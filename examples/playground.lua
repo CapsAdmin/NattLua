@@ -1,4 +1,4 @@
-local oh = require("runtime")
+local oh = require("oh/runtime")
 
 print(10pb)
 

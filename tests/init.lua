@@ -1,0 +1,211 @@
+
+local oh = require("oh.oh")
+
+local test = {}
+
+function test.transpile(ast, what)
+    what = what or "lua"
+    local self = oh.LuaEmitter({preserve_whitespace = true})
+    local res = self:BuildCode(ast)
+    local ok, err = loadstring(res)
+    if not ok then
+        return res, err
+    end
+    return res
+end
+
+function test.tokenize(code, capture_whitespace)
+    local self = oh.Tokenizer(code, function(_, msg, start, stop)
+        io.write(oh.FormatError(code, "test", msg, start, stop))
+    end, capture_whitespace)
+
+    self:ResetState()
+
+    return self:GetTokens()
+end
+
+function test.parse(tokens, code)
+    return oh.Parser(function(_, msg, start, stop)
+        error(oh.FormatError(code, "test", msg, start, stop))
+    end):BuildAST(tokens)
+end
+
+do
+    local indent = 0
+
+    local function type2string(val)
+        if not val then
+            return "any"
+        end
+
+        local str = ""
+
+        for i,v in ipairs(val) do
+            str = str .. v.value.value
+            if i ~= #val then
+                str = str  .. "|"
+            end
+
+            if v.function_arguments then
+                str = str .. "("
+                for i, arg in ipairs(v.function_arguments) do
+                    str = str .. tostring(arg.value.value) .. ": " .. type2string(arg.data_type)
+                    if i ~= #v.function_arguments then
+                        str = str .. ", "
+                    end
+                end
+                str = str .. "): " .. type2string(v.function_return_type)
+            end
+        end
+
+        return str
+    end
+
+    function test.dump_ast(tbl, blacklist)
+        if tbl.type == "value" and tbl.value.type and tbl.value.value then
+            io.write(("\t"):rep(indent))
+            io.write(tbl.value.type, ": ", tbl.value.value, " as ", type2string(tbl.value.data_type), "\n")
+        else
+            for k,v in pairs(tbl) do
+                if type(v) ~= "table" then
+                    io.write(("\t"):rep(indent))
+                    io.write(k, " = ", tostring(v), "\n")
+                end
+            end
+
+            for k,v in pairs(tbl) do
+                if type(v) == "table" and k ~= "tokens" and k ~= "whitespace" then
+                    if v.type == "value" and v.value.type and v.value.value then
+                        io.write(("\t"):rep(indent))
+                        io.write(k, ": [", v.value.type, ": ", tostring(v.value.value), " as ", type2string(v.data_type), "]\n")
+                        if v.suffixes then
+                            indent = indent + 1
+                            io.write(("\t"):rep(indent))
+                            io.write("suffixes", ":", "\n")
+                            test.dump_ast(v.suffixes, blacklist)
+                            indent = indent - 1
+                        end
+                    end
+                end
+            end
+
+            for k,v in pairs(tbl) do
+                if type(v) == "table" and k ~= "tokens" and k ~= "whitespace" then
+                    if v.type == "value" and v.value.type and v.value.value then
+
+                    else
+                        io.write(("\t"):rep(indent))
+                        io.write(k, ":", "\n")
+                        indent = indent + 1
+                        test.dump_ast(v, blacklist)
+                        indent = indent - 1
+                    end
+                end
+            end
+        end
+	end
+end
+
+function test.dump_tokens(tokens, code)
+    for _, v in ipairs(tokens) do
+        for _, v in ipairs(v.whitespace) do
+            io.write(code:usub(v.start, v.stop))
+        end
+
+        io.write("⸢" .. code:usub(v.start, v.stop) .. "⸥")
+    end
+end
+
+function test.transpile_fail_check(code)
+    local ok = pcall(function() test.parse(test.tokenize(code), code) end) == false
+    if not ok then
+        print(code)
+        print("shouldn't compile")
+    end
+end
+
+
+function test.transpile_ok(code, path, lang)
+    local tokens, ast, new_code, lua_err
+
+    local ok = xpcall(function()
+        tokens = test.tokenize(code)
+        ast = test.parse(tokens, code)
+        new_code, lua_err = test.transpile(ast, lang)
+    end, function(err)
+        print("===================================")
+        print(debug.traceback(err))
+        print(path or code)
+        print("===================================")
+    end)
+
+    if ok then
+        --print(new_code, " - OK!\n")
+        return new_code, lua_err
+    end
+end
+
+function test.transpile_check(code)
+    local tokens, ast, new_code, lua_err
+
+    local ok = xpcall(function()
+        tokens = test.tokenize(code)
+        ast = test.parse(tokens, code)
+        new_code, lua_err = test.transpile(ast)
+    end, function(err)
+        print("===================================")
+        print(debug.traceback(err))
+        print(code)
+        print("===================================")
+    end)
+
+    if ok and code ~= new_code then
+        print("===================================")
+        print("transpiled output doesn't match:")
+        print("FROM:")
+        print(code)
+        print("TO:")
+        print(new_code)
+        print("===================================")
+
+        test.dump_ast(ast)
+        --table.print(ast)
+        for i,v in ipairs(tokens) do
+            print("[" .. i .. "][" .. v.type .. "]: " .. v.value)
+        end
+
+        ok = false
+    end
+
+    if ok then
+        --io.write(code, " - OK!\n")
+    end
+
+    return ok, new_code
+end
+
+function test.check_tokens_separated_by_space(code)
+    local tokens = test.tokenize(code)
+    local i = 1
+    for expected in code:gmatch("(%S+)") do
+        if tokens[i].type == "unknown" then
+            error("token " .. tokens[i].value .. " is unknown")
+        end
+
+        if tokens[i].value ~= expected then
+            error("token " .. tokens[i].value .. " does not match " .. expected)
+        end
+
+        i = i + 1
+    end
+end
+
+function test.print_ast(code)
+    local tokens = tokenize(code)
+    test.dump_ast(test.parse(tokens, code, true))
+end
+
+print("============TEST============")
+assert(loadfile("tests/transpile.lua"))(test)
+assert(loadfile("tests/random_tokens.lua"))(test)
+print("============TEST COMPLETE============")

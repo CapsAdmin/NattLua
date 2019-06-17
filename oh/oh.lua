@@ -1,9 +1,9 @@
 local oh = {}
 
-oh.syntax = assert(loadfile("src/syntax.lua"))(oh)
-assert(loadfile("src/tokenizer.lua"))(oh)
-assert(loadfile("src/parser.lua"))(oh)
-assert(loadfile("src/lua_emitter.lua"))(oh)
+oh.syntax = assert(loadfile("oh/syntax.lua"))(oh)
+assert(loadfile("oh/tokenizer.lua"))(oh)
+assert(loadfile("oh/parser.lua"))(oh)
+assert(loadfile("oh/lua_emitter.lua"))(oh)
 
 function oh.ASTToCode(ast, config)
     local self = oh.LuaEmitter(config)
