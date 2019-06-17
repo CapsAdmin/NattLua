@@ -1,5 +1,7 @@
 local test = ...
 
+io.write("running checks...")
+
 local transpile_check = test.transpile_check
 local transpile_ok = test.transpile_ok
 
@@ -92,3 +94,5 @@ transpile_check("foo = 1 /* bar */")
 assert(test.tokenize([[0xfFFF]])[1].value == "0xfFFF")
 test.check_tokens_separated_by_space([[while true do end]])
 test.check_tokens_separated_by_space([[if a == b and b + 4 and true or ( true and function ( ) end ) then :: foo :: end]])
+
+io.write(" - OK\n")

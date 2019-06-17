@@ -9,12 +9,14 @@ do
     if oh.syntax.UTF8 then
         local utf8totable
         do
-            local band = bit.band
-            local bor = bit.bor
-            local rshift = bit.rshift
-            local lshift = bit.lshift
+            local bit_band = bit.band
+            local bit_bor = bit.bor
+            local bit_rshift = bit.rshift
+            local bit_lshift = bit.lshift
             local math_floor = math.floor
             local string_char = string.char
+            local string_byte = string.byte
+            
             local UTF8_ACCEPT = 0
     
             local utf8d =  {
@@ -46,20 +48,20 @@ do
                 local out_i = 1
     
                 for i = 1, #str do
-                    local byte = str:byte(i)
+                    local byte = string_byte(str, i)
                     local ctype = utf8d[byte + 1]
     
                     if state ~= UTF8_ACCEPT then
-                        codepoint = bor(band(byte, 0x3f), lshift(codepoint, 6))
+                        codepoint = bit_bor(bit_band(byte, 0x3f), bit_lshift(codepoint, 6))
                     else
-                        codepoint = band(rshift(0xff, ctype), byte)
+                        codepoint = bit_band(bit_rshift(0xff, ctype), byte)
                     end
     
                     state = utf8d[256 + state + ctype + 1]
     
                     if state == UTF8_ACCEPT then
                         if codepoint > 0xffff then
-                            codepoint = lshift(((0xD7C0 + rshift(codepoint, 10)) - 0xD7C0), 10) + (0xDC00 + band(codepoint, 0x3ff)) - 0xDC00
+                            codepoint = bit_lshift(((0xD7C0 + bit_rshift(codepoint, 10)) - 0xD7C0), 10) + (0xDC00 + bit_band(codepoint, 0x3ff)) - 0xDC00
                         end
     
                         if codepoint <= 127 then
@@ -67,20 +69,20 @@ do
                         elseif codepoint < 2048 then
                             out[out_i] = string_char(
                                 192 + codepoint / 64,
-                                128 + band(codepoint, 63)
+                                128 + bit_band(codepoint, 63)
                             )
                         elseif codepoint < 65536 then
                             out[out_i] = string_char(
                                 224 + codepoint / 4096,
-                                128 + band(math_floor(codepoint / 64), 63),
-                                128 + band(codepoint, 63)
+                                128 + bit_band(math_floor(codepoint / 64), 63),
+                                128 + bit_band(codepoint, 63)
                             )
                         elseif codepoint < 2097152 then
                             out[out_i] = string_char(
                                 240 + codepoint / 262144,
-                                128 + band(math_floor(codepoint / 4096), 63),
-                                128 + band(math_floor(codepoint / 64), 63),
-                                128 + band(codepoint, 63)
+                                128 + bit_band(math_floor(codepoint / 4096), 63),
+                                128 + bit_band(math_floor(codepoint / 64), 63),
+                                128 + bit_band(codepoint, 63)
                             )
                         else
                             out[out_i] = ""
