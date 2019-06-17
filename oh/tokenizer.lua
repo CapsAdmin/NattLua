@@ -1,4 +1,5 @@
 local oh = ...
+local util = require("oh.util")
 
 local META
 
@@ -6,126 +7,36 @@ do
     META = {}
     META.__index = META
 
-    if oh.syntax.UTF8 then
-        local utf8totable
-        do
-            local bit_band = bit.band
-            local bit_bor = bit.bor
-            local bit_rshift = bit.rshift
-            local bit_lshift = bit.lshift
-            local math_floor = math.floor
-            local string_char = string.char
-            local string_byte = string.byte
-            
-            local UTF8_ACCEPT = 0
-    
-            local utf8d =  {
-                -- The first part of the table maps bytes to character classes that
-                -- to reduce the size of the transition table and create bitmasks.
-                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,
-                7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,  7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
-                8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-                10,3,3,3,3,3,3,3,3,3,3,3,3,4,3,3, 11,6,6,6,5,8,8,8,8,8,8,8,8,8,8,8,
-    
-                -- The second part is a transition table that maps a combination
-                -- of a state of the automaton and a character class to a state.
-                0,12,24,36,60,96,84,12,12,12,48,72, 12,12,12,12,12,12,12,12,12,12,12,12,
-                12, 0,12,12,12,12,12, 0,12, 0,12,12, 12,24,12,12,12,12,12,24,12,24,12,12,
-                12,12,12,12,12,12,12,24,12,12,12,12, 12,24,12,12,12,12,12,12,12,24,12,12,
-                12,12,12,12,12,12,12,36,12,36,12,12, 12,36,12,12,12,12,12,36,12,36,12,12,
-                12,36,12,12,12,12,12,12,12,12,12,12,
-            }
-    
-            utf8totable = function(str)
-                local state = UTF8_ACCEPT
-                local codepoint = 0
-    
-                local out = {}
-                local out_i = 1
-    
-                for i = 1, #str do
-                    local byte = string_byte(str, i)
-                    local ctype = utf8d[byte + 1]
-    
-                    if state ~= UTF8_ACCEPT then
-                        codepoint = bit_bor(bit_band(byte, 0x3f), bit_lshift(codepoint, 6))
-                    else
-                        codepoint = bit_band(bit_rshift(0xff, ctype), byte)
-                    end
-    
-                    state = utf8d[256 + state + ctype + 1]
-    
-                    if state == UTF8_ACCEPT then
-                        if codepoint > 0xffff then
-                            codepoint = bit_lshift(((0xD7C0 + bit_rshift(codepoint, 10)) - 0xD7C0), 10) + (0xDC00 + bit_band(codepoint, 0x3ff)) - 0xDC00
-                        end
-    
-                        if codepoint <= 127 then
-                            out[out_i] = string_char(codepoint)
-                        elseif codepoint < 2048 then
-                            out[out_i] = string_char(
-                                192 + codepoint / 64,
-                                128 + bit_band(codepoint, 63)
-                            )
-                        elseif codepoint < 65536 then
-                            out[out_i] = string_char(
-                                224 + codepoint / 4096,
-                                128 + bit_band(math_floor(codepoint / 64), 63),
-                                128 + bit_band(codepoint, 63)
-                            )
-                        elseif codepoint < 2097152 then
-                            out[out_i] = string_char(
-                                240 + codepoint / 262144,
-                                128 + bit_band(math_floor(codepoint / 4096), 63),
-                                128 + bit_band(math_floor(codepoint / 64), 63),
-                                128 + bit_band(codepoint, 63)
-                            )
-                        else
-                            out[out_i] = ""
-                        end
-    
-                        out_i = out_i + 1
-                    end
-                end
-                return out
-            end
+    -- This is needed for UTF8. Assume everything is a letter if it's not any of the other types.
+    META.FallbackCharacterType = "letter"
+
+    function META:OnInitialize(str)
+        self.code = util.UTF8ToTable(str)
+        self.code_length = #self.code
+        self.tbl_cache = {}
+    end
+    function META:GetLength()
+        return self.code_length
+    end
+    function META:GetCharOffset(i)
+        return self.code[self.i + i] or ""
+    end
+
+    local table_concat = table.concat
+    function META:GetCharsRange(start, stop)
+        local length = stop-start
+
+        if not self.tbl_cache[length] then
+            self.tbl_cache[length] = {}
         end
-    
-        -- This is needed for UTF8. Assume everything is a letter if it's not any of the other types.
-        META.FallbackCharacterType = "letter"
-    
-        function META:OnInitialize(str)
-            self.code = utf8totable(str)
-            self.code_length = #self.code
-            self.tbl_cache = {}
+        local str = self.tbl_cache[length]
+
+        local str_i = 1
+        for i = start, stop do
+            str[str_i] = self.code[i] or ""
+            str_i = str_i + 1
         end
-        function META:GetLength()
-            return self.code_length
-        end
-        function META:GetCharOffset(i)
-            return self.code[self.i + i] or ""
-        end
-    
-        local table_concat = table.concat
-        function META:GetCharsRange(start, stop)
-            local length = stop-start
-    
-            if not self.tbl_cache[length] then
-                self.tbl_cache[length] = {}
-            end
-            local str = self.tbl_cache[length]
-    
-            local str_i = 1
-            for i = start, stop do
-                str[str_i] = self.code[i] or ""
-                str_i = str_i + 1
-            end
-            return table_concat(str)
-        end
+        return table_concat(str)
     end
 
     function META:GetCurrentChar()
@@ -186,16 +97,16 @@ do
 
     local function CaptureLiteralString(self, multiline_comment)
         local start = self.i
-    
+
         local c = self:ReadChar()
         if c ~= "[" then
             if multiline_comment then return true end
             return nil, "expected "..oh.QuoteToken("[").." got " .. oh.QuoteToken(c)
         end
-    
+
         if self:GetCurrentChar() == "=" then
             self:Advance(1)
-    
+
             for _ = self.i, self.code_length do
                 if self:GetCurrentChar() ~= "=" then
                     break
@@ -203,17 +114,17 @@ do
                 self:Advance(1)
             end
         end
-    
+
         c = self:ReadChar()
         if c ~= "[" then
             if multiline_comment then return true end
             return nil, "expected " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. c)
         end
-    
+
         local length = self.i - start
-    
+
         if length < 2 then return nil end
-    
+
         local closing = "]" .. string.rep("=", length - 2) .. "]"
         local found = false
         for _ = self.i, self.code_length do
@@ -224,11 +135,11 @@ do
             end
             self:Advance(1)
         end
-    
+
         if not found then
             return nil, "expected "..oh.QuoteToken(closing).." reached end of code"
         end
-    
+
         return true
     end
 
@@ -238,7 +149,7 @@ do
                 local str = self:GetCharsOffset(3)
                 return str == "--[=" or str == "--[["
             end
-        
+
             function META:CaptureMultilineComment(start)
                 self:Advance(2)
 
@@ -257,10 +168,10 @@ do
             function META:IsGLuaMultilineComment()
                 return self:GetCharsOffset(1) == "/*"
             end
-        
+
             function META:CaptureGLuaMultilineComment(start)
                 self:Advance(2)
-        
+
                 for _ = self.i, self.code_length do
                     self:Advance(1)
                     if self:GetCharsOffset(1) == "*/" then
@@ -279,7 +190,7 @@ do
                 META["Is" .. func_name] = function(self)
                     return self:GetCharsOffset(#str - 1) == str
                 end
-            
+
                 META["Capture" .. func_name] = function(self, start)
                     self:Advance(#str)
 
@@ -331,7 +242,7 @@ do
             function META:IsMultilineString()
                 return self:GetCharsOffset(1) == "[=" or self:GetCharsOffset(1) == "[["
             end
-        
+
             function META:CaptureMultilineString(start)
                 local ok, err = CaptureLiteralString(self, true)
 
@@ -530,26 +441,26 @@ do
         function META:IsLiteralString()
             return self:GetCurrentChar() == str
         end
-    
+
         function META:CaptureLiteralString(start)
             self:Advance(1)
-    
+
             for _ = self.i, self.code_length do
                 local char = self:ReadCharByte()
-    
+
                 if char == str then
                     return "literal_string"
                 end
             end
-    
+
             self:Error("unterminated " .. str, start, self.i - 1)
-    
+
             return false
         end
     end
 
     do
-        local escape_character = "\\"
+        local escape_character = [[\]]
         local quotes = {
             Double = [["]],
             Single = [[']],
@@ -589,7 +500,7 @@ do
 
                         if char == "\n" then
                             self:Advance(-1)
-                            self:Error("unterminated " .. name:lower() .. " quote string", start, self.i - 1)
+                            self:Error("unterminated " .. name:lower() .. " quote", start, self.i - 1)
                             return false
                         end
 
@@ -599,7 +510,7 @@ do
                     end
                 end
 
-                self:Error("unterminated " .. name:lower() .. " quote string", start, self.i - 1)
+                self:Error("unterminated " .. name:lower() .. " quote: reached end of file", start, self.i - 1)
 
                 return false
             end
@@ -620,7 +531,7 @@ do
                 end
                 self:Advance(1)
             end
-        
+
             return "letter"
         end
     end
@@ -629,7 +540,7 @@ do
         function META:IsSymbol()
             return self:GetCharType(self:GetCurrentChar()) == "symbol"
         end
-    
+
         function META:CaptureSymbol()
             for len = oh.syntax.LongestSymbolLength - 1, 0, -1 do
                 if oh.syntax.SymbolLookup[self:GetCharsOffset(len)] then

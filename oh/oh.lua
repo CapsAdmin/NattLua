@@ -15,22 +15,27 @@ local function on_error(self, msg, start, stop)
     table.insert(self.errors, {msg = msg, start = start, stop = stop})
 end
 
-function oh.CodeToAST(code, name)
-    name = name or "unknown"
+function oh.CodeToTokens(code, name)
+	name = name or "unknown"
 
-    local tokenizer = oh.Tokenizer(code)
+	local tokenizer = oh.Tokenizer(code)
     tokenizer.OnError = on_error
     local tokens = tokenizer:GetTokens()
-
     if tokenizer.errors then
         local str = ""
         for _, err in ipairs(tokenizer.errors) do
             str = str .. oh.FormatError(code, name, err.msg, err.start, err.stop) .. "\n"
         end
         return nil, str
-    end
+	end
 
-    local parser = oh.Parser()
+	return tokens
+end
+
+function oh.TokensToAST(tokens, name)
+	name = name or "unknown"
+
+	local parser = oh.Parser()
     parser.OnError = on_error
     local ast = parser:BuildAST(tokens)
     if parser.errors then
@@ -40,6 +45,13 @@ function oh.CodeToAST(code, name)
         end
         return nil, str
     end
+end
+
+function oh.CodeToAST(code, name)
+	name = name or "unknown"
+
+	local tokens = oh.CodeToTokens(code, name)
+	local ast = oh.TokensToAST(tokens, name)
 
     return ast, tokens
 end
@@ -88,18 +100,32 @@ function oh.QuoteTokens(var)
 	return str
 end
 
-local function count(str, what)
+local function count(tbl, what, stop)
     local found = 0
-    for i = 1, #str do
-        if str:sub(i, i + #what - 1) == what then
-            found = found + 1
-        end
-    end
+	for i, v in ipairs(tbl) do
+		if v == "\n" then
+			found = found + 1
+		end
+		if stop and i >= stop then
+			break
+		end
+	end
     return found
 end
 
+local function sub(tbl, start, stop)
+	local out = {}
+	for i = start, stop do
+		table.insert(out, tbl[i])
+	end
+	return table.concat(out)
+end
+
+local util = require("oh.util")
+
 function oh.FormatError(code, path, msg, start, stop)
-	local total_lines = count(code, "\n")
+	local chars = util.UTF8ToTable(code)
+	local total_lines = count(chars, "\n")
 	local line_number_length = #tostring(total_lines)
 
 	local function tab2space(str)
@@ -110,13 +136,13 @@ function oh.FormatError(code, path, msg, start, stop)
 		return ("%i%s"):format(i, (" "):rep(line_number_length - #tostring(i)))
 	end
 
-	local context_size = 100
-	local line_context_size = 1
+	local context_size = 120
+	local line_context_size = 3
 
-	local length = (stop - start) + 1
-	local before = code:sub(math.max(start - context_size, 0), stop - length)
-	local middle = code:sub(start, stop)
-	local after = code:sub(stop + 1, stop + context_size)
+	local length = (stop - start)
+	local before = sub(chars, math.max(start - context_size, 0), stop - length - 1)
+	local middle = sub(chars, start, stop-1)
+	local after = sub(chars, stop, stop + context_size)
 
 	local context_before, line_before = before:match("(.+\n)(.*)")
 	local line_after, context_after = after:match("(.-)(\n.+)")
@@ -136,12 +162,12 @@ function oh.FormatError(code, path, msg, start, stop)
 		end
 	end
 
-	local current_line = count(code:sub(0, stop), "\n") + 1
+	local current_line = count(chars, "\n", stop)
 	local char_number = #line_before + 1
 
 	line_before = tab2space(line_before)
-	line_after = tab2space(line_after)
 	middle = tab2space(middle)
+	line_after = tab2space(line_after)
 
 	local out = ""
 	out = out .. "error: " ..  msg .. "\n"
@@ -160,7 +186,7 @@ function oh.FormatError(code, path, msg, start, stop)
 					offset = offset - 1
 					local line = current_line - (-offset + #lines)
 					if line ~= 0 then
-						out = out .. line2str(line) .. " | " .. str .. "\n"
+						out = out .. line2str(line-1) .. " | " .. str .. "\n"
 					end
 				--end
 			end
@@ -179,7 +205,7 @@ function oh.FormatError(code, path, msg, start, stop)
 			for offset = 1, #lines do
 				local str = lines[offset]
 				--if str:trim() ~= "" then
-					out = out .. line2str(current_line + offset) .. " | " .. str .. "\n"
+					out = out .. line2str(current_line + offset+1) .. " | " .. str .. "\n"
 				--end
 				if offset >= line_context_size then break end
 			end
