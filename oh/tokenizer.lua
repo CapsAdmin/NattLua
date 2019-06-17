@@ -1,55 +1,160 @@
 local oh = ...
 
-local TOKENIZER
-local BUILDER
+local META
 
 do
-    TOKENIZER = {}
-    TOKENIZER.__index = TOKENIZER
+    META = {}
+    META.__index = META
 
-    do -- these can/should be overriden with an utf8 variant
-        function TOKENIZER:GetLength()
-            return #self.code
+    if oh.syntax.UTF8 then
+        local utf8totable
+        do
+            local band = bit.band
+            local bor = bit.bor
+            local rshift = bit.rshift
+            local lshift = bit.lshift
+            local math_floor = math.floor
+            local string_char = string.char
+            local UTF8_ACCEPT = 0
+    
+            local utf8d =  {
+                -- The first part of the table maps bytes to character classes that
+                -- to reduce the size of the transition table and create bitmasks.
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,
+                7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,  7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+                8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+                10,3,3,3,3,3,3,3,3,3,3,3,3,4,3,3, 11,6,6,6,5,8,8,8,8,8,8,8,8,8,8,8,
+    
+                -- The second part is a transition table that maps a combination
+                -- of a state of the automaton and a character class to a state.
+                0,12,24,36,60,96,84,12,12,12,48,72, 12,12,12,12,12,12,12,12,12,12,12,12,
+                12, 0,12,12,12,12,12, 0,12, 0,12,12, 12,24,12,12,12,12,12,24,12,24,12,12,
+                12,12,12,12,12,12,12,24,12,12,12,12, 12,24,12,12,12,12,12,12,12,24,12,12,
+                12,12,12,12,12,12,12,36,12,36,12,12, 12,36,12,12,12,12,12,36,12,36,12,12,
+                12,36,12,12,12,12,12,12,12,12,12,12,
+            }
+    
+            utf8totable = function(str)
+                local state = UTF8_ACCEPT
+                local codepoint = 0
+    
+                local out = {}
+                local out_i = 1
+    
+                for i = 1, #str do
+                    local byte = str:byte(i)
+                    local ctype = utf8d[byte + 1]
+    
+                    if state ~= UTF8_ACCEPT then
+                        codepoint = bor(band(byte, 0x3f), lshift(codepoint, 6))
+                    else
+                        codepoint = band(rshift(0xff, ctype), byte)
+                    end
+    
+                    state = utf8d[256 + state + ctype + 1]
+    
+                    if state == UTF8_ACCEPT then
+                        if codepoint > 0xffff then
+                            codepoint = lshift(((0xD7C0 + rshift(codepoint, 10)) - 0xD7C0), 10) + (0xDC00 + band(codepoint, 0x3ff)) - 0xDC00
+                        end
+    
+                        if codepoint <= 127 then
+                            out[out_i] = string_char(codepoint)
+                        elseif codepoint < 2048 then
+                            out[out_i] = string_char(
+                                192 + codepoint / 64,
+                                128 + band(codepoint, 63)
+                            )
+                        elseif codepoint < 65536 then
+                            out[out_i] = string_char(
+                                224 + codepoint / 4096,
+                                128 + band(math_floor(codepoint / 64), 63),
+                                128 + band(codepoint, 63)
+                            )
+                        elseif codepoint < 2097152 then
+                            out[out_i] = string_char(
+                                240 + codepoint / 262144,
+                                128 + band(math_floor(codepoint / 4096), 63),
+                                128 + band(math_floor(codepoint / 64), 63),
+                                128 + band(codepoint, 63)
+                            )
+                        else
+                            out[out_i] = ""
+                        end
+    
+                        out_i = out_i + 1
+                    end
+                end
+                return out
+            end
         end
-
-        function TOKENIZER:GetCharOffset(offset)
-            return string.sub(self.code, self.i + offset, self.i + offset)
+    
+        -- This is needed for UTF8. Assume everything is a letter if it's not any of the other types.
+        META.FallbackCharacterType = "letter"
+    
+        function META:OnInitialize(str)
+            self.code = utf8totable(str)
+            self.code_length = #self.code
+            self.tbl_cache = {}
         end
-
-        function TOKENIZER:GetCharsRange(start, stop)
-            return string.sub(self.code, start, stop)
+        function META:GetLength()
+            return self.code_length
+        end
+        function META:GetCharOffset(i)
+            return self.code[self.i + i] or ""
+        end
+    
+        local table_concat = table.concat
+        function META:GetCharsRange(start, stop)
+            local length = stop-start
+    
+            if not self.tbl_cache[length] then
+                self.tbl_cache[length] = {}
+            end
+            local str = self.tbl_cache[length]
+    
+            local str_i = 1
+            for i = start, stop do
+                str[str_i] = self.code[i] or ""
+                str_i = str_i + 1
+            end
+            return table_concat(str)
         end
     end
 
-    function TOKENIZER:GetCurrentChar()
+    function META:GetCurrentChar()
         return self:GetCharOffset(0)
     end
 
-    function TOKENIZER:GetCharsOffset(length)
+    function META:GetCharsOffset(length)
         return self:GetCharsRange(self.i, self.i + length)
     end
 
-    function TOKENIZER:GetCharType(char)
-        return self.syntax.GetCharacterType(char)
+    function META:GetCharType(char)
+        return oh.syntax.GetCharacterType(char) or (self.FallbackCharacterType and char:byte() > 128 and self.FallbackCharacterType)
     end
 
-    function TOKENIZER:ReadChar()
+    function META:ReadChar()
         local char = self:GetCurrentChar()
         self.i = self.i + 1
         return char
     end
 
-    function TOKENIZER:ReadCharByte()
+    function META:ReadCharByte()
         local b = self:GetCurrentChar()
         self.i = self.i + 1
         return b
     end
 
-    function TOKENIZER:Advance(len)
+    function META:Advance(len)
         self.i = self.i + len
     end
 
-    function TOKENIZER:Error(msg, start, stop)
+    function META:Error(msg, start, stop)
         if self.OnError then
             self:OnError(msg, start or self.i, stop or self.i)
         end
@@ -62,12 +167,12 @@ do
         end
     end
 
-    function TOKENIZER:NewToken(tbl)
+    function META:NewToken(tbl)
         tbl.tk = self
         return setmetatable(tbl, TOKEN)
     end
 
-    function TOKENIZER:BufferWhitespace(type, start, stop)
+    function META:BufferWhitespace(type, start, stop)
         self.whitespace_buffer[self.whitespace_buffer_i] = self:NewToken({
             type = type,
             start = start == 1 and 0 or start,
@@ -77,12 +182,531 @@ do
         self.whitespace_buffer_i = self.whitespace_buffer_i + 1
     end
 
-    function TOKENIZER:ReadToken()
-        if self.ShebangTokenType.Is(self) then
-            self.ShebangTokenType.Capture(self)
-            return self.ShebangTokenType.Type, 1, self.i - 1, {}
+    local function CaptureLiteralString(self, multiline_comment)
+        local start = self.i
+    
+        local c = self:ReadChar()
+        if c ~= "[" then
+            if multiline_comment then return true end
+            return nil, "expected "..oh.QuoteToken("[").." got " .. oh.QuoteToken(c)
+        end
+    
+        if self:GetCurrentChar() == "=" then
+            self:Advance(1)
+    
+            for _ = self.i, self.code_length do
+                if self:GetCurrentChar() ~= "=" then
+                    break
+                end
+                self:Advance(1)
+            end
+        end
+    
+        c = self:ReadChar()
+        if c ~= "[" then
+            if multiline_comment then return true end
+            return nil, "expected " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. c)
+        end
+    
+        local length = self.i - start
+    
+        if length < 2 then return nil end
+    
+        local closing = "]" .. string.rep("=", length - 2) .. "]"
+        local found = false
+        for _ = self.i, self.code_length do
+            if self:GetCharsOffset(length - 1) == closing then
+                self:Advance(length)
+                found = true
+                break
+            end
+            self:Advance(1)
+        end
+    
+        if not found then
+            return nil, "expected "..oh.QuoteToken(closing).." reached end of code"
+        end
+    
+        return true
+    end
+
+    do -- whitespace
+        do
+            function META:IsMultilineComment()
+                local str = self:GetCharsOffset(3)
+                return str == "--[=" or str == "--[["
+            end
+        
+            function META:CaptureMultilineComment(start)
+                self:Advance(2)
+
+                local ok, err = CaptureLiteralString(self, true)
+
+                if not ok then
+                    self.i = start + 2
+                    self:Error("unterminated multiline comment: " .. err, start, start + 1)
+                end
+
+                self:BufferWhitespace("multiline_comment", start, self.i - 1)
+            end
         end
 
+        do
+            function META:IsGLuaMultilineComment()
+                return self:GetCharsOffset(1) == "/*"
+            end
+        
+            function META:CaptureGLuaMultilineComment(start)
+                self:Advance(2)
+        
+                for _ = self.i, self.code_length do
+                    self:Advance(1)
+                    if self:GetCharsOffset(1) == "*/" then
+                        self:Advance(2)
+                        break
+                    end
+                end
+
+                self:BufferWhitespace("glua_multiline_comment", start, self.i - 1)
+            end
+        end
+
+        do
+
+            local function LINE_COMMENT(str, name, func_name)
+                META["Is" .. func_name] = function(self)
+                    return self:GetCharsOffset(#str - 1) == str
+                end
+            
+                META["Capture" .. func_name] = function(self, start)
+                    self:Advance(#str)
+
+                    for _ = self.i, self.code_length do
+                        if self:ReadChar() == "\n" or self.i-1 == self.code_length then
+                            break
+                        end
+                    end
+
+                    self:BufferWhitespace(name, start, self.i - 1)
+                end
+            end
+
+            LINE_COMMENT("--", "line_comment", "LineComment")
+            LINE_COMMENT("//", "glua_line_comment", "GLuaLineComment")
+        end
+
+        do
+            function META:IsSpace()
+                return self:GetCharType(self:GetCurrentChar()) == "space"
+            end
+
+            function META:CaptureSpace(start)
+                for _ = self.i, self.code_length do
+                    self:Advance(1)
+                    if self:GetCharType(self:GetCurrentChar()) ~= "space" then
+                        break
+                    end
+                end
+
+                self:BufferWhitespace("space", start, self.i - 1)
+            end
+        end
+    end
+
+    do -- other
+        do
+            function META:IsEndOfFile()
+                return self.i > self.code_length
+            end
+
+            function META:CaptureEndOfFile(start)
+                -- nothing to capture, but remaining whitespace will be added
+                return "end_of_file"
+            end
+        end
+
+        do
+            function META:IsMultilineString()
+                return self:GetCharsOffset(1) == "[=" or self:GetCharsOffset(1) == "[["
+            end
+        
+            function META:CaptureMultilineString(start)
+                local ok, err = CaptureLiteralString(self, true)
+
+                if not ok then
+                    self:Error("unterminated multiline string: " .. err, start, start + 1)
+                    return
+                end
+
+                return "string"
+            end
+        end
+
+        do
+            local string_lower = string.lower
+            local allowed = {
+                ["a"] = true,
+                ["b"] = true,
+                ["c"] = true,
+                ["d"] = true,
+                ["e"] = true,
+                ["f"] = true,
+                ["p"] = true,
+                ["_"] = true,
+                ["."] = true,
+            }
+
+            local pow_letter = "p"
+            local plus_sign = "+"
+            local minus_sign = "-"
+
+            local legal_number_annotations = {"ull", "ll", "ul", "i"}
+            table.sort(legal_number_annotations, function(a, b) return #a > #b end)
+
+            function META:CaptureNumberAnnotations()
+                for _, annotation in ipairs(legal_number_annotations) do
+                    local len = #annotation
+                    if string_lower(self:GetCharsOffset(len - 1)) == annotation then
+                        local t = self:GetCharType(self:GetCharOffset(len))
+
+                        if t == "space" or t == "symbol" then
+                            self:Advance(len)
+                            return true
+                        end
+                    end
+                end
+            end
+
+            function META:IsNumber()
+                if self:GetCurrentChar() == "." and self:GetCharType(self:GetCharOffset(1)) == "number" then
+                    return true
+                end
+
+                return self:GetCharType(self:GetCurrentChar()) == "number"
+            end
+
+            function META:CaptureHexNumber()
+                self:Advance(2)
+
+                local pow = false
+
+                for _ = self.i, self.code_length do
+                    if self:CaptureNumberAnnotations() then return "number" end
+
+                    local char = string_lower(self:GetCurrentChar())
+                    local t = self:GetCharType(self:GetCurrentChar())
+
+                    if char == pow_letter then
+                        if not pow then
+                            pow = true
+                        else
+                            self:Error("malformed number: pow character can only be used once")
+                            return false
+                        end
+                    end
+
+                    if not (t == "number" or allowed[char] or ((char == plus_sign or char == minus_sign) and string_lower(self:GetCharOffset(-1)) == pow_letter) ) then
+                        if not t or t == "space" or t == "symbol" then
+                            return "number"
+                        elseif char == "symbol" or t == "letter" then
+                            self:Error("malformed number: invalid character "..oh.QuoteToken(char)..". only "..oh.QuoteTokens("abcdef0123456789_").." allowed after hex notation")
+                            return false
+                        end
+                    end
+
+                    self:Advance(1)
+                end
+
+                return "number"
+            end
+
+            function META:CaptureBinaryNumber()
+                self:Advance(2)
+
+                for _ = self.i, self.code_length do
+                    local char = string_lower(self:GetCurrentChar())
+                    local t = self:GetCharType(self:GetCurrentChar())
+
+                    if char ~= "1" and char ~= "0" and char ~= "_" then
+                        if not t or t == "space" or t == "symbol" then
+                            return "number"
+                        elseif char == "symbol" or t == "letter" or (char ~= "0" and char ~= "1") then
+                            self:Error("malformed number: only "..oh.QuoteTokens("01_").." allowed after binary notation")
+                            return false
+                        end
+                    end
+
+                    self:Advance(1)
+                end
+
+                return "number"
+            end
+
+            function META:CaptureDecimalNumber()
+                local found_dot = false
+                local exponent = false
+
+                local start = self.i
+
+                for _ = self.i, self.code_length do
+                    local t = self:GetCharType(self:GetCurrentChar())
+                    local char = self:GetCurrentChar()
+
+                    if exponent then
+                        if char ~= "-" and char ~= "+" and t ~= "number" then
+                            self:Error("malformed number: invalid character " .. oh.QuoteToken(char) .. ". only "..oh.QuoteTokens("+-0123456789").." allowed after exponent", start, self.i)
+                            return false
+                        elseif char ~= "-" and char ~= "+" then
+                            exponent = false
+                        end
+                    elseif t ~= "number" then
+                        if t == "letter" then
+                            start = self.i
+                            if string_lower(char) == "e" then
+                                exponent = true
+                            elseif self:CaptureNumberAnnotations() then
+                                return "number"
+                            else
+                            -- self:Error("malformed number: invalid character " .. oh.QuoteToken(char) .. ". only " .. oh.QuoteTokens(legal_number_annotations) .. " allowed after a number", start, self.i)
+                                return "number"
+                            end
+                        elseif not found_dot and char == "." then
+                            found_dot = true
+                        elseif t == "space" or t == "symbol" then
+                            return "number"
+                        end
+                    end
+
+                    self:Advance(1)
+                end
+
+                return "number"
+            end
+
+            function META:CaptureNumber(start)
+                local s = string_lower(self:GetCharOffset(1))
+                if s == "x" then
+                    return self:CaptureHexNumber()
+                elseif s == "b" then
+                    return self:CaptureBinaryNumber()
+                end
+
+                return self:CaptureDecimalNumber()
+            end
+        end
+    end
+
+    do
+        local str = "##"
+
+        function META:IsCompilerOption()
+            return self:GetCharsOffset(#str - 1) == str
+        end
+
+        function META:CaptureCompilerOption(start)
+            self:Advance(#str)
+            local i = self.i
+
+            for _ = self.i, self.code_length do
+                if self:ReadChar() == "\n" or self.i-1 == self.code_length then
+                    local code = self:GetCharsRange(i, self.i-1)
+                    if code:sub(1, 2) == "T:" then
+                        local code = "local self = ...;" .. code:sub(3)
+                        assert(loadstring(code))(self)
+                    end
+                    break
+                end
+            end
+
+            return "compiler_option"
+        end
+    end
+
+    do
+        local str = "`"
+
+        function META:IsLiteralString()
+            return self:GetCurrentChar() == str
+        end
+    
+        function META:CaptureLiteralString(start)
+            self:Advance(1)
+    
+            for _ = self.i, self.code_length do
+                local char = self:ReadCharByte()
+    
+                if char == str then
+                    return "literal_string"
+                end
+            end
+    
+            self:Error("unterminated " .. str, start, self.i - 1)
+    
+            return false
+        end
+    end
+
+    do
+        local escape_character = "\\"
+        local quotes = {
+            Double = [["]],
+            Single = [[']],
+        }
+
+        for name, quote in pairs(quotes) do
+            META["Is" .. name .. "String"] = function(self)
+                return self:GetCurrentChar() == quote
+            end
+
+            local key = "string_escape_" .. name
+            local function escape(self, c)
+                if self[key] then
+
+                    if c == "z" and self:GetCurrentChar() ~= quote then
+                        self:CaptureSpace(self)
+                    end
+
+                    self[key] = false
+                    return "string"
+                end
+
+                if c == escape_character then
+                    self[key] = true
+                end
+
+                return false
+            end
+
+            META["Capture" .. name .. "String"] = function(self, start)
+                self:Advance(1)
+
+                for _ = self.i, self.code_length do
+                    local char = self:ReadCharByte()
+
+                    if not escape(self, char) then
+
+                        if char == "\n" then
+                            self:Advance(-1)
+                            self:Error("unterminated " .. name:lower() .. " quote string", start, self.i - 1)
+                            return false
+                        end
+
+                        if char == quote then
+                            return "string"
+                        end
+                    end
+                end
+
+                self:Error("unterminated " .. name:lower() .. " quote string", start, self.i - 1)
+
+                return false
+            end
+        end
+    end
+
+    do
+        function META:IsLetter()
+            return self:GetCharType(self:GetCurrentChar()) == "letter"
+        end
+
+        function META:CaptureLetter(start)
+            self:Advance(1)
+            for _ = self.i, self.code_length do
+                local t = self:GetCharType(self:GetCurrentChar())
+                if t == "space" or not (t == "letter" or (t == "number" and self.i ~= start)) then
+                    break
+                end
+                self:Advance(1)
+            end
+        
+            return "letter"
+        end
+    end
+
+    do
+        function META:IsSymbol()
+            return self:GetCharType(self:GetCurrentChar()) == "symbol"
+        end
+    
+        function META:CaptureSymbol()
+            for len = oh.syntax.LongestSymbolLength - 1, 0, -1 do
+                if oh.syntax.SymbolLookup[self:GetCharsOffset(len)] then
+                    self:Advance(len + 1)
+                    break
+                end
+            end
+
+            return "symbol"
+        end
+    end
+
+    do
+        function META:IsShebang()
+            return self.i == 1 and self:GetCurrentChar() == "#" and self:GetCharOffset(1) == "!"
+        end
+
+        function META:CaptureShebang()
+            for _ = self.i, self.code_length do
+                if self:ReadChar() == "\n" then
+                    return "shebang"
+                end
+            end
+        end
+    end
+
+    function META:CaptureToken()
+        if self:IsShebang() then
+            self:CaptureShebang()
+            return "shebang", 1, self.i - 1, {}
+        end
+
+        for _ = self.i, self.code_length do
+            if self:IsMultilineComment() then
+                self:CaptureMultilineComment(self.i)
+            elseif self:IsGLuaMultilineComment() then
+                self:CaptureGLuaMultilineComment(self.i) -- NON LUA
+            elseif self:IsLineComment() then
+                self:CaptureLineComment(self.i)
+            elseif self:IsGLuaLineComment() then
+                self:CaptureGLuaLineComment(self.i) -- NON LUA
+            elseif self:IsSpace() then
+                self:CaptureSpace(self.i)
+            else
+                break
+            end
+        end
+
+        local start = self.i
+        local type
+        if self:IsEndOfFile() then
+            type = self:CaptureEndOfFile(start)
+        elseif self:IsMultilineString() then
+            type = self:CaptureMultilineString(start)
+        elseif self:IsNumber() then
+            type = self:CaptureNumber(start)
+        elseif self:IsCompilerOption() then
+            type = self:CaptureCompilerOption(start) -- NON LUA
+        elseif self:IsLiteralString() then
+            type = self:CaptureLiteralString(start) -- NON LUA
+        elseif self:IsSingleString() then
+            type = self:CaptureSingleString(start)
+        elseif self:IsDoubleString() then
+            type = self:CaptureDoubleString(start)
+        elseif self:IsLetter() then
+            type = self:CaptureLetter()
+        elseif self:IsSymbol() then
+            type = self:CaptureSymbol()
+        end
+
+        if type then
+            local whitespace = self.whitespace_buffer
+            self.whitespace_buffer = {}
+            self.whitespace_buffer_i = 1
+            return type, start, self.i - 1, whitespace
+        end
+    end
+
+    function META:ReadToken()
         local type, start, stop, whitespace = self:CaptureToken()
 
         if not type then
@@ -101,7 +725,7 @@ do
         return type, start, stop, whitespace
     end
 
-    function TOKENIZER:GetTokens()
+    function META:GetTokens()
         self.i = 1
 
         local tokens = {}
@@ -129,7 +753,7 @@ do
         return token.tk:GetCharsRange(token.start, token.stop)
     end
 
-    function TOKENIZER:ResetState()
+    function META:ResetState()
         self.code_length = self:GetLength()
         self.whitespace_buffer = {}
         self.whitespace_buffer_i = 1
@@ -139,736 +763,19 @@ do
     end
 end
 
-do
-    BUILDER = {}
-    BUILDER.__index = BUILDER
+local Tokenizer = function(code, on_error, capture_whitespace)
+    local tk = setmetatable({}, META)
 
-    do
-        local function tolist(tbl)
-            local list = {}
-            for key, val in pairs(tbl) do
-                table.insert(list, {key = key, val = val})
-            end
-            table.sort(list, function(a, b) return a.val.Priority > b.val.Priority end)
-            return list
-        end
-
-        function BUILDER:BuildCaptureLoop()
-            local sorted_token_classes = tolist(self.TokenClasses)
-            local sorted_whitespace_classes = tolist(self.WhitespaceClasses)
-
-            local code = "return function(self)\n"
-
-            code = code .. "\tfor _ = self.i, self.code_length do\n"
-
-
-            for i, class in ipairs(sorted_whitespace_classes) do
-                if i == 1 then
-                    code = code .. "\t\tif "
-                else
-                    code = code .. "\t\telseif "
-                end
-
-                code = code .. "self.WhitespaceClasses." .. class.val.Type .. ".Is(self) then\n"
-                code = code .. "\t\t\tlocal start = self.i\n"
-                code = code .. "\t\t\tself.WhitespaceClasses." .. class.val.Type .. ".Capture(self)\n"
-
-
-                code = code .. "\t\t\tif self.capture_whitespace then\n"
-                code = code .. "\t\t\t\tself:BufferWhitespace(\"" .. class.val.ParserType .. "\", start, self.i - 1)\n"
-                code = code .. "\t\t\tend\n"
-            end
-
-            code = code .. "\t\telse\n"
-            code = code .. "\t\t\tbreak\n"
-            code = code .. "\t\tend\n"
-            code = code .. "\tend\n"
-
-            code = code .. "\n"
-
-            for i, class in ipairs(sorted_token_classes) do
-                if i == 1 then
-                    code = code .. "\tif "
-                else
-                    code = code .. "\telseif "
-                end
-
-                code = code .. "self.TokenClasses." .. class.val.Type .. ".Is(self) then\n"
-                code = code .. "\t\tlocal start = self.i\n"
-                code = code .. "\t\tself.TokenClasses." .. class.val.Type .. ".Capture(self)\n"
-                code = code .. "\t\tlocal whitespace = self.whitespace_buffer\n"
-                code = code .. "\t\tself.whitespace_buffer = {}\n"
-                code = code .. "\t\tself.whitespace_buffer_i = 1\n"
-                code = code .. "\t\treturn \"" .. class.val.ParserType .. "\", start, self.i - 1, whitespace\n"
-            end
-            code = code .. "\tend\n"
-            code = code .. "end\n"
-
-            return assert(loadstring(code))()
-        end
+    if capture_whitespace == nil then
+        tk.capture_whitespace = true
     end
 
+    tk.OnError = on_error or false
 
-    function BUILDER:RegisterTokenClass(tbl)
-        tbl.ParserType = tbl.ParserType or tbl.Type
-        tbl.Priority = tbl.Priority or 0
+    tk:OnInitialize(code, on_error)
 
-        self.TokenClasses = self.TokenClasses or {}
-        self.WhitespaceClasses = self.WhitespaceClasses or {}
-
-        if tbl.Whitespace then
-            self.WhitespaceClasses[tbl.Type] = tbl
-        else
-            self.TokenClasses[tbl.Type] = tbl
-        end
-    end
-
-    function BUILDER:BuildTokenizer(config)
-        config.OnInitialize = config.OnInitialize or function(self, code) self.code = code end
-
-        local CaptureToken = self:BuildCaptureLoop()
-
-        return function(code, on_error, capture_whitespace)
-            local tk = setmetatable({}, TOKENIZER)
-
-            if capture_whitespace == nil then
-                tk.capture_whitespace = true
-            end
-
-            tk.OnError = on_error or false
-
-            config.OnInitialize(tk, code, on_error)
-            tk.GetCharsRange = config.GetCharsRange or tk.GetCharsRange
-            tk.GetCharOffset = config.GetCharOffset or tk.GetCharsOffset
-            tk.GetLength = config.GetLength or tk.GetLength
-            tk.CaptureToken = CaptureToken
-
-            tk.syntax = config.Syntax
-
-            tk.TokenClasses = self.TokenClasses
-            tk.WhitespaceClasses = self.WhitespaceClasses
-            tk.ShebangTokenType = self.ShebangTokenType
-
-            return tk
-        end
-    end
+    return tk
 end
-
-function oh.CreateBaseTokenizer()
-    local self = setmetatable({}, BUILDER)
-
-    do -- eof
-        local Token = {}
-
-        Token.Type = "end_of_file"
-        Token.Priority = math.huge
-
-        function Token:Is()
-            return self.i > self.code_length
-        end
-
-        function Token:Capture()
-            -- nothing to capture, but remaining whitespace will be added
-        end
-
-        self:RegisterTokenClass(Token)
-    end
-
-    return self
-end
-
-local builder = oh.CreateBaseTokenizer()
-local string_lower = string.lower
-
-local function CaptureLiteralString(self, multiline_comment)
-    local start = self.i
-
-    local c = self:ReadChar()
-    if c ~= "[" then
-        if multiline_comment then return true end
-        return nil, "expected "..oh.QuoteToken("[").." got " .. oh.QuoteToken(c)
-    end
-
-    if self:GetCurrentChar() == "=" then
-        self:Advance(1)
-
-        for _ = self.i, self.code_length do
-            if self:GetCurrentChar() ~= "=" then
-                break
-            end
-            self:Advance(1)
-        end
-    end
-
-    c = self:ReadChar()
-    if c ~= "[" then
-        if multiline_comment then return true end
-        return nil, "expected " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. c)
-    end
-
-    local length = self.i - start
-
-    if length < 2 then return nil end
-
-    local closing = "]" .. string.rep("=", length - 2) .. "]"
-    local found = false
-    for _ = self.i, self.code_length do
-        if self:GetCharsOffset(length - 1) == closing then
-            self:Advance(length)
-            found = true
-            break
-        end
-        self:Advance(1)
-    end
-
-    if not found then
-        return nil, "expected "..oh.QuoteToken(closing).." reached end of code"
-    end
-
-    return true
-end
-
-do
-    local Token = {}
-
-    Token.Type = "multiline_comment"
-    Token.Whitespace = true
-    Token.Priority = 100
-
-    function Token:Is()
-        local str = self:GetCharsOffset(3)
-        return str == "--[=" or str == "--[["
-    end
-
-    function Token:Capture()
-        local start = self.i
-        self:Advance(2)
-        local ok, err = CaptureLiteralString(self, true)
-        if not ok then
-            self.i = start + 2
-            self:Error("unterminated multiline comment: " .. err, start, start + 1)
-            return false
-        end
-        return ok
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-
-do
-    local Token = {}
-
-    Token.Type = "compiler_option"
-    Token.Priority = 100
-
-    local start = "##"
-
-    function Token:Is()
-        return self:GetCharsOffset(#start - 1) == start
-    end
-
-    function Token:Capture()
-        self:Advance(#start)
-        local i = self.i
-
-        for _ = self.i, self.code_length do
-            if self:ReadChar() == "\n" or self.i-1 == self.code_length then
-                local code = self:GetCharsRange(i, self.i-1)
-                if code:sub(1, 2) == "T:" then
-                    local code = "local self = ...;" .. code:sub(3)
-                    assert(loadstring(code))(self)
-                end
-                return true
-            end
-        end
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-
-do
-    local Token = {}
-
-    Token.Type = "line_comment"
-    Token.Whitespace = true
-    Token.Priority = 99
-
-    local line_comment = "--"
-
-    function Token:Is()
-        return self:GetCharsOffset(#line_comment - 1) == line_comment
-    end
-
-    function Token:Capture()
-        self:Advance(#line_comment)
-
-        for _ = self.i, self.code_length do
-            if self:ReadChar() == "\n" or self.i-1 == self.code_length then
-                return true
-            end
-        end
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do
-    local Token = {}
-
-    Token.Type = "glua_line_comment"
-    Token.Whitespace = true
-    Token.Priority = 99
-
-    local line_comment = "//"
-
-    function Token:Is()
-        return self:GetCharsOffset(#line_comment - 1) == line_comment
-    end
-
-    function Token:Capture()
-        self:Advance(#line_comment)
-
-        for _ = self.i, self.code_length do
-            if self:ReadChar() == "\n" or self.i-1 == self.code_length then
-                return true
-            end
-        end
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do
-    local Token = {}
-
-    Token.Type = "glua_multiline_comment"
-    Token.Whitespace = true
-    Token.Priority = 99
-
-    function Token:Is()
-        return self:GetCharsOffset(1) == "/*"
-    end
-
-    function Token:Capture()
-        self:Advance(2)
-
-        for _ = self.i, self.code_length do
-            self:Advance(1)
-            if self:GetCharsOffset(1) == "*/" then
-                self:Advance(2)
-                return true
-            end
-        end
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do
-    local escape_character = "\\"
-    local quotes = {
-        double = [["]],
-        single = [[']],
-    }
-
-    for name, quote in pairs(quotes) do
-        local Token = {}
-
-        Token.Type = name .. "_quote_string"
-        Token.ParserType = "string"
-
-        function Token:Is()
-            return self:GetCurrentChar() == quote
-        end
-
-        function Token:StringEscape(c)
-            if self.string_escape then
-
-                if c == "z" and self:GetCurrentChar() ~= quote then
-                    self.WhitespaceClasses.space.Capture(self)
-                end
-
-                self.string_escape = false
-                return true
-            end
-
-            if c == escape_character then
-                self.string_escape = true
-            end
-
-            return false
-        end
-
-        function Token:Capture()
-            local start = self.i
-            self:Advance(1)
-
-            for _ = self.i, self.code_length do
-                local char = self:ReadCharByte()
-
-                if not Token.StringEscape(self, char) then
-
-                    if char == "\n" then
-                        self:Advance(-1)
-                        self:Error("unterminated " .. name .. " quote string", start, self.i - 1)
-                        return false
-                    end
-
-                    if char == quote then
-                        return true
-                    end
-                end
-            end
-
-            self:Error("unterminated " .. name .. " quote string", start, self.i - 1)
-
-            return false
-        end
-
-        builder:RegisterTokenClass(Token)
-    end
-end
-
-do
-    local Token = {}
-
-    Token.Type = "literal_string"
-    Token.ParserType = "literal_string"
-
-    function Token:Is()
-        return self:GetCurrentChar() == "`"
-    end
-
-    function Token:Capture()
-        local start = self.i
-        self:Advance(1)
-
-        for _ = self.i, self.code_length do
-            local char = self:ReadCharByte()
-
-            if char == "`" then
-                return true
-            end
-        end
-
-        self:Error("unterminated " .. name .. " literal string", start, self.i - 1)
-
-        return false
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do
-    local Token = {}
-
-    Token.Type = "multiline_string"
-    Token.ParserType = "string"
-    Token.Priority = 1000
-
-    function Token:Is()
-        return self:GetCharsOffset(1) == "[=" or self:GetCharsOffset(1) == "[["
-    end
-
-    function Token:Capture()
-        local start = self.i
-        local ok, err = CaptureLiteralString(self, true)
-        if not ok then
-            self:Error("unterminated multiline string: " .. err, start, start + 1)
-            return false
-        end
-        return ok
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do
-    local Token = {}
-
-    Token.Type = "number"
-    Token.Priority = 1000
-
-    local allowed = {
-        ["a"] = true,
-        ["b"] = true,
-        ["c"] = true,
-        ["d"] = true,
-        ["e"] = true,
-        ["f"] = true,
-        ["p"] = true,
-        ["_"] = true,
-        ["."] = true,
-    }
-
-    local pow_letter = "p"
-    local plus_sign = "+"
-    local minus_sign = "-"
-
-    local legal_number_annotations = {"ull", "ll", "ul", "i"}
-    table.sort(legal_number_annotations, function(a, b) return #a > #b end)
-
-    do
-        local code = "local Token, oh = ... function Token:CaptureAnnotations()\n"
-
-        for i, annotation in ipairs(legal_number_annotations) do
-            if i == 1 then
-                code = code .. "\tif "
-            else
-                code = code .. "\telseif "
-            end
-
-            local len = #annotation
-            code = code .. "string.lower(self:GetCharsOffset(" .. (len - 1) .. ")) == '" .. annotation .. "' then\n"
-            code = code .. "\t\tlocal t = self:GetCharType(self:GetCharOffset("..len.."))\n"
-            code = code .. "\t\tif t == \"space\" or t == \"symbol\" then\n"
-            code = code .. "\t\t\tself:Advance("..len..")\n"
-            code = code .. "\t\t\treturn true\n"
-            code = code .. "\t\tend\n"
-
-        end
-
-        code = code .. "\tend\n"
-        code = code .. "\treturn false\nend\n"
-
-        assert(loadstring(code))(Token, oh)
-    end
-
-    function Token:CaptureAnnotations()
-        for _, annotation in ipairs(legal_number_annotations) do
-            local len = #annotation
-            if string_lower(self:GetCharsOffset(len - 1)) == annotation then
-                local t = self:GetCharType(self:GetCharOffset(len))
-
-                if t == "space" or t == "symbol" then
-                    self:Advance(len)
-                    return true
-                end
-            end
-        end
-    end
-
-    function Token:Is()
-        if self:GetCurrentChar() == "." and self:GetCharType(self:GetCharOffset(1)) == "number" then
-            return true
-        end
-
-        return self:GetCharType(self:GetCurrentChar()) == "number"
-    end
-
-    function Token:CaptureHexNumber()
-        self:Advance(2)
-
-        local pow = false
-
-        for _ = self.i, self.code_length do
-            if Token.CaptureAnnotations(self) then return true end
-
-            local char = string_lower(self:GetCurrentChar())
-            local t = self:GetCharType(self:GetCurrentChar())
-
-            if char == pow_letter then
-                if not pow then
-                    pow = true
-                else
-                    self:Error("malformed number: pow character can only be used once")
-                    return false
-                end
-            end
-
-            if not (t == "number" or allowed[char] or ((char == plus_sign or char == minus_sign) and string_lower(self:GetCharOffset(-1)) == pow_letter) ) then
-                if not t or t == "space" or t == "symbol" then
-                    return true
-                elseif char == "symbol" or t == "letter" then
-                    self:Error("malformed number: invalid character "..oh.QuoteToken(char)..". only "..oh.QuoteTokens("abcdef0123456789_").." allowed after hex notation")
-                    return false
-                end
-            end
-
-            self:Advance(1)
-        end
-
-        return false
-    end
-
-    function Token:CaptureBinaryNumber()
-        self:Advance(2)
-
-        for _ = self.i, self.code_length do
-            local char = string_lower(self:GetCurrentChar())
-            local t = self:GetCharType(self:GetCurrentChar())
-
-            if char ~= "1" and char ~= "0" and char ~= "_" then
-                if not t or t == "space" or t == "symbol" then
-                    return true
-                elseif char == "symbol" or t == "letter" or (char ~= "0" and char ~= "1") then
-                    self:Error("malformed number: only "..oh.QuoteTokens("01_").." allowed after binary notation")
-                    return false
-                end
-            end
-
-            self:Advance(1)
-        end
-
-        return true
-    end
-
-    function Token:CaptureNumber()
-        local found_dot = false
-        local exponent = false
-
-        local start = self.i
-
-        for _ = self.i, self.code_length do
-            local t = self:GetCharType(self:GetCurrentChar())
-            local char = self:GetCurrentChar()
-
-            if exponent then
-                if char ~= "-" and char ~= "+" and t ~= "number" then
-                    self:Error("malformed number: invalid character " .. oh.QuoteToken(char) .. ". only "..oh.QuoteTokens("+-0123456789").." allowed after exponent", start, self.i)
-                    return false
-                elseif char ~= "-" and char ~= "+" then
-                    exponent = false
-                end
-            elseif t ~= "number" then
-                if t == "letter" then
-                    start = self.i
-                    if string_lower(char) == "e" then
-                        exponent = true
-                    elseif Token.CaptureAnnotations(self) then
-                        return true
-                    else
-                       -- self:Error("malformed number: invalid character " .. oh.QuoteToken(char) .. ". only " .. oh.QuoteTokens(legal_number_annotations) .. " allowed after a number", start, self.i)
-                        return false
-                    end
-                elseif not found_dot and char == "." then
-                    found_dot = true
-                elseif t == "space" or t == "symbol" then
-                    return true
-                end
-            end
-
-            self:Advance(1)
-        end
-    end
-
-    function Token:Capture()
-        local s = string_lower(self:GetCharOffset(1))
-        if s == "x" then
-            return Token.CaptureHexNumber(self)
-        elseif s == "b" then
-            return Token.CaptureBinaryNumber(self)
-        end
-
-        return Token.CaptureNumber(self)
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do
-    local Token = {}
-
-    Token.Type = "symbol"
-    Token.Priority = -1000
-
-    function Token:Is()
-        return self:GetCharType(self:GetCurrentChar()) == "symbol"
-    end
-
-    function Token:Capture()
-        for len = oh.syntax.LongestSymbolLength - 1, 0, -1 do
-            if oh.syntax.SymbolLookup[self:GetCharsOffset(len)] then
-                self:Advance(len + 1)
-                return true
-            end
-        end
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do
-    local Token = {}
-
-    Token.Type = "letter"
-
-    function Token:Is()
-        return self:GetCharType(self:GetCurrentChar()) == "letter"
-    end
-
-    function Token:Capture()
-        local start = self.i
-        self:Advance(1)
-        for _ = self.i, self.code_length do
-            local t = self:GetCharType(self:GetCurrentChar())
-            if t == "space" or not (t == "letter" or (t == "number" and self.i ~= start)) then
-                return true
-            end
-            self:Advance(1)
-        end
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do
-    local Token = {}
-
-    Token.Type = "space"
-    Token.Whitespace = true
-
-    function Token:Is()
-        return self:GetCharType(self:GetCurrentChar()) == "space"
-    end
-
-    function Token:Capture()
-        for _ = self.i, self.code_length do
-            self:Advance(1)
-            if self:GetCharType(self:GetCurrentChar()) ~= "space" then
-                return true
-            end
-        end
-
-        return true
-    end
-
-    builder:RegisterTokenClass(Token)
-end
-
-do -- shebang
-    local Token = {}
-
-    Token.Type = "shebang"
-
-    function Token:Is()
-        return self.i == 1 and self:GetCurrentChar() == "#" and self:GetCharOffset(1) == "!"
-    end
-
-    function Token:Capture()
-        for _ = self.i, self.code_length do
-            if self:ReadChar() == "\n" then
-                return true
-            end
-        end
-    end
-
-    builder.ShebangTokenType = Token
-end
-
-local config = {}
-
-config.Syntax = oh.syntax
-
-config.CharacterMap = oh.syntax.CharacterMap
-
-for key, val in pairs(oh.syntax.TokenizerSetup) do
-    config[key] = val
-end
-
-local Tokenizer = builder:BuildTokenizer(config)
 
 function oh.Tokenizer(code)
     local self = Tokenizer(code)
