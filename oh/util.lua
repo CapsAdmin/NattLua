@@ -29,7 +29,7 @@ do
     end
 end
 
-function util.fetch_code(path, url)
+function util.FetchCode(path, url)
     local f = io.open(path, "rb")
     if not f then
         os.execute("wget -O "..path.." " .. url)
@@ -46,6 +46,33 @@ function util.fetch_code(path, url)
     local code = f:read("*all")
     f:close()
     return code
+end
+
+do
+	local indent = 0
+	function util.TablePrint(tbl, blacklist)
+		for k,v in pairs(tbl) do
+			if (not blacklist or blacklist[k] ~= type(v)) and type(v) ~= "table" then
+				io.write(("\t"):rep(indent))
+				local v = v
+				if type(v) == "string" then
+					v = "\"" .. v .. "\""
+				end
+
+				io.write(tostring(k), " = ", tostring(v), "\n")
+			end
+		end
+
+		for k,v in pairs(tbl) do
+			if (not blacklist or blacklist[k] ~= type(v)) and type(v) == "table" then
+				io.write(("\t"):rep(indent))
+				io.write(tostring(k), ":\n")
+				indent = indent + 1
+				util.TablePrint(v, blacklist)
+				indent = indent - 1
+			end
+		end
+	end
 end
 
 function util.LogTraceAbort()

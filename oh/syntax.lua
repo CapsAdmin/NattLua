@@ -1,3 +1,5 @@
+local util = require("oh.util")
+
 local syntax = {}
 
 syntax.UTF8 = true
@@ -139,17 +141,28 @@ do
 
     syntax.LongestSymbolLength = 0
     syntax.SymbolLookup = {}
+    syntax.SymbolLookup2 = {}
 
-    for char, type in pairs(syntax.CharacterMap) do
+    for str, type in pairs(syntax.CharacterMap) do
         if type == "symbol" then
-            syntax.SymbolLookup[char] = true
+            local chars = util.UTF8ToTable(str)
+
+            local node = syntax.SymbolLookup2
+            for i, char in ipairs(chars) do
+                node[char] = node[char] or {}
+                node = node[char]
+            end
+            node.DONE = {str = str, length = #chars}
+
+
+            syntax.SymbolLookup[str] = true
             do -- this triggers symbol lookup. For example it adds "~" from "~=" so that "~" is a symbol
-                local first_char = string.sub(char, 1, 1)
+                local first_char = chars[1]
                 if not syntax.CharacterMap[first_char] then
                     syntax.CharacterMap[first_char] = "symbol"
                 end
             end
-            syntax.LongestSymbolLength = math.max(syntax.LongestSymbolLength, #char)
+            syntax.LongestSymbolLength = math.max(syntax.LongestSymbolLength, #chars)
         end
     end
 end

@@ -28,9 +28,9 @@ do
     end
 
     local table_concat = table.concat
-    function META:GetCharsRange(start, stop) 
-        if stop < self.code_length then 
-            return table_concat(self.code, nil, start, stop) 
+    function META:GetCharsRange(start, stop)
+        if stop < self.code_length then
+            return table_concat(self.code, nil, start, stop)
         end
 
         local str = {}
@@ -45,7 +45,7 @@ do
     end
 
     function META:GetCurrentChar()
-        return self:GetCharOffset(0)
+        return self.code[self.i] or ""
     end
 
     function META:GetCharsOffset(length)
@@ -104,18 +104,17 @@ do
 
     local setmetatable = setmetatable
 
-    function META:NewToken(type, start, stop, whitespace)
+    function META:NewToken(type, start, stop)
         --return setmetatable({tk = self, type = type, start = start, stop = stop, whitespace = whitespace}, TOKEN)
         return {
             type = type,
             start = start,
             stop = stop,
             value = self:GetCharsRange(start, stop),
-            whitespace = whitespace,
         }
     end
 
-    local function CaptureLiteralString(self, multiline_comment)
+    local function ReadLiteralString(self, multiline_comment)
         local start = self.i
 
         local c = self:ReadChar()
@@ -169,17 +168,18 @@ do
                 return self:StringMatches("--[=") or self:StringMatches("--[[")
             end
 
-            function META:CaptureMultilineComment(start)
+            function META:ReadMultilineComment()
+                local start = self.i
                 self:Advance(2)
 
-                local ok, err = CaptureLiteralString(self, true)
+                local ok, err = ReadLiteralString(self, true)
 
                 if not ok then
                     self.i = start + 2
                     self:Error("unterminated multiline comment: " .. err, start, start + 1)
                 end
 
-                return "multiline_comment", start, self.i - 1
+                return "multiline_comment"
             end
         end
 
@@ -188,7 +188,7 @@ do
                 return self:StringMatches("/*")
             end
 
-            function META:CaptureGLuaMultilineComment(start)
+            function META:ReadGLuaMultilineComment()
                 self:Advance(2)
 
                 for _ = self.i, self.code_length do
@@ -199,7 +199,7 @@ do
                     end
                 end
 
-                return "glua_multiline_comment", start, self.i - 1
+                return "glua_multiline_comment"
             end
         end
 
@@ -210,7 +210,7 @@ do
                     return self:StringMatches(str)
                 end
 
-                META["Capture" .. func_name] = function(self, start)
+                META["Read" .. func_name] = function(self)
                     self:Advance(#str)
 
                     for _ = self.i, self.code_length do
@@ -219,7 +219,7 @@ do
                         end
                     end
 
-                    return name, start, self.i - 1
+                    return name
                 end
             end
 
@@ -232,7 +232,7 @@ do
                 return self:GetCharType(self:GetCurrentChar()) == "space"
             end
 
-            function META:CaptureSpace(start)
+            function META:ReadSpace()
                 for _ = self.i, self.code_length do
                     self:Advance(1)
                     if self:GetCharType(self:GetCurrentChar()) ~= "space" then
@@ -240,7 +240,7 @@ do
                     end
                 end
 
-                return "space", start, self.i - 1
+                return "space"
             end
         end
     end
@@ -251,7 +251,7 @@ do
                 return self.i > self.code_length
             end
 
-            function META:CaptureEndOfFile(start)
+            function META:ReadEndOfFile()
                 -- nothing to capture, but remaining whitespace will be added
                 return "end_of_file"
             end
@@ -262,8 +262,9 @@ do
                 return self:StringMatches("[=") or self:StringMatches("[[")
             end
 
-            function META:CaptureMultilineString(start)
-                local ok, err = CaptureLiteralString(self, true)
+            function META:ReadMultilineString()
+                local start = self.i
+                local ok, err = ReadLiteralString(self, true)
 
                 if not ok then
                     self:Error("unterminated multiline string: " .. err, start, start + 1)
@@ -295,7 +296,7 @@ do
             local legal_number_annotations = {"ull", "ll", "ul", "i"}
             table.sort(legal_number_annotations, function(a, b) return #a > #b end)
 
-            function META:CaptureNumberAnnotations()
+            function META:ReadNumberAnnotations()
                 for _, annotation in ipairs(legal_number_annotations) do
                     local len = #annotation
                     if self:StringMatches(annotation, true) then
@@ -317,13 +318,13 @@ do
                 return self:GetCharType(self:GetCurrentChar()) == "number"
             end
 
-            function META:CaptureHexNumber()
+            function META:ReadHexNumber()
                 self:Advance(2)
 
                 local pow = false
 
                 for _ = self.i, self.code_length do
-                    if self:CaptureNumberAnnotations() then return "number" end
+                    if self:ReadNumberAnnotations() then return "number" end
 
                     local char = string_lower(self:GetCurrentChar())
                     local t = self:GetCharType(self:GetCurrentChar())
@@ -352,7 +353,7 @@ do
                 return "number"
             end
 
-            function META:CaptureBinaryNumber()
+            function META:ReadBinaryNumber()
                 self:Advance(2)
 
                 for _ = self.i, self.code_length do
@@ -374,7 +375,7 @@ do
                 return "number"
             end
 
-            function META:CaptureDecimalNumber()
+            function META:ReadDecimalNumber()
                 local found_dot = false
                 local exponent = false
 
@@ -396,7 +397,7 @@ do
                             start = self.i
                             if string_lower(char) == "e" then
                                 exponent = true
-                            elseif self:CaptureNumberAnnotations() then
+                            elseif self:ReadNumberAnnotations() then
                                 return "number"
                             else
                             -- self:Error("malformed number: invalid character " .. oh.QuoteToken(char) .. ". only " .. oh.QuoteTokens(legal_number_annotations) .. " allowed after a number", start, self.i)
@@ -415,15 +416,15 @@ do
                 return "number"
             end
 
-            function META:CaptureNumber(start)
+            function META:ReadNumber()
                 local s = string_lower(self:GetCharOffset(1))
                 if s == "x" then
-                    return self:CaptureHexNumber()
+                    return self:ReadHexNumber()
                 elseif s == "b" then
-                    return self:CaptureBinaryNumber()
+                    return self:ReadBinaryNumber()
                 end
 
-                return self:CaptureDecimalNumber()
+                return self:ReadDecimalNumber()
             end
         end
     end
@@ -435,7 +436,7 @@ do
             return self:StringMatches(str)
         end
 
-        function META:CaptureCompilerOption(start)
+        function META:ReadCompilerOption()
             self:Advance(#str)
             local i = self.i
 
@@ -461,7 +462,8 @@ do
             return self:GetCurrentChar() == str
         end
 
-        function META:CaptureLiteralString(start)
+        function META:ReadLiteralString()
+            local start = self.i
             self:Advance(1)
 
             for _ = self.i, self.code_length do
@@ -495,7 +497,7 @@ do
                 if self[key] then
 
                     if c == "z" and self:GetCurrentChar() ~= quote then
-                        self:CaptureSpace(self)
+                        self:ReadSpace(self)
                     end
 
                     self[key] = false
@@ -509,7 +511,8 @@ do
                 return false
             end
 
-            META["Capture" .. name .. "String"] = function(self, start)
+            META["Read" .. name .. "String"] = function(self)
+                local start = self.i
                 self:Advance(1)
 
                 for _ = self.i, self.code_length do
@@ -541,7 +544,8 @@ do
             return self:GetCharType(self:GetCurrentChar()) == "letter"
         end
 
-        function META:CaptureLetter(start)
+        function META:ReadLetter()
+            local start = self.i
             self:Advance(1)
             for _ = self.i, self.code_length do
                 local t = self:GetCharType(self:GetCurrentChar())
@@ -560,15 +564,20 @@ do
             return self:GetCharType(self:GetCurrentChar()) == "symbol"
         end
 
-        function META:CaptureSymbol()
-            for len = oh.syntax.LongestSymbolLength - 1, 0, -1 do
-                if oh.syntax.SymbolLookup[self:GetCharsOffset(len)] then
-                    self:Advance(len + 1)
-                    break
-                end
+        function META:ReadSymbol()
+
+            local node = oh.syntax.SymbolLookup2
+            for i = 0, oh.syntax.LongestSymbolLength - 1 do
+                local found = node[self:GetCharOffset(i)]
+                if not found then break end
+
+                node = found
             end
 
-            return "symbol"
+            if node.DONE then
+                self:Advance(node.DONE.length)
+                return "symbol"
+            end
         end
     end
 
@@ -577,7 +586,7 @@ do
             return self.i == 1 and self:GetCurrentChar() == "#" and self:GetCharOffset(1) == "!"
         end
 
-        function META:CaptureShebang()
+        function META:ReadShebang()
             for _ = self.i, self.code_length do
                 if self:ReadChar() == "\n" then
                     return "shebang"
@@ -586,66 +595,61 @@ do
         end
     end
 
+    function META:ReadWhiteSpace()
+        if
+        self:IsMultilineComment() then      return self:ReadMultilineComment() elseif
+        self:IsGLuaMultilineComment() then  return self:ReadGLuaMultilineComment() elseif -- NON LUA
+        self:IsLineComment() then           return self:ReadLineComment() elseif
+        self:IsGLuaLineComment() then       return self:ReadGLuaLineComment() elseif -- NON LUA
+        self:IsSpace() then                 return self:ReadSpace() end
+    end
+
+    function META:ReadNonWhiteSpace()
+        if
+        self:IsEndOfFile() then         return self:ReadEndOfFile() elseif
+        self:IsMultilineString() then   return self:ReadMultilineString() elseif
+        self:IsNumber() then            return self:ReadNumber() elseif
+        self:IsCompilerOption() then    return self:ReadCompilerOption() elseif  -- NON LUA
+        self:IsLiteralString() then     return self:ReadLiteralString() elseif -- NON LUA
+        self:IsSingleString() then      return self:ReadSingleString() elseif
+        self:IsDoubleString() then      return self:ReadDoubleString() elseif
+        self:IsLetter() then            return self:ReadLetter() elseif
+        self:IsSymbol() then            return self:ReadSymbol() end
+
+        self:Advance(1)
+        return "unknown"
+    end
+
     function META:ReadToken()
-        
-        if not self.captured_shebang and self:IsShebang() then
-            self:CaptureShebang()
-            self.captured_shebang = true
-            return self:NewToken("shebang", 1, self.i - 1, {})
+
+        if self:IsShebang() then
+            self:ReadShebang()
+            local tk = self:NewToken("shebang", 1, self.i - 1)
+            tk.whitespace = {}
+            return tk
         end
 
         local wbuffer = {}
-        local i = 1
 
-        for _ = self.i, self.code_length do
-            local type, start, stop
-            if self:IsMultilineComment() then
-                type, start, stop = self:CaptureMultilineComment(self.i)
-            elseif self:IsGLuaMultilineComment() then
-                type, start, stop = self:CaptureGLuaMultilineComment(self.i) -- NON LUA
-            elseif self:IsLineComment() then
-                type, start, stop = self:CaptureLineComment(self.i)
-            elseif self:IsGLuaLineComment() then
-                type, start, stop = self:CaptureGLuaLineComment(self.i) -- NON LUA
-            elseif self:IsSpace() then
-                type, start, stop = self:CaptureSpace(self.i)
-            else
+        for i = 1, self.code_length do
+            local start = self.i
+            local type = self:ReadWhiteSpace()
+            if not type then
                 break
             end
-            if type then
-                wbuffer[i] = self:NewToken(type, start, stop, false)
-                i = i + 1
-            end
+
+            wbuffer[i] = self:NewToken(type, start, self.i - 1)
         end
 
         local start = self.i
-        local type
-        if self:IsEndOfFile() then
-            type = self:CaptureEndOfFile(start)
-        elseif self:IsMultilineString() then
-            type = self:CaptureMultilineString(start)
-        elseif self:IsNumber() then
-            type = self:CaptureNumber(start)
-        elseif self:IsCompilerOption() then
-            type = self:CaptureCompilerOption(start) -- NON LUA
-        elseif self:IsLiteralString() then
-            type = self:CaptureLiteralString(start) -- NON LUA
-        elseif self:IsSingleString() then
-            type = self:CaptureSingleString(start)
-        elseif self:IsDoubleString() then
-            type = self:CaptureDoubleString(start)
-        elseif self:IsLetter() then
-            type = self:CaptureLetter()
-        elseif self:IsSymbol() then
-            type = self:CaptureSymbol()
-        else
-            type = "unknown"
-            self:Advance(1)
-        end
-        
-        return self:NewToken(type, start, self.i - 1, wbuffer)
+        local type = self:ReadNonWhiteSpace()
+        local stop = self.i - 1
+
+        local tk = self:NewToken(type, start, stop)
+        tk.whitespace = wbuffer
+        return tk
     end
-    
+
     function META:GetTokens()
         self.i = 1
 
