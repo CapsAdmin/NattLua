@@ -32,7 +32,7 @@ function oh.CodeToTokens(code, name)
 	return tokens
 end
 
-function oh.TokensToAST(tokens, name)
+function oh.TokensToAST(tokens, name, code)
 	name = name or "unknown"
 
 	local parser = oh.Parser()
@@ -44,14 +44,16 @@ function oh.TokensToAST(tokens, name)
             str = str .. oh.FormatError(code, name, err.msg, err.start, err.stop) .. "\n"
         end
         return nil, str
-    end
+	end
+	
+	return ast
 end
 
 function oh.CodeToAST(code, name)
 	name = name or "unknown"
 
 	local tokens = oh.CodeToTokens(code, name)
-	local ast = oh.TokensToAST(tokens, name)
+	local ast = oh.TokensToAST(tokens, name, code)
 
     return ast, tokens
 end
@@ -124,10 +126,12 @@ end
 local util = require("oh.util")
 
 function oh.FormatError(code, path, msg, start, stop)
-	local chars = util.UTF8ToTable(code)
+	local chars = type(code) == "table" and code or util.UTF8ToTable(code)
+
+
 	local total_lines = count(chars, "\n")
 	local line_number_length = #tostring(total_lines)
-
+	
 	local function tab2space(str)
 		return str:gsub("\t", "    ")
 	end

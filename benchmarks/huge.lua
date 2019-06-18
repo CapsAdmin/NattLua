@@ -30,13 +30,20 @@ jit.opt.start(
 )
 
 require("oh.util").LogTraceAbort()
+
+local start = os.clock()
+io.write("utf8totable ..")io.flush()
+local tbl = require("oh.util").UTF8ToTable(huge)
+io.write("- OK ", (os.clock() - start) .. " seconds\n")
+
 io.write("tokenizing ..")io.flush()
 local start = os.clock()
-local tokens = oh.CodeToTokens(huge)
+local tokens, err = oh.CodeToTokens(tbl)
+print(tokens, err)
 io.write("- OK ", (os.clock() - start) .. " seconds\n")
-do return end
 
 io.write("parsing ..")io.flush()
 local start = os.clock()
-local ast = oh.TokensToAST(tokens)
+local ast, err = oh.TokensToAST(tokens, nil, tbl)
+print(ast, err)
 io.write("- OK ", (os.clock() - start) .. " seconds\n")
