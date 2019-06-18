@@ -33,7 +33,7 @@ require("oh.util").LogTraceAbort()
 
 local start = os.clock()
 io.write("utf8totable ..")io.flush()
-local tbl = require("oh.util").UTF8ToTable(huge)
+local tbl = require("oh.util").UTF8ToTable(code)
 io.write("- OK ", (os.clock() - start) .. " seconds\n")
 
 io.write("tokenizing ..")io.flush()
@@ -47,3 +47,10 @@ local start = os.clock()
 local ast, err = oh.TokensToAST(tokens, nil, tbl)
 print(ast, err)
 io.write("- OK ", (os.clock() - start) .. " seconds\n")
+
+io.write("generating lua code ..")io.flush()
+local start = os.clock()
+local code = oh.ASTToCode(ast)
+io.write("- OK ", (os.clock() - start) .. " seconds\n")
+
+print(loadstring(code))
