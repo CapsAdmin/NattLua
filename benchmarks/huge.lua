@@ -62,7 +62,30 @@ start("tokenizing")
 local tokens, err = oh.CodeToTokens(tbl)
 stop()
 if tokens then
-    io.write("parsed ", #tokens, " tokens\n")
+    io.write("parsed a total of ", #tokens, " tokens\n")
+
+    local function score(tbl, what, cb)
+        local score = {}
+        for i,v in ipairs(tbl) do
+            local key = cb(v)
+            score[key] = (score[key] or 0) + 1
+        end
+        local temp = {}
+        for k,v in pairs(score) do
+            table.insert(temp, {name = k, score = v})
+        end
+        table.sort(temp, function(a,b) return a.score > b.score end)
+        io.write("top 10 ",what,":\n")
+        for i = 1, 10 do
+            local data = temp[i]
+            if not data then break end
+            if i < 10 then io.write(" ") end
+            io.write(i, ": `", data.name, "´ occured ", data.score, " times\n")
+        end
+    end
+
+    score(tokens, "types", function(v) return v.type end)
+    score(tokens, "values", function(v) return v.value end)
 else
     io.write(err)
 end
