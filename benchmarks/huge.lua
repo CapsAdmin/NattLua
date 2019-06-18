@@ -2,6 +2,7 @@ local oh = require("oh.oh")
 
 local huge = assert(io.open("benchmarks/10mb.lua", "rb")):read("*all")
 
+--[[
 jit.opt.start(
     "maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
     "maxrecord=20000", -- 4000: maximum number of recorded IR instructions
@@ -27,9 +28,9 @@ jit.opt.start(
     "+abc", -- Array Bounds Check Elimination
     "+sink", -- Allocation/Store Sinking
     "+fuse" -- Fusion of operands into instructions
-)
+)]]
 
-require("oh.util").LogTraceAbort()
+--require("oh.util").LogTraceAbort()
 
 local start = os.clock()
 io.write("utf8totable ..")io.flush()
