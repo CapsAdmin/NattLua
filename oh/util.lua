@@ -3,9 +3,9 @@ local util = {}
 do
     local map = {}
     for byte = 0, 255 do
-        local length = 
-            byte>=240 and 4 or 
-            byte>=223 and 3 or 
+        local length =
+            byte>=240 and 4 or
+            byte>=223 and 3 or
             byte>=192 and 2 or
             1
         map[byte] = length
@@ -15,10 +15,10 @@ do
         local tbl = {}
         local i = 1
         local length = 1
-        
+
         for tbl_i = 1, #str do
             local length = map[str:byte(i)]
-            
+
             if not length then break end
 
             tbl[tbl_i] = str:sub(i, i + length - 1)
@@ -27,6 +27,25 @@ do
 
         return tbl
     end
+end
+
+function util.fetch_code(path, url)
+    local f = io.open(path, "rb")
+    if not f then
+        os.execute("wget -O "..path.." " .. url)
+        f = io.open(path, "rb")
+        if not f then
+            os.execute("curl "..url.." --output " .. path)
+        end
+        if not io.open(path, "rb") then
+            error("unable to download file?")
+        end
+    end
+
+    f = assert(io.open(path, "rb"))
+    local code = f:read("*all")
+    f:close()
+    return code
 end
 
 function util.LogTraceAbort()
