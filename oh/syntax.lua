@@ -141,27 +141,18 @@ do
 
     syntax.LongestSymbolLength = 0
     syntax.SymbolLookup = {}
-    syntax.SymbolLookup2 = {}
 
     for str, type in pairs(syntax.CharacterMap) do
         if type == "symbol" then
             local chars = util.UTF8ToTable(str)
 
-            local node = syntax.SymbolLookup2
+            local node = syntax.SymbolLookup
             for i, char in ipairs(chars) do
                 node[char] = node[char] or {}
                 node = node[char]
             end
             node.DONE = {str = str, length = #chars}
 
-
-            syntax.SymbolLookup[str] = true
-            do -- this triggers symbol lookup. For example it adds "~" from "~=" so that "~" is a symbol
-                local first_char = chars[1]
-                if not syntax.CharacterMap[first_char] then
-                    syntax.CharacterMap[first_char] = "symbol"
-                end
-            end
             syntax.LongestSymbolLength = math.max(syntax.LongestSymbolLength, #chars)
         end
     end

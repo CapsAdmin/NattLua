@@ -566,7 +566,7 @@ do
 
         function META:ReadSymbol()
 
-            local node = oh.syntax.SymbolLookup2
+            local node = oh.syntax.SymbolLookup
             for i = 0, oh.syntax.LongestSymbolLength - 1 do
                 local found = node[self:GetCharOffset(i)]
                 if not found then break end
@@ -597,11 +597,12 @@ do
 
     function META:ReadWhiteSpace()
         if
+        self:IsSpace() then                 return self:ReadSpace() elseif
         self:IsMultilineComment() then      return self:ReadMultilineComment() elseif
-        self:IsGLuaMultilineComment() then  return self:ReadGLuaMultilineComment() elseif -- NON LUA
         self:IsLineComment() then           return self:ReadLineComment() elseif
+        self:IsGLuaMultilineComment() then  return self:ReadGLuaMultilineComment() elseif -- NON LUA
         self:IsGLuaLineComment() then       return self:ReadGLuaLineComment() elseif -- NON LUA
-        self:IsSpace() then                 return self:ReadSpace() end
+        false then end
     end
 
     function META:ReadNonWhiteSpace()
@@ -614,7 +615,8 @@ do
         self:IsSingleString() then      return self:ReadSingleString() elseif
         self:IsDoubleString() then      return self:ReadDoubleString() elseif
         self:IsLetter() then            return self:ReadLetter() elseif
-        self:IsSymbol() then            return self:ReadSymbol() end
+        self:IsSymbol() then            return self:ReadSymbol() elseif
+        false then end
 
         self:Advance(1)
         return "unknown"
