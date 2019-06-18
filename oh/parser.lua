@@ -373,7 +373,7 @@ do -- function
 
     function META:IsAnonymousFunction()
         return
-            self:IsValue("function") or self:IsValue("do") or self:IsValue("async")
+            self:IsValue("function") or self:IsValue("do") or (self:IsValue("async") and self:GetTokenOffset(1).value == "function")
     end
 
     function META:AnonymousFunction()
@@ -596,32 +596,20 @@ end
 
 do -- interface
     function META:IsInterfaceStatemenet()
-        return self:IsValue("interface")
+        return self:IsValue("interface") and self:GetTokenOffset(1).type == "name" and self:GetTokenOffset(2).value == "do"
     end
 
     function META:ReadInterfaceStatement()
         local node = self:Node("interface")
         node.tokens["interface"] = self:ReadToken()
         node.name = self:ReadExpectType("letter")
-        node.interface = self:Table()
-        return node
-    end
-end
-
-do -- struct
-    function META:IsStructStatemenet()
-        return self:IsValue("struct")
-    end
-
-    function META:ReadStructContent(node)
-        node.tokens["{"] = self:ReadExpectValue("{")
         node.values = {}
         for i = 1, self:GetLength() do
             local val = self:ReadIdentifier()
 
             node.values[i] = val
 
-            if self:IsValue("}") then
+            if self:IsValue("end") then
                 break
             end
 
@@ -631,11 +619,45 @@ do -- struct
 
             val.tokens[","] = self:ReadToken()
 
-            if self:IsValue("}") then
+            if self:IsValue("end") then
                 break
             end
         end
-        node.tokens["}"] = self:ReadExpectValue("}")
+        node.tokens["end"] = self:ReadExpectValue("end")
+        return node
+    end
+end
+
+do -- struct
+    function META:IsStructStatemenet()
+        return
+            (self:IsValue("struct") and self:GetTokenOffset(1).value == "do") or
+            (self:IsValue("struct") and self:GetTokenOffset(1).type == "name" and self:GetTokenOffset(2).value == "do")
+    end
+
+    function META:ReadStructContent(node)
+        node.tokens["do"] = self:ReadExpectValue("do")
+        node.values = {}
+        for i = 1, self:GetLength() do
+            local val = self:ReadIdentifier()
+
+            node.values[i] = val
+
+            if self:IsValue("end") then
+                break
+            end
+
+            if not self:IsValue(",") and not self:IsValue(";") then
+                self:Error("expected ".. oh.QuoteTokens(",", ";", "}") .. " got " .. (self:GetToken() and self:GetToken().value or "no token"))
+            end
+
+            val.tokens[","] = self:ReadToken()
+
+            if self:IsValue("end") then
+                break
+            end
+        end
+        node.tokens["end"] = self:ReadExpectValue("end")
         return node
     end
 

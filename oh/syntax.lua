@@ -10,9 +10,11 @@ syntax.SymbolCharacters = {
 
 syntax.Keywords = {
     "and", "break", "do", "else", "elseif", "end",
-    "false", "for", "function", "interface", "if", "in", "of", "local",
-    "nil", "not", "or", "repeat", "return", "then", "as", "@",
-    "...", "async"
+    "false", "for", "function", "if", "in", "of", "local",
+    "nil", "not", "or", "repeat", "return", "then",
+    "...",
+
+    --"async", "interface", "struct", "as", "@",
 }
 
 syntax.KeywordValues = {
