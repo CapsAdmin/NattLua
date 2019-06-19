@@ -198,7 +198,7 @@ function oh.FormatError(code, path, msg, start, stop)
 	end
 
 	out = out .. line2str(current_line) .. " | " .. line_before .. middle .. line_after .. "\n"
-	out = out .. (" "):rep(line_number_length) .. " |" .. (" "):rep(#line_before + 1) .. ("^"):rep(length) .. " " .. msg .. "\n"
+	out = out .. (" "):rep(line_number_length) .. " |" .. (" "):rep(#line_before + 1) .. ("^"):rep(length + 1) .. " " .. msg .. "\n"
 
 	if line_context_size > 0 then
         local lines = {}

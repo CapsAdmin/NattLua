@@ -71,23 +71,22 @@ function META:EmitToken(v, translate)
         end
     else
         self:Emit(v.value)
-
-        if self.FORCE_INTEGER then
-            if v.type == "number" then
-                self:Emit("LL")
-            end
-        end
     end
 end
 
-function META:BuildCode(block)
+function META:Initialize()
     self.level = 0
     self.out = {}
     self.i = 1
+end
 
-    self:Block(block)
-
+function META:Concat()
     return table.concat(self.out)
+end
+
+function META:BuildCode(block)
+    self:Block(block)
+    return self:Concat()
 end
 
 function META:Expression(v)
@@ -278,7 +277,9 @@ function META:LSX(node)
 end
 
 function META:Operator(v)
+    self:Whitespace(" ")
     self:EmitToken(v.tokens.operator)
+    self:Whitespace(" ")
 end
 
 function META:Function(v)
@@ -289,7 +290,6 @@ function META:Function(v)
     end
 
     self:EmitToken(v.tokens["function"], "function")
-    self:Whitespace(" ")
 
     if v.value then
         self:Expression(v.value)
@@ -475,231 +475,245 @@ local function emit_block_with_continue(self, data, repeat_expression)
     end
 end
 
-function META:Block(block)
-    for _, data in ipairs(block.statements) do
-        if data.type == "if" then
-            for _,v in ipairs(data.clauses) do
-                self:Whitespace("\t")self:EmitToken(v.tokens["if/else/elseif"]) if v.condition then self:Expression(v.condition) self:Whitespace(" ") self:EmitToken(v.tokens["then"]) end self:Whitespace("\n")
+function META:EmitStatement(data)
+    if data.type == "if" then
+        for _,v in ipairs(data.clauses) do
+            self:Whitespace("\t")
+            self:EmitToken(v.tokens["if/else/elseif"]) 
+                if v.condition then 
+                    self:Whitespace(" ")
+                    self:Expression(v.condition) 
+                    self:Whitespace(" ")
+                    self:EmitToken(v.tokens["then"]) 
+                end 
+            self:Whitespace("\n")
+            self:Whitespace("\t+")
+            self:Block(v.block)
+            self:Whitespace("\t-")
+        end
+        self:Whitespace("\t") self:EmitToken(data.tokens["end"])
+    elseif data.type == "goto" then
+        self:Whitespace("\t") self:EmitToken(data.tokens["goto"]) self:Whitespace(" ") self:Expression(data.label)
+    elseif data.type == "goto_label" then
+        self:Whitespace("\t") self:EmitToken(data.tokens["::left"]) self:Expression(data.label) self:EmitToken(data.tokens["::right"])
+    elseif data.type == "while" then
+        self:Whitespace("\t")self:EmitToken(data.tokens["while"])self:Expression(data.expression)self:Whitespace("?")self:EmitToken(data.tokens["do"])self:Whitespace("\n")
+            self:Whitespace("\t+")
+                emit_block_with_continue(self, data)
+            self:Whitespace("\t-")
+        self:Whitespace("\t")self:EmitToken(data.tokens["end"])
+    elseif data.type == "repeat" then
+        if data.has_continue then
+            self:Whitespace("\t")self:EmitToken(data.tokens["repeat"], "while true do --[[repeat]]")self:Whitespace("\n")
                 self:Whitespace("\t+")
-                    self:Block(v.block)
+                    emit_block_with_continue(self, data, true)
                 self:Whitespace("\t-")
-            end
-            self:Whitespace("\t") self:EmitToken(data.tokens["end"])
-        elseif data.type == "goto" then
-            self:Whitespace("\t") self:EmitToken(data.tokens["goto"]) self:Whitespace(" ") self:Expression(data.label)
-        elseif data.type == "goto_label" then
-            self:Whitespace("\t") self:EmitToken(data.tokens["::left"]) self:Expression(data.label) self:EmitToken(data.tokens["::right"])
-        elseif data.type == "while" then
-            self:Whitespace("\t")self:EmitToken(data.tokens["while"])self:Expression(data.expression)self:Whitespace("?")self:EmitToken(data.tokens["do"])self:Whitespace("\n")
+            self:Whitespace("\t") self:EmitToken(data.tokens["until"],"")
+            self:Emit("if--[[until]](") self:Expression(data.condition) self:Emit(")then break end") self:Emit("::continue__oh::end")
+        else
+            self:Whitespace("\t")self:EmitToken(data.tokens["repeat"])self:Whitespace("\n")
                 self:Whitespace("\t+")
                     emit_block_with_continue(self, data)
                 self:Whitespace("\t-")
-            self:Whitespace("\t")self:EmitToken(data.tokens["end"])
-        elseif data.type == "repeat" then
-            if data.has_continue then
-                self:Whitespace("\t")self:EmitToken(data.tokens["repeat"], "while true do --[[repeat]]")self:Whitespace("\n")
-                    self:Whitespace("\t+")
-                        emit_block_with_continue(self, data, true)
-                    self:Whitespace("\t-")
-                self:Whitespace("\t") self:EmitToken(data.tokens["until"],"")
-                self:Emit("if--[[until]](") self:Expression(data.condition) self:Emit(")then break end") self:Emit("::continue__oh::end")
-            else
-                self:Whitespace("\t")self:EmitToken(data.tokens["repeat"])self:Whitespace("\n")
-                    self:Whitespace("\t+")
-                        emit_block_with_continue(self, data)
-                    self:Whitespace("\t-")
-                self:Whitespace("\t") self:EmitToken(data.tokens["until"])self:Expression(data.condition)
+            self:Whitespace("\t") self:EmitToken(data.tokens["until"])self:Expression(data.condition)
+        end
+    elseif data.type == "break" then
+        self:Whitespace("\t")self:EmitToken(data.tokens["break"])
+    elseif data.type == "return" then
+        self:Whitespace("\t")
+        self:Whitespace("?")
+        if data.implicit then
+            self:Emit(" return ")
+        else
+            self:EmitToken(data.tokens["return"])
+        end
+
+        if data.expressions then
+            self:Whitespace(" ")
+            self:ExpressionList(data.expressions)
+        end
+    elseif data.type == "continue" then
+        self:Whitespace("\t")self:Whitespace("?") self:EmitToken(data.tokens["continue"], "goto continue__oh")
+    elseif data.type == "for_i" or data.type == "for_kv" then
+        self:Whitespace("\t")
+
+        if data.of then
+            --for __curindex = 1, object.iterate_length(list) do
+                --local v,i = list:__iterate_index(__curindex)
+
+            self:Emit(" local __iterobject = ")
+            self:ExpressionList(data.expressions)
+
+            self:EmitToken(data.tokens["for"])
+            self:Emit(" ")
+            self:Emit("__curindex = 1, object.iterate_length(__iterobject)")
+
+        elseif data.type == "for_i" then
+            self:EmitToken(data.tokens["for"])
+            self:EmitToken(data.identifier.value)
+            self:Whitespace(" ")
+            self:EmitToken(data.tokens["="])
+            self:Whitespace(" ")
+            self:Expression(data.expression)
+            self:EmitToken(data.tokens[",1"])
+            self:Whitespace(" ")
+            self:Expression(data.max)
+            if data.step then
+                self:EmitToken(data.tokens[",2"])self:Whitespace(" ")self:Expression(data.step)
             end
-        elseif data.type == "break" then
-            self:Whitespace("\t")self:EmitToken(data.tokens["break"])
-        elseif data.type == "return" then
-            self:Whitespace("\t")
+        else
+            self:EmitToken(data.tokens["for"])
             self:Whitespace("?")
-            if data.implicit then
-                self:Emit(" return ")
-            else
-                self:EmitToken(data.tokens["return"])
-            end
+            self:ExpressionList(data.identifiers)
+            self:Whitespace("?")
+            self:EmitToken(data.tokens["in"])
+            self:Whitespace("?")
+            self:ExpressionList(data.expressions)
+        end
 
-            if data.expressions then
-                self:ExpressionList(data.expressions)
-            end
-        elseif data.type == "continue" then
-            self:Whitespace("\t")self:Whitespace("?") self:EmitToken(data.tokens["continue"], "goto continue__oh")
-        elseif data.type == "for_i" or data.type == "for_kv" then
-            self:Whitespace("\t")
+        self:Whitespace("?")self:EmitToken(data.tokens["do"])self:Whitespace("\n")
+            self:Whitespace("\t+")
 
-            if data.of then
-                --for __curindex = 1, object.iterate_length(list) do
-                    --local v,i = list:__iterate_index(__curindex)
+                if data.of then
+                    self:Emit(" local ")
+                    self:ExpressionList(data.identifiers)
+                    self:Emit(" = __iterobject:__iterate_index(__curindex)")
+                end
 
-                self:Emit(" local __iterobject = ")
-                self:ExpressionList(data.expressions)
+                emit_block_with_continue(self, data)
+            self:Whitespace("\t-")
+        self:Whitespace("\t")self:EmitToken(data.tokens["end"])
 
-                self:EmitToken(data.tokens["for"])
-                self:Emit(" ")
-                self:Emit("__curindex = 1, object.iterate_length(__iterobject)")
+    elseif data.type == "do" then
+        self:Whitespace("\t")self:EmitToken(data.tokens["do"])self:Whitespace("\n")
+            self:Whitespace("\t+")
+                self:Block(data.block)
+            self:Whitespace("\t-")
+        self:Whitespace("\t")self:EmitToken(data.tokens["end"])
+    elseif data.type == "assignment" then
+        self:Whitespace("\t") if data.is_local then self:EmitToken(data.tokens["local"], "local")self:Whitespace(" ") end
 
-            elseif data.type == "for_i" then
-                self:EmitToken(data.tokens["for"])
-                self:EmitToken(data.identifier.value)
-                self:Whitespace(" ")
-                self:EmitToken(data.tokens["="])
-                self:Whitespace(" ")
-                self:Expression(data.expression)
-                self:EmitToken(data.tokens[",1"])
-                self:Whitespace(" ")
-                self:Expression(data.max)
-                if data.step then
-                    self:EmitToken(data.tokens[",2"])self:Whitespace(" ")self:Expression(data.step)
+        for i,v in ipairs(data.lvalues) do
+            if data.is_local or data.destructor then
+                if v.destructor then
+                    self:EmitToken(v.tokens["{"], "")
+                    self:ExpressionList(v.destructor)
+                else
+                    self:EmitToken(v.value)
                 end
             else
-                self:EmitToken(data.tokens["for"])
-                self:Whitespace("?")
-                self:ExpressionList(data.identifiers)
-                self:Whitespace("?")
-                self:EmitToken(data.tokens["in"])
-                self:Whitespace("?")
-                self:ExpressionList(data.expressions)
+                self:Expression(v)
+            end
+            if data.lvalues[2] and i ~= #data.lvalues then
+                self:EmitToken(v.tokens[","])self:Whitespace(" ")
             end
 
-            self:Whitespace("?")self:EmitToken(data.tokens["do"])self:Whitespace("\n")
-                self:Whitespace("\t+")
+            if v.value_type then
+                self:Emit(" --[[")
+                self:Emit(table.concat(v.value_type, ", "))
+                self:Emit("]]")
+            end
 
-                    if data.of then
-                        self:Emit(" local ")
-                        self:ExpressionList(data.identifiers)
-                        self:Emit(" = __iterobject:__iterate_index(__curindex)")
+            if v.attributes then
+                self:Emit(";")
+                self:Emit("oh.attributes(")
+                self:EmitToken(v.value)
+
+                self:Emit(",")
+
+                for _, attr in ipairs(v.attributes) do
+                    print(attr)
+                    self:Emit("{'")
+                    self:EmitToken(attr.name)
+                    self:Emit("'")
+                    if attr.arguments then
+                        self:Emit(",")
+                        self:ExpressionList(attr.arguments)
                     end
+                    self:Emit("}")
+                    if _ ~= #v.attributes then
+                        self:Emit(",")
+                    end
+                end
+                self:Emit(")")
 
-                    emit_block_with_continue(self, data)
-                self:Whitespace("\t-")
-            self:Whitespace("\t")self:EmitToken(data.tokens["end"])
+                self:EmitToken(v.value)
+            end
+        end
 
-        elseif data.type == "do" then
-            self:Whitespace("\t")self:EmitToken(data.tokens["do"])self:Whitespace("\n")
-                self:Whitespace("\t+")
-                    self:Block(data.block)
-                self:Whitespace("\t-")
-            self:Whitespace("\t")self:EmitToken(data.tokens["end"])
-        elseif data.type == "assignment" then
-            self:Whitespace("\t") if data.is_local then self:EmitToken(data.tokens["local"], "local")self:Whitespace(" ") end
+        if data.rvalues then
+            self:Whitespace(" ")self:EmitToken(data.tokens["="])self:Whitespace(" ")
 
-            for i,v in ipairs(data.lvalues) do
-                if data.is_local or data.destructor then
-                    if v.destructor then
-                        self:EmitToken(v.tokens["{"], "")
-                        self:ExpressionList(v.destructor)
-                    else
-                        self:EmitToken(v.value)
+            for i,v in ipairs(data.rvalues) do
+                if data.lvalues[i] and data.lvalues[i].destructor then
+                    for i2,v2 in ipairs(data.lvalues[i].destructor) do
+                        self:Emit("(")
+                        self:Expression(v)
+                        self:Emit(").")
+                        self:EmitToken(v2.value)
+                        if i2 ~= #data.lvalues[i].destructor then
+                            self:Emit(",")
+                        end
                     end
                 else
                     self:Expression(v)
                 end
-                if data.lvalues[2] and i ~= #data.lvalues then
+
+                if data.rvalues[2] and i ~= #data.rvalues then
                     self:EmitToken(v.tokens[","])self:Whitespace(" ")
                 end
-
-                if v.value_type then
-                    self:Emit(" --[[")
-                    self:Emit(table.concat(v.value_type, ", "))
-                    self:Emit("]]")
-                end
-
-                if v.attributes then
-                    self:Emit(";")
-                    self:Emit("oh.attributes(")
-                    self:EmitToken(v.value)
-
-                    self:Emit(",")
-
-                    for _, attr in ipairs(v.attributes) do
-                        print(attr)
-                        self:Emit("{'")
-                        self:EmitToken(attr.name)
-                        self:Emit("'")
-                        if attr.arguments then
-                            self:Emit(",")
-                            self:ExpressionList(attr.arguments)
-                        end
-                        self:Emit("}")
-                        if _ ~= #v.attributes then
-                            self:Emit(",")
-                        end
-                    end
-                    self:Emit(")")
-
-                    self:EmitToken(v.value)
-                end
             end
 
-            if data.rvalues then
-                self:Whitespace(" ")self:EmitToken(data.tokens["="])self:Whitespace(" ")
-
-                for i,v in ipairs(data.rvalues) do
-                    if data.lvalues[i] and data.lvalues[i].destructor then
-                        for i2,v2 in ipairs(data.lvalues[i].destructor) do
-                            self:Emit("(")
-                            self:Expression(v)
-                            self:Emit(").")
+            for i in ipairs(data.rvalues) do
+                if data.lvalues[i] and data.lvalues[i].destructor then
+                    for _,v2 in ipairs(data.lvalues[i].destructor) do
+                        if v2.default then
+                            self:Emit(" ")
                             self:EmitToken(v2.value)
-                            if i2 ~= #data.lvalues[i].destructor then
-                                self:Emit(",")
-                            end
-                        end
-                    else
-                        self:Expression(v)
-                    end
-
-                    if data.rvalues[2] and i ~= #data.rvalues then
-                        self:EmitToken(v.tokens[","])self:Whitespace(" ")
-                    end
-                end
-
-                for i in ipairs(data.rvalues) do
-                    if data.lvalues[i] and data.lvalues[i].destructor then
-                        for _,v2 in ipairs(data.lvalues[i].destructor) do
-                            if v2.default then
-                                self:Emit(" ")
-                                self:EmitToken(v2.value)
-                                self:Emit("=")
-                                self:EmitToken(v2.value)
-                                self:Emit("~=nil and ")
-                                self:EmitToken(v2.value)
-                                self:Emit(" or ")
-                                self:Expression(v2.default)
-                                self:Emit(";")
-                            end
+                            self:Emit("=")
+                            self:EmitToken(v2.value)
+                            self:Emit("~=nil and ")
+                            self:EmitToken(v2.value)
+                            self:Emit(" or ")
+                            self:Expression(v2.default)
+                            self:Emit(";")
                         end
                     end
                 end
             end
-        elseif data.type == "function" then
-            self:Function(data)
-        elseif data.type == "expression" then
-            self:Expression(data.value)
-        elseif data.type == "call" then
-            self:Whitespace("\t")self:Expression(data.value)
-        elseif data.type == "end_of_statement" then
-            self:EmitToken(data.tokens[";"])
-        elseif data.type == "end_of_file" then
-            self:EmitToken(data.tokens["end_of_file"])
-        elseif data.type == "shebang" then
-            self:EmitToken(data.tokens["shebang"])
-        elseif data.type == "interface" then
-            self:Emit("-- interface TODO")
-        elseif data.type == "struct" then
-            self:StructStatement()
-        elseif data.type == "compiler_option" then
-            self:Emit("--" .. data.lua)
-
-            if data.lua:sub(1, 2) == "E:" then
-                assert(loadstring("local self = ...;" .. data.lua:sub(3)))(self)
-            end
-        else
-            error("unhandled value: " .. data.type)
         end
+    elseif data.type == "function" then
+        self:Function(data)
+    elseif data.type == "expression" then
+        self:Expression(data.value)
+    elseif data.type == "call" then
+        self:Whitespace("\t")self:Expression(data.value)
+    elseif data.type == "end_of_statement" then
+        self:EmitToken(data.tokens[";"])
+    elseif data.type == "end_of_file" then
+        self:EmitToken(data.tokens["end_of_file"])
+    elseif data.type == "shebang" then
+        self:EmitToken(data.tokens["shebang"])
+    elseif data.type == "interface" then
+        self:Emit("-- interface TODO")
+    elseif data.type == "struct" then
+        self:StructStatement()
+    elseif data.type == "value" then
+        self:Expression(data)
+    elseif data.type == "compiler_option" then
+        self:Emit("--" .. data.lua)
 
+        if data.lua:sub(1, 2) == "E:" then
+            assert(loadstring("local self = ...;" .. data.lua:sub(3)))(self)
+        end
+    else
+        error("unhandled value: " .. data.type)
+    end
+end
+
+function META:Block(block)
+    for _, data in ipairs(block.statements) do
+        self:EmitStatement(data)
         self:Whitespace("\n")
     end
 end
@@ -714,6 +728,11 @@ function META:ExpressionList(tbl)
     end
 end
 
-function oh.LuaEmitter()
-    return setmetatable({}, META)
+function oh.LuaEmitter(config)
+    local self = setmetatable({}, META)
+    if config and config.preserve_whitespace ~= nil then
+        self.PreserveWhitespace = config.preserve_whitespace
+    end
+    self:Initialize()
+    return self
 end

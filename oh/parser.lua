@@ -5,13 +5,152 @@ local table_remove = table.remove
 local META = {}
 META.__index = META
 
-function META:Node(t)
-    local node = {}
+do
+    local NODE = {}
+    NODE.__index = NODE
+    
+    function NODE:__tostring()
+        return "node[" .. self.type .. "]"
+    end
 
-    node.type = t
-    node.tokens = {}
+    function NODE:Render(what)
+        local em = oh.LuaEmitter({preserve_whitespace = false})
+        
+        if what and self.tokens[what] then
+            em:EmitToken(self.tokens[what])
+            return em:Concat()
+        end
 
-    return node
+        if self.type == "operator" or self.type == "unary" then
+            em:Expression(self)
+        elseif self.type == "block" then
+            em:Block(self)
+        else
+            em:EmitStatement(self)
+        end
+
+        return em:Concat()
+    end
+
+    function NODE:GetArguments()
+        return self.arguments
+    end
+
+    function NODE:FindStatementsByType(what, out)
+        out = out or {}
+        for _, child in ipairs(self:GetChildren()) do
+            if child.type == what then
+                table.insert(out, child)
+            elseif child.type ~= "function" and child:GetChildren() then
+                child:FindStatementsByType(what, out)
+            end
+        end
+        return out
+    end
+
+    function NODE:FindByType(what, out)
+        out = out or {}
+        for _, child in ipairs(self:GetChildren()) do
+            if child.type == what then
+                table.insert(out, child)
+            elseif child.type ~= "function" and child:GetChildren() then
+                child:FindStatementsByType(what, out)
+            end
+        end
+        return out
+    end
+
+    function NODE:ExpandExpression()
+        assert(self.type == "expression" or self.type == "operator")
+        
+        local flat = {}
+
+        local function expand(node)
+            if node.type == "operator" then
+                if node.left then
+                    expand(node.left)
+                end
+
+                table.insert(flat, node)
+    
+                if node.right then
+                    expand(node.right)
+                end
+            else
+                table.insert(flat, node)
+            end
+        end
+
+        expand(self)
+
+        local i = 1
+
+        return function()
+            local l,o,r = flat[i + 0], flat[i + 1], flat[i + 2]
+            if r then
+                i = i + 2
+                return l,o,r
+            end
+        end
+    end
+
+    function NODE:GetChildren()
+        if self.clauses then
+            local out = {}
+            for i,v in ipairs(self.clauses) do
+                table.insert(out, v.block)
+            end
+            return out
+        end
+
+        if self.block then
+            return self.block.statements
+        end
+
+        return self.statements or self.children or self.values or self.expressions
+    end
+
+    function NODE:Assignments()
+        assert(self.type == "assignment")
+
+        local i = 1
+
+        return function() 
+            local l, r = self.lvalues[i], self.rvalues and self.rvalues[i]
+            i = i + 1
+            return l, r
+        end
+    end
+
+    function NODE:IsType(what)
+        return self.type == what
+    end
+
+    function NODE:IsValue(val)
+        return self.value and self.value.value == val
+    end
+
+    function NODE:SetValue(val) 
+        assert(self.value or self.operator)
+
+        if self.operator then
+            self.operator = val
+            self.tokens["operator"].value = val
+        else
+            self.value.value = val
+        end
+    end
+
+    function META:Node(t)
+        local node = {}
+
+        node.type = t
+        node.tokens = {}
+
+        setmetatable(node, NODE)
+
+        return node
+    end
 end
 
 function META:Error(msg, start, stop)
@@ -203,7 +342,7 @@ do -- do
     function META:ReadDoStatement()
         local token = self:GetToken()
         local node = self:Node("do")
-
+        
         node.tokens["do"] = self:ReadToken()
         node.block = self:Block({["end"] = true})
         node.tokens["end"] = self:ReadExpectValue("end", token, token)
@@ -829,10 +968,9 @@ function META:Statement(block, implicit_return)
             node = self:Node("expression")
             node.value = expr
         elseif implicit_return then
-            local node = self:Node("return")
+            node = self:Node("return")
             node.implicit = true
             node.expressions = self:ExpressionList()
-            return node
         else
             self:Error("unexpected " .. start_token.type, start_token)
         end
