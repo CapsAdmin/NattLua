@@ -53,8 +53,8 @@ do
         for _, child in ipairs(self:GetChildren()) do
             if child.type == what then
                 table.insert(out, child)
-            elseif child.type ~= "function" and child:GetChildren() then
-                child:FindStatementsByType(what, out)
+            elseif child:GetChildren() then
+                child:FindByType(what, out)
             end
         end
         return out
@@ -92,6 +92,13 @@ do
                 return l,o,r
             end
         end
+    end
+
+    function NODE:GetStatements()
+        if self.block then
+            return self.block:GetStatements()
+        end
+        return self.statements
     end
 
     function NODE:GetChildren()
