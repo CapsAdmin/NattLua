@@ -148,40 +148,44 @@ function test.transpile_ok(code, path, config)
     end
 end
 
-function test.transpile_check(code, config)
+function test.transpile_check(tbl)
     local tokens, ast, new_code
 
     local ok = xpcall(function()
-        tokens = assert(test.tokenize(code))
-        ast = assert(test.parse(tokens, code))
-        new_code = assert(test.transpile(ast, nil, config))
+        tokens = assert(test.tokenize(tbl.code))
+        ast = assert(test.parse(tokens, tbl.code))
+        new_code = assert(test.transpile(ast, nil, tbl.config))
     end, function(err)
         print("===================================")
         print(debug.traceback(err))
-        print(code)
+        print(tbl.code)
         print("===================================")
     end)
 
-    if ok and code ~= new_code then
-        print("===================================")
-        print("transpiled output doesn't match:")
-        print("FROM:")
-        print(code)
-        print("TO:")
-        print(new_code)
-        print("===================================")
-
-        test.dump_ast(ast)
-        --table.print(ast)
-        for i,v in ipairs(tokens) do
-            print("[" .. i .. "][" .. v.type .. "]: " .. v.value)
+    if ok then
+        if tbl.compare_tokens then
+            local a = assert(test.tokenize(new_code))
+            local b = assert(test.tokenize(tbl.expect))
+            for i = 1, #a do
+                if a[i].value ~= b[i].value then
+                    ok = false
+                    break
+                end
+            end
+        else
+            ok = new_code == tbl.expect
         end
 
-        ok = false
-    end
-
-    if ok then
-        --io.write(code, " - OK!\n")
+        if not ok then
+            print("===================================")
+            print("error transpiling code:")
+            print(tbl.code)
+            print("expected:")
+            print(tbl.expect)
+            print("got:")
+            print(new_code)
+            print("===================================")
+        end
     end
 
     return ok, new_code
@@ -210,6 +214,6 @@ end
 
 print("============TEST============")
 --assert(loadfile("tests/transpile.lua"))(test)
---assert(loadfile("tests/random_tokens.lua"))(test)
-assert(loadfile("tests/parser_rewrite.lua"))(test)
+assert(loadfile("tests/random_tokens.lua"))(test)
+assert(loadfile("tests/transpile_equal.lua"))(test)
 print("============TEST COMPLETE============")

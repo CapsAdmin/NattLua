@@ -93,13 +93,13 @@ function META:EmitExpression(v)
     end
 
     if v.kind == "binary_operator" then
-        local func_name = oh.syntax.GetFunctionForOperator(v.value)
-        if func_name then
-            self:Emit(" " .. func_name .. "(")
+        local func_chunks = oh.syntax.GetFunctionForOperator(v.value)
+        if func_chunks then
+            self:Emit(func_chunks[1])
             if v.left then self:EmitExpression(v.left) end
-            self:Emit(",")
+            self:Emit(func_chunks[2])
             if v.right then self:EmitExpression(v.right) end
-            self:Emit(") ")
+            self:Emit(func_chunks[3])
         else
             if v.left then self:EmitExpression(v.left) end
             self:EmitBinaryOperator(v)
@@ -145,6 +145,12 @@ function META:EmitExpression(v)
                     self:EmitToken(node.tokens["call)"])
                 end
             end
+
+            if node.tokens[")"] then
+                for _, v in ipairs(node.tokens[")"]) do
+                    self:EmitToken(v)
+                end
+            end
         end
     end
 end
@@ -161,6 +167,7 @@ do
         if anon then
             self:EmitToken(node.tokens["function"])
         elseif node.is_local then
+            self:Whitespace("\t")
             self:EmitToken(node.tokens["local"])
             self:Whitespace(" ")
             self:EmitToken(node.tokens["function"])
@@ -168,6 +175,7 @@ do
             self:EmitExpressionList(node.identifiers)
             self:EmitExpression(node.name)
         else
+            self:Whitespace("\t")
             self:EmitToken(node.tokens["function"])
             self:Whitespace(" ")
             self:EmitExpressionList(node.expressions)
@@ -232,11 +240,11 @@ function META:EmitTable(v)
 end
 
 function META:EmitUnaryOperator(v)
-    local func_name = oh.syntax.GetFunctionForUnaryOperator(v.value)
-    if func_name then
-        self:Emit(" " .. func_name .. "(")
+    local func_chunks = oh.syntax.GetFunctionForUnaryOperator(v.value)
+    if func_chunks then
+        self:Emit(func_chunks[1])
         self:EmitExpression(v.right)
-        self:Emit(") ")
+        self:Emit(func_chunks[2])
     else
         if oh.syntax.IsKeyword(v.value) then
             self:EmitToken(v.value, "")
@@ -260,13 +268,13 @@ end
 
 function META:EmitIfStatement(node)
     for i = 1, #node.statements do
+        self:Whitespace("\t")
         if node.expressions[i] then
-            self:Whitespace("\t") 
-            self:EmitToken(node.tokens["if/else/elseif"][i]) 
+            self:EmitToken(node.tokens["if/else/elseif"][i])
             self:Whitespace(" ")
-            self:EmitExpression(node.expressions[i]) 
+            self:EmitExpression(node.expressions[i])
             self:Whitespace(" ")
-            self:EmitToken(node.tokens["then"][i]) 
+            self:EmitToken(node.tokens["then"][i])
         elseif node.tokens["if/else/elseif"][i] then
             self:EmitToken(node.tokens["if/else/elseif"][i])
         end
@@ -279,6 +287,7 @@ function META:EmitIfStatement(node)
 end
 
 function META:EmitForStatement(node)
+    self:Whitespace("\t")
     self:EmitToken(node.tokens["for"])
     self:Whitespace(" ")
     if node.fori then
@@ -295,7 +304,7 @@ function META:EmitForStatement(node)
         self:EmitExpressionList(node.expressions)
     end
 
-    self:Whitespace("?")
+    self:Whitespace(" ")
     self:EmitToken(node.tokens["do"])
     self:Whitespace("\n")
     self:Whitespace("\t+")
@@ -306,6 +315,7 @@ function META:EmitForStatement(node)
 end
 
 function META:EmitWhileStatement(node)
+    self:Whitespace("\t")
     self:EmitToken(node.tokens["while"])
     self:Whitespace(" ")
     self:EmitExpression(node.expressions[1])
@@ -320,9 +330,10 @@ function META:EmitWhileStatement(node)
 end
 
 function META:EmitRepeatStatement(node)
+    self:Whitespace("\t")
     self:EmitToken(node.tokens["repeat"])
     self:Whitespace("\n")
-    
+
     self:Whitespace("\t+")
     self:EmitStatements(node.statements)
     self:Whitespace("\t-")
@@ -335,15 +346,15 @@ end
 
 do
     function META:EmitLabelStatement(node)
-        self:Whitespace("\t") 
-        self:EmitToken(node.tokens["::left"]) 
-        self:EmitToken(node.identifiers[1]) 
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["::left"])
+        self:EmitToken(node.identifiers[1])
         self:EmitToken(node.tokens["::right"])
     end
 
     function META:EmitGotoStatement(node)
         self:Whitespace("\t")
-        self:EmitToken(node.tokens["goto"]) 
+        self:EmitToken(node.tokens["goto"])
         self:Whitespace(" ")
         self:EmitToken(node.identifiers[1])
     end
@@ -358,16 +369,17 @@ function META:EmitDoStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["do"])
     self:Whitespace("\n")
+
     self:Whitespace("\t+")
     self:EmitStatements(node.statements)
     self:Whitespace("\t-")
+
     self:Whitespace("\t")
     self:EmitToken(node.tokens["end"])
 end
 
 function META:EmitReturnStatement(node)
     self:Whitespace("\t")
-    self:Whitespace("?")
     self:EmitToken(node.tokens["return"])
     self:Whitespace(" ")
     self:EmitExpressionList(node.expressions)
@@ -396,9 +408,7 @@ function META:EmitAssignment(node)
 end
 
 function META:EmitStatement(node)
-    if node.kind == "semicolon" then
-        self:EmitSemicolonStatement(node)
-    elseif node.kind == "if" then
+    if node.kind == "if" then
         self:EmitIfStatement(node)
     elseif node.kind == "goto" then
         self:EmitGotoStatement(node)
@@ -421,12 +431,12 @@ function META:EmitStatement(node)
     elseif node.kind == "assignment" then
         self:EmitAssignment(node)
     elseif node.kind == "expression" then
+        self:Whitespace("\t")
         self:EmitExpression(node.value)
     elseif node.kind == "function" then
         self:Function(node)
-    elseif node.kind == "expression" then
-        self:EmitExpression(node.value)
     elseif node.kind == "call" then
+        self:Whitespace("\t")
         self:EmitExpression(node.value)
     elseif node.kind == "end_of_file" then
         self:EmitToken(node.tokens["end_of_file"])
@@ -434,7 +444,7 @@ function META:EmitStatement(node)
         self:EmitToken(node.tokens["shebang"])
     elseif node.kind == "value" then
         self:EmitExpression(node)
-    else
+    elseif node.kind ~= "semicolon" then
         error("unhandled value: " .. node.kind)
     end
 end
@@ -443,9 +453,13 @@ function META:Block(block)
     self:EmitStatements(block.statements)
 end
 function META:EmitStatements(tbl)
-    self:Whitespace("\t")
-    for _, data in ipairs(tbl) do
-        self:EmitStatement(data)
+    for i, node in ipairs(tbl) do
+        self:EmitStatement(node)
+
+        if tbl[i + 1] and tbl[i + 1].kind == "semicolon" then
+            self:EmitSemicolonStatement(tbl[i + 1])
+        end
+
         self:Whitespace("\n")
     end
 end

@@ -8,14 +8,14 @@ META.__index = META
 do
     local NODE = {}
     NODE.__index = NODE
-    
+
     function NODE:__tostring()
         return "node[" .. self.type .. "]"
     end
 
     function NODE:Render(what)
         local em = oh.LuaEmitter({preserve_whitespace = false})
-        
+
         if what and self.tokens[what] then
             em:EmitToken(self.tokens[what])
             return em:Concat()
@@ -62,7 +62,7 @@ do
 
     function NODE:ExpandExpression()
         assert(self.type == "expression" or self.type == "operator")
-        
+
         local flat = {}
 
         local function expand(node)
@@ -72,7 +72,7 @@ do
                 end
 
                 table.insert(flat, node)
-    
+
                 if node.right then
                     expand(node.right)
                 end
@@ -122,7 +122,7 @@ do
 
         local i = 1
 
-        return function() 
+        return function()
             local l, r = self.lvalues[i], self.rvalues and self.rvalues[i]
             i = i + 1
             return l, r
@@ -137,7 +137,7 @@ do
         return self.value and self.value.value == val
     end
 
-    function NODE:SetValue(val) 
+    function NODE:SetValue(val)
         assert(self.value or self.operator)
 
         if self.operator then
@@ -158,7 +158,7 @@ do
 
         return node
     end
-    
+
     do
         local STATEMENT = {}
         STATEMENT.__index = STATEMENT
@@ -329,7 +329,7 @@ do -- do
     function META:IsDoStatement()
         return self:IsValue("do")
     end
-    
+
     function META:ReadDoStatement()
         local start = self:GetToken()
 
@@ -337,7 +337,7 @@ do -- do
         node.tokens["do"] = self:ReadToken()
         node.statements = self:ReadStatements({["end"] = true})
         node.tokens["end"] = self:ReadExpectValue("end", start, start)
-        
+
         return node
     end
 end
@@ -355,7 +355,7 @@ do -- while
         node.tokens["while"] = self:ReadToken()
         node.expressions = {self:ReadExpression()}
         node.tokens["do"] = self:ReadExpectValue("do")
-        
+
         node.statements = self:ReadStatements({["end"] = true})
 
         node.tokens["end"] = self:ReadExpectValue("end", start, start)
@@ -488,14 +488,14 @@ do -- identifier
         return node
     end
 
-    function META:IdentifierList(max, with_vararg)  
+    function META:IdentifierList(max, with_vararg)
         local out = {}
-        
+
         for _ = 1, max or self:GetLength() do
             if not self:IsType("letter") then
                 break
             end
-            
+
             local node = self:ReadIdentifier()
 
             table.insert(out, node)
@@ -503,7 +503,7 @@ do -- identifier
             if not self:IsValue(",") then
                 break
             end
-            
+
             node.tokens[","] = self:ReadToken()
         end
 
@@ -518,17 +518,17 @@ do -- if
 
     function META:ReadIfStatement()
         local node = self:NewStatement("if")
-        
+
         node.expressions = {}
         node.statements = {}
         node.tokens["if/else/elseif"] = {}
         node.tokens["then"] = {}
-        
+
         for i = 1, self:GetLength() do
             local token
 
-            if i == 1 then 
-                token = self:ReadExpectValue("if") 
+            if i == 1 then
+                token = self:ReadExpectValue("if")
             else
                 token = self:ReadExpectValues({"else", "elseif"})
             end
@@ -539,7 +539,7 @@ do -- if
                 node.expressions[i] = self:ReadExpression()
                 node.tokens["then"][i] = self:ReadExpectValue("then")
             end
-            
+
             node.statements[i] = self:ReadStatements({["end"] = true, ["else"] = true, ["elseif"] = true})
 
             if self:IsValue("end") then
@@ -548,7 +548,7 @@ do -- if
         end
 
         node.tokens["end"] = self:ReadExpectValue("end")
-        
+
         return node
     end
 end
@@ -569,7 +569,7 @@ do -- local
             node.tokens["="] = self:ReadToken("=")
             node.expressions = self:ReadExpressionList()
         end
-        
+
         return node
     end
 end
@@ -677,20 +677,20 @@ function META:ReadRemainingStatement()
 end
 
 function META:ReadStatement()
-    if 
-        self:IsReturnStatement() then           return self:ReadReturnStatement() elseif 
+    if
+        self:IsReturnStatement() then           return self:ReadReturnStatement() elseif
         self:IsBreakStatement() then            return self:ReadBreakStatement() elseif
-        self:IsSemicolonStatement() then        return self:ReadSemicolonStatement() elseif 
+        self:IsSemicolonStatement() then        return self:ReadSemicolonStatement() elseif
         self:IsGotoLabelStatement() then        return self:ReadGotoLabelStatement() elseif
-        self:IsGotoStatement() then             return self:ReadGotoStatement() elseif 
+        self:IsGotoStatement() then             return self:ReadGotoStatement() elseif
         self:IsRepeatStatement() then           return self:ReadRepeatStatement() elseif
-        self:IsFunctionStatement() then         return self:ReadFunctionStatement() elseif 
+        self:IsFunctionStatement() then         return self:ReadFunctionStatement() elseif
         self:IsLocalAssignmentStatement() then  return self:ReadLocalAssignmentStatement() elseif
         self:IsDoStatement() then               return self:ReadDoStatement() elseif
-        self:IsIfStatement() then               return self:ReadIfStatement() elseif 
+        self:IsIfStatement() then               return self:ReadIfStatement() elseif
         self:IsWhileStatement() then            return self:ReadWhileStatement() elseif
         self:IsForStatement() then              return self:ReadForStatement() else
-                                                return self:ReadRemainingStatement() 
+                                                return self:ReadRemainingStatement()
     end
 
     local type = self:GetToken().type
@@ -727,11 +727,17 @@ function META:ReadExpression(priority, stop_on_call)
         end
 
         val.tokens["("] = val.tokens["("] or {}
-        table_insert(val.tokens["("], pleft)
+        table_insert(val.tokens["("], 1, pleft)
 
-        val.tokens[")"] = val.tokens[")"] or {}
-        table_insert(val.tokens[")"], self:ReadExpectValue(")"))
-        
+        if val.suffixes then
+            local val = val.suffixes[#val.suffixes]
+            val.tokens[")"] = val.tokens[")"] or {}
+            table_insert(val.tokens[")"], 1, self:ReadExpectValue(")"))
+        else
+            val.tokens[")"] = val.tokens[")"] or {}
+            table_insert(val.tokens[")"], 1, self:ReadExpectValue(")"))
+        end
+
     elseif self:IsAnonymousFunction() then
         val = self:ReadAnonymousFunction()
     elseif oh.syntax.IsValue(token) or (token.type == "letter" and not oh.syntax.IsKeyword(token)) then

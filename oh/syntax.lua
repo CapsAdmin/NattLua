@@ -48,16 +48,16 @@ syntax.Operators = {
 }
 
 syntax.OperatorFunctions = {
-    [">>"] = "bit.rshift",
-    ["<<"] = "bit.lshift",
-    ["|"] = "bit.bor",
-    ["&"] = "bit.band",
-    ["//"] = "math.floordiv",
-    ["~"] = "bit.bxor",
+    [">>"] = "bit.rshift(A, B)",
+    ["<<"] = "bit.lshift(A, B)",
+    ["|"] = "bit.bor(A, B)",
+    ["&"] = "bit.band(A, B)",
+    ["//"] = "math.floor(A / B)",
+    ["~"] = "bit.bxor(A, B)",
 }
 
 syntax.UnaryOperatorFunctions = {
-    ["~"] = "bit.bnot",
+    ["~"] = "bit.bnot(A)",
 }
 
 -- temp
@@ -155,6 +155,18 @@ do
 
             syntax.LongestSymbolLength = math.max(syntax.LongestSymbolLength, #chars)
         end
+    end
+end
+
+do
+    for k, v in pairs(syntax.OperatorFunctions) do
+        local a,b,c = v:match("(.-)A(.-)B(.*)")
+        syntax.OperatorFunctions[k] = {" " .. a, b, c .. " "}
+    end
+
+    for k, v in pairs(syntax.UnaryOperatorFunctions) do
+        local a, b = v:match("^(.-)A(.-)$")
+        syntax.UnaryOperatorFunctions[k] = {" " .. a, b .. " "}
     end
 end
 
