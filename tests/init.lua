@@ -3,9 +3,9 @@ local oh = require("oh.oh")
 
 local test = {}
 
-function test.transpile(ast, what)
+function test.transpile(ast, what, config)
     what = what or "lua"
-    local self = oh.LuaEmitter({preserve_whitespace = true})
+    local self = oh.LuaEmitter(config)
     local res = self:BuildCode(ast)
     local ok, err = loadstring(res)
     if not ok then
@@ -15,9 +15,10 @@ function test.transpile(ast, what)
 end
 
 function test.tokenize(code, capture_whitespace)
-    local self = oh.Tokenizer(code, function(_, msg, start, stop)
+    local self = oh.Tokenizer(code, capture_whitespace)
+    self.OnError = function(_, msg, start, stop)
         io.write(oh.FormatError(code, "test", msg, start, stop))
-    end, capture_whitespace)
+    end
 
     self:ResetState()
 
@@ -25,9 +26,11 @@ function test.tokenize(code, capture_whitespace)
 end
 
 function test.parse(tokens, code)
-    return oh.Parser(function(_, msg, start, stop)
+    local self = oh.Parser()
+    self.OnError = function(_, msg, start, stop)
         error(oh.FormatError(code, "test", msg, start, stop))
-    end):BuildAST(tokens)
+    end
+    return self:BuildAST(tokens)
 end
 
 do
@@ -125,13 +128,13 @@ function test.transpile_fail_check(code)
 end
 
 
-function test.transpile_ok(code, path, lang)
+function test.transpile_ok(code, path, config)
     local tokens, ast, new_code, lua_err
 
     local ok = xpcall(function()
         tokens = test.tokenize(code)
         ast = test.parse(tokens, code)
-        new_code, lua_err = test.transpile(ast, lang)
+        new_code, lua_err = test.transpile(ast, config)
     end, function(err)
         print("===================================")
         print(debug.traceback(err))
@@ -145,13 +148,13 @@ function test.transpile_ok(code, path, lang)
     end
 end
 
-function test.transpile_check(code)
-    local tokens, ast, new_code, lua_err
+function test.transpile_check(code, config)
+    local tokens, ast, new_code
 
     local ok = xpcall(function()
-        tokens = test.tokenize(code)
-        ast = test.parse(tokens, code)
-        new_code, lua_err = test.transpile(ast)
+        tokens = assert(test.tokenize(code))
+        ast = assert(test.parse(tokens, code))
+        new_code = assert(test.transpile(ast, nil, config))
     end, function(err)
         print("===================================")
         print(debug.traceback(err))
@@ -206,6 +209,7 @@ function test.print_ast(code)
 end
 
 print("============TEST============")
-assert(loadfile("tests/transpile.lua"))(test)
-assert(loadfile("tests/random_tokens.lua"))(test)
+--assert(loadfile("tests/transpile.lua"))(test)
+--assert(loadfile("tests/random_tokens.lua"))(test)
+assert(loadfile("tests/parser_rewrite.lua"))(test)
 print("============TEST COMPLETE============")

@@ -184,26 +184,6 @@ do
         end
 
         do
-            function META:IsGLuaMultilineComment()
-                return self:StringMatches("/*")
-            end
-
-            function META:ReadGLuaMultilineComment()
-                self:Advance(2)
-
-                for _ = self.i, self.code_length do
-                    self:Advance(1)
-                    if self:StringMatches("*/") then
-                        self:Advance(2)
-                        break
-                    end
-                end
-
-                return "glua_multiline_comment"
-            end
-        end
-
-        do
 
             local function LINE_COMMENT(str, name, func_name)
                 META["Is" .. func_name] = function(self)
@@ -224,7 +204,6 @@ do
             end
 
             LINE_COMMENT("--", "line_comment", "LineComment")
-            LINE_COMMENT("//", "glua_line_comment", "GLuaLineComment")
         end
 
         do
@@ -430,57 +409,6 @@ do
     end
 
     do
-        local str = "##"
-
-        function META:IsCompilerOption()
-            return self:StringMatches(str)
-        end
-
-        function META:ReadCompilerOption()
-            self:Advance(#str)
-            local i = self.i
-
-            for _ = self.i, self.code_length do
-                if self:ReadChar() == "\n" or self.i-1 == self.code_length then
-                    local code = self:GetCharsRange(i, self.i-1)
-                    if code:sub(1, 2) == "T:" then
-                        local code = "local self = ...;" .. code:sub(3)
-                        assert(loadstring(code))(self)
-                    end
-                    break
-                end
-            end
-
-            return "compiler_option"
-        end
-    end
-
-    do
-        local str = "`"
-
-        function META:IsLiteralString()
-            return self:GetCurrentChar() == str
-        end
-
-        function META:ReadLiteralString()
-            local start = self.i
-            self:Advance(1)
-
-            for _ = self.i, self.code_length do
-                local char = self:ReadCharByte()
-
-                if char == str then
-                    return "literal_string"
-                end
-            end
-
-            self:Error("unterminated " .. str, start, self.i - 1)
-
-            return false
-        end
-    end
-
-    do
         local escape_character = [[\]]
         local quotes = {
             Double = [["]],
@@ -600,22 +528,18 @@ do
         self:IsSpace() then                 return self:ReadSpace() elseif
         self:IsMultilineComment() then      return self:ReadMultilineComment() elseif
         self:IsLineComment() then           return self:ReadLineComment() elseif
-        self:IsGLuaMultilineComment() then  return self:ReadGLuaMultilineComment() elseif -- NON LUA
-        self:IsGLuaLineComment() then       return self:ReadGLuaLineComment() elseif -- NON LUA
         false then end
     end
 
     function META:ReadNonWhiteSpace()
         if
-        self:IsEndOfFile() then         return self:ReadEndOfFile() elseif
-        self:IsMultilineString() then   return self:ReadMultilineString() elseif
-        self:IsNumber() then            return self:ReadNumber() elseif
-        self:IsCompilerOption() then    return self:ReadCompilerOption() elseif  -- NON LUA
-        self:IsLiteralString() then     return self:ReadLiteralString() elseif -- NON LUA
-        self:IsSingleString() then      return self:ReadSingleString() elseif
-        self:IsDoubleString() then      return self:ReadDoubleString() elseif
-        self:IsLetter() then            return self:ReadLetter() elseif
-        self:IsSymbol() then            return self:ReadSymbol() elseif
+        self:IsEndOfFile() then             return self:ReadEndOfFile() elseif
+        self:IsMultilineString() then       return self:ReadMultilineString() elseif
+        self:IsNumber() then                return self:ReadNumber() elseif
+        self:IsSingleString() then          return self:ReadSingleString() elseif
+        self:IsDoubleString() then          return self:ReadDoubleString() elseif
+        self:IsLetter() then                return self:ReadLetter() elseif
+        self:IsSymbol() then                return self:ReadSymbol() elseif
         false then end
 
         self:Advance(1)

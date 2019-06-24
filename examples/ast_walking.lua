@@ -2,27 +2,37 @@ local oh = require("oh.oh")
 local util = require("oh.util")
 
 local code = [[
-    function foo(a,b,c,d)
-        return a + b - c * (-d) + (function(a) return a+2 end)(1)
+    -- It checks variables you have defined as global
+    some_unused_var = 42
+    local x
+    
+    -- Write-only variables are not considered as used.
+    local y = 10
+    y = 5
+    
+    -- A read for a modification of itself is not considered as used.
+    local z = 0
+    z = z + 1
+    
+    -- By default, unused arguments cause warnings.
+    local function lol(foo)
+        return 5
+    end
+
+    lol()
+    
+    -- Unused recursive functions also cause warnings.
+    local function fact(n)
+        if n < 2 then return 1 end
+        return n * fact(n - 1)
     end
 ]]
+code = "local a = (({} + 2 * 3)()+1)(1,2,3)()()"
 
 local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code))))
 
-for _, statement in ipairs(ast:GetChildren()) do
-    if statement:IsType("function") then
-        for _, exp in ipairs(statement:FindStatementsByType("return")[1]:GetChildren()) do
-            for l, op, r in exp:ExpandExpression() do
-                if l:IsValue("c") then
-                    l:SetValue("x")
-                end
-                if r:IsValue("b") then
-                    r:SetValue("x")
-                end
-                op:SetValue("/")
-            end
-        end
-    end
-end
+util.TablePrint(ast)
 
-print(ast:Render())
+for _, node in ipairs(ast:FindByType("value")) do
+    print(node:Render())
+end

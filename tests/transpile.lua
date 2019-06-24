@@ -69,7 +69,6 @@ transpile_check"local tbl = {a; b; c,d,e,f}"
 transpile_check"aslk()"
 transpile_check"a = #a();;"
 transpile_check"a();;"
-transpile_check"a();;"
 transpile_check("🐵=😍+🙅")
 transpile_check("print(･✿ヾ╲｡◕‿◕｡╱✿･ﾟ)")
 transpile_check("print(･✿ヾ╲｡◕‿◕｡╱✿･ﾟ)")

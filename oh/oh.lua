@@ -49,30 +49,22 @@ function oh.TokensToAST(tokens, name, code)
 	return ast
 end
 
-function oh.CodeToAST(code, name)
-	name = name or "unknown"
+function oh.Transpile(code, name, config)
+    name = name or "unknown"
 
-	local tokens = oh.CodeToTokens(code, name)
-	local ast = oh.TokensToAST(tokens, name, code)
-
-    return ast, tokens
+	local tokens, err = oh.CodeToTokens(code, name)
+	if not tokens then return nil, err end
+	
+	local ast, err = oh.TokensToAST(tokens, name, code)
+	if not ast then return nil, err end
+	return oh.ASTToCode(ast, config)
 end
 
-function oh.loadstring(code, name)
-    local ast, err = oh.CodeToAST(code, name)
-
-    if not ast then return nil, err end
-
-    code = oh.ASTToCode(ast)
-
-    local func, err = loadstring(code, name)
-
-    print(code)
-    if not func then
-        return nil, err
-    end
-
-    return func
+function oh.loadstring(code, name, config)
+	local code, err = oh.Transpile(code, name, config)
+	if not code then return nil, err end
+	
+    return loadstring(code, name)
 end
 
 
