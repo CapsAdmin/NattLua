@@ -148,27 +148,28 @@ do
         end
     end
 
-    function META:Node(t)
-        local node = {}
-
-        node.type = t
-        node.tokens = {}
-
-        setmetatable(node, NODE)
-
-        return node
-    end
-
     do
         local STATEMENT = {}
         STATEMENT.__index = STATEMENT
         STATEMENT.type = "statement"
 
+        function STATEMENT:__tostring()
+            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
+        end
+
         function META:NewStatement(kind)
             local node = {}
             node.tokens = {}
             node.kind = kind
-            return setmetatable(node, STATEMENT)
+
+            setmetatable(node, STATEMENT)
+
+            if self.NodeRecord then
+                self.NodeRecord[self.NodeRecordI] = node
+                self.NodeRecordI = self.NodeRecordI + 1
+            end
+
+            return node
         end
     end
 
@@ -177,11 +178,23 @@ do
         EXPRESSSION.__index = EXPRESSSION
         EXPRESSSION.type = "expression"
 
+        function EXPRESSSION:__tostring()
+            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
+        end
+
         function META:NewExpression(kind)
             local node = {}
             node.tokens = {}
             node.kind = kind
-            return setmetatable(node, EXPRESSSION)
+
+            setmetatable(node, EXPRESSSION)
+
+            if self.NodeRecord then
+                self.NodeRecord[self.NodeRecordI] = node
+                self.NodeRecordI = self.NodeRecordI + 1
+            end
+
+            return node
         end
     end
 end
@@ -321,6 +334,13 @@ function META:BuildAST(tokens)
     self.chunks = tokens
     self.chunks_length = #tokens
     self.i = 1
+
+    if self.config then
+        if self.config.record_nodes then
+            self.NodeRecord = {}
+            self.NodeRecordI = 1
+        end
+    end
 
     return self:Root()
 end
@@ -467,7 +487,8 @@ do -- goto
     end
 
     function META:IsGotoStatement()
-        return self:IsValue("goto")
+        -- letter check is needed for cases like 'goto:foo()'
+        return self:IsValue("goto") and self:GetTokenOffset(1).type == "letter"
     end
 
     function META:ReadGotoStatement()
@@ -532,6 +553,8 @@ do -- if
             else
                 token = self:ReadExpectValues({"else", "elseif"})
             end
+
+            if not token then return end
 
             node.tokens["if/else/elseif"][i] = token
 
@@ -651,7 +674,7 @@ end
 function META:ReadRemainingStatement()
     local node
     local start_token = self:GetToken()
-    local expr = self:ReadExpression()
+    local expr = self:ReadExpression(nil, nil, true)
 
     if self:IsValue("=") then
         node = self:NewStatement("assignment")
@@ -702,13 +725,18 @@ function META:ReadStatement()
     self:Error("unexpected " .. type)
 end
 
-function META:ReadExpression(priority, stop_on_call)
+function META:ReadExpression(priority, stop_on_call, non_explicit)
     priority = priority or 0
 
     local token = self:GetToken()
 
     if not token then
         self:Error("attempted to read expression but reached end of code")
+        return
+    end
+
+    if not non_explicit and oh.syntax.IsDefinetlyNotStartOfExpression(token) then
+        self:Error("expected beginning of expression, got ".. oh.QuoteToken(token.value))
         return
     end
 
@@ -749,7 +777,7 @@ function META:ReadExpression(priority, stop_on_call)
 
     token = self:GetToken()
 
-    if token and (
+    if token and val and (
         token.value == "." or
         token.value == ":" or
         token.value == "[" or
@@ -847,7 +875,7 @@ function META:ReadExpressionList(max)
     local out = {}
 
     for _ = 1, max or self:GetLength() do
-        local exp = self:ReadExpression()
+        local exp = self:ReadExpression(nil, nil, true)
 
         if not exp then
             break
@@ -906,7 +934,7 @@ function META:ReadTable()
         end
 
         if not self:IsValue(",") and not self:IsValue(";") then
-            self:Error("expected ".. oh.QuoteTokens(",", ";", "}") .. " got " .. (self:GetToken().value or "no token"))
+            self:Error("expected ".. oh.QuoteTokens(",;}") .. " got " .. (self:GetToken().value or "no token"))
         end
 
         node.tokens[","] = self:ReadToken()
@@ -917,6 +945,6 @@ function META:ReadTable()
     return tree
 end
 
-function oh.Parser()
-    return setmetatable({}, META)
+function oh.Parser(config)
+    return setmetatable({config = config}, META)
 end

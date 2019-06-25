@@ -11,7 +11,7 @@ do
     META.FallbackCharacterType = "letter"
 
     function META:OnInitialize(str)
-        if type(str) == "table" then
+       if type(str) == "table" then
             self.code = str
             self.code_length = #str
         else
@@ -135,8 +135,9 @@ do
         end
 
         c = self:ReadChar()
+
         if c ~= "[" then
-            if multiline_comment then return true end
+            if multiline_comment then return false end
             return nil, "expected " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. c)
         end
 
@@ -175,9 +176,15 @@ do
                 local ok, err = ReadLiteralString(self, true)
 
                 if not ok then
-                    self.i = start + 2
-                    self:Error("unterminated multiline comment: " .. err, start, start + 1)
+                    if err then
+                        self.i = start + 2
+                        self:Error("unterminated multiline comment: " .. err, start, start + 1)
+                    else
+                        self.i = start
+                        return self:ReadLineComment()
+                    end
                 end
+
 
                 return "multiline_comment"
             end
@@ -511,7 +518,7 @@ do
 
     do
         function META:IsShebang()
-            return self.i == 1 and self:GetCurrentChar() == "#" and self:GetCharOffset(1) == "!"
+            return self.i == 1 and self:GetCurrentChar() == "#"
         end
 
         function META:ReadShebang()
@@ -571,7 +578,7 @@ do
         local type = self:ReadNonWhiteSpace()
         local stop = self.i - 1
 
-        local tk = self:NewToken(type, start, stop)
+        local tk = self:NewToken(type or "unknown", start, stop)
         tk.whitespace = wbuffer
         return tk
     end

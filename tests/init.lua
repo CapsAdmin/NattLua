@@ -1,5 +1,6 @@
 
 local oh = require("oh.oh")
+local util = require("oh.util")
 
 local test = {}
 
@@ -14,10 +15,10 @@ function test.transpile(ast, what, config)
     return res
 end
 
-function test.tokenize(code, capture_whitespace)
+function test.tokenize(code, capture_whitespace, name)
     local self = oh.Tokenizer(code, capture_whitespace)
     self.OnError = function(_, msg, start, stop)
-        io.write(oh.FormatError(code, "test", msg, start, stop))
+        io.write(oh.FormatError(code, name or "test", msg, start, stop))
     end
 
     self:ResetState()
@@ -28,7 +29,7 @@ end
 function test.parse(tokens, code)
     local self = oh.Parser()
     self.OnError = function(_, msg, start, stop)
-        error(oh.FormatError(code, "test", msg, start, stop))
+        error(oh.FormatError(code, name or "test", msg, start, stop))
     end
     return self:BuildAST(tokens)
 end
@@ -151,14 +152,22 @@ end
 function test.transpile_check(tbl)
     local tokens, ast, new_code
 
+
+    local function strip(code)
+        local line = code:match("(.-)\n")
+        if line then line = line .. "..." end
+
+        return line or code
+    end
+
     local ok = xpcall(function()
-        tokens = assert(test.tokenize(tbl.code))
-        ast = assert(test.parse(tokens, tbl.code))
-        new_code = assert(test.transpile(ast, nil, tbl.config))
+        tokens = assert(test.tokenize(tbl.code, nil, tbl.name))
+        ast = assert(test.parse(tokens, tbl.code, tbl.name))
+        new_code = assert(test.transpile(ast, tbl.name, tbl.config))
     end, function(err)
         print("===================================")
         print(debug.traceback(err))
-        print(tbl.code)
+        print(strip(tbl.code))
         print("===================================")
     end)
 
@@ -179,17 +188,31 @@ function test.transpile_check(tbl)
         if not ok then
             print("===================================")
             print("error transpiling code:")
-            print(tbl.code)
+            print(strip(tbl.code))
             print("expected:")
-            print(tbl.expect)
+            print(strip(tbl.expect))
             print("got:")
-            print(new_code)
+            print(strip(new_code))
             print("===================================")
         end
     end
 
     return ok, new_code
 end
+
+function test.dofile(path)
+    local f = assert(io.open(path))
+    local code = f:read("*all")
+    f:close()
+    code = util.RemoveBOMHeader(code)
+    return test.transpile_check({
+        code = code,
+        expect = code,
+        name = path,
+    })
+end
+
+
 
 function test.check_tokens_separated_by_space(code)
     local tokens = test.tokenize(code)
@@ -212,8 +235,17 @@ function test.print_ast(code)
     test.dump_ast(test.parse(tokens, code, true))
 end
 
-print("============TEST============")
---assert(loadfile("tests/transpile.lua"))(test)
-assert(loadfile("tests/random_tokens.lua"))(test)
+io.write("TESTING") io.flush()
+--assert(loadfile("tests/random_tokens.lua"))(test)
 assert(loadfile("tests/transpile_equal.lua"))(test)
-print("============TEST COMPLETE============")
+assert(loadfile("tests/errors.lua"))(test)
+io.write(" - OK\n")
+
+for name in io.popen("ls tests/random_files"):read("*all"):gmatch("(.-)\n") do
+    io.write(name)
+    if test.dofile("tests/random_files/" .. name) then
+        io.write(" - OK\n")
+    else
+        io.write(" - FAIL\n")
+    end
+end

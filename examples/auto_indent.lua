@@ -4,7 +4,7 @@ local code = [[
     BlueTeam = game.Teams["BlueTeam"]:Clone()
     local RedTeam = game.Teams["RedTeam"]:Clone()
     local NumPlayers = 2
-    
+
     repeat wait(0)until game:FindFirstChild("Teams")
     local GameTime = 250
     local A = game:service('Players')
@@ -24,7 +24,7 @@ local code = [[
     local GameRun = false
     local GameOver = false
     local RegenTeams = false
-    
+
     function teams()
     function balanceTeams(players, teams, randomize, callback)
     for key = 1, #players do
@@ -35,13 +35,13 @@ local code = [[
     end
     end
     end;
-    
+
     balanceTeams(
     players:GetPlayers(),
     {BrickColor.new("Bright red"), BrickColor.new("Bright blue")},
     true
     );
-    
+
     function checkSpectators()
     spectators = 0
     for _, player in pairs(game:service('Players'):GetChildren()) do
@@ -51,11 +51,11 @@ local code = [[
     game.Teams.BlueTeam:remove()
     game.Teams.RedTeam:remove()
     end
-    
+
     wait(3)
     end
     end
-    
+
     function findwinner()
     if GameOver then
     for _, player in pairs(game.Players:GetPlayers()) do
@@ -76,7 +76,7 @@ local code = [[
     end
     end
     end
-    
+
     function RegenPlrs()
     for i,v in pairs(game.Players:GetPlayers())do
     if v and v.Character then
@@ -84,7 +84,7 @@ local code = [[
     end
     end
     end
-    
+
     function StartGame()
     if GameRun then
     teams()
@@ -93,7 +93,7 @@ local code = [[
     findwinner()
     end
     end
-    
+
     coroutine.resume(coroutine.create(function()
     while wait(TimeForLoop)do
     if not ( #A:GetPlayers() >= NumPlayers ) then
@@ -124,4 +124,4 @@ local code = [[
 ]]
 
 local code = assert(oh.Transpile(code, "", {preserve_whitespace = false}))
-io.open("lol.lua", "wb"):write(code)
+print(code)

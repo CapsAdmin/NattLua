@@ -13,7 +13,8 @@ syntax.SymbolCharacters = {
 syntax.Keywords = {
     "and", "break", "do", "else", "elseif", "end",
     "false", "for", "function", "if", "in", "of", "local",
-    "nil", "not", "or", "repeat", "return", "then",
+    "nil", "not", "or", "repeat", "until", "return", "then",
+
     "...",
 
     --"async", "interface", "struct", "as", "@",
@@ -30,10 +31,10 @@ syntax.UnaryOperators = {
     "-", "#", "not", "~",
 
     -- glua
-    "!",
+   -- "!",
 }
 
-syntax.Operators = {
+syntax.BinaryOperators = {
     {"or", "||"},
     {"and", "&&"},
     {"<", ">", "<=", ">=", "~=", "!=", "=="},
@@ -47,7 +48,7 @@ syntax.Operators = {
     {"R^"}, -- right associative
 }
 
-syntax.OperatorFunctions = {
+syntax.BinaryOperatorFunctionTranslate = {
     [">>"] = "bit.rshift(A, B)",
     ["<<"] = "bit.lshift(A, B)",
     ["|"] = "bit.bor(A, B)",
@@ -56,7 +57,7 @@ syntax.OperatorFunctions = {
     ["~"] = "bit.bxor(A, B)",
 }
 
-syntax.UnaryOperatorFunctions = {
+syntax.UnaryOperatorFunctionTranslate = {
     ["~"] = "bit.bnot(A)",
 }
 
@@ -111,7 +112,7 @@ do -- extend the symbol map from grammar rules
         end
     end
 
-    for _, group in ipairs(syntax.Operators) do
+    for _, group in ipairs(syntax.BinaryOperators) do
         for _, token in ipairs(group) do
             if token:find("%p") then
                 if token:sub(1, 1) == "R" then
@@ -159,14 +160,14 @@ do
 end
 
 do
-    for k, v in pairs(syntax.OperatorFunctions) do
+    for k, v in pairs(syntax.BinaryOperatorFunctionTranslate) do
         local a,b,c = v:match("(.-)A(.-)B(.*)")
-        syntax.OperatorFunctions[k] = {" " .. a, b, c .. " "}
+        syntax.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
     end
 
-    for k, v in pairs(syntax.UnaryOperatorFunctions) do
+    for k, v in pairs(syntax.UnaryOperatorFunctionTranslate) do
         local a, b = v:match("^(.-)A(.-)$")
-        syntax.UnaryOperatorFunctions[k] = {" " .. a, b .. " "}
+        syntax.UnaryOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
     end
 end
 
@@ -179,24 +180,36 @@ do -- grammar rules
         return token.type == "number" or token.type == "string" or syntax.KeywordValues[token.value]
     end
 
+    function syntax.IsDefinetlyNotStartOfExpression(token)
+        return
+        token.value == "}" or token.value == "," or
+        token.value == "[" or token.value == "]" or
+        (
+            syntax.IsKeyword(token) and
+            not syntax.IsUnaryOperator(token) and
+            not syntax.IsValue(token) and
+            token.value ~= "function"
+        )
+    end
+
     function syntax.IsOperator(token)
-        return syntax.Operators[token.value] ~= nil
+        return syntax.BinaryOperators[token.value] ~= nil
     end
 
     function syntax.GetLeftOperatorPriority(token)
-        return syntax.Operators[token.value] and syntax.Operators[token.value][1]
+        return syntax.BinaryOperators[token.value] and syntax.BinaryOperators[token.value][1]
     end
 
     function syntax.GetRightOperatorPriority(token)
-        return syntax.Operators[token.value] and syntax.Operators[token.value][2]
+        return syntax.BinaryOperators[token.value] and syntax.BinaryOperators[token.value][2]
     end
 
     function syntax.GetFunctionForOperator(token)
-        return syntax.OperatorFunctions[token.value]
+        return syntax.BinaryOperatorFunctionTranslate[token.value]
     end
 
     function syntax.GetFunctionForUnaryOperator(token)
-        return syntax.UnaryOperatorFunctions[token.value]
+        return syntax.UnaryOperatorFunctionTranslate[token.value]
     end
 
     function syntax.IsUnaryOperator(token)
@@ -208,7 +221,7 @@ do -- grammar rules
     end
 
     local temp = {}
-    for priority, group in ipairs(syntax.Operators) do
+    for priority, group in ipairs(syntax.BinaryOperators) do
         for _, token in ipairs(group) do
             if token:sub(1, 1) == "R" then
                 temp[token:sub(2)] = {priority + 1, priority}
@@ -217,7 +230,7 @@ do -- grammar rules
             end
         end
     end
-    syntax.Operators = temp
+    syntax.BinaryOperators = temp
 
     do
       local temp = {}

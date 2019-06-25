@@ -12,6 +12,8 @@ do
     end
 
     function util.UTF8ToTable(str)
+        str = util.RemoveBOMHeader(str)
+
         local tbl = {}
         local i = 1
         local length = 1
@@ -20,6 +22,20 @@ do
             local length = map[str:byte(i)]
 
             if not length then break end
+
+            -- this could be optional, but there are some lua files out there
+            -- with unicode strings that contain bytes over 240 (4 byte length)
+            -- but goes beyond the terminating quote causing the tokenizer to error
+            -- with unterminated quote
+            if length > 1 then
+                for i2 = 1, length do
+                    local b = str:byte(i + i2 - 1)
+                    if not b or b <= 127 then
+                        length = 1
+                        break
+                    end
+                end
+            end
 
             tbl[tbl_i] = str:sub(i, i + length - 1)
             i = i + length
@@ -48,6 +64,15 @@ function util.FetchCode(path, url)
     return code
 end
 
+function util.RemoveBOMHeader(str)
+    if str:sub(1, 2) == "\xFE\xFF" then
+        return str:sub(3)
+    elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+        return str:sub(4)
+    end
+    return str
+end
+
 do
 	local indent = 0
 	function util.TablePrint(tbl, blacklist)
@@ -73,6 +98,28 @@ do
 			end
 		end
 	end
+end
+
+function util.CountFields(tbl, what, cb, max)
+    max = max or 10
+
+    local score = {}
+    for i,v in ipairs(tbl) do
+        local key = cb(v)
+        score[key] = (score[key] or 0) + 1
+    end
+    local temp = {}
+    for k,v in pairs(score) do
+        table.insert(temp, {name = k, score = v})
+    end
+    table.sort(temp, function(a,b) return a.score > b.score end)
+    io.write("top "..max.." ",what,":\n")
+    for i = 1, max do
+        local data = temp[i]
+        if not data then break end
+        if i < max then io.write(" ") end
+        io.write(i, ": `", data.name, "´ occured ", data.score, " times\n")
+    end
 end
 
 function util.LogTraceAbort()

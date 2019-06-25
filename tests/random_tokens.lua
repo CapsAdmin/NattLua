@@ -1,6 +1,6 @@
 local test = ...
 
-io.write("generating random tokens ...")
+--io.write("generating random tokens ...")
 local tokens = {
     ",", "=", ".", "(", ")", "end", ":", "function", "self", "then", "}", "{", "[", "]",
     "local", "if", "return", "ffi", "tbl", "1", "cast", "i", "0", "==",
@@ -47,49 +47,20 @@ for i = 1, total do
 end
 
 local code = table.concat(code)
-io.write(" - OK! ", ("%0.3f"):format(#code/1024/1024), "Mb of lua code\n")
+--io.write(" - OK! ", ("%0.3f"):format(#code/1024/1024), "Mb of lua code\n")
 
 do
-    io.write("tokenizing random tokens with capture_whitespace ...")
+    --io.write("tokenizing random tokens with capture_whitespace ...")
     local t = os.clock()
     local res = test.tokenize(code, true)
     local total = os.clock() - t
-    io.write(" - OK! ", total, " seconds / ", #res, " tokens\n")
+    --io.write(" - OK! ", total, " seconds / ", #res, " tokens\n")
 end
 
 do
-    io.write("tokenizing random tokens without capture_whitespace ...")
+    --io.write("tokenizing random tokens without capture_whitespace ...")
     local t = os.clock()
     local res = test.tokenize(code, false)
     local total = os.clock() - t
-    io.write(" - OK! ", total, " seconds / ", #res, " tokens\n")
-end
-
-local function measure(code)
-    collectgarbage()
-    local res = code
-
-    do
-        io.write("tokenizing     ...", ("%0.3f"):format(#code/1024/1024), "Mb of lua code\n")
-        local t = os.clock()
-        res = test.tokenize(res)
-        local total = os.clock() - t
-        io.write(" - OK! ", total, " seconds / ", #res, " tokens\n")
-    end
-
-    do
-        io.write("parsing        ...")
-        local t = os.clock()
-        res = test.parse(res, code)
-        local total = os.clock() - t
-        io.write(" - OK! ", total, " seconds\n")
-    end
-
-    do
-        io.write("generating code...")
-        local t = os.clock()
-        res = test.transpile(res)
-        local total = os.clock() - t
-        io.write(" - OK! ", total, " seconds / ", ("%0.3f"):format(#res/1024/1024), "Mb of code\n")
-    end
+    --io.write(" - OK! ", total, " seconds / ", #res, " tokens\n")
 end

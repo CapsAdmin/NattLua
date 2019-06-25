@@ -172,7 +172,6 @@ do
             self:Whitespace(" ")
             self:EmitToken(node.tokens["function"])
             self:Whitespace(" ")
-            self:EmitExpressionList(node.identifiers)
             self:EmitExpression(node.name)
         else
             self:Whitespace("\t")
@@ -246,22 +245,14 @@ function META:EmitUnaryOperator(v)
         self:EmitExpression(v.right)
         self:Emit(func_chunks[2])
     else
-        if oh.syntax.IsKeyword(v.value) then
-            self:EmitToken(v.value, "")
-            self:Whitespace("?", true)
+        if oh.syntax.IsKeyword(v) then
+            self:Whitespace("?")
+            self:EmitToken(v.value)
+            self:Whitespace("?")
             self:EmitExpression(v.right)
         else
-            if v.tokens["("] and v.tokens.value.start > v.tokens["("].start then
-                if v.tokens["("] then self:EmitToken(v.tokens["("]) end
                 self:EmitToken(v.value)
-            else
-                self:EmitToken(v.value)
-                if v.tokens["("] then self:EmitToken(v.tokens["("]) end
-            end
-
             self:EmitExpression(v.right)
-
-            if v.tokens[")"] then self:EmitToken(v.tokens[")"]) end
         end
     end
 end
@@ -444,7 +435,15 @@ function META:EmitStatement(node)
         self:EmitToken(node.tokens["shebang"])
     elseif node.kind == "value" then
         self:EmitExpression(node)
-    elseif node.kind ~= "semicolon" then
+    elseif node.kind == "semicolon" then
+        self:EmitSemicolonStatement(node)
+
+        if not self.PreserveWhitespace then
+            if self.out[self.i - 2] and self.out[self.i - 2] == "\n" then
+                self.out[self.i - 2] = ""
+            end
+        end
+    else
         error("unhandled value: " .. node.kind)
     end
 end
@@ -455,10 +454,6 @@ end
 function META:EmitStatements(tbl)
     for i, node in ipairs(tbl) do
         self:EmitStatement(node)
-
-        if tbl[i + 1] and tbl[i + 1].kind == "semicolon" then
-            self:EmitSemicolonStatement(tbl[i + 1])
-        end
 
         self:Whitespace("\n")
     end

@@ -5,6 +5,8 @@ assert(loadfile("oh/tokenizer.lua"))(oh)
 assert(loadfile("oh/parser.lua"))(oh)
 assert(loadfile("oh/lua_emitter.lua"))(oh)
 
+local util = require("oh.util")
+
 function oh.ASTToCode(ast, config)
     local self = oh.LuaEmitter(config)
     return self:BuildCode(ast)
@@ -29,13 +31,13 @@ function oh.CodeToTokens(code, name)
         return nil, str
 	end
 
-	return tokens
+	return tokens, tokenizer
 end
 
-function oh.TokensToAST(tokens, name, code)
+function oh.TokensToAST(tokens, name, code, config)
 	name = name or "unknown"
 
-	local parser = oh.Parser()
+	local parser = oh.Parser(config)
     parser.OnError = on_error
     local ast = parser:BuildAST(tokens)
     if parser.errors then
@@ -45,8 +47,8 @@ function oh.TokensToAST(tokens, name, code)
         end
         return nil, str
 	end
-	
-	return ast
+
+	return ast, parser
 end
 
 function oh.Transpile(code, name, config)
@@ -54,8 +56,8 @@ function oh.Transpile(code, name, config)
 
 	local tokens, err = oh.CodeToTokens(code, name)
 	if not tokens then return nil, err end
-	
-	local ast, err = oh.TokensToAST(tokens, name, code)
+
+	local ast, err = oh.TokensToAST(tokens, name, code, config)
 	if not ast then return nil, err end
 	return oh.ASTToCode(ast, config)
 end
@@ -63,22 +65,19 @@ end
 function oh.loadstring(code, name, config)
 	local code, err = oh.Transpile(code, name, config)
 	if not code then return nil, err end
-	
+
     return loadstring(code, name)
 end
 
 
 function oh.QuoteToken(str)
-	return "⸢" .. str .. "⸥"
+	return "❲" .. str .. "❳"
 end
 
 function oh.QuoteTokens(var)
+
 	if type(var) == "string" then
-        local temp = {}
-        for i = 1, #var do
-            temp[i] = var:sub(i,i)
-        end
-        var = temp
+		var = util.UTF8ToTable(var)
 	end
 
 	local str = ""
@@ -115,7 +114,6 @@ local function sub(tbl, start, stop)
 	return table.concat(out)
 end
 
-local util = require("oh.util")
 
 function oh.FormatError(code, path, msg, start, stop)
 	local chars = type(code) == "table" and code or util.UTF8ToTable(code)
@@ -123,7 +121,7 @@ function oh.FormatError(code, path, msg, start, stop)
 
 	local total_lines = count(chars, "\n")
 	local line_number_length = #tostring(total_lines)
-	
+
 	local function tab2space(str)
 		return str:gsub("\t", "    ")
 	end
@@ -190,7 +188,7 @@ function oh.FormatError(code, path, msg, start, stop)
 	end
 
 	out = out .. line2str(current_line) .. " | " .. line_before .. middle .. line_after .. "\n"
-	out = out .. (" "):rep(line_number_length) .. " |" .. (" "):rep(#line_before + 1) .. ("^"):rep(length + 1) .. " " .. msg .. "\n"
+	out = out .. (" "):rep(line_number_length) .. " |" .. (" "):rep(#line_before + 1) .. ("🠙"):rep(length) .. "🠝" .. " " .. msg .. "\n"
 
 	if line_context_size > 0 then
         local lines = {}

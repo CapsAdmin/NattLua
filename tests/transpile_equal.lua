@@ -103,11 +103,30 @@ do
         "a=(foo.bar)()",
         "a=(foo.bar)",
         "if (player:IsValid()) then end",
+        "if not true then end",
+        "local function F (m) end",
+        "msgs[#msgs+1] = string.sub(m, 3, -3)",
+        "a = (--[[a]]((-a)))",
 
-        {code = "local a = 1 >> 2",  expect = "local a = bit.rshift(1, 2)", compare_tokens = true},
-        {code = "local a = 1 >> 2 << 23",  expect = "local a = bit.lshift(bit.rshift(1, 2), 23)", compare_tokens = true},
+        "a = 1; b = 2; local a = 3; function a() end while true do end b = c; a,b,c=1,2,3",
+        "if not a then return end",
+        "foo = 'foo'\r\nbar = 'bar'\r\n",
 
-        {code = "local a\nlocal b\nlocal c", expect = "local a local b\n local c "},
+        ";;print 'testing syntax';;",
+        "#testse tseokt osektokseotk\nprint('ok')",
+        "do ;;; end\n; do ; a = 3; assert(a == 3) end;\n;",
+        "--[=TESTSUITE\n-- utilities\nlocal ops = {}\n--]=]",
+        "assert(string.gsub('�lo �lo', '�', 'x') == 'xlo xlo')",
+
+        'foo = "\200\220\2\3\r"\r\nfoo = "\200\220\2\3"\r\n',
+        "goto:foo()",
+        "a = " .. string.char(34,187,243,193,161,34),
+
+        {code = "\xEF\xBB\xBF foo = true", expect = " foo = true"},
+
+        {code = "local a = ~1",             expect = "local a = bit.bnot(1)",                       compare_tokens = true},
+        {code = "local a = 1 >> 2",         expect = "local a = bit.rshift(1, 2)",                  compare_tokens = true},
+        {code = "local a = 1 >> 2 << 23",   expect = "local a = bit.lshift(bit.rshift(1, 2), 23)",  compare_tokens = true},
     }
 end
 
