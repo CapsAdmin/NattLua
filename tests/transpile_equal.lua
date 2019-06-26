@@ -121,6 +121,9 @@ do
         'foo = "\200\220\2\3\r"\r\nfoo = "\200\220\2\3"\r\n',
         "goto:foo()",
         "a = " .. string.char(34,187,243,193,161,34),
+        "local a = {foo,bar,faz,}",
+        "local a = {{--[[1]]foo--[[2]],--[[3]]bar--[[4]],--[[5]]faz--[[6]],--[[7]]},}",
+        "local a = {--[[1]]foo--[[2]],--[[3]]bar--[[4]],--[[5]]faz--[[6]]}",
 
         {code = "\xEF\xBB\xBF foo = true", expect = " foo = true"},
 

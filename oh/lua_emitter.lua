@@ -109,8 +109,27 @@ function META:EmitExpression(v)
         self:EmitFunction(v, true)
     elseif v.kind == "table" then
         self:EmitTable(v)
-    elseif v.kind == "unary_operator" then
-        self:EmitUnaryOperator(v)
+    elseif v.kind == "prefix_operator" then
+        self:EmitPrefixOperator(v)
+    elseif v.kind == "postfix_operator" then
+        self:EmitPostfixOperator(v)
+    elseif v.kind == "postfix_call" then
+        self:EmitExpression(v.left)
+
+        if v.tokens["left"] then
+            self:EmitToken(v.tokens["left"])
+        end
+        
+        self:EmitExpressionList(v.expressions)
+
+        if v.tokens["right"] then
+            self:EmitToken(v.tokens["right"])
+        end
+    elseif v.kind == "postfix_expression_index" then
+        self:EmitExpression(v.left)
+        self:EmitToken(v.tokens["["])
+        self:EmitExpression(v.expressions[1])
+        self:EmitToken(v.tokens["]"])
     elseif v.kind == "value" then
         self:EmitToken(v.value)
     else
@@ -120,37 +139,6 @@ function META:EmitExpression(v)
     if v.tokens[")"] then
         for _, v in ipairs(v.tokens[")"]) do
             self:EmitToken(v)
-        end
-    end
-
-    if v.suffixes then
-        for _, node in ipairs(v.suffixes) do
-            if node.kind == "index" then
-                self:EmitToken(node.tokens["."])
-                self:EmitToken(node.value)
-            elseif node.kind == "self_index" then
-                self:EmitToken(node.tokens[":"])
-                self:EmitToken(node.value)
-            elseif node.kind == "index_expression" then
-                self:EmitToken(node.tokens["["])
-                self:EmitExpression(node.value)
-                self:EmitToken(node.tokens["]"])
-            elseif node.kind == "call" then
-                if node.tokens["call("] then
-                    self:EmitToken(node.tokens["call("])
-                end
-                self:EmitExpressionList(node.value)
-
-                if node.tokens["call)"] then
-                    self:EmitToken(node.tokens["call)"])
-                end
-            end
-
-            if node.tokens[")"] then
-                for _, v in ipairs(node.tokens[")"]) do
-                    self:EmitToken(v)
-                end
-            end
         end
     end
 end
@@ -208,12 +196,8 @@ function META:EmitTable(v)
                     self:EmitExpression(v.value)
                 elseif v.kind == "table_key_value" then
                     self:EmitToken(v.key)
-                    if v.tokens["="] then
-                        self:EmitToken(v.tokens["="])
-                        self:EmitExpression(v.value)
-                    else
-                        self:Emit(" = nil")
-                    end
+                    self:EmitToken(v.tokens["="])
+                    self:EmitExpression(v.value)
                 elseif v.kind == "table_expression_value" then
 
                     self:EmitToken(v.tokens["["])
@@ -238,8 +222,8 @@ function META:EmitTable(v)
     end
 end
 
-function META:EmitUnaryOperator(v)
-    local func_chunks = oh.syntax.GetFunctionForUnaryOperator(v.value)
+function META:EmitPrefixOperator(v)
+    local func_chunks = oh.syntax.GetFunctionForPrefixOperator(v.value)
     if func_chunks then
         self:Emit(func_chunks[1])
         self:EmitExpression(v.right)
@@ -253,6 +237,25 @@ function META:EmitUnaryOperator(v)
         else
                 self:EmitToken(v.value)
             self:EmitExpression(v.right)
+        end
+    end
+end
+
+function META:EmitPostfixOperator(v)
+    local func_chunks = oh.syntax.GetFunctionForPostfixOperator(v.value)
+    if func_chunks then
+        self:Emit(func_chunks[1])
+        self:EmitExpression(v.left)
+        self:Emit(func_chunks[2])
+    else
+        if oh.syntax.IsKeyword(v) then
+            self:Whitespace("?")
+            self:EmitToken(v.value)
+            self:Whitespace("?")
+            self:EmitExpression(v.left)
+        else
+            self:EmitToken(v.value)
+            self:EmitExpression(v.left)
         end
     end
 end
@@ -423,7 +426,7 @@ function META:EmitStatement(node)
         self:EmitAssignment(node)
     elseif node.kind == "function" then
         self:Function(node)
-    elseif node.kind == "call" then
+    elseif node.kind == "expression" then
         self:Whitespace("\t")
         self:EmitExpression(node.value)
     elseif node.kind == "shebang" then

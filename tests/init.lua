@@ -194,6 +194,14 @@ function test.transpile_check(tbl)
             print("got:")
             print(strip(new_code))
             print("===================================")
+
+            local f = io.open("got.lua", "w") f:write(new_code) f:close()
+            local f = io.open("expect.lua", "w") f:write(tbl.expect) f:close()
+
+            os.execute("diff -d ./got.lua ./expect.lua")
+
+            os.remove("got.lua")
+            os.remove("expect.lua")
         end
     end
 
@@ -239,6 +247,13 @@ io.write("TESTING") io.flush()
 --assert(loadfile("tests/random_tokens.lua"))(test)
 assert(loadfile("tests/transpile_equal.lua"))(test)
 assert(loadfile("tests/errors.lua"))(test)
+if jit.os == "Linux" or jit.os == "OSX" then
+    for path in io.popen("find ."):lines() do
+        if path:sub(-4) == ".lua" and not path:find("10mb") then
+            test.dofile(path, {name = path})
+        end
+    end
+end
 io.write(" - OK\n")
 
 do return end

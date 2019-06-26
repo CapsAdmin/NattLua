@@ -21,7 +21,7 @@ do
             return em:Concat()
         end
 
-        if self.type == "operator" or self.type == "unary" then
+        if self.type == "operator" or self.type == "prefix" then
             em:ReadExpression(self)
         elseif self.type == "block" then
             em:Block(self)
@@ -718,11 +718,11 @@ function META:ReadRemainingStatement()
         node.expressions_left = list
         node.tokens["="] = self:ReadExpectValue("=")
         node.expressions_right = self:ReadExpressionList()
-    elseif expr and expr.suffixes and expr.suffixes[#expr.suffixes].kind == "call" then
-        node = self:NewStatement("call")
+    elseif expr then-- and expr.suffixes and expr.suffixes[#expr.suffixes].kind == "call" then
+        node = self:NewStatement("expression")
         node.value = expr
-    else
-        self:Error("unexpected " .. start_token.type, start_token)
+    --else
+       -- self:Error("unexpected " .. start_token.type .. " while trying to read assignment or call", start_token)
     end
 
     return node
@@ -771,8 +771,8 @@ function META:ReadExpression(priority, stop_on_call, non_explicit)
 
     local val
 
-    if oh.syntax.IsUnaryOperator(token) then
-        val = self:NewExpression("unary_operator")
+    if oh.syntax.IsPrefixOperator(token) then
+        val = self:NewExpression("prefix_operator")
         val.value = self:ReadToken()
         val.right = self:ReadExpression(math.huge, stop_on_call)
     elseif self:IsValue("(") then
@@ -806,76 +806,46 @@ function META:ReadExpression(priority, stop_on_call, non_explicit)
 
     token = self:GetToken()
 
-    if token and val and (
-        token.value == "." or
-        token.value == ":" or
-        token.value == "[" or
-        token.value == "(" or
-        token.value == "{" or
-        token.type == "string"
-    ) then
-        local suffixes = val.suffixes or {}
+    if token then
+        for _ = 1, max or self:GetLength() do
+            token = self:GetToken()
+            local left = val
 
-        for _ = 1, self:GetLength() do
-            if not self:GetToken() then break end
+            if not token or not val then break end
 
-            local node
-
-            if self:IsValue(".") then
-                node = self:NewExpression("index")
-                node.tokens["."] = self:ReadToken()
-                node.value = self:ReadExpectType("letter")
-            elseif self:IsValue(":") then
-                local nxt = self:GetTokenOffset(2)
-                if nxt.type == "string" or nxt.value == "(" or nxt.value == "{" then
-                    node = self:NewExpression("self_index")
-                    node.tokens[":"] = self:ReadToken()
-                    node.value = self:ReadExpectType("letter")
-                else
-                    break
-                end
-            elseif self:IsValue("[") then
-                node = self:NewExpression("index_expression")
-
-                node.tokens["["] = self:ReadToken()
-                node.value = self:ReadExpression(0, stop_on_call)
-                node.tokens["]"] = self:ReadExpectValue("]")
-            elseif self:IsValue("(") then
-
+            if token and oh.syntax.IsPostfixOperator(token) then
+                val = self:NewExpression("postfix_operator")
+                val.value = self:ReadToken()
+                val.left = left
+            elseif self:IsValue("(") or self:IsValue("{") or self:IsType("string") then
                 if stop_on_call then
-                    if suffixes[1] then
-                        val.suffixes = suffixes
-                    end
                     return val
                 end
 
-                local start = self:GetToken()
+                val = self:NewExpression("postfix_call")
+                
+                if not self:IsType("string") then
+                    val.tokens["left"] = self:ReadToken()
+                end
 
-                local pleft = self:ReadToken()
-                node = self:NewExpression("call")
+                val.expressions = self:ReadExpressionList()
 
-                node.tokens["call("] = pleft
-                node.value = self:ReadExpressionList()
-                node.tokens["call)"] = self:ReadExpectValue(")", start)
-            elseif self:IsValue("{") then
-                node = self:NewExpression("call")
-                node.value = {self:ReadTable()}
-            elseif self:IsType("string") then
-                node = self:NewExpression("call")
-                node.value = {self:NewExpression("value")}
-                node.value[1].value = self:ReadToken()
-            elseif self:IsType("literal_string") then
-                node = self:NewExpression("call")
-                node.value = {self:LiteralString()}
-            else
-                break
+                if val.tokens["left"] then
+                    if val.tokens["left"].value == "(" then
+                        val.tokens["right"] = self:ReadExpectValue(")")
+                    elseif val.tokens["left"].value == "{" then
+                        val.tokens["right"] = self:ReadExpectValue("}")
+                    end
+                end
+
+                val.left = left
+            elseif self:IsValue("[") then
+                val = self:NewExpression("postfix_expression_index")
+                val.tokens["["] = self:ReadToken()
+                val.expressions = {self:ReadExpression()}
+                val.tokens["]"] = self:ReadExpectValue("]")
+                val.left = left
             end
-
-            table_insert(suffixes, node)
-        end
-
-        if suffixes[1] then
-            val.suffixes = suffixes
         end
     end
 
@@ -896,6 +866,8 @@ function META:ReadExpression(priority, stop_on_call, non_explicit)
             val.right = right
         end
     end
+
+    token = self:GetToken()
 
     return val
 end

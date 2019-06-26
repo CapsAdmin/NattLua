@@ -5,7 +5,7 @@ local syntax = {}
 syntax.UTF8 = true
 
 syntax.SymbolCharacters = {
-    ".", ",", ":", ";",
+    ",", ";",
     "(", ")", "{", "}", "[", "]",
     "=", "::", "\"", "'", "`",
 }
@@ -14,10 +14,7 @@ syntax.Keywords = {
     "and", "break", "do", "else", "elseif", "end",
     "false", "for", "function", "if", "in", "of", "local",
     "nil", "not", "or", "repeat", "until", "return", "then",
-
     "...",
-
-    --"async", "interface", "struct", "as", "@",
 }
 
 syntax.KeywordValues = {
@@ -27,17 +24,19 @@ syntax.KeywordValues = {
     "false",
 }
 
-syntax.UnaryOperators = {
+syntax.PrefixOperators = {
     "-", "#", "not", "~",
+}
 
-    -- glua
-   -- "!",
+syntax.PostfixOperators = {
+    "++",
 }
 
 syntax.BinaryOperators = {
-    {"or", "||"},
-    {"and", "&&"},
-    {"<", ">", "<=", ">=", "~=", "!=", "=="},
+    {".", ":"},
+    {"or"},
+    {"and"},
+    {"<", ">", "<=", ">=", "~=", "=="},
     {"|"},
     {"~"},
     {"&"},
@@ -57,8 +56,12 @@ syntax.BinaryOperatorFunctionTranslate = {
     ["~"] = "bit.bxor(A, B)",
 }
 
-syntax.UnaryOperatorFunctionTranslate = {
+syntax.PrefixOperatorFunctionTranslate = {
     ["~"] = "bit.bnot(A)",
+}
+
+syntax.PostfixOperatorFunctionTranslate = {
+    ["++"] = "(A+1)",
 }
 
 -- temp
@@ -106,7 +109,13 @@ do
 end
 
 do -- extend the symbol map from grammar rules
-    for _, symbol in pairs(syntax.UnaryOperators) do
+    for _, symbol in pairs(syntax.PrefixOperators) do
+        if symbol:find("%p") then
+            table.insert(syntax.CharacterMap.symbol, symbol)
+        end
+    end
+
+    for _, symbol in pairs(syntax.PostfixOperators) do
         if symbol:find("%p") then
             table.insert(syntax.CharacterMap.symbol, symbol)
         end
@@ -165,9 +174,14 @@ do
         syntax.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
     end
 
-    for k, v in pairs(syntax.UnaryOperatorFunctionTranslate) do
+    for k, v in pairs(syntax.PrefixOperatorFunctionTranslate) do
         local a, b = v:match("^(.-)A(.-)$")
-        syntax.UnaryOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+        syntax.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+    end
+
+    for k, v in pairs(syntax.PostfixOperatorFunctionTranslate) do
+        local a, b = v:match("^(.-)A(.-)$")
+        syntax.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
     end
 end
 
@@ -186,7 +200,7 @@ do -- grammar rules
         token.value == "[" or token.value == "]" or
         (
             syntax.IsKeyword(token) and
-            not syntax.IsUnaryOperator(token) and
+            not syntax.IsPrefixOperator(token) and
             not syntax.IsValue(token) and
             token.value ~= "function"
         )
@@ -208,12 +222,20 @@ do -- grammar rules
         return syntax.BinaryOperatorFunctionTranslate[token.value]
     end
 
-    function syntax.GetFunctionForUnaryOperator(token)
-        return syntax.UnaryOperatorFunctionTranslate[token.value]
+    function syntax.GetFunctionForPrefixOperator(token)
+        return syntax.PrefixOperatorFunctionTranslate[token.value]
     end
 
-    function syntax.IsUnaryOperator(token)
-        return syntax.UnaryOperators[token.value]
+    function syntax.GetFunctionForPostfixOperator(token)
+        return syntax.PostfixOperatorFunctionTranslate[token.value]
+    end
+
+    function syntax.IsPrefixOperator(token)
+        return syntax.PrefixOperators[token.value]
+    end
+
+    function syntax.IsPostfixOperator(token)
+        return syntax.PostfixOperators[token.value]
     end
 
     function syntax.IsKeyword(token)
@@ -232,29 +254,18 @@ do -- grammar rules
     end
     syntax.BinaryOperators = temp
 
-    do
-      local temp = {}
-      for _, val in pairs(syntax.UnaryOperators) do
-          temp[val] = true
-      end
-      syntax.UnaryOperators = temp
+    local function to_lookup(tbl)
+        local out = {}
+        for _, v in pairs(tbl) do
+            out[v] = v
+        end
+        return out
     end
 
-    do
-      local temp = {}
-      for _, v in pairs(syntax.Keywords) do
-          temp[v] = v
-      end
-      syntax.Keywords = temp
-    end
-
-    do
-      local temp = {}
-      for _, v in pairs(syntax.KeywordValues) do
-          temp[v] = v
-      end
-      syntax.KeywordValues = temp
-    end
+    syntax.PrefixOperators = to_lookup(syntax.PrefixOperators)
+    syntax.PostfixOperators = to_lookup(syntax.PostfixOperators)
+    syntax.Keywords = to_lookup(syntax.Keywords)
+    syntax.KeywordValues = to_lookup(syntax.KeywordValues)
 end
 
 return syntax

@@ -3,7 +3,10 @@ local oh = require("oh.oh")
 local function check(tbl)
     for i,v in ipairs(tbl) do
         local ok, err = oh.loadstring(v[1])
-        if ok then error("expected error, but code compiled", 2) end
+        if ok then 
+            print(ok, v[1])
+            error("expected error, but code compiled", 2)
+        end
         if not err:find(v[2]) then
             print(err)
             print("~=")
@@ -11,7 +14,7 @@ local function check(tbl)
             error("error does not match")
         end
     end
-end
+end do return end
 
 check({
     {"local foo[123] = true", "  |          .- unexpected symbol"},
