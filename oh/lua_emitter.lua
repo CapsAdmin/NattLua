@@ -116,19 +116,19 @@ function META:EmitExpression(v)
     elseif v.kind == "postfix_call" then
         self:EmitExpression(v.left)
 
-        if v.tokens["left"] then
-            self:EmitToken(v.tokens["left"])
+        if v.tokens["call("] then
+            self:EmitToken(v.tokens["call("])
         end
-        
+
         self:EmitExpressionList(v.expressions)
 
-        if v.tokens["right"] then
-            self:EmitToken(v.tokens["right"])
+        if v.tokens["call)"] then
+            self:EmitToken(v.tokens["call)"])
         end
     elseif v.kind == "postfix_expression_index" then
         self:EmitExpression(v.left)
         self:EmitToken(v.tokens["["])
-        self:EmitExpression(v.expressions[1])
+        self:EmitExpression(v.expression)
         self:EmitToken(v.tokens["]"])
     elseif v.kind == "value" then
         self:EmitToken(v.value)
@@ -235,7 +235,7 @@ function META:EmitPrefixOperator(v)
             self:Whitespace("?")
             self:EmitExpression(v.right)
         else
-                self:EmitToken(v.value)
+            self:EmitToken(v.value)
             self:EmitExpression(v.right)
         end
     end
@@ -277,7 +277,8 @@ function META:EmitIfStatement(node)
         self:EmitStatements(node.statements[i])
         self:Whitespace("\t-")
     end
-    self:Whitespace("\t") self:EmitToken(node.tokens["end"])
+    self:Whitespace("\t")
+    self:EmitToken(node.tokens["end"])
 end
 
 function META:EmitForStatement(node)
@@ -312,7 +313,7 @@ function META:EmitWhileStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["while"])
     self:Whitespace(" ")
-    self:EmitExpression(node.expressions[1])
+    self:EmitExpression(node.expression)
     self:Whitespace(" ")
     self:EmitToken(node.tokens["do"])
     self:Whitespace("\n")
@@ -335,14 +336,14 @@ function META:EmitRepeatStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["until"])
     self:Whitespace(" ")
-    self:EmitExpression(node.expressions[1])
+    self:EmitExpression(node.expression)
 end
 
 do
     function META:EmitLabelStatement(node)
         self:Whitespace("\t")
         self:EmitToken(node.tokens["::left"])
-        self:EmitToken(node.identifiers[1])
+        self:EmitToken(node.identifier)
         self:EmitToken(node.tokens["::right"])
     end
 
@@ -350,7 +351,7 @@ do
         self:Whitespace("\t")
         self:EmitToken(node.tokens["goto"])
         self:Whitespace(" ")
-        self:EmitToken(node.identifiers[1])
+        self:EmitToken(node.identifier)
     end
 end
 
@@ -451,7 +452,6 @@ end
 function META:EmitStatements(tbl)
     for i, node in ipairs(tbl) do
         self:EmitStatement(node)
-
         self:Whitespace("\n")
     end
 end

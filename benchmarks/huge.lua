@@ -91,12 +91,13 @@ else
 end
 
 start("parsing")
-local ast, err = oh.TokensToAST(tokens, nil, tbl)
+local ast, err = oh.TokensToAST(tokens, "benchmarks/10mb.lua", tbl)
 stop()
 if ast then
     io.write("main block of tree contains ", #ast.statements, " statements\n")
 else
     io.write(err)
+    return
 end
 
 start("generating lua code")

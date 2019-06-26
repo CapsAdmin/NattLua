@@ -196,6 +196,7 @@ do -- grammar rules
 
     function syntax.IsDefinetlyNotStartOfExpression(token)
         return
+        not token or token.type == "end_of_file" or
         token.value == "}" or token.value == "," or
         token.value == "[" or token.value == "]" or
         (

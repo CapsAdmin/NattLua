@@ -125,6 +125,11 @@ do
         "local a = {{--[[1]]foo--[[2]],--[[3]]bar--[[4]],--[[5]]faz--[[6]],--[[7]]},}",
         "local a = {--[[1]]foo--[[2]],--[[3]]bar--[[4]],--[[5]]faz--[[6]]}",
 
+        "local a = foo.bar\n{\nkey = key,\nhost = asdsad.wawaw,\nport = aa.bb\n}",
+        "_IOW(string.byte'f', 126, 'uint32_t')",
+        "return",
+        "return 1",
+
         {code = "\xEF\xBB\xBF foo = true", expect = " foo = true"},
 
         {code = "local a = ~1",             expect = "local a = bit.bnot(1)",                       compare_tokens = true},
