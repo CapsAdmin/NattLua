@@ -81,7 +81,7 @@ function META:Concat()
 end
 
 function META:BuildCode(block)
-    self:Block(block)
+    self:EmitStatements(block.statements)
     return self:Concat()
 end
 
@@ -421,16 +421,11 @@ function META:EmitStatement(node)
         self:EmitFunction(node)
     elseif node.kind == "assignment" then
         self:EmitAssignment(node)
-    elseif node.kind == "expression" then
-        self:Whitespace("\t")
-        self:EmitExpression(node.value)
     elseif node.kind == "function" then
         self:Function(node)
     elseif node.kind == "call" then
         self:Whitespace("\t")
         self:EmitExpression(node.value)
-    elseif node.kind == "end_of_file" then
-        self:EmitToken(node.tokens["end_of_file"])
     elseif node.kind == "shebang" then
         self:EmitToken(node.tokens["shebang"])
     elseif node.kind == "value" then
@@ -443,14 +438,13 @@ function META:EmitStatement(node)
                 self.out[self.i - 2] = ""
             end
         end
+    elseif node.kind == "end_of_file" then
+        self:EmitToken(node.tokens["end_of_file"])
     else
         error("unhandled value: " .. node.kind)
     end
 end
 
-function META:Block(block)
-    self:EmitStatements(block.statements)
-end
 function META:EmitStatements(tbl)
     for i, node in ipairs(tbl) do
         self:EmitStatement(node)

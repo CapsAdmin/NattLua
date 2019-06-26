@@ -36,18 +36,6 @@ do
         return self.arguments
     end
 
-    function NODE:FindStatementsByType(what, out)
-        out = out or {}
-        for _, child in ipairs(self:GetChildren()) do
-            if child.type == what then
-                table.insert(out, child)
-            elseif child.type ~= "function" and child:GetChildren() then
-                child:FindStatementsByType(what, out)
-            end
-        end
-        return out
-    end
-
     function NODE:FindByType(what, out)
         out = out or {}
         for _, child in ipairs(self:GetChildren()) do
@@ -58,40 +46,6 @@ do
             end
         end
         return out
-    end
-
-    function NODE:ExpandExpression()
-        assert(self.type == "expression" or self.type == "operator")
-
-        local flat = {}
-
-        local function expand(node)
-            if node.type == "operator" then
-                if node.left then
-                    expand(node.left)
-                end
-
-                table.insert(flat, node)
-
-                if node.right then
-                    expand(node.right)
-                end
-            else
-                table.insert(flat, node)
-            end
-        end
-
-        expand(self)
-
-        local i = 1
-
-        return function()
-            local l,o,r = flat[i + 0], flat[i + 1], flat[i + 2]
-            if r then
-                i = i + 2
-                return l,o,r
-            end
-        end
     end
 
     function NODE:GetStatements()
@@ -157,6 +111,43 @@ do
             return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
         end
 
+        function STATEMENT:Render()
+            local em = oh.LuaEmitter({preserve_whitespace = false})
+ 
+            em:EmitStatement(self)
+    
+            return em:Concat()
+        end
+
+        function STATEMENT:GetStatements()
+            if self.kind == "if" then
+                local flat = {}
+                for i, statements in ipairs(self.statements) do
+                    for i,v in ipairs(statements) do
+                        table.insert(flat, v)
+                    end
+                end
+                return flat
+            end
+            return self.statements
+        end
+
+        function STATEMENT:GetExpressions()
+            return self.expressions
+        end
+
+        function STATEMENT:FindStatementsByType(what, out)
+            out = out or {}
+            for _, child in ipairs(self:GetStatements()) do
+                if child.kind == what then
+                    table.insert(out, child)
+                elseif child:GetStatements() then
+                    child:FindStatementsByType(what, out)
+                end
+            end
+            return out
+        end    
+
         function META:NewStatement(kind)
             local node = {}
             node.tokens = {}
@@ -180,6 +171,44 @@ do
 
         function EXPRESSSION:__tostring()
             return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
+        end
+
+        function EXPRESSSION:Render()
+            local em = oh.LuaEmitter({preserve_whitespace = false})
+            
+            em:EmitExpression(self)
+            
+            return em:Concat()
+        end
+
+        do
+            local function expand(node, tbl)
+                if node.left then
+                    expand(node.left, tbl)
+                end
+
+                table.insert(tbl, node)
+
+                if node.right then
+                    expand(node.right, tbl)
+                end
+            end
+    
+            function EXPRESSSION:Walk()
+                local flat = {}
+    
+                expand(self, flat)
+    
+                local i = 1
+    
+                return function()
+                    local l,o,r = flat[i + 0], flat[i + 1], flat[i + 2]
+                    if r then
+                        i = i + 2
+                        return l,o,r
+                    end
+                end
+            end
         end
 
         function META:NewExpression(kind)
@@ -690,7 +719,7 @@ function META:ReadRemainingStatement()
         node.tokens["="] = self:ReadExpectValue("=")
         node.expressions_right = self:ReadExpressionList()
     elseif expr and expr.suffixes and expr.suffixes[#expr.suffixes].kind == "call" then
-        node = self:NewExpression("expression")
+        node = self:NewStatement("call")
         node.value = expr
     else
         self:Error("unexpected " .. start_token.type, start_token)
@@ -934,7 +963,7 @@ function META:ReadTable()
         end
 
         if not self:IsValue(",") and not self:IsValue(";") then
-            self:Error("expected ".. oh.QuoteTokens(",;}") .. " got " .. (self:GetToken().value or "no token"))
+            self:Error("expected ".. oh.QuoteTokens(",;}") .. " got " .. ((self:GetToken() and self:GetToken().value) or "no token"))
         end
 
         node.tokens[","] = self:ReadToken()
