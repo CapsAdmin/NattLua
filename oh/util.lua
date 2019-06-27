@@ -191,4 +191,21 @@ function util.LogTraceAbort()
     end, "trace")
 end
 
+function util.Measure(what, cb)
+    jit.flush()
+    io.write("> ", what)
+    local time = os.clock()
+    io.flush()
+
+    local ok, err = pcall(cb)
+
+    if ok then
+        io.write((" "):rep(40 - #what)," - OK ", (os.clock() - time) .. " seconds\n")
+        return err
+    else 
+        io.write(" - FAIL: ", err)
+        error(err, 2)
+    end
+end
+
 return util

@@ -31,85 +31,16 @@ local util = require("oh.util")
 
     --require("oh.util").LogTraceAbort()
 
-local time
-local function start(what)
-    io.write("=========== " .. what .. " =============")
-    time = os.clock()
-    io.flush()
-end
+local code = assert(util.FetchCode("benchmarks/10mb.lua", "https://gist.githubusercontent.com/CapsAdmin/0bc3fce0624a72d83ff0667226511ecd/raw/b84b097b0382da524c4db36e644ee8948dd4fb20/10mb.lua"))
+local code_points = util.Measure("util.UTF8ToTable", function() return require("oh.util").UTF8ToTable(code) end)
+local tokens = util.Measure("oh.CodeToTokens(code_points)", function() return assert(oh.CodeToTokens(code_points)) end)
+local ast = util.Measure("oh.TokensToAST(tokens)", function() return assert(oh.TokensToAST(tokens, "benchmarks/10mb.lua", code_points)) end)
+local lua_code = util.Measure("oh.ASTToCode(ast)", function() return assert(oh.ASTToCode(ast)) end)
 
-local function stop()
-    io.write("- OK ", (os.clock() - time) .. " seconds\n")
-end
+io.write("parsed a total of ", #tokens, " tokens\n")
+io.write("main block of tree contains ", #ast.statements, " statements\n")
 
-local code = util.FetchCode("benchmarks/10mb.lua", "https://gist.githubusercontent.com/CapsAdmin/0bc3fce0624a72d83ff0667226511ecd/raw/b84b097b0382da524c4db36e644ee8948dd4fb20/10mb.lua")
-
-start("loadstring huge code")
-local func, err = loadstring(code)
-stop()
-
-if func then
-    io.write("size of function in bytecode is ", #string.dump(func), " bytes\n")
-else
-    io.write(err)
-end
-
-start("utf8totable")
-local tbl = require("oh.util").UTF8ToTable(code)
-stop()
-
-start("tokenizing")
-local tokens, err = oh.CodeToTokens(tbl)
-stop()
-if tokens then
-    io.write("parsed a total of ", #tokens, " tokens\n")
-
-    local function score(tbl, what, cb)
-        local score = {}
-        for i,v in ipairs(tbl) do
-            local key = cb(v)
-            score[key] = (score[key] or 0) + 1
-        end
-        local temp = {}
-        for k,v in pairs(score) do
-            table.insert(temp, {name = k, score = v})
-        end
-        table.sort(temp, function(a,b) return a.score > b.score end)
-        io.write("top 10 ",what,":\n")
-        for i = 1, 10 do
-            local data = temp[i]
-            if not data then break end
-            if i < 10 then io.write(" ") end
-            io.write(i, ": `", data.name, "´ occured ", data.score, " times\n")
-        end
-    end
-
-    score(tokens, "types", function(v) return v.type end)
-    score(tokens, "values", function(v) return v.value end)
-else
-    io.write(err)
-end
-
-start("parsing")
-local ast, err = oh.TokensToAST(tokens, "benchmarks/10mb.lua", tbl)
-stop()
-if ast then
-    io.write("main block of tree contains ", #ast.statements, " statements\n")
-else
-    io.write(err)
-    return
-end
-
-start("generating lua code")
-local code = oh.ASTToCode(ast)
-stop()
-
-start("loadstringing generated lua code")
-local func, err = loadstring(code)
-stop()
-
-if func then
-    io.write("size of function in bytecode is ", #string.dump(func), " bytes\n")
-else
-    io.write(err)
-end
+local func = util.Measure("loadstring(lua_code)", function() return assert(loadstring(lua_code)) end)
+local original_func = util.Measure("loadstring huge code", function() return assert(loadstring(code)) end)
+io.write("size of original function in bytecode is ", #string.dump(original_func), " bytes\n")
+io.write("size of function in bytecode is ", #string.dump(func), " bytes\n")
