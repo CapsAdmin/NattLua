@@ -35,7 +35,8 @@ local util = require("oh.util")
 
 local start, stop
 
-for i, char in ipairs(util.UTF8ToTable(code)) do
+for i = 1, #code do
+    local char = code:sub(i, i)
     if char == "O" then
         start = i
         stop = i + 9
