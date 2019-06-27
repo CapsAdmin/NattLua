@@ -313,14 +313,14 @@ do
     end
 
     function META:ReadExpectValues(values, start, stop)
-        local tk = self:GetToken()
-        if not tk then
+        if not self:GetToken() then
             self:Error("expected " .. oh.QuoteTokens(values) .. ": reached end of code", start, stop)
-        elseif not table_hasvalue(values, tk.value) then
-            self:Error("expected " .. oh.QuoteTokens(values) .. " got " .. tk.value, start, stop)
+        elseif not table_hasvalue(values, self:GetToken().value) then
+            local tk = self:GetToken()
+            self:Error("expected " .. oh.QuoteTokens(values) .. " got " .. (tk.value == "" and tk.type or tk.value), start, stop)
         end
-        self:Advance(1)
-        return tk
+
+        return self:ReadToken()
     end
 end
 
