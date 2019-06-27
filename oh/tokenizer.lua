@@ -23,47 +23,23 @@ do
     function META:GetLength()
         return self.code_length
     end
-    function META:GetCharOffset(i)
-        return self.code[self.i + i] or ""
-    end
 
     local table_concat = table.concat
-    function META:GetCharsRange(start, stop)
-        if stop < self.code_length then
-            return table_concat(self.code, nil, start, stop)
-        end
-
-        local str = {}
-
-        local str_i = 1
-        for i = start, stop do
-            str[str_i] = self.code[i] or ""
-            str_i = str_i + 1
-        end
-
-        return table_concat(str)
+    function META:GetChars(start, stop)
+        return table_concat(self.code, "", start, stop)
     end
 
-    function META:GetCurrentChar()
+    function META:GetChar(offset)
+        if offset then
+            return self.code[self.i + offset] or ""
+        end
         return self.code[self.i] or ""
     end
 
-    function META:GetCharsOffset(length)
-        return self:GetCharsRange(self.i, self.i + length)
-    end
-
-    function META:StringMatches(str, lower)
-        if lower then
-            for i = 1, #str do
-                if self.code[self.i + i - 1] and self.code[self.i + i - 1]:lower() ~= str:sub(i, i) then
-                    return false
-                end
-            end
-        else
-            for i = 1, #str do
-                if self.code[self.i + i - 1] ~= str:sub(i, i) then
-                    return false
-                end
+    function META:StringMatches(str)
+        for i = 1, #str do
+            if self:GetChar(i-1) ~= str:sub(i, i) then
+                return false
             end
         end
         return true
@@ -74,7 +50,7 @@ do
     end
 
     function META:ReadChar()
-        local char = self:GetCurrentChar()
+        local char = self:GetChar()
         self.i = self.i + 1
         return char
     end
@@ -85,16 +61,16 @@ do
 
     function META:IsValue(what, offset)
         if offset then
-            return self:GetCharOffset(offset) == what
+            return self:GetChar(offset) == what
         end
-        return self:GetCurrentChar() == what
+        return self:GetChar() == what
     end
 
     function META:IsType(what, offset)
         if offset then
-            return self:GetCharType(self:GetCharOffset(offset)) == what
+            return self:GetCharType(self:GetChar(offset)) == what
         end
-        return self:GetCharType(self:GetCurrentChar()) == what
+        return self:GetCharType(self:GetChar()) == what
     end
 
     function META:Error(msg, start, stop)
@@ -106,7 +82,7 @@ do
     local TOKEN = {}
     function TOKEN:__index(key)
         if key == "value" then
-            return self.tk:GetCharsRange(self.start, self.stop)
+            return self.tk:GetChars(self.start, self.stop)
         end
     end
 
@@ -118,7 +94,7 @@ do
             type = type,
             start = start,
             stop = stop,
-            value = self:GetCharsRange(start, stop),
+            value = self:GetChars(start, stop),
         }
     end
 
@@ -127,7 +103,7 @@ do
 
         if not self:IsValue("[") then
             if multiline_comment then return true end
-            return nil, "expected " .. oh.QuoteToken("[") .. " got " .. oh.QuoteToken(self:GetCurrentChar())
+            return nil, "expected " .. oh.QuoteToken("[") .. " got " .. oh.QuoteToken(self:GetChar())
         end
 
         self:Advance(1)
@@ -143,7 +119,7 @@ do
 
         if not self:IsValue("[") then
             if multiline_comment then return false end
-            return nil, "expected " .. oh.QuoteToken(self:GetCharsRange(start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self:GetCharsRange(start, self.i))
+            return nil, "expected " .. oh.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self:GetChars(start, self.i))
         end
 
         self:Advance(1)
@@ -190,7 +166,6 @@ do
         end
 
         do
-
             local function LINE_COMMENT(str, name, func_name)
                 META["Is" .. func_name] = function(self)
                     return self:StringMatches(str)
@@ -271,9 +246,6 @@ do
             
             local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
-            local legal_number_annotations = {"ull", "ll", "ul", "i"}
-            table.sort(legal_number_annotations, function(a, b) return #a > #b end)
-
             function META:ReadNumberAnnotations(what)
                 if what == "hex" then
                     if self:IsNumberPow() then
@@ -284,26 +256,8 @@ do
                         return self:ReadNumberPowExponent("exponent")
                     end
                 end
- 
-                for _, annotation in ipairs(legal_number_annotations) do
-                    local len = #annotation
-                    if self:StringMatches(annotation, true) then
-                        local t = self:GetCharType(self:GetCharOffset(len))
 
-                        if t == "space" or t == "symbol" then
-                            self:Advance(len)
-                            return true
-                        end
-                    end
-                end
-            end
-
-            function META:IsNumber()
-                if self:GetCurrentChar() == "." and self:GetCharType(self:GetCharOffset(1)) == "number" then
-                    return true
-                end
-
-                return self:GetCharType(self:GetCurrentChar()) == "number"
+                return oh.syntax.ReadLongestNumberAnnotation(self)
             end
 
             function META:IsNumberExponent()
@@ -319,7 +273,7 @@ do
                 if self:IsValue("+") or self:IsValue("-") then
                     self:Advance(1)
                     if not self:IsType("number") then
-                        self:Error("malformed " .. what .. " expected number, got " .. self:GetCurrentChar(), self.i - 2)
+                        self:Error("malformed " .. what .. " expected number, got " .. self:GetChar(), self.i - 2)
                         return false
                     end
                 end
@@ -354,12 +308,12 @@ do
                         break
                     end
                     
-                    if allowed_hex[self:GetCurrentChar()] then
+                    if allowed_hex[self:GetChar()] then
                         self:Advance(1)
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
-                    elseif self:GetCurrentChar() ~= "" then
-                        self:Error("malformed number "..self:GetCurrentChar().." in hex notation")
+                    elseif self:GetChar() ~= "" then
+                        self:Error("malformed number "..self:GetChar().." in hex notation")
                         return
                     end
                 end
@@ -377,8 +331,8 @@ do
                         self:Advance(1)
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
-                    elseif self:GetCurrentChar() ~= "" then
-                        self:Error("malformed number "..self:GetCurrentChar().." in binary notation")
+                    elseif self:GetChar() ~= "" then
+                        self:Error("malformed number "..self:GetChar().." in binary notation")
                         return
                     end
 
@@ -411,17 +365,21 @@ do
                         break
                     end
                     
-                    if allowed_number[self:GetCurrentChar()] then
+                    if allowed_number[self:GetChar()] then
                         self:Advance(1)
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
-                    else--if self:GetCurrentChar() ~= "" then
-                        --self:Error("malformed number "..self:GetCurrentChar().." in hex notation")
+                    else--if self:GetChar() ~= "" then
+                        --self:Error("malformed number "..self:GetChar().." in hex notation")
                         return
                     end
                 end
 
                 return "number"
+            end
+
+            function META:IsNumber()
+                return self:IsType("number") or (self:IsValue(".") and self:IsType("number", 1))
             end
 
             function META:ReadNumber()
@@ -445,14 +403,14 @@ do
 
         for name, quote in pairs(quotes) do
             META["Is" .. name .. "String"] = function(self)
-                return self:GetCurrentChar() == quote
+                return self:IsValue(quote)
             end
 
             local key = "string_escape_" .. name
             local function escape(self, c)
                 if self[key] then
 
-                    if c == "z" and self:GetCurrentChar() ~= quote then
+                    if c == "z" and not self:IsValue(quote) then
                         self:ReadSpace(self)
                     end
 
@@ -518,26 +476,13 @@ do
         end
 
         function META:ReadSymbol()
-            local node = oh.syntax.SymbolLookup
-
-            for i = 0, oh.syntax.LongestSymbolLength - 1 do
-                local found = node[self:GetCharOffset(i)]
-                
-                if not found then break end
-
-                node = found
-            end
-
-            if node.DONE then
-                self:Advance(node.DONE.length)
-                return "symbol"
-            end
+            return oh.syntax.ReadLongestSymbol(self)
         end
     end
 
     do
         function META:IsShebang()
-            return self.i == 1 and self:GetCurrentChar() == "#"
+            return self.i == 1 and self:IsValue("#")
         end
 
         function META:ReadShebang()

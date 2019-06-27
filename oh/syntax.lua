@@ -10,6 +10,10 @@ syntax.SymbolCharacters = {
     "=", "::", "\"", "'", "`",
 }
 
+syntax.NumberAnnotations = {
+    "ull", "ll", "ul", "i",
+}
+
 syntax.Keywords = {
     "and", "break", "do", "else", "elseif", "end",
     "false", "for", "function", "if", "in", "of", "local",
@@ -135,6 +139,46 @@ do -- extend the symbol map from grammar rules
     end
 end
 
+function syntax.LongestLookup(tbl, what, lower)
+    local longest = 0
+    local map = {}
+
+    for _, str in ipairs(tbl) do
+        local chars = util.UTF8ToTable(str)
+
+        local node = map
+
+        for _, char in ipairs(chars) do
+            node[char] = node[char] or {}
+            node = node[char]
+        end
+        
+        node.DONE = {str = str, length = #chars}
+
+        longest = math.max(longest, #chars)
+    end
+
+    longest = longest - 1
+
+    return function(tk)
+        local node = map
+
+        for i = 0, longest do
+            local found = lower and node[tk:GetChar(i):lower()] or node[tk:GetChar(i)]
+            
+            if not found and i == 0 then return end
+            if not found then break end
+
+            node = found
+        end
+
+        if node.DONE then
+            tk:Advance(node.DONE.length)
+            return what
+        end
+    end
+end
+
 do
     local temp = {}
     for type, chars in pairs(syntax.CharacterMap) do
@@ -144,23 +188,14 @@ do
     end
     syntax.CharacterMap = temp
 
-    syntax.LongestSymbolLength = 0
-    syntax.SymbolLookup = {}
-
+    local temp = {}
     for str, type in pairs(syntax.CharacterMap) do
         if type == "symbol" then
-            local chars = util.UTF8ToTable(str)
-
-            local node = syntax.SymbolLookup
-            for _, char in ipairs(chars) do
-                node[char] = node[char] or {}
-                node = node[char]
-            end
-            node.DONE = {str = str, length = #chars}
-
-            syntax.LongestSymbolLength = math.max(syntax.LongestSymbolLength, #chars)
+            table.insert(temp, str)
         end
     end
+    syntax.ReadLongestSymbol = syntax.LongestLookup(temp, "symbol")
+    syntax.ReadLongestNumberAnnotation = syntax.LongestLookup(syntax.NumberAnnotations, true, true)
 end
 
 do
