@@ -909,7 +909,7 @@ do -- expression
             end
 
             if not self:IsValue(",") and not self:IsValue(";") then
-                self:Error("expected ".. oh.QuoteTokens(",;}") .. " got " .. ((self:GetToken() and self:GetToken().value) or "no token"))
+                self:Error("expected ".. oh.QuoteTokens({",", ";", "}"}) .. " got " .. ((self:GetToken() and self:GetToken().value) or "no token"))
             end
 
             node.tokens[","] = self:ReadToken()

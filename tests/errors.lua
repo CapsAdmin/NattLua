@@ -17,7 +17,7 @@ local function check(tbl)
 end
 
 check({
-    {"local foo[123] = true", "  |          .- unexpected symbol"},
+    {"local foo[123] = true", ".- unexpected symbol"},
     {"/clcret retprio inq tv5 howaw tv4aw exoaw", "unexpected symbol"},
     {"print( “Hello World” )", "expected.-%).-got.-World”"},
     {"foo = {bar = until}, faz = true}", "expected beginning of expression, got.-until"},

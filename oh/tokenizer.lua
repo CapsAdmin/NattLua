@@ -11,29 +11,23 @@ do
     META.FallbackCharacterType = "letter"
 
     function META:OnInitialize(str)
-       if type(str) == "table" then
-            self.code = str
-            self.code_length = #str
-        else
-            self.code = util.UTF8ToTable(str)
-            self.code_length = #self.code
-        end
-        self.tbl_cache = {}
+        str = util.RemoveBOMHeader(str)
+        self.code = str
+        self.code_length = #str
     end
     function META:GetLength()
         return self.code_length
     end
 
-    local table_concat = table.concat
     function META:GetChars(start, stop)
-        return table_concat(self.code, "", start, stop)
+        return self.code:sub(start, stop)
     end
 
     function META:GetChar(offset)
         if offset then
-            return self.code[self.i + offset] or ""
+            return self.code:sub(self.i + offset, self.i + offset)
         end
-        return self.code[self.i] or ""
+        return self.code:sub(self.i, self.i)
     end
 
     function META:StringMatches(str)
@@ -109,7 +103,7 @@ do
         self:Advance(1)
 
         if self:IsValue("=") then
-            for _ = self.i, self.code_length do
+            for _ = self.i, self:GetLength() do
                 self:Advance(1)
                 if not self:IsValue("=") then
                     break
@@ -127,7 +121,7 @@ do
         local length = self.i - start
         local closing = "]" .. string.rep("=", length - 2) .. "]"
         
-        for _ = self.i, self.code_length do
+        for _ = self.i, self:GetLength() do
             if self:StringMatches(closing) then
                 self:Advance(length)
                 return true
@@ -174,7 +168,7 @@ do
                 META["Read" .. func_name] = function(self)
                     self:Advance(#str)
 
-                    for _ = self.i, self.code_length do
+                    for _ = self.i, self:GetLength() do
                         if self:ReadChar() == "\n" then
                             break
                         end
@@ -193,7 +187,7 @@ do
             end
 
             function META:ReadSpace()
-                for _ = self.i, self.code_length do
+                for _ = self.i, self:GetLength() do
                     self:Advance(1)
                     if not self:IsType("space") then
                         break
@@ -208,7 +202,7 @@ do
     do -- other
         do
             function META:IsEndOfFile()
-                return self.i > self.code_length
+                return self.i > self:GetLength()
             end
 
             function META:ReadEndOfFile()
@@ -277,7 +271,7 @@ do
                         return false
                     end
                 end
-                for _ = self.i, self.code_length do
+                for _ = self.i, self:GetLength() do
                     if not self:IsType("number") then
                         break
                     end
@@ -292,7 +286,7 @@ do
 
                 local dot = false
 
-                for _ = self.i, self.code_length do
+                for _ = self.i, self:GetLength() do
                     if self:IsValue("_") then self:Advance(1) end
                     
                     if self:IsValue(".") then
@@ -324,7 +318,7 @@ do
             function META:ReadBinaryNumber()
                 self:Advance(2)
 
-                for _ = self.i, self.code_length do
+                for _ = self.i, self:GetLength() do
                     if self:IsValue("_") then self:Advance(1) end
 
                     if self:IsValue("1") or self:IsValue("0") then
@@ -349,7 +343,7 @@ do
             function META:ReadDecimalNumber()  
                 local dot = false
 
-                for _ = self.i, self.code_length do
+                for _ = self.i, self:GetLength() do
                     if self:IsValue("_") then self:Advance(1) end
 
                     if self:IsValue(".") then
@@ -429,7 +423,7 @@ do
                 local start = self.i
                 self:Advance(1)
 
-                for _ = self.i, self.code_length do
+                for _ = self.i, self:GetLength() do
                     local char = self:ReadChar()
 
                     if not escape(self, char) then
@@ -459,7 +453,7 @@ do
         end
 
         function META:ReadLetter()
-            for _ = self.i, self.code_length do
+            for _ = self.i, self:GetLength() do
                 self:Advance(1)
                 if self:IsType("space") or not self:IsType("letter") and not self:IsType("number") then
                     break
@@ -486,7 +480,7 @@ do
         end
 
         function META:ReadShebang()
-            for _ = self.i, self.code_length do
+            for _ = self.i, self:GetLength() do
                 if self:ReadChar() == "\n" then
                     return "shebang"
                 end
@@ -528,7 +522,7 @@ do
 
         local wbuffer = {}
 
-        for i = 1, self.code_length do
+        for i = 1, self:GetLength() do
             local start = self.i
             local type = self:ReadWhiteSpace()
             if not type then
@@ -553,7 +547,7 @@ do
         local tokens = {}
         local tokens_i = 1
 
-        for _ = self.i, self.code_length do
+        for _ = self.i, self:GetLength() do
             local token = self:ReadToken()
 
             tokens[tokens_i] = token
@@ -566,7 +560,6 @@ do
     end
 
     function META:ResetState()
-        self.code_length = self:GetLength()
         self.whitespace_buffer = {}
         self.whitespace_buffer_i = 1
         self.i = 1

@@ -94,6 +94,11 @@ do
         for i = string.byte("a"), string.byte("z") do
             table.insert(map.letter, string.char(i))
         end
+
+        -- although not accurate, we consider anything above 128 to be unicode
+        for i = 128, 255 do
+            table.insert(map.letter, string.char(i))
+        end
     end
 
     if syntax.SymbolCharacters then
@@ -144,18 +149,17 @@ function syntax.LongestLookup(tbl, what, lower)
     local map = {}
 
     for _, str in ipairs(tbl) do
-        local chars = util.UTF8ToTable(str)
-
         local node = map
 
-        for _, char in ipairs(chars) do
+        for i = 1, #str do
+            local char = str:sub(i, i)
             node[char] = node[char] or {}
             node = node[char]
         end
         
-        node.DONE = {str = str, length = #chars}
+        node.DONE = {str = str, length = #str}
 
-        longest = math.max(longest, #chars)
+        longest = math.max(longest, #str)
     end
 
     longest = longest - 1

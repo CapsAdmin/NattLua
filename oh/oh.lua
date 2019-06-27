@@ -75,11 +75,6 @@ function oh.QuoteToken(str)
 end
 
 function oh.QuoteTokens(var)
-
-	if type(var) == "string" then
-		var = util.UTF8ToTable(var)
-	end
-
 	local str = ""
 	for i, v in ipairs(var) do
 		str = str .. oh.QuoteToken(v)
@@ -95,7 +90,9 @@ end
 
 local function count(tbl, what, stop)
     local found = 0
-	for i, v in ipairs(tbl) do
+	--for i, v in ipairs(tbl) do
+	for i = 1, #tbl do
+		local v = tbl:sub(i, i)
 		if v == "\n" then
 			found = found + 1
 		end
@@ -116,7 +113,7 @@ end
 
 
 function oh.FormatError(code, path, msg, start, stop)
-	local chars = type(code) == "table" and code or util.UTF8ToTable(code)
+	local chars = code
 
 
 	local total_lines = count(chars, "\n")
