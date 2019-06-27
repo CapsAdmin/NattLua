@@ -130,11 +130,38 @@ do
         "return",
         "return 1",
 
+        "a = foo(0x89abcdef, 1)",
+        "a = foo(0x20EA2, 1)",
+        "a = foo(0Xabcdef.0, 1)",
+        "a = foo(3.1416, 1)",
+        "a = foo(314.16e-2, 1)",
+        "a = foo(0.31416E1, 1)",
+        "a = foo(34e1, 1)",
+        "a = foo(0x0.1E, 1)",
+        "a = foo(0xA23p-4, 1)",
+        "a = foo(0X1.921FB54442D18P+1, 1)",
+        "a = foo(2.E-1, 1)",
+        "a = foo(.2e2, 1)",
+        "a = foo(0., 1)",
+        "a = foo(.0, 1)",
+        "a = foo(0x.P1, 1)",
+        "a = foo(0x.P+1, 1)",
+        "a = foo(0b101001011, 1)",
+        "a = foo(0b101001011ull, 1)",
+        "a = foo(0b101001011i, 1)",
+        "a = foo(0b01_101_101, 1)",
+        "a = foo(0xDEAD_BEEF_CAFE_BABE, 1)",
+        "a = foo(1_1_1_0e2, 1)",
+        "a = foo(1_, 1)",
+
+        {code = "return math.maxinteger // 80", expect = "return math.floor(math.maxinteger / 80)",     compare_tokens = true},
+
         {code = "\xEF\xBB\xBF foo = true", expect = " foo = true"},
 
-        {code = "local a = ~1",             expect = "local a = bit.bnot(1)",                       compare_tokens = true},
-        {code = "local a = 1 >> 2",         expect = "local a = bit.rshift(1, 2)",                  compare_tokens = true},
-        {code = "local a = 1 >> 2 << 23",   expect = "local a = bit.lshift(bit.rshift(1, 2), 23)",  compare_tokens = true},
+        {code = "return math.maxinteger // 80", expect = "return math.floor(math.maxinteger / 80)",     compare_tokens = true},
+        {code = "local a = ~1",                 expect = "local a = bit.bnot(1)",                       compare_tokens = true},
+        {code = "local a = 1 >> 2",             expect = "local a = bit.rshift(1, 2)",                  compare_tokens = true},
+        {code = "local a = 1 >> 2 << 23",       expect = "local a = bit.lshift(bit.rshift(1, 2), 23)",  compare_tokens = true},
     }
 end
 

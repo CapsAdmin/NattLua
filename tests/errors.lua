@@ -25,5 +25,10 @@ check({
     {"if foo = 5 then end", "expected.-then"},
     {"if foo == 5 end", "expected.-then.-got.-end"},
     {"if 0xWRONG then end", "malformed number.-hex notation"},
-    {"if true then", "expected.-else.-elseif.-end.-got end_of_file"}
+    {"if true then", "expected.-else.-elseif.-end.-got end_of_file"},
+    {"a = [[wa", "unterminated multiline string.-expected.-%]%].-reached end of code"},
+    {"a = [=[wa", "unterminated multiline string.-expected.-%]=%].-reached end of code"},
+    {"a = [=wa", "unterminated multiline string.-expected.-%[=%[.-got.-%[=w"},
+    {"a = [=[wa]=", "unterminated multiline string.-expected.-%]=%].-reached end of code"},
+    {"0xBEEFp+L", "malformed pow expected number, got L"},
 })

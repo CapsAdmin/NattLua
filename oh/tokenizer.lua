@@ -55,7 +55,7 @@ do
     function META:StringMatches(str, lower)
         if lower then
             for i = 1, #str do
-                if self.code[self.i + i - 1]:lower() ~= str:sub(i, i) then
+                if self.code[self.i + i - 1] and self.code[self.i + i - 1]:lower() ~= str:sub(i, i) then
                     return false
                 end
             end
@@ -79,14 +79,22 @@ do
         return char
     end
 
-    function META:ReadCharByte()
-        local b = self:GetCurrentChar()
-        self.i = self.i + 1
-        return b
-    end
-
     function META:Advance(len)
         self.i = self.i + len
+    end
+
+    function META:IsValue(what, offset)
+        if offset then
+            return self:GetCharOffset(offset) == what
+        end
+        return self:GetCurrentChar() == what
+    end
+
+    function META:IsType(what, offset)
+        if offset then
+            return self:GetCharType(self:GetCharOffset(offset)) == what
+        end
+        return self:GetCharType(self:GetCurrentChar()) == what
     end
 
     function META:Error(msg, start, stop)
@@ -117,50 +125,41 @@ do
     local function ReadLiteralString(self, multiline_comment)
         local start = self.i
 
-        local c = self:ReadChar()
-        if c ~= "[" then
+        if not self:IsValue("[") then
             if multiline_comment then return true end
-            return nil, "expected "..oh.QuoteToken("[").." got " .. oh.QuoteToken(c)
+            return nil, "expected " .. oh.QuoteToken("[") .. " got " .. oh.QuoteToken(self:GetCurrentChar())
         end
 
-        if self:GetCurrentChar() == "=" then
-            self:Advance(1)
+        self:Advance(1)
 
+        if self:IsValue("=") then
             for _ = self.i, self.code_length do
-                if self:GetCurrentChar() ~= "=" then
+                self:Advance(1)
+                if not self:IsValue("=") then
                     break
                 end
-                self:Advance(1)
             end
         end
 
-        c = self:ReadChar()
-
-        if c ~= "[" then
+        if not self:IsValue("[") then
             if multiline_comment then return false end
-            return nil, "expected " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self.get_code_char_range(self, start, self.i - 1) .. c)
+            return nil, "expected " .. oh.QuoteToken(self:GetCharsRange(start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self:GetCharsRange(start, self.i))
         end
 
+        self:Advance(1)
+
         local length = self.i - start
-
-        if length < 2 then return nil end
-
         local closing = "]" .. string.rep("=", length - 2) .. "]"
-        local found = false
+        
         for _ = self.i, self.code_length do
             if self:StringMatches(closing) then
                 self:Advance(length)
-                found = true
-                break
+                return true
             end
             self:Advance(1)
         end
 
-        if not found then
-            return nil, "expected "..oh.QuoteToken(closing).." reached end of code"
-        end
-
-        return true
+        return nil, "expected "..oh.QuoteToken(closing).." reached end of code"
     end
 
     do -- whitespace
@@ -201,7 +200,7 @@ do
                     self:Advance(#str)
 
                     for _ = self.i, self.code_length do
-                        if self:ReadChar() == "\n" or self.i-1 == self.code_length then
+                        if self:ReadChar() == "\n" then
                             break
                         end
                     end
@@ -215,13 +214,13 @@ do
 
         do
             function META:IsSpace()
-                return self:GetCharType(self:GetCurrentChar()) == "space"
+                return self:IsType("space")
             end
 
             function META:ReadSpace()
                 for _ = self.i, self.code_length do
                     self:Advance(1)
-                    if self:GetCharType(self:GetCurrentChar()) ~= "space" then
+                    if not self:IsType("space") then
                         break
                     end
                 end
@@ -250,7 +249,7 @@ do
 
             function META:ReadMultilineString()
                 local start = self.i
-                local ok, err = ReadLiteralString(self, true)
+                local ok, err = ReadLiteralString(self, false)
 
                 if not ok then
                     self:Error("unterminated multiline string: " .. err, start, start + 1)
@@ -262,27 +261,30 @@ do
         end
 
         do
-            local string_lower = string.lower
-            local allowed = {
-                ["a"] = true,
-                ["b"] = true,
-                ["c"] = true,
-                ["d"] = true,
-                ["e"] = true,
-                ["f"] = true,
-                ["p"] = true,
-                ["_"] = true,
-                ["."] = true,
-            }
-
-            local pow_letter = "p"
-            local plus_sign = "+"
-            local minus_sign = "-"
+            local function generate_map(str)
+                local out = {}
+                for i = 1, #str do
+                    out[str:sub(i, i)] = true
+                end
+                return out
+            end
+            
+            local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
             local legal_number_annotations = {"ull", "ll", "ul", "i"}
             table.sort(legal_number_annotations, function(a, b) return #a > #b end)
 
-            function META:ReadNumberAnnotations()
+            function META:ReadNumberAnnotations(what)
+                if what == "hex" then
+                    if self:IsNumberPow() then
+                        return self:ReadNumberPowExponent("pow")
+                    end
+                elseif what == "decimal" then
+                    if self:IsNumberExponent() then
+                        return self:ReadNumberPowExponent("exponent")
+                    end
+                end
+ 
                 for _, annotation in ipairs(legal_number_annotations) do
                     local len = #annotation
                     if self:StringMatches(annotation, true) then
@@ -304,36 +306,62 @@ do
                 return self:GetCharType(self:GetCurrentChar()) == "number"
             end
 
+            function META:IsNumberExponent()
+                return self:IsValue("e") or self:IsValue("E")
+            end
+
+            function META:IsNumberPow()
+                return self:IsValue("p") or self:IsValue("P")
+            end
+
+            function META:ReadNumberPowExponent(what)
+                self:Advance(1)
+                if self:IsValue("+") or self:IsValue("-") then
+                    self:Advance(1)
+                    if not self:IsType("number") then
+                        self:Error("malformed " .. what .. " expected number, got " .. self:GetCurrentChar(), self.i - 2)
+                        return false
+                    end
+                end
+                for _ = self.i, self.code_length do
+                    if not self:IsType("number") then
+                        break
+                    end
+                    self:Advance(1)
+                end
+
+                return true
+            end
+
             function META:ReadHexNumber()
                 self:Advance(2)
 
-                local pow = false
+                local dot = false
 
                 for _ = self.i, self.code_length do
-                    if self:ReadNumberAnnotations() then return "number" end
-
-                    local char = string_lower(self:GetCurrentChar())
-                    local t = self:GetCharType(self:GetCurrentChar())
-
-                    if char == pow_letter then
-                        if not pow then
-                            pow = true
-                        else
-                            self:Error("malformed number: pow character can only be used once")
-                            return false
+                    if self:IsValue("_") then self:Advance(1) end
+                    
+                    if self:IsValue(".") then
+                        if dot then
+                            --self:Error("dot can only be placed once")
+                            return
                         end
+                        dot = true
+                        self:Advance(1)
                     end
 
-                    if not (t == "number" or allowed[char] or ((char == plus_sign or char == minus_sign) and string_lower(self:GetCharOffset(-1)) == pow_letter) ) then
-                        if not t or t == "space" or t == "symbol" then
-                            return "number"
-                        elseif char == "symbol" or t == "letter" then
-                            self:Error("malformed number: invalid character "..oh.QuoteToken(char)..". only "..oh.QuoteTokens("abcdef0123456789_").." allowed after hex notation")
-                            return false
-                        end
+                    if self:ReadNumberAnnotations("hex") then
+                        break
                     end
-
-                    self:Advance(1)
+                    
+                    if allowed_hex[self:GetCurrentChar()] then
+                        self:Advance(1)
+                    elseif self:IsType("symbol") or self:IsType("space") then
+                        break
+                    elseif self:GetCurrentChar() ~= "" then
+                        self:Error("malformed number "..self:GetCurrentChar().." in hex notation")
+                        return
+                    end
                 end
 
                 return "number"
@@ -343,70 +371,63 @@ do
                 self:Advance(2)
 
                 for _ = self.i, self.code_length do
-                    local char = string_lower(self:GetCurrentChar())
-                    local t = self:GetCharType(self:GetCurrentChar())
+                    if self:IsValue("_") then self:Advance(1) end
 
-                    if char ~= "1" and char ~= "0" and char ~= "_" then
-                        if not t or t == "space" or t == "symbol" then
-                            return "number"
-                        elseif char == "symbol" or t == "letter" or (char ~= "0" and char ~= "1") then
-                            self:Error("malformed number: only "..oh.QuoteTokens("01_").." allowed after binary notation")
-                            return false
-                        end
+                    if self:IsValue("1") or self:IsValue("0") then
+                        self:Advance(1)
+                    elseif self:IsType("symbol") or self:IsType("space") then
+                        break
+                    elseif self:GetCurrentChar() ~= "" then
+                        self:Error("malformed number "..self:GetCurrentChar().." in binary notation")
+                        return
                     end
 
-                    self:Advance(1)
+                    if self:ReadNumberAnnotations("binary") then
+                        break
+                    end
                 end
 
                 return "number"
             end
 
-            function META:ReadDecimalNumber()
-                local found_dot = false
-                local exponent = false
+            local allowed_number = generate_map("0123456789")
 
-                local start = self.i
+            function META:ReadDecimalNumber()  
+                local dot = false
 
                 for _ = self.i, self.code_length do
-                    local t = self:GetCharType(self:GetCurrentChar())
-                    local char = self:GetCurrentChar()
+                    if self:IsValue("_") then self:Advance(1) end
 
-                    if exponent then
-                        if char ~= "-" and char ~= "+" and t ~= "number" then
-                            self:Error("malformed number: invalid character " .. oh.QuoteToken(char) .. ". only "..oh.QuoteTokens("+-0123456789").." allowed after exponent", start, self.i)
-                            return false
-                        elseif char ~= "-" and char ~= "+" then
-                            exponent = false
+                    if self:IsValue(".") then
+                        if dot then
+                            --self:Error("dot can only be placed once")
+                            return
                         end
-                    elseif t ~= "number" then
-                        if t == "letter" then
-                            start = self.i
-                            if string_lower(char) == "e" then
-                                exponent = true
-                            elseif self:ReadNumberAnnotations() then
-                                return "number"
-                            else
-                            -- self:Error("malformed number: invalid character " .. oh.QuoteToken(char) .. ". only " .. oh.QuoteTokens(legal_number_annotations) .. " allowed after a number", start, self.i)
-                                return "number"
-                            end
-                        elseif not found_dot and char == "." then
-                            found_dot = true
-                        elseif t == "space" or t == "symbol" then
-                            return "number"
-                        end
+                        dot = true
+                        self:Advance(1)
                     end
 
-                    self:Advance(1)
+                    if self:ReadNumberAnnotations("decimal") then
+                        break
+                    end
+                    
+                    if allowed_number[self:GetCurrentChar()] then
+                        self:Advance(1)
+                    elseif self:IsType("symbol") or self:IsType("space") then
+                        break
+                    else--if self:GetCurrentChar() ~= "" then
+                        --self:Error("malformed number "..self:GetCurrentChar().." in hex notation")
+                        return
+                    end
                 end
 
                 return "number"
             end
 
             function META:ReadNumber()
-                local s = string_lower(self:GetCharOffset(1))
-                if s == "x" then
+                if self:IsValue("x", 1) or self:IsValue("X", 1) then
                     return self:ReadHexNumber()
-                elseif s == "b" then
+                elseif self:IsValue("b", 1) or self:IsValue("B", 1) then
                     return self:ReadBinaryNumber()
                 end
 
@@ -451,7 +472,7 @@ do
                 self:Advance(1)
 
                 for _ = self.i, self.code_length do
-                    local char = self:ReadCharByte()
+                    local char = self:ReadChar()
 
                     if not escape(self, char) then
 
@@ -476,18 +497,15 @@ do
 
     do
         function META:IsLetter()
-            return self:GetCharType(self:GetCurrentChar()) == "letter"
+            return self:IsType("letter")
         end
 
         function META:ReadLetter()
-            local start = self.i
-            self:Advance(1)
             for _ = self.i, self.code_length do
-                local t = self:GetCharType(self:GetCurrentChar())
-                if t == "space" or not (t == "letter" or (t == "number" and self.i ~= start)) then
+                self:Advance(1)
+                if self:IsType("space") or not self:IsType("letter") and not self:IsType("number") then
                     break
                 end
-                self:Advance(1)
             end
 
             return "letter"
@@ -496,14 +514,15 @@ do
 
     do
         function META:IsSymbol()
-            return self:GetCharType(self:GetCurrentChar()) == "symbol"
+            return self:IsType("symbol")
         end
 
         function META:ReadSymbol()
-
             local node = oh.syntax.SymbolLookup
+
             for i = 0, oh.syntax.LongestSymbolLength - 1 do
                 local found = node[self:GetCharOffset(i)]
+                
                 if not found then break end
 
                 node = found

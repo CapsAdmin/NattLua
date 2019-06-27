@@ -94,13 +94,14 @@ function META:EmitExpression(v)
     end
 
     if v.kind == "binary_operator" then
-        local func_chunks = oh.syntax.GetFunctionForOperator(v.value)
+        local func_chunks = oh.syntax.GetFunctionForBinaryOperator(v.value)
         if func_chunks then
             self:Emit(func_chunks[1])
             if v.left then self:EmitExpression(v.left) end
             self:Emit(func_chunks[2])
             if v.right then self:EmitExpression(v.right) end
             self:Emit(func_chunks[3])
+            self.operator_transformed = true
         else
             if v.left then self:EmitExpression(v.left) end
             self:EmitBinaryOperator(v)
@@ -229,6 +230,7 @@ function META:EmitPrefixOperator(v)
         self:Emit(func_chunks[1])
         self:EmitExpression(v.right)
         self:Emit(func_chunks[2])
+        self.operator_transformed = true
     else
         if oh.syntax.IsKeyword(v) then
             self:Whitespace("?")
@@ -248,6 +250,7 @@ function META:EmitPostfixOperator(v)
         self:Emit(func_chunks[1])
         self:EmitExpression(v.left)
         self:Emit(func_chunks[2])
+        self.operator_transformed = true
     else
         if oh.syntax.IsKeyword(v) then
             self:Whitespace("?")

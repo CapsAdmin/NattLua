@@ -33,7 +33,6 @@ syntax.PostfixOperators = {
 }
 
 syntax.BinaryOperators = {
-    {".", ":"},
     {"or"},
     {"and"},
     {"<", ">", "<=", ">=", "~=", "=="},
@@ -45,6 +44,7 @@ syntax.BinaryOperators = {
     {"+", "-"},
     {"*", "/", "//", "%"},
     {"R^"}, -- right associative
+    {".", ":"},
 }
 
 syntax.BinaryOperatorFunctionTranslate = {
@@ -63,11 +63,6 @@ syntax.PrefixOperatorFunctionTranslate = {
 syntax.PostfixOperatorFunctionTranslate = {
     ["++"] = "(A+1)",
 }
-
--- temp
-function math.floordiv(a, b)
-    return math.floor(a / b)
-end
 
 do
     local map = {}
@@ -219,7 +214,7 @@ do -- grammar rules
         return syntax.BinaryOperators[token.value] and syntax.BinaryOperators[token.value][2]
     end
 
-    function syntax.GetFunctionForOperator(token)
+    function syntax.GetFunctionForBinaryOperator(token)
         return syntax.BinaryOperatorFunctionTranslate[token.value]
     end
 
