@@ -1,6 +1,7 @@
 local oh = ...
-local table_remove = table.remove
 local ipairs = ipairs
+local assert = assert
+local type = type
 
 local META = {}
 META.__index = META
@@ -450,7 +451,7 @@ function META:EmitStatement(node)
 end
 
 function META:EmitStatements(tbl)
-    for i, node in ipairs(tbl) do
+    for _, node in ipairs(tbl) do
         self:EmitStatement(node)
         self:Whitespace("\n")
     end

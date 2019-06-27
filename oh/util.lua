@@ -16,7 +16,6 @@ do
 
         local tbl = {}
         local i = 1
-        local length = 1
 
         for tbl_i = 1, #str do
             local length = map[str:byte(i)]
@@ -104,7 +103,7 @@ function util.CountFields(tbl, what, cb, max)
     max = max or 10
 
     local score = {}
-    for i,v in ipairs(tbl) do
+    for _,v in ipairs(tbl) do
         local key = cb(v)
         score[key] = (score[key] or 0) + 1
     end

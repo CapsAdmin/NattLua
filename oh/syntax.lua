@@ -157,7 +157,7 @@ do
             local chars = util.UTF8ToTable(str)
 
             local node = syntax.SymbolLookup
-            for i, char in ipairs(chars) do
+            for _, char in ipairs(chars) do
                 node[char] = node[char] or {}
                 node = node[char]
             end

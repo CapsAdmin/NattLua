@@ -102,7 +102,7 @@ do
         end
     end
 
-    local setmetatable = setmetatable
+    --local setmetatable = setmetatable
 
     function META:NewToken(type, start, stop)
         --return setmetatable({tk = self, type = type, start = start, stop = stop, whitespace = whitespace}, TOKEN)
