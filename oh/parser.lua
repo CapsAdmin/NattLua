@@ -411,8 +411,14 @@ do -- statements
         elseif expr then-- and expr.suffixes and expr.suffixes[#expr.suffixes].kind == "call" then
             node = self:NewStatement("expression")
             node.value = expr
-        --else
-        -- self:Error("unexpected " .. start_token.type .. " while trying to read assignment or call", start_token)
+        elseif not self:IsType("end_of_file") then
+            local type = self:GetToken().type
+
+            if oh.syntax.IsKeyword(self:GetToken()) then
+                type = "keyword"
+            end
+    
+            self:Error("unexpected " .. type .. " while trying to read assignment or call statement")
         end
 
         return node
@@ -431,17 +437,10 @@ do -- statements
             self:IsDoStatement() then               return self:ReadDoStatement() elseif
             self:IsIfStatement() then               return self:ReadIfStatement() elseif
             self:IsWhileStatement() then            return self:ReadWhileStatement() elseif
-            self:IsForStatement() then              return self:ReadForStatement() else
-                                                    return self:ReadRemainingStatement()
+            self:IsForStatement() then              return self:ReadForStatement()
         end
 
-        local type = self:GetToken().type
-
-        if oh.syntax.IsKeyword(self:GetToken()) then
-            type = "keyword"
-        end
-
-        self:Error("unexpected " .. type)
+        return self:ReadRemainingStatement()
     end
 
 end
@@ -644,7 +643,7 @@ do -- if
             if i == 1 then
                 token = self:ReadExpectValue("if")
             else
-                token = self:ReadExpectValues({"else", "elseif"})
+                token = self:ReadExpectValues({"else", "elseif", "end"})
             end
 
             if not token then return end
@@ -747,7 +746,7 @@ end
 do -- expression
     function META:ReadExpectExpression(priority, stop_on_call)
         if oh.syntax.IsDefinetlyNotStartOfExpression(self:GetToken()) then
-            self:Error("expected beginning of expression, got ".. oh.QuoteToken(self:GetToken().value))
+            self:Error("expected beginning of expression, got ".. oh.QuoteToken(self:GetToken() and self:GetToken().value or "no token"))
             return
         end
 
@@ -786,44 +785,46 @@ do -- expression
             val = self:ReadTable()
         end
 
-        for _ = 1, self:GetLength() do
-            if not self:GetToken() then break end
+        if val then
+            for _ = 1, self:GetLength() do
+                if not self:GetToken() then break end
 
-            if oh.syntax.IsPostfixOperator(self:GetToken()) then
-                local left = val
-                val = self:NewExpression("postfix_operator")
-                val.value = self:ReadToken()
-                val.left = left
-            elseif self:IsValue("(") then
-                if stop_on_call then
-                    return val
+                if oh.syntax.IsPostfixOperator(self:GetToken()) then
+                    local left = val
+                    val = self:NewExpression("postfix_operator")
+                    val.value = self:ReadToken()
+                    val.left = left
+                elseif self:IsValue("(") then
+                    if stop_on_call then
+                        return val
+                    end
+
+                    local left = val
+                    val = self:NewExpression("postfix_call")
+                    val.tokens["call("] = self:ReadExpectValue("(")
+                    val.expressions = self:ReadExpressionList()
+                    val.tokens["call)"] = self:ReadExpectValue(")")
+
+                    val.left = left
+                elseif self:IsValue("{") or self:IsType("string") then
+                    if stop_on_call then
+                        return val
+                    end
+
+                    local left = val
+                    val = self:NewExpression("postfix_call")
+                    val.expressions = {self:ReadExpression()}
+                    val.left = left
+                elseif self:IsValue("[") then
+                    local left = val
+                    val = self:NewExpression("postfix_expression_index")
+                    val.tokens["["] = self:ReadToken()
+                    val.expression = self:ReadExpectExpression()
+                    val.tokens["]"] = self:ReadExpectValue("]")
+                    val.left = left
+                else
+                    break
                 end
-
-                local left = val
-                val = self:NewExpression("postfix_call")
-                val.tokens["call("] = self:ReadExpectValue("(")
-                val.expressions = self:ReadExpressionList()
-                val.tokens["call)"] = self:ReadExpectValue(")")
-
-                val.left = left
-            elseif self:IsValue("{") or self:IsType("string") then
-                if stop_on_call then
-                    return val
-                end
-
-                local left = val
-                val = self:NewExpression("postfix_call")
-                val.expressions = {self:ReadExpression()}
-                val.left = left
-            elseif self:IsValue("[") then
-                local left = val
-                val = self:NewExpression("postfix_expression_index")
-                val.tokens["["] = self:ReadToken()
-                val.expression = self:ReadExpectExpression()
-                val.tokens["]"] = self:ReadExpectValue("]")
-                val.left = left
-            else
-                break
             end
         end
 

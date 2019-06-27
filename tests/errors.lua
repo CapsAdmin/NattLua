@@ -14,7 +14,7 @@ local function check(tbl)
             error("error does not match")
         end
     end
-end do return end
+end
 
 check({
     {"local foo[123] = true", "  |          .- unexpected symbol"},
