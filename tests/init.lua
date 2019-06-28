@@ -257,7 +257,7 @@ function test.print_ast(code)
     test.dump_ast(test.parse(tokens, code, true))
 end
 
-local map = -- {}
+local map --= {}
 
 if map then
     debug.sethook(function(evt)
