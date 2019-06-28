@@ -129,6 +129,8 @@ do
         "_IOW(string.byte'f', 126, 'uint32_t')",
         "return",
         "return 1",
+        "function foo(a, ...) end",
+        "function foo(...) end",
 
         "a = foo(0x89abcdef, 1)",
         "a = foo(0x20EA2, 1)",
@@ -153,6 +155,9 @@ do
         "a = foo(0xDEAD_BEEF_CAFE_BABE, 1)",
         "a = foo(1_1_1_0e2, 1)",
         "a = foo(1_, 1)",
+        'a = "a\\z\na"',
+        "lol = 1 ÆØÅ",
+        "lol = 1 ÆØÅÆ",
 
         {code = "return math.maxinteger // 80", expect = "return math.floor(math.maxinteger / 80)",     compare_tokens = true},
 
@@ -162,6 +167,7 @@ do
         {code = "local a = ~1",                 expect = "local a = bit.bnot(1)",                       compare_tokens = true},
         {code = "local a = 1 >> 2",             expect = "local a = bit.rshift(1, 2)",                  compare_tokens = true},
         {code = "local a = 1 >> 2 << 23",       expect = "local a = bit.lshift(bit.rshift(1, 2), 23)",  compare_tokens = true},
+        {code = "local a = a++",                expect = "local a = (a + 1)",                           compare_tokens = true},
     }
 end
 
