@@ -9,9 +9,6 @@ do
     META = {}
     META.__index = META
 
-    -- This is needed for UTF8. Assume everything is a letter if it's not any of the other types.
-    META.FallbackCharacterType = "letter"
-
     function META:OnInitialize(str)
         str = util.RemoveBOMHeader(str)
         self.code = str
