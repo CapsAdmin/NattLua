@@ -1,4 +1,5 @@
 local util = require("oh.util")
+local B = string.byte
 
 local syntax = {}
 
@@ -71,33 +72,33 @@ syntax.PostfixOperatorFunctionTranslate = {
 do
     local map = {}
 
-    map.space = syntax.SpaceCharacters or {" ", "\n", "\r", "\t"}
+    map.space = syntax.SpaceCharacters or {B" ", B"\r", B"\t", B"\n"}
 
     if syntax.NumberCharacters then
         map.number = syntax.NumberCharacters
     else
         map.number = {}
         for i = 0, 9 do
-            map.number[i+1] = tostring(i)
+            map.number[i+1] = B(tostring(i))
         end
     end
 
     if syntax.LetterCharacters then
         map.letter = syntax.LetterCharacters
     else
-        map.letter = {"_"}
+        map.letter = {B"_"}
 
-        for i = string.byte("A"), string.byte("Z") do
-            table.insert(map.letter, string.char(i))
+        for i = B"A", B"Z" do
+            table.insert(map.letter, i)
         end
 
-        for i = string.byte("a"), string.byte("z") do
-            table.insert(map.letter, string.char(i))
+        for i = B"a", B"z" do
+            table.insert(map.letter, i)
         end
 
         -- although not accurate, we consider anything above 128 to be unicode
         for i = 128, 255 do
-            table.insert(map.letter, string.char(i))
+            table.insert(map.letter, i)
         end
     end
 
@@ -152,11 +153,11 @@ function syntax.LongestLookup(tbl, what, lower)
         local node = map
 
         for i = 1, #str do
-            local char = str:sub(i, i)
+            local char = str:byte(i)
             node[char] = node[char] or {}
             node = node[char]
         end
-        
+
         node.DONE = {str = str, length = #str}
 
         longest = math.max(longest, #str)
@@ -168,8 +169,8 @@ function syntax.LongestLookup(tbl, what, lower)
         local node = map
 
         for i = 0, longest do
-            local found = lower and node[tk:GetChar(i):lower()] or node[tk:GetChar(i)]
-            
+            local found = lower and node[string.char(tk:GetChar(i)):lower():byte()] or node[tk:GetChar(i)]
+
             if not found and i == 0 then return end
             if not found then break end
 
@@ -184,21 +185,22 @@ function syntax.LongestLookup(tbl, what, lower)
 end
 
 do
+    local symbols = {}
     local temp = {}
     for type, chars in pairs(syntax.CharacterMap) do
         for _, char in ipairs(chars) do
+            if type == "symbol" then
+                table.insert(symbols, char)
+            end
+            if _G.type(char) == "string" then
+                char = char:byte() or 0
+            end
             temp[char] = type
         end
     end
     syntax.CharacterMap = temp
 
-    local temp = {}
-    for str, type in pairs(syntax.CharacterMap) do
-        if type == "symbol" then
-            table.insert(temp, str)
-        end
-    end
-    syntax.ReadLongestSymbol = syntax.LongestLookup(temp, "symbol")
+    syntax.ReadLongestSymbol = syntax.LongestLookup(symbols, "symbol")
     syntax.ReadLongestNumberAnnotation = syntax.LongestLookup(syntax.NumberAnnotations, true, true)
 end
 

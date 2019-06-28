@@ -48,7 +48,7 @@ end
 function META:GetPrevCharType()
     local prev = self.out[self.i - 1]
     local char = prev:sub(-1)
-    return prev and oh.syntax.GetCharacterType(char) or (self.FallbackCharacterType and char:byte() > 128 and self.FallbackCharacterType)
+    return prev and oh.syntax.GetCharacterType(char:byte())
 end
 
 function META:EmitToken(v, translate)

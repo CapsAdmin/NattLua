@@ -1,6 +1,8 @@
 local oh = ...
 local util = require("oh.util")
 
+local B = string.byte
+
 local META
 
 do
@@ -25,14 +27,14 @@ do
 
     function META:GetChar(offset)
         if offset then
-            return self.code:sub(self.i + offset, self.i + offset)
+            return self.code:byte(self.i + offset)
         end
-        return self.code:sub(self.i, self.i)
+        return self.code:byte(self.i)
     end
 
     function META:StringMatches(str)
         for i = 1, #str do
-            if self:GetChar(i-1) ~= str:sub(i, i) then
+            if self:GetChar(i-1) ~= str:byte(i) then
                 return false
             end
         end
@@ -40,7 +42,7 @@ do
     end
 
     function META:GetCharType(char)
-        return oh.syntax.GetCharacterType(char) or (self.FallbackCharacterType and char:byte() > 128 and self.FallbackCharacterType)
+        return oh.syntax.GetCharacterType(char)
     end
 
     function META:ReadChar()
@@ -55,9 +57,9 @@ do
 
     function META:IsValue(what, offset)
         if offset then
-            return self:GetChar(offset) == what
+            return self:GetChar(offset) == B(what)
         end
-        return self:GetChar() == what
+        return self:GetChar() == B(what)
     end
 
     function META:IsType(what, offset)
@@ -120,7 +122,7 @@ do
 
         local length = self.i - start
         local closing = "]" .. string.rep("=", length - 2) .. "]"
-        
+
         for _ = self.i, self:GetLength() do
             if self:StringMatches(closing) then
                 self:Advance(length)
@@ -169,7 +171,7 @@ do
                     self:Advance(#str)
 
                     for _ = self.i, self:GetLength() do
-                        if self:ReadChar() == "\n" then
+                        if self:ReadChar() == B"\n" then
                             break
                         end
                     end
@@ -233,11 +235,11 @@ do
             local function generate_map(str)
                 local out = {}
                 for i = 1, #str do
-                    out[str:sub(i, i)] = true
+                    out[str:byte(i)] = true
                 end
                 return out
             end
-            
+
             local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
             function META:ReadNumberAnnotations(what)
@@ -267,7 +269,7 @@ do
                 if self:IsValue("+") or self:IsValue("-") then
                     self:Advance(1)
                     if not self:IsType("number") then
-                        self:Error("malformed " .. what .. " expected number, got " .. self:GetChar(), self.i - 2)
+                        self:Error("malformed " .. what .. " expected number, got " .. string.char(self:GetChar()), self.i - 2)
                         return false
                     end
                 end
@@ -288,7 +290,7 @@ do
 
                 for _ = self.i, self:GetLength() do
                     if self:IsValue("_") then self:Advance(1) end
-                    
+
                     if self:IsValue(".") then
                         if dot then
                             --self:Error("dot can only be placed once")
@@ -301,13 +303,13 @@ do
                     if self:ReadNumberAnnotations("hex") then
                         break
                     end
-                    
+
                     if allowed_hex[self:GetChar()] then
                         self:Advance(1)
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
                     elseif self:GetChar() ~= "" then
-                        self:Error("malformed number "..self:GetChar().." in hex notation")
+                        self:Error("malformed number "..string.char(self:GetChar()).." in hex notation")
                         return
                     end
                 end
@@ -338,9 +340,7 @@ do
                 return "number"
             end
 
-            local allowed_number = generate_map("0123456789")
-
-            function META:ReadDecimalNumber()  
+            function META:ReadDecimalNumber()
                 local dot = false
 
                 for _ = self.i, self:GetLength() do
@@ -358,8 +358,8 @@ do
                     if self:ReadNumberAnnotations("decimal") then
                         break
                     end
-                    
-                    if allowed_number[self:GetChar()] then
+
+                    if self:IsType("number") then
                         self:Advance(1)
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
@@ -389,7 +389,7 @@ do
     end
 
     do
-        local escape_character = [[\]]
+        local escape_character = B[[\]]
         local quotes = {
             Double = [["]],
             Single = [[']],
@@ -404,7 +404,7 @@ do
             local function escape(self, c)
                 if self[key] then
 
-                    if c == "z" and not self:IsValue(quote) then
+                    if c == B"z" and not self:IsValue(quote) then
                         self:ReadSpace(self)
                     end
 
@@ -428,13 +428,13 @@ do
 
                     if not escape(self, char) then
 
-                        if char == "\n" then
+                        if char == B"\n" then
                             self:Advance(-1)
                             self:Error("unterminated " .. name:lower() .. " quote", start, self.i - 1)
                             return false
                         end
 
-                        if char == quote then
+                        if char == B(quote) then
                             return "string"
                         end
                     end
@@ -481,7 +481,7 @@ do
 
         function META:ReadShebang()
             for _ = self.i, self:GetLength() do
-                if self:ReadChar() == "\n" then
+                if self:ReadChar() == B"\n" then
                     return "shebang"
                 end
             end
