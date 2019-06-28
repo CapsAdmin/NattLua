@@ -393,6 +393,8 @@ do -- statements
 
     function META:ReadRemainingStatement()
         local node
+        local start = self:GetToken()
+
         local expr = self:ReadExpression()
 
         if self:IsValue("=") then
@@ -408,17 +410,17 @@ do -- statements
             node.expressions_left = list
             node.tokens["="] = self:ReadExpectValue("=")
             node.expressions_right = self:ReadExpressionList()
-        elseif expr then-- and expr.suffixes and expr.suffixes[#expr.suffixes].kind == "call" then
+        elseif expr then
             node = self:NewStatement("expression")
             node.value = expr
         elseif not self:IsType("end_of_file") then
-            local type = self:GetToken().type
+            local type = start.type
 
             if oh.syntax.IsKeyword(self:GetToken()) then
                 type = "keyword"
             end
     
-            self:Error("unexpected " .. type .. " while trying to read assignment or call statement")
+            self:Error("unexpected " .. type .. " while trying to read assignment or call statement", start, start)
         end
 
         return node

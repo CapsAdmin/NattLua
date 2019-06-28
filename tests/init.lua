@@ -26,7 +26,7 @@ function test.tokenize(code, capture_whitespace, name)
     return self:GetTokens()
 end
 
-function test.parse(tokens, code)
+function test.parse(tokens, code, name)
     local self = oh.Parser()
     self.OnError = function(_, msg, start, stop)
         error(oh.FormatError(code, name or "test", msg, start, stop))
@@ -134,7 +134,7 @@ function test.transpile_ok(code, path, config)
 
     local ok = xpcall(function()
         tokens = test.tokenize(code)
-        ast = test.parse(tokens, code)
+        ast = test.parse(tokens, code, path)
         new_code, lua_err = test.transpile(ast, config)
     end, function(err)
         print("===================================")

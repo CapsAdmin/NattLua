@@ -42,8 +42,12 @@ function oh.TokensToAST(tokens, name, code, config)
     local ast = parser:BuildAST(tokens)
     if parser.errors then
         local str = ""
-        for _, err in ipairs(parser.errors) do
-            str = str .. oh.FormatError(code, name, err.msg, err.start, err.stop) .. "\n"
+		for _, err in ipairs(parser.errors) do
+			if code then
+				str = str .. oh.FormatError(code, name, err.msg, err.start, err.stop) .. "\n"
+			else
+				str = str .. err.msg .. "\n"
+			end
         end
         return nil, str
 	end
@@ -111,99 +115,204 @@ local function sub(tbl, start, stop)
 	return table.concat(out)
 end
 
+do
+	local function sub_pos_2_line_pos(code, start, stop)
+		local line = 1
 
-function oh.FormatError(code, path, msg, start, stop)
-	local chars = code
+		local line_start
+		local line_stop 
 
+		local within_start
+		local within_stop
+		
+		local line_pos = 0
 
-	local total_lines = count(chars, "\n")
-	local line_number_length = #tostring(total_lines)
+		for i = 1, #code do
+			local char = code:sub(i, i)
+		
 
-	local function tab2space(str)
-		return str:gsub("\t", "    ")
-	end
+			if i == stop then
+				line_stop = line
+			end
 
-	local function line2str(i)
-		return ("%i%s"):format(i, (" "):rep(line_number_length - #tostring(i)))
-	end
+			if i == start then
+				line_start = line
+				within_start = line_pos
+			end
 
-	local context_size = 120
-	local line_context_size = 3
+			if char == "\n" then
+				if line_stop then
+					within_stop = i
+					break
+				end
 
-	local length = (stop - start)
-	local before = sub(chars, math.max(start - context_size, 0), stop - length - 1)
-	local middle = sub(chars, start, stop-1)
-	local after = sub(chars, stop, stop + context_size)
-
-	local context_before, line_before = before:match("(.+\n)(.*)")
-	local line_after, context_after = after:match("(.-)(\n.+)")
-
-	if not line_before then
-		context_before = before
-		line_before = before
-	end
-
-	if not line_after then
-		context_after = after
-		line_after = after
-
-		-- hmm
-		if context_after == line_after then
-			context_after = ""
+				line = line + 1
+				line_pos = i
+			end
 		end
+
+		if not within_stop then
+			within_stop = #code + 1
+		end
+
+		if not within_start then
+			return
+		end
+
+		return {
+			sub_line_before = {within_start + 1, start - 1},
+			sub_line_after = {stop + 1, within_stop - 1},
+			line_start = line_start,
+			line_stop = line_stop,            
+		}
 	end
 
-	local current_line = count(chars, "\n", stop)
-	local char_number = #line_before + 1
+	local function get_lines_before(code, pos, lines)
+		local line = 1
+		local first_line_pos = 1
 
-	line_before = tab2space(line_before)
-	middle = tab2space(middle)
-	line_after = tab2space(line_after)
+		for i = pos, 1, -1 do
+			local char = code:sub(i, i)
+			if char == "\n" then
+				if line == 1 then
+					first_line_pos = i
+				end
 
-	local out = ""
-	out = out .. "error: " ..  msg .. "\n"
-	out = out .. " " .. ("-"):rep(line_number_length + 1) .. "> " .. path .. ":" .. current_line .. ":" .. char_number .. "\n"
+				line = line + 1
+			
+				if line == lines + 2 then
+					return i + 1, first_line_pos - 1, line
+				end
+			end
+		end
 
-	if line_context_size > 0 then
-        local lines = {}
-        for line in tab2space(context_before:sub(0, -2)):gmatch("(.-)\n") do
-            table.insert(lines, line)
-        end
 
-		if #lines ~= 1 or lines[1] ~= "" then
-			for offset = math.max(#lines - line_context_size, 1), #lines do
-				local str = lines[offset]
-				--if str:trim() ~= "" then
-					offset = offset - 1
-					local line = current_line - (-offset + #lines)
-					if line ~= 0 then
-						out = out .. line2str(line-1) .. " | " .. str .. "\n"
+		return 1, first_line_pos, line
+	end
+
+	local function get_lines_after(code, pos, lines)
+		local line = 1
+		local first_line_pos = 1
+
+		for i = pos, #code do
+			local char = code:sub(i, i)
+			if char == "\n" then
+				if line == 1 then
+					first_line_pos = i
+				end
+
+				if line == lines + 1 then
+					return first_line_pos + 1, i - 1, line
+				end
+
+				line = line + 1
+			end
+		end
+
+		return first_line_pos + 1, #code, line-1
+	end
+
+	local function get_current_line(code, start, stop)
+		local line_start
+		local line_stop
+
+		for i = start, 1, -1 do
+			local char = code:sub(i, i)
+			if char == "\n" then
+				line_start = i
+				break
+			end
+		end 
+
+		for i = stop, #code do
+			local char = code:sub(i, i)
+			if char == "\n" then
+				line_stop = i
+				break
+			end
+		end
+
+		return line_start + 1, line_stop-1
+	end
+			
+	function oh.FormatError(code, path, msg, start, stop)
+		local data = sub_pos_2_line_pos(code, start, stop)
+		
+		if not data then
+			local str = ""
+			if path then
+				str = str .. path .. ":INVALID: "
+			end
+
+			if msg then
+				str = str .. msg
+			end
+			return str
+		end
+
+		local line_start, line_stop = data.line_start, data.line_stop
+
+		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(code, start, 5, line_start)
+		local post_start_pos, post_stop_pos, lines_after = get_lines_after(code, stop, 5, line_stop)
+
+		local spacing = #tostring(data.line_stop + lines_after)
+		local lines = {}
+
+		do
+			if lines_before > 0 then
+				local line = line_start - lines_before + 1
+				for str in (code:sub(pre_start_pos, pre_stop_pos)):gmatch("(.-)\n") do
+					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
+					table.insert(lines, prefix .. str)
+					line = line + 1
+				end
+			end
+
+			do
+				local line = line_start
+				for str in (code:sub(start, stop) .. "\n"):gmatch("(.-)\n") do
+					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
+
+					if line == line_start then
+						prefix = prefix .. code:sub(unpack(data.sub_line_before))
 					end
-				--end
+
+					local test = str
+
+					if line == line_stop then
+						str = str .. code:sub(unpack(data.sub_line_after))
+					end
+						
+					str = str .. "\n" .. (" "):rep(#prefix) .. ("^"):rep(math.max(#test, 1))
+
+					table.insert(lines, prefix .. str)
+					line = line + 1
+				end
 			end
-		end
-	end
 
-	out = out .. line2str(current_line) .. " | " .. line_before .. middle .. line_after .. "\n"
-	out = out .. (" "):rep(line_number_length) .. " |" .. (" "):rep(#line_before + 1) .. ("🠙"):rep(length) .. "🠝" .. " " .. msg .. "\n"
-
-	if line_context_size > 0 then
-        local lines = {}
-        for line in tab2space(context_after:sub(2)):gmatch("(.-)\n") do
-            table.insert(lines, line)
-        end
-		if #lines ~= 1 or lines[1] ~= "" then
-			for offset = 1, #lines do
-				local str = lines[offset]
-				--if str:trim() ~= "" then
-					out = out .. line2str(current_line + offset+1) .. " | " .. str .. "\n"
-				--end
-				if offset >= line_context_size then break end
+			if lines_after > 0 then
+				local line = line_stop + 1
+				for str in (code:sub(post_start_pos, post_stop_pos) .. "\n"):gmatch("(.-)\n") do
+					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
+					table.insert(lines, prefix .. str)
+					line = line + 1
+				end
 			end
-		end
-	end
 
-	return out
+		end
+		
+		local str = table.concat(lines, "\n")
+
+		local path = path .. ":" .. line_start
+		local msg = path .. (msg and ": " .. msg or "")
+		local post = (" "):rep(spacing - 2) .. "-> | " .. msg
+		
+		local pre = ("="):rep(#post)
+
+		str = pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n" .. pre
+
+		return str
+	end
 end
 
 function oh.GetErrorsFormatted(error_table, code, path)
