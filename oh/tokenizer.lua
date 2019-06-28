@@ -328,7 +328,7 @@ do
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
                     elseif self:GetChar() ~= "" then
-                        self:Error("malformed number "..self:GetChar().." in binary notation")
+                        self:Error("malformed number "..string.char(self:GetChar()).." in binary notation")
                         return
                     end
 
