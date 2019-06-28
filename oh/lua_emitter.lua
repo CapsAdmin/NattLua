@@ -232,7 +232,7 @@ function META:EmitPrefixOperator(v)
         self:Emit(func_chunks[2])
         self.operator_transformed = true
     else
-        if oh.syntax.IsKeyword(v) then
+        if oh.syntax.IsKeyword(v.value) then
             self:Whitespace("?")
             self:EmitToken(v.value)
             self:Whitespace("?")
@@ -252,14 +252,14 @@ function META:EmitPostfixOperator(v)
         self:Emit(func_chunks[2])
         self.operator_transformed = true
     else
-        if oh.syntax.IsKeyword(v) then
+        if oh.syntax.IsKeyword(v.value) then
+            self:EmitExpression(v.left)
             self:Whitespace("?")
             self:EmitToken(v.value)
             self:Whitespace("?")
-            self:EmitExpression(v.left)
         else
-            self:EmitToken(v.value)
             self:EmitExpression(v.left)
+            self:EmitToken(v.value)
         end
     end
 end

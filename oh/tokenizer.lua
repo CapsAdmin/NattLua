@@ -97,11 +97,6 @@ do
     local function ReadLiteralString(self, multiline_comment)
         local start = self.i
 
-        if not self:IsValue("[") then
-            if multiline_comment then return true end
-            return nil, "expected " .. oh.QuoteToken("[") .. " got " .. oh.QuoteToken(self:GetChar())
-        end
-
         self:Advance(1)
 
         if self:IsValue("=") then
