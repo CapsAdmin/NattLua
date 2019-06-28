@@ -286,7 +286,7 @@ function META:ReadExpectType(type, start, stop)
     elseif not self:IsType(type) then
         self:Error("expected " .. oh.QuoteToken(type) .. " got " .. oh.QuoteToken(self:GetToken().type) .. "(" .. self:GetToken().value .. ")", start, stop, 3, -1)
     end
-    
+
     return self:ReadToken()
 end
 
@@ -410,7 +410,7 @@ do -- statements
             node.expressions_left = list
             node.tokens["="] = self:ReadExpectValue("=")
             node.expressions_right = self:ReadExpressionList()
-        elseif expr then
+        elseif expr then -- TODO: make sure it's a call
             node = self:NewStatement("expression")
             node.value = expr
         elseif not self:IsType("end_of_file") then
@@ -419,7 +419,7 @@ do -- statements
             if oh.syntax.IsKeyword(self:GetToken()) then
                 type = "keyword"
             end
-    
+
             self:Error("unexpected " .. type .. " while trying to read assignment or call statement", start, start)
         end
 
