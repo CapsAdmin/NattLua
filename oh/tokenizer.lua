@@ -540,13 +540,11 @@ do
         self.i = 1
 
         local tokens = {}
-        local tokens_i = 1
 
-        for _ = self.i, self:GetLength() do
+        for i = self.i, self:GetLength() do
             local token = self:ReadToken()
 
-            tokens[tokens_i] = token
-            tokens_i = tokens_i + 1
+            tokens[i] = token
 
             if token.type == "end_of_file" then break end
         end
