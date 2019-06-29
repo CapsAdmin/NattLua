@@ -1,6 +1,3 @@
-local util = require("oh.util")
-local B = string.byte
-
 local syntax = {}
 
 syntax.SymbolCharacters = {
@@ -71,36 +68,40 @@ syntax.PostfixOperatorFunctionTranslate = {
     ["++"] = "(A+1)",
 }
 
-function syntax.IsLetter(c)
-    return
-        (c >= B"a" and c <= B"z") or
-        (c >= B"A" and c <= B"Z") or
-        (c == B"_" or c >= 128)
-end
+do
+    local B = string.byte
 
-function syntax.IsDuringLetter(c)
-    return
-        (c >= B"a" and c <= B"z") or
-        (c >= B"0" and c <= B"9") or
-        (c >= B"A" and c <= B"Z") or
-        (c == B"_" or c >= 128)
-end
+    function syntax.IsLetter(c)
+        return
+            (c >= B'a' and c <= B'z') or
+            (c >= B'A' and c <= B'Z') or
+            (c == B'_' or c >= 128)
+    end
 
-function syntax.IsNumber(c)
-    return (c >= B"0" and c <= B"9")
-end
+    function syntax.IsDuringLetter(c)
+        return
+            (c >= B'a' and c <= B'z') or
+            (c >= B'0' and c <= B'9') or
+            (c >= B'A' and c <= B'Z') or
+            (c == B'_' or c >= 128)
+    end
 
-function syntax.IsSpace(c)
-    return c > 0 and c <= 32
-end
+    function syntax.IsNumber(c)
+        return (c >= B'0' and c <= B'9')
+    end
 
-function syntax.IsSymbol(c)
-    return c ~= B"_" and (
-        (c >= B'!' and c <= B'/') or
-        (c >= B':' and c <= B'@') or
-        (c >= B'[' and c <= B'`') or
-        (c >= B'{' and c <= B'~')
-    )
+    function syntax.IsSpace(c)
+        return c > 0 and c <= 32
+    end
+
+    function syntax.IsSymbol(c)
+        return c ~= B'_' and (
+            (c >= B'!' and c <= B'/') or
+            (c >= B':' and c <= B'@') or
+            (c >= B'[' and c <= B'`') or
+            (c >= B'{' and c <= B'~')
+        )
+    end
 end
 
 do -- extend the symbol characters from grammar rules

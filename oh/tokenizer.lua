@@ -110,9 +110,6 @@ do
 
         table.sort(copy, function(a, b) return #a > #b end)
 
-        local longest = 0
-        local map = {}
-
         local kernel = "return function(self)\n"
 
         for _, str in ipairs(copy) do

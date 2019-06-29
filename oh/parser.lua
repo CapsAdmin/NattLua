@@ -301,20 +301,18 @@ function META:ReadExpectValue(value, start, stop)
     return self:ReadToken()
 end
 
-    function META:ReadExpectValues(values, start, stop)
-        if not self:GetToken() then
-            self:Error("expected " .. oh.QuoteTokens(values) .. ": reached end of code", start, stop)
+function META:ReadExpectValues(values, start, stop)
+    if not self:GetToken() then
+        self:Error("expected " .. oh.QuoteTokens(values) .. ": reached end of code", start, stop)
     elseif not values[self:GetToken().value] then
-            local tk = self:GetToken()
+        local tk = self:GetToken()
         local array = {}
-        for k,v in pairs(values) do
-            table.insert(array, k)
-        end
+        for k in pairs(values) do table.insert(array, k) end
         self:Error("expected " .. oh.QuoteTokens(array) .. " got " .. tk.type, start, stop)
-        end
-
-        return self:ReadToken()
     end
+
+    return self:ReadToken()
+end
 
 function META:GetLength()
     return self.tokens_length
