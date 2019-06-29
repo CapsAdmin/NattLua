@@ -3,6 +3,17 @@ local util = require("oh.util")
 
 local B = string.byte
 
+local ffi = jit and require("ffi")
+
+if ffi then
+    ffi.cdef([[
+        size_t strspn( const char * str1, const char * str2 );
+        int strcmp ( const char * str1, const char * str2 );
+        int memcmp ( const void * ptr1, const void * ptr2, size_t num );
+    ]])
+end
+
+
 local META
 
 do
@@ -12,30 +23,60 @@ do
     function META:OnInitialize(str)
         str = util.RemoveBOMHeader(str)
         self.code = str
-        self.code_length = #str
+
+        if ffi then
+            self.code_ptr_ref = str-- .. ("\0"):rep(4)
+            self.code_ptr = ffi.cast("const uint8_t *", self.code_ptr_ref)
+        end
     end
+
     function META:GetLength()
-        return self.code_length
+        return #self.code
     end
 
-    function META:GetChars(start, stop)
-        return self.code:sub(start, stop)
-    end
+    if ffi then
+        local memcmp = ffi.C.memcmp
+        local ffi_string = ffi.string
 
-    function META:GetChar(offset)
-        if offset then
-            return self.code:byte(self.i + offset)
+        function META:GetChars(start, stop)
+            return ffi_string(self.code_ptr + start - 1, (stop - start) + 1)
         end
-        return self.code:byte(self.i)
-    end
 
-    function META:StringMatches(str)
-        for i = 1, #str do
-            if self:GetChar(i-1) ~= str:byte(i) then
-                return false
+        function META:GetChar(offset)
+            if offset then
+                return self.code_ptr[self.i + offset - 1]
             end
+            return self.code_ptr[self.i - 1]
         end
-        return true
+
+        function META:ResetState()
+            self.i = 1
+        end
+    else
+        function META:GetChars(start, stop)
+            return self.code:sub(start, stop)
+        end
+
+        function META:GetChar(offset)
+            if offset then
+                return self.code:byte(self.i + offset) or 0
+            end
+            return self.code:byte(self.i) or 0
+        end
+
+        function META:ResetState()
+            self.i = 1
+        end
+    end
+
+    function META:FindNearest(str)
+        local _, stop = self.code:find(str, self.i, true)
+
+        if stop then
+            return stop - self.i + 1
+        end
+
+        return false
     end
 
     function META:GetCharType(char)
@@ -59,6 +100,13 @@ do
         return self:GetChar() == B(what)
     end
 
+    function META:IsValueb(what, offset)
+        if offset then
+            return self:GetChar(offset) == what
+        end
+        return self:GetChar() == what
+    end
+
     function META:IsType(what, offset)
         if offset then
             return self:GetCharType(self:GetChar(offset)) == what
@@ -72,17 +120,7 @@ do
         end
     end
 
-    local TOKEN = {}
-    function TOKEN:__index(key)
-        if key == "value" then
-            return self.tk:GetChars(self.start, self.stop)
-        end
-    end
-
-    --local setmetatable = setmetatable
-
     function META:NewToken(type, start, stop)
-        --return setmetatable({tk = self, type = type, start = start, stop = stop, whitespace = whitespace}, TOKEN)
         return {
             type = type,
             start = start,
@@ -112,15 +150,11 @@ do
 
         self:Advance(1)
 
-        local length = self.i - start
-        local closing = "]" .. string.rep("=", length - 2) .. "]"
-
-        for _ = self.i, self:GetLength() do
-            if self:StringMatches(closing) then
-                self:Advance(length)
-                return true
-            end
-            self:Advance(1)
+        local closing = "]" .. string.rep("=", (self.i - start) - 2) .. "]"
+        local pos = self:FindNearest(closing)
+        if pos then
+            self:Advance(pos)
+            return true
         end
 
         return nil, "expected "..oh.QuoteToken(closing).." reached end of code"
@@ -129,7 +163,10 @@ do
     do -- whitespace
         do
             function META:IsMultilineComment()
-                return self:StringMatches("--[=") or self:StringMatches("--[[")
+                return
+                    self:IsValue("-") and self:IsValue("-", 1) and self:IsValue("[", 2) and (
+                        self:IsValue("[", 3) or self:IsValue("=", 3)
+                    )
             end
 
             function META:ReadMultilineComment()
@@ -154,41 +191,51 @@ do
         end
 
         do
-            local function LINE_COMMENT(str, name, func_name)
-                META["Is" .. func_name] = function(self)
-                    return self:StringMatches(str)
-                end
+            local function LINE_COMMENT(str, cmp, name, func_name)
+                META["Is" .. func_name] = cmp
 
                 META["Read" .. func_name] = function(self)
                     self:Advance(#str)
 
                     for _ = self.i, self:GetLength() do
-                        if self:ReadChar() == B"\n" then
+                        if self:IsValue("\n") then
                             break
                         end
+                        self:Advance(1)
                     end
 
                     return name
                 end
             end
 
-            LINE_COMMENT("--", "line_comment", "LineComment")
+            LINE_COMMENT("--", function(self) return self:IsValue("-") and self:IsValue("-", 1) end, "line_comment", "LineComment")
         end
 
         do
             function META:IsSpace()
-                return self:IsType("space")
+                return oh.syntax.IsSpace(self:GetChar())
             end
 
-            function META:ReadSpace()
-                for _ = self.i, self:GetLength() do
-                    self:Advance(1)
-                    if not self:IsType("space") then
-                        break
-                    end
-                end
+            if ffi then
+                local chars = "\32\t\n\r"
+                local C = ffi.C
+                local tonumber = tonumber
 
-                return "space"
+                function META:ReadSpace()
+                    self:Advance(tonumber(C.strspn(self.code_ptr + self.i - 1, chars)))
+                    return "space"
+                end
+            else
+                function META:ReadSpace()
+                    for _ = self.i, self:GetLength() do
+                        self:Advance(1)
+                        if not oh.syntax.IsSpace(self:GetChar()) then
+                            break
+                        end
+                    end
+
+                    return "space"
+                end
             end
         end
     end
@@ -201,13 +248,16 @@ do
 
             function META:ReadEndOfFile()
                 -- nothing to capture, but remaining whitespace will be added
+                self:Advance(1)
                 return "end_of_file"
             end
         end
 
         do
             function META:IsMultilineString()
-                return self:StringMatches("[=") or self:StringMatches("[[")
+                return self:IsValue("[") and (
+                    self:IsValue("[", 1) or self:IsValue("=", 1)
+                )
             end
 
             function META:ReadMultilineString()
@@ -300,7 +350,7 @@ do
                         self:Advance(1)
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
-                    elseif self:GetChar() ~= "" then
+                    elseif self:GetChar() ~= 0 then
                         self:Error("malformed number "..string.char(self:GetChar()).." in hex notation")
                         return
                     end
@@ -319,7 +369,7 @@ do
                         self:Advance(1)
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
-                    elseif self:GetChar() ~= "" then
+                    elseif self:GetChar() ~= 0 then
                         self:Error("malformed number "..string.char(self:GetChar()).." in binary notation")
                         return
                     end
@@ -355,7 +405,7 @@ do
                         self:Advance(1)
                     elseif self:IsType("symbol") or self:IsType("space") then
                         break
-                    else--if self:GetChar() ~= "" then
+                    else--if self:GetChar() ~= 0 then
                         --self:Error("malformed number "..self:GetChar().." in hex notation")
                         return
                     end
@@ -441,18 +491,37 @@ do
 
     do
         function META:IsLetter()
-            return self:IsType("letter")
+            if oh.syntax.IsLetter(self:GetChar()) then
+                return true
+            end
         end
 
-        function META:ReadLetter()
-            for _ = self.i, self:GetLength() do
-                self:Advance(1)
-                if self:IsType("space") or not self:IsType("letter") and not self:IsType("number") then
-                    break
+        if ffi then
+            local C = ffi.C
+            local tonumber = tonumber
+            local chars = ""
+
+            for i = 1, 255 do
+                if oh.syntax.IsDuringLetter(i) then
+                    chars = chars .. string.char(i)
                 end
             end
 
-            return "letter"
+            function META:ReadLetter()
+                self:Advance(tonumber(C.strspn(self.code_ptr + self.i - 1, chars)))
+                return "letter"
+            end
+        else
+            function META:ReadLetter()
+                for _ = self.i, self:GetLength() do
+                    self:Advance(1)
+                    if not oh.syntax.IsDuringLetter(self:GetChar()) then
+                        break
+                    end
+                end
+
+                return "letter"
+            end
         end
     end
 
@@ -462,7 +531,11 @@ do
         end
 
         function META:ReadSymbol()
-            return oh.syntax.ReadLongestSymbol(self)
+            if oh.syntax.ReadLongestSymbol(self) then
+                return "symbol"
+            end
+
+            return nil
         end
     end
 
@@ -473,10 +546,12 @@ do
 
         function META:ReadShebang()
             for _ = self.i, self:GetLength() do
-                if self:ReadChar() == B"\n" then
-                    return "shebang"
+                self:Advance(1)
+                if self:IsValue("\n") then
+                    break
                 end
             end
+            return "shebang"
         end
     end
 
@@ -512,7 +587,7 @@ do
             return tk
         end
 
-        local wbuffer = {}
+        local wbuffer
 
         for i = 1, self:GetLength() do
             local start = self.i
@@ -520,21 +595,20 @@ do
             if not type then
                 break
             end
-
+            wbuffer = wbuffer or {}
             wbuffer[i] = self:NewToken(type, start, self.i - 1)
         end
 
         local start = self.i
         local type = self:ReadNonWhiteSpace()
-        local stop = self.i - 1
 
-        local tk = self:NewToken(type or "unknown", start, stop)
+        local tk = self:NewToken(type or "unknown", start, self.i - 1)
         tk.whitespace = wbuffer
         return tk
     end
 
     function META:GetTokens()
-        self.i = 1
+        self:ResetState()
 
         local tokens = {}
 
@@ -543,16 +617,12 @@ do
 
             tokens[i] = token
 
-            if token.type == "end_of_file" then break end
+            if token.type == "end_of_file" then
+                token.value = ""
+            break end
         end
 
         return tokens
-    end
-
-    function META:ResetState()
-        self.whitespace_buffer = {}
-        self.whitespace_buffer_i = 1
-        self.i = 1
     end
 end
 

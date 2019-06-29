@@ -165,7 +165,9 @@ function util.LogTraceAbort()
     local blacklist = {
         ["leaving loop in root trace"] = true,
         ["error thrown or hook fed during recording"] = true,
-        ["too many spill slots"] = true,
+        ["down-recursion, restarting"] = true,
+        ["loop unroll limit reached"] = true,
+        ["inner loop in root trace"] = true,
     }
 
     jit.attach(function(what, trace_id, func, pc, trace_error_id, trace_error_arg)
@@ -192,7 +194,9 @@ function util.LogTraceAbort()
 end
 
 function util.Measure(what, cb)
-    jit.flush()
+    if jit then
+        jit.flush()
+    end
     io.write("> ", what)
     local time = os.clock()
     io.flush()
@@ -202,10 +206,72 @@ function util.Measure(what, cb)
     if ok then
         io.write((" "):rep(40 - #what)," - OK ", (os.clock() - time) .. " seconds\n")
         return err
-    else 
+    else
         io.write(" - FAIL: ", err)
         error(err, 2)
     end
+end
+
+function util.GenerateBalancedTree(patterns, is_byte)
+    table.sort(patterns, function(a, b) return #a > #b end)
+
+    local longest = 0
+    local map = {}
+
+    local kernel = "local is_byte = ...; return function()\n"
+
+    for _, str in ipairs(patterns) do
+        local lua = "if "
+
+        for i = 1, #str do
+            lua = lua .. "is_byte(" .. str:byte(i) .. "," .. i-1 .. ") "
+
+            if i ~= #str then
+                lua = lua .. "and "
+            end
+        end
+
+        lua = lua .. "then"
+        lua = lua .. " return '" .. str .. "' end"
+        kernel = kernel .. lua .. "\n"
+    end
+
+    kernel = kernel .. "\nend"
+
+    return loadstring(kernel)(is_byte)
+end
+
+function util.EnhancedJITSettings()
+    if not jit then return end
+    jit.opt.start(
+		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
+		"maxrecord=16000", -- 4000: maximum number of recorded IR instructions
+		"maxirconst=500", -- 500: maximum number of IR constants of a trace
+		"maxside=100", -- 100: maximum number of side traces of a root trace
+		"maxsnap=500", -- 500: maximum number of snapshots for a trace
+		"hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
+		"hotexit=10", -- 10: number of taken exits to start a side trace
+		"tryside=8", -- 4: number of attempts to compile a side trace
+		"instunroll=4", -- 4: maximum unroll factor for instable loops
+		"loopunroll=15", -- 15: maximum unroll factor for loop ops in side traces
+		"callunroll=3", -- 3: maximum unroll factor for pseudo-recursive calls
+		"recunroll=0", -- 2: minimum unroll factor for true recursion
+		"maxmcode=40960", -- 512: maximum total size of all machine code areas in KBytes
+		--jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
+		"+fold", -- Constant Folding, Simplifications and Reassociation
+		"+cse", -- Common-Subexpression Elimination
+		"+dce", -- Dead-Code Elimination
+		"+narrow", -- Narrowing of numbers to integers
+		"+loop", -- Loop Optimizations (code hoisting)
+		"+fwd", -- Load Forwarding (L2L) and Store Forwarding (S2L)
+		"+dse", -- Dead-Store Elimination
+		"+abc", -- Array Bounds Check Elimination
+		"+sink", -- Allocation/Store Sinking
+		"+fuse" -- Fusion of operands into instructions
+	)
+	if jit.version_num >= 20100 then
+		jit.opt.start("minstitch=3") -- 0: minimum number of IR ins for a stitched trace.
+	end
 end
 
 return util

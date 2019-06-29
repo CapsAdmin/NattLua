@@ -19,7 +19,7 @@ syntax.Keywords = {
     "and", "break", "do", "else", "elseif", "end",
     "false", "for", "function", "if", "in", "of", "local",
     "nil", "not", "or", "repeat", "until", "return", "then",
-    "...", 
+    "...",
 
     -- these are just to make sure all code is covered by tests
     "ÆØÅ", "ÆØÅÆ",
@@ -38,7 +38,7 @@ syntax.PrefixOperators = {
 
 syntax.PostfixOperators = {
     -- these are just to make sure all code is covered by tests
-    "++", "ÆØÅ", "ÆØÅÆ", 
+    "++", "ÆØÅ", "ÆØÅÆ",
 }
 
 syntax.BinaryOperators = {
@@ -72,6 +72,35 @@ syntax.PrefixOperatorFunctionTranslate = {
 syntax.PostfixOperatorFunctionTranslate = {
     ["++"] = "(A+1)",
 }
+
+
+do
+    local B = string.byte
+    local a, z = B"a", B"z"
+    local A, Z = B"A", B"Z"
+    local _0, _9 = B"0", B"9"
+    local _ = B"_"
+
+    function syntax.IsLetter(c)
+        return
+            (c >= a and c <= z) or
+            (c >= A and c <= Z) or
+            (c == _ or c >= 128)
+    end
+
+    function syntax.IsDuringLetter(c)
+        return
+            (c >= a and c <= z) or
+            (c >= _0 and c <= _9) or
+            (c >= A and c <= Z) or
+            (c == _ or c >= 128)
+    end
+end
+
+function syntax.IsSpace(c)
+    return c == B" " or c == B"\r" or c == B"\t" or c == B"\n"
+end
+
 
 do
     local map = {}
@@ -149,48 +178,43 @@ do -- extend the symbol map from grammar rules
     end
 end
 
-function syntax.LongestLookup(tbl, what, lower)
+function syntax.LongestLookup(tbl, lower)
+    table.sort(tbl, function(a, b) return #a > #b end)
+
     local longest = 0
     local map = {}
 
+    local kernel = "return function(tk)\n"
+
     for _, str in ipairs(tbl) do
-        local node = map
+        local lua = "if "
 
         for i = 1, #str do
-            local char = str:byte(i)
-            node[char] = node[char] or {}
-            node = node[char]
+            if lower then
+                lua = lua .. "(tk:IsValueb(" .. str:byte(i) .. "," .. i-1 .. ")" .. " or " .. "tk:IsValueb(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
+            else
+                lua = lua .. "tk:IsValueb(" .. str:byte(i) .. "," .. i-1 .. ") "
+            end
+
+            if i ~= #str then
+                lua = lua .. "and "
+            end
         end
 
-        node.DONE = {str = str, length = #str}
-
-        longest = math.max(longest, #str)
+        lua = lua .. "then"
+        lua = lua .. " tk:Advance("..#str..") return true end"
+        kernel = kernel .. lua .. "\n"
     end
 
-    longest = longest - 1
+    kernel = kernel .. "\nend"
 
-    return function(tk)
-        local node = map
-
-        for i = 0, longest do
-            local found = lower and node[string.char(tk:GetChar(i)):lower():byte()] or node[tk:GetChar(i)]
-
-            if not found and i == 0 then return end
-            if not found then break end
-
-            node = found
-        end
-
-        if node.DONE then
-            tk:Advance(node.DONE.length)
-            return what
-        end
-    end
+    return assert(loadstring(kernel))()
 end
 
 do
     local symbols = {}
     local temp = {}
+    local temp2 = {}
     for type, chars in pairs(syntax.CharacterMap) do
         for _, char in ipairs(chars) do
             if type == "symbol" then
@@ -200,12 +224,18 @@ do
                 char = char:byte() or 0
             end
             temp[char] = type
+
+            if type == "letter" or type == "number" or char == string.byte("_") then
+                temp2[char] = "letter_number"
+            end
         end
     end
     syntax.CharacterMap = temp
+    syntax.IsIdentifier = temp2
 
-    syntax.ReadLongestSymbol = syntax.LongestLookup(symbols, "symbol")
-    syntax.ReadLongestNumberAnnotation = syntax.LongestLookup(syntax.NumberAnnotations, true, true)
+    syntax.ReadLongestSymbol = syntax.LongestLookup(symbols)
+    syntax.ReadLongestNumberAnnotation = syntax.LongestLookup(syntax.NumberAnnotations, true)
+
 end
 
 do
