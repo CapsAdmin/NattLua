@@ -13,7 +13,7 @@ function META:Whitespace(str, force)
     if self.PreserveWhitespace and not force then return end
 
     if str == "?" then
-        if oh.syntax.IsLetter(self:GetPrevChar()) or oh.syntax.IsNumber("number") then
+        if oh.syntax.IsLetter(self:GetPrevChar()) or oh.syntax.IsNumber(self:GetPrevChar()) then
             self:Emit(" ")
         end
     elseif str == "\t" then
