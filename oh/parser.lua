@@ -256,9 +256,9 @@ end
 
 function META:GetToken(offset)
     if offset then
-        return self.chunks[self.i + offset]
+        return self.tokens[self.i + offset]
     end
-    return self.chunks[self.i]
+    return self.tokens[self.i]
 end
 
 function META:ReadToken()
@@ -268,9 +268,9 @@ end
 
 function META:IsValue(str, offset)
     if offset then
-        return self.chunks[self.i + offset] and self.chunks[self.i + offset].value == str
+        return self.tokens[self.i + offset] and self.tokens[self.i + offset].value == str
     end
-    return self.chunks[self.i] and self.chunks[self.i].value == str
+    return self.tokens[self.i] and self.tokens[self.i].value == str
 end
 
 function META:IsType(str, offset)
@@ -301,35 +301,23 @@ function META:ReadExpectValue(value, start, stop)
     return self:ReadToken()
 end
 
-do
-    local function table_hasvalue(tbl, val)
-        for k,v in ipairs(tbl) do
-            if v == val then
-                return k
-            end
-        end
-
-        return false
-    end
-
-function META:ReadExpectValues(values, start, stop)
-    if not self:GetToken() then
-        self:Error("expected " .. oh.QuoteTokens(values) .. ": reached end of code", start, stop)
+    function META:ReadExpectValues(values, start, stop)
+        if not self:GetToken() then
+            self:Error("expected " .. oh.QuoteTokens(values) .. ": reached end of code", start, stop)
     elseif not values[self:GetToken().value] then
-        local tk = self:GetToken()
+            local tk = self:GetToken()
         local array = {}
         for k,v in pairs(values) do
             table.insert(array, k)
         end
         self:Error("expected " .. oh.QuoteTokens(array) .. " got " .. tk.type, start, stop)
+        end
+
+        return self:ReadToken()
     end
 
-    return self:ReadToken()
-end
-end
-
 function META:GetLength()
-    return self.chunks_length
+    return self.tokens_length
 end
 
 function META:Advance(offset)
@@ -337,8 +325,8 @@ function META:Advance(offset)
 end
 
 function META:BuildAST(tokens)
-    self.chunks = tokens
-    self.chunks_length = #tokens
+    self.tokens = tokens
+    self.tokens_length = #tokens
     self.i = 1
 
     if self.config then
@@ -369,7 +357,7 @@ function META:Root()
 
     if self:IsType("end_of_file") then
         local eof = self:NewStatement("end_of_file")
-        eof.tokens["end_of_file"] = self.chunks[#self.chunks]
+        eof.tokens["end_of_file"] = self.tokens[#self.tokens]
         table.insert(node.statements, eof)
     end
 
