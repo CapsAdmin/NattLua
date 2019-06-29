@@ -13,7 +13,7 @@ function META:Whitespace(str, force)
     if self.PreserveWhitespace and not force then return end
 
     if str == "?" then
-        if self:GetPrevCharType() == "letter" or self:GetPrevCharType() == "number" then
+        if oh.syntax.IsLetter(self:GetPrevChar()) or oh.syntax.IsNumber("number") then
             self:Emit(" ")
         end
     elseif str == "\t" then
@@ -45,10 +45,10 @@ function META:EmitIndent()
     self:Emit(("\t"):rep(self.level))
 end
 
-function META:GetPrevCharType()
+function META:GetPrevChar()
     local prev = self.out[self.i - 1]
     local char = prev:sub(-1)
-    return prev and oh.syntax.GetCharacterType(char:byte())
+    return prev and char:byte()
 end
 
 function META:EmitToken(v, translate)

@@ -1,4 +1,17 @@
 
+
+local map --= {}
+
+if map then
+    debug.sethook(function(evt)
+        if evt ~= "line" then return end
+        local info = debug.getinfo(2)
+        local src = info.source:sub(2)
+        map[src] = map[src] or {}
+        map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
+    end, "l")
+end
+
 local oh = require("oh.oh")
 local util = require("oh.util")
 
@@ -257,17 +270,6 @@ function test.print_ast(code)
     test.dump_ast(test.parse(tokens, code, true))
 end
 
-local map --= {}
-
-if map then
-    debug.sethook(function(evt)
-        if evt ~= "line" then return end
-        local info = debug.getinfo(2)
-        local src = info.source:sub(2)
-        map[src] = map[src] or {}
-        map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
-    end, "l")
-end
 
 io.write("TESTING") io.flush()
 if not map then

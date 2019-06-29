@@ -8,8 +8,6 @@ local ffi = jit and require("ffi")
 if ffi then
     ffi.cdef([[
         size_t strspn( const char * str1, const char * str2 );
-        int strcmp ( const char * str1, const char * str2 );
-        int memcmp ( const void * ptr1, const void * ptr2, size_t num );
     ]])
 end
 
@@ -35,7 +33,6 @@ do
     end
 
     if ffi then
-        local memcmp = ffi.C.memcmp
         local ffi_string = ffi.string
 
         function META:GetChars(start, stop)
@@ -79,10 +76,6 @@ do
         return false
     end
 
-    function META:GetCharType(char)
-        return oh.syntax.GetCharacterType(char)
-    end
-
     function META:ReadChar()
         local char = self:GetChar()
         self.i = self.i + 1
@@ -94,24 +87,57 @@ do
     end
 
     function META:IsValue(what, offset)
-        if offset then
-            return self:GetChar(offset) == B(what)
-        end
-        return self:GetChar() == B(what)
+        return self:IsByte(B(what), offset)
     end
 
-    function META:IsValueb(what, offset)
+    function META:IsByte(what, offset)
         if offset then
             return self:GetChar(offset) == what
         end
         return self:GetChar() == what
     end
 
-    function META:IsType(what, offset)
-        if offset then
-            return self:GetCharType(self:GetChar(offset)) == what
+    function META:GenerateLookupFunction(tbl, lower)
+        local copy = {}
+        local done = {}
+
+        for _, str in ipairs(tbl) do
+            if not done[str] then
+                table.insert(copy, str)
+                done[str] = true
+            end
         end
-        return self:GetCharType(self:GetChar()) == what
+
+        table.sort(copy, function(a, b) return #a > #b end)
+
+        local longest = 0
+        local map = {}
+
+        local kernel = "return function(self)\n"
+
+        for _, str in ipairs(copy) do
+            local lua = "if "
+
+            for i = 1, #str do
+                if lower then
+                    lua = lua .. "(self:IsByte(" .. str:byte(i) .. "," .. i-1 .. ")" .. " or " .. "self:IsByte(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
+                else
+                    lua = lua .. "self:IsByte(" .. str:byte(i) .. "," .. i-1 .. ") "
+                end
+
+                if i ~= #str then
+                    lua = lua .. "and "
+                end
+            end
+
+            lua = lua .. "then"
+            lua = lua .. " self:Advance("..#str..") return true end"
+            kernel = kernel .. lua .. "\n"
+        end
+
+        kernel = kernel .. "\nend"
+
+        return assert(loadstring(kernel))()
     end
 
     function META:Error(msg, start, stop)
@@ -284,6 +310,8 @@ do
 
             local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
+            META.IsInNumberAnnotation = META:GenerateLookupFunction(oh.syntax.NumberAnnotations, true)
+
             function META:ReadNumberAnnotations(what)
                 if what == "hex" then
                     if self:IsNumberPow() then
@@ -295,7 +323,7 @@ do
                     end
                 end
 
-                return oh.syntax.ReadLongestNumberAnnotation(self)
+                return self:IsInNumberAnnotation()
             end
 
             function META:IsNumberExponent()
@@ -310,13 +338,13 @@ do
                 self:Advance(1)
                 if self:IsValue("+") or self:IsValue("-") then
                     self:Advance(1)
-                    if not self:IsType("number") then
+                    if not oh.syntax.IsNumber(self:GetChar()) then
                         self:Error("malformed " .. what .. " expected number, got " .. string.char(self:GetChar()), self.i - 2)
                         return false
                     end
                 end
                 for _ = self.i, self:GetLength() do
-                    if not self:IsType("number") then
+                    if not oh.syntax.IsNumber(self:GetChar()) then
                         break
                     end
                     self:Advance(1)
@@ -348,7 +376,7 @@ do
 
                     if allowed_hex[self:GetChar()] then
                         self:Advance(1)
-                    elseif self:IsType("symbol") or self:IsType("space") then
+                    elseif self:IsSymbol() or self:IsSpace() then
                         break
                     elseif self:GetChar() ~= 0 then
                         self:Error("malformed number "..string.char(self:GetChar()).." in hex notation")
@@ -367,7 +395,7 @@ do
 
                     if self:IsValue("1") or self:IsValue("0") then
                         self:Advance(1)
-                    elseif self:IsType("symbol") or self:IsType("space") then
+                    elseif self:IsSymbol() or self:IsSpace() then
                         break
                     elseif self:GetChar() ~= 0 then
                         self:Error("malformed number "..string.char(self:GetChar()).." in binary notation")
@@ -401,9 +429,9 @@ do
                         break
                     end
 
-                    if self:IsType("number") then
+                    if oh.syntax.IsNumber(self:GetChar()) then
                         self:Advance(1)
-                    elseif self:IsType("symbol") or self:IsType("space") then
+                    elseif self:IsSymbol() or self:IsSpace() then
                         break
                     else--if self:GetChar() ~= 0 then
                         --self:Error("malformed number "..self:GetChar().." in hex notation")
@@ -415,7 +443,7 @@ do
             end
 
             function META:IsNumber()
-                return self:IsType("number") or (self:IsValue(".") and self:IsType("number", 1))
+                return oh.syntax.IsNumber(self:GetChar()) or (self:IsValue(".") and oh.syntax.IsNumber(self:GetChar(1)))
             end
 
             function META:ReadNumber()
@@ -527,11 +555,13 @@ do
 
     do
         function META:IsSymbol()
-            return self:IsType("symbol")
+            return oh.syntax.IsSymbol(self:GetChar())
         end
 
+        META.IsInSymbol = META:GenerateLookupFunction(oh.syntax.SymbolCharacters)
+
         function META:ReadSymbol()
-            if oh.syntax.ReadLongestSymbol(self) then
+            if self:IsInSymbol() then
                 return "symbol"
             end
 

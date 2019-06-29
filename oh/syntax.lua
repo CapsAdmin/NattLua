@@ -3,12 +3,10 @@ local B = string.byte
 
 local syntax = {}
 
-syntax.UTF8 = true
-
 syntax.SymbolCharacters = {
     ",", ";",
     "(", ")", "{", "}", "[", "]",
-    "=", "::", "\"", "'", "`",
+    "=", "::", "\"", "'",
 }
 
 syntax.NumberAnnotations = {
@@ -73,89 +71,48 @@ syntax.PostfixOperatorFunctionTranslate = {
     ["++"] = "(A+1)",
 }
 
+function syntax.IsLetter(c)
+    return
+        (c >= B"a" and c <= B"z") or
+        (c >= B"A" and c <= B"Z") or
+        (c == B"_" or c >= 128)
+end
 
-do
-    local B = string.byte
-    local a, z = B"a", B"z"
-    local A, Z = B"A", B"Z"
-    local _0, _9 = B"0", B"9"
-    local _ = B"_"
+function syntax.IsDuringLetter(c)
+    return
+        (c >= B"a" and c <= B"z") or
+        (c >= B"0" and c <= B"9") or
+        (c >= B"A" and c <= B"Z") or
+        (c == B"_" or c >= 128)
+end
 
-    function syntax.IsLetter(c)
-        return
-            (c >= a and c <= z) or
-            (c >= A and c <= Z) or
-            (c == _ or c >= 128)
-    end
-
-    function syntax.IsDuringLetter(c)
-        return
-            (c >= a and c <= z) or
-            (c >= _0 and c <= _9) or
-            (c >= A and c <= Z) or
-            (c == _ or c >= 128)
-    end
+function syntax.IsNumber(c)
+    return (c >= B"0" and c <= B"9")
 end
 
 function syntax.IsSpace(c)
-    return c == B" " or c == B"\r" or c == B"\t" or c == B"\n"
+    return c > 0 and c <= 32
 end
 
-
-do
-    local map = {}
-
-    map.space = syntax.SpaceCharacters or {B" ", B"\r", B"\t", B"\n"}
-
-    if syntax.NumberCharacters then
-        map.number = syntax.NumberCharacters
-    else
-        map.number = {}
-        for i = 0, 9 do
-            map.number[i+1] = B(tostring(i))
-        end
-    end
-
-    if syntax.LetterCharacters then
-        map.letter = syntax.LetterCharacters
-    else
-        map.letter = {B"_"}
-
-        for i = B"A", B"Z" do
-            table.insert(map.letter, i)
-        end
-
-        for i = B"a", B"z" do
-            table.insert(map.letter, i)
-        end
-
-        -- although not accurate, we consider anything above 128 to be unicode
-        for i = 128, 255 do
-            table.insert(map.letter, i)
-        end
-    end
-
-    if syntax.SymbolCharacters then
-        map.symbol = syntax.SymbolCharacters
-    else
-        error("syntax.SymbolCharacters not defined", 2)
-    end
-
-    map.end_of_file = {syntax.EndOfFileCharacter or ""}
-
-    syntax.CharacterMap = map
+function syntax.IsSymbol(c)
+    return c ~= B"_" and (
+        (c >= B'!' and c <= B'/') or
+        (c >= B':' and c <= B'@') or
+        (c >= B'[' and c <= B'`') or
+        (c >= B'{' and c <= B'~')
+    )
 end
 
-do -- extend the symbol map from grammar rules
+do -- extend the symbol characters from grammar rules
     for _, symbol in pairs(syntax.PrefixOperators) do
         if symbol:find("%p") then
-            table.insert(syntax.CharacterMap.symbol, symbol)
+            table.insert(syntax.SymbolCharacters, symbol)
         end
     end
 
     for _, symbol in pairs(syntax.PostfixOperators) do
         if symbol:find("%p") then
-            table.insert(syntax.CharacterMap.symbol, symbol)
+            table.insert(syntax.SymbolCharacters, symbol)
         end
     end
 
@@ -166,76 +123,16 @@ do -- extend the symbol map from grammar rules
                     token = token:sub(2)
                 end
 
-                table.insert(syntax.CharacterMap.symbol, token)
+                table.insert(syntax.SymbolCharacters, token)
             end
         end
     end
 
     for _, symbol in ipairs(syntax.Keywords) do
         if symbol:find("%p") then
-            table.insert(syntax.CharacterMap.symbol, symbol)
+            table.insert(syntax.SymbolCharacters, symbol)
         end
     end
-end
-
-function syntax.LongestLookup(tbl, lower)
-    table.sort(tbl, function(a, b) return #a > #b end)
-
-    local longest = 0
-    local map = {}
-
-    local kernel = "return function(tk)\n"
-
-    for _, str in ipairs(tbl) do
-        local lua = "if "
-
-        for i = 1, #str do
-            if lower then
-                lua = lua .. "(tk:IsValueb(" .. str:byte(i) .. "," .. i-1 .. ")" .. " or " .. "tk:IsValueb(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
-            else
-                lua = lua .. "tk:IsValueb(" .. str:byte(i) .. "," .. i-1 .. ") "
-            end
-
-            if i ~= #str then
-                lua = lua .. "and "
-            end
-        end
-
-        lua = lua .. "then"
-        lua = lua .. " tk:Advance("..#str..") return true end"
-        kernel = kernel .. lua .. "\n"
-    end
-
-    kernel = kernel .. "\nend"
-
-    return assert(loadstring(kernel))()
-end
-
-do
-    local symbols = {}
-    local temp = {}
-    local temp2 = {}
-    for type, chars in pairs(syntax.CharacterMap) do
-        for _, char in ipairs(chars) do
-            if type == "symbol" then
-                table.insert(symbols, char)
-            end
-            if _G.type(char) == "string" then
-                char = char:byte() or 0
-            end
-            temp[char] = type
-
-            if type == "letter" or type == "number" or char == string.byte("_") then
-                temp2[char] = "letter_number"
-            end
-        end
-    end
-    syntax.CharacterMap = temp
-    syntax.IsIdentifier = temp2
-
-    syntax.ReadLongestSymbol = syntax.LongestLookup(symbols)
-    syntax.ReadLongestNumberAnnotation = syntax.LongestLookup(syntax.NumberAnnotations, true)
-
 end
 
 do
@@ -256,10 +153,6 @@ do
 end
 
 do -- grammar rules
-    function syntax.GetCharacterType(char)
-        return syntax.CharacterMap[char]
-    end
-
     function syntax.IsValue(token)
         return token.type == "number" or token.type == "string" or syntax.KeywordValues[token.value]
     end
