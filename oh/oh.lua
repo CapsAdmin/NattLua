@@ -34,22 +34,32 @@ function oh.CodeToTokens(code, name)
 	return tokens, tokenizer
 end
 
+local function on_error(self, msg, start, stop)
+    self.errors = self.errors or {}
+	table.insert(self.errors, {msg = msg, start = start, stop = stop})
+	error(msg)
+end
+
 function oh.TokensToAST(tokens, name, code, config)
 	name = name or "unknown"
 
 	local parser = oh.Parser(config)
     parser.OnError = on_error
-    local ast = parser:BuildAST(tokens)
-    if parser.errors then
-        local str = ""
-		for _, err in ipairs(parser.errors) do
-			if code then
-				str = str .. oh.FormatError(code, name, err.msg, err.start, err.stop) .. "\n"
-			else
-				str = str .. err.msg .. "\n"
+    local ok, ast = pcall(parser.BuildAST, parser, tokens)
+	if not ok then
+		if parser.errors then
+			local str = ""
+			for _, err in ipairs(parser.errors) do
+				if code then
+					str = str .. oh.FormatError(code, name, err.msg, err.start, err.stop) .. "\n"
+				else
+					str = str .. err.msg .. "\n"
+				end
 			end
-        end
-        return nil, str
+			return nil, str
+		else
+			return nil, ast
+		end
 	end
 
 	return ast, parser
@@ -120,16 +130,16 @@ do
 		local line = 1
 
 		local line_start
-		local line_stop 
+		local line_stop
 
 		local within_start
 		local within_stop
-		
+
 		local line_pos = 0
 
 		for i = 1, #code do
 			local char = code:sub(i, i)
-		
+
 
 			if i == stop then
 				line_stop = line
@@ -163,7 +173,7 @@ do
 			sub_line_before = {within_start + 1, start - 1},
 			sub_line_after = {stop + 1, within_stop - 1},
 			line_start = line_start,
-			line_stop = line_stop,            
+			line_stop = line_stop,
 		}
 	end
 
@@ -179,7 +189,7 @@ do
 				end
 
 				line = line + 1
-			
+
 				if line == lines + 2 then
 					return i + 1, first_line_pos - 1, line
 				end
@@ -222,7 +232,7 @@ do
 				line_start = i
 				break
 			end
-		end 
+		end
 
 		for i = stop, #code do
 			local char = code:sub(i, i)
@@ -234,10 +244,10 @@ do
 
 		return line_start + 1, line_stop-1
 	end
-			
+
 	function oh.FormatError(code, path, msg, start, stop)
 		local data = sub_pos_2_line_pos(code, start, stop)
-		
+
 		if not data then
 			local str = ""
 			if path then
@@ -282,7 +292,7 @@ do
 					if line == line_stop then
 						str = str .. code:sub(unpack(data.sub_line_after))
 					end
-						
+
 					str = str .. "\n" .. (" "):rep(#prefix) .. ("^"):rep(math.max(#test, 1))
 
 					table.insert(lines, prefix .. str)
@@ -300,13 +310,13 @@ do
 			end
 
 		end
-		
+
 		local str = table.concat(lines, "\n")
 
 		local path = path .. ":" .. line_start
 		local msg = path .. (msg and ": " .. msg or "")
 		local post = (" "):rep(spacing - 2) .. "-> | " .. msg
-		
+
 		local pre = ("="):rep(#post)
 
 		str = pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n" .. pre

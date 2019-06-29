@@ -3,7 +3,7 @@ local oh = require("oh.oh")
 local function check(tbl)
     for i,v in ipairs(tbl) do
         local ok, err = oh.loadstring(v[1])
-        if ok then 
+        if ok then
             print(ok, v[1])
             error("expected error, but code compiled", 2)
         end
@@ -25,14 +25,14 @@ check({
     {"if foo = 5 then end", "expected.-then"},
     {"if foo == 5 end", "expected.-then.-got.-end"},
     {"if 0xWRONG then end", "malformed number.-hex notation"},
-    {"if true then", "expected.-else.-elseif.-end.-got end_of_file"},
+    {"if true then", "expected.-elseif.-got end_of_file"},
     {"a = [[wa", "unterminated multiline string.-expected.-%]%].-reached end of code"},
     {"a = [=[wa", "unterminated multiline string.-expected.-%]=%].-reached end of code"},
     {"a = [=wa", "unterminated multiline string.-expected.-%[=%[.-got.-%[=w"},
     {"a = [=[wa]=", "unterminated multiline string.-expected.-%]=%].-reached end of code"},
     {"0xBEEFp+L", "malformed pow expected number, got L"},
     {"foo(())", "empty parenth"},
-    {"a = {", "expected expression got nothing"},
+    {"a = {", "expected beginning of expression.-end_of_file"},
     {"a = 0b1LOL01", "malformed number L in binary notation"},
     {"a = 'aaaa", "unterminated single quote.-reached end of file"},
     {"a = 'aaaa \ndawd=1", "unterminated single quote"},

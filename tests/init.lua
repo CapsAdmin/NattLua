@@ -213,7 +213,7 @@ function test.transpile_check(tbl)
 
                 os.execute("diff -d ./expect.lua ./got.lua")
 
-                --os.remove("got.lua")
+                os.remove("got.lua")
                 os.remove("expect.lua")
             end
         end
@@ -264,13 +264,13 @@ if map then
         if evt ~= "line" then return end
         local info = debug.getinfo(2)
         local src = info.source:sub(2)
-        map[src] = map[src] or {}    
+        map[src] = map[src] or {}
         map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
     end, "l")
 end
 
 io.write("TESTING") io.flush()
-if not map then 
+if not map then
     assert(loadfile("tests/random_tokens.lua"))(test)
 end
 assert(loadfile("tests/transpile_equal.lua"))(test)
@@ -278,7 +278,7 @@ assert(loadfile("tests/errors.lua"))(test)
 if not map and (jit.os == "Linux" or jit.os == "OSX") then
     for path in io.popen("find ."):lines() do
         if path:sub(-4) == ".lua" and not path:find("10mb") then
-            test.dofile(path, {name = path})
+           -- test.dofile(path, {name = path})
         end
     end
 end

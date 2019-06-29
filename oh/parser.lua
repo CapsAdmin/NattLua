@@ -312,16 +312,20 @@ do
         return false
     end
 
-    function META:ReadExpectValues(values, start, stop)
-        if not self:GetToken() then
-            self:Error("expected " .. oh.QuoteTokens(values) .. ": reached end of code", start, stop)
-        elseif not table_hasvalue(values, self:GetToken().value) then
-            local tk = self:GetToken()
-            self:Error("expected " .. oh.QuoteTokens(values) .. " got " .. (tk.value == "" and tk.type or tk.value), start, stop)
+function META:ReadExpectValues(values, start, stop)
+    if not self:GetToken() then
+        self:Error("expected " .. oh.QuoteTokens(values) .. ": reached end of code", start, stop)
+    elseif not values[self:GetToken().value] then
+        local tk = self:GetToken()
+        local array = {}
+        for k,v in pairs(values) do
+            table.insert(array, k)
         end
-
-        return self:ReadToken()
+        self:Error("expected " .. oh.QuoteTokens(array) .. " got " .. tk.type, start, stop)
     end
+
+    return self:ReadToken()
+end
 end
 
 function META:GetLength()
@@ -420,7 +424,7 @@ do -- statements
                 type = "keyword"
             end
 
-            self:Error("unexpected " .. type .. " while trying to read assignment or call statement", start, start)
+            self:Error("unexpected " .. type .. " (" .. (self:GetToken().value) .. ") while trying to read assignment or call statement", start, start)
         end
 
         return node
@@ -645,7 +649,7 @@ do -- if
             if i == 1 then
                 token = self:ReadExpectValue("if")
             else
-                token = self:ReadExpectValues({"else", "elseif", "end"})
+                token = self:ReadExpectValues({["else"] = true, ["elseif"] = true, ["end"] = true})
             end
 
             if not token then return end
@@ -748,7 +752,7 @@ end
 do -- expression
     function META:ReadExpectExpression(priority, stop_on_call)
         if oh.syntax.IsDefinetlyNotStartOfExpression(self:GetToken()) then
-            self:Error("expected beginning of expression, got ".. oh.QuoteToken(self:GetToken() and self:GetToken().value or "no token"))
+            self:Error("expected beginning of expression, got ".. oh.QuoteToken(self:GetToken() and self:GetToken().value ~= "" and self:GetToken().value or self:GetToken().type))
             return
         end
 
