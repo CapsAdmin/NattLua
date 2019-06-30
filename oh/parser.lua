@@ -397,26 +397,20 @@ do -- statements
             node = self:NewStatement("assignment")
             node.tokens["="] = self:ReadToken()
             node.expressions_left = {expr}
-            node.expressions_right = self:ReadExpressionList()
+            node.expressions_right = self:ReadExpressionList(math.huge)
         elseif self:IsValue(",") then
             node = self:NewStatement("assignment")
             expr.tokens[","] = self:ReadToken()
-            local list = self:ReadExpressionList()
+            local list = self:ReadExpressionList(math.huge)
             table_insert(list, 1, expr)
             node.expressions_left = list
             node.tokens["="] = self:ReadExpectValue("=")
-            node.expressions_right = self:ReadExpressionList()
+            node.expressions_right = self:ReadExpressionList(math.huge)
         elseif expr then -- TODO: make sure it's a call
             node = self:NewStatement("expression")
             node.value = expr
         elseif not self:IsType("end_of_file") then
-            local type = start.type
-
-            if oh.syntax.IsKeyword(self:GetToken()) then
-                type = "keyword"
-            end
-
-            self:Error("unexpected " .. type .. " (" .. (self:GetToken().value) .. ") while trying to read assignment or call statement", start, start)
+            self:Error("unexpected " .. start.type .. " (" .. (self:GetToken().value) .. ") while trying to read assignment or call statement", start, start)
         end
 
         return node
@@ -775,7 +769,7 @@ do -- expression
             val.right = self:ReadExpression(math.huge, stop_on_call)
         elseif self:IsAnonymousFunction() then
             val = self:ReadAnonymousFunction()
-        elseif oh.syntax.IsValue(self:GetToken()) or (self:IsType("letter") and not oh.syntax.IsKeyword(self:GetToken())) then
+        elseif oh.syntax.IsValue(self:GetToken()) or self:IsType("letter") then
             val = self:NewExpression("value")
             val.value = self:ReadToken()
         elseif self:IsValue("{") then

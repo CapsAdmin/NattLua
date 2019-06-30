@@ -37,6 +37,7 @@ check({
     {"a = 'aaaa", "unterminated single quote.-reached end of file"},
     {"a = 'aaaa \ndawd=1", "unterminated single quote"},
     {"foo = !", "unexpected unknown"},
+    {"foo = then", "expected beginning of expression.-got.-then"},
     {"--[[aaaa", "unterminated multiline comment.-reached end of code"},
     {"--[[aaaa\na=1", "unterminated multiline comment.-reached end of code"},
     {"::1::", "expected.-letter.-got.-number"},

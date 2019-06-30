@@ -144,11 +144,16 @@ do
     end
 
     function META:NewToken(type, start, stop)
+        local value = self:GetChars(start, stop)
+        if type == "letter" and oh.syntax.Keywords[value] then
+            type = "keyword"
+        end
+
         return {
             type = type,
             start = start,
             stop = stop,
-            value = self:GetChars(start, stop),
+            value = value,
         }
     end
 
