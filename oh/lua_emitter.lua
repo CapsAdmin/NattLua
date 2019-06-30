@@ -147,9 +147,13 @@ end
 
 
 function META:EmitBinaryOperator(v)
-    self:Whitespace(" ")
-    self:EmitToken(v.value)
-    self:Whitespace(" ")
+    if v.value.value == "." or v.value.value == ":" then
+        self:EmitToken(v.value)
+    else
+        self:Whitespace(" ")
+        self:EmitToken(v.value)
+        self:Whitespace(" ")
+    end
 end
 
 do
