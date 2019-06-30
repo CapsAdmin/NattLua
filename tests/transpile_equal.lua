@@ -131,6 +131,8 @@ do
         "return 1",
         "function foo(a, ...) end",
         "function foo(...) end",
+        "a = ( (1) )",
+        "a = (--[[1]](--[[2]]true--[[3]])--[[4]])",
 
         "a = foo(0x89abcdef, 1)",
         "a = foo(0x20EA2, 1)",
@@ -158,6 +160,7 @@ do
         'a = "a\\z\na"',
         "lol = 1 ÆØÅ",
         "lol = 1 ÆØÅÆ",
+        "local foo = 0.15",
 
         {code = "return math.maxinteger // 80", expect = "return math.floor(math.maxinteger / 80)",     compare_tokens = true},
 

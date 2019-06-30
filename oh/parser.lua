@@ -761,7 +761,7 @@ do -- expression
             table_insert(val.tokens["("], 1, pleft)
 
             val.tokens[")"] = val.tokens[")"] or {}
-            table_insert(val.tokens[")"], 1, self:ReadExpectValue(")"))
+            table_insert(val.tokens[")"], self:ReadExpectValue(")"))
 
         elseif oh.syntax.IsPrefixOperator(self:GetToken()) then
             val = self:NewExpression("prefix_operator")
