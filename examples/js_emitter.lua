@@ -2,6 +2,45 @@ local oh = require("oh.oh")
 local util = require("oh.util")
 local code = io.open("oh/parser.lua"):read("*all")
 
+local runtime = [[
+    global.print = console.log
+
+    global.setmetatable = (tbl, meta) => { 
+        let p = new Proxy(tbl, meta)
+
+        return p
+    }
+    ////////
+]]
+
+code = [===[
+    local tbl = {b=nil}
+
+    function tbl:foo(a)
+        print(self, a)
+    end
+
+    local a = {tbl = tbl}
+    
+    a.tbl:foo(1)
+    a = 1
+    
+    print("\n")
+
+    local test = {1,2,3}
+    for i = 1, #test do
+        print(test[i])
+    end
+
+    local tbll = setmetatable({}, {
+        get = function(self, name) return "get from meta " .. name end,
+        set = function(selfa, name) print(selfa, name, "!") end,
+    })
+    --print(tbl)
+    print(tbll.foo)
+    tbll.foo = 1
+]===]
+
 local map = {
     ["and"] = "&&",
     ["or"] = "||",
@@ -79,10 +118,12 @@ do
 
     function META:PushScope()
         local scope = {children = {}, parent = self.scope, upvalues = {}}
-        for k,v in pairs(self.scope.upvalues) do
-            scope.upvalues[k] = v
+        if self.scope then
+            for k,v in pairs(self.scope.upvalues) do
+                scope.upvalues[k] = v
+            end
+            table.insert(self.scope.children, scope)
         end
-        table.insert(self.scope.children, scope)
         self.scope = scope
     end
 
@@ -105,40 +146,64 @@ do
         return self.scope
     end
 
+    function META:NoSpace()
+        self.suppress_space = true
+    end
+
     function META:PushSpace()
         self.push_space = {}
     end
 
-    function META:PopSpace()
+    function META:EmitWhitespace(whitespace)
+        for _, data in ipairs(whitespace) do
+            if data.type == "line_comment" then
+                self:Emit("//" .. data.value:sub(2))
+            elseif data.type == "multiline_comment" then
+                self:Emit("/*" .. data.value:sub(2) .. "*/")
+            elseif data.type ~= "space" or self.PreserveWhitespace then
+                self:Emit(data.value)
+            end
+        end
+    end
+
+    function META:PopSpace(when)
+        if when then
+            self.space_pop = self.space_pop or {}
+            
+            table.insert(self.space_pop, {when = when, space = self.push_space})
+            return
+        end
         if not self.push_space then return end
         for _, whitespace in ipairs(self.push_space) do
-            for _, data in ipairs(whitespace) do
-                if data.type == "line_comment" then
-                    self:Emit("//" .. data.value:sub(2))
-                elseif data.type == "multiline_comment" then
-                    self:Emit("/*" .. data.value:sub(2) .. "*/")
-                elseif data.type ~= "space" or self.PreserveWhitespace then
-                    self:Emit(data.value)
-                end
-            end
+            self:EmitWhitespace(whitespace)
         end
         self.push_space = nil
     end
 
-    function META:EmitToken(v, translate)
-        if v.whitespace then
-            if self.push_space then
-                table.insert(self.push_space, v.whitespace)
-            else
-                for _, data in ipairs(v.whitespace) do
-                    if data.type == "line_comment" then
-                        self:Emit("//" .. data.value:sub(2))
-                    elseif data.type == "multiline_comment" then
-                        self:Emit("/*" .. data.value:sub(2) .. "*/")
-                    elseif data.type ~= "space" or self.PreserveWhitespace then
-                        self:Emit(data.value)
+    function META:Emit(str) assert(type(str) == "string")
+        self.out[self.i] = str or ""
+        self.i = self.i + 1
+
+        if self.space_pop and self.space_pop[1] then 
+            for i = #self.space_pop, 1, -1 do
+                if self.space_pop[i].when == str then
+                    local data = table.remove(self.space_pop)
+                    for _, whitespace in ipairs(data.space) do
+                        self:EmitWhitespace(whitespace)
                     end
                 end
+            end
+        end
+    end
+
+    function META:EmitToken(v, translate)
+        if v.whitespace then
+            if self.suppress_space then
+                self.suppress_space = nil
+            elseif self.push_space then
+                table.insert(self.push_space, v.whitespace)
+            else
+                self:EmitWhitespace(v.whitespace) 
             end
         end
 
@@ -188,7 +253,7 @@ do
                     v.parenthesise_me = nil
                 end
 
-                self:EmitBinaryOperator(v)
+                self:EmitBinaryOperator(v, v.left)
                 if v.right then self:EmitExpression(v.right) end
             end
         elseif v.kind == "function" then
@@ -204,11 +269,19 @@ do
             if v.kind == "postfix_call" and not v.tokens["call("] then
                 v.expressions[1].parenthesise_me = true
             end
-
+            
             if v.tokens["call("] then
                 self:EmitToken(v.tokens["call("])
             end
-
+            
+            if type(self.SELF_INDEX) == "table" then
+                --self:PushSpace()
+                self:NoSpace()
+                self:EmitExpression(self.SELF_INDEX)
+                --self:PopSpace(";")
+                self:Emit(", ")
+                self.SELF_INDEX = nil
+            end
             self:EmitExpressionList(v.expressions)
 
             if v.tokens["call)"] then
@@ -252,9 +325,9 @@ do
         end
     end
 
-    function META:EmitBinaryOperator(v)
+    function META:EmitBinaryOperator(v, left)
         if v.value.value == ":" then
-            self.SELF_INDEX = true
+            self.SELF_INDEX = left
             self:EmitToken(v.value, ".")
         elseif v.value.value == "." then
             self:EmitToken(v.value)
@@ -296,6 +369,7 @@ do
                 self.SELF_INDEX = false
             end
 
+            self:PushScope()
 
             for i,v in ipairs(node.identifiers) do
                 v.value.value = self:DeclareIdentifier(v.value.value)
@@ -308,7 +382,6 @@ do
 
             self:Whitespace("\n")
             self:Whitespace("\t+")
-            self:PushScope()
             self:EmitStatements(node.statements)
             self:PopScope()
             self:Whitespace("\t-")
@@ -343,6 +416,11 @@ do
             self:EmitToken(v.tokens["}"], array_close)
         else
             self:EmitToken(v.tokens["{"], array_open)
+
+            if array_open then
+                self:Emit("null,")
+            end
+
             self:Whitespace("\n")
                 self:Whitespace("\t+")
                 for _,v in ipairs(v.children) do
@@ -700,14 +778,15 @@ do
     end
 end
 
-em.scope = {children = {}, parent = nil, upvalues = {}}
+em:PushScope()
 local js = em:BuildCode(ast)
+em:PopScope()
 
 --util.TablePrint(em.scope, {parent = "table"})
 --print(js)
 local f = io.open("temp.js", "w")
-f:write(js)
+f:write(runtime .. js)
 f:close()
---print(js)
-os.execute("node --check temp.js")
+print(js)
+os.execute("node temp.js")
 --os.remove("temp.js")
