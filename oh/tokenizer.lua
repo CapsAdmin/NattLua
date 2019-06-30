@@ -433,11 +433,11 @@ do
 
                     if oh.syntax.IsNumber(self:GetChar()) then
                         self:Advance(1)
-                    elseif self:IsSymbol() or self:IsSpace() then
-                        break
+                    --elseif self:IsSymbol() or self:IsSpace() then
+                        --break
                     else--if self:GetChar() ~= 0 then
                         --self:Error("malformed number "..self:GetChar().." in hex notation")
-                        return
+                        break
                     end
                 end
 

@@ -280,7 +280,8 @@ assert(loadfile("tests/errors.lua"))(test)
 if not map and (jit.os == "Linux" or jit.os == "OSX") then
     for path in io.popen("find ."):lines() do
         if path:sub(-4) == ".lua" and not path:find("10mb") then
-           -- test.dofile(path, {name = path})
+          -- print(path)
+            --test.dofile(path, {name = path})
         end
     end
 end
