@@ -11,10 +11,13 @@ syntax.NumberAnnotations = {
 }
 
 syntax.Keywords = {
-    "and", "break", "do", "else", "elseif", "end",
-    "false", "for", "function", "if", "in", "of", "local",
-    "nil", "not", "or", "repeat", "until", "return", "then",
-    "...",
+    "do", "end",
+    "if", "then", "else", "elseif",
+    "for", "in",
+    "repeat", "until",
+    "break", "return",
+    "local", "function",
+    "and", "not", "or",
 
     -- these are just to make sure all code is covered by tests
     "ÆØÅ", "ÆØÅÆ",
@@ -127,6 +130,10 @@ do -- extend the symbol characters from grammar rules
                 table.insert(syntax.SymbolCharacters, token)
             end
         end
+    end
+
+    for _, str in ipairs(syntax.KeywordValues) do
+        table.insert(syntax.Keywords, str)
     end
 
     for _, symbol in ipairs(syntax.Keywords) do
