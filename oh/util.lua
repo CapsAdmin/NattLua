@@ -1,49 +1,5 @@
 local util = {}
 
-do
-    local map = {}
-    for byte = 0, 255 do
-        local length =
-            byte>=240 and 4 or
-            byte>=223 and 3 or
-            byte>=192 and 2 or
-            1
-        map[byte] = length
-    end
-
-    function util.UTF8ToTable(str)
-        str = util.RemoveBOMHeader(str)
-
-        local tbl = {}
-        local i = 1
-
-        for tbl_i = 1, #str do
-            local length = map[str:byte(i)]
-
-            if not length then break end
-
-            -- this could be optional, but there are some lua files out there
-            -- with unicode strings that contain bytes over 240 (4 byte length)
-            -- but goes beyond the terminating quote causing the tokenizer to error
-            -- with unterminated quote
-            if length > 1 then
-                for i2 = 1, length do
-                    local b = str:byte(i + i2 - 1)
-                    if not b or b <= 127 then
-                        length = 1
-                        break
-                    end
-                end
-            end
-
-            tbl[tbl_i] = str:sub(i, i + length - 1)
-            i = i + length
-        end
-
-        return tbl
-    end
-end
-
 function util.FetchCode(path, url)
     local f = io.open(path, "rb")
     if not f then
@@ -210,35 +166,6 @@ function util.Measure(what, cb)
         io.write(" - FAIL: ", err)
         error(err, 2)
     end
-end
-
-function util.GenerateBalancedTree(patterns, is_byte)
-    table.sort(patterns, function(a, b) return #a > #b end)
-
-    local longest = 0
-    local map = {}
-
-    local kernel = "local is_byte = ...; return function()\n"
-
-    for _, str in ipairs(patterns) do
-        local lua = "if "
-
-        for i = 1, #str do
-            lua = lua .. "is_byte(" .. str:byte(i) .. "," .. i-1 .. ") "
-
-            if i ~= #str then
-                lua = lua .. "and "
-            end
-        end
-
-        lua = lua .. "then"
-        lua = lua .. " return '" .. str .. "' end"
-        kernel = kernel .. lua .. "\n"
-    end
-
-    kernel = kernel .. "\nend"
-
-    return loadstring(kernel)(is_byte)
 end
 
 function util.EnhancedJITSettings()
