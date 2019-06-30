@@ -1,5 +1,6 @@
 local oh = require("oh.oh")
-local code = io.open("oh/tokenizer.lua"):read("*all")
+local util = require("oh.util")
+local code = io.open("oh/parser.lua"):read("*all")
 
 local map = {
     ["and"] = "&&",
@@ -16,18 +17,127 @@ local map = {
     ["=="] = "===",
 }
 
+local keywords = {
+    let = true,
+    new = true,
+    try = true,
+    var = true,
+    case = true,
+    enum = true,
+    eval = true,
+    null = true,
+    this = true,
+    void = true,
+    with = true,
+    await = true,
+    catch = true,
+    class = true,
+    const = true,
+    super = true,
+    throw = true,
+    yield = true,
+    delete = true,
+    export = true,
+    import = true,
+    public = true,
+    static = true,
+    switch = true,
+    typeof = true,
+    default = true,
+    extends = true,
+    finally = true,
+    package = true,
+    private = true,
+    continue = true,
+    debugger = true,
+    arguments = true,
+    interface = true,
+    protected = true,
+    implements = true,
+    instanceof = true,
+}
+
 local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code))))
+--util.TablePrint(ast)
 local em = oh.LuaEmitter()
 do
     local META = getmetatable(em)
 
-    function META:EmitToken(v, translate)
-        if v.whitespace then
-            for _, data in ipairs(v.whitespace) do
+    function META:DeclareIdentifier(str)
+        for i = 1, 100 do
+            if self:GetUpvalue(str) or keywords[str] then
+                str = str .. "$"
+            else
+                break
+            end
+        end
+
+        self:SetUpvalue(str, true)
+
+        return str
+    end
+
+    function META:PushScope()
+        local scope = {children = {}, parent = self.scope, upvalues = {}}
+        for k,v in pairs(self.scope.upvalues) do
+            scope.upvalues[k] = v
+        end
+        table.insert(self.scope.children, scope)
+        self.scope = scope
+    end
+
+    function META:SetUpvalue(key, val)
+        self.scope.upvalues[key] = val
+    end
+
+    function META:GetUpvalue(key)
+        return self.scope.upvalues[key]
+    end
+
+    function META:PopScope()
+        local scope = self.scope.parent
+        if scope then
+            self.scope = scope
+        end
+    end
+
+    function META:GetScope()
+        return self.scope
+    end
+
+    function META:PushSpace()
+        self.push_space = {}
+    end
+
+    function META:PopSpace()
+        if not self.push_space then return end
+        for _, whitespace in ipairs(self.push_space) do
+            for _, data in ipairs(whitespace) do
                 if data.type == "line_comment" then
                     self:Emit("//" .. data.value:sub(2))
+                elseif data.type == "multiline_comment" then
+                    self:Emit("/*" .. data.value:sub(2) .. "*/")
                 elseif data.type ~= "space" or self.PreserveWhitespace then
                     self:Emit(data.value)
+                end
+            end
+        end
+        self.push_space = nil
+    end
+
+    function META:EmitToken(v, translate)
+        if v.whitespace then
+            if self.push_space then
+                table.insert(self.push_space, v.whitespace)
+            else
+                for _, data in ipairs(v.whitespace) do
+                    if data.type == "line_comment" then
+                        self:Emit("//" .. data.value:sub(2))
+                    elseif data.type == "multiline_comment" then
+                        self:Emit("/*" .. data.value:sub(2) .. "*/")
+                    elseif data.type ~= "space" or self.PreserveWhitespace then
+                        self:Emit(data.value)
+                    end
                 end
             end
         end
@@ -39,6 +149,14 @@ do
                 self:Emit(translate)
             end
         else
+            if keywords[v.value] then
+                v.value = "_" .. v.value
+            end
+
+            if v.value == "nil" then
+                v.value = "undefined"
+            end
+
             self:Emit(v.value)
         end
     end
@@ -102,10 +220,20 @@ do
             self:EmitExpression(v.expression)
             self:EmitToken(v.tokens["]"])
         elseif v.kind == "value" then
-            if v.value.value == "..." then
+
+            if v.value.type == "number" then
+                if v.value.value:sub(-3):lower() == "ull" then
+                    v.value.value = v.value.value:sub(1, #v.value.value - 3)
+                elseif v.value.value:sub(-3):lower() == "ul" or v.value.value:sub(-3):lower() == "ll" then
+                    v.value.value = v.value.value:sub(1, #v.value.value - 2)
+                elseif v.value.value:sub(-3):lower() == "i" then
+                    v.value.value = v.value.value:sub(1, #v.value.value - 1)
+                end
+                self:EmitToken(v.value)
+            elseif v.value.value == "..." then
                 self:EmitToken(v.value, "LUA_ARGS")
             elseif v.value.type == "string" and v.value.value:sub(1,1) == "[" then
-                self:EmitToken(v.value, v.value.value:gsub("`", "\\`"):gsub("^%[=-%[(.+)%]=-%]$", "`%1`"):gsub("\\", "\\\\"))
+                self:EmitToken(v.value, v.value.value:gsub("\\", "\\\\"):gsub("`", "\\`"):gsub("^%[=-%[(.+)%]=-%]$", "`%1`"))
             else
                 self:EmitToken(v.value)
             end
@@ -150,6 +278,7 @@ do
                 self:EmitToken(node.tokens["function"], "")
                 self:Emit("let")
                 self:Whitespace(" ")
+                node.name.value.value = self:DeclareIdentifier(node.name.value.value)
                 self:EmitExpression(node.name)
                 self:Emit(" = function")
             else
@@ -162,9 +291,16 @@ do
 
             self:EmitToken(node.tokens["("])
             if self.SELF_INDEX and not node.is_local then
+                self:DeclareIdentifier("self")
                 self:Emit("self, ")
                 self.SELF_INDEX = false
             end
+
+
+            for i,v in ipairs(node.identifiers) do
+                v.value.value = self:DeclareIdentifier(v.value.value)
+            end
+
             self:EmitExpressionList(node.identifiers)
             self:EmitToken(node.tokens[")"])
 
@@ -172,7 +308,9 @@ do
 
             self:Whitespace("\n")
             self:Whitespace("\t+")
+            self:PushScope()
             self:EmitStatements(node.statements)
+            self:PopScope()
             self:Whitespace("\t-")
 
             self:Whitespace("\t")
@@ -181,30 +319,53 @@ do
     end
 
     function META:EmitTable(v)
+        local array_open = nil
+        local array_close = nil
+
         if not v.children[1] then
-            self:EmitToken(v.tokens["{"])
-            self:EmitToken(v.tokens["}"])
+            array_open = "["
+            array_close = "]"
+        end
+
+        for _,v in ipairs(v.children) do
+            if v.kind == "table_index_value" then
+                array_open = "["
+                array_close = "]"
+            else
+                array_close = nil
+                array_open = nil
+                break
+            end
+        end
+
+        if not v.children[1] then
+            self:EmitToken(v.tokens["{"], array_open)
+            self:EmitToken(v.tokens["}"], array_close)
         else
-            self:EmitToken(v.tokens["{"])
+            self:EmitToken(v.tokens["{"], array_open)
             self:Whitespace("\n")
                 self:Whitespace("\t+")
                 for _,v in ipairs(v.children) do
                     self:Whitespace("\t")
                     if v.kind == "table_index_value" then
+                        if not array_close  then
+                            self:Emit(v.key .. ": ")
+                        end
                         self:EmitExpression(v.value)
                     elseif v.kind == "table_key_value" then
                         self:EmitToken(v.key)
                         self:EmitToken(v.tokens["="], ":")
                         self:EmitExpression(v.value)
                     elseif v.kind == "table_expression_value" then
+                        if not array_open then
+                            self:EmitToken(v.tokens["["])
+                            self:Whitespace("(")
+                            self:EmitExpression(v.key)
+                            self:Whitespace(")")
+                            self:EmitToken(v.tokens["]"])
 
-                        self:EmitToken(v.tokens["["])
-                        self:Whitespace("(")
-                        self:EmitExpression(v.key)
-                        self:Whitespace(")")
-                        self:EmitToken(v.tokens["]"])
-
-                        self:EmitToken(v.tokens["="], ":")
+                            self:EmitToken(v.tokens["="], ":")
+                        end
 
                         self:EmitExpression(v.value)
                     end
@@ -216,7 +377,8 @@ do
                     self:Whitespace("\n")
                 end
                 self:Whitespace("\t-")
-            self:Whitespace("\t")self:EmitToken(v.tokens["}"])
+            self:Whitespace("\t")
+            self:EmitToken(v.tokens["}"], array_close)
         end
     end
 
@@ -282,7 +444,9 @@ do
             end
             self:Whitespace("\n")
             self:Whitespace("\t+")
+            self:PushScope()
             self:EmitStatements(node.statements[i])
+            self:PopScope()
             self:Whitespace("\t-")
         end
         self:Whitespace("\t")
@@ -330,7 +494,9 @@ do
         self:EmitToken(node.tokens["do"], map["do"])
         self:Whitespace("\n")
         self:Whitespace("\t+")
+        self:PushScope()
         self:EmitStatements(node.statements)
+        self:PopScope()
         self:Whitespace("\t-")
         self:Whitespace("\t")
         self:EmitToken(node.tokens["end"], map["end"])
@@ -340,45 +506,59 @@ do
         self:Whitespace("\t")
         self:EmitToken(node.tokens["while"])
         self:Whitespace(" ")
+        self:Emit("(")
         self:EmitExpression(node.expression)
+        self:Emit(")")
         self:Whitespace(" ")
-        self:EmitToken(node.tokens["do"])
+        self:EmitToken(node.tokens["do"], map["do"])
         self:Whitespace("\n")
         self:Whitespace("\t+")
+        self:PushScope()
         self:EmitStatements(node.statements)
+        self:PopScope()
         self:Whitespace("\t-")
         self:Whitespace("\t")
-        self:EmitToken(node.tokens["end"])
+        self:EmitToken(node.tokens["end"], map["end"])
     end
 
     function META:EmitRepeatStatement(node)
         self:Whitespace("\t")
-        self:EmitToken(node.tokens["repeat"])
+        self:EmitToken(node.tokens["repeat"], "do")
         self:Whitespace("\n")
 
+        self:Emit("{")
         self:Whitespace("\t+")
+        self:PushScope()
         self:EmitStatements(node.statements)
+        self:PopScope()
         self:Whitespace("\t-")
+        self:Emit("}")
 
         self:Whitespace("\t")
-        self:EmitToken(node.tokens["until"])
+        self:EmitToken(node.tokens["until"], "while")
         self:Whitespace(" ")
+        self:Emit("(")
         self:EmitExpression(node.expression)
+        self:Emit(")")
     end
 
     do
         function META:EmitLabelStatement(node)
+            self:Emit("/*")
             self:Whitespace("\t")
             self:EmitToken(node.tokens["::left"])
             self:EmitToken(node.identifier)
             self:EmitToken(node.tokens["::right"])
+            self:Emit("*/")
         end
 
         function META:EmitGotoStatement(node)
+            self:Emit("/*")
             self:Whitespace("\t")
             self:EmitToken(node.tokens["goto"])
             self:Whitespace(" ")
             self:EmitToken(node.identifier)
+            self:Emit("*/")
         end
     end
 
@@ -393,7 +573,9 @@ do
         self:Whitespace("\n")
 
         self:Whitespace("\t+")
+        self:PushScope()
         self:EmitStatements(node.statements)
+        self:PopScope()
         self:Whitespace("\t-")
 
         self:Whitespace("\t")
@@ -417,15 +599,33 @@ do
         if node.is_local then
             self:EmitToken(node.tokens["local"], "let")
             self:Whitespace(" ")
+            if node.identifiers[2] and node.tokens["="] then
+                self:Emit(" [")
+            end
+            for i,v in ipairs(node.identifiers) do
+                v.value.value = self:DeclareIdentifier(v.value.value)
+            end
             self:EmitExpressionList(node.identifiers)
+            if node.identifiers[2] and node.tokens["="]then
+                self:Emit(" ]")
+            end
         else
             self:EmitExpressionList(node.expressions_left)
         end
+
         if node.tokens["="] then
             self:Whitespace(" ")
             self:EmitToken(node.tokens["="])
             self:Whitespace(" ")
-            self:EmitExpressionList(node.expressions_right or node.expressions)
+            local expr = node.expressions_right or node.expressions
+            if expr[2] then
+                self:Emit(" [")
+            end
+            self:EmitExpressionList(expr)
+
+            if expr[2] then
+                self:Emit("]")
+            end
         end
     end
 
@@ -450,13 +650,19 @@ do
             self:EmitDoStatement(node)
         elseif node.kind == "function" then
             self:EmitFunction(node)
+            self:Emit(";")
         elseif node.kind == "assignment" then
             self:EmitAssignment(node)
+            self:Emit(";")
         elseif node.kind == "function" then
             self:Function(node)
         elseif node.kind == "expression" then
             self:Whitespace("\t")
             self:EmitExpression(node.value)
+            local flat = node.value:Flatten()
+            if flat[#flat].kind == "postfix_call" then
+                self:Emit(";")
+            end
         elseif node.kind == "shebang" then
             self:EmitToken(node.tokens["shebang"])
         elseif node.kind == "value" then
@@ -494,11 +700,14 @@ do
     end
 end
 
+em.scope = {children = {}, parent = nil, upvalues = {}}
 local js = em:BuildCode(ast)
 
+--util.TablePrint(em.scope, {parent = "table"})
+--print(js)
 local f = io.open("temp.js", "w")
 f:write(js)
 f:close()
-
-os.execute("node temp.js")
+--print(js)
+os.execute("node --check temp.js")
 --os.remove("temp.js")
