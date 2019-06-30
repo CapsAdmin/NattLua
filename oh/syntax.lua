@@ -78,7 +78,7 @@ do
         return
             (c >= B'a' and c <= B'z') or
             (c >= B'A' and c <= B'Z') or
-            (c == B'_' or c >= 128)
+            (c == B'_' or c >= 127)
     end
 
     function syntax.IsDuringLetter(c)
@@ -86,7 +86,7 @@ do
             (c >= B'a' and c <= B'z') or
             (c >= B'0' and c <= B'9') or
             (c >= B'A' and c <= B'Z') or
-            (c == B'_' or c >= 128)
+            (c == B'_' or c >= 127)
     end
 
     function syntax.IsNumber(c)
@@ -157,6 +157,26 @@ do
     for k, v in pairs(syntax.PostfixOperatorFunctionTranslate) do
         local a, b = v:match("^(.-)A(.-)$")
         syntax.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+    end
+end
+
+
+-- optimize lookup if we have ffi
+local ffi = jit and require("ffi")
+
+if ffi then
+    for key, func in pairs(syntax) do
+
+        if key:sub(1, 2) == "Is" then
+            local map = ffi.new("uint8_t[256]", 0)
+
+            for i = 0, 255 do
+                if func(i) then
+                    map[i] = 1
+                end
+            end
+            syntax[key] = function(i) return map[i] == 1 end
+        end
     end
 end
 
