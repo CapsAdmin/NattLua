@@ -197,10 +197,16 @@ do
                 end
             end
 
-            function EXPRESSSION:Walk()
+            function EXPRESSSION:Flatten()
                 local flat = {}
 
                 expand(self, flat)
+
+                return flat
+            end
+
+            function EXPRESSSION:Walk()
+                local flat = self:Flatten()
 
                 local i = 1
 
