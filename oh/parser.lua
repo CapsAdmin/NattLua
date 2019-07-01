@@ -5,102 +5,6 @@ local META = {}
 META.__index = META
 
 do
-    local NODE = {}
-    NODE.__index = NODE
-
-    function NODE:__tostring()
-        return "node[" .. self.type .. "]"
-    end
-
-    function NODE:Render(what)
-        local em = oh.LuaEmitter({preserve_whitespace = false})
-
-        if what and self.tokens[what] then
-            em:EmitToken(self.tokens[what])
-            return em:Concat()
-        end
-
-        if self.type == "operator" or self.type == "prefix" then
-            em:ReadExpression(self)
-        elseif self.type == "block" then
-            em:Block(self)
-        else
-            em:EmitStatement(self)
-        end
-
-        return em:Concat()
-    end
-
-    function NODE:GetArguments()
-        return self.arguments
-    end
-
-    function NODE:FindByType(what, out)
-        out = out or {}
-        for _, child in ipairs(self:GetChildren()) do
-            if child.type == what then
-                table_insert(out, child)
-            elseif child:GetChildren() then
-                child:FindByType(what, out)
-            end
-        end
-        return out
-    end
-
-    function NODE:GetStatements()
-        if self.block then
-            return self.block:GetStatements()
-        end
-        return self.statements
-    end
-
-    function NODE:GetChildren()
-        if self.clauses then
-            local out = {}
-            for _, v in ipairs(self.clauses) do
-                table_insert(out, v.block)
-            end
-            return out
-        end
-
-        if self.block then
-            return self.block.statements
-        end
-
-        return self.statements or self.children or self.values or self.expressions
-    end
-
-    function NODE:Assignments()
-        assert(self.type == "assignment")
-
-        local i = 1
-
-        return function()
-            local l, r = self.lvalues[i], self.rvalues and self.rvalues[i]
-            i = i + 1
-            return l, r
-        end
-    end
-
-    function NODE:IsType(what)
-        return self.type == what
-    end
-
-    function NODE:IsValue(val)
-        return self.value and self.value.value == val
-    end
-
-    function NODE:SetValue(val)
-        assert(self.value or self.operator)
-
-        if self.operator then
-            self.operator = val
-            self.tokens["operator"].value = val
-        else
-            self.value.value = val
-        end
-    end
-
     do
         local STATEMENT = {}
         STATEMENT.__index = STATEMENT
@@ -176,12 +80,72 @@ do
             return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
         end
 
+        function EXPRESSSION:GetExpressions()
+            if self.expression then
+                return {self.expression}
+            end
+
+            return self.expressions or self.left or self.right
+        end
+
+        function EXPRESSSION:GetExpression()
+            return self.expression or self.expressions[1]
+        end
+
         function EXPRESSSION:Render()
             local em = oh.LuaEmitter({preserve_whitespace = false})
 
             em:EmitExpression(self)
 
             return em:Concat()
+        end
+
+        do
+            local function expand(node, tbl)
+
+                if node.kind == "prefix_operator" or node.kind == "postfix_operator" then
+                    table_insert(tbl, node.value.value)
+                    table_insert(tbl, "(")
+                    expand(node.right or node.left, tbl)
+                    table_insert(tbl, ")")
+                    return tbl
+                elseif node.kind:sub(1, #"postfix") == "postfix" then
+                    table_insert(tbl, node.kind:sub(#"postfix"+2))
+                elseif node.kind ~= "binary_operator" then
+                    table_insert(tbl, node:Render())
+                else
+                    table_insert(tbl, node.value.value)
+                end
+
+                if node.left then
+                    table_insert(tbl, "(")
+                    expand(node.left, tbl)
+                end
+
+
+                if node.right then
+                    table_insert(tbl, ", ")
+                    expand(node.right, tbl)
+                    table_insert(tbl, ")")
+                end
+
+                if node.kind:sub(1, #"postfix") == "postfix" then
+                    local str = {""}
+                    for _, exp in ipairs(node:GetExpressions()) do
+                        table.insert(str, exp:Render())
+                    end
+                    table_insert(tbl, table.concat(str, ", "))
+                    table_insert(tbl, ")")
+                end
+
+                return tbl
+            end
+
+            function EXPRESSSION:DumpPresedence()
+                local list = expand(self, {})
+                local a = table.concat(list)
+                return a
+            end
         end
 
         do
@@ -644,6 +608,29 @@ do -- function
         node.tokens["end"] = self:ReadExpectValue("end", start, start)
     end
 
+    function META:ReadFunctionExpression()
+        priority = priority or 0
+
+        local val = self:NewExpression("value")
+        val.value = self:ReadExpectType("letter")
+
+        while self:IsValue(".") or self:IsValue(":") do
+            local op = self:GetToken()
+            if not op then break end
+            self:Advance(1)
+
+            local left = val
+            local right = self:ReadFunctionExpression()
+
+            val = self:NewExpression("binary_operator")
+            val.value = op
+            val.left = val.left or left
+            val.right = val.right or right
+        end
+
+        return val
+    end
+
     function META:ReadFunctionStatement()
         local node = self:NewStatement("function")
         if self:IsValue("local") then
@@ -654,7 +641,7 @@ do -- function
         else
             node.is_local = false
             node.tokens["function"] = self:ReadExpectValue("function")
-            node.expressions = {self:ReadExpression(nil, true)}
+            node.expression = self:ReadFunctionExpression()
         end
         self:ReadFunctionBody(node)
         return node
@@ -741,106 +728,145 @@ do -- identifier
 end
 
 do -- expression
-    function META:ReadExpectExpression(priority, stop_on_call)
+    function META:ReadExpectExpression(priority)
         if oh.syntax.IsDefinetlyNotStartOfExpression(self:GetToken()) then
             self:Error("expected beginning of expression, got ".. oh.QuoteToken(self:GetToken() and self:GetToken().value ~= "" and self:GetToken().value or self:GetToken().type))
             return
         end
 
-        return self:ReadExpression(priority, stop_on_call)
+        return self:ReadExpression(priority)
     end
 
-    function META:ReadExpression(priority, stop_on_call)
+    local function swap_operators(a, b)
+        local temp = {}
+
+        for k,v in pairs(a) do
+            temp[k] = v
+            a[k] = nil
+        end
+
+        for k,v in pairs(b) do
+            a[k] = v
+        end
+
+        for k,v in pairs(temp) do
+            b[k] = v
+        end
+    end
+
+    local function read_expression(self, priority)
         priority = priority or 0
 
-        local val
+        local node
 
         if self:IsValue("(") then
             local pleft = self:ReadToken()
-            val = self:ReadExpression(0, stop_on_call)
-            if not val then
+            node = read_expression(self, 0)
+            if not node then
                 self:Error("empty parentheses group", pleft)
                 return
             end
 
-            val.tokens["("] = val.tokens["("] or {}
-            table_insert(val.tokens["("], 1, pleft)
+            node.tokens["("] = node.tokens["("] or {}
+            table_insert(node.tokens["("], 1, pleft)
 
-            val.tokens[")"] = val.tokens[")"] or {}
-            table_insert(val.tokens[")"], self:ReadExpectValue(")"))
+            node.tokens[")"] = node.tokens[")"] or {}
+            table_insert(node.tokens[")"], self:ReadExpectValue(")"))
 
         elseif oh.syntax.IsPrefixOperator(self:GetToken()) then
-            val = self:NewExpression("prefix_operator")
-            val.value = self:ReadToken()
-            val.right = self:ReadExpression(math.huge, stop_on_call)
+            node = self:NewExpression("prefix_operator")
+            node.value = self:ReadToken()
+            node.right = read_expression(self, math.huge)
         elseif self:IsAnonymousFunction() then
-            val = self:ReadAnonymousFunction()
+            node = self:ReadAnonymousFunction()
         elseif oh.syntax.IsValue(self:GetToken()) or self:IsType("letter") then
-            val = self:NewExpression("value")
-            val.value = self:ReadToken()
+            node = self:NewExpression("value")
+            node.value = self:ReadToken()
         elseif self:IsValue("{") then
-            val = self:ReadTable()
+            node = self:ReadTable()
         end
 
-        if val then
+        while self:IsValue(".") or self:IsValue(":") do
+            local op = self:GetToken()
+            local right_priority = oh.syntax.GetRightOperatorPriority(op)
+            if not op or not right_priority then break end
+            self:Advance(1)
+
+            local left = node
+            local right
+            if self:IsAnonymousFunction() then
+                right = self:ReadAnonymousFunction()
+            elseif oh.syntax.IsValue(self:GetToken()) or self:IsType("letter") then
+                right = self:NewExpression("value")
+                right.value = self:ReadToken()
+            elseif self:IsValue("{") then
+                right = self:ReadTable()
+            else
+                break
+            end
+
+            node = self:NewExpression("binary_operator")
+            node.value = op
+            node.left = left
+            node.right = right
+        end
+
+        if node then
             for _ = 1, self:GetLength() do
+                local left = node
                 if not self:GetToken() then break end
-
                 if oh.syntax.IsPostfixOperator(self:GetToken()) then
-                    local left = val
-                    val = self:NewExpression("postfix_operator")
-                    val.value = self:ReadToken()
-                    val.left = left
+                    node = self:NewExpression("postfix_operator")
+                    node.left = left
+                    node.value = self:ReadToken()
                 elseif self:IsValue("(") then
-                    if stop_on_call then
-                        return val
-                    end
-
-                    local left = val
-                    val = self:NewExpression("postfix_call")
-                    val.tokens["call("] = self:ReadExpectValue("(")
-                    val.expressions = self:ReadExpressionList()
-                    val.tokens["call)"] = self:ReadExpectValue(")")
-
-                    val.left = left
+                    node = self:NewExpression("postfix_call")
+                    node.left = left
+                    node.tokens["call("] = self:ReadExpectValue("(")
+                    node.expressions = self:ReadExpressionList()
+                    node.tokens["call)"] = self:ReadExpectValue(")")
                 elseif self:IsValue("{") or self:IsType("string") then
-                    if stop_on_call then
-                        return val
+                    node = self:NewExpression("postfix_call")
+                    node.left = left
+                    if self:IsValue("{") then
+                        node.expressions = {self:ReadTable()}
+                    else
+                        local val = self:NewExpression("value")
+                        val.value = self:ReadToken()
+                        node.expressions = {val}
                     end
-
-                    local left = val
-                    val = self:NewExpression("postfix_call")
-                    val.expressions = {self:ReadExpression()}
-                    val.left = left
                 elseif self:IsValue("[") then
-                    local left = val
-                    val = self:NewExpression("postfix_expression_index")
-                    val.tokens["["] = self:ReadToken()
-                    val.expression = self:ReadExpectExpression()
-                    val.tokens["]"] = self:ReadExpectValue("]")
-                    val.left = left
+                    node = self:NewExpression("postfix_expression_index")
+                    node.left = left
+                    node.tokens["["] = self:ReadToken()
+                    node.expression = self:ReadExpectExpression()
+                    node.tokens["]"] = self:ReadExpectValue("]")
                 else
                     break
                 end
             end
         end
 
-        while self:GetToken() and oh.syntax.IsOperator(self:GetToken()) and oh.syntax.GetLeftOperatorPriority(self:GetToken()) > priority do
+        while oh.syntax.IsOperator(self:GetToken()) and oh.syntax.GetLeftOperatorPriority(self:GetToken()) > priority do
             local op = self:GetToken()
             local right_priority = oh.syntax.GetRightOperatorPriority(op)
             if not op or not right_priority then break end
             self:Advance(1)
 
-            local right = self:ReadExpression(right_priority, stop_on_call)
-            local left = val
+            local left = node
+            local right = read_expression(self, right_priority)
 
-            val = self:NewExpression("binary_operator")
-            val.left = left
-            val.value = op
-            val.right = right
+            node = self:NewExpression("binary_operator")
+            node.value = op
+            node.left = node.left or left
+            node.right = node.right or right
         end
 
-        return val
+        return node
+    end
+
+    function META:ReadExpression(priority)
+        return read_expression(self, priority)
     end
 
     function META:ReadExpressionList(max)

@@ -28,8 +28,8 @@ do
 
         "function test() end",
         "function test.asdf() end",
-        "function test[asdf]() end",
-        "function test[asdf].sadas:FOO() end",
+        --"function test[asdf]() end",
+        --"function test[asdf].sadas:FOO() end",
         "local function test() end",
 
         "local test = function() end",

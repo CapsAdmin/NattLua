@@ -45,14 +45,14 @@ local runtime = [[
     OH = {
         _G: function(a) { return global[a] },
         '=': function(a, b) { global[a] = b },
+        call: function(a, ...args) { return a.apply(null, args) },
         ]] .. (function()
         local js = ""
         for k,v in pairs(oh.syntax.BinaryOperators) do
             local exp = op_map[k] or  ("a " .. k .. " b")
-            js = js .. [["]]..k..[[": function(a, b) { if (m[a] && m[a]['__]]..k..[[']) {return m[a]['__]]..k..[['](a, b)} return ]]..exp..[[ },]] .. "\n"
-            js = js .. [["raw_]]..k..[[": function(a, b) { return ]]..exp..[[ },]] .. "\n"
+            js = js .. [["]]..k..[[": function(a, b) { if (m[a] && m[a]['__]]..k..[[']) {return m[a]['__]]..k..[['](a, b)[0]} return ]]..exp..[[ },]] .. "\n"
+            js = js .. [["raw_]]..k..[[": function(a, b) { return ]]..exp..[[[0] },]] .. "\n"
         end
-        print(js)
         return js
     end)() .. [[}
 
@@ -60,26 +60,36 @@ local runtime = [[
 ]]
 
 code = [===[
-a = {b = {c = 999}}
 
-local b = {}
-setmetatable(b, {["__:"] = function(self, str)
-    if str == "foo" then
-        return function()
-            print("foo!")
+do
+    local tbl = {}
+    setmetatable(tbl, {["__:"] = function(self, str)
+        if str == "foo" then
+            return function()
+                print("foo!")
+                return "aaa",1,2
+            end
         end
-    end
-    return true
-end})
-print(b:foo(1,2,3))
-local a = a.b.c + 1 / 2
-print(a)
+        return true
+    end})
+
+    local a,b,c = tbl:foo(1,2,3)
+
+    print(a,b,c)
+end
+
+do
+    local a = {b = {c = 999}}
+    b = a:b:c + 1 / 2
+    print(b)
+end
 
 for i = 1, 10 do
     print(i)
 end
-
 ]===]
+
+--loadstring(code)()
 
 
 local keywords = {
@@ -348,7 +358,7 @@ do
                         if not self:GetUpvalue(l.value.value) then
                             l.value.value = "OH['_G']('" .. l.value.value .. "')"
                         else
-                            l.value.value = "'" .. l.value.value .. "'"
+                            l.value.value = l.value.value
                         end
                         l.value.transformed = true
                     end
@@ -790,9 +800,10 @@ do
     function META:EmitReturnStatement(node)
         self:Whitespace("\t")
         self:EmitToken(node.tokens["return"])
-        self:Emit(" ")
+        self:Emit("[")
         self:Whitespace(" ")
         self:EmitExpressionList(node.expressions)
+        self:Emit("]")
     end
 
     function META:EmitSemicolonStatement(node)
@@ -805,14 +816,14 @@ do
         if node.is_local then
             self:EmitToken(node.tokens["local"], "let")
             self:Whitespace(" ")
-            if node.identifiers[2] and node.tokens["="] then
+            if node.tokens["="] then
                 self:Emit(" [")
             end
             for i,v in ipairs(node.identifiers) do
                 v.value.value = self:DeclareIdentifier(v.value.value)
             end
             self:EmitExpressionList(node.identifiers)
-            if node.identifiers[2] and node.tokens["="]then
+            if node.tokens["="]then
                 self:Emit(" ]")
             end
         else
@@ -838,6 +849,8 @@ do
     function META:EmitAssignment(node)
         self:Whitespace("\t")
 
+        local global_assignment = false
+
         if node.is_local then
             self:EmitToken(node.tokens["local"], "let")
             self:Whitespace(" ")
@@ -853,14 +866,19 @@ do
                 self:Emit(" ]")
             end
         else
-            self:Emit("OH['='](")
-            node.expressions_left[1].value.value = "'" .. node.expressions_left[1].value.value .. "'"
-            self:EmitExpressionList(node.expressions_left)
+            if self:GetUpvalue(node.expressions_left[1].value.value) then
+                self:EmitExpressionList(node.expressions_left)
+            else
+                global_assignment = true
+                self:Emit("OH['='](")
+                node.expressions_left[1].value.value = "'" .. node.expressions_left[1].value.value .. "'"
+                self:EmitExpressionList(node.expressions_left)
+            end
         end
 
         if node.tokens["="] then
             self:Whitespace(" ")
-            if node.expressions_left then
+            if global_assignment then
                 self:EmitToken(node.tokens["="], ",")
             else
                 self:EmitToken(node.tokens["="])
@@ -877,7 +895,7 @@ do
             end
         end
 
-        if node.expressions_left then
+        if global_assignment then
             self:Emit(")")
         end
 
@@ -964,10 +982,10 @@ local js = em:BuildCode(ast)
 em:PopScope()
 
 --util.TablePrint(em.scope, {parent = "table"})
-print(js)
+--print(js)
 local f = io.open("temp.js", "w")
 f:write(runtime .. js)
 f:close()
-print(js)
+--print(js)
 os.execute("node temp.js")
 --os.remove("temp.js")

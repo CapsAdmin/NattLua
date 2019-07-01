@@ -644,7 +644,7 @@ do
 
         local tokens = {}
 
-        for i = self.i, self:GetLength() do
+        for i = self.i, self:GetLength() + 1 do
             local token = self:ReadToken()
 
             tokens[i] = token

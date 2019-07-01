@@ -171,7 +171,7 @@ do
             self:Whitespace("\t")
             self:EmitToken(node.tokens["function"])
             self:Whitespace(" ")
-            self:EmitExpressionList(node.expressions)
+            self:EmitExpression(node.expression)
         end
 
         self:EmitToken(node.tokens["("])

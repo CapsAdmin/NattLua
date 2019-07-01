@@ -152,6 +152,7 @@ end
 function test.transpile_check(tbl)
     local tokens, ast, new_code, emitter
 
+    tbl.expect = tbl.expect or tbl.code
 
     local function strip(code)
         local line = code:match("(.-)\n")
@@ -206,16 +207,7 @@ function test.transpile_check(tbl)
             print("got:")
             print(strip(new_code))
             print("===================================")
-
-            if jit.os == "Linux" or jit.os == "OSX" then
-                local f = io.open("got.lua", "w") f:write(new_code) f:close()
-                local f = io.open("expect.lua", "w") f:write(tbl.expect) f:close()
-
-                os.execute("diff -d ./expect.lua ./got.lua")
-
-                os.remove("got.lua")
-                os.remove("expect.lua")
-            end
+            error("")
         end
     end
 

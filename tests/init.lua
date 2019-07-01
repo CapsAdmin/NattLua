@@ -1,4 +1,5 @@
 
+local test = require("tests.test")
 
 local map --= {}
 
@@ -12,19 +13,20 @@ if map then
     end, "l")
 end
 
-local test = require("tests.test")
+--test.transpile_check({code = "a.b()"}) do return end
 
 io.write("TESTING") io.flush()
-if not map then
-    assert(loadfile("tests/random_tokens.lua"))(test)
-end
-assert(loadfile("tests/transpile_equal.lua"))(test)
-assert(loadfile("tests/errors.lua"))(test)
-if not map and (jit.os == "Linux" or jit.os == "OSX") then
-    for path in io.popen("find ."):lines() do
-        if path:sub(-4) == ".lua" and not path:find("10mb") then
-          -- print(path)
-            --test.dofile(path, {name = path})
+assert(loadfile("tests/transpile_equal.lua"))()
+assert(loadfile("tests/operator_precedence.lua"))()
+assert(loadfile("tests/errors.lua"))()
+
+if VERBOSE then
+    if not map and (jit.os == "Linux" or jit.os == "OSX") then
+        for path in io.popen("find ."):lines() do
+            if path:sub(-4) == ".lua" and not path:find("10mb") then
+                print(path)
+                test.dofile(path, {name = path})
+            end
         end
     end
 end
