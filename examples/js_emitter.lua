@@ -2,44 +2,6 @@ local oh = require("oh.oh")
 local util = require("oh.util")
 local code = io.open("oh/parser.lua"):read("*all")
 
-local runtime = [[
-    global.print = console.log
-
-    global.setmetatable = (tbl, meta) => { 
-        let p = new Proxy(tbl, meta)
-
-        return p
-    }
-    ////////
-]]
-
-code = [===[
-    local tbl = {b=nil}
-
-    function tbl:foo(a)
-        print(self, a)
-    end
-
-    local a = {tbl = tbl}
-    
-    a.tbl:foo(1)
-    a = 1
-    
-    print("\n")
-
-    local test = {1,2,3}
-    for i = 1, #test do
-        print(test[i])
-    end
-
-    local tbll = setmetatable({}, {
-        get = function(self, name) return "get from meta " .. name end,
-        set = function(selfa, name) print(selfa, name, "!") end,
-    })
-    --print(tbl)
-    print(tbll.foo)
-    tbll.foo = 1
-]===]
 
 local map = {
     ["and"] = "&&",
@@ -54,7 +16,71 @@ local map = {
     ["in"] = "of",
     [".."] = "+",
     ["=="] = "===",
+    ["~"] = "^",
 }
+
+local op_map = {
+    ["~"] = "a^b",
+    ["~="] = "a!=b",
+    [".."] = "a+b",
+    ["%"] = "Math.mod(a,b)",
+    ["or"] = "a||b",
+    ["//"] = "Math.floor(a / b)",
+    ["and"] = "a && b",
+    [":"] = "a[b]",
+    ["."] = "a[b]",
+    ["^"] = "Math.pow(a, b)",
+}
+
+local runtime = [[
+    global.print = console.log
+
+    let m = {}
+
+    global.setmetatable = (tbl, meta) => {
+        m[tbl] = meta
+        return tbl
+    }
+
+    OH = {
+        _G: function(a) { return global[a] },
+        '=': function(a, b) { global[a] = b },
+        ]] .. (function()
+        local js = ""
+        for k,v in pairs(oh.syntax.BinaryOperators) do
+            local exp = op_map[k] or  ("a " .. k .. " b")
+            js = js .. [["]]..k..[[": function(a, b) { if (m[a] && m[a]['__]]..k..[[']) {return m[a]['__]]..k..[['](a, b)} return ]]..exp..[[ },]] .. "\n"
+            js = js .. [["raw_]]..k..[[": function(a, b) { return ]]..exp..[[ },]] .. "\n"
+        end
+        print(js)
+        return js
+    end)() .. [[}
+
+    ////////
+]]
+
+code = [===[
+a = {b = {c = 999}}
+
+local b = {}
+setmetatable(b, {["__:"] = function(self, str)
+    if str == "foo" then
+        return function()
+            print("foo!")
+        end
+    end
+    return true
+end})
+print(b:foo(1,2,3))
+local a = a.b.c + 1 / 2
+print(a)
+
+for i = 1, 10 do
+    print(i)
+end
+
+]===]
+
 
 local keywords = {
     let = true,
@@ -102,7 +128,7 @@ local em = oh.LuaEmitter()
 do
     local META = getmetatable(em)
 
-    function META:DeclareIdentifier(str)
+    function META:DeclareIdentifier(str) do return str end
         for i = 1, 100 do
             if self:GetUpvalue(str) or keywords[str] then
                 str = str .. "$"
@@ -110,9 +136,6 @@ do
                 break
             end
         end
-
-        self:SetUpvalue(str, true)
-
         return str
     end
 
@@ -169,7 +192,7 @@ do
     function META:PopSpace(when)
         if when then
             self.space_pop = self.space_pop or {}
-            
+
             table.insert(self.space_pop, {when = when, space = self.push_space})
             return
         end
@@ -184,7 +207,7 @@ do
         self.out[self.i] = str or ""
         self.i = self.i + 1
 
-        if self.space_pop and self.space_pop[1] then 
+        if self.space_pop and self.space_pop[1] then
             for i = #self.space_pop, 1, -1 do
                 if self.space_pop[i].when == str then
                     local data = table.remove(self.space_pop)
@@ -203,7 +226,7 @@ do
             elseif self.push_space then
                 table.insert(self.push_space, v.whitespace)
             else
-                self:EmitWhitespace(v.whitespace) 
+                self:EmitWhitespace(v.whitespace)
             end
         end
 
@@ -226,14 +249,11 @@ do
         end
     end
 
-
     function META:EmitExpression(v)
         if v.tokens["("] then
             for _, v in ipairs(v.tokens["("]) do
                 self:EmitToken(v)
             end
-        elseif v.parenthesise_me then
-            self:Emit("(")
         end
 
         if v.kind == "binary_operator" then
@@ -247,12 +267,6 @@ do
                 self.operator_transformed = true
             else
                 if v.left then self:EmitExpression(v.left) end
-
-                if v.parenthesise_me then
-                    self:Emit(")")
-                    v.parenthesise_me = nil
-                end
-
                 self:EmitBinaryOperator(v, v.left)
                 if v.right then self:EmitExpression(v.right) end
             end
@@ -269,11 +283,11 @@ do
             if v.kind == "postfix_call" and not v.tokens["call("] then
                 v.expressions[1].parenthesise_me = true
             end
-            
+
             if v.tokens["call("] then
                 self:EmitToken(v.tokens["call("])
             end
-            
+
             if type(self.SELF_INDEX) == "table" then
                 --self:PushSpace()
                 self:NoSpace()
@@ -286,6 +300,119 @@ do
 
             if v.tokens["call)"] then
                 self:EmitToken(v.tokens["call)"])
+            end
+        elseif v.kind == "postfix_expression_index" then
+            self:EmitExpression(v.left)
+            self:EmitToken(v.tokens["["])
+            self:EmitExpression(v.expression)
+            self:EmitToken(v.tokens["]"])
+        elseif v.kind == "value" then
+
+            if v.value.type == "number" then
+                if v.value.value:sub(-3):lower() == "ull" then
+                    v.value.value = v.value.value:sub(1, #v.value.value - 3)
+                elseif v.value.value:sub(-3):lower() == "ul" or v.value.value:sub(-3):lower() == "ll" then
+                    v.value.value = v.value.value:sub(1, #v.value.value - 2)
+                elseif v.value.value:sub(-3):lower() == "i" then
+                    v.value.value = v.value.value:sub(1, #v.value.value - 1)
+                end
+                self:EmitToken(v.value)
+            elseif v.value.value == "..." then
+                self:EmitToken(v.value, "LUA_ARGS")
+            elseif v.value.type == "string" and v.value.value:sub(1,1) == "[" then
+                self:EmitToken(v.value, v.value.value:gsub("\\", "\\\\"):gsub("`", "\\`"):gsub("^%[=-%[(.+)%]=-%]$", "`%1`"))
+            else
+                self:EmitToken(v.value)
+            end
+        else
+            error("unhandled token type " .. v.kind)
+        end
+
+        if v.parenthesise_me then
+            self:Emit(")")
+        end
+
+        if v.tokens[")"] then
+            for _, v in ipairs(v.tokens[")"]) do
+                self:EmitToken(v)
+            end
+        end
+    end
+
+    function META:EmitExpression(v, index)
+        if v.kind == "binary_operator" then
+            local what = v.value.value
+            for l,op,r in v:Walk() do
+                if what == "." or what == ":" then
+                    if not l.value.transformed then
+                        if not self:GetUpvalue(l.value.value) then
+                            l.value.value = "OH['_G']('" .. l.value.value .. "')"
+                        else
+                            l.value.value = "'" .. l.value.value .. "'"
+                        end
+                        l.value.transformed = true
+                    end
+                    if not r.value.transformed then
+                        r.value.transformed = true
+                        r.value.value = "'" .. r.value.value .. "'"
+                    end
+                end
+            end
+
+
+            self:Emit("OH['"..what.."'](")
+
+            if v.right.kind == "postfix_call" then
+                self:EmitExpression(v.right)
+                self:Emit(",")
+                self:EmitExpression(v.left)
+            else
+
+                if v.left then
+                    self:EmitExpression(v.left)
+                end
+                self:Emit(",")
+                if v.right then
+                    self:EmitExpression(v.right)
+                end
+            end
+
+            self:Emit(")")
+
+        elseif v.kind == "function" then
+            self:EmitFunction(v, true)
+        elseif v.kind == "table" then
+            self:EmitTable(v)
+        elseif v.kind == "prefix_operator" then
+            self:EmitPrefixOperator(v)
+        elseif v.kind == "postfix_operator" then
+            self:EmitPostfixOperator(v)
+        elseif v.kind == "postfix_call" then
+            self:Emit("OH.call(")
+            self:EmitExpression(v.left)
+            self:Emit(",")
+            if v.kind == "postfix_call" and not v.tokens["call("] then
+                v.expressions[1].parenthesise_me = true
+            end
+
+            if v.tokens["call("] then
+                --self:EmitToken(v.tokens["call("])
+            end
+
+            if type(self.SELF_INDEX) == "table" then
+                --self:PushSpace()
+                self:NoSpace()
+                self:EmitExpression(self.SELF_INDEX)
+                --self:PopSpace(";")
+                self:Emit(", ")
+                self.SELF_INDEX = nil
+            end
+            self:EmitExpressionList(v.expressions)
+
+            self:Emit(")")
+
+            if v.tokens["call)"] then
+                --self:EmitToken(v.tokens["call)"])
             end
         elseif v.kind == "postfix_expression_index" then
             self:EmitExpression(v.left)
@@ -663,6 +790,7 @@ do
     function META:EmitReturnStatement(node)
         self:Whitespace("\t")
         self:EmitToken(node.tokens["return"])
+        self:Emit(" ")
         self:Whitespace(" ")
         self:EmitExpressionList(node.expressions)
     end
@@ -703,6 +831,59 @@ do
 
             if expr[2] then
                 self:Emit("]")
+            end
+        end
+    end
+
+    function META:EmitAssignment(node)
+        self:Whitespace("\t")
+
+        if node.is_local then
+            self:EmitToken(node.tokens["local"], "let")
+            self:Whitespace(" ")
+            if node.identifiers[2] and node.tokens["="] then
+                self:Emit(" [")
+            end
+            for i,v in ipairs(node.identifiers) do
+                v.value.value = self:DeclareIdentifier(v.value.value)
+            end
+
+            self:EmitExpressionList(node.identifiers)
+            if node.identifiers[2] and node.tokens["="]then
+                self:Emit(" ]")
+            end
+        else
+            self:Emit("OH['='](")
+            node.expressions_left[1].value.value = "'" .. node.expressions_left[1].value.value .. "'"
+            self:EmitExpressionList(node.expressions_left)
+        end
+
+        if node.tokens["="] then
+            self:Whitespace(" ")
+            if node.expressions_left then
+                self:EmitToken(node.tokens["="], ",")
+            else
+                self:EmitToken(node.tokens["="])
+            end
+            self:Whitespace(" ")
+            local expr = node.expressions_right or node.expressions
+            if expr[2] then
+                self:Emit(" [")
+            end
+            self:EmitExpressionList(expr)
+
+            if expr[2] then
+                self:Emit("]")
+            end
+        end
+
+        if node.expressions_left then
+            self:Emit(")")
+        end
+
+        if node.identifiers then
+            for i,v in ipairs(node.identifiers) do
+                self:SetUpvalue(v.value.value, true)
             end
         end
     end
@@ -783,7 +964,7 @@ local js = em:BuildCode(ast)
 em:PopScope()
 
 --util.TablePrint(em.scope, {parent = "table"})
---print(js)
+print(js)
 local f = io.open("temp.js", "w")
 f:write(runtime .. js)
 f:close()
