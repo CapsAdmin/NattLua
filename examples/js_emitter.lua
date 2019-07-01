@@ -1,6 +1,6 @@
 local oh = require("oh.oh")
 local util = require("oh.util")
-local code = io.open("oh/parser.lua"):read("*all")
+local code = io.open("examples/scimark.lua"):read("*all")
 
 
 local map = {
@@ -34,6 +34,15 @@ local op_map = {
 
 local runtime = [[
     global.print = console.log
+    global.math = Math
+    global.os = {clock: function() { return new Date().getTime() / 1000 } }
+    global.string = {format: function(fmt, ...args) { return fmt; }}
+    global.jit = {status: function() { return [true]; }}
+    global.bit = {
+
+
+    }
+    _G = global
 
     let m = {}
 
@@ -42,17 +51,26 @@ local runtime = [[
         return tbl
     }
 
+    let last_self = undefined
+
     OH = {
         _G: function(a) { return global[a] },
-        '=': function(a, b) { global[a] = b },
-        call: function(a, ...args) { return a.apply(null, args) },
+        '=': function(t, a, b) { t[a] = b },
+        call: function(a, ...args) {
+            if (last_self) {
+                args.unshift(last_self)
+                last_self = undefined
+            }
+            return a.apply(null, args)
+        },
         ]] .. (function()
         local js = ""
         for k,v in pairs(oh.syntax.BinaryOperators) do
             local exp = op_map[k] or  ("a " .. k .. " b")
-            js = js .. [["]]..k..[[": function(a, b) { if (m[a] && m[a]['__]]..k..[[']) {return m[a]['__]]..k..[['](a, b)[0]} return ]]..exp..[[ },]] .. "\n"
+            js = js .. [["]]..k..[[": function(a, b) { if (m[a] && m[a]['__]]..k..[[']) {return m[a]['__]]..k..[['](a, b)[0]} ]]..(k==":" and ("last_self=a; return " .. exp) or "return " .. exp) .. [[; },]] .. "\n"
             js = js .. [["raw_]]..k..[[": function(a, b) { return ]]..exp..[[[0] },]] .. "\n"
         end
+        print(js)
         return js
     end)() .. [[}
 
@@ -80,13 +98,44 @@ end
 
 do
     local a = {b = {c = 999}}
-    b = a:b:c + 1 / 2
+    b = a.b.c + 1 / 2
+    lol = a
     print(b)
+end
+
+do
+    print(_G.b)
 end
 
 for i = 1, 10 do
     print(i)
 end
+
+do
+    local a,b,c = 1,2,3
+    print(a,b,c)
+end
+
+do
+    lol.b.c = 1337
+    print(lol.b.c)
+
+    a = 1
+    print(a)
+    a = 2
+    print(a)
+end
+
+do
+    local foo = {lol=1}
+
+    function foo.bar(self, n)
+        print(self, n)
+    end
+
+    foo:bar("hello")
+end
+
 ]===]
 
 --loadstring(code)()
@@ -352,8 +401,15 @@ do
     function META:EmitExpression(v, index)
         if v.kind == "binary_operator" then
             local what = v.value.value
+
+            for i,v in ipairs(v:Flatten()) do
+                --print(v.value.value)
+            end
+
             for l,op,r in v:Walk() do
-                if what == "." or what == ":" then
+                if op.value and (op.value.value == "." or op.value.value == ":" or
+                op.value.value == "'.'" or op.value.value == "':'")
+                then
                     if not l.value.transformed then
                         if not self:GetUpvalue(l.value.value) then
                             l.value.value = "OH['_G']('" .. l.value.value .. "')"
@@ -362,6 +418,7 @@ do
                         end
                         l.value.transformed = true
                     end
+
                     if not r.value.transformed then
                         r.value.transformed = true
                         r.value.value = "'" .. r.value.value .. "'"
@@ -370,7 +427,11 @@ do
             end
 
 
-            self:Emit("OH['"..what.."'](")
+            if v.value.transformed then
+                self:Emit("OH["..what.."](")
+            else
+                self:Emit("OH['"..what.."'](")
+            end
 
             if v.right.kind == "postfix_call" then
                 self:EmitExpression(v.right)
@@ -401,6 +462,7 @@ do
             self:Emit("OH.call(")
             self:EmitExpression(v.left)
             self:Emit(",")
+
             if v.kind == "postfix_call" and not v.tokens["call("] then
                 v.expressions[1].parenthesise_me = true
             end
@@ -457,7 +519,7 @@ do
 
         if v.tokens[")"] then
             for _, v in ipairs(v.tokens[")"]) do
-                self:EmitToken(v)
+                --self:EmitToken(v)
             end
         end
     end
@@ -478,6 +540,7 @@ do
     do
         function META:EmitFunction(node, anon)
             self.SELF_INDEX = false
+            local table_assign = false
 
             if anon then
                 self:EmitToken(node.tokens["function"])
@@ -492,11 +555,29 @@ do
                 self:EmitExpression(node.name)
                 self:Emit(" = function")
             else
+                table_assign = true
                 self:Whitespace("\t")
+                --self:Emit("OH['='](")
                 self:EmitToken(node.tokens["function"], "") -- emit white space only
-                self:EmitExpressionList(node.expressions)
+
+                    if node.expression.right then
+                        self:Emit("OH['='](")
+                        self:EmitExpression(node.expression.left)
+                        self:Emit(", ")
+
+                        if not node.expression.right.transformed then
+                            node.expression.right.value.value = "'" .. node.expression.right.value.value .. "'"
+                            node.expression.right.transformed = true
+                        end
+
+                        self:EmitExpression(node.expression.right)
+                    else
+                        self:EmitExpression(node.expression)
+                    end
+
+                --self:EmitExpression(node.expression)
                 self:Whitespace(" ")
-                self:Emit(" = function")
+                self:Emit(", function")
             end
 
             self:EmitToken(node.tokens["("])
@@ -525,6 +606,10 @@ do
 
             self:Whitespace("\t")
             self:EmitToken(node.tokens["end"], map["end"])
+
+            if table_assign then
+                self:Emit(")")
+            end
         end
     end
 
@@ -700,6 +785,7 @@ do
             self:Emit("]")
             self:Whitespace(" ")
             self:EmitToken(node.tokens["in"], map["in"])
+            self:Emit(" ")
             self:Whitespace(" ")
             self:EmitExpressionList(node.expressions)
         end
@@ -866,13 +952,34 @@ do
                 self:Emit(" ]")
             end
         else
-            if self:GetUpvalue(node.expressions_left[1].value.value) then
+            if node.expressions_left[1] and node.expressions_left[1].value and self:GetUpvalue(node.expressions_left[1].value.value) then
                 self:EmitExpressionList(node.expressions_left)
             else
-                global_assignment = true
-                self:Emit("OH['='](")
-                node.expressions_left[1].value.value = "'" .. node.expressions_left[1].value.value .. "'"
-                self:EmitExpressionList(node.expressions_left)
+                if node.expressions_left[1] and node.expressions_left[1].value and not node.expressions_left[1].right then
+                    global_assignment = true
+                    self:Emit("OH['='](global, ")
+                    if not node.expressions_left[1].value.transformed then
+                        node.expressions_left[1].value.value = "'" .. node.expressions_left[1].value.value .. "'"
+                        node.expressions_left[1].value.transformed = true
+                    end
+                end
+
+                if node.expressions_left[1].right then
+                    global_assignment = true
+
+                    self:Emit("OH['='](")
+                    self:EmitExpression(node.expressions_left[1].left)
+                    self:Emit(", ")
+
+                    if not node.expressions_left[1].right.transformed then
+                        node.expressions_left[1].right.value.value = "'" .. node.expressions_left[1].right.value.value .. "'"
+                        node.expressions_left[1].right.transformed = true
+                    end
+
+                    self:EmitExpression(node.expressions_left[1].right)
+                else
+                    self:EmitExpressionList(node.expressions_left)
+                end
             end
         end
 
