@@ -1,4 +1,4 @@
-local test = ...
+local test = require("tests.test")
 
 --io.write("generating random tokens ...")
 local tokens = {

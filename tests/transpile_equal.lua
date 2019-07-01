@@ -1,4 +1,4 @@
-local test = ...
+local test = require("tests.test")
 
 do
     local function check(strings)
