@@ -27,7 +27,6 @@ function META:Whitespace(str, force)
     end
 end
 
-
 function META:Emit(str) assert(type(str) == "string")
     self.out[self.i] = str or ""
     self.i = self.i + 1
@@ -51,13 +50,25 @@ function META:GetPrevChar()
     return prev and char:byte()
 end
 
+function META:EmitWhitespace(token)
+    if token.type ~= "space" or self.PreserveWhitespace then
+        self:EmitToken(token)
+        if token.type ~= "space" then
+            self:Whitespace("\n")
+            self:Whitespace("\t")
+        end
+    end
+end
+
 function META:EmitToken(node, translate)
     if node.whitespace then
         for _, data in ipairs(node.whitespace) do
-            if data.type ~= "space" or self.PreserveWhitespace then
-                self:Emit(data.value)
-            end
+            self:EmitWhitespace(data)
         end
+    end
+
+    if self.TranslateToken then
+        translate = self:TranslateToken(node) or translate
     end
 
     if translate then
@@ -173,7 +184,7 @@ do
             self:Whitespace(" ")
             self:EmitToken(node.tokens["function"])
             self:Whitespace(" ")
-            self:EmitExpression(node.name)
+            self:EmitIdentifier(node.name)
         else
             self:Whitespace("\t")
             self:EmitToken(node.tokens["function"])
@@ -182,7 +193,7 @@ do
         end
 
         self:EmitToken(node.tokens["("])
-        self:EmitExpressionList(node.identifiers)
+        self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"])
 
         self:Whitespace("\n")
@@ -305,14 +316,15 @@ function META:EmitForStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["for"])
     self:Whitespace(" ")
+
     if node.fori then
-        self:EmitExpressionList(node.identifiers)
+        self:EmitIdentifierList(node.identifiers)
         self:Whitespace(" ")
         self:EmitToken(node.tokens["="])
         self:Whitespace(" ")
         self:EmitExpressionList(node.expressions)
     else
-        self:EmitExpressionList(node.identifiers)
+        self:EmitIdentifierList(node.identifiers)
         self:Whitespace(" ")
         self:EmitToken(node.tokens["in"])
         self:Whitespace(" ")
@@ -402,7 +414,7 @@ function META:EmitAssignment(node)
     if node.is_local then
         self:EmitToken(node.tokens["local"])
         self:Whitespace(" ")
-        self:EmitExpressionList(node.identifiers)
+        self:EmitIdentifierList(node.identifiers)
     else
         self:EmitExpressionList(node.expressions_left)
     end
@@ -440,7 +452,6 @@ function META:EmitStatement(node)
     elseif node.kind == "function" then
         self:Function(node)
     elseif node.kind == "expression" then
-        print(node.value:Render())
         self:Whitespace("\t")
         self:EmitExpression(node.value)
     elseif node.kind == "shebang" then
@@ -460,6 +471,12 @@ function META:EmitStatement(node)
     else
         error("unhandled value: " .. node.kind)
     end
+
+    if self.OnEmitStatement then
+        if node.kind ~= "end_of_file" then
+            self:OnEmitStatement()
+        end
+    end
 end
 
 function META:EmitStatements(tbl)
@@ -469,11 +486,25 @@ function META:EmitStatements(tbl)
     end
 end
 
-function META:EmitExpressionList(tbl)
+function META:EmitExpressionList(tbl, delimiter)
     for i = 1, #tbl do
         self:EmitExpression(tbl[i])
         if i ~= #tbl then
-            self:EmitToken(tbl[i].tokens[","])
+            self:EmitToken(tbl[i].tokens[","], delimiter)
+            self:Whitespace(" ")
+        end
+    end
+end
+
+function META:EmitIdentifier(token)
+    self:EmitToken(token.value)
+end
+
+function META:EmitIdentifierList(tbl, delimiter)
+    for i = 1, #tbl do
+        self:EmitIdentifier(tbl[i])
+        if i ~= #tbl then
+            self:EmitToken(tbl[i].tokens[","], delimiter)
             self:Whitespace(" ")
         end
     end

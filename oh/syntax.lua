@@ -14,7 +14,7 @@ syntax.Keywords = {
     "do", "end",
     "if", "then", "else", "elseif",
     "for", "in",
-    "repeat", "until",
+    "while", "repeat", "until",
     "break", "return",
     "local", "function",
     "and", "not", "or",
