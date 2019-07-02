@@ -15,6 +15,9 @@ local function check(tbl)
 end
 
 check {
+    {'pcall(require, "ffi")', ""},
+    {"1 / #a", "/(1, #(a))"},
+    {"jit.status and jit.status()", "and(.(jit, status), call(.(jit, status)))"},
     {"a.b.c.d.e.f()", "call(.(.(.(.(.(a, b), c), d), e), f))"},
     {"(foo.bar())", "call(.(foo, bar))"},
     {[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], [[+(+(^(-(1), 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), ""))))]]},
