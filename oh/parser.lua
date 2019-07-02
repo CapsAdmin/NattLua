@@ -72,15 +72,15 @@ do
     end
 
     do
-        local EXPRESSSION = {}
-        EXPRESSSION.__index = EXPRESSSION
-        EXPRESSSION.type = "expression"
+        local EXPRESSION = {}
+        EXPRESSION.__index = EXPRESSION
+        EXPRESSION.type = "expression"
 
-        function EXPRESSSION:__tostring()
+        function EXPRESSION:__tostring()
             return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
         end
 
-        function EXPRESSSION:GetExpressions()
+        function EXPRESSION:GetExpressions()
             if self.expression then
                 return {self.expression}
             end
@@ -88,11 +88,11 @@ do
             return self.expressions or self.left or self.right
         end
 
-        function EXPRESSSION:GetExpression()
+        function EXPRESSION:GetExpression()
             return self.expression or self.expressions[1]
         end
 
-        function EXPRESSSION:Render()
+        function EXPRESSION:Render()
             local em = oh.LuaEmitter({preserve_whitespace = false})
 
             em:EmitExpression(self)
@@ -141,7 +141,7 @@ do
                 return tbl
             end
 
-            function EXPRESSSION:DumpPresedence()
+            function EXPRESSION:DumpPresedence()
                 local list = expand(self, {})
                 local a = table.concat(list)
                 return a
@@ -161,7 +161,7 @@ do
                 end
             end
 
-            function EXPRESSSION:Flatten()
+            function EXPRESSION:Flatten()
                 local flat = {}
 
                 expand(self, flat)
@@ -169,7 +169,7 @@ do
                 return flat
             end
 
-            function EXPRESSSION:Walk()
+            function EXPRESSION:Walk()
                 local flat = self:Flatten()
 
                 local i = 1
@@ -189,7 +189,7 @@ do
             node.tokens = {}
             node.kind = kind
 
-            setmetatable(node, EXPRESSSION)
+            setmetatable(node, EXPRESSION)
 
             if self.NodeRecord then
                 self.NodeRecord[self.NodeRecordI] = node
