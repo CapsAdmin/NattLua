@@ -1,6 +1,6 @@
 local oh = require("oh.oh")
 local util = require("oh.util")
-local code = io.open("examples/scimark.lua"):read("*all")
+local code = io.open("oh/parser.lua"):read("*all")
 
 local token_translate = {
     ["and"] = "&&",
@@ -135,6 +135,7 @@ for what, operators in pairs(meta_methods) do
 end
 
 local runtime = [[
+    let LUA_ARGS = [{}]
     let _G = {}
     _G._G = _G
     _G.math = Math
@@ -265,7 +266,7 @@ local runtime = [[
     ////////
 ]]
 
-code = [===[
+codwe = [===[
 
 do
     local tbl = {}
@@ -430,6 +431,15 @@ do
     test(1, table.unpack(tbl.foo))
 end
 
+do
+    local self = {GetToken = function() return {value = "test"} end}
+    local values = {test = true}
+
+    if not self:GetToken() or not values[self:GetToken().value] then
+
+    end
+end
+
 ]===]
 
 --loadstring(code)()
@@ -583,6 +593,10 @@ do
             end
         end
 
+        if not translate then
+            translate = token_translate[v.value]
+        end
+
         if translate then
             if type(translate) == "table" then
                 self:Emit(translate[v.value] or v.value)
@@ -618,8 +632,14 @@ do
         end
     end
 
+    function META:TranslateBinaryOperator(v)
+
+    end
+
     function META:EmitExpression(v, index)
-        if v.kind == "binary_operator" then
+        if self.HandleExpression and self:HandleExpression(v) then
+
+        elseif v.kind == "binary_operator" then
             transform(v)
 
             if operator_translate[v.value.value] then
@@ -632,14 +652,9 @@ do
                     self:Emit(",")
                     self:EmitExpression(v.left)
                 else
-
-                    if v.left then
-                        self:EmitExpression(v.left)
-                    end
+                    if v.left then self:EmitExpression(v.left) end
                     self:Emit(",")
-                    if v.right then
-                        self:EmitExpression(v.right)
-                    end
+                    if v.right then self:EmitExpression(v.right) end
                 end
 
                 self:Emit(")")
@@ -933,34 +948,14 @@ do
         end
     end
 
-    function META:EmitPrefixOperator(v)
+    function META:TranslatePrefixOperator(v)
         if operator_translate[v.value.value] then
             local name = operator_translate[v.value.value].name
-            self:Emit("OH."..name.."(")
-            self:EmitExpression(v.right)
-            self:Emit(")")
-        else
-            local func_chunks = oh.syntax.GetFunctionForPrefixOperator(v.value)
-            if func_chunks then
-                self:Emit(func_chunks[1])
-                self:EmitExpression(v.right)
-                self:Emit(func_chunks[2])
-                self.operator_transformed = true
-            else
-                if oh.syntax.IsKeyword(v.value) then
-                    self:Whitespace("?")
-                    self:EmitToken(v.value, token_translate[v.value.value])
-                    self:Whitespace("?")
-                    self:EmitExpression(v.right)
-                else
-                    self:EmitToken(v.value, token_translate[v.value.value])
-                    self:EmitExpression(v.right)
-                end
-            end
+            return {"OH."..name.."(",  ")"}
         end
     end
 
-    function META:EmitPostfixOperator(v)
+    function META:EmitPostfixOperatorw(v)
         local func_chunks = oh.syntax.GetFunctionForPostfixOperator(v.value)
         if func_chunks then
             self:Emit(func_chunks[1])
@@ -1155,10 +1150,6 @@ do
         end
     end
 
-    function META:EmitSemicolonStatement(node)
-        self:EmitToken(node.tokens[";"])
-    end
-
     function META:EmitAssignment(node)
         self:Whitespace("\t")
 
@@ -1201,7 +1192,7 @@ do
                     self:EmitExpression(node.expressions_left[1].left)
                     self:Emit(", ")
 
-                    if not node.expressions_left[1].right.transformed then
+                    if node.expressions_left[1].right.value and not node.expressions_left[1].right.transformed then
                         node.expressions_left[1].right.value.value = "'" .. node.expressions_left[1].right.value.value .. "'"
                         node.expressions_left[1].right.transformed = true
                     end
@@ -1264,19 +1255,14 @@ do
             self:EmitDoStatement(node)
         elseif node.kind == "function" then
             self:EmitFunction(node)
-            self:Emit(";")
         elseif node.kind == "assignment" then
             self:EmitAssignment(node)
-            self:Emit(";")
         elseif node.kind == "function" then
             self:Function(node)
         elseif node.kind == "expression" then
+            print(node.value:Render())
             self:Whitespace("\t")
             self:EmitExpression(node.value)
-            local flat = node.value:Flatten()
-            if flat[#flat].kind == "postfix_call" then
-                self:Emit(";")
-            end
         elseif node.kind == "shebang" then
             self:EmitToken(node.tokens["shebang"])
         elseif node.kind == "value" then
@@ -1293,23 +1279,6 @@ do
             self:EmitToken(node.tokens["end_of_file"])
         else
             error("unhandled value: " .. node.kind)
-        end
-    end
-
-    function META:EmitStatements(tbl)
-        for _, node in ipairs(tbl) do
-            self:EmitStatement(node)
-            self:Whitespace("\n")
-        end
-    end
-
-    function META:EmitExpressionList(tbl)
-        for i = 1, #tbl do
-            self:EmitExpression(tbl[i])
-            if i ~= #tbl then
-                self:EmitToken(tbl[i].tokens[","])
-                self:Whitespace(" ")
-            end
         end
     end
 end

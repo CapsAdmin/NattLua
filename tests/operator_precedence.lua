@@ -15,7 +15,7 @@ local function check(tbl)
 end
 
 check {
-    {'pcall(require, "ffi")', ""},
+    {'pcall(require, "ffi")', 'call(pcall, require, "ffi")'},
     {"1 / #a", "/(1, #(a))"},
     {"jit.status and jit.status()", "and(.(jit, status), call(.(jit, status)))"},
     {"a.b.c.d.e.f()", "call(.(.(.(.(.(a, b), c), d), e), f))"},
