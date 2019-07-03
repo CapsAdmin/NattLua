@@ -1,6 +1,14 @@
 local util = require("oh.util")
 local oh = require("oh.oh")
-local code = io.open("examples/scope_walking.lua"):read("*all")
+local code = [[
+    local a,b,c = 1,2,3
+
+    if b then
+        a = true
+        a.lol = true
+    end
+
+]]
 
 local tk = oh.Tokenizer(code)
 local ps = oh.Parser()
@@ -15,15 +23,18 @@ local function dump_scope(scope)
     for _, v in ipairs(scope.upvalues) do
         local key = tostring(v.key)
         print(("\t"):rep(level+1) .. "LET " .. key .. " = " .. tostring(v.val and v.val:Render() or nil))
-        if v.mutations then
-            for _, v in ipairs(v.mutations) do
-                print(("\t"):rep(level+2) .. "SET " .. tostring(v.val and v.val:Render() or nil))
-            end
+    end
+
+
+    if scope.mutations then
+        for _, v in ipairs(scope.mutations) do
+            print(("\t"):rep(level+2) .. "SET " .. v.key .. " = " .. tostring(v.val and v.val:Render() or nil))
         end
-        if v.usage then
-            for _, v in ipairs(v.usage) do
-                print(("\t"):rep(level+2) .. "USE " .. tostring(v.val and v.val:Render() or nil))
-            end
+    end
+
+    if scope.usage then
+        for _, v in ipairs(scope.usage) do
+            print(("\t"):rep(level+2) .. "USE " .. tostring(v.val and v.val:Render() or nil))
         end
     end
 

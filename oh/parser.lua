@@ -343,8 +343,8 @@ do
 
         local scope = self.scope.parent
         while scope do
-            if self.scope.upvalues_done[key] then
-                self.scope.upvalues_done[key].val = val
+            if scope.upvalues_done[key] then
+                scope.upvalues_done[key].val = val
                 return true
             end
             scope = scope.parent
@@ -356,17 +356,15 @@ do
     function META:UseUpvalue(key, val)
         local upvalue = self:GetUpvalue(key)
         if upvalue then
-            upvalue.usage = upvalue.usage or {}
-            table_insert(upvalue.usage, {i = self.i, val = val})
+            self.scope.usage = self.scope.usage or {}
+            table_insert(self.scope.usage, {i = self.i, val = val})
         end
     end
 
     function META:MutateUpvalue(key, val)
-        local upvalue = self:GetUpvalue(key)
-        local old_val = upvalue.val
         if self:SetUpvalue(key, val) then
-            upvalue.mutations = upvalue.mutations or {}
-            table_insert(upvalue.mutations, {i = self.i, val = upvalue.val})
+            self.scope.mutations = self.scope.mutations or {}
+            table_insert(self.scope.mutations, {i = self.i, key = key, val = val})
         end
     end
 
@@ -380,14 +378,13 @@ do
             end
         elseif node.expressions_left then
             for i, v in ipairs(node.expressions_left) do
-
-                if v.kind == "binary_operator" or v.kind == "postfix_expression_index" then
-                    local value = v
-                    while value.left do
-                        value = value.left
+                if v.left then
+                    while v.left do
+                        v = v.left
                     end
-                    if self:GetUpvalue(value.value.value) then
-                        self:UseUpvalue(value.value.value, node)
+
+                    if self:GetUpvalue(v.value.value) then
+                        self:UseUpvalue(v.value.value, node)
                     end
                 elseif v.kind == "value" then
                     if self:GetUpvalue(v.value.value) then
@@ -405,8 +402,8 @@ do
 
         local scope = self.scope.parent
         while scope do
-            if self.scope.upvalues_done[key] then
-                return self.scope.upvalues_done[key]
+            if scope.upvalues_done[key] then
+                return scope.upvalues_done[key]
             end
             scope = scope.parent
         end
