@@ -311,6 +311,52 @@ function META:BuildAST(tokens)
     return self:Root()
 end
 
+do
+    function META:PushScope()
+        local parent = self.scope
+        local scope = {
+            children = {}, 
+            parent = parent, 
+            upvalues = {},
+            upvalues_done = {},
+        }
+
+        if parent then
+            for i, v in ipairs(parent.upvalues) do
+                scope.upvalues[i] = v
+                scope.upvalues_done[v] = true
+            end
+            table_insert(parent.children, scope)
+        end
+
+        self.scope = scope
+    end
+
+    function META:SetUpvalue(key, val)
+        if self.scope.upvalues_done[key] then 
+            self.scope.upvalues[self.scope.upvalues_done[key]] = {key = key, val = val}
+        else
+            table_insert(self.scope.upvalues, {key = key, val = val, i = #self.scope.upvalues})
+            self.scope.upvalues_done[key] = #self.scope.upvalues
+        end
+    end
+
+    function META:GetUpvalue(key)
+        return self.scope and self.scope.upvalues_done[key]
+    end
+
+    function META:PopScope()
+        local scope = self.scope.parent
+        if scope then
+            self.scope = scope
+        end
+    end
+
+    function META:GetScope()
+        return self.scope
+    end
+end
+
 function META:Root()
     local node = self:NewStatement("root")
 
@@ -338,8 +384,9 @@ end
 
 do -- statements
     function META:ReadStatements(stop_token)
+        self:PushScope()
+        
         local out = {}
-
         for i = 1, self:GetLength() do
             if not self:GetToken() or stop_token and stop_token[self:GetToken().value] then
                 break
@@ -353,6 +400,7 @@ do -- statements
 
             out[i] = statement
         end
+        self:PopScope()
 
         return out
     end
