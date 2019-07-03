@@ -19,7 +19,7 @@ do
         end
 
         function STATEMENT:Render()
-            local em = oh.LuaEmitter({preserve_whitespace = false})
+            local em = oh.LuaEmitter({preserve_whitespace = false, no_newlines = true})
 
             em:EmitStatement(self)
 
@@ -93,7 +93,7 @@ do
         end
 
         function EXPRESSION:Render()
-            local em = oh.LuaEmitter({preserve_whitespace = false})
+            local em = oh.LuaEmitter({preserve_whitespace = false, no_newlines = true})
 
             em:EmitExpression(self)
 
@@ -313,36 +313,103 @@ end
 
 do
     function META:PushScope()
-        local parent = self.scope
-        local scope = {
-            children = {}, 
-            parent = parent, 
+        self.scope = {
+            children = {},
+            parent = self.scope,
             upvalues = {},
             upvalues_done = {},
         }
 
-        if parent then
-            for i, v in ipairs(parent.upvalues) do
-                scope.upvalues[i] = v
-                scope.upvalues_done[v] = true
-            end
-            table_insert(parent.children, scope)
+        if self.scope.parent then
+            table_insert(self.scope.parent.children, self.scope)
         end
+    end
 
-        self.scope = scope
+    function META:DeclareUpvalue(key)
+        if self.scope.upvalues_done[key] then
+            self.scope.upvalues_done[key] = {key = key, val = val, scope = scope}
+        else
+            table_insert(self.scope.upvalues, {key = key, i = #self.scope.upvalues, scope = scope})
+            self.scope.upvalues_done[key] = self.scope.upvalues[#self.scope.upvalues]
+        end
+        return self.scope.upvalues_done[key]
     end
 
     function META:SetUpvalue(key, val)
-        if self.scope.upvalues_done[key] then 
-            self.scope.upvalues[self.scope.upvalues_done[key]] = {key = key, val = val}
-        else
-            table_insert(self.scope.upvalues, {key = key, val = val, i = #self.scope.upvalues})
-            self.scope.upvalues_done[key] = #self.scope.upvalues
+        if self.scope.upvalues_done[key] then
+            self.scope.upvalues_done[key].val = val
+            return true
+        end
+
+        local scope = self.scope.parent
+        while scope do
+            if self.scope.upvalues_done[key] then
+                self.scope.upvalues_done[key].val = val
+                return true
+            end
+            scope = scope.parent
+        end
+
+        return false
+    end
+
+    function META:UseUpvalue(key, val)
+        local upvalue = self:GetUpvalue(key)
+        if upvalue then
+            upvalue.usage = upvalue.usage or {}
+            table_insert(upvalue.usage, {i = self.i, val = val})
+        end
+    end
+
+    function META:MutateUpvalue(key, val)
+        local upvalue = self:GetUpvalue(key)
+        local old_val = upvalue.val
+        if self:SetUpvalue(key, val) then
+            upvalue.mutations = upvalue.mutations or {}
+            table_insert(upvalue.mutations, {i = self.i, val = upvalue.val})
+        end
+    end
+
+    function META:SetUpvalueFromAssignment(node)
+        if node.identifiers then
+            for i, v in ipairs(node.identifiers) do
+                if node.expressions and node.expressions[i] then
+                    local upvalue = self:GetUpvalue(v.value.value)
+                    upvalue.val = node.expressions[i]
+                end
+            end
+        elseif node.expressions_left then
+            for i, v in ipairs(node.expressions_left) do
+
+                if v.kind == "binary_operator" or v.kind == "postfix_expression_index" then
+                    local value = v
+                    while value.left do
+                        value = value.left
+                    end
+                    if self:GetUpvalue(value.value.value) then
+                        self:UseUpvalue(value.value.value, node)
+                    end
+                elseif v.kind == "value" then
+                    if self:GetUpvalue(v.value.value) then
+                        self:MutateUpvalue(v.value.value, node.expressions_right[i])
+                    end
+                end
+            end
         end
     end
 
     function META:GetUpvalue(key)
-        return self.scope and self.scope.upvalues_done[key]
+        if self.scope.upvalues_done[key] then
+            return self.scope.upvalues_done[key]
+        end
+
+        local scope = self.scope.parent
+        while scope do
+            if self.scope.upvalues_done[key] then
+                return self.scope.upvalues_done[key]
+            end
+            scope = scope.parent
+        end
     end
 
     function META:PopScope()
@@ -367,7 +434,9 @@ function META:Root()
         shebang.tokens["shebang"] = self:ReadToken()
     end
 
+    self:PushScope()
     node.statements = self:ReadStatements()
+    self:PopScope()
 
     if shebang then
         table_insert(node.statements, 1, shebang)
@@ -384,8 +453,6 @@ end
 
 do -- statements
     function META:ReadStatements(stop_token)
-        self:PushScope()
-        
         local out = {}
         for i = 1, self:GetLength() do
             if not self:GetToken() or stop_token and stop_token[self:GetToken().value] then
@@ -400,7 +467,6 @@ do -- statements
 
             out[i] = statement
         end
-        self:PopScope()
 
         return out
     end
@@ -416,6 +482,7 @@ do -- statements
             node.tokens["="] = self:ReadToken()
             node.expressions_left = {expr}
             node.expressions_right = self:ReadExpressionList(math.huge)
+            self:SetUpvalueFromAssignment(node)
         elseif self:IsValue(",") then
             node = self:NewStatement("assignment")
             expr.tokens[","] = self:ReadToken()
@@ -424,6 +491,7 @@ do -- statements
             node.expressions_left = list
             node.tokens["="] = self:ReadExpectValue("=")
             node.expressions_right = self:ReadExpressionList(math.huge)
+            self:SetUpvalueFromAssignment(node)
         elseif expr then -- TODO: make sure it's a call
             node = self:NewStatement("expression")
             node.value = expr
@@ -501,7 +569,9 @@ do -- do
 
         local node = self:NewStatement("do")
         node.tokens["do"] = self:ReadToken()
+        self:PushScope()
         node.statements = self:ReadStatements({["end"] = true})
+        self:PopScope()
         node.tokens["end"] = self:ReadExpectValue("end", node.tokens["do"], node.tokens["do"])
 
         return node
@@ -519,7 +589,9 @@ do -- while
         node.tokens["while"] = self:ReadToken()
         node.expression = self:ReadExpectExpression()
         node.tokens["do"] = self:ReadExpectValue("do")
+        self:PushScope()
         node.statements = self:ReadStatements({["end"] = true})
+        self:PopScope()
         node.tokens["end"] = self:ReadExpectValue("end", node.tokens["while"], node.tokens["while"])
 
         return node
@@ -535,7 +607,9 @@ do -- repeat
         local node = self:NewStatement("repeat")
 
         node.tokens["repeat"] = self:ReadToken()
+        self:PushScope()
         node.statements = self:ReadStatements({["until"] = true})
+        self:PopScope()
         node.tokens["until"] = self:ReadExpectValue("until", node.tokens["repeat"], node.tokens["repeat"])
         node.expression = self:ReadExpectExpression()
 
@@ -585,11 +659,16 @@ do -- local
         node.is_local = true
 
         node.identifiers = self:ReadIdentifierList()
+        for i, v in ipairs(node.identifiers) do
+            self:DeclareUpvalue(v.value.value)
+        end
 
         if self:IsValue("=") then
             node.tokens["="] = self:ReadToken("=")
             node.expressions = self:ReadExpressionList()
         end
+
+        self:SetUpvalueFromAssignment(node)
 
         return node
     end
@@ -619,7 +698,15 @@ do -- for
         end
 
         node.tokens["do"] = self:ReadExpectValue("do")
+
+
+        self:PushScope()
+        for i, v in ipairs(node.identifiers) do
+            local upvalue = self:DeclareUpvalue(v.value.value)
+            upvalue.val = node.expressions[i] or node.expressions[1]
+        end
         node.statements = self:ReadStatements({["end"] = true})
+        self:PopScope()
         node.tokens["end"] = self:ReadExpectValue("end", node.tokens["do"], node.tokens["do"])
 
         return node
@@ -651,7 +738,12 @@ do -- function
 
         local start = self:GetToken()
 
+        self:PushScope()
+        for i, v in ipairs(node.identifiers) do
+            self:DeclareUpvalue(v.value.value)
+        end
         node.statements = self:ReadStatements({["end"] = true})
+        self:PopScope()
 
         node.tokens["end"] = self:ReadExpectValue("end", start, start)
     end
@@ -686,6 +778,8 @@ do -- function
             node.tokens["local"] = self:ReadToken()
             node.tokens["function"] = self:ReadExpectValue("function")
             node.name = self:ReadIdentifier() -- YUCK
+            self:DeclareUpvalue(node.name.value.value)
+            self:SetUpvalue(node.name.value.value, node)
         else
             node.is_local = false
             node.tokens["function"] = self:ReadExpectValue("function")
@@ -734,7 +828,9 @@ do -- if
                 node.tokens["then"][i] = self:ReadExpectValue("then")
             end
 
+            self:PushScope()
             node.statements[i] = self:ReadStatements({["end"] = true, ["else"] = true, ["elseif"] = true})
+            self:PopScope()
 
             if self:IsValue("end") then
                 break

@@ -23,7 +23,11 @@ function META:Whitespace(str, force)
     elseif str == "\t-" then
         self:Outdent()
     else
-        self:Emit(str)
+        if self.NoNewlines and str == "\n" then
+            self:Emit(" ")
+        else
+            self:Emit(str)
+        end
     end
 end
 
@@ -41,7 +45,11 @@ function META:Outdent()
 end
 
 function META:EmitIndent()
-    self:Emit(("\t"):rep(self.level))
+    if self.NoNewlines then
+        --self:Emit("")
+    else
+        self:Emit(("\t"):rep(self.level))
+    end
 end
 
 function META:GetPrevChar()
@@ -512,8 +520,13 @@ end
 
 function oh.LuaEmitter(config)
     local self = setmetatable({}, META)
-    if config and config.preserve_whitespace ~= nil then
-        self.PreserveWhitespace = config.preserve_whitespace
+    if config then
+        if config.preserve_whitespace ~= nil then
+            self.PreserveWhitespace = config.preserve_whitespace
+        end
+        if config.no_newlines then
+            self.NoNewlines = config.no_newlines
+        end
     end
     self:Initialize()
     return self
