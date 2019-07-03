@@ -97,7 +97,7 @@ do
         return self:GetChar() == what
     end
 
-    function META:GenerateLookupFunction(tbl, lower)
+    local function generate_lookup_function(tbl, lower)
         local copy = {}
         local done = {}
 
@@ -312,7 +312,7 @@ do
 
             local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
-            META.IsInNumberAnnotation = META:GenerateLookupFunction(oh.syntax.NumberAnnotations, true)
+            META.IsInNumberAnnotation = generate_lookup_function(oh.syntax.NumberAnnotations, true)
 
             function META:ReadNumberAnnotations(what)
                 if what == "hex" then
@@ -560,7 +560,7 @@ do
             return oh.syntax.IsSymbol(self:GetChar())
         end
 
-        META.IsInSymbol = META:GenerateLookupFunction(oh.syntax.SymbolCharacters)
+        META.IsInSymbol = generate_lookup_function(oh.syntax.SymbolCharacters)
 
         function META:ReadSymbol()
             if self:IsInSymbol() then

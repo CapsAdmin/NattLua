@@ -23,22 +23,16 @@ do
         if stop.kind ~= "value" then
             if stop.kind == "postfix_call" then
                 stop = stop.tokens["call)"].stop
+            elseif stop.kind == "postfix_expression_index" then
+                stop = stop.tokens["]"].stop
             else
-                print(stop)
+                error("not sure how to handle stop for " .. stop.kind)
             end
         else
             stop = stop.value.stop
         end
 
         return start, stop
-    end
-
-    local function record_position(self, node) do return end
-        node.start = self.tokens[self.i].start
-        if self.last_node then
-            self.last_node.stop = self.tokens[self.i].stop
-        end
-        self.last_node = node
     end
 
     do
@@ -92,7 +86,6 @@ do
             local node = {}
             node.tokens = {}
             node.kind = kind
-            record_position(self, node)
             setmetatable(node, STATEMENT)
 
             if self.NodeRecord then
@@ -222,7 +215,6 @@ do
             local node = {}
             node.tokens = {}
             node.kind = kind
-            record_position(self, node)
 
             setmetatable(node, EXPRESSION)
 
@@ -347,117 +339,99 @@ function META:BuildAST(tokens)
 end
 
 do
-    function META:TrackExpression(node, parent, set)
-        if node and node.kind == "value" and node.value.type == "letter" then
-            if self:GetUpvalue(node.value.value) then
-                self:UpvalueHandle(node.value.value, parent)
-            else
-                if set then
-                    self:GlobalMutate(node, parent)
-                else
-                    self:GlobalHandle(node, parent)
-                end
-            end
-        end
-    end
-
     function META:PushScope(node)
         self.globals = self.globals or {}
+        parent = parent or self.scope
 
-        self.scope = {
+        local scope = {
             children = {},
             parent = self.scope,
             upvalues = {},
-            upvalues_done = {},
+            upvalue_map = {},
             events = {},
             node = node,
         }
 
-        if self.scope.parent then
-            table_insert(self.scope.parent.children, self.scope)
-            table_insert(self.scope.parent.events, {type = "scope", scope = self.scope})
+        if self.scope then
+            self:RecordScopeEvent("scope", "create", {scope = scope})
+            table_insert(self.scope.children, self.scope)
         end
+
+        self.scope = scope
     end
 
-    function META:GlobalMutate(key, val)
-        self.globals[key] = val
-        table_insert(self.scope.events, {type = "global", kind = "mutate", key = key, val = val, i = self.i})
+    function META:DeclareUpvalue(token, node, init)
+        node = node or token
+        local key = type(token) == "table" and token.value.value or token
+        local upvalue = {
+            token = token,
+            key = key,
+            node = node,
+            scope = self.scope,
+            events = {},
+            shadow = self:GetUpvalue(key),
+            init = init,
+        }
+
+        table_insert(self.scope.upvalues, upvalue)
+        self.scope.upvalue_map[key] = upvalue
+
+        self:RecordScopeEvent("local", "create", {
+            key = key,
+            token = token,
+            node = node,
+            upvalue = upvalue,
+        })
+
+        return upvalue
     end
 
-    function META:GlobalHandle(key, val)
-        table_insert(self.scope.events, {type = "global", kind = "handle", key = key.value.value, key_node = key, val = val, i = self.i})
+    function META:RecordScopeEvent(type, kind, data)
+        data.type = type
+        data.kind = kind
+        table_insert(self.scope.events, data)
+        return data
     end
 
-    function META:DeclareUpvalue(key, node)
-        if self.scope.upvalues_done[key] then
-            self.scope.upvalues_done[key] = {key = key, val = node, scope = self.scope}
+    function META:RecordUpvalueEvent(what, key, node)
+        local upvalue = assert(self:GetUpvalue(key))
+        local data = {}
+        data.upvalue = upvalue
+        data.key = key
+        data.node = node
+        table_insert(upvalue.events, self:RecordScopeEvent("local", what, data))
+    end
+
+    function META:RecordGlobalEvent(what, key, node)
+        if what == "mutate" then
+            self.globals[key.value.value] = node
+        end
+
+        self:RecordScopeEvent("global", what, {
+            key = key.value.value,
+            node = node,
+        })
+    end
+
+    function META:RecordEvent(what, key, node)
+        if self:GetUpvalue(key) then
+            self:RecordUpvalueEvent(what, key, node)
         else
-            table_insert(self.scope.upvalues, {key = key, i = #self.scope.upvalues, scope = self.scope})
-            self.scope.upvalues_done[key] = self.scope.upvalues[#self.scope.upvalues]
+            self:RecordGlobalEvent(what, key, node)
         end
-
-        table_insert(self.scope.events, {type = "local", kind = "create", key = key, i = self.i})
-
-        return self.scope.upvalues_done[key]
     end
 
-    function META:SetUpvalue(key, val)
-        if self.scope.upvalues_done[key] then
-            self.scope.upvalues_done[key].val = val
-            return true
+    function META:GetUpvalue(token)
+        local key = type(token) == "table" and token.value.value or token
+
+        if self.scope.upvalue_map[key] then
+            return self.scope.upvalue_map[key]
         end
 
         local scope = self.scope.parent
         while scope do
-            if scope.upvalues_done[key] then
-                scope.upvalues_done[key].val = val
-                return true
-            end
-            scope = scope.parent
-        end
-
-        return false
-    end
-
-    function META:UpvalueHandle(key, val)
-        if not self:GetUpvalue(key) then return end
-        table_insert(self.scope.events, {type = "local", kind = "handle", key = key, val = val, i = self.i})
-    end
-
-    function META:UpvalueMutate(key, val)
-        if not self:GetUpvalue(key) then return end
-        table_insert(self.scope.events, {type = "local", kind = "mutate", key = key, val = val, i = self.i})
-    end
-
-    function META:SetUpvalueFromAssignment(node)
-        if node.identifiers then
-            for i, v in ipairs(node.identifiers) do
-                if node.expressions and node.expressions[i] then
-                    self:UpvalueMutate(v.value.value, node.expressions[i])
-                end
-            end
-        elseif node.expressions_left then
-            for i, v in ipairs(node.expressions_left) do
-                if v.kind == "value" then
-                    if self:GetUpvalue(v.value.value) then
-                        self:UpvalueMutate(v.value.value, node.expressions_right[i])
-                    else
-                        self:GlobalMutate(v, v)
-                    end
-                end
-            end
-        end
-    end
-
-    function META:GetUpvalue(key)
-        if self.scope.upvalues_done[key] then
-            return self.scope.upvalues_done[key]
-        end
-
-        local scope = self.scope.parent
-        while scope do
-            if scope.upvalues_done[key] then
-                return scope.upvalues_done[key]
+            if scope.upvalue_map[key] then
+                return scope.upvalue_map[key]
             end
             scope = scope.parent
         end
@@ -510,7 +484,7 @@ do
                 str = str .. self:DumpScope(v.scope, level)
                 level = level - 1
             else
-                str = str .. ("\t"):rep(level+1) .. v.type .. "_" .. v.kind .. ": " .. v.key .. (v.val and (" (" .. (v.val.kind) .. " - " .. tostring(v.val and v.val:Render() or nil) .. ")") or "") .. "\n"
+                str = str .. ("\t"):rep(level+1) .. v.type .. "_" .. v.kind .. ": " .. v.node:Render() .. "\n"
             end
         end
 
@@ -590,7 +564,6 @@ do -- statements
             node.tokens["="] = self:ReadToken()
             node.expressions_left = {expr}
             node.expressions_right = self:ReadExpressionList(math_huge)
-            self:SetUpvalueFromAssignment(node)
         elseif self:IsValue(",") then
             node = self:NewStatement("assignment")
             expr.tokens[","] = self:ReadToken()
@@ -599,12 +572,19 @@ do -- statements
             node.expressions_left = list
             node.tokens["="] = self:ReadExpectValue("=")
             node.expressions_right = self:ReadExpressionList(math_huge)
-            self:SetUpvalueFromAssignment(node)
         elseif expr then -- TODO: make sure it's a call
             node = self:NewStatement("expression")
             node.value = expr
         elseif not self:IsType("end_of_file") then
             self:Error("unexpected " .. start.type .. " (" .. (self:GetToken().value) .. ") while trying to read assignment or call statement", start, start)
+        end
+
+        if node and node.kind == "assignment" then
+            for i, v in ipairs(node.expressions_left) do
+                if v.kind == "value" then
+                    self:RecordEvent("mutate", v, node.expressions_right[i])
+                end
+            end
         end
 
         return node
@@ -767,16 +747,15 @@ do -- local
         node.is_local = true
 
         node.identifiers = self:ReadIdentifierList()
-        for i, v in ipairs(node.identifiers) do
-            self:DeclareUpvalue(v.value.value)
-        end
 
         if self:IsValue("=") then
             node.tokens["="] = self:ReadToken("=")
             node.expressions = self:ReadExpressionList()
         end
 
-        self:SetUpvalueFromAssignment(node)
+        for i, v in ipairs(node.identifiers) do
+            self:DeclareUpvalue(v, v, node.expressions and node.expressions[i] or nil)
+        end
 
         return node
     end
@@ -810,8 +789,7 @@ do -- for
 
         self:PushScope(node)
         for i, v in ipairs(node.identifiers) do
-            local upvalue = self:DeclareUpvalue(v.value.value)
-            upvalue.val = node.expressions[i] or node.expressions[1]
+            self:DeclareUpvalue(v, node.expressions[i] or node.expressions[1])
         end
         node.statements = self:ReadStatements({["end"] = true})
         self:PopScope()
@@ -850,8 +828,8 @@ do -- function
         if not node.is_local and node.expression and node.expression.value and node.expression.value.value == ":" then
             self:DeclareUpvalue("self", node.expression)
         end
-        for i, v in ipairs(node.identifiers) do
-            self:DeclareUpvalue(v.value.value)
+        for _, v in ipairs(node.identifiers) do
+            self:DeclareUpvalue(v)
         end
         node.statements = self:ReadStatements({["end"] = true})
         self:PopScope()
@@ -887,14 +865,14 @@ do -- function
             node.tokens["local"] = self:ReadToken()
             node.tokens["function"] = self:ReadExpectValue("function")
             node.name = self:ReadIdentifier() -- YUCK
-            self:DeclareUpvalue(node.name.value.value)
-            self:SetUpvalue(node.name.value.value, node)
+            self:DeclareUpvalue(node.name, node)
+            self:RecordUpvalueEvent("mutate", node.name, node)
         else
             node.is_local = false
             node.tokens["function"] = self:ReadExpectValue("function")
             node.expression = self:ReadFunctionExpression()
 
-            self:TrackExpression(node.expression, node, true)
+            self:RecordEvent("mutate", node.expression.left or node.expression, node)
         end
         self:ReadFunctionBody(node)
         return node
@@ -992,23 +970,6 @@ do -- expression
         return self:ReadExpression(priority)
     end
 
-    local function swap_operators(a, b)
-        local temp = {}
-
-        for k,v in pairs(a) do
-            temp[k] = v
-            a[k] = nil
-        end
-
-        for k,v in pairs(b) do
-            a[k] = v
-        end
-
-        for k,v in pairs(temp) do
-            b[k] = v
-        end
-    end
-
     local function read_expression(self, priority)
         priority = priority or 0
 
@@ -1103,8 +1064,8 @@ do -- expression
             end
         end
 
-        if first then
-            self:TrackExpression(first, node)
+        if first and first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
+            self:RecordEvent("handle", first, node)
         end
 
         while oh.syntax.IsOperator(self:GetToken()) and oh.syntax.GetLeftOperatorPriority(self:GetToken()) > priority do
