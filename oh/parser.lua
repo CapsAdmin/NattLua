@@ -12,25 +12,27 @@ do
 
     function SHARED:GetStartStop()
         if self.type == "statement" then
-            if self.kind == "function" then
+            if self.kind == "function" and not self.is_local then
                 return self.expression:GetStartStop()
-            end
-        end
-        local tbl = self:Flatten()
-        local start, stop = tbl[1], tbl[#tbl]
-        start = start.value.start
-
-        if stop.kind ~= "value" then
-            if stop.kind == "postfix_call" then
-                stop = stop.tokens["call)"].stop
-            elseif stop.kind == "postfix_expression_index" then
-                stop = stop.tokens["]"].stop
             else
-                error("not sure how to handle stop for " .. stop.kind)
+                return self.name:GetStartStop()
             end
-        else
-            stop = stop.value.stop
         end
+            local tbl = self:Flatten()
+            local start, stop = tbl[1], tbl[#tbl]
+            start = start.value.start
+
+            if stop.kind ~= "value" then
+                if stop.kind == "postfix_call" then
+                    stop = stop.tokens["call)"].stop
+                elseif stop.kind == "postfix_expression_index" then
+                    stop = stop.tokens["]"].stop
+                else
+                    error("not sure how to handle stop for " .. stop.kind)
+                end
+            else
+                stop = stop.value.stop
+            end
 
         return start, stop
     end
@@ -66,8 +68,60 @@ do
             return self.statements
         end
 
+        function STATEMENT:HasStatements()
+            return self.statements ~= nil
+        end
+
         function STATEMENT:GetExpressions()
-            return self.expressions
+            if self.expressions then
+                return self.expressions
+            end
+
+            if self.expression then
+                return {self.expression}
+            end
+
+            if self.value then
+                return {self.value}
+            end
+        end
+
+        function STATEMENT:GetAssignments()
+            local flat = {}
+
+            if self.kind == "for" then
+                for i, node in ipairs(self.identifiers) do
+                    flat[i] = {node, self.expressions[i]}
+                end
+            elseif self.kind == "assignment" then
+                if self.is_local then
+                    for i, node in ipairs(self.identifiers) do
+                        flat[i] = {node, self.expressions and self.expressions[i]}
+                    end
+                else
+                    for i, node in ipairs(self.expressions_left) do
+                        flat[i] = {node, self.expressions_right[i]}
+                    end
+                end
+            elseif self.kind == "function" then
+                if self.is_local then
+                    flat[1] = {self.name, self}
+                else
+                    flat[1] = {self.expression, self}
+                end
+            end
+
+            return flat
+        end
+
+        function STATEMENT:Walk(cb)
+            if self.kind == "if" then
+                for i = 1, #self.statements do
+                    cb(self, self.statements[i], {self.expressions[i]})
+                end
+            else
+                cb(self, self:GetStatements(), self:GetExpressions(), self:GetAssignments())
+            end
         end
 
         function STATEMENT:FindStatementsByType(what, out)
@@ -88,10 +142,8 @@ do
             node.kind = kind
             setmetatable(node, STATEMENT)
 
-            if self.NodeRecord then
-                self.NodeRecord[self.NodeRecordI] = node
-                self.NodeRecordI = self.NodeRecordI + 1
-            end
+            self.nodes[self.nodes_i] = node
+            self.nodes_i = self.nodes_i + 1
 
             return node
         end
@@ -117,6 +169,24 @@ do
 
         function EXPRESSION:GetExpression()
             return self.expression or self.expressions[1]
+        end
+
+        function EXPRESSION:GetUpvaluesAndGlobals(tbl)
+            tbl = tbl or {}
+            for i, v in ipairs(self:Flatten()) do
+                if v.kind == "postfix_call" then
+                    for i,v in ipairs(v.expressions) do
+                        v:GetUpvaluesAndGlobals(tbl)
+                    end
+                elseif v.kind == "postfix_expression_index" then
+                    v.expression:GetUpvaluesAndGlobals(tbl)
+                end
+
+                if v.upvalue_or_global then
+                    table_insert(tbl, v)
+                end
+            end
+            return tbl
         end
 
         function EXPRESSION:Render()
@@ -218,10 +288,8 @@ do
 
             setmetatable(node, EXPRESSION)
 
-            if self.NodeRecord then
-                self.NodeRecord[self.NodeRecordI] = node
-                self.NodeRecordI = self.NodeRecordI + 1
-            end
+            self.nodes[self.nodes_i] = node
+            self.nodes_i = self.nodes_i + 1
 
             return node
         end
@@ -328,12 +396,8 @@ function META:BuildAST(tokens)
     self.tokens_length = #tokens
     self.i = 1
 
-    if self.config then
-        if self.config.record_nodes then
-            self.NodeRecord = {}
-            self.NodeRecordI = 1
-        end
-    end
+    self.nodes = {}
+    self.nodes_i = 1
 
     return self:Root()
 end
@@ -400,6 +464,7 @@ do
         data.key = key
         data.node = node
         table_insert(upvalue.events, self:RecordScopeEvent("local", what, data))
+        return data
     end
 
     function META:RecordGlobalEvent(what, key, node)
@@ -407,7 +472,7 @@ do
             self.globals[key.value.value] = node
         end
 
-        self:RecordScopeEvent("global", what, {
+        return self:RecordScopeEvent("global", what, {
             key = key.value.value,
             node = node,
         })
@@ -415,10 +480,10 @@ do
 
     function META:RecordEvent(what, key, node)
         if self:GetUpvalue(key) then
-            self:RecordUpvalueEvent(what, key, node)
-        else
-            self:RecordGlobalEvent(what, key, node)
+            return self:RecordUpvalueEvent(what, key, node)
         end
+
+        return self:RecordGlobalEvent(what, key, node)
     end
 
     function META:GetUpvalue(token)
@@ -484,7 +549,15 @@ do
                 str = str .. self:DumpScope(v.scope, level)
                 level = level - 1
             else
-                str = str .. ("\t"):rep(level+1) .. v.type .. "_" .. v.kind .. ": " .. v.node:Render() .. "\n"
+                local view
+
+                if v.token == "self" then
+                    view = v.token
+                else
+                   view = (v.token or v.node):Render()
+                end
+
+                str = str .. ("\t"):rep(level+1) .. v.type .. "_" .. v.kind .. ": " .. view .. "\n"
             end
         end
 
@@ -769,6 +842,7 @@ do -- for
     function META:ReadForStatement()
         local node = self:NewStatement("for")
         node.tokens["for"] = self:ReadToken()
+        node.is_local = true
 
         if self:IsType("letter") and self:IsValue("=", 1) then
             node.fori = true
@@ -871,6 +945,7 @@ do -- function
             node.is_local = false
             node.tokens["function"] = self:ReadExpectValue("function")
             node.expression = self:ReadFunctionExpression()
+            node.expression.upvalue_or_global = node
 
             self:RecordEvent("mutate", node.expression.left or node.expression, node)
         end
@@ -1066,6 +1141,7 @@ do -- expression
 
         if first and first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
             self:RecordEvent("handle", first, node)
+            first.upvalue_or_global = node
         end
 
         while oh.syntax.IsOperator(self:GetToken()) and oh.syntax.GetLeftOperatorPriority(self:GetToken()) > priority do
