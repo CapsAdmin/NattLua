@@ -309,17 +309,61 @@ do
                 return flat
             end
 
-            function EXPRESSION:Walk()
-                local flat = self:Flatten()
+            local function expand(node, cb, arg)
+                if node.left and not node.left.primary then
+                    expand(node.left, cb, arg)
+                end
 
-                local i = 1
+                if node.left and node.right then
+                    local res
 
-                return function()
-                    local l,o,r = flat[i + 0], flat[i + 1], flat[i + 2]
-                    if r then
-                        i = i + 2
-                        return l,o,r
+                    if node.left.kind ~= "binary_operator" then
+                        res = cb(node.left, node)
                     end
+
+                    if res then
+                        expand(res, cb, arg)
+                    end
+
+                    res = cb(node.right, node, arg)
+
+                    if res then
+                        expand(res, cb, arg)
+                    end
+                end
+
+                if node.right and not node.right.primary then
+                    expand(node.right, cb, arg)
+                end
+            end
+
+            function EXPRESSION:WalkValues(cb, arg)
+                if self.kind ~= "binary_operator" or self.primary then
+                    cb(self)
+                else
+                    expand(self, cb, arg)
+                end
+            end
+
+            local function expand(node, cb, arg)
+                if node.left and not node.left.primary then
+                    expand(node.left, cb, arg)
+                end
+
+                if node.left and node.right then
+                    cb(node.left, node, node.right, arg)
+                end
+
+                if node.right and not node.right.primary then
+                    expand(node.right, cb, arg)
+                end
+            end
+
+            function EXPRESSION:WalkBinary(cb, arg)
+                if self.kind ~= "binary_operator" then
+                    cb(self)
+                else
+                    expand(self, cb, arg)
                 end
             end
         end
@@ -952,6 +996,10 @@ do -- expression
                     node.tokens["]"] = self:ReadExpectValue("]")
                 else
                     break
+                end
+
+                if node then
+                    node.primary = first
                 end
             end
         end
