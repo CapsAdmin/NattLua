@@ -1,8 +1,12 @@
 local oh = ...
 local table_insert = table.insert
+local table_concat = table.concat
+local setmetatable = setmetatable
+local type = type
 local math_huge = math.huge
 local pairs = pairs
 local ipairs = ipairs
+local error = error
 
 local META = {}
 META.__index = META
@@ -73,6 +77,10 @@ do
         end
 
         function STATEMENT:GetExpressions()
+            if self.kind == "function" then
+                return
+            end
+
             if self.expressions then
                 return self.expressions
             end
@@ -86,14 +94,41 @@ do
             end
         end
 
-        function STATEMENT:GetAssignments()
-            local flat = {}
+        function STATEMENT:GetStatementAssignments()
+            local flat
 
             if self.kind == "for" then
+                flat = {}
                 for i, node in ipairs(self.identifiers) do
                     flat[i] = {node, self.expressions[i]}
                 end
-            elseif self.kind == "assignment" then
+            elseif self.kind == "function" then
+                flat = {}
+                for i, node in ipairs(self.identifiers) do
+                    flat[i] = {node}
+                end
+
+                if not self.is_local then
+                    local flat2 = self.expression:Flatten()
+                    if self.kind == "function" and flat2[#flat2-1] and flat2[#flat2-1].value.value == ":" then
+                        local start, stop = self.expression:GetStartStop()
+
+                        local exp = oh.NewExpression("value")
+                        exp.value = oh.NewToken("letter", start, stop, "self")
+
+                        table_insert(flat, 1, {exp, self.expression})
+                    end
+                end
+            end
+
+            return flat
+        end
+
+        function STATEMENT:GetAssignments()
+            local flat
+
+            if self.kind == "assignment" then
+                flat = {}
                 if self.is_local then
                     for i, node in ipairs(self.identifiers) do
                         flat[i] = {node, self.expressions and self.expressions[i]}
@@ -104,6 +139,7 @@ do
                     end
                 end
             elseif self.kind == "function" then
+                flat = {}
                 if self.is_local then
                     flat[1] = {self.name, self}
                 else
@@ -114,13 +150,13 @@ do
             return flat
         end
 
-        function STATEMENT:Walk(cb)
+        function STATEMENT:Walk(cb, arg)
             if self.kind == "if" then
                 for i = 1, #self.statements do
-                    cb(self, self.statements[i], {self.expressions[i]})
+                    cb(self, arg, self.statements[i], {self.expressions[i]}, self.tokens["if/else/elseif"][i])
                 end
             else
-                cb(self, self:GetStatements(), self:GetExpressions(), self:GetAssignments())
+                cb(self, arg, self:GetStatements(), self:GetExpressions())
             end
         end
 
@@ -136,14 +172,11 @@ do
             return out
         end
 
-        function META:NewStatement(kind)
+        function oh.NewStatement(kind)
             local node = {}
             node.tokens = {}
             node.kind = kind
             setmetatable(node, STATEMENT)
-
-            self.nodes[self.nodes_i] = node
-            self.nodes_i = self.nodes_i + 1
 
             return node
         end
@@ -173,9 +206,9 @@ do
 
         function EXPRESSION:GetUpvaluesAndGlobals(tbl)
             tbl = tbl or {}
-            for i, v in ipairs(self:Flatten()) do
+            for _, v in ipairs(self:Flatten()) do
                 if v.kind == "postfix_call" then
-                    for i,v in ipairs(v.expressions) do
+                    for _, v in ipairs(v.expressions) do
                         v:GetUpvaluesAndGlobals(tbl)
                     end
                 elseif v.kind == "postfix_expression_index" then
@@ -183,6 +216,16 @@ do
                 end
 
                 if v.upvalue_or_global then
+                    table_insert(tbl, v)
+                end
+            end
+            return tbl
+        end
+
+        function EXPRESSION:GetKind(kind)
+            local tbl = {}
+            for _, v in ipairs(self:Flatten()) do
+                if v.kind == kind then
                     table_insert(tbl, v)
                 end
             end
@@ -229,9 +272,9 @@ do
                 if node.kind:sub(1, #"postfix") == "postfix" then
                     local str = {""}
                     for _, exp in ipairs(node:GetExpressions()) do
-                        table.insert(str, exp:Render())
+                        table_insert(str, exp:Render())
                     end
-                    table_insert(tbl, table.concat(str, ", "))
+                    table_insert(tbl, table_concat(str, ", "))
                     table_insert(tbl, ")")
                 end
 
@@ -240,7 +283,7 @@ do
 
             function EXPRESSION:DumpPresedence()
                 local list = expand(self, {})
-                local a = table.concat(list)
+                local a = table_concat(list)
                 return a
             end
         end
@@ -281,15 +324,12 @@ do
             end
         end
 
-        function META:NewExpression(kind)
+        function oh.NewExpression(kind)
             local node = {}
             node.tokens = {}
             node.kind = kind
 
             setmetatable(node, EXPRESSION)
-
-            self.nodes[self.nodes_i] = node
-            self.nodes_i = self.nodes_i + 1
 
             return node
         end
@@ -396,209 +436,28 @@ function META:BuildAST(tokens)
     self.tokens_length = #tokens
     self.i = 1
 
-    self.nodes = {}
-    self.nodes_i = 1
-
     return self:Root()
 end
 
-do
-    function META:PushScope(node)
-        self.globals = self.globals or {}
-        parent = parent or self.scope
-
-        local scope = {
-            children = {},
-            parent = self.scope,
-            upvalues = {},
-            upvalue_map = {},
-            events = {},
-            node = node,
-        }
-
-        if self.scope then
-            self:RecordScopeEvent("scope", "create", {scope = scope})
-            table_insert(self.scope.children, self.scope)
-        end
-
-        self.scope = scope
-    end
-
-    function META:DeclareUpvalue(token, node, init)
-        node = node or token
-        local key = type(token) == "table" and token.value.value or token
-        local upvalue = {
-            token = token,
-            key = key,
-            node = node,
-            scope = self.scope,
-            events = {},
-            shadow = self:GetUpvalue(key),
-            init = init,
-        }
-
-        table_insert(self.scope.upvalues, upvalue)
-        self.scope.upvalue_map[key] = upvalue
-
-        self:RecordScopeEvent("local", "create", {
-            key = key,
-            token = token,
-            node = node,
-            upvalue = upvalue,
-        })
-
-        return upvalue
-    end
-
-    function META:RecordScopeEvent(type, kind, data)
-        data.type = type
-        data.kind = kind
-        table_insert(self.scope.events, data)
-        return data
-    end
-
-    function META:RecordUpvalueEvent(what, key, node)
-        local upvalue = assert(self:GetUpvalue(key))
-        local data = {}
-        data.upvalue = upvalue
-        data.key = key
-        data.node = node
-        table_insert(upvalue.events, self:RecordScopeEvent("local", what, data))
-        return data
-    end
-
-    function META:RecordGlobalEvent(what, key, node)
-        if what == "mutate" then
-            self.globals[key.value.value] = node
-        end
-
-        return self:RecordScopeEvent("global", what, {
-            key = key.value.value,
-            node = node,
-        })
-    end
-
-    function META:RecordEvent(what, key, node)
-        if self:GetUpvalue(key) then
-            return self:RecordUpvalueEvent(what, key, node)
-        end
-
-        return self:RecordGlobalEvent(what, key, node)
-    end
-
-    function META:GetUpvalue(token)
-        local key = type(token) == "table" and token.value.value or token
-
-        if self.scope.upvalue_map[key] then
-            return self.scope.upvalue_map[key]
-        end
-
-        local scope = self.scope.parent
-        while scope do
-            if scope.upvalue_map[key] then
-                return scope.upvalue_map[key]
-            end
-            scope = scope.parent
-        end
-    end
-
-    function META:PopScope()
-        local scope = self.scope.parent
-        if scope then
-            self.scope = scope
-        end
-    end
-
-    function META:GetScope()
-        return self.scope
-    end
-
-    function META:GetScopeEvents()
-        return self.scope.events
-    end
-
-    do
-        local function walk(scope, level, cb)
-            for _, event in ipairs(scope.events) do
-                if event.type == "scope" then
-                    level = level + 1
-                    cb(event, level)
-                    walk(event.scope, level, cb)
-                    level = level - 1
-                else
-                    cb(event, level)
-                end
-            end
-        end
-
-        function META:WalkAllEvents(cb)
-            walk(self:GetScope(), 0, cb)
-        end
-    end
-
-    function META:DumpScope(scope, level)
-        level = level or 0
-        scope = scope or self:GetScope()
-        local str = ""
-
-        str = str .. ("\t"):rep(level) .. scope.node.kind .. " {\n"
-
-        for _, v in ipairs(scope.events) do
-            if v.type == "scope" then
-                level = level + 1
-                str = str .. self:DumpScope(v.scope, level)
-                level = level - 1
-            else
-                local view
-
-                if v.token == "self" then
-                    view = v.token
-                else
-                   view = (v.token or v.node):Render()
-                end
-
-                str = str .. ("\t"):rep(level+1) .. v.type .. "_" .. v.kind .. ": " .. view .. "\n"
-            end
-        end
-
-        str = str .. ("\t"):rep(level) .. "}\n"
-
-        return str
-    end
-
-    function META:WalkScopes()
-        local events = self:GetScopeEvents()
-        local i = 1
-        return function()
-            local event = events[i]
-            i = i + 1
-            if event then
-
-            end
-        end
-    end
-end
 
 function META:Root()
-    local node = self:NewStatement("root")
+    local node = oh.NewStatement("root")
 
     local shebang
 
     if self:IsType("shebang") then
-        shebang = self:NewStatement("shebang")
+        shebang = oh.NewStatement("shebang")
         shebang.tokens["shebang"] = self:ReadToken()
     end
 
-    self:PushScope(node)
     node.statements = self:ReadStatements()
-    self:PopScope()
 
     if shebang then
         table_insert(node.statements, 1, shebang)
     end
 
     if self:IsType("end_of_file") then
-        local eof = self:NewStatement("end_of_file")
+        local eof = oh.NewStatement("end_of_file")
         eof.tokens["end_of_file"] = self.tokens[#self.tokens]
         table_insert(node.statements, eof)
     end
@@ -633,12 +492,12 @@ do -- statements
         local expr = self:ReadExpression()
 
         if self:IsValue("=") then
-            node = self:NewStatement("assignment")
+            node = oh.NewStatement("assignment")
             node.tokens["="] = self:ReadToken()
             node.expressions_left = {expr}
             node.expressions_right = self:ReadExpressionList(math_huge)
         elseif self:IsValue(",") then
-            node = self:NewStatement("assignment")
+            node = oh.NewStatement("assignment")
             expr.tokens[","] = self:ReadToken()
             local list = self:ReadExpressionList(math_huge)
             table_insert(list, 1, expr)
@@ -646,18 +505,10 @@ do -- statements
             node.tokens["="] = self:ReadExpectValue("=")
             node.expressions_right = self:ReadExpressionList(math_huge)
         elseif expr then -- TODO: make sure it's a call
-            node = self:NewStatement("expression")
+            node = oh.NewStatement("expression")
             node.value = expr
         elseif not self:IsType("end_of_file") then
             self:Error("unexpected " .. start.type .. " (" .. (self:GetToken().value) .. ") while trying to read assignment or call statement", start, start)
-        end
-
-        if node and node.kind == "assignment" then
-            for i, v in ipairs(node.expressions_left) do
-                if v.kind == "value" then
-                    self:RecordEvent("mutate", v, node.expressions_right[i])
-                end
-            end
         end
 
         return node
@@ -690,7 +541,7 @@ do
     end
 
     function META:ReadSemicolonStatement()
-        local node = self:NewStatement("semicolon")
+        local node = oh.NewStatement("semicolon")
         node.tokens[";"] = self:ReadToken()
         return node
     end
@@ -702,7 +553,7 @@ do
     end
 
     function META:ReadBreakStatement()
-        local node = self:NewStatement("break")
+        local node = oh.NewStatement("break")
         node.tokens["break"] = self:ReadToken()
         return node
     end
@@ -714,7 +565,7 @@ do
     end
 
     function META:ReadReturnStatement()
-        local node = self:NewStatement("return")
+        local node = oh.NewStatement("return")
         node.tokens["return"] = self:ReadToken()
         node.expressions = self:ReadExpressionList()
         return node
@@ -728,11 +579,9 @@ do -- do
 
     function META:ReadDoStatement()
 
-        local node = self:NewStatement("do")
+        local node = oh.NewStatement("do")
         node.tokens["do"] = self:ReadToken()
-        self:PushScope(node)
         node.statements = self:ReadStatements({["end"] = true})
-        self:PopScope()
         node.tokens["end"] = self:ReadExpectValue("end", node.tokens["do"], node.tokens["do"])
 
         return node
@@ -745,14 +594,12 @@ do -- while
     end
 
     function META:ReadWhileStatement()
-        local node = self:NewStatement("while")
+        local node = oh.NewStatement("while")
 
         node.tokens["while"] = self:ReadToken()
         node.expression = self:ReadExpectExpression()
         node.tokens["do"] = self:ReadExpectValue("do")
-        self:PushScope(node)
         node.statements = self:ReadStatements({["end"] = true})
-        self:PopScope()
         node.tokens["end"] = self:ReadExpectValue("end", node.tokens["while"], node.tokens["while"])
 
         return node
@@ -765,12 +612,10 @@ do -- repeat
     end
 
     function META:ReadRepeatStatement()
-        local node = self:NewStatement("repeat")
+        local node = oh.NewStatement("repeat")
 
         node.tokens["repeat"] = self:ReadToken()
-        self:PushScope(node)
         node.statements = self:ReadStatements({["until"] = true})
-        self:PopScope()
         node.tokens["until"] = self:ReadExpectValue("until", node.tokens["repeat"], node.tokens["repeat"])
         node.expression = self:ReadExpectExpression()
 
@@ -784,7 +629,7 @@ do -- goto label
     end
 
     function META:ReadGotoLabelStatement()
-        local node = self:NewStatement("goto_label")
+        local node = oh.NewStatement("goto_label")
 
         node.tokens["::left"] = self:ReadToken()
         node.identifier = self:ReadExpectType("letter")
@@ -800,7 +645,7 @@ do -- goto statement
     end
 
     function META:ReadGotoStatement()
-        local node = self:NewStatement("goto")
+        local node = oh.NewStatement("goto")
 
         node.tokens["goto"] = self:ReadToken()
         node.identifier = self:ReadExpectType("letter")
@@ -815,7 +660,7 @@ do -- local
     end
 
     function META:ReadLocalAssignmentStatement()
-        local node = self:NewStatement("assignment")
+        local node = oh.NewStatement("assignment")
         node.tokens["local"] = self:ReadToken()
         node.is_local = true
 
@@ -824,10 +669,6 @@ do -- local
         if self:IsValue("=") then
             node.tokens["="] = self:ReadToken("=")
             node.expressions = self:ReadExpressionList()
-        end
-
-        for i, v in ipairs(node.identifiers) do
-            self:DeclareUpvalue(v, v, node.expressions and node.expressions[i] or nil)
         end
 
         return node
@@ -840,7 +681,7 @@ do -- for
     end
 
     function META:ReadForStatement()
-        local node = self:NewStatement("for")
+        local node = oh.NewStatement("for")
         node.tokens["for"] = self:ReadToken()
         node.is_local = true
 
@@ -859,14 +700,7 @@ do -- for
         end
 
         node.tokens["do"] = self:ReadExpectValue("do")
-
-
-        self:PushScope(node)
-        for i, v in ipairs(node.identifiers) do
-            self:DeclareUpvalue(v, node.expressions[i] or node.expressions[1])
-        end
         node.statements = self:ReadStatements({["end"] = true})
-        self:PopScope()
         node.tokens["end"] = self:ReadExpectValue("end", node.tokens["do"], node.tokens["do"])
 
         return node
@@ -889,30 +723,19 @@ do -- function
         node.identifiers = self:ReadIdentifierList()
 
         if self:IsValue("...") then
-            local vararg = self:NewExpression("value")
+            local vararg = oh.NewExpression("value")
             vararg.value = self:ReadToken()
             table_insert(node.identifiers, vararg)
         end
 
         node.tokens[")"] = self:ReadExpectValue(")")
-
         local start = self:GetToken()
-
-        self:PushScope(node)
-        if not node.is_local and node.expression and node.expression.value and node.expression.value.value == ":" then
-            self:DeclareUpvalue("self", node.expression)
-        end
-        for _, v in ipairs(node.identifiers) do
-            self:DeclareUpvalue(v)
-        end
         node.statements = self:ReadStatements({["end"] = true})
-        self:PopScope()
-
         node.tokens["end"] = self:ReadExpectValue("end", start, start)
     end
 
     function META:ReadFunctionExpression()
-        local val = self:NewExpression("value")
+        local val = oh.NewExpression("value")
         val.value = self:ReadExpectType("letter")
 
         while self:IsValue(".") or self:IsValue(":") do
@@ -923,7 +746,7 @@ do -- function
             local left = val
             local right = self:ReadFunctionExpression()
 
-            val = self:NewExpression("binary_operator")
+            val = oh.NewExpression("binary_operator")
             val.value = op
             val.left = val.left or left
             val.right = val.right or right
@@ -933,28 +756,24 @@ do -- function
     end
 
     function META:ReadFunctionStatement()
-        local node = self:NewStatement("function")
+        local node = oh.NewStatement("function")
         if self:IsValue("local") then
             node.is_local = true
             node.tokens["local"] = self:ReadToken()
             node.tokens["function"] = self:ReadExpectValue("function")
             node.name = self:ReadIdentifier() -- YUCK
-            self:DeclareUpvalue(node.name, node)
-            self:RecordUpvalueEvent("mutate", node.name, node)
         else
             node.is_local = false
             node.tokens["function"] = self:ReadExpectValue("function")
             node.expression = self:ReadFunctionExpression()
             node.expression.upvalue_or_global = node
-
-            self:RecordEvent("mutate", node.expression.left or node.expression, node)
         end
         self:ReadFunctionBody(node)
         return node
     end
 
     function META:ReadAnonymousFunction()
-        local node = self:NewExpression("function")
+        local node = oh.NewExpression("function")
         node.tokens["function"] = self:ReadExpectValue("function")
         self:ReadFunctionBody(node)
         return node
@@ -967,7 +786,7 @@ do -- if
     end
 
     function META:ReadIfStatement()
-        local node = self:NewStatement("if")
+        local node = oh.NewStatement("if")
 
         node.expressions = {}
         node.statements = {}
@@ -992,9 +811,7 @@ do -- if
                 node.tokens["then"][i] = self:ReadExpectValue("then")
             end
 
-            self:PushScope(node)
             node.statements[i] = self:ReadStatements({["end"] = true, ["else"] = true, ["elseif"] = true})
-            self:PopScope()
 
             if self:IsValue("end") then
                 break
@@ -1009,7 +826,7 @@ end
 
 do -- identifier
     function META:ReadIdentifier()
-        local node = self:NewExpression("value")
+        local node = oh.NewExpression("value")
         node.value = self:ReadExpectType("letter")
         return node
     end
@@ -1065,13 +882,13 @@ do -- expression
             table_insert(node.tokens[")"], self:ReadExpectValue(")"))
 
         elseif oh.syntax.IsPrefixOperator(self:GetToken()) then
-            node = self:NewExpression("prefix_operator")
+            node = oh.NewExpression("prefix_operator")
             node.value = self:ReadToken()
             node.right = read_expression(self, math_huge)
         elseif self:IsAnonymousFunction() then
             node = self:ReadAnonymousFunction()
         elseif oh.syntax.IsValue(self:GetToken()) or self:IsType("letter") then
-            node = self:NewExpression("value")
+            node = oh.NewExpression("value")
             node.value = self:ReadToken()
         elseif self:IsValue("{") then
             node = self:ReadTable()
@@ -1095,7 +912,7 @@ do -- expression
                     if self:IsAnonymousFunction() then
                         right = self:ReadAnonymousFunction()
                     elseif oh.syntax.IsValue(self:GetToken()) or self:IsType("letter") then
-                        right = self:NewExpression("value")
+                        right = oh.NewExpression("value")
                         right.value = self:ReadToken()
                     elseif self:IsValue("{") then
                         right = self:ReadTable()
@@ -1103,32 +920,32 @@ do -- expression
                         break
                     end
 
-                    node = self:NewExpression("binary_operator")
+                    node = oh.NewExpression("binary_operator")
                     node.value = op
                     node.left = left
                     node.right = right
                 elseif oh.syntax.IsPostfixOperator(self:GetToken()) then
-                    node = self:NewExpression("postfix_operator")
+                    node = oh.NewExpression("postfix_operator")
                     node.left = left
                     node.value = self:ReadToken()
                 elseif self:IsValue("(") then
-                    node = self:NewExpression("postfix_call")
+                    node = oh.NewExpression("postfix_call")
                     node.left = left
                     node.tokens["call("] = self:ReadExpectValue("(")
                     node.expressions = self:ReadExpressionList()
                     node.tokens["call)"] = self:ReadExpectValue(")")
                 elseif self:IsValue("{") or self:IsType("string") then
-                    node = self:NewExpression("postfix_call")
+                    node = oh.NewExpression("postfix_call")
                     node.left = left
                     if self:IsValue("{") then
                         node.expressions = {self:ReadTable()}
                     else
-                        local val = self:NewExpression("value")
+                        local val = oh.NewExpression("value")
                         val.value = self:ReadToken()
                         node.expressions = {val}
                     end
                 elseif self:IsValue("[") then
-                    node = self:NewExpression("postfix_expression_index")
+                    node = oh.NewExpression("postfix_expression_index")
                     node.left = left
                     node.tokens["["] = self:ReadToken()
                     node.expression = self:ReadExpectExpression()
@@ -1140,7 +957,6 @@ do -- expression
         end
 
         if first and first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
-            self:RecordEvent("handle", first, node)
             first.upvalue_or_global = node
         end
 
@@ -1153,7 +969,7 @@ do -- expression
             local left = node
             local right = read_expression(self, right_priority)
 
-            node = self:NewExpression("binary_operator")
+            node = oh.NewExpression("binary_operator")
             node.value = op
             node.left = node.left or left
             node.right = node.right or right
@@ -1189,7 +1005,7 @@ do -- expression
     end
 
     function META:ReadTable()
-        local tree = self:NewExpression("table")
+        local tree = oh.NewExpression("table")
 
         tree.children = {}
         tree.tokens["{"] = self:ReadExpectValue("{")
@@ -1202,7 +1018,7 @@ do -- expression
             local node
 
             if self:IsValue("[") then
-                node = self:NewExpression("table_expression_value")
+                node = oh.NewExpression("table_expression_value")
 
                 node.tokens["["] = self:ReadToken()
                 node.key = self:ReadExpectExpression()
@@ -1210,12 +1026,12 @@ do -- expression
                 node.tokens["="] = self:ReadExpectValue("=")
                 node.expression_key = true
             elseif self:IsType("letter") and self:IsValue("=", 1) then
-                node = self:NewExpression("table_key_value")
+                node = oh.NewExpression("table_key_value")
 
                 node.key = self:ReadToken()
                 node.tokens["="] = self:ReadToken()
             else
-                node = self:NewExpression("table_index_value")
+                node = oh.NewExpression("table_index_value")
 
                 node.key = i
             end

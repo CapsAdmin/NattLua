@@ -157,6 +157,15 @@ do
         }
     end
 
+    function oh.NewToken(type, start, stop, value)
+        return {
+            type = type,
+            start = start,
+            stop = stop,
+            value = value,
+        }
+    end
+
     local function ReadLiteralString(self, multiline_comment)
         local start = self.i
 

@@ -3,6 +3,7 @@ local oh = {}
 oh.syntax = assert(loadfile("oh/syntax.lua"))(oh)
 assert(loadfile("oh/tokenizer.lua"))(oh)
 assert(loadfile("oh/parser.lua"))(oh)
+assert(loadfile("oh/analyzer.lua"))(oh)
 assert(loadfile("oh/lua_emitter.lua"))(oh)
 
 local util = require("oh.util")
