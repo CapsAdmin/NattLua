@@ -37,9 +37,24 @@ do
         if assignments then
             print("----------------------------------------")
             for _, assignment in ipairs(assignments) do
+                --[[
+                    val = _G.a
+                    val = val.b
+                    val = val.c
+                    val = val[2]
+
+
+                    nil a
+                    a.b b
+                    a.b.c c
+                    a.b.c[2]
+                ]]
+
                 assignment[1]:WalkValues(function(val, op)
-                    print(val:Render() .. " = ")
+                    print(val:Render())
                 end)
+
+                print("=")
 
                 assignment[2]:WalkValues(function(val, op)
                     print(val:Render(), op.value.value)

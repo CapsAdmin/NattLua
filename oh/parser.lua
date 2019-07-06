@@ -286,6 +286,57 @@ do
                 local a = table_concat(list)
                 return a
             end
+
+            local function expand(node, tbl)
+                if node.left then
+                    expand(node.left, tbl)
+                end
+                
+                if node.kind == "binary_operator" then
+                    if node.left.kind ~= "binary_operator" then
+                        table_insert(tbl, {op = nil, node = node.left})
+                    end
+                    table_insert(tbl, {op = node, node = node.right})
+                elseif node.kind ~= "value" then
+                    table_insert(tbl, {op = node})
+                end
+                
+                if node.right then
+                    expand(node.right, tbl)
+                end
+            end 
+
+            function EXPRESSION:Evaluate(cb)
+                local tbl = {}
+                expand(self, tbl)
+                local res = nil
+                for _, val in ipairs(tbl) do
+                    res = cb(val.op, val.node, res)
+                end
+                return res
+            end
+
+            local function expand(node, tbl)
+                if node.left then
+                    expand(node.left, tbl)
+                end
+                if node.right then
+                    expand(node.right, tbl)
+                end
+
+                table_insert(tbl, node)
+
+            end
+
+            function EXPRESSION:Evaluate2(cb)
+                local tbl = {}
+                expand(self, tbl)
+                local res = nil
+                for _, val in ipairs(tbl) do
+                    res = cb(val)
+                end
+                return res
+            end
         end
 
         do
@@ -346,7 +397,7 @@ do
             end
 
             local function expand(node, cb, arg)
-                if node.left and not node.left.primary then
+                if node.left then
                     expand(node.left, cb, arg)
                 end
 
@@ -354,7 +405,7 @@ do
                     cb(node.left, node, node.right, arg)
                 end
 
-                if node.right and not node.right.primary then
+                if node.right then
                     expand(node.right, cb, arg)
                 end
             end
