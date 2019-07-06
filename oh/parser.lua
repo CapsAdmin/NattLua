@@ -77,7 +77,7 @@ do
         end
 
         function STATEMENT:GetExpressions()
-            if self.kind == "function" then
+            if self.kind == "function" or self.kind == "assignment" then
                 return
             end
 
@@ -302,21 +302,21 @@ do
                 return self.values[self.i]
             end
 
-            local function expand(node, cb, stack)
+            local function expand(node, cb, stack, ...)
                 if node.left then
-                    expand(node.left, cb, stack)
+                    expand(node.left, cb, stack, ...)
                 end
 
                 if node.right then
-                    expand(node.right, cb, stack)
+                    expand(node.right, cb, stack, ...)
                 end
 
-                cb(node, stack)
+                cb(node, stack, ...)
             end
 
-            function EXPRESSION:Evaluate(cb)
+            function EXPRESSION:Evaluate(cb, ...)
                 local stack = setmetatable({values = {}, i = 1}, meta)
-                expand(self, cb, stack)
+                expand(self, cb, stack, ...)
                 return unpack(stack.values)
             end
         end

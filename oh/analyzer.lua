@@ -187,7 +187,13 @@ function META:DumpScope(scope, level)
                 elseif v.kind == "index" then
                     str = str .. ("\t"):rep(level+1) .. "use" .. "(" .. key .. ")\n"
                 elseif v.kind == "newindex" then
-                    str = str .. ("\t"):rep(level+1) .. key .. "\n"
+                    str = str .. ("\t"):rep(level+1) .. key
+
+                    if v.data then
+                        str = str .. " = " .. tostring(v.data)
+                    end
+
+                    str = str  .. "\n"
                 end
             else
                 local view = (v.token or v.node):Render()

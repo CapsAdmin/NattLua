@@ -21,6 +21,78 @@ function oh.RegisterType(meta)
     oh.types[meta.type] = meta
 end
 
+function oh.Type(str, parent)
+    return setmetatable({parent = parent}, oh.types[str])
+end
+
+local self_arg
+function oh.TypeWalk(node, stack, handle_upvalue, ...)
+    if node.kind == "value" then
+        if node.value.type == "letter" then
+            if node.upvalue_or_global then
+                if handle_upvalue then
+                    stack:Push(handle_upvalue(node, ...))
+                else
+                    stack:Push(val or oh.Type("any", node))
+                end
+            else
+                stack:Push(oh.Type("string", node))
+            end
+        elseif node.value.type == "number" then
+            stack:Push(oh.Type("number", node))
+        elseif node.value.type == "string" then
+            stack:Push(oh.Type("string", node))
+        elseif node.value.value == "true" or node.value.value == "false" then
+            stack:Push(oh.Type("boolean", node))
+        elseif node.value.value == "..." then
+            stack:Push(oh.Type("any", node))
+        else
+            error("unhandled value type " .. node.value.type)
+        end
+    elseif handle_upvalue and (node.kind == "function" or node.kind == "table") then
+        stack:Push(handle_upvalue(node, ...))
+    elseif node.kind == "function" then
+        stack:Push(oh.Type("function", node))
+    elseif node.kind == "table" then
+        stack:Push(oh.Type("table", node))
+    elseif node.kind == "binary_operator" then
+        local r, l = stack:Pop(), stack:Pop()
+        local op = node.value.value
+
+        stack:Push(r:BinaryOperator(op, l, node))
+    elseif node.kind == "prefix_operator" then
+        local r = stack:Pop()
+        local op = node.value.value
+
+        stack:Push(r:PrefixOperator(op, node))
+    elseif node.kind == "postfix_operator" then
+        local r = stack:Pop()
+        local op = node.value.value
+
+        stack:Push(r:PostfixOperator(op, node))
+    elseif node.kind == "postfix_expression_index" then
+        local r = stack:Pop()
+        local index = node.expression:Evaluate(oh.TypeWalk, handle_upvalue)
+
+        stack:Push(r:BinaryOperator(".", index))
+    elseif node.kind == "postfix_call" then
+        local r = stack:Pop()
+        local args = {}
+        for i,v in ipairs(node.expressions) do
+            args[i] = v:Evaluate(oh.TypeWalk, handle_upvalue)
+        end
+
+        if self_arg then
+            stack:Push(r:Call(node, self_arg, unpack(args)))
+            self_arg = nil
+        else
+            stack:Push(r:Call(node, unpack(args)))
+        end
+    else
+        error("unhandled expression " .. node.kind)
+    end
+end
+
 do
     local meta = {}
 
@@ -186,8 +258,4 @@ do
     meta.type = "function"
 
     oh.RegisterType(meta)
-end
-
-function oh.Type(str, parent)
-    return setmetatable({parent = parent}, oh.types[str])
 end
