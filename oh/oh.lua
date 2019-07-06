@@ -191,7 +191,7 @@ do
 
 				line = line + 1
 
-				if line == lines + 2 then
+				if line == lines then
 					return i + 1, first_line_pos - 1, line
 				end
 			end
@@ -271,7 +271,7 @@ do
 
 		do
 			if lines_before > 0 then
-				local line = line_start - lines_before + 1
+				local line = line_start - lines_before - 1
 				for str in (code:sub(pre_start_pos, pre_stop_pos)):gmatch("(.-)\n") do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 					table.insert(lines, prefix .. str)
