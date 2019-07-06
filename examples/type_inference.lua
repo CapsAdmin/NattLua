@@ -5,32 +5,10 @@ local code = assert(io.open(path)):read("*all")
 
 code = [[
     local a = 1
-    local b = a > 2
-
-    if b then
-        local a = 1
-
-        local function test(a,b,c)
-
-        end
-
-        local a = function(lol, foo) 
-            if true then
-                return true
-            end
-
-
-            if false then
-                return ""
-            end
-
-            if foo then
-                return {}
-            end
-        
-        end
-
-
+    local b = a+1
+    local c
+    if true then
+        c = b
     end
 ]]
 
@@ -62,18 +40,18 @@ do
             end
             anl:PopScope()
 
-            return oh.Type("function", node)
+            return oh.Type("function", nil, node)
         elseif node.kind == "table"  then
         else
             local upvalue = anl:GetUpvalue(node)
-            
+
             if upvalue then
                 return upvalue.data
             elseif _G[node.value.value] ~= nil then
-                return oh.Type(type(_G[node.value.value]), node)
+                return oh.Type(type(_G[node.value.value]), nil, node)
             end
 
-            return oh.Type("any", node)
+            return oh.Type("any", nil, node)
         end
     end
 
@@ -85,14 +63,14 @@ do
                 if node.is_local then
                     if r then
                         if r.type == "statement" and r.kind == "function" then
-                            anl:DeclareUpvalue(l, oh.Type("function", node))
+                            anl:DeclareUpvalue(l, oh.Type("function", nil, node))
                         else
                             anl:DeclareUpvalue(l, r:Evaluate(oh.TypeWalk, handle_upvalue))
                         end
                     else
-                        anl:DeclareUpvalue(l, oh.Type("any", l))
+                        anl:DeclareUpvalue(l, oh.Type("any", nil, l))
                     end
-                else
+                elseif l.kind == "value" then
                     local upvalue = self:GetUpvalue(l)
                     if upvalue then
                         anl:RecordUpvalueEvent("newindex", l, r:Evaluate(oh.TypeWalk, handle_upvalue))
@@ -100,6 +78,9 @@ do
                         local t = l:Evaluate(oh.TypeWalk, handle_upvalue, true)
                         --print(t.)
                     end
+                else
+                    local t = l:Evaluate(oh.TypeWalk, handle_upvalue, true)
+                    --print(t.)
                 end
             end
         end
@@ -143,3 +124,9 @@ end
 
 --anl:Walk(ast)
 print(anl:DumpScope())
+
+local list = anl:GetUpvalue("c").data:TraceBack()
+for i,v in ipairs(list) do
+    local start, stop = v.node:GetStartStop()
+    print(oh.FormatError(code, "test", "root", start, stop))
+end

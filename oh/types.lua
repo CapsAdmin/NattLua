@@ -21,8 +21,9 @@ function oh.RegisterType(meta)
     oh.types[meta.type] = meta
 end
 
-function oh.Type(str, parent)
-    return setmetatable({parent = parent}, oh.types[str])
+function oh.Type(str, parent, node)
+    assert(node and node.kind)
+    return setmetatable({parent = parent, node = node}, oh.types[str])
 end
 
 local self_arg
@@ -33,28 +34,28 @@ function oh.TypeWalk(node, stack, handle_upvalue, ...)
                 if handle_upvalue then
                     stack:Push(handle_upvalue(node, ...))
                 else
-                    stack:Push(val or oh.Type("any", node))
+                    stack:Push(val or oh.Type("any", nil, node))
                 end
             else
-                stack:Push(oh.Type("string", node))
+                stack:Push(oh.Type("string", nil, node))
             end
         elseif node.value.type == "number" then
-            stack:Push(oh.Type("number", node))
+            stack:Push(oh.Type("number", nil, node))
         elseif node.value.type == "string" then
-            stack:Push(oh.Type("string", node))
+            stack:Push(oh.Type("string", nil, node))
         elseif node.value.value == "true" or node.value.value == "false" then
-            stack:Push(oh.Type("boolean", node))
+            stack:Push(oh.Type("boolean", nil, node))
         elseif node.value.value == "..." then
-            stack:Push(oh.Type("any", node))
+            stack:Push(oh.Type("any", nil, node))
         else
             error("unhandled value type " .. node.value.type)
         end
     elseif handle_upvalue and (node.kind == "function" or node.kind == "table") then
         stack:Push(handle_upvalue(node, ...))
     elseif node.kind == "function" then
-        stack:Push(oh.Type("function", node))
+        stack:Push(oh.Type("function", nil, node))
     elseif node.kind == "table" then
-        stack:Push(oh.Type("table", node))
+        stack:Push(oh.Type("table", nil, node))
     elseif node.kind == "binary_operator" then
         local r, l = stack:Pop(), stack:Pop()
         local op = node.value.value
@@ -74,7 +75,7 @@ function oh.TypeWalk(node, stack, handle_upvalue, ...)
         local r = stack:Pop()
         local index = node.expression:Evaluate(oh.TypeWalk, handle_upvalue)
 
-        stack:Push(r:BinaryOperator(".", index))
+        stack:Push(r:BinaryOperator(".", index, node))
     elseif node.kind == "postfix_call" then
         local r = stack:Pop()
         local args = {}
@@ -106,32 +107,43 @@ do
     }
     meta.PostfixOperatorMap = {}
 
-    function meta:Type(what)
-        return oh.Type(what, self)
+    function meta:Type(what, node)
+        return oh.Type(what, self, node)
     end
 
     function meta:__tostring()
         return self.type
     end
 
+    function meta:TraceBack()
+        local list = {}
+        local p = self
+        for i = 1, math.huge do
+            if not p then break end
+            list[i] = p
+            p = p.parent
+        end
+        return list
+    end
+
     function meta:ErrorBinary(what, val, node)
         print(tostring(self) .. " " .. what .. " " .. tostring(val) .. " is an illegal operation")
-        return self:Type("any")
+        return self:Type("any", node)
     end
 
     function meta:ErrorPrefix(what, node)
         print(tostring(self) .. " " .. what .. " is an illegal operation")
-        return self:Type("any")
+        return self:Type("any", node)
     end
 
     function meta:ErrorPostfix(what, node)
         print(what .. " " .. tostring(self) .. " is an illegal operation")
-        return self:Type("any")
+        return self:Type("any", node)
     end
 
     function meta:BinaryOperator(what, val, node)
         if self.BinaryOperatorMap[what] then
-            return self:Type(self.BinaryOperatorMap[what])
+            return self:Type(self.BinaryOperatorMap[what], node)
         end
 
         return self:ErrorBinary(what, val, node)
@@ -139,7 +151,7 @@ do
 
     function meta:PrefixOperator(what, node)
         if self.PrefixOperatorMap[what] then
-            return self:Type(self.PrefixOperatorMap[what])
+            return self:Type(self.PrefixOperatorMap[what], node)
         end
 
         return self:ErrorPrefix(what, val, node)
@@ -147,7 +159,7 @@ do
 
     function meta:PostfixOperator(what, node)
         if self.PostfixOperatorMap[what] then
-            return self:Type(self.PostfixOperatorMap[what])
+            return self:Type(self.PostfixOperatorMap[what], node)
         end
 
         return self:ErrorPostfix(what, val, node)
@@ -156,7 +168,7 @@ do
     function meta:Call(node, ...)
         print(self, "(", ...)
 
-        return self:Type("any")
+        return self:Type("any", node)
     end
 
     oh.base_type = meta
@@ -166,10 +178,10 @@ do
     local meta = {}
     meta.type = "any"
 
-    function meta:BinaryOperator(what, val, node) return self:Type("any") end
-    function meta:PrefixOperator(what, node) return self:Type("any") end
-    function meta:PostfixOperator(what, node) return self:Type("any") end
-    function meta:Call(node, ...) return self:Type("any") end
+    function meta:BinaryOperator(what, val, node) return self:Type("any", node) end
+    function meta:PrefixOperator(what, node) return self:Type("any", node) end
+    function meta:PostfixOperator(what, node) return self:Type("any", node) end
+    function meta:Call(node, ...) return self:Type("any", node) end
 
     oh.RegisterType(meta)
 end
