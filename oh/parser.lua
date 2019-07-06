@@ -286,56 +286,29 @@ do
                 local a = table_concat(list)
                 return a
             end
+        end
 
-            local function expand(node, tbl)
+        do
+            local function expand(node, cb, stack)
                 if node.left then
-                    expand(node.left, tbl)
+                    expand(node.left, cb, stack)
                 end
-                
-                if node.kind == "binary_operator" then
-                    if node.left.kind ~= "binary_operator" then
-                        table_insert(tbl, {op = nil, node = node.left})
-                    end
-                    table_insert(tbl, {op = node, node = node.right})
-                elseif node.kind ~= "value" then
-                    table_insert(tbl, {op = node})
-                end
-                
+
                 if node.right then
-                    expand(node.right, tbl)
+                    expand(node.right, cb, stack)
                 end
-            end 
+
+                local value, env_lookup = cb(node, stack)
+                table_insert(stack, {
+                    value = value,
+                    env_lookup = env_lookup,
+                })
+            end
 
             function EXPRESSION:Evaluate(cb)
-                local tbl = {}
-                expand(self, tbl)
-                local res = nil
-                for _, val in ipairs(tbl) do
-                    res = cb(val.op, val.node, res)
-                end
-                return res
-            end
-
-            local function expand(node, tbl)
-                if node.left then
-                    expand(node.left, tbl)
-                end
-                if node.right then
-                    expand(node.right, tbl)
-                end
-
-                table_insert(tbl, node)
-
-            end
-
-            function EXPRESSION:Evaluate2(cb)
-                local tbl = {}
-                expand(self, tbl)
-                local res = nil
-                for _, val in ipairs(tbl) do
-                    res = cb(val)
-                end
-                return res
+                local stack = {}
+                expand(self, cb, stack)
+                return unpack(stack)
             end
         end
 
