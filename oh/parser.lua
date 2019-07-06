@@ -289,26 +289,49 @@ do
         end
 
         do
-            local function expand(node, cb, stack)
+            local meta = {}
+            meta.__index = meta
+
+            function meta:Push(val)
+                self.values[self.i] = val
+                self.i = self.i + 1
+            end
+
+            function meta:Pop()
+                self.i = self.i - 1
+                return self.values[self.i]
+            end
+
+            local function expand(node, cb, stack, env)
                 if node.left then
-                    expand(node.left, cb, stack)
+                    expand(node.left, cb, stack, env)
                 end
 
                 if node.right then
-                    expand(node.right, cb, stack)
+                    expand(node.right, cb, stack, env)
                 end
 
-                local value, env_lookup = cb(node, stack)
-                table_insert(stack, {
-                    value = value,
-                    env_lookup = env_lookup,
-                })
+                if node.kind == "value" then
+                    if node.value.type == "letter" then
+                        if node.upvalue_or_global then
+                            stack:Push(env[node.value.value])
+                        else
+                            stack:Push(node.value.value)
+                        end
+                    elseif node.value.type == "number" then
+                        stack:Push(tonumber(node.value.value))
+                    else
+                        error("unhandled value type " .. node.value.type)
+                    end
+                else
+                    cb(node, stack)
+                end
             end
 
-            function EXPRESSION:Evaluate(cb)
-                local stack = {}
-                expand(self, cb, stack)
-                return unpack(stack)
+            function EXPRESSION:Evaluate(cb, env)
+                local stack = setmetatable({values = {}, i = 1}, meta)
+                expand(self, cb, stack, env)
+                return unpack(stack.values)
             end
         end
 

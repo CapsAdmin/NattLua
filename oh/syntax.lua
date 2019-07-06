@@ -69,6 +69,8 @@ syntax.PrefixOperatorFunctionTranslate = {
 
 syntax.PostfixOperatorFunctionTranslate = {
     ["++"] = "(A+1)",
+    ["ÆØÅ"] = "(A)",
+    ["ÆØÅÆ"] = "(A)",
 }
 
 do
@@ -258,6 +260,42 @@ do -- grammar rules
     syntax.PostfixOperators = to_lookup(syntax.PostfixOperators)
     syntax.Keywords = to_lookup(syntax.Keywords)
     syntax.KeywordValues = to_lookup(syntax.KeywordValues)
+end
+
+do
+    ---
+    syntax.CompiledBinaryOperatorFunctions = {}
+
+    for op, v in pairs(syntax.BinaryOperators) do
+        if op ~= ":" then
+            local tr = syntax.BinaryOperatorFunctionTranslate[op]
+            if tr then
+                syntax.CompiledBinaryOperatorFunctions[op] = assert(loadstring("return function(a,b) return" .. tr[1] .. "a" .. tr[2] .. "b" .. tr[3] .. " end"))()
+            else
+                syntax.CompiledBinaryOperatorFunctions[op] = assert(loadstring("return function(a, b) return a " .. op .. " b end"))()
+            end
+        end
+    end
+
+    syntax.CompiledPrefixOperatorFunctions = {}
+    for op, v in pairs(syntax.PrefixOperators) do
+        local tr = syntax.PrefixOperatorFunctionTranslate[op]
+        if tr then
+            syntax.CompiledPrefixOperatorFunctions[op] = assert(loadstring("return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
+        else
+            syntax.CompiledPrefixOperatorFunctions[op] = assert(loadstring("return function(a) return " .. op .. " a end"))()
+        end
+    end
+
+    syntax.CompiledPostfixOperatorFunctions = {}
+    for op, v in pairs(syntax.PostfixOperators) do
+        local tr = syntax.PostfixOperatorFunctionTranslate[op]
+        if tr then
+            syntax.CompiledPostfixOperatorFunctions[op] = assert(loadstring("return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
+        else
+            syntax.CompiledPostfixOperatorFunctions[op] = assert(loadstring("return function(a) return a " .. op .. " end"))()
+        end
+    end
 end
 
 return syntax
