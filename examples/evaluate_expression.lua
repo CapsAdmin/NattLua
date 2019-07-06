@@ -12,10 +12,26 @@ local expect = func()
 local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code))))
 local exp = ast:FindStatementsByType("return")[1].expressions[1]
 
+local function env_lookup(key)
+    return env[key]
+end
+
 local self_arg
 
 local function eval(node, stack)
-    if node.kind == "binary_operator" then
+    if node.kind == "value" then
+        if node.value.type == "letter" then
+            if node.upvalue_or_global then
+                stack:Push(env_lookup(node.value.value))
+            else
+                stack:Push(node.value.value)
+            end
+        elseif node.value.type == "number" then
+            stack:Push(tonumber(node.value.value))
+        else
+            error("unhandled value type " .. node.value.type)
+        end
+    elseif node.kind == "binary_operator" then
         local r, l = stack:Pop(), stack:Pop()
         local op = node.value.value
 
@@ -70,4 +86,4 @@ local function eval(node, stack)
     end
 end
 
-print(exp:Evaluate(eval, env), " should be ", expect)
+print(exp:Evaluate(eval), " should be ", expect)

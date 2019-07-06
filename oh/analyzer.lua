@@ -55,9 +55,7 @@ function META:DeclareUpvalue(key, data)
     self.scope.upvalue_map[hash(key)] = upvalue
 
     self:RecordScopeEvent("local", "create", {
-        key = key,
-        token = token,
-        node = node,
+        key = upvalue.key,
         upvalue = upvalue,
     })
 
@@ -168,6 +166,7 @@ function META:DumpScope(scope, level)
             level = level - 1
         else
             local key = hash(v.key)
+
             if v.type == "global" then
                 if v.kind == "index" then
                     str = str .. ("\t"):rep(level+1) .. "? = _G." .. key .. "\n"
@@ -180,8 +179,8 @@ function META:DumpScope(scope, level)
                 if v.kind == "create" then
                     str = str .. ("\t"):rep(level+1) .. "local " .. key
 
-                    if v.upvalue.init then
-                        str = str .. " = " .. v.upvalue.init:Render()
+                    if v.upvalue.data then
+                        str = str .. " = " .. tostring(v.upvalue.data)
                     end
 
                     str = str  .. "\n"

@@ -1,6 +1,6 @@
 local util = require("oh.util")
 local oh = require("oh.oh")
-local path = "oh/analyzer.lua"
+local path = "examples/scimark.lua"
 local code = assert(io.open(path)):read("*all")
 
 local tk = oh.Tokenizer(code)
