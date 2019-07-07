@@ -1,4 +1,6 @@
-local oh = ...
+local syntax = require("oh.syntax")
+
+local oh = {}
 
 oh.types = {}
 
@@ -21,9 +23,10 @@ function oh.RegisterType(meta)
     oh.types[meta.type] = meta
 end
 
-function oh.Type(str, parent, node)
-    assert(node and node.kind)
-    return setmetatable({parent = parent, node = node}, oh.types[str])
+function oh.Type(val, node, parent, t)
+    local meta = oh.types[t or type(val)]
+    assert(meta, "unknown meta type " .. (t or type(val)))
+    return setmetatable({val = val, node = node, parent = parent}, meta)
 end
 
 local self_arg
@@ -108,11 +111,11 @@ do
     meta.PostfixOperatorMap = {}
 
     function meta:Type(what, node)
-        return oh.Type(what, self, node)
+        return oh.Type(self.val, node, self, what)
     end
 
     function meta:__tostring()
-        return self.type
+        return self.type .. "(" .. tostring(self.val) .. ")"
     end
 
     function meta:TraceBack()
@@ -124,6 +127,10 @@ do
             p = p.parent
         end
         return list
+    end
+
+    function meta:Truthy()
+        return self.val
     end
 
     function meta:ErrorBinary(what, val, node)
@@ -143,7 +150,18 @@ do
 
     function meta:BinaryOperator(what, val, node)
         if self.BinaryOperatorMap[what] then
-            return self:Type(self.BinaryOperatorMap[what], node)
+            local t = self:Type(self.BinaryOperatorMap[what], node)
+
+            if syntax.CompiledBinaryOperatorFunctions[what] then
+                local ok, val = pcall(syntax.CompiledBinaryOperatorFunctions[what], self.val, val.val)
+                if ok then
+                    t.val = val
+                else
+                    print(val, self, val.val)
+                end
+            end
+
+            return t
         end
 
         return self:ErrorBinary(what, val, node)
@@ -271,3 +289,6 @@ do
 
     oh.RegisterType(meta)
 end
+
+
+return oh
