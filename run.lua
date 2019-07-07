@@ -1,1 +1,1 @@
-return assert(require("oh.oh").loadstring(assert(io.open(arg[1], "r")):read("*all")))(unpack(arg))
+return assert(require("oh").loadstring(assert(io.open(arg[1], "r")):read("*all")))(unpack(arg))

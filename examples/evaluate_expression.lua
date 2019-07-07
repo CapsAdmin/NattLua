@@ -1,4 +1,5 @@
-local oh = require("oh.oh")
+local oh = require("oh")
+local syntax = require("oh.syntax")
 
 local env = {foo = {bar = {value = 10, baz = {1,2,3}, func = function(self, num) return {[5] = 5+num+self.value} end }}}
 local code = [[
@@ -40,8 +41,8 @@ local function eval(node, stack)
         elseif op == ":" then
             self_arg = l
             stack:Push(l[r])
-        elseif oh.syntax.CompiledBinaryOperatorFunctions[op] then
-            stack:Push(oh.syntax.CompiledBinaryOperatorFunctions[op](l,r))
+        elseif syntax.CompiledBinaryOperatorFunctions[op] then
+            stack:Push(syntax.CompiledBinaryOperatorFunctions[op](l,r))
         else
             error("unhandled binary operator " .. op)
         end
@@ -49,8 +50,8 @@ local function eval(node, stack)
         local r = stack:Pop()
         local op = node.value.value
 
-        if oh.syntax.CompiledPrefixOperatorFunctions[op] then
-            stack:Push(oh.syntax.CompiledPrefixOperatorFunctions[op](r))
+        if syntax.CompiledPrefixOperatorFunctions[op] then
+            stack:Push(syntax.CompiledPrefixOperatorFunctions[op](r))
         else
             error("unhandled prefix operator " .. op)
         end
@@ -58,8 +59,8 @@ local function eval(node, stack)
         local r = stack:Pop()
         local op = node.value.value
 
-        if oh.syntax.CompiledPrefixOperatorFunctions[op] then
-            stack:Push(oh.syntax.CompiledPrefixOperatorFunctions[op](r))
+        if syntax.CompiledPrefixOperatorFunctions[op] then
+            stack:Push(syntax.CompiledPrefixOperatorFunctions[op](r))
         else
             error("unhandled postfix operator " .. op)
         end

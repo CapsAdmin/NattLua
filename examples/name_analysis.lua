@@ -1,6 +1,7 @@
 -- split by casing as well? SetCleint GetClient TransferCleint
 
-local oh = require("oh.oh")
+local oh = require("oh")
+local syntax = require("oh.syntax")
 local util = require("oh.util")
 
 local function levenshtein(s, t, lim)
@@ -71,7 +72,7 @@ end
 function check_tokens(tokens, name, code)
     local score = {}
     for i, tk in ipairs(tokens) do
-        if tk.type == "letter" and not oh.syntax.IsKeyword(tk) then
+        if tk.type == "letter" and not syntax.IsKeyword(tk) then
             score[tk.value] = score[tk.value] or {}
             table.insert(score[tk.value], tk)
         end

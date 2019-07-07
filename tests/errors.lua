@@ -1,4 +1,4 @@
-local oh = require("oh.oh")
+local oh = require("oh")
 
 local function check(tbl)
     for i,v in ipairs(tbl) do
@@ -21,11 +21,11 @@ check({
     {"/clcret retprio inq tv5 howaw tv4aw exoaw", "unexpected symbol"},
     {"print( “Hello World” )", "expected.-%).-got.-World”"},
     {"foo = {bar = until}, faz = true}", "expected beginning of expression, got.-until"},
-    {"foo = {1, 2 3}", "expected.-,.-;.-}.-got 3"},
+    {"foo = {1, 2 3}", "expected.-,.-;.-}.-got.-3"},
     {"if foo = 5 then end", "expected.-then"},
     {"if foo == 5 end", "expected.-then.-got.-end"},
     {"if 0xWRONG then end", "malformed number.-hex notation"},
-    {"if true then", "expected.-elseif.-got end_of_file"},
+    {"if true then", "expected.-elseif.-got.-end_of_file"},
     {"a = [[wa", "unterminated multiline string.-expected.-%]%].-reached end of code"},
     {"a = [=[wa", "unterminated multiline string.-expected.-%]=%].-reached end of code"},
     {"a = [=wa", "unterminated multiline string.-expected.-%[=%[.-got.-%[=w"},

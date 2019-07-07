@@ -1,4 +1,4 @@
-local oh = require("oh.oh")
+local oh = require("oh")
 
 for i = 1, 100 do
     math.randomseed(os.clock())

@@ -266,7 +266,7 @@ do
     ---
     syntax.CompiledBinaryOperatorFunctions = {}
 
-    for op, v in pairs(syntax.BinaryOperators) do
+    for op in pairs(syntax.BinaryOperators) do
         if op ~= ":" then
             local tr = syntax.BinaryOperatorFunctionTranslate[op]
             if tr then
@@ -278,7 +278,7 @@ do
     end
 
     syntax.CompiledPrefixOperatorFunctions = {}
-    for op, v in pairs(syntax.PrefixOperators) do
+    for op in pairs(syntax.PrefixOperators) do
         local tr = syntax.PrefixOperatorFunctionTranslate[op]
         if tr then
             syntax.CompiledPrefixOperatorFunctions[op] = assert(loadstring("return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
@@ -288,7 +288,7 @@ do
     end
 
     syntax.CompiledPostfixOperatorFunctions = {}
-    for op, v in pairs(syntax.PostfixOperators) do
+    for op in pairs(syntax.PostfixOperators) do
         local tr = syntax.PostfixOperatorFunctionTranslate[op]
         if tr then
             syntax.CompiledPostfixOperatorFunctions[op] = assert(loadstring("return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()

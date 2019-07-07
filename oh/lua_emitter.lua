@@ -1,4 +1,4 @@
-local oh = ...
+local syntax = require("oh.syntax")
 local ipairs = ipairs
 local assert = assert
 local type = type
@@ -13,7 +13,7 @@ function META:Whitespace(str, force)
     if self.PreserveWhitespace and not force then return end
 
     if str == "?" then
-        if oh.syntax.IsLetter(self:GetPrevChar()) or oh.syntax.IsNumber(self:GetPrevChar()) then
+        if syntax.IsLetter(self:GetPrevChar()) or syntax.IsNumber(self:GetPrevChar()) then
             self:Emit(" ")
         end
     elseif str == "\t" then
@@ -115,7 +115,7 @@ function META:EmitExpression(node)
     if node.kind == "binary_operator" then
         self:EmitBinaryOperator(node)
     elseif node.kind == "function" then
-        self:EmitFunction(node, true)
+        self:EmitAnonymousFunction(node)
     elseif node.kind == "table" then
         self:EmitTable(node)
     elseif node.kind == "prefix_operator" then
@@ -161,7 +161,7 @@ function META:EmitCall(node)
 end
 
 function META:EmitBinaryOperator(node)
-    local func_chunks = oh.syntax.GetFunctionForBinaryOperator(node.value)
+    local func_chunks = syntax.GetFunctionForBinaryOperator(node.value)
     if func_chunks then
         self:Emit(func_chunks[1])
         if node.left then self:EmitExpression(node.left) end
@@ -183,23 +183,7 @@ function META:EmitBinaryOperator(node)
 end
 
 do
-    function META:EmitFunction(node, anon)
-        if anon then
-            self:EmitToken(node.tokens["function"])
-        elseif node.is_local then
-            self:Whitespace("\t")
-            self:EmitToken(node.tokens["local"])
-            self:Whitespace(" ")
-            self:EmitToken(node.tokens["function"])
-            self:Whitespace(" ")
-            self:EmitIdentifier(node.name)
-        else
-            self:Whitespace("\t")
-            self:EmitToken(node.tokens["function"])
-            self:Whitespace(" ")
-            self:EmitExpression(node.expression)
-        end
-
+    local function emit_function_body(self, node)
         self:EmitToken(node.tokens["("])
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"])
@@ -209,6 +193,29 @@ do
 
         self:Whitespace("\t")
         self:EmitToken(node.tokens["end"])
+    end
+
+    function META:EmitAnonymousFunction(node)
+        self:EmitToken(node.tokens["function"])
+        emit_function_body(self, node)
+    end
+
+    function META:EmitLocalFunction(node)
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["local"])
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["function"])
+        self:Whitespace(" ")
+        self:EmitIdentifier(node.identifier)
+        emit_function_body(self, node)
+    end
+
+    function META:EmitFunction(node)
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["function"])
+        self:Whitespace(" ")
+        self:EmitExpression(node.expression)
+        emit_function_body(self, node)
     end
 end
 
@@ -251,7 +258,7 @@ function META:EmitTable(node)
 end
 
 function META:EmitPrefixOperator(node)
-    local func_chunks = oh.syntax.GetFunctionForPrefixOperator(node.value)
+    local func_chunks = syntax.GetFunctionForPrefixOperator(node.value)
 
     if self.TranslatePrefixOperator then
         func_chunks = self:TranslatePrefixOperator(node) or func_chunks
@@ -263,7 +270,7 @@ function META:EmitPrefixOperator(node)
         self:Emit(func_chunks[2])
         self.operator_transformed = true
     else
-        if oh.syntax.IsKeyword(node.value) then
+        if syntax.IsKeyword(node.value) then
             self:Whitespace("?")
             self:EmitToken(node.value)
             self:Whitespace("?")
@@ -276,14 +283,14 @@ function META:EmitPrefixOperator(node)
 end
 
 function META:EmitPostfixOperator(node)
-    local func_chunks = oh.syntax.GetFunctionForPostfixOperator(node.value)
+    local func_chunks = syntax.GetFunctionForPostfixOperator(node.value)
     if func_chunks then
         self:Emit(func_chunks[1])
         self:EmitExpression(node.left)
         self:Emit(func_chunks[2])
         self.operator_transformed = true
     else
-        if oh.syntax.IsKeyword(node.value) then
+        if syntax.IsKeyword(node.value) then
             self:EmitExpression(node.left)
             self:Whitespace("?")
             self:EmitToken(node.value)
@@ -416,6 +423,35 @@ function META:EmitSemicolonStatement(node)
     self:EmitToken(node.tokens[";"])
 end
 
+function META:EmitLocalAssignment(node)
+    self:Whitespace("\t")
+
+    self:EmitToken(node.tokens["local"])
+    self:Whitespace(" ")
+    self:EmitIdentifierList(node.left)
+
+    if node.tokens["="] then
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["="])
+        self:Whitespace(" ")
+        self:EmitExpressionList(node.right)
+    end
+end
+
+function META:EmitAssignment(node)
+    self:Whitespace("\t")
+
+    self:EmitExpressionList(node.left)
+
+    if node.tokens["="] then
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["="])
+        self:Whitespace(" ")
+        self:EmitExpressionList(node.right)
+    end
+end
+
+
 function META:EmitAssignment(node)
     self:Whitespace("\t")
 
@@ -424,13 +460,13 @@ function META:EmitAssignment(node)
         self:Whitespace(" ")
         self:EmitIdentifierList(node.identifiers)
     else
-        self:EmitExpressionList(node.expressions_left)
+        self:EmitExpressionList(node.left)
     end
     if node.tokens["="] then
         self:Whitespace(" ")
         self:EmitToken(node.tokens["="])
         self:Whitespace(" ")
-        self:EmitExpressionList(node.expressions_right or node.expressions)
+        self:EmitExpressionList(node.right)
     end
 end
 
@@ -455,10 +491,12 @@ function META:EmitStatement(node)
         self:EmitDoStatement(node)
     elseif node.kind == "function" then
         self:EmitFunction(node)
+    elseif node.kind == "local_function" then
+        self:EmitLocalFunction(node)
     elseif node.kind == "assignment" then
         self:EmitAssignment(node)
-    elseif node.kind == "function" then
-        self:Function(node)
+    elseif node.kind == "local_assignment" then
+        self:EmitLocalAssignment(node)
     elseif node.kind == "expression" then
         self:Whitespace("\t")
         self:EmitExpression(node.value)
@@ -518,7 +556,7 @@ function META:EmitIdentifierList(tbl, delimiter)
     end
 end
 
-function oh.LuaEmitter(config)
+return function(config)
     local self = setmetatable({}, META)
     if config then
         if config.preserve_whitespace ~= nil then

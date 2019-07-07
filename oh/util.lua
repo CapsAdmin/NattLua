@@ -19,15 +19,6 @@ function util.FetchCode(path, url)
     return code
 end
 
-function util.RemoveBOMHeader(str)
-    if str:sub(1, 2) == "\xFE\xFF" then
-        return str:sub(3)
-    elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-        return str:sub(4)
-    end
-    return str
-end
-
 do
 	local indent = 0
 	function util.TablePrint(tbl, blacklist)

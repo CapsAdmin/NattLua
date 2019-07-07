@@ -1,8 +1,8 @@
-local oh = require("oh.oh")
+local oh = require("oh")
 
 local code = [[
-    while true do 
-            dadokok {} 
+    while true do
+            dadokok {}
             asdaw
     end
 ]]

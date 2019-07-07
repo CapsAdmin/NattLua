@@ -34,7 +34,7 @@ function oh.TypeWalk(node, stack, handle_upvalue, ...)
                 if handle_upvalue then
                     stack:Push(handle_upvalue(node, ...))
                 else
-                    stack:Push(val or oh.Type("any", nil, node))
+                    stack:Push(oh.Type("any", nil, node))
                 end
             else
                 stack:Push(oh.Type("string", nil, node))

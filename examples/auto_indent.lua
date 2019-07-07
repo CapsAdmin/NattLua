@@ -1,4 +1,4 @@
-local oh = require("oh.oh")
+local oh = require("oh")
 
 local code = [[
     BlueTeam = game.Teams["BlueTeam"]:Clone()
@@ -123,5 +123,4 @@ local code = [[
     end))
 ]]
 
-local code = assert(oh.Transpile(code, "", {preserve_whitespace = false}))
-print(code)
+print(assert(oh.Transpile(code, "", {preserve_whitespace = false})))

@@ -2,7 +2,7 @@ local test = require("tests.test")
 
 do
     local function check(strings)
-        for i,v in ipairs(strings) do
+        for _, v in ipairs(strings) do
             if v == false then
                 break
             end

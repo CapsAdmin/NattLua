@@ -1,4 +1,4 @@
-local oh = require("oh.oh")
+local oh = require("oh")
 local util = require("oh.util")
 
 jit.opt.start(

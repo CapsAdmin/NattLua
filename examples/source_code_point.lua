@@ -1,4 +1,4 @@
-local oh = require("oh.oh")
+local print_util = require("oh.print_util")
 
 local code = [[
 for i = 1, #code do
@@ -40,4 +40,4 @@ local function example(code)
 end
 local start, stop = example(code)
 
-print(oh.FormatError(code, "format_error.lua", "unterminated multiline string", start, stop))
+print(print_util.FormatError(code, "format_error.lua", "unterminated multiline string", start, stop))

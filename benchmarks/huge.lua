@@ -2,7 +2,7 @@ if ravi then
     ravi.jit(true)
 end
 
-local oh = require("oh.oh")
+local oh = require("oh")
 local util = require("oh.util")
 
 --util.LogTraceAbort()

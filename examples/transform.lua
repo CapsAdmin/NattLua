@@ -1,8 +1,9 @@
-local oh = require("oh.oh")
+local oh = require("oh")
+local LuaEmitter = require("oh.lua_emitter")
 local code = io.open("oh/parser.lua"):read("*all")
 
 local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code)), nil,  code))
-local em = oh.LuaEmitter({preserve_whitespace = false})
+local em = LuaEmitter({preserve_whitespace = false})
 
 function em:OnEmitStatement()
     self:Emit(";")
@@ -14,12 +15,12 @@ local translate = {
     ["or"] = "||",
 
     ["local"] = "var",
-    
+
     --["for"] = "for (",
     ["do"] = "{",
     ["end"] = "}",
 
-    
+
     ["if"] = "if (",
     ["then"] = ") {",
     ["elseif"] = "} else if (",
@@ -32,7 +33,7 @@ function em:EmitForStatement(node)
     self:Whitespace(" ")
 
     self:Emit("(")
-    
+
     if node.fori then
         self:Emit("let ")
         self:EmitIdentifierList(node.identifiers)
@@ -86,12 +87,11 @@ function em:TranslateToken(token)
         :gsub("%*/", "* /"):gsub("/%*", "/ *")
         return "/*" .. content .. "*/"
     end
-    
+
     if token.type == "letter" and token.value:upper() ~= token.value then
         return token.value:sub(1, 1):lower() .. token.value:sub(2)
     end
 end
 
 local code = em:BuildCode(ast)
-print(loadstring(code))
-io.open("temp.lua", "w"):write(code)
+print(code)

@@ -1,4 +1,3 @@
-local oh = ...
 local ipairs = ipairs
 
 local META = {}
@@ -26,7 +25,7 @@ function META:PushScope(node, token)
 
     local scope = {
         children = {},
-        parent = self.scope,
+        parent = parent,
         upvalues = {},
         upvalue_map = {},
         events = {},
@@ -34,9 +33,9 @@ function META:PushScope(node, token)
         token = token,
     }
 
-    if self.scope then
+    if parent then
         self:RecordScopeEvent("scope", "create", {scope = scope})
-        table_insert(self.scope.children, self.scope)
+        table_insert(parent.children, scope)
     end
 
     self.scope = scope
@@ -221,24 +220,27 @@ function META:WalkScopes()
 end
 
 do
-    local function record_expressions(self, node, expressions, callback)
+    local walk_statement
+    local walk_expression
+
+    walk_expression = function(self, node, expressions)
         if expressions then
             for _, expression in ipairs(expressions) do
                 if expression.kind == "table" then
                     for _,v in ipairs(expression.children) do
                         if v.kind == "table_expression_value" then
-                            record_expressions(self, node, {v.key, v.value}, callback)
+                            walk_expression(self, node, {v.key, v.value})
                         else
-                            record_expressions(self, node, {v.value}, callback)
+                            walk_expression(self, node, {v.value})
                         end
                     end
                 elseif expression.kind == "postfix_call" then
-                    record_expressions(self, node, {expression.left}, callback)
-                    record_expressions(self, node, expression.expressions, callback)
+                    walk_expression(self, node, {expression.left})
+                    walk_expression(self, node, expression.expressions)
                 elseif expression.kind == "function" then
                     self:PushScope(expression)
                     for _, statement in ipairs(expression.statements) do
-                        statement:Walk(callback, self)
+                        statement:Walk(walk_statement, self)
                     end
                     self:PopScope()
                 else
@@ -251,7 +253,7 @@ do
     end
 
 
-    local function record_assignments(self, node, assignments, statement, callback)
+    walk_assignment = function(self, node, assignments, statement)
         if assignments then
             for _, assignment in ipairs(assignments) do
                 if node.is_local or (statement and node.kind == "function" ) then
@@ -273,31 +275,31 @@ do
                     end
 
                     if assignment[2].type == "expression" then
-                        record_expressions(self, node, {assignment[2]}, callback)
+                        walk_expression(self, node, {assignment[2]})
                     end
                 end
             end
         end
     end
 
-    local function callback(node, self, statements, expressions, start_token)
-        record_assignments(self, node, node:GetAssignments())
+    walk_statement = function(node, self, statements, expressions, start_token)
+        walk_assignment(self, node, node:GetAssignments())
 
         if node.kind ~= "repeat" then
-            record_expressions(self, node, expressions, callback)
+            walk_expression(self, node, expressions)
         end
 
         if statements then
             self:PushScope(node, start_token)
 
-            record_assignments(self, node, node:GetStatementAssignments(), true, callback)
+            walk_assignment(self, node, node:GetStatementAssignments(), true)
 
             for _, statement in ipairs(statements) do
-                statement:Walk(callback, self)
+                statement:Walk(walk_statement, self)
             end
 
             if node.kind == "repeat" then
-                record_expressions(self, node, expressions)
+                walk_expression(self, node, expressions)
             end
 
             self:PopScope()
@@ -305,11 +307,11 @@ do
     end
 
     function META:Walk(ast)
-        ast:Walk(callback, self)
+        ast:Walk(walk_statement, self)
     end
 end
 
-function oh.Analyzer()
+return function()
     local self = setmetatable({}, META)
     self.globals = {}
     return self

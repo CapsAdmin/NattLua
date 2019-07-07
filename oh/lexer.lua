@@ -1,5 +1,6 @@
-local oh = ...
-local util = require("oh.util")
+local syntax = require("oh.syntax")
+local print_util = require("oh.print_util")
+local Token = require("oh.token")
 
 local B = string.byte
 
@@ -14,8 +15,17 @@ end
 local META = {}
 META.__index = META
 
+local function remove_bom_header(str)
+    if str:sub(1, 2) == "\xFE\xFF" then
+        return str:sub(3)
+    elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+        return str:sub(4)
+    end
+    return str
+end
+
 function META:OnInitialize(str)
-    str = util.RemoveBOMHeader(str)
+    str = remove_bom_header(str)
     self.code = str
 
     if ffi then
@@ -143,25 +153,12 @@ end
 
 function META:NewToken(type, start, stop)
     local value = self:GetChars(start, stop)
-    if type == "letter" and oh.syntax.Keywords[value] then
+
+    if type == "letter" and syntax.Keywords[value] then
         type = "keyword"
     end
 
-    return {
-        type = type,
-        start = start,
-        stop = stop,
-        value = value,
-    }
-end
-
-function oh.NewToken(type, start, stop, value)
-    return {
-        type = type,
-        start = start,
-        stop = stop,
-        value = value,
-    }
+    return Token(type, start, stop, value)
 end
 
 local function ReadLiteralString(self, multiline_comment)
@@ -180,7 +177,7 @@ local function ReadLiteralString(self, multiline_comment)
 
     if not self:IsValue("[") then
         if multiline_comment then return false end
-        return nil, "expected " .. oh.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. oh.QuoteToken(self:GetChars(start, self.i))
+        return nil, "expected " .. print_util.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. print_util.QuoteToken(self:GetChars(start, self.i))
     end
 
     self:Advance(1)
@@ -192,7 +189,7 @@ local function ReadLiteralString(self, multiline_comment)
         return true
     end
 
-    return nil, "expected "..oh.QuoteToken(closing).." reached end of code"
+    return nil, "expected "..print_util.QuoteToken(closing).." reached end of code"
 end
 
 do -- whitespace
@@ -248,7 +245,7 @@ do -- whitespace
 
     do
         function META:IsSpace()
-            return oh.syntax.IsSpace(self:GetChar())
+            return syntax.IsSpace(self:GetChar())
         end
 
         if ffi then
@@ -264,7 +261,7 @@ do -- whitespace
             function META:ReadSpace()
                 for _ = self.i, self:GetLength() do
                     self:Advance(1)
-                    if not oh.syntax.IsSpace(self:GetChar()) then
+                    if not syntax.IsSpace(self:GetChar()) then
                         break
                     end
                 end
@@ -319,7 +316,7 @@ do -- other
 
         local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
-        META.IsInNumberAnnotation = generate_lookup_function(oh.syntax.NumberAnnotations, true)
+        META.IsInNumberAnnotation = generate_lookup_function(syntax.NumberAnnotations, true)
 
         function META:ReadNumberAnnotations(what)
             if what == "hex" then
@@ -347,13 +344,13 @@ do -- other
             self:Advance(1)
             if self:IsValue("+") or self:IsValue("-") then
                 self:Advance(1)
-                if not oh.syntax.IsNumber(self:GetChar()) then
+                if not syntax.IsNumber(self:GetChar()) then
                     self:Error("malformed " .. what .. " expected number, got " .. string.char(self:GetChar()), self.i - 2)
                     return false
                 end
             end
             for _ = self.i, self:GetLength() do
-                if not oh.syntax.IsNumber(self:GetChar()) then
+                if not syntax.IsNumber(self:GetChar()) then
                     break
                 end
                 self:Advance(1)
@@ -438,7 +435,7 @@ do -- other
                     break
                 end
 
-                if oh.syntax.IsNumber(self:GetChar()) then
+                if syntax.IsNumber(self:GetChar()) then
                     self:Advance(1)
                 --elseif self:IsSymbol() or self:IsSpace() then
                     --break
@@ -452,7 +449,7 @@ do -- other
         end
 
         function META:IsNumber()
-            return oh.syntax.IsNumber(self:GetChar()) or (self:IsValue(".") and oh.syntax.IsNumber(self:GetChar(1)))
+            return syntax.IsNumber(self:GetChar()) or (self:IsValue(".") and syntax.IsNumber(self:GetChar(1)))
         end
 
         function META:ReadNumber()
@@ -528,7 +525,7 @@ end
 
 do
     function META:IsLetter()
-        if oh.syntax.IsLetter(self:GetChar()) then
+        if syntax.IsLetter(self:GetChar()) then
             return true
         end
     end
@@ -539,7 +536,7 @@ do
         local chars = ""
 
         for i = 1, 255 do
-            if oh.syntax.IsDuringLetter(i) then
+            if syntax.IsDuringLetter(i) then
                 chars = chars .. string.char(i)
             end
         end
@@ -552,7 +549,7 @@ do
         function META:ReadLetter()
             for _ = self.i, self:GetLength() do
                 self:Advance(1)
-                if not oh.syntax.IsDuringLetter(self:GetChar()) then
+                if not syntax.IsDuringLetter(self:GetChar()) then
                     break
                 end
             end
@@ -564,10 +561,10 @@ end
 
 do
     function META:IsSymbol()
-        return oh.syntax.IsSymbol(self:GetChar())
+        return syntax.IsSymbol(self:GetChar())
     end
 
-    META.IsInSymbol = generate_lookup_function(oh.syntax.SymbolCharacters)
+    META.IsInSymbol = generate_lookup_function(syntax.SymbolCharacters)
 
     function META:ReadSymbol()
         if self:IsInSymbol() then
@@ -664,7 +661,7 @@ function META:GetTokens()
     return tokens
 end
 
-function oh.Tokenizer(code)
+return function(code)
     local self = setmetatable({}, META)
     self:OnInitialize(code)
     return self

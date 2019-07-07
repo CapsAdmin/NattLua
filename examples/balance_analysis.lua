@@ -1,4 +1,5 @@
-local oh = require("oh.oh")
+local oh = require("oh")
+local print_util = require("oh.print_util")
 
 do
     local rules = {
@@ -12,19 +13,23 @@ do
     local should_check = {}
 
     for _, b in ipairs(rules) do
+      do
         local temp = {}
         for _, key in ipairs(b.l) do
             should_check[key] = true
             temp[key] = true
         end
         b.l = temp
+      end
 
+      do
         local temp = {}
         for _, key in ipairs(b.r) do
             should_check[key] = true
             temp[key] = true
         end
         b.r = temp
+      end
     end
 
     local ipairs = ipairs
@@ -38,14 +43,14 @@ do
             env[b.name] = {}
         end
 
-        for i, tk in ipairs(tokens) do
+        for _, tk in ipairs(tokens) do
             if should_check[tk.value] then
                 for _, b in ipairs(rules) do
                     if b.l[tk.value] then
                         table_insert(env[b.name], tk)
                     elseif b.r[tk.value] then
                         if not env[b.name][1] then
-                            io.write(oh.FormatError(code, name, "could not find the opening " .. b.name, tk.start, tk.stop))
+                            io.write(print_util.FormatError(code, name, "could not find the opening " .. b.name, tk.start, tk.stop))
                         else
                             table_remove(env[b.name])
                         end
@@ -56,7 +61,7 @@ do
 
         for name, tokens in pairs(env) do
             for _, tk in ipairs(tokens) do
-                io.write(oh.FormatError(code, name, "could not the closing " .. name, tk.start, tk.stop))
+                io.write(print_util.FormatError(code, name, "could not the closing " .. name, tk.start, tk.stop))
             end
         end
     end
@@ -186,8 +191,7 @@ local code = [[
     end))
 ]]
 local name = "https://scriptinghelpers.org/questions/10176/expected-near-end-whats-that-mean"
-local util = require("oh.util")
-local tokens, err = oh.CodeToTokens(code)
+local tokens = assert(oh.CodeToTokens(code))
 
 local time = os.clock()
 check_tokens(tokens, name, code)

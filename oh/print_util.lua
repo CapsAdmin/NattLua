@@ -1,91 +1,5 @@
 local oh = {}
 
-oh.syntax = assert(loadfile("oh/syntax.lua"))(oh)
-assert(loadfile("oh/tokenizer.lua"))(oh)
-assert(loadfile("oh/parser.lua"))(oh)
-assert(loadfile("oh/analyzer.lua"))(oh)
-assert(loadfile("oh/types.lua"))(oh)
-assert(loadfile("oh/lua_emitter.lua"))(oh)
-
-local util = require("oh.util")
-
-function oh.ASTToCode(ast, config)
-    local self = oh.LuaEmitter(config)
-    return self:BuildCode(ast)
-end
-
-local function on_error(self, msg, start, stop)
-    self.errors = self.errors or {}
-    table.insert(self.errors, {msg = msg, start = start, stop = stop})
-end
-
-function oh.CodeToTokens(code, name)
-	name = name or "unknown"
-
-	local tokenizer = oh.Tokenizer(code)
-    tokenizer.OnError = on_error
-    local tokens = tokenizer:GetTokens()
-    if tokenizer.errors then
-        local str = ""
-        for _, err in ipairs(tokenizer.errors) do
-            str = str .. oh.FormatError(code, name, err.msg, err.start, err.stop) .. "\n"
-        end
-        return nil, str
-	end
-
-	return tokens, tokenizer
-end
-
-local function on_error(self, msg, start, stop)
-    self.errors = self.errors or {}
-	table.insert(self.errors, {msg = msg, start = start, stop = stop})
-	error(msg)
-end
-
-function oh.TokensToAST(tokens, name, code, config)
-	name = name or "unknown"
-
-	local parser = oh.Parser(config)
-    parser.OnError = on_error
-    local ok, ast = pcall(parser.BuildAST, parser, tokens)
-	if not ok then
-		if parser.errors then
-			local str = ""
-			for _, err in ipairs(parser.errors) do
-				if code then
-					str = str .. oh.FormatError(code, name, err.msg, err.start, err.stop) .. "\n"
-				else
-					str = str .. err.msg .. "\n"
-				end
-			end
-			return nil, str
-		else
-			return nil, ast
-		end
-	end
-
-	return ast, parser
-end
-
-function oh.Transpile(code, name, config)
-    name = name or "unknown"
-
-	local tokens, err = oh.CodeToTokens(code, name)
-	if not tokens then return nil, err end
-
-	local ast, err = oh.TokensToAST(tokens, name, code, config)
-	if not ast then return nil, err end
-	return oh.ASTToCode(ast, config)
-end
-
-function oh.loadstring(code, name, config)
-	local code, err = oh.Transpile(code, name, config)
-	if not code then return nil, err end
-
-    return loadstring(code, name)
-end
-
-
 function oh.QuoteToken(str)
 	return "❲" .. str .. "❳"
 end
@@ -102,29 +16,6 @@ function oh.QuoteTokens(var)
 		end
 	end
 	return str
-end
-
-local function count(tbl, what, stop)
-    local found = 0
-	--for i, v in ipairs(tbl) do
-	for i = 1, #tbl do
-		local v = tbl:sub(i, i)
-		if v == "\n" then
-			found = found + 1
-		end
-		if stop and i >= stop then
-			break
-		end
-	end
-    return found
-end
-
-local function sub(tbl, start, stop)
-	local out = {}
-	for i = start, stop do
-		table.insert(out, tbl[i])
-	end
-	return table.concat(out)
 end
 
 do
@@ -224,30 +115,22 @@ do
 		return first_line_pos + 1, #code, line-1
 	end
 
-	local function get_current_line(code, start, stop)
-		local line_start
-		local line_stop
-
-		for i = start, 1, -1 do
-			local char = code:sub(i, i)
-			if char == "\n" then
-				line_start = i
-				break
+	function oh.FormatMessage(msg, ...)
+		local args = {...}
+		msg = msg:gsub("$(%d)", function(num)
+			num = tonumber(num)
+			if type(args[num]) == "table" then
+				return oh.QuoteTokens(args[num])
 			end
-		end
+			return oh.QuoteToken(args[num] or "?")
+		end)
 
-		for i = stop, #code do
-			local char = code:sub(i, i)
-			if char == "\n" then
-				line_stop = i
-				break
-			end
-		end
-
-		return line_start + 1, line_stop-1
+		return msg
 	end
 
-	function oh.FormatError(code, path, msg, start, stop)
+	function oh.FormatError(code, path, msg, start, stop, ...)
+		msg = oh.FormatMessage(msg, ...)
+
 		local data = sub_pos_2_line_pos(code, start, stop)
 
 		if not data then
