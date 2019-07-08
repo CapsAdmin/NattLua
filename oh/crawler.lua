@@ -10,7 +10,6 @@ META.__index = META
 local table_insert = table.insert
 
 do
-
     function META:Hash(token)
         return hash(token)
     end
@@ -174,6 +173,16 @@ function META:OnEvent(what, ...)
             io.write(tostring(val))
         end
         io.write("\n")
+    elseif what == "set_global" then
+        io.write((" "):rep(t))
+        io.write(what, " - ")
+        local key, val = ...
+        io.write(self:Hash(key))
+        if val then
+            io.write(" = ")
+            io.write(tostring(val))
+        end
+        io.write("\n")
     elseif what == "enter_scope" then
         local node, extra_node = ...
         io.write((" "):rep(t))
@@ -279,14 +288,21 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "function" then
         --self:FireEvent("newindex", statement.expression, statement)
         local node = statement.expression
-        node.left.upvalue_or_global = node -- HACK
-        local val = T(statement, statement, nil, "function")
+
+         -- HACK
+        if node.left then
+            node.left.upvalue_or_global = node
+        else
+            node.upvalue_or_global = node
+        end
+
+        local val = self:CrawlExpression(statement:ToExpression("function"))
 
         self:Assign(node, val)
     elseif statement.kind == "local_function" then
 
         local key = statement.identifier.value
-        local val = self:CrawlExpression(statement:ToExpression("function"))--T(statement, statement, nil, "function")
+        local val = self:CrawlExpression(statement:ToExpression("function"))
         self:DeclareUpvalue(key, val)
 
     elseif statement.kind == "if" then
@@ -364,6 +380,12 @@ do
         if node.kind == "value" then
             if node.value.type == "letter" then
                 if node.upvalue_or_global then
+
+                    if self.hijack and self.hijack[node.value.value] then
+                        stack:Push(self.hijack[node.value.value])
+                        return
+                    end
+
                     stack:Push(self:GetValue(T(node.value.value, node)) or T(nil, node, nil, "any"))
                 else
                     stack:Push(T(node.value.value, node))
@@ -441,6 +463,24 @@ do
             stack:Push(r:BinaryOperator(".", index, node))
         elseif node.kind == "postfix_call" then
             local r = stack:Pop()
+
+            if type(r) == "function" then
+                local values = {}
+
+                if node.expressions then
+                    self.suppress_events = true
+                    for _, exp in ipairs(node.expressions) do
+                        local val = self:CrawlExpression(exp)
+                        table.insert(values, val)
+                    end
+                    self.suppress_events = false
+                end
+
+                r(unpack(values))
+
+                stack:Push(T(nil))
+                return
+            end
 
             if r.type == "any" then
                 stack:Push(r:Copy("any"))
