@@ -1,104 +1,42 @@
 local syntax = require("oh.syntax")
 
-local oh = {}
+local types = {}
 
-oh.types = {}
-
-function oh.RegisterType(meta)
-
-    for k,v in pairs(oh.base_type) do
-        meta[k] = meta[k] or v
-    end
-
-    for k,v in pairs(oh.base_type.BinaryOperatorMap) do
-        meta.BinaryOperatorMap[k] = meta.BinaryOperatorMap[k] or v
-    end
-
-    for k,v in pairs(oh.base_type.PrefixOperatorMap) do
-        meta.PrefixOperatorMap[k] = meta.PrefixOperatorMap[k] or v
-    end
-
-    meta.__index = meta
-
-    oh.types[meta.type] = meta
-end
-
-function oh.Type(val, node, parent, t)
-    local meta = oh.types[t or type(val)]
+function types.Type(val, node, parent, t)
+    local meta = types.types[t or type(val)]
     assert(meta, "unknown meta type " .. (t or type(val)))
     return setmetatable({val = val, node = node, parent = parent}, meta)
 end
 
-local self_arg
-function oh.TypeWalk(node, stack, handle_upvalue, ...)
-    if node.kind == "value" then
-        if node.value.type == "letter" then
-            if node.upvalue_or_global then
-                if handle_upvalue then
-                    stack:Push(handle_upvalue(node, ...))
-                else
-                    stack:Push(oh.Type("any", nil, node))
-                end
-            else
-                stack:Push(oh.Type("string", nil, node))
-            end
-        elseif node.value.type == "number" then
-            stack:Push(oh.Type("number", nil, node))
-        elseif node.value.type == "string" then
-            stack:Push(oh.Type("string", nil, node))
-        elseif node.value.value == "true" or node.value.value == "false" then
-            stack:Push(oh.Type("boolean", nil, node))
-        elseif node.value.value == "..." then
-            stack:Push(oh.Type("any", nil, node))
-        else
-            error("unhandled value type " .. node.value.type)
-        end
-    elseif handle_upvalue and (node.kind == "function" or node.kind == "table") then
-        stack:Push(handle_upvalue(node, ...))
-    elseif node.kind == "function" then
-        stack:Push(oh.Type("function", nil, node))
-    elseif node.kind == "table" then
-        stack:Push(oh.Type("table", nil, node))
-    elseif node.kind == "binary_operator" then
-        local r, l = stack:Pop(), stack:Pop()
-        local op = node.value.value
+do
+    local META = {}
+    META.__index = META
+    META.IsTable = true
 
-        stack:Push(r:BinaryOperator(op, l, node))
-    elseif node.kind == "prefix_operator" then
-        local r = stack:Pop()
-        local op = node.value.value
+    function META:__tostring()
+        return "{#" .. self.id .. "}"
+    end
 
-        stack:Push(r:PrefixOperator(op, node))
-    elseif node.kind == "postfix_operator" then
-        local r = stack:Pop()
-        local op = node.value.value
+    function META:SetValue(key, val)
+        self.tbl[types.Hash(key)] = val
+    end
 
-        stack:Push(r:PostfixOperator(op, node))
-    elseif node.kind == "postfix_expression_index" then
-        local r = stack:Pop()
-        local index = node.expression:Evaluate(oh.TypeWalk, handle_upvalue)
+    function META:GetValue(key, val)
+        return self.tbl[key]
+    end
 
-        stack:Push(r:BinaryOperator(".", index, node))
-    elseif node.kind == "postfix_call" then
-        local r = stack:Pop()
-        local args = {}
-        for i,v in ipairs(node.expressions) do
-            args[i] = v:Evaluate(oh.TypeWalk, handle_upvalue)
-        end
+    local id = 0
 
-        if self_arg then
-            stack:Push(r:Call(node, self_arg, unpack(args)))
-            self_arg = nil
-        else
-            stack:Push(r:Call(node, unpack(args)))
-        end
-    else
-        error("unhandled expression " .. node.kind)
+    function types.Table(node)
+        id = id + 1
+        return setmetatable({node = node, tbl = {}, id = id}, META)
     end
 end
 
 do
     local meta = {}
+
+    meta.IsType = true
 
     meta.BinaryOperatorMap = {
         ["=="] = "boolean",
@@ -111,11 +49,62 @@ do
     meta.PostfixOperatorMap = {}
 
     function meta:Type(what, node)
-        return oh.Type(self.val, node, self, what)
+        return types.Type(self.val, node, self, what)
+    end
+
+    function meta:Copy(t)
+        return types.Type(self.val, self.node, self.parent, t or self.type)
+    end
+
+    function meta:Max(t)
+        local copy = self:Copy()
+        copy.max = t.val
+        return copy
+    end
+
+    function meta:Combine(t)
+        local combined = self.combined or {}
+        local copy = self:Copy()
+        copy.combined = {}
+        for i,v in ipairs(combined) do
+            copy.combined[i] = v:Copy()
+        end
+        table.insert(copy.combined, t:Copy())
+        return copy
     end
 
     function meta:__tostring()
-        return self.type .. "(" .. tostring(self.val) .. ")"
+        local str
+
+        if self.type == "function" then
+            local lol = {}
+
+            for k,v in pairs(self.val) do
+                lol[k] = tostring(v)
+            end
+
+            str = self.type .. ": " .. table.concat(lol, ", ")
+        elseif self.max then
+            str = self.type .. "(" .. tostring(self.val) .. ".." .. tostring(self.max) .. ")"
+        elseif self.type == "any" or self.type == "nil" then
+            str =  self.type .. "(" .. self.node:Render() .. ")"
+        else
+            str = self.type .. "(" .. tostring(self.val) .. ")"
+        end
+
+        if self.combined then
+            local lol = {}
+
+            for k,v in pairs(self.combined) do
+                lol[k] = tostring(v)
+            end
+
+            table.insert(lol, 1, str)
+
+            str = "{ " .. table.concat(lol, " | ") .. " }"
+        end
+
+        return str
     end
 
     function meta:TraceBack()
@@ -130,7 +119,15 @@ do
     end
 
     function meta:Truthy()
-        return self.val
+        if self.type == "any" then
+            return true
+        end
+
+        if self.val == nil or self.val == false then
+            return false
+        end
+
+        return true
     end
 
     function meta:ErrorBinary(what, val, node)
@@ -153,11 +150,21 @@ do
             local t = self:Type(self.BinaryOperatorMap[what], node)
 
             if syntax.CompiledBinaryOperatorFunctions[what] then
-                local ok, val = pcall(syntax.CompiledBinaryOperatorFunctions[what], self.val, val.val)
-                if ok then
-                    t.val = val
+
+                if what == "==" and val.max then
+                    if self.val >= val.val and self.val <= val.max then
+                        t.val = true
+                    else
+                        t.val = false
+                    end
                 else
-                    print(val, self, val.val)
+                    local ok, val2 = pcall(syntax.CompiledBinaryOperatorFunctions[what], self.val, val.val)
+                    if ok then
+                        t.val = val2
+                    else
+                        return self:ErrorBinary(what, val, node)
+                        --print(val, self, val.val)
+                    end
                 end
             end
 
@@ -189,7 +196,28 @@ do
         return self:Type("any", node)
     end
 
-    oh.base_type = meta
+    types.types = {}
+
+    function types.RegisterType(meta)
+
+        for k,v in pairs(types.base_type) do
+            meta[k] = meta[k] or v
+        end
+
+        for k,v in pairs(types.base_type.BinaryOperatorMap) do
+            meta.BinaryOperatorMap[k] = meta.BinaryOperatorMap[k] or v
+        end
+
+        for k,v in pairs(types.base_type.PrefixOperatorMap) do
+            meta.PrefixOperatorMap[k] = meta.PrefixOperatorMap[k] or v
+        end
+
+        meta.__index = meta
+
+        types.types[meta.type] = meta
+    end
+
+    types.base_type = meta
 end
 
 do
@@ -201,7 +229,7 @@ do
     function meta:PostfixOperator(what, node) return self:Type("any", node) end
     function meta:Call(node, ...) return self:Type("any", node) end
 
-    oh.RegisterType(meta)
+    types.RegisterType(meta)
 end
 
 do
@@ -234,7 +262,7 @@ do
         [">="] = "boolean",
     }
 
-    oh.RegisterType(meta)
+    types.RegisterType(meta)
 end
 
 do
@@ -254,7 +282,7 @@ do
         ["#"] = "number",
     }
 
-    oh.RegisterType(meta)
+    types.RegisterType(meta)
 end
 
 
@@ -266,29 +294,54 @@ do
         ["#"] = "number",
     }
 
-    oh.RegisterType(meta)
+    function meta:Max(t)
+        self.max = t
+    end
+
+    types.RegisterType(meta)
 end
 
 do
     local meta = {}
     meta.type = "boolean"
 
-    meta.BinaryOperatorMap = {
-        ["=="] = "boolean",
-        ["~="] = "boolean",
-    }
+    types.RegisterType(meta)
+end
+
+do
+    local meta = {}
+    meta.type = "nil"
+
+    types.RegisterType(meta)
+end
 
 
+do
+    local meta = {}
+    meta.type = "..."
 
-    oh.RegisterType(meta)
+    types.RegisterType(meta)
 end
 
 do
     local meta = {}
     meta.type = "function"
 
-    oh.RegisterType(meta)
+    types.RegisterType(meta)
 end
 
+function types.Hash(t)
+    assert(type(t) == "table" and (t.IsType or t.type == "letter" or t.value == "..."), "expected a type or identifier got " .. tostring(t))
 
-return oh
+    if t.type == "letter" or t.value == "..." then
+        return t.value
+    end
+
+    if type(t.val) == "table" then
+        return t.val.value.value
+    end
+
+    return t.val
+end
+
+return types

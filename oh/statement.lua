@@ -143,6 +143,12 @@ function META:FindStatementsByType(what, out)
     return out
 end
 
+function META:ToExpression(kind)
+    setmetatable(self, Expression)
+    self.kind = kind
+    return self
+end
+
 return function(kind)
     local node = {}
     node.tokens = {}

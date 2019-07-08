@@ -239,12 +239,16 @@ do
     end
 end
 
-return function(kind)
-    local node = {}
-    node.tokens = {}
-    node.kind = kind
+setmetatable(META, {
+    __call = function(_, kind)
+        local node = {}
+        node.tokens = {}
+        node.kind = kind
 
-    setmetatable(node, META)
+        setmetatable(node, META)
 
-    return node
-end
+        return node
+    end
+})
+
+return META
