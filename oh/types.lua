@@ -331,6 +331,10 @@ do
 end
 
 function types.Hash(t)
+    if type(t) == "string" then
+        return t
+    end
+
     assert(type(t) == "table" and (t.IsType or t.type == "letter" or t.value == "..."), "expected a type or identifier got " .. tostring(t))
 
     if t.type == "letter" or t.value == "..." then
@@ -343,5 +347,6 @@ function types.Hash(t)
 
     return t.val
 end
+
 
 return types

@@ -68,7 +68,13 @@ do
         return upvalue
     end
 
+    function META:DeclareGlobal(key, data)
+        self.env[self:Hash(key)] = data
+    end
+
     function META:GetUpvalue(key)
+        if not self.scope then return end
+
         local key_hash = self:Hash(key)
 
         if self.scope.upvalue_map[key_hash] then
@@ -111,11 +117,16 @@ do
     end
 
     function META:NewIndex(obj, key, val)
+        assert(obj)
+        assert(key)
+        assert(val)
         local key = self:CrawlExpression(key)
         local obj = self:CrawlExpression(obj)
 
         if obj.type ~= "any" then
-            obj.val:SetValue(key, val)
+            if type(obj.val) == "table" and obj.val.SetValue then
+                obj.val:SetValue(key, val)
+            end
             self:FireEvent("newindex", obj, key, val)
         end
     end
@@ -125,6 +136,8 @@ do
             if not self:MutateUpvalue(node.value, val) then
                 self:SetGlobal(node.value, val)
             end
+        elseif node.kind == "postfix_expression_index" then
+            self:NewIndex(node.left, node.expression, val)
         else
             self:NewIndex(node.left, node.right, val)
         end
@@ -366,7 +379,7 @@ function META:CrawlStatement(statement, ...)
             self:CrawlStatements(statement.statements, ...)
             self:PopScope()
         end
-    elseif statement.kind ~= "end_of_file" then
+    elseif statement.kind ~= "end_of_file" and statement.kind ~= "semicolon" then
         error("unhandled statement " .. tostring(statement))
     end
 end
@@ -400,8 +413,10 @@ do
                 stack:Push(T(node.value.value, node))
             elseif node.value.value == "..." then
                 stack:Push(self:GetValue(T(node.value.value, node)) or T(nil, node, nil, "..."))
+            elseif node.value.value == "nil" then
+                stack:Push(T(node.value.value, node))
             else
-                error("unhandled value type " .. node.value.type)
+                error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
         elseif node.kind == "function" then
             local ret = {}
@@ -543,5 +558,5 @@ do
 end
 
 return function()
-    return setmetatable({}, META)
+    return setmetatable({env = {}}, META)
 end
