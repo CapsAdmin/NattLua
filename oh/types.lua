@@ -2,357 +2,445 @@ local syntax = require("oh.syntax")
 
 local types = {}
 
-function types.Type(val, node, parent, t)
-    local meta = types.types[t or type(val)]
-    assert(meta, "unknown meta type " .. (t or type(val)))
-    return setmetatable({val = val, node = node, parent = parent}, meta)
+local META = {}
+META.__index = META
+
+function META.__add(a, b)
+    return types.Fuse(a, b)
+end
+
+function META:AttachNode(node)
+    self.node = node
+    return self
+end
+
+function META:GetNode()
+    return self.node
+end
+
+function META:get()
+    self:Error("undefined get")
+
+    return types.Type("any"):AttachNode(self:GetNode())
+end
+
+function META:set(key, val)
+    self:Error("undefined set")
+end
+
+function META:__tostring()
+    if self.interface.tostring then
+        return self.interface.tostring(self)
+    end
+
+    if self.value ~= nil then
+        return self.name .. "(" .. tostring(self.value) .. ")"
+    end
+    return self.name
+end
+
+function META:GetTypes()
+    return {self.name}
+end
+
+function META:IsType(what)
+    if type(what) == "table" then
+        for i,v in ipairs(what:GetTypes()) do
+            if self:IsType(v) then
+                return true
+            end
+        end
+    end
+    return self.interface.type_map[what]
+end
+
+function META:IsCompatible(type)
+    return self:IsType(type) and type:IsType(self)
+end
+
+function META:IsTruthy()
+    if type(self.interface.truthy) == "table" then
+        if self.value == nil then
+            return self.interface.truthy._nil
+        end
+        return self.interface.truthy[self.value]
+    end
+
+    return self.interface.truthy
+end
+
+function META:BinaryOperator(op, b)
+    local a = self
+    if self.interface.binary[op] then
+        local arg, ret
+
+        if type(self.interface.binary[op]) == "table" then
+            arg, ret = self.interface.binary[op].arg, self.interface.binary[op].ret
+        else
+            arg = self.interface.binary[op]
+            ret = arg
+        end
+
+        self:Expect(b, arg)
+
+        if syntax.CompiledBinaryOperatorFunctions[op] and a.value ~= nil and b.value ~= nil then
+            return types.Type(ret, syntax.CompiledBinaryOperatorFunctions[op](a.value, b.value))
+        end
+
+        return types.Type(ret)
+    end
+
+    self:Error("invalid binary operation " .. op)
+
+    return types.Type("any"):AttachNode(self:GetNode())
+end
+
+function META:PrefixOperator(op)
+    if self.interface.prefix[op] then
+        local ret = self.interface.prefix[op]
+
+        if syntax.CompiledPrefixOperatorFunctions[op] and self.value ~= nil then
+            return types.Type(ret, syntax.CompiledPrefixOperatorFunctions[op](self.value))
+        end
+
+        return types.Type(ret)
+    end
+
+    self:Error("invalid prefix operation " .. op)
+
+    return types.Type("any"):AttachNode(self:GetNode())
+end
+
+function META:PostfixOperator(op)
+    if self.interface.postfix[op] then
+        local ret = self.interface.postfix[op]
+
+        if syntax.CompiledPostfixOperatorFunctions[op] and self.value ~= nil then
+            return types.Type(ret, syntax.CompiledPostfixOperatorFunctions[op](self.value))
+        end
+
+        return types.Type(ret)
+    end
+
+    self:Error("invalid postfix operation " .. op)
+
+    return types.Type("any"):AttachNode(self:GetNode())
+end
+
+function META:Expect(type, expect)
+    if not type:IsType(expect) then
+        self:Error("expected " .. expect .. " got " .. type.name)
+    end
+end
+
+function META:Error(msg)
+    print(tostring(self) .. ": " .. msg)
+end
+
+local registered = {}
+
+function types.Register(name, interface)
+
+    interface.type_map = {
+        [name] = true,
+    }
+
+    if interface.inherits then
+
+        interface.type_map[interface.inherits] = true
+
+        local function merge(a, b)
+            for k,v in pairs(b) do
+                if type(v) == "table" and type(a[k]) == "table" then
+                    merge(a[k], v)
+                else
+                    a[k] = v
+                end
+            end
+
+            return a
+        end
+
+        local base = assert(registered[interface.inherits], "base type " .. interface.inherits .. " does not exist")
+
+        interface = merge(interface, base.interface)
+    end
+
+    registered[name] = {
+        interface = interface,
+        new = function(...)
+            local self = setmetatable({interface = interface}, META)
+
+            if interface.init then
+                for k,v in pairs(interface.init(self, ...)) do
+                    self[k] = v
+                end
+
+                self.get = interface.get
+                self.set = interface.set
+            else
+                self.value = ...
+            end
+
+            self.name = name
+
+            return self
+        end,
+    }
+
+    return registered[name].new
+end
+
+function types.Type(name, ...)
+    assert(registered[name], "type " .. name .. " does not exist")
+    return registered[name].new(...)
 end
 
 do
     local META = {}
     META.__index = META
-    META.IsTable = true
+
+    local function invoke(self, name, ...)
+        for _, type in ipairs(self.types) do
+            local ret = type[name](type, ...)
+            if ret ~= nil then
+                return ret
+            end
+        end
+    end
 
     function META:__tostring()
-        return "{#" .. self.id .. "}"
+        local str = {}
+
+        for i, type in ipairs(self.types) do
+            str[i] = tostring(type)
+        end
+
+        return table.concat(str, " | ")
     end
 
-    function META:SetValue(key, val)
-        self.tbl[types.Hash(key)] = val
+    function META:IsTruthy()
+        return invoke(self, "IsTruthy")
     end
 
-    function META:GetValue(key, val)
-        return self.tbl[key]
+    function META:IsType(...)
+        return invoke(self, "IsTruthy", ...)
     end
 
-    local id = 0
+    function META:GetTypes()
+        local types = {}
+        for i, type in ipairs(self.types) do
+            types[i] = type.name
+        end
+        return types
+    end
 
-    function types.Table(node)
-        id = id + 1
-        return setmetatable({node = node, tbl = {}, id = id}, META)
+    function META:BinaryOperator(...)
+        return invoke(self, "BinaryOperator", ...)
+    end
+
+    function META:PrefixOperator(...)
+        return invoke(self, "PrefixOperator", ...)
+    end
+
+    function META:PostfixOperator(...)
+        return invoke(self, "PostfixOperator", ...)
+    end
+
+    function types.Fuse(...)
+        return setmetatable({types = {...}}, META)
     end
 end
 
-do
-    local meta = {}
+types.Register("any", {
+    truthy = true,
+})
 
-    meta.IsType = true
+types.Register("base", {
+    binary = {
+        ["=="] = {arg = "base", ret = "boolean"},
+        ["~="] = {arg = "base", ret = "boolean"},
+    },
+})
 
-    meta.BinaryOperatorMap = {
-        ["=="] = "boolean",
-        ["~="] = "boolean",
-        ["or"] = "any",
-    }
-    meta.PrefixOperatorMap = {
-        ["not"] = "boolean",
-    }
-    meta.PostfixOperatorMap = {}
-
-    function meta:Type(what, node)
-        return types.Type(self.val, node, self, what)
-    end
-
-
-    function meta:Copy(t)
-        return types.Type(self.val, self.node, self.parent, t or self.type)
-    end
-
-    function meta:Max(t)
-        local copy = self:Copy()
-        copy.max = t.val
-        return copy
-    end
-
-    function meta:Combine(t)
-        local combined = self.combined or {}
-        local copy = self:Copy()
-        copy.combined = {}
-        for i,v in ipairs(combined) do
-            copy.combined[i] = v:Copy()
-        end
-        table.insert(copy.combined, t:Copy())
-        return copy
-    end
-
-    function meta:__tostring()
-        local str
-
-        if self.type == "function" then
-            local lol = {}
-
-            for k,v in pairs(self.val) do
-                lol[k] = tostring(v)
-            end
-
-            str = self.type .. ": " .. table.concat(lol, ", ")
-        elseif self.max then
-            str = self.type .. "(" .. tostring(self.val) .. ".." .. tostring(self.max) .. ")"
-        elseif self.type == "any" or self.type == "nil" then
-            str =  self.type .. "(" .. self.node:Render() .. ")"
-        else
-            str = self.type .. "(" .. tostring(self.val) .. ")"
-        end
-
-        if self.combined then
-            local lol = {}
-
-            for k,v in pairs(self.combined) do
-                lol[k] = tostring(v)
-            end
-
-            table.insert(lol, 1, str)
-
-            str = "{ " .. table.concat(lol, " | ") .. " }"
-        end
-
-        return str
-    end
-
-    function meta:TraceBack()
-        local list = {}
-        local p = self
-        for i = 1, math.huge do
-            if not p then break end
-            list[i] = p
-            p = p.parent
-        end
-        return list
-    end
-
-    function meta:Truthy()
-
-        if types.always_truthy then
-            return true
-        end 
-
-        if self.type == "any" then
-            return true
-        end
-
-        if self.val == nil or self.val == false then
-            return false
-        end
-
-        return true
-    end
-
-    function meta:ErrorBinary(what, val, node)
-        print(tostring(self) .. " " .. what .. " " .. tostring(val) .. " is an illegal operation")
-        return self:Type("any", node)
-    end
-
-    function meta:ErrorPrefix(what, node)
-        print(tostring(self) .. " " .. what .. " is an illegal operation")
-        return self:Type("any", node)
-    end
-
-    function meta:ErrorPostfix(what, node)
-        print(what .. " " .. tostring(self) .. " is an illegal operation")
-        return self:Type("any", node)
-    end
-
-    function meta:BinaryOperator(what, val, node)
-        if self.BinaryOperatorMap[what] then
-            local t = self:Type(self.BinaryOperatorMap[what], node)
-
-            if syntax.CompiledBinaryOperatorFunctions[what] then
-
-                if what == "==" and val.max then
-                    if self.val >= val.val and self.val <= val.max then
-                        t.val = true
-                    else
-                        t.val = false
-                    end
-                else
-                    local ok, val2 = pcall(syntax.CompiledBinaryOperatorFunctions[what], self.val, val.val)
-                    if ok then
-                        t.val = val2
-                    else
-                        return self:ErrorBinary(what, val, node)
-                        --print(val, self, val.val)
-                    end
-                end
-            end
-
-            return t
-        end
-
-        return self:ErrorBinary(what, val, node)
-    end
-
-    function meta:PrefixOperator(what, node)
-        if self.PrefixOperatorMap[what] then
-            return self:Type(self.PrefixOperatorMap[what], node)
-        end
-
-        return self:ErrorPrefix(what, val, node)
-    end
-
-    function meta:PostfixOperator(what, node)
-        if self.PostfixOperatorMap[what] then
-            return self:Type(self.PostfixOperatorMap[what], node)
-        end
-
-        return self:ErrorPostfix(what, val, node)
-    end
-
-    function meta:Call(node, ...)
-        print(self, "(", ...)
-
-        return self:Type("any", node)
-    end
-
-    types.types = {}
-
-    function types.RegisterType(meta)
-
-        for k,v in pairs(types.base_type) do
-            meta[k] = meta[k] or v
-        end
-
-        for k,v in pairs(types.base_type.BinaryOperatorMap) do
-            meta.BinaryOperatorMap[k] = meta.BinaryOperatorMap[k] or v
-        end
-
-        for k,v in pairs(types.base_type.PrefixOperatorMap) do
-            meta.PrefixOperatorMap[k] = meta.PrefixOperatorMap[k] or v
-        end
-
-        meta.__index = meta
-
-        types.types[meta.type] = meta
-    end
-
-    types.base_type = meta
-end
-
-do
-    local meta = {}
-    meta.type = "any"
-
-    function meta:BinaryOperator(what, val, node) return self:Type("any", node) end
-    function meta:PrefixOperator(what, node) return self:Type("any", node) end
-    function meta:PostfixOperator(what, node) return self:Type("any", node) end
-    function meta:Call(node, ...) return self:Type("any", node) end
-
-    types.RegisterType(meta)
-end
-
-do
-    local meta = {}
-    meta.type = "number"
-
-    meta.PrefixOperator = {
-        ["-"] = "number",
-        ["~"] = "number",
-    }
-
-    meta.BinaryOperatorMap = {
-        ["+"] = "number",
-        ["-"] = "number",
-        ["*"] = "number",
-        ["/"] = "number",
-        ["^"] = "number",
-        ["%"] = "number",
-        ["//"] = "number",
-
-        ["&"] = "number",
-        ["|"] = "number",
-        ["~"] = "number",
-        [">>"] = "number",
-        ["<<"] = "number",
-
-        ["<"] = "boolean",
-        [">"] = "boolean",
-        ["<="] = "boolean",
-        [">="] = "boolean",
-    }
-
-    types.RegisterType(meta)
-end
-
-do
-    local meta = {}
-    meta.type = "string"
-
-    meta.BinaryOperatorMap = {
+types.Register("string", {
+    inherits = "base",
+    truthy = true,
+    binary = {
         [".."] = "string",
 
         ["<"] = "boolean",
         [">"] = "boolean",
         ["<="] = "boolean",
         [">="] = "boolean",
-    }
-
-    meta.PrefixOperatorMap = {
+    },
+    prefix = {
         ["#"] = "number",
-    }
+    },
+})
 
-    types.RegisterType(meta)
-end
-
-
-do
-    local meta = {}
-    meta.type = "table"
-
-    meta.PrefixOperatorMap = {
+types.Register("table", {
+    inherits = "base",
+    truthy = true,
+    prefix = {
         ["#"] = "number",
+    },
+    init = function(self, structure)
+        if structure then
+            for key, val in pairs(structure) do
+                if val[1] == "self" then
+                    structure[key] = self
+                end
+            end
+        end
+        return {structure = structure, value = {}}
+    end,
+    set = function(self, key, val)
+        if not self.structure then
+            local key = type(key) ~= "string" and key.value or key
+            self.value[key] = val
+        elseif type(key) == "string" or self.structure[key.value] then
+            local key = type(key) ~= "string" and key.value or key
+
+            if not self.structure[key] then
+                self:Error("index " .. tostring(key) .. " is not defined")
+            end
+
+            if not self.structure[key]:IsCompatible(val) then
+                self:Error("invalid index " .. tostring(key) .. " expected " .. tostring(self.structure[key]) .. " got " .. tostring(val))
+            end
+
+            self.value[key] = val
+        else
+            local found = nil
+            for v in pairs(self.structure) do
+                if key:IsCompatible(v) then
+                    found = key
+                    break
+                end
+            end
+
+            if not found then
+                self:Error("index " .. tostring(key) .. " is not defined")
+            end
+
+            if not found:IsCompatible(val) then
+                self:Error("invalid index " .. tostring(key) .. " expected " .. tostring(found) .. " got " .. tostring(val))
+            end
+
+            self.value[found] = val
+        end
+    end,
+    get = function(self, key, val)
+        if self.structure and not self.structure[key] then
+            self:Error("invalid index " .. tostring(key))
+        end
+
+        local key = type(key) ~= "string" and key.value or key
+
+        if self.value[key] == nil then
+            return types.Type("any"):AttachNode(self:GetNode())
+        end
+
+        return self.value[key]
+    end,
+    tostring = function(self)
+        local str = {"table {"}
+        for k, v in pairs(self.value) do
+            local key = tostring(k)
+
+            if type(k) == "table" then
+                key = "[" .. key .. "]"
+            elseif v == self then
+                v = "*self"
+            end
+
+            table.insert(str, key .. " = " .. tostring(v) .. ",")
+        end
+        table.insert(str, "}")
+        return table.concat(str, " ")
+    end,
+})
+
+types.Register("boolean", {
+    inherits = "base",
+    truthy = {
+        [true] = true,
+        [false] = false,
+        _nil = true,
+    },
+})
+
+types.Register("nil", {
+    inherits = "base",
+    truthy = false,
+})
+
+types.Register("number", {
+    inherits = "base",
+    truthy = true,
+    binary = {
+        ["+"] = {arg = "number", ret = "number"},
+        ["-"] = "number",
+        ["*"] = "number",
+        ["/"] = "number",
+
+        ["<"] = "boolean",
+        [">"] = "boolean",
+        ["<="] = "boolean",
+        [">="] = "boolean",
     }
+})
 
-    function meta:Max(t)
-        self.max = t
+types.Register("...", {
+    inherits = "base",
+})
+
+types.Register("function", {
+    inherits = "base",
+    truthy = true,
+
+    init = function(self, ret, arguments)
+        return {ret = ret or types.Type("any"), arguments = arguments or {}}
+    end,
+
+    tostring = function(self)
+        local str = {}
+
+        for i, v in ipairs(self.arguments) do
+            str[i] = tostring(v)
+        end
+
+        return self.name .. "(" .. table.concat(str, ", ") .. "): " .. tostring(self.ret)
+    end,
+})
+
+function types.MatchFunction(functions, arguments)
+    for _, func in ipairs(functions) do
+        local ok = false
+        for i, type in ipairs(arguments) do
+            if func.arguments[i] and func.arguments[i]:IsType(type) then
+                ok = true
+            else
+                ok = false
+                break
+            end
+        end
+        if ok then
+            return func
+        end
     end
-
-    types.RegisterType(meta)
 end
 
-do
-    local meta = {}
-    meta.type = "boolean"
-
-    types.RegisterType(meta)
-end
-
-do
-    local meta = {}
-    meta.type = "nil"
-
-    types.RegisterType(meta)
-end
-
-
-do
-    local meta = {}
-    meta.type = "..."
-
-    types.RegisterType(meta)
-end
-
-do
-    local meta = {}
-    meta.type = "function"
-
-    types.RegisterType(meta)
-end
-
-function types.Hash(t)
-    if type(t) == "string" then
-        return t
-    end
-
-    assert(type(t) == "table" and (t.IsType or t.type == "letter" or t.value == "..."), "expected a type or identifier got " .. tostring(t))
-
-    if t.type == "letter" or t.value == "..." then
-        return t.value
-    end
-
-    if type(t.val) == "table" then
-        return t.val.value.value
-    end
-
-    return t.val
-end
-
+setmetatable(types, {
+    __call = function(_, ...)
+        return types.Type(...)
+    end,
+    __index = function(_, key)
+        if registered[key] then
+            return registered[key].new
+        end
+    end,
+})
 
 return types

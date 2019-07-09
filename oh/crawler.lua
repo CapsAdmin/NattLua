@@ -1,8 +1,5 @@
 
 local types = require("oh.types")
-local T = types.Type
-local Table = types.Table
-local hash = types.Hash
 
 local META = {}
 META.__index = META
@@ -10,10 +7,67 @@ META.__index = META
 local table_insert = table.insert
 
 do
-    function META:Hash(token)
-        return hash(token)
+    function META:Hash(t)
+        if type(t) == "string" then
+            return t
+        end
+
+        assert(type(t.value.value) == "string")
+
+        return t.value.value
     end
-    
+
+    local function table_to_types(self, node, out)
+        for i,v in ipairs(node.children) do
+            if v.kind == "table_key_value" then
+                --out[types.Type("string", v.key.value)] = self:Type(v.value) -- HMMM
+                out[v.key.value] = self:Type(v.value)
+            elseif v.kind == "table_expression_value" then
+                out[self:Type(v.key)] = self:Type(v.value)
+            elseif v.kind == "table_index_value" then
+                out[v.i] = self:Type(v.value)
+            end
+        end
+    end
+
+    function META:Type(node, ...)
+        if type(node) == "string" then
+            local type, node = node, ...
+            return types.Type(type):AttachNode(node)
+        end
+
+        assert(node.type == "expression")
+
+        if node.kind == "value" then
+            local t = node.value.type
+            local v = node.value.value
+            if t == "number" then
+                return types.Type("number", tonumber(v)):AttachNode(node)
+            elseif t == "string" or t == "letter" then
+                return types.Type("string", v):AttachNode(node)
+            elseif v == "..." then
+                local t = types.Type("..."):AttachNode(node)
+                t.values = ... -- HACK
+                return t
+            else
+                error("unhanlded value type " .. t)
+            end
+            --local t = types.Type()
+        elseif node.kind == "table" then
+            local t = types.Type("table"):AttachNode(node)
+
+            table_to_types(self, node, t.value)
+
+            return t
+        elseif node.kind == "function" then
+            local t = types.Type("function"):AttachNode(node)
+
+                return t
+        else
+            error("unhanlded expresison kind " .. node.kind)
+        end
+    end
+
     --[[
         local a = b -- this works and shouldn't work
         local b = 2
@@ -21,7 +75,7 @@ do
         >> 2
 
         ability to create a temporary scope based on some other scope
-        
+
         maybe don't try and declare and collect functions if they aren't called
         collect function behavior only when called, and mark dead paths in function
 
@@ -38,7 +92,7 @@ do
             node = node,
             extra_node = extra_node,
         }
-        
+
         self.scope = scope
     end
 
@@ -145,24 +199,20 @@ do
     end
 
     function META:NewIndex(obj, key, val)
-        assert(obj)
-        assert(key)
-        assert(val)
-        local key = self:CrawlExpression(key)
-        local obj = self:CrawlExpression(obj)
+        local node = obj
 
-        if obj.type ~= "any" then
-            if type(obj.val) == "table" and obj.val.SetValue then
-                obj.val:SetValue(key, val)
-            end
-            self:FireEvent("newindex", obj, key, val)
-        end
+        local key = self:CrawlExpression(key)
+        local obj = self:CrawlExpression(obj) or self:Type("nil"):AttachNode(node)
+
+        obj:set(key, val)
+
+        self:FireEvent("newindex", obj, key, val)
     end
 
     function META:Assign(node, val)
         if node.kind == "value" then
-            if not self:MutateUpvalue(node.value, val) then
-                self:SetGlobal(node.value, val)
+            if not self:MutateUpvalue(node, val) then
+                self:SetGlobal(node, val)
             end
         elseif node.kind == "postfix_expression_index" then
             self:NewIndex(node.left, node.expression, val)
@@ -178,9 +228,9 @@ do
 
         for i, exp in ipairs(expressions) do
             for _, t in ipairs({self:CrawlExpression(exp)}) do
-                if t.type == "..." then
-                    if t.val then
-                        for _, t in ipairs(t.val) do
+                if t:IsType("...") then
+                    if t.values then
+                        for _, t in ipairs(t.values) do
                             table.insert(ret, t)
                         end
                     end
@@ -216,8 +266,8 @@ function META:CrawlStatement(statement, ...)
         local ret = self:UnpackExpressions(statement.right)
 
         for i, node in ipairs(statement.left) do
-            local key = node.value
-            local val = ret[i] or T(nil, node)
+            local key = node
+            local val = ret[i]
             self:DeclareUpvalue(key, val)
         end
     elseif statement.kind == "assignment" then
@@ -228,12 +278,12 @@ function META:CrawlStatement(statement, ...)
         end
     elseif statement.kind == "function" then
         self:Assign(
-            statement.expression, 
+            statement.expression,
             self:CrawlExpression(statement:ToExpression("function"))
         )
     elseif statement.kind == "local_function" then
         self:DeclareUpvalue(
-            statement.identifier.value, 
+            statement.identifier,
             self:CrawlExpression(statement:ToExpression("function"))
         )
     elseif statement.kind == "if" then
@@ -301,43 +351,31 @@ do
 
     evaluate_expression = function(node, stack, self)
         if node.kind == "value" then
-            if node.value.type == "letter" then
-                if node.upvalue_or_global then
-
-                    if self.hijack and self.hijack[node.value.value] then
-                        stack:Push(self.hijack[node.value.value])
-                        return
-                    end
-
-                    stack:Push(self:GetValue(T(node.value.value, node)) or T(nil, node, nil, "any"))
-                else
-                    stack:Push(T(node.value.value, node))
-                end
-            elseif node.value.type == "number" then
-                stack:Push(T(tonumber(node.value.value), node))
-            elseif node.value.value == "true" then
-                stack:Push(T(true, node))
-            elseif node.value.value == "false" then
-                stack:Push(T(false, node))
-            elseif node.value.type == "string" then
-                stack:Push(T(node.value.value, node))
-            elseif node.value.value == "..." then
-                stack:Push(self:GetValue(T(node.value.value, node)) or T(nil, node, nil, "..."))
-            elseif node.value.value == "nil" then
-                stack:Push(T(node.value.value, node))
+            if
+                (node.value.type == "letter" and node.upvalue_or_global) or
+                node.value.value == "..."
+            then
+                stack:Push(self:GetValue(node) or self:Type("nil", node))
+            elseif
+                node.value.type == "number" or
+                node.value.type == "string" or
+                node.value.type == "letter" or
+                node.value.value == "nil" or
+                node.value.value == "true" or
+                node.value.value == "false"
+            then
+                stack:Push(self:Type(node))
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
-        elseif node.kind == "function" then
-            stack:Push(T(node, node, nil, "function"))
-        elseif node.kind == "table" then
-            stack:Push(T(Table(node), node, nil, "table"))
+        elseif node.kind == "function" or node.kind == "table" then
+            stack:Push(self:Type(node))
         elseif node.kind == "binary_operator" then
             local r, l = stack:Pop(), stack:Pop()
             local op = node.value.value
 
-            if (op == "." or op == ":") and l.type == "table" then
-                stack:Push(l.val:GetValue(r.val))
+            if (op == "." or op == ":") and l:IsType("table") then
+                stack:Push(l:get(r))
                 return
             end
 
@@ -374,7 +412,7 @@ do
 
                 r(unpack(values))
 
-                stack:Push(T(nil))
+                stack:Push(self:Type("nil"))
                 return
             end
 
@@ -404,10 +442,10 @@ do
                                 for i = i, #node.expressions do
                                     table.insert(values, self:CrawlExpression(node.expressions[i]))
                                 end
-                                self:DeclareUpvalue(v.value, T(values, v, nil, "..."))
+                                self:DeclareUpvalue(v, self:Type(v, values))
                             end
                         else
-                            self:DeclareUpvalue(v.value, node.expressions[i] and self:CrawlExpression(node.expressions[i]) or nil)
+                            self:DeclareUpvalue(v, node.expressions[i] and self:CrawlExpression(node.expressions[i]) or nil)
                         end
                     end
 

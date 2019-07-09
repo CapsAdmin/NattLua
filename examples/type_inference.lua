@@ -164,8 +164,14 @@ end
 A, B, C, D = test(), 4
 
 local z,x,y,æ,ø,å = test(4,5,6)
-]]}
+local novalue
 
+]], [[
+local a = {b = {c = {}}}
+a.b.c = 1
+]], [[
+
+]]}
 
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
@@ -174,13 +180,13 @@ for _, code in ipairs(tests) do
     if code == false then return end
     --local path = "oh/parser.lua"
     --local code = assert(io.open(path)):read("*all")
-    
+
     local tk = Lexer(code)
     local ps = Parser()
-    
+
     local tokens = tk:GetTokens()
     local ast = ps:BuildAST(tokens)
-    
+
     local crawler = Crawler()
 
     local t = 0
@@ -200,7 +206,7 @@ for _, code in ipairs(tests) do
             io.write((" "):rep(t))
             io.write(what, " - ")
             local obj, key, val = ...
-            io.write(tostring(obj), "[", self:Hash(key), "] = ", tostring(val))
+            io.write(tostring(obj.name), "[", self:Hash(key:GetNode()), "] = ", tostring(val))
             io.write("\n")
         elseif what == "mutate_upvalue" then
             io.write((" "):rep(t))
