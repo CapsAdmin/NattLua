@@ -521,6 +521,10 @@ do
                     self:FireEvent("function_spec", r)
 
                     self.calling_function = nil
+                elseif r:IsType("function") and r.ret then
+                    for i,v in ipairs(r.ret) do
+                        stack:Push(v)
+                    end
                 else
                     stack:Push(types.Type("any"):AttachNode(node))
                 end

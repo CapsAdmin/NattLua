@@ -14,7 +14,6 @@ function META.__add(a, b)
 end
 
 function META:AttachNode(node)
-    assert(node)
     self.node = node
     return self
 end

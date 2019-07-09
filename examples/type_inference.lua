@@ -293,6 +293,7 @@ tests = {[[
     end
 ]]}
 
+
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 
@@ -414,6 +415,27 @@ for _, code in ipairs(tests) do
     function crawler.hijack.Expect(a,b)
         assert(tostring(a) == b.val:sub(2,-2))
     end
+
+    local T = require("oh.types").Type
+
+    local function add(lib, t)
+        local tbl = T("table")
+        tbl.value = t
+        crawler:DeclareGlobal(lib, tbl)
+    end
+
+    add("io", {lines = T("function", {T"string"}, {T"number" + T"nil" + T"string"})})
+    add("table", {
+        insert = T("function", {T"nil"}, {T"table"}),
+        getn = T("function", {T"number"}, {T"table"}),
+        })
+    add("math", {
+        random = T("function", {T"number"}, {T"number"}),
+    })
+    add("string", {
+        find = T("function", {T"number" + T"nil", T"number" + T"nil", T"string" + T"nil"}, {T"string", T"string"}),
+        sub = T("function", {T"string"}, {T"number", T"number" + T"nil"}),
+    })
 
     crawler:CrawlStatement(ast)
 end
