@@ -43,12 +43,18 @@ do
             local v = node.value.value
             if t == "number" then
                 return types.Type("number", tonumber(v)):AttachNode(node)
-            elseif t == "string" or t == "letter" then
+            elseif t == "string" then
+                return types.Type("string", v:sub(2, -2)):AttachNode(node)
+            elseif t == "letter" then
                 return types.Type("string", v):AttachNode(node)
             elseif v == "..." then
                 local t = types.Type("..."):AttachNode(node)
                 t.values = ... -- HACK
                 return t
+            elseif v == "true" then
+                return types.Type("boolean", true):AttachNode(node)
+            elseif v == "false" then
+                return types.Type("boolean", false):AttachNode(node)
             else
                 error("unhanlded value type " .. t)
             end
@@ -251,7 +257,9 @@ end
 
 function META:CrawlStatements(statements, ...)
     for _, val in ipairs(statements) do
-        self:CrawlStatement(val, ...)
+        if self:CrawlStatement(val, ...) == true then
+            return true
+        end
     end
 end
 
@@ -260,7 +268,9 @@ local evaluate_expression
 function META:CrawlStatement(statement, ...)
     if statement.kind == "root" then
         self:PushScope(statement)
-        self:CrawlStatements(statement.statements, ...)
+        if self:CrawlStatements(statement.statements, ...) == true then
+            return true
+        end
         self:PopScope()
     elseif statement.kind == "local_assignment" then
         local ret = self:UnpackExpressions(statement.right)
@@ -288,25 +298,34 @@ function META:CrawlStatement(statement, ...)
         )
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
-            if not statement.expressions[i] or self:CrawlExpression(statement.expressions[i]):Truthy() then
+            if not statement.expressions[i] or self:CrawlExpression(statement.expressions[i]):IsTruthy() then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                self:CrawlStatements(statements, ...)
+                if self:CrawlStatements(statements, ...) == true then
+                    self:PopScope()
+                    return true
+                end
                 self:PopScope()
             end
         end
     elseif statement.kind == "while" then
         if self:CrawlExpression(statement.expression):Truthy() then
             self:PushScope(statement)
-            self:CrawlStatements(statement.statements, ...)
+            if self:CrawlStatements(statement.statements, ...) == true then
+                return true
+            end
             self:PopScope()
         end
     elseif statement.kind == "do" then
         self:PushScope(statement)
-        self:CrawlStatements(statement.statements, ...)
+        if self:CrawlStatements(statement.statements, ...) == true then
+            return true
+        end
         self:PopScope()
     elseif statement.kind == "repeat" then
         self:PushScope(statement)
-        self:CrawlStatements(statement.statements, ...)
+        if self:CrawlStatements(statement.statements, ...) == true then
+            return true
+        end
         if self:CrawlExpression(statement.expression):Truthy() then
             self:FireEvent("break")
         end
@@ -317,29 +336,37 @@ function META:CrawlStatement(statement, ...)
         local evaluated = {}
         for i,v in ipairs(statement.expressions) do
             evaluated[i] = self:CrawlExpression(v)
+
+            if return_values then
+                table.insert(return_values, evaluated[i])
+            end
         end
+
         self:FireEvent("return", evaluated)
-        if return_values then
-            table.insert(return_values, evaluated)
-        end
+
+        return true
     elseif statement.kind == "break" then
         self:FireEvent("break")
+
+        return true
     elseif statement.kind == "expression" then
         self:FireEvent("call", statement.value, {self:CrawlExpression(statement.value)})
     elseif statement.kind == "for" then
         self:PushScope(statement)
         if statement.fori then
             local range = self:CrawlExpression(statement.expressions[1]):Max(self:CrawlExpression(statement.expressions[2]))
-            self:DeclareUpvalue(statement.identifiers[1].value, range)
+            self:DeclareUpvalue(statement.identifiers[1], range)
             if statement.expressions[3] then
                 self:CrawlExpression(statement.expressions[3])
             end
         else
             for i,v in ipairs(statement.identifiers) do
-                self:DeclareUpvalue(v.value, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
+                self:DeclareUpvalue(v, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
             end
         end
-        self:CrawlStatements(statement.statements, ...)
+        if self:CrawlStatements(statement.statements, ...) == true then
+            return true
+        end
         self:PopScope()
     elseif statement.kind ~= "end_of_file" and statement.kind ~= "semicolon" then
         error("unhandled statement " .. tostring(statement))
@@ -348,6 +375,22 @@ end
 
 do
     local syntax = require("oh.syntax")
+
+    local function merge_types(src, dst)
+        if src then
+            for i,v in ipairs(dst) do
+                if src[i] then
+                    src[i] = v + src[i]
+                else
+                    src[i] = dst[i]
+                end
+            end
+
+            return src
+        end
+
+        return dst
+    end
 
     evaluate_expression = function(node, stack, self)
         if node.kind == "value" then
@@ -375,8 +418,17 @@ do
             local op = node.value.value
 
             if (op == "." or op == ":") and l:IsType("table") then
+                if op == ":" then
+                    stack:Push(l)
+                end
                 stack:Push(l:get(r))
                 return
+            end
+
+
+            -- HACK
+            if op == ".." or op == "^" then
+                l,r = r,l
             end
 
             stack:Push(r:BinaryOperator(op, l, node))
@@ -417,13 +469,13 @@ do
             end
 
             if r.type == "any" then
-                stack:Push(r:Copy("any"))
+                stack:Push(types.Type("any"):AttachNode(node))
             else
                 local func_expr = r.node
 
                 if func_expr and type(func_expr) == "table" and func_expr.kind == "function" then
                     if self.calling_function == r then
-                        stack:Push(r:Copy("any"))
+                        stack:Push(types.Type("any"):AttachNode(node))
                         return
                     end
 
@@ -431,8 +483,12 @@ do
 
                     self:PushScope(node)
 
-                    if self_arg then
-                        self:DeclareUpvalue("self", self_arg)
+                    local arguments = {}
+
+                    if func_expr.self_call then
+                        local val = stack:Pop()
+                        table.insert(arguments, val)
+                        self:DeclareUpvalue("self", val)
                     end
 
                     for i, v in ipairs(func_expr.identifiers) do
@@ -445,7 +501,9 @@ do
                                 self:DeclareUpvalue(v, self:Type(v, values))
                             end
                         else
-                            self:DeclareUpvalue(v, node.expressions[i] and self:CrawlExpression(node.expressions[i]) or nil)
+                            local arg = node.expressions[i] and self:CrawlExpression(node.expressions[i]) or nil
+                            self:DeclareUpvalue(v, arg)
+                            table.insert(arguments, arg)
                         end
                     end
 
@@ -453,17 +511,18 @@ do
                     self:CrawlStatements(func_expr.statements, ret)
                     self:PopScope()
 
-                    if ret[1] then
-                        for _, values in ipairs(ret) do
-                            for _, v in ipairs(values) do
-                                stack:Push(v)
-                            end
-                        end
+                    for _, v in ipairs(ret) do
+                        stack:Push(v)
                     end
+
+                    r.ret = merge_types(r.ret, ret)
+                    r.arguments = merge_types(r.arguments, arguments)
+
+                    self:FireEvent("function_spec", r)
 
                     self.calling_function = nil
                 else
-                    stack:Push(r:Copy("any"))
+                    stack:Push(types.Type("any"):AttachNode(node))
                 end
             end
         else

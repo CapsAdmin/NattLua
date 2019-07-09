@@ -137,7 +137,9 @@ do
 
     function meta:Pop()
         self.i = self.i - 1
-        return self.values[self.i]
+        local val = self.values[self.i]
+        self.values[self.i] = nil
+        return val
     end
 
     local function expand(node, cb, stack, ...)

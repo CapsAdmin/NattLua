@@ -514,6 +514,8 @@ function META:EmitStatement(node)
         end
     elseif node.kind == "end_of_file" then
         self:EmitToken(node.tokens["end_of_file"])
+    elseif node.kind == "root" then
+        self:EmitStatements(node.statements)
     else
         error("unhandled value: " .. node.kind)
     end

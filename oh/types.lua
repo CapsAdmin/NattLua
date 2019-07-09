@@ -6,10 +6,15 @@ local META = {}
 META.__index = META
 
 function META.__add(a, b)
-    return types.Fuse(a, b)
+    if not a:IsType(b) then
+        return types.Fuse(a, b)
+    end
+
+    return a
 end
 
 function META:AttachNode(node)
+    assert(node)
     self.node = node
     return self
 end
@@ -58,6 +63,13 @@ function META:IsCompatible(type)
     return self:IsType(type) and type:IsType(self)
 end
 
+function META:Max(max)
+    local t = types.Type(self.name, self.value)
+    t:AttachNode(self:GetNode())
+    t.max = max
+    return t
+end
+
 function META:IsTruthy()
     if type(self.interface.truthy) == "table" then
         if self.value == nil then
@@ -71,7 +83,7 @@ end
 
 function META:BinaryOperator(op, b)
     local a = self
-    if self.interface.binary[op] then
+    if self.interface.binary and self.interface.binary[op] then
         local arg, ret
 
         if type(self.interface.binary[op]) == "table" then
@@ -83,11 +95,21 @@ function META:BinaryOperator(op, b)
 
         self:Expect(b, arg)
 
-        if syntax.CompiledBinaryOperatorFunctions[op] and a.value ~= nil and b.value ~= nil then
-            return types.Type(ret, syntax.CompiledBinaryOperatorFunctions[op](a.value, b.value))
+        if op == "==" and a:IsType("number") and b:IsType("number") and a.value and b.value then
+            if a.max then
+                return types.Type("boolean", b.value >= a.value and b.value <= a.max.value):AttachNode(self:GetNode())
+            end
+
+            if b.max then
+                return types.Type("boolean", a.value >= b.value and a.value <= b.max.value):AttachNode(self:GetNode())
+            end
         end
 
-        return types.Type(ret)
+        if syntax.CompiledBinaryOperatorFunctions[op] and a.value ~= nil and b.value ~= nil then
+            return types.Type(ret, syntax.CompiledBinaryOperatorFunctions[op](a.value, b.value)):AttachNode(self:GetNode())
+        end
+
+        return types.Type(ret):AttachNode(self:GetNode())
     end
 
     self:Error("invalid binary operation " .. op)
@@ -96,14 +118,14 @@ function META:BinaryOperator(op, b)
 end
 
 function META:PrefixOperator(op)
-    if self.interface.prefix[op] then
+    if self.interface.prefix and self.interface.prefix[op] then
         local ret = self.interface.prefix[op]
 
         if syntax.CompiledPrefixOperatorFunctions[op] and self.value ~= nil then
-            return types.Type(ret, syntax.CompiledPrefixOperatorFunctions[op](self.value))
+            return types.Type(ret, syntax.CompiledPrefixOperatorFunctions[op](self.value)):AttachNode(self:GetNode())
         end
 
-        return types.Type(ret)
+        return types.Type(ret):AttachNode(self:GetNode())
     end
 
     self:Error("invalid prefix operation " .. op)
@@ -112,14 +134,14 @@ function META:PrefixOperator(op)
 end
 
 function META:PostfixOperator(op)
-    if self.interface.postfix[op] then
+    if self.interface.postfix and self.interface.postfix[op] then
         local ret = self.interface.postfix[op]
 
         if syntax.CompiledPostfixOperatorFunctions[op] and self.value ~= nil then
-            return types.Type(ret, syntax.CompiledPostfixOperatorFunctions[op](self.value))
+            return types.Type(ret, syntax.CompiledPostfixOperatorFunctions[op](self.value)):AttachNode(self:GetNode())
         end
 
-        return types.Type(ret)
+        return types.Type(ret):AttachNode(self:GetNode())
     end
 
     self:Error("invalid postfix operation " .. op)
@@ -345,6 +367,9 @@ types.Register("table", {
         return self.value[key]
     end,
     tostring = function(self)
+        if self.during_tostring then return "*self" end
+
+        self.during_tostring = true
         local str = {"table {"}
         for k, v in pairs(self.value) do
             local key = tostring(k)
@@ -358,6 +383,8 @@ types.Register("table", {
             table.insert(str, key .. " = " .. tostring(v) .. ",")
         end
         table.insert(str, "}")
+
+        self.during_tostring = false
         return table.concat(str, " ")
     end,
 })
@@ -401,17 +428,27 @@ types.Register("function", {
     truthy = true,
 
     init = function(self, ret, arguments)
-        return {ret = ret or types.Type("any"), arguments = arguments or {}}
+        return {ret = ret, arguments = arguments}
     end,
 
     tostring = function(self)
-        local str = {}
+        local arg_str = {}
 
-        for i, v in ipairs(self.arguments) do
-            str[i] = tostring(v)
+        if self.arguments then
+            for i, v in ipairs(self.arguments) do
+                arg_str[i] = tostring(v)
+            end
         end
 
-        return self.name .. "(" .. table.concat(str, ", ") .. "): " .. tostring(self.ret)
+        local ret_str = {}
+
+        if self.ret then
+            for i, v in ipairs(self.ret) do
+                ret_str[i] = tostring(v)
+            end
+        end
+
+        return self.name .. "(" .. table.concat(arg_str, ", ") .. "): " .. table.concat(ret_str, ", ")
     end,
 })
 
@@ -419,7 +456,7 @@ function types.MatchFunction(functions, arguments)
     for _, func in ipairs(functions) do
         local ok = false
         for i, type in ipairs(arguments) do
-            if func.arguments[i] and func.arguments[i]:IsType(type) then
+            if func.arguments and func.arguments[i] and func.arguments[i]:IsType(type) then
                 ok = true
             else
                 ok = false

@@ -169,8 +169,128 @@ local novalue
 ]], [[
 local a = {b = {c = {}}}
 a.b.c = 1
-]], [[
+]],[[
+    local a = function(b)
+        if b then
+            return true
+        end
+        return 1,2,3
+    end
 
+    a()
+    a(true)
+
+]]}
+
+
+tests = {[[
+    function string(ok)
+        if ok then
+            return 2
+        else
+            return "hello"
+        end
+    end
+
+    string(true)
+    local ag = string()
+]]}
+
+tests = {[[
+    local foo = {lol = 3}
+    function foo:bar(a)
+        return a+self.lol
+    end
+
+    foo:bar(2)
+]]}
+
+tests = {[[
+    function prefix (w1, w2)
+        return w1 .. ' ' .. w2
+    end
+
+    prefix("hello", "world")
+]]}
+
+tests = {[[
+    local function test(max)
+        for i = 1, max do
+            if i == 20 then
+                return false
+            end
+
+            if i == 5 then
+                return true
+            end
+        end
+        return "lol"
+    end
+
+    test(20)
+    test(5)
+    test(1)
+]]}
+
+tests = {[[
+
+    -- Markov Chain Program in Lua
+
+    function allwords ()
+      local line = io.read()    -- current line
+      local pos = 1             -- current position in the line
+      return function ()        -- iterator function
+        while line do           -- repeat while there are lines
+          local s, e = string.find(line, "%w+", pos)
+          if s then      -- found a word?
+            pos = e + 1  -- update next position
+            return string.sub(line, s, e)   -- return the word
+          else
+            line = io.read()    -- word not found; try next line
+            pos = 1             -- restart from first position
+          end
+        end
+        return nil            -- no more lines: end of traversal
+      end
+    end
+
+    function prefix (w1, w2)
+      return w1 .. ' ' .. w2
+    end
+
+    local statetab
+
+    function insert (index, value)
+      if not statetab[index] then
+        statetab[index] = {n=0}
+      end
+      table.insert(statetab[index], value)
+    end
+
+    local N  = 2
+    local MAXGEN = 10000
+    local NOWORD = "\n"
+
+    -- build table
+    statetab = {}
+    local w1, w2 = NOWORD, NOWORD
+    for w in allwords() do
+      insert(prefix(w1, w2), w)
+      w1 = w2; w2 = w;
+    end
+    insert(prefix(w1, w2), NOWORD)
+
+    -- generate text
+    w1 = NOWORD; w2 = NOWORD     -- reinitialize
+    for i=1,MAXGEN do
+      local list = statetab[prefix(w1, w2)]
+      -- choose a random item from list
+      local r = math.random(table.getn(list))
+      local nextword = list[r]
+      if nextword == NOWORD then return end
+      io.write(nextword, " ")
+      w1 = w2; w2 = nextword
+    end
 ]]}
 
 local Lexer = require("oh.lexer")
@@ -257,18 +377,22 @@ for _, code in ipairs(tests) do
             io.write("\n")
         elseif what == "call" then
             io.write((" "):rep(t))
-            io.write(what, " - ")
+            --io.write(what, " - ")
             local exp, return_values = ...
-            io.write(exp:Render(), " = ")
             if return_values then
+                local str = {}
                 for i,v in ipairs(return_values) do
-                    io.write("(")
-                    for i,v in ipairs(v) do
-                        io.write(tostring(v), ", ")
-                    end
-                    io.write(") | ")
+                    str[i] = tostring(v)
                 end
+                io.write(table.concat(str, ", "))
             end
+            io.write(" = ", exp:Render())
+            io.write("\n")
+        elseif what == "function_spec" then
+            local func = ...
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            io.write(tostring(func))
             io.write("\n")
         elseif what == "return" then
             io.write((" "):rep(t))
