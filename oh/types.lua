@@ -52,6 +52,7 @@ do
         return types.Type(self.val, node, self, what)
     end
 
+
     function meta:Copy(t)
         return types.Type(self.val, self.node, self.parent, t or self.type)
     end
@@ -119,6 +120,11 @@ do
     end
 
     function meta:Truthy()
+
+        if types.always_truthy then
+            return true
+        end 
+
         if self.type == "any" then
             return true
         end

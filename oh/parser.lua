@@ -78,6 +78,7 @@ function META:ReadExpectValues(values, start, stop)
     if not self:GetToken() or not values[self:GetToken().value] then
         local tk = self:GetToken()
         if not tk then
+
             self:Error("expected $1: reached end of code", start, stop, values)
         end
         local array = {}
@@ -417,8 +418,21 @@ do  -- function
         local node = Statement("function")
         node.tokens["function"] = self:ReadExpectValue("function")
         node.expression = read_function_expression(self)
-        node.expression.upvalue_or_global = node
+
+        do -- hacky
+            if node.expression.left then
+                node.expression.left.upvalue_or_global = node
+            else
+                node.expression.upvalue_or_global = node
+            end
+            
+            if node.expression.value.value == ":" then
+                node.self_call = true
+            end
+        end
+
         self:ReadFunctionBody(node)
+
         return node
     end
 end

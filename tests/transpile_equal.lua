@@ -79,6 +79,7 @@ do
         "do end",
         "local function test() end",
         "function test() end",
+        "function test:foo() end",
         "goto test ::test::",
         "#!shebang wadawd\nfoo = bar",
         "local a,b,c = 1 + (2 + 3) + v()()",

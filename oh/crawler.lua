@@ -13,12 +13,40 @@ do
     function META:Hash(token)
         return hash(token)
     end
+    
+    --[[
+        local a = b -- this works and shouldn't work
+        local b = 2
+        print(a)
+        >> 2
 
-    function META:PushScope(node, extra_node, temporary)
+        ability to create a temporary scope based on some other scope
+        
+        maybe don't try and declare and collect functions if they aren't called
+        collect function behavior only when called, and mark dead paths in function
+
+        when a function is defined, it returns any and and takes any until it's actaully called, then it becomes refined
+    ]]
+
+    function META:CreateScope()
+        local scope = {
+            children = {},
+            parent = parent,
+            upvalues = {},
+            upvalue_map = {},
+
+            node = node,
+            extra_node = extra_node,
+        }
+        
+        self.scope = scope
+    end
+
+    function META:PushScope(node, extra_node)
         assert(type(node) == "table" and node.kind, "expected an associated ast node")
 
         self:FireEvent("enter_scope", node, extra_node)
-        self.env = self.env or {}
+
         local parent = self.scope
 
         local scope = {
@@ -31,7 +59,7 @@ do
             extra_node = extra_node,
         }
 
-        if parent and not temporary then
+        if parent then
             table_insert(parent.children, scope)
         end
 
@@ -142,110 +170,33 @@ do
             self:NewIndex(node.left, node.right, val)
         end
     end
-end
 
-local t = 0
+    function META:UnpackExpressions(expressions)
+        local ret = {}
+
+        if not expressions then return ret end
+
+        for i, exp in ipairs(expressions) do
+            for _, t in ipairs({self:CrawlExpression(exp)}) do
+                if t.type == "..." then
+                    if t.val then
+                        for _, t in ipairs(t.val) do
+                            table.insert(ret, t)
+                        end
+                    end
+                end
+                table.insert(ret, t)
+            end
+        end
+
+        return ret
+    end
+end
 
 function META:FireEvent(what, ...)
     if self.suppress_events then return end
 
     self:OnEvent(what, ...)
-end
-
-function META:OnEvent(what, ...)
-
-    if what == "create_global" then
-        io.write((" "):rep(t))
-        io.write(what, " - ")
-        local key, val = ...
-        io.write(key:Render())
-        if val then
-            io.write(" = ")
-            io.write(tostring(val))
-        end
-        io.write("\n")
-    elseif what == "newindex" then
-        io.write((" "):rep(t))
-        io.write(what, " - ")
-        local obj, key, val = ...
-        io.write(tostring(obj), "[", self:Hash(key), "] = ", tostring(val))
-        io.write("\n")
-    elseif what == "mutate_upvalue" then
-        io.write((" "):rep(t))
-        io.write(what, " - ")
-        local key, val = ...
-        io.write(self:Hash(key), " = ", tostring(val))
-        io.write("\n")
-    elseif what == "upvalue" then
-        io.write((" "):rep(t))
-        io.write(what, "  - ")
-        local key, val = ...
-        io.write(self:Hash(key))
-        if val then
-            io.write(" = ")
-            io.write(tostring(val))
-        end
-        io.write("\n")
-    elseif what == "set_global" then
-        io.write((" "):rep(t))
-        io.write(what, " - ")
-        local key, val = ...
-        io.write(self:Hash(key))
-        if val then
-            io.write(" = ")
-            io.write(tostring(val))
-        end
-        io.write("\n")
-    elseif what == "enter_scope" then
-        local node, extra_node = ...
-        io.write((" "):rep(t))
-        t = t + 1
-        if extra_node then
-            io.write(extra_node.value)
-        else
-            io.write(node.kind)
-        end
-        io.write(" { ")
-        io.write("\n")
-    elseif what == "leave_scope" then
-        local node, extra_node = ...
-        t = t - 1
-        io.write((" "):rep(t))
-        io.write("}")
-        --io.write(node.kind)
-        if extra_node then
-          --  io.write(tostring(extra_node))
-        end
-        io.write("\n")
-    elseif what == "call" then
-        io.write((" "):rep(t))
-        io.write(what, " - ")
-        local exp, return_values = ...
-        io.write(exp:Render(), " = ")
-        if return_values then
-            for i,v in ipairs(return_values) do
-                io.write("(")
-                for i,v in ipairs(v) do
-                    io.write(tostring(v), ", ")
-                end
-                io.write(") | ")
-            end
-        end
-        io.write("\n")
-    elseif what == "return" then
-        io.write((" "):rep(t))
-        io.write(what, "   - ")
-        local values = ...
-        if values then
-            for i,v in ipairs(values) do
-                io.write(tostring(v), ", ")
-            end
-        end
-        io.write("\n")
-    else
-        io.write((" "):rep(t))
-        print(what .. " - ", ...)
-    end
 end
 
 function META:CrawlStatements(statements, ...)
@@ -257,35 +208,12 @@ end
 local evaluate_expression
 
 function META:CrawlStatement(statement, ...)
-    local always_truthy = select(2, ...)
-    if self.statement_break then
-        --return
-    end
-
     if statement.kind == "root" then
         self:PushScope(statement)
         self:CrawlStatements(statement.statements, ...)
         self:PopScope()
     elseif statement.kind == "local_assignment" then
-        local last_ret
-
-        local ret = {}
-
-        if statement.right then
-            for i, node in ipairs(statement.right) do
-                local values = {self:CrawlExpression(statement.right[i])}
-                for i,v in ipairs(values) do
-                    if v.type == "..." then
-                        if v.val then
-                            for i,v in ipairs(v.val) do
-                                table.insert(ret, v)
-                            end
-                        end
-                    end
-                    table.insert(ret, v)
-                end
-            end
-        end
+        local ret = self:UnpackExpressions(statement.right)
 
         for i, node in ipairs(statement.left) do
             local key = node.value
@@ -293,41 +221,31 @@ function META:CrawlStatement(statement, ...)
             self:DeclareUpvalue(key, val)
         end
     elseif statement.kind == "assignment" then
-        for i, node in ipairs(statement.left) do
-            local val = statement.right and statement.right[i] and self:CrawlExpression(statement.right[i] or nil)
+        local ret = self:UnpackExpressions(statement.right)
 
-            self:Assign(node, val)
+        for i, node in ipairs(statement.left) do
+            self:Assign(node, ret[i])
         end
     elseif statement.kind == "function" then
-        --self:FireEvent("newindex", statement.expression, statement)
-        local node = statement.expression
-
-         -- HACK
-        if node.left then
-            node.left.upvalue_or_global = node
-        else
-            node.upvalue_or_global = node
-        end
-
-        local val = self:CrawlExpression(statement:ToExpression("function"))
-
-        self:Assign(node, val)
+        self:Assign(
+            statement.expression, 
+            self:CrawlExpression(statement:ToExpression("function"))
+        )
     elseif statement.kind == "local_function" then
-
-        local key = statement.identifier.value
-        local val = self:CrawlExpression(statement:ToExpression("function"))
-        self:DeclareUpvalue(key, val)
-
+        self:DeclareUpvalue(
+            statement.identifier.value, 
+            self:CrawlExpression(statement:ToExpression("function"))
+        )
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
-            if not statement.expressions[i] or self:CrawlExpression(statement.expressions[i]):Truthy() or always_truthy then
+            if not statement.expressions[i] or self:CrawlExpression(statement.expressions[i]):Truthy() then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
                 self:CrawlStatements(statements, ...)
                 self:PopScope()
             end
         end
     elseif statement.kind == "while" then
-        if self:CrawlExpression(statement.expression):Truthy() or always_truthy then
+        if self:CrawlExpression(statement.expression):Truthy() then
             self:PushScope(statement)
             self:CrawlStatements(statement.statements, ...)
             self:PopScope()
@@ -339,13 +257,12 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "repeat" then
         self:PushScope(statement)
         self:CrawlStatements(statement.statements, ...)
-        if self:CrawlExpression(statement.expression):Truthy() or always_truthy then
+        if self:CrawlExpression(statement.expression):Truthy() then
             self:FireEvent("break")
         end
         self:PopScope()
     elseif statement.kind == "return" then
         local return_values = ...
-        self.statement_break = true
 
         local evaluated = {}
         for i,v in ipairs(statement.expressions) do
@@ -356,29 +273,24 @@ function META:CrawlStatement(statement, ...)
             table.insert(return_values, evaluated)
         end
     elseif statement.kind == "break" then
-        self.statement_break = true
-
         self:FireEvent("break")
     elseif statement.kind == "expression" then
         self:FireEvent("call", statement.value, {self:CrawlExpression(statement.value)})
     elseif statement.kind == "for" then
+        self:PushScope(statement)
         if statement.fori then
-            self:PushScope(statement)
             local range = self:CrawlExpression(statement.expressions[1]):Max(self:CrawlExpression(statement.expressions[2]))
             self:DeclareUpvalue(statement.identifiers[1].value, range)
             if statement.expressions[3] then
                 self:CrawlExpression(statement.expressions[3])
             end
-            self:CrawlStatements(statement.statements, ...)
-            self:PopScope()
         else
-            self:PushScope(statement)
             for i,v in ipairs(statement.identifiers) do
                 self:DeclareUpvalue(v.value, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
             end
-            self:CrawlStatements(statement.statements, ...)
-            self:PopScope()
         end
+        self:CrawlStatements(statement.statements, ...)
+        self:PopScope()
     elseif statement.kind ~= "end_of_file" and statement.kind ~= "semicolon" then
         error("unhandled statement " .. tostring(statement))
     end
@@ -386,8 +298,6 @@ end
 
 do
     local syntax = require("oh.syntax")
-
-    local self_arg
 
     evaluate_expression = function(node, stack, self)
         if node.kind == "value" then
@@ -419,36 +329,7 @@ do
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
         elseif node.kind == "function" then
-            local ret = {}
-            self.suppress_events = true
-
-            self:PushScope(node, nil, true)
-                if self_arg then
-                    self:DeclareUpvalue("self", nil)
-                end
-
-                for i, v in ipairs(node.identifiers) do
-                    self:DeclareUpvalue(v.value)
-                end
-
-                local ret = {}
-                self:CrawlStatements(node.statements, ret, true)
-            self:PopScope()
-
-            local combined = {}
-            for i, tuple in ipairs(ret) do
-                for index, typ in ipairs(tuple) do
-                    if combined[index] then
-                        combined[index] = combined[index]:Combine(typ)
-                    end
-                    combined[index] = combined[index] or typ
-                end
-            end
-
-            self.suppress_events = false
-            node.return_statements = combined
-
-            stack:Push(T(combined, node, nil, "function"))
+            stack:Push(T(node, node, nil, "function"))
         elseif node.kind == "table" then
             stack:Push(T(Table(node), node, nil, "table"))
         elseif node.kind == "binary_operator" then
