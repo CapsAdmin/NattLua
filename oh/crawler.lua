@@ -23,7 +23,12 @@ do
                 --out[types.Type("string", v.key.value)] = self:Type(v.value) -- HMMM
                 out[v.key.value] = self:Type(v.value)
             elseif v.kind == "table_expression_value" then
-                out[self:Type(v.key)] = self:Type(v.value)
+                local t = self:Type(v.key)
+                if t:IsType("string") then
+                    out[t.value] = self:Type(v.value)
+                else
+                    out[t] = self:Type(v.value)
+                end
             elseif v.kind == "table_index_value" then
                 out[v.i] = self:Type(v.value)
             end
@@ -55,8 +60,10 @@ do
                 return types.Type("boolean", true):AttachNode(node)
             elseif v == "false" then
                 return types.Type("boolean", false):AttachNode(node)
+            elseif v == "nil" then
+                return types.Type("nil"):AttachNode(node)
             else
-                error("unhanlded value type " .. t)
+                error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
             end
             --local t = types.Type()
         elseif node.kind == "table" then
@@ -67,8 +74,8 @@ do
             return t
         elseif node.kind == "function" then
             local t = types.Type("function"):AttachNode(node)
-
-                return t
+            node.scope = self.scope
+            return t
         else
             error("unhanlded expresison kind " .. node.kind)
         end
@@ -124,6 +131,8 @@ do
         end
 
         self.scope = scope
+
+        return scope
     end
 
     function META:PopScope(discard)
@@ -298,17 +307,20 @@ function META:CrawlStatement(statement, ...)
         )
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
-            if not statement.expressions[i] or self:CrawlExpression(statement.expressions[i]):IsTruthy() then
+            local b = not statement.expressions[i] or self:CrawlExpression(statement.expressions[i])
+            if b == true or b:IsTruthy() then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
                 if self:CrawlStatements(statements, ...) == true then
                     self:PopScope()
-                    return true
+                    if type(b) == "table" and b.value == true then
+                        return true
+                    end
                 end
                 self:PopScope()
             end
         end
     elseif statement.kind == "while" then
-        if self:CrawlExpression(statement.expression):Truthy() then
+        if self:CrawlExpression(statement.expression):IsTruthy() then
             self:PushScope(statement)
             if self:CrawlStatements(statement.statements, ...) == true then
                 return true
@@ -364,7 +376,17 @@ function META:CrawlStatement(statement, ...)
                 --self:DeclareUpvalue(v, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
             --end
             local func = self:CrawlExpression(statement.expressions[1])
-            local args = {self:CallFunction(func, {statement.expressions[2] and self:CrawlExpression(statement.expressions[2])})}
+            local args
+            if type(func) == "function" then
+                args = func()
+                print(args, debug.getinfo(func).source)
+            else
+                args = func:IsType("function") and self:CallFunction(func, {statement.expressions[2] and self:CrawlExpression(statement.expressions[2])})
+            end
+
+            for i,v in ipairs(statement.identifiers) do
+                self:DeclareUpvalue(v, args and args[i])
+            end
         end
         if self:CrawlStatements(statement.statements, ...) == true then
             return true
@@ -427,7 +449,6 @@ do
                 return
             end
 
-
             -- HACK
             if op == ".." or op == "^" then
                 l,r = r,l
@@ -448,7 +469,7 @@ do
             local r = stack:Pop()
             local index = self:CrawlExpression(node.expression)
 
-            stack:Push(r:BinaryOperator(".", index, node))
+            stack:Push(r:get(index))
         elseif node.kind == "postfix_call" then
             local r = stack:Pop()
 
@@ -477,10 +498,15 @@ do
 
                 if func_expr and type(func_expr) == "table" and func_expr.kind == "function" then
                     if self.calling_function == r then
+                        local args = {}
+                        for i,v in ipairs(node.expressions) do
+                            args[i] = self:CrawlExpression(v)
+                            print(self:GetUpvalue(v.left), "!")
+                        end
                         stack:Push(types.Type("any"):AttachNode(node))
                         return
                     end
-            
+
                     self.calling_function = r
                     local ret = self:CallFunction(r, node.expressions)
                     self.calling_function = nil
@@ -505,6 +531,10 @@ do
                         end
                     end
                 else
+                    local args = {}
+                    for i,v in ipairs(node.expressions) do
+                        args[i] = self:CrawlExpression(v)
+                    end
                     stack:Push(types.Type("any"):AttachNode(node))
                 end
             end
@@ -514,6 +544,8 @@ do
     end
 
     function META:CallFunction(r, expressions)
+        local old_scope = self.scope
+        self.scope = r.node.scope or self.scope
         self:PushScope(r.node)
 
         local arguments = {}
@@ -543,6 +575,7 @@ do
         local ret = {}
         self:CrawlStatements(r.node.statements, ret)
         self:PopScope()
+        self.scope = old_scope
 
         r.ret = merge_types(r.ret, ret)
         r.arguments = merge_types(r.arguments, arguments)

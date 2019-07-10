@@ -231,6 +231,73 @@ tests = {[[
     test(5)
     test(1)
 ]]}
+tests={[[
+    local func = function()
+        local a = 1
+
+        return function()
+            return a
+        end
+    end
+
+    local f = func()
+
+    f()
+]]}
+
+tests={[[
+    local function pairs(t)
+        local k, v
+        return function(v, k)
+            local k, v = next(t, k)
+
+            return k,v
+        end
+    end
+
+    for k,v in pairs({foo=1, bar=2, faz=3}) do
+        print(k,v)
+    end
+]]}
+
+
+tests={[[
+    local t = {foo=1, bar=2, faz="str"}
+    pairs(t)
+    for k,v in pairs(t) do
+        print(k,v)
+    end
+]]}
+
+
+tests = {[[
+    function prefix (w1, w2)
+        return w1 .. ' ' .. w2
+    end
+
+    local w1,w2 = "foo", "bar"
+    local statetab = {["foo bar"] = 1337}
+
+    local test = statetab[prefix(w1, w2)]
+]]}
+
+
+tests = {[[
+    -- defines a factorial function
+    function fact (n)
+      if n == 0 then
+        return 1
+      else
+        return n * fact(n-1)
+      end
+    end
+
+    print("enter a number:")
+    a = io.read("*number")        -- read a number
+    print(fact(a))
+
+]]}
+
 
 tests = {[[
 
@@ -290,21 +357,6 @@ tests = {[[
       if nextword == NOWORD then return end
       io.write(nextword, " ")
       w1 = w2; w2 = nextword
-    end
-]]}
-
-tests={[[
-    local function pairs(t)
-        local k, v 
-        return function(v, k)
-            local k, v = next(t, k)
-    
-            return k,v
-        end
-    end
-    
-    for k,v in pairs({foo=1, bar=2, faz=3}) do
-        print(k,v)
     end
 ]]}
 
@@ -443,8 +495,35 @@ for _, code in ipairs(tests) do
         crawler:DeclareGlobal(lib, tbl)
     end
 
-    crawler:DeclareGlobal("next", T("function", {T"any", T"any"}, {T"any", T"any"}, function(tbl, key) 
-        print(tbl, key)
+    crawler:DeclareGlobal("next", T("function", {T"any", T"any"}, {T"any", T"any"}, function(tbl, key)
+        local key, val = next(tbl.value)
+
+        return T("string", key), val
+    end))
+
+    crawler:DeclareGlobal("pairs", T("function", {T"table"}, {T"table"}, function(tbl)
+        local key, val
+        return function()
+            for k,v in pairs(tbl.value) do
+                if type(k) == "string" then
+                    k = T("string", k)
+                end
+
+                if not key then
+                    key = k
+                else
+                    key = key + k
+                end
+
+                if not val then
+                    val = v
+                else
+                    val = val + v
+                end
+            end
+
+            return {key, val}
+        end, tbl
     end))
 
     add("io", {lines = T("function", {T"string"}, {T"number" + T"nil" + T"string"})})

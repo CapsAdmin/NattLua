@@ -111,7 +111,7 @@ function META:BinaryOperator(op, b)
         return types.Type(ret):AttachNode(self:GetNode())
     end
 
-    self:Error("invalid binary operation " .. op)
+    self:Error("invalid binary operation " .. op .. " on " .. tostring(b))
 
     return types.Type("any"):AttachNode(self:GetNode())
 end
@@ -155,7 +155,15 @@ function META:Expect(type, expect)
 end
 
 function META:Error(msg)
-    print(tostring(self) .. ": " .. msg)
+    local s = tostring(self)
+
+    if self:GetNode() then
+        s = s .. " - " .. self:GetNode():Render() .. " - "
+    end
+
+    s = s .. ": " .. msg
+
+    print(s)
 end
 
 local registered = {}
@@ -273,15 +281,20 @@ do
     end
 end
 
-types.Register("any", {
-    truthy = true,
-})
-
 types.Register("base", {
     binary = {
         ["=="] = {arg = "base", ret = "boolean"},
         ["~="] = {arg = "base", ret = "boolean"},
     },
+    prefix = {
+        ["not"] = "boolean",
+    },
+})
+
+
+types.Register("any", {
+    inherits = "base",
+    truthy = true,
 })
 
 types.Register("string", {
