@@ -360,9 +360,11 @@ function META:CrawlStatement(statement, ...)
                 self:CrawlExpression(statement.expressions[3])
             end
         else
-            for i,v in ipairs(statement.identifiers) do
-                self:DeclareUpvalue(v, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
-            end
+            --for i,v in ipairs(statement.identifiers) do
+                --self:DeclareUpvalue(v, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
+            --end
+            local func = self:CrawlExpression(statement.expressions[1])
+            local args = {self:CallFunction(func, {statement.expressions[2] and self:CrawlExpression(statement.expressions[2])})}
         end
         if self:CrawlStatements(statement.statements, ...) == true then
             return true
@@ -478,52 +480,29 @@ do
                         stack:Push(types.Type("any"):AttachNode(node))
                         return
                     end
-
+            
                     self.calling_function = r
-
-                    self:PushScope(node)
-
-                    local arguments = {}
-
-                    if func_expr.self_call then
-                        local val = stack:Pop()
-                        table.insert(arguments, val)
-                        self:DeclareUpvalue("self", val)
-                    end
-
-                    for i, v in ipairs(func_expr.identifiers) do
-                        if v.value.value == "..." then
-                            if node.expressions then
-                                local values = {}
-                                for i = i, #node.expressions do
-                                    table.insert(values, self:CrawlExpression(node.expressions[i]))
-                                end
-                                self:DeclareUpvalue(v, self:Type(v, values))
-                            end
-                        else
-                            local arg = node.expressions[i] and self:CrawlExpression(node.expressions[i]) or nil
-                            self:DeclareUpvalue(v, arg)
-                            table.insert(arguments, arg)
-                        end
-                    end
-
-                    local ret = {}
-                    self:CrawlStatements(func_expr.statements, ret)
-                    self:PopScope()
+                    local ret = self:CallFunction(r, node.expressions)
+                    self.calling_function = nil
 
                     for _, v in ipairs(ret) do
                         stack:Push(v)
                     end
-
-                    r.ret = merge_types(r.ret, ret)
-                    r.arguments = merge_types(r.arguments, arguments)
-
-                    self:FireEvent("function_spec", r)
-
-                    self.calling_function = nil
                 elseif r:IsType("function") and r.ret then
-                    for i,v in ipairs(r.ret) do
-                        stack:Push(v)
+                    if r.func then
+                        local args = {}
+                        for i,v in ipairs(node.expressions) do
+                            args[i] = self:CrawlExpression(v)
+                        end
+                        local ret = {r.func(unpack(args))}
+                        for i,v in ipairs(ret) do
+                            stack:Push(v)
+                        end
+                    else
+                        self:FireEvent("external_call", node, r)
+                        for i,v in ipairs(r.ret) do
+                            stack:Push(v)
+                        end
                     end
                 else
                     stack:Push(types.Type("any"):AttachNode(node))
@@ -532,6 +511,45 @@ do
         else
             error("unhandled expression " .. node.kind)
         end
+    end
+
+    function META:CallFunction(r, expressions)
+        self:PushScope(r.node)
+
+        local arguments = {}
+
+        if r.node.self_call then
+            local val = stack:Pop()
+            table.insert(arguments, val)
+            self:DeclareUpvalue("self", val)
+        end
+
+        for i, v in ipairs(r.node.identifiers) do
+            if v.value.value == "..." then
+                if expressions then
+                    local values = {}
+                    for i = i, #expressions do
+                        table.insert(values, self:CrawlExpression(expressions[i]))
+                    end
+                    self:DeclareUpvalue(v, self:Type(v, values))
+                end
+            else
+                local arg = expressions[i] and self:CrawlExpression(expressions[i]) or nil
+                self:DeclareUpvalue(v, arg)
+                table.insert(arguments, arg)
+            end
+        end
+
+        local ret = {}
+        self:CrawlStatements(r.node.statements, ret)
+        self:PopScope()
+
+        r.ret = merge_types(r.ret, ret)
+        r.arguments = merge_types(r.arguments, arguments)
+
+        self:FireEvent("function_spec", r)
+
+        return ret
     end
 
     function META:CrawlExpression(exp)

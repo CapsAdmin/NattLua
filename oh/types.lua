@@ -426,8 +426,8 @@ types.Register("function", {
     inherits = "base",
     truthy = true,
 
-    init = function(self, ret, arguments)
-        return {ret = ret, arguments = arguments}
+    init = function(self, ret, arguments, func)
+        return {ret = ret, arguments = arguments, func = func}
     end,
 
     tostring = function(self)

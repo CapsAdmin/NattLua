@@ -293,6 +293,20 @@ tests = {[[
     end
 ]]}
 
+tests={[[
+    local function pairs(t)
+        local k, v 
+        return function(v, k)
+            local k, v = next(t, k)
+    
+            return k,v
+        end
+    end
+    
+    for k,v in pairs({foo=1, bar=2, faz=3}) do
+        print(k,v)
+    end
+]]}
 
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
@@ -376,6 +390,11 @@ for _, code in ipairs(tests) do
             --  io.write(tostring(extra_node))
             end
             io.write("\n")
+        elseif what == "external_call" then
+            io.write((" "):rep(t))
+            local node, type = ...
+            io.write(node:Render(), " - (", tostring(type), ")")
+            io.write("\n")
         elseif what == "call" then
             io.write((" "):rep(t))
             --io.write(what, " - ")
@@ -423,6 +442,10 @@ for _, code in ipairs(tests) do
         tbl.value = t
         crawler:DeclareGlobal(lib, tbl)
     end
+
+    crawler:DeclareGlobal("next", T("function", {T"any", T"any"}, {T"any", T"any"}, function(tbl, key) 
+        print(tbl, key)
+    end))
 
     add("io", {lines = T("function", {T"string"}, {T"number" + T"nil" + T"string"})})
     add("table", {
