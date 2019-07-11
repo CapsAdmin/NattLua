@@ -40,7 +40,7 @@ local tests = {
         else
 
         end
-    ]], [[
+    ]], false, [[
         local function lol(a,b,c)
             if true then
                 return a+b+c
@@ -150,12 +150,18 @@ local tests = {
     ]]
 }
 
-tests = {[[
+tests = {
+[[
+    local a = 1
+    type_expect(a, "number")
+]], [[
 local   a,b,c = 1,2,3
         d,e,f = 4,5,6
 
 local   vararg_1 = ...
         vararg_2 = ...
+
+type_expect(vararg_1, "")
 
 local function test(...)
     return a,b,c, ...
@@ -182,7 +188,6 @@ a.b.c = 1
 
 ]]}
 
-
 tests = {[[
     function string(ok)
         if ok then
@@ -194,26 +199,24 @@ tests = {[[
 
     string(true)
     local ag = string()
-]]}
+    
+    type_expect(ag, "string", "hello")
 
-tests = {[[
+]],[[
     local foo = {lol = 3}
     function foo:bar(a)
         return a+self.lol
     end
+    
+    type_expect(foo:bar(2), "number", 5)
 
-    foo:bar(2)
-]]}
-
-tests = {[[
+]],[[
     function prefix (w1, w2)
         return w1 .. ' ' .. w2
     end
 
-    prefix("hello", "world")
-]]}
-
-tests = {[[
+    type_expect(prefix("hello", "world"), "string", "hello world")
+]],[[
     local function test(max)
         for i = 1, max do
             if i == 20 then
@@ -230,8 +233,7 @@ tests = {[[
     test(20)
     test(5)
     test(1)
-]]}
-tests={[[
+]],[[
     local func = function()
         local a = 1
 
@@ -243,9 +245,7 @@ tests={[[
     local f = func()
 
     f()
-]]}
-
-tests={[[
+]],[[
     local function pairs(t)
         local k, v
         return function(v, k)
@@ -258,19 +258,13 @@ tests={[[
     for k,v in pairs({foo=1, bar=2, faz=3}) do
         print(k,v)
     end
-]]}
-
-
-tests={[[
+]],[[
     local t = {foo=1, bar=2, faz="str"}
     pairs(t)
     for k,v in pairs(t) do
         print(k,v)
     end
-]]}
-
-
-tests = {[[
+]],[[
     function prefix (w1, w2)
         return w1 .. ' ' .. w2
     end
@@ -279,27 +273,7 @@ tests = {[[
     local statetab = {["foo bar"] = 1337}
 
     local test = statetab[prefix(w1, w2)]
-]]}
-
-
-tests = {[[
-    -- defines a factorial function
-    function fact (n)
-      if n == 0 then
-        return 1
-      else
-        return n * fact(n-1)
-      end
-    end
-
-    print("enter a number:")
-    a = io.read("*number")        -- read a number
-    print(fact(a))
-
-]]}
-
-
-tests = {[[
+]],[[
 
     -- Markov Chain Program in Lua
 
@@ -358,7 +332,22 @@ tests = {[[
       io.write(nextword, " ")
       w1 = w2; w2 = nextword
     end
+]],[[
+    local function test(a)
+        --if a > 10 then return a end
+        return test(a+1)
+    end
+    
+    return test(1)
+]],[[
+    local function test(a)
+        if a > 10 then return a end
+        return test(a+1)
+    end
+    
+    return test(1)
 ]]}
+
 
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
@@ -481,12 +470,7 @@ for _, code in ipairs(tests) do
             print(what .. " - ", ...)
         end
     end
-
-    crawler.hijack = {}
-    function crawler.hijack.Expect(a,b)
-        assert(tostring(a) == b.val:sub(2,-2))
-    end
-
+    
     local T = require("oh.types").Type
 
     local function add(lib, t)
@@ -494,6 +478,19 @@ for _, code in ipairs(tests) do
         tbl.value = t
         crawler:DeclareGlobal(lib, tbl)
     end
+
+    crawler:DeclareGlobal("type_expect", T("function", {T"any"}, {T"..."}, function(what, type, value, ...)
+        local type = type.value
+        if not what:IsType(type) then
+            error("expected " .. type .. " got " .. tostring(what))
+        end
+
+        if value ~= nil and value.value ~= what.value then
+            error("expected " .. tostring(value.value) .. " got " .. tostring(what.value))
+        end
+
+        return T("boolean", true)
+    end))
 
     crawler:DeclareGlobal("next", T("function", {T"any", T"any"}, {T"any", T"any"}, function(tbl, key)
         local key, val = next(tbl.value)

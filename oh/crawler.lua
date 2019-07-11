@@ -18,27 +18,26 @@ do
     end
 
     local function table_to_types(self, node, out)
-        for i,v in ipairs(node.children) do
+        for _,v in ipairs(node.children) do
             if v.kind == "table_key_value" then
-                --out[types.Type("string", v.key.value)] = self:Type(v.value) -- HMMM
-                out[v.key.value] = self:Type(v.value)
+                --out[types.Type("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
+                out[v.key.value] = self:TypeFromNode(v.value)
             elseif v.kind == "table_expression_value" then
-                local t = self:Type(v.key)
+                local t = self:TypeFromNode(v.key)
                 if t:IsType("string") then
-                    out[t.value] = self:Type(v.value)
+                    out[t.value] = self:TypeFromNode(v.value)
                 else
-                    out[t] = self:Type(v.value)
+                    out[t] = self:TypeFromNode(v.value)
                 end
             elseif v.kind == "table_index_value" then
-                out[v.i] = self:Type(v.value)
+                out[v.i] = self:TypeFromNode(v.value)
             end
         end
     end
 
-    function META:Type(node, ...)
+    local function new_type(self, node, ...)
         if type(node) == "string" then
-            local type, node = node, ...
-            return types.Type(type):AttachNode(node)
+            return types.Type(type)
         end
 
         assert(node.type == "expression")
@@ -47,38 +46,46 @@ do
             local t = node.value.type
             local v = node.value.value
             if t == "number" then
-                return types.Type("number", tonumber(v)):AttachNode(node)
+                return types.Type("number", tonumber(v))
             elseif t == "string" then
-                return types.Type("string", v:sub(2, -2)):AttachNode(node)
+                return types.Type("string", v:sub(2, -2))
             elseif t == "letter" then
-                return types.Type("string", v):AttachNode(node)
+                return types.Type("string", v)
             elseif v == "..." then
-                local t = types.Type("..."):AttachNode(node)
+                local t = types.Type("...")
                 t.values = ... -- HACK
                 return t
             elseif v == "true" then
-                return types.Type("boolean", true):AttachNode(node)
+                return types.Type("boolean", true)
             elseif v == "false" then
-                return types.Type("boolean", false):AttachNode(node)
+                return types.Type("boolean", false)
             elseif v == "nil" then
-                return types.Type("nil"):AttachNode(node)
+                return types.Type("nil")
             else
                 error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
             end
             --local t = types.Type()
         elseif node.kind == "table" then
-            local t = types.Type("table"):AttachNode(node)
+            local t = types.Type("table")
 
             table_to_types(self, node, t.value)
 
             return t
         elseif node.kind == "function" then
-            local t = types.Type("function"):AttachNode(node)
+            local t = types.Type("function")
             node.scope = self.scope
             return t
         else
             error("unhanlded expresison kind " .. node.kind)
         end
+    end
+
+    function META:TypeFromNode(node, ...)
+        return new_type(self, node, ...):AttachNode(node)
+    end
+
+    function META:TypeFromImplicitNode(node, ...)
+        return types.Type(...):AttachNode(node)
     end
 
     --[[
@@ -94,20 +101,6 @@ do
 
         when a function is defined, it returns any and and takes any until it's actaully called, then it becomes refined
     ]]
-
-    function META:CreateScope()
-        local scope = {
-            children = {},
-            parent = parent,
-            upvalues = {},
-            upvalue_map = {},
-
-            node = node,
-            extra_node = extra_node,
-        }
-
-        self.scope = scope
-    end
 
     function META:PushScope(node, extra_node)
         assert(type(node) == "table" and node.kind, "expected an associated ast node")
@@ -135,7 +128,7 @@ do
         return scope
     end
 
-    function META:PopScope(discard)
+    function META:PopScope()
         self:FireEvent("leave_scope", self.scope.node, self.scope.extra_node)
 
         local scope = self.scope.parent
@@ -217,7 +210,7 @@ do
         local node = obj
 
         local key = self:CrawlExpression(key)
-        local obj = self:CrawlExpression(obj) or self:Type("nil"):AttachNode(node)
+        local obj = self:CrawlExpression(obj) or self:TypeFromImplicitNode(node, "nil")
 
         obj:set(key, val)
 
@@ -241,7 +234,7 @@ do
 
         if not expressions then return ret end
 
-        for i, exp in ipairs(expressions) do
+        for _, exp in ipairs(expressions) do
             for _, t in ipairs({self:CrawlExpression(exp)}) do
                 if t:IsType("...") then
                     if t.values then
@@ -398,8 +391,6 @@ function META:CrawlStatement(statement, ...)
 end
 
 do
-    local syntax = require("oh.syntax")
-
     local function merge_types(src, dst)
         if src then
             for i,v in ipairs(dst) do
@@ -422,7 +413,7 @@ do
                 (node.value.type == "letter" and node.upvalue_or_global) or
                 node.value.value == "..."
             then
-                stack:Push(self:GetValue(node) or self:Type("nil", node))
+                stack:Push(self:GetValue(node) or self:TypeFromImplicitNode(node, "nil"))
             elseif
                 node.value.type == "number" or
                 node.value.type == "string" or
@@ -431,12 +422,12 @@ do
                 node.value.value == "true" or
                 node.value.value == "false"
             then
-                stack:Push(self:Type(node))
+                stack:Push(self:TypeFromNode(node))
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
         elseif node.kind == "function" or node.kind == "table" then
-            stack:Push(self:Type(node))
+            stack:Push(self:TypeFromNode(node))
         elseif node.kind == "binary_operator" then
             local r, l = stack:Pop(), stack:Pop()
             local op = node.value.value
@@ -487,12 +478,12 @@ do
 
                 r(unpack(values))
 
-                stack:Push(self:Type("nil"))
+                stack:Push(self:TypeFromImplicitNode(node, "nil"))
                 return
             end
 
             if r.type == "any" then
-                stack:Push(types.Type("any"):AttachNode(node))
+                stack:Push(self:TypeFromImplicitNode(node, "any"))
             else
                 local func_expr = r.node
 
@@ -501,14 +492,13 @@ do
                         local args = {}
                         for i,v in ipairs(node.expressions) do
                             args[i] = self:CrawlExpression(v)
-                            print(self:GetUpvalue(v.left), "!")
                         end
-                        stack:Push(types.Type("any"):AttachNode(node))
+                        stack:Push(self:TypeFromImplicitNode(node, "any"))
                         return
                     end
 
                     self.calling_function = r
-                    local ret = self:CallFunction(r, node.expressions)
+                    local ret = self:CallFunction(r, node.expressions, stack)
                     self.calling_function = nil
 
                     for _, v in ipairs(ret) do
@@ -521,12 +511,12 @@ do
                             args[i] = self:CrawlExpression(v)
                         end
                         local ret = {r.func(unpack(args))}
-                        for i,v in ipairs(ret) do
+                        for _,v in ipairs(ret) do
                             stack:Push(v)
                         end
                     else
                         self:FireEvent("external_call", node, r)
-                        for i,v in ipairs(r.ret) do
+                        for _,v in ipairs(r.ret) do
                             stack:Push(v)
                         end
                     end
@@ -535,7 +525,7 @@ do
                     for i,v in ipairs(node.expressions) do
                         args[i] = self:CrawlExpression(v)
                     end
-                    stack:Push(types.Type("any"):AttachNode(node))
+                    stack:Push(self:TypeFromImplicitNode(node, "any"))
                 end
             end
         else
@@ -543,14 +533,14 @@ do
         end
     end
 
-    function META:CallFunction(r, expressions)
+    function META:CallFunction(r, expressions, stack)
         local old_scope = self.scope
         self.scope = r.node.scope or self.scope
         self:PushScope(r.node)
 
         local arguments = {}
 
-        if r.node.self_call then
+        if r.node.self_call and stack then
             local val = stack:Pop()
             table.insert(arguments, val)
             self:DeclareUpvalue("self", val)
@@ -563,7 +553,7 @@ do
                     for i = i, #expressions do
                         table.insert(values, self:CrawlExpression(expressions[i]))
                     end
-                    self:DeclareUpvalue(v, self:Type(v, values))
+                    self:DeclareUpvalue(v, self:TypeFromNode(v, values))
                 end
             else
                 local arg = expressions[i] and self:CrawlExpression(expressions[i]) or nil

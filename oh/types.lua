@@ -25,7 +25,7 @@ end
 function META:get()
     self:Error("undefined get")
 
-    return types.Type("any"):AttachNode(self:GetNode())
+    return self:Type("any")
 end
 
 function META:set(key, val)
@@ -49,7 +49,7 @@ end
 
 function META:IsType(what)
     if type(what) == "table" then
-        for i,v in ipairs(what:GetTypes()) do
+        for _,v in ipairs(what:GetTypes()) do
             if self:IsType(v) then
                 return true
             end
@@ -62,9 +62,14 @@ function META:IsCompatible(type)
     return self:IsType(type) and type:IsType(self)
 end
 
-function META:Max(max)
-    local t = types.Type(self.name, self.value)
+function META:Type(...)
+    local t = types.Type(...)
     t:AttachNode(self:GetNode())
+    return t
+end
+
+function META:Max(max)
+    local t = self:Type(self.name, self.value)
     t.max = max
     return t
 end
@@ -92,28 +97,28 @@ function META:BinaryOperator(op, b)
             ret = arg
         end
 
-        self:Expect(b, arg)
+        --self:Expect(b, arg)
 
         if op == "==" and a:IsType("number") and b:IsType("number") and a.value and b.value then
             if a.max then
-                return types.Type("boolean", b.value >= a.value and b.value <= a.max.value):AttachNode(self:GetNode())
+                return self:Type("boolean", b.value >= a.value and b.value <= a.max.value)
             end
 
             if b.max then
-                return types.Type("boolean", a.value >= b.value and a.value <= b.max.value):AttachNode(self:GetNode())
+                return self:Type("boolean", a.value >= b.value and a.value <= b.max.value)
             end
         end
 
         if syntax.CompiledBinaryOperatorFunctions[op] and a.value ~= nil and b.value ~= nil then
-            return types.Type(ret, syntax.CompiledBinaryOperatorFunctions[op](a.value, b.value)):AttachNode(self:GetNode())
+            return self:Type(ret, syntax.CompiledBinaryOperatorFunctions[op](a.value, b.value))
         end
 
-        return types.Type(ret):AttachNode(self:GetNode())
+        return self:Type(ret)
     end
 
     self:Error("invalid binary operation " .. op .. " on " .. tostring(b))
 
-    return types.Type("any"):AttachNode(self:GetNode())
+    return self:Type("any")
 end
 
 function META:PrefixOperator(op)
@@ -121,15 +126,15 @@ function META:PrefixOperator(op)
         local ret = self.interface.prefix[op]
 
         if syntax.CompiledPrefixOperatorFunctions[op] and self.value ~= nil then
-            return types.Type(ret, syntax.CompiledPrefixOperatorFunctions[op](self.value)):AttachNode(self:GetNode())
+            return self:Type(ret, syntax.CompiledPrefixOperatorFunctions[op](self.value))
         end
 
-        return types.Type(ret):AttachNode(self:GetNode())
+        return self:Type(ret)
     end
 
     self:Error("invalid prefix operation " .. op)
 
-    return types.Type("any"):AttachNode(self:GetNode())
+    return self:Type("any")
 end
 
 function META:PostfixOperator(op)
@@ -137,15 +142,15 @@ function META:PostfixOperator(op)
         local ret = self.interface.postfix[op]
 
         if syntax.CompiledPostfixOperatorFunctions[op] and self.value ~= nil then
-            return types.Type(ret, syntax.CompiledPostfixOperatorFunctions[op](self.value)):AttachNode(self:GetNode())
+            return self:Type(ret, syntax.CompiledPostfixOperatorFunctions[op](self.value))
         end
 
-        return types.Type(ret):AttachNode(self:GetNode())
+        return self:Type(ret)
     end
 
     self:Error("invalid postfix operation " .. op)
 
-    return types.Type("any"):AttachNode(self:GetNode())
+    return self:Type("any")
 end
 
 function META:Expect(type, expect)
@@ -365,15 +370,15 @@ types.Register("table", {
             self.value[found] = val
         end
     end,
-    get = function(self, key, val)
+    get = function(self, key)
         if self.structure and not self.structure[key] then
             self:Error("invalid index " .. tostring(key))
         end
 
-        local key = type(key) ~= "string" and key.value or key
+        key = type(key) ~= "string" and key.value or key
 
         if self.value[key] == nil then
-            return types.Type("any"):AttachNode(self:GetNode())
+            return self:Type("any")
         end
 
         return self.value[key]
