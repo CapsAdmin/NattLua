@@ -63,26 +63,28 @@ local tests = {
     type_expect(a, "number", 6)
 ]], [[
     local a = 1+2+3+4
+    local b = nil
 
     local function print(foo)
         return foo
     end
 
     if a then
-        local b = print(a)
+        b = print(a+10)
     end
 
-    --type_expect(print, "function: any(foo)")
-]],  false,[[
+    type_expect(b, "number", 20)
+
+]], [[
     local a
     a = 2
 
     if true then
         local function foo(lol)
-            return foo(lol)
+            return foo(lol), nil
         end
         local complex = foo(a)
-        EXPECT(complex, "any(function(lol) return foo(lol) end)")
+        type_expect(foo, "function", {{"any"}, {"nil"}}, {{"number"}} )
     end
 ]], [[
     b = {}
@@ -95,7 +97,8 @@ local tests = {
     end
 
     local c = foo(a)
-    EXPECT(c, "number(2)")
+
+    type_expect(c, "number", 2)
 ]], [[
     local META = {}
     META.__index = META
@@ -106,12 +109,13 @@ local tests = {
 
     local a,b,c = META:Test(1,2,3)
 
-    --local w = false
+    local ret
 
-    if w then
-        local c = a
-        EXPECT(c, "number(4)")
+    if someunknownglobal then
+        ret = a+b+c
     end
+
+    type_expect(ret, "number", 12)
 ]], [[
     local function test(a)
         if a then
@@ -126,15 +130,18 @@ local tests = {
     if res then
         local a = 1 + res
 
-        EXPECT(a, "number(2)")
+        type_expect(a, "number", 2)
     end
 ]], [[
+    local a = 1337
     for i = 1, 10 do
-        EXPECT(i, "number(1..10)")
+        type_expect(i, "number", 1, 10)
         if i == 15 then
+            a = 7777
             break
         end
     end
+    type_expect(a, "number", 1337)
 ]], [[
     local function lol(a, ...)
         local lol,foo,bar = ...
@@ -146,28 +153,36 @@ local tests = {
 
     local a,b,c = lol(3,1,2,3)
 
-    Expect(a, 'string("")')
-    Expect(b, 'number(4)')
-    Expect(c, 'number(3)')
+    type_expect(a, "string", "")
+    type_expect(b, "number", 4)
+    type_expect(c, "number", 3)
 ]], [[
     function foo(a, b) return a+b end
 
     local a = foo(1,2)
 
-    Expect(a, "number(3)")
+    type_expect(a, "number", 3)
 end
-]],
-[[
+]], [[
     local a = 1
     type_expect(a, "number")
 ]], [[
 local   a,b,c = 1,2,3
         d,e,f = 4,5,6
 
+type_expect(a, "number", 1)
+type_expect(b, "number", 2)
+type_expect(c, "number", 3)
+
+type_expect(d, "number", 4)
+type_expect(e, "number", 5)
+type_expect(f, "number", 6)
+
 local   vararg_1 = ...
         vararg_2 = ...
 
-type_expect(vararg_1, "")
+type_expect(vararg_1, "nil")
+type_expect(vararg_2, "nil")
 
 local function test(...)
     return a,b,c, ...
@@ -175,10 +190,22 @@ end
 
 A, B, C, D = test(), 4
 
+type_expect(A, "number", 1)
+type_expect(B, "number", 2)
+type_expect(C, "number", 3)
+type_expect(D, "...") -- THIS IS WRONG, tuple of any?
+
 local z,x,y,æ,ø,å = test(4,5,6)
 local novalue
 
-]], [[
+type_expect(z, "number", 1)
+type_expect(x, "number", 2)
+type_expect(y, "number", 3)
+type_expect(æ, "number", 4)
+type_expect(ø, "number", 5)
+type_expect(å, "number", 6)
+
+]],false, [[
 local a = {b = {c = {}}}
 a.b.c = 1
 ]],[[
@@ -432,24 +459,55 @@ for _, code in ipairs(tests) do
         crawler:DeclareGlobal(lib, tbl)
     end
 
+    local function table_to_types(type)
+        local combined = T(type.value[1].value)
+        for i = 2, #type.value do
+            combined = combined + T(type.value[i].value)
+        end
+        return combined
+    end
+
     crawler:DeclareGlobal("type_expect", T("function", {T"any"}, {T"..."}, function(what, type, value, ...)
         if type:IsType("table") then
-            local combined = T(type.value[1].value)
-            for i = 2, #type.value do
-                combined = combined + T(type.value[i].value)
+            type = table_to_types(type)
+        end
+
+        if not what:IsType(type.value) then
+            error("expected " .. type.value .. " got " .. tostring(what))
+        end
+
+        if type.value == "function" then
+            local expected_ret, expected_args = value, ...
+            local func = what
+
+            if expected_ret then
+                for i, ret_slot in ipairs(expected_ret.value) do
+                    ret_slot = table_to_types(ret_slot)
+                    if not ret_slot:IsType(func.ret[i]) then
+                        error("expected return type " .. tostring(ret_slot) .. " to #" .. i .. " got " .. tostring(func.ret[i] == nil and "nothing" or func.ret[i]))
+                    end
+                end
             end
-            type = combined
-        end
 
-        local type = type.value
+            if expected_args then
+                for i, arg in ipairs(expected_args.value) do
+                    arg = table_to_types(arg)
+                    if not arg:IsType(func.arguments[i]) then
+                        error("expected argument type " .. tostring(arg) .. " to #" .. i .. " got " .. tostring(func.arguments[i]))
+                    end
+                end
+            end
+        else
+            if value ~= nil and value.value ~= what.value then
+                error("expected " .. tostring(value.value) .. " got " .. tostring(what.value))
+            end
 
-
-        if not what:IsType(type) then
-            error("expected " .. type .. " got " .. tostring(what))
-        end
-
-        if value ~= nil and value.value ~= what.value then
-            error("expected " .. tostring(value.value) .. " got " .. tostring(what.value))
+            local max = ...
+            if max and type.value == "number" then
+                if not what.max or not what.max.value or max.value ~= what.max.value then
+                    error("expected max " .. tostring(max.value) .. " got " .. tostring(what.max.value))
+                end
+            end
         end
 
         return T("boolean", true)
