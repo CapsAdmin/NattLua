@@ -1,156 +1,162 @@
 local Crawler = require("oh.crawler")
 
 local tests = {
-    [[
-        local a = {}
-        a.foo = {}
+[[
+    local a = {}
+    a.foo = {}
 
-        function a:bar()
+    local c = 0
 
-        end
-
-        local function test()
-
-        end
-
-        repeat
-
-        until false
-
-        for i = 1, 10, 2 do
-            if i == 1 then
-                break
-            end
-        end
-
-        for k,v in pairs(a) do
-
-        end
-
-        while true do
-
-        end
-
-        do
-        end
-
-        if true() then
-        elseif false() then
-            return false
-        else
-
-        end
-    ]], false, [[
-        local function lol(a,b,c)
-            if true then
-                return a+b+c
-            elseif true then
-                return true
-            end
-            a = 0
-            return a
-        end
-        local a = lol(1,2,3)
-    ]], [[
-        local a = 1+2+3+4
-        a = false
-
-        local function print(foo)
-            return foo
-        end
-
-        if a then
-            local b = print(a)
-        end
-
-        EXPECT(print, "function: any(foo)")
-    ]], [[
-        local a
-        a = 2
-
-        if true then
-            local function foo(lol)
-                return foo(lol)
-            end
-            local complex = foo(a)
-            EXPECT(complex, "any(function(lol) return foo(lol) end)")
-        end
-    ]], [[
-        b = {}
-        b.lol = 1
-
-        local a = b
-
-        local function foo(tbl)
-            return tbl.lol + 1
-        end
-
-        local c = foo(a)
-        EXPECT(c, "number(2)")
-    ]], [[
-        local META = {}
-        META.__index = META
-
-        function META:Test(a,b,c)
-            return 1+c,2+b,3+a
-        end
-
-        local a,b,c = META:Test(1,2,3)
-
-        --local w = false
-
-        if w then
-            local c = a
-            EXPECT(c, "number(4)")
-        end
-    ]], [[
-        local function test(a)
-            if a then
-                return 1
-            end
-
-            return false
-        end
-
-        local res = test(true)
-
-        if res then
-            local a = 1 + res
-
-            EXPECT(a, "number(2)")
-        end
-    ]], [[
-        for i = 1, 10 do
-            EXPECT(i, "number(1..10)")
-            if i == 15 then
-                break
-            end
-        end
-    ]], [[
-        local function lol(a, ...)
-            local lol,foo,bar = ...
-
-            if a == 1 then return 1 end
-            if a == 2 then return {} end
-            if a == 3 then return "", foo+2,3 end
-        end
-
-        local a,b,c = lol(3,1,2,3)
-
-        Expect(a, 'string("")')
-        Expect(b, 'number(4)')
-        Expect(c, 'number(3)')
-    ]], [[
-        function foo(a, b) return a+b end
-
-        local a = foo(1,2)
-
-        Expect(a, "number(3)")
+    function a:bar()
+        type_expect(self, "table")
+        c = 1
     end
-    ]]
-}
 
-tests = {
+    a:bar()
+
+    type_expect(c, "number", 1)
+]], [[
+    local function test()
+
+    end
+
+    type_expect(test, "function")
+]], [[
+    local a = 1
+    repeat
+        type_expect(a, "number")
+    until false
+]], [[
+    local c = 0
+    for i = 1, 10, 2 do
+        type_expect(i, "number")
+        if i == 1 then
+            c = 1
+            break
+        end
+    end
+    type_expect(c, "number", 1)
+]], [[
+    local a = {foo = true, bar = false, faz = 1}
+    for k,v in pairs(a) do
+        type_expect(k, "string")
+        type_expect(v, {"number", "string"})
+    end
+]], [[
+    local a = 0
+    while false do
+        a = 1
+    end
+
+]], [[
+    local function lol(a,b,c)
+        if true then
+            return a+b+c
+        elseif true then
+            return true
+        end
+        a = 0
+        return a
+    end
+    local a = lol(1,2,3)
+
+    type_expect(a, "number", 6)
+]], [[
+    local a = 1+2+3+4
+
+    local function print(foo)
+        return foo
+    end
+
+    if a then
+        local b = print(a)
+    end
+
+    --type_expect(print, "function: any(foo)")
+]],  false,[[
+    local a
+    a = 2
+
+    if true then
+        local function foo(lol)
+            return foo(lol)
+        end
+        local complex = foo(a)
+        EXPECT(complex, "any(function(lol) return foo(lol) end)")
+    end
+]], [[
+    b = {}
+    b.lol = 1
+
+    local a = b
+
+    local function foo(tbl)
+        return tbl.lol + 1
+    end
+
+    local c = foo(a)
+    EXPECT(c, "number(2)")
+]], [[
+    local META = {}
+    META.__index = META
+
+    function META:Test(a,b,c)
+        return 1+c,2+b,3+a
+    end
+
+    local a,b,c = META:Test(1,2,3)
+
+    --local w = false
+
+    if w then
+        local c = a
+        EXPECT(c, "number(4)")
+    end
+]], [[
+    local function test(a)
+        if a then
+            return 1
+        end
+
+        return false
+    end
+
+    local res = test(true)
+
+    if res then
+        local a = 1 + res
+
+        EXPECT(a, "number(2)")
+    end
+]], [[
+    for i = 1, 10 do
+        EXPECT(i, "number(1..10)")
+        if i == 15 then
+            break
+        end
+    end
+]], [[
+    local function lol(a, ...)
+        local lol,foo,bar = ...
+
+        if a == 1 then return 1 end
+        if a == 2 then return {} end
+        if a == 3 then return "", foo+2,3 end
+    end
+
+    local a,b,c = lol(3,1,2,3)
+
+    Expect(a, 'string("")')
+    Expect(b, 'number(4)')
+    Expect(c, 'number(3)')
+]], [[
+    function foo(a, b) return a+b end
+
+    local a = foo(1,2)
+
+    Expect(a, "number(3)")
+end
+]],
 [[
     local a = 1
     type_expect(a, "number")
@@ -186,9 +192,7 @@ a.b.c = 1
     a()
     a(true)
 
-]]}
-
-tests = {[[
+]],[[
     function string(ok)
         if ok then
             return 2
@@ -199,7 +203,7 @@ tests = {[[
 
     string(true)
     local ag = string()
-    
+
     type_expect(ag, "string", "hello")
 
 ]],[[
@@ -207,7 +211,7 @@ tests = {[[
     function foo:bar(a)
         return a+self.lol
     end
-    
+
     type_expect(foo:bar(2), "number", 5)
 
 ]],[[
@@ -230,9 +234,13 @@ tests = {[[
         return "lol"
     end
 
-    test(20)
-    test(5)
-    test(1)
+    local a = test(20)
+    local b = test(5)
+    local c = test(1)
+
+    type_expect(a, "boolean", false)
+    type_expect(b, "boolean", true)
+    type_expect(c, "string", "lol")
 ]],[[
     local func = function()
         local a = 1
@@ -244,7 +252,7 @@ tests = {[[
 
     local f = func()
 
-    f()
+    type_expect(f(), "number", 1)
 ]],[[
     local function pairs(t)
         local k, v
@@ -256,13 +264,15 @@ tests = {[[
     end
 
     for k,v in pairs({foo=1, bar=2, faz=3}) do
-        print(k,v)
+        type_expect(k, "string")
+        type_expect(v, "number")
     end
 ]],[[
     local t = {foo=1, bar=2, faz="str"}
     pairs(t)
     for k,v in pairs(t) do
-        print(k,v)
+        type_expect(k, "string")
+        type_expect(v, {"string", "number"})
     end
 ]],[[
     function prefix (w1, w2)
@@ -273,80 +283,23 @@ tests = {[[
     local statetab = {["foo bar"] = 1337}
 
     local test = statetab[prefix(w1, w2)]
-]],[[
-
-    -- Markov Chain Program in Lua
-
-    function allwords ()
-      local line = io.read()    -- current line
-      local pos = 1             -- current position in the line
-      return function ()        -- iterator function
-        while line do           -- repeat while there are lines
-          local s, e = string.find(line, "%w+", pos)
-          if s then      -- found a word?
-            pos = e + 1  -- update next position
-            return string.sub(line, s, e)   -- return the word
-          else
-            line = io.read()    -- word not found; try next line
-            pos = 1             -- restart from first position
-          end
-        end
-        return nil            -- no more lines: end of traversal
-      end
-    end
-
-    function prefix (w1, w2)
-      return w1 .. ' ' .. w2
-    end
-
-    local statetab
-
-    function insert (index, value)
-      if not statetab[index] then
-        statetab[index] = {n=0}
-      end
-      table.insert(statetab[index], value)
-    end
-
-    local N  = 2
-    local MAXGEN = 10000
-    local NOWORD = "\n"
-
-    -- build table
-    statetab = {}
-    local w1, w2 = NOWORD, NOWORD
-    for w in allwords() do
-      insert(prefix(w1, w2), w)
-      w1 = w2; w2 = w;
-    end
-    insert(prefix(w1, w2), NOWORD)
-
-    -- generate text
-    w1 = NOWORD; w2 = NOWORD     -- reinitialize
-    for i=1,MAXGEN do
-      local list = statetab[prefix(w1, w2)]
-      -- choose a random item from list
-      local r = math.random(table.getn(list))
-      local nextword = list[r]
-      if nextword == NOWORD then return end
-      io.write(nextword, " ")
-      w1 = w2; w2 = nextword
-    end
+    type_expect(test, "number", 1337)
 ]],[[
     local function test(a)
         --if a > 10 then return a end
         return test(a+1)
     end
-    
-    return test(1)
+
+    type_expect(test(1), "any")
 ]],[[
     local function test(a)
         if a > 10 then return a end
         return test(a+1)
     end
-    
-    return test(1)
-]]}
+
+    type_expect(test(1), "number")
+]]
+}
 
 
 local Lexer = require("oh.lexer")
@@ -470,7 +423,7 @@ for _, code in ipairs(tests) do
             print(what .. " - ", ...)
         end
     end
-    
+
     local T = require("oh.types").Type
 
     local function add(lib, t)
@@ -480,7 +433,17 @@ for _, code in ipairs(tests) do
     end
 
     crawler:DeclareGlobal("type_expect", T("function", {T"any"}, {T"..."}, function(what, type, value, ...)
+        if type:IsType("table") then
+            local combined = T(type.value[1].value)
+            for i = 2, #type.value do
+                combined = combined + T(type.value[i].value)
+            end
+            type = combined
+        end
+
         local type = type.value
+
+
         if not what:IsType(type) then
             error("expected " .. type .. " got " .. tostring(what))
         end

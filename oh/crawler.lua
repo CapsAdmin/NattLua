@@ -30,7 +30,11 @@ do
                     out[t] = self:TypeFromNode(v.value)
                 end
             elseif v.kind == "table_index_value" then
-                out[v.i] = self:TypeFromNode(v.value)
+                if v.i then
+                    out[v.i] = self:TypeFromNode(v.value)
+                else
+                    table.insert(out, self:TypeFromNode(v.value))
+                end
             end
         end
     end
@@ -331,7 +335,7 @@ function META:CrawlStatement(statement, ...)
         if self:CrawlStatements(statement.statements, ...) == true then
             return true
         end
-        if self:CrawlExpression(statement.expression):Truthy() then
+        if self:CrawlExpression(statement.expression):IsTruthy() then
             self:FireEvent("break")
         end
         self:PopScope()
@@ -353,7 +357,7 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "break" then
         self:FireEvent("break")
 
-        return true
+        --return true
     elseif statement.kind == "expression" then
         self:FireEvent("call", statement.value, {self:CrawlExpression(statement.value)})
     elseif statement.kind == "for" then
