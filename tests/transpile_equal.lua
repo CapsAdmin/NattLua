@@ -173,6 +173,8 @@ do
         {code = "local a = 1 >> 2",             expect = "local a = bit.rshift(1, 2)",                  compare_tokens = true},
         {code = "local a = 1 >> 2 << 23",       expect = "local a = bit.lshift(bit.rshift(1, 2), 23)",  compare_tokens = true},
         {code = "local a = a++",                expect = "local a = (a + 1)",                           compare_tokens = true},
+        {code = "_ENV = {}",                    expect = "_ENV={};setfenv(1, _ENV);",                   compare_tokens = true},
+        {code = "a,_ENV,c = 1,{},2",            expect = "a,_ENV,c = 1,{},2;setfenv(1, _ENV);",         compare_tokens = true},
     }
 end
 

@@ -469,15 +469,28 @@ function META:EmitAssignment(node)
     end
 end
 
-
 function META:EmitAssignment(node)
     self:Whitespace("\t")
     self:EmitExpressionList(node.left)
+
     if node.tokens["="] then
         self:Whitespace(" ")
         self:EmitToken(node.tokens["="])
         self:Whitespace(" ")
         self:EmitExpressionList(node.right)
+    end
+end
+
+function META:Emit_ENVFromAssignment(node)
+    for i,v in ipairs(node.left) do
+        if v.kind == "value" and v.value.value == "_ENV" then
+            if node.right[i] then
+                local key = node.left[i]
+                local val = node.right[i]
+
+                self:Emit(";setfenv(1, _ENV);")
+            end
+        end
     end
 end
 
@@ -508,6 +521,7 @@ function META:EmitStatement(node)
         self:EmitLocalFunction(node)
     elseif node.kind == "assignment" then
         self:EmitAssignment(node)
+        self:Emit_ENVFromAssignment(node)
     elseif node.kind == "local_assignment" then
         self:EmitLocalAssignment(node)
     elseif node.kind == "call_expression" then
