@@ -285,12 +285,16 @@ function META:CrawlStatement(statement, ...)
             local key = node
             local val = ret[i]
             self:DeclareUpvalue(key, val)
+
+            node.inferred_type = val
         end
     elseif statement.kind == "assignment" then
         local ret = self:UnpackExpressions(statement.right)
 
         for i, node in ipairs(statement.left) do
             self:Assign(node, ret[i])
+
+            node.inferred_type = ret[i]
         end
     elseif statement.kind == "function" then
         self:Assign(
@@ -305,7 +309,7 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
             local b = not statement.expressions[i] or self:CrawlExpression(statement.expressions[i])
-            if b == true or b:IsTruthy() then
+            if b == true or b:IsTruthy() or b:IsType("nil") then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
                 if self:CrawlStatements(statements, ...) == true then
                     self:PopScope()
@@ -314,6 +318,7 @@ function META:CrawlStatement(statement, ...)
                     end
                 end
                 self:PopScope()
+                break
             end
         end
     elseif statement.kind == "while" then
@@ -358,33 +363,40 @@ function META:CrawlStatement(statement, ...)
         self:FireEvent("break")
 
         --return true
-    elseif statement.kind == "expression" then
+    elseif statement.kind == "call_expression" then
         self:FireEvent("call", statement.value, {self:CrawlExpression(statement.value)})
-    elseif statement.kind == "for" then
+    elseif statement.kind == "generic_for" then
         self:PushScope(statement)
-        if statement.fori then
-            local range = self:CrawlExpression(statement.expressions[1]):Max(self:CrawlExpression(statement.expressions[2]))
-            self:DeclareUpvalue(statement.identifiers[1], range)
-            if statement.expressions[3] then
-                self:CrawlExpression(statement.expressions[3])
-            end
+        --for i,v in ipairs(statement.identifiers) do
+            --self:DeclareUpvalue(v, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
+        --end
+        local func = self:CrawlExpression(statement.expressions[1])
+        local args
+        if type(func) == "function" then
+            args = func()
+            print(args, debug.getinfo(func).source)
         else
-            --for i,v in ipairs(statement.identifiers) do
-                --self:DeclareUpvalue(v, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
-            --end
-            local func = self:CrawlExpression(statement.expressions[1])
-            local args
-            if type(func) == "function" then
-                args = func()
-                print(args, debug.getinfo(func).source)
-            else
-                args = func:IsType("function") and self:CallFunction(func, {statement.expressions[2] and self:CrawlExpression(statement.expressions[2])})
-            end
-
-            for i,v in ipairs(statement.identifiers) do
-                self:DeclareUpvalue(v, args and args[i])
-            end
+            args = func:IsType("function") and self:CallFunction(func, {statement.expressions[2] and self:CrawlExpression(statement.expressions[2])})
         end
+
+        for i,v in ipairs(statement.identifiers) do
+            self:DeclareUpvalue(v, args and args[i])
+        end
+
+        if self:CrawlStatements(statement.statements, ...) == true then
+            return true
+        end
+
+        self:PopScope()
+    elseif statement.kind == "numeric_for" then
+        self:PushScope(statement)
+        local range = self:CrawlExpression(statement.expressions[1]):Max(self:CrawlExpression(statement.expressions[2]))
+        self:DeclareUpvalue(statement.identifiers[1], range)
+
+        if statement.expressions[3] then
+            self:CrawlExpression(statement.expressions[3])
+        end
+
         if self:CrawlStatements(statement.statements, ...) == true then
             return true
         end
@@ -411,7 +423,7 @@ do
         return dst
     end
 
-    evaluate_expression = function(node, stack, self)
+    evaluate_expression = function(self, node, stack)
         if node.kind == "value" then
             if
                 (node.value.type == "letter" and node.upvalue_or_global) or
@@ -573,14 +585,48 @@ do
 
         r.ret = merge_types(r.ret, ret)
         r.arguments = merge_types(r.arguments, arguments)
+        for i, v in ipairs(r.arguments) do
+            r.node.identifiers[i].inferred_type = v
+        end
 
         self:FireEvent("function_spec", r)
 
         return ret
     end
 
-    function META:CrawlExpression(exp)
-        return exp:Evaluate(evaluate_expression, self)
+    do
+        local meta = {}
+        meta.__index = meta
+
+        function meta:Push(val)
+            self.values[self.i] = val
+            self.i = self.i + 1
+        end
+
+        function meta:Pop()
+            self.i = self.i - 1
+            local val = self.values[self.i]
+            self.values[self.i] = nil
+            return val
+        end
+
+        local function expand(self, node, cb, stack)
+            if node.left then
+                expand(self, node.left, cb, stack)
+            end
+
+            if node.right then
+                expand(self, node.right, cb, stack)
+            end
+
+            cb(self, node, stack)
+        end
+
+        function META:CrawlExpression(exp)
+            local stack = setmetatable({values = {}, i = 1}, meta)
+            expand(self, exp, evaluate_expression, stack)
+            return unpack(stack.values)
+        end
     end
 end
 

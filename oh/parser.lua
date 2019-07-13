@@ -152,32 +152,28 @@ do -- statements
     end
 
     function META:ReadRemainingStatement()
-        local node
-        local start = self:GetToken()
-
-        local expr = self:ReadExpression()
-
-        if self:IsValue("=") then
-            node = Statement("assignment")
-            node.tokens["="] = self:ReadToken()
-            node.left = {expr}
-            node.right = self:ReadExpressionList(math_huge)
-        elseif self:IsValue(",") then
-            node = Statement("assignment")
-            expr.tokens[","] = self:ReadToken()
-            local list = self:ReadExpressionList(math_huge)
-            table_insert(list, 1, expr)
-            node.left = list
-            node.tokens["="] = self:ReadExpectValue("=")
-            node.right = self:ReadExpressionList(math_huge)
-        elseif expr and expr.kind == "postfix_call" then
-            node = Statement("expression")
-            node.value = expr
-        elseif not self:IsType("end_of_file") then
-            self:Error("unexpected " .. start.type .. " (" .. (self:GetToken().value) .. ") while trying to read assignment or call statement", start, start)
+        if self:IsType("end_of_file") then
+            return
         end
 
-        return node
+        local start = self:GetToken()
+        local left = self:ReadExpressionList(math_huge)
+
+        if self:IsValue("=") then
+            local node = Statement("assignment")
+            node.tokens["="] = self:ReadToken()
+            node.left = left
+            node.right = self:ReadExpressionList(math_huge)
+            return node
+        end
+
+        if left[1] and left[1].kind == "postfix_call" and not left[2] then
+            local node = Statement("call_expression")
+            node.value = left[1]
+            return node
+        end
+
+        self:Error("expected assignment or call expression got $1", start, self:GetToken(), self:GetToken().type)
     end
 
     function META:ReadStatement()
@@ -194,7 +190,8 @@ do -- statements
             self:IsDoStatement() then               return self:ReadDoStatement() elseif
             self:IsIfStatement() then               return self:ReadIfStatement() elseif
             self:IsWhileStatement() then            return self:ReadWhileStatement() elseif
-            self:IsForStatement() then              return self:ReadForStatement()
+            self:IsNumericForStatement() then       return self:ReadNumericForStatement() elseif
+            self:IsGenericForStatement() then       return self:ReadGenericForStatement()
         end
 
         return self:ReadRemainingStatement()
@@ -340,29 +337,44 @@ do -- local
     end
 end
 
-do -- for
-    function META:IsForStatement()
-        return self:IsValue("for")
+do -- numeric for
+    function META:IsNumericForStatement()
+        return self:IsValue("for") and self:IsType("letter", 1) and self:IsValue("=", 2)
     end
 
-    function META:ReadForStatement()
-        local node = Statement("for")
+    function META:ReadNumericForStatement()
+        local node = Statement("numeric_for")
+
         node.tokens["for"] = self:ReadToken()
         node.is_local = true
 
-        if self:IsType("letter") and self:IsValue("=", 1) then
-            node.fori = true
+        node.identifiers = self:ReadIdentifierList(1)
+        node.tokens["="] = self:ReadToken()
+        node.expressions = self:ReadExpressionList(3)
 
-            node.identifiers = self:ReadIdentifierList(1)
-            node.tokens["="] = self:ReadToken()
-            node.expressions = self:ReadExpressionList(3)
-        else
-            node.fori = false
+        node.tokens["do"] = self:ReadExpectValue("do")
+        node.statements = self:ReadStatements({["end"] = true})
+        node.tokens["end"] = self:ReadExpectValue("end", node.tokens["do"], node.tokens["do"])
 
-            node.identifiers = self:ReadIdentifierList()
-            node.tokens["in"] = self:ReadExpectValue("in")
-            node.expressions = self:ReadExpressionList()
-        end
+        return node
+    end
+end
+
+
+do -- generic for
+    function META:IsGenericForStatement()
+        return self:IsValue("for")
+    end
+
+    function META:ReadGenericForStatement()
+        local node = Statement("generic_for")
+
+        node.tokens["for"] = self:ReadToken()
+        node.is_local = true
+
+        node.identifiers = self:ReadIdentifierList()
+        node.tokens["in"] = self:ReadExpectValue("in")
+        node.expressions = self:ReadExpressionList()
 
         node.tokens["do"] = self:ReadExpectValue("do")
         node.statements = self:ReadStatements({["end"] = true})
@@ -425,7 +437,7 @@ do  -- function
             else
                 node.expression.upvalue_or_global = node
             end
-            
+
             if node.expression.value.value == ":" then
                 node.self_call = true
             end

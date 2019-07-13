@@ -655,7 +655,8 @@ function META:GetTokens()
 
         if token.type == "end_of_file" then
             token.value = ""
-        break end
+            break
+        end
     end
 
     return tokens

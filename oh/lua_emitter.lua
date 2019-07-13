@@ -188,6 +188,14 @@ do
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"])
 
+        if node.inferred_type and node.inferred_type.ret then
+            --self:Emit(" --[[ : ")
+            self:Emit(": ")
+            self:Emit(tostring(node.inferred_type.ret[1].name))
+            --self:Emit(" ]] ")
+        end
+
+
         self:Whitespace("\n")
         self:EmitBlock(node.statements)
 
@@ -214,7 +222,7 @@ do
         self:Whitespace("\t")
         self:EmitToken(node.tokens["function"])
         self:Whitespace(" ")
-        self:EmitExpression(node.expression)
+        self:EmitExpression(node.expression or node.identifier)
         emit_function_body(self, node)
     end
 end
@@ -327,24 +335,36 @@ function META:EmitIfStatement(node)
     self:EmitToken(node.tokens["end"])
 end
 
-function META:EmitForStatement(node)
+
+function META:EmitGenericForStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["for"])
     self:Whitespace(" ")
 
-    if node.fori then
-        self:EmitIdentifierList(node.identifiers)
-        self:Whitespace(" ")
-        self:EmitToken(node.tokens["="])
-        self:Whitespace(" ")
-        self:EmitExpressionList(node.expressions)
-    else
-        self:EmitIdentifierList(node.identifiers)
-        self:Whitespace(" ")
-        self:EmitToken(node.tokens["in"])
-        self:Whitespace(" ")
-        self:EmitExpressionList(node.expressions)
-    end
+    self:EmitIdentifierList(node.identifiers)
+    self:Whitespace(" ")
+    self:EmitToken(node.tokens["in"])
+    self:Whitespace(" ")
+    self:EmitExpressionList(node.expressions)
+
+    self:Whitespace(" ")
+    self:EmitToken(node.tokens["do"])
+    self:Whitespace("\n")
+    self:EmitBlock(node.statements)
+    self:Whitespace("\t")
+    self:EmitToken(node.tokens["end"])
+end
+
+function META:EmitNumericForStatement(node)
+    self:Whitespace("\t")
+    self:EmitToken(node.tokens["for"])
+    self:Whitespace(" ")
+
+    self:EmitIdentifierList(node.identifiers)
+    self:Whitespace(" ")
+    self:EmitToken(node.tokens["="])
+    self:Whitespace(" ")
+    self:EmitExpressionList(node.expressions)
 
     self:Whitespace(" ")
     self:EmitToken(node.tokens["do"])
@@ -380,20 +400,18 @@ function META:EmitRepeatStatement(node)
     self:EmitExpression(node.expression)
 end
 
-do
-    function META:EmitLabelStatement(node)
-        self:Whitespace("\t")
-        self:EmitToken(node.tokens["::left"])
-        self:EmitToken(node.identifier)
-        self:EmitToken(node.tokens["::right"])
-    end
+function META:EmitLabelStatement(node)
+    self:Whitespace("\t")
+    self:EmitToken(node.tokens["::left"])
+    self:EmitToken(node.identifier)
+    self:EmitToken(node.tokens["::right"])
+end
 
-    function META:EmitGotoStatement(node)
-        self:Whitespace("\t")
-        self:EmitToken(node.tokens["goto"])
-        self:Whitespace(" ")
-        self:EmitToken(node.identifier)
-    end
+function META:EmitGotoStatement(node)
+    self:Whitespace("\t")
+    self:EmitToken(node.tokens["goto"])
+    self:Whitespace(" ")
+    self:EmitToken(node.identifier)
 end
 
 function META:EmitBreakStatement(node)
@@ -454,14 +472,7 @@ end
 
 function META:EmitAssignment(node)
     self:Whitespace("\t")
-
-    if node.is_local then
-        self:EmitToken(node.tokens["local"])
-        self:Whitespace(" ")
-        self:EmitIdentifierList(node.identifiers)
-    else
-        self:EmitExpressionList(node.left)
-    end
+    self:EmitExpressionList(node.left)
     if node.tokens["="] then
         self:Whitespace(" ")
         self:EmitToken(node.tokens["="])
@@ -485,8 +496,10 @@ function META:EmitStatement(node)
         self:EmitBreakStatement(node)
     elseif node.kind == "return" then
         self:EmitReturnStatement(node)
-    elseif node.kind == "for" then
-        self:EmitForStatement(node)
+    elseif node.kind == "numeric_for" then
+        self:EmitNumericForStatement(node)
+    elseif node.kind == "generic_for" then
+        self:EmitGenericForStatement(node)
     elseif node.kind == "do" then
         self:EmitDoStatement(node)
     elseif node.kind == "function" then
@@ -497,7 +510,7 @@ function META:EmitStatement(node)
         self:EmitAssignment(node)
     elseif node.kind == "local_assignment" then
         self:EmitLocalAssignment(node)
-    elseif node.kind == "expression" then
+    elseif node.kind == "call_expression" then
         self:Whitespace("\t")
         self:EmitExpression(node.value)
     elseif node.kind == "shebang" then
@@ -544,15 +557,19 @@ function META:EmitExpressionList(tbl, delimiter)
     end
 end
 
-function META:EmitIdentifier(token)
-    self:EmitToken(token.value)
+function META:EmitIdentifier(node)
+    self:EmitToken(node.value)
+    if node.inferred_type then
+        self:Emit(": ")
+        self:Emit(tostring(node.inferred_type.name))
+    end
 end
 
-function META:EmitIdentifierList(tbl, delimiter)
+function META:EmitIdentifierList(tbl)
     for i = 1, #tbl do
         self:EmitIdentifier(tbl[i])
         if i ~= #tbl then
-            self:EmitToken(tbl[i].tokens[","], delimiter)
+            self:EmitToken(tbl[i].tokens[","])
             self:Whitespace(" ")
         end
     end

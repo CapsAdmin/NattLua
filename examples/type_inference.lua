@@ -1,5 +1,3 @@
-local Crawler = require("oh.crawler")
-
 local tests = {
 [[
     local a = {}
@@ -8,39 +6,39 @@ local tests = {
     local c = 0
 
     function a:bar()
-        type_expect(self, "table")
+        assert_type(self, "table")
         c = 1
     end
 
     a:bar()
 
-    type_expect(c, "number", 1)
+    assert_type(c, "number", 1)
 ]], [[
     local function test()
 
     end
 
-    type_expect(test, "function")
+    assert_type(test, "function")
 ]], [[
     local a = 1
     repeat
-        type_expect(a, "number")
+        assert_type(a, "number")
     until false
 ]], [[
     local c = 0
     for i = 1, 10, 2 do
-        type_expect(i, "number")
+        assert_type(i, "number")
         if i == 1 then
             c = 1
             break
         end
     end
-    type_expect(c, "number", 1)
+    assert_type(c, "number", 1)
 ]], [[
     local a = {foo = true, bar = false, faz = 1}
     for k,v in pairs(a) do
-        type_expect(k, "string")
-        type_expect(v, {"number", "string"})
+        assert_type(k, "string")
+        assert_type(v, {"number", "string"})
     end
 ]], [[
     local a = 0
@@ -60,7 +58,7 @@ local tests = {
     end
     local a = lol(1,2,3)
 
-    type_expect(a, "number", 6)
+    assert_type(a, "number", 6)
 ]], [[
     local a = 1+2+3+4
     local b = nil
@@ -73,7 +71,7 @@ local tests = {
         b = print(a+10)
     end
 
-    type_expect(b, "number", 20)
+    assert_type(b, "number", 20)
 
 ]], [[
     local a
@@ -84,7 +82,7 @@ local tests = {
             return foo(lol), nil
         end
         local complex = foo(a)
-        type_expect(foo, "function", {{"any"}, {"nil"}}, {{"number"}} )
+        assert_type(foo, "function", {{"any"}, {"nil"}}, {{"number"}} )
     end
 ]], [[
     b = {}
@@ -98,7 +96,7 @@ local tests = {
 
     local c = foo(a)
 
-    type_expect(c, "number", 2)
+    assert_type(c, "number", 2)
 ]], [[
     local META = {}
     META.__index = META
@@ -115,7 +113,7 @@ local tests = {
         ret = a+b+c
     end
 
-    type_expect(ret, "number", 12)
+    assert_type(ret, "number", 12)
 ]], [[
     local function test(a)
         if a then
@@ -130,18 +128,18 @@ local tests = {
     if res then
         local a = 1 + res
 
-        type_expect(a, "number", 2)
+        assert_type(a, "number", 2)
     end
 ]], [[
     local a = 1337
     for i = 1, 10 do
-        type_expect(i, "number", 1, 10)
+        assert_type(i, "number", 1, 10)
         if i == 15 then
             a = 7777
             break
         end
     end
-    type_expect(a, "number", 1337)
+    assert_type(a, "number", 1337)
 ]], [[
     local function lol(a, ...)
         local lol,foo,bar = ...
@@ -153,36 +151,35 @@ local tests = {
 
     local a,b,c = lol(3,1,2,3)
 
-    type_expect(a, "string", "")
-    type_expect(b, "number", 4)
-    type_expect(c, "number", 3)
+    assert_type(a, "string", "")
+    assert_type(b, "number", 4)
+    assert_type(c, "number", 3)
 ]], [[
     function foo(a, b) return a+b end
 
     local a = foo(1,2)
 
-    type_expect(a, "number", 3)
-end
+    assert_type(a, "number", 3)
 ]], [[
     local a = 1
-    type_expect(a, "number")
+    assert_type(a, "number")
 ]], [[
 local   a,b,c = 1,2,3
         d,e,f = 4,5,6
 
-type_expect(a, "number", 1)
-type_expect(b, "number", 2)
-type_expect(c, "number", 3)
+assert_type(a, "number", 1)
+assert_type(b, "number", 2)
+assert_type(c, "number", 3)
 
-type_expect(d, "number", 4)
-type_expect(e, "number", 5)
-type_expect(f, "number", 6)
+assert_type(d, "number", 4)
+assert_type(e, "number", 5)
+assert_type(f, "number", 6)
 
 local   vararg_1 = ...
         vararg_2 = ...
 
-type_expect(vararg_1, "nil")
-type_expect(vararg_2, "nil")
+assert_type(vararg_1, "nil")
+assert_type(vararg_2, "nil")
 
 local function test(...)
     return a,b,c, ...
@@ -190,22 +187,22 @@ end
 
 A, B, C, D = test(), 4
 
-type_expect(A, "number", 1)
-type_expect(B, "number", 2)
-type_expect(C, "number", 3)
-type_expect(D, "...") -- THIS IS WRONG, tuple of any?
+assert_type(A, "number", 1)
+assert_type(B, "number", 2)
+assert_type(C, "number", 3)
+assert_type(D, "...") -- THIS IS WRONG, tuple of any?
 
 local z,x,y,æ,ø,å = test(4,5,6)
 local novalue
 
-type_expect(z, "number", 1)
-type_expect(x, "number", 2)
-type_expect(y, "number", 3)
-type_expect(æ, "number", 4)
-type_expect(ø, "number", 5)
-type_expect(å, "number", 6)
+assert_type(z, "number", 1)
+assert_type(x, "number", 2)
+assert_type(y, "number", 3)
+assert_type(æ, "number", 4)
+assert_type(ø, "number", 5)
+assert_type(å, "number", 6)
 
-]],false, [[
+]], [[
 local a = {b = {c = {}}}
 a.b.c = 1
 ]],[[
@@ -231,7 +228,7 @@ a.b.c = 1
     string(true)
     local ag = string()
 
-    type_expect(ag, "string", "hello")
+    assert_type(ag, "number", 2)
 
 ]],[[
     local foo = {lol = 3}
@@ -239,14 +236,14 @@ a.b.c = 1
         return a+self.lol
     end
 
-    type_expect(foo:bar(2), "number", 5)
+    assert_type(foo:bar(2), "number", 5)
 
 ]],[[
     function prefix (w1, w2)
         return w1 .. ' ' .. w2
     end
 
-    type_expect(prefix("hello", "world"), "string", "hello world")
+    assert_type(prefix("hello", "world"), "string", "hello world")
 ]],[[
     local function test(max)
         for i = 1, max do
@@ -265,9 +262,9 @@ a.b.c = 1
     local b = test(5)
     local c = test(1)
 
-    type_expect(a, "boolean", false)
-    type_expect(b, "boolean", true)
-    type_expect(c, "string", "lol")
+    assert_type(a, "boolean", false)
+    assert_type(b, "boolean", true)
+    assert_type(c, "string", "lol")
 ]],[[
     local func = function()
         local a = 1
@@ -279,7 +276,7 @@ a.b.c = 1
 
     local f = func()
 
-    type_expect(f(), "number", 1)
+    assert_type(f(), "number", 1)
 ]],[[
     local function pairs(t)
         local k, v
@@ -291,15 +288,15 @@ a.b.c = 1
     end
 
     for k,v in pairs({foo=1, bar=2, faz=3}) do
-        type_expect(k, "string")
-        type_expect(v, "number")
+        assert_type(k, "string")
+        assert_type(v, "number")
     end
 ]],[[
     local t = {foo=1, bar=2, faz="str"}
     pairs(t)
     for k,v in pairs(t) do
-        type_expect(k, "string")
-        type_expect(v, {"string", "number"})
+        assert_type(k, "string")
+        assert_type(v, {"string", "number"})
     end
 ]],[[
     function prefix (w1, w2)
@@ -310,38 +307,76 @@ a.b.c = 1
     local statetab = {["foo bar"] = 1337}
 
     local test = statetab[prefix(w1, w2)]
-    type_expect(test, "number", 1337)
+    assert_type(test, "number", 1337)
 ]],[[
     local function test(a)
         --if a > 10 then return a end
         return test(a+1)
     end
 
-    type_expect(test(1), "any")
+    assert_type(test(1), "any")
 ]],[[
     local function test(a)
         if a > 10 then return a end
         return test(a+1)
     end
 
-    type_expect(test(1), "number")
+    assert_type(test(1), "number")
 ]]
 }
 
+tests = {[[
+    do
+        -- Avoid heap allocs for performance
+        local fcomp_default = function( a,b ) return a < b end
+        function table_bininsert(t, value, fcomp)
+           -- Initialise compare function
+           local fcomp = fcomp or fcomp_default
+           --  Initialise numbers
+           local iStart,iEnd,iMid,iState = 1,#t,1,0
+           -- Get insert position
+           while iStart <= iEnd do
+              -- calculate middle
+              iMid = math.floor( (iStart+iEnd)/2 )
+              -- compare
+              if fcomp( value,t[iMid] ) then
+                 iEnd,iState = iMid - 1,0
+              else
+                 iStart,iState = iMid + 1,1
+              end
+           end
+           table.insert( t,(iMid+iState),value )
+           return (iMid+iState)
+        end
+     end
 
+    local t = {}
+    table_bininsert(t,  5)
+]]}
+
+--tests= {io.open("oh/crawler.lua", "r"):read("*all")}
+
+local Crawler = require("oh.crawler")
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
+local LuaEmitter = require("oh.lua_emitter")
 
 for _, code in ipairs(tests) do
     if code == false then return end
+
     --local path = "oh/parser.lua"
     --local code = assert(io.open(path)):read("*all")
 
     local tk = Lexer(code)
     local ps = Parser()
+    local em = LuaEmitter()
 
-    local tokens = tk:GetTokens()
-    local ast = ps:BuildAST(tokens)
+    local oh = require("oh")
+    ps.OnError = oh.DefaultErrorHandler
+    tk.OnError = oh.DefaultErrorHandler
+
+    local tokens = assert(tk:GetTokens())
+    local ast = assert(ps:BuildAST(tokens))
 
     local crawler = Crawler()
 
@@ -467,7 +502,7 @@ for _, code in ipairs(tests) do
         return combined
     end
 
-    crawler:DeclareGlobal("type_expect", T("function", {T"any"}, {T"..."}, function(what, type, value, ...)
+    crawler:DeclareGlobal("assert_type", T("function", {T"any"}, {T"..."}, function(what, type, value, ...)
         if type:IsType("table") then
             type = table_to_types(type)
         end
@@ -551,6 +586,9 @@ for _, code in ipairs(tests) do
         })
     add("math", {
         random = T("function", {T"number"}, {T"number"}),
+        floor = T("function", {T"number"}, {T"number"}),
+        ceil = T("function", {T"number"}, {T"number"}),
+
     })
     add("string", {
         find = T("function", {T"number" + T"nil", T"number" + T"nil", T"string" + T"nil"}, {T"string", T"string"}),
@@ -558,4 +596,8 @@ for _, code in ipairs(tests) do
     })
 
     crawler:CrawlStatement(ast)
+
+    local f = io.open("temp.lua", "w")
+    f:write(em:BuildCode(ast))
+    f:close()
 end

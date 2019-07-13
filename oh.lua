@@ -32,6 +32,12 @@ function oh.CodeToTokens(code, name)
 	return tokens, lexer
 end
 
+function oh.DefaultErrorHandler(self, msg, start, stop, ...)
+	self.errors = self.errors or {}
+	table.insert(self.errors, {msg = msg, start = start, stop = stop, args = {...}})
+	error(print_util.FormatMessage(msg, ...))
+end
+
 local function on_error(self, msg, start, stop, ...)
 	self.errors = self.errors or {}
 	table.insert(self.errors, {msg = msg, start = start, stop = stop, args = {...}})

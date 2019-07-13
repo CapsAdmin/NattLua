@@ -33,7 +33,6 @@ do
 		for i = 1, #code do
 			local char = code:sub(i, i)
 
-
 			if i == stop then
 				line_stop = line
 			end
@@ -89,7 +88,6 @@ do
 			end
 		end
 
-
 		return 1, first_line_pos, line
 	end
 
@@ -130,6 +128,9 @@ do
 
 	function oh.FormatError(code, path, msg, start, stop, ...)
 		msg = oh.FormatMessage(msg, ...)
+
+		start = math.min(start, 0)
+		stop = math.max(stop, #code)
 
 		local data = sub_pos_2_line_pos(code, start, stop)
 

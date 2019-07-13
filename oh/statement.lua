@@ -65,62 +65,6 @@ function META:GetExpressions()
     end
 end
 
-function META:GetStatementAssignments()
-    local flat
-
-    if self.kind == "for" then
-        flat = {}
-        for i, node in ipairs(self.identifiers) do
-            flat[i] = {node, self.expressions[i]}
-        end
-    elseif self.kind == "function" then
-        flat = {}
-        for i, node in ipairs(self.identifiers) do
-            flat[i] = {node}
-        end
-
-        if not self.is_local then
-            local flat2 = self.expression:Flatten()
-            if self.kind == "function" and flat2[#flat2-1] and flat2[#flat2-1].value.value == ":" then
-                local start, stop = self.expression:GetStartStop()
-
-                local exp = Expression("value")
-                exp.value = Token("letter", start, stop, "self")
-
-                table_insert(flat, 1, {exp, self.expression})
-            end
-        end
-    end
-
-    return flat
-end
-
-function META:GetAssignments()
-    local flat
-
-    if self.kind == "assignment" then
-        flat = {}
-        if self.is_local then
-            for i, node in ipairs(self.identifiers) do
-                flat[i] = {node, self.expressions and self.expressions[i]}
-            end
-        else
-            for i, node in ipairs(self.left) do
-                flat[i] = {node, self.right[i]}
-            end
-        end
-    elseif self.kind == "function" then
-        flat = {}
-        if self.is_local then
-            flat[1] = {self.name, self}
-        else
-            flat[1] = {self.expression, self}
-        end
-    end
-
-    return flat
-end
-
 function META:Walk(cb, arg)
     if self.kind == "if" then
         for i = 1, #self.statements do
@@ -153,6 +97,7 @@ return function(kind)
     local node = {}
     node.tokens = {}
     node.kind = kind
+
     setmetatable(node, META)
 
     return node

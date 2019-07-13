@@ -17,8 +17,9 @@ local function check(tbl)
 end
 
 check({
-    {"local foo[123] = true", ".- unexpected symbol"},
-    {"/clcret retprio inq tv5 howaw tv4aw exoaw", "unexpected symbol"},
+    {"a,b", "expected assignment or call expression"},
+    {"local foo[123] = true", ".- expected beginning of expression"},
+    {"/clcret retprio inq tv5 howaw tv4aw exoaw", "expected assignment or call expression"},
     {"print( “Hello World” )", "expected.-%).-got.-World”"},
     {"foo = {bar = until}, faz = true}", "expected beginning of expression, got.-until"},
     {"foo = {1, 2 3}", "expected.-,.-;.-}.-got.-3"},
@@ -36,7 +37,7 @@ check({
     {"a = 0b1LOL01", "malformed number L in binary notation"},
     {"a = 'aaaa", "unterminated single quote.-reached end of file"},
     {"a = 'aaaa \ndawd=1", "unterminated single quote"},
-    {"foo = !", "unexpected unknown"},
+    {"foo = !", "expected assignment or call expression got.-unknown"},
     {"foo = then", "expected beginning of expression.-got.-then"},
     {"--[[aaaa", "unterminated multiline comment.-reached end of code"},
     {"--[[aaaa\na=1", "unterminated multiline comment.-reached end of code"},

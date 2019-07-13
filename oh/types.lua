@@ -14,7 +14,12 @@ function META.__add(a, b)
 end
 
 function META:AttachNode(node)
+
     self.node = node
+    if node then
+        node.inferred_type = self
+    end
+
     return self
 end
 
@@ -38,8 +43,14 @@ function META:__tostring()
     end
 
     if self.value ~= nil then
-        return self.name .. "(" .. tostring(self.value) .. ")"
+        local val = tostring(self.value)
+        if self.max then
+            val = val .. ".." .. tostring(self.max.value)
+        end
+
+        return self.name .. "(" .. val .. ")"
     end
+
     return self.name
 end
 
@@ -81,7 +92,6 @@ function META:IsTruthy()
         end
         return self.interface.truthy[self.value]
     end
-
     return self.interface.truthy
 end
 
