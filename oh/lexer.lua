@@ -156,6 +156,14 @@ function META:NewToken(type, start, stop)
 
     if type == "letter" and syntax.Keywords[value] then
         type = "keyword"
+    elseif type == "symbol" then
+        if syntax.PrefixOperators[value] then
+            type = "operator_prefix"
+        elseif syntax.PostfixOperators[value] then
+            type = "operator_postfix"
+        elseif syntax.BinaryOperators[value] then
+            type = "operator_binary"
+        end
     end
 
     return Token(type, start, stop, value)

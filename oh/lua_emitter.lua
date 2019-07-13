@@ -188,7 +188,7 @@ do
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"])
 
-        if node.inferred_type and node.inferred_type.ret then
+        if node.inferred_type and node.inferred_type.ret and node.inferred_type.ret[1] then
             --self:Emit(" --[[ : ")
             self:Emit(": ")
             self:Emit(tostring(node.inferred_type.ret[1].name))

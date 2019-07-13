@@ -1,5 +1,11 @@
-local tests = {
-[[
+local tests = {[[
+    local a = 1
+    assert_type(a, "number", 1)
+]],[[
+    local a
+    a = 1
+    assert_type(a, "number", 1)
+]],[[
     local a = {}
     a.foo = {}
 
@@ -265,7 +271,7 @@ a.b.c = 1
     assert_type(a, "boolean", false)
     assert_type(b, "boolean", true)
     assert_type(c, "string", "lol")
-]],[[
+]], [[
     local func = function()
         local a = 1
 
@@ -325,41 +331,11 @@ a.b.c = 1
 ]]
 }
 
-tests = {[[
-    do
-        -- Avoid heap allocs for performance
-        local fcomp_default = function( a,b ) return a < b end
-        function table_bininsert(t, value, fcomp)
-           -- Initialise compare function
-           local fcomp = fcomp or fcomp_default
-           --  Initialise numbers
-           local iStart,iEnd,iMid,iState = 1,#t,1,0
-           -- Get insert position
-           while iStart <= iEnd do
-              -- calculate middle
-              iMid = math.floor( (iStart+iEnd)/2 )
-              -- compare
-              if fcomp( value,t[iMid] ) then
-                 iEnd,iState = iMid - 1,0
-              else
-                 iStart,iState = iMid + 1,1
-              end
-           end
-           table.insert( t,(iMid+iState),value )
-           return (iMid+iState)
-        end
-     end
-
-    local t = {}
-    table_bininsert(t,  5)
-]]}
-
---tests= {io.open("oh/crawler.lua", "r"):read("*all")}
-
 local Crawler = require("oh.crawler")
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
+local types = require("oh.types")
 
 for _, code in ipairs(tests) do
     if code == false then return end
@@ -380,129 +356,23 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-    local t = 0
-    function crawler:OnEvent(what, ...)
-
-        if what == "create_global" then
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            local key, val = ...
-            io.write(key:Render())
-            if val then
-                io.write(" = ")
-                io.write(tostring(val))
-            end
-            io.write("\n")
-        elseif what == "newindex" then
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            local obj, key, val = ...
-            io.write(tostring(obj.name), "[", self:Hash(key:GetNode()), "] = ", tostring(val))
-            io.write("\n")
-        elseif what == "mutate_upvalue" then
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            local key, val = ...
-            io.write(self:Hash(key), " = ", tostring(val))
-            io.write("\n")
-        elseif what == "upvalue" then
-            io.write((" "):rep(t))
-            io.write(what, "  - ")
-            local key, val = ...
-            io.write(self:Hash(key))
-            if val then
-                io.write(" = ")
-                io.write(tostring(val))
-            end
-            io.write("\n")
-        elseif what == "set_global" then
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            local key, val = ...
-            io.write(self:Hash(key))
-            if val then
-                io.write(" = ")
-                io.write(tostring(val))
-            end
-            io.write("\n")
-        elseif what == "enter_scope" then
-            local node, extra_node = ...
-            io.write((" "):rep(t))
-            t = t + 1
-            if extra_node then
-                io.write(extra_node.value)
-            else
-                io.write(node.kind)
-            end
-            io.write(" { ")
-            io.write("\n")
-        elseif what == "leave_scope" then
-            local node, extra_node = ...
-            t = t - 1
-            io.write((" "):rep(t))
-            io.write("}")
-            --io.write(node.kind)
-            if extra_node then
-            --  io.write(tostring(extra_node))
-            end
-            io.write("\n")
-        elseif what == "external_call" then
-            io.write((" "):rep(t))
-            local node, type = ...
-            io.write(node:Render(), " - (", tostring(type), ")")
-            io.write("\n")
-        elseif what == "call" then
-            io.write((" "):rep(t))
-            --io.write(what, " - ")
-            local exp, return_values = ...
-            if return_values then
-                local str = {}
-                for i,v in ipairs(return_values) do
-                    str[i] = tostring(v)
-                end
-                io.write(table.concat(str, ", "))
-            end
-            io.write(" = ", exp:Render())
-            io.write("\n")
-        elseif what == "function_spec" then
-            local func = ...
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            io.write(tostring(func))
-            io.write("\n")
-        elseif what == "return" then
-            io.write((" "):rep(t))
-            io.write(what, "   - ")
-            local values = ...
-            if values then
-                for i,v in ipairs(values) do
-                    io.write(tostring(v), ", ")
-                end
-            end
-            io.write("\n")
-        else
-            io.write((" "):rep(t))
-            print(what .. " - ", ...)
-        end
-    end
-
-    local T = require("oh.types").Type
+    --crawler.OnEvent = crawler.DumpEvent
 
     local function add(lib, t)
-        local tbl = T("table")
+        local tbl = types.Type("table")
         tbl.value = t
         crawler:DeclareGlobal(lib, tbl)
     end
 
     local function table_to_types(type)
-        local combined = T(type.value[1].value)
+        local combined = types.Type(type.value[1].value)
         for i = 2, #type.value do
-            combined = combined + T(type.value[i].value)
+            combined = combined + types.Type(type.value[i].value)
         end
         return combined
     end
 
-    crawler:DeclareGlobal("assert_type", T("function", {T"any"}, {T"..."}, function(what, type, value, ...)
+    crawler:DeclareGlobal("assert_type", types.Type("function", {types.Type"any"}, {types.Type"..."}, function(what, type, value, ...)
         if type:IsType("table") then
             type = table_to_types(type)
         end
@@ -545,21 +415,21 @@ for _, code in ipairs(tests) do
             end
         end
 
-        return T("boolean", true)
+        return types.Type("boolean", true)
     end))
 
-    crawler:DeclareGlobal("next", T("function", {T"any", T"any"}, {T"any", T"any"}, function(tbl, key)
+    crawler:DeclareGlobal("next", types.Type("function", {types.Type"any", types.Type"any"}, {types.Type"any", types.Type"any"}, function(tbl, key)
         local key, val = next(tbl.value)
 
-        return T("string", key), val
+        return types.Type("string", key), val
     end))
 
-    crawler:DeclareGlobal("pairs", T("function", {T"table"}, {T"table"}, function(tbl)
+    crawler:DeclareGlobal("pairs", types.Type("function", {types.Type"table"}, {types.Type"table"}, function(tbl)
         local key, val
         return function()
             for k,v in pairs(tbl.value) do
                 if type(k) == "string" then
-                    k = T("string", k)
+                    k = types.Type("string", k)
                 end
 
                 if not key then
@@ -579,25 +449,21 @@ for _, code in ipairs(tests) do
         end, tbl
     end))
 
-    add("io", {lines = T("function", {T"string"}, {T"number" + T"nil" + T"string"})})
+    add("io", {lines = types.Type("function", {types.Type"string"}, {types.Type"number" + types.Type"nil" + types.Type"string"})})
     add("table", {
-        insert = T("function", {T"nil"}, {T"table"}),
-        getn = T("function", {T"number"}, {T"table"}),
+        insert = types.Type("function", {types.Type"nil"}, {types.Type"table"}),
+        getn = types.Type("function", {types.Type"number"}, {types.Type"table"}),
         })
     add("math", {
-        random = T("function", {T"number"}, {T"number"}),
-        floor = T("function", {T"number"}, {T"number"}),
-        ceil = T("function", {T"number"}, {T"number"}),
+        random = types.Type("function", {types.Type"number"}, {types.Type"number"}),
+        floor = types.Type("function", {types.Type"number"}, {types.Type"number"}),
+        ceil = types.Type("function", {types.Type"number"}, {types.Type"number"}),
 
     })
     add("string", {
-        find = T("function", {T"number" + T"nil", T"number" + T"nil", T"string" + T"nil"}, {T"string", T"string"}),
-        sub = T("function", {T"string"}, {T"number", T"number" + T"nil"}),
+        find = types.Type("function", {types.Type"number" + types.Type"nil", types.Type"number" + types.Type"nil", types.Type"string" + types.Type"nil"}, {types.Type"string", types.Type"string"}),
+        sub = types.Type("function", {types.Type"string"}, {types.Type"number", types.Type"number" + types.Type"nil"}),
     })
 
     crawler:CrawlStatement(ast)
-
-    local f = io.open("temp.lua", "w")
-    f:write(em:BuildCode(ast))
-    f:close()
 end

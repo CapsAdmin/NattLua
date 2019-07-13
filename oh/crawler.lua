@@ -258,7 +258,117 @@ end
 function META:FireEvent(what, ...)
     if self.suppress_events then return end
 
-    self:OnEvent(what, ...)
+    if self.OnEvent then
+        self:OnEvent(what, ...)
+    end
+end
+
+do
+    local t = 0
+    function META:DumpEvent(what, ...)
+
+        if what == "create_global" then
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            local key, val = ...
+            io.write(key:Render())
+            if val then
+                io.write(" = ")
+                io.write(tostring(val))
+            end
+            io.write("\n")
+        elseif what == "newindex" then
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            local obj, key, val = ...
+            io.write(tostring(obj.name), "[", self:Hash(key:GetNode()), "] = ", tostring(val))
+            io.write("\n")
+        elseif what == "mutate_upvalue" then
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            local key, val = ...
+            io.write(self:Hash(key), " = ", tostring(val))
+            io.write("\n")
+        elseif what == "upvalue" then
+            io.write((" "):rep(t))
+            io.write(what, "  - ")
+            local key, val = ...
+            io.write(self:Hash(key))
+            if val then
+                io.write(" = ")
+                io.write(tostring(val))
+            end
+            io.write("\n")
+        elseif what == "set_global" then
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            local key, val = ...
+            io.write(self:Hash(key))
+            if val then
+                io.write(" = ")
+                io.write(tostring(val))
+            end
+            io.write("\n")
+        elseif what == "enter_scope" then
+            local node, extra_node = ...
+            io.write((" "):rep(t))
+            t = t + 1
+            if extra_node then
+                io.write(extra_node.value)
+            else
+                io.write(node.kind)
+            end
+            io.write(" { ")
+            io.write("\n")
+        elseif what == "leave_scope" then
+            local node, extra_node = ...
+            t = t - 1
+            io.write((" "):rep(t))
+            io.write("}")
+            --io.write(node.kind)
+            if extra_node then
+            --  io.write(tostring(extra_node))
+            end
+            io.write("\n")
+        elseif what == "external_call" then
+            io.write((" "):rep(t))
+            local node, type = ...
+            io.write(node:Render(), " - (", tostring(type), ")")
+            io.write("\n")
+        elseif what == "call" then
+            io.write((" "):rep(t))
+            --io.write(what, " - ")
+            local exp, return_values = ...
+            if return_values then
+                local str = {}
+                for i,v in ipairs(return_values) do
+                    str[i] = tostring(v)
+                end
+                io.write(table.concat(str, ", "))
+            end
+            io.write(" = ", exp:Render())
+            io.write("\n")
+        elseif what == "function_spec" then
+            local func = ...
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            io.write(tostring(func))
+            io.write("\n")
+        elseif what == "return" then
+            io.write((" "):rep(t))
+            io.write(what, "   - ")
+            local values = ...
+            if values then
+                for i,v in ipairs(values) do
+                    io.write(tostring(v), ", ")
+                end
+            end
+            io.write("\n")
+        else
+            io.write((" "):rep(t))
+            print(what .. " - ", ...)
+        end
+    end
 end
 
 function META:CrawlStatements(statements, ...)
@@ -374,7 +484,6 @@ function META:CrawlStatement(statement, ...)
         local args
         if type(func) == "function" then
             args = func()
-            print(args, debug.getinfo(func).source)
         else
             args = func:IsType("function") and self:CallFunction(func, {statement.expressions[2] and self:CrawlExpression(statement.expressions[2])})
         end
@@ -586,7 +695,9 @@ do
         r.ret = merge_types(r.ret, ret)
         r.arguments = merge_types(r.arguments, arguments)
         for i, v in ipairs(r.arguments) do
-            r.node.identifiers[i].inferred_type = v
+            if r.node.identifiers[i] then
+                r.node.identifiers[i].inferred_type = v
+            end
         end
 
         self:FireEvent("function_spec", r)

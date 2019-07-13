@@ -166,6 +166,7 @@ do
         {code = "return math.maxinteger // 80", expect = "return math.floor(math.maxinteger / 80)",     compare_tokens = true},
 
         {code = "\xEF\xBB\xBF foo = true", expect = " foo = true"},
+        {code = "foo(1,2,3,)", expect = "foo(1,2,3)"},
 
         {code = "return math.maxinteger // 80", expect = "return math.floor(math.maxinteger / 80)",     compare_tokens = true},
         {code = "local a = ~1",                 expect = "local a = bit.bnot(1)",                       compare_tokens = true},

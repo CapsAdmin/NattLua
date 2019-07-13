@@ -200,7 +200,7 @@ do -- grammar rules
         )
     end
 
-    function syntax.IsOperator(token)
+    function syntax.IsBinaryOperator(token)
         return syntax.BinaryOperators[token.value] ~= nil
     end
 

@@ -1,7 +1,7 @@
 
 local test = require("tests.test")
 
-local map --= {}
+local map = {}
 
 if map then
     debug.sethook(function(evt)
@@ -18,6 +18,7 @@ end
 io.write("TESTING") io.flush()
 assert(loadfile("tests/transpile_equal.lua"))()
 assert(loadfile("tests/operator_precedence.lua"))()
+assert(loadfile("tests/type_inference.lua"))()
 assert(loadfile("tests/errors.lua"))()
 
 if VERBOSE then
