@@ -572,18 +572,13 @@ do -- expression
                     if not op or not right_priority then break end
                     self:Advance(1)
 
-                    local left = node
-                    local right
-                    if self:IsValue("function") then
-                        right = self:ReadAnonymousFunction()
-                    elseif syntax.IsValue(self:GetToken()) or self:IsType("letter") then
-                        right = Expression("value")
-                        right.value = self:ReadTokenLoose()
-                    elseif self:IsValue("{") then
-                        right = self:ReadTable()
-                    else
+                    if not self:IsType("letter") then
                         break
                     end
+
+                    local left = node
+                    local right = Expression("value")
+                    right.value = self:ReadTokenLoose()
 
                     node = Expression("binary_operator")
                     node.value = op

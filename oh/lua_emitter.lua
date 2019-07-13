@@ -292,22 +292,15 @@ end
 
 function META:EmitPostfixOperator(node)
     local func_chunks = syntax.GetFunctionForPostfixOperator(node.value)
-    if func_chunks then
-        self:Emit(func_chunks[1])
-        self:EmitExpression(node.left)
-        self:Emit(func_chunks[2])
-        self.operator_transformed = true
-    else
-        if syntax.IsKeyword(node.value) then
-            self:EmitExpression(node.left)
-            self:Whitespace("?")
-            self:EmitToken(node.value)
-            self:Whitespace("?")
-        else
-            self:EmitExpression(node.left)
-            self:EmitToken(node.value)
-        end
-    end
+
+    -- no such thing as postfix operator in lua,
+    -- so we have to assume that there's a translation
+    assert(func_chunks)
+
+    self:Emit(func_chunks[1])
+    self:EmitExpression(node.left)
+    self:Emit(func_chunks[2])
+    self.operator_transformed = true
 end
 
 function META:EmitBlock(statements)
@@ -458,19 +451,6 @@ end
 
 function META:EmitAssignment(node)
     self:Whitespace("\t")
-
-    self:EmitExpressionList(node.left)
-
-    if node.tokens["="] then
-        self:Whitespace(" ")
-        self:EmitToken(node.tokens["="])
-        self:Whitespace(" ")
-        self:EmitExpressionList(node.right)
-    end
-end
-
-function META:EmitAssignment(node)
-    self:Whitespace("\t")
     self:EmitExpressionList(node.left)
 
     if node.tokens["="] then
@@ -529,8 +509,6 @@ function META:EmitStatement(node)
         self:EmitExpression(node.value)
     elseif node.kind == "shebang" then
         self:EmitToken(node.tokens["shebang"])
-    elseif node.kind == "value" then
-        self:EmitExpression(node)
     elseif node.kind == "semicolon" then
         self:EmitSemicolonStatement(node)
 

@@ -43,4 +43,5 @@ check({
     {"--[[aaaa\na=1", "unterminated multiline comment.-reached end of code"},
     {"::1::", "expected.-letter.-got.-number"},
     {"::", "expected.-letter.-got.-end_of_file"},
+    {"!!!!!!!!!!!", "expected.-got.-unknown"},
 })
