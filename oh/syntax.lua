@@ -51,7 +51,10 @@ syntax.BinaryOperators = {
     {"+", "-"},
     {"*", "/", "//", "%"},
     {"R^"}, -- right associative
-    {".", ":"},
+}
+
+syntax.PrimaryBinaryOperators = {
+    ".", ":",
 }
 
 syntax.BinaryOperatorFunctionTranslate = {
@@ -117,6 +120,12 @@ do -- extend the symbol characters from grammar rules
     end
 
     for _, symbol in pairs(syntax.PostfixOperators) do
+        if symbol:find("%p") then
+            table.insert(syntax.SymbolCharacters, symbol)
+        end
+    end
+
+    for _, symbol in pairs(syntax.PrimaryBinaryOperators) do
         if symbol:find("%p") then
             table.insert(syntax.SymbolCharacters, symbol)
         end
@@ -224,6 +233,10 @@ do -- grammar rules
         return syntax.PostfixOperatorFunctionTranslate[token.value]
     end
 
+    function syntax.IsPrimaryBinaryOperator(token)
+        return syntax.PrimaryBinaryOperators[token.value]
+    end
+
     function syntax.IsPrefixOperator(token)
         return syntax.PrefixOperators[token.value]
     end
@@ -256,6 +269,7 @@ do -- grammar rules
         return out
     end
 
+    syntax.PrimaryBinaryOperators = to_lookup(syntax.PrimaryBinaryOperators)
     syntax.PrefixOperators = to_lookup(syntax.PrefixOperators)
     syntax.PostfixOperators = to_lookup(syntax.PostfixOperators)
     syntax.Keywords = to_lookup(syntax.Keywords)
@@ -267,13 +281,11 @@ do
     syntax.CompiledBinaryOperatorFunctions = {}
 
     for op in pairs(syntax.BinaryOperators) do
-        if op ~= ":" then
-            local tr = syntax.BinaryOperatorFunctionTranslate[op]
-            if tr then
-                syntax.CompiledBinaryOperatorFunctions[op] = assert(loadstring("return function(a,b) return" .. tr[1] .. "a" .. tr[2] .. "b" .. tr[3] .. " end"))()
-            else
-                syntax.CompiledBinaryOperatorFunctions[op] = assert(loadstring("return function(a, b) return a " .. op .. " b end"))()
-            end
+        local tr = syntax.BinaryOperatorFunctionTranslate[op]
+        if tr then
+            syntax.CompiledBinaryOperatorFunctions[op] = assert(loadstring("return function(a,b) return" .. tr[1] .. "a" .. tr[2] .. "b" .. tr[3] .. " end"))()
+        else
+            syntax.CompiledBinaryOperatorFunctions[op] = assert(loadstring("return function(a, b) return a " .. op .. " b end"))()
         end
     end
 

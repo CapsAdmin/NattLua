@@ -1,7 +1,7 @@
 
 local test = require("tests.test")
 
-local map = {}
+local map-- = {}
 
 if map then
     debug.sethook(function(evt)

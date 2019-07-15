@@ -566,19 +566,11 @@ do -- expression
                 local left = node
                 if not self:GetToken() then break end
 
-                if self:IsValue(".") or self:IsValue(":") then
-                    local op = self:GetToken()
-                    local right_priority = syntax.GetRightOperatorPriority(op)
-                    if not op or not right_priority then break end
-                    self:Advance(1)
+                if syntax.IsPrimaryBinaryOperator(self:GetToken()) and self:IsType("letter", 1) then
+                    local op = self:ReadTokenLoose()
 
-                    if not self:IsType("letter") then
-                        break
-                    end
-
-                    local left = node
                     local right = Expression("value")
-                    right.value = self:ReadTokenLoose()
+                    right.value = self:ReadType("letter")
 
                     node = Expression("binary_operator")
                     node.value = op
