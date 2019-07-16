@@ -465,5 +465,7 @@ for _, code in ipairs(tests) do
         sub = types.Type("function", {types.Type"string"}, {types.Type"number", types.Type"number" + types.Type"nil"}),
     })
 
+    crawler.code = code
+    crawler.name = "test"
     crawler:CrawlStatement(ast)
 end

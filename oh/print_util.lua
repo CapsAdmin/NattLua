@@ -126,11 +126,13 @@ do
 		return msg
 	end
 
+	local function clamp(num, min, max) return math.min(math.max(num, min), max) end
+
 	function oh.FormatError(code, path, msg, start, stop, ...)
 		msg = oh.FormatMessage(msg, ...)
 
-		start = math.min(start, 0)
-		stop = math.max(stop, #code)
+		start = clamp(start, 1, #code)
+		stop = clamp(stop, 1, #code)
 
 		local data = sub_pos_2_line_pos(code, start, stop)
 
@@ -147,6 +149,10 @@ do
 		end
 
 		local line_start, line_stop = data.line_start, data.line_stop
+
+		if not line_stop then
+			print(start, stop, #code)
+		end
 
 		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(code, start, 5, line_start)
 		local post_start_pos, post_stop_pos, lines_after = get_lines_after(code, stop, 5, line_stop)
@@ -238,6 +244,30 @@ function oh.GetErrorsFormatted(error_table, code, path)
 	str = str .. ("="):rep(max_width) .. "\n"
 
 	return str
+end
+
+do
+    local function traverse(tbl, done, out)
+        for k, v in pairs(tbl) do
+            if type(v) == "table" and not done[v] then
+                done[v] = true
+                traverse(v, done, out)
+            end
+            if type(v) == "number" then
+                if k == "start" then
+                    out.max = math.min(out.max, v)
+                elseif k == "stop" then
+                    out.min = math.max(out.min, v)
+                end
+            end
+        end
+    end
+
+    function oh.LazyFindStartStop(tbl)
+        local out = {min = -math.huge, max = math.huge}
+        traverse(tbl, {}, out)
+        return out.max, out.min
+    end
 end
 
 return oh

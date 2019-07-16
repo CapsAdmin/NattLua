@@ -107,7 +107,10 @@ function META:BinaryOperator(op, b)
             ret = arg
         end
 
-        --self:Expect(b, arg)
+        if not b:IsType(arg) then
+            self:Error(tostring(self) .. " " .. op .. " " .. tostring(b) .." is not a valid binary operation (expected " .. arg .. ")")
+            return self:Type("any")
+        end
 
         if op == "==" and a:IsType("number") and b:IsType("number") and a.value and b.value then
             if a.max then
@@ -120,7 +123,12 @@ function META:BinaryOperator(op, b)
         end
 
         if syntax.CompiledBinaryOperatorFunctions[op] and a.value ~= nil and b.value ~= nil then
-            return self:Type(ret, syntax.CompiledBinaryOperatorFunctions[op](a.value, b.value))
+            local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], a.value, b.value)
+            if not ok then
+                self:Error(res)
+            else
+                return self:Type(ret, res)
+            end
         end
 
         return self:Type(ret)
@@ -136,7 +144,12 @@ function META:PrefixOperator(op)
         local ret = self.interface.prefix[op]
 
         if syntax.CompiledPrefixOperatorFunctions[op] and self.value ~= nil then
-            return self:Type(ret, syntax.CompiledPrefixOperatorFunctions[op](self.value))
+            local ok, res = pcall(syntax.CompiledPrefixOperatorFunctions[op], self.value)
+            if not ok then
+                self:Error(res)
+            else
+                return self:Type(ret, res)
+            end
         end
 
         return self:Type(ret)
@@ -152,7 +165,12 @@ function META:PostfixOperator(op)
         local ret = self.interface.postfix[op]
 
         if syntax.CompiledPostfixOperatorFunctions[op] and self.value ~= nil then
-            return self:Type(ret, syntax.CompiledPostfixOperatorFunctions[op](self.value))
+            local ok, res = pcall(syntax.CompiledPostfixOperatorFunctions[op], self.value)
+            if not ok then
+                self:Error(res)
+            else
+                return self:Type(ret, res)
+            end
         end
 
         return self:Type(ret)
@@ -170,15 +188,18 @@ function META:Expect(type, expect)
 end
 
 function META:Error(msg)
-    local s = tostring(self)
 
-    if self:GetNode() then
-        s = s .. " - " .. self:GetNode():Render() .. " - "
+    if self:GetNode() and self.code then
+        local print_util = require("oh.print_util")
+        local node = self:GetNode()
+        local start, stop = print_util.LazyFindStartStop(node)
+        io.write(print_util.FormatError(self.code, self.name, msg, start, stop))
+    else
+        local s = tostring(self)
+        s = s .. ": " .. msg
+
+        print(s)
     end
-
-    s = s .. ": " .. msg
-
-    print(s)
 end
 
 local registered = {}
@@ -434,15 +455,15 @@ types.Register("number", {
     inherits = "base",
     truthy = true,
     binary = {
-        ["+"] = {arg = "number", ret = "number"},
+        ["+"] = "number",
         ["-"] = "number",
         ["*"] = "number",
         ["/"] = "number",
 
-        ["<"] = "boolean",
-        [">"] = "boolean",
-        ["<="] = "boolean",
-        [">="] = "boolean",
+        ["<"] = {arg = "number", ret = "boolean"},
+        [">"] = {arg = "number", ret = "boolean"},
+        ["<="] = {arg = "number", ret = "boolean"},
+        [">="] = {arg = "number", ret = "boolean"},
     }
 })
 

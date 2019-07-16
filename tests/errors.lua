@@ -44,4 +44,5 @@ check({
     {"::1::", "expected.-letter.-got.-number"},
     {"::", "expected.-letter.-got.-end_of_file"},
     {"!!!!!!!!!!!", "expected.-got.-unknown"},
+    {"do do end", "expected.-end.-got.-"},
 })

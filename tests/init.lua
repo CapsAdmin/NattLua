@@ -1,7 +1,5 @@
 
-local test = require("tests.test")
-
-local map-- = {}
+local map -- = {}
 
 if map then
     debug.sethook(function(evt)
@@ -12,6 +10,8 @@ if map then
         map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
     end, "l")
 end
+
+local test = require("tests.test")
 
 --test.transpile_check({code = "a.b()"}) do return end
 

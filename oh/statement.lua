@@ -1,22 +1,11 @@
 local LuaEmitter = require("oh.lua_emitter")
 local Expression = require("oh.expression")
-local Token = require("oh.token")
 
 local table_insert = table.insert
 
 local META = {}
 META.__index = META
 META.type = "statement"
-
-function META:GetStartStop()
-    if self.kind == "function" and not self.is_local then
-        return self.expression:GetStartStop()
-    else
-        return self.name:GetStartStop()
-    end
-
-    return 0,0
-end
 
 function META:__tostring()
     return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
@@ -45,34 +34,6 @@ end
 
 function META:HasStatements()
     return self.statements ~= nil
-end
-
-function META:GetExpressions()
-    if self.kind == "function" or self.kind == "assignment" then
-        return
-    end
-
-    if self.expressions then
-        return self.expressions
-    end
-
-    if self.expression then
-        return {self.expression}
-    end
-
-    if self.value then
-        return {self.value}
-    end
-end
-
-function META:Walk(cb, arg)
-    if self.kind == "if" then
-        for i = 1, #self.statements do
-            cb(self, arg, self.statements[i], {self.expressions[i]}, self.tokens["if/else/elseif"][i])
-        end
-    else
-        cb(self, arg, self:GetStatements(), self:GetExpressions())
-    end
 end
 
 function META:FindStatementsByType(what, out)

@@ -1,12 +1,45 @@
-local oh = require("oh")
+local print_util = require("oh.print_util")
 
 local code = [[
-    while true do
-            dadokok {}
-            asdaw
+for i = 1, #code do
+    local char = code:sub(i, i)
+
+    if char == "dd" then
+        start = i+1
     end
+
+    if char == "cc" then
+        start = i+2
+    end
+
+    local foo = >[[
+        Lorem Ipsum
+        Foo Bar
+        Thy Thee
+        End Of
+    ]<
+
+    if char == "aaa" then
+        stop = i-1
+        break
+    end
+
+    if char == "bbb" then
+        stop = i-1
+        break
+    end
+end
 ]]
 
-local tokens, errors = oh.CodeToTokens(code)
-local ast, errors = oh.TokensToAST(tokens, "prop_generic.lua", code)
-print(errors)
+local function example(code)
+    local start
+    for i = 1, #code do
+        if code:sub(i, i) == ">" then start = i+1 end
+        if code:sub(i, i) == "<" then return start, i-1 end
+    end
+end
+local start, stop = example(code)
+
+print(start, stop)
+
+print(print_util.FormatError(code, "format_error.lua", "unterminated multiline string", start, stop))

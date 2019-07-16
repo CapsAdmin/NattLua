@@ -85,11 +85,15 @@ do
     end
 
     function META:TypeFromNode(node, ...)
-        return new_type(self, node, ...):AttachNode(node)
+        local t = new_type(self, node, ...):AttachNode(node)
+        t.code = self.code
+        return t
     end
 
     function META:TypeFromImplicitNode(node, ...)
-        return types.Type(...):AttachNode(node)
+        local t = types.Type(...):AttachNode(node)
+        t.code = self.code
+        return t
     end
 
     --[[
