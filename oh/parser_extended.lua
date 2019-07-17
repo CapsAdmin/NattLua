@@ -8,15 +8,15 @@ function META:ReadTypeExpression()
 
     for _ = 1, self:GetLength() do
         if self:IsType("letter") then
-            
+
             local node = Expression("type")
-            
+
             if self:IsValue("type") then
                 node.tokens["type"] = self:ReadValue("type")
             end
-            
+
             node.value = self:ReadType("letter")
-            
+
             table.insert(types, node)
         elseif self:IsValue("(") then
             local node = Expression("type_function")
@@ -24,25 +24,25 @@ function META:ReadTypeExpression()
             node.identifiers = self:ReadIdentifierList()
             node.tokens[")"] = self:ReadValue(")")
             node.tokens["=>"] = self:ReadValue("=>")
-    
+
             local out = {}
             for i = 1, max or self:GetLength() do
-    
+
                 local typ = self:ReadTypeExpression()
-    
+
                 if self:HandleListSeparator(out, i, typ) then
                     break
                 end
             end
             node.return_types = out
-    
+
             table.insert(types, node)
         elseif self:IsValue("{") then
             local node = Expression("type_table")
             node.tokens["{"] = self:ReadValue("{")
             node.key_values = self:ReadIdentifierList()
             node.tokens["}"] = self:ReadValue("}")
-            
+
             table.insert(types, node)
         end
 

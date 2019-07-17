@@ -85,12 +85,14 @@ do
     end
 
     function META:TypeFromNode(node, ...)
+        node.scope = self.scope
         local t = new_type(self, node, ...):AttachNode(node)
         t.code = self.code
         return t
     end
 
     function META:TypeFromImplicitNode(node, ...)
+        node.scope = self.scope
         local t = types.Type(...):AttachNode(node)
         t.code = self.code
         return t
@@ -120,8 +122,12 @@ do
         local scope = {
             children = {},
             parent = parent,
+
             upvalues = {},
             upvalue_map = {},
+
+            types = {},
+            type_map = {},
 
             node = node,
             extra_node = extra_node,
@@ -147,6 +153,23 @@ do
 
     function META:GetScope()
         return self.scope
+    end
+
+    function META:DeclareType(key, data)
+        local type = {
+            key = key,
+            data = data,
+            scope = self.scope,
+            events = {},
+            shadow = self:GetTypeDeclaration(key),
+        }
+
+        table_insert(self.scope.types, type)
+        self.scope.type_map[self:Hash(key)] = type
+
+        self:FireEvent("type", key, data)
+
+        return type
     end
 
     function META:DeclareUpvalue(key, data)
@@ -183,6 +206,24 @@ do
         while scope do
             if scope.upvalue_map[key_hash] then
                 return scope.upvalue_map[key_hash]
+            end
+            scope = scope.parent
+        end
+    end
+
+    function META:GetTypeDeclaration(key)
+        if not self.scope then return end
+
+        local key_hash = self:Hash(key)
+
+        if self.scope.type_map[key_hash] then
+            return self.scope.type_map[key_hash]
+        end
+
+        local scope = self.scope.parent
+        while scope do
+            if scope.type_map[key_hash] then
+                return scope.type_map[key_hash]
             end
             scope = scope.parent
         end
@@ -383,34 +424,44 @@ function META:CrawlStatements(statements, ...)
     end
 end
 
-function META:CrawlTypeExpression(exp)
+function META:CrawlTypeExpression(t)
+    local val
+
+    if t.kind == "type" then
+        if t.tokens["type"] and self:GetUpvalue(t) then
+            val = self:GetUpvalue(t).data
+        elseif self:GetTypeDeclaration(t.value.value) then
+            val = self:GetTypeDeclaration(t.value.value).data
+        elseif types.IsType(t.value.value) then
+            val = types.Type(t.value.value)
+        else
+            val = self:TypeFromImplicitNode(t, "any")
+        end
+    elseif t.kind == "type_function" then
+        local args = {}
+        local rets = {}
+        for i,v in ipairs(t.identifiers) do
+            args[i] = self:CrawlTypeExpressions(v.type_expression)
+        end
+        for i,v in ipairs(t.return_types) do
+            rets[i] = self:CrawlTypeExpressions(v)
+        end
+        val = types.Type("function", rets, args)
+    elseif t.kind == "type_table" then
+        val = types.Type("table")
+        val.value = {}
+        for _, node in ipairs(t.key_values) do
+            val.value[node.value.value] = self:CrawlTypeExpressions(node.type_expression)
+        end
+    end
+
+    return val
+end
+
+function META:CrawlTypeExpressions(exp)
     local res
     for _, t in ipairs(exp.types or exp) do
-        local val
-
-        if t.kind == "type" then
-            if t.tokens["type"] then
-                val = self:GetUpvalue(t).data
-            else
-                val = types.Type(t.value.value)
-            end
-        elseif t.kind == "type_function" then
-            local args = {}
-            local rets = {}
-            for i,v in ipairs(t.identifiers) do
-                args[i] = self:CrawlTypeExpression(v)
-            end
-            for i,v in ipairs(t.return_types) do
-                rets[i] = self:CrawlTypeExpression(v)
-            end
-            val = types.Type("function", rets, args)
-        elseif t.kind == "type_table" then
-            val = types.Type("table")
-            val.value = {}
-            for _, node in ipairs(t.key_values) do
-                val.value[node.value.value] = self:CrawlTypeExpression(node.type_expression)
-            end
-        end
+        local val = self:CrawlTypeExpression(t)
 
         if not res then
             res = val
@@ -437,7 +488,7 @@ function META:CrawlStatement(statement, ...)
             local key = node
             local val = ret[i]
             if key.type_expression then
-                val = self:CrawlTypeExpression(key.type_expression)
+                val = self:CrawlTypeExpressions(key.type_expression)
             end
             self:DeclareUpvalue(key, val)
 
@@ -555,6 +606,8 @@ function META:CrawlStatement(statement, ...)
             return true
         end
         self:PopScope()
+    elseif statement.kind == "type_declaration" then
+        self:DeclareType(statement.identifier.value.value, self:CrawlTypeExpressions(statement.expression.types))
     elseif statement.kind ~= "end_of_file" and statement.kind ~= "semicolon" then
         error("unhandled statement " .. tostring(statement))
     end
@@ -597,9 +650,9 @@ do
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
         elseif node.kind == "function" then
-            
+
             local function type_expression(key, types)
-                local res 
+                local res
                 for _, t in ipairs(types) do
                     if not res then
                         res = self:TypeFromImplicitNode(key, t.value.value)
@@ -610,12 +663,15 @@ do
                 return res
             end
 
+            local args_defined = false
+
             local args = {}
             for i, key in ipairs(node.identifiers) do
                 if key.type_expression then
                     args[i] = type_expression(key, key.type_expression.types)
+                    args_defined = true
                 else
-                    args[i] =  self:TypeFromImplicitNode(key, "any")
+                   -- args[i] =  self:TypeFromImplicitNode(key, "any")
                 end
             end
 
@@ -624,11 +680,49 @@ do
                 for i, type_exp in ipairs(node.type_expressions) do
                     ret[i] = type_expression(node, type_exp.types)
                 end
-            else
-                table.insert(ret, self:TypeFromImplicitNode(key, "any"))
             end
 
-            stack:Push(self:TypeFromImplicitNode(node, "function", ret, args))
+            local t = self:TypeFromImplicitNode(node, "function", ret, args)
+
+            if args_defined then
+                local r = t
+                local old_scope = self.scope
+                self.scope = r.node.scope or self.scope
+                self:PushScope(r.node)
+
+                local arguments = {}
+
+                if r.node.self_call and stack then
+                    local val = stack:Pop()
+                    table.insert(arguments, val)
+                    self:DeclareUpvalue("self", val)
+                end
+
+                for i,v in ipairs(node.identifiers) do
+                    self:DeclareUpvalue(v, args[i])
+                end
+
+                local ret = {}
+                self:CrawlStatements(r.node.statements, ret)
+                self:PopScope()
+                self.scope = old_scope
+
+                r.ret = merge_types(r.ret, ret)
+                r.arguments = merge_types(r.arguments, arguments)
+                for i, v in ipairs(r.arguments) do
+                    if r.node.identifiers[i] then
+                        r.node.identifiers[i].inferred_type = v
+                    end
+                end
+
+                self:FireEvent("function_spec", r)
+            end
+
+            if not t.ret[1] then
+                --table.insert(t.ret, self:TypeFromImplicitNode(key, "any"))
+            end
+
+            stack:Push(t)
         elseif node.kind == "table" then
             stack:Push(self:TypeFromNode(node))
         elseif node.kind == "binary_operator" then
@@ -772,6 +866,14 @@ do
 
         r.ret = merge_types(r.ret, ret)
         r.arguments = merge_types(r.arguments, arguments)
+
+        for i,v in ipairs(r.ret) do
+            -- ERROR HERE
+            if ret[i] == nil then
+                ret[i] = v
+            end
+        end
+
         for i, v in ipairs(r.arguments) do
             if r.node.identifiers[i] then
                 r.node.identifiers[i].inferred_type = v

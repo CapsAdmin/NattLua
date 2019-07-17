@@ -191,6 +191,7 @@ do -- statements
             self:IsValue("function") then                                                       return self:ReadFunctionStatement() elseif
             self:IsValue("local") and self:IsValue("function", 1) then                          return self:ReadLocalFunctionStatement() elseif
             self:IsValue("local") then                                                          return self:ReadLocalAssignmentStatement() elseif
+            self:IsValue("type") and self:IsType("letter", 1) then                              return self:ReadTypeDeclarationStatement() elseif
             self:IsValue("do") then                                                             return self:ReadDoStatement() elseif
             self:IsValue("if") then                                                             return self:ReadIfStatement() elseif
             self:IsValue("while") then                                                          return self:ReadWhileStatement() elseif
@@ -280,6 +281,17 @@ function META:ReadGotoStatement()
     return node
 end
 
+function META:ReadTypeDeclarationStatement()
+    local node = Statement("type_declaration")
+
+    node.tokens["type"] = self:ReadValue("type")
+    node.identifier = self:ReadIdentifier()
+    node.tokens["="] = self:ReadValue("=")
+    node.expression = self:ReadTypeExpression()
+
+    return node
+end
+
 function META:ReadLocalAssignmentStatement()
     local node = Statement("local_assignment")
 
@@ -339,7 +351,7 @@ function META:ReadFunctionBody(node)
     end
 
     node.tokens[")"] = self:ReadValue(")")
-    
+
     if self:IsValue(":") then
         node.tokens[":"] = self:ReadValue(":")
 

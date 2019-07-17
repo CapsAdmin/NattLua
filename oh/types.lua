@@ -256,6 +256,10 @@ function types.Register(name, interface)
     return registered[name].new
 end
 
+function types.IsType(name)
+    return registered[name]
+end
+
 function types.Type(name, ...)
     assert(registered[name], "type " .. name .. " does not exist")
     return registered[name].new(...)

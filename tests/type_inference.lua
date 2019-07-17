@@ -328,23 +328,35 @@ a.b.c = 1
     end
 
     assert_type(test(1), "number")
-]]
-}
-
-tests = {[[
+]],[[
     local a: string | number = 1
 
     local function test(a: number, b: string): boolean, number
-    
+
     end
 
-    local foo,bar = test()
-]]}
+    local foo,bar = test(1, "")
 
-tests={[[
-    local a: boolean | number
-    local b: {foo: type a}
-    local c: (a: number, b:number) => type b, type b    
+    assert_type(foo, "boolean")
+    assert_type(bar, "number")
+]],[[
+    do
+        type x = boolean | number
+    end
+
+    type c = type x
+    local a: type x
+    type b = {foo: type a}
+    local c: (a: number, b:number) => b, b
+
+    assert_type(c, "function", {{"table"}, {"table"}}, {{"number"}, {"number"}} )
+
+]], [[
+    local function test(a:number,b: number)
+        return a+b
+    end
+
+    assert_type(test, "function", {{"number"}}, {{"number"}, {"number"}} )
 ]]}
 
 local Crawler = require("oh.crawler")
@@ -372,7 +384,7 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-    crawler.OnEvent = crawler.DumpEvent
+    --crawler.OnEvent = crawler.DumpEvent
 
     local function add(lib, t)
         local tbl = types.Type("table")
@@ -394,6 +406,7 @@ for _, code in ipairs(tests) do
         end
 
         if not what:IsType(type.value) then
+            print(code)
             error("expected " .. type.value .. " got " .. tostring(what))
         end
 
