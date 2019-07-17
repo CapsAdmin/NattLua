@@ -4,40 +4,57 @@ local META = {}
 
 function META:ReadTypeExpression()
     local node = Expression("type_expression")
-
-    local out = {}
+    local types = {}
 
     for _ = 1, self:GetLength() do
-        local token = self:ReadTokenLoose()
-
-        if not token then return node end
-
-        do
+        if self:IsType("letter") then
+            
             local node = Expression("type")
-            node.value = token
-            table.insert(out, node)
-
-            if token.type == "letter" and self:IsValue("(") then
-                local start = self:GetToken()
-
-                node.tokens["func("] = self:ReadValue("(")
-                node.function_arguments = self:IdentifierList()
-                node.tokens["func)"] = self:ReadValue(")", start, start)
-                node.tokens["return:"] = self:ReadValue(":")
-                node.function_return_type = self:ReadTypeExpression()
+            
+            if self:IsValue("type") then
+                node.tokens["type"] = self:ReadValue("type")
             end
-
-            if not self:IsValue("|") then
-                break
+            
+            node.value = self:ReadType("letter")
+            
+            table.insert(types, node)
+        elseif self:IsValue("(") then
+            local node = Expression("type_function")
+            node.tokens["("] = self:ReadValue("(")
+            node.identifiers = self:ReadIdentifierList()
+            node.tokens[")"] = self:ReadValue(")")
+            node.tokens["=>"] = self:ReadValue("=>")
+    
+            local out = {}
+            for i = 1, max or self:GetLength() do
+    
+                local typ = self:ReadTypeExpression()
+    
+                if self:HandleListSeparator(out, i, typ) then
+                    break
+                end
             end
+            node.return_types = out
+    
+            table.insert(types, node)
+        elseif self:IsValue("{") then
+            local node = Expression("type_table")
+            node.tokens["{"] = self:ReadValue("{")
+            node.key_values = self:ReadIdentifierList()
+            node.tokens["}"] = self:ReadValue("}")
+            
+            table.insert(types, node)
+        end
+
+        if not self:IsValue("|") then
+            break
         end
 
         node.tokens["|"] = node.tokens["|"] or {}
         table.insert(node.tokens["|"], self:ReadValue("|"))
     end
 
-    node.types = out
-
+    node.types = types
     return node
 end
 

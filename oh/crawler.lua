@@ -383,6 +383,44 @@ function META:CrawlStatements(statements, ...)
     end
 end
 
+function META:CrawlTypeExpression(exp)
+    local res
+    for _, t in ipairs(exp.types or exp) do
+        local val
+
+        if t.kind == "type" then
+            if t.tokens["type"] then
+                val = self:GetUpvalue(t).data
+            else
+                val = types.Type(t.value.value)
+            end
+        elseif t.kind == "type_function" then
+            local args = {}
+            local rets = {}
+            for i,v in ipairs(t.identifiers) do
+                args[i] = self:CrawlTypeExpression(v)
+            end
+            for i,v in ipairs(t.return_types) do
+                rets[i] = self:CrawlTypeExpression(v)
+            end
+            val = types.Type("function", rets, args)
+        elseif t.kind == "type_table" then
+            val = types.Type("table")
+            val.value = {}
+            for _, node in ipairs(t.key_values) do
+                val.value[node.value.value] = self:CrawlTypeExpression(node.type_expression)
+            end
+        end
+
+        if not res then
+            res = val
+        else
+            res = res + val
+        end
+    end
+    return res
+end
+
 local evaluate_expression
 
 function META:CrawlStatement(statement, ...)
@@ -398,16 +436,8 @@ function META:CrawlStatement(statement, ...)
         for i, node in ipairs(statement.left) do
             local key = node
             local val = ret[i]
-            if key.explicit_types then
-                local res 
-                for _, t in ipairs(key.explicit_types) do
-                    if not res then
-                        res = types.Type(t.value.value)
-                    else
-                        res = res + types.Type(t.value.value)
-                    end
-                end
-                val = res
+            if key.type_expression then
+                val = self:CrawlTypeExpression(key.type_expression)
             end
             self:DeclareUpvalue(key, val)
 

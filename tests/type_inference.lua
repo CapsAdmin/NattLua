@@ -337,6 +337,14 @@ tests = {[[
     local function test(a: number, b: string): boolean, number
     
     end
+
+    local foo,bar = test()
+]]}
+
+tests={[[
+    local a: boolean | number
+    local b: {foo: type a}
+    local c: (a: number, b:number) => type b, type b    
 ]]}
 
 local Crawler = require("oh.crawler")
