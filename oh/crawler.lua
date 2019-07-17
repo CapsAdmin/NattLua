@@ -398,6 +398,17 @@ function META:CrawlStatement(statement, ...)
         for i, node in ipairs(statement.left) do
             local key = node
             local val = ret[i]
+            if key.explicit_types then
+                local res 
+                for _, t in ipairs(key.explicit_types) do
+                    if not res then
+                        res = types.Type(t.value.value)
+                    else
+                        res = res + types.Type(t.value.value)
+                    end
+                end
+                val = res
+            end
             self:DeclareUpvalue(key, val)
 
             node.inferred_type = val
@@ -555,7 +566,40 @@ do
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
-        elseif node.kind == "function" or node.kind == "table" then
+        elseif node.kind == "function" then
+            
+            local function type_expression(key, types)
+                local res 
+                for _, t in ipairs(types) do
+                    if not res then
+                        res = self:TypeFromImplicitNode(key, t.value.value)
+                    else
+                        res = res + self:TypeFromImplicitNode(key, t.value.value)
+                    end
+                end
+                return res
+            end
+
+            local args = {}
+            for i, key in ipairs(node.identifiers) do
+                if key.type_expression then
+                    args[i] = type_expression(key, key.type_expression.types)
+                else
+                    args[i] =  self:TypeFromImplicitNode(key, "any")
+                end
+            end
+
+            local ret = {}
+            if node.type_expressions then
+                for i, type_exp in ipairs(node.type_expressions) do
+                    ret[i] = type_expression(node, type_exp.types)
+                end
+            else
+                table.insert(ret, self:TypeFromImplicitNode(key, "any"))
+            end
+
+            stack:Push(self:TypeFromImplicitNode(node, "function", ret, args))
+        elseif node.kind == "table" then
             stack:Push(self:TypeFromNode(node))
         elseif node.kind == "binary_operator" then
             local r, l = stack:Pop(), stack:Pop()

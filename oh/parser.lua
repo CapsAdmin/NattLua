@@ -11,6 +11,10 @@ local Statement = require("oh.statement")
 local META = {}
 META.__index = META
 
+for k, v in pairs(require("oh.parser_extended")) do
+    META[k] = v
+end
+
 function META:Error(msg, start, stop, ...)
     if not self.OnError then return end
 
@@ -335,6 +339,23 @@ function META:ReadFunctionBody(node)
     end
 
     node.tokens[")"] = self:ReadValue(")")
+    
+    if self:IsValue(":") then
+        node.tokens[":"] = self:ReadValue(":")
+
+        local out = {}
+        for i = 1, max or self:GetLength() do
+
+            local typ = self:ReadTypeExpression()
+
+            if self:HandleListSeparator(out, i, typ) then
+                break
+            end
+        end
+
+        node.type_expressions = out
+    end
+
     local start = self:GetToken()
     node.statements = self:ReadStatements({["end"] = true})
     node.tokens["end"] = self:ReadValue("end", start, start)
@@ -448,9 +469,15 @@ function META:HandleListSeparator(out, i, node)
 end
 
 do -- identifier
-    function META:ReadIdentifier()
+   function META:ReadIdentifier()
         local node = Expression("value")
         node.value = self:ReadType("letter")
+
+        if self.ReadTypeExpression and self:IsValue(":") then
+            node.tokens[":"] = self:ReadValue(":")
+            node.type_expression = self:ReadTypeExpression()
+        end
+
         return node
     end
 

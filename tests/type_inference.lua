@@ -331,6 +331,14 @@ a.b.c = 1
 ]]
 }
 
+tests = {[[
+    local a: string | number = 1
+
+    local function test(a: number, b: string): boolean, number
+    
+    end
+]]}
+
 local Crawler = require("oh.crawler")
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
@@ -356,7 +364,7 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-    --crawler.OnEvent = crawler.DumpEvent
+    crawler.OnEvent = crawler.DumpEvent
 
     local function add(lib, t)
         local tbl = types.Type("table")
