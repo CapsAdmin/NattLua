@@ -641,6 +641,9 @@ do -- expression
                     node.tokens["["] = self:ReadValue("[")
                     node.expression = self:ReadExpectExpression()
                     node.tokens["]"] = self:ReadValue("]")
+                elseif self:IsValue("as") then
+                    node.tokens["as"] = self:ReadValue("as")
+                    node.type_expression = self:ReadTypeExpression()
                 else
                     break
                 end

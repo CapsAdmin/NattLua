@@ -645,7 +645,11 @@ do
                 node.value.value == "true" or
                 node.value.value == "false"
             then
-                stack:Push(self:TypeFromNode(node))
+                if node.type_expression then
+                    stack:Push(self:CrawlTypeExpressions(node.type_expression))
+                else
+                    stack:Push(self:TypeFromNode(node))
+                end
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
@@ -692,8 +696,7 @@ do
 
                 local arguments = {}
 
-                if r.node.self_call and stack then
-                    local val = stack:Pop()
+                if r.node.self_call then
                     table.insert(arguments, val)
                     self:DeclareUpvalue("self", val)
                 end
@@ -896,6 +899,7 @@ do
 
         function meta:Pop()
             self.i = self.i - 1
+            if self.i < 1 then error("stack underflow", 2) end
             local val = self.values[self.i]
             self.values[self.i] = nil
             return val
