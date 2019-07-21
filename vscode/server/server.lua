@@ -1,4 +1,4 @@
-do
+if false then
 	local suppress = false
 
 	io.write = function(...)
@@ -236,8 +236,17 @@ local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
 local print_util = require("oh.print_util")
 
-local function validate(code, uri, server, client)
+local document_cache = {}
 
+local function compile(uri, server, client)
+	local code = document_cache[uri]
+	if not code then
+		local f = io.open(uri:sub(#"file://" + 1), "r")
+		print(uri, "!!!")
+		code = f:read("*all")
+		f:close()
+		document_cache[uri] = code
+	end
 	local resp = {
 		method = "textDocument/publishDiagnostics",
 		params = {
@@ -282,17 +291,22 @@ local function validate(code, uri, server, client)
 
 	local ast = parser:BuildAST(tokens)
 
-	server:Respond(client, resp)
+	if resp.params.diagnostics[1] then
+		server:Respond(client, resp)
+	end
+
+	return tokens, ast
 end
 
 function server:HandleMessage(resp, client)
+	print(resp.method)
 	if resp.method == "initialize" and resp.id then
 		self:Respond(client, {
 			id = resp.id,
 			result = {
 				capabilities = {
 					textDocumentSync = TextDocumentSyncKind.Full,
-					hoverProvider = false,
+					hoverProvider = true,
 					completionProvider = {
 						resolveProvider = true,
 						triggerCharacters = { ".", ":" },
@@ -320,15 +334,49 @@ function server:HandleMessage(resp, client)
 			},
 		})
 	elseif resp.method == "textDocument/didOpen" then
-		tprint(resp)
-		textDocument = resp.params.textDocument
-		validate(resp.params.textDocument.text, resp.params.textDocument.uri, self, client)
+		--tprint(resp)
+		document_cache[resp.params.textDocument.uri] = resp.params.textDocument.text
+		compile(resp.params.textDocument.uri, self, client)
 	elseif resp.method == "textDocument/didChange" then
-		tprint(resp)
-		validate(resp.params.contentChanges[1].text, resp.params.textDocument.uri, self, client)
-	elseif resp.method ~= "$/cancelRequest" then
-		print("unhandled method ", resp.method)
-		tprint(resp)
+		--tprint(resp)
+		--document_cache[resp.params.textDocument.uri] = resp.params.contentChanges[1].text
+		compile(resp.params.textDocument.uri, self, client)
+	elseif resp.method == "textDocument/hover" then
+		local pos = resp.params.position
+		local tokens, ast = compile(resp.params.textDocument.uri, self, client)
+		local code = assert(document_cache[resp.params.textDocument.uri])
+
+		local function line_column_to_sub_pos(line, column)
+			local line_pos = 0
+			local sub_start = 0
+			for str in code:gmatch("(.-)\n") do
+				if line_pos == line then
+					for i = 0, #str - 1 do
+						if i == column then
+							return sub_start + i
+						end
+					end
+				end
+				line_pos = line_pos + 1
+				sub_start = sub_start + #str + 1
+			end
+		end
+		local pos = line_column_to_sub_pos(pos.line, pos.character)
+
+		for i,v in ipairs(tokens) do
+			if v.start > pos and v.stop <= pos then
+				print(v.value, "!!")
+				self:Respond(client, { 
+					id = resp.id,
+					result = {
+						contents = v.value,
+					}
+				})
+				break
+			end
+		end
+	else--if resp.method ~= "$/cancelRequest" then
+		--tprint(resp)
 	end
 end
 
