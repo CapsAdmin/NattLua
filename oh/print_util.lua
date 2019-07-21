@@ -19,7 +19,7 @@ function oh.QuoteTokens(var)
 end
 
 do
-	local function sub_pos_2_line_pos(code, start, stop)
+	function oh.SubPositionToLinePosition(code, start, stop)
 		local line = 1
 
 		local line_start
@@ -28,18 +28,24 @@ do
 		local within_start
 		local within_stop
 
+		local character_start
+		local character_stop
+
 		local line_pos = 0
+		local char_pos = 0
 
 		for i = 1, #code do
 			local char = code:sub(i, i)
 
 			if i == stop then
 				line_stop = line
+				character_stop = char_pos
 			end
 
 			if i == start then
 				line_start = line
 				within_start = line_pos
+				character_start = char_pos
 			end
 
 			if char == "\n" then
@@ -50,6 +56,9 @@ do
 
 				line = line + 1
 				line_pos = i
+				char_pos = 0
+			else
+				char_pos = char_pos + 1
 			end
 		end
 
@@ -62,6 +71,8 @@ do
 		end
 
 		return {
+			character_start = character_start,
+			character_stop = character_stop,
 			sub_line_before = {within_start + 1, start - 1},
 			sub_line_after = {stop + 1, within_stop - 1},
 			line_start = line_start,
@@ -134,7 +145,7 @@ do
 		start = clamp(start, 1, #code)
 		stop = clamp(stop, 1, #code)
 
-		local data = sub_pos_2_line_pos(code, start, stop)
+		local data = oh.SubPositionToLinePosition(code, start, stop)
 
 		if not data then
 			local str = ""

@@ -1,4 +1,5 @@
 local Expression = require("oh.expression")
+local syntax = require("oh.syntax")
 
 local META = {}
 
@@ -7,7 +8,7 @@ function META:ReadTypeExpression()
     local types = {}
 
     for _ = 1, self:GetLength() do
-        if self:IsType("letter") then
+        if self:IsType("letter") or syntax.IsValue(self:GetToken()) then
 
             local node = Expression("type")
 
@@ -15,7 +16,7 @@ function META:ReadTypeExpression()
                 node.tokens["type"] = self:ReadValue("type")
             end
 
-            node.value = self:ReadType("letter")
+            node.value = self:ReadTokenLoose()
 
             table.insert(types, node)
         elseif self:IsValue("(") then

@@ -1,0 +1,82 @@
+{
+  "name": "generic-lsp",
+  "description": "Generic LSP Language Client",
+  "author": "CapsAdmin",
+  "license": "MIT",
+  "version": "0.0.1",
+  "publisher": "unpublished",
+  "engines": {
+    "vscode": "^1.8.0"
+  },
+  "keywords": [
+    "LSP",
+    "Language Server Client"
+  ],
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:lua",
+    "workspaceContains:**/*.tl"
+  ],
+  "main": "./out/extension",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Generic LSP configuration",
+      "properties": {
+        "generic-lsp.path": {
+          "type": "string",
+          "default": "luajit",
+          "description": "path to luajit"
+        },
+        "generic-lsp.arguments": {
+          "type": "array",
+          "default": [
+            "${workspaceRoot}/vscode/server/server.lua"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Arguments for Lua server"
+        },
+        "generic-lsp.extensions": {
+          "description": "extensions",
+          "type": "array",
+          "default": [
+            "lua",
+            "tl"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "generic-lsp.ip": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "ip"
+        },
+        "generic-lsp.port": {
+          "type": "string",
+          "default": 1337,
+          "description": "port"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -watch -p ./",
+    "update-vscode": "node ./node_modules/vscode/bin/install",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.33",
+    "@types/node": "^6.0.52",
+    "typescript": "^2.1.5",
+    "vscode": "^1.0.3"
+  },
+  "dependencies": {
+    "vscode-languageclient": "3.1.0"
+  }
+}

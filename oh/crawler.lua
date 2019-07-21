@@ -697,6 +697,7 @@ do
                 local arguments = {}
 
                 if r.node.self_call then
+                    local val = self:CrawlExpression(r.node.expression)
                     table.insert(arguments, val)
                     self:DeclareUpvalue("self", val)
                 end

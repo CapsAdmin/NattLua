@@ -359,6 +359,17 @@ a.b.c = 1
     assert_type(test, "function", {{"number"}}, {{"number"}, {"number"}} )
 ]]}
 
+tests = {[[
+    local Entity = {}
+    Entity.age = 123
+
+    function Entity:Age(num: number): nil
+        self.age = self.age + num
+    end
+
+    type Entity = type Entity
+]]}
+
 local Crawler = require("oh.crawler")
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
@@ -384,7 +395,7 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-    --crawler.OnEvent = crawler.DumpEvent
+    crawler.OnEvent = crawler.DumpEvent
 
     local function add(lib, t)
         local tbl = types.Type("table")
