@@ -360,15 +360,22 @@ a.b.c = 1
 ]]}
 
 tests = {[[
-    type math = {}
-    type math.sin = (a: number): number
-    type math.cos = (a: number): number
+    type lol = number
 
-    local math: math
+    interface math {
+        sin = (a: lol): lol
+        cos = (a: string): lol
+        cos = (a: number): lol
+    }
+
+    interface math {
+        lol = (): lol
+    }
+
 
 
     local a = math.sin(1)
-    --print(a)
+    local b = math.lol()
 ]]}
 
 local Crawler = require("oh.crawler")

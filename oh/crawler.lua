@@ -172,7 +172,7 @@ do
         table_insert(self.scope.upvalues[env].list, upvalue)
         self.scope.upvalues[env].map[self:Hash(key)] = upvalue
 
-        self:FireEvent("upvalue", key, data)
+        self:FireEvent("upvalue", key, data, env)
 
         return upvalue
     end
@@ -208,8 +208,6 @@ do
     function META:GetValue(key, env)
         local upvalue = self:GetUpvalue(key, env)
 
-        print(upvalue, env)
-
         if upvalue then
             return upvalue.data
         end
@@ -218,7 +216,7 @@ do
     end
 
     function META:SetGlobal(key, val, env)
-        self:FireEvent("set_global", key, val)
+        self:FireEvent("set_global", key, val, env)
 
         self.env[env][self:Hash(key)] = val
     end
@@ -304,6 +302,9 @@ do
             io.write("\n")
         elseif what == "upvalue" then
             io.write((" "):rep(t))
+
+
+
             io.write(what, "  - ")
             local key, val = ...
             io.write(self:Hash(key))
@@ -396,10 +397,10 @@ function META:CrawlTypeExpression(t)
     local val
 
     if t.kind == "type" then
-        if t.tokens["type"] and self:GetUpvalue(t, "typesystem") then
-            val = self:GetUpvalue(t, "typesystem").data
-        elseif self:GetUpvalue(t.value.value, "runtime") then
-            val = self:GetUpvalue(t.value.value, "runtime").data
+        if self:GetValue(t, "typesystem") then
+            val = self:GetValue(t, "typesystem")
+        elseif self:GetValue(t, "runtime") then
+            val = self:GetValue(t, "runtime").data
         elseif types.IsType(t.value.value) then
             val = types.Type(t.value.value)
         else
@@ -451,7 +452,7 @@ function META:CrawlStatement(statement, ...)
         self:PopScope()
     elseif statement.kind == "local_assignment" then
         local ret = self:UnpackExpressions(statement.right)
-print(ret, "!!!")
+
         for i, node in ipairs(statement.left) do
             local key = node
             local val = ret[i]
@@ -466,7 +467,7 @@ print(ret, "!!!")
         local ret = self:UnpackExpressions(statement.right)
 
         for i, node in ipairs(statement.left) do
-            self:Assign(node, ret[i])
+            self:Assign(node, ret[i], "runtime")
 
             node.inferred_type = ret[i]
         end
@@ -575,8 +576,25 @@ print(ret, "!!!")
             return true
         end
         self:PopScope()
-    elseif statement.kind == "type_declaration" then
-        self:Assign(statement.left, self:CrawlTypeExpressions(statement.right.types), "typesystem")
+    elseif statement.kind == "local_type_declaration" then
+        self:DeclareUpvalue(statement.left, self:CrawlTypeExpressions(statement.right.types), "typesystem")
+    elseif statement.kind == "type_assignment" then
+        self:DeclareUpvalue(statement.left, self:CrawlTypeExpressions(statement.right.types), "typesystem")
+    elseif statement.kind == "type_interface" then
+        local tbl = self:GetUpvalue(statement.key, "typesystem")
+
+        if tbl then
+            tbl = tbl.data
+        else
+            tbl = self:TypeFromImplicitNode(statement, "table")
+        end
+
+        for i,v in ipairs(statement.expressions) do
+            tbl:set(v.left.value, self:CrawlTypeExpressions(v.right.types))
+        end
+
+        self:DeclareUpvalue(statement.key, tbl, "typesystem")
+
     elseif statement.kind ~= "end_of_file" and statement.kind ~= "semicolon" then
         error("unhandled statement " .. tostring(statement))
     end

@@ -1,4 +1,5 @@
 local Expression = require("oh.expression")
+local Statement = require("oh.statement")
 local syntax = require("oh.syntax")
 
 local META = {}
@@ -56,6 +57,51 @@ function META:ReadTypeExpression()
     end
 
     node.types = types
+    return node
+end
+
+
+function META:ReadLocalTypeDeclarationStatement()
+    local node = Statement("local_type_declaration")
+
+    node.tokens["local"] = self:ReadValue("local")
+    node.tokens["type"] = self:ReadValue("type")
+    node.left = self:ReadExpression()
+    node.tokens["="] = self:ReadValue("=")
+    node.right = self:ReadTypeExpression()
+
+    return node
+end
+
+function META:ReadInterfaceStatement()
+    local node = Statement("type_interface")
+    node.tokens["interface"] = self:ReadValue("interface")
+    node.key = self:ReadIndexExpression()
+    node.tokens["{"] = self:ReadValue("{")
+    local list = {}
+    for i = 1, max or self:GetLength() do
+        if not self:IsType("letter") then break end
+        local node = Statement("interface_declaration")
+        node.left = self:ReadType("letter")
+        node.tokens["="] = self:ReadValue("=")
+        node.right = self:ReadTypeExpression()
+
+        list[i] = node
+    end
+    node.expressions = list
+    node.tokens["}"] = self:ReadValue("}")
+
+    return node
+end
+
+function META:ReadTypeAssignment()
+    local node = Statement("type_assignment")
+
+    node.tokens["type"] = self:ReadValue("type")
+    node.left = self:ReadExpression()
+    node.tokens["="] = self:ReadValue("=")
+    node.right = self:ReadTypeExpression()
+
     return node
 end
 

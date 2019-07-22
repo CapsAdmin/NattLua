@@ -190,8 +190,10 @@ do -- statements
             self:IsValue("repeat") then                                                         return self:ReadRepeatStatement() elseif
             self:IsValue("function") then                                                       return self:ReadFunctionStatement() elseif
             self:IsValue("local") and self:IsValue("function", 1) then                          return self:ReadLocalFunctionStatement() elseif
+            self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2) then return self:ReadLocalTypeDeclarationStatement() elseif
             self:IsValue("local") then                                                          return self:ReadLocalAssignmentStatement() elseif
-            self:IsValue("type") and self:IsType("letter", 1) then                              return self:ReadTypeDeclarationStatement() elseif
+            self:IsValue("type") and self:IsType("letter", 1) then                              return self:ReadTypeAssignment() elseif
+            self:IsValue("interface") then                                                      return self:ReadInterfaceStatement() elseif
             self:IsValue("do") then                                                             return self:ReadDoStatement() elseif
             self:IsValue("if") then                                                             return self:ReadIfStatement() elseif
             self:IsValue("while") then                                                          return self:ReadWhileStatement() elseif
@@ -277,17 +279,6 @@ function META:ReadGotoStatement()
 
     node.tokens["goto"] = self:ReadValue("goto")
     node.identifier = self:ReadType("letter")
-
-    return node
-end
-
-function META:ReadTypeDeclarationStatement()
-    local node = Statement("type_declaration")
-
-    node.tokens["type"] = self:ReadValue("type")
-    node.left = self:ReadExpression()
-    node.tokens["="] = self:ReadValue("=")
-    node.right = self:ReadTypeExpression()
 
     return node
 end
@@ -393,6 +384,10 @@ do  -- function
         end
 
         return val
+    end
+
+    function META:ReadIndexExpression()
+        return read_function_expression(self)
     end
 
     function META:ReadFunctionStatement()
