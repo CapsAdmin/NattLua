@@ -123,11 +123,16 @@ do
             children = {},
             parent = parent,
 
-            upvalues = {},
-            upvalue_map = {},
-
-            types = {},
-            type_map = {},
+            upvalues = {
+                runtime = {
+                    list = {},
+                    map = {},
+                },
+                typesystem = {
+                    list = {},
+                    map = {},
+                }
+            },
 
             node = node,
             extra_node = extra_node,
@@ -155,167 +160,89 @@ do
         return self.scope
     end
 
-    function META:DeclareType(key, data)
-        local type = {
-            key = key,
-            data = data,
-            scope = self.scope,
-            events = {},
-            shadow = self:GetTypeDeclaration(key),
-        }
-
-        table_insert(self.scope.types, type)
-        self.scope.type_map[self:Hash(key)] = type
-
-        self:FireEvent("type", key, data)
-
-        return type
-    end
-
-    function META:DeclareUpvalue(key, data)
+    function META:DeclareUpvalue(key, data, env)
         local upvalue = {
             key = key,
             data = data,
             scope = self.scope,
             events = {},
-            shadow = self:GetUpvalue(key),
+            shadow = self:GetUpvalue(key, env),
         }
 
-        table_insert(self.scope.upvalues, upvalue)
-        self.scope.upvalue_map[self:Hash(key)] = upvalue
+        table_insert(self.scope.upvalues[env].list, upvalue)
+        self.scope.upvalues[env].map[self:Hash(key)] = upvalue
 
         self:FireEvent("upvalue", key, data)
 
         return upvalue
     end
 
-    function META:DeclareGlobal(key, data)
-        self.env[self:Hash(key)] = data
-    end
-
-    function META:GetUpvalue(key)
+    function META:GetUpvalue(key, env)
         if not self.scope then return end
 
         local key_hash = self:Hash(key)
 
-        if self.scope.upvalue_map[key_hash] then
-            return self.scope.upvalue_map[key_hash]
+        if self.scope.upvalues[env].map[key_hash] then
+            return self.scope.upvalues[env].map[key_hash]
         end
 
         local scope = self.scope.parent
         while scope do
-            if scope.upvalue_map[key_hash] then
-                return scope.upvalue_map[key_hash]
+            if scope.upvalues[env].map[key_hash] then
+                return scope.upvalues[env].map[key_hash]
             end
             scope = scope.parent
         end
     end
 
-    function META:GetTypeDeclaration(key)
-        if not self.scope then return end
-
-        local key_hash = self:Hash(key)
-
-        if self.scope.type_map[key_hash] then
-            return self.scope.type_map[key_hash]
-        end
-
-        local scope = self.scope.parent
-        while scope do
-            if scope.type_map[key_hash] then
-                return scope.type_map[key_hash]
-            end
-            scope = scope.parent
-        end
-    end
-
-    function META:MutateUpvalue(key, val)
-        local upvalue = self:GetUpvalue(key)
+    function META:MutateUpvalue(key, val, env)
+        local upvalue = self:GetUpvalue(key, env)
         if upvalue then
             upvalue.data = val
-            self:FireEvent("mutate_upvalue", key, val)
+            self:FireEvent("mutate_upvalue", key, val, env)
             return true
         end
         return false
     end
 
+    function META:GetValue(key, env)
+        local upvalue = self:GetUpvalue(key, env)
 
-
-    function META:MutateUpvalueType(key, val)
-        local upvalue = self:GetTypeDeclaration(key)
-        if upvalue then
-            upvalue.data = val
-            self:FireEvent("mutate_type", key, val)
-            return true
-        end
-        return false
-    end
-
-    function META:GetValue(key)
-        local upvalue = self:GetUpvalue(key)
+        print(upvalue, env)
 
         if upvalue then
             return upvalue.data
         end
 
-        return self.env[self:Hash(key)]
+        return self.env[env][self:Hash(key)]
     end
 
-    function META:SetGlobal(key, val)
+    function META:SetGlobal(key, val, env)
         self:FireEvent("set_global", key, val)
 
-        self.env[self:Hash(key)] = val
+        self.env[env][self:Hash(key)] = val
     end
 
-    function META:SetGlobalType(key, val)
-        self:FireEvent("set_global_type", key, val)
-
-        self.env_types[self:Hash(key)] = val
-    end
-
-    function META:NewIndex(obj, key, val)
+    function META:NewIndex(obj, key, val, env)
         local node = obj
 
-        local key = self:CrawlExpression(key)
-        local obj = self:CrawlExpression(obj) or self:TypeFromImplicitNode(node, "nil")
+        local key = self:CrawlExpression(key, env)
+        local obj = self:CrawlExpression(obj, env) or self:TypeFromImplicitNode(node, "nil")
 
         obj:set(key, val)
 
-        self:FireEvent("newindex", obj, key, val)
+        self:FireEvent("newindex", obj, key, val, env)
     end
 
-    function META:Assign(node, val)
+    function META:Assign(node, val, env)
         if node.kind == "value" then
-            if not self:MutateUpvalue(node, val) then
-                self:SetGlobal(node, val)
+            if not self:MutateUpvalue(node, val, env) then
+                self:SetGlobal(node, val, env)
             end
         elseif node.kind == "postfix_expression_index" then
-            self:NewIndex(node.left, node.expression, val)
+            self:NewIndex(node.left, node.expression, val, env)
         else
-            self:NewIndex(node.left, node.right, val)
-        end
-    end
-
-    function META:NewIndexType(obj, key, val)
-        local node = obj
-
-        local key = self:CrawlExpression(key)
-        local obj = self:CrawlExpression(obj) or self:TypeFromImplicitNode(node, "nil")
-
-        obj:set(key, val)
-
-        self:FireEvent("newindex_type", obj, key, val)
-    end
-
-    function META:AssignType(node, val)
-        if node.kind == "value" then
-            if not self:MutateUpvalueType(node, val) then
-                self:SetGlobalType(node, val)
-            end
-        elseif node.kind == "postfix_expression_index" then
-            self:NewIndexType(node.left, node.expression, val)
-        else
-            self:NewIndexType(node.left, node.right, val)
+            self:NewIndex(node.left, node.right, val, env)
         end
     end
 
@@ -469,10 +396,10 @@ function META:CrawlTypeExpression(t)
     local val
 
     if t.kind == "type" then
-        if t.tokens["type"] and self:GetUpvalue(t) then
-            val = self:GetUpvalue(t).data
-        elseif self:GetTypeDeclaration(t.value.value) then
-            val = self:GetTypeDeclaration(t.value.value).data
+        if t.tokens["type"] and self:GetUpvalue(t, "typesystem") then
+            val = self:GetUpvalue(t, "typesystem").data
+        elseif self:GetUpvalue(t.value.value, "runtime") then
+            val = self:GetUpvalue(t.value.value, "runtime").data
         elseif types.IsType(t.value.value) then
             val = types.Type(t.value.value)
         else
@@ -524,14 +451,14 @@ function META:CrawlStatement(statement, ...)
         self:PopScope()
     elseif statement.kind == "local_assignment" then
         local ret = self:UnpackExpressions(statement.right)
-
+print(ret, "!!!")
         for i, node in ipairs(statement.left) do
             local key = node
             local val = ret[i]
             if key.type_expression then
                 val = self:CrawlTypeExpressions(key.type_expression)
             end
-            self:DeclareUpvalue(key, val)
+            self:DeclareUpvalue(key, val, "runtime")
 
             node.inferred_type = val
         end
@@ -551,7 +478,8 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "local_function" then
         self:DeclareUpvalue(
             statement.identifier,
-            self:CrawlExpression(statement:ToExpression("function"))
+            self:CrawlExpression(statement:ToExpression("function")),
+            "runtime"
         )
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
@@ -626,7 +554,7 @@ function META:CrawlStatement(statement, ...)
         end
 
         for i,v in ipairs(statement.identifiers) do
-            self:DeclareUpvalue(v, args and args[i])
+            self:DeclareUpvalue(v, args and args[i], "runtime")
         end
 
         if self:CrawlStatements(statement.statements, ...) == true then
@@ -637,7 +565,7 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "numeric_for" then
         self:PushScope(statement)
         local range = self:CrawlExpression(statement.expressions[1]):Max(self:CrawlExpression(statement.expressions[2]))
-        self:DeclareUpvalue(statement.identifiers[1], range)
+        self:DeclareUpvalue(statement.identifiers[1], range, "runtime")
 
         if statement.expressions[3] then
             self:CrawlExpression(statement.expressions[3])
@@ -648,7 +576,7 @@ function META:CrawlStatement(statement, ...)
         end
         self:PopScope()
     elseif statement.kind == "type_declaration" then
-        self:DeclareType(statement.left, self:CrawlTypeExpressions(statement.right.types))
+        self:Assign(statement.left, self:CrawlTypeExpressions(statement.right.types), "typesystem")
     elseif statement.kind ~= "end_of_file" and statement.kind ~= "semicolon" then
         error("unhandled statement " .. tostring(statement))
     end
@@ -671,13 +599,17 @@ do
         return dst
     end
 
-    evaluate_expression = function(self, node, stack)
+    evaluate_expression = function(self, node, stack, env)
         if node.kind == "value" then
             if
                 (node.value.type == "letter" and node.upvalue_or_global) or
                 node.value.value == "..."
             then
-                stack:Push(self:GetValue(node) or self:TypeFromImplicitNode(node, "nil"))
+                local val = self:GetValue(node, env)
+                if env == "runtime" and not val then
+                    val = self:GetValue(node, "typesystem")
+                end
+                stack:Push(val or self:TypeFromImplicitNode(node, "nil"))
             elseif
                 node.value.type == "number" or
                 node.value.type == "string" or
@@ -740,11 +672,11 @@ do
                 if r.node.self_call then
                     local val = self:CrawlExpression(r.node.expression)
                     table.insert(arguments, val)
-                    self:DeclareUpvalue("self", val)
+                    self:DeclareUpvalue("self", val, env)
                 end
 
                 for i,v in ipairs(node.identifiers) do
-                    self:DeclareUpvalue(v, args[i])
+                    self:DeclareUpvalue(v, args[i], env)
                 end
 
                 local ret = {}
@@ -885,7 +817,7 @@ do
         if r.node.self_call and stack then
             local val = stack:Pop()
             table.insert(arguments, val)
-            self:DeclareUpvalue("self", val)
+            self:DeclareUpvalue("self", val, "runtime")
         end
 
         for i, v in ipairs(r.node.identifiers) do
@@ -895,11 +827,11 @@ do
                     for i = i, #expressions do
                         table.insert(values, self:CrawlExpression(expressions[i]))
                     end
-                    self:DeclareUpvalue(v, self:TypeFromNode(v, values))
+                    self:DeclareUpvalue(v, self:TypeFromNode(v, values), "runtime")
                 end
             else
                 local arg = expressions[i] and self:CrawlExpression(expressions[i]) or nil
-                self:DeclareUpvalue(v, arg)
+                self:DeclareUpvalue(v, arg, "runtime")
                 table.insert(arguments, arg)
             end
         end
@@ -947,26 +879,27 @@ do
             return val
         end
 
-        local function expand(self, node, cb, stack)
+        local function expand(self, node, cb, ...)
             if node.left then
-                expand(self, node.left, cb, stack)
+                expand(self, node.left, cb, ...)
             end
 
             if node.right then
-                expand(self, node.right, cb, stack)
+                expand(self, node.right, cb, ...)
             end
 
-            cb(self, node, stack)
+            cb(self, node, ...)
         end
 
-        function META:CrawlExpression(exp)
+        function META:CrawlExpression(exp, env)
+            env = env or "runtime"
             local stack = setmetatable({values = {}, i = 1}, meta)
-            expand(self, exp, evaluate_expression, stack)
+            expand(self, exp, evaluate_expression, stack, env)
             return unpack(stack.values)
         end
     end
 end
 
 return function()
-    return setmetatable({env = {}, env_types = {}}, META)
+    return setmetatable({env = {runtime = {}, typesystem = {}}}, META)
 end
