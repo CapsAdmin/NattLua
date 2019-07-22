@@ -19,6 +19,35 @@ function oh.QuoteTokens(var)
 end
 
 do
+	function oh.LinePositionToSubPosition(code, line, character)
+		local line_pos = 1
+		local char_pos = 1
+
+		local found_line
+
+		for i = 1, #code do
+			local c = code:sub(i, i)
+
+			if line_pos == line then
+				found_line = true
+			end
+
+			if c == "\n" then
+				line_pos = line_pos + 1
+			end
+
+			if found_line then
+				if char_pos == character then
+					return i
+				end
+
+				char_pos = char_pos + 1
+			end
+		end
+
+		return #code
+	end
+
 	function oh.SubPositionToLinePosition(code, start, stop)
 		local line = 1
 

@@ -227,13 +227,15 @@ end
 function server:Respond(client, res)
 	res.jsonrpc = "2.0"
     local encoded = json.encode(res)
-	local msg = string.format("Content-Length: %d\r\nContent-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n%s", #encoded, encoded)
+	local msg = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
+	print(msg)
     client:Send(msg)
 end
 
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
+local Crawler = require("oh.crawler")
 local print_util = require("oh.print_util")
 
 local document_cache = {}
@@ -241,7 +243,7 @@ local document_cache = {}
 local function compile(uri, server, client)
 	local code = document_cache[uri]
 	if not code then
-		local f = io.open(uri:sub(#"file://" + 1), "r")
+		local f = assert(io.open(uri:sub(#"file://" + 1), "r"))
 		print(uri, "!!!")
 		code = f:read("*all")
 		f:close()
@@ -280,7 +282,6 @@ local function compile(uri, server, client)
 		})
 	end
 
-
 	local lexer = Lexer(code)
 	lexer.OnError = handle_error
 
@@ -295,6 +296,13 @@ local function compile(uri, server, client)
 		server:Respond(client, resp)
 	end
 
+	if true then
+		local crawler = Crawler()
+		crawler.code = code
+		crawler.name = "test"
+
+		crawler:CrawlStatement(ast)
+	end
 	return tokens, ast
 end
 
@@ -346,31 +354,28 @@ function server:HandleMessage(resp, client)
 		local tokens, ast = compile(resp.params.textDocument.uri, self, client)
 		local code = assert(document_cache[resp.params.textDocument.uri])
 
-		local function line_column_to_sub_pos(line, column)
-			local line_pos = 0
-			local sub_start = 0
-			for str in code:gmatch("(.-)\n") do
-				if line_pos == line then
-					for i = 0, #str - 1 do
-						if i == column then
-							return sub_start + i
-						end
-					end
-				end
-				line_pos = line_pos + 1
-				sub_start = sub_start + #str + 1
-			end
-		end
-		local pos = line_column_to_sub_pos(pos.line, pos.character)
+
+		local sub_pos = print_util.LinePositionToSubPosition(code, pos.line + 1, pos.character)
 
 		for i,v in ipairs(tokens) do
-			if v.start > pos and v.stop <= pos then
-				print(v.value, "!!")
-				self:Respond(client, { 
+			if sub_pos >= v.start and sub_pos <= v.stop then
+				local data = print_util.SubPositionToLinePosition(code, v.start, v.stop)
+
+				self:Respond(client, {
 					id = resp.id,
 					result = {
 						contents = v.value,
-					}
+					},
+					range = {
+						start = {
+							line = data.line_start-1,
+							character = data.character_start,
+						},
+						["end"] = {
+							line = data.line_stop-1,
+							character = data.character_stop,
+						},
+					},
 				})
 				break
 			end

@@ -360,14 +360,15 @@ a.b.c = 1
 ]]}
 
 tests = {[[
-    local Entity = {}
-    Entity.age = 123
+    type math = {}
+    type math.sin = (a: number): number
+    type math.cos = (a: number): number
 
-    function Entity:Age(num: number): nil
-        self.age = self.age + num
-    end
+    local math: math
 
-    type Entity = type Entity
+
+    local a = math.sin(1)
+    --print(a)
 ]]}
 
 local Crawler = require("oh.crawler")
@@ -410,6 +411,8 @@ for _, code in ipairs(tests) do
         end
         return combined
     end
+
+if false then
 
     crawler:DeclareGlobal("assert_type", types.Type("function", {types.Type"any"}, {types.Type"..."}, function(what, type, value, ...)
         if type:IsType("table") then
@@ -504,6 +507,8 @@ for _, code in ipairs(tests) do
         find = types.Type("function", {types.Type"number" + types.Type"nil", types.Type"number" + types.Type"nil", types.Type"string" + types.Type"nil"}, {types.Type"string", types.Type"string"}),
         sub = types.Type("function", {types.Type"string"}, {types.Type"number", types.Type"number" + types.Type"nil"}),
     })
+
+end
 
     crawler.code = code
     crawler.name = "test"

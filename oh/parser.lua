@@ -285,9 +285,9 @@ function META:ReadTypeDeclarationStatement()
     local node = Statement("type_declaration")
 
     node.tokens["type"] = self:ReadValue("type")
-    node.identifier = self:ReadIdentifier()
+    node.left = self:ReadExpression()
     node.tokens["="] = self:ReadValue("=")
-    node.expression = self:ReadTypeExpression()
+    node.right = self:ReadTypeExpression()
 
     return node
 end

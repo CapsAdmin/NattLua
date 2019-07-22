@@ -24,7 +24,7 @@ function META:ReadTypeExpression()
             node.tokens["("] = self:ReadValue("(")
             node.identifiers = self:ReadIdentifierList()
             node.tokens[")"] = self:ReadValue(")")
-            node.tokens["=>"] = self:ReadValue("=>")
+            node.tokens[":"] = self:ReadValue(":")
 
             local out = {}
             for i = 1, max or self:GetLength() do

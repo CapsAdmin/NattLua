@@ -239,6 +239,18 @@ do
         return false
     end
 
+
+
+    function META:MutateUpvalueType(key, val)
+        local upvalue = self:GetTypeDeclaration(key)
+        if upvalue then
+            upvalue.data = val
+            self:FireEvent("mutate_type", key, val)
+            return true
+        end
+        return false
+    end
+
     function META:GetValue(key)
         local upvalue = self:GetUpvalue(key)
 
@@ -253,6 +265,12 @@ do
         self:FireEvent("set_global", key, val)
 
         self.env[self:Hash(key)] = val
+    end
+
+    function META:SetGlobalType(key, val)
+        self:FireEvent("set_global_type", key, val)
+
+        self.env_types[self:Hash(key)] = val
     end
 
     function META:NewIndex(obj, key, val)
@@ -275,6 +293,29 @@ do
             self:NewIndex(node.left, node.expression, val)
         else
             self:NewIndex(node.left, node.right, val)
+        end
+    end
+
+    function META:NewIndexType(obj, key, val)
+        local node = obj
+
+        local key = self:CrawlExpression(key)
+        local obj = self:CrawlExpression(obj) or self:TypeFromImplicitNode(node, "nil")
+
+        obj:set(key, val)
+
+        self:FireEvent("newindex_type", obj, key, val)
+    end
+
+    function META:AssignType(node, val)
+        if node.kind == "value" then
+            if not self:MutateUpvalueType(node, val) then
+                self:SetGlobalType(node, val)
+            end
+        elseif node.kind == "postfix_expression_index" then
+            self:NewIndexType(node.left, node.expression, val)
+        else
+            self:NewIndexType(node.left, node.right, val)
         end
     end
 
@@ -607,7 +648,7 @@ function META:CrawlStatement(statement, ...)
         end
         self:PopScope()
     elseif statement.kind == "type_declaration" then
-        self:DeclareType(statement.identifier.value.value, self:CrawlTypeExpressions(statement.expression.types))
+        self:DeclareType(statement.left, self:CrawlTypeExpressions(statement.right.types))
     elseif statement.kind ~= "end_of_file" and statement.kind ~= "semicolon" then
         error("unhandled statement " .. tostring(statement))
     end
@@ -927,5 +968,5 @@ do
 end
 
 return function()
-    return setmetatable({env = {}}, META)
+    return setmetatable({env = {}, env_types = {}}, META)
 end
