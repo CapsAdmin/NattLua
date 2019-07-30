@@ -1,17 +1,15 @@
-local Expression = require("oh.expression")
-local Statement = require("oh.statement")
 local syntax = require("oh.syntax")
 
 local META = {}
 
 function META:ReadTypeExpression()
-    local node = Expression("type_expression")
+    local node = self:Expression("type_expression")
     local types = {}
 
     for _ = 1, self:GetLength() do
         if self:IsType("letter") or syntax.IsValue(self:GetToken()) then
 
-            local node = Expression("type")
+            local node = self:Expression("type")
 
             if self:IsValue("type") then
                 node.tokens["type"] = self:ReadValue("type")
@@ -21,7 +19,7 @@ function META:ReadTypeExpression()
 
             table.insert(types, node)
         elseif self:IsValue("(") then
-            local node = Expression("type_function")
+            local node = self:Expression("type_function")
             node.tokens["("] = self:ReadValue("(")
             node.identifiers = self:ReadIdentifierList()
             node.tokens[")"] = self:ReadValue(")")
@@ -40,7 +38,7 @@ function META:ReadTypeExpression()
 
             table.insert(types, node)
         elseif self:IsValue("{") then
-            local node = Expression("type_table")
+            local node = self:Expression("type_table")
             node.tokens["{"] = self:ReadValue("{")
             node.key_values = self:ReadIdentifierList()
             node.tokens["}"] = self:ReadValue("}")
@@ -62,7 +60,7 @@ end
 
 
 function META:ReadLocalTypeDeclarationStatement()
-    local node = Statement("local_type_declaration")
+    local node = self:Statement("local_type_declaration")
 
     node.tokens["local"] = self:ReadValue("local")
     node.tokens["type"] = self:ReadValue("type")
@@ -74,14 +72,14 @@ function META:ReadLocalTypeDeclarationStatement()
 end
 
 function META:ReadInterfaceStatement()
-    local node = Statement("type_interface")
+    local node = self:Statement("type_interface")
     node.tokens["interface"] = self:ReadValue("interface")
     node.key = self:ReadIndexExpression()
     node.tokens["{"] = self:ReadValue("{")
     local list = {}
     for i = 1, max or self:GetLength() do
         if not self:IsType("letter") then break end
-        local node = Statement("interface_declaration")
+        local node = self:Statement("interface_declaration")
         node.left = self:ReadType("letter")
         node.tokens["="] = self:ReadValue("=")
         node.right = self:ReadTypeExpression()
@@ -95,7 +93,7 @@ function META:ReadInterfaceStatement()
 end
 
 function META:ReadTypeAssignment()
-    local node = Statement("type_assignment")
+    local node = self:Statement("type_assignment")
 
     node.tokens["type"] = self:ReadValue("type")
     node.left = self:ReadExpression()

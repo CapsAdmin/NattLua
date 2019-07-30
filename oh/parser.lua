@@ -3,16 +3,114 @@ local setmetatable = setmetatable
 local type = type
 local math_huge = math.huge
 local pairs = pairs
+local table_insert = table.insert
+local table_concat = table.concat
 
 local syntax = require("oh.syntax")
-local Expression = require("oh.expression")
-local Statement = require("oh.statement")
+local LuaEmitter = require("oh.lua_emitter")
 
 local META = {}
 META.__index = META
 
 for k, v in pairs(require("oh.parser_extended")) do
     META[k] = v
+end
+
+do
+    local PARSER = META
+
+    local META = {}
+    META.__index = META
+    META.type = "expression"
+
+    function META:__tostring()
+        return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
+    end
+
+    function META:Render()
+        local em = LuaEmitter({preserve_whitespace = false, no_newlines = true})
+
+        em:EmitExpression(self)
+
+        return em:Concat()
+    end
+
+    PARSER.ExpressionMeta = META
+
+    function PARSER:Expression(kind)
+        local node = {}
+        node.tokens = {}
+        node.kind = kind
+
+        setmetatable(node, META)
+
+        return node
+    end
+end
+
+do
+    local PARSER = META
+
+    local META = {}
+    META.__index = META
+    META.type = "statement"
+
+    function META:__tostring()
+        return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
+    end
+
+    function META:Render()
+        local em = LuaEmitter({preserve_whitespace = false, no_newlines = true})
+
+        em:EmitStatement(self)
+
+        return em:Concat()
+    end
+
+    function META:GetStatements()
+        if self.kind == "if" then
+            local flat = {}
+            for _, statements in ipairs(self.statements) do
+                for _, v in ipairs(statements) do
+                    table_insert(flat, v)
+                end
+            end
+            return flat
+        end
+        return self.statements
+    end
+
+    function META:HasStatements()
+        return self.statements ~= nil
+    end
+
+    function META:FindStatementsByType(what, out)
+        out = out or {}
+        for _, child in ipairs(self:GetStatements()) do
+            if child.kind == what then
+                table_insert(out, child)
+            elseif child:GetStatements() then
+                child:FindStatementsByType(what, out)
+            end
+        end
+        return out
+    end
+
+    function META:ToExpression(kind)
+        setmetatable(self, PARSER.ExpressionMeta)
+        self.kind = kind
+        return self
+    end
+
+    function PARSER:Statement(kind)
+        local node = {}
+        node.tokens = {}
+        node.kind = kind
+
+        setmetatable(node, META)
+
+        return node
+    end
 end
 
 function META:Error(msg, start, stop, ...)
@@ -111,12 +209,12 @@ end
 
 
 function META:Root()
-    local node = Statement("root")
+    local node = self:Statement("root")
 
     local shebang
 
     if self:IsType("shebang") then
-        shebang = Statement("shebang")
+        shebang = self:Statement("shebang")
         shebang.tokens["shebang"] = self:ReadType("shebang")
     end
 
@@ -127,7 +225,7 @@ function META:Root()
     end
 
     if self:IsType("end_of_file") then
-        local eof = Statement("end_of_file")
+        local eof = self:Statement("end_of_file")
         eof.tokens["end_of_file"] = self.tokens[#self.tokens]
         table_insert(node.statements, eof)
     end
@@ -164,7 +262,7 @@ do -- statements
         local left = self:ReadExpressionList(math_huge)
 
         if self:IsValue("=") then
-            local node = Statement("assignment")
+            local node = self:Statement("assignment")
             node.tokens["="] = self:ReadValue("=")
             node.left = left
             node.right = self:ReadExpressionList(math_huge)
@@ -172,7 +270,7 @@ do -- statements
         end
 
         if left[1] and left[1].kind == "postfix_call" and not left[2] then
-            local node = Statement("call_expression")
+            local node = self:Statement("call_expression")
             node.value = left[1]
             return node
         end
@@ -207,7 +305,7 @@ do -- statements
 end
 
 function META:ReadSemicolonStatement()
-    local node = Statement("semicolon")
+    local node = self:Statement("semicolon")
 
     node.tokens[";"] = self:ReadValue(";")
 
@@ -215,7 +313,7 @@ function META:ReadSemicolonStatement()
 end
 
 function META:ReadBreakStatement()
-    local node = Statement("break")
+    local node = self:Statement("break")
 
     node.tokens["break"] = self:ReadValue("break")
 
@@ -223,7 +321,7 @@ function META:ReadBreakStatement()
 end
 
 function META:ReadReturnStatement()
-    local node = Statement("return")
+    local node = self:Statement("return")
 
     node.tokens["return"] = self:ReadValue("return")
     node.expressions = self:ReadExpressionList()
@@ -232,7 +330,7 @@ function META:ReadReturnStatement()
 end
 
 function META:ReadDoStatement()
-    local node = Statement("do")
+    local node = self:Statement("do")
 
     node.tokens["do"] = self:ReadValue("do")
     node.statements = self:ReadStatements({["end"] = true})
@@ -242,7 +340,7 @@ function META:ReadDoStatement()
 end
 
 function META:ReadWhileStatement()
-    local node = Statement("while")
+    local node = self:Statement("while")
 
     node.tokens["while"] = self:ReadValue("while")
     node.expression = self:ReadExpectExpression()
@@ -254,7 +352,7 @@ function META:ReadWhileStatement()
 end
 
 function META:ReadRepeatStatement()
-    local node = Statement("repeat")
+    local node = self:Statement("repeat")
 
     node.tokens["repeat"] = self:ReadValue("repeat")
     node.statements = self:ReadStatements({["until"] = true})
@@ -265,7 +363,7 @@ function META:ReadRepeatStatement()
 end
 
 function META:ReadGotoLabelStatement()
-    local node = Statement("goto_label")
+    local node = self:Statement("goto_label")
 
     node.tokens["::left"] = self:ReadValue("::")
     node.identifier = self:ReadType("letter")
@@ -275,7 +373,7 @@ function META:ReadGotoLabelStatement()
 end
 
 function META:ReadGotoStatement()
-    local node = Statement("goto")
+    local node = self:Statement("goto")
 
     node.tokens["goto"] = self:ReadValue("goto")
     node.identifier = self:ReadType("letter")
@@ -284,7 +382,7 @@ function META:ReadGotoStatement()
 end
 
 function META:ReadLocalAssignmentStatement()
-    local node = Statement("local_assignment")
+    local node = self:Statement("local_assignment")
 
     node.tokens["local"] = self:ReadValue("local")
     node.left = self:ReadIdentifierList()
@@ -298,7 +396,7 @@ function META:ReadLocalAssignmentStatement()
 end
 
 function META:ReadNumericForStatement()
-    local node = Statement("numeric_for")
+    local node = self:Statement("numeric_for")
 
     node.tokens["for"] = self:ReadValue("for")
     node.is_local = true
@@ -315,7 +413,7 @@ function META:ReadNumericForStatement()
 end
 
 function META:ReadGenericForStatement()
-    local node = Statement("generic_for")
+    local node = self:Statement("generic_for")
 
     node.tokens["for"] = self:ReadValue("for")
     node.is_local = true
@@ -336,7 +434,7 @@ function META:ReadFunctionBody(node)
     node.identifiers = self:ReadIdentifierList()
 
     if self:IsValue("...") then
-        local vararg = Expression("value")
+        local vararg = self:Expression("value")
         vararg.value = self:ReadValue("...")
         table_insert(node.identifiers, vararg)
     end
@@ -366,7 +464,7 @@ end
 
 do  -- function
     local function read_function_expression(self)
-        local val = Expression("value")
+        local val = self:Expression("value")
         val.value = self:ReadType("letter")
 
         while self:IsValue(".") or self:IsValue(":") do
@@ -377,7 +475,7 @@ do  -- function
             local left = val
             local right = read_function_expression(self)
 
-            val = Expression("binary_operator")
+            val = self:Expression("binary_operator")
             val.value = op
             val.left = val.left or left
             val.right = val.right or right
@@ -391,7 +489,7 @@ do  -- function
     end
 
     function META:ReadFunctionStatement()
-        local node = Statement("function")
+        local node = self:Statement("function")
         node.tokens["function"] = self:ReadValue("function")
         node.expression = read_function_expression(self)
 
@@ -414,7 +512,7 @@ do  -- function
 end
 
 function META:ReadLocalFunctionStatement()
-    local node = Statement("local_function")
+    local node = self:Statement("local_function")
     node.tokens["local"] = self:ReadValue("local")
     node.tokens["function"] = self:ReadValue("function")
     node.identifier = self:ReadIdentifier()
@@ -423,7 +521,7 @@ function META:ReadLocalFunctionStatement()
 end
 
 function META:ReadIfStatement()
-    local node = Statement("if")
+    local node = self:Statement("if")
 
     node.expressions = {}
     node.statements = {}
@@ -504,14 +602,14 @@ end
 do -- expression
 
     function META:ReadAnonymousFunction()
-        local node = Expression("function")
+        local node = self:Expression("function")
         node.tokens["function"] = self:ReadValue("function")
         self:ReadFunctionBody(node)
         return node
     end
 
     function META:ReadTable()
-        local tree = Expression("table")
+        local tree = self:Expression("table")
 
         tree.children = {}
         tree.tokens["{"] = self:ReadValue("{")
@@ -524,7 +622,7 @@ do -- expression
             local node
 
             if self:IsValue("[") then
-                node = Expression("table_expression_value")
+                node = self:Expression("table_expression_value")
 
                 node.tokens["["] = self:ReadValue("[")
                 node.key = self:ReadExpectExpression()
@@ -532,12 +630,12 @@ do -- expression
                 node.tokens["="] = self:ReadValue("=")
                 node.expression_key = true
             elseif self:IsType("letter") and self:IsValue("=", 1) then
-                node = Expression("table_key_value")
+                node = self:Expression("table_key_value")
 
                 node.key = self:ReadType("letter")
                 node.tokens["="] = self:ReadValue("=")
             else
-                node = Expression("table_index_value")
+                node = self:Expression("table_index_value")
 
                 node.key = i
             end
@@ -581,13 +679,13 @@ do -- expression
             table_insert(node.tokens[")"], self:ReadValue(")"))
 
         elseif syntax.IsPrefixOperator(self:GetToken()) then
-            node = Expression("prefix_operator")
+            node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
             node.right = self:ReadExpression(math_huge)
         elseif self:IsValue("function") then
             node = self:ReadAnonymousFunction()
         elseif syntax.IsValue(self:GetToken()) or self:IsType("letter") then
-            node = Expression("value")
+            node = self:Expression("value")
             node.value = self:ReadTokenLoose()
         elseif self:IsValue("{") then
             node = self:ReadTable()
@@ -603,35 +701,35 @@ do -- expression
                 if syntax.IsPrimaryBinaryOperator(self:GetToken()) and self:IsType("letter", 1) then
                     local op = self:ReadTokenLoose()
 
-                    local right = Expression("value")
+                    local right = self:Expression("value")
                     right.value = self:ReadType("letter")
 
-                    node = Expression("binary_operator")
+                    node = self:Expression("binary_operator")
                     node.value = op
                     node.left = left
                     node.right = right
                 elseif syntax.IsPostfixOperator(self:GetToken()) then
-                    node = Expression("postfix_operator")
+                    node = self:Expression("postfix_operator")
                     node.left = left
                     node.value = self:ReadTokenLoose()
                 elseif self:IsValue("(") then
-                    node = Expression("postfix_call")
+                    node = self:Expression("postfix_call")
                     node.left = left
                     node.tokens["call("] = self:ReadValue("(")
                     node.expressions = self:ReadExpressionList()
                     node.tokens["call)"] = self:ReadValue(")")
                 elseif self:IsValue("{") or self:IsType("string") then
-                    node = Expression("postfix_call")
+                    node = self:Expression("postfix_call")
                     node.left = left
                     if self:IsValue("{") then
                         node.expressions = {self:ReadTable()}
                     else
-                        local val = Expression("value")
+                        local val = self:Expression("value")
                         val.value = self:ReadTokenLoose()
                         node.expressions = {val}
                     end
                 elseif self:IsValue("[") then
-                    node = Expression("postfix_expression_index")
+                    node = self:Expression("postfix_expression_index")
                     node.left = left
                     node.tokens["["] = self:ReadValue("[")
                     node.expression = self:ReadExpectExpression()
@@ -662,7 +760,7 @@ do -- expression
             local left = node
             local right = self:ReadExpression(right_priority)
 
-            node = Expression("binary_operator")
+            node = self:Expression("binary_operator")
             node.value = op
             node.left = node.left or left
             node.right = node.right or right
