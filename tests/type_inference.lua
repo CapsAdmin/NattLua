@@ -1,10 +1,10 @@
 local tests = {[[
     local a = 1
-    assert_type(a, "number", 1)
+    type_assert(a, nil as number)
 ]],[[
     local a
     a = 1
-    assert_type(a, "number", 1)
+    type_assert(a, 1)
 ]],[[
     local a = {}
     a.foo = {}
@@ -12,46 +12,46 @@ local tests = {[[
     local c = 0
 
     function a:bar()
-        assert_type(self, "table")
+        type_assert(self, a)
         c = 1
     end
 
     a:bar()
 
-    assert_type(c, "number", 1)
+    type_assert(c, 1)
 ]], [[
     local function test()
 
     end
 
-    assert_type(test, "function")
+    type_assert(test, nil as ():)
 ]], [[
     local a = 1
     repeat
-        assert_type(a, "number")
+        type_assert(a, 1)
     until false
 ]], [[
     local c = 0
     for i = 1, 10, 2 do
-        assert_type(i, "number")
+        type_assert(i, nil as number)
         if i == 1 then
             c = 1
             break
         end
     end
-    assert_type(c, "number", 1)
+    type_assert(c, 1)
 ]], [[
     local a = {foo = true, bar = false, faz = 1}
     for k,v in pairs(a) do
-        assert_type(k, "string")
-        assert_type(v, {"number", "string"})
+        type_assert(k, nil as string)
+        type_assert(v, nil as number | string)
     end
 ]], [[
     local a = 0
     while false do
         a = 1
     end
-
+    type_assert(a, 0)
 ]], [[
     local function lol(a,b,c)
         if true then
@@ -64,7 +64,7 @@ local tests = {[[
     end
     local a = lol(1,2,3)
 
-    assert_type(a, "number", 6)
+    type_assert(a, 6)
 ]], [[
     local a = 1+2+3+4
     local b = nil
@@ -77,8 +77,8 @@ local tests = {[[
         b = print(a+10)
     end
 
-    assert_type(b, "number", 20)
-
+    type_assert(b, 20)
+    type_assert(a, 10)
 ]], [[
     local a
     a = 2
@@ -88,7 +88,7 @@ local tests = {[[
             return foo(lol), nil
         end
         local complex = foo(a)
-        assert_type(foo, "function", {{"any"}, {"nil"}}, {{"number"}} )
+        type_assert(foo, nil as (_:any, _:nil):number )
     end
 ]], [[
     b = {}
@@ -102,7 +102,7 @@ local tests = {[[
 
     local c = foo(a)
 
-    assert_type(c, "number", 2)
+    type_assert(c, 2)
 ]], [[
     local META = {}
     META.__index = META
@@ -119,7 +119,7 @@ local tests = {[[
         ret = a+b+c
     end
 
-    assert_type(ret, "number", 12)
+    type_assert(ret, 12)
 ]], [[
     local function test(a)
         if a then
@@ -134,18 +134,18 @@ local tests = {[[
     if res then
         local a = 1 + res
 
-        assert_type(a, "number", 2)
+        type_assert(a, 2)
     end
 ]], [[
     local a = 1337
     for i = 1, 10 do
-        assert_type(i, "number", 1, 10)
+        type_assert(i, 1)
         if i == 15 then
             a = 7777
             break
         end
     end
-    assert_type(a, "number", 1337)
+    type_assert(a, 1337)
 ]], [[
     local function lol(a, ...)
         local lol,foo,bar = ...
@@ -157,35 +157,32 @@ local tests = {[[
 
     local a,b,c = lol(3,1,2,3)
 
-    assert_type(a, "string", "")
-    assert_type(b, "number", 4)
-    assert_type(c, "number", 3)
+    type_assert(a, "")
+    type_assert(b, 4)
+    type_assert(c, 3)
 ]], [[
     function foo(a, b) return a+b end
 
     local a = foo(1,2)
 
-    assert_type(a, "number", 3)
-]], [[
-    local a = 1
-    assert_type(a, "number")
-]], [[
+    type_assert(a, 3)
+]],[[
 local   a,b,c = 1,2,3
         d,e,f = 4,5,6
 
-assert_type(a, "number", 1)
-assert_type(b, "number", 2)
-assert_type(c, "number", 3)
+type_assert(a, 1)
+type_assert(b, 2)
+type_assert(c, 3)
 
-assert_type(d, "number", 4)
-assert_type(e, "number", 5)
-assert_type(f, "number", 6)
+type_assert(d, 4)
+type_assert(e, 5)
+type_assert(f, 6)
 
 local   vararg_1 = ...
         vararg_2 = ...
 
-assert_type(vararg_1, "nil")
-assert_type(vararg_2, "nil")
+type_assert(vararg_1, nil)
+type_assert(vararg_2, nil)
 
 local function test(...)
     return a,b,c, ...
@@ -193,20 +190,20 @@ end
 
 A, B, C, D = test(), 4
 
-assert_type(A, "number", 1)
-assert_type(B, "number", 2)
-assert_type(C, "number", 3)
-assert_type(D, "...") -- THIS IS WRONG, tuple of any?
+type_assert(A, 1)
+type_assert(B, 2)
+type_assert(C, 3)
+type_assert(D, nil as ...) -- THIS IS WRONG, tuple of any?
 
 local z,x,y,æ,ø,å = test(4,5,6)
 local novalue
 
-assert_type(z, "number", 1)
-assert_type(x, "number", 2)
-assert_type(y, "number", 3)
-assert_type(æ, "number", 4)
-assert_type(ø, "number", 5)
-assert_type(å, "number", 6)
+type_assert(z, 1)
+type_assert(x, 2)
+type_assert(y, 3)
+type_assert(æ, 4)
+type_assert(ø, 5)
+type_assert(å, 6)
 
 ]], [[
 local a = {b = {c = {}}}
@@ -234,7 +231,7 @@ a.b.c = 1
     string(true)
     local ag = string()
 
-    assert_type(ag, "number", 2)
+    type_assert(ag, 2)
 
 ]],[[
     local foo = {lol = 3}
@@ -242,14 +239,14 @@ a.b.c = 1
         return a+self.lol
     end
 
-    assert_type(foo:bar(2), "number", 5)
+    type_assert(foo:bar(2), 5)
 
 ]],[[
     function prefix (w1, w2)
         return w1 .. ' ' .. w2
     end
 
-    assert_type(prefix("hello", "world"), "string", "hello world")
+    type_assert(prefix("hello", "world"), "hello world")
 ]],[[
     local function test(max)
         for i = 1, max do
@@ -268,9 +265,9 @@ a.b.c = 1
     local b = test(5)
     local c = test(1)
 
-    assert_type(a, "boolean", false)
-    assert_type(b, "boolean", true)
-    assert_type(c, "string", "lol")
+    type_assert(a, false)
+    type_assert(b, true)
+    type_assert(c, "lol")
 ]], [[
     local func = function()
         local a = 1
@@ -282,7 +279,7 @@ a.b.c = 1
 
     local f = func()
 
-    assert_type(f(), "number", 1)
+    type_assert(f(), 1)
 ]],[[
     local function pairs(t)
         local k, v
@@ -294,15 +291,15 @@ a.b.c = 1
     end
 
     for k,v in pairs({foo=1, bar=2, faz=3}) do
-        assert_type(k, "string")
-        assert_type(v, "number")
+        type_assert(k, nil as string)
+        type_assert(v, nil as number)
     end
 ]],[[
     local t = {foo=1, bar=2, faz="str"}
     pairs(t)
     for k,v in pairs(t) do
-        assert_type(k, "string")
-        assert_type(v, {"string", "number"})
+        type_assert(k, nil as string)
+        type_assert(v, nil as string | number)
     end
 ]],[[
     function prefix (w1, w2)
@@ -313,21 +310,21 @@ a.b.c = 1
     local statetab = {["foo bar"] = 1337}
 
     local test = statetab[prefix(w1, w2)]
-    assert_type(test, "number", 1337)
+    type_assert(test, 1337)
 ]],[[
     local function test(a)
         --if a > 10 then return a end
         return test(a+1)
     end
 
-    assert_type(test(1), "any")
+    type_assert(test(1), nil as any)
 ]],[[
     local function test(a)
         if a > 10 then return a end
         return test(a+1)
     end
 
-    assert_type(test(1), "number")
+    type_assert(test(1), nil as number)
 ]],[[
     local a: string | number = 1
 
@@ -337,8 +334,8 @@ a.b.c = 1
 
     local foo,bar = test(1, "")
 
-    assert_type(foo, "boolean")
-    assert_type(bar, "number")
+    type_assert(foo, nil as boolean)
+    type_assert(bar, nil as number)
 ]],[[
     do
         type x = boolean | number
@@ -347,23 +344,21 @@ a.b.c = 1
     type c = type x
     local a: type x
     type b = {foo: type a}
-    local c: (a: number, b:number) => b, b
+    local c: (a: number, b:number): b, b
 
-    assert_type(c, "function", {{"table"}, {"table"}}, {{"number"}, {"number"}} )
+    type_assert(c, nil as (_:table, _:table): number, number)
 
 ]], [[
     local function test(a:number,b: number)
-        return a+b
+        return a + b
     end
 
-    assert_type(test, "function", {{"number"}}, {{"number"}, {"number"}} )
-]]}
-
-tests = {[[
+    type_assert(test, nil as (_:number, _:number): number)
+]],[[
     type lol = number
 
     interface math {
-        sin = (a: lol): lol
+        sin = (a: lol, b: string): lol
         cos = (a: string): lol
         cos = (a: number): lol
     }
@@ -372,15 +367,28 @@ tests = {[[
         lol = (): lol
     }
 
-
-
     local a = math.sin(1)
     local b = math.lol()
+
+    type_assert(a, nil as number)
+    type_assert(b, nil as number)
+]], [[
+    interface foo {
+        a = number
+        b = {
+            str: string,
+        }
+    }
+
+    local b: foo = {}
+    local c = b.a
+    local d = b.b.str
+
+    type_assert(b, nil as foo)
 ]]}
 
 local Crawler = require("oh.crawler")
-local Lexer = require("oh.lexer")
-local Parser = require("oh.parser")
+
 local LuaEmitter = require("oh.lua_emitter")
 local types = require("oh.types")
 
@@ -390,20 +398,15 @@ for _, code in ipairs(tests) do
     --local path = "oh/parser.lua"
     --local code = assert(io.open(path)):read("*all")
 
-    local tk = Lexer(code)
-    local ps = Parser()
     local em = LuaEmitter()
 
     local oh = require("oh")
-    ps.OnError = oh.DefaultErrorHandler
-    tk.OnError = oh.DefaultErrorHandler
 
-    local tokens = assert(tk:GetTokens())
-    local ast = assert(ps:BuildAST(tokens))
+    local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code, "test " .. _)), "test " .. _, code))
 
     local crawler = Crawler()
 
-    crawler.OnEvent = crawler.DumpEvent
+    --crawler.OnEvent = crawler.DumpEvent
 
     local function add(lib, t)
         local tbl = types.Type("table")
@@ -419,62 +422,19 @@ for _, code in ipairs(tests) do
         return combined
     end
 
-if false then
-
-    crawler:DeclareGlobal("assert_type", types.Type("function", {types.Type"any"}, {types.Type"..."}, function(what, type, value, ...)
-        if type:IsType("table") then
-            type = table_to_types(type)
+    crawler:SetGlobal("type_assert", types.Type("function", {types.Type"any"}, {types.Type"..."}, function(what, type, value, ...)
+        if not what:IsType(type) then
+            error("expected type " .. tostring(type) .." got " .. tostring(what))
         end
-
-        if not what:IsType(type.value) then
-            print(code)
-            error("expected " .. type.value .. " got " .. tostring(what))
-        end
-
-        if type.value == "function" then
-            local expected_ret, expected_args = value, ...
-            local func = what
-
-            if expected_ret then
-                for i, ret_slot in ipairs(expected_ret.value) do
-                    ret_slot = table_to_types(ret_slot)
-                    if not ret_slot:IsType(func.ret[i]) then
-                        error("expected return type " .. tostring(ret_slot) .. " to #" .. i .. " got " .. tostring(func.ret[i] == nil and "nothing" or func.ret[i]))
-                    end
-                end
-            end
-
-            if expected_args then
-                for i, arg in ipairs(expected_args.value) do
-                    arg = table_to_types(arg)
-                    if not arg:IsType(func.arguments[i]) then
-                        error("expected argument type " .. tostring(arg) .. " to #" .. i .. " got " .. tostring(func.arguments[i]))
-                    end
-                end
-            end
-        else
-            if value ~= nil and value.value ~= what.value then
-                error("expected " .. tostring(value.value) .. " got " .. tostring(what.value))
-            end
-
-            local max = ...
-            if max and type.value == "number" then
-                if not what.max or not what.max.value or max.value ~= what.max.value then
-                    error("expected max " .. tostring(max.value) .. " got " .. tostring(what.max.value))
-                end
+        if type.value ~= nil then
+            if what.value ~= type.value then
+                error("expected type value " .. tostring(type) .." got " .. tostring(what))
             end
         end
+    end), "typesystem")
 
-        return types.Type("boolean", true)
-    end))
 
-    crawler:DeclareGlobal("next", types.Type("function", {types.Type"any", types.Type"any"}, {types.Type"any", types.Type"any"}, function(tbl, key)
-        local key, val = next(tbl.value)
-
-        return types.Type("string", key), val
-    end))
-
-    crawler:DeclareGlobal("pairs", types.Type("function", {types.Type"table"}, {types.Type"table"}, function(tbl)
+    crawler:SetGlobal("pairs", types.Type("function", {types.Type"table"}, {types.Type"table"}, function(tbl)
         local key, val
         return function()
             for k,v in pairs(tbl.value) do
@@ -497,7 +457,17 @@ if false then
 
             return {key, val}
         end, tbl
-    end))
+    end), "typesystem")
+
+
+    crawler:SetGlobal("next", types.Type("function", {types.Type"any", types.Type"any"}, {types.Type"any", types.Type"any"}, function(tbl, key)
+        local key, val = next(tbl.value)
+
+        return types.Type("string", key), val
+    end), "typesystem")
+if false then
+
+
 
     add("io", {lines = types.Type("function", {types.Type"string"}, {types.Type"number" + types.Type"nil" + types.Type"string"})})
     add("table", {

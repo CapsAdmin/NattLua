@@ -38,17 +38,11 @@ function oh.DefaultErrorHandler(self, msg, start, stop, ...)
 	error(print_util.FormatMessage(msg, ...))
 end
 
-local function on_error(self, msg, start, stop, ...)
-	self.errors = self.errors or {}
-	table.insert(self.errors, {msg = msg, start = start, stop = stop, args = {...}})
-	error(print_util.FormatMessage(msg, ...))
-end
-
 function oh.TokensToAST(tokens, name, code, config)
 	name = name or "unknown"
 
 	local parser = Parser(config)
-    parser.OnError = on_error
+    parser.OnError = oh.DefaultErrorHandler
     local ok, ast = pcall(parser.BuildAST, parser, tokens)
 	if not ok then
 		if parser.errors then

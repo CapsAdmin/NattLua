@@ -163,18 +163,18 @@ do
         "lol = 1 ÆØÅÆ",
         "local foo = 0.15",
 
-        {code = "return math.maxinteger // 80", expect = "return math.floor(math.maxinteger / 80)",     compare_tokens = true},
+        {code = "return math.maxinteger // 80",     expect = "return math.floor(math.maxinteger / 80)",         compare_tokens = true},
 
-        {code = "\xEF\xBB\xBF foo = true", expect = " foo = true"},
-        {code = "foo(1,2,3,)", expect = "foo(1,2,3)"},
+        {code = "\xEF\xBB\xBF foo = true",          expect = " foo = true"},
+        {code = "foo(1,2,3,)",                      expect = "foo(1,2,3)"},
 
-        {code = "return math.maxinteger // 80", expect = "return math.floor(math.maxinteger / 80)",     compare_tokens = true},
-        {code = "local a = ~1",                 expect = "local a = bit.bnot(1)",                       compare_tokens = true},
-        {code = "local a = 1 >> 2",             expect = "local a = bit.rshift(1, 2)",                  compare_tokens = true},
-        {code = "local a = 1 >> 2 << 23",       expect = "local a = bit.lshift(bit.rshift(1, 2), 23)",  compare_tokens = true},
-        {code = "local a = a++",                expect = "local a = (a + 1)",                           compare_tokens = true},
-        {code = "_ENV = {}",                    expect = "_ENV={};setfenv(1, _ENV);",                   compare_tokens = true},
-        {code = "a,_ENV,c = 1,{},2",            expect = "a,_ENV,c = 1,{},2;setfenv(1, _ENV);",         compare_tokens = true},
+        {code = "return math.maxinteger // 80",     expect = "return math.floor(math.maxinteger / 80)",         compare_tokens = true},
+        {code = "local a = ~1",                     expect = "local a = bit.bnot(1)",                           compare_tokens = true},
+        {code = "local a = 1 >> 2",                 expect = "local a = bit.rshift(1, 2)",                      compare_tokens = true},
+        {code = "local a = 1 >> 2 << 23",           expect = "local a = bit.lshift(bit.rshift(1, 2), 23)",      compare_tokens = true},
+        {code = "local a = a++",                    expect = "local a = (a + 1)",                               compare_tokens = true},
+        {code = "_ENV = {}",                        expect = "_ENV={};setfenv(1, _ENV);",                       compare_tokens = true},
+        {code = "a,_ENV,c = 1,{},2",                expect = "a,_ENV,c = 1,{},2;setfenv(1, _ENV);",             compare_tokens = true},
 
 
         {code = "local a: number",            expect = "local a",         compare_tokens = true},

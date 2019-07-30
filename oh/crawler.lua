@@ -474,13 +474,20 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "function" then
         self:Assign(
             statement.expression,
-            self:CrawlExpression(statement:ToExpression("function"))
+            self:CrawlExpression(statement:ToExpression("function")),
+            "runtime"
         )
     elseif statement.kind == "local_function" then
         self:DeclareUpvalue(
             statement.identifier,
             self:CrawlExpression(statement:ToExpression("function")),
             "runtime"
+        )
+    elseif statement.kind == "local_type_function" then
+        self:DeclareUpvalue(
+            statement.identifier,
+            self:CrawlExpression(statement:ToExpression("function")),
+            "typesystem"
         )
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
