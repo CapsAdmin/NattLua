@@ -575,7 +575,7 @@ end
 
 do -- identifier
    function META:ReadIdentifier()
-        local node = Expression("value")
+        local node = self:Expression("value")
         node.value = self:ReadType("letter")
 
         if self.ReadTypeExpression and self:IsValue(":") then
@@ -687,6 +687,8 @@ do -- expression
         elseif syntax.IsValue(self:GetToken()) or self:IsType("letter") then
             node = self:Expression("value")
             node.value = self:ReadTokenLoose()
+        elseif self.ReadImportExpression and self:IsValue("import") then
+            node = self:ReadImportExpression()
         elseif self:IsValue("{") then
             node = self:ReadTable()
         end

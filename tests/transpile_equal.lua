@@ -177,7 +177,7 @@ do
         {code = "a,_ENV,c = 1,{},2",                expect = "a,_ENV,c = 1,{},2;setfenv(1, _ENV);",             compare_tokens = true},
 
 
-        {code = "local a: number",            expect = "local a",         compare_tokens = true},
+        {code = "local a: number",                  expect = "local a",         compare_tokens = true},
     }
 end
 

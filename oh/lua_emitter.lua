@@ -128,6 +128,8 @@ function META:EmitExpression(node)
         self:EmitExpressionIndex(node)
     elseif node.kind == "value" then
         self:EmitToken(node.value)
+    elseif node.kind == "import" then
+        self:EmitImportExpression(node)
     else
         error("unhandled token type " .. node.kind)
     end
@@ -472,6 +474,18 @@ function META:Emit_ENVFromAssignment(node)
             end
         end
     end
+end
+
+function META:EmitImportExpression(node)
+    local oh = require("oh")
+    oh.import_ref_count = (oh.import_ref_count or 0) + 1
+    local rep = oh.import_ref_count
+
+    self:Emit(" loadstring(["..("="):rep(rep).."[")
+    self:Emit(node.code)
+    self:Emit("]"..("="):rep(rep).."], '@"..node.expressions[1].value.value:sub(2, -2).."')(")
+    self:EmitExpressionList(node.expressions)
+    self:Emit(")")
 end
 
 function META:EmitStatement(node)

@@ -21,6 +21,8 @@ syntax.Keywords = {
     "local", "function",
     "and", "not", "or",
 
+    "import",
+
     -- these are just to make sure all code is covered by tests
     "ÆØÅ", "ÆØÅÆ",
 }

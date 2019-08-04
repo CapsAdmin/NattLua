@@ -103,4 +103,28 @@ function META:ReadTypeAssignment()
     return node
 end
 
+function META:ReadImportExpression()
+    local node = self:Expression("import")
+    node.tokens["import"] = self:ReadValue("import")
+    node.tokens["("] = self:ReadValue("(")
+
+    local start = self:GetToken()
+
+    node.expressions = self:ReadExpressionList()
+
+    local root = self.config.path:match("(.+/)")
+
+    local oh = require("oh")
+    local code, err = oh.TranspileFile(root .. node.expressions[1].value.value:sub(2, -2))
+
+    if not code then
+        self:Error("error importing file: $1", start, start, err)
+    end
+
+    node.code = code
+
+    node.tokens[")"] = self:ReadValue(")")
+    return node
+end
+
 return META

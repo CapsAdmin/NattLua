@@ -81,4 +81,21 @@ function oh.loadstring(code, name, config)
     return loadstring(code, name)
 end
 
+function oh.loadfile(path)
+	local code, err = oh.TranspileFile(path)
+	if not code then return nil, err end
+    return loadstring(code, name)
+end
+
+function oh.TranspileFile(path)
+	local f, err = io.open(path, "rb")
+	if not f then return nil, err end
+	local code = f:read("*all")
+	f:close()
+	local code, err = oh.Transpile(code, "@" .. path, {path = path})
+	if not code then return nil, err end
+
+	return code
+end
+
 return oh
