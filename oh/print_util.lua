@@ -287,25 +287,31 @@ function oh.GetErrorsFormatted(error_table, code, path)
 end
 
 do
+	local blacklist = {
+		inferred_type = true,
+		scope = true,
+	}
     local function traverse(tbl, done, out)
-        for k, v in pairs(tbl) do
-            if type(v) == "table" and not done[v] then
-                done[v] = true
-                traverse(v, done, out)
-            end
-            if type(v) == "number" then
-                if k == "start" then
-                    out.max = math.min(out.max, v)
-                elseif k == "stop" then
-                    out.min = math.max(out.min, v)
-                end
-            end
+		for k, v in pairs(tbl) do
+			if not blacklist[k] then
+				if type(v) == "table" and not done[v] then
+					done[v] = true
+					traverse(v, done, out)
+				end
+				if type(v) == "number" then
+					if k == "start" then
+						out.max = math.min(out.max, v)
+					elseif k == "stop" then
+						out.min = math.max(out.min, v)
+					end
+				end
+			end
         end
     end
 
-    function oh.LazyFindStartStop(tbl)
+	function oh.LazyFindStartStop(tbl)
         local out = {min = -math.huge, max = math.huge}
-        traverse(tbl, {}, out)
+		traverse(tbl, {}, out)
         return out.max, out.min
     end
 end

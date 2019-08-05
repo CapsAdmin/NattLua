@@ -204,7 +204,11 @@ do
         if node.inferred_type and node.inferred_type.ret and node.inferred_type.ret[1] then
             --self:Emit(" --[[ : ")
             self:Emit(": ")
-            self:Emit(tostring(node.inferred_type.ret[1].name))
+            local str = {}
+            for i,v in ipairs(node.inferred_type.ret) do
+                str[i] = tostring(v)
+            end
+            self:Emit(table.concat(str, ", "))
             --self:Emit(" ]] ")
         end
 

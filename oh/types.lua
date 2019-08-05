@@ -134,7 +134,7 @@ function META:BinaryOperator(op, b)
         return self:Type(ret)
     end
 
-    self:Error("invalid binary operation " .. op .. " on " .. tostring(b))
+    self:Error("invalid binary operation " .. op .. " on " .. tostring(b) .. "(" .. type(b) .. ")" )
 
     return self:Type("any")
 end

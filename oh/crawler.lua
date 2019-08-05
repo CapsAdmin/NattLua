@@ -673,7 +673,8 @@ do
                     args[i] = type_expression(key, key.type_expression.types)
                     args_defined = true
                 else
-                   -- args[i] =  self:TypeFromImplicitNode(key, "any")
+                    --args[i] =  self:TypeFromImplicitNode(key, "any")
+                    --args_defined = true
                 end
             end
 
