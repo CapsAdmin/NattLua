@@ -204,12 +204,13 @@ function META:BuildAST(tokens)
     self.tokens_length = #tokens
     self.i = 1
 
-    return self:Root()
+    return self:Root(self.config and self.config.root)
 end
 
 
-function META:Root()
+function META:Root(root)
     local node = self:Statement("root")
+    self.root = root or node
 
     local shebang
 
@@ -284,6 +285,7 @@ do -- statements
             self:IsValue("break") then                                                          return self:ReadBreakStatement() elseif
             self:IsValue(";") then                                                              return self:ReadSemicolonStatement() elseif
             self:IsValue("goto") and self:IsType("letter", 1) then                              return self:ReadGotoStatement() elseif
+            self:IsValue("import") then                                                         return self:ReadImportStatement() elseif
             self:IsValue("::") then                                                             return self:ReadGotoLabelStatement() elseif
             self:IsValue("repeat") then                                                         return self:ReadRepeatStatement() elseif
             self:IsValue("function") then                                                       return self:ReadFunctionStatement() elseif

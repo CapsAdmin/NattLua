@@ -71,6 +71,7 @@ function oh.Transpile(code, name, config)
 
 	local ast, err = oh.TokensToAST(tokens, name, code, config)
 	if not ast then return nil, err end
+
 	return oh.ASTToCode(ast, config)
 end
 
@@ -84,7 +85,29 @@ end
 function oh.loadfile(path)
 	local code, err = oh.TranspileFile(path)
 	if not code then return nil, err end
+	print(code)
     return loadstring(code, name)
+end
+
+
+function oh.FileToAST(path, root)
+	local f, err = io.open(path, "rb")
+	
+	if not f then 
+		return nil, err 
+	end
+	
+	local code = f:read("*all")
+	f:close()
+
+	local name = "@" .. path
+	local tokens, err = oh.CodeToTokens(code, name)
+	if not tokens then return nil, err end
+
+	local ast, err = oh.TokensToAST(tokens, name, code, {path = path, root = root})
+	if not ast then return nil, err end
+
+	return ast
 end
 
 function oh.TranspileFile(path)

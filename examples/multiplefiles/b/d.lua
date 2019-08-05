@@ -1,3 +1,3 @@
-local str = "foo"
+local str = "bar"
 
-return str
+return str, math.random()

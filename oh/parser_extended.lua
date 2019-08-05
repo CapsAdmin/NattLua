@@ -103,6 +103,36 @@ function META:ReadTypeAssignment()
     return node
 end
 
+
+
+function META:ReadImportStatement()
+    local node = self:Statement("import")
+    node.tokens["import"] = self:ReadValue("import")
+    node.left = self:ReadIdentifierList()
+    node.tokens["from"] = self:ReadValue("from")
+    
+    local start = self:GetToken()
+    
+    node.expressions = self:ReadExpressionList()
+
+    local root = self.config.path:match("(.+/)")
+    node.path = root .. node.expressions[1].value.value:sub(2, -2)
+
+    local oh = require("oh")
+    local root, err = oh.FileToAST(node.path, self.root)
+
+    if not root then
+        self:Error("error importing file: $1", start, start, err)
+    end
+
+    node.root = root
+
+    self.root.imports = self.root.imports or {}
+    table.insert(self.root.imports, node)
+
+    return node 
+end
+
 function META:ReadImportExpression()
     local node = self:Expression("import")
     node.tokens["import"] = self:ReadValue("import")
@@ -113,17 +143,22 @@ function META:ReadImportExpression()
     node.expressions = self:ReadExpressionList()
 
     local root = self.config.path:match("(.+/)")
+    node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
     local oh = require("oh")
-    local code, err = oh.TranspileFile(root .. node.expressions[1].value.value:sub(2, -2))
+    local root, err = oh.FileToAST(node.path, self.root)
 
-    if not code then
+    if not root then
         self:Error("error importing file: $1", start, start, err)
     end
 
-    node.code = code
+    node.root = root
 
     node.tokens[")"] = self:ReadValue(")")
+
+    self.root.imports = self.root.imports or {}
+    table.insert(self.root.imports, node)
+
     return node
 end
 

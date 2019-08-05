@@ -101,6 +101,17 @@ function META:Concat()
 end
 
 function META:BuildCode(block)
+    if block.imports then
+        self.done = {}
+        self:Emit("IMPORTS = IMPORTS or {}\n")
+        for i, node in ipairs(block.imports) do
+            if not self.done[node.path] then
+                self:Emit("IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render() .. " end\n")
+                self.done[node.path] = true
+            end
+        end
+    end
+
     self:EmitStatements(block.statements)
     return self:Concat()
 end
@@ -477,13 +488,7 @@ function META:Emit_ENVFromAssignment(node)
 end
 
 function META:EmitImportExpression(node)
-    local oh = require("oh")
-    oh.import_ref_count = (oh.import_ref_count or 0) + 1
-    local rep = oh.import_ref_count
-
-    self:Emit(" loadstring(["..("="):rep(rep).."[")
-    self:Emit(node.code)
-    self:Emit("]"..("="):rep(rep).."], '@"..node.expressions[1].value.value:sub(2, -2).."')(")
+    self:Emit(" IMPORTS['" .. node.path .. "'](")
     self:EmitExpressionList(node.expressions)
     self:Emit(")")
 end
@@ -518,6 +523,11 @@ function META:EmitStatement(node)
         self:Emit_ENVFromAssignment(node)
     elseif node.kind == "local_assignment" then
         self:EmitLocalAssignment(node)
+    elseif node.kind == "import" then
+        self:Emit("local ")
+        self:EmitIdentifierList(node.left)
+        self:Emit(" = ")
+        self:EmitImportExpression(node)
     elseif node.kind == "call_expression" then
         self:Whitespace("\t")
         self:EmitExpression(node.value)
@@ -536,7 +546,7 @@ function META:EmitStatement(node)
     elseif node.kind == "root" then
         self:EmitStatements(node.statements)
     else
-        error("unhandled value: " .. node.kind)
+        error("unhandled statement: " .. node.kind)
     end
 
     if self.OnEmitStatement then
