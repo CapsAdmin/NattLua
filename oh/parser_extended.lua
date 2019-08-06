@@ -7,22 +7,52 @@ function META:ReadTypeExpression()
     local types = {}
 
     for _ = 1, self:GetLength() do
+        local group
+
+        if self:IsValue("(") then
+            self:Advance(1)
+            group = self:ReadTypeExpression()
+            self:ReadValue(")")
+        end
+
         if self:IsType("letter") or syntax.IsValue(self:GetToken()) then
+            if self:IsValue("[", 1) then
+                local node = self:Expression("type_array")
 
-            local node = self:Expression("type")
+                if self:IsValue("type") then
+                    node.tokens["type"] = self:ReadValue("type")
+                end
 
-            if self:IsValue("type") then
-                node.tokens["type"] = self:ReadValue("type")
+                do
+                    local t = self:Expression("type")
+                    t.value = self:ReadTokenLoose()
+                    node.value = t
+                end
+
+                node.tokens["["] = self:ReadValue("[")
+                if self:IsType("number") then
+                    node.length = self:ReadTokenLoose()
+                end
+                node.tokens["]"] = self:ReadValue("]", node.tokens["["])
+
+                table.insert(types, node)
+            else
+                local node = self:Expression("type")
+
+                if self:IsValue("type") then
+                    node.tokens["type"] = self:ReadValue("type")
+                end
+
+                node.value = self:ReadTokenLoose()
+
+                table.insert(types, node)
             end
-
-            node.value = self:ReadTokenLoose()
-
-            table.insert(types, node)
-        elseif self:IsValue("(") then
+        elseif self:IsValue("function") then
             local node = self:Expression("type_function")
+            node.tokens["function"] = self:ReadValue("function")
             node.tokens["("] = self:ReadValue("(")
             node.identifiers = self:ReadIdentifierList()
-            node.tokens[")"] = self:ReadValue(")")
+            node.tokens[")"] = self:ReadValue(")", node.tokens["("])
             node.tokens[":"] = self:ReadValue(":")
 
             local out = {}
@@ -37,6 +67,18 @@ function META:ReadTypeExpression()
             node.return_types = out
 
             table.insert(types, node)
+        elseif self:IsValue("[") then
+            local node = self:Expression("type_array")
+
+            node.value = group
+
+            node.tokens["["] = self:ReadValue("[")
+            if self:IsType("number") then
+                node.length = self:ReadTokenLoose()
+            end
+            node.tokens["]"] = self:ReadValue("]")
+
+            table.insert(types, node)
         elseif self:IsValue("{") then
             local node = self:Expression("type_table")
             node.tokens["{"] = self:ReadValue("{")
@@ -44,6 +86,15 @@ function META:ReadTypeExpression()
             node.tokens["}"] = self:ReadValue("}")
 
             table.insert(types, node)
+        elseif group then
+            for i,v in ipairs(group.types) do
+                table.insert(types, v)
+            end
+        end
+
+        if self:IsValue("?") then
+            types[#types].optional = true
+            types[#types].tokens = self:ReadTokenLoose()
         end
 
         if not self:IsValue("|") then

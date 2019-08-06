@@ -6,6 +6,8 @@ syntax.SymbolCharacters = {
     "=", "::", "\"", "'",
 
     "=>",
+
+    "?",
 }
 
 syntax.NumberAnnotations = {

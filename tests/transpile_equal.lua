@@ -163,6 +163,8 @@ do
         "lol = 1 ÆØÅÆ",
         "local foo = 0.15",
 
+        {code = "local --[[#foo = true]]"},
+
         {code = "return math.maxinteger // 80",     expect = "return math.floor(math.maxinteger / 80)",         compare_tokens = true},
 
         {code = "\xEF\xBB\xBF foo = true",          expect = " foo = true"},

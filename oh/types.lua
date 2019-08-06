@@ -37,6 +37,14 @@ function META:set(key, val)
     self:Error("undefined set")
 end
 
+function META:GetReadableContent()
+    if self.value ~= nil then
+        return self.value
+    end
+
+    return self.name
+end
+
 function META:__tostring()
     if self.interface.tostring then
         return self.interface.tostring(self)
@@ -113,11 +121,11 @@ function META:BinaryOperator(op, b)
         end
 
         if op == "==" and a:IsType("number") and b:IsType("number") and a.value and b.value then
-            if a.max then
+            if a.max and a.max.value then
                 return self:Type("boolean", b.value >= a.value and b.value <= a.max.value)
             end
 
-            if b.max then
+            if b.max and b.max.value then
                 return self:Type("boolean", a.value >= b.value and a.value <= b.max.value)
             end
         end
@@ -134,7 +142,7 @@ function META:BinaryOperator(op, b)
         return self:Type(ret)
     end
 
-    self:Error("invalid binary operation " .. op .. " on " .. tostring(b) .. "(" .. type(b) .. ")" )
+    self:Error("invalid binary operation " .. tostring(b:GetReadableContent()) .. op .. tostring(a:GetReadableContent()))
 
     return self:Type("any")
 end
@@ -441,6 +449,46 @@ types.Register("table", {
     end,
 })
 
+do
+    local function check_index(self, key)
+        if not key:IsType("number") then
+            self:Error("cannnot index " .. tostring(key) .. " on array")
+        elseif self.length and key.value and key.value > self.length then
+            self:Error("out of bounds " .. tostring(key))
+        elseif key.value and key.value < 1 then
+            self:Error("out of bounds " .. tostring(key))
+        end
+    end
+
+    types.Register("array", {
+        inherits = "base",
+        truthy = true,
+        prefix = {
+            ["#"] = "number",
+        },
+        init = function(self, types, length)
+            return {array_type = types, length = length}
+        end,
+        set = function(self, key, val)
+            check_index(self, key)
+
+            if self.array_type and not val:IsType(self.array_type) then
+                self:Error("expected " .. tostring(self.array_type) .. " got " .. tostring(val))
+            end
+            
+            self.value[key] = val
+        end,
+        get = function(self, key)
+            check_index(self, key)
+
+            return self.value[key]
+        end,
+        tostring = function(self)
+            return (tostring(self.array_type) or "") .. "[]"
+        end,
+    })
+end
+
 types.Register("boolean", {
     inherits = "base",
     truthy = {
@@ -458,6 +506,9 @@ types.Register("nil", {
 types.Register("number", {
     inherits = "base",
     truthy = true,
+    prefix = {
+        ["-"] = "number",
+    },
     binary = {
         ["+"] = "number",
         ["-"] = "number",

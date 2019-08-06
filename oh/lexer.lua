@@ -213,6 +213,12 @@ do -- whitespace
             local start = self.i
             self:Advance(2)
 
+            if self:IsValue("#", 2) then
+                self:Advance(3)
+                self.comment_escape = true
+                return "comment_escape_start"
+            end
+
             local ok, err = ReadLiteralString(self, true)
 
             if not ok then
@@ -224,7 +230,6 @@ do -- whitespace
                     return self:ReadLineComment()
                 end
             end
-
 
             return "multiline_comment"
         end
@@ -607,7 +612,7 @@ function META:ReadWhiteSpace()
     false then end
 end
 
-function META:ReadNonWhiteSpace()
+function META:ReadNonWhiteSpace()    
     if
     self:IsEndOfFile() then             return self:ReadEndOfFile() elseif
     self:IsMultilineString() then       return self:ReadMultilineString() elseif
@@ -635,6 +640,12 @@ function META:ReadToken()
 
     for i = 1, self:GetLength() do
         local start = self.i
+
+        if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
+            self.comment_escape = false
+            self:Advance(2)
+        end
+    
         local type = self:ReadWhiteSpace()
         if not type then
             break

@@ -422,6 +422,15 @@ function META:CrawlTypeExpression(t)
         for _, node in ipairs(t.key_values) do
             val.value[node.value.value] = self:CrawlTypeExpressions(node.type_expression)
         end
+    elseif t.kind == "type_array" then
+        local tbl = {}
+        if t.value.types then
+            for i,v in ipairs(t.value.types)do
+                tbl[i] = self:CrawlTypeExpression(v)
+            end
+        end
+        val = types.Type("array", types.Fuse(unpack(tbl)), t.length and tonumber(t.length.value))
+        val.value = {}
     end
 
     return val
@@ -678,6 +687,12 @@ do
                 end
             end
 
+            if node.self_call then
+                if self:GetUpvalue(node.expression.left, "runtime").key.type_expression then
+                    args_defined = true
+                end
+            end
+
             local ret = {}
             if node.type_expressions then
                 for i, type_exp in ipairs(node.type_expressions) do
@@ -697,7 +712,7 @@ do
 
                 if r.node.self_call then
                     local val = self:CrawlExpression(r.node.expression)
-                    table.insert(arguments, val)
+                    --table.insert(arguments, val)
                     self:DeclareUpvalue("self", val, env)
                 end
 

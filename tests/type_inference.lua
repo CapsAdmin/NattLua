@@ -24,7 +24,7 @@ local tests = {[[
 
     end
 
-    type_assert(test, nil as ():)
+    type_assert(test, nil as function():)
 ]], [[
     local a = 1
     repeat
@@ -88,7 +88,7 @@ local tests = {[[
             return foo(lol), nil
         end
         local complex = foo(a)
-        type_assert(foo, nil as (_:any, _:nil):number )
+        type_assert(foo, nil as function(_:any, _:nil):number )
     end
 ]], [[
     b = {}
@@ -344,27 +344,27 @@ a.b.c = 1
     type c = type x
     local a: type x
     type b = {foo: type a}
-    local c: (a: number, b:number): b, b
+    local c: function(a: number, b:number): b, b
 
-    type_assert(c, nil as (_:table, _:table): number, number)
+    type_assert(c, nil as function(_:table, _:table): number, number)
 
 ]], [[
     local function test(a:number,b: number)
         return a + b
     end
 
-    type_assert(test, nil as (_:number, _:number): number)
+    type_assert(test, nil as function(_:number, _:number): number)
 ]],[[
     type lol = number
 
     interface math {
-        sin = (a: lol, b: string): lol
-        cos = (a: string): lol
-        cos = (a: number): lol
+        sin = function(a: lol, b: string): lol
+        cos = function(a: string): lol
+        cos = function(a: number): lol
     }
 
     interface math {
-        lol = (): lol
+        lol = function(): lol
     }
 
     local a = math.sin(1)
@@ -385,6 +385,10 @@ a.b.c = 1
     local d = b.b.str
 
     type_assert(b, nil as foo)
+]], [[
+    local a: (string|number)[] = {"", ""}
+    a[1] = ""
+    a[2] = 1
 ]]}
 
 local Crawler = require("oh.crawler")
