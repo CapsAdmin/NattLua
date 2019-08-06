@@ -24,9 +24,12 @@ function META:ReadTypeExpression()
                 end
 
                 do
+                    local types = self:Expression("type_expression")
+
                     local t = self:Expression("type")
                     t.value = self:ReadTokenLoose()
-                    node.value = t
+                    types.types = {t}
+                    node.value = types
                 end
 
                 node.tokens["["] = self:ReadValue("[")
@@ -161,9 +164,9 @@ function META:ReadImportStatement()
     node.tokens["import"] = self:ReadValue("import")
     node.left = self:ReadIdentifierList()
     node.tokens["from"] = self:ReadValue("from")
-    
+
     local start = self:GetToken()
-    
+
     node.expressions = self:ReadExpressionList()
 
     local root = self.config.path:match("(.+/)")
@@ -181,7 +184,7 @@ function META:ReadImportStatement()
     self.root.imports = self.root.imports or {}
     table.insert(self.root.imports, node)
 
-    return node 
+    return node
 end
 
 function META:ReadImportExpression()

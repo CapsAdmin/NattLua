@@ -424,6 +424,7 @@ function META:CrawlTypeExpression(t)
         end
     elseif t.kind == "type_array" then
         local tbl = {}
+        print(t.value.types)
         if t.value.types then
             for i,v in ipairs(t.value.types)do
                 tbl[i] = self:CrawlTypeExpression(v)
