@@ -80,7 +80,7 @@ do
             node.scope = self.scope
             return t
         else
-            error("unhanlded expresison kind " .. node.kind)
+            error("unhanlded expression kind " .. node.kind)
         end
     end
 
@@ -403,19 +403,29 @@ function META:CrawlTypeExpression(t)
             val = self:GetValue(t, "runtime").data
         elseif types.IsType(t.value.value) then
             val = types.Type(t.value.value)
+        elseif t.value.value == "true" or t.value.value == "false" then
+            val = self:TypeFromImplicitNode(t, "boolean")
+            val.value = t.value.value == "true"
         else
             val = self:TypeFromImplicitNode(t, "any")
         end
     elseif t.kind == "type_function" then
         local args = {}
         local rets = {}
-        for i,v in ipairs(t.identifiers) do
-            args[i] = self:CrawlTypeExpressions(v.type_expression)
+
+        if t.statements then
+            t.kind = "function"
+            for k, v in pairs(t) do print(k,v) end
+            val = loadstring("local crawler, types = ...; return " .. t:Render())(self, types)
+        else
+            for i,v in ipairs(t.identifiers) do
+                args[i] = self:CrawlTypeExpressions(v.type_expression)
+            end
+            for i,v in ipairs(t.return_types) do
+                rets[i] = self:CrawlTypeExpressions(v)
+            end
+            val = types.Type("function", rets, args)
         end
-        for i,v in ipairs(t.return_types) do
-            rets[i] = self:CrawlTypeExpressions(v)
-        end
-        val = types.Type("function", rets, args)
     elseif t.kind == "type_table" then
         val = types.Type("table")
         val.value = {}
@@ -607,7 +617,11 @@ function META:CrawlStatement(statement, ...)
         end
 
         for i,v in ipairs(statement.expressions) do
-            tbl:set(v.left.value, self:CrawlTypeExpressions(v.right.types))
+            if tbl.value[v.left.value] then
+                types.OverloadFunction(tbl:get(v.left.value), self:CrawlTypeExpressions(v.right.types))
+            else
+                tbl:set(v.left.value, self:CrawlTypeExpressions(v.right.types))
+            end
         end
 
         self:DeclareUpvalue(statement.key, tbl, "typesystem")
@@ -832,7 +846,14 @@ do
                         end
                     else
                         self:FireEvent("external_call", node, r)
-                        for _,v in ipairs(r.ret) do
+
+                        local args = {}
+                        
+                        for i,v in ipairs(node.expressions) do
+                            args[i] = self:CrawlExpression(v)
+                        end
+
+                        for _,v in ipairs(types.CallFunction(r, args)) do
                             stack:Push(v)
                         end
                     end

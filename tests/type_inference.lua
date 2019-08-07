@@ -389,6 +389,17 @@ a.b.c = 1
     local a: (string|number)[] = {"", ""}
     a[1] = ""
     a[2] = 1
+]], [[
+    interface foo {
+        bar = function(a: boolean, b: number): true
+        bar = function(a: number): false
+    }
+        
+    local a = foo.bar(true, 1)
+    local b = foo.bar(1)
+
+    type_assert(a, true)
+    type_assert(b, false)
 ]]}
 
 local Crawler = require("oh.crawler")
@@ -400,7 +411,6 @@ for _, code in ipairs(tests) do
     if code == false then return end
 
     --local path = "oh/parser.lua"
-    --local code = assert(io.open(path)):read("*all")
 
     local em = LuaEmitter()
 
@@ -426,71 +436,12 @@ for _, code in ipairs(tests) do
         return combined
     end
 
-    crawler:SetGlobal("type_assert", types.Type("function", {types.Type"any"}, {types.Type"..."}, function(what, type, value, ...)
-        if not what:IsType(type) then
-            error("expected type " .. tostring(type) .." got " .. tostring(what))
-        end
-        if type.value ~= nil then
-            if what.value ~= type.value then
-                error("expected type value " .. tostring(type) .." got " .. tostring(what))
-            end
-        end
-    end), "typesystem")
-
-
-    crawler:SetGlobal("pairs", types.Type("function", {types.Type"table"}, {types.Type"table"}, function(tbl)
-        local key, val
-        return function()
-            for k,v in pairs(tbl.value) do
-                if type(k) == "string" then
-                    k = types.Type("string", k)
-                end
-
-                if not key then
-                    key = k
-                else
-                    key = key + k
-                end
-
-                if not val then
-                    val = v
-                else
-                    val = val + v
-                end
-            end
-
-            return {key, val}
-        end, tbl
-    end), "typesystem")
-
-
     crawler:SetGlobal("next", types.Type("function", {types.Type"any", types.Type"any"}, {types.Type"any", types.Type"any"}, function(tbl, key)
         local key, val = next(tbl.value)
 
         return types.Type("string", key), val
     end), "typesystem")
-if false then
-
-
-
-    add("io", {lines = types.Type("function", {types.Type"string"}, {types.Type"number" + types.Type"nil" + types.Type"string"})})
-    add("table", {
-        insert = types.Type("function", {types.Type"nil"}, {types.Type"table"}),
-        getn = types.Type("function", {types.Type"number"}, {types.Type"table"}),
-        })
-    add("math", {
-        random = types.Type("function", {types.Type"number"}, {types.Type"number"}),
-        floor = types.Type("function", {types.Type"number"}, {types.Type"number"}),
-        ceil = types.Type("function", {types.Type"number"}, {types.Type"number"}),
-
-    })
-    add("string", {
-        find = types.Type("function", {types.Type"number" + types.Type"nil", types.Type"number" + types.Type"nil", types.Type"string" + types.Type"nil"}, {types.Type"string", types.Type"string"}),
-        sub = types.Type("function", {types.Type"string"}, {types.Type"number", types.Type"number" + types.Type"nil"}),
-    })
-
-end
-
+    
     crawler.code = code
     crawler.name = "test"
     crawler:CrawlStatement(ast)

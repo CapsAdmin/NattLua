@@ -55,19 +55,33 @@ function META:ReadTypeExpression()
             node.tokens["function"] = self:ReadValue("function")
             node.tokens["("] = self:ReadValue("(")
             node.identifiers = self:ReadIdentifierList()
-            node.tokens[")"] = self:ReadValue(")", node.tokens["("])
-            node.tokens[":"] = self:ReadValue(":")
 
-            local out = {}
-            for i = 1, max or self:GetLength() do
-
-                local typ = self:ReadTypeExpression()
-
-                if self:HandleListSeparator(out, i, typ) then
-                    break
-                end
+            if self:IsValue("...") then
+                local vararg = self:Expression("value")
+                vararg.value = self:ReadValue("...")
+                table.insert(node.identifiers, vararg)
             end
-            node.return_types = out
+
+            node.tokens[")"] = self:ReadValue(")", node.tokens["("])
+
+            if not self:IsValue(":") then
+                local start = self:GetToken()
+                node.statements = self:ReadStatements({["end"] = true})
+                node.tokens["end"] = self:ReadValue("end", start, start)
+            else                
+                node.tokens[":"] = self:ReadValue(":")
+
+                local out = {}
+                for i = 1, max or self:GetLength() do
+
+                    local typ = self:ReadTypeExpression()
+
+                    if self:HandleListSeparator(out, i, typ) then
+                        break
+                    end
+                end
+                node.return_types = out
+            end
 
             table.insert(types, node)
         elseif self:IsValue("[") then

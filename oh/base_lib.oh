@@ -1,3 +1,40 @@
+type type_assert = function(what, type, value, ...)
+    if not what:IsType(type) then
+        error("expected type " .. tostring(type) .." got " .. tostring(what))
+    end
+    
+    if type.value ~= nil then
+        if what.value ~= type.value then
+            error("expected type value " .. tostring(type) .." got " .. tostring(what))
+        end
+    end
+end
+
+type pairs = function(tbl)
+    local key, val
+    return function()
+        for k,v in pairs(tbl.value) do
+            if type(k) == "string" then
+                k = types.Type("string", k)
+            end
+
+            if not key then
+                key = k
+            else
+                key = key + k
+            end
+
+            if not val then
+                val = v
+            else
+                val = val + v
+            end
+        end
+
+        return {key, val}
+    end, tbl
+end
+
 type generic_func = function(varg: ...): any
 
 interface _G {

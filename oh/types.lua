@@ -74,6 +74,11 @@ function META:IsType(what)
             end
         end
     end
+
+    if self.name == "any" or what == "any" then
+        return true
+    end
+
     return self.interface.type_map[what]
 end
 
@@ -271,6 +276,43 @@ end
 function types.Type(name, ...)
     assert(registered[name], "type " .. name .. " does not exist")
     return registered[name].new(...)
+end
+
+function types.OverloadFunction(a, b)
+    a.overloads = a.overloads or {a}
+    table.insert(a.overloads, b)
+    
+    return a
+end
+
+function types.CallFunction(func, args)
+    local errors = {}
+    local found
+
+    for _, func in ipairs(func.overloads or {func}) do
+        local ok = true
+        
+        for i, typ in ipairs(func.arguments) do
+            if not args[i] or not typ:IsType(args[i]) then
+                ok = false
+                table.insert(errors, {func = func, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
+            end
+        end
+
+        if ok then
+            found = func
+            break
+        end
+    end
+
+    if not found then
+        for _, data in ipairs(errors) do
+            data.func:Error(unpack(data.err))
+        end
+        return {func:Type("any")}
+    end
+
+    return found.ret
 end
 
 do
