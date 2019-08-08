@@ -415,7 +415,6 @@ function META:CrawlTypeExpression(t)
 
         if t.statements then
             t.kind = "function"
-            for k, v in pairs(t) do print(k,v) end
             val = loadstring("local crawler, types = ...; return " .. t:Render())(self, types)
         else
             for i,v in ipairs(t.identifiers) do
@@ -806,9 +805,7 @@ do
                     self.suppress_events = false
                 end
 
-                r(unpack(values))
-
-                stack:Push(self:TypeFromImplicitNode(node, "nil"))
+                stack:Push(r(unpack(values)))
                 return
             end
 
@@ -848,7 +845,7 @@ do
                         self:FireEvent("external_call", node, r)
 
                         local args = {}
-                        
+
                         for i,v in ipairs(node.expressions) do
                             args[i] = self:CrawlExpression(v)
                         end
