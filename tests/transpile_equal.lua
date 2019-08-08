@@ -45,7 +45,6 @@ do
         "a.b.c()",
         "(function(b) return 1 end)(2)",
 
-
         "local a = 1;",
         "local a,b,c",
         "local a,b,c = 1,2,3",
@@ -162,6 +161,16 @@ do
         "lol = 1 ÆØÅ",
         "lol = 1 ÆØÅÆ",
         "local foo = 0.15",
+        
+        "local a: sometype", 
+        "local a: boolean = foo",
+        "local a: boolean | true = foo",
+        "local a: boolean or true = foo", 
+        "local a: true or false = foo", 
+        "local a: list[]", 
+        "local a: list[string, number]", 
+        
+        false,
 
         {code = "local --[[#foo = true]]"},
 
@@ -177,9 +186,6 @@ do
         {code = "local a = a++",                    expect = "local a = (a + 1)",                               compare_tokens = true},
         {code = "_ENV = {}",                        expect = "_ENV={};setfenv(1, _ENV);",                       compare_tokens = true},
         {code = "a,_ENV,c = 1,{},2",                expect = "a,_ENV,c = 1,{},2;setfenv(1, _ENV);",             compare_tokens = true},
-
-
-        {code = "local a: number",                  expect = "local a",         compare_tokens = true},
     }
 end
 

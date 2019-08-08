@@ -586,6 +586,87 @@ function META:EmitIdentifier(node)
         self:Emit(": ")
         self:Emit(tostring(node.inferred_type.name))
     end
+
+    if node.type_expression then
+        self:EmitToken(node.tokens[":"])
+        self:EmitTypeExpression(node.type_expression)
+    end
+end
+
+do -- types
+    function META:EmitTypeBinaryOperator(node)
+        if node.left then self:EmitTypeExpression(node.left) end
+        if node.value.value == "." or node.value.value == ":" then
+            self:EmitToken(node.value)
+        else
+            self:Whitespace(" ")
+            self:EmitToken(node.value)
+            self:Whitespace(" ")
+        end
+        if node.right then self:EmitTypeExpression(node.right) end
+    end
+
+    function META:EmitType(node)
+        self:EmitToken(node.value)
+
+        if node.type_expression then
+            self:EmitToken(node.tokens[":"])
+            self:EmitTypeExpression(node.type_expression)
+        end
+    end
+
+    function META:EmitTypeList(tbl) 
+        for i = 1, #tbl do
+            self:EmitType(tbl[i])
+            if i ~= #tbl then
+                self:EmitToken(tbl[i].tokens[","])
+                self:Whitespace(" ")
+            end
+        end
+    end
+
+    function META:EmitListType(node) 
+        self:EmitTypeExpression(node.left)
+        self:EmitToken(node.tokens["["])
+        self:EmitTypeList(node.types)
+        self:EmitToken(node.tokens["]"])
+    end
+
+    function META:EmitTypeExpression(node)
+        if node.tokens["("] then
+            for _, node in ipairs(node.tokens["("]) do
+                self:EmitToken(node)
+            end
+        end
+
+        if node.kind == "binary_operator" then
+            self:EmitTypeBinaryOperator(node)
+        elseif node.kind == "function" then
+            self:EmitAnonymousFunction(node)
+        elseif node.kind == "table" then
+            self:EmitTable(node)
+        elseif node.kind == "prefix_operator" then
+            self:EmitPrefixOperator(node)
+        elseif node.kind == "postfix_operator" then
+            self:EmitPostfixOperator(node)
+        elseif node.kind == "postfix_call" then
+            self:EmitCall(node)
+        elseif node.kind == "postfix_expression_index" then
+            self:EmitExpressionIndex(node)
+        elseif node.kind == "type_value" or node.kind == "value" then
+            self:EmitToken(node.value)
+        elseif node.kind == "type_list" then
+            self:EmitListType(node)
+        else
+            error("unhandled token type " .. node.kind)
+        end
+
+        if node.tokens[")"] then
+            for _, node in ipairs(node.tokens[")"]) do
+                self:EmitToken(node)
+            end
+        end
+    end
 end
 
 function META:EmitIdentifierList(tbl)

@@ -1,0 +1,236 @@
+local syntax = require("oh.syntax")
+
+local META = {}
+
+do -- identifier
+    function META:ReadTypeIdentifier()
+        local node
+        
+        if self:IsType("letter") and self:IsValue(":", 1) then
+            node = self:Expression("value")
+            node.value = self:ReadType("letter")
+            node.tokens[":"] = self:ReadValue(":")
+            node.type_expression = self:ReadTypeExpression()
+        elseif syntax.IsValue(self:GetToken()) or self:IsType("letter") then
+            node = self:Expression("value")
+            node.value = self:ReadTokenLoose()
+        else
+            --self:Error("expected identifier: type or type")
+        end
+        
+        return node
+    end
+
+    function META:ReadTypeList(max)
+        local out = {}
+
+        for i = 1, max or self:GetLength() do
+            if self:HandleListSeparator(out, i, self:ReadTypeIdentifier()) then
+                break
+            end
+        end
+
+        return out
+    end
+end
+
+function META:ReadTypeFunction()
+    local node = self:Expression("type_function")
+    node.tokens["function"] = self:ReadValue("function")
+    node.tokens["("] = self:ReadValue("(")
+    node.identifiers = self:ReadTypeList()
+
+    if self:IsValue("...") then
+        local vararg = self:Expression("value")
+        vararg.value = self:ReadValue("...")
+        table.insert(node.identifiers, vararg)
+    end
+
+    node.tokens[")"] = self:ReadValue(")", node.tokens["("])
+
+    if not self:IsValue(":") then
+        local start = self:GetToken()
+        node.statements = self:ReadStatements({["end"] = true})
+        node.tokens["end"] = self:ReadValue("end", start, start)
+    else                
+        node.tokens[":"] = self:ReadValue(":")
+
+        local out = {}
+        for i = 1, max or self:GetLength() do
+
+            local typ = self:ReadTypeExpression()
+
+            if self:HandleListSeparator(out, i, typ) then
+                break
+            end
+        end
+        node.return_types = out
+    end
+
+    return node
+end
+
+function META:ReadTypeTable()
+    local tree = self:Expression("type_table")
+
+    tree.children = {}
+    tree.tokens["{"] = self:ReadValue("{")
+
+    for i = 1, self:GetLength() do
+        if self:IsValue("}") then
+            break
+        end
+
+        local node
+
+        if self:IsValue("[") then
+            node = self:Expression("table_expression_value")
+
+            node.tokens["["] = self:ReadValue("[")
+            node.key = self:ReadExpectExpression()
+            node.tokens["]"] = self:ReadValue("]")
+            node.tokens["="] = self:ReadValue("=")
+            node.expression_key = true
+        elseif self:IsType("letter") and self:IsValue("=", 1) then
+            node = self:Expression("table_key_value")
+
+            node.key = self:ReadType("letter")
+            node.tokens["="] = self:ReadValue("=")
+        else
+            node = self:Expression("table_index_value")
+
+            node.key = i
+        end
+
+        node.value = self:ReadExpectExpression()
+
+        tree.children[i] = node
+
+        if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
+            self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
+            break
+        end
+
+        if not self:IsValue("}") then
+            node.tokens[","] = self:ReadValues({[","] = true, [";"] = true})
+        end
+    end
+
+    tree.tokens["}"] = self:ReadValue("}")
+
+    return tree
+end
+
+function META:ReadTypeExpression(priority)
+    priority = priority or 0
+
+    local node
+
+    if self:IsValue("(") then
+        local pleft = self:ReadValue("(")
+        node = self:ReadExpression(0)
+        if not node then
+            self:Error("empty parentheses group", pleft)
+            return
+        end
+
+        node.tokens["("] = node.tokens["("] or {}
+        table_insert(node.tokens["("], 1, pleft)
+
+        node.tokens[")"] = node.tokens[")"] or {}
+        table_insert(node.tokens[")"], self:ReadValue(")"))
+
+    elseif syntax.IsPrefixOperator(self:GetToken()) then
+        node = self:Expression("prefix_operator")
+        node.value = self:ReadTokenLoose()
+        node.right = self:ReadExpression(math_huge)
+    elseif self:IsValue("function") then
+        node = self:ReadTypeFunction()
+    elseif syntax.IsValue(self:GetToken()) or self:IsType("letter") then
+        node = self:Expression("type_value")
+        node.value = self:ReadTokenLoose()
+    elseif self:IsValue("{") then
+        node = self:ReadTypeTable()
+    elseif self:IsValue("[") then
+        node = self:ReadTypeList()
+    end
+
+    local first = node
+
+    if node then
+        for _ = 1, self:GetLength() do
+            local left = node
+            if not self:GetToken() then break end
+
+            if syntax.IsPrimaryBinaryOperator(self:GetToken()) and self:IsType("letter", 1) then
+                local op = self:ReadTokenLoose()
+
+                local right = self:Expression("value")
+                right.value = self:ReadType("letter")
+
+                node = self:Expression("binary_operator")
+                node.value = op
+                node.left = left
+                node.right = right
+            elseif syntax.IsPostfixOperator(self:GetToken()) then
+                node = self:Expression("postfix_operator")
+                node.left = left
+                node.value = self:ReadTokenLoose()
+            elseif self:IsValue("(") then
+                node = self:Expression("postfix_call")
+                node.left = left
+                node.tokens["call("] = self:ReadValue("(")
+                node.expressions = self:ReadExpressionList()
+                node.tokens["call)"] = self:ReadValue(")")
+            elseif self:IsValue("{") or self:IsType("string") then
+                node = self:Expression("postfix_call")
+                node.left = left
+                if self:IsValue("{") then
+                    node.expressions = {self:ReadTable()}
+                else
+                    local val = self:Expression("value")
+                    val.value = self:ReadTokenLoose()
+                    node.expressions = {val}
+                end
+            elseif self:IsValue("[") then
+                node = self:Expression("type_list")
+                node.left = left
+                node.tokens["["] = self:ReadValue("[")
+                node.types = self:ReadTypeList()
+                node.tokens["]"] = self:ReadValue("]")
+            elseif self:IsValue("as") then
+                node.tokens["as"] = self:ReadValue("as")
+                node.type_expression = self:ReadTypeExpression()
+            else
+                break
+            end
+
+            if node then
+                node.primary = first
+            end
+        end
+    end
+
+    if first and first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
+        first.upvalue_or_global = node
+    end
+
+    while syntax.IsBinaryOperator(self:GetToken()) and syntax.GetLeftOperatorPriority(self:GetToken()) > priority do
+        local op = self:GetToken()
+        local right_priority = syntax.GetRightOperatorPriority(op)
+        if not op or not right_priority then break end
+        self:Advance(1)
+
+        local left = node
+        local right = self:ReadExpression(right_priority)
+
+        node = self:Expression("binary_operator")
+        node.value = op
+        node.left = node.left or left
+        node.right = node.right or right
+    end
+
+    return node
+end
+
+return META
