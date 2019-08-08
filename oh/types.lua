@@ -75,7 +75,7 @@ function META:IsType(what)
         end
     end
 
-    if self.name == "any" or what == "any" then
+    if what == "any" then
         return true
     end
 

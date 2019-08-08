@@ -879,7 +879,7 @@ do
             table.insert(arguments, val)
             self:DeclareUpvalue("self", val, "runtime")
         end
-
+        
         for i, v in ipairs(r.node.identifiers) do
             if v.value.value == "..." then
                 if expressions then

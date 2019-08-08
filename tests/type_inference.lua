@@ -367,7 +367,7 @@ a.b.c = 1
         lol = function(): lol
     }
 
-    local a = math.sin(1)
+    local a = math.sin(1, "")
     local b = math.lol()
 
     type_assert(a, nil as number)
