@@ -615,21 +615,85 @@ do -- types
         end
     end
 
-    function META:EmitTypeList(tbl) 
-        for i = 1, #tbl do
-            self:EmitType(tbl[i])
-            if i ~= #tbl then
-                self:EmitToken(tbl[i].tokens[","])
+    function META:EmitListType(node)
+        self:EmitTypeExpression(node.left)
+        self:EmitToken(node.tokens["["])
+        for i = 1, #node.types do
+            self:EmitTypeExpression(node.types[i])
+            if i ~= #node.types then
+                self:EmitToken(node.types[i].tokens[","])
                 self:Whitespace(" ")
             end
         end
+        self:EmitToken(node.tokens["]"])
     end
 
-    function META:EmitListType(node) 
-        self:EmitTypeExpression(node.left)
-        self:EmitToken(node.tokens["["])
-        self:EmitTypeList(node.types)
-        self:EmitToken(node.tokens["]"])
+    function META:EmitTableType(node)
+        self:EmitToken(node.tokens["{"])
+        if node.children[1] then
+            self:Whitespace("\n")
+                self:Whitespace("\t+")
+                for _,node in ipairs(node.children) do
+                    self:Whitespace("\t")
+                    if node.kind == "table_index_value" then
+                        self:EmitTypeExpression(node.value)
+                    elseif node.kind == "table_key_value" then
+                        self:EmitToken(node.key)
+                        self:EmitToken(node.tokens["="])
+                        self:EmitTypeExpression(node.value)
+                    elseif node.kind == "table_expression_value" then
+    
+                        self:EmitToken(node.tokens["["])
+                        self:Whitespace("(")
+                        self:EmitTypeExpression(node.key)
+                        self:Whitespace(")")
+                        self:EmitToken(node.tokens["]"])
+    
+                        self:EmitToken(node.tokens["="])
+    
+                        self:EmitTypeExpression(node.value)
+                    end
+                    if node.tokens[","] then
+                        self:EmitToken(node.tokens[","])
+                    else
+                        self:Whitespace(",")
+                    end
+                    self:Whitespace("\n")
+                end
+                self:Whitespace("\t-")
+            self:Whitespace("\t")
+        end
+        self:EmitToken(node.tokens["}"])
+    end
+
+    function META:EmitTypeFunction(node)
+        self:EmitToken(node.tokens["function"])
+        self:EmitToken(node.tokens["("])
+        for i, exp in ipairs(node.identifiers) do
+            if exp.identifier then
+                self:EmitToken(exp.identifier)
+                self:EmitToken(exp.tokens[":"])
+            end
+            self:EmitTypeExpression(exp)
+            if i ~= #node.identifiers then
+                self:EmitToken(exp.tokens[","])
+            end
+        end
+        self:EmitToken(node.tokens[")"])
+        if node.tokens[":"] then
+            self:EmitToken(node.tokens[":"])
+            for i, exp in ipairs(node.return_expressions) do
+                self:EmitTypeExpression(exp)
+                if i ~= #node.return_expressions then
+                    self:EmitToken(exp.tokens[","])
+                end
+            end
+        else
+            self:Whitespace("\n")
+            self:EmitBlock(node.statements)
+            self:Whitespace("\t")
+            self:EmitToken(node.tokens["end"])
+        end
     end
 
     function META:EmitTypeExpression(node)
@@ -641,8 +705,8 @@ do -- types
 
         if node.kind == "binary_operator" then
             self:EmitTypeBinaryOperator(node)
-        elseif node.kind == "function" then
-            self:EmitAnonymousFunction(node)
+        elseif node.kind == "type_function" then
+            self:EmitTypeFunction(node)
         elseif node.kind == "table" then
             self:EmitTable(node)
         elseif node.kind == "prefix_operator" then
@@ -653,8 +717,10 @@ do -- types
             self:EmitCall(node)
         elseif node.kind == "postfix_expression_index" then
             self:EmitExpressionIndex(node)
-        elseif node.kind == "type_value" or node.kind == "value" then
+        elseif node.kind == "value" then
             self:EmitToken(node.value)
+        elseif node.kind == "type_table" then
+            self:EmitTableType(node)
         elseif node.kind == "type_list" then
             self:EmitListType(node)
         else

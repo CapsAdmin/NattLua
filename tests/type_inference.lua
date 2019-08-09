@@ -402,6 +402,11 @@ a.b.c = 1
     type_assert(b, false)
 ]]}
 
+tests = {[[
+    local a: string = 1
+    type a = string | number | (boolean | string)
+]]}
+
 local Crawler = require("oh.crawler")
 
 local LuaEmitter = require("oh.lua_emitter")
@@ -420,7 +425,7 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-    --crawler.OnEvent = crawler.DumpEvent
+    crawler.OnEvent = crawler.DumpEvent
 
     local function add(lib, t)
         local tbl = types.Type("table")

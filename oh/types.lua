@@ -108,8 +108,15 @@ function META:IsTruthy()
     return self.interface.truthy
 end
 
-function META:BinaryOperator(op, b)
+function META:BinaryOperator(op, b, node, env)
     local a = self
+
+    if env == "typesystem" then
+        if op == "|" then
+            return types.Fuse(a, b)
+        end
+    end
+
     if self.interface.binary and self.interface.binary[op] then
         local arg, ret
 
@@ -146,6 +153,8 @@ function META:BinaryOperator(op, b)
 
         return self:Type(ret)
     end
+
+    print(env, "!!")
 
     self:Error("invalid binary operation " .. tostring(b:GetReadableContent()) .. op .. tostring(a:GetReadableContent()))
 
@@ -367,7 +376,18 @@ do
     end
 
     function types.Fuse(...)
-        return setmetatable({types = {...}}, META)
+        local types = {}
+        for i = 1, select("#", ...) do
+            local t = select(i, ...)
+            if t.types then
+                for i,v in ipairs(t.types) do
+                    table.insert(types, v)
+                end
+            else
+                table.insert(types, t)
+            end
+        end
+        return setmetatable({types = types}, META)
     end
 end
 
@@ -502,20 +522,20 @@ do
         end
     end
 
-    types.Register("array", {
+    types.Register("list", {
         inherits = "base",
         truthy = true,
         prefix = {
             ["#"] = "number",
         },
         init = function(self, types, length)
-            return {array_type = types, length = length}
+            return {list_type = types, length = length}
         end,
         set = function(self, key, val)
             check_index(self, key)
 
-            if self.array_type and not val:IsType(self.array_type) then
-                self:Error("expected " .. tostring(self.array_type) .. " got " .. tostring(val))
+            if self.list_type and not val:IsType(self.list_type) then
+                self:Error("expected " .. tostring(self.list_type) .. " got " .. tostring(val))
             end
             
             self.value[key] = val
@@ -526,7 +546,7 @@ do
             return self.value[key]
         end,
         tostring = function(self)
-            return (tostring(self.array_type) or "") .. "[]"
+            return (tostring(self.list_type) or "") .. "[]"
         end,
     })
 end

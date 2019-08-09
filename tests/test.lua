@@ -1,6 +1,8 @@
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
+local Crawler = require("oh.crawler")
+
 local print_util = require("oh.print_util")
 
 local test = {}
@@ -49,6 +51,9 @@ function test.transpile_check(tbl)
         tokens = assert(test.lex(tbl.code, nil, tbl.name))
         ast = assert(test.parse(tokens, tbl.code, tbl.name))
         new_code, emitter = assert(test.transpile(ast, tbl.name, tbl.config))
+
+        --local crawler = Crawler()
+        --crawler:CrawlStatement(ast)
     end, function(err)
         print("===================================")
         print(debug.traceback(err))

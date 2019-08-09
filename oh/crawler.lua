@@ -6,6 +6,29 @@ META.__index = META
 
 local table_insert = table.insert
 
+local function table_to_types(self, node, out, env)
+    for _,v in ipairs(node.children) do
+        if v.kind == "table_key_value" then
+            --out[types.Type("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
+            out[v.key.value] = self:CrawlExpression(v.value, env)
+        elseif v.kind == "table_expression_value" then
+            local t = self:CrawlExpression(v.key, env)
+            local v = self:CrawlExpression(v.value, env)
+            if t:IsType("string") then
+                out[t.value] = v
+            else
+                out[t] = v
+            end
+        elseif v.kind == "table_index_value" then
+            if v.i then
+                out[v.i] = self:CrawlExpression(v.value, env)
+            else
+                table.insert(out, self:CrawlExpression(v.value, env))
+            end
+        end
+    end
+end
+
 do
     function META:Hash(t)
         if type(t) == "string" then
@@ -17,27 +40,6 @@ do
         return t.value.value
     end
 
-    local function table_to_types(self, node, out)
-        for _,v in ipairs(node.children) do
-            if v.kind == "table_key_value" then
-                --out[types.Type("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
-                out[v.key.value] = self:TypeFromNode(v.value)
-            elseif v.kind == "table_expression_value" then
-                local t = self:TypeFromNode(v.key)
-                if t:IsType("string") then
-                    out[t.value] = self:TypeFromNode(v.value)
-                else
-                    out[t] = self:TypeFromNode(v.value)
-                end
-            elseif v.kind == "table_index_value" then
-                if v.i then
-                    out[v.i] = self:TypeFromNode(v.value)
-                else
-                    table.insert(out, self:TypeFromNode(v.value))
-                end
-            end
-        end
-    end
 
     local function new_type(self, node, ...)
         if type(node) == "string" then
@@ -65,6 +67,10 @@ do
                 return types.Type("boolean", false)
             elseif v == "nil" then
                 return types.Type("nil")
+            elseif v == "function" then
+                return types.Type("function", ...)
+            elseif v == "list" then
+                return types.Type("list", ...)
             else
                 error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
             end
@@ -72,7 +78,7 @@ do
         elseif node.kind == "table" then
             local t = types.Type("table")
 
-            table_to_types(self, node, t.value)
+            table_to_types(self, node, t.value, "runtime")
 
             return t
         elseif node.kind == "function" then
@@ -393,73 +399,6 @@ function META:CrawlStatements(statements, ...)
     end
 end
 
-function META:CrawlTypeExpression(t)
-    local val
-
-    if t.kind == "type" then
-        if self:GetValue(t, "typesystem") then
-            val = self:GetValue(t, "typesystem")
-        elseif self:GetValue(t, "runtime") then
-            val = self:GetValue(t, "runtime").data
-        elseif types.IsType(t.value.value) then
-            val = types.Type(t.value.value)
-        elseif t.value.value == "true" or t.value.value == "false" then
-            val = self:TypeFromImplicitNode(t, "boolean")
-            val.value = t.value.value == "true"
-        else
-            val = self:TypeFromImplicitNode(t, "any")
-        end
-    elseif t.kind == "type_function" then
-        local args = {}
-        local rets = {}
-
-        if t.statements then
-            t.kind = "function"
-            val = loadstring("local crawler, types = ...; return " .. t:Render())(self, types)
-        else
-            for i,v in ipairs(t.identifiers) do
-                args[i] = self:CrawlTypeExpressions(v.type_expression)
-            end
-            for i,v in ipairs(t.return_types) do
-                rets[i] = self:CrawlTypeExpressions(v)
-            end
-            val = types.Type("function", rets, args)
-        end
-    elseif t.kind == "type_table" then
-        val = types.Type("table")
-        val.value = {}
-        for _, node in ipairs(t.key_values) do
-            val.value[node.value.value] = self:CrawlTypeExpressions(node.type_expression)
-        end
-    elseif t.kind == "type_array" then
-        local tbl = {}
-        print(t.value.types)
-        if t.value.types then
-            for i,v in ipairs(t.value.types)do
-                tbl[i] = self:CrawlTypeExpression(v)
-            end
-        end
-        val = types.Type("array", types.Fuse(unpack(tbl)), t.length and tonumber(t.length.value))
-        val.value = {}
-    end
-
-    return val
-end
-
-function META:CrawlTypeExpressions(exp)
-    local res
-    for _, t in ipairs(exp.types or exp) do
-        local val = self:CrawlTypeExpression(t)
-
-        if not res then
-            res = val
-        else
-            res = res + val
-        end
-    end
-    return res
-end
-
 local evaluate_expression
 
 function META:CrawlStatement(statement, ...)
@@ -475,9 +414,11 @@ function META:CrawlStatement(statement, ...)
         for i, node in ipairs(statement.left) do
             local key = node
             local val = ret[i]
+            
             if key.type_expression then
-                val = self:CrawlTypeExpressions(key.type_expression)
+                val = self:CrawlExpression(key.type_expression, "typesystem")
             end
+
             self:DeclareUpvalue(key, val, "runtime")
 
             node.inferred_type = val
@@ -603,11 +544,11 @@ function META:CrawlStatement(statement, ...)
         end
         self:PopScope()
     elseif statement.kind == "local_type_declaration" then
-        self:DeclareUpvalue(statement.left, self:CrawlTypeExpressions(statement.right.types), "typesystem")
+        self:DeclareUpvalue(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
     elseif statement.kind == "type_assignment" then
-        self:DeclareUpvalue(statement.left, self:CrawlTypeExpressions(statement.right.types), "typesystem")
+        self:DeclareUpvalue(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
     elseif statement.kind == "type_interface" then
-        local tbl = self:GetUpvalue(statement.key, "typesystem")
+        local tbl = self:CrawlTypeExpression(statement.key, "typesystem")
 
         if tbl then
             tbl = tbl.data
@@ -616,16 +557,22 @@ function META:CrawlStatement(statement, ...)
         end
 
         for i,v in ipairs(statement.expressions) do
+            local val = self:CrawlExpression(v.right.types, "typesystem")
             if tbl.value[v.left.value] then
-                types.OverloadFunction(tbl:get(v.left.value), self:CrawlTypeExpressions(v.right.types))
+                types.OverloadFunction(tbl:get(v.left.value), val)
             else
-                tbl:set(v.left.value, self:CrawlTypeExpressions(v.right.types))
+                tbl:set(v.left.value, self:CrawlExpression(v.right.types, "typesystem"))
             end
         end
 
         self:DeclareUpvalue(statement.key, tbl, "typesystem")
-
-    elseif statement.kind ~= "end_of_file" and statement.kind ~= "semicolon" then
+    elseif 
+        statement.kind ~= "end_of_file" and 
+        statement.kind ~= "semicolon" and 
+        statement.kind ~= "shebang" and
+        statement.kind ~= "goto_label" and 
+        statement.kind ~= "goto"
+    then
         error("unhandled statement " .. tostring(statement))
     end
 end
@@ -652,11 +599,16 @@ do
             if
                 (node.value.type == "letter" and node.upvalue_or_global) or
                 node.value.value == "..."
-            then
+            then   
                 local val = self:GetValue(node, env)
+
                 if env == "runtime" and not val then
                     val = self:GetValue(node, "typesystem")
                 end
+                if not val and env == "typesystem" and types.IsType(self:Hash(node)) then
+                    val = self:TypeFromImplicitNode(node, node.value.value)
+                end
+
                 stack:Push(val or self:TypeFromImplicitNode(node, "nil"))
             elseif
                 node.value.type == "number" or
@@ -664,10 +616,11 @@ do
                 node.value.type == "letter" or
                 node.value.value == "nil" or
                 node.value.value == "true" or
-                node.value.value == "false"
+                node.value.value == "false" or
+                (env == "typesystem" and node.value.value == "function")
             then
                 if node.type_expression then
-                    stack:Push(self:CrawlTypeExpressions(node.type_expression))
+                    stack:Push(self:CrawlExpression(node.type_expression, env))
                 else
                     stack:Push(self:TypeFromNode(node))
                 end
@@ -701,7 +654,7 @@ do
                 end
             end
 
-            if node.self_call then
+            if node.self_call and node.expression then
                 if self:GetUpvalue(node.expression.left, "runtime").key.type_expression then
                     args_defined = true
                 end
@@ -774,22 +727,39 @@ do
                 l,r = r,l
             end
 
-            stack:Push(r:BinaryOperator(op, l, node))
+            stack:Push(r:BinaryOperator(op, l, node, env))
         elseif node.kind == "prefix_operator" then
             local r = stack:Pop()
             local op = node.value.value
 
-            stack:Push(r:PrefixOperator(op, node))
+            stack:Push(r:PrefixOperator(op, node, env))
         elseif node.kind == "postfix_operator" then
             local r = stack:Pop()
             local op = node.value.value
 
-            stack:Push(r:PostfixOperator(op, node))
+            stack:Push(r:PostfixOperator(op, node, env))
         elseif node.kind == "postfix_expression_index" then
             local r = stack:Pop()
             local index = self:CrawlExpression(node.expression)
 
             stack:Push(r:get(index))
+        elseif node.kind == "type_function" then
+            local args = {}
+            local rets = {}
+
+            if node.statements then
+                node.kind = "function"
+                val = loadstring("local crawler, types = ...; return " .. node:Render())(self, types)
+            else
+                for i,v in ipairs(node.identifiers) do
+                    args[i] = self:CrawlExpression(v, "typesystem")
+                end
+                for i,v in ipairs(node.return_expressions) do
+                    rets[i] = self:CrawlExpression(v, "typesystem")
+                end
+                val = types.Type("function", rets, args)
+            end
+            stack:Push(val)
         elseif node.kind == "postfix_call" then
             local r = stack:Pop()
 
@@ -862,6 +832,21 @@ do
                     stack:Push(self:TypeFromImplicitNode(node, "any"))
                 end
             end
+        elseif node.kind == "type_list" then
+            local tbl = {}
+            if node.types then
+                for i,v in ipairs(node.types)do
+                    tbl[i] = self:CrawlExpression(v, env)
+                end
+            end
+            val = types.Type("list", types.Fuse(unpack(tbl)), node.length and tonumber(node.length.value))
+            val.value = {}
+        elseif node.kind == "type_table" then
+            local t = types.Type("table")
+
+            table_to_types(self, node, t.value, env)
+
+            return t
         else
             error("unhandled expression " .. node.kind)
         end

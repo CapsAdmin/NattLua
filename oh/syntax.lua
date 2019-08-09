@@ -23,7 +23,7 @@ syntax.Keywords = {
     "local", "function",
     "and", "not", "or",
 
-    "import",
+    --"import",
 
     -- these are just to make sure all code is covered by tests
     "ÆØÅ", "ÆØÅÆ",
@@ -40,7 +40,17 @@ syntax.PrefixOperators = {
     "-", "#", "not", "~",
 }
 
+syntax.PrefixTypeOperators = {
+    "-", "#", "not", "~",
+}
+
+
 syntax.PostfixOperators = {
+    -- these are just to make sure all code is covered by tests
+    "++", "ÆØÅ", "ÆØÅÆ",
+}
+
+syntax.PostfixTypeOperators = {
     -- these are just to make sure all code is covered by tests
     "++", "ÆØÅ", "ÆØÅÆ",
 }
@@ -61,6 +71,24 @@ syntax.BinaryOperators = {
 
 syntax.PrimaryBinaryOperators = {
     ".", ":",
+}
+
+syntax.PrimaryBinaryTypeOperators = {
+    ".",
+}
+
+syntax.BinaryTypeOperators = {
+    {"or"},
+    {"and"},
+    {"<", ">", "<=", ">=", "~=", "=="},
+    {"|"},
+    {"~"},
+    {"&"},
+    {"<<", ">>"},
+    {"R.."}, -- right associative
+    {"+", "-"},
+    {"*", "/", "//", "%"},
+    {"R^"}, -- right associative
 }
 
 syntax.BinaryOperatorFunctionTranslate = {
@@ -119,35 +147,39 @@ do
 end
 
 do -- extend the symbol characters from grammar rules
-    for _, symbol in pairs(syntax.PrefixOperators) do
-        if symbol:find("%p") then
-            table.insert(syntax.SymbolCharacters, symbol)
-        end
-    end
-
-    for _, symbol in pairs(syntax.PostfixOperators) do
-        if symbol:find("%p") then
-            table.insert(syntax.SymbolCharacters, symbol)
-        end
-    end
-
-    for _, symbol in pairs(syntax.PrimaryBinaryOperators) do
-        if symbol:find("%p") then
-            table.insert(syntax.SymbolCharacters, symbol)
-        end
-    end
-
-    for _, group in ipairs(syntax.BinaryOperators) do
-        for _, token in ipairs(group) do
-            if token:find("%p") then
-                if token:sub(1, 1) == "R" then
-                    token = token:sub(2)
-                end
-
-                table.insert(syntax.SymbolCharacters, token)
+    local function add_symbols(tbl)
+        for _, symbol in pairs(tbl) do
+            if symbol:find("%p") then
+                table.insert(syntax.SymbolCharacters, symbol)
             end
         end
     end
+
+    local function add_binary_symbols(tbl)
+        for _, group in ipairs(tbl) do
+            for _, token in ipairs(group) do
+                if token:find("%p") then
+                    if token:sub(1, 1) == "R" then
+                        token = token:sub(2)
+                    end
+    
+                    table.insert(syntax.SymbolCharacters, token)
+                end
+            end
+        end
+    end
+
+    add_binary_symbols(syntax.BinaryOperators)
+    add_binary_symbols(syntax.BinaryTypeOperators)
+
+    add_symbols(syntax.PrefixOperators)
+    add_symbols(syntax.PostfixOperators)
+    add_symbols(syntax.PrimaryBinaryOperators)
+    
+    add_symbols(syntax.PrefixTypeOperators)
+    add_symbols(syntax.PostfixTypeOperators)
+    add_symbols(syntax.PrimaryBinaryTypeOperators)
+   
 
     for _, str in ipairs(syntax.KeywordValues) do
         table.insert(syntax.Keywords, str)
@@ -202,6 +234,10 @@ do -- grammar rules
         return token.type == "number" or token.type == "string" or syntax.KeywordValues[token.value]
     end
 
+    function syntax.IsTypeValue(token)
+        return token.type == "number" or token.type == "string" or token.value == "function" or syntax.KeywordValues[token.value]
+    end
+
     function syntax.IsDefinetlyNotStartOfExpression(token)
         return
         not token or token.type == "end_of_file" or
@@ -219,12 +255,24 @@ do -- grammar rules
         return syntax.BinaryOperators[token.value] ~= nil
     end
 
+    function syntax.IsBinaryTypeOperator(token)
+        return syntax.BinaryTypeOperators[token.value] ~= nil
+    end
+
     function syntax.GetLeftOperatorPriority(token)
         return syntax.BinaryOperators[token.value] and syntax.BinaryOperators[token.value][1]
     end
 
     function syntax.GetRightOperatorPriority(token)
         return syntax.BinaryOperators[token.value] and syntax.BinaryOperators[token.value][2]
+    end
+
+    function syntax.GetLeftTypeOperatorPriority(token)
+        return syntax.BinaryTypeOperators[token.value] and syntax.BinaryTypeOperators[token.value][1]
+    end
+
+    function syntax.GetRightTypeOperatorPriority(token)
+        return syntax.BinaryTypeOperators[token.value] and syntax.BinaryTypeOperators[token.value][2]
     end
 
     function syntax.GetFunctionForBinaryOperator(token)
@@ -243,29 +291,47 @@ do -- grammar rules
         return syntax.PrimaryBinaryOperators[token.value]
     end
 
+    function syntax.IsPrimaryBinaryTypeOperator(token)
+        return syntax.PrimaryBinaryTypeOperators[token.value]
+    end
+
     function syntax.IsPrefixOperator(token)
         return syntax.PrefixOperators[token.value]
+    end
+
+    function syntax.IsTypePrefixOperator(token)
+        return syntax.PrefixTypeOperators[token.value]
     end
 
     function syntax.IsPostfixOperator(token)
         return syntax.PostfixOperators[token.value]
     end
 
+    function syntax.IsPostfixTypeOperator(token)
+        return syntax.PostfixTypeOperators[token.value]
+    end
+
     function syntax.IsKeyword(token)
         return syntax.Keywords[token.value]
     end
 
-    local temp = {}
-    for priority, group in ipairs(syntax.BinaryOperators) do
-        for _, token in ipairs(group) do
-            if token:sub(1, 1) == "R" then
-                temp[token:sub(2)] = {priority + 1, priority}
-            else
-                temp[token] = {priority, priority}
+
+    local function convert_binary_operators(tbl)
+        local temp = {}
+        for priority, group in ipairs(tbl) do
+            for _, token in ipairs(group) do
+                if token:sub(1, 1) == "R" then
+                    temp[token:sub(2)] = {priority + 1, priority}
+                else
+                    temp[token] = {priority, priority}
+                end
             end
         end
+        return temp
     end
-    syntax.BinaryOperators = temp
+    
+    syntax.BinaryOperators = convert_binary_operators(syntax.BinaryOperators)
+    syntax.BinaryTypeOperators = convert_binary_operators(syntax.BinaryTypeOperators)
 
     local function to_lookup(tbl)
         local out = {}
@@ -280,6 +346,10 @@ do -- grammar rules
     syntax.PostfixOperators = to_lookup(syntax.PostfixOperators)
     syntax.Keywords = to_lookup(syntax.Keywords)
     syntax.KeywordValues = to_lookup(syntax.KeywordValues)
+
+    syntax.PrimaryBinaryTypeOperators = to_lookup(syntax.PrimaryBinaryTypeOperators)
+    syntax.PrefixTypeOperators = to_lookup(syntax.PrefixTypeOperators)
+    syntax.PostfixTypeOperators = to_lookup(syntax.PostfixTypeOperators)
 end
 
 do
