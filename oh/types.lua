@@ -154,8 +154,6 @@ function META:BinaryOperator(op, b, node, env)
         return self:Type(ret)
     end
 
-    print(env, "!!")
-
     self:Error("invalid binary operation " .. tostring(b:GetReadableContent()) .. op .. tostring(a:GetReadableContent()))
 
     return self:Type("any")
@@ -290,7 +288,7 @@ end
 function types.OverloadFunction(a, b)
     a.overloads = a.overloads or {a}
     table.insert(a.overloads, b)
-    
+
     return a
 end
 
@@ -300,7 +298,7 @@ function types.CallFunction(func, args)
 
     for _, func in ipairs(func.overloads or {func}) do
         local ok = true
-        
+
         for i, typ in ipairs(func.arguments) do
             if not args[i] or not typ:IsType(args[i]) then
                 ok = false
@@ -329,11 +327,22 @@ do
     META.__index = META
 
     local function invoke(self, name, ...)
+        local types = {}
+        local done = {}
         for _, type in ipairs(self.types) do
             local ret = type[name](type, ...)
             if ret ~= nil then
-                return ret
+                for k,v in pairs(ret.types or {ret}) do
+                    if not done[v.name] then
+                        table.insert(types, v)
+                        done[v.name] = true
+                    end
+                end
             end
+        end
+
+        if types[1] then
+            return setmetatable({types = types}, META)
         end
     end
 
@@ -375,17 +384,13 @@ do
         return invoke(self, "PostfixOperator", ...)
     end
 
-    function types.Fuse(...)
+    function types.Fuse(a, b)
         local types = {}
-        for i = 1, select("#", ...) do
-            local t = select(i, ...)
-            if t.types then
-                for i,v in ipairs(t.types) do
-                    table.insert(types, v)
-                end
-            else
-                table.insert(types, t)
-            end
+        for i,v in ipairs(a.types or {a}) do
+            table.insert(types, v)
+        end
+        for i,v in ipairs(b.types or {b}) do
+            table.insert(types, v)
         end
         return setmetatable({types = types}, META)
     end
@@ -528,8 +533,8 @@ do
         prefix = {
             ["#"] = "number",
         },
-        init = function(self, types, length)
-            return {list_type = types, length = length}
+        init = function(self, type, length)
+            return {list_type = type, length = length}
         end,
         set = function(self, key, val)
             check_index(self, key)
@@ -537,7 +542,7 @@ do
             if self.list_type and not val:IsType(self.list_type) then
                 self:Error("expected " .. tostring(self.list_type) .. " got " .. tostring(val))
             end
-            
+
             self.value[key] = val
         end,
         get = function(self, key)
@@ -546,7 +551,7 @@ do
             return self.value[key]
         end,
         tostring = function(self)
-            return (tostring(self.list_type) or "") .. "[]"
+            return (tostring(self.list_type) or "") .. "["..(self.length and self.length or "").."]"
         end,
     })
 end

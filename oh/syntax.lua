@@ -162,7 +162,7 @@ do -- extend the symbol characters from grammar rules
                     if token:sub(1, 1) == "R" then
                         token = token:sub(2)
                     end
-    
+
                     table.insert(syntax.SymbolCharacters, token)
                 end
             end
@@ -175,11 +175,11 @@ do -- extend the symbol characters from grammar rules
     add_symbols(syntax.PrefixOperators)
     add_symbols(syntax.PostfixOperators)
     add_symbols(syntax.PrimaryBinaryOperators)
-    
+
     add_symbols(syntax.PrefixTypeOperators)
     add_symbols(syntax.PostfixTypeOperators)
     add_symbols(syntax.PrimaryBinaryTypeOperators)
-   
+
 
     for _, str in ipairs(syntax.KeywordValues) do
         table.insert(syntax.Keywords, str)
@@ -329,7 +329,7 @@ do -- grammar rules
         end
         return temp
     end
-    
+
     syntax.BinaryOperators = convert_binary_operators(syntax.BinaryOperators)
     syntax.BinaryTypeOperators = convert_binary_operators(syntax.BinaryTypeOperators)
 

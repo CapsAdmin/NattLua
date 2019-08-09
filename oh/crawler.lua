@@ -414,7 +414,7 @@ function META:CrawlStatement(statement, ...)
         for i, node in ipairs(statement.left) do
             local key = node
             local val = ret[i]
-            
+
             if key.type_expression then
                 val = self:CrawlExpression(key.type_expression, "typesystem")
             end
@@ -566,11 +566,11 @@ function META:CrawlStatement(statement, ...)
         end
 
         self:DeclareUpvalue(statement.key, tbl, "typesystem")
-    elseif 
-        statement.kind ~= "end_of_file" and 
-        statement.kind ~= "semicolon" and 
+    elseif
+        statement.kind ~= "end_of_file" and
+        statement.kind ~= "semicolon" and
         statement.kind ~= "shebang" and
-        statement.kind ~= "goto_label" and 
+        statement.kind ~= "goto_label" and
         statement.kind ~= "goto"
     then
         error("unhandled statement " .. tostring(statement))
@@ -599,7 +599,7 @@ do
             if
                 (node.value.type == "letter" and node.upvalue_or_global) or
                 node.value.value == "..."
-            then   
+            then
                 local val = self:GetValue(node, env)
 
                 if env == "runtime" and not val then
@@ -749,7 +749,12 @@ do
 
             if node.statements then
                 node.kind = "function"
-                val = loadstring("local crawler, types = ...; return " .. node:Render())(self, types)
+                local func, err = loadstring("local crawler, types = ...; return " .. node:Render())(self, types)
+                if not func then
+                    -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
+                    error(err)
+                end
+                val = func
             else
                 for i,v in ipairs(node.identifiers) do
                     args[i] = self:CrawlExpression(v, "typesystem")
@@ -769,17 +774,15 @@ do
                 if node.expressions then
                     self.suppress_events = true
                     for _, exp in ipairs(node.expressions) do
-                        local val = self:CrawlExpression(exp)
+                        local val = self:CrawlExpression(exp, env)
                         table.insert(values, val)
                     end
                     self.suppress_events = false
                 end
-
-                stack:Push(r(unpack(values)))
-                return
-            end
-
-            if r.type == "any" then
+                for i,v in ipairs({r(unpack(values))}) do
+                    stack:Push(v)
+                end
+            elseif r.type == "any" then
                 stack:Push(self:TypeFromImplicitNode(node, "any"))
             else
                 local func_expr = r.node
@@ -839,7 +842,7 @@ do
                     tbl[i] = self:CrawlExpression(v, env)
                 end
             end
-            val = types.Type("list", types.Fuse(unpack(tbl)), node.length and tonumber(node.length.value))
+            val = types.Type("list", tbl, node.length and tonumber(node.length.value))
             val.value = {}
         elseif node.kind == "type_table" then
             local t = types.Type("table")
@@ -864,7 +867,7 @@ do
             table.insert(arguments, val)
             self:DeclareUpvalue("self", val, "runtime")
         end
-        
+
         for i, v in ipairs(r.node.identifiers) do
             if v.value.value == "..." then
                 if expressions then

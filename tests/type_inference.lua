@@ -394,7 +394,7 @@ a.b.c = 1
         bar = function(a: boolean, b: number): true
         bar = function(a: number): false
     }
-        
+
     local a = foo.bar(true, 1)
     local b = foo.bar(1)
 
@@ -405,6 +405,29 @@ a.b.c = 1
 tests = {[[
     local a: string = 1
     type a = string | number | (boolean | string)
+
+    type type_func = function(a,b,c) print(a,b,c)  return types.Type("string"), types.Type("number") end
+    local a, b = type_func(a,2,3)
+]]}
+
+tests= {[[
+    type Array = function(T, L)
+        return types.Type("list", T.name, L.value)
+    end
+
+    type Exclude = function(T, U)
+        if T.types then
+            for i,v in ipairs(T.types) do
+                if v:IsType(U) and v.value == U.value then
+                    table.remove(T.types, i)
+                end
+            end
+        end
+        return T
+    end
+
+    local list: Array(number, 3) = {1, 2, 3}
+    local a: Exclude(1|2|3, 2) = 1
 ]]}
 
 local Crawler = require("oh.crawler")
@@ -446,7 +469,7 @@ for _, code in ipairs(tests) do
 
         return types.Type("string", key), val
     end), "typesystem")
-    
+
     crawler.code = code
     crawler.name = "test"
     crawler:CrawlStatement(ast)

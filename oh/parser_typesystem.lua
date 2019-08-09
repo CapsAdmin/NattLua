@@ -47,7 +47,7 @@ function META:ReadFunctionArgument()
         exp.identifier = identifier
         return exp
     end
-    
+
     return self:ReadTypeExpression()
 end
 
@@ -198,16 +198,6 @@ function META:ReadTypeExpression(priority)
                 node.tokens["call("] = self:ReadValue("(")
                 node.expressions = self:ReadTypeExpressionList()
                 node.tokens["call)"] = self:ReadValue(")")
-            elseif self:IsValue("{") or self:IsType("string") then
-                node = self:Expression("postfix_call")
-                node.left = left
-                if self:IsValue("{") then
-                    node.expressions = {self:ReadTable()}
-                else
-                    local val = self:Expression("value")
-                    val.value = self:ReadTokenLoose()
-                    node.expressions = {val}
-                end
             elseif self:IsValue("[") then
                 node = self:Expression("type_list")
                 node.left = left
