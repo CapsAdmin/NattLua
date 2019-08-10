@@ -192,12 +192,12 @@ function META:ReadTypeExpression(priority)
                 node = self:Expression("postfix_operator")
                 node.left = left
                 node.value = self:ReadTokenLoose()
-            elseif self:IsValue("(") then
+            elseif self:IsValue("<") then
                 node = self:Expression("postfix_call")
                 node.left = left
-                node.tokens["call("] = self:ReadValue("(")
+                node.tokens["call("] = self:ReadValue("<")
                 node.expressions = self:ReadTypeExpressionList()
-                node.tokens["call)"] = self:ReadValue(")")
+                node.tokens["call)"] = self:ReadValue(">")
             elseif self:IsValue("[") then
                 node = self:Expression("type_list")
                 node.left = left

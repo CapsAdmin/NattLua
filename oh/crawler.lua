@@ -399,6 +399,19 @@ function META:CrawlStatements(statements, ...)
     end
 end
 
+function META:Error(node, msg)
+    if self.code then
+        local print_util = require("oh.print_util")
+        local start, stop = print_util.LazyFindStartStop(node)
+        io.write(print_util.FormatError(self.code, self.name, msg, start, stop))
+    else
+        local s = tostring(self)
+        s = s .. ": " .. msg
+
+        print(s)
+    end
+end
+
 local evaluate_expression
 
 function META:CrawlStatement(statement, ...)
@@ -546,7 +559,11 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "local_type_declaration" then
         self:DeclareUpvalue(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
     elseif statement.kind == "type_assignment" then
-        self:DeclareUpvalue(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
+        local val = self:CrawlExpression(statement.right, "typesystem")
+        if type(val) ~= "table" then
+            self:Error(statement.right, "type expression must resolve to a type. got " .. type(val) .. "("  .. tostring(val).. ")")
+        end
+        self:DeclareUpvalue(statement.left, val, "typesystem")
     elseif statement.kind == "type_interface" then
         local tbl = self:CrawlTypeExpression(statement.key, "typesystem")
 
@@ -726,8 +743,9 @@ do
             if op == ".." or op == "^" then
                 l,r = r,l
             end
-
-            stack:Push(r:BinaryOperator(op, l, node, env))
+            local val = r:BinaryOperator(op, l, node, env)
+            print(" = ", val)
+            stack:Push(val)
         elseif node.kind == "prefix_operator" then
             local r = stack:Pop()
             local op = node.value.value
@@ -844,12 +862,13 @@ do
             end
             val = types.Type("list", tbl, node.length and tonumber(node.length.value))
             val.value = {}
+            stack:Push(val)
         elseif node.kind == "type_table" then
             local t = types.Type("table")
 
             table_to_types(self, node, t.value, env)
 
-            return t
+            stack:Push(t)
         else
             error("unhandled expression " .. node.kind)
         end

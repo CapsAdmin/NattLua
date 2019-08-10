@@ -426,8 +426,14 @@ tests= {[[
         return T
     end
 
-    local list: Array(number, 3) = {1, 2, 3}
-    local a: Exclude(1|2|3, 2) = 1
+    local list: Array<number, 3> = {1, 2, 3}
+    local a: Exclude<1|2|3, 2> = 1
+]]}
+
+tests ={[[
+    type A = {B = 1}
+    type B = {A = 1}
+    type C = A extends B and B or A
 ]]}
 
 local Crawler = require("oh.crawler")

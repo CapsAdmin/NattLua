@@ -80,7 +80,8 @@ syntax.PrimaryBinaryTypeOperators = {
 syntax.BinaryTypeOperators = {
     {"or"},
     {"and"},
-    {"<", ">", "<=", ">=", "~=", "=="},
+    {"extends"},
+    {"~=", "=="},
     {"|"},
     {"~"},
     {"&"},

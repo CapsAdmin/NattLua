@@ -111,9 +111,19 @@ end
 function META:BinaryOperator(op, b, node, env)
     local a = self
 
+    print(a,op,b,env)
+
     if env == "typesystem" then
         if op == "|" then
             return types.Fuse(a, b)
+        elseif op == "extends" then
+            return a:IsType(b)
+        elseif op == "and" then
+            return b and a
+        elseif op == "or" then
+            return b or a
+        elseif b == false or b == nil then
+            return false
         end
     end
 
