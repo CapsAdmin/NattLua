@@ -94,6 +94,7 @@ do
         node.scope = self.scope
         local t = new_type(self, node, ...):AttachNode(node)
         t.code = self.code
+        t.crawler = self
         return t
     end
 
@@ -101,6 +102,7 @@ do
         node.scope = self.scope
         local t = types.Type(...):AttachNode(node)
         t.code = self.code
+        t.crawler = self
         return t
     end
 
@@ -257,7 +259,7 @@ do
 
         for _, exp in ipairs(expressions) do
             for _, t in ipairs({self:CrawlExpression(exp)}) do
-                if t:IsType("...") then
+                if type(t) == "table" and t:IsType("...") then
                     if t.values then
                         for _, t in ipairs(t.values) do
                             table.insert(ret, t)
@@ -561,24 +563,23 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "type_assignment" then
         local val = self:CrawlExpression(statement.right, "typesystem")
         if type(val) ~= "table" then
-            self:Error(statement.right, "type expression must resolve to a type. got " .. type(val) .. "("  .. tostring(val).. ")")
+     --      self:Error(statement.right, "type expression must resolve to a type. got " .. type(val) .. "("  .. tostring(val).. ")")
         end
         self:DeclareUpvalue(statement.left, val, "typesystem")
     elseif statement.kind == "type_interface" then
-        local tbl = self:CrawlTypeExpression(statement.key, "typesystem")
+        local tbl = self:GetValue(statement.key, "typesystem")
 
         if tbl then
-            tbl = tbl.data
         else
             tbl = self:TypeFromImplicitNode(statement, "table")
         end
 
         for i,v in ipairs(statement.expressions) do
-            local val = self:CrawlExpression(v.right.types, "typesystem")
+            local val = self:CrawlExpression(v.right, "typesystem")
             if tbl.value[v.left.value] then
                 types.OverloadFunction(tbl:get(v.left.value), val)
             else
-                tbl:set(v.left.value, self:CrawlExpression(v.right.types, "typesystem"))
+                tbl:set(v.left.value, self:CrawlExpression(v.right, "typesystem"))
             end
         end
 
@@ -743,9 +744,8 @@ do
             if op == ".." or op == "^" then
                 l,r = r,l
             end
-            local val = r:BinaryOperator(op, l, node, env)
-            print(" = ", val)
-            stack:Push(val)
+
+            stack:Push(r:BinaryOperator(op, l, node, env))
         elseif node.kind == "prefix_operator" then
             local r = stack:Pop()
             local op = node.value.value
@@ -959,6 +959,7 @@ do
         end
 
         function META:CrawlExpression(exp, env)
+            assert(exp)
             env = env or "runtime"
             local stack = setmetatable({values = {}, i = 1}, meta)
             expand(self, exp, evaluate_expression, stack, env)

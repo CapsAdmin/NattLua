@@ -7,7 +7,7 @@ local types = require("oh.types")
 local code = io.open("oh/parser.lua"):read("*all")
 local base_lib = io.open("oh/base_lib.oh"):read("*all")
 
-code = base_lib .. [==[
+codwe = [==[
     local a = 1
     function b(lol)
         if lol == 1 then return "foo" end
@@ -31,6 +31,27 @@ code = base_lib .. [==[
 
     local a = table.concat(lol)
 ]==]
+
+codwe = [[
+    interface math {
+        sin = function(number): number
+    }
+
+    interface math {
+        cos = function(number): number
+    }
+
+    local a = math.sin(1)
+]]
+
+code = [[
+    local a = math.cos(1)
+    local number: number
+    
+    type_assert(a, number)
+]]
+
+code = base_lib .. "\n" .. code
 
 local em = LuaEmitter()
 local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code, "test")), "test", code))

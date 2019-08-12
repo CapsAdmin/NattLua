@@ -310,6 +310,9 @@ do
     end
 
 	function oh.LazyFindStartStop(tbl)
+		if tbl.start and tbl.stop then
+			return tbl.start, tbl.stop
+		end
         local out = {min = -math.huge, max = math.huge}
 		traverse(tbl, {}, out)
         return out.max, out.min

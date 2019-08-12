@@ -434,6 +434,11 @@ tests ={[[
     type A = {B = 1}
     type B = {A = 1}
     type C = A extends B and B or A
+
+    local a = 1
+    local b = ""
+    local c = 1 + a    +   b
+    local d = c + 1
 ]]}
 
 local Crawler = require("oh.crawler")

@@ -39,6 +39,9 @@ end
 
 function META:GetReadableContent()
     if self.value ~= nil then
+        if self.name == "string" then
+            return '"' .. self.value .. '"' 
+        end
         return self.value
     end
 
@@ -111,8 +114,6 @@ end
 function META:BinaryOperator(op, b, node, env)
     local a = self
 
-    print(a,op,b,env)
-
     if env == "typesystem" then
         if op == "|" then
             return types.Fuse(a, b)
@@ -138,7 +139,7 @@ function META:BinaryOperator(op, b, node, env)
         end
 
         if not b:IsType(arg) then
-            self:Error(tostring(self) .. " " .. op .. " " .. tostring(b) .." is not a valid binary operation (expected " .. arg .. ")")
+            self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", node.value)
             return self:Type("any")
         end
 
@@ -164,7 +165,7 @@ function META:BinaryOperator(op, b, node, env)
         return self:Type(ret)
     end
 
-    self:Error("invalid binary operation " .. tostring(b:GetReadableContent()) .. op .. tostring(a:GetReadableContent()))
+    self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", node.value)
 
     return self:Type("any")
 end
@@ -217,11 +218,16 @@ function META:Expect(type, expect)
     end
 end
 
-function META:Error(msg)
+function META:Error(msg, node)
+    local node = node or self:GetNode()
 
-    if self:GetNode() and self.code then
+    if self.crawler then
+        self.crawler:Error(node, msg)
+    end
+    do return end
+
+    if node and self.code then
         local print_util = require("oh.print_util")
-        local node = self:GetNode()
         local start, stop = print_util.LazyFindStartStop(node)
         io.write(print_util.FormatError(self.code, self.name, msg, start, stop))
     else
