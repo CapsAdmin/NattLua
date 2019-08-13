@@ -46,9 +46,8 @@ codwe = [[
 
 code = [[
     local a = math.cos(1)
-    local number: number
-    
-    type_assert(a, number)
+
+    type_assert<a, nil as number>
 ]]
 
 code = base_lib .. "\n" .. code
@@ -57,7 +56,7 @@ local em = LuaEmitter()
 local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code, "test")), "test", code))
 local crawler = Crawler()
 
-crawler.OnEvent = crawler.DumpEvent
+--crawler.OnEvent = crawler.DumpEvent
 
 crawler.code = code
 crawler.name = "test"

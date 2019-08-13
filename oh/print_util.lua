@@ -299,10 +299,12 @@ do
 					traverse(v, done, out)
 				end
 				if type(v) == "number" then
-					if k == "start" then
-						out.max = math.min(out.max, v)
-					elseif k == "stop" then
-						out.min = math.max(out.min, v)
+					if tbl.type ~= "space" then
+						if k == "start" then
+							out.max = math.min(out.max, v)
+						elseif k == "stop" then
+							out.min = math.max(out.min, v)
+						end
 					end
 				end
 			end

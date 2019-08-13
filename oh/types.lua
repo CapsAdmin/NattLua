@@ -1,5 +1,26 @@
 local syntax = require("oh.syntax")
 
+
+local function Error(self, msg, node)
+    local node = node or self.GetNode and self:GetNode()
+
+    if self.crawler then
+        self.crawler:Error(node, msg)
+        return
+    end
+
+    if node and self.code then
+        local print_util = require("oh.print_util")
+        local start, stop = print_util.LazyFindStartStop(node)
+        io.write(print_util.FormatError(self.code, self.name, msg, start, stop))
+    else
+        local s = tostring(self)
+        s = s .. ": " .. msg
+
+        print(s)
+    end
+end
+
 local types = {}
 
 local META = {}
@@ -40,7 +61,7 @@ end
 function META:GetReadableContent()
     if self.value ~= nil then
         if self.name == "string" then
-            return '"' .. self.value .. '"' 
+            return '"' .. self.value .. '"'
         end
         return self.value
     end
@@ -218,25 +239,8 @@ function META:Expect(type, expect)
     end
 end
 
-function META:Error(msg, node)
-    local node = node or self:GetNode()
 
-    if self.crawler then
-        self.crawler:Error(node, msg)
-    end
-    do return end
-
-    if node and self.code then
-        local print_util = require("oh.print_util")
-        local start, stop = print_util.LazyFindStartStop(node)
-        io.write(print_util.FormatError(self.code, self.name, msg, start, stop))
-    else
-        local s = tostring(self)
-        s = s .. ": " .. msg
-
-        print(s)
-    end
-end
+META.Error = Error
 
 local registered = {}
 
@@ -342,16 +346,20 @@ do
     local META = {}
     META.__index = META
 
+    META.Error = Error
+
     local function invoke(self, name, ...)
         local types = {}
         local done = {}
         for _, type in ipairs(self.types) do
             local ret = type[name](type, ...)
             if ret ~= nil then
-                for k,v in pairs(ret.types or {ret}) do
-                    if not done[v.name] then
+                for k,v in pairs(_G.type(ret) == "table" and ret.types or {ret}) do
+                    if _G.type(v) ~= "table" or not done[v.name] then
                         table.insert(types, v)
-                        done[v.name] = true
+                        if _G.type(v) == "table" then
+                            done[v.name] = true
+                        end
                     end
                 end
             end
@@ -360,6 +368,16 @@ do
         if types[1] then
             return setmetatable({types = types}, META)
         end
+    end
+
+    function META:get()
+        self:Error("undefined get")
+
+        return self:Type("any")
+    end
+
+    function META:set(key, val)
+        self:Error("undefined set")
     end
 
     function META:__tostring()
@@ -527,8 +545,14 @@ types.Register("table", {
         end
         table.insert(str, "}")
 
+        local str = table.concat(str, " ")
+
+        if #str > 20 then
+            str = str:sub(1, 20) .. " ... }"
+        end
+
         self.during_tostring = false
-        return table.concat(str, " ")
+        return str
     end,
 })
 

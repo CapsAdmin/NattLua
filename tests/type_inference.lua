@@ -1,6 +1,6 @@
 local tests = {[[
     local a = 1
-    type_assert(a, nil as number)
+    type_assert(a, 1)
 ]],[[
     local a
     a = 1
@@ -43,7 +43,7 @@ local tests = {[[
 ]], [[
     local a = {foo = true, bar = false, faz = 1}
     for k,v in pairs(a) do
-        type_assert(k, nil as string)
+        type_assert(k, "")
         type_assert(v, nil as number | string)
     end
 ]], [[
@@ -291,15 +291,15 @@ a.b.c = 1
     end
 
     for k,v in pairs({foo=1, bar=2, faz=3}) do
-        type_assert(k, nil as string)
+        type_assert(k, "")
         type_assert(v, nil as number)
     end
 ]],[[
     local t = {foo=1, bar=2, faz="str"}
     pairs(t)
     for k,v in pairs(t) do
-        type_assert(k, nil as string)
-        type_assert(v, nil as string | number)
+        type_assert(k, "")
+        type_assert(v, "" | number)
     end
 ]],[[
     function prefix (w1, w2)
@@ -341,9 +341,9 @@ a.b.c = 1
         type x = boolean | number
     end
 
-    type c = type x
-    local a: type x
-    type b = {foo: type a}
+    type c = x
+    local a: x
+    type b = {foo = a}
     local c: function(a: number, b:number): b, b
 
     type_assert(c, nil as function(_:table, _:table): number, number)
@@ -376,7 +376,7 @@ a.b.c = 1
     interface foo {
         a = number
         b = {
-            str: string,
+            str = string,
         }
     }
 
@@ -400,17 +400,15 @@ a.b.c = 1
 
     type_assert(a, true)
     type_assert(b, false)
-]]}
-
-tests = {[[
+]],[[
     local a: string = 1
     type a = string | number | (boolean | string)
 
-    type type_func = function(a,b,c) print(a,b,c)  return types.Type("string"), types.Type("number") end
+    type type_func = function(a,b,c) return types.Type("string"), types.Type("number") end
     local a, b = type_func(a,2,3)
-]]}
-
-tests= {[[
+    type_assert(a, "")
+    type_assert(b, _ as number)
+]],[[
     type Array = function(T, L)
         return types.Type("list", T.name, L.value)
     end
@@ -428,18 +426,41 @@ tests= {[[
 
     local list: Array<number, 3> = {1, 2, 3}
     local a: Exclude<1|2|3, 2> = 1
+
+    type_assert(a, _ as 3|1)
+    type_assert(a, _ as number[3])
 ]]}
 
-tests ={[[
-    type A = {B = 1}
-    type B = {A = 1}
-    type C = A extends B and B or A
+tests = {[[
+    type next = function(t, k)
+        return next(t.value, k.value)
+    end
 
-    local a = 1
-    local b = ""
-    local c = 1 + a    +   b
-    local d = c + 1
+    function pairs(t)
+        return next, t, nil
+    end
+
+    do
+        local function iter(a, i)
+            i = i + 1
+            local v = a[i]
+            if v then
+                return i, v
+            end
+        end
+
+        function ipairs(a)
+            return iter, a, 0
+        end
+    end
+
+    for k,v in ipairs({1,2,3}) do
+        print(k,v)
+    end
 ]]}
+
+local base_lib = io.open("oh/base_lib.oh"):read("*all")
+
 
 local Crawler = require("oh.crawler")
 
@@ -448,6 +469,8 @@ local types = require("oh.types")
 
 for _, code in ipairs(tests) do
     if code == false then return end
+
+    --local code = base_lib .. code
 
     --local path = "oh/parser.lua"
 

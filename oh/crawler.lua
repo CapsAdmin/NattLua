@@ -525,15 +525,16 @@ function META:CrawlStatement(statement, ...)
         self:FireEvent("call", statement.value, {self:CrawlExpression(statement.value)})
     elseif statement.kind == "generic_for" then
         self:PushScope(statement)
-        --for i,v in ipairs(statement.identifiers) do
-            --self:DeclareUpvalue(v, statement.expressions[i] and self:CrawlExpression(statement.expressions[i] or nil))
-        --end
-        local func = self:CrawlExpression(statement.expressions[1])
+
+        local values = {self:CrawlExpression(statement.expressions[1])}
+        local func = table.remove(values, 1)
+
         local args
+
         if type(func) == "function" then
-            args = func()
+            args = {func(unpack(values))}
         else
-            args = func:IsType("function") and self:CallFunction(func, {statement.expressions[2] and self:CrawlExpression(statement.expressions[2])})
+            args = func:IsType("function") and self:CallFunction(func, values)
         end
 
         for i,v in ipairs(statement.identifiers) do
@@ -614,7 +615,9 @@ do
 
     evaluate_expression = function(self, node, stack, env)
         if node.kind == "value" then
-            if
+            if node.type_expression then
+                stack:Push(self:CrawlExpression(node.type_expression, "typesystem"))
+            elseif
                 (node.value.type == "letter" and node.upvalue_or_global) or
                 node.value.value == "..."
             then
@@ -637,11 +640,7 @@ do
                 node.value.value == "false" or
                 (env == "typesystem" and node.value.value == "function")
             then
-                if node.type_expression then
-                    stack:Push(self:CrawlExpression(node.type_expression, env))
-                else
-                    stack:Push(self:TypeFromNode(node))
-                end
+                stack:Push(self:TypeFromNode(node))
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
@@ -664,7 +663,7 @@ do
             local args = {}
             for i, key in ipairs(node.identifiers) do
                 if key.type_expression then
-                    args[i] = type_expression(key, key.type_expression.types)
+                    args[i] = self:CrawlExpression(key.type_expression, "typesystem")
                     args_defined = true
                 else
                     --args[i] =  self:TypeFromImplicitNode(key, "any")
@@ -681,7 +680,7 @@ do
             local ret = {}
             if node.type_expressions then
                 for i, type_exp in ipairs(node.type_expressions) do
-                    ret[i] = type_expression(node, type_exp.types)
+                    ret[i] = self:CrawlExpression(type_exp, "typesystem")
                 end
             end
 
@@ -797,8 +796,14 @@ do
                     end
                     self.suppress_events = false
                 end
-                for i,v in ipairs({r(unpack(values))}) do
-                    stack:Push(v)
+                local ret = {pcall(r, unpack(values))}
+                if not ret[1] then
+                    self:Error(node, ret[2])
+                else
+                    table.remove(ret, 1)
+                    for i,v in ipairs(ret) do
+                        stack:Push(v)
+                    end
                 end
             elseif r.type == "any" then
                 stack:Push(self:TypeFromImplicitNode(node, "any"))
