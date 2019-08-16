@@ -138,7 +138,11 @@ function META:EmitExpression(node)
     elseif node.kind == "postfix_expression_index" then
         self:EmitExpressionIndex(node)
     elseif node.kind == "value" then
-        self:EmitToken(node.value)
+        if node.tokens["is"] then
+            self:EmitToken(node.value, tostring(node.result_is))
+        else
+            self:EmitToken(node.value)
+        end
     elseif node.kind == "import" then
         self:EmitImportExpression(node)
     else
@@ -584,7 +588,7 @@ function META:EmitIdentifier(node)
     self:EmitToken(node.value)
     if node.inferred_type then
         self:Emit(": ")
-        self:Emit(tostring(node.inferred_type.name))
+        self:Emit(tostring(type(node.inferred_type) == "table" and node.inferred_type.name or tostring(node.inferred_type)))
     end
 
     if node.type_expression then

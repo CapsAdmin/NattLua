@@ -31,8 +31,8 @@ do
         return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
     end
 
-    function META:Render()
-        local em = LuaEmitter({preserve_whitespace = false, no_newlines = true})
+    function META:Render(op)
+        local em = LuaEmitter(op or {preserve_whitespace = false, no_newlines = true})
 
         em:EmitExpression(self)
 
@@ -63,8 +63,8 @@ do
         return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
     end
 
-    function META:Render()
-        local em = LuaEmitter({preserve_whitespace = false, no_newlines = true})
+    function META:Render(op)
+        local em = LuaEmitter(op or {preserve_whitespace = false, no_newlines = true})
 
         em:EmitStatement(self)
 
@@ -726,6 +726,10 @@ do -- expression
                     node.tokens["call("] = self:ReadValue("(")
                     node.expressions = self:ReadExpressionList()
                     node.tokens["call)"] = self:ReadValue(")")
+
+                    if left.value and left.value.value == ":" then
+                        node.self_call = true
+                    end
                 elseif self:IsValue("{") or self:IsType("string") then
                     node = self:Expression("postfix_call")
                     node.left = left
@@ -744,6 +748,9 @@ do -- expression
                     node.tokens["]"] = self:ReadValue("]")
                 elseif self:IsValue("as") then
                     node.tokens["as"] = self:ReadValue("as")
+                    node.type_expression = self:ReadTypeExpression()
+                elseif self:IsValue("is") then
+                    node.tokens["is"] = self:ReadValue("is")
                     node.type_expression = self:ReadTypeExpression()
                 else
                     break

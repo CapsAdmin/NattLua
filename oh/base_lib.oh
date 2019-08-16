@@ -10,29 +10,54 @@ type type_assert = function(what, type, value, ...)
     end
 end
 
-type pairs = function(tbl)
+type next = function(tbl, _)
+    if not tbl then return types.Type("any"), types.Type("any") end 
     local key, val
-    return function()
-        for k,v in pairs(tbl.value) do
+
+    for k, v in pairs(tbl.value) do
+        if not key then
+            key = types.Type(type(k))
+        elseif not key:IsType(k) then
             if type(k) == "string" then
-                k = types.Type("string", k)
-            end
-
-            if not key then
-                key = k
+                key = types.Fuse(key, types.Type("string"))
             else
-                key = key + k
-            end
-
-            if not val then
-                val = v
-            else
-                val = val + v
+                key = types.Fuse(key, types.Type(k.name))
             end
         end
 
-        return {key, val}
-    end, tbl
+        if not val then
+            val = types.Type(type(v))
+        else
+            if not val:IsType(v) then
+                val = types.Fuse(val, types.Type(v.name))
+            end
+        end
+    end
+end
+
+type pairs = function(tbl)
+    local next = crawler:GetValue("next", "typesystem")
+    return next, t, nil
+end
+
+type require = function(name)
+    local str = name.value
+    for _, searcher in ipairs(package.loaders) do
+        local loader = searcher(str)
+        if type(loader) == "function" then
+            local path = debug.getinfo(loader).source
+            if path:sub(1, 1) == "@" then
+                local path = path:sub(2)
+                
+                local ast = assert(require("oh").FileToAST(path))
+                crawler:CrawlStatement(ast)
+
+                return unpack(crawler.last_return)
+            end
+        end
+    end
+
+    error("unable to find module " .. str)
 end
 
 type generic_func = function(varg: ...): any
@@ -282,4 +307,10 @@ interface io {
     lines = function(): generic_func
     input = function(file: string|file): file|nil
     input = function(): file|nil
+}
+
+interface _G {
+    _G = _G
+    string = ^string
+    io = io
 }

@@ -41,12 +41,6 @@ local tests = {[[
     end
     type_assert(c, 1)
 ]], [[
-    local a = {foo = true, bar = false, faz = 1}
-    for k,v in pairs(a) do
-        type_assert(k, "")
-        type_assert(v, nil as number | string)
-    end
-]], [[
     local a = 0
     while false do
         a = 1
@@ -281,27 +275,6 @@ a.b.c = 1
 
     type_assert(f(), 1)
 ]],[[
-    local function pairs(t)
-        local k, v
-        return function(v, k)
-            local k, v = next(t, k)
-
-            return k,v
-        end
-    end
-
-    for k,v in pairs({foo=1, bar=2, faz=3}) do
-        type_assert(k, "")
-        type_assert(v, nil as number)
-    end
-]],[[
-    local t = {foo=1, bar=2, faz="str"}
-    pairs(t)
-    for k,v in pairs(t) do
-        type_assert(k, "")
-        type_assert(v, "" | number)
-    end
-]],[[
     function prefix (w1, w2)
         return w1 .. ' ' .. w2
     end
@@ -406,7 +379,7 @@ a.b.c = 1
 
     type type_func = function(a,b,c) return types.Type("string"), types.Type("number") end
     local a, b = type_func(a,2,3)
-    type_assert(a, "")
+    type_assert(a, _ as string)
     type_assert(b, _ as number)
 ]],[[
     type Array = function(T, L)
@@ -429,11 +402,27 @@ a.b.c = 1
 
     type_assert(a, _ as 3|1)
     type_assert(a, _ as number[3])
-]]}
-
-tests = {[[
+]],[[
     type next = function(t, k)
-        return next(t.value, k.value)
+        -- behavior of the external next function
+        -- we can literally just pass what the next function returns
+        local a,b
+
+        if k then
+            a,b = next(t.value, k.value)
+        else
+            a,b = next(t.value)
+        end
+        
+        if type(a) == "table" and a.name then   
+            a = a.value
+        end
+        
+        if type(b) == "table" and b.name then   
+            b = b.value
+        end
+        
+        return types.Type(type(a), a), types.Type(type(b), b)
     end
 
     function pairs(t)
@@ -454,13 +443,122 @@ tests = {[[
         end
     end
 
-    for k,v in ipairs({1,2,3}) do
-        print(k,v)
+    for k,v in pairs({foo = true}) do
+        type_assert(k, _ as "foo")
+        type_assert(v, _ as true)
+    end
+    
+    for i,v in ipairs({"LOL",2,3}) do
+        type_assert(i, _ as 1)
+        type_assert(v, _ as "LOL")
     end
 ]]}
 
-local base_lib = io.open("oh/base_lib.oh"):read("*all")
+tests = {[[
+    type next = function(tbl, _key) 
+        local key, val
 
+        for k, v in pairs(tbl.value) do
+            if not key then
+                key = types.Type(type(k))
+            elseif not key:IsType(k) then
+                if type(k) == "string" then
+                    key = types.Fuse(key, types.Type("string"))
+                else
+                    key = types.Fuse(key, types.Type(k.name))
+                end
+            end
+
+            if not val then
+                val = types.Type(type(v))
+            else
+                if not val:IsType(v) then
+                    val = types.Fuse(val, types.Type(v.name))
+                end
+            end
+        end
+    end
+
+    local a = {
+        foo = true,
+        bar = false,
+        a = 1,
+        lol = {},
+    }
+
+    local k, v = next(a)
+]],[[
+    local a: _G.string
+
+    type_assert(a, _G.string)
+]],[[
+    local a = ""
+
+    if a is string then
+        type_assert(a, _ as string)
+    end
+
+]],[[
+    local a = math.cos(1)
+    type_assert(a, nil as number)
+
+    if a is number then
+        type_assert(a, _ as number)
+    end
+]],[[
+    interface math {
+        sin = function(number): number
+    }
+
+    interface math {
+        cos = function(number): number
+    }
+
+    local a = math.sin(1)
+
+    type_assert(a, _ as number)
+]],[=[
+    local a = 1
+    function b(lol)
+        if lol == 1 then return "foo" end
+        return lol + 4, true
+    end
+    local d = b(2)
+    local d = b(a)
+
+    function foo(a --[[#:number]], b --[[#:number]])
+        return a+b
+    end
+
+    local lol: {a = boolean} = {}
+    lol.a = true
+
+    function lol:Foo(foo, bar)
+        local a = self.a
+    end
+
+    local lol: string[] = {}
+
+    local a = table.concat(lol)
+]=],[[
+    type a = function()
+        _G.LOL = true
+    end
+
+    type b = function() 
+        _G.LOL = nil
+        crawler:GetValue("a", "typesystem")()
+        if not _G.LOL then
+            error("test fail")
+        end
+    end
+
+    local a = b()
+
+
+]]}
+
+local base_lib = io.open("oh/base_lib.oh"):read("*all")
 
 local Crawler = require("oh.crawler")
 
@@ -470,7 +568,7 @@ local types = require("oh.types")
 for _, code in ipairs(tests) do
     if code == false then return end
 
-    --local code = base_lib .. code
+    local code = base_lib .. code
 
     --local path = "oh/parser.lua"
 
@@ -482,27 +580,7 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-    crawler.OnEvent = crawler.DumpEvent
-
-    local function add(lib, t)
-        local tbl = types.Type("table")
-        tbl.value = t
-        crawler:DeclareGlobal(lib, tbl)
-    end
-
-    local function table_to_types(type)
-        local combined = types.Type(type.value[1].value)
-        for i = 2, #type.value do
-            combined = combined + types.Type(type.value[i].value)
-        end
-        return combined
-    end
-
-    crawler:SetGlobal("next", types.Type("function", {types.Type"any", types.Type"any"}, {types.Type"any", types.Type"any"}, function(tbl, key)
-        local key, val = next(tbl.value)
-
-        return types.Type("string", key), val
-    end), "typesystem")
+    --crawler.OnEvent = crawler.DumpEvent
 
     crawler.code = code
     crawler.name = "test"

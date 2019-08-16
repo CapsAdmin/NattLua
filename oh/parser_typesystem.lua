@@ -139,6 +139,12 @@ function META:ReadTypeExpression(priority)
 
     local node
 
+    local force_upvalue
+    if self:IsValue("^") then
+        force_upvalue = true
+        self:Advance(1)
+    end
+
     if self:IsValue("(") then
         local pleft = self:ReadValue("(")
         node = self:ReadTypeExpression(0)
@@ -219,6 +225,7 @@ function META:ReadTypeExpression(priority)
 
     if first and first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
         first.upvalue_or_global = node
+        first.force_upvalue = force_upvalue
     end
 
     while syntax.IsBinaryTypeOperator(self:GetToken()) and syntax.GetLeftTypeOperatorPriority(self:GetToken()) > priority do

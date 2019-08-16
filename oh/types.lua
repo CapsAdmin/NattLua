@@ -86,6 +86,10 @@ function META:__tostring()
     return self.name
 end
 
+function META:Copy()
+    return types.Type(self.name, self.value)
+end
+
 function META:GetTypes()
     return {self.name}
 end
@@ -280,12 +284,13 @@ function types.Register(name, interface)
                 for k,v in pairs(interface.init(self, ...)) do
                     self[k] = v
                 end
-
-                self.get = interface.get
-                self.set = interface.set
             else
                 self.value = ...
             end
+
+
+            self.get = interface.get
+            self.set = interface.set
 
             self.name = name
 
@@ -309,6 +314,8 @@ function types.OverloadFunction(a, b)
     a.overloads = a.overloads or {a}
     table.insert(a.overloads, b)
 
+    table.sort(a.overloads, function(a, b) return #a.arguments > #b.arguments end)
+
     return a
 end
 
@@ -320,7 +327,7 @@ function types.CallFunction(func, args)
         local ok = true
 
         for i, typ in ipairs(func.arguments) do
-            if not args[i] or not typ:IsType(args[i]) then
+            if (not args[i] or not typ:IsType(args[i])) and not typ:IsType("any") then
                 ok = false
                 table.insert(errors, {func = func, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
             end
@@ -394,8 +401,25 @@ do
         return invoke(self, "IsTruthy")
     end
 
-    function META:IsType(...)
-        return invoke(self, "IsTruthy", ...)
+
+    function META:GetReadableContent()
+        return tostring(self)
+    end
+
+    function META:IsType(what)
+        if type(what) == "table" then
+            for _,v in ipairs(what:GetTypes()) do
+                if self:IsType(v) then
+                    return true
+                end
+            end
+        end
+    
+        if what == "any" then
+            return true
+        end
+    
+        return false
     end
 
     function META:GetTypes()
@@ -416,6 +440,23 @@ do
 
     function META:PostfixOperator(...)
         return invoke(self, "PostfixOperator", ...)
+    end
+
+    function META:Copy()
+        local copy = setmetatable({types = {}}, META)
+        for i,v in ipairs(self.types) do
+            copy.types[i] = v:Copy()
+        end
+        return copy
+    end
+
+    function META:RemoveNonTruthy()
+        for i = #self.types, 1, -1 do
+            local v = self.types[i]
+            if not v:IsTruthy() then
+                table.remove(self.types, i)
+            end
+        end
     end
 
     function types.Fuse(a, b)
@@ -449,6 +490,13 @@ types.Register("any", {
 types.Register("string", {
     inherits = "base",
     truthy = true,
+    get = function(self, key)
+        local tbl = self.crawler:GetValue("string", "typesystem")
+        if tbl and key then
+            return tbl:get(key)
+        end
+        return self:Type("any")
+    end,
     binary = {
         [".."] = "string",
 
@@ -621,6 +669,7 @@ types.Register("number", {
         ["-"] = "number",
         ["*"] = "number",
         ["/"] = "number",
+        ["%"] = "number",
 
         ["<"] = {arg = "number", ret = "boolean"},
         [">"] = {arg = "number", ret = "boolean"},

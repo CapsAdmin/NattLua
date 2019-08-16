@@ -282,6 +282,22 @@ function META:FireEvent(what, ...)
     end
 end
 
+local function merge_types(src, dst)
+    if src then
+        for i,v in ipairs(dst) do
+            if src[i] then
+                src[i] = v + src[i]
+            else
+                src[i] = dst[i]
+            end
+        end
+
+        return src
+    end
+
+    return dst
+end
+
 do
     local t = 0
     function META:DumpEvent(what, ...)
@@ -394,6 +410,7 @@ do
 end
 
 function META:CrawlStatements(statements, ...)
+    if not statements then print(debug.traceback()) end
     for _, val in ipairs(statements) do
         if self:CrawlStatement(val, ...) == true then
             return true
@@ -433,7 +450,7 @@ function META:CrawlStatement(statement, ...)
             if key.type_expression then
                 val = self:CrawlExpression(key.type_expression, "typesystem")
             end
-
+            
             self:DeclareUpvalue(key, val, "runtime")
 
             node.inferred_type = val
@@ -467,14 +484,20 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
             local b = not statement.expressions[i] or self:CrawlExpression(statement.expressions[i])
-            if b == true or b:IsTruthy() or b:IsType("nil") then
+            if b == true or b:IsTruthy() then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
+                
+                b.truthy = (b.truthy or 0) + 1
+
                 if self:CrawlStatements(statements, ...) == true then
                     self:PopScope()
                     if type(b) == "table" and b.value == true then
                         return true
                     end
                 end
+
+                b.truthy = (b.truthy or 0) - 1
+
                 self:PopScope()
                 break
             end
@@ -516,6 +539,8 @@ function META:CrawlStatement(statement, ...)
 
         self:FireEvent("return", evaluated)
 
+        self.last_return = evaluated
+
         return true
     elseif statement.kind == "break" then
         self:FireEvent("break")
@@ -532,10 +557,74 @@ function META:CrawlStatement(statement, ...)
         local args
 
         if type(func) == "function" then
-            args = {func(unpack(values))}
+            local ret = {pcall(func, unpack(values))}
+            if not ret[1] then
+                self:Error(statement, ret[2])
+            else
+                table.remove(ret, 1)
+                args = ret
+            end
         else
-            args = func:IsType("function") and self:CallFunction(func, values)
-        end
+            local r = func
+            local expressions = values
+            local old_scope = self.scope
+            self.scope = r.node.scope or self.scope
+            self:PushScope(r.node)
+    
+            local arguments = {}
+    
+            if r.node.self_call and stack then
+                local val = stack:Pop()
+                table.insert(arguments, val)
+                self:DeclareUpvalue("self", val, "runtime")
+            end
+
+            if r.node.identifiers then
+                for i, v in ipairs(r.node.identifiers) do
+                    if v.value.value == "..." then
+                        if expressions then
+                            local values = {}
+                            for i = i, #expressions do
+                                table.insert(values, expressions[i])
+                            end
+                            self:DeclareUpvalue(v, self:TypeFromNode(v, values), "runtime")
+                        end
+                    else
+                        local arg = expressions[i] or nil
+                        self:DeclareUpvalue(v, arg, "runtime")
+                        table.insert(arguments, arg)
+                    end
+                end
+            end
+            
+            local ret = {}
+            if r.node.statements then
+                self:CrawlStatements(r.node.statements, ret)
+            end
+
+                self:PopScope()
+                self.scope = old_scope
+        
+                r.ret = merge_types(r.ret, ret)
+                r.arguments = merge_types(r.arguments, arguments)
+        
+                for i,v in ipairs(r.ret) do
+                    -- ERROR HERE
+                    if ret[i] == nil then
+                        ret[i] = v
+                    end
+                end
+        
+                for i, v in ipairs(r.arguments) do
+                    if r.node.identifiers[i] then
+                        r.node.identifiers[i].inferred_type = v
+                    end
+                end
+        
+                self:FireEvent("function_spec", r)
+                
+                args = ret
+        end 
 
         for i,v in ipairs(statement.identifiers) do
             self:DeclareUpvalue(v, args and args[i], "runtime")
@@ -616,18 +705,33 @@ do
     evaluate_expression = function(self, node, stack, env)
         if node.kind == "value" then
             if node.type_expression then
-                stack:Push(self:CrawlExpression(node.type_expression, "typesystem"))
+                local val = self:CrawlExpression(node.type_expression, "typesystem")
+
+                stack:Push(val)
+                if node.tokens["is"] then
+                    node.result_is = self:GetValue(node, env):IsType(val)
+                end
             elseif
                 (node.value.type == "letter" and node.upvalue_or_global) or
                 node.value.value == "..."
             then
-                local val = self:GetValue(node, env)
+                local val
 
-                if env == "runtime" and not val then
-                    val = self:GetValue(node, "typesystem")
-                end
-                if not val and env == "typesystem" and types.IsType(self:Hash(node)) then
+                if env == "typesystem" and types.IsType(self:Hash(node)) and not node.force_upvalue then
                     val = self:TypeFromImplicitNode(node, node.value.value)
+                else
+                    val = self:GetValue(node, env)
+
+                    if env == "runtime" and not val then
+                        val = self:GetValue(node, "typesystem")
+                    end
+                end
+
+
+                if type(val) == "table" and val.truthy and val.truthy > 0 then
+                    local copy = val:Copy()
+                    copy:RemoveNonTruthy()
+                    val = copy
                 end
 
                 stack:Push(val or self:TypeFromImplicitNode(node, "nil"))
@@ -672,7 +776,8 @@ do
             end
 
             if node.self_call and node.expression then
-                if self:GetUpvalue(node.expression.left, "runtime").key.type_expression then
+                local val = self:GetUpvalue(node.expression.left, "runtime")
+                if val and val.key.type_expression then
                     args_defined = true
                 end
             end
@@ -731,7 +836,7 @@ do
             local r, l = stack:Pop(), stack:Pop()
             local op = node.value.value
 
-            if (op == "." or op == ":") and l:IsType("table") then
+            if (op == "." or op == ":") and (l:IsType("table") or l:IsType("string")) then
                 if op == ":" then
                     stack:Push(l)
                 end
@@ -766,11 +871,14 @@ do
 
             if node.statements then
                 node.kind = "function"
-                local func, err = loadstring("local crawler, types = ...; return " .. node:Render())(self, types)
+                local str = "local oh, crawler, types = ...; return " .. node:Render({})
+                local func, err = loadstring(str, "")
                 if not func then
                     -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
+                    print(str)
                     error(err)
                 end
+                func = func(oh, self, types)
                 val = func
             else
                 for i,v in ipairs(node.identifiers) do
@@ -828,6 +936,7 @@ do
                         stack:Push(v)
                     end
                 elseif r:IsType("function") and r.ret then
+
                     if r.func then
                         local args = {}
                         for i,v in ipairs(node.expressions) do
@@ -842,10 +951,20 @@ do
 
                         local args = {}
 
-                        for i,v in ipairs(node.expressions) do
-                            args[i] = self:CrawlExpression(v)
+                        if node.self_call then
+                            local val = stack:Pop()
+                            table.insert(args, val)
                         end
 
+                        for i,v in ipairs(node.expressions) do
+                            table.insert(args, self:CrawlExpression(v))
+                        end
+
+
+                        -- HACKS
+                        r.crawler = self
+                        r.node = node
+                        
                         for _,v in ipairs(types.CallFunction(r, args)) do
                             stack:Push(v)
                         end
@@ -897,7 +1016,7 @@ do
                 if expressions then
                     local values = {}
                     for i = i, #expressions do
-                        table.insert(values, self:CrawlExpression(expressions[i]))
+                        table.insert(values, self:CrawlExpression(expressions[i]) or expressions[i])
                     end
                     self:DeclareUpvalue(v, self:TypeFromNode(v, values), "runtime")
                 end
@@ -964,7 +1083,7 @@ do
         end
 
         function META:CrawlExpression(exp, env)
-            assert(exp)
+            assert(exp and exp.type == "expression")
             env = env or "runtime"
             local stack = setmetatable({values = {}, i = 1}, meta)
             expand(self, exp, evaluate_expression, stack, env)
