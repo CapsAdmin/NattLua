@@ -114,7 +114,17 @@ function META:Set(key, val)
     for _, a in pairs(self:GetValues()) do
         for _, b in pairs(key:GetValues()) do
             local ok, err = pcall(function()
-                a.value.value[b.value.value or Object():AddType(b.type)] = val
+                local key = b.value.value or ("-_T" .. b.type)
+
+                if self.signature and not self.signature[key] then
+                    print("cannot index with ", key) -- todo expected
+                elseif self.signature and self.signature[key] and not self.signature[key]:Extends(val) then
+                    print("cannot assign ", key, " = ", val) -- todo expected
+                elseif a.value.value[key] then
+                    a.value.value[key]:AddType(val)
+                else
+                    a.value.value[key] = val
+                end
             end)
             if not ok then
                 print(err)
@@ -138,6 +148,12 @@ function META:Copy()
 end
 
 function META:AddType(name, value)
+    if getmetatable(name) == META then
+        for k,v in ipairs(name:GetValues()) do
+            self:AddType(v.type, v.value.value)
+        end
+        return
+    end
     self.types[name] = self.types[name] or {}
     if value == "unknown" then
         self.types[name] = {}
@@ -147,6 +163,29 @@ function META:AddType(name, value)
     return self
 end
 
+function META:LockSignature()
+    local signature = {}
+    for _, a in pairs(self:GetValues()) do
+        if a.type == "table" then
+            for k,v in pairs(a.value.value) do
+                signature[k] = v
+            end
+        end
+    end
+    self.signature = signature
+end
+
+function META:Extends(t)
+    for _, a in pairs(self:GetValues()) do
+        for _, b in pairs(t:GetValues()) do
+            if a.type ~= b.type then
+                return false
+            end
+        end
+    end
+
+    return true
+end
 local ref = 0
 
 function Object(...)
@@ -169,6 +208,14 @@ local a = Object("lol") .. (Object(1,2,3) + Object(3))
 --print(a:Copy())
 
 local a = Object({})
+local b = Object({})
+print(a:Extends(b))
+
 a:Set(Object():AddType("string"), Object(true))
+a:LockSignature()
+a:Set(Object():AddType("number"), Object(true))
+a:Set(Object():AddType("string"), Object(""))
+
+
 print(a)
 --print(Object():AddType("table", {a = true, b = false}))
