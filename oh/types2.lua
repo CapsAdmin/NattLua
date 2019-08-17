@@ -1,15 +1,20 @@
 local inspect = require("oh.inspect")
 
 local META = {}
+
 META.__index = META
+
+local process = function(item, path) if getmetatable(item) == META then return tostring(item) end return item end
 
 function META:__tostring()
     local types = {}
     for name, values in pairs(self.types) do
-        
+
         local str = {}
         for i,v in ipairs(values) do
-            table.insert(str, inspect(v.value, {newline = " ", indent = ""}))
+            if v.value ~= nil then
+                table.insert(str, inspect(v.value, {newline = " ", indent = "", process = process}))
+            end
         end
 
         local values = table.concat(str, ", ")
@@ -23,7 +28,7 @@ function META:__tostring()
 
     local str = table.concat(types, " | ")
 
-    return str
+    return self.id .. "-" .. str
 end
 
 function META.__add(a, b) return a:BinaryOperator("+", b) end
@@ -61,7 +66,7 @@ function META.BinaryOperator(a, op, b)
     for _, a in pairs(a:GetValues()) do
         for i, b in pairs(b:GetValues()) do
             local new = {value = {}}
-            
+
             if a.value.value == nil or b.value.value == nil then
                 new.type = a.type
                 new.value.value = "unknown"
@@ -100,11 +105,22 @@ function META.PostfixOperator(a, op)
 end
 
 function META:Get(key)
-
+    for _, a in pairs(self:GetValues()) do
+        print(a)
+    end
 end
 
 function META:Set(key, val)
-
+    for _, a in pairs(self:GetValues()) do
+        for _, b in pairs(key:GetValues()) do
+            local ok, err = pcall(function()
+                a.value.value[b.value.value or Object():AddType(b.type)] = val
+            end)
+            if not ok then
+                print(err)
+            end
+        end
+    end
 end
 
 function META:IsTruthy()
@@ -112,7 +128,13 @@ function META:IsTruthy()
 end
 
 function META:Copy()
-    return self
+    local copy = Object()
+    local values = self:GetValues()
+
+    for _, v in ipairs(values) do
+        copy:AddType(v.type, v.value.value)
+    end
+    return copy
 end
 
 function META:AddType(name, value)
@@ -125,8 +147,11 @@ function META:AddType(name, value)
     return self
 end
 
+local ref = 0
+
 function Object(...)
-    local self = setmetatable({}, META)
+    ref = ref + 1
+    local self = setmetatable({id = ref}, META)
     self.types = {}
 
     if ... ~= nil then
@@ -140,5 +165,10 @@ end
 
 local a = Object("lol") .. (Object(1,2,3) + Object(3))
 
-print(Object(true) + Object(false))
+--print(a)
+--print(a:Copy())
+
+local a = Object({})
+a:Set(Object():AddType("string"), Object(true))
+print(a)
 --print(Object():AddType("table", {a = true, b = false}))
