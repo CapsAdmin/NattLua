@@ -588,7 +588,7 @@ function META:EmitIdentifier(node)
     self:EmitToken(node.value)
     if node.inferred_type then
         self:Emit(": ")
-        self:Emit(tostring(type(node.inferred_type) == "table" and node.inferred_type.name or tostring(node.inferred_type)))
+        self:Emit(tostring(node.inferred_type))
     end
 
     if node.type_expression then
@@ -646,15 +646,15 @@ do -- types
                         self:EmitToken(node.tokens["="])
                         self:EmitTypeExpression(node.value)
                     elseif node.kind == "table_expression_value" then
-    
+
                         self:EmitToken(node.tokens["["])
                         self:Whitespace("(")
                         self:EmitTypeExpression(node.key)
                         self:Whitespace(")")
                         self:EmitToken(node.tokens["]"])
-    
+
                         self:EmitToken(node.tokens["="])
-    
+
                         self:EmitTypeExpression(node.value)
                     end
                     if node.tokens[","] then

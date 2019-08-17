@@ -122,7 +122,11 @@ end
 
 function META:Max(max)
     local t = self:Type(self.name, self.value)
-    t.max = max
+    if max.value then
+        t.max = max
+    else
+        t.value = nil
+    end
     return t
 end
 
@@ -163,7 +167,7 @@ function META:BinaryOperator(op, b, node, env)
             ret = arg
         end
 
-        if not b:IsType(arg) then
+        if not b:IsType(arg) and ret ~= "last" then
             self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", node.value)
             return self:Type("any")
         end
@@ -178,7 +182,25 @@ function META:BinaryOperator(op, b, node, env)
             end
         end
 
-        if syntax.CompiledBinaryOperatorFunctions[op] and a.value ~= nil and b.value ~= nil then
+        if ret == "last" then
+            if syntax.CompiledBinaryOperatorFunctions[op] then
+
+                local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], b.value, a.value)
+                if not ok then
+                    self:Error(res)
+                else
+                    if res == b.value then
+                        return b
+                    elseif res == a.value then
+                        return a
+                    end
+                end
+            end
+
+            return a + b
+        end
+
+        if syntax.CompiledBinaryOperatorFunctions[op] then
             local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], a.value, b.value)
             if not ok then
                 self:Error(res)
@@ -302,6 +324,8 @@ function types.Register(name, interface)
 end
 
 function types.IsType(name)
+    if name == "table" or name == "list" then return false end
+
     return registered[name]
 end
 
@@ -414,11 +438,11 @@ do
                 end
             end
         end
-    
+
         if what == "any" then
             return true
         end
-    
+
         return false
     end
 
@@ -475,6 +499,8 @@ types.Register("base", {
     binary = {
         ["=="] = {arg = "base", ret = "boolean"},
         ["~="] = {arg = "base", ret = "boolean"},
+        ["or"] = {arg = "base", ret = "last"},
+        ["and"] = {arg = "base", ret = "last"},
     },
     prefix = {
         ["not"] = "boolean",
@@ -670,6 +696,7 @@ types.Register("number", {
         ["*"] = "number",
         ["/"] = "number",
         ["%"] = "number",
+        ["^"] = "number",
 
         ["<"] = {arg = "number", ret = "boolean"},
         [">"] = {arg = "number", ret = "boolean"},

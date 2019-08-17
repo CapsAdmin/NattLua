@@ -413,15 +413,15 @@ a.b.c = 1
         else
             a,b = next(t.value)
         end
-        
-        if type(a) == "table" and a.name then   
+
+        if type(a) == "table" and a.name then
             a = a.value
         end
-        
-        if type(b) == "table" and b.name then   
+
+        if type(b) == "table" and b.name then
             b = b.value
         end
-        
+
         return types.Type(type(a), a), types.Type(type(b), b)
     end
 
@@ -447,7 +447,7 @@ a.b.c = 1
         type_assert(k, _ as "foo")
         type_assert(v, _ as true)
     end
-    
+
     for i,v in ipairs({"LOL",2,3}) do
         type_assert(i, _ as 1)
         type_assert(v, _ as "LOL")
@@ -455,7 +455,7 @@ a.b.c = 1
 ]]}
 
 tests = {[[
-    type next = function(tbl, _key) 
+    type next = function(tbl, _key)
         local key, val
 
         for k, v in pairs(tbl.value) do
@@ -545,7 +545,7 @@ tests = {[[
         _G.LOL = true
     end
 
-    type b = function() 
+    type b = function()
         _G.LOL = nil
         crawler:GetValue("a", "typesystem")()
         if not _G.LOL then

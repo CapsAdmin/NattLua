@@ -296,7 +296,7 @@ do -- statements
             self:IsValue("local") and self:IsValue("function", 1) then                          return self:ReadLocalFunctionStatement() elseif
             self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2) then return self:ReadLocalTypeDeclarationStatement() elseif
             self:IsValue("local") then                                                          return self:ReadLocalAssignmentStatement() elseif
-            self:IsValue("type") and self:IsType("letter", 1) then                              return self:ReadTypeAssignment() elseif
+            self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1)) then    return self:ReadTypeAssignment() elseif
             self:IsValue("interface") then                                                      return self:ReadInterfaceStatement() elseif
             self:IsValue("do") then                                                             return self:ReadDoStatement() elseif
             self:IsValue("if") then                                                             return self:ReadIfStatement() elseif

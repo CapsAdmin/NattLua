@@ -450,7 +450,7 @@ function META:CrawlStatement(statement, ...)
             if key.type_expression then
                 val = self:CrawlExpression(key.type_expression, "typesystem")
             end
-            
+
             self:DeclareUpvalue(key, val, "runtime")
 
             node.inferred_type = val
@@ -486,7 +486,7 @@ function META:CrawlStatement(statement, ...)
             local b = not statement.expressions[i] or self:CrawlExpression(statement.expressions[i])
             if b == true or b:IsTruthy() then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                
+
                 b.truthy = (b.truthy or 0) + 1
 
                 if self:CrawlStatements(statements, ...) == true then
@@ -570,9 +570,9 @@ function META:CrawlStatement(statement, ...)
             local old_scope = self.scope
             self.scope = r.node.scope or self.scope
             self:PushScope(r.node)
-    
+
             local arguments = {}
-    
+
             if r.node.self_call and stack then
                 local val = stack:Pop()
                 table.insert(arguments, val)
@@ -596,7 +596,7 @@ function META:CrawlStatement(statement, ...)
                     end
                 end
             end
-            
+
             local ret = {}
             if r.node.statements then
                 self:CrawlStatements(r.node.statements, ret)
@@ -604,27 +604,27 @@ function META:CrawlStatement(statement, ...)
 
                 self:PopScope()
                 self.scope = old_scope
-        
+
                 r.ret = merge_types(r.ret, ret)
                 r.arguments = merge_types(r.arguments, arguments)
-        
+
                 for i,v in ipairs(r.ret) do
                     -- ERROR HERE
                     if ret[i] == nil then
                         ret[i] = v
                     end
                 end
-        
+
                 for i, v in ipairs(r.arguments) do
                     if r.node.identifiers[i] then
                         r.node.identifiers[i].inferred_type = v
                     end
                 end
-        
+
                 self:FireEvent("function_spec", r)
-                
+
                 args = ret
-        end 
+        end
 
         for i,v in ipairs(statement.identifiers) do
             self:DeclareUpvalue(v, args and args[i], "runtime")
@@ -652,10 +652,13 @@ function META:CrawlStatement(statement, ...)
         self:DeclareUpvalue(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
     elseif statement.kind == "type_assignment" then
         local val = self:CrawlExpression(statement.right, "typesystem")
+
         if type(val) ~= "table" then
      --      self:Error(statement.right, "type expression must resolve to a type. got " .. type(val) .. "("  .. tostring(val).. ")")
         end
-        self:DeclareUpvalue(statement.left, val, "typesystem")
+
+        self:Assign(statement.left, val, "typesystem")
+        --self:DeclareUpvalue(statement.left, val, "typesystem")
     elseif statement.kind == "type_interface" then
         local tbl = self:GetValue(statement.key, "typesystem")
 
@@ -774,6 +777,7 @@ do
                     --args_defined = true
                 end
             end
+
 
             if node.self_call and node.expression then
                 local val = self:GetUpvalue(node.expression.left, "runtime")
@@ -964,7 +968,7 @@ do
                         -- HACKS
                         r.crawler = self
                         r.node = node
-                        
+
                         for _,v in ipairs(types.CallFunction(r, args)) do
                             stack:Push(v)
                         end
@@ -1022,6 +1026,7 @@ do
                 end
             else
                 local arg = expressions[i] and self:CrawlExpression(expressions[i]) or nil
+                print(v:Render(),arg)
                 self:DeclareUpvalue(v, arg, "runtime")
                 table.insert(arguments, arg)
             end

@@ -2,7 +2,7 @@ type type_assert = function(what, type, value, ...)
     if not what:IsType(type) then
         error("expected type " .. tostring(type) .." got " .. tostring(what))
     end
-    
+
     if type.value ~= nil then
         if what.value ~= type.value then
             error("expected type value " .. tostring(type) .." got " .. tostring(what))
@@ -11,7 +11,7 @@ type type_assert = function(what, type, value, ...)
 end
 
 type next = function(tbl, _)
-    if not tbl then return types.Type("any"), types.Type("any") end 
+    if not tbl then return types.Type("any"), types.Type("any") end
     local key, val
 
     for k, v in pairs(tbl.value) do
@@ -48,7 +48,7 @@ type require = function(name)
             local path = debug.getinfo(loader).source
             if path:sub(1, 1) == "@" then
                 local path = path:sub(2)
-                
+
                 local ast = assert(require("oh").FileToAST(path))
                 crawler:CrawlStatement(ast)
 
@@ -314,3 +314,39 @@ interface _G {
     string = ^string
     io = io
 }
+
+type table.insert = function(tbl, ...)
+    local pos, val = ...
+
+    if not val then
+        val = ...
+        pos = #tbl.value + 1
+    else
+        pos = pos.value
+    end
+
+    local l = types.Type("list")
+
+    local list_type = tbl.list_type
+
+    for k,v in pairs(tbl) do
+        if k ~= "value" then
+            tbl[k] = nil
+        end
+    end
+
+    for k,v in pairs(l) do
+        tbl[k] = v
+    end
+
+    table.insert(tbl.value, pos, val)
+
+    if list_type then
+        list_type = list_type + val
+    end
+
+    tbl.list_type = list_type or val
+    tbl.length = pos
+end
+
+type TPRINT = function(...) print(...) end
