@@ -554,8 +554,6 @@ tests = {[[
     end
 
     local a = b()
-
-
 ]]}
 
 local base_lib = io.open("oh/base_lib.oh"):read("*all")

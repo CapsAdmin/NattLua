@@ -633,7 +633,7 @@ types.Register("table", {
 do
     local function check_index(self, key)
         if not key:IsType("number") then
-            self:Error("cannnot index " .. tostring(key) .. " on array")
+            self:Error("cannnot index " .. tostring(key) .. " on list")
         elseif self.length and key.value and key.value > self.length then
             self:Error("out of bounds " .. tostring(key))
         elseif key.value and key.value < 1 then

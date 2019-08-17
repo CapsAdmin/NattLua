@@ -44,6 +44,13 @@ code = [[
 
 ]]
 
+code = [[
+    local a = {}
+    table.insert(a, 1)
+
+    a.lol = true
+]]
+
 code = base_lib .. "\n" .. code
 
 local em = LuaEmitter()
