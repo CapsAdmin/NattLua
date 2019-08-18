@@ -6,14 +6,28 @@ META.__index = META
 
 local process = function(item, path) if getmetatable(item) == META then return tostring(item) end return item end
 
-function META:__tostring()
+function META:Serialize()
     local types = {}
     for name, values in pairs(self.types) do
 
         local str = {}
         for i,v in ipairs(values) do
             if v.value ~= nil then
-                table.insert(str, inspect(v.value, {newline = " ", indent = "", process = process}))
+                if name == "function" then
+                    local arg = {}
+                    for i,v in ipairs(v.value.arg) do
+                        arg[i] = v:Serialize()
+                    end
+
+                    local ret = {}
+                    for i,v in ipairs(v.value.ret) do
+                        ret[i] = v:Serialize()
+                    end
+
+                    table.insert(str, "function(" .. table.concat(arg, ", ") .. "): " .. table.concat(ret, ", "))
+                else
+                    table.insert(str, inspect(v.value, {newline = " ", indent = "", process = process}))
+                end
             end
         end
 
@@ -28,7 +42,11 @@ function META:__tostring()
 
     local str = table.concat(types, " | ")
 
-    return self.id .. "-" .. str
+    return str
+end
+
+function META:__tostring()
+    return "「"..self.id .. " 〉" .. self:Serialize() .. "」"
 end
 
 function META.__add(a, b) return a:BinaryOperator("+", b) end
@@ -114,16 +132,24 @@ function META:Set(key, val)
     for _, a in pairs(self:GetValues()) do
         for _, b in pairs(key:GetValues()) do
             local ok, err = pcall(function()
-                local key = b.value.value or ("-_T" .. b.type)
+                local key = b.constant and b.value.value or "⊤" .. b.type
 
                 if self.signature and not self.signature[key] then
                     print("cannot index with ", key) -- todo expected
                 elseif self.signature and self.signature[key] and not self.signature[key]:Extends(val) then
                     print("cannot assign ", key, " = ", val) -- todo expected
-                elseif a.value.value[key] then
+                elseif a.value.value[key] and val ~= nil then
                     a.value.value[key]:AddType(val)
+
+                    if b.value.value and not b.constant then
+                        a.value.value[b.value.value] = a.value.value[key]
+                    end
                 else
                     a.value.value[key] = val
+
+                    if b.value.value and not b.constant then
+                        a.value.value[b.value.value] = a.value.value[key]
+                    end
                 end
             end)
             if not ok then
@@ -147,10 +173,10 @@ function META:Copy()
     return copy
 end
 
-function META:AddType(name, value)
+function META:AddType(name, value, constant)
     if getmetatable(name) == META then
         for k,v in ipairs(name:GetValues()) do
-            self:AddType(v.type, v.value.value)
+            self:AddType(v.type, v.value.value, v.constant)
         end
         return
     end
@@ -158,12 +184,12 @@ function META:AddType(name, value)
     if value == "unknown" then
         self.types[name] = {}
     else
-        table.insert(self.types[name], {value = value})
+        table.insert(self.types[name], {value = value, constant = constant})
     end
     return self
 end
 
-function META:LockSignature()
+function META:GetSignature()
     local signature = {}
     for _, a in pairs(self:GetValues()) do
         if a.type == "table" then
@@ -172,15 +198,74 @@ function META:LockSignature()
             end
         end
     end
-    self.signature = signature
+    return signature
+end
+
+function META:LockSignature()
+    self.signature = self:GetSignature()
+end
+
+function META:Exclude(t)
+    for _, val in ipairs(t:GetValues()) do
+       self.types[val.type] = nil
+    end
+    return self
+end
+
+function META:Error(...)
+    print(...)
+end
+
+function META:__call(args)
+    local errors = {}
+    local found
+
+    for _, val in ipairs(self:GetValues()) do
+        if val.type == "function" then
+            local ok = true
+
+            for i, typ in ipairs(val.value.value.arg) do
+                if (not args[i] or not typ:Extends(args[i])) and not typ:Extends(Object():AddType("any")) then
+                    ok = false
+                    table.insert(errors, {func = val, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
+                end
+            end
+
+            if ok then
+                found = val
+                break
+            end
+        end
+    end
+
+    if not found then
+        for _, data in ipairs(errors) do
+            self:Error(unpack(data.err))
+        end
+        return {Object():AddType("any")}
+    end
+
+    local ret = found.value.value.ret
+    return ret
 end
 
 function META:Extends(t)
-    for _, a in pairs(self:GetValues()) do
-        for _, b in pairs(t:GetValues()) do
+    for _, a in ipairs(self:GetValues()) do
+        for _, b in ipairs(t:GetValues()) do
             if a.type ~= b.type then
                 return false
             end
+        end
+    end
+
+    local sig = t:GetSignature()
+    for k, v in pairs(self:GetSignature()) do
+        if sig[k] == nil then
+            return false
+        end
+
+        if not sig[k]:Extends(v) then
+            return false
         end
     end
 
@@ -202,20 +287,44 @@ function Object(...)
     return self
 end
 
+local T = function(str) return Object():AddType(str) end
+local V = Object
+
+local f = Object()
+f:AddType("function", {arg = {T"string", T"number"}, ret = {T"boolean"}, func = print})
+f:AddType("function", {arg = {T"number"}, ret = {T"string"}, func = print})
+
+print(unpack(f({T"string", T"number"})))
+
+
+do return end
+
 local a = Object("lol") .. (Object(1,2,3) + Object(3))
 
 --print(a)
 --print(a:Copy())
 
-local a = Object({})
-local b = Object({})
+local a = V({})
+local b = V({})
+
 print(a:Extends(b))
 
-a:Set(Object():AddType("string"), Object(true))
+a:Set(T"string", V(true))
+a:Set(T"number", V(true))
 a:LockSignature()
-a:Set(Object():AddType("number"), Object(true))
-a:Set(Object():AddType("string"), Object(""))
+
+a:Set(T"number", V(true))
+--a:Set(T"string", V(""))
 
 
+b:Set(T"string", T"boolean")
+b:Set(V(55), T"boolean")
+print(a:Extends(b))
 print(a)
+print(b)
+
+print(V(1):Extends(T("number")))
+
+print(T("number"):AddType("string"):Exclude(T"string"):Extends(T"number"))
+
 --print(Object():AddType("table", {a = true, b = false}))
