@@ -5,6 +5,8 @@ local META = {}
 META.__index = META
 
 local process = function(item, path) if getmetatable(item) == META then return tostring(item) end return item end
+local inspect = function(v) inspect(v, {newline = " ", indent = "", process = process}) end
+local tprint = function(v) print(inspect(v)) end
 
 function META:Serialize()
     local types = {}
@@ -26,7 +28,7 @@ function META:Serialize()
 
                     table.insert(str, "function(" .. table.concat(arg, ", ") .. "): " .. table.concat(ret, ", "))
                 else
-                    table.insert(str, inspect(v.value, {newline = " ", indent = "", process = process}))
+                    table.insert(str, inspect(v.value))
                 end
             end
         end
@@ -160,14 +162,18 @@ function META:Set(key, val)
 end
 
 function META:IsTruthy()
+    for _, v in pairs(self:GetValues()) do
+        if v.value.value ~= false and v.value.value ~= nil then
+            return true
+        end
+    end
 
+    return false
 end
 
 function META:Copy()
     local copy = Object()
-    local values = self:GetValues()
-
-    for _, v in ipairs(values) do
+    for _, v in ipairs(self:GetValues()) do
         copy:AddType(v.type, v.value.value)
     end
     return copy
@@ -191,13 +197,22 @@ end
 
 function META:GetSignature()
     local signature = {}
+    
     for _, a in pairs(self:GetValues()) do
         if a.type == "table" then
             for k,v in pairs(a.value.value) do
-                signature[k] = v
+                table.insert(signature, v)
+            end
+        elseif a.type == "function" then
+            for i,v in pairs(a.value.value.ret) do
+                table.insert(signature, v)
+            end
+            for i,v in pairs(a.value.value.arg) do
+                table.insert(signature, v)
             end
         end
     end
+
     return signature
 end
 
@@ -249,6 +264,16 @@ function META:__call(args)
     return ret
 end
 
+function META:AttachNode(node)
+    self.node = node
+
+    if node then
+        node.inferred_type = self
+    end
+
+    return self
+end
+
 function META:Extends(t)
     for _, a in ipairs(self:GetValues()) do
         for _, b in ipairs(t:GetValues()) do
@@ -287,15 +312,28 @@ function Object(...)
     return self
 end
 
+do return setmetatable({
+    IsType = function(str) 
+        return str == "number" or str == "boolean" or str == "function" or str == "boolean"
+    end,
+}, {__call = function(_,...) return Object(...) end}) end
+
 local T = function(str) return Object():AddType(str) end
 local V = Object
+
+
+local a = Object():AddType("function", {arg = {T"number"}, ret = {T"boolean"}, func = print})
+local b = Object():AddType("function", {arg = {T"number", T"string"}, ret = {T"boolean"}, func = print})
+
+do return end
 
 local f = Object()
 f:AddType("function", {arg = {T"string", T"number"}, ret = {T"boolean"}, func = print})
 f:AddType("function", {arg = {T"number"}, ret = {T"string"}, func = print})
 
-print(unpack(f({T"string", T"number"})))
+--print(unpack(f({T"string", T"number"})))
 
+print(f)
 
 do return end
 
