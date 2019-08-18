@@ -205,7 +205,16 @@ do
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"])
 
-        if node.inferred_type and node.inferred_type.ret and node.inferred_type.ret[1] then
+        if node.inferred_return_types then
+            self:Emit(": ")
+            local str = {}
+            for i,v in ipairs(node.inferred_return_types) do
+                str[i] = tostring(v)
+            end
+            self:Emit(table.concat(str, ", "))
+        end
+
+        if node.inferred_type and node.inferred_type:GetReturnTypes() and node.inferred_type.ret[1] then
             --self:Emit(" --[[ : ")
             self:Emit(": ")
             local str = {}
@@ -215,7 +224,6 @@ do
             self:Emit(table.concat(str, ", "))
             --self:Emit(" ]] ")
         end
-
 
         self:Whitespace("\n")
         self:EmitBlock(node.statements)
@@ -586,14 +594,13 @@ end
 
 function META:EmitIdentifier(node)
     self:EmitToken(node.value)
-    if node.inferred_type then
-        self:Emit(": ")
-        self:Emit(tostring(node.inferred_type))
-    end
 
     if node.type_expression then
         self:EmitToken(node.tokens[":"])
         self:EmitTypeExpression(node.type_expression)
+    elseif node.inferred_type then
+        self:Emit(": ")
+        self:Emit(node.inferred_type:Serialize())
     end
 end
 

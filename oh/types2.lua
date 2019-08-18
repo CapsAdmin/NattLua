@@ -17,18 +17,23 @@ function META:Serialize()
             if v.value ~= nil then
                 if name == "function" then
                     local arg = {}
-                    for i,v in ipairs(v.value.arg) do
-                        arg[i] = v:Serialize()
+                    if v.value.arg then
+                        for i,v in ipairs(v.value.arg) do
+                            arg[i] = v:Serialize()
+                        end
                     end
 
                     local ret = {}
-                    for i,v in ipairs(v.value.ret) do
-                        ret[i] = v:Serialize()
+
+                    if v.value.ret then
+                        for i,v in ipairs(v.value.ret) do
+                            ret[i] = v:Serialize()
+                        end
                     end
 
                     table.insert(str, "function(" .. table.concat(arg, ", ") .. "): " .. table.concat(ret, ", "))
                 else
-                    table.insert(str, inspect(v.value))
+                    table.insert(str, inspect(v.value) or "")
                 end
             end
         end
@@ -55,8 +60,18 @@ function META.__add(a, b) return a:BinaryOperator("+", b) end
 function META.__sub(a, b) return a:BinaryOperator("-", b) end
 function META.__concat(a, b) return a:BinaryOperator("..", b) end
 
-function META:Call(...)
+function META:GetReturnTypes()
+    local out = {}
 
+    for _, a in pairs(self:GetValues()) do
+        if type(a.value.value) == "table" and a.value.value.ret then
+            for i,v in pairs(a.value.value.ret) do
+                table.insert(out, v)
+            end
+        end
+    end
+
+    return out
 end
 
 function META:GetValues()
@@ -80,6 +95,11 @@ local function binary(a, op, b)
 end
 
 function META.BinaryOperator(a, op, b)
+
+    if op == "|" then
+        return a:Copy():AddType(b)
+    end
+
     local copy = Object()
     local values = a:GetValues()
 
@@ -184,7 +204,7 @@ function META:AddType(name, value, constant)
         for k,v in ipairs(name:GetValues()) do
             self:AddType(v.type, v.value.value, v.constant)
         end
-        return
+        return self
     end
     self.types[name] = self.types[name] or {}
     if value == "unknown" then
@@ -197,7 +217,7 @@ end
 
 function META:GetSignature()
     local signature = {}
-    
+
     for _, a in pairs(self:GetValues()) do
         if a.type == "table" then
             for k,v in pairs(a.value.value) do
@@ -274,6 +294,10 @@ function META:AttachNode(node)
     return self
 end
 
+function META:IsType(t)
+    return self.types[t] ~= nil
+end
+
 function META:Extends(t)
     for _, a in ipairs(self:GetValues()) do
         for _, b in ipairs(t:GetValues()) do
@@ -312,9 +336,20 @@ function Object(...)
     return self
 end
 
+local primitives = {
+    ["nil"] = true,
+    ["boolean"] = true,
+    ["number"] = true,
+    ["string"] = true,
+    ["function"] = true,
+    ["userdata"] = true,
+    ["thread"] = true,
+    ["table"] = true,
+}
+
 do return setmetatable({
-    IsType = function(str) 
-        return str == "number" or str == "boolean" or str == "function" or str == "boolean"
+    IsType = function(str)
+        return primitives[str] or false
     end,
 }, {__call = function(_,...) return Object(...) end}) end
 

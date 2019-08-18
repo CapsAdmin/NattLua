@@ -469,6 +469,10 @@ function META:CrawlStatement(statement, ...)
             self:CrawlExpression(statement:ToExpression("function")),
             "runtime"
         )
+
+        if statement.return_types then
+            statement.inferred_return_types = self:CrawlExpressions(statement.return_types, "typesystem")
+        end
     elseif statement.kind == "local_function" then
         self:DeclareUpvalue(
             statement.identifier,
@@ -1026,7 +1030,6 @@ do
                 end
             else
                 local arg = expressions[i] and self:CrawlExpression(expressions[i]) or nil
-                print(v:Render(),arg)
                 self:DeclareUpvalue(v, arg, "runtime")
                 table.insert(arguments, arg)
             end
@@ -1093,6 +1096,15 @@ do
             local stack = setmetatable({values = {}, i = 1}, meta)
             expand(self, exp, evaluate_expression, stack, env)
             return unpack(stack.values)
+        end
+
+        function META:CrawlExpressions(expressions, ...)
+            if not expressions then return end
+            local ret = {}
+            for i, expression in ipairs(expressions) do
+                ret[i] = self:CrawlExpression(expression, ...)
+            end
+            return ret
         end
     end
 end

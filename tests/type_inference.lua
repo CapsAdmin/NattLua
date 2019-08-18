@@ -1,3 +1,42 @@
+local test = require("tests.test")
+local function check(tbl)
+    for k,v in pairs(tbl) do
+        tbl[k] = {code = v[1], expect = v[2], crawl = true, compare_tokens = true}
+    end
+    test.check_strings(tbl)
+end
+
+check {
+    {
+        "local a = 1",
+        "local a: number(1) = 1"
+    },
+    {
+        "local a: number = 1",
+        "local a: number = 1"
+    },
+    {
+        "local a: number | string = 1",
+        "local a: number | string = 1"
+    },
+    {
+        "function foo(a: number) end",
+        "function foo(a: number) end"
+    },
+    {
+        "function foo(a: number):string end",
+        "function foo(a: number):string end",
+    },
+    {
+        "function foo(a: number):string, number end",
+        "function foo(a: number):string, number end",
+    },
+    {
+        "type a = number; local num: a = 1",
+        "local num: a = 1",
+    },
+}
+
 local tests = {[[
     local a = 1
     type_assert(a, 1)
@@ -525,10 +564,6 @@ tests = {[[
     end
     local d = b(2)
     local d = b(a)
-
-    function foo(a --[[#:number]], b --[[#:number]])
-        return a+b
-    end
 
     local lol: {a = boolean} = {}
     lol.a = true

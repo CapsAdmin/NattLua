@@ -343,6 +343,14 @@ function types.OverloadFunction(a, b)
     return a
 end
 
+function META:GetReturnTypes()
+    return self.ret
+end
+
+function META:Serialize()
+    return tostring(self)
+end
+
 function types.CallFunction(func, args)
     local errors = {}
     local found

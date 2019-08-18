@@ -52,6 +52,12 @@ code = [[
 
 code = base_lib .. "\n" .. code
 
+code = [[
+    local a = 1
+    a = 2 as string | number
+    local b = a
+]]
+
 local em = LuaEmitter()
 local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code, "test")), "test", code))
 local crawler = Crawler()

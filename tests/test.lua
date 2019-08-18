@@ -50,10 +50,11 @@ function test.transpile_check(tbl)
     local ok = xpcall(function()
         tokens = assert(test.lex(tbl.code, nil, tbl.name))
         ast = assert(test.parse(tokens, tbl.code, tbl.name))
+        if tbl.crawl then
+            local crawler = Crawler()
+            crawler:CrawlStatement(ast)
+        end
         new_code, emitter = assert(test.transpile(ast, tbl.name, tbl.config))
-
-        --local crawler = Crawler()
-        --crawler:CrawlStatement(ast)
     end, function(err)
         print("===================================")
         print(debug.traceback(err))
@@ -112,6 +113,19 @@ function test.dofile(path)
         expect = code,
         name = path,
     })
+end
+
+function test.check_strings(strings)
+    for _, v in ipairs(strings) do
+        if v == false then
+            break
+        end
+        if type(v) == "table" then
+            test.transpile_check(v)
+        else
+            test.transpile_check({code = v, expect = v})
+        end
+    end
 end
 
 return test

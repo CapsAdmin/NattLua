@@ -460,7 +460,7 @@ function META:ReadFunctionBody(node)
             end
         end
 
-        node.type_expressions = out
+        node.return_types = out
     end
 
     local start = self:GetToken()
