@@ -2,7 +2,6 @@
 local oh = require("oh")
 local Crawler = require("oh.crawler")
 local LuaEmitter = require("oh.lua_emitter")
-local types = require("oh.types")
 
 local code = io.open("oh/parser.lua"):read("*all")
 local base_lib = io.open("oh/base_lib.oh"):read("*all")

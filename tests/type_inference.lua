@@ -557,11 +557,8 @@ tests = {[[
 ]]}
 
 local base_lib = io.open("oh/base_lib.oh"):read("*all")
-
 local Crawler = require("oh.crawler")
-
 local LuaEmitter = require("oh.lua_emitter")
-local types = require("oh.types")
 
 for _, code in ipairs(tests) do
     if code == false then return end
