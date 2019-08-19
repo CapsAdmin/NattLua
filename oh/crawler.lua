@@ -440,45 +440,44 @@ function META:CrawlStatement(statement, ...)
             return true
         end
         self:PopScope()
-    elseif statement.kind == "local_assignment" then
-        local ret = self:UnpackExpressions(statement.right, "runtime")
+    elseif 
+        statement.kind == "assignment" or 
+        statement.kind == "local_assignment" or
+
+        statement.kind == "type_assignment" or
+        statement.kind == "local_type_assignment"
+    then
+        local env = (statement.kind == "type_assignment" or statement.kind == "local_type_assignment") and "typesystem" or "runtime"
+        local ret = self:UnpackExpressions(statement.right, env)
 
         for i, node in ipairs(statement.left) do
-            local key = node
-            local val = ret[i]
-
-            if key.type_expression then
-                val = self:CrawlExpression(key.type_expression, "typesystem")
-                if ret[i] then
-                    if not ret[i]:IsType(val) then
-                        self:Error(key, "expected " .. tostring(val) .. " but the right hand side is a " .. tostring(ret[i]))
-                    end
-                end
-            end
-
-            self:DeclareUpvalue(key, val, "runtime")
-
-            node.inferred_type = val
-        end
-    elseif statement.kind == "assignment" then
-        local ret = self:UnpackExpressions(statement.right)
-
-        for i, node in ipairs(statement.left) do
-            local val = ret[i]
+            local val
 
             if node.type_expression then
                 val = self:CrawlExpression(node.type_expression, "typesystem")
+                if ret[i] and not ret[i]:IsType(val) then
+                    self:Error(node, "expected " .. tostring(val) .. " but the right hand side is a " .. tostring(ret[i]))
+                end
+            else
+                val = ret[i]
             end
+
             
-            self:Assign(node, val, "runtime")
+            if statement.kind == "local_assignment" then
+                self:DeclareUpvalue(node, val, "runtime")
+            elseif statement.kind == "assignment" then
+                self:Assign(node, val, "runtime")
+                
+            elseif statement.kind == "type_assignment" then
+                self:DeclareUpvalue(node, val, "typesystem")
+            elseif statement.kind == "local_type_assignment" then
+                self:Assign(node, val, "typesystem")
+            end
+
             node.inferred_type = val
         end
     elseif statement.kind == "function" then
-        self:Assign(
-            statement.expression,
-            self:CrawlExpression(statement:ToExpression("function")),
-            "runtime"
-        )
+        self:Assign(statement.expression, self:CrawlExpression(statement:ToExpression("function")), "runtime")
 
         if statement.return_types then
             statement.inferred_return_types = self:CrawlExpressions(statement.return_types, "typesystem")
@@ -663,17 +662,10 @@ function META:CrawlStatement(statement, ...)
             return true
         end
         self:PopScope()
-    elseif statement.kind == "local_type_declaration" then
+    elseif statement.kind == "local_type_assignment" then
         self:DeclareUpvalue(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
     elseif statement.kind == "type_assignment" then
-        local val = self:CrawlExpression(statement.right, "typesystem")
-
-        if type(val) ~= "table" then
-     --      self:Error(statement.right, "type expression must resolve to a type. got " .. type(val) .. "("  .. tostring(val).. ")")
-        end
-
-        self:Assign(statement.left, val, "typesystem")
-        --self:DeclareUpvalue(statement.left, val, "typesystem")
+        self:Assign(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
     elseif statement.kind == "type_interface" then
         local tbl = self:GetValue(statement.key, "typesystem")
 
@@ -752,7 +744,7 @@ do
                     val = copy
                 end
 
-                stack:Push(val or self:TypeFromImplicitNode(node, "nil"))
+                stack:Push(val or self:TypeFromImplicitNode(node, "any"))
             elseif
                 node.value.type == "number" or
                 node.value.type == "string" or

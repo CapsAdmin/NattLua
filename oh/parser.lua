@@ -12,10 +12,6 @@ local LuaEmitter = require("oh.lua_emitter")
 local META = {}
 META.__index = META
 
-for k, v in pairs(require("oh.parser_extended")) do
-    META[k] = v
-end
-
 for k, v in pairs(require("oh.parser_typesystem")) do
     META[k] = v
 end

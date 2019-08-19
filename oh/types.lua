@@ -107,8 +107,8 @@ function META:IsType(what)
     if self.name == "table" and what == "list" then
         return true
     end
-
-    if what == "any" then
+    
+    if what == "any" or self.name == "any" then
         return true
     end
 

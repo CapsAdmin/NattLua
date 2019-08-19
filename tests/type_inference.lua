@@ -214,8 +214,8 @@ type_assert(f, 6)
 local   vararg_1 = ...
         vararg_2 = ...
 
-type_assert(vararg_1, nil)
-type_assert(vararg_2, nil)
+type_assert(vararg_1, any)
+type_assert(vararg_2, any)
 
 local function test(...)
     return a,b,c, ...
@@ -592,6 +592,16 @@ a.b.c = 1
     a: number = lol()
 
     type_assert(a, _ as number)
+]], [[
+    local a = {}
+    a.b: boolean, a.c: number = LOL, LOL2
+]],[[
+    type test = {
+        sin = (function(number): number),
+        cos = (function(number): number),
+    }
+
+    local a = test.sin(1)
 ]]}
 
 local base_lib = io.open("oh/base_lib.oh"):read("*all")
@@ -613,7 +623,7 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-    --crawler.OnEvent = crawler.DumpEvent
+   -- crawler.OnEvent = crawler.DumpEvent
 
     crawler.code = code
     crawler.name = "test"

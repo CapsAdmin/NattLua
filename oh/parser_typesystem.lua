@@ -116,9 +116,8 @@ function META:ReadTypeTable()
         end
 
         node.value = self:ReadTypeExpression()
-
         tree.children[i] = node
-
+        
         if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
             self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
             break
@@ -127,6 +126,7 @@ function META:ReadTypeTable()
         if not self:IsValue("}") then
             node.tokens[","] = self:ReadValues({[","] = true, [";"] = true})
         end
+
     end
 
     tree.tokens["}"] = self:ReadValue("}")
@@ -257,5 +257,118 @@ function META:ReadTypeExpression(priority)
 
     return node
 end
+
+
+
+
+function META:ReadLocalTypeDeclarationStatement()
+    local node = self:Statement("local_type_assignment")
+
+    node.tokens["local"] = self:ReadValue("local")
+    node.tokens["type"] = self:ReadValue("type")
+    node.left = self:ReadTypeExpressionList()
+
+    if self:IsValue("=") then
+        node.tokens["="] = self:ReadValue("=")
+        node.right = self:ReadTypeExpressionList()
+    end
+
+    return node
+end
+
+function META:ReadInterfaceStatement()
+    local node = self:Statement("type_interface")
+    node.tokens["interface"] = self:ReadValue("interface")
+    node.key = self:ReadIndexExpression()
+    node.tokens["{"] = self:ReadValue("{")
+    local list = {}
+    for i = 1, max or self:GetLength() do
+        if not self:IsType("letter") then break end
+        local node = self:Statement("interface_declaration")
+        node.left = self:ReadType("letter")
+        node.tokens["="] = self:ReadValue("=")
+        node.right = self:ReadTypeExpression()
+
+        list[i] = node
+    end
+    node.expressions = list
+    node.tokens["}"] = self:ReadValue("}")
+
+    return node
+end
+
+function META:ReadTypeAssignment()
+    local node = self:Statement("type_assignment")
+
+    node.tokens["type"] = self:ReadValue("type")
+    node.left = self:ReadTypeExpressionList()
+
+    if self:IsValue("=") then
+        node.tokens["="] = self:ReadValue("=")
+        node.right = self:ReadTypeExpressionList()
+    end
+
+    return node
+end
+
+
+
+function META:ReadImportStatement()
+    local node = self:Statement("import")
+    node.tokens["import"] = self:ReadValue("import")
+    node.left = self:ReadIdentifierList()
+    node.tokens["from"] = self:ReadValue("from")
+
+    local start = self:GetToken()
+
+    node.expressions = self:ReadExpressionList()
+
+    local root = self.config.path:match("(.+/)")
+    node.path = root .. node.expressions[1].value.value:sub(2, -2)
+
+    local oh = require("oh")
+    local root, err = oh.FileToAST(node.path, self.root)
+
+    if not root then
+        self:Error("error importing file: $1", start, start, err)
+    end
+
+    node.root = root
+
+    self.root.imports = self.root.imports or {}
+    table.insert(self.root.imports, node)
+
+    return node
+end
+
+function META:ReadImportExpression()
+    local node = self:Expression("import")
+    node.tokens["import"] = self:ReadValue("import")
+    node.tokens["("] = self:ReadValue("(")
+
+    local start = self:GetToken()
+
+    node.expressions = self:ReadExpressionList()
+
+    local root = self.config.path:match("(.+/)")
+    node.path = root .. node.expressions[1].value.value:sub(2, -2)
+
+    local oh = require("oh")
+    local root, err = oh.FileToAST(node.path, self.root)
+
+    if not root then
+        self:Error("error importing file: $1", start, start, err)
+    end
+
+    node.root = root
+
+    node.tokens[")"] = self:ReadValue(")")
+
+    self.root.imports = self.root.imports or {}
+    table.insert(self.root.imports, node)
+
+    return node
+end
+
 
 return META
