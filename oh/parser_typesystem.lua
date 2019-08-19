@@ -184,7 +184,7 @@ function META:ReadTypeExpression(priority)
             local left = node
             if not self:GetToken() then break end
 
-            if syntax.IsPrimaryBinaryTypeOperator(self:GetToken()) and self:IsType("letter", 1) then
+            if self:IsValue(".") and self:IsType("letter", 1) then
                 local op = self:ReadTokenLoose()
 
                 local right = self:Expression("value")
@@ -194,6 +194,18 @@ function META:ReadTypeExpression(priority)
                 node.value = op
                 node.left = left
                 node.right = right
+            elseif self:IsValue(":") then
+                if self:IsType("letter", 1) and (self:IsValue("(", 2) or self:IsValue("{", 2) or self:IsValue("\"", 2) or self:IsValue("'", 2)) then
+                    local op = self:ReadTokenLoose()
+    
+                    local right = self:Expression("value")
+                    right.value = self:ReadType("letter")
+    
+                    node = self:Expression("binary_operator")
+                    node.value = op
+                    node.left = left
+                    node.right = right
+                end
             elseif syntax.IsPostfixTypeOperator(self:GetToken()) then
                 node = self:Expression("postfix_operator")
                 node.left = left
