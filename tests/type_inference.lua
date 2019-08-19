@@ -379,6 +379,7 @@ a.b.c = 1
         lol = function(): lol
     }
 
+
     local a = math.sin(1, "")
     local b = math.lol()
 
@@ -398,9 +399,9 @@ a.b.c = 1
 
     type_assert(b, nil as foo)
 ]], [[
-    local a: (string|number)[] = {"", ""}
-    a[1] = ""
-    a[2] = 1
+  --  local a: (string|number)[] = {"", ""}
+  --  a[1] = ""
+  --  a[2] = 1
 ]], [[
     interface foo {
         bar = function(a: boolean, b: number): true
@@ -413,7 +414,7 @@ a.b.c = 1
     type_assert(a, true)
     type_assert(b, false)
 ]],[[
-    local a: string = 1
+    local a: string = "1"
     type a = string | number | (boolean | string)
 
     type type_func = function(a,b,c) return types.Type("string"), types.Type("number") end
@@ -439,7 +440,7 @@ a.b.c = 1
     local list: Array<number, 3> = {1, 2, 3}
     local a: Exclude<1|2|3, 2> = 1
 
-    type_assert(a, _ as 3|1)
+    type_assert(a, _ as 1|3)
     type_assert(a, _ as number[3])
 ]],[[
     type next = function(t, k)
@@ -491,9 +492,7 @@ a.b.c = 1
         type_assert(i, _ as 1)
         type_assert(v, _ as "LOL")
     end
-]]}
-
-tests = {[[
+]],[[
     type next = function(tbl, _key)
         local key, val
 
@@ -572,9 +571,9 @@ tests = {[[
         local a = self.a
     end
 
-    local lol: string[] = {}
+    --local lol: string[] = {}
 
-    local a = table.concat(lol)
+    --local a = table.concat(lol)
 ]=],[[
     type a = function()
         _G.LOL = true
@@ -589,6 +588,10 @@ tests = {[[
     end
 
     local a = b()
+]],[[
+    a: number = lol()
+
+    type_assert(a, _ as number)
 ]]}
 
 local base_lib = io.open("oh/base_lib.oh"):read("*all")
@@ -598,7 +601,7 @@ local LuaEmitter = require("oh.lua_emitter")
 for _, code in ipairs(tests) do
     if code == false then return end
 
-    local code = base_lib .. code
+    local code = base_lib .. "\n" .. code
 
     --local path = "oh/parser.lua"
 

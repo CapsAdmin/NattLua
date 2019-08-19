@@ -252,13 +252,13 @@ do
         end
     end
 
-    function META:UnpackExpressions(expressions)
+    function META:UnpackExpressions(expressions, env)
         local ret = {}
 
         if not expressions then return ret end
 
         for _, exp in ipairs(expressions) do
-            for _, t in ipairs({self:CrawlExpression(exp)}) do
+            for _, t in ipairs({self:CrawlExpression(exp, env)}) do
                 if type(t) == "table" and t:IsType("...") then
                     if t.values then
                         for _, t in ipairs(t.values) do
@@ -422,12 +422,12 @@ function META:Error(node, msg)
     if self.code then
         local print_util = require("oh.print_util")
         local start, stop = print_util.LazyFindStartStop(node)
-        io.write(print_util.FormatError(self.code, self.name, msg, start, stop))
+        error(print_util.FormatError(self.code, self.name, msg, start, stop))
     else
         local s = tostring(self)
         s = s .. ": " .. msg
 
-        print(s)
+        error(s)
     end
 end
 
@@ -441,7 +441,7 @@ function META:CrawlStatement(statement, ...)
         end
         self:PopScope()
     elseif statement.kind == "local_assignment" then
-        local ret = self:UnpackExpressions(statement.right)
+        local ret = self:UnpackExpressions(statement.right, "runtime")
 
         for i, node in ipairs(statement.left) do
             local key = node
@@ -449,6 +449,11 @@ function META:CrawlStatement(statement, ...)
 
             if key.type_expression then
                 val = self:CrawlExpression(key.type_expression, "typesystem")
+                if ret[i] then
+                    if not ret[i]:IsType(val) then
+                        self:Error(key, "expected " .. tostring(val) .. " but the right hand side is a " .. tostring(ret[i]))
+                    end
+                end
             end
 
             self:DeclareUpvalue(key, val, "runtime")
@@ -459,9 +464,14 @@ function META:CrawlStatement(statement, ...)
         local ret = self:UnpackExpressions(statement.right)
 
         for i, node in ipairs(statement.left) do
-            self:Assign(node, ret[i], "runtime")
+            local val = ret[i]
 
-            node.inferred_type = ret[i]
+            if node.type_expression then
+                val = self:CrawlExpression(node.type_expression, "typesystem")
+            end
+            
+            self:Assign(node, val, "runtime")
+            node.inferred_type = val
         end
     elseif statement.kind == "function" then
         self:Assign(
@@ -474,24 +484,23 @@ function META:CrawlStatement(statement, ...)
             statement.inferred_return_types = self:CrawlExpressions(statement.return_types, "typesystem")
         end
     elseif statement.kind == "local_function" then
-        self:DeclareUpvalue(
-            statement.identifier,
-            self:CrawlExpression(statement:ToExpression("function")),
-            "runtime"
-        )
+        self:DeclareUpvalue(statement.identifier, self:CrawlExpression(statement:ToExpression("function")), "runtime")
     elseif statement.kind == "local_type_function" then
-        self:DeclareUpvalue(
-            statement.identifier,
-            self:CrawlExpression(statement:ToExpression("function")),
-            "typesystem"
-        )
+        self:DeclareUpvalue(statement.identifier, self:CrawlExpression(statement:ToExpression("function")), "typesystem")
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
-            local b = not statement.expressions[i] or self:CrawlExpression(statement.expressions[i])
-            if b == true or b:IsTruthy() then
+            local b = not statement.expressions[i] or (self:CrawlExpression(statement.expressions[i], "runtime") or self:TypeFromImplicitNode(statement.expressions[i], "any"))
+            
+            if b:IsType("nil") then
+                b = types.Fuse(b, self:TypeFromImplicitNode(statement.expressions[i], "any"))
+            end
+
+            if b == true or b:IsTruthy() or b == nil then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
 
-                b.truthy = (b.truthy or 0) + 1
+                if b ~= true then
+                    b.truthy = (b.truthy or 0) + 1
+                end
 
                 if self:CrawlStatements(statements, ...) == true then
                     self:PopScope()
@@ -500,7 +509,9 @@ function META:CrawlStatement(statement, ...)
                     end
                 end
 
-                b.truthy = (b.truthy or 0) - 1
+                if b ~= true then
+                    b.truthy = (b.truthy or 0) - 1
+                end
 
                 self:PopScope()
                 break
@@ -1035,7 +1046,14 @@ do
             end
         end
 
-        local ret = {}
+        local ret
+        if r.node.return_types then
+            ret = self:CrawlExpressions(r.node.return_types, "typesystem")
+        else
+            ret = {}
+        end
+
+        -- collect return values from function statements
         self:CrawlStatements(r.node.statements, ret)
         self:PopScope()
         self.scope = old_scope

@@ -55,6 +55,7 @@ function META:get()
 end
 
 function META:set(key, val)
+    debug.traceback()
     self:Error("undefined set")
 end
 
@@ -103,6 +104,10 @@ function META:IsType(what)
         end
     end
 
+    if self.name == "table" and what == "list" then
+        return true
+    end
+
     if what == "any" then
         return true
     end
@@ -131,6 +136,8 @@ function META:Max(max)
 end
 
 function META:IsTruthy()
+    if self.name == "any" then return true end
+
     if type(self.interface.truthy) == "table" then
         if self.value == nil then
             return self.interface.truthy._nil
@@ -200,7 +207,7 @@ function META:BinaryOperator(op, b, node, env)
             return a + b
         end
 
-        if syntax.CompiledBinaryOperatorFunctions[op] then
+        if syntax.CompiledBinaryOperatorFunctions[op] and a.value ~= nil and b.value ~= nil then
             local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], a.value, b.value)
             if not ok then
                 self:Error(res)
@@ -263,6 +270,9 @@ function META:Expect(type, expect)
     if not type:IsType(expect) then
         self:Error("expected " .. expect .. " got " .. type.name)
     end
+end
+
+function META:RemoveNonTruthy()
 end
 
 
@@ -358,6 +368,11 @@ function types.CallFunction(func, args)
     for _, func in ipairs(func.overloads or {func}) do
         local ok = true
 
+
+        if #func.arguments ~= #args then
+            ok = false
+        end
+
         for i, typ in ipairs(func.arguments) do
             if (not args[i] or not typ:IsType(args[i])) and not typ:IsType("any") then
                 ok = false
@@ -416,6 +431,7 @@ do
     end
 
     function META:set(key, val)
+        print(debug.traceback())
         self:Error("undefined set")
     end
 
@@ -430,7 +446,12 @@ do
     end
 
     function META:IsTruthy()
-        return invoke(self, "IsTruthy")
+        for _, type in ipairs(self.types) do
+            if type:IsTruthy() then
+                return true
+            end
+        end
+        return false
     end
 
 
@@ -447,8 +468,10 @@ do
             end
         end
 
-        if what == "any" then
-            return true
+        for _, type in ipairs(self.types) do
+            if type:IsType(self) then
+                return true
+            end
         end
 
         return false
