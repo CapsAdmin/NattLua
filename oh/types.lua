@@ -107,7 +107,7 @@ function META:IsType(what)
     if self.name == "table" and what == "list" then
         return true
     end
-    
+
     if what == "any" or self.name == "any" then
         return true
     end
@@ -391,6 +391,10 @@ function types.CallFunction(func, args)
             data.func:Error(unpack(data.err))
         end
         return {func:Type("any")}
+    end
+
+    if found.func then
+        return found.func(unpack(args))
     end
 
     return found.ret

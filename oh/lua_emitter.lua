@@ -127,6 +127,8 @@ function META:EmitExpression(node)
         self:EmitBinaryOperator(node)
     elseif node.kind == "function" then
         self:EmitAnonymousFunction(node)
+    elseif node.kind == "type_function" then
+        self:EmitTypeFunction(node)
     elseif node.kind == "table" then
         self:EmitTable(node)
     elseif node.kind == "prefix_operator" then

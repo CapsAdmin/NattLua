@@ -1,4 +1,3 @@
-
 local types = require("oh.types")
 
 local META = {}
@@ -440,8 +439,8 @@ function META:CrawlStatement(statement, ...)
             return true
         end
         self:PopScope()
-    elseif 
-        statement.kind == "assignment" or 
+    elseif
+        statement.kind == "assignment" or
         statement.kind == "local_assignment" or
 
         statement.kind == "type_assignment" or
@@ -462,12 +461,12 @@ function META:CrawlStatement(statement, ...)
                 val = ret[i]
             end
 
-            
+
             if statement.kind == "local_assignment" then
                 self:DeclareUpvalue(node, val, "runtime")
             elseif statement.kind == "assignment" then
                 self:Assign(node, val, "runtime")
-                
+
             elseif statement.kind == "type_assignment" then
                 self:DeclareUpvalue(node, val, "typesystem")
             elseif statement.kind == "local_type_assignment" then
@@ -489,7 +488,7 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
             local b = not statement.expressions[i] or (self:CrawlExpression(statement.expressions[i], "runtime") or self:TypeFromImplicitNode(statement.expressions[i], "any"))
-            
+
             if b:IsType("nil") then
                 b = types.Fuse(b, self:TypeFromImplicitNode(statement.expressions[i], "any"))
             end
@@ -879,8 +878,11 @@ do
         elseif node.kind == "type_function" then
             local args = {}
             local rets = {}
+            local func
 
             if node.statements then
+                -- with body
+
                 node.kind = "function"
                 local str = "local oh, crawler, types = ...; return " .. node:Render({})
                 local func, err = loadstring(str, "")
@@ -892,19 +894,32 @@ do
                 func = func(oh, self, types)
                 val = func
             else
-                for i,v in ipairs(node.identifiers) do
-                    args[i] = self:CrawlExpression(v, "typesystem")
+                -- declaration
+
+                if node.identifiers then
+                    for i,v in ipairs(node.identifiers) do
+                        args[i] = self:CrawlExpression(v, "typesystem")
+                    end
                 end
-                for i,v in ipairs(node.return_expressions) do
-                    rets[i] = self:CrawlExpression(v, "typesystem")
+
+                if node.return_expressions then
+                    for i,v in ipairs(node.return_expressions) do
+                        rets[i] = self:CrawlExpression(v, "typesystem")
+                    end
                 end
-                val = types.Type("function", rets, args)
+
+                val = types.Type("function", rets, args, func)
             end
+
             stack:Push(val)
         elseif node.kind == "postfix_call" then
             local r = stack:Pop()
 
+            --print(r)
+
             if type(r) == "function" then
+                -- type function
+
                 local values = {}
 
                 if node.expressions then
@@ -924,12 +939,12 @@ do
                         stack:Push(v)
                     end
                 end
-            elseif r.type == "any" then
-                stack:Push(self:TypeFromImplicitNode(node, "any"))
             else
                 local func_expr = r.node
 
-                if func_expr and type(func_expr) == "table" and func_expr.kind == "function" then
+                if func_expr and func_expr.kind == "function" then
+                    --lua function
+
                     if self.calling_function == r then
                         local args = {}
                         for i,v in ipairs(node.expressions) do
@@ -947,40 +962,32 @@ do
                         stack:Push(v)
                     end
                 elseif r:IsType("function") and r.ret then
+                    --external
 
-                    if r.func then
-                        local args = {}
-                        for i,v in ipairs(node.expressions) do
-                            args[i] = self:CrawlExpression(v)
-                        end
-                        local ret = {r.func(unpack(args))}
-                        for _,v in ipairs(ret) do
-                            stack:Push(v)
-                        end
-                    else
-                        self:FireEvent("external_call", node, r)
+                    self:FireEvent("external_call", node, r)
 
-                        local args = {}
+                    local args = {}
 
-                        if node.self_call then
-                            local val = stack:Pop()
-                            table.insert(args, val)
-                        end
+                    if node.self_call then
+                        local val = stack:Pop()
+                        table.insert(args, val)
+                    end
 
-                        for i,v in ipairs(node.expressions) do
-                            table.insert(args, self:CrawlExpression(v))
-                        end
+                    for i,v in ipairs(node.expressions) do
+                        table.insert(args, self:CrawlExpression(v))
+                    end
 
 
-                        -- HACKS
-                        r.crawler = self
-                        r.node = node
+                    -- HACKS
+                    r.crawler = self
+                    r.node = node
 
-                        for _,v in ipairs(types.CallFunction(r, args)) do
-                            stack:Push(v)
-                        end
+                    for _,v in ipairs(types.CallFunction(r, args)) do
+                        stack:Push(v)
                     end
                 else
+                    -- calling something that has no type and does not exist
+
                     local args = {}
                     for i,v in ipairs(node.expressions) do
                         args[i] = self:CrawlExpression(v)
