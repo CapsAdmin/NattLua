@@ -5,7 +5,7 @@ local function check(tbl)
     end
     test.check_strings(tbl)
 end
-
+--[[
 check {
     {
         "local a = 1",
@@ -35,7 +35,7 @@ check {
         "type a = number; local num: a = 1",
         "local num: a = 1",
     },
-}
+}]]
 
 local tests = {[[
     local a = 1
@@ -297,6 +297,8 @@ a.b.c = 1
     local a = test(20)
     local b = test(5)
     local c = test(1)
+
+    local LOL = a
 
     type_assert(a, false)
     type_assert(b, true)
@@ -602,6 +604,67 @@ a.b.c = 1
     }
 
     local a = test.sin(1)
+]],[[
+    type lol = function(a) return a end
+    local a: lol<string>
+    type_expect(a, _ as string)
+]],[[
+    local a = {}
+    function a:lol(a,b,c)
+        return a+b+c
+    end
+    type_assert(a:lol(1,2,3), 6)
+]],[[
+    local a = {}
+    function a.lol(_, a,b,c)
+        return a+b+c
+    end
+    type_assert(a:lol(1,2,3), 6)
+]],[[
+    local a = {}
+    function a.lol(a,b,c)
+        return a+b+c
+    end
+    type_assert(a.lol(1,2,3), 6)
+]],[[
+    local a = {}
+    function a.lol(...)
+        local a,b,c = ...
+        return a+b+c
+    end
+    type_assert(a.lol(1,2,3), 6)
+]],[[
+    local a = {}
+    function a.lol(foo, ...)
+        local a,b,c = ...
+        return a+b+c+foo
+    end
+    type_assert(a.lol(10,1,2,3), 16)
+]],[[
+    local a = (function(...) return ...+... end)(10)
+]],[[
+    --local k,v = next({k = 1})
+]]}
+
+tests = {[[
+     local function test(max)
+        for i = 1, max do
+            if i == 20 then
+                return false
+            end
+
+            if i == 5 then
+                return true
+            end
+        end
+        return "lol"
+    end
+
+    local a = test(20)
+    local b = test(5)
+    local c = test(1)
+
+    local LOL = a
 ]]}
 
 local base_lib = io.open("oh/base_lib.oh"):read("*all")
@@ -623,7 +686,8 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-   -- crawler.OnEvent = crawler.DumpEvent
+
+    crawler.OnEvent = crawler.DumpEvent
 
     crawler.code = code
     crawler.name = "test"

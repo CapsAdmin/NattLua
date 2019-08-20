@@ -23,8 +23,15 @@ end
 
 local types = {}
 
+
+function types.IsTypeObject(val)
+    return getmetatable(val) == types.fuse_meta or getmetatable(val) == types.type_meta
+end
+
 local META = {}
 META.__index = META
+
+types.type_meta = META
 
 function META.__add(a, b)
     if not a:IsType(b) then
@@ -164,6 +171,18 @@ function META:BinaryOperator(op, b, node, env)
         end
     end
 
+    if self.name == "..." then
+        if a.values[1] then
+            return self.values[1]:BinaryOperator(op, b, node, env)
+        end
+    end
+
+    if b.name == "..." then
+        if b.values[1] then
+            return self:BinaryOperator(op, b.values[1], node, env)
+        end
+    end
+
     if self.interface.binary and self.interface.binary[op] then
         local arg, ret
 
@@ -173,6 +192,8 @@ function META:BinaryOperator(op, b, node, env)
             arg = self.interface.binary[op]
             ret = arg
         end
+
+
 
         if not b:IsType(arg) and ret ~= "last" then
             self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", node.value)
@@ -223,7 +244,6 @@ function META:BinaryOperator(op, b, node, env)
 
     return self:Type("any")
 end
-
 function META:PrefixOperator(op)
     if self.interface.prefix and self.interface.prefix[op] then
         local ret = self.interface.prefix[op]
@@ -365,11 +385,12 @@ function types.CallFunction(func, args)
     local errors = {}
     local found
 
+    local overloads = func.overloads
+
     for _, func in ipairs(func.overloads or {func}) do
         local ok = true
 
-
-        if #func.arguments ~= #args then
+        if overloads and #func.arguments ~= #args then
             ok = false
         end
 
@@ -394,7 +415,7 @@ function types.CallFunction(func, args)
     end
 
     if found.func then
-        return found.func(unpack(args))
+        return {found.func(unpack(args))}
     end
 
     return found.ret
@@ -405,6 +426,8 @@ do
     META.__index = META
 
     META.Error = Error
+
+    types.fuse_meta = META
 
     local function invoke(self, name, ...)
         local types = {}

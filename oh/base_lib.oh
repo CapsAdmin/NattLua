@@ -5,6 +5,7 @@ type type_assert = function(what, type, value, ...)
 
     if type.value ~= nil then
         if what.value ~= type.value then
+            print(what, type, value)
             error("expected type value " .. tostring(type) .." got " .. tostring(what))
         end
     end
@@ -16,28 +17,44 @@ type next = function(tbl, _)
 
     for k, v in pairs(tbl.value) do
         if not key then
-            key = types.Type(type(k))
-        elseif not key:IsType(k) then
-            if type(k) == "string" then
-                key = types.Fuse(key, types.Type("string"))
+            if types.IsTypeObject(k) then
+                key = k
             else
+                key = types.Type(type(k))
+            end
+        else
+            if types.IsTypeObject(k) then
+                key = types.Fuse(key, k)
+            elseif type(k) == "string" then
+                key = types.Fuse(key, types.Type("string"))
+            elseif type(k) == "number" then
+                key = types.Fuse(key, types.Type("number"))
+            elseif not key:IsType(k) then
                 key = types.Fuse(key, types.Type(k.name))
             end
         end
 
         if not val then
-            val = types.Type(type(v))
+            if types.IsTypeObject(v) then
+                val = v
+            else
+                val = types.Type(type(v))
+            end
         else
-            if not val:IsType(v) then
+            if types.IsTypeObject(v) then
+                val = types.Fuse(val, v)
+            elseif not val:IsType(v) then
                 val = types.Fuse(val, types.Type(v.name))
             end
         end
     end
+
+    return key, val
 end
 
 type pairs = function(tbl)
     local next = crawler:GetValue("next", "typesystem")
-    return next, t, nil
+    return next, tbl, nil
 end
 
 type require = function(name)
