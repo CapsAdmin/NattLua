@@ -5,7 +5,7 @@ local function check(tbl)
     end
     test.check_strings(tbl)
 end
---[[
+
 check {
     {
         "local a = 1",
@@ -35,7 +35,7 @@ check {
         "type a = number; local num: a = 1",
         "local num: a = 1",
     },
-}]]
+}
 
 local tests = {[[
     local a = 1
@@ -583,7 +583,7 @@ a.b.c = 1
 
     type b = function()
         _G.LOL = nil
-        crawler:GetValue("a", "typesystem")()
+        crawler:GetValue("a", "typesystem").func()
         if not _G.LOL then
             error("test fail")
         end
@@ -643,29 +643,9 @@ a.b.c = 1
 ]],[[
     local a = (function(...) return ...+... end)(10)
 ]],[[
-    --local k,v = next({k = 1})
+    local k,v = next({k = 1})
 ]]}
 
-tests = {[[
-     local function test(max)
-        for i = 1, max do
-            if i == 20 then
-                return false
-            end
-
-            if i == 5 then
-                return true
-            end
-        end
-        return "lol"
-    end
-
-    local a = test(20)
-    local b = test(5)
-    local c = test(1)
-
-    local LOL = a
-]]}
 
 local base_lib = io.open("oh/base_lib.oh"):read("*all")
 local Crawler = require("oh.crawler")
@@ -686,8 +666,7 @@ for _, code in ipairs(tests) do
 
     local crawler = Crawler()
 
-
-    crawler.OnEvent = crawler.DumpEvent
+    --crawler.OnEvent = crawler.DumpEvent
 
     crawler.code = code
     crawler.name = "test"

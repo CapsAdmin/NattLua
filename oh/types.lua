@@ -415,7 +415,16 @@ function types.CallFunction(func, args)
     end
 
     if found.func then
-        return {found.func(unpack(args))}
+        local res = {pcall(found.func, unpack(args))}
+
+        if not res[1] then
+            func:Error(res[2])
+            return {func:Type("any")}
+        end
+        
+        table.remove(res, 1)
+
+        return res
     end
 
     return found.ret
