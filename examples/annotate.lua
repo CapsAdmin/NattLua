@@ -38,28 +38,16 @@ string.split(a, " ", nil, false)
 ]]
 
 code = [[
-    local lol
+    local lol = nil
     local a = lol == nil or lol >= 1
-
 ]]
 
-code = [[
-    local a = {}
-    table.insert(a, 1)
 
-    a.lol = true
-]]
-
-code = base_lib .. "\n" .. code
-
-code = [[
-    local a = 1
-    a = 2 as string | number
-    local b = a
-]]
+--code = base_lib .. "\n" .. code
 
 local em = LuaEmitter()
 local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code, "test")), "test", code))
+--require("oh.util").TablePrint(ast.statements[2], {tokens = "table", whitespace = "table", upvalue_or_global = "table"})
 local crawler = Crawler()
 
 --crawler.OnEvent = crawler.DumpEvent

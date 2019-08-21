@@ -20,8 +20,8 @@ function util.FetchCode(path, url)
 end
 
 do
-	local indent = 0
-	function util.TablePrint(tbl, blacklist)
+    local indent = 0
+	local function dump(tbl, blacklist, done)
 		for k,v in pairs(tbl) do
 			if (not blacklist or blacklist[k] ~= type(v)) and type(v) ~= "table" then
 				io.write(("\t"):rep(indent))
@@ -35,15 +35,25 @@ do
 		end
 
 		for k,v in pairs(tbl) do
-			if (not blacklist or blacklist[k] ~= type(v)) and type(v) == "table" then
-				io.write(("\t"):rep(indent))
-				io.write(tostring(k), ":\n")
-				indent = indent + 1
-				util.TablePrint(v, blacklist)
-				indent = indent - 1
+            if (not blacklist or blacklist[k] ~= type(v)) and type(v) == "table" then
+                if done[v] then
+                    io.write(("\t"):rep(indent))
+                    io.write(tostring(k), ": CIRCULAR\n")
+                else
+                    io.write(("\t"):rep(indent))
+                    io.write(tostring(k), ":\n")
+                    indent = indent + 1
+                    done[v] = true
+                    dump(v, blacklist, done)
+                    indent = indent - 1
+                end
 			end
 		end
-	end
+    end
+
+    function util.TablePrint(tbl, blacklist)
+        dump(tbl, blacklist, {})
+    end
 end
 
 function util.CountFields(tbl, what, cb, max)

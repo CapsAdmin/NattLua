@@ -155,7 +155,19 @@ function META:IsTruthy()
 end
 
 function META:BinaryOperator(op, b, node, env)
+    assert(types.IsTypeObject(b))
     local a = self
+
+    if op == "." or op == ":" then
+        if b.get then
+            return b:get(a)
+        end
+    end
+
+    -- HACK
+    if op == ".." or op == "^" then
+        a,b = b,a
+    end
 
     if env == "typesystem" then
         if op == "|" then
@@ -421,7 +433,7 @@ function types.CallFunction(func, args)
             func:Error(res[2])
             return {func:Type("any")}
         end
-        
+
         table.remove(res, 1)
 
         return res
@@ -469,6 +481,10 @@ do
     function META:set(key, val)
         print(debug.traceback())
         self:Error("undefined set")
+    end
+
+    function META:Serialize()
+        return self:__tostring()
     end
 
     function META:__tostring()

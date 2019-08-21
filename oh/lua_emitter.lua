@@ -207,15 +207,6 @@ do
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"])
 
-        if node.inferred_return_types then
-            self:Emit(": ")
-            local str = {}
-            for i,v in ipairs(node.inferred_return_types) do
-                str[i] = tostring(v)
-            end
-            self:Emit(table.concat(str, ", "))
-        end
-
         if node.inferred_type and node.inferred_type:GetReturnTypes() and node.inferred_type.ret[1] then
             --self:Emit(" --[[ : ")
             self:Emit(": ")

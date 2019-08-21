@@ -176,6 +176,8 @@ do
     end
 
     function META:DeclareUpvalue(key, data, env)
+        assert(data == nil or types.IsTypeObject(data))
+
         local upvalue = {
             key = key,
             data = data,
@@ -211,6 +213,8 @@ do
     end
 
     function META:MutateUpvalue(key, val, env)
+        assert(val == nil or types.IsTypeObject(val))
+
         local upvalue = self:GetUpvalue(key, env)
         if upvalue then
             upvalue.data = val
@@ -231,12 +235,15 @@ do
     end
 
     function META:SetGlobal(key, val, env)
+        assert(val == nil or types.IsTypeObject(val))
         self:FireEvent("set_global", key, val, env)
 
         self.env[env][self:Hash(key)] = val
     end
 
     function META:NewIndex(obj, key, val, env)
+        assert(val == nil or types.IsTypeObject(val))
+
         local node = obj
 
         local key = self:CrawlExpression(key, env)
@@ -248,6 +255,8 @@ do
     end
 
     function META:Assign(node, val, env)
+        assert(val == nil or types.IsTypeObject(val))
+
         if node.kind == "value" then
             if not self:MutateUpvalue(node, val, env) then
                 self:SetGlobal(node, val, env)
@@ -515,7 +524,7 @@ function META:CallFunctionType(typ, arguments, node)
     end
     -- calling something that has no type and does not exist
     -- expressions assumed to be crawled from caller
-    
+
     return {self:TypeFromImplicitNode(node, "any")}
 end
 
@@ -802,25 +811,18 @@ do
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
         elseif node.kind == "function" then
-
-            local args_defined = false
-
             local args = {}
             for i, key in ipairs(node.identifiers) do
                 if key.type_expression then
                     args[i] = self:CrawlExpression(key.type_expression, "typesystem")
-                    args_defined = true
-                else
-                    --args[i] =  self:TypeFromImplicitNode(key, "any")
-                    --args_defined = true
                 end
             end
 
-
             if node.self_call and node.expression then
                 local val = self:GetUpvalue(node.expression.left, "runtime")
+
                 if val and val.key.type_expression then
-                    args_defined = true
+                    table.insert(args, 1, val.value)
                 end
             end
 
@@ -833,39 +835,8 @@ do
 
             local t = self:TypeFromImplicitNode(node, "function", ret, args)
 
-            if args_defined then
-                local r = t
-                self:PushScope(r.node)
-
-                local arguments = {}
-
-                if r.node.self_call then
-                    local val = self:CrawlExpression(r.node.expression)
-                    --table.insert(arguments, val)
-                    self:DeclareUpvalue("self", val, env)
-                end
-
-                for i,v in ipairs(node.identifiers) do
-                    self:DeclareUpvalue(v, args[i], env)
-                end
-
-                local ret = {}
-                self:CrawlStatements(r.node.statements, ret)
-                self:PopScope()
-
-                r.ret = merge_types(r.ret, ret)
-                r.arguments = merge_types(r.arguments, arguments)
-                for i, v in ipairs(r.arguments) do
-                    if r.node.identifiers[i] then
-                        r.node.identifiers[i].inferred_type = v
-                    end
-                end
-
-                self:FireEvent("function_spec", r)
-            end
-
-            if not t.ret[1] then
-                --table.insert(t.ret, self:TypeFromImplicitNode(key, "any"))
+            if args[1] then
+                self:CallFunctionType(t, args, node)
             end
 
             stack:Push(t)
@@ -875,17 +846,8 @@ do
             local r, l = stack:Pop(), stack:Pop()
             local op = node.value.value
 
-            if (op == "." or op == ":") and (l:IsType("table") or l:IsType("string")) then
-                if op == ":" then
-                    stack:Push(l)
-                end
-                stack:Push(l:get(r))
-                return
-            end
-
-            -- HACK
-            if op == ".." or op == "^" then
-                l,r = r,l
+            if op == ":" then
+                stack:Push(l)
             end
 
             stack:Push(r:BinaryOperator(op, l, node, env))
@@ -975,7 +937,7 @@ do
         meta.__index = meta
 
         function meta:Push(val)
-            assert(type(val) == "table")
+            assert(types.IsTypeObject(val))
             self.values[self.i] = val
             self.i = self.i + 1
         end
