@@ -644,6 +644,9 @@ a.b.c = 1
     local a = (function(...) return ...+... end)(10)
 ]],[[
     local k,v = next({k = 1})
+]],[[
+    type_assert(TOTAL_STRANGER_COUNT, _ as number)
+    type_assert(TOTAL_STRANGER_STRING, _ as string)
 ]]}
 
 

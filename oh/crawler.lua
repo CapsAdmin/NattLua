@@ -434,10 +434,17 @@ function META:CrawlStatements(statements, ...)
     end
 end
 
+function META:CallMeLater(typ, arguments, node)
+    self.deferred_calls = self.deferred_calls or {}
+    table.insert(self.deferred_calls, {typ, arguments, node})
+end
+
 
 function META:CallFunctionType(typ, arguments, node)
     node = node or typ.node
     local func_expr = typ.node
+
+    typ.called = true
 
     if func_expr and func_expr.kind == "function" then
         --lua function
@@ -465,16 +472,17 @@ function META:CallFunctionType(typ, arguments, node)
             end
 
             for i, identifier in ipairs(identifiers) do
-                local arg = arguments[i] or self:TypeFromImplicitNode(identifier, "nil")
+                local node = identifier == "self" and typ.node or identifier
+                local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
 
                 if identifier == "self" or identifier.value.value ~= "..." then
                     self:DeclareUpvalue(identifier, arg, "runtime")
                 else
                     local values = {}
                     for i = i, #arguments do
-                        table.insert(values, arguments[i] or self:TypeFromImplicitNode(identifier, "nil"))
+                        table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
                     end
-                    self:DeclareUpvalue(identifier, self:TypeFromNode(identifier, values), "runtime")
+                    self:DeclareUpvalue(identifier, self:TypeFromNode(node, values), "runtime")
                 end
             end
 
@@ -541,6 +549,35 @@ function META:Error(node, msg)
     end
 end
 
+do
+    local guesses = {
+        {pattern = "count", type = "number"},
+        {pattern = "tbl", type = "table"},
+        {pattern = "str", type = "string"},
+    }
+
+    table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
+
+    function META:GetInferredType(node)
+        if node.type_expression then
+            return self:CrawlExpression(node.type_expression, "typesystem")
+        end
+
+        local str = node.value and node.value.value
+
+        if str then
+            str = str:lower()
+            for i, v in ipairs(guesses) do
+                if str:find(v.pattern) then
+                    return self:TypeFromImplicitNode(node, v.type)
+                end
+            end
+        end
+
+        return self:TypeFromImplicitNode(node, "any")
+    end
+end
+
 local evaluate_expression
 
 function META:CrawlStatement(statement, ...)
@@ -550,6 +587,13 @@ function META:CrawlStatement(statement, ...)
             return true
         end
         self:PopScope()
+        if self.deferred_calls then
+            for i,v in ipairs(self.deferred_calls) do
+                if not v[1].called then
+                    self:CallFunctionType(unpack(v))
+                end
+            end
+        end
     elseif
         statement.kind == "assignment" or
         statement.kind == "local_assignment" or
@@ -749,22 +793,6 @@ function META:CrawlStatement(statement, ...)
 end
 
 do
-    local function merge_types(src, dst)
-        if src then
-            for i,v in ipairs(dst) do
-                if src[i] then
-                    src[i] = v + src[i]
-                else
-                    src[i] = dst[i]
-                end
-            end
-
-            return src
-        end
-
-        return dst
-    end
-
     evaluate_expression = function(self, node, stack, env)
         if node.kind == "value" then
             if node.type_expression then
@@ -796,6 +824,10 @@ do
                     val = copy
                 end
 
+                if not val then
+                    val = self:GetInferredType(node)
+                end
+
                 stack:Push(val or self:TypeFromImplicitNode(node, "any"))
             elseif
                 node.value.type == "number" or
@@ -813,8 +845,10 @@ do
         elseif node.kind == "function" then
             local args = {}
             for i, key in ipairs(node.identifiers) do
-                if key.type_expression then
-                    args[i] = self:CrawlExpression(key.type_expression, "typesystem")
+                local val = self:GetInferredType(key)
+
+                if val then
+                    table.insert(args, val)
                 end
             end
 
@@ -822,7 +856,7 @@ do
                 local val = self:GetUpvalue(node.expression.left, "runtime")
 
                 if val and val.key.type_expression then
-                    table.insert(args, 1, val.value)
+                    table.insert(args, 1, val.data)
                 end
             end
 
@@ -832,12 +866,9 @@ do
                     ret[i] = self:CrawlExpression(type_exp, "typesystem")
                 end
             end
-
             local t = self:TypeFromImplicitNode(node, "function", ret, args)
 
-            if args[1] then
-                self:CallFunctionType(t, args, node)
-            end
+            self:CallMeLater(t, args, node)
 
             stack:Push(t)
         elseif node.kind == "table" then
