@@ -332,7 +332,7 @@ do
             io.write((" "):rep(t))
             io.write(what, " - ")
             local obj, key, val = ...
-            io.write(tostring(obj.name), "[", self:Hash(key:GetNode()), "] = ", tostring(val))
+            io.write(tostring(obj.name), "[", (tostring(key)), "] = ", tostring(val))
             io.write("\n")
         elseif what == "mutate_upvalue" then
             io.write((" "):rep(t))
@@ -540,7 +540,7 @@ function META:Error(node, msg)
     if self.code then
         local print_util = require("oh.print_util")
         local start, stop = print_util.LazyFindStartStop(node)
-        error(print_util.FormatError(self.code, self.name, msg, start, stop))
+        print(print_util.FormatError(self.code, self.name, msg, start, stop))
     else
         local s = tostring(self)
         s = s .. ": " .. msg
@@ -623,9 +623,9 @@ function META:CrawlStatement(statement, ...)
                 self:Assign(node, val, "runtime")
 
             elseif statement.kind == "type_assignment" then
-                self:DeclareUpvalue(node, val, "typesystem")
-            elseif statement.kind == "local_type_assignment" then
                 self:Assign(node, val, "typesystem")
+            elseif statement.kind == "local_type_assignment" then
+                self:DeclareUpvalue(node, val, "typesystem")
             end
 
             node.inferred_type = val

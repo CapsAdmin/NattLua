@@ -12,39 +12,44 @@ type type_assert = function(what, type, value, ...)
 end
 
 type next = function(tbl, _)
-    if not tbl then return types.Type("any"), types.Type("any") end
+    local T = tbl
+    if not tbl then return T:Type("any"), T:Type("any") end
     local key, val
 
-    for k, v in pairs(tbl.value) do
-        if not key then
-            if types.IsTypeObject(k) then
-                key = k
-            else
-                key = types.Type(type(k))
-            end
-        else
-            if types.IsTypeObject(k) then
-                key = types.Fuse(key, k)
-            elseif type(k) == "string" then
-                key = types.Fuse(key, types.Type("string"))
-            elseif type(k) == "number" then
-                key = types.Fuse(key, types.Type("number"))
-            elseif not key:IsType(k) then
-                key = types.Fuse(key, types.Type(k.name))
-            end
-        end
+    for _, tbl in ipairs(tbl.types or {tbl}) do
+        if tbl.value then
+            for k, v in pairs(tbl.value) do
+                if not key then
+                    if types.IsTypeObject(k) then
+                        key = k
+                    else
+                        key = T:Type(type(k))
+                    end
+                else
+                    if types.IsTypeObject(k) then
+                        key = types.Fuse(key, k)
+                    elseif type(k) == "string" then
+                        key = types.Fuse(key, T:Type("string"))
+                    elseif type(k) == "number" then
+                        key = types.Fuse(key, T:Type("number"))
+                    elseif not key:IsType(k) then
+                        key = types.Fuse(key, T:Type(k.name))
+                    end
+                end
 
-        if not val then
-            if types.IsTypeObject(v) then
-                val = v
-            else
-                val = types.Type(type(v))
-            end
-        else
-            if types.IsTypeObject(v) then
-                val = types.Fuse(val, v)
-            elseif not val:IsType(v) then
-                val = types.Fuse(val, types.Type(v.name))
+                if not val then
+                    if types.IsTypeObject(v) then
+                        val = v
+                    else
+                        val = T:Type(type(v))
+                    end
+                else
+                    if types.IsTypeObject(v) then
+                        val = types.Fuse(val, v)
+                    elseif not val:IsType(v) then
+                        val = types.Fuse(val, T:Type(v.name))
+                    end
+                end
             end
         end
     end
@@ -57,8 +62,18 @@ type pairs = function(tbl)
     return next, tbl, nil
 end
 
+type ipairs = function(tbl)
+    local next = crawler:GetValue("next", "typesystem")
+    return next, tbl, nil
+end
+
 type require = function(name)
     local str = name.value
+
+    if crawler:GetValue(str, "typesystem") then
+        return crawler:GetValue(str, "typesystem")
+    end
+
     for _, searcher in ipairs(package.loaders) do
         local loader = searcher(str)
         if type(loader) == "function" then
@@ -326,11 +341,51 @@ interface io {
     input = function(): file|nil
 }
 
+interface jit {
+    status = function(): boolean,
+}
+
+interface bit {
+    tobit = function(x: number): number
+    tohex = function(x: number): string
+    band = function(a: number, b: number): number
+    arshift = function(a: number, b: number): number
+}
+
+interface ffi {
+    cdef = function(code: string): nil
+    C = table
+    load = function(name: string, global: boolean | nil): table
+    new = function(def: string, ...): table
+
+}
+
 interface _G {
     _G = _G
     string = ^string
     io = io
 }
+
+type arg = {}
+
+
+type _G.string.match = function(s, pattern, init)
+    if s.value and pattern.value then
+        local res = {s.value:match(pattern.value)}
+        for i,v in ipairs(res) do
+            res[i] = types.Type("string", v)
+        end
+        return unpack(res)
+    end
+
+    if pattern.value then
+        local out = {}
+        for s in pattern.value:gmatch("%b()") do
+            table.insert(out, types.Type("string") + types.Type("nil"))
+        end
+        return unpack(out)
+    end
+end
 
 type table.insert = function(tbl, ...)
     local pos, val = ...

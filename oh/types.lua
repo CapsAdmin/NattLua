@@ -55,15 +55,13 @@ function META:GetNode()
     return self.node
 end
 
-function META:get()
-    self:Error("undefined get")
-
+function META:get(key)
+    self:Error("undefined get: "..tostring(self).."[" .. tostring(key) .. "]")
     return self:Type("any")
 end
 
 function META:set(key, val)
-    debug.traceback()
-    self:Error("undefined set")
+    self:Error("undefined set: "..tostring(self).."[" .. tostring(key) .. "] = " .. tostring(val))
 end
 
 function META:GetReadableContent()
@@ -128,6 +126,7 @@ end
 
 function META:Type(...)
     local t = types.Type(...)
+    t.crawler = self.crawler
     t:AttachNode(self:GetNode())
     return t
 end
@@ -184,13 +183,13 @@ function META:BinaryOperator(op, b, node, env)
     end
 
     if self.name == "..." then
-        if a.values[1] then
+        if a.values and a.values[1] then
             return self.values[1]:BinaryOperator(op, b, node, env)
         end
     end
 
     if b.name == "..." then
-        if b.values[1] then
+        if b.values and b.values[1] then
             return self:BinaryOperator(op, b.values[1], node, env)
         end
     end
@@ -204,8 +203,6 @@ function META:BinaryOperator(op, b, node, env)
             arg = self.interface.binary[op]
             ret = arg
         end
-
-
 
         if not b:IsType(arg) and ret ~= "last" then
             self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", node.value)
@@ -472,15 +469,22 @@ do
         end
     end
 
-    function META:get()
-        self:Error("undefined get")
-
-        return self:Type("any")
+    function META:get(key)
+        local out
+        for _, type in ipairs(self.types) do
+            if not out then
+                out = type:get(key)
+            else
+                out = out + type:get(key)
+            end
+        end
+        return out
     end
 
     function META:set(key, val)
-        print(debug.traceback())
-        self:Error("undefined set")
+        for _, type in ipairs(self.types) do
+            type:set(key, val)
+        end
     end
 
     function META:Serialize()
@@ -495,6 +499,11 @@ do
         end
 
         return table.concat(str, " | ")
+    end
+
+
+    function META:Type(...)
+        return self.types[1]:Type(...)
     end
 
     function META:IsTruthy()
@@ -600,9 +609,11 @@ types.Register("string", {
     inherits = "base",
     truthy = true,
     get = function(self, key)
-        local tbl = self.crawler:GetValue("string", "typesystem")
-        if tbl and key then
-            return tbl:get(key)
+        if self.crawler then
+            local tbl = self.crawler:GetValue("string", "typesystem")
+            if tbl and key then
+                return tbl:get(key)
+            end
         end
         return self:Type("any")
     end,

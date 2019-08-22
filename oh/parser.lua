@@ -293,7 +293,7 @@ do -- statements
             self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2) then return self:ReadLocalTypeDeclarationStatement() elseif
             self:IsValue("local") then                                                          return self:ReadLocalAssignmentStatement() elseif
             self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1)) then    return self:ReadTypeAssignment() elseif
-            self:IsValue("interface") then                                                      return self:ReadInterfaceStatement() elseif
+            self:IsValue("interface") and self:IsType("letter", 1) then                                                      return self:ReadInterfaceStatement() elseif
             self:IsValue("do") then                                                             return self:ReadDoStatement() elseif
             self:IsValue("if") then                                                             return self:ReadIfStatement() elseif
             self:IsValue("while") then                                                          return self:ReadWhileStatement() elseif
@@ -704,10 +704,10 @@ do -- expression
 
                 if self:IsValue(".") and self:IsType("letter", 1) then
                     local op = self:ReadTokenLoose()
-    
+
                     local right = self:Expression("value")
                     right.value = self:ReadType("letter")
-    
+
                     node = self:Expression("binary_operator")
                     node.value = op
                     node.left = left
@@ -715,10 +715,10 @@ do -- expression
                 elseif self:IsValue(":") then
                     if self:IsType("letter", 1) and (self:IsValue("(", 2) or self:IsValue("{", 2) or self:IsValue("\"", 2) or self:IsValue("'", 2)) then
                         local op = self:ReadTokenLoose()
-        
+
                         local right = self:Expression("value")
                         right.value = self:ReadType("letter")
-        
+
                         node = self:Expression("binary_operator")
                         node.value = op
                         node.left = left
