@@ -625,7 +625,7 @@ function META:CrawlStatement(statement, ...)
         for i, statements in ipairs(statement.statements) do
             local b = not statement.expressions[i] or (self:CrawlExpression(statement.expressions[i], "runtime") or self:TypeFromImplicitNode(statement.expressions[i], "any"))
 
-            if b == true or b:IsTruthy() or b == nil then
+            if b == true or b:IsTruthy() then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
 
                 if b ~= true then
