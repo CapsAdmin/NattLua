@@ -636,7 +636,7 @@ types.Register("table", {
     prefix = {
         ["#"] = "number",
     },
-    init = function(self, structure)
+    init = function(self, value, structure)
         if structure then
             for key, val in pairs(structure) do
                 if val[1] == "self" then
@@ -644,7 +644,7 @@ types.Register("table", {
                 end
             end
         end
-        return {structure = structure, value = {}}
+        return {structure = structure, value = value or {}}
     end,
     set = function(self, key, val)
         if not self.structure then
@@ -801,6 +801,9 @@ types.Register("number", {
 
 types.Register("...", {
     inherits = "base",
+    init = function(self, ...)
+        return {values = ...}
+    end,
 })
 
 types.Register("function", {

@@ -5,29 +5,6 @@ META.__index = META
 
 local table_insert = table.insert
 
-local function table_to_types(self, node, out, env)
-    for _,v in ipairs(node.children) do
-        if v.kind == "table_key_value" then
-            --out[types.Type("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
-            out[v.key.value] = self:CrawlExpression(v.value, env)
-        elseif v.kind == "table_expression_value" then
-            local t = self:CrawlExpression(v.key, env)
-            local v = self:CrawlExpression(v.value, env)
-            if t:IsType("string") then
-                out[t.value] = v
-            else
-                out[t] = v
-            end
-        elseif v.kind == "table_index_value" then
-            if v.i then
-                out[v.i] = self:CrawlExpression(v.value, env)
-            else
-                table.insert(out, self:CrawlExpression(v.value, env))
-            end
-        end
-    end
-end
-
 do
     function META:Hash(t)
         if type(t) == "string" then
@@ -57,9 +34,7 @@ do
             elseif t == "letter" then
                 return types.Type("string", v)
             elseif v == "..." then
-                local t = types.Type("...")
-                t.values = ... -- HACK
-                return t
+                return types.Type("...", ...)
             elseif v == "true" then
                 return types.Type("boolean", true)
             elseif v == "false" then
@@ -74,12 +49,8 @@ do
                 error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
             end
             --local t = types.Type()
-        elseif node.kind == "table" then
-            local t = types.Type("table")
-
-            table_to_types(self, node, t.value, "runtime")
-
-            return t
+        elseif node.kind == "type_table" or node.kind == "table" then
+            return types.Type("table", ...)
         elseif node.kind == "function" then
             local t = types.Type("function")
             node.scope = self.scope
@@ -103,6 +74,32 @@ do
         t.code = self.code
         t.crawler = self
         return t
+    end
+
+
+    function META:TableToTypes(node, env)
+        local out = {}
+        for _,v in ipairs(node.children) do
+            if v.kind == "table_key_value" then
+                --out[types.Type("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
+                out[v.key.value] = self:CrawlExpression(v.value, env)
+            elseif v.kind == "table_expression_value" then
+                local t = self:CrawlExpression(v.key, env)
+                local v = self:CrawlExpression(v.value, env)
+                if t:IsType("string") then
+                    out[t.value] = v
+                else
+                    out[t] = v
+                end
+            elseif v.kind == "table_index_value" then
+                if v.i then
+                    out[v.i] = self:CrawlExpression(v.value, env)
+                else
+                    table.insert(out, self:CrawlExpression(v.value, env))
+                end
+            end
+        end
+        return out
     end
 
     --[[
@@ -766,8 +763,7 @@ function META:CrawlStatement(statement, ...)
     elseif statement.kind == "type_interface" then
         local tbl = self:GetValue(statement.key, "typesystem")
 
-        if tbl then
-        else
+        if not tbl then
             tbl = self:TypeFromImplicitNode(statement, "table")
         end
 
@@ -808,12 +804,13 @@ do
             then
                 local val
 
+                -- if it's ^string, number, etc, but not string
                 if env == "typesystem" and types.IsType(self:Hash(node)) and not node.force_upvalue then
                     val = self:TypeFromImplicitNode(node, node.value.value)
                 else
                     val = self:GetValue(node, env)
 
-                    if env == "runtime" and not val then
+                    if not val and env == "runtime" then
                         val = self:GetValue(node, "typesystem")
                     end
                 end
@@ -824,11 +821,16 @@ do
                     val = copy
                 end
 
+                if not val and self.Index then
+                    val = self:Index(node)
+                end
+
+                -- last resort, itemCount > number
                 if not val then
                     val = self:GetInferredType(node)
                 end
 
-                stack:Push(val or self:TypeFromImplicitNode(node, "any"))
+                stack:Push(val)
             elseif
                 node.value.type == "number" or
                 node.value.type == "string" or
@@ -872,7 +874,7 @@ do
 
             stack:Push(t)
         elseif node.kind == "table" then
-            stack:Push(self:TypeFromNode(node))
+            stack:Push(self:TypeFromNode(node, self:TableToTypes(node, env)))
         elseif node.kind == "binary_operator" then
             local r, l = stack:Pop(), stack:Pop()
             local op = node.value.value
@@ -953,11 +955,7 @@ do
             val.value = {}
             stack:Push(val)
         elseif node.kind == "type_table" then
-            local t = types.Type("table")
-
-            table_to_types(self, node, t.value, env)
-
-            stack:Push(t)
+            stack:Push(self:TypeFromNode(node, self:TableToTypes(node, env)))
         else
             error("unhandled expression " .. node.kind)
         end
