@@ -48,7 +48,6 @@ do
             else
                 error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
             end
-            --local t = types.Type()
         elseif node.kind == "type_table" or node.kind == "table" then
             return types.Type("table", ...)
         elseif node.kind == "function" then
@@ -101,20 +100,6 @@ do
         end
         return out
     end
-
-    --[[
-        local a = b -- this works and shouldn't work
-        local b = 2
-        print(a)
-        >> 2
-
-        ability to create a temporary scope based on some other scope
-
-        maybe don't try and declare and collect functions if they aren't called
-        collect function behavior only when called, and mark dead paths in function
-
-        when a function is defined, it returns any and and takes any until it's actaully called, then it becomes refined
-    ]]
 
     function META:PushScope(node, extra_node)
         self.old_scope = self.scope
@@ -295,22 +280,6 @@ function META:FireEvent(what, ...)
     end
 end
 
-local function merge_types(src, dst)
-    if src then
-        for i,v in ipairs(dst) do
-            if src[i] then
-                src[i] = v + src[i]
-            else
-                src[i] = dst[i]
-            end
-        end
-
-        return src
-    end
-
-    return dst
-end
-
 do
     local t = 0
     function META:DumpEvent(what, ...)
@@ -437,100 +406,115 @@ function META:CallMeLater(typ, arguments, node)
 end
 
 
-function META:CallFunctionType(typ, arguments, node)
-    node = node or typ.node
-    local func_expr = typ.node
-
-    typ.called = true
-
-    if func_expr and func_expr.kind == "function" then
-        --lua function
-
-        do -- recursive guard
-            if self.calling_function == typ then
-                return {self:TypeFromImplicitNode(node, "any")}
-            end
-            self.calling_function = typ
-        end
-
-        local ret
-
-        do
-            self:PushScope(typ.node)
-
-            local identifiers = {}
-
-            for i,v in ipairs(typ.node.identifiers) do
-                identifiers[i] = v
-            end
-
-            if typ.node.self_call then
-                table.insert(identifiers, 1, "self")
-            end
-
-            for i, identifier in ipairs(identifiers) do
-                local node = identifier == "self" and typ.node or identifier
-                local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
-
-                if identifier == "self" or identifier.value.value ~= "..." then
-                    self:DeclareUpvalue(identifier, arg, "runtime")
-                else
-                    local values = {}
-                    for i = i, #arguments do
-                        table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
-                    end
-                    self:DeclareUpvalue(identifier, self:TypeFromNode(node, values), "runtime")
-                end
-            end
-
-            if typ.node.return_types then
-                ret = self:CrawlExpressions(typ.node.return_types, "typesystem")
+do
+    local function merge_types(src, dst)
+        for i,v in ipairs(dst) do
+            if src[i] then
+                src[i] = src[i] + v
             else
-                ret = {}
+                src[i] = dst[i]
             end
-
-            -- collect return values from function statements
-            self:CrawlStatements(typ.node.statements, ret)
-
-            self:PopScope()
-
-            typ.ret = merge_types(typ.ret, ret)
-            typ.arguments = merge_types(typ.arguments, arguments)
-
-            for i,v in ipairs(typ.ret) do
-                -- ERROR HERE
-                if ret[i] == nil then
-                    ret[i] = v
-                end
-            end
-
-            for i, v in ipairs(typ.arguments) do
-                if typ.node.identifiers[i] then
-                    typ.node.identifiers[i].inferred_type = v
-                end
-            end
-
-            self:FireEvent("function_spec", typ)
         end
 
-        self.calling_function = nil
-
-        return ret
-    elseif typ:IsType("function") and typ.ret then
-        --external
-
-        self:FireEvent("external_call", node, typ)
-
-        -- HACKS
-        typ.crawler = self
-        typ.node = node
-
-        return types.CallFunction(typ, arguments)
+        return src
     end
-    -- calling something that has no type and does not exist
-    -- expressions assumed to be crawled from caller
 
-    return {self:TypeFromImplicitNode(node, "any")}
+    function META:CallFunctionType(typ, arguments, node)
+        node = node or typ.node
+        local func_expr = typ.node
+
+        typ.called = true
+
+        if func_expr and func_expr.kind == "function" then
+            --lua function
+
+            do -- recursive guard
+                if self.calling_function == typ then
+                    return {self:TypeFromImplicitNode(node, "any")}
+                end
+                self.calling_function = typ
+            end
+
+            local ret
+
+            do
+                self:PushScope(typ.node)
+
+                local identifiers = {}
+
+                for i,v in ipairs(typ.node.identifiers) do
+                    identifiers[i] = v
+                end
+
+                if typ.node.self_call then
+                    table.insert(identifiers, 1, "self")
+                end
+
+                for i, identifier in ipairs(identifiers) do
+                    local node = identifier == "self" and typ.node or identifier
+                    local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
+
+                    if identifier == "self" or identifier.value.value ~= "..." then
+                        self:DeclareUpvalue(identifier, arg, "runtime")
+                    else
+                        local values = {}
+                        for i = i, #arguments do
+                            table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
+                        end
+                        self:DeclareUpvalue(identifier, self:TypeFromNode(node, values), "runtime")
+                    end
+                end
+
+                if typ.node.return_types then
+                    ret = self:CrawlExpressions(typ.node.return_types, "typesystem")
+                else
+                    ret = {}
+                end
+
+                -- collect return values from function statements
+                self:CrawlStatements(typ.node.statements, ret)
+
+                self:PopScope()
+                
+                for i,v in ipairs(typ.ret) do
+                    if ret[i] == nil then
+                        ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
+                    end
+                end
+
+                typ.ret = merge_types(typ.ret, ret)
+                typ.arguments = merge_types(typ.arguments, arguments)                
+
+                for i, v in ipairs(typ.arguments) do
+                    if typ.node.identifiers[i] then
+                        typ.node.identifiers[i].inferred_type = v
+                    end
+                end
+
+                func_expr.inferred_type = typ
+
+                self:FireEvent("function_spec", typ)
+            end
+
+            self.calling_function = nil
+
+            return ret
+        elseif typ:IsType("function") and typ.ret then
+            --external
+
+            self:FireEvent("external_call", node, typ)
+
+            -- HACKS
+            typ.crawler = self
+            typ.node = node
+
+            return types.CallFunction(typ, arguments)
+        end
+        -- calling something that has no type and does not exist
+        -- expressions assumed to be crawled from caller
+
+        return {self:TypeFromImplicitNode(node, "any")}
+    end
 end
 
 function META:Error(node, msg)
@@ -641,10 +625,6 @@ function META:CrawlStatement(statement, ...)
         for i, statements in ipairs(statement.statements) do
             local b = not statement.expressions[i] or (self:CrawlExpression(statement.expressions[i], "runtime") or self:TypeFromImplicitNode(statement.expressions[i], "any"))
 
-            if b:IsType("nil") then
-                b = types.Fuse(b, self:TypeFromImplicitNode(statement.expressions[i], "any"))
-            end
-
             if b == true or b:IsTruthy() or b == nil then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
 
@@ -698,7 +678,7 @@ function META:CrawlStatement(statement, ...)
             evaluated[i] = self:CrawlExpression(v)
 
             if return_values then
-                table.insert(return_values, evaluated[i])
+                return_values[i] = return_values[i] and (return_values[i] + evaluated[i]) or evaluated[i]
             end
         end
 

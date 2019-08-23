@@ -264,7 +264,7 @@ a.b.c = 1
     string(true)
     local ag = string()
 
-    type_assert(ag, 2)
+    type_assert(ag, "hello")
 
 ]],[[
     local foo = {lol = 3}
@@ -647,8 +647,11 @@ a.b.c = 1
 ]],[[
     type_assert(TOTAL_STRANGER_COUNT, _ as number)
     type_assert(TOTAL_STRANGER_STRING, _ as string)
+]],[[
+    local a = b -- this works and shouldn't work
+    local b = 2
+    type_assert(a, _ as any)
 ]]}
-
 
 
 local base_lib = io.open("oh/base_lib.oh"):read("*all")
