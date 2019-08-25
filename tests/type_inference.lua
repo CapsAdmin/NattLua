@@ -41,6 +41,9 @@ local tests = {[[
     local a = 1
     type_assert(a, 1)
 ]],[[
+    type local a = number
+    type_assert(a, _ as number)
+]],[[
     local a
     a = 1
     type_assert(a, 1)

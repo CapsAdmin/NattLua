@@ -156,6 +156,7 @@ function META:ReadTypeExpression(priority)
         node.tokens["("] = node.tokens["("] or {}
         table_insert(node.tokens["("], 1, pleft)
 
+
         node.tokens[")"] = node.tokens[")"] or {}
         table_insert(node.tokens[")"], self:ReadValue(")"))
 
@@ -258,20 +259,11 @@ function META:ReadTypeExpression(priority)
     return node
 end
 
-
-
-
 function META:ReadLocalTypeDeclarationStatement()
-    local node = self:Statement("local_type_assignment")
-
-    node.tokens["local"] = self:ReadValue("local")
-    node.tokens["type"] = self:ReadValue("type")
-    node.left = self:ReadTypeExpressionList()
-
-    if self:IsValue("=") then
-        node.tokens["="] = self:ReadValue("=")
-        node.right = self:ReadTypeExpressionList()
-    end
+    local token = self:ReadValue("type")
+    local node = self:ReadLocalAssignmentStatement()
+    node.environment = "typesystem"
+    node.tokens["type"] = token
 
     return node
 end
@@ -298,10 +290,11 @@ function META:ReadInterfaceStatement()
 end
 
 function META:ReadTypeAssignment()
-    local node = self:Statement("type_assignment")
+    local node = self:Statement("assignment")
 
     node.tokens["type"] = self:ReadValue("type")
     node.left = self:ReadTypeExpressionList()
+    node.environment = "typesystem"
 
     if self:IsValue("=") then
         node.tokens["="] = self:ReadValue("=")

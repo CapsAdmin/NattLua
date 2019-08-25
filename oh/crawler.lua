@@ -575,14 +575,8 @@ function META:CrawlStatement(statement, ...)
                 end
             end
         end
-    elseif
-        statement.kind == "assignment" or
-        statement.kind == "local_assignment" or
-
-        statement.kind == "type_assignment" or
-        statement.kind == "local_type_assignment"
-    then
-        local env = (statement.kind == "type_assignment" or statement.kind == "local_type_assignment") and "typesystem" or "runtime"
+    elseif statement.kind == "assignment" or statement.kind == "local_assignment" then
+        local env = statement.environment or "runtime"
         local ret = self:UnpackExpressions(statement.right, env)
 
         for i, node in ipairs(statement.left) do
@@ -597,16 +591,10 @@ function META:CrawlStatement(statement, ...)
                 val = ret[i]
             end
 
-
             if statement.kind == "local_assignment" then
-                self:DeclareUpvalue(node, val, "runtime")
+                self:DeclareUpvalue(node, val, env)
             elseif statement.kind == "assignment" then
-                self:Assign(node, val, "runtime")
-
-            elseif statement.kind == "type_assignment" then
-                self:Assign(node, val, "typesystem")
-            elseif statement.kind == "local_type_assignment" then
-                self:DeclareUpvalue(node, val, "typesystem")
+                self:Assign(node, val, env)
             end
 
             node.inferred_type = val

@@ -457,9 +457,16 @@ function META:EmitSemicolonStatement(node)
 end
 
 function META:EmitLocalAssignment(node)
+    if node.environment == "typesystem" then return end
+
     self:Whitespace("\t")
 
     self:EmitToken(node.tokens["local"])
+
+    if node.environment == "typesystem" then
+        self:EmitToken(node.tokens["type"])
+    end
+
     self:Whitespace(" ")
     self:EmitIdentifierList(node.left)
 
@@ -472,7 +479,14 @@ function META:EmitLocalAssignment(node)
 end
 
 function META:EmitAssignment(node)
+    if node.environment == "typesystem" then return end
+
     self:Whitespace("\t")
+
+    if node.environment == "typesystem" then
+        self:EmitToken(node.tokens["type"])
+    end
+
     self:EmitExpressionList(node.left)
 
     if node.tokens["="] then
@@ -554,9 +568,6 @@ function META:EmitStatement(node)
         self:EmitToken(node.tokens["end_of_file"])
     elseif node.kind == "root" then
         self:EmitStatements(node.statements)
-    elseif node.kind == "type_assignment" then
-    elseif node.kind == "type_interface" then
-
     else
         error("unhandled statement: " .. node.kind)
     end
