@@ -41,7 +41,7 @@ local tests = {[[
     local a = 1
     type_assert(a, 1)
 ]],[[
-    type local a = number
+    local type a = number
     type_assert(a, _ as number)
 ]],[[
     local a
@@ -654,6 +654,14 @@ a.b.c = 1
     local a = b -- this works and shouldn't work
     local b = 2
     type_assert(a, _ as any)
+]],[[
+    type test = (function(boolean, boolean): number) | (function(boolean): string)
+
+    local a = test(true, true)
+    local b = test(true)
+
+    type_assert(a, _ as number)
+    type_assert(b, _ as string)
 ]]}
 
 

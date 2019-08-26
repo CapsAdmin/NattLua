@@ -426,20 +426,22 @@ end
 function types.CallFunction(func, args)
     local errors = {}
     local found
+    
+    local overloads = func.overloads or func.types
 
-    local overloads = func.overloads
-
-    for _, func in ipairs(func.overloads or {func}) do
+    for _, func in ipairs(overloads or {func}) do
         local ok = true
 
-        if overloads and #func.arguments ~= #args then
+        if overloads and func.arguments and #func.arguments ~= #args then
             ok = false
         end
 
-        for i, typ in ipairs(func.arguments) do
-            if (not args[i] or not typ:IsType(args[i])) and not typ:IsType("any") then
-                ok = false
-                table.insert(errors, {func = func, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
+        if func.arguments then
+            for i, typ in ipairs(func.arguments) do
+                if (not args[i] or not typ:IsType(args[i])) and not typ:IsType("any") then
+                    ok = false
+                    table.insert(errors, {func = func, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
+                end
             end
         end
 
@@ -469,7 +471,7 @@ function types.CallFunction(func, args)
         return res
     end
 
-    return found.ret
+    return found.ret or {func:Type("any")}
 end
 
 do

@@ -71,6 +71,7 @@ function META:ReadTypeFunction()
     end
 
     node.tokens[")"] = self:ReadValue(")", node.tokens["("])
+
     if self:IsValue(":") then
         node.tokens[":"] = self:ReadValue(":")
         node.return_expressions = self:ReadTypeExpressionList()
@@ -248,7 +249,7 @@ function META:ReadTypeExpression(priority)
         self:Advance(1)
 
         local left = node
-        local right = self:ReadExpression(right_priority)
+        local right = self:ReadTypeExpression(right_priority)
 
         node = self:Expression("binary_operator")
         node.value = op

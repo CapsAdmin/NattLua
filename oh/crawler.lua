@@ -499,7 +499,7 @@ do
             self.calling_function = nil
 
             return ret
-        elseif typ:IsType("function") and typ.ret then
+        elseif typ:IsType("function") then
             --external
 
             self:FireEvent("external_call", node, typ)
