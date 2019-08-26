@@ -92,8 +92,29 @@ function META:__tostring()
     return self.name
 end
 
-function META:Copy()
-    return types.Type(self.name, self.value)
+do
+
+    local function deepcopy(orig)
+        local orig_type = type(orig)
+        local copy
+        if orig_type == 'table' then
+            if types.IsTypeObject(orig) then
+                copy = orig:Copy()
+            else
+                copy = {}
+                for orig_key, orig_value in pairs(orig) do
+                    copy[deepcopy(orig_key)] = deepcopy(orig_value)
+                end
+            end
+        else -- number, string, boolean, etc
+            copy = orig
+        end
+        return copy
+    end
+
+    function META:Copy()
+        return types.Type(self.name, deepcopy(self.value))
+    end
 end
 
 function META:GetTypes()
@@ -153,6 +174,18 @@ function META:IsTruthy()
     return self.interface.truthy
 end
 
+function META:Extend(t)
+    local copy = self:Copy()
+
+    for k,v in pairs(t.value) do
+        if not copy.value[k] then
+            copy:set(k,v)
+        end
+    end
+
+    return copy
+end
+
 function META:BinaryOperator(op, b, node, env)
     assert(types.IsTypeObject(b))
     local a = self
@@ -172,7 +205,7 @@ function META:BinaryOperator(op, b, node, env)
         if op == "|" then
             return types.Fuse(a, b)
         elseif op == "extends" then
-            return a:IsType(b)
+            return a:Extend(b)
         elseif op == "and" then
             return b and a
         elseif op == "or" then

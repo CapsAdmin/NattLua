@@ -260,10 +260,18 @@ function META:ReadTypeExpression(priority)
 end
 
 function META:ReadLocalTypeDeclarationStatement()
-    local token = self:ReadValue("type")
-    local node = self:ReadLocalAssignmentStatement()
+    local node = self:Statement("local_assignment")
+
+    node.tokens["local"] = self:ReadValue("local")
+    node.tokens["type"] = self:ReadValue("type")
+    
+    node.left = self:ReadIdentifierList()
     node.environment = "typesystem"
-    node.tokens["type"] = token
+
+    if self:IsValue("=") then
+        node.tokens["="] = self:ReadValue("=")
+        node.right = self:ReadTypeExpressionList()
+    end
 
     return node
 end

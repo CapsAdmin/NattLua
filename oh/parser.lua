@@ -290,7 +290,7 @@ do -- statements
             self:IsValue("repeat") then                                                         return self:ReadRepeatStatement() elseif
             self:IsValue("function") then                                                       return self:ReadFunctionStatement() elseif
             self:IsValue("local") and self:IsValue("function", 1) then                          return self:ReadLocalFunctionStatement() elseif
-            self:IsValue("type") and self:IsValue("local", 1) and self:IsType("letter", 2) then return self:ReadLocalTypeDeclarationStatement() elseif
+            self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2) then return self:ReadLocalTypeDeclarationStatement() elseif
             self:IsValue("local") then                                                          return self:ReadLocalAssignmentStatement() elseif
             self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1)) then    return self:ReadTypeAssignment() elseif
             self:IsValue("interface") and self:IsType("letter", 1) then                         return self:ReadInterfaceStatement() elseif
