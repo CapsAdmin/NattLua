@@ -39,8 +39,8 @@ do -- identifier
 end
 
 function META:ReadFunctionArgument()
-    if self:IsType("letter") and self:IsValue(":", 1) then
-        local identifier = self:ReadType("letter")
+    if (self:IsType("letter") or self:IsValue("...")) and self:IsValue(":", 1) then
+        local identifier = self:ReadTokenLoose()
         local token = self:ReadValue(":")
         local exp = self:ReadTypeExpression()
         exp.tokens[":"] = token
@@ -118,7 +118,7 @@ function META:ReadTypeTable()
 
         node.value = self:ReadTypeExpression()
         tree.children[i] = node
-        
+
         if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
             self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
             break
@@ -199,10 +199,10 @@ function META:ReadTypeExpression(priority)
             elseif self:IsValue(":") then
                 if self:IsType("letter", 1) and (self:IsValue("(", 2) or self:IsValue("{", 2) or self:IsValue("\"", 2) or self:IsValue("'", 2)) then
                     local op = self:ReadTokenLoose()
-    
+
                     local right = self:Expression("value")
                     right.value = self:ReadType("letter")
-    
+
                     node = self:Expression("binary_operator")
                     node.value = op
                     node.left = left
@@ -265,7 +265,7 @@ function META:ReadLocalTypeDeclarationStatement()
 
     node.tokens["local"] = self:ReadValue("local")
     node.tokens["type"] = self:ReadValue("type")
-    
+
     node.left = self:ReadIdentifierList()
     node.environment = "typesystem"
 

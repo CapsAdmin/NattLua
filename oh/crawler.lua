@@ -475,7 +475,7 @@ do
                 self:CrawlStatements(typ.node.statements, ret)
 
                 self:PopScope()
-                
+
                 for i,v in ipairs(typ.ret) do
                     if ret[i] == nil then
                         ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
@@ -483,7 +483,7 @@ do
                 end
 
                 typ.ret = merge_types(typ.ret, ret)
-                typ.arguments = merge_types(typ.arguments, arguments)                
+                typ.arguments = merge_types(typ.arguments, arguments)
 
                 for i, v in ipairs(typ.arguments) do
                     if typ.node.identifiers[i] then
@@ -978,6 +978,13 @@ do
     end
 end
 
+local function DefaultIndex(self, node)
+    local oh = require("oh")
+    return oh.GetBaseCrawler():GetValue("_G", "typesystem"):get(oh.GetBaseCrawler():Hash(node))
+end
+
 return function()
-    return setmetatable({env = {runtime = {}, typesystem = {}}}, META)
+    local self = setmetatable({env = {runtime = {}, typesystem = {}}}, META)
+    self.Index = DefaultIndex
+    return self
 end

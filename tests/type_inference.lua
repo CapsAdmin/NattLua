@@ -665,14 +665,11 @@ a.b.c = 1
 ]]}
 
 
-local base_lib = io.open("oh/base_lib.oh"):read("*all")
 local Crawler = require("oh.crawler")
 local LuaEmitter = require("oh.lua_emitter")
 
 for _, code in ipairs(tests) do
     if code == false then return end
-
-    local code = base_lib .. "\n" .. code
 
     --local path = "oh/parser.lua"
 

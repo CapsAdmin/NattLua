@@ -4,6 +4,7 @@ local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
 local print_util = require("oh.print_util")
+local Crawler = require("oh.crawler")
 
 function oh.ASTToCode(ast, config)
     local self = LuaEmitter(config)
@@ -90,13 +91,27 @@ function oh.loadfile(path)
 end
 
 
+function oh.GetBaseCrawler()
+
+    if not oh.base_crawler then
+        local base_lib = io.open("oh/base_lib.oh"):read("*all")
+        local base = Crawler()
+        base.Index = nil
+        base:CrawlStatement(assert(oh.TokensToAST(assert(oh.CodeToTokens(base_lib, "test")), "test", base_lib)))
+        oh.base_crawler = base
+    end
+
+    return oh.base_crawler
+end
+
+
 function oh.FileToAST(path, root)
 	local f, err = io.open(path, "rb")
-	
-	if not f then 
-		return nil, err 
+
+	if not f then
+		return nil, err
 	end
-	
+
 	local code = f:read("*all")
 	f:close()
 

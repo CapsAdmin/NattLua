@@ -578,7 +578,12 @@ end
 do -- identifier
    function META:ReadIdentifier()
         local node = self:Expression("value")
-        node.value = self:ReadType("letter")
+
+        if self:IsValue("...") then
+            node.value = self:ReadValue("...")
+        else
+            node.value = self:ReadType("letter")
+        end
 
         if self.ReadTypeExpression and self:IsValue(":") then
             node.tokens[":"] = self:ReadValue(":")
@@ -592,7 +597,7 @@ do -- identifier
         local out = {}
 
         for i = 1, max or self:GetLength() do
-            if not self:IsType("letter") or self:HandleListSeparator(out, i, self:ReadIdentifier()) then
+            if (not self:IsType("letter") and not self:IsValue("...")) or self:HandleListSeparator(out, i, self:ReadIdentifier()) then
                 break
             end
         end

@@ -1,4 +1,659 @@
-type type_assert = function(what, type, value, ...)
+local type empty_function = function(...): any
+
+type _G = {
+    assert =
+        (function(v: any, message: string): ...) |
+        (function(v: any): ...),
+    tostring =
+        (function(v: any): string),
+    tonumber =
+        (function(e: any, base: number): number|nil) |
+        (function(e: any): number|nil),
+    rawget =
+        (function(table: table, index: any): any),
+    xpcall =
+        (function(f: empty_function, msgh: empty_function, arg1: any, ...): boolean, ...) |
+        (function(f: empty_function, msgh: empty_function): boolean, ...),
+    print =
+        (function(...): nil),
+    pcall =
+        (function(f: empty_function, arg1: any, ...): boolean, ...) |
+        (function(f: empty_function): boolean, ...),
+    module =
+        (function(name: string, ...): nil) |
+        (function(name: string): nil),
+    setfenv =
+        (function(f: empty_function|number, table: table): empty_function|nil),
+    pairs =
+        (function(t: table): empty_function, table, nil),
+    rawequal =
+        (function(v1: any, v2: any): boolean),
+    loadstring =
+        (function(string: string, chunkname: string): empty_function|nil, string|nil) |
+        (function(string: string): empty_function|nil, string|nil),
+    error =
+        (function(message: string, level: number): nil) |
+        (function(message: string): nil),
+    loadfile =
+        (function(filename: string, mode: string, env: table): empty_function|nil, string|nil) |
+        (function(filename: string, mode: string): empty_function|nil, string|nil) |
+        (function(filename: string): empty_function|nil, string|nil) |
+        (function(): empty_function|nil, string|nil),
+    dofile =
+        (function(filename: string): ...) |
+        (function(): ...),
+    ipairs =
+        (function(t: table): empty_function, table, number),
+    type =
+        (function(v: any): string),
+    collectgarbage =
+        (function(opt: string, arg: number): ...) |
+        (function(opt: string): ...) |
+        (function(): ...),
+    getfenv =
+        (function(f: empty_function|number): table) |
+        (function(): table),
+    next =
+        (function(table: table, index: any): any, any|nil) |
+        (function(table: table): any, any|nil),
+    load =
+        (function(ld: string|empty_function, source: string, mode: string, env: table): empty_function|nil, string|nil) |
+        (function(ld: string|empty_function, source: string, mode: string): empty_function|nil, string|nil) |
+        (function(ld: string|empty_function, source: string): empty_function|nil, string|nil) |
+        (function(ld: string|empty_function): empty_function|nil, string|nil),
+    setmetatable =
+        (function(table: table, metatable: table|nil): table),
+    select =
+        (function(index: number|string, ...): ...),
+    rawlen =
+        (function(v: table|string): number),
+    unpack =
+        (function(list: table, i: number, j: number): ...) |
+        (function(list: table, i: number): ...) |
+        (function(list: table): ...),
+    require =
+        (function(modname: string): any),
+    rawset =
+        (function(table: table, index: any, value: any): table),
+    getmetatable =
+        (function(object: any): table|nil),
+    coroutine = {
+        wrap =
+            (function(f: empty_function): empty_function),
+        resume =
+            (function(co: thread, val1: any, ...): boolean, ...) |
+            (function(co: thread): boolean, ...),
+        yield =
+            (function(...): nil),
+        status =
+            (function(co: thread): string),
+        isyieldable =
+            (function(): boolean),
+        running =
+            (function(): thread, boolean),
+        create =
+            (function(f: empty_function): thread),
+    },
+    io = {
+        tmpfile =
+            (function(): file),
+        read =
+            (function(...): ...),
+        output =
+            (function(file: string|file): file|nil) |
+            (function(): file|nil),
+        open =
+            (function(filename: string, mode: string): file|nil, string|nil) |
+            (function(filename: string): file|nil, string|nil),
+        close =
+            (function(file: file): boolean|nil, string, number|nil) |
+            (function(): boolean|nil, string, number|nil),
+        write =
+            (function(...): file|nil, string|nil),
+        popen =
+            (function(prog: string, mode: string): file|nil, string|nil) |
+            (function(prog: string): file|nil, string|nil),
+        flush =
+            (function(): nil),
+        type =
+            (function(obj: file): string|nil),
+        lines =
+            (function(filename: string, ...): empty_function) |
+            (function(): empty_function),
+        input =
+            (function(file: string|file): file|nil) |
+            (function(): file|nil),
+    },
+    love = {
+        gamepadreleased =
+            (function(joystick: Joystick, button: GamepadButton): nil),
+        focus =
+            (function(focus: boolean): nil),
+        lowmemory =
+            (function(): nil),
+        getVersion =
+            (function(): number, number, number, string),
+        quit =
+            (function(): boolean),
+        wheelmoved =
+            (function(x: number, y: number): nil),
+        joystickhat =
+            (function(joystick: Joystick, hat: number, direction: JoystickHat): nil),
+        joystickaxis =
+            (function(joystick: Joystick, axis: number, value: number): nil),
+        joystickpressed =
+            (function(joystick: number, button: number): nil),
+        touchmoved =
+            (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
+        visible =
+            (function(visible: boolean): nil),
+        update =
+            (function(dt: number): nil),
+        errorhandler =
+            (function(msg: string): nil),
+        mousereleased =
+            (function(x: number, y: number, button: number, isTouch: boolean, presses: number): nil),
+        touchreleased =
+            (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
+        filedropped =
+            (function(file: File): nil),
+        mousepressed =
+            (function(x: number, y: number, button: number, isTouch: boolean, presses: number): nil),
+        touchpressed =
+            (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
+        joystickadded =
+            (function(joystick: Joystick): nil),
+        threaderror =
+            (function(thread: Thread, errorstr: string): nil),
+        textinput =
+            (function(text: string): nil),
+        textedited =
+            (function(text: string, start: number, length: number): nil),
+        conf =
+            (function(t: table): nil),
+        run =
+            (function(): nil),
+        draw =
+            (function(): nil),
+        setDeprecationOutput =
+            (function(enable: boolean): nil),
+        resize =
+            (function(w: number, h: number): nil),
+        mousemoved =
+            (function(x: number, y: number, dx: number, dy: number, istouch: boolean): nil),
+        mousefocus =
+            (function(focus: boolean): nil),
+        gamepadpressed =
+            (function(joystick: Joystick, button: GamepadButton): nil),
+        hasDeprecationOutput =
+            (function(): boolean),
+        joystickreleased =
+            (function(joystick: number, button: number): nil),
+        joystickremoved =
+            (function(joystick: Joystick): nil),
+        gamepadaxis =
+            (function(joystick: Joystick, axis: GamepadAxis, value: number): nil),
+        keyreleased =
+            (function(key: KeyConstant, scancode: Scancode): nil),
+        directorydropped =
+            (function(path: string): nil),
+        load =
+            (function(arg: table): nil),
+        keypressed =
+            (function(key: KeyConstant, scancode: Scancode, isrepeat: boolean): nil),
+        system = {
+            setClipboardText =
+                (function(text: string): nil),
+            vibrate =
+                (function(seconds: number): nil),
+            openURL =
+                (function(url: string): boolean),
+            getPowerInfo =
+                (function(): PowerState, number, number),
+            getOS =
+                (function(): string),
+            getProcessorCount =
+                (function(): number),
+        },
+        event = {
+            pump =
+                (function(): nil),
+            poll =
+                (function(): empty_function),
+            push =
+                (function(e: Event, a: Variant, b: Variant, c: Variant, d: Variant): nil),
+            wait =
+                (function(): Event, Variant, Variant, Variant, Variant),
+            quit =
+                (function(exitstatus: number): nil),
+        },
+        window = {
+            restore =
+                (function(): nil),
+            updateMode =
+                (function(width: number, height: number, settings: table): boolean),
+            fromPixels =
+                (function(pixelvalue: number): number),
+            toPixels =
+                (function(value: number): number),
+            requestAttention =
+                (function(continuous: boolean): nil),
+            setTitle =
+                (function(title: string): nil),
+            isVisible =
+                (function(): boolean),
+            isOpen =
+                (function(): boolean),
+            getDisplayName =
+                (function(displayindex: number): string),
+            getPixelScale =
+                (function(): number),
+            isMinimized =
+                (function(): boolean),
+            setMode =
+                (function(width: number, height: number, flags: table): boolean),
+            getMode =
+                (function(): number, number, table),
+            setIcon =
+                (function(imagedata: ImageData): boolean),
+            getTitle =
+                (function(): string),
+            setFullscreen =
+                (function(fullscreen: boolean): boolean),
+            setDisplaySleepEnabled =
+                (function(enable: boolean): nil),
+            minimize =
+                (function(): nil),
+            getFullscreenModes =
+                (function(display: number): table),
+            getDPIScale =
+                (function(): number),
+            getFullscreen =
+                (function(): boolean, FullscreenType),
+            getPosition =
+                (function(): number, number, number),
+            maximize =
+                (function(): nil),
+            isDisplaySleepEnabled =
+                (function(): boolean),
+            getIcon =
+                (function(): ImageData),
+            setPosition =
+                (function(x: number, y: number, display: number): nil),
+            showMessageBox =
+                (function(title: string, message: string, type: MessageBoxType, attachtowindow: boolean): boolean),
+            hasMouseFocus =
+                (function(): boolean),
+            isMaximized =
+                (function(): boolean),
+            hasFocus =
+                (function(): boolean),
+        },
+        touch = {
+            getPressure =
+                (function(id: light_userdata): number),
+            getTouches =
+                (function(): table),
+        },
+        timer = {
+            step =
+                (function(): number),
+            getDelta =
+                (function(): number),
+            getTime =
+                (function(): number),
+            getFPS =
+                (function(): number),
+            sleep =
+                (function(s: number): nil),
+        },
+        Object = {
+            typeOf =
+                (function(name: string): boolean),
+        },
+        data = {
+            encode =
+                (function(containerType: ContainerType, format: EncodeFormat, sourceString: string, lineLength: number): Variant),
+            decode =
+                (function(containerType: ContainerType, format: EncodeFormat, sourceString: string): Variant),
+            hash =
+                (function(hashFunction: HashFunction, string: string): string),
+            decompress =
+                (function(container: ContainerType, compressedData: CompressedData): string),
+        },
+        keyboard = {
+            hasTextInput =
+                (function(): boolean),
+            getScancodeFromKey =
+                (function(key: KeyConstant): Scancode),
+            isDown =
+                (function(key: KeyConstant): boolean),
+            setKeyRepeat =
+                (function(enable: boolean): nil),
+            setTextInput =
+                (function(enable: boolean): nil),
+            hasKeyRepeat =
+                (function(): boolean),
+            isScancodeDown =
+                (function(scancode: Scancode, ...: Scancode[]): boolean),
+        },
+    },
+    ffi = {
+        cdef =
+            (function(string): nil),
+        abi =
+            (function(string): boolean),
+        metatype =
+            (function(ct,table): cdata),
+        new =
+            (function(ctype, number, ...): cdata),
+        copy =
+            (function(cdata, cdata, number): nil) |
+            (function(cdata,): nil),
+        alignof =
+            (function(ct): number),
+        cast =
+            (function(ctype,cdata): cdata),
+        typeof =
+            (function(ct): ctype),
+        load =
+            (function(string,global): userdata) |
+            (function(string,): userdata),
+        sizeof =
+            (function(ct,nelem): number) |
+            (function(ct,): number),
+        string =
+            (function(ptr, number): string) |
+            (function(ptr,): string),
+        gc =
+            (function(ct,empty_function): cdata),
+        istype =
+            (function(ct,obj): boolean),
+        fill =
+            (function(dst, len, c): nil) |
+            (function(dst, len,): nil),
+        offsetof =
+            (function(ct, field): number),
+    },
+    debug = {
+        sethook =
+            (function(thread: thread, hook: empty_function, mask: string, count: number): nil) |
+            (function(thread: thread, hook: empty_function, mask: string): nil) |
+            (function( hook: empty_function, mask: string): nil),
+        getregistry =
+            (function(): nil),
+        traceback =
+            (function(thread: thread, message: any, level: number): string) |
+            (function(thread: thread, message: any): string) |
+            (function(thread: thread,): string) |
+            (function(): string),
+        setlocal =
+            (function(thread: thread, level: number, local_: number, value: any): string|nil) |
+            (function( level: number, local_: number, value: any): string|nil),
+        getinfo =
+            (function(thread: thread, f: empty_function|number, what: string): table|nil) |
+            (function(thread: thread, f: empty_function|number): table|nil) |
+            (function( f: empty_function|number): table|nil),
+        upvalueid =
+            (function(f: empty_function, n: number): userdata),
+        setupvalue =
+            (function(f: empty_function, up: number, value: any): string|nil),
+        getlocal =
+            (function(thread: thread, f: number|empty_function, local_: number): string|nil, any) |
+            (function( f: number|empty_function, local_: number): string|nil, any),
+        upvaluejoin =
+            (function(f1: empty_function, n1: number, f2: empty_function, n2: number): nil),
+        getupvalue =
+            (function(f: empty_function, up: number): string|nil, any),
+        getmetatable =
+            (function(value: any): table|nil),
+        setmetatable =
+            (function(value: any, table: table|nil): any),
+        gethook =
+            (function(thread: thread): empty_function, string, number) |
+            (function(): empty_function, string, number),
+        getuservalue =
+            (function(u: userdata): table|nil),
+        debug =
+            (function(): nil),
+        getfenv =
+            (function(o: any): table),
+        setfenv =
+            (function(object: any, table: table): any),
+        setuservalue =
+            (function(udata: userdata, value: table|nil): userdata),
+    },
+    package = {
+        searchpath =
+            (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil) |
+            (function(name: string, path: string, sep: string): string|nil, string|nil) |
+            (function(name: string, path: string): string|nil, string|nil),
+        seeall =
+            (function(module: table): nil),
+        loadlib =
+            (function(libname: string, funcname: string): empty_function|nil),
+    },
+    bit32 = {
+        lrotate =
+            (function(x: number, disp: number): number),
+        bor =
+            (function(...): number),
+        rshift =
+            (function(x: number, disp: number): number),
+        band =
+            (function(...): number),
+        lshift =
+            (function(x: number, disp: number): number),
+        rrotate =
+            (function(x: number, disp: number): number),
+        replace =
+            (function(n: number, v: number, field: number, width: number): number) |
+            (function(n: number, v: number, field: number): number),
+        bxor =
+            (function(...): number),
+        arshift =
+            (function(x: number, disp: number): number),
+        extract =
+            (function(n: number, field: number, width: number): number) |
+            (function(n: number, field: number): number),
+        bnot =
+            (function(x: number): number),
+        btest =
+            (function(...): boolean),
+    },
+    table = {
+        maxn =
+            (function(table: table): number),
+        move =
+            (function(a1: table, f, e, t ,a2: table): nil) |
+            (function(a1: table, f, e, t): nil),
+        remove =
+            (function(list: table, pos: number): any) |
+            (function(list: table): any),
+        sort =
+            (function(list: table, comp: empty_function): nil) |
+            (function(list: table): nil),
+        unpack =
+            (function(list: table, i: number, j: number): ...) |
+            (function(list: table, i: number): ...) |
+            (function(list: table): ...),
+        insert =
+            (function(list: table, pos: number, value: any): nil) |
+            (function(list: table,  value: any): nil),
+        concat =
+            (function(list: table, sep: string, i: number, j: number): string) |
+            (function(list: table, sep: string, i: number): string) |
+            (function(list: table, sep: string): string) |
+            (function(list: table): string),
+        pack =
+            (function(...): table),
+    },
+    string = {
+        find =
+            (function(s: string, pattern: string, init: number, plain: boolean): number|nil, number, ...|nil|nil) |
+            (function(s: string, pattern: string, init: number): number|nil, number, ...|nil|nil) |
+            (function(s: string, pattern: string): number|nil, number, ...|nil|nil),
+        len =
+            (function(s: string): number),
+        packsize =
+            (function(fmt: string): number),
+        match =
+            (function(s: string, pattern: string, init: number): string|nil ,...|nil) |
+            (function(s: string, pattern: string): string|nil ,...|nil),
+        upper =
+            (function(s: string): string),
+        sub =
+            (function(s: string, i: number, j: number): string) |
+            (function(s: string, i: number): string),
+        char =
+            (function(...): string),
+        rep =
+            (function(s: string, n: number, sep: string): string) |
+            (function(s: string, n: number): string),
+        lower =
+            (function(s: string): string),
+        dump =
+            (function(empty_function: empty_function): string),
+        gmatch =
+            (function(s: string, pattern: string): empty_function),
+        reverse =
+            (function(s: string): string),
+        byte =
+            (function(s: string, i: number, j: number): number, ...|nil) |
+            (function(s: string, i: number): number, ...|nil) |
+            (function(s: string): number, ...|nil),
+        unpack =
+            (function(fmt: string, s: string, pos: number): values) |
+            (function(fmt: string, s: string): values),
+        gsub =
+            (function(s: string, pattern: string, repl: string|table|empty_function, n: number): string, number) |
+            (function(s: string, pattern: string, repl: string|table|empty_function): string, number),
+        format =
+            (function(formatstring, ...): string),
+        pack =
+            (function(fmt: string, v1, v2, ...): string),
+    },
+    math = {
+        ceil =
+            (function(x: number): number),
+        tan =
+            (function(x: number): number),
+        log10 =
+            (function(x: number): number),
+        sinh =
+            (function(x: number): number),
+        ldexp =
+            (function(m: number, e: number): number),
+        tointeger =
+            (function(x: number): number),
+        cosh =
+            (function(x: number): number),
+        min =
+            (function(x: number, ...): number),
+        fmod =
+            (function(x: number, y: number): number),
+        exp =
+            (function(x: number): number),
+        random =
+            (function(m: number, n: number): number) |
+            (function(m: number): number) |
+            (function(): number),
+        rad =
+            (function(x: number): number),
+        log =
+            (function(x: number, base: number): number) |
+            (function(x: number): number),
+        cos =
+            (function(x: number): number),
+        randomseed =
+            (function(x: number): nil),
+        floor =
+            (function(x: number): number),
+        tanh =
+            (function(x: number): number),
+        max =
+            (function(x: number, ...): number),
+        pow =
+            (function(x: number, y: number): number),
+        ult =
+            (function(m: number, n: number): boolean),
+        acos =
+            (function(x: number): number),
+        type =
+            (function(x: number): string),
+        abs =
+            (function(x: number): number),
+        frexp =
+            (function(x: number): number, number),
+        deg =
+            (function(x: number): number),
+        modf =
+            (function(x: number): number, number),
+        atan2 =
+            (function(y: number, x: number): number),
+        asin =
+            (function(x: number): number),
+        atan =
+            (function(x: number): number),
+        sqrt =
+            (function(x: number): number),
+        sin =
+            (function(x: number): number),
+    },
+    os = {
+        execute =
+            (function(command: string): boolean|nil, string, number|nil) |
+            (function(): boolean|nil, string, number|nil),
+        rename =
+            (function(oldname: string, newname: string): boolean|nil, string, number|nil),
+        getenv =
+            (function(varname: string): string|nil),
+        difftime =
+            (function(t2: number, t1: number): number),
+        exit =
+            (function(code: boolean|number, close: boolean): nil) |
+            (function(code: boolean|number): nil) |
+            (function(): nil),
+        remove =
+            (function(filename: string): boolean|nil, string, number|nil),
+        setlocale =
+            (function(local_e: string, category: string): string|nil) |
+            (function(local_e: string): string|nil),
+        date =
+            (function(format: string, time: number): string|table) |
+            (function(format: string): string|table) |
+            (function(): string|table),
+        time =
+            (function(table: table): number) |
+            (function(): number),
+        clock =
+            (function(): number),
+        tmpname =
+            (function(): string),
+    },
+}
+
+type _G._G = _G
+
+type _G.string.match = function(s, pattern, init)
+    if s.value and pattern.value then
+        local res = {s.value:match(pattern.value)}
+        for i,v in ipairs(res) do
+            res[i] = types.Type("string", v)
+        end
+        return unpack(res)
+    end
+
+    if pattern.value then
+        local out = {}
+        for s in pattern.value:gmatch("%b()") do
+            table.insert(out, types.Type("string") + types.Type("nil"))
+        end
+        return unpack(out)
+    end
+end
+
+type _G.type_assert = function(what, type, value, ...)
     if not what:IsType(type) then
         error("expected type " .. tostring(type) .." got " .. tostring(what))
     end
@@ -11,7 +666,7 @@ type type_assert = function(what, type, value, ...)
     end
 end
 
-type next = function(tbl, _)
+type _G.next = function(tbl, _)
     local T = tbl
     if not tbl then return T:Type("any"), T:Type("any") end
     local key, val
@@ -57,17 +712,17 @@ type next = function(tbl, _)
     return key, val
 end
 
-type pairs = function(tbl)
+type _G.pairs = function(tbl)
     local next = crawler:GetValue("next", "typesystem")
     return next, tbl, nil
 end
 
-type ipairs = function(tbl)
+type _G.ipairs = function(tbl)
     local next = crawler:GetValue("next", "typesystem")
     return next, tbl, nil
 end
 
-type require = function(name)
+type _G.require = function(name)
     local str = name.value
 
     if crawler:GetValue(str, "typesystem") then
@@ -92,302 +747,7 @@ type require = function(name)
     error("unable to find module " .. str)
 end
 
-type generic_func = function(varg: ...): any
-
-interface _G {
-    assert = function(v: any, message: string): ...
-    assert = function(v: any): ...
-    tostring = function(v: any): string
-    tonumber = function(e: any, base: number): number|nil
-    tonumber = function(e: any): number|nil
-    rawget = function(table: table, index: any): any
-    xpcall = function(f: generic_func, msgh: generic_func, arg1: any, varg: ...): boolean, ...
-    xpcall = function(f: generic_func, msgh: generic_func): boolean, ...
-    print = function(varg: ...): nil
-    pcall = function(f: generic_func, arg1: any, varg: ...): boolean, ...
-    pcall = function(f: generic_func): boolean, ...
-    module = function(name: string, varg: ...): nil
-    module = function(name: string): nil
-    setfenv = function(f: generic_func|number, table: table): generic_func|nil
-    pairs = function(t: table): generic_func, table, nil
-    rawequal = function(v1: any, v2: any): boolean
-    loadstring = function(string: string, chunkname: string): generic_func|nil, string|nil
-    loadstring = function(string: string): generic_func|nil, string|nil
-    error = function(message: string, level: number): nil
-    error = function(message: string): nil
-    loadfile = function(filename: string, mode: string, env: table): generic_func|nil, string|nil
-    loadfile = function(filename: string, mode: string): generic_func|nil, string|nil
-    loadfile = function(filename: string): generic_func|nil, string|nil
-    loadfile = function(): generic_func|nil, string|nil
-    dofile = function(filename: string): ...
-    dofile = function(): ...
-    ipairs = function(t: table): generic_func, table, number
-    type = function(v: any): string
-    collectgarbage = function(opt: string, arg: number): ...
-    collectgarbage = function(opt: string): ...
-    collectgarbage = function(): ...
-    getfenv = function(f: generic_func|number): table
-    getfenv = function(): table
-    next = function(table: table, index: any): any, any|nil
-    next = function(table: table): any, any|nil
-    load = function(ld: string|generic_func, source: string, mode: string, env: table): generic_func|nil, string|nil
-    load = function(ld: string|generic_func, source: string, mode: string): generic_func|nil, string|nil
-    load = function(ld: string|generic_func, source: string): generic_func|nil, string|nil
-    load = function(ld: string|generic_func): generic_func|nil, string|nil
-    setmetatable = function(table: table, metatable: table|nil): table
-    select = function(index: number|string, varg: ...): ...
-    rawlen = function(v: table|string): number
-    unpack = function(list: table, i: number, j: number): ...
-    unpack = function(list: table, i: number): ...
-    unpack = function(list: table): ...
-    require = function(modname: string): any
-    rawset = function(table: table, index: any, value: any): table
-    getmetatable = function(object: any): table|nil
-}
-
-interface coroutine {
-    wrap = function(f: generic_func): generic_func
-    resume = function(co: thread, val1: any, varg: ...): boolean, ...
-    resume = function(co: thread): boolean, ...
-    yield = function(varg: ...): nil
-    status = function(co: thread): string
-    isyieldable = function(): boolean
-    running = function(): thread, boolean
-    create = function(f: generic_func): thread
-}
-
-interface bit32 {
-    lrotate = function(x: number, disp: number): number
-    bor = function(varg: ...): number
-    rshift = function(x: number, disp: number): number
-    band = function(varg: ...): number
-    lshift = function(x: number, disp: number): number
-    rrotate = function(x: number, disp: number): number
-    replace = function(n: number, v: number, field: number, width: number): number
-    replace = function(n: number, v: number, field: number): number
-    bxor = function(varg: ...): number
-    arshift = function(x: number, disp: number): number
-    extract = function(n: number, field: number, width: number): number
-    extract = function(n: number, field: number): number
-    bnot = function(x: number): number
-    btest = function(varg: ...): boolean
-}
-
-interface table {
-    maxn = function(table: table): number
-    move = function(a1: table, f:any, e:any, t:any ,a2: table): nil
-    move = function(a1: table, f:any, e:any, t:any): nil
-    remove = function(list: table, pos: number): any
-    remove = function(list: table): any
-    sort = function(list: table, comp: generic_func): nil
-    sort = function(list: table): nil
-    unpack = function(list: table, i: number, j: number): ...
-    unpack = function(list: table, i: number): ...
-    unpack = function(list: table): ...
-    insert = function(list: table, pos: number, value: any): nil
-    insert = function(list: table,  value: any): nil
-
-    concat = function(list: string[], sep: string, i: number, j: number): string
-    concat = function(list: string[], sep: string, i: number): string
-    concat = function(list: string[], sep: string): string
-    concat = function(list: string[]): string
-
-    pack = function(varg: ...): table
-}
-
-interface os {
-    execute = function(command: string): boolean|nil, string, number|nil
-    execute = function(): boolean|nil, string, number|nil
-    rename = function(oldname: string, newname: string): boolean|nil, string, number|nil
-    getenv = function(varname: string): string|nil
-    difftime = function(t2: number, t1: number): number
-    exit = function(code: boolean|number, close: boolean): nil
-    exit = function(code: boolean|number): nil
-    exit = function(): nil
-    remove = function(filename: string): boolean|nil, string, number|nil
-    setlocale = function(locale: string, category: string): string|nil
-    setlocale = function(locale: string): string|nil
-    date = function(format: string, time: number): string|table
-    date = function(format: string): string|table
-    date = function(): string|table
-    time = function(table: table): number
-    time = function(): number
-    clock = function(): number
-    tmpname = function(): string
-}
-
-interface string {
-    find = function(s: string, pattern: string, init: number, plain: boolean): number|nil, number, ...|nil|nil
-    find = function(s: string, pattern: string, init: number): number|nil, number, ...|nil|nil
-    find = function(s: string, pattern: string): number|nil, number, ...|nil|nil
-    len = function(s: string): number
-    packsize = function(fmt: string): number
-    match = function(s: string, pattern: string, init: number): string|nil ,...|nil
-    match = function(s: string, pattern: string): string|nil ,...|nil
-    upper = function(s: string): string
-    sub = function(s: string, i: number, j: number): string
-    sub = function(s: string, i: number): string
-    char = function(varg: ...): string
-    rep = function(s: string, n: number, sep: string): string
-    rep = function(s: string, n: number): string
-    lower = function(s: string): string
-    dump = function(generic_func: generic_func): string
-    gmatch = function(s: string, pattern: string): generic_func
-    reverse = function(s: string): string
-    byte = function(s: string, i: number, j: number): number, ...|nil
-    byte = function(s: string, i: number): number, ...|nil
-    byte = function(s: string): number, ...|nil
-    unpack = function(fmt: string, s: string, pos: number): values
-    unpack = function(fmt: string, s: string): values
-    gsub = function(s: string, pattern: string, repl: string|table|generic_func, n: number): string, number
-    gsub = function(s: string, pattern: string, repl: string|table|generic_func): string, number
-    format = function(formatstring: string, varg: ...): string
-    pack = function(fmt: string, v1: any, v2: any, varg: ...): string
-}
-
-interface debug {
-    sethook = function(thread: thread, hook: generic_func, mask: string, count: number): nil
-    sethook = function(thread: thread, hook: generic_func, mask: string): nil
-    sethook = function( hook: generic_func, mask: string): nil
-    getregistry = function(): nil
-    traceback = function(thread: thread, message: any, level: number): string
-    traceback = function(thread: thread, message: any): string
-    traceback = function(thread: thread): string
-    traceback = function(): string
-    setlocal = function(thread: thread, level: number, local_: number, value: any): string|nil
-    setlocal = function( level: number, local_: number, value: any): string|nil
-    getinfo = function(thread: thread, f: generic_func|number, what: string): table|nil
-    getinfo = function(thread: thread, f: generic_func|number): table|nil
-    getinfo = function( f: generic_func|number): table|nil
-    upvalueid = function(f: generic_func, n: number): userdata
-    setupvalue = function(f: generic_func, up: number, value: any): string|nil
-    getlocal = function(thread: thread, f: number|generic_func, local_: number): string|nil, any
-    getlocal = function( f: number|generic_func, local_: number): string|nil, any
-    upvaluejoin = function(f1: generic_func, n1: number, f2: generic_func, n2: number): nil
-    getupvalue = function(f: generic_func, up: number): string|nil, any
-    getmetatable = function(value: any): table|nil
-    setmetatable = function(value: any, table: table|nil): any
-    gethook = function(thread: thread): generic_func, string, number
-    gethook = function(): generic_func, string, number
-    getuservalue = function(u: userdata): table|nil
-    debug = function(): nil
-    getfenv = function(o: any): table
-    setfenv = function(object: any, table: table): any
-    setuservalue = function(udata: userdata, value: table|nil): userdata
-}
-
-interface math {
-    ceil = function(x: number): number
-    tan = function(x: number): number
-    log10 = function(x: number): number
-    sinh = function(x: number): number
-    ldexp = function(m: number, e: number): number
-    tointeger = function(x: number): number
-    cosh = function(x: number): number
-    min = function(x: number, varg: ...): number
-    fmod = function(x: number, y: number): number
-    exp = function(x: number): number
-    random = function(m: number, n: number): number
-    random = function(m: number): number
-    random = function(): number
-    rad = function(x: number): number
-    log = function(x: number, base: number): number
-    log = function(x: number): number
-    cos = function(x: number): number
-    randomseed = function(x: number): nil
-    floor = function(x: number): number
-    tanh = function(x: number): number
-    max = function(x: number, varg: ...): number
-    pow = function(x: number, y: number): number
-    ult = function(m: number, n: number): boolean
-    acos = function(x: number): number
-    type = function(x: number): string
-    abs = function(x: number): number
-    frexp = function(x: number): number, number
-    deg = function(x: number): number
-    modf = function(x: number): number, number
-    atan2 = function(y: number, x: number): number
-    asin = function(x: number): number
-    atan = function(x: number): number
-    sqrt = function(x: number): number
-    sin = function(x: number): number
-}
-
-interface package {
-    searchpath = function(name: string, path: string, sep: string, rep: string): string|nil, string|nil
-    searchpath = function(name: string, path: string, sep: string): string|nil, string|nil
-    searchpath = function(name: string, path: string): string|nil, string|nil
-    seeall = function(module: table): nil
-    loadlib = function(libname: string, funcname: string): generic_func|nil
-}
-
-interface io {
-    tmpfile = function(): file
-    read = function(varg: ...): ...
-    output = function(file: string|file): file|nil
-    output = function(): file|nil
-    open = function(filename: string, mode: string): file|nil, string|nil
-    open = function(filename: string): file|nil, string|nil
-    close = function(file: file): boolean|nil, string, number|nil
-    close = function(): boolean|nil, string, number|nil
-    write = function(varg: ...): file|nil, string|nil
-    popen = function(prog: string, mode: string): file|nil, string|nil
-    popen = function(prog: string): file|nil, string|nil
-    flush = function(): nil
-    type = function(obj: file): string|nil
-    lines = function(filename: string, varg: ...): generic_func
-    lines = function(): generic_func
-    input = function(file: string|file): file|nil
-    input = function(): file|nil
-}
-
-interface jit {
-    status = function(): boolean,
-}
-
-interface bit {
-    tobit = function(x: number): number
-    tohex = function(x: number): string
-    band = function(a: number, b: number): number
-    arshift = function(a: number, b: number): number
-}
-
-interface ffi {
-    cdef = function(code: string): nil
-    C = table
-    load = function(name: string, global: boolean | nil): table
-    new = function(def: string, ...): table
-
-}
-
-interface _G {
-    _G = _G
-    string = ^string
-    io = io
-}
-
-type arg = {}
-
-
-type _G.string.match = function(s, pattern, init)
-    if s.value and pattern.value then
-        local res = {s.value:match(pattern.value)}
-        for i,v in ipairs(res) do
-            res[i] = types.Type("string", v)
-        end
-        return unpack(res)
-    end
-
-    if pattern.value then
-        local out = {}
-        for s in pattern.value:gmatch("%b()") do
-            table.insert(out, types.Type("string") + types.Type("nil"))
-        end
-        return unpack(out)
-    end
-end
-
-type table.insert = function(tbl, ...)
+type _G.table.insert = function(tbl, ...)
     local pos, val = ...
 
     if not val then
@@ -421,4 +781,4 @@ type table.insert = function(tbl, ...)
     tbl.length = pos
 end
 
-type TPRINT = function(...) print(...) end
+type _G.TPRINT = function(...) print(...) end
