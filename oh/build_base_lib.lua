@@ -9574,6 +9574,14 @@ lua = lua .. [[
 	end
 
 	type _G.TPRINT = function(...) print(...) end
+
+
+    type _G.table.sort = function(tbl, func)
+        local next = oh.GetBaseCrawler():GetValue("_G", "typesystem"):get("next").func
+        local k,v = next(tbl)
+        func.arguments[1] = v
+        func.arguments[2] = v
+    end
 ]]
 lua = lua:gsub("\t", "    ")
-io.open("base_lib2.lua", "w"):write(lua)
+io.open("oh/base_lib.oh", "w"):write(lua)

@@ -699,10 +699,12 @@ function META:CrawlStatement(statement, ...)
             args = {self:CrawlExpression(statement.expressions[1])}
         end
 
-        local ret = self:CallFunctionType(args[1], {unpack(args, 2)}, statement.expressions[1])
+        if args[1] then
+            local ret = self:CallFunctionType(args[1], {unpack(args, 2)}, statement.expressions[1])
 
-        for i,v in ipairs(statement.identifiers) do
-            self:DeclareUpvalue(v, ret and ret[i], "runtime")
+            for i,v in ipairs(statement.identifiers) do
+                self:DeclareUpvalue(v, ret and ret[i], "runtime")
+            end
         end
 
         if self:CrawlStatements(statement.statements, ...) == true then

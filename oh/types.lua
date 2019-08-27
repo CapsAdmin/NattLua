@@ -423,10 +423,12 @@ function META:Serialize()
     return tostring(self)
 end
 
+
+
 function types.CallFunction(func, args)
     local errors = {}
     local found
-    
+
     local overloads = func.overloads or func.types
 
     for _, func in ipairs(overloads or {func}) do
@@ -536,6 +538,15 @@ do
         return table.concat(str, " | ")
     end
 
+
+
+    function META.__add(a, b)
+        if not a:IsType(b) then
+            return types.Fuse(a, b)
+        end
+
+        return a
+    end
 
     function META:Type(...)
         return self.types[1]:Type(...)
