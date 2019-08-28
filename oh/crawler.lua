@@ -791,6 +791,10 @@ do
                     val = copy
                 end
 
+                if not val and node.value.value == "self" then
+                    val = self.current_table
+                end 
+
                 if not val and self.Index then
                     val = self:Index(node)
                 end
@@ -925,7 +929,11 @@ do
             val.value = {}
             stack:Push(val)
         elseif node.kind == "type_table" then
-            stack:Push(self:TypeFromNode(node, self:TableToTypes(node, env)))
+            local t = self:TypeFromNode(node)
+            self.current_table = t
+            t.value = self:TableToTypes(node, env)
+            self.current_table = nil
+            stack:Push(t)
         else
             error("unhandled expression " .. node.kind)
         end

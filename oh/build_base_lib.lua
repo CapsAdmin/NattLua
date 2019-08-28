@@ -9404,7 +9404,7 @@ local function walk(key, tbl)
 	end
 
 	for lib, data in pairs(tbl) do
-		if data.type == "lib" then
+		if data.childs then
 			indent = indent + 1
 			walk(lib, data.childs)
 			indent = indent - 1
@@ -9584,4 +9584,12 @@ lua = lua .. [[
     end
 ]]
 lua = lua:gsub("\t", "    ")
+
+local oh = require("oh")
+local Crawler = require("oh.crawler")
+local base = Crawler()
+base.Index = nil
+base:CrawlStatement(assert(oh.TokensToAST(assert(oh.CodeToTokens(lua, "test")), "test", lua)))
+
 io.open("oh/base_lib.oh", "w"):write(lua)
+

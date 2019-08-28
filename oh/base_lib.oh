@@ -214,6 +214,756 @@ type _G = {
                 (function(): string),
             getProcessorCount = 
                 (function(): number),
+            PowerState = {
+            },
+        },
+        audio = {
+            setVelocity = 
+                (function(x: number, y: number, z: number): nil),
+            setDistanceModel = 
+                (function(model: DistanceModel): nil),
+            setMixWithSystem = 
+                (function(mix: boolean): boolean),
+            getSourceCount = 
+                (function(): number),
+            getVelocity = 
+                (function(): number, number, number),
+            newQueueableSource = 
+                (function(samplerate: number, bitdepth: number, channels: number, buffercount: number): Source),
+            getMaxSceneEffects = 
+                (function(): number),
+            setEffect = 
+                (function(name: string, settings: table): boolean),
+            getVolume = 
+                (function(): number),
+            getEffect = 
+                (function(name: string): table),
+            getActiveSourceCount = 
+                (function(): number),
+            getDopplerScale = 
+                (function(): number),
+            getDistanceModel = 
+                (function(): DistanceModel),
+            setOrientation = 
+                (function(fx: number, fy: number, fz: number, ux: number, uy: number, uz: number): nil),
+            stop = 
+                (function(source: Source): nil),
+            setVolume = 
+                (function(volume: number): nil),
+            getRecordingDevices = 
+                (function(): table),
+            newSource = 
+                (function(filename: string, type: SourceType): Source),
+            pause = 
+                (function(source: Source): nil),
+            getPosition = 
+                (function(): number, number, number),
+            getMaxSourceEffects = 
+                (function(): number),
+            getOrientation = 
+                (function(): number, number, number, number, number, number),
+            setPosition = 
+                (function(x: number, y: number, z: number): nil),
+            isEffectsSupported = 
+                (function(): boolean),
+            play = 
+                (function(source: Source): nil),
+            setDopplerScale = 
+                (function(scale: number): nil),
+            EffectType = {
+            },
+            Source = {
+                setVelocity = 
+                    (function(x: number, y: number, z: number): nil),
+                setPitch = 
+                    (function(pitch: number): nil),
+                getType = 
+                    (function(): SourceType),
+                getActiveEffects = 
+                    (function(): table),
+                isRelative = 
+                    (function(): boolean),
+                setVolume = 
+                    (function(volume: number): nil),
+                setDirection = 
+                    (function(x: number, y: number, z: number): nil),
+                setFilter = 
+                    (function(settings: table): boolean),
+                setVolumeLimits = 
+                    (function(min: number, max: number): nil),
+                queue = 
+                    (function(sounddata: SoundData): boolean),
+                setCone = 
+                    (function(innerAngle: number, outerAngle: number, outerVolume: number, outerHighGain: number): nil),
+                setRelative = 
+                    (function(enable: boolean): nil),
+                setEffect = 
+                    (function(name: string, enable: boolean): boolean),
+                tell = 
+                    (function(unit: TimeUnit): number),
+                getVolume = 
+                    (function(): number),
+                getEffect = 
+                    (function(name: string, filtersettings: table): table),
+                setLooping = 
+                    (function(loop: boolean): nil),
+                getChannelCount = 
+                    (function(): number),
+                seek = 
+                    (function(position: number, unit: TimeUnit): nil),
+                getDirection = 
+                    (function(): number, number, number),
+                play = 
+                    (function(): boolean),
+                setAttenuationDistances = 
+                    (function(ref: number, max: number): nil),
+                setRolloff = 
+                    (function(rolloff: number): nil),
+                stop = 
+                    (function(): nil),
+                isPlaying = 
+                    (function(): boolean),
+                getFilter = 
+                    (function(settings: table): table),
+                pause = 
+                    (function(): nil),
+                getFreeBufferCount = 
+                    (function(): number),
+                getCone = 
+                    (function(): number, number, number, number),
+                getPosition = 
+                    (function(): number, number, number),
+                getPitch = 
+                    (function(): number),
+                getVelocity = 
+                    (function(): number, number, number),
+                getAttenuationDistances = 
+                    (function(): number, number),
+                setPosition = 
+                    (function(x: number, y: number, z: number): nil),
+                isLooping = 
+                    (function(): boolean),
+                getRolloff = 
+                    (function(): number),
+                getVolumeLimits = 
+                    (function(): number, number),
+                getDuration = 
+                    (function(unit: TimeUnit): number),
+            },
+            RecordingDevice = {
+                stop = 
+                    (function(): SoundData),
+                start = 
+                    (function(samplecount: number, samplerate: number, bitdepth: number, channels: number): boolean),
+                getSampleRate = 
+                    (function(): number),
+                getData = 
+                    (function(): SoundData),
+                isRecording = 
+                    (function(): boolean),
+                getSampleCount = 
+                    (function(): number),
+                getName = 
+                    (function(): string),
+                getChannelCount = 
+                    (function(): number),
+            },
+            TimeUnit = {
+            },
+            SourceType = {
+            },
+            DistanceModel = {
+            },
+            EffectWaveform = {
+            },
+            FilterType = {
+            },
+        },
+        joystick = {
+            saveGamepadMappings = 
+                (function(filename: string): string),
+            setGamepadMapping = 
+                (function(guid: string, button: GamepadButton, inputtype: JoystickInputType, inputindex: number, hatdirection: JoystickHat): boolean),
+            getJoysticks = 
+                (function(): table),
+            loadGamepadMappings = 
+                (function(filename: string): nil),
+            GamepadButton = {
+            },
+            Joystick = {
+                isConnected = 
+                    (function(): boolean),
+                isGamepad = 
+                    (function(): boolean),
+                getHat = 
+                    (function(hat: number): JoystickHat),
+                isDown = 
+                    (function(...: number[]): boolean),
+                getID = 
+                    (function(): number, number),
+                getGUID = 
+                    (function(): string),
+                isGamepadDown = 
+                    (function(...: GamepadButton[]): boolean),
+                getAxis = 
+                    (function(axis: number): number),
+                getName = 
+                    (function(): string),
+                getAxisCount = 
+                    (function(): number),
+                isVibrationSupported = 
+                    (function(): boolean),
+                getButtonCount = 
+                    (function(): number),
+                getVibration = 
+                    (function(): number, number),
+                getGamepadMapping = 
+                    (function(axis: GamepadAxis): JoystickInputType, number, JoystickHat),
+                getGamepadAxis = 
+                    (function(axis: GamepadAxis): number),
+                getHatCount = 
+                    (function(): number),
+                setVibration = 
+                    (function(left: number, right: number): boolean),
+            },
+            JoystickHat = {
+            },
+            JoystickInputType = {
+            },
+            GamepadAxis = {
+            },
+        },
+        physics = {
+            newMouseJoint = 
+                (function(body: Body, x: number, y: number): MouseJoint),
+            newFixture = 
+                (function(body: Body, shape: Shape, density: number): Fixture),
+            newWheelJoint = 
+                (function(body1: Body, body2: Body, x: number, y: number, ax: number, ay: number, collideConnected: boolean): WheelJoint),
+            newEdgeShape = 
+                (function(x1: number, y1: number, x2: number, y2: number): EdgeShape),
+            newBody = 
+                (function(world: World, x: number, y: number, type: BodyType): Body),
+            newChainShape = 
+                (function(loop: boolean, x1: number, y1: number, x2: number, y2: number, ...: number[]): ChainShape),
+            setMeter = 
+                (function(scale: number): nil),
+            newWorld = 
+                (function(xg: number, yg: number, sleep: boolean): World),
+            newWeldJoint = 
+                (function(body1: Body, body2: Body, x: number, y: number, collideConnected: boolean): WeldJoint),
+            newRopeJoint = 
+                (function(body1: Body, body2: Body, x1: number, y1: number, x2: number, y2: number, maxLength: number, collideConnected: boolean): RopeJoint),
+            getMeter = 
+                (function(): number),
+            newGearJoint = 
+                (function(joint1: Joint, joint2: Joint, ratio: number, collideConnected: boolean): GearJoint),
+            newRectangleShape = 
+                (function(width: number, height: number): PolygonShape),
+            newFrictionJoint = 
+                (function(body1: Body, body2: Body, x: number, y: number, collideConnected: boolean): FrictionJoint),
+            newPulleyJoint = 
+                (function(body1: Body, body2: Body, gx1: number, gy1: number, gx2: number, gy2: number, x1: number, y1: number, x2: number, y2: number, ratio: number, collideConnected: boolean): PulleyJoint),
+            newPrismaticJoint = 
+                (function(body1: Body, body2: Body, x: number, y: number, ax: number, ay: number, collideConnected: boolean): PrismaticJoint),
+            newMotorJoint = 
+                (function(body1: Body, body2: Body, correctionFactor: number): MotorJoint),
+            newRevoluteJoint = 
+                (function(body1: Body, body2: Body, x: number, y: number, collideConnected: boolean): RevoluteJoint),
+            newCircleShape = 
+                (function(radius: number): CircleShape),
+            newPolygonShape = 
+                (function(x1: number, y1: number, x2: number, y2: number, ...: number[]): PolygonShape),
+            newDistanceJoint = 
+                (function(body1: Body, body2: Body, x1: number, y1: number, x2: number, y2: number, collideConnected: boolean): DistanceJoint),
+            PrismaticJoint = {
+                getMotorForce = 
+                    (function(): number),
+                setLimitsEnabled = 
+                    (function(enable: boolean): nil),
+                getJointSpeed = 
+                    (function(): number),
+                setMotorSpeed = 
+                    (function(s: number): nil),
+                getMotorSpeed = 
+                    (function(): number),
+                getJointTranslation = 
+                    (function(): number),
+                getAxis = 
+                    (function(): number, number),
+                setMotorEnabled = 
+                    (function(enable: boolean): nil),
+                setUpperLimit = 
+                    (function(upper: number): nil),
+                getMaxMotorForce = 
+                    (function(): number),
+                setLimits = 
+                    (function(lower: number, upper: number): nil),
+                isMotorEnabled = 
+                    (function(): boolean),
+                setMaxMotorForce = 
+                    (function(f: number): nil),
+                getUpperLimit = 
+                    (function(): number),
+                getLimits = 
+                    (function(): number, number),
+                getLowerLimit = 
+                    (function(): number),
+                setLowerLimit = 
+                    (function(lower: number): nil),
+            },
+            MouseJoint = {
+                getTarget = 
+                    (function(): number, number),
+                getMaxForce = 
+                    (function(): number),
+                getFrequency = 
+                    (function(): number),
+                setTarget = 
+                    (function(x: number, y: number): nil),
+                setMaxForce = 
+                    (function(f: number): nil),
+                setDampingRatio = 
+                    (function(ratio: number): nil),
+                setFrequency = 
+                    (function(freq: number): nil),
+            },
+            World = {
+                getJointCount = 
+                    (function(): number),
+                getContactList = 
+                    (function(): table),
+                isDestroyed = 
+                    (function(): boolean),
+                queryBoundingBox = 
+                    (function(topLeftX: number, topLeftY: number, bottomRightX: number, bottomRightY: number, callback: empty_function): nil),
+                setCallbacks = 
+                    (function(beginContact: empty_function, endContact: empty_function, preSolve: empty_function, postSolve: empty_function): nil),
+                getBodyList = 
+                    (function(): table),
+                getContactFilter = 
+                    (function(): empty_function),
+                update = 
+                    (function(dt: number, velocityiterations: number, positioniterations: number): nil),
+                rayCast = 
+                    (function(x1: number, y1: number, x2: number, y2: number, callback: empty_function): nil),
+                getContactCount = 
+                    (function(): number),
+                setContactFilter = 
+                    (function(filter: empty_function): nil),
+                isSleepingAllowed = 
+                    (function(): boolean),
+                getCallbacks = 
+                    (function(): empty_function, empty_function, empty_function, empty_function),
+                translateOrigin = 
+                    (function(x: number, y: number): nil),
+                getBodyCount = 
+                    (function(): number),
+                getGravity = 
+                    (function(): number, number),
+                setSleepingAllowed = 
+                    (function(allowSleep: boolean): nil),
+                setGravity = 
+                    (function(x: number, y: number): nil),
+                getJointList = 
+                    (function(): table),
+                isLocked = 
+                    (function(): boolean),
+            },
+            PulleyJoint = {
+                getLengthA = 
+                    (function(): number),
+                getGroundAnchors = 
+                    (function(): number, number, number, number),
+                getMaxLengths = 
+                    (function(): number, number),
+                setRatio = 
+                    (function(ratio: number): nil),
+                setMaxLengths = 
+                    (function(max1: number, max2: number): nil),
+                setConstant = 
+                    (function(length: number): nil),
+                getLengthB = 
+                    (function(): number),
+                getRatio = 
+                    (function(): number),
+            },
+            WheelJoint = {
+                getMaxMotorTorque = 
+                    (function(): number),
+                getSpringDampingRatio = 
+                    (function(): number),
+                getJointTranslation = 
+                    (function(): number),
+                setMotorSpeed = 
+                    (function(speed: number): nil),
+                setMotorEnabled = 
+                    (function(enable: boolean): nil),
+                setSpringDampingRatio = 
+                    (function(ratio: number): nil),
+                setSpringFrequency = 
+                    (function(freq: number): nil),
+                getMotorSpeed = 
+                    (function(): number),
+                setMaxMotorTorque = 
+                    (function(maxTorque: number): nil),
+                getJointSpeed = 
+                    (function(): number),
+                getSpringFrequency = 
+                    (function(): number),
+                getMotorTorque = 
+                    (function(invdt: number): number),
+            },
+            FrictionJoint = {
+                setMaxForce = 
+                    (function(maxForce: number): nil),
+                getMaxTorque = 
+                    (function(): number),
+                setMaxTorque = 
+                    (function(torque: number): nil),
+            },
+            RopeJoint = {
+                setMaxLength = 
+                    (function(maxLength: number): nil),
+            },
+            Body = {
+                getJointList = 
+                    (function(): table),
+                isDestroyed = 
+                    (function(): boolean),
+                isBullet = 
+                    (function(): boolean),
+                getType = 
+                    (function(): BodyType),
+                setBullet = 
+                    (function(status: boolean): nil),
+                setGravityScale = 
+                    (function(scale: number): nil),
+                getWorldVector = 
+                    (function(local_X: number, local_Y: number): number, number),
+                getWorldPoints = 
+                    (function(x1: number, y1: number, x2: number, y2: number, ...: number[]): number, number, number, number, number),
+                getWorld = 
+                    (function(): World),
+                setMass = 
+                    (function(mass: number): nil),
+                setLinearDamping = 
+                    (function(ld: number): nil),
+                setUserData = 
+                    (function(value: any): nil),
+                setType = 
+                    (function(type: BodyType): nil),
+                applyTorque = 
+                    (function(torque: number): nil),
+                getLinearDamping = 
+                    (function(): number),
+                getFixtureList = 
+                    (function(): table),
+                setPosition = 
+                    (function(x: number, y: number): nil),
+                getLinearVelocityFromLocalPoint = 
+                    (function(x: number, y: number): number, number),
+                getAngle = 
+                    (function(): number),
+                applyLinearImpulse = 
+                    (function(ix: number, iy: number): nil),
+                isActive = 
+                    (function(): boolean),
+                setLinearVelocity = 
+                    (function(x: number, y: number): nil),
+                isFixedRotation = 
+                    (function(): boolean),
+                getAngularDamping = 
+                    (function(): number),
+                getLocalPoint = 
+                    (function(worldX: number, worldY: number): number, number),
+                getLinearVelocity = 
+                    (function(): number, number),
+                getContactList = 
+                    (function(): table),
+                setAngularDamping = 
+                    (function(damping: number): nil),
+                setX = 
+                    (function(x: number): nil),
+                setY = 
+                    (function(y: number): nil),
+                setAwake = 
+                    (function(awake: boolean): nil),
+                setFixedRotation = 
+                    (function(fixed: boolean): nil),
+                getGravityScale = 
+                    (function(): number),
+                setAngle = 
+                    (function(angle: number): nil),
+                setAngularVelocity = 
+                    (function(w: number): nil),
+                isAwake = 
+                    (function(): boolean),
+                setActive = 
+                    (function(active: boolean): nil),
+                applyForce = 
+                    (function(fx: number, fy: number): nil),
+                getInertia = 
+                    (function(): number),
+                resetMassData = 
+                    (function(): nil),
+                getLinearVelocityFromWorldPoint = 
+                    (function(x: number, y: number): number, number),
+                getWorldPoint = 
+                    (function(local_X: number, local_Y: number): number, number),
+                setInertia = 
+                    (function(inertia: number): nil),
+                getLocalVector = 
+                    (function(worldX: number, worldY: number): number, number),
+                isSleepingAllowed = 
+                    (function(): boolean),
+                setSleepingAllowed = 
+                    (function(allowed: boolean): nil),
+                getAngularVelocity = 
+                    (function(): number),
+                destroy = 
+                    (function(): nil),
+                getPosition = 
+                    (function(): number, number),
+                getLocalCenter = 
+                    (function(): number, number),
+                setMassData = 
+                    (function(x: number, y: number, mass: number, inertia: number): nil),
+                getMassData = 
+                    (function(): number, number, number, number),
+                getUserData = 
+                    (function(): any),
+                getX = 
+                    (function(): number),
+                getY = 
+                    (function(): number),
+                getMass = 
+                    (function(): number),
+                getWorldCenter = 
+                    (function(): number, number),
+            },
+            Contact = {
+                isTouching = 
+                    (function(): boolean),
+                setFriction = 
+                    (function(friction: number): nil),
+                resetRestitution = 
+                    (function(): nil),
+                getFriction = 
+                    (function(): number),
+                getNormal = 
+                    (function(): number, number),
+                getRestitution = 
+                    (function(): number),
+                getPositions = 
+                    (function(): number, number, number, number),
+                setEnabled = 
+                    (function(enabled: boolean): nil),
+                setRestitution = 
+                    (function(restitution: number): nil),
+                isEnabled = 
+                    (function(): boolean),
+                resetFriction = 
+                    (function(): nil),
+            },
+            Shape = {
+                testPoint = 
+                    (function(x: number, y: number): boolean),
+                rayCast = 
+                    (function(x1: number, y1: number, x2: number, y2: number, maxFraction: number, tx: number, ty: number, tr: number, childIndex: number): number, number, number),
+                computeMass = 
+                    (function(density: number): number, number, number, number),
+                getChildCount = 
+                    (function(): number),
+                getRadius = 
+                    (function(): number),
+                getType = 
+                    (function(): ShapeType),
+            },
+            EdgeShape = {
+                setPreviousVertex = 
+                    (function(x: number, y: number): nil),
+                setNextVertex = 
+                    (function(x: number, y: number): nil),
+                getNextVertex = 
+                    (function(): number, number),
+                getPreviousVertex = 
+                    (function(): number, number),
+            },
+            WeldJoint = {
+                setDampingRatio = 
+                    (function(ratio: number): nil),
+                setFrequency = 
+                    (function(freq: number): nil),
+                getFrequency = 
+                    (function(): number),
+            },
+            JointType = {
+            },
+            BodyType = {
+            },
+            DistanceJoint = {
+                setLength = 
+                    (function(l: number): nil),
+                setDampingRatio = 
+                    (function(ratio: number): nil),
+                getFrequency = 
+                    (function(): number),
+                getLength = 
+                    (function(): number),
+                setFrequency = 
+                    (function(Hz: number): nil),
+            },
+            ChainShape = {
+                getPoint = 
+                    (function(index: number): number, number),
+                getVertexCount = 
+                    (function(): number),
+                getNextVertex = 
+                    (function(x: number, y: number): nil),
+                setPreviousVertex = 
+                    (function(x: number, y: number): nil),
+                setNextVertex = 
+                    (function(x: number, y: number): nil),
+                getPreviousVertex = 
+                    (function(): number, number),
+                getPoints = 
+                    (function(): number, number, number, number, number),
+            },
+            PolygonShape = {
+                getPoints = 
+                    (function(): number, number, number, number, number),
+            },
+            MotorJoint = {
+                setLinearOffset = 
+                    (function(x: number, y: number): nil),
+                getLinearOffset = 
+                    (function(): number, number),
+                setAngularOffset = 
+                    (function(angularoffset: number): nil),
+            },
+            Joint = {
+                getReactionTorque = 
+                    (function(invdt: number): number),
+                isDestroyed = 
+                    (function(): boolean),
+                getBodies = 
+                    (function(): Body, Body),
+                getType = 
+                    (function(): JointType),
+                getAnchors = 
+                    (function(): number, number, number, number),
+                getCollideConnected = 
+                    (function(): boolean),
+                getReactionForce = 
+                    (function(): number, number),
+                setUserData = 
+                    (function(value: any): nil),
+                getUserData = 
+                    (function(): any),
+            },
+            GearJoint = {
+                getRatio = 
+                    (function(): number),
+                setRatio = 
+                    (function(ratio: number): nil),
+            },
+            ShapeType = {
+            },
+            RevoluteJoint = {
+                getMaxMotorTorque = 
+                    (function(): number),
+                setUpperLimit = 
+                    (function(upper: number): nil),
+                getJointSpeed = 
+                    (function(): number),
+                isMotorEnabled = 
+                    (function(): boolean),
+                setLimitsEnabled = 
+                    (function(enable: boolean): nil),
+                getUpperLimit = 
+                    (function(): number),
+                setMotorEnabled = 
+                    (function(enable: boolean): nil),
+                setMotorSpeed = 
+                    (function(s: number): nil),
+                setLowerLimit = 
+                    (function(lower: number): nil),
+                getLowerLimit = 
+                    (function(): number),
+                setLimits = 
+                    (function(lower: number, upper: number): nil),
+                getMotorSpeed = 
+                    (function(): number),
+                setMaxMotorTorque = 
+                    (function(f: number): nil),
+                getLimits = 
+                    (function(): number, number),
+                getJointAngle = 
+                    (function(): number),
+                getMotorTorque = 
+                    (function(): number),
+            },
+            CircleShape = {
+                setPoint = 
+                    (function(x: number, y: number): nil),
+                getRadius = 
+                    (function(): number),
+                setRadius = 
+                    (function(radius: number): nil),
+            },
+            Fixture = {
+                getCategory = 
+                    (function(): number, number, number),
+                isDestroyed = 
+                    (function(): boolean),
+                getFilterData = 
+                    (function(): number, number, number),
+                setUserData = 
+                    (function(value: any): nil),
+                testPoint = 
+                    (function(x: number, y: number): boolean),
+                getBody = 
+                    (function(): Body),
+                setRestitution = 
+                    (function(restitution: number): nil),
+                setSensor = 
+                    (function(sensor: boolean): nil),
+                rayCast = 
+                    (function(x1: number, y1: number, x2: number, y2: number, maxFraction: number, childIndex: number): number, number, number),
+                setMask = 
+                    (function(mask1: number, mask2: number, ...: number[]): nil),
+                setGroupIndex = 
+                    (function(group: number): nil),
+                setFriction = 
+                    (function(friction: number): nil),
+                getGroupIndex = 
+                    (function(): number),
+                isSensor = 
+                    (function(): boolean),
+                setFilterData = 
+                    (function(categories: number, mask: number, group: number): nil),
+                getFriction = 
+                    (function(): number),
+                getMask = 
+                    (function(): number, number, number),
+                getBoundingBox = 
+                    (function(index: number): number, number, number, number),
+                getRestitution = 
+                    (function(): number),
+                getMassData = 
+                    (function(): number, number, number, number),
+                getUserData = 
+                    (function(): any),
+                getDensity = 
+                    (function(): number),
+                setCategory = 
+                    (function(category1: number, category2: number, ...: number[]): nil),
+                setDensity = 
+                    (function(density: number): nil),
+                getShape = 
+                    (function(): Shape),
+            },
         },
         event = {
             pump = 
@@ -226,6 +976,8 @@ type _G = {
                 (function(): Event, Variant, Variant, Variant, Variant),
             quit = 
                 (function(exitstatus: number): nil),
+            Event = {
+            },
         },
         window = {
             restore = 
@@ -288,6 +1040,10 @@ type _G = {
                 (function(): boolean),
             hasFocus = 
                 (function(): boolean),
+            MessageBoxType = {
+            },
+            FullscreenType = {
+            },
         },
         touch = {
             getPressure = 
@@ -307,9 +1063,777 @@ type _G = {
             sleep = 
                 (function(s: number): nil),
         },
+        Data = {
+            getString = 
+                (function(): string),
+            getSize = 
+                (function(): number),
+        },
+        thread = {
+            newThread = 
+                (function(filename: string): Thread),
+            newChannel = 
+                (function(): Channel),
+            Thread = {
+                isRunning = 
+                    (function(): boolean),
+                wait = 
+                    (function(): nil),
+                start = 
+                    (function(arg1: Variant, arg2: Variant, ...: Variant[]): nil),
+            },
+            Channel = {
+                supply = 
+                    (function(value: Variant): boolean),
+                peek = 
+                    (function(): Variant),
+                performAtomic = 
+                    (function(func: empty_function, arg1: any, ...: any[]): any, any),
+                push = 
+                    (function(value: Variant): nil),
+                demand = 
+                    (function(timeout: number): Variant),
+                getCount = 
+                    (function(): number),
+                hasRead = 
+                    (function(id: number): boolean),
+                pop = 
+                    (function(): Variant),
+            },
+        },
+        filesystem = {
+            unmount = 
+                (function(archive: string): boolean),
+            write = 
+                (function(name: string, data: string, size: number): boolean, string),
+            read = 
+                (function(name: string, bytes: number): string, number),
+            setCRequirePath = 
+                (function(paths: string): nil),
+            getCRequirePath = 
+                (function(): string),
+            init = 
+                (function(appname: string): nil),
+            newFileData = 
+                (function(contents: string, name: string): FileData),
+            createDirectory = 
+                (function(name: string): boolean),
+            getInfo = 
+                (function(path: string): table),
+            lines = 
+                (function(name: string): empty_function),
+            newFile = 
+                (function(filename: string, mode: FileMode): File, string),
+            getSaveDirectory = 
+                (function(): string),
+            getSource = 
+                (function(): string),
+            getRequirePath = 
+                (function(): string),
+            getWorkingDirectory = 
+                (function(): string),
+            setRequirePath = 
+                (function(paths: string): nil),
+            getDirectoryItems = 
+                (function(dir: string): table),
+            setSymlinksEnabled = 
+                (function(enable: boolean): nil),
+            setSource = 
+                (function(path: string): nil),
+            setIdentity = 
+                (function(name: string, appendToPath: boolean): nil),
+            getIdentity = 
+                (function(name: string): nil),
+            areSymlinksEnabled = 
+                (function(): boolean),
+            getAppdataDirectory = 
+                (function(): string),
+            getRealDirectory = 
+                (function(filepath: string): string),
+            load = 
+                (function(name: string, errormsg: string): empty_function),
+            remove = 
+                (function(name: string): boolean),
+            getUserDirectory = 
+                (function(): string),
+            isFused = 
+                (function(): boolean),
+            mount = 
+                (function(archive: string, mountpoint: string): boolean),
+            getSourceBaseDirectory = 
+                (function(): string),
+            FileData = {
+                getFilename = 
+                    (function(): string),
+            },
+            File = {
+                setBuffer = 
+                    (function(mode: BufferMode, size: number): boolean, string),
+                write = 
+                    (function(data: string, size: number): boolean),
+                getFilename = 
+                    (function(): string),
+                read = 
+                    (function(bytes: number): string, number),
+                getBuffer = 
+                    (function(): BufferMode, number),
+                open = 
+                    (function(mode: FileMode): boolean),
+                seek = 
+                    (function(position: number): boolean),
+                getSize = 
+                    (function(): number),
+                tell = 
+                    (function(): number),
+                flush = 
+                    (function(): boolean, string),
+                isOpen = 
+                    (function(): boolean),
+                lines = 
+                    (function(): empty_function),
+                getMode = 
+                    (function(): FileMode),
+                isEOF = 
+                    (function(): boolean),
+            },
+            BufferMode = {
+            },
+            FileMode = {
+            },
+            FileDecoder = {
+            },
+            FileType = {
+            },
+        },
+        image = {
+            newImageData = 
+                (function(width: number, height: number): ImageData),
+            newCompressedData = 
+                (function(filename: string): CompressedImageData),
+            CompressedImageData = {
+                getWidth = 
+                    (function(level: number): number),
+                getMipmapCount = 
+                    (function(): number),
+                getFormat = 
+                    (function(): CompressedImageFormat),
+                getHeight = 
+                    (function(level: number): number),
+            },
+            ImageFormat = {
+            },
+            ImageData = {
+                paste = 
+                    (function(source: ImageData, dx: number, dy: number, sx: number, sy: number, sw: number, sh: number): nil),
+                getPixel = 
+                    (function(x: number, y: number): number, number, number, number),
+                getWidth = 
+                    (function(): number),
+                mapPixel = 
+                    (function(pixelFunction: empty_function): nil),
+                setPixel = 
+                    (function(x: number, y: number, r: number, g: number, b: number, a: number): nil),
+                getHeight = 
+                    (function(): number),
+                getDimensions = 
+                    (function(): number, number),
+            },
+            CompressedImageFormat = {
+            },
+        },
         Object = {
             typeOf = 
                 (function(name: string): boolean),
+        },
+        mouse = {
+            setX = 
+                (function(x: number): nil),
+            getSystemCursor = 
+                (function(ctype: CursorType): Cursor),
+            isGrabbed = 
+                (function(): boolean),
+            isVisible = 
+                (function(): boolean),
+            newCursor = 
+                (function(imageData: ImageData, hotx: number, hoty: number): Cursor),
+            setVisible = 
+                (function(visible: boolean): nil),
+            getRelativeMode = 
+                (function(): boolean),
+            setGrabbed = 
+                (function(grab: boolean): nil),
+            setY = 
+                (function(y: number): nil),
+            getPosition = 
+                (function(): number, number),
+            hasCursor = 
+                (function(): boolean),
+            isCursorSupported = 
+                (function(): boolean),
+            setCursor = 
+                (function(cursor: Cursor): nil),
+            setPosition = 
+                (function(x: number, y: number): nil),
+            getX = 
+                (function(): number),
+            getY = 
+                (function(): number),
+            isDown = 
+                (function(button: number, ...: number[]): boolean),
+            setRelativeMode = 
+                (function(enable: boolean): nil),
+            Cursor = {
+                getType = 
+                    (function(): CursorType),
+            },
+            CursorType = {
+            },
+        },
+        graphics = {
+            stencil = 
+                (function(stencilempty_function: empty_function, action: StencilAction, value: number, keepvalues: boolean): nil),
+            getStats = 
+                (function(): table),
+            newParticleSystem = 
+                (function(texture: Texture, buffer: number): ParticleSystem),
+            setFont = 
+                (function(font: Font): nil),
+            getSupported = 
+                (function(): table),
+            getDefaultFilter = 
+                (function(): FilterMode, FilterMode, number),
+            validateShader = 
+                (function(gles: boolean, code: string): boolean, string),
+            inverseTransformPoint = 
+                (function(screenX: number, screenY: number): number, number),
+            getStackDepth = 
+                (function(): number),
+            setDefaultFilter = 
+                (function(min: FilterMode, mag: FilterMode, anisotropy: number): nil),
+            translate = 
+                (function(dx: number, dy: number): nil),
+            shear = 
+                (function(kx: number, ky: number): nil),
+            print = 
+                (function(text: string, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
+            newShader = 
+                (function(code: string): Shader),
+            setWireframe = 
+                (function(enable: boolean): nil),
+            newMesh = 
+                (function(vertices: table, mode: MeshDrawMode, usage: SpriteBatchUsage): Mesh),
+            getMeshCullMode = 
+                (function(): CullMode),
+            setStencilTest = 
+                (function(comparemode: CompareMode, comparevalue: number): nil),
+            setShader = 
+                (function(shader: Shader): nil),
+            getHeight = 
+                (function(): number),
+            points = 
+                (function(x: number, y: number, ...: number[]): nil),
+            scale = 
+                (function(sx: number, sy: number): nil),
+            getLineStyle = 
+                (function(): LineStyle),
+            setScissor = 
+                (function(x: number, y: number, width: number, height: number): nil),
+            setBlendMode = 
+                (function(mode: BlendMode): nil),
+            getImageFormats = 
+                (function(): table),
+            setPointSize = 
+                (function(size: number): nil),
+            getLineJoin = 
+                (function(): LineJoin),
+            setNewFont = 
+                (function(filename: string, size: number): Font),
+            draw = 
+                (function(drawable: Drawable, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
+            getFont = 
+                (function(): Font),
+            setMeshCullMode = 
+                (function(mode: CullMode): nil),
+            setLineWidth = 
+                (function(width: number): nil),
+            setLineStyle = 
+                (function(style: LineStyle): nil),
+            drawLayer = 
+                (function(texture: Texture, layerindex: number, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
+            getDepthMode = 
+                (function(): CompareMode, boolean),
+            reset = 
+                (function(): nil),
+            circle = 
+                (function(mode: DrawMode, x: number, y: number, radius: number): nil),
+            getFrontFaceWinding = 
+                (function(): VertexWinding),
+            getCanvasFormats = 
+                (function(readable: boolean): table),
+            discard = 
+                (function(discardcolor: boolean, discardstencil: boolean): nil),
+            setColorMask = 
+                (function(red: boolean, green: boolean, blue: boolean, alpha: boolean): nil),
+            setColor = 
+                (function(red: number, green: number, blue: number, alpha: number): nil),
+            setCanvas = 
+                (function(canvas: Canvas): nil),
+            origin = 
+                (function(): nil),
+            push = 
+                (function(stack: StackType): nil),
+            newImage = 
+                (function(filename: string): Image),
+            clear = 
+                (function(r: number, g: number, b: number, a: number): nil),
+            rotate = 
+                (function(angle: number): nil),
+            setFrontFaceWinding = 
+                (function(winding: VertexWinding): nil),
+            getStencilTest = 
+                (function(): boolean, boolean),
+            newSpriteBatch = 
+                (function(texture: Texture, maxsprites: number, usage: SpriteBatchUsage): SpriteBatch),
+            rectangle = 
+                (function(mode: DrawMode, x: number, y: number, width: number, height: number): nil),
+            printf = 
+                (function(text: string, x: number, y: number, limit: number, align: AlignMode, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
+            getShader = 
+                (function(): Shader),
+            present = 
+                (function(): nil),
+            pop = 
+                (function(): nil),
+            getScissor = 
+                (function(): number, number, number, number),
+            newFont = 
+                (function(filename: string): Font),
+            newVideo = 
+                (function(filename: string, loadaudio: boolean): Video),
+            getBlendMode = 
+                (function(): BlendMode, BlendAlphaMode),
+            isGammaCorrect = 
+                (function(): boolean),
+            newCanvas = 
+                (function(width: number, height: number, format: CanvasFormat, msaa: number): Canvas),
+            newQuad = 
+                (function(x: number, y: number, width: number, height: number, sw: number, sh: number): Quad),
+            setBackgroundColor = 
+                (function(r: number, g: number, b: number, a: number): nil),
+            polygon = 
+                (function(mode: DrawMode, ...: number[]): nil),
+            line = 
+                (function(x1: number, y1: number, x2: number, y2: number, ...: number[]): nil),
+            isWireframe = 
+                (function(): boolean),
+            getRendererInfo = 
+                (function(): string, string, string, string),
+            intersectScissor = 
+                (function(x: number, y: number, width: number, height: number): nil),
+            getWidth = 
+                (function(): number),
+            getTextureTypes = 
+                (function(): table),
+            replaceTransform = 
+                (function(transform: Transform): nil),
+            captureScreenshot = 
+                (function(filename: string): nil),
+            getColor = 
+                (function(): number, number, number, number),
+            transformPoint = 
+                (function(globalX: number, globalY: number): number, number),
+            setDepthMode = 
+                (function(comparemode: CompareMode, write: boolean): nil),
+            flushBatch = 
+                (function(): nil),
+            drawInstanced = 
+                (function(mesh: Mesh, instancecount: number, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
+            getSystemLimits = 
+                (function(): table),
+            applyTransform = 
+                (function(transform: Transform): nil),
+            setLineJoin = 
+                (function(join: LineJoin): nil),
+            ellipse = 
+                (function(mode: DrawMode, x: number, y: number, radiusx: number, radiusy: number): nil),
+            newImageFont = 
+                (function(filename: string, glyphs: string): Font),
+            getLineWidth = 
+                (function(): number),
+            newText = 
+                (function(font: Font, textstring: string): Text),
+            getDimensions = 
+                (function(): number, number),
+            getBackgroundColor = 
+                (function(): number, number, number, number),
+            getCanvas = 
+                (function(): Canvas),
+            getColorMask = 
+                (function(): boolean, boolean, boolean, boolean),
+            getPointSize = 
+                (function(): number),
+            Mesh = {
+                getDrawRange = 
+                    (function(): number, number),
+                setAttributeEnabled = 
+                    (function(name: string, enable: boolean): nil),
+                setVertexMap = 
+                    (function(map: table): nil),
+                setTexture = 
+                    (function(texture: Texture): nil),
+                setVertexAttribute = 
+                    (function(vertexindex: number, attributeindex: number, value1: number, value2: number, ...: number[]): nil),
+                getVertexMap = 
+                    (function(): table),
+                getTexture = 
+                    (function(): Texture),
+                setDrawMode = 
+                    (function(mode: MeshDrawMode): nil),
+                detachAttribute = 
+                    (function(name: string): boolean),
+                setVertex = 
+                    (function(index: number, attributecomponent: number, ...: number[]): nil),
+                setVertices = 
+                    (function(vertices: table): nil),
+                getVertex = 
+                    (function(index: number): number, number),
+                getVertexFormat = 
+                    (function(): table),
+                getVertexAttribute = 
+                    (function(vertexindex: number, attributeindex: number): number, number, number),
+                getVertexCount = 
+                    (function(): number),
+                isAttributeEnabled = 
+                    (function(name: string): boolean),
+                setDrawRange = 
+                    (function(min: number, max: number): nil),
+                getDrawMode = 
+                    (function(): MeshDrawMode),
+            },
+            ParticleSystem = {
+                isPaused = 
+                    (function(): boolean),
+                getSizeVariation = 
+                    (function(): number),
+                getInsertMode = 
+                    (function(): ParticleInsertMode),
+                getAreaSpread = 
+                    (function(): AreaSpreadDistribution, number, number),
+                setAreaSpread = 
+                    (function(distribution: AreaSpreadDistribution, dx: number, dy: number): nil),
+                getTexture = 
+                    (function(): Texture),
+                setQuads = 
+                    (function(quad1: Quad, quad2: Quad): nil),
+                setSizes = 
+                    (function(size1: number, size2: number, ...: number[]): nil),
+                start = 
+                    (function(): nil),
+                update = 
+                    (function(dt: number): nil),
+                getRotation = 
+                    (function(): number, number),
+                setRotation = 
+                    (function(min: number, max: number): nil),
+                setLinearDamping = 
+                    (function(min: number, max: number): nil),
+                setParticleLifetime = 
+                    (function(min: number, max: number): nil),
+                emit = 
+                    (function(numparticles: number): nil),
+                setSpread = 
+                    (function(spread: number): nil),
+                getQuads = 
+                    (function(): table),
+                isStopped = 
+                    (function(): boolean),
+                setSpinVariation = 
+                    (function(variation: number): nil),
+                setSpin = 
+                    (function(min: number, max: number): nil),
+                hasRelativeRotation = 
+                    (function(): boolean),
+                setEmitterLifetime = 
+                    (function(life: number): nil),
+                isActive = 
+                    (function(): boolean),
+                setSpeed = 
+                    (function(min: number, max: number): nil),
+                setRelativeRotation = 
+                    (function(enable: boolean): nil),
+                moveTo = 
+                    (function(x: number, y: number): nil),
+                setRadialAcceleration = 
+                    (function(min: number, max: number): nil),
+                stop = 
+                    (function(): nil),
+                setSizeVariation = 
+                    (function(variation: number): nil),
+                setLinearAcceleration = 
+                    (function(xmin: number, ymin: number, xmax: number, ymax: number): nil),
+                setTangentialAcceleration = 
+                    (function(min: number, max: number): nil),
+                setEmissionRate = 
+                    (function(rate: number): nil),
+                getSpread = 
+                    (function(): number),
+                setTexture = 
+                    (function(texture: Texture): nil),
+                getSpeed = 
+                    (function(): number, number),
+                setOffset = 
+                    (function(x: number, y: number): nil),
+                setInsertMode = 
+                    (function(mode: ParticleInsertMode): nil),
+                setDirection = 
+                    (function(direction: number): nil),
+                getDirection = 
+                    (function(): number),
+                getLinearDamping = 
+                    (function(): number, number),
+                setColors = 
+                    (function(r1: number, g1: number, b1: number, a1: number, r2: number, g2: number, b2: number, a2: number, ...: number[]): nil),
+                getEmitterLifetime = 
+                    (function(): number),
+                getEmissionRate = 
+                    (function(): number),
+                getSpin = 
+                    (function(): number, number),
+                reset = 
+                    (function(): nil),
+                getSizes = 
+                    (function(): number, number, number),
+                getCount = 
+                    (function(): number),
+                pause = 
+                    (function(): nil),
+                setBufferSize = 
+                    (function(buffer: number): nil),
+                getParticleLifetime = 
+                    (function(): number, number),
+                getPosition = 
+                    (function(): number, number),
+                getBufferSize = 
+                    (function(): number),
+                getOffset = 
+                    (function(): number, number),
+                getRadialAcceleration = 
+                    (function(): number, number),
+                setPosition = 
+                    (function(x: number, y: number): nil),
+                getLinearAcceleration = 
+                    (function(): number, number, number, number),
+                getSpinVariation = 
+                    (function(): number),
+                getColors = 
+                    (function(): number, number, number, number, number, number, number, number, number),
+                getTangentialAcceleration = 
+                    (function(): number, number),
+            },
+            AreaSpreadDistribution = {
+            },
+            FilterMode = {
+            },
+            Shader = {
+                send = 
+                    (function(name: string, number: number, ...: number[]): nil),
+                hasUniform = 
+                    (function(name: string): boolean),
+                sendColor = 
+                    (function(name: string, color: table, ...: table[]): nil),
+            },
+            SpriteBatchUsage = {
+            },
+            Canvas = {
+                setFilter = 
+                    (function(min: FilterMode, mag: FilterMode, anisotropy: number): nil),
+                getFilter = 
+                    (function(): FilterMode, FilterMode, number),
+                getWrap = 
+                    (function(): WrapMode, WrapMode),
+                getWidth = 
+                    (function(): number),
+                setWrap = 
+                    (function(horizontal: WrapMode, vertical: WrapMode): nil),
+                newImageData = 
+                    (function(x: number, y: number, width: number, height: number): ImageData),
+                getMSAA = 
+                    (function(): number),
+                renderTo = 
+                    (function(func: empty_function): nil),
+                getHeight = 
+                    (function(): number),
+            },
+            DrawMode = {
+            },
+            StackType = {
+            },
+            Quad = {
+                setViewport = 
+                    (function(x: number, y: number, w: number, h: number): nil),
+                getViewport = 
+                    (function(): number, number, number, number),
+            },
+            Image = {
+                setFilter = 
+                    (function(min: FilterMode, mag: FilterMode): nil),
+                replacePixels = 
+                    (function(data: ImageData, slice: number, mipmap: number): nil),
+                getFilter = 
+                    (function(): FilterMode, FilterMode),
+                getWrap = 
+                    (function(): WrapMode, WrapMode),
+                getWidth = 
+                    (function(): number),
+                setMipmapFilter = 
+                    (function(filtermode: FilterMode, sharpness: number): nil),
+                setWrap = 
+                    (function(horizontal: WrapMode, vertical: WrapMode): nil),
+                getMipmapFilter = 
+                    (function(): FilterMode, number),
+                getHeight = 
+                    (function(): number),
+                getFlags = 
+                    (function(): table),
+            },
+            ParticleInsertMode = {
+            },
+            BlendMode = {
+            },
+            SpriteBatch = {
+                attachAttribute = 
+                    (function(name: string, mesh: Mesh): nil),
+                setColor = 
+                    (function(r: number, g: number, b: number, a: number): nil),
+                set = 
+                    (function(id: number, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
+                getCount = 
+                    (function(): number),
+                getColor = 
+                    (function(): number, number, number, number),
+                setDrawRange = 
+                    (function(start: number, count: number): nil),
+                getBufferSize = 
+                    (function(): number),
+                getTexture = 
+                    (function(): Texture),
+                flush = 
+                    (function(): nil),
+                clear = 
+                    (function(): nil),
+                setTexture = 
+                    (function(texture: Texture): nil),
+            },
+            StencilAction = {
+            },
+            LineStyle = {
+            },
+            Font = {
+                setFilter = 
+                    (function(min: FilterMode, mag: FilterMode, anisotropy: number): nil),
+                getDescent = 
+                    (function(): number),
+                getFilter = 
+                    (function(): FilterMode, FilterMode, number),
+                getWrap = 
+                    (function(text: string, wraplimit: number): number, table),
+                setLineHeight = 
+                    (function(height: number): nil),
+                getWidth = 
+                    (function(line: string): number),
+                getBaseline = 
+                    (function(): number),
+                hasGlyphs = 
+                    (function(character: string): boolean),
+                setFallbacks = 
+                    (function(fallbackfont1: Font, ...: Font[]): nil),
+                getLineHeight = 
+                    (function(): number),
+                getHeight = 
+                    (function(): number),
+            },
+            MeshDrawMode = {
+            },
+            GraphicsFeature = {
+            },
+            BlendAlphaMode = {
+            },
+            Video = {
+                rewind = 
+                    (function(): nil),
+                setSource = 
+                    (function(source: Source): nil),
+                getSource = 
+                    (function(): Source),
+                tell = 
+                    (function(seconds: number): nil),
+                isPlaying = 
+                    (function(): boolean),
+                seek = 
+                    (function(offset: number): nil),
+                setFilter = 
+                    (function(min: FilterMode, mag: FilterMode, anisotropy: number): nil),
+                getWidth = 
+                    (function(): number),
+                pause = 
+                    (function(): nil),
+                getFilter = 
+                    (function(): FilterMode, FilterMode, number),
+                play = 
+                    (function(): nil),
+                getStream = 
+                    (function(): VideoStream),
+                getHeight = 
+                    (function(): number),
+            },
+            VertexWinding = {
+            },
+            ArcType = {
+            },
+            LineJoin = {
+            },
+            GraphicsLimit = {
+            },
+            CompareMode = {
+            },
+            CullMode = {
+            },
+            AlignMode = {
+            },
+            WrapMode = {
+            },
+            Texture = {
+                getTextureType = 
+                    (function(): TextureType),
+                isReadable = 
+                    (function(): boolean),
+                getLayerCount = 
+                    (function(): number),
+                getMipmapCount = 
+                    (function(): number),
+                getFormat = 
+                    (function(): PixelFormat),
+            },
+            Text = {
+                set = 
+                    (function(textstring: string): nil),
+                addf = 
+                    (function(textstring: string, wraplimit: number, align: AlignMode, x: number, y: number, angle: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): number),
+                getDimensions = 
+                    (function(index: number): number, number),
+                setf = 
+                    (function(textstring: string, wraplimit: number, align: AlignMode): nil),
+                setFont = 
+                    (function(font: Font): nil),
+                getFont = 
+                    (function(): Font),
+                getWidth = 
+                    (function(index: number): number),
+                clear = 
+                    (function(): nil),
+                getHeight = 
+                    (function(index: number): number),
+            },
         },
         data = {
             encode = 
@@ -320,6 +1844,142 @@ type _G = {
                 (function(hashFunction: HashFunction, string: string): string),
             decompress = 
                 (function(container: ContainerType, compressedData: CompressedData): string),
+            HashFunction = {
+            },
+            ContainerType = {
+            },
+        },
+        math = {
+            randomNormal = 
+                (function(stddev: number, mean: number): number),
+            isConvex = 
+                (function(vertices: table): boolean),
+            gammaToLinear = 
+                (function(r: number, g: number, b: number): number, number, number),
+            newTransform = 
+                (function(x: number, y: number, angle: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): Transform),
+            noise = 
+                (function(x: number): number),
+            getRandomSeed = 
+                (function(): number, number),
+            triangulate = 
+                (function(polygon: table): table),
+            newRandomGenerator = 
+                (function(seed: number): RandomGenerator),
+            setRandomState = 
+                (function(state: string): nil),
+            setRandomSeed = 
+                (function(seed: number): nil),
+            linearToGamma = 
+                (function(lr: number, lg: number, lb: number): number, number, number),
+            getRandomState = 
+                (function(): string),
+            random = 
+                (function(max: number): number),
+            decompress = 
+                (function(compressedData: CompressedData): string),
+            newBezierCurve = 
+                (function(vertices: table): BezierCurve),
+            CompressedDataFormat = {
+            },
+            BezierCurve = {
+                removeControlPoint = 
+                    (function(index: number): nil),
+                scale = 
+                    (function(s: number, ox: number, oy: number): nil),
+                render = 
+                    (function(depth: number): table),
+                getControlPointCount = 
+                    (function(): number),
+                translate = 
+                    (function(dx: number, dy: number): nil),
+                getSegment = 
+                    (function(startpoint: number, endpoint: number): BezierCurve),
+                getDegree = 
+                    (function(): number),
+                setControlPoint = 
+                    (function(i: number, ox: number, oy: number): nil),
+                insertControlPoint = 
+                    (function(x: number, y: number, i: number): nil),
+                renderSegment = 
+                    (function(startpoint: number, endpoint: number, depth: number): table),
+                getControlPoint = 
+                    (function(i: number): number, number),
+                rotate = 
+                    (function(angle: number, ox: number, oy: number): nil),
+                getDerivative = 
+                    (function(): BezierCurve),
+            },
+            CompressedData = {
+                getFormat = 
+                    (function(): CompressedDataFormat),
+            },
+            MatrixLayout = {
+            },
+            RandomGenerator = {
+                randomNormal = 
+                    (function(stddev: number, mean: number): number),
+                setState = 
+                    (function(state: string): nil),
+                random = 
+                    (function(max: number): number),
+                getState = 
+                    (function(): string),
+                setSeed = 
+                    (function(seed: number): nil),
+            },
+            Transform = {
+                reset = 
+                    (function(): Transform),
+                shear = 
+                    (function(kx: number, ky: number): Transform),
+                getMatrix = 
+                    (function(): number, number, number, number),
+                translate = 
+                    (function(dx: number, dy: number): Transform),
+                inverse = 
+                    (function(): Transform),
+                setTransformation = 
+                    (function(x: number, y: number, angle: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): Transform),
+                transformPoint = 
+                    (function(globalX: number, globalY: number): number, number),
+                clone = 
+                    (function(): Transform),
+                rotate = 
+                    (function(angle: number): Transform),
+                scale = 
+                    (function(sx: number, sy: number): Transform),
+                inverseTransformPoint = 
+                    (function(local_X: number, local_Y: number): number, number),
+                setMatrix = 
+                    (function(e1_1: number, e1_2: number, ...: number, e4_4: number): Transform),
+            },
+        },
+        sound = {
+            newSoundData = 
+                (function(filename: string): SoundData),
+            Decoder = {
+                getSampleRate = 
+                    (function(): number),
+                getDuration = 
+                    (function(): number),
+                getChannelCount = 
+                    (function(): number),
+            },
+            SoundData = {
+                getSampleRate = 
+                    (function(): number),
+                getSample = 
+                    (function(i: number): number),
+                setSample = 
+                    (function(i: number, sample: number): nil),
+                getSampleCount = 
+                    (function(): number),
+                getDuration = 
+                    (function(): number),
+                getChannelCount = 
+                    (function(): number),
+            },
         },
         keyboard = {
             hasTextInput = 
@@ -336,7 +1996,17 @@ type _G = {
                 (function(): boolean),
             isScancodeDown = 
                 (function(scancode: Scancode, ...: Scancode[]): boolean),
+            Scancode = {
+            },
+            KeyConstant = {
+            },
         },
+        video = {
+            newVideoStream = 
+                (function(filename: string): VideoStream),
+        },
+    },
+    f = {
     },
     ffi = {
         cdef = 
@@ -532,6 +2202,46 @@ type _G = {
             (function(formatstring, ...): string),
         pack = 
             (function(fmt: string, v1, v2, ...): string),
+    },
+    m = {
+        __le = 
+            (function(op1, op2): boolean),
+        __ipairs = 
+            (function(table): iterator, table, index),
+        __lt = 
+            (function(op1, op2): boolean),
+        __concat = 
+            (function(op1, op2): value),
+        __sub = 
+            (function(op1, op2): value),
+        __div = 
+            (function(op1, op2): value),
+        __index = 
+            (function(table, key): value),
+        __unm = 
+            (function(op): value),
+        __gc = 
+            (function(func, ...): values),
+        __mod = 
+            (function(op1, op2): value),
+        __call = 
+            (function(func, ...): values),
+        __newindex = 
+            (function(table, key, value): value),
+        __pairs = 
+            (function(table): iterator, table, key),
+        __tostring = 
+            (function(op): value),
+        __eq = 
+            (function(op1, op2): boolean),
+        __len = 
+            (function(op): value),
+        __mul = 
+            (function(op1, op2): value),
+        __add = 
+            (function(op1, op2): value),
+        __pow = 
+            (function(op1, op2): value),
     },
     math = {
         ceil = 

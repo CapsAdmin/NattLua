@@ -113,7 +113,11 @@ do
     end
 
     function META:Copy()
-        return types.Type(self.name, deepcopy(self.value))
+        if self.name == "function" then
+            return types.Type(self.name, deepcopy(self.ret), deepcopy(self.args))
+        else
+            return types.Type(self.name, deepcopy(self.value))
+        end
     end
 end
 
@@ -182,7 +186,7 @@ function META:Extend(t)
             copy:set(k,v)
         end
     end
-
+    
     return copy
 end
 
@@ -237,7 +241,7 @@ function META:BinaryOperator(op, b, node, env)
             ret = arg
         end
 
-        if not b:IsType(arg) and ret ~= "last" then
+        if not b:IsType(arg) and ret ~= "last" or b.name == "any" then
             self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", node.value)
             return self:Type("any")
         end
@@ -440,7 +444,7 @@ function types.CallFunction(func, args)
 
         if func.arguments then
             for i, typ in ipairs(func.arguments) do
-                if (not args[i] or not typ:IsType(args[i])) and not typ:IsType("any") then
+                if (not args[i] or not typ:IsType(args[i])) and not (typ.name == "any" or typ.name == "...") then
                     ok = false
                     table.insert(errors, {func = func, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
                 end
