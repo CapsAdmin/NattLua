@@ -396,6 +396,7 @@ function types.Register(name, interface)
         end,
     }
 
+
     return registered[name].new
 end
 
@@ -665,6 +666,9 @@ types.Register("string", {
                 return tbl:get(key)
             end
         end
+
+        self:Error("index " .. tostring(key) .. " is not defined")
+
         return self:Type("any")
     end,
     binary = {
@@ -740,6 +744,8 @@ types.Register("table", {
         key = type(key) ~= "string" and key.value or key
 
         if self.value[key] == nil then
+            self:Error("index " .. tostring(key) .. " is not defined")
+
             return self:Type("any")
         end
 

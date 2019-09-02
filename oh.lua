@@ -136,4 +136,34 @@ function oh.TranspileFile(path)
 	return code
 end
 
+function oh.TypeInfer(ast, name, code, dump_events)
+
+    local crawler = Crawler()
+    if dump_events then
+        crawler.OnEvent = crawler.DumpEvent
+    end
+    crawler.code = code
+    crawler.name = name
+    crawler:CrawlStatement(ast)
+
+    return ast
+end
+
+function oh.Analyze(code, dump_events)
+	local name = "test"
+	return assert(oh.TypeInfer(assert(oh.TokensToAST(assert(oh.CodeToTokens(code, name)), name, code)), name, code, dump_events))
+end
+
+
+function oh.Code(code, name)
+	local info = debug.getinfo(2)
+
+	return {
+		parent_line = info and info.currentline,
+		parent_source = info and info.source,
+		code = code, 
+		name = name,
+	}
+end
+
 return oh

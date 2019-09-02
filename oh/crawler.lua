@@ -223,7 +223,7 @@ do
         self.env[env][self:Hash(key)] = val
     end
 
-    function META:NewIndex(obj, key, val, env)
+    function META:NewIndex(obj, key, val, env) 
         assert(val == nil or types.IsTypeObject(val))
 
         local node = obj
@@ -245,6 +245,10 @@ do
             end
         elseif node.kind == "postfix_expression_index" then
             self:NewIndex(node.left, node.expression, val, env)
+        elseif node.kind == "postfix_call" then
+            if not self:MutateUpvalue(node.left, val, env) then
+                self:SetGlobal(node.left, val, env)
+            end        
         else
             self:NewIndex(node.left, node.right, val, env)
         end
@@ -368,6 +372,19 @@ do
             end
             io.write(" = ", exp:Render())
             io.write("\n")
+        elseif what == "deferred_call" then
+            io.write((" "):rep(t))
+            --io.write(what, " - ")
+            local exp, return_values = ...
+            if return_values then
+                local str = {}
+                for i,v in ipairs(return_values) do
+                    str[i] = tostring(v)
+                end
+                io.write(table.concat(str, ", "))
+            end
+            io.write(" = ", exp:Render())
+            io.write("\n")
         elseif what == "function_spec" then
             local func = ...
             io.write((" "):rep(t))
@@ -402,14 +419,14 @@ end
 
 function META:CallMeLater(typ, arguments, node)
     self.deferred_calls = self.deferred_calls or {}
-    table.insert(self.deferred_calls, {typ, arguments, node})
+    table.insert(self.deferred_calls, 1, {typ, arguments, node})
 end
 
 
 do
     local function merge_types(src, dst)
         for i,v in ipairs(dst) do
-            if src[i] then
+            if src[i] and src[i].name ~= "any" then
                 src[i] = src[i] + v
             else
                 src[i] = dst[i]
@@ -526,7 +543,7 @@ function META:Error(node, msg)
         local s = tostring(self)
         s = s .. ": " .. msg
 
-        error(s)
+        print(s)
     end
 end
 
@@ -564,8 +581,9 @@ local evaluate_expression
 function META:CrawlStatement(statement, ...)
     if statement.kind == "root" then
         self:PushScope(statement)
+        local ret
         if self:CrawlStatements(statement.statements, ...) == true then
-            return true
+            ret = true
         end
         self:PopScope()
         if self.deferred_calls then
@@ -575,6 +593,7 @@ function META:CrawlStatement(statement, ...)
                 end
             end
         end
+        return ret
     elseif statement.kind == "assignment" or statement.kind == "local_assignment" then
         local env = statement.environment or "runtime"
         local ret = self:UnpackExpressions(statement.right, env)
