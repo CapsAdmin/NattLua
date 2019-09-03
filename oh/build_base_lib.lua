@@ -9505,20 +9505,20 @@ lua = lua .. [[
 	end
 
 	type _G.pairs = function(tbl)
-		local next = crawler:GetValue("next", "typesystem")
+		local next = analyzer:GetValue("next", "typesystem")
 		return next, tbl, nil
 	end
 
 	type _G.ipairs = function(tbl)
-		local next = crawler:GetValue("next", "typesystem")
+		local next = analyzer:GetValue("next", "typesystem")
 		return next, tbl, nil
 	end
 
 	type _G.require = function(name)
 		local str = name.value
 
-		if crawler:GetValue(str, "typesystem") then
-			return crawler:GetValue(str, "typesystem")
+		if analyzer:GetValue(str, "typesystem") then
+			return analyzer:GetValue(str, "typesystem")
 		end
 
 		for _, searcher in ipairs(package.loaders) do
@@ -9529,9 +9529,9 @@ lua = lua .. [[
 					local path = path:sub(2)
 
 					local ast = assert(require("oh").FileToAST(path))
-					crawler:CrawlStatement(ast)
+					analyzer:AnalyzeStatement(ast)
 
-					return unpack(crawler.last_return)
+					return unpack(analyzer.last_return)
 				end
 			end
 		end
@@ -9577,7 +9577,7 @@ lua = lua .. [[
 
 
     type _G.table.sort = function(tbl, func)
-        local next = oh.GetBaseCrawler():GetValue("_G", "typesystem"):get("next").func
+        local next = oh.GetBaseAnalyzeer():GetValue("_G", "typesystem"):get("next").func
         local k,v = next(tbl)
         func.arguments[1] = v
         func.arguments[2] = v
@@ -9586,11 +9586,11 @@ lua = lua .. [[
 lua = lua:gsub("\t", "    ")
 
 local oh = require("oh")
-local Crawler = require("oh.crawler")
-local base = Crawler()
+local Analyzer = require("oh.analyzer")
+local base = Analyzer()
 base.Index = nil
 
-base:CrawlStatement(assert(oh.Code(lua, "base_library"):Parse()).SyntaxTree)
+base:AnalyzeStatement(assert(oh.Code(lua, "base_library"):Parse()).SyntaxTree)
 
 io.open("oh/base_lib.oh", "w"):write(lua)
 

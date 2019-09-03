@@ -4,8 +4,8 @@ local syntax = require("oh.syntax")
 local function Error(self, msg, node)
     local node = node or self.GetNode and self:GetNode()
 
-    if self.crawler then
-        self.crawler:Error(node, msg)
+    if self.analyzer then
+        self.analyzer:Error(node, msg)
         return
     end
 
@@ -151,7 +151,7 @@ end
 
 function META:Type(...)
     local t = types.Type(...)
-    t.crawler = self.crawler
+    t.analyzer = self.analyzer
     t:AttachNode(self:GetNode())
     return t
 end
@@ -660,8 +660,8 @@ types.Register("string", {
     inherits = "base",
     truthy = true,
     get = function(self, key)
-        if self.crawler then
-            local tbl = self.crawler:GetValue("string", "typesystem")
+        if self.analyzer then
+            local tbl = self.analyzer:GetValue("string", "typesystem")
             if tbl and key then
                 return tbl:get(key)
             end

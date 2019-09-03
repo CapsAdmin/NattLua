@@ -4,19 +4,19 @@ local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
 local print_util = require("oh.print_util")
-local Crawler = require("oh.crawler")
+local Analyzer = require("oh.analyzer")
 
 
-function oh.GetBaseCrawler()
+function oh.GetBaseAnalyzeer()
 
-    if not oh.base_crawler then
-        local base = Crawler()
+    if not oh.base_analyzer then
+        local base = Analyzer()
         base.Index = nil
-        base:CrawlStatement(assert(oh.FileToAST("oh/base_lib.oh")).SyntaxTree)
-        oh.base_crawler = base
+        base:AnalyzeStatement(assert(oh.FileToAST("oh/base_lib.oh")).SyntaxTree)
+        oh.base_analyzer = base
     end
 
-    return oh.base_crawler
+    return oh.base_analyzer
 end
 
 
@@ -111,13 +111,13 @@ do
 			assert(self:Parse())
 		end
 
-		local crawler = Crawler()
-		crawler.code_data = self
-		crawler.OnError = function(obj, ...) self:OnError(obj, ...) end
+		local analyzer = Analyzer()
+		analyzer.code_data = self
+		analyzer.OnError = function(obj, ...) self:OnError(obj, ...) end
 
-		oh.current_crawler = crawler
-		local ok, ast = pcall(crawler.CrawlStatement, crawler, self.SyntaxTree)
-		oh.current_crawler = nil
+		oh.current_analyzer = analyzer
+		local ok, ast = pcall(analyzer.AnalyzeStatement, analyzer, self.SyntaxTree)
+		oh.current_analyzer = nil
 	
 		if not ok then
 			return nil, ast:match("^.-:%s+(.+)")

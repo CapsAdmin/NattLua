@@ -235,7 +235,7 @@ end
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
-local Crawler = require("oh.crawler")
+local Analyzer = require("oh.analyzer")
 local print_util = require("oh.print_util")
 
 local document_cache = {}
@@ -297,11 +297,11 @@ local function compile(uri, server, client)
 	end
 
 	if true then
-		local crawler = Crawler()
-		crawler.code = code
-		crawler.name = "test"
+		local analyzer = Analyzer()
+		analyzer.code = code
+		analyzer.name = "test"
 
-		crawler:CrawlStatement(ast)
+		analyzer:AnalyzeStatement(ast)
 	end
 	return tokens, ast
 end

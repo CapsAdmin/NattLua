@@ -11,7 +11,7 @@ do return end
 
 
 local oh = require("oh")
-local Crawler = require("oh.crawler")
+local Analyzer = require("oh.analyzer")
 local LuaEmitter = require("oh.lua_emitter")
 
 local code = io.open("oh/lexer.lua"):read("*all")

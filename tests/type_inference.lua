@@ -550,7 +550,7 @@ a.b.c = 1
 
     type b = function()
         _G.LOL = nil
-        crawler:GetValue("a", "typesystem").func()
+        analyzer:GetValue("a", "typesystem").func()
         if not _G.LOL then
             error("test fail")
         end

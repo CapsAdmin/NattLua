@@ -62,7 +62,7 @@ do
         node.scope = self.scope
         local t = new_type(self, node, ...):AttachNode(node)
         t.code = self.code
-        t.crawler = self
+        t.analyzer = self
         return t
     end
 
@@ -70,7 +70,7 @@ do
         node.scope = self.scope
         local t = types.Type(...):AttachNode(node)
         t.code = self.code
-        t.crawler = self
+        t.analyzer = self
         return t
     end
 
@@ -80,10 +80,10 @@ do
         for _,v in ipairs(node.children) do
             if v.kind == "table_key_value" then
                 --out[types.Type("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
-                out[v.key.value] = self:CrawlExpression(v.value, env)
+                out[v.key.value] = self:AnalyzeExpression(v.value, env)
             elseif v.kind == "table_expression_value" then
-                local t = self:CrawlExpression(v.key, env)
-                local v = self:CrawlExpression(v.value, env)
+                local t = self:AnalyzeExpression(v.key, env)
+                local v = self:AnalyzeExpression(v.value, env)
                 if t:IsType("string") then
                     out[t.value] = v
                 else
@@ -91,9 +91,9 @@ do
                 end
             elseif v.kind == "table_index_value" then
                 if v.i then
-                    out[v.i] = self:CrawlExpression(v.value, env)
+                    out[v.i] = self:AnalyzeExpression(v.value, env)
                 else
-                    table.insert(out, self:CrawlExpression(v.value, env))
+                    table.insert(out, self:AnalyzeExpression(v.value, env))
                 end
             end
         end
@@ -227,8 +227,8 @@ do
 
         local node = obj
 
-        local key = self:CrawlExpression(key, env)
-        local obj = self:CrawlExpression(obj, env) or self:TypeFromImplicitNode(node, "nil")
+        local key = self:AnalyzeExpression(key, env)
+        local obj = self:AnalyzeExpression(obj, env) or self:TypeFromImplicitNode(node, "nil")
 
         obj:set(key, val)
 
@@ -259,7 +259,7 @@ do
         if not expressions then return ret end
 
         for _, exp in ipairs(expressions) do
-            for _, t in ipairs({self:CrawlExpression(exp, env)}) do
+            for _, t in ipairs({self:AnalyzeExpression(exp, env)}) do
                 if type(t) == "table" and t:IsType("...") then
                     if t.values then
                         for _, t in ipairs(t.values) do
@@ -407,10 +407,10 @@ do
     end
 end
 
-function META:CrawlStatements(statements, ...)
+function META:AnalyzeStatements(statements, ...)
     if not statements then print(debug.traceback()) end
     for _, val in ipairs(statements) do
-        if self:CrawlStatement(val, ...) == true then
+        if self:AnalyzeStatement(val, ...) == true then
             return true
         end
     end
@@ -482,13 +482,13 @@ do
                 end
 
                 if typ.node.return_types then
-                    ret = self:CrawlExpressions(typ.node.return_types, "typesystem")
+                    ret = self:AnalyzeExpressions(typ.node.return_types, "typesystem")
                 else
                     ret = {}
                 end
 
                 -- collect return values from function statements
-                self:CrawlStatements(typ.node.statements, ret)
+                self:AnalyzeStatements(typ.node.statements, ret)
 
                 self:PopScope()
 
@@ -521,7 +521,7 @@ do
             self:FireEvent("external_call", node, typ)
 
             -- HACKS
-            typ.crawler = self
+            typ.analyzer = self
             typ.node = node
 
             return types.CallFunction(typ, arguments)
@@ -534,8 +534,8 @@ do
 end
 
 function META:Error(node, msg)
-    if require("oh").current_crawler and require("oh").current_crawler ~= self then
-        return require("oh").current_crawler:Error(node, msg)
+    if require("oh").current_analyzer and require("oh").current_analyzer ~= self then
+        return require("oh").current_analyzer:Error(node, msg)
     end
 
     if self.OnError then
@@ -568,7 +568,7 @@ do
 
     function META:GetInferredType(node)
         if node.type_expression then
-            return self:CrawlExpression(node.type_expression, "typesystem")
+            return self:AnalyzeExpression(node.type_expression, "typesystem")
         end
 
         local str = node.value and node.value.value
@@ -588,11 +588,11 @@ end
 
 local evaluate_expression
 
-function META:CrawlStatement(statement, ...)
+function META:AnalyzeStatement(statement, ...)
     if statement.kind == "root" then
         self:PushScope(statement)
         local ret
-        if self:CrawlStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements, ...) == true then
             ret = true
         end
         self:PopScope()
@@ -612,7 +612,7 @@ function META:CrawlStatement(statement, ...)
             local val
 
             if node.type_expression then
-                val = self:CrawlExpression(node.type_expression, "typesystem")
+                val = self:AnalyzeExpression(node.type_expression, "typesystem")
                 if ret[i] and not ret[i]:IsType(val) then
                     self:Error(node, "expected " .. tostring(val) .. " but the right hand side is a " .. tostring(ret[i]))
                 end
@@ -629,18 +629,18 @@ function META:CrawlStatement(statement, ...)
             node.inferred_type = val
         end
     elseif statement.kind == "function" then
-        self:Assign(statement.expression, self:CrawlExpression(statement:ToExpression("function")), "runtime")
+        self:Assign(statement.expression, self:AnalyzeExpression(statement:ToExpression("function")), "runtime")
 
         if statement.return_types then
-            statement.inferred_return_types = self:CrawlExpressions(statement.return_types, "typesystem")
+            statement.inferred_return_types = self:AnalyzeExpressions(statement.return_types, "typesystem")
         end
     elseif statement.kind == "local_function" then
-        self:DeclareUpvalue(statement.identifier, self:CrawlExpression(statement:ToExpression("function")), "runtime")
+        self:DeclareUpvalue(statement.identifier, self:AnalyzeExpression(statement:ToExpression("function")), "runtime")
     elseif statement.kind == "local_type_function" then
-        self:DeclareUpvalue(statement.identifier, self:CrawlExpression(statement:ToExpression("function")), "typesystem")
+        self:DeclareUpvalue(statement.identifier, self:AnalyzeExpression(statement:ToExpression("function")), "typesystem")
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
-            local b = not statement.expressions[i] or (self:CrawlExpression(statement.expressions[i], "runtime") or self:TypeFromImplicitNode(statement.expressions[i], "any"))
+            local b = not statement.expressions[i] or (self:AnalyzeExpression(statement.expressions[i], "runtime") or self:TypeFromImplicitNode(statement.expressions[i], "any"))
 
             if b == true or b:IsTruthy() then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
@@ -649,7 +649,7 @@ function META:CrawlStatement(statement, ...)
                     b.truthy = (b.truthy or 0) + 1
                 end
 
-                if self:CrawlStatements(statements, ...) == true then
+                if self:AnalyzeStatements(statements, ...) == true then
                     self:PopScope()
                     if type(b) == "table" and b.value == true then
                         return true
@@ -665,25 +665,25 @@ function META:CrawlStatement(statement, ...)
             end
         end
     elseif statement.kind == "while" then
-        if self:CrawlExpression(statement.expression):IsTruthy() then
+        if self:AnalyzeExpression(statement.expression):IsTruthy() then
             self:PushScope(statement)
-            if self:CrawlStatements(statement.statements, ...) == true then
+            if self:AnalyzeStatements(statement.statements, ...) == true then
                 return true
             end
             self:PopScope()
         end
     elseif statement.kind == "do" then
         self:PushScope(statement)
-        if self:CrawlStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements, ...) == true then
             return true
         end
         self:PopScope()
     elseif statement.kind == "repeat" then
         self:PushScope(statement)
-        if self:CrawlStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements, ...) == true then
             return true
         end
-        if self:CrawlExpression(statement.expression):IsTruthy() then
+        if self:AnalyzeExpression(statement.expression):IsTruthy() then
             self:FireEvent("break")
         end
         self:PopScope()
@@ -692,7 +692,7 @@ function META:CrawlStatement(statement, ...)
 
         local evaluated = {}
         for i,v in ipairs(statement.expressions) do
-            evaluated[i] = self:CrawlExpression(v)
+            evaluated[i] = self:AnalyzeExpression(v)
 
             if return_values then
                 return_values[i] = return_values[i] and (return_values[i] + evaluated[i]) or evaluated[i]
@@ -709,7 +709,7 @@ function META:CrawlStatement(statement, ...)
 
         --return true
     elseif statement.kind == "call_expression" then
-        self:FireEvent("call", statement.value, {self:CrawlExpression(statement.value)})
+        self:FireEvent("call", statement.value, {self:AnalyzeExpression(statement.value)})
     elseif statement.kind == "generic_for" then
         self:PushScope(statement)
 
@@ -723,9 +723,9 @@ function META:CrawlStatement(statement, ...)
 
             setmetatable(copy, getmetatable(statement.expressions[1]))
 
-            args = {self:CrawlExpression(copy)}
+            args = {self:AnalyzeExpression(copy)}
         else
-            args = {self:CrawlExpression(statement.expressions[1])}
+            args = {self:AnalyzeExpression(statement.expressions[1])}
         end
 
         if args[1] then
@@ -736,29 +736,29 @@ function META:CrawlStatement(statement, ...)
             end
         end
 
-        if self:CrawlStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements, ...) == true then
             return true
         end
 
         self:PopScope()
     elseif statement.kind == "numeric_for" then
         self:PushScope(statement)
-        local range = self:CrawlExpression(statement.expressions[1]):Max(self:CrawlExpression(statement.expressions[2]))
+        local range = self:AnalyzeExpression(statement.expressions[1]):Max(self:AnalyzeExpression(statement.expressions[2]))
         self:DeclareUpvalue(statement.identifiers[1], range, "runtime")
 
         if statement.expressions[3] then
-            self:CrawlExpression(statement.expressions[3])
+            self:AnalyzeExpression(statement.expressions[3])
         end
 
-        if self:CrawlStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements, ...) == true then
             self:PopScope()
             return true
         end
         self:PopScope()
     elseif statement.kind == "local_type_assignment" then
-        self:DeclareUpvalue(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
+        self:DeclareUpvalue(statement.left, self:AnalyzeExpression(statement.right, "typesystem"), "typesystem")
     elseif statement.kind == "type_assignment" then
-        self:Assign(statement.left, self:CrawlExpression(statement.right, "typesystem"), "typesystem")
+        self:Assign(statement.left, self:AnalyzeExpression(statement.right, "typesystem"), "typesystem")
     elseif statement.kind == "type_interface" then
         local tbl = self:GetValue(statement.key, "typesystem")
 
@@ -767,11 +767,11 @@ function META:CrawlStatement(statement, ...)
         end
 
         for i,v in ipairs(statement.expressions) do
-            local val = self:CrawlExpression(v.right, "typesystem")
+            local val = self:AnalyzeExpression(v.right, "typesystem")
             if tbl.value[v.left.value] then
                 types.OverloadFunction(tbl:get(v.left.value), val)
             else
-                tbl:set(v.left.value, self:CrawlExpression(v.right, "typesystem"))
+                tbl:set(v.left.value, self:AnalyzeExpression(v.right, "typesystem"))
             end
         end
 
@@ -791,7 +791,7 @@ do
     evaluate_expression = function(self, node, stack, env)
         if node.kind == "value" then
             if node.type_expression then
-                local val = self:CrawlExpression(node.type_expression, "typesystem")
+                local val = self:AnalyzeExpression(node.type_expression, "typesystem")
 
                 stack:Push(val)
                 if node.tokens["is"] then
@@ -868,7 +868,7 @@ do
             local ret = {}
             if node.type_expressions then
                 for i, type_exp in ipairs(node.type_expressions) do
-                    ret[i] = self:CrawlExpression(type_exp, "typesystem")
+                    ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
                 end
             end
             local t = self:TypeFromImplicitNode(node, "function", ret, args)
@@ -899,7 +899,7 @@ do
             stack:Push(r:PostfixOperator(op, node, env))
         elseif node.kind == "postfix_expression_index" then
             local r = stack:Pop()
-            local index = self:CrawlExpression(node.expression)
+            local index = self:AnalyzeExpression(node.expression)
 
             stack:Push(r:get(index))
         elseif node.kind == "type_function" then
@@ -921,12 +921,12 @@ do
 
             if node.return_expressions then
                 for i,v in ipairs(node.return_expressions) do
-                    rets[i] = self:CrawlExpression(v, "typesystem")
+                    rets[i] = self:AnalyzeExpression(v, "typesystem")
                 end
             end
 
             if node.statements then
-                local str = "local oh, crawler, types = ...; return " .. node:Render({})
+                local str = "local oh, analyzer, types = ...; return " .. node:Render({})
                 local f, err = loadstring(str, "")
                 if not f then
                     -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
@@ -940,7 +940,7 @@ do
         elseif node.kind == "postfix_call" then
             local typ = stack:Pop()
 
-            local arguments = self:CrawlExpressions(node.expressions, env)
+            local arguments = self:AnalyzeExpressions(node.expressions, env)
 
             if node.self_call then
                 local val = stack:Pop()
@@ -955,7 +955,7 @@ do
             local tbl = {}
             if node.types then
                 for i,v in ipairs(node.types)do
-                    tbl[i] = self:CrawlExpression(v, env)
+                    tbl[i] = self:AnalyzeExpression(v, env)
                 end
             end
             local val = types.Type("list", tbl, node.length and tonumber(node.length.value))
@@ -1002,7 +1002,7 @@ do
             cb(self, node, ...)
         end
 
-        function META:CrawlExpression(exp, env)
+        function META:AnalyzeExpression(exp, env)
             assert(exp and exp.type == "expression")
             env = env or "runtime"
             local stack = setmetatable({values = {}, i = 1}, meta)
@@ -1010,11 +1010,11 @@ do
             return unpack(stack.values)
         end
 
-        function META:CrawlExpressions(expressions, ...)
+        function META:AnalyzeExpressions(expressions, ...)
             if not expressions then return end
             local ret = {}
             for i, expression in ipairs(expressions) do
-                ret[i] = self:CrawlExpression(expression, ...)
+                ret[i] = self:AnalyzeExpression(expression, ...)
             end
             return ret
         end
@@ -1023,9 +1023,9 @@ end
 
 local function DefaultIndex(self, node)
     local oh = require("oh")
-    local val = oh.GetBaseCrawler():GetValue("_G", "typesystem")
+    local val = oh.GetBaseAnalyzeer():GetValue("_G", "typesystem")
     val:AttachNode(node)
-    return val:get(oh.GetBaseCrawler():Hash(node))
+    return val:get(oh.GetBaseAnalyzeer():Hash(node))
 end
 
 return function()
