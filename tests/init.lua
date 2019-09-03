@@ -1,6 +1,6 @@
 local oh = require("oh")
 
-local map -- = {}
+local map-- = {}
 
 if map then
     debug.sethook(function(evt)
@@ -17,6 +17,14 @@ assert(loadfile("tests/transpile_equal.lua"))()
 assert(loadfile("tests/operator_precedence.lua"))()
 assert(loadfile("tests/type_inference.lua"))()
 assert(loadfile("tests/errors.lua"))()
+
+do
+    local a,b,c = assert(oh.loadfile("tests/multiplefiles/init.lua"))()
+    assert(a == "foo bar")
+    assert(b ~= c)
+    assert(type(b) == "number")
+    assert(type(c) == "number")
+end
 
 if VERBOSE then
     if not map and (jit.os == "Linux" or jit.os == "OSX") then

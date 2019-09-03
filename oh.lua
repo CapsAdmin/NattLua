@@ -12,7 +12,7 @@ function oh.GetBaseAnalyzeer()
     if not oh.base_analyzer then
         local base = Analyzer()
         base.Index = nil
-        base:AnalyzeStatement(assert(oh.FileToAST("oh/base_lib.oh")).SyntaxTree)
+        base:AnalyzeStatement(assert(oh.FileToAST("oh/base_lib.oh")))
         oh.base_analyzer = base
     end
 
@@ -27,7 +27,7 @@ function oh.loadstring(code, name, config)
     return loadstring(code, name)
 end
 
-function oh.loadfile(path)
+function oh.loadfile(path, config)
 	local code = oh.File(path, config)
 	local ok, code = pcall(code.BuildLua, code)
 	if not ok then return nil, code end
@@ -35,13 +35,13 @@ function oh.loadfile(path)
 end
 
 function oh.FileToAST(path, root)
-	local code, err = assert(oh.File(path, {root = root}))
+	local code, err = assert(oh.File(path, {path = path, root = root}))
 
 	if not code then
 		return err
 	end
 
-	return code:Parse()
+	return assert(code:Parse()).SyntaxTree
 end
 
 do
@@ -155,13 +155,17 @@ do
 	end
 
 	function oh.File(path, config)
+		
+		config = config or {}
+		config.path = config.path or path
+
 		local f, err = io.open(path, "rb")
 		if not f then
 			return nil, err
 		end
 		local code = f:read("*all")
 		f:close()
-		return oh.Code(code, "@" .. path)
+		return oh.Code(code, "@" .. path, config)
 	end
 
 end

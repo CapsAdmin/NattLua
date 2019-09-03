@@ -693,11 +693,11 @@ do -- expression
             node.right = self:ReadExpression(math_huge)
         elseif self:IsValue("function") then
             node = self:ReadAnonymousFunction()
+        elseif self.ReadImportExpression and self:IsValue("import") then
+            node = self:ReadImportExpression()
         elseif syntax.IsValue(self:GetToken()) or self:IsType("letter") then
             node = self:Expression("value")
             node.value = self:ReadTokenLoose()
-        elseif self.ReadImportExpression and self:IsValue("import") then
-            node = self:ReadImportExpression()
         elseif self:IsValue("{") then
             node = self:ReadTable()
         end
