@@ -1,3 +1,4 @@
+local oh = require("oh")
 
 local map -- = {}
 
@@ -11,10 +12,6 @@ if map then
     end, "l")
 end
 
-local test = require("tests.test")
-
---test.transpile_check({code = "a.b()"}) do return end
-
 io.write("TESTING") io.flush()
 assert(loadfile("tests/transpile_equal.lua"))()
 assert(loadfile("tests/operator_precedence.lua"))()
@@ -26,7 +23,7 @@ if VERBOSE then
         for path in io.popen("find ."):lines() do
             if path:sub(-4) == ".lua" and not path:find("10mb") then
                 print(path)
-                test.dofile(path, {name = path})
+                assert(oh.loadfile(path))()
             end
         end
     end

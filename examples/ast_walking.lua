@@ -1,7 +1,5 @@
 local oh = require("oh")
-local code = io.open("oh/parser.lua"):read("*all")
-
-local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code))))
+local ast = assert(oh.Code(assert(io.open("oh/parser.lua")):read("*all")):Parse()).SyntaxTree
 
 print("==================================================")
 print("all while statements:")

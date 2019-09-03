@@ -6,98 +6,13 @@ local LuaEmitter = require("oh.lua_emitter")
 local print_util = require("oh.print_util")
 local Crawler = require("oh.crawler")
 
-function oh.ASTToCode(ast, config)
-    local self = LuaEmitter(config)
-    return self:BuildCode(ast)
-end
-
-local function on_error(self, msg, start, stop, ...)
-	self.errors = self.errors or {}
-    table.insert(self.errors, {msg = msg, start = start, stop = stop, args = {...}})
-end
-
-function oh.CodeToTokens(code, name)
-	name = name or "unknown"
-
-	local lexer = Lexer(code)
-    lexer.OnError = on_error
-    local tokens = lexer:GetTokens()
-    if lexer.errors then
-        local str = ""
-        for _, err in ipairs(lexer.errors) do
-            str = str .. print_util.FormatError(code, name, err.msg, err.start, err.stop, unpack(err.args)) .. "\n"
-        end
-        return nil, str
-	end
-
-	return tokens, lexer
-end
-
-function oh.DefaultErrorHandler(self, msg, start, stop, ...)
-	self.errors = self.errors or {}
-	table.insert(self.errors, {msg = msg, start = start, stop = stop, args = {...}})
-	error(print_util.FormatMessage(msg, ...))
-end
-
-function oh.TokensToAST(tokens, name, code, config)
-	name = name or "unknown"
-
-	local parser = Parser(config)
-    parser.OnError = oh.DefaultErrorHandler
-    local ok, ast = pcall(parser.BuildAST, parser, tokens)
-	if not ok then
-		if parser.errors then
-			local str = ""
-			for _, err in ipairs(parser.errors) do
-				if code then
-					str = str .. print_util.FormatError(code, name, err.msg, err.start, err.stop, unpack(err.args)) .. "\n"
-				else
-					str = str .. err.msg .. "\n"
-				end
-			end
-			return nil, str
-		else
-			return nil, ast
-		end
-	end
-
-	return ast, parser
-end
-
-function oh.Transpile(code, name, config)
-    name = name or "unknown"
-
-	local tokens, err = oh.CodeToTokens(code, name)
-	if not tokens then return nil, err end
-
-	local ast, err = oh.TokensToAST(tokens, name, code, config)
-	if not ast then return nil, err end
-
-	return oh.ASTToCode(ast, config)
-end
-
-function oh.loadstring(code, name, config)
-	local code, err = oh.Transpile(code, name, config)
-	if not code then return nil, err end
-
-    return loadstring(code, name)
-end
-
-function oh.loadfile(path)
-	local code, err = oh.TranspileFile(path)
-	if not code then return nil, err end
-	print(code)
-    return loadstring(code, name)
-end
-
 
 function oh.GetBaseCrawler()
 
     if not oh.base_crawler then
-        local base_lib = io.open("oh/base_lib.oh"):read("*all")
         local base = Crawler()
         base.Index = nil
-        base:CrawlStatement(assert(oh.TokensToAST(assert(oh.CodeToTokens(base_lib, "test")), "test", base_lib)))
+        base:CrawlStatement(assert(oh.FileToAST("oh/base_lib.oh")).SyntaxTree)
         oh.base_crawler = base
     end
 
@@ -105,65 +20,150 @@ function oh.GetBaseCrawler()
 end
 
 
-function oh.FileToAST(path, root)
-	local f, err = io.open(path, "rb")
+function oh.loadstring(code, name, config)
+	local code = oh.Code(code, name, config)
+	local ok, code = pcall(code.BuildLua, code)
+	if not ok then return nil, code end
+    return loadstring(code, name)
+end
 
-	if not f then
-		return nil, err
+function oh.loadfile(path)
+	local code = oh.File(path, config)
+	local ok, code = pcall(code.BuildLua, code)
+	if not ok then return nil, code end
+    return loadstring(code, name)
+end
+
+function oh.FileToAST(path, root)
+	local code, err = assert(oh.File(path, {root = root}))
+
+	if not code then
+		return err
 	end
 
-	local code = f:read("*all")
-	f:close()
-
-	local name = "@" .. path
-	local tokens, err = oh.CodeToTokens(code, name)
-	if not tokens then return nil, err end
-
-	local ast, err = oh.TokensToAST(tokens, name, code, {path = path, root = root})
-	if not ast then return nil, err end
-
-	return ast
+	return code:Parse()
 end
 
-function oh.TranspileFile(path)
-	local f, err = io.open(path, "rb")
-	if not f then return nil, err end
-	local code = f:read("*all")
-	f:close()
-	local code, err = oh.Transpile(code, "@" .. path, {path = path})
-	if not code then return nil, err end
+do
+	local META = {}
+	META.__index = META
 
-	return code
-end
+	function META:__tostring()
+		local str = ""
 
-function oh.TypeInfer(ast, name, code, dump_events)
+		if self.parent_name then
+			str = str .. "[" .. self.parent_name .. ":" .. self.parent_line .. "] "
+		end
 
-    local crawler = Crawler()
-    if dump_events then
-        crawler.OnEvent = crawler.DumpEvent
-    end
-    crawler.code = code
-    crawler.name = name
-    crawler:CrawlStatement(ast)
+		local line = self.code:match("(.-)\n")
 
-    return ast
-end
+		if line then 
+			str = str .. line .. "..."
+		else
+			str = str .. self.code
+		end
 
-function oh.Analyze(code, dump_events)
-	local name = "test"
-	return assert(oh.TypeInfer(assert(oh.TokensToAST(assert(oh.CodeToTokens(code, name)), name, code)), name, code, dump_events))
-end
+		return str
+	end
 
+	function META:OnError(obj, msg, start, stop, ...)
+		error(print_util.FormatError(self.code, self.name, msg, start, stop, ...))
+	end
 
-function oh.Code(code, name)
-	local info = debug.getinfo(2)
+	function META:Lex()
+		local lexer = Lexer(self.code)
+		lexer.code_data = self
+		lexer.OnError = function(obj, ...) self:OnError(obj, ...) end
+	
+		local ok, tokens = pcall(lexer.GetTokens, lexer)
+	
+		if not ok then
+			return nil, tokens:match("^.-:%s+(.+)")
+		end
 
-	return {
-		parent_line = info and info.currentline,
-		parent_source = info and info.source,
-		code = code, 
-		name = name,
-	}
+		self.Tokens = tokens
+
+		return self
+	end
+
+	function META:Parse()
+		if not self.Tokens then
+			assert(self:Lex())
+		end
+
+		local parser = Parser(self.config)
+		parser.code_data = self
+		parser.OnError = function(obj, ...) self:OnError(obj, ...) end
+		
+		local ok, ast = pcall(parser.BuildAST, parser, self.Tokens)
+
+		if not ok then
+			return nil, ast:match("^.-:%s+(.+)")
+		end
+
+		self.SyntaxTree = ast
+
+		return self
+	end
+
+	function META:Analyze()
+		if not self.SyntaxTree then
+			assert(self:Parse())
+		end
+
+		local crawler = Crawler()
+		crawler.code_data = self
+		crawler.OnError = function(obj, ...) self:OnError(obj, ...) end
+
+		oh.current_crawler = crawler
+		local ok, ast = pcall(crawler.CrawlStatement, crawler, self.SyntaxTree)
+		oh.current_crawler = nil
+	
+		if not ok then
+			return nil, ast:match("^.-:%s+(.+)")
+		end
+	
+		self.Analyzed = true
+	
+		return self
+	end
+
+	function META:BuildLua()
+		if not self.SyntaxTree then
+			assert(self:Parse())
+		end
+
+		local em = LuaEmitter(self.config)
+    	return em:BuildCode(self.SyntaxTree), em
+	end
+
+	function oh.Code(code, name, config)
+		local info = debug.getinfo(2)
+
+		local parent_line = info and info.currentline or nil
+		local parent_name = info and info.source:sub(2) or nil
+		
+		name = name or (parent_name .. ":" .. parent_line)
+
+		return setmetatable({
+			code = code, 
+			parent_line = parent_line,
+			parent_name = parent_name,
+			name = name,
+			config = config,
+		}, META)
+	end
+
+	function oh.File(path, config)
+		local f, err = io.open(path, "rb")
+		if not f then
+			return nil, err
+		end
+		local code = f:read("*all")
+		f:close()
+		return oh.Code(code, "@" .. path)
+	end
+
 end
 
 return oh

@@ -1,4 +1,4 @@
-local test = require("tests.test")
+local oh = require("oh")
 
 --io.write("generating random tokens ...")
 local tokens = {
@@ -52,7 +52,7 @@ local code = table.concat(code)
 do
     --io.write("tokenizing random tokens with capture_whitespace ...")
     local t = os.clock()
-    local res = test.lex(code, true)
+    local res = assert(oh.Code(code, nil, {capture_whitespace = true}):Lex())
     local total = os.clock() - t
     --io.write(" - OK! ", total, " seconds / ", #res, " tokens\n")
 end
@@ -60,7 +60,7 @@ end
 do
     --io.write("tokenizing random tokens without capture_whitespace ...")
     local t = os.clock()
-    local res = test.lex(code, false)
+    local res = assert(oh.Code(code, nil, {capture_whitespace = false}):Lex())
     local total = os.clock() - t
     --io.write(" - OK! ", total, " seconds / ", #res, " tokens\n")
 end

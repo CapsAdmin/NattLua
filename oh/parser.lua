@@ -127,7 +127,7 @@ function META:Error(msg, start, stop, ...)
     start = start or tk and tk.start or 0
     stop = stop or tk and tk.stop or 0
 
-    msg = debug.traceback(msg)
+    --msg = debug.traceback(msg)
 
     self:OnError(msg, start, stop, ...)
 end

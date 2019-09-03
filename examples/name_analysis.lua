@@ -69,7 +69,7 @@ local function levenshtein(s, t, lim)
 end
 
 
-function check_tokens(tokens, name, code)
+function check_tokens(tokens)
     local score = {}
     for i, tk in ipairs(tokens) do
         if tk.type == "letter" and not syntax.IsKeyword(tk) then
@@ -108,9 +108,9 @@ function check_tokens(tokens, name, code)
 end
 
 local name = "oh/lua_emitter.lua"
-local code = io.open(name):read("*all")
-local tokens, err = oh.CodeToTokens(code)
+local code = oh.Code(assert(io.open(name)):read("*all"), name)
+local tokens = assert(code:Lex()).Tokens
 
 local time = os.clock()
-check_tokens(tokens, name, code)
+check_tokens(tokens, code)
 print(os.clock() - time)

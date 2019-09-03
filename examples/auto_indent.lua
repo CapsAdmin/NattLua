@@ -123,4 +123,4 @@ local code = [[
     end))
 ]]
 
-print(assert(oh.Transpile(code, "", {preserve_whitespace = false})))
+print(assert(oh.Code(code, nil, {preserve_whitespace = false}):BuildLua()))

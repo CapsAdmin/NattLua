@@ -2,7 +2,8 @@ local oh = require("oh")
 local LuaEmitter = require("oh.lua_emitter")
 local code = io.open("oh/parser.lua"):read("*all")
 
-local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code)), nil,  code))
+local ast = assert(oh.Code(code):Parse()).SyntaxTree
+
 local em = LuaEmitter({preserve_whitespace = false})
 
 function em:OnEmitStatement()

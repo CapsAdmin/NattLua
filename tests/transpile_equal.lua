@@ -1,189 +1,307 @@
-local test = require("tests.test")
+local oh = require("oh")
+local C = oh.Code
 
-test.check_strings {
-    "if 1 then elseif 2 then elseif 3 then else end",
-    "if 1 then elseif 2 then else end",
-    "if 1 then else end",
-    "if 1 then end",
+local function go(tbl)
+    for _, val in ipairs(tbl) do
+        local data = not val.expect and {code = val, expect = val} or val
 
-    "while 1 do end",
-    "repeat until 1",
+        data.code:Lex()
+        data.code:Parse()
+        if data.analyze then
+            data.code:Analyze()
+        end
+        local result, emitter = data.code:BuildLua()
 
-    "for i = 1, 2 do end",
-    "for a,b,c,d,e in 1,2,3,4,5 do end",
+        local ok = true
 
-    "function test() end",
-    "function test.asdf() end",
+        if data.compare_tokens or data.analyze then
+            local tokens = assert(oh.Code(result, "compare_tokens"):Lex()).Tokens
+            data.expect:Lex()
+
+            for i = 1, #data.expect.Tokens do
+                if tokens[i].value ~= data.expect.Tokens[i].value then
+                    ok = false
+                    break
+                end
+            end
+        else
+            ok = result == data.expect.code
+        end
+
+        if not ok and data.code.code == data.expect.code and emitter and emitter.operator_transformed then
+            ok = true
+        end
+
+        if not ok then
+            print("===================================")
+            print("error transpiling code:")
+            print(data.code)
+            print("expected:")
+            print(data.expect)
+            print("got:")
+            print(result)
+            print("===================================")
+            error("")
+        end
+    end
+end
+
+go {
+    C"if 1 then elseif 2 then elseif 3 then else end",
+    C"if 1 then elseif 2 then else end",
+    C"if 1 then else end",
+    C"if 1 then end",
+
+    C"while 1 do end",
+    C"repeat until 1",
+
+    C"for i = 1, 2 do end",
+    C"for a,b,c,d,e in 1,2,3,4,5 do end",
+
+    C"function test() end",
+    C"function test.asdf() end",
     --"function test[asdf]() end",
     --"function test[asdf].sadas:FOO() end",
-    "local function test() end",
+    C"local function test() end",
 
-    "local test = function() end",
+    C"local test = function() end",
 
-    "a = 1",
-    "a,b = 1,2",
-    "a,b = 1",
-    "a,b,c = 1,2,3",
-    "a.b.c, d.e.f = 1, 2",
+    C"a = 1",
+    C"a,b = 1,2",
+    C"a,b = 1",
+    C"a,b,c = 1,2,3",
+    C"a.b.c, d.e.f = 1, 2",
 
-    "a()",
-    "a.b:c()",
-    "a.b.c()",
-    "(function(b) return 1 end)(2)",
+    C"a()",
+    C"a.b:c()",
+    C"a.b.c()",
+    C"(function(b) return 1 end)(2)",
 
-    "local a = 1;",
-    "local a,b,c",
-    "local a,b,c = 1,2,3",
-    "local a,c = 1,2,3",
-    "local a = 1,2,3",
-    "local a",
-    "local a = -c+1",
-    "local a = c",
-    "(a)[b] = c",
-    "local a = {[1+2+3] = 2}",
-    "foo = bar",
-    "foo--[[]].--[[]]bar--[[]]:--[[]]test--[[]](--[[]]1--[[]]--[[]],2--[[]])--------[[]]--[[]]--[[]]",
-    "function foo.testadw() end",
-    "asdf.a.b.c[5](1)[2](3)",
-    "while true do end",
-    "for i = 1, 10, 2 do end",
-    "local a,b,c = 1,2,3",
-    "local a = 1\nlocal b = 2\nlocal c = 3",
-    "function test.foo() end",
-    "local function test() end",
-    "local a = {foo = true, c = {'bar'}}",
-    "for k,v,b in pairs() do end",
-    "for k in pairs do end",
-    "foo()",
-    "if true then print(1) elseif false then print(2) else print(3) end",
-    "a.b = 1",
-    "local a,b,c = 1,2,3",
-    "repeat until false",
-    "return true",
-    "while true do break end",
-    "do end",
-    "local function test() end",
-    "function test() end",
-    "function test:foo() end",
-    "goto test ::test::",
-    "#!shebang wadawd\nfoo = bar",
-    "local a,b,c = 1 + (2 + 3) + v()()",
-    "(function() end)(1,2,3)",
-    "(function() end)(1,2,3){4}'5'",
-    "(function() end)(1,2,3);(function() end)(1,2,3)",
-    "local tbl = {a; b; c,d,e,f}",
-    "aslk()",
-    "a = #a()",
-    "a()",
-    "🐵=😍+🙅",
-    "print(･✿ヾ╲｡◕‿◕｡╱✿･ﾟ)",
-    "print(･✿ヾ╲｡◕‿◕｡╱✿･ﾟ)",
-    "print(ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็)",
-    "local a = 1;;;",
-    "local a = (1)+(1)",
-    "local a = (1)+(((((1)))))",
-    "local a = 1 --[[a]];",
-    "local a = 1 --[=[a]=] + (1);",
-    "local a = (--[[1]](--[[2]](--[[3]](--[[4]]4))))",
-    "local a = 1 --[=[a]=] + (((1)));",
-    "a=(foo.bar)()",
-    "a=(foo.bar)",
-    "if (player:IsValid()) then end",
-    "if not true then end",
-    "local function F (m) end",
-    "msgs[#msgs+1] = string.sub(m, 3, -3)",
-    "a = (--[[a]]((-a)))",
+    C"local a = 1;",
+    C"local a,b,c",
+    C"local a,b,c = 1,2,3",
+    C"local a,c = 1,2,3",
+    C"local a = 1,2,3",
+    C"local a",
+    C"local a = -c+1",
+    C"local a = c",
+    C"(a)[b] = c",
+    C"local a = {[1+2+3] = 2}",
+    C"foo = bar",
+    C"foo--[[]].--[[]]bar--[[]]:--[[]]test--[[]](--[[]]1--[[]]--[[]],2--[[]])--------[[]]--[[]]--[[]]",
+    C"function foo.testadw() end",
+    C"asdf.a.b.c[5](1)[2](3)",
+    C"while true do end",
+    C"for i = 1, 10, 2 do end",
+    C"local a,b,c = 1,2,3",
+    C"local a = 1\nlocal b = 2\nlocal c = 3",
+    C"function test.foo() end",
+    C"local function test() end",
+    C"local a = {foo = true, c = {'bar'}}",
+    C"for k,v,b in pairs() do end",
+    C"for k in pairs do end",
+    C"foo()",
+    C"if true then print(1) elseif false then print(2) else print(3) end",
+    C"a.b = 1",
+    C"local a,b,c = 1,2,3",
+    C"repeat until false",
+    C"return true",
+    C"while true do break end",
+    C"do end",
+    C"local function test() end",
+    C"function test() end",
+    C"function test:foo() end",
+    C"goto test ::test::",
+    C"#!shebang wadawd\nfoo = bar",
+    C"local a,b,c = 1 + (2 + 3) + v()()",
+    C"(function() end)(1,2,3)",
+    C"(function() end)(1,2,3){4}'5'",
+    C"(function() end)(1,2,3);(function() end)(1,2,3)",
+    C"local tbl = {a; b; c,d,e,f}",
+    C"aslk()",
+    C"a = #a()",
+    C"a()",
+    C"🐵=😍+🙅",
+    C"print(･✿ヾ╲｡◕‿◕｡╱✿･ﾟ)",
+    C"print(･✿ヾ╲｡◕‿◕｡╱✿･ﾟ)",
+    C"print(ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็)",
+    C"local a = 1;;;",
+    C"local a = (1)+(1)",
+    C"local a = (1)+(((((1)))))",
+    C"local a = 1 --[[a]];",
+    C"local a = 1 --[=[a]=] + (1);",
+    C"local a = (--[[1]](--[[2]](--[[3]](--[[4]]4))))",
+    C"local a = 1 --[=[a]=] + (((1)));",
+    C"a=(foo.bar)()",
+    C"a=(foo.bar)",
+    C"if (player:IsValid()) then end",
+    C"if not true then end",
+    C"local function F (m) end",
+    C"msgs[#msgs+1] = string.sub(m, 3, -3)",
+    C"a = (--[[a]]((-a)))",
 
-    "a = 1; b = 2; local a = 3; function a() end while true do end b = c; a,b,c=1,2,3",
-    "if not a then return end",
-    "foo = 'foo'\r\nbar = 'bar'\r\n",
+    C"a = 1; b = 2; local a = 3; function a() end while true do end b = c; a,b,c=1,2,3",
+    C"if not a then return end",
+    C"foo = 'foo'\r\nbar = 'bar'\r\n",
 
-    ";;print 'testing syntax';;",
-    "#testse tseokt osektokseotk\nprint('ok')",
-    "do ;;; end\n; do ; a = 3; assert(a == 3) end;\n;",
-    "--[=TESTSUITE\n-- utilities\nlocal ops = {}\n--]=]",
-    "assert(string.gsub('�lo �lo', '�', 'x') == 'xlo xlo')",
+    C";;print 'testing syntax';;",
+    C"#testse tseokt osektokseotk\nprint('ok')",
+    C"do ;;; end\n; do ; a = 3; assert(a == 3) end;\n;",
+    C"--[=TESTSUITE\n-- utilities\nlocal ops = {}\n--]=]",
+    C"assert(string.gsub('�lo �lo', '�', 'x') == 'xlo xlo')",
 
-    'foo = "\200\220\2\3\r"\r\nfoo = "\200\220\2\3"\r\n',
-    "goto:foo()",
-    "a = " .. string.char(34,187,243,193,161,34),
-    "local a = {foo,bar,faz,}",
-    "local a = {{--[[1]]foo--[[2]],--[[3]]bar--[[4]],--[[5]]faz--[[6]],--[[7]]},}",
-    "local a = {--[[1]]foo--[[2]],--[[3]]bar--[[4]],--[[5]]faz--[[6]]}",
+    C'foo = "\200\220\2\3\r"\r\nfoo = "\200\220\2\3"\r\n',
+    C"goto:foo()",
+    C("a = " .. string.char(34,187,243,193,161,34)),
+    C"local a = {foo,bar,faz,}",
+    C"local a = {{--[[1]]foo--[[2]],--[[3]]bar--[[4]],--[[5]]faz--[[6]],--[[7]]},}",
+    C"local a = {--[[1]]foo--[[2]],--[[3]]bar--[[4]],--[[5]]faz--[[6]]}",
 
-    "local a = foo.bar\n{\nkey = key,\nhost = asdsad.wawaw,\nport = aa.bb\n}",
-    "_IOW(string.byte'f', 126, 'uint32_t')",
-    "return",
-    "return 1",
-    "function foo(a, ...) end",
-    "function foo(...) end",
-    "a = ( (1) )",
-    "a = (--[[1]](--[[2]]true--[[3]])--[[4]])",
+    C"local a = foo.bar\n{\nkey = key,\nhost = asdsad.wawaw,\nport = aa.bb\n}",
+    C"_IOW(string.byte'f', 126, 'uint32_t')",
+    C"return",
+    C"return 1",
+    C"function foo(a, ...) end",
+    C"function foo(...) end",
+    C"a = ( (1) )",
+    C"a = (--[[1]](--[[2]]true--[[3]])--[[4]])",
 
-    "a = foo(0x89abcdef, 1)",
-    "a = foo(0x20EA2, 1)",
-    "a = foo(0Xabcdef.0, 1)",
-    "a = foo(3.1416, 1)",
-    "a = foo(314.16e-2, 1)",
-    "a = foo(0.31416E1, 1)",
-    "a = foo(34e1, 1)",
-    "a = foo(0x0.1E, 1)",
-    "a = foo(0xA23p-4, 1)",
-    "a = foo(0X1.921FB54442D18P+1, 1)",
-    "a = foo(2.E-1, 1)",
-    "a = foo(.2e2, 1)",
-    "a = foo(0., 1)",
-    "a = foo(.0, 1)",
-    "a = foo(0x.P1, 1)",
-    "a = foo(0x.P+1, 1)",
-    "a = foo(0b101001011, 1)",
-    "a = foo(0b101001011ull, 1)",
-    "a = foo(0b101001011i, 1)",
-    "a = foo(0b01_101_101, 1)",
-    "a = foo(0xDEAD_BEEF_CAFE_BABE, 1)",
-    "a = foo(1_1_1_0e2, 1)",
-    "a = foo(1_, 1)",
-    'a = "a\\z\na"',
-    "lol = 1 ÆØÅ",
-    "lol = 1 ÆØÅÆ",
-    "local foo = 0.15",
+    C"a = foo(0x89abcdef, 1)",
+    C"a = foo(0x20EA2, 1)",
+    C"a = foo(0Xabcdef.0, 1)",
+    C"a = foo(3.1416, 1)",
+    C"a = foo(314.16e-2, 1)",
+    C"a = foo(0.31416E1, 1)",
+    C"a = foo(34e1, 1)",
+    C"a = foo(0x0.1E, 1)",
+    C"a = foo(0xA23p-4, 1)",
+    C"a = foo(0X1.921FB54442D18P+1, 1)",
+    C"a = foo(2.E-1, 1)",
+    C"a = foo(.2e2, 1)",
+    C"a = foo(0., 1)",
+    C"a = foo(.0, 1)",
+    C"a = foo(0x.P1, 1)",
+    C"a = foo(0x.P+1, 1)",
+    C"a = foo(0b101001011, 1)",
+    C"a = foo(0b101001011ull, 1)",
+    C"a = foo(0b101001011i, 1)",
+    C"a = foo(0b01_101_101, 1)",
+    C"a = foo(0xDEAD_BEEF_CAFE_BABE, 1)",
+    C"a = foo(1_1_1_0e2, 1)",
+    C"a = foo(1_, 1)",
+    C'a = "a\\z\na"',
+    C"lol = 1 ÆØÅ",
+    C"lol = 1 ÆØÅÆ",
+    C"local foo = 0.15",
 
-    "local a:   sometype = foo",
-    "local a:   boolean = foo",
-    "local a:   boolean | true = foo",
-    "local a:   boolean & true = foo",
-    "local a:   boolean & true | false | {} = foo",
-    "local a:   boolean or true = foo",
-    "local a:   true or false = foo",
-    "local a:   list[] = foo",
-    "local a:   list[string, number] = foo",
-    "local a:   list[string, number, foo[]] = foo",
-    "local a:   list[string, number, foo[], {}] = foo",
-    "local a:   list[string, number, foo[], {}] = foo",
-    "local a:   list[string, number, foo[], {a = boolean, b = {}}] = foo",
-    "local a:   list[string, number, foo[], {a = boolean, b = function(string, number): boolean}] = foo",
-    "local a:   {[string] = string} = foo",
-    "local a:   {[string | boolean] = string} = foo",
-    "local a:   function(string, boolean): string[] = foo",
-    "local a:   function(foo: string, bar: boolean): (string | boolean)[] = foo",
-    "local a:   function[(function(): boolean, any, true, false), (function(): boolean, any, true, false)] = foo",
-    "local a:   function[function(): boolean, any, true, false; function(): boolean, any, true, false] = foo",
-    "local a:   function(): boolean, any = foo",
-    "local a:   function(a,b,c) local a = 1 local b = 2 while true do end end = foo",
-    "local a:   foo.bar.faz = foo",
+    C"local a:   sometype = foo",
+    C"local a:   boolean = foo",
+    C"local a:   boolean | true = foo",
+    C"local a:   boolean & true = foo",
+    C"local a:   boolean & true | false | {} = foo",
+    C"local a:   boolean or true = foo",
+    C"local a:   true or false = foo",
+    C"local a:   list[] = foo",
+    C"local a:   list[string, number] = foo",
+    C"local a:   list[string, number, foo[]] = foo",
+    C"local a:   list[string, number, foo[], {}] = foo",
+    C"local a:   list[string, number, foo[], {}] = foo",
+    C"local a:   list[string, number, foo[], {a = boolean, b = {}}] = foo",
+    C"local a:   list[string, number, foo[], {a = boolean, b = function(string, number): boolean}] = foo",
+    C"local a:   {[string] = string} = foo",
+    C"local a:   {[string | boolean] = string} = foo",
+    C"local a:   function(string, boolean): string[] = foo",
+    C"local a:   function(foo: string, bar: boolean): (string | boolean)[] = foo",
+    C"local a:   function[(function(): boolean, any, true, false), (function(): boolean, any, true, false)] = foo",
+    C"local a:   function[function(): boolean, any, true, false; function(): boolean, any, true, false] = foo",
+    C"local a:   function(): boolean, any = foo",
+    C"local a:   function(a,b,c) local a = 1 local b = 2 while true do end end = foo",
+    C"local a:   foo.bar.faz = foo",
 
     --{code = "local --[[#foo = true]]"},
 
-    {code = "return math.maxinteger // 80",     expect = "return math.floor(math.maxinteger / 80)",         compare_tokens = true},
+    {
+        code = C"return math.maxinteger // 80",     
+        expect = C"return math.floor(math.maxinteger / 80)",         
+        compare_tokens = true
+    },
+    {
+        code = C"\xEF\xBB\xBF foo = true",          
+        expect = C" foo = true"
+    },
+    {
+        code = C"foo(1,2,3,)",                      
+        expect = C"foo(1,2,3)"
+    },
+    {
+        code = C"return math.maxinteger // 80",     
+        expect = C"return math.floor(math.maxinteger / 80)",         
+        compare_tokens = true
+    },
+    {
+        code = C"local a = ~1",                     
+        expect = C"local a = bit.bnot(1)",                           
+        compare_tokens = true
+    },
+    {
+        code = C"local a = 1 >> 2",                 
+        expect = C"local a = bit.rshift(1, 2)",                      
+        compare_tokens = true
+    },
+    {
+        code = C"local a = 1 >> 2 << 23",           
+        expect = C"local a = bit.lshift(bit.rshift(1, 2), 23)",      
+        compare_tokens = true
+    },
+    {
+        code = C"local a = a++",                    
+        expect = C"local a = (a + 1)",                               
+        compare_tokens = true
+    },
+    {
+        code = C"_ENV = {}",                        
+        expect = C"_ENV={};setfenv(1, _ENV);",                       
+        compare_tokens = true
+    },
+    {
+        code = C"a,_ENV,c = 1,{},2",                
+        expect = C"a,_ENV,c = 1,{},2;setfenv(1, _ENV);",             
+        compare_tokens = true
+    },
 
-    {code = "\xEF\xBB\xBF foo = true",          expect = " foo = true"},
-    {code = "foo(1,2,3,)",                      expect = "foo(1,2,3)"},
-
-    {code = "return math.maxinteger // 80",     expect = "return math.floor(math.maxinteger / 80)",         compare_tokens = true},
-    {code = "local a = ~1",                     expect = "local a = bit.bnot(1)",                           compare_tokens = true},
-    {code = "local a = 1 >> 2",                 expect = "local a = bit.rshift(1, 2)",                      compare_tokens = true},
-    {code = "local a = 1 >> 2 << 23",           expect = "local a = bit.lshift(bit.rshift(1, 2), 23)",      compare_tokens = true},
-    {code = "local a = a++",                    expect = "local a = (a + 1)",                               compare_tokens = true},
-    {code = "_ENV = {}",                        expect = "_ENV={};setfenv(1, _ENV);",                       compare_tokens = true},
-    {code = "a,_ENV,c = 1,{},2",                expect = "a,_ENV,c = 1,{},2;setfenv(1, _ENV);",             compare_tokens = true},
+    {
+        code = C"local a = 1",
+        expect = C"local a: number(1) = 1",
+        analyze = true,
+    },
+    {
+        code = C"local a: number = 1",
+        expect = C"local a: number = 1",
+        analyze = true,
+    },
+    {
+        code = C"local a: number | string = 1",
+        expect = C"local a: number | string = 1",
+        analyze = true,
+    },
+    {
+        code = C"function foo(a: number) end",
+        expect = C"function foo(a: number) end",
+        analyze = true,
+    },
+    {
+        code = C"function foo(a: number):string end",
+        expect = C"function foo(a: number):string end",
+        analyze = true,
+    },
+    {
+        code = C"function foo(a: number):string, number end",
+        expect = C"function foo(a: number):string, number end",
+        analyze = true,
+    },
+    {
+        code = C"type a = number; local num: a = 1",
+        expect = C"local num: a = 1",
+        analyze = true,
+    },
 }

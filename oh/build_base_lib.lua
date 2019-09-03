@@ -9589,7 +9589,8 @@ local oh = require("oh")
 local Crawler = require("oh.crawler")
 local base = Crawler()
 base.Index = nil
-base:CrawlStatement(assert(oh.TokensToAST(assert(oh.CodeToTokens(lua, "test")), "test", lua)))
+
+base:CrawlStatement(assert(oh.Code(lua, "base_library"):Parse()).SyntaxTree)
 
 io.open("oh/base_lib.oh", "w"):write(lua)
 

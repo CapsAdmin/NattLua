@@ -16,7 +16,6 @@ do
         return t.value.value
     end
 
-
     local function new_type(self, node, ...)
         if type(node) == "string" then
             return types.Type(type)
@@ -535,6 +534,17 @@ do
 end
 
 function META:Error(node, msg)
+    if require("oh").current_crawler and require("oh").current_crawler ~= self then
+        return require("oh").current_crawler:Error(node, msg)
+    end
+
+    if self.OnError then
+        local print_util = require("oh.print_util")
+        local start, stop = print_util.LazyFindStartStop(node)
+        self:OnError(msg, start, stop)
+    end
+    
+
     if self.code then
         local print_util = require("oh.print_util")
         local start, stop = print_util.LazyFindStartStop(node)
@@ -900,8 +910,12 @@ do
             -- declaration
 
             if node.identifiers then
-                for i,v in ipairs(node.identifiers) do
-                    args[i] = self:CrawlExpression(v, "typesystem")
+                for i, key in ipairs(node.identifiers) do
+                    local val = self:GetInferredType(key)
+    
+                    if val then
+                        table.insert(args, val)
+                    end
                 end
             end
 
@@ -1009,7 +1023,9 @@ end
 
 local function DefaultIndex(self, node)
     local oh = require("oh")
-    return oh.GetBaseCrawler():GetValue("_G", "typesystem"):get(oh.GetBaseCrawler():Hash(node))
+    local val = oh.GetBaseCrawler():GetValue("_G", "typesystem")
+    val:AttachNode(node)
+    return val:get(oh.GetBaseCrawler():Hash(node))
 end
 
 return function()

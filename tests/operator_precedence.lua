@@ -1,4 +1,5 @@
 local oh = require("oh")
+local C = oh.Code
 
 local table_insert = table.insert
 local table_concat = table.concat
@@ -51,23 +52,23 @@ end
 
 local function check(tbl)
     for i, val in ipairs(tbl) do
-        local code = "a = " .. val[1]
-        local ast = assert(oh.TokensToAST(assert(oh.CodeToTokens(code)), "test " .. i, code))
+        val[1].code = "a = " .. val[1].code
+        local ast = assert(val[1]:Parse()).SyntaxTree
 
         local expr = ast:FindStatementsByType("assignment")[1].right[1]
         local res = dump_precedence(expr)
-        if val[2] ~= res then
-            print("EXPECT: " .. val[2])
+        if val[2] and val[2].code ~= res then
+            print("EXPECT: " .. val[2].code)
             print("GOT   : " .. res)
         end
     end
 end
 
 check {
-    {'pcall(require, "ffi")', 'call(pcall, require, "ffi")'},
-    {"1 / #a", "/(1, #(a))"},
-    {"jit.status and jit.status()", "and(.(jit, status), call(.(jit, status)))"},
-    {"a.b.c.d.e.f()", "call(.(.(.(.(.(a, b), c), d), e), f))"},
-    {"(foo.bar())", "call(.(foo, bar))"},
-    {[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], [[+(+(^(-(1), 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), ""))))]]},
+    {C'pcall(require, "ffi")', C'call(pcall, require, "ffi")'},
+    {C"1 / #a", C"/(1, #(a))"},
+    {C"jit.status and jit.status()", C"and(.(jit, status), call(.(jit, status)))"},
+    {C"a.b.c.d.e.f()", C"call(.(.(.(.(.(a, b), c), d), e), f))"},
+    {C"(foo.bar())", C"call(.(foo, bar))"},
+    {C[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], C[[+(+(^(-(1), 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), ""))))]]},
 }
