@@ -217,6 +217,8 @@ go {
     C"local a:   function(): boolean, any = foo",
     C"local a:   function(a,b,c) local a = 1 local b = 2 while true do end end = foo",
     C"local a:   foo.bar.faz = foo",
+    C"local type = function(a,b,c,...) end",
+    C"local type function aaa(a) return a end",
 
     --{code = "local --[[#foo = true]]"},
 

@@ -38,6 +38,15 @@ do -- identifier
     end
 end
 
+function META:ReadLocalTypeFunctionStatement()
+    local node = self:Statement("local_type_function")
+    node.tokens["local"] = self:ReadValue("local")
+    node.tokens["type"] = self:ReadValue("type")
+    node.tokens["function"] = self:ReadValue("function")
+    node.identifier = self:ReadIdentifier()
+    return self:ReadTypeFunctionBody(node)
+end
+
 function META:ReadFunctionArgument()
     if (self:IsType("letter") or self:IsValue("...")) and self:IsValue(":", 1) then
         local identifier = self:ReadTokenLoose()
@@ -51,9 +60,8 @@ function META:ReadFunctionArgument()
     return self:ReadTypeExpression()
 end
 
-function META:ReadTypeFunction()
-    local node = self:Expression("type_function")
-    node.tokens["function"] = self:ReadValue("function")
+
+function META:ReadTypeFunctionBody(node)
     node.tokens["("] = self:ReadValue("(")
 
     node.identifiers = {}
@@ -82,6 +90,12 @@ function META:ReadTypeFunction()
     end
 
     return node
+end
+
+function META:ReadTypeFunction()
+    local node = self:Expression("type_function")
+    node.tokens["function"] = self:ReadValue("function")
+    return self:ReadTypeFunctionBody(node)   
 end
 
 function META:ReadTypeTable()

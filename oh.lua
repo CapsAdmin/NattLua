@@ -112,6 +112,9 @@ do
 		end
 
 		local analyzer = Analyzer()
+		if self.config and self.config.dump_analyzer_events then
+			analyzer.OnEvent = analyzer.DumpEvent
+		end
 		analyzer.code_data = self
 		analyzer.OnError = function(obj, ...) self:OnError(obj, ...) end
 

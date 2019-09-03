@@ -40,8 +40,6 @@ do
                 return types.Type("boolean", false)
             elseif v == "nil" then
                 return types.Type("nil")
-            elseif v == "function" then
-                return types.Type("function", ...)
             elseif v == "list" then
                 return types.Type("list", ...)
             else
@@ -49,10 +47,6 @@ do
             end
         elseif node.kind == "type_table" or node.kind == "table" then
             return types.Type("table", ...)
-        elseif node.kind == "function" then
-            local t = types.Type("function")
-            node.scope = self.scope
-            return t
         else
             error("unhanlded expression kind " .. node.kind)
         end
@@ -713,20 +707,7 @@ function META:AnalyzeStatement(statement, ...)
     elseif statement.kind == "generic_for" then
         self:PushScope(statement)
 
-        if statement.expressions[1].kind ~= "postfix_call" then
-            local copy = {
-                kind = "postfix_call",
-                expressions = {unpack(statement.expressions, 2)},
-                left = statement.expressions[1],
-                tokens = {},
-            }
-
-            setmetatable(copy, getmetatable(statement.expressions[1]))
-
-            args = {self:AnalyzeExpression(copy)}
-        else
-            args = {self:AnalyzeExpression(statement.expressions[1])}
-        end
+        args = self:AnalyzeExpressions(statement.expressions)
 
         if args[1] then
             local ret = self:CallFunctionType(args[1], {unpack(args, 2)}, statement.expressions[1])
@@ -1012,11 +993,14 @@ do
 
         function META:AnalyzeExpressions(expressions, ...)
             if not expressions then return end
-            local ret = {}
+            local out = {}
             for i, expression in ipairs(expressions) do
-                ret[i] = self:AnalyzeExpression(expression, ...)
+                local ret = {self:AnalyzeExpression(expression, ...)}
+                for i,v in ipairs(ret) do
+                    table.insert(out, v)
+                end
             end
-            return ret
+            return out
         end
     end
 end

@@ -627,6 +627,24 @@ a.b.c = 1
 
     type_assert(a, _ as number)
     type_assert(b, _ as string)
+]],C[[
+    local type function identity(a) return a end
+]], C[[
+    local a = 1
+    while true do
+        a = a + 1
+    end
+    local b = a
+
+    repeat 
+        b = b + 1
+    until true
+
+    local c = b
+]], C[[
+    for k,v in next, {1,2,3} do
+        print(k,v)
+    end
 ]]}
 
 for _, code_data in ipairs(tests) do

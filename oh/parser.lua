@@ -283,24 +283,25 @@ do -- statements
 
     function META:ReadStatement()
         if
-            self:IsValue("return") then                                                         return self:ReadReturnStatement() elseif
-            self:IsValue("break") then                                                          return self:ReadBreakStatement() elseif
-            self:IsValue(";") then                                                              return self:ReadSemicolonStatement() elseif
-            self:IsValue("goto") and self:IsType("letter", 1) then                              return self:ReadGotoStatement() elseif
-            self:IsValue("import") then                                                         return self:ReadImportStatement() elseif
-            self:IsValue("::") then                                                             return self:ReadGotoLabelStatement() elseif
-            self:IsValue("repeat") then                                                         return self:ReadRepeatStatement() elseif
-            self:IsValue("function") then                                                       return self:ReadFunctionStatement() elseif
-            self:IsValue("local") and self:IsValue("function", 1) then                          return self:ReadLocalFunctionStatement() elseif
-            self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2) then return self:ReadLocalTypeDeclarationStatement() elseif
-            self:IsValue("local") then                                                          return self:ReadLocalAssignmentStatement() elseif
-            self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1)) then    return self:ReadTypeAssignment() elseif
-            self:IsValue("interface") and self:IsType("letter", 1) then                         return self:ReadInterfaceStatement() elseif
-            self:IsValue("do") then                                                             return self:ReadDoStatement() elseif
-            self:IsValue("if") then                                                             return self:ReadIfStatement() elseif
-            self:IsValue("while") then                                                          return self:ReadWhileStatement() elseif
-            self:IsValue("for") and self:IsValue("=", 2) then                                   return self:ReadNumericForStatement() elseif
-            self:IsValue("for") then                                                            return self:ReadGenericForStatement()
+            self:IsValue("return") then                                                             return self:ReadReturnStatement() elseif
+            self:IsValue("break") then                                                              return self:ReadBreakStatement() elseif
+            self:IsValue(";") then                                                                  return self:ReadSemicolonStatement() elseif
+            self:IsValue("goto") and self:IsType("letter", 1) then                                  return self:ReadGotoStatement() elseif
+            self:IsValue("import") then                                                             return self:ReadImportStatement() elseif
+            self:IsValue("::") then                                                                 return self:ReadGotoLabelStatement() elseif
+            self:IsValue("repeat") then                                                             return self:ReadRepeatStatement() elseif
+            self:IsValue("function") then                                                           return self:ReadFunctionStatement() elseif
+            self:IsValue("local") and self:IsValue("function", 1) then                              return self:ReadLocalFunctionStatement() elseif
+            self:IsValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2) then  return self:ReadLocalTypeFunctionStatement() elseif
+            self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2) then     return self:ReadLocalTypeDeclarationStatement() elseif
+            self:IsValue("local") then                                                              return self:ReadLocalAssignmentStatement() elseif
+            self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1)) then        return self:ReadTypeAssignment() elseif
+            self:IsValue("interface") and self:IsType("letter", 1) then                             return self:ReadInterfaceStatement() elseif
+            self:IsValue("do") then                                                                 return self:ReadDoStatement() elseif
+            self:IsValue("if") then                                                                 return self:ReadIfStatement() elseif
+            self:IsValue("while") then                                                              return self:ReadWhileStatement() elseif
+            self:IsValue("for") and self:IsValue("=", 2) then                                       return self:ReadNumericForStatement() elseif
+            self:IsValue("for") then                                                                return self:ReadGenericForStatement()
         end
 
         return self:ReadRemainingStatement()

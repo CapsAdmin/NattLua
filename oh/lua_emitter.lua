@@ -240,6 +240,18 @@ do
         emit_function_body(self, node)
     end
 
+    function META:EmitLocalTypeFunction(node)
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["local"])
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["type"])
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["function"])
+        self:Whitespace(" ")
+        self:EmitIdentifier(node.identifier)
+        emit_function_body(self, node)
+    end
+
     function META:EmitFunction(node)
         self:Whitespace("\t")
         self:EmitToken(node.tokens["function"])
@@ -541,6 +553,8 @@ function META:EmitStatement(node)
         self:EmitFunction(node)
     elseif node.kind == "local_function" then
         self:EmitLocalFunction(node)
+    elseif node.kind == "local_type_function" then
+        self:EmitLocalTypeFunction(node)
     elseif node.kind == "assignment" then
         self:EmitAssignment(node)
         self:Emit_ENVFromAssignment(node)

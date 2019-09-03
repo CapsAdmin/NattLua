@@ -1,6 +1,5 @@
-local oh = require("oh")
 
-local map-- = {}
+local map = {}
 
 if map then
     debug.sethook(function(evt)
@@ -12,7 +11,10 @@ if map then
     end, "l")
 end
 
+local oh = require("oh")
+
 io.write("TESTING") io.flush()
+
 assert(loadfile("tests/transpile_equal.lua"))()
 assert(loadfile("tests/operator_precedence.lua"))()
 assert(loadfile("tests/type_inference.lua"))()
