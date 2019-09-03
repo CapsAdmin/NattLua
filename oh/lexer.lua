@@ -1,6 +1,14 @@
 local syntax = require("oh.syntax")
 local print_util = require("oh.print_util")
-local Token = require("oh.token")
+
+local function Token(type, start, stop, value)
+    return {
+        type = type,
+        start = start,
+        stop = stop,
+        value = value,
+    }
+end
 
 local B = string.byte
 
