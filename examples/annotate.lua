@@ -1,16 +1,4 @@
 local oh = require("oh")
-
-local C = oh.Code
-local a = C[[local a = bbb + 1]]
-
-assert(a:Lex())
-assert(a:Parse())
-assert(a:Analyze())
-print(assert(a:BuildLua()))
-do return end
-
-
-local oh = require("oh")
 local Analyzer = require("oh.analyzer")
 local LuaEmitter = require("oh.lua_emitter")
 
@@ -283,7 +271,7 @@ function mt:add (m)
 end
 
 
-function mt:close ()
+function mt:close()
   self.msg = preproc(self.msg, self.len)
   self:add("")
   return finalresult256(self.H)
@@ -297,24 +285,7 @@ return {
 }
 ]]
 
-
-local code = oh.Code[[
-
-
-
-
-
-
-
-
-    local a = rofl + 1
-]]
-
-
-local ast = oh.Code(code):Analyze()
-
---local em = LuaEmitter() print(em:BuildCode(ast))
-
+print(assert(oh.Code(code, nil, {dump_analyzer_events = true}):Analyze()):BuildLua())
 
 
 

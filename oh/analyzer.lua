@@ -458,12 +458,16 @@ do
 
                 if typ.node.self_call then
                     table.insert(identifiers, 1, "self")
+                    if not arguments[1] then
+                        --table.insert(arguments, )
+                        print("!!!!!")
+                    end
                 end
 
                 for i, identifier in ipairs(identifiers) do
                     local node = identifier == "self" and typ.node or identifier
                     local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
-
+                    
                     if identifier == "self" or identifier.value.value ~= "..." then
                         self:DeclareUpvalue(identifier, arg, "runtime")
                     else
@@ -707,7 +711,7 @@ function META:AnalyzeStatement(statement, ...)
     elseif statement.kind == "generic_for" then
         self:PushScope(statement)
 
-        args = self:AnalyzeExpressions(statement.expressions)
+        local args = self:AnalyzeExpressions(statement.expressions)
 
         if args[1] then
             local ret = self:CallFunctionType(args[1], {unpack(args, 2)}, statement.expressions[1])
@@ -840,8 +844,7 @@ do
 
             if node.self_call and node.expression then
                 local val = self:GetUpvalue(node.expression.left, "runtime")
-
-                if val and val.key.type_expression then
+                if val then
                     table.insert(args, 1, val.data)
                 end
             end
@@ -867,7 +870,7 @@ do
                 stack:Push(l)
             end
 
-            stack:Push(r:BinaryOperator(op, l, node, env))
+            stack:Push(r:BinaryOperator(op, l, node.right, env))
         elseif node.kind == "prefix_operator" then
             local r = stack:Pop()
             local op = node.value.value

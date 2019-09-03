@@ -196,7 +196,7 @@ function META:BinaryOperator(op, b, node, env)
 
     if op == "." or op == ":" then
         if b.get then
-            return b:get(a)
+            return b:get(a, node, env)
         end
     end
 
@@ -736,7 +736,7 @@ types.Register("table", {
             self.value[found] = val
         end
     end,
-    get = function(self, key)
+    get = function(self, key, node, env)
         if self.structure and not self.structure[key] then
             self:Error("invalid index " .. tostring(key))
         end
@@ -744,7 +744,7 @@ types.Register("table", {
         key = type(key) ~= "string" and key.value or key
 
         if self.value[key] == nil then
-            self:Error("index " .. tostring(key) .. " is not defined")
+            self:Error("index " .. tostring(key) .. " is not defined", node)
 
             return self:Type("any")
         end
