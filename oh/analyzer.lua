@@ -933,10 +933,7 @@ do
                 table.insert(arguments, 1, val)
             end
 
-            for i,v in ipairs(self:CallFunctionType(typ, arguments, node)) do
-                stack:Push(v)
-            end
-
+            stack:Push(self:CallFunctionType(typ, arguments, node), true)
         elseif node.kind == "type_list" then
             local tbl = {}
             if node.types then
@@ -962,8 +959,10 @@ do
         local meta = {}
         meta.__index = meta
 
-        function meta:Push(val)
-            assert(types.IsTypeObject(val))
+        function meta:Push(val, multi)
+            if not multi then
+                assert(types.IsTypeObject(val))
+            end
             self.values[self.i] = val
             self.i = self.i + 1
         end
@@ -973,6 +972,11 @@ do
             if self.i < 1 then error("stack underflow", 2) end
             local val = self.values[self.i]
             self.values[self.i] = nil
+
+            if val[1] then
+                return val[1], val
+            end
+
             return val
         end
 
@@ -993,7 +997,20 @@ do
             env = env or "runtime"
             local stack = setmetatable({values = {}, i = 1}, meta)
             expand(self, exp, evaluate_expression, stack, env)
-            return unpack(stack.values)
+
+            local out = {}
+            
+            for i,v in ipairs(stack.values) do
+                if not types.IsTypeObject(v) then
+                    for i,v in ipairs(v) do
+                        table.insert(out, v)
+                    end
+                else
+                    table.insert(out, v)
+                end
+            end
+
+            return unpack(out)
         end
 
         function META:AnalyzeExpressions(expressions, ...)
@@ -1013,7 +1030,7 @@ end
 local function DefaultIndex(self, node)
     local oh = require("oh")
     local val = oh.GetBaseAnalyzeer():GetValue("_G", "typesystem")
-    val:AttachNode(node)
+    if type(node) ~= "string" then val:AttachNode(node) end
     return val:get(self:Hash(node))
 end
 

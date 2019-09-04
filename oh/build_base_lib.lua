@@ -9607,6 +9607,30 @@ lua = lua .. [[
 		end
 		return tbl
 	end
+
+	type _G.string.gsub = function(str, pattern, val)
+		if val:IsType("function") then
+		  local args = {}
+		  
+		  if pattern.value then
+			for group in pattern.value:gmatch("%b()") do
+			  table.insert(args, val:Type("string"))
+			end
+		  end
+	
+		  if not args[1] then
+			args[1] = val:Type("string")
+		  end
+	
+		  for i,v in ipairs(args) do
+			val.arguments[i] = types.ReplaceType(val.arguments[i], v)
+		  end
+	
+		  val.ret[1] = types.ReplaceType(val.ret[1], val:Type("string"))
+		end
+	
+		return str:Type("string")
+	end
 ]]
 lua = lua:gsub("\t", "    ")
 

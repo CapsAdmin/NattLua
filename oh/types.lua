@@ -28,6 +28,15 @@ function types.IsTypeObject(val)
     return getmetatable(val) == types.fuse_meta or getmetatable(val) == types.type_meta
 end
 
+function types.ReplaceType(a, b)
+    if a then
+        a:Replace(b)
+        return a
+    end
+
+    return b
+end
+
 local META = {}
 META.__index = META
 
@@ -118,6 +127,16 @@ do
         else
             return types.Type(self.name, deepcopy(self.value))
         end
+    end
+end
+
+function META:Replace(t)
+    for k,v in pairs(self) do
+        self[k] = nil
+    end
+
+    for k,v in pairs(t) do
+        self[k] = v
     end
 end
 
@@ -287,6 +306,12 @@ function META:BinaryOperator(op_node, b, node, env)
             else
                 return self:Type(ret, res)
             end
+        end
+
+        if op == "%" and a:IsType("number") and a:IsType("number") and a.value then
+            local t = self:Type("number", 0)
+            t.max = a:Copy()
+            return t
         end
 
         return self:Type(ret)
@@ -672,15 +697,26 @@ types.Register("string", {
     inherits = "base",
     truthy = true,
     get = function(self, key)
+        
         if self.analyzer then
-            local tbl = self.analyzer:GetValue("string", "runtime") or self.analyzer:GetValue("string", "typesystem") -- MERGE?
+            local g = self.analyzer:GetValue("_G", "typesystem")
+            
+            if not g then
+                if self.analyzer.Index then
+                    g = self.analyzer:Index("_G")
+                end
+            end
 
-            if tbl and key then
-                return tbl:get(key)
+            if g then
+                local tbl = g:get("string")
+
+                if tbl and key then
+                    return tbl:get(key)
+                end
             end
         end
-
-        self:Error("index " .. tostring(key) .. " is not defined", key.node)
+        print(self)
+        self:Error("index " .. tostring(key) .. " is not defined on the string type", key.node)
 
         return self:Type("any")
     end,

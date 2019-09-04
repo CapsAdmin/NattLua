@@ -678,6 +678,14 @@ a.b.c = 1
     
     local test = x:Test()
     type_assert(test, _ as number)
+]], C[[
+    local function lol()
+        return "hello", 1337
+    end
+
+    local a = lol():gsub("", "")
+
+    type_assert(a, _ as string)
 ]]}
 
 -- todo, check for the correct error
