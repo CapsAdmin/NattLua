@@ -9341,6 +9341,16 @@ local function get_overloads(str)
 	return out
 end
 
+local fixup = {
+	string = {
+		byte = [[
+            (function(s: string, i: number, j: number): ...) | 
+            (function(s: string, i: number): number | nil) | 
+			(function(s: string): number),
+		]],
+	},
+}
+
 local indent = 0
 
 local function get_declarations(k, v)
@@ -9386,6 +9396,7 @@ local function get_declarations(k, v)
 end
 
 
+
 local str = {}
 
 local interfaces = {}
@@ -9394,12 +9405,17 @@ local function walk(key, tbl)
 	table.insert(str, ("\t"):rep(indent) .. key .. " = {")
 
 	for lib, data in pairs(tbl) do
-		if data.type == "function" then
-			indent = indent + 1
-			for i,v in ipairs(get_declarations(lib, data)) do
-				table.insert(str, v .. ",")
+		if fixup[key] and fixup[key][lib] then
+			table.insert(str, ("\t"):rep(indent) .. lib .. " = ")
+			table.insert(str, fixup[key][lib])
+		else
+			if data.type == "function" then
+				indent = indent + 1
+				for i,v in ipairs(get_declarations(lib, data)) do
+					table.insert(str, v .. ",")
+				end
+				indent = indent - 1
 			end
-			indent = indent - 1
 		end
 	end
 
@@ -9581,7 +9597,16 @@ lua = lua .. [[
         local k,v = next(tbl)
         func.arguments[1] = v
         func.arguments[2] = v
-    end
+	end
+	
+	type _G.setmetatable = function(tbl, meta) 
+		if meta.value and meta.value["__index"] then 
+			tbl.index = function(self, key) 
+			return meta:get(key)
+			end
+		end
+		return tbl
+	end
 ]]
 lua = lua:gsub("\t", "    ")
 

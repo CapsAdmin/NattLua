@@ -2188,10 +2188,11 @@ type _G = {
             (function(s: string, pattern: string): empty_function),
         reverse = 
             (function(s: string): string),
-        byte = 
-            (function(s: string, i: number, j: number): number, ...|nil) | 
-            (function(s: string, i: number): number, ...|nil) | 
-            (function(s: string): number, ...|nil),
+    byte = 
+            (function(s: string, i: number, j: number): ...) | 
+            (function(s: string, i: number): number | nil) | 
+            (function(s: string): number),
+        
         unpack = 
             (function(fmt: string, s: string, pos: number): values) | 
             (function(fmt: string, s: string): values),
@@ -2498,4 +2499,13 @@ type _G = {
         local k,v = next(tbl)
         func.arguments[1] = v
         func.arguments[2] = v
+    end
+    
+    type _G.setmetatable = function(tbl, meta) 
+        if meta.value and meta.value["__index"] then 
+            tbl.index = function(self, key) 
+            return meta:get(key)
+            end
+        end
+        return tbl
     end

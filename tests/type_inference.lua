@@ -533,7 +533,7 @@ a.b.c = 1
     local d = b(2)
     local d = b(a)
 
-    local lol: {a = boolean} = {}
+    local lol: {a = boolean, Foo = function():} = {}
     lol.a = true
 
     function lol:Foo(foo, bar)
@@ -641,11 +641,73 @@ a.b.c = 1
     until true
 
     local c = b
-]], C[[
+]],C[[
     for k,v in next, {1,2,3} do
         print(k,v)
     end
+]],C[[
+    local a = setmetatable({} as {num = number}, meta)
+
+    type_assert(a.num, _ as number)
+]],C[[
+    local meta: {num = number, __index = self} = {}
+    meta.__index = meta
+
+    local a = setmetatable({}, meta)
+
+    type_assert(a.num, _ as number)
+]],C[[
+    local type Vec2 = {x = number, y = number}
+    local type Vec3 = {z = number} extends Vec2
+
+    local type Base = {
+        Test = function(self): number,
+    }
+
+    local type Foo = Base extends {
+        SetPos = (function(self, pos: Vec3): nil),
+        GetPos = (function(self): Vec3),
+    }
+        
+    local x: Foo = {}
+    x:SetPos({x = 1, y = 2, z = 3})
+    local a = x:GetPos()
+    local z = a.x + 1
+
+    type_assert(z, _ as number)
+    
+    local test = x:Test()
+    type_assert(test, _ as number)
 ]]}
+
+-- todo, check for the correct error
+local nyi = [[
+  local a: {} = {} -- can't do anything
+  --a.lol = true
+  --local b = a.lol
+
+  local a: {[string] = string} = {} -- can only assign strings to strings
+  --a.lol = "aaa"
+  --local b = a.lol
+  --local b = a.rofl
+
+  local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)
+  --a.lol = "aaa"
+  --a.lol2 = 2
+  --a.lol3 = {}
+  --local b = a.lol3
+  --local b = a.rofl
+
+  local a: {[any] = any} = {} -- same as no type annotation 
+
+  local a = {}
+  a.lol = true
+  local c = a.lol
+
+
+  local a: {[number] = any} = {} -- list-like
+]]
+
 
 for _, code_data in ipairs(tests) do
     if code_data == false then return end

@@ -4,47 +4,11 @@ local LuaEmitter = require("oh.lua_emitter")
 
 local code = io.open("oh/lexer.lua"):read("*all")
 
-code = [[
-
-  --[==[  
-      type Vector<T> = {
-        x = T,
-        y = T,
-        z = T
-    }
-
-    local a: Vector<boolean>
-]==]
-    local type Vec2 = {x = number, y = number}
-    local type Vec3 = {z = number} extends Vec2
-
-    local type Base = {
-        Test = function(self): number,
-    }
-
-    local type Foo = Base extends {
-        SetPos = (function(self, pos: Vec3): nil),
-        GetPos = (function(self): Vec3),
-    }
-        
-    local x: Foo = {}
-    x:SetPos({x = 1, y = 2, z = 3})
-    local a = x:GetPos()
-    local z = a.x + 1 
-    
-    local test = x:Test()
-
-    local type lol = {x = number}
-    local a = lol.x
-]]
 
 code = [[
-
-
 
 -- SHA-256 code in Lua 5.2; based on the pseudo-code from
 -- Wikipedia (http://en.wikipedia.org/wiki/SHA-2)
-
 
 local band, rrotate, bxor, rshift, bnot =
   bit32.band, bit32.rrotate, bit32.bxor, bit32.rshift, bit32.bnot
@@ -102,7 +66,8 @@ end
 local function s232num (s, i)
   local n = 0
   for i = i, i + 3 do
-    n = n*256 + string.byte(s, i)
+    --n = n*256 + string.byte(s, i) -- POTENTIAL MISTAKE
+    n = n*256 + (string.byte(s, i) or 0)
   end
   return n
 end
@@ -224,7 +189,7 @@ end
 ----------------------------------------------------------------------
 local HH = {}    -- to reuse
 
-local function hash224 (msg)
+local function hash224 (msg: string) -- SPRINKLE: never called, msg starts as type any and #any is invalid
   msg = preproc(msg, #msg)
   local H = initH224(HH)
 
@@ -237,7 +202,7 @@ local function hash224 (msg)
 end
 
 
-local function hash256 (msg)
+local function hash256 (msg: string) -- SPRINKLE: never called, msg starts as type any and #any is invalid
   msg = preproc(msg, #msg)
   local H = initH256(HH)
 
@@ -249,7 +214,14 @@ local function hash256 (msg)
   return finalresult256(H)
 end
 ----------------------------------------------------------------------
-local mt = {}
+local mt: {
+  len = number, 
+  msg = string,
+  H = {[number] = number},
+  __index = table,
+  add = (function(self, m: string): nil), 
+  close = (function(self): nil) 
+} = {}
 
 local function new256 ()
   local o = {H = initH256({}), msg = "", len = 0}
@@ -272,6 +244,7 @@ end
 
 
 function mt:close()
+  local a = self
   self.msg = preproc(self.msg, self.len)
   self:add("")
   return finalresult256(self.H)
@@ -286,6 +259,3 @@ return {
 ]]
 
 print(assert(oh.Code(code, nil, {dump_analyzer_events = true}):Analyze()):BuildLua())
-
-
-

@@ -12,7 +12,7 @@ function oh.GetBaseAnalyzeer()
     if not oh.base_analyzer then
         local base = Analyzer()
         base.Index = nil
-        base:AnalyzeStatement(assert(oh.FileToAST("oh/base_lib.oh")))
+		base:AnalyzeStatement(assert(oh.FileToAST("oh/base_lib.oh")))
         oh.base_analyzer = base
     end
 
@@ -75,10 +75,10 @@ do
 		lexer.code_data = self
 		lexer.OnError = function(obj, ...) self:OnError(obj, ...) end
 	
-		local ok, tokens = pcall(lexer.GetTokens, lexer)
+		local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
 	
 		if not ok then
-			return nil, tokens:match("^.-:%s+(.+)")
+			return nil, tokens
 		end
 
 		self.Tokens = tokens
@@ -95,10 +95,10 @@ do
 		parser.code_data = self
 		parser.OnError = function(obj, ...) self:OnError(obj, ...) end
 		
-		local ok, ast = pcall(parser.BuildAST, parser, self.Tokens)
+		local ok, ast = xpcall(parser.BuildAST, debug.traceback, parser, self.Tokens)
 
 		if not ok then
-			return nil, ast:match("^.-:%s+(.+)")
+			return nil, ast
 		end
 
 		self.SyntaxTree = ast
@@ -116,14 +116,16 @@ do
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
 		analyzer.code_data = self
-		analyzer.OnError = function(obj, ...) self:OnError(obj, ...) end
+		analyzer.OnError = function(obj, ...) 
+			self:OnError(obj, ...) 
+		end
 
 		oh.current_analyzer = analyzer
-		local ok, ast = pcall(analyzer.AnalyzeStatement, analyzer, self.SyntaxTree)
+		local ok, ast = xpcall(analyzer.AnalyzeStatement, debug.traceback, analyzer, self.SyntaxTree)
 		oh.current_analyzer = nil
 	
 		if not ok then
-			return nil, ast:match("^.-:%s+(.+)")
+			return nil, ast
 		end
 	
 		self.Analyzed = true

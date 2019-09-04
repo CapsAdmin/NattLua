@@ -338,20 +338,23 @@ end
 
 local primitives = {
     ["nil"] = true,
-    ["boolean"] = true,
+    ["true"] = true,
+    ["false"] = true,
     ["number"] = true,
     ["string"] = true,
     ["function"] = true,
     ["userdata"] = true,
+    ["cdata"] = true,
     ["thread"] = true,
     ["table"] = true,
 }
 
-do return setmetatable({
+local Object = setmetatable({
     IsType = function(str)
         return primitives[str] or false
     end,
-}, {__call = function(_,...) return Object(...) end}) end
+}, {__call = function(_,...) return Object(...) end})
+
 
 local T = function(str) return Object():AddType(str) end
 local V = Object
@@ -359,6 +362,9 @@ local V = Object
 
 local a = Object():AddType("function", {arg = {T"number"}, ret = {T"boolean"}, func = print})
 local b = Object():AddType("function", {arg = {T"number", T"string"}, ret = {T"boolean"}, func = print})
+
+print(a:BinaryOperator("|", b)(T"number"))
+
 
 do return end
 

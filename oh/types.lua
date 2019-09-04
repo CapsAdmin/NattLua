@@ -114,7 +114,7 @@ do
 
     function META:Copy()
         if self.name == "function" then
-            return types.Type(self.name, deepcopy(self.ret), deepcopy(self.args))
+            return types.Type(self.name, deepcopy(self.ret), deepcopy(self.args), self.func)
         else
             return types.Type(self.name, deepcopy(self.value))
         end
@@ -146,6 +146,10 @@ function META:IsType(what)
 end
 
 function META:IsCompatible(type)
+    if _G.type(type) == "string" and self:IsType("string") and self.value == type then
+        return true
+    end
+    
     return self:IsType(type) and type:IsType(self)
 end
 
@@ -190,9 +194,11 @@ function META:Extend(t)
     return copy
 end
 
-function META:BinaryOperator(op, b, node, env)
+function META:BinaryOperator(op_node, b, node, env)
     assert(types.IsTypeObject(b))
     local a = self
+
+    local op = op_node.value.value
 
     if op == "." or op == ":" then
         if b.get then
@@ -221,13 +227,13 @@ function META:BinaryOperator(op, b, node, env)
 
     if self.name == "..." then
         if a.values and a.values[1] then
-            return self.values[1]:BinaryOperator(op, b, node, env)
+            return self.values[1]:BinaryOperator(op_node, b, node, env)
         end
     end
 
     if b.name == "..." then
         if b.values and b.values[1] then
-            return self:BinaryOperator(op, b.values[1], node, env)
+            return self:BinaryOperator(op_node, b.values[1], node, env)
         end
     end
 
@@ -242,7 +248,7 @@ function META:BinaryOperator(op, b, node, env)
         end
 
         if not b:IsType(arg) and ret ~= "last" or b.name == "any" then
-            self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", node.value)
+            self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", op_node)
             return self:Type("any")
         end
 
@@ -286,11 +292,13 @@ function META:BinaryOperator(op, b, node, env)
         return self:Type(ret)
     end
 
-    self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", node.value)
+    self:Error("no operator for `" .. tostring(b) .. " " .. op .. " " .. tostring(a) .. "`", op_node)
 
     return self:Type("any")
 end
-function META:PrefixOperator(op)
+function META:PrefixOperator(op_node)
+    local op = op_node.value.value
+
     if self.interface.prefix and self.interface.prefix[op] then
         local ret = self.interface.prefix[op]
 
@@ -306,12 +314,14 @@ function META:PrefixOperator(op)
         return self:Type(ret)
     end
 
-    self:Error("invalid prefix operation " .. op)
+    self:Error("invalid prefix operation " .. op .. " on " .. tostring(self), op_node)
 
     return self:Type("any")
 end
 
-function META:PostfixOperator(op)
+function META:PostfixOperator(op_node)
+    local op = op_node.value.value
+    
     if self.interface.postfix and self.interface.postfix[op] then
         local ret = self.interface.postfix[op]
 
@@ -377,6 +387,8 @@ function types.Register(name, interface)
         interface = interface,
         new = function(...)
             local self = setmetatable({interface = interface}, META)
+
+            self.trace = debug.traceback()
 
             if interface.init then
                 for k,v in pairs(interface.init(self, ...)) do
@@ -661,13 +673,14 @@ types.Register("string", {
     truthy = true,
     get = function(self, key)
         if self.analyzer then
-            local tbl = self.analyzer:GetValue("string", "typesystem")
+            local tbl = self.analyzer:GetValue("string", "runtime") or self.analyzer:GetValue("string", "typesystem") -- MERGE?
+
             if tbl and key then
                 return tbl:get(key)
             end
         end
 
-        self:Error("index " .. tostring(key) .. " is not defined")
+        self:Error("index " .. tostring(key) .. " is not defined", key.node)
 
         return self:Type("any")
     end,
@@ -700,72 +713,103 @@ types.Register("table", {
         end
         return {structure = structure, value = value or {}}
     end,
-    set = function(self, key, val)
-        if not self.structure then
-            local key = type(key) ~= "string" and key.value or key
-            self.value[key] = val
-        elseif type(key) == "string" or self.structure[key.value] then
-            local key = type(key) ~= "string" and key.value or key
+    set = function(self, key, val, node, env)
+        local hashed_key = type(key) == "string" and key or key.value
 
-            if not self.structure[key] then
-                self:Error("index " .. tostring(key) .. " is not defined")
+        if self.structure then
+            local expected = {}
+
+            for k,v in pairs(self.structure) do
+                if key:IsCompatible(k) then
+                    if not val:IsCompatible(v) then
+                        self:Error("invalid value " .. tostring(val) .. " expected " .. tostring(v), val.node)
+                    end
+
+                    if hashed_key then
+                        self.value[hashed_key] = val
+                    end
+
+                    return
+                end
+                table.insert(expected, tostring(k))
             end
 
-            if not self.structure[key]:IsCompatible(val) then
-                self:Error("invalid index " .. tostring(key) .. " expected " .. tostring(self.structure[key]) .. " got " .. tostring(val))
-            end
-
-            self.value[key] = val
+            self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
         else
-            local found = nil
-            for v in pairs(self.structure) do
-                if key:IsCompatible(v) then
-                    found = key
-                    break
+            if key.max then
+                self.value[key] = val
+            elseif hashed_key and val then
+                self.value[hashed_key] = val
+            end            
+        end
+    end,
+    get = function(self, key)
+        local hashed_key = type(key) == "string" and key or key.value
+
+        if self.structure then
+
+            if hashed_key then
+                if self.value[hashed_key] then
+                    return self.value[hashed_key]
+                elseif self.structure[hashed_key] then
+                    return self.structure[hashed_key]
                 end
             end
 
-            if not found then
-                self:Error("index " .. tostring(key) .. " is not defined")
+            local expected = {}
+
+            for k,v in pairs(self.structure) do
+                if key:IsCompatible(k) then
+                    return v
+                end
+
+                table.insert(expected, tostring(k))
+            end
+            
+            if self.index then
+                return self:index(key)
             end
 
-            if not found:IsCompatible(val) then
-                self:Error("invalid index " .. tostring(key) .. " expected " .. tostring(found) .. " got " .. tostring(val))
+            self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
+        end
+
+        if hashed_key and self.value[hashed_key] then
+            return self.value[hashed_key]
+        end
+
+        for k,v in pairs(self.value) do
+            if hashed_key then
+                if key.value == hashed_key then
+                    return v
+                end
+            elseif key:IsCompatible(k) then
+                return v
             end
-
-            self.value[found] = val
-        end
-    end,
-    get = function(self, key, node, env)
-        if self.structure and not self.structure[key] then
-            self:Error("invalid index " .. tostring(key))
+        end    
+        
+        if self.index then
+            return self:index(key)
         end
 
-        key = type(key) ~= "string" and key.value or key
-
-        if self.value[key] == nil then
-            self:Error("index " .. tostring(key) .. " is not defined", node)
-
-            return self:Type("any")
-        end
-
-        return self.value[key]
+        return self:Type("any")
     end,
     tostring = function(self)
         if self.during_tostring then return "*self" end
 
         self.during_tostring = true
         local str = {"table {"}
-        for k, v in pairs(self.value) do
-            local key = tostring(k)
+        if self.value then
+            for k, v in pairs(self.value) do
+                local key = tostring(k)
 
-            if type(k) == "table" then
-                key = "[" .. key .. "]"
-            elseif v == self then
-                v = "*self"
+                if type(k) == "table" then
+                    key = "[" .. key .. "]"
+                elseif v == self then
+                    v = "*self"
+                end
+
+                table.insert(str, key .. " = " .. tostring(v) .. ",")
             end
-
-            table.insert(str, key .. " = " .. tostring(v) .. ",")
         end
         table.insert(str, "}")
 

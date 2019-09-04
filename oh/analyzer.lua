@@ -78,7 +78,7 @@ do
             elseif v.kind == "table_expression_value" then
                 local t = self:AnalyzeExpression(v.key, env)
                 local v = self:AnalyzeExpression(v.value, env)
-                if t:IsType("string") then
+                if t:IsType("string") and t.value then
                     out[t.value] = v
                 else
                     out[t] = v
@@ -95,12 +95,7 @@ do
     end
 
     function META:PushScope(node, extra_node)
-        self.old_scope = self.scope
-        self.scope = node.scope or self.scope
-
-        assert(type(node) == "table" and node.kind, "expected an associated ast node")
-
-        self:FireEvent("enter_scope", node, extra_node)
+        assert(type(node) == "table" and node.kind, "expected an associated ast node")   
 
         local parent = self.scope
 
@@ -123,26 +118,27 @@ do
             extra_node = extra_node,
         }
 
+        self:FireEvent("enter_scope", node, extra_node, scope)
+
         if parent then
             table_insert(parent.children, scope)
         end
 
-        self.scope = scope
+        self.scope_stack = self.scope_stack or {}        
+        table.insert(self.scope_stack, self.scope)
+
+        self.scope = node.scope or scope
 
         return scope
     end
 
     function META:PopScope()
-        self:FireEvent("leave_scope", self.scope.node, self.scope.extra_node)
+        local old = table.remove(self.scope_stack)
 
-        local scope = self.scope.parent
-        if scope then
-            self.scope = scope
-        end
+        self:FireEvent("leave_scope", self.scope.node, self.scope.extra_node, old)
 
-        if self.old_scope then
-            self.scope = self.old_scope
-            self.old_scope = nil
+        if old then
+            self.scope = old
         end
     end
 
@@ -223,14 +219,14 @@ do
 
         local key = self:AnalyzeExpression(key, env)
         local obj = self:AnalyzeExpression(obj, env) or self:TypeFromImplicitNode(node, "nil")
-
+        
         obj:set(key, val)
 
         self:FireEvent("newindex", obj, key, val, env)
     end
 
     function META:Assign(node, val, env)
-        assert(val == nil or types.IsTypeObject(val))
+        assert(val == nil or types.IsTypeObject(val))     
 
         if node.kind == "value" then
             if not self:MutateUpvalue(node, val, env) then
@@ -327,7 +323,7 @@ do
             end
             io.write("\n")
         elseif what == "enter_scope" then
-            local node, extra_node = ...
+            local node, extra_node, scope = ...
             io.write((" "):rep(t))
             t = t + 1
             if extra_node then
@@ -335,13 +331,15 @@ do
             else
                 io.write(node.kind)
             end
-            io.write(" { ")
+            io.write(" {")
+            io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
             io.write("\n")
         elseif what == "leave_scope" then
-            local node, extra_node = ...
+            local node, extra_node, scope = ...
             t = t - 1
             io.write((" "):rep(t))
             io.write("}")
+            io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
             --io.write(node.kind)
             if extra_node then
             --  io.write(tostring(extra_node))
@@ -458,10 +456,6 @@ do
 
                 if typ.node.self_call then
                     table.insert(identifiers, 1, "self")
-                    if not arguments[1] then
-                        --table.insert(arguments, )
-                        print("!!!!!")
-                    end
                 end
 
                 for i, identifier in ipairs(identifiers) do
@@ -568,8 +562,12 @@ do
         if node.type_expression then
             return self:AnalyzeExpression(node.type_expression, "typesystem")
         end
-
+        
         local str = node.value and node.value.value
+
+        if str == "self" and self.current_table then
+            return self.current_table
+        end
 
         if str then
             str = str:lower()
@@ -611,10 +609,19 @@ function META:AnalyzeStatement(statement, ...)
 
             if node.type_expression then
                 val = self:AnalyzeExpression(node.type_expression, "typesystem")
+
                 if ret[i] and not ret[i]:IsType(val) then
                     self:Error(node, "expected " .. tostring(val) .. " but the right hand side is a " .. tostring(ret[i]))
+                else
+                    if val:IsType("table") and ret[i] then
+                        val.structure = val.value
+                        val.value = ret[i].value
+                    end
                 end
+
+                node.type_explicit = true
             else
+                node.type_explicit = false
                 val = ret[i]
             end
 
@@ -787,13 +794,14 @@ do
                 node.value.value == "..."
             then
                 local val
-
+                
                 -- if it's ^string, number, etc, but not string
                 if env == "typesystem" and types.IsType(self:Hash(node)) and not node.force_upvalue then
                     val = self:TypeFromImplicitNode(node, node.value.value)
                 else
                     val = self:GetValue(node, env)
 
+                    
                     if not val and env == "runtime" then
                         val = self:GetValue(node, "typesystem")
                     end
@@ -864,23 +872,18 @@ do
             stack:Push(self:TypeFromNode(node, self:TableToTypes(node, env)))
         elseif node.kind == "binary_operator" then
             local r, l = stack:Pop(), stack:Pop()
-            local op = node.value.value
 
-            if op == ":" then
+            if node.value.value == ":" then
                 stack:Push(l)
             end
 
-            stack:Push(r:BinaryOperator(op, l, node.right, env))
+            stack:Push(r:BinaryOperator(node, l, node.right, env))
         elseif node.kind == "prefix_operator" then
             local r = stack:Pop()
-            local op = node.value.value
-
-            stack:Push(r:PrefixOperator(op, node, env))
+            stack:Push(r:PrefixOperator(node))
         elseif node.kind == "postfix_operator" then
             local r = stack:Pop()
-            local op = node.value.value
-
-            stack:Push(r:PostfixOperator(op, node, env))
+            stack:Push(r:PostfixOperator(node))
         elseif node.kind == "postfix_expression_index" then
             local r = stack:Pop()
             local index = self:AnalyzeExpression(node.expression)
@@ -896,7 +899,7 @@ do
             if node.identifiers then
                 for i, key in ipairs(node.identifiers) do
                     local val = self:GetInferredType(key)
-    
+                    
                     if val then
                         table.insert(args, val)
                     end
@@ -919,7 +922,6 @@ do
                 end
                 func = f(require("oh"), self, types)
             end
-
             stack:Push(types.Type("function", rets, args, func))
         elseif node.kind == "postfix_call" then
             local typ = stack:Pop()
@@ -1012,7 +1014,7 @@ local function DefaultIndex(self, node)
     local oh = require("oh")
     local val = oh.GetBaseAnalyzeer():GetValue("_G", "typesystem")
     val:AttachNode(node)
-    return val:get(oh.GetBaseAnalyzeer():Hash(node))
+    return val:get(self:Hash(node))
 end
 
 return function()
