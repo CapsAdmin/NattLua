@@ -220,6 +220,26 @@ do
         local key = self:AnalyzeExpression(key, env)
         local obj = self:AnalyzeExpression(obj, env) or self:TypeFromImplicitNode(node, "nil")
         
+
+        -- type foo = {bar = function(number, string)}
+        -- foo.bar = function(a, b) -- automatically annotate number and string
+        if obj.value and obj.value[key.value] then
+            local t = obj:get(key)
+            if not t.types then
+                if t.name == "function" then
+                    for i,v in pairs(val.arguments) do
+                        if v.name == "any" and t.arguments[i] then
+                            val.arguments[i] = t.arguments[i] 
+                        end
+                    end
+                    --print(t)
+                end
+            end
+
+            --typ.ret = merge_types(typ.ret, ret)
+            --typ.arguments = merge_types(typ.arguments, arguments)
+        end
+        
         obj:set(key, val)
 
         self:FireEvent("newindex", obj, key, val, env)
@@ -559,11 +579,19 @@ do
     table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
 
     function META:GetInferredType(node)
+
+        local str = node.value and node.value.value
+
         if node.type_expression then
             return self:AnalyzeExpression(node.type_expression, "typesystem")
         end
         
-        local str = node.value and node.value.value
+        if node.kind == "value" and str ~= "string" then
+            local v = self:GetValue(node, "typesystem")
+            if v then
+                return v
+            end
+        end
 
         if str == "self" and self.current_table then
             return self.current_table
@@ -898,10 +926,13 @@ do
 
             if node.identifiers then
                 for i, key in ipairs(node.identifiers) do
+                    -- type functions with a body must be with identifier: type
+                    if not node.statements or key.type_expression then
                     local val = self:GetInferredType(key)
-                    
-                    if val then
-                        table.insert(args, val)
+                        
+                        if val then
+                            table.insert(args, val)
+                        end
                     end
                 end
             end
@@ -969,13 +1000,20 @@ do
 
         function meta:Pop()
             self.i = self.i - 1
-            if self.i < 1 then error("stack underflow", 2) end
+            if self.i < 1 then 
+                if self.last_val then
+                    self.last_val:Error("stack underflow")
+                end
+                error("stack underflow", 2) 
+            end
             local val = self.values[self.i]
             self.values[self.i] = nil
 
             if val[1] then
                 return val[1], val
             end
+
+            self.last_val = val
 
             return val
         end
@@ -1029,9 +1067,7 @@ end
 
 local function DefaultIndex(self, node)
     local oh = require("oh")
-    local val = oh.GetBaseAnalyzeer():GetValue("_G", "typesystem")
-    if type(node) ~= "string" then val:AttachNode(node) end
-    return val:get(self:Hash(node))
+    return oh.GetBaseAnalyzer():GetValue(node, "typesystem")
 end
 
 return function()

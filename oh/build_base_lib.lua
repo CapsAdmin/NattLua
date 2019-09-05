@@ -9346,15 +9346,14 @@ local fixup = {
 		byte = [[
             (function(s: string, i: number, j: number): ...) | 
             (function(s: string, i: number): number | nil) | 
-			(function(s: string): number),
+			(function(s: string): number)
 		]],
 	},
 }
 
 local indent = 0
 
-local function get_declarations(k, v)
-	local out = {}
+local function get_declarations(v)
 	v.args = v.args:gsub("function", "empty_function")
 	v.returns = v.returns:gsub("function", "empty_function")
 
@@ -9387,50 +9386,71 @@ local function get_declarations(k, v)
 			args = args:gsub("(%.%.%.: %S+)%)", "%1[])")
 		end
 
-		table.insert(str,  "\n" .. ("\t"):rep(indent+1) .."(function" .. args .. ": " .. v.returns .. ")")
+		table.insert(str,  "(function" .. args .. ": " .. v.returns .. ")")
 	end
 
-	table.insert(out, ("\t"):rep(indent) .. k .. " = " .. table.concat(str, " | "))
-
-	return out
+	return str
 end
 
-
-
-local str = {}
-
+local enums = {}
 local interfaces = {}
 
-local function walk(key, tbl)
-	table.insert(str, ("\t"):rep(indent) .. key .. " = {")
+local function walk(lib, data)
+	local str = {}
 
-	for lib, data in pairs(tbl) do
-		if fixup[key] and fixup[key][lib] then
-			table.insert(str, ("\t"):rep(indent) .. lib .. " = ")
-			table.insert(str, fixup[key][lib])
-		else
-			if data.type == "function" then
-				indent = indent + 1
-				for i,v in ipairs(get_declarations(lib, data)) do
-					table.insert(str, v .. ",")
+	if data.type == "function" or data.type == "method" then
+		indent = indent + 1
+		table.insert(str, lib .. " = " .. table.concat(get_declarations(data), "    |    "))
+		indent = indent - 1
+	end
+
+	if data.childs then
+		indent = indent + 1
+		table.insert(str, lib .. " = {")
+		local t = {}
+		for k,v in pairs(data.childs) do
+			if v.type == "function" or v.type == "method" then
+				if fixup[lib] and fixup[lib][k] then
+					table.insert(t, ("\t"):rep(indent) .. k .. " = " .. fixup[lib][k])
+				else
+					local lines = walk(k, v)
+					if lines[1] then
+						table.insert(t, ("\t"):rep(indent) .. table.concat(lines, "\n"))
+					end
 				end
-				indent = indent - 1
+			elseif v.type == "lib" then
+				local lines = walk(k, v)
+				if lines[1] then
+					table.insert(t, ("\t"):rep(indent) .. table.concat(lines, "\n"))
+				end
+			elseif v.type == "class" then
+				if v.childs then
+					local s = {}
+					
+					for val, data in pairs(v.childs) do
+						if data.type == "value" then
+							table.insert(s, ("\t"):rep(1) .. ("%q"):format(val))
+						end
+					end
+		
+					if s[1] then
+						table.sort(s, function(a, b) return a < b end)
+						table.insert(enums, "type " .. k .. " =\n" .. table.concat(s, " |\n") .. "\n")
+					end
+				end
+			elseif v.type == "value" then
+				--print(v.type, "!!!s", k)
+				--for k,v in pairs(v) do print("   ",k,v) end
 			end
 		end
+		table.insert(str, table.concat(t, ",\n"))
+		
+		indent = indent - 1
+		table.insert(str, ("\t"):rep(indent)  .. "}")
 	end
 
-	for lib, data in pairs(tbl) do
-		if data.childs then
-			indent = indent + 1
-			walk(lib, data.childs)
-			indent = indent - 1
-		end
-	end
-
-	table.insert(str, ("\t"):rep(indent) .. "},")
+	return str
 end
-
-walk("_G", lib)
 
 local lua = ""
 
@@ -9438,208 +9458,222 @@ lua = lua .. [[
 local type empty_function = function(...): any
 
 ]]
-lua = lua .. "type " .. table.concat(str, "\n")
+
+local out = {}
+
+for lib, data in pairs(lib) do
+	local lines = walk(lib, data)
+	if lines[1] then
+		table.insert(out, "type " .. table.concat(lines, "\n") .. "\n")
+	end
+end
+
+lua = lua .. table.concat(enums, "\n")  .. "\n"
+lua = lua .. table.concat(out)
+
 lua = lua .. [[
 
-	type _G._G = _G
+-- overrides
 
-	type _G.string.match = function(s, pattern, init)
-		if s.value and pattern.value then
-			local res = {s.value:match(pattern.value)}
-			for i,v in ipairs(res) do
-				res[i] = types.Type("string", v)
-			end
-			return unpack(res)
+-- ^string is just to circumvent getting the primitive type string
+
+type ^string.match = function(s, pattern, init)
+	if s.value and pattern.value then
+		local res = {s.value:match(pattern.value)}
+		for i,v in ipairs(res) do
+			res[i] = types.Type("string", v)
 		end
+		return unpack(res)
+	end
 
+	if pattern.value then
+		local out = {}
+		for s in pattern.value:gmatch("%b()") do
+			table.insert(out, types.Type("string") + types.Type("nil"))
+		end
+		return unpack(out)
+	end
+end
+
+type ^string.gsub = function(str, pattern, val)
+	if val:IsType("function") then
+		local args = {}
+		
 		if pattern.value then
-			local out = {}
-			for s in pattern.value:gmatch("%b()") do
-				table.insert(out, types.Type("string") + types.Type("nil"))
-			end
-			return unpack(out)
+		for group in pattern.value:gmatch("%b()") do
+			table.insert(args, val:Type("string"))
 		end
+		end
+
+		if not args[1] then
+		args[1] = val:Type("string")
+		end
+
+		for i,v in ipairs(args) do
+		val.arguments[i] = types.ReplaceType(val.arguments[i], v)
+		end
+
+		val.ret[1] = types.ReplaceType(val.ret[1], val:Type("string"))
 	end
 
-	type _G.type_assert = function(what, type, value, ...)
-		if not what:IsType(type) then
-			error("expected type " .. tostring(type) .." got " .. tostring(what))
-		end
+	return str:Type("string")
+end
 
-		if type.value ~= nil then
-			if what.value ~= type.value then
-				print(what, type, value)
-				error("expected type value " .. tostring(type) .." got " .. tostring(what))
-			end
-		end
+type type_assert = function(what, type, value, ...)
+	if not what:IsType(type) then
+		error("expected type " .. tostring(type) .." got " .. tostring(what))
 	end
 
-	type _G.next = function(tbl, _)
-		local T = tbl
-		if not tbl then return T:Type("any"), T:Type("any") end
-		local key, val
+	if type.value ~= nil then
+		if what.value ~= type.value then
+			print(what, type, value)
+			error("expected type value " .. tostring(type) .." got " .. tostring(what))
+		end
+	end
+end
 
-		for _, tbl in ipairs(tbl.types or {tbl}) do
-			if tbl.value then
-				for k, v in pairs(tbl.value) do
-					if not key then
-						if types.IsTypeObject(k) then
-							key = k
-						else
-							key = T:Type(type(k))
-						end
+type next = function(tbl, _)
+	local T = tbl
+	if not tbl then return T:Type("any"), T:Type("any") end
+	local key, val
+
+	for _, tbl in ipairs(tbl.types or {tbl}) do
+		if tbl.value then
+			for k, v in pairs(tbl.value) do
+				if not key then
+					if types.IsTypeObject(k) then
+						key = k
 					else
-						if types.IsTypeObject(k) then
-							key = types.Fuse(key, k)
-						elseif type(k) == "string" then
-							key = types.Fuse(key, T:Type("string"))
-						elseif type(k) == "number" then
-							key = types.Fuse(key, T:Type("number"))
-						elseif not key:IsType(k) then
-							key = types.Fuse(key, T:Type(k.name))
-						end
+						key = T:Type(type(k))
 					end
+				else
+					if types.IsTypeObject(k) then
+						key = types.Fuse(key, k)
+					elseif type(k) == "string" then
+						key = types.Fuse(key, T:Type("string"))
+					elseif type(k) == "number" then
+						key = types.Fuse(key, T:Type("number"))
+					elseif not key:IsType(k) then
+						key = types.Fuse(key, T:Type(k.name))
+					end
+				end
 
-					if not val then
-						if types.IsTypeObject(v) then
-							val = v
-						else
-							val = T:Type(type(v))
-						end
+				if not val then
+					if types.IsTypeObject(v) then
+						val = v
 					else
-						if types.IsTypeObject(v) then
-							val = types.Fuse(val, v)
-						elseif not val:IsType(v) then
-							val = types.Fuse(val, T:Type(v.name))
-						end
+						val = T:Type(type(v))
+					end
+				else
+					if types.IsTypeObject(v) then
+						val = types.Fuse(val, v)
+					elseif not val:IsType(v) then
+						val = types.Fuse(val, T:Type(v.name))
 					end
 				end
 			end
 		end
-
-		return key, val
 	end
 
-	type _G.pairs = function(tbl)
-		local next = analyzer:GetValue("next", "typesystem")
-		return next, tbl, nil
+	return key, val
+end
+
+type pairs = function(tbl)
+	local next = analyzer:GetValue("next", "typesystem")
+	return next, tbl, nil
+end
+
+type ipairs = function(tbl)
+	local next = analyzer:GetValue("next", "typesystem")
+	return next, tbl, nil
+end
+
+type require = function(name)
+	local str = name.value
+
+	if analyzer:GetValue(str, "typesystem") then
+		return analyzer:GetValue(str, "typesystem")
 	end
 
-	type _G.ipairs = function(tbl)
-		local next = analyzer:GetValue("next", "typesystem")
-		return next, tbl, nil
-	end
+	for _, searcher in ipairs(package.loaders) do
+		local loader = searcher(str)
+		if type(loader) == "function" then
+			local path = debug.getinfo(loader).source
+			if path:sub(1, 1) == "@" then
+				local path = path:sub(2)
 
-	type _G.require = function(name)
-		local str = name.value
+				local ast = assert(require("oh").FileToAST(path))
+				analyzer:AnalyzeStatement(ast)
 
-		if analyzer:GetValue(str, "typesystem") then
-			return analyzer:GetValue(str, "typesystem")
-		end
-
-		for _, searcher in ipairs(package.loaders) do
-			local loader = searcher(str)
-			if type(loader) == "function" then
-				local path = debug.getinfo(loader).source
-				if path:sub(1, 1) == "@" then
-					local path = path:sub(2)
-
-					local ast = assert(require("oh").FileToAST(path))
-					analyzer:AnalyzeStatement(ast)
-
-					return unpack(analyzer.last_return)
-				end
+				return unpack(analyzer.last_return)
 			end
 		end
-
-		error("unable to find module " .. str)
 	end
 
-	type _G.table.insert = function(tbl, ...)
-		local pos, val = ...
+	error("unable to find module " .. str)
+end
 
-		if not val then
-			val = ...
-			pos = #tbl.value + 1
-		else
-			pos = pos.value
-		end
+type table.insert = function(tbl, ...)
+	local pos, val = ...
 
-		local l = types.Type("list")
-
-		local list_type = tbl.list_type
-
-		for k,v in pairs(tbl) do
-			if k ~= "value" then
-				tbl[k] = nil
-			end
-		end
-
-		for k,v in pairs(l) do
-			tbl[k] = v
-		end
-
-		table.insert(tbl.value, pos, val)
-
-		if list_type then
-			list_type = list_type + val
-		end
-
-		tbl.list_type = list_type or val
-		tbl.length = pos
+	if not val then
+		val = ...
+		pos = #tbl.value + 1
+	else
+		pos = pos.value
 	end
 
-	type _G.TPRINT = function(...) print(...) end
+	local l = types.Type("list")
 
+	local list_type = tbl.list_type
 
-    type _G.table.sort = function(tbl, func)
-        local next = oh.GetBaseAnalyzeer():GetValue("_G", "typesystem"):get("next").func
-        local k,v = next(tbl)
-        func.arguments[1] = v
-        func.arguments[2] = v
-	end
-	
-	type _G.setmetatable = function(tbl, meta) 
-		if meta.value and meta.value["__index"] then 
-			tbl.index = function(self, key) 
-			return meta:get(key)
-			end
+	for k,v in pairs(tbl) do
+		if k ~= "value" then
+			tbl[k] = nil
 		end
-		return tbl
 	end
 
-	type _G.string.gsub = function(str, pattern, val)
-		if val:IsType("function") then
-		  local args = {}
-		  
-		  if pattern.value then
-			for group in pattern.value:gmatch("%b()") do
-			  table.insert(args, val:Type("string"))
-			end
-		  end
-	
-		  if not args[1] then
-			args[1] = val:Type("string")
-		  end
-	
-		  for i,v in ipairs(args) do
-			val.arguments[i] = types.ReplaceType(val.arguments[i], v)
-		  end
-	
-		  val.ret[1] = types.ReplaceType(val.ret[1], val:Type("string"))
-		end
-	
-		return str:Type("string")
+	for k,v in pairs(l) do
+		tbl[k] = v
 	end
+
+	table.insert(tbl.value, pos, val)
+
+	if list_type then
+		list_type = list_type + val
+	end
+
+	tbl.list_type = list_type or val
+	tbl.length = pos
+end
+
+type TPRINT = function(...) print(...) end
+
+
+type table.sort = function(tbl, func)
+	local next = oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):get("next").func
+	local k,v = next(tbl)
+	func.arguments[1] = v
+	func.arguments[2] = v
+end
+
+type setmetatable = function(tbl, meta) 
+	if meta.value and meta.value["__index"] then 
+		tbl.index = function(self, key) 
+		return meta:get(key)
+		end
+	end
+	return tbl
+end
+
 ]]
-lua = lua:gsub("\t", "    ")
 
 local oh = require("oh")
-local Analyzer = require("oh.analyzer")
-local base = Analyzer()
-base.Index = nil
 
-base:AnalyzeStatement(assert(oh.Code(lua, "base_library"):Parse()).SyntaxTree)
+local base = oh.GetBaseAnalyzer(assert(oh.Code(lua, "base_library"):Parse()).SyntaxTree)
+
+assert(base:GetValue("_G", "typesystem"):get("string"):get("gsub") == base:GetValue("string", "typesystem"):get("gsub"))
 
 io.open("oh/base_lib.oh", "w"):write(lua)
+
 

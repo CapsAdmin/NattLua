@@ -7,12 +7,22 @@ local print_util = require("oh.print_util")
 local Analyzer = require("oh.analyzer")
 
 
-function oh.GetBaseAnalyzeer()
+function oh.GetBaseAnalyzer(ast)
 
     if not oh.base_analyzer then
         local base = Analyzer()
-        base.Index = nil
-		base:AnalyzeStatement(assert(oh.FileToAST("oh/base_lib.oh")))
+		base.Index = nil
+
+		local root = assert(ast or oh.FileToAST("oh/base_lib.oh"))
+		base:AnalyzeStatement(root)
+		
+		local g = base:TypeFromImplicitNode(root, "table")
+		for k,v in pairs(base.env.typesystem) do
+			g:set(k, v)
+		end		
+		base:SetGlobal("_G", g, "typesystem")
+		base:GetValue("_G", "typesystem"):set("_G", g)
+
         oh.base_analyzer = base
     end
 

@@ -292,4 +292,81 @@ function dec(data)
 end
 ]]
 
+code = [[
+  function love.keypressed(key, scancode, isrepeat)
+    if key == "tab" then
+       local state = not love.mouse.isGrabbed()   -- the opposite of whatever it currently is
+       love.mouse.setGrabbed(state) --Use love.mouse.setGrab(state) for 0.8.0 or lower
+    end
+ end
+]]
+
+code = [[
+
+type foo = 1 | 2 | 3
+
+local a: foo = 4
+
+]]
+
+code = [[
+type object = function(tbl)
+  local t = tbl:Type("table")
+  t.value = nil
+  t.structure = nil
+
+  local a = tbl:get("__newindex")
+  if a.name == "function" then
+    local old = t.set
+    t.set = function(...) 
+      a.func(...)
+      return old(...)
+    end
+  end
+
+  return t
+end
+
+type foo = object({
+  __newindex = function(self, key, val)
+      if val.value == true then
+          key:Error("cannot assign true!")
+      end
+  end,
+})
+
+local a: foo = {}
+a.lol = false
+local test = a.lol
+a.lol = true
+
+]]
+
+code = [[
+
+
+type assert = function(val, err) 
+  if val.value == false then
+    val:Error(err.value or "assertion failed")
+  end
+end
+
+function foo(a)
+  assert(a == 1, "first argument must be 1")
+end
+
+foo(2)
+
+]]
+
+code = [[
+
+  type foo = (function(false): true) | (function(true): false)
+  
+  local a = foo(true)
+
+]]
+
+oh.GetBaseAnalyzer()
+
 print(assert(oh.Code(code, nil, {dump_analyzer_events = true}):Analyze()):BuildLua())

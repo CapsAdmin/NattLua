@@ -1,2535 +1,912 @@
 local type empty_function = function(...): any
 
-type _G = {
-    assert = 
-        (function(v: any, message: string): ...) | 
-        (function(v: any): ...),
-    tostring = 
-        (function(v: any): string),
-    tonumber = 
-        (function(e: any, base: number): number|nil) | 
-        (function(e: any): number|nil),
-    rawget = 
-        (function(table: table, index: any): any),
-    xpcall = 
-        (function(f: empty_function, msgh: empty_function, arg1: any, ...): boolean, ...) | 
-        (function(f: empty_function, msgh: empty_function): boolean, ...),
-    print = 
-        (function(...): nil),
-    pcall = 
-        (function(f: empty_function, arg1: any, ...): boolean, ...) | 
-        (function(f: empty_function): boolean, ...),
-    module = 
-        (function(name: string, ...): nil) | 
-        (function(name: string): nil),
-    setfenv = 
-        (function(f: empty_function|number, table: table): empty_function|nil),
-    pairs = 
-        (function(t: table): empty_function, table, nil),
-    rawequal = 
-        (function(v1: any, v2: any): boolean),
-    loadstring = 
-        (function(string: string, chunkname: string): empty_function|nil, string|nil) | 
-        (function(string: string): empty_function|nil, string|nil),
-    error = 
-        (function(message: string, level: number): nil) | 
-        (function(message: string): nil),
-    loadfile = 
-        (function(filename: string, mode: string, env: table): empty_function|nil, string|nil) | 
-        (function(filename: string, mode: string): empty_function|nil, string|nil) | 
-        (function(filename: string): empty_function|nil, string|nil) | 
-        (function(): empty_function|nil, string|nil),
-    dofile = 
-        (function(filename: string): ...) | 
-        (function(): ...),
-    ipairs = 
-        (function(t: table): empty_function, table, number),
-    type = 
-        (function(v: any): string),
-    collectgarbage = 
-        (function(opt: string, arg: number): ...) | 
-        (function(opt: string): ...) | 
-        (function(): ...),
-    getfenv = 
-        (function(f: empty_function|number): table) | 
-        (function(): table),
-    next = 
-        (function(table: table, index: any): any, any|nil) | 
-        (function(table: table): any, any|nil),
-    load = 
-        (function(ld: string|empty_function, source: string, mode: string, env: table): empty_function|nil, string|nil) | 
-        (function(ld: string|empty_function, source: string, mode: string): empty_function|nil, string|nil) | 
-        (function(ld: string|empty_function, source: string): empty_function|nil, string|nil) | 
-        (function(ld: string|empty_function): empty_function|nil, string|nil),
-    setmetatable = 
-        (function(table: table, metatable: table|nil): table),
-    select = 
-        (function(index: number|string, ...): ...),
-    rawlen = 
-        (function(v: table|string): number),
-    unpack = 
-        (function(list: table, i: number, j: number): ...) | 
-        (function(list: table, i: number): ...) | 
-        (function(list: table): ...),
-    require = 
-        (function(modname: string): any),
-    rawset = 
-        (function(table: table, index: any, value: any): table),
-    getmetatable = 
-        (function(object: any): table|nil),
-    coroutine = {
-        wrap = 
-            (function(f: empty_function): empty_function),
-        resume = 
-            (function(co: thread, val1: any, ...): boolean, ...) | 
-            (function(co: thread): boolean, ...),
-        yield = 
-            (function(...): nil),
-        status = 
-            (function(co: thread): string),
-        isyieldable = 
-            (function(): boolean),
-        running = 
-            (function(): thread, boolean),
-        create = 
-            (function(f: empty_function): thread),
-    },
-    io = {
-        tmpfile = 
-            (function(): file),
-        read = 
-            (function(...): ...),
-        output = 
-            (function(file: string|file): file|nil) | 
-            (function(): file|nil),
-        open = 
-            (function(filename: string, mode: string): file|nil, string|nil) | 
-            (function(filename: string): file|nil, string|nil),
-        close = 
-            (function(file: file): boolean|nil, string, number|nil) | 
-            (function(): boolean|nil, string, number|nil),
-        write = 
-            (function(...): file|nil, string|nil),
-        popen = 
-            (function(prog: string, mode: string): file|nil, string|nil) | 
-            (function(prog: string): file|nil, string|nil),
-        flush = 
-            (function(): nil),
-        type = 
-            (function(obj: file): string|nil),
-        lines = 
-            (function(filename: string, ...): empty_function) | 
-            (function(): empty_function),
-        input = 
-            (function(file: string|file): file|nil) | 
-            (function(): file|nil),
-    },
-    love = {
-        gamepadreleased = 
-            (function(joystick: Joystick, button: GamepadButton): nil),
-        focus = 
-            (function(focus: boolean): nil),
-        lowmemory = 
-            (function(): nil),
-        getVersion = 
-            (function(): number, number, number, string),
-        quit = 
-            (function(): boolean),
-        wheelmoved = 
-            (function(x: number, y: number): nil),
-        joystickhat = 
-            (function(joystick: Joystick, hat: number, direction: JoystickHat): nil),
-        joystickaxis = 
-            (function(joystick: Joystick, axis: number, value: number): nil),
-        joystickpressed = 
-            (function(joystick: number, button: number): nil),
-        touchmoved = 
-            (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
-        visible = 
-            (function(visible: boolean): nil),
-        update = 
-            (function(dt: number): nil),
-        errorhandler = 
-            (function(msg: string): nil),
-        mousereleased = 
-            (function(x: number, y: number, button: number, isTouch: boolean, presses: number): nil),
-        touchreleased = 
-            (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
-        filedropped = 
-            (function(file: File): nil),
-        mousepressed = 
-            (function(x: number, y: number, button: number, isTouch: boolean, presses: number): nil),
-        touchpressed = 
-            (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
-        joystickadded = 
-            (function(joystick: Joystick): nil),
-        threaderror = 
-            (function(thread: Thread, errorstr: string): nil),
-        textinput = 
-            (function(text: string): nil),
-        textedited = 
-            (function(text: string, start: number, length: number): nil),
-        conf = 
-            (function(t: table): nil),
-        run = 
-            (function(): nil),
-        draw = 
-            (function(): nil),
-        setDeprecationOutput = 
-            (function(enable: boolean): nil),
-        resize = 
-            (function(w: number, h: number): nil),
-        mousemoved = 
-            (function(x: number, y: number, dx: number, dy: number, istouch: boolean): nil),
-        mousefocus = 
-            (function(focus: boolean): nil),
-        gamepadpressed = 
-            (function(joystick: Joystick, button: GamepadButton): nil),
-        hasDeprecationOutput = 
-            (function(): boolean),
-        joystickreleased = 
-            (function(joystick: number, button: number): nil),
-        joystickremoved = 
-            (function(joystick: Joystick): nil),
-        gamepadaxis = 
-            (function(joystick: Joystick, axis: GamepadAxis, value: number): nil),
-        keyreleased = 
-            (function(key: KeyConstant, scancode: Scancode): nil),
-        directorydropped = 
-            (function(path: string): nil),
-        load = 
-            (function(arg: table): nil),
-        keypressed = 
-            (function(key: KeyConstant, scancode: Scancode, isrepeat: boolean): nil),
-        system = {
-            setClipboardText = 
-                (function(text: string): nil),
-            vibrate = 
-                (function(seconds: number): nil),
-            openURL = 
-                (function(url: string): boolean),
-            getPowerInfo = 
-                (function(): PowerState, number, number),
-            getOS = 
-                (function(): string),
-            getProcessorCount = 
-                (function(): number),
-            PowerState = {
-            },
-        },
-        audio = {
-            setVelocity = 
-                (function(x: number, y: number, z: number): nil),
-            setDistanceModel = 
-                (function(model: DistanceModel): nil),
-            setMixWithSystem = 
-                (function(mix: boolean): boolean),
-            getSourceCount = 
-                (function(): number),
-            getVelocity = 
-                (function(): number, number, number),
-            newQueueableSource = 
-                (function(samplerate: number, bitdepth: number, channels: number, buffercount: number): Source),
-            getMaxSceneEffects = 
-                (function(): number),
-            setEffect = 
-                (function(name: string, settings: table): boolean),
-            getVolume = 
-                (function(): number),
-            getEffect = 
-                (function(name: string): table),
-            getActiveSourceCount = 
-                (function(): number),
-            getDopplerScale = 
-                (function(): number),
-            getDistanceModel = 
-                (function(): DistanceModel),
-            setOrientation = 
-                (function(fx: number, fy: number, fz: number, ux: number, uy: number, uz: number): nil),
-            stop = 
-                (function(source: Source): nil),
-            setVolume = 
-                (function(volume: number): nil),
-            getRecordingDevices = 
-                (function(): table),
-            newSource = 
-                (function(filename: string, type: SourceType): Source),
-            pause = 
-                (function(source: Source): nil),
-            getPosition = 
-                (function(): number, number, number),
-            getMaxSourceEffects = 
-                (function(): number),
-            getOrientation = 
-                (function(): number, number, number, number, number, number),
-            setPosition = 
-                (function(x: number, y: number, z: number): nil),
-            isEffectsSupported = 
-                (function(): boolean),
-            play = 
-                (function(source: Source): nil),
-            setDopplerScale = 
-                (function(scale: number): nil),
-            EffectType = {
-            },
-            Source = {
-                setVelocity = 
-                    (function(x: number, y: number, z: number): nil),
-                setPitch = 
-                    (function(pitch: number): nil),
-                getType = 
-                    (function(): SourceType),
-                getActiveEffects = 
-                    (function(): table),
-                isRelative = 
-                    (function(): boolean),
-                setVolume = 
-                    (function(volume: number): nil),
-                setDirection = 
-                    (function(x: number, y: number, z: number): nil),
-                setFilter = 
-                    (function(settings: table): boolean),
-                setVolumeLimits = 
-                    (function(min: number, max: number): nil),
-                queue = 
-                    (function(sounddata: SoundData): boolean),
-                setCone = 
-                    (function(innerAngle: number, outerAngle: number, outerVolume: number, outerHighGain: number): nil),
-                setRelative = 
-                    (function(enable: boolean): nil),
-                setEffect = 
-                    (function(name: string, enable: boolean): boolean),
-                tell = 
-                    (function(unit: TimeUnit): number),
-                getVolume = 
-                    (function(): number),
-                getEffect = 
-                    (function(name: string, filtersettings: table): table),
-                setLooping = 
-                    (function(loop: boolean): nil),
-                getChannelCount = 
-                    (function(): number),
-                seek = 
-                    (function(position: number, unit: TimeUnit): nil),
-                getDirection = 
-                    (function(): number, number, number),
-                play = 
-                    (function(): boolean),
-                setAttenuationDistances = 
-                    (function(ref: number, max: number): nil),
-                setRolloff = 
-                    (function(rolloff: number): nil),
-                stop = 
-                    (function(): nil),
-                isPlaying = 
-                    (function(): boolean),
-                getFilter = 
-                    (function(settings: table): table),
-                pause = 
-                    (function(): nil),
-                getFreeBufferCount = 
-                    (function(): number),
-                getCone = 
-                    (function(): number, number, number, number),
-                getPosition = 
-                    (function(): number, number, number),
-                getPitch = 
-                    (function(): number),
-                getVelocity = 
-                    (function(): number, number, number),
-                getAttenuationDistances = 
-                    (function(): number, number),
-                setPosition = 
-                    (function(x: number, y: number, z: number): nil),
-                isLooping = 
-                    (function(): boolean),
-                getRolloff = 
-                    (function(): number),
-                getVolumeLimits = 
-                    (function(): number, number),
-                getDuration = 
-                    (function(unit: TimeUnit): number),
-            },
-            RecordingDevice = {
-                stop = 
-                    (function(): SoundData),
-                start = 
-                    (function(samplecount: number, samplerate: number, bitdepth: number, channels: number): boolean),
-                getSampleRate = 
-                    (function(): number),
-                getData = 
-                    (function(): SoundData),
-                isRecording = 
-                    (function(): boolean),
-                getSampleCount = 
-                    (function(): number),
-                getName = 
-                    (function(): string),
-                getChannelCount = 
-                    (function(): number),
-            },
-            TimeUnit = {
-            },
-            SourceType = {
-            },
-            DistanceModel = {
-            },
-            EffectWaveform = {
-            },
-            FilterType = {
-            },
-        },
-        joystick = {
-            saveGamepadMappings = 
-                (function(filename: string): string),
-            setGamepadMapping = 
-                (function(guid: string, button: GamepadButton, inputtype: JoystickInputType, inputindex: number, hatdirection: JoystickHat): boolean),
-            getJoysticks = 
-                (function(): table),
-            loadGamepadMappings = 
-                (function(filename: string): nil),
-            GamepadButton = {
-            },
-            Joystick = {
-                isConnected = 
-                    (function(): boolean),
-                isGamepad = 
-                    (function(): boolean),
-                getHat = 
-                    (function(hat: number): JoystickHat),
-                isDown = 
-                    (function(...: number[]): boolean),
-                getID = 
-                    (function(): number, number),
-                getGUID = 
-                    (function(): string),
-                isGamepadDown = 
-                    (function(...: GamepadButton[]): boolean),
-                getAxis = 
-                    (function(axis: number): number),
-                getName = 
-                    (function(): string),
-                getAxisCount = 
-                    (function(): number),
-                isVibrationSupported = 
-                    (function(): boolean),
-                getButtonCount = 
-                    (function(): number),
-                getVibration = 
-                    (function(): number, number),
-                getGamepadMapping = 
-                    (function(axis: GamepadAxis): JoystickInputType, number, JoystickHat),
-                getGamepadAxis = 
-                    (function(axis: GamepadAxis): number),
-                getHatCount = 
-                    (function(): number),
-                setVibration = 
-                    (function(left: number, right: number): boolean),
-            },
-            JoystickHat = {
-            },
-            JoystickInputType = {
-            },
-            GamepadAxis = {
-            },
-        },
-        physics = {
-            newMouseJoint = 
-                (function(body: Body, x: number, y: number): MouseJoint),
-            newFixture = 
-                (function(body: Body, shape: Shape, density: number): Fixture),
-            newWheelJoint = 
-                (function(body1: Body, body2: Body, x: number, y: number, ax: number, ay: number, collideConnected: boolean): WheelJoint),
-            newEdgeShape = 
-                (function(x1: number, y1: number, x2: number, y2: number): EdgeShape),
-            newBody = 
-                (function(world: World, x: number, y: number, type: BodyType): Body),
-            newChainShape = 
-                (function(loop: boolean, x1: number, y1: number, x2: number, y2: number, ...: number[]): ChainShape),
-            setMeter = 
-                (function(scale: number): nil),
-            newWorld = 
-                (function(xg: number, yg: number, sleep: boolean): World),
-            newWeldJoint = 
-                (function(body1: Body, body2: Body, x: number, y: number, collideConnected: boolean): WeldJoint),
-            newRopeJoint = 
-                (function(body1: Body, body2: Body, x1: number, y1: number, x2: number, y2: number, maxLength: number, collideConnected: boolean): RopeJoint),
-            getMeter = 
-                (function(): number),
-            newGearJoint = 
-                (function(joint1: Joint, joint2: Joint, ratio: number, collideConnected: boolean): GearJoint),
-            newRectangleShape = 
-                (function(width: number, height: number): PolygonShape),
-            newFrictionJoint = 
-                (function(body1: Body, body2: Body, x: number, y: number, collideConnected: boolean): FrictionJoint),
-            newPulleyJoint = 
-                (function(body1: Body, body2: Body, gx1: number, gy1: number, gx2: number, gy2: number, x1: number, y1: number, x2: number, y2: number, ratio: number, collideConnected: boolean): PulleyJoint),
-            newPrismaticJoint = 
-                (function(body1: Body, body2: Body, x: number, y: number, ax: number, ay: number, collideConnected: boolean): PrismaticJoint),
-            newMotorJoint = 
-                (function(body1: Body, body2: Body, correctionFactor: number): MotorJoint),
-            newRevoluteJoint = 
-                (function(body1: Body, body2: Body, x: number, y: number, collideConnected: boolean): RevoluteJoint),
-            newCircleShape = 
-                (function(radius: number): CircleShape),
-            newPolygonShape = 
-                (function(x1: number, y1: number, x2: number, y2: number, ...: number[]): PolygonShape),
-            newDistanceJoint = 
-                (function(body1: Body, body2: Body, x1: number, y1: number, x2: number, y2: number, collideConnected: boolean): DistanceJoint),
-            PrismaticJoint = {
-                getMotorForce = 
-                    (function(): number),
-                setLimitsEnabled = 
-                    (function(enable: boolean): nil),
-                getJointSpeed = 
-                    (function(): number),
-                setMotorSpeed = 
-                    (function(s: number): nil),
-                getMotorSpeed = 
-                    (function(): number),
-                getJointTranslation = 
-                    (function(): number),
-                getAxis = 
-                    (function(): number, number),
-                setMotorEnabled = 
-                    (function(enable: boolean): nil),
-                setUpperLimit = 
-                    (function(upper: number): nil),
-                getMaxMotorForce = 
-                    (function(): number),
-                setLimits = 
-                    (function(lower: number, upper: number): nil),
-                isMotorEnabled = 
-                    (function(): boolean),
-                setMaxMotorForce = 
-                    (function(f: number): nil),
-                getUpperLimit = 
-                    (function(): number),
-                getLimits = 
-                    (function(): number, number),
-                getLowerLimit = 
-                    (function(): number),
-                setLowerLimit = 
-                    (function(lower: number): nil),
-            },
-            MouseJoint = {
-                getTarget = 
-                    (function(): number, number),
-                getMaxForce = 
-                    (function(): number),
-                getFrequency = 
-                    (function(): number),
-                setTarget = 
-                    (function(x: number, y: number): nil),
-                setMaxForce = 
-                    (function(f: number): nil),
-                setDampingRatio = 
-                    (function(ratio: number): nil),
-                setFrequency = 
-                    (function(freq: number): nil),
-            },
-            World = {
-                getJointCount = 
-                    (function(): number),
-                getContactList = 
-                    (function(): table),
-                isDestroyed = 
-                    (function(): boolean),
-                queryBoundingBox = 
-                    (function(topLeftX: number, topLeftY: number, bottomRightX: number, bottomRightY: number, callback: empty_function): nil),
-                setCallbacks = 
-                    (function(beginContact: empty_function, endContact: empty_function, preSolve: empty_function, postSolve: empty_function): nil),
-                getBodyList = 
-                    (function(): table),
-                getContactFilter = 
-                    (function(): empty_function),
-                update = 
-                    (function(dt: number, velocityiterations: number, positioniterations: number): nil),
-                rayCast = 
-                    (function(x1: number, y1: number, x2: number, y2: number, callback: empty_function): nil),
-                getContactCount = 
-                    (function(): number),
-                setContactFilter = 
-                    (function(filter: empty_function): nil),
-                isSleepingAllowed = 
-                    (function(): boolean),
-                getCallbacks = 
-                    (function(): empty_function, empty_function, empty_function, empty_function),
-                translateOrigin = 
-                    (function(x: number, y: number): nil),
-                getBodyCount = 
-                    (function(): number),
-                getGravity = 
-                    (function(): number, number),
-                setSleepingAllowed = 
-                    (function(allowSleep: boolean): nil),
-                setGravity = 
-                    (function(x: number, y: number): nil),
-                getJointList = 
-                    (function(): table),
-                isLocked = 
-                    (function(): boolean),
-            },
-            PulleyJoint = {
-                getLengthA = 
-                    (function(): number),
-                getGroundAnchors = 
-                    (function(): number, number, number, number),
-                getMaxLengths = 
-                    (function(): number, number),
-                setRatio = 
-                    (function(ratio: number): nil),
-                setMaxLengths = 
-                    (function(max1: number, max2: number): nil),
-                setConstant = 
-                    (function(length: number): nil),
-                getLengthB = 
-                    (function(): number),
-                getRatio = 
-                    (function(): number),
-            },
-            WheelJoint = {
-                getMaxMotorTorque = 
-                    (function(): number),
-                getSpringDampingRatio = 
-                    (function(): number),
-                getJointTranslation = 
-                    (function(): number),
-                setMotorSpeed = 
-                    (function(speed: number): nil),
-                setMotorEnabled = 
-                    (function(enable: boolean): nil),
-                setSpringDampingRatio = 
-                    (function(ratio: number): nil),
-                setSpringFrequency = 
-                    (function(freq: number): nil),
-                getMotorSpeed = 
-                    (function(): number),
-                setMaxMotorTorque = 
-                    (function(maxTorque: number): nil),
-                getJointSpeed = 
-                    (function(): number),
-                getSpringFrequency = 
-                    (function(): number),
-                getMotorTorque = 
-                    (function(invdt: number): number),
-            },
-            FrictionJoint = {
-                setMaxForce = 
-                    (function(maxForce: number): nil),
-                getMaxTorque = 
-                    (function(): number),
-                setMaxTorque = 
-                    (function(torque: number): nil),
-            },
-            RopeJoint = {
-                setMaxLength = 
-                    (function(maxLength: number): nil),
-            },
-            Body = {
-                getJointList = 
-                    (function(): table),
-                isDestroyed = 
-                    (function(): boolean),
-                isBullet = 
-                    (function(): boolean),
-                getType = 
-                    (function(): BodyType),
-                setBullet = 
-                    (function(status: boolean): nil),
-                setGravityScale = 
-                    (function(scale: number): nil),
-                getWorldVector = 
-                    (function(local_X: number, local_Y: number): number, number),
-                getWorldPoints = 
-                    (function(x1: number, y1: number, x2: number, y2: number, ...: number[]): number, number, number, number, number),
-                getWorld = 
-                    (function(): World),
-                setMass = 
-                    (function(mass: number): nil),
-                setLinearDamping = 
-                    (function(ld: number): nil),
-                setUserData = 
-                    (function(value: any): nil),
-                setType = 
-                    (function(type: BodyType): nil),
-                applyTorque = 
-                    (function(torque: number): nil),
-                getLinearDamping = 
-                    (function(): number),
-                getFixtureList = 
-                    (function(): table),
-                setPosition = 
-                    (function(x: number, y: number): nil),
-                getLinearVelocityFromLocalPoint = 
-                    (function(x: number, y: number): number, number),
-                getAngle = 
-                    (function(): number),
-                applyLinearImpulse = 
-                    (function(ix: number, iy: number): nil),
-                isActive = 
-                    (function(): boolean),
-                setLinearVelocity = 
-                    (function(x: number, y: number): nil),
-                isFixedRotation = 
-                    (function(): boolean),
-                getAngularDamping = 
-                    (function(): number),
-                getLocalPoint = 
-                    (function(worldX: number, worldY: number): number, number),
-                getLinearVelocity = 
-                    (function(): number, number),
-                getContactList = 
-                    (function(): table),
-                setAngularDamping = 
-                    (function(damping: number): nil),
-                setX = 
-                    (function(x: number): nil),
-                setY = 
-                    (function(y: number): nil),
-                setAwake = 
-                    (function(awake: boolean): nil),
-                setFixedRotation = 
-                    (function(fixed: boolean): nil),
-                getGravityScale = 
-                    (function(): number),
-                setAngle = 
-                    (function(angle: number): nil),
-                setAngularVelocity = 
-                    (function(w: number): nil),
-                isAwake = 
-                    (function(): boolean),
-                setActive = 
-                    (function(active: boolean): nil),
-                applyForce = 
-                    (function(fx: number, fy: number): nil),
-                getInertia = 
-                    (function(): number),
-                resetMassData = 
-                    (function(): nil),
-                getLinearVelocityFromWorldPoint = 
-                    (function(x: number, y: number): number, number),
-                getWorldPoint = 
-                    (function(local_X: number, local_Y: number): number, number),
-                setInertia = 
-                    (function(inertia: number): nil),
-                getLocalVector = 
-                    (function(worldX: number, worldY: number): number, number),
-                isSleepingAllowed = 
-                    (function(): boolean),
-                setSleepingAllowed = 
-                    (function(allowed: boolean): nil),
-                getAngularVelocity = 
-                    (function(): number),
-                destroy = 
-                    (function(): nil),
-                getPosition = 
-                    (function(): number, number),
-                getLocalCenter = 
-                    (function(): number, number),
-                setMassData = 
-                    (function(x: number, y: number, mass: number, inertia: number): nil),
-                getMassData = 
-                    (function(): number, number, number, number),
-                getUserData = 
-                    (function(): any),
-                getX = 
-                    (function(): number),
-                getY = 
-                    (function(): number),
-                getMass = 
-                    (function(): number),
-                getWorldCenter = 
-                    (function(): number, number),
-            },
-            Contact = {
-                isTouching = 
-                    (function(): boolean),
-                setFriction = 
-                    (function(friction: number): nil),
-                resetRestitution = 
-                    (function(): nil),
-                getFriction = 
-                    (function(): number),
-                getNormal = 
-                    (function(): number, number),
-                getRestitution = 
-                    (function(): number),
-                getPositions = 
-                    (function(): number, number, number, number),
-                setEnabled = 
-                    (function(enabled: boolean): nil),
-                setRestitution = 
-                    (function(restitution: number): nil),
-                isEnabled = 
-                    (function(): boolean),
-                resetFriction = 
-                    (function(): nil),
-            },
-            Shape = {
-                testPoint = 
-                    (function(x: number, y: number): boolean),
-                rayCast = 
-                    (function(x1: number, y1: number, x2: number, y2: number, maxFraction: number, tx: number, ty: number, tr: number, childIndex: number): number, number, number),
-                computeMass = 
-                    (function(density: number): number, number, number, number),
-                getChildCount = 
-                    (function(): number),
-                getRadius = 
-                    (function(): number),
-                getType = 
-                    (function(): ShapeType),
-            },
-            EdgeShape = {
-                setPreviousVertex = 
-                    (function(x: number, y: number): nil),
-                setNextVertex = 
-                    (function(x: number, y: number): nil),
-                getNextVertex = 
-                    (function(): number, number),
-                getPreviousVertex = 
-                    (function(): number, number),
-            },
-            WeldJoint = {
-                setDampingRatio = 
-                    (function(ratio: number): nil),
-                setFrequency = 
-                    (function(freq: number): nil),
-                getFrequency = 
-                    (function(): number),
-            },
-            JointType = {
-            },
-            BodyType = {
-            },
-            DistanceJoint = {
-                setLength = 
-                    (function(l: number): nil),
-                setDampingRatio = 
-                    (function(ratio: number): nil),
-                getFrequency = 
-                    (function(): number),
-                getLength = 
-                    (function(): number),
-                setFrequency = 
-                    (function(Hz: number): nil),
-            },
-            ChainShape = {
-                getPoint = 
-                    (function(index: number): number, number),
-                getVertexCount = 
-                    (function(): number),
-                getNextVertex = 
-                    (function(x: number, y: number): nil),
-                setPreviousVertex = 
-                    (function(x: number, y: number): nil),
-                setNextVertex = 
-                    (function(x: number, y: number): nil),
-                getPreviousVertex = 
-                    (function(): number, number),
-                getPoints = 
-                    (function(): number, number, number, number, number),
-            },
-            PolygonShape = {
-                getPoints = 
-                    (function(): number, number, number, number, number),
-            },
-            MotorJoint = {
-                setLinearOffset = 
-                    (function(x: number, y: number): nil),
-                getLinearOffset = 
-                    (function(): number, number),
-                setAngularOffset = 
-                    (function(angularoffset: number): nil),
-            },
-            Joint = {
-                getReactionTorque = 
-                    (function(invdt: number): number),
-                isDestroyed = 
-                    (function(): boolean),
-                getBodies = 
-                    (function(): Body, Body),
-                getType = 
-                    (function(): JointType),
-                getAnchors = 
-                    (function(): number, number, number, number),
-                getCollideConnected = 
-                    (function(): boolean),
-                getReactionForce = 
-                    (function(): number, number),
-                setUserData = 
-                    (function(value: any): nil),
-                getUserData = 
-                    (function(): any),
-            },
-            GearJoint = {
-                getRatio = 
-                    (function(): number),
-                setRatio = 
-                    (function(ratio: number): nil),
-            },
-            ShapeType = {
-            },
-            RevoluteJoint = {
-                getMaxMotorTorque = 
-                    (function(): number),
-                setUpperLimit = 
-                    (function(upper: number): nil),
-                getJointSpeed = 
-                    (function(): number),
-                isMotorEnabled = 
-                    (function(): boolean),
-                setLimitsEnabled = 
-                    (function(enable: boolean): nil),
-                getUpperLimit = 
-                    (function(): number),
-                setMotorEnabled = 
-                    (function(enable: boolean): nil),
-                setMotorSpeed = 
-                    (function(s: number): nil),
-                setLowerLimit = 
-                    (function(lower: number): nil),
-                getLowerLimit = 
-                    (function(): number),
-                setLimits = 
-                    (function(lower: number, upper: number): nil),
-                getMotorSpeed = 
-                    (function(): number),
-                setMaxMotorTorque = 
-                    (function(f: number): nil),
-                getLimits = 
-                    (function(): number, number),
-                getJointAngle = 
-                    (function(): number),
-                getMotorTorque = 
-                    (function(): number),
-            },
-            CircleShape = {
-                setPoint = 
-                    (function(x: number, y: number): nil),
-                getRadius = 
-                    (function(): number),
-                setRadius = 
-                    (function(radius: number): nil),
-            },
-            Fixture = {
-                getCategory = 
-                    (function(): number, number, number),
-                isDestroyed = 
-                    (function(): boolean),
-                getFilterData = 
-                    (function(): number, number, number),
-                setUserData = 
-                    (function(value: any): nil),
-                testPoint = 
-                    (function(x: number, y: number): boolean),
-                getBody = 
-                    (function(): Body),
-                setRestitution = 
-                    (function(restitution: number): nil),
-                setSensor = 
-                    (function(sensor: boolean): nil),
-                rayCast = 
-                    (function(x1: number, y1: number, x2: number, y2: number, maxFraction: number, childIndex: number): number, number, number),
-                setMask = 
-                    (function(mask1: number, mask2: number, ...: number[]): nil),
-                setGroupIndex = 
-                    (function(group: number): nil),
-                setFriction = 
-                    (function(friction: number): nil),
-                getGroupIndex = 
-                    (function(): number),
-                isSensor = 
-                    (function(): boolean),
-                setFilterData = 
-                    (function(categories: number, mask: number, group: number): nil),
-                getFriction = 
-                    (function(): number),
-                getMask = 
-                    (function(): number, number, number),
-                getBoundingBox = 
-                    (function(index: number): number, number, number, number),
-                getRestitution = 
-                    (function(): number),
-                getMassData = 
-                    (function(): number, number, number, number),
-                getUserData = 
-                    (function(): any),
-                getDensity = 
-                    (function(): number),
-                setCategory = 
-                    (function(category1: number, category2: number, ...: number[]): nil),
-                setDensity = 
-                    (function(density: number): nil),
-                getShape = 
-                    (function(): Shape),
-            },
-        },
-        event = {
-            pump = 
-                (function(): nil),
-            poll = 
-                (function(): empty_function),
-            push = 
-                (function(e: Event, a: Variant, b: Variant, c: Variant, d: Variant): nil),
-            wait = 
-                (function(): Event, Variant, Variant, Variant, Variant),
-            quit = 
-                (function(exitstatus: number): nil),
-            Event = {
-            },
-        },
-        window = {
-            restore = 
-                (function(): nil),
-            updateMode = 
-                (function(width: number, height: number, settings: table): boolean),
-            fromPixels = 
-                (function(pixelvalue: number): number),
-            toPixels = 
-                (function(value: number): number),
-            requestAttention = 
-                (function(continuous: boolean): nil),
-            setTitle = 
-                (function(title: string): nil),
-            isVisible = 
-                (function(): boolean),
-            isOpen = 
-                (function(): boolean),
-            getDisplayName = 
-                (function(displayindex: number): string),
-            getPixelScale = 
-                (function(): number),
-            isMinimized = 
-                (function(): boolean),
-            setMode = 
-                (function(width: number, height: number, flags: table): boolean),
-            getMode = 
-                (function(): number, number, table),
-            setIcon = 
-                (function(imagedata: ImageData): boolean),
-            getTitle = 
-                (function(): string),
-            setFullscreen = 
-                (function(fullscreen: boolean): boolean),
-            setDisplaySleepEnabled = 
-                (function(enable: boolean): nil),
-            minimize = 
-                (function(): nil),
-            getFullscreenModes = 
-                (function(display: number): table),
-            getDPIScale = 
-                (function(): number),
-            getFullscreen = 
-                (function(): boolean, FullscreenType),
-            getPosition = 
-                (function(): number, number, number),
-            maximize = 
-                (function(): nil),
-            isDisplaySleepEnabled = 
-                (function(): boolean),
-            getIcon = 
-                (function(): ImageData),
-            setPosition = 
-                (function(x: number, y: number, display: number): nil),
-            showMessageBox = 
-                (function(title: string, message: string, type: MessageBoxType, attachtowindow: boolean): boolean),
-            hasMouseFocus = 
-                (function(): boolean),
-            isMaximized = 
-                (function(): boolean),
-            hasFocus = 
-                (function(): boolean),
-            MessageBoxType = {
-            },
-            FullscreenType = {
-            },
-        },
-        touch = {
-            getPressure = 
-                (function(id: light_userdata): number),
-            getTouches = 
-                (function(): table),
-        },
-        timer = {
-            step = 
-                (function(): number),
-            getDelta = 
-                (function(): number),
-            getTime = 
-                (function(): number),
-            getFPS = 
-                (function(): number),
-            sleep = 
-                (function(s: number): nil),
-        },
-        Data = {
-            getString = 
-                (function(): string),
-            getSize = 
-                (function(): number),
-        },
-        thread = {
-            newThread = 
-                (function(filename: string): Thread),
-            newChannel = 
-                (function(): Channel),
-            Thread = {
-                isRunning = 
-                    (function(): boolean),
-                wait = 
-                    (function(): nil),
-                start = 
-                    (function(arg1: Variant, arg2: Variant, ...: Variant[]): nil),
-            },
-            Channel = {
-                supply = 
-                    (function(value: Variant): boolean),
-                peek = 
-                    (function(): Variant),
-                performAtomic = 
-                    (function(func: empty_function, arg1: any, ...: any[]): any, any),
-                push = 
-                    (function(value: Variant): nil),
-                demand = 
-                    (function(timeout: number): Variant),
-                getCount = 
-                    (function(): number),
-                hasRead = 
-                    (function(id: number): boolean),
-                pop = 
-                    (function(): Variant),
-            },
-        },
-        filesystem = {
-            unmount = 
-                (function(archive: string): boolean),
-            write = 
-                (function(name: string, data: string, size: number): boolean, string),
-            read = 
-                (function(name: string, bytes: number): string, number),
-            setCRequirePath = 
-                (function(paths: string): nil),
-            getCRequirePath = 
-                (function(): string),
-            init = 
-                (function(appname: string): nil),
-            newFileData = 
-                (function(contents: string, name: string): FileData),
-            createDirectory = 
-                (function(name: string): boolean),
-            getInfo = 
-                (function(path: string): table),
-            lines = 
-                (function(name: string): empty_function),
-            newFile = 
-                (function(filename: string, mode: FileMode): File, string),
-            getSaveDirectory = 
-                (function(): string),
-            getSource = 
-                (function(): string),
-            getRequirePath = 
-                (function(): string),
-            getWorkingDirectory = 
-                (function(): string),
-            setRequirePath = 
-                (function(paths: string): nil),
-            getDirectoryItems = 
-                (function(dir: string): table),
-            setSymlinksEnabled = 
-                (function(enable: boolean): nil),
-            setSource = 
-                (function(path: string): nil),
-            setIdentity = 
-                (function(name: string, appendToPath: boolean): nil),
-            getIdentity = 
-                (function(name: string): nil),
-            areSymlinksEnabled = 
-                (function(): boolean),
-            getAppdataDirectory = 
-                (function(): string),
-            getRealDirectory = 
-                (function(filepath: string): string),
-            load = 
-                (function(name: string, errormsg: string): empty_function),
-            remove = 
-                (function(name: string): boolean),
-            getUserDirectory = 
-                (function(): string),
-            isFused = 
-                (function(): boolean),
-            mount = 
-                (function(archive: string, mountpoint: string): boolean),
-            getSourceBaseDirectory = 
-                (function(): string),
-            FileData = {
-                getFilename = 
-                    (function(): string),
-            },
-            File = {
-                setBuffer = 
-                    (function(mode: BufferMode, size: number): boolean, string),
-                write = 
-                    (function(data: string, size: number): boolean),
-                getFilename = 
-                    (function(): string),
-                read = 
-                    (function(bytes: number): string, number),
-                getBuffer = 
-                    (function(): BufferMode, number),
-                open = 
-                    (function(mode: FileMode): boolean),
-                seek = 
-                    (function(position: number): boolean),
-                getSize = 
-                    (function(): number),
-                tell = 
-                    (function(): number),
-                flush = 
-                    (function(): boolean, string),
-                isOpen = 
-                    (function(): boolean),
-                lines = 
-                    (function(): empty_function),
-                getMode = 
-                    (function(): FileMode),
-                isEOF = 
-                    (function(): boolean),
-            },
-            BufferMode = {
-            },
-            FileMode = {
-            },
-            FileDecoder = {
-            },
-            FileType = {
-            },
-        },
-        image = {
-            newImageData = 
-                (function(width: number, height: number): ImageData),
-            newCompressedData = 
-                (function(filename: string): CompressedImageData),
-            CompressedImageData = {
-                getWidth = 
-                    (function(level: number): number),
-                getMipmapCount = 
-                    (function(): number),
-                getFormat = 
-                    (function(): CompressedImageFormat),
-                getHeight = 
-                    (function(level: number): number),
-            },
-            ImageFormat = {
-            },
-            ImageData = {
-                paste = 
-                    (function(source: ImageData, dx: number, dy: number, sx: number, sy: number, sw: number, sh: number): nil),
-                getPixel = 
-                    (function(x: number, y: number): number, number, number, number),
-                getWidth = 
-                    (function(): number),
-                mapPixel = 
-                    (function(pixelFunction: empty_function): nil),
-                setPixel = 
-                    (function(x: number, y: number, r: number, g: number, b: number, a: number): nil),
-                getHeight = 
-                    (function(): number),
-                getDimensions = 
-                    (function(): number, number),
-            },
-            CompressedImageFormat = {
-            },
-        },
-        Object = {
-            typeOf = 
-                (function(name: string): boolean),
-        },
-        mouse = {
-            setX = 
-                (function(x: number): nil),
-            getSystemCursor = 
-                (function(ctype: CursorType): Cursor),
-            isGrabbed = 
-                (function(): boolean),
-            isVisible = 
-                (function(): boolean),
-            newCursor = 
-                (function(imageData: ImageData, hotx: number, hoty: number): Cursor),
-            setVisible = 
-                (function(visible: boolean): nil),
-            getRelativeMode = 
-                (function(): boolean),
-            setGrabbed = 
-                (function(grab: boolean): nil),
-            setY = 
-                (function(y: number): nil),
-            getPosition = 
-                (function(): number, number),
-            hasCursor = 
-                (function(): boolean),
-            isCursorSupported = 
-                (function(): boolean),
-            setCursor = 
-                (function(cursor: Cursor): nil),
-            setPosition = 
-                (function(x: number, y: number): nil),
-            getX = 
-                (function(): number),
-            getY = 
-                (function(): number),
-            isDown = 
-                (function(button: number, ...: number[]): boolean),
-            setRelativeMode = 
-                (function(enable: boolean): nil),
-            Cursor = {
-                getType = 
-                    (function(): CursorType),
-            },
-            CursorType = {
-            },
-        },
-        graphics = {
-            stencil = 
-                (function(stencilempty_function: empty_function, action: StencilAction, value: number, keepvalues: boolean): nil),
-            getStats = 
-                (function(): table),
-            newParticleSystem = 
-                (function(texture: Texture, buffer: number): ParticleSystem),
-            setFont = 
-                (function(font: Font): nil),
-            getSupported = 
-                (function(): table),
-            getDefaultFilter = 
-                (function(): FilterMode, FilterMode, number),
-            validateShader = 
-                (function(gles: boolean, code: string): boolean, string),
-            inverseTransformPoint = 
-                (function(screenX: number, screenY: number): number, number),
-            getStackDepth = 
-                (function(): number),
-            setDefaultFilter = 
-                (function(min: FilterMode, mag: FilterMode, anisotropy: number): nil),
-            translate = 
-                (function(dx: number, dy: number): nil),
-            shear = 
-                (function(kx: number, ky: number): nil),
-            print = 
-                (function(text: string, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
-            newShader = 
-                (function(code: string): Shader),
-            setWireframe = 
-                (function(enable: boolean): nil),
-            newMesh = 
-                (function(vertices: table, mode: MeshDrawMode, usage: SpriteBatchUsage): Mesh),
-            getMeshCullMode = 
-                (function(): CullMode),
-            setStencilTest = 
-                (function(comparemode: CompareMode, comparevalue: number): nil),
-            setShader = 
-                (function(shader: Shader): nil),
-            getHeight = 
-                (function(): number),
-            points = 
-                (function(x: number, y: number, ...: number[]): nil),
-            scale = 
-                (function(sx: number, sy: number): nil),
-            getLineStyle = 
-                (function(): LineStyle),
-            setScissor = 
-                (function(x: number, y: number, width: number, height: number): nil),
-            setBlendMode = 
-                (function(mode: BlendMode): nil),
-            getImageFormats = 
-                (function(): table),
-            setPointSize = 
-                (function(size: number): nil),
-            getLineJoin = 
-                (function(): LineJoin),
-            setNewFont = 
-                (function(filename: string, size: number): Font),
-            draw = 
-                (function(drawable: Drawable, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
-            getFont = 
-                (function(): Font),
-            setMeshCullMode = 
-                (function(mode: CullMode): nil),
-            setLineWidth = 
-                (function(width: number): nil),
-            setLineStyle = 
-                (function(style: LineStyle): nil),
-            drawLayer = 
-                (function(texture: Texture, layerindex: number, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
-            getDepthMode = 
-                (function(): CompareMode, boolean),
-            reset = 
-                (function(): nil),
-            circle = 
-                (function(mode: DrawMode, x: number, y: number, radius: number): nil),
-            getFrontFaceWinding = 
-                (function(): VertexWinding),
-            getCanvasFormats = 
-                (function(readable: boolean): table),
-            discard = 
-                (function(discardcolor: boolean, discardstencil: boolean): nil),
-            setColorMask = 
-                (function(red: boolean, green: boolean, blue: boolean, alpha: boolean): nil),
-            setColor = 
-                (function(red: number, green: number, blue: number, alpha: number): nil),
-            setCanvas = 
-                (function(canvas: Canvas): nil),
-            origin = 
-                (function(): nil),
-            push = 
-                (function(stack: StackType): nil),
-            newImage = 
-                (function(filename: string): Image),
-            clear = 
-                (function(r: number, g: number, b: number, a: number): nil),
-            rotate = 
-                (function(angle: number): nil),
-            setFrontFaceWinding = 
-                (function(winding: VertexWinding): nil),
-            getStencilTest = 
-                (function(): boolean, boolean),
-            newSpriteBatch = 
-                (function(texture: Texture, maxsprites: number, usage: SpriteBatchUsage): SpriteBatch),
-            rectangle = 
-                (function(mode: DrawMode, x: number, y: number, width: number, height: number): nil),
-            printf = 
-                (function(text: string, x: number, y: number, limit: number, align: AlignMode, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
-            getShader = 
-                (function(): Shader),
-            present = 
-                (function(): nil),
-            pop = 
-                (function(): nil),
-            getScissor = 
-                (function(): number, number, number, number),
-            newFont = 
-                (function(filename: string): Font),
-            newVideo = 
-                (function(filename: string, loadaudio: boolean): Video),
-            getBlendMode = 
-                (function(): BlendMode, BlendAlphaMode),
-            isGammaCorrect = 
-                (function(): boolean),
-            newCanvas = 
-                (function(width: number, height: number, format: CanvasFormat, msaa: number): Canvas),
-            newQuad = 
-                (function(x: number, y: number, width: number, height: number, sw: number, sh: number): Quad),
-            setBackgroundColor = 
-                (function(r: number, g: number, b: number, a: number): nil),
-            polygon = 
-                (function(mode: DrawMode, ...: number[]): nil),
-            line = 
-                (function(x1: number, y1: number, x2: number, y2: number, ...: number[]): nil),
-            isWireframe = 
-                (function(): boolean),
-            getRendererInfo = 
-                (function(): string, string, string, string),
-            intersectScissor = 
-                (function(x: number, y: number, width: number, height: number): nil),
-            getWidth = 
-                (function(): number),
-            getTextureTypes = 
-                (function(): table),
-            replaceTransform = 
-                (function(transform: Transform): nil),
-            captureScreenshot = 
-                (function(filename: string): nil),
-            getColor = 
-                (function(): number, number, number, number),
-            transformPoint = 
-                (function(globalX: number, globalY: number): number, number),
-            setDepthMode = 
-                (function(comparemode: CompareMode, write: boolean): nil),
-            flushBatch = 
-                (function(): nil),
-            drawInstanced = 
-                (function(mesh: Mesh, instancecount: number, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
-            getSystemLimits = 
-                (function(): table),
-            applyTransform = 
-                (function(transform: Transform): nil),
-            setLineJoin = 
-                (function(join: LineJoin): nil),
-            ellipse = 
-                (function(mode: DrawMode, x: number, y: number, radiusx: number, radiusy: number): nil),
-            newImageFont = 
-                (function(filename: string, glyphs: string): Font),
-            getLineWidth = 
-                (function(): number),
-            newText = 
-                (function(font: Font, textstring: string): Text),
-            getDimensions = 
-                (function(): number, number),
-            getBackgroundColor = 
-                (function(): number, number, number, number),
-            getCanvas = 
-                (function(): Canvas),
-            getColorMask = 
-                (function(): boolean, boolean, boolean, boolean),
-            getPointSize = 
-                (function(): number),
-            Mesh = {
-                getDrawRange = 
-                    (function(): number, number),
-                setAttributeEnabled = 
-                    (function(name: string, enable: boolean): nil),
-                setVertexMap = 
-                    (function(map: table): nil),
-                setTexture = 
-                    (function(texture: Texture): nil),
-                setVertexAttribute = 
-                    (function(vertexindex: number, attributeindex: number, value1: number, value2: number, ...: number[]): nil),
-                getVertexMap = 
-                    (function(): table),
-                getTexture = 
-                    (function(): Texture),
-                setDrawMode = 
-                    (function(mode: MeshDrawMode): nil),
-                detachAttribute = 
-                    (function(name: string): boolean),
-                setVertex = 
-                    (function(index: number, attributecomponent: number, ...: number[]): nil),
-                setVertices = 
-                    (function(vertices: table): nil),
-                getVertex = 
-                    (function(index: number): number, number),
-                getVertexFormat = 
-                    (function(): table),
-                getVertexAttribute = 
-                    (function(vertexindex: number, attributeindex: number): number, number, number),
-                getVertexCount = 
-                    (function(): number),
-                isAttributeEnabled = 
-                    (function(name: string): boolean),
-                setDrawRange = 
-                    (function(min: number, max: number): nil),
-                getDrawMode = 
-                    (function(): MeshDrawMode),
-            },
-            ParticleSystem = {
-                isPaused = 
-                    (function(): boolean),
-                getSizeVariation = 
-                    (function(): number),
-                getInsertMode = 
-                    (function(): ParticleInsertMode),
-                getAreaSpread = 
-                    (function(): AreaSpreadDistribution, number, number),
-                setAreaSpread = 
-                    (function(distribution: AreaSpreadDistribution, dx: number, dy: number): nil),
-                getTexture = 
-                    (function(): Texture),
-                setQuads = 
-                    (function(quad1: Quad, quad2: Quad): nil),
-                setSizes = 
-                    (function(size1: number, size2: number, ...: number[]): nil),
-                start = 
-                    (function(): nil),
-                update = 
-                    (function(dt: number): nil),
-                getRotation = 
-                    (function(): number, number),
-                setRotation = 
-                    (function(min: number, max: number): nil),
-                setLinearDamping = 
-                    (function(min: number, max: number): nil),
-                setParticleLifetime = 
-                    (function(min: number, max: number): nil),
-                emit = 
-                    (function(numparticles: number): nil),
-                setSpread = 
-                    (function(spread: number): nil),
-                getQuads = 
-                    (function(): table),
-                isStopped = 
-                    (function(): boolean),
-                setSpinVariation = 
-                    (function(variation: number): nil),
-                setSpin = 
-                    (function(min: number, max: number): nil),
-                hasRelativeRotation = 
-                    (function(): boolean),
-                setEmitterLifetime = 
-                    (function(life: number): nil),
-                isActive = 
-                    (function(): boolean),
-                setSpeed = 
-                    (function(min: number, max: number): nil),
-                setRelativeRotation = 
-                    (function(enable: boolean): nil),
-                moveTo = 
-                    (function(x: number, y: number): nil),
-                setRadialAcceleration = 
-                    (function(min: number, max: number): nil),
-                stop = 
-                    (function(): nil),
-                setSizeVariation = 
-                    (function(variation: number): nil),
-                setLinearAcceleration = 
-                    (function(xmin: number, ymin: number, xmax: number, ymax: number): nil),
-                setTangentialAcceleration = 
-                    (function(min: number, max: number): nil),
-                setEmissionRate = 
-                    (function(rate: number): nil),
-                getSpread = 
-                    (function(): number),
-                setTexture = 
-                    (function(texture: Texture): nil),
-                getSpeed = 
-                    (function(): number, number),
-                setOffset = 
-                    (function(x: number, y: number): nil),
-                setInsertMode = 
-                    (function(mode: ParticleInsertMode): nil),
-                setDirection = 
-                    (function(direction: number): nil),
-                getDirection = 
-                    (function(): number),
-                getLinearDamping = 
-                    (function(): number, number),
-                setColors = 
-                    (function(r1: number, g1: number, b1: number, a1: number, r2: number, g2: number, b2: number, a2: number, ...: number[]): nil),
-                getEmitterLifetime = 
-                    (function(): number),
-                getEmissionRate = 
-                    (function(): number),
-                getSpin = 
-                    (function(): number, number),
-                reset = 
-                    (function(): nil),
-                getSizes = 
-                    (function(): number, number, number),
-                getCount = 
-                    (function(): number),
-                pause = 
-                    (function(): nil),
-                setBufferSize = 
-                    (function(buffer: number): nil),
-                getParticleLifetime = 
-                    (function(): number, number),
-                getPosition = 
-                    (function(): number, number),
-                getBufferSize = 
-                    (function(): number),
-                getOffset = 
-                    (function(): number, number),
-                getRadialAcceleration = 
-                    (function(): number, number),
-                setPosition = 
-                    (function(x: number, y: number): nil),
-                getLinearAcceleration = 
-                    (function(): number, number, number, number),
-                getSpinVariation = 
-                    (function(): number),
-                getColors = 
-                    (function(): number, number, number, number, number, number, number, number, number),
-                getTangentialAcceleration = 
-                    (function(): number, number),
-            },
-            AreaSpreadDistribution = {
-            },
-            FilterMode = {
-            },
-            Shader = {
-                send = 
-                    (function(name: string, number: number, ...: number[]): nil),
-                hasUniform = 
-                    (function(name: string): boolean),
-                sendColor = 
-                    (function(name: string, color: table, ...: table[]): nil),
-            },
-            SpriteBatchUsage = {
-            },
-            Canvas = {
-                setFilter = 
-                    (function(min: FilterMode, mag: FilterMode, anisotropy: number): nil),
-                getFilter = 
-                    (function(): FilterMode, FilterMode, number),
-                getWrap = 
-                    (function(): WrapMode, WrapMode),
-                getWidth = 
-                    (function(): number),
-                setWrap = 
-                    (function(horizontal: WrapMode, vertical: WrapMode): nil),
-                newImageData = 
-                    (function(x: number, y: number, width: number, height: number): ImageData),
-                getMSAA = 
-                    (function(): number),
-                renderTo = 
-                    (function(func: empty_function): nil),
-                getHeight = 
-                    (function(): number),
-            },
-            DrawMode = {
-            },
-            StackType = {
-            },
-            Quad = {
-                setViewport = 
-                    (function(x: number, y: number, w: number, h: number): nil),
-                getViewport = 
-                    (function(): number, number, number, number),
-            },
-            Image = {
-                setFilter = 
-                    (function(min: FilterMode, mag: FilterMode): nil),
-                replacePixels = 
-                    (function(data: ImageData, slice: number, mipmap: number): nil),
-                getFilter = 
-                    (function(): FilterMode, FilterMode),
-                getWrap = 
-                    (function(): WrapMode, WrapMode),
-                getWidth = 
-                    (function(): number),
-                setMipmapFilter = 
-                    (function(filtermode: FilterMode, sharpness: number): nil),
-                setWrap = 
-                    (function(horizontal: WrapMode, vertical: WrapMode): nil),
-                getMipmapFilter = 
-                    (function(): FilterMode, number),
-                getHeight = 
-                    (function(): number),
-                getFlags = 
-                    (function(): table),
-            },
-            ParticleInsertMode = {
-            },
-            BlendMode = {
-            },
-            SpriteBatch = {
-                attachAttribute = 
-                    (function(name: string, mesh: Mesh): nil),
-                setColor = 
-                    (function(r: number, g: number, b: number, a: number): nil),
-                set = 
-                    (function(id: number, x: number, y: number, r: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): nil),
-                getCount = 
-                    (function(): number),
-                getColor = 
-                    (function(): number, number, number, number),
-                setDrawRange = 
-                    (function(start: number, count: number): nil),
-                getBufferSize = 
-                    (function(): number),
-                getTexture = 
-                    (function(): Texture),
-                flush = 
-                    (function(): nil),
-                clear = 
-                    (function(): nil),
-                setTexture = 
-                    (function(texture: Texture): nil),
-            },
-            StencilAction = {
-            },
-            LineStyle = {
-            },
-            Font = {
-                setFilter = 
-                    (function(min: FilterMode, mag: FilterMode, anisotropy: number): nil),
-                getDescent = 
-                    (function(): number),
-                getFilter = 
-                    (function(): FilterMode, FilterMode, number),
-                getWrap = 
-                    (function(text: string, wraplimit: number): number, table),
-                setLineHeight = 
-                    (function(height: number): nil),
-                getWidth = 
-                    (function(line: string): number),
-                getBaseline = 
-                    (function(): number),
-                hasGlyphs = 
-                    (function(character: string): boolean),
-                setFallbacks = 
-                    (function(fallbackfont1: Font, ...: Font[]): nil),
-                getLineHeight = 
-                    (function(): number),
-                getHeight = 
-                    (function(): number),
-            },
-            MeshDrawMode = {
-            },
-            GraphicsFeature = {
-            },
-            BlendAlphaMode = {
-            },
-            Video = {
-                rewind = 
-                    (function(): nil),
-                setSource = 
-                    (function(source: Source): nil),
-                getSource = 
-                    (function(): Source),
-                tell = 
-                    (function(seconds: number): nil),
-                isPlaying = 
-                    (function(): boolean),
-                seek = 
-                    (function(offset: number): nil),
-                setFilter = 
-                    (function(min: FilterMode, mag: FilterMode, anisotropy: number): nil),
-                getWidth = 
-                    (function(): number),
-                pause = 
-                    (function(): nil),
-                getFilter = 
-                    (function(): FilterMode, FilterMode, number),
-                play = 
-                    (function(): nil),
-                getStream = 
-                    (function(): VideoStream),
-                getHeight = 
-                    (function(): number),
-            },
-            VertexWinding = {
-            },
-            ArcType = {
-            },
-            LineJoin = {
-            },
-            GraphicsLimit = {
-            },
-            CompareMode = {
-            },
-            CullMode = {
-            },
-            AlignMode = {
-            },
-            WrapMode = {
-            },
-            Texture = {
-                getTextureType = 
-                    (function(): TextureType),
-                isReadable = 
-                    (function(): boolean),
-                getLayerCount = 
-                    (function(): number),
-                getMipmapCount = 
-                    (function(): number),
-                getFormat = 
-                    (function(): PixelFormat),
-            },
-            Text = {
-                set = 
-                    (function(textstring: string): nil),
-                addf = 
-                    (function(textstring: string, wraplimit: number, align: AlignMode, x: number, y: number, angle: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): number),
-                getDimensions = 
-                    (function(index: number): number, number),
-                setf = 
-                    (function(textstring: string, wraplimit: number, align: AlignMode): nil),
-                setFont = 
-                    (function(font: Font): nil),
-                getFont = 
-                    (function(): Font),
-                getWidth = 
-                    (function(index: number): number),
-                clear = 
-                    (function(): nil),
-                getHeight = 
-                    (function(index: number): number),
-            },
-        },
-        data = {
-            encode = 
-                (function(containerType: ContainerType, format: EncodeFormat, sourceString: string, lineLength: number): Variant),
-            decode = 
-                (function(containerType: ContainerType, format: EncodeFormat, sourceString: string): Variant),
-            hash = 
-                (function(hashFunction: HashFunction, string: string): string),
-            decompress = 
-                (function(container: ContainerType, compressedData: CompressedData): string),
-            HashFunction = {
-            },
-            ContainerType = {
-            },
-        },
-        math = {
-            randomNormal = 
-                (function(stddev: number, mean: number): number),
-            isConvex = 
-                (function(vertices: table): boolean),
-            gammaToLinear = 
-                (function(r: number, g: number, b: number): number, number, number),
-            newTransform = 
-                (function(x: number, y: number, angle: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): Transform),
-            noise = 
-                (function(x: number): number),
-            getRandomSeed = 
-                (function(): number, number),
-            triangulate = 
-                (function(polygon: table): table),
-            newRandomGenerator = 
-                (function(seed: number): RandomGenerator),
-            setRandomState = 
-                (function(state: string): nil),
-            setRandomSeed = 
-                (function(seed: number): nil),
-            linearToGamma = 
-                (function(lr: number, lg: number, lb: number): number, number, number),
-            getRandomState = 
-                (function(): string),
-            random = 
-                (function(max: number): number),
-            decompress = 
-                (function(compressedData: CompressedData): string),
-            newBezierCurve = 
-                (function(vertices: table): BezierCurve),
-            CompressedDataFormat = {
-            },
-            BezierCurve = {
-                removeControlPoint = 
-                    (function(index: number): nil),
-                scale = 
-                    (function(s: number, ox: number, oy: number): nil),
-                render = 
-                    (function(depth: number): table),
-                getControlPointCount = 
-                    (function(): number),
-                translate = 
-                    (function(dx: number, dy: number): nil),
-                getSegment = 
-                    (function(startpoint: number, endpoint: number): BezierCurve),
-                getDegree = 
-                    (function(): number),
-                setControlPoint = 
-                    (function(i: number, ox: number, oy: number): nil),
-                insertControlPoint = 
-                    (function(x: number, y: number, i: number): nil),
-                renderSegment = 
-                    (function(startpoint: number, endpoint: number, depth: number): table),
-                getControlPoint = 
-                    (function(i: number): number, number),
-                rotate = 
-                    (function(angle: number, ox: number, oy: number): nil),
-                getDerivative = 
-                    (function(): BezierCurve),
-            },
-            CompressedData = {
-                getFormat = 
-                    (function(): CompressedDataFormat),
-            },
-            MatrixLayout = {
-            },
-            RandomGenerator = {
-                randomNormal = 
-                    (function(stddev: number, mean: number): number),
-                setState = 
-                    (function(state: string): nil),
-                random = 
-                    (function(max: number): number),
-                getState = 
-                    (function(): string),
-                setSeed = 
-                    (function(seed: number): nil),
-            },
-            Transform = {
-                reset = 
-                    (function(): Transform),
-                shear = 
-                    (function(kx: number, ky: number): Transform),
-                getMatrix = 
-                    (function(): number, number, number, number),
-                translate = 
-                    (function(dx: number, dy: number): Transform),
-                inverse = 
-                    (function(): Transform),
-                setTransformation = 
-                    (function(x: number, y: number, angle: number, sx: number, sy: number, ox: number, oy: number, kx: number, ky: number): Transform),
-                transformPoint = 
-                    (function(globalX: number, globalY: number): number, number),
-                clone = 
-                    (function(): Transform),
-                rotate = 
-                    (function(angle: number): Transform),
-                scale = 
-                    (function(sx: number, sy: number): Transform),
-                inverseTransformPoint = 
-                    (function(local_X: number, local_Y: number): number, number),
-                setMatrix = 
-                    (function(e1_1: number, e1_2: number, ...: number, e4_4: number): Transform),
-            },
-        },
-        sound = {
-            newSoundData = 
-                (function(filename: string): SoundData),
-            Decoder = {
-                getSampleRate = 
-                    (function(): number),
-                getDuration = 
-                    (function(): number),
-                getChannelCount = 
-                    (function(): number),
-            },
-            SoundData = {
-                getSampleRate = 
-                    (function(): number),
-                getSample = 
-                    (function(i: number): number),
-                setSample = 
-                    (function(i: number, sample: number): nil),
-                getSampleCount = 
-                    (function(): number),
-                getDuration = 
-                    (function(): number),
-                getChannelCount = 
-                    (function(): number),
-            },
-        },
-        keyboard = {
-            hasTextInput = 
-                (function(): boolean),
-            getScancodeFromKey = 
-                (function(key: KeyConstant): Scancode),
-            isDown = 
-                (function(key: KeyConstant): boolean),
-            setKeyRepeat = 
-                (function(enable: boolean): nil),
-            setTextInput = 
-                (function(enable: boolean): nil),
-            hasKeyRepeat = 
-                (function(): boolean),
-            isScancodeDown = 
-                (function(scancode: Scancode, ...: Scancode[]): boolean),
-            Scancode = {
-            },
-            KeyConstant = {
-            },
-        },
-        video = {
-            newVideoStream = 
-                (function(filename: string): VideoStream),
-        },
-    },
-    f = {
-    },
-    ffi = {
-        cdef = 
-            (function(string): nil),
-        abi = 
-            (function(string): boolean),
-        metatype = 
-            (function(ct,table): cdata),
-        new = 
-            (function(ctype, number, ...): cdata),
-        copy = 
-            (function(cdata, cdata, number): nil) | 
-            (function(cdata,): nil),
-        alignof = 
-            (function(ct): number),
-        cast = 
-            (function(ctype,cdata): cdata),
-        typeof = 
-            (function(ct): ctype),
-        load = 
-            (function(string,global): userdata) | 
-            (function(string,): userdata),
-        sizeof = 
-            (function(ct,nelem): number) | 
-            (function(ct,): number),
-        string = 
-            (function(ptr, number): string) | 
-            (function(ptr,): string),
-        gc = 
-            (function(ct,empty_function): cdata),
-        istype = 
-            (function(ct,obj): boolean),
-        fill = 
-            (function(dst, len, c): nil) | 
-            (function(dst, len,): nil),
-        offsetof = 
-            (function(ct, field): number),
-    },
-    debug = {
-        sethook = 
-            (function(thread: thread, hook: empty_function, mask: string, count: number): nil) | 
-            (function(thread: thread, hook: empty_function, mask: string): nil) | 
-            (function( hook: empty_function, mask: string): nil),
-        getregistry = 
-            (function(): nil),
-        traceback = 
-            (function(thread: thread, message: any, level: number): string) | 
-            (function(thread: thread, message: any): string) | 
-            (function(thread: thread,): string) | 
-            (function(): string),
-        setlocal = 
-            (function(thread: thread, level: number, local_: number, value: any): string|nil) | 
-            (function( level: number, local_: number, value: any): string|nil),
-        getinfo = 
-            (function(thread: thread, f: empty_function|number, what: string): table|nil) | 
-            (function(thread: thread, f: empty_function|number): table|nil) | 
-            (function( f: empty_function|number): table|nil),
-        upvalueid = 
-            (function(f: empty_function, n: number): userdata),
-        setupvalue = 
-            (function(f: empty_function, up: number, value: any): string|nil),
-        getlocal = 
-            (function(thread: thread, f: number|empty_function, local_: number): string|nil, any) | 
-            (function( f: number|empty_function, local_: number): string|nil, any),
-        upvaluejoin = 
-            (function(f1: empty_function, n1: number, f2: empty_function, n2: number): nil),
-        getupvalue = 
-            (function(f: empty_function, up: number): string|nil, any),
-        getmetatable = 
-            (function(value: any): table|nil),
-        setmetatable = 
-            (function(value: any, table: table|nil): any),
-        gethook = 
-            (function(thread: thread): empty_function, string, number) | 
-            (function(): empty_function, string, number),
-        getuservalue = 
-            (function(u: userdata): table|nil),
-        debug = 
-            (function(): nil),
-        getfenv = 
-            (function(o: any): table),
-        setfenv = 
-            (function(object: any, table: table): any),
-        setuservalue = 
-            (function(udata: userdata, value: table|nil): userdata),
-    },
-    package = {
-        searchpath = 
-            (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil) | 
-            (function(name: string, path: string, sep: string): string|nil, string|nil) | 
-            (function(name: string, path: string): string|nil, string|nil),
-        seeall = 
-            (function(module: table): nil),
-        loadlib = 
-            (function(libname: string, funcname: string): empty_function|nil),
-    },
-    bit32 = {
-        lrotate = 
-            (function(x: number, disp: number): number),
-        bor = 
-            (function(...): number),
-        rshift = 
-            (function(x: number, disp: number): number),
-        band = 
-            (function(...): number),
-        lshift = 
-            (function(x: number, disp: number): number),
-        rrotate = 
-            (function(x: number, disp: number): number),
-        replace = 
-            (function(n: number, v: number, field: number, width: number): number) | 
-            (function(n: number, v: number, field: number): number),
-        bxor = 
-            (function(...): number),
-        arshift = 
-            (function(x: number, disp: number): number),
-        extract = 
-            (function(n: number, field: number, width: number): number) | 
-            (function(n: number, field: number): number),
-        bnot = 
-            (function(x: number): number),
-        btest = 
-            (function(...): boolean),
-    },
-    table = {
-        maxn = 
-            (function(table: table): number),
-        move = 
-            (function(a1: table, f, e, t ,a2: table): nil) | 
-            (function(a1: table, f, e, t): nil),
-        remove = 
-            (function(list: table, pos: number): any) | 
-            (function(list: table): any),
-        sort = 
-            (function(list: table, comp: empty_function): nil) | 
-            (function(list: table): nil),
-        unpack = 
-            (function(list: table, i: number, j: number): ...) | 
-            (function(list: table, i: number): ...) | 
-            (function(list: table): ...),
-        insert = 
-            (function(list: table, pos: number, value: any): nil) | 
-            (function(list: table,  value: any): nil),
-        concat = 
-            (function(list: table, sep: string, i: number, j: number): string) | 
-            (function(list: table, sep: string, i: number): string) | 
-            (function(list: table, sep: string): string) | 
-            (function(list: table): string),
-        pack = 
-            (function(...): table),
-    },
-    string = {
-        find = 
-            (function(s: string, pattern: string, init: number, plain: boolean): number|nil, number, ...|nil|nil) | 
-            (function(s: string, pattern: string, init: number): number|nil, number, ...|nil|nil) | 
-            (function(s: string, pattern: string): number|nil, number, ...|nil|nil),
-        len = 
-            (function(s: string): number),
-        packsize = 
-            (function(fmt: string): number),
-        match = 
-            (function(s: string, pattern: string, init: number): string|nil ,...|nil) | 
-            (function(s: string, pattern: string): string|nil ,...|nil),
-        upper = 
-            (function(s: string): string),
-        sub = 
-            (function(s: string, i: number, j: number): string) | 
-            (function(s: string, i: number): string),
-        char = 
-            (function(...): string),
-        rep = 
-            (function(s: string, n: number, sep: string): string) | 
-            (function(s: string, n: number): string),
-        lower = 
-            (function(s: string): string),
-        dump = 
-            (function(empty_function: empty_function): string),
-        gmatch = 
-            (function(s: string, pattern: string): empty_function),
-        reverse = 
-            (function(s: string): string),
-    byte = 
-            (function(s: string, i: number, j: number): ...) | 
+type PowerState =
+	"battery" |
+	"charged" |
+	"charging" |
+	"nobattery" |
+	"unknown"
+
+type Event =
+	"focus" |
+	"joystickaxis" |
+	"joystickhat" |
+	"joystickpressed" |
+	"joystickreleased" |
+	"keypressed" |
+	"keyreleased" |
+	"mousefocus" |
+	"mousepressed" |
+	"mousereleased" |
+	"quit" |
+	"resize" |
+	"threaderror" |
+	"visible"
+
+type MessageBoxType =
+	"error" |
+	"info" |
+	"warning"
+
+type FullscreenType =
+	"desktop" |
+	"exclusive"
+
+type HashFunction =
+	"md5" |
+	"sha1" |
+	"sha224" |
+	"sha256" |
+	"sha384" |
+	"sha512"
+
+type ContainerType =
+	"data" |
+	"string"
+
+type Scancode =
+	"'" |
+	"," |
+	"-" |
+	"." |
+	"/" |
+	"0" |
+	"1" |
+	"2" |
+	"3" |
+	"4" |
+	"5" |
+	"6" |
+	"7" |
+	"8" |
+	"9" |
+	";" |
+	"=" |
+	"[" |
+	"\\" |
+	"]" |
+	"`" |
+	"a" |
+	"acback" |
+	"acbookmarks" |
+	"acforward" |
+	"achome" |
+	"acrefresh" |
+	"acsearch" |
+	"acstop" |
+	"again" |
+	"alterase" |
+	"app1" |
+	"app2" |
+	"application" |
+	"audiomute" |
+	"audionext" |
+	"audioplay" |
+	"audioprev" |
+	"audiostop" |
+	"b" |
+	"backspace" |
+	"brightnessdown" |
+	"brightnessup" |
+	"c" |
+	"calculator" |
+	"cancel" |
+	"capslock" |
+	"clear" |
+	"clearagain" |
+	"computer" |
+	"copy" |
+	"crsel" |
+	"currencysubunit" |
+	"currencyunit" |
+	"cut" |
+	"d" |
+	"decimalseparator" |
+	"delete" |
+	"displayswitch" |
+	"down" |
+	"e" |
+	"eject" |
+	"end" |
+	"escape" |
+	"execute" |
+	"exsel" |
+	"f" |
+	"f1" |
+	"f10" |
+	"f11" |
+	"f12" |
+	"f13" |
+	"f14" |
+	"f15" |
+	"f16" |
+	"f17" |
+	"f18" |
+	"f19" |
+	"f2" |
+	"f20" |
+	"f21" |
+	"f22" |
+	"f23" |
+	"f24" |
+	"f3" |
+	"f4" |
+	"f5" |
+	"f6" |
+	"f7" |
+	"f8" |
+	"f9" |
+	"find" |
+	"g" |
+	"h" |
+	"help" |
+	"home" |
+	"i" |
+	"insert" |
+	"international1" |
+	"international2" |
+	"international3" |
+	"international4" |
+	"international5" |
+	"international6" |
+	"international7" |
+	"international8" |
+	"international9" |
+	"j" |
+	"k" |
+	"kbdillumdown" |
+	"kbdillumtoggle" |
+	"kbdillumup" |
+	"kp*" |
+	"kp+" |
+	"kp-" |
+	"kp." |
+	"kp/" |
+	"kp0" |
+	"kp00" |
+	"kp000" |
+	"kp1" |
+	"kp2" |
+	"kp3" |
+	"kp4" |
+	"kp5" |
+	"kp6" |
+	"kp7" |
+	"kp8" |
+	"kp9" |
+	"kp=" |
+	"kpenter" |
+	"l" |
+	"lalt" |
+	"lang1" |
+	"lang2" |
+	"lang3" |
+	"lang4" |
+	"lang5" |
+	"lctrl" |
+	"left" |
+	"lgui" |
+	"lshift" |
+	"m" |
+	"mail" |
+	"mediaselect" |
+	"menu" |
+	"mute" |
+	"n" |
+	"nonus#" |
+	"nonusbackslash" |
+	"numlock" |
+	"o" |
+	"oper" |
+	"out" |
+	"p" |
+	"pagedown" |
+	"pageup" |
+	"paste" |
+	"pause" |
+	"power" |
+	"printscreen" |
+	"prior" |
+	"q" |
+	"r" |
+	"ralt" |
+	"rctrl" |
+	"return" |
+	"return2" |
+	"rgui" |
+	"right" |
+	"rshift" |
+	"s" |
+	"scrolllock" |
+	"select" |
+	"separator" |
+	"sleep" |
+	"space" |
+	"stop" |
+	"sysreq" |
+	"t" |
+	"tab" |
+	"thsousandsseparator" |
+	"u" |
+	"undo" |
+	"unknown" |
+	"up" |
+	"v" |
+	"volumedown" |
+	"volumeup" |
+	"w" |
+	"www" |
+	"x" |
+	"y" |
+	"z"
+
+type KeyConstant =
+	"!" |
+	"#" |
+	"$" |
+	"&" |
+	"'" |
+	"(" |
+	")" |
+	"*" |
+	"+" |
+	"," |
+	"-" |
+	"." |
+	"/" |
+	"0" |
+	"1" |
+	"2" |
+	"3" |
+	"4" |
+	"5" |
+	"6" |
+	"7" |
+	"8" |
+	"9" |
+	":" |
+	";" |
+	"<" |
+	"=" |
+	">" |
+	"?" |
+	"@" |
+	"[" |
+	"\"" |
+	"\\" |
+	"]" |
+	"^" |
+	"_" |
+	"`" |
+	"a" |
+	"appback" |
+	"appbookmarks" |
+	"appforward" |
+	"apphome" |
+	"apprefresh" |
+	"appsearch" |
+	"b" |
+	"backspace" |
+	"break" |
+	"c" |
+	"calculator" |
+	"capslock" |
+	"clear" |
+	"compose" |
+	"d" |
+	"delete" |
+	"down" |
+	"e" |
+	"end" |
+	"escape" |
+	"euro" |
+	"f" |
+	"f1" |
+	"f10" |
+	"f11" |
+	"f12" |
+	"f13" |
+	"f14" |
+	"f15" |
+	"f2" |
+	"f3" |
+	"f4" |
+	"f5" |
+	"f6" |
+	"f7" |
+	"f8" |
+	"f9" |
+	"g" |
+	"h" |
+	"help" |
+	"home" |
+	"i" |
+	"insert" |
+	"j" |
+	"k" |
+	"kp*" |
+	"kp+" |
+	"kp-" |
+	"kp." |
+	"kp/" |
+	"kp0" |
+	"kp1" |
+	"kp2" |
+	"kp3" |
+	"kp4" |
+	"kp5" |
+	"kp6" |
+	"kp7" |
+	"kp8" |
+	"kp9" |
+	"kp=" |
+	"kpenter" |
+	"l" |
+	"lalt" |
+	"lctrl" |
+	"left" |
+	"lmeta" |
+	"lshift" |
+	"lsuper" |
+	"m" |
+	"mail" |
+	"menu" |
+	"mode" |
+	"n" |
+	"numlock" |
+	"o" |
+	"p" |
+	"pagedown" |
+	"pageup" |
+	"pause" |
+	"power" |
+	"print" |
+	"q" |
+	"r" |
+	"ralt" |
+	"rctrl" |
+	"return" |
+	"right" |
+	"rmeta" |
+	"rshift" |
+	"rsuper" |
+	"s" |
+	"scrollock" |
+	"space" |
+	"sysreq" |
+	"t" |
+	"tab" |
+	"u" |
+	"undo" |
+	"up" |
+	"v" |
+	"w" |
+	"www" |
+	"x" |
+	"y" |
+	"z"
+
+type coroutine = {
+	wrap = (function(f: empty_function): empty_function),
+	resume = (function(co: thread, val1: any, ...): boolean, ...)    |    (function(co: thread): boolean, ...),
+	yield = (function(...): nil),
+	status = (function(co: thread): string),
+	isyieldable = (function(): boolean),
+	running = (function(): thread, boolean),
+	create = (function(f: empty_function): thread)
+}
+type assert = (function(v: any, message: string): ...)    |    (function(v: any): ...)
+type tostring = (function(v: any): string)
+type tonumber = (function(e: any, base: number): number|nil)    |    (function(e: any): number|nil)
+type io = {
+	tmpfile = (function(): file),
+	read = (function(...): ...),
+	output = (function(file: string|file): file|nil)    |    (function(): file|nil),
+	open = (function(filename: string, mode: string): file|nil, string|nil)    |    (function(filename: string): file|nil, string|nil),
+	close = (function(file: file): boolean|nil, string, number|nil)    |    (function(): boolean|nil, string, number|nil),
+	write = (function(...): file|nil, string|nil),
+	popen = (function(prog: string, mode: string): file|nil, string|nil)    |    (function(prog: string): file|nil, string|nil),
+	flush = (function(): nil),
+	type = (function(obj: file): string|nil),
+	lines = (function(filename: string, ...): empty_function)    |    (function(): empty_function),
+	input = (function(file: string|file): file|nil)    |    (function(): file|nil)
+}
+type rawget = (function(table: table, index: any): any)
+type xpcall = (function(f: empty_function, msgh: empty_function, arg1: any, ...): boolean, ...)    |    (function(f: empty_function, msgh: empty_function): boolean, ...)
+type print = (function(...): nil)
+type pcall = (function(f: empty_function, arg1: any, ...): boolean, ...)    |    (function(f: empty_function): boolean, ...)
+type module = (function(name: string, ...): nil)    |    (function(name: string): nil)
+type setfenv = (function(f: empty_function|number, table: table): empty_function|nil)
+type love = {
+	gamepadreleased = (function(joystick: Joystick, button: GamepadButton): nil),
+	focus = (function(focus: boolean): nil),
+	lowmemory = (function(): nil),
+	getVersion = (function(): number, number, number, string),
+	quit = (function(): boolean),
+	wheelmoved = (function(x: number, y: number): nil),
+	system = {
+		setClipboardText = (function(text: string): nil),
+		vibrate = (function(seconds: number): nil),
+		openURL = (function(url: string): boolean),
+		getPowerInfo = (function(): PowerState, number, number),
+		getOS = (function(): string),
+		getProcessorCount = (function(): number)
+	},
+	joystickhat = (function(joystick: Joystick, hat: number, direction: JoystickHat): nil),
+	joystickaxis = (function(joystick: Joystick, axis: number, value: number): nil),
+	joystickpressed = (function(joystick: number, button: number): nil),
+	touchmoved = (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
+	visible = (function(visible: boolean): nil),
+	update = (function(dt: number): nil),
+	errorhandler = (function(msg: string): nil),
+	mousereleased = (function(x: number, y: number, button: number, isTouch: boolean, presses: number): nil),
+	touchreleased = (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
+	filedropped = (function(file: File): nil),
+	mousepressed = (function(x: number, y: number, button: number, isTouch: boolean, presses: number): nil),
+	touchpressed = (function(id: light_userdata, x: number, y: number, dx: number, dy: number, pressure: number): nil),
+	event = {
+		pump = (function(): nil),
+		poll = (function(): empty_function),
+		push = (function(e: Event, a: Variant, b: Variant, c: Variant, d: Variant): nil),
+		wait = (function(): Event, Variant, Variant, Variant, Variant),
+		quit = (function(exitstatus: number): nil)
+	},
+	window = {
+		restore = (function(): nil),
+		updateMode = (function(width: number, height: number, settings: table): boolean),
+		fromPixels = (function(pixelvalue: number): number),
+		toPixels = (function(value: number): number),
+		requestAttention = (function(continuous: boolean): nil),
+		setTitle = (function(title: string): nil),
+		isVisible = (function(): boolean),
+		isOpen = (function(): boolean),
+		getDisplayName = (function(displayindex: number): string),
+		getPixelScale = (function(): number),
+		isMinimized = (function(): boolean),
+		setMode = (function(width: number, height: number, flags: table): boolean),
+		getMode = (function(): number, number, table),
+		setIcon = (function(imagedata: ImageData): boolean),
+		getTitle = (function(): string),
+		setFullscreen = (function(fullscreen: boolean): boolean),
+		setDisplaySleepEnabled = (function(enable: boolean): nil),
+		minimize = (function(): nil),
+		getFullscreenModes = (function(display: number): table),
+		getDPIScale = (function(): number),
+		getFullscreen = (function(): boolean, FullscreenType),
+		getPosition = (function(): number, number, number),
+		maximize = (function(): nil),
+		isDisplaySleepEnabled = (function(): boolean),
+		getIcon = (function(): ImageData),
+		setPosition = (function(x: number, y: number, display: number): nil),
+		showMessageBox = (function(title: string, message: string, type: MessageBoxType, attachtowindow: boolean): boolean),
+		hasMouseFocus = (function(): boolean),
+		isMaximized = (function(): boolean),
+		hasFocus = (function(): boolean)
+	},
+	joystickadded = (function(joystick: Joystick): nil),
+	touch = {
+		getPressure = (function(id: light_userdata): number),
+		getTouches = (function(): table)
+	},
+	timer = {
+		step = (function(): number),
+		getDelta = (function(): number),
+		getTime = (function(): number),
+		getFPS = (function(): number),
+		sleep = (function(s: number): nil)
+	},
+	threaderror = (function(thread: Thread, errorstr: string): nil),
+	textinput = (function(text: string): nil),
+	textedited = (function(text: string, start: number, length: number): nil),
+	conf = (function(t: table): nil),
+	run = (function(): nil),
+	draw = (function(): nil),
+	setDeprecationOutput = (function(enable: boolean): nil),
+	resize = (function(w: number, h: number): nil),
+	Object = {
+		typeOf = (function(name: string): boolean)
+	},
+	mousemoved = (function(x: number, y: number, dx: number, dy: number, istouch: boolean): nil),
+	mousefocus = (function(focus: boolean): nil),
+	gamepadpressed = (function(joystick: Joystick, button: GamepadButton): nil),
+	hasDeprecationOutput = (function(): boolean),
+	joystickreleased = (function(joystick: number, button: number): nil),
+	joystickremoved = (function(joystick: Joystick): nil),
+	gamepadaxis = (function(joystick: Joystick, axis: GamepadAxis, value: number): nil),
+	keyreleased = (function(key: KeyConstant, scancode: Scancode): nil),
+	directorydropped = (function(path: string): nil),
+	load = (function(arg: table): nil),
+	data = {
+		encode = (function(containerType: ContainerType, format: EncodeFormat, sourceString: string, lineLength: number): Variant),
+		decode = (function(containerType: ContainerType, format: EncodeFormat, sourceString: string): Variant),
+		hash = (function(hashFunction: HashFunction, string: string): string),
+		decompress = (function(container: ContainerType, compressedData: CompressedData): string)
+	},
+	keyboard = {
+		hasTextInput = (function(): boolean),
+		getScancodeFromKey = (function(key: KeyConstant): Scancode),
+		isDown = (function(key: KeyConstant): boolean),
+		setKeyRepeat = (function(enable: boolean): nil),
+		setTextInput = (function(enable: boolean): nil),
+		hasKeyRepeat = (function(): boolean),
+		isScancodeDown = (function(scancode: Scancode, ...: Scancode[]): boolean)
+	},
+	keypressed = (function(key: KeyConstant, scancode: Scancode, isrepeat: boolean): nil)
+}
+type f = {
+	close = (function(file: file): boolean|nil, string, number|nil),
+	write = (function(file: file, ...): file|nil, string|nil),
+	flush = (function(file: file): boolean|nil, string|nil),
+	read = (function(file: file, ...): ...),
+	lines = (function(file: file, ...): empty_function),
+	setvbuf = (function(file: file, mode: string, size: number): boolean|nil, string|nil)    |    (function(file: file, mode: string): boolean|nil, string|nil),
+	seek = (function(file: file, whence: string, offset: number): number|nil, string|nil)    |    (function(file: file, whence: string): number|nil, string|nil)    |    (function(file: file,): number|nil, string|nil)
+}
+type ffi = {
+	cdef = (function(string): nil),
+	abi = (function(string): boolean),
+	metatype = (function(ct,table): cdata),
+	new = (function(string/ctype,nelement,init...): cdata),
+	copy = (function(dst,src,len / string): nil)    |    (function(dst,src,len /): nil)    |    (function(dst, /): nil),
+	alignof = (function(ct): number),
+	cast = (function(ctype,cdata): cdata),
+	typeof = (function(ct): ctype),
+	load = (function(string,global): userdata)    |    (function(string,): userdata),
+	sizeof = (function(ct,nelem): number)    |    (function(ct,): number),
+	string = (function(ptr, number): string)    |    (function(ptr,): string),
+	gc = (function(ct,empty_function): cdata),
+	istype = (function(ct,obj): boolean),
+	fill = (function(dst, len, c): nil)    |    (function(dst, len,): nil),
+	offsetof = (function(ct, field): number)
+}
+type debug = {
+	sethook = (function(thread: thread, hook: empty_function, mask: string, count: number): nil)    |    (function(thread: thread, hook: empty_function, mask: string): nil)    |    (function( hook: empty_function, mask: string): nil),
+	getregistry = (function(): nil),
+	traceback = (function(thread: thread, message: any, level: number): string)    |    (function(thread: thread, message: any): string)    |    (function(thread: thread,): string)    |    (function(): string),
+	setlocal = (function(thread: thread, level: number, local_: number, value: any): string|nil)    |    (function( level: number, local_: number, value: any): string|nil),
+	getinfo = (function(thread: thread, f: empty_function|number, what: string): table|nil)    |    (function(thread: thread, f: empty_function|number): table|nil)    |    (function( f: empty_function|number): table|nil),
+	upvalueid = (function(f: empty_function, n: number): userdata),
+	setupvalue = (function(f: empty_function, up: number, value: any): string|nil),
+	getlocal = (function(thread: thread, f: number|empty_function, local_: number): string|nil, any)    |    (function( f: number|empty_function, local_: number): string|nil, any),
+	upvaluejoin = (function(f1: empty_function, n1: number, f2: empty_function, n2: number): nil),
+	getupvalue = (function(f: empty_function, up: number): string|nil, any),
+	getmetatable = (function(value: any): table|nil),
+	setmetatable = (function(value: any, table: table|nil): any),
+	gethook = (function(thread: thread): empty_function, string, number)    |    (function(): empty_function, string, number),
+	getuservalue = (function(u: userdata): table|nil),
+	debug = (function(): nil),
+	getfenv = (function(o: any): table),
+	setfenv = (function(object: any, table: table): any),
+	setuservalue = (function(udata: userdata, value: table|nil): userdata)
+}
+type pairs = (function(t: table): empty_function, table, nil)
+type rawequal = (function(v1: any, v2: any): boolean)
+type loadstring = (function(string: string, chunkname: string): empty_function|nil, string|nil)    |    (function(string: string): empty_function|nil, string|nil)
+type package = {
+	searchpath = (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil)    |    (function(name: string, path: string, sep: string): string|nil, string|nil)    |    (function(name: string, path: string): string|nil, string|nil),
+	seeall = (function(module: table): nil),
+	loadlib = (function(libname: string, funcname: string): empty_function|nil)
+}
+type error = (function(message: string, level: number): nil)    |    (function(message: string): nil)
+type bit32 = {
+	lrotate = (function(x: number, disp: number): number),
+	bor = (function(...): number),
+	rshift = (function(x: number, disp: number): number),
+	band = (function(...): number),
+	lshift = (function(x: number, disp: number): number),
+	rrotate = (function(x: number, disp: number): number),
+	replace = (function(n: number, v: number, field: number, width: number): number)    |    (function(n: number, v: number, field: number): number),
+	bxor = (function(...): number),
+	arshift = (function(x: number, disp: number): number),
+	extract = (function(n: number, field: number, width: number): number)    |    (function(n: number, field: number): number),
+	bnot = (function(x: number): number),
+	btest = (function(...): boolean)
+}
+type loadfile = (function(filename: string, mode: string, env: table): empty_function|nil, string|nil)    |    (function(filename: string, mode: string): empty_function|nil, string|nil)    |    (function(filename: string): empty_function|nil, string|nil)    |    (function(): empty_function|nil, string|nil)
+type dofile = (function(filename: string): ...)    |    (function(): ...)
+type table = {
+	maxn = (function(table: table): number),
+	move = (function(a1: table, f, e, t ,a2: table): nil)    |    (function(a1: table, f, e, t): nil),
+	remove = (function(list: table, pos: number): any)    |    (function(list: table): any),
+	sort = (function(list: table, comp: empty_function): nil)    |    (function(list: table): nil),
+	unpack = (function(list: table, i: number, j: number): ...)    |    (function(list: table, i: number): ...)    |    (function(list: table): ...),
+	insert = (function(list: table, pos: number, value: any): nil)    |    (function(list: table,  value: any): nil),
+	concat = (function(list: table, sep: string, i: number, j: number): string)    |    (function(list: table, sep: string, i: number): string)    |    (function(list: table, sep: string): string)    |    (function(list: table): string),
+	pack = (function(...): table)
+}
+type string = {
+	find = (function(s: string, pattern: string, init: number, plain: boolean): number|nil, number, ...|nil|nil)    |    (function(s: string, pattern: string, init: number): number|nil, number, ...|nil|nil)    |    (function(s: string, pattern: string): number|nil, number, ...|nil|nil),
+	len = (function(s: string): number),
+	packsize = (function(fmt: string): number),
+	match = (function(s: string, pattern: string, init: number): string|nil ,...|nil)    |    (function(s: string, pattern: string): string|nil ,...|nil),
+	upper = (function(s: string): string),
+	sub = (function(s: string, i: number, j: number): string)    |    (function(s: string, i: number): string),
+	char = (function(...): string),
+	rep = (function(s: string, n: number, sep: string): string)    |    (function(s: string, n: number): string),
+	lower = (function(s: string): string),
+	dump = (function(empty_function: empty_function): string),
+	gmatch = (function(s: string, pattern: string): empty_function),
+	reverse = (function(s: string): string),
+	byte =             (function(s: string, i: number, j: number): ...) | 
             (function(s: string, i: number): number | nil) | 
-            (function(s: string): number),
-        
-        unpack = 
-            (function(fmt: string, s: string, pos: number): values) | 
-            (function(fmt: string, s: string): values),
-        gsub = 
-            (function(s: string, pattern: string, repl: string|table|empty_function, n: number): string, number) | 
-            (function(s: string, pattern: string, repl: string|table|empty_function): string, number),
-        format = 
-            (function(formatstring, ...): string),
-        pack = 
-            (function(fmt: string, v1, v2, ...): string),
-    },
-    m = {
-        __le = 
-            (function(op1, op2): boolean),
-        __ipairs = 
-            (function(table): iterator, table, index),
-        __lt = 
-            (function(op1, op2): boolean),
-        __concat = 
-            (function(op1, op2): value),
-        __sub = 
-            (function(op1, op2): value),
-        __div = 
-            (function(op1, op2): value),
-        __index = 
-            (function(table, key): value),
-        __unm = 
-            (function(op): value),
-        __gc = 
-            (function(func, ...): values),
-        __mod = 
-            (function(op1, op2): value),
-        __call = 
-            (function(func, ...): values),
-        __newindex = 
-            (function(table, key, value): value),
-        __pairs = 
-            (function(table): iterator, table, key),
-        __tostring = 
-            (function(op): value),
-        __eq = 
-            (function(op1, op2): boolean),
-        __len = 
-            (function(op): value),
-        __mul = 
-            (function(op1, op2): value),
-        __add = 
-            (function(op1, op2): value),
-        __pow = 
-            (function(op1, op2): value),
-    },
-    math = {
-        ceil = 
-            (function(x: number): number),
-        tan = 
-            (function(x: number): number),
-        log10 = 
-            (function(x: number): number),
-        sinh = 
-            (function(x: number): number),
-        ldexp = 
-            (function(m: number, e: number): number),
-        tointeger = 
-            (function(x: number): number),
-        cosh = 
-            (function(x: number): number),
-        min = 
-            (function(x: number, ...): number),
-        fmod = 
-            (function(x: number, y: number): number),
-        exp = 
-            (function(x: number): number),
-        random = 
-            (function(m: number, n: number): number) | 
-            (function(m: number): number) | 
-            (function(): number),
-        rad = 
-            (function(x: number): number),
-        log = 
-            (function(x: number, base: number): number) | 
-            (function(x: number): number),
-        cos = 
-            (function(x: number): number),
-        randomseed = 
-            (function(x: number): nil),
-        floor = 
-            (function(x: number): number),
-        tanh = 
-            (function(x: number): number),
-        max = 
-            (function(x: number, ...): number),
-        pow = 
-            (function(x: number, y: number): number),
-        ult = 
-            (function(m: number, n: number): boolean),
-        acos = 
-            (function(x: number): number),
-        type = 
-            (function(x: number): string),
-        abs = 
-            (function(x: number): number),
-        frexp = 
-            (function(x: number): number, number),
-        deg = 
-            (function(x: number): number),
-        modf = 
-            (function(x: number): number, number),
-        atan2 = 
-            (function(y: number, x: number): number),
-        asin = 
-            (function(x: number): number),
-        atan = 
-            (function(x: number): number),
-        sqrt = 
-            (function(x: number): number),
-        sin = 
-            (function(x: number): number),
-    },
-    os = {
-        execute = 
-            (function(command: string): boolean|nil, string, number|nil) | 
-            (function(): boolean|nil, string, number|nil),
-        rename = 
-            (function(oldname: string, newname: string): boolean|nil, string, number|nil),
-        getenv = 
-            (function(varname: string): string|nil),
-        difftime = 
-            (function(t2: number, t1: number): number),
-        exit = 
-            (function(code: boolean|number, close: boolean): nil) | 
-            (function(code: boolean|number): nil) | 
-            (function(): nil),
-        remove = 
-            (function(filename: string): boolean|nil, string, number|nil),
-        setlocale = 
-            (function(local_e: string, category: string): string|nil) | 
-            (function(local_e: string): string|nil),
-        date = 
-            (function(format: string, time: number): string|table) | 
-            (function(format: string): string|table) | 
-            (function(): string|table),
-        time = 
-            (function(table: table): number) | 
-            (function(): number),
-        clock = 
-            (function(): number),
-        tmpname = 
-            (function(): string),
-    },
-},
-    type _G._G = _G
+			(function(s: string): number)
+		,
+	unpack = (function(fmt: string, s: string, pos: number): values)    |    (function(fmt: string, s: string): values),
+	gsub = (function(s: string, pattern: string, repl: string|table|empty_function, n: number): string, number)    |    (function(s: string, pattern: string, repl: string|table|empty_function): string, number),
+	format = (function(formatstring, ...): string),
+	pack = (function(fmt: string, v1, v2, ...): string)
+}
+type ipairs = (function(t: table): empty_function, table, number)
+type m = {
+	__le = (function(op1, op2): boolean),
+	__ipairs = (function(table): iterator, table, index),
+	__lt = (function(op1, op2): boolean),
+	__concat = (function(op1, op2): value),
+	__sub = (function(op1, op2): value),
+	__div = (function(op1, op2): value),
+	__index = (function(table, key): value),
+	__unm = (function(op): value),
+	__gc = (function(func, ...): values),
+	__mod = (function(op1, op2): value),
+	__call = (function(func, ...): values),
+	__newindex = (function(table, key, value): value),
+	__pairs = (function(table): iterator, table, key),
+	__tostring = (function(op): value),
+	__eq = (function(op1, op2): boolean),
+	__len = (function(op): value),
+	__mul = (function(op1, op2): value),
+	__add = (function(op1, op2): value),
+	__pow = (function(op1, op2): value)
+}
+type type = (function(v: any): string)
+type collectgarbage = (function(opt: string, arg: number): ...)    |    (function(opt: string): ...)    |    (function(): ...)
+type getfenv = (function(f: empty_function|number): table)    |    (function(): table)
+type next = (function(table: table, index: any): any, any|nil)    |    (function(table: table): any, any|nil)
+type math = {
+	ceil = (function(x: number): number),
+	tan = (function(x: number): number),
+	log10 = (function(x: number): number),
+	sinh = (function(x: number): number),
+	ldexp = (function(m: number, e: number): number),
+	tointeger = (function(x: number): number),
+	cosh = (function(x: number): number),
+	min = (function(x: number, ...): number),
+	fmod = (function(x: number, y: number): number),
+	exp = (function(x: number): number),
+	random = (function(m: number, n: number): number)    |    (function(m: number): number)    |    (function(): number),
+	rad = (function(x: number): number),
+	log = (function(x: number, base: number): number)    |    (function(x: number): number),
+	cos = (function(x: number): number),
+	randomseed = (function(x: number): nil),
+	floor = (function(x: number): number),
+	tanh = (function(x: number): number),
+	max = (function(x: number, ...): number),
+	pow = (function(x: number, y: number): number),
+	ult = (function(m: number, n: number): boolean),
+	acos = (function(x: number): number),
+	type = (function(x: number): string),
+	abs = (function(x: number): number),
+	frexp = (function(x: number): number, number),
+	deg = (function(x: number): number),
+	modf = (function(x: number): number, number),
+	atan2 = (function(y: number, x: number): number),
+	asin = (function(x: number): number),
+	atan = (function(x: number): number),
+	sqrt = (function(x: number): number),
+	sin = (function(x: number): number)
+}
+type load = (function(ld: string|empty_function, source: string, mode: string, env: table): empty_function|nil, string|nil)    |    (function(ld: string|empty_function, source: string, mode: string): empty_function|nil, string|nil)    |    (function(ld: string|empty_function, source: string): empty_function|nil, string|nil)    |    (function(ld: string|empty_function): empty_function|nil, string|nil)
+type os = {
+	execute = (function(command: string): boolean|nil, string, number|nil)    |    (function(): boolean|nil, string, number|nil),
+	rename = (function(oldname: string, newname: string): boolean|nil, string, number|nil),
+	getenv = (function(varname: string): string|nil),
+	difftime = (function(t2: number, t1: number): number),
+	exit = (function(code: boolean|number, close: boolean): nil)    |    (function(code: boolean|number): nil)    |    (function(): nil),
+	remove = (function(filename: string): boolean|nil, string, number|nil),
+	setlocale = (function(local_e: string, category: string): string|nil)    |    (function(local_e: string): string|nil),
+	date = (function(format: string, time: number): string|table)    |    (function(format: string): string|table)    |    (function(): string|table),
+	time = (function(table: table): number)    |    (function(): number),
+	clock = (function(): number),
+	tmpname = (function(): string)
+}
+type setmetatable = (function(table: table, metatable: table|nil): table)
+type select = (function(index: number|string, ...): ...)
+type rawlen = (function(v: table|string): number)
+type unpack = (function(list: table, i: number, j: number): ...)    |    (function(list: table, i: number): ...)    |    (function(list: table): ...)
+type require = (function(modname: string): any)
+type rawset = (function(table: table, index: any, value: any): table)
+type getmetatable = (function(object: any): table|nil)
 
-    type _G.string.match = function(s, pattern, init)
-        if s.value and pattern.value then
-            local res = {s.value:match(pattern.value)}
-            for i,v in ipairs(res) do
-                res[i] = types.Type("string", v)
-            end
-            return unpack(res)
-        end
+-- overrides
 
-        if pattern.value then
-            local out = {}
-            for s in pattern.value:gmatch("%b()") do
-                table.insert(out, types.Type("string") + types.Type("nil"))
-            end
-            return unpack(out)
-        end
-    end
+-- ^string is just to circumvent getting the primitive type string
 
-    type _G.type_assert = function(what, type, value, ...)
-        if not what:IsType(type) then
-            error("expected type " .. tostring(type) .." got " .. tostring(what))
-        end
+type ^string.match = function(s, pattern, init)
+	if s.value and pattern.value then
+		local res = {s.value:match(pattern.value)}
+		for i,v in ipairs(res) do
+			res[i] = types.Type("string", v)
+		end
+		return unpack(res)
+	end
 
-        if type.value ~= nil then
-            if what.value ~= type.value then
-                print(what, type, value)
-                error("expected type value " .. tostring(type) .." got " .. tostring(what))
-            end
-        end
-    end
+	if pattern.value then
+		local out = {}
+		for s in pattern.value:gmatch("%b()") do
+			table.insert(out, types.Type("string") + types.Type("nil"))
+		end
+		return unpack(out)
+	end
+end
 
-    type _G.next = function(tbl, _)
-        local T = tbl
-        if not tbl then return T:Type("any"), T:Type("any") end
-        local key, val
+type ^string.gsub = function(str, pattern, val)
+	if val:IsType("function") then
+		local args = {}
+		
+		if pattern.value then
+		for group in pattern.value:gmatch("%b()") do
+			table.insert(args, val:Type("string"))
+		end
+		end
 
-        for _, tbl in ipairs(tbl.types or {tbl}) do
-            if tbl.value then
-                for k, v in pairs(tbl.value) do
-                    if not key then
-                        if types.IsTypeObject(k) then
-                            key = k
-                        else
-                            key = T:Type(type(k))
-                        end
-                    else
-                        if types.IsTypeObject(k) then
-                            key = types.Fuse(key, k)
-                        elseif type(k) == "string" then
-                            key = types.Fuse(key, T:Type("string"))
-                        elseif type(k) == "number" then
-                            key = types.Fuse(key, T:Type("number"))
-                        elseif not key:IsType(k) then
-                            key = types.Fuse(key, T:Type(k.name))
-                        end
-                    end
+		if not args[1] then
+		args[1] = val:Type("string")
+		end
 
-                    if not val then
-                        if types.IsTypeObject(v) then
-                            val = v
-                        else
-                            val = T:Type(type(v))
-                        end
-                    else
-                        if types.IsTypeObject(v) then
-                            val = types.Fuse(val, v)
-                        elseif not val:IsType(v) then
-                            val = types.Fuse(val, T:Type(v.name))
-                        end
-                    end
-                end
-            end
-        end
+		for i,v in ipairs(args) do
+		val.arguments[i] = types.ReplaceType(val.arguments[i], v)
+		end
 
-        return key, val
-    end
+		val.ret[1] = types.ReplaceType(val.ret[1], val:Type("string"))
+	end
 
-    type _G.pairs = function(tbl)
-        local next = analyzer:GetValue("next", "typesystem")
-        return next, tbl, nil
-    end
+	return str:Type("string")
+end
 
-    type _G.ipairs = function(tbl)
-        local next = analyzer:GetValue("next", "typesystem")
-        return next, tbl, nil
-    end
+type type_assert = function(what, type, value, ...)
+	if not what:IsType(type) then
+		error("expected type " .. tostring(type) .." got " .. tostring(what))
+	end
 
-    type _G.require = function(name)
-        local str = name.value
+	if type.value ~= nil then
+		if what.value ~= type.value then
+			print(what, type, value)
+			error("expected type value " .. tostring(type) .." got " .. tostring(what))
+		end
+	end
+end
 
-        if analyzer:GetValue(str, "typesystem") then
-            return analyzer:GetValue(str, "typesystem")
-        end
+type next = function(tbl, _)
+	local T = tbl
+	if not tbl then return T:Type("any"), T:Type("any") end
+	local key, val
 
-        for _, searcher in ipairs(package.loaders) do
-            local loader = searcher(str)
-            if type(loader) == "function" then
-                local path = debug.getinfo(loader).source
-                if path:sub(1, 1) == "@" then
-                    local path = path:sub(2)
+	for _, tbl in ipairs(tbl.types or {tbl}) do
+		if tbl.value then
+			for k, v in pairs(tbl.value) do
+				if not key then
+					if types.IsTypeObject(k) then
+						key = k
+					else
+						key = T:Type(type(k))
+					end
+				else
+					if types.IsTypeObject(k) then
+						key = types.Fuse(key, k)
+					elseif type(k) == "string" then
+						key = types.Fuse(key, T:Type("string"))
+					elseif type(k) == "number" then
+						key = types.Fuse(key, T:Type("number"))
+					elseif not key:IsType(k) then
+						key = types.Fuse(key, T:Type(k.name))
+					end
+				end
 
-                    local ast = assert(require("oh").FileToAST(path))
-                    analyzer:AnalyzeStatement(ast)
+				if not val then
+					if types.IsTypeObject(v) then
+						val = v
+					else
+						val = T:Type(type(v))
+					end
+				else
+					if types.IsTypeObject(v) then
+						val = types.Fuse(val, v)
+					elseif not val:IsType(v) then
+						val = types.Fuse(val, T:Type(v.name))
+					end
+				end
+			end
+		end
+	end
 
-                    return unpack(analyzer.last_return)
-                end
-            end
-        end
+	return key, val
+end
 
-        error("unable to find module " .. str)
-    end
+type pairs = function(tbl)
+	local next = analyzer:GetValue("next", "typesystem")
+	return next, tbl, nil
+end
 
-    type _G.table.insert = function(tbl, ...)
-        local pos, val = ...
+type ipairs = function(tbl)
+	local next = analyzer:GetValue("next", "typesystem")
+	return next, tbl, nil
+end
 
-        if not val then
-            val = ...
-            pos = #tbl.value + 1
-        else
-            pos = pos.value
-        end
+type require = function(name)
+	local str = name.value
 
-        local l = types.Type("list")
+	if analyzer:GetValue(str, "typesystem") then
+		return analyzer:GetValue(str, "typesystem")
+	end
 
-        local list_type = tbl.list_type
+	for _, searcher in ipairs(package.loaders) do
+		local loader = searcher(str)
+		if type(loader) == "function" then
+			local path = debug.getinfo(loader).source
+			if path:sub(1, 1) == "@" then
+				local path = path:sub(2)
 
-        for k,v in pairs(tbl) do
-            if k ~= "value" then
-                tbl[k] = nil
-            end
-        end
+				local ast = assert(require("oh").FileToAST(path))
+				analyzer:AnalyzeStatement(ast)
 
-        for k,v in pairs(l) do
-            tbl[k] = v
-        end
+				return unpack(analyzer.last_return)
+			end
+		end
+	end
 
-        table.insert(tbl.value, pos, val)
+	error("unable to find module " .. str)
+end
 
-        if list_type then
-            list_type = list_type + val
-        end
+type table.insert = function(tbl, ...)
+	local pos, val = ...
 
-        tbl.list_type = list_type or val
-        tbl.length = pos
-    end
+	if not val then
+		val = ...
+		pos = #tbl.value + 1
+	else
+		pos = pos.value
+	end
 
-    type _G.TPRINT = function(...) print(...) end
+	local l = types.Type("list")
+
+	local list_type = tbl.list_type
+
+	for k,v in pairs(tbl) do
+		if k ~= "value" then
+			tbl[k] = nil
+		end
+	end
+
+	for k,v in pairs(l) do
+		tbl[k] = v
+	end
+
+	table.insert(tbl.value, pos, val)
+
+	if list_type then
+		list_type = list_type + val
+	end
+
+	tbl.list_type = list_type or val
+	tbl.length = pos
+end
+
+type TPRINT = function(...) print(...) end
 
 
-    type _G.table.sort = function(tbl, func)
-        local next = oh.GetBaseAnalyzeer():GetValue("_G", "typesystem"):get("next").func
-        local k,v = next(tbl)
-        func.arguments[1] = v
-        func.arguments[2] = v
-    end
-    
-    type _G.setmetatable = function(tbl, meta) 
-        if meta.value and meta.value["__index"] then 
-            tbl.index = function(self, key) 
-            return meta:get(key)
-            end
-        end
-        return tbl
-    end
+type table.sort = function(tbl, func)
+	local next = oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):get("next").func
+	local k,v = next(tbl)
+	func.arguments[1] = v
+	func.arguments[2] = v
+end
 
-    type _G.string.gsub = function(str, pattern, val)
-        if val:IsType("function") then
-          local args = {}
-          
-          if pattern.value then
-            for group in pattern.value:gmatch("%b()") do
-              table.insert(args, val:Type("string"))
-            end
-          end
-    
-          if not args[1] then
-            args[1] = val:Type("string")
-          end
-    
-          for i,v in ipairs(args) do
-            val.arguments[i] = types.ReplaceType(val.arguments[i], v)
-          end
-    
-          val.ret[1] = types.ReplaceType(val.ret[1], val:Type("string"))
-        end
-    
-        return str:Type("string")
-    end
+type setmetatable = function(tbl, meta) 
+	if meta.value and meta.value["__index"] then 
+		tbl.index = function(self, key) 
+		return meta:get(key)
+		end
+	end
+	return tbl
+end
+

@@ -147,6 +147,8 @@ function META:EmitExpression(node)
         end
     elseif node.kind == "import" then
         self:EmitImportExpression(node)
+    elseif node.kind == "type_table" then
+        self:EmitTableType(node)
     else
         error("unhandled token type " .. node.kind)
     end
