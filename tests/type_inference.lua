@@ -636,7 +636,7 @@ a.b.c = 1
     end
     local b = a
 
-    repeat 
+    repeat
         b = b + 1
     until true
 
@@ -668,14 +668,14 @@ a.b.c = 1
         SetPos = (function(self, pos: Vec3): nil),
         GetPos = (function(self): Vec3),
     }
-        
+
     local x: Foo = {}
     x:SetPos({x = 1, y = 2, z = 3})
     local a = x:GetPos()
     local z = a.x + 1
 
     type_assert(z, _ as number)
-    
+
     local test = x:Test()
     type_assert(test, _ as number)
 ]], C[[
@@ -706,7 +706,7 @@ local nyi = [[
   --local b = a.lol3
   --local b = a.rofl
 
-  local a: {[any] = any} = {} -- same as no type annotation 
+  local a: {[any] = any} = {} -- same as no type annotation
 
   local a = {}
   a.lol = true

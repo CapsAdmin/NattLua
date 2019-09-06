@@ -168,7 +168,7 @@ function META:IsCompatible(type)
     if _G.type(type) == "string" and self:IsType("string") and self.value == type then
         return true
     end
-    
+
     return self:IsType(type) and type:IsType(self)
 end
 
@@ -209,7 +209,7 @@ function META:Extend(t)
             copy:set(k,v)
         end
     end
-    
+
     return copy
 end
 
@@ -241,6 +241,11 @@ function META:BinaryOperator(op_node, b, node, env)
             return b or a
         elseif b == false or b == nil then
             return false
+        elseif op == ".." then
+            local new = a:Copy()
+            new.max = b
+            print(new)
+            return new
         end
     end
 
@@ -346,7 +351,7 @@ end
 
 function META:PostfixOperator(op_node)
     local op = op_node.value.value
-    
+
     if self.interface.postfix and self.interface.postfix[op] then
         local ret = self.interface.postfix[op]
 
@@ -697,10 +702,10 @@ types.Register("string", {
     inherits = "base",
     truthy = true,
     get = function(self, key)
-        
+
         if self.analyzer then
             local g = self.analyzer:GetValue("_G", "typesystem")
-            
+
             if not g then
                 if self.analyzer.Index then
                     g = self.analyzer:Index("_G")
@@ -776,7 +781,7 @@ types.Register("table", {
                 self.value[key] = val
             elseif hashed_key and val then
                 self.value[hashed_key] = val
-            end            
+            end
         end
     end,
     get = function(self, key)
@@ -801,7 +806,7 @@ types.Register("table", {
 
                 table.insert(expected, tostring(k))
             end
-            
+
             if self.index then
                 return self:index(key)
             end
@@ -821,8 +826,8 @@ types.Register("table", {
             elseif key:IsCompatible(k) then
                 return v
             end
-        end    
-        
+        end
+
         if self.index then
             return self:index(key)
         end

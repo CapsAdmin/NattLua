@@ -9344,8 +9344,8 @@ end
 local fixup = {
 	string = {
 		byte = [[
-            (function(s: string, i: number, j: number): ...) | 
-            (function(s: string, i: number): number | nil) | 
+            (function(s: string, i: number, j: number): ...) |
+            (function(s: string, i: number): number | nil) |
 			(function(s: string): number)
 		]],
 	},
@@ -9426,13 +9426,13 @@ local function walk(lib, data)
 			elseif v.type == "class" then
 				if v.childs then
 					local s = {}
-					
+
 					for val, data in pairs(v.childs) do
 						if data.type == "value" then
 							table.insert(s, ("\t"):rep(1) .. ("%q"):format(val))
 						end
 					end
-		
+
 					if s[1] then
 						table.sort(s, function(a, b) return a < b end)
 						table.insert(enums, "type " .. k .. " =\n" .. table.concat(s, " |\n") .. "\n")
@@ -9444,7 +9444,7 @@ local function walk(lib, data)
 			end
 		end
 		table.insert(str, table.concat(t, ",\n"))
-		
+
 		indent = indent - 1
 		table.insert(str, ("\t"):rep(indent)  .. "}")
 	end
@@ -9498,7 +9498,7 @@ end
 type ^string.gsub = function(str, pattern, val)
 	if val:IsType("function") then
 		local args = {}
-		
+
 		if pattern.value then
 		for group in pattern.value:gmatch("%b()") do
 			table.insert(args, val:Type("string"))
@@ -9519,7 +9519,7 @@ type ^string.gsub = function(str, pattern, val)
 	return str:Type("string")
 end
 
-type type_assert = function(what, type, value, ...)
+type type_assert = function(what: any, type: any, value: any, ...)
 	if not what:IsType(type) then
 		error("expected type " .. tostring(type) .." got " .. tostring(what))
 	end
@@ -9657,9 +9657,9 @@ type table.sort = function(tbl, func)
 	func.arguments[2] = v
 end
 
-type setmetatable = function(tbl, meta) 
-	if meta.value and meta.value["__index"] then 
-		tbl.index = function(self, key) 
+type setmetatable = function(tbl, meta)
+	if meta.value and meta.value["__index"] then
+		tbl.index = function(self, key)
 		return meta:get(key)
 		end
 	end

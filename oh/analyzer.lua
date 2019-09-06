@@ -95,7 +95,7 @@ do
     end
 
     function META:PushScope(node, extra_node)
-        assert(type(node) == "table" and node.kind, "expected an associated ast node")   
+        assert(type(node) == "table" and node.kind, "expected an associated ast node")
 
         local parent = self.scope
 
@@ -124,7 +124,7 @@ do
             table_insert(parent.children, scope)
         end
 
-        self.scope_stack = self.scope_stack or {}        
+        self.scope_stack = self.scope_stack or {}
         table.insert(self.scope_stack, self.scope)
 
         self.scope = node.scope or scope
@@ -212,14 +212,14 @@ do
         self.env[env][self:Hash(key)] = val
     end
 
-    function META:NewIndex(obj, key, val, env) 
+    function META:NewIndex(obj, key, val, env)
         assert(val == nil or types.IsTypeObject(val))
 
         local node = obj
 
         local key = self:AnalyzeExpression(key, env)
         local obj = self:AnalyzeExpression(obj, env) or self:TypeFromImplicitNode(node, "nil")
-        
+
 
         -- type foo = {bar = function(number, string)}
         -- foo.bar = function(a, b) -- automatically annotate number and string
@@ -229,7 +229,7 @@ do
                 if t.name == "function" then
                     for i,v in pairs(val.arguments) do
                         if v.name == "any" and t.arguments[i] then
-                            val.arguments[i] = t.arguments[i] 
+                            val.arguments[i] = t.arguments[i]
                         end
                     end
                     --print(t)
@@ -239,14 +239,14 @@ do
             --typ.ret = merge_types(typ.ret, ret)
             --typ.arguments = merge_types(typ.arguments, arguments)
         end
-        
+
         obj:set(key, val)
 
         self:FireEvent("newindex", obj, key, val, env)
     end
 
     function META:Assign(node, val, env)
-        assert(val == nil or types.IsTypeObject(val))     
+        assert(val == nil or types.IsTypeObject(val))
 
         if node.kind == "value" then
             if not self:MutateUpvalue(node, val, env) then
@@ -257,7 +257,7 @@ do
         elseif node.kind == "postfix_call" then
             if not self:MutateUpvalue(node.left, val, env) then
                 self:SetGlobal(node.left, val, env)
-            end        
+            end
         else
             self:NewIndex(node.left, node.right, val, env)
         end
@@ -420,7 +420,6 @@ do
 end
 
 function META:AnalyzeStatements(statements, ...)
-    if not statements then print(debug.traceback()) end
     for _, val in ipairs(statements) do
         if self:AnalyzeStatement(val, ...) == true then
             return true
@@ -481,7 +480,7 @@ do
                 for i, identifier in ipairs(identifiers) do
                     local node = identifier == "self" and typ.node or identifier
                     local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
-                    
+
                     if identifier == "self" or identifier.value.value ~= "..." then
                         self:DeclareUpvalue(identifier, arg, "runtime")
                     else
@@ -555,7 +554,7 @@ function META:Error(node, msg)
         local start, stop = print_util.LazyFindStartStop(node)
         self:OnError(msg, start, stop)
     end
-    
+
 
     if self.code then
         local print_util = require("oh.print_util")
@@ -585,7 +584,7 @@ do
         if node.type_expression then
             return self:AnalyzeExpression(node.type_expression, "typesystem")
         end
-        
+
         if node.kind == "value" and str ~= "string" then
             local v = self:GetValue(node, "typesystem")
             if v then
@@ -822,14 +821,14 @@ do
                 node.value.value == "..."
             then
                 local val
-                
+
                 -- if it's ^string, number, etc, but not string
                 if env == "typesystem" and types.IsType(self:Hash(node)) and not node.force_upvalue then
                     val = self:TypeFromImplicitNode(node, node.value.value)
                 else
                     val = self:GetValue(node, env)
 
-                    
+
                     if not val and env == "runtime" then
                         val = self:GetValue(node, "typesystem")
                     end
@@ -843,7 +842,7 @@ do
 
                 if not val and node.value.value == "self" then
                     val = self.current_table
-                end 
+                end
 
                 if not val and self.Index then
                     val = self:Index(node)
@@ -927,9 +926,9 @@ do
             if node.identifiers then
                 for i, key in ipairs(node.identifiers) do
                     -- type functions with a body must be with identifier: type
-                    if not node.statements or key.type_expression then
-                    local val = self:GetInferredType(key)
-                        
+                    if true or not node.statements or key.type_expression then
+                        local val = self:GetInferredType(key)
+
                         if val then
                             table.insert(args, val)
                         end
@@ -1000,11 +999,11 @@ do
 
         function meta:Pop()
             self.i = self.i - 1
-            if self.i < 1 then 
+            if self.i < 1 then
                 if self.last_val then
                     self.last_val:Error("stack underflow")
                 end
-                error("stack underflow", 2) 
+                error("stack underflow", 2)
             end
             local val = self.values[self.i]
             self.values[self.i] = nil
@@ -1037,7 +1036,7 @@ do
             expand(self, exp, evaluate_expression, stack, env)
 
             local out = {}
-            
+
             for i,v in ipairs(stack.values) do
                 if not types.IsTypeObject(v) then
                     for i,v in ipairs(v) do

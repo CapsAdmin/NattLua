@@ -627,8 +627,8 @@ type string = {
 	dump = (function(empty_function: empty_function): string),
 	gmatch = (function(s: string, pattern: string): empty_function),
 	reverse = (function(s: string): string),
-	byte =             (function(s: string, i: number, j: number): ...) | 
-            (function(s: string, i: number): number | nil) | 
+	byte =             (function(s: string, i: number, j: number): ...) |
+            (function(s: string, i: number): number | nil) |
 			(function(s: string): number)
 		,
 	unpack = (function(fmt: string, s: string, pos: number): values)    |    (function(fmt: string, s: string): values),
@@ -742,7 +742,7 @@ end
 type ^string.gsub = function(str, pattern, val)
 	if val:IsType("function") then
 		local args = {}
-		
+
 		if pattern.value then
 		for group in pattern.value:gmatch("%b()") do
 			table.insert(args, val:Type("string"))
@@ -763,7 +763,7 @@ type ^string.gsub = function(str, pattern, val)
 	return str:Type("string")
 end
 
-type type_assert = function(what, type, value, ...)
+type type_assert = function(what: any, type: any, value: any, ...)
 	if not what:IsType(type) then
 		error("expected type " .. tostring(type) .." got " .. tostring(what))
 	end
@@ -901,9 +901,9 @@ type table.sort = function(tbl, func)
 	func.arguments[2] = v
 end
 
-type setmetatable = function(tbl, meta) 
-	if meta.value and meta.value["__index"] then 
-		tbl.index = function(self, key) 
+type setmetatable = function(tbl, meta)
+	if meta.value and meta.value["__index"] then
+		tbl.index = function(self, key)
 		return meta:get(key)
 		end
 	end

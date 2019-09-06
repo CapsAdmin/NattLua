@@ -6,11 +6,9 @@ local type = type
 local META = {}
 META.__index = META
 
-META.PreserveWhitespace = true
-
 function META:Whitespace(str, force)
 
-    if self.PreserveWhitespace and not force then return end
+    if self.config.preserve_whitespace == nil and not force then return end
 
     if str == "?" then
         if syntax.IsLetter(self:GetPrevChar()) or syntax.IsNumber(self:GetPrevChar()) then
@@ -23,7 +21,7 @@ function META:Whitespace(str, force)
     elseif str == "\t-" then
         self:Outdent()
     else
-        if self.NoNewlines and str == "\n" then
+        if self.config.no_newlines and str == "\n" then
             self:Emit(" ")
         else
             self:Emit(str)
@@ -45,7 +43,7 @@ function META:Outdent()
 end
 
 function META:EmitIndent()
-    if self.NoNewlines then
+    if self.config.no_newlines then
         --self:Emit("")
     else
         self:Emit(("\t"):rep(self.level))
@@ -59,7 +57,7 @@ function META:GetPrevChar()
 end
 
 function META:EmitWhitespace(token)
-    if token.type ~= "space" or self.PreserveWhitespace then
+    if token.type ~= "space" or self.config.preserve_whitespace == nil then
         self:EmitToken(token)
         if token.type ~= "space" then
             self:Whitespace("\n")
@@ -113,6 +111,7 @@ function META:BuildCode(block)
     end
 
     self:EmitStatements(block.statements)
+
     return self:Concat()
 end
 
@@ -209,7 +208,7 @@ do
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"])
 
-        if node.inferred_type and node.inferred_type:GetReturnTypes() and node.inferred_type.ret[1] then
+        if self.config.annotate and node.inferred_type and node.inferred_type:GetReturnTypes() and node.inferred_type.ret[1] then
             --self:Emit(" --[[ : ")
             self:Emit(": ")
             local str = {}
@@ -575,7 +574,7 @@ function META:EmitStatement(node)
     elseif node.kind == "semicolon" then
         self:EmitSemicolonStatement(node)
 
-        if not self.PreserveWhitespace then
+        if self.config.preserve_whitespace == false then
             if self.out[self.i - 2] and self.out[self.i - 2] == "\n" then
                 self.out[self.i - 2] = ""
             end
@@ -615,12 +614,14 @@ end
 function META:EmitIdentifier(node)
     self:EmitToken(node.value)
 
-    if node.type_expression then
-        self:EmitToken(node.tokens[":"])
-        self:EmitTypeExpression(node.type_expression)
-    elseif node.inferred_type then
-        self:Emit(": ")
-        self:Emit(node.inferred_type:Serialize())
+    if self.config.annotate then
+        if node.type_expression then
+            self:EmitToken(node.tokens[":"])
+            self:EmitTypeExpression(node.type_expression)
+        elseif node.inferred_type then
+            self:Emit(": ")
+            self:Emit(node.inferred_type:Serialize())
+        end
     end
 end
 
@@ -701,11 +702,22 @@ do -- types
         self:EmitToken(node.tokens["function"])
         self:EmitToken(node.tokens["("])
         for i, exp in ipairs(node.identifiers) do
-            if exp.identifier then
-                self:EmitToken(exp.identifier)
-                self:EmitToken(exp.tokens[":"])
+
+            if not self.config.annotate and node.statements then
+                if exp.identifier then
+                    self:EmitToken(exp.identifier)
+                else
+                    self:EmitTypeExpression(exp)
+                end
+            else
+                if exp.identifier then
+                    self:EmitToken(exp.identifier)
+                    self:EmitToken(exp.tokens[":"])
+                end
+
+                self:EmitTypeExpression(exp)
             end
-            self:EmitTypeExpression(exp)
+
             if i ~= #node.identifiers then
                 self:EmitToken(exp.tokens[","])
             end
@@ -778,14 +790,7 @@ end
 
 return function(config)
     local self = setmetatable({}, META)
-    if config then
-        if config.preserve_whitespace ~= nil then
-            self.PreserveWhitespace = config.preserve_whitespace
-        end
-        if config.no_newlines then
-            self.NoNewlines = config.no_newlines
-        end
-    end
+    self.config = config or {}
     self:Initialize()
     return self
 end

@@ -1,11 +1,10 @@
 local oh = require("oh")
-local Analyzer = require("oh.analyzer")
-local LuaEmitter = require("oh.lua_emitter")
 
-local code = io.open("oh/lexer.lua"):read("*all")
+local code
+--local code = io.open("oh/lexer.lua"):read("*all")
 
 
-code = [[
+codwe = [[
 
 -- SHA-256 code in Lua 5.2; based on the pseudo-code from
 -- Wikipedia (http://en.wikipedia.org/wiki/SHA-2)
@@ -215,12 +214,12 @@ local function hash256 (msg: string) -- SPRINKLE: never called, msg starts as ty
 end
 ----------------------------------------------------------------------
 local mt: {
-  len = number, 
+  len = number,
   msg = string,
   H = {[number] = number},
   __index = table,
-  add = (function(self, m: string): nil), 
-  close = (function(self): nil) 
+  add = (function(self, m: string): nil),
+  close = (function(self): nil)
 } = {}
 
 local function new256 ()
@@ -237,7 +236,7 @@ function mt:add (m)
   local t = 0
   while #self.msg - t >= 64 do
     digestblock(self.msg, t + 1, self.H)
-    t = t + 64 
+    t = t + 64
   end
   self.msg = self.msg:sub(t + 1, -1)
 end
@@ -258,12 +257,12 @@ return {
 }
 ]]
 
-code = [[
+codwe = [[
 
   local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/' -- You will need this for encoding/decoding
 -- encoding
 function enc(data: string)
-    return ((data:gsub('.', function(x) 
+    return ((data:gsub('.', function(x)
         local r,b='',x:byte()
         for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
         return r;
@@ -292,7 +291,7 @@ function dec(data)
 end
 ]]
 
-code = [[
+codew = [[
   function love.keypressed(key, scancode, isrepeat)
     if key == "tab" then
        local state = not love.mouse.isGrabbed()   -- the opposite of whatever it currently is
@@ -301,7 +300,7 @@ code = [[
  end
 ]]
 
-code = [[
+codwe = [[
 
 type foo = 1 | 2 | 3
 
@@ -309,7 +308,7 @@ local a: foo = 4
 
 ]]
 
-code = [[
+codwe = [[
 type object = function(tbl)
   local t = tbl:Type("table")
   t.value = nil
@@ -318,7 +317,7 @@ type object = function(tbl)
   local a = tbl:get("__newindex")
   if a.name == "function" then
     local old = t.set
-    t.set = function(...) 
+    t.set = function(...)
       a.func(...)
       return old(...)
     end
@@ -337,15 +336,11 @@ type foo = object({
 
 local a: foo = {}
 a.lol = false
-local test = a.lol
-a.lol = true
-
+a.lol = not a.lol
 ]]
 
-code = [[
-
-
-type assert = function(val, err) 
+codwe = [[
+type assert = function(val: boolean, err: string | nil)
   if val.value == false then
     val:Error(err.value or "assertion failed")
   end
@@ -359,14 +354,29 @@ foo(2)
 
 ]]
 
+codew = [[
+  local type foo = function(a: string,b,c,d)
+
+  end
+
+  print(foo("1"))
+]]
+
+
 code = [[
+local a1: {[number] = any} = {}
+local a2: {[1 .. math.huge] = any} = {}
+local a3: {[1 .. (#self) + 1] = any} = {}
+local a4: {[1 .. 10] = any} = {}
 
-  type foo = (function(false): true) | (function(true): false)
-  
-  local a = foo(true)
+a4[12] = true
 
+local b: (1 .. 5) = 6
 ]]
 
 oh.GetBaseAnalyzer()
 
+--print(oh.File("oh/parser.lua"):Analyze())
+
 print(assert(oh.Code(code, nil, {dump_analyzer_events = true}):Analyze()):BuildLua())
+

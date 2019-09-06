@@ -1,9 +1,14 @@
 local oh = require("oh")
 local C = oh.Code
 
-local function go(tbl)
+local function go(tbl, annotate)
     for _, val in ipairs(tbl) do
         local data = not val.expect and {code = val, expect = val} or val
+
+        if annotate then
+            data.code.config = data.code.config or {}
+            data.code.config.annotate = true
+        end
 
         data.code:Lex()
         data.code:Parse()
@@ -193,7 +198,59 @@ go {
     C"lol = 1 ÆØÅ",
     C"lol = 1 ÆØÅÆ",
     C"local foo = 0.15",
+    --{code = "local --[[#foo = true]]"},
 
+    {
+        code = C"return math.maxinteger // 80",
+        expect = C"return math.floor(math.maxinteger / 80)",
+        compare_tokens = true
+    },
+    {
+        code = C"\xEF\xBB\xBF foo = true",
+        expect = C" foo = true"
+    },
+    {
+        code = C"foo(1,2,3,)",
+        expect = C"foo(1,2,3)"
+    },
+    {
+        code = C"return math.maxinteger // 80",
+        expect = C"return math.floor(math.maxinteger / 80)",
+        compare_tokens = true
+    },
+    {
+        code = C"local a = ~1",
+        expect = C"local a = bit.bnot(1)",
+        compare_tokens = true
+    },
+    {
+        code = C"local a = 1 >> 2",
+        expect = C"local a = bit.rshift(1, 2)",
+        compare_tokens = true
+    },
+    {
+        code = C"local a = 1 >> 2 << 23",
+        expect = C"local a = bit.lshift(bit.rshift(1, 2), 23)",
+        compare_tokens = true
+    },
+    {
+        code = C"local a = a++",
+        expect = C"local a = (a + 1)",
+        compare_tokens = true
+    },
+    {
+        code = C"_ENV = {}",
+        expect = C"_ENV={};setfenv(1, _ENV);",
+        compare_tokens = true
+    },
+    {
+        code = C"a,_ENV,c = 1,{},2",
+        expect = C"a,_ENV,c = 1,{},2;setfenv(1, _ENV);",
+        compare_tokens = true
+    },
+}
+
+go({
     C"local a:   sometype = foo",
     C"local a:   boolean = foo",
     C"local a:   boolean | true = foo",
@@ -219,58 +276,6 @@ go {
     C"local a:   foo.bar.faz = foo",
     C"local type = function(a,b,c,...) end",
     C"local type function aaa(a) return a end",
-
-    --{code = "local --[[#foo = true]]"},
-
-    {
-        code = C"return math.maxinteger // 80",     
-        expect = C"return math.floor(math.maxinteger / 80)",         
-        compare_tokens = true
-    },
-    {
-        code = C"\xEF\xBB\xBF foo = true",          
-        expect = C" foo = true"
-    },
-    {
-        code = C"foo(1,2,3,)",                      
-        expect = C"foo(1,2,3)"
-    },
-    {
-        code = C"return math.maxinteger // 80",     
-        expect = C"return math.floor(math.maxinteger / 80)",         
-        compare_tokens = true
-    },
-    {
-        code = C"local a = ~1",                     
-        expect = C"local a = bit.bnot(1)",                           
-        compare_tokens = true
-    },
-    {
-        code = C"local a = 1 >> 2",                 
-        expect = C"local a = bit.rshift(1, 2)",                      
-        compare_tokens = true
-    },
-    {
-        code = C"local a = 1 >> 2 << 23",           
-        expect = C"local a = bit.lshift(bit.rshift(1, 2), 23)",      
-        compare_tokens = true
-    },
-    {
-        code = C"local a = a++",                    
-        expect = C"local a = (a + 1)",                               
-        compare_tokens = true
-    },
-    {
-        code = C"_ENV = {}",                        
-        expect = C"_ENV={};setfenv(1, _ENV);",                       
-        compare_tokens = true
-    },
-    {
-        code = C"a,_ENV,c = 1,{},2",                
-        expect = C"a,_ENV,c = 1,{},2;setfenv(1, _ENV);",             
-        compare_tokens = true
-    },
-
     {
         code = C"local a = 1",
         expect = C"local a: number(1) = 1",
@@ -306,4 +311,4 @@ go {
         expect = C"local num: a = 1",
         analyze = true,
     },
-}
+}, true)

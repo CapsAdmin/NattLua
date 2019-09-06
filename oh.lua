@@ -15,11 +15,11 @@ function oh.GetBaseAnalyzer(ast)
 
 		local root = assert(ast or oh.FileToAST("oh/base_lib.oh"))
 		base:AnalyzeStatement(root)
-		
+
 		local g = base:TypeFromImplicitNode(root, "table")
 		for k,v in pairs(base.env.typesystem) do
 			g:set(k, v)
-		end		
+		end
 		base:SetGlobal("_G", g, "typesystem")
 		base:GetValue("_G", "typesystem"):set("_G", g)
 
@@ -67,7 +67,7 @@ do
 
 		local line = self.code:match("(.-)\n")
 
-		if line then 
+		if line then
 			str = str .. line .. "..."
 		else
 			str = str .. self.code
@@ -84,9 +84,9 @@ do
 		local lexer = Lexer(self.code)
 		lexer.code_data = self
 		lexer.OnError = function(obj, ...) self:OnError(obj, ...) end
-	
+
 		local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
-	
+
 		if not ok then
 			return nil, tokens
 		end
@@ -104,7 +104,7 @@ do
 		local parser = Parser(self.config)
 		parser.code_data = self
 		parser.OnError = function(obj, ...) self:OnError(obj, ...) end
-		
+
 		local ok, ast = xpcall(parser.BuildAST, debug.traceback, parser, self.Tokens)
 
 		if not ok then
@@ -126,20 +126,20 @@ do
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
 		analyzer.code_data = self
-		analyzer.OnError = function(obj, ...) 
-			self:OnError(obj, ...) 
+		analyzer.OnError = function(obj, ...)
+			self:OnError(obj, ...)
 		end
 
 		oh.current_analyzer = analyzer
 		local ok, ast = xpcall(analyzer.AnalyzeStatement, debug.traceback, analyzer, self.SyntaxTree)
 		oh.current_analyzer = nil
-	
+
 		if not ok then
 			return nil, ast
 		end
-	
+
 		self.Analyzed = true
-	
+
 		return self
 	end
 
@@ -157,11 +157,11 @@ do
 
 		local parent_line = info and info.currentline or nil
 		local parent_name = info and info.source:sub(2) or nil
-		
+
 		name = name or (parent_name .. ":" .. parent_line)
 
 		return setmetatable({
-			code = code, 
+			code = code,
 			parent_line = parent_line,
 			parent_name = parent_name,
 			name = name,
@@ -170,9 +170,10 @@ do
 	end
 
 	function oh.File(path, config)
-		
+
 		config = config or {}
 		config.path = config.path or path
+		config.name = config.name or path
 
 		local f, err = io.open(path, "rb")
 		if not f then
