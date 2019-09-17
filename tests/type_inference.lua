@@ -686,6 +686,38 @@ a.b.c = 1
     local a = lol():gsub("", "")
 
     type_assert(a, _ as string)
+]], C[[
+    -- val should be a string and lol should be any
+    string.gsub("foo bar", "(%s)", function(val, lol)
+        type_assert(val, _ as string)
+        type_assert(lol, _ as any)
+    end)
+]], C[[
+    local _: boolean
+    local a = 0
+
+    -- boolean which has no known value should be truthy
+    if _ then
+        a = 1
+    end
+    type_assert(a, 1)
+]],C[[
+    -- 1..any
+    for i = 1, _ do
+
+    end
+]],C[[
+    local a, b = 0, 0
+    for i = 1, 10 do
+        if 5 == i then
+            a = 1
+        end
+        if i == 5 then
+            b = 1
+        end
+    end
+    type_assert(a, 1)
+    type_assert(b, 1)
 ]]}
 
 -- todo, check for the correct error
@@ -723,4 +755,40 @@ for _, code_data in ipairs(tests) do
     --function code_data:OnError(obj, msg, start, stop, ...) print(require("oh.print_util").FormatError(self.code, self.name, msg, start, stop)) end
 
     assert(code_data:Analyze())
+end
+
+local tests = {
+{C[[
+    local a: {} = {}
+    a.lol = true
+]],"invalid key.-lol"},
+{C[[
+    local a = 1
+    a.lol = true
+]],"undefined set:"},
+{C[[
+    local a = 1
+    a = a.lol
+]],"undefined get:"},
+{C[[
+    local a = 1 + true
+]],"no operator for.-number.-%+.-boolean"},
+}
+
+local types = require("oh.types")
+types.Type("number"):__tostring()
+types.Type("number", 1):__tostring()
+
+types.Type("number", 1):GetReadableContent()
+types.Type("string", "test"):GetReadableContent()
+types.Type("number"):GetReadableContent()
+
+for _, code_data in ipairs(tests) do
+    if code_data == false then return end
+
+    local ok, err = code_data[1]:Analyze()
+    if not err:find(code_data[2]) then
+        print(err)
+        error("error not found")
+    end
 end

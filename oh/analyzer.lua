@@ -223,7 +223,7 @@ do
 
         -- type foo = {bar = function(number, string)}
         -- foo.bar = function(a, b) -- automatically annotate number and string
-        if obj.value and obj.value[key.value] then
+        if obj.value and type(obj.value) == "table" and obj.value[key.value] then
             local t = obj:get(key)
             if not t.types then
                 if t.name == "function" then
@@ -808,15 +808,14 @@ end
 
 do
     evaluate_expression = function(self, node, stack, env)
-        if node.kind == "value" then
-            if node.type_expression then
-                local val = self:AnalyzeExpression(node.type_expression, "typesystem")
-
-                stack:Push(val)
-                if node.tokens["is"] then
-                    node.result_is = self:GetValue(node, env):IsType(val)
-                end
-            elseif
+        if node.type_expression then
+            local val = self:AnalyzeExpression(node.type_expression, "typesystem")
+            stack:Push(val)
+            if node.tokens["is"] then
+                node.result_is = self:GetValue(node, env):IsType(val)
+            end
+        elseif node.kind == "value" then
+            if
                 (node.value.type == "letter" and node.upvalue_or_global) or
                 node.value.value == "..."
             then

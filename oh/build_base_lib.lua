@@ -9520,7 +9520,7 @@ type ^string.gsub = function(str, pattern, val)
 end
 
 type type_assert = function(what: any, type: any, value: any, ...)
-	if not what:IsType(type) then
+	if not what:IsType(type, true) then
 		error("expected type " .. tostring(type) .." got " .. tostring(what))
 	end
 

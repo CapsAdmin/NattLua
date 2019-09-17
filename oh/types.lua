@@ -70,7 +70,7 @@ function META:get(key)
 end
 
 function META:set(key, val)
-    self:Error("undefined set: "..tostring(self).."[" .. tostring(key) .. "] = " .. tostring(val))
+    key:Error("undefined set: "..tostring(self).."[" .. tostring(key) .. "] = " .. tostring(val))
 end
 
 function META:GetReadableContent()
@@ -144,10 +144,10 @@ function META:GetTypes()
     return {self.name}
 end
 
-function META:IsType(what)
+function META:IsType(what, explicit)
     if type(what) == "table" then
         for _,v in ipairs(what:GetTypes()) do
-            if self:IsType(v) then
+            if self:IsType(v, explicit) then
                 return true
             end
         end
@@ -157,7 +157,7 @@ function META:IsType(what)
         return true
     end
 
-    if what == "any" or self.name == "any" then
+    if not explicit and (what == "any" or self.name == "any") then
         return true
     end
 
@@ -244,7 +244,6 @@ function META:BinaryOperator(op_node, b, node, env)
         elseif op == ".." then
             local new = a:Copy()
             new.max = b
-            print(new)
             return new
         end
     end
@@ -975,23 +974,6 @@ types.Register("function", {
         return self.name .. "(" .. table.concat(arg_str, ", ") .. "): " .. table.concat(ret_str, ", ")
     end,
 })
-
-function types.MatchFunction(functions, arguments)
-    for _, func in ipairs(functions) do
-        local ok = false
-        for i, type in ipairs(arguments) do
-            if func.arguments and func.arguments[i] and func.arguments[i]:IsType(type) then
-                ok = true
-            else
-                ok = false
-                break
-            end
-        end
-        if ok then
-            return func
-        end
-    end
-end
 
 setmetatable(types, {
     __call = function(_, ...)
