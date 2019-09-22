@@ -65,7 +65,7 @@ function META:GetNode()
 end
 
 function META:get(key)
-    self:Error("undefined get: "..tostring(self).."[" .. tostring(key) .. "]")
+    key:Error("undefined get: "..tostring(self).."[" .. tostring(key) .. "]")
     return self:Type("any")
 end
 
