@@ -248,6 +248,46 @@ go {
         expect = C"a,_ENV,c = 1,{},2;setfenv(1, _ENV);",
         compare_tokens = true
     },
+
+    -- destructuring assignment
+    {
+        code = C"local {a, b} = {a = true, b = false}",
+        expect = C'local a, b = table.destructure({a = true, b = false}, {"a", "b"})',
+        compare_tokens = true
+    },
+    {
+        code = C"{a, b} = {a = true, b = false}",
+        expect = C'a, b = table.destructure({a = true, b = false}, {"a", "b"})',
+        compare_tokens = true
+    },
+    {
+        code = C"local tbl, {a, b} = {a = true, b = false}",
+        expect = C'local tbl, a, b = table.destructure({a = true, b = false}, {"a", "b"}, true)',
+        compare_tokens = true
+    },
+    {
+        code = C"tbl, {a, b} = {a = true, b = false}",
+        expect = C'tbl, a, b = table.destructure({a = true, b = false}, {"a", "b"}, true)',
+        compare_tokens = true
+    },
+
+    -- spread
+    {
+        code = C"local a = {...{foo=true}, ...{bar=false}, foo = false}",
+        expect = C'local a = table.mergetables{{foo=true}, {bar=false}, {foo=false}}',
+        compare_tokens = true
+    },
+    {
+        code = C"local a = {...{foo=true},rofl = 1, lol = 2, ...{bar=false}}",
+        expect = C'local a = table.mergetables{{foo=true}, {rofl=1, lol=2,}, {bar=false}}',
+        compare_tokens = true
+    },
+    {
+        code = C"local a = {rofl = 1, ...{foo=true}, lol = 2, ...{bar=false}}",
+        expect = C'local a = table.mergetables{{rofl=1,},{foo=true}, {lol=2,}, {bar=false}}',
+        compare_tokens = true
+    },
+    
 }
 
 go({

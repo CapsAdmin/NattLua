@@ -262,16 +262,35 @@ do
     end
 end
 
-function META:EmitTable(node)
-    self:EmitToken(node.tokens["{"])
-    if node.children[1] then
+function META:EmitTable(tree)    
+    if tree.spread then
+        self:Emit("table.mergetables")
+    end
+
+    local during_spread = false
+
+    self:EmitToken(tree.tokens["{"])
+
+    if tree.children[1] then
         self:Whitespace("\n")
             self:Whitespace("\t+")
-            for _,node in ipairs(node.children) do
+            for _,node in ipairs(tree.children) do
                 self:Whitespace("\t")
                 if node.kind == "table_index_value" then
-                    self:EmitExpression(node.value)
+                    if node.value.kind == "table_spread" then
+                        if during_spread then
+                            self:Emit("},")
+                            during_spread = false
+                        end
+                        self:EmitExpression(node.value.expression)
+                    else
+                        self:EmitExpression(node.value)
+                    end
                 elseif node.kind == "table_key_value" then
+                    if tree.spread and not during_spread then
+                        during_spread = true
+                        self:Emit("{")
+                    end
                     self:EmitToken(node.key)
                     self:EmitToken(node.tokens["="])
                     self:EmitExpression(node.value)
@@ -287,6 +306,7 @@ function META:EmitTable(node)
 
                     self:EmitExpression(node.value)
                 end
+                    
                 if node.tokens[","] then
                     self:EmitToken(node.tokens[","])
                 else
@@ -297,7 +317,10 @@ function META:EmitTable(node)
             self:Whitespace("\t-")
         self:Whitespace("\t")
     end
-    self:EmitToken(node.tokens["}"])
+    if during_spread then
+        self:Emit("}")
+    end
+    self:EmitToken(tree.tokens["}"])
 end
 
 function META:EmitPrefixOperator(node)
@@ -469,6 +492,50 @@ function META:EmitSemicolonStatement(node)
     self:EmitToken(node.tokens[";"])
 end
 
+function META:EmitDestructureAssignment(node)
+    self:Whitespace("\t")
+    self:EmitToken(node.tokens["{"], "")
+    
+    if node.default then
+        self:EmitToken(node.default)
+        self:EmitToken(node.default_comma)
+    end
+    self:EmitToken(node.tokens["{"], "")
+    self:Whitespace(" ")
+    self:EmitIdentifierList(node.left)
+    self:EmitToken(node.tokens["}"], "")
+
+    self:Whitespace(" ")
+    self:EmitToken(node.tokens["="])
+    self:Whitespace(" ")
+
+    self:Emit("table.destructure(")
+    self:EmitExpression(node.right)
+    self:Emit(", ")
+    self:Emit("{")
+    for i, v in ipairs(node.left) do
+        self:Emit("\"")
+        self:Emit(v.value.value)
+        self:Emit("\"")
+        if i ~= #node.left then
+            self:Emit(", ")
+        end
+    end
+    self:Emit("}")
+
+    if node.default then
+        self:Emit(", true")
+    end
+
+    self:Emit(")")
+end
+
+function META:EmitLocalDestructureAssignment(node)
+    self:Whitespace("\t")
+    self:EmitToken(node.tokens["local"])
+    self:EmitDestructureAssignment(node)
+end
+
 function META:EmitLocalAssignment(node)
     if node.environment == "typesystem" then return end
 
@@ -556,11 +623,15 @@ function META:EmitStatement(node)
         self:EmitLocalFunction(node)
     elseif node.kind == "local_type_function" then
         self:EmitLocalTypeFunction(node)
+    elseif node.kind == "destructure_assignment" then
+        self:EmitDestructureAssignment(node)
     elseif node.kind == "assignment" then
         self:EmitAssignment(node)
         self:Emit_ENVFromAssignment(node)
     elseif node.kind == "local_assignment" then
         self:EmitLocalAssignment(node)
+    elseif node.kind == "local_destructure_assignment" then
+        self:EmitLocalDestructureAssignment(node)
     elseif node.kind == "import" then
         self:Emit("local ")
         self:EmitIdentifierList(node.left)

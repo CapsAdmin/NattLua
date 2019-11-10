@@ -261,6 +261,10 @@ do -- statements
             return
         end
 
+        if self:IsDestructureStatement(0) then
+            return self:ReadDestructureAssignmentStatement()
+        end
+
         local start = self:GetToken()
         local left = self:ReadExpressionList(math_huge)
 
@@ -294,6 +298,7 @@ do -- statements
             self:IsValue("local") and self:IsValue("function", 1) then                              return self:ReadLocalFunctionStatement() elseif
             self:IsValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2) then  return self:ReadLocalTypeFunctionStatement() elseif
             self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2) then     return self:ReadLocalTypeDeclarationStatement() elseif
+            self:IsValue("local") and self:IsDestructureStatement(1) then                           return self:ReadLocalDestructureAssignmentStatement() elseif
             self:IsValue("local") then                                                              return self:ReadLocalAssignmentStatement() elseif
             self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1)) then        return self:ReadTypeAssignment() elseif
             self:IsValue("interface") and self:IsType("letter", 1) then                             return self:ReadInterfaceStatement() elseif
@@ -306,7 +311,49 @@ do -- statements
 
         return self:ReadRemainingStatement()
     end
+end
 
+do
+
+    function META:IsDestructureStatement(offset)
+        return 
+            (self:IsValue("{", offset + 0) and self:IsType("letter", offset + 1)) or 
+            (self:IsType("letter", offset + 0) and self:IsValue(",", offset + 1) and self:IsValue("{", offset + 2))
+    end
+    function META:ReadDestructureAssignmentStatement()
+        local node = self:Statement("destructure_assignment")
+
+        if self:IsType("letter") then
+            node.default = self:ReadType("letter")
+            node.default_comma = self:ReadValue(",")
+        end
+
+        node.tokens["{"] = self:ReadValue("{")
+        node.left = self:ReadIdentifierList()
+        node.tokens["}"] = self:ReadValue("}")
+        node.tokens["="] = self:ReadValue("=")
+        node.right = self:ReadExpression()
+
+        return node
+    end
+
+    function META:ReadLocalDestructureAssignmentStatement()
+        local node = self:Statement("local_destructure_assignment")
+        node.tokens["local"] = self:ReadValue("local")
+        
+        if self:IsType("letter") then
+            node.default = self:ReadType("letter")
+            node.default_comma = self:ReadValue(",")
+        end
+
+        node.tokens["{"] = self:ReadValue("{")
+        node.left = self:ReadIdentifierList()
+        node.tokens["}"] = self:ReadValue("}")
+        node.tokens["="] = self:ReadValue("=")
+        node.right = self:ReadExpression()
+
+        return node
+    end
 end
 
 function META:ReadSemicolonStatement()
@@ -650,7 +697,15 @@ do -- expression
                 node.key = i
             end
 
-            node.value = self:ReadExpectExpression()
+            if self:IsValue("...") then
+                local v = self:Expression("table_spread")
+                v.tokens["..."] = self:ReadValue("...")
+                v.expression = self:ReadExpectExpression()
+                node.value = v
+                tree.spread = true
+            else
+                node.value = self:ReadExpectExpression()
+            end
 
             tree.children[i] = node
 
