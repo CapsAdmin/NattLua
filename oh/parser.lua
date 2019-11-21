@@ -932,7 +932,7 @@ do -- expression
 
         if self:IsValue("{") then
             node.tokens["{"] = self:ReadValue("{")
-            node.statements = self:ReadStatements({[""] = true})
+            node.statements = self:ReadStatements({["}"] = true})
             node.tokens["}"] = self:ReadValue("}")
         end
 

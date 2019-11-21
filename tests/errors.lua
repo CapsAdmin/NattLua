@@ -18,7 +18,7 @@ end
 
 check({
     {"a,b", "expected assignment or call expression"},
-    {"local foo[123] = true", ".- expected beginning of expression"},
+    {"local foo[123] = true", ".- expected assignment or call expression"},
     {"/clcret retprio inq tv5 howaw tv4aw exoaw", "expected assignment or call expression"},
     {"print( “Hello World” )", "expected.-%).-got.-World”"},
     {"foo = {bar = until}, faz = true}", "expected beginning of expression, got.-until"},
