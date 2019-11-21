@@ -12,8 +12,14 @@ local LuaEmitter = require("oh.lua_emitter")
 local META = {}
 META.__index = META
 
-for k, v in pairs(require("oh.parser_typesystem")) do
-    META[k] = v
+local extended = {
+    "oh.parser_typesystem",
+}
+
+for _, name in ipairs(extended) do
+    for k, v in pairs(require(name)) do
+        META[k] = v
+    end
 end
 
 do
@@ -267,6 +273,7 @@ do -- statements
 
         local start = self:GetToken()
         local left = self:ReadExpressionList(math_huge)
+        print(left)
 
         if self:IsValue("=") then
             local node = self:Statement("assignment")
@@ -293,6 +300,7 @@ do -- statements
             self:IsValue("goto") and self:IsType("letter", 1) then                                  return self:ReadGotoStatement() elseif
             self:IsValue("import") then                                                             return self:ReadImportStatement() elseif
             self:IsValue("::") then                                                                 return self:ReadGotoLabelStatement() elseif
+            self:IsLSXExpression() then                                                             return self:ReadLSXStatement() elseif
             self:IsValue("repeat") then                                                             return self:ReadRepeatStatement() elseif
             self:IsValue("function") then                                                           return self:ReadFunctionStatement() elseif
             self:IsValue("local") and self:IsValue("function", 1) then                              return self:ReadLocalFunctionStatement() elseif
@@ -314,17 +322,19 @@ do -- statements
 end
 
 do
-
     function META:IsDestructureStatement(offset)
-        return 
-            (self:IsValue("{", offset + 0) and self:IsType("letter", offset + 1)) or 
+        return
+            (self:IsValue("{", offset + 0) and self:IsType("letter", offset + 1)) or
             (self:IsType("letter", offset + 0) and self:IsValue(",", offset + 1) and self:IsValue("{", offset + 2))
     end
-    function META:ReadDestructureAssignmentStatement()
-        local node = self:Statement("destructure_assignment")
 
+    local function read_remaining(self, node)
         if self:IsType("letter") then
-            node.default = self:ReadType("letter")
+
+            local val = self:Expression("value")
+            val.value = self:ReadTokenLoose()
+            node.default = val
+
             node.default_comma = self:ReadValue(",")
         end
 
@@ -333,6 +343,12 @@ do
         node.tokens["}"] = self:ReadValue("}")
         node.tokens["="] = self:ReadValue("=")
         node.right = self:ReadExpression()
+    end
+
+    function META:ReadDestructureAssignmentStatement()
+        local node = self:Statement("destructure_assignment")
+
+        read_remaining(self, node)
 
         return node
     end
@@ -340,17 +356,8 @@ do
     function META:ReadLocalDestructureAssignmentStatement()
         local node = self:Statement("local_destructure_assignment")
         node.tokens["local"] = self:ReadValue("local")
-        
-        if self:IsType("letter") then
-            node.default = self:ReadType("letter")
-            node.default_comma = self:ReadValue(",")
-        end
 
-        node.tokens["{"] = self:ReadValue("{")
-        node.left = self:ReadIdentifierList()
-        node.tokens["}"] = self:ReadValue("}")
-        node.tokens["="] = self:ReadValue("=")
-        node.right = self:ReadExpression()
+        read_remaining(self, node)
 
         return node
     end
@@ -657,7 +664,6 @@ do -- identifier
 end
 
 do -- expression
-
     function META:ReadAnonymousFunction()
         local node = self:Expression("function")
         node.tokens["function"] = self:ReadValue("function")
@@ -724,14 +730,14 @@ do -- expression
         return tree
     end
 
-    function META:ReadExpression(priority)
+    function META:ReadExpression(priority, no_ambigious_calls)
         priority = priority or 0
 
         local node
 
         if self:IsValue("(") then
             local pleft = self:ReadValue("(")
-            node = self:ReadExpression(0)
+            node = self:ReadExpression(0, no_ambigious_calls)
             if not node then
                 self:Error("empty parentheses group", pleft)
                 return
@@ -746,11 +752,13 @@ do -- expression
         elseif syntax.IsPrefixOperator(self:GetToken()) then
             node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
-            node.right = self:ReadExpression(math_huge)
+            node.right = self:ReadExpression(math_huge, no_ambigious_calls)
         elseif self:IsValue("function") then
             node = self:ReadAnonymousFunction()
         elseif self.ReadImportExpression and self:IsValue("import") then
             node = self:ReadImportExpression()
+        elseif self:IsLSXExpression() then
+            node = self:ReadLSXExpression()
         elseif syntax.IsValue(self:GetToken()) or self:IsType("letter") then
             node = self:Expression("value")
             node.value = self:ReadTokenLoose()
@@ -776,7 +784,7 @@ do -- expression
                     node.left = left
                     node.right = right
                 elseif self:IsValue(":") then
-                    if self:IsType("letter", 1) and (self:IsValue("(", 2) or self:IsValue("{", 2) or self:IsValue("\"", 2) or self:IsValue("'", 2)) then
+                    if self:IsType("letter", 1) and (self:IsValue("(", 2) or (not no_ambigious_calls and self:IsValue("{", 2) or self:IsValue("\"", 2) or self:IsValue("'", 2))) then
                         local op = self:ReadTokenLoose()
 
                         local right = self:Expression("value")
@@ -804,7 +812,7 @@ do -- expression
                     if left.value and left.value.value == ":" then
                         node.self_call = true
                     end
-                elseif self:IsValue("{") or self:IsType("string") then
+                elseif not no_ambigious_calls and (self:IsValue("{") or self:IsType("string")) then
                     node = self:Expression("postfix_call")
                     node.left = left
                     if self:IsValue("{") then
@@ -847,7 +855,7 @@ do -- expression
             self:Advance(1)
 
             local left = node
-            local right = self:ReadExpression(right_priority)
+            local right = self:ReadExpression(right_priority, no_ambigious_calls)
 
             node = self:Expression("binary_operator")
             node.value = op
@@ -858,13 +866,13 @@ do -- expression
         return node
     end
 
-    function META:ReadExpectExpression(priority)
+    function META:ReadExpectExpression(priority, no_ambigious_calls)
         if syntax.IsDefinetlyNotStartOfExpression(self:GetToken()) then
             self:Error("expected beginning of expression, got $1", nil, nil, self:GetToken() and self:GetToken().value ~= "" and self:GetToken().value or self:GetToken().type)
             return
         end
 
-        return self:ReadExpression(priority)
+        return self:ReadExpression(priority, no_ambigious_calls)
     end
 
     function META:ReadExpressionList(max)
@@ -879,6 +887,56 @@ do -- expression
         end
 
         return out
+    end
+
+    function META:IsLSXExpression()
+        return self:IsValue("[") and self:IsType("letter", 1)
+    end
+
+    function META:ReadLSXStatement()
+        return self:ReadLSXExpression(true)
+    end
+
+    function META:ReadLSXExpression(statement)
+        local node = statement and self:Statement("lsx") or self:Expression("lsx")
+
+        node.tokens["["] = self:ReadValue("[")
+        node.tag = self:ReadType("letter")
+        print(node.tag.value)
+
+        local props = {}
+
+        while true do
+            if self:IsType("letter") and self:IsValue("=", 1) then
+                local key = self:ReadType("letter")
+                self:ReadValue("=")
+                local val = self:ReadExpectExpression(nil, true)
+                table.insert(props, {
+                    key = key,
+                    val = val,
+                })
+            elseif self:IsValue("...") then
+                self:ReadTokenLoose() -- !
+                table.insert(props, {
+                    val = self:ReadExpression(nil, true),
+                    spread = true,
+                })
+            else
+                break
+            end
+        end
+
+        node.tokens["]"] = self:ReadValue("]")
+
+        node.props = props
+
+        if self:IsValue("{") then
+            node.tokens["{"] = self:ReadValue("{")
+            node.statements = self:ReadStatements({[""] = true})
+            node.tokens["}"] = self:ReadValue("}")
+        end
+
+        return node
     end
 end
 

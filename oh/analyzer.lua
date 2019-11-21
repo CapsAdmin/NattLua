@@ -660,6 +660,32 @@ function META:AnalyzeStatement(statement, ...)
 
             node.inferred_type = val
         end
+    elseif statement.kind == "destructure_assignment" or statement.kind == "local_destructure_assignment" then
+        local env = statement.environment or "runtime"
+        local ret = self:AnalyzeExpression(statement.right, env) or self:TypeFromImplicitNode(statement.right, "nil")
+
+        if not ret:IsType("table") then
+            self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(ret))
+        end
+
+        if statement.default then
+            if statement.kind == "local_destructure_assignment" then
+                print(statement.default:Render())
+                self:DeclareUpvalue(statement.default, ret, env)
+            elseif statement.kind == "destructure_assignment" then
+                self:Assign(statement.default, ret, env)
+            end
+        end
+
+        for _, node in ipairs(statement.left) do
+            local val = ret:get(node.value) or self:TypeFromImplicitNode(node, "nil")
+
+            if statement.kind == "local_destructure_assignment" then
+                self:DeclareUpvalue(node, val, env)
+            elseif statement.kind == "destructure_assignment" then
+                self:Assign(node, val, env)
+            end
+        end
     elseif statement.kind == "function" then
         self:Assign(statement.expression, self:AnalyzeExpression(statement:ToExpression("function")), "runtime")
 
@@ -979,6 +1005,9 @@ do
             t.value = self:TableToTypes(node, env)
             self.current_table = nil
             stack:Push(t)
+        elseif node.kind == "import" or node.kind == "lsx" then
+            --stack:Push(self:AnalyzeStatement(node.root))
+--            print(node.analyzer:Analyze())
         else
             error("unhandled expression " .. node.kind)
         end
@@ -1032,7 +1061,13 @@ do
             assert(exp and exp.type == "expression")
             env = env or "runtime"
             local stack = setmetatable({values = {}, i = 1}, meta)
+
             expand(self, exp, evaluate_expression, stack, env)
+
+          --  local ok, err = pcall(expand, self, exp, evaluate_expression, stack, env)
+--            if not ok then
+                --stack:Push(self:TypeFromImplicitNode(exp, "any"))
+            --end
 
             local out = {}
 

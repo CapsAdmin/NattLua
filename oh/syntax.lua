@@ -243,7 +243,7 @@ do -- grammar rules
         return
         not token or token.type == "end_of_file" or
         token.value == "}" or token.value == "," or
-        token.value == "[" or token.value == "]" or
+        --[[token.value == "[" or]] token.value == "]" or
         (
             syntax.IsKeyword(token) and
             not syntax.IsPrefixOperator(token) and

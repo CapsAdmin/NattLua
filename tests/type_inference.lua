@@ -718,7 +718,16 @@ a.b.c = 1
     end
     type_assert(a, 1)
     type_assert(b, 1)
-]]}
+]],C[[
+    local def,{a,b,c} = {a=1,b=2,c=3}
+    type_assert(a, 1)
+    type_assert(b, 2)
+    type_assert(c, 3)
+    type_assert(def, def)
+]], C[[
+    -- local a = nil
+  --   local b = a and a.b or 1
+ ]]}
 
 -- todo, check for the correct error
 local nyi = [[

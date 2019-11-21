@@ -54,6 +54,17 @@ function oh.FileToAST(path, root)
 	return assert(code:Parse()).SyntaxTree
 end
 
+
+function oh.FileToAST2(path, root)
+	local code, err = assert(oh.File(path, {path = path, root = root}))
+
+	if not code then
+		return err
+	end
+
+	return assert(code:Parse()), code
+end
+
 do
 	local META = {}
 	META.__index = META

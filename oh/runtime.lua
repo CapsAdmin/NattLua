@@ -9,7 +9,7 @@ function table.destructure(tbl, fields, with_default)
     return unpack(out)
 end
 
-function table.mergetables(tables) 
+function table.mergetables(tables)
     local out = {}
     for i, tbl in ipairs(tables) do
         for k,v in pairs(tbl) do
@@ -17,4 +17,28 @@ function table.mergetables(tables)
         end
     end
     return out
+end
+
+function table.spread(tbl)
+    if not tbl then
+        return nil
+    end
+
+    return unpack(tbl)
+end
+
+function LSX(tag, constructor, props, children)
+    local e = constructor and constructor(props, children) or {
+        props = props,
+        children = children,
+    }
+    e.tag = tag
+    return e
+end
+
+
+local inspect = require("oh.inspect")
+
+function table.print(t)
+    io.write(inspect(t))
 end

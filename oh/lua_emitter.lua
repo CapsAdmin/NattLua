@@ -104,7 +104,7 @@ function META:BuildCode(block)
         self:Emit("IMPORTS = IMPORTS or {}\n")
         for i, node in ipairs(block.imports) do
             if not self.done[node.path] then
-                self:Emit("IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render() .. " end\n")
+                self:Emit("IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render({}) .. " end\n")
                 self.done[node.path] = true
             end
         end
@@ -146,6 +146,8 @@ function META:EmitExpression(node)
         end
     elseif node.kind == "import" then
         self:EmitImportExpression(node)
+    elseif node.kind == "lsx" then
+        self:EmitLSXExpression(node)
     elseif node.kind == "type_table" then
         self:EmitTableType(node)
     else
@@ -262,7 +264,7 @@ do
     end
 end
 
-function META:EmitTable(tree)    
+function META:EmitTable(tree)
     if tree.spread then
         self:Emit("table.mergetables")
     end
@@ -306,7 +308,7 @@ function META:EmitTable(tree)
 
                     self:EmitExpression(node.value)
                 end
-                    
+
                 if node.tokens[","] then
                     self:EmitToken(node.tokens[","])
                 else
@@ -492,50 +494,6 @@ function META:EmitSemicolonStatement(node)
     self:EmitToken(node.tokens[";"])
 end
 
-function META:EmitDestructureAssignment(node)
-    self:Whitespace("\t")
-    self:EmitToken(node.tokens["{"], "")
-    
-    if node.default then
-        self:EmitToken(node.default)
-        self:EmitToken(node.default_comma)
-    end
-    self:EmitToken(node.tokens["{"], "")
-    self:Whitespace(" ")
-    self:EmitIdentifierList(node.left)
-    self:EmitToken(node.tokens["}"], "")
-
-    self:Whitespace(" ")
-    self:EmitToken(node.tokens["="])
-    self:Whitespace(" ")
-
-    self:Emit("table.destructure(")
-    self:EmitExpression(node.right)
-    self:Emit(", ")
-    self:Emit("{")
-    for i, v in ipairs(node.left) do
-        self:Emit("\"")
-        self:Emit(v.value.value)
-        self:Emit("\"")
-        if i ~= #node.left then
-            self:Emit(", ")
-        end
-    end
-    self:Emit("}")
-
-    if node.default then
-        self:Emit(", true")
-    end
-
-    self:Emit(")")
-end
-
-function META:EmitLocalDestructureAssignment(node)
-    self:Whitespace("\t")
-    self:EmitToken(node.tokens["local"])
-    self:EmitDestructureAssignment(node)
-end
-
 function META:EmitLocalAssignment(node)
     if node.environment == "typesystem" then return end
 
@@ -575,25 +533,6 @@ function META:EmitAssignment(node)
         self:Whitespace(" ")
         self:EmitExpressionList(node.right)
     end
-end
-
-function META:Emit_ENVFromAssignment(node)
-    for i,v in ipairs(node.left) do
-        if v.kind == "value" and v.value.value == "_ENV" then
-            if node.right[i] then
-                local key = node.left[i]
-                local val = node.right[i]
-
-                self:Emit(";setfenv(1, _ENV);")
-            end
-        end
-    end
-end
-
-function META:EmitImportExpression(node)
-    self:Emit(" IMPORTS['" .. node.path .. "'](")
-    self:EmitExpressionList(node.expressions)
-    self:Emit(")")
 end
 
 function META:EmitStatement(node)
@@ -642,6 +581,8 @@ function META:EmitStatement(node)
         self:EmitExpression(node.value)
     elseif node.kind == "shebang" then
         self:EmitToken(node.tokens["shebang"])
+    elseif node.kind == "lsx" then
+        self:EmitLSXStatement(node)
     elseif node.kind == "semicolon" then
         self:EmitSemicolonStatement(node)
 
@@ -692,6 +633,16 @@ function META:EmitIdentifier(node)
         elseif node.inferred_type then
             self:Emit(": ")
             self:Emit(node.inferred_type:Serialize())
+        end
+    end
+end
+
+function META:EmitIdentifierList(tbl)
+    for i = 1, #tbl do
+        self:EmitIdentifier(tbl[i])
+        if i ~= #tbl then
+            self:EmitToken(tbl[i].tokens[","])
+            self:Whitespace(" ")
         end
     end
 end
@@ -849,13 +800,100 @@ do -- types
     end
 end
 
-function META:EmitIdentifierList(tbl)
-    for i = 1, #tbl do
-        self:EmitIdentifier(tbl[i])
-        if i ~= #tbl then
-            self:EmitToken(tbl[i].tokens[","])
-            self:Whitespace(" ")
+do -- extra
+    function META:EmitDestructureAssignment(node)
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["{"], "")
+
+        if node.default then
+            self:EmitToken(node.default.value)
+            self:EmitToken(node.default_comma)
         end
+        self:EmitToken(node.tokens["{"], "")
+        self:Whitespace(" ")
+        self:EmitIdentifierList(node.left)
+        self:EmitToken(node.tokens["}"], "")
+
+            self:Whitespace(" ")
+        self:EmitToken(node.tokens["="])
+        self:Whitespace(" ")
+
+        self:Emit("table.destructure(")
+        self:EmitExpression(node.right)
+        self:Emit(", ")
+        self:Emit("{")
+        for i, v in ipairs(node.left) do
+            self:Emit("\"")
+            self:Emit(v.value.value)
+            self:Emit("\"")
+            if i ~= #node.left then
+                self:Emit(", ")
+            end
+        end
+        self:Emit("}")
+
+        if node.default then
+            self:Emit(", true")
+        end
+
+        self:Emit(")")
+    end
+
+    function META:EmitLocalDestructureAssignment(node)
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["local"])
+        self:EmitDestructureAssignment(node)
+        end
+
+    function META:Emit_ENVFromAssignment(node)
+        for i,v in ipairs(node.left) do
+            if v.kind == "value" and v.value.value == "_ENV" then
+                if node.right[i] then
+                    local key = node.left[i]
+                    local val = node.right[i]
+
+                    self:Emit(";setfenv(1, _ENV);")
+                end
+            end
+        end
+    end
+
+    function META:EmitImportExpression(node)
+        self:Emit(" IMPORTS['" .. node.path .. "'](")
+        self:EmitExpressionList(node.expressions)
+        self:Emit(")")
+    end
+
+    function META:EmitLSXStatement(node, root)
+        if not root then
+            self:Emit(" local ")
+        end
+        self:EmitToken(node.tag) self:Emit(" = {type=\""..node.tag.value.."\",")
+
+        for _, prop in ipairs(node.props) do
+            self:EmitToken(prop.key)
+            self:Emit("=")
+            self:EmitExpression(prop.val)
+            self:Emit(",")
+        end
+
+        self:Emit("}\n")
+        if not root then
+            self:Emit("table.insert(parent.children, ") self:EmitToken(node.tag) self:Emit(")")
+        end
+        if node.statements then
+            self:EmitToken(node.tag)
+            self:Emit(".children={}\n")
+            self:Emit("do local parent = "..node.tag.value.."\n")
+                self:EmitStatements(node.statements)
+            self:Emit(" end\n")
+        end
+    end
+
+    function META:EmitLSXExpression(node)
+        self:Emit("(function() local ") self:EmitToken(node.tag) self:Emit(" do\n")
+            self:EmitLSXStatement(node, true)
+        self:Emit(" end return ") self:EmitToken(node.tag) self:Emit(" end)()")
     end
 end
 

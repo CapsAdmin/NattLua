@@ -95,7 +95,7 @@ end
 function META:ReadTypeFunction()
     local node = self:Expression("type_function")
     node.tokens["function"] = self:ReadValue("function")
-    return self:ReadTypeFunctionBody(node)   
+    return self:ReadTypeFunctionBody(node)
 end
 
 function META:ReadTypeTable()
@@ -376,13 +376,14 @@ function META:ReadImportExpression()
     node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
     local oh = require("oh")
-    local root, err = oh.FileToAST(node.path, self.root)
+    local root, err = oh.FileToAST2(node.path, self.root)
 
     if not root then
         self:Error("error importing file: $1", start, start, err)
     end
 
-    node.root = root
+    node.root = root.SyntaxTree
+    node.analyzer = root
 
     node.tokens[")"] = self:ReadValue(")")
 
