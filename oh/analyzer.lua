@@ -17,36 +17,30 @@ do
     end
 
     local function new_type(self, node, ...)
-        if type(node) == "string" then
-            return types.Type(type)
-        end
-
         assert(node.type == "expression")
 
         if node.kind == "value" then
             local t = node.value.type
             local v = node.value.value
             if t == "number" then
-                return types.Type("number", tonumber(v))
+                return types.Create("number", tonumber(v))
             elseif t == "string" then
-                return types.Type("string", v:sub(2, -2))
+                return types.Create("string", v:sub(2, -2))
             elseif t == "letter" then
-                return types.Type("string", v)
+                return types.Create("string", v)
             elseif v == "..." then
-                return types.Type("...", ...)
+                return types.Create("...", ...)
             elseif v == "true" then
-                return types.Type("boolean", true)
+                return types.Create("boolean", true)
             elseif v == "false" then
-                return types.Type("boolean", false)
+                return types.Create("boolean", false)
             elseif v == "nil" then
-                return types.Type("nil")
-            elseif v == "list" then
-                return types.Type("list", ...)
+                return types.Create("nil")
             else
                 error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
             end
         elseif node.kind == "type_table" or node.kind == "table" then
-            return types.Type("table", ...)
+            return types.Create("table", ...)
         else
             error("unhanlded expression kind " .. node.kind)
         end
@@ -62,18 +56,17 @@ do
 
     function META:TypeFromImplicitNode(node, ...)
         node.scope = self.scope
-        local t = types.Type(...):AttachNode(node)
+        local t = types.Create(...):AttachNode(node)
         t.code = self.code
         t.analyzer = self
         return t
     end
 
-
     function META:TableToTypes(node, env)
         local out = {}
         for _,v in ipairs(node.children) do
             if v.kind == "table_key_value" then
-                --out[types.Type("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
+                --out[types.Create("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
                 out[v.key.value] = self:AnalyzeExpression(v.value, env)
             elseif v.kind == "table_expression_value" then
                 local t = self:AnalyzeExpression(v.key, env)
@@ -636,7 +629,7 @@ function META:AnalyzeStatement(statement, ...)
 
             if node.type_expression then
                 val = self:AnalyzeExpression(node.type_expression, "typesystem")
-
+                
                 if ret[i] and not ret[i]:IsType(val) then
                     self:Error(node, "expected " .. tostring(val) .. " but the right hand side is a " .. tostring(ret[i]))
                 else
@@ -977,7 +970,7 @@ do
                 end
                 func = f(require("oh"), self, types)
             end
-            stack:Push(types.Type("function", rets, args, func))
+            stack:Push(types.Create("function", rets, args, func))
         elseif node.kind == "postfix_call" then
             local typ = stack:Pop()
 
@@ -996,7 +989,7 @@ do
                     tbl[i] = self:AnalyzeExpression(v, env)
                 end
             end
-            local val = types.Type("list", tbl, node.length and tonumber(node.length.value))
+            local val = types.Create("list", tbl, node.length and tonumber(node.length.value))
             val.value = {}
             stack:Push(val)
         elseif node.kind == "type_table" then

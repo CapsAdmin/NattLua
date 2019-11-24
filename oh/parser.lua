@@ -273,7 +273,6 @@ do -- statements
 
         local start = self:GetToken()
         local left = self:ReadExpressionList(math_huge)
-        print(left)
 
         if self:IsValue("=") then
             local node = self:Statement("assignment")
@@ -902,7 +901,6 @@ do -- expression
 
         node.tokens["["] = self:ReadValue("[")
         node.tag = self:ReadType("letter")
-        print(node.tag.value)
 
         local props = {}
 

@@ -123,9 +123,9 @@ do
 
     function META:Copy()
         if self.name == "function" then
-            return types.Type(self.name, deepcopy(self.ret), deepcopy(self.args), self.func)
+            return types.Create(self.name, deepcopy(self.ret), deepcopy(self.args), self.func)
         else
-            return types.Type(self.name, deepcopy(self.value))
+            return types.Create(self.name, deepcopy(self.value))
         end
     end
 end
@@ -146,9 +146,29 @@ end
 
 function META:IsType(what, explicit)
     if type(what) == "table" then
-        for _,v in ipairs(what:GetTypes()) do
-            if self:IsType(v, explicit) then
-                return true
+        if self.LOL then return false end
+        if what.name == "table" and self.name == "table" and what.value then
+            for k,v in pairs(what.value) do
+                local self_val = v
+                local what_val = self:get(k)
+                self.LOL = true
+
+                if not what_val:IsType(self_val) then 
+                    return false
+                end
+
+                if not what_val:IsType(self_val) and self_val.value ~= nil and self_val.value ~= what_val.value then
+                    return false
+                end
+
+                self.LOL = false
+            end
+            return true
+        else
+            for _,v in ipairs(what:GetTypes()) do
+                if self:IsType(v, explicit) then
+                    return true
+                end
             end
         end
     end
@@ -165,7 +185,7 @@ function META:IsType(what, explicit)
 end
 
 function META:IsCompatible(type)
-    if _G.type(type) == "string" and self:IsType("string") and self.value == type then
+    if self:IsType(_G.type(type)) and (self.value == nil or self.value == type) then
         return true
     end
 
@@ -173,7 +193,7 @@ function META:IsCompatible(type)
 end
 
 function META:Type(...)
-    local t = types.Type(...)
+    local t = types.Create(...)
     t.analyzer = self.analyzer
     t:AttachNode(self:GetNode())
     return t
@@ -447,7 +467,7 @@ function types.IsType(name)
     return registered[name]
 end
 
-function types.Type(name, ...)
+function types.Create(name, ...)
     assert(registered[name], "type " .. name .. " does not exist")
     return registered[name].new(...)
 end
@@ -614,6 +634,7 @@ do
 
     function META:IsType(what)
         if type(what) == "table" then
+
             for _,v in ipairs(what:GetTypes()) do
                 if self:IsType(v) then
                     return true
@@ -761,7 +782,7 @@ types.Register("table", {
 
             for k,v in pairs(self.structure) do
                 if key:IsCompatible(k) then
-                    if not val:IsCompatible(v) then
+                    if not val:IsCompatible(v) or (v.value ~= nil and val.value ~= v.value) then
                         self:Error("invalid value " .. tostring(val) .. " expected " .. tostring(v), val.node)
                     end
 
@@ -784,7 +805,7 @@ types.Register("table", {
         end
     end,
     get = function(self, key)
-        local hashed_key = type(key) == "string" and key or key.value
+        local hashed_key = (type(key) == "string" or type(key) == "number") and key or key.value
 
         if self.structure then
 
@@ -819,7 +840,7 @@ types.Register("table", {
 
         for k,v in pairs(self.value) do
             if hashed_key then
-                if key.value == hashed_key then
+                if k.value == hashed_key then
                     return v
                 end
             elseif key:IsCompatible(k) then
@@ -977,7 +998,7 @@ types.Register("function", {
 
 setmetatable(types, {
     __call = function(_, ...)
-        return types.Type(...)
+        return types.Create(...)
     end,
     __index = function(_, key)
         if registered[key] then

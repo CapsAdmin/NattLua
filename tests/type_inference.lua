@@ -1,7 +1,8 @@
 local oh = require("oh")
 local C = oh.Code
 
-local tests = {C[[
+local tests = {
+C[[
     local a = 1
     type_assert(a, 1)
 ]],C[[
@@ -362,7 +363,7 @@ a.b.c = 1
         }
     }
 
-    local b: foo = {}
+    local b: foo = {a=1, b={str="lol"}}
     local c = b.a
     local d = b.b.str
 
@@ -386,13 +387,13 @@ a.b.c = 1
     local a: string = "1"
     type a = string | number | (boolean | string)
 
-    type type_func = function(a,b,c) return types.Type("string"), types.Type("number") end
+    type type_func = function(a,b,c) return types.Create("string"), types.Create("number") end
     local a, b = type_func(a,2,3)
     type_assert(a, _ as string)
     type_assert(b, _ as number)
 ]],C[[
     type Array = function(T, L)
-        return types.Type("list", T.name, L.value)
+        return types.Create("list", T.name, L.value)
     end
 
     type Exclude = function(T, U)
@@ -431,7 +432,7 @@ a.b.c = 1
             b = b.value
         end
 
-        return types.Type(type(a), a), types.Type(type(b), b)
+        return types.Create(type(a), a), types.Create(type(b), b)
     end
 
     function pairs(t)
@@ -467,20 +468,20 @@ a.b.c = 1
 
         for k, v in pairs(tbl.value) do
             if not key then
-                key = types.Type(type(k))
+                key = types.Create(type(k))
             elseif not key:IsType(k) then
                 if type(k) == "string" then
-                    key = types.Fuse(key, types.Type("string"))
+                    key = types.Fuse(key, types.Create("string"))
                 else
-                    key = types.Fuse(key, types.Type(k.name))
+                    key = types.Fuse(key, types.Create(k.name))
                 end
             end
 
             if not val then
-                val = types.Type(type(v))
+                val = types.Create(type(v))
             else
                 if not val:IsType(v) then
-                    val = types.Fuse(val, types.Type(v.name))
+                    val = types.Fuse(val, types.Create(v.name))
                 end
             end
         end
@@ -726,7 +727,27 @@ a.b.c = 1
     type_assert(def, def)
 ]], C[[
     -- local a = nil
-  --   local b = a and a.b or 1
+    -- local b = a and a.b or 1
+ ]],C[[
+    local tbl: {[true] = false} = {}
+    tbl[true] = false
+    type_assert(tbl[true], false)
+ ]],C[[
+    local tbl: {1,true,3} = {}
+    tbl[1] = 1
+    tbl[2] = true
+ ]]
+,C[[
+    local tbl: {1,true,3} = {1, true, 3}
+    tbl[1] = 1
+    tbl[2] = true
+    tbl[3] = 3
+ ]],
+ C[[
+    local tbl: {1,true,3} = {1, true, 3}
+    tbl[1] = 1
+    tbl[2] = true
+    tbl[3] = 3
  ]]}
 
 -- todo, check for the correct error
@@ -757,6 +778,16 @@ local nyi = [[
   local a: {[number] = any} = {} -- list-like
 ]]
 
+local errors = {
+    {C[[
+        local tbl: {1,true,3} = {1, true, 3}
+        tbl[2] = false
+     ]], "invalid value boolean%(false%) expected boolean%(true%)"},
+     {C[[
+        local tbl: {1,true,3} = {1, false, 3}
+    ]], "invalid value boolean%(false%) expected boolean%(true%)"},
+}
+
 
 for _, code_data in ipairs(tests) do
     if code_data == false then return end
@@ -764,6 +795,17 @@ for _, code_data in ipairs(tests) do
     --function code_data:OnError(obj, msg, start, stop, ...) print(require("oh.print_util").FormatError(self.code, self.name, msg, start, stop)) end
 
     assert(code_data:Analyze())
+end
+
+for _, code_data in ipairs(errors) do
+    if code_data == false then return end
+    local func, err = code_data[1]:Analyze()
+    if not err then
+        print(func, err)
+        error("expected error, got nothing")
+    elseif not err:find(code_data[2]) then
+        error("expected error " .. code_data[2] .. " got\n\n\n" .. err)
+    end
 end
 
 local tests = {
@@ -785,12 +827,12 @@ local tests = {
 }
 
 local types = require("oh.types")
-types.Type("number"):__tostring()
-types.Type("number", 1):__tostring()
+types.Create("number"):__tostring()
+types.Create("number", 1):__tostring()
 
-types.Type("number", 1):GetReadableContent()
-types.Type("string", "test"):GetReadableContent()
-types.Type("number"):GetReadableContent()
+types.Create("number", 1):GetReadableContent()
+types.Create("string", "test"):GetReadableContent()
+types.Create("number"):GetReadableContent()
 
 for _, code_data in ipairs(tests) do
     if code_data == false then return end

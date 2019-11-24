@@ -9481,7 +9481,7 @@ type ^string.match = function(s, pattern, init)
 	if s.value and pattern.value then
 		local res = {s.value:match(pattern.value)}
 		for i,v in ipairs(res) do
-			res[i] = types.Type("string", v)
+			res[i] = types.Create("string", v)
 		end
 		return unpack(res)
 	end
@@ -9489,7 +9489,7 @@ type ^string.match = function(s, pattern, init)
 	if pattern.value then
 		local out = {}
 		for s in pattern.value:gmatch("%b()") do
-			table.insert(out, types.Type("string") + types.Type("nil"))
+			table.insert(out, types.Create("string") + types.Create("nil"))
 		end
 		return unpack(out)
 	end
@@ -9623,7 +9623,7 @@ type table.insert = function(tbl, ...)
 		pos = pos.value
 	end
 
-	local l = types.Type("list")
+	local l = types.Create("list")
 
 	local list_type = tbl.list_type
 
