@@ -287,7 +287,7 @@ go {
         expect = C'local a = table.mergetables{{rofl=1,},{foo=true}, {lol=2,}, {bar=false}}',
         compare_tokens = true
     },
-    
+
 }
 
 go({

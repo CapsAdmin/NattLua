@@ -57,6 +57,7 @@ do
     function META:TypeFromImplicitNode(node, ...)
         node.scope = self.scope
         local t = types.Create(...):AttachNode(node)
+        t.implicit = true
         t.code = self.code
         t.analyzer = self
         return t
@@ -629,8 +630,11 @@ function META:AnalyzeStatement(statement, ...)
 
             if node.type_expression then
                 val = self:AnalyzeExpression(node.type_expression, "typesystem")
-                
-                if ret[i] and not ret[i]:IsType(val) then
+
+                local superset = val
+                local subset = ret[i]
+
+                if subset and not subset:IsType(superset) then
                     self:Error(node, "expected " .. tostring(val) .. " but the right hand side is a " .. tostring(ret[i]))
                 else
                     if val:IsType("table") and ret[i] then
@@ -663,7 +667,6 @@ function META:AnalyzeStatement(statement, ...)
 
         if statement.default then
             if statement.kind == "local_destructure_assignment" then
-                print(statement.default:Render())
                 self:DeclareUpvalue(statement.default, ret, env)
             elseif statement.kind == "destructure_assignment" then
                 self:Assign(statement.default, ret, env)
@@ -801,12 +804,12 @@ function META:AnalyzeStatement(statement, ...)
         local tbl = self:GetValue(statement.key, "typesystem")
 
         if not tbl then
-            tbl = self:TypeFromImplicitNode(statement, "table")
+            tbl = self:TypeFromImplicitNode(statement, "table", {})
         end
 
         for i,v in ipairs(statement.expressions) do
             local val = self:AnalyzeExpression(v.right, "typesystem")
-            if tbl.value[v.left.value] then
+            if tbl.value and tbl.value[v.left.value] then
                 types.OverloadFunction(tbl:get(v.left.value), val)
             else
                 tbl:set(v.left.value, self:AnalyzeExpression(v.right, "typesystem"))
@@ -975,7 +978,6 @@ do
             local typ = stack:Pop()
 
             local arguments = self:AnalyzeExpressions(node.expressions, env)
-
             if node.self_call then
                 local val = stack:Pop()
                 table.insert(arguments, 1, val)

@@ -147,22 +147,29 @@ end
 function META:IsType(what, explicit)
     if type(what) == "table" then
         if self.LOL then return false end
-        if what.name == "table" and self.name == "table" and what.value then
-            for k,v in pairs(what.value) do
-                local self_val = v
-                local what_val = self:get(k)
+
+        if what.name == "table" and self.name == "table" and what.value and self.value then
+            local subset = self
+            local superset = what
+
+            for super_key, super_val in pairs(superset.value) do
+                local sub_val = self:get(super_key)
+
                 self.LOL = true
 
-                if not what_val:IsType(self_val) then 
+                if not sub_val:IsCompatible(super_val) then
+                    self.LOL = false
                     return false
                 end
 
-                if not what_val:IsType(self_val) and self_val.value ~= nil and self_val.value ~= what_val.value then
+
+                if super_val.name ~= "table" and super_val.value ~= nil and sub_val.value ~= super_val.value then
+                    self.LOL = false
                     return false
                 end
 
-                self.LOL = false
             end
+            self.LOL = false
             return true
         else
             for _,v in ipairs(what:GetTypes()) do
@@ -189,7 +196,7 @@ function META:IsCompatible(type)
         return true
     end
 
-    return self:IsType(type) and type:IsType(self)
+    return self:IsType(type)
 end
 
 function META:Type(...)
@@ -722,10 +729,8 @@ types.Register("string", {
     inherits = "base",
     truthy = true,
     get = function(self, key)
-
         if self.analyzer then
             local g = self.analyzer:GetValue("_G", "typesystem")
-
             if not g then
                 if self.analyzer.Index then
                     g = self.analyzer:Index("_G")
@@ -733,14 +738,14 @@ types.Register("string", {
             end
 
             if g then
-                local tbl = g:get("string")
+                local tbl = self.analyzer:Index("string")
 
                 if tbl and key then
                     return tbl:get(key)
                 end
             end
         end
-        print(self)
+
         self:Error("index " .. tostring(key) .. " is not defined on the string type", key.node)
 
         return self:Type("any")
@@ -772,7 +777,7 @@ types.Register("table", {
                 end
             end
         end
-        return {structure = structure, value = value or {}}
+        return {structure = structure, value = value}
     end,
     set = function(self, key, val, node, env)
         local hashed_key = type(key) == "string" and key or key.value
@@ -795,8 +800,8 @@ types.Register("table", {
                 table.insert(expected, tostring(k))
             end
 
-            self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
-        else
+            self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
+        elseif self.value then
             if key.max then
                 self.value[key] = val
             elseif hashed_key and val then
@@ -810,7 +815,7 @@ types.Register("table", {
         if self.structure then
 
             if hashed_key then
-                if self.value[hashed_key] then
+                if self.value and self.value[hashed_key] then
                     return self.value[hashed_key]
                 elseif self.structure[hashed_key] then
                     return self.structure[hashed_key]
@@ -834,17 +839,19 @@ types.Register("table", {
             self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
         end
 
-        if hashed_key and self.value[hashed_key] then
+        if hashed_key and self.value and self.value[hashed_key] then
             return self.value[hashed_key]
         end
 
-        for k,v in pairs(self.value) do
-            if hashed_key then
-                if k.value == hashed_key then
+        if self.value then
+            for k,v in pairs(self.value) do
+                if hashed_key then
+                    if k.value == hashed_key then
+                        return v
+                    end
+                elseif key:IsCompatible(k) then
                     return v
                 end
-            elseif key:IsCompatible(k) then
-                return v
             end
         end
 
@@ -858,8 +865,9 @@ types.Register("table", {
         if self.during_tostring then return "*self" end
 
         self.during_tostring = true
-        local str = {"table {"}
+        local str = {"table"}
         if self.value then
+            table.insert(str, " {")
             for k, v in pairs(self.value) do
                 local key = tostring(k)
 
@@ -871,8 +879,8 @@ types.Register("table", {
 
                 table.insert(str, key .. " = " .. tostring(v) .. ",")
             end
+            table.insert(str, "}")
         end
-        table.insert(str, "}")
 
         local str = table.concat(str, " ")
 

@@ -729,11 +729,11 @@ a.b.c = 1
     -- local a = nil
     -- local b = a and a.b or 1
  ]],C[[
-    local tbl: {[true] = false} = {}
+    local tbl = {} as {[true] = false}
     tbl[true] = false
     type_assert(tbl[true], false)
  ]],C[[
-    local tbl: {1,true,3} = {}
+    local tbl = {} as {1,true,3}
     tbl[1] = 1
     tbl[2] = true
  ]]
@@ -785,7 +785,7 @@ local errors = {
      ]], "invalid value boolean%(false%) expected boolean%(true%)"},
      {C[[
         local tbl: {1,true,3} = {1, false, 3}
-    ]], "invalid value boolean%(false%) expected boolean%(true%)"},
+    ]], "expected table.- but the right hand side is a table"},
 }
 
 
