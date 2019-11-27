@@ -799,8 +799,8 @@ types.Register("table", {
                 end
                 table.insert(expected, tostring(k))
             end
-
-            self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
+            
+            self:Error("invalid key " .. tostring(key) .. (expected[1] and (" expected " .. table.concat(expected, " | ")) or ""), key.node)
         elseif self.value then
             if key.max then
                 self.value[key] = val
@@ -896,11 +896,11 @@ types.Register("table", {
 do
     local function check_index(self, key)
         if not key:IsType("number") then
-            self:Error("cannnot index " .. tostring(key) .. " on list")
+            key:Error("cnnnot index " .. tostring(key) .. " on list")
         elseif self.length and key.value and key.value > self.length then
-            self:Error("out of bounds " .. tostring(key))
+            key:Error("out of bounds " .. tostring(key))
         elseif key.value and key.value < 1 then
-            self:Error("out of bounds " .. tostring(key))
+            key:Error("out of bounds " .. tostring(key))
         end
     end
 

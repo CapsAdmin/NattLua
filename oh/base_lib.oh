@@ -867,18 +867,20 @@ type table.insert = function(tbl, ...)
 		pos = pos.value
 	end
 
-	local l = types.Create("list")
+	if not tbl.value or not tbl.value[1] then
+		local list = types.Create("list")
 
-	local list_type = tbl.list_type
+		local list_type = tbl.list_type
 
-	for k,v in pairs(tbl) do
-		if k ~= "value" then
-			tbl[k] = nil
+		for k,v in pairs(tbl) do
+			if k ~= "value" then
+				tbl[k] = nil
+			end
 		end
-	end
 
-	for k,v in pairs(l) do
-		tbl[k] = v
+		for k,v in pairs(list) do
+			tbl[k] = v
+		end
 	end
 
 	table.insert(tbl.value, pos, val)

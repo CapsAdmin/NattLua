@@ -559,9 +559,9 @@ a.b.c = 1
 
     local a = b()
 ]],C[[
-    a: number = (lol as any)()
+    a: number = (lol as function(): number)()
 
-    type_assert(a, _ as number)
+    type_assert(a, nil as number)
 ]], C[[
     local a = {}
     a.b: boolean, a.c: number = LOL as any, LOL2 as any
@@ -748,37 +748,48 @@ a.b.c = 1
     tbl[1] = 1
     tbl[2] = true
     tbl[3] = 3
- ]]}
-
--- todo, check for the correct error
-local nyi = [[
-  local a: {} = {} -- can't do anything
-  --a.lol = true
-  --local b = a.lol
-
-  local a: {[string] = string} = {} -- can only assign strings to strings
-  --a.lol = "aaa"
-  --local b = a.lol
-  --local b = a.rofl
-
-  local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)
-  --a.lol = "aaa"
-  --a.lol2 = 2
-  --a.lol3 = {}
-  --local b = a.lol3
-  --local b = a.rofl
-
-  local a: {[any] = any} = {} -- same as no type annotation
-
-  local a = {}
-  a.lol = true
-  local c = a.lol
-
-
-  local a: {[number] = any} = {} -- list-like
-]]
+ ]],C[[
+    local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)
+    a.lol = "aaa"
+    a.lol2 = 2
+    a.lol3 = {}
+ ]],C[[
+    local a: {[number] = any} = {}
+    a[1] = true
+    a[2] = true
+    table.insert(a, 1337)
+    type_assert(a[3], 1337)
+ ]],C[[
+    local a = {}
+    a()
+    table.insert(a, 1337)
+]]}
 
 local errors = {
+    {C[[local a = 1 a()]], "number.-cannot be called"},
+    {C[[
+    local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)
+    a.lol = "aaa"
+    a.lol2 = 2
+    a.lol3 = {}
+    a[1] = {}
+ ]], "invalid key number"},
+    {C[[
+        local a: {[string] = string} = {}
+        a.lol = "a"
+        a[1] = "a"
+
+        
+
+    ]], "invalid key number.-expected string"},
+    {C[[
+        local a: {[string] = string} = {}
+        a.lol = 1
+    ]], "invalid value number.-expected string"},
+    {C[[
+        local a: {} = {}
+        a.lol = true
+     ]], "invalid key string"},
     {C[[
         local tbl: {1,true,3} = {1, true, 3}
         tbl[2] = false

@@ -983,6 +983,11 @@ do
                 table.insert(arguments, 1, val)
             end
 
+            if typ.name and typ.name ~= "function" and typ.name ~= "table" then
+                self:Error(node, tostring(typ) .. " cannot be called")
+                return
+            end    
+
             stack:Push(self:CallFunctionType(typ, arguments, node), true)
         elseif node.kind == "type_list" then
             local tbl = {}
