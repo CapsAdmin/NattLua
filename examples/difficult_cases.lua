@@ -1,8 +1,8 @@
 local oh = require("oh")
 local em = require("oh.lua_emitter")
-oh.Analyze([[local exp = false and (nil).somevalue or "some_default"]])
+--oh.Code([[local exp = false and (nil).somevalue or "some_default"]])
 
-local ast = oh.Analyze([[
+local code = assert(oh.Code([[
 local lib = {}
 
 function lib.foo1(a, b)
@@ -17,9 +17,11 @@ function lib.foo2(a, b)
     return a + b
 end
 
+lib.main()
+
 return lib
-]], true)
+]], "test", {annotate = true, dump_analyzer_events = true}):Analyze()):BuildLua()
 
 print("====")
 
-print(em():BuildCode(ast))
+print(code)
