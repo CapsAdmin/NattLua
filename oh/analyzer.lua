@@ -519,6 +519,10 @@ do
 
             self.calling_function = nil
 
+            if not ret[1] then
+                ret[1] = self:TypeFromImplicitNode(func_expr, "nil")
+            end
+
             return ret
         elseif typ:IsType("function") then
             --external
@@ -1013,7 +1017,11 @@ do
         meta.__index = meta
 
         function meta:Push(val, multi)
-            if not multi then
+            if multi then
+                for i,v in ipairs(val) do
+                    assert(types.IsTypeObject(v))
+                end
+            else
                 assert(types.IsTypeObject(val))
             end
             self.values[self.i] = val

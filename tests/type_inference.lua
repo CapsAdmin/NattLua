@@ -748,6 +748,10 @@ a.b.c = 1
     tbl[1] = 1
     tbl[2] = true
     tbl[3] = 3
+ ]],C[[
+    local pl = {IsValid = function() end}
+    local a = pl:IsValid()
+    type_assert(a, nil)
  ]]}
 
 -- todo, check for the correct error
