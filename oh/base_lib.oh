@@ -835,8 +835,8 @@ end
 type require = function(name)
 	local str = name.value
 
-	if analyzer:GetValue(str, "typesystem") then
-		return analyzer:GetValue(str, "typesystem")
+	if self:GetValue(str, "typesystem") then
+		return self:GetValue(str, "typesystem")
 	end
 
 	for _, searcher in ipairs(package.loaders) do

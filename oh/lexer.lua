@@ -620,7 +620,7 @@ function META:ReadWhiteSpace()
     false then end
 end
 
-function META:ReadNonWhiteSpace()    
+function META:ReadNonWhiteSpace()
     if
     self:IsEndOfFile() then             return self:ReadEndOfFile() elseif
     self:IsMultilineString() then       return self:ReadMultilineString() elseif
@@ -630,9 +630,6 @@ function META:ReadNonWhiteSpace()
     self:IsLetter() then                return self:ReadLetter() elseif
     self:IsSymbol() then                return self:ReadSymbol() elseif
     false then end
-
-    self:Advance(1)
-    return "unknown"
 end
 
 function META:ReadToken()
@@ -653,7 +650,7 @@ function META:ReadToken()
             self.comment_escape = false
             self:Advance(2)
         end
-    
+
         local type = self:ReadWhiteSpace()
         if not type then
             break
@@ -665,7 +662,12 @@ function META:ReadToken()
     local start = self.i
     local type = self:ReadNonWhiteSpace()
 
-    local tk = self:NewToken(type or "unknown", start, self.i - 1)
+    if type == nil then
+        type = "unknown"
+        self:Advance(1)
+    end
+
+    local tk = self:NewToken(type, start, self.i - 1)
     tk.whitespace = wbuffer
     return tk
 end

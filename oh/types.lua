@@ -297,7 +297,7 @@ function META:BinaryOperator(op_node, b, node, env)
             ret = arg
         end
 
-        if not b:IsType(arg) and ret ~= "last" or b.name == "any" then
+        if (not b:IsType(arg) and ret ~= "last") then
             self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", op_node)
             return self:Type("any")
         end
@@ -534,7 +534,9 @@ function types.CallFunction(func, args)
     end
 
     if found.func then
+        _G.self = found.analyzer
         local res = {pcall(found.func, unpack(args))}
+        _G.self = nil
 
         if not res[1] then
             func:Error(res[2])
@@ -542,6 +544,10 @@ function types.CallFunction(func, args)
         end
 
         table.remove(res, 1)
+
+        if not res[1] then
+            res[1] = func:Type("nil")
+        end
 
         return res
     end
@@ -723,6 +729,11 @@ types.Register("base", {
 types.Register("any", {
     inherits = "base",
     truthy = true,
+    get = function(self, key)
+        return self:Type("any")
+    end,
+    set = function(self, key)
+    end,
 })
 
 types.Register("string", {
@@ -738,10 +749,18 @@ types.Register("string", {
             end
 
             if g then
-                local tbl = self.analyzer:Index("string")
+                if self.analyzer.Index then
+                    local tbl = self.analyzer:Index("string")
 
-                if tbl and key then
-                    return tbl:get(key)
+                    if tbl and key then
+                        return tbl:get(key)
+                    end
+                else
+                    local tbl = self.analyzer:GetValue("string", "typesystem")
+
+                    if tbl and key then
+                        return tbl:get(key)
+                    end
                 end
             end
         end
@@ -799,7 +818,7 @@ types.Register("table", {
                 end
                 table.insert(expected, tostring(k))
             end
-            
+
             self:Error("invalid key " .. tostring(key) .. (expected[1] and (" expected " .. table.concat(expected, " | ")) or ""), key.node)
         elseif self.value then
             if key.max then

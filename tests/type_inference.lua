@@ -762,9 +762,25 @@ a.b.c = 1
     local a = {}
     a()
     table.insert(a, 1337)
+]], C[[
+    type test = function(name)
+        return analyzer:GetValue(name.value, "typesystem")
+    end
+    local type lol = {}
+    type_assert(test("lol"), lol)
+]], C[[
+    local type lol = {}
+    type_assert(require("lol"), lol)
+]],C[[
+    local tbl = {}
+    local test = "asdawd"
+    tbl[test] = tbl[test] or {}
+    tbl[test] = "1"
+    type_assert(tbl[test], nil as "1")
 ]]}
 
 local errors = {
+    {C[[require("adawdawddwaldwadwadawol")]], "unable to find module"},
     {C[[local a = 1 a()]], "number.-cannot be called"},
     {C[[
     local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)

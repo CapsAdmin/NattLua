@@ -18,30 +18,36 @@ function oh.QuoteTokens(var)
 	return str
 end
 
+local tab_size = 1
+
 do
 	function oh.LinePositionToSubPosition(code, line, character)
 		local line_pos = 1
-		local char_pos = 1
-
-		local found_line
-
 		for i = 1, #code do
 			local c = code:sub(i, i)
 
 			if line_pos == line then
-				found_line = true
+				local char_pos = 1
+
+				for i = i, i + character do
+					local c = code:sub(i, i)
+
+					if char_pos == character then
+						return i
+					end
+
+					if c == "\t" then
+						char_pos = char_pos +tab_size
+					else
+						char_pos = char_pos + 1
+					end
+				end
+
+				return i
 			end
 
 			if c == "\n" then
 				line_pos = line_pos + 1
-			end
-
-			if found_line then
-				if char_pos == character then
-					return i
-				end
-
-				char_pos = char_pos + 1
 			end
 		end
 
@@ -87,7 +93,11 @@ do
 				line_pos = i
 				char_pos = 0
 			else
-				char_pos = char_pos + 1
+				if char == "\t" then
+					char_pos = char_pos + tab_size
+				else
+					char_pos = char_pos + 1
+				end
 			end
 		end
 
@@ -120,11 +130,11 @@ do
 					first_line_pos = i
 				end
 
+				if line == lines then
+					return i-1, first_line_pos-1, line-1
+				end
 				line = line + 1
 
-				if line == lines then
-					return i + 1, first_line_pos - 1, line
-				end
 			end
 		end
 
@@ -216,7 +226,7 @@ do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 
 					if line == line_start then
-						prefix = prefix .. code:sub(unpack(data.sub_line_before))
+						prefix = prefix .. code:sub(unpack(data.sub_line_before)):gsub("\t", (" "):rep(tab_size))
 					end
 
 					local test = str
@@ -245,7 +255,7 @@ do
 
 		local str = table.concat(lines, "\n")
 
-		local path = path .. ":" .. line_start
+		local path = path:gsub("@", "") .. ":" .. line_start  .. ":".. data.character_start
 		local msg = path .. (msg and ": " .. msg or "")
 		local post = (" "):rep(spacing - 2) .. "-> | " .. msg
 

@@ -45,4 +45,5 @@ check({
     {"::", "expected.-letter.-got.-end_of_file"},
     {"!!!!!!!!!!!", "expected.-got.-unknown"},
     {"do do end", "expected.-end.-got.-"},
+    {"\n\n\nif !test then end", "expected.-then.-got.-!"},
 })

@@ -1,6 +1,4 @@
-local print_util = require("oh.print_util")
-
-local code = [[
+local print_util = require("oh.print_util")local code = [[
 for i = 1, #code do
     local char = code:sub(i, i)
 
@@ -9,7 +7,7 @@ for i = 1, #code do
     end
 
     if char == "cc" then
-        start = i+1
+        start = i+2
     end
 
     local foo = >[[
