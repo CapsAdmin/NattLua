@@ -855,7 +855,7 @@ types.Register("table", {
                 return self:index(key)
             end
 
-            self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
+            self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
         end
 
         if hashed_key and self.value and self.value[hashed_key] then
@@ -864,8 +864,10 @@ types.Register("table", {
 
         if self.value then
             for k,v in pairs(self.value) do
+
                 if hashed_key then
-                    if k.value == hashed_key then
+                    local hashed_key2 = (type(k) == "string" or type(k) == "number") and k or k.value
+                    if hashed_key2 == hashed_key then
                         return v
                     end
                 elseif key:IsCompatible(k) then

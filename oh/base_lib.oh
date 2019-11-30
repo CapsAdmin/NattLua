@@ -602,6 +602,7 @@ type bit32 = {
 	bnot = (function(x: number): number),
 	btest = (function(...): boolean)
 }
+type bit = bit32
 type loadfile = (function(filename: string, mode: string, env: table): empty_function|nil, string|nil)    |    (function(filename: string, mode: string): empty_function|nil, string|nil)    |    (function(filename: string): empty_function|nil, string|nil)    |    (function(): empty_function|nil, string|nil)
 type dofile = (function(filename: string): ...)    |    (function(): ...)
 type table = {

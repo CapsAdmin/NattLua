@@ -257,6 +257,10 @@ do
 
     function META:EmitFunction(node)
         self:Whitespace("\t")
+        if node.tokens["local"] then
+            self:EmitToken(node.tokens["local"])
+            self:Whitespace(" ")
+        end
         self:EmitToken(node.tokens["function"])
         self:Whitespace(" ")
         self:EmitExpression(node.expression or node.identifier)

@@ -783,7 +783,7 @@ do -- expression
                     node.left = left
                     node.right = right
                 elseif self:IsValue(":") then
-                    if self:IsType("letter", 1) and (self:IsValue("(", 2) or (not no_ambigious_calls and self:IsValue("{", 2) or self:IsValue("\"", 2) or self:IsValue("'", 2))) then
+                    if self:IsType("letter", 1) and (self:IsValue("(", 2) or (not no_ambigious_calls and self:IsValue("{", 2) or self:IsType("string", 2))) then
                         local op = self:ReadTokenLoose()
 
                         local right = self:Expression("value")

@@ -316,6 +316,7 @@ go({
     C"local a:   foo.bar.faz = foo",
     C"local type = function(a,b,c,...) end",
     C"local type function aaa(a) return a end",
+    C"foao(a):bar'a'",
     {
         code = C"local a = 1",
         expect = C"local a: number(1) = 1",
