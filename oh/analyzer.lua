@@ -5,6 +5,211 @@ META.__index = META
 
 local table_insert = table.insert
 
+do -- types
+    function META:TypeFromImplicitNode(node, ...)
+        node.scope = self.scope
+        local t = types.Create(...)
+
+        t.node = node
+        node.inferred_type = t
+        t.code = self.code
+        t.analyzer = self
+
+        return t
+    end
+
+    function META:TypeFromNode(node, ...)
+        local type
+        if node.kind == "value" then
+            local t = node.value.type
+            local v = node.value.value
+
+            if t == "number" then
+                return self:TypeFromImplicitNode(node, "number", tonumber(v))
+            elseif t == "type_function" or t == "function" then
+                return self:TypeFromImplicitNode(node, "function", ...)
+            elseif t == "string" then
+                return self:TypeFromImplicitNode(node, "string", v:sub(2, -2))
+            elseif t == "letter" then
+                return self:TypeFromImplicitNode(node, "string", v)
+            elseif v == "..." then
+                return self:TypeFromImplicitNode(node, "...", ...)
+            elseif v == "true" then
+                return self:TypeFromImplicitNode(node, "boolean", true)
+            elseif v == "false" then
+                return self:TypeFromImplicitNode(node, "boolean", false)
+            elseif v == "nil" then
+                return self:TypeFromImplicitNode(node, "nil")
+            else
+                error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
+            end
+        elseif node.kind == "type_list" then
+            return self:TypeFromImplicitNode(node, "list", ...)
+        elseif node.kind == "type_table" or node.kind == "table" then
+            return self:TypeFromImplicitNode(node, "table", ...)
+        elseif node.kind == "type_function" or node.kind == "function" then
+            return self:TypeFromImplicitNode(node, "function", ...)
+        else
+            error("unhanlded expression kind " .. node.kind)
+        end
+    end
+
+    do
+        local guesses = {
+            {pattern = "count", type = "number"},
+            {pattern = "tbl", type = "table"},
+            {pattern = "str", type = "string"},
+        }
+
+        table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
+
+        function META:GetInferredType(node)
+            local str = node.value and node.value.value
+
+            if node.type_expression then
+                return self:AnalyzeExpression(node.type_expression, "typesystem")
+            end
+
+            if node.kind == "value" and str ~= "string" then
+                local v = self:GetValue(node, "typesystem")
+                if v then
+                    return v
+                end
+            end
+
+            if str == "self" and self.current_table then
+                return self.current_table
+            end
+
+            if str then
+                str = str:lower()
+                for i, v in ipairs(guesses) do
+                    if str:find(v.pattern) then
+                        return self:TypeFromImplicitNode(node, v.type)
+                    end
+                end
+            end
+
+            return self:TypeFromImplicitNode(node, "any")
+        end
+    end
+
+    do
+        local function merge_types(src, dst)
+            for i,v in ipairs(dst) do
+                if src[i] and src[i].name ~= "any" then
+                    src[i] = src[i] + v
+                else
+                    src[i] = dst[i]
+                end
+            end
+
+            return src
+        end
+
+        function META:CallFunctionType(typ, arguments, node)
+            node = node or typ.node
+            local func_expr = typ.node
+
+            typ.called = true
+
+            if func_expr and func_expr.kind == "function" then
+                --lua function
+
+                do -- recursive guard
+                    if self.calling_function == typ then
+                        return {self:TypeFromImplicitNode(node, "any")}
+                    end
+                    self.calling_function = typ
+                end
+
+                local ret
+
+                do
+                    self:PushScope(typ.node)
+
+                    local identifiers = {}
+
+                    for i,v in ipairs(typ.node.identifiers) do
+                        identifiers[i] = v
+                    end
+
+                    if typ.node.self_call then
+                        table.insert(identifiers, 1, "self")
+                    end
+
+                    for i, identifier in ipairs(identifiers) do
+                        local node = identifier == "self" and typ.node or identifier
+                        local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
+
+                        if identifier == "self" or identifier.value.value ~= "..." then
+                            self:DeclareUpvalue(identifier, arg, "runtime")
+                        else
+                            local values = {}
+                            for i = i, #arguments do
+                                table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
+                            end
+                            self:DeclareUpvalue(identifier, self:TypeFromNode(node, values), "runtime")
+                        end
+                    end
+
+                    if typ.node.return_types then
+                        ret = self:AnalyzeExpressions(typ.node.return_types, "typesystem")
+                    else
+                        ret = {}
+                    end
+
+                    -- collect return values from function statements
+                    self:AnalyzeStatements(typ.node.statements, ret)
+
+                    self:PopScope()
+
+                    for i,v in ipairs(typ.ret) do
+                        if ret[i] == nil then
+                            ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
+                        end
+                    end
+
+                    typ.ret = merge_types(typ.ret, ret)
+                    typ.arguments = merge_types(typ.arguments, arguments)
+
+                    for i, v in ipairs(typ.arguments) do
+                        if typ.node.identifiers[i] then
+                            typ.node.identifiers[i].inferred_type = v
+                        end
+                    end
+
+                    func_expr.inferred_type = typ
+
+                    self:FireEvent("function_spec", typ)
+                end
+
+                self.calling_function = nil
+
+                if not ret[1] then
+                    ret[1] = self:TypeFromImplicitNode(func_expr, "nil")
+                end
+
+                return ret
+            elseif typ:IsType("function") then
+                --external
+
+                self:FireEvent("external_call", node, typ)
+
+                -- HACKS
+                typ.analyzer = self
+                typ.node = node
+
+                return types.CallFunction(typ, arguments)
+            end
+            -- calling something that has no type and does not exist
+            -- expressions assumed to be crawled from caller
+
+            return {self:TypeFromImplicitNode(node, "any")}
+        end
+    end
+end
+
 do
     function META:Hash(t)
         if type(t) == "string" then
@@ -14,78 +219,6 @@ do
         assert(type(t.value.value) == "string")
 
         return t.value.value
-    end
-
-    local function new_type(self, node, ...)
-        assert(node.type == "expression")
-
-        if node.kind == "value" then
-            local t = node.value.type
-            local v = node.value.value
-            if t == "number" then
-                return types.Create("number", tonumber(v))
-            elseif t == "string" then
-                return types.Create("string", v:sub(2, -2))
-            elseif t == "letter" then
-                return types.Create("string", v)
-            elseif v == "..." then
-                return types.Create("...", ...)
-            elseif v == "true" then
-                return types.Create("boolean", true)
-            elseif v == "false" then
-                return types.Create("boolean", false)
-            elseif v == "nil" then
-                return types.Create("nil")
-            else
-                error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
-            end
-        elseif node.kind == "type_table" or node.kind == "table" then
-            return types.Create("table", ...)
-        else
-            error("unhanlded expression kind " .. node.kind)
-        end
-    end
-
-    function META:TypeFromNode(node, ...)
-        node.scope = self.scope
-        local t = new_type(self, node, ...):AttachNode(node)
-        t.code = self.code
-        t.analyzer = self
-        return t
-    end
-
-    function META:TypeFromImplicitNode(node, ...)
-        node.scope = self.scope
-        local t = types.Create(...):AttachNode(node)
-        t.implicit = true
-        t.code = self.code
-        t.analyzer = self
-        return t
-    end
-
-    function META:TableToTypes(node, env)
-        local out = {}
-        for _,v in ipairs(node.children) do
-            if v.kind == "table_key_value" then
-                --out[types.Create("string", v.key.value)] = self:TypeFromNode(v.value) -- HMMM
-                out[v.key.value] = self:AnalyzeExpression(v.value, env)
-            elseif v.kind == "table_expression_value" then
-                local t = self:AnalyzeExpression(v.key, env)
-                local v = self:AnalyzeExpression(v.value, env)
-                if t:IsType("string") and t.value then
-                    out[t.value] = v
-                else
-                    out[t] = v
-                end
-            elseif v.kind == "table_index_value" then
-                if v.i then
-                    out[v.i] = self:AnalyzeExpression(v.value, env)
-                else
-                    table.insert(out, self:AnalyzeExpression(v.value, env))
-                end
-            end
-        end
-        return out
     end
 
     function META:PushScope(node, extra_node)
@@ -426,122 +559,6 @@ function META:CallMeLater(typ, arguments, node)
     table.insert(self.deferred_calls, 1, {typ, arguments, node})
 end
 
-
-do
-    local function merge_types(src, dst)
-        for i,v in ipairs(dst) do
-            if src[i] and src[i].name ~= "any" then
-                src[i] = src[i] + v
-            else
-                src[i] = dst[i]
-            end
-        end
-
-        return src
-    end
-
-    function META:CallFunctionType(typ, arguments, node)
-        node = node or typ.node
-        local func_expr = typ.node
-
-        typ.called = true
-
-        if func_expr and func_expr.kind == "function" then
-            --lua function
-
-            do -- recursive guard
-                if self.calling_function == typ then
-                    return {self:TypeFromImplicitNode(node, "any")}
-                end
-                self.calling_function = typ
-            end
-
-            local ret
-
-            do
-                self:PushScope(typ.node)
-
-                local identifiers = {}
-
-                for i,v in ipairs(typ.node.identifiers) do
-                    identifiers[i] = v
-                end
-
-                if typ.node.self_call then
-                    table.insert(identifiers, 1, "self")
-                end
-
-                for i, identifier in ipairs(identifiers) do
-                    local node = identifier == "self" and typ.node or identifier
-                    local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
-
-                    if identifier == "self" or identifier.value.value ~= "..." then
-                        self:DeclareUpvalue(identifier, arg, "runtime")
-                    else
-                        local values = {}
-                        for i = i, #arguments do
-                            table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
-                        end
-                        self:DeclareUpvalue(identifier, self:TypeFromNode(node, values), "runtime")
-                    end
-                end
-
-                if typ.node.return_types then
-                    ret = self:AnalyzeExpressions(typ.node.return_types, "typesystem")
-                else
-                    ret = {}
-                end
-
-                -- collect return values from function statements
-                self:AnalyzeStatements(typ.node.statements, ret)
-
-                self:PopScope()
-
-                for i,v in ipairs(typ.ret) do
-                    if ret[i] == nil then
-                        ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
-                    end
-                end
-
-                typ.ret = merge_types(typ.ret, ret)
-                typ.arguments = merge_types(typ.arguments, arguments)
-
-                for i, v in ipairs(typ.arguments) do
-                    if typ.node.identifiers[i] then
-                        typ.node.identifiers[i].inferred_type = v
-                    end
-                end
-
-                func_expr.inferred_type = typ
-
-                self:FireEvent("function_spec", typ)
-            end
-
-            self.calling_function = nil
-
-            if not ret[1] then
-                ret[1] = self:TypeFromImplicitNode(func_expr, "nil")
-            end
-
-            return ret
-        elseif typ:IsType("function") then
-            --external
-
-            self:FireEvent("external_call", node, typ)
-
-            -- HACKS
-            typ.analyzer = self
-            typ.node = node
-
-            return types.CallFunction(typ, arguments)
-        end
-        -- calling something that has no type and does not exist
-        -- expressions assumed to be crawled from caller
-
-        return {self:TypeFromImplicitNode(node, "any")}
-    end
-end
-
 function META:Error(node, msg)
     if require("oh").current_analyzer and require("oh").current_analyzer ~= self then
         return require("oh").current_analyzer:Error(node, msg)
@@ -566,46 +583,6 @@ function META:Error(node, msg)
     end
 end
 
-do
-    local guesses = {
-        {pattern = "count", type = "number"},
-        {pattern = "tbl", type = "table"},
-        {pattern = "str", type = "string"},
-    }
-
-    table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
-
-    function META:GetInferredType(node)
-
-        local str = node.value and node.value.value
-
-        if node.type_expression then
-            return self:AnalyzeExpression(node.type_expression, "typesystem")
-        end
-
-        if node.kind == "value" and str ~= "string" then
-            local v = self:GetValue(node, "typesystem")
-            if v then
-                return v
-            end
-        end
-
-        if str == "self" and self.current_table then
-            return self.current_table
-        end
-
-        if str then
-            str = str:lower()
-            for i, v in ipairs(guesses) do
-                if str:find(v.pattern) then
-                    return self:TypeFromImplicitNode(node, v.type)
-                end
-            end
-        end
-
-        return self:TypeFromImplicitNode(node, "any")
-    end
-end
 
 local evaluate_expression
 
@@ -915,13 +892,13 @@ do
                     ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
                 end
             end
-            local t = self:TypeFromImplicitNode(node, "function", ret, args)
+            local t = self:TypeFromNode(node, ret, args)
 
             self:CallMeLater(t, args, node)
 
             stack:Push(t)
         elseif node.kind == "table" then
-            stack:Push(self:TypeFromNode(node, self:TableToTypes(node, env)))
+            stack:Push(self:TypeFromNode(node, self:AnalyzeTable(node, env)))
         elseif node.kind == "binary_operator" then
             local r, l = stack:Pop(), stack:Pop()
 
@@ -968,16 +945,16 @@ do
             end
 
             if node.statements then
-                local str = "local oh, analyzer, types = ...; return " .. node:Render({})
+                local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
                 local f, err = loadstring(str, "")
                 if not f then
                     -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
                     print(str)
                     error(err)
                 end
-                func = f(require("oh"), self, types)
+                func = f(require("oh"), self, types, node)
             end
-            stack:Push(types.Create("function", rets, args, func))
+            stack:Push(self:TypeFromNode(node, rets, args, func))
         elseif node.kind == "postfix_call" then
             local typ = stack:Pop()
 
@@ -1000,13 +977,14 @@ do
                     tbl[i] = self:AnalyzeExpression(v, env)
                 end
             end
-            local val = types.Create("list", tbl, node.length and tonumber(node.length.value))
+
+            local val = self:TypeFromNode(node, tbl, node.length and tonumber(node.length.value))
             val.value = {}
             stack:Push(val)
         elseif node.kind == "type_table" then
             local t = self:TypeFromNode(node)
             self.current_table = t
-            t.value = self:TableToTypes(node, env)
+            t.value = self:AnalyzeTable(node, env)
             self.current_table = nil
             stack:Push(t)
         elseif node.kind == "import" or node.kind == "lsx" then
@@ -1099,6 +1077,30 @@ do
                 local ret = {self:AnalyzeExpression(expression, ...)}
                 for i,v in ipairs(ret) do
                     table.insert(out, v)
+                end
+            end
+            return out
+        end
+
+        function META:AnalyzeTable(node, env)
+            local out = {}
+            for _,v in ipairs(node.children) do
+                if v.kind == "table_key_value" then
+                    out[v.key.value] = self:AnalyzeExpression(v.value, env)
+                elseif v.kind == "table_expression_value" then
+                    local t = self:AnalyzeExpression(v.key, env)
+                    local v = self:AnalyzeExpression(v.value, env)
+                    if t:IsType("string") and t.value then
+                        out[t.value] = v
+                    else
+                        out[t] = v
+                    end
+                elseif v.kind == "table_index_value" then
+                    if v.i then
+                        out[v.i] = self:AnalyzeExpression(v.value, env)
+                    else
+                        table.insert(out, self:AnalyzeExpression(v.value, env))
+                    end
                 end
             end
             return out

@@ -284,16 +284,6 @@ function META:__call(args)
     return ret
 end
 
-function META:AttachNode(node)
-    self.node = node
-
-    if node then
-        node.inferred_type = self
-    end
-
-    return self
-end
-
 function META:IsType(t)
     return self.types[t] ~= nil
 end

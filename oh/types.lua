@@ -2,7 +2,7 @@ local syntax = require("oh.syntax")
 
 
 local function Error(self, msg, node)
-    local node = node or self.GetNode and self:GetNode()
+    local node = node or self.node
 
     if self.analyzer then
         self.analyzer:Error(node, msg)
@@ -48,20 +48,6 @@ function META.__add(a, b)
     end
 
     return a
-end
-
-function META:AttachNode(node)
-
-    self.node = node
-    if node then
-        node.inferred_type = self
-    end
-
-    return self
-end
-
-function META:GetNode()
-    return self.node
 end
 
 function META:get(key)
@@ -199,10 +185,9 @@ function META:IsCompatible(type)
     return self:IsType(type)
 end
 
-function META:Type(...)
-    local t = types.Create(...)
+function META:Type(name, ...)
+    local t = types.Create(name, ...)
     t.analyzer = self.analyzer
-    t:AttachNode(self:GetNode())
     return t
 end
 
@@ -476,7 +461,9 @@ end
 
 function types.Create(name, ...)
     assert(registered[name], "type " .. name .. " does not exist")
-    return registered[name].new(...)
+    local type = registered[name].new(...)
+
+    return type
 end
 
 function types.OverloadFunction(a, b)
@@ -535,7 +522,7 @@ function types.CallFunction(func, args)
 
     if found.func then
         _G.self = found.analyzer
-        local res = {pcall(found.func, unpack(args))}
+        local res = {xpcall(found.func, debug.traceback, unpack(args))}
         _G.self = nil
 
         if not res[1] then

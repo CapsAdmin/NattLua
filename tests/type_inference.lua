@@ -777,6 +777,14 @@ a.b.c = 1
     tbl[test] = tbl[test] or {}
     tbl[test] = "1"
     type_assert(tbl[test], nil as "1")
+]],C[[
+    local function fill(t)
+        for i = 1, 10 do
+            t[i] = i
+        end
+    end
+    local tbl = {}
+    fill(tbl)
 ]]}
 
 local errors = {
