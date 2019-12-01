@@ -6,14 +6,15 @@ META.__index = META
 local table_insert = table.insert
 
 do -- types
-    function META:TypeFromImplicitNode(node, ...)
-        node.scope = self.scope
-        local t = types.Create(...)
+    function META:TypeFromImplicitNode(node, name, ...)
+        node.scope = self.scope -- move this out of here
+
+        local t = types.Create(name, ...)
 
         t.node = node
-        node.inferred_type = t
-        t.code = self.code
         t.analyzer = self
+
+        node.inferred_type = t
 
         return t
     end
@@ -645,7 +646,7 @@ function META:AnalyzeStatement(statement, ...)
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
 
                 if b ~= true then
-                    b.truthy = (b.truthy or 0) + 1
+                    b:PushTruthy()
                 end
 
                 if self:AnalyzeStatements(statements, ...) == true then
@@ -656,7 +657,7 @@ function META:AnalyzeStatement(statement, ...)
                 end
 
                 if b ~= true then
-                    b.truthy = (b.truthy or 0) - 1
+                    b:PopTruthy()
                 end
 
                 self:PopScope()
@@ -800,7 +801,7 @@ do
                     end
                 end
 
-                if type(val) == "table" and val.truthy and val.truthy > 0 then
+                if type(val) == "table" and val:GetTruthy() then
                     local copy = val:Copy()
                     copy:RemoveNonTruthy()
                     val = copy

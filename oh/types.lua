@@ -77,7 +77,7 @@ function META:__tostring()
 
     if self.value ~= nil then
         local val = tostring(self.value)
-        if self.max then
+        if self.name == "number" and self.max then
             val = val .. ".." .. tostring(self.max.value)
         end
 
@@ -211,6 +211,19 @@ function META:IsTruthy()
         return self.interface.truthy[self.value]
     end
     return self.interface.truthy
+end
+
+META.truthy = 0
+
+function META:GetTruthy()
+    return self.truthy > 0
+end
+
+function META:PushTruthy()
+    self.truthy = self.truthy + 1
+end
+function META:PopTruthy()
+    self.truthy = self.truthy + 1
 end
 
 function META:Extend(t)
@@ -627,6 +640,18 @@ do
         return false
     end
 
+    META.truthy = 0
+
+    function META:GetTruthy()
+        return self.truthy > 0
+    end
+
+    function META:PushTruthy()
+        self.truthy = self.truthy + 1
+    end
+    function META:PopTruthy()
+        self.truthy = self.truthy - 1
+    end
 
     function META:GetReadableContent()
         return tostring(self)
