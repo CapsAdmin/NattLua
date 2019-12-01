@@ -310,9 +310,7 @@ a.b.c = 1
 ]],C[[
     local a: string | number = 1
 
-    local function test(a: number, b: string): boolean, number
-
-    end
+    local type test = function(a: number, b: string): boolean, number
 
     local foo,bar = test(1, "")
 
@@ -785,6 +783,18 @@ a.b.c = 1
     end
     local tbl = {}
     fill(tbl)
+]],C[[
+    tbl, {a,b} = {a=1,b=2}
+
+    type_assert(tbl.a, nil as 1)
+    type_assert(tbl.b, nil as 2)
+    type_assert(a, nil as 1)
+    type_assert(b, nil as 2)
+]],C[[
+    local type a = 1
+    type_assert(a, 1)
+]],C[[
+    local a = function(): number,string return 1,"" end
 ]]}
 
 local errors = {
@@ -797,6 +807,9 @@ local errors = {
     a.lol3 = {}
     a[1] = {}
  ]], "invalid key number"},
+    {C[[
+        local {a,b} = nil
+    ]], "expected a table on the right hand side, got"},
     {C[[
         local a: {[string] = string} = {}
         a.lol = "a"

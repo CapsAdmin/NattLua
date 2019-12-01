@@ -150,6 +150,8 @@ function META:EmitExpression(node)
         self:EmitLSXExpression(node)
     elseif node.kind == "type_table" then
         self:EmitTableType(node)
+    elseif node.kind == "type_list" then
+       self:EmitTypeList(node)
     else
         error("unhandled token type " .. node.kind)
     end
@@ -675,8 +677,7 @@ do -- types
         end
     end
 
-    function META:EmitListType(node)
-        self:EmitTypeExpression(node.left)
+    function META:EmitTypeList(node)
         self:EmitToken(node.tokens["["])
         for i = 1, #node.types do
             self:EmitTypeExpression(node.types[i])
@@ -686,6 +687,11 @@ do -- types
             end
         end
         self:EmitToken(node.tokens["]"])
+    end
+
+    function META:EmitListType(node)
+        self:EmitTypeExpression(node.left)
+        self:EmitTypeList(node)
     end
 
 

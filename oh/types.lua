@@ -39,16 +39,21 @@ end
 
 local META = {}
 META.__index = META
-
-types.type_meta = META
-
-function META.__add(a, b)
-    if not a:IsType(b) then
-        return types.Fuse(a, b)
+--[[
+local reported = {}
+META.__index = function(s,k)
+    if META[k] == nil then
+        if not reported[k] then
+            local d = debug.getinfo(2)
+            print("undefined lookup " .. k .. ": " .. d.source:sub(2) .. ":" .. d.currentline)
+            reported[k] = true
+        end
     end
 
-    return a
-end
+    return META[k]
+end--]]
+
+types.type_meta = META
 
 function META:get(key)
     key:Error("undefined get: "..tostring(self).."[" .. tostring(key) .. "]")
@@ -403,6 +408,7 @@ function META:Expect(type, expect)
 end
 
 function META:RemoveNonTruthy()
+    return self:Copy()
 end
 
 
@@ -557,7 +563,8 @@ end
 
 do
     local META = {}
-    META.__index = META
+    FUSE_META = {}
+    META.__index = function(s,k) FUSE_META[k] = true return META[k] end
 
     META.Error = Error
 
@@ -615,16 +622,6 @@ do
         end
 
         return table.concat(str, " | ")
-    end
-
-
-
-    function META.__add(a, b)
-        if not a:IsType(b) then
-            return types.Fuse(a, b)
-        end
-
-        return a
     end
 
     function META:Type(...)
