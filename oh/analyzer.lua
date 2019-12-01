@@ -18,42 +18,6 @@ do -- types
         return t
     end
 
-    function META:TypeFromNode(node, ...)
-        local type
-        if node.kind == "value" then
-            local t = node.value.type
-            local v = node.value.value
-
-            if t == "number" then
-                return self:TypeFromImplicitNode(node, "number", tonumber(v))
-            elseif t == "type_function" or t == "function" then
-                return self:TypeFromImplicitNode(node, "function", ...)
-            elseif t == "string" then
-                return self:TypeFromImplicitNode(node, "string", v:sub(2, -2))
-            elseif t == "letter" then
-                return self:TypeFromImplicitNode(node, "string", v)
-            elseif v == "..." then
-                return self:TypeFromImplicitNode(node, "...", ...)
-            elseif v == "true" then
-                return self:TypeFromImplicitNode(node, "boolean", true)
-            elseif v == "false" then
-                return self:TypeFromImplicitNode(node, "boolean", false)
-            elseif v == "nil" then
-                return self:TypeFromImplicitNode(node, "nil")
-            else
-                error("unhanlded value type " .. t .. " ( " .. v .. " ) ")
-            end
-        elseif node.kind == "type_list" then
-            return self:TypeFromImplicitNode(node, "list", ...)
-        elseif node.kind == "type_table" or node.kind == "table" then
-            return self:TypeFromImplicitNode(node, "table", ...)
-        elseif node.kind == "type_function" or node.kind == "function" then
-            return self:TypeFromImplicitNode(node, "function", ...)
-        else
-            error("unhanlded expression kind " .. node.kind)
-        end
-    end
-
     do
         local guesses = {
             {pattern = "count", type = "number"},
@@ -149,7 +113,7 @@ do -- types
                             for i = i, #arguments do
                                 table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
                             end
-                            self:DeclareUpvalue(identifier, self:TypeFromNode(node, values), "runtime")
+                            self:DeclareUpvalue(identifier, self:TypeFromImplicitNode(node, "...", values), "runtime")
                         end
                     end
 
@@ -856,16 +820,20 @@ do
                 end
 
                 stack:Push(val)
-            elseif
-                node.value.type == "number" or
-                node.value.type == "string" or
-                node.value.type == "letter" or
-                node.value.value == "nil" or
-                node.value.value == "true" or
-                node.value.value == "false" or
-                (env == "typesystem" and node.value.value == "function")
-            then
-                stack:Push(self:TypeFromNode(node))
+            elseif node.value.type == "number" then
+                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value)))
+            elseif node.value.type == "string" then
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2)))
+            elseif node.value.type == "letter" then
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value))
+            elseif node.value.value == "nil" then
+                stack:Push(self:TypeFromImplicitNode(node, "nil"))
+            elseif node.value.value == "true" then
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", true))
+            elseif node.value.value == "false" then
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", false))
+            elseif env == "typesystem" and node.value.value == "function" then
+                stack:Push(self:TypeFromImplicitNode(node, "function"))
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
@@ -892,13 +860,14 @@ do
                     ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
                 end
             end
-            local t = self:TypeFromNode(node, ret, args)
+
+            local t = self:TypeFromImplicitNode(node, "function", ret, args)
 
             self:CallMeLater(t, args, node)
 
             stack:Push(t)
         elseif node.kind == "table" then
-            stack:Push(self:TypeFromNode(node, self:AnalyzeTable(node, env)))
+            stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env)))
         elseif node.kind == "binary_operator" then
             local r, l = stack:Pop(), stack:Pop()
 
@@ -954,7 +923,8 @@ do
                 end
                 func = f(require("oh"), self, types, node)
             end
-            stack:Push(self:TypeFromNode(node, rets, args, func))
+
+            stack:Push(self:TypeFromImplicitNode(node, "function", rets, args, func))
         elseif node.kind == "postfix_call" then
             local typ = stack:Pop()
 
@@ -978,11 +948,12 @@ do
                 end
             end
 
-            local val = self:TypeFromNode(node, tbl, node.length and tonumber(node.length.value))
+            local val = self:TypeFromImplicitNode(node, "list", tbl, node.length and tonumber(node.length.value))
+
             val.value = {}
             stack:Push(val)
         elseif node.kind == "type_table" then
-            local t = self:TypeFromNode(node)
+            local t = self:TypeFromImplicitNode(node, "table")
             self.current_table = t
             t.value = self:AnalyzeTable(node, env)
             self.current_table = nil
@@ -1049,11 +1020,6 @@ do
             local stack = setmetatable({values = {}, i = 1}, meta)
 
             expand(self, exp, evaluate_expression, stack, env)
-
-          --  local ok, err = pcall(expand, self, exp, evaluate_expression, stack, env)
---            if not ok then
-                --stack:Push(self:TypeFromImplicitNode(exp, "any"))
-            --end
 
             local out = {}
 
