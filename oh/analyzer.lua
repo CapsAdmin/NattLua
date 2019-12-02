@@ -793,69 +793,56 @@ do
             end
         elseif node.kind == "function" then
             local args = {}
+
             for i, key in ipairs(node.identifiers) do
                 -- if this node is already explicitly annotated with foo: mytype or foo as mytype use that
-                val = key.type_expression and self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
-
-                if val then
-                    table.insert(args, val)
-                end
+                args[i] = key.type_expression and self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
             end
 
             if node.self_call and node.expression then
-                local val = self:GetUpvalue(node.expression.left, "runtime")
-                if val then
-                    table.insert(args, 1, val.data)
+                local upvalue = self:GetUpvalue(node.expression.left, "runtime")
+                if upvalue then
+                    table.insert(args, 1, upvalue.data)
                 end
             end
 
             local ret = {}
+            
             if node.return_types then
                 for i, type_exp in ipairs(node.return_types) do
                     ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
                 end
             end
 
-            local t = self:TypeFromImplicitNode(node, "function", ret, args)
+            local obj = self:TypeFromImplicitNode(node, "function", ret, args)
+            self:CallMeLater(obj, args, node)
+            stack:Push(obj)
 
-            self:CallMeLater(t, args, node)
-
-            stack:Push(t)
         elseif node.kind == "table" then
             stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env)))
         elseif node.kind == "binary_operator" then
-            local r, l = stack:Pop(), stack:Pop()
+            local right, left = stack:Pop(), stack:Pop()
 
             if node.value.value == ":" then
-                stack:Push(l)
+                stack:Push(left)
             end
 
-            stack:Push(r:BinaryOperator(node, l, node.right, env))
+            stack:Push(right:BinaryOperator(node, left, node.right, env))
         elseif node.kind == "prefix_operator" then
-            local r = stack:Pop()
-            stack:Push(r:PrefixOperator(node))
+            stack:Push(stack:Pop():PrefixOperator(node))
         elseif node.kind == "postfix_operator" then
-            local r = stack:Pop()
-            stack:Push(r:PostfixOperator(node))
+            stack:Push(stack:Pop():PostfixOperator(node))
         elseif node.kind == "postfix_expression_index" then
-            local r = stack:Pop()
-            local index = self:AnalyzeExpression(node.expression)
-
-            stack:Push(r:get(index))
+            stack:Push(stack:Pop():get(self:AnalyzeExpression(node.expression)))
         elseif node.kind == "type_function" then
             local args = {}
             local rets = {}
             local func
 
             -- declaration
-
             if node.identifiers then
                 for i, key in ipairs(node.identifiers) do
-                    local val = self:GetValue(key.left or key, env) or self:GetInferredType(key)
-
-                    if val then
-                        table.insert(args, val)
-                    end
+                    args[i] = self:GetValue(key.left or key, env) or self:GetInferredType(key)
                 end
             end
 
@@ -867,49 +854,52 @@ do
 
             if node.statements then
                 local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
-                local f, err = loadstring(str, "")
-                if not f then
+                local load_func, err = loadstring(str, "")
+                if not load_func then
                     -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
                     print(str)
                     error(err)
                 end
-                func = f(require("oh"), self, types, node)
+                func = load_func(require("oh"), self, types, node)
             end
 
             stack:Push(self:TypeFromImplicitNode(node, "function", rets, args, func))
         elseif node.kind == "postfix_call" then
-            local typ = stack:Pop()
+            local obj = stack:Pop()
 
             local arguments = self:AnalyzeExpressions(node.expressions, env)
+
             if node.self_call then
                 local val = stack:Pop()
                 table.insert(arguments, 1, val)
             end
 
-            if typ.name and typ.name ~= "function" and typ.name ~= "table" and typ.name ~= "any" then
-                self:Error(node, tostring(typ) .. " cannot be called")
-                return
+            if obj.name and obj.name ~= "function" and obj.name ~= "table" and obj.name ~= "any" then
+                self:Error(node, tostring(obj) .. " cannot be called")
+            else
+                stack:Push(self:CallFunctionType(obj, arguments, node), true)
             end
-
-            stack:Push(self:CallFunctionType(typ, arguments, node), true)
         elseif node.kind == "type_list" then
             local tbl = {}
+
             if node.types then
-                for i,v in ipairs(node.types)do
-                    tbl[i] = self:AnalyzeExpression(v, env)
+                for i, exp in ipairs(node.types)do
+                    tbl[i] = self:AnalyzeExpression(exp, env)
                 end
             end
 
-            local val = self:TypeFromImplicitNode(node, "list", tbl, node.length and tonumber(node.length.value))
+            local obj = self:TypeFromImplicitNode(node, "list", tbl, node.length and tonumber(node.length.value))
 
-            val.value = {}
-            stack:Push(val)
+            obj.value = {}
+            stack:Push(obj)
         elseif node.kind == "type_table" then
-            local t = self:TypeFromImplicitNode(node, "table")
-            self.current_table = t
-            t.value = self:AnalyzeTable(node, env)
+            local obj = self:TypeFromImplicitNode(node, "table")
+            
+            self.current_table = obj
+            obj.value = self:AnalyzeTable(node, env)
             self.current_table = nil
-            stack:Push(t)
+
+            stack:Push(obj)
         elseif node.kind == "import" or node.kind == "lsx" then
             --stack:Push(self:AnalyzeStatement(node.root))
 --            print(node.analyzer:Analyze())
@@ -924,7 +914,7 @@ do
 
         function meta:Push(val, multi)
             if multi then
-                for i,v in ipairs(val) do
+                for i, v in ipairs(val) do
                     assert(types.IsTypeObject(v))
                 end
             else
@@ -1002,22 +992,24 @@ do
 
         function META:AnalyzeTable(node, env)
             local out = {}
-            for _,v in ipairs(node.children) do
-                if v.kind == "table_key_value" then
-                    out[v.key.value] = self:AnalyzeExpression(v.value, env)
-                elseif v.kind == "table_expression_value" then
-                    local t = self:AnalyzeExpression(v.key, env)
-                    local v = self:AnalyzeExpression(v.value, env)
-                    if t:IsType("string") and t.value then
-                        out[t.value] = v
+            for _, node in ipairs(node.children) do
+                if node.kind == "table_key_value" then
+                    out[node.key.value] = self:AnalyzeExpression(node.value, env)
+                elseif node.kind == "table_expression_value" then
+                    
+                    local key = self:AnalyzeExpression(node.key, env)
+                    local obj = self:AnalyzeExpression(node.value, env)
+                    
+                    if key:IsType("string") and key.value then
+                        out[key.value] = obj
                     else
-                        out[t] = v
+                        out[key] = obj
                     end
-                elseif v.kind == "table_index_value" then
-                    if v.i then
-                        out[v.i] = self:AnalyzeExpression(v.value, env)
+                elseif node.kind == "table_index_value" then
+                    if node.i then
+                        out[node.i] = self:AnalyzeExpression(node.value, env)
                     else
-                        table.insert(out, self:AnalyzeExpression(v.value, env))
+                        table.insert(out, self:AnalyzeExpression(node.value, env))
                     end
                 end
             end
