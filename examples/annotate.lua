@@ -314,7 +314,7 @@ type object = function(tbl)
   t.value = nil
   t.structure = nil
 
-  local a = tbl:get("__newindex")
+  local a = tbl:Get("__newindex")
   if a.name == "function" then
     local old = t.set
     t.set = function(...)

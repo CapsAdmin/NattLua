@@ -55,12 +55,12 @@ end--]]
 
 types.type_meta = META
 
-function META:get(key)
+function META:Get(key)
     key:Error("undefined get: "..tostring(self).."[" .. tostring(key) .. "]")
     return self:Type("any")
 end
 
-function META:set(key, val)
+function META:Set(key, val)
     key:Error("undefined set: "..tostring(self).."[" .. tostring(key) .. "] = " .. tostring(val))
 end
 
@@ -144,7 +144,7 @@ function META:IsType(what, explicit)
             local superset = what
 
             for super_key, super_val in pairs(superset.value) do
-                local sub_val = self:get(super_key)
+                local sub_val = self:Get(super_key)
 
                 self.LOL = true
 
@@ -236,7 +236,7 @@ function META:Extend(t)
 
     for k,v in pairs(t.value) do
         if not copy.value[k] then
-            copy:set(k,v)
+            copy:Set(k,v)
         end
     end
 
@@ -250,8 +250,8 @@ function META:BinaryOperator(op_node, b, node, env)
     local op = op_node.value.value
 
     if op == "." or op == ":" then
-        if b.get then
-            return b:get(a, node, env)
+        if b.Get then
+            return b:Get(a, node, env)
         end
     end
 
@@ -459,8 +459,8 @@ function types.Register(name, interface)
             end
 
 
-            self.get = interface.get
-            self.set = interface.set
+            self.Get = interface.Get
+            self.Set = interface.Set
 
             self.name = name
 
@@ -592,21 +592,21 @@ do
         end
     end
 
-    function META:get(key)
+    function META:Get(key)
         local out
         for _, type in ipairs(self.types) do
             if not out then
-                out = type:get(key)
+                out = type:Get(key)
             else
-                out = out + type:get(key)
+                out = out + type:Get(key)
             end
         end
         return out
     end
 
-    function META:set(key, val)
+    function META:Set(key, val)
         for _, type in ipairs(self.types) do
-            type:set(key, val)
+            type:Set(key, val)
         end
     end
 
@@ -738,17 +738,17 @@ types.Register("base", {
 types.Register("any", {
     inherits = "base",
     truthy = true,
-    get = function(self, key)
+    Get = function(self, key)
         return self:Type("any")
     end,
-    set = function(self, key)
+    Set = function(self, key)
     end,
 })
 
 types.Register("string", {
     inherits = "base",
     truthy = true,
-    get = function(self, key)
+    Get = function(self, key)
         if self.analyzer then
             local g = self.analyzer:GetValue("_G", "typesystem")
             if not g then
@@ -762,13 +762,13 @@ types.Register("string", {
                     local tbl = self.analyzer:Index("string")
 
                     if tbl and key then
-                        return tbl:get(key)
+                        return tbl:Get(key)
                     end
                 else
                     local tbl = self.analyzer:GetValue("string", "typesystem")
 
                     if tbl and key then
-                        return tbl:get(key)
+                        return tbl:Get(key)
                     end
                 end
             end
@@ -807,7 +807,7 @@ types.Register("table", {
         end
         return {structure = structure, value = value}
     end,
-    set = function(self, key, val, node, env)
+    Set = function(self, key, val, node, env)
         local hashed_key = type(key) == "string" and key or key.value
 
         if self.structure then
@@ -837,7 +837,7 @@ types.Register("table", {
             end
         end
     end,
-    get = function(self, key)
+    Get = function(self, key)
         local hashed_key = (type(key) == "string" or type(key) == "number") and key or key.value
 
         if self.structure then
@@ -943,7 +943,7 @@ do
         init = function(self, type, length)
             return {list_type = type, length = length}
         end,
-        set = function(self, key, val)
+        Set = function(self, key, val)
             check_index(self, key)
 
             if self.list_type and not val:IsType(self.list_type) then
@@ -952,7 +952,7 @@ do
 
             self.value[key] = val
         end,
-        get = function(self, key)
+        Get = function(self, key)
             check_index(self, key)
 
             return self.value[key]

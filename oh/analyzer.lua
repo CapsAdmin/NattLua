@@ -298,7 +298,7 @@ do
         local key = self:AnalyzeExpression(key, env)
         local obj = self:AnalyzeExpression(obj, env)
 
-        obj:set(key, val)
+        obj:Set(key, val)
 
         self:FireEvent("newindex", obj, key, val, env)
     end
@@ -579,7 +579,7 @@ function META:AnalyzeStatement(statement, ...)
         end
 
         for _, node in ipairs(statement.left) do
-            local obj = obj:get(node.value) or self:TypeFromImplicitNode(node, "nil")
+            local obj = obj:Get(node.value) or self:TypeFromImplicitNode(node, "nil")
 
             if statement.kind == "local_destructure_assignment" then
                 self:DeclareUpvalue(node, obj, env)
@@ -713,9 +713,9 @@ function META:AnalyzeStatement(statement, ...)
         for i,v in ipairs(statement.expressions) do
             local val = self:AnalyzeExpression(v.right, "typesystem")
             if tbl.value and tbl.value[v.left.value] then
-                types.OverloadFunction(tbl:get(v.left.value), val)
+                types.OverloadFunction(tbl:Get(v.left.value), val)
             else
-                tbl:set(v.left.value, self:AnalyzeExpression(v.right, "typesystem"))
+                tbl:Set(v.left.value, self:AnalyzeExpression(v.right, "typesystem"))
             end
         end
 
@@ -833,7 +833,7 @@ do
         elseif node.kind == "postfix_operator" then
             stack:Push(stack:Pop():PostfixOperator(node))
         elseif node.kind == "postfix_expression_index" then
-            stack:Push(stack:Pop():get(self:AnalyzeExpression(node.expression)))
+            stack:Push(stack:Pop():Get(self:AnalyzeExpression(node.expression)))
         elseif node.kind == "type_function" then
             local args = {}
             local rets = {}

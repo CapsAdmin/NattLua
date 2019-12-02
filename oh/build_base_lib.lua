@@ -9651,7 +9651,7 @@ type TPRINT = function(...) print(...) end
 
 
 type table.sort = function(tbl, func)
-	local next = oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):get("next").func
+	local next = oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get("next").func
 	local k,v = next(tbl)
 	func.arguments[1] = v
 	func.arguments[2] = v
@@ -9660,7 +9660,7 @@ end
 type setmetatable = function(tbl, meta)
 	if meta.value and meta.value["__index"] then
 		tbl.index = function(self, key)
-		return meta:get(key)
+		return meta:Get(key)
 		end
 	end
 	return tbl
@@ -9672,7 +9672,7 @@ local oh = require("oh")
 
 local base = oh.GetBaseAnalyzer(assert(oh.Code(lua, "base_library"):Parse()).SyntaxTree)
 
-assert(base:GetValue("_G", "typesystem"):get("string"):get("gsub") == base:GetValue("string", "typesystem"):get("gsub"))
+assert(base:GetValue("_G", "typesystem"):Get("string"):Get("gsub") == base:GetValue("string", "typesystem"):Get("gsub"))
 
 io.open("oh/base_lib.oh", "w"):write(lua)
 

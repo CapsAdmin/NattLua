@@ -18,10 +18,10 @@ function oh.GetBaseAnalyzer(ast)
 
 		local g = base:TypeFromImplicitNode(root, "table")
 		for k,v in pairs(base.env.typesystem) do
-			g:set(k, v)
+			g:Set(k, v)
 		end
 		base:SetGlobal("_G", g, "typesystem")
-		base:GetValue("_G", "typesystem"):set("_G", g)
+		base:GetValue("_G", "typesystem"):Set("_G", g)
 
         oh.base_analyzer = base
     end
