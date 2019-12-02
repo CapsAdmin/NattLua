@@ -504,39 +504,39 @@ end
 
 
 
-function types.CallFunction(func, args)
+function types.CallFunction(obj, args)
     local errors = {}
     local found
 
-    local overloads = func.overloads or func.types
+    local overloads = obj.overloads or obj.types
 
-    for _, func in ipairs(overloads or {func}) do
+    for _, obj in ipairs(overloads or {obj}) do
         local ok = true
 
-        if overloads and func.arguments and #func.arguments ~= #args then
+        if overloads and obj.arguments and #obj.arguments ~= #args then
             ok = false
         end
 
-        if func.arguments then
-            for i, typ in ipairs(func.arguments) do
+        if obj.arguments then
+            for i, typ in ipairs(obj.arguments) do
                 if (not args[i] or not typ:IsType(args[i])) and not (typ.name == "any" or typ.name == "...") then
                     ok = false
-                    table.insert(errors, {func = func, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
+                    table.insert(errors, {obj = obj, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
                 end
             end
         end
 
         if ok then
-            found = func
+            found = obj
             break
         end
     end
 
     if not found then
         for _, data in ipairs(errors) do
-            data.func:Error(unpack(data.err))
+            data.obj:Error(unpack(data.err))
         end
-        return {func:Type("any")}
+        return {obj:Type("any")}
     end
 
     if found.func then
@@ -545,20 +545,20 @@ function types.CallFunction(func, args)
         _G.self = nil
 
         if not res[1] then
-            func:Error(res[2])
-            return {func:Type("any")}
+            obj:Error(res[2])
+            return {obj:Type("any")}
         end
 
         table.remove(res, 1)
 
         if not res[1] then
-            res[1] = func:Type("nil")
+            res[1] = obj:Type("nil")
         end
 
         return res
     end
 
-    return found.ret or {func:Type("any")}
+    return found.ret or {obj:Type("any")}
 end
 
 do
