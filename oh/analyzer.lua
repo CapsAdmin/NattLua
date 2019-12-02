@@ -1,4 +1,5 @@
 local types = require("oh.types")
+local types3 = require("oh.types3")
 
 local META = {}
 META.__index = META
@@ -9,11 +10,11 @@ do -- types
     function META:TypeFromImplicitNode(node, name, ...)
         node.scope = self.scope -- move this out of here
 
-        local obj = types.Create(name, ...)
+        local obj = types3.Create(name, ...)
+        if not obj then error("NYI: " .. name) end
 
         obj.node = node
         obj.analyzer = self
-
         node.inferred_type = obj
 
         return obj
@@ -44,8 +45,8 @@ do -- types
     do
         local function merge_types(src, dst)
             for i,v in ipairs(dst) do
-                if src[i] and src[i].name ~= "any" then
-                    src[i] = types.Fuse(src[i], v)
+                if src[i] and src[i].type ~= "any" then
+                    src[i] = types3.Set:new(src[i], v)
                 else
                     src[i] = dst[i]
                 end
@@ -54,7 +55,7 @@ do -- types
             return src
         end
 
-        function META:CallFunctionType(obj, arguments, node)
+        function META:CallFunctionType(obj, arguments, node, deferred)
             node = node or obj.node
             local func_expr = obj.node
 
@@ -75,6 +76,18 @@ do -- types
                 do
                     self:PushScope(obj.node)
 
+
+
+                    local argument_tuple = types3.Tuple:new(unpack(arguments))
+                    local return_tuple = obj:Call(argument_tuple)
+
+                    if not return_tuple then
+                        self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
+                    end
+
+
+
+
                     local identifiers = {}
 
                     for i,v in ipairs(obj.node.identifiers) do
@@ -89,6 +102,7 @@ do -- types
                         local node = identifier == "self" and obj.node or identifier
                         local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
 
+
                         if identifier == "self" or identifier.value.value ~= "..." then
                             self:DeclareUpvalue(identifier, arg, "runtime")
                         else
@@ -96,7 +110,8 @@ do -- types
                             for i = i, #arguments do
                                 table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
                             end
-                            self:DeclareUpvalue(identifier, self:TypeFromImplicitNode(node, "...", values), "runtime")
+                            local obj = self:TypeFromImplicitNode(node, "...", values)
+                            self:DeclareUpvalue(identifier, obj, "runtime")
                         end
                     end
 
@@ -108,24 +123,26 @@ do -- types
                     self:PopScope()
 
                     if obj.node.return_types then
-                        for i,v in ipairs(obj.ret) do
-                            if not ret[i] or not v:IsType(ret[i]) then
-                                self:Error(func_expr, "expected return #" .. i .. " to be " .. tostring(v) .. " got " .. tostring(ret[i]))
+                        for i,v in ipairs(return_tuple.data) do
+                            if not ret[i] or not types3.SupersetOf(v, ret[i]) then
+                                self:Error(func_expr, "expected return #" .. i .. " to be a superset of " .. tostring(v) .. " got " .. tostring(ret[i]))
                             end
                         end
                     else
-                        for i,v in ipairs(obj.ret) do
+                        for i,v in ipairs(return_tuple.data) do
                             if ret[i] == nil then
                                 ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
                             end
                         end
 
-                        obj.ret = merge_types(obj.ret, ret)
+                        -- return tuples
+                        obj.data:GetKeyVal(argument_tuple).val.data = merge_types(obj.data:GetKeyVal(argument_tuple).val.data, ret)
                     end
 
-                    obj.arguments = merge_types(obj.arguments, arguments)
+                    -- argument tuples
+                    obj.data:GetKeyVal(argument_tuple).key.data = merge_types(obj.data:GetKeyVal(argument_tuple).key.data, arguments)
 
-                    for i, v in ipairs(obj.arguments) do
+                    for i, v in ipairs(obj.data:GetKeyVal(argument_tuple).key.data) do
                         if obj.node.identifiers[i] then
                             obj.node.identifiers[i].inferred_type = v
                         end
@@ -139,7 +156,10 @@ do -- types
                 self.calling_function = nil
 
                 if not ret[1] then
-                    ret[1] = self:TypeFromImplicitNode(func_expr, "nil")
+                    -- if this is called from CallMeLater we cannot create a nil type from node
+                    local old = node.inferred_type
+                    ret[1] = self:TypeFromImplicitNode(node, "nil")
+                    node.inferred_type = old
                 end
 
                 return ret
@@ -226,8 +246,6 @@ do
     end
 
     function META:DeclareUpvalue(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
         local upvalue = {
             key = key,
             data = val,
@@ -263,8 +281,6 @@ do
     end
 
     function META:MutateUpvalue(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
         local upvalue = self:GetUpvalue(key, env)
         if upvalue then
             upvalue.data = val
@@ -285,7 +301,6 @@ do
     end
 
     function META:SetGlobal(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
         self:FireEvent("set_global", key, val, env)
 
         self.env[env][self:Hash(key)] = val
@@ -293,8 +308,6 @@ do
 
     -- obj[key] = val
     function META:NewIndex(obj, key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
         local key = self:AnalyzeExpression(key, env)
         local obj = self:AnalyzeExpression(obj, env)
 
@@ -304,8 +317,6 @@ do
     end
 
     function META:Assign(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
         if key.kind == "value" then
             -- local key = val; key = val
             if not self:MutateUpvalue(key, val, env) then
@@ -464,9 +475,9 @@ function META:AnalyzeStatements(statements, ...)
     end
 end
 
-function META:CallMeLater(typ, arguments, node)
+function META:CallMeLater(...)
     self.deferred_calls = self.deferred_calls or {}
-    table.insert(self.deferred_calls, 1, {typ, arguments, node})
+    table.insert(self.deferred_calls, 1, {...})
 end
 
 function META:Error(node, msg)
@@ -520,8 +531,9 @@ function META:AnalyzeStatement(statement, ...)
         if statement.right then
             for _, exp in ipairs(statement.right) do
                 for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
-                    if obj:IsType("...") and obj.values then
-                        for _, obj in ipairs(obj.values) do
+                    --if obj:IsType("...") and obj.values then
+                    if types3.GetType(obj) == "tuple" then -- vararg
+                        for _, obj in ipairs(obj.data) do
                             table.insert(values, obj)
                         end
                     end
@@ -539,13 +551,8 @@ function META:AnalyzeStatement(statement, ...)
                 local superset = obj
                 local subset = values[i]
 
-                if subset and not subset:IsType(superset) then
+                if subset and not types3.SupersetOf(subset, superset) then
                     self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(values[i]))
-                else
-                    if obj:IsType("table") and values[i] then
-                        obj.structure = obj.value
-                        obj.value = values[i].value
-                    end
                 end
 
                 node.type_explicit = true
@@ -771,7 +778,8 @@ do
                     obj = self:GetInferredType(node)
                 end
 
-                if obj:GetTruthy() then
+                -- ...
+                if obj.GetTruthy and obj:GetTruthy() then
                     obj = obj:RemoveNonTruthy()
                 end
 
@@ -807,7 +815,7 @@ do
             end
 
             local ret = {}
-            
+
             if node.return_types then
                 for i, type_exp in ipairs(node.return_types) do
                     ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
@@ -815,7 +823,7 @@ do
             end
 
             local obj = self:TypeFromImplicitNode(node, "function", ret, args)
-            self:CallMeLater(obj, args, node)
+            self:CallMeLater(obj, args, node, true)
             stack:Push(obj)
 
         elseif node.kind == "table" then
@@ -827,7 +835,7 @@ do
                 stack:Push(left)
             end
 
-            stack:Push(right:BinaryOperator(node, left, node.right, env))
+            stack:Push(types3.BinaryOperator(node.value.value, right, left, env))
         elseif node.kind == "prefix_operator" then
             stack:Push(stack:Pop():PrefixOperator(node))
         elseif node.kind == "postfix_operator" then
@@ -877,7 +885,7 @@ do
             if obj.name and obj.name ~= "function" and obj.name ~= "table" and obj.name ~= "any" then
                 self:Error(node, tostring(obj) .. " cannot be called")
             else
-                stack:Push(self:CallFunctionType(obj, arguments, node), true)
+                stack:Push(self:CallFunctionType(obj, arguments, node))
             end
         elseif node.kind == "type_list" then
             local tbl = {}
@@ -894,7 +902,7 @@ do
             stack:Push(obj)
         elseif node.kind == "type_table" then
             local obj = self:TypeFromImplicitNode(node, "table")
-            
+
             self.current_table = obj
             obj.value = self:AnalyzeTable(node, env)
             self.current_table = nil
@@ -912,26 +920,21 @@ do
         local meta = {}
         meta.__index = meta
 
-        function meta:Push(val, multi)
-            if multi then
-                for i, v in ipairs(val) do
-                    assert(types.IsTypeObject(v))
-                end
-            else
-                assert(types.IsTypeObject(val))
-            end
+        function meta:Push(val)
             self.values[self.i] = val
             self.i = self.i + 1
         end
 
         function meta:Pop()
             self.i = self.i - 1
+
             if self.i < 1 then
                 if self.last_val then
                     self.last_val:Error("stack underflow")
                 end
                 error("stack underflow", 2)
             end
+
             local val = self.values[self.i]
             self.values[self.i] = nil
 
@@ -966,7 +969,7 @@ do
             local out = {}
 
             for i,v in ipairs(stack.values) do
-                if not types.IsTypeObject(v) then
+                if v[1] then
                     for i,v in ipairs(v) do
                         table.insert(out, v)
                     end
@@ -996,10 +999,10 @@ do
                 if node.kind == "table_key_value" then
                     out[node.key.value] = self:AnalyzeExpression(node.value, env)
                 elseif node.kind == "table_expression_value" then
-                    
+
                     local key = self:AnalyzeExpression(node.key, env)
                     local obj = self:AnalyzeExpression(node.value, env)
-                    
+
                     if key:IsType("string") and key.value then
                         out[key.value] = obj
                     else

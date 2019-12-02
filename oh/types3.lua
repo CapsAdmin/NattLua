@@ -12,8 +12,23 @@ function types.IsType(obj, what)
     return getmetatable(obj) == types[what]
 end
 
-function types.GetType(obj)
-    return getmetatable(obj)
+function types.GetObjectType(val)
+    return getmetatable(val) == types.Object and val.type
+end
+
+function types.GetType(val)
+    local m = getmetatable(val)
+    if m then
+        if m == types.Set then
+            return "set"
+        elseif m == types.Tuple then
+            return "tuple"
+        elseif m == types.Object then
+            return "object"
+        elseif m == types.Dictionary then
+            return "dictionary"
+        end
+    end
 end
 
 function types.SupersetOf(a, b)
@@ -44,8 +59,12 @@ function types.Index(obj, key)
 
 end
 
-function types.BinaryOperator(obj, l, r)
-
+function types.BinaryOperator(op, l, r, env)
+    if env == "typesystem" then
+        if op == "|" then
+            return types.Set:new(l, r)
+        end
+    end
 end
 
 do
@@ -131,12 +150,20 @@ do
     end
 
     function Dictionary:Get(key)
+        local keyval = self:GetKeyVal(key)
+        if keyval then
+            return keyval.val
+        end
+    end
+
+    function Dictionary:GetKeyVal(key)
         for _, keyval in ipairs(self.data) do
             if types.SupersetOf(key, keyval.key) then
-                return keyval.val
+                return keyval
             end
         end
     end
+
 
     function Dictionary:new(data)
         local self = setmetatable({}, self)
@@ -165,6 +192,10 @@ do
 
     function Object:SetType(name)
         self.type = name
+    end
+
+    function Object:IsType(name)
+        return self.type == name
     end
 
     function Object:GetLength()
@@ -266,7 +297,30 @@ do
             return tostring(self.data)
         end
 
-        return "「" .. self.type .. " 〉" .. tostring(self.data) .. (self.const and "!" or "") .. "」"
+        if self.data == nil then
+            return self.type
+        end
+
+        return self.type .. "(".. tostring(self.data) .. ")"
+    end
+
+    function Object:Serialize()
+        return self:__tostring()
+    end
+
+    do
+        Object.truthy = 0
+
+        function Object:GetTruthy()
+            return self.truthy > 0
+        end
+
+        function Object:PushTruthy()
+            self.truthy = self.truthy + 1
+        end
+        function Object:PopTruthy()
+            self.truthy = self.truthy + 1
+        end
     end
 
     local uid = 0
@@ -307,7 +361,7 @@ do
 
     function Tuple:SupersetOf(sub)
         for i = 1, sub:GetLength() do
-            if not self:Get(i):SupersetOf(sub:Get(i)) then
+            if not self:Get(i) or not self:Get(i):SupersetOf(sub:Get(i)) then
                 return false
             end
         end
@@ -330,7 +384,7 @@ do
             s[i] = tostring(v)
         end
 
-        return "(" .. table.concat(s, ", ") .. ")"
+        return table.concat(s, ", ")
     end
 
     function Tuple:new(...)
@@ -468,6 +522,30 @@ do
 
     types.Set = Set
 end
+
+function types.Create(type, ...)
+    if type == "nil" then
+        return types.Object:new(type)
+    elseif type == "any" then
+        return types.Object:new(type)
+    elseif type == "table" then
+        print(...)
+        return types.Dictionary:new({})
+    elseif type == "boolean" then
+        return types.Object:new("boolean", ...)
+    elseif type == "..." then
+        return types.Tuple:new(...)
+    elseif type == "number" or type == "string" then
+        return types.Object:new(type, ...)
+    elseif type == "function" then
+        local returns, arguments = ...
+        local dict = types.Dictionary:new({})
+        dict:Set(types.Tuple:new(unpack(arguments)), types.Tuple:new(unpack(returns)))
+        return types.Object:new(type, dict)
+    end
+end
+
+do return types end
 
 do
     local Set = function(...) return types.Set:new(...) end

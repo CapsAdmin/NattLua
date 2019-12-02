@@ -1034,15 +1034,4 @@ types.Register("function", {
     end,
 })
 
-setmetatable(types, {
-    __call = function(_, ...)
-        return types.Create(...)
-    end,
-    __index = function(_, key)
-        if registered[key] then
-            return registered[key].new
-        end
-    end,
-})
-
 return types

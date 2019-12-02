@@ -212,14 +212,17 @@ do
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"])
 
-        if self.config.annotate and node.inferred_type and node.inferred_type:GetReturnTypes() and node.inferred_type.ret[1] then
+        if self.config.annotate and node.inferred_type then
             --self:Emit(" --[[ : ")
-            self:Emit(": ")
             local str = {}
-            for i,v in ipairs(node.inferred_type.ret) do
+            -- this iterates the first return tuple
+            for i,v in ipairs(node.inferred_type.data.data[1].val.data) do
                 str[i] = tostring(v)
             end
-            self:Emit(table.concat(str, ", "))
+            if str[1] then
+                self:Emit(": ")
+                self:Emit(table.concat(str, ", "))
+            end
             --self:Emit(" ]] ")
         end
 
