@@ -172,7 +172,14 @@ do -- types
                 obj.analyzer = self
                 obj.node = node
 
-                return types.CallFunction(obj, arguments)
+
+                local argument_tuple = types3.Tuple:new(unpack(arguments))
+                local return_tuple = obj:Call(argument_tuple)
+                if not return_tuple then
+                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
+                end
+
+                return return_tuple
             end
             -- calling something that has no type and does not exist
             -- expressions assumed to be crawled from caller
@@ -868,7 +875,7 @@ do
                     print(str)
                     error(err)
                 end
-                func = load_func(require("oh"), self, types, node)
+                func = load_func(require("oh"), self, types3, node)
             end
 
             stack:Push(self:TypeFromImplicitNode(node, "function", rets, args, func))
@@ -921,6 +928,7 @@ do
         meta.__index = meta
 
         function meta:Push(val)
+            assert(val)
             self.values[self.i] = val
             self.i = self.i + 1
         end

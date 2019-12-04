@@ -65,6 +65,15 @@ function types.BinaryOperator(op, l, r, env)
             return types.Set:new(l, r)
         end
     end
+
+    if op == ":" then
+        print(r)
+        print(r:Get(l))
+        return r:Get(l)
+    end
+
+    print(op, "!!",l,r,env)
+    error("NYI")
 end
 
 do
@@ -136,7 +145,18 @@ do
         self.locked = true
     end
 
+    function Dictionary:Cast(val)
+        if type(val) == "string" then
+            return types.Object:new("string", val)
+        elseif type(val) == "number" then
+            return types.Object:new("number", val)
+        end
+        return val
+    end
+
     function Dictionary:Set(key, val)
+        key = self:Cast(key)
+        val = self:Cast(val)
         for _, keyval in ipairs(self.data) do
             if types.SupersetOf(key, keyval.key) and types.SupersetOf(val, keyval.val) then
                 keyval.val = val
@@ -237,6 +257,10 @@ do
         end
 
         if types.IsType(sub, "Object") then
+            if sub.type == "any" then
+                return true
+            end
+
             if self.type == sub.type then
 
                 if self.const == true and sub.const == true then
@@ -361,7 +385,7 @@ do
 
     function Tuple:SupersetOf(sub)
         for i = 1, sub:GetLength() do
-            if not self:Get(i) or not self:Get(i):SupersetOf(sub:Get(i)) then
+            if sub:Get(i).type ~= "any" and (not self:Get(i) or not self:Get(i):SupersetOf(sub:Get(i))) then
                 return false
             end
         end
@@ -529,7 +553,6 @@ function types.Create(type, ...)
     elseif type == "any" then
         return types.Object:new(type)
     elseif type == "table" then
-        print(...)
         return types.Dictionary:new({})
     elseif type == "boolean" then
         return types.Object:new("boolean", ...)
