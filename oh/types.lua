@@ -25,7 +25,22 @@ local types = {}
 
 
 function types.IsTypeObject(val)
-    return getmetatable(val) == types.fuse_meta or getmetatable(val) == types.type_meta
+    return val ~= nil and getmetatable(val) == types.fuse_meta or getmetatable(val) == types.type_meta
+end
+
+function types.GetType(obj)
+    if obj:IsType("...") and obj.data then
+        return "tuple"
+    end
+    return "object"
+end
+
+function types.SupersetOf(subset, superset)
+    return subset:IsType(superset)
+end
+
+function types.BinaryOperator(node, right, left, env)
+    return right:BinaryOperator(node, left, node.right, env)
 end
 
 function types.ReplaceType(a, b)
@@ -183,6 +198,10 @@ function META:IsType(what, explicit)
 end
 
 function META:IsCompatible(type)
+    if self == type then
+        return true
+    end 
+
     if self:IsType(_G.type(type)) and (self.value == nil or self.value == type) then
         return true
     end
@@ -279,14 +298,14 @@ function META:BinaryOperator(op_node, b, node, env)
     end
 
     if self.name == "..." then
-        if a.values and a.values[1] then
-            return self.values[1]:BinaryOperator(op_node, b, node, env)
+        if a.data and a.data[1] then
+            return self.data[1]:BinaryOperator(op_node, b, node, env)
         end
     end
 
     if b.name == "..." then
-        if b.values and b.values[1] then
-            return self:BinaryOperator(op_node, b.values[1], node, env)
+        if b.data and b.data[1] then
+            return self:BinaryOperator(op_node, b.data[1], node, env)
         end
     end
 
@@ -656,7 +675,6 @@ do
 
     function META:IsType(what)
         if type(what) == "table" then
-
             for _,v in ipairs(what:GetTypes()) do
                 if self:IsType(v) then
                     return true
@@ -975,6 +993,7 @@ types.Register("boolean", {
 types.Register("nil", {
     inherits = "base",
     truthy = false,
+    init = function() return {} end
 })
 
 types.Register("number", {
@@ -1001,7 +1020,7 @@ types.Register("number", {
 types.Register("...", {
     inherits = "base",
     init = function(self, ...)
-        return {values = ...}
+        return {data = ...}
     end,
 })
 

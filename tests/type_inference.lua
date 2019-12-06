@@ -230,7 +230,7 @@ a.b.c = 1
     end
 
     string(true)
-    local ag = string()
+    local ag = string(false)
 
     type_assert(ag, "hello")
 

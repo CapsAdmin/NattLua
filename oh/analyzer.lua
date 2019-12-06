@@ -10,10 +10,10 @@ do -- types
         node.scope = self.scope -- move this out of here
 
         local obj = types.Create(name, ...)
+        if not obj then error("NYI: " .. name) end
 
         obj.node = node
         obj.analyzer = self
-
         node.inferred_type = obj
 
         return obj
@@ -54,10 +54,11 @@ do -- types
             return src
         end
 
-        function META:CallFunctionType(obj, arguments, node)
+        function META:CallFunctionType(obj, arguments, node, deferred)
             node = node or obj.node
             local func_expr = obj.node
 
+            if types.GetType(obj) ~= "object" then  self:Error(func_expr, "cannot call non object") error("") end
             obj.called = true
 
             if func_expr and func_expr.kind == "function" then
@@ -75,6 +76,13 @@ do -- types
                 do
                     self:PushScope(obj.node)
 
+                    local return_tuple = types.CallFunction(obj, arguments)
+
+                    if not return_tuple then
+                        self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
+                    end
+
+
                     local identifiers = {}
 
                     for i,v in ipairs(obj.node.identifiers) do
@@ -89,6 +97,7 @@ do -- types
                         local node = identifier == "self" and obj.node or identifier
                         local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
 
+
                         if identifier == "self" or identifier.value.value ~= "..." then
                             self:DeclareUpvalue(identifier, arg, "runtime")
                         else
@@ -96,7 +105,8 @@ do -- types
                             for i = i, #arguments do
                                 table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
                             end
-                            self:DeclareUpvalue(identifier, self:TypeFromImplicitNode(node, "...", values), "runtime")
+                            local obj = self:TypeFromImplicitNode(node, "...", values)
+                            self:DeclareUpvalue(identifier, obj, "runtime")
                         end
                     end
 
@@ -108,13 +118,13 @@ do -- types
                     self:PopScope()
 
                     if obj.node.return_types then
-                        for i,v in ipairs(obj.ret) do
-                            if not ret[i] or not v:IsType(ret[i]) then
-                                self:Error(func_expr, "expected return #" .. i .. " to be " .. tostring(v) .. " got " .. tostring(ret[i]))
+                        for i,v in ipairs(return_tuple) do
+                            if not ret[i] or not types.SupersetOf(v, ret[i]) then
+                                self:Error(func_expr, "expected return #" .. i .. " to be a superset of " .. tostring(v) .. " got " .. tostring(ret[i]))
                             end
                         end
                     else
-                        for i,v in ipairs(obj.ret) do
+                        for i,v in ipairs(return_tuple) do
                             if ret[i] == nil then
                                 ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
                             end
@@ -139,11 +149,14 @@ do -- types
                 self.calling_function = nil
 
                 if not ret[1] then
-                    ret[1] = self:TypeFromImplicitNode(func_expr, "nil")
+                    -- if this is called from CallMeLater we cannot create a nil type from node
+                    local old = node.inferred_type
+                    ret[1] = self:TypeFromImplicitNode(node, "nil")
+                    node.inferred_type = old
                 end
 
                 return ret
-            elseif obj:IsType("function") then
+            elseif types.GetType(obj) == "object" and obj:IsType("function") then
                 --external
 
                 self:FireEvent("external_call", node, obj)
@@ -152,7 +165,12 @@ do -- types
                 obj.analyzer = self
                 obj.node = node
 
-                return types.CallFunction(obj, arguments)
+                local return_tuple = types.CallFunction(obj, arguments)
+                if not return_tuple then
+                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(arguments))
+            end
+
+                return return_tuple
             end
             -- calling something that has no type and does not exist
             -- expressions assumed to be crawled from caller
@@ -464,9 +482,9 @@ function META:AnalyzeStatements(statements, ...)
     end
 end
 
-function META:CallMeLater(typ, arguments, node)
+function META:CallMeLater(...)
     self.deferred_calls = self.deferred_calls or {}
-    table.insert(self.deferred_calls, 1, {typ, arguments, node})
+    table.insert(self.deferred_calls, 1, {...})
 end
 
 function META:Error(node, msg)
@@ -520,8 +538,9 @@ function META:AnalyzeStatement(statement, ...)
         if statement.right then
             for _, exp in ipairs(statement.right) do
                 for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
-                    if obj:IsType("...") and obj.values then
-                        for _, obj in ipairs(obj.values) do
+                    --if obj:IsType("...") and obj.values then
+                    if types.GetType(obj) == "tuple" then -- vararg
+                        for _, obj in ipairs(obj.data) do
                             table.insert(values, obj)
                         end
                     end
@@ -539,7 +558,7 @@ function META:AnalyzeStatement(statement, ...)
                 local superset = obj
                 local subset = values[i]
 
-                if subset and not subset:IsType(superset) then
+                if subset and not types.SupersetOf(subset, superset) then
                     self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(values[i]))
                 else
                     if obj:IsType("table") and values[i] then
@@ -771,23 +790,24 @@ do
                     obj = self:GetInferredType(node)
                 end
 
-                if obj:GetTruthy() then
+                -- ...
+                if obj.GetTruthy and obj:GetTruthy() then
                     obj = obj:RemoveNonTruthy()
                 end
 
                 stack:Push(obj)
             elseif node.value.type == "number" then
-                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value)))
+                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), env == "typesystem"))
             elseif node.value.type == "string" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2)))
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), env == "typesystem"))
             elseif node.value.type == "letter" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value))
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value, true))
             elseif node.value.value == "nil" then
-                stack:Push(self:TypeFromImplicitNode(node, "nil"))
+                stack:Push(self:TypeFromImplicitNode(node, "nil", env == "typesystem"))
             elseif node.value.value == "true" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", true))
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", true, env == "typesystem"))
             elseif node.value.value == "false" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", false))
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", false, env == "typesystem"))
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
@@ -815,7 +835,7 @@ do
             end
 
             local obj = self:TypeFromImplicitNode(node, "function", ret, args)
-            self:CallMeLater(obj, args, node)
+            self:CallMeLater(obj, args, node, true)
             stack:Push(obj)
 
         elseif node.kind == "table" then
@@ -827,7 +847,7 @@ do
                 stack:Push(left)
             end
 
-            stack:Push(right:BinaryOperator(node, left, node.right, env))
+            stack:Push(types.BinaryOperator(node, right, left, env))
         elseif node.kind == "prefix_operator" then
             stack:Push(stack:Pop():PrefixOperator(node))
         elseif node.kind == "postfix_operator" then
@@ -877,7 +897,7 @@ do
             if obj.name and obj.name ~= "function" and obj.name ~= "table" and obj.name ~= "any" then
                 self:Error(node, tostring(obj) .. " cannot be called")
             else
-                stack:Push(self:CallFunctionType(obj, arguments, node), true)
+                stack:Push(self:CallFunctionType(obj, arguments, node))
             end
         elseif node.kind == "type_list" then
             local tbl = {}
@@ -912,26 +932,22 @@ do
         local meta = {}
         meta.__index = meta
 
-        function meta:Push(val, multi)
-            if multi then
-                for i, v in ipairs(val) do
-                    assert(types.IsTypeObject(v))
-                end
-            else
-                assert(types.IsTypeObject(val))
-            end
+        function meta:Push(val)
+            assert(val)
             self.values[self.i] = val
             self.i = self.i + 1
         end
 
         function meta:Pop()
             self.i = self.i - 1
+
             if self.i < 1 then
                 if self.last_val then
                     self.last_val:Error("stack underflow")
                 end
                 error("stack underflow", 2)
             end
+
             local val = self.values[self.i]
             self.values[self.i] = nil
 
@@ -966,7 +982,7 @@ do
             local out = {}
 
             for i,v in ipairs(stack.values) do
-                if not types.IsTypeObject(v) then
+                if v[1] then
                     for i,v in ipairs(v) do
                         table.insert(out, v)
                     end

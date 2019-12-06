@@ -6,12 +6,22 @@
     The way Lua is parsed is maybe a little bit different. Syntax errors are IMO a less amigious
 ]]
 
---[[other ideas
-    string annotations, to allow lua inline strings, regex, pattern matching, ettc for syntax highlkighting
-        
-    " "regex
-]]
 
+macro LOL = function(i)
+   return i:Render() .. " + LOL" 
+end
+
+for i = 1, 10 do
+  @LOL(i)
+end
+
+>>
+
+for i = 1, 10 do
+    i + "LOL"
+end
+
+----
 
 -- various list types, from loose to strict
 local a: {[number] = any} = {}
@@ -50,7 +60,16 @@ type lol = tuple -> tuple
 type lol = function(a,b,c) return a,b,c end
 
 
-    
+-- tuples
+    -- BAD
+    type function io.open(string, string?): file | nil, string | nil
+    -- GOOD
+    type function io.open(string, string?): (file) | (nil, string)
+
+    type error = (nil, string)
+    type function io.open(string, string?): file | error
+
+
 
 -- true, number, string, userdata, object
 -- false, nil
