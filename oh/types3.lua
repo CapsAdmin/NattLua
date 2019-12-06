@@ -67,8 +67,6 @@ function types.BinaryOperator(op, l, r, env)
     end
 
     if op == ":" then
-        print(r)
-        print(r:Get(l))
         return r:Get(l)
     end
 
@@ -100,7 +98,7 @@ do
     end
 
     local level = 0
-    function Dictionary:__tostring()
+    function Dictionary:Serialize()
         if self.supress then
             return "*self*"
         end
@@ -128,9 +126,18 @@ do
     function Dictionary:SupersetOf(sub)
         for _, keyval in ipairs(self.data) do
             local val = sub:Get(keyval.key)
+
+            if not val then
+                print("unable to find value from " .. tostring(keyval.key))
+                for k,v in pairs(sub.data) do
+                    print(keyval.key.const, k,v)
+                end
+            end
+
             if not val then
                 return false
             end
+
 
             if not types.SupersetOf(keyval.val, val) then
                 return false

@@ -59,6 +59,7 @@ do -- types
             node = node or obj.node
             local func_expr = obj.node
 
+            if types3.GetType(obj) ~= "object" then  self:Error(func_expr, "cannot call non object") error("") end
             obj.called = true
 
             if func_expr and func_expr.kind == "function" then
@@ -77,15 +78,13 @@ do -- types
                     self:PushScope(obj.node)
 
 
-
                     local argument_tuple = types3.Tuple:new(unpack(arguments))
                     local return_tuple = obj:Call(argument_tuple)
+
 
                     if not return_tuple then
                         self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
                     end
-
-
 
 
                     local identifiers = {}
@@ -142,6 +141,12 @@ do -- types
                     -- argument tuples
                     obj.data:GetKeyVal(argument_tuple).key.data = merge_types(obj.data:GetKeyVal(argument_tuple).key.data, arguments)
 
+                    print(argument_tuple, obj)
+                    for _, keyval in ipairs(obj.data.data) do
+                        print(_, argument_tuple, "|||", keyval.key, types3.SupersetOf(argument_tuple, keyval.key))
+
+
+                    end
                     for i, v in ipairs(obj.data:GetKeyVal(argument_tuple).key.data) do
                         if obj.node.identifiers[i] then
                             obj.node.identifiers[i].inferred_type = v
@@ -163,7 +168,7 @@ do -- types
                 end
 
                 return ret
-            elseif obj:IsType("function") then
+            elseif types3.GetType(obj) == "object" and obj:IsType("function") then
                 --external
 
                 self:FireEvent("external_call", node, obj)
@@ -792,17 +797,17 @@ do
 
                 stack:Push(obj)
             elseif node.value.type == "number" then
-                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value)))
+                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value)), env == "typesystem")
             elseif node.value.type == "string" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2)))
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2)), env == "typesystem")
             elseif node.value.type == "letter" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value))
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value, true))
             elseif node.value.value == "nil" then
-                stack:Push(self:TypeFromImplicitNode(node, "nil"))
+                stack:Push(self:TypeFromImplicitNode(node, "nil"), env == "typesystem")
             elseif node.value.value == "true" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", true))
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", true), env == "typesystem")
             elseif node.value.value == "false" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", false))
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", false), env == "typesystem")
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end

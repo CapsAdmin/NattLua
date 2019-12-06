@@ -336,6 +336,11 @@ go({
         analyze = true,
     },
     {
+        code = C"local a: 1 = 1",
+        expect = C"local a: 1 = 1",
+        analyze = true,
+    },
+    {
         code = C"local a: number = 1",
         expect = C"local a: number = 1",
         analyze = true,
