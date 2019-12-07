@@ -4,7 +4,11 @@ local C = oh.Code
 local tests = {
 C[[
     local a = 1
-    type_assert(a, 1)
+    type_assert(a, nil as number)
+]],
+    C[[
+    local a = ""
+    type_assert(a, nil as string)
 ]],C[[
     local type a = number
     type_assert(a, _ as number)

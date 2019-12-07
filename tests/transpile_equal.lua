@@ -10,11 +10,24 @@ local function go(tbl, annotate)
             data.code.config.annotate = true
         end
 
-        data.code:Lex()
-        data.code:Parse()
-        if data.analyze then
-            data.code:Analyze()
+        local ok, err = pcall(function()
+            assert(data.code:Lex())
+            assert(data.code:Parse())
+            if data.analyze then
+                assert(data.code:Analyze())
+            end
+        end)
+
+        if not ok then
+            print("===================================")
+            print("error transpiling code:")
+            print(data.code)
+            print(err)
+            print("===================================")
+            error("")
+            return
         end
+
         local result, emitter = data.code:BuildLua()
 
         local ok = true
@@ -323,6 +336,11 @@ go({
         analyze = true,
     },
     {
+        code = C"local a: 1 = 1",
+        expect = C"local a: 1 = 1",
+        analyze = true,
+    },
+    {
         code = C"local a: number = 1",
         expect = C"local a: number = 1",
         analyze = true,
@@ -338,13 +356,13 @@ go({
         analyze = true,
     },
     {
-        code = C"function foo(a: number):string end",
-        expect = C"function foo(a: number):string end",
+        code = C"function foo(a: number):string return '' end",
+        expect = C"function foo(a: number):string return '' end",
         analyze = true,
     },
     {
-        code = C"function foo(a: number):string, number end",
-        expect = C"function foo(a: number):string, number end",
+        code = C"function foo(a: number):string, number return '',1 end",
+        expect = C"function foo(a: number):string, number return '',1 end",
         analyze = true,
     },
     {

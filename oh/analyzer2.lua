@@ -44,8 +44,8 @@ do -- types
     do
         local function merge_types(src, dst)
             for i,v in ipairs(dst) do
-                if src[i] and src[i].name ~= "any" then
-                    src[i] = types.Fuse(src[i], v)
+                if src[i] and src[i].type ~= "any" then
+                    src[i] = types.Set:new(src[i], v)
                 else
                     src[i] = dst[i]
                 end
@@ -76,7 +76,10 @@ do -- types
                 do
                     self:PushScope(obj.node)
 
-                    local return_tuple = types.CallFunction(obj, arguments)
+
+                    local argument_tuple = types.Tuple:new(unpack(arguments))
+                    local return_tuple = obj:Call(argument_tuple)
+
 
                     if not return_tuple then
                         self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
@@ -118,24 +121,32 @@ do -- types
                     self:PopScope()
 
                     if obj.node.return_types then
-                        for i,v in ipairs(return_tuple) do
+                        for i,v in ipairs(return_tuple.data) do
                             if not ret[i] or not types.SupersetOf(v, ret[i]) then
                                 self:Error(func_expr, "expected return #" .. i .. " to be a superset of " .. tostring(v) .. " got " .. tostring(ret[i]))
                             end
                         end
                     else
-                        for i,v in ipairs(return_tuple) do
+                        for i,v in ipairs(return_tuple.data) do
                             if ret[i] == nil then
                                 ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
                             end
                         end
 
-                        obj.ret = merge_types(obj.ret, ret)
+                        -- return tuples
+                        obj.data:GetKeyVal(argument_tuple).val.data = merge_types(obj.data:GetKeyVal(argument_tuple).val.data, ret)
                     end
 
-                    obj.arguments = merge_types(obj.arguments, arguments)
+                    -- argument tuples
+                    obj.data:GetKeyVal(argument_tuple).key.data = merge_types(obj.data:GetKeyVal(argument_tuple).key.data, arguments)
 
-                    for i, v in ipairs(obj.arguments) do
+                    print(argument_tuple, obj)
+                    for _, keyval in ipairs(obj.data.data) do
+                        print(_, argument_tuple, "|||", keyval.key, types.SupersetOf(argument_tuple, keyval.key))
+
+
+                    end
+                    for i, v in ipairs(obj.data:GetKeyVal(argument_tuple).key.data) do
                         if obj.node.identifiers[i] then
                             obj.node.identifiers[i].inferred_type = v
                         end
@@ -165,10 +176,12 @@ do -- types
                 obj.analyzer = self
                 obj.node = node
 
-                local return_tuple = types.CallFunction(obj, arguments)
+
+                local argument_tuple = types.Tuple:new(unpack(arguments))
+                local return_tuple = obj:Call(argument_tuple)
                 if not return_tuple then
-                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(arguments))
-            end
+                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
+                end
 
                 return return_tuple
             end
@@ -244,8 +257,6 @@ do
     end
 
     function META:DeclareUpvalue(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
         local upvalue = {
             key = key,
             data = val,
@@ -281,8 +292,6 @@ do
     end
 
     function META:MutateUpvalue(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
         local upvalue = self:GetUpvalue(key, env)
         if upvalue then
             upvalue.data = val
@@ -303,7 +312,6 @@ do
     end
 
     function META:SetGlobal(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
         self:FireEvent("set_global", key, val, env)
 
         self.env[env][self:Hash(key)] = val
@@ -311,8 +319,6 @@ do
 
     -- obj[key] = val
     function META:NewIndex(obj, key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
         local key = self:AnalyzeExpression(key, env)
         local obj = self:AnalyzeExpression(obj, env)
 
@@ -322,8 +328,6 @@ do
     end
 
     function META:Assign(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
         if key.kind == "value" then
             -- local key = val; key = val
             if not self:MutateUpvalue(key, val, env) then
@@ -560,11 +564,6 @@ function META:AnalyzeStatement(statement, ...)
 
                 if subset and not types.SupersetOf(subset, superset) then
                     self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(values[i]))
-                else
-                    if obj:IsType("table") and values[i] then
-                        obj.structure = obj.value
-                        obj.value = values[i].value
-                    end
                 end
 
                 node.type_explicit = true
@@ -797,17 +796,17 @@ do
 
                 stack:Push(obj)
             elseif node.value.type == "number" then
-                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value)), env == "typesystem")
             elseif node.value.type == "string" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2)), env == "typesystem")
             elseif node.value.type == "letter" then
                 stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value, true))
             elseif node.value.value == "nil" then
-                stack:Push(self:TypeFromImplicitNode(node, "nil", env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "nil"), env == "typesystem")
             elseif node.value.value == "true" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", true, env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", true), env == "typesystem")
             elseif node.value.value == "false" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", false, env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", false), env == "typesystem")
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
@@ -847,7 +846,7 @@ do
                 stack:Push(left)
             end
 
-            stack:Push(types.BinaryOperator(node, right, left, env))
+            stack:Push(types.BinaryOperator(node.value.value, right, left, env))
         elseif node.kind == "prefix_operator" then
             stack:Push(stack:Pop():PrefixOperator(node))
         elseif node.kind == "postfix_operator" then
