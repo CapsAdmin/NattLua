@@ -4,7 +4,7 @@ local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
 local print_util = require("oh.print_util")
-local Analyzer = require("oh.analyzer")
+local Analyzer = require(ANALYZER_VERSION or "oh.analyzer")
 
 
 function oh.GetBaseAnalyzer(ast)

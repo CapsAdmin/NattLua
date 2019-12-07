@@ -1,4 +1,4 @@
-local types = require("oh.typesystem")
+local types = require("oh.typesystem2")
 
 local META = {}
 META.__index = META

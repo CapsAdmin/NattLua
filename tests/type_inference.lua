@@ -870,7 +870,7 @@ local tests = {
 ]],"no operator for.-number.-%+.-boolean"},
 }
 
-local types = require("oh.types")
+local types = require(TYPESYSTEM_VERSION or "oh.typesystem")
 types.Create("number"):__tostring()
 types.Create("number", 1):__tostring()
 
