@@ -42,17 +42,7 @@ do -- types
     end
 
     do
-        local function merge_types(src, dst)
-            for i,v in ipairs(dst) do
-                if src[i] and src[i].name ~= "any" then
-                    src[i] = types.Fuse(src[i], v)
-                else
-                    src[i] = dst[i]
-                end
-            end
 
-            return src
-        end
 
         function META:CallFunctionType(obj, arguments, node, deferred)
             node = node or obj.node
@@ -129,13 +119,12 @@ do -- types
                                 ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
                             end
                         end
-
-                        obj.ret = merge_types(obj.ret, ret)
+                        types.MergeFunctionReturns(obj, ret)
                     end
 
-                    obj.arguments = merge_types(obj.arguments, arguments)
+                    types.MergeFunctionArguments(obj, arguments)
 
-                    for i, v in ipairs(obj.arguments) do
+                    for i, v in ipairs(obj:GetArguments()) do
                         if obj.node.identifiers[i] then
                             obj.node.identifiers[i].inferred_type = v
                         end
@@ -165,10 +154,12 @@ do -- types
                 obj.analyzer = self
                 obj.node = node
 
+
                 local return_tuple = types.CallFunction(obj, arguments)
+
                 if not return_tuple then
-                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(arguments))
-            end
+                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
+                end
 
                 return return_tuple
             end
@@ -766,7 +757,7 @@ do
                 local obj
 
                 -- if it's ^string, number, etc, but not string
-                if env == "typesystem" and types.IsType(self:Hash(node)) and not node.force_upvalue then
+                if env == "typesystem" and types.IsPrimitiveType(self:Hash(node)) and not node.force_upvalue then
                     obj = self:TypeFromImplicitNode(node, node.value.value)
                 else
                     obj = self:GetValue(node, env)

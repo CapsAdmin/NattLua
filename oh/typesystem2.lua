@@ -16,6 +16,18 @@ function types.GetObjectType(val)
     return getmetatable(val) == types.Object and val.type
 end
 
+function types.IsPrimitiveType(val)
+    return val == "string" or
+    val == "number" or
+    val == "boolean" or
+    val == "true" or
+    val == "false"
+end
+
+function types.IsTypeObject(obj)
+    return types.GetType(obj) ~= nil
+end
+
 function types.GetType(val)
     local m = getmetatable(val)
     if m then
@@ -51,6 +63,13 @@ function types.Union(a, b)
     end
 end
 
+function types.CallFunction(obj, arguments)
+    local argument_tuple = types.Tuple:new(unpack(arguments))
+    local return_tuple = obj:Call(argument_tuple)
+    return return_tuple
+end
+
+
 function types.NewIndex(obj, key, val)
 
 end
@@ -59,7 +78,41 @@ function types.Index(obj, key)
 
 end
 
+
+do
+    local function merge_types(src, dst)
+        for i,v in ipairs(dst) do
+            if src[i] and src[i].type ~= "any" then
+                src[i] = types.Set:new(src[i], v)
+            else
+                src[i] = dst[i]
+            end
+        end
+
+        return src
+    end
+
+    function types.MergeFunctionArguments(obj, arg, argument_key)
+        local data = obj.data:GetKeyVal(argument_key)
+
+        if arg then
+            data.key.data = merge_types(data.key.data, arg)
+        end
+    end
+
+    function types.MergeFunctionReturns(obj, ret, argument_key)
+        local data = obj.data:GetKeyVal(argument_key)
+
+        if ret then
+            data.val.data = merge_types(data.val.data, ret)
+        end
+    end
+end
+
+
 function types.BinaryOperator(op, l, r, env)
+    assert(types.IsTypeObject(l))
+    assert(types.IsTypeObject(r))
     if env == "typesystem" then
         if op == "|" then
             return types.Set:new(l, r)
@@ -99,6 +152,10 @@ do
 
     local level = 0
     function Dictionary:Serialize()
+        if not self.data[1] then
+            return "{}"
+        end
+
         if self.supress then
             return "*self*"
         end
@@ -119,25 +176,32 @@ do
         return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
     end
 
+    function Dictionary:__tostring()
+        return (self:Serialize():gsub("%s+", " "))
+    end
+
     function Dictionary:GetLength()
         return #self.data
     end
 
     function Dictionary:SupersetOf(sub)
+        if self == sub then
+            return true
+        end
+
         for _, keyval in ipairs(self.data) do
             local val = sub:Get(keyval.key)
 
             if not val then
-                print("unable to find value from " .. tostring(keyval.key))
-                for k,v in pairs(sub.data) do
-                    print(keyval.key.const, k,v)
+                if self:Serialize():find("function(*self*)", nil, true) then
+                    print(keyval.key:GetSignature(), "!!")
+                    print("====")
+                    for k,v in pairs(sub.data) do print(k,v) end
+                    print("====")
+                    print(sub.data[keyval.key:GetSignature()])
                 end
-            end
-
-            if not val then
                 return false
             end
-
 
             if not types.SupersetOf(keyval.val, val) then
                 return false
@@ -196,6 +260,15 @@ do
         local self = setmetatable({}, self)
 
         self.data = data
+
+        for k,v in pairs(data) do
+            print(k,v)
+        end
+
+        if data and not data[1] and next(data) then
+            print(data)
+            assert("bad table for dictionary")
+        end
 
         return self
     end
@@ -258,6 +331,16 @@ do
         return self.data:Get(args)
     end
 
+    function Object:GetArguments(argument_tuple)
+        local val = self.data:GetKeyVal(argument_tuple)
+        return val and val.key.data
+    end
+
+    function Object:GetReturnTypes(argument_tuple)
+        local val = self.data:GetKeyVal(argument_tuple)
+        return val and val.val.data
+    end
+
     function Object:SupersetOf(sub)
         if types.IsType(sub, "Set") then
            return sub:Get(self) ~= nil
@@ -299,6 +382,10 @@ do
                 if not self.const and not sub.const then
                     return true
                 end
+
+                if self.data == sub.data then
+                    return true
+                end
             end
 
             return false
@@ -318,6 +405,14 @@ do
             elseif types.IsType(a, "Object") then
                 return "(" .. tostring(a) .. " .. " .. tostring(b) .. ")"
             end
+        end
+
+        if self.type == "function" then
+            local str = {}
+            for _, keyval in ipairs(self.data.data) do
+                table.insert(str, "function(" .. tostring(keyval.key) .. "):" .. tostring(keyval.val))
+            end
+            return table.concat(str, " | ")
         end
 
         if self.const then
@@ -423,6 +518,10 @@ do
 
         self.data = {...}
 
+        for i,v in ipairs(self.data) do
+            assert(types.IsTypeObject(v))
+        end
+
         return self
     end
 
@@ -457,6 +556,9 @@ do
     end
 
     function Set:AddElement(e)
+        if e:__tostring():find("function(*self*)", nil, true) then
+            print(types.GetType(e), types.GetSignature(e), "??")
+        end
         self.data[types.GetSignature(e)] = e
 
         return self
@@ -560,7 +662,7 @@ function types.Create(type, ...)
     elseif type == "any" then
         return types.Object:new(type)
     elseif type == "table" then
-        return types.Dictionary:new({})
+        return types.Dictionary:new(... or {})
     elseif type == "boolean" then
         return types.Object:new("boolean", ...)
     elseif type == "..." then

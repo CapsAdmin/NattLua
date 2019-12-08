@@ -214,7 +214,7 @@ do
 
 
         if self.config.annotate and node.inferred_type then
-            if node.inferred_type.GetReturnTypes then
+            if node.inferred_type.GetReturnTypes and node.inferred_type.ret then
                 if node.inferred_type:GetReturnTypes() and node.inferred_type.ret[1] then
                     --self:Emit(" --[[ : ")
                     self:Emit(": ")

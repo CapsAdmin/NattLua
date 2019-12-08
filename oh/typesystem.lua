@@ -52,6 +52,28 @@ function types.ReplaceType(a, b)
     return b
 end
 
+do
+    local function merge_types(src, dst)
+        for i,v in ipairs(dst) do
+            if src[i] and src[i].name ~= "any" then
+                src[i] = types.Fuse(src[i], v)
+            else
+                src[i] = dst[i]
+            end
+        end
+
+        return src
+    end
+
+    function types.MergeFunctionArguments(obj, arg, argument_key)
+        obj.arguments = merge_types(obj.arguments, arg)
+    end
+
+    function types.MergeFunctionReturns(obj, ret, argument_key)
+        obj.ret = merge_types(obj.ret, ret)
+    end
+end
+
 local META = {}
 META.__index = META
 --[[
@@ -200,7 +222,7 @@ end
 function META:IsCompatible(type)
     if self == type then
         return true
-    end 
+    end
 
     if self:IsType(_G.type(type)) and (self.value == nil or self.value == type) then
         return true
@@ -223,6 +245,11 @@ function META:Max(max)
         t.value = nil
     end
     return t
+end
+
+
+function META:GetArguments()
+    return self.arguments
 end
 
 function META:IsTruthy()
@@ -491,7 +518,7 @@ function types.Register(name, interface)
     return registered[name].new
 end
 
-function types.IsType(name)
+function types.IsPrimitiveType(name)
     if name == "table" or name == "list" then return false end
 
     return registered[name]
@@ -671,6 +698,10 @@ do
 
     function META:GetReadableContent()
         return tostring(self)
+    end
+
+    function META:GetArguments()
+        return self.arguments
     end
 
     function META:IsType(what)
