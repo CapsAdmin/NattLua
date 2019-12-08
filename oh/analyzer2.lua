@@ -46,7 +46,7 @@ do -- types
             node = node or obj.node
             local func_expr = obj.node
 
-            if types.GetType(obj) ~= "object" then  self:Error(func_expr, "cannot call non object") error("") end
+            if types.GetType(obj) ~= "object" then self:Error(func_expr, "cannot call non object") error("") end
             obj.called = true
 
             if func_expr and func_expr.kind == "function" then
@@ -355,7 +355,7 @@ do
             io.write((" "):rep(t))
             io.write(what, " - ")
             local obj, key, val = ...
-            io.write(tostring(obj.name), "[", (tostring(key)), "] = ", tostring(val))
+            io.write(tostring(obj.type), "[", (tostring(key)), "] = ", tostring(val))
             io.write("\n")
         elseif what == "mutate_upvalue" then
             io.write((" "):rep(t))
@@ -491,7 +491,7 @@ function META:Error(node, msg)
     if self.code then
         local print_util = require("oh.print_util")
         local start, stop = print_util.LazyFindStartStop(node)
-        print(print_util.FormatError(self.code, self.name, msg, start, stop))
+        print(print_util.FormatError(self.code, self.type, msg, start, stop))
     else
         local s = tostring(self)
         s = s .. ": " .. msg
@@ -827,17 +827,11 @@ do
         elseif node.kind == "binary_operator" then
             local right, left = stack:Pop(), stack:Pop()
 
-
             if node.value.value == ":" then
                 stack:Push(left)
             end
 
-            local val = types.BinaryOperator(node.value.value, right, left, env)
-            if not val then
-                print(node.value.value, right, left, env)
-            end
-
-            stack:Push(val)
+            stack:Push(types.BinaryOperator(node.value.value, right, left, env))
         elseif node.kind == "prefix_operator" then
             stack:Push(stack:Pop():PrefixOperator(node))
         elseif node.kind == "postfix_operator" then
@@ -879,12 +873,13 @@ do
 
             local arguments = self:AnalyzeExpressions(node.expressions, env)
 
+
             if node.self_call then
                 local val = stack:Pop()
                 table.insert(arguments, 1, val)
             end
 
-            if obj.name and obj.name ~= "function" and obj.name ~= "table" and obj.name ~= "any" then
+            if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
                 self:Error(node, tostring(obj) .. " cannot be called")
             else
                 stack:Push(self:CallFunctionType(obj, arguments, node))

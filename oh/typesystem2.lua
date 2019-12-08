@@ -177,13 +177,16 @@ function types.BinaryOperator(op, l, r, env)
         return t
     end
 
-
     if op == "==" and (l:IsType("any") or r:IsType("any")) then
         return types.Object:new("boolean")
     end
 
-    print(op, "!!",l,r,env)
-    error("NYI")
+    -- todo
+    if l.type == r.type then
+        return types.Object:new(l.type)
+    end
+
+    error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
 end
 
 do
@@ -327,10 +330,6 @@ do
 
         self.data = data
 
-        for k,v in pairs(data) do
-            print(k,v)
-        end
-
         if data and not data[1] and next(data) then
             print(data)
             assert("bad table for dictionary")
@@ -378,7 +377,7 @@ do
     end
 
     function Object:Get(key)
-        if not self.data.Get then return end
+        if type(self.data) ~= "table" or not self.data.Get then return end
 
         local val = self.data:Get(key)
 
@@ -444,15 +443,18 @@ do
                     end
                 end
 
-                if self.const and not sub.const then
+                -- self = number(1)
+                -- sub = 1
+
+                if self.data ~= nil and self.data == sub.data then
+                    return true
+                end
+
+                if not sub.data or not self.data then
                     return true
                 end
 
                 if not self.const and not sub.const then
-                    return true
-                end
-
-                if self.data == sub.data then
                     return true
                 end
             end
@@ -753,10 +755,16 @@ function types.Create(type, ...)
     elseif type == "any" then
         return types.Object:new(type)
     elseif type == "table" then
-        return types.Dictionary:new(... or {})
+        local dict = types.Dictionary:new({})
+        if ... then
+            for k,v in pairs(...) do
+                dict:Set(k,v)
+            end
+        end
+        return dict
     elseif type == "boolean" then
         return types.Object:new("boolean", ...)
-    elseif type == "..." then  
+    elseif type == "..." then
         local values = ... or {}
         return types.Tuple:new(unpack(values))
     elseif type == "number" or type == "string" then

@@ -4,7 +4,25 @@ local C = oh.Code
 local tests = {
 C[[
     local a = 1
-    type_assert(a, nil as number)
+    type_assert(a, nil as 1)
+]],
+C[[
+    local a = {a = 1}
+    type_assert(a.a, nil as 1)
+]],
+C[[
+    local a = {a = {a = 1}}
+    type_assert(a.a.a, nil as 1)
+]],
+C[[
+    local a = {a = 1}
+    a.a = nil
+    type_assert(a.a, nil)
+]],
+C[[
+    local a = {}
+    a.a = 1
+    type_assert(a.a, nil as number)
 ]],
     C[[
     local a = ""
@@ -239,12 +257,12 @@ a.b.c = 1
     type_assert(ag, "hello")
 
 ]],C[[
-    local foo = {lol = 3}
+    local foo = {lol = 30}
     function foo:bar(a)
         return a+self.lol
     end
 
-    type_assert(foo:bar(2), 5)
+    type_assert(foo:bar(20), 50)
 
 ]],C[[
     function prefix (w1, w2)
@@ -353,7 +371,7 @@ a.b.c = 1
 
 
     local a = math.sin(1, "")
-    local b = math.lol()
+    local b = math.lol() -- support overloads
 
     type_assert(a, nil as number)
     type_assert(b, nil as number)
@@ -844,6 +862,7 @@ for _, code_data in ipairs(tests) do
 
     local ok, err = code_data:Analyze()
     if not ok then
+        local ok, err = C(code_data.code):Analyze(true)
         print(code_data.code)
         print(err)
         return
