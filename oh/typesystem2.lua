@@ -1,3 +1,4 @@
+local syntax = require("oh.syntax")
 local types = {}
 
 function types.GetSignature(obj)
@@ -119,8 +120,66 @@ function types.BinaryOperator(op, l, r, env)
         end
     end
 
-    if op == ":" then
-        return r:Get(l)
+    local b = r
+    local a = l
+
+    if op == "." or op == ":" then
+        if b.Get then
+            return b:Get(a, node, env) or types.Create("nil")
+        end
+    end
+
+    -- HACK
+    if op == ".." or op == "^" then
+        a,b = b,a
+    end
+
+    if env == "typesystem" then
+        if op == "|" then
+            return types.Fuse(a, b)
+        elseif op == "extends" then
+            return a:Extend(b)
+        elseif op == "and" then
+            return b and a
+        elseif op == "or" then
+            return b or a
+        elseif b == false or b == nil then
+            return false
+        elseif op == ".." then
+            local new = a:Copy()
+            new.max = b
+            return new
+        end
+    end
+
+    if op == "==" and l:IsType("number") and r:IsType("number") and l.data and r.data then
+        if l.max and l.max.data then
+            return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data)
+        end
+
+        if r.max and r.max.data then
+            return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data)
+        end
+    end
+
+    if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
+        local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], l.data, r.data)
+        if not ok then
+            self:Error(res)
+        else
+            return types.Object:new(l.type, res)
+        end
+    end
+
+    if op == "%" and a:IsType("number") and l:IsType("number") and l.data then
+        local t = types.Object:new("number", 0)
+        t.max = a:Copy()
+        return t
+    end
+
+
+    if op == "==" and (l:IsType("any") or r:IsType("any")) then
+        return types.Object:new("boolean")
     end
 
     print(op, "!!",l,r,env)
@@ -137,6 +196,10 @@ do
             return "*self*"
         end
         self.supress = true
+
+        if not self.data[1] then
+            return "{}"
+        end
 
         local s = {}
 
@@ -190,7 +253,7 @@ do
         end
 
         for _, keyval in ipairs(self.data) do
-            local val = sub:Get(keyval.key)
+            local val = sub:Get(keyval.key, true)
 
             if not val then
                 if self:Serialize():find("function(*self*)", nil, true) then
@@ -198,6 +261,9 @@ do
                     print("====")
                     for k,v in pairs(sub.data) do print(k,v) end
                     print("====")
+                    print("SIGNATURE:")
+                    print(sub:GetSignature())
+                    print(".")
                     print(sub.data[keyval.key:GetSignature()])
                 end
                 return false
@@ -291,6 +357,7 @@ do
     end
 
     function Object:SetType(name)
+        assert(name)
         self.type = name
     end
 
@@ -311,6 +378,8 @@ do
     end
 
     function Object:Get(key)
+        if not self.data.Get then return end
+
         local val = self.data:Get(key)
 
         if not val and self.meta then
@@ -449,6 +518,20 @@ do
         end
     end
 
+    function Object:Max(val)
+        if self.type == "number" then
+            self.max = val
+        end
+    end
+
+    function Object:IsTruthy()
+        return self.type ~= "nil" and self.type ~= "false" and self.data ~= false
+    end
+
+    function Object:RemoveNonTruthy()
+        return self
+    end
+
     local uid = 0
 
     function Object:new(type, data, const)
@@ -556,9 +639,6 @@ do
     end
 
     function Set:AddElement(e)
-        if e:__tostring():find("function(*self*)", nil, true) then
-            print(types.GetType(e), types.GetSignature(e), "??")
-        end
         self.data[types.GetSignature(e)] = e
 
         return self
@@ -576,7 +656,18 @@ do
         self.data[types.GetSignature(e)] = nil
     end
 
-    function Set:Get(key)
+    function Set:Get(key, from_dictionary)
+        if from_dictionary then
+            for _, obj in pairs(self.data) do
+                if obj.Get then
+                    local val = obj:Get(key)
+                    if val then
+                        return val
+                    end
+                end
+            end
+        end
+
         return self.data[key:GetSignature()]
     end
 
@@ -665,8 +756,9 @@ function types.Create(type, ...)
         return types.Dictionary:new(... or {})
     elseif type == "boolean" then
         return types.Object:new("boolean", ...)
-    elseif type == "..." then
-        return types.Tuple:new(...)
+    elseif type == "..." then  
+        local values = ... or {}
+        return types.Tuple:new(unpack(values))
     elseif type == "number" or type == "string" then
         return types.Object:new(type, ...)
     elseif type == "function" then

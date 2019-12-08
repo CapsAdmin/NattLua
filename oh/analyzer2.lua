@@ -660,7 +660,7 @@ function META:AnalyzeStatement(statement, ...)
 
             -- add the return values
             if return_values then
-                return_values[i] = return_values[i] and types.Fuse(return_values[i], evaluated[i]) or evaluated[i]
+                return_values[i] = return_values[i] and types.Union(return_values[i], evaluated[i]) or evaluated[i]
             end
         end
 
@@ -832,7 +832,12 @@ do
                 stack:Push(left)
             end
 
-            stack:Push(types.BinaryOperator(node.value.value, right, left, env))
+            local val = types.BinaryOperator(node.value.value, right, left, env)
+            if not val then
+                print(node.value.value, right, left, env)
+            end
+
+            stack:Push(val)
         elseif node.kind == "prefix_operator" then
             stack:Push(stack:Pop():PrefixOperator(node))
         elseif node.kind == "postfix_operator" then

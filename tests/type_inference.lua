@@ -101,8 +101,8 @@ C[[
 
     local a = b
 
-    local function foo(tbl)
-        return tbl.lol + 1
+    local function foo(tbal)
+        return tbal.lol + 1
     end
 
     local c = foo(a)
@@ -842,7 +842,12 @@ for _, code_data in ipairs(tests) do
 
     --function code_data:OnError(obj, msg, start, stop, ...) print(require("oh.print_util").FormatError(self.code, self.name, msg, start, stop)) end
 
-    assert(code_data:Analyze())
+    local ok, err = code_data:Analyze()
+    if not ok then
+        print(code_data.code)
+        print(err)
+        return
+    end
 end
 
 for _, code_data in ipairs(errors) do
