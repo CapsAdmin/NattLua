@@ -46,7 +46,7 @@ do -- types
             node = node or obj.node
             local func_expr = obj.node
 
-            if types.GetType(obj) ~= "object" then self:Error(func_expr, "cannot call non object") error("") end
+            if types.GetType(obj) ~= "object"  and types.GetType(obj) ~= "set" then self:Error(node, "cannot call non object") error("") end
             obj.called = true
 
             if func_expr and func_expr.kind == "function" then
@@ -152,18 +152,35 @@ do -- types
                 obj.analyzer = self
                 obj.node = node
 
-
                 local return_tuple = types.CallFunction(obj, arguments)
 
                 if not return_tuple then
-                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
+                    self:Error(node, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(types.Tuple:new(unpack(arguments))))
                 end
 
                 return return_tuple
+            elseif types.GetType(obj) == "set" then
+                for _, obj in pairs(obj.data) do
+                    if types.GetType(obj) ~= "object" and not obj:IsType("function") then
+                        self:Error(node, "cannot call " .. tostring(obj))
+                    end
+                    --external
+
+                    self:FireEvent("external_call", node, obj)
+
+                    -- HACKS
+                    obj.analyzer = self
+                    obj.node = node
+
+                    local return_tuple = types.CallFunction(obj, arguments)
+                    if return_tuple then
+                        return return_tuple
+                    end
+                end
+                self:Error(node, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(types.Tuple:new(unpack(arguments))))
             end
             -- calling something that has no type and does not exist
             -- expressions assumed to be crawled from caller
-
             return {self:TypeFromImplicitNode(node, "any")}
         end
     end
@@ -547,8 +564,43 @@ function META:AnalyzeStatement(statement, ...)
                 local superset = obj
                 local subset = values[i]
 
-                if subset and not types.SupersetOf(subset, superset) then
-                    self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(values[i]))
+                if subset and subset.type ~= "any" then
+                    -- local a: 1 = 1
+                    -- should turn the right side into a constant number rather than number(1)
+                    local is_const = true
+
+                    if types.GetType(superset) == "set" then
+                        for k,v in pairs(superset.data) do
+                            if not v.const then
+                                is_const = false
+                                break
+                            end
+                        end
+                    elseif types.GetType(superset) == "object" then
+                        is_const = superset.const
+                    end
+
+                    if is_const then
+                        subset.const = true
+                    end
+
+                    if types.GetType(superset) == "set" then
+                        if not superset:Get(subset) then
+                            self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(subset))
+                        end
+                    elseif types.GetType(superset) == "tuple" then
+                        local hm = {}
+                        for i,v in ipairs(subset.data) do
+                            if v.key.type == "number" then
+                                hm[v.key.data] = v.val.data
+                            end
+                        end
+                        if #hm ~= #subset.data then
+                            self:Error(node, "expected a tuple on the right hand side, got " .. tostring(subset))
+                        end
+                    elseif subset and not types.SupersetOf(subset, superset) then
+                        self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(subset))
+                    end
                 end
 
                 node.type_explicit = true
@@ -615,7 +667,7 @@ function META:AnalyzeStatement(statement, ...)
                     obj:PushTruthy()
 
                     if self:AnalyzeStatements(statements, ...) == true then
-                        if obj.value == true then
+                        if obj.data == true then
                             obj:PopTruthy()
                             self:PopScope()
                             return true
@@ -715,7 +767,7 @@ function META:AnalyzeStatement(statement, ...)
 
         for i,v in ipairs(statement.expressions) do
             local val = self:AnalyzeExpression(v.right, "typesystem")
-            if tbl.value and tbl.value[v.left.value] then
+            if tbl:Get(v.left.value) then
                 types.OverloadFunction(tbl:Get(v.left.value), val)
             else
                 tbl:Set(v.left.value, self:AnalyzeExpression(v.right, "typesystem"))
@@ -846,7 +898,11 @@ do
             -- declaration
             if node.identifiers then
                 for i, key in ipairs(node.identifiers) do
-                    args[i] = self:GetValue(key.left or key, env) or self:GetInferredType(key)
+                    if env == "typesystem" then
+                        args[i] = self:GetValue(key.left or key, env) or types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value) or self:GetInferredType(key)
+                    else
+                        args[i] = self:GetValue(key.left or key, env) or self:GetInferredType(key)
+                    end
                 end
             end
 
@@ -873,7 +929,6 @@ do
 
             local arguments = self:AnalyzeExpressions(node.expressions, env)
 
-
             if node.self_call then
                 local val = stack:Pop()
                 table.insert(arguments, 1, val)
@@ -882,7 +937,8 @@ do
             if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
                 self:Error(node, tostring(obj) .. " cannot be called")
             else
-                stack:Push(self:CallFunctionType(obj, arguments, node))
+                local ret = self:CallFunctionType(obj, arguments, node)
+                stack:Push(ret)
             end
         elseif node.kind == "type_list" then
             local tbl = {}
@@ -893,15 +949,15 @@ do
                 end
             end
 
-            local obj = self:TypeFromImplicitNode(node, "list", tbl, node.length and tonumber(node.length.value))
-
-            obj.value = {}
-            stack:Push(obj)
+            -- number[3] << tbl only contains {3}.. hmm
+            stack:Push(self:TypeFromImplicitNode(node, "list", nil, unpack(tbl)))
         elseif node.kind == "type_table" then
             local obj = self:TypeFromImplicitNode(node, "table")
 
             self.current_table = obj
-            obj.value = self:AnalyzeTable(node, env)
+            for k,v in pairs(self:AnalyzeTable(node, env)) do
+                obj:Set(k,v)
+            end
             self.current_table = nil
 
             stack:Push(obj)

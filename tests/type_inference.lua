@@ -417,6 +417,8 @@ a.b.c = 1
     end
 
     type Exclude = function(T, U)
+
+        -- old typesystem
         if T.types then
             for i,v in ipairs(T.types) do
                 if v:IsType(U) and v.value == U.value then
@@ -424,35 +426,61 @@ a.b.c = 1
                 end
             end
         end
+
+        -- new typesystem
+        if T.data then
+            T:RemoveElement(U)
+        end
+
         return T
     end
 
-    local list: Array<number, 3> = {1, 2, 3}
     local a: Exclude<1|2|3, 2> = 1
-
     type_assert(a, _ as 1|3)
-    type_assert(a, _ as number[3])
+
+    local list: Array<number, 3> = {1, 2, 3}
+    type_assert(list, _ as number[3])
 ]],C[[
     type next = function(t, k)
-        -- behavior of the external next function
-        -- we can literally just pass what the next function returns
-        local a,b
 
-        if k then
-            a,b = next(t.value, k.value)
-        else
-            a,b = next(t.value)
+        if t.value then
+            -- behavior of the external next function
+            -- we can literally just pass what the next function returns
+            local a,b
+
+            if k then
+                a,b = next(t.value, k.value)
+            else
+                a,b = next(t.value)
+            end
+
+            if type(a) == "table" and a.name then
+                a = a.value
+            end
+
+            if type(b) == "table" and b.name then
+                b = b.value
+            end
+
+            return types.Create(type(a), a), types.Create(type(b), b)
         end
 
-        if type(a) == "table" and a.name then
-            a = a.value
-        end
+        if t.data then
+            local a, b
+            local kv
 
-        if type(b) == "table" and b.name then
-            b = b.value
-        end
+            if k and k.type ~= "nil" then
+                kv = t:GetKeyVal(k)
+            else
+                kv = t.data[1]
+            end
 
-        return types.Create(type(a), a), types.Create(type(b), b)
+            if kv then
+                a, b = kv.key, kv.val
+            end
+
+            return a, b
+        end
     end
 
     function pairs(t)
@@ -486,25 +514,48 @@ a.b.c = 1
     type next = function(tbl, _key)
         local key, val
 
-        for k, v in pairs(tbl.value) do
-            if not key then
-                key = types.Create(type(k))
-            elseif not key:IsType(k) then
-                if type(k) == "string" then
-                    key = types.Fuse(key, types.Create("string"))
-                else
-                    key = types.Fuse(key, types.Create(k.name))
-                end
-            end
+        -- old typesystem
+        if tbl.value then
 
-            if not val then
-                val = types.Create(type(v))
-            else
-                if not val:IsType(v) then
-                    val = types.Fuse(val, types.Create(v.name))
+            for k, v in pairs(tbl.value) do
+                if not key then
+                    key = types.Create(type(k))
+                elseif not key:IsType(k) then
+                    if type(k) == "string" then
+                        key = types.Fuse(key, types.Create("string"))
+                    else
+                        key = types.Fuse(key, types.Create(k.name))
+                    end
+                end
+
+                if not val then
+                    val = types.Create(type(v))
+                else
+                    if not val:IsType(v) then
+                        val = types.Fuse(val, types.Create(v.name))
+                    end
                 end
             end
         end
+
+        -- new typesystem
+        if tbl.data then
+            key, val = types.Set:new(), types.Set:new()
+            if types.GetType(tbl) == "dictionary" then
+                for _, keyval in ipairs(tbl.data) do
+                    key:AddElement(keyval.key)
+                    val:AddElement(keyval.val)
+                end
+            elseif types.GetType(tbl) == "tuple" then
+                key = types.Create("number", i, const)
+                key.max = tbl.max and tbl.max:Copy() or nil
+                for _, val in ipairs(tbl.data) do
+                    val:AddElement(val)
+                end
+            end
+        end
+
+        return key, val
     end
 
     local a = {
@@ -571,7 +622,9 @@ a.b.c = 1
 
     type b = function()
         _G.LOL = nil
-        analyzer:GetValue("a", "typesystem").func()
+        local t = analyzer:GetValue("a", "typesystem")
+        local func = t.func or t.lua_function
+        func()
         if not _G.LOL then
             error("test fail")
         end
@@ -676,7 +729,7 @@ a.b.c = 1
 
     local a = setmetatable({}, meta)
 
-    type_assert(a.num, _ as number)
+    type_assert(a.num, _ as number) -- implement meta tables
 ]],C[[
     local type Vec2 = {x = number, y = number}
     local type Vec3 = {z = number} extends Vec2
@@ -862,7 +915,7 @@ for _, code_data in ipairs(tests) do
 
     local ok, err = code_data:Analyze()
     if not ok then
-        local ok, err = C(code_data.code):Analyze(true)
+        local ok, err2 = C(code_data.code):Analyze(true)
         print(code_data.code)
         print(err)
         return

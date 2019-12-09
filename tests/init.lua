@@ -1,4 +1,6 @@
 
+table.print = require("tests.tprint")
+
 local map --= {}
 
 if map then

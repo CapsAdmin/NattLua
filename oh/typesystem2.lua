@@ -17,6 +17,12 @@ function types.GetObjectType(val)
     return getmetatable(val) == types.Object and val.type
 end
 
+function types.OverloadFunction(a, b)
+    for _, keyval in ipairs(b.data.data) do
+        a.data:Set(keyval.key, keyval.val)
+    end
+end
+
 function types.IsPrimitiveType(val)
     return val == "string" or
     val == "number" or
@@ -65,6 +71,25 @@ function types.Union(a, b)
 end
 
 function types.CallFunction(obj, arguments)
+    if obj.lua_function then
+        _G.self = obj.analyzer
+        local res = {pcall(obj.lua_function, unpack(arguments))}
+        _G.self = nil
+
+        if not res[1] then
+            obj.analyzer:Error(obj.node, res[2])
+            return {types.Object:new("any")}
+        end
+
+        table.remove(res, 1)
+
+        if not res[1] then
+            res[1] = types.Object:new("nil")
+        end
+
+        return res
+    end
+
     local argument_tuple = types.Tuple:new(unpack(arguments))
     local return_tuple = obj:Call(argument_tuple)
     return return_tuple
@@ -135,9 +160,7 @@ function types.BinaryOperator(op, l, r, env)
     end
 
     if env == "typesystem" then
-        if op == "|" then
-            return types.Fuse(a, b)
-        elseif op == "extends" then
+        if op == "extends" then
             return a:Extend(b)
         elseif op == "and" then
             return b and a
@@ -154,20 +177,33 @@ function types.BinaryOperator(op, l, r, env)
 
     if op == "==" and l:IsType("number") and r:IsType("number") and l.data and r.data then
         if l.max and l.max.data then
-            return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data)
+            return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data, true)
         end
 
         if r.max and r.max.data then
-            return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data)
+            return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
         end
     end
 
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
-        local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], l.data, r.data)
+        local lval = l.data
+        local rval = r.data
+        local type = l.type
+
+        if types.GetType(l) == "tuple" then
+            lval = l.data[1].data
+            type = l.data[1].type
+        end
+
+        if types.GetType(r) == "tuple" then
+            rval = r.data[1].data
+        end
+
+        local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], lval, rval)
         if not ok then
-            self:Error(res)
+            l.analyzer:Error(l.node, res)
         else
-            return types.Object:new(l.type, res)
+            return types.Object:new(type, res)
         end
     end
 
@@ -287,9 +323,9 @@ do
 
     function Dictionary:Cast(val)
         if type(val) == "string" then
-            return types.Object:new("string", val)
+            return types.Object:new("string", val, true)
         elseif type(val) == "number" then
-            return types.Object:new("number", val)
+            return types.Object:new("number", val, true)
         end
         return val
     end
@@ -297,6 +333,17 @@ do
     function Dictionary:Set(key, val)
         key = self:Cast(key)
         val = self:Cast(val)
+
+        if val == nil or val.type == "nil" then
+            for i, keyval in ipairs(self.data) do
+                if types.SupersetOf(key, keyval.key) then
+                    table.remove(self.data, _)
+                    return
+                end
+            end
+            return
+        end
+
         for _, keyval in ipairs(self.data) do
             if types.SupersetOf(key, keyval.key) and types.SupersetOf(val, keyval.val) then
                 keyval.val = val
@@ -310,6 +357,8 @@ do
     end
 
     function Dictionary:Get(key)
+        key = self:Cast(key)
+
         local keyval = self:GetKeyVal(key)
         if keyval then
             return keyval.val
@@ -348,6 +397,9 @@ do
     Object.__index = Object
 
     function Object:GetSignature()
+        if self.type == "function" then
+            return self.type .. "-"..types.GetSignature(self.data)
+        end
         if self.const then
             return self.type .. "-" .. types.GetSignature(self.data)
         end
@@ -491,14 +543,14 @@ do
                 return ("%q"):format(self.data)
             end
 
-            return tostring(self.data)
+            return tostring(self.data) .. (self.max and (".." .. self.max.data) or "")
         end
 
         if self.data == nil then
             return self.type
         end
 
-        return self.type .. "(".. tostring(self.data) .. ")"
+        return self.type .. "(".. tostring(self.data) .. (self.max and (".." .. self.max.data) or "") .. ")"
     end
 
     function Object:Serialize()
@@ -524,6 +576,7 @@ do
         if self.type == "number" then
             self.max = val
         end
+        return self
     end
 
     function Object:IsTruthy()
@@ -641,6 +694,13 @@ do
     end
 
     function Set:AddElement(e)
+        if types.GetType(e) == "set" then
+            for _, e in pairs(e.data) do
+                self:AddElement(e)
+            end
+            return self
+        end
+
         self.data[types.GetSignature(e)] = e
 
         return self
@@ -770,11 +830,21 @@ function types.Create(type, ...)
     elseif type == "number" or type == "string" then
         return types.Object:new(type, ...)
     elseif type == "function" then
-        local returns, arguments = ...
+        local returns, arguments, lua_function = ...
         local dict = types.Dictionary:new({})
         dict:Set(types.Tuple:new(unpack(arguments)), types.Tuple:new(unpack(returns)))
-        return types.Object:new(type, dict)
+        local obj = types.Object:new(type, dict)
+        obj.lua_function = lua_function
+        return obj
+    elseif type == "list" then
+        local values, len = ...
+        local tup = types.Tuple:new(unpack(values or {}))
+        if len then
+            tup.max = len
+        end
+        return tup
     end
+    error("NYI " .. type)
 end
 
 do return types end

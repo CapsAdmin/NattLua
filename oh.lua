@@ -127,13 +127,13 @@ do
 		return self
 	end
 
-	function META:Analyze()
+	function META:Analyze(dump_events)
 		if not self.SyntaxTree then
 			assert(self:Parse())
 		end
 
 		local analyzer = Analyzer()
-		if self.config and self.config.dump_analyzer_events then
+		if dump_events or self.config and self.config.dump_analyzer_events then
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
 		analyzer.code_data = self

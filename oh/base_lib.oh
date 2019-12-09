@@ -765,7 +765,12 @@ type ^string.gsub = function(str, pattern, val)
 end
 
 type type_assert = function(what: any, type: any, value: any, ...)
-	if not what:IsType(type, true) then
+	if what.name == "list" then
+	 	--WIP
+		return
+	end
+
+	if not types.SupersetOf(what, type) then
 		error("expected type " .. tostring(type) .." got " .. tostring(what))
 	end
 
@@ -775,6 +780,7 @@ type type_assert = function(what: any, type: any, value: any, ...)
 			error("expected type value " .. tostring(type) .." got " .. tostring(what))
 		end
 	end
+
 end
 
 type next = function(tbl, _)

@@ -36,9 +36,8 @@ function LSX(tag, constructor, props, children)
     return e
 end
 
+local tprint = require("tprint")
 
-local inspect = require("oh.inspect")
-
-function table.print(t)
-    io.write(inspect(t))
+function table.print(...)
+    return tprint(...)
 end
