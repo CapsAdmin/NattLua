@@ -702,7 +702,7 @@ do -- expression
                 node.key = i
             end
 
-            if self:IsValue("...") then
+            if self:IsValue("...") and (self:IsType("letter", 1) or self:IsValue("{", 1) or self:IsValue("(", 1)) then
                 local v = self:Expression("table_spread")
                 v.tokens["..."] = self:ReadValue("...")
                 v.expression = self:ReadExpectExpression()
@@ -754,7 +754,7 @@ do -- expression
             node.right = self:ReadExpression(math_huge, no_ambigious_calls)
         elseif self:IsValue("function") then
             node = self:ReadAnonymousFunction()
-        elseif self.ReadImportExpression and self:IsValue("import") then
+        elseif self.ReadImportExpression and self:IsValue("import") and self:IsValue("(", 1) then
             node = self:ReadImportExpression()
         elseif self:IsLSXExpression() then
             node = self:ReadLSXExpression()

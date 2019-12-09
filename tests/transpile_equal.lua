@@ -152,6 +152,8 @@ go {
     C"local a = 1 --[=[a]=] + (((1)));",
     C"a=(foo.bar)()",
     C"a=(foo.bar)",
+    C"lol({...})",
+    C"if import then end",
     C"if (player:IsValid()) then end",
     C"if not true then end",
     C"local function F (m) end",
