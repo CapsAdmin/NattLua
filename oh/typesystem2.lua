@@ -360,6 +360,14 @@ do
         key = self:Cast(key)
 
         local keyval = self:GetKeyVal(key)
+
+        if not keyval and self.meta then
+            local index = self.meta:Get("__index")
+            if types.GetType(index) == "dictionary" then
+                return index:Get(key)
+            end
+        end
+
         if keyval then
             return keyval.val
         end
@@ -373,6 +381,27 @@ do
         end
     end
 
+    function Dictionary:Copy()
+        local copy = Dictionary:new({})
+
+        for _, keyval in ipairs(self.data) do
+            copy:Set(keyval.key, keyval.val)
+        end
+
+        return copy
+    end
+
+    function Dictionary:Extend(t)
+        local copy = self:Copy()
+
+        for _, keyval in ipairs(t.data) do
+            if not copy:Get(keyval.key) then
+                copy:Set(keyval.key, keyval.val)
+            end
+        end
+
+        return copy
+    end
 
     function Dictionary:new(data)
         local self = setmetatable({}, self)
@@ -434,7 +463,7 @@ do
         local val = self.data:Get(key)
 
         if not val and self.meta then
-            local index = self.meta:Get(types.Object:new("string", "__index", true))
+            local index = self.meta:Get("__index")
             if index.type == "table" then
                 return index:Get(key)
             end

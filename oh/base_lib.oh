@@ -911,11 +911,16 @@ type table.sort = function(tbl, func)
 end
 
 type setmetatable = function(tbl, meta)
+	if meta.data then
+		tbl.meta = meta
+	end
+
 	if meta.value and meta.value["__index"] then
 		tbl.index = function(self, key)
-		return meta:Get(key)
+			return meta:Get(key)
 		end
 	end
+
 	return tbl
 end
 

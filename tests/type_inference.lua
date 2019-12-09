@@ -720,6 +720,9 @@ a.b.c = 1
         print(k,v)
     end
 ]],C[[
+    local a = {a = self}
+    TPRINT(a)
+]],C[[
     local a = setmetatable({} as {num = number}, meta)
 
     type_assert(a.num, _ as number)
@@ -757,7 +760,7 @@ a.b.c = 1
         return "hello", 1337
     end
 
-    local a = lol():gsub("", "")
+    local a = lol():gsub("", "") -- make sure first value in ... is returned by lol()
 
     type_assert(a, _ as string)
 ]], C[[
