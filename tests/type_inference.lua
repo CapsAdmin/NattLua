@@ -271,7 +271,7 @@ a.b.c = 1
 
     type_assert(prefix("hello", "world"), "hello world")
 ]],C[[
-    local function test(max)
+    local function test(max: number)
         for i = 1, max do
             if i == 20 then
                 return false
@@ -598,7 +598,7 @@ a.b.c = 1
     type_assert(a, _ as number)
 ]],C[=[
     local a = 1
-    function b(lol)
+    function b(lol: number)
         if lol == 1 then return "foo" end
         return lol + 4, true
     end
@@ -721,7 +721,6 @@ a.b.c = 1
     end
 ]],C[[
     local a = {a = self}
-    TPRINT(a)
 ]],C[[
     local a = setmetatable({} as {num = number}, meta)
 
@@ -760,7 +759,7 @@ a.b.c = 1
         return "hello", 1337
     end
 
-    local a = lol():gsub("", "") -- make sure first value in ... is returned by lol()
+    local a = lol():gsub("", "")
 
     type_assert(a, _ as string)
 ]], C[[
@@ -829,17 +828,17 @@ a.b.c = 1
     local a = pl:IsValid()
     type_assert(a, nil)
  ]],C[[
-    local a: {[number] = any} = {}
+    --local a: {[number] = any} = {}
+    local a = {}
     a[1] = true
-    a[2] = true
+    a[2] = false
     table.insert(a, 1337)
     type_assert(a[3], 1337)
- ]],C[[
-    local a = {}
-    a()
-    table.insert(a, 1337)
-]], C[[
+ ]], C[[
     type test = function(name)
+        if types.newsystem then
+            return analyzer:GetValue(name.data, "typesystem")
+        end
         return analyzer:GetValue(name.value, "typesystem")
     end
     local type lol = {}

@@ -744,24 +744,42 @@ type ^string.gsub = function(str, pattern, val)
 	if val:IsType("function") then
 		local args = {}
 
-		if pattern.value then
-		for group in pattern.value:gmatch("%b()") do
-			table.insert(args, val:Type("string"))
-		end
-		end
+		if types.newsystem then
+			if pattern.data then
+				for group in pattern.data:gmatch("%b()") do
+					table.insert(args, types.Create("string"))
+				end
+			end
 
-		if not args[1] then
-		args[1] = val:Type("string")
-		end
+			if not args[1] then
+				args[1] = types.Create("string")
+			end
 
-		for i,v in ipairs(args) do
-		val.arguments[i] = types.ReplaceType(val.arguments[i], v)
-		end
+			for i,v in ipairs(args) do
+				val.data.data[1].key.data[i] = v
+			end
 
-		val.ret[1] = types.ReplaceType(val.ret[1], val:Type("string"))
+			val.data.data[1].val.data[1] = types.Create("string")
+		else
+			if pattern.value then
+				for group in pattern.value:gmatch("%b()") do
+					table.insert(args, val:Type("string"))
+				end
+			end
+
+			if not args[1] then
+				args[1] = val:Type("string")
+			end
+
+			for i,v in ipairs(args) do
+				val.arguments[i] = types.ReplaceType(val.arguments[i], v)
+			end
+
+			val.ret[1] = types.ReplaceType(val.ret[1], val:Type("string"))
+		end
 	end
 
-	return str:Type("string")
+	return types.Create("string")
 end
 
 type type_assert = function(what: any, type: any, value: any, ...)
@@ -840,7 +858,7 @@ type ipairs = function(tbl)
 end
 
 type require = function(name)
-	local str = name.value
+	local str = name.value or name.data
 
 	if self:GetValue(str, "typesystem") then
 		return self:GetValue(str, "typesystem")
@@ -867,37 +885,71 @@ end
 type table.insert = function(tbl, ...)
 	local pos, val = ...
 
-	if not val then
-		val = ...
-		pos = #tbl.value + 1
-	else
-		pos = pos.value
-	end
+	if types.newsystem then
+		if not val then
+			val = ...
+			pos = #tbl.data + 1
+		else
+			pos = pos.data
+		end
 
-	if not tbl.value or not tbl.value[1] then
-		local list = types.Create("list")
+		if types.GetType(tbl) ~= "tuple" then
+			local values = {}
 
-		local list_type = tbl.list_type
+			for i, keyval in ipairs(tbl.data) do
+				values[i] = keyval.val
+			end
 
-		for k,v in pairs(tbl) do
-			if k ~= "value" then
+			local list = types.Create("list", values)
+
+			for k,v in pairs(tbl) do
 				tbl[k] = nil
+			end
+
+			for k,v in pairs(list) do
+				tbl[k] = v
+			end
+
+			setmetatable(tbl, types.Tuple)
+		end
+		table.insert(tbl.data, pos, val)
+
+		tbl.max = tbl.max or types.Create("number", pos, true)
+		tbl.max.data = pos
+	else
+
+		if not val then
+			val = ...
+			pos = #tbl.value + 1
+		else
+			pos = pos.value
+		end
+
+		if not tbl.value or not tbl.value[1] then
+			local list = types.Create("list")
+
+			local list_type = tbl.list_type
+
+			for k,v in pairs(tbl) do
+				if k ~= "value" then
+					tbl[k] = nil
+				end
+			end
+
+			for k,v in pairs(list) do
+				tbl[k] = v
 			end
 		end
 
-		for k,v in pairs(list) do
-			tbl[k] = v
+		table.insert(tbl.value, pos, val)
+
+		if list_type then
+			list_type = list_type + val
 		end
+
+		tbl.list_type = list_type or val
+		tbl.length = pos
 	end
-
-	table.insert(tbl.value, pos, val)
-
-	if list_type then
-		list_type = list_type + val
-	end
-
-	tbl.list_type = list_type or val
-	tbl.length = pos
 end
 
 type TPRINT = function(...) print(...) end

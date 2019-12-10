@@ -12,6 +12,12 @@ do -- types
         local obj = types.Create(name, ...)
         if not obj then error("NYI: " .. name) end
 
+        if name == "string" then
+            local string_meta = types.Create("table", {})
+            string_meta:Set("__index", self.Index and self:Index("string") or self:GetValue("string", "typesystem"))
+            obj.meta = string_meta
+        end
+
         obj.node = node
         obj.analyzer = self
         node.inferred_type = obj
@@ -63,7 +69,14 @@ do -- types
 
                 do
                     self:PushScope(obj.node)
+
+                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+                    if deferred then
+                        arguments = obj.data.data[1].key.data
+                    end
+
                     local argument_tuple = types.Tuple:new(unpack(arguments))
+
                     local return_tuple = types.CallFunction(obj, arguments)
 
                     if not return_tuple then
@@ -475,7 +488,8 @@ do
             io.write("\n")
         else
             io.write((" "):rep(t))
-            print(what .. " - ", ...)
+            io.write(what .. " - ", ...)
+            io.write("\n")
         end
     end
 end
@@ -499,21 +513,20 @@ function META:Error(node, msg)
     end
 
     if self.OnError then
-        local print_util = require("oh.print_util")
-        local start, stop = print_util.LazyFindStartStop(node)
+        local start, stop = require("oh.print_util").LazyFindStartStop(node)
         self:OnError(msg, start, stop)
     end
 
 
     if self.code then
-        local print_util = require("oh.print_util")
-        local start, stop = print_util.LazyFindStartStop(node)
-        print(print_util.FormatError(self.code, self.type, msg, start, stop))
+        local utl = require("oh.print_util")
+        local start, stop = utl.LazyFindStartStop(node)
+        io.write(utl.FormatError(self.code, self.type, msg, start, stop), "\n")
     else
         local s = tostring(self)
         s = s .. ": " .. msg
 
-        print(s)
+        io.write(s, "\n")
     end
 end
 
@@ -586,7 +599,7 @@ function META:AnalyzeStatement(statement, ...)
 
                     if types.GetType(superset) == "set" then
                         if not superset:Get(subset) then
-                            self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(subset))
+                            self:Error(node, "expected " .. tostring(superset) .. " but the right hand side is a " .. tostring(subset))
                         end
                     elseif types.GetType(superset) == "tuple" then
                         local hm = {}
@@ -607,6 +620,9 @@ function META:AnalyzeStatement(statement, ...)
             else
                 node.type_explicit = false
                 obj = values[i]
+                if obj then
+                    obj.const = false
+                end
             end
 
             if statement.kind == "local_assignment" then
@@ -621,7 +637,7 @@ function META:AnalyzeStatement(statement, ...)
         local env = statement.environment or "runtime"
         local obj = self:AnalyzeExpression(statement.right, env)
 
-        if not obj:IsType("table") then
+        if types.GetType(obj) ~= "dictionary" then
             self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj))
         end
 
@@ -634,7 +650,7 @@ function META:AnalyzeStatement(statement, ...)
         end
 
         for _, node in ipairs(statement.left) do
-            local obj = obj:Get(node.value) or self:TypeFromImplicitNode(node, "nil")
+            local obj = node.value and obj:Get(node.value.value) or self:TypeFromImplicitNode(node, "nil")
 
             if statement.kind == "local_destructure_assignment" then
                 self:DeclareUpvalue(node, obj, env)
@@ -833,9 +849,9 @@ do
 
                 stack:Push(obj)
             elseif node.value.type == "number" then
-                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), true or env == "typesystem"))
             elseif node.value.type == "string" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true or env == "typesystem"))
             elseif node.value.type == "letter" then
                 stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value, true))
             elseif node.value.value == "nil" then
@@ -889,7 +905,7 @@ do
         elseif node.kind == "postfix_operator" then
             stack:Push(stack:Pop():PostfixOperator(node))
         elseif node.kind == "postfix_expression_index" then
-            stack:Push(stack:Pop():Get(self:AnalyzeExpression(node.expression)))
+            stack:Push(stack:Pop():Get(self:AnalyzeExpression(node.expression)) or types.Create("nil"))
         elseif node.kind == "type_function" then
             local args = {}
             local rets = {}
@@ -917,7 +933,7 @@ do
                 local load_func, err = loadstring(str, "")
                 if not load_func then
                     -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
-                    print(str)
+                    io.write(str, "\n")
                     error(err)
                 end
                 func = load_func(require("oh"), self, types, node)
@@ -937,8 +953,7 @@ do
             if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
                 self:Error(node, tostring(obj) .. " cannot be called")
             else
-                local ret = self:CallFunctionType(obj, arguments, node)
-                stack:Push(ret)
+                stack:Push(self:CallFunctionType(obj, arguments, node))
             end
         elseif node.kind == "type_list" then
             local tbl = {}
@@ -963,7 +978,6 @@ do
             stack:Push(obj)
         elseif node.kind == "import" or node.kind == "lsx" then
             --stack:Push(self:AnalyzeStatement(node.root))
---            print(node.analyzer:Analyze())
         else
             error("unhandled expression " .. node.kind)
         end
