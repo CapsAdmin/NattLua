@@ -152,6 +152,11 @@ function types.BinaryOperator(op, l, r, env)
 
     if op == "." or op == ":" then
         if b.Get then
+
+            if types.GetType(b) ~= "dictionary" and types.GetType(b) ~= "tuple" and (types.GetType(b) ~= "object" or b.type ~= "string") then
+                l.analyzer:Error(l.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
+            end
+
             return b:Get(a, node, env) or types.Create("nil")
         end
     end
@@ -189,6 +194,12 @@ function types.BinaryOperator(op, l, r, env)
     end
 
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
+
+        if l.type ~= b.type then
+            l.analyzer:Error(l.node, "no operator for " .. r.type .. " " .. op .. " " .. l.type)
+            return
+        end
+
         local lval = l.data
         local rval = r.data
         local type = l.type
@@ -226,7 +237,11 @@ function types.BinaryOperator(op, l, r, env)
     end
 
     if op == "or" then
-        return types.Create("boolean", l.data or r.data, true)
+        if l.data then
+            return l
+        end
+
+        return r
     end
 
     error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
@@ -327,36 +342,43 @@ do
         return val
     end
 
-    function Dictionary:Set(key, val, overwrite_value)
+    function Dictionary:Set(key, val, env)
         key = self:Cast(key)
         val = self:Cast(val)
 
+        local data = self.data
+
         if val == nil or val.type == "nil" then
-            for i, keyval in ipairs(self.data) do
+            for i, keyval in ipairs(data) do
                 if types.SupersetOf(key, keyval.key) then
-                    table.remove(self.data, _)
-                    return
+                    table.remove(data, _)
+                    return true
                 end
             end
-            return
+            return false
         end
 
-        for _, keyval in ipairs(self.data) do
-            if types.SupersetOf(key, keyval.key) and (not overwrite_value or types.SupersetOf(val, keyval.val)) then
-                keyval.val = val
-                return
+        for _, keyval in ipairs(data) do
+            if types.SupersetOf(key, keyval.key) and (env == "typesystem" or types.SupersetOf(val, keyval.val)) then
+                if not self.locked then
+                    keyval.val = val
+                end
+                return true
             end
         end
 
         if not self.locked then
-            table.insert(self.data, {key = key, val = val})
+            table.insert(data, {key = key, val = val})
+            return true
         end
+
+        return false
     end
 
-    function Dictionary:Get(key)
+    function Dictionary:Get(key, env)
         key = self:Cast(key)
 
-        local keyval = self:GetKeyVal(key)
+        local keyval = self:GetKeyVal(key, env)
 
         if not keyval and self.meta then
             local index = self.meta:Get("__index")
@@ -370,8 +392,8 @@ do
         end
     end
 
-    function Dictionary:GetKeyVal(key)
-        for _, keyval in ipairs(self.data) do
+    function Dictionary:GetKeyVal(key, env)
+        for _, keyval in ipairs(env == "typesystem" and self.structure or self.data) do
             if types.SupersetOf(key, keyval.key) then
                 return keyval
             end
@@ -404,6 +426,7 @@ do
         local self = setmetatable({}, self)
 
         self.data = data
+        self.structure = {}
 
         if data and not data[1] and next(data) then
             assert("bad table for dictionary")
@@ -525,7 +548,7 @@ do
                     return true
                 end
 
-                if not sub.data or not self.data then
+                if sub.data == nil or self.data == nil then
                     return true
                 end
 

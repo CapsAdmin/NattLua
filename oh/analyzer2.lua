@@ -335,7 +335,28 @@ do
         local key = self:AnalyzeExpression(key, env)
         local obj = self:AnalyzeExpression(obj, env)
 
-        obj:Set(key, val)
+        if types.GetType(obj) ~= "dictionary" then
+            self:Error(key.node, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val))
+        end
+
+        if not obj:Set(key, val, env) then
+            local expected_keys = {}
+            local expected_values = {}
+            for i, keyval in pairs(obj.data) do
+                if not types.SupersetOf(key, keyval.key) then
+                    table.insert(expected_keys, tostring(keyval.key))
+                elseif not types.SupersetOf(val, keyval.val) then
+                    table.insert(expected_values, tostring(keyval.val))
+                end
+            end
+            if #expected_values > 0 then
+                self:Error(val.node, "invalid value " .. tostring(val.type or val) .. " expected " .. table.concat(expected_values, " | "))
+            elseif #expected_keys > 0 then
+                self:Error(key.node, "invalid key " .. tostring(key.type or key) .. " expected " .. table.concat(expected_keys, " | "))
+            else
+                self:Error(key.node, "invalid key " .. tostring(key.type or key))
+            end
+        end
 
         self:FireEvent("newindex", obj, key, val, env)
     end
@@ -598,7 +619,7 @@ function META:AnalyzeStatement(statement, ...)
                     end
 
                     if types.GetType(superset) == "set" then
-                        if not superset:Get(subset) then
+                        if not superset:Get(subset, env) then
                             self:Error(node, "expected " .. tostring(superset) .. " but the right hand side is a " .. tostring(subset))
                         end
                     elseif types.GetType(superset) == "tuple" then
@@ -614,6 +635,11 @@ function META:AnalyzeStatement(statement, ...)
                     elseif subset and not types.SupersetOf(subset, superset) then
                         self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(subset))
                     end
+                end
+
+                -- lock the dictionary if there's an explicit type annotation
+                if types.GetType(superset) == "dictionary" then
+                    superset.locked = true
                 end
 
                 node.type_explicit = true
@@ -650,7 +676,7 @@ function META:AnalyzeStatement(statement, ...)
         end
 
         for _, node in ipairs(statement.left) do
-            local obj = node.value and obj:Get(node.value.value) or self:TypeFromImplicitNode(node, "nil")
+            local obj = node.value and obj:Get(node.value.value, env) or self:TypeFromImplicitNode(node, "nil")
 
             if statement.kind == "local_destructure_assignment" then
                 self:DeclareUpvalue(node, obj, env)
@@ -783,8 +809,9 @@ function META:AnalyzeStatement(statement, ...)
 
         for i,v in ipairs(statement.expressions) do
             local val = self:AnalyzeExpression(v.right, "typesystem")
-            if tbl:Get(v.left.value) then
-                types.OverloadFunction(tbl:Get(v.left.value), val)
+            local v2 = tbl:Get(v.left.value, env)
+            if v2 then
+                types.OverloadFunction(v2, val)
             else
                 tbl:Set(v.left.value, self:AnalyzeExpression(v.right, "typesystem"))
             end
@@ -849,17 +876,17 @@ do
 
                 stack:Push(obj)
             elseif node.value.type == "number" then
-                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), true or env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), true))
             elseif node.value.type == "string" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true or env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true))
             elseif node.value.type == "letter" then
                 stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value, true))
             elseif node.value.value == "nil" then
                 stack:Push(self:TypeFromImplicitNode(node, "nil", env == "typesystem"))
             elseif node.value.value == "true" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", true, env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", true, true))
             elseif node.value.value == "false" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", false, env == "typesystem"))
+                stack:Push(self:TypeFromImplicitNode(node, "boolean", false, true))
             else
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
@@ -905,7 +932,14 @@ do
         elseif node.kind == "postfix_operator" then
             stack:Push(stack:Pop():PostfixOperator(node))
         elseif node.kind == "postfix_expression_index" then
-            stack:Push(stack:Pop():Get(self:AnalyzeExpression(node.expression)) or types.Create("nil"))
+            local obj = stack:Pop()
+            local key = self:AnalyzeExpression(node.expression)
+
+            if types.GetType(obj) ~= "dictionary" and types.GetType(obj) ~= "tuple" then
+                self:Error(node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
+            end
+
+            stack:Push(obj:Get(key, env) or types.Create("nil"))
         elseif node.kind == "type_function" then
             local args = {}
             local rets = {}

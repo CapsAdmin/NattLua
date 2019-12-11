@@ -243,7 +243,7 @@ a.b.c = 1
     a(true)
 
 ]],C[[
-    function string(ok)
+    function string(ok: boolean)
         if ok then
             return 2
         else
@@ -903,10 +903,10 @@ local errors = {
     {C[[
         local tbl: {1,true,3} = {1, true, 3}
         tbl[2] = false
-     ]], "invalid value boolean%(false%) expected boolean%(true%)"},
+     ]], "invalid value boolean.-expected.-true"},
      {C[[
         local tbl: {1,true,3} = {1, false, 3}
-    ]], "expected table.- but the right hand side is a table"},
+    ]], "expected .- but the right hand side is a "},
 }
 
 
@@ -939,7 +939,7 @@ local tests = {
 {C[[
     local a: {} = {}
     a.lol = true
-]],"invalid key.-lol"},
+]],"invalid key"},
 {C[[
     local a = 1
     a.lol = true
@@ -954,19 +954,23 @@ local tests = {
 }
 
 local types = require(TYPESYSTEM_VERSION or "oh.typesystem")
-types.Create("number"):__tostring()
-types.Create("number", 1):__tostring()
+if not types.newsystem then
+    types.Create("number"):__tostring()
+    types.Create("number", 1):__tostring()
 
-types.Create("number", 1):GetReadableContent()
-types.Create("string", "test"):GetReadableContent()
-types.Create("number"):GetReadableContent()
+    types.Create("number", 1):GetReadableContent()
+    types.Create("string", "test"):GetReadableContent()
+    types.Create("number"):GetReadableContent()
+end
 
 for _, code_data in ipairs(tests) do
     if code_data == false then return end
 
     local ok, err = code_data[1]:Analyze()
-    if not err:find(code_data[2]) then
-        print(err)
-        error("error not found")
+    if not err then
+        print(code_data[1].code)
+        error("expected error "..code_data[2]..", got nothing")
+    elseif not err:find(code_data[2]) then
+        error("expected error " .. code_data[2] .. " got\n\n\n" .. err)
     end
 end
