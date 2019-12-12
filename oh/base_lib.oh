@@ -788,8 +788,14 @@ type type_assert = function(what: any, type: any, value: any, ...)
 		return
 	end
 
-	if not types.SupersetOf(what, type) then
-		error("expected type " .. tostring(type) .." got " .. tostring(what))
+	if types.newsystem then
+		if not what:SupersetOf(type) then
+			error("expected type " .. tostring(type) .." got " .. tostring(what))
+		end
+	else
+		if not types.SupersetOf(what, type) then
+			error("expected type " .. tostring(type) .." got " .. tostring(what))
+		end
 	end
 
 	if type.value ~= nil then

@@ -413,7 +413,7 @@ a.b.c = 1
     type_assert(b, _ as number)
 ]],C[[
     type Array = function(T, L)
-        return types.Create("list", T.name, L.value)
+        return types.Create("list", T.name, L.value or L.data)
     end
 
     type Exclude = function(T, U)

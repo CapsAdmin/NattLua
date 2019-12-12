@@ -11,14 +11,6 @@ function types.GetSignature(obj)
     return tostring(obj)
 end
 
-function types.IsType(obj, what)
-    return getmetatable(obj) == types[what]
-end
-
-function types.GetObjectType(val)
-    return getmetatable(val) == types.Object and val.type
-end
-
 function types.OverloadFunction(a, b)
     for _, keyval in ipairs(b.data.data) do
         a.data:Set(keyval.key, keyval.val)
@@ -37,50 +29,8 @@ function types.IsTypeObject(obj)
     return obj.Type ~= nil
 end
 
-function types.SupersetOf(subset, superset)
-
-    if subset.type == "any" then
-        return true
-    end
-
-    if subset then
-        -- local a: 1 = 1
-        -- should turn the right side into a constant number rather than number(1)
-        subset.const = superset:IsConst()
-
-        if superset.Type == "set" then
-            if subset.Type == "set" then
-                for k,v in pairs(subset.data) do
-                    if not types.SupersetOf(v, superset.data[k]) then
-                        return false
-                    end
-                end
-                return true
-            elseif not superset:Get(subset) then
-                return false
-            end
-        elseif superset.Type == "tuple" and subset.Type == "dictionary" then
-            local hm = {}
-            for i,v in ipairs(subset.data) do
-                if v.key.type == "number" then
-                    hm[v.key.data] = v.val.data
-                end
-            end
-            if #hm ~= #subset.data then
-                return false
-            end
-        elseif subset and not subset:SupersetOf(superset) then
-            return false
-        end
-
-        return true
-    end
-
-    return subset:SupersetOf(superset)
-end
-
 function types.Union(a, b)
-    if types.IsType(a, "Dictionary") and types.IsType(b, "Dictionary") then
+    if a.Type == "dictionary" and b.Type == "dictionary" then
         local copy = types.Dictionary:new({})
 
         for _, keyval in pairs(a.data) do
@@ -341,6 +291,33 @@ do
             return true
         end
 
+        if sub.Type == "tuple" then
+            if sub:GetLength() > 0 then
+                for i, keyval in ipairs(self.data) do
+                    if keyval.key.type == "number" then
+                        if not sub:Get(i) or not sub:Get(i):SupersetOf(keyval.val) then
+                            return false
+                        end
+                    end
+                end
+            else
+                local count = 0
+                for i, keyval in ipairs(self.data) do
+                    if keyval.key.data ~= i then
+                        return false
+                    end
+
+                    count = count + 1
+                end
+                if count ~= sub:GetMaxLength() then
+                    return false
+                end
+            end
+
+            return true
+        end
+
+
         for _, keyval in ipairs(self.data) do
             local val = sub:Get(keyval.key, true)
 
@@ -348,7 +325,7 @@ do
                 return false
             end
 
-            if not types.SupersetOf(keyval.val, val) then
+            if not keyval.val:SupersetOf(val) then
                 return false
             end
         end
@@ -378,7 +355,7 @@ do
 
         if val == nil or val.type == "nil" then
             for i, keyval in ipairs(data) do
-                if types.SupersetOf(key, keyval.key) then
+                if key:SupersetOf(keyval.key) then
                     table.remove(data, _)
                     return true
                 end
@@ -387,7 +364,7 @@ do
         end
 
         for _, keyval in ipairs(data) do
-            if types.SupersetOf(key, keyval.key) and (env == "typesystem" or types.SupersetOf(val, keyval.val)) then
+            if key:SupersetOf(keyval.key) and (env == "typesystem" or val:SupersetOf(keyval.val)) then
                 if not self.locked then
                     keyval.val = val
                 end
@@ -422,7 +399,7 @@ do
 
     function Dictionary:GetKeyVal(key, env)
         for _, keyval in ipairs(env == "typesystem" and self.structure or self.data) do
-            if types.SupersetOf(key, keyval.key) then
+            if key:SupersetOf(keyval.key) then
                 return keyval
             end
         end
@@ -546,11 +523,15 @@ do
     end
 
     function Object:SupersetOf(sub)
-        if types.IsType(sub, "Set") then
+        if self.type == "any" then
+            return true
+        end
+
+        if sub.Type == "set" then
            return sub:Get(self) ~= nil
         end
 
-        if types.IsType(sub, "Object") then
+        if sub.Type == "object" then
             if sub.type == "any" then
                 return true
             end
@@ -563,11 +544,11 @@ do
                         return true
                     end
 
-                    if self.type == "number" and sub.type == "number" and types.IsType(self.data, "Tuple") then
+                    if self.type == "number" and sub.type == "number" and self.Type == "object" and self.type == "list" and self.data and self.data.Type == "tuple" then
                         local min = self:Get(1).data
                         local max = self:Get(2).data
 
-                        if types.IsType(sub.data, "Tuple") then
+                        if sub.data and sub.data.Type == "tuple" then
                             if sub:Get(1) >= min and sub:Get(2) <= max then
                                 return true
                             end
@@ -603,13 +584,13 @@ do
 
     function Object:__tostring()
         --return "「"..self.uid .. " 〉" .. self:GetSignature() .. "」"
-        if types.IsType(self, "Tuple") then
+        if self.Type == "tuple" then
             local a = self.data:Get(1)
             local b = self.data:Get(2)
 
-            if types.IsType(a, "Tuple") then
+            if a.Type == "tuple" then
                 return tostring(a) .. " => " .. tostring(b)
-            elseif types.IsType(a, "Object") then
+            elseif a.Type == "object" then
                 return "(" .. tostring(a) .. " .. " .. tostring(b) .. ")"
             end
         end
@@ -714,11 +695,30 @@ do
         return table.concat(s, " ")
     end
 
+    function Tuple:GetMaxLength()
+        return self.max or 0
+    end
+
     function Tuple:GetLength()
         return #self.data
     end
 
     function Tuple:SupersetOf(sub)
+
+        if sub.Type == "dictionary" then
+            local hm = {}
+
+            for i,v in ipairs(sub.data) do
+                if v.key.type == "number" then
+                    hm[v.key.data] = v.val.data
+                end
+            end
+
+            if #hm ~= #sub.data then
+                return false
+            end
+        end
+
         for i = 1, sub:GetLength() do
             if sub:Get(i).type ~= "any" and (not self:Get(i) or not self:Get(i):SupersetOf(sub:Get(i))) then
                 return false
@@ -855,7 +855,18 @@ do
     end
 
     function Set:SupersetOf(sub)
-        if types.IsType(sub, "Object") then
+        if sub.Type == "object" then
+            return false
+        end
+
+        if sub.Type == "set" then
+            for k,v in pairs(sub.data) do
+                if not v:SupersetOf(self.data[k]) then
+                    return false
+                end
+            end
+            return true
+        elseif not self:Get(subset) then
             return false
         end
 

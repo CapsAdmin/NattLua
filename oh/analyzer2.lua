@@ -118,7 +118,7 @@ do -- types
 
                     if obj.node.return_types then
                         for i,v in ipairs(return_tuple.data) do
-                            if not ret[i] or not types.SupersetOf(v, ret[i]) then
+                            if not ret[i] or not v:SupersetOf(ret[i]) then
                                 self:Error(func_expr, "expected return #" .. i .. " to be a superset of " .. tostring(v) .. " got " .. tostring(ret[i]))
                             end
                         end
@@ -341,9 +341,9 @@ do
             local expected_keys = {}
             local expected_values = {}
             for i, keyval in pairs(obj.data) do
-                if not types.SupersetOf(key, keyval.key) then
+                if not key:SupersetOf(keyval.key) then
                     table.insert(expected_keys, tostring(keyval.key))
-                elseif not types.SupersetOf(val, keyval.val) then
+                elseif not val:SupersetOf(keyval.val) then
                     table.insert(expected_values, tostring(keyval.val))
                 end
             end
@@ -599,8 +599,14 @@ function META:AnalyzeStatement(statement, ...)
                 local superset = obj
                 local subset = values[i]
 
-                if subset and not types.SupersetOf(subset, superset, true) then
-                    self:Error(subset.node, "expected " .. tostring(superset) .. " but the right hand side is " .. tostring(subset))
+                if subset then
+                    if not subset:SupersetOf(superset) then
+                        self:Error(subset.node, "expected " .. tostring(superset) .. " but the right hand side is " .. tostring(subset))
+                    end
+
+                    -- local a: 1 = 1
+                    -- should turn the right side into a constant number rather than number(1)
+                    subset.const = superset:IsConst()
                 end
 
                 -- lock the dictionary if there's an explicit type annotation
