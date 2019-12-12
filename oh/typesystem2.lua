@@ -50,10 +50,42 @@ function types.GetType(val)
             return "dictionary"
         end
     end
+    error(val, "!?")
 end
 
-function types.SupersetOf(a, b)
-    return a:SupersetOf(b)
+function types.SupersetOf(subset, superset, lol)
+
+    if subset.type == "any" then
+        return true
+    end
+
+    if subset and lol then
+        -- local a: 1 = 1
+        -- should turn the right side into a constant number rather than number(1)                    
+        subset.const = superset:IsConst()                    
+
+        if types.GetType(superset) == "set" then
+            if not superset:Get(subset, env) then
+                return false
+            end
+        elseif types.GetType(superset) == "tuple" and types.GetType(subset) == "dictionary" then
+            local hm = {}
+            for i,v in ipairs(subset.data) do
+                if v.key.type == "number" then
+                    hm[v.key.data] = v.val.data
+                end
+            end
+            if #hm ~= #subset.data then
+                return false
+            end
+        elseif subset and not subset:SupersetOf(superset) then
+            return false
+        end
+
+        return true
+    end
+
+    return subset:SupersetOf(superset)
 end
 
 function types.Union(a, b)
@@ -250,6 +282,7 @@ end
 do
 
     local Dictionary = {}
+    Dictionary.Type = "dictionary"
     Dictionary.__index = Dictionary
 
     function Dictionary:GetSignature()
@@ -422,6 +455,15 @@ do
         return copy
     end
 
+    function Dictionary:IsConst()
+        for _, v in ipairs(self.data) do
+            if not v.val:IsConst() then
+                return true
+            end
+        end 
+        return false
+    end
+
     function Dictionary:new(data)
         local self = setmetatable({}, self)
 
@@ -442,6 +484,7 @@ end
 
 do
     local Object = {}
+    Object.Type = "Object"
     Object.__index = Object
 
     function Object:GetSignature()
@@ -633,6 +676,10 @@ do
         return self
     end
 
+    function Object:IsConst()
+        return self.const
+    end
+
     local uid = 0
 
     function Object:new(type, data, const)
@@ -653,6 +700,7 @@ end
 
 do
     local Tuple = {}
+    Tuple.Type = "Tuple"
     Tuple.__index = Tuple
 
     function Tuple:GetSignature()
@@ -680,6 +728,10 @@ do
     end
 
     function Tuple:Get(key)
+        if type(key) == "number" then
+            return self.data[key]
+        end
+
         if types.GetType(key) == "object" then
             if key:IsType("number") then
                 key = key.data
@@ -705,6 +757,15 @@ do
         return table.concat(s, ", ")
     end
 
+    function Tuple:IsConst()
+        for i,v in ipairs(self.data) do
+            if not v:IsConst() then
+                return false
+            end
+        end
+        return true
+    end
+
     function Tuple:new(...)
         local self = setmetatable({}, self)
 
@@ -722,6 +783,7 @@ end
 
 do
     local Set = {}
+    Set.Type = "set"
     Set.__index = Set
 
     function Set:GetSignature()
@@ -845,6 +907,16 @@ do
             copy:AddElement(e)
         end
         return copy
+    end
+
+    function Set:IsConst()
+        for k,v in pairs(self.data) do
+            if not v.const then
+                return false
+            end
+        end
+
+        return true
     end
 
 

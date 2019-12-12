@@ -578,12 +578,15 @@ function META:AnalyzeStatement(statement, ...)
         if statement.right then
             for _, exp in ipairs(statement.right) do
                 for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
-                    --if obj:IsType("...") and obj.values then
+                    
+                    -- unpack
                     if types.GetType(obj) == "tuple" then -- vararg
                         for _, obj in ipairs(obj.data) do
                             table.insert(values, obj)
                         end
                     end
+
+
                     table.insert(values, obj)
                 end
             end
@@ -598,43 +601,8 @@ function META:AnalyzeStatement(statement, ...)
                 local superset = obj
                 local subset = values[i]
 
-                if subset and subset.type ~= "any" then
-                    -- local a: 1 = 1
-                    -- should turn the right side into a constant number rather than number(1)
-                    local is_const = true
-
-                    if types.GetType(superset) == "set" then
-                        for k,v in pairs(superset.data) do
-                            if not v.const then
-                                is_const = false
-                                break
-                            end
-                        end
-                    elseif types.GetType(superset) == "object" then
-                        is_const = superset.const
-                    end
-
-                    if is_const then
-                        subset.const = true
-                    end
-
-                    if types.GetType(superset) == "set" then
-                        if not superset:Get(subset, env) then
-                            self:Error(node, "expected " .. tostring(superset) .. " but the right hand side is a " .. tostring(subset))
-                        end
-                    elseif types.GetType(superset) == "tuple" then
-                        local hm = {}
-                        for i,v in ipairs(subset.data) do
-                            if v.key.type == "number" then
-                                hm[v.key.data] = v.val.data
-                            end
-                        end
-                        if #hm ~= #subset.data then
-                            self:Error(node, "expected a tuple on the right hand side, got " .. tostring(subset))
-                        end
-                    elseif subset and not types.SupersetOf(subset, superset) then
-                        self:Error(node, "expected " .. tostring(obj) .. " but the right hand side is a " .. tostring(subset))
-                    end
+                if subset and not types.SupersetOf(subset, superset, true) then
+                    self:Error(subset.node, "expected " .. tostring(superset) .. " but the right hand side is " .. tostring(subset))
                 end
 
                 -- lock the dictionary if there's an explicit type annotation

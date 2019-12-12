@@ -906,7 +906,7 @@ local errors = {
      ]], "invalid value boolean.-expected.-true"},
      {C[[
         local tbl: {1,true,3} = {1, false, 3}
-    ]], "expected .- but the right hand side is a "},
+    ]], "expected .- but the right hand side is "},
 }
 
 

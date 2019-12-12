@@ -44,6 +44,13 @@ function oh.loadfile(path, config)
     return loadstring(code, name)
 end
 
+function oh.debug(path) 
+	local c = oh.File(path):BuildLua()
+	print(c)
+	require("oh.runtime")
+	assert(loadstring(c))()
+end
+
 function oh.FileToAST(path, root)
 	local code, err = assert(oh.File(path, {path = path, root = root}))
 
