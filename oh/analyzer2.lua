@@ -48,11 +48,10 @@ do -- types
     end
 
     do
-        function META:CallFunctionType(obj, arguments, node, deferred)
+        function META:Call(obj, arguments, node, deferred)
             node = node or obj.node
             local func_expr = obj.node
 
-            if types.GetType(obj) ~= "object"  and types.GetType(obj) ~= "set" then self:Error(node, "cannot call non object") error("") end
             obj.called = true
 
             if func_expr and func_expr.kind == "function" then
@@ -82,7 +81,6 @@ do -- types
                     if not return_tuple then
                         self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
                     end
-
 
                     local identifiers = {}
 
@@ -565,7 +563,7 @@ function META:AnalyzeStatement(statement, ...)
         if self.deferred_calls then
             for i,v in ipairs(self.deferred_calls) do
                 if not v[1].called then
-                    self:CallFunctionType(unpack(v))
+                    self:Call(unpack(v))
                 end
             end
         end
@@ -742,7 +740,7 @@ function META:AnalyzeStatement(statement, ...)
         local args = self:AnalyzeExpressions(statement.expressions)
 
         if args[1] then
-            local values = self:CallFunctionType(args[1], {unpack(args, 2)}, statement.expressions[1])
+            local values = self:Call(args[1], {unpack(args, 2)}, statement.expressions[1])
 
             for i,v in ipairs(statement.identifiers) do
                 self:DeclareUpvalue(v, values[i], "runtime")
@@ -955,7 +953,7 @@ do
             if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
                 self:Error(node, tostring(obj) .. " cannot be called")
             else
-                stack:Push(self:CallFunctionType(obj, arguments, node))
+                stack:Push(self:Call(obj, arguments, node))
             end
         elseif node.kind == "type_list" then
             local tbl = {}

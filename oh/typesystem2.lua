@@ -53,19 +53,26 @@ function types.GetType(val)
     error(val, "!?")
 end
 
-function types.SupersetOf(subset, superset, lol)
+function types.SupersetOf(subset, superset)
 
     if subset.type == "any" then
         return true
     end
 
-    if subset and lol then
+    if subset then
         -- local a: 1 = 1
         -- should turn the right side into a constant number rather than number(1)                    
         subset.const = superset:IsConst()                    
 
         if types.GetType(superset) == "set" then
-            if not superset:Get(subset, env) then
+            if types.GetType(subset) == "set" then
+                for k,v in pairs(subset.data) do
+                    if not types.SupersetOf(v, superset.data[k]) then
+                        return false
+                    end
+                end
+                return true
+            elseif not superset:Get(subset) then
                 return false
             end
         elseif types.GetType(superset) == "tuple" and types.GetType(subset) == "dictionary" then
@@ -105,6 +112,10 @@ function types.Union(a, b)
 end
 
 function types.CallFunction(obj, arguments)
+    if types.GetType(obj) ~= "object"  and types.GetType(obj) ~= "set" then 
+        return false 
+    end
+
     if obj.lua_function then
         _G.self = obj.analyzer
         local res = {pcall(obj.lua_function, unpack(arguments))}
@@ -457,7 +468,7 @@ do
 
     function Dictionary:IsConst()
         for _, v in ipairs(self.data) do
-            if not v.val:IsConst() then
+            if v.val ~= self and not v.val:IsConst() then
                 return true
             end
         end 
@@ -629,7 +640,13 @@ do
 
         if self.const then
             if self.type == "string" then
-                return ("%q"):format(self.data)
+                if self.data then
+                    return ("%q"):format(self.data)
+                end
+            end
+
+            if self.data == nil then
+                return self.type
             end
 
             return tostring(self.data) .. (self.max and (".." .. self.max.data) or "")
