@@ -772,8 +772,8 @@ do
                     obj = self.current_table
                 end
 
-                if not obj and self.Index then
-                    obj = self:Index(node)
+                if not obj and self.IndexNotFound then
+                    obj = self:IndexNotFound(node)
                 end
 
                 -- last resort, itemCount > number
@@ -1032,6 +1032,6 @@ end
 
 return function()
     local self = setmetatable({env = {runtime = {}, typesystem = {}}}, META)
-    self.Index = DefaultIndex
+    self.IndexNotFound = DefaultIndex
     return self
 end

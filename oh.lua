@@ -11,7 +11,7 @@ function oh.GetBaseAnalyzer(ast)
 
     if not oh.base_analyzer then
         local base = Analyzer()
-		base.Index = nil
+		base.IndexNotFound = nil
 
 		local root = assert(ast or oh.FileToAST("oh/base_lib.oh"))
 		base:AnalyzeStatement(root)
@@ -44,7 +44,7 @@ function oh.loadfile(path, config)
     return loadstring(code, name)
 end
 
-function oh.debug(path) 
+function oh.debug(path)
 	local c = oh.File(path):BuildLua()
 	print(c)
 	require("oh.runtime")

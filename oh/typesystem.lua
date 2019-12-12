@@ -801,14 +801,14 @@ types.Register("string", {
         if self.analyzer then
             local g = self.analyzer:GetValue("_G", "typesystem")
             if not g then
-                if self.analyzer.Index then
-                    g = self.analyzer:Index("_G")
+                if self.analyzer.IndexNotFound then
+                    g = self.analyzer:IndexNotFound("_G")
                 end
             end
 
             if g then
-                if self.analyzer.Index then
-                    local tbl = self.analyzer:Index("string")
+                if self.analyzer.IndexNotFound then
+                    local tbl = self.analyzer:IndexNotFound("string")
 
                     if tbl and key then
                         return tbl:Get(key)

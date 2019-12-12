@@ -14,7 +14,7 @@ do -- types
 
         if name == "string" then
             local string_meta = types.Create("table", {})
-            string_meta:Set("__index", self.Index and self:Index("string") or self:GetValue("string", "typesystem"))
+            string_meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
             obj.meta = string_meta
         end
 
@@ -52,6 +52,7 @@ do -- types
             node = node or obj.node
             local func_expr = obj.node
 
+            -- for deferred calls
             obj.called = true
 
             if func_expr and func_expr.kind == "function" then
@@ -66,46 +67,37 @@ do -- types
 
                 local ret
 
+                -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+                if deferred then
+                    arguments = obj.data.data[1].key.data
+                end
+
+                local argument_tuple = types.Tuple:new(unpack(arguments))
+
+                local return_tuple = obj:Call(arguments)
+
+                if not return_tuple then
+                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
+                end
+
                 do
                     self:PushScope(obj.node)
 
-                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                    if deferred then
-                        arguments = obj.data.data[1].key.data
-                    end
-
-                    local argument_tuple = types.Tuple:new(unpack(arguments))
-
-                    local return_tuple = types.CallFunction(obj, arguments)
-
-                    if not return_tuple then
-                        self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
-                    end
-
-                    local identifiers = {}
-
-                    for i,v in ipairs(obj.node.identifiers) do
-                        identifiers[i] = v
-                    end
-
                     if obj.node.self_call then
-                        table.insert(identifiers, 1, "self")
+                        self:DeclareUpvalue("self", arguments[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
                     end
 
-                    for i, identifier in ipairs(identifiers) do
-                        local node = identifier == "self" and obj.node or identifier
-                        local arg = arguments[i] or self:TypeFromImplicitNode(node, "nil")
+                    for i, identifier in ipairs(obj.node.identifiers) do
+                        local argi = obj.node.self_call and (i+1) or i
 
-
-                        if identifier == "self" or identifier.value.value ~= "..." then
-                            self:DeclareUpvalue(identifier, arg, "runtime")
-                        else
+                        if identifier.value.value == "..." then
                             local values = {}
-                            for i = i, #arguments do
-                                table.insert(values, arguments[i] or self:TypeFromImplicitNode(node, "nil"))
+                            for i = argi, #arguments do
+                                table.insert(values, arguments[i])
                             end
-                            local obj = self:TypeFromImplicitNode(node, "...", values)
-                            self:DeclareUpvalue(identifier, obj, "runtime")
+                            self:DeclareUpvalue(identifier, self:TypeFromImplicitNode(identifier, "...", values), "runtime")
+                        else
+                            self:DeclareUpvalue(identifier, arguments[argi] or self:TypeFromImplicitNode(identifier, "nil"), "runtime")
                         end
                     end
 
@@ -115,34 +107,28 @@ do -- types
                     self:AnalyzeStatements(obj.node.statements, ret)
 
                     self:PopScope()
-
-                    if obj.node.return_types then
-                        for i,v in ipairs(return_tuple.data) do
-                            if not ret[i] or not v:SupersetOf(ret[i]) then
-                                self:Error(func_expr, "expected return #" .. i .. " to be a superset of " .. tostring(v) .. " got " .. tostring(ret[i]))
-                            end
-                        end
-                    else
-                        for i,v in ipairs(return_tuple.data) do
-                            if ret[i] == nil then
-                                ret[i] = self:TypeFromImplicitNode(func_expr, "nil")
-                            end
-                        end
-                        types.MergeFunctionReturns(obj, ret, argument_tuple)
-                    end
-
-                    types.MergeFunctionArguments(obj, arguments, argument_tuple)
-
-                    for i, v in ipairs(obj:GetArguments(argument_tuple)) do
-                        if obj.node.identifiers[i] then
-                            obj.node.identifiers[i].inferred_type = v
-                        end
-                    end
-
-                    func_expr.inferred_type = obj
-
-                    self:FireEvent("function_spec", obj)
                 end
+
+                -- if this function has an explicit return type
+                if obj.node.return_types then
+                    if not types.Tuple:new(unpack(ret)):SupersetOf(return_tuple) then
+                        self:Error(func_expr, "expected return #" .. i .. " to be a superset of " .. tostring(v) .. " got " .. tostring(ret[i]))
+                    end
+                else
+                    types.MergeFunctionReturns(obj, ret, argument_tuple)
+                end
+
+                types.MergeFunctionArguments(obj, arguments, argument_tuple)
+
+                for i, v in ipairs(obj:GetArguments(argument_tuple)) do
+                    if obj.node.identifiers[i] then
+                        obj.node.identifiers[i].inferred_type = v
+                    end
+                end
+
+                func_expr.inferred_type = obj
+
+                self:FireEvent("function_spec", obj)
 
                 self.calling_function = nil
 
@@ -155,15 +141,13 @@ do -- types
 
                 return ret
             elseif obj.Type == "object" and obj:IsType("function") then
-                --external
-
                 self:FireEvent("external_call", node, obj)
 
                 -- HACKS
                 obj.analyzer = self
                 obj.node = node
 
-                local return_tuple = types.CallFunction(obj, arguments)
+                local return_tuple = obj:Call(arguments)
 
                 if not return_tuple then
                     self:Error(node, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(types.Tuple:new(unpack(arguments))))
@@ -172,18 +156,13 @@ do -- types
                 return return_tuple
             elseif obj.Type == "set" then
                 for _, obj in pairs(obj.data) do
-                    if obj.Type ~= "object" and not obj:IsType("function") then
-                        self:Error(node, "cannot call " .. tostring(obj))
-                    end
-                    --external
-
                     self:FireEvent("external_call", node, obj)
 
                     -- HACKS
                     obj.analyzer = self
                     obj.node = node
 
-                    local return_tuple = types.CallFunction(obj, arguments)
+                    local return_tuple = obj:Call(arguments)
                     if return_tuple then
                         return return_tuple
                     end
@@ -357,6 +336,14 @@ do
         end
 
         self:FireEvent("newindex", obj, key, val, env)
+    end
+
+    function META:Index(obj, key, env)
+        if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
+            self:Error(obj.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
+        end
+
+        return obj:Get(key) or self:TypeFromImplicitNode(key.node, "nil")
     end
 
     function META:Assign(key, val, env)
@@ -832,8 +819,8 @@ do
                     obj = self.current_table
                 end
 
-                if not obj and self.Index then
-                    obj = self:Index(node)
+                if not obj and self.IndexNotFound then
+                    obj = self:IndexNotFound(node)
                 end
 
                 -- last resort, itemCount > number
@@ -898,20 +885,17 @@ do
                 stack:Push(left)
             end
 
-            stack:Push(types.BinaryOperator(node.value.value, right, left, env))
+            if node.value.value == "." or node.value.value == ":" then
+                stack:Push(self:Index(left, right, env))
+            else
+                stack:Push(types.BinaryOperator(node, right, left, env))
+            end
         elseif node.kind == "prefix_operator" then
             stack:Push(stack:Pop():PrefixOperator(node))
         elseif node.kind == "postfix_operator" then
             stack:Push(stack:Pop():PostfixOperator(node))
         elseif node.kind == "postfix_expression_index" then
-            local obj = stack:Pop()
-            local key = self:AnalyzeExpression(node.expression)
-
-            if obj.Type ~= "dictionary" and obj.Type ~= "tuple" then
-                self:Error(node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
-            end
-
-            stack:Push(obj:Get(key, env) or types.Create("nil"))
+            stack:Push(self:Index(stack:Pop(), self:AnalyzeExpression(node.expression), env))
         elseif node.kind == "type_function" then
             local args = {}
             local rets = {}
@@ -1112,6 +1096,6 @@ end
 
 return function()
     local self = setmetatable({env = {runtime = {}, typesystem = {}}}, META)
-    self.Index = DefaultIndex
+    self.IndexNotFound = DefaultIndex
     return self
 end

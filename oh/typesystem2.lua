@@ -45,45 +45,6 @@ function types.Union(a, b)
     end
 end
 
-function types.CallFunction(obj, arguments)
-    if obj.Type ~= "object"  and obj.Type ~= "set" then
-        return false
-    end
-
-    if obj.lua_function then
-        _G.self = obj.analyzer
-        local res = {pcall(obj.lua_function, unpack(arguments))}
-        _G.self = nil
-
-        if not res[1] then
-            obj.analyzer:Error(obj.node, res[2])
-            return {types.Object:new("any")}
-        end
-
-        table.remove(res, 1)
-
-        if not res[1] then
-            res[1] = types.Object:new("nil")
-        end
-
-        return res
-    end
-
-    local argument_tuple = types.Tuple:new(unpack(arguments))
-    local return_tuple = obj:Call(argument_tuple)
-    return return_tuple
-end
-
-
-function types.NewIndex(obj, key, val)
-
-end
-
-function types.Index(obj, key)
-
-end
-
-
 do
     local function merge_types(src, dst)
         for i,v in ipairs(dst) do
@@ -115,9 +76,10 @@ do
 end
 
 
-function types.BinaryOperator(op, l, r, env)
+function types.BinaryOperator(node, l, r, env)
     assert(types.IsTypeObject(l))
     assert(types.IsTypeObject(r))
+    local op = node.value.value
     if env == "typesystem" then
         if op == "|" then
             return types.Set:new(l, r)
@@ -126,17 +88,6 @@ function types.BinaryOperator(op, l, r, env)
 
     local b = r
     local a = l
-
-    if op == "." or op == ":" then
-        if b.Get then
-
-            if b.Type ~= "dictionary" and b.Type ~= "tuple" and (b.Type ~= "object" or b.type ~= "string") then
-                l.analyzer:Error(l.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
-            end
-
-            return b:Get(a, node, env) or types.Create("nil")
-        end
-    end
 
     -- HACK
     if op == ".." or op == "^" then
@@ -508,10 +459,6 @@ do
         return self.data:Set(key, val)
     end
 
-    function Object:Call(args)
-        return self.data:Get(args)
-    end
-
     function Object:GetArguments(argument_tuple)
         local val = self.data:GetKeyVal(argument_tuple)
         return val and val.key.data
@@ -660,6 +607,35 @@ do
 
     function Object:IsConst()
         return self.const
+    end
+
+    function Object:Call(arguments)
+        if self.Type ~= "object"  and self.Type ~= "set" then
+            return false
+        end
+
+        if self.lua_function then
+            _G.self = self.analyzer
+            local res = {pcall(self.lua_function, unpack(arguments))}
+            _G.self = nil
+
+            if not res[1] then
+                self.analyzer:Error(self.node, res[2])
+                return {types.Object:new("any")}
+            end
+
+            table.remove(res, 1)
+
+            if not res[1] then
+                res[1] = types.Object:new("nil")
+            end
+
+            return res
+        end
+
+        local argument_tuple = types.Tuple:new(unpack(arguments))
+        local return_tuple = self.data:Get(argument_tuple)
+        return return_tuple
     end
 
     local uid = 0
