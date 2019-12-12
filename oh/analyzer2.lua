@@ -154,7 +154,7 @@ do -- types
                 end
 
                 return ret
-            elseif types.GetType(obj) == "object" and obj:IsType("function") then
+            elseif obj.Type == "object" and obj:IsType("function") then
                 --external
 
                 self:FireEvent("external_call", node, obj)
@@ -170,9 +170,9 @@ do -- types
                 end
 
                 return return_tuple
-            elseif types.GetType(obj) == "set" then
+            elseif obj.Type == "set" then
                 for _, obj in pairs(obj.data) do
-                    if types.GetType(obj) ~= "object" and not obj:IsType("function") then
+                    if obj.Type ~= "object" and not obj:IsType("function") then
                         self:Error(node, "cannot call " .. tostring(obj))
                     end
                     --external
@@ -333,7 +333,7 @@ do
         local key = self:AnalyzeExpression(key, env)
         local obj = self:AnalyzeExpression(obj, env)
 
-        if types.GetType(obj) ~= "dictionary" then
+        if obj.Type ~= "dictionary" then
             self:Error(key.node, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val))
         end
 
@@ -576,9 +576,9 @@ function META:AnalyzeStatement(statement, ...)
         if statement.right then
             for _, exp in ipairs(statement.right) do
                 for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
-                    
+
                     -- unpack
-                    if types.GetType(obj) == "tuple" then -- vararg
+                    if obj.Type == "tuple" then -- vararg
                         for _, obj in ipairs(obj.data) do
                             table.insert(values, obj)
                         end
@@ -604,7 +604,7 @@ function META:AnalyzeStatement(statement, ...)
                 end
 
                 -- lock the dictionary if there's an explicit type annotation
-                if types.GetType(superset) == "dictionary" then
+                if superset.Type == "dictionary" then
                     superset.locked = true
                 end
 
@@ -629,7 +629,7 @@ function META:AnalyzeStatement(statement, ...)
         local env = statement.environment or "runtime"
         local obj = self:AnalyzeExpression(statement.right, env)
 
-        if types.GetType(obj) ~= "dictionary" then
+        if obj.Type ~= "dictionary" then
             self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj))
         end
 
@@ -901,7 +901,7 @@ do
             local obj = stack:Pop()
             local key = self:AnalyzeExpression(node.expression)
 
-            if types.GetType(obj) ~= "dictionary" and types.GetType(obj) ~= "tuple" then
+            if obj.Type ~= "dictionary" and obj.Type ~= "tuple" then
                 self:Error(node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
             end
 

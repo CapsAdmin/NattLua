@@ -893,7 +893,7 @@ type table.insert = function(tbl, ...)
 			pos = pos.data
 		end
 
-		if types.GetType(tbl) ~= "tuple" then
+		if tbl:Type ~= "tuple" then
 			local values = {}
 
 			for i, keyval in ipairs(tbl.data) do

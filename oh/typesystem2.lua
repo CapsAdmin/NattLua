@@ -34,23 +34,7 @@ function types.IsPrimitiveType(val)
 end
 
 function types.IsTypeObject(obj)
-    return types.GetType(obj) ~= nil
-end
-
-function types.GetType(val)
-    local m = getmetatable(val)
-    if m then
-        if m == types.Set then
-            return "set"
-        elseif m == types.Tuple then
-            return "tuple"
-        elseif m == types.Object then
-            return "object"
-        elseif m == types.Dictionary then
-            return "dictionary"
-        end
-    end
-    error(val, "!?")
+    return obj.Type ~= nil
 end
 
 function types.SupersetOf(subset, superset)
@@ -61,11 +45,11 @@ function types.SupersetOf(subset, superset)
 
     if subset then
         -- local a: 1 = 1
-        -- should turn the right side into a constant number rather than number(1)                    
-        subset.const = superset:IsConst()                    
+        -- should turn the right side into a constant number rather than number(1)
+        subset.const = superset:IsConst()
 
-        if types.GetType(superset) == "set" then
-            if types.GetType(subset) == "set" then
+        if superset.Type == "set" then
+            if subset.Type == "set" then
                 for k,v in pairs(subset.data) do
                     if not types.SupersetOf(v, superset.data[k]) then
                         return false
@@ -75,7 +59,7 @@ function types.SupersetOf(subset, superset)
             elseif not superset:Get(subset) then
                 return false
             end
-        elseif types.GetType(superset) == "tuple" and types.GetType(subset) == "dictionary" then
+        elseif superset.Type == "tuple" and subset.Type == "dictionary" then
             local hm = {}
             for i,v in ipairs(subset.data) do
                 if v.key.type == "number" then
@@ -112,8 +96,8 @@ function types.Union(a, b)
 end
 
 function types.CallFunction(obj, arguments)
-    if types.GetType(obj) ~= "object"  and types.GetType(obj) ~= "set" then 
-        return false 
+    if obj.Type ~= "object"  and obj.Type ~= "set" then
+        return false
     end
 
     if obj.lua_function then
@@ -196,7 +180,7 @@ function types.BinaryOperator(op, l, r, env)
     if op == "." or op == ":" then
         if b.Get then
 
-            if types.GetType(b) ~= "dictionary" and types.GetType(b) ~= "tuple" and (types.GetType(b) ~= "object" or b.type ~= "string") then
+            if b.Type ~= "dictionary" and b.Type ~= "tuple" and (b.Type ~= "object" or b.type ~= "string") then
                 l.analyzer:Error(l.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
             end
 
@@ -247,12 +231,12 @@ function types.BinaryOperator(op, l, r, env)
         local rval = r.data
         local type = l.type
 
-        if types.GetType(l) == "tuple" then
+        if l.Type == "tuple" then
             lval = l.data[1].data
             type = l.data[1].type
         end
 
-        if types.GetType(r) == "tuple" then
+        if r.Type == "tuple" then
             rval = r.data[1].data
         end
 
@@ -426,7 +410,7 @@ do
 
         if not keyval and self.meta then
             local index = self.meta:Get("__index")
-            if types.GetType(index) == "dictionary" then
+            if index.Type == "dictionary" then
                 return index:Get(key)
             end
         end
@@ -471,7 +455,7 @@ do
             if v.val ~= self and not v.val:IsConst() then
                 return true
             end
-        end 
+        end
         return false
     end
 
@@ -495,7 +479,7 @@ end
 
 do
     local Object = {}
-    Object.Type = "Object"
+    Object.Type = "object"
     Object.__index = Object
 
     function Object:GetSignature()
@@ -535,7 +519,7 @@ do
 
         if not val and self.meta then
             local index = self.meta:Get("__index")
-            if types.GetType(index) == "dictionary" then
+            if index.Type == "dictionary" then
                 return index:Get(key)
             end
         end
@@ -717,7 +701,7 @@ end
 
 do
     local Tuple = {}
-    Tuple.Type = "Tuple"
+    Tuple.Type = "tuple"
     Tuple.__index = Tuple
 
     function Tuple:GetSignature()
@@ -749,7 +733,7 @@ do
             return self.data[key]
         end
 
-        if types.GetType(key) == "object" then
+        if key.Type == "object" then
             if key:IsType("number") then
                 key = key.data
             elseif key:IsType("string") then
@@ -827,7 +811,7 @@ do
     end
 
     function Set:AddElement(e)
-        if types.GetType(e) == "set" then
+        if e.Type == "set" then
             for _, e in pairs(e.data) do
                 self:AddElement(e)
             end

@@ -541,12 +541,12 @@ a.b.c = 1
         -- new typesystem
         if tbl.data then
             key, val = types.Set:new(), types.Set:new()
-            if types.GetType(tbl) == "dictionary" then
+            if tbl.Type == "dictionary" then
                 for _, keyval in ipairs(tbl.data) do
                     key:AddElement(keyval.key)
                     val:AddElement(keyval.val)
                 end
-            elseif types.GetType(tbl) == "tuple" then
+            elseif tbl.Type == "tuple" then
                 key = types.Create("number", i, const)
                 key.max = tbl.max and tbl.max:Copy() or nil
                 for _, val in ipairs(tbl.data) do
