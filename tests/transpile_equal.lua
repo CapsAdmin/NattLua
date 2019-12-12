@@ -52,12 +52,10 @@ local function go(tbl, annotate)
 
         if not ok then
             print("===================================")
-            print("error transpiling code:")
-            print(data.code)
-            print("expected:")
-            print(data.expect)
-            print("got:")
-            print(result)
+            print("error transpiling code")
+            print("FROM:   " .. data.code.code)
+            print("TO:     " .. data.expect.code)
+            print("GOT:    " .. result)
             print("===================================")
             error("")
         end
