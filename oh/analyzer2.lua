@@ -55,7 +55,7 @@ do -- types
             -- for deferred calls
             obj.called = true
 
-            if func_expr and func_expr.kind == "function" then
+            if func_expr and (func_expr.kind == "function" or func_expr.kind == "local_function") then
                 --lua function
 
                 do -- recursive guard
@@ -644,15 +644,15 @@ function META:AnalyzeStatement(statement, ...)
             end
         end
     elseif statement.kind == "function" then
-        self:Assign(statement.expression, self:AnalyzeExpression(statement:ToExpression("function")), "runtime")
+        self:Assign(statement.expression, self:AnalyzeFunction(statement), "runtime")
 
         if statement.return_types then
             statement.inferred_return_types = self:AnalyzeExpressions(statement.return_types, "typesystem")
         end
     elseif statement.kind == "local_function" then
-        self:DeclareUpvalue(statement.identifier, self:AnalyzeExpression(statement:ToExpression("function")), "runtime")
+        self:DeclareUpvalue(statement.identifier, self:AnalyzeFunction(statement), "runtime")
     elseif statement.kind == "local_type_function" then
-        self:DeclareUpvalue(statement.identifier, self:AnalyzeExpression(statement:ToExpression("function")), "typesystem")
+        self:DeclareUpvalue(statement.identifier, self:AnalyzeFunction(statement), "typesystem")
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
             if not statement.expressions[i] then
@@ -797,10 +797,7 @@ do
                 node.result_is = self:GetValue(node, env):IsType(val)
             end
         elseif node.kind == "value" then
-            if
-                (node.value.type == "letter" and node.upvalue_or_global) or
-                node.value.value == "..."
-            then
+            if (node.value.type == "letter" and node.upvalue_or_global) or node.value.value == "..." then
                 local obj
 
                 -- if it's ^string, number, etc, but not string
@@ -850,32 +847,7 @@ do
                 error("unhandled value type " .. node.value.type .. " " .. node:Render())
             end
         elseif node.kind == "function" then
-            local args = {}
-
-            for i, key in ipairs(node.identifiers) do
-                -- if this node is already explicitly annotated with foo: mytype or foo as mytype use that
-                args[i] = key.type_expression and self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
-            end
-
-            if node.self_call and node.expression then
-                local upvalue = self:GetUpvalue(node.expression.left, "runtime")
-                if upvalue then
-                    table.insert(args, 1, upvalue.data)
-                end
-            end
-
-            local ret = {}
-
-            if node.return_types then
-                for i, type_exp in ipairs(node.return_types) do
-                    ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
-                end
-            end
-
-            local obj = self:TypeFromImplicitNode(node, "function", ret, args)
-            self:CallMeLater(obj, args, node, true)
-            stack:Push(obj)
-
+            stack:Push(self:AnalyzeFunction(node))
         elseif node.kind == "table" then
             stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env)))
         elseif node.kind == "binary_operator" then
@@ -1059,6 +1031,38 @@ do
                 end
             end
             return out
+        end
+
+        function META:AnalyzeFunction(node)
+            local args = {}
+
+            for i, key in ipairs(node.identifiers) do
+                -- if this node is already explicitly annotated with foo: mytype or foo as mytype use that
+                if key.type_expression then
+                    args[i] = self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
+                else
+                    args[i] = self:GetInferredType(key)
+                end
+            end
+
+            if node.self_call and node.expression then
+                local upvalue = self:GetUpvalue(node.expression.left, "runtime")
+                if upvalue then
+                    table.insert(args, 1, upvalue.data)
+                end
+            end
+
+            local ret = {}
+
+            if node.return_types then
+                for i, type_exp in ipairs(node.return_types) do
+                    ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
+                end
+            end
+
+            local obj = self:TypeFromImplicitNode(node, "function", ret, args)
+            self:CallMeLater(obj, args, node, true)
+            return obj
         end
 
         function META:AnalyzeTable(node, env)

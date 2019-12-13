@@ -387,6 +387,10 @@ do
         return false
     end
 
+    function Dictionary:IsTruthy()
+        return true
+    end
+
     function Dictionary:new(data)
         local self = setmetatable({}, self)
 
@@ -743,6 +747,10 @@ do
         return true
     end
 
+    function Tuple:IsTruthy()
+        return self.data[1] and self.data[1]:IsTruthy()
+    end
+
     function Tuple:new(...)
         local self = setmetatable({}, self)
 
@@ -907,6 +915,15 @@ do
         return true
     end
 
+    function Set:IsTruthy()
+        for k,v in pairs(self.data) do
+            if v:IsTruthy() then
+                return true
+            end
+        end
+
+        return false
+    end
 
     function Set:new(...)
         local self = setmetatable({}, Set)
