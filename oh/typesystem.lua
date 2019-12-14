@@ -112,6 +112,73 @@ function types.BinaryOperator(op, l, r, env)
         end
     end
 
+    if op == "or" then
+        -- false or 1
+        -- 1
+        if l.data ~= nil and r.data ~= nil then
+            if l.data then
+                return l
+            end
+            if r.data then
+                return r
+            end
+        end
+
+        -- boolean or number
+        -- boolean | number
+        if l.data ~= nil and r.data ~= nil then
+            return types.Set:new(l, r)
+        end
+    end
+
+    if op == "and" then
+        if l.data ~= nil and r.data ~= nil then
+            if l.data and r.data then
+                return r
+            end
+        end
+    end
+
+    if op == "==" then
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("boolean", l.data == r.data)
+        end
+
+        return types.Object:new("boolean")
+    end
+
+    if op == ">" then
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("boolean", r.data > l.data)
+        end
+
+        return types.Object:new("boolean")
+    end
+
+    if op == "<" then
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("boolean", r.data < l.data)
+        end
+
+        return types.Object:new("boolean")
+    end
+
+    if op == "<=" then
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("boolean", r.data <= l.data)
+        end
+
+        return types.Object:new("boolean")
+    end
+
+    if op == ">=" then
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("boolean", r.data >= l.data)
+        end
+
+        return types.Object:new("boolean")
+    end
+
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
 
         if l.type ~= r.type then
@@ -136,10 +203,6 @@ function types.BinaryOperator(op, l, r, env)
         if not ok then
             return false, res
         else
-
-            if op == ">" or op == "<" or op == "==" or op == ">=" or op == "<=" then
-                return types.Object:new("boolean", res)
-            end
             return types.Object:new(type, res)
         end
     end
@@ -474,8 +537,8 @@ do
     end
 
     function Object:GetReturnTypes(argument_tuple)
-        local val = self.data:GetKeyVal(argument_tuple)
-        return val and val.val.data
+        local keyval = self.data:GetKeyVal(argument_tuple)
+        return keyval and keyval.val
     end
 
     function Object:SupersetOf(sub)
@@ -757,6 +820,10 @@ do
         return table.concat(s, ", ")
     end
 
+    function Tuple:Serialize()
+        return self:__tostring()
+    end
+
     function Tuple:IsConst()
         for i,v in ipairs(self.data) do
             if not v:IsConst() then
@@ -813,6 +880,10 @@ do
         return table.concat(s, " | ")
     end
 
+    function Set:Serialize()
+        return self:__tostring()
+    end
+
     function Set:AddElement(e)
         if e.Type == "set" then
             for _, e in pairs(e.data) do
@@ -859,7 +930,7 @@ do
 
     function Set:SupersetOf(sub)
         if sub.Type == "object" then
-            return false
+            return self:Get(sub) ~= nil
         end
 
         if sub.Type == "set" then

@@ -214,30 +214,17 @@ do
 
 
         if self.config.annotate and node.inferred_type then
-            if node.inferred_type.GetReturnTypes and node.inferred_type.ret then
-                if node.inferred_type:GetReturnTypes() and node.inferred_type.ret[1] then
-                    --self:Emit(" --[[ : ")
-                    self:Emit(": ")
-                    local str = {}
-                    for i,v in ipairs(node.inferred_type.ret) do
-                        str[i] = tostring(v)
-                    end
-                    self:Emit(table.concat(str, ", "))
-                    --self:Emit(" ]] ")
-                end
-             else
-                --self:Emit(" --[[ : ")
-                local str = {}
-                -- this iterates the first return tuple
-                for i,v in ipairs(node.inferred_type.data.data[1].val.data) do
-                    str[i] = tostring(v)
-                end
-                if str[1] then
-                    self:Emit(": ")
-                    self:Emit(table.concat(str, ", "))
-                end
-                --self:Emit(" ]] ")
+            --self:Emit(" --[[ : ")
+            local str = {}
+            -- this iterates the first return tuple
+            for i,v in ipairs(node.inferred_type.data.data[1].val.data) do
+                str[i] = tostring(v)
             end
+            if str[1] then
+                self:Emit(": ")
+                self:Emit(table.concat(str, ", "))
+            end
+            --self:Emit(" ]] ")
         end
 
         self:Whitespace("\n")

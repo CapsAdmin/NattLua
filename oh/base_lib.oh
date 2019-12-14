@@ -765,34 +765,33 @@ type ^string.gsub = function(str, pattern, val)
 	return types.Create("string")
 end
 
-type type_assert = function(what: any, type: any, value: any, ...)
-	if what.name == "list" then
-	 	--WIP
-		return
+type assert = function(obj, err)
+	if obj:IsTruthy() then
+		return obj
 	end
+	error(err and err.data or "assertion failed")
+end
 
-	if not what:SupersetOf(type) then
+type type_assert = function(what: any, type: any, value: any, ...)
+	if not what:SupersetOf(type) or (what.type == "any" and type.type ~= "any") then
 		error("expected type " .. tostring(type) .." got " .. tostring(what))
 	end
 end
 
 type next = function(t, k)
-	if t.data then
-		local a, b
-		local kv
-
-		if k and k.type ~= "nil" then
-			kv = t:GetKeyVal(k)
-		else
-			kv = t.data[1]
-		end
-
-		if kv then
-			a, b = kv.key, kv.val
-		end
-
-		return a, b
+	if not t.data then
+		return
 	end
+
+	local k = types.Set:new()
+	local v = types.Set:new()
+
+	for _, kv in ipairs(t.data) do
+		k:AddElement(kv.key)
+		v:AddElement(kv.val)
+	end
+
+	return k,v
 end
 
 type pairs = function(tbl)

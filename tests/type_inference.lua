@@ -337,7 +337,7 @@ a.b.c = 1
 
     type_assert(test(1), nil as any)
 ]],C[[
-    local function test(a)
+    local function test(a): number
         if a > 10 then return a end
         return test(a+1)
     end
@@ -657,8 +657,8 @@ a.b.c = 1
     local a = (function(...) return ...+... end)(10)
 ]],C[[
     local k,v = next({k = 1})
-    type_assert(k, nil as string)
-    type_assert(v, nil as number)
+    type_assert(k, nil as "k")
+    type_assert(v, nil as 1)
 ]],C[[
     -- this will error with not defined
     --type_assert(TOTAL_STRANGER_COUNT, _ as number)
@@ -853,6 +853,8 @@ a.b.c = 1
     type_assert(a, 1)
 ]],C[[
     local a = function(): number,string return 1,"" end
+]],C[[
+    assert(1 == 1, "lol")
 ]]}
 
 local errors = {
@@ -888,6 +890,9 @@ local errors = {
      {C[[
         local tbl: {1,true,3} = {1, false, 3}
     ]], "expected .- but the right hand side is "},
+    {C[[
+        assert(1 == 2, "lol")
+    ]],"lol"},
 }
 
 

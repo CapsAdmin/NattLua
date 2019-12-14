@@ -50,6 +50,7 @@ do -- types
         function META:Call(obj, arguments, node, deferred)
             node = node or obj.node
             local func_expr = obj.node
+            local argument_tuple = types.Tuple:new(unpack(arguments))
 
             -- for deferred calls
             obj.called = true
@@ -59,7 +60,7 @@ do -- types
 
                 do -- recursive guard
                     if self.calling_function == obj then
-                        return {self:TypeFromImplicitNode(node, "any")}
+                        return obj:GetReturnTypes(argument_tuple) or {self:TypeFromImplicitNode(node, "any")}
                     end
                     self.calling_function = obj
                 end
@@ -71,7 +72,6 @@ do -- types
                     arguments = obj.data.data[1].key.data
                 end
 
-                local argument_tuple = types.Tuple:new(unpack(arguments))
 
                 local return_tuple = self:Assert(func_expr, obj:Call(arguments))
 
@@ -336,7 +336,7 @@ do
 
     function META:Index(obj, key)
         if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
-            self:Error(obj.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
+            self:Error(key.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
         end
 
         return obj:Get(key) or self:TypeFromImplicitNode(key.node, "nil")
@@ -518,6 +518,10 @@ function META:Assert(node, ok, err)
 end
 
 function META:Error(node, msg)
+    if not node then
+        io.write("invalid error, no node supplied\n")
+        error(msg)
+    end
     if require("oh").current_analyzer and require("oh").current_analyzer ~= self then
         return require("oh").current_analyzer:Error(node, msg)
     end

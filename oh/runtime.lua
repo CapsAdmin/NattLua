@@ -36,7 +36,7 @@ function LSX(tag, constructor, props, children)
     return e
 end
 
-local tprint = require("tprint")
+local tprint = require("tests.tprint")
 
 function table.print(...)
     return tprint(...)
