@@ -76,37 +76,28 @@ do
 end
 
 
-function types.BinaryOperator(node, l, r, env)
+function types.BinaryOperator(op, l, r, env)
     assert(types.IsTypeObject(l))
     assert(types.IsTypeObject(r))
-    local op = node.value.value
+
     if env == "typesystem" then
         if op == "|" then
             return types.Set:new(l, r)
         end
     end
 
-    local b = r
-    local a = l
-
-    -- HACK
-    if op == ".." or op == "^" then
-        a,b = b,a
-        r,l = l,r
-    end
-
     if env == "typesystem" then
         if op == "extends" then
-            return a:Extend(b)
+            return l:Extend(r)
         elseif op == "and" then
-            return b and a
+            return r and l
         elseif op == "or" then
-            return b or a
-        elseif b == false or b == nil then
+            return r or l
+        elseif r == false or r == nil then
             return false
         elseif op == ".." then
-            local new = a:Copy()
-            new.max = b
+            local new = l:Copy()
+            new.max = r
             return new
         end
     end
@@ -123,7 +114,7 @@ function types.BinaryOperator(node, l, r, env)
 
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
 
-        if l.type ~= b.type then
+        if l.type ~= r.type then
             return false, "no operator for " .. r.type .. " " .. op .. " " .. l.type
         end
 
@@ -140,17 +131,22 @@ function types.BinaryOperator(node, l, r, env)
             rval = r.data[1].data
         end
 
-        local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], lval, rval)
+        local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], rval, lval)
+
         if not ok then
             return false, res
         else
+
+            if op == ">" or op == "<" or op == "==" or op == ">=" or op == "<=" then
+                return types.Object:new("boolean", res)
+            end
             return types.Object:new(type, res)
         end
     end
 
-    if op == "%" and a:IsType("number") and l:IsType("number") and l.data then
+    if op == "%" and l:IsType("number") and l:IsType("number") and l.data then
         local t = types.Object:new("number", 0)
-        t.max = a:Copy()
+        t.max = l:Copy()
         return t
     end
 
@@ -388,6 +384,16 @@ do
 
     function Dictionary:IsTruthy()
         return true
+    end
+
+    function Dictionary:PrefixOperator(op, val)
+        if op == "#" then
+            if self.meta and self.meta:Get("__len") then
+                error("NYI")
+            end
+
+            return types.Create("number", #self.data, true)
+        end
     end
 
     function Dictionary:new(data)
@@ -641,6 +647,18 @@ do
             return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(argument_tuple)
         end
         return return_tuple
+    end
+
+    function Object:PrefixOperator(op, val)
+        if syntax.CompiledPrefixOperatorFunctions[op] and val.data ~= nil then
+            local ok, res = pcall(syntax.CompiledPrefixOperatorFunctions[op], val.data)
+
+            if not ok then
+                return false, res
+            else
+                return types.Object:new(val.type, res)
+            end
+        end
     end
 
     local uid = 0

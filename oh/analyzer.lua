@@ -73,11 +73,7 @@ do -- types
 
                 local argument_tuple = types.Tuple:new(unpack(arguments))
 
-                local return_tuple, err = obj:Call(arguments)
-
-                if not return_tuple then
-                    self:Error(func_expr, err)
-                end
+                local return_tuple = self:Assert(func_expr, obj:Call(arguments))
 
                 do
                     self:PushScope(obj.node)
@@ -513,6 +509,14 @@ function META:CallMeLater(...)
     table.insert(self.deferred_calls, 1, {...})
 end
 
+function META:Assert(node, ok, err)
+    if ok == false then
+        self:Error(node, err)
+        return self:TypeFromImplicitNode(node, "any")
+    end
+    return ok
+end
+
 function META:Error(node, msg)
     if require("oh").current_analyzer and require("oh").current_analyzer ~= self then
         return require("oh").current_analyzer:Error(node, msg)
@@ -522,7 +526,6 @@ function META:Error(node, msg)
         local start, stop = require("oh.print_util").LazyFindStartStop(node)
         self:OnError(msg, start, stop)
     end
-
 
     if self.code then
         local utl = require("oh.print_util")
@@ -848,14 +851,10 @@ do
             if node.value.value == "." or node.value.value == ":" then
                 stack:Push(self:Index(left, right, env))
             else
-                local val, err = types.BinaryOperator(node, right, left, env)
-                if not val then
-                    self:Error(node, err)
-                end
-                stack:Push(val)
+                stack:Push(self:Assert(node, types.BinaryOperator(node.value.value, right, left, env)))
             end
         elseif node.kind == "prefix_operator" then
-            stack:Push(stack:Pop():PrefixOperator(node))
+            stack:Push(self:Assert(node, stack:Pop():PrefixOperator(node.value.value, self:AnalyzeExpression(node.right))))
         elseif node.kind == "postfix_operator" then
             stack:Push(stack:Pop():PostfixOperator(node))
         elseif node.kind == "postfix_expression_index" then

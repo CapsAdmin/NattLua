@@ -3,10 +3,18 @@ local C = oh.Code
 
 local tests = {
 C[[
-    type_assert(1-1, 0)
-    type_assert(1+1, 2)
-    type_assert(2*2, 4)
-    --type_assert(1/2, 0.5)
+    type_assert(-1, -1)
+    type_assert(#{1,2,3}, 3)
+
+    type_assert(1-2, -1)
+    type_assert(1+2, 3)
+    type_assert(2*3, 6)
+    type_assert(1/2, 0.5)
+    type_assert(2^3, 8)
+    type_assert("a" .. "b", "ab")
+
+    type_assert(1>2, false)
+    type_assert(1%1, 0)
 ]],
 C[[
     local a = 1
