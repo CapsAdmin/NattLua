@@ -112,7 +112,7 @@ do -- types
                 -- if this function has an explicit return type
                 if obj.node.return_types then
                     if not types.Tuple:new(unpack(ret)):SupersetOf(return_tuple) then
-                        self:Error(func_expr, "expected return #" .. i .. " to be a superset of " .. tostring(v) .. " got " .. tostring(ret[i]))
+                        self:Error(func_expr, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(types.Tuple:new(unpack(ret))))
                     end
                 else
                     types.MergeFunctionReturns(obj, ret, argument_tuple)
@@ -319,7 +319,7 @@ do
         if not obj:Set(key, val, env) then
             local expected_keys = {}
             local expected_values = {}
-            for i, keyval in pairs(obj.data) do
+            for _, keyval in pairs(obj.data) do
                 if not key:SupersetOf(keyval.key) then
                     table.insert(expected_keys, tostring(keyval.key))
                 elseif not val:SupersetOf(keyval.val) then
@@ -338,7 +338,7 @@ do
         self:FireEvent("newindex", obj, key, val, env)
     end
 
-    function META:Index(obj, key, env)
+    function META:Index(obj, key)
         if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
             self:Error(obj.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
         end
@@ -487,7 +487,7 @@ do
             io.write(what, "   - ")
             local values = ...
             if values then
-                for i,v in ipairs(values) do
+                for _,v in ipairs(values) do
                     io.write(tostring(v), ", ")
                 end
             end
@@ -548,7 +548,7 @@ function META:AnalyzeStatement(statement, ...)
         end
         self:PopScope()
         if self.deferred_calls then
-            for i,v in ipairs(self.deferred_calls) do
+            for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called then
                     self:Call(unpack(v))
                 end
@@ -578,45 +578,37 @@ function META:AnalyzeStatement(statement, ...)
         end
 
         for i, node in ipairs(statement.left) do
-            local obj
+            local left = values[i]
+            local right = values[i]
 
             if node.type_expression then
-                obj = self:AnalyzeExpression(node.type_expression, "typesystem")
+                left = self:AnalyzeExpression(node.type_expression, "typesystem")
 
-                local superset = obj
-                local subset = values[i]
-
-                if subset then
-                    if not subset:SupersetOf(superset) then
-                        self:Error(subset.node, "expected " .. tostring(superset) .. " but the right hand side is " .. tostring(subset))
+                if right then
+                    if not right:SupersetOf(left) then
+                        self:Error(right.node, "expected " .. tostring(left) .. " but the right hand side is " .. tostring(right))
                     end
 
                     -- local a: 1 = 1
                     -- should turn the right side into a constant number rather than number(1)
-                    subset.const = superset:IsConst()
+                    right.const = left:IsConst()
                 end
 
                 -- lock the dictionary if there's an explicit type annotation
-                if superset.Type == "dictionary" then
-                    superset.locked = true
+                if left.Type == "dictionary" then
+                    left.locked = true
                 end
-
-                node.type_explicit = true
-            else
-                node.type_explicit = false
-                obj = values[i]
-                if obj then
-                    obj.const = false
-                end
+            elseif left then
+                left.const = false
             end
 
             if statement.kind == "local_assignment" then
-                self:DeclareUpvalue(node, obj, env)
+                self:DeclareUpvalue(node, left, env)
             elseif statement.kind == "assignment" then
-                self:Assign(node, obj, env)
+                self:Assign(node, left, env)
             end
 
-            node.inferred_type = obj
+            node.inferred_type = left
         end
     elseif statement.kind == "destructure_assignment" or statement.kind == "local_destructure_assignment" then
         local env = statement.environment or "runtime"
@@ -760,19 +752,15 @@ function META:AnalyzeStatement(statement, ...)
         end
         self:PopScope()
     elseif statement.kind == "type_interface" then
-        local tbl = self:GetValue(statement.key, "typesystem")
+        local tbl = self:GetValue(statement.key, "typesystem") or self:TypeFromImplicitNode(statement, "table", {})
 
-        if not tbl then
-            tbl = self:TypeFromImplicitNode(statement, "table", {})
-        end
-
-        for i,v in ipairs(statement.expressions) do
-            local val = self:AnalyzeExpression(v.right, "typesystem")
-            local v2 = tbl:Get(v.left.value, env)
-            if v2 then
-                types.OverloadFunction(v2, val)
+        for _, exp in ipairs(statement.expressions) do
+            local left = tbl:Get(exp.left.value)
+            local right = self:AnalyzeExpression(exp.right, "typesystem")
+            if left and left.Type == "object" and left.type == "function" then
+                types.OverloadFunction(left, right)
             else
-                tbl:Set(v.left.value, self:AnalyzeExpression(v.right, "typesystem"))
+                tbl:Set(exp.left.value, right)
             end
         end
 
@@ -877,7 +865,7 @@ do
             if node.identifiers then
                 for i, key in ipairs(node.identifiers) do
                     if env == "typesystem" then
-                        args[i] = self:GetValue(key.left or key, env) or types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value) or self:GetInferredType(key)
+                        args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
                     else
                         args[i] = self:GetValue(key.left or key, env) or self:GetInferredType(key)
                     end
@@ -951,7 +939,7 @@ do
 
         function meta:Push(val)
             if val[1] then
-                for i,v in ipairs(val) do
+                for _,v in ipairs(val) do
                     assert(types.IsTypeObject(v))
                 end
             else
@@ -1008,9 +996,9 @@ do
 
             local out = {}
 
-            for i,v in ipairs(stack.values) do
+            for _,v in ipairs(stack.values) do
                 if v[1] then
-                    for i,v in ipairs(v) do
+                    for _,v in ipairs(v) do
                         table.insert(out, v)
                     end
                 else
@@ -1024,9 +1012,9 @@ do
         function META:AnalyzeExpressions(expressions, ...)
             if not expressions then return end
             local out = {}
-            for i, expression in ipairs(expressions) do
+            for _, expression in ipairs(expressions) do
                 local ret = {self:AnalyzeExpression(expression, ...)}
-                for i,v in ipairs(ret) do
+                for _,v in ipairs(ret) do
                     table.insert(out, v)
                 end
             end

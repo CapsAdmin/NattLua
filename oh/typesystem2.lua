@@ -307,7 +307,7 @@ do
         if val == nil or val.type == "nil" then
             for i, keyval in ipairs(data) do
                 if key:SupersetOf(keyval.key) then
-                    table.remove(data, _)
+                    table.remove(data, i)
                     return true
                 end
             end
@@ -850,7 +850,7 @@ do
                 end
             end
             return true
-        elseif not self:Get(subset) then
+        elseif not self:Get(sub) then
             return false
         end
 
