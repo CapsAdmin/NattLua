@@ -19,7 +19,6 @@ do -- types
         end
 
         obj.node = node
-        obj.analyzer = self
         node.inferred_type = obj
 
         return obj
@@ -74,10 +73,10 @@ do -- types
 
                 local argument_tuple = types.Tuple:new(unpack(arguments))
 
-                local return_tuple = obj:Call(arguments)
+                local return_tuple, err = obj:Call(arguments)
 
                 if not return_tuple then
-                    self:Error(func_expr, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(argument_tuple))
+                    self:Error(func_expr, err)
                 end
 
                 do
@@ -147,10 +146,10 @@ do -- types
                 obj.analyzer = self
                 obj.node = node
 
-                local return_tuple = obj:Call(arguments)
+                local return_tuple, err = obj:Call(arguments)
 
                 if not return_tuple then
-                    self:Error(node, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(types.Tuple:new(unpack(arguments))))
+                    self:Error(func_expr, err)
                 end
 
                 return return_tuple
@@ -162,7 +161,8 @@ do -- types
                     obj.analyzer = self
                     obj.node = node
 
-                    local return_tuple = obj:Call(arguments)
+                    local return_tuple, err = obj:Call(arguments)
+
                     if return_tuple then
                         return return_tuple
                     end
@@ -848,7 +848,11 @@ do
             if node.value.value == "." or node.value.value == ":" then
                 stack:Push(self:Index(left, right, env))
             else
-                stack:Push(types.BinaryOperator(node, right, left, env))
+                local val, err = types.BinaryOperator(node, right, left, env)
+                if not val then
+                    self:Error(node, err)
+                end
+                stack:Push(val)
             end
         elseif node.kind == "prefix_operator" then
             stack:Push(stack:Pop():PrefixOperator(node))

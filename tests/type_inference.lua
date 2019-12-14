@@ -3,6 +3,12 @@ local C = oh.Code
 
 local tests = {
 C[[
+    type_assert(1-1, 0)
+    type_assert(1+1, 2)
+    type_assert(2*2, 4)
+    --type_assert(1/2, 0.5)
+]],
+C[[
     local a = 1
     type_assert(a, nil as 1)
 ]],

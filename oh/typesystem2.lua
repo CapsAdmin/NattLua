@@ -124,8 +124,7 @@ function types.BinaryOperator(node, l, r, env)
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
 
         if l.type ~= b.type then
-            l.analyzer:Error(l.node, "no operator for " .. r.type .. " " .. op .. " " .. l.type)
-            return
+            return false, "no operator for " .. r.type .. " " .. op .. " " .. l.type
         end
 
         local lval = l.data
@@ -143,7 +142,7 @@ function types.BinaryOperator(node, l, r, env)
 
         local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], lval, rval)
         if not ok then
-            l.analyzer:Error(l.node, res)
+            return false, res
         else
             return types.Object:new(type, res)
         end
@@ -614,7 +613,7 @@ do
     end
 
     function Object:Call(arguments)
-        if self.Type ~= "object"  and self.Type ~= "set" then
+        if self.Type ~= "object" and self.Type ~= "set" then
             return false
         end
 
@@ -624,8 +623,7 @@ do
             _G.self = nil
 
             if not res[1] then
-                self.analyzer:Error(self.node, res[2])
-                return {types.Object:new("any")}
+                return false, res[2]
             end
 
             table.remove(res, 1)
@@ -639,6 +637,9 @@ do
 
         local argument_tuple = types.Tuple:new(unpack(arguments))
         local return_tuple = self.data:Get(argument_tuple)
+        if not return_tuple then
+            return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(argument_tuple)
+        end
         return return_tuple
     end
 
