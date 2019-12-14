@@ -69,14 +69,4 @@ local function run()
 
 end
 
-ANALYZER_VERSION = "oh.analyzer"
-TYPESYSTEM_VERSION = "oh.typesystem"
-
-run()
-
-
-
-ANALYZER_VERSION = "oh.analyzer2"
-TYPESYSTEM_VERSION = "oh.typesystem2"
-
 run()

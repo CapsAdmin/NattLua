@@ -447,48 +447,6 @@ a.b.c = 1
     local list: Array<number, 3> = {1, 2, 3}
     type_assert(list, _ as number[3])
 ]],C[[
-    type next = function(t, k)
-
-        if t.value then
-            -- behavior of the external next function
-            -- we can literally just pass what the next function returns
-            local a,b
-
-            if k then
-                a,b = next(t.value, k.value)
-            else
-                a,b = next(t.value)
-            end
-
-            if type(a) == "table" and a.name then
-                a = a.value
-            end
-
-            if type(b) == "table" and b.name then
-                b = b.value
-            end
-
-            return types.Create(type(a), a), types.Create(type(b), b)
-        end
-
-        if t.data then
-            local a, b
-            local kv
-
-            if k and k.type ~= "nil" then
-                kv = t:GetKeyVal(k)
-            else
-                kv = t.data[1]
-            end
-
-            if kv then
-                a, b = kv.key, kv.val
-            end
-
-            return a, b
-        end
-    end
-
     function pairs(t)
         return next, t, nil
     end
@@ -691,6 +649,8 @@ a.b.c = 1
     local a = (function(...) return ...+... end)(10)
 ]],C[[
     local k,v = next({k = 1})
+    type_assert(k, nil as string)
+    type_assert(v, nil as number)
 ]],C[[
     -- this will error with not defined
     --type_assert(TOTAL_STRANGER_COUNT, _ as number)
@@ -768,7 +728,14 @@ a.b.c = 1
     local a = lol():gsub("", "")
 
     type_assert(a, _ as string)
-]], C[[
+]],C[[
+
+    local a,b,c = string.match("1 2 3", "(%d) (%d) (%d)")
+    type_assert(a, nil as string)
+    type_assert(b, nil as string)
+    type_assert(c, nil as string)
+
+]],C[[
     -- val should be a string and lol should be any
     string.gsub("foo bar", "(%s)", function(val, lol)
         type_assert(val, _ as string)
@@ -959,7 +926,7 @@ local tests = {
 ]],"no operator for.-number.-%+.-boolean"},
 }
 
-local types = require(TYPESYSTEM_VERSION or "oh.typesystem")
+local types = require("oh.typesystem")
 if not types.newsystem then
     types.Create("number"):__tostring()
     types.Create("number", 1):__tostring()

@@ -1,62 +1,55 @@
 local syntax = require("oh.syntax")
 
-
-local function Error(self, msg, node)
-    local node = node or self.node
-
-    if self.analyzer then
-        self.analyzer:Error(node, msg)
-        return
-    end
-
-    if node and self.code then
-        local print_util = require("oh.print_util")
-        local start, stop = print_util.LazyFindStartStop(node)
-        io.write(print_util.FormatError(self.code, self.name, msg, start, stop))
-    else
-        local s = tostring(self)
-        s = s .. ": " .. msg
-
-        print(s)
-    end
-end
-
 local types = {}
+types.newsystem = true
 
-
-function types.IsTypeObject(val)
-    return val ~= nil and getmetatable(val) == types.fuse_meta or getmetatable(val) == types.type_meta
-end
-
-function types.GetType(obj)
-    if obj:IsType("...") and obj.data then
-        return "tuple"
-    end
-    return "object"
-end
-
-function types.SupersetOf(subset, superset)
-    return subset:IsType(superset)
-end
-
-function types.BinaryOperator(node, right, left, env)
-    return right:BinaryOperator(node, left, node.right, env)
-end
-
-function types.ReplaceType(a, b)
-    if a then
-        a:Replace(b)
-        return a
+function types.GetSignature(obj)
+    if type(obj) == "table" and obj.GetSignature then
+        return obj:GetSignature()
     end
 
-    return b
+    return tostring(obj)
+end
+
+function types.OverloadFunction(a, b)
+    for _, keyval in ipairs(b.data.data) do
+        a.data:Set(keyval.key, keyval.val)
+    end
+end
+
+function types.IsPrimitiveType(val)
+    return val == "string" or
+    val == "number" or
+    val == "boolean" or
+    val == "true" or
+    val == "false"
+end
+
+function types.IsTypeObject(obj)
+    return obj.Type ~= nil
+end
+
+function types.Union(a, b)
+    if a.Type == "dictionary" and b.Type == "dictionary" then
+        local copy = types.Dictionary:new({})
+
+        for _, keyval in pairs(a.data) do
+            copy:Set(keyval.key, keyval.val)
+        end
+
+        for _, keyval in pairs(b.data) do
+            copy:Set(keyval.key, keyval.val)
+        end
+
+        return copy
+    end
 end
 
 do
     local function merge_types(src, dst)
         for i,v in ipairs(dst) do
-            if src[i] and src[i].name ~= "any" then
-                src[i] = types.Fuse(src[i], v)
+            if src[i] and src[i].type ~= "any" then
+                src[i] = types.Set:new(src[i], v)
             else
                 src[i] = dst[i]
             end
@@ -66,250 +59,44 @@ do
     end
 
     function types.MergeFunctionArguments(obj, arg, argument_key)
-        obj.arguments = merge_types(obj.arguments, arg)
+        local data = obj.data:GetKeyVal(argument_key)
+
+        if arg then
+            data.key.data = merge_types(data.key.data, arg)
+        end
     end
 
     function types.MergeFunctionReturns(obj, ret, argument_key)
-        obj.ret = merge_types(obj.ret, ret)
-    end
-end
+        local data = obj.data:GetKeyVal(argument_key)
 
-local META = {}
-META.__index = META
---[[
-local reported = {}
-META.__index = function(s,k)
-    if META[k] == nil then
-        if not reported[k] then
-            local d = debug.getinfo(2)
-            print("undefined lookup " .. k .. ": " .. d.source:sub(2) .. ":" .. d.currentline)
-            reported[k] = true
-        end
-    end
-
-    return META[k]
-end--]]
-
-types.type_meta = META
-
-function META:Get(key)
-    key:Error("undefined get: "..tostring(self).."[" .. tostring(key) .. "]")
-    return self:Type("any")
-end
-
-function META:Set(key, val)
-    key:Error("undefined set: "..tostring(self).."[" .. tostring(key) .. "] = " .. tostring(val))
-end
-
-function META:GetReadableContent()
-    if self.value ~= nil then
-        if self.name == "string" then
-            return '"' .. self.value .. '"'
-        end
-        return self.value
-    end
-
-    return self.name
-end
-
-function META:__tostring()
-    if self.interface.tostring then
-        return self.interface.tostring(self)
-    end
-
-    if self.value ~= nil then
-        local val = tostring(self.value)
-        if self.name == "number" and self.max then
-            val = val .. ".." .. tostring(self.max.value)
-        end
-
-        return self.name .. "(" .. val .. ")"
-    end
-
-    return self.name
-end
-
-do
-
-    local function deepcopy(orig)
-        local orig_type = type(orig)
-        local copy
-        if orig_type == 'table' then
-            if types.IsTypeObject(orig) then
-                copy = orig:Copy()
-            else
-                copy = {}
-                for orig_key, orig_value in pairs(orig) do
-                    copy[deepcopy(orig_key)] = deepcopy(orig_value)
-                end
-            end
-        else -- number, string, boolean, etc
-            copy = orig
-        end
-        return copy
-    end
-
-    function META:Copy()
-        if self.name == "function" then
-            return types.Create(self.name, deepcopy(self.ret), deepcopy(self.args), self.func)
-        else
-            return types.Create(self.name, deepcopy(self.value))
+        if ret then
+            data.val.data = merge_types(data.val.data, ret)
         end
     end
 end
 
-function META:Replace(t)
-    for k,v in pairs(self) do
-        self[k] = nil
-    end
 
-    for k,v in pairs(t) do
-        self[k] = v
-    end
-end
-
-function META:GetTypes()
-    return {self.name}
-end
-
-function META:IsType(what, explicit)
-    if type(what) == "table" then
-        if self.LOL then return false end
-
-        if what.name == "table" and self.name == "table" and what.value and self.value then
-            local subset = self
-            local superset = what
-
-            for super_key, super_val in pairs(superset.value) do
-                local sub_val = self:Get(super_key)
-
-                self.LOL = true
-
-                if not sub_val:IsCompatible(super_val) then
-                    self.LOL = false
-                    return false
-                end
-
-
-                if super_val.name ~= "table" and super_val.value ~= nil and sub_val.value ~= super_val.value then
-                    self.LOL = false
-                    return false
-                end
-
-            end
-            self.LOL = false
-            return true
-        else
-            for _,v in ipairs(what:GetTypes()) do
-                if self:IsType(v, explicit) then
-                    return true
-                end
-            end
+function types.BinaryOperator(node, l, r, env)
+    assert(types.IsTypeObject(l))
+    assert(types.IsTypeObject(r))
+    local op = node.value.value
+    if env == "typesystem" then
+        if op == "|" then
+            return types.Set:new(l, r)
         end
     end
 
-    if self.name == "table" and what == "list" then
-        return true
-    end
-
-    if not explicit and (what == "any" or self.name == "any") then
-        return true
-    end
-
-    return self.interface.type_map[what]
-end
-
-function META:IsCompatible(type)
-    if self == type then
-        return true
-    end
-
-    if self:IsType(_G.type(type)) and (self.value == nil or self.value == type) then
-        return true
-    end
-
-    return self:IsType(type)
-end
-
-function META:Type(name, ...)
-    local t = types.Create(name, ...)
-    t.analyzer = self.analyzer
-    return t
-end
-
-function META:Max(max)
-    local t = self:Type(self.name, self.value)
-    if max.value then
-        t.max = max
-    else
-        t.value = nil
-    end
-    return t
-end
-
-
-function META:GetArguments()
-    return self.arguments
-end
-
-function META:IsTruthy()
-    if self.name == "any" then return true end
-
-    if type(self.interface.truthy) == "table" then
-        if self.value == nil then
-            return self.interface.truthy._nil
-        end
-        return self.interface.truthy[self.value]
-    end
-    return self.interface.truthy
-end
-
-META.truthy = 0
-
-function META:GetTruthy()
-    return self.truthy > 0
-end
-
-function META:PushTruthy()
-    self.truthy = self.truthy + 1
-end
-function META:PopTruthy()
-    self.truthy = self.truthy + 1
-end
-
-function META:Extend(t)
-    local copy = self:Copy()
-
-    for k,v in pairs(t.value) do
-        if not copy.value[k] then
-            copy:Set(k,v)
-        end
-    end
-
-    return copy
-end
-
-function META:BinaryOperator(op_node, b, node, env)
-    assert(types.IsTypeObject(b))
-    local a = self
-
-    local op = op_node.value.value
-
-    if op == "." or op == ":" then
-        if b.Get then
-            return b:Get(a, node, env)
-        end
-    end
+    local b = r
+    local a = l
 
     -- HACK
     if op == ".." or op == "^" then
         a,b = b,a
+        r,l = l,r
     end
 
     if env == "typesystem" then
-        if op == "|" then
-            return types.Fuse(a, b)
-        elseif op == "extends" then
+        if op == "extends" then
             return a:Extend(b)
         elseif op == "and" then
             return b and a
@@ -324,764 +111,874 @@ function META:BinaryOperator(op_node, b, node, env)
         end
     end
 
-    if self.name == "..." then
-        if a.data and a.data[1] then
-            return self.data[1]:BinaryOperator(op_node, b, node, env)
+    if op == "==" and l:IsType("number") and r:IsType("number") and l.data and r.data then
+        if l.max and l.max.data then
+            return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data, true)
+        end
+
+        if r.max and r.max.data then
+            return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
         end
     end
 
-    if b.name == "..." then
-        if b.data and b.data[1] then
-            return self:BinaryOperator(op_node, b.data[1], node, env)
+    if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
+
+        if l.type ~= b.type then
+            return false, "no operator for " .. r.type .. " " .. op .. " " .. l.type
         end
-    end
 
-    if self.interface.binary and self.interface.binary[op] then
-        local arg, ret
+        local lval = l.data
+        local rval = r.data
+        local type = l.type
 
-        if type(self.interface.binary[op]) == "table" then
-            arg, ret = self.interface.binary[op].arg, self.interface.binary[op].ret
+        if l.Type == "tuple" then
+            lval = l.data[1].data
+            type = l.data[1].type
+        end
+
+        if r.Type == "tuple" then
+            rval = r.data[1].data
+        end
+
+        local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], lval, rval)
+        if not ok then
+            return false, res
         else
-            arg = self.interface.binary[op]
-            ret = arg
-        end
-
-        if (not b:IsType(arg) and ret ~= "last") then
-            self:Error("no operator for `" .. tostring(b:GetReadableContent()) .. " " .. op .. " " .. tostring(a:GetReadableContent()) .. "`", op_node)
-            return self:Type("any")
-        end
-
-        if op == "==" and a:IsType("number") and b:IsType("number") and a.value and b.value then
-            if a.max and a.max.value then
-                return self:Type("boolean", b.value >= a.value and b.value <= a.max.value)
-            end
-
-            if b.max and b.max.value then
-                return self:Type("boolean", a.value >= b.value and a.value <= b.max.value)
-            end
-        end
-
-        if ret == "last" then
-            if syntax.CompiledBinaryOperatorFunctions[op] then
-
-                local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], b.value, a.value)
-                if not ok then
-                    self:Error(res)
-                else
-                    if res == b.value then
-                        return b
-                    elseif res == a.value then
-                        return a
-                    end
-                end
-            end
-
-            return a + b
-        end
-
-        if syntax.CompiledBinaryOperatorFunctions[op] and a.value ~= nil and b.value ~= nil then
-            local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], a.value, b.value)
-            if not ok then
-                self:Error(res)
-            else
-                return self:Type(ret, res)
-            end
-        end
-
-        if op == "%" and a:IsType("number") and a:IsType("number") and a.value then
-            local t = self:Type("number", 0)
-            t.max = a:Copy()
-            return t
-        end
-
-        return self:Type(ret)
-    end
-
-    self:Error("no operator for `" .. tostring(b) .. " " .. op .. " " .. tostring(a) .. "`", op_node)
-
-    return self:Type("any")
-end
-function META:PrefixOperator(op_node)
-    local op = op_node.value.value
-
-    if self.interface.prefix and self.interface.prefix[op] then
-        local ret = self.interface.prefix[op]
-
-        if syntax.CompiledPrefixOperatorFunctions[op] and self.value ~= nil then
-            local ok, res = pcall(syntax.CompiledPrefixOperatorFunctions[op], self.value)
-            if not ok then
-                self:Error(res)
-            else
-                return self:Type(ret, res)
-            end
-        end
-
-        return self:Type(ret)
-    end
-
-    self:Error("invalid prefix operation " .. op .. " on " .. tostring(self), op_node)
-
-    return self:Type("any")
-end
-
-function META:PostfixOperator(op_node)
-    local op = op_node.value.value
-
-    if self.interface.postfix and self.interface.postfix[op] then
-        local ret = self.interface.postfix[op]
-
-        if syntax.CompiledPostfixOperatorFunctions[op] and self.value ~= nil then
-            local ok, res = pcall(syntax.CompiledPostfixOperatorFunctions[op], self.value)
-            if not ok then
-                self:Error(res)
-            else
-                return self:Type(ret, res)
-            end
-        end
-
-        return self:Type(ret)
-    end
-
-    self:Error("invalid postfix operation " .. op)
-
-    return self:Type("any")
-end
-
-function META:Expect(type, expect)
-    if not type:IsType(expect) then
-        self:Error("expected " .. expect .. " got " .. type.name)
-    end
-end
-
-function META:RemoveNonTruthy()
-    return self:Copy()
-end
-
-
-META.Error = Error
-
-local registered = {}
-
-function types.Register(name, interface)
-
-    interface.type_map = {
-        [name] = true,
-    }
-
-    if interface.inherits then
-
-        interface.type_map[interface.inherits] = true
-
-        local function merge(a, b)
-            for k,v in pairs(b) do
-                if type(v) == "table" and type(a[k]) == "table" then
-                    merge(a[k], v)
-                else
-                    a[k] = v
-                end
-            end
-
-            return a
-        end
-
-        local base = assert(registered[interface.inherits], "base type " .. interface.inherits .. " does not exist")
-
-        interface = merge(interface, base.interface)
-    end
-
-    registered[name] = {
-        interface = interface,
-        new = function(...)
-            local self = setmetatable({interface = interface}, META)
-
-            self.trace = debug.traceback()
-
-            if interface.init then
-                for k,v in pairs(interface.init(self, ...)) do
-                    self[k] = v
-                end
-            else
-                self.value = ...
-            end
-
-
-            self.Get = interface.Get
-            self.Set = interface.Set
-
-            self.name = name
-
-            return self
-        end,
-    }
-
-
-    return registered[name].new
-end
-
-function types.IsPrimitiveType(name)
-    if name == "table" or name == "list" then return false end
-
-    return registered[name]
-end
-
-function types.Create(name, ...)
-    assert(registered[name], "type " .. name .. " does not exist")
-    local type = registered[name].new(...)
-
-    return type
-end
-
-function types.OverloadFunction(a, b)
-    a.overloads = a.overloads or {a}
-    table.insert(a.overloads, b)
-
-    table.sort(a.overloads, function(a, b) return #a.arguments > #b.arguments end)
-
-    return a
-end
-
-function META:GetReturnTypes()
-    return self.ret
-end
-
-function META:Serialize()
-    return tostring(self)
-end
-
-
-
-function types.CallFunction(obj, args)
-    local errors = {}
-    local found
-
-    local overloads = obj.overloads or obj.types
-
-    for _, obj in ipairs(overloads or {obj}) do
-        local ok = true
-
-        if overloads and obj.arguments and #obj.arguments ~= #args then
-            ok = false
-        end
-
-        if obj.arguments then
-            for i, typ in ipairs(obj.arguments) do
-                if (not args[i] or not typ:IsType(args[i])) and not (typ.name == "any" or typ.name == "...") then
-                    ok = false
-                    table.insert(errors, {obj = obj, err = {"expected " .. tostring(typ) .. " to argument #"..i.." got " .. tostring(args[i])}})
-                end
-            end
-        end
-
-        if ok then
-            found = obj
-            break
+            return types.Object:new(type, res)
         end
     end
 
-    if not found then
-        for _, data in ipairs(errors) do
-            data.obj:Error(unpack(data.err))
-        end
-        return {obj:Type("any")}
+    if op == "%" and a:IsType("number") and l:IsType("number") and l.data then
+        local t = types.Object:new("number", 0)
+        t.max = a:Copy()
+        return t
     end
 
-    if found.func then
-        _G.self = found.analyzer
-        local res = {xpcall(found.func, debug.traceback, unpack(args))}
-        _G.self = nil
-
-        if not res[1] then
-            obj:Error(res[2])
-            return {obj:Type("any")}
-        end
-
-        table.remove(res, 1)
-
-        if not res[1] then
-            res[1] = obj:Type("nil")
-        end
-
-        return res
+    if op == "==" and (l:IsType("any") or r:IsType("any")) then
+        return types.Object:new("boolean")
     end
 
-    return found.ret or {obj:Type("any")}
+    -- todo
+    if l.type == r.type then
+        return types.Object:new(l.type)
+    end
+
+    if op == "or" then
+        if l.data then
+            return l
+        end
+
+        return r
+    end
+
+    error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
 end
 
 do
-    local META = {}
-    FUSE_META = {}
-    META.__index = function(s,k) FUSE_META[k] = true return META[k] end
 
-    META.Error = Error
+    local Dictionary = {}
+    Dictionary.Type = "dictionary"
+    Dictionary.__index = Dictionary
 
-    types.fuse_meta = META
+    function Dictionary:GetSignature()
+        if self.supress then
+            return "*self*"
+        end
+        self.supress = true
 
-    local function invoke(self, name, ...)
-        local types = {}
-        local done = {}
-        for _, type in ipairs(self.types) do
-            local ret = type[name](type, ...)
-            if ret ~= nil then
-                for k,v in pairs(_G.type(ret) == "table" and ret.types or {ret}) do
-                    if _G.type(v) ~= "table" or not done[v.name] then
-                        table.insert(types, v)
-                        if _G.type(v) == "table" then
-                            done[v.name] = true
+        if not self.data[1] then
+            return "{}"
+        end
+
+        local s = {}
+
+        for i, keyval in ipairs(self.data) do
+            s[i] = keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature()
+        end
+        self.supress = nil
+
+        table.sort(s, function(a, b) return a > b end)
+
+        return table.concat(s, "\n")
+    end
+
+    local level = 0
+    function Dictionary:Serialize()
+        if not self.data[1] then
+            return "{}"
+        end
+
+        if self.supress then
+            return "*self*"
+        end
+        self.supress = true
+
+        local s = {}
+
+        level = level + 1
+        for i, keyval in ipairs(self.data) do
+            s[i] = ("\t"):rep(level) .. tostring(keyval.key) .. " = " .. tostring(keyval.val)
+        end
+        level = level - 1
+
+        self.supress = nil
+
+        table.sort(s, function(a, b) return a > b end)
+
+        return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
+    end
+
+    function Dictionary:__tostring()
+        return (self:Serialize():gsub("%s+", " "))
+    end
+
+    function Dictionary:GetLength()
+        return #self.data
+    end
+
+    function Dictionary:SupersetOf(sub)
+        if self == sub then
+            return true
+        end
+
+        if sub.Type == "tuple" then
+            if sub:GetLength() > 0 then
+                for i, keyval in ipairs(self.data) do
+                    if keyval.key.type == "number" then
+                        if not sub:Get(i) or not sub:Get(i):SupersetOf(keyval.val) then
+                            return false
                         end
+                    end
+                end
+            else
+                local count = 0
+                for i, keyval in ipairs(self.data) do
+                    if keyval.key.data ~= i then
+                        return false
+                    end
+
+                    count = count + 1
+                end
+                if count ~= sub:GetMaxLength() then
+                    return false
+                end
+            end
+
+            return true
+        end
+
+
+        for _, keyval in ipairs(self.data) do
+            local val = sub:Get(keyval.key, true)
+
+            if not val then
+                return false
+            end
+
+            if not keyval.val:SupersetOf(val) then
+                return false
+            end
+        end
+
+
+        return true
+    end
+
+    function Dictionary:Lock(b)
+        self.locked = true
+    end
+
+    function Dictionary:Cast(val)
+        if type(val) == "string" then
+            return types.Object:new("string", val, true)
+        elseif type(val) == "number" then
+            return types.Object:new("number", val, true)
+        end
+        return val
+    end
+
+    function Dictionary:Set(key, val, env)
+        key = self:Cast(key)
+        val = self:Cast(val)
+
+        local data = self.data
+
+        if val == nil or val.type == "nil" then
+            for i, keyval in ipairs(data) do
+                if key:SupersetOf(keyval.key) then
+                    table.remove(data, i)
+                    return true
+                end
+            end
+            return false
+        end
+
+        for _, keyval in ipairs(data) do
+            if key:SupersetOf(keyval.key) and (env == "typesystem" or val:SupersetOf(keyval.val)) then
+                if not self.locked then
+                    keyval.val = val
+                end
+                return true
+            end
+        end
+
+        if not self.locked then
+            table.insert(data, {key = key, val = val})
+            return true
+        end
+
+        return false
+    end
+
+    function Dictionary:Get(key, env)
+        key = self:Cast(key)
+
+        local keyval = self:GetKeyVal(key, env)
+
+        if not keyval and self.meta then
+            local index = self.meta:Get("__index")
+            if index.Type == "dictionary" then
+                return index:Get(key)
+            end
+        end
+
+        if keyval then
+            return keyval.val
+        end
+    end
+
+    function Dictionary:GetKeyVal(key, env)
+        for _, keyval in ipairs(env == "typesystem" and self.structure or self.data) do
+            if key:SupersetOf(keyval.key) then
+                return keyval
+            end
+        end
+    end
+
+    function Dictionary:Copy()
+        local copy = Dictionary:new({})
+
+        for _, keyval in ipairs(self.data) do
+            copy:Set(keyval.key, keyval.val)
+        end
+
+        return copy
+    end
+
+    function Dictionary:Extend(t)
+        local copy = self:Copy()
+
+        for _, keyval in ipairs(t.data) do
+            if not copy:Get(keyval.key) then
+                copy:Set(keyval.key, keyval.val)
+            end
+        end
+
+        return copy
+    end
+
+    function Dictionary:IsConst()
+        for _, v in ipairs(self.data) do
+            if v.val ~= self and not v.val:IsConst() then
+                return true
+            end
+        end
+        return false
+    end
+
+    function Dictionary:IsTruthy()
+        return true
+    end
+
+    function Dictionary:new(data)
+        local self = setmetatable({}, self)
+
+        self.data = data
+        self.structure = {}
+
+        if data and not data[1] and next(data) then
+            assert("bad table for dictionary")
+        end
+
+        return self
+    end
+
+    types.Dictionary = Dictionary
+
+
+end
+
+do
+    local Object = {}
+    Object.Type = "object"
+    Object.__index = Object
+
+    function Object:GetSignature()
+        if self.type == "function" then
+            return self.type .. "-"..types.GetSignature(self.data)
+        end
+        if self.const then
+            return self.type .. "-" .. types.GetSignature(self.data)
+        end
+
+        return self.type
+    end
+
+    function Object:SetType(name)
+        assert(name)
+        self.type = name
+    end
+
+    function Object:IsType(name)
+        return self.type == name
+    end
+
+    function Object:GetLength()
+        if type(self.data) == "table" then
+            if self.data.GetLength then
+                return self.data:GetLength()
+            end
+
+            return #self.data
+        end
+
+        return 0
+    end
+
+    function Object:Get(key)
+        local val = type(self.data) == "table" and self.data:Get(key)
+
+        if not val and self.meta then
+            local index = self.meta:Get("__index")
+            if index.Type == "dictionary" then
+                return index:Get(key)
+            end
+        end
+
+        return val
+    end
+
+    function Object:Set(key, val)
+        return self.data:Set(key, val)
+    end
+
+    function Object:GetArguments(argument_tuple)
+        local val = self.data:GetKeyVal(argument_tuple)
+        return val and val.key.data
+    end
+
+    function Object:GetReturnTypes(argument_tuple)
+        local val = self.data:GetKeyVal(argument_tuple)
+        return val and val.val.data
+    end
+
+    function Object:SupersetOf(sub)
+        if self.type == "any" then
+            return true
+        end
+
+        if sub.Type == "set" then
+           return sub:Get(self) ~= nil
+        end
+
+        if sub.Type == "object" then
+            if sub.type == "any" then
+                return true
+            end
+
+            if self.type == sub.type then
+
+                if self.const == true and sub.const == true then
+
+                    if self.data == sub.data then
+                        return true
+                    end
+
+                    if self.type == "number" and sub.type == "number" and self.Type == "object" and self.type == "list" and self.data and self.data.Type == "tuple" then
+                        local min = self:Get(1).data
+                        local max = self:Get(2).data
+
+                        if sub.data and sub.data.Type == "tuple" then
+                            if sub:Get(1) >= min and sub:Get(2) <= max then
+                                return true
+                            end
+                        else
+                            if sub.data >= min and sub.data <= max then
+                                return true
+                            end
+                        end
+                    end
+                end
+
+                -- self = number(1)
+                -- sub = 1
+
+                if self.data ~= nil and self.data == sub.data then
+                    return true
+                end
+
+                if sub.data == nil or self.data == nil then
+                    return true
+                end
+
+                if not self.const and not sub.const then
+                    return true
+                end
+            end
+
+            return false
+        end
+
+        return false
+    end
+
+    function Object:__tostring()
+        --return "「"..self.uid .. " 〉" .. self:GetSignature() .. "」"
+        if self.Type == "tuple" then
+            local a = self.data:Get(1)
+            local b = self.data:Get(2)
+
+            if a.Type == "tuple" then
+                return tostring(a) .. " => " .. tostring(b)
+            elseif a.Type == "object" then
+                return "(" .. tostring(a) .. " .. " .. tostring(b) .. ")"
+            end
+        end
+
+        if self.type == "function" then
+            local str = {}
+            for _, keyval in ipairs(self.data.data) do
+                table.insert(str, "function(" .. tostring(keyval.key) .. "):" .. tostring(keyval.val))
+            end
+            return table.concat(str, " | ")
+        end
+
+        if self.const then
+            if self.type == "string" then
+                if self.data then
+                    return ("%q"):format(self.data)
+                end
+            end
+
+            if self.data == nil then
+                return self.type
+            end
+
+            return tostring(self.data) .. (self.max and (".." .. self.max.data) or "")
+        end
+
+        if self.data == nil then
+            return self.type
+        end
+
+        return self.type .. "(".. tostring(self.data) .. (self.max and (".." .. self.max.data) or "") .. ")"
+    end
+
+    function Object:Serialize()
+        return self:__tostring()
+    end
+
+    do
+        Object.truthy = 0
+
+        function Object:GetTruthy()
+            return self.truthy > 0
+        end
+
+        function Object:PushTruthy()
+            self.truthy = self.truthy + 1
+        end
+        function Object:PopTruthy()
+            self.truthy = self.truthy + 1
+        end
+    end
+
+    function Object:Max(val)
+        if self.type == "number" then
+            self.max = val
+        end
+        return self
+    end
+
+    function Object:IsTruthy()
+        return self.type ~= "nil" and self.type ~= "false" and self.data ~= false
+    end
+
+    function Object:RemoveNonTruthy()
+        return self
+    end
+
+    function Object:IsConst()
+        return self.const
+    end
+
+    function Object:Call(arguments)
+        if self.Type ~= "object" and self.Type ~= "set" then
+            return false
+        end
+
+        if self.lua_function then
+            _G.self = self.analyzer
+            local res = {pcall(self.lua_function, unpack(arguments))}
+            _G.self = nil
+
+            if not res[1] then
+                return false, res[2]
+            end
+
+            table.remove(res, 1)
+
+            if not res[1] then
+                res[1] = types.Object:new("nil")
+            end
+
+            return res
+        end
+
+        local argument_tuple = types.Tuple:new(unpack(arguments))
+        local return_tuple = self.data:Get(argument_tuple)
+        if not return_tuple then
+            return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(argument_tuple)
+        end
+        return return_tuple
+    end
+
+    local uid = 0
+
+    function Object:new(type, data, const)
+        local self = setmetatable({}, self)
+
+        uid = uid + 1
+
+        self.uid = uid
+        self:SetType(type)
+        self.data = data
+        self.const = const
+
+        return self
+    end
+
+    types.Object = Object
+end
+
+do
+    local Tuple = {}
+    Tuple.Type = "tuple"
+    Tuple.__index = Tuple
+
+    function Tuple:GetSignature()
+        local s = {}
+
+        for i,v in ipairs(self.data) do
+            s[i] = types.GetSignature(v)
+        end
+
+        return table.concat(s, " ")
+    end
+
+    function Tuple:GetMaxLength()
+        return self.max or 0
+    end
+
+    function Tuple:GetLength()
+        return #self.data
+    end
+
+    function Tuple:SupersetOf(sub)
+
+        if sub.Type == "dictionary" then
+            local hm = {}
+
+            for i,v in ipairs(sub.data) do
+                if v.key.type == "number" then
+                    hm[v.key.data] = v.val.data
+                end
+            end
+
+            if #hm ~= #sub.data then
+                return false
+            end
+        end
+
+        for i = 1, sub:GetLength() do
+            if sub:Get(i).type ~= "any" and (not self:Get(i) or not self:Get(i):SupersetOf(sub:Get(i))) then
+                return false
+            end
+        end
+
+        return true
+    end
+
+    function Tuple:Get(key)
+        if type(key) == "number" then
+            return self.data[key]
+        end
+
+        if key.Type == "object" then
+            if key:IsType("number") then
+                key = key.data
+            elseif key:IsType("string") then
+                key = key.data
+            end
+        end
+
+        return self.data[key]
+    end
+
+    function Tuple:Set(key, val)
+        self.data[key] =  val
+    end
+
+    function Tuple:__tostring()
+        local s = {}
+
+        for i,v in ipairs(self.data) do
+            s[i] = tostring(v)
+        end
+
+        return table.concat(s, ", ")
+    end
+
+    function Tuple:IsConst()
+        for i,v in ipairs(self.data) do
+            if not v:IsConst() then
+                return false
+            end
+        end
+        return true
+    end
+
+    function Tuple:IsTruthy()
+        return self.data[1] and self.data[1]:IsTruthy()
+    end
+
+    function Tuple:new(...)
+        local self = setmetatable({}, self)
+
+        self.data = {...}
+
+        for i,v in ipairs(self.data) do
+            assert(types.IsTypeObject(v))
+        end
+
+        return self
+    end
+
+    types.Tuple = Tuple
+end
+
+do
+    local Set = {}
+    Set.Type = "set"
+    Set.__index = Set
+
+    function Set:GetSignature()
+        local s = {}
+
+        for _, v in pairs(self.data) do
+            table.insert(s, types.GetSignature(v))
+        end
+
+        table.sort(s, function(a, b) return a < b end)
+
+        return table.concat(s, "|")
+    end
+
+    function Set:__tostring()
+        local s = {}
+        for _, v in pairs(self.data) do
+            table.insert(s, tostring(v))
+        end
+
+        table.sort(s, function(a, b) return a < b end)
+
+        return table.concat(s, " | ")
+    end
+
+    function Set:AddElement(e)
+        if e.Type == "set" then
+            for _, e in pairs(e.data) do
+                self:AddElement(e)
+            end
+            return self
+        end
+
+        self.data[types.GetSignature(e)] = e
+
+        return self
+    end
+
+    function Set:GetLength()
+        local len = 0
+        for _, v in pairs(self.data) do
+            len = len + 1
+        end
+        return len
+    end
+
+    function Set:RemoveElement(e)
+        self.data[types.GetSignature(e)] = nil
+    end
+
+    function Set:Get(key, from_dictionary)
+        if from_dictionary then
+            for _, obj in pairs(self.data) do
+                if obj.Get then
+                    local val = obj:Get(key)
+                    if val then
+                        return val
                     end
                 end
             end
         end
 
-        if types[1] then
-            return setmetatable({types = types}, META)
-        end
+        return self.data[key.type] or self.data[key:GetSignature()]
     end
 
-    function META:Get(key)
-        local out
-        for _, type in ipairs(self.types) do
-            if not out then
-                out = type:Get(key)
-            else
-                out = out + type:Get(key)
-            end
-        end
-        return out
+    function Set:Set(key, val)
+        return self:AddElement(val)
     end
 
-    function META:Set(key, val)
-        for _, type in ipairs(self.types) do
-            type:Set(key, val)
-        end
-    end
-
-    function META:Serialize()
-        return self:__tostring()
-    end
-
-    function META:__tostring()
-        local str = {}
-
-        for i, type in ipairs(self.types) do
-            str[i] = tostring(type)
+    function Set:SupersetOf(sub)
+        if sub.Type == "object" then
+            return false
         end
 
-        return table.concat(str, " | ")
-    end
-
-    function META:Type(...)
-        return self.types[1]:Type(...)
-    end
-
-    function META:IsTruthy()
-        for _, type in ipairs(self.types) do
-            if type:IsTruthy() then
-                return true
-            end
-        end
-        return false
-    end
-
-    META.truthy = 0
-
-    function META:GetTruthy()
-        return self.truthy > 0
-    end
-
-    function META:PushTruthy()
-        self.truthy = self.truthy + 1
-    end
-    function META:PopTruthy()
-        self.truthy = self.truthy - 1
-    end
-
-    function META:GetReadableContent()
-        return tostring(self)
-    end
-
-    function META:GetArguments()
-        return self.arguments
-    end
-
-    function META:IsType(what)
-        if type(what) == "table" then
-            for _,v in ipairs(what:GetTypes()) do
-                if self:IsType(v) then
-                    return true
+        if sub.Type == "set" then
+            for k,v in pairs(sub.data) do
+                if not v:SupersetOf(self.data[k]) then
+                    return false
                 end
             end
+            return true
+        elseif not self:Get(sub) then
+            return false
         end
 
-        for _, type in ipairs(self.types) do
-            if type:IsType(self) then
-                return true
+        for _, e in pairs(self.data) do
+            if not sub:Get(e) then
+                return false
             end
         end
 
-        return false
+        return true
     end
 
-    function META:GetTypes()
-        local types = {}
-        for i, type in ipairs(self.types) do
-            types[i] = type.name
+    function Set:Union(set)
+        local copy = self:Copy()
+
+        for _, e in pairs(set.data) do
+            copy:AddElement(e)
         end
-        return types
+
+        return copy
     end
 
-    function META:BinaryOperator(...)
-        return invoke(self, "BinaryOperator", ...)
+
+    function Set:Intersect(set)
+        local copy = types.Set:new()
+
+        for _, e in pairs(self.data) do
+            if set:Get(e) then
+                copy:AddElement(e)
+            end
+        end
+
+        return copy
     end
 
-    function META:PrefixOperator(...)
-        return invoke(self, "PrefixOperator", ...)
+
+    function Set:Subtract(set)
+        local copy = self:Copy()
+
+        for _, e in pairs(self.data) do
+            copy:RemoveElement(e)
+        end
+
+        return copy
     end
 
-    function META:PostfixOperator(...)
-        return invoke(self, "PostfixOperator", ...)
-    end
-
-    function META:Copy()
-        local copy = setmetatable({types = {}}, META)
-        for i,v in ipairs(self.types) do
-            copy.types[i] = v:Copy()
+    function Set:Copy()
+        local copy = Set:new()
+        for _, e in pairs(self.data) do
+            copy:AddElement(e)
         end
         return copy
     end
 
-    function META:RemoveNonTruthy()
-        for i = #self.types, 1, -1 do
-            local v = self.types[i]
-            if not v:IsTruthy() then
-                table.remove(self.types, i)
+    function Set:IsConst()
+        for k,v in pairs(self.data) do
+            if not v.const then
+                return false
             end
         end
+
+        return true
     end
 
-    function types.Fuse(a, b)
-        local types = {}
-        for i,v in ipairs(a.types or {a}) do
-            table.insert(types, v)
+    function Set:IsTruthy()
+        for k,v in pairs(self.data) do
+            if v:IsTruthy() then
+                return true
+            end
         end
-        for i,v in ipairs(b.types or {b}) do
-            table.insert(types, v)
-        end
-        return setmetatable({types = types}, META)
+
+        return false
     end
+
+    function Set:new(...)
+        local self = setmetatable({}, Set)
+
+        self.data = {}
+
+        for _, v in ipairs({...}) do
+            self:AddElement(v)
+        end
+
+        return self
+    end
+
+    types.Set = Set
 end
 
-types.Register("base", {
-    binary = {
-        ["=="] = {arg = "base", ret = "boolean"},
-        ["~="] = {arg = "base", ret = "boolean"},
-        ["or"] = {arg = "base", ret = "last"},
-        ["and"] = {arg = "base", ret = "last"},
-    },
-    prefix = {
-        ["not"] = "boolean",
-    },
-})
-
-
-types.Register("any", {
-    inherits = "base",
-    truthy = true,
-    Get = function(self, key)
-        return self:Type("any")
-    end,
-    Set = function(self, key)
-    end,
-})
-
-types.Register("string", {
-    inherits = "base",
-    truthy = true,
-    Get = function(self, key)
-        if self.analyzer then
-            local g = self.analyzer:GetValue("_G", "typesystem")
-            if not g then
-                if self.analyzer.IndexNotFound then
-                    g = self.analyzer:IndexNotFound("_G")
-                end
-            end
-
-            if g then
-                if self.analyzer.IndexNotFound then
-                    local tbl = self.analyzer:IndexNotFound("string")
-
-                    if tbl and key then
-                        return tbl:Get(key)
-                    end
-                else
-                    local tbl = self.analyzer:GetValue("string", "typesystem")
-
-                    if tbl and key then
-                        return tbl:Get(key)
-                    end
-                end
+function types.Create(type, ...)
+    if type == "nil" then
+        return types.Object:new(type)
+    elseif type == "any" then
+        return types.Object:new(type)
+    elseif type == "table" then
+        local dict = types.Dictionary:new({})
+        if ... then
+            for k,v in pairs(...) do
+                dict:Set(k,v)
             end
         end
-
-        self:Error("index " .. tostring(key) .. " is not defined on the string type", key.node)
-
-        return self:Type("any")
-    end,
-    binary = {
-        [".."] = "string",
-
-        ["<"] = "boolean",
-        [">"] = "boolean",
-        ["<="] = "boolean",
-        [">="] = "boolean",
-    },
-    prefix = {
-        ["#"] = "number",
-    },
-})
-
-types.Register("table", {
-    inherits = "base",
-    truthy = true,
-    prefix = {
-        ["#"] = "number",
-    },
-    init = function(self, value, structure)
-        if structure then
-            for key, val in pairs(structure) do
-                if val[1] == "self" then
-                    structure[key] = self
-                end
-            end
+        return dict
+    elseif type == "boolean" then
+        return types.Object:new("boolean", ...)
+    elseif type == "..." then
+        local values = ... or {}
+        return types.Tuple:new(unpack(values))
+    elseif type == "number" then
+        return types.Object:new(type, ...)
+    elseif type == "string" then
+        return types.Object:new(type, ...)
+    elseif type == "function" then
+        local returns, arguments, lua_function = ...
+        local dict = types.Dictionary:new({})
+        dict:Set(types.Tuple:new(unpack(arguments)), types.Tuple:new(unpack(returns)))
+        local obj = types.Object:new(type, dict)
+        obj.lua_function = lua_function
+        return obj
+    elseif type == "list" then
+        local values, len = ...
+        local tup = types.Tuple:new(unpack(values or {}))
+        if len then
+            tup.max = len
         end
-        return {structure = structure, value = value}
-    end,
-    Set = function(self, key, val, node, env)
-        local hashed_key = type(key) == "string" and key or key.value
-
-        if self.structure then
-            local expected = {}
-
-            for k,v in pairs(self.structure) do
-                if key:IsCompatible(k) then
-                    if not val:IsCompatible(v) or (v.value ~= nil and val.value ~= v.value) then
-                        self:Error("invalid value " .. tostring(val) .. " expected " .. tostring(v), val.node)
-                    end
-
-                    if hashed_key then
-                        self.value[hashed_key] = val
-                    end
-
-                    return
-                end
-                table.insert(expected, tostring(k))
-            end
-
-            self:Error("invalid key " .. tostring(key) .. (expected[1] and (" expected " .. table.concat(expected, " | ")) or ""), key.node)
-        elseif self.value then
-            if key.max then
-                self.value[key] = val
-            elseif hashed_key and val then
-                self.value[hashed_key] = val
-            end
-        end
-    end,
-    Get = function(self, key)
-        local hashed_key = (type(key) == "string" or type(key) == "number") and key or key.value
-
-        if self.structure then
-
-            if hashed_key then
-                if self.value and self.value[hashed_key] then
-                    return self.value[hashed_key]
-                elseif self.structure[hashed_key] then
-                    return self.structure[hashed_key]
-                end
-            end
-
-            local expected = {}
-
-            for k,v in pairs(self.structure) do
-                if key:IsCompatible(k) then
-                    return v
-                end
-
-                table.insert(expected, tostring(k))
-            end
-
-            if self.index then
-                return self:index(key)
-            end
-
-            self:Error("invalid key " .. tostring(key) .. " expected " .. table.concat(expected, " | "), key.node)
-        end
-
-        if hashed_key and self.value and self.value[hashed_key] then
-            return self.value[hashed_key]
-        end
-
-        if self.value then
-            for k,v in pairs(self.value) do
-
-                if hashed_key then
-                    local hashed_key2 = (type(k) == "string" or type(k) == "number") and k or k.value
-                    if hashed_key2 == hashed_key then
-                        return v
-                    end
-                elseif key:IsCompatible(k) then
-                    return v
-                end
-            end
-        end
-
-        if self.index then
-            return self:index(key)
-        end
-
-        return self:Type("any")
-    end,
-    tostring = function(self)
-        if self.during_tostring then return "*self" end
-
-        self.during_tostring = true
-        local str = {"table"}
-        if self.value then
-            table.insert(str, " {")
-            for k, v in pairs(self.value) do
-                local key = tostring(k)
-
-                if type(k) == "table" then
-                    key = "[" .. key .. "]"
-                elseif v == self then
-                    v = "*self"
-                end
-
-                table.insert(str, key .. " = " .. tostring(v) .. ",")
-            end
-            table.insert(str, "}")
-        end
-
-        local str = table.concat(str, " ")
-
-        if #str > 20 then
-            str = str:sub(1, 20) .. " ... }"
-        end
-
-        self.during_tostring = false
-        return str
-    end,
-})
-
-do
-    local function check_index(self, key)
-        if not key:IsType("number") then
-            key:Error("cnnnot index " .. tostring(key) .. " on list")
-        elseif self.length and key.value and key.value > self.length then
-            key:Error("out of bounds " .. tostring(key))
-        elseif key.value and key.value < 1 then
-            key:Error("out of bounds " .. tostring(key))
-        end
+        return tup
     end
-
-    types.Register("list", {
-        inherits = "base",
-        truthy = true,
-        prefix = {
-            ["#"] = "number",
-        },
-        init = function(self, type, length)
-            return {list_type = type, length = length}
-        end,
-        Set = function(self, key, val)
-            check_index(self, key)
-
-            if self.list_type and not val:IsType(self.list_type) then
-                self:Error("expected " .. tostring(self.list_type) .. " got " .. tostring(val))
-            end
-
-            self.value[key] = val
-        end,
-        Get = function(self, key)
-            check_index(self, key)
-
-            return self.value[key]
-        end,
-        tostring = function(self)
-            return (tostring(self.list_type) or "") .. "["..(self.length and self.length or "").."]"
-        end,
-    })
+    error("NYI " .. type)
 end
-
-types.Register("boolean", {
-    inherits = "base",
-    truthy = {
-        [true] = true,
-        [false] = false,
-        _nil = true,
-    },
-})
-
-types.Register("nil", {
-    inherits = "base",
-    truthy = false,
-    init = function() return {} end
-})
-
-types.Register("number", {
-    inherits = "base",
-    truthy = true,
-    prefix = {
-        ["-"] = "number",
-    },
-    binary = {
-        ["+"] = "number",
-        ["-"] = "number",
-        ["*"] = "number",
-        ["/"] = "number",
-        ["%"] = "number",
-        ["^"] = "number",
-
-        ["<"] = {arg = "number", ret = "boolean"},
-        [">"] = {arg = "number", ret = "boolean"},
-        ["<="] = {arg = "number", ret = "boolean"},
-        [">="] = {arg = "number", ret = "boolean"},
-    }
-})
-
-types.Register("...", {
-    inherits = "base",
-    init = function(self, ...)
-        return {data = ...}
-    end,
-})
-
-types.Register("function", {
-    inherits = "base",
-    truthy = true,
-
-    init = function(self, ret, arguments, func)
-        return {ret = ret, arguments = arguments, func = func}
-    end,
-
-    tostring = function(self)
-        local arg_str = {}
-
-        if self.arguments then
-            for i, v in ipairs(self.arguments) do
-                arg_str[i] = tostring(v)
-            end
-        end
-
-        local ret_str = {}
-
-        if self.ret then
-            for i, v in ipairs(self.ret) do
-                ret_str[i] = tostring(v)
-            end
-        end
-
-        return self.name .. "(" .. table.concat(arg_str, ", ") .. "): " .. table.concat(ret_str, ", ")
-    end,
-})
 
 return types

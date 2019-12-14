@@ -723,17 +723,17 @@ type getmetatable = (function(object: any): table|nil)
 -- ^string is just to circumvent getting the primitive type string
 
 type ^string.match = function(s, pattern, init)
-	if s.value and pattern.value then
-		local res = {s.value:match(pattern.value)}
+	if s.data and pattern.data then
+		local res = {s.data:match(pattern.data)}
 		for i,v in ipairs(res) do
 			res[i] = types.Create("string", v)
 		end
 		return unpack(res)
 	end
 
-	if pattern.value then
+	if pattern.data then
 		local out = {}
-		for s in pattern.value:gmatch("%b()") do
+		for s in pattern.data:gmatch("%b()") do
 			table.insert(out, types.Create("string") + types.Create("nil"))
 		end
 		return unpack(out)
@@ -744,39 +744,22 @@ type ^string.gsub = function(str, pattern, val)
 	if val:IsType("function") then
 		local args = {}
 
-		if types.newsystem then
-			if pattern.data then
-				for group in pattern.data:gmatch("%b()") do
-					table.insert(args, types.Create("string"))
-				end
+		if pattern.data then
+			for group in pattern.data:gmatch("%b()") do
+				table.insert(args, types.Create("string"))
 			end
-
-			if not args[1] then
-				args[1] = types.Create("string")
-			end
-
-			for i,v in ipairs(args) do
-				val.data.data[1].key.data[i] = v
-			end
-
-			val.data.data[1].val.data[1] = types.Create("string")
-		else
-			if pattern.value then
-				for group in pattern.value:gmatch("%b()") do
-					table.insert(args, val:Type("string"))
-				end
-			end
-
-			if not args[1] then
-				args[1] = val:Type("string")
-			end
-
-			for i,v in ipairs(args) do
-				val.arguments[i] = types.ReplaceType(val.arguments[i], v)
-			end
-
-			val.ret[1] = types.ReplaceType(val.ret[1], val:Type("string"))
 		end
+
+		if not args[1] then
+			args[1] = types.Create("string")
+		end
+
+		for i,v in ipairs(args) do
+			val.data.data[1].key.data[i] = v
+		end
+
+		val.data.data[1].val.data[1] = types.Create("string")
+
 	end
 
 	return types.Create("string")
@@ -788,69 +771,28 @@ type type_assert = function(what: any, type: any, value: any, ...)
 		return
 	end
 
-	if types.newsystem then
-		if not what:SupersetOf(type) then
-			error("expected type " .. tostring(type) .." got " .. tostring(what))
-		end
-	else
-		if not types.SupersetOf(what, type) then
-			error("expected type " .. tostring(type) .." got " .. tostring(what))
-		end
+	if not what:SupersetOf(type) then
+		error("expected type " .. tostring(type) .." got " .. tostring(what))
 	end
-
-	if type.value ~= nil then
-		if what.value ~= type.value then
-			print(what, type, value)
-			error("expected type value " .. tostring(type) .." got " .. tostring(what))
-		end
-	end
-
 end
 
-type next = function(tbl, _)
-	local T = tbl
-	if not tbl then return T:Type("any"), T:Type("any") end
-	local key, val
+type next = function(t, k)
+	if t.data then
+		local a, b
+		local kv
 
-	for _, tbl in ipairs(tbl.types or {tbl}) do
-		if tbl.value then
-			for k, v in pairs(tbl.value) do
-				if not key then
-					if types.IsTypeObject(k) then
-						key = k
-					else
-						key = T:Type(type(k))
-					end
-				else
-					if types.IsTypeObject(k) then
-						key = types.Fuse(key, k)
-					elseif type(k) == "string" then
-						key = types.Fuse(key, T:Type("string"))
-					elseif type(k) == "number" then
-						key = types.Fuse(key, T:Type("number"))
-					elseif not key:IsType(k) then
-						key = types.Fuse(key, T:Type(k.name))
-					end
-				end
-
-				if not val then
-					if types.IsTypeObject(v) then
-						val = v
-					else
-						val = T:Type(type(v))
-					end
-				else
-					if types.IsTypeObject(v) then
-						val = types.Fuse(val, v)
-					elseif not val:IsType(v) then
-						val = types.Fuse(val, T:Type(v.name))
-					end
-				end
-			end
+		if k and k.type ~= "nil" then
+			kv = t:GetKeyVal(k)
+		else
+			kv = t.data[1]
 		end
-	end
 
-	return key, val
+		if kv then
+			a, b = kv.key, kv.val
+		end
+
+		return a, b
+	end
 end
 
 type pairs = function(tbl)
@@ -864,7 +806,7 @@ type ipairs = function(tbl)
 end
 
 type require = function(name)
-	local str = name.value or name.data
+	local str = name.data
 
 	if self:GetValue(str, "typesystem") then
 		return self:GetValue(str, "typesystem")
@@ -891,71 +833,37 @@ end
 type table.insert = function(tbl, ...)
 	local pos, val = ...
 
-	if types.newsystem then
-		if not val then
-			val = ...
-			pos = #tbl.data + 1
-		else
-			pos = pos.data
-		end
-
-		if tbl:Type ~= "tuple" then
-			local values = {}
-
-			for i, keyval in ipairs(tbl.data) do
-				values[i] = keyval.val
-			end
-
-			local list = types.Create("list", values)
-
-			for k,v in pairs(tbl) do
-				tbl[k] = nil
-			end
-
-			for k,v in pairs(list) do
-				tbl[k] = v
-			end
-
-			setmetatable(tbl, types.Tuple)
-		end
-		table.insert(tbl.data, pos, val)
-
-		tbl.max = tbl.max or types.Create("number", pos, true)
-		tbl.max.data = pos
+	if not val then
+		val = ...
+		pos = #tbl.data + 1
 	else
-
-		if not val then
-			val = ...
-			pos = #tbl.value + 1
-		else
-			pos = pos.value
-		end
-
-		if not tbl.value or not tbl.value[1] then
-			local list = types.Create("list")
-
-			local list_type = tbl.list_type
-
-			for k,v in pairs(tbl) do
-				if k ~= "value" then
-					tbl[k] = nil
-				end
-			end
-
-			for k,v in pairs(list) do
-				tbl[k] = v
-			end
-		end
-
-		table.insert(tbl.value, pos, val)
-
-		if list_type then
-			list_type = list_type + val
-		end
-
-		tbl.list_type = list_type or val
-		tbl.length = pos
+		pos = pos.data
 	end
+
+	if tbl:Type ~= "tuple" then
+		local values = {}
+
+		for i, keyval in ipairs(tbl.data) do
+			values[i] = keyval.val
+		end
+
+		local list = types.Create("list", values)
+
+		for k,v in pairs(tbl) do
+			tbl[k] = nil
+		end
+
+		for k,v in pairs(list) do
+			tbl[k] = v
+		end
+
+		setmetatable(tbl, types.Tuple)
+	end
+	table.insert(tbl.data, pos, val)
+
+	tbl.max = tbl.max or types.Create("number", pos, true)
+	tbl.max.data = pos
+
 end
 
 type TPRINT = function(...) print(...) end
@@ -971,12 +879,6 @@ end
 type setmetatable = function(tbl, meta)
 	if meta.data then
 		tbl.meta = meta
-	end
-
-	if meta.value and meta.value["__index"] then
-		tbl.index = function(self, key)
-			return meta:Get(key)
-		end
 	end
 
 	return tbl
