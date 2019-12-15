@@ -855,6 +855,15 @@ a.b.c = 1
     local a = function(): number,string return 1,"" end
 ]],C[[
     assert(1 == 1, "lol")
+]],false,C[[
+    local function test(a, b)
+
+    end
+
+    test(true, false)
+    test(false, true)
+    test(1, "")
+
 ]]}
 
 local errors = {

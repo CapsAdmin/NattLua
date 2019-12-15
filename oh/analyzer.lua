@@ -72,7 +72,6 @@ do -- types
                     arguments = obj.data.data[1].key.data
                 end
 
-
                 local return_tuple = self:Assert(func_expr, obj:Call(arguments))
 
                 do
@@ -644,10 +643,6 @@ function META:AnalyzeStatement(statement, ...)
         end
     elseif statement.kind == "function" then
         self:Assign(statement.expression, self:AnalyzeFunction(statement), "runtime")
-
-        if statement.return_types then
-            statement.inferred_return_types = self:AnalyzeExpressions(statement.return_types, "typesystem")
-        end
     elseif statement.kind == "local_function" then
         self:DeclareUpvalue(statement.identifier, self:AnalyzeFunction(statement), "runtime")
     elseif statement.kind == "local_type_function" then
@@ -871,17 +866,13 @@ do
             -- declaration
             if node.identifiers then
                 for i, key in ipairs(node.identifiers) do
-                    if env == "typesystem" then
-                        args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
-                    else
-                        args[i] = self:GetValue(key.left or key, env) or self:GetInferredType(key)
-                    end
+                    args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
                 end
             end
 
             if node.return_expressions then
                 for i,v in ipairs(node.return_expressions) do
-                    rets[i] = self:AnalyzeExpression(v, "typesystem")
+                    rets[i] = self:AnalyzeExpression(v, env)
                 end
             end
 
@@ -1037,6 +1028,7 @@ do
                     args[i] = self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
                 else
                     args[i] = self:GetInferredType(key)
+                    args[i].volatile = true
                 end
             end
 
@@ -1053,6 +1045,8 @@ do
                 for i, type_exp in ipairs(node.return_types) do
                     ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
                 end
+            else
+                --ret[1] = self:TypeFromImplicitNode(node, "any")
             end
 
             local obj = self:TypeFromImplicitNode(node, "function", ret, args)

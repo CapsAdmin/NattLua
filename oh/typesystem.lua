@@ -49,9 +49,18 @@ do
     local function merge_types(src, dst)
         for i,v in ipairs(dst) do
             if src[i] and src[i].type ~= "any" then
+                if src[i].volatile then
+                    v.volatile = true -- todo: mutation, copy instead?
+                end
                 src[i] = types.Set:new(src[i], v)
             else
+                local prev = src[i]
+
                 src[i] = dst[i]
+
+                if prev and prev.volatile then
+                    src[i].volatile = true -- todo: mutation, copy instead?
+                end
             end
         end
 
@@ -542,7 +551,7 @@ do
     end
 
     function Object:SupersetOf(sub)
-        if self.type == "any" then
+        if self.type == "any" or self.volatile then
             return true
         end
 
@@ -551,7 +560,7 @@ do
         end
 
         if sub.Type == "object" then
-            if sub.type == "any" then
+            if sub.type == "any" or sub.volatile then
                 return true
             end
 
@@ -603,16 +612,6 @@ do
 
     function Object:__tostring()
         --return "「"..self.uid .. " 〉" .. self:GetSignature() .. "」"
-        if self.Type == "tuple" then
-            local a = self.data:Get(1)
-            local b = self.data:Get(2)
-
-            if a.Type == "tuple" then
-                return tostring(a) .. " => " .. tostring(b)
-            elseif a.Type == "object" then
-                return "(" .. tostring(a) .. " .. " .. tostring(b) .. ")"
-            end
-        end
 
         if self.type == "function" then
             local str = {}
@@ -620,6 +619,11 @@ do
                 table.insert(str, "function(" .. tostring(keyval.key) .. "):" .. tostring(keyval.val))
             end
             return table.concat(str, " | ")
+        end
+
+
+        if self.volatile then
+            return "💥"
         end
 
         if self.const then
@@ -706,9 +710,15 @@ do
 
         local argument_tuple = types.Tuple:new(unpack(arguments))
         local return_tuple = self.data:Get(argument_tuple)
+
         if not return_tuple then
+            local a,b,c,d,e = unpack(self.data.data[1].key.data)
+            if a and b then
+                table.print(a.data, 2)
+            end
             return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(argument_tuple)
         end
+
         return return_tuple
     end
 
