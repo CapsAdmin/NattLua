@@ -334,7 +334,7 @@ do
     end
 
     function META:Index(obj, key)
-        if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
+        if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or not obj:IsType("string")) then
             self:Error(key.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
         end
 
@@ -759,7 +759,7 @@ function META:AnalyzeStatement(statement, ...)
         for _, exp in ipairs(statement.expressions) do
             local left = tbl:Get(exp.left.value)
             local right = self:AnalyzeExpression(exp.right, "typesystem")
-            if left and left.Type == "object" and left.type == "function" then
+            if left and left.Type == "object" and left:IsType("function") then
                 types.OverloadFunction(left, right)
             else
                 tbl:Set(exp.left.value, right)
@@ -898,7 +898,7 @@ do
                 table.insert(arguments, 1, val)
             end
 
-            if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
+            if obj.Type == "object" and not obj:IsType("function") and not obj:IsType("table") and not obj:IsType("any") then
                 self:Error(node, tostring(obj) .. " cannot be called")
             else
                 stack:Push(self:Call(obj, arguments, node))
