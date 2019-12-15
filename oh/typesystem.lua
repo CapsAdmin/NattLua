@@ -623,7 +623,15 @@ do
 
 
         if self.volatile then
-            return "💥"
+            local str = self.type
+        
+            if self.data ~= nil then
+                str = str .. "(" .. tostring(self.data) .. ")"
+            end
+
+            str = str .. "💥"
+
+            return str
         end
 
         if self.const then
@@ -712,10 +720,6 @@ do
         local return_tuple = self.data:Get(argument_tuple)
 
         if not return_tuple then
-            local a,b,c,d,e = unpack(self.data.data[1].key.data)
-            if a and b then
-                table.print(a.data, 2)
-            end
             return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(argument_tuple)
         end
 
@@ -931,7 +935,16 @@ do
             end
         end
 
-        return self.data[key.type] or self.data[key:GetSignature()]
+        local val = self.data[key.type] or self.data[key:GetSignature()]
+        if val then
+            return val
+        end
+
+        for _, obj in pairs(self.data) do
+            if obj.volatile then
+                return obj
+            end
+        end
     end
 
     function Set:Set(key, val)
@@ -945,7 +958,7 @@ do
 
         if sub.Type == "set" then
             for k,v in pairs(sub.data) do
-                if not v:SupersetOf(self.data[k]) then
+                if not self.data[k] or not v:SupersetOf(self.data[k]) then
                     return false
                 end
             end

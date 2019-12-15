@@ -676,7 +676,9 @@ a.b.c = 1
     type_assert(a, _ as number)
     type_assert(b, _ as string)
 ]],C[[
-    local type function identity(a) return a end
+    local type function identity(a) 
+        return a 
+    end
 ]], C[[
     local a = 1
     while true do
@@ -855,7 +857,7 @@ a.b.c = 1
     local a = function(): number,string return 1,"" end
 ]],C[[
     assert(1 == 1, "lol")
-]],false,C[[
+]],C[[
     local function test(a, b)
 
     end
@@ -864,6 +866,19 @@ a.b.c = 1
     test(false, true)
     test(1, "")
 
+    local type check = function(func)
+        local a = func.data.data[1].key.data[1]
+        local b = types.Set:new(
+            types.Object:new("number", 1, true), 
+            types.Object:new("boolean", false, true), 
+            types.Object:new("boolean", true, true
+            )
+        )
+
+        assert(b:SupersetOf(a))
+    end
+
+    check(test, "!")
 ]]}
 
 local errors = {
