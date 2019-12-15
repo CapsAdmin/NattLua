@@ -93,62 +93,59 @@ function types.BinaryOperator(op, l, r, env)
         if op == "|" then
             return types.Set:new(l, r)
         end
-    end
 
-    if env == "typesystem" then
         if op == "extends" then
             return l:Extend(r)
-        elseif op == "and" then
+        end
+
+        if op == "and" then
             return r and l
-        elseif op == "or" then
+        end
+
+        if op == "or" then
             return r or l
-        elseif r == false or r == nil then
+        end
+
+        if r == false or r == nil then
             return false
-        elseif op == ".." then
+        end
+
+        if op == ".." then
             local new = l:Copy()
             new.max = r
             return new
         end
     end
 
-    if op == "==" and l:IsType("number") and r:IsType("number") and l.data and r.data then
-        if l.max and l.max.data then
-            return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data, true)
-        end
-
-        if r.max and r.max.data then
-            return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
-        end
-    end
-
     if op == "or" then
-        -- false or 1
-        -- 1
-        if l.data ~= nil and r.data ~= nil then
-            if l.data then
-                return l
-            end
-            if r.data then
-                return r
-            end
+        if r.data ~= nil then
+            return r
         end
 
-        -- boolean or number
-        -- boolean | number
-        if l.data ~= nil and r.data ~= nil then
-            return types.Set:new(l, r)
+        if l.data ~= nil then
+            return l
         end
+
+        return types.Set:new(l,r)
     end
 
     if op == "and" then
         if l.data ~= nil and r.data ~= nil then
-            if l.data and r.data then
-                return r
-            end
+            return l.data and r.data and r
         end
     end
 
     if op == "==" then
+        if l.Type == "object" and r.Type == "object" then
+            if l.max and l.max.data then
+                return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data, true)
+            end
+
+            if r.max and r.max.data then
+                return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
+            end
+        end
+
         if l.data ~= nil and r.data ~= nil then
             return types.Object:new("boolean", l.data == r.data)
         end
@@ -188,10 +185,27 @@ function types.BinaryOperator(op, l, r, env)
         return types.Object:new("boolean")
     end
 
+
+    if op == "%" then
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("number", r.data % l.data)
+        end
+        local t = types.Object:new("number", 0)
+        t.max = l:Copy()
+        return t
+    end
+
+    if op == ".." then
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("string", r.data .. l.data)
+        end
+    end
+
+
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
 
         if l.type ~= r.type then
-            return false, "no operator for " .. r.type .. " " .. op .. " " .. l.type
+            return false, "no operator for " .. tostring(r.type or r) .. " " .. op .. " " .. tostring(l.type or l)
         end
 
         local lval = l.data
@@ -214,16 +228,6 @@ function types.BinaryOperator(op, l, r, env)
         else
             return types.Object:new(type, res)
         end
-    end
-
-    if op == "%" and l:IsType("number") and l:IsType("number") and l.data then
-        local t = types.Object:new("number", 0)
-        t.max = l:Copy()
-        return t
-    end
-
-    if op == "==" and (l:IsType("any") or r:IsType("any")) then
-        return types.Object:new("boolean")
     end
 
     -- todo
@@ -624,7 +628,7 @@ do
 
         if self.volatile then
             local str = self.type
-        
+
             if self.data ~= nil then
                 str = str .. "(" .. tostring(self.data) .. ")"
             end
@@ -723,7 +727,7 @@ do
             return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(argument_tuple)
         end
 
-        return return_tuple
+        return return_tuple.data
     end
 
     function Object:PrefixOperator(op, val)
@@ -831,7 +835,7 @@ do
             s[i] = tostring(v)
         end
 
-        return table.concat(s, ", ")
+        return "(" .. table.concat(s, ", ") .. ")"
     end
 
     function Tuple:Serialize()

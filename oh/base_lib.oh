@@ -766,7 +766,7 @@ type ^string.gsub = function(str, pattern, val)
 end
 
 type assert = function(obj, err)
-	if obj:IsTruthy() then
+	if obj:IsTruthy() or obj.data == true then
 		return obj
 	end
 	error(err and err.data or "assertion failed")

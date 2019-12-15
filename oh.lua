@@ -44,11 +44,26 @@ function oh.loadfile(path, config)
     return loadstring(code, name)
 end
 
-function oh.debug(path)
-	local c = oh.File(path):BuildLua()
-	print(c)
+function oh.on_editor_save(path)
+	if path:sub(-4) ~= ".lua" and path:sub(-3) ~= ".oh" then
+		return
+	end
+
+	if path:find("oh/oh", nil, true)  or path:find("type_inference.lua", 1, true) then
+		dofile("./tests/init.lua")
+		return
+	end
+
+	local c = oh.File(path, {annotate = true})
+	local ok, err = c:Analyze()
+	if not ok then
+		print(err)
+		return
+	end
+	local res = assert(c:BuildLua())
 	require("oh.runtime")
-	assert(loadstring(c))()
+	print(res)
+	--assert(loadstring(res))()
 end
 
 function oh.FileToAST(path, root)
@@ -94,16 +109,54 @@ do
 		return str
 	end
 
-	function META:OnError(obj, msg, start, stop, ...)
+	function META:OnError(msg, start, stop, ...)
+		local self = self.code_data
 		error(print_util.FormatError(self.code, self.name, msg, start, stop, ...))
+	end
+
+	local function traceback(msg)
+		local s = ""
+		s = msg .. "\n" .. s
+		for i = 2, math.huge do
+			local info = debug.getinfo(i)
+			if not info then
+				break
+			end
+
+			if info.source:sub(1,1) == "@" then
+				if info.name == "Error" or info.name == "OnError" then
+
+				else
+					s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (info.name or "?") .. "\n"
+				end
+			end
+		end
+
+		if oh.current_analyzer then
+			local analyzer = oh.current_analyzer
+
+			if analyzer.current_statement then
+				s = s .. "======== statement =======\n"
+				s = s .. analyzer.current_statement:Render()
+				s = s .. "\n===============\n"
+			end
+
+			if analyzer.current_expression then
+				s = s .. "======== expression =======\n"
+				s = s .. analyzer.current_expression:Render()
+				s = s .. "\n===============\n"
+			end
+		end
+
+		return s
 	end
 
 	function META:Lex()
 		local lexer = Lexer(self.code)
 		lexer.code_data = self
-		lexer.OnError = function(obj, ...) self:OnError(obj, ...) end
+		lexer.OnError = self.OnError
 
-		local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
+		local ok, tokens = xpcall(lexer.GetTokens, traceback, lexer)
 
 		if not ok then
 			return nil, tokens
@@ -121,9 +174,9 @@ do
 
 		local parser = Parser(self.config)
 		parser.code_data = self
-		parser.OnError = function(obj, ...) self:OnError(obj, ...) end
+		parser.OnError = self.OnError
 
-		local ok, ast = xpcall(parser.BuildAST, debug.traceback, parser, self.Tokens)
+		local ok, ast = xpcall(parser.BuildAST, traceback, parser, self.Tokens)
 
 		if not ok then
 			return nil, ast
@@ -144,12 +197,10 @@ do
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
 		analyzer.code_data = self
-		analyzer.OnError = function(obj, ...)
-			self:OnError(obj, ...)
-		end
+		analyzer.OnError = self.OnError
 
 		oh.current_analyzer = analyzer
-		local ok, ast = xpcall(analyzer.AnalyzeStatement, debug.traceback, analyzer, self.SyntaxTree)
+		local ok, ast = xpcall(analyzer.AnalyzeStatement, traceback, analyzer, self.SyntaxTree)
 		oh.current_analyzer = nil
 
 		if not ok then

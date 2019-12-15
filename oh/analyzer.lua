@@ -72,7 +72,7 @@ do -- types
                     arguments = obj.data.data[1].key.data
                 end
 
-                local return_tuple = self:Assert(func_expr, obj:Call(arguments))
+                local return_tuple = types.Tuple:new(unpack(self:Assert(func_expr, obj:Call(arguments))))
 
                 do
                     self:PushScope(obj.node)
@@ -334,7 +334,7 @@ do
     end
 
     function META:Index(obj, key)
-        if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or not obj:IsType("string")) then
+        if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
             self:Error(key.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
         end
 
@@ -386,7 +386,7 @@ do
             io.write((" "):rep(t))
             io.write(what, " - ")
             local obj, key, val = ...
-            io.write(tostring(obj.type), "[", (tostring(key)), "] = ", tostring(val))
+            io.write(tostring(obj), "[", (tostring(key)), "] = ", tostring(val))
             io.write("\n")
         elseif what == "mutate_upvalue" then
             io.write((" "):rep(t))
@@ -516,22 +516,23 @@ function META:Assert(node, ok, err)
     return ok
 end
 
+local utl = require("oh.print_util")
+
 function META:Error(node, msg)
     if not node then
         io.write("invalid error, no node supplied\n")
         error(msg)
     end
+
     if require("oh").current_analyzer and require("oh").current_analyzer ~= self then
         return require("oh").current_analyzer:Error(node, msg)
     end
 
     if self.OnError then
-        local start, stop = require("oh.print_util").LazyFindStartStop(node)
-        self:OnError(msg, start, stop)
+        self:OnError(msg, utl.LazyFindStartStop(node))
     end
 
     if self.code then
-        local utl = require("oh.print_util")
         local start, stop = utl.LazyFindStartStop(node)
         io.write(utl.FormatError(self.code, self.type, msg, start, stop), "\n")
     else
@@ -546,6 +547,8 @@ end
 local evaluate_expression
 
 function META:AnalyzeStatement(statement, ...)
+    self.current_statement = statement
+
     if statement.kind == "root" then
         self:PushScope(statement)
         local ret
@@ -759,7 +762,7 @@ function META:AnalyzeStatement(statement, ...)
         for _, exp in ipairs(statement.expressions) do
             local left = tbl:Get(exp.left.value)
             local right = self:AnalyzeExpression(exp.right, "typesystem")
-            if left and left.Type == "object" and left:IsType("function") then
+            if left and left.Type == "object" and left.type == "function" then
                 types.OverloadFunction(left, right)
             else
                 tbl:Set(exp.left.value, right)
@@ -779,161 +782,13 @@ function META:AnalyzeStatement(statement, ...)
 end
 
 do
-    evaluate_expression = function(self, node, stack, env)
-        if node.type_expression then
-            local val = self:AnalyzeExpression(node.type_expression, "typesystem")
-            stack:Push(val)
-            if node.tokens["is"] then
-                node.result_is = self:GetValue(node, env):IsType(val)
-            end
-        elseif node.kind == "value" then
-            if (node.value.type == "letter" and node.upvalue_or_global) or node.value.value == "..." then
-                local obj
-
-                -- if it's ^string, number, etc, but not string
-                if env == "typesystem" and types.IsPrimitiveType(self:Hash(node)) and not node.force_upvalue then
-                    obj = self:TypeFromImplicitNode(node, node.value.value)
-                else
-                    obj = self:GetValue(node, env)
-
-                    if not obj and env == "runtime" then
-                        obj = self:GetValue(node, "typesystem")
-                    end
-                end
-
-                -- self in a table type declaration refers to the type table itself
-                if env == "typesystem" and not obj and node.value.value == "self" then
-                    obj = self.current_table
-                end
-
-                if not obj and self.IndexNotFound then
-                    obj = self:IndexNotFound(node)
-                end
-
-                -- last resort, itemCount > number
-                if not obj then
-                    obj = self:GetInferredType(node)
-                end
-
-                -- ...
-                if obj.GetTruthy and obj:GetTruthy() then
-                    obj = obj:RemoveNonTruthy()
-                end
-
-                stack:Push(obj)
-            elseif node.value.type == "number" then
-                stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), true))
-            elseif node.value.type == "string" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true))
-            elseif node.value.type == "letter" then
-                stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value, true))
-            elseif node.value.value == "nil" then
-                stack:Push(self:TypeFromImplicitNode(node, "nil", env == "typesystem"))
-            elseif node.value.value == "true" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", true, true))
-            elseif node.value.value == "false" then
-                stack:Push(self:TypeFromImplicitNode(node, "boolean", false, true))
-            else
-                error("unhandled value type " .. node.value.type .. " " .. node:Render())
-            end
-        elseif node.kind == "function" then
-            stack:Push(self:AnalyzeFunction(node))
-        elseif node.kind == "table" then
-            stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env)))
-        elseif node.kind == "binary_operator" then
-            local right, left = stack:Pop(), stack:Pop()
-
-            if node.value.value == ":" then
-                stack:Push(left)
-            end
-
-            if node.value.value == "." or node.value.value == ":" then
-                stack:Push(self:Index(left, right, env))
-            else
-                stack:Push(self:Assert(node, types.BinaryOperator(node.value.value, right, left, env)))
-            end
-        elseif node.kind == "prefix_operator" then
-            stack:Push(self:Assert(node, stack:Pop():PrefixOperator(node.value.value, self:AnalyzeExpression(node.right))))
-        elseif node.kind == "postfix_operator" then
-            stack:Push(stack:Pop():PostfixOperator(node))
-        elseif node.kind == "postfix_expression_index" then
-            stack:Push(self:Index(stack:Pop(), self:AnalyzeExpression(node.expression), env))
-        elseif node.kind == "type_function" then
-            local args = {}
-            local rets = {}
-            local func
-
-            -- declaration
-            if node.identifiers then
-                for i, key in ipairs(node.identifiers) do
-                    args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
-                end
-            end
-
-            if node.return_expressions then
-                for i,v in ipairs(node.return_expressions) do
-                    rets[i] = self:AnalyzeExpression(v, env)
-                end
-            end
-
-            if node.statements then
-                local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
-                local load_func, err = loadstring(str, "")
-                if not load_func then
-                    -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
-                    io.write(str, "\n")
-                    error(err)
-                end
-                func = load_func(require("oh"), self, types, node)
-            end
-
-            stack:Push(self:TypeFromImplicitNode(node, "function", rets, args, func))
-        elseif node.kind == "postfix_call" then
-            local obj = stack:Pop()
-
-            local arguments = self:AnalyzeExpressions(node.expressions, env)
-
-            if node.self_call then
-                local val = stack:Pop()
-                table.insert(arguments, 1, val)
-            end
-
-            if obj.Type == "object" and not obj:IsType("function") and not obj:IsType("table") and not obj:IsType("any") then
-                self:Error(node, tostring(obj) .. " cannot be called")
-            else
-                stack:Push(self:Call(obj, arguments, node))
-            end
-        elseif node.kind == "type_list" then
-            local tbl = {}
-
-            if node.types then
-                for i, exp in ipairs(node.types)do
-                    tbl[i] = self:AnalyzeExpression(exp, env)
-                end
-            end
-
-            -- number[3] << tbl only contains {3}.. hmm
-            stack:Push(self:TypeFromImplicitNode(node, "list", nil, unpack(tbl)))
-        elseif node.kind == "type_table" then
-            local obj = self:TypeFromImplicitNode(node, "table")
-
-            self.current_table = obj
-            for k,v in pairs(self:AnalyzeTable(node, env)) do
-                obj:Set(k,v)
-            end
-            self.current_table = nil
-
-            stack:Push(obj)
-        elseif node.kind == "import" or node.kind == "lsx" then
-            --stack:Push(self:AnalyzeStatement(node.root))
-        else
-            error("unhandled expression " .. node.kind)
-        end
-    end
-
     do
         local meta = {}
         meta.__index = meta
+
+        local function Stack()
+            return setmetatable({values = {}, i = 1}, meta)
+        end
 
         function meta:Push(val)
             if val[1] then
@@ -973,28 +828,10 @@ do
             return val
         end
 
-        local function expand(self, node, cb, ...)
-            if node.left then
-                expand(self, node.left, cb, ...)
-            end
-
-            if node.right then
-                expand(self, node.right, cb, ...)
-            end
-
-            cb(self, node, ...)
-        end
-
-        function META:AnalyzeExpression(exp, env)
-            assert(exp and exp.type == "expression")
-            env = env or "runtime"
-            local stack = setmetatable({values = {}, i = 1}, meta)
-
-            expand(self, exp, evaluate_expression, stack, env)
-
+        function meta:Unpack()
             local out = {}
 
-            for _,v in ipairs(stack.values) do
+            for _,v in ipairs(self.values) do
                 if v[1] then
                     for _,v in ipairs(v) do
                         table.insert(out, v)
@@ -1005,6 +842,184 @@ do
             end
 
             return unpack(out)
+        end
+
+        local function expand(exp, out)
+            out = out or {}
+
+            if exp.left then
+                expand(exp.left, out)
+            end
+
+            if exp.right then
+                expand(exp.right, out)
+            end
+
+            table.insert(out, exp)
+
+            return out
+        end
+
+        function META:AnalyzeExpression(exp, env)
+            assert(exp and exp.type == "expression")
+            env = env or "runtime"
+            local stack = Stack()
+
+            for _, node in ipairs(expand(exp)) do
+                self.current_expression = node
+
+                if node.type_expression then
+                    local val = self:AnalyzeExpression(node.type_expression, "typesystem")
+                    stack:Push(val)
+                    if node.tokens["is"] then
+                        node.result_is = self:GetValue(node, env):IsType(val)
+                    end
+                elseif node.kind == "value" then
+                    if (node.value.type == "letter" and node.upvalue_or_global) or node.value.value == "..." then
+                        local obj
+
+                        -- if it's ^string, number, etc, but not string
+                        if env == "typesystem" and types.IsPrimitiveType(self:Hash(node)) and not node.force_upvalue then
+                            obj = self:TypeFromImplicitNode(node, node.value.value)
+                        else
+                            obj = self:GetValue(node, env)
+
+                            if not obj and env == "runtime" then
+                                obj = self:GetValue(node, "typesystem")
+                            end
+                        end
+
+                        -- self in a table type declaration refers to the type table itself
+                        if env == "typesystem" and not obj and node.value.value == "self" then
+                            obj = self.current_table
+                        end
+
+                        if not obj and self.IndexNotFound then
+                            obj = self:IndexNotFound(node)
+                        end
+
+                        -- last resort, itemCount > number
+                        if not obj then
+                            obj = self:GetInferredType(node)
+                        end
+
+                        -- ...
+                        if obj.GetTruthy and obj:GetTruthy() then
+                            obj = obj:RemoveNonTruthy()
+                        end
+
+                        stack:Push(obj)
+                    elseif node.value.type == "number" then
+                        stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), true))
+                    elseif node.value.type == "string" then
+                        stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true))
+                    elseif node.value.type == "letter" then
+                        stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value, true))
+                    elseif node.value.value == "nil" then
+                        stack:Push(self:TypeFromImplicitNode(node, "nil", env == "typesystem"))
+                    elseif node.value.value == "true" then
+                        stack:Push(self:TypeFromImplicitNode(node, "boolean", true, true))
+                    elseif node.value.value == "false" then
+                        stack:Push(self:TypeFromImplicitNode(node, "boolean", false, true))
+                    else
+                        error("unhandled value type " .. node.value.type .. " " .. node:Render())
+                    end
+                elseif node.kind == "function" then
+                    stack:Push(self:AnalyzeFunction(node))
+                elseif node.kind == "table" then
+                    stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env)))
+                elseif node.kind == "binary_operator" then
+                    local right, left = stack:Pop(), stack:Pop()
+
+                    if node.value.value == ":" then
+                        stack:Push(left)
+                    end
+
+                    if node.value.value == "." or node.value.value == ":" then
+                        stack:Push(self:Index(left, right, env))
+                    else
+                        stack:Push(self:Assert(node, types.BinaryOperator(node.value.value, right, left, env)))
+                    end
+                elseif node.kind == "prefix_operator" then
+                    stack:Push(self:Assert(node, stack:Pop():PrefixOperator(node.value.value, self:AnalyzeExpression(node.right))))
+                elseif node.kind == "postfix_operator" then
+                    stack:Push(stack:Pop():PostfixOperator(node))
+                elseif node.kind == "postfix_expression_index" then
+                    stack:Push(self:Index(stack:Pop(), self:AnalyzeExpression(node.expression), env))
+                elseif node.kind == "type_function" then
+                    local args = {}
+                    local rets = {}
+                    local func
+
+                    -- declaration
+                    if node.identifiers then
+                        for i, key in ipairs(node.identifiers) do
+                            args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
+                        end
+                    end
+
+                    if node.return_expressions then
+                        for i,v in ipairs(node.return_expressions) do
+                            rets[i] = self:AnalyzeExpression(v, env)
+                        end
+                    end
+
+                    if node.statements then
+                        local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
+                        local load_func, err = loadstring(str, "")
+                        if not load_func then
+                            -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
+                            io.write(str, "\n")
+                            error(err)
+                        end
+                        func = load_func(require("oh"), self, types, node)
+                    end
+
+                    stack:Push(self:TypeFromImplicitNode(node, "function", rets, args, func))
+                elseif node.kind == "postfix_call" then
+                    local obj = stack:Pop()
+
+                    local arguments = self:AnalyzeExpressions(node.expressions, env)
+
+                    if node.self_call then
+                        local val = stack:Pop()
+                        table.insert(arguments, 1, val)
+                    end
+
+                    if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
+                        self:Error(node, tostring(obj) .. " cannot be called")
+                    else
+                        stack:Push(self:Call(obj, arguments, node))
+                    end
+                elseif node.kind == "type_list" then
+                    local tbl = {}
+
+                    if node.types then
+                        for i, exp in ipairs(node.types)do
+                            tbl[i] = self:AnalyzeExpression(exp, env)
+                        end
+                    end
+
+                    -- number[3] << tbl only contains {3}.. hmm
+                    stack:Push(self:TypeFromImplicitNode(node, "list", nil, unpack(tbl)))
+                elseif node.kind == "type_table" then
+                    local obj = self:TypeFromImplicitNode(node, "table")
+
+                    self.current_table = obj
+                    for k,v in pairs(self:AnalyzeTable(node, env)) do
+                        obj:Set(k,v)
+                    end
+                    self.current_table = nil
+
+                    stack:Push(obj)
+                elseif node.kind == "import" or node.kind == "lsx" then
+                    --stack:Push(self:AnalyzeStatement(node.root))
+                else
+                    error("unhandled expression " .. node.kind)
+                end
+            end
+
+            return stack:Unpack()
         end
 
         function META:AnalyzeExpressions(expressions, ...)
@@ -1073,7 +1088,7 @@ do
                     if node.i then
                         out[node.i] = self:AnalyzeExpression(node.value, env)
                     else
-                        table.insert(out, self:AnalyzeExpression(node.value, env))
+                        table.insert(out, (self:AnalyzeExpression(node.value, env)))
                     end
                 end
             end

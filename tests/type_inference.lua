@@ -15,6 +15,29 @@ C[[
 
     type_assert(1>2, false)
     type_assert(1%1, 0)
+
+    local a = nil
+    local b = 1
+    type_assert(b or a, 1)
+
+    local b = {}
+    local a = 1
+    type_assert(b or a, b)
+]],C[[
+    do --- tnew
+        local a = nil
+        local b = {}
+        local t = {[true] = a, [false] = b or 1}
+        assert(t[true] == nil)
+        assert(t[false] == b)
+    end
+
+    do --- tdup
+        local b = {}
+        local t = {[true] = nil, [false] = b or 1}
+        assert(t[true] == nil)
+        assert(t[false] == b)
+    end
 ]],
 C[[
     local a = 1
@@ -676,8 +699,8 @@ a.b.c = 1
     type_assert(a, _ as number)
     type_assert(b, _ as string)
 ]],C[[
-    local type function identity(a) 
-        return a 
+    local type function identity(a)
+        return a
     end
 ]], C[[
     local a = 1
@@ -869,8 +892,8 @@ a.b.c = 1
     local type check = function(func)
         local a = func.data.data[1].key.data[1]
         local b = types.Set:new(
-            types.Object:new("number", 1, true), 
-            types.Object:new("boolean", false, true), 
+            types.Object:new("number", 1, true),
+            types.Object:new("boolean", false, true),
             types.Object:new("boolean", true, true
             )
         )
@@ -879,6 +902,8 @@ a.b.c = 1
     end
 
     check(test, "!")
+]],C[[
+    type_assert(math.floor(1), 1)
 ]]}
 
 local errors = {
