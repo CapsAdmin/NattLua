@@ -1,3 +1,4 @@
+local types = require("oh.typesystem")
 
 do
     local Set = function(...) return types.Set:new(...) end

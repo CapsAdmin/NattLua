@@ -68,19 +68,11 @@ do
     end
 
     function types.MergeFunctionArguments(obj, arg, argument_key)
-        local data = obj.data:GetKeyVal(argument_key)
-
-        if arg then
-            data.key.data = merge_types(data.key.data, arg)
-        end
+        obj.data.arg.data = merge_types(obj.data.arg.data, arg)
     end
 
     function types.MergeFunctionReturns(obj, ret, argument_key)
-        local data = obj.data:GetKeyVal(argument_key)
-
-        if ret then
-            data.val.data = merge_types(data.val.data, ret)
-        end
+        obj.data.ret.data = merge_types(obj.data.ret.data, ret)
     end
 end
 
@@ -544,14 +536,12 @@ do
         return self.data:Set(key, val)
     end
 
-    function Object:GetArguments(argument_tuple)
-        local val = self.data:GetKeyVal(argument_tuple)
-        return val and val.key.data
+    function Object:GetArguments()
+        return self.data.arg
     end
 
-    function Object:GetReturnTypes(argument_tuple)
-        local keyval = self.data:GetKeyVal(argument_tuple)
-        return keyval and keyval.val
+    function Object:GetReturnTypes()
+        return self.data.ret
     end
 
     function Object:SupersetOf(sub)
@@ -618,11 +608,7 @@ do
         --return "「"..self.uid .. " 〉" .. self:GetSignature() .. "」"
 
         if self.type == "function" then
-            local str = {}
-            for _, keyval in ipairs(self.data.data) do
-                table.insert(str, "function(" .. tostring(keyval.key) .. "):" .. tostring(keyval.val))
-            end
-            return table.concat(str, " | ")
+            return "function" .. tostring(self.data.arg) .. ": " .. tostring(self.data.ret)
         end
 
 
@@ -721,13 +707,12 @@ do
         end
 
         local argument_tuple = types.Tuple:new(unpack(arguments))
-        local return_tuple = self.data:Get(argument_tuple)
 
-        if not return_tuple then
+        if not self.data.arg:SupersetOf(argument_tuple) then
             return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(argument_tuple)
         end
 
-        return return_tuple.data
+        return self.data.ret.data
     end
 
     function Object:PrefixOperator(op, val)
@@ -800,6 +785,9 @@ do
         end
 
         for i = 1, sub:GetLength() do
+            if self:Get(i) and self:Get(i).max == math.huge and self:Get(i):Get(1):SupersetOf(sub:Get(i)) then
+                return true
+            end
             if sub:Get(i).type ~= "any" and (not self:Get(i) or not self:Get(i):SupersetOf(sub:Get(i))) then
                 return false
             end
@@ -835,7 +823,7 @@ do
             s[i] = tostring(v)
         end
 
-        return "(" .. table.concat(s, ", ") .. ")"
+        return "(" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or self.max and self.max.data or "") .. ")"
     end
 
     function Tuple:Serialize()
@@ -927,7 +915,19 @@ do
         self.data[types.GetSignature(e)] = nil
     end
 
+
+    function Set:Cast(val)
+        if type(val) == "string" then
+            return types.Object:new("string", val, true)
+        elseif type(val) == "number" then
+            return types.Object:new("number", val, true)
+        end
+        return val
+    end
+
     function Set:Get(key, from_dictionary)
+        key = self:Cast(key)
+
         if from_dictionary then
             for _, obj in pairs(self.data) do
                 if obj.Get then
@@ -1081,10 +1081,12 @@ function types.Create(type, ...)
         return types.Object:new(type, ...)
     elseif type == "function" then
         local returns, arguments, lua_function = ...
-        local dict = types.Dictionary:new({})
-        dict:Set(types.Tuple:new(unpack(arguments)), types.Tuple:new(unpack(returns)))
-        local obj = types.Object:new(type, dict)
+        local obj = types.Object:new(type, {
+            arg = types.Tuple:new(unpack(arguments)),
+            ret = types.Tuple:new(unpack(returns)),
+        })
         obj.lua_function = lua_function
+
         return obj
     elseif type == "list" then
         local values, len = ...

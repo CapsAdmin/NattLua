@@ -696,6 +696,7 @@ a.b.c = 1
     local a = test(true, true)
     local b = test(true)
 
+
     type_assert(a, _ as number)
     type_assert(b, _ as string)
 ]],C[[
@@ -830,7 +831,7 @@ a.b.c = 1
     tbl[2] = true
     tbl[3] = 3
  ]],C[[
-    local pl = {IsValid = function() end}
+    local pl = {IsValid = function(self) end}
     local a = pl:IsValid()
     type_assert(a, nil)
  ]],C[[
@@ -890,7 +891,7 @@ a.b.c = 1
     test(1, "")
 
     local type check = function(func)
-        local a = func.data.data[1].key.data[1]
+        local a = func.data.arg.data[1]
         local b = types.Set:new(
             types.Object:new("number", 1, true),
             types.Object:new("boolean", false, true),

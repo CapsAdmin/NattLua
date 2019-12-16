@@ -755,10 +755,10 @@ type ^string.gsub = function(str, pattern, val)
 		end
 
 		for i,v in ipairs(args) do
-			val.data.data[1].key.data[i] = v
+			val.data.arg.data[i] = v
 		end
 
-		val.data.data[1].val.data[1] = types.Create("string")
+		val.data.ret.data[1] = types.Create("string")
 
 	end
 

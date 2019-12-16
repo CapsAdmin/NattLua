@@ -217,7 +217,7 @@ do
             --self:Emit(" --[[ : ")
             local str = {}
             -- this iterates the first return tuple
-            for i,v in ipairs(node.inferred_type.data.data[1].val.data) do
+            for i,v in ipairs(node.inferred_type.data.ret.data) do
                 str[i] = tostring(v)
             end
             if str[1] then

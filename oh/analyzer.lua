@@ -55,6 +55,11 @@ do -- types
             -- for deferred calls
             obj.called = true
 
+            -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+            if deferred then
+                arguments = obj:GetArguments().data
+            end
+
             if func_expr and (func_expr.kind == "function" or func_expr.kind == "local_function") then
                 --lua function
 
@@ -66,11 +71,6 @@ do -- types
                 end
 
                 local ret
-
-                -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                if deferred then
-                    arguments = obj.data.data[1].key.data
-                end
 
                 local return_tuple = types.Tuple:new(unpack(self:Assert(func_expr, obj:Call(arguments))))
 
@@ -156,7 +156,7 @@ do -- types
                     obj.analyzer = self
                     obj.node = node
 
-                    local return_tuple, err = obj:Call(arguments)
+                    local return_tuple = obj:Call(arguments)
 
                     if return_tuple then
                         return return_tuple
@@ -516,7 +516,7 @@ function META:Assert(node, ok, err)
     return ok
 end
 
-local utl = require("oh.print_util")
+local utl = require("oh.pri".."nt_util")
 
 function META:Error(node, msg)
     if not node then
@@ -542,9 +542,6 @@ function META:Error(node, msg)
         io.write(s, "\n")
     end
 end
-
-
-local evaluate_expression
 
 function META:AnalyzeStatement(statement, ...)
     self.current_statement = statement
@@ -763,7 +760,9 @@ function META:AnalyzeStatement(statement, ...)
             local left = tbl:Get(exp.left.value)
             local right = self:AnalyzeExpression(exp.right, "typesystem")
             if left and left.Type == "object" and left.type == "function" then
-                types.OverloadFunction(left, right)
+                tbl:Set(exp.left.value, types.Set:new(left, right))
+            elseif left and left.Type == "set" then
+                left:AddElement(right)
             else
                 tbl:Set(exp.left.value, right)
             end
@@ -954,7 +953,12 @@ do
                     -- declaration
                     if node.identifiers then
                         for i, key in ipairs(node.identifiers) do
-                            args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
+                            if key.kind == "value" and key.value.value == "..." then
+                                args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
+                                args[i].max = math.huge
+                            else
+                                args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
+                            end
                         end
                     end
 
@@ -1042,7 +1046,12 @@ do
                 if key.type_expression then
                     args[i] = self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
                 else
-                    args[i] = self:GetInferredType(key)
+                    if key.value.value == "..." then
+                        args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
+                        args[i].max = math.huge
+                    else
+                        args[i] = self:GetInferredType(key)
+                    end
                     args[i].volatile = true
                 end
             end
