@@ -49,8 +49,16 @@ function oh.on_editor_save(path)
 		return
 	end
 
-	if path:find("oh/oh", nil, true)  or path:find("type_inference.lua", 1, true) then
+	if
+		path:find("oh/oh", nil, true)  or
+		path:find("type_inference.lua", 1, true)
+	then
 		dofile("./tests/init.lua")
+		return
+	end
+
+	if path:find("tests/typesystem.lua", nil, true) then
+		dofile(path)
 		return
 	end
 

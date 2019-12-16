@@ -696,7 +696,6 @@ a.b.c = 1
     local a = test(true, true)
     local b = test(true)
 
-
     type_assert(a, _ as number)
     type_assert(b, _ as string)
 ]],C[[

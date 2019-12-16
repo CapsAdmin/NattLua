@@ -566,7 +566,7 @@ do
                         return true
                     end
 
-                    if self.type == "number" and sub.type == "number" and self.Type == "object" and self.type == "list" and self.data and self.data.Type == "tuple" then
+                    if self.type == "number" and sub.type == "number" and self.type == "list" and self.data and self.data.Type == "tuple" then
                         local min = self:Get(1).data
                         local max = self:Get(2).data
 
@@ -684,10 +684,6 @@ do
     end
 
     function Object:Call(arguments)
-        if self.Type ~= "object" and self.Type ~= "set" then
-            return false
-        end
-
         if self.lua_function then
             _G.self = self.analyzer
             local res = {pcall(self.lua_function, unpack(arguments))}
@@ -785,10 +781,15 @@ do
         end
 
         for i = 1, sub:GetLength() do
-            if self:Get(i) and self:Get(i).max == math.huge and self:Get(i):Get(1):SupersetOf(sub:Get(i)) then
+            local a = self:Get(i)
+            local b = sub:Get(i)
+
+            -- vararg
+            if a and a.max == math.huge and a:Get(1):SupersetOf(b) then
                 return true
             end
-            if sub:Get(i).type ~= "any" and (not self:Get(i) or not self:Get(i):SupersetOf(sub:Get(i))) then
+
+            if b.type ~= "any" and (not a or not a:SupersetOf(b)) then
                 return false
             end
         end
@@ -962,7 +963,7 @@ do
 
         if sub.Type == "set" then
             for k,v in pairs(sub.data) do
-                if not self.data[k] or not v:SupersetOf(self.data[k]) then
+                if self.data[k] == nil or not v:SupersetOf(self.data[k]) then
                     return false
                 end
             end
@@ -972,7 +973,7 @@ do
         end
 
         for _, e in pairs(self.data) do
-            if not sub:Get(e) then
+            if not sub:Get(e)then
                 return false
             end
         end

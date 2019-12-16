@@ -9,11 +9,12 @@ do
     local S = function(n) return Object("string", n, true) end
     local O = Object
 
-    assert(Set(S"a", S"b", S"a", S"a"):SupersetOf(Set(S"a", S"b", S"c")))
+    assert(Set(S"a", S"b", S"a", S"a"):Serialize() == Set(S"a", S"b"):Serialize())
+    assert(Set(S"a", S"b", S"c"):SupersetOf(Set(S"a", S"b", S"a", S"a")))
     assert(Set(S"c", S"d"):SupersetOf(Set(S"c", S"d")))
     assert(Set(S"c", S"d"):SupersetOf(Set(S"c", S"d")))
     assert(Set(S"a"):SupersetOf(Set(Set(S"a")))) -- should be false?
-    assert(Set():SupersetOf(Set(S"a", S"b", S"c"))) -- should be false?
+    assert(Set(S"a", S"b", S"c"):SupersetOf(Set())) -- should be false?
     assert(Set(N(1), N(4), N(5), N(9), N(13)):Intersect(Set(N(2), N(5), N(6), N(8), N(9))):GetSignature() == Set(N(5), N(9)):GetSignature())
 
     local A = Set(N(1),N(2),N(3))
@@ -21,16 +22,17 @@ do
 
     assert(B:GetSignature() == A:Union(B):GetSignature(), tostring(B) .. " should equal the union of "..tostring(A).." and " .. tostring(B))
     assert(B:GetLength() == 4)
-    assert(A:SupersetOf(B))
+    assert(B:SupersetOf(A))
 
     local yes = Object("boolean", true, true)
     local no = Object("boolean", false, true)
     local yes_and_no =  Set(yes, no)
 
-    assert(types.SupersetOf(yes, yes_and_no), tostring(yes) .. "should be a subset of " .. tostring(yes_and_no))
-    assert(types.SupersetOf(no, yes_and_no), tostring(no) .. " should be a subset of " .. tostring(yes_and_no))
-    assert(not types.SupersetOf(yes_and_no, yes), tostring(yes_and_no) .. " is NOT a subset of " .. tostring(yes))
-    assert(not types.SupersetOf(yes_and_no, no), tostring(yes_and_no) .. " is NOT a subset of " .. tostring(no))
+    assert(yes:SupersetOf(yes_and_no), tostring(yes) .. "should be a subset of " .. tostring(yes_and_no))
+    assert(no:SupersetOf(yes_and_no), tostring(no) .. " should be a subset of " .. tostring(yes_and_no))
+
+    assert(yes_and_no:SupersetOf(yes), tostring(yes_and_no) .. " is NOT a subset of " .. tostring(yes))
+    assert(yes_and_no:SupersetOf(no), tostring(yes_and_no) .. " is NOT a subset of " .. tostring(no))
 
     local tbl = Dictionary({})
     tbl:Set(yes_and_no, Object("boolean", false))
