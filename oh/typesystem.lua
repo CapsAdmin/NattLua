@@ -123,8 +123,11 @@ function types.BinaryOperator(op, l, r, env)
 
     if op == "and" then
         if l.data ~= nil and r.data ~= nil then
-            return l.data and r.data and r
+            if l.data and r.data then
+                return r
         end
+    end
+        return types.Object:new("boolean", false, true)
     end
 
     if op == "==" then
