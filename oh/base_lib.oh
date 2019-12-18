@@ -807,6 +807,10 @@ end
 type require = function(name)
 	local str = name.data
 
+	if oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get(str) then
+		return oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get(str)
+	end
+
 	if self:GetValue(str, "typesystem") then
 		return self:GetValue(str, "typesystem")
 	end
