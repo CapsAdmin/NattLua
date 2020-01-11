@@ -240,8 +240,42 @@ function types.BinaryOperator(op, l, r, env)
     error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
 end
 
-do
+function types.NewIndex(obj, key, val, env)
+    if obj.Type ~= "dictionary" then
+        return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val)
+    end
 
+    if not obj:Set(key, val, env) then
+        local expected_keys = {}
+        local expected_values = {}
+        for _, keyval in pairs(obj.data) do
+            if not key:SupersetOf(keyval.key) then
+                table.insert(expected_keys, tostring(keyval.key))
+            elseif not val:SupersetOf(keyval.val) then
+                table.insert(expected_values, tostring(keyval.val))
+            end
+        end
+
+        if #expected_values > 0 then
+            return false, "invalid value " .. tostring(val.type or val) .. " expected " .. table.concat(expected_values, " | ")
+        elseif #expected_keys > 0 then
+            return false, "invalid key " .. tostring(key.type or key) .. " expected " .. table.concat(expected_keys, " | ")
+        end
+
+        return false, "invalid key " .. tostring(key.type or key)
+    end
+end
+
+
+function types.Index(obj, key)
+    if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
+        return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
+    end
+
+    return obj:Get(key)
+end
+
+do
     local Dictionary = {}
     Dictionary.Type = "dictionary"
     Dictionary.__index = Dictionary

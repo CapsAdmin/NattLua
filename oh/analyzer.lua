@@ -302,43 +302,12 @@ do
 
     -- obj[key] = val
     function META:NewIndex(obj, key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
-        local key = self:AnalyzeExpression(key, env)
-        local obj = self:AnalyzeExpression(obj, env)
-
-        if obj.Type ~= "dictionary" then
-            self:Error(key.node, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val))
-        end
-
-        if not obj:Set(key, val, env) then
-            local expected_keys = {}
-            local expected_values = {}
-            for _, keyval in pairs(obj.data) do
-                if not key:SupersetOf(keyval.key) then
-                    table.insert(expected_keys, tostring(keyval.key))
-                elseif not val:SupersetOf(keyval.val) then
-                    table.insert(expected_values, tostring(keyval.val))
-                end
-            end
-            if #expected_values > 0 then
-                self:Error(val.node, "invalid value " .. tostring(val.type or val) .. " expected " .. table.concat(expected_values, " | "))
-            elseif #expected_keys > 0 then
-                self:Error(key.node, "invalid key " .. tostring(key.type or key) .. " expected " .. table.concat(expected_keys, " | "))
-            else
-                self:Error(key.node, "invalid key " .. tostring(key.type or key))
-            end
-        end
-
+        self:Assert(key.node, types.NewIndex(obj, key, val, env))
         self:FireEvent("newindex", obj, key, val, env)
     end
 
     function META:Index(obj, key)
-        if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
-            self:Error(key.node, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
-        end
-
-        return obj:Get(key) or self:TypeFromImplicitNode(key.node, "nil")
+        return self:Assert(key.node, types.Index(obj, key)) or self:TypeFromImplicitNode(key.node, "nil")
     end
 
     function META:Assign(key, val, env)
@@ -352,10 +321,10 @@ do
             end
         elseif key.kind == "postfix_expression_index" then
             -- key[foo] = val
-            self:NewIndex(key.left, key.expression, val, env)
+            self:NewIndex(self:AnalyzeExpression(key.left, env), self:AnalyzeExpression(key.expression, env), val, env)
         else
             -- key.foo = val
-            self:NewIndex(key.left, key.right, val, env)
+            self:NewIndex(self:AnalyzeExpression(key.left, env), self:AnalyzeExpression(key.right, env), val, env)
         end
     end
 end
