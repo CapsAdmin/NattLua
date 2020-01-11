@@ -368,133 +368,6 @@ function META:FireEvent(what, ...)
     end
 end
 
-do
-    local t = 0
-    function META:DumpEvent(what, ...)
-
-        if what == "create_global" then
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            local key, val = ...
-            io.write(key:Render())
-            if val then
-                io.write(" = ")
-                io.write(tostring(val))
-            end
-            io.write("\n")
-        elseif what == "newindex" then
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            local obj, key, val = ...
-            io.write(tostring(obj), "[", (tostring(key)), "] = ", tostring(val))
-            io.write("\n")
-        elseif what == "mutate_upvalue" then
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            local key, val = ...
-            io.write(self:Hash(key), " = ", tostring(val))
-            io.write("\n")
-        elseif what == "upvalue" then
-            io.write((" "):rep(t))
-
-
-
-            io.write(what, "  - ")
-            local key, val = ...
-            io.write(self:Hash(key))
-            if val then
-                io.write(" = ")
-                io.write(tostring(val))
-            end
-            io.write("\n")
-        elseif what == "set_global" then
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            local key, val = ...
-            io.write(self:Hash(key))
-            if val then
-                io.write(" = ")
-                io.write(tostring(val))
-            end
-            io.write("\n")
-        elseif what == "enter_scope" then
-            local node, extra_node, scope = ...
-            io.write((" "):rep(t))
-            t = t + 1
-            if extra_node then
-                io.write(extra_node.value)
-            else
-                io.write(node.kind)
-            end
-            io.write(" {")
-            io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
-            io.write("\n")
-        elseif what == "leave_scope" then
-            local node, extra_node, scope = ...
-            t = t - 1
-            io.write((" "):rep(t))
-            io.write("}")
-            io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
-            --io.write(node.kind)
-            if extra_node then
-            --  io.write(tostring(extra_node))
-            end
-            io.write("\n")
-        elseif what == "external_call" then
-            io.write((" "):rep(t))
-            local node, type = ...
-            io.write(node:Render(), " - (", tostring(type), ")")
-            io.write("\n")
-        elseif what == "call" then
-            io.write((" "):rep(t))
-            --io.write(what, " - ")
-            local exp, return_values = ...
-            if return_values then
-                local str = {}
-                for i,v in ipairs(return_values) do
-                    str[i] = tostring(v)
-                end
-                io.write(table.concat(str, ", "))
-            end
-            io.write(" = ", exp:Render())
-            io.write("\n")
-        elseif what == "deferred_call" then
-            io.write((" "):rep(t))
-            --io.write(what, " - ")
-            local exp, return_values = ...
-            if return_values then
-                local str = {}
-                for i,v in ipairs(return_values) do
-                    str[i] = tostring(v)
-                end
-                io.write(table.concat(str, ", "))
-            end
-            io.write(" = ", exp:Render())
-            io.write("\n")
-        elseif what == "function_spec" then
-            local func = ...
-            io.write((" "):rep(t))
-            io.write(what, " - ")
-            io.write(tostring(func))
-            io.write("\n")
-        elseif what == "return" then
-            io.write((" "):rep(t))
-            io.write(what, "   - ")
-            local values = ...
-            if values then
-                for _,v in ipairs(values) do
-                    io.write(tostring(v), ", ")
-                end
-            end
-            io.write("\n")
-        else
-            io.write((" "):rep(t))
-            io.write(what .. " - ", ...)
-            io.write("\n")
-        end
-    end
-end
-
 function META:AnalyzeStatements(statements, ...)
     for _, val in ipairs(statements) do
         if self:AnalyzeStatement(val, ...) == true then
@@ -510,6 +383,7 @@ end
 
 function META:Assert(node, ok, err)
     if ok == false then
+        err = err or "unknown error"
         self:Error(node, err)
         return self:TypeFromImplicitNode(node, "any")
     end
@@ -937,7 +811,12 @@ do
                     if node.value.value == "." or node.value.value == ":" then
                         stack:Push(self:Index(left, right, env))
                     else
-                        stack:Push(self:Assert(node, types.BinaryOperator(node.value.value, right, left, env)))
+                        local val, err = types.BinaryOperator(node.value.value, right, left, env)
+                        if not val and not err then
+                            print(node:Render(), right, node.value.value, left, env)
+                            error("wtf")
+                        end
+                        stack:Push(self:Assert(node, val, err))
                     end
                 elseif node.kind == "prefix_operator" then
                     stack:Push(self:Assert(node, stack:Pop():PrefixOperator(node.value.value, self:AnalyzeExpression(node.right))))
@@ -1109,6 +988,134 @@ end
 local function DefaultIndex(self, node)
     local oh = require("oh")
     return oh.GetBaseAnalyzer():GetValue(node, "typesystem")
+end
+
+
+do
+    local t = 0
+    function META:DumpEvent(what, ...)
+
+        if what == "create_global" then
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            local key, val = ...
+            io.write(key:Render())
+            if val then
+                io.write(" = ")
+                io.write(tostring(val))
+            end
+            io.write("\n")
+        elseif what == "newindex" then
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            local obj, key, val = ...
+            io.write(tostring(obj), "[", (tostring(key)), "] = ", tostring(val))
+            io.write("\n")
+        elseif what == "mutate_upvalue" then
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            local key, val = ...
+            io.write(self:Hash(key), " = ", tostring(val))
+            io.write("\n")
+        elseif what == "upvalue" then
+            io.write((" "):rep(t))
+
+
+
+            io.write(what, "  - ")
+            local key, val = ...
+            io.write(self:Hash(key))
+            if val then
+                io.write(" = ")
+                io.write(tostring(val))
+            end
+            io.write("\n")
+        elseif what == "set_global" then
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            local key, val = ...
+            io.write(self:Hash(key))
+            if val then
+                io.write(" = ")
+                io.write(tostring(val))
+            end
+            io.write("\n")
+        elseif what == "enter_scope" then
+            local node, extra_node, scope = ...
+            io.write((" "):rep(t))
+            t = t + 1
+            if extra_node then
+                io.write(extra_node.value)
+            else
+                io.write(node.kind)
+            end
+            io.write(" {")
+            io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
+            io.write("\n")
+        elseif what == "leave_scope" then
+            local node, extra_node, scope = ...
+            t = t - 1
+            io.write((" "):rep(t))
+            io.write("}")
+            io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
+            --io.write(node.kind)
+            if extra_node then
+            --  io.write(tostring(extra_node))
+            end
+            io.write("\n")
+        elseif what == "external_call" then
+            io.write((" "):rep(t))
+            local node, type = ...
+            io.write(node:Render(), " - (", tostring(type), ")")
+            io.write("\n")
+        elseif what == "call" then
+            io.write((" "):rep(t))
+            --io.write(what, " - ")
+            local exp, return_values = ...
+            if return_values then
+                local str = {}
+                for i,v in ipairs(return_values) do
+                    str[i] = tostring(v)
+                end
+                io.write(table.concat(str, ", "))
+            end
+            io.write(" = ", exp:Render())
+            io.write("\n")
+        elseif what == "deferred_call" then
+            io.write((" "):rep(t))
+            --io.write(what, " - ")
+            local exp, return_values = ...
+            if return_values then
+                local str = {}
+                for i,v in ipairs(return_values) do
+                    str[i] = tostring(v)
+                end
+                io.write(table.concat(str, ", "))
+            end
+            io.write(" = ", exp:Render())
+            io.write("\n")
+        elseif what == "function_spec" then
+            local func = ...
+            io.write((" "):rep(t))
+            io.write(what, " - ")
+            io.write(tostring(func))
+            io.write("\n")
+        elseif what == "return" then
+            io.write((" "):rep(t))
+            io.write(what, "   - ")
+            local values = ...
+            if values then
+                for _,v in ipairs(values) do
+                    io.write(tostring(v), ", ")
+                end
+            end
+            io.write("\n")
+        else
+            io.write((" "):rep(t))
+            io.write(what .. " - ", ...)
+            io.write("\n")
+        end
+    end
 end
 
 return function()

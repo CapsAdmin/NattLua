@@ -125,8 +125,8 @@ function types.BinaryOperator(op, l, r, env)
         if l.data ~= nil and r.data ~= nil then
             if l.data and r.data then
                 return r
+            end
         end
-    end
         return types.Object:new("boolean", false, true)
     end
 
@@ -195,7 +195,6 @@ function types.BinaryOperator(op, l, r, env)
             return types.Object:new("string", r.data .. l.data)
         end
     end
-
 
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
 
@@ -547,6 +546,8 @@ do
         return self.data.ret
     end
 
+
+
     function Object:SupersetOf(sub)
         if self.type == "any" or self.volatile then
             return true
@@ -605,6 +606,10 @@ do
         end
 
         return false
+    end
+
+    function Object.SubsetOf(a,b)
+        return b:SupersetOf(a)
     end
 
     function Object:__tostring()
@@ -724,6 +729,7 @@ do
                 return types.Object:new(val.type, res)
             end
         end
+        return false, "NYI " .. op
     end
 
     local uid = 0

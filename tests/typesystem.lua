@@ -1,21 +1,40 @@
 local types = require("oh.typesystem")
 
 do
-    local Set = function(...) return types.Set:new(...) end
-    local Tuple = function(...) return types.Tuple:new(...) end
     local Object = function(...) return types.Object:new(...) end
+
+    local function cast(...)
+        local ret = {}
+        for i = 1, select("#", ...) do
+            local v = select(i, ...)
+            local t = type(v)
+            if t == "number" or t == "string" or t == "boolean" then
+                ret[i] = Object(t, v, true)
+            else
+                ret[i] = v
+            end
+        end
+        return unpack(ret)
+    end
+
+
+    local Set = function(...) return types.Set:new(cast(...)) end
+    local Tuple = function(...) return types.Tuple:new(...) end
+
     local Dictionary = function(...) return types.Dictionary:new(...) end
     local N = function(n) return Object("number", n, true) end
     local S = function(n) return Object("string", n, true) end
     local O = Object
 
-    assert(Set(S"a", S"b", S"a", S"a"):Serialize() == Set(S"a", S"b"):Serialize())
-    assert(Set(S"a", S"b", S"c"):SupersetOf(Set(S"a", S"b", S"a", S"a")))
-    assert(Set(S"c", S"d"):SupersetOf(Set(S"c", S"d")))
-    assert(Set(S"c", S"d"):SupersetOf(Set(S"c", S"d")))
-    assert(Set(S"a"):SupersetOf(Set(Set(S"a")))) -- should be false?
-    assert(Set(S"a", S"b", S"c"):SupersetOf(Set())) -- should be false?
-    assert(Set(N(1), N(4), N(5), N(9), N(13)):Intersect(Set(N(2), N(5), N(6), N(8), N(9))):GetSignature() == Set(N(5), N(9)):GetSignature())
+
+
+    assert(Set("a", "b", "a", "a"):Serialize() == Set("a", "b"):Serialize())
+    assert(Set("a", "b", "c"):SupersetOf(Set("a", "b", "a", "a")))
+    assert(Set("c", "d"):SupersetOf(Set("c", "d")))
+    assert(Set("c", "d"):SupersetOf(Set("c", "d")))
+    assert(Set("a"):SupersetOf(Set(Set("a")))) -- should be false?
+    assert(Set("a", "b", "c"):SupersetOf(Set())) -- should be false?
+    assert(Set(1, 4, 5, 9, 13):Intersect(Set(2, 5, 6, 8, 9)):GetSignature() == Set(5, 9):GetSignature())
 
     local A = Set(N(1),N(2),N(3))
     local B = Set(N(1),N(2),N(3),N(4))
@@ -36,7 +55,7 @@ do
 
     local tbl = Dictionary({})
     tbl:Set(yes_and_no, Object("boolean", false))
-    tbl:Lock()
+    tbl:Lock(true)
     tbl:Set(yes, yes)
     assert(tbl:Get(yes).data == true, " should be true")
 

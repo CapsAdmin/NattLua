@@ -740,6 +740,14 @@ type ^string.match = function(s, pattern, init)
 	end
 end
 
+type ^string.len = function(str)
+	if str.data then
+		return types.Create("number", #str.data, true)
+	end
+
+	return types.Create("number")
+end
+
 type ^string.gsub = function(str, pattern, val)
 	if val:IsType("function") then
 		local args = {}
@@ -803,6 +811,7 @@ type ipairs = function(tbl)
 	local next = analyzer:GetValue("next", "typesystem")
 	return next, tbl, nil
 end
+
 
 type require = function(name)
 	local str = name.data
