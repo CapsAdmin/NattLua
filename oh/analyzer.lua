@@ -72,7 +72,7 @@ do -- types
 
                 local ret
 
-                local return_tuple = types.Tuple:new(unpack(self:Assert(func_expr, obj:Call(arguments))))
+                local return_tuple = types.Tuple:new(unpack(self:Assert(func_expr, obj:Call(types.Tuple:new(unpack(arguments))))))
 
                 do
                     self:PushScope(obj.node)
@@ -141,7 +141,7 @@ do -- types
                 obj.analyzer = self
                 obj.node = node
 
-                local return_tuple, err = obj:Call(arguments)
+                local return_tuple, err = obj:Call(types.Tuple:new(unpack(arguments)))
 
                 if not return_tuple then
                     self:Error(func_expr, err)
@@ -149,14 +149,14 @@ do -- types
 
                 return return_tuple
             elseif obj.Type == "set" then
-                for _, obj in pairs(obj.data) do
+                for _, obj in ipairs(obj.datai) do
                     self:FireEvent("external_call", node, obj)
 
                     -- HACKS
                     obj.analyzer = self
                     obj.node = node
 
-                    local return_tuple = obj:Call(arguments)
+                    local return_tuple = obj:Call(types.Tuple:new(unpack(arguments)))
 
                     if return_tuple then
                         return return_tuple

@@ -33,11 +33,11 @@ function types.Union(a, b)
     if a.Type == "dictionary" and b.Type == "dictionary" then
         local copy = types.Dictionary:new({})
 
-        for _, keyval in pairs(a.data) do
+        for _, keyval in ipairs(a.data) do
             copy:Set(keyval.key, keyval.val)
         end
 
-        for _, keyval in pairs(b.data) do
+        for _, keyval in ipairs(b.data) do
             copy:Set(keyval.key, keyval.val)
         end
 
@@ -248,7 +248,7 @@ function types.NewIndex(obj, key, val, env)
     if not obj:Set(key, val, env) then
         local expected_keys = {}
         local expected_values = {}
-        for _, keyval in pairs(obj.data) do
+        for _, keyval in ipairs(obj.data) do
             if not key:SupersetOf(keyval.key) then
                 table.insert(expected_keys, tostring(keyval.key))
             elseif not val:SupersetOf(keyval.val) then
@@ -385,7 +385,7 @@ do
     end
 
     function Dictionary:Lock(b)
-        self.locked = true
+        self.locked = b
     end
 
     function Dictionary:Cast(val)
@@ -604,6 +604,12 @@ do
                         return true
                     end
 
+                    if self.type == "number" and sub.type == "number" and self.max then
+                        if sub.data > self.data and sub.data < self.max.data then
+                            return true
+                        end
+                    end
+
                     if self.type == "number" and sub.type == "number" and self.type == "list" and self.data and self.data.Type == "tuple" then
                         local min = self:Get(1).data
                         local max = self:Get(2).data
@@ -620,9 +626,13 @@ do
                     end
                 end
 
+                -- "5" must be within "number"
+                if self.data == nil and sub.data ~= nil then
+                    return true
+                end
+
                 -- self = number(1)
                 -- sub = 1
-
                 if self.data ~= nil and self.data == sub.data then
                     return true
                 end
@@ -728,7 +738,7 @@ do
     function Object:Call(arguments)
         if self.lua_function then
             _G.self = self.analyzer
-            local res = {pcall(self.lua_function, unpack(arguments))}
+            local res = {pcall(self.lua_function, unpack(arguments.data))}
             _G.self = nil
 
             if not res[1] then
@@ -744,13 +754,11 @@ do
             return res
         end
 
-        local argument_tuple = types.Tuple:new(unpack(arguments))
-
-        if not self.data.arg:SupersetOf(argument_tuple) then
-            return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(argument_tuple)
+        if not self.data.arg:SupersetOf(arguments) then
+            return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(arguments)
         end
 
-        return self.data.ret.data
+        return self.data.ret
     end
 
     function Object:PrefixOperator(op, val)
@@ -910,7 +918,7 @@ do
     function Set:GetSignature()
         local s = {}
 
-        for _, v in pairs(self.data) do
+        for _, v in ipairs(self.datai) do
             table.insert(s, types.GetSignature(v))
         end
 
@@ -919,9 +927,18 @@ do
         return table.concat(s, "|")
     end
 
+    function Set:Call(arguments)
+        for _, obj in pairs(self.datai) do
+            local return_tuple = obj:Call(arguments)
+            if return_tuple then
+                return return_tuple
+            end
+        end
+    end
+
     function Set:__tostring()
         local s = {}
-        for _, v in pairs(self.data) do
+        for _, v in ipairs(self.datai) do
             table.insert(s, tostring(v))
         end
 
@@ -936,27 +953,32 @@ do
 
     function Set:AddElement(e)
         if e.Type == "set" then
-            for _, e in pairs(e.data) do
+            for _, e in ipairs(e.datai) do
                 self:AddElement(e)
             end
             return self
         end
 
-        self.data[types.GetSignature(e)] = e
+        if not self.data[types.GetSignature(e)] then
+            self.data[types.GetSignature(e)] = e
+            table.insert(self.datai, e)
+        end
 
         return self
     end
 
     function Set:GetLength()
-        local len = 0
-        for _, v in pairs(self.data) do
-            len = len + 1
-        end
-        return len
+        return #self.datai
     end
 
     function Set:RemoveElement(e)
         self.data[types.GetSignature(e)] = nil
+        for i,v in ipairs(self.datai) do
+            if types.GetSignature(v) == types.GetSignature(e) then
+                table.remove(self.datai, i)
+                return
+            end
+        end
     end
 
 
@@ -973,7 +995,7 @@ do
         key = self:Cast(key)
 
         if from_dictionary then
-            for _, obj in pairs(self.data) do
+            for _, obj in ipairs(self.datai) do
                 if obj.Get then
                     local val = obj:Get(key)
                     if val then
@@ -988,7 +1010,7 @@ do
             return val
         end
 
-        for _, obj in pairs(self.data) do
+        for _, obj in ipairs(self.datai) do
             if obj.volatile then
                 return obj
             end
@@ -1005,8 +1027,8 @@ do
         end
 
         if sub.Type == "set" then
-            for k,v in pairs(sub.data) do
-                if self.data[k] == nil or not v:SupersetOf(self.data[k]) then
+            for k,v in ipairs(sub.datai) do
+                if self.data[types.GetSignature(v)] == nil or not v:SupersetOf(self.data[types.GetSignature(v)]) then
                     return false
                 end
             end
@@ -1015,7 +1037,7 @@ do
             return false
         end
 
-        for _, e in pairs(self.data) do
+        for _, e in ipairs(self.datai) do
             if not sub:Get(e)then
                 return false
             end
@@ -1027,7 +1049,7 @@ do
     function Set:Union(set)
         local copy = self:Copy()
 
-        for _, e in pairs(set.data) do
+        for _, e in ipairs(set.datai) do
             copy:AddElement(e)
         end
 
@@ -1038,7 +1060,7 @@ do
     function Set:Intersect(set)
         local copy = types.Set:new()
 
-        for _, e in pairs(self.data) do
+        for _, e in ipairs(self.datai) do
             if set:Get(e) then
                 copy:AddElement(e)
             end
@@ -1051,7 +1073,7 @@ do
     function Set:Subtract(set)
         local copy = self:Copy()
 
-        for _, e in pairs(self.data) do
+        for _, e in ipairs(self.datai) do
             copy:RemoveElement(e)
         end
 
@@ -1060,14 +1082,14 @@ do
 
     function Set:Copy()
         local copy = Set:new()
-        for _, e in pairs(self.data) do
+        for _, e in ipairs(self.datai) do
             copy:AddElement(e)
         end
         return copy
     end
 
     function Set:IsConst()
-        for k,v in pairs(self.data) do
+        for _, v in ipairs(self.datai) do
             if not v.const then
                 return false
             end
@@ -1077,7 +1099,7 @@ do
     end
 
     function Set:IsTruthy()
-        for k,v in pairs(self.data) do
+        for _, v in ipairs(self.datai) do
             if v:IsTruthy() then
                 return true
             end
@@ -1090,6 +1112,7 @@ do
         local self = setmetatable({}, Set)
 
         self.data = {}
+        self.datai = {}
 
         for _, v in ipairs({...}) do
             self:AddElement(v)
@@ -1109,7 +1132,7 @@ function types.Create(type, ...)
     elseif type == "table" then
         local dict = types.Dictionary:new({})
         if ... then
-            for _, v in pairs(...) do
+            for _, v in ipairs(...) do
                 dict:Set(v.key, v.val)
             end
         end

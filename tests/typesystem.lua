@@ -26,8 +26,6 @@ do
     local S = function(n) return Object("string", n, true) end
     local O = Object
 
-
-
     assert(Set("a", "b", "a", "a"):Serialize() == Set("a", "b"):Serialize())
     assert(Set("a", "b", "c"):SupersetOf(Set("a", "b", "a", "a")))
     assert(Set("c", "d"):SupersetOf(Set("c", "d")))
@@ -57,6 +55,12 @@ do
     tbl:Set(yes_and_no, Object("boolean", false))
     tbl:Lock(true)
     tbl:Set(yes, yes)
+    assert(tbl:Get(yes).data == false, " should be false")
+
+    local tbl = Dictionary({})
+    tbl:Set(yes_and_no, Object("boolean", false))
+    tbl:Lock(false)
+    tbl:Set(yes, yes, "typesystem")
     assert(tbl:Get(yes).data == true, " should be true")
 
     do
@@ -85,19 +89,29 @@ do
         Human:Set(Object("string", "magic"), Object("string", "lol"))
     end
 
-    assert(Object("number", Tuple(N(-10), N(10)), true):SupersetOf(Object("number", 5, true)) == true, "5 should contain within -10..10")
-    assert(Object("number", 5, true):SupersetOf(Object("number", Tuple(N(-10), N(10)), true)) == false, "5 should not contain -10..10")
+    assert(N(-10):Max(N(10)):SupersetOf(N(5)) == true, "5 should contain within -10..10")
+    assert(N(5):SupersetOf(N(-10):Max(N(10))) == false, "5 should not contain -10..10")
 
-    local overloads = Dictionary({})
-    overloads:Set(Tuple(O"number", O"string"), Tuple(O"ROFL"))
-    overloads:Set(Tuple(O"string", O"number"), Tuple(O"LOL"))
-    local func = Object("function", overloads)
-    assert(func:Call(Tuple(O"string", O"number")):GetSignature() == "LOL")
-    assert(func:Call(Tuple(O("number", 5, true), O"string")):GetSignature() == "ROFL")
+    local overloads = Set(Object("function", {
+        arg = Tuple(O"number", O"string"),
+        ret = Tuple(O"ROFL"),
+    }), Object("function", {
+        arg = Tuple(O"string", O"number"),
+        ret = Tuple(O"LOL"),
+    }))
 
+    assert(Tuple(O"string", O"number"):SupersetOf(Tuple(O"number", O"string")) == false)
+    assert(Tuple(O"number", O"string"):SupersetOf(Tuple(O"number", O"string")) == true)
 
-    assert(O("number"):SupersetOf(O("number", 5, true)) == false)
-    assert(O("number", 5, true):SupersetOf(O("number")) == true)
+    assert(overloads:Call(Tuple(O"string", O"number")):GetSignature() == "LOL")
+    assert(overloads:Call(Tuple(N(5), O"string")):GetSignature() == "ROFL")
+
+    assert(O("number"):SupersetOf(N(5)) == true)
+    assert(N(5):SupersetOf(O("number")) == true)
+
+    do return end
+
+    -- wip
 
     do
         local T = function()
@@ -106,9 +120,9 @@ do
             return setmetatable({obj = obj}, {
                 __newindex = function(_, key, val)
                     if type(key) == "string" then
-                        key = Object("string", key, true)
+                        key = S(key)
                     elseif type(key) == "number" then
-                        key = Object("number", key, true)
+                        key = N(key)
                     end
 
                     if val == _ then
@@ -124,11 +138,11 @@ do
         end
 
         local function F(overloads)
-            local dict = Dictionary({})
-            for k,v in pairs(overloads) do
-                dict:Set(k,v)
+            local ret = Set()
+            for k,v in pairs(ret) do
+                ret:AddElement(Object("function", {arg = k, ret = v}))
             end
-            return Object("function", dict)
+            return ret
         end
 
         local tbl = T()
