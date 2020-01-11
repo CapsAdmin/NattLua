@@ -1109,8 +1109,8 @@ function types.Create(type, ...)
     elseif type == "table" then
         local dict = types.Dictionary:new({})
         if ... then
-            for k,v in pairs(...) do
-                dict:Set(k,v)
+            for _, v in pairs(...) do
+                dict:Set(v.key, v.val)
             end
         end
         return dict

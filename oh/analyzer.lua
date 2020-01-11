@@ -834,8 +834,8 @@ do
                     local obj = self:TypeFromImplicitNode(node, "table")
 
                     self.current_table = obj
-                    for k,v in pairs(self:AnalyzeTable(node, env)) do
-                        obj:Set(k,v)
+                    for _, v in ipairs(self:AnalyzeTable(node, env)) do
+                        obj:Set(v.key, v.val)
                     end
                     self.current_table = nil
 
@@ -904,24 +904,24 @@ do
 
         function META:AnalyzeTable(node, env)
             local out = {}
-            for _, node in ipairs(node.children) do
+            for i, node in ipairs(node.children) do
                 if node.kind == "table_key_value" then
-                    out[node.key.value] = self:AnalyzeExpression(node.value, env)
+                    out[i] = {key = node.key.value, val = self:AnalyzeExpression(node.value, env)}
                 elseif node.kind == "table_expression_value" then
 
                     local key = self:AnalyzeExpression(node.key, env)
                     local obj = self:AnalyzeExpression(node.value, env)
 
                     if key:IsType("string") and key.value then
-                        out[key.value] = obj
+                        out[i] = {key = key.value, val = obj}
                     else
-                        out[key] = obj
+                        out[i] = {key = key, val = obj}
                     end
                 elseif node.kind == "table_index_value" then
                     if node.i then
-                        out[node.i] = self:AnalyzeExpression(node.value, env)
+                        out[i] = {key = node.i, val = self:AnalyzeExpression(node.value, env)}
                     else
-                        table.insert(out, (self:AnalyzeExpression(node.value, env)))
+                        table.insert(out, {key = #out + 1, val = self:AnalyzeExpression(node.value, env)})
                     end
                 end
             end
