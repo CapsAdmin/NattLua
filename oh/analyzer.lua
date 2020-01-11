@@ -78,7 +78,7 @@ do -- types
                     self:PushScope(obj.node)
 
                     if obj.node.self_call then
-                        self:DeclareUpvalue("self", arguments[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
+                        self:SetUpvalue("self", arguments[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
                     end
 
                     for i, identifier in ipairs(obj.node.identifiers) do
@@ -89,9 +89,9 @@ do -- types
                             for i = argi, #arguments do
                                 table.insert(values, arguments[i])
                             end
-                            self:DeclareUpvalue(identifier, self:TypeFromImplicitNode(identifier, "...", values), "runtime")
+                            self:SetUpvalue(identifier, self:TypeFromImplicitNode(identifier, "...", values), "runtime")
                         else
-                            self:DeclareUpvalue(identifier, arguments[argi] or self:TypeFromImplicitNode(identifier, "nil"), "runtime")
+                            self:SetUpvalue(identifier, arguments[argi] or self:TypeFromImplicitNode(identifier, "nil"), "runtime")
                         end
                     end
 
@@ -177,8 +177,6 @@ do
             return node
         end
 
-        assert(type(node.value.value) == "string")
-
         return node.value.value
     end
 
@@ -234,7 +232,7 @@ do
         return self.scope
     end
 
-    function META:DeclareUpvalue(key, val, env)
+    function META:SetUpvalue(key, val, env)
         assert(val == nil or types.IsTypeObject(val))
 
         local upvalue = {
@@ -271,18 +269,6 @@ do
         end
     end
 
-    function META:MutateUpvalue(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-
-        local upvalue = self:GetUpvalue(key, env)
-        if upvalue then
-            upvalue.data = val
-            self:FireEvent("mutate_upvalue", key, val, env)
-            return true
-        end
-        return false
-    end
-
     function META:GetValue(key, env)
         local upvalue = self:GetUpvalue(key, env)
 
@@ -293,38 +279,27 @@ do
         return self.env[env][self:Hash(key)]
     end
 
-    function META:SetGlobal(key, val, env)
-        assert(val == nil or types.IsTypeObject(val))
-        self:FireEvent("set_global", key, val, env)
-
-        self.env[env][self:Hash(key)] = val
-    end
-
-    -- obj[key] = val
-    function META:NewIndex(obj, key, val, env)
-        self:Assert(key.node, types.NewIndex(obj, key, val, env))
-        self:FireEvent("newindex", obj, key, val, env)
-    end
-
-    function META:Index(obj, key)
-        return self:Assert(key.node, types.Index(obj, key)) or self:TypeFromImplicitNode(key.node, "nil")
-    end
-
-    function META:Assign(key, val, env)
+    function META:SetValue(key, val, env)
         assert(val == nil or types.IsTypeObject(val))
 
-        if key.kind == "value" then
+        if type(key) == "string" or key.kind == "value" then
             -- local key = val; key = val
-            if not self:MutateUpvalue(key, val, env) then
+
+            local upvalue = self:GetUpvalue(key, env)
+            if upvalue then
+                upvalue.data = val
+                self:FireEvent("mutate_upvalue", key, val, env)
+            else
                 -- key = val
-                self:SetGlobal(key, val, env)
+                self.env[env][self:Hash(key)] = val
+                self:FireEvent("set_global", key, val, env)
             end
-        elseif key.kind == "postfix_expression_index" then
-            -- key[foo] = val
-            self:NewIndex(self:AnalyzeExpression(key.left, env), self:AnalyzeExpression(key.expression, env), val, env)
         else
-            -- key.foo = val
-            self:NewIndex(self:AnalyzeExpression(key.left, env), self:AnalyzeExpression(key.right, env), val, env)
+            local obj = self:AnalyzeExpression(key.left, env)
+            local key = key.kind == "postfix_expression_index" and self:AnalyzeExpression(key.expression, env) or self:AnalyzeExpression(key.right, env)
+
+            self:Assert(key.node, types.NewIndex(obj, key, val, env))
+            self:FireEvent("newindex", obj, key, val, env)
         end
     end
 end
@@ -452,9 +427,9 @@ function META:AnalyzeStatement(statement, ...)
             end
 
             if statement.kind == "local_assignment" then
-                self:DeclareUpvalue(node, left, env)
+                self:SetUpvalue(node, left, env)
             elseif statement.kind == "assignment" then
-                self:Assign(node, left, env)
+                self:SetValue(node, left, env)
             end
 
             node.inferred_type = left
@@ -469,9 +444,9 @@ function META:AnalyzeStatement(statement, ...)
 
         if statement.default then
             if statement.kind == "local_destructure_assignment" then
-                self:DeclareUpvalue(statement.default, obj, env)
+                self:SetUpvalue(statement.default, obj, env)
             elseif statement.kind == "destructure_assignment" then
-                self:Assign(statement.default, obj, env)
+                self:SetValue(statement.default, obj, env)
             end
         end
 
@@ -479,17 +454,17 @@ function META:AnalyzeStatement(statement, ...)
             local obj = node.value and obj:Get(node.value.value, env) or self:TypeFromImplicitNode(node, "nil")
 
             if statement.kind == "local_destructure_assignment" then
-                self:DeclareUpvalue(node, obj, env)
+                self:SetUpvalue(node, obj, env)
             elseif statement.kind == "destructure_assignment" then
-                self:Assign(node, obj, env)
+                self:SetValue(node, obj, env)
             end
         end
     elseif statement.kind == "function" then
-        self:Assign(statement.expression, self:AnalyzeFunction(statement), "runtime")
+        self:SetValue(statement.expression, self:AnalyzeFunction(statement), "runtime")
     elseif statement.kind == "local_function" then
-        self:DeclareUpvalue(statement.identifier, self:AnalyzeFunction(statement), "runtime")
+        self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement), "runtime")
     elseif statement.kind == "local_type_function" then
-        self:DeclareUpvalue(statement.identifier, self:AnalyzeFunction(statement), "typesystem")
+        self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement), "typesystem")
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
             if not statement.expressions[i] then
@@ -573,7 +548,7 @@ function META:AnalyzeStatement(statement, ...)
             local values = self:Call(args[1], {unpack(args, 2)}, statement.expressions[1])
 
             for i,v in ipairs(statement.identifiers) do
-                self:DeclareUpvalue(v, values[i], "runtime")
+                self:SetUpvalue(v, values[i], "runtime")
             end
         end
 
@@ -585,7 +560,7 @@ function META:AnalyzeStatement(statement, ...)
     elseif statement.kind == "numeric_for" then
         self:PushScope(statement)
         local range = self:AnalyzeExpression(statement.expressions[1]):Max(self:AnalyzeExpression(statement.expressions[2]))
-        self:DeclareUpvalue(statement.identifiers[1], range, "runtime")
+        self:SetUpvalue(statement.identifiers[1], range, "runtime")
 
         if statement.expressions[3] then
             self:AnalyzeExpression(statement.expressions[3])
@@ -611,7 +586,7 @@ function META:AnalyzeStatement(statement, ...)
             end
         end
 
-        self:DeclareUpvalue(statement.key, tbl, "typesystem")
+        self:SetUpvalue(statement.key, tbl, "typesystem")
     elseif
         statement.kind ~= "end_of_file" and
         statement.kind ~= "semicolon" and
@@ -778,7 +753,7 @@ do
                     end
 
                     if node.value.value == "." or node.value.value == ":" then
-                        stack:Push(self:Index(left, right, env))
+                        stack:Push(self:Assert(left.node, types.Index(left, right)) or self:TypeFromImplicitNode(left.node, "nil"))
                     else
                         local val, err = types.BinaryOperator(node.value.value, right, left, env)
                         if not val and not err then
@@ -792,7 +767,8 @@ do
                 elseif node.kind == "postfix_operator" then
                     stack:Push(stack:Pop():PostfixOperator(node))
                 elseif node.kind == "postfix_expression_index" then
-                    stack:Push(self:Index(stack:Pop(), self:AnalyzeExpression(node.expression), env))
+                    local obj = stack:Pop()
+                    stack:Push(self:Assert(obj.node, types.Index(obj, self:AnalyzeExpression(node.expression))) or self:TypeFromImplicitNode(obj.node, "nil"))
                 elseif node.kind == "type_function" then
                     local args = {}
                     local rets = {}

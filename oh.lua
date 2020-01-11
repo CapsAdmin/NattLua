@@ -20,7 +20,7 @@ function oh.GetBaseAnalyzer(ast)
 		for k,v in pairs(base.env.typesystem) do
 			g:Set(k, v)
 		end
-		base:SetGlobal("_G", g, "typesystem")
+		base:SetValue("_G", g, "typesystem")
 		base:GetValue("_G", "typesystem"):Set("_G", g)
 
         oh.base_analyzer = base
