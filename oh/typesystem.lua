@@ -76,12 +76,14 @@ do
         return src
     end
 
-    function types.MergeFunctionArguments(obj, arg, argument_key)
-        obj.data.arg.data = merge_types(obj.data.arg.data, arg)
+    function types.MergeFunctionArguments(obj, arg)
+        assert(arg.Type == "tuple")
+        obj.data.arg.data = merge_types(obj.data.arg.data, arg.data)
     end
 
-    function types.MergeFunctionReturns(obj, ret, argument_key)
-        obj.data.ret.data = merge_types(obj.data.ret.data, ret)
+    function types.MergeFunctionReturns(obj, ret)
+        assert(ret.Type == "tuple")
+        obj.data.ret.data = merge_types(obj.data.ret.data, ret.data)
     end
 end
 

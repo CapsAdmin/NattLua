@@ -55,7 +55,7 @@ do -- types
 
             -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
             if deferred then
-                arguments = obj:GetArguments().data
+                arguments = obj:GetArguments()
             end
 
             --lua function
@@ -68,17 +68,15 @@ do -- types
                     self.calling_function = obj
                 end
 
-                local argument_tuple = types.Tuple:new(unpack(arguments))
-
                 local ret
 
-                local return_tuple = types.Tuple:new(unpack(self:Assert(obj.node, obj:Call(types.Tuple:new(unpack(arguments)))).data))
+                local return_tuple = self:Assert(obj.node, obj:Call(arguments))
 
                 do
                     self:PushScope(obj.node)
 
                     if obj.node.self_call then
-                        self:SetUpvalue("self", arguments[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
+                        self:SetUpvalue("self", arguments.data[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
                     end
 
                     for i, identifier in ipairs(obj.node.identifiers) do
@@ -86,12 +84,12 @@ do -- types
 
                         if identifier.value.value == "..." then
                             local values = {}
-                            for i = argi, #arguments do
-                                table.insert(values, arguments[i])
+                            for i = argi, arguments:GetLength() do
+                                table.insert(values, arguments.data[i])
                             end
                             self:SetUpvalue(identifier, self:TypeFromImplicitNode(identifier, "...", values), "runtime")
                         else
-                            self:SetUpvalue(identifier, arguments[argi] or self:TypeFromImplicitNode(identifier, "nil"), "runtime")
+                            self:SetUpvalue(identifier, arguments.data[argi] or self:TypeFromImplicitNode(identifier, "nil"), "runtime")
                         end
                     end
 
@@ -103,16 +101,18 @@ do -- types
                     self:PopScope()
                 end
 
+                local ret_tuple = types.Tuple:new(unpack(ret))
+
                 -- if this function has an explicit return type
                 if obj.node.return_types then
-                    if not types.Tuple:new(unpack(ret)):SupersetOf(return_tuple) then
+                    if not ret_tuple:SupersetOf(return_tuple) then
                         self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(types.Tuple:new(unpack(ret))))
                     end
                 else
-                    types.MergeFunctionReturns(obj, ret, argument_tuple)
+                    types.MergeFunctionReturns(obj, ret_tuple)
                 end
 
-                types.MergeFunctionArguments(obj, arguments, argument_tuple)
+                types.MergeFunctionArguments(obj, arguments)
 
                 for i, v in ipairs(obj:GetArguments().data) do
                     if obj.node.identifiers[i] then
@@ -137,7 +137,7 @@ do -- types
             elseif obj.Call then
                 self:FireEvent("external_call", node, obj)
 
-                local return_tuple, err = obj:Call(types.Tuple:new(unpack(arguments)))
+                local return_tuple, err = obj:Call(arguments)
 
                 if return_tuple == false then
                     self:Error(obj.node, err)
@@ -526,7 +526,7 @@ function META:AnalyzeStatement(statement, ...)
         local args = self:AnalyzeExpressions(statement.expressions)
 
         if args[1] then
-            local values = self:Call(args[1], {unpack(args, 2)}, statement.expressions[1])
+            local values = self:Call(args[1], types.Tuple:new(unpack(args, 2)), statement.expressions[1])
 
             for i,v in ipairs(statement.identifiers) do
                 self:SetUpvalue(v, values[i], "runtime")
@@ -798,7 +798,7 @@ do
                     if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
                         self:Error(node, tostring(obj) .. " cannot be called")
                     else
-                        stack:Push(self:Call(obj, arguments, node))
+                        stack:Push(self:Call(obj, types.Tuple:new(unpack(arguments)), node))
                     end
                 elseif node.kind == "type_list" then
                     local tbl = {}
@@ -879,7 +879,7 @@ do
             end
 
             local obj = self:TypeFromImplicitNode(node, "function", ret, args)
-            self:CallMeLater(obj, args, node, true)
+            self:CallMeLater(obj, types.Tuple:new(unpack(args)), node, true)
             return obj
         end
 
