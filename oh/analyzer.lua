@@ -90,10 +90,14 @@ do -- types
                         end
                     end
 
-                    local ret = {}
+
+                    types.collected_return_tuples = {}
+                    local ret = types.collected_return_tuples
 
                     -- crawl and collect return values from function statements
-                    self:AnalyzeStatements(obj.node.statements, ret)
+                    self:AnalyzeStatements(obj.node.statements)
+
+                    types.collected_return_tuples = nil
 
                 self:PopScope()
 
@@ -290,9 +294,9 @@ function META:FireEvent(what, ...)
     end
 end
 
-function META:AnalyzeStatements(statements, ...)
+function META:AnalyzeStatements(statements)
     for _, val in ipairs(statements) do
-        if self:AnalyzeStatement(val, ...) == true then
+        if self:AnalyzeStatement(val) == true then
             return true
         end
     end
@@ -339,13 +343,13 @@ function META:Error(node, msg)
     end
 end
 
-function META:AnalyzeStatement(statement, ...)
+function META:AnalyzeStatement(statement)
     self.current_statement = statement
 
     if statement.kind == "root" then
         self:PushScope(statement)
         local ret
-        if self:AnalyzeStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements) == true then
             ret = true
         end
         self:PopScope()
@@ -446,7 +450,7 @@ function META:AnalyzeStatement(statement, ...)
         for i, statements in ipairs(statement.statements) do
             if not statement.expressions[i] then
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                self:AnalyzeStatements(statements, ...)
+                self:AnalyzeStatements(statements)
                 self:PopScope()
                 break
             else
@@ -456,7 +460,7 @@ function META:AnalyzeStatement(statement, ...)
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
                     obj:PushTruthy()
 
-                    if self:AnalyzeStatements(statements, ...) == true then
+                    if self:AnalyzeStatements(statements) == true then
                         if obj.data == true then
                             obj:PopTruthy()
                             self:PopScope()
@@ -473,20 +477,20 @@ function META:AnalyzeStatement(statement, ...)
     elseif statement.kind == "while" then
         if self:AnalyzeExpression(statement.expression):IsTruthy() then
             self:PushScope(statement)
-            if self:AnalyzeStatements(statement.statements, ...) == true then
+            if self:AnalyzeStatements(statement.statements) == true then
                 return true
             end
             self:PopScope()
         end
     elseif statement.kind == "do" then
         self:PushScope(statement)
-        if self:AnalyzeStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements) == true then
             return true
         end
         self:PopScope()
     elseif statement.kind == "repeat" then
         self:PushScope(statement)
-        if self:AnalyzeStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements) == true then
             return true
         end
         if self:AnalyzeExpression(statement.expression):IsTruthy() then
@@ -494,7 +498,7 @@ function META:AnalyzeStatement(statement, ...)
         end
         self:PopScope()
     elseif statement.kind == "return" then
-        local return_values = ...
+        local return_values = types.collected_return_tuples
 
         local evaluated = {}
         for i,v in ipairs(statement.expressions) do
@@ -531,7 +535,7 @@ function META:AnalyzeStatement(statement, ...)
             end
         end
 
-        if self:AnalyzeStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements) == true then
             return true
         end
 
@@ -545,7 +549,7 @@ function META:AnalyzeStatement(statement, ...)
             self:AnalyzeExpression(statement.expressions[3])
         end
 
-        if self:AnalyzeStatements(statement.statements, ...) == true then
+        if self:AnalyzeStatements(statement.statements) == true then
             self:PopScope()
             return true
         end
