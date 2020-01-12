@@ -20,12 +20,6 @@ function types.GetSignature(obj)
     return tostring(obj)
 end
 
-function types.OverloadFunction(a, b)
-    for _, keyval in ipairs(b.data.data) do
-        a.data:Set(keyval.key, keyval.val)
-    end
-end
-
 function types.IsPrimitiveType(val)
     return val == "string" or
     val == "number" or
@@ -36,22 +30,6 @@ end
 
 function types.IsTypeObject(obj)
     return obj.Type ~= nil
-end
-
-function types.Union(a, b)
-    if a.Type == "dictionary" and b.Type == "dictionary" then
-        local copy = types.Dictionary:new({})
-
-        for _, keyval in ipairs(a.data) do
-            copy:Set(keyval.key, keyval.val)
-        end
-
-        for _, keyval in ipairs(b.data) do
-            copy:Set(keyval.key, keyval.val)
-        end
-
-        return copy
-    end
 end
 
 function types.BinaryOperator(op, l, r, env)
@@ -222,25 +200,7 @@ function types.NewIndex(obj, key, val, env)
         return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val)
     end
 
-    if not obj:Set(key, val, env) then
-        local expected_keys = {}
-        local expected_values = {}
-        for _, keyval in ipairs(obj.data) do
-            if not key:SupersetOf(keyval.key) then
-                table.insert(expected_keys, tostring(keyval.key))
-            elseif not val:SupersetOf(keyval.val) then
-                table.insert(expected_values, tostring(keyval.val))
-            end
-        end
-
-        if #expected_values > 0 then
-            return false, "invalid value " .. tostring(val.type or val) .. " expected " .. table.concat(expected_values, " | ")
-        elseif #expected_keys > 0 then
-            return false, "invalid key " .. tostring(key.type or key) .. " expected " .. table.concat(expected_keys, " | ")
-        end
-
-        return false, "invalid key " .. tostring(key.type or key)
-    end
+    return obj:Set(key, val, env)
 end
 
 
@@ -365,6 +325,20 @@ do
         self.locked = b
     end
 
+    function Dictionary:Union(dict)
+        local copy = types.Dictionary:new({})
+
+        for _, keyval in ipairs(self.data) do
+            copy:Set(keyval.key, keyval.val)
+        end
+
+        for _, keyval in ipairs(dict.data) do
+            copy:Set(keyval.key, keyval.val)
+        end
+
+        return copy
+    end
+
     function Dictionary:Set(key, val, env)
         key = types.Cast(key)
         val = types.Cast(val)
@@ -395,7 +369,25 @@ do
             return true
         end
 
-        return false
+        local obj = self
+
+        local expected_keys = {}
+        local expected_values = {}
+        for _, keyval in ipairs(obj.data) do
+            if not key:SupersetOf(keyval.key) then
+                table.insert(expected_keys, tostring(keyval.key))
+            elseif not val:SupersetOf(keyval.val) then
+                table.insert(expected_values, tostring(keyval.val))
+            end
+        end
+
+        if #expected_values > 0 then
+            return false, "invalid value " .. tostring(val.type or val) .. " expected " .. table.concat(expected_values, " | ")
+        elseif #expected_keys > 0 then
+            return false, "invalid key " .. tostring(key.type or key) .. " expected " .. table.concat(expected_keys, " | ")
+        end
+
+        return false, "invalid key " .. tostring(key.type or key)
     end
 
     function Dictionary:Get(key, env)

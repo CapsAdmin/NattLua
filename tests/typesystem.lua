@@ -80,7 +80,7 @@ do
             io.write(string.format("Hello, my name is %s and I am %s years old.", person:Get(Object("string", "name")), person:Get(Object("string", "age")) ),"\n")
         end
 
-        local Human = types.Union(IAge, IName)
+        local Human = IAge:Union(IName)
         Human:Lock()
 
 
