@@ -28,6 +28,11 @@ do
 
     assert(Set("a", "b", "a", "a"):Serialize() == Set("a", "b"):Serialize())
     assert(Set("a", "b", "c"):SupersetOf(Set("a", "b", "a", "a")))
+
+    assert(Set("a", "b", "c"):SupersetOf(Tuple(Set("a", "b", "a", "a"))))
+    assert(Tuple(Set("a", "b", "c")):SupersetOf(Tuple(Set("a", "b", "a", "a"))))
+    assert(Tuple(Set("a", "b", "c")):SupersetOf(Set("a", "b", "a", "a")))
+
     assert(Set("c", "d"):SupersetOf(Set("c", "d")))
     assert(Set("c", "d"):SupersetOf(Set("c", "d")))
     assert(Set("a"):SupersetOf(Set(Set("a")))) -- should be false?
