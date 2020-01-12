@@ -902,6 +902,8 @@ do
     Set.Type = "set"
     Set.__index = Set
 
+    local sort = function(a, b) return a < b end
+
     function Set:GetSignature()
         local s = {}
 
@@ -909,7 +911,7 @@ do
             table.insert(s, types.GetSignature(v))
         end
 
-        table.sort(s, function(a, b) return a < b end)
+        table.sort(s, sort)
 
         return table.concat(s, "|")
     end

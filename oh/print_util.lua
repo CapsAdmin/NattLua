@@ -163,17 +163,21 @@ do
 		return first_line_pos + 1, #code, line-1
 	end
 
-	function oh.FormatMessage(msg, ...)
-		local args = {...}
-		msg = msg:gsub("$(%d)", function(num)
+	do
+		local args
+		local fmt = function(num)
 			num = tonumber(num)
 			if type(args[num]) == "table" then
 				return oh.QuoteTokens(args[num])
 			end
 			return oh.QuoteToken(args[num] or "?")
-		end)
+		end
+		function oh.FormatMessage(msg, ...)
+			args = {...}
+			msg = msg:gsub("$(%d)", fmt)
 
-		return msg
+			return msg
+		end
 	end
 
 	local function clamp(num, min, max) return math.min(math.max(num, min), max) end
