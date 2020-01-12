@@ -68,12 +68,9 @@ do -- types
                     self.calling_function = obj
                 end
 
-                local ret
-
                 local return_tuple = self:Assert(obj.node, obj:Call(arguments))
 
-                do
-                    self:PushScope(obj.node)
+                self:PushScope(obj.node)
 
                     if obj.node.self_call then
                         self:SetUpvalue("self", arguments.data[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
@@ -93,26 +90,25 @@ do -- types
                         end
                     end
 
-                    ret = {}
+                    local ret = {}
 
                     -- crawl and collect return values from function statements
                     self:AnalyzeStatements(obj.node.statements, ret)
 
-                    self:PopScope()
-                end
+                self:PopScope()
 
                 local ret_tuple = types.Tuple:new(ret)
 
                 -- if this function has an explicit return type
                 if obj.node.return_types then
                     if not ret_tuple:SupersetOf(return_tuple) then
-                        self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(types.Tuple:new(ret)))
+                        self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(ret_tuple))
                     end
                 else
-                    types.MergeFunctionReturns(obj, ret_tuple)
+                    obj:GetReturnTypes():Merge(ret_tuple)
                 end
 
-                types.MergeFunctionArguments(obj, arguments)
+                obj:GetArguments():Merge(arguments)
 
                 for i, v in ipairs(obj:GetArguments().data) do
                     if obj.node.identifiers[i] then
@@ -560,6 +556,8 @@ function META:AnalyzeStatement(statement, ...)
         for _, exp in ipairs(statement.expressions) do
             local left = tbl:Get(exp.left.value)
             local right = self:AnalyzeExpression(exp.right, "typesystem")
+
+            -- function overload shortcut
             if left and left.Type == "object" and left.type == "function" then
                 tbl:Set(exp.left.value, types.Set:new(left, right))
             elseif left and left.Type == "set" then

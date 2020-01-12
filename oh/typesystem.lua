@@ -54,40 +54,6 @@ function types.Union(a, b)
     end
 end
 
-do
-    local function merge_types(src, dst)
-        for i,v in ipairs(dst) do
-            if src[i] and src[i].type ~= "any" then
-                if src[i].volatile then
-                    v.volatile = true -- todo: mutation, copy instead?
-                end
-                src[i] = types.Set:new(src[i], v)
-            else
-                local prev = src[i]
-
-                src[i] = dst[i]
-
-                if prev and prev.volatile then
-                    src[i].volatile = true -- todo: mutation, copy instead?
-                end
-            end
-        end
-
-        return src
-    end
-
-    function types.MergeFunctionArguments(obj, arg)
-        assert(arg.Type == "tuple")
-        obj.data.arg.data = merge_types(obj.data.arg.data, arg.data)
-    end
-
-    function types.MergeFunctionReturns(obj, ret)
-        assert(ret.Type == "tuple")
-        obj.data.ret.data = merge_types(obj.data.ret.data, ret.data)
-    end
-end
-
-
 function types.BinaryOperator(op, l, r, env)
     assert(types.IsTypeObject(l))
     assert(types.IsTypeObject(r))
@@ -806,6 +772,30 @@ do
         end
 
         return table.concat(s, " ")
+    end
+
+    function Tuple:Merge(tup)
+        local src = self.data
+        local dst = tup.data
+
+        for i,v in ipairs(dst) do
+            if src[i] and src[i].type ~= "any" then
+                if src[i].volatile then
+                    v.volatile = true -- todo: mutation, copy instead?
+                end
+                src[i] = types.Set:new(src[i], v)
+            else
+                local prev = src[i]
+
+                src[i] = dst[i]
+
+                if prev and prev.volatile then
+                    src[i].volatile = true -- todo: mutation, copy instead?
+                end
+            end
+        end
+
+        return self
     end
 
     function Tuple:GetMaxLength()
