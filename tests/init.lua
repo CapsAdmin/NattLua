@@ -1,7 +1,7 @@
 
 table.print = require("tests.tprint")
 
-local map --= {}
+local map-- = {}
 
 if map then
     debug.sethook(function(evt)
@@ -58,7 +58,18 @@ local function run()
                     if map[k][i] then
                         f:write("\n")
                     else
-                        f:write(line, "\n")
+                        local test = line:gsub("%s", ""):gsub("%-%-.+", "")
+                        if
+                            test ~= "" and
+                            test ~= "}" and
+                            test ~= "end" and
+                            test ~= "do" and
+                            test ~= "else"
+                        then
+                            f:write(line, "\n")
+                        else
+                            f:write("\n")
+                        end
                     end
                     i = i + 1
                 end

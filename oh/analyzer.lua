@@ -49,8 +49,6 @@ do -- types
     do
         function META:Call(obj, arguments, node, deferred)
             node = node or obj.node
-            local func_expr = obj.node
-            local argument_tuple = types.Tuple:new(unpack(arguments))
 
             -- for deferred calls
             obj.called = true
@@ -60,19 +58,21 @@ do -- types
                 arguments = obj:GetArguments().data
             end
 
-            if func_expr and (func_expr.kind == "function" or func_expr.kind == "local_function") then
-                --lua function
+            --lua function
+            if obj.node and (obj.node.kind == "function" or obj.node.kind == "local_function") then
 
                 do -- recursive guard
                     if self.calling_function == obj then
-                        return obj:GetReturnTypes(argument_tuple) or {self:TypeFromImplicitNode(node, "any")}
+                        return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes().data[1]) or {self:TypeFromImplicitNode(node, "any")}
                     end
                     self.calling_function = obj
                 end
 
+                local argument_tuple = types.Tuple:new(unpack(arguments))
+
                 local ret
 
-                local return_tuple = types.Tuple:new(unpack(self:Assert(func_expr, obj:Call(types.Tuple:new(unpack(arguments))))))
+                local return_tuple = types.Tuple:new(unpack(self:Assert(obj.node, obj:Call(types.Tuple:new(unpack(arguments)))).data))
 
                 do
                     self:PushScope(obj.node)
@@ -106,7 +106,7 @@ do -- types
                 -- if this function has an explicit return type
                 if obj.node.return_types then
                     if not types.Tuple:new(unpack(ret)):SupersetOf(return_tuple) then
-                        self:Error(func_expr, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(types.Tuple:new(unpack(ret))))
+                        self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(types.Tuple:new(unpack(ret))))
                     end
                 else
                     types.MergeFunctionReturns(obj, ret, argument_tuple)
@@ -114,13 +114,13 @@ do -- types
 
                 types.MergeFunctionArguments(obj, arguments, argument_tuple)
 
-                for i, v in ipairs(obj:GetArguments(argument_tuple)) do
+                for i, v in ipairs(obj:GetArguments().data) do
                     if obj.node.identifiers[i] then
                         obj.node.identifiers[i].inferred_type = v
                     end
                 end
 
-                func_expr.inferred_type = obj
+                obj.node.inferred_type = obj
 
                 self:FireEvent("function_spec", obj)
 
@@ -134,36 +134,18 @@ do -- types
                 end
 
                 return ret
-            elseif obj.Type == "object" and obj:IsType("function") then
+            elseif obj.Call then
                 self:FireEvent("external_call", node, obj)
-
-                -- HACKS
-                obj.analyzer = self
-                obj.node = node
 
                 local return_tuple, err = obj:Call(types.Tuple:new(unpack(arguments)))
 
-                if not return_tuple then
-                    self:Error(func_expr, err)
+                if return_tuple == false then
+                    self:Error(obj.node, err)
                 end
 
-                return return_tuple
-            elseif obj.Type == "set" then
-                for _, obj in ipairs(obj.datai) do
-                    self:FireEvent("external_call", node, obj)
-
-                    -- HACKS
-                    obj.analyzer = self
-                    obj.node = node
-
-                    local return_tuple = obj:Call(types.Tuple:new(unpack(arguments)))
-
-                    if return_tuple then
-                        return return_tuple
-                    end
-                end
-                self:Error(node, "cannot call " .. tostring(obj) .. " with arguments " ..  tostring(types.Tuple:new(unpack(arguments))))
+                return return_tuple.data
             end
+
             -- calling something that has no type and does not exist
             -- expressions assumed to be crawled from caller
             return {self:TypeFromImplicitNode(node, "any")}
@@ -394,7 +376,6 @@ function META:AnalyzeStatement(statement, ...)
                             table.insert(values, obj)
                         end
                     end
-
 
                     table.insert(values, obj)
                 end

@@ -506,10 +506,6 @@ do
         self.data = data
         self.structure = {}
 
-        if data and not data[1] and next(data) then
-            assert("bad table for dictionary")
-        end
-
         return self
     end
 
@@ -583,6 +579,10 @@ do
 
 
     function Object:SupersetOf(sub)
+        if sub.Type == "tuple" and sub:GetLength() == 1 then
+            sub = sub.data[1]
+        end
+
         if self.type == "any" or self.volatile then
             return true
         end
@@ -737,7 +737,7 @@ do
 
     function Object:Call(arguments)
         if self.lua_function then
-            _G.self = self.analyzer
+            _G.self = require("oh").current_analyzer
             local res = {pcall(self.lua_function, unpack(arguments.data))}
             _G.self = nil
 
@@ -751,9 +751,8 @@ do
                 res[1] = types.Object:new("nil")
             end
 
-            return res
+            return types.Tuple:new(unpack(res))
         end
-
         if not self.data.arg:SupersetOf(arguments) then
             return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(arguments)
         end
@@ -816,6 +815,9 @@ do
     end
 
     function Tuple:SupersetOf(sub)
+        if self:GetLength() == 1 then
+            return self.data[1]:SupersetOf(sub)
+        end
 
         if sub.Type == "dictionary" then
             local hm = {}
@@ -875,7 +877,7 @@ do
             s[i] = tostring(v)
         end
 
-        return "(" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or self.max and self.max.data or "") .. ")"
+        return "(" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or (self.max and ("#" .. self.max)) or "") .. ")"
     end
 
     function Tuple:Serialize()
@@ -928,12 +930,21 @@ do
     end
 
     function Set:Call(arguments)
-        for _, obj in pairs(self.datai) do
+        local out = types.Set:new()
+
+        for _, obj in ipairs(self.datai) do
+            if not obj.Call then
+                return false, "set contains uncallable object " .. tostring(obj)
+            end
+
             local return_tuple = obj:Call(arguments)
+
             if return_tuple then
-                return return_tuple
+                out:AddElement(return_tuple)
             end
         end
+
+        return types.Tuple:new(out)
     end
 
     function Set:__tostring()
@@ -1012,6 +1023,10 @@ do
     end
 
     function Set:SupersetOf(sub)
+        if sub.Type == "tuple" and sub:GetLength() == 1 then
+            sub = sub.data[1]
+        end
+
         if sub.Type == "object" then
             return self:Get(sub) ~= nil
         end

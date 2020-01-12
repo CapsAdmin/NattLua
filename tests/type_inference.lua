@@ -450,25 +450,11 @@ a.b.c = 1
     type_assert(b, _ as number)
 ]],C[[
     type Array = function(T, L)
-        return types.Create("list", T.name, L.value or L.data)
+        return types.Create("list", T.name, L.data)
     end
 
     type Exclude = function(T, U)
-
-        -- old typesystem
-        if T.types then
-            for i,v in ipairs(T.types) do
-                if v:IsType(U) and v.value == U.value then
-                    table.remove(T.types, i)
-                end
-            end
-        end
-
-        -- new typesystem
-        if T.data then
-            T:RemoveElement(U)
-        end
-
+        T:RemoveElement(U)
         return T
     end
 
