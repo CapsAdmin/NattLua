@@ -3,6 +3,15 @@ local syntax = require("oh.syntax")
 local types = {}
 types.newsystem = true
 
+function types.Cast(val)
+    if type(val) == "string" then
+        return types.Object:new("string", val, true)
+    elseif type(val) == "number" then
+        return types.Object:new("number", val, true)
+    end
+    return val
+end
+
 function types.GetSignature(obj)
     if type(obj) == "table" and obj.GetSignature then
         return obj:GetSignature()
@@ -388,18 +397,9 @@ do
         self.locked = b
     end
 
-    function Dictionary:Cast(val)
-        if type(val) == "string" then
-            return types.Object:new("string", val, true)
-        elseif type(val) == "number" then
-            return types.Object:new("number", val, true)
-        end
-        return val
-    end
-
     function Dictionary:Set(key, val, env)
-        key = self:Cast(key)
-        val = self:Cast(val)
+        key = types.Cast(key)
+        val = types.Cast(val)
 
         local data = self.data
 
@@ -431,7 +431,7 @@ do
     end
 
     function Dictionary:Get(key, env)
-        key = self:Cast(key)
+        key = types.Cast(key)
 
         local keyval = self:GetKeyVal(key, env)
 
@@ -981,18 +981,8 @@ do
         end
     end
 
-
-    function Set:Cast(val)
-        if type(val) == "string" then
-            return types.Object:new("string", val, true)
-        elseif type(val) == "number" then
-            return types.Object:new("number", val, true)
-        end
-        return val
-    end
-
     function Set:Get(key, from_dictionary)
-        key = self:Cast(key)
+        key = types.Cast(key)
 
         if from_dictionary then
             for _, obj in ipairs(self.datai) do
