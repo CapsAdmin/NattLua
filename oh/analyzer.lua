@@ -101,12 +101,12 @@ do -- types
                     self:PopScope()
                 end
 
-                local ret_tuple = types.Tuple:new(unpack(ret))
+                local ret_tuple = types.Tuple:new(ret)
 
                 -- if this function has an explicit return type
                 if obj.node.return_types then
                     if not ret_tuple:SupersetOf(return_tuple) then
-                        self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(types.Tuple:new(unpack(ret))))
+                        self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(types.Tuple:new(ret)))
                     end
                 else
                     types.MergeFunctionReturns(obj, ret_tuple)
@@ -524,9 +524,11 @@ function META:AnalyzeStatement(statement, ...)
         self:PushScope(statement)
 
         local args = self:AnalyzeExpressions(statement.expressions)
+        local obj = args[1]
 
-        if args[1] then
-            local values = self:Call(args[1], types.Tuple:new(unpack(args, 2)), statement.expressions[1])
+        if obj then
+            table.remove(args, 1)
+            local values = self:Call(obj, types.Tuple:new(args), statement.expressions[1])
 
             for i,v in ipairs(statement.identifiers) do
                 self:SetUpvalue(v, values[i], "runtime")
@@ -784,6 +786,10 @@ do
                         func = load_func(require("oh"), self, types, node)
                     end
 
+
+                    args = types.Tuple:new(args)
+                    rets = types.Tuple:new(rets)
+
                     stack:Push(self:TypeFromImplicitNode(node, "function", rets, args, func))
                 elseif node.kind == "postfix_call" then
                     local obj = stack:Pop()
@@ -798,7 +804,7 @@ do
                     if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
                         self:Error(node, tostring(obj) .. " cannot be called")
                     else
-                        stack:Push(self:Call(obj, types.Tuple:new(unpack(arguments)), node))
+                        stack:Push(self:Call(obj, types.Tuple:new(arguments), node))
                     end
                 elseif node.kind == "type_list" then
                     local tbl = {}
@@ -868,6 +874,7 @@ do
                 end
             end
 
+
             local ret = {}
 
             if node.return_types then
@@ -878,8 +885,12 @@ do
                 --ret[1] = self:TypeFromImplicitNode(node, "any")
             end
 
+            args = types.Tuple:new(args)
+            ret = types.Tuple:new(ret)
+
             local obj = self:TypeFromImplicitNode(node, "function", ret, args)
-            self:CallMeLater(obj, types.Tuple:new(unpack(args)), node, true)
+            self:CallMeLater(obj, args, node, true)
+
             return obj
         end
 

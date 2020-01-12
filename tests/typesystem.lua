@@ -19,7 +19,7 @@ do
 
 
     local Set = function(...) return types.Set:new(cast(...)) end
-    local Tuple = function(...) return types.Tuple:new(...) end
+    local Tuple = function(...) return types.Tuple:new({...}) end
 
     local Dictionary = function(...) return types.Dictionary:new(...) end
     local N = function(n) return Object("number", n, true) end

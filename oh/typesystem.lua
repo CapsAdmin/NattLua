@@ -747,13 +747,13 @@ do
                 return false, res[2]
             end
 
-            table.remove(res, 1)
-
-            if not res[1] then
-                res[1] = types.Object:new("nil")
+            if not res[2] then
+                res[2] = types.Object:new("nil")
             end
 
-            return types.Tuple:new(unpack(res))
+            table.remove(res, 1)
+
+            return types.Tuple:new(res)
         end
         if not self.data.arg:SupersetOf(arguments) then
             return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(arguments)
@@ -899,13 +899,14 @@ do
         return self.data[1] and self.data[1]:IsTruthy()
     end
 
-    function Tuple:new(...)
+    function Tuple:new(tbl)
         local self = setmetatable({}, self)
-
-        self.data = {...}
+        self.data = tbl or {}
 
         for i,v in ipairs(self.data) do
-            assert(types.IsTypeObject(v))
+            if not types.IsTypeObject(v) then
+                error(tostring(v) .. " is not a type object")
+            end
         end
 
         return self
@@ -946,7 +947,7 @@ do
             end
         end
 
-        return types.Tuple:new(out)
+        return types.Tuple:new({out})
     end
 
     function Set:__tostring()
@@ -1148,23 +1149,26 @@ function types.Create(type, ...)
         return types.Object:new("boolean", ...)
     elseif type == "..." then
         local values = ... or {}
-        return types.Tuple:new(unpack(values))
+        return types.Tuple:new(values)
     elseif type == "number" then
         return types.Object:new(type, ...)
     elseif type == "string" then
         return types.Object:new(type, ...)
     elseif type == "function" then
         local returns, arguments, lua_function = ...
+        assert(returns.Type == "tuple")
+        assert(arguments.Type == "tuple")
+
         local obj = types.Object:new(type, {
-            arg = types.Tuple:new(unpack(arguments)),
-            ret = types.Tuple:new(unpack(returns)),
+            arg = arguments,
+            ret = returns,
         })
         obj.lua_function = lua_function
 
         return obj
     elseif type == "list" then
         local values, len = ...
-        local tup = types.Tuple:new(unpack(values or {}))
+        local tup = types.Tuple:new(values)
         if len then
             tup.max = len
         end
