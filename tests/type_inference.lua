@@ -450,7 +450,7 @@ a.b.c = 1
     type_assert(b, _ as number)
 ]],C[[
     type Array = function(T, L)
-        return types.Create("list", T.name, L.data)
+        return types.Create("list", {values = T.name, length = L.data})
     end
 
     type Exclude = function(T, U)
@@ -604,7 +604,7 @@ a.b.c = 1
     type b = function()
         _G.LOL = nil
         local t = analyzer:GetValue("a", "typesystem")
-        local func = t.func or t.lua_function
+        local func = t.data.lua_function
         func()
         if not _G.LOL then
             error("test fail")
@@ -877,12 +877,11 @@ a.b.c = 1
 
     local type check = function(func)
         local a = func.data.arg.data[1]
-        local b = types.Set:new(
+        local b = types.Set:new({
             types.Object:new("number", 1, true),
             types.Object:new("boolean", false, true),
-            types.Object:new("boolean", true, true
-            )
-        )
+            types.Object:new("boolean", true, true)
+        })
 
         assert(b:SupersetOf(a))
     end

@@ -859,7 +859,7 @@ type table.insert = function(tbl, ...)
 			values[i] = keyval.val
 		end
 
-		local list = types.Create("list", values)
+		local list = types.Create("list", {values = values})
 
 		for k,v in pairs(tbl) do
 			tbl[k] = nil

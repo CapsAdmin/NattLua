@@ -6,10 +6,11 @@ META.__index = META
 local table_insert = table.insert
 
 do -- types
-    function META:TypeFromImplicitNode(node, name, ...)
+    function META:TypeFromImplicitNode(node, name, data, const)
         node.scope = self.scope -- move this out of here
 
-        local obj = types.Create(name, ...)
+        local obj = types.Create(name, data, const)
+
         if not obj then error("NYI: " .. name) end
 
         if name == "string" then
@@ -563,7 +564,7 @@ function META:AnalyzeStatement(statement)
 
             -- function overload shortcut
             if left and left.Type == "object" and left.type == "function" then
-                tbl:Set(exp.left.value, types.Set:new(left, right))
+                tbl:Set(exp.left.value, types.Set:new({left, right}))
             elseif left and left.Type == "set" then
                 left:AddElement(right)
             else
@@ -792,7 +793,11 @@ do
                     args = types.Tuple:new(args)
                     rets = types.Tuple:new(rets)
 
-                    stack:Push(self:TypeFromImplicitNode(node, "function", rets, args, func))
+                    stack:Push(self:TypeFromImplicitNode(node, "function", {
+                        arg = args,
+                        ret = rets,
+                        lua_function = func
+                    }))
                 elseif node.kind == "postfix_call" then
                     local obj = stack:Pop()
 
@@ -818,7 +823,7 @@ do
                     end
 
                     -- number[3] << tbl only contains {3}.. hmm
-                    stack:Push(self:TypeFromImplicitNode(node, "list", nil, unpack(tbl)))
+                    stack:Push(self:TypeFromImplicitNode(node, "list", {length = nil, values = tbl}))
                 elseif node.kind == "type_table" then
                     local obj = self:TypeFromImplicitNode(node, "table")
 
@@ -890,7 +895,11 @@ do
             args = types.Tuple:new(args)
             ret = types.Tuple:new(ret)
 
-            local obj = self:TypeFromImplicitNode(node, "function", ret, args)
+            local obj = self:TypeFromImplicitNode(node, "function", {
+                arg = args,
+                ret = ret,
+            })
+
             self:CallMeLater(obj, args, node, true)
 
             return obj

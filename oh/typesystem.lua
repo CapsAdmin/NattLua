@@ -38,7 +38,7 @@ function types.BinaryOperator(op, l, r, env)
 
     if env == "typesystem" then
         if op == "|" then
-            return types.Set:new(l, r)
+            return types.Set:new({l, r})
         end
 
         if op == "extends" then
@@ -73,7 +73,7 @@ function types.BinaryOperator(op, l, r, env)
             return l
         end
 
-        return types.Set:new(l,r)
+        return types.Set:new({l,r})
     end
 
     if op == "and" then
@@ -463,8 +463,14 @@ do
     function Dictionary:new(data)
         local self = setmetatable({}, self)
 
-        self.data = data
+        self.data = {}
         self.structure = {}
+
+        if data then
+            for _, v in ipairs(data) do
+                self:Set(v.key, v.val)
+            end
+        end
 
         return self
     end
@@ -696,9 +702,9 @@ do
     end
 
     function Object:Call(arguments)
-        if self.lua_function then
+        if self.type == "function" and self.data.lua_function then
             _G.self = require("oh").current_analyzer
-            local res = {pcall(self.lua_function, unpack(arguments.data))}
+            local res = {pcall(self.data.lua_function, unpack(arguments.data))}
             _G.self = nil
 
             if not res[1] then
@@ -775,7 +781,7 @@ do
                 if src[i].volatile then
                     v.volatile = true -- todo: mutation, copy instead?
                 end
-                src[i] = types.Set:new(src[i], v)
+                src[i] = types.Set:new({src[i], v})
             else
                 local prev = src[i]
 
@@ -1100,14 +1106,16 @@ do
         return false
     end
 
-    function Set:new(...)
+    function Set:new(values)
         local self = setmetatable({}, Set)
 
         self.data = {}
         self.datai = {}
 
-        for _, v in ipairs({...}) do
-            self:AddElement(v)
+        if values then
+            for _, v in ipairs(values) do
+                self:AddElement(v)
+            end
         end
 
         return self
@@ -1116,46 +1124,21 @@ do
     types.Set = Set
 end
 
-function types.Create(type, ...)
-    if type == "nil" then
-        return types.Object:new(type)
-    elseif type == "any" then
-        return types.Object:new(type)
-    elseif type == "table" then
-        local dict = types.Dictionary:new({})
-        if ... then
-            for _, v in ipairs(...) do
-                dict:Set(v.key, v.val)
-            end
-        end
-        return dict
-    elseif type == "boolean" then
-        return types.Object:new("boolean", ...)
+function types.Create(type, data, const)
+    if type == "table" then
+        return types.Dictionary:new(data)
     elseif type == "..." then
-        local values = ... or {}
-        return types.Tuple:new(values)
-    elseif type == "number" then
-        return types.Object:new(type, ...)
-    elseif type == "string" then
-        return types.Object:new(type, ...)
-    elseif type == "function" then
-        local returns, arguments, lua_function = ...
-        assert(returns.Type == "tuple")
-        assert(arguments.Type == "tuple")
-
-        local obj = types.Object:new(type, {
-            arg = arguments,
-            ret = returns,
-        })
-        obj.lua_function = lua_function
-
-        return obj
+        return types.Tuple:new(data)
+    elseif type == "number" or type == "string" or type == "function" or type == "boolean" then
+        return types.Object:new(type, data, const)
+    elseif type == "nil" then
+        return types.Object:new(type, const)
+    elseif type == "any" then
+        return types.Object:new(type, const)
     elseif type == "list" then
-        local values, len = ...
-        local tup = types.Tuple:new(values)
-        if len then
-            tup.max = len
-        end
+        data = data or {}
+        local tup = types.Tuple:new(data.values)
+        tup.max = data.length
         return tup
     end
     error("NYI " .. type)
