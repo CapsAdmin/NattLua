@@ -1,7 +1,6 @@
 local syntax = require("oh.syntax")
 
 local types = {}
-types.newsystem = true
 
 function types.Cast(val)
     if type(val) == "string" then
