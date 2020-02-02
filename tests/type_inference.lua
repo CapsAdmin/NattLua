@@ -20,6 +20,9 @@ local function R(code_data, expect_error)
 end
 
 R(C[[
+    type a = 1 or 2
+
+    type_assert(1 or 2, 1)
     type_assert(-1, -1)
     type_assert(#{1,2,3}, 3)
 

@@ -35,6 +35,10 @@ function types.BinaryOperator(op, l, r, env)
     assert(types.IsTypeObject(l))
     assert(types.IsTypeObject(r))
 
+    if l[op] and r[op] then
+        return l[op](l, r, env)
+    end
+
     if env == "typesystem" then
         if op == "|" then
             return types.Set:new({l, r})
@@ -44,109 +48,10 @@ function types.BinaryOperator(op, l, r, env)
             return l:Extend(r)
         end
 
-        if op == "and" then
-            return r and l
-        end
-
-        if op == "or" then
-            return r or l
-        end
-
-        if r == false or r == nil then
-            return false
-        end
-
         if op == ".." then
             local new = l:Copy()
             new.max = r
             return new
-        end
-    end
-
-    if op == "or" then
-        if r.data ~= nil then
-            return r
-        end
-
-        if l.data ~= nil then
-            return l
-        end
-
-        return types.Set:new({l,r})
-    end
-
-    if op == "and" then
-        if l.data ~= nil and r.data ~= nil then
-            if l.data and r.data then
-                return r
-            end
-        end
-        return types.Object:new("boolean", false, true)
-    end
-
-    if op == "==" then
-        if l.Type == "object" and r.Type == "object" then
-            if l.max and l.max.data then
-                return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data, true)
-            end
-
-            if r.max and r.max.data then
-                return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
-            end
-        end
-
-        if l.data ~= nil and r.data ~= nil then
-            return types.Object:new("boolean", l.data == r.data)
-        end
-
-        return types.Object:new("boolean")
-    end
-
-    if op == ">" then
-        if l.data ~= nil and r.data ~= nil then
-            return types.Object:new("boolean", r.data > l.data)
-        end
-
-        return types.Object:new("boolean")
-    end
-
-    if op == "<" then
-        if l.data ~= nil and r.data ~= nil then
-            return types.Object:new("boolean", r.data < l.data)
-        end
-
-        return types.Object:new("boolean")
-    end
-
-    if op == "<=" then
-        if l.data ~= nil and r.data ~= nil then
-            return types.Object:new("boolean", r.data <= l.data)
-        end
-
-        return types.Object:new("boolean")
-    end
-
-    if op == ">=" then
-        if l.data ~= nil and r.data ~= nil then
-            return types.Object:new("boolean", r.data >= l.data)
-        end
-
-        return types.Object:new("boolean")
-    end
-
-
-    if op == "%" then
-        if l.data ~= nil and r.data ~= nil then
-            return types.Object:new("number", r.data % l.data)
-        end
-        local t = types.Object:new("number", 0)
-        t.max = l:Copy()
-        return t
-    end
-
-    if op == ".." then
-        if l.data ~= nil and r.data ~= nil then
-            return types.Object:new("string", r.data .. l.data)
         end
     end
 
@@ -178,17 +83,8 @@ function types.BinaryOperator(op, l, r, env)
         end
     end
 
-    -- todo
     if l.type == r.type then
         return types.Object:new(l.type)
-    end
-
-    if op == "or" then
-        if l.data then
-            return l
-        end
-
-        return r
     end
 
     error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
@@ -209,6 +105,64 @@ function types.Index(obj, key)
     end
 
     return obj:Get(key)
+end
+
+do
+    local Base = {}
+
+    Base["or"] = function(l, r, env)
+        if r.data ~= nil and r.data ~= false then
+            return r
+        end
+
+        if l.data ~= nil and r.data ~= false then
+            return l
+        end
+
+        return types.Set:new({l,r})
+    end
+
+    Base["not"] = function(l, r, env)
+        if r.data ~= nil and r.data ~= false then
+            return r
+        end
+
+        if l.data ~= nil and r.data ~= false then
+            return l
+        end
+
+        return types.Set:new({l,r})
+    end
+
+    Base["and"] = function(l,r,env)
+        if l.data ~= nil and r.data ~= nil then
+            if l.data and r.data then
+                return r
+            end
+        end
+
+        return types.Object:new("boolean", false, true)
+    end
+
+    Base["=="] = function(l,r,env)
+        do -- number specific
+            if l.max and l.max.data then
+                return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data, true)
+            end
+
+            if r.max and r.max.data then
+                return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
+            end
+        end
+
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("boolean", l.data == r.data)
+        end
+
+        return types.Object:new("boolean")
+    end
+
+    types.BaseObject = Base
 end
 
 do
@@ -474,15 +428,45 @@ do
         return self
     end
 
+    for k,v in pairs(types.BaseObject) do Dictionary[k] = v end
     types.Dictionary = Dictionary
-
-
 end
 
 do
     local Object = {}
     Object.Type = "object"
     Object.__index = Object
+
+    Object["%"] = function(l, r, env)
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("number", r.data % l.data)
+        end
+        local t = types.Object:new("number", 0)
+        t.max = l:Copy()
+        return t
+    end
+
+    Object[".."] = function(l, r, env)
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("string", r.data .. l.data)
+        end
+    end
+
+    local function generic(op)
+        Object[op] = loadstring([[local types = ...; return function(l,r,env)
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("boolean", r.data ]]..op..[[ l.data)
+            end
+
+            return types.Object:new("boolean")
+        end]])(types)
+    end
+
+    generic(">")
+    generic("<")
+    generic(">=")
+    generic("<=")
+
 
     function Object:GetSignature()
         if self.type == "function" then
@@ -505,14 +489,6 @@ do
     end
 
     function Object:GetLength()
-        if type(self.data) == "table" then
-            if self.data.GetLength then
-                return self.data:GetLength()
-            end
-
-            return #self.data
-        end
-
         return 0
     end
 
@@ -540,8 +516,6 @@ do
     function Object:GetReturnTypes()
         return self.data.ret
     end
-
-
 
     function Object:SupersetOf(sub)
         if sub.Type == "tuple" and sub:GetLength() == 1 then
@@ -572,21 +546,6 @@ do
                     if self.type == "number" and sub.type == "number" and self.max then
                         if sub.data > self.data and sub.data < self.max.data then
                             return true
-                        end
-                    end
-
-                    if self.type == "number" and sub.type == "number" and self.type == "list" and self.data and self.data.Type == "tuple" then
-                        local min = self:Get(1).data
-                        local max = self:Get(2).data
-
-                        if sub.data and sub.data.Type == "tuple" then
-                            if sub:Get(1) >= min and sub:Get(2) <= max then
-                                return true
-                            end
-                        else
-                            if sub.data >= min and sub.data <= max then
-                                return true
-                            end
                         end
                     end
                 end
@@ -753,6 +712,7 @@ do
         return self
     end
 
+    for k,v in pairs(types.BaseObject) do Object[k] = v end
     types.Object = Object
 end
 
@@ -899,6 +859,7 @@ do
         return self
     end
 
+    for k,v in pairs(types.BaseObject) do Tuple[k] = v end
     types.Tuple = Tuple
 end
 
@@ -1120,6 +1081,7 @@ do
         return self
     end
 
+    for k,v in pairs(types.BaseObject) do Set[k] = v end
     types.Set = Set
 end
 
