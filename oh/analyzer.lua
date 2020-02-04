@@ -285,6 +285,13 @@ do
             self:FireEvent("newindex", obj, key, val, env)
         end
     end
+
+    function META:SetObjectKeyValue(obj, key, val, env) 
+        assert(val == nil or types.IsTypeObject(val))
+
+        self:Assert(key.node, types.NewIndex(obj, key, val, env))
+        self:FireEvent("newindex", obj, key, val, env)
+    end
 end
 
 function META:FireEvent(what, ...)
@@ -322,6 +329,7 @@ local utl = require("oh.pri".."nt_util")
 function META:Error(node, msg)
     if not node then
         io.write("invalid error, no node supplied\n")
+        print(debug.traceback())
         error(msg)
     end
 
@@ -364,9 +372,95 @@ function META:AnalyzeStatement(statement)
         return ret
     elseif statement.kind == "assignment" or statement.kind == "local_assignment" then
         local env = statement.environment or "runtime"
+        local assignments = {}
+
+        for i, exp_key in ipairs(statement.left) do
+            if statement.kind == "local_assignment" then
+                assignments[i] = {
+                    key = exp_key,
+                    env = env,
+                }
+            elseif statement.kind == "assignment" then
+                if type(exp_key) == "string" or exp_key.kind == "value" then
+                    assignments[i] = {
+                        key = exp_key,
+                        env = env,
+                    }
+                else
+                    local obj = self:AnalyzeExpression(exp_key.left, env)
+                    local key = exp_key.kind == "postfix_expression_index" and self:AnalyzeExpression(exp_key.expression, env) or self:AnalyzeExpression(exp_key.right, env)
+        
+                    assignments[i] = {
+                        obj = obj,
+                        key = key,
+                    }
+                end
+            end
+        end
 
         local values = {}
+       
+        if statement.right then
+            for _, exp in ipairs(statement.right) do
+                for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
 
+                    -- unpack
+                    if obj.Type == "tuple" then -- vararg
+                        for _, obj in ipairs(obj.data) do
+                            table.insert(values, obj)
+                        end
+                    end
+
+                    table.insert(values, obj)
+                end
+            end
+        end
+
+        for i, exp_key in ipairs(statement.left) do
+            local val = values[i] or self:TypeFromImplicitNode(exp_key, "nil")
+
+            local key = assignments[i].key
+            local obj = assignments[i].obj
+
+
+            -- if there's a type expression override the right value
+            if exp_key.type_expression then
+                local left = self:AnalyzeExpression(exp_key.type_expression, "typesystem")
+
+                if statement.right and statement.right[i] then
+                    if not val:SupersetOf(left) then
+                        self:Error(val.node, "expected " .. tostring(left) .. " but the right hand side is " .. tostring(right))
+                    end
+
+                    -- local a: 1 = 1
+                    -- should turn the right side into a constant number rather than number(1)
+                    val.const = left:IsConst()
+                end
+
+                -- lock the dictionary if there's an explicit type annotation
+                if left.Type == "dictionary" then
+                    left.locked = true
+                end
+
+                val = left
+            else
+                val.const = false
+            end
+
+            exp_key.inferred_type = val
+
+            if statement.kind == "local_assignment" then
+                self:SetUpvalue(key, val, env)
+            elseif statement.kind == "assignment" then
+                if type(exp_key) == "string" or exp_key.kind == "value" then
+                    self:SetValue(key, val, env)
+                else
+                    self:Assert(exp_key, types.NewIndex(obj, key, val, env))
+                    self:FireEvent("newindex", obj, key, val, env)
+                end
+            end
+        end
+--[[
         if statement.right then
             for _, exp in ipairs(statement.right) do
                 for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
@@ -409,13 +503,16 @@ function META:AnalyzeStatement(statement)
             end
 
             if statement.kind == "local_assignment" then
-                self:SetUpvalue(node, left, env)
+                self:SetUpvalue(node, left or self:TypeFromImplicitNode(node, "nil"), env)
             elseif statement.kind == "assignment" then
-                self:SetValue(node, left, env)
+                self:SetValue(node, left or self:TypeFromImplicitNode(node, "nil"), env)
             end
 
             node.inferred_type = left
         end
+
+]]
+    
     elseif statement.kind == "destructure_assignment" or statement.kind == "local_destructure_assignment" then
         local env = statement.environment or "runtime"
         local obj = self:AnalyzeExpression(statement.right, env)

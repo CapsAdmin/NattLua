@@ -58,7 +58,7 @@ function types.BinaryOperator(op, l, r, env)
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
 
         if l.type ~= r.type then
-            return false, "no operator for " .. tostring(r.type or r) .. " " .. op .. " " .. tostring(l.type or l)
+            return false, "no operator for " .. tostring(l.type or l) .. " " .. op .. " " .. tostring(r.type or r)
         end
 
         local lval = l.data
@@ -107,61 +107,110 @@ function types.Index(obj, key)
     return obj:Get(key)
 end
 
+function types.IsTruthy(obj)
+    if obj.Type == "object" then
+        if obj.type == "nil" then
+            return false
+        end
+
+        if obj.type == "boolean" then
+            if obj.data == false then
+                return false
+            end
+
+            if obj.data == nil then
+                return true
+            end
+        end
+    end
+
+    return true
+end
+
+function types.IsFalsy(obj)
+    if obj.Type == "object" then
+        if obj.type == "nil" then
+            return true
+        end
+
+        if obj.type == "boolean" and obj.data == false or obj.data == nil then
+            return true
+        end
+    end
+end
+
+function types.HasData(obj)
+    return obj.data ~= nil and obj.type ~= "nil"
+end
+
 do
     local Base = {}
 
     Base["or"] = function(l, r, env)
-        if (l.type == "boolean" and l.data == false) and r.type == "nil" then
-            return r
+
+        if types.IsTruthy(l) and types.IsFalsy(l) then
+            return types.Set:new({l,r})
         end
 
-        if r.data ~= nil and r.data ~= false then
-            return r
+        if types.IsTruthy(r) and types.IsFalsy(r) then
+            return types.Set:new({l,r})
         end
 
-        if l.data ~= nil and r.data ~= false then
+        -- when true, or returns its first argument
+        if types.IsTruthy(l) then
             return l
         end
 
-        return types.Set:new({l,r})
+        if types.IsTruthy(r) then
+            return r
+        end
+
+        return r
     end
 
     Base["not"] = function(l, r, env)
-        if r.data ~= nil and r.data ~= false then
-            return r
+        if types.IsTruthy(l) then
+            if types.IsFalsy(l) then
+                return Object:new("boolean")
+            end
+
+            return Object:new("boolean", false, true)
         end
 
-        if l.data ~= nil and r.data ~= false then
-            return l
-        end
-
-        return types.Set:new({l,r})
+        return Object:new("boolean", true, true)
     end
 
     Base["and"] = function(l,r,env)
-        if l.type == "nil" then
-            return l
-        end
-
-        if l.type == "boolean" and l.data == false then
-            return l
-        end
-
-        if r.type == "nil" then
+        
+        if types.IsTruthy(l) and types.IsFalsy(r) then
+            if types.IsFalsy(l) or types.IsTruthy(r) then
+                return types.Set:new({l,r})
+            end
+            
             return r
         end
 
-        if l.data ~= nil and r.data ~= nil then
-            if l.data then
-                return l
+        if types.IsFalsy(l) and types.IsTruthy(r) then
+            if types.IsTruthy(l) or types.IsFalsy(r) then
+                return types.Set:new({l,r})
             end
-
-            if r.data then
-                return r
-            end
+            
+            return l
         end
 
-        return types.Object:new("boolean", false, true)
+        if types.IsTruthy(l) and types.IsTruthy(r) then
+            if types.IsFalsy(l) and types.IsFalsy(r) then
+                return types.Set:new({l,r})
+            end
+            
+            return r
+        else
+            if types.IsTruthy(l) and types.IsTruthy(r) then
+                return types.Set:new({l,r})
+            end
+
+            return l
+        end
     end
 
     Base["=="] = function(l,r,env)
@@ -315,6 +364,10 @@ do
     function Dictionary:Set(key, val, env)
         key = types.Cast(key)
         val = types.Cast(val)
+
+        if key.type == "nil" then
+            return false, "key is nil"
+        end
 
         local data = self.data
 
@@ -475,7 +528,6 @@ do
 
     Object["/"] = function(l, r, env)
         if l.data ~= nil and r.data ~= nil then
-            print(r,l)
             return types.Object:new("number", l.data / r.data)
         end
     end
@@ -853,6 +905,7 @@ do
 
     function Tuple:Set(key, val)
         self.data[key] =  val
+        return true
     end
 
     function Tuple:__tostring()
@@ -956,6 +1009,7 @@ do
             for _, e in ipairs(e.datai) do
                 self:AddElement(e)
             end
+
             return self
         end
 
@@ -1008,7 +1062,8 @@ do
     end
 
     function Set:Set(key, val)
-        return self:AddElement(val)
+        self:AddElement(val)
+        return true
     end
 
     function Set:SupersetOf(sub)

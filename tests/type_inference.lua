@@ -1,3 +1,6 @@
+-- R"type_assert((nil as boolean) or 1, (nil as boolean) | 1)"
+
+
 local oh = require("oh")
 local C = oh.Code
 
@@ -21,6 +24,27 @@ local function R(code, expect_error)
 end
 
 if true then -- andor
+    -- when false, or returns its second argument
+    R"type_assert(nil or false, false)"
+    R"type_assert(false or nil, nil)"
+
+    -- when true, or returns its first argument
+    R"type_assert(1 or false, 1)"
+    R"type_assert(true or nil, true)"
+
+    R"type_assert(nil or {}, {})"
+    
+    -- boolean without any data can be true and false at the same time
+    R"type_assert(nil as boolean or 1, nil as boolean | 1)"
+    
+    -- when false and returns its first argument
+    R"type_assert(false and true, false)"
+    R"type_assert(true and nil, nil)"
+
+    -- when true and returns its second argument
+    -- ????
+    
+    -- smoke test
     R"type_assert(((1 or false) and true) or false, true)"
 
     do --- allcases
@@ -64,10 +88,63 @@ if true then -- andor
     end
 end
 
-if false then -- assignment
+if true then -- assignment
     R[[
         local a
         type_assert(a, nil)
+    ]]
+
+    R[[
+        local a: boolean
+        type_assert(a, _ as boolean)
+    ]]
+
+
+    R[[
+        a = nil
+        -- todo, if any calls don't happen here then it's probably nil?
+        type_assert(a, any)
+    ]]
+
+    R[[
+        local a = {}
+        a[5] = 5
+        type_assert(a[5], 5)
+    ]]
+
+    R[[
+        local a = {}
+
+        local i = 0
+        function test(n) 
+            i = i + 1
+            if i ~= n then
+                if i ~= n then
+                    local test = function(n) TPRINT(n) return n end
+                    a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)                     
+                    type_assert(i, n)
+                end
+            end 
+
+            return n
+        end
+        
+        -- test should be executed in the numeric order
+
+        a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)         
+    ]]
+
+
+    R[[
+        local function test()
+            return 1,2,3
+        end
+        
+        local a,b,c = test()
+
+        type_assert(a,1)
+        type_assert(b,2)
+        type_assert(c,3)
     ]]
 
     R[[
@@ -101,7 +178,9 @@ if false then -- assignment
     R[[
         local a = {}
         local i = 3
+
         i, a[i] = i+1, 20
+
         type_assert(i, 4)
         type_assert(a[3], 20)
     ]]
