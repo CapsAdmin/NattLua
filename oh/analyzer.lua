@@ -741,7 +741,7 @@ do
                     if node.value.value == "." or node.value.value == ":" then
                         stack:Push(self:Assert(left.node, types.Index(left, right)) or self:TypeFromImplicitNode(left.node, "nil"))
                     else
-                        local val, err = types.BinaryOperator(node.value.value, right, left, env)
+                        local val, err = types.BinaryOperator(node.value.value, left, right, env)
                         if not val and not err then
                             print(node:Render(), right, node.value.value, left, env)
                             error("wtf")

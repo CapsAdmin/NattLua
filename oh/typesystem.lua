@@ -111,6 +111,10 @@ do
     local Base = {}
 
     Base["or"] = function(l, r, env)
+        if (l.type == "boolean" and l.data == false) and r.type == "nil" then
+            return r
+        end
+
         if r.data ~= nil and r.data ~= false then
             return r
         end
@@ -135,8 +139,24 @@ do
     end
 
     Base["and"] = function(l,r,env)
+        if l.type == "nil" then
+            return l
+        end
+
+        if l.type == "boolean" and l.data == false then
+            return l
+        end
+
+        if r.type == "nil" then
+            return r
+        end
+
         if l.data ~= nil and r.data ~= nil then
-            if l.data and r.data then
+            if l.data then
+                return l
+            end
+
+            if r.data then
                 return r
             end
         end
@@ -439,14 +459,30 @@ do
 
     Object["%"] = function(l, r, env)
         if l.data ~= nil and r.data ~= nil then
-            return types.Object:new("number", r.data % l.data)
+            return types.Object:new("number", l.data % r.data)
         end
         local t = types.Object:new("number", 0)
         t.max = l:Copy()
         return t
     end
 
-    Object[".."] = function(l, r, env)
+    Object["^"] = function(l, r, env)
+        if l.data ~= nil and r.data ~= nil then
+            return types.Object:new("number", l.data ^ r.data)
+        end
+    end
+
+
+    Object["/"] = function(l, r, env)
+        if l.data ~= nil and r.data ~= nil then
+            print(r,l)
+            return types.Object:new("number", l.data / r.data)
+        end
+    end
+
+
+
+    Object[".."] = function(r, l, env)
         if l.data ~= nil and r.data ~= nil then
             return types.Object:new("string", r.data .. l.data)
         end

@@ -229,8 +229,8 @@ do
     	return em:BuildCode(self.SyntaxTree), em
 	end
 
-	function oh.Code(code, name, config)
-		local info = debug.getinfo(2)
+	function oh.Code(code, name, config, level)
+		local info = debug.getinfo(level or 2)
 
 		local parent_line = info and info.currentline or nil
 		local parent_name = info and info.source:sub(2) or nil
