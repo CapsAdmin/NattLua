@@ -286,7 +286,7 @@ do
         end
     end
 
-    function META:SetObjectKeyValue(obj, key, val, env) 
+    function META:SetObjectKeyValue(obj, key, val, env)
         assert(val == nil or types.IsTypeObject(val))
 
         self:Assert(key.node, types.NewIndex(obj, key, val, env))
@@ -389,7 +389,7 @@ function META:AnalyzeStatement(statement)
                 else
                     local obj = self:AnalyzeExpression(exp_key.left, env)
                     local key = exp_key.kind == "postfix_expression_index" and self:AnalyzeExpression(exp_key.expression, env) or self:AnalyzeExpression(exp_key.right, env)
-        
+
                     assignments[i] = {
                         obj = obj,
                         key = key,
@@ -399,7 +399,7 @@ function META:AnalyzeStatement(statement)
         end
 
         local values = {}
-       
+
         if statement.right then
             for _, exp in ipairs(statement.right) do
                 for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
@@ -512,7 +512,7 @@ function META:AnalyzeStatement(statement)
         end
 
 ]]
-    
+
     elseif statement.kind == "destructure_assignment" or statement.kind == "local_destructure_assignment" then
         local env = statement.environment or "runtime"
         local obj = self:AnalyzeExpression(statement.right, env)

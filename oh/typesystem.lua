@@ -107,61 +107,25 @@ function types.Index(obj, key)
     return obj:Get(key)
 end
 
-function types.IsTruthy(obj)
-    if obj.Type == "object" then
-        if obj.type == "nil" then
-            return false
-        end
-
-        if obj.type == "boolean" then
-            if obj.data == false then
-                return false
-            end
-
-            if obj.data == nil then
-                return true
-            end
-        end
-    end
-
-    return true
-end
-
-function types.IsFalsy(obj)
-    if obj.Type == "object" then
-        if obj.type == "nil" then
-            return true
-        end
-
-        if obj.type == "boolean" and obj.data == false or obj.data == nil then
-            return true
-        end
-    end
-end
-
-function types.HasData(obj)
-    return obj.data ~= nil and obj.type ~= "nil"
-end
-
 do
     local Base = {}
 
     Base["or"] = function(l, r, env)
 
-        if types.IsTruthy(l) and types.IsFalsy(l) then
+        if l:IsTruthy() and l:IsFalsy() then
             return types.Set:new({l,r})
         end
 
-        if types.IsTruthy(r) and types.IsFalsy(r) then
+        if r:IsTruthy() and r:IsFalsy() then
             return types.Set:new({l,r})
         end
 
         -- when true, or returns its first argument
-        if types.IsTruthy(l) then
+        if l:IsTruthy() then
             return l
         end
 
-        if types.IsTruthy(r) then
+        if r:IsTruthy() then
             return r
         end
 
@@ -169,8 +133,8 @@ do
     end
 
     Base["not"] = function(l, r, env)
-        if types.IsTruthy(l) then
-            if types.IsFalsy(l) then
+        if l:IsTruthy() then
+            if l:IsFalsy() then
                 return Object:new("boolean")
             end
 
@@ -181,31 +145,31 @@ do
     end
 
     Base["and"] = function(l,r,env)
-        
-        if types.IsTruthy(l) and types.IsFalsy(r) then
-            if types.IsFalsy(l) or types.IsTruthy(r) then
+
+        if l:IsTruthy() and r:IsFalsy() then
+            if l:IsFalsy() or r:IsTruthy() then
                 return types.Set:new({l,r})
             end
-            
+
             return r
         end
 
-        if types.IsFalsy(l) and types.IsTruthy(r) then
-            if types.IsTruthy(l) or types.IsFalsy(r) then
+        if l:IsFalsy() and r:IsTruthy() then
+            if l:IsTruthy() or r:IsFalsy() then
                 return types.Set:new({l,r})
             end
-            
+
             return l
         end
 
-        if types.IsTruthy(l) and types.IsTruthy(r) then
-            if types.IsFalsy(l) and types.IsFalsy(r) then
+        if l:IsTruthy() and r:IsTruthy() then
+            if l:IsFalsy() and r:IsFalsy() then
                 return types.Set:new({l,r})
             end
-            
+
             return r
         else
-            if types.IsTruthy(l) and types.IsTruthy(r) then
+            if l:IsTruthy() and r:IsTruthy() then
                 return types.Set:new({l,r})
             end
 
@@ -224,8 +188,26 @@ do
             end
         end
 
-        if l.data ~= nil and r.data ~= nil then
+        if (l.data ~= nil or l.type == "nil") and (r.data ~= nil or r.type == "nil") then
             return types.Object:new("boolean", l.data == r.data)
+        end
+
+        return types.Object:new("boolean")
+    end
+
+    Base["~="] = function(l,r,env)
+        do -- number specific
+            if l.max and l.max.data then
+                return types.Object:new("boolean", not (r.data >= l.data and r.data <= l.max.data), true)
+            end
+
+            if r.max and r.max.data then
+                return types.Object:new("boolean", not (l.data >= r.data and l.data <= r.max.data), true)
+            end
+        end
+
+        if (l.data ~= nil or l.type == "nil") and (r.data ~= nil or r.type == "nil") then
+            return types.Object:new("boolean", l.data ~= r.data)
         end
 
         return types.Object:new("boolean")
@@ -472,6 +454,10 @@ do
         return false
     end
 
+    function Dictionary:IsFalsy()
+        return false
+    end
+
     function Dictionary:IsTruthy()
         return true
     end
@@ -484,6 +470,8 @@ do
 
             return types.Create("number", #self.data, true)
         end
+
+        return false, "NYI " .. op
     end
 
     function Dictionary:new(data)
@@ -543,7 +531,7 @@ do
     local function generic(op)
         Object[op] = loadstring([[local types = ...; return function(l,r,env)
             if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("boolean", r.data ]]..op..[[ l.data)
+                return types.Object:new("boolean", l.data ]]..op..[[ r.data)
             end
 
             return types.Object:new("boolean")
@@ -735,8 +723,34 @@ do
         return self
     end
 
+    function Object:IsFalsy()
+        if self.type == "nil" then
+            return true
+        end
+
+        if self.type == "boolean" and self.data == false or self.data == nil then
+            return true
+        end
+
+        return false
+    end
+
     function Object:IsTruthy()
-        return self.type ~= "nil" and self.type ~= "false" and self.data ~= false
+        if self.type == "nil" then
+            return false
+        end
+
+        if self.type == "boolean" then
+            if self.data == false then
+                return false
+            end
+
+            if self.data == nil then
+                return true
+            end
+        end
+
+        return true
     end
 
     function Object:RemoveNonTruthy()
@@ -765,6 +779,7 @@ do
 
             return types.Tuple:new(res)
         end
+
         if not self.data.arg:SupersetOf(arguments) then
             return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(arguments)
         end
@@ -773,6 +788,20 @@ do
     end
 
     function Object:PrefixOperator(op, val)
+        if op == "not" then
+            if self:IsTruthy() and self:IsFalsy() then
+                return types.Object:new("boolean")
+            end
+
+            if self:IsTruthy() then
+                return types.Object:new("boolean", false, true)
+            end
+
+            if self:IsFalsy() then
+                return types.Object:new("boolean", true, true)
+            end
+        end
+
         if syntax.CompiledPrefixOperatorFunctions[op] and val.data ~= nil then
             local ok, res = pcall(syntax.CompiledPrefixOperatorFunctions[op], val.data)
 
@@ -819,6 +848,10 @@ do
         return table.concat(s, " ")
     end
 
+    function Tuple:PrefixOperator(op, env)
+        return self.data[1]:PrefixOperator(op, env)
+    end
+
     function Tuple:Merge(tup)
         local src = self.data
         local dst = tup.data
@@ -832,7 +865,9 @@ do
             else
                 local prev = src[i]
 
-                src[i] = dst[i]
+                if prev and prev.volatile then
+                    src[i] = dst[i]
+                end
 
                 if prev and prev.volatile then
                     src[i].volatile = true -- todo: mutation, copy instead?
@@ -932,7 +967,11 @@ do
     end
 
     function Tuple:IsTruthy()
-        return self.data[1] and self.data[1]:IsTruthy()
+        return true
+    end
+
+    function Tuple:IsFalsy()
+        return false
     end
 
     function Tuple:new(tbl)
@@ -958,6 +997,20 @@ do
     Set.__index = Set
 
     local sort = function(a, b) return a < b end
+
+    function Set:PrefixOperator(op, val, env)
+        local set = {}
+
+        for _, v in ipairs(self.datai) do
+            local val, err = v:PrefixOperator(op, val, env)
+            if not val then
+                return val, err
+            end
+            table.insert(set, val)
+        end
+
+        return Set:new(set)
+    end
 
     function Set:GetSignature()
         local s = {}
@@ -1150,6 +1203,17 @@ do
     function Set:IsTruthy()
         for _, v in ipairs(self.datai) do
             if v:IsTruthy() then
+                return true
+            end
+        end
+
+        return false
+    end
+
+
+    function Set:IsFalsy()
+        for _, v in ipairs(self.datai) do
+            if v:IsFalsy() then
                 return true
             end
         end

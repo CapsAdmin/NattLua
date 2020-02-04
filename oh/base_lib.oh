@@ -600,7 +600,8 @@ type bit32 = {
 	arshift = (function(x: number, disp: number): number),
 	extract = (function(n: number, field: number, width: number): number)    |    (function(n: number, field: number): number),
 	bnot = (function(x: number): number),
-	btest = (function(...): boolean)
+	btest = (function(...): boolean),
+	tobit = (function(...): number)
 }
 type bit = bit32
 type loadfile = (function(filename: string, mode: string, env: table): empty_function|nil, string|nil)    |    (function(filename: string, mode: string): empty_function|nil, string|nil)    |    (function(filename: string): empty_function|nil, string|nil)    |    (function(): empty_function|nil, string|nil)
@@ -780,9 +781,20 @@ type assert = function(obj, err)
 	error(err and err.data or "assertion failed")
 end
 
-type type_assert = function(what: any, type: any, value: any, ...)
+type type_assert = function(what: any, type: any)
+	--if not what:SupersetOf(type) or (what.type == "any" and type.type ~= "any") then
+	if what.type == type.type and what.data == type.data then
+		return
+	end
+
+	if what:Serialize() ~= type:Serialize() then
+		error("expected " .. tostring(type) .." got " .. tostring(what))
+	end
+end
+
+type type_assert_superset = function(what: any, type: any)
 	if not what:SupersetOf(type) or (what.type == "any" and type.type ~= "any") then
-		error("expected type " .. tostring(type) .." got " .. tostring(what))
+		error("expected " .. tostring(type) .." got " .. tostring(what))
 	end
 end
 

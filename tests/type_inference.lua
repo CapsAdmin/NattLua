@@ -23,7 +23,358 @@ local function R(code, expect_error)
     end
 end
 
-if true then -- andor
+-- make sure type_assert works
+R("type_assert(1, 2)", "expected.-2 got 1")
+R("type_assert(nil as 1|2, 1)", "expected.-1")
+
+R"type_assert(not true, false)"
+R"type_assert(not 1, false)"
+R"type_assert(nil==nil, true)"
+
+
+R[[
+    local function test(a,b)
+
+    end
+
+    test(true, true)
+    test(false, false)
+
+    --type_assert(test, _ as (function(a: false|true, b: false|true):))
+]]
+R[[
+    local function test(a: any,b: any)
+
+    end
+
+    test(true, true)
+    test(false, false)
+
+    type_assert(test, _ as (function(a: any, b: any):))
+]]
+
+
+R[[
+    local function lt(x, y)
+        if x < y then return true else return false end
+      end
+
+      local function le(x, y)
+        if x <= y then return true else return false end
+      end
+
+      local function gt(x, y)
+        if x > y then return true else return false end
+      end
+
+      local function ge(x, y)
+        if x >= y then return true else return false end
+      end
+
+      local function eq(x, y)
+        if x == y then return true else return false end
+      end
+
+      local function ne(x, y)
+        if x ~= y then return true else return false end
+      end
+
+
+      local function ltx1(x)
+        if x < 1 then return true else return false end
+      end
+
+      local function lex1(x)
+        if x <= 1 then return true else return false end
+      end
+
+      local function gtx1(x)
+        if x > 1 then return true else return false end
+      end
+
+      local function gex1(x)
+        if x >= 1 then return true else return false end
+      end
+
+      local function eqx1(x)
+        if x == 1 then return true else return false end
+      end
+
+      local function nex1(x)
+        if x ~= 1 then return true else return false end
+      end
+
+
+      local function lt1x(x)
+        if 1 < x then return true else return false end
+      end
+
+      local function le1x(x)
+        if 1 <= x then return true else return false end
+      end
+
+      local function gt1x(x)
+        if 1 > x then return true else return false end
+      end
+
+      local function ge1x(x)
+        if 1 >= x then return true else return false end
+      end
+
+      local function eq1x(x)
+        if 1 == x then return true else return false end
+      end
+
+      local function ne1x(x)
+        if 1 ~= x then return true else return false end
+      end
+
+      do --- 1,2
+        local x,y = 1,2
+
+        type_assert(x<y,	true)
+        type_assert(x<=y,	true)
+        type_assert(x>y,	false)
+        type_assert(x>=y,	false)
+        type_assert(x==y,	false)
+        type_assert(x~=y,	true)
+
+        type_assert(1<y,	true)
+        type_assert(1<=y,	true)
+        type_assert(1>y,	false)
+        type_assert(1>=y,	false)
+        type_assert(1==y,	false)
+        type_assert(1~=y,	true)
+
+        type_assert(x<2,	true)
+        type_assert(x<=2,	true)
+        type_assert(x>2,	false)
+        type_assert(x>=2,	false)
+        type_assert(x==2,	false)
+        type_assert(x~=2,	true)
+
+        type_assert(lt(x,y),	true)
+        type_assert(le(x,y),	true)
+        type_assert(gt(x,y),	false)
+        type_assert(ge(x,y),	false)
+        type_assert(eq(y,x),	false)
+        type_assert(ne(y,x),	true)
+      end
+
+      do --- 2,1
+        local x,y = 2,1
+
+        type_assert(x<y,	false)
+        type_assert(x<=y,	false)
+        type_assert(x>y,	true)
+        type_assert(x>=y,	true)
+        type_assert(x==y,	false)
+        type_assert(x~=y,	true)
+
+        type_assert(2<y,	false)
+        type_assert(2<=y,	false)
+        type_assert(2>y,	true)
+        type_assert(2>=y,	true)
+        type_assert(2==y,	false)
+        type_assert(2~=y,	true)
+
+        type_assert(x<1,	false)
+        type_assert(x<=1,	false)
+        type_assert(x>1,	true)
+        type_assert(x>=1,	true)
+        type_assert(x==1,	false)
+        type_assert(x~=1,	true)
+
+        type_assert(lt(x,y),	false)
+        type_assert(le(x,y),	false)
+        type_assert(gt(x,y),	true)
+        type_assert(ge(x,y),	true)
+        type_assert(eq(y,x),	false)
+        type_assert(ne(y,x),	true)
+      end
+
+      do --- 1,1
+        local x,y = 1,1
+
+        type_assert(x<y,	false)
+        type_assert(x<=y,	true)
+        type_assert(x>y,	false)
+        type_assert(x>=y,	true)
+        type_assert(x==y,	true)
+        type_assert(x~=y,	false)
+
+        type_assert(1<y,	false)
+        type_assert(1<=y,	true)
+        type_assert(1>y,	false)
+        type_assert(1>=y,	true)
+        type_assert(1==y,	true)
+        type_assert(1~=y,	false)
+
+        type_assert(x<1,	false)
+        type_assert(x<=1,	true)
+        type_assert(x>1,	false)
+        type_assert(x>=1,	true)
+        type_assert(x==1,	true)
+        type_assert(x~=1,	false)
+
+        type_assert(lt(x,y),	false)
+        type_assert(le(x,y),	true)
+        type_assert(gt(x,y),	false)
+        type_assert(ge(x,y),	true)
+        type_assert(eq(y,x),	true)
+        type_assert(ne(y,x),	false)
+      end
+
+      do --- 2
+        type_assert(lt1x(2),	true)
+        type_assert(le1x(2),	true)
+        type_assert(gt1x(2),	false)
+        type_assert(ge1x(2),	false)
+        type_assert(eq1x(2),	false)
+        type_assert(ne1x(2),	true)
+
+        type_assert(ltx1(2),	false)
+        type_assert(lex1(2),	false)
+        type_assert(gtx1(2),	true)
+        type_assert(gex1(2),	true)
+        type_assert(eqx1(2),	false)
+        type_assert(nex1(2),	true)
+      end
+
+      do --- 1
+        type_assert(lt1x(1),	false)
+        type_assert(le1x(1),	true)
+        type_assert(gt1x(1),	false)
+        type_assert(ge1x(1),	true)
+        type_assert(eq1x(1),	true)
+        type_assert(ne1x(1),	false)
+
+        type_assert(ltx1(1),	false)
+        type_assert(lex1(1),	true)
+        type_assert(gtx1(1),	false)
+        type_assert(gex1(1),	true)
+        type_assert(eqx1(1),	true)
+        type_assert(nex1(1),	false)
+      end
+
+      do --- 0
+        type_assert(lt1x(0),	false)
+        type_assert(le1x(0),	false)
+        type_assert(gt1x(0),	true)
+        type_assert(ge1x(0),	true)
+        type_assert(eq1x(0),	false)
+        type_assert(ne1x(0),	true)
+
+        type_assert(ltx1(0),	true)
+        type_assert(lex1(0),	true)
+        type_assert(gtx1(0),	false)
+        type_assert(gex1(0),	false)
+        type_assert(eqx1(0),	false)
+        type_assert(nex1(0),	true)
+      end
+
+      do --- pcall
+        assert(not pcall(function()
+          local a, b = 10.5, nil
+          return a < b
+        end))
+      end
+
+      do --- bit +bit
+        for i=1,100 do
+          assert(bit.tobit(i+0x7fffffff) < 0)
+        end
+        for i=1,100 do
+          assert(bit.tobit(i+0x7fffffff) <= 0)
+        end
+      end
+
+      do --- string 1 255
+        local a = "\255\255\255\255"
+        local b = "\1\1\1\1"
+
+        assert(a > b)
+        assert(a > b)
+        assert(a >= b)
+        assert(b <= a)
+      end
+
+      do --- String comparisons:
+        local function str_cmp(a, b, lt, gt, le, ge)
+          assert(a<b == lt)
+          assert(a>b == gt)
+          assert(a<=b == le)
+          assert(a>=b == ge)
+          assert((not (a<b)) == (not lt))
+          assert((not (a>b)) == (not gt))
+          assert((not (a<=b)) == (not le))
+          assert((not (a>=b)) == (not ge))
+        end
+
+        local function str_lo(a, b)
+          str_cmp(a, b, true, false, true, false)
+        end
+
+        local function str_eq(a, b)
+          str_cmp(a, b, false, false, true, true)
+        end
+
+        local function str_hi(a, b)
+          str_cmp(a, b, false, true, false, true)
+        end
+
+        str_lo("a", "b")
+        str_eq("a", "a")
+        str_hi("b", "a")
+
+        str_lo("a", "aa")
+        str_hi("aa", "a")
+
+        str_lo("a", "a\0")
+        str_hi("a\0", "a")
+      end
+
+      do --- obj_eq/ne
+        local function obj_eq(a: any, b: any)
+          type_assert(a==b, true)
+          type_assert(a~=b, false)
+        end
+
+        local function obj_ne(a: any, b: any)
+            type_assert(a==b, false)
+            type_assert(a~=b, true)
+        end
+
+        obj_eq(nil, nil)
+        obj_ne(nil, false)
+        obj_ne(nil, true)
+
+        obj_ne(false, nil)
+        obj_eq(false, false)
+        obj_ne(false, true)
+
+        obj_ne(true, nil)
+        obj_ne(true, false)
+        obj_eq(true, true)
+
+        obj_eq(1, 1)
+        obj_ne(1, 2)
+        obj_ne(2, 1)
+
+        obj_eq("a", "a")
+        obj_ne("a", "b")
+        obj_ne("a", 1)
+        obj_ne(1, "a")
+
+        local t, t2 = {}, {}
+        obj_eq(t, t)
+        obj_ne(t, t2)
+        obj_ne(t, 1)
+        obj_ne(t, "")
+      end
+]]
+
+do -- and or
     -- when false, or returns its second argument
     R"type_assert(nil or false, false)"
     R"type_assert(false or nil, nil)"
@@ -33,17 +384,17 @@ if true then -- andor
     R"type_assert(true or nil, true)"
 
     R"type_assert(nil or {}, {})"
-    
+
     -- boolean without any data can be true and false at the same time
-    R"type_assert(nil as boolean or 1, nil as boolean | 1)"
-    
+    R"type_assert((_ as boolean) or (1), _ as boolean | 1)"
+
     -- when false and returns its first argument
     R"type_assert(false and true, false)"
     R"type_assert(true and nil, nil)"
 
     -- when true and returns its second argument
     -- ????
-    
+
     -- smoke test
     R"type_assert(((1 or false) and true) or false, true)"
 
@@ -88,7 +439,7 @@ if true then -- andor
     end
 end
 
-if true then -- assignment
+do -- assignment
     R[[
         local a
         type_assert(a, nil)
@@ -103,7 +454,7 @@ if true then -- assignment
     R[[
         a = nil
         -- todo, if any calls don't happen here then it's probably nil?
-        type_assert(a, any)
+        type_assert(a, _ as nil)
     ]]
 
     R[[
@@ -116,31 +467,30 @@ if true then -- assignment
         local a = {}
 
         local i = 0
-        function test(n) 
+        function test(n)
             i = i + 1
+
             if i ~= n then
-                if i ~= n then
-                    local test = function(n) TPRINT(n) return n end
-                    a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)                     
-                    type_assert(i, n)
-                end
-            end 
+                local test = function(n) TPRINT(n) return n end
+                a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)
+                type_assert(i, n)
+            end
 
             return n
         end
-        
+
         -- test should be executed in the numeric order
 
-        a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)         
+        a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)
     ]]
 
 
     R[[
-        local function test()
-            return 1,2,3
+        local function test(...)
+            return 1,2,...
         end
-        
-        local a,b,c = test()
+
+        local a,b,c = test(3)
 
         type_assert(a,1)
         type_assert(b,2)
@@ -193,6 +543,21 @@ if true then -- assignment
     ]]
 end
 
+R[[
+    local z1, z2
+    local function test(i)
+        local function f() return i end
+        z1 = z1 or f
+        z2 = f
+    end
+
+    test(1)
+    test(2)
+
+    --type_assert(z1(), 1)
+    type_assert(z2(), 2)
+]]
+
 --local numbers = {-1,-0.5,0,0.5,1,math.huge,0/0}
 
 
@@ -233,10 +598,30 @@ R"type_assert(0b10 & 0b10, 0b10)"
 
 --R"type_assert(0b10 >> 1, 0b01)"
 --R"type_assert(0b01 << 1, 0b10)"
-R"type_assert(~0b01, -3)"
+R"type_assert(~0b01, -2)"
 
 R"type_assert('a'..'b', 'ab')"
 R"type_assert('a'..'b'..'c', 'abc')"
+R"type_assert(1 .. '', nil as '1')"
+R"type_assert('ab'..(1)..'cd'..(1.5), 'ab1cd1.5')"
+
+
+
+R[[ --- tnew
+    local a = nil
+    local b = {}
+    local t = {[true] = a, [false] = b or 1}
+    type_assert(t[true], nil)
+    type_assert(t[false], b)
+]]
+
+R[[ --- tdup
+    local b = {}
+    local t = {[true] = nil, [false] = b or 1}
+    type_assert(t[true], nil)
+    type_assert(t[false], b)
+]]
+
 
 R[[
     do --- tnew
@@ -279,12 +664,12 @@ R[[
 R[[
     local a = {}
     a.a = 1
-    type_assert(a.a, nil as number)
+    type_assert(a.a, nil as 1)
 ]]
 
 R[[
     local a = ""
-    type_assert(a, nil as string)
+    type_assert(a, nil as "")
 ]]
 R[[
     local type a = number
@@ -327,7 +712,7 @@ R[[
 R[[
     local c = 0
     for i = 1, 10, 2 do
-        type_assert(i, nil as number)
+        type_assert_superset(i, nil as number)
         if i == 1 then
             c = 1
             break
@@ -380,7 +765,7 @@ R[[
             return foo(lol), nil
         end
         local complex = foo(a)
-        type_assert(foo, nil as function(_:any, _:nil):number )
+        type_assert_superset(foo, nil as function(_:any, _:nil):number )
     end
 ]]
 R[[
@@ -492,7 +877,7 @@ A, B, C, D = test(), 4
 type_assert(A, 1)
 type_assert(B, 2)
 type_assert(C, 3)
-type_assert(D, nil as ...) -- THIS IS WRONG, tuple of any?
+type_assert(D, nil as []) -- THIS IS WRONG, tuple of any?
 
 local z,x,y,æ,ø,å = test(4,5,6)
 local novalue
@@ -636,7 +1021,7 @@ R[[
     type b = {foo = a as any}
     local c: function(a: number, b:number): b, b
 
-    type_assert(c, nil as function(_:table, _:table): number, number)
+    type_assert_superset(c, nil as function(_:table, _:table): number, number)
 
 ]]
 R[[
@@ -644,7 +1029,7 @@ R[[
         return a + b
     end
 
-    type_assert(test, nil as function(_:number, _:number): number)
+    type_assert_superset(test, nil as function(_:number, _:number): number)
 ]]
 R[[
     type lol = number
@@ -694,8 +1079,8 @@ R[[
     local a = foo.bar(true, 1)
     local b = foo.bar(1)
 
-    type_assert(a, true)
-    type_assert(b, false)
+    type_assert(a, nil as [true])
+    type_assert(b, nil as [false])
 ]]
 R[[
     local a: string = "1"
@@ -720,7 +1105,7 @@ R[[
     type_assert(a, _ as 1|3)
 
     local list: Array<number, 3> = {1, 2, 3}
-    type_assert(list, _ as number[3])
+    type_assert_superset(list, _ as number[3])
 ]]
 R[[
     function pairs(t)
@@ -817,7 +1202,7 @@ R[[
     local a = ""
 
     if a is string then
-        type_assert(a, _ as string)
+        type_assert(a, _ as "")
     end
 
 ]]
@@ -964,8 +1349,8 @@ R[[
     local a = test(true, true)
     local b = test(true)
 
-    type_assert(a, _ as number)
-    type_assert(b, _ as string)
+    type_assert(a, _ as [number])
+    --type_assert(b, _ as [string]) TODO
 ]]
 R[[
     local type function identity(a)
@@ -1041,9 +1426,9 @@ R[[
 R[[
 
     local a,b,c = string.match("1 2 3", "(%d) (%d) (%d)")
-    type_assert(a, nil as string)
-    type_assert(b, nil as string)
-    type_assert(c, nil as string)
+    type_assert(a, nil as "1")
+    type_assert(b, nil as "2")
+    type_assert(c, nil as "3")
 
 ]]
 R[[
@@ -1144,7 +1529,7 @@ R[[
 R[[
     local tbl = {}
     local test = "asdawd"
-    tbl[test] = tbl[test] or {}
+  --  tbl[test] = tbl[test] or {} TODO
     tbl[test] = "1"
     type_assert(tbl[test], nil as "1")
 ]]
@@ -1199,7 +1584,7 @@ R[[
 ]]
 
 R[[
-    type_assert(math.floor(1), 1)
+    type_assert_superset(math.floor(1), 1)
 ]]
 
 R([[require("adawdawddwaldwadwadawol")]], "unable to find module")
