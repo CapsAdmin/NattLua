@@ -1,4 +1,5 @@
-local print_util = require("oh.print_util")local code = [[
+local print_util = require("oh.print_util")
+local code = [==[
 for i = 1, #code do
     local char = code:sub(i, i)
 
@@ -15,7 +16,7 @@ for i = 1, #code do
         Foo Bar
         Thy Thee
         End Of
-    ]<
+    ]]<
 
     if char == "aaa" then
         stop = i-1
@@ -27,7 +28,7 @@ for i = 1, #code do
         break
     end
 end
-]]
+]==]
 
 local function example(code)
     local start
@@ -38,4 +39,4 @@ local function example(code)
 end
 local start, stop = example(code)
 
-print(print_util.FormatError(code, "format_error.lua", "unterminated multiline string", start, stop))
+print(print_util.FormatError(code, "format_error.lua", "pointing at this multiline string", start, stop))

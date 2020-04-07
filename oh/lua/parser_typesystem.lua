@@ -1,6 +1,6 @@
 local table_insert = table.insert
 
-local syntax = require("oh.syntax")
+local syntax = require("oh.lua.syntax")
 
 local META = {}
 

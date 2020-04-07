@@ -1,7 +1,7 @@
 -- split by casing as well? SetCleint GetClient TransferCleint
 
 local oh = require("oh")
-local syntax = require("oh.syntax")
+local syntax = require("oh.lua_syntax")
 local util = require("oh.util")
 
 local function levenshtein(s, t, lim)

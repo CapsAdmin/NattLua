@@ -235,7 +235,7 @@ end
 local Lexer = require("oh.lexer")
 local Parser = require("oh.parser")
 local LuaEmitter = require("oh.lua_emitter")
-local Analyzer = require("oh.analyzer")
+local Analyzer = require("oh.typesystem.analyzer")
 local print_util = require("oh.print_util")
 
 local document_cache = {}

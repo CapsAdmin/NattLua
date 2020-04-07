@@ -4,7 +4,7 @@ local code
 --local code = io.open("oh/lexer.lua"):read("*all")
 
 
-codwe = [[
+code = [[
 
 -- SHA-256 code in Lua 5.2; based on the pseudo-code from
 -- Wikipedia (http://en.wikipedia.org/wiki/SHA-2)
@@ -363,7 +363,7 @@ codew = [[
 ]]
 
 
-code = [[
+codwe = [[
 local a1: {[number] = any} = {}
 local a2: {[1 .. math.huge] = any} = {}
 local a3: {[1 .. (#self) + 1] = any} = {}

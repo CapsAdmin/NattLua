@@ -1,9 +1,89 @@
-local types = require("oh.typesystem")
+
+local syntax = require("oh.lua.syntax")
+local types = require("oh.typesystem.types")
+types.Initialize()
 
 local META = {}
 META.__index = META
 
 local table_insert = table.insert
+
+local function binary_operator(op, l, r, env)
+    assert(types.IsTypeObject(l))
+    assert(types.IsTypeObject(r))
+
+    if l[op] and r[op] then
+        return l[op](l, r, env)
+    end
+
+    if env == "typesystem" then
+        if op == "|" then
+            return types.Set:new({l, r})
+        end
+
+        if op == "extends" then
+            return l:Extend(r)
+        end
+
+        if op == ".." then
+            local new = l:Copy()
+            new.max = r
+            return new
+        end
+    end
+
+    if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
+
+        if l.type ~= r.type then
+            return false, "no operator for " .. tostring(l.type or l) .. " " .. op .. " " .. tostring(r.type or r)
+        end
+
+        local lval = l.data
+        local rval = r.data
+        local type = l.type
+
+        if l.Type == "tuple" then
+            lval = l.data[1].data
+            type = l.data[1].type
+        end
+
+        if r.Type == "tuple" then
+            rval = r.data[1].data
+        end
+
+        local ok, res = pcall(syntax.CompiledBinaryOperatorFunctions[op], rval, lval)
+
+        if not ok then
+            return false, res
+        else
+            return types.Object:new(type, res)
+        end
+    end
+
+    if l.type == r.type then
+        return types.Object:new(l.type)
+    end
+
+    error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
+end
+
+local function __new_index(obj, key, val, env)
+    if obj.Type ~= "dictionary" then
+        return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val)
+    end
+
+    return obj:Set(key, val, env)
+end
+
+
+local function __index(obj, key)
+    if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
+        return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
+    end
+
+    return obj:Get(key)
+end
+
 
 do -- types
     function META:TypeFromImplicitNode(node, name, data, const)
@@ -281,7 +361,7 @@ do
             local obj = self:AnalyzeExpression(key.left, env)
             local key = key.kind == "postfix_expression_index" and self:AnalyzeExpression(key.expression, env) or self:AnalyzeExpression(key.right, env)
 
-            self:Assert(key.node, types.NewIndex(obj, key, val, env))
+            self:Assert(key.node, __new_index(obj, key, val, env))
             self:FireEvent("newindex", obj, key, val, env)
         end
     end
@@ -289,7 +369,7 @@ do
     function META:SetObjectKeyValue(obj, key, val, env)
         assert(val == nil or types.IsTypeObject(val))
 
-        self:Assert(key.node, types.NewIndex(obj, key, val, env))
+        self:Assert(key.node, __new_index(obj, key, val, env))
         self:FireEvent("newindex", obj, key, val, env)
     end
 end
@@ -455,7 +535,7 @@ function META:AnalyzeStatement(statement)
                 if type(exp_key) == "string" or exp_key.kind == "value" then
                     self:SetValue(key, val, env)
                 else
-                    self:Assert(exp_key, types.NewIndex(obj, key, val, env))
+                    self:Assert(exp_key, __new_index(obj, key, val, env))
                     self:FireEvent("newindex", obj, key, val, env)
                 end
             end
@@ -836,9 +916,9 @@ do
                     end
 
                     if node.value.value == "." or node.value.value == ":" then
-                        stack:Push(self:Assert(left.node, types.Index(left, right)) or self:TypeFromImplicitNode(left.node, "nil"))
+                        stack:Push(self:Assert(left.node, __index(left, right)) or self:TypeFromImplicitNode(left.node, "nil"))
                     else
-                        local val, err = types.BinaryOperator(node.value.value, left, right, env)
+                        local val, err = binary_operator(node.value.value, left, right, env)
                         if not val and not err then
                             print(node:Render(), right, node.value.value, left, env)
                             error("wtf")
@@ -851,7 +931,7 @@ do
                     stack:Push(stack:Pop():PostfixOperator(node))
                 elseif node.kind == "postfix_expression_index" then
                     local obj = stack:Pop()
-                    stack:Push(self:Assert(obj.node, types.Index(obj, self:AnalyzeExpression(node.expression))) or self:TypeFromImplicitNode(obj.node, "nil"))
+                    stack:Push(self:Assert(obj.node, __index(obj, self:AnalyzeExpression(node.expression))) or self:TypeFromImplicitNode(obj.node, "nil"))
                 elseif node.kind == "type_function" then
                     local args = {}
                     local rets = {}

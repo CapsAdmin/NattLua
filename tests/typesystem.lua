@@ -1,4 +1,5 @@
-local types = require("oh.typesystem")
+local types = require("oh.typesystem.types")
+types.Initialize()
 
 do
     local Object = function(...) return types.Object:new(...) end

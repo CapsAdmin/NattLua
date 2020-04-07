@@ -18,8 +18,6 @@ interface all {
 	Cexec = function(table, string, string | nil): nil
 }
 
-
-
 interface Entity {
 	Fire = function(self, string, string): nil
 }

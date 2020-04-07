@@ -9674,6 +9674,4 @@ local base = oh.GetBaseAnalyzer(assert(oh.Code(lua, "base_library"):Parse()).Syn
 
 assert(base:GetValue("_G", "typesystem"):Get("string"):Get("gsub") == base:GetValue("string", "typesystem"):Get("gsub"))
 
-io.open("oh/base_lib.oh", "w"):write(lua)
-
-
+io.open("oh/lua/base_typesystem.oh", "w"):write(lua)

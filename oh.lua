@@ -1,10 +1,11 @@
 local oh = {}
 
-local Lexer = require("oh.lexer")
-local Parser = require("oh.parser")
-local LuaEmitter = require("oh.lua_emitter")
+local Lexer = require("oh.lua.lexer")
+local LuaEmitter = require("oh.lua.emitter")
+local Parser = require("oh.lua.parser")
+local Analyzer = require("oh.lua.analyzer")
+
 local print_util = require("oh.print_util")
-local Analyzer = require("oh.analyzer")
 
 
 function oh.GetBaseAnalyzer(ast)
@@ -13,7 +14,7 @@ function oh.GetBaseAnalyzer(ast)
         local base = Analyzer()
 		base.IndexNotFound = nil
 
-		local root = assert(ast or oh.FileToAST("oh/base_lib.oh"))
+		local root = assert(ast or oh.FileToAST("oh/lua/base_typesystem.oh"))
 		base:AnalyzeStatement(root)
 
 		local g = base:TypeFromImplicitNode(root, "table")
@@ -69,7 +70,7 @@ function oh.on_editor_save(path)
 		return
 	end
 	local res = assert(c:BuildLua())
-	require("oh.runtime")
+	require("oh.lua.base_runtime")
 	print(res)
 	--assert(loadstring(res))()
 end
@@ -122,7 +123,7 @@ do
 		error(print_util.FormatError(self.code, self.name, msg, start, stop, ...))
 	end
 
-	local function traceback(msg)
+	local function traceback_(msg)
 		local s = ""
 		s = msg .. "\n" .. s
 		for i = 2, math.huge do
@@ -157,6 +158,15 @@ do
 		end
 
 		return s
+	end
+
+	local traceback = function(...) 
+		local ret = {pcall(traceback_, ...)} 
+		if not ret[1] then
+			return "error in error handling: " .. ret[2]
+		end
+
+		return unpack(ret, 2)
 	end
 
 	function META:Lex()
