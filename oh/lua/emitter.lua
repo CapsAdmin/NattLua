@@ -135,7 +135,7 @@ do
         self:Whitespace(" ")
         self:EmitToken(node.tokens["function"])
         self:Whitespace(" ")
-        self:EmitIdentifier(node.identifier)
+        self:EmitToken(node.tokens["identifier"])
         emit_function_body(self, node)
     end
 
@@ -176,44 +176,45 @@ function META:EmitTable(tree)
     if tree.children[1] then
         self:Whitespace("\n")
             self:Whitespace("\t+")
-            for _,node in ipairs(tree.children) do
+            for i,node in ipairs(tree.children) do
                 self:Whitespace("\t")
                 if node.kind == "table_index_value" then
-                    if node.value.kind == "table_spread" then
+                    if node.spread then
                         if during_spread then
                             self:Emit("},")
                             during_spread = false
                         end
-                        self:EmitExpression(node.value.expression)
+                        self:EmitExpression(node.spread.expression)
                     else
-                        self:EmitExpression(node.value)
+                        self:EmitExpression(node.expression)
                     end
                 elseif node.kind == "table_key_value" then
                     if tree.spread and not during_spread then
                         during_spread = true
                         self:Emit("{")
                     end
-                    self:EmitToken(node.key)
+                    self:EmitToken(node.tokens["identifier"])
                     self:EmitToken(node.tokens["="])
-                    self:EmitExpression(node.value)
+                    self:EmitExpression(node.expression)
                 elseif node.kind == "table_expression_value" then
 
                     self:EmitToken(node.tokens["["])
                     self:Whitespace("(")
-                    self:EmitExpression(node.key)
+                    self:EmitExpression(node.expressions[1])
                     self:Whitespace(")")
                     self:EmitToken(node.tokens["]"])
 
                     self:EmitToken(node.tokens["="])
 
-                    self:EmitExpression(node.value)
+                    self:EmitExpression(node.expressions[2])
                 end
-
-                if node.tokens[","] then
-                    self:EmitToken(node.tokens[","])
-                else
+                
+                if tree.tokens["separators"][i] then
+                    self:EmitToken(tree.tokens["separators"][i])
+                else 
                     self:Whitespace(",")
                 end
+
                 self:Whitespace("\n")
             end
             self:Whitespace("\t-")
@@ -355,16 +356,17 @@ end
 
 function META:EmitLabelStatement(node)
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["::left"])
-    self:EmitToken(node.identifier)
-    self:EmitToken(node.tokens["::right"])
+
+    self:EmitToken(node.tokens["::"][1])
+    self:EmitToken(node.tokens["identifier"])
+    self:EmitToken(node.tokens["::"][2])
 end
 
 function META:EmitGotoStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["goto"])
     self:Whitespace(" ")
-    self:EmitToken(node.identifier)
+    self:EmitToken(node.tokens["identifier"])
 end
 
 function META:EmitBreakStatement(node)
@@ -603,35 +605,35 @@ do -- types
 
 
     function META:EmitTableType(node)
+        local tree = node
         self:EmitToken(node.tokens["{"])
         if node.children[1] then
             self:Whitespace("\n")
                 self:Whitespace("\t+")
-                for _,node in ipairs(node.children) do
+                for i, node in ipairs(node.children) do
                     self:Whitespace("\t")
                     if node.kind == "table_index_value" then
                         self:EmitTypeExpression(node.value)
                     elseif node.kind == "table_key_value" then
-                        self:EmitToken(node.key)
+                        self:EmitToken(node.tokens["identifier"])
                         self:EmitToken(node.tokens["="])
-                        self:EmitTypeExpression(node.value)
+                        self:EmitTypeExpression(node.expression)
                     elseif node.kind == "table_expression_value" then
-
                         self:EmitToken(node.tokens["["])
                         self:Whitespace("(")
-                        self:EmitTypeExpression(node.key)
+                        self:EmitTypeExpression(node.expressions[1])
                         self:Whitespace(")")
                         self:EmitToken(node.tokens["]"])
-
                         self:EmitToken(node.tokens["="])
-
-                        self:EmitTypeExpression(node.value)
+                        self:EmitTypeExpression(node.expressions[2])
                     end
-                    if node.tokens[","] then
-                        self:EmitToken(node.tokens[","])
-                    else
+                     
+                    if tree.tokens["separators"][i] then
+                        self:EmitToken(tree.tokens["separators"][i])
+                    else 
                         self:Whitespace(",")
                     end
+
                     self:Whitespace("\n")
                 end
                 self:Whitespace("\t-")

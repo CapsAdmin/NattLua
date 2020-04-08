@@ -98,55 +98,78 @@ function META:ReadTypeFunction()
     return self:ReadTypeFunctionBody(node)
 end
 
-function META:ReadTypeTable()
-    local tree = self:Expression("type_table")
 
+function META:ExpectTypeExpression(what)
+    if self.nodes[1].expressions then
+        table.insert(self.nodes[1].expressions, self:ReadTypeExpression())
+    elseif self.nodes[1].expression then
+        self.nodes[1].expressions = {self.nodes[1].expression}
+        self.nodes[1].expression = nil
+        table.insert(self.nodes[1].expressions, self:ReadTypeExpression())
+    else
+        self.nodes[1].expression = self:ReadTypeExpression()
+    end
+    
+    return self
+end
+
+
+function META:ReadTypeTableEntry()
+    if self:IsValue("[") then
+        self:BeginExpression("table_expression_value")
+        :Store("expression_key", true)
+        :ExpectKeyword("[")
+        :ExpectTypeExpression()
+        :ExpectKeyword("]")
+        :ExpectKeyword("=")
+    elseif self:IsType("letter") and self:IsValue("=", 1) then
+        self:BeginExpression("table_key_value")
+        :ExpectSimpleIdentifier()
+        :ExpectKeyword("=")
+    else
+        self:BeginExpression("table_index_value")
+        :GetNode().key = i
+    end
+
+    self:ExpectTypeExpression()
+
+    return self:EndExpression()
+end
+
+function META:ReadTypeTable()
+    self:BeginExpression("type_table")
+    self:ExpectKeyword("{")
+
+    local tree = self:GetNode()
     tree.children = {}
-    tree.tokens["{"] = self:ReadValue("{")
+    tree.tokens["separators"] = {}
 
     for i = 1, self:GetLength() do
         if self:IsValue("}") then
             break
         end
 
-        local node
-
-        if self:IsValue("[") then
-            node = self:Expression("table_expression_value")
-
-            node.tokens["["] = self:ReadValue("[")
-            node.key = self:ReadTypeExpression()
-            node.tokens["]"] = self:ReadValue("]")
-            node.tokens["="] = self:ReadValue("=")
-            node.expression_key = true
-        elseif self:IsType("letter") and self:IsValue("=", 1) then
-            node = self:Expression("table_key_value")
-
-            node.key = self:ReadType("letter")
-            node.tokens["="] = self:ReadValue("=")
-        else
-            node = self:Expression("table_index_value")
-
-            node.key = i
+        local entry = self:ReadTypeTableEntry()
+        
+        if entry.spread then
+            tree.spread = true
         end
 
-        node.value = self:ReadTypeExpression()
-        tree.children[i] = node
-
+        tree.children[i] = entry
+      
         if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
             self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
             break
         end
 
         if not self:IsValue("}") then
-            node.tokens[","] = self:ReadValues({[","] = true, [";"] = true})
+            tree.tokens["separators"][i] = self:ReadTokenLoose()
         end
-
     end
 
-    tree.tokens["}"] = self:ReadValue("}")
+    self:ExpectKeyword("}")
 
-    return tree
+    return self:EndExpression()
 end
 
 function META:ReadTypeExpression(priority)

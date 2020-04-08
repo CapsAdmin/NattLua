@@ -21,25 +21,6 @@ for _, name in ipairs(extended) do
 end
 
 do -- statements
-    function META:ReadStatements(stop_token)
-        local out = {}
-        for i = 1, self:GetLength() do
-            if not self:GetToken() or stop_token and stop_token[self:GetToken().value] then
-                break
-            end
-
-            local statement = self:ReadStatement()
-
-            if not statement then
-                break
-            end
-
-            out[i] = statement
-        end
-
-        return out
-    end
-
     function META:ReadRemainingStatement()
         if self:IsType("end_of_file") then
             return
@@ -167,94 +148,193 @@ function META:ReadDoStatement()
     return node
 end
 
+
+do
+    function META:BeginStatement(kind)
+        self.nodes = self.nodes or {}
+    
+        table.insert(self.nodes, 1, self:Statement(kind))
+
+        return self
+    end
+
+    function META:BeginExpression(kind)
+        self.nodes = self.nodes or {}
+    
+        table.insert(self.nodes, 1, self:Expression(kind))
+
+        return self
+    end
+
+    local function expect(self, func, what, start, stop)
+        local tokens = self.nodes[1].tokens
+    
+        if start then
+            start = tokens[start]
+        end
+        
+        if stop then
+            stop = tokens[stop]
+        end
+        
+        if start and not stop then
+            stop = tokens[start]
+        end
+        
+        local token = func(self, what, start, stop)
+
+        if tokens[what] then
+
+            if not tokens[what][1] then
+                tokens[what] = {tokens[what]}
+            end
+
+            table.insert(tokens[what], token)
+        else
+            tokens[what] = token
+        end
+
+        return self
+    end
+
+    function META:ExpectKeyword(what, start, stop)
+        return expect(self, self.ReadValue, what, start, stop)
+    end
+
+    function META:ExpectType(what, start, stop)
+        return expect(self, self.ReadType, what, start, stop)
+    end
+
+    function META:ExpectExpression(what)
+        if self.nodes[1].expressions then
+            table.insert(self.nodes[1].expressions, self:ReadExpectExpression())
+        elseif self.nodes[1].expression then
+            self.nodes[1].expressions = {self.nodes[1].expression}
+            self.nodes[1].expression = nil
+            table.insert(self.nodes[1].expressions, self:ReadExpectExpression())
+        else
+            self.nodes[1].expression = self:ReadExpectExpression()
+        end
+        
+        return self
+    end
+
+    function META:StatementsUntil(what)
+        self.nodes[1].statements = self:ReadStatements({[what] = true})
+
+        return self
+    end
+
+    function META:EndStatement()
+        local node = table.remove(self.nodes, 1)
+        return node
+    end
+    function META:EndExpression()
+        local node = table.remove(self.nodes, 1)
+        return node
+    end
+
+    function META:GetNode()
+        return self.nodes[1]
+    end
+
+    function META:Store(key, val)
+        self.nodes[1][key] = val
+        return self
+    end
+
+    function META:ExpectSimpleIdentifier()
+        self.nodes[1].tokens["identifier"] = self:ReadType("letter")
+        return self
+    end
+
+    function META:ExpectIdentifier()
+        self:Store("identifier", self:ReadIdentifier())
+        return self
+    end
+
+    function META:ExpectIdentifierList(length)
+        self:Store("identifiers", self:ReadIdentifierList(length))
+        return self
+    end
+
+    function META:ExpectExpressionList(length)
+        self:Store("expressions", self:ReadExpressionList(length))
+        return self
+    end
+end
+
+function META:ExpectDoBlock()
+    return self:ExpectKeyword("do")
+        :StatementsUntil("end")
+    :ExpectKeyword("end", "do")
+end
+
 function META:ReadWhileStatement()
-    local node = self:Statement("while")
-
-    node.tokens["while"] = self:ReadValue("while")
-    node.expression = self:ReadExpectExpression()
-    node.tokens["do"] = self:ReadValue("do")
-    node.statements = self:ReadStatements({["end"] = true})
-    node.tokens["end"] = self:ReadValue("end", node.tokens["while"], node.tokens["while"])
-
-    return node
+    return self:BeginStatement("while")
+        :ExpectKeyword("while")
+        :ExpectExpression()
+        :ExpectDoBlock()
+    :EndStatement()
 end
 
 function META:ReadRepeatStatement()
-    local node = self:Statement("repeat")
-
-    node.tokens["repeat"] = self:ReadValue("repeat")
-    node.statements = self:ReadStatements({["until"] = true})
-    node.tokens["until"] = self:ReadValue("until", node.tokens["repeat"], node.tokens["repeat"])
-    node.expression = self:ReadExpectExpression()
-
-    return node
+    return self:BeginStatement("repeat")
+        :ExpectKeyword("repeat")
+            :StatementsUntil("until")
+        :ExpectKeyword("until")
+        :ExpectExpression()
+    :EndStatement()
 end
 
 function META:ReadGotoLabelStatement()
-    local node = self:Statement("goto_label")
-
-    node.tokens["::left"] = self:ReadValue("::")
-    node.identifier = self:ReadType("letter")
-    node.tokens["::right"]  = self:ReadValue("::")
-
-    return node
+    return self:BeginStatement("goto_label")
+        :ExpectKeyword("::")
+            :ExpectSimpleIdentifier()
+        :ExpectKeyword("::")
+    :EndStatement()
 end
 
 function META:ReadGotoStatement()
-    local node = self:Statement("goto")
-
-    node.tokens["goto"] = self:ReadValue("goto")
-    node.identifier = self:ReadType("letter")
-
-    return node
+    return self:BeginStatement("goto")
+        :ExpectKeyword("goto")
+        :ExpectSimpleIdentifier()
+    :EndStatement()
 end
 
 function META:ReadLocalAssignmentStatement()
-    local node = self:Statement("local_assignment")
-
-    node.tokens["local"] = self:ReadValue("local")
-    node.left = self:ReadIdentifierList()
-
+    self:BeginStatement("local_assignment")
+    self:ExpectKeyword("local")
+    self:Store("left", self:ReadIdentifierList())
+    
     if self:IsValue("=") then
-        node.tokens["="] = self:ReadValue("=")
-        node.right = self:ReadExpressionList()
+        self:ExpectKeyword("=")
+        self:Store("right", self:ReadExpressionList())
     end
 
-    return node
+    return self:EndStatement()
 end
 
 function META:ReadNumericForStatement()
-    local node = self:Statement("numeric_for")
-
-    node.tokens["for"] = self:ReadValue("for")
-    node.is_local = true
-
-    node.identifiers = self:ReadIdentifierList(1)
-    node.tokens["="] = self:ReadValue("=")
-    node.expressions = self:ReadExpressionList(3)
-
-    node.tokens["do"] = self:ReadValue("do")
-    node.statements = self:ReadStatements({["end"] = true})
-    node.tokens["end"] = self:ReadValue("end", node.tokens["do"], node.tokens["do"])
-
-    return node
+    return self:BeginStatement("numeric_for")
+        :Store("is_local", true)
+        :ExpectKeyword("for")
+        :ExpectIdentifierList(1)
+        :ExpectKeyword("=")
+        :ExpectExpressionList(3)
+        :ExpectDoBlock()
+    :EndStatement()
 end
 
 function META:ReadGenericForStatement()
-    local node = self:Statement("generic_for")
-
-    node.tokens["for"] = self:ReadValue("for")
-    node.is_local = true
-
-    node.identifiers = self:ReadIdentifierList()
-    node.tokens["in"] = self:ReadValue("in")
-    node.expressions = self:ReadExpressionList()
-
-    node.tokens["do"] = self:ReadValue("do")
-    node.statements = self:ReadStatements({["end"] = true})
-    node.tokens["end"] = self:ReadValue("end", node.tokens["do"], node.tokens["do"])
-
-    return node
+    return self:BeginStatement("generic_for")
+        :Store("is_local", true)
+        :ExpectKeyword("for")
+        :ExpectIdentifierList()
+        :ExpectKeyword("in")
+        :ExpectExpressionList()
+        :ExpectDoBlock()
+    :EndStatement()
 end
 
 function META:ReadFunctionBody(node)
@@ -340,12 +420,15 @@ do  -- function
 end
 
 function META:ReadLocalFunctionStatement()
-    local node = self:Statement("local_function")
-    node.tokens["local"] = self:ReadValue("local")
-    node.tokens["function"] = self:ReadValue("function")
-    node.identifier = self:ReadIdentifier()
+    self:BeginStatement("local_function")
+    :ExpectKeyword("local")
+    :ExpectKeyword("function")
+    :ExpectSimpleIdentifier()
+
+    local node = self:GetNode()
     self:ReadFunctionBody(node)
-    return node
+    
+    return self:EndStatement()
 end
 
 function META:ReadIfStatement()
@@ -433,6 +516,7 @@ function META:ReadIdentifier()
 end
 
 do -- expression
+
     function META:ReadAnonymousFunction()
         local node = self:Expression("function")
         node.tokens["function"] = self:ReadValue("function")
@@ -440,63 +524,77 @@ do -- expression
         return node
     end
 
-    function META:ReadTable()
-        local tree = self:Expression("table")
+    function META:IsTableSpread()
+        return self:IsValue("...") and (self:IsType("letter", 1) or self:IsValue("{", 1) or self:IsValue("(", 1))
+    end
 
+    function META:ReadTableSpread()
+        return self:BeginExpression("table_spread")
+        :ExpectKeyword("...") 
+        :ExpectExpression()
+        :EndExpression()
+    end
+
+    function META:ReadTableEntry()
+        if self:IsValue("[") then
+            self:BeginExpression("table_expression_value")
+            :Store("expression_key", true)
+            :ExpectKeyword("[")
+            :ExpectExpression()
+            :ExpectKeyword("]")
+            :ExpectKeyword("=")
+        elseif self:IsType("letter") and self:IsValue("=", 1) then
+            self:BeginExpression("table_key_value")
+            :ExpectSimpleIdentifier()
+            :ExpectKeyword("=")
+        else
+            self:BeginExpression("table_index_value")
+            :GetNode().key = i
+        end
+
+        if self:IsTableSpread() then
+            self:Store("spread", self:ReadTableSpread())
+        else
+            self:ExpectExpression()
+        end
+
+        return self:EndExpression()
+    end
+
+    function META:ReadTable()
+        self:BeginExpression("table")
+        self:ExpectKeyword("{")
+
+        local tree = self:GetNode()
         tree.children = {}
-        tree.tokens["{"] = self:ReadValue("{")
+        tree.tokens["separators"] = {}
 
         for i = 1, self:GetLength() do
             if self:IsValue("}") then
                 break
             end
 
-            local node
-
-            if self:IsValue("[") then
-                node = self:Expression("table_expression_value")
-
-                node.tokens["["] = self:ReadValue("[")
-                node.key = self:ReadExpectExpression()
-                node.tokens["]"] = self:ReadValue("]")
-                node.tokens["="] = self:ReadValue("=")
-                node.expression_key = true
-            elseif self:IsType("letter") and self:IsValue("=", 1) then
-                node = self:Expression("table_key_value")
-
-                node.key = self:ReadType("letter")
-                node.tokens["="] = self:ReadValue("=")
-            else
-                node = self:Expression("table_index_value")
-
-                node.key = i
-            end
-
-            if self:IsValue("...") and (self:IsType("letter", 1) or self:IsValue("{", 1) or self:IsValue("(", 1)) then
-                local v = self:Expression("table_spread")
-                v.tokens["..."] = self:ReadValue("...")
-                v.expression = self:ReadExpectExpression()
-                node.value = v
+            local entry = self:ReadTableEntry()
+            
+            if entry.spread then
                 tree.spread = true
-            else
-                node.value = self:ReadExpectExpression()
             end
 
-            tree.children[i] = node
-
+            tree.children[i] = entry
+          
             if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
                 self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
                 break
             end
 
             if not self:IsValue("}") then
-                node.tokens[","] = self:ReadValues({[","] = true, [";"] = true})
+                tree.tokens["separators"][i] = self:ReadTokenLoose()
             end
         end
 
-        tree.tokens["}"] = self:ReadValue("}")
+        self:ExpectKeyword("}")
 
-        return tree
+        return self:EndExpression()
     end
 
     function META:ReadExpression(priority, no_ambigious_calls)

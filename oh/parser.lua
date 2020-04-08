@@ -36,6 +36,7 @@ return function(parser_meta, syntax, Emitter)
             node.kind = kind
 
             setmetatable(node, META)
+            self.current_node = node
 
             return node
         end
@@ -97,10 +98,12 @@ return function(parser_meta, syntax, Emitter)
 
         function PARSER:Statement(kind)
             local node = {}
+
             node.tokens = {}
             node.kind = kind
 
             setmetatable(node, META)
+            self.current_node = node
 
             return node
         end
@@ -191,6 +194,8 @@ return function(parser_meta, syntax, Emitter)
     end
 
     function META:Advance(offset)
+        self.tokens[self.i].parent = self.current_node
+
         self.i = self.i + offset
     end
 
@@ -227,6 +232,25 @@ return function(parser_meta, syntax, Emitter)
         end
 
         return node
+    end
+
+    function META:ReadStatements(stop_token)
+        local out = {}
+        for i = 1, self:GetLength() do
+            if not self:GetToken() or stop_token and stop_token[self:GetToken().value] then
+                break
+            end
+
+            local statement = self:ReadStatement()
+
+            if not statement then
+                break
+            end
+
+            out[i] = statement
+        end
+
+        return out
     end
 
     function META:ReadSemicolonStatement()

@@ -240,6 +240,10 @@ do
             return node
         end
 
+        if type(node.value) == "string" then
+            return node.value
+        end
+
         return node.value.value
     end
 
@@ -621,7 +625,7 @@ function META:AnalyzeStatement(statement)
     elseif statement.kind == "function" then
         self:SetValue(statement.expression, self:AnalyzeFunction(statement), "runtime")
     elseif statement.kind == "local_function" then
-        self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement), "runtime")
+        self:SetUpvalue(statement.tokens["identifier"], self:AnalyzeFunction(statement), "runtime")
     elseif statement.kind == "local_type_function" then
         self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement), "typesystem")
     elseif statement.kind == "if" then
@@ -1086,11 +1090,14 @@ do
             local out = {}
             for i, node in ipairs(node.children) do
                 if node.kind == "table_key_value" then
-                    out[i] = {key = node.key.value, val = self:AnalyzeExpression(node.value, env)}
+                    out[i] = {
+                        key = node.tokens["identifier"].value, 
+                        val = self:AnalyzeExpression(node.expression, env)
+                    }
                 elseif node.kind == "table_expression_value" then
 
-                    local key = self:AnalyzeExpression(node.key, env)
-                    local obj = self:AnalyzeExpression(node.value, env)
+                    local key = self:AnalyzeExpression(node.expressions[1], env)
+                    local obj = self:AnalyzeExpression(node.expressions[2], env)
 
                     if key:IsType("string") and key.value then
                         out[i] = {key = key.value, val = obj}
@@ -1099,9 +1106,15 @@ do
                     end
                 elseif node.kind == "table_index_value" then
                     if node.i then
-                        out[i] = {key = node.i, val = self:AnalyzeExpression(node.value, env)}
+                        out[i] = {
+                            key = node.i, 
+                            val = self:AnalyzeExpression(node.expression, env)
+                        }
                     else
-                        table.insert(out, {key = #out + 1, val = self:AnalyzeExpression(node.value, env)})
+                        table.insert(out, {
+                            key = #out + 1, 
+                            val = self:AnalyzeExpression(node.expression, env)
+                        })
                     end
                 end
             end
