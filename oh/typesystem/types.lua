@@ -34,6 +34,22 @@ end
 do
     local Base = {}
 
+    do
+        Base.truthy = 0
+    
+        function Base:GetTruthy()
+            return self.truthy > 0
+        end
+    
+        function Base:PushTruthy()
+            self.truthy = self.truthy + 1
+        end
+        function Base:PopTruthy()
+            self.truthy = self.truthy + 1
+        end
+    end
+
+
     Base["or"] = function(l, r, env)
 
         if l:IsTruthy() and l:IsFalsy() then

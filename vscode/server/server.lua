@@ -147,7 +147,7 @@ local server = LOLSERVER
 if not server then
     server = tcp_server()
 	server:Host("*", 1337)
-	io.write("CONNECT\n")
+	io.write("HOSTING AT: *:1337\n")
 end
 
 function server:OnClientConnected(client)
@@ -232,11 +232,13 @@ function server:Respond(client, res)
     client:Send(msg)
 end
 
-local Lexer = require("oh.lexer")
-local Parser = require("oh.parser")
-local LuaEmitter = require("oh.lua_emitter")
-local Analyzer = require("oh.typesystem.analyzer")
+local Lexer = require("oh.lua.lexer")
+local Parser = require("oh.lua.parser")
+local LuaEmitter = require("oh.lua.emitter")
+local Analyzer = require("oh.lua.analyzer")
 local print_util = require("oh.print_util")
+
+local oh = require("oh")
 
 local document_cache = {}
 
@@ -257,7 +259,8 @@ local function compile(uri, server, client)
 		}
 	}
 
-	local function handle_error(_, msg, start, stop, ...)
+	local file = oh.Code(code, "test", {annotate = true})
+	function file:OnError(msg, start, stop, ...)
 		msg = print_util.FormatMessage(msg, ...)
 		local data = print_util.SubPositionToLinePosition(code, start, stop)
 
@@ -281,29 +284,9 @@ local function compile(uri, server, client)
 			message = msg,
 		})
 	end
+	file:Analyze()
 
-	local lexer = Lexer(code)
-	lexer.OnError = handle_error
-
-	local tokens = lexer:GetTokens()
-
-	local parser = Parser(config)
-	parser.OnError = handle_error
-
-	local ast = parser:BuildAST(tokens)
-
-	if resp.params.diagnostics[1] then
-		server:Respond(client, resp)
-	end
-
-	if true then
-		local analyzer = Analyzer()
-		analyzer.code = code
-		analyzer.name = "test"
-
-		analyzer:AnalyzeStatement(ast)
-	end
-	return tokens, ast
+	return file.Tokens, file.Syntaxtree
 end
 
 function server:HandleMessage(resp, client)
@@ -354,7 +337,6 @@ function server:HandleMessage(resp, client)
 		local tokens, ast = compile(resp.params.textDocument.uri, self, client)
 		local code = assert(document_cache[resp.params.textDocument.uri])
 
-
 		local sub_pos = print_util.LinePositionToSubPosition(code, pos.line + 1, pos.character)
 
 		for i,v in ipairs(tokens) do
@@ -364,7 +346,7 @@ function server:HandleMessage(resp, client)
 				self:Respond(client, {
 					id = resp.id,
 					result = {
-						contents = v.value,
+						contents = v.parent and v.parent:Render({annotate = true}) or v.value,
 					},
 					range = {
 						start = {

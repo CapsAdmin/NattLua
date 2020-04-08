@@ -259,7 +259,7 @@ do
 
 		local str = table.concat(lines, "\n")
 
-		local path = path:gsub("@", "") .. ":" .. line_start  .. ":".. data.character_start
+		local path = path and (path:gsub("@", "") .. ":" .. line_start  .. ":".. data.character_start) or ""
 		local msg = path .. (msg and ": " .. msg or "")
 		local post = (" "):rep(spacing - 2) .. "-> | " .. msg
 

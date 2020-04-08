@@ -1,14 +1,18 @@
-import * as vscode from 'vscode';
-import { Socket } from 'net'
-import * as vscodelc from 'vscode-languageclient';
+
 import { spawn } from 'child_process';
+import { Socket } from 'net';
+import { ExtensionContext, window, workspace } from 'vscode';
+import { LanguageClient, LanguageClientOptions } from "vscode-languageclient";
 
 function getConfig<T>(option: string, defaultValue?: any): T {
-    const config = vscode.workspace.getConfiguration('generic-lsp');
+    const config = workspace.getConfiguration('generic-lsp');
     return config.get<T>(option, defaultValue);
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: ExtensionContext) {
+    let output = window.createOutputChannel('Generic LSP');
+    output.show(true)
+
     const path = getConfig<string>('path');
     const args = getConfig<string[]>('arguments');
     const port = getConfig<number>('port');
@@ -16,16 +20,39 @@ export function activate(context: vscode.ExtensionContext) {
 
     const extensions = getConfig<string[]>('extensions');
 
-    const clientOptions: vscodelc.LanguageClientOptions = {
+
+    const clientOptions: LanguageClientOptions = {
         documentSelector: extensions,
         synchronize: {
             configurationSection: "generic-lsp",
         },
     };
 
-    const lspClient = new vscodelc.LanguageClient('Generic Language Server', () => {
+    const lspClient = new LanguageClient('Generic Language Server', () => {
         return new Promise((resolve, reject) => {
-            //const server = spawn(path, args, { stdio: [process.stdin, data => console.log(data), data => console.log(data)] })
+            const server = spawn(path, args, {
+                cwd: workspace.rootPath,
+                stdio: "inherit",
+                env: Object.create(process.env),
+                detached: false
+            })
+
+            output.appendLine("RUNNING: " + path + " " + args.join(" "))
+
+            if (server.stdout) {
+                server.stdout.on("data", (s) => {
+                    output.append(s)
+                })
+            }
+            if (server.stderr) { server.stderr.on("data", (s) => output.append(s)) }
+
+            server.on("error", (err) => {
+                output.appendLine(err.toString())
+            })
+
+            process.on("exit", () => {
+                server.kill()
+            })
 
             let client = new Socket()
 
@@ -39,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
             let retry = () => {
                 try {
                     client.connect(port, ip)
-                } catch(e) {
+                } catch (e) {
                     setTimeout(() => {
                         retry()
                     }, 1000);
@@ -47,7 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             client.on('error', e => {
-                console.log(`Generic LSP Connection error : ${e.message}`)
+                output.appendLine(`Generic LSP Connection error : ${e.message}`)
                 setTimeout(() => {
                     retry()
                 }, 1000);
@@ -57,9 +84,9 @@ export function activate(context: vscode.ExtensionContext) {
         })
     }, clientOptions);
 
-    console.log(`Generic LSP RUN: ${path} ${args.join(" ")}`)
-    console.log(`Generic LSP CONNECT: ${ip} ${port}`)
-    console.log(`Generic LSP EXTENSIONS: ${extensions.join(" ")}`)
+    output.appendLine(`Generic LSP RUN: ${path} ${args.join(" ")}`)
+    output.appendLine(`Generic LSP CONNECT: ${ip} ${port}`)
+    output.appendLine(`Generic LSP EXTENSIONS: ${extensions.join(" ")}`)
 
     const disposable = lspClient.start();
 }

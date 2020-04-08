@@ -7,10 +7,15 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
-			"args": ["${workspaceRoot}/../../examples/.", "--extensionDevelopmentPath=${workspaceRoot}"],
+			"args": [
+				"${workspaceRoot}/../../.",
+				"--extensionDevelopmentPath=${workspaceRoot}"
+			],
 			"stopOnEntry": false,
 			"sourceMaps": true,
-			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
+			"outFiles": [
+				"${workspaceRoot}/out/**/*.js"
+			],
 			"preLaunchTask": "npm"
 		},
 	]
