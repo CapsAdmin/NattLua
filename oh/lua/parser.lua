@@ -121,34 +121,6 @@ do
     end
 end
 
-function META:ReadBreakStatement()
-    local node = self:Statement("break")
-
-    node.tokens["break"] = self:ReadValue("break")
-
-    return node
-end
-
-function META:ReadReturnStatement()
-    local node = self:Statement("return")
-
-    node.tokens["return"] = self:ReadValue("return")
-    node.expressions = self:ReadExpressionList()
-
-    return node
-end
-
-function META:ReadDoStatement()
-    local node = self:Statement("do")
-
-    node.tokens["do"] = self:ReadValue("do")
-    node.statements = self:ReadStatements({["end"] = true})
-    node.tokens["end"] = self:ReadValue("end", node.tokens["do"], node.tokens["do"])
-
-    return node
-end
-
-
 do
     function META:BeginStatement(kind)
         self.nodes = self.nodes or {}
@@ -262,6 +234,25 @@ do
         self:Store("expressions", self:ReadExpressionList(length))
         return self
     end
+end
+
+function META:ReadBreakStatement()
+    return self:BeginStatement("break")
+        :ExpectKeyword("break")
+    :EndStatement()
+end
+
+function META:ReadReturnStatement()
+    return self:BeginStatement("return")
+        :ExpectKeyword("return")
+        :ExpectExpressionList()
+    :EndStatement()
+end
+
+function META:ReadDoStatement()
+    return self:BeginStatement("do")
+        :ExpectDoBlock()
+    :EndStatement()
 end
 
 function META:ExpectDoBlock()
