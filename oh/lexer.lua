@@ -220,6 +220,34 @@ return function(lexer_meta, syntax)
             end
         end
     end
+    
+    do
+        function META:IsSpace()
+            return syntax.IsSpace(self:GetChar())
+        end
+
+        if ffi then
+            local chars = "\32\t\n\r"
+            local C = ffi.C
+            local tonumber = tonumber
+
+            function META:ReadSpace()
+                self:Advance(tonumber(C.strspn(self.code_ptr + self.i - 1, chars)))
+                return "space"
+            end
+        else
+            function META:ReadSpace()
+                for _ = self.i, self:GetLength() do
+                    self:Advance(1)
+                    if not syntax.IsSpace(self:GetChar()) then
+                        break
+                    end
+                end
+
+                return "space"
+            end
+        end
+    end
 
     do
         function META:IsSymbol()
@@ -253,6 +281,17 @@ return function(lexer_meta, syntax)
         end
     end
 
+    do
+        function META:IsEndOfFile()
+            return self.i > self:GetLength()
+        end
+
+        function META:ReadEndOfFile()
+            -- nothing to capture, but remaining whitespace will be added
+            self:Advance(1)
+            return "end_of_file"
+        end
+    end
 
     function META:ReadToken()
 

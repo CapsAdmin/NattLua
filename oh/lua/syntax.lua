@@ -114,6 +114,7 @@ syntax.PostfixOperatorFunctionTranslate = {
 do
     local B = string.byte
 
+    --: number => boolean
     function syntax.IsLetter(c)
         return
             (c >= B'a' and c <= B'z') or
@@ -121,6 +122,7 @@ do
             (c == B'_' or c >= 127)
     end
 
+    --: number => boolean
     function syntax.IsDuringLetter(c)
         return
             (c >= B'a' and c <= B'z') or
@@ -129,14 +131,17 @@ do
             (c == B'_' or c >= 127)
     end
 
+    --: number => boolean
     function syntax.IsNumber(c)
         return (c >= B'0' and c <= B'9')
     end
 
+    --: number => boolean
     function syntax.IsSpace(c)
         return c > 0 and c <= 32
     end
 
+    --: number => boolean
     function syntax.IsSymbol(c)
         return c ~= B'_' and (
             (c >= B'!' and c <= B'/') or
