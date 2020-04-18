@@ -246,6 +246,10 @@ function Dictionary:IsTruthy()
 end
 
 function Dictionary:PrefixOperator(op, val)
+    if op == "not" then
+        return types.Create("boolean", false)
+    end
+
     if op == "#" then
         if self.meta and self.meta:Get("__len") then
             error("NYI")

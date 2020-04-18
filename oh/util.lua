@@ -1,6 +1,6 @@
 local util = {}
 
-function util.FetchCode(path, url)
+function util.FetchCode(path, url) --: type util.FetchCode = function(string, string): string
     local f = io.open(path, "rb")
     if not f then
         os.execute("wget -O "..path.." " .. url)
@@ -150,7 +150,7 @@ function util.LogTraceAbort()
     end, "trace")
 end
 
-function util.Measure(what, cb)
+function util.Measure(what, cb) -- type util.Measure = function(string, function): any
     if jit then
         jit.flush()
     end

@@ -13,7 +13,11 @@ local function binary_operator(op, l, r, env)
     assert(types.IsTypeObject(r))
 
     if l[op] and r[op] then
-        return l[op](l, r, env)
+        local ret = l[op](l, r, env)
+        if not ret then
+            error("operator " .. op .. " on " .. tostring(l) .. " does not return anything")
+        end
+        return ret
     end
 
     if env == "typesystem" then
@@ -62,6 +66,10 @@ local function binary_operator(op, l, r, env)
 
     if l.type == r.type then
         return types.Object:new(l.type)
+    end
+
+    if l.type == "any" or r.type == "any" then
+        return types.Object:new("any")
     end
 
     error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
@@ -887,11 +895,6 @@ do
                             obj = self:GetInferredType(node)
                         end
 
-                        -- ...
-                        if obj.GetTruthy and obj:GetTruthy() then
-                            obj = obj:RemoveNonTruthy()
-                        end
-
                         stack:Push(obj)
                     elseif node.value.type == "number" then
                         stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), true))
@@ -925,6 +928,8 @@ do
                         local val, err = binary_operator(node.value.value, left, right, env)
                         if not val and not err then
                             print(node:Render(), right, node.value.value, left, env)
+                            print(left.type, right.type)
+                            print(val, err)
                             error("wtf")
                         end
                         stack:Push(self:Assert(node, val, err))

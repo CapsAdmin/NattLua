@@ -1,5 +1,5 @@
 local table_insert = table.insert
-
+local math_huge = math.huge
 local syntax = require("oh.lua.syntax")
 
 local META = {}
@@ -26,10 +26,17 @@ end
 do -- identifier
     function META:ReadTypeExpressionList(max)
         local out = {}
-
-        for i = 1, max or self:GetLength() do
+        
+        for i = 1, math_huge do
             if self:HandleTypeListSeparator(out, i, self:ReadTypeExpression()) then
                 break
+            end
+
+            if max then
+                max = max - 1
+                if max == 0 then
+                    break
+                end
             end
         end
 
@@ -71,7 +78,7 @@ function META:ReadTypeFunctionBody(node)
 
     node.identifiers = {}
 
-    for i = 1, max or self:GetLength() do
+    for i = 1, math_huge do
         if self:HandleListSeparator(node.identifiers, i, self:ReadFunctionArgument()) then
             break
         end
@@ -149,7 +156,7 @@ function META:ReadTypeTable()
     tree.children = {}
     tree.tokens["separators"] = {}
 
-    for i = 1, self:GetLength() do
+    for i = 1, math_huge do
         if self:IsValue("}") then
             break
         end
@@ -326,7 +333,7 @@ do
             node.tokens["="] = self:ReadValue("=")
             node.right = self:ReadTypeExpressionList()
         end
-
+        
         return node
     end
 end
@@ -342,7 +349,7 @@ do
         node.key = self:ReadIndexExpression()
         node.tokens["{"] = self:ReadValue("{")
         local list = {}
-        for i = 1, max or self:GetLength() do
+        for i = 1, math_huge do
             if not self:IsType("letter") then break end
             local node = self:Statement("interface_declaration")
             node.left = self:ReadType("letter")
@@ -447,6 +454,20 @@ do
         table.insert(self.root.imports, node)
 
         return node
+    end
+end
+
+do
+    -- todo: GetLength > while
+    function META:IsTypeComment()
+        return self:IsType("type_comment")
+    end
+
+    function META:ReadTypeComment()
+        local code = self:ReadType("type_comment").value:sub(4)
+        local lexer = require("oh.lua.lexer")(code)
+        self:AddTokens(lexer:GetTokens())
+        return self:ReadStatement()
     end
 end
 

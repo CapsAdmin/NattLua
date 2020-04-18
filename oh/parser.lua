@@ -140,6 +140,16 @@ return function(parser_meta, syntax, Emitter)
         return self:GetToken(-1)
     end
 
+    function META:AddTokens(tokens)
+        for i, token in ipairs(tokens) do
+            if token.type == "end_of_file" then
+                break
+            end
+            table.insert(self.tokens, self.i + i - 1, token)
+        end
+        self.tokens_length = #self.tokens
+    end
+
     function META:IsValue(str, offset)
         return self:GetToken(offset) and self:GetToken(offset).value == str
     end
@@ -241,13 +251,7 @@ return function(parser_meta, syntax, Emitter)
                 break
             end
 
-            local statement = self:ReadStatement()
-
-            if not statement then
-                break
-            end
-
-            out[i] = statement
+            out[i] = self:ReadStatement()
         end
 
         return out

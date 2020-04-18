@@ -1637,3 +1637,28 @@ R([[
 
 R([[local a = 1; a = a.lol]],"undefined get:")
 R([[local a = 1 + true]], "no operator for.-number.-%+.-boolean")
+
+R([[
+    --: local type a = 1
+    type_assert(a, 1)
+]])
+
+R([[
+    type a = {}
+    
+    if not a then
+        -- shouldn't reach
+        type_assert(1, 2)
+    else
+        type_assert(1, 1)
+    end
+]])
+
+R([[
+    type a = {}
+    if not a then
+        -- shouldn't reach
+        type_assert(1, 2)
+    end
+]])
+

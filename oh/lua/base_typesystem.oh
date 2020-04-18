@@ -559,6 +559,13 @@ type ffi = {
 	fill = (function(dst, len, c): nil)    |    (function(dst, len,): nil),
 	offsetof = (function(ct, field): number)
 }
+type jit = {
+	attach = (function(function): nil),
+	flush = (function(): nil),
+	opt = {
+		start = (function(...): nil)
+	}
+}
 type debug = {
 	sethook = (function(thread: thread, hook: empty_function, mask: string, count: number): nil)    |    (function(thread: thread, hook: empty_function, mask: string): nil)    |    (function( hook: empty_function, mask: string): nil),
 	getregistry = (function(): nil),
@@ -894,7 +901,8 @@ type TPRINT = function(...) print(...) end
 
 
 type table.sort = function(tbl, func)
-	local next = oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get("next").func
+	local next = analyzer:GetValue("next", "typesystem").data.lua_function
+
 	local k,v = next(tbl)
 	func.arguments[1] = v
 	func.arguments[2] = v

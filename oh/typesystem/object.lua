@@ -18,6 +18,7 @@ Object["^"] = function(l, r, env)
     if l.data ~= nil and r.data ~= nil then
         return types.Object:new("number", l.data ^ r.data)
     end
+    return types.Object:new("any")
 end
 
 
@@ -25,6 +26,7 @@ Object["/"] = function(l, r, env)
     if l.data ~= nil and r.data ~= nil then
         return types.Object:new("number", l.data / r.data)
     end
+    return types.Object:new("any")
 end
 
 
@@ -33,6 +35,7 @@ Object[".."] = function(r, l, env)
     if l.data ~= nil and r.data ~= nil then
         return types.Object:new("string", r.data .. l.data)
     end
+    return types.Object:new("any")
 end
 
 local function generic(op)
@@ -269,6 +272,10 @@ function Object:IsConst()
 end
 
 function Object:Call(arguments)
+    if self.type == "any" then
+        return types.Tuple:new(types.Object:new("any"))
+    end
+
     if self.type == "function" and self.data.lua_function then
         _G.self = require("oh").current_analyzer
         local res = {pcall(self.data.lua_function, unpack(arguments.data))}
@@ -295,6 +302,19 @@ function Object:Call(arguments)
 end
 
 function Object:PrefixOperator(op, val)
+    if op == "#" then
+        if self.type == "string" then
+            if self.const then
+                if self.data then
+                    return types.Object:new("number", #self.data, true)
+                end
+            end
+            return types.Object:new("number")
+        end
+
+        return types.Object:new("any")
+    end
+
     if op == "not" then
         if self:IsTruthy() and self:IsFalsy() then
             return types.Object:new("boolean")
@@ -318,6 +338,7 @@ function Object:PrefixOperator(op, val)
             return types.Object:new(val.type, res)
         end
     end
+
     return false, "NYI " .. op
 end
 
