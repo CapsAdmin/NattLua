@@ -1,10 +1,10 @@
 The parts involved from turning oh code into lua are as following
 
 # syntax.lua
-Sets up the base syntax for the lexer and parser. You can define keywords, operators along with precedence, and other low level configuration.
+Sets up the base syntax for the lexer and parser. Language constructs such as keywords, operators, operator precedence, etc are defined here.
 
 # lexer.lua
-Used to create tokens from code. Each token consists of whitespace
+Used to create tokens from code. Each token can also contain whitespace.
 
 # parser.lua 
 Parses the lua code into an abstract syntax tree
@@ -15,4 +15,4 @@ An optional step which traverses the AST and runs type checking on it.
 uses base_typesystem.oh
 
 # emitter.lua
-Emits the lua code ready to be ran along with runtime.lua
+Emits the lua code ready to be executed along with runtime.lua
