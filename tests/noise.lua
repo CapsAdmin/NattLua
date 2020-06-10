@@ -11,5 +11,5 @@ for i = 1, 100 do
 
     code = table.concat(code)
 
-    print(oh.loadstring(code))
+    print(oh.load(code))
 end

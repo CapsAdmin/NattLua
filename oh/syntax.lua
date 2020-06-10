@@ -213,9 +213,9 @@ return function(syntax)
         for op in pairs(syntax.BinaryOperators) do
             local tr = syntax.BinaryOperatorFunctionTranslate[op]
             if tr then
-                syntax.CompiledBinaryOperatorFunctions[op] = assert(loadstring("return function(a,b) return" .. tr[1] .. "a" .. tr[2] .. "b" .. tr[3] .. " end"))()
+                syntax.CompiledBinaryOperatorFunctions[op] = assert(load("return function(a,b) return" .. tr[1] .. "a" .. tr[2] .. "b" .. tr[3] .. " end"))()
             else
-                syntax.CompiledBinaryOperatorFunctions[op] = assert(loadstring("return function(a, b) return a " .. op .. " b end"))()
+                syntax.CompiledBinaryOperatorFunctions[op] = assert(load("return function(a, b) return a " .. op .. " b end"))()
             end
         end
 
@@ -223,9 +223,9 @@ return function(syntax)
         for op in pairs(syntax.PrefixOperators) do
             local tr = syntax.PrefixOperatorFunctionTranslate[op]
             if tr then
-                syntax.CompiledPrefixOperatorFunctions[op] = assert(loadstring("return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
+                syntax.CompiledPrefixOperatorFunctions[op] = assert(load("return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
             else
-                syntax.CompiledPrefixOperatorFunctions[op] = assert(loadstring("return function(a) return " .. op .. " a end"))()
+                syntax.CompiledPrefixOperatorFunctions[op] = assert(load("return function(a) return " .. op .. " a end"))()
             end
         end
 
@@ -233,9 +233,9 @@ return function(syntax)
         for op in pairs(syntax.PostfixOperators) do
             local tr = syntax.PostfixOperatorFunctionTranslate[op]
             if tr then
-                syntax.CompiledPostfixOperatorFunctions[op] = assert(loadstring("return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
+                syntax.CompiledPostfixOperatorFunctions[op] = assert(load("return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
             else
-                syntax.CompiledPostfixOperatorFunctions[op] = assert(loadstring("return function(a) return a " .. op .. " end"))()
+                syntax.CompiledPostfixOperatorFunctions[op] = assert(load("return function(a) return a " .. op .. " end"))()
             end
         end
     end

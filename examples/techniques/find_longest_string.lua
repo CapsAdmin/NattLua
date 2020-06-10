@@ -214,7 +214,7 @@ if true then
 
     kernel = kernel .. "\nend"
 
-    local find_longest = loadstring(kernel)(is_byte)
+    local find_longest = load(kernel)(is_byte)
 
     i = 1
     --local found = {}

@@ -966,7 +966,7 @@ do
 
                     if node.statements then
                         local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
-                        local load_func, err = loadstring(str, "")
+                        local load_func, err = load(str, "")
                         if not load_func then
                             -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
                             io.write(str, "\n")

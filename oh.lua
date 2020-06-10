@@ -31,18 +31,18 @@ function oh.GetBaseAnalyzer(ast)
 end
 
 
-function oh.loadstring(code, name, config)
+function oh.load(code, name, config)
 	local code = oh.Code(code, name, config)
 	local ok, code = pcall(code.BuildLua, code)
 	if not ok then return nil, code end
-    return loadstring(code, name)
+    return load(code, name)
 end
 
 function oh.loadfile(path, config)
 	local code = oh.File(path, config)
 	local ok, code = pcall(code.BuildLua, code)
 	if not ok then return nil, code end
-    return loadstring(code, name)
+    return load(code, name)
 end
 
 function oh.on_editor_save(path)
@@ -72,7 +72,7 @@ function oh.on_editor_save(path)
 	local res = assert(c:BuildLua())
 	require("oh.lua.base_runtime")
 	print(res)
-	--assert(loadstring(res))()
+	--assert(load(res))()
 end
 
 function oh.FileToAST(path, root)

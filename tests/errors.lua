@@ -2,7 +2,7 @@ local oh = require("oh")
 
 local function check(tbl)
     for i,v in ipairs(tbl) do
-        local ok, err = oh.loadstring(v[1])
+        local ok, err = oh.load(v[1])
         if ok then
             print(ok, v[1])
             error("expected error, but code compiled", 2)

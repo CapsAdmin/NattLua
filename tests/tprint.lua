@@ -258,7 +258,7 @@ function luadata.ToString(var, context)
 end
 
 function luadata.FromString(str)
-	local func = assert(loadstring("return " .. str), "luadata")
+	local func = assert(load("return " .. str), "luadata")
 	setfenv(func, env)
 	return func()
 end
@@ -288,7 +288,7 @@ end
 function luadata.Decode(str, skip_error)
 	if not str then return {} end
 
-	local func, err = loadstring("return {\n" .. str .. "\n}", "luadata")
+	local func, err = load("return {\n" .. str .. "\n}", "luadata")
 
 	if not func then
 		if not skip_error then wlog("luadata syntax error: ", err, 2) end

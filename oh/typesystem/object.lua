@@ -39,7 +39,7 @@ Object[".."] = function(r, l, env)
 end
 
 local function generic(op)
-    Object[op] = loadstring([[local types = ...; return function(l,r,env)
+    Object[op] = load([[local types = ...; return function(l,r,env)
         if l.data ~= nil and r.data ~= nil then
             return types.Object:new("boolean", l.data ]]..op..[[ r.data)
         end

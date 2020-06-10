@@ -1,1 +1,1 @@
-c=assert((assert(require('oh').File('/home/caps/oh/playground.lua',{annotate=true, dump_analyzer_events=true}):Analyze()):BuildLua()));print(c);require('oh.lua.base_runtime');assert(loadstring(c))()
+c=assert((assert(require('oh').File('/home/caps/oh/playground.lua',{annotate=true, dump_analyzer_events=true}):Analyze()):BuildLua()));print(c);require('oh.lua.base_runtime');assert(load(c))()

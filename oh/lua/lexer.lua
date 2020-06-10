@@ -174,7 +174,7 @@ do
 
         kernel = kernel .. "\nend"
 
-        return assert(loadstring(kernel))()
+        return assert(load(kernel))()
     end
 
     local allowed_hex = META.GenerateMap("1234567890abcdefABCDEF")

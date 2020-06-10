@@ -158,7 +158,7 @@ return function(lexer_meta, syntax)
 
         kernel = kernel .. "\nend"
 
-        return assert(loadstring(kernel))()
+        return assert(load(kernel))()
     end
 
     function META:Error(msg, start, stop)
