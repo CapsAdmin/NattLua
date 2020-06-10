@@ -1,5 +1,13 @@
 local oh = require("oh")
 
+local function check(code)
+   assert.same(oh.Code(code):Parse():BuildLua(), code)
+end
+
+local function tokenize(code)
+   return oh.Code(code):Lex().Tokens
+end
+
 math.randomseed(os.time())
 
 describe("lexer", function()
@@ -51,14 +59,44 @@ describe("lexer", function()
    gen_all_passes(passes, "0X", hexs, "P", decs)
 
    it("accepts valid literals", function()
-      local syntax_errors = {}
       local code = {}
       for i, p in ipairs(passes) do
          table.insert(code, "local x" .. i .. " = " .. p)
       end
       local input = table.concat(code, "\n")
 
-      local o = oh.Code(input)
-      assert(o:Lex())
+      -- make sure the amount of tokens
+      local tokens = assert(oh.Code(input):Lex())
+      assert.equal(#tokens.Tokens, #code*4 + 1)
+
+      -- make sure all the tokens are numbers
+      for i = 1, #tokens.Tokens - 1, 4 do
+         assert.equal("number", tokens.Tokens[i+3].type)
+      end
+   end)
+
+   it("should handle shebang", function()
+      check"#foo\nlocal lol = 1"
+   end)
+
+   it("should handle multiline comments", function()
+      check"--[[foo]]"
+      check"--[=[foo]=]"
+      check"--[==[foo]==]"
+      check"--[=======[foo]=======]"
+      check"--[=TESTSUITE\n-- utilities\nlocal ops = {}\n--]=]"
+      check"foo--[[]].--[[]]bar--[[]]:--[[]]test--[[]](--[[]]1--[[]]--[[]],2--[[]])--------[[]]--[[]]--[[]]"
+   end)
+
+   it("should handle strings", function()
+      check'a = "a"'
+      check"a = 'a'"
+      check'a = "a\\z\na"'
+   end)
+
+   it("should handle unicode", function()
+      assert.same(6, #tokenize"🐵=😍+🙅")
+      assert.same(5, #tokenize"print(･✿ヾ╲｡◕‿◕｡╱✿･ﾟ)")
+      assert.same(5, #tokenize"print(ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็)")
    end)
 end)

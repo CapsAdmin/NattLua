@@ -1645,7 +1645,7 @@ R([[
 
 R([[
     type a = {}
-    
+
     if not a then
         -- shouldn't reach
         type_assert(1, 2)

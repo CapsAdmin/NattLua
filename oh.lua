@@ -50,6 +50,11 @@ function oh.on_editor_save(path)
 		return
 	end
 
+	if path:find("_spec") then
+		os.execute("busted " .. path)
+		return
+	end
+
 	if
 		path:find("oh/oh", nil, true)  or
 		path:find("type_inference.lua", 1, true)
@@ -160,8 +165,8 @@ do
 		return s
 	end
 
-	local traceback = function(...) 
-		local ret = {pcall(traceback_, ...)} 
+	local traceback = function(...)
+		local ret = {pcall(traceback_, ...)}
 		if not ret[1] then
 			return "error in error handling: " .. ret[2]
 		end

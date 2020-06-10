@@ -17,7 +17,16 @@ return function(parser_meta, syntax, Emitter)
         META.type = "expression"
 
         function META:__tostring()
-            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
+            local meta = getmetatable(self)
+            setmetatable(self, nil)
+            local p = tostring(self)
+            setmetatable(self, meta)
+            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%s"):format(p)
+        end
+
+        function META:Dump()
+            local tprint = require("tests.tprint")
+            tprint(self)
         end
 
         function META:Render(op)
@@ -50,7 +59,16 @@ return function(parser_meta, syntax, Emitter)
         META.type = "statement"
 
         function META:__tostring()
-            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%p"):format(self)
+            local meta = getmetatable(self)
+            setmetatable(self, nil)
+            local p = tostring(self)
+            setmetatable(self, meta)
+            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%s"):format(p)
+        end
+
+        function META:Dump()
+            local tprint = require("tests.tprint")
+            tprint(self)
         end
 
         function META:Render(op)
@@ -258,8 +276,8 @@ return function(parser_meta, syntax, Emitter)
     end
 
     do
-        function META:IsSemicolonStatement() 
-            return self:IsValue(";") 
+        function META:IsSemicolonStatement()
+            return self:IsValue(";")
         end
 
         function META:ReadSemicolonStatement()
@@ -274,79 +292,79 @@ return function(parser_meta, syntax, Emitter)
     do -- functional-like helpers. makes the code easier to read and maintain but does not always work
         function META:BeginStatement(kind)
             self.nodes = self.nodes or {}
-        
+
             table.insert(self.nodes, 1, self:Statement(kind))
-    
+
             return self
         end
-    
+
         function META:BeginExpression(kind)
             self.nodes = self.nodes or {}
-        
+
             table.insert(self.nodes, 1, self:Expression(kind))
-    
+
             return self
         end
-    
+
         local function expect(self, func, what, start, stop)
             local tokens = self.nodes[1].tokens
-        
+
             if start then
                 start = tokens[start]
             end
-            
+
             if stop then
                 stop = tokens[stop]
             end
-            
+
             if start and not stop then
                 stop = tokens[start]
             end
-            
+
             local token = func(self, what, start, stop)
-    
+
             if tokens[what] then
-    
+
                 if not tokens[what][1] then
                     tokens[what] = {tokens[what]}
                 end
-    
+
                 table.insert(tokens[what], token)
             else
                 tokens[what] = token
             end
-    
+
             return self
         end
-    
+
         function META:ExpectKeyword(what, start, stop)
             return expect(self, self.ReadValue, what, start, stop)
         end
-    
+
         function META:ExpectType(what, start, stop)
             return expect(self, self.ReadType, what, start, stop)
         end
-    
+
         function META:StatementsUntil(what)
             self.nodes[1].statements = self:ReadStatements({[what] = true})
-    
+
             return self
         end
-    
+
         function META:EndStatement()
             local node = table.remove(self.nodes, 1)
             return node
         end
-    
+
         function META:EndExpression()
             local node = table.remove(self.nodes, 1)
             return node
         end
-    
+
         function META:GetNode()
             return self.nodes[1]
         end
-    
+
         function META:Store(key, val)
             self.nodes[1][key] = val
             return self
