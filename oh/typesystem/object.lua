@@ -103,6 +103,10 @@ function Object:GetReturnTypes()
     return self.data.ret
 end
 
+function Object:GetData()
+    return self.data
+end
+
 function Object:SupersetOf(sub)
     if sub.Type == "tuple" and sub:GetLength() == 1 then
         sub = sub.data[1]
@@ -268,7 +272,7 @@ function Object:RemoveNonTruthy()
 end
 
 function Object:IsConst()
-    return self.const
+    return self.const == true
 end
 
 function Object:Call(arguments)
@@ -339,7 +343,7 @@ function Object:PrefixOperator(op, val)
         end
     end
 
-    return false, "NYI " .. op
+    return false, "NYI " .. op .. ": " .. tostring(val)
 end
 
 local uid = 0

@@ -85,6 +85,10 @@ function Set:GetLength()
     return #self.datai
 end
 
+function Set:GetElements()
+    return self.datai
+end
+
 function Set:RemoveElement(e)
     self.data[types.GetSignature(e)] = nil
     for i,v in ipairs(self.datai) do

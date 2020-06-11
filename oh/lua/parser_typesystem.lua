@@ -26,7 +26,7 @@ end
 do -- identifier
     function META:ReadTypeExpressionList(max)
         local out = {}
-        
+
         for i = 1, math_huge do
             if self:HandleTypeListSeparator(out, i, self:ReadTypeExpression()) then
                 break
@@ -45,8 +45,8 @@ do -- identifier
 end
 
 do
-    function META:IsLocalTypeFunctionStatement() 
-        return self:IsValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2) 
+    function META:IsLocalTypeFunctionStatement()
+        return self:IsValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2)
     end
 
     function META:ReadLocalTypeFunctionStatement()
@@ -121,7 +121,7 @@ function META:ExpectTypeExpression(what)
     else
         self.nodes[1].expression = self:ReadTypeExpression()
     end
-    
+
     return self
 end
 
@@ -162,13 +162,13 @@ function META:ReadTypeTable()
         end
 
         local entry = self:ReadTypeTableEntry()
-        
+
         if entry.spread then
             tree.spread = true
         end
 
         tree.children[i] = entry
-      
+
         if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
             self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
             break
@@ -210,7 +210,7 @@ function META:ReadTypeExpression(priority)
         node.tokens[")"] = node.tokens[")"] or {}
         table_insert(node.tokens[")"], self:ReadValue(")"))
 
-    elseif syntax.IsTypePrefixOperator(self:GetToken()) then
+    elseif syntax.IsTypePrefixOperator(self:GetToken()) or self:IsValue("typeof") then
         node = self:Expression("prefix_operator")
         node.value = self:ReadTokenLoose()
         node.right = self:ReadTypeExpression(math_huge)
@@ -316,8 +316,8 @@ function META:ReadTypeExpression(priority)
 end
 
 do
-    function META:IsLocalTypeDeclarationStatement() 
-        return self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2) 
+    function META:IsLocalTypeDeclarationStatement()
+        return self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2)
     end
 
     function META:ReadLocalTypeDeclarationStatement()
@@ -333,14 +333,14 @@ do
             node.tokens["="] = self:ReadValue("=")
             node.right = self:ReadTypeExpressionList()
         end
-        
+
         return node
     end
 end
 
 do
-    function META:IsInterfaceStatement() 
-        return self:IsValue("interface") and self:IsType("letter", 1) 
+    function META:IsInterfaceStatement()
+        return self:IsValue("interface") and self:IsType("letter", 1)
     end
 
     function META:ReadInterfaceStatement()
@@ -367,8 +367,8 @@ end
 
 
 do
-    function META:IsTypeAssignment() 
-        return self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1)) 
+    function META:IsTypeAssignment()
+        return self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))
     end
 
     function META:ReadTypeAssignment()
@@ -388,8 +388,8 @@ do
 end
 
 do
-    function META:IsImportStatement() 
-        return self:IsValue("import") 
+    function META:IsImportStatement()
+        return self:IsValue("import")
     end
 
     function META:ReadImportStatement()

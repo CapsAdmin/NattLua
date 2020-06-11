@@ -42,6 +42,20 @@ local function binary_operator(op, l, r, env)
             return false, "no operator for " .. tostring(l.type or l) .. " " .. op .. " " .. tostring(r.type or r)
         end
 
+        if l.Type == "set" and r.Type == "set" then
+            local new_set = types.Set:new()
+
+            for _, l in ipairs(l:GetElements()) do
+                for _, r in ipairs(r:GetElements()) do
+                    print(l,r)
+                    local a = assert(binary_operator(op, l, r, env))
+                    new_set:AddElement(a)
+                end
+            end
+
+            return new_set
+        end
+
         local lval = l.data
         local rval = r.data
         local type = l.type
@@ -60,7 +74,7 @@ local function binary_operator(op, l, r, env)
         if not ok then
             return false, res
         else
-            return types.Object:new(type, res)
+            return types.Object:new(type, res, l:IsConst() or r:IsConst())
         end
     end
 
@@ -345,6 +359,8 @@ do
     end
 
     function META:GetValue(key, env)
+        env = env or "runtime"
+
         local upvalue = self:GetUpvalue(key, env)
 
         if upvalue then

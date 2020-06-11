@@ -1,4 +1,19 @@
-type test = (function(boolean, boolean): number) | (function(boolean): string)
---local a = test(true)
-local b = test(true,true)
-TPRINT(a,b)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+for i,v in ipairs({1,2,3,4}) do
+    local a =i+v
+    TPRINT(a)
+end

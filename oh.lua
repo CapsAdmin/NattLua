@@ -153,13 +153,13 @@ do
 		if oh.current_analyzer then
 			local analyzer = oh.current_analyzer
 
-			if analyzer.current_statement then
+			if analyzer.current_statement and analyzer.current_statement.Render then
 				s = s .. "======== statement =======\n"
 				s = s .. analyzer.current_statement:Render()
 				s = s .. "\n===============\n"
 			end
 
-			if analyzer.current_expression then
+			if analyzer.current_expressionand and analyzer.current_expression.Render then
 				s = s .. "======== expression =======\n"
 				s = s .. analyzer.current_expression:Render()
 				s = s .. "\n===============\n"
@@ -234,6 +234,7 @@ do
 		oh.current_analyzer = analyzer
 		local ok, ast = xpcall(analyzer.AnalyzeStatement, traceback, analyzer, self.SyntaxTree)
 		oh.current_analyzer = nil
+		self.Analyzer = analyzer
 
 		if not ok then
 			return nil, ast
