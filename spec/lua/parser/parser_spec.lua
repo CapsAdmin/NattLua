@@ -53,7 +53,7 @@ describe("parser", function()
         check"a.b:c()"
         check"(function(b) return 1 end)(2)"
         check"foo.a.b.c[5](1)[2](3)"
-        check"foo(1)'1'{1}[[1]]\"1\"*1"
+        check"foo(1)'1'{1}[[1]][1]\"1\""
         check"a=(foo.bar)()"
         check"lol({...})"
     end)
@@ -105,5 +105,30 @@ describe("parser", function()
         check"local a = (--[[1]](--[[2]](--[[3]](--[[4]]4))))"
         check"local a = 1 --[=[a]=] + (((1)));"
         check"a = (--[[a]]((-a)))"
+    end)
+
+    it("shouldn't internally error when handling random bytes", function()
+        for i = 1, 1000 do
+            math.randomseed(i)
+            local code = {}
+
+            for i = 1, 100 do
+                code[i] = string.char(math.random(255))
+            end
+
+            code = table.concat(code)
+
+            local ok, err = oh.load(code)
+            if err then
+                local line = err:match("%-%> | (.-)\n")
+                if not line then
+                    print(line)
+                    --error(err)
+                elseif not line:find("expected") then
+                    print(line)
+                end
+            end
+        end
+
     end)
 end)

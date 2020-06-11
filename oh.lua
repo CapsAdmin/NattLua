@@ -36,16 +36,16 @@ end
 
 
 function oh.load(code, name, config)
-	local code = oh.Code(code, name, config)
-	local ok, code = pcall(code.BuildLua, code)
-	if not ok then return nil, code end
+	local obj = oh.Code(code, name, config)
+	local code, err = obj:BuildLua()
+	if not code then return nil, err end
     return load(code, name)
 end
 
 function oh.loadfile(path, config)
-	local code = oh.File(path, config)
-	local ok, code = pcall(code.BuildLua, code)
-	if not ok then return nil, code end
+	local obj = oh.File(path, config)
+	local code, err = obj:BuildLua()
+	if not code then return nil, err end
     return load(code, name)
 end
 
@@ -195,7 +195,10 @@ do
 
 	function META:Parse()
 		if not self.Tokens then
-			assert(self:Lex())
+			local ok, err = self:Lex()
+			if not ok then
+				return ok, err
+			end
 		end
 
 		local parser = Parser(self.config)
@@ -215,7 +218,10 @@ do
 
 	function META:Analyze(dump_events)
 		if not self.SyntaxTree then
-			assert(self:Parse())
+			local ok, err = self:Parse()
+			if not ok then
+				return ok, err
+			end
 		end
 
 		local analyzer = Analyzer()
@@ -240,7 +246,10 @@ do
 
 	function META:BuildLua()
 		if not self.SyntaxTree then
-			assert(self:Parse())
+			local ok, err = self:Parse()
+			if not ok then
+				return ok, err
+			end
 		end
 
 		local em = LuaEmitter(self.config)

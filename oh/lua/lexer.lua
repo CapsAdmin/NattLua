@@ -57,7 +57,7 @@ do
         if not ok then
             if err then
                 self.i = start + 2
-                self:Error("unterminated multiline comment: " .. err, start, start + 1)
+                self:Error("expected multiline comment to end: " .. err, start, start + 1)
             else
                 self.i = start
                 return self:ReadLineComment()
@@ -69,11 +69,11 @@ do
 end
 
 do
-    function META:IsLineComment() 
+    function META:IsLineComment()
         return self:IsValue("-") and self:IsValue("-", 1)
         -- we have to add this check here becuse line comments / whitespace is read before non whitespace
         and not self:IsValue(":", 2) -- type comment
-    end 
+    end
 
     function META:ReadLineComment()
         self:Advance(#"--")
@@ -120,14 +120,14 @@ do
         local ok, err = ReadLiteralString(self, false)
 
         if not ok then
-            self:Error("unterminated multiline string: " .. err, start, start + 1)
+            self:Error("expected multiline string to end: " .. err, start, start + 1)
             return
         end
 
         return "string"
     end
 end
-    
+
 do
     function META.GenerateMap(str)
         local out = {}
@@ -370,7 +370,7 @@ do
 
                     if char == B"\n" then
                         self:Advance(-1)
-                        self:Error("unterminated " .. name:lower() .. " quote", start, self.i - 1)
+                        self:Error("expected " .. name:lower() .. " quote to end", start, self.i - 1)
                         return false
                     end
 
@@ -380,7 +380,7 @@ do
                 end
             end
 
-            self:Error("unterminated " .. name:lower() .. " quote: reached end of file", start, self.i - 1)
+            self:Error("expected " .. name:lower() .. " quote to end: reached end of file", start, self.i - 1)
 
             return false
         end
@@ -393,7 +393,7 @@ function META:ReadWhiteSpace()
 
     self:IsMultilineComment() then      return self:ReadMultilineComment() elseif
     self:IsLineComment() then           return self:ReadLineComment() elseif
-        
+
     false then end
 end
 
@@ -404,7 +404,7 @@ function META:ReadNonWhiteSpace()
     self:IsNumber() then                return self:ReadNumber() elseif
     self:IsSingleString() then          return self:ReadSingleString() elseif
     self:IsDoubleString() then          return self:ReadDoubleString() elseif
-                        
+
     self:IsEndOfFile() then             return self:ReadEndOfFile() elseif
     self:IsLetter() then                return self:ReadLetter() elseif
     self:IsSymbol() then                return self:ReadSymbol() elseif
