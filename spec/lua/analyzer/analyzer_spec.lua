@@ -154,33 +154,4 @@ describe("analyzer", function()
         assert.equal(2, analyzer:GetValue("a", "runtime"):GetData())
         assert.equal(1, analyzer:GetValue("c", "runtime"):GetData())
     end)
-
-    it("function arguments should work", function()
-        local analyzer = run[[
-            local function test(a,b,c)
-                return a+b+c
-            end
-            local a = test(1,2,3)
-        ]]
-
-        assert.equal(6, analyzer:GetValue("a", "runtime"):GetData())
-    end)
-
-    it("function arguments should get annotated", function()
-        local analyzer = run[[
-            local function test(a,b,c)
-                return a+b+c
-            end
-
-            test(1,2,3)
-        ]]
-
-        local args = analyzer:GetValue("test", "runtime"):GetArguments()
-        assert.equal(true, args:Get(1):IsType("number"))
-        assert.equal(true, args:Get(2):IsType("number"))
-        assert.equal(true, args:Get(3):IsType("number"))
-
-        local rets = analyzer:GetValue("test", "runtime"):GetReturnTypes()
-        assert.equal(true, rets:Get(1):IsType("number"))
-    end)
 end)

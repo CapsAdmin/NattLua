@@ -211,6 +211,16 @@ function Set:IsConst()
     return true
 end
 
+function Set:IsType(str)
+    for _, v in ipairs(self.datai) do
+        if v:IsType(str) then
+            return true
+        end
+    end
+
+    return false
+end
+
 function Set:IsTruthy()
     for _, v in ipairs(self.datai) do
         if v:IsTruthy() then

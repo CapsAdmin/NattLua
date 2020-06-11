@@ -25,18 +25,20 @@ function Tuple:Merge(tup)
     for i,v in ipairs(dst) do
         if src[i] and src[i].type ~= "any" then
             if src[i].volatile then
-                v.volatile = true -- todo: mutation, copy instead?
+                v = v:Copy()
+                v.volatile = true
             end
             src[i] = types.Set:new({src[i], v})
         else
             local prev = src[i]
 
-            if prev and prev.volatile then
-                src[i] = dst[i]
+            if not prev or prev.volatile then
+                src[i] = dst[i]:Copy()
             end
 
             if prev and prev.volatile then
-                src[i].volatile = true -- todo: mutation, copy instead?
+                src[i] = src[i]:Copy()
+                src[i].volatile = true
             end
         end
     end
@@ -50,6 +52,18 @@ end
 
 function Tuple:GetLength()
     return #self.data
+end
+
+function Tuple:GetData()
+    return self.data
+end
+
+function Tuple:Copy()
+    local copy = {}
+    for i, v in ipairs(self.data) do
+        copy[i] = v:Copy()
+    end
+    return Tuple:new(copy)
 end
 
 function Tuple:SupersetOf(sub)

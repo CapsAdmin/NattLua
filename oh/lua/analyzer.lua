@@ -204,15 +204,22 @@ do -- types
 
                 self:PopScope()
 
-                local ret_tuple = types.Tuple:new(ret)
+                do
+                    -- copy the entire tuple so we don't modify the return value of this call
+                    local ret_tuple = types.Tuple:new(ret):Copy()
 
-                -- if this function has an explicit return type
-                if obj.node.return_types then
-                    if not ret_tuple:SupersetOf(return_tuple) then
-                        self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(ret_tuple))
+                    for i,v in ipairs(ret_tuple:GetData()) do
+                        v.volatile = true
                     end
-                else
-                    obj:GetReturnTypes():Merge(ret_tuple)
+
+                    -- if this function has an explicit return type
+                    if obj.node.return_types then
+                        if not ret_tuple:SupersetOf(return_tuple) then
+                            self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(ret_tuple))
+                        end
+                    else
+                        obj:GetReturnTypes():Merge(ret_tuple)
+                    end
                 end
 
                 obj:GetArguments():Merge(arguments)

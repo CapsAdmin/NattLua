@@ -107,6 +107,18 @@ function Object:GetData()
     return self.data
 end
 
+function Object:Copy()
+    local data = self.data
+
+    if self.type == "function" then
+        data = {ret = data.ret:Copy(), arg = data.arg:Copy()}
+    end
+
+    local copy = Object:new(self.type, data, self.const)
+    copy.volatile = self.volatile
+    return copy
+end
+
 function Object:SupersetOf(sub)
     if sub.Type == "tuple" and sub:GetLength() == 1 then
         sub = sub.data[1]
@@ -235,6 +247,10 @@ function Object:Max(val)
         self.max = val
     end
     return self
+end
+
+function Object:IsVolatile()
+    return self.volatile == true
 end
 
 function Object:IsFalsy()
