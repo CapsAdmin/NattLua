@@ -230,13 +230,13 @@ do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 
 					if line == line_start then
-						prefix = prefix .. code:sub(unpack(data.sub_line_before)):gsub("\t", (" "):rep(tab_size))
+						prefix = prefix .. code:sub(table.unpack(data.sub_line_before)):gsub("\t", (" "):rep(tab_size))
 					end
 
 					local test = str
 
 					if line == line_stop then
-						str = str .. code:sub(unpack(data.sub_line_after))
+						str = str .. code:sub(table.unpack(data.sub_line_after))
 					end
 
 					str = str .. "\n" .. (" "):rep(#prefix) .. ("^"):rep(math.max(#test, 1))

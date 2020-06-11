@@ -278,7 +278,7 @@ function Object:Call(arguments)
 
     if self.type == "function" and self.data.lua_function then
         _G.self = require("oh").current_analyzer
-        local res = {pcall(self.data.lua_function, unpack(arguments.data))}
+        local res = {pcall(self.data.lua_function, table.unpack(arguments.data))}
         _G.self = nil
 
         if not res[1] then

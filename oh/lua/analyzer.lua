@@ -457,7 +457,7 @@ function META:AnalyzeStatement(statement)
         if self.deferred_calls then
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called then
-                    self:Call(unpack(v))
+                    self:Call(table.unpack(v))
                 end
             end
         end
@@ -496,7 +496,7 @@ function META:AnalyzeStatement(statement)
             for _, exp in ipairs(statement.right) do
                 for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
 
-                    -- unpack
+                    -- table.unpack
                     if obj.Type == "tuple" then -- vararg
                         for _, obj in ipairs(obj.data) do
                             table.insert(values, obj)
@@ -557,7 +557,7 @@ function META:AnalyzeStatement(statement)
             for _, exp in ipairs(statement.right) do
                 for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
 
-                    -- unpack
+                    -- table.unpack
                     if obj.Type == "tuple" then -- vararg
                         for _, obj in ipairs(obj.data) do
                             table.insert(values, obj)
@@ -833,7 +833,7 @@ do
                 end
             end
 
-            return unpack(out)
+            return table.unpack(out)
         end
 
         local function expand(exp, out)
@@ -1096,7 +1096,7 @@ do
             for i, node in ipairs(node.children) do
                 if node.kind == "table_key_value" then
                     out[i] = {
-                        key = node.tokens["identifier"].value, 
+                        key = node.tokens["identifier"].value,
                         val = self:AnalyzeExpression(node.expression, env)
                     }
                 elseif node.kind == "table_expression_value" then
@@ -1112,12 +1112,12 @@ do
                 elseif node.kind == "table_index_value" then
                     if node.i then
                         out[i] = {
-                            key = node.i, 
+                            key = node.i,
                             val = self:AnalyzeExpression(node.expression, env)
                         }
                     else
                         table.insert(out, {
-                            key = #out + 1, 
+                            key = #out + 1,
                             val = self:AnalyzeExpression(node.expression, env)
                         })
                     end

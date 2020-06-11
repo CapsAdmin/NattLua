@@ -1,5 +1,9 @@
 local oh = {}
 
+if not table.unpack then
+	table.unpack = unpack
+end
+
 local Lexer = require("oh.lua.lexer")
 local LuaEmitter = require("oh.lua.emitter")
 local Parser = require("oh.lua.parser")
@@ -170,8 +174,7 @@ do
 		if not ret[1] then
 			return "error in error handling: " .. ret[2]
 		end
-
-		return unpack(ret, 2)
+		return table.unpack(ret, 2)
 	end
 
 	function META:Lex()

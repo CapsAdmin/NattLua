@@ -9483,7 +9483,7 @@ type ^string.match = function(s, pattern, init)
 		for i,v in ipairs(res) do
 			res[i] = types.Create("string", v)
 		end
-		return unpack(res)
+		return table.unpack(res)
 	end
 
 	if pattern.value then
@@ -9491,7 +9491,7 @@ type ^string.match = function(s, pattern, init)
 		for s in pattern.value:gmatch("%b()") do
 			table.insert(out, types.Create("string") + types.Create("nil"))
 		end
-		return unpack(out)
+		return table.unpack(out)
 	end
 end
 
@@ -9605,7 +9605,7 @@ type require = function(name)
 				local ast = assert(require("oh").FileToAST(path))
 				analyzer:AnalyzeStatement(ast)
 
-				return unpack(analyzer.last_return)
+				return table.unpack(analyzer.last_return)
 			end
 		end
 	end

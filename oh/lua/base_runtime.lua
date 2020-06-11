@@ -6,7 +6,7 @@ function table.destructure(tbl, fields, with_default)
     if with_default then
         table.insert(out, 1, tbl)
     end
-    return unpack(out)
+    return table.unpack(out)
 end
 
 function table.mergetables(tables)
@@ -24,7 +24,7 @@ function table.spread(tbl)
         return nil
     end
 
-    return unpack(tbl)
+    return table.unpack(tbl)
 end
 
 function LSX(tag, constructor, props, children)

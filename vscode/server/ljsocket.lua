@@ -1039,7 +1039,7 @@ do
 
     function meta:poll_connect()
         if self.on_connect and self.timeout_connected and self:is_connected() then
-            local ok, err = self:on_connect(unpack(self.timeout_connected))
+            local ok, err = self:on_connect(table.unpack(self.timeout_connected))
             self.timeout_connected = nil
             return ok, err
         end
