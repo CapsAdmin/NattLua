@@ -18,7 +18,25 @@ function Tuple:PrefixOperator(op, env)
     return self.data[1]:PrefixOperator(op, env)
 end
 
-function Tuple:Merge(tup)
+function Tuple:Call(arguments)
+    local out = types.Set:new()
+
+    for _, obj in ipairs(self.data) do
+        if not obj.Call then
+            return false, "set contains uncallable object " .. tostring(obj)
+        end
+
+        local return_tuple = obj:Call(arguments)
+
+        if return_tuple then
+            out:AddElement(return_tuple)
+        end
+    end
+
+    return types.Tuple:new({out})
+end
+
+function Tuple:Merge(tup, dont_extend)
     local src = self.data
     local dst = tup.data
 
@@ -32,13 +50,15 @@ function Tuple:Merge(tup)
         else
             local prev = src[i]
 
-            if not prev or prev.volatile then
-                src[i] = dst[i]:Copy()
-            end
+            if not dont_extend or prev then
+                if not prev or prev.volatile then
+                    src[i] = dst[i]:Copy()
+                end
 
-            if prev and prev.volatile then
-                src[i] = src[i]:Copy()
-                src[i].volatile = true
+                if prev and prev.volatile then
+                    src[i] = src[i]:Copy()
+                    src[i].volatile = true
+                end
             end
         end
     end

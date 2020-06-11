@@ -213,7 +213,7 @@ function Object:__tostring()
             return self.type
         end
 
-        return tostring(self.data) .. (self.max and (".." .. self.max.data) or "")
+        return tostring(self.data) .. (self.max and (".." .. tostring(self.max.data)) or "")
     end
 
     if self.data == nil then
@@ -314,8 +314,15 @@ function Object:Call(arguments)
         return types.Tuple:new(res)
     end
 
-    if not self.data.arg:SupersetOf(arguments) then
-        return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(arguments)
+    for i, arg in ipairs(self.data.arg:GetData()) do
+        if not arguments[i] then
+            break
+        end
+
+        if  not arg:SupersetOf(arguments[i]) then
+            return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(arguments)
+        end
+
     end
 
     return self.data.ret

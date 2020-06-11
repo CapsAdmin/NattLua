@@ -47,7 +47,6 @@ local function binary_operator(op, l, r, env)
 
             for _, l in ipairs(l:GetElements()) do
                 for _, r in ipairs(r:GetElements()) do
-                    print(l,r)
                     local a = assert(binary_operator(op, l, r, env))
                     new_set:AddElement(a)
                 end
@@ -90,8 +89,8 @@ local function binary_operator(op, l, r, env)
 end
 
 local function __new_index(obj, key, val, env)
-    if obj.Type ~= "dictionary" then
-        return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val)
+    if not obj.Set then
+        return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type
     end
 
     return obj:Set(key, val, env)
@@ -193,24 +192,19 @@ do -- types
                         end
                     end
 
-
-                    types.collected_return_tuples = {}
-                    local ret = types.collected_return_tuples
+                    types.collected_return_tuples = types.collected_return_tuples or {}
+                    table.insert(types.collected_return_tuples,  1, {})
+                    local ret = types.collected_return_tuples[1]
 
                     -- crawl and collect return values from function statements
                     self:AnalyzeStatements(obj.node.statements)
 
-                    types.collected_return_tuples = nil
-
+                    table.remove(types.collected_return_tuples, 1)
                 self:PopScope()
 
                 do
                     -- copy the entire tuple so we don't modify the return value of this call
                     local ret_tuple = types.Tuple:new(ret):Copy()
-
-                    for i,v in ipairs(ret_tuple:GetData()) do
-                        v.volatile = true
-                    end
 
                     -- if this function has an explicit return type
                     if obj.node.return_types then
@@ -218,11 +212,15 @@ do -- types
                             self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(ret_tuple))
                         end
                     else
+                        for i,v in ipairs(ret_tuple:GetData()) do
+                            v.volatile = true
+                        end
+
                         obj:GetReturnTypes():Merge(ret_tuple)
                     end
                 end
 
-                obj:GetArguments():Merge(arguments)
+                obj:GetArguments():Merge(arguments, true)
 
                 for i, v in ipairs(obj:GetArguments().data) do
                     if obj.node.identifiers[i] then
@@ -250,7 +248,7 @@ do -- types
                 local return_tuple, err = obj:Call(arguments)
 
                 if return_tuple == false then
-                    self:Error(obj.node, err)
+                    self:Error(node, err)
                 end
 
                 return return_tuple.data
@@ -711,15 +709,18 @@ function META:AnalyzeStatement(statement)
         end
         self:PopScope()
     elseif statement.kind == "return" then
-        local return_values = types.collected_return_tuples
+        local return_values = types.collected_return_tuples[1]
 
         local evaluated = {}
         for i,v in ipairs(statement.expressions) do
             evaluated[i] = self:AnalyzeExpression(v)
-
             -- add the return values
             if return_values then
-                return_values[i] = return_values[i] and types.Union(return_values[i], evaluated[i]) or evaluated[i]
+                if not return_values[i] then
+                    return_values[i] = evaluated[i]
+                else
+                    return_values[i] = types.Union(return_values[i], evaluated[i])
+                end
             end
         end
 
@@ -740,7 +741,6 @@ function META:AnalyzeStatement(statement)
         local obj = args[1]
 
         if obj then
-            table.remove(args, 1)
             local values = self:Call(obj, types.Tuple:new(args), statement.expressions[1])
 
             for i,v in ipairs(statement.identifiers) do

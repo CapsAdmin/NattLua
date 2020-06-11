@@ -87,9 +87,83 @@ describe("function", function()
         ]]
 
         local val = analyzer:GetValue("a", "runtime")
-        print(val)
         assert.equal(true, val:IsType("boolean"))
         assert.equal(true, val:GetData())
         assert.equal(false, val:IsVolatile())
     end)
+
+    it("which is explicitly annotated should error when the actual return value is different", function()
+        run([[
+            local function test(a): string
+                return a
+            end
+
+            test(1)
+        ]], "expected return .-string.- to be a superset of .-1")
+    end)
+
+    it("which is explicitly annotated should error when the actual return value is unknown", function()
+        run([[
+            local function test(a: number): string
+                return a
+            end
+        ]], "expected return .-string.- to be a superset of .-number")
+    end)
+
+    it("function call within a function shouldn't mess up collected return types", function()
+        local analyzer = run[[
+            local function b()
+                (function() return 888 end)()
+                return 1337
+            end
+
+            local c = b()
+        ]]
+        local c = analyzer:GetValue("c", "runtime")
+        assert.equal(1337, c:GetData())
+    end)
+
+
+    it("arguments that are not explicitly typed should be volatile", function()
+        local analyzer = run[[
+            local function b()
+                return 1337
+            end
+
+            b(1)
+            b(2)
+        ]]
+        local b = analyzer:GetValue("b", "runtime")
+    end)
+
+    it("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", function()
+        local analyzer = run[[
+            function f1()
+                return { data = function () return 1, 2, 3 end }
+            end
+
+            function f2()
+                local one, two, three
+                local data = f1().data
+                one, two, three = data()
+                return one, two, three
+            end
+
+            local a,b,c = f2()
+        ]]
+        local a = analyzer:GetValue("a", "runtime")
+        local b = analyzer:GetValue("b", "runtime")
+        local c = analyzer:GetValue("c", "runtime")
+
+        assert.equal(1, a:GetData())
+        assert.equal(2, b:GetData())
+        assert.equal(3, c:GetData())
+    end)
+
+    it("a", function()
+        local analyzer = run[[
+
+        ]]
+    end)
+
 end)

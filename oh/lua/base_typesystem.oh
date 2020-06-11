@@ -901,11 +901,19 @@ type TPRINT = function(...) print(...) end
 
 
 type table.sort = function(tbl, func)
-	local next = analyzer:GetValue("next", "typesystem").data.lua_function
+	local set = types.Set:new()
 
-	local k,v = next(tbl)
-	func.arguments[1] = v
-	func.arguments[2] = v
+	if tbl.Type == "tuple" then
+		for i,v in ipairs(tbl:GetData()) do
+			set:AddElement(v)
+		end
+	elseif tbl.Type == "dictionary" then
+		for i,v in ipairs(tbl.data) do
+			set:AddElement(v.val)
+		end
+	end
+	func:GetArguments():GetData()[1] = set
+	func:GetArguments():GetData()[2] = set
 end
 
 type setmetatable = function(tbl, meta)
