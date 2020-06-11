@@ -17,11 +17,7 @@ return function(parser_meta, syntax, Emitter)
         META.type = "expression"
 
         function META:__tostring()
-            local meta = getmetatable(self)
-            setmetatable(self, nil)
-            local p = tostring(self)
-            setmetatable(self, meta)
-            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%s"):format(p)
+            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%s"):format(self.id)
         end
 
         function META:Dump()
@@ -43,6 +39,7 @@ return function(parser_meta, syntax, Emitter)
             local node = {}
             node.tokens = {}
             node.kind = kind
+            node.id = tostring(node)
 
             setmetatable(node, META)
             self.current_node = node
@@ -59,11 +56,7 @@ return function(parser_meta, syntax, Emitter)
         META.type = "statement"
 
         function META:__tostring()
-            local meta = getmetatable(self)
-            setmetatable(self, nil)
-            local p = tostring(self)
-            setmetatable(self, meta)
-            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%s"):format(p)
+            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%s"):format(self.id)
         end
 
         function META:Dump()
@@ -119,6 +112,7 @@ return function(parser_meta, syntax, Emitter)
 
             node.tokens = {}
             node.kind = kind
+            node.id = tostring(node)
 
             setmetatable(node, META)
             self.current_node = node
