@@ -141,6 +141,19 @@ describe("analyzer", function()
         assert.equal(3, analyzer:GetValue("c", "runtime"):GetData())
     end)
 
+
+    it("scopes shouldn't leak", function()
+        local analyzer = run[[
+            local a = {}
+            function a:test(a, b)
+                return nil, a+b
+            end
+            local _, a = a:test(1, 2)
+        ]]
+
+        assert.equal(3, analyzer:GetValue("a", "runtime"):GetData())
+    end)
+
     it("functions can modify parent scope", function()
         local analyzer = run[[
             local a = 1

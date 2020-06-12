@@ -8,9 +8,17 @@ META.__index = META
 
 local table_insert = table.insert
 
-local function binary_operator(op, l, r, env)
+local function binary_operator(self, op, l, r, env)
     assert(types.IsTypeObject(l))
     assert(types.IsTypeObject(r))
+
+    if l.meta then
+        if op == "+" then
+            if l.meta:Get("__add") then
+                return self:Call(l.meta:Get("__add"), types.Tuple:new({l, r}), op)[1]
+            end
+        end
+    end
 
     if l[op] and r[op] then
         local ret = l[op](l, r, env)
@@ -37,7 +45,7 @@ local function binary_operator(op, l, r, env)
     end
 
     if l.Type == "object" and r.Type == "set" then
-        return binary_operator(op, types.Set:new({l}), r, env)
+        return binary_operator(self, op, types.Set:new({l}), r, env)
     end
 
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
@@ -51,7 +59,7 @@ local function binary_operator(op, l, r, env)
 
             for _, l in ipairs(l:GetElements()) do
                 for _, r in ipairs(r:GetElements()) do
-                    local a = assert(binary_operator(op, l, r, env))
+                    local a = assert(binary_operator(self, op, l, r, env))
                     new_set:AddElement(a)
                 end
             end
@@ -168,21 +176,21 @@ do -- types
         function META:Call(obj, arguments, node, deferred)
             node = node or obj.node
 
-            -- for deferred calls
-            obj.called = true
+            --lua function
+            local callable = obj.Type == "dictionary" and obj.meta and obj.meta:Get("__call")
+
+            if callable then
+                table.insert(arguments.data, 1, obj)
+                obj = callable
+            end
 
             -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
             if deferred then
                 arguments = obj:GetArguments()
             end
 
-            --lua function
-            local callable = obj.Type == "dictionary" and obj.meta and obj:Get("__call")
-
-            if callable then
-                obj = callable
-                table.insert(arguments.data, 1, obj)
-            end
+            -- for deferred calls
+            obj.called = true
 
             if obj.node and (obj.node.kind == "function" or obj.node.kind == "local_function") then
 
@@ -195,8 +203,8 @@ do -- types
 
                 local return_tuple = self:Assert(obj.node, obj:Call(arguments))
 
-                self:PushScope(obj.node)    
-                    local self_call = obj.node.self_call or callable
+                self:PushScope(obj.node)
+                    local self_call = obj.node.self_call
 
                     if self_call then
                         self:SetUpvalue("self", arguments.data[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
@@ -224,6 +232,8 @@ do -- types
                     self:AnalyzeStatements(obj.node.statements)
 
                     table.remove(types.collected_return_tuples, 1)
+
+
                 self:PopScope()
 
                 do
@@ -974,7 +984,7 @@ do
                     if node.value.value == "." or node.value.value == ":" then
                         stack:Push(self:Assert(left.node, __index(left, right)) or self:TypeFromImplicitNode(left.node, "nil"))
                     else
-                        local val, err = binary_operator(node.value.value, left, right, env)
+                        local val, err = binary_operator(self, node.value.value, left, right, env)
                         if not val and not err then
                             print(node:Render(), right, node.value.value, left, env)
                             print(left.type, right.type)
@@ -1038,9 +1048,7 @@ do
 
                     local arguments = self:AnalyzeExpressions(node.expressions, env)
 
-                    local callable = obj.Type == "dictionary" and obj.meta and obj:Get("__call")
-
-                    if node.self_call or callable then
+                    if node.self_call then
                         local val = stack:Pop()
                         table.insert(arguments, 1, val)
                     end

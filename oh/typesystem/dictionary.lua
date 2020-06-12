@@ -190,16 +190,18 @@ function Dictionary:Get(key, env)
     if not keyval and self.meta then
         local index = self.meta:Get("__index")
 
-        if index.Type == "dictionary" then
-            return index:Get(key)
-        end
-
-        if index.Type == "object" then
-            local analyzer = require("oh").current_analyzer
-            if analyzer then
-                return analyzer:Call(index, types.Tuple:new({self, key}), key.node)[1]
+        if index then
+            if index.Type == "dictionary" then
+                return index:Get(key)
             end
-            return index:Call(self, key):GetData()[1]
+
+            if index.Type == "object" then
+                local analyzer = require("oh").current_analyzer
+                if analyzer then
+                    return analyzer:Call(index, types.Tuple:new({self, key}), key.node)[1]
+                end
+                return index:Call(self, key):GetData()[1]
+            end
         end
     end
 

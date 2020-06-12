@@ -53,13 +53,13 @@ describe("metatable", function()
 
         local a = analyzer:GetValue("a", "runtime")
         local b = analyzer:GetValue("b", "runtime")
-        
+
         assert.equal(2, a:GetData())
         assert.equal(3, b:GetData())
-    end) 
-        
+    end)
 
-    it("meta methods should work", function()
+
+    it("__call method should work", function()
         local analyzer = run[[
             local META = {}
             META.__index = META
@@ -69,35 +69,74 @@ describe("metatable", function()
             end
 
             local obj = setmetatable({}, META)
-            local a = obj(1,2,3)
+            local lol = obj(100,2,3)
         ]]
 
         local obj = analyzer:GetValue("obj", "runtime")
 
-        local a = analyzer:GetValue("a", "runtime")
-        print(a)
---        assert.equal(6, a:GetData())
+        assert.equal(105, analyzer:GetValue("lol", "runtime"):GetData())
     end)
-do return end
-    pending("basic inheritance should work", function()
+
+    it("__call method should not mess with scopes", function()
+        local analyzer = run[[
+            local META = {}
+            META.__index = META
+
+            function META:__call(a,b,c)
+                return a+b+c
+            end
+
+            local a = setmetatable({}, META)(100,2,3)
+        ]]
+
+        local a = analyzer:GetValue("a", "runtime")
+
+        assert.equal(105, a:GetData())
+    end)
+
+    it("vector test", function()
         local analyzer = run[[
             local Vector = {}
             Vector.__index = Vector
-            
+
+            setmetatable(Vector, {
+                __call = function(_, a)
+                    return setmetatable({lol = a}, Vector)
+                end
+            })
+
+            local v = Vector(123).lol
+        ]]
+
+        local v = analyzer:GetValue("v", "runtime")
+        assert.equal(123, v:GetData())
+    end)
+
+    it("vector test2", function()
+        local analyzer = run[[
+            local Vector = {}
+            Vector.__index = Vector
+
             function Vector.__add(a, b)
                 return Vector(a.x + b.x, a.y + b.y, a.z + b.z)
             end
 
             setmetatable(Vector, {
-                __call = function(x,y,z) 
-                    return setmetatable({x=x,y=y,z=z}, Vector) 
+                __call = function(_, x,y,z)
+                    return setmetatable({x=x,y=y,z=z}, Vector)
                 end
             })
 
-            local v = Vector(1,2,3) + Vector(3,2,1)
+            local v = Vector(1,2,3) + Vector(100,100,100)
+            local x, y, z = v.x, v.y, v.z
         ]]
 
-        local obj = analyzer:GetValue("v", "runtime")
-        print(obj)
+        local x = analyzer:GetValue("x", "runtime")
+        local y = analyzer:GetValue("y", "runtime")
+        local z = analyzer:GetValue("z", "runtime")
+
+        assert.equal(101, x:GetData())
+        assert.equal(102, y:GetData())
+        assert.equal(103, z:GetData())
     end)
 end)
