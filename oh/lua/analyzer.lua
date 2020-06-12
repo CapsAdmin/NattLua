@@ -36,6 +36,10 @@ local function binary_operator(op, l, r, env)
         end
     end
 
+    if l.Type == "object" and r.Type == "set" then
+        return binary_operator(op, types.Set:new({l}), r, env)
+    end
+
     if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
 
         if l.type ~= r.type then
@@ -98,6 +102,18 @@ end
 
 
 local function __index(obj, key)
+    if obj.Type == "set" then
+        local copy = types.Set:new()
+        for i,v in ipairs(obj:GetElements()) do
+            local val, err = __index(v, key)
+            if not val then
+                return val, err
+            end
+            copy:AddElement(val)
+        end
+        return copy
+    end
+
     if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
         return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
     end
@@ -741,6 +757,8 @@ function META:AnalyzeStatement(statement)
         local obj = args[1]
 
         if obj then
+            table.remove(args, 1)
+
             local values = self:Call(obj, types.Tuple:new(args), statement.expressions[1])
 
             for i,v in ipairs(statement.identifiers) do
@@ -963,7 +981,7 @@ do
                     stack:Push(stack:Pop():PostfixOperator(node))
                 elseif node.kind == "postfix_expression_index" then
                     local obj = stack:Pop()
-                    stack:Push(self:Assert(obj.node, __index(obj, self:AnalyzeExpression(node.expression))) or self:TypeFromImplicitNode(obj.node, "nil"))
+                    stack:Push(self:Assert(node, __index(obj, self:AnalyzeExpression(node.expression))) or self:TypeFromImplicitNode(obj.node, "nil"))
                 elseif node.kind == "type_function" then
                     local args = {}
                     local rets = {}
