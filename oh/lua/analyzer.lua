@@ -177,6 +177,13 @@ do -- types
             end
 
             --lua function
+            local callable = obj.Type == "dictionary" and obj.meta and obj:Get("__call")
+
+            if callable then
+                obj = callable
+                table.insert(arguments.data, 1, obj)
+            end
+
             if obj.node and (obj.node.kind == "function" or obj.node.kind == "local_function") then
 
                 do -- recursive guard
@@ -188,14 +195,15 @@ do -- types
 
                 local return_tuple = self:Assert(obj.node, obj:Call(arguments))
 
-                self:PushScope(obj.node)
+                self:PushScope(obj.node)    
+                    local self_call = obj.node.self_call or callable
 
-                    if obj.node.self_call then
+                    if self_call then
                         self:SetUpvalue("self", arguments.data[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
                     end
 
                     for i, identifier in ipairs(obj.node.identifiers) do
-                        local argi = obj.node.self_call and (i+1) or i
+                        local argi = self_call and (i+1) or i
 
                         if identifier.value.value == "..." then
                             local values = {}
@@ -1030,7 +1038,9 @@ do
 
                     local arguments = self:AnalyzeExpressions(node.expressions, env)
 
-                    if node.self_call then
+                    local callable = obj.Type == "dictionary" and obj.meta and obj:Get("__call")
+
+                    if node.self_call or callable then
                         local val = stack:Pop()
                         table.insert(arguments, 1, val)
                     end

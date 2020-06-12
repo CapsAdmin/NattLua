@@ -92,6 +92,9 @@ function Object:Get(key)
 end
 
 function Object:Set(key, val)
+    if self.type == "any" then
+        return false, "any[" .. tostring(key) .. "] = " .. tostring(val)
+    end
     return self.data:Set(key, val)
 end
 

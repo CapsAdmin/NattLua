@@ -23,8 +23,8 @@ local function run(code, expect_error)
     return code_data.Analyzer
 end
 
-describe("metatables", function()
-    it("should work", function()
+describe("metatable", function()
+    it("index function should work", function()
         local analyzer = run[[
             local t = setmetatable({}, {__index = function() return 1 end})
             local a = t.lol
@@ -32,5 +32,72 @@ describe("metatables", function()
 
         local a = analyzer:GetValue("a", "runtime")
         assert.equal(1, a:GetData())
+    end)
+
+    it("basic inheritance should work", function()
+        local analyzer = run[[
+            local META = {}
+            META.__index = META
+
+            META.Foo = 2
+
+            function META:Test(v)
+                return self.foo + v, META.Foo + v
+            end
+
+            local obj = setmetatable({foo = 1}, META)
+            local a, b = obj:Test(1)
+        ]]
+
+        local obj = analyzer:GetValue("obj", "runtime")
+
+        local a = analyzer:GetValue("a", "runtime")
+        local b = analyzer:GetValue("b", "runtime")
+        
+        assert.equal(2, a:GetData())
+        assert.equal(3, b:GetData())
+    end) 
+        
+
+    it("meta methods should work", function()
+        local analyzer = run[[
+            local META = {}
+            META.__index = META
+
+            function META:__call(a,b,c)
+                return a+b+c
+            end
+
+            local obj = setmetatable({}, META)
+            local a = obj(1,2,3)
+        ]]
+
+        local obj = analyzer:GetValue("obj", "runtime")
+
+        local a = analyzer:GetValue("a", "runtime")
+        print(a)
+--        assert.equal(6, a:GetData())
+    end)
+do return end
+    pending("basic inheritance should work", function()
+        local analyzer = run[[
+            local Vector = {}
+            Vector.__index = Vector
+            
+            function Vector.__add(a, b)
+                return Vector(a.x + b.x, a.y + b.y, a.z + b.z)
+            end
+
+            setmetatable(Vector, {
+                __call = function(x,y,z) 
+                    return setmetatable({x=x,y=y,z=z}, Vector) 
+                end
+            })
+
+            local v = Vector(1,2,3) + Vector(3,2,1)
+        ]]
+
+        local obj = analyzer:GetValue("v", "runtime")
+        print(obj)
     end)
 end)
