@@ -114,7 +114,9 @@ function Tuple:SupersetOf(sub)
             return true
         end
 
-        if b.type ~= "any" and (not a or not a:SupersetOf(b)) then
+        if not a and i <= self:GetMaxLength() then
+            print("LOL")
+        elseif b.type ~= "any" and (not a or not a:SupersetOf(b)) then
             return false
         end
     end

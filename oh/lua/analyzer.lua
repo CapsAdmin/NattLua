@@ -180,7 +180,10 @@ do -- types
             local callable = obj.Type == "dictionary" and obj.meta and obj.meta:Get("__call")
 
             if callable then
-                table.insert(arguments.data, 1, obj)
+                --arguments = arguments:Copy()
+                local arg = obj
+                arg.volatile = true
+                table.insert(arguments.data, 1, arg)
                 obj = callable
             end
 
@@ -201,7 +204,7 @@ do -- types
                     self.calling_function = obj
                 end
 
-                local return_tuple = self:Assert(obj.node, obj:Call(arguments))
+                local return_tuple = self:Assert(node, obj:Call(arguments))
 
                 self:PushScope(obj.node)
                     local self_call = obj.node.self_call
@@ -475,8 +478,7 @@ local utl = require("oh.pri".."nt_util")
 
 function META:Error(node, msg)
     if not node then
-        io.write("invalid error, no node supplied\n")
-        print(debug.traceback())
+        io.write("invalid error, no node supplied\n", debug.traceback(), "\n")
         error(msg)
     end
 
@@ -575,8 +577,8 @@ function META:AnalyzeStatement(statement)
                 local left = self:AnalyzeExpression(exp_key.type_expression, "typesystem")
 
                 if statement.right and statement.right[i] then
-                    if not val:SupersetOf(left) then
-                        self:Error(val.node, "expected " .. tostring(left) .. " but the right hand side is " .. tostring(right))
+                    if not left:SupersetOf(val) then
+                        self:Error(val.node, "expected " .. tostring(left) .. " but the right hand side is " .. tostring(val))
                     end
 
                     -- local a: 1 = 1
@@ -591,6 +593,7 @@ function META:AnalyzeStatement(statement)
 
                 val = left
             else
+                -- by default assignments are not constant, even though TypeFromImplicitNode is const by default
                 val.const = false
             end
 
@@ -607,58 +610,6 @@ function META:AnalyzeStatement(statement)
                 end
             end
         end
---[[
-        if statement.right then
-            for _, exp in ipairs(statement.right) do
-                for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
-
-                    -- table.unpack
-                    if obj.Type == "tuple" then -- vararg
-                        for _, obj in ipairs(obj.data) do
-                            table.insert(values, obj)
-                        end
-                    end
-
-                    table.insert(values, obj)
-                end
-            end
-        end
-
-        for i, node in ipairs(statement.left) do
-            local left = values[i]
-            local right = values[i]
-
-            if node.type_expression then
-                left = self:AnalyzeExpression(node.type_expression, "typesystem")
-
-                if right then
-                    if not right:SupersetOf(left) then
-                        self:Error(right.node, "expected " .. tostring(left) .. " but the right hand side is " .. tostring(right))
-                    end
-
-                    -- local a: 1 = 1
-                    -- should turn the right side into a constant number rather than number(1)
-                    right.const = left:IsConst()
-                end
-
-                -- lock the dictionary if there's an explicit type annotation
-                if left.Type == "dictionary" then
-                    left.locked = true
-                end
-            elseif left then
-                left.const = false
-            end
-
-            if statement.kind == "local_assignment" then
-                self:SetUpvalue(node, left or self:TypeFromImplicitNode(node, "nil"), env)
-            elseif statement.kind == "assignment" then
-                self:SetValue(node, left or self:TypeFromImplicitNode(node, "nil"), env)
-            end
-
-            node.inferred_type = left
-        end
-
-]]
 
     elseif statement.kind == "destructure_assignment" or statement.kind == "local_destructure_assignment" then
         local env = statement.environment or "runtime"
@@ -985,12 +936,6 @@ do
                         stack:Push(self:Assert(left.node, __index(left, right)) or self:TypeFromImplicitNode(left.node, "nil"))
                     else
                         local val, err = binary_operator(self, node.value.value, left, right, env)
-                        if not val and not err then
-                            print(node:Render(), right, node.value.value, left, env)
-                            print(left.type, right.type)
-                            print(val, err)
-                            error("wtf")
-                        end
                         stack:Push(self:Assert(node, val, err))
                     end
                 elseif node.kind == "prefix_operator" then
@@ -1154,14 +1099,25 @@ do
             local out = {}
             for i, node in ipairs(node.children) do
                 if node.kind == "table_key_value" then
+                    local val = self:AnalyzeExpression(node.expression, env)
                     out[i] = {
                         key = node.tokens["identifier"].value,
-                        val = self:AnalyzeExpression(node.expression, env)
+                        val = val
                     }
+
+                    if env == "runtime" then
+                        -- values should not be const by default
+                        val.const = false
+                    end
                 elseif node.kind == "table_expression_value" then
 
                     local key = self:AnalyzeExpression(node.expressions[1], env)
                     local obj = self:AnalyzeExpression(node.expressions[2], env)
+
+                    -- values should not be const by default
+                    if env == "runtime" then
+                        obj.const = false
+                    end
 
                     if key:IsType("string") and key.value then
                         out[i] = {key = key.value, val = obj}

@@ -24,7 +24,7 @@ local function run()
 
     assert(loadfile("tests/transpile_equal.lua"))()
     assert(loadfile("tests/operator_precedence.lua"))()
-    assert(loadfile("tests/typesystem.lua"))()
+--    assert(loadfile("tests/typesystem.lua"))()
     assert(loadfile("tests/type_inference.lua"))()
     assert(loadfile("tests/errors.lua"))()
 

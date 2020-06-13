@@ -42,10 +42,10 @@ describe("metatable", function()
             META.Foo = 2
 
             function META:Test(v)
-                return self.foo + v, META.Foo + v
+                return self.Bar + v, META.Foo + v
             end
 
-            local obj = setmetatable({foo = 1}, META)
+            local obj = setmetatable({Bar = 1}, META)
             local a, b = obj:Test(1)
         ]]
 
@@ -58,6 +58,27 @@ describe("metatable", function()
         assert.equal(3, b:GetData())
     end)
 
+    it("empty table should be compatible with metatable", function()
+        local analyzer = run[[
+            local META = {}
+            META.__index = META
+            META.Foo = "foo"
+
+            function META:Test()
+              --  TPRINT(self.Foo, self.Bar)
+            end
+
+            local obj = setmetatable({Bar = "bar"}, META)
+
+            obj:Test()
+        ]]
+
+        local META = analyzer:GetValue("META", "runtime")
+        local obj = analyzer:GetValue("obj", "runtime")
+
+        --print(META:Get("Foo"))
+
+    end)
 
     it("__call method should work", function()
         local analyzer = run[[
@@ -69,6 +90,7 @@ describe("metatable", function()
             end
 
             local obj = setmetatable({}, META)
+
             local lol = obj(100,2,3)
         ]]
 

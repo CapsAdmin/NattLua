@@ -154,6 +154,12 @@ describe("analyzer", function()
         assert.equal(3, analyzer:GetValue("a", "runtime"):GetData())
     end)
 
+    it("explicitly annotated variables need to be set properly", function()
+        local analyzer = run[[
+            local a: number | string = 1
+        ]]
+    end)
+
     it("functions can modify parent scope", function()
         local analyzer = run[[
             local a = 1
@@ -166,5 +172,33 @@ describe("analyzer", function()
 
         assert.equal(2, analyzer:GetValue("a", "runtime"):GetData())
         assert.equal(1, analyzer:GetValue("c", "runtime"):GetData())
+    end)
+
+    it("uncalled functions should be called", function()
+        local analyzer = run[[
+            local lib = {}
+
+            function lib.foo1(a, b)
+                return lib.foo2(a, b)
+            end
+
+            function lib.main()
+                return lib.foo1(1, 2)
+            end
+
+            function lib.foo2(a, b)
+                return a + b
+            end
+        ]]
+        local lib = analyzer:GetValue("lib", "runtime")
+
+        assert.equal(true, lib:Get("foo1"):GetArguments().data[1]:IsType("number"))
+        assert.equal(true, lib:Get("foo1"):GetArguments().data[2]:IsType("number"))
+        assert.equal(true, lib:Get("foo1"):GetReturnTypes().data[1]:IsType("number"))
+
+        print(lib)
+        assert.equal(true, lib:Get("foo2"):GetArguments().data[1]:IsType("number"))
+        assert.equal(true, lib:Get("foo2"):GetArguments().data[2]:IsType("number"))
+        assert.equal(true, lib:Get("foo2"):GetReturnTypes().data[1]:IsType("number"))
     end)
 end)

@@ -32,21 +32,29 @@ function Set:GetSignature()
 end
 
 function Set:Call(arguments)
-    local out = types.Set:new()
+    local set = types.Set:new()
+    local errors = {}
 
     for _, obj in ipairs(self.datai) do
         if not obj.Call then
             return false, "set contains uncallable object " .. tostring(obj)
         end
 
-        local return_tuple = obj:Call(arguments)
+
+        local return_tuple, error = obj:Call(arguments)
 
         if return_tuple then
-            out:AddElement(return_tuple)
+            set:AddElement(return_tuple)
+        else
+            table.insert(errors, error)
         end
     end
 
-    return types.Tuple:new({out})
+    if set:GetLength() == 0 then
+        return false, table.concat(errors, "\n")
+    end
+
+    return types.Tuple:new({set})
 end
 
 function Set:__tostring()
@@ -114,6 +122,7 @@ function Set:Get(key, from_dictionary)
     end
 
     local val = self.data[key.type] or self.data[key:GetSignature()]
+
     if val then
         return val
     end
@@ -136,23 +145,42 @@ function Set:SupersetOf(sub)
     end
 
     if sub.Type == "object" then
-        return self:Get(sub) ~= nil
+        if self:Get(sub) == nil then
+            return false, tostring(sub) .. " is not part of the set " .. tostring(self)
+        end
+
+        return true
     end
 
     if sub.Type == "set" then
         for k,v in ipairs(sub.datai) do
-            if self.data[types.GetSignature(v)] == nil or not v:SupersetOf(self.data[types.GetSignature(v)]) then
-                return false
+            local val = self.data[types.GetSignature(v)]
+
+            if val == nil then
+                return false, "the signature " .. tostring(val) .. " cannot be found in the set " .. tostring(self)
+            end
+
+            if not v:SupersetOf(val) then
+                return false, tostring(v) .. " is not a superset of " .. self
             end
         end
+
         return true
     elseif not self:Get(sub) then
-        return false
+        return false, tostring(sub) .. " is not inside2 " .. tostring(self)
+    end
+
+    if sub.Type == "dictionary" then
+        if not self:Get(sub) then
+            return false, tostring(sub) .. " is not inside3 " .. tostring(self)
+        end
+
+        return true
     end
 
     for _, e in ipairs(self.datai) do
-        if not sub:Get(e)then
-            return false
+        if not sub:Get(e) then
+            return false, tostring(e) .. " is not inside set " .. tostring(self) .. " "
         end
     end
 

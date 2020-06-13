@@ -924,3 +924,6 @@ type setmetatable = function(tbl, meta)
 	return tbl
 end
 
+type getmetatable = function(tbl)
+	return tbl.meta
+end

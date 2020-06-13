@@ -1,75 +1,103 @@
 local types = require("oh.typesystem.types")
 types.Initialize()
 
-do
-    local Object = function(...) return types.Object:new(...) end
+local Object = function(...) return types.Object:new(...) end
 
-    local function cast(...)
-        local ret = {}
-        for i = 1, select("#", ...) do
-            local v = select(i, ...)
-            local t = type(v)
-            if t == "number" or t == "string" or t == "boolean" then
-                ret[i] = Object(t, v, true)
-            else
-                ret[i] = v
-            end
+local function cast(...)
+    local ret = {}
+    for i = 1, select("#", ...) do
+        local v = select(i, ...)
+        local t = type(v)
+        if t == "number" or t == "string" or t == "boolean" then
+            ret[i] = Object(t, v, true)
+        else
+            ret[i] = v
         end
-
-        return ret
     end
 
+    return ret
+end
 
-    local Set = function(...) return types.Set:new(cast(...)) end
-    local Tuple = function(...) return types.Tuple:new({...}) end
 
-    local Dictionary = function(...) return types.Dictionary:new(...) end
-    local N = function(n) return Object("number", n, true) end
-    local S = function(n) return Object("string", n, true) end
-    local O = Object
+local Set = function(...) return types.Set:new(cast(...)) end
+local Tuple = function(...) return types.Tuple:new({...}) end
 
-    assert(Set("a", "b", "a", "a"):Serialize() == Set("a", "b"):Serialize())
-    assert(Set("a", "b", "c"):SupersetOf(Set("a", "b", "a", "a")))
+local Dictionary = function(...) return types.Dictionary:new(...) end
+local N = function(n) return Object("number", n, true) end
+local S = function(n) return Object("string", n, true) end
+local O = Object
 
-    assert(Set("a", "b", "c"):SupersetOf(Tuple(Set("a", "b", "a", "a"))))
-    assert(Tuple(Set("a", "b", "c")):SupersetOf(Tuple(Set("a", "b", "a", "a"))))
-    assert(Tuple(Set("a", "b", "c")):SupersetOf(Set("a", "b", "a", "a")))
+describe("typesystem", function()
+    it("set should not contain duplicates", function()
+        assert.equal(Set("a", "b", "a", "a"):Serialize(), Set("a", "b"):Serialize())
+    end)
 
-    assert(Set("c", "d"):SupersetOf(Set("c", "d")))
-    assert(Set("c", "d"):SupersetOf(Set("c", "d")))
-    assert(Set("a"):SupersetOf(Set(Set("a")))) -- should be false?
-    assert(Set("a", "b", "c"):SupersetOf(Set())) -- should be false?
-    assert(Set(1, 4, 5, 9, 13):Intersect(Set(2, 5, 6, 8, 9)):GetSignature() == Set(5, 9):GetSignature())
+    it("smaller set should fit in larger set", function()
+        assert(Set("a", "b", "c"):SupersetOf(Set("a", "b", "a", "a")))
+        assert(Set("a", "b", "c"):SupersetOf(Tuple(Set("a", "b", "a", "a"))))
+        assert(Tuple(Set("a", "b", "c")):SupersetOf(Tuple(Set("a", "b", "a", "a"))))
+        assert(Tuple(Set("a", "b", "c")):SupersetOf(Set("a", "b", "a", "a")))
+
+        assert(Set("c", "d"):SupersetOf(Set("c", "d")))
+        assert(Set("a"):SupersetOf(Set(Set("a")))) -- should be false?
+        assert(Set("a", "b", "c"):SupersetOf(Set())) -- should be false?
+    end)
+
+    it("set intersection should work", function()
+        assert.equal(Set(1, 4, 5, 9, 13):Intersect(Set(2, 5, 6, 8, 9)):GetSignature(), Set(5, 9):GetSignature())
+    end)
 
     local A = Set(N(1),N(2),N(3))
     local B = Set(N(1),N(2),N(3),N(4))
 
-    assert(B:GetSignature() == A:Union(B):GetSignature(), tostring(B) .. " should equal the union of "..tostring(A).." and " .. tostring(B))
-    assert(B:GetLength() == 4)
-    assert(B:SupersetOf(A))
+    it(tostring(B) .. " should equal the union of "..tostring(A).." and " .. tostring(B), function()
+        assert.equal(B:GetSignature(), A:Union(B):GetSignature())
+        assert.equal(4, B:GetLength())
+        assert(B:SupersetOf(A))
+
+    end)
+
 
     local yes = Object("boolean", true, true)
     local no = Object("boolean", false, true)
     local yes_and_no =  Set(yes, no)
 
-    assert(yes:SupersetOf(yes_and_no), tostring(yes) .. "should be a subset of " .. tostring(yes_and_no))
-    assert(no:SupersetOf(yes_and_no), tostring(no) .. " should be a subset of " .. tostring(yes_and_no))
+    it(tostring(yes) .. " should be a subset of " .. tostring(yes_and_no), function()
+        assert(yes:SupersetOf(yes_and_no) == false)
+    end)
 
-    assert(yes_and_no:SupersetOf(yes), tostring(yes_and_no) .. " is NOT a subset of " .. tostring(yes))
-    assert(yes_and_no:SupersetOf(no), tostring(yes_and_no) .. " is NOT a subset of " .. tostring(no))
+    it(tostring(no) .. "  should be a subset of " .. tostring(yes_and_no), function()
+        assert(no:SupersetOf(yes_and_no) == false)
+    end)
 
-    local tbl = Dictionary({})
-    tbl:Set(yes_and_no, Object("boolean", false))
-    tbl:Lock(true)
-    tbl:Set(yes, yes)
-    assert(tbl:Get(yes).data == false, " should be false")
+    it(tostring(yes_and_no) .. " is NOT a subset of " .. tostring(yes), function()
+        assert(yes_and_no:SupersetOf(yes))
+    end)
 
-    local tbl = Dictionary({})
-    tbl:Set(yes_and_no, Object("boolean", false))
-    tbl:Lock(false)
-    tbl:Set(yes, yes, "typesystem")
-    assert(tbl:Get(yes).data == true, " should be true")
+    it(tostring(yes_and_no) .. " is NOT a subset of " .. tostring(no), function()
+        assert(yes_and_no:SupersetOf(no))
+    end)
 
+
+    pending("dictionary should be able to lock", function()
+        local tbl = Dictionary({})
+        tbl:Set(yes_and_no, Object("boolean", false))
+        tbl:Lock(true)
+        local what = tbl:Get(yes)
+        assert(what.data == false, " should be false")
+    end)
+
+    pending("dictionary should be able to unlock", function()
+        local tbl = Dictionary({})
+        tbl:Set(yes_and_no, Object("boolean", false))
+        tbl:Lock(false)
+        tbl:Set(yes, yes, "typesystem")
+        assert(tbl:Get(yes).data == true, " should be true")
+    end)
+
+end)
+
+do
     do
         local IAge = Dictionary({})
         IAge:Set(Object("string", "age", true), Object("number"))
@@ -110,8 +138,8 @@ do
     assert(Tuple(O"string", O"number"):SupersetOf(Tuple(O"number", O"string")) == false)
     assert(Tuple(O"number", O"string"):SupersetOf(Tuple(O"number", O"string")) == true)
 
-    assert(overloads:Call(Tuple(O"string", O"number")):GetSignature() == "LOL")
-    assert(overloads:Call(Tuple(N(5), O"string")):GetSignature() == "ROFL")
+    assert(assert(overloads:Call(Tuple(O"string", O"number"))):GetSignature() == "LOL")
+    assert(assert(overloads:Call(Tuple(N(5), O"string"))):GetSignature() == "ROFL")
 
     assert(O("number"):SupersetOf(N(5)) == true)
     assert(N(5):SupersetOf(O("number")) == true)

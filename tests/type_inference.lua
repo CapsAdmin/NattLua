@@ -1126,9 +1126,10 @@ R[[
         end
     end
 
-    for k,v in pairs({foo = true}) do
+    local t = {foo = true}
+    for k,v in pairs(t) do
         type_assert(k, _ as "foo")
-        type_assert(v, _ as true)
+        type_assert(v, t.foo)
     end
 
     for i,v in ipairs({"LOL",2,3}) do
@@ -1237,7 +1238,7 @@ R[=[
     local d = b(2)
     local d = b(a)
 
-    local lol: {a = boolean, Foo = function():} = {}
+    local lol: {a = boolean |nil, Foo = (function():nil) | nil} = {a = nil, Foo = nil}
     lol.a = true
 
     function lol:Foo(foo, bar)

@@ -131,7 +131,7 @@ function Object:SupersetOf(sub)
         return true
     end
 
-    if sub.Type == "set" then
+    if sub.Type == "set" and sub:GetLength() == 1 then
         return sub:Get(self) ~= nil
     end
 
@@ -299,36 +299,52 @@ function Object:Call(arguments)
         return types.Tuple:new(types.Object:new("any"))
     end
 
-    if self.type == "function" and self.data.lua_function then
-        _G.self = require("oh").current_analyzer
-        local res = {pcall(self.data.lua_function, table.unpack(arguments.data))}
-        _G.self = nil
+    if self.type == "function"  then
+        if self.data.lua_function then
+            _G.self = require("oh").current_analyzer
+            local res = {pcall(self.data.lua_function, table.unpack(arguments.data))}
+            _G.self = nil
 
-        if not res[1] then
-            return false, res[2]
+            if not res[1] then
+                return false, res[2]
+            end
+
+            if not res[2] then
+                res[2] = types.Object:new("nil")
+            end
+
+            table.remove(res, 1)
+
+            return types.Tuple:new(res)
         end
 
-        if not res[2] then
-            res[2] = types.Object:new("nil")
+        for i, arg in ipairs(self.data.arg:GetData()) do
+            if not arguments.data[i] then
+                break
+            end
+
+            local ok, reason = arg:SupersetOf(arguments.data[i])
+
+            if not ok then
+                if not reason then
+                    print("no reason provided?")
+                    print(arg.Type, "a ============")
+                    for k,v in pairs(arg) do
+                        print(k,v)
+                    end
+                    print(arg.Type, "b ============")
+                    for k,v in pairs(arguments.data[i]) do
+                        print(k,v)
+                    end
+                end
+                return false, "argument " .. tostring(arg) .. " is not compatible with " .. tostring(arguments.data[i]) .. ": " .. tostring(reason)
+            end
         end
 
-        table.remove(res, 1)
-
-        return types.Tuple:new(res)
+        return self.data.ret
     end
 
-    for i, arg in ipairs(self.data.arg:GetData()) do
-        if not arguments[i] then
-            break
-        end
-
-        if  not arg:SupersetOf(arguments[i]) then
-            return false, "cannot call " .. tostring(self) .. " with arguments " ..  tostring(arguments)
-        end
-
-    end
-
-    return self.data.ret
+    return false, "cannot call a nil value"
 end
 
 function Object:PrefixOperator(op, val)
