@@ -161,4 +161,40 @@ describe("metatable", function()
         assert.equal(102, y:GetData())
         assert.equal(103, z:GetData())
     end)
+    pending("a", function()
+        run[[
+            local meta: {num = number, __index = self} = {}
+            meta.__index = meta
+
+            local a = setmetatable({}, meta)
+
+            TPRINT(meta)
+            --type_assert(a.num, _ as number) -- implement meta tables
+        ]]
+    end)
+    pending("interface extensions", function()
+        run[[
+            local type Vec2 = {x = number, y = number}
+            local type Vec3 = {z = number} extends Vec2
+
+            local type Base = {
+                Test = function(self): number,
+            }
+
+            local type Foo = Base extends {
+                SetPos = (function(self, pos: Vec3): nil),
+                GetPos = (function(self): Vec3),
+            }
+
+            local x: Foo = {}
+            x:SetPos({x = 1, y = 2, z = 3})
+            local a = x:GetPos()
+            local z = a.x + 1
+
+            type_assert(z, _ as number)
+
+            local test = x:Test()
+            type_assert(test, _ as number)
+        ]]
+    end)
 end)

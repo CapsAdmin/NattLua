@@ -279,4 +279,16 @@ describe("function", function()
             function foo(a: number):string return '' end
         ]]
     end)
+
+    pending("calling a set should work", function()
+        run[[
+            type test = (function(boolean, boolean): number) | (function(boolean): string)
+
+            local a = test(true, true)
+            local b = test(true)
+
+            type_assert(a, _ as number)
+            type_assert(b, _ as string)
+        ]]
+    end)
 end)

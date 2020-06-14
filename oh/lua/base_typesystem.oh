@@ -266,6 +266,15 @@ type type_assert = function(what: any, type: any)
 	end
 end
 
+type subset_of = function(A: any, B: any)
+	local ok, err = A:SubsetOf(B)
+	if not ok then
+		error(err)
+	end
+
+	return ok
+end
+
 type type_assert_superset = function(what: any, type: any)
 	if not what:SubsetOf(type) or (what.type == "any" and type.type ~= "any") then
 		error("expected " .. tostring(type) .." got " .. tostring(what))
@@ -310,17 +319,19 @@ type require = function(name)
 		return self:GetValue(str, "typesystem")
 	end
 
-	for _, searcher in ipairs(package.loaders) do
-		local loader = searcher(str)
-		if type(loader) == "function" then
-			local path = debug.getinfo(loader).source
-			if path:sub(1, 1) == "@" then
-				local path = path:sub(2)
+	if package.loaders then
+		for _, searcher in ipairs(package.loaders) do
+			local loader = searcher(str)
+			if type(loader) == "function" then
+				local path = debug.getinfo(loader).source
+				if path:sub(1, 1) == "@" then
+					local path = path:sub(2)
 
-				local ast = assert(require("oh").FileToAST(path))
-				analyzer:AnalyzeStatement(ast)
+					local ast = assert(require("oh").FileToAST(path))
+					analyzer:AnalyzeStatement(ast)
 
-				return table.unpack(analyzer.last_return)
+					return table.unpack(analyzer.last_return)
+				end
 			end
 		end
 	end

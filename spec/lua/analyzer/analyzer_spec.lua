@@ -30,6 +30,34 @@ describe("analyzer", function()
         assert.equal(true, v:IsType("number"))
     end)
 
+    it("comment types", function()
+        run([[
+            --: local type a = 1
+            type_assert(a, 1)
+        ]])
+    end)
+
+    it("branching", function()
+        run([[
+            type a = {}
+
+            if not a then
+                -- shouldn't reach
+                type_assert(1, 2)
+            else
+                type_assert(1, 1)
+            end
+        ]])
+
+        run([[
+            type a = {}
+            if not a then
+                -- shouldn't reach
+                type_assert(1, 2)
+            end
+        ]])
+    end)
+
     it("runtime block scopes should work", function()
 
         local analyzer = run("do local a = 1 end")
@@ -198,5 +226,145 @@ describe("analyzer", function()
         assert.equal(true, lib:Get("foo2"):GetArguments().data[1]:IsType("number"))
         assert.equal(true, lib:Get("foo2"):GetArguments().data[2]:IsType("number"))
         assert.equal(true, lib:Get("foo2"):GetReturnTypes().data[1]:IsType("number"))
+    end)
+
+    it("should convert binary numbers to numbers", function()
+        local analyzer = run[[
+            local a = 0b01
+        ]]
+        assert.equal(1, analyzer:GetValue("a", "runtime"):GetData())
+    end)
+
+    it("undefined types should error", function()
+        run([[local a: ASDF = true]], "cannot be nil")
+    end)
+
+    it("type functions should return a tuple with types", function()
+        local analyzer = run([[
+            local type test = function()
+                return 1,2,3
+            end
+
+            local type a,b,c = test()
+        ]])
+
+        assert.equal(1, analyzer:GetValue("a", "typesystem"):GetData())
+        assert.equal(2, analyzer:GetValue("b", "typesystem"):GetData())
+        assert.equal(3, analyzer:GetValue("c", "typesystem"):GetData())
+    end)
+
+    it("type should be able to error", function()
+        run([[
+            local type test = function()
+                error("test")
+            end
+
+            test()
+        ]], "test")
+    end)
+
+    it("exclude type function should work", function()
+        run([[
+            type Exclude = function(T, U)
+                T:RemoveElement(U)
+                return T
+            end
+
+            local a: Exclude<1|2|3, 2>
+
+            type_assert(a, _ as 1|3)
+        ]])
+
+        run([[
+            type Exclude = function(T, U)
+                T:RemoveElement(U)
+                return T
+            end
+
+            local a: Exclude<1|2|3, 2>
+
+            type_assert(a, _ as 11|31)
+        ]], "expected 11 | 31 got 1 | 3")
+    end)
+
+    pending("what", function()
+        run[=[
+            local a = 1
+            function b(lol: number)
+                if lol == 1 then return "foo" end
+                return lol + 4, true
+            end
+            local d = b(2)
+            local d = b(a)
+
+            local lol: {a = boolean |nil, Foo = (function():nil) | nil} = {a = nil, Foo = nil}
+            lol.a = true
+
+            function lol:Foo(foo, bar)
+                local a = self.a
+            end
+
+            --local lol: string[] = {}
+
+            --local a = table.concat(lol)
+        ]=]
+    end)
+
+    pending("lists should work", function()
+        local analyzer = run([[
+            type Array = function(T, L)
+                return types.Create("list", {type = T, values = {}, length = L.data})
+            end
+
+            local list: Array<number, 3> = {1, 2, 3}
+        ]])
+        print(analyzer:GetValue("list", "runtime"))
+    end)
+
+    pending("expected errors", function()
+        run([[require("adawdawddwaldwadwadawol")]], "unable to find module")
+
+        run([[local a = 1 a()]], "1 cannot be called")
+
+        run([[
+                local {a,b} = nil
+            ]], "expected a table on the right hand side, got")
+        run([[
+                local a: {[string] = string} = {}
+                a.lol = "a"
+                a[1] = "a"
+            ]], "invalid key number.-expected string")
+        run([[
+                local a: {[string] = string} = {}
+                a.lol = 1
+            ]], "invalid value number.-expected string")
+        run([[
+                local a: {} = {}
+                a.lol = true
+            ]], "invalid key string")
+        run([[
+                local tbl: {1,true,3} = {1, true, 3}
+                tbl[2] = false
+            ]], "invalid value boolean.-expected.-true")
+        run([[
+                local tbl: {1,true,3} = {1, false, 3}
+            ]], "expected .- but the right hand side is ")
+        run([[
+                assert(1 == 2, "lol")
+            ]],"lol")
+
+        run([[
+            local a: {} = {}
+            a.lol = true
+        ]],"invalid key")
+
+        run([[
+            local a = 1
+            a.lol = true
+        ]],"undefined set:")
+
+        run([[local a = 1; a = a.lol]],"undefined get:")
+        run([[local a = 1 + true]], "no operator for.-number.-%+.-boolean")
+
     end)
 end)

@@ -67,6 +67,10 @@ function Tuple:Merge(tup, dont_extend)
     return self
 end
 
+function Tuple:SetElementType(typ)
+    self.ElementType = typ
+end
+
 function Tuple:GetMaxLength()
     return self.max or 0
 end
@@ -161,7 +165,7 @@ function Tuple:__tostring()
         s[i] = tostring(v)
     end
 
-    return "(" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or (self.max and ("#" .. self.max)) or "") .. ")"
+    return (self.ElementType and tostring(self.ElementType) or "") .. "(" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or (self.max and ("#" .. self.max)) or "") .. ")"
 end
 
 function Tuple:Serialize()
@@ -191,6 +195,7 @@ function Tuple:new(tbl)
 
     for i,v in ipairs(self.data) do
         if not types.IsTypeObject(v) then
+            for k,v in pairs(tbl) do print(k,v) end
             error(tostring(v) .. " is not a type object")
         end
     end

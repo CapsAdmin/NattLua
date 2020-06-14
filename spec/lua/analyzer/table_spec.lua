@@ -95,9 +95,51 @@ describe("table", function()
             local b = {a=true}
             b.foo = {lol = b}
         ]])
+
         local a = analyzer:GetValue("a", "runtime")
         local b = analyzer:GetValue("b", "runtime")
 
         assert.equal(true, a:SubsetOf(b))
+    end)
+
+    it("indexing nil in a table should be allowed", function()
+        local analyzer = run([[
+            local tbl = {foo = true}
+            local a = tbl.bar
+        ]])
+
+        assert.equal("nil", analyzer:GetValue("a", "runtime").type)
+    end)
+
+    it("indexing nil in a table with a contract should error", function()
+        run([[
+            local tbl: {foo = true} = {foo = true}
+            local a = tbl.bar
+        ]], "\"bar\" is not a subset of any of the keys in ")
+    end)
+
+    pending("string: any", function()
+        run([[
+            local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)
+            a.lol = "aaa"
+            a.lol2 = 2
+            a.lol3 = {}
+            a[1] = {}
+        ]])
+    end)
+
+    it("nested tables should work", function()
+        local analyzer = run[[
+            interface a {
+                foo = {
+                    bar = number
+                }
+            }
+
+            local tbl: a = {foo = {bar = 1}}
+        ]]
+
+        local tbl = analyzer:GetValue("tbl", "runtime")
+        print(tbl)
     end)
 end)

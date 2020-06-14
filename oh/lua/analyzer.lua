@@ -3,6 +3,18 @@ local syntax = require("oh.lua.syntax")
 local types = require("oh.typesystem.types")
 types.Initialize()
 
+local function string_to_number(str)
+    if str:sub(1,2) == "0b" then
+        return tonumber(str:sub(3))
+    end
+
+    local num = tonumber(str)
+    if not num then
+        error("unable to convert " .. str .. " to number", 2)
+    end
+    return num
+end
+
 local META = {}
 META.__index = META
 
@@ -109,11 +121,11 @@ local function __new_index(obj, key, val, env)
 end
 
 
-local function __index(obj, key)
+local function __index(self, obj, key)
     if obj.Type == "set" then
         local copy = types.Set:new()
         for i,v in ipairs(obj:GetElements()) do
-            local val, err = __index(v, key)
+            local val, err = __index(self, v, key)
             if not val then
                 return val, err
             end
@@ -126,7 +138,17 @@ local function __index(obj, key)
         return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
     end
 
-    return obj:Get(key)
+    if obj.contract then
+        return obj:Get(key)
+    end
+
+    local val = obj:Get(key)
+
+    if not val then
+        return self:TypeFromImplicitNode(obj.node, "nil")
+    end
+
+    return val
 end
 
 
@@ -159,13 +181,17 @@ do -- types
 
         table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
 
-        function META:GetInferredType(node)
+        function META:GetInferredType(node, env)
             local str = node.value.value:lower()
 
             for _, v in ipairs(guesses) do
                 if str:find(v.pattern, nil, true) then
                     return self:TypeFromImplicitNode(node, v.type)
                 end
+            end
+
+            if env == "typesystem" then
+                return self:TypeFromImplicitNode(node, "nil")
             end
 
             return self:TypeFromImplicitNode(node, "any")
@@ -296,13 +322,13 @@ do -- types
             elseif obj.Call then
                 self:FireEvent("external_call", node, obj)
 
-                local return_tuple, err = obj:Call(arguments)
+                local ret, err = obj:Call(arguments)
 
-                if return_tuple == false then
+                if ret == false then
                     self:Error(node, err)
                 end
 
-                return return_tuple.data
+                return ret.data
             end
 
             -- calling something that has no type and does not exist
@@ -589,6 +615,11 @@ function META:AnalyzeStatement(statement)
             if exp_key.type_expression then
                 local contract = self:AnalyzeExpression(exp_key.type_expression, "typesystem")
 
+                if contract.type == "nil" then
+                    -- TODO: better error
+                    self:Error(exp_key.type_expression, "cannot be nil")
+                end
+
                 if statement.right and statement.right[i] then
 
                     if contract.Type == "dictionary" then
@@ -606,7 +637,11 @@ function META:AnalyzeStatement(statement)
                     end
                 end
 
-                val.contract = contract
+                if val.type == "dictionary" and contract.type == "list" then
+                    assert("NYI")
+                else
+                    val.contract = contract
+                end
 
                 if not values[i] then
                     val = contract
@@ -912,6 +947,10 @@ do
                             end
                         end
 
+                        if env == "typesystem" and node.value.value == "any" then
+                            obj = self:TypeFromImplicitNode(node, "any")
+                        end
+
                         -- self in a table type declaration refers to the type table itself
                         if env == "typesystem" and not obj and node.value.value == "self" then
                             obj = self.current_table
@@ -923,12 +962,12 @@ do
 
                         -- last resort, itemCount > number
                         if not obj then
-                            obj = self:GetInferredType(node)
+                            obj = self:GetInferredType(node, env)
                         end
 
                         stack:Push(obj)
                     elseif node.value.type == "number" then
-                        stack:Push(self:TypeFromImplicitNode(node, "number", tonumber(node.value.value), true))
+                        stack:Push(self:TypeFromImplicitNode(node, "number", string_to_number(node.value.value), true))
                     elseif node.value.type == "string" then
                         stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true))
                     elseif node.value.type == "letter" then
@@ -954,7 +993,7 @@ do
                     end
 
                     if node.value.value == "." or node.value.value == ":" then
-                        stack:Push(self:Assert(left.node, __index(left, right)) or self:TypeFromImplicitNode(left.node, "nil"))
+                        stack:Push(self:Assert(left.node, __index(self, left, right)) or self:TypeFromImplicitNode(left.node, "nil"))
                     else
                         local val, err = binary_operator(self, node.value.value, left, right, env)
                         stack:Push(self:Assert(node, val, err))
@@ -965,7 +1004,7 @@ do
                     stack:Push(stack:Pop():PostfixOperator(node))
                 elseif node.kind == "postfix_expression_index" then
                     local obj = stack:Pop()
-                    stack:Push(self:Assert(node, __index(obj, self:AnalyzeExpression(node.expression))) or self:TypeFromImplicitNode(obj.node, "nil"))
+                    stack:Push(self:Assert(node, __index(self, obj, self:AnalyzeExpression(node.expression))) or self:TypeFromImplicitNode(obj.node, "nil"))
                 elseif node.kind == "type_function" then
                     local args = {}
                     local rets = {}

@@ -66,7 +66,7 @@ function types.IsPrimitiveType(val)
 end
 
 function types.IsTypeObject(obj)
-    return obj.Type ~= nil
+    return type(obj) == "table" and obj.Type ~= nil
 end
 
 do
@@ -215,6 +215,7 @@ function types.Create(type, data, const)
     elseif type == "list" then
         data = data or {}
         local tup = types.Tuple:new(data.values)
+        tup.ElementType = data.type
         tup.max = data.length
         return tup
     end

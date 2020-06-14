@@ -1,5 +1,6 @@
 local types = require("oh.typesystem.types")
 local syntax = require("oh.lua.syntax")
+local bit = not _G.bit and require("bit32") or _G.bit
 
 local Object = {}
 Object.Type = "object"
@@ -310,6 +311,12 @@ function Object:Call(arguments)
 
             table.remove(res, 1)
 
+            for i,v in ipairs(res) do
+                if not types.IsTypeObject(v) then
+                    res[i] = types.Create(type(v), v, true)
+                end
+            end
+
             return types.Tuple:new(res)
         end
 
@@ -344,6 +351,19 @@ function Object:PrefixOperator(op, val)
                     return types.Object:new("number", #self.data, true)
                 end
             end
+            return types.Object:new("number")
+        end
+
+        return types.Object:new("any")
+    end
+
+    if op == "~" then
+        if self.type == "number" then
+            print(self, op, val, "!!")
+            if self.data ~= nil then
+                return types.Object:new("number", bit.bnot(self.data))
+            end
+
             return types.Object:new("number")
         end
 
