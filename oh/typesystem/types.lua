@@ -36,11 +36,11 @@ do
 
     do
         Base.truthy = 0
-    
+
         function Base:GetTruthy()
             return self.truthy > 0
         end
-    
+
         function Base:PushTruthy()
             self.truthy = self.truthy + 1
         end
@@ -165,7 +165,7 @@ end
 
 function types.Create(type, data, const)
     if type == "table" then
-        return types.Dictionary:new(data)
+        return types.Dictionary:new(data, const)
     elseif type == "..." then
         return types.Tuple:new(data)
     elseif type == "number" or type == "string" or type == "function" or type == "boolean" then

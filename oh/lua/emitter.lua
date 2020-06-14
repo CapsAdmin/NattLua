@@ -107,7 +107,7 @@ do
             --self:Emit(" --[[ : ")
             local str = {}
             -- this iterates the first return tuple
-            for i,v in ipairs(node.inferred_type.data.ret.data) do
+            for i,v in ipairs((node.inferred_type.contract or node.inferred_type).data.ret.data) do
                 str[i] = tostring(v)
             end
             if str[1] then
@@ -208,10 +208,10 @@ function META:EmitTable(tree)
 
                     self:EmitExpression(node.expressions[2])
                 end
-                
+
                 if tree.tokens["separators"][i] then
                     self:EmitToken(tree.tokens["separators"][i])
-                else 
+                else
                     self:Whitespace(",")
                 end
 
@@ -536,7 +536,7 @@ function META:EmitIdentifier(node)
             self:EmitTypeExpression(node.type_expression)
         elseif node.inferred_type then
             self:Emit(": ")
-            self:Emit(node.inferred_type:Serialize())
+            self:Emit((node.inferred_type.contract or node.inferred_type):Serialize())
         end
     end
 end
@@ -627,10 +627,10 @@ do -- types
                         self:EmitToken(node.tokens["="])
                         self:EmitTypeExpression(node.expressions[2])
                     end
-                     
+
                     if tree.tokens["separators"][i] then
                         self:EmitToken(tree.tokens["separators"][i])
-                    else 
+                    else
                         self:Whitespace(",")
                     end
 

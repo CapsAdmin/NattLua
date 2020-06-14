@@ -122,67 +122,70 @@ function Object:Copy()
     return copy
 end
 
-function Object:SupersetOf(sub)
-    if sub.Type == "tuple" and sub:GetLength() == 1 then
-        sub = sub.data[1]
-    end
-
-    if self.type == "any" or self.volatile then
-        return true
-    end
-
-    if sub.Type == "set" and sub:GetLength() == 1 then
-        return sub:Get(self) ~= nil
-    end
-
-    if sub.Type == "object" then
-        if sub.type == "any" or sub.volatile then
-            return true
-        end
-
-        if self.type == sub.type then
-
-            if self.const == true and sub.const == true then
-
-                if self.data == sub.data then
-                    return true
-                end
-
-                if self.type == "number" and sub.type == "number" and self.max then
-                    if sub.data > self.data and sub.data < self.max.data then
-                        return true
-                    end
-                end
-            end
-
-            -- "5" must be within "number"
-            if self.data == nil and sub.data ~= nil then
-                return true
-            end
-
-            -- self = number(1)
-            -- sub = 1
-            if self.data ~= nil and self.data == sub.data then
-                return true
-            end
-
-            if sub.data == nil or self.data == nil then
-                return true
-            end
-
-            if not self.const and not sub.const then
-                return true
-            end
-        end
-
-        return false
-    end
-
-    return false
+function Object:ContainedIn(val)
+    return val:SubsetOf(self)
 end
 
 function Object.SubsetOf(a,b)
-    return b:SupersetOf(a)
+    return b:SubsetOf(a)
+end
+
+function Object.SubsetOf(A, B)
+    if A.type == "any" or A.volatile then
+        return true
+    end
+
+    if B.Type == "tuple" and B:GetLength() == 1 then
+        B = B:Get(1)
+    end
+
+    if B.Type == "object" then
+        if B.type == "any" or B.volatile then
+            return true
+        end
+
+        if A.type == B.type then
+
+            if A.const == true and B.const == true then
+                -- compare against literals
+
+                if A.data == B.data then
+                    return true
+                end
+
+                if A.type == "number" and B.type == "number" and A.max then
+                    if B.data > A.data and B.data < A.max.data then
+                        return true
+                    end
+                end
+
+                return false, "literal " .. tostring(A) .. " is not a subset of literal " .. tostring(B)
+            elseif A.data == nil and B.data == nil then
+                -- number contains number
+                return true
+            elseif A.const and not B.const then
+                -- 42 contains number ?
+                return false, "literal " .. tostring(A) .. " does not contain " .. tostring(B)
+            elseif not A.const and B.const then
+                -- number contains 42 ?
+                return true
+            end
+
+            -- number == number
+            return true
+        else
+            return false, tostring(A) .. " is not the same type as " .. tostring(B)
+        end
+        print(A, B)
+        print(A.const, B.const)
+        print(A.data, B.data)
+        print(A.type, B.type)
+        error("this shouldn't be reached ")
+    elseif B.Type == "set" then
+        return types.Set:new({A}):SubsetOf(B)
+    end
+
+    return false
 end
 
 function Object:__tostring()
@@ -323,20 +326,9 @@ function Object:Call(arguments)
                 break
             end
 
-            local ok, reason = arg:SupersetOf(arguments.data[i])
+            local ok, reason = arg:SubsetOf(arguments.data[i])
 
             if not ok then
-                if not reason then
-                    print("no reason provided?")
-                    print(arg.Type, "a ============")
-                    for k,v in pairs(arg) do
-                        print(k,v)
-                    end
-                    print(arg.Type, "b ============")
-                    for k,v in pairs(arguments.data[i]) do
-                        print(k,v)
-                    end
-                end
                 return false, "argument " .. tostring(arg) .. " is not compatible with " .. tostring(arguments.data[i]) .. ": " .. tostring(reason)
             end
         end

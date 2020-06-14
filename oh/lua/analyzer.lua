@@ -105,7 +105,7 @@ local function __new_index(obj, key, val, env)
         return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type
     end
 
-    return obj:Set(key, val, env)
+    return obj:Set(key, val)
 end
 
 
@@ -245,8 +245,8 @@ do -- types
 
                     -- if this function has an explicit return type
                     if obj.node.return_types then
-                        if not ret_tuple:SupersetOf(return_tuple) then
-                            self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a superset of " .. tostring(ret_tuple))
+                        if not return_tuple:SubsetOf(ret_tuple) then
+                            self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a subset of " .. tostring(ret_tuple))
                         end
                     else
                         for i,v in ipairs(ret_tuple:GetData()) do
@@ -571,30 +571,37 @@ function META:AnalyzeStatement(statement)
             local key = assignments[i].key
             local obj = assignments[i].obj
 
-
             -- if there's a type expression override the right value
             if exp_key.type_expression then
-                local left = self:AnalyzeExpression(exp_key.type_expression, "typesystem")
+                local contract = self:AnalyzeExpression(exp_key.type_expression, "typesystem")
 
                 if statement.right and statement.right[i] then
-                    if not left:SupersetOf(val) then
-                        self:Error(val.node, "expected " .. tostring(left) .. " but the right hand side is " .. tostring(val))
+
+                    if contract.Type == "dictionary" then
+                        val:CopyConstness(contract)
+                    else
+                        -- local a: 1 = 1
+                        -- should turn the right side into a constant number rather than number(1)
+                        val.const = contract:IsConst()
                     end
 
-                    -- local a: 1 = 1
-                    -- should turn the right side into a constant number rather than number(1)
-                    val.const = left:IsConst()
+                    local ok, reason = val:SubsetOf(contract)
+
+                    if not ok then
+                        self:Error(val.node, tostring(contract) .. " is not a subset of " .. tostring(val) .. " because " .. reason)
+                    end
                 end
 
-                -- lock the dictionary if there's an explicit type annotation
-                if left.Type == "dictionary" then
-                    left.locked = true
+                val.contract = contract
+
+                if not values[i] then
+                    val = contract
                 end
 
-                val = left
+                --val = contract
             else
                 -- by default assignments are not constant, even though TypeFromImplicitNode is const by default
-                val.const = false
+              --  val.const = false
             end
 
             exp_key.inferred_type = val
@@ -924,7 +931,7 @@ do
                 elseif node.kind == "function" then
                     stack:Push(self:AnalyzeFunction(node))
                 elseif node.kind == "table" then
-                    stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env)))
+                    stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env), env == "typesystem"))
                 elseif node.kind == "binary_operator" then
                     local right, left = stack:Pop(), stack:Pop()
 
@@ -1019,7 +1026,7 @@ do
 
                     self.current_table = obj
                     for _, v in ipairs(self:AnalyzeTable(node, env)) do
-                        obj:Set(v.key, v.val)
+                        obj:Set(v.key, v.val, true)
                     end
                     self.current_table = nil
 

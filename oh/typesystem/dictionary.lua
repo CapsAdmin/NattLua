@@ -10,10 +10,6 @@ function Dictionary:GetSignature()
     end
     self.supress = true
 
-    if not self.data[1] then
-        return "{}"
-    end
-
     local s = {}
 
     for i, keyval in ipairs(self.data) do
@@ -28,10 +24,6 @@ end
 
 local level = 0
 function Dictionary:Serialize()
-    if not self.data[1] then
-        return "{}"
-    end
-
     if self.supress then
         return "*self*"
     end
@@ -41,7 +33,9 @@ function Dictionary:Serialize()
 
     level = level + 1
     for i, keyval in ipairs(self.data) do
-        s[i] = ("\t"):rep(level) .. tostring(keyval.key) .. " = " .. tostring(keyval.val)
+        local key, val = tostring(keyval.key), tostring(keyval.val)
+
+        s[i] = ("\t"):rep(level) .. key .. " = " .. val
     end
     level = level - 1
 
@@ -60,7 +54,7 @@ function Dictionary:GetLength()
     return #self.data
 end
 
-function Dictionary:SupersetOf(sub)
+function Dictionary:SubsetOf(sub)
     if self == sub then
         return true
     end
@@ -72,8 +66,8 @@ function Dictionary:SupersetOf(sub)
                     if not sub:Get(i) then
                         return false, "index " .. i .. " does not exist"
                     end
-                    if not sub:Get(i):SupersetOf(keyval.val) then
-                        return false, tostring(sub:Get(i)) " is not a superset of " .. tostring(keyval.val)
+                    if not sub:Get(i):SubsetOf(keyval.val) then
+                        return false, tostring(sub:Get(i)) " is not a subset of " .. tostring(keyval.val)
                     end
                 end
             end
@@ -115,8 +109,8 @@ function Dictionary:SupersetOf(sub)
                     done[key] = true
                 end
 
-                if not keyval.val:SupersetOf(val) then
-                    return false, tostring(keyval.val) .. " is not a superset of " .. tostring(val)
+                if not keyval.val:SubsetOf(val) then
+                    return false, tostring(keyval.val) .. " is not a subset of " .. tostring(val)
                 end
             end
         end
@@ -125,11 +119,11 @@ function Dictionary:SupersetOf(sub)
         return true
     end
 
-    return false, tostring(self) .." is not a superset of " .. tostring(sub)
+    return false, tostring(sub) .." is not a subset of " .. tostring(self)
 end
 
-function Dictionary:Lock(b)
-    self.locked = b
+function Dictionary:IsDynamic()
+    return true
 end
 
 function Dictionary:Union(dict)
@@ -146,7 +140,31 @@ function Dictionary:Union(dict)
     return copy
 end
 
-function Dictionary:Set(key, val, env)
+function Dictionary:Delete(key)
+    for i, keyval in ipairs(self.data) do
+        if key:SubsetOf(keyval.key) then
+            table.remove(self.data, i)
+            return true
+        end
+    end
+    return false, tostring(key) .. " was not found in " .. tostring(self)
+end
+
+function Dictionary:GetKeyVal(key)
+    local reasons = {}
+
+    for _, keyval in ipairs(self.data) do
+        local ok, reason = keyval.key:SubsetOf(key)
+        if ok then
+            return keyval
+        end
+        table.insert(reasons, reason)
+    end
+
+    return false, tostring(key) .. " is not a subset of any of the keys in " .. tostring(self) .. " because " .. table.concat(reasons, "\n")
+end
+
+function Dictionary:Set(key, val)
     key = types.Cast(key)
     val = types.Cast(val)
 
@@ -154,63 +172,42 @@ function Dictionary:Set(key, val, env)
         return false, "key is nil"
     end
 
+    -- delete entry
     if val == nil or val.type == "nil" then
-        for i, keyval in ipairs(self.data) do
-            if key:SupersetOf(keyval.key) then
-                table.remove(self.data, i)
-                return true
-            end
-        end
-        return false
+        return self:Delete(key)
     end
 
-    for _, keyval in ipairs(self.data) do
-        if key:SupersetOf(keyval.key) and (env == "typesystem" or val:SupersetOf(keyval.val)) then
-            if not self.locked then
-                keyval.val = val
-            end
-            return true
+
+    if self.contract then
+        local keyval, reason = self.contract:GetKeyVal(key)
+        if not keyval then
+            return keyval, reason
+        end
+
+        local keyval, reason = keyval.val:SubsetOf(val)
+
+        if not keyval then
+            return keyval, reason
         end
     end
 
-    if not self.locked then
+    -- if the key exists, check if we can replace it and maybe the value
+    local keyval, reason = self:GetKeyVal(key)
+
+    if not keyval then
         table.insert(self.data, {key = key, val = val})
-        return true
+    else
+        keyval.val = val
     end
 
-    local obj = self
-
-    local expected_keys = {}
-    local expected_values = {}
-    for _, keyval in ipairs(obj.data) do
-        if not key:SupersetOf(keyval.key) then
-            table.insert(expected_keys, tostring(keyval.key))
-        elseif not val:SupersetOf(keyval.val) then
-            table.insert(expected_values, tostring(keyval.val))
-        end
-    end
-
-    if #expected_values > 0 then
-        return false, "invalid value " .. tostring(val.type or val) .. " expected " .. table.concat(expected_values, " | ")
-    elseif #expected_keys > 0 then
-        return false, "invalid key " .. tostring(key.type or key) .. " expected " .. table.concat(expected_keys, " | ")
-    end
-
-    if env == "runtime" then
-        for _, keyval in ipairs(self.data) do
-            if key:SupersetOf(keyval.key) and not val:SupersetOf(keyval.val) then
-                return false, tostring(val) .. " is not a superset of " .. tostring(keyval.val)
-            end
-        end
-    end
-
-    return false, "invalid key " .. tostring(key)
+    return true
 end
 
-function Dictionary:Get(key, env)
+function Dictionary:Get(key)
     key = types.Cast(key)
 
-    local keyval = self:GetKeyVal(key, env)
+    local keyval, reason = self:GetKeyVal(key)
+
     if not keyval and self.meta then
         local index = self.meta:Get("__index")
 
@@ -232,14 +229,42 @@ function Dictionary:Get(key, env)
     if keyval then
         return keyval.val
     end
+
+    return false, reason
 end
 
-function Dictionary:GetKeyVal(key, env)
-    for _, keyval in ipairs(env == "typesystem" and self.structure or self.data) do
-        if key:SupersetOf(keyval.key) then
-            return keyval
+function Dictionary:IsNumericallyIndexed()
+
+    for _, keyval in ipairs(self:GetElements()) do
+        if keyval.key.type ~= "number" then
+            return false
         end
     end
+
+    return true
+end
+
+function Dictionary:CopyConstness(from)
+    for _, keyval_from in ipairs(from.data) do
+        local keyval, reason = self:GetKeyVal(keyval_from.key)
+
+        if not keyval then
+            return false, reason
+        end
+
+        if keyval_from.key.Type == "dictionary" then
+            keyval.key:CopyConstness(keyval_from.key)
+        else
+            keyval.key.const = keyval_from.key:IsConst()
+        end
+
+        if keyval_from.val.Type == "dictionary" then
+            keyval.val:CopyConstness(keyval_from.val)
+        else
+            keyval.val.const = keyval_from.val:IsConst()
+        end
+    end
+    return true
 end
 
 function Dictionary:Copy()
@@ -317,7 +342,6 @@ function Dictionary:new(data)
     local self = setmetatable({}, self)
 
     self.data = {}
-    self.structure = {}
 
     if data then
         for _, v in ipairs(data) do

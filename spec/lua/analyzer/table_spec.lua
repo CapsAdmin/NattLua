@@ -44,21 +44,39 @@ describe("table", function()
         assert.equal(false, tbl:Get("foo"):GetData())
     end)
 
+    it("typed field should work", function()
+        local analyzer = run[[
+            local tbl: {foo = boolean} = {foo = true}
+        ]]
+        assert.equal(true, analyzer:GetValue("tbl", "runtime"):Get("foo"):GetData())
+    end)
+
     it("typed table invalid reassignment should error", function()
-        run(
+        local analyzer = run(
             [[
-                local tbl: {foo = true} = {foo = true}
-                tbl.foo = false
-            ]],
-            "invalid value boolean expected true"
+                local tbl: {foo = 1} = {foo = 2}
+            ]]
+            ,"because 2 is not a subset of 1"
         )
+    end)
+
+    it("typed table invalid reassignment should error", function()
+        local analyzer = run(
+            [[
+                local tbl: {foo = 1} = {foo = 1}
+                tbl.foo = 2
+            ]]
+            ,"literal 1 is not a subset of literal 2"
+        )
+        local v = analyzer:GetValue("tbl", "runtime")
 
         run(
             [[
                 local tbl: {foo = {number, number}} = {foo = {1,1}}
+                tbl.foo = {66,66}
                 tbl.foo = {1,true}
-            ]],
-            ".-1 = 1.-2 = true.-is not a superset of.-1 = number.-2 = number"
+            ]]
+            ,"number is not a subset of true"
         )
     end)
 
@@ -80,6 +98,6 @@ describe("table", function()
         local a = analyzer:GetValue("a", "runtime")
         local b = analyzer:GetValue("b", "runtime")
 
-        assert.equal(true, a:SupersetOf(b))
+        assert.equal(true, a:SubsetOf(b))
     end)
 end)

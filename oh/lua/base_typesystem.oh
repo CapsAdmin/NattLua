@@ -789,7 +789,7 @@ type assert = function(obj, err)
 end
 
 type type_assert = function(what: any, type: any)
-	--if not what:SupersetOf(type) or (what.type == "any" and type.type ~= "any") then
+	--if not what:SubsetOf(type) or (what.type == "any" and type.type ~= "any") then
 	if what.type == type.type and what.data == type.data then
 		return
 	end
@@ -800,7 +800,7 @@ type type_assert = function(what: any, type: any)
 end
 
 type type_assert_superset = function(what: any, type: any)
-	if not what:SupersetOf(type) or (what.type == "any" and type.type ~= "any") then
+	if not what:SubsetOf(type) or (what.type == "any" and type.type ~= "any") then
 		error("expected " .. tostring(type) .." got " .. tostring(what))
 	end
 end

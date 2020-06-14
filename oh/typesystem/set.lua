@@ -139,52 +139,38 @@ function Set:Set(key, val)
     return true
 end
 
-function Set:SupersetOf(sub)
-    if sub.Type == "tuple" and sub:GetLength() == 1 then
-        sub = sub.data[1]
-    end
+function Set:ContainedIn(val)
+    return self:SubsetOf(val)
+end
 
-    if sub.Type == "object" then
-        if self:Get(sub) == nil then
-            return false, tostring(sub) .. " is not part of the set " .. tostring(self)
+function Set.SubsetOf(A, B)
+    if B.Type == "tuple" then
+        if B:GetLength() == 1 then
+            B = B:Get(1)
+        else
+            return false, tostring(A) .. " cannot contain tuple " .. tostring(B)
         end
-
-        return true
     end
 
-    if sub.Type == "set" then
-        for k,v in ipairs(sub.datai) do
-            local val = self.data[types.GetSignature(v)]
+    if B.Type == "object" or B.Type == "dictionary" then
+        return A:SubsetOf(Set:new({B}))
+    elseif B.Type == "set" then
+        for _, obj in ipairs(A:GetElements()) do
+            local found = B.data[types.GetSignature(obj)]
 
-            if val == nil then
-                return false, "the signature " .. tostring(val) .. " cannot be found in the set " .. tostring(self)
+            if not found then
+                return false, tostring(A) .. " does not contain " .. tostring(obj)
             end
 
-            if not v:SupersetOf(val) then
-                return false, tostring(v) .. " is not a superset of " .. self
+            if not obj:SubsetOf(found) then
+                return false, tostring(obj) .. " is not a subset of " .. tostring(found)
             end
         end
 
         return true
-    elseif not self:Get(sub) then
-        return false, tostring(sub) .. " is not inside2 " .. tostring(self)
     end
 
-    if sub.Type == "dictionary" then
-        if not self:Get(sub) then
-            return false, tostring(sub) .. " is not inside3 " .. tostring(self)
-        end
-
-        return true
-    end
-
-    for _, e in ipairs(self.datai) do
-        if not sub:Get(e) then
-            return false, tostring(e) .. " is not inside set " .. tostring(self) .. " "
-        end
-    end
-
-    return true
+    return false, "unhandled type" .. tostring(B)
 end
 
 function Set:Union(set)

@@ -99,7 +99,7 @@ describe("function", function()
             end
 
             test(1)
-        ]], "expected return .-string.- to be a superset of .-1")
+        ]], "expected return .-string.- to be a subset of .-1")
     end)
 
     it("which is explicitly annotated should error when the actual return value is unknown", function()
@@ -107,7 +107,7 @@ describe("function", function()
             local function test(a: number): string
                 return a
             end
-        ]], "expected return .-string.- to be a superset of .-number")
+        ]], "expected return .-string.- to be a subset of .-number")
     end)
 
     it("function call within a function shouldn't mess up collected return types", function()
@@ -160,10 +160,22 @@ describe("function", function()
         assert.equal(3, c:GetData())
     end)
 
-    it("a", function()
+    it("return type should work", function()
         local analyzer = run[[
-
+            function foo(a: number):string return '' end
         ]]
+    end)
+
+    it("return type should work", function()
+        local analyzer = run[[
+            local function test(a, b)
+            end
+
+            test(1,2)
+            test(3,0)
+            test(24,24)
+        ]]
+        print(analyzer:GetValue("test", "runtime"))
     end)
 
 end)

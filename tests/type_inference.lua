@@ -1578,7 +1578,7 @@ R[[
             types.Object:new("boolean", true, true)
         })
 
-        assert(b:SupersetOf(a))
+        assert(b:SubsetOf(a))
     end
 
     check(test, "!")

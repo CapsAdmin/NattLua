@@ -332,7 +332,7 @@ go({
     C"foao(a):bar'a'",
     {
         code = C"local a = 1",
-        expect = C"local a: number(1) = 1",
+        expect = C"local a: 1 = 1",
         analyze = true,
     },
     {

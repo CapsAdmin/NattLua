@@ -70,6 +70,10 @@ function Tuple:GetMaxLength()
     return self.max or 0
 end
 
+function Tuple:GetElements()
+    return self.data
+end
+
 function Tuple:GetLength()
     return #self.data
 end
@@ -86,38 +90,37 @@ function Tuple:Copy()
     return Tuple:new(copy)
 end
 
-function Tuple:SupersetOf(sub)
-    if self:GetLength() == 1 then
-        return self.data[1]:SupersetOf(sub)
+function Tuple.SubsetOf(A, B)
+    if A:GetLength() == 1 then
+        return A:Get(1):SubsetOf(B)
     end
 
-    if sub.Type == "dictionary" then
-        local hm = {}
-
-        for i,v in ipairs(sub.data) do
-            if v.key.type == "number" then
-                hm[v.key.data] = v.val.data
-            end
-        end
-
-        if #hm ~= #sub.data then
-            return false
+    if B.Type == "dictionary" then
+        if not B:IsNumericallyIndexed() then
+            return false, tostring(B) .. " cannot be treated as a tuple because it contains non a numeric index " .. tostring(keyval.key)
         end
     end
 
-    for i = 1, sub:GetLength() do
-        local a = self:Get(i)
-        local b = sub:Get(i)
+    if A:GetLength() > B:GetLength() then
+        return false, tostring(A) .. " is larger than " .. tostring(B)
+    end
+
+    for i = 1, A:GetLength() do
+        local a = A:Get(i)
+        local b = B:Get(i)
+
+        if not b then
+            return false, "cannot find index " .. tostring(i) .. " in " .. tostring(B)
+        end
 
         -- vararg
-        if a and a.max == math.huge and a:Get(1):SupersetOf(b) then
+        if a.max == math.huge and a:Get(1):SubsetOf(b) then
             return true
         end
 
-        if not a and i <= self:GetMaxLength() then
-            print("LOL")
-        elseif b.type ~= "any" and (not a or not a:SupersetOf(b)) then
-            return false
+        local ok, reason = a:SubsetOf(b)
+        if not ok then
+            return false, tostring(A) .. " is not a subset of " .. tostring(B) .. " at index " .. i .. " because " .. reason
         end
     end
 
