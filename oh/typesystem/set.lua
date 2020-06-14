@@ -139,8 +139,14 @@ function Set:Set(key, val)
     return true
 end
 
-function Set:ContainedIn(val)
-    return self:SubsetOf(val)
+function Set:IsVolatile()
+    for _, obj in ipairs(self:GetElements()) do
+        if obj.volatile then
+            return true
+        end
+    end
+
+    return false
 end
 
 function Set.SubsetOf(A, B)
@@ -155,22 +161,26 @@ function Set.SubsetOf(A, B)
     if B.Type == "object" or B.Type == "dictionary" then
         return A:SubsetOf(Set:new({B}))
     elseif B.Type == "set" then
-        for _, obj in ipairs(A:GetElements()) do
-            local found = B.data[types.GetSignature(obj)]
+        if A:IsVolatile() then
+            return true
+        end
 
-            if not found then
-                return false, tostring(A) .. " does not contain " .. tostring(obj)
+        for _, a in ipairs(A:GetElements()) do
+            local b = B:Get(a)
+
+            if not b then
+                return types.errors.missing(B, a)
             end
 
-            if not obj:SubsetOf(found) then
-                return false, tostring(obj) .. " is not a subset of " .. tostring(found)
+            if not a:SubsetOf(b) then
+                return types.errors.subset(a, b)
             end
         end
 
         return true
     end
 
-    return false, "unhandled type" .. tostring(B)
+    error("unhandled type" .. tostring(B))
 end
 
 function Set:Union(set)

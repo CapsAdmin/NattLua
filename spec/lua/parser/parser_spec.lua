@@ -1,7 +1,11 @@
 local oh = require("oh")
 
 local function check(code)
-    assert.same(assert(assert(oh.Code(code)):Parse()):BuildLua(), code)
+    local c = assert(assert(oh.Code(code)):Parse())
+    --c.SyntaxTree:Dump()
+    local new_code = assert(c:BuildLua())
+    assert.same(new_code, code)
+    return new_code
 end
 
 describe("parser", function()

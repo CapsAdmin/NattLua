@@ -53,6 +53,7 @@ function Tuple:Merge(tup, dont_extend)
             if not dont_extend or prev then
                 if not prev or prev.volatile then
                     src[i] = dst[i]:Copy()
+                    src[i].volatile = true
                 end
 
                 if prev and prev.volatile then
@@ -110,17 +111,22 @@ function Tuple.SubsetOf(A, B)
         local b = B:Get(i)
 
         if not b then
-            return false, "cannot find index " .. tostring(i) .. " in " .. tostring(B)
+            return types.errors.missing(B, i)
         end
 
         -- vararg
-        if a.max == math.huge and a:Get(1):SubsetOf(b) then
+        if a.max == math.huge then
+            local ok, reason = a:Get(1):SubsetOf(b)
+            if not ok then
+                return types.errors.subset(a:Get(1), b, reason)
+            end
             return true
         end
 
         local ok, reason = a:SubsetOf(b)
+
         if not ok then
-            return false, tostring(A) .. " is not a subset of " .. tostring(B) .. " at index " .. i .. " because " .. reason
+            return types.errors.subset(a, b, reason)
         end
     end
 

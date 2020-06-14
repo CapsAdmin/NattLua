@@ -122,14 +122,6 @@ function Object:Copy()
     return copy
 end
 
-function Object:ContainedIn(val)
-    return val:SubsetOf(self)
-end
-
-function Object.SubsetOf(a,b)
-    return b:SubsetOf(a)
-end
-
 function Object.SubsetOf(A, B)
     if A.type == "any" or A.volatile then
         return true
@@ -153,22 +145,22 @@ function Object.SubsetOf(A, B)
                     return true
                 end
 
-                if A.type == "number" and B.type == "number" and A.max then
-                    if B.data > A.data and B.data < A.max.data then
+                if A.type == "number" and B.max then
+                    if A.data > B.data and A.data < B.max.data then
                         return true
                     end
                 end
 
-                return false, "literal " .. tostring(A) .. " is not a subset of literal " .. tostring(B)
+                return types.errors.subset(A, B)
             elseif A.data == nil and B.data == nil then
                 -- number contains number
                 return true
             elseif A.const and not B.const then
-                -- 42 contains number ?
-                return false, "literal " .. tostring(A) .. " does not contain " .. tostring(B)
-            elseif not A.const and B.const then
-                -- number contains 42 ?
+                -- 42 subset of number?
                 return true
+            elseif not A.const and B.const then
+                -- number subset of 42 ?
+                return types.errors.subset(A, B)
             end
 
             -- number == number
@@ -321,15 +313,20 @@ function Object:Call(arguments)
             return types.Tuple:new(res)
         end
 
-        for i, arg in ipairs(self.data.arg:GetData()) do
-            if not arguments.data[i] then
+        local A = arguments -- incoming
+        local B = self.data.arg -- the contract
+        -- A should be a subset of B
+
+        for i, a in ipairs(A:GetData()) do
+            local b = B:Get(i)
+            if not b then
                 break
             end
 
-            local ok, reason = arg:SubsetOf(arguments.data[i])
+            local ok, reason = a:SubsetOf(b)
 
             if not ok then
-                return false, "argument " .. tostring(arg) .. " is not compatible with " .. tostring(arguments.data[i]) .. ": " .. tostring(reason)
+                return false, reason
             end
         end
 

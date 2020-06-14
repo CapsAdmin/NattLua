@@ -66,7 +66,7 @@ describe("table", function()
                 local tbl: {foo = 1} = {foo = 1}
                 tbl.foo = 2
             ]]
-            ,"literal 1 is not a subset of literal 2"
+            ,"2 is not a subset of 1"
         )
         local v = analyzer:GetValue("tbl", "runtime")
 
@@ -76,7 +76,7 @@ describe("table", function()
                 tbl.foo = {66,66}
                 tbl.foo = {1,true}
             ]]
-            ,"number is not a subset of true"
+            ,"true is not a subset of number"
         )
     end)
 

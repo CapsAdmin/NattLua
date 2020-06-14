@@ -47,79 +47,116 @@ function Dictionary:Serialize()
 end
 
 function Dictionary:__tostring()
-    return self:Serialize()--(self:Serialize():gsub("%s+", " "))
+    if self.supress then
+        return "*self*"
+    end
+    self.supress = true
+
+    local s = {}
+
+    level = level + 1
+    for i, keyval in ipairs(self.data) do
+        local key, val = tostring(keyval.key), tostring(keyval.val)
+        local tkey, tval
+
+        local indent = ("\t"):rep(level)
+
+        if self.contract then
+            local keyval = self.contract.data[i]
+            tkey = tostring(keyval.key)
+            tval = tostring(keyval.val)
+            s[i] = indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val
+        else
+            s[i] = indent .. key .. " = " .. val
+        end
+    end
+    level = level - 1
+
+    self.supress = nil
+
+    table.sort(s, function(a, b) return a < b end)
+
+    return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
 function Dictionary:GetLength()
     return #self.data
 end
 
-function Dictionary:SubsetOf(sub)
-    if self == sub then
+-- TODO
+local done
+
+function Dictionary.SubsetOf(A, B)
+    if A == B then
         return true
     end
 
-    if sub.Type == "tuple" then
-        if sub:GetLength() > 0 then
-            for i, keyval in ipairs(self.data) do
-                if keyval.key.type == "number" then
-                    if not sub:Get(i) then
-                        return false, "index " .. i .. " does not exist"
+    if B.type == "any" or B.volatile then
+        return true
+    end
+
+    if B.Type == "tuple" then
+        if B:GetLength() > 0 then
+            for i, a in ipairs(A.data) do
+                if a.key.type == "number" then
+                    if not B:Get(i) then
+                        return types.errors.missing(B, i)
                     end
-                    if not sub:Get(i):SubsetOf(keyval.val) then
-                        return false, tostring(sub:Get(i)) " is not a subset of " .. tostring(keyval.val)
+
+                    if not a.val:SubsetOf(B:Get(i)) then
+                        return types.errors.subset(a.val, B:Get(i))
                     end
                 end
             end
         else
             local count = 0
-            for i, keyval in ipairs(self.data) do
-                if keyval.key.data ~= i then
-                    return false, "index " .. tostring(keyval.key.data) .. " is not the same as " .. tostring(i)
+            for i, a in ipairs(A.data) do
+                if a.key.data ~= i then
+                    return false, "index " .. tostring(a.key.data) .. " is not the same as " .. tostring(i)
                 end
 
                 count = count + 1
             end
-            if count ~= sub:GetMaxLength() then
-                return false, " count " .. tostring(count) .. " is not the same as max length " .. tostring(sub:GetMaxLength())
+            if count ~= B:GetMaxLength() then
+                return false, " count " .. tostring(count) .. " is not the same as max length " .. tostring(B:GetMaxLength())
             end
         end
 
         return true
-    end
+    elseif B.Type == "dictionary" then
 
-    if sub.Type == "dictionary" then
-
-        if sub.meta and sub.meta == self then
+        if B.meta and B.meta == A then
             return true
         end
 
         done = done or {}
-        for _, keyval in ipairs(self.data) do
-            local val = sub:Get(keyval.key, true)
+        for _, a in ipairs(A.data) do
+            local b = B:GetKeyVal(a.key)
 
-            if not val then
-                return false, tostring(keyval.key) .. " does not exist in source table"
+            if not b then
+                return types.errors.missing(B, a.key)
             end
 
-
-            local key = keyval.val:Serialize() .. val:Serialize()
+            local key = a.val:Serialize() .. b.val:Serialize()
             if not done or not done[key] then
                 if done then
                     done[key] = true
                 end
 
-                if not keyval.val:SubsetOf(val) then
-                    return false, tostring(keyval.val) .. " is not a subset of " .. tostring(val)
+                local ok, reason = a.val:SubsetOf(b.val)
+                if not ok then
+                    return types.errors.subset(a.val, b.val, reason)
                 end
             end
         end
         done = nil
 
         return true
+    elseif B.Type == "set" then
+        return types.Set:new({A}):SubsetOf(B)
     end
 
-    return false, tostring(sub) .." is not a subset of " .. tostring(self)
+    return types.errors.subset(A, B)
 end
 
 function Dictionary:IsDynamic()
@@ -184,7 +221,7 @@ function Dictionary:Set(key, val)
             return keyval, reason
         end
 
-        local keyval, reason = keyval.val:SubsetOf(val)
+        local keyval, reason = val:SubsetOf(keyval.val)
 
         if not keyval then
             return keyval, reason
@@ -289,6 +326,7 @@ function Dictionary:Copy()
     end
 
     copy.meta = self.meta
+    copy.volatile = self.volatile
 
     return copy
 end

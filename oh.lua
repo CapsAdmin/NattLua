@@ -141,6 +141,10 @@ do
 				break
 			end
 
+			if info.source:find("/busted/") then
+				break
+			end
+
 			if info.source:sub(1,1) == "@" then
 				if info.name == "Error" or info.name == "OnError" then
 

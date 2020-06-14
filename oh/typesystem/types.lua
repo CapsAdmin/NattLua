@@ -2,6 +2,44 @@ local syntax = require("oh.lua.syntax")
 
 local types = {}
 
+
+
+--[[
+    this keeps confusing me
+
+    subset:
+        A subsetof B
+        A within B
+        A inside B
+        A compatible with B
+        A child of B
+
+    superset:
+        A parent of B
+        A supersetof B
+        A covers B
+        A contains B
+        A has B
+        A owns B
+        A entails B
+]]
+
+
+types.errors = {
+    subset = function(a, b, reason)
+        local msg = tostring(a) .. " is not a subset of " .. tostring(b)
+
+        if reason then
+            msg = msg .. " because " .. reason
+        end
+
+        return false, msg
+    end,
+    missing = function(a, b)
+        return false, tostring(a) .. " does not contain " .. tostring(b)
+    end
+}
+
 function types.Cast(val)
     if type(val) == "string" then
         return types.Object:new("string", val, true)

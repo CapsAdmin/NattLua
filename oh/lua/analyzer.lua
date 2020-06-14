@@ -210,7 +210,7 @@ do -- types
                     local self_call = obj.node.self_call
 
                     if self_call then
-                        self:SetUpvalue("self", arguments.data[1] or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
+                        self:SetUpvalue("self", arguments:Get(1) or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
                     end
 
                     for i, identifier in ipairs(obj.node.identifiers) do
@@ -219,11 +219,11 @@ do -- types
                         if identifier.value.value == "..." then
                             local values = {}
                             for i = argi, arguments:GetLength() do
-                                table.insert(values, arguments.data[i])
+                                table.insert(values, arguments:Get(i))
                             end
                             self:SetUpvalue(identifier, self:TypeFromImplicitNode(identifier, "...", values), "runtime")
                         else
-                            self:SetUpvalue(identifier, arguments.data[argi] or self:TypeFromImplicitNode(identifier, "nil"), "runtime")
+                            self:SetUpvalue(identifier, arguments:Get(argi) or self:TypeFromImplicitNode(identifier, "nil"), "runtime")
                         end
                     end
 
@@ -245,8 +245,13 @@ do -- types
 
                     -- if this function has an explicit return type
                     if obj.node.return_types then
-                        if not return_tuple:SubsetOf(ret_tuple) then
-                            self:Error(obj.node, "expected return " .. tostring(return_tuple) .. " to be a subset of " .. tostring(ret_tuple))
+                        local B = return_tuple
+                        local A = ret_tuple
+
+                        local ok, reason = A:SubsetOf(B)
+
+                        if not ok then
+                            self:Error(obj.node, reason)
                         end
                     else
                         for i,v in ipairs(ret_tuple:GetData()) do
@@ -258,6 +263,15 @@ do -- types
                 end
 
                 obj:GetArguments():Merge(arguments, true)
+
+
+                -- TODO
+                if node.self_call then
+                    local first_arg = obj:GetArguments():Get(1)
+                    if not first_arg.contract then
+                        first_arg.volatile = true
+                    end
+                end
 
                 for i, v in ipairs(obj:GetArguments().data) do
                     if obj.node.identifiers[i] then
@@ -1074,6 +1088,9 @@ do
             if node.self_call and node.expression then
                 local upvalue = self:GetUpvalue(node.expression.left, "runtime")
                 if upvalue then
+                    -- TODO: this will cause local META = {} .. to be volatile,
+                    -- all the volatile things should be separated from types i think
+                    upvalue.data.volatile = true
                     table.insert(args, 1, upvalue.data)
                 end
             end

@@ -12,26 +12,26 @@ describe("numbers", function()
     _32_to_52.max = Object("number", 52, true)
 
     it("a literal number should be contained within all numbers", function()
-        assert(_42:ContainedIn(all_numbers))
+        assert(_42:SubsetOf(all_numbers))
     end)
 
     it("all numbers should not be contained within a literal number", function()
-        assert(not all_numbers:ContainedIn(_42))
+        assert(not all_numbers:SubsetOf(_42))
     end)
 
     it("42 should be contained within any", function()
-        assert(_42:ContainedIn(any))
+        assert(_42:SubsetOf(any))
     end)
 
     it("any should be contained within 42", function()
-        assert(any:ContainedIn(_42))
+        assert(any:SubsetOf(_42))
     end)
 
     it("42 should be contained within 32..52", function()
-        assert(_42:ContainedIn(_32_to_52))
+        assert(_42:SubsetOf(_32_to_52))
     end)
 
     it("32..52 should not be contained within 42", function()
-        assert(not _32_to_52:ContainedIn(_42))
+        assert(not _32_to_52:SubsetOf(_42))
     end)
 end)

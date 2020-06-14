@@ -8,33 +8,32 @@ local Tuple = T.Tuple
 
 describe("dictionary", function()
     it("set and get should work", function()
-        local interface = Dictionary()
-        assert(interface:Set(S("foo"), O("number")))
-        assert(assert(interface:Get("foo")):IsType("number"))
-        assert.equal(false, interface:Get(S("asdf")))
+        local contract = Dictionary()
+        assert(contract:Set(S("foo"), O("number")))
+        assert(assert(contract:Get("foo")):IsType("number"))
+        assert.equal(false, contract:Get(S("asdf")))
 
         local dict = Dictionary()
-        dict.contract = interface
+        dict.contract = contract
         assert(dict:Set(S("foo"), N(1337)))
         assert.equal(1337, dict:Get(S("foo")):GetData())
 
-        assert(not dict:SubsetOf(interface))
-        assert(interface:SubsetOf(dict))
+        assert(dict:SubsetOf(contract))
+        assert(not contract:SubsetOf(dict))
     end)
 
     it("set string and get constant string should work", function()
-        local interface = Dictionary()
-        assert(interface:Set(O("string"), O("number")))
+        local contract = Dictionary()
+        assert(contract:Set(O("string"), O("number")))
 
         local dict = Dictionary()
-        dict.contract = interface
+        dict.contract = contract
         dict:Set(O("string"), N(1337))
         assert.equal(1337, assert(dict:Get(O("string"))):GetData())
 
-        assert(not dict:SubsetOf(interface))
-        assert(interface:SubsetOf(dict))
+        assert(dict:SubsetOf(contract))
+        assert(not contract:SubsetOf(dict))
     end)
-
 
     it("errors when trying to modify a dictionary without a defined structure", function()
         local dict = Dictionary()
@@ -44,15 +43,15 @@ describe("dictionary", function()
     end)
 
     it("copy from constness should work", function()
-        local interface = Dictionary()
-        interface:Set(S("foo"), S("bar"))
-        interface:Set(S("a"), O("number"))
+        local contract = Dictionary()
+        contract:Set(S("foo"), S("bar"))
+        contract:Set(S("a"), O("number"))
 
         local dict = Dictionary()
         dict:Set(S("foo"), O("string", "bar"))
         dict:Set(S("a"), N(1337))
 
-        assert(dict:CopyConstness(interface))
+        assert(dict:CopyConstness(contract))
         assert(assert(dict:Get(S("foo"))):IsConst())
     end)
 

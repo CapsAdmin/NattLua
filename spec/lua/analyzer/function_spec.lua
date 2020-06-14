@@ -99,7 +99,7 @@ describe("function", function()
             end
 
             test(1)
-        ]], "expected return .-string.- to be a subset of .-1")
+        ]], "1 is not the same type as string")
     end)
 
     it("which is explicitly annotated should error when the actual return value is unknown", function()
@@ -107,7 +107,7 @@ describe("function", function()
             local function test(a: number): string
                 return a
             end
-        ]], "expected return .-string.- to be a subset of .-number")
+        ]], "number is not the same type as string")
     end)
 
     it("function call within a function shouldn't mess up collected return types", function()
@@ -123,15 +123,129 @@ describe("function", function()
         assert.equal(1337, c:GetData())
     end)
 
+    it("any arguments should work", function()
+        run([[
+            local function test(b: any, a: any)
+
+            end
+
+            test(123, "a")
+        ]])
+    end)
+
+    it("self argument should be volatile", function()
+        local analyzer = run([[
+            local meta = {}
+            function meta:Foo(b)
+
+            end
+            local a = meta.Foo
+        ]])
+
+        local self = analyzer:GetValue("a", "runtime"):GetArguments():Get(1)
+        assert(self.volatile)
+    end)
+
+    it("arguments that are explicitly typed should error", function()
+        run([[
+            local function test(a: 1)
+
+            end
+
+            test(2)
+        ]], "2 is not a subset of 1")
+
+        run([[
+            local function test(a: number)
+
+            end
+
+            test("a")
+        ]], "\"a\" is not the same type as number")
+
+        run([[
+            local function test(a: number, b: 1)
+
+            end
+
+            test(5123, 2)
+        ]], "2 is not a subset of 1")
+
+        run([[
+            local function test(b: 123, a: number)
+
+            end
+
+            test(123, "a")
+        ]], "\"a\" is not the same type as number")
+    end)
 
     it("arguments that are not explicitly typed should be volatile", function()
+        do
+            local analyzer = run[[
+                local function test(a, b)
+                    return 1337
+                end
+
+                test(1,"a")
+            ]]
+
+            local args = analyzer:GetValue("test", "runtime"):GetArguments()
+            local a = args:Get(1)
+            local b = args:Get(2)
+
+            assert.equal("number", a.type)
+            assert.equal(true, a.volatile)
+            assert.equal(1, a.data)
+
+            assert.equal("string", b.type)
+            assert.equal(true, b.volatile)
+            assert.equal("a", b.data)
+        end
+
+        do
+            local analyzer = run[[
+                local function test(a, b)
+                    return 1337
+                end
+
+                test(1,"a")
+                test("a",1)
+            ]]
+
+            local args = analyzer:GetValue("test", "runtime"):GetArguments()
+            local a = args:Get(1)
+            local b = args:Get(2)
+
+            assert.equal(a:Serialize(), b:Serialize())
+        end
+
+        do
+            local analyzer = run[[
+                local function test(a, b)
+                    return 1337
+                end
+
+                test(1,"a")
+                test("a",1)
+                test(4,4)
+            ]]
+
+            local args = analyzer:GetValue("test", "runtime"):GetArguments()
+            local a = args:Get(1)
+            local b = args:Get(2)
+
+            assert.equal(a:Serialize(), b:Serialize())
+        end
+
+
         local analyzer = run[[
-            local function b()
+            local function test(a, b)
                 return 1337
             end
 
-            b(1)
-            b(2)
+            test(1,2)
+            test("awddwa",{})
         ]]
         local b = analyzer:GetValue("b", "runtime")
     end)
@@ -165,17 +279,4 @@ describe("function", function()
             function foo(a: number):string return '' end
         ]]
     end)
-
-    it("return type should work", function()
-        local analyzer = run[[
-            local function test(a, b)
-            end
-
-            test(1,2)
-            test(3,0)
-            test(24,24)
-        ]]
-        print(analyzer:GetValue("test", "runtime"))
-    end)
-
 end)
