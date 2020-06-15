@@ -33,6 +33,14 @@ end
 
 
 Object[".."] = function(r, l, env)
+    if env == "typesystem" then
+        if r.type == "number" and l.type == "number" then
+            local new = r:Copy()
+            new.max = l
+            return new
+        end
+    end
+
     if l.data ~= nil and r.data ~= nil then
         return types.Object:new("string", r.data .. l.data)
     end
@@ -142,12 +150,20 @@ function Object.SubsetOf(A, B)
             if A.const == true and B.const == true then
                 -- compare against literals
 
+
+                -- nan
+                if A.type == "number" and B.type == "number" then
+                    if A.data ~= A.data and B.data ~= B.data then
+                        return true
+                    end
+                end
+
                 if A.data == B.data then
                     return true
                 end
 
                 if A.type == "number" and B.max then
-                    if A.data > B.data and A.data < B.max.data then
+                    if A.data >= B.data and A.data <= B.max.data then
                         return true
                     end
                 end
@@ -343,7 +359,7 @@ function Object:Call(arguments)
     return false, "cannot call a nil value"
 end
 
-function Object:PrefixOperator(op, val)
+function Object:PrefixOperator(op, val, env)
     if op == "#" then
         if self.type == "string" then
             if self.const then
@@ -359,7 +375,6 @@ function Object:PrefixOperator(op, val)
 
     if op == "~" then
         if self.type == "number" then
-            print(self, op, val, "!!")
             if self.data ~= nil then
                 return types.Object:new("number", bit.bnot(self.data))
             end
@@ -381,6 +396,14 @@ function Object:PrefixOperator(op, val)
 
         if self:IsFalsy() then
             return types.Object:new("boolean", true, true)
+        end
+    end
+
+    if op == "-" then
+        if env == "typesystem" then
+            if self.type == "number" and self.data then
+                return types.Object:new(self.type, -self.data, self.const)
+            end
         end
     end
 

@@ -93,7 +93,7 @@ describe("table", function()
         run([[
             local tbl: {foo = true} = {foo = true}
             local a = tbl.bar
-        ]], "\"bar\" is not a subset of any of the keys in ")
+        ]], "\"foo\" is not a subset of \"bar\"")
     end)
 
     pending("string: any", function()

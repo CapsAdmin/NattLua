@@ -122,14 +122,8 @@ function Set:Get(key, from_dictionary)
         end
     end
 
-    local val = self.data[key.type] or self.data[key:GetSignature()]
-
-    if val then
-        return val
-    end
-
     for _, obj in ipairs(self.datai) do
-        if obj.volatile then
+        if obj.volatile or key:SubsetOf(obj) then
             return obj
         end
     end

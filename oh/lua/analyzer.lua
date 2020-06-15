@@ -633,7 +633,7 @@ function META:AnalyzeStatement(statement)
                     local ok, reason = val:SubsetOf(contract)
 
                     if not ok then
-                        self:Error(val.node, tostring(contract) .. " is not a subset of " .. tostring(val) .. " because " .. reason)
+                        self:Error(val.node or exp_key.type_expression, tostring(val) .. " is not a subset of " .. tostring(contract) .. " because " .. reason)
                     end
                 end
 
@@ -936,25 +936,31 @@ do
                     if (node.value.type == "letter" and node.upvalue_or_global) or node.value.value == "..." then
                         local obj
 
-                        -- if it's ^string, number, etc, but not string
-                        if env == "typesystem" and types.IsPrimitiveType(self:Hash(node)) and not node.force_upvalue then
-                            obj = self:TypeFromImplicitNode(node, node.value.value)
-                        else
-                            obj = self:GetValue(node, env)
-
-                            if not obj and env == "runtime" then
-                                obj = self:GetValue(node, "typesystem")
+                        if env == "typesystem" then
+                            if node.value.value == "any" then
+                                obj = self:TypeFromImplicitNode(node, "any")
+                            elseif node.value.value == "self" then
+                                obj = self.current_table
+                            elseif node.value.value == "inf" then
+                                obj = self:TypeFromImplicitNode(node, "number", math.huge, true)
+                            elseif node.value.value == "nan" then
+                                obj = self:TypeFromImplicitNode(node, "number", 0/0, true)
                             end
                         end
 
-                        if env == "typesystem" and node.value.value == "any" then
-                            obj = self:TypeFromImplicitNode(node, "any")
+                        if not obj then
+                            -- if it's ^string, number, etc, but not string
+                            if env == "typesystem" and types.IsPrimitiveType(self:Hash(node)) and not node.force_upvalue then
+                                obj = self:TypeFromImplicitNode(node, node.value.value)
+                            else
+                                obj = self:GetValue(node, env)
+
+                                if not obj and env == "runtime" then
+                                    obj = self:GetValue(node, "typesystem")
+                                end
+                            end
                         end
 
-                        -- self in a table type declaration refers to the type table itself
-                        if env == "typesystem" and not obj and node.value.value == "self" then
-                            obj = self.current_table
-                        end
 
                         if not obj and self.IndexNotFound then
                             obj = self:IndexNotFound(node)
@@ -999,7 +1005,7 @@ do
                         stack:Push(self:Assert(node, val, err))
                     end
                 elseif node.kind == "prefix_operator" then
-                    stack:Push(self:Assert(node, stack:Pop():PrefixOperator(node.value.value, self:AnalyzeExpression(node.right))))
+                    stack:Push(self:Assert(node, stack:Pop():PrefixOperator(node.value.value, self:AnalyzeExpression(node.right), env)))
                 elseif node.kind == "postfix_operator" then
                     stack:Push(stack:Pop():PostfixOperator(node))
                 elseif node.kind == "postfix_expression_index" then

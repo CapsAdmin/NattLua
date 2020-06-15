@@ -55,18 +55,17 @@ function Dictionary:__tostring()
     local s = {}
 
     level = level + 1
-    for i, keyval in ipairs(self.data) do
-        local key, val = tostring(keyval.key), tostring(keyval.val)
-        local tkey, tval
+    local indent = ("\t"):rep(level)
 
-        local indent = ("\t"):rep(level)
-
-        if self.contract then
-            local keyval = self.contract.data[i]
-            tkey = tostring(keyval.key)
-            tval = tostring(keyval.val)
+    if self.contract then
+        for i, keyval in ipairs(self.contract.data) do
+            local key, val = tostring(self.data[i] and self.data[i].key or "undefined"), tostring(self.data[i] and self.data[i].val or "undefined")
+            local tkey, tval = tostring(keyval.key), tostring(keyval.val)
             s[i] = indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val
-        else
+        end
+    else
+        for i, keyval in ipairs(self.data) do
+            local key, val = tostring(keyval.key), tostring(keyval.val)
             s[i] = indent .. key .. " = " .. val
         end
     end
@@ -131,10 +130,22 @@ function Dictionary.SubsetOf(A, B)
 
         done = done or {}
         for _, a in ipairs(A.data) do
-            local b = B:GetKeyVal(a.key)
+            local b
+            do
+                local reasons = {}
 
-            if not b then
-                return types.errors.missing(B, a.key)
+                for _, keyval in ipairs(B.data) do
+                    local ok, reason = a.key:SubsetOf(keyval.key)
+                    if ok then
+                        b = keyval
+                        break
+                    end
+                    table.insert(reasons, reason)
+                end
+
+                if not b then
+                    return false, table.concat(reasons, "\n")
+                end
             end
 
             local key = a.val:Serialize() .. b.val:Serialize()
@@ -187,6 +198,16 @@ function Dictionary:Delete(key)
     return false, tostring(key) .. " was not found in " .. tostring(self)
 end
 
+function Dictionary:GetKeySet()
+    local set = types.Set:new()
+
+    for _, keyval in ipairs(self.data) do
+        set:AddElement(keyval.key:Copy())
+    end
+
+    return set
+end
+
 function Dictionary:GetKeyVal(key)
     local reasons = {}
 
@@ -198,7 +219,7 @@ function Dictionary:GetKeyVal(key)
         table.insert(reasons, reason)
     end
 
-    return false, tostring(key) .. " is not a subset of any of the keys in " .. tostring(self) .. " because " .. table.concat(reasons, "\n")
+    return false, table.concat(reasons, "\n")
 end
 
 function Dictionary:Set(key, val)
@@ -217,6 +238,7 @@ function Dictionary:Set(key, val)
 
     if self.contract then
         local keyval, reason = self.contract:GetKeyVal(key)
+
         if not keyval then
             return keyval, reason
         end
@@ -360,7 +382,7 @@ function Dictionary:IsTruthy()
     return true
 end
 
-function Dictionary:PrefixOperator(op, val)
+function Dictionary:PrefixOperator(op, val, env)
     if op == "not" then
         return types.Create("boolean", false)
     end
