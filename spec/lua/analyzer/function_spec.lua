@@ -1,27 +1,5 @@
-local oh = require("oh")
-local C = oh.Code
-
-local function run(code, expect_error)
-    local code_data = oh.Code(code, nil, nil, 3)
-    local ok, err = code_data:Analyze()
-
-    if expect_error then
-        if not err then
-            error("expected error, got\n\n\n[" .. tostring(ok) .. ", " .. tostring(err) .. "]")
-        elseif type(expect_error) == "string" and not err:find(expect_error) then
-            error("expected error " .. expect_error .. " got\n\n\n" .. err)
-        end
-    else
-        if not ok then
-            code_data = C(code_data.code)
-            local ok, err2 = code_data:Analyze(true)
-            print(code_data.code)
-            error(err)
-        end
-    end
-
-    return code_data.Analyzer
-end
+local T = require("spec.lua.helpers")
+local run = T.RunCode
 
 describe("function", function()
     it("arguments should work", function()
@@ -280,6 +258,19 @@ describe("function", function()
         ]]
     end)
 
+    pending("defining a type for a function should type the arguments", function()
+        run[[
+            local type test = function(number, string): 1
+
+            function test(a, b)
+                return 1
+            end
+
+            test(true, 14)
+            TPRINT(test)
+        ]]
+    end)
+
     pending("calling a set should work", function()
         run[[
             type test = (function(boolean, boolean): number) | (function(boolean): string)
@@ -289,6 +280,15 @@ describe("function", function()
 
             type_assert(a, _ as number)
             type_assert(b, _ as string)
+        ]]
+    end)
+
+    it("calling a set that does not contain a function should error", function()
+        run[[
+            type test = (function(boolean, boolean): number) | (function(boolean): string) | number
+
+            local a = test(true, true)
+            TPRINT(a)
         ]]
     end)
 end)

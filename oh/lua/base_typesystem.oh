@@ -405,3 +405,10 @@ end
 type getmetatable = function(tbl)
 	return tbl.meta
 end
+
+type math.floor = function(num)
+	if num.data then
+		return math.floor(num.data)
+	end
+	return types.Create("number")
+end

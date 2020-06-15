@@ -1,4 +1,4 @@
-local T = require("spec.lua.typesystem_helpers")
+local T = require("spec.lua.helpers")
 local Object = T.Object
 
 describe("strings", function()

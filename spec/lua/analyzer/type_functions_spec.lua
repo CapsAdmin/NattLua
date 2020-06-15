@@ -1,27 +1,5 @@
-local oh = require("oh")
-local C = oh.Code
-
-local function run(code, expect_error)
-    local code_data = oh.Code(code, nil, nil, 3)
-    local ok, err = code_data:Analyze()
-
-    if expect_error then
-        if not err then
-            error("expected error, got\n\n\n[" .. tostring(ok) .. ", " .. tostring(err) .. "]")
-        elseif type(expect_error) == "string" and not err:find(expect_error) then
-            error("expected error " .. expect_error .. " got\n\n\n" .. err)
-        end
-    else
-        if not ok then
-            code_data = C(code_data.code)
-            local ok, err2 = code_data:Analyze(true)
-            print(code_data.code)
-            error(err)
-        end
-    end
-
-    return code_data.Analyzer
-end
+local T = require("spec.lua.helpers")
+local run = T.RunCode
 
 describe("type functions", function()
 
@@ -73,6 +51,15 @@ describe("type functions", function()
         ]], "expected 11 | 31 got 1 | 3")
     end)
 
+    it("self referenced type tables", function()
+        run[[
+            local type a = {
+                b = self,
+            }
+            TPRINT(a)
+        ]]
+    end)
+
     pending("what", function()
         run[=[
             local a = 1
@@ -83,7 +70,16 @@ describe("type functions", function()
             local d = b(2)
             local d = b(a)
 
-            local lol: {a = boolean |nil, Foo = (function():nil) | nil} = {a = nil, Foo = nil}
+            type hm = {
+                a = boolean | nil,
+                Foo = (function(self, number, string):nil) | nil
+            }
+            local lol: hm = {
+                a = nil,
+                Foo = nil
+            }
+            TPRINT(hm, "!!")
+
             lol.a = true
 
             function lol:Foo(foo, bar)
@@ -107,17 +103,20 @@ describe("type functions", function()
         print(analyzer:GetValue("list", "runtime"))
     end)
 
-    pending("next should work", function()
+    it("next should work", function()
         run[[
+            local t = {k = 1}
+            local a = 1
+            TPRINT(t.k, "!!!")
             local k,v = next({k = 1})
             type_assert(k, nil as "k")
             type_assert(v, nil as 1)
         ]]
     end)
 
-    pending("math.floor", function()
-        R[[
-            type_assert(math.floor(1), 1)
+    it("math.floor", function()
+        run[[
+            type_assert(math.floor(1.5), 1)
         ]]
     end)
 end)

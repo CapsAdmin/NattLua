@@ -1,4 +1,4 @@
-local T = require("spec.lua.typesystem_helpers")
+local T = require("spec.lua.helpers")
 local N = T.Number
 local Object = T.Object
 local Set = T.Set

@@ -1167,20 +1167,11 @@ do
                         key = node.tokens["identifier"].value,
                         val = val
                     }
-
-                    if env == "runtime" then
-                        -- values should not be const by default
-                        val.const = false
-                    end
                 elseif node.kind == "table_expression_value" then
 
                     local key = self:AnalyzeExpression(node.expressions[1], env)
                     local obj = self:AnalyzeExpression(node.expressions[2], env)
 
-                    -- values should not be const by default
-                    if env == "runtime" then
-                        obj.const = false
-                    end
 
                     if key:IsType("string") and key.value then
                         out[i] = {key = key.value, val = obj}

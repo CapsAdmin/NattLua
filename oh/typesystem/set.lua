@@ -39,8 +39,9 @@ function Set:Call(arguments)
         if not obj.Call then
             return false, "set contains uncallable object " .. tostring(obj)
         end
+    end
 
-
+    for _, obj in ipairs(self.datai) do
         local return_tuple, error = obj:Call(arguments)
 
         if return_tuple then

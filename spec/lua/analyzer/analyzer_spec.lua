@@ -1,29 +1,417 @@
-local oh = require("oh")
-local C = oh.Code
-
-local function run(code, expect_error)
-    local code_data = oh.Code(code, nil, nil, 3)
-    local ok, err = code_data:Analyze()
-
-    if expect_error then
-        if not err then
-            error("expected error, got\n\n\n[" .. tostring(ok) .. ", " .. tostring(err) .. "]")
-        elseif type(expect_error) == "string" and not err:find(expect_error) then
-            error("expected error " .. expect_error .. " got\n\n\n" .. err)
-        end
-    else
-        if not ok then
-            code_data = C(code_data.code)
-            local ok, err2 = code_data:Analyze(true)
-            print(code_data.code)
-            error(err)
-        end
-    end
-
-    return code_data.Analyzer
-end
+local T = require("spec.lua.helpers")
+local run = T.RunCode
 
 describe("analyzer", function()
+    it("type_assert works", function()
+        run("type_assert(1, 2)", "expected.-2 got 1")
+        run("type_assert(nil as 1|2, 1)", "expected.-1")
+
+        run"type_assert(not true, false)"
+        run"type_assert(not 1, false)"
+        run"type_assert(nil==nil, true)"
+    end)
+
+    it("logic operators", function()
+        run[[
+            local function lt(x, y)
+                if x < y then return true else return false end
+            end
+
+            local function le(x, y)
+                if x <= y then return true else return false end
+            end
+
+            local function gt(x, y)
+                if x > y then return true else return false end
+            end
+
+            local function ge(x, y)
+                if x >= y then return true else return false end
+            end
+
+            local function eq(x, y)
+                if x == y then return true else return false end
+            end
+
+            local function ne(x, y)
+                if x ~= y then return true else return false end
+            end
+
+
+            local function ltx1(x)
+                if x < 1 then return true else return false end
+            end
+
+            local function lex1(x)
+                if x <= 1 then return true else return false end
+            end
+
+            local function gtx1(x)
+                if x > 1 then return true else return false end
+            end
+
+            local function gex1(x)
+                if x >= 1 then return true else return false end
+            end
+
+            local function eqx1(x)
+                if x == 1 then return true else return false end
+            end
+
+            local function nex1(x)
+                if x ~= 1 then return true else return false end
+            end
+
+
+            local function lt1x(x)
+                if 1 < x then return true else return false end
+            end
+
+            local function le1x(x)
+                if 1 <= x then return true else return false end
+            end
+
+            local function gt1x(x)
+                if 1 > x then return true else return false end
+            end
+
+            local function ge1x(x)
+                if 1 >= x then return true else return false end
+            end
+
+            local function eq1x(x)
+                if 1 == x then return true else return false end
+            end
+
+            local function ne1x(x)
+                if 1 ~= x then return true else return false end
+            end
+
+            do --- 1,2
+                local x,y = 1,2
+
+                type_assert(x<y,	true)
+                type_assert(x<=y,	true)
+                type_assert(x>y,	false)
+                type_assert(x>=y,	false)
+                type_assert(x==y,	false)
+                type_assert(x~=y,	true)
+
+                type_assert(1<y,	true)
+                type_assert(1<=y,	true)
+                type_assert(1>y,	false)
+                type_assert(1>=y,	false)
+                type_assert(1==y,	false)
+                type_assert(1~=y,	true)
+
+                type_assert(x<2,	true)
+                type_assert(x<=2,	true)
+                type_assert(x>2,	false)
+                type_assert(x>=2,	false)
+                type_assert(x==2,	false)
+                type_assert(x~=2,	true)
+
+                type_assert(lt(x,y),	true)
+                type_assert(le(x,y),	true)
+                type_assert(gt(x,y),	false)
+                type_assert(ge(x,y),	false)
+                type_assert(eq(y,x),	false)
+                type_assert(ne(y,x),	true)
+            end
+
+            do --- 2,1
+                local x,y = 2,1
+
+                type_assert(x<y,	false)
+                type_assert(x<=y,	false)
+                type_assert(x>y,	true)
+                type_assert(x>=y,	true)
+                type_assert(x==y,	false)
+                type_assert(x~=y,	true)
+
+                type_assert(2<y,	false)
+                type_assert(2<=y,	false)
+                type_assert(2>y,	true)
+                type_assert(2>=y,	true)
+                type_assert(2==y,	false)
+                type_assert(2~=y,	true)
+
+                type_assert(x<1,	false)
+                type_assert(x<=1,	false)
+                type_assert(x>1,	true)
+                type_assert(x>=1,	true)
+                type_assert(x==1,	false)
+                type_assert(x~=1,	true)
+
+                type_assert(lt(x,y),	false)
+                type_assert(le(x,y),	false)
+                type_assert(gt(x,y),	true)
+                type_assert(ge(x,y),	true)
+                type_assert(eq(y,x),	false)
+                type_assert(ne(y,x),	true)
+            end
+
+            do --- 1,1
+                local x,y = 1,1
+
+                type_assert(x<y,	false)
+                type_assert(x<=y,	true)
+                type_assert(x>y,	false)
+                type_assert(x>=y,	true)
+                type_assert(x==y,	true)
+                type_assert(x~=y,	false)
+
+                type_assert(1<y,	false)
+                type_assert(1<=y,	true)
+                type_assert(1>y,	false)
+                type_assert(1>=y,	true)
+                type_assert(1==y,	true)
+                type_assert(1~=y,	false)
+
+                type_assert(x<1,	false)
+                type_assert(x<=1,	true)
+                type_assert(x>1,	false)
+                type_assert(x>=1,	true)
+                type_assert(x==1,	true)
+                type_assert(x~=1,	false)
+
+                type_assert(lt(x,y),	false)
+                type_assert(le(x,y),	true)
+                type_assert(gt(x,y),	false)
+                type_assert(ge(x,y),	true)
+                type_assert(eq(y,x),	true)
+                type_assert(ne(y,x),	false)
+            end
+
+            do --- 2
+                type_assert(lt1x(2),	true)
+                type_assert(le1x(2),	true)
+                type_assert(gt1x(2),	false)
+                type_assert(ge1x(2),	false)
+                type_assert(eq1x(2),	false)
+                type_assert(ne1x(2),	true)
+
+                type_assert(ltx1(2),	false)
+                type_assert(lex1(2),	false)
+                type_assert(gtx1(2),	true)
+                type_assert(gex1(2),	true)
+                type_assert(eqx1(2),	false)
+                type_assert(nex1(2),	true)
+            end
+
+            do --- 1
+                type_assert(lt1x(1),	false)
+                type_assert(le1x(1),	true)
+                type_assert(gt1x(1),	false)
+                type_assert(ge1x(1),	true)
+                type_assert(eq1x(1),	true)
+                type_assert(ne1x(1),	false)
+
+                type_assert(ltx1(1),	false)
+                type_assert(lex1(1),	true)
+                type_assert(gtx1(1),	false)
+                type_assert(gex1(1),	true)
+                type_assert(eqx1(1),	true)
+                type_assert(nex1(1),	false)
+            end
+
+            do --- 0
+                type_assert(lt1x(0),	false)
+                type_assert(le1x(0),	false)
+                type_assert(gt1x(0),	true)
+                type_assert(ge1x(0),	true)
+                type_assert(eq1x(0),	false)
+                type_assert(ne1x(0),	true)
+
+                type_assert(ltx1(0),	true)
+                type_assert(lex1(0),	true)
+                type_assert(gtx1(0),	false)
+                type_assert(gex1(0),	false)
+                type_assert(eqx1(0),	false)
+                type_assert(nex1(0),	true)
+            end
+        ]]
+    end)
+
+    it("boolean and or logic", function() -- and or
+        -- when false, or returns its second argument
+        run"type_assert(nil or false, false)"
+        run"type_assert(false or nil, nil)"
+
+        -- when true, or returns its first argument
+        run"type_assert(1 or false, 1)"
+        run"type_assert(true or nil, true)"
+
+        run"type_assert(nil or {}, {})"
+
+        -- boolean without any data can be true and false at the same time
+        run"type_assert((_ as boolean) or (1), _ as boolean | 1)"
+
+        -- when false and returns its first argument
+        run"type_assert(false and true, false)"
+        run"type_assert(true and nil, nil)"
+
+        -- when true and returns its second argument
+        -- ????
+
+        -- smoke test
+        run"type_assert(((1 or false) and true) or false, true)"
+
+        do --- allcases
+            local basiccases = {
+                {"nil", nil},
+                {"false", false},
+                {"true", true},
+                {"10", 10},
+            }
+
+            local mem = {basiccases}    -- for memoization
+
+            local function allcases (n)
+                if mem[n] then return mem[n] end
+                local res = {}
+                -- include all smaller cases
+                for _, v in ipairs(allcases(n - 1)) do
+                    res[#res + 1] = v
+                end
+                for i = 1, n - 1 do
+                    for _, v1 in ipairs(allcases(i)) do
+                        for _, v2 in ipairs(allcases(n - i)) do
+                            res[#res + 1] = {
+                                "(" .. v1[1] .. " and " .. v2[1] .. ")",
+                                v1[2] and v2[2]
+                            }
+                            res[#res + 1] = {
+                                "(" .. v1[1] .. " or " .. v2[1] .. ")",
+                                v1[2] or v2[2]
+                            }
+                        end
+                    end
+                end
+                mem[n] = res   -- memoize
+                return res
+            end
+            local code = {}
+            for _, v in pairs(allcases(4)) do
+                table.insert(code, "type_assert("..tostring(v[1])..", "..tostring(v[2])..")")
+            end
+
+            run(table.concat(code, "\n"))
+        end
+    end)
+
+    pending("pcall", function()
+        run[[
+            do --- pcall
+                assert(not pcall(function()
+                    local a, b = 10.5, nil
+                    return a < b
+                end))
+            end
+        ]]
+    end)
+
+    it("bit operations", function()
+        run[[
+            for i=1,100 do
+                assert(bit.tobit(i+0x7fffffff) < 0)
+            end
+            for i=1,100 do
+                assert(bit.tobit(i+0x7fffffff) <= 0)
+            end
+        ]]
+    end)
+
+    it("string comparisons", function()
+        run[[
+            do
+                local a = "\255\255\255\255"
+                local b = "\1\1\1\1"
+
+                assert(a > b)
+                assert(a > b)
+                assert(a >= b)
+                assert(b <= a)
+            end
+
+            do --- String comparisons:
+                local function str_cmp(a, b, lt, gt, le, ge)
+                    assert(a<b == lt)
+                    assert(a>b == gt)
+                    assert(a<=b == le)
+                    assert(a>=b == ge)
+                    assert((not (a<b)) == (not lt))
+                    assert((not (a>b)) == (not gt))
+                    assert((not (a<=b)) == (not le))
+                    assert((not (a>=b)) == (not ge))
+                end
+
+                local function str_lo(a, b)
+                    str_cmp(a, b, true, false, true, false)
+                end
+
+                local function str_eq(a, b)
+                    str_cmp(a, b, false, false, true, true)
+                end
+
+                local function str_hi(a, b)
+                    str_cmp(a, b, false, true, false, true)
+                end
+
+                str_lo("a", "b")
+                str_eq("a", "a")
+                str_hi("b", "a")
+
+                str_lo("a", "aa")
+                str_hi("aa", "a")
+
+                str_lo("a", "a\0")
+                str_hi("a\0", "a")
+            end
+        ]]
+    end)
+
+    it("object equality", function()
+        run[[
+            local function obj_eq(a: any, b: any)
+                type_assert(a==b, true)
+                type_assert(a~=b, false)
+            end
+
+            local function obj_ne(a: any, b: any)
+                type_assert(a==b, false)
+                type_assert(a~=b, true)
+            end
+
+            obj_eq(nil, nil)
+            obj_ne(nil, false)
+            obj_ne(nil, true)
+
+            obj_ne(false, nil)
+            obj_eq(false, false)
+            obj_ne(false, true)
+
+            obj_ne(true, nil)
+            obj_ne(true, false)
+            obj_eq(true, true)
+
+            obj_eq(1, 1)
+            obj_ne(1, 2)
+            obj_ne(2, 1)
+
+            obj_eq("a", "a")
+            obj_ne("a", "b")
+            obj_ne("a", 1)
+            obj_ne(1, "a")
+
+            local t, t2 = {}, {}
+            obj_eq(t, t)
+            obj_ne(t, t2)
+            obj_ne(t, 1)
+            obj_ne(t, "")
+        ]]
+    end)
+
     it("runtime scopes should work", function()
         local v = run("local a = 1"):GetValue("a", "runtime")
         assert.equal(v.Type, "object")
@@ -35,6 +423,16 @@ describe("analyzer", function()
             --: local type a = 1
             type_assert(a, 1)
         ]])
+    end)
+
+    it("default declaration is const", function()
+        local analyzer = run([[
+            local a = 1
+            local t = {k = 1}
+            local b = t.k
+        ]])
+        assert(analyzer:GetValue("a", "runtime"):IsConst())
+        assert(analyzer:GetValue("b", "runtime"):IsConst())
     end)
 
     it("branching", function()
@@ -286,6 +684,7 @@ describe("analyzer", function()
             type_assert(a, _ as 11|31)
         ]], "expected 11 | 31 got 1 | 3")
     end)
+
 
     pending("what", function()
         run[=[
