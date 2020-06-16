@@ -88,7 +88,7 @@ describe("function", function()
         ]], "number is not the same type as string")
     end)
 
-    it("function call within a function shouldn't mess up collected return types", function()
+    it("call within a function shouldn't mess up collected return types", function()
         local analyzer = run[[
             local function b()
                 (function() return 888 end)()
@@ -101,7 +101,7 @@ describe("function", function()
         assert.equal(1337, c:GetData())
     end)
 
-    it("any arguments should work", function()
+    it("arguments with any should work", function()
         run([[
             local function test(b: any, a: any)
 
@@ -228,6 +228,20 @@ describe("function", function()
         local b = analyzer:GetValue("b", "runtime")
     end)
 
+    it("control path within a function should work", function()
+        run([[
+            local a = 1
+            function b(lol: number)
+                if lol == 1 then return "foo" end
+                return lol + 4, true
+            end
+            local d = b(2)
+            type_assert(d, 6)
+            local d = b(a)
+            type_assert(d, "foo")
+        ]])
+    end)
+
     it("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", function()
         local analyzer = run[[
             function f1()
@@ -258,7 +272,7 @@ describe("function", function()
         ]]
     end)
 
-    pending("defining a type for a function should type the arguments", function()
+    it("defining a type for a function should type the arguments", function()
         run[[
             local type test = function(number, string): 1
 
@@ -266,12 +280,21 @@ describe("function", function()
                 return 1
             end
 
-            test(true, 14)
-            TPRINT(test)
+            test(14, "asd")
         ]]
+
+        run([[
+            local type test = function(number, string): 1
+
+            function test(a, b)
+                return 1
+            end
+
+            test(true, 2)
+        ]], "true is not the same type as number")
     end)
 
-    pending("calling a set should work", function()
+    it("calling a set should work", function()
         run[[
             type test = (function(boolean, boolean): number) | (function(boolean): string)
 
@@ -284,11 +307,27 @@ describe("function", function()
     end)
 
     it("calling a set that does not contain a function should error", function()
-        run[[
+        run([[
             type test = (function(boolean, boolean): number) | (function(boolean): string) | number
 
             local a = test(true, true)
-            TPRINT(a)
+            print(a)
+        ]], "set contains uncallable object number")
+    end)
+
+    it("pcall", function()
+        run[[
+            type pcall = function(cb: function, ...)
+                return types.Object:new("boolean"), table.unpack(analyzer:Call(cb, types.Tuple:new({...})))
+            end
+
+            local ok, err = pcall(function()
+                local a, b = 10.5, nil
+                return a < b
+            end)
+
+            type_assert(ok, _ as boolean)
+            type_assert(err, _ as boolean)
         ]]
     end)
 end)

@@ -97,13 +97,13 @@ function META:EmitBinaryOperator(node)
 end
 
 do
-    local function emit_function_body(self, node)
-        self:EmitToken(node.tokens["("])
+    local function emit_function_body(self, node, type_function)
+        self:EmitToken(node.tokens["("] or node.tokens["<"])
         self:EmitIdentifierList(node.identifiers)
-        self:EmitToken(node.tokens[")"])
+        self:EmitToken(node.tokens[")"] or node.tokens[">"])
 
 
-        if self.config.annotate and node.inferred_type then
+        if self.config.annotate and node.inferred_type and not type_function then
             --self:Emit(" --[[ : ")
             local str = {}
             -- this iterates the first return tuple
@@ -149,6 +149,16 @@ do
         self:Whitespace(" ")
         self:EmitIdentifier(node.identifier)
         emit_function_body(self, node)
+    end
+
+    function META:EmitLocalTypeFunction2(node)
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["local"])
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["function"])
+        self:Whitespace(" ")
+        self:EmitIdentifier(node.identifier)
+        emit_function_body(self, node, true)
     end
 
     function META:EmitFunction(node)

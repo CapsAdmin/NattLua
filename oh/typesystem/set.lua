@@ -36,26 +36,22 @@ function Set:Call(arguments)
     local errors = {}
 
     for _, obj in ipairs(self.datai) do
-        if not obj.Call then
+        if not obj.Call or (obj.Type == "object" and not obj:IsType("function")) then
             return false, "set contains uncallable object " .. tostring(obj)
         end
     end
 
     for _, obj in ipairs(self.datai) do
-        local return_tuple, error = obj:Call(arguments)
+        local return_tuple, error = obj:Call(arguments, true)
 
         if return_tuple then
-            set:AddElement(return_tuple)
+            return return_tuple
         else
             table.insert(errors, error)
         end
     end
 
-    if set:GetLength() == 0 then
-        return false, table.concat(errors, "\n")
-    end
-
-    return types.Tuple:new({set})
+    return false, table.concat(errors, "\n")
 end
 
 function Set:__tostring()
@@ -232,7 +228,7 @@ end
 
 function Set:IsType(str)
     for _, v in ipairs(self.datai) do
-        if v:IsType(str) then
+        if v.IsType and v:IsType(str) then
             return true
         end
     end

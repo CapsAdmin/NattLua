@@ -306,7 +306,7 @@ function Object:IsConst()
     return self.const == true
 end
 
-function Object:Call(arguments)
+function Object:Call(arguments, check_length)
     if self.type == "any" then
         return types.Tuple:new(types.Object:new("any"))
     end
@@ -339,6 +339,10 @@ function Object:Call(arguments)
         local A = arguments -- incoming
         local B = self.data.arg -- the contract
         -- A should be a subset of B
+
+        if check_length and A:GetLength() ~= B:GetLength() then
+            return false, "invalid amount of arguments"
+        end
 
         for i, a in ipairs(A:GetData()) do
             local b = B:Get(i)

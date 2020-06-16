@@ -221,7 +221,7 @@ do -- types
             -- for deferred calls
             obj.called = true
 
-            if obj.node and (obj.node.kind == "function" or obj.node.kind == "local_function") then
+            if obj.node and (obj.node.kind == "function" or obj.node.kind == "local_function" or obj.node.kind == "local_type_function2") then
 
                 do -- recursive guard
                     if self.calling_function == obj then
@@ -232,11 +232,17 @@ do -- types
 
                 local return_tuple = self:Assert(node, obj:Call(arguments))
 
+                local env = "runtime"
+
+                if self.PreferTypesystem then
+                    env = "typesystem"
+                end
+
                 self:PushScope(obj.node)
                     local self_call = obj.node.self_call
 
                     if self_call then
-                        self:SetUpvalue("self", arguments:Get(1) or self:TypeFromImplicitNode(obj.node, "nil"), "runtime")
+                        self:SetUpvalue("self", arguments:Get(1) or self:TypeFromImplicitNode(obj.node, "nil"), env)
                     end
 
                     for i, identifier in ipairs(obj.node.identifiers) do
@@ -247,9 +253,9 @@ do -- types
                             for i = argi, arguments:GetLength() do
                                 table.insert(values, arguments:Get(i))
                             end
-                            self:SetUpvalue(identifier, self:TypeFromImplicitNode(identifier, "...", values), "runtime")
+                            self:SetUpvalue(identifier, self:TypeFromImplicitNode(identifier, "...", values), env)
                         else
-                            self:SetUpvalue(identifier, arguments:Get(argi) or self:TypeFromImplicitNode(identifier, "nil"), "runtime")
+                            self:SetUpvalue(identifier, arguments:Get(argi) or self:TypeFromImplicitNode(identifier, "nil"), env)
                         end
                     end
 
@@ -560,7 +566,7 @@ function META:AnalyzeStatement(statement)
         end
         return ret
     elseif statement.kind == "assignment" or statement.kind == "local_assignment" then
-        local env = statement.environment or "runtime"
+        local env = self.PreferTypesystem and "typesystem" or statement.environment or "runtime"
         local assignments = {}
 
         for i, exp_key in ipairs(statement.left) do
@@ -693,11 +699,11 @@ function META:AnalyzeStatement(statement)
             end
         end
     elseif statement.kind == "function" then
-        self:SetValue(statement.expression, self:AnalyzeFunction(statement), "runtime")
+        self:SetValue(statement.expression, self:GetValue(statement.expression, "typesystem") or self:AnalyzeFunction(statement), "runtime")
     elseif statement.kind == "local_function" then
         self:SetUpvalue(statement.tokens["identifier"], self:AnalyzeFunction(statement), "runtime")
-    elseif statement.kind == "local_type_function" then
-        self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement), "typesystem")
+    elseif statement.kind == "local_type_function" or statement.kind == "local_type_function2" then
+        self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement, "typesystem"), "typesystem")
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
             if not statement.expressions[i] then
@@ -921,6 +927,11 @@ do
         function META:AnalyzeExpression(exp, env)
             assert(exp and exp.type == "expression")
             env = env or "runtime"
+
+            if self.PreferTypesystem then
+                env = "typesystem"
+            end
+
             local stack = Stack()
 
             for _, node in ipairs(expand(exp)) do
@@ -1057,7 +1068,7 @@ do
                 elseif node.kind == "postfix_call" then
                     local obj = stack:Pop()
 
-                    local arguments = self:AnalyzeExpressions(node.expressions, env)
+                    local arguments = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
 
                     if node.self_call then
                         local val = stack:Pop()
@@ -1067,7 +1078,9 @@ do
                     if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
                         self:Error(node, tostring(obj) .. " cannot be called")
                     else
+                        self.PreferTypesystem = node.type_call
                         stack:Push(self:Call(obj, types.Tuple:new(arguments), node))
+                        self.PreferTypesystem = nil
                     end
                 elseif node.kind == "type_list" then
                     local tbl = {}
@@ -1159,7 +1172,9 @@ do
                 ret = ret,
             })
 
-            self:CallMeLater(obj, args, node, true)
+            if node.kind ~= "local_type_function2" then
+                self:CallMeLater(obj, args, node, true)
+            end
 
             return obj
         end

@@ -59,6 +59,21 @@ do
     end
 end
 
+
+do
+    function META:IsLocalTypeFunctionStatement2()
+        return self:IsValue("local") and self:IsValue("function", 1) and self:IsValue("<", 3)
+    end
+
+    function META:ReadLocalTypeFunctionStatement2()
+        local node = self:Statement("local_type_function2")
+        node.tokens["local"] = self:ReadValue("local")
+        node.tokens["function"] = self:ReadValue("function")
+        node.identifier = self:ReadIdentifier()
+        return self:ReadTypeFunctionBody2(node)
+    end
+end
+
 function META:ReadFunctionArgument()
     if (self:IsType("letter") or self:IsValue("...")) and self:IsValue(":", 1) then
         local identifier = self:ReadTokenLoose()
@@ -91,6 +106,31 @@ function META:ReadTypeFunctionBody(node)
     end
 
     node.tokens[")"] = self:ReadValue(")", node.tokens["("])
+
+    if self:IsValue(":") then
+        node.tokens[":"] = self:ReadValue(":")
+        node.return_expressions = self:ReadTypeExpressionList()
+    else
+        local start = self:GetToken()
+        node.statements = self:ReadStatements({["end"] = true})
+        node.tokens["end"] = self:ReadValue("end", start, start)
+    end
+
+    return node
+end
+
+function META:ReadTypeFunctionBody2(node)
+    node.tokens["<"] = self:ReadValue("<")
+
+    node.identifiers = self:ReadIdentifierList()
+
+    if self:IsValue("...") then
+        local vararg = self:Expression("value")
+        vararg.value = self:ReadValue("...")
+        table.insert(node.identifiers, vararg)
+    end
+
+    node.tokens[">"] = self:ReadValue(">", node.tokens["<"])
 
     if self:IsValue(":") then
         node.tokens[":"] = self:ReadValue(":")
@@ -267,6 +307,7 @@ function META:ReadTypeExpression(priority)
                 node.tokens["call("] = self:ReadValue("<")
                 node.expressions = self:ReadTypeExpressionList()
                 node.tokens["call)"] = self:ReadValue(">")
+                node.type_call = true
             elseif self:IsValue("(") then
                 node = self:Expression("postfix_call")
                 node.left = left

@@ -9647,7 +9647,7 @@ type table.insert = function(tbl, ...)
 	tbl.length = pos
 end
 
-type TPRINT = function(...) print(...) end
+type print = function(...) print(...) end
 
 
 type table.sort = function(tbl, func)

@@ -375,8 +375,7 @@ type table.insert = function(tbl, ...)
 
 end
 
-type TPRINT = function(...) print(...) end
-
+type print = function(...) print(...) end
 
 type table.sort = function(tbl, func)
 	local set = types.Set:new()

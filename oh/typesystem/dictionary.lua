@@ -208,11 +208,22 @@ function Dictionary:GetKeySet()
     return set
 end
 
-function Dictionary:GetKeyVal(key)
+function Dictionary:GetKeyVal(key, reverse_subset)
+    if not self.data[1] then
+        return false, "dictionary has no definitions"
+    end
+
     local reasons = {}
 
     for _, keyval in ipairs(self.data) do
-        local ok, reason = keyval.key:SubsetOf(key)
+        local ok, reason
+
+        if reverse_subset then
+            ok, reason = key:SubsetOf(keyval.key)
+        else
+            ok, reason = keyval.key:SubsetOf(key)
+        end
+
         if ok then
             return keyval
         end
@@ -256,7 +267,7 @@ function Dictionary:Set(key, val)
 
 
     if self.contract then
-        local keyval, reason = self.contract:GetKeyVal(key)
+        local keyval, reason = self.contract:GetKeyVal(key, true)
 
         if not keyval then
             return keyval, reason

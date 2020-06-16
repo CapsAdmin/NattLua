@@ -56,58 +56,14 @@ describe("type functions", function()
             local type a = {
                 b = self,
             }
-            TPRINT(a)
+            type_assert(a, a.b)
         ]]
-    end)
-
-    pending("what", function()
-        run[=[
-            local a = 1
-            function b(lol: number)
-                if lol == 1 then return "foo" end
-                return lol + 4, true
-            end
-            local d = b(2)
-            local d = b(a)
-
-            type hm = {
-                a = boolean | nil,
-                Foo = (function(self, number, string):nil) | nil
-            }
-            local lol: hm = {
-                a = nil,
-                Foo = nil
-            }
-            TPRINT(hm, "!!")
-
-            lol.a = true
-
-            function lol:Foo(foo, bar)
-                local a = self.a
-            end
-
-            --local lol: string[] = {}
-
-            --local a = table.concat(lol)
-        ]=]
-    end)
-
-    pending("lists should work", function()
-        local analyzer = run([[
-            type Array = function(T, L)
-                return types.Create("list", {type = T, values = {}, length = L.data})
-            end
-
-            local list: Array<number, 3> = {1, 2, 3}
-        ]])
-        print(analyzer:GetValue("list", "runtime"))
     end)
 
     it("next should work", function()
         run[[
             local t = {k = 1}
             local a = 1
-            TPRINT(t.k, "!!!")
             local k,v = next({k = 1})
             type_assert(k, nil as "k")
             type_assert(v, nil as 1)
@@ -118,5 +74,15 @@ describe("type functions", function()
         run[[
             type_assert(math.floor(1.5), 1)
         ]]
+    end)
+
+    it("assert", function()
+        run([[
+            assert(1 == 2, "lol")
+        ]],"lol")
+    end)
+
+    it("require should error when not finding a module", function()
+        run([[require("adawdawddwaldwadwadawol")]], "unable to find module")
     end)
 end)

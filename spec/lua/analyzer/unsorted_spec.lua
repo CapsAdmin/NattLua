@@ -670,8 +670,8 @@ R[[
     local a = foo.bar(true, 1)
     local b = foo.bar(1)
 
-    type_assert(a, nil as [true])
-    type_assert(b, nil as [false])
+    type_assert(a, nil as true)
+    type_assert(b, nil as false)
 ]]
 R[[
     local a: string = "1"
@@ -933,7 +933,7 @@ R[[
 ]]
 R[[
     for k,v in next, {1,2,3} do
-        print(k,v)
+        type_assert(_ as 1 | 2 | 3, _ as 1 | 2 | 3)
     end
 ]]
 R[[

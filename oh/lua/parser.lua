@@ -32,7 +32,7 @@ do -- functional helpers
         else
             self.nodes[1].expression = self:ReadExpectExpression()
         end
-        
+
         return self
     end
 
@@ -65,8 +65,8 @@ do -- functional helpers
 end
 
 do
-    function META:IsBreakStatement() 
-        return self:IsValue("break") 
+    function META:IsBreakStatement()
+        return self:IsValue("break")
     end
 
     function META:ReadBreakStatement()
@@ -77,8 +77,8 @@ do
 end
 
 do
-    function META:IsReturnStatement() 
-        return self:IsValue("return") 
+    function META:IsReturnStatement()
+        return self:IsValue("return")
     end
 
     function META:ReadReturnStatement()
@@ -90,8 +90,8 @@ do
 end
 
 do
-    function META:IsDoStatement() 
-        return self:IsValue("do") 
+    function META:IsDoStatement()
+        return self:IsValue("do")
     end
 
     function META:ReadDoStatement()
@@ -103,8 +103,8 @@ end
 
 
 do
-    function META:IsWhileStatement() 
-        return self:IsValue("while") 
+    function META:IsWhileStatement()
+        return self:IsValue("while")
     end
 
     function META:ReadWhileStatement()
@@ -117,8 +117,8 @@ do
 end
 
 do
-    function META:IsRepeatStatement() 
-        return self:IsValue("repeat") 
+    function META:IsRepeatStatement()
+        return self:IsValue("repeat")
     end
 
     function META:ReadRepeatStatement()
@@ -132,8 +132,8 @@ do
 end
 
 do
-    function META:IsGotoLabelStatement() 
-        return self:IsValue("::") 
+    function META:IsGotoLabelStatement()
+        return self:IsValue("::")
     end
 
     function META:ReadGotoLabelStatement()
@@ -146,8 +146,8 @@ do
 end
 
 do
-    function META:IsGotoStatement() 
-        return self:IsValue("goto") and self:IsType("letter", 1) 
+    function META:IsGotoStatement()
+        return self:IsValue("goto") and self:IsType("letter", 1)
     end
 
     function META:ReadGotoStatement()
@@ -159,15 +159,15 @@ do
 end
 
 do
-    function META:IsLocalAssignmentStatement() 
-        return self:IsValue("local") 
+    function META:IsLocalAssignmentStatement()
+        return self:IsValue("local")
     end
 
     function META:ReadLocalAssignmentStatement()
         self:BeginStatement("local_assignment")
         self:ExpectKeyword("local")
         self:Store("left", self:ReadIdentifierList())
-        
+
         if self:IsValue("=") then
             self:ExpectKeyword("=")
             self:Store("right", self:ReadExpressionList())
@@ -178,11 +178,11 @@ do
 end
 
 
-do 
-    function META:IsNumericForStatement() 
-        return self:IsValue("for") and self:IsValue("=", 2) 
+do
+    function META:IsNumericForStatement()
+        return self:IsValue("for") and self:IsValue("=", 2)
     end
-    
+
     function META:ReadNumericForStatement()
         return self:BeginStatement("numeric_for")
             :Store("is_local", true)
@@ -196,8 +196,8 @@ do
 end
 
 do
-    function META:IsGenericForStatement() 
-        return self:IsValue("for") 
+    function META:IsGenericForStatement()
+        return self:IsValue("for")
     end
 
     function META:ReadGenericForStatement()
@@ -272,8 +272,8 @@ do  -- function
     end
 
     do
-        function META:IsFunctionStatement() 
-            return self:IsValue("function") 
+        function META:IsFunctionStatement()
+            return self:IsValue("function")
         end
 
         function META:ReadFunctionStatement()
@@ -302,8 +302,8 @@ end
 
 
 do
-    function META:IsLocalFunctionStatement() 
-        return self:IsValue("local") and self:IsValue("function", 1) 
+    function META:IsLocalFunctionStatement()
+        return self:IsValue("local") and self:IsValue("function", 1)
     end
 
     function META:ReadLocalFunctionStatement()
@@ -314,14 +314,14 @@ do
 
         local node = self:GetNode()
         self:ReadFunctionBody(node)
-        
+
         return self:EndStatement()
     end
 end
 
 do
-    function META:IsIfStatement() 
-        return self:IsValue("if") 
+    function META:IsIfStatement()
+        return self:IsValue("if")
     end
 
     function META:ReadIfStatement()
@@ -430,7 +430,7 @@ do -- expression
 
         function META:ReadTableSpread()
             return self:BeginExpression("table_spread")
-            :ExpectKeyword("...") 
+            :ExpectKeyword("...")
             :ExpectExpression()
             :EndExpression()
         end
@@ -476,13 +476,13 @@ do -- expression
             end
 
             local entry = self:ReadTableEntry()
-            
+
             if entry.spread then
                 tree.spread = true
             end
 
             tree.children[i] = entry
-          
+
             if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
                 self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
                 break
@@ -587,6 +587,19 @@ do -- expression
                     node.tokens["call("] = self:ReadValue("(")
                     node.expressions = self:ReadExpressionList()
                     node.tokens["call)"] = self:ReadValue(")")
+
+                    if left.value and left.value.value == ":" then
+                        node.self_call = true
+                    end
+                elseif self:IsValue("<") and self:IsValue("(", 1) then
+                    node = self:Expression("postfix_call")
+                    node.left = left
+                    node.tokens["call("] = self:ReadValue("<")
+                    node.tokens["call(2"] = self:ReadValue("(")
+                    node.expressions = self:ReadTypeExpressionList()
+                    node.tokens["call)2"] = self:ReadValue(")")
+                    node.tokens["call)"] = self:ReadValue(">")
+                    node.type_call = true
 
                     if left.value and left.value.value == ":" then
                         node.self_call = true
@@ -711,6 +724,7 @@ do -- statements
             self:IsLSXStatement() then                              return self:ReadLSXStatement() elseif
             self:IsRepeatStatement() then                           return self:ReadRepeatStatement() elseif
             self:IsFunctionStatement() then                         return self:ReadFunctionStatement() elseif
+            self:IsLocalTypeFunctionStatement2() then               return self:ReadLocalTypeFunctionStatement2() elseif
             self:IsLocalFunctionStatement() then                    return self:ReadLocalFunctionStatement() elseif
             self:IsLocalTypeFunctionStatement() then                return self:ReadLocalTypeFunctionStatement() elseif
             self:IsLocalTypeDeclarationStatement() then             return self:ReadLocalTypeDeclarationStatement() elseif

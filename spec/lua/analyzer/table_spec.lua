@@ -96,28 +96,40 @@ describe("table", function()
         ]], "\"foo\" is not a subset of \"bar\"")
     end)
 
-    pending("string: any", function()
+    it("string: any", function()
         run([[
             local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)
             a.lol = "aaa"
             a.lol2 = 2
             a.lol3 = {}
-            a[1] = {}
         ]])
     end)
 
-    it("nested tables should work", function()
-        local analyzer = run[[
-            interface a {
-                foo = {
-                    bar = number
-                }
-            }
+    it("empty type table shouldn't be writable", function()
+        run([[
+            local a: {} = {}
+            a.lol = true
+        ]], "dictionary has no definitions")
+    end)
 
-            local tbl: a = {foo = {bar = 1}}
-        ]]
+    it("wrong right hand type should error", function()
+        run([[
+            local {a,b} = nil
+        ]], "expected a table on the right hand side, got")
+    end)
 
-        local tbl = analyzer:GetValue("tbl", "runtime")
-        print(tbl)
+    it("should error when key doesn't match the type", function()
+        run([[
+            local a: {[string] = string} = {}
+            a.lol = "a"
+            a[1] = "a"
+        ]], "is not the same type as string")
+    end)
+
+    it("with typed numerically indexed table should error", function()
+        run([[
+            local tbl: {1,true,3} = {1, true, 3}
+            tbl[2] = false
+        ]], "false is not a subset of true")
     end)
 end)
