@@ -10,6 +10,14 @@ describe("metatable", function()
 
         local a = analyzer:GetValue("a", "runtime")
         assert.equal(1, a:GetData())
+
+        run[[
+            local meta = {} as {num = number, __index = self}
+
+            local a = setmetatable({}, meta)
+
+            type_assert(a.num, _ as number)
+        ]]
     end)
 
     it("basic inheritance should work", function()
@@ -139,18 +147,8 @@ describe("metatable", function()
         assert.equal(102, y:GetData())
         assert.equal(103, z:GetData())
     end)
-    pending("a", function()
-        run[[
-            local meta: {num = number, __index = self} = {}
-            meta.__index = meta
 
-            local a = setmetatable({}, meta)
-
-            TPRINT(meta)
-            --type_assert(a.num, _ as number) -- implement meta tables
-        ]]
-    end)
-    pending("interface extensions", function()
+    it("interface extensions", function()
         run[[
             local type Vec2 = {x = number, y = number}
             local type Vec3 = {z = number} extends Vec2
@@ -164,7 +162,9 @@ describe("metatable", function()
                 GetPos = (function(self): Vec3),
             }
 
-            local x: Foo = {}
+            -- have to use as here because {} would not be a subset of Foo
+            local x = {} as Foo
+
             x:SetPos({x = 1, y = 2, z = 3})
             local a = x:GetPos()
             local z = a.x + 1
@@ -175,4 +175,30 @@ describe("metatable", function()
             type_assert(test, _ as number)
         ]]
     end)
+
+    it("error on newindex", function()
+        run([[
+            type error = function(msg: string)
+                assert(type(msg.data) == "string", "msg does not contain a string?")
+                error(msg.data)
+            end
+
+            local META = {}
+            META.__index = META
+
+            function META:__newindex(key, val)
+                if key == "foo" then
+                    error("cannot use " .. key)
+                end
+            end
+
+            local self = setmetatable({}, META)
+
+            self.foo = true
+
+            -- should error
+            self.bar = true
+        ]], "cannot use foo")
+    end)
 end)
+

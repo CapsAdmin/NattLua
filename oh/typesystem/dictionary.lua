@@ -230,6 +230,25 @@ function Dictionary:Set(key, val)
         return false, "key is nil"
     end
 
+    if self.meta then
+        local func = self.meta:Get("__newindex")
+
+        if func then
+            if func.Type == "dictionary" then
+                return func:Set(key, val)
+            end
+
+            if func.Type == "object" then
+                local analyzer = require("oh").current_analyzer
+                if analyzer then
+                    return analyzer:Call(func, types.Tuple:new({self, key, val}), key.node)[1]
+                end
+                return func:Call(self, key):GetData()[1]
+            end
+        end
+    end
+
+
     -- delete entry
     if val == nil or val.type == "nil" then
         return self:Delete(key)

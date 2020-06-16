@@ -15,7 +15,3 @@ it("{[1 .. inf]: any}", function()
 
     run([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[number%(%-1234%) is not a subset of 1%.%.inf]])
 end)
---local a: {[1 .. math.huge] = any} = {}
---local a: {[1 .. #self + 1] = any} = {}
---local a: {[1 .. 10] = any} = {}
---local a: {[1 .. 10] = string} = {}

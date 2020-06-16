@@ -20,28 +20,6 @@ local type func = (function(string, number): ("foo!")) | (function(number, strin
 assert(func("", 0) == "foo!")
 assert(func(0, "") == "bar!")
 
--- various list types, from loose to strict
-local a: {[number] = any} = {}
-local a: {[1 .. math.huge] = any} = {}
-local a: {[1 .. #self + 1] = any} = {}
-local a: {[1 .. 10] = any} = {}
-local a: {[1 .. 10] = string} = {}
-
------------
-type foo = object({
-    __newindex = function(self, key, val)
-        if val.value == true then
-            error("cannot assign true!")
-        end
-    end,
-})
-
-local test: foo = {}
-test.foo = true
-     ^^^
-     cannot assign true!
------------
-
 any:
     number = -math.huge .. math.huge | math.nan
     string = *all possible string values*
