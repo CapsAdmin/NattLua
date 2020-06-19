@@ -85,4 +85,31 @@ describe("type functions", function()
     it("require should error when not finding a module", function()
         run([[require("adawdawddwaldwadwadawol")]], "unable to find module")
     end)
+
+    it("load", function()
+        run[[
+            type_assert(assert(load("type_assert(1, 1) return 2")), 2)
+        ]]
+
+        run[[
+            type_assert(assert(load("return " .. 2)), 2)
+        ]]
+    end)
+
+    it("rawset rawget", function()
+        run[[
+            local meta = {}
+            meta.__index = meta
+
+            local called = false
+            function meta:__newindex(key: string, val: any)
+                called = true
+            end
+
+            local self = setmetatable({}, meta)
+            rawset(self, "lol", "LOL")
+            type_assert(rawget(self, "lol"), "LOL")
+            type_assert(called, false)
+        ]]
+    end)
 end)

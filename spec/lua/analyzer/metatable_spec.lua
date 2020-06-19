@@ -200,5 +200,37 @@ describe("metatable", function()
             self.bar = true
         ]], "cannot use foo")
     end)
+
+    it("tutorialspoint", function()
+        run[[
+            mytable = setmetatable({key1 = "value1"}, {
+                __index = function(mytable, key)
+                    if key == "key2" then
+                        return "metatablevalue"
+                    else
+                        return mytable[key]
+                    end
+                end
+            })
+
+            type_assert(mytable.key1, "value1")
+            type_assert(mytable.key2, "metatablevalue")
+        ]]
+
+        run[[
+            mymetatable = {}
+            mytable = setmetatable({key1 = "value1"}, { __newindex = mymetatable })
+
+            type_assert(mytable.key1, "value1")
+
+            mytable.newkey = "new value 2"
+            type_assert(mytable.newkey, nil)
+            type_assert(mymetatable.newkey, "new value 2")
+
+            mytable.key1 = "new value 1"
+            type_assert(mytable.key1, "value1")
+            type_assert(mymetatable.newkey1, nil)
+        ]]
+    end)
 end)
 

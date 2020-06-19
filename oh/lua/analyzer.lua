@@ -300,7 +300,7 @@ do -- types
                 -- TODO
                 if node.self_call then
                     local first_arg = obj:GetArguments():Get(1)
-                    if not first_arg.contract then
+                    if first_arg and not first_arg.contract then
                         first_arg.volatile = true
                     end
                 end
@@ -1033,6 +1033,8 @@ do
                             if key.kind == "value" and key.value.value == "..." then
                                 args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
                                 args[i].max = math.huge
+                            elseif key.kind == "type_table" then
+                                args[i] = self:AnalyzeExpression(key)
                             else
                                 args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
                             end
@@ -1200,15 +1202,24 @@ do
                         out[i] = {key = key, val = obj}
                     end
                 elseif node.kind == "table_index_value" then
-                    if node.i then
+                    local val = self:AnalyzeExpression(node.expression, env)
+
+                    if val.Type == "tuple" then
+                        for i = 1, val:GetLength() do
+                            table.insert(out, {
+                                key = #out + 1,
+                                val = val:Get(i)
+                            })
+                        end
+                    elseif node.i then
                         out[i] = {
                             key = node.i,
-                            val = self:AnalyzeExpression(node.expression, env)
+                            val = val
                         }
                     else
                         table.insert(out, {
                             key = #out + 1,
-                            val = self:AnalyzeExpression(node.expression, env)
+                            val = val
                         })
                     end
                 end

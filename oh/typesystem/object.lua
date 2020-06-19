@@ -31,6 +31,25 @@ Object["/"] = function(l, r, env)
 end
 
 
+Object["*"] = function(l, r, env)
+    if l.data ~= nil and r.data ~= nil then
+        local res = types.Object:new(l.type, l.data * r.data, l:IsConst() or r:IsConst())
+
+        if l.max and r.max then
+            res.max = Object["*"](l.max, r.max, env)
+        elseif r.max then
+            res.max = Object["*"](l, r.max, env)
+        elseif l.max then
+            res.max = Object["*"](l.max, r, env)
+        end
+
+        return res
+    end
+
+    return types.Object:new("any")
+end
+
+
 
 Object[".."] = function(r, l, env)
     if env == "typesystem" then

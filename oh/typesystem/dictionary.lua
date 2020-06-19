@@ -233,7 +233,7 @@ function Dictionary:GetKeyVal(key, reverse_subset)
     return false, table.concat(reasons, "\n")
 end
 
-function Dictionary:Set(key, val)
+function Dictionary:Set(key, val, raw)
     key = types.Cast(key)
     val = types.Cast(val)
 
@@ -241,7 +241,7 @@ function Dictionary:Set(key, val)
         return false, "key is nil"
     end
 
-    if self.meta then
+    if not raw and self.meta then
         local func = self.meta:Get("__newindex")
 
         if func then
@@ -281,23 +281,27 @@ function Dictionary:Set(key, val)
     end
 
     -- if the key exists, check if we can replace it and maybe the value
-    local keyval, reason = self:GetKeyVal(key)
+    local keyval, reason = self:GetKeyVal(key, true)
 
     if not keyval then
         table.insert(self.data, {key = key, val = val})
     else
-        keyval.val = val
+        if keyval.val and keyval.key:Serialize() ~= key:Serialize() then
+            keyval.val = types.Set:new({keyval.val, val})
+        else
+            keyval.val = val
+        end
     end
 
     return true
 end
 
-function Dictionary:Get(key)
+function Dictionary:Get(key, raw)
     key = types.Cast(key)
 
     local keyval, reason = self:GetKeyVal(key)
 
-    if not keyval and self.meta then
+    if not raw and not keyval and self.meta then
         local index = self.meta:Get("__index")
 
         if index then
