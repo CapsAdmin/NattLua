@@ -27,10 +27,10 @@ local function run(code, expect_error)
     local ok, err = code_data:Analyze()
 
     if expect_error then
-        if not err then
+        if not err or err == "" then
             error("expected error, got\n\n\n[" .. tostring(ok) .. ", " .. tostring(err) .. "]")
         elseif type(expect_error) == "string" and not err:find(expect_error) then
-            error("expected error " .. expect_error .. " got\n\n\n" .. err)
+            error("expected error '" .. expect_error .. "' got\n\n\n" .. err)
         end
     else
         if not ok then

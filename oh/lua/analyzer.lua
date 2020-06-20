@@ -31,9 +31,7 @@ do -- type operators
                 end
 
                 return types.Object:new("any")
-            end
-
-            if op == "~" then
+            elseif op == "~" then
                 if l.type == "number" then
                     if l.data ~= nil then
                         return types.Object:new("number", bit.bnot(l.data))
@@ -43,9 +41,7 @@ do -- type operators
                 end
 
                 return types.Object:new("any")
-            end
-
-            if op == "not" then
+            elseif op == "not" then
                 if l:IsTruthy() and l:IsFalsy() then
                     return types.Object:new("boolean")
                 end
@@ -57,9 +53,7 @@ do -- type operators
                 if l:IsFalsy() then
                     return types.Object:new("boolean", true, true)
                 end
-            end
-
-            if op == "-" then
+            elseif op == "-" then
                 if env == "typesystem" then
                     if l.type == "number" and l.data then
                         return types.Object:new(l.type, -l.data, l.const)
@@ -102,6 +96,27 @@ do -- type operators
     end
 
     function META:BinaryOperator(op, l, r, env)
+
+        -- adding two tuples at runtime in lua will practically do this
+        if l.Type == "tuple" then l = l:Get(1) end
+        if r.Type == "tuple" then r = r:Get(1) end
+
+        -- normalize l and r to be both sets to reduce complexity
+        if l.Type == "set" and r.Type == "set" then l = types.Set:new({l}) end
+        if l.Type == "set" and r.Type ~= "set" then r = types.Set:new({r}) end
+
+        if l.Type == "set" and r.Type == "set" then
+            local new_set = types.Set:new()
+
+             for _, l in ipairs(l:GetElements()) do
+                 for _, r in ipairs(r:GetElements()) do
+                     new_set:AddElement(assert(self:BinaryOperator(op, l, r, env)))
+                 end
+             end
+
+             return new_set
+         end
+
         if env == "typesystem" then
             if op == "|" then
                 return types.Set:new({l, r})
@@ -111,6 +126,7 @@ do -- type operators
                 return l:Extend(r)
             end
 
+            -- number range
             if op == ".." then
                 local new = l:Copy()
                 new.max = r
@@ -118,87 +134,15 @@ do -- type operators
             end
         end
 
-        if l.Type == "object" and r.Type == "set" then
-            return self:BinaryOperator(op, types.Set:new({l}), r, env)
-        end
-
-        if l.Type == "set" and r.Type == "object" then
-            return self:BinaryOperator(op, l, types.Set:new({r}), env)
-        end
-
         if op == "." or op == ":" then
             return self:GetOperator(l, r)
         end
 
-        if op == "or" then
-            if l:IsTruthy() and l:IsFalsy() then
-                return types.Set:new({l,r})
-            end
-
-            if r:IsTruthy() and r:IsFalsy() then
-                return types.Set:new({l,r})
-            end
-
-            -- when true, or returns its first argument
-            if l:IsTruthy() then
-                return l
-            end
-
-            if r:IsTruthy() then
-                return r
-            end
-
-            return r
-        end
-
-        if op == "not" then
-            if l:IsTruthy() then
-                if l:IsFalsy() then
-                    return Object:new("boolean")
-                end
-
-                return Object:new("boolean", false, true)
-            end
-
-            return Object:new("boolean", true, true)
-        end
-
-        if op == "and" then
-            if l:IsTruthy() and r:IsFalsy() then
-                if l:IsFalsy() or r:IsTruthy() then
-                    return types.Set:new({l,r})
-                end
-
-                return r
-            end
-
-            if l:IsFalsy() and r:IsTruthy() then
-                if l:IsTruthy() or r:IsFalsy() then
-                    return types.Set:new({l,r})
-                end
-
-                return l
-            end
-
-            if l:IsTruthy() and r:IsTruthy() then
-                if l:IsFalsy() and r:IsFalsy() then
-                    return types.Set:new({l,r})
-                end
-
-                return r
-            else
-                if l:IsTruthy() and r:IsTruthy() then
-                    return types.Set:new({l,r})
-                end
-
-                return l
-            end
-        end
-
-        if l.meta then
+        if r.meta or l.meta then
             if op == "+" then
-                if l.meta:Get("__add") then
-                    return self:Call(l.meta:Get("__add"), types.Tuple:new({l, r}), op)[1]
+                local func = (l.meta and l.meta:Get("__add")) or (r.meta and r.meta:Get("__add"))
+                if func then
+                    return self:Call(func, types.Tuple:new({l, r}), op)[1]
                 end
             end
         end
@@ -236,9 +180,45 @@ do -- type operators
                     end
 
                     return types.Object:new("number")
+                elseif op == "+" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", l.data + r.data, true)
+                    end
+
+                    return types.Object:new("number")
+                elseif op == "-" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", l.data - r.data, true)
+                    end
+
+                    return types.Object:new("number")
                 elseif op == "/" then
                     if l:IsConst() and r:IsConst() then
                         return types.Object:new("number", l.data / r.data, true)
+                    end
+
+                    return types.Object:new("number")
+                elseif op == "&" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", bit.band(l.data, r.data), true)
+                    end
+
+                    return types.Object:new("number")
+                elseif op == "<<" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", bit.lshift(l.data, r.data), true)
+                    end
+
+                    return types.Object:new("number")
+                elseif op == ">>" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", bit.rshift(l.data, r.data), true)
+                    end
+
+                    return types.Object:new("number")
+                elseif op == "|" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", bit.bor(l.data, r.data), true)
                     end
 
                     return types.Object:new("number")
@@ -262,7 +242,56 @@ do -- type operators
             end
         end
 
-        if op == "==" then
+        if op == "or" then
+            if l:IsTruthy() and l:IsFalsy() then
+                return types.Set:new({l,r})
+            end
+
+            if r:IsTruthy() and r:IsFalsy() then
+                return types.Set:new({l,r})
+            end
+
+            -- when true, or returns its first argument
+            if l:IsTruthy() then
+                return l
+            end
+
+            if r:IsTruthy() then
+                return r
+            end
+
+            return r
+        elseif op == "and" then
+            if l:IsTruthy() and r:IsFalsy() then
+                if l:IsFalsy() or r:IsTruthy() then
+                    return types.Set:new({l,r})
+                end
+
+                return r
+            end
+
+            if l:IsFalsy() and r:IsTruthy() then
+                if l:IsTruthy() or r:IsFalsy() then
+                    return types.Set:new({l,r})
+                end
+
+                return l
+            end
+
+            if l:IsTruthy() and r:IsTruthy() then
+                if l:IsFalsy() and r:IsFalsy() then
+                    return types.Set:new({l,r})
+                end
+
+                return r
+            else
+                if l:IsTruthy() and r:IsTruthy() then
+                    return types.Set:new({l,r})
+                end
+
+                return l
+            end
+        elseif op == "==" then
             if l:IsConst() and r:IsConst() then
                 return types.Object:new("boolean", l.data == r.data, true)
             end
@@ -298,9 +327,7 @@ do -- type operators
             end
 
             return types.Object:new("boolean")
-        end
-
-        if op == ".." then
+        elseif op == ".." then
             if (l.type == "string" or l.type == "number") and (r.type == "string" or r.type == "number") then
                 if l:IsConst() and r:IsConst() then
                     return types.Object:new("string", l.data .. r.data, l:IsConst() or r:IsConst())
@@ -308,9 +335,7 @@ do -- type operators
 
                 return types.Object:new("string")
             end
-        end
-
-        if op == ">=" then
+        elseif op == ">=" then
             if l:IsConst() and r:IsConst() then
                 return types.Object:new("boolean", l.data >= r.data, true)
             end
@@ -336,50 +361,11 @@ do -- type operators
             return types.Object:new("boolean")
         end
 
-        if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
-
-            if l.type ~= r.type then
-                return false, "no operator for " .. tostring(l.type or l) .. " " .. op .. " " .. tostring(r.type or r)
-            end
-
-            if l.Type == "set" and r.Type == "set" then
-                local new_set = types.Set:new()
-
-                for _, l in ipairs(l:GetElements()) do
-                    for _, r in ipairs(r:GetElements()) do
-                        local a = assert(self:BinaryOperator(op, l, r, env))
-                        new_set:AddElement(a)
-                    end
-                end
-
-                return new_set
-            end
-
-            local lval = l.data
-            local rval = r.data
-            local type = l.type
-
-            if l.Type == "tuple" then
-                lval = l.data[1].data
-                type = l.data[1].type
-            end
-
-            if r.Type == "tuple" then
-                rval = r.data[1].data
-            end
-
-            return types.Object:new(type, syntax.CompiledBinaryOperatorFunctions[op](rval, lval), l:IsConst() or r:IsConst())
-        end
-
-        if l.type == r.type then
-            return types.Object:new(l.type)
-        end
-
         if l.type == "any" or r.type == "any" then
             return types.Object:new("any")
         end
 
-        error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
+        error("no operator for "..tostring(l).." "..op.. " "..tostring(r) .. " in " .. env)
     end
 
     function META:SetOperator(obj, key, val, env)

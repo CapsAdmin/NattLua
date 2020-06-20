@@ -35,6 +35,6 @@ describe("number", function()
     end)
 
     it("cannot be added to another type", function()
-        run([[local a = 1 + true]], "no operator for.-number.-%+.-boolean")
+        run([[local a = 1 + true]], "no operator for 1 %+ true in runtime")
     end)
 end)
