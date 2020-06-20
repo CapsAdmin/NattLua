@@ -351,7 +351,19 @@ do -- types
             return types.Dictionary:new(data, const)
         elseif type == "..." then
             return types.Tuple:new(data)
-        elseif type == "number" or type == "string" or type == "function" or type == "boolean" then
+        elseif type == "string" then
+            local obj = types.Object:new(type, data, const)
+
+            if not self.string_meta then
+                local meta = self:CreateLuaType("table", {})
+                meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
+                self.string_meta = meta
+            end
+
+            obj.meta = self.string_meta
+
+            return obj
+        elseif type == "number" or type == "function" or type == "boolean" then
             return types.Object:new(type, data, const)
         elseif type == "nil" then
             return types.Object:new(type, const)
@@ -374,12 +386,6 @@ do -- types
         local obj = self:CreateLuaType(name, data, const)
 
         if not obj then error("NYI: " .. name) end
-
-        if name == "string" then
-            local string_meta = self:CreateLuaType("table", {})
-            string_meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
-            obj.meta = string_meta
-        end
 
         obj.node = node
         node.inferred_type = obj
