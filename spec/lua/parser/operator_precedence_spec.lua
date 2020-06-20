@@ -58,18 +58,21 @@ local function check(tbl)
         local expr = ast:FindStatementsByType("assignment")[1].right[1]
         local res = dump_precedence(expr)
         if val[2] and val[2].code ~= res then
-            print("EXPECT: " .. val[2].code)
-            print("GOT   : " .. res)
+            io.write("EXPECT: " .. val[2].code, "\n")
+            io.write("GOT   : " .. res, "\n")
         end
     end
 end
-
-check {
-    {C'-2 ^ 2', C'-(^(2, 2))'},
-    {C'pcall(require, "ffi")', C'call(pcall, require, "ffi")'},
-    {C"1 / #a", C"/(1, #(a))"},
-    {C"jit.status and jit.status()", C"and(.(jit, status), call(.(jit, status)))"},
-    {C"a.b.c.d.e.f()", C"call(.(.(.(.(.(a, b), c), d), e), f))"},
-    {C"(foo.bar())", C"call(.(foo, bar))"},
-    {C[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], C[[-(+(+(^(1, 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), "")))))]]},
-}
+describe("parser operator precedence", function()
+    it("correct order", function()
+        check {
+            {C'-2 ^ 2', C'-(^(2, 2))'},
+            {C'pcall(require, "ffi")', C'call(pcall, require, "ffi")'},
+            {C"1 / #a", C"/(1, #(a))"},
+            {C"jit.status and jit.status()", C"and(.(jit, status), call(.(jit, status)))"},
+            {C"a.b.c.d.e.f()", C"call(.(.(.(.(.(a, b), c), d), e), f))"},
+            {C"(foo.bar())", C"call(.(foo, bar))"},
+            {C[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], C[[-(+(+(^(1, 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), "")))))]]},
+        }
+    end)
+end)

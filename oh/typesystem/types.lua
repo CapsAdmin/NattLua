@@ -43,6 +43,8 @@ types.errors = {
 function types.Cast(val)
     if type(val) == "string" then
         return types.Object:new("string", val, true)
+    elseif type(val) == "boolean" then
+        return types.Object:new("boolean", val, true)
     elseif type(val) == "number" then
         return types.Object:new("number", val, true)
     end

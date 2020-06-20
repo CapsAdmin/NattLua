@@ -19,6 +19,7 @@ type f = {
 	seek = (function(file: file, whence: string, offset: number): number|nil, string|nil)    |    (function(file: file, whence: string): number|nil, string|nil)    |    (function(file: file,): number|nil, string|nil)
 }
 type ffi = {
+	C = {[string] = any},
 	cdef = (function(string): nil),
 	abi = (function(string): boolean),
 	metatype = (function(ct,table): cdata),
@@ -225,7 +226,7 @@ type ^string.match = function(s, pattern, init)
 end
 
 type ^string.len = function(str)
-	if str.data then
+	if str.Type == "object" and str.data then
 		return types.Create("number", #str.data, true)
 	end
 
@@ -299,6 +300,9 @@ type next = function(t, k)
 	local v = types.Set:new()
 
 	for _, kv in ipairs(t.data) do
+		kv.key.node = t.node
+		kv.val.node = t.node
+
 		k:AddElement(kv.key)
 		v:AddElement(kv.val)
 	end

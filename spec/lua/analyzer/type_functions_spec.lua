@@ -48,7 +48,7 @@ describe("type functions", function()
             local a: Exclude<1|2|3, 2>
 
             type_assert(a, _ as 11|31)
-        ]], "expected 11 | 31 got 1 | 3")
+        ]], "expected ⦃11, 31⦄ got ⦃1, 3⦄")
     end)
 
     it("self referenced type tables", function()
@@ -65,8 +65,13 @@ describe("type functions", function()
             local t = {k = 1}
             local a = 1
             local k,v = next({k = 1})
-            type_assert(k, nil as "k")
-            type_assert(v, nil as 1)
+            type_assert(k, nil as "k" | "k")
+            type_assert(v, nil as 1 | 1)
+        ]]
+        run[[
+            local k,v = next({foo = 1})
+            type_assert(string.len(k), _ as number)
+            type_assert(v, _ as 1 | 1)
         ]]
     end)
 

@@ -21,7 +21,7 @@ return function(parser_meta, syntax, Emitter)
         end
 
         function META:Dump()
-            local tprint = require("tests.tprint")
+            local tprint = require("libraries.tprint")
             tprint(self)
         end
 
@@ -60,7 +60,7 @@ return function(parser_meta, syntax, Emitter)
         end
 
         function META:Dump()
-            local tprint = require("tests.tprint")
+            local tprint = require("libraries.tprint")
             tprint(self)
         end
 

@@ -204,10 +204,6 @@ do
 
 		local line_start, line_stop = data.line_start, data.line_stop
 
-		if not line_stop then
-			print(start, stop, #code)
-		end
-
 		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(code, start, 5, line_start)
 		local post_start_pos, post_stop_pos, lines_after = get_lines_after(code, stop, 5, line_stop)
 

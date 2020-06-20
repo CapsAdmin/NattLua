@@ -71,7 +71,7 @@ describe("lists", function()
                 tbl[i] = i*100
             end
             tbl[50] = true
-            print(tbl)
+            type_assert(tbl[20], _ as 100 .. 10000 | true)
         ]]
     end)
 

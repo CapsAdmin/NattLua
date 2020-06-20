@@ -195,7 +195,7 @@ function Dictionary:Delete(key)
             return true
         end
     end
-    return false, tostring(key) .. " was not found in " .. tostring(self)
+    return false, "cannot remove " .. tostring(key) .. " from dictionary because it was not found in " .. tostring(self)
 end
 
 function Dictionary:GetKeySet()
@@ -299,7 +299,7 @@ end
 function Dictionary:Get(key, raw)
     key = types.Cast(key)
 
-    local keyval, reason = self:GetKeyVal(key)
+    local keyval, reason = self:GetKeyVal(key, true)
 
     if not raw and not keyval and self.meta then
         local index = self.meta:Get("__index")

@@ -36,7 +36,7 @@ local function run(code, expect_error)
         if not ok then
             code_data = C(code_data.code)
             local ok, err2 = code_data:Analyze(true)
-            print(code_data.code)
+            io.write(code_data.code, "\n")
             error(err)
         end
     end

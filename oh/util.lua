@@ -144,7 +144,7 @@ function util.LogTraceAbort()
             local path = info.source:sub(2)
             local line = info.currentline or info.linedefined
 
-            print(path .. ":" .. line .. " - " .. reason)
+            io.write(path .. ":" .. line .. " - " .. reason .. "\n")
         end
 
     end, "trace")

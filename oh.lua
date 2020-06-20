@@ -59,28 +59,20 @@ function oh.on_editor_save(path)
 		return
 	end
 
-	if
-		path:find("oh/oh", nil, true)  or
-		path:find("type_inference.lua", 1, true)
-	then
-		dofile("./tests/init.lua")
-		return
-	end
-
-	if path:find("tests/typesystem.lua", nil, true) then
-		dofile(path)
+	if path:find("oh/oh", nil, true) then
+		os.execute("busted")
 		return
 	end
 
 	local c = oh.File(path, {annotate = true})
 	local ok, err = c:Analyze()
 	if not ok then
-		print(err)
+		io.write(err, "\n")
 		return
 	end
 	local res = assert(c:BuildLua())
 	require("oh.lua.base_runtime")
-	print(res)
+	io.write(res, "\n")
 	--assert(load(res))()
 end
 

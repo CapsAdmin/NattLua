@@ -61,7 +61,7 @@ Object[".."] = function(r, l, env)
     end
 
     if l.data ~= nil and r.data ~= nil then
-        return types.Object:new("string", r.data .. l.data)
+        return types.Object:new("string", r.data .. l.data, l:IsConst() or r:IsConst())
     end
     return types.Object:new("any")
 end
@@ -204,10 +204,6 @@ function Object.SubsetOf(A, B)
         else
             return false, tostring(A) .. " is not the same type as " .. tostring(B)
         end
-        print(A, B)
-        print(A.const, B.const)
-        print(A.data, B.data)
-        print(A.type, B.type)
         error("this shouldn't be reached ")
     elseif B.Type == "set" then
         return types.Set:new({A}):SubsetOf(B)

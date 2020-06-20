@@ -310,8 +310,7 @@ describe("function", function()
         run([[
             type test = (function(boolean, boolean): number) | (function(boolean): string) | number
 
-            local a = test(true, true)
-            print(a)
+            test(true, true)
         ]], "set contains uncallable object number")
     end)
 

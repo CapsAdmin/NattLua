@@ -336,12 +336,12 @@ R[[
     local a = 1+2+3+4
     local b = nil
 
-    local function print(foo)
+    local function foo(foo)
         return foo
     end
 
     if a then
-        b = print(a+10)
+        b = foo(a+10)
     end
 
     type_assert(b, 20)
@@ -720,8 +720,8 @@ R[[
 
     local t = {foo = true}
     for k,v in pairs(t) do
-        type_assert(k, _ as "foo")
-        type_assert(v, t.foo)
+        type_assert(k, _ as "foo" | "foo")
+        type_assert(v, _ as true | true)
     end
 
     for i,v in ipairs({"LOL",2,3}) do

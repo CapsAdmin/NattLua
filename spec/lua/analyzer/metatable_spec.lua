@@ -44,28 +44,6 @@ describe("metatable", function()
         assert.equal(3, b:GetData())
     end)
 
-    it("empty table should be compatible with metatable", function()
-        local analyzer = run[[
-            local META = {}
-            META.__index = META
-            META.Foo = "foo"
-
-            function META:Test()
-              --  TPRINT(self.Foo, self.Bar)
-            end
-
-            local obj = setmetatable({Bar = "bar"}, META)
-
-            obj:Test()
-        ]]
-
-        local META = analyzer:GetValue("META", "runtime")
-        local obj = analyzer:GetValue("obj", "runtime")
-
-        --print(META:Get("Foo"))
-
-    end)
-
     it("__call method should work", function()
         local analyzer = run[[
             local META = {}

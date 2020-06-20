@@ -56,13 +56,14 @@ end
 
 function Set:__tostring()
     local s = {}
+
     for _, v in ipairs(self.datai) do
         table.insert(s, tostring(v))
     end
 
     table.sort(s, function(a, b) return a < b end)
 
-    return table.concat(s, " | ")
+    return "⦃" .. table.concat(s, ", ") .. "⦄"
 end
 
 function Set:Serialize()

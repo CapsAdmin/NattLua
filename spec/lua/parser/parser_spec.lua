@@ -96,7 +96,7 @@ describe("parser", function()
         check"local a = 1;"
         check"local a = 1;local a = 1"
         check"local a = 1;;;"
-        check";;print 'testing syntax';;"
+        check";;foo 'testing syntax';;"
         check"#testse tseokt osektokseotk\nprint('ok')"
         check"do ;;; end\n; do ; a = 3; assert(a == 3) end;\n;"
     end)
@@ -109,5 +109,55 @@ describe("parser", function()
         check"local a = (--[[1]](--[[2]](--[[3]](--[[4]]4))))"
         check"local a = 1 --[=[a]=] + (((1)));"
         check"a = (--[[a]]((-a)))"
+    end)
+
+    it("should error properly", function()
+        local function check(tbl)
+            for i,v in ipairs(tbl) do
+                local ok, err = oh.load(v[1])
+                if ok then
+                    io.write(ok, v[1], "\n")
+                    error("expected error, but code compiled", 2)
+                end
+                if not err:find(v[2]) then
+                    io.write(err, "\n")
+                    io.write("~=", "\n")
+                    io.write(v[2], "\n")
+                    error("error does not match")
+                end
+            end
+        end
+
+        check({
+            {"a,b", "expected assignment or call expression"},
+            {"local foo[123] = true", ".- expected assignment or call expression"},
+            {"/clcret retprio inq tv5 howaw tv4aw exoaw", "expected assignment or call expression"},
+            {"foo( “Hello World” )", "expected.-%).-got.-World”"},
+            {"foo = {bar = until}, faz = true}", "expected beginning of expression, got.-until"},
+            {"foo = {1, 2 3}", "expected.-,.-;.-}.-got.-3"},
+            {"if foo = 5 then end", "expected.-then"},
+            {"if foo == 5 end", "expected.-then.-got.-end"},
+            {"if 0xWRONG then end", "malformed number.-hex notation"},
+            {"if true then", "expected.-elseif.-got.-end_of_file"},
+            {"a = [[wa", "expected multiline string.-expected.-%]%].-reached end of code"},
+            {"a = [=[wa", "expected multiline string.-expected.-%]=%].-reached end of code"},
+            {"a = [=wa", "expected multiline string.-expected.-%[=%[.-got.-%[=w"},
+            {"a = [=[wa]=", "expected multiline string.-expected.-%]=%].-reached end of code"},
+            {"0xBEEFp+L", "malformed pow expected number, got L"},
+            {"foo(())", "empty parenth"},
+            {"a = {", "expected beginning of expression.-end_of_file"},
+            {"a = 0b1LOL01", "malformed number L in binary notation"},
+            {"a = 'aaaa", "expected single quote.-reached end of file"},
+            {"a = 'aaaa \ndawd=1", "expected single quote"},
+            {"foo = !", "expected assignment or call expression got.-unknown"},
+            {"foo = then", "expected beginning of expression.-got.-then"},
+            {"--[[aaaa", "expected multiline comment.-reached end of code"},
+            {"--[[aaaa\na=1", "expected multiline comment.-reached end of code"},
+            {"::1::", "expected.-letter.-got.-number"},
+            {"::", "expected.-letter.-got.-end_of_file"},
+            {"!!!!!!!!!!!", "expected.-got.-unknown"},
+            {"do do end", "expected.-end.-got.-"},
+            {"\n\n\nif !test then end", "expected.-then.-got.-!"},
+        })
     end)
 end)

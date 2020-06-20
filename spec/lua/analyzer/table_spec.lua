@@ -93,7 +93,7 @@ describe("table", function()
         run([[
             local tbl: {foo = true} = {foo = true}
             local a = tbl.bar
-        ]], "\"foo\" is not a subset of \"bar\"")
+        ]], "\"bar\" is not a subset of \"foo\"")
     end)
 
     it("string: any", function()
@@ -131,5 +131,19 @@ describe("table", function()
             local tbl: {1,true,3} = {1, true, 3}
             tbl[2] = false
         ]], "false is not a subset of true")
+    end)
+
+    it("which has no data but contract says it does should return what the contract says", function()
+        run[[
+            local tbl = {} as {[string] = 1}
+            type_assert(tbl.foo, 1)
+        ]]
+
+
+        -- TODO: error or not error?
+        run([[
+            local tbl = {} as {[string] = 1}
+            type_assert(tbl[true], nil)
+        ]])
     end)
 end)

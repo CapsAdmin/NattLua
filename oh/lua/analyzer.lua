@@ -142,7 +142,7 @@ local function __index(self, obj, key)
         return obj:Get(key)
     end
 
-    local val = obj:Get(key)
+    local val, reason = obj:Get(key)
 
     if not val then
         return self:TypeFromImplicitNode(obj.node, "nil")
