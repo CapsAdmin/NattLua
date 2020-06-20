@@ -35,6 +35,10 @@ function Set:Call(arguments)
     local set = types.Set:new()
     local errors = {}
 
+    if not self.datai[1] then
+        return false, "cannot call empty set"
+    end
+
     for _, obj in ipairs(self.datai) do
         if not obj.Call or (obj.Type == "object" and not obj:IsType("function")) then
             return false, "set contains uncallable object " .. tostring(obj)

@@ -1,6 +1,16 @@
 local T = require("spec.lua.helpers")
 local run = T.RunCode
 
+if not describe then
+    describe = function(_, cb)
+        cb()
+    end
+
+    it = function(_, cb)
+        cb()
+    end
+end
+
 describe("lua test suite", function()
     it("logic operators", function()
         run[[
@@ -282,12 +292,10 @@ describe("lua test suite", function()
                 mem[n] = res   -- memoize
                 return res
             end
-            local code = {}
-            for _, v in pairs(allcases(4)) do
-                table.insert(code, "type_assert("..tostring(v[1])..", "..tostring(v[2])..")")
-            end
 
-            run(table.concat(code, "\n"))
+            for _, v in pairs(allcases(4)) do
+                run("type_assert("..tostring(v[1])..", "..tostring(v[2])..")")
+            end
         end
     end)
 

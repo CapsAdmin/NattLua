@@ -35,11 +35,14 @@ return function(parser_meta, syntax, Emitter)
 
         PARSER.ExpressionMeta = META
 
+        local id = 0
+
         function PARSER:Expression(kind)
             local node = {}
             node.tokens = {}
             node.kind = kind
-            node.id = tostring(node)
+            node.id = id
+            id = id + 1
 
             setmetatable(node, META)
             self.current_node = node
@@ -107,12 +110,15 @@ return function(parser_meta, syntax, Emitter)
             return self
         end
 
+        local id = 0
+
         function PARSER:Statement(kind)
             local node = {}
 
             node.tokens = {}
             node.kind = kind
-            node.id = tostring(node)
+            node.id = id
+            id = id + 1
 
             setmetatable(node, META)
             self.current_node = node

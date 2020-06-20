@@ -17,4 +17,37 @@ describe("set", function()
         ]]:GetValue("c", "typesystem")
         assert.equal(4, a:GetLength())
     end)
+
+    it("set + object", function()
+        run[[
+            local a = _ as (1 | 2) + 3
+            type_assert(a, _ as 4 | 5)
+        ]]
+    end)
+
+    it("set + set", function()
+        run[[
+            local a = _ as 1 | 2
+            local b = _ as 10 | 20
+
+            type_assert(a + b, _ as 11 | 12 | 21 | 22)
+        ]]
+    end)
+
+    it("set.foo", function()
+        run[[
+            local a = _ as {foo = true} | {foo = false}
+
+            type_assert(a.foo, _ as true | false)
+        ]]
+    end)
+
+    it("set.foo = bar", function()
+        run[[
+            local a = { foo = 4 } as { foo = 1|2 } | { foo = 3 }
+            type_assert(a.foo,  _ as 1 | 2 | 3)
+            a.foo = 4
+            type_assert(a.foo, _ as 4|4)
+        ]]
+    end)
 end)

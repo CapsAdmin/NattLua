@@ -41,7 +41,8 @@ type jit = {
 	flush = (function(): nil),
 	opt = {
 		start = (function(...): nil)
-	}
+	},
+	tracebarrier = (function(): nil)
 }
 type debug = {
 	sethook = (function(thread: thread, hook: empty_function, mask: string, count: number): nil)    |    (function(thread: thread, hook: empty_function, mask: string): nil)    |    (function( hook: empty_function, mask: string): nil),

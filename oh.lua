@@ -55,12 +55,12 @@ function oh.on_editor_save(path)
 	end
 
 	if path:find("_spec") then
-		os.execute("busted " .. path)
+		os.execute("busted --lua luajit " .. path)
 		return
 	end
 
 	if path:find("oh/oh", nil, true) then
-		os.execute("busted")
+		os.execute("busted --lua luajit")
 		return
 	end
 
