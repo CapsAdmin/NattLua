@@ -102,26 +102,6 @@ do -- type operators
     end
 
     function META:BinaryOperator(op, l, r, env)
-        if op == "." or op == ":" then
-            return self:GetOperator(l, r)
-        end
-
-        if l.meta then
-            if op == "+" then
-                if l.meta:Get("__add") then
-                    return self:Call(l.meta:Get("__add"), types.Tuple:new({l, r}), op)[1]
-                end
-            end
-        end
-
-        if l[op] and r[op] then
-            local ret = l[op](l, r, env)
-            if not ret then
-                error("operator " .. op .. " on " .. tostring(l) .. " does not return anything")
-            end
-            return ret
-        end
-
         if env == "typesystem" then
             if op == "|" then
                 return types.Set:new({l, r})
@@ -142,86 +122,215 @@ do -- type operators
             return self:BinaryOperator(op, types.Set:new({l}), r, env)
         end
 
-
         if l.Type == "set" and r.Type == "object" then
             return self:BinaryOperator(op, l, types.Set:new({r}), env)
         end
 
-        if op == "%" then
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("number", l.data % r.data)
+        if op == "." or op == ":" then
+            return self:GetOperator(l, r)
+        end
+
+        if op == "or" then
+            if l:IsTruthy() and l:IsFalsy() then
+                return types.Set:new({l,r})
             end
 
-            local t = types.Object:new("number", 0)
-            t.max = l:Copy()
-
-            return t
-        elseif op == "^" then
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("number", l.data ^ r.data)
+            if r:IsTruthy() and r:IsFalsy() then
+                return types.Set:new({l,r})
             end
-            return types.Object:new("any")
-        elseif op == "/" then
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("number", l.data / r.data)
-            end
-            return types.Object:new("any")
-        elseif op == "*" then
-            if l.data ~= nil and r.data ~= nil then
-                local res = types.Object:new(l.type, l.data * r.data, l:IsConst() or r:IsConst())
 
-                if l.max and r.max then
-                    res.max = self:BinaryOperator("*", l.max, r.max, env)
-                elseif r.max then
-                    res.max = self:BinaryOperator("*", l, r.max, env)
-                elseif l.max then
-                    res.max = self:BinaryOperator("*", l.max, r, env)
+            -- when true, or returns its first argument
+            if l:IsTruthy() then
+                return l
+            end
+
+            if r:IsTruthy() then
+                return r
+            end
+
+            return r
+        end
+
+        if op == "not" then
+            if l:IsTruthy() then
+                if l:IsFalsy() then
+                    return Object:new("boolean")
                 end
 
-                return res
+                return Object:new("boolean", false, true)
             end
 
-            return types.Object:new("any")
-        elseif op == ".." then
-            if env == "typesystem" then
-                if r.type == "number" and l.type == "number" then
-                    local new = r:Copy()
-                    new.max = l
-                    return new
+            return Object:new("boolean", true, true)
+        end
+
+        if op == "and" then
+            if l:IsTruthy() and r:IsFalsy() then
+                if l:IsFalsy() or r:IsTruthy() then
+                    return types.Set:new({l,r})
+                end
+
+                return r
+            end
+
+            if l:IsFalsy() and r:IsTruthy() then
+                if l:IsTruthy() or r:IsFalsy() then
+                    return types.Set:new({l,r})
+                end
+
+                return l
+            end
+
+            if l:IsTruthy() and r:IsTruthy() then
+                if l:IsFalsy() and r:IsFalsy() then
+                    return types.Set:new({l,r})
+                end
+
+                return r
+            else
+                if l:IsTruthy() and r:IsTruthy() then
+                    return types.Set:new({l,r})
+                end
+
+                return l
+            end
+        end
+
+        if l.meta then
+            if op == "+" then
+                if l.meta:Get("__add") then
+                    return self:Call(l.meta:Get("__add"), types.Tuple:new({l, r}), op)[1]
                 end
             end
+        end
 
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("string", l.data .. r.data, l:IsConst() or r:IsConst())
+        if l.Type == "object" then
+            if l.type == "number" and r.type == "number" then
+                if op == "~=" then
+                    if l.max and l.max.data then
+                        return types.Object:new("boolean", not (r.data >= l.data and r.data <= l.max.data), true)
+                    end
+
+                    if r.max and r.max.data then
+                        return types.Object:new("boolean", not (l.data >= r.data and l.data <= r.max.data), true)
+                    end
+                elseif op == "==" then
+                    if l.max and l.max.data then
+                        return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data, true)
+                    end
+
+                    if r.max and r.max.data then
+                        return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
+                    end
+                elseif op == "%" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", l:GetData() % r:GetData())
+                    end
+
+                    local t = types.Object:new("number", 0)
+                    t.max = r:Copy()
+
+                    return t
+                elseif op == "^" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", l.data ^ r.data, true)
+                    end
+
+                    return types.Object:new("number")
+                elseif op == "/" then
+                    if l:IsConst() and r:IsConst() then
+                        return types.Object:new("number", l.data / r.data, true)
+                    end
+
+                    return types.Object:new("number")
+                elseif op == "*" then
+                    if l:IsConst() and r:IsConst() then
+                        local res = types.Object:new(l.type, l.data * r.data, true)
+
+                        if l.max and r.max then
+                            res.max = self:BinaryOperator("*", l.max, r.max, env)
+                        elseif r.max then
+                            res.max = self:BinaryOperator("*", l, r.max, env)
+                        elseif l.max then
+                            res.max = self:BinaryOperator("*", l.max, r, env)
+                        end
+
+                        return res
+                    end
+
+                    return types.Object:new("number")
+                end
             end
-            return types.Object:new("any")
-        elseif op == "==" then
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("boolean", l.data == r.data)
+        end
+
+        if op == "==" then
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data == r.data, true)
+            end
+
+            if l.type == "nil" and r.type == "nil" then
+                return types.Object:new("boolean", nil == nil, true)
+            end
+
+            if l.type ~= r.type then
+                return types.Object:new("boolean", false, true)
+            end
+
+            if l == r then
+                return types.Object:new("boolean", true, true)
             end
 
             return types.Object:new("boolean")
-        elseif op == ">=" then
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("boolean", l.data >= r.data)
+        elseif op == "~=" then
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data ~= r.data, true)
+            end
+
+            if l.type == "nil" and r.type == "nil" then
+                return types.Object:new("boolean", nil ~= nil, true)
+            end
+
+            if l.type ~= r.type then
+                return types.Object:new("boolean", true, true)
+            end
+
+            if l == r then
+                return types.Object:new("boolean", false, true)
+            end
+
+            return types.Object:new("boolean")
+        end
+
+        if op == ".." then
+            if (l.type == "string" or l.type == "number") and (r.type == "string" or r.type == "number") then
+                if l:IsConst() and r:IsConst() then
+                    return types.Object:new("string", l.data .. r.data, l:IsConst() or r:IsConst())
+                end
+
+                return types.Object:new("string")
+            end
+        end
+
+        if op == ">=" then
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data >= r.data, true)
             end
 
             return types.Object:new("boolean")
         elseif op == "<=" then
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("boolean", l.data <= r.data)
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data <= r.data, true)
             end
 
             return types.Object:new("boolean")
         elseif op == "<" then
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("boolean", l.data < r.data)
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data < r.data, true)
             end
 
             return types.Object:new("boolean")
         elseif op == ">" then
-            if l.data ~= nil and r.data ~= nil then
-                return types.Object:new("boolean", l.data > r.data)
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data > r.data, true)
             end
 
             return types.Object:new("boolean")

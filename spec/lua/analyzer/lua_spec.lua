@@ -361,12 +361,12 @@ describe("lua test suite", function()
 
     it("object equality", function()
         run[[
-            local function obj_eq(a: any, b: any)
+            local function obj_eq(a, b)
                 type_assert(a==b, true)
                 type_assert(a~=b, false)
             end
 
-            local function obj_ne(a: any, b: any)
+            local function obj_ne(a, b)
                 type_assert(a==b, false)
                 type_assert(a~=b, true)
             end
@@ -394,7 +394,8 @@ describe("lua test suite", function()
 
             local t, t2 = {}, {}
             obj_eq(t, t)
-            obj_ne(t, t2)
+            type_assert(t==t2, _ as boolean)
+            type_assert(t~=t2, _ as boolean)
             obj_ne(t, 1)
             obj_ne(t, "")
         ]]

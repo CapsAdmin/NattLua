@@ -6,8 +6,6 @@ local Object = {}
 Object.Type = "object"
 Object.__index = Object
 
-
-
 function Object:GetSignature()
     if self.type == "function" then
         return self.type .. "-"..types.GetSignature(self.data)
