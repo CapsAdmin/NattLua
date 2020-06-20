@@ -147,6 +147,86 @@ do -- type operators
             return self:BinaryOperator(op, l, types.Set:new({r}), env)
         end
 
+        if op == "%" then
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("number", l.data % r.data)
+            end
+
+            local t = types.Object:new("number", 0)
+            t.max = l:Copy()
+
+            return t
+        elseif op == "^" then
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("number", l.data ^ r.data)
+            end
+            return types.Object:new("any")
+        elseif op == "/" then
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("number", l.data / r.data)
+            end
+            return types.Object:new("any")
+        elseif op == "*" then
+            if l.data ~= nil and r.data ~= nil then
+                local res = types.Object:new(l.type, l.data * r.data, l:IsConst() or r:IsConst())
+
+                if l.max and r.max then
+                    res.max = self:BinaryOperator("*", l.max, r.max, env)
+                elseif r.max then
+                    res.max = self:BinaryOperator("*", l, r.max, env)
+                elseif l.max then
+                    res.max = self:BinaryOperator("*", l.max, r, env)
+                end
+
+                return res
+            end
+
+            return types.Object:new("any")
+        elseif op == ".." then
+            if env == "typesystem" then
+                if r.type == "number" and l.type == "number" then
+                    local new = r:Copy()
+                    new.max = l
+                    return new
+                end
+            end
+
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("string", l.data .. r.data, l:IsConst() or r:IsConst())
+            end
+            return types.Object:new("any")
+        elseif op == "==" then
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("boolean", l.data == r.data)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == ">=" then
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("boolean", l.data >= r.data)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == "<=" then
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("boolean", l.data <= r.data)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == "<" then
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("boolean", l.data < r.data)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == ">" then
+            if l.data ~= nil and r.data ~= nil then
+                return types.Object:new("boolean", l.data > r.data)
+            end
+
+            return types.Object:new("boolean")
+        end
+
         if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
 
             if l.type ~= r.type then
