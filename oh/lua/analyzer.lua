@@ -95,6 +95,64 @@ do -- type operators
         error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
     end
 
+    local operators = {
+        ["+"] = function(l,r) return l+r end,
+        ["-"] = function(l,r) return l-r end,
+        ["*"] = function(l,r) return l*r end,
+        ["/"] = function(l,r) return l/r end,
+        ["//"] = function(l,r) return math.floor(l/r) end,
+        ["%"] = function(l,r) return l%r end,
+        ["^"] = function(l,r) return l^r end,
+        [".."] = function(l,r) return l..r end,
+
+        ["&"] = function(l, r) return bit.band(l,r) end, -- bitwise AND (&) operation.
+        ["|"] = function(l, r) return bit.bor(l,r) end, -- bitwise OR (|) operation.
+        ["~"] = function(l,r) return bit.bxor(l,r) end, -- bitwise exclusive OR (binary ~) operation.
+        ["<<"] = function(l, r) return bit.lshift(l,r) end, -- bitwise left shift (<<) operation.
+        [">>"] = function(l, r) return bit.rshift(l,r) end, -- bitwise right shift (>>) operation.
+
+        ["=="] = function(l,r) return l==r end,
+        ["<"] = function(l,r) return l<r end,
+        ["<="] = function(l,r) return l<=r end,
+    }
+
+    local function metatable_function(self, meta_method, l,r, swap)
+        if sawp then
+            l,r = r,l
+        end
+
+        if r.meta or l.meta then
+            local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
+
+            if func then
+                return self:Call(func, types.Tuple:new({l, r}), op)[1]
+            end
+        end
+    end
+
+    local function arithmetic(l,r, type, operator)
+        assert(operators[operator], "cannot map operator " .. tostring(operator))
+        if type and l.type == type and r.type == type then
+            if l:IsConst() and r:IsConst() then
+                local obj = types.Object:new(type, operators[operator](l.data, r.data), true)
+
+                if r.max then
+                    obj.max = arithmetic(l, r.max, type, operator)
+                end
+
+                if l.max then
+                    obj.max = arithmetic(l.max, r, type, operator)
+                end
+
+                return obj
+            end
+
+            return types.Object:new(type)
+        end
+
+        return false, "no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime"
+    end
+
     function META:BinaryOperator(op, l, r, env)
 
         -- adding two tuples at runtime in lua will practically do this
@@ -138,14 +196,22 @@ do -- type operators
             return self:GetOperator(l, r)
         end
 
-        if r.meta or l.meta then
-            if op == "+" then
-                local func = (l.meta and l.meta:Get("__add")) or (r.meta and r.meta:Get("__add"))
-                if func then
-                    return self:Call(func, types.Tuple:new({l, r}), op)[1]
-                end
-            end
+        if l.type == "any" or r.type == "any" then
+            return types.Object:new("any")
         end
+
+        if op == "+" then local res = metatable_function(self, "__add", l, r) if res then return res end
+        elseif op == "-" then local res = metatable_function(self, "__sub", l, r) if res then return res end
+        elseif op == "*" then local res = metatable_function(self, "__mul", l, r) if res then return res end
+        elseif op == "/" then local res = metatable_function(self, "__div", l, r) if res then return res end
+        elseif op == "//" then local res = metatable_function(self, "__idiv", l, r) if res then return res end
+        elseif op == "%" then local res = metatable_function(self, "__mod", l, r) if res then return res end
+        elseif op == "^" then local res = metatable_function(self, "__pow", l, r) if res then return res end
+        elseif op == "&" then local res = metatable_function(self, "__band", l, r) if res then return res end
+        elseif op == "|" then local res = metatable_function(self, "__bor", l, r) if res then return res end
+        elseif op == "~" then local res = metatable_function(self, "__bxor", l, r) if res then return res end
+        elseif op == "<<" then local res = metatable_function(self, "__lshift", l, r) if res then return res end
+        elseif op == ">>" then local res = metatable_function(self, "__rshift", l, r) if res then return res end end
 
         if l.Type == "object" then
             if l.type == "number" and r.type == "number" then
@@ -165,84 +231,98 @@ do -- type operators
                     if r.max and r.max.data then
                         return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
                     end
-                elseif op == "%" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", l:GetData() % r:GetData())
-                    end
-
-                    local t = types.Object:new("number", 0)
-                    t.max = r:Copy()
-
-                    return t
-                elseif op == "^" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", l.data ^ r.data, true)
-                    end
-
-                    return types.Object:new("number")
-                elseif op == "+" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", l.data + r.data, true)
-                    end
-
-                    return types.Object:new("number")
-                elseif op == "-" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", l.data - r.data, true)
-                    end
-
-                    return types.Object:new("number")
-                elseif op == "/" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", l.data / r.data, true)
-                    end
-
-                    return types.Object:new("number")
-                elseif op == "&" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", bit.band(l.data, r.data), true)
-                    end
-
-                    return types.Object:new("number")
-                elseif op == "<<" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", bit.lshift(l.data, r.data), true)
-                    end
-
-                    return types.Object:new("number")
-                elseif op == ">>" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", bit.rshift(l.data, r.data), true)
-                    end
-
-                    return types.Object:new("number")
-                elseif op == "|" then
-                    if l:IsConst() and r:IsConst() then
-                        return types.Object:new("number", bit.bor(l.data, r.data), true)
-                    end
-
-                    return types.Object:new("number")
-                elseif op == "*" then
-                    if l:IsConst() and r:IsConst() then
-                        local res = types.Object:new(l.type, l.data * r.data, true)
-
-                        if l.max and r.max then
-                            res.max = self:BinaryOperator("*", l.max, r.max, env)
-                        elseif r.max then
-                            res.max = self:BinaryOperator("*", l, r.max, env)
-                        elseif l.max then
-                            res.max = self:BinaryOperator("*", l.max, r, env)
-                        end
-
-                        return res
-                    end
-
-                    return types.Object:new("number")
                 end
             end
         end
 
-        if op == "or" then
+        if op == "==" then
+            local res = metatable_function(self, "__eq", l, r)
+            if res then
+                return res
+            end
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data == r.data, true)
+            end
+
+            if l.type == "nil" and r.type == "nil" then
+                return types.Object:new("boolean", nil == nil, true)
+            end
+
+            if l.type ~= r.type then
+                return types.Object:new("boolean", false, true)
+            end
+
+            if l == r then
+                return types.Object:new("boolean", true, true)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == "~=" then
+            local res = metatable_function(self, "__eq", l, r)
+            if res then
+                if res:IsConst() then
+                    res.data = not res.data
+                end
+                return res
+            end
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data ~= r.data, true)
+            end
+
+            if l.type == "nil" and r.type == "nil" then
+                return types.Object:new("boolean", nil ~= nil, true)
+            end
+
+            if l.type ~= r.type then
+                return types.Object:new("boolean", true, true)
+            end
+
+            if l == r then
+                return types.Object:new("boolean", false, true)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == "<" then
+            local res = metatable_function(self, "__lt", l, r)
+            if res then
+                return res
+            end
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data < r.data, true)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == "<=" then
+            local res = metatable_function(self, "__le", l, r)
+            if res then
+                return res
+            end
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data <= r.data, true)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == ">" then
+            local res = metatable_function(self, "__lt", l, r, true)
+            if res then
+                return res
+            end
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data > r.data, true)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == ">=" then
+            local res = metatable_function(self, "__le", l, r, true)
+            if res then
+                return res
+            end
+            if l:IsConst() and r:IsConst() then
+                return types.Object:new("boolean", l.data >= r.data, true)
+            end
+
+            return types.Object:new("boolean")
+        elseif op == "or" then
             if l:IsTruthy() and l:IsFalsy() then
                 return types.Set:new({l,r})
             end
@@ -291,79 +371,36 @@ do -- type operators
 
                 return l
             end
-        elseif op == "==" then
-            if l:IsConst() and r:IsConst() then
-                return types.Object:new("boolean", l.data == r.data, true)
-            end
+        end
 
-            if l.type == "nil" and r.type == "nil" then
-                return types.Object:new("boolean", nil == nil, true)
-            end
-
-            if l.type ~= r.type then
-                return types.Object:new("boolean", false, true)
-            end
-
-            if l == r then
-                return types.Object:new("boolean", true, true)
-            end
-
-            return types.Object:new("boolean")
-        elseif op == "~=" then
-            if l:IsConst() and r:IsConst() then
-                return types.Object:new("boolean", l.data ~= r.data, true)
-            end
-
-            if l.type == "nil" and r.type == "nil" then
-                return types.Object:new("boolean", nil ~= nil, true)
-            end
-
-            if l.type ~= r.type then
-                return types.Object:new("boolean", true, true)
-            end
-
-            if l == r then
-                return types.Object:new("boolean", false, true)
-            end
-
-            return types.Object:new("boolean")
-        elseif op == ".." then
-            if (l.type == "string" or l.type == "number") and (r.type == "string" or r.type == "number") then
+        if op == ".." then
+            if
+                (l.type == "string" or r.type == "string") and
+                (l.type == "number" or r.type == "number" or l.type == "string" or l.type == "string")
+            then
                 if l:IsConst() and r:IsConst() then
-                    return types.Object:new("string", l.data .. r.data, l:IsConst() or r:IsConst())
+                    return types.Object:new("string", l.data ..  r.data, true)
                 end
 
                 return types.Object:new("string")
             end
-        elseif op == ">=" then
-            if l:IsConst() and r:IsConst() then
-                return types.Object:new("boolean", l.data >= r.data, true)
-            end
 
-            return types.Object:new("boolean")
-        elseif op == "<=" then
-            if l:IsConst() and r:IsConst() then
-                return types.Object:new("boolean", l.data <= r.data, true)
-            end
-
-            return types.Object:new("boolean")
-        elseif op == "<" then
-            if l:IsConst() and r:IsConst() then
-                return types.Object:new("boolean", l.data < r.data, true)
-            end
-
-            return types.Object:new("boolean")
-        elseif op == ">" then
-            if l:IsConst() and r:IsConst() then
-                return types.Object:new("boolean", l.data > r.data, true)
-            end
-
-            return types.Object:new("boolean")
+            return false, "no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r)
         end
 
-        if l.type == "any" or r.type == "any" then
-            return types.Object:new("any")
-        end
+        if op == "+" then return arithmetic(l,r, "number", op)
+        elseif op == "-" then return arithmetic(l,r, "number", op)
+        elseif op == "*" then return arithmetic(l,r, "number", op)
+        elseif op == "/" then return arithmetic(l,r, "number", op)
+        elseif op == "//" then return arithmetic(l,r, "number", op)
+        elseif op == "%" then return arithmetic(l,r, "number", op)
+        elseif op == "^" then return arithmetic(l,r, "number", op)
+
+        elseif op == "&" then return arithmetic(l,r, "number", op)
+        elseif op == "|" then return arithmetic(l,r, "number", op)
+        elseif op == "~" then return arithmetic(l,r, "number", op)
+        elseif op == "<<" then return arithmetic(l,r, "number", op)
+        elseif op == ">>" then return arithmetic(l,r, "number", op) end
 
         error("no operator for "..tostring(l).." "..op.. " "..tostring(r) .. " in " .. env)
     end
@@ -381,6 +418,21 @@ do -- type operators
             end
             return copy
         end
+
+        if not raw and obj.meta then
+            local func = obj.meta:Get("__newindex")
+
+            if func then
+                if func.Type == "dictionary" then
+                    return func:Set(key, val)
+                end
+
+                if func.Type == "object" then
+                    return self:Call(func, types.Tuple:new({obj, key, val}), key.node)[1]
+                end
+            end
+        end
+
 
         if not obj.Set then
             return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type
@@ -404,6 +456,24 @@ do -- type operators
 
         if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
             return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
+        end
+
+        if obj.Type == "dictionary" and obj.meta and not obj:Contains(key) then
+            local index = obj.meta:Get("__index")
+
+            if index then
+                if index.Type == "dictionary" then
+                    return index:Get(key)
+                end
+
+                if index.Type == "object" then
+                    local analyzer = require("oh").current_analyzer
+                    if analyzer then
+                        return analyzer:Call(index, types.Tuple:new({obj, key}), key.node)[1]
+                    end
+                    return index:Call(obj, key):GetData()[1]
+                end
+            end
         end
 
         if obj.contract then

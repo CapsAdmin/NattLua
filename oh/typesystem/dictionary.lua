@@ -208,6 +208,10 @@ function Dictionary:GetKeySet()
     return set
 end
 
+function Dictionary:Contains(key)
+    return self:GetKeyVal(key, true)
+end
+
 function Dictionary:GetKeyVal(key, reverse_subset)
     if not self.data[1] then
         return false, "dictionary has no definitions"
@@ -241,30 +245,10 @@ function Dictionary:Set(key, val, raw)
         return false, "key is nil"
     end
 
-    if not raw and self.meta then
-        local func = self.meta:Get("__newindex")
-
-        if func then
-            if func.Type == "dictionary" then
-                return func:Set(key, val)
-            end
-
-            if func.Type == "object" then
-                local analyzer = require("oh").current_analyzer
-                if analyzer then
-                    return analyzer:Call(func, types.Tuple:new({self, key, val}), key.node)[1]
-                end
-                return func:Call(self, key):GetData()[1]
-            end
-        end
-    end
-
-
     -- delete entry
     if val == nil or val.type == "nil" then
         return self:Delete(key)
     end
-
 
     if self.contract then
         local keyval, reason = self.contract:GetKeyVal(key, true)
@@ -300,24 +284,6 @@ function Dictionary:Get(key, raw)
     key = types.Cast(key)
 
     local keyval, reason = self:GetKeyVal(key, true)
-
-    if not raw and not keyval and self.meta then
-        local index = self.meta:Get("__index")
-
-        if index then
-            if index.Type == "dictionary" then
-                return index:Get(key)
-            end
-
-            if index.Type == "object" then
-                local analyzer = require("oh").current_analyzer
-                if analyzer then
-                    return analyzer:Call(index, types.Tuple:new({self, key}), key.node)[1]
-                end
-                return index:Call(self, key):GetData()[1]
-            end
-        end
-    end
 
     if keyval then
         return keyval.val
