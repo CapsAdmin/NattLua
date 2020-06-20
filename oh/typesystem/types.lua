@@ -203,25 +203,4 @@ function types.Initialize()
     types.Object = require("oh.typesystem.object")
 end
 
-function types.Create(type, data, const)
-    if type == "table" then
-        return types.Dictionary:new(data, const)
-    elseif type == "..." then
-        return types.Tuple:new(data)
-    elseif type == "number" or type == "string" or type == "function" or type == "boolean" then
-        return types.Object:new(type, data, const)
-    elseif type == "nil" then
-        return types.Object:new(type, const)
-    elseif type == "any" then
-        return types.Object:new(type, const)
-    elseif type == "list" then
-        data = data or {}
-        local tup = types.Tuple:new(data.values)
-        tup.ElementType = data.type
-        tup.max = data.length
-        return tup
-    end
-    error("NYI " .. type)
-end
-
 return types

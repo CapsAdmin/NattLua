@@ -212,7 +212,7 @@ type ^string.match = function(s, pattern, init)
 	if s.data and pattern.data then
 		local res = {s.data:match(pattern.data)}
 		for i,v in ipairs(res) do
-			res[i] = types.Create("string", v)
+			res[i] = analyzer:CreateLuaType("string", v)
 		end
 		return table.unpack(res)
 	end
@@ -220,7 +220,7 @@ type ^string.match = function(s, pattern, init)
 	if pattern.data then
 		local out = {}
 		for s in pattern.data:gmatch("%b()") do
-			table.insert(out, types.Create("string") + types.Create("nil"))
+			table.insert(out, analyzer:CreateLuaType("string") + analyzer:CreateLuaType("nil"))
 		end
 		return table.unpack(out)
 	end
@@ -228,10 +228,10 @@ end
 
 type ^string.len = function(str)
 	if str.Type == "object" and str.data then
-		return types.Create("number", #str.data, true)
+		return analyzer:CreateLuaType("number", #str.data, true)
 	end
 
-	return types.Create("number")
+	return analyzer:CreateLuaType("number")
 end
 
 type ^string.gsub = function(str, pattern, val)
@@ -240,23 +240,23 @@ type ^string.gsub = function(str, pattern, val)
 
 		if pattern.data then
 			for group in pattern.data:gmatch("%b()") do
-				table.insert(args, types.Create("string"))
+				table.insert(args, analyzer:CreateLuaType("string"))
 			end
 		end
 
 		if not args[1] then
-			args[1] = types.Create("string")
+			args[1] = analyzer:CreateLuaType("string")
 		end
 
 		for i,v in ipairs(args) do
 			val.data.arg.data[i] = v
 		end
 
-		val.data.ret.data[1] = types.Create("string")
+		val.data.ret.data[1] = analyzer:CreateLuaType("string")
 
 	end
 
-	return types.Create("string")
+	return analyzer:CreateLuaType("string")
 end
 
 type assert = function(obj, err)
@@ -370,7 +370,7 @@ type table.insert = function(tbl, ...)
 			values[i] = keyval.val
 		end
 
-		local list = types.Create("list", {values = values})
+		local list = analyzer:CreateLuaType("list", {values = values})
 
 		for k,v in pairs(tbl) do
 			tbl[k] = nil
@@ -384,7 +384,7 @@ type table.insert = function(tbl, ...)
 	end
 	table.insert(tbl.data, pos, val)
 
-	tbl.max = tbl.max or types.Create("number", pos, true)
+	tbl.max = tbl.max or analyzer:CreateLuaType("number", pos, true)
 	tbl.max.data = pos
 
 end
@@ -423,7 +423,7 @@ type math.floor = function(num)
 	if num.data then
 		return math.floor(num.data)
 	end
-	return types.Create("number")
+	return analyzer:CreateLuaType("number")
 end
 
 local type load = function(str)

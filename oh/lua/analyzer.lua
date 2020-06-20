@@ -7,168 +7,376 @@ local META = {}
 
 local table_insert = table.insert
 
-function META:PrefixOperator(op, l, r, env)
-    return l:PrefixOperator(op, r, env)
-end
-
-function META:BinaryOperator(op, l, r, env)
-    assert(types.IsTypeObject(l))
-    assert(types.IsTypeObject(r))
-
-    if op == "." or op == ":" then
-        return self:Index(l, r)
-    end
-
-    if l.meta then
-        if op == "+" then
-            if l.meta:Get("__add") then
-                return self:Call(l.meta:Get("__add"), types.Tuple:new({l, r}), op)[1]
+do -- type operators
+    function META:PostfixOperator(op, r, env)
+        if r.Type == "object" then
+            if op == "++" then
+                if r.data and r.const then
+                    return self:BinaryOperator("+", r, r, env)
+                end
             end
         end
     end
 
-    if l[op] and r[op] then
-        local ret = l[op](l, r, env)
-        if not ret then
-            error("operator " .. op .. " on " .. tostring(l) .. " does not return anything")
-        end
-        return ret
-    end
+    function META:PrefixOperator(op, l, env)
+        if l.Type == "object" then
+            if op == "#" then
+                if l.type == "string" then
+                    if l.const then
+                        if l.data then
+                            return types.Object:new("number", #l.data, true)
+                        end
+                    end
+                    return types.Object:new("number")
+                end
 
-    if env == "typesystem" then
-        if op == "|" then
-            return types.Set:new({l, r})
-        end
+                return types.Object:new("any")
+            end
 
-        if op == "extends" then
-            return l:Extend(r)
-        end
+            if op == "~" then
+                if l.type == "number" then
+                    if l.data ~= nil then
+                        return types.Object:new("number", bit.bnot(l.data))
+                    end
 
-        if op == ".." then
-            local new = l:Copy()
-            new.max = r
-            return new
-        end
-    end
+                    return types.Object:new("number")
+                end
 
-    if l.Type == "object" and r.Type == "set" then
-        return self:BinaryOperator(op, types.Set:new({l}), r, env)
-    end
+                return types.Object:new("any")
+            end
 
+            if op == "not" then
+                if l:IsTruthy() and l:IsFalsy() then
+                    return types.Object:new("boolean")
+                end
 
-    if l.Type == "set" and r.Type == "object" then
-        return self:BinaryOperator(op, l, types.Set:new({r}), env)
-    end
+                if l:IsTruthy() then
+                    return types.Object:new("boolean", false, true)
+                end
 
-    if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
-
-        if l.type ~= r.type then
-            return false, "no operator for " .. tostring(l.type or l) .. " " .. op .. " " .. tostring(r.type or r)
-        end
-
-        if l.Type == "set" and r.Type == "set" then
-            local new_set = types.Set:new()
-
-            for _, l in ipairs(l:GetElements()) do
-                for _, r in ipairs(r:GetElements()) do
-                    local a = assert(self:BinaryOperator(op, l, r, env))
-                    new_set:AddElement(a)
+                if l:IsFalsy() then
+                    return types.Object:new("boolean", true, true)
                 end
             end
 
-            return new_set
-        end
-
-        local lval = l.data
-        local rval = r.data
-        local type = l.type
-
-        if l.Type == "tuple" then
-            lval = l.data[1].data
-            type = l.data[1].type
-        end
-
-        if r.Type == "tuple" then
-            rval = r.data[1].data
-        end
-
-        return types.Object:new(type, syntax.CompiledBinaryOperatorFunctions[op](rval, lval), l:IsConst() or r:IsConst())
-    end
-
-    if l.type == r.type then
-        return types.Object:new(l.type)
-    end
-
-    if l.type == "any" or r.type == "any" then
-        return types.Object:new("any")
-    end
-
-    error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
-end
-
-function META:NewIndex(obj, key, val, env)
-
-    if obj.Type == "set" then
-        local copy = types.Set:new()
-        for i,v in ipairs(obj:GetElements()) do
-            local ok, err = self:NewIndex(v, key, val, env)
-            if not ok then
-                return ok, err
+            if op == "-" then
+                if env == "typesystem" then
+                    if l.type == "number" and l.data then
+                        return types.Object:new(l.type, -l.data, l.const)
+                    end
+                end
             end
-            copy:AddElement(val)
-        end
-        return copy
-    end
 
-    if not obj.Set then
-        return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type
-    end
-
-    return obj:Set(key, val)
-end
-
-
-function META:Index(obj, key)
-    if obj.Type == "set" then
-        local copy = types.Set:new()
-        for i,v in ipairs(obj:GetElements()) do
-            local val, err = self:Index(v, key)
-            if not val then
-                return val, err
+            if syntax.CompiledPrefixOperatorFunctions[op] and l.data ~= nil and l.const then
+                return types.Object:new(l.type, syntax.CompiledPrefixOperatorFunctions[op](l.data))
             end
-            copy:AddElement(val)
+        elseif l.Type == "dictionary" then
+            if op == "not" then
+                return self:CreateLuaType("boolean", false)
+            end
+
+            if op == "#" then
+                if l.meta and l.meta:Get("__len") then
+                    error("NYI")
+                end
+
+                return self:CreateLuaType("number", #l.data, true)
+            end
+        elseif l.Type == "set" then
+            local set = {}
+
+            for _, v in ipairs(self.datai) do
+                local val, err = self:PrefixOperator(op, v, env)
+                if not val then
+                    return val, err
+                end
+                table.insert(set, val)
+            end
+
+            return Set:new(set)
+        elseif l.Type == "tuple" then
+            return self:PrefixOperator(op, v:Get(1), env)
         end
-        return copy
+
+        error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
     end
 
-    if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
-        return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
+    function META:BinaryOperator(op, l, r, env)
+        if op == "." or op == ":" then
+            return self:GetOperator(l, r)
+        end
+
+        if l.meta then
+            if op == "+" then
+                if l.meta:Get("__add") then
+                    return self:Call(l.meta:Get("__add"), types.Tuple:new({l, r}), op)[1]
+                end
+            end
+        end
+
+        if l[op] and r[op] then
+            local ret = l[op](l, r, env)
+            if not ret then
+                error("operator " .. op .. " on " .. tostring(l) .. " does not return anything")
+            end
+            return ret
+        end
+
+        if env == "typesystem" then
+            if op == "|" then
+                return types.Set:new({l, r})
+            end
+
+            if op == "extends" then
+                return l:Extend(r)
+            end
+
+            if op == ".." then
+                local new = l:Copy()
+                new.max = r
+                return new
+            end
+        end
+
+        if l.Type == "object" and r.Type == "set" then
+            return self:BinaryOperator(op, types.Set:new({l}), r, env)
+        end
+
+
+        if l.Type == "set" and r.Type == "object" then
+            return self:BinaryOperator(op, l, types.Set:new({r}), env)
+        end
+
+        if syntax.CompiledBinaryOperatorFunctions[op] and l.data ~= nil and r.data ~= nil then
+
+            if l.type ~= r.type then
+                return false, "no operator for " .. tostring(l.type or l) .. " " .. op .. " " .. tostring(r.type or r)
+            end
+
+            if l.Type == "set" and r.Type == "set" then
+                local new_set = types.Set:new()
+
+                for _, l in ipairs(l:GetElements()) do
+                    for _, r in ipairs(r:GetElements()) do
+                        local a = assert(self:BinaryOperator(op, l, r, env))
+                        new_set:AddElement(a)
+                    end
+                end
+
+                return new_set
+            end
+
+            local lval = l.data
+            local rval = r.data
+            local type = l.type
+
+            if l.Type == "tuple" then
+                lval = l.data[1].data
+                type = l.data[1].type
+            end
+
+            if r.Type == "tuple" then
+                rval = r.data[1].data
+            end
+
+            return types.Object:new(type, syntax.CompiledBinaryOperatorFunctions[op](rval, lval), l:IsConst() or r:IsConst())
+        end
+
+        if l.type == r.type then
+            return types.Object:new(l.type)
+        end
+
+        if l.type == "any" or r.type == "any" then
+            return types.Object:new("any")
+        end
+
+        error(" NYI " .. env .. ": "..tostring(l).." "..op.. " "..tostring(r))
     end
 
-    if obj.contract then
-        return obj:Get(key)
+    function META:SetOperator(obj, key, val, env)
+
+        if obj.Type == "set" then
+            local copy = types.Set:new()
+            for i,v in ipairs(obj:GetElements()) do
+                local ok, err = self:SetOperator(v, key, val, env)
+                if not ok then
+                    return ok, err
+                end
+                copy:AddElement(val)
+            end
+            return copy
+        end
+
+        if not obj.Set then
+            return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type
+        end
+
+        return obj:Set(key, val)
     end
 
-    local val, reason = obj:Get(key)
+    function META:GetOperator(obj, key, env)
+        if obj.Type == "set" then
+            local copy = types.Set:new()
+            for i,v in ipairs(obj:GetElements()) do
+                local val, err = self:GetOperator(v, key)
+                if not val then
+                    return val, err
+                end
+                copy:AddElement(val)
+            end
+            return copy
+        end
 
-    if not val then
-        return self:TypeFromImplicitNode(obj.node, "nil")
+        if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
+            return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
+        end
+
+        if obj.contract then
+            return obj:Get(key)
+        end
+
+        local val, reason = obj:Get(key)
+
+        if not val then
+            return self:TypeFromImplicitNode(obj.node, "nil")
+        end
+
+        return val
     end
 
-    return val
+    function META:CallOperator(obj, arguments, check_length)
+        if obj.Type == "object" then
+            if obj.type == "any" then
+                return types.Tuple:new(types.Object:new("any"))
+            end
+
+            if obj.type == "function"  then
+                if obj.data.lua_function then
+                    _G.self = require("oh").current_analyzer
+                    local res = {pcall(obj.data.lua_function, table.unpack(arguments.data))}
+                    _G.self = nil
+
+                    if not res[1] then
+                        return false, res[2]
+                    end
+
+                    if not res[2] then
+                        res[2] = types.Object:new("nil")
+                    end
+
+                    table.remove(res, 1)
+
+                    for i,v in ipairs(res) do
+                        if not types.IsTypeObject(v) then
+                            res[i] = self:CreateLuaType(type(v), v, true)
+                        end
+                    end
+
+                    return types.Tuple:new(res)
+                end
+
+                local A = arguments -- incoming
+                local B = obj.data.arg -- the contract
+                -- A should be a subset of B
+
+                if check_length and A:GetLength() ~= B:GetLength() then
+                    return false, "invalid amount of arguments"
+                end
+
+                for i, a in ipairs(A:GetData()) do
+                    local b = B:Get(i)
+                    if not b then
+                        break
+                    end
+
+                    local ok, reason = a:SubsetOf(b)
+
+                    if not ok then
+                        return false, reason
+                    end
+                end
+
+                return obj.data.ret
+            end
+        elseif obj.Type == "tuple" then
+            local out = types.Set:new()
+
+            for _, obj in ipairs(obj.data) do
+                if not obj.Call then
+                    return false, "set contains uncallable object " .. tostring(obj)
+                end
+
+                local return_tuple = self:CallOperator(obj, arguments)
+
+                if return_tuple then
+                    out:AddElement(return_tuple)
+                end
+            end
+
+            return types.Tuple:new({out})
+        elseif obj.Type == "set" then
+            local set = types.Set:new()
+            local errors = {}
+
+            if not obj.datai[1] then
+                return false, "cannot call empty set"
+            end
+
+            for _, obj in ipairs(obj.datai) do
+                if (obj.Type == "object" and not obj:IsType("function")) then
+                    return false, "set contains uncallable object " .. tostring(obj)
+                end
+            end
+
+            for _, obj in ipairs(obj.datai) do
+                local return_tuple, error = self:CallOperator(obj, arguments, true)
+
+                if return_tuple then
+                    return return_tuple
+                else
+                    table.insert(errors, error)
+                end
+            end
+
+            return false, table.concat(errors, "\n")
+        end
+
+        error("undefined call:" .. tostring(obj) .. tostring(arguments))
+    end
 end
-
 
 do -- types
+    function META:CreateLuaType(type, data, const)
+        if type == "table" then
+            return types.Dictionary:new(data, const)
+        elseif type == "..." then
+            return types.Tuple:new(data)
+        elseif type == "number" or type == "string" or type == "function" or type == "boolean" then
+            return types.Object:new(type, data, const)
+        elseif type == "nil" then
+            return types.Object:new(type, const)
+        elseif type == "any" then
+            return types.Object:new(type, const)
+        elseif type == "list" then
+            data = data or {}
+            local tup = types.Tuple:new(data.values)
+            tup.ElementType = data.type
+            tup.max = data.length
+            return tup
+        end
+
+        error("NYI " .. type)
+    end
+
     function META:TypeFromImplicitNode(node, name, data, const)
         node.scope = self.scope -- move this out of here
 
-        local obj = types.Create(name, data, const)
+        local obj = self:CreateLuaType(name, data, const)
 
         if not obj then error("NYI: " .. name) end
 
         if name == "string" then
-            local string_meta = types.Create("table", {})
+            local string_meta = self:CreateLuaType("table", {})
             string_meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
             obj.meta = string_meta
         end
@@ -237,7 +445,7 @@ do -- types
                     self.calling_function = obj
                 end
 
-                local return_tuple = self:Assert(node, obj:Call(arguments))
+                local return_tuple = self:Assert(node, self:CallOperator(obj, arguments))
 
                 local env = "runtime"
 
@@ -332,19 +540,17 @@ do -- types
                 end
 
                 return ret
-            elseif obj.Call then
-                self:FireEvent("external_call", node, obj)
-
-                local ret, err = obj:Call(arguments)
-
-                if ret == false then
-                    self:Error(node, err)
-                end
-
-                return ret.data
             end
 
-            error("this should never be reached")
+            self:FireEvent("external_call", node, obj)
+
+            local ret, err = self:CallOperator(obj, arguments)
+
+            if ret == false then
+                self:Error(node, err)
+            end
+
+            return ret.data
         end
     end
 end
@@ -469,7 +675,7 @@ function META:AnalyzeStatement(statement)
                 if type(exp_key) == "string" or exp_key.kind == "value" then
                     self:SetValue(key, val, env)
                 else
-                    self:Assert(exp_key, self:NewIndex(obj, key, val, env))
+                    self:Assert(exp_key, self:SetOperator(obj, key, val, env))
                     self:FireEvent("newindex", obj, key, val, env)
                 end
             end
@@ -736,15 +942,13 @@ do
                  stack:Push(self:Assert(node, self:BinaryOperator(node.value.value, left, right, env)))
             elseif node.kind == "prefix_operator" then
                 local left = stack:Pop()
-                local val, err = self:PrefixOperator(node.value.value, left, self:AnalyzeExpression(node.right), env)
-                stack:Push(self:Assert(node, val, err))
+                stack:Push(self:Assert(node, self:PrefixOperator(node.value.value, left, env)))
             elseif node.kind == "postfix_operator" then
                 local right = stack:Pop()
-                local val, err = self:PostfixOperator(node.value.value, right, self:AnalyzeExpression(node.left), env)
-                stack:Push(self:Assert(node, val, err))
+                stack:Push(self:Assert(node, self:PostfixOperator(node.value.value, right, env)))
             elseif node.kind == "postfix_expression_index" then
                 local obj = stack:Pop()
-                stack:Push(self:Assert(node, self:Index(obj, self:AnalyzeExpression(node.expression))))
+                stack:Push(self:Assert(node, self:GetOperator(obj, self:AnalyzeExpression(node.expression))))
             elseif node.kind == "type_function" then
                 local args = {}
                 local rets = {}

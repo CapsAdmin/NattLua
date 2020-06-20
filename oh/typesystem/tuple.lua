@@ -14,28 +14,6 @@ function Tuple:GetSignature()
     return table.concat(s, " ")
 end
 
-function Tuple:PrefixOperator(op, env)
-    return self.data[1]:PrefixOperator(op, env)
-end
-
-function Tuple:Call(arguments)
-    local out = types.Set:new()
-
-    for _, obj in ipairs(self.data) do
-        if not obj.Call then
-            return false, "set contains uncallable object " .. tostring(obj)
-        end
-
-        local return_tuple = obj:Call(arguments)
-
-        if return_tuple then
-            out:AddElement(return_tuple)
-        end
-    end
-
-    return types.Tuple:new({out})
-end
-
 function Tuple:Merge(tup, dont_extend)
     local src = self.data
     local dst = tup.data

@@ -416,22 +416,6 @@ function Dictionary:IsTruthy()
     return true
 end
 
-function Dictionary:PrefixOperator(op, val, env)
-    if op == "not" then
-        return types.Create("boolean", false)
-    end
-
-    if op == "#" then
-        if self.meta and self.meta:Get("__len") then
-            error("NYI")
-        end
-
-        return types.Create("number", #self.data, true)
-    end
-
-    return false, "NYI " .. op
-end
-
 function Dictionary:new(data)
     local self = setmetatable({}, self)
 

@@ -156,7 +156,7 @@ return function(analyzer_meta)
                 local obj = self:AnalyzeExpression(key.left, env)
                 local key = key.kind == "postfix_expression_index" and self:AnalyzeExpression(key.expression, env) or self:AnalyzeExpression(key.right, env)
 
-                self:Assert(key.node, self:NewIndex(obj, key, val, env))
+                self:Assert(key.node, self:SetOperator(obj, key, val, env))
                 self:FireEvent("newindex", obj, key, val, env)
             end
         end

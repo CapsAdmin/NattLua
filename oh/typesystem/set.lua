@@ -5,20 +5,6 @@ Set.__index = Set
 
 local sort = function(a, b) return a < b end
 
-function Set:PrefixOperator(op, val, env)
-    local set = {}
-
-    for _, v in ipairs(self.datai) do
-        local val, err = v:PrefixOperator(op, val, env)
-        if not val then
-            return val, err
-        end
-        table.insert(set, val)
-    end
-
-    return Set:new(set)
-end
-
 function Set:GetSignature()
     local s = {}
 
@@ -29,33 +15,6 @@ function Set:GetSignature()
     table.sort(s, sort)
 
     return table.concat(s, "|")
-end
-
-function Set:Call(arguments)
-    local set = types.Set:new()
-    local errors = {}
-
-    if not self.datai[1] then
-        return false, "cannot call empty set"
-    end
-
-    for _, obj in ipairs(self.datai) do
-        if not obj.Call or (obj.Type == "object" and not obj:IsType("function")) then
-            return false, "set contains uncallable object " .. tostring(obj)
-        end
-    end
-
-    for _, obj in ipairs(self.datai) do
-        local return_tuple, error = obj:Call(arguments, true)
-
-        if return_tuple then
-            return return_tuple
-        else
-            table.insert(errors, error)
-        end
-    end
-
-    return false, table.concat(errors, "\n")
 end
 
 function Set:__tostring()
