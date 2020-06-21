@@ -6,10 +6,38 @@ describe("varargs", function()
         run[[
             local function test(...)
                 local a,b,c = ...
-                return  a+b+c
+                return a+b+c
             end
 
             type_assert(test(test(1,2,3), test(1,2,3), test(1,2,3)), 18)
+        ]]
+    end)
+
+
+    it("smoke", function()
+        run[[
+            local function test()
+                return 1,2
+            end
+
+            local a,b,c = test(), 3
+            assert_type(a, 1)
+            assert_type(b, 3)
+            assert_type(c, nil)
+        ]]
+
+        run[[
+            local function test(...)
+                return 1,2,...
+            end
+
+            local a,b,c = test(3)
+
+            print(a,b,c)
+
+            type_assert(a,1)
+            type_assert(b,2)
+            type_assert(c,3)
         ]]
     end)
 
@@ -41,4 +69,20 @@ describe("varargs", function()
             type_assert(c, 30)
         ]]
     end)
+
+    it("asadawd", function()
+        run[[
+            local function test(...)
+                return 1,2,3, ...
+            end
+
+            local A, B, C, D = test(), 4
+
+            type_assert(A, 1)
+            type_assert(B, 4)
+            type_assert(C, nil)
+            type_assert(D, nil)
+        ]]
+    end)
+
 end)

@@ -466,9 +466,9 @@ end
 A, B, C, D = test(), 4
 
 type_assert(A, 1)
-type_assert(B, 2)
-type_assert(C, 3)
-type_assert(D, nil as []) -- THIS IS WRONG, tuple of any?
+type_assert(B, 4)
+type_assert(C, nil)
+type_assert(D, nil)
 
 local z,x,y,æ,ø,å = test(4,5,6)
 local novalue

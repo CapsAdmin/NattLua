@@ -1,7 +1,14 @@
-
-local function lol()
-  local a,b,c = 1,2,3
-  return a,b,c
+local function test(...)
+  return 1,2,...
 end
 
-print(lol())
+local a,b,c = test(3)
+
+print("123: ", a,b,c)
+
+local function test(...)
+  local a,b,c = ...
+  print("123: ", a,b,c)
+end
+
+test(1,2,3)

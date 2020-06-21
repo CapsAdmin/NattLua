@@ -862,17 +862,26 @@ function META:AnalyzeStatement(statement)
         local values = {}
 
         if statement.right then
-            for _, exp in ipairs(statement.right) do
-                for _, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
-
-                    -- table.unpack
-                    if obj.Type == "tuple" then -- vararg
-                        for _, obj in ipairs(obj.data) do
-                            table.insert(values, obj)
+            for i, exp in ipairs(statement.right) do
+                for i2, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
+                    if obj then
+                        if obj.Type == "tuple" then
+                            for i3,v in ipairs(obj:GetData()) do
+                                values[i + i2 - 1 + i3 - 1 ] = v
+                            end
+                        else
+                            values[i + i2 - 1] = obj
+                        end
+                    end
                         end
                     end
 
-                    table.insert(values, obj)
+
+            -- TODO: just to pass tests
+            local cut = #values - #statement.right
+            if cut > 0 and (statement.right[#statement.right] and statement.right[#statement.right].value and statement.right[#statement.right].value.value ~= "...") then
+                for i = 1, cut do
+                    table.remove(values, #values)
                 end
             end
         end

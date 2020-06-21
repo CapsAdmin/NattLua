@@ -267,7 +267,6 @@ type assert = function(obj, err)
 end
 
 type type_assert = function(what: any, type: any)
-	--if not what:SubsetOf(type) or (what.type == "any" and type.type ~= "any") then
 	if what.type == type.type and what.data == type.data then
 		return
 	end

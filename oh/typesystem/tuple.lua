@@ -84,8 +84,22 @@ function Tuple.SubsetOf(A, B)
         end
     end
 
-    if A:GetLength() > B:GetLength() then
+    if A:GetLength() > B:GetLength() and A:GetLength() > B:GetMaxLength() then
         return false, tostring(A) .. " is larger than " .. tostring(B)
+    end
+
+
+    if A.ElementType == "any" then
+        return true
+    end
+
+    -- vararg
+    if B.max == math.huge then
+        local ok, reason = B:Get(1):SubsetOf(A)
+        if not ok then
+            return types.errors.subset(B:Get(1), A, reason)
+        end
+        return true
     end
 
     for i = 1, A:GetLength() do
@@ -94,15 +108,6 @@ function Tuple.SubsetOf(A, B)
 
         if not b then
             return types.errors.missing(B, i)
-        end
-
-        -- vararg
-        if a.max == math.huge then
-            local ok, reason = a:Get(1):SubsetOf(b)
-            if not ok then
-                return types.errors.subset(a:Get(1), b, reason)
-            end
-            return true
         end
 
         local ok, reason = a:SubsetOf(b)
