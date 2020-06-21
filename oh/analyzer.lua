@@ -134,6 +134,10 @@ return function(analyzer_meta)
                 return upvalue.data
             end
 
+            if self.ENV then
+                return self.ENV:Get(self:Hash(key), env)
+            end
+
             return self.env[env][self:Hash(key)]
         end
 
@@ -148,9 +152,13 @@ return function(analyzer_meta)
                     upvalue.data = val
                     self:FireEvent("mutate_upvalue", key, val, env)
                 else
-                    -- key = val
-                    self.env[env][self:Hash(key)] = val
-                    self:FireEvent("set_global", key, val, env)
+                    if self.ENV then
+                        self.ENV:Set(self:Hash(key), val)
+                    else
+                        -- key = val
+                        self.env[env][self:Hash(key)] = val
+                        self:FireEvent("set_global", key, val, env)
+                    end
                 end
             else
                 local obj = self:AnalyzeExpression(key.left, env)
@@ -282,7 +290,7 @@ return function(analyzer_meta)
                 io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
                 io.write("\n")
             elseif what == "leave_scope" then
-                local node, extra_node, scope = ...
+                local _, extra_node, scope = ...
                 t = t - 1
                 io.write((" "):rep(t))
                 io.write("}")

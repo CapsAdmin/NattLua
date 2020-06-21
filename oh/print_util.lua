@@ -127,14 +127,14 @@ do
 			local char = code:sub(i, i)
 			if char == "\n" then
 				if line == 1 then
-					first_line_pos = i
+					first_line_pos = i+1
 				end
 
-				if line == lines then
-					return i-1, first_line_pos-1, line-1
+				if line == lines+1 then
+					return i-1, first_line_pos-1, line
 				end
+
 				line = line + 1
-
 			end
 		end
 
@@ -259,7 +259,7 @@ do
 		local msg = path .. (msg and ": " .. msg or "")
 		local post = (" "):rep(spacing - 2) .. "-> | " .. msg
 
-		local pre = ("="):rep(#post)
+		local pre = ("="):rep(100)
 
 		str = pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n" .. pre
 

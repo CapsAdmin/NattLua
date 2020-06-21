@@ -5,8 +5,6 @@ types.Initialize()
 
 local META = {}
 
-local table_insert = table.insert
-
 do -- type operators
     function META:PostfixOperator(op, r, env)
         if r.Type == "object" then
@@ -87,9 +85,9 @@ do -- type operators
                 table.insert(set, val)
             end
 
-            return Set:new(set)
+            return types.Set:new(set)
         elseif l.Type == "tuple" then
-            return self:PrefixOperator(op, v:Get(1), env)
+            return self:PrefixOperator(op, l:Get(1), env)
         end
 
         error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
@@ -117,7 +115,7 @@ do -- type operators
     }
 
     local function metatable_function(self, meta_method, l,r, swap)
-        if sawp then
+        if swap then
             l,r = r,l
         end
 
@@ -125,7 +123,7 @@ do -- type operators
             local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
 
             if func then
-                return self:Call(func, types.Tuple:new({l, r}), op)[1]
+                return self:Call(func, types.Tuple:new({l, r}))[1]
             end
         end
     end
@@ -409,7 +407,7 @@ do -- type operators
 
         if obj.Type == "set" then
             local copy = types.Set:new()
-            for i,v in ipairs(obj:GetElements()) do
+            for _,v in ipairs(obj:GetElements()) do
                 local ok, err = self:SetOperator(v, key, val, env)
                 if not ok then
                     return ok, err
@@ -419,7 +417,7 @@ do -- type operators
             return copy
         end
 
-        if not raw and obj.meta then
+        if obj.meta then
             local func = obj.meta:Get("__newindex")
 
             if func then
@@ -444,7 +442,7 @@ do -- type operators
     function META:GetOperator(obj, key, env)
         if obj.Type == "set" then
             local copy = types.Set:new()
-            for i,v in ipairs(obj:GetElements()) do
+            for _,v in ipairs(obj:GetElements()) do
                 local val, err = self:GetOperator(v, key)
                 if not val then
                     return val, err
@@ -480,7 +478,7 @@ do -- type operators
             return obj:Get(key)
         end
 
-        local val, reason = obj:Get(key)
+        local val = obj:Get(key)
 
         if not val then
             return self:TypeFromImplicitNode(obj.node, "nil")
@@ -497,23 +495,19 @@ do -- type operators
 
             if obj.type == "function"  then
                 if obj.data.lua_function then
-                    _G.self = require("oh").current_analyzer
-                    local res = {pcall(obj.data.lua_function, table.unpack(arguments.data))}
+                    _G.self = self
+                    _G.obj = obj
+                    local res = {obj.data.lua_function(table.unpack(arguments.data))}
+                    _G.obj = nil
                     _G.self = nil
 
-                    if not res[1] then
-                        return false, res[2]
+                    if res[1] == nil then
+                        res[1] = self:TypeFromImplicitNode(obj.node, "nil", nil, true)
                     end
-
-                    if not res[2] then
-                        res[2] = types.Object:new("nil")
-                    end
-
-                    table.remove(res, 1)
 
                     for i,v in ipairs(res) do
                         if not types.IsTypeObject(v) then
-                            res[i] = self:CreateLuaType(type(v), v, true)
+                            res[i] = self:TypeFromImplicitNode(obj.node, type(v), v, true)
                         end
                     end
 
@@ -560,7 +554,6 @@ do -- type operators
 
             return types.Tuple:new({out})
         elseif obj.Type == "set" then
-            local set = types.Set:new()
             local errors = {}
 
             if not obj.datai[1] then
@@ -626,6 +619,10 @@ do -- types
     end
 
     function META:TypeFromImplicitNode(node, name, data, const)
+        if not node then
+            print(node, name, data, const)
+            print(debug.traceback())
+        end
         node.scope = self.scope -- move this out of here
 
         local obj = self:CreateLuaType(name, data, const)
@@ -752,7 +749,7 @@ do -- types
                             self:Error(obj.node, reason)
                         end
                     else
-                        for i,v in ipairs(ret_tuple:GetData()) do
+                        for _,v in ipairs(ret_tuple:GetData()) do
                             v.volatile = true
                         end
 

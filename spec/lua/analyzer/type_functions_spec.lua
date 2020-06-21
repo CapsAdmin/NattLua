@@ -93,11 +93,11 @@ describe("type functions", function()
 
     it("load", function()
         run[[
-            type_assert(assert(load("type_assert(1, 1) return 2")), 2)
+            type_assert(assert(load("type_assert(1, 1) return 2"))(), 2)
         ]]
 
         run[[
-            type_assert(assert(load("return " .. 2)), 2)
+            type_assert(assert(load("return " .. 2))(), 2)
         ]]
     end)
 

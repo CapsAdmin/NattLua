@@ -75,13 +75,9 @@ function Object:Copy()
 end
 
 function Object.SubsetOf(A, B)
-    if A.type == "any" or A.volatile then
-        return true
-    end
+    if A.type == "any" or A.volatile then return true end
 
-    if B.Type == "tuple" and B:GetLength() == 1 then
-        B = B:Get(1)
-    end
+    if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
     if B.Type == "object" then
         if B.type == "any" or B.volatile then

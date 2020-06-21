@@ -59,7 +59,7 @@ function oh.on_editor_save(path)
 		return
 	end
 
-	if path:find("oh/oh", nil, true) then
+	if path:find("oh/oh", nil, true) and not path:find("print_util") then
 		os.execute("busted --lua luajit")
 		return
 	end
