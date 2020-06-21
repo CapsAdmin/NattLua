@@ -160,6 +160,16 @@ do
 				s = s .. analyzer.current_expression:Render()
 				s = s .. "\n===============\n"
 			end
+
+			if analyzer.callstack then
+				s = s .. "======== callstack =======\n"
+
+				for _, obj in ipairs(analyzer.callstack) do
+					s = s .. print_util.FormatError(analyzer.code_data.code, analyzer.code_data.name, tostring(obj), print_util.LazyFindStartStop(obj))
+				end
+
+				s = s .. "\n===============\n"
+			end
 		end
 
 		return s

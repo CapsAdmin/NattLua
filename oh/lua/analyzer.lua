@@ -624,10 +624,6 @@ do -- types
     end
 
     function META:TypeFromImplicitNode(node, name, data, const)
-        if not node then
-            print(node, name, data, const)
-            print(debug.traceback())
-        end
         node.scope = self.scope -- move this out of here
 
         local obj = self:CreateLuaType(name, data, const)
@@ -667,54 +663,67 @@ do -- types
     end
 
     do
-        function META:Call(obj, arguments, node, deferred)
-            node = node or obj.node
+        function META:Call(obj, arguments, call_node)
+            call_node = call_node or obj.node
+            local function_node = obj.node
+            local env = "runtime"
 
-            --lua function
-            local callable = obj.Type == "dictionary" and obj.meta and obj.meta:Get("__call")
-
-            if callable then
-                --arguments = arguments:Copy()
-                local arg = obj
-                arg.volatile = true
-                table.insert(arguments.data, 1, arg)
-                obj = callable
+            if self.PreferTypesystem then
+                env = "typesystem"
             end
 
-            -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-            if deferred then
-                arguments = obj:GetArguments()
-            end
-
-            -- for deferred calls
             obj.called = true
 
-            if obj.node and (obj.node.kind == "function" or obj.node.kind == "local_function" or obj.node.kind == "local_type_function2") then
+            if obj.Type == "object" and obj.type == "any" then
+                return self:TypeFromImplicitNode(function_node, "any")
+            end
 
-                do -- recursive guard
-                    if self.calling_function == obj then
-                        return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes().data[1]) or {self:TypeFromImplicitNode(node, "any")}
-                    end
-                    self.calling_function = obj
+            if not function_node or function_node.kind == "type_function" then
+                self:FireEvent("external_call", call_node, obj)
+
+                local ret, err = self:CallOperator(obj, arguments)
+
+                if ret == false then
+                    self:Error(call_node, err)
                 end
 
-                local return_tuple = self:Assert(node, self:CallOperator(obj, arguments))
-
-                local env = "runtime"
-
-                if self.PreferTypesystem then
-                    env = "typesystem"
+                -- TODO: hacky workaround
+                if call_node.tokens["("] and call_node.tokens[")"] then
+                    if ret.data[1].Type == "tuple" then
+                        ret.data = {ret.data[1]:Get(1)}
+                    else
+                        ret.data = {ret.data[1]}
+                    end
                 end
 
-                self:PushScope(obj.node)
-                    local self_call = obj.node.self_call
+                return ret.data
+            end
 
-                    if self_call then
-                        self:SetUpvalue("self", arguments:Get(1) or self:TypeFromImplicitNode(obj.node, "nil"), env)
+            do -- recursive guard
+                if self.calling_function == obj then
+                    return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes().data[1]) or {self:TypeFromImplicitNode(call_node, "any")}
+                end
+                self.calling_function = obj
+            end
+
+            local return_tuple = self:Assert(call_node, self:CallOperator(obj, arguments))
+
+            if not function_node.statements then
+                error("cannot call " .. tostring(function_node) .. " because it has no statements")
+            end
+
+            self:PushScope(function_node)
+
+                -- TODO: function_node can be a root statement because of loadstring
+                if function_node.identifiers then
+                    local first_argument_is_self = function_node.self_call
+
+                    if first_argument_is_self then
+                        self:SetUpvalue("self", arguments:Get(1) or self:TypeFromImplicitNode(function_node, "nil"), env)
                     end
 
-                    for i, identifier in ipairs(obj.node.identifiers) do
-                        local argi = self_call and (i+1) or i
+                    for i, identifier in ipairs(function_node.identifiers) do
+                        local argi = first_argument_is_self and (i+1) or i
 
                         if identifier.value.value == "..." then
                             local values = {}
@@ -726,84 +735,86 @@ do -- types
                             self:SetUpvalue(identifier, arguments:Get(argi) or self:TypeFromImplicitNode(identifier, "nil"), env)
                         end
                     end
-
-                    types.collected_return_tuples = types.collected_return_tuples or {}
-                    table.insert(types.collected_return_tuples,  1, {})
-                    local ret = types.collected_return_tuples[1]
-
-                    -- crawl and collect return values from function statements
-                    self:AnalyzeStatements(obj.node.statements)
-
-                    table.remove(types.collected_return_tuples, 1)
-
-
-                self:PopScope()
-
-                do
-                    -- copy the entire tuple so we don't modify the return value of this call
-                    local ret_tuple = types.Tuple:new(ret):Copy()
-
-                    -- if this function has an explicit return type
-                    if obj.node.return_types then
-                        local B = return_tuple
-                        local A = ret_tuple
-
-                        local ok, reason = A:SubsetOf(B)
-
-                        if not ok then
-                            self:Error(obj.node, reason)
-                        end
-                    else
-                        for _,v in ipairs(ret_tuple:GetData()) do
-                            v.volatile = true
-                        end
-
-                        obj:GetReturnTypes():Merge(ret_tuple)
-                    end
                 end
 
-                obj:GetArguments():Merge(arguments, true)
+                types.collected_return_tuples = types.collected_return_tuples or {}
+                table.insert(types.collected_return_tuples,  1, {})
+                local ret = types.collected_return_tuples[1]
 
+                self.callstack = self.callstack or {}
+                table.insert(self.callstack, 1, call_node)
 
-                -- TODO
-                if node.self_call then
-                    local first_arg = obj:GetArguments():Get(1)
-                    if first_arg and not first_arg.contract then
-                        first_arg.volatile = true
+                -- crawl and collect return values from function statements
+                self:AnalyzeStatements(function_node.statements)
+
+                table.remove(self.callstack, 1)
+                table.remove(types.collected_return_tuples, 1)
+
+            self:PopScope()
+
+            do
+                -- copy the entire tuple so we don't modify the return value of this call
+                local ret_tuple = types.Tuple:new(ret):Copy()
+
+                -- if this function has an explicit return type
+                if function_node.return_types then
+                    local B = return_tuple
+                    local A = ret_tuple
+
+                    local ok, reason = A:SubsetOf(B)
+
+                    if not ok then
+                        self:Error(function_node, reason)
                     end
-                end
+                else
+                    for _,v in ipairs(ret_tuple:GetData()) do
+                        v.volatile = true
+                    end
 
+                    obj:GetReturnTypes():Merge(ret_tuple)
+                end
+            end
+
+            obj:GetArguments():Merge(arguments, true)
+
+            -- TODO
+            if call_node.self_call then
+                local first_arg = obj:GetArguments():Get(1)
+                if first_arg and not first_arg.contract then
+                    first_arg.volatile = true
+                end
+            end
+
+            if function_node.identifiers then
                 for i, v in ipairs(obj:GetArguments().data) do
-                    if obj.node.identifiers[i] then
-                        obj.node.identifiers[i].inferred_type = v
+                    if function_node.identifiers[i] then
+                        function_node.identifiers[i].inferred_type = v
                     end
                 end
+            end
+            function_node.inferred_type = obj
 
-                obj.node.inferred_type = obj
+            self:FireEvent("function_spec", obj)
 
-                self:FireEvent("function_spec", obj)
+            self.calling_function = nil
 
-                self.calling_function = nil
+            if not ret[1] then
+                -- if this is called from CallMeLater we cannot create a nil type from node
+                local old = call_node.inferred_type
+                ret[1] = self:TypeFromImplicitNode(call_node, "nil")
+                call_node.inferred_type = old
+            end
 
-                if not ret[1] then
-                    -- if this is called from CallMeLater we cannot create a nil type from node
-                    local old = node.inferred_type
-                    ret[1] = self:TypeFromImplicitNode(node, "nil")
-                    node.inferred_type = old
+            -- TODO: hacky workaround
+            if call_node.tokens["("] and call_node.tokens[")"] then
+                if ret[1].Type == "tuple" then
+                    ret = {ret[1]:Get(1)}
+                else
+                    ret = {ret[1]}
                 end
-
-                return ret
             end
 
-            self:FireEvent("external_call", node, obj)
-
-            local ret, err = self:CallOperator(obj, arguments)
-
-            if ret == false then
-                self:Error(node, err)
-            end
-
-            return ret.data
+            return ret
         end
     end
 end
@@ -821,7 +832,12 @@ function META:AnalyzeStatement(statement)
         if self.deferred_calls then
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called then
-                    self:Call(table.unpack(v))
+                    local obj, arguments, node = table.unpack(v)
+
+                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+                    arguments = obj:GetArguments()
+
+                    self:Call(obj, arguments, node)
                 end
             end
         end
@@ -1255,6 +1271,16 @@ do
                 if node.self_call then
                     local val = stack:Pop()
                     table.insert(arguments, 1, val)
+                end
+
+                --lua function
+                local callable = obj.Type == "dictionary" and obj.meta and obj.meta:Get("__call")
+
+                if callable then
+                    local arg = obj
+                    arg.volatile = true
+                    table.insert(arguments, 1, arg)
+                    obj = callable
                 end
 
                 if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then

@@ -283,4 +283,31 @@ describe("analyzer", function()
             type_assert(a, _ as 11|31)
         ]], "expected ⦃11, 31⦄ got ⦃1, 3⦄")
     end)
+
+    it("parenthesis around varargs should only return the first value in the tuple", function()
+        run[[
+            local function s(...) return ... end
+            local a,b,c = (s(1, 2, 3))
+            type_assert(a, 1)
+            type_assert(b, nil)
+            type_assert(c, nil)
+        ]]
+    end)
+
+    pending("type function varargs", function()
+        run[[
+            type lol = function(...)
+                local a,b,c = ...
+                assert(a == 1)
+                assert(b == 2)
+                assert(c == 3)
+            end
+
+            local function lol2(...)
+                lol(...)
+            end
+
+            lol2(1,2,3)
+        ]]
+    end)
 end)

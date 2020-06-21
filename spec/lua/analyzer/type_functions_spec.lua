@@ -117,4 +117,19 @@ describe("type functions", function()
             type_assert(called, false)
         ]]
     end)
+
+    it("select", function()
+        run[[
+            type_assert(select("#", 1,2,3), 3)
+        ]]
+    end)
+
+    it("parenthesis around vararg should work", function()
+        run[[
+            local a = select(2, 1,2,3)
+            type_assert(a, 2)
+
+            type_assert((select(2, 1,2,3)), 2)
+        ]]
+    end)
 end)

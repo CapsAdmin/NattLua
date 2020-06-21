@@ -443,7 +443,7 @@ local type load = function(str, huh, huh, env)
 		return ok, err
 	end
 
-	return self:TypeFromImplicitNode(str.node or obj.node, "function", {
+	return self:TypeFromImplicitNode(code.SyntaxTree, "function", {
 		arg = types.Tuple:new({types.Object:new("any")}),
 		ret = types.Tuple:new({types.Object:new("any")}),
 		lua_function = function()
@@ -470,4 +470,8 @@ end
 
 type error = function(msg: string, level: number)
 	error(msg.data)
+end
+
+type select = function(index: 1 .. inf | "#", ...)
+	return select(index:GetData(), ...)
 end
