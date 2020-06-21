@@ -294,7 +294,7 @@ describe("analyzer", function()
         ]]
     end)
 
-    pending("type function varargs", function()
+    it("type function varargs", function()
         run[[
             type lol = function(...)
                 local a,b,c = ...

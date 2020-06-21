@@ -528,30 +528,7 @@ R[[
 
     type_assert(prefix("hello", "world"), "hello world")
 ]]
-R[[
-    local function test(max: number)
-        for i = 1, max do
-            if i == 20 then
-                return false
-            end
 
-            if i == 5 then
-                return true
-            end
-        end
-        return "lol"
-    end
-
-    local a = test(20)
-    local b = test(5)
-    local c = test(1)
-
-    local LOL = a
-
-    type_assert(a, false)
-    type_assert(b, true)
-    type_assert(c, "lol")
-]]
 R[[
     local func = function()
         local a = 1

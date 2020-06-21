@@ -178,10 +178,42 @@ return function(analyzer_meta)
         end
     end
 
+    function META:CollectReturnExpressions(val)
+        self.return_expressions = self.return_expressions or {}
+        table.insert(self.return_expressions, val)
+    end
+
+    function META:ClearReturnExpressions()
+        self.return_expressions = {}
+    end
+
+    function META:GetReturnExpressions()
+        local out = {}
+        if self.return_expressions then
+            for _, ret in ipairs(self.return_expressions) do
+                for i, obj in ipairs(ret) do
+                    if out[i] then
+                        out[i] = types.Set:new({out[i], obj})
+                    else
+                        out[i] = obj
+                    end
+                end
+            end
+        end
+        return out
+    end
+
+    function META:ReturnFromThisScope()
+        self.ReturnFromFunction = #self.scope_stack
+    end
+
     function META:AnalyzeStatements(statements)
         for _, val in ipairs(statements) do
-            if self:AnalyzeStatement(val) == true then
-                return true
+            self:AnalyzeStatement(val)
+            if self.Returned and self.ReturnFromFunction == #self.scope_stack then
+                self.ReturnFromFunction = nil
+                self.Returned = nil
+                break
             end
         end
     end

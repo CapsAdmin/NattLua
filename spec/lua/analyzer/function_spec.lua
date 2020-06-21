@@ -228,20 +228,6 @@ describe("function", function()
         local b = analyzer:GetValue("b", "runtime")
     end)
 
-    it("control path within a function should work", function()
-        run([[
-            local a = 1
-            function b(lol: number)
-                if lol == 1 then return "foo" end
-                return lol + 4, true
-            end
-            local d = b(2)
-            type_assert(d, 6)
-            local d = b(a)
-            type_assert(d, "foo")
-        ]])
-    end)
-
     it("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", function()
         local analyzer = run[[
             function f1()

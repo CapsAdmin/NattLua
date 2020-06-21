@@ -737,18 +737,11 @@ do -- types
                     end
                 end
 
-                types.collected_return_tuples = types.collected_return_tuples or {}
-                table.insert(types.collected_return_tuples,  1, {})
-                local ret = types.collected_return_tuples[1]
-
-                self.callstack = self.callstack or {}
-                table.insert(self.callstack, 1, call_node)
-
                 -- crawl and collect return values from function statements
+                self:ReturnFromThisScope()
                 self:AnalyzeStatements(function_node.statements)
-
-                table.remove(self.callstack, 1)
-                table.remove(types.collected_return_tuples, 1)
+                local ret = self:GetReturnExpressions()
+                self:ClearReturnExpressions()
 
             self:PopScope()
 
@@ -824,10 +817,7 @@ function META:AnalyzeStatement(statement)
 
     if statement.kind == "root" then
         self:PushScope(statement)
-        local ret
-        if self:AnalyzeStatements(statement.statements) == true then
-            ret = true
-        end
+        self:AnalyzeStatements(statement.statements)
         self:PopScope()
         if self.deferred_calls then
             for _,v in ipairs(self.deferred_calls) do
@@ -841,7 +831,6 @@ function META:AnalyzeStatement(statement)
                 end
             end
         end
-        return ret
     elseif statement.kind == "assignment" or statement.kind == "local_assignment" then
         local env = self.PreferTypesystem and "typesystem" or statement.environment or "runtime"
         local assignments = {}
@@ -983,79 +972,48 @@ function META:AnalyzeStatement(statement)
         self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement, "typesystem"), "typesystem")
     elseif statement.kind == "if" then
         for i, statements in ipairs(statement.statements) do
-            if not statement.expressions[i] then
-                self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                self:AnalyzeStatements(statements)
-                self:PopScope()
-                break
-            else
+            if statement.expressions[i] then
                 local obj = self:AnalyzeExpression(statement.expressions[i], "runtime")
 
                 if obj:IsTruthy() then
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                    obj:PushTruthy()
-
-                    if self:AnalyzeStatements(statements) == true then
-                        if obj.data == true then
-                            obj:PopTruthy()
-                            self:PopScope()
-                            return true
-                        end
-                    end
-
-                    obj:PopTruthy()
+                        obj:PushTruthy()
+                            self:AnalyzeStatements(statements)
+                        obj:PopTruthy()
                     self:PopScope()
                     break
                 end
+            else
+                -- else part
+                self:PushScope(statement, statement.tokens["if/else/elseif"][i])
+                    self:AnalyzeStatements(statements)
+                self:PopScope()
             end
         end
     elseif statement.kind == "while" then
         if self:AnalyzeExpression(statement.expression):IsTruthy() then
             self:PushScope(statement)
-            if self:AnalyzeStatements(statement.statements) == true then
-                return true
-            end
+            self:AnalyzeStatements(statement.statements)
             self:PopScope()
         end
     elseif statement.kind == "do" then
         self:PushScope(statement)
-        if self:AnalyzeStatements(statement.statements) == true then
-            return true
-        end
+        self:AnalyzeStatements(statement.statements)
         self:PopScope()
     elseif statement.kind == "repeat" then
         self:PushScope(statement)
-        if self:AnalyzeStatements(statement.statements) == true then
-            return true
-        end
+        self:AnalyzeStatements(statement.statements)
         if self:AnalyzeExpression(statement.expression):IsTruthy() then
             self:FireEvent("break")
         end
         self:PopScope()
     elseif statement.kind == "return" then
-        local return_values = types.collected_return_tuples[1]
-
-        local evaluated = {}
-        for i,v in ipairs(statement.expressions) do
-            evaluated[i] = self:AnalyzeExpression(v)
-            -- add the return values
-            if return_values then
-                if not return_values[i] then
-                    return_values[i] = evaluated[i]
-                else
-                    return_values[i] = types.Union(return_values[i], evaluated[i])
-                end
-            end
-        end
-
-        self:FireEvent("return", evaluated)
-
-        self.last_return = evaluated
-
-        return true
+        local ret = self:AnalyzeExpressions(statement.expressions)
+        self:CollectReturnExpressions(ret)
+        self.Returned = true
+        self:FireEvent("return", ret)
     elseif statement.kind == "break" then
         self:FireEvent("break")
-        --return true
     elseif statement.kind == "call_expression" then
         self:FireEvent("call", statement.value, {self:AnalyzeExpression(statement.value)})
     elseif statement.kind == "generic_for" then
@@ -1074,9 +1032,7 @@ function META:AnalyzeStatement(statement)
             end
         end
 
-        if self:AnalyzeStatements(statement.statements) == true then
-            return true
-        end
+        self:AnalyzeStatements(statement.statements)
 
         self:PopScope()
     elseif statement.kind == "numeric_for" then
@@ -1088,10 +1044,7 @@ function META:AnalyzeStatement(statement)
             self:AnalyzeExpression(statement.expressions[3])
         end
 
-        if self:AnalyzeStatements(statement.statements) == true then
-            self:PopScope()
-            return true
-        end
+        self:AnalyzeStatements(statement.statements)
         self:PopScope()
     elseif statement.kind == "type_interface" then
         local tbl = self:GetValue(statement.key, "typesystem") or self:TypeFromImplicitNode(statement, "table", {})
