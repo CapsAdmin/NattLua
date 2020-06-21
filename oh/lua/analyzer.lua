@@ -7,87 +7,92 @@ local META = {}
 
 do -- type operators
     function META:PostfixOperator(op, r, env)
-        if r.Type == "object" then
-            if op == "++" then
-                if r.data and r.const then
-                    return self:BinaryOperator("+", r, r, env)
-                end
+        if op == "++" then
+            return self:BinaryOperator("+", r, r, env)
+        end
+    end
+
+    local operators = {
+        ["-"] = function(l) return -l end,
+        ["~"] = function(l) return bit.bnot(l) end,
+        ["#"] = function(l) return #l end,
+    }
+
+    local function metatable_function(self, meta_method, l)
+        if l.meta then
+            local func = l.meta:Get(meta_method)
+
+            if func then
+                return self:Call(func, types.Tuple:new({l}))[1]
             end
         end
     end
 
+    local function arithmetic(l, type, operator)
+        assert(operators[operator], "cannot map operator " .. tostring(operator))
+        if l.type == type then
+            if l:IsConst() then
+                local obj = types.Object:new(type, operators[operator](l.data), true)
+
+                if l.max then
+                    obj.max = arithmetic(l.max, type, operator)
+                end
+
+                return obj
+            end
+
+            return types.Object:new(type)
+        end
+
+        return false, "no operator for " .. operator .. tostring(l) .. " in runtime"
+    end
+
     function META:PrefixOperator(op, l, env)
-        if l.Type == "object" then
-            if op == "#" then
-                if l.type == "string" then
-                    if l.const then
-                        if l.data then
-                            return types.Object:new("number", #l.data, true)
-                        end
-                    end
-                    return types.Object:new("number")
-                end
+        if l.Type == "tuple" then l = l:Get(1) end
 
-                return types.Object:new("any")
-            elseif op == "~" then
-                if l.type == "number" then
-                    if l.data ~= nil then
-                        return types.Object:new("number", bit.bnot(l.data))
-                    end
+        if l.Type == "set" then
+            local new_set = types.Set:new()
 
-                    return types.Object:new("number")
-                end
-
-                return types.Object:new("any")
-            elseif op == "not" then
-                if l:IsTruthy() and l:IsFalsy() then
-                    return types.Object:new("boolean")
-                end
-
-                if l:IsTruthy() then
-                    return types.Object:new("boolean", false, true)
-                end
-
-                if l:IsFalsy() then
-                    return types.Object:new("boolean", true, true)
-                end
-            elseif op == "-" then
-                if env == "typesystem" then
-                    if l.type == "number" and l.data then
-                        return types.Object:new(l.type, -l.data, l.const)
-                    end
+            for _, l in ipairs(l:GetElements()) do
+                for _, r in ipairs(r:GetElements()) do
+                    new_set:AddElement(assert(self:PrefixOperator(op, l, env)))
                 end
             end
 
-            if syntax.CompiledPrefixOperatorFunctions[op] and l.data ~= nil and l.const then
-                return types.Object:new(l.type, syntax.CompiledPrefixOperatorFunctions[op](l.data))
-            end
-        elseif l.Type == "dictionary" then
-            if op == "not" then
-                return self:CreateLuaType("boolean", false)
-            end
+            return new_set
+        end
 
-            if op == "#" then
-                if l.meta and l.meta:Get("__len") then
-                    error("NYI")
-                end
+        if l.type == "any" then
+            return types.Object:new("any")
+        end
 
-                return self:CreateLuaType("number", #l.data, true)
-            end
-        elseif l.Type == "set" then
-            local set = {}
+        if op == "-" then local res = metatable_function(self, "__unm", l) if res then return res end
+        elseif op == "~" then local res = metatable_function(self, "__bxor", l) if res then return res end
+        elseif op == "#" then local res = metatable_function(self, "__len", l) if res then return res end end
 
-            for _, v in ipairs(self.datai) do
-                local val, err = self:PrefixOperator(op, v, env)
-                if not val then
-                    return val, err
-                end
-                table.insert(set, val)
+        if op == "not" then
+            if l:IsTruthy() and l:IsFalsy() then
+                return types.Object:new("boolean")
             end
 
-            return types.Set:new(set)
-        elseif l.Type == "tuple" then
-            return self:PrefixOperator(op, l:Get(1), env)
+            if l:IsTruthy() then
+                return types.Object:new("boolean", false, true)
+            end
+
+            if l:IsFalsy() then
+                return types.Object:new("boolean", true, true)
+            end
+        end
+
+
+        if op == "-" then return arithmetic(l, "number", op)
+        elseif op == "~" then return arithmetic(l, "number", op)
+        elseif op == "#" then
+            if l.Type == "dictionary" then
+                return types.Object:new("number", l:GetLength(), l:IsConst())
+            elseif l.Type == "object" and l.type == "string" then
+                return types.Object:new("number", l:GetData() and #l:GetData() or nil, l:IsConst())
+            end
         end
 
         error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))

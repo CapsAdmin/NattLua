@@ -84,7 +84,7 @@ describe("lists", function()
     it("{[1 .. inf]: any}", function()
         check(run[[local a: {[1 .. inf] = any} = {[1234] = 1}]], "{ 1..inf ⊃ 1234 = any ⊃ number(1) }")
 
-        run([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[number%(%-1234%) is not a subset of 1%.%.inf]])
+        run([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[%-1234 is not a subset of 1%.%.inf]])
     end)
 
     it("traditional array", function()
