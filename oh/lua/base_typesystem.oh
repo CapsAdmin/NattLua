@@ -148,7 +148,7 @@ type m = {
 type type = (function(v: any): string)
 type collectgarbage = (function(opt: string, arg: number): ...)    |    (function(opt: string): ...)    |    (function(): ...)
 type getfenv = (function(f: empty_function|number): table)    |    (function(): table)
-type next = (function(table: table, index: any): any, any|nil)    |    (function(table: table): any, any|nil)
+--type next = (function(table: table, index: any): any, any|nil)    |    (function(table: table): any, any|nil)
 type math = {
 	ceil = (function(x: number): number),
 	tan = (function(x: number): number),
@@ -443,8 +443,8 @@ local type load = function(str, huh, huh, env)
 	end
 
 	return self:TypeFromImplicitNode(code.SyntaxTree, "function", {
-		arg = types.Tuple:new({types.Object:new("any")}),
-		ret = types.Tuple:new({types.Object:new("any")}),
+		arg = types.Tuple:new({}),
+		ret = types.Tuple:new({}),
 		lua_function = function()
 			types.collected_return_tuples = types.collected_return_tuples or {}
 			table.insert(types.collected_return_tuples,  1, {})

@@ -62,6 +62,7 @@ describe("function", function()
             test(1)
 
             local a = test(true)
+            print(a, "!!")
         ]]
 
         local val = analyzer:GetValue("a", "runtime")
@@ -72,12 +73,12 @@ describe("function", function()
 
     it("which is explicitly annotated should error when the actual return value is different", function()
         run([[
-            local function test(a): string
+            local function test(a)
                 return a
             end
 
-            test(1)
-        ]], "1 is not the same type as string")
+            local a: string = test(1)
+        ]], "1.-is not the same type as string")
     end)
 
     it("which is explicitly annotated should error when the actual return value is unknown", function()

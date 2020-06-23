@@ -1,14 +1,21 @@
-local function test(...)
-  return 1,2,...
+local BASE = {} as {
+	A = number,
+	B = number,
+}
+
+type BASE = typeof BASE & {C = number}
+
+function BASE:Foo(lol: true | false): number
+	if lol then
+		return "LOL"
+	end
+	return self.A + self.B
 end
 
-local a,b,c = test(3)
+local Foo: (typeof BASE) & {__index = self} = {}
+Foo.__index = Foo
 
-print("123: ", a,b,c)
+local self = setmetatable({}, Foo)
 
-local function test(...)
-  local a,b,c = ...
-  print("123: ", a,b,c)
-end
-
-test(1,2,3)
+print(self:Foo(true))
+print(self:Foo())

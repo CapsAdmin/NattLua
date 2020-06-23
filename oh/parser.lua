@@ -47,6 +47,10 @@ return function(parser_meta, syntax, Emitter)
             setmetatable(node, META)
             self.current_node = node
 
+            if self.OnNode then
+                self:OnNode(node)
+            end
+
             return node
         end
     end
@@ -122,6 +126,10 @@ return function(parser_meta, syntax, Emitter)
 
             setmetatable(node, META)
             self.current_node = node
+
+            if self.OnNode then
+                self:OnNode(node)
+            end
 
             return node
         end

@@ -296,31 +296,9 @@ describe("analyzer", function()
 
     pending("type function varargs", function()
         run[[
-            type lol = function(...)
-                local a,b,c = ...
-                print(a,b,c)
-                assert(a == 1)
-                assert(b == 2)
-                assert(c == 3)
-            end
-
-            local function lol2(...)
-                print(...)
-                lol(...)
-            end
-
-            lol2(1,2,3)
-        ]]
-    end)
-
-    it("type function varargs", function()
-        run[[
             local lol = function(...)
                 local a,b,c = ...
-                ---print(a,b,c, "!")
-                --assert(a == 1)
-                --assert(b == 2)
-                --assert(c == 3)
+                -- a is a tuple but the rest is nil
             end
 
             local function lol2(...)

@@ -401,7 +401,13 @@ return function(analyzer_meta)
                     assert(types.IsTypeObject(v))
                 end
             else
-                assert(types.IsTypeObject(val))
+                if not types.IsTypeObject(val) then
+                    if not next(val) then
+                        error("cannot push empty table", 2)
+                    end
+                    for k,v in pairs(val) do print(k,v) end
+                    error("cannot push non type object", 2)
+                end
             end
 
             self.values[self.i] = val

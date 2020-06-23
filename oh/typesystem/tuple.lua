@@ -164,6 +164,16 @@ function Tuple:IsConst()
     return true
 end
 
+function Tuple:IsVolatile()
+    for i,v in ipairs(self.data) do
+        if not v:IsVolatile() then
+            return false
+        end
+    end
+    return true
+end
+
+
 function Tuple:IsTruthy()
     return true
 end

@@ -1,7 +1,7 @@
 -- split by casing as well? SetCleint GetClient TransferCleint
 
 local oh = require("oh")
-local syntax = require("oh.lua_syntax")
+local syntax = require("oh.lua.syntax")
 local util = require("oh.util")
 
 local function levenshtein(s, t, lim)
@@ -107,7 +107,7 @@ function check_tokens(tokens)
     end
 end
 
-local name = "oh/lua_emitter.lua"
+local name = "oh/lua/parser.lua"
 local code = oh.Code(assert(io.open(name)):read("*all"), name)
 local tokens = assert(code:Lex()).Tokens
 

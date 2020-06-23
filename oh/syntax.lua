@@ -206,39 +206,5 @@ return function(syntax)
         syntax.PostfixTypeOperators = to_lookup(syntax.PostfixTypeOperators)
     end
 
-    do
-        local bit = "local bit = not _G.bit and require(\"bit32\") or _G.bit;"
-        syntax.CompiledBinaryOperatorFunctions = {}
-
-        for op in pairs(syntax.BinaryOperators) do
-            local tr = syntax.BinaryOperatorFunctionTranslate[op]
-            if tr then
-                syntax.CompiledBinaryOperatorFunctions[op] = assert(load(bit .. "return function(a,b) return" .. tr[1] .. "a" .. tr[2] .. "b" .. tr[3] .. " end"))()
-            else
-                syntax.CompiledBinaryOperatorFunctions[op] = assert(load(bit .. "return function(a, b) return a " .. op .. " b end"))()
-            end
-        end
-
-        syntax.CompiledPrefixOperatorFunctions = {}
-        for op in pairs(syntax.PrefixOperators) do
-            local tr = syntax.PrefixOperatorFunctionTranslate[op]
-            if tr then
-                syntax.CompiledPrefixOperatorFunctions[op] = assert(load(bit .. "return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
-            else
-                syntax.CompiledPrefixOperatorFunctions[op] = assert(load(bit .. "return function(a) return " .. op .. " a end"))()
-            end
-        end
-
-        syntax.CompiledPostfixOperatorFunctions = {}
-        for op in pairs(syntax.PostfixOperators) do
-            local tr = syntax.PostfixOperatorFunctionTranslate[op]
-            if tr then
-                syntax.CompiledPostfixOperatorFunctions[op] = assert(load(bit .. "return function(a) return" .. tr[1] .. "a" ..  tr[2] .. " end"))()
-            else
-                syntax.CompiledPostfixOperatorFunctions[op] = assert(load(bit .. "return function(a) return a " .. op .. " end"))()
-            end
-        end
-    end
-
     return syntax
 end

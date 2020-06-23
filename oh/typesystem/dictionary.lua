@@ -229,6 +229,10 @@ function Dictionary:GetKeyVal(key, reverse_subset)
         end
 
         if ok then
+            if keyval.val.self then
+                keyval.val = self
+            end
+
             return keyval
         end
         table.insert(reasons, reason)
@@ -358,6 +362,9 @@ function Dictionary:Extend(t)
 
     for _, keyval in ipairs(t.data) do
         if not copy:Get(keyval.key) then
+            if keyval.val.self then
+                keyval.val = copy
+            end
             copy:Set(keyval.key, keyval.val)
         end
     end
@@ -394,6 +401,10 @@ function Dictionary:new(data)
     end
 
     return self
+end
+
+function Dictionary:IsVolatile()
+    return self.volatile
 end
 
 for k,v in pairs(types.BaseObject) do Dictionary[k] = v end

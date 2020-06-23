@@ -6,9 +6,11 @@ types.Initialize()
 local META = {}
 
 do -- type operators
-    function META:PostfixOperator(op, r, env)
+    function META:PostfixOperator(node, r, env)
+        local op = node.value.value
+
         if op == "++" then
-            return self:BinaryOperator("+", r, r, env)
+            return self:BinaryOperator({value = {value = "+"}}, r, r, env)
         end
     end
 
@@ -47,16 +49,16 @@ do -- type operators
         return false, "no operator for " .. operator .. tostring(l) .. " in runtime"
     end
 
-    function META:PrefixOperator(op, l, env)
+    function META:PrefixOperator(node, l, env)
+        local op = node.value.value
+
         if l.Type == "tuple" then l = l:Get(1) end
 
         if l.Type == "set" then
             local new_set = types.Set:new()
 
             for _, l in ipairs(l:GetElements()) do
-                for _, r in ipairs(r:GetElements()) do
-                    new_set:AddElement(assert(self:PrefixOperator(op, l, env)))
-                end
+                new_set:AddElement(assert(self:PrefixOperator(node, l, env)))
             end
 
             return new_set
@@ -64,6 +66,13 @@ do -- type operators
 
         if l.type == "any" then
             return types.Object:new("any")
+        end
+
+        if env == "typesystem" then
+            if op == "typeof" then
+                local obj = self:GetValue(node.right, "runtime")
+                return obj.contract or obj
+            end
         end
 
         if op == "-" then local res = metatable_function(self, "__unm", l) if res then return res end
@@ -156,7 +165,8 @@ do -- type operators
         return false, "no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime"
     end
 
-    function META:BinaryOperator(op, l, r, env)
+    function META:BinaryOperator(node, l, r, env)
+        local op = node.value.value
 
         -- adding two tuples at runtime in lua will practically do this
         if l.Type == "tuple" then l = l:Get(1) end
@@ -171,7 +181,7 @@ do -- type operators
 
              for _, l in ipairs(l:GetElements()) do
                  for _, r in ipairs(r:GetElements()) do
-                     new_set:AddElement(assert(self:BinaryOperator(op, l, r, env)))
+                     new_set:AddElement(assert(self:BinaryOperator(node, l, r, env)))
                  end
              end
 
@@ -181,6 +191,10 @@ do -- type operators
         if env == "typesystem" then
             if op == "|" then
                 return types.Set:new({l, r})
+            elseif op == "&" then
+                if l.Type == "dictionary" and r.Type == "dictionary" then
+                    return l:Extend(r)
+                end
             end
 
             if op == "extends" then
@@ -466,15 +480,15 @@ do -- type operators
 
             if index then
                 if index.Type == "dictionary" then
-                    return index:Get(key)
+                    if index.contract then
+                        return index.contract:Get(key)
+                    else
+                        return index:Get(key)
+                    end
                 end
 
                 if index.Type == "object" then
-                    local analyzer = require("oh").current_analyzer
-                    if analyzer then
-                        return analyzer:Call(index, types.Tuple:new({obj, key}), key.node)[1]
-                    end
-                    return index:Call(obj, key):GetData()[1]
+                    return self:Call(index, types.Tuple:new({obj, key}), key.node)[1]
                 end
             end
         end
@@ -590,7 +604,11 @@ end
 
 do -- types
     function META:CreateLuaType(type, data, const)
-        if type == "table" then
+        if type == "self" then
+            local t = types.Dictionary:new(data, const)
+            t.self = true
+            return t
+        elseif type == "table" then
             return types.Dictionary:new(data, const)
         elseif type == "..." then
             return types.Tuple:new(data)
@@ -696,6 +714,13 @@ do -- types
                     end
                 end
 
+                if not ret.data[1] then
+                    -- if this is called from CallMeLater we cannot create a nil type from node
+                    local old = call_node.inferred_type
+                    ret.data[1] = self:TypeFromImplicitNode(call_node, "nil")
+                    call_node.inferred_type = old
+                end
+
                 return ret.data
             end
 
@@ -709,6 +734,7 @@ do -- types
             local return_tuple = self:Assert(call_node, self:CallOperator(obj, arguments))
 
             if not function_node.statements then
+                print(obj, function_node)
                 error("cannot call " .. tostring(function_node) .. " because it has no statements")
             end
 
@@ -716,14 +742,12 @@ do -- types
 
                 -- TODO: function_node can be a root statement because of loadstring
                 if function_node.identifiers then
-                    local first_argument_is_self = function_node.self_call
-
-                    if first_argument_is_self then
+                    if function_node.self_call then
                         self:SetUpvalue("self", arguments:Get(1) or self:TypeFromImplicitNode(function_node, "nil"), env)
                     end
 
                     for i, identifier in ipairs(function_node.identifiers) do
-                        local argi = first_argument_is_self and (i+1) or i
+                        local argi = function_node.self_call and (i+1) or i
 
                         if identifier.value.value == "..." then
                             local values = {}
@@ -791,20 +815,26 @@ do -- types
 
             self.calling_function = nil
 
-            if not ret[1] then
-                -- if this is called from CallMeLater we cannot create a nil type from node
-                local old = call_node.inferred_type
-                ret[1] = self:TypeFromImplicitNode(call_node, "nil")
-                call_node.inferred_type = old
+            for i, func_ret in ipairs(obj:GetReturnTypes():GetData()) do
+                if not func_ret:IsVolatile() then
+                    ret[i] = func_ret
+                end
             end
 
             -- TODO: hacky workaround
-            if call_node.tokens["("] and call_node.tokens[")"] then
+            if ret[1] and call_node.tokens["("] and call_node.tokens[")"] then
                 if ret[1].Type == "tuple" then
                     ret = {ret[1]:Get(1)}
                 else
                     ret = {ret[1]}
                 end
+            end
+
+            if not ret[1] then
+                -- if this is called from CallMeLater we cannot create a nil type from node
+                local old = call_node.inferred_type
+                ret[1] = self:TypeFromImplicitNode(call_node, "nil")
+                call_node.inferred_type = old
             end
 
             return ret
@@ -1031,9 +1061,9 @@ function META:AnalyzeStatement(statement)
         local args = self:AnalyzeExpressions(statement.expressions)
         local obj = args[1]
 
+
         if obj then
             table.remove(args, 1)
-
             local values = self:Call(obj, types.Tuple:new(args), statement.expressions[1])
 
             for i,v in ipairs(statement.identifiers) do
@@ -1112,7 +1142,7 @@ do
                         if node.value.value == "any" then
                             obj = self:TypeFromImplicitNode(node, "any")
                         elseif node.value.value == "self" then
-                            obj = self.current_table
+                            obj = self:TypeFromImplicitNode(node, "self")--self.current_table
                         elseif node.value.value == "inf" then
                             obj = self:TypeFromImplicitNode(node, "number", math.huge, true)
                         elseif node.value.value == "nan" then
@@ -1170,13 +1200,13 @@ do
                     stack:Push(left)
                 end
 
-                 stack:Push(self:Assert(node, self:BinaryOperator(node.value.value, left, right, env)))
+                 stack:Push(self:Assert(node, self:BinaryOperator(node, left, right, env)))
             elseif node.kind == "prefix_operator" then
                 local left = stack:Pop()
-                stack:Push(self:Assert(node, self:PrefixOperator(node.value.value, left, env)))
+                stack:Push(self:Assert(node, self:PrefixOperator(node, left, env)))
             elseif node.kind == "postfix_operator" then
                 local right = stack:Pop()
-                stack:Push(self:Assert(node, self:PostfixOperator(node.value.value, right, env)))
+                stack:Push(self:Assert(node, self:PostfixOperator(node, right, env)))
             elseif node.kind == "postfix_expression_index" then
                 local obj = stack:Pop()
                 stack:Push(self:Assert(node, self:GetOperator(obj, self:AnalyzeExpression(node.expression))))

@@ -60,7 +60,12 @@ function oh.on_editor_save(path)
 	end
 
 	if path:find("oh/oh", nil, true) and not path:find("print_util") then
-		os.execute("busted --lua luajit")
+--		os.execute("busted --lua luajit")
+		--return
+	end
+
+	if path:find("examples/") then
+		os.execute("luajit " .. path)
 		return
 	end
 
@@ -199,7 +204,7 @@ do
 		return self
 	end
 
-	function META:Parse()
+	function META:Parse(cb)
 		if not self.Tokens then
 			local ok, err = self:Lex()
 			if not ok then
@@ -211,6 +216,10 @@ do
 		parser.code_data = self
 		parser.OnError = self.OnError
 
+		if cb then
+			parser.OnNode = function(self, node) cb(self, node) end
+		end
+
 		local ok, ast = xpcall(parser.BuildAST, traceback, parser, self.Tokens)
 
 		if not ok then
@@ -218,6 +227,7 @@ do
 		end
 
 		self.SyntaxTree = ast
+
 
 		return self
 	end
