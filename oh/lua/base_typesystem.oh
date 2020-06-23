@@ -352,7 +352,7 @@ type require = function(name)
 	error("unable to find module " .. str)
 end
 
-type table.insert = function(tbl, ...)
+type table.insert = function(tbl: {[1 .. inf] = any}, ...)
 	local pos, val = ...
 
 	if not val then

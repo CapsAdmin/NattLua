@@ -56,7 +56,7 @@ end
 ]]
 local function new(bases: {[1 .. inf] = {[string] = any}}): MergeTables(bases)
 	local meta = {}
-	
+
 	for _, base in ipairs(bases) do
 		for k, v in pairs(base) do
 			meta[k] = v
@@ -71,10 +71,10 @@ end
 local obj = new({Scale, Alpha, Sprite})
 
 obj:SetScale(2)
-print(obj:GetScale())
+--print(obj:GetScale())
 
 
-function test(list: {[1 .. inf] = number})
+function test(list: {[1 .. inf] = number}): number
 	return list
 end
 

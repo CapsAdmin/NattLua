@@ -134,6 +134,10 @@ function Dictionary.SubsetOf(A, B)
             do
                 local reasons = {}
 
+                if not B.data[1] then
+                    return false, "dictionary is empty"
+                end
+
                 for _, keyval in ipairs(B.data) do
                     local ok, reason = a.key:SubsetOf(keyval.key)
                     if ok then
@@ -358,14 +362,14 @@ function Dictionary:Copy()
 end
 
 function Dictionary:GetData()
-    return self.data 
+    return self.data
 end
 
 function Dictionary:pairs()
     local i = 1
     return function()
         local keyval = self.data and self.data[i]
-        
+
         if not keyval then
             return nil
         end

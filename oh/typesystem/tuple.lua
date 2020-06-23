@@ -164,6 +164,14 @@ function Tuple:IsConst()
     return true
 end
 
+function Tuple:IsEmpty()
+    return self:GetLength() == 0
+end
+
+function Tuple:SetLength()
+
+end
+
 function Tuple:IsVolatile()
     for i,v in ipairs(self.data) do
         if not v:IsVolatile() then

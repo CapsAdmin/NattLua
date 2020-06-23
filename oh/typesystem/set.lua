@@ -94,6 +94,14 @@ function Set:Set(key, val)
     return true
 end
 
+function Set:IsEmpty()
+    return self.datai[1] == nil
+end
+
+function Set:GetData()
+    return self.datai
+end
+
 function Set:IsVolatile()
     for _, obj in ipairs(self:GetElements()) do
         if obj.volatile then
