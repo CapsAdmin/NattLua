@@ -394,8 +394,8 @@ describe("lua test suite", function()
 
             local t, t2 = {}, {}
             obj_eq(t, t)
-            type_assert(t==t2, _ as boolean)
-            type_assert(t~=t2, _ as boolean)
+            type_assert(t==t2, _ as false)
+            type_assert(t~=t2, _ as true)
             obj_ne(t, 1)
             obj_ne(t, "")
         ]]

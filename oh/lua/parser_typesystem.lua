@@ -250,7 +250,7 @@ function META:ReadTypeExpression(priority)
         node.tokens[")"] = node.tokens[")"] or {}
         table_insert(node.tokens[")"], self:ReadValue(")"))
 
-    elseif syntax.IsTypePrefixOperator(self:GetToken()) or self:IsValue("typeof") then
+    elseif syntax.IsTypePrefixOperator(self:GetToken()) then
         node = self:Expression("prefix_operator")
         node.value = self:ReadTokenLoose()
         node.right = self:ReadTypeExpression(math_huge)

@@ -71,6 +71,9 @@ do -- type operators
         if env == "typesystem" then
             if op == "typeof" then
                 local obj = self:GetValue(node.right, "runtime")
+                if not obj then
+                    return false, "cannot find " .. self:Hash(node.right) .. " in the current typesystem scope"
+                end
                 return obj.contract or obj
             end
         end
@@ -256,7 +259,8 @@ do -- type operators
             local res = metatable_function(self, "__eq", l, r)
             if res then
                 return res
-            end
+			end
+			
             if l:IsConst() and r:IsConst() then
                 return types.Object:new("boolean", l.data == r.data, true)
             end
@@ -814,12 +818,18 @@ do -- types
             self:FireEvent("function_spec", obj)
 
             self.calling_function = nil
-
-            for i, func_ret in ipairs(obj:GetReturnTypes():GetData()) do
-                if not func_ret:IsVolatile() then
-                    ret[i] = func_ret
-                end
-            end
+			
+			if function_node.return_types then
+				self:PushScope(function_node)
+					for i, key in ipairs(function_node.identifiers) do
+						self:SetUpvalue(key, arguments:Get(i), "typesystem")
+					end
+	
+					for i, type_exp in ipairs(function_node.return_types) do
+						ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
+					end			
+				self:PopScope()
+			end
 
             -- TODO: hacky workaround
             if ret[1] and call_node.tokens["("] and call_node.tokens[")"] then
@@ -1344,12 +1354,16 @@ do
 
         local ret = {}
 
-        if node.return_types then
-            for i, type_exp in ipairs(node.return_types) do
-                ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
-            end
-        else
-            --ret[1] = self:TypeFromImplicitNode(node, "any")
+		if node.return_types then
+			self:PushScope(node)
+				for i, key in ipairs(node.identifiers) do
+					self:SetUpvalue(key, args[i], "typesystem")
+				end
+
+				for i, type_exp in ipairs(node.return_types) do
+					ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
+				end			
+			self:PopScope()
         end
 
         args = types.Tuple:new(args)

@@ -62,7 +62,6 @@ describe("function", function()
             test(1)
 
             local a = test(true)
-            print(a, "!!")
         ]]
 
         local val = analyzer:GetValue("a", "runtime")

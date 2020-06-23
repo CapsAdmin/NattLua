@@ -77,7 +77,7 @@ function oh.on_editor_save(path)
 	end
 	local res = assert(c:BuildLua())
 	require("oh.lua.base_runtime")
-	io.write(res, "\n")
+	--io.write(res, "\n")
 	--assert(load(res))()
 end
 

@@ -357,6 +357,25 @@ function Dictionary:Copy()
     return copy
 end
 
+function Dictionary:GetData()
+    return self.data 
+end
+
+function Dictionary:pairs()
+    local i = 1
+    return function()
+        local keyval = self.data and self.data[i]
+        
+        if not keyval then
+            return nil
+        end
+
+        i = i + 1
+
+        return keyval.key, keyval.val
+    end
+end
+
 function Dictionary:Extend(t)
     local copy = self:Copy()
 
@@ -374,11 +393,11 @@ end
 
 function Dictionary:IsConst()
     for _, v in ipairs(self.data) do
-        if v.val ~= self and not v.val:IsConst() then
-            return true
+        if v.val ~= self and (not v.val:IsConst() or not v.key:IsConst()) then
+            return false
         end
     end
-    return false
+    return true
 end
 
 function Dictionary:IsFalsy()

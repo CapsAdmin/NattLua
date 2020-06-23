@@ -1,21 +1,81 @@
-local BASE = {} as {
-	A = number,
-	B = number,
+local Scale = {} as {
+	scale = number,
 }
 
-type BASE = typeof BASE & {C = number}
-
-function BASE:Foo(lol: true | false): number
-	if lol then
-		return "LOL"
-	end
-	return self.A + self.B
+function Scale:SetScale(scale: number)
+	self.scale = scale
 end
 
-local Foo: (typeof BASE) & {__index = self} = {}
-Foo.__index = Foo
+function Scale:GetScale(): number
+	return self.scale
+end
 
-local self = setmetatable({}, Foo)
 
-print(self:Foo(true))
-print(self:Foo())
+local Alpha = {} as {
+	alpha = number,
+}
+
+function Alpha:SetHidden()
+	self.alpha = 0
+end
+
+function Alpha:SetVisible()
+	self.alpha = 1
+end
+
+function Alpha:SetAlpha(alpha: number)
+	self.alpha = alpha
+end
+
+local Sprite = {} as {
+	name = string,
+	x = number,
+	y = number,
+}
+
+local type MergeTables = function(bases)
+	local merged = types.Dictionary:new()
+
+	for _, base in bases:pairs() do
+		for k, v in base:pairs() do
+			merged:Set(k, v)
+		end
+	end
+
+	merged:Set("__index", merged)
+
+	return merged
+end
+
+--[[
+	{
+		[1 .. inf] = {
+			[string] = any
+		}
+	}
+]]
+local function new(bases: {[1 .. inf] = {[string] = any}}): MergeTables(bases)
+	local meta = {}
+	
+	for _, base in ipairs(bases) do
+		for k, v in pairs(base) do
+			meta[k] = v
+		end
+	end
+
+	meta.__index = meta
+
+	return setmetatable({}, meta)
+end
+
+local obj = new({Scale, Alpha, Sprite})
+
+obj:SetScale(2)
+print(obj:GetScale())
+
+
+function test(list: {[1 .. inf] = number})
+	return list
+end
+
+test({1,2,3})
