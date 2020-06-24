@@ -25,7 +25,7 @@ do -- type operators
             local func = l.meta:Get(meta_method)
 
             if func then
-                return self:Call(func, types.Tuple:new({l}))[1]
+                return self:Call(func, types.Tuple:new({l})):Get(1)
             end
         end
     end
@@ -140,7 +140,7 @@ do -- type operators
             local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
 
             if func then
-                return self:Call(func, types.Tuple:new({l, r}))[1]
+                return self:Call(func, types.Tuple:new({l, r})):Get(1)
             end
         end
     end
@@ -449,7 +449,7 @@ do -- type operators
                 end
 
                 if func.Type == "object" then
-                    return self:Call(func, types.Tuple:new({obj, key, val}), key.node)[1]
+                    return self:Call(func, types.Tuple:new({obj, key, val}), key.node):Get(1)
                 end
             end
         end
@@ -492,7 +492,7 @@ do -- type operators
                 end
 
                 if index.Type == "object" then
-                    return self:Call(index, types.Tuple:new({obj, key}), key.node)[1]
+                    return self:Call(index, types.Tuple:new({obj, key}), key.node):Get(1)
                 end
             end
         end
@@ -650,6 +650,10 @@ do -- types
                     break
                 end
 
+                if b.Type == "tuple" then
+                    b = b:Get(1)
+                end
+
                 local ok, reason = a:SubsetOf(b)
 
                 if not ok then
@@ -670,11 +674,8 @@ do -- types
                     res[i] = self:TypeFromImplicitNode(obj.node, type(v), v, true)
                 end
             end
-
             return_tuple = types.Tuple:new(res)
         else
-
-
             return_tuple = obj:GetReturnTypes()
         end
 
@@ -688,7 +689,7 @@ do -- types
 
             do -- recursive guard
                 if self.calling_function == obj then
-                    return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes().data[1]) or {self:TypeFromImplicitNode(call_node, "any")}
+                    return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes():Get(1)) or types.Tuple:new({self:TypeFromImplicitNode(call_node, "any")})
                 end
                 self.calling_function = obj
             end
@@ -799,7 +800,7 @@ do -- types
             return_tuple:Set(1, self:TypeFromImplicitNode(call_node, "nil"))
         end
 
-        return return_tuple:GetData()
+        return return_tuple
     end
 end
 
@@ -855,18 +856,15 @@ function META:AnalyzeStatement(statement)
         if statement.right then
             for i, exp in ipairs(statement.right) do
                 for i2, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
-                    if obj then
-                        if obj.Type == "tuple" then
-                            for i3,v in ipairs(obj:GetData()) do
-                                values[i + i2 - 1 + i3 - 1 ] = v
-                            end
-                        else
-                            values[i + i2 - 1] = obj
+                    if obj.Type == "tuple" then
+                        for i3,v in ipairs(obj:GetData()) do
+                            values[i + i2 - 1 + i3 - 1 ] = v
                         end
+                    else
+                        values[i + i2 - 1] = obj
                     end
-                        end
-                    end
-
+                end
+            end
 
             -- TODO: just to pass tests
             local cut = #values - #statement.right
@@ -1028,7 +1026,7 @@ function META:AnalyzeStatement(statement)
             local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple:new(args), statement.expressions[1]))
 
             for i,v in ipairs(statement.identifiers) do
-                self:SetUpvalue(v, values[i], "runtime")
+                self:SetUpvalue(v, values:Get(i), "runtime")
             end
         end
 
@@ -1353,25 +1351,19 @@ do
                     out[i] = {key = key, val = obj}
                 end
             elseif node.kind == "table_index_value" then
-                local val = self:AnalyzeExpression(node.expression, env)
-
-                if val.Type == "tuple" then
-                    for i = 1, val:GetLength() do
-                        table.insert(out, {
-                            key = #out + 1,
-                            val = val:Get(i)
-                        })
-                    end
-                elseif node.i then
+                local val = {self:AnalyzeExpression(node.expression, env)}
+                if node.i then
                     out[i] = {
                         key = node.i,
-                        val = val
+                        val = val[1]
                     }
-                else
-                    table.insert(out, {
-                        key = #out + 1,
-                        val = val
-                    })
+                elseif val then
+                    for i, val in ipairs(val) do
+                        table.insert(out, {
+                            key = #out + 1,
+                            val = val
+                        })
+                    end
                 end
             end
         end

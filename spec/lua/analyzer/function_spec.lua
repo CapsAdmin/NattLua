@@ -303,7 +303,7 @@ describe("function", function()
     it("pcall", function()
         run[[
             type pcall = function(cb: function, ...)
-                return types.Object:new("boolean"), table.unpack(analyzer:Call(cb, types.Tuple:new({...})))
+                return types.Object:new("boolean"), table.unpack(analyzer:Call(cb, types.Tuple:new({...})):GetData())
             end
 
             local ok, err = pcall(function()

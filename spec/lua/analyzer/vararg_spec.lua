@@ -33,8 +33,6 @@ describe("varargs", function()
 
             local a,b,c = test(3)
 
-            print(a,b,c)
-
             type_assert(a,1)
             type_assert(b,2)
             type_assert(c,3)

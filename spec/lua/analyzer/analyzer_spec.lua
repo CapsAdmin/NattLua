@@ -294,11 +294,13 @@ describe("analyzer", function()
         ]]
     end)
 
-    pending("type function varargs", function()
+    it("type function varargs", function()
         run[[
             local lol = function(...)
                 local a,b,c = ...
-                -- a is a tuple but the rest is nil
+                type_assert(a, 1)
+                type_assert(b, 2)
+                type_assert(c, 3)
             end
 
             local function lol2(...)

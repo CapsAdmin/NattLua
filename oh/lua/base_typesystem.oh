@@ -362,30 +362,7 @@ type table.insert = function(tbl: {[1 .. inf] = any}, ...)
 		pos = pos.data
 	end
 
-	if tbl:Type ~= "tuple" then
-		local values = {}
-
-		for i, keyval in ipairs(tbl.data) do
-			values[i] = keyval.val
-		end
-
-		local list = analyzer:CreateLuaType("list", {values = values})
-
-		for k,v in pairs(tbl) do
-			tbl[k] = nil
-		end
-
-		for k,v in pairs(list) do
-			tbl[k] = v
-		end
-
-		setmetatable(tbl, types.Tuple)
-	end
-	table.insert(tbl.data, pos, val)
-
-	tbl.max = tbl.max or analyzer:CreateLuaType("number", pos, true)
-	tbl.max.data = pos
-
+	tbl:Set(pos, val)
 end
 
 type print = function(...) print(...) end

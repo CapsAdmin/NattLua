@@ -1017,14 +1017,6 @@ R[[
     type_assert(a, nil)
  ]]
 R[[
-    --local a: {[number] = any} = {}
-    local a = {}
-    a[1] = true
-    a[2] = false
-    table.insert(a, 1337)
-    type_assert(a[3], 1337)
- ]]
-R[[
     type test = function(name)
          return analyzer:GetValue(name.data, "typesystem")
     end

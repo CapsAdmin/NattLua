@@ -396,7 +396,7 @@ return function(analyzer_meta)
         end
 
         function meta:Push(val)
-            if val[1] then
+            if val.Type == "tuple" then
                 for _,v in ipairs(val) do
                     assert(types.IsTypeObject(v))
                 end
@@ -427,9 +427,8 @@ return function(analyzer_meta)
             local val = self.values[self.i]
             self.values[self.i] = nil
 
-            if val[1] then
-                assert(types.IsTypeObject(val[1]))
-                return val[1], val
+            if val.Type == "tuple" then
+                return val:Get(1)
             end
 
             self.last_val = val
@@ -443,15 +442,14 @@ return function(analyzer_meta)
             local out = {}
 
             for _,v in ipairs(self.values) do
-                if v[1] then
-                    for _,v in ipairs(v) do
+                if v.Type == "tuple" then
+                    for _, v in ipairs(v:GetData()) do
                         table.insert(out, v)
                     end
                 else
                     table.insert(out, v)
                 end
             end
-
             return table.unpack(out)
         end
     end

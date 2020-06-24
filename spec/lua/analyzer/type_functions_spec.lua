@@ -132,4 +132,25 @@ describe("type functions", function()
             type_assert((select(2, 1,2,3)), 2)
         ]]
     end)
+
+    it("varargs", function()
+        run[[
+        type test = function(...) end
+        local a = {}
+        a[1] = true
+        a[2] = false
+        test(test(a))
+
+        ]]
+    end)
+
+    it("table.insert", function()
+        run[[
+            local a = {}
+            a[1] = true
+            a[2] = false
+            table.insert(a, 1337)
+            type_assert(a[3], 1337)
+        ]]
+    end)
 end)
