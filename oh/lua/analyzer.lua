@@ -963,9 +963,9 @@ function META:AnalyzeStatement(statement)
             end
         end
     elseif statement.kind == "function" then
-        self:SetValue(statement.expression, self:GetValue(statement.expression, "typesystem") or self:AnalyzeFunction(statement), "runtime")
+        self:SetValue(statement.expression, self:GetValue(statement.expression, "typesystem") or self:AnalyzeFunction(statement, "runtime"), "runtime")
     elseif statement.kind == "local_function" then
-        self:SetUpvalue(statement.tokens["identifier"], self:AnalyzeFunction(statement), "runtime")
+        self:SetUpvalue(statement.tokens["identifier"], self:AnalyzeFunction(statement, "runtime"), "runtime")
     elseif statement.kind == "local_type_function" or statement.kind == "local_type_function2" then
         self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement, "typesystem"), "typesystem")
     elseif statement.kind == "if" then
@@ -1149,7 +1149,7 @@ do
                     error("unhandled value type " .. node.value.type .. " " .. node:Render())
                 end
             elseif node.kind == "function" then
-                stack:Push(self:AnalyzeFunction(node))
+                stack:Push(self:AnalyzeFunction(node, env))
             elseif node.kind == "table" then
                 stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env), env == "typesystem"))
             elseif node.kind == "binary_operator" then
@@ -1170,50 +1170,7 @@ do
                 local obj = stack:Pop()
                 stack:Push(self:Assert(node, self:GetOperator(obj, self:AnalyzeExpression(node.expression))))
             elseif node.kind == "type_function" then
-                local args = {}
-                local rets = {}
-                local func
-
-                -- declaration
-                if node.identifiers then
-                    for i, key in ipairs(node.identifiers) do
-                        if key.kind == "value" and key.value.value == "..." then
-                            args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
-                            args[i].max = math.huge
-                        elseif key.kind == "type_table" then
-                            args[i] = self:AnalyzeExpression(key)
-                        else
-                            args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
-                        end
-                    end
-                end
-
-                if node.return_expressions then
-                    for i,v in ipairs(node.return_expressions) do
-                        rets[i] = self:AnalyzeExpression(v, env)
-                    end
-                end
-
-                if node.statements then
-                    local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
-                    local load_func, err = load(str, "")
-                    if not load_func then
-                        -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
-                        io.write(str, "\n")
-                        error(err)
-                    end
-                    func = load_func(require("oh"), self, types, node)
-                end
-
-
-                args = types.Tuple:new(args)
-                rets = types.Tuple:new(rets)
-
-                stack:Push(self:TypeFromImplicitNode(node, "function", {
-                    arg = args,
-                    ret = rets,
-                    lua_function = func
-                }))
+                stack:Push(self:AnalyzeFunction(node, env))
             elseif node.kind == "postfix_call" then
                 local obj = stack:Pop()
 
@@ -1272,7 +1229,7 @@ do
         return stack:Unpack()
     end
 
-    function META:AnalyzeFunction(node)
+    function META:AnalyzeFunction(node, env)
         local args = {}
 
         for i, key in ipairs(node.identifiers) do
@@ -1280,13 +1237,24 @@ do
             if key.type_expression then
                 args[i] = self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
             else
-                if key.value.value == "..." then
-                    args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
-                    args[i].max = math.huge
+                if env == "typesystem" then
+                    if key.kind == "value" and key.value.value == "..." then
+                        args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
+                        args[i].max = math.huge
+                    elseif key.kind == "type_table" then
+                        args[i] = self:AnalyzeExpression(key)
+                    else
+                        args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
+                    end
                 else
-                    args[i] = self:GetInferredType(key)
+                    if key.value.value == "..." then
+                        args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
+                        args[i].max = math.huge
+                    else
+                        args[i] = self:GetInferredType(key)
+                    end
+                    args[i].volatile = true
                 end
-                args[i].volatile = true
             end
         end
 
@@ -1315,15 +1283,38 @@ do
 			self:PopScope()
         end
 
+
+        if node.return_expressions then
+            for i,v in ipairs(node.return_expressions) do
+                ret[i] = self:AnalyzeExpression(v, env)
+            end
+        end
+
         args = types.Tuple:new(args)
         ret = types.Tuple:new(ret)
+
+        local func
+        if env == "typesystem" then
+            if node.statements and node.kind == "type_function" then
+                local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
+                local load_func, err = load(str, "")
+                if not load_func then
+                    -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
+                    io.write(str, "\n")
+                    error(err)
+                end
+                func = load_func(require("oh"), self, types, node)
+            end
+        end
 
         local obj = self:TypeFromImplicitNode(node, "function", {
             arg = args,
             ret = ret,
+            lua_function = func
         })
 
-        if node.kind ~= "local_type_function2" then
+
+        if env == "runtime" then
             self:CallMeLater(obj, args, node, true)
         end
 
