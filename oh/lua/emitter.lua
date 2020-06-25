@@ -679,9 +679,9 @@ do -- types
         self:EmitToken(node.tokens[")"])
         if node.tokens[":"] then
             self:EmitToken(node.tokens[":"])
-            for i, exp in ipairs(node.return_expressions) do
+            for i, exp in ipairs(node.return_types) do
                 self:EmitTypeExpression(exp)
-                if i ~= #node.return_expressions then
+                if i ~= #node.return_types then
                     self:EmitToken(exp.tokens[","])
                 end
             end

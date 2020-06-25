@@ -884,7 +884,6 @@ function META:AnalyzeStatement(statement)
             -- if there's a type expression override the right value
             if exp_key.type_expression then
                 local contract = self:AnalyzeExpression(exp_key.type_expression, "typesystem")
-
                 if contract.type == "nil" then
                     -- TODO: better error
                     self:Error(exp_key.type_expression, "cannot be nil")
@@ -1237,22 +1236,25 @@ do
             if key.type_expression then
                 args[i] = self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
             else
-                if env == "typesystem" then
-                    if key.kind == "value" and key.value.value == "..." then
-                        args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
-                        args[i].max = math.huge
-                    elseif key.kind == "type_table" then
-                        args[i] = self:AnalyzeExpression(key)
-                    else
-                        args[i] = self:GetValue(key.left or key, env) or (types.IsPrimitiveType(key.value.value) and self:TypeFromImplicitNode(node, key.value.value)) or self:GetInferredType(key)
-                    end
+                if key.kind == "value" and key.value.value == "..." then
+                    args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
+                    args[i].max = math.huge
+                elseif key.kind == "type_table" then
+                    args[i] = self:AnalyzeExpression(key)
                 else
-                    if key.value.value == "..." then
-                        args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
-                        args[i].max = math.huge
-                    else
+                    if env == "typesystem" then
+                        args[i] = self:GetValue(key.left or key, env)
+                        if not args[i] and types.IsPrimitiveType(key.value.value) then
+                            args[i] = self:TypeFromImplicitNode(node, key.value.value)
+                        end
+                    end
+
+                    if not args[i] then
                         args[i] = self:GetInferredType(key)
                     end
+                end
+
+                if env == "runtime" then
                     args[i].volatile = true
                 end
             end
@@ -1281,13 +1283,6 @@ do
 					ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
 				end
 			self:PopScope()
-        end
-
-
-        if node.return_expressions then
-            for i,v in ipairs(node.return_expressions) do
-                ret[i] = self:AnalyzeExpression(v, env)
-            end
         end
 
         args = types.Tuple:new(args)

@@ -101,7 +101,7 @@ type table = {
 	concat = (function(list: table, sep: string, i: number, j: number): string)    |    (function(list: table, sep: string, i: number): string)    |    (function(list: table, sep: string): string)    |    (function(list: table): string),
 	pack = (function(...): table)
 }
-type string = {
+type ^string = {
 	find = (function(s: string, pattern: string, init: number, plain: boolean): number|nil, number, ...|nil|nil)    |    (function(s: string, pattern: string, init: number): number|nil, number, ...|nil|nil)    |    (function(s: string, pattern: string): number|nil, number, ...|nil|nil),
 	len = (function(s: string): number),
 	packsize = (function(fmt: string): number),

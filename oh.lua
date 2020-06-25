@@ -25,6 +25,8 @@ function oh.GetBaseAnalyzer(ast)
 		for k,v in pairs(base.env.typesystem) do
 			g:Set(k, v)
 		end
+		-- TODO: string library isn't in base.env.typesystem
+		g:Set("string", base:GetValue("string", "typesystem"))
 		base:SetValue("_G", g, "typesystem")
 		base:GetValue("_G", "typesystem"):Set("_G", g)
 

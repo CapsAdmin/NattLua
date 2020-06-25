@@ -179,18 +179,18 @@ return function(analyzer_meta)
     end
 
     function META:CollectReturnExpressions(val)
-        self.return_expressions = self.return_expressions or {}
-        table.insert(self.return_expressions, val)
+        self.return_types = self.return_types or {}
+        table.insert(self.return_types, val)
     end
 
     function META:ClearReturnExpressions()
-        self.return_expressions = {}
+        self.return_types = {}
     end
 
     function META:GetReturnExpressions()
         local out = {}
-        if self.return_expressions then
-            for _, ret in ipairs(self.return_expressions) do
+        if self.return_types then
+            for _, ret in ipairs(self.return_types) do
                 for i, obj in ipairs(ret) do
                     if out[i] then
                         out[i] = types.Set:new({out[i], obj})

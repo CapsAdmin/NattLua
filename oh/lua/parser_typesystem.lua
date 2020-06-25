@@ -109,7 +109,7 @@ function META:ReadTypeFunctionBody(node)
 
     if self:IsValue(":") then
         node.tokens[":"] = self:ReadValue(":")
-        node.return_expressions = self:ReadTypeExpressionList()
+        node.return_types = self:ReadTypeExpressionList()
     else
         local start = self:GetToken()
         node.statements = self:ReadStatements({["end"] = true})
@@ -134,7 +134,7 @@ function META:ReadTypeFunctionBody2(node)
 
     if self:IsValue(":") then
         node.tokens[":"] = self:ReadValue(":")
-        node.return_expressions = self:ReadTypeExpressionList()
+        node.return_types = self:ReadTypeExpressionList()
     else
         local start = self:GetToken()
         node.statements = self:ReadStatements({["end"] = true})
