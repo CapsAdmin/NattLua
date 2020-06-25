@@ -1093,64 +1093,11 @@ do
                     node.result_is = self:GetValue(node, env):IsType(val)
                 end
             elseif node.kind == "value" then
-                if (node.value.type == "letter" and node.upvalue_or_global) or node.value.value == "..." then
-                    local obj
-
-                    if env == "typesystem" then
-                        if node.value.value == "any" then
-                            obj = self:TypeFromImplicitNode(node, "any")
-                        elseif node.value.value == "self" then
-                            obj = self:TypeFromImplicitNode(node, "self")--self.current_table
-                        elseif node.value.value == "inf" then
-                            obj = self:TypeFromImplicitNode(node, "number", math.huge, true)
-                        elseif node.value.value == "nan" then
-                            obj = self:TypeFromImplicitNode(node, "number", 0/0, true)
-                        end
-                    end
-
-                    if not obj then
-                        -- if it's ^string, number, etc, but not string
-                        if env == "typesystem" and types.IsPrimitiveType(self:Hash(node)) and not node.force_upvalue then
-                            obj = self:TypeFromImplicitNode(node, node.value.value)
-                        else
-                            obj = self:GetValue(node, env)
-
-                            if not obj and env == "runtime" then
-                                obj = self:GetValue(node, "typesystem")
-                            end
-                        end
-                    end
-
-
-                    if not obj and self.IndexNotFound then
-                        obj = self:IndexNotFound(node)
-                    end
-
-                    -- last resort, itemCount > number
-                    if not obj then
-                        obj = self:GetInferredType(node, env)
-                    end
-
-                    stack:Push(obj)
-                elseif node.value.type == "number" then
-                    stack:Push(self:TypeFromImplicitNode(node, "number", self:StringToNumber(node.value.value), true))
-                elseif node.value.type == "string" then
-                    stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true))
-                elseif node.value.type == "letter" then
-                    stack:Push(self:TypeFromImplicitNode(node, "string", node.value.value, true))
-                elseif node.value.value == "nil" then
-                    stack:Push(self:TypeFromImplicitNode(node, "nil", env == "typesystem"))
-                elseif node.value.value == "true" then
-                    stack:Push(self:TypeFromImplicitNode(node, "boolean", true, true))
-                elseif node.value.value == "false" then
-                    stack:Push(self:TypeFromImplicitNode(node, "boolean", false, true))
-                else
-                    error("unhandled value type " .. node.value.type .. " " .. node:Render())
-                end
+                stack:Push(self:AnalyzeValue(node, env))
             elseif node.kind == "function" then
                 stack:Push(self:AnalyzeFunction(node, env))
             elseif node.kind == "table" then
-                stack:Push(self:TypeFromImplicitNode(node, "table", self:AnalyzeTable(node, env), env == "typesystem"))
+                stack:Push(self:AnalyzeTable(node, env))
             elseif node.kind == "binary_operator" then
                 local right, left = stack:Pop(), stack:Pop()
 
@@ -1197,27 +1144,8 @@ do
                     stack:Push(self:Assert(node, self:Call(obj, types.Tuple:new(arguments), node)))
                     self.PreferTypesystem = nil
                 end
-            elseif node.kind == "type_list" then
-                local tbl = {}
-
-                if node.types then
-                    for i, exp in ipairs(node.types)do
-                        tbl[i] = self:AnalyzeExpression(exp, env)
-                    end
-                end
-
-                -- number[3] << tbl only contains {3}.. hmm
-                stack:Push(self:TypeFromImplicitNode(node, "list", {length = nil, values = tbl}))
             elseif node.kind == "type_table" then
-                local obj = self:TypeFromImplicitNode(node, "table")
-
-                self.current_table = obj
-                for _, v in ipairs(self:AnalyzeTable(node, env)) do
-                    obj:Set(v.key, v.val, true)
-                end
-                self.current_table = nil
-
-                stack:Push(obj)
+                stack:Push(self:AnalyzeTable(node, env))
             elseif node.kind == "import" or node.kind == "lsx" then
                 --stack:Push(self:AnalyzeStatement(node.root))
             else
@@ -1226,6 +1154,57 @@ do
         end
 
         return stack:Unpack()
+    end
+
+    function META:AnalyzeValue(node, env)
+        if (node.value.type == "letter" and node.upvalue_or_global) or node.value.value == "..." then
+
+            if env == "typesystem" and not node.force_upvalue then
+                if node.value.value == "any" then
+                    return self:TypeFromImplicitNode(node, "any")
+                elseif node.value.value == "self" then
+                    return self:TypeFromImplicitNode(node, "self")
+                elseif node.value.value == "inf" then
+                    return self:TypeFromImplicitNode(node, "number", math.huge, true)
+                elseif node.value.value == "nan" then
+                    return self:TypeFromImplicitNode(node, "number", 0/0, true)
+                elseif types.IsPrimitiveType(node.value.value) then
+                    -- string, number, boolean, etc
+                    return self:TypeFromImplicitNode(node, node.value.value)
+                end
+            end
+
+            local obj = self:GetValue(node, env)
+
+            if not obj and env == "runtime" then
+                obj = self:GetValue(node, "typesystem")
+            end
+
+            if not obj and self.IndexNotFound then
+               obj = self:IndexNotFound(node)
+            end
+
+            -- last resort. the identifier itemCount could become a number
+            if not obj then
+                obj = self:GetInferredType(node, env)
+            end
+
+            return obj
+        elseif node.value.type == "number" then
+            return self:TypeFromImplicitNode(node, "number", self:StringToNumber(node.value.value), true)
+        elseif node.value.type == "string" then
+            return self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true)
+        elseif node.value.type == "letter" then
+            return self:TypeFromImplicitNode(node, "string", node.value.value, true)
+        elseif node.value.value == "nil" then
+            return self:TypeFromImplicitNode(node, "nil", env == "typesystem")
+        elseif node.value.value == "true" then
+            return self:TypeFromImplicitNode(node, "boolean", true, true)
+        elseif node.value.value == "false" then
+            return self:TypeFromImplicitNode(node, "boolean", false, true)
+        end
+
+        error("unhandled value type " .. node.value.type .. " " .. node:Render())
     end
 
     function META:AnalyzeFunction(node, env)
@@ -1353,7 +1332,7 @@ do
                 end
             end
         end
-        return out
+        return self:TypeFromImplicitNode(node, "table", out, env == "typesystem")
     end
 end
 
