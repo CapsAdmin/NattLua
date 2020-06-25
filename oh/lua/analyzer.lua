@@ -888,7 +888,7 @@ function META:AnalyzeStatement(statement)
                 end
             end
 
-            -- TODO: just to pass tests
+            -- TODO: remove this if possible, it's just to pass tests
             local cut = #values - #statement.right
             if cut > 0 and (statement.right[#statement.right] and statement.right[#statement.right].value and statement.right[#statement.right].value.value ~= "...") then
                 for i = 1, cut do
@@ -1066,6 +1066,9 @@ function META:AnalyzeStatement(statement)
         self:AnalyzeStatements(statement.statements)
         self:PopScope()
     elseif statement.kind == "type_interface" then
+
+        -- TODO: remove interface? just use tables
+
         local tbl = self:GetValue(statement.key, "typesystem") or self:TypeFromImplicitNode(statement, "table", {})
 
         for _, exp in ipairs(statement.expressions) do
@@ -1109,6 +1112,7 @@ do
             self.current_expression = node
 
             if node.type_expression then
+                -- TODO: move to AnalyzeValue?
                 local val = self:AnalyzeExpression(node.type_expression, "typesystem")
                 stack:Push(val)
                 if node.tokens["is"] then
@@ -1116,29 +1120,26 @@ do
                 end
             elseif node.kind == "value" then
                 stack:Push(self:AnalyzeValue(node, env))
-            elseif node.kind == "function" then
+            elseif node.kind == "function" or node.kind == "type_function" then
                 stack:Push(self:AnalyzeFunction(node, env))
-            elseif node.kind == "table" then
+            elseif node.kind == "table" or node.kind == "type_table" then
                 stack:Push(self:AnalyzeTable(node, env))
             elseif node.kind == "binary_operator" then
                 local right, left = stack:Pop(), stack:Pop()
 
+                -- TODO: more elegant way of dealing with self?
                 if node.value.value == ":" then
                     stack:Push(left)
                 end
 
                  stack:Push(self:Assert(node, self:BinaryOperator(node, left, right, env)))
             elseif node.kind == "prefix_operator" then
-                local left = stack:Pop()
-                stack:Push(self:Assert(node, self:PrefixOperator(node, left, env)))
+                local left =
+                stack:Push(self:Assert(node, self:PrefixOperator(node, stack:Pop(), env)))
             elseif node.kind == "postfix_operator" then
-                local right = stack:Pop()
-                stack:Push(self:Assert(node, self:PostfixOperator(node, right, env)))
+                stack:Push(self:Assert(node, self:PostfixOperator(node, stack:Pop(), env)))
             elseif node.kind == "postfix_expression_index" then
-                local obj = stack:Pop()
-                stack:Push(self:Assert(node, self:GetOperator(obj, self:AnalyzeExpression(node.expression))))
-            elseif node.kind == "type_function" then
-                stack:Push(self:AnalyzeFunction(node, env))
+                stack:Push(self:Assert(node, self:GetOperator(stack:Pop(), self:AnalyzeExpression(node.expression))))
             elseif node.kind == "postfix_call" then
                 local obj = stack:Pop()
 
@@ -1151,8 +1152,6 @@ do
                 self.PreferTypesystem = node.type_call
                 stack:Push(self:Assert(node, self:Call(obj, types.Tuple:new(arguments), node)))
                 self.PreferTypesystem = nil
-            elseif node.kind == "type_table" then
-                stack:Push(self:AnalyzeTable(node, env))
             elseif node.kind == "import" or node.kind == "lsx" then
                 --stack:Push(self:AnalyzeStatement(node.root))
             else
