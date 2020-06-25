@@ -635,8 +635,30 @@ do -- types
             return false, table.concat(errros, "\n")
         end
 
-        if obj.Type == "object" and obj.type == "any" then
-            return self:TypeFromImplicitNode(function_node, "any")
+        if obj.Type == "object" then
+            if obj.type == "any" then
+                return self:TypeFromImplicitNode(function_node, "any")
+            end
+
+            if obj.type ~= "function" then
+                return false, tostring(obj) .. " cannot be called"
+            end
+        end
+
+        if obj.Type == "dictionary" then
+            local __call = obj.meta and obj.meta:Get("__call")
+
+            if __call then
+                obj.volatile = true
+
+                local new_arguments = {obj}
+
+                for i,v in ipairs(arguments:GetData()) do
+                    table.insert(new_arguments, v)
+                end
+
+                return self:Call(__call, types.Tuple:new(new_arguments), call_node)
+            end
         end
 
         do
@@ -1123,27 +1145,12 @@ do
                 local arguments = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
 
                 if node.self_call then
-                    local val = stack:Pop()
-                    table.insert(arguments, 1, val)
+                    table.insert(arguments, 1, stack:Pop())
                 end
 
-                --lua function
-                local callable = obj.Type == "dictionary" and obj.meta and obj.meta:Get("__call")
-
-                if callable then
-                    local arg = obj
-                    arg.volatile = true
-                    table.insert(arguments, 1, arg)
-                    obj = callable
-                end
-
-                if obj.type and obj.type ~= "function" and obj.type ~= "table" and obj.type ~= "any" then
-                    self:Error(node, tostring(obj) .. " cannot be called")
-                else
-                    self.PreferTypesystem = node.type_call
-                    stack:Push(self:Assert(node, self:Call(obj, types.Tuple:new(arguments), node)))
-                    self.PreferTypesystem = nil
-                end
+                self.PreferTypesystem = node.type_call
+                stack:Push(self:Assert(node, self:Call(obj, types.Tuple:new(arguments), node)))
+                self.PreferTypesystem = nil
             elseif node.kind == "type_table" then
                 stack:Push(self:AnalyzeTable(node, env))
             elseif node.kind == "import" or node.kind == "lsx" then
