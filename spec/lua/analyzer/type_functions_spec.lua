@@ -144,6 +144,18 @@ describe("type functions", function()
         ]]
     end)
 
+    it("exlcude", function()
+        run[[
+            type Exclude = function(T, U)
+                T:RemoveElement(U)
+                return T
+            end
+
+            local a: Exclude<1|2|3, 2>
+            type_assert(a, _ as 1|3)
+        ]]
+    end)
+
     it("table.insert", function()
         run[[
             local a = {}

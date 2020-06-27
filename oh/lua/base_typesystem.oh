@@ -212,7 +212,7 @@ type ^string.match = function(s, pattern, init)
 	if s.data and pattern.data then
 		local res = {s.data:match(pattern.data)}
 		for i,v in ipairs(res) do
-			res[i] = analyzer:CreateLuaType("string", v)
+			res[i] = types.Object:new("string", v)
 		end
 		return table.unpack(res)
 	end
@@ -220,7 +220,7 @@ type ^string.match = function(s, pattern, init)
 	if pattern.data then
 		local out = {}
 		for s in pattern.data:gmatch("%b()") do
-			table.insert(out, analyzer:CreateLuaType("string") + analyzer:CreateLuaType("nil"))
+			table.insert(out, types.Object:new("string") + types.Object:new("nil"))
 		end
 		return table.unpack(out)
 	end
@@ -228,10 +228,10 @@ end
 
 type ^string.len = function(str)
 	if str.Type == "object" and str.data then
-		return analyzer:CreateLuaType("number", #str.data, true)
+		return types.Object:new("number", #str.data, true)
 	end
 
-	return analyzer:CreateLuaType("number")
+	return types.Object:new("number")
 end
 
 type ^string.gsub = function(str, pattern, val)
@@ -240,23 +240,23 @@ type ^string.gsub = function(str, pattern, val)
 
 		if pattern.data then
 			for group in pattern.data:gmatch("%b()") do
-				table.insert(args, analyzer:CreateLuaType("string"))
+				table.insert(args, types.Object:new("string"))
 			end
 		end
 
 		if not args[1] then
-			args[1] = analyzer:CreateLuaType("string")
+			args[1] = types.Object:new("string")
 		end
 
 		for i,v in ipairs(args) do
 			val.data.arg.data[i] = v
 		end
 
-		val.data.ret.data[1] = analyzer:CreateLuaType("string")
+		val.data.ret.data[1] = types.Object:new("string")
 
 	end
 
-	return analyzer:CreateLuaType("string")
+	return types.Object:new("string")
 end
 
 type assert = function(obj, err)
@@ -399,7 +399,7 @@ type math.floor = function(num)
 	if num.data then
 		return math.floor(num.data)
 	end
-	return analyzer:CreateLuaType("number")
+	return types.Object:new("number")
 end
 
 local type load = function(str, huh, huh, env)

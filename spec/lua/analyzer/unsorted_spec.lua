@@ -654,28 +654,12 @@ R[[
     local a: string = "1"
     type a = string | number | (boolean | string)
 
-    type type_func = function(a,b,c) return analyzer:CreateLuaType("string"), analyzer:CreateLuaType("number") end
+    type type_func = function(a,b,c) return types.Object:new("string"), types.Object:new("number") end
     local a, b = type_func(a,2,3)
     type_assert(a, _ as string)
     type_assert(b, _ as number)
 ]]
-R[[
-    type Array = function(T, L)
-        return analyzer:CreateLuaType("list", {values = T.name, length = L.data})
-    end
 
-    type Exclude = function(T, U)
-        T:RemoveElement(U)
-        return T
-    end
-
-    local a: Exclude<1|2|3, 2>
-    type_assert(a, _ as 1|3)
-
-    type Array = function(T, L)
-        return analyzer:CreateLuaType("list", {values = T.name, length = L.data})
-    end
-]]
 R[[
     function pairs(t)
         return next, t, nil
@@ -715,20 +699,20 @@ R[[
 
             for k, v in pairs(tbl.value) do
                 if not key then
-                    key = analyzer:CreateLuaType(type(k))
+                    key = types.Object:new(type(k))
                 elseif not key:IsType(k) then
                     if type(k) == "string" then
-                        key = types.Fuse(key, analyzer:CreateLuaType("string"))
+                        key = types.Fuse(key, types.Object:new("string"))
                     else
-                        key = types.Fuse(key, analyzer:CreateLuaType(k.name))
+                        key = types.Fuse(key, types.Object:new(k.name))
                     end
                 end
 
                 if not val then
-                    val = analyzer:CreateLuaType(type(v))
+                    val = types.Object:new(type(v))
                 else
                     if not val:IsType(v) then
-                        val = types.Fuse(val, analyzer:CreateLuaType(v.name))
+                        val = types.Fuse(val, types.Object:new(v.name))
                     end
                 end
             end
@@ -743,7 +727,7 @@ R[[
                     val:AddElement(keyval.val)
                 end
             elseif tbl.Type == "tuple" then
-                key = analyzer:CreateLuaType("number", i, const)
+                key = types.Object:new("number", i, const)
                 key.max = tbl.max and tbl.max:Copy() or nil
                 for _, val in ipairs(tbl.data) do
                     val:AddElement(val)

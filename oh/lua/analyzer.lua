@@ -512,50 +512,41 @@ do -- type operators
 end
 
 do -- types
-    function META:CreateLuaType(type, data, const)
-        if type == "self" then
-            local t = types.Dictionary:new(data, const)
-            t.self = true
-            return t
-        elseif type == "table" then
-            return types.Dictionary:new(data, const)
-        elseif type == "..." then
-            return types.Tuple:new(data)
-        elseif type == "string" then
-            local obj = types.Object:new(type, data, const)
+    function META:TypeFromImplicitNode(node, type, data, const)
+        node.scope = self.scope -- move this out of here
 
+        local obj
+
+        if type == "self" then
+            obj = types.Dictionary:new(data, const)
+            obj.self = true
+        elseif type == "table" then
+            obj = types.Dictionary:new(data, const)
+        elseif type == "..." then
+            obj = types.Tuple:new(data)
+        elseif type == "string" then
+            obj = types.Object:new(type, data, const)
+        elseif
+            type == "number" or
+            type == "function" or
+            type == "boolean" or
+            type == "nil" or
+            type == "any"
+        then
+            obj = types.Object:new(type, data, const)
+        end
+
+        if type == "string" then
             if not self.string_meta then
-                local meta = self:CreateLuaType("table", {})
+                local meta = types.Dictionary:new({}, const)
                 meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
                 self.string_meta = meta
             end
 
             obj.meta = self.string_meta
-
-            return obj
-        elseif type == "number" or type == "function" or type == "boolean" then
-            return types.Object:new(type, data, const)
-        elseif type == "nil" then
-            return types.Object:new(type, const)
-        elseif type == "any" then
-            return types.Object:new(type, const)
-        elseif type == "list" then
-            data = data or {}
-            local tup = types.Tuple:new(data.values)
-            tup.ElementType = data.type
-            tup.max = data.length
-            return tup
         end
 
-        error("NYI " .. type)
-    end
-
-    function META:TypeFromImplicitNode(node, name, data, const)
-        node.scope = self.scope -- move this out of here
-
-        local obj = self:CreateLuaType(name, data, const)
-
-        if not obj then error("NYI: " .. name) end
+        if not obj then error("NYI: " .. type) end
 
         obj.node = node
         node.inferred_type = obj
@@ -928,11 +919,7 @@ function META:AnalyzeStatement(statement)
                     end
                 end
 
-                if val.type == "dictionary" and contract.type == "list" then
-                    assert("NYI")
-                else
-                    val.contract = contract
-                end
+                val.contract = contract
 
                 if not values[i] then
                     val = contract
