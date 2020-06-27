@@ -517,23 +517,23 @@ do -- types
 
         local obj
 
-        if type == "self" then
-            obj = types.Dictionary:new(data, const)
-            obj.self = true
-        elseif type == "table" then
+        if type == "table" or type == "self" then
             obj = types.Dictionary:new(data, const)
         elseif type == "..." then
             obj = types.Tuple:new(data)
-        elseif type == "string" then
-            obj = types.Object:new(type, data, const)
         elseif
             type == "number" or
+            type == "string" or
             type == "function" or
             type == "boolean" or
             type == "nil" or
             type == "any"
         then
             obj = types.Object:new(type, data, const)
+        end
+
+        if type == "self" then
+            obj.self = true
         end
 
         if type == "string" then
@@ -1190,7 +1190,7 @@ do
         elseif node.value.type == "letter" then
             return self:TypeFromImplicitNode(node, "string", node.value.value, true)
         elseif node.value.value == "nil" then
-            return self:TypeFromImplicitNode(node, "nil", env == "typesystem")
+            return self:TypeFromImplicitNode(node, "nil", nil, env == "typesystem")
         elseif node.value.value == "true" then
             return self:TypeFromImplicitNode(node, "boolean", true, true)
         elseif node.value.value == "false" then

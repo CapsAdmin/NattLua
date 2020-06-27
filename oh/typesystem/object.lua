@@ -250,7 +250,9 @@ function Object:new(type, data, const)
 
     self.uid = uid
     self:SetType(type)
+
     self.data = data
+
     self.const = const
 
     return self
