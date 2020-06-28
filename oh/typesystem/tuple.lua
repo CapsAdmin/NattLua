@@ -24,7 +24,7 @@ function META:Merge(tup, dont_extend)
                 v = v:Copy()
                 v.volatile = true
             end
-            src[i] = types.Set:new({src[i], v})
+            src[i] = types.Set({src[i], v})
         else
             local prev = src[i]
 
@@ -70,7 +70,7 @@ function META:Copy()
     for i, v in ipairs(self.data) do
         copy[i] = v:Copy()
     end
-    return META:new(copy)
+    return types.Tuple(copy)
 end
 
 function META.SubsetOf(A, B)
@@ -186,11 +186,10 @@ function META:IsFalsy()
     return false
 end
 
-function META:new(tbl)
-    local self = setmetatable({}, self)
-    self.data = tbl or {}
+function META:Initialize(data)
+    self.data = data or {}
 
-    for i,v in ipairs(self.data) do
+    for _,v in ipairs(self.data) do
         if not types.IsTypeObject(v) then
             for k,v in pairs(v) do print(k,v) end
             error(tostring(v) .. " is not a type object")
@@ -200,6 +199,4 @@ function META:new(tbl)
     return self
 end
 
-types.RegisterType(META)
-
-return META
+return types.RegisterType(META)

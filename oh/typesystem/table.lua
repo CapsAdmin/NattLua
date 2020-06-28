@@ -168,7 +168,7 @@ function META.SubsetOf(A, B)
 
         return true
     elseif B.Type == "set" then
-        return types.Set:new({A}):SubsetOf(B)
+        return types.Set({A}):SubsetOf(B)
     end
 
     return types.errors.subset(A, B)
@@ -179,7 +179,7 @@ function META:IsDynamic()
 end
 
 function META:Union(tbk)
-    local copy = types.Table:new({})
+    local copy = types.Table({})
 
     for _, keyval in ipairs(self.data) do
         copy:Set(keyval.key, keyval.val)
@@ -203,7 +203,7 @@ function META:Delete(key)
 end
 
 function META:GetKeySet()
-    local set = types.Set:new()
+    local set = types.Set()
 
     for _, keyval in ipairs(self.data) do
         set:AddElement(keyval.key:Copy())
@@ -279,7 +279,7 @@ function META:Set(key, val, raw)
         table.insert(self.data, {key = key, val = val})
     else
         if keyval.val and keyval.key:Serialize() ~= key:Serialize() then
-            keyval.val = types.Set:new({keyval.val, val})
+            keyval.val = types.Set({keyval.val, val})
         else
             keyval.val = val
         end
@@ -335,7 +335,7 @@ function META:CopyLiteralness(from)
 end
 
 function META:Copy()
-    local copy = META:new({})
+    local copy = types.Table({})
 
     for _, keyval in ipairs(self.data) do
         local k,v = keyval.key, keyval.val
@@ -430,9 +430,11 @@ function META:IsTruthy()
     return true
 end
 
-function META:new(data)
-    local self = setmetatable({}, self)
+function META:IsVolatile()
+    return self.volatile
+end
 
+function META:Initialize(data)
     self.data = {}
 
     if data then
@@ -440,14 +442,6 @@ function META:new(data)
             self:Set(v.key, v.val)
         end
     end
-
-    return self
 end
 
-function META:IsVolatile()
-    return self.volatile
-end
-
-types.RegisterType(META)
-
-return META
+return types.RegisterType(META)

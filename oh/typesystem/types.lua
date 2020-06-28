@@ -1,5 +1,3 @@
-local syntax = require("oh.lua.syntax")
-
 local types = {}
 
 
@@ -42,11 +40,11 @@ types.errors = {
 
 function types.Cast(val)
     if type(val) == "string" then
-        return types.String:new(val):MakeLiteral(true)
+        return types.String(val):MakeLiteral(true)
     elseif type(val) == "boolean" then
-        return types.Symbol:new(val)
+        return types.Symbol(val)
     elseif type(val) == "number" then
-        return types.Number:new(val):MakeLiteral(true)
+        return types.Number(val):MakeLiteral(true)
     end
     return val
 end
@@ -111,11 +109,23 @@ do
     types.BaseObject = Base
 end
 
+local uid = 0
 function types.RegisterType(meta)
     for k, v in pairs(types.BaseObject) do
         if not meta[k] then
             meta[k] = v
         end
+    end
+
+    return function(data)
+        local self = setmetatable({}, meta)
+        self.data = data
+        self.uid = uid
+        uid = uid + 1
+        if self.Initialize then
+            self:Initialize(data)
+        end
+        return self
     end
 end
 
@@ -129,13 +139,13 @@ function types.Initialize()
     types.Any = require("oh.typesystem.any")
     types.Symbol = require("oh.typesystem.symbol")
 
-    types.Nil = types.Symbol:new()
-    types.True = types.Symbol:new(true)
-    types.False = types.Symbol:new(false)
-    types.AnyType = types.Any:new()
-    types.Boolean = types.Set:new({types.True, types.False})
-    types.NumberType = types.Number:new()
-    types.StringType = types.String:new()
+    types.Nil = types.Symbol()
+    types.True = types.Symbol(true)
+    types.False = types.Symbol(false)
+    types.AnyType = types.Any()
+    types.Boolean = types.Set({types.True, types.False})
+    types.NumberType = types.Number()
+    types.StringType = types.String()
 end
 
 return types

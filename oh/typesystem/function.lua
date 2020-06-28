@@ -44,7 +44,7 @@ end
 function META:Copy()
     local data = {ret = self.data.ret:Copy(), arg = self.data.arg:Copy()}
 
-    local copy = META:new(data):MakeLiteral(self.literal)
+    local copy = types.Function(data):MakeLiteral(self.literal)
     copy.volatile = self.volatile
     return copy
 end
@@ -68,7 +68,7 @@ function META.SubsetOf(A, B)
 
         return true
     elseif B.Type == "set" then
-        return types.Set:new({A}):SubsetOf(B)
+        return types.Set({A}):SubsetOf(B)
     end
 
     return false, "NYI " .. tostring(B)
@@ -95,19 +95,4 @@ function META:IsTruthy()
     return true
 end
 
-local uid = 0
-
-function META:new(data)
-    local self = setmetatable({}, self)
-
-    uid = uid + 1
-
-    self.uid = uid
-    self.data = data
-
-    return self
-end
-
-types.RegisterType(META)
-
-return META
+return types.RegisterType(META)

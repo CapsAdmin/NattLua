@@ -193,7 +193,7 @@ return function(analyzer_meta)
             for _, ret in ipairs(self.return_types) do
                 for i, obj in ipairs(ret) do
                     if out[i] then
-                        out[i] = types.Set:new({out[i], obj})
+                        out[i] = types.Set({out[i], obj})
                     else
                         out[i] = obj
                     end

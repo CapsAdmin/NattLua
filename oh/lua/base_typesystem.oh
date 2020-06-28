@@ -212,7 +212,7 @@ type ^string.match = function(s, pattern, init)
 	if s.data and pattern.data then
 		local res = {s.data:match(pattern.data)}
 		for i,v in ipairs(res) do
-			res[i] = types.String:new(v)
+			res[i] = types.String(v)
 		end
 		return table.unpack(res)
 	end
@@ -220,7 +220,7 @@ type ^string.match = function(s, pattern, init)
 	if pattern.data then
 		local out = {}
 		for s in pattern.data:gmatch("%b()") do
-			table.insert(out, types.String:new() + types.Nil)
+			table.insert(out, types.String() + types.Nil)
 		end
 		return table.unpack(out)
 	end
@@ -228,22 +228,22 @@ end
 
 type ^string.len = function(str: string)
 	if str.Type == "set" then
-		local copy = types.Set:new()
+		local copy = types.Set()
 		for _, obj in ipairs(str:GetElements()) do
 			if obj:IsLiteral() then
-				copy:AddElement(types.Number:new(#obj:GetData()):MakeLiteral(true))
+				copy:AddElement(types.Number(#obj:GetData()):MakeLiteral(true))
 			else
-				copy:AddElement(types.Number:new())
+				copy:AddElement(types.Number())
 			end
 		end
 		return copy
 	end
 
 	if str:IsLiteral() then
-		return types.Number:new(#str.data):MakeLiteral(true)
+		return types.Number(#str.data):MakeLiteral(true)
 	end
 
-	return types.Number:new()
+	return types.Number()
 end
 
 type ^string.gsub = function(str, pattern, val)
@@ -252,23 +252,23 @@ type ^string.gsub = function(str, pattern, val)
 
 		if pattern.data then
 			for group in pattern.data:gmatch("%b()") do
-				table.insert(args, types.String:new())
+				table.insert(args, types.String())
 			end
 		end
 
 		if not args[1] then
-			args[1] = types.String:new()
+			args[1] = types.String()
 		end
 
 		for i,v in ipairs(args) do
 			val.data.arg.data[i] = v
 		end
 
-		val.data.ret.data[1] = types.String:new()
+		val.data.ret.data[1] = types.String()
 
 	end
 
-	return types.String:new()
+	return types.String()
 end
 
 type assert = function(obj, err)
@@ -308,8 +308,8 @@ type next = function(t: {[any] = any}, k: any)
 		return
 	end
 
-	local k = types.Set:new()
-	local v = types.Set:new()
+	local k = types.Set()
+	local v = types.Set()
 
 	for _, kv in ipairs(t.data) do
 		kv.key.node = t.node
@@ -380,7 +380,7 @@ end
 type print = function(...) print(...) end
 
 type table.sort = function(tbl, func)
-	local set = types.Set:new()
+	local set = types.Set()
 
 	if tbl.Type == "tuple" then
 		for i,v in ipairs(tbl:GetData()) do
@@ -411,7 +411,7 @@ type math.floor = function(num)
 	if num.data then
 		return math.floor(num.data)
 	end
-	return types.Number:new()
+	return types.Number()
 end
 
 local type load = function(str, huh, huh, env)
@@ -432,8 +432,8 @@ local type load = function(str, huh, huh, env)
 	end
 
 	return self:TypeFromImplicitNode(code.SyntaxTree, "function", {
-		arg = types.Tuple:new({}),
-		ret = types.Tuple:new({}),
+		arg = types.Tuple({}),
+		ret = types.Tuple({}),
 		lua_function = function()
 			types.collected_return_tuples = types.collected_return_tuples or {}
 			table.insert(types.collected_return_tuples,  1, {})

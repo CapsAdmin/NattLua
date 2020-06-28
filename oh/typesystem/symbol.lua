@@ -23,7 +23,7 @@ function META:GetData()
 end
 
 function META:Copy()
-    local copy = META:new(self:GetData())
+    local copy = types.Symbol(self:GetData())
     copy.truthy = self.truthy
 
     return copy
@@ -75,22 +75,9 @@ function META:IsTruthy()
    return self.truthy
 end
 
-local uid = 0
-
-function META:new(data)
-    local self = setmetatable({}, self)
-
-    uid = uid + 1
-
-    self.uid = uid
-    self.data = data
+function META:Initialize(data)
     self.literal = true
-
-    self.truthy = not not self.data
-
-    return self
+    self.truthy = not not data
 end
 
-types.RegisterType(META)
-
-return META
+return types.RegisterType(META)

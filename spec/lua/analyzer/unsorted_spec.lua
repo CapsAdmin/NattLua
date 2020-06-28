@@ -623,7 +623,7 @@ R[[
     local a: string = "1"
     type a = string | number | (boolean | string)
 
-    type type_func = function(a,b,c) return types.String:new(), types.Number:new() end
+    type type_func = function(a,b,c) return types.String(), types.Number() end
     local a, b = type_func(a,2,3)
     type_assert(a, _ as string)
     type_assert(b, _ as number)
@@ -978,8 +978,8 @@ R[[
 
     local type check = function(func)
         local a = func.data.arg.data[1]
-        local b = types.Set:new({
-            types.Number:new(1),
+        local b = types.Set({
+            types.Number(1),
             types.False,
             types.True
         })

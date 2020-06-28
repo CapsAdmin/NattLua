@@ -177,7 +177,7 @@ function META.SubsetOf(A, B)
     end
 
     if B.Type ~= "set" then
-        return A:SubsetOf(META:new({B}))
+        return A:SubsetOf(types.Set({B}))
     end
 
     if A:IsVolatile() then
@@ -213,7 +213,7 @@ end
 
 
 function META:Intersect(set)
-    local copy = types.Set:new()
+    local copy = types.Set()
 
     for _, e in ipairs(self.datai) do
         if set:Get(e) then
@@ -236,7 +236,7 @@ function META:Subtract(set)
 end
 
 function META:Copy()
-    local copy = META:new()
+    local copy = types.Set()
     for _, e in ipairs(self.datai) do
         copy:AddElement(e)
     end
@@ -274,21 +274,15 @@ function META:IsFalsy()
     return false
 end
 
-function META:new(values)
-    local self = setmetatable({}, META)
-
+function META:Initialize(data)
     self.data = {}
     self.datai = {}
 
-    if values then
-        for _, v in ipairs(values) do
+    if data then
+        for _, v in ipairs(data) do
             self:AddElement(v)
         end
     end
-
-    return self
 end
 
-types.RegisterType(META)
-
-return META
+return types.RegisterType(META)

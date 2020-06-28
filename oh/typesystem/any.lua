@@ -48,20 +48,4 @@ function META:IsTruthy()
     return true
 end
 
-local uid = 0
-
-function META:new()
-    local self = setmetatable({}, self)
-
-    uid = uid + 1
-    self.uid = uid
-
-    self.Type = "any"
-    assert(self.Type == "any")
-
-    return self
-end
-
-types.RegisterType(META)
-
-return META
+return types.RegisterType(META)

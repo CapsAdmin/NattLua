@@ -38,7 +38,7 @@ end
 function META:Copy()
     local data = self.data
 
-    local copy = META:new(data):MakeLiteral(self.literal)
+    local copy = types.String(data):MakeLiteral(self.literal)
     copy.volatile = self.volatile
     return copy
 end
@@ -141,19 +141,4 @@ function META:IsTruthy()
     return true
 end
 
-local uid = 0
-
-function META:new( data)
-    local self = setmetatable({}, self)
-
-    uid = uid + 1
-
-    self.uid = uid
-    self.data = data
-
-    return self
-end
-
-types.RegisterType(META)
-
-return META
+return types.RegisterType(META)
