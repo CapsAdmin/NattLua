@@ -146,4 +146,28 @@ describe("table", function()
             type_assert(tbl[true], nil)
         ]])
     end)
+
+    it("is literal", function()
+        local a = run[[
+            local type a = {a = 1, b = 2}
+        ]]
+        assert(a:GetValue("a", "typesystem"):IsLiteral() == true)
+
+        local a = run[[
+            local type a = {a = 1, b = 2, c = {c = true}}
+        ]]
+        assert(a:GetValue("a", "typesystem"):IsLiteral() == true)
+    end)
+
+    it("is not literal", function()
+        local a = run[[
+            local type a = {a = number, [string] = boolean}
+        ]]
+        assert(a:GetValue("a", "typesystem"):IsLiteral() == false)
+
+        local a = run[[
+            local type a = {a = 1, b = 2, c = {c = boolean}}
+        ]]
+        assert(a:GetValue("a", "typesystem"):IsLiteral() == false)
+    end)
 end)
