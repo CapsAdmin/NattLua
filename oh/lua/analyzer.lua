@@ -32,9 +32,9 @@ do -- type operators
 
     local function arithmetic(l, type, operator)
         assert(operators[operator], "cannot map operator " .. tostring(operator))
-        if l.type == type then
+        if l.Type == type then
             if l:IsLiteral() then
-                local obj = types.Object:new(type, operators[operator](l.data), true)
+                local obj = types.Number:new(operators[operator](l.data), true)
 
                 if l.max then
                     obj.max = arithmetic(l.max, type, operator)
@@ -43,7 +43,7 @@ do -- type operators
                 return obj
             end
 
-            return types.Object:new(type)
+            return types.Number:new()
         end
 
         return false, "no operator for " .. operator .. tostring(l) .. " in runtime"
@@ -64,8 +64,8 @@ do -- type operators
             return new_set
         end
 
-        if l.type == "any" then
-            return types.Object:new("any")
+        if l.Type == "any" then
+            return types.Any:new()
         end
 
         if env == "typesystem" then
@@ -84,15 +84,15 @@ do -- type operators
 
         if op == "not" then
             if l:IsTruthy() and l:IsFalsy() then
-                return types.Object:new("boolean")
+                return types.Boolean
             end
 
             if l:IsTruthy() then
-                return types.Object:new("boolean", false, true)
+                return types.False
             end
 
             if l:IsFalsy() then
-                return types.Object:new("boolean", true, true)
+                return types.True
             end
         end
 
@@ -101,9 +101,9 @@ do -- type operators
         elseif op == "~" then return arithmetic(l, "number", op)
         elseif op == "#" then
             if l.Type == "table" then
-                return types.Object:new("number", l:GetLength(), l:IsLiteral())
-            elseif l.Type == "object" and l.type == "string" then
-                return types.Object:new("number", l:GetData() and #l:GetData() or nil, l:IsLiteral())
+                return types.Number:new(l:GetLength(), l:IsLiteral())
+            elseif l.Type == "string" then
+                return types.Number:new(l:GetData() and #l:GetData() or nil, l:IsLiteral())
             end
         end
 
@@ -147,9 +147,10 @@ do -- type operators
 
     local function arithmetic(l,r, type, operator)
         assert(operators[operator], "cannot map operator " .. tostring(operator))
-        if type and l.type == type and r.type == type then
+        if type and l.Type == type and r.Type == type then
             if l:IsLiteral() and r:IsLiteral() then
-                local obj = types.Object:new(type, operators[operator](l.data, r.data), true)
+
+                local obj = types.Number:new(operators[operator](l.data, r.data), true)
 
                 if r.max then
                     obj.max = arithmetic(l, r.max, type, operator)
@@ -162,7 +163,7 @@ do -- type operators
                 return obj
             end
 
-            return types.Object:new(type)
+            return types.Number:new()
         end
 
         return false, "no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime"
@@ -216,8 +217,8 @@ do -- type operators
             return self:GetOperator(l, r)
         end
 
-        if l.type == "any" or r.type == "any" then
-            return types.Object:new("any")
+        if l.Type == "any" or r.Type == "any" then
+            return types.Any:new()
         end
 
         if op == "+" then local res = metatable_function(self, "__add", l, r) if res then return res end
@@ -233,24 +234,22 @@ do -- type operators
         elseif op == "<<" then local res = metatable_function(self, "__lshift", l, r) if res then return res end
         elseif op == ">>" then local res = metatable_function(self, "__rshift", l, r) if res then return res end end
 
-        if l.Type == "object" then
-            if l.type == "number" and r.type == "number" then
-                if op == "~=" then
-                    if l.max and l.max.data then
-                        return types.Object:new("boolean", not (r.data >= l.data and r.data <= l.max.data), true)
-                    end
+        if l.Type == "number" and r.Type == "number" then
+            if op == "~=" then
+                if l.max and l.max.data then
+                    return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.False
+                end
 
-                    if r.max and r.max.data then
-                        return types.Object:new("boolean", not (l.data >= r.data and l.data <= r.max.data), true)
-                    end
-                elseif op == "==" then
-                    if l.max and l.max.data then
-                        return types.Object:new("boolean", r.data >= l.data and r.data <= l.max.data, true)
-                    end
+                if r.max and r.max.data then
+                    return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.False
+                end
+            elseif op == "==" then
+                if l.max and l.max.data then
+                    return r.data >= l.data and r.data <= l.max.data and types.True or types.False
+                end
 
-                    if r.max and r.max.data then
-                        return types.Object:new("boolean", l.data >= r.data and l.data <= r.max.data, true)
-                    end
+                if r.max and r.max.data then
+                    return l.data >= r.data and l.data <= r.max.data and types.True or types.False
                 end
             end
         end
@@ -262,22 +261,22 @@ do -- type operators
 			end
 
             if l:IsLiteral() and r:IsLiteral() then
-                return types.Object:new("boolean", l.data == r.data, true)
+                return l.data == r.data and types.True or types.False
             end
 
-            if l.type == "nil" and r.type == "nil" then
-                return types.Object:new("boolean", nil == nil, true)
+            if l.Type == "symbol" and r.Type == "symbol" and l:GetData() == nil and r:GetData() == nil then
+                return types.True
             end
 
-            if l.type ~= r.type then
-                return types.Object:new("boolean", false, true)
+            if l.Type ~= r.Type then
+                return types.False
             end
 
             if l == r then
-                return types.Object:new("boolean", true, true)
+                return types.True
             end
 
-            return types.Object:new("boolean")
+            return types.Boolean
         elseif op == "~=" then
             local res = metatable_function(self, "__eq", l, r)
             if res then
@@ -287,62 +286,62 @@ do -- type operators
                 return res
             end
             if l:IsLiteral() and r:IsLiteral() then
-                return types.Object:new("boolean", l.data ~= r.data, true)
+                return l.data ~= r.data and types.True or types.False
             end
 
-            if l.type == "nil" and r.type == "nil" then
-                return types.Object:new("boolean", nil ~= nil, true)
+            if l == types.Nil and r == types.Nil then
+                return types.True
             end
 
-            if l.type ~= r.type then
-                return types.Object:new("boolean", true, true)
+            if l.Type ~= r.Type then
+                return types.True
             end
 
             if l == r then
-                return types.Object:new("boolean", false, true)
+                return types.False
             end
 
-            return types.Object:new("boolean")
+            return types.Boolean
         elseif op == "<" then
             local res = metatable_function(self, "__lt", l, r)
             if res then
                 return res
             end
-            if l:IsLiteral() and r:IsLiteral() then
-                return types.Object:new("boolean", l.data < r.data, true)
+            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                return types.Symbol:new(l.data < r.data)
             end
 
-            return types.Object:new("boolean")
+            return types.Boolean
         elseif op == "<=" then
             local res = metatable_function(self, "__le", l, r)
             if res then
                 return res
             end
-            if l:IsLiteral() and r:IsLiteral() then
-                return types.Object:new("boolean", l.data <= r.data, true)
+            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                return types.Symbol:new(l.data <= r.data)
             end
 
-            return types.Object:new("boolean")
+            return types.Boolean
         elseif op == ">" then
-            local res = metatable_function(self, "__lt", l, r, true)
+            local res = metatable_function(self, "__lt", l, r)
             if res then
                 return res
             end
-            if l:IsLiteral() and r:IsLiteral() then
-                return types.Object:new("boolean", l.data > r.data, true)
+            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                return types.Symbol:new(l.data > r.data)
             end
 
-            return types.Object:new("boolean")
+            return types.Boolean
         elseif op == ">=" then
-            local res = metatable_function(self, "__le", l, r, true)
+            local res = metatable_function(self, "__le", l, r)
             if res then
                 return res
             end
-            if l:IsLiteral() and r:IsLiteral() then
-                return types.Object:new("boolean", l.data >= r.data, true)
+            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                return types.Symbol:new(l.data >= r.data)
             end
 
-            return types.Object:new("boolean")
+            return types.Boolean
         elseif op == "or" then
             if l:IsTruthy() and l:IsFalsy() then
                 return types.Set:new({l,r})
@@ -396,14 +395,14 @@ do -- type operators
 
         if op == ".." then
             if
-                (l.type == "string" or r.type == "string") and
-                (l.type == "number" or r.type == "number" or l.type == "string" or l.type == "string")
+                (l.Type == "string" or r.Type == "string") and
+                (l.Type == "number" or r.Type == "number" or l.Type == "string" or l.Type == "string")
             then
                 if l:IsLiteral() and r:IsLiteral() then
-                    return types.Object:new("string", l.data ..  r.data, true)
+                    return types.String:new(l.data ..  r.data, true)
                 end
 
-                return types.Object:new("string")
+                return types.StringType
             end
 
             return false, "no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r)
@@ -448,7 +447,7 @@ do -- type operators
                     return func:Set(key, val)
                 end
 
-                if func.Type == "object" then
+                if func.Type == "function" or func.Type == "table" then
                     return self:Call(func, types.Tuple:new({obj, key, val}), key.node):Get(1)
                 end
             end
@@ -475,7 +474,9 @@ do -- type operators
             return copy
         end
 
-        if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
+
+        --TODO: not needed? Get and Set should error
+        if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then
             return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
         end
 
@@ -491,7 +492,7 @@ do -- type operators
                     end
                 end
 
-                if index.Type == "object" then
+                if index.Type == "function" or index.Type == "table" then
                     return self:Call(index, types.Tuple:new({obj, key}), key.node):Get(1)
                 end
             end
@@ -518,18 +519,25 @@ do -- types
         local obj
 
         if type == "table" or type == "self" then
-            obj = types.Table:new(data, literal)
+            obj = types.Table:new(data)
         elseif type == "..." then
             obj = types.Tuple:new(data)
-        elseif
-            type == "number" or
-            type == "string" or
-            type == "function" or
-            type == "boolean" or
-            type == "nil" or
-            type == "any"
-        then
-            obj = types.Object:new(type, data, literal)
+        elseif type == "number" then
+            obj = types.Number:new(data, literal)
+        elseif type == "string" then
+            obj = types.String:new(data, literal)
+        elseif type == "boolean" then
+            if literal then
+                obj = types.Symbol:new(data)
+            else
+                obj = types.Boolean
+            end
+        elseif type == "nil" then
+            obj = types.Symbol:new(nil)
+        elseif type == "any" then
+            obj = types.Any:new()
+        elseif type == "function" then
+            obj = types.Function:new(data)
         end
 
         if type == "self" then
@@ -538,7 +546,7 @@ do -- types
 
         if type == "string" then
             if not self.string_meta then
-                local meta = types.Table:new({}, literal)
+                local meta = types.Table:new({})
                 meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
                 self.string_meta = meta
             end
@@ -557,7 +565,7 @@ do -- types
     do
         local guesses = {
             {pattern = "count", type = "number"},
-            {pattern = "tbl", type = "table", ctor = function(obj) obj:Set(types.Object:new("any"), types.Object:new("any")) end},
+            {pattern = "tbl", type = "table", ctor = function(obj) obj:Set(types.Any:new(), types.Any:new()) end},
             {pattern = "str", type = "string"},
         }
 
@@ -602,7 +610,7 @@ do -- types
             end
 
             for _, obj in ipairs(obj:GetData()) do
-                if (obj.Type == "object" and not obj:IsType("function")) then
+                if obj.Type ~= "function" and obj.Type ~= "table" then
                     return false, "set contains uncallable object " .. tostring(obj)
                 end
             end
@@ -626,14 +634,8 @@ do -- types
             return false, table.concat(errors, "\n")
         end
 
-        if obj.Type == "object" then
-            if obj.type == "any" then
-                return self:TypeFromImplicitNode(function_node, "any")
-            end
-
-            if obj.type ~= "function" then
-                return false, tostring(obj) .. " cannot be called"
-            end
+        if obj.Type == "any" then
+            return self:TypeFromImplicitNode(function_node, "any")
         end
 
         if obj.Type == "table" then
@@ -652,6 +654,10 @@ do -- types
             end
         end
 
+        if obj.Type ~= "function" then
+            return false, tostring(obj) .. " cannot be called"
+        end
+
         do
             local A = arguments -- incoming
             local B = obj:GetArguments() -- the contract
@@ -667,10 +673,15 @@ do -- types
                     b = b:Get(1)
                 end
 
+                -- TODO: not sure about this..
+                if b.self then
+                    b = arguments:Get(1)
+                end
+
                 local ok, reason = a:SubsetOf(b)
 
                 if not ok then
-                    return false, reason
+                    return false, "argument #" .. i .. " - " .. tostring(a) .. " is not a subset of " .. tostring(b) .. " because " .. reason
                 end
             end
         end
@@ -696,7 +707,6 @@ do -- types
             self:FireEvent("external_call", call_node, obj)
         else
             if not function_node.statements then
-                print(obj, function_node)
                 error("cannot call " .. tostring(function_node) .. " because it has no statements")
             end
 
@@ -1063,7 +1073,7 @@ function META:AnalyzeStatement(statement)
             local right = self:AnalyzeExpression(exp.right, "typesystem")
 
             -- function overload shortcut
-            if left and left.Type == "object" and left.type == "function" then
+            if left and left.Type == "function" then
                 tbl:Set(exp.left.value, types.Set:new({left, right}))
             elseif left and left.Type == "set" then
                 left:AddElement(right)
@@ -1103,7 +1113,7 @@ do
                 local val = self:AnalyzeExpression(node.type_expression, "typesystem")
                 stack:Push(val)
                 if node.tokens["is"] then
-                    node.result_is = self:GetValue(node, env):IsType(val)
+                    node.result_is = self:GetValue(node, env).Type == val
                 end
             elseif node.kind == "value" then
                 stack:Push(self:AnalyzeValue(node, env))
@@ -1195,6 +1205,11 @@ do
             return self:TypeFromImplicitNode(node, "boolean", true, true)
         elseif node.value.value == "false" then
             return self:TypeFromImplicitNode(node, "boolean", false, true)
+        elseif node.value.value == "function" then
+            return self:TypeFromImplicitNode(node, "function", {
+                args = types.Tuple:new({}),
+                ret = types.Tuple:new({})
+            })
         end
 
         error("unhandled value type " .. node.value.type .. " " .. node:Render())
@@ -1215,13 +1230,10 @@ do
                     args[i] = self:AnalyzeExpression(key)
                 else
                     if env == "typesystem" then
-                        args[i] = self:GetValue(key.left or key, env)
-                        if not args[i] and types.IsPrimitiveType(key.value.value) then
-                            args[i] = self:TypeFromImplicitNode(node, key.value.value)
-                        end
+                        args[i] = self:AnalyzeExpression(key, env)
                     end
 
-                    if not args[i] then
+                    if not args[i] or args[i].Type == "symbol" and args[i]:GetData() == nil then
                         args[i] = self:GetInferredType(key)
                     end
                 end
@@ -1247,8 +1259,10 @@ do
 
 		if node.return_types then
 			self:PushScope(node)
-				for i, key in ipairs(node.identifiers) do
-					self:SetUpvalue(key, args[i], "typesystem")
+                for i, key in ipairs(node.identifiers) do
+                    if key.kind == "value" then
+                        self:SetUpvalue(key, args[i], "typesystem")
+                    end
 				end
 
 				for i, type_exp in ipairs(node.return_types) do
@@ -1303,7 +1317,7 @@ do
                 local obj = self:AnalyzeExpression(node.expressions[2], env)
 
 
-                if key:IsType("string") and key.value then
+                if key.Type == "string" and key.value then
                     out[i] = {key = key.value, val = obj}
                 else
                     out[i] = {key = key, val = obj}

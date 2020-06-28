@@ -144,13 +144,14 @@ describe("metatable", function()
             local x = {} as Foo
 
             x:SetPos({x = 1, y = 2, z = 3})
+            --[==[x:SetPos({x = 1, y = 2, z = 3})
             local a = x:GetPos()
             local z = a.x + 1
 
             type_assert(z, _ as number)
 
             local test = x:Test()
-            type_assert(test, _ as number)
+            type_assert(test, _ as number)]==]
         ]]
     end)
 

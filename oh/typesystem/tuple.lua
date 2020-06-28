@@ -19,7 +19,7 @@ function Tuple:Merge(tup, dont_extend)
     local dst = tup.data
 
     for i,v in ipairs(dst) do
-        if src[i] and src[i].type ~= "any" then
+        if src[i] and src[i].Type ~= "any" then
             if src[i].volatile then
                 v = v:Copy()
                 v.volatile = true
@@ -125,12 +125,8 @@ function Tuple:Get(key)
         return self.data[key]
     end
 
-    if key.Type == "object" then
-        if key:IsType("number") then
-            key = key.data
-        elseif key:IsType("string") then
-            key = key.data
-        end
+    if key.Type == "number" or key.Type == "string" and key:IsLiteral() then
+        key = key.data
     end
 
     return self.data[key]
@@ -155,9 +151,9 @@ function Tuple:Serialize()
     return self:__tostring()
 end
 
-function Tuple:IsLiteral()
+function Tuple:IsConst()
     for _, obj in ipairs(self.data) do
-        if not obj:IsLiteral() then
+        if not obj:IsConst() then
             return false
         end
     end
@@ -196,6 +192,7 @@ function Tuple:new(tbl)
 
     for i,v in ipairs(self.data) do
         if not types.IsTypeObject(v) then
+            for k,v in pairs(v) do print(k,v) end
             error(tostring(v) .. " is not a type object")
         end
     end

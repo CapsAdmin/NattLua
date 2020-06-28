@@ -13,8 +13,7 @@ describe("analyzer", function()
 
     it("runtime scopes should work", function()
         local v = run("local a = 1"):GetValue("a", "runtime")
-        assert.equal(v.Type, "object")
-        assert.equal(true, v:IsType("number"))
+        assert.equal(true, v.Type == "number")
     end)
 
     it("comment types", function()
@@ -122,8 +121,7 @@ describe("analyzer", function()
         ]]
 
         local v = analyzer:GetValue("c", "runtime")
-        assert.equal(v.Type, "object")
-        assert.equal(true, v:IsType("number"))
+        assert.equal(true, v.Type == ("number"))
         assert.equal(false, v:IsLiteral())
     end)
 
@@ -135,8 +133,7 @@ describe("analyzer", function()
         ]]
 
         local v = analyzer:GetValue("c", "runtime")
-        assert.equal(v.Type, "object")
-        assert.equal(true, v:IsType("number"))
+        assert.equal(true, v.Type == ("number"))
         assert.equal(3, v:GetData())
     end)
 
@@ -216,13 +213,13 @@ describe("analyzer", function()
         ]]
         local lib = analyzer:GetValue("lib", "runtime")
 
-        assert.equal(true, lib:Get("foo1"):GetArguments().data[1]:IsType("number"))
-        assert.equal(true, lib:Get("foo1"):GetArguments().data[2]:IsType("number"))
-        assert.equal(true, lib:Get("foo1"):GetReturnTypes().data[1]:IsType("number"))
+        assert.equal(true, lib:Get("foo1"):GetArguments().data[1].Type == ("number"))
+        assert.equal(true, lib:Get("foo1"):GetArguments().data[2].Type == ("number"))
+        assert.equal(true, lib:Get("foo1"):GetReturnTypes().data[1].Type == ("number"))
 
-        assert.equal(true, lib:Get("foo2"):GetArguments().data[1]:IsType("number"))
-        assert.equal(true, lib:Get("foo2"):GetArguments().data[2]:IsType("number"))
-        assert.equal(true, lib:Get("foo2"):GetReturnTypes().data[1]:IsType("number"))
+        assert.equal(true, lib:Get("foo2"):GetArguments().data[1].Type == ("number"))
+        assert.equal(true, lib:Get("foo2"):GetArguments().data[2].Type == ("number"))
+        assert.equal(true, lib:Get("foo2"):GetReturnTypes().data[1].Type == ("number"))
     end)
 
     it("should convert binary numbers to numbers", function()
@@ -233,7 +230,7 @@ describe("analyzer", function()
     end)
 
     it("undefined types should error", function()
-        run([[local a: ASDF = true]], "cannot be nil")
+        run([[local a: ASDF = true]], "true is not a subset of nil")
     end)
 
     it("type functions should return a tuple with types", function()

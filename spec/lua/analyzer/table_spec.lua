@@ -86,7 +86,8 @@ describe("table", function()
             local a = tbl.bar
         ]])
 
-        assert.equal("nil", analyzer:GetValue("a", "runtime").type)
+        assert.equal("symbol", analyzer:GetValue("a", "runtime").Type)
+        assert.equal(nil, analyzer:GetValue("a", "runtime"):GetData())
     end)
 
     it("indexing nil in a table with a contract should error", function()
@@ -130,7 +131,7 @@ describe("table", function()
         run([[
             local tbl: {1,true,3} = {1, true, 3}
             tbl[2] = false
-        ]], "false is not a subset of true")
+        ]], "false is not the same as true")
     end)
 
     it("which has no data but contract says it does should return what the contract says", function()

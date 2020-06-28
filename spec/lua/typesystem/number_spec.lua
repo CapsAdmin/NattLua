@@ -3,13 +3,14 @@ local N = T.Number
 local Object = T.Object
 
 describe("numbers", function()
-    local any = Object("any")
+    local any = T.Any()
 
-    local _42 = Object("number", 42, true)
-    local all_numbers = Object("number")
+    local all_numbers = T.Number()
 
-    local _32_to_52 = Object("number", 32, true)
-    _32_to_52.max = Object("number", 52, true)
+    local _32_to_52 = T.Number(32)
+    _32_to_52:Max(T.Number(52))
+
+    local _42 = T.Number(42)
 
     it("a literal number should be contained within all numbers", function()
         assert(_42:SubsetOf(all_numbers))

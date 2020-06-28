@@ -1,10 +1,11 @@
 local T = require("spec.lua.helpers")
-local O = T.Object
+local String = T.String
+local Number = T.Number
 local Tuple = T.Tuple
 
-local SN = Tuple(O"string", O"number")
-local NS = Tuple(O"number", O"string")
-local SNS = Tuple(O"string", O"number", O"string")
+local SN = Tuple(String(), Number())
+local NS = Tuple(Number(), String())
+local SNS = Tuple(String(), Number(), String())
 
 describe("tuple", function()
     it(tostring(SN) .. " should not be a subset of " .. tostring(NS), function()

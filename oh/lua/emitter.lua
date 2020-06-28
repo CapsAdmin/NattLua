@@ -107,8 +107,14 @@ do
             --self:Emit(" --[[ : ")
             local str = {}
             -- this iterates the first return tuple
-            for i,v in ipairs((node.inferred_type.contract or node.inferred_type).data.ret.data) do
-                str[i] = tostring(v)
+            local obj = node.inferred_type.contract or node.inferred_type
+
+            if obj.Type == "function" then
+                for i,v in ipairs(obj:GetReturnTypes():GetData()) do
+                    str[i] = tostring(v)
+                end
+            else
+                str[1] = tostring(obj)
             end
             if str[1] then
                 self:Emit(": ")
@@ -673,7 +679,9 @@ do -- types
             end
 
             if i ~= #node.identifiers then
-                self:EmitToken(exp.tokens[","])
+                if exp.tokens[","]then
+                    self:EmitToken(exp.tokens[","])
+                end
             end
         end
         self:EmitToken(node.tokens[")"])

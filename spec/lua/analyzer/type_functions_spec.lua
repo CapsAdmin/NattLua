@@ -70,7 +70,7 @@ describe("type functions", function()
         ]]
         run[[
             local k,v = next({foo = 1})
-            type_assert(string.len(k), _ as number)
+            type_assert(string.len(k), _ as 3 | 3)
             type_assert(v, _ as 1 | 1)
         ]]
     end)

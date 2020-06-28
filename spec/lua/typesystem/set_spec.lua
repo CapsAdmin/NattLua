@@ -1,7 +1,8 @@
 local T = require("spec.lua.helpers")
 local Set = T.Set
+local String = T.String
+local Number = T.Number
 local Tuple = T.Tuple
-local O = T.Object
 
 describe("typesystem", function()
     it("a set should not contain duplicates", function()
@@ -41,15 +42,15 @@ describe("typesystem", function()
     end)
 
     it("a number should be a subset of a set with numbers", function()
-        assert(O("number", 24, true)):SubsetOf(Set(O("number"), O("number")))
+        assert(Number(24)):SubsetOf(Set(Number(), Number()))
     end)
 
     it("a smaller set within an empty set should be identical to the smaller set", function()
         assert.equal(smaller:Serialize(), Set(smaller):Serialize())
     end)
 
-    it("a set containing one number literal should be a subset of a set containing a number", function()
-        assert(Set(1):SubsetOf(O("number"), O("string")))
+    it("a set containing one literal number should be a subset of a set containing a number", function()
+        assert(Set(1):SubsetOf(Number()))
     end)
 
     local A = Set(1, 4, 5, 9, 13)

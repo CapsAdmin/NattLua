@@ -348,18 +348,6 @@ R[[
     type_assert(a, 10)
 ]]
 R[[
-    local a
-    a = 2
-
-    if true then
-        local function foo(lol)
-            return foo(lol), nil
-        end
-        local complex = foo(a)
-        type_assert_superset(foo, nil as function(_:any, _:nil):number )
-    end
-]]
-R[[
     b = {}
     b.lol = 1
 
@@ -579,26 +567,7 @@ R[[
     type_assert(foo, nil as boolean)
     type_assert(bar, nil as number)
 ]]
-R[[
-    do
-        type x = boolean | number
-    end
 
-    type c = x
-    local a: c
-    type b = {foo = a as any}
-    local c: function(a: number, b:number): b, b
-
-    type_assert_superset(c, nil as function(_:table, _:table): number, number)
-
-]]
-R[[
-    local function test(a:number,b: number)
-        return a + b
-    end
-
-    type_assert_superset(test, nil as function(_:number, _:number): number)
-]]
 R[[
     type lol = number
 
@@ -654,7 +623,7 @@ R[[
     local a: string = "1"
     type a = string | number | (boolean | string)
 
-    type type_func = function(a,b,c) return types.Object:new("string"), types.Object:new("number") end
+    type type_func = function(a,b,c) return types.String:new(), types.Number:new() end
     local a, b = type_func(a,2,3)
     type_assert(a, _ as string)
     type_assert(b, _ as number)
@@ -691,53 +660,6 @@ R[[
     end
 ]]
 R[[
-    type next = function(tbl, _key)
-        local key, val
-
-        -- old typesystem
-        if tbl.value then
-
-            for k, v in pairs(tbl.value) do
-                if not key then
-                    key = types.Object:new(type(k))
-                elseif not key:IsType(k) then
-                    if type(k) == "string" then
-                        key = types.Fuse(key, types.Object:new("string"))
-                    else
-                        key = types.Fuse(key, types.Object:new(k.name))
-                    end
-                end
-
-                if not val then
-                    val = types.Object:new(type(v))
-                else
-                    if not val:IsType(v) then
-                        val = types.Fuse(val, types.Object:new(v.name))
-                    end
-                end
-            end
-        end
-
-        -- new typesystem
-        if tbl.data then
-            key, val = types.Set:new(), types.Set:new()
-            if tbl.Type == "table" then
-                for _, keyval in ipairs(tbl.data) do
-                    key:AddElement(keyval.key)
-                    val:AddElement(keyval.val)
-                end
-            elseif tbl.Type == "tuple" then
-                key = types.Object:new("number")
-                key.max = tbl.max and tbl.max:Copy() or nil
-                for _, val in ipairs(tbl.data) do
-                    val:AddElement(val)
-                end
-            end
-        end
-
-        return key, val
-    end
-
     local a = {
         foo = true,
         bar = false,
@@ -1057,9 +979,9 @@ R[[
     local type check = function(func)
         local a = func.data.arg.data[1]
         local b = types.Set:new({
-            types.Object:new("number", 1, true),
-            types.Object:new("boolean", false, true),
-            types.Object:new("boolean", true, true)
+            types.Number:new(1),
+            types.False,
+            types.True
         })
 
         assert(b:SubsetOf(a))

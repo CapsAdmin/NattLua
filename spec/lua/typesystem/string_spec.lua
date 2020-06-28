@@ -2,11 +2,11 @@ local T = require("spec.lua.helpers")
 local Object = T.Object
 
 describe("strings", function()
-    local any = Object("any")
+    local any = T.Any()
 
-    local foo = Object("string", "foo", true)
-    local all_letters = Object("string")
-    local foo_bar = Object("string", "foo bar", true)
+    local foo = T.String("foo")
+    local all_letters = T.String()
+    local foo_bar = T.String("foo bar")
 
     it("'foo' should be contained within all letters", function()
         assert(foo:SubsetOf(all_letters))

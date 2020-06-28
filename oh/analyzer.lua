@@ -250,7 +250,7 @@ return function(analyzer_meta)
 
         if self.code then
             local start, stop = utl.LazyFindStartStop(node)
-            io.write(utl.FormatError(self.code, self.type, msg, start, stop), "\n")
+            io.write(utl.FormatError(self.code, node.type, msg, start, stop), "\n")
         else
             local s = tostring(self)
             s = s .. ": " .. msg

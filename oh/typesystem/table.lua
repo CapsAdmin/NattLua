@@ -90,14 +90,14 @@ function Table.SubsetOf(A, B)
         return true
     end
 
-    if B.type == "any" or B.volatile then
+    if B.Type == "any" or B.volatile then
         return true
     end
 
     if B.Type == "tuple" then
         if B:GetLength() > 0 then
             for i, a in ipairs(A.data) do
-                if a.key.type == "number" then
+                if a.key.Type == "number" then
                     if not B:Get(i) then
                         return types.errors.missing(B, i)
                     end
@@ -249,12 +249,12 @@ function Table:Set(key, val, raw)
     key = types.Cast(key)
     val = types.Cast(val)
 
-    if key.type == "nil" then
+    if key.Type == "symbol" and key:GetData() == nil then
         return false, "key is nil"
     end
 
     -- delete entry
-    if val == nil or val.type == "nil" then
+    if val == nil or (val.Type == "symbol" and val:GetData() == nil) then
         return self:Delete(key)
     end
 
@@ -303,7 +303,7 @@ end
 function Table:IsNumericallyIndexed()
 
     for _, keyval in ipairs(self:GetElements()) do
-        if keyval.key.type ~= "number" then
+        if keyval.key.Type ~= "number" then
             return false
         end
     end
@@ -397,10 +397,28 @@ end
 
 function Table:IsLiteral()
     for _, v in ipairs(self.data) do
-        if v.val ~= self and (not v.val:IsLiteral() or not v.key:IsLiteral()) then
-            return false
+        if v.val ~= self then
+
+            if v.key.Type == "set" then
+                return false, "the key " .. tostring(v.key) .. " is a set"
+            end
+
+            if v.val.Type == "set" then
+                return false, "the value " .. tostring(v.val) .. " is a set"
+            end
+
+            local ok, reason = v.key:IsLiteral()
+            if not ok then
+                return false, "the key " .. tostring(v.key) .. " is not a literal because " .. tostring(reason)
+            end
+
+            local ok, reason = v.val:IsLiteral()
+            if not ok then
+                return false, "the value " .. tostring(v.val) .. " is not a literal because " .. tostring(reason)
+            end
         end
     end
+
     return true
 end
 

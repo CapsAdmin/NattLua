@@ -246,12 +246,11 @@ describe("lua test suite", function()
         run"type_assert(nil or {}, {})"
 
         -- boolean without any data can be true and false at the same time
-        run"type_assert((_ as boolean) or (1), _ as boolean | 1)"
+        run"type_assert((_ as boolean) or (1), _ as true | 1)"
 
         -- when false and returns its first argument
         run"type_assert(false and true, false)"
         run"type_assert(true and nil, nil)"
-
         -- when true and returns its second argument
         -- ????
 

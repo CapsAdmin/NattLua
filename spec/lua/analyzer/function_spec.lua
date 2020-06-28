@@ -23,12 +23,12 @@ describe("function", function()
         ]]
 
         local args = analyzer:GetValue("test", "runtime"):GetArguments()
-        assert.equal(true, args:Get(1):IsType("number"))
-        assert.equal(true, args:Get(2):IsType("string"))
-        assert.equal(true, args:Get(3):IsType("number"))
+        assert.equal(true, args:Get(1).Type == ("number"))
+        assert.equal(true, args:Get(2).Type == ("string"))
+        assert.equal(true, args:Get(3).Type == ("number"))
 
         local rets = analyzer:GetValue("test", "runtime"):GetReturnTypes()
-        assert.equal(true, rets:Get(1):IsType("number"))
+        assert.equal(true, rets:Get(1).Type == ("number"))
     end)
 
 
@@ -45,12 +45,12 @@ describe("function", function()
         local func = analyzer:GetValue("test", "runtime")
 
         local args = func:GetArguments()
-        assert.equal(true, args:Get(1):IsType("number"))
-        assert.equal(true, args:Get(1):IsType("string"))
+        assert.equal(true, args:Get(1):HasType("number"))
+        assert.equal(true, args:Get(1):HasType("string"))
 
         local rets = func:GetReturnTypes()
-        assert.equal(true, rets:Get(1):IsType("number"))
-        assert.equal(true, rets:Get(1):IsType("string"))
+        assert.equal(true, rets:Get(1):HasType("number"))
+        assert.equal(true, rets:Get(1):HasType("string"))
     end)
 
     it("which is not explicitly annotated should not dictate return values", function()
@@ -65,7 +65,7 @@ describe("function", function()
         ]]
 
         local val = analyzer:GetValue("a", "runtime")
-        assert.equal(true, val:IsType("boolean"))
+        assert.equal(true, val.Type == "symbol")
         assert.equal(true, val:GetData())
         assert.equal(false, val:IsVolatile())
     end)
@@ -172,11 +172,11 @@ describe("function", function()
             local a = args:Get(1)
             local b = args:Get(2)
 
-            assert.equal("number", a.type)
+            assert.equal("number", a.Type)
             assert.equal(true, a.volatile)
             assert.equal(1, a.data)
 
-            assert.equal("string", b.type)
+            assert.equal("string", b.Type)
             assert.equal(true, b.volatile)
             assert.equal("a", b.data)
         end
@@ -277,7 +277,7 @@ describe("function", function()
             end
 
             test(true, 2)
-        ]], "true is not the same type as number")
+        ]], "true is not the same as number")
     end)
 
     it("calling a set should work", function()
@@ -302,8 +302,8 @@ describe("function", function()
 
     it("pcall", function()
         run[[
-            type pcall = function(cb: function, ...)
-                return types.Object:new("boolean"), table.unpack(analyzer:Call(cb, types.Tuple:new({...})):GetData())
+            type pcall = function(cb: any, ...)
+                return types.Boolean, table.unpack(analyzer:Call(cb, types.Tuple:new({...})):GetData())
             end
 
             local ok, err = pcall(function()
@@ -313,6 +313,44 @@ describe("function", function()
 
             type_assert(ok, _ as boolean)
             type_assert(err, _ as boolean)
+        ]]
+    end)
+    it("complex", function()
+        run[[
+            local a
+            a = 2
+
+            if true then
+                local function foo(lol)
+                    return foo(lol), nil
+                end
+                local complex = foo(a)
+                type_assert_superset(foo, nil as function(_:any, _:nil):number, nil )
+            end
+        ]]
+    end)
+    it("lol", function()
+        run[[
+            do
+                type x = boolean | number
+            end
+
+            type c = x
+            local a: c
+            type b = {foo = a as any}
+            local c: function(a: number, b:number): b, b
+
+            type_assert_superset(c, nil as function(_:number, _:number): {foo = any}, {foo = any})
+        ]]
+    end)
+
+    it("lol2", function()
+        run[[
+            local function test(a:number,b: number)
+                return a + b
+            end
+
+            type_assert_superset(test, nil as function(_:number, _:number): number)
         ]]
     end)
 end)

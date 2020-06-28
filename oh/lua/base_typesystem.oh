@@ -23,8 +23,8 @@ type ffi = {
 	cdef = (function(string): nil),
 	abi = (function(string): boolean),
 	metatype = (function(ct,table): cdata),
-	new = (function(string/ctype,nelement,init...): cdata),
-	copy = (function(dst,src,len / string): nil)    |    (function(dst,src,len /): nil)    |    (function(dst, /): nil),
+	new = (function(string | ctype,nelement,init...): cdata),
+	copy = (function(dst,src,len | string): nil)    |    (function(dst,src,len): nil)    |    (function(dst): nil),
 	alignof = (function(ct): number),
 	cast = (function(ctype,cdata): cdata),
 	typeof = (function(ct): ctype),
@@ -212,7 +212,7 @@ type ^string.match = function(s, pattern, init)
 	if s.data and pattern.data then
 		local res = {s.data:match(pattern.data)}
 		for i,v in ipairs(res) do
-			res[i] = types.Object:new("string", v)
+			res[i] = types.String:new(v)
 		end
 		return table.unpack(res)
 	end
@@ -220,43 +220,55 @@ type ^string.match = function(s, pattern, init)
 	if pattern.data then
 		local out = {}
 		for s in pattern.data:gmatch("%b()") do
-			table.insert(out, types.Object:new("string") + types.Object:new("nil"))
+			table.insert(out, types.String:new() + types.Nil)
 		end
 		return table.unpack(out)
 	end
 end
 
-type ^string.len = function(str)
-	if str.Type == "object" and str.data then
-		return types.Object:new("number", #str.data, true)
+type ^string.len = function(str: string)
+	if str.Type == "set" then
+		local copy = types.Set:new()
+		for _, obj in ipairs(str:GetElements()) do
+			if obj:IsLiteral() then
+				copy:AddElement(types.Number:new(#obj:GetData(), true))
+			else
+				copy:AddElement(types.Number:new())
+			end
+		end
+		return copy
 	end
 
-	return types.Object:new("number")
+	if str:IsLiteral() then
+		return types.Number:new(#str.data, true)
+	end
+
+	return types.Number:new()
 end
 
 type ^string.gsub = function(str, pattern, val)
-	if val:IsType("function") then
+	if val.Type == "function" then
 		local args = {}
 
 		if pattern.data then
 			for group in pattern.data:gmatch("%b()") do
-				table.insert(args, types.Object:new("string"))
+				table.insert(args, types.String:new())
 			end
 		end
 
 		if not args[1] then
-			args[1] = types.Object:new("string")
+			args[1] = types.String:new()
 		end
 
 		for i,v in ipairs(args) do
 			val.data.arg.data[i] = v
 		end
 
-		val.data.ret.data[1] = types.Object:new("string")
+		val.data.ret.data[1] = types.String:new()
 
 	end
 
-	return types.Object:new("string")
+	return types.String:new()
 end
 
 type assert = function(obj, err)
@@ -267,7 +279,7 @@ type assert = function(obj, err)
 end
 
 type type_assert = function(what: any, type: any)
-	if what.type == type.type and what.data == type.data then
+	if what.Type == type.Type and what.data == type.data then
 		return
 	end
 
@@ -291,7 +303,7 @@ type type_assert_superset = function(what: any, type: any)
 	end
 end
 
-type next = function(t, k)
+type next = function(t: {[any] = any}, k: any)
 	if not t.data then
 		return
 	end
@@ -399,12 +411,12 @@ type math.floor = function(num)
 	if num.data then
 		return math.floor(num.data)
 	end
-	return types.Object:new("number")
+	return types.Number:new()
 end
 
 local type load = function(str, huh, huh, env)
 	if not str.data then
-		return types.Object:new("any")
+		return types.Any
 	end
 
 	local code = oh.Code(str.data)

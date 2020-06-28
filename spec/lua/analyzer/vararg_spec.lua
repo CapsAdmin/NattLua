@@ -2,6 +2,16 @@ local T = require("spec.lua.helpers")
 local run = T.RunCode
 
 describe("varargs", function()
+    it("a", function()
+        run[[
+            local function test(...)
+
+            end
+
+            test({})
+        ]]
+    end)
+
     it("vararg", function()
         run[[
             local function test(...)

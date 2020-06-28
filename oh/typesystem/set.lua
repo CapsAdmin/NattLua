@@ -82,11 +82,23 @@ function Set:Get(key, from_table)
         end
     end
 
+    local errors = {}
+
     for _, obj in ipairs(self.datai) do
-        if obj.volatile or key:SubsetOf(obj) then
+        if obj.volatile then
             return obj
         end
+
+        local ok, reason = key:SubsetOf(obj)
+
+        if ok then
+            return obj
+        end
+
+        table.insert(errors, reason)
     end
+
+    return false, table.concat(errors, "\n")
 end
 
 function Set:Set(key, val)
@@ -100,6 +112,49 @@ end
 
 function Set:GetData()
     return self.datai
+end
+
+
+function Set:IsTruthy()
+    if self:IsEmpty() then return false end
+
+    for _, obj in ipairs(self:GetElements()) do
+        if obj:IsTruthy() then
+            return true
+        end
+    end
+    return false
+end
+
+function Set:IsFalsy()
+    if self:IsEmpty() then return false end
+
+    for _, obj in ipairs(self:GetElements()) do
+        if obj:IsFalsy() then
+            return true
+        end
+    end
+    return false
+end
+
+function Set:IsType(typ)
+    if self:IsEmpty() then return false end
+
+    for _, obj in ipairs(self:GetElements()) do
+        if obj.Type ~= typ then
+            return false
+        end
+    end
+    return true
+end
+
+function Set:HasType(typ)
+    for _, obj in ipairs(self:GetElements()) do
+        if obj.Type == typ then
+            return true
+        end
+    end
+    return false
 end
 
 function Set:IsVolatile()
@@ -121,29 +176,29 @@ function Set.SubsetOf(A, B)
         end
     end
 
-    if B.Type == "object" or B.Type == "table" then
+    if B.Type ~= "set" then
         return A:SubsetOf(Set:new({B}))
-    elseif B.Type == "set" then
-        if A:IsVolatile() then
-            return true
-        end
+    end
 
-        for _, a in ipairs(A:GetElements()) do
-            local b = B:Get(a)
-
-            if not b then
-                return types.errors.missing(B, a)
-            end
-
-            if not a:SubsetOf(b) then
-                return types.errors.subset(a, b)
-            end
-        end
-
+    if A:IsVolatile() then
         return true
     end
 
-    error("unhandled type" .. tostring(B))
+    for _, a in ipairs(A:GetElements()) do
+        local b, reason = B:Get(a)
+
+        if not b then
+            return types.errors.missing(B, a)
+        end
+
+        local ok, reason = a:SubsetOf(b)
+
+        if not ok then
+            return types.errors.subset(a, b, reason)
+        end
+    end
+
+    return true
 end
 
 function Set:Union(set)
@@ -196,16 +251,6 @@ function Set:IsLiteral()
     end
 
     return true
-end
-
-function Set:IsType(str)
-    for _, v in ipairs(self.datai) do
-        if v.IsType and v:IsType(str) then
-            return true
-        end
-    end
-
-    return false
 end
 
 function Set:IsTruthy()

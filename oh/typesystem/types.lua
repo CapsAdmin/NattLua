@@ -42,11 +42,11 @@ types.errors = {
 
 function types.Cast(val)
     if type(val) == "string" then
-        return types.Object:new("string", val, true)
+        return types.String:new(val, true)
     elseif type(val) == "boolean" then
-        return types.Object:new("boolean", val, true)
+        return types.Symbol:new(val)
     elseif type(val) == "number" then
-        return types.Object:new("number", val, true)
+        return types.Number:new(val, true)
     end
     return val
 end
@@ -75,17 +75,17 @@ do
     local Base = {}
 
     do
-        Base.truthy = 0
+        Base.truthy_level = 0
 
         function Base:GetTruthy()
-            return self.truthy > 0
+            return self.truthy_level > 0
         end
 
         function Base:PushTruthy()
-            self.truthy = self.truthy + 1
+            self.truthy_level = self.truthy_level + 1
         end
         function Base:PopTruthy()
-            self.truthy = self.truthy - 1
+            self.truthy_level = self.truthy_level - 1
         end
     end
 
@@ -118,11 +118,25 @@ function types.RegisterType(meta)
     end
 end
 
+setmetatable(types, {__index = function(_, key)
+    if key == "Nil" then return types.Symbol:new() end
+    if key == "True" then return types.Symbol:new(true) end
+    if key == "False" then return types.Symbol:new(false) end
+    if key == "AnyType" then return types.Any:new() end
+    if key == "Boolean" then return types.Set:new({types.True, types.False}) end
+    if key == "NumberType" then return types.Number:new() end
+    if key == "StringType" then return types.String:new() end
+end})
+
 function types.Initialize()
     types.Set = require("oh.typesystem.set")
     types.Table = require("oh.typesystem.table")
     types.Tuple = require("oh.typesystem.tuple")
-    types.Object = require("oh.typesystem.object")
+    types.Number = require("oh.typesystem.number")
+    types.Function = require("oh.typesystem.function")
+    types.String = require("oh.typesystem.string")
+    types.Any = require("oh.typesystem.any")
+    types.Symbol = require("oh.typesystem.symbol")
 end
 
 return types

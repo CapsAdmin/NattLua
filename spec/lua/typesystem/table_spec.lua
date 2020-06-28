@@ -1,7 +1,6 @@
 local T = require("spec.lua.helpers")
-local O = T.Object
-local N = T.Number
-local S = T.String
+local Number = T.Number
+local String = T.String
 local Table = T.Table
 local Set = T.Set
 local Tuple = T.Tuple
@@ -9,59 +8,59 @@ local Tuple = T.Tuple
 describe("table", function()
     it("set and get should work", function()
         local contract = Table()
-        assert(contract:Set(S("foo"), O("number")))
-        assert(assert(contract:Get("foo")):IsType("number"))
-        assert.equal(false, contract:Get(S("asdf")))
+        assert(contract:Set(String("foo"), Number()))
+        assert(assert(contract:Get("foo")).Type == "number")
+        assert.equal(false, contract:Get(String("asdf")))
 
-        local tbk = Table()
-        tbk.contract = contract
-        assert(tbk:Set(S("foo"), N(1337)))
-        assert.equal(1337, tbk:Get(S("foo")):GetData())
+        local tbl = Table()
+        tbl.contract = contract
+        assert(tbl:Set(String("foo"), Number(1337)))
+        assert.equal(1337, tbl:Get(String("foo")):GetData())
 
-        assert(tbk:SubsetOf(contract))
-        assert(not contract:SubsetOf(tbk))
+        assert(tbl:SubsetOf(contract))
+        assert(not contract:SubsetOf(tbl))
     end)
 
     it("set string and get constant string should work", function()
         local contract = Table()
-        assert(contract:Set(O("string"), O("number")))
+        assert(contract:Set(String(), Number()))
 
-        local tbk = Table()
-        tbk.contract = contract
-        tbk:Set(O("string"), N(1337))
-        assert.equal(1337, assert(tbk:Get(O("string"))):GetData())
+        local tbl = Table()
+        tbl.contract = contract
+        tbl:Set(String(), Number(1337))
+        assert.equal(1337, assert(tbl:Get(String())):GetData())
 
-        assert(tbk:SubsetOf(contract))
-        assert(not contract:SubsetOf(tbk))
+        assert(tbl:SubsetOf(contract))
+        assert(not contract:SubsetOf(tbl))
     end)
 
     it("errors when trying to modify a table without a defined structure", function()
-        local tbk = Table()
-        tbk.contract = Table()
-        assert(not tbk:Set(S("foo"), N(1337)))
+        local tbl = Table()
+        tbl.contract = Table()
+        assert(not tbl:Set(String("foo"), Number(1337)))
     end)
 
     it("copy from constness should work", function()
         local contract = Table()
-        contract:Set(S("foo"), S("bar"))
-        contract:Set(S("a"), O("number"))
+        contract:Set(String("foo"), String("bar"))
+        contract:Set(String("a"), Number())
 
-        local tbk = Table()
-        tbk:Set(S("foo"), O("string", "bar"))
-        tbk:Set(S("a"), N(1337))
+        local tbl = Table()
+        tbl:Set(String("foo"), String("bar"))
+        tbl:Set(String("a"), Number(1337))
 
-        assert(tbk:CopyLiteralness(contract))
-        assert(assert(tbk:Get(S("foo"))):IsLiteral())
+        assert(tbl:CopyLiteralness(contract))
+        assert(assert(tbl:Get(String("foo"))):IsLiteral())
     end)
 
     do return end
     do
         local IAge = Table()
-        IAge:Set(O("string", "age", true), O("number"), true)
+        IAge:Set(String("age", true), Number(), true)
 
         local IName = Table()
-        IName:Set(O("string", "name", true), O("string"))
-        IName:Set(O("string", "magic", true), O("string", "deadbeef", true))
+        IName:Set(String("name"), String())
+        IName:Set(String("magic"), String("deadbeef", true))
 
         local function introduce(person)
             io.write(string.format("Hello, my name is %s and I am %s years old.", person:Get(O("string", "name")), person:Get(O("string", "age")) ),"\n")

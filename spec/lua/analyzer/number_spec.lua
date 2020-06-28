@@ -35,6 +35,14 @@ describe("number", function()
     end)
 
     it("cannot be added to another type", function()
-        run([[local a = 1 + true]], "no operator for 1 %+ true in runtime")
+        run([[local a = 1 + true]], "no operator for 1 %+ .-true in runtime")
+    end)
+
+    it("literal number + number = number", function()
+        local a = run([[
+            local a = 1 + (_ as number)
+
+            type_assert(a, _ as number)
+        ]])
     end)
 end)
