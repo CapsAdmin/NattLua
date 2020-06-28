@@ -54,7 +54,7 @@ function META:Update()
         local client, err = self.socket:accept()
 
         if not client and err == "Too many open files" then
-            llog("cannot accept more clients: %s", err)
+            print("cannot accept more clients: %s", err)
             return
         end
 

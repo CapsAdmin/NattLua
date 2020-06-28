@@ -1,6 +1,8 @@
 local oh = require("oh")
 local print_util = require("oh.print_util")
 
+local check_tokens
+
 do
     local rules = {
         {name = "parenthesis", l = {"("}, r = {")"}},

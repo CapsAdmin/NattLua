@@ -228,7 +228,7 @@ function META:ReadFunctionBody(node)
         node.tokens[":"] = self:ReadValue(":")
 
         local out = {}
-        for i = 1, max or self:GetLength() do
+        for i = 1, self:GetLength() do
 
             local typ = self:ReadTypeExpression()
 
@@ -436,7 +436,7 @@ do -- expression
         end
     end
 
-    function META:ReadTableEntry()
+    function META:ReadTableEntry(i)
         if self:IsValue("[") then
             self:BeginExpression("table_expression_value")
             :Store("expression_key", true)
@@ -475,7 +475,7 @@ do -- expression
                 break
             end
 
-            local entry = self:ReadTableEntry()
+            local entry = self:ReadTableEntry(i)
 
             if entry.spread then
                 tree.spread = true

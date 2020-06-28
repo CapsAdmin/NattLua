@@ -166,7 +166,7 @@ function META:ExpectTypeExpression(what)
 end
 
 
-function META:ReadTypeTableEntry()
+function META:ReadTypeTableEntry(i)
     if self:IsValue("[") then
         self:BeginExpression("table_expression_value")
         :Store("expression_key", true)
@@ -201,7 +201,7 @@ function META:ReadTypeTable()
             break
         end
 
-        local entry = self:ReadTypeTableEntry()
+        local entry = self:ReadTypeTableEntry(i)
 
         if entry.spread then
             tree.spread = true

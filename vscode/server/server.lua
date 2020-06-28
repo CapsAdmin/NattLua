@@ -265,7 +265,7 @@ local function compile(uri, server, client)
 		local data = print_util.SubPositionToLinePosition(code, start, stop)
 
 		if not data then
-			print(_, msg, start, stop, ...)
+			print(self, msg, start, stop, ...)
 			return
 		end
 

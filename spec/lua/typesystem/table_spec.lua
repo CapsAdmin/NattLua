@@ -57,14 +57,14 @@ describe("table", function()
     do return end
     do
         local IAge = Table()
-        IAge:Set(Object("string", "age", true), Object("number"), true)
+        IAge:Set(O("string", "age", true), O("number"), true)
 
         local IName = Table()
-        IName:Set(Object("string", "name", true), Object("string"))
-        IName:Set(Object("string", "magic", true), Object("string", "deadbeef", true))
+        IName:Set(O("string", "name", true), O("string"))
+        IName:Set(O("string", "magic", true), O("string", "deadbeef", true))
 
         local function introduce(person)
-            io.write(string.format("Hello, my name is %s and I am %s years old.", person:Get(Object("string", "name")), person:Get(Object("string", "age")) ),"\n")
+            io.write(string.format("Hello, my name is %s and I am %s years old.", person:Get(O("string", "name")), person:Get(O("string", "age")) ),"\n")
         end
 
         local Human = IAge:Union(IName)
@@ -72,12 +72,12 @@ describe("table", function()
 
 
         assert(IAge:SubsetOf(Human), "IAge should be a subset of Human")
-        Human:Set(Object("string", "name", true), Object("string", "gunnar"))
-        Human:Set(Object("string", "age", true), Object("number", 40))
+        Human:Set(O("string", "name", true), O("string", "gunnar"))
+        Human:Set(O("string", "age", true), O("number", 40))
 
-        assert(Human:Get(Object("string", "name", true)).data == "gunnar")
-        assert(Human:Get(Object("string", "age", true)).data == 40)
+        assert(Human:Get(O("string", "name", true)).data == "gunnar")
+        assert(Human:Get(O("string", "age", true)).data == 40)
 
-        Human:Set(Object("string", "magic"), Object("string", "lol"))
+        Human:Set(O("string", "magic"), O("string", "lol"))
     end
 end)

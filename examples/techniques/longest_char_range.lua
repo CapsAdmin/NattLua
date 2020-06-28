@@ -136,7 +136,7 @@ if true then
     for _ = 1, #noise do
         if is_space() then
             local start = i
-            advance(strspn(strptr + i - 1, chars))
+            advance(C.strspn(strptr + i - 1, chars))
             found[foundi] = noise:sub(start, i-1)
             foundi = foundi + 1
         else

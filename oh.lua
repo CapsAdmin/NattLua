@@ -1,7 +1,7 @@
 local oh = {}
 
-if not table.unpack then
-	table.unpack = unpack
+if not table.unpack and _G.unpack then
+	table.unpack = _G.unpack
 end
 
 local Lexer = require("oh.lua.lexer")
@@ -48,7 +48,7 @@ function oh.loadfile(path, config)
 	local obj = oh.File(path, config)
 	local code, err = obj:BuildLua()
 	if not code then return nil, err end
-    return load(code, name)
+    return load(code, path)
 end
 
 function oh.on_editor_save(path)

@@ -69,7 +69,7 @@ local function levenshtein(s, t, lim)
 end
 
 
-function check_tokens(tokens)
+local function check_tokens(tokens)
     local score = {}
     for i, tk in ipairs(tokens) do
         if tk.type == "letter" and not syntax.IsKeyword(tk) then

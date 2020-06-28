@@ -139,7 +139,7 @@ function META:Error(message, ...)
     return false
 end
 
-function META:OnError(str, tr) logn(tr) llog(str) self:Remove(str) end
+function META:OnError(str, tr) print(tr) print(str) self:Remove(str) end
 function META:OnReceiveChunk(str) end
 function META:OnClose() self:Close() end
 function META:OnConnect() end

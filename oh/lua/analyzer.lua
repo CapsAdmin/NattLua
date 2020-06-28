@@ -623,7 +623,7 @@ do -- types
                 end
             end
 
-            return false, table.concat(errros, "\n")
+            return false, table.concat(errors, "\n")
         end
 
         if obj.Type == "object" then

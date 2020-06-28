@@ -1,0 +1,7 @@
+{
+    "Lua.diagnostics.globals": [
+        "describe",
+        "it"
+    ],
+    "Lua.runtime.version": "LuaJIT"
+}

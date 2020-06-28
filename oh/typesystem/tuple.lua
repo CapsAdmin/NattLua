@@ -80,7 +80,7 @@ function Tuple.SubsetOf(A, B)
 
     if B.Type == "table" then
         if not B:IsNumericallyIndexed() then
-            return false, tostring(B) .. " cannot be treated as a tuple because it contains non a numeric index " .. tostring(keyval.key)
+            return false, tostring(B) .. " cannot be treated as a tuple because it contains non a numeric index " .. tostring(A)
         end
     end
 

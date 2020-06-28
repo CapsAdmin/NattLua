@@ -1,5 +1,5 @@
-if ravi then
-    ravi.jit(true)
+if _G.ravi then
+    _G.ravi.jit(true)
 end
 
 local oh = require("oh")

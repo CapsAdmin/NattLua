@@ -44,7 +44,7 @@ local function expand(node, tbl)
     return tbl
 end
 
-function dump_precedence(expr)
+local function dump_precedence(expr)
     local list = expand(expr, {})
     local a = table_concat(list)
     return a
