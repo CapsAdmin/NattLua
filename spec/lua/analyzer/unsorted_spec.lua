@@ -721,7 +721,7 @@ R[[
         -- new typesystem
         if tbl.data then
             key, val = types.Set:new(), types.Set:new()
-            if tbl.Type == "dictionary" then
+            if tbl.Type == "table" then
                 for _, keyval in ipairs(tbl.data) do
                     key:AddElement(keyval.key)
                     val:AddElement(keyval.val)

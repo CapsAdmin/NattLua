@@ -2,64 +2,64 @@ local T = require("spec.lua.helpers")
 local O = T.Object
 local N = T.Number
 local S = T.String
-local Dictionary = T.Dictionary
+local Table = T.Table
 local Set = T.Set
 local Tuple = T.Tuple
 
-describe("dictionary", function()
+describe("table", function()
     it("set and get should work", function()
-        local contract = Dictionary()
+        local contract = Table()
         assert(contract:Set(S("foo"), O("number")))
         assert(assert(contract:Get("foo")):IsType("number"))
         assert.equal(false, contract:Get(S("asdf")))
 
-        local dict = Dictionary()
-        dict.contract = contract
-        assert(dict:Set(S("foo"), N(1337)))
-        assert.equal(1337, dict:Get(S("foo")):GetData())
+        local tbk = Table()
+        tbk.contract = contract
+        assert(tbk:Set(S("foo"), N(1337)))
+        assert.equal(1337, tbk:Get(S("foo")):GetData())
 
-        assert(dict:SubsetOf(contract))
-        assert(not contract:SubsetOf(dict))
+        assert(tbk:SubsetOf(contract))
+        assert(not contract:SubsetOf(tbk))
     end)
 
     it("set string and get constant string should work", function()
-        local contract = Dictionary()
+        local contract = Table()
         assert(contract:Set(O("string"), O("number")))
 
-        local dict = Dictionary()
-        dict.contract = contract
-        dict:Set(O("string"), N(1337))
-        assert.equal(1337, assert(dict:Get(O("string"))):GetData())
+        local tbk = Table()
+        tbk.contract = contract
+        tbk:Set(O("string"), N(1337))
+        assert.equal(1337, assert(tbk:Get(O("string"))):GetData())
 
-        assert(dict:SubsetOf(contract))
-        assert(not contract:SubsetOf(dict))
+        assert(tbk:SubsetOf(contract))
+        assert(not contract:SubsetOf(tbk))
     end)
 
-    it("errors when trying to modify a dictionary without a defined structure", function()
-        local dict = Dictionary()
-        dict.contract = Dictionary()
-        assert(not dict:Set(S("foo"), N(1337)))
+    it("errors when trying to modify a table without a defined structure", function()
+        local tbk = Table()
+        tbk.contract = Table()
+        assert(not tbk:Set(S("foo"), N(1337)))
     end)
 
     it("copy from constness should work", function()
-        local contract = Dictionary()
+        local contract = Table()
         contract:Set(S("foo"), S("bar"))
         contract:Set(S("a"), O("number"))
 
-        local dict = Dictionary()
-        dict:Set(S("foo"), O("string", "bar"))
-        dict:Set(S("a"), N(1337))
+        local tbk = Table()
+        tbk:Set(S("foo"), O("string", "bar"))
+        tbk:Set(S("a"), N(1337))
 
-        assert(dict:CopyConstness(contract))
-        assert(assert(dict:Get(S("foo"))):IsConst())
+        assert(tbk:CopyConstness(contract))
+        assert(assert(tbk:Get(S("foo"))):IsConst())
     end)
 
     do return end
     do
-        local IAge = Dictionary()
+        local IAge = Table()
         IAge:Set(Object("string", "age", true), Object("number"), true)
 
-        local IName = Dictionary()
+        local IName = Table()
         IName:Set(Object("string", "name", true), Object("string"))
         IName:Set(Object("string", "magic", true), Object("string", "deadbeef", true))
 

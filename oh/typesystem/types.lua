@@ -95,7 +95,7 @@ end
 
 function types.Initialize()
     types.Set = require("oh.typesystem.set")
-    types.Dictionary = require("oh.typesystem.dictionary")
+    types.Table = require("oh.typesystem.table")
     types.Tuple = require("oh.typesystem.tuple")
     types.Object = require("oh.typesystem.object")
 end

@@ -374,7 +374,7 @@ type table.sort = function(tbl, func)
 		for i,v in ipairs(tbl:GetData()) do
 			set:AddElement(v)
 		end
-	elseif tbl.Type == "dictionary" then
+	elseif tbl.Type == "table" then
 		for i,v in ipairs(tbl.data) do
 			set:AddElement(v.val)
 		end

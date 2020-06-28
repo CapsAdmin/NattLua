@@ -100,7 +100,7 @@ do -- type operators
         if op == "-" then return arithmetic(l, "number", op)
         elseif op == "~" then return arithmetic(l, "number", op)
         elseif op == "#" then
-            if l.Type == "dictionary" then
+            if l.Type == "table" then
                 return types.Object:new("number", l:GetLength(), l:IsConst())
             elseif l.Type == "object" and l.type == "string" then
                 return types.Object:new("number", l:GetData() and #l:GetData() or nil, l:IsConst())
@@ -195,7 +195,7 @@ do -- type operators
             if op == "|" then
                 return types.Set:new({l, r})
             elseif op == "&" then
-                if l.Type == "dictionary" and r.Type == "dictionary" then
+                if l.Type == "table" and r.Type == "table" then
                     return l:Extend(r)
                 end
             end
@@ -444,7 +444,7 @@ do -- type operators
             local func = obj.meta:Get("__newindex")
 
             if func then
-                if func.Type == "dictionary" then
+                if func.Type == "table" then
                     return func:Set(key, val)
                 end
 
@@ -475,15 +475,15 @@ do -- type operators
             return copy
         end
 
-        if obj.Type ~= "dictionary" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
+        if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "object" or obj.type ~= "string") then
             return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
         end
 
-        if obj.Type == "dictionary" and obj.meta and not obj:Contains(key) then
+        if obj.Type == "table" and obj.meta and not obj:Contains(key) then
             local index = obj.meta:Get("__index")
 
             if index then
-                if index.Type == "dictionary" then
+                if index.Type == "table" then
                     if index.contract then
                         return index.contract:Get(key)
                     else
@@ -518,7 +518,7 @@ do -- types
         local obj
 
         if type == "table" or type == "self" then
-            obj = types.Dictionary:new(data, const)
+            obj = types.Table:new(data, const)
         elseif type == "..." then
             obj = types.Tuple:new(data)
         elseif
@@ -538,7 +538,7 @@ do -- types
 
         if type == "string" then
             if not self.string_meta then
-                local meta = types.Dictionary:new({}, const)
+                local meta = types.Table:new({}, const)
                 meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
                 self.string_meta = meta
             end
@@ -636,7 +636,7 @@ do -- types
             end
         end
 
-        if obj.Type == "dictionary" then
+        if obj.Type == "table" then
             local __call = obj.meta and obj.meta:Get("__call")
 
             if __call then
@@ -904,7 +904,7 @@ function META:AnalyzeStatement(statement)
 
                 if statement.right and statement.right[i] then
 
-                    if contract.Type == "dictionary" then
+                    if contract.Type == "table" then
                         val:CopyConstness(contract)
                     else
                         -- local a: 1 = 1
@@ -949,7 +949,7 @@ function META:AnalyzeStatement(statement)
         local env = statement.environment or "runtime"
         local obj = self:AnalyzeExpression(statement.right, env)
 
-        if obj.Type ~= "dictionary" then
+        if obj.Type ~= "table" then
             self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj))
         end
 

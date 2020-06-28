@@ -78,7 +78,7 @@ function Tuple.SubsetOf(A, B)
         return A:Get(1):SubsetOf(B)
     end
 
-    if B.Type == "dictionary" then
+    if B.Type == "table" then
         if not B:IsNumericallyIndexed() then
             return false, tostring(B) .. " cannot be treated as a tuple because it contains non a numeric index " .. tostring(keyval.key)
         end

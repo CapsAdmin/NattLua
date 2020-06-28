@@ -34,7 +34,7 @@ local Sprite = {} as {
 }
 
 local type MergeTables = function(bases)
-	local merged = types.Dictionary:new()
+	local merged = types.Table:new()
 
 	for _, base in bases:pairs() do
 		for k, v in base:pairs() do

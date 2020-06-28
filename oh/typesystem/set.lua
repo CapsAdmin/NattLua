@@ -68,10 +68,10 @@ function Set:RemoveElement(e)
     end
 end
 
-function Set:Get(key, from_dictionary)
+function Set:Get(key, from_table)
     key = types.Cast(key)
 
-    if from_dictionary then
+    if from_table then
         for _, obj in ipairs(self.datai) do
             if obj.Get then
                 local val = obj:Get(key)
@@ -121,7 +121,7 @@ function Set.SubsetOf(A, B)
         end
     end
 
-    if B.Type == "object" or B.Type == "dictionary" then
+    if B.Type == "object" or B.Type == "table" then
         return A:SubsetOf(Set:new({B}))
     elseif B.Type == "set" then
         if A:IsVolatile() then

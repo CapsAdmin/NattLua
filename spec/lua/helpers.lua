@@ -50,6 +50,6 @@ return {
     Number = function(n) return Object("number", n, true) end,
     String = function(n) return Object("string", n, true) end,
     Object = Object,
-    Dictionary = function(data) return types.Dictionary:new(data or {}) end,
+    Table = function(data) return types.Table:new(data or {}) end,
     RunCode = run,
 }

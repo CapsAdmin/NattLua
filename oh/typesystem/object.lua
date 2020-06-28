@@ -35,7 +35,7 @@ function Object:Get(key)
 
     if not val and self.meta then
         local index = self.meta:Get("__index")
-        if index.Type == "dictionary" then
+        if index.Type == "table" then
             return index:Get(key)
         end
     end

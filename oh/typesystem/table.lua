@@ -1,10 +1,10 @@
 local types = require("oh.typesystem.types")
 
-local Dictionary = {}
-Dictionary.Type = "dictionary"
-Dictionary.__index = Dictionary
+local Table = {}
+Table.Type = "table"
+Table.__index = Table
 
-function Dictionary:GetSignature()
+function Table:GetSignature()
     if self.supress then
         return "*self*"
     end
@@ -23,7 +23,7 @@ function Dictionary:GetSignature()
 end
 
 local level = 0
-function Dictionary:Serialize()
+function Table:Serialize()
     if self.supress then
         return "*self*"
     end
@@ -46,7 +46,7 @@ function Dictionary:Serialize()
     return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
-function Dictionary:__tostring()
+function Table:__tostring()
     if self.supress then
         return "*self*"
     end
@@ -78,14 +78,14 @@ function Dictionary:__tostring()
     return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
-function Dictionary:GetLength()
+function Table:GetLength()
     return #self.data
 end
 
 -- TODO
 local done
 
-function Dictionary.SubsetOf(A, B)
+function Table.SubsetOf(A, B)
     if A == B then
         return true
     end
@@ -122,7 +122,7 @@ function Dictionary.SubsetOf(A, B)
         end
 
         return true
-    elseif B.Type == "dictionary" then
+    elseif B.Type == "table" then
 
         if B.meta and B.meta == A then
             return true
@@ -135,7 +135,7 @@ function Dictionary.SubsetOf(A, B)
                 local reasons = {}
 
                 if not B.data[1] then
-                    return false, "dictionary is empty"
+                    return false, "table is empty"
                 end
 
                 for _, keyval in ipairs(B.data) do
@@ -174,35 +174,35 @@ function Dictionary.SubsetOf(A, B)
     return types.errors.subset(A, B)
 end
 
-function Dictionary:IsDynamic()
+function Table:IsDynamic()
     return true
 end
 
-function Dictionary:Union(dict)
-    local copy = types.Dictionary:new({})
+function Table:Union(tbk)
+    local copy = types.Table:new({})
 
     for _, keyval in ipairs(self.data) do
         copy:Set(keyval.key, keyval.val)
     end
 
-    for _, keyval in ipairs(dict.data) do
+    for _, keyval in ipairs(tbk.data) do
         copy:Set(keyval.key, keyval.val)
     end
 
     return copy
 end
 
-function Dictionary:Delete(key)
+function Table:Delete(key)
     for i, keyval in ipairs(self.data) do
         if key:SubsetOf(keyval.key) then
             table.remove(self.data, i)
             return true
         end
     end
-    return false, "cannot remove " .. tostring(key) .. " from dictionary because it was not found in " .. tostring(self)
+    return false, "cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self)
 end
 
-function Dictionary:GetKeySet()
+function Table:GetKeySet()
     local set = types.Set:new()
 
     for _, keyval in ipairs(self.data) do
@@ -212,13 +212,13 @@ function Dictionary:GetKeySet()
     return set
 end
 
-function Dictionary:Contains(key)
+function Table:Contains(key)
     return self:GetKeyVal(key, true)
 end
 
-function Dictionary:GetKeyVal(key, reverse_subset)
+function Table:GetKeyVal(key, reverse_subset)
     if not self.data[1] then
-        return false, "dictionary has no definitions"
+        return false, "table has no definitions"
     end
 
     local reasons = {}
@@ -245,7 +245,7 @@ function Dictionary:GetKeyVal(key, reverse_subset)
     return false, table.concat(reasons, "\n")
 end
 
-function Dictionary:Set(key, val, raw)
+function Table:Set(key, val, raw)
     key = types.Cast(key)
     val = types.Cast(val)
 
@@ -288,7 +288,7 @@ function Dictionary:Set(key, val, raw)
     return true
 end
 
-function Dictionary:Get(key, raw)
+function Table:Get(key, raw)
     key = types.Cast(key)
 
     local keyval, reason = self:GetKeyVal(key, true)
@@ -300,7 +300,7 @@ function Dictionary:Get(key, raw)
     return false, reason
 end
 
-function Dictionary:IsNumericallyIndexed()
+function Table:IsNumericallyIndexed()
 
     for _, keyval in ipairs(self:GetElements()) do
         if keyval.key.type ~= "number" then
@@ -311,7 +311,7 @@ function Dictionary:IsNumericallyIndexed()
     return true
 end
 
-function Dictionary:CopyConstness(from)
+function Table:CopyConstness(from)
     for _, keyval_from in ipairs(from.data) do
         local keyval, reason = self:GetKeyVal(keyval_from.key)
 
@@ -319,13 +319,13 @@ function Dictionary:CopyConstness(from)
             return false, reason
         end
 
-        if keyval_from.key.Type == "dictionary" then
+        if keyval_from.key.Type == "table" then
             keyval.key:CopyConstness(keyval_from.key)
         else
             keyval.key.const = keyval_from.key:IsConst()
         end
 
-        if keyval_from.val.Type == "dictionary" then
+        if keyval_from.val.Type == "table" then
             keyval.val:CopyConstness(keyval_from.val)
         else
             keyval.val.const = keyval_from.val:IsConst()
@@ -334,8 +334,8 @@ function Dictionary:CopyConstness(from)
     return true
 end
 
-function Dictionary:Copy()
-    local copy = Dictionary:new({})
+function Table:Copy()
+    local copy = Table:new({})
 
     for _, keyval in ipairs(self.data) do
         local k,v = keyval.key, keyval.val
@@ -361,11 +361,11 @@ function Dictionary:Copy()
     return copy
 end
 
-function Dictionary:GetData()
+function Table:GetData()
     return self.data
 end
 
-function Dictionary:pairs()
+function Table:pairs()
     local i = 1
     return function()
         local keyval = self.data and self.data[i]
@@ -380,7 +380,7 @@ function Dictionary:pairs()
     end
 end
 
-function Dictionary:Extend(t)
+function Table:Extend(t)
     local copy = self:Copy()
 
     for _, keyval in ipairs(t.data) do
@@ -395,7 +395,7 @@ function Dictionary:Extend(t)
     return copy
 end
 
-function Dictionary:IsConst()
+function Table:IsConst()
     for _, v in ipairs(self.data) do
         if v.val ~= self and (not v.val:IsConst() or not v.key:IsConst()) then
             return false
@@ -404,15 +404,15 @@ function Dictionary:IsConst()
     return true
 end
 
-function Dictionary:IsFalsy()
+function Table:IsFalsy()
     return false
 end
 
-function Dictionary:IsTruthy()
+function Table:IsTruthy()
     return true
 end
 
-function Dictionary:new(data)
+function Table:new(data)
     local self = setmetatable({}, self)
 
     self.data = {}
@@ -426,11 +426,11 @@ function Dictionary:new(data)
     return self
 end
 
-function Dictionary:IsVolatile()
+function Table:IsVolatile()
     return self.volatile
 end
 
-for k,v in pairs(types.BaseObject) do Dictionary[k] = v end
-types.Dictionary = Dictionary
+for k,v in pairs(types.BaseObject) do Table[k] = v end
+types.Table = Table
 
-return Dictionary
+return Table

@@ -109,7 +109,7 @@ describe("table", function()
         run([[
             local a: {} = {}
             a.lol = true
-        ]], "dictionary has no definitions")
+        ]], "table has no definitions")
     end)
 
     it("wrong right hand type should error", function()
