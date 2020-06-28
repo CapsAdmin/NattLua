@@ -322,13 +322,13 @@ function Table:CopyConstness(from)
         if keyval_from.key.Type == "table" then
             keyval.key:CopyConstness(keyval_from.key)
         else
-            keyval.key.const = keyval_from.key:IsConst()
+            keyval.key:SetConst(keyval_from.key:IsConst())
         end
 
         if keyval_from.val.Type == "table" then
             keyval.val:CopyConstness(keyval_from.val)
         else
-            keyval.val.const = keyval_from.val:IsConst()
+            keyval.val:SetConst(keyval_from.val:IsConst())
         end
     end
     return true
@@ -430,7 +430,6 @@ function Table:IsVolatile()
     return self.volatile
 end
 
-for k,v in pairs(types.BaseObject) do Table[k] = v end
-types.Table = Table
+types.RegisterType(Table)
 
 return Table

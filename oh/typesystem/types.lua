@@ -89,8 +89,25 @@ do
         end
     end
 
+    Base.const = false
+
+    function Base:SetConst(b)
+        self.const = b
+    end
+
+    function Base:IsConst()
+        return self.const
+    end
 
     types.BaseObject = Base
+end
+
+function types.RegisterType(meta)
+    for k, v in pairs(types.BaseObject) do
+        if not meta[k] then
+            meta[k] = v
+        end
+    end
 end
 
 function types.Initialize()

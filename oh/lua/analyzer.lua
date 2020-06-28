@@ -909,7 +909,7 @@ function META:AnalyzeStatement(statement)
                     else
                         -- local a: 1 = 1
                         -- should turn the right side into a constant number rather than number(1)
-                        val.const = contract:IsConst()
+                        val:SetConst(contract:IsConst())
                     end
 
                     local ok, reason = val:SubsetOf(contract)

@@ -17,17 +17,8 @@ function Object:GetSignature()
     return self.type
 end
 
-function Object:SetType(name)
-    assert(name)
-    self.type = name
-end
-
 function Object:IsType(name)
     return self.type == name
-end
-
-function Object:GetLength()
-    return 0
 end
 
 function Object:Get(key)
@@ -237,10 +228,6 @@ function Object:RemoveNonTruthy()
     return self
 end
 
-function Object:IsConst()
-    return self.const == true
-end
-
 local uid = 0
 
 function Object:new(type, data, const)
@@ -249,16 +236,13 @@ function Object:new(type, data, const)
     uid = uid + 1
 
     self.uid = uid
-    self:SetType(type)
-
+    self.type = type
     self.data = data
-
     self.const = const
 
     return self
 end
 
-for k,v in pairs(types.BaseObject) do Object[k] = v end
-types.Object = Object
+types.RegisterType(Object)
 
 return Object

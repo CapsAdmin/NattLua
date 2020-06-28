@@ -190,7 +190,7 @@ end
 
 function Set:IsConst()
     for _, v in ipairs(self.datai) do
-        if not v.const then
+        if not v:IsConst() then
             return false
         end
     end
@@ -244,7 +244,6 @@ function Set:new(values)
     return self
 end
 
-for k,v in pairs(types.BaseObject) do Set[k] = v end
-types.Set = Set
+types.RegisterType(Set)
 
 return Set

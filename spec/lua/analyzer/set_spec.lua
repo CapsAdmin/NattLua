@@ -50,4 +50,17 @@ describe("set", function()
             type_assert(a.foo, _ as 4|4)
         ]]
     end)
+    it("is const", function()
+        local a = run[[
+            local type a = 1 | 2 | 3
+        ]]
+        assert(a:GetValue("a", "typesystem"):IsConst() == true)
+    end)
+
+    it("is not const", function()
+        local a = run[[
+            local type a = 1 | 2 | 3 | string
+        ]]
+        assert(a:GetValue("a", "typesystem"):IsConst() == false)
+    end)
 end)

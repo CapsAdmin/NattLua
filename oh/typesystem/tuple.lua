@@ -156,8 +156,8 @@ function Tuple:Serialize()
 end
 
 function Tuple:IsConst()
-    for i,v in ipairs(self.data) do
-        if not v:IsConst() then
+    for _, obj in ipairs(self.data) do
+        if not obj:IsConst() then
             return false
         end
     end
@@ -203,7 +203,6 @@ function Tuple:new(tbl)
     return self
 end
 
-for k,v in pairs(types.BaseObject) do Tuple[k] = v end
-types.Tuple = Tuple
+types.RegisterType(Tuple)
 
 return Tuple
