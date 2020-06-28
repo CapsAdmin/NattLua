@@ -1,10 +1,10 @@
 local types = require("oh.typesystem.types")
 
-local Table = {}
-Table.Type = "table"
-Table.__index = Table
+local META = {}
+META.Type = "table"
+META.__index = META
 
-function Table:GetSignature()
+function META:GetSignature()
     if self.supress then
         return "*self*"
     end
@@ -23,7 +23,7 @@ function Table:GetSignature()
 end
 
 local level = 0
-function Table:Serialize()
+function META:Serialize()
     if self.supress then
         return "*self*"
     end
@@ -46,7 +46,7 @@ function Table:Serialize()
     return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
-function Table:__tostring()
+function META:__tostring()
     if self.supress then
         return "*self*"
     end
@@ -78,14 +78,14 @@ function Table:__tostring()
     return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
-function Table:GetLength()
+function META:GetLength()
     return #self.data
 end
 
 -- TODO
 local done
 
-function Table.SubsetOf(A, B)
+function META.SubsetOf(A, B)
     if A == B then
         return true
     end
@@ -174,11 +174,11 @@ function Table.SubsetOf(A, B)
     return types.errors.subset(A, B)
 end
 
-function Table:IsDynamic()
+function META:IsDynamic()
     return true
 end
 
-function Table:Union(tbk)
+function META:Union(tbk)
     local copy = types.Table:new({})
 
     for _, keyval in ipairs(self.data) do
@@ -192,7 +192,7 @@ function Table:Union(tbk)
     return copy
 end
 
-function Table:Delete(key)
+function META:Delete(key)
     for i, keyval in ipairs(self.data) do
         if key:SubsetOf(keyval.key) then
             table.remove(self.data, i)
@@ -202,7 +202,7 @@ function Table:Delete(key)
     return false, "cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self)
 end
 
-function Table:GetKeySet()
+function META:GetKeySet()
     local set = types.Set:new()
 
     for _, keyval in ipairs(self.data) do
@@ -212,11 +212,11 @@ function Table:GetKeySet()
     return set
 end
 
-function Table:Contains(key)
+function META:Contains(key)
     return self:GetKeyVal(key, true)
 end
 
-function Table:GetKeyVal(key, reverse_subset)
+function META:GetKeyVal(key, reverse_subset)
     if not self.data[1] then
         return false, "table has no definitions"
     end
@@ -245,7 +245,7 @@ function Table:GetKeyVal(key, reverse_subset)
     return false, table.concat(reasons, "\n")
 end
 
-function Table:Set(key, val, raw)
+function META:Set(key, val, raw)
     key = types.Cast(key)
     val = types.Cast(val)
 
@@ -288,7 +288,7 @@ function Table:Set(key, val, raw)
     return true
 end
 
-function Table:Get(key, raw)
+function META:Get(key, raw)
     key = types.Cast(key)
 
     local keyval, reason = self:GetKeyVal(key, true)
@@ -300,7 +300,7 @@ function Table:Get(key, raw)
     return false, reason
 end
 
-function Table:IsNumericallyIndexed()
+function META:IsNumericallyIndexed()
 
     for _, keyval in ipairs(self:GetElements()) do
         if keyval.key.Type ~= "number" then
@@ -311,7 +311,7 @@ function Table:IsNumericallyIndexed()
     return true
 end
 
-function Table:CopyLiteralness(from)
+function META:CopyLiteralness(from)
     for _, keyval_from in ipairs(from.data) do
         local keyval, reason = self:GetKeyVal(keyval_from.key)
 
@@ -334,8 +334,8 @@ function Table:CopyLiteralness(from)
     return true
 end
 
-function Table:Copy()
-    local copy = Table:new({})
+function META:Copy()
+    local copy = META:new({})
 
     for _, keyval in ipairs(self.data) do
         local k,v = keyval.key, keyval.val
@@ -361,11 +361,11 @@ function Table:Copy()
     return copy
 end
 
-function Table:GetData()
+function META:GetData()
     return self.data
 end
 
-function Table:pairs()
+function META:pairs()
     local i = 1
     return function()
         local keyval = self.data and self.data[i]
@@ -380,7 +380,7 @@ function Table:pairs()
     end
 end
 
-function Table:Extend(t)
+function META:Extend(t)
     local copy = self:Copy()
 
     for _, keyval in ipairs(t.data) do
@@ -395,7 +395,7 @@ function Table:Extend(t)
     return copy
 end
 
-function Table:IsLiteral()
+function META:IsLiteral()
     for _, v in ipairs(self.data) do
         if v.val ~= self then
 
@@ -422,15 +422,15 @@ function Table:IsLiteral()
     return true
 end
 
-function Table:IsFalsy()
+function META:IsFalsy()
     return false
 end
 
-function Table:IsTruthy()
+function META:IsTruthy()
     return true
 end
 
-function Table:new(data)
+function META:new(data)
     local self = setmetatable({}, self)
 
     self.data = {}
@@ -444,10 +444,10 @@ function Table:new(data)
     return self
 end
 
-function Table:IsVolatile()
+function META:IsVolatile()
     return self.volatile
 end
 
-types.RegisterType(Table)
+types.RegisterType(META)
 
-return Table
+return META

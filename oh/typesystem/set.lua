@@ -1,11 +1,11 @@
 local types = require("oh.typesystem.types")
-local Set = {}
-Set.Type = "set"
-Set.__index = Set
+local META = {}
+META.Type = "set"
+META.__index = META
 
 local sort = function(a, b) return a < b end
 
-function Set:GetSignature()
+function META:GetSignature()
     local s = {}
 
     for _, v in ipairs(self.datai) do
@@ -17,7 +17,7 @@ function Set:GetSignature()
     return table.concat(s, "|")
 end
 
-function Set:__tostring()
+function META:__tostring()
     local s = {}
 
     for _, v in ipairs(self.datai) do
@@ -29,11 +29,11 @@ function Set:__tostring()
     return "⦃" .. table.concat(s, ", ") .. "⦄"
 end
 
-function Set:Serialize()
+function META:Serialize()
     return self:__tostring()
 end
 
-function Set:AddElement(e)
+function META:AddElement(e)
     if e.Type == "set" then
         for _, e in ipairs(e.datai) do
             self:AddElement(e)
@@ -50,15 +50,15 @@ function Set:AddElement(e)
     return self
 end
 
-function Set:GetLength()
+function META:GetLength()
     return #self.datai
 end
 
-function Set:GetElements()
+function META:GetElements()
     return self.datai
 end
 
-function Set:RemoveElement(e)
+function META:RemoveElement(e)
     self.data[types.GetSignature(e)] = nil
     for i,v in ipairs(self.datai) do
         if types.GetSignature(v) == types.GetSignature(e) then
@@ -68,7 +68,7 @@ function Set:RemoveElement(e)
     end
 end
 
-function Set:Get(key, from_table)
+function META:Get(key, from_table)
     key = types.Cast(key)
 
     if from_table then
@@ -101,21 +101,21 @@ function Set:Get(key, from_table)
     return false, table.concat(errors, "\n")
 end
 
-function Set:Set(key, val)
+function META:Set(key, val)
     self:AddElement(val)
     return true
 end
 
-function Set:IsEmpty()
+function META:IsEmpty()
     return self.datai[1] == nil
 end
 
-function Set:GetData()
+function META:GetData()
     return self.datai
 end
 
 
-function Set:IsTruthy()
+function META:IsTruthy()
     if self:IsEmpty() then return false end
 
     for _, obj in ipairs(self:GetElements()) do
@@ -126,7 +126,7 @@ function Set:IsTruthy()
     return false
 end
 
-function Set:IsFalsy()
+function META:IsFalsy()
     if self:IsEmpty() then return false end
 
     for _, obj in ipairs(self:GetElements()) do
@@ -137,7 +137,7 @@ function Set:IsFalsy()
     return false
 end
 
-function Set:IsType(typ)
+function META:IsType(typ)
     if self:IsEmpty() then return false end
 
     for _, obj in ipairs(self:GetElements()) do
@@ -148,7 +148,7 @@ function Set:IsType(typ)
     return true
 end
 
-function Set:HasType(typ)
+function META:HasType(typ)
     for _, obj in ipairs(self:GetElements()) do
         if obj.Type == typ then
             return true
@@ -157,7 +157,7 @@ function Set:HasType(typ)
     return false
 end
 
-function Set:IsVolatile()
+function META:IsVolatile()
     for _, obj in ipairs(self:GetElements()) do
         if obj.volatile then
             return true
@@ -167,7 +167,7 @@ function Set:IsVolatile()
     return false
 end
 
-function Set.SubsetOf(A, B)
+function META.SubsetOf(A, B)
     if B.Type == "tuple" then
         if B:GetLength() == 1 then
             B = B:Get(1)
@@ -177,7 +177,7 @@ function Set.SubsetOf(A, B)
     end
 
     if B.Type ~= "set" then
-        return A:SubsetOf(Set:new({B}))
+        return A:SubsetOf(META:new({B}))
     end
 
     if A:IsVolatile() then
@@ -201,7 +201,7 @@ function Set.SubsetOf(A, B)
     return true
 end
 
-function Set:Union(set)
+function META:Union(set)
     local copy = self:Copy()
 
     for _, e in ipairs(set.datai) do
@@ -212,7 +212,7 @@ function Set:Union(set)
 end
 
 
-function Set:Intersect(set)
+function META:Intersect(set)
     local copy = types.Set:new()
 
     for _, e in ipairs(self.datai) do
@@ -225,7 +225,7 @@ function Set:Intersect(set)
 end
 
 
-function Set:Subtract(set)
+function META:Subtract(set)
     local copy = self:Copy()
 
     for _, e in ipairs(self.datai) do
@@ -235,15 +235,15 @@ function Set:Subtract(set)
     return copy
 end
 
-function Set:Copy()
-    local copy = Set:new()
+function META:Copy()
+    local copy = META:new()
     for _, e in ipairs(self.datai) do
         copy:AddElement(e)
     end
     return copy
 end
 
-function Set:IsLiteral()
+function META:IsLiteral()
     for _, v in ipairs(self.datai) do
         if not v:IsLiteral() then
             return false
@@ -253,7 +253,7 @@ function Set:IsLiteral()
     return true
 end
 
-function Set:IsTruthy()
+function META:IsTruthy()
     for _, v in ipairs(self.datai) do
         if v:IsTruthy() then
             return true
@@ -264,7 +264,7 @@ function Set:IsTruthy()
 end
 
 
-function Set:IsFalsy()
+function META:IsFalsy()
     for _, v in ipairs(self.datai) do
         if v:IsFalsy() then
             return true
@@ -274,8 +274,8 @@ function Set:IsFalsy()
     return false
 end
 
-function Set:new(values)
-    local self = setmetatable({}, Set)
+function META:new(values)
+    local self = setmetatable({}, META)
 
     self.data = {}
     self.datai = {}
@@ -289,6 +289,6 @@ function Set:new(values)
     return self
 end
 
-types.RegisterType(Set)
+types.RegisterType(META)
 
-return Set
+return META

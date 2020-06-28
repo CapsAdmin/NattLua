@@ -1,60 +1,56 @@
 local types = require("oh.typesystem.types")
 
-local Any = {}
-Any.Type = "any"
-Any.__index = Any
+local META = {}
+META.Type = "any"
+META.__index = META
 
-function Any:GetSignature()
+function META:GetSignature()
     return "any"
 end
 
-function Any:Get(key)
+function META:Get(key)
     return self
 end
 
-function Any:Set(key, val)
+function META:Set(key, val)
 
 end
 
-function Any:GetData()
+function META:GetData()
     return self.data
 end
 
-function Any:Copy()
+function META:Copy()
     return self
 end
 
-function Any.SubsetOf(A, B)
+function META.SubsetOf(A, B)
     return true
 end
 
-function Any:__tostring()
+function META:__tostring()
     return "any"
 end
 
-function Any:Serialize()
+function META:Serialize()
     return self:__tostring()
 end
 
-function Any:IsVolatile()
+function META:IsVolatile()
     return self.volatile == true
 end
 
-function Any:IsFalsy()
+function META:IsFalsy()
     return true
 end
 
-function Any:IsTruthy()
+function META:IsTruthy()
     return true
-end
-
-function Any:RemoveNonTruthy()
-    return self
 end
 
 local uid = 0
 
-function Any:new()
+function META:new()
     local self = setmetatable({}, self)
 
     uid = uid + 1
@@ -66,6 +62,6 @@ function Any:new()
     return self
 end
 
-types.RegisterType(Any)
+types.RegisterType(META)
 
-return Any
+return META

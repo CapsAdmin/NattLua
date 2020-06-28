@@ -34,7 +34,7 @@ do -- type operators
         assert(operators[operator], "cannot map operator " .. tostring(operator))
         if l.Type == type then
             if l:IsLiteral() then
-                local obj = types.Number:new(operators[operator](l.data), true)
+                local obj = types.Number:new(operators[operator](l.data)):MakeLiteral(true)
 
                 if l.max then
                     obj.max = arithmetic(l.max, type, operator)
@@ -101,9 +101,9 @@ do -- type operators
         elseif op == "~" then return arithmetic(l, "number", op)
         elseif op == "#" then
             if l.Type == "table" then
-                return types.Number:new(l:GetLength(), l:IsLiteral())
+                return types.Number:new(l:GetLength()):MakeLiteral(l:IsLiteral())
             elseif l.Type == "string" then
-                return types.Number:new(l:GetData() and #l:GetData() or nil, l:IsLiteral())
+                return types.Number:new(l:GetData() and #l:GetData() or nil):MakeLiteral(l:IsLiteral())
             end
         end
 
@@ -150,7 +150,7 @@ do -- type operators
         if type and l.Type == type and r.Type == type then
             if l:IsLiteral() and r:IsLiteral() then
 
-                local obj = types.Number:new(operators[operator](l.data, r.data), true)
+                local obj = types.Number:new(operators[operator](l.data, r.data)):MakeLiteral(true)
 
                 if r.max then
                     obj.max = arithmetic(l, r.max, type, operator)
@@ -399,7 +399,7 @@ do -- type operators
                 (l.Type == "number" or r.Type == "number" or l.Type == "string" or l.Type == "string")
             then
                 if l:IsLiteral() and r:IsLiteral() then
-                    return types.String:new(l.data ..  r.data, true)
+                    return types.String:new(l.data ..  r.data):MakeLiteral(true)
                 end
 
                 return types.StringType
@@ -523,9 +523,9 @@ do -- types
         elseif type == "..." then
             obj = types.Tuple:new(data)
         elseif type == "number" then
-            obj = types.Number:new(data, literal)
+            obj = types.Number:new(data):MakeLiteral(literal)
         elseif type == "string" then
-            obj = types.String:new(data, literal)
+            obj = types.String:new(data):MakeLiteral(literal)
         elseif type == "boolean" then
             if literal then
                 obj = types.Symbol:new(data)

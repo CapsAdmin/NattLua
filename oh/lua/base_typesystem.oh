@@ -231,7 +231,7 @@ type ^string.len = function(str: string)
 		local copy = types.Set:new()
 		for _, obj in ipairs(str:GetElements()) do
 			if obj:IsLiteral() then
-				copy:AddElement(types.Number:new(#obj:GetData(), true))
+				copy:AddElement(types.Number:new(#obj:GetData()):MakeLiteral(true))
 			else
 				copy:AddElement(types.Number:new())
 			end
@@ -240,7 +240,7 @@ type ^string.len = function(str: string)
 	end
 
 	if str:IsLiteral() then
-		return types.Number:new(#str.data, true)
+		return types.Number:new(#str.data):MakeLiteral(true)
 	end
 
 	return types.Number:new()

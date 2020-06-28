@@ -1,10 +1,10 @@
 local types = require("oh.typesystem.types")
 
-local Tuple = {}
-Tuple.Type = "tuple"
-Tuple.__index = Tuple
+local META = {}
+META.Type = "tuple"
+META.__index = META
 
-function Tuple:GetSignature()
+function META:GetSignature()
     local s = {}
 
     for i,v in ipairs(self.data) do
@@ -14,7 +14,7 @@ function Tuple:GetSignature()
     return table.concat(s, " ")
 end
 
-function Tuple:Merge(tup, dont_extend)
+function META:Merge(tup, dont_extend)
     local src = self.data
     local dst = tup.data
 
@@ -45,35 +45,35 @@ function Tuple:Merge(tup, dont_extend)
     return self
 end
 
-function Tuple:SetElementType(typ)
+function META:SetElementType(typ)
     self.ElementType = typ
 end
 
-function Tuple:GetMaxLength()
+function META:GetMaxLength()
     return self.max or 0
 end
 
-function Tuple:GetElements()
+function META:GetElements()
     return self.data
 end
 
-function Tuple:GetLength()
+function META:GetLength()
     return #self.data
 end
 
-function Tuple:GetData()
+function META:GetData()
     return self.data
 end
 
-function Tuple:Copy()
+function META:Copy()
     local copy = {}
     for i, v in ipairs(self.data) do
         copy[i] = v:Copy()
     end
-    return Tuple:new(copy)
+    return META:new(copy)
 end
 
-function Tuple.SubsetOf(A, B)
+function META.SubsetOf(A, B)
     if A:GetLength() == 1 then
         return A:Get(1):SubsetOf(B)
     end
@@ -120,7 +120,7 @@ function Tuple.SubsetOf(A, B)
     return true
 end
 
-function Tuple:Get(key)
+function META:Get(key)
     if type(key) == "number" then
         return self.data[key]
     end
@@ -132,12 +132,12 @@ function Tuple:Get(key)
     return self.data[key]
 end
 
-function Tuple:Set(key, val)
+function META:Set(key, val)
     self.data[key] =  val
     return true
 end
 
-function Tuple:__tostring()
+function META:__tostring()
     local s = {}
 
     for i,v in ipairs(self.data) do
@@ -147,11 +147,11 @@ function Tuple:__tostring()
     return (self.ElementType and tostring(self.ElementType) or "") .. "⦅" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or (self.max and ("#" .. self.max)) or "") .. "⦆"
 end
 
-function Tuple:Serialize()
+function META:Serialize()
     return self:__tostring()
 end
 
-function Tuple:IsConst()
+function META:IsConst()
     for _, obj in ipairs(self.data) do
         if not obj:IsConst() then
             return false
@@ -160,15 +160,15 @@ function Tuple:IsConst()
     return true
 end
 
-function Tuple:IsEmpty()
+function META:IsEmpty()
     return self:GetLength() == 0
 end
 
-function Tuple:SetLength()
+function META:SetLength()
 
 end
 
-function Tuple:IsVolatile()
+function META:IsVolatile()
     for i,v in ipairs(self.data) do
         if not v:IsVolatile() then
             return false
@@ -178,15 +178,15 @@ function Tuple:IsVolatile()
 end
 
 
-function Tuple:IsTruthy()
+function META:IsTruthy()
     return true
 end
 
-function Tuple:IsFalsy()
+function META:IsFalsy()
     return false
 end
 
-function Tuple:new(tbl)
+function META:new(tbl)
     local self = setmetatable({}, self)
     self.data = tbl or {}
 
@@ -200,6 +200,6 @@ function Tuple:new(tbl)
     return self
 end
 
-types.RegisterType(Tuple)
+types.RegisterType(META)
 
-return Tuple
+return META

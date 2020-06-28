@@ -52,31 +52,4 @@ describe("table", function()
         assert(tbl:CopyLiteralness(contract))
         assert(assert(tbl:Get(String("foo"))):IsLiteral())
     end)
-
-    do return end
-    do
-        local IAge = Table()
-        IAge:Set(String("age", true), Number(), true)
-
-        local IName = Table()
-        IName:Set(String("name"), String())
-        IName:Set(String("magic"), String("deadbeef", true))
-
-        local function introduce(person)
-            io.write(string.format("Hello, my name is %s and I am %s years old.", person:Get(O("string", "name")), person:Get(O("string", "age")) ),"\n")
-        end
-
-        local Human = IAge:Union(IName)
-        Human:Lock()
-
-
-        assert(IAge:SubsetOf(Human), "IAge should be a subset of Human")
-        Human:Set(O("string", "name", true), O("string", "gunnar"))
-        Human:Set(O("string", "age", true), O("number", 40))
-
-        assert(Human:Get(O("string", "name", true)).data == "gunnar")
-        assert(Human:Get(O("string", "age", true)).data == 40)
-
-        Human:Set(O("string", "magic"), O("string", "lol"))
-    end
 end)

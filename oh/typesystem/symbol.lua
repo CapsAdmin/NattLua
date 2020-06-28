@@ -1,37 +1,35 @@
 local types = require("oh.typesystem.types")
-local syntax = require("oh.lua.syntax")
-local bit = not _G.bit and require("bit32") or _G.bit
 
-local Symbol = {}
-Symbol.Type = "symbol"
-Symbol.__index = Symbol
+local META = {}
+META.Type = "symbol"
+META.__index = META
 
-function Symbol:GetSignature()
+function META:GetSignature()
     return "symbol" .. "-" .. tostring(self.data)
 end
 
-function Symbol:Get(key)
+function META:Get(key)
     return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."]"
     --return self.data
 end
 
-function Symbol:Set(key, val)
+function META:Set(key, val)
     return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val)
     --self.data = val
 end
 
-function Symbol:GetData()
+function META:GetData()
     return self.data
 end
 
-function Symbol:Copy()
-    local copy = Symbol:new(self:GetData())
+function META:Copy()
+    local copy = META:new(self:GetData())
     copy.truthy = self.truthy
 
     return copy
 end
 
-function Symbol.SubsetOf(A, B)
+function META.SubsetOf(A, B)
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
     if B.Type == "set" then
@@ -57,33 +55,29 @@ function Symbol.SubsetOf(A, B)
     return true
 end
 
-function Symbol:__tostring()
+function META:__tostring()
     return tostring(self.data)
 end
 
-function Symbol:Serialize()
+function META:Serialize()
     return self:__tostring()
 end
 
-function Symbol:IsVolatile()
+function META:IsVolatile()
     return self.volatile == true
 end
 
-function Symbol:IsFalsy()
+function META:IsFalsy()
     return not self.truthy
 end
 
-function Symbol:IsTruthy()
+function META:IsTruthy()
    return self.truthy
-end
-
-function Symbol:RemoveNonTruthy()
-    return self
 end
 
 local uid = 0
 
-function Symbol:new(data, truthy)
+function META:new(data)
     local self = setmetatable({}, self)
 
     uid = uid + 1
@@ -92,15 +86,11 @@ function Symbol:new(data, truthy)
     self.data = data
     self.literal = true
 
-    if truthy == nil then
-        self.truthy = not not self.data
-    else
-        self.truthy = truthy
-    end
+    self.truthy = not not self.data
 
     return self
 end
 
-types.RegisterType(Symbol)
+types.RegisterType(META)
 
-return Symbol
+return META

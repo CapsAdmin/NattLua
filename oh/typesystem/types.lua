@@ -42,11 +42,11 @@ types.errors = {
 
 function types.Cast(val)
     if type(val) == "string" then
-        return types.String:new(val, true)
+        return types.String:new(val):MakeLiteral(true)
     elseif type(val) == "boolean" then
         return types.Symbol:new(val)
     elseif type(val) == "number" then
-        return types.Number:new(val, true)
+        return types.Number:new(val):MakeLiteral(true)
     end
     return val
 end
@@ -101,6 +101,7 @@ do
 
     function Base:MakeLiteral(b)
         self.literal = b
+        return self
     end
 
     function Base:IsLiteral()
@@ -118,16 +119,6 @@ function types.RegisterType(meta)
     end
 end
 
-setmetatable(types, {__index = function(_, key)
-    if key == "Nil" then return types.Symbol:new() end
-    if key == "True" then return types.Symbol:new(true) end
-    if key == "False" then return types.Symbol:new(false) end
-    if key == "AnyType" then return types.Any:new() end
-    if key == "Boolean" then return types.Set:new({types.True, types.False}) end
-    if key == "NumberType" then return types.Number:new() end
-    if key == "StringType" then return types.String:new() end
-end})
-
 function types.Initialize()
     types.Set = require("oh.typesystem.set")
     types.Table = require("oh.typesystem.table")
@@ -137,6 +128,14 @@ function types.Initialize()
     types.String = require("oh.typesystem.string")
     types.Any = require("oh.typesystem.any")
     types.Symbol = require("oh.typesystem.symbol")
+
+    types.Nil = types.Symbol:new()
+    types.True = types.Symbol:new(true)
+    types.False = types.Symbol:new(false)
+    types.AnyType = types.Any:new()
+    types.Boolean = types.Set:new({types.True, types.False})
+    types.NumberType = types.Number:new()
+    types.StringType = types.String:new()
 end
 
 return types

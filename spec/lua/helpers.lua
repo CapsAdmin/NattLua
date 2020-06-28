@@ -11,9 +11,9 @@ local function cast(...)
         local v = select(i, ...)
         local t = type(v)
         if t == "number" then
-            ret[i] = types.Number:new(v, true)
+            ret[i] = types.Number:new(v):MakeLiteral(true)
         elseif t == "string" then
-            ret[i] = types.String:new(v, true)
+            ret[i] = types.String:new(v):MakeLiteral(true)
         elseif t == "boolean" then
             ret[i] = types.Symbol:new(v)
         else
@@ -49,9 +49,9 @@ end
 return {
     Set = function(...) return types.Set:new(cast(...)) end,
     Tuple = function(...) return types.Tuple:new({...}) end,
-    Number = function(n) return types.Number:new(n, n ~= nil) end,
+    Number = function(n) return types.Number:new(n):MakeLiteral(n ~= nil) end,
     Function = function(d) return types.Function:new(d) end,
-    String = function(n) return types.String:new(n, n ~= nil) end,
+    String = function(n) return types.String:new(n):MakeLiteral(n ~= nil) end,
     Table = function(data) return types.Table:new(data or {}) end,
     Symbol = function(data) return types.Symbol:new(data) end,
     Any = function() return types.Any:new() end,

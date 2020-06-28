@@ -2,11 +2,11 @@ local types = require("oh.typesystem.types")
 local syntax = require("oh.lua.syntax")
 local bit = not _G.bit and require("bit32") or _G.bit
 
-local Number = {}
-Number.Type = "number"
-Number.__index = Number
+local META = {}
+META.Type = "number"
+META.__index = META
 
-function Number:GetSignature()
+function META:GetSignature()
 
     if self.literal then
         return "number-" .. types.GetSignature(self.data)
@@ -15,31 +15,31 @@ function Number:GetSignature()
     return "number"
 end
 
-function Number:Get(key)
+function META:Get(key)
     return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."]"
     --return self.data
 end
 
-function Number:Set(key, val)
+function META:Set(key, val)
     return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val)
     --self.data = val
 end
 
-function Number:GetData()
+function META:GetData()
     return self.data
 end
 
-function Number:Copy()
+function META:Copy()
     local data = self.data
 
-    local copy = Number:new(data, self.literal)
+    local copy = META:new(data):MakeLiteral(self.literal)
 
     copy.volatile = self.volatile
 
     return copy
 end
 
-function Number.SubsetOf(A, B)
+function META.SubsetOf(A, B)
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
     if B.Type == "set" then
@@ -101,7 +101,7 @@ function Number.SubsetOf(A, B)
     return false
 end
 
-function Number:__tostring()
+function META:__tostring()
     --return "「"..self.uid .. " 〉" .. self:GetSignature() .. "」"
 
 
@@ -132,47 +132,42 @@ function Number:__tostring()
     return "number" .. "(".. tostring(self.data) .. (self.max and (".." .. self.max.data) or "") .. ")"
 end
 
-function Number:Serialize()
+function META:Serialize()
     return self:__tostring()
 end
 
-function Number:Max(val)
+function META:Max(val)
     if "number" == "number" then
         self.max = val
     end
     return self
 end
 
-function Number:IsVolatile()
+function META:IsVolatile()
     return self.volatile == true
 end
 
-function Number:IsFalsy()
+function META:IsFalsy()
     return false
 end
 
-function Number:IsTruthy()
+function META:IsTruthy()
     return true
-end
-
-function Number:RemoveNonTruthy()
-    return self
 end
 
 local uid = 0
 
-function Number:new(data, const)
+function META:new(data)
     local self = setmetatable({}, self)
 
     uid = uid + 1
 
     self.uid = uid
     self.data = data
-    self.literal = const
 
     return self
 end
 
-types.RegisterType(Number)
+types.RegisterType(META)
 
-return Number
+return META
