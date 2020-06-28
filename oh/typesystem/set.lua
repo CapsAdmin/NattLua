@@ -188,9 +188,9 @@ function Set:Copy()
     return copy
 end
 
-function Set:IsConst()
+function Set:IsLiteral()
     for _, v in ipairs(self.datai) do
-        if not v:IsConst() then
+        if not v:IsLiteral() then
             return false
         end
     end

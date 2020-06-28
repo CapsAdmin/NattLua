@@ -50,8 +50,8 @@ describe("table", function()
         tbk:Set(S("foo"), O("string", "bar"))
         tbk:Set(S("a"), N(1337))
 
-        assert(tbk:CopyConstness(contract))
-        assert(assert(tbk:Get(S("foo"))):IsConst())
+        assert(tbk:CopyLiteralness(contract))
+        assert(assert(tbk:Get(S("foo"))):IsLiteral())
     end)
 
     do return end

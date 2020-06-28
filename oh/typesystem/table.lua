@@ -311,7 +311,7 @@ function Table:IsNumericallyIndexed()
     return true
 end
 
-function Table:CopyConstness(from)
+function Table:CopyLiteralness(from)
     for _, keyval_from in ipairs(from.data) do
         local keyval, reason = self:GetKeyVal(keyval_from.key)
 
@@ -320,15 +320,15 @@ function Table:CopyConstness(from)
         end
 
         if keyval_from.key.Type == "table" then
-            keyval.key:CopyConstness(keyval_from.key)
+            keyval.key:CopyLiteralness(keyval_from.key)
         else
-            keyval.key:SetConst(keyval_from.key:IsConst())
+            keyval.key:MakeLiteral(keyval_from.key:IsLiteral())
         end
 
         if keyval_from.val.Type == "table" then
-            keyval.val:CopyConstness(keyval_from.val)
+            keyval.val:CopyLiteralness(keyval_from.val)
         else
-            keyval.val:SetConst(keyval_from.val:IsConst())
+            keyval.val:MakeLiteral(keyval_from.val:IsLiteral())
         end
     end
     return true
@@ -395,9 +395,9 @@ function Table:Extend(t)
     return copy
 end
 
-function Table:IsConst()
+function Table:IsLiteral()
     for _, v in ipairs(self.data) do
-        if v.val ~= self and (not v.val:IsConst() or not v.key:IsConst()) then
+        if v.val ~= self and (not v.val:IsLiteral() or not v.key:IsLiteral()) then
             return false
         end
     end

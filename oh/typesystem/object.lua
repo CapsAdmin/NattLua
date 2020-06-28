@@ -10,7 +10,7 @@ function Object:GetSignature()
     if self.type == "function" then
         return self.type .. "-"..types.GetSignature(self.data)
     end
-    if self.const then
+    if self.literal then
         return self.type .. "-" .. types.GetSignature(self.data)
     end
 
@@ -60,7 +60,7 @@ function Object:Copy()
         data = {ret = data.ret:Copy(), arg = data.arg:Copy()}
     end
 
-    local copy = Object:new(self.type, data, self.const)
+    local copy = Object:new(self.type, data, self.literal)
     copy.volatile = self.volatile
     return copy
 end
@@ -77,7 +77,7 @@ function Object.SubsetOf(A, B)
 
         if A.type == B.type then
 
-            if A.const == true and B.const == true then
+            if A.literal == true and B.literal == true then
                 -- compare against literals
 
 
@@ -102,10 +102,10 @@ function Object.SubsetOf(A, B)
             elseif A.data == nil and B.data == nil then
                 -- number contains number
                 return true
-            elseif A.const and not B.const then
+            elseif A.literal and not B.literal then
                 -- 42 subset of number?
                 return true
-            elseif not A.const and B.const then
+            elseif not A.literal and B.literal then
                 -- number subset of 42 ?
                 return types.errors.subset(A, B)
             end
@@ -143,7 +143,7 @@ function Object:__tostring()
         return str
     end
 
-    if self.const then
+    if self.literal then
         if self.type == "string" then
             if self.data then
                 return ("%q"):format(self.data)
@@ -238,7 +238,7 @@ function Object:new(type, data, const)
     self.uid = uid
     self.type = type
     self.data = data
-    self.const = const
+    self.literal = const
 
     return self
 end

@@ -89,14 +89,14 @@ do
         end
     end
 
-    Base.const = false
+    Base.literal = false
 
-    function Base:SetConst(b)
-        self.const = b
+    function Base:MakeLiteral(b)
+        self.literal = b
     end
 
-    function Base:IsConst()
-        return self.const
+    function Base:IsLiteral()
+        return self.literal
     end
 
     types.BaseObject = Base

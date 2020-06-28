@@ -155,9 +155,9 @@ function Tuple:Serialize()
     return self:__tostring()
 end
 
-function Tuple:IsConst()
+function Tuple:IsLiteral()
     for _, obj in ipairs(self.data) do
-        if not obj:IsConst() then
+        if not obj:IsLiteral() then
             return false
         end
     end

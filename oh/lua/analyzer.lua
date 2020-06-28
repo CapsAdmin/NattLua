@@ -33,7 +33,7 @@ do -- type operators
     local function arithmetic(l, type, operator)
         assert(operators[operator], "cannot map operator " .. tostring(operator))
         if l.type == type then
-            if l:IsConst() then
+            if l:IsLiteral() then
                 local obj = types.Object:new(type, operators[operator](l.data), true)
 
                 if l.max then
@@ -101,9 +101,9 @@ do -- type operators
         elseif op == "~" then return arithmetic(l, "number", op)
         elseif op == "#" then
             if l.Type == "table" then
-                return types.Object:new("number", l:GetLength(), l:IsConst())
+                return types.Object:new("number", l:GetLength(), l:IsLiteral())
             elseif l.Type == "object" and l.type == "string" then
-                return types.Object:new("number", l:GetData() and #l:GetData() or nil, l:IsConst())
+                return types.Object:new("number", l:GetData() and #l:GetData() or nil, l:IsLiteral())
             end
         end
 
@@ -148,7 +148,7 @@ do -- type operators
     local function arithmetic(l,r, type, operator)
         assert(operators[operator], "cannot map operator " .. tostring(operator))
         if type and l.type == type and r.type == type then
-            if l:IsConst() and r:IsConst() then
+            if l:IsLiteral() and r:IsLiteral() then
                 local obj = types.Object:new(type, operators[operator](l.data, r.data), true)
 
                 if r.max then
@@ -261,7 +261,7 @@ do -- type operators
                 return res
 			end
 
-            if l:IsConst() and r:IsConst() then
+            if l:IsLiteral() and r:IsLiteral() then
                 return types.Object:new("boolean", l.data == r.data, true)
             end
 
@@ -281,12 +281,12 @@ do -- type operators
         elseif op == "~=" then
             local res = metatable_function(self, "__eq", l, r)
             if res then
-                if res:IsConst() then
+                if res:IsLiteral() then
                     res.data = not res.data
                 end
                 return res
             end
-            if l:IsConst() and r:IsConst() then
+            if l:IsLiteral() and r:IsLiteral() then
                 return types.Object:new("boolean", l.data ~= r.data, true)
             end
 
@@ -308,7 +308,7 @@ do -- type operators
             if res then
                 return res
             end
-            if l:IsConst() and r:IsConst() then
+            if l:IsLiteral() and r:IsLiteral() then
                 return types.Object:new("boolean", l.data < r.data, true)
             end
 
@@ -318,7 +318,7 @@ do -- type operators
             if res then
                 return res
             end
-            if l:IsConst() and r:IsConst() then
+            if l:IsLiteral() and r:IsLiteral() then
                 return types.Object:new("boolean", l.data <= r.data, true)
             end
 
@@ -328,7 +328,7 @@ do -- type operators
             if res then
                 return res
             end
-            if l:IsConst() and r:IsConst() then
+            if l:IsLiteral() and r:IsLiteral() then
                 return types.Object:new("boolean", l.data > r.data, true)
             end
 
@@ -338,7 +338,7 @@ do -- type operators
             if res then
                 return res
             end
-            if l:IsConst() and r:IsConst() then
+            if l:IsLiteral() and r:IsLiteral() then
                 return types.Object:new("boolean", l.data >= r.data, true)
             end
 
@@ -399,7 +399,7 @@ do -- type operators
                 (l.type == "string" or r.type == "string") and
                 (l.type == "number" or r.type == "number" or l.type == "string" or l.type == "string")
             then
-                if l:IsConst() and r:IsConst() then
+                if l:IsLiteral() and r:IsLiteral() then
                     return types.Object:new("string", l.data ..  r.data, true)
                 end
 
@@ -512,13 +512,13 @@ do -- type operators
 end
 
 do -- types
-    function META:TypeFromImplicitNode(node, type, data, const)
+    function META:TypeFromImplicitNode(node, type, data, literal)
         node.scope = self.scope -- move this out of here
 
         local obj
 
         if type == "table" or type == "self" then
-            obj = types.Table:new(data, const)
+            obj = types.Table:new(data, literal)
         elseif type == "..." then
             obj = types.Tuple:new(data)
         elseif
@@ -529,7 +529,7 @@ do -- types
             type == "nil" or
             type == "any"
         then
-            obj = types.Object:new(type, data, const)
+            obj = types.Object:new(type, data, literal)
         end
 
         if type == "self" then
@@ -538,7 +538,7 @@ do -- types
 
         if type == "string" then
             if not self.string_meta then
-                local meta = types.Table:new({}, const)
+                local meta = types.Table:new({}, literal)
                 meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
                 self.string_meta = meta
             end
@@ -905,11 +905,11 @@ function META:AnalyzeStatement(statement)
                 if statement.right and statement.right[i] then
 
                     if contract.Type == "table" then
-                        val:CopyConstness(contract)
+                        val:CopyLiteralness(contract)
                     else
                         -- local a: 1 = 1
                         -- should turn the right side into a constant number rather than number(1)
-                        val:SetConst(contract:IsConst())
+                        val:MakeLiteral(contract:IsLiteral())
                     end
 
                     local ok, reason = val:SubsetOf(contract)
@@ -928,7 +928,7 @@ function META:AnalyzeStatement(statement)
                 --val = contract
             else
                 -- by default assignments are not constant, even though TypeFromImplicitNode is const by default
-              --  val.const = false
+              --  val.literal = false
             end
 
             exp_key.inferred_type = val

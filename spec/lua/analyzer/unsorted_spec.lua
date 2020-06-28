@@ -727,7 +727,7 @@ R[[
                     val:AddElement(keyval.val)
                 end
             elseif tbl.Type == "tuple" then
-                key = types.Object:new("number", i, const)
+                key = types.Object:new("number")
                 key.max = tbl.max and tbl.max:Copy() or nil
                 for _, val in ipairs(tbl.data) do
                     val:AddElement(val)

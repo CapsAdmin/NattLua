@@ -24,14 +24,14 @@ describe("analyzer", function()
         ]])
     end)
 
-    it("default declaration is const", function()
+    it("default declaration is literal", function()
         local analyzer = run([[
             local a = 1
             local t = {k = 1}
             local b = t.k
         ]])
-        assert(analyzer:GetValue("a", "runtime"):IsConst())
-        assert(analyzer:GetValue("b", "runtime"):IsConst())
+        assert(analyzer:GetValue("a", "runtime"):IsLiteral())
+        assert(analyzer:GetValue("b", "runtime"):IsLiteral())
     end)
 
     it("branching", function()
@@ -109,8 +109,8 @@ describe("analyzer", function()
             local b: number
         ]]
 
-        assert.equal(true, analyzer:GetValue("a", "runtime"):IsConst())
-        assert.equal(false, analyzer:GetValue("b", "runtime"):IsConst())
+        assert.equal(true, analyzer:GetValue("a", "runtime"):IsLiteral())
+        assert.equal(false, analyzer:GetValue("b", "runtime"):IsLiteral())
     end)
 
     -- literal + vague = vague
@@ -124,7 +124,7 @@ describe("analyzer", function()
         local v = analyzer:GetValue("c", "runtime")
         assert.equal(v.Type, "object")
         assert.equal(true, v:IsType("number"))
-        assert.equal(false, v:IsConst())
+        assert.equal(false, v:IsLiteral())
     end)
 
     it("1 + 2 = 3", function()
