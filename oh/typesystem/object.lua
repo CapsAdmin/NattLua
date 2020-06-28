@@ -80,7 +80,6 @@ function Object.SubsetOf(A, B)
             if A.literal == true and B.literal == true then
                 -- compare against literals
 
-
                 -- nan
                 if A.type == "number" and B.type == "number" then
                     if A.data ~= A.data and B.data ~= B.data then
@@ -166,21 +165,6 @@ end
 
 function Object:Serialize()
     return self:__tostring()
-end
-
-do
-    Object.truthy = 0
-
-    function Object:GetTruthy()
-        return self.truthy > 0
-    end
-
-    function Object:PushTruthy()
-        self.truthy = self.truthy + 1
-    end
-    function Object:PopTruthy()
-        self.truthy = self.truthy + 1
-    end
 end
 
 function Object:Max(val)

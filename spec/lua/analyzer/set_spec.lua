@@ -50,6 +50,7 @@ describe("set", function()
             type_assert(a.foo, _ as 4|4)
         ]]
     end)
+
     it("is literal", function()
         local a = run[[
             local type a = 1 | 2 | 3

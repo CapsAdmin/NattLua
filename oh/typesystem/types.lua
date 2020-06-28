@@ -85,8 +85,16 @@ do
             self.truthy = self.truthy + 1
         end
         function Base:PopTruthy()
-            self.truthy = self.truthy + 1
+            self.truthy = self.truthy - 1
         end
+    end
+
+    function Base:GetSignature()
+        error("NYI")
+    end
+
+    function Base:Serialize()
+        error("NYI")
     end
 
     Base.literal = false
