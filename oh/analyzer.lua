@@ -470,6 +470,25 @@ return function(analyzer_meta)
         return out
     end
 
+    function META:AnalyzeExpression(exp, env)
+        assert(exp and exp.type == "expression")
+        env = env or "runtime"
+
+        if self.PreferTypesystem then
+            env = "typesystem"
+        end
+
+        local stack = self:CreateStack()
+
+        for _, node in ipairs(self:ExpandExpression(exp)) do
+            self.current_expression = node
+
+            self:HandleExpression(stack, node, env)
+        end
+
+        return stack:Unpack()
+    end
+
     function META:AnalyzeExpressions(expressions, ...)
         if not expressions then return end
         local out = {}

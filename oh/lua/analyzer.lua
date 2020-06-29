@@ -82,7 +82,7 @@ do -- type operators
                 if not obj:IsLiteral() then
                     return false, "must be a literal"
                 end
-                
+
                 obj.pattern_contract = obj:GetData()
 
                 return obj
@@ -1107,71 +1107,56 @@ function META:AnalyzeStatement(statement)
 end
 
 do
-    function META:AnalyzeExpression(exp, env)
-        assert(exp and exp.type == "expression")
-        env = env or "runtime"
-
-        if self.PreferTypesystem then
-            env = "typesystem"
-        end
-
-        local stack = self:CreateStack()
-
-        for _, node in ipairs(self:ExpandExpression(exp)) do
-            self.current_expression = node
-
-            if node.type_expression then
-                -- TODO: move to AnalyzeValue?
-                local val = self:AnalyzeExpression(node.type_expression, "typesystem")
-                stack:Push(val)
-                if node.tokens["is"] then
-                    node.result_is = self:GetValue(node, env).Type == val
-                end
-            elseif node.kind == "value" then
-                stack:Push(self:AnalyzeValue(node, env))
-            elseif node.kind == "function" or node.kind == "type_function" then
-                stack:Push(self:AnalyzeFunction(node, env))
-            elseif node.kind == "table" or node.kind == "type_table" then
-                stack:Push(self:AnalyzeTable(node, env))
-            elseif node.kind == "vararg_tuple" then
-                local obj = self:TypeFromImplicitNode(node, "...")
-                obj:SetElementType(self:GetValue(node.value, "typesystem"))
-                stack:Push(obj)
-            elseif node.kind == "binary_operator" then
-                local right, left = stack:Pop(), stack:Pop()
-
-                -- TODO: more elegant way of dealing with self?
-                if node.value.value == ":" then
-                    stack:Push(left)
-                end
-
-                 stack:Push(self:Assert(node, self:BinaryOperator(node, left, right, env)))
-            elseif node.kind == "prefix_operator" then
-                stack:Push(self:Assert(node, self:PrefixOperator(node, stack:Pop(), env)))
-            elseif node.kind == "postfix_operator" then
-                stack:Push(self:Assert(node, self:PostfixOperator(node, stack:Pop(), env)))
-            elseif node.kind == "postfix_expression_index" then
-                stack:Push(self:Assert(node, self:GetOperator(stack:Pop(), self:AnalyzeExpression(node.expression))))
-            elseif node.kind == "postfix_call" then
-                local obj = stack:Pop()
-
-                local arguments = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
-
-                if node.self_call then
-                    table.insert(arguments, 1, stack:Pop())
-                end
-
-                self.PreferTypesystem = node.type_call
-                stack:Push(self:Assert(node, self:Call(obj, types.Tuple(arguments), node)))
-                self.PreferTypesystem = nil
-            elseif node.kind == "import" or node.kind == "lsx" then
-                --stack:Push(self:AnalyzeStatement(node.root))
-            else
-                error("unhandled expression " .. node.kind)
+    function META:HandleExpression(stack, node, env)
+        if node.type_expression then
+            -- TODO: move to AnalyzeValue?
+            local val = self:AnalyzeExpression(node.type_expression, "typesystem")
+            stack:Push(val)
+            if node.tokens["is"] then
+                node.result_is = self:GetValue(node, env).Type == val
             end
-        end
+        elseif node.kind == "value" then
+            stack:Push(self:AnalyzeValue(node, env))
+        elseif node.kind == "function" or node.kind == "type_function" then
+            stack:Push(self:AnalyzeFunction(node, env))
+        elseif node.kind == "table" or node.kind == "type_table" then
+            stack:Push(self:AnalyzeTable(node, env))
+        elseif node.kind == "vararg_tuple" then
+            local obj = self:TypeFromImplicitNode(node, "...")
+            obj:SetElementType(self:GetValue(node.value, "typesystem"))
+            stack:Push(obj)
+        elseif node.kind == "binary_operator" then
+            local right, left = stack:Pop(), stack:Pop()
 
-        return stack:Unpack()
+            -- TODO: more elegant way of dealing with self?
+            if node.value.value == ":" then
+                stack:Push(left)
+            end
+
+                stack:Push(self:Assert(node, self:BinaryOperator(node, left, right, env)))
+        elseif node.kind == "prefix_operator" then
+            stack:Push(self:Assert(node, self:PrefixOperator(node, stack:Pop(), env)))
+        elseif node.kind == "postfix_operator" then
+            stack:Push(self:Assert(node, self:PostfixOperator(node, stack:Pop(), env)))
+        elseif node.kind == "postfix_expression_index" then
+            stack:Push(self:Assert(node, self:GetOperator(stack:Pop(), self:AnalyzeExpression(node.expression))))
+        elseif node.kind == "postfix_call" then
+            local obj = stack:Pop()
+
+            local arguments = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
+
+            if node.self_call then
+                table.insert(arguments, 1, stack:Pop())
+            end
+
+            self.PreferTypesystem = node.type_call
+            stack:Push(self:Assert(node, self:Call(obj, types.Tuple(arguments), node)))
+            self.PreferTypesystem = nil
+        elseif node.kind == "import" or node.kind == "lsx" then
+            --stack:Push(self:AnalyzeStatement(node.root))
+        else
+            error("unhandled expression " .. node.kind)
+        end
     end
 
     function META:AnalyzeValue(node, env)
