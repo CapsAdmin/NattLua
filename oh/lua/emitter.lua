@@ -40,6 +40,8 @@ function META:EmitExpression(node)
         self:EmitLSXExpression(node)
     elseif node.kind == "type_table" then
         self:EmitTableType(node)
+    elseif node.kind == "vararg_tuple" then
+        self:EmitVarargTuple(node) 
     elseif node.kind == "type_list" then
        self:EmitTypeList(node)
     else
@@ -51,6 +53,10 @@ function META:EmitExpression(node)
             self:EmitToken(node)
         end
     end
+end
+
+function META:EmitVarargTuple(node)
+    self:Emit(tostring(node.inferred_type))
 end
 
 function META:EmitExpressionIndex(node)

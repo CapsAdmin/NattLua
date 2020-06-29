@@ -2,7 +2,16 @@ local T = require("spec.lua.helpers")
 local run = T.RunCode
 
 describe("varargs", function()
-    it("a", function()
+
+    pending("typed vararg", function()
+        local a = run[[
+            local foo: string... = 1,2,3
+        ]]
+        local foo = a:GetValue("foo", "typesystem")
+        print(foo)
+    end)
+
+    it("vararg", function()
         run[[
             local function test(...)
 

@@ -74,6 +74,18 @@ do -- type operators
                     return false, "cannot find " .. self:Hash(node.right) .. " in the current typesystem scope"
                 end
                 return obj.contract or obj
+            elseif op == "$" then
+                local obj = self:AnalyzeExpression(node.right, "typesystem")
+                if obj.Type ~= "string" then
+                    return false, "must evaluate to a string"
+                end
+                if not obj:IsLiteral() then
+                    return false, "must be a literal"
+                end
+                
+                obj.pattern_contract = obj:GetData()
+
+                return obj
             end
         end
 
@@ -521,6 +533,7 @@ do -- types
             obj = types.Table(data)
         elseif type == "..." then
             obj = types.Tuple(data)
+            obj.max = math.huge
         elseif type == "number" then
             obj = types.Number(data):MakeLiteral(literal)
         elseif type == "string" then
@@ -1120,6 +1133,10 @@ do
                 stack:Push(self:AnalyzeFunction(node, env))
             elseif node.kind == "table" or node.kind == "type_table" then
                 stack:Push(self:AnalyzeTable(node, env))
+            elseif node.kind == "vararg_tuple" then
+                local obj = self:TypeFromImplicitNode(node, "...")
+                obj:SetElementType(self:GetValue(node.value, "typesystem"))
+                stack:Push(obj)
             elseif node.kind == "binary_operator" then
                 local right, left = stack:Pop(), stack:Pop()
 
@@ -1130,7 +1147,6 @@ do
 
                  stack:Push(self:Assert(node, self:BinaryOperator(node, left, right, env)))
             elseif node.kind == "prefix_operator" then
-                local left =
                 stack:Push(self:Assert(node, self:PrefixOperator(node, stack:Pop(), env)))
             elseif node.kind == "postfix_operator" then
                 stack:Push(self:Assert(node, self:PostfixOperator(node, stack:Pop(), env)))
@@ -1224,7 +1240,6 @@ do
             else
                 if key.kind == "value" and key.value.value == "..." then
                     args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
-                    args[i].max = math.huge
                 elseif key.kind == "type_table" then
                     args[i] = self:AnalyzeExpression(key)
                 else

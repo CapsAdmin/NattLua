@@ -89,7 +89,7 @@ function META.SubsetOf(A, B)
     end
 
 
-    if A.ElementType == "any" then
+    if A.ElementType and A.ElementType.Type == "any" then
         return true
     end
 

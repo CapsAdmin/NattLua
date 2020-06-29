@@ -41,7 +41,7 @@ syntax.PrefixOperators = {
 }
 
 syntax.PrefixTypeOperators = {
-    "-", "#", "not", "~", "typeof"
+    "-", "#", "not", "~", "typeof", "$"
 }
 
 

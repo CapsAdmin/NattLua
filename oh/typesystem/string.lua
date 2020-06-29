@@ -62,6 +62,19 @@ function META.SubsetOf(A, B)
     if B.Type == "any" or B.volatile then return true end
 
     if B.Type == "string" then
+        
+        if B.pattern_contract then
+            if not A:IsLiteral() then
+                return false, "must be a literal"
+            end
+
+            if not A:GetData():find(B.pattern_contract) then
+                return false, "the pattern failed to match"
+            end
+
+            return true
+        end
+
 
         if A.literal == true and B.literal == true then
             -- compare against literals

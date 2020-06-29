@@ -254,6 +254,10 @@ function META:ReadTypeExpression(priority)
         node = self:Expression("prefix_operator")
         node.value = self:ReadTokenLoose()
         node.right = self:ReadTypeExpression(math_huge)
+    elseif self:IsType("letter") and self:IsValue("...", 1) then
+        node = self:Expression("vararg_tuple")
+        node.value = self:ReadTokenLoose()
+        node.tokens["..."] = self:ReadValue("...")
     elseif self:IsValue("function") and self:IsValue("(", 1) then
         node = self:ReadTypeFunction()
     elseif syntax.IsTypeValue(self:GetToken()) or self:IsType("letter") then
@@ -261,6 +265,10 @@ function META:ReadTypeExpression(priority)
         node.value = self:ReadTokenLoose()
     elseif self:IsValue("{") then
         node = self:ReadTypeTable()
+    elseif self:IsType("$") and self:IsType("string", 1) then
+        node = self:Expression("type_string")
+        node.tokens["$"] = self:ReadTokenLoose("...")
+        node.value = self:ReadType("string")
     elseif self:IsValue("[") then
         node = self:Expression("type_list")
         node.tokens["["] = self:ReadValue("[")

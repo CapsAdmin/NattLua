@@ -22,11 +22,10 @@ assert(func(0, "") == "bar!")
 
 any:
     number = -math.huge .. math.huge | math.nan
-    string = *all possible string values*
+    string = ""
     boolean = true | false
-    table = *all possible table values*
-    function = *all possible function types*
-        (string): string
+    table = {[any] = any}
+    function = function(): 
 
 
 type pcall = function(function, ...): (boolean, ...)
