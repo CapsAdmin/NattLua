@@ -13,435 +13,439 @@ do -- type operators
         end
     end
 
-    local operators = {
-        ["-"] = function(l) return -l end,
-        ["~"] = function(l) return bit.bnot(l) end,
-        ["#"] = function(l) return #l end,
-    }
+    do -- prefix
+        local operators = {
+            ["-"] = function(l) return -l end,
+            ["~"] = function(l) return bit.bnot(l) end,
+            ["#"] = function(l) return #l end,
+        }
 
-    local function metatable_function(self, meta_method, l)
-        if l.meta then
-            local func = l.meta:Get(meta_method)
+        local function metatable_function(self, meta_method, l)
+            if l.meta then
+                local func = l.meta:Get(meta_method)
 
-            if func then
-                return self:Call(func, types.Tuple({l})):Get(1)
+                if func then
+                    return self:Call(func, types.Tuple({l})):Get(1)
+                end
             end
+        end
+
+        local function arithmetic(l, type, operator)
+            assert(operators[operator], "cannot map operator " .. tostring(operator))
+            if l.Type == type then
+                if l:IsLiteral() then
+                    local obj = types.Number(operators[operator](l.data)):MakeLiteral(true)
+
+                    if l.max then
+                        obj.max = arithmetic(l.max, type, operator)
+                    end
+
+                    return obj
+                end
+
+                return types.Number()
+            end
+
+            return false, "no operator for " .. operator .. tostring(l) .. " in runtime"
+        end
+
+        function META:PrefixOperator(node, l, env)
+            local op = node.value.value
+
+            if l.Type == "tuple" then l = l:Get(1) end
+
+            if l.Type == "set" then
+                local new_set = types.Set()
+
+                for _, l in ipairs(l:GetElements()) do
+                    new_set:AddElement(assert(self:PrefixOperator(node, l, env)))
+                end
+
+                return new_set
+            end
+
+            if l.Type == "any" then
+                return types.Any()
+            end
+
+            if env == "typesystem" then
+                if op == "typeof" then
+                    local obj = self:GetValue(node.right, "runtime")
+                    if not obj then
+                        return false, "cannot find " .. self:Hash(node.right) .. " in the current typesystem scope"
+                    end
+                    return obj.contract or obj
+                elseif op == "$" then
+                    local obj = self:AnalyzeExpression(node.right, "typesystem")
+                    if obj.Type ~= "string" then
+                        return false, "must evaluate to a string"
+                    end
+                    if not obj:IsLiteral() then
+                        return false, "must be a literal"
+                    end
+
+                    obj.pattern_contract = obj:GetData()
+
+                    return obj
+                end
+            end
+
+            if op == "-" then local res = metatable_function(self, "__unm", l) if res then return res end
+            elseif op == "~" then local res = metatable_function(self, "__bxor", l) if res then return res end
+            elseif op == "#" then local res = metatable_function(self, "__len", l) if res then return res end end
+
+            if op == "not" then
+                if l:IsTruthy() and l:IsFalsy() then
+                    return types.Boolean
+                end
+
+                if l:IsTruthy() then
+                    return types.False
+                end
+
+                if l:IsFalsy() then
+                    return types.True
+                end
+            end
+
+
+            if op == "-" then return arithmetic(l, "number", op)
+            elseif op == "~" then return arithmetic(l, "number", op)
+            elseif op == "#" then
+                if l.Type == "table" then
+                    return types.Number(l:GetLength()):MakeLiteral(l:IsLiteral())
+                elseif l.Type == "string" then
+                    return types.Number(l:GetData() and #l:GetData() or nil):MakeLiteral(l:IsLiteral())
+                end
+            end
+
+            error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
         end
     end
 
-    local function arithmetic(l, type, operator)
-        assert(operators[operator], "cannot map operator " .. tostring(operator))
-        if l.Type == type then
-            if l:IsLiteral() then
-                local obj = types.Number(operators[operator](l.data)):MakeLiteral(true)
+    do -- binary
+        local operators = {
+            ["+"] = function(l,r) return l+r end,
+            ["-"] = function(l,r) return l-r end,
+            ["*"] = function(l,r) return l*r end,
+            ["/"] = function(l,r) return l/r end,
+            ["//"] = function(l,r) return math.floor(l/r) end,
+            ["%"] = function(l,r) return l%r end,
+            ["^"] = function(l,r) return l^r end,
+            [".."] = function(l,r) return l..r end,
 
-                if l.max then
-                    obj.max = arithmetic(l.max, type, operator)
+            ["&"] = function(l, r) return bit.band(l,r) end, -- bitwise AND (&) operation.
+            ["|"] = function(l, r) return bit.bor(l,r) end, -- bitwise OR (|) operation.
+            ["~"] = function(l,r) return bit.bxor(l,r) end, -- bitwise exclusive OR (binary ~) operation.
+            ["<<"] = function(l, r) return bit.lshift(l,r) end, -- bitwise left shift (<<) operation.
+            [">>"] = function(l, r) return bit.rshift(l,r) end, -- bitwise right shift (>>) operation.
+
+            ["=="] = function(l,r) return l==r end,
+            ["<"] = function(l,r) return l<r end,
+            ["<="] = function(l,r) return l<=r end,
+        }
+
+        local function metatable_function(self, meta_method, l,r, swap)
+            if swap then
+                l,r = r,l
+            end
+
+            if r.meta or l.meta then
+                local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
+
+                if func then
+                    return self:Call(func, types.Tuple({l, r})):Get(1)
+                end
+            end
+        end
+
+        local function arithmetic(l,r, type, operator)
+            assert(operators[operator], "cannot map operator " .. tostring(operator))
+            if type and l.Type == type and r.Type == type then
+                if l:IsLiteral() and r:IsLiteral() then
+
+                    local obj = types.Number(operators[operator](l.data, r.data)):MakeLiteral(true)
+
+                    if r.max then
+                        obj.max = arithmetic(l, r.max, type, operator)
+                    end
+
+                    if l.max then
+                        obj.max = arithmetic(l.max, r, type, operator)
+                    end
+
+                    return obj
                 end
 
-                return obj
+                return types.Number()
             end
 
-            return types.Number()
+            return false, "no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime"
         end
 
-        return false, "no operator for " .. operator .. tostring(l) .. " in runtime"
-    end
+        function META:BinaryOperator(node, l, r, env)
+            local op = node.value.value
 
-    function META:PrefixOperator(node, l, env)
-        local op = node.value.value
+            -- adding two tuples at runtime in lua will practically do this
+            if l.Type == "tuple" then l = l:Get(1) end
+            if r.Type == "tuple" then r = r:Get(1) end
 
-        if l.Type == "tuple" then l = l:Get(1) end
+            -- normalize l and r to be both sets to reduce complexity
+            if l.Type == "set" and r.Type == "set" then l = types.Set({l}) end
+            if l.Type == "set" and r.Type ~= "set" then r = types.Set({r}) end
 
-        if l.Type == "set" then
-            local new_set = types.Set()
+            if l.Type == "set" and r.Type == "set" then
+                local new_set = types.Set()
 
-            for _, l in ipairs(l:GetElements()) do
-                new_set:AddElement(assert(self:PrefixOperator(node, l, env)))
-            end
-
-            return new_set
-        end
-
-        if l.Type == "any" then
-            return types.Any()
-        end
-
-        if env == "typesystem" then
-            if op == "typeof" then
-                local obj = self:GetValue(node.right, "runtime")
-                if not obj then
-                    return false, "cannot find " .. self:Hash(node.right) .. " in the current typesystem scope"
-                end
-                return obj.contract or obj
-            elseif op == "$" then
-                local obj = self:AnalyzeExpression(node.right, "typesystem")
-                if obj.Type ~= "string" then
-                    return false, "must evaluate to a string"
-                end
-                if not obj:IsLiteral() then
-                    return false, "must be a literal"
+                for _, l in ipairs(l:GetElements()) do
+                    for _, r in ipairs(r:GetElements()) do
+                        new_set:AddElement(assert(self:BinaryOperator(node, l, r, env)))
+                    end
                 end
 
-                obj.pattern_contract = obj:GetData()
-
-                return obj
-            end
-        end
-
-        if op == "-" then local res = metatable_function(self, "__unm", l) if res then return res end
-        elseif op == "~" then local res = metatable_function(self, "__bxor", l) if res then return res end
-        elseif op == "#" then local res = metatable_function(self, "__len", l) if res then return res end end
-
-        if op == "not" then
-            if l:IsTruthy() and l:IsFalsy() then
-                return types.Boolean
+                return new_set
             end
 
-            if l:IsTruthy() then
-                return types.False
-            end
-
-            if l:IsFalsy() then
-                return types.True
-            end
-        end
-
-
-        if op == "-" then return arithmetic(l, "number", op)
-        elseif op == "~" then return arithmetic(l, "number", op)
-        elseif op == "#" then
-            if l.Type == "table" then
-                return types.Number(l:GetLength()):MakeLiteral(l:IsLiteral())
-            elseif l.Type == "string" then
-                return types.Number(l:GetData() and #l:GetData() or nil):MakeLiteral(l:IsLiteral())
-            end
-        end
-
-        error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
-    end
-
-    local operators = {
-        ["+"] = function(l,r) return l+r end,
-        ["-"] = function(l,r) return l-r end,
-        ["*"] = function(l,r) return l*r end,
-        ["/"] = function(l,r) return l/r end,
-        ["//"] = function(l,r) return math.floor(l/r) end,
-        ["%"] = function(l,r) return l%r end,
-        ["^"] = function(l,r) return l^r end,
-        [".."] = function(l,r) return l..r end,
-
-        ["&"] = function(l, r) return bit.band(l,r) end, -- bitwise AND (&) operation.
-        ["|"] = function(l, r) return bit.bor(l,r) end, -- bitwise OR (|) operation.
-        ["~"] = function(l,r) return bit.bxor(l,r) end, -- bitwise exclusive OR (binary ~) operation.
-        ["<<"] = function(l, r) return bit.lshift(l,r) end, -- bitwise left shift (<<) operation.
-        [">>"] = function(l, r) return bit.rshift(l,r) end, -- bitwise right shift (>>) operation.
-
-        ["=="] = function(l,r) return l==r end,
-        ["<"] = function(l,r) return l<r end,
-        ["<="] = function(l,r) return l<=r end,
-    }
-
-    local function metatable_function(self, meta_method, l,r, swap)
-        if swap then
-            l,r = r,l
-        end
-
-        if r.meta or l.meta then
-            local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
-
-            if func then
-                return self:Call(func, types.Tuple({l, r})):Get(1)
-            end
-        end
-    end
-
-    local function arithmetic(l,r, type, operator)
-        assert(operators[operator], "cannot map operator " .. tostring(operator))
-        if type and l.Type == type and r.Type == type then
-            if l:IsLiteral() and r:IsLiteral() then
-
-                local obj = types.Number(operators[operator](l.data, r.data)):MakeLiteral(true)
-
-                if r.max then
-                    obj.max = arithmetic(l, r.max, type, operator)
+            if env == "typesystem" then
+                if op == "|" then
+                    return types.Set({l, r})
+                elseif op == "&" then
+                    if l.Type == "table" and r.Type == "table" then
+                        return l:Extend(r)
+                    end
                 end
 
-                if l.max then
-                    obj.max = arithmetic(l.max, r, type, operator)
-                end
-
-                return obj
-            end
-
-            return types.Number()
-        end
-
-        return false, "no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime"
-    end
-
-    function META:BinaryOperator(node, l, r, env)
-        local op = node.value.value
-
-        -- adding two tuples at runtime in lua will practically do this
-        if l.Type == "tuple" then l = l:Get(1) end
-        if r.Type == "tuple" then r = r:Get(1) end
-
-        -- normalize l and r to be both sets to reduce complexity
-        if l.Type == "set" and r.Type == "set" then l = types.Set({l}) end
-        if l.Type == "set" and r.Type ~= "set" then r = types.Set({r}) end
-
-        if l.Type == "set" and r.Type == "set" then
-            local new_set = types.Set()
-
-             for _, l in ipairs(l:GetElements()) do
-                 for _, r in ipairs(r:GetElements()) do
-                     new_set:AddElement(assert(self:BinaryOperator(node, l, r, env)))
-                 end
-             end
-
-             return new_set
-         end
-
-        if env == "typesystem" then
-            if op == "|" then
-                return types.Set({l, r})
-            elseif op == "&" then
-                if l.Type == "table" and r.Type == "table" then
+                if op == "extends" then
                     return l:Extend(r)
                 end
-            end
 
-            if op == "extends" then
-                return l:Extend(r)
-            end
-
-            -- number range
-            if op == ".." then
-                local new = l:Copy()
-                new.max = r
-                return new
-            end
-        end
-
-        if op == "." or op == ":" then
-            return self:GetOperator(l, r)
-        end
-
-        if l.Type == "any" or r.Type == "any" then
-            return types.Any()
-        end
-
-        if op == "+" then local res = metatable_function(self, "__add", l, r) if res then return res end
-        elseif op == "-" then local res = metatable_function(self, "__sub", l, r) if res then return res end
-        elseif op == "*" then local res = metatable_function(self, "__mul", l, r) if res then return res end
-        elseif op == "/" then local res = metatable_function(self, "__div", l, r) if res then return res end
-        elseif op == "//" then local res = metatable_function(self, "__idiv", l, r) if res then return res end
-        elseif op == "%" then local res = metatable_function(self, "__mod", l, r) if res then return res end
-        elseif op == "^" then local res = metatable_function(self, "__pow", l, r) if res then return res end
-        elseif op == "&" then local res = metatable_function(self, "__band", l, r) if res then return res end
-        elseif op == "|" then local res = metatable_function(self, "__bor", l, r) if res then return res end
-        elseif op == "~" then local res = metatable_function(self, "__bxor", l, r) if res then return res end
-        elseif op == "<<" then local res = metatable_function(self, "__lshift", l, r) if res then return res end
-        elseif op == ">>" then local res = metatable_function(self, "__rshift", l, r) if res then return res end end
-
-        if l.Type == "number" and r.Type == "number" then
-            if op == "~=" then
-                if l.max and l.max.data then
-                    return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.False
-                end
-
-                if r.max and r.max.data then
-                    return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.False
-                end
-            elseif op == "==" then
-                if l.max and l.max.data then
-                    return r.data >= l.data and r.data <= l.max.data and types.True or types.False
-                end
-
-                if r.max and r.max.data then
-                    return l.data >= r.data and l.data <= r.max.data and types.True or types.False
+                -- number range
+                if op == ".." then
+                    local new = l:Copy()
+                    new.max = r
+                    return new
                 end
             end
-        end
 
-        if op == "==" then
-            local res = metatable_function(self, "__eq", l, r)
-            if res then
-                return res
-			end
-
-            if l:IsLiteral() and r:IsLiteral() then
-                return l.data == r.data and types.True or types.False
+            if op == "." or op == ":" then
+                return self:GetOperator(l, r)
             end
 
-            if l.Type == "symbol" and r.Type == "symbol" and l:GetData() == nil and r:GetData() == nil then
-                return types.True
+            if l.Type == "any" or r.Type == "any" then
+                return types.Any()
             end
 
-            if l.Type ~= r.Type then
-                return types.False
-            end
+            if op == "+" then local res = metatable_function(self, "__add", l, r) if res then return res end
+            elseif op == "-" then local res = metatable_function(self, "__sub", l, r) if res then return res end
+            elseif op == "*" then local res = metatable_function(self, "__mul", l, r) if res then return res end
+            elseif op == "/" then local res = metatable_function(self, "__div", l, r) if res then return res end
+            elseif op == "//" then local res = metatable_function(self, "__idiv", l, r) if res then return res end
+            elseif op == "%" then local res = metatable_function(self, "__mod", l, r) if res then return res end
+            elseif op == "^" then local res = metatable_function(self, "__pow", l, r) if res then return res end
+            elseif op == "&" then local res = metatable_function(self, "__band", l, r) if res then return res end
+            elseif op == "|" then local res = metatable_function(self, "__bor", l, r) if res then return res end
+            elseif op == "~" then local res = metatable_function(self, "__bxor", l, r) if res then return res end
+            elseif op == "<<" then local res = metatable_function(self, "__lshift", l, r) if res then return res end
+            elseif op == ">>" then local res = metatable_function(self, "__rshift", l, r) if res then return res end end
 
-            if l == r then
-                return types.True
-            end
+            if l.Type == "number" and r.Type == "number" then
+                if op == "~=" then
+                    if l.max and l.max.data then
+                        return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.False
+                    end
 
-            return types.Boolean
-        elseif op == "~=" then
-            local res = metatable_function(self, "__eq", l, r)
-            if res then
-                if res:IsLiteral() then
-                    res.data = not res.data
+                    if r.max and r.max.data then
+                        return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.False
+                    end
+                elseif op == "==" then
+                    if l.max and l.max.data then
+                        return r.data >= l.data and r.data <= l.max.data and types.True or types.False
+                    end
+
+                    if r.max and r.max.data then
+                        return l.data >= r.data and l.data <= r.max.data and types.True or types.False
+                    end
                 end
-                return res
-            end
-            if l:IsLiteral() and r:IsLiteral() then
-                return l.data ~= r.data and types.True or types.False
             end
 
-            if l == types.Nil and r == types.Nil then
-                return types.True
-            end
-
-            if l.Type ~= r.Type then
-                return types.True
-            end
-
-            if l == r then
-                return types.False
-            end
-
-            return types.Boolean
-        elseif op == "<" then
-            local res = metatable_function(self, "__lt", l, r)
-            if res then
-                return res
-            end
-            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                return types.Symbol(l.data < r.data)
-            end
-
-            return types.Boolean
-        elseif op == "<=" then
-            local res = metatable_function(self, "__le", l, r)
-            if res then
-                return res
-            end
-            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                return types.Symbol(l.data <= r.data)
-            end
-
-            return types.Boolean
-        elseif op == ">" then
-            local res = metatable_function(self, "__lt", l, r)
-            if res then
-                return res
-            end
-            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                return types.Symbol(l.data > r.data)
-            end
-
-            return types.Boolean
-        elseif op == ">=" then
-            local res = metatable_function(self, "__le", l, r)
-            if res then
-                return res
-            end
-            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                return types.Symbol(l.data >= r.data)
-            end
-
-            return types.Boolean
-        elseif op == "or" then
-            if l:IsTruthy() and l:IsFalsy() then
-                return types.Set({l,r})
-            end
-
-            if r:IsTruthy() and r:IsFalsy() then
-                return types.Set({l,r})
-            end
-
-            -- when true, or returns its first argument
-            if l:IsTruthy() then
-                return l
-            end
-
-            if r:IsTruthy() then
-                return r
-            end
-
-            return r
-        elseif op == "and" then
-            if l:IsTruthy() and r:IsFalsy() then
-                if l:IsFalsy() or r:IsTruthy() then
-                    return types.Set({l,r})
+            if op == "==" then
+                local res = metatable_function(self, "__eq", l, r)
+                if res then
+                    return res
                 end
 
-                return r
-            end
-
-            if l:IsFalsy() and r:IsTruthy() then
-                if l:IsTruthy() or r:IsFalsy() then
-                    return types.Set({l,r})
-                end
-
-                return l
-            end
-
-            if l:IsTruthy() and r:IsTruthy() then
-                if l:IsFalsy() and r:IsFalsy() then
-                    return types.Set({l,r})
-                end
-
-                return r
-            else
-                if l:IsTruthy() and r:IsTruthy() then
-                    return types.Set({l,r})
-                end
-
-                return l
-            end
-        end
-
-        if op == ".." then
-            if
-                (l.Type == "string" or r.Type == "string") and
-                (l.Type == "number" or r.Type == "number" or l.Type == "string" or l.Type == "string")
-            then
                 if l:IsLiteral() and r:IsLiteral() then
-                    return types.String(l.data ..  r.data):MakeLiteral(true)
+                    return l.data == r.data and types.True or types.False
                 end
 
-                return types.StringType
+                if l.Type == "symbol" and r.Type == "symbol" and l:GetData() == nil and r:GetData() == nil then
+                    return types.True
+                end
+
+                if l.Type ~= r.Type then
+                    return types.False
+                end
+
+                if l == r then
+                    return types.True
+                end
+
+                return types.Boolean
+            elseif op == "~=" then
+                local res = metatable_function(self, "__eq", l, r)
+                if res then
+                    if res:IsLiteral() then
+                        res.data = not res.data
+                    end
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() then
+                    return l.data ~= r.data and types.True or types.False
+                end
+
+                if l == types.Nil and r == types.Nil then
+                    return types.True
+                end
+
+                if l.Type ~= r.Type then
+                    return types.True
+                end
+
+                if l == r then
+                    return types.False
+                end
+
+                return types.Boolean
+            elseif op == "<" then
+                local res = metatable_function(self, "__lt", l, r)
+                if res then
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                    return types.Symbol(l.data < r.data)
+                end
+
+                return types.Boolean
+            elseif op == "<=" then
+                local res = metatable_function(self, "__le", l, r)
+                if res then
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                    return types.Symbol(l.data <= r.data)
+                end
+
+                return types.Boolean
+            elseif op == ">" then
+                local res = metatable_function(self, "__lt", l, r)
+                if res then
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                    return types.Symbol(l.data > r.data)
+                end
+
+                return types.Boolean
+            elseif op == ">=" then
+                local res = metatable_function(self, "__le", l, r)
+                if res then
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                    return types.Symbol(l.data >= r.data)
+                end
+
+                return types.Boolean
+            elseif op == "or" then
+                if l:IsTruthy() and l:IsFalsy() then
+                    return types.Set({l,r})
+                end
+
+                if r:IsTruthy() and r:IsFalsy() then
+                    return types.Set({l,r})
+                end
+
+                -- when true, or returns its first argument
+                if l:IsTruthy() then
+                    return l
+                end
+
+                if r:IsTruthy() then
+                    return r
+                end
+
+                return r
+            elseif op == "and" then
+                if l:IsTruthy() and r:IsFalsy() then
+                    if l:IsFalsy() or r:IsTruthy() then
+                        return types.Set({l,r})
+                    end
+
+                    return r
+                end
+
+                if l:IsFalsy() and r:IsTruthy() then
+                    if l:IsTruthy() or r:IsFalsy() then
+                        return types.Set({l,r})
+                    end
+
+                    return l
+                end
+
+                if l:IsTruthy() and r:IsTruthy() then
+                    if l:IsFalsy() and r:IsFalsy() then
+                        return types.Set({l,r})
+                    end
+
+                    return r
+                else
+                    if l:IsTruthy() and r:IsTruthy() then
+                        return types.Set({l,r})
+                    end
+
+                    return l
+                end
             end
 
-            return false, "no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r)
+            if op == ".." then
+                if
+                    (l.Type == "string" or r.Type == "string") and
+                    (l.Type == "number" or r.Type == "number" or l.Type == "string" or l.Type == "string")
+                then
+                    if l:IsLiteral() and r:IsLiteral() then
+                        return types.String(l.data ..  r.data):MakeLiteral(true)
+                    end
+
+                    return types.StringType
+                end
+
+                return false, "no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r)
+            end
+
+            if op == "+" then return arithmetic(l,r, "number", op)
+            elseif op == "-" then return arithmetic(l,r, "number", op)
+            elseif op == "*" then return arithmetic(l,r, "number", op)
+            elseif op == "/" then return arithmetic(l,r, "number", op)
+            elseif op == "//" then return arithmetic(l,r, "number", op)
+            elseif op == "%" then return arithmetic(l,r, "number", op)
+            elseif op == "^" then return arithmetic(l,r, "number", op)
+
+            elseif op == "&" then return arithmetic(l,r, "number", op)
+            elseif op == "|" then return arithmetic(l,r, "number", op)
+            elseif op == "~" then return arithmetic(l,r, "number", op)
+            elseif op == "<<" then return arithmetic(l,r, "number", op)
+            elseif op == ">>" then return arithmetic(l,r, "number", op) end
+
+            error("no operator for "..tostring(l).." "..op.. " "..tostring(r) .. " in " .. env)
         end
-
-        if op == "+" then return arithmetic(l,r, "number", op)
-        elseif op == "-" then return arithmetic(l,r, "number", op)
-        elseif op == "*" then return arithmetic(l,r, "number", op)
-        elseif op == "/" then return arithmetic(l,r, "number", op)
-        elseif op == "//" then return arithmetic(l,r, "number", op)
-        elseif op == "%" then return arithmetic(l,r, "number", op)
-        elseif op == "^" then return arithmetic(l,r, "number", op)
-
-        elseif op == "&" then return arithmetic(l,r, "number", op)
-        elseif op == "|" then return arithmetic(l,r, "number", op)
-        elseif op == "~" then return arithmetic(l,r, "number", op)
-        elseif op == "<<" then return arithmetic(l,r, "number", op)
-        elseif op == ">>" then return arithmetic(l,r, "number", op) end
-
-        error("no operator for "..tostring(l).." "..op.. " "..tostring(r) .. " in " .. env)
     end
 
-    function META:SetOperator(obj, key, val, env)
+    function META:SetOperator(obj, key, val)
 
         if obj.Type == "set" then
             local copy = types.Set()
             for _,v in ipairs(obj:GetElements()) do
-                local ok, err = self:SetOperator(v, key, val, env)
+                local ok, err = self:SetOperator(v, key, val)
                 if not ok then
                     return ok, err
                 end
@@ -472,7 +476,7 @@ do -- type operators
         return obj:Set(key, val)
     end
 
-    function META:GetOperator(obj, key, env)
+    function META:GetOperator(obj, key)
         if obj.Type == "set" then
             local copy = types.Set()
             for _,v in ipairs(obj:GetElements()) do
@@ -658,7 +662,7 @@ do -- types
 
                 local new_arguments = {obj}
 
-                for i,v in ipairs(arguments:GetData()) do
+                for _, v in ipairs(arguments:GetData()) do
                     table.insert(new_arguments, v)
                 end
 
@@ -860,61 +864,44 @@ function META:AnalyzeStatement(statement)
         end
     elseif statement.kind == "assignment" or statement.kind == "local_assignment" then
         local env = self.PreferTypesystem and "typesystem" or statement.environment or "runtime"
-        local assignments = {}
+
+        local left = {}
+        local right = {}
 
         for i, exp_key in ipairs(statement.left) do
-            if statement.kind == "local_assignment" then
-                assignments[i] = {
-                    key = exp_key,
-                    env = env,
-                }
-            elseif statement.kind == "assignment" then
-                if type(exp_key) == "string" or exp_key.kind == "value" then
-                    assignments[i] = {
-                        key = exp_key,
-                        env = env,
-                    }
-                else
-                    local obj = self:AnalyzeExpression(exp_key.left, env)
-                    local key = exp_key.kind == "postfix_expression_index" and self:AnalyzeExpression(exp_key.expression, env) or self:AnalyzeExpression(exp_key.right, env)
-
-                    assignments[i] = {
-                        obj = obj,
-                        key = key,
-                    }
-                end
+            if statement.kind == "local_assignment" or (statement.kind == "assignment" and exp_key.kind == "value") then
+                left[i] = exp_key
+            elseif exp_key.kind == "postfix_expression_index" then
+                left[i] = self:AnalyzeExpression(exp_key.expression, env)
+            else
+                left[i] = self:AnalyzeExpression(exp_key.right, env)
             end
         end
-
-        local values = {}
 
         if statement.right then
             for i, exp in ipairs(statement.right) do
                 for i2, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
                     if obj.Type == "tuple" then
                         for i3,v in ipairs(obj:GetData()) do
-                            values[i + i2 - 1 + i3 - 1 ] = v
+                            right[i + i2 - 1 + i3 - 1 ] = v
                         end
                     else
-                        values[i + i2 - 1] = obj
+                        right[i + i2 - 1] = obj
                     end
                 end
             end
 
             -- TODO: remove this if possible, it's just to pass tests
-            local cut = #values - #statement.right
+            local cut = #right - #statement.right
             if cut > 0 and (statement.right[#statement.right] and statement.right[#statement.right].value and statement.right[#statement.right].value.value ~= "...") then
                 for i = 1, cut do
-                    table.remove(values, #values)
+                    table.remove(right, #right)
                 end
             end
         end
 
         for i, exp_key in ipairs(statement.left) do
-            local val = values[i] or self:TypeFromImplicitNode(exp_key, "nil")
-
-            local key = assignments[i].key
-            local obj = assignments[i].obj
+            local val = right[i] or self:TypeFromImplicitNode(exp_key, "nil")
 
             -- if there's a type expression override the right value
             if exp_key.type_expression then
@@ -943,7 +930,7 @@ function META:AnalyzeStatement(statement)
 
                 val.contract = contract
 
-                if not values[i] then
+                if not right[i] then
                     val = contract
                 end
 
@@ -956,11 +943,14 @@ function META:AnalyzeStatement(statement)
             exp_key.inferred_type = val
 
             if statement.kind == "local_assignment" then
-                self:SetUpvalue(key, val, env)
+                self:SetUpvalue(exp_key, val, env)
             elseif statement.kind == "assignment" then
-                if type(exp_key) == "string" or exp_key.kind == "value" then
+                local key = left[i]
+
+                if exp_key.kind == "value" then
                     self:SetValue(key, val, env)
                 else
+                    local obj = self:AnalyzeExpression(exp_key.left, env)
                     self:Assert(exp_key, self:SetOperator(obj, key, val, env))
                     self:FireEvent("newindex", obj, key, val, env)
                 end
@@ -1074,27 +1064,6 @@ function META:AnalyzeStatement(statement)
 
         self:AnalyzeStatements(statement.statements)
         self:PopScope()
-    elseif statement.kind == "type_interface" then
-
-        -- TODO: remove interface? just use tables
-
-        local tbl = self:GetValue(statement.key, "typesystem") or self:TypeFromImplicitNode(statement, "table", {})
-
-        for _, exp in ipairs(statement.expressions) do
-            local left = tbl:Get(exp.left.value)
-            local right = self:AnalyzeExpression(exp.right, "typesystem")
-
-            -- function overload shortcut
-            if left and left.Type == "function" then
-                tbl:Set(exp.left.value, types.Set({left, right}))
-            elseif left and left.Type == "set" then
-                left:AddElement(right)
-            else
-                tbl:Set(exp.left.value, right)
-            end
-        end
-
-        self:SetUpvalue(statement.key, tbl, "typesystem")
     elseif
         statement.kind ~= "end_of_file" and
         statement.kind ~= "semicolon" and

@@ -45,4 +45,15 @@ describe("number", function()
             type_assert(a, _ as number)
         ]])
     end)
+
+    it("nan", function()
+        run([[
+            local function isNaN (x)
+                return (x ~= x)
+            end
+
+            assert(isNaN(0/0))
+            assert(not isNaN(1/0))
+        ]])
+    end)
 end)

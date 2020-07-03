@@ -571,16 +571,13 @@ R[[
 R[[
     type lol = number
 
-    interface math {
-        sin = function(a: lol, b: string): lol
-        cos = function(a: string): lol
-        cos = function(a: number): lol
+    local type math = {
+        sin = (function(a: lol, b: string): lol),
+        cos = (function(a: string): lol),
+        cos = (function(a: number): lol),
     }
 
-    interface math {
-        lol = function(): lol
-    }
-
+    type math.lol = (function(): lol)
 
     local a = math.sin(1, "")
     local b = math.lol() -- support overloads
@@ -589,8 +586,8 @@ R[[
     type_assert(b, nil as number)
 ]]
 R[[
-    interface foo {
-        a = number
+    local type foo = {
+        a = number,
         b = {
             str = string,
         }
@@ -608,9 +605,8 @@ R[[
   --  a[2] = 1
 ]]
 R[[
-    interface foo {
-        bar = function(a: boolean, b: number): true
-        bar = function(a: number): false
+    local type foo = {
+        bar = (function(a: boolean, b: number): true) | (function(a: number): false),
     }
 
     local a = foo.bar(true, 1)
@@ -691,13 +687,11 @@ R[[
     end
 ]]
 R[[
-    interface math {
+    local type math = {
         sin = function(number): number
     }
 
-    interface math {
-        cos = function(number): number
-    }
+    type math.cos = function(number): number
 
     local a = math.sin(1)
 
