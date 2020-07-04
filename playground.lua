@@ -1,9 +1,285 @@
--- nil, true and false is declared internally as symbols
+type positive_numbers = 0 .. inf
+type table_index_range = 0 .. inf
 
-type function_ = function(any...): any...
-type number = -inf .. inf | nan
-type string = $".-"
-type boolean = true | false
-type table = {[any] = any}
+type TAngle = {
+    p = number,
+    y = number,
+    r = number,
+}
+type TVector = {
+    x = number,
+    y = number,
+    z = number,
+}
 
-print(test, test2)
+type Angle = function(number, number, number): TAngle
+
+type BodyGroup = {
+    id = positive_numbers,
+    name = string,
+    num = positive_numbers,
+    submodels = {[table_index_range] = any} -- not sure what's in here
+}
+
+type TMatrix = {
+    GetTranslation = (function(self): TVector),
+    GetAngles = (function(self): TAngle),
+}
+
+type Entity = {
+    SetAngles = (function(self, TAngle): nil),
+    GetModel = (function(self): string),
+    GetBodyGroups = (function(self, positive_numbers): {[table_index_range] = BodyGroup}),
+    GetBodygroup = (function(self, positive_numbers): positive_numbers),
+    LookupSequence = (function(self, string): positive_numbers),
+    ResetSequence = (function(self, positive_numbers): nil),
+    SetCycle = (function(self, positive_numbers): nil),
+    SetupBones = (function(self): nil),
+    TranslatePhysBoneToBone = (function(self, number): number),
+    TranslateBoneToPhysBone = (function(self, number): number),
+    GetBoneMatrix = (function(self, number): TMatrix),
+    GetChildBones = (function(self, number): {[table_index_range] = number}),
+    BoneLength = (function(self, number): number),
+    Remove = (function(self): nil)
+}
+
+type ClientsideModel = function(string): Entity
+
+type Triangle = {
+    color = Color,
+    normal = TVector,
+    binormal = TVector,
+    pos = TVector,
+    u = number,
+    v = number,
+    userdata = {number, number, number, number},
+    weights = {[table_index_range] = {bone = number}}
+}
+type ModelMeshes = {
+    [table_index_range] = {
+        material = string,
+        triangles = {[table_index_range] = Triangle},
+        verticies = {[table_index_range] = Triangle},
+    }
+}
+
+type util = {}
+type util.GetModelMeshes = (function(string, number, number): ModelMeshes)
+
+    type WorldToLocal = (function(TVector, TAngle, TVector, TAngle): TVector, TAngle)
+
+--[[
+    TODO:
+    mutating triangles does not error, should it?
+    loops aren't crawled properly
+    if statements kind of don't work because variables are by default literal
+    local a = 0 while true do a = a + 1 end should turn a into a number
+]]
+
+
+local vec_zero = Vector(0,0,0)
+local ang_zero = Angle(0,0,0)
+
+local CACHE = {}
+
+function GetBoneMeshes(ent: Entity, phys_bone: number)
+    local mdl = ent:GetModel()
+
+    CACHE[mdl] = CACHE[mdl] or {}
+
+    local bg_mask = 0
+
+    for _, data in pairs(ent:GetBodyGroups()) do
+        local bg = ent:GetBodygroup(data.id)
+        if bg ~= 0 then print(data.name, bg)
+            bg_mask = bit.bor(bg_mask, bit.lshift(1, data.id-1))
+        end
+    end
+
+    CACHE[mdl][bg_mask] = CACHE[mdl][bg_mask] or {}
+
+    if CACHE[mdl][bg_mask][phys_bone] then
+        return CACHE[mdl][bg_mask][phys_bone]
+    end
+
+    local temp = ClientsideModel(mdl)
+    temp:SetAngles(Angle(0,-90,0)) --dunno why its turned -90 but i dont question it
+    temp:ResetSequence(temp:LookupSequence("ragdoll"))
+    temp:SetCycle(1)
+    temp:SetupBones()
+
+    local bone = temp:TranslatePhysBoneToBone(phys_bone)
+    local bone_matrix = temp:GetBoneMatrix(bone)
+    local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles() --temp:GetBonePosition(bone)
+
+    --local bone_length = temp:BoneLength(bone)
+    local bone_length = ent:BoneLength(ent:GetChildBones(bone)[1] or 0)
+    bone_length = math.min(bone_length, temp:BoneLength(temp:GetChildBones(bone)[1] or 0))
+    --print("LEN:",bone_length, temp:BoneLength(temp:GetChildBones(bone)[1]), ent:GetChildBones(bone)[1], temp:GetChildBones(bone)[1])
+    local new_meshes = {}
+
+    local MESHES = util.GetModelMeshes(mdl, 0, bg_mask)
+
+    for _, MESH in pairs(MESHES) do
+        for _, vert in pairs(MESH.verticies) do
+            vert.pos = WorldToLocal(vert.pos, ang_zero, bone_pos, bone_ang)
+        end
+        local new_tris = {}
+        local TRIS = MESH.triangles
+        for tri_idx = 1, #TRIS-2, 3 do
+            print(tri_idx, #TRIS-2)
+            local is_strong = true
+            for offset = 0, 2 do
+                local vert = TRIS[tri_idx + offset]
+                for _, weight in pairs(vert.weights) do
+                    if temp:TranslateBoneToPhysBone(weight.bone) ~= phys_bone then
+                        is_strong = false
+                        break
+                    end
+                end
+                if not is_strong then
+                    break
+                end
+            end
+            if is_strong then
+                for offset = 0, 2 do
+                    local vert = TRIS[tri_idx + offset]
+
+                    vert.is_strong = true
+                    table.insert(new_tris, vert)
+                end
+            end
+        end
+
+        if #new_tris ~= 0 then
+            local new_mesh = Mesh()
+            new_mesh:BuildFromTriangles(new_tris)
+
+            table.insert(new_meshes, {
+                Mesh = new_mesh,
+                Material = Material(MESH.material)
+            })
+        end
+    end
+
+    --Add fleshy stump meshes
+    for _, MESH in pairs(MESHES) do
+        for _, vert in pairs(MESH.verticies) do
+            if not vert.is_strong then
+                for _, weight in pairs(vert.weights) do
+                    if temp:TranslateBoneToPhysBone(weight.bone) == phys_bone then
+                        vert.is_conn = true
+                    else
+                        local parent_bone = weight.bone
+
+                        repeat
+                            if (temp:TranslateBoneToPhysBone(parent_bone) == phys_bone) then
+                                break
+                            end
+                            parent_bone = temp:GetBoneParent(parent_bone)
+                        until (parent_bone == -1)
+
+                        if (parent_bone ~= -1) then
+                            local weight_bone_matrix = temp:GetBoneMatrix(weight.bone)
+
+                            local weight_bone_pos, weight_bone_ang = weight_bone_matrix:GetTranslation(), weight_bone_matrix:GetAngles()
+
+                            local parent_bone_matrix = temp:GetBoneMatrix(parent_bone)
+
+                            local parent_bone_pos, parent_bone_ang = parent_bone_matrix:GetTranslation(), parent_bone_matrix:GetAngles()
+
+                            local lpos = WorldToLocal(weight_bone_pos, weight_bone_ang, parent_bone_pos, parent_bone_ang)
+
+                            local lpos2 = WorldToLocal(parent_bone_pos, parent_bone_ang, bone_pos, bone_ang)
+
+                            vert.pos = vert.pos + (lpos - vert.pos) * weight.weight
+                            vert.pos = vert.pos + (lpos2 - vert.pos) * weight.weight * 0.3
+                        else
+                            vert.pos = vert.pos * (1 - weight.weight)
+                        end
+                    end
+                end
+
+                if not vert.is_conn then
+                    vert.pos = vec_zero
+                    local high_bone
+                    local high_weight
+                    for _, weight in pairs(vert.weights) do
+                        if (weight.bone ~= bone) then
+                            local parent_bone = weight.bone
+
+                            repeat
+                                if (temp:TranslateBoneToPhysBone(parent_bone) == phys_bone) then
+                                    break
+                                end
+                                parent_bone = temp:GetBoneParent(parent_bone)
+                            until (parent_bone == -1)
+
+                            if (parent_bone ~= -1 and (not high_weight or high_weight < weight.weight)) then
+                                high_bone = weight.bone
+                                high_weight = weight.weight
+                            end
+                        end
+                    end
+                    if not high_bone then
+                        vert.pos = vec_zero
+                    else
+                        local weight_bone_matrix = temp:GetBoneMatrix(high_bone)
+
+                        local weight_bone_pos, weight_bone_ang = weight_bone_matrix:GetTranslation(), weight_bone_matrix:GetAngles()
+
+                        local lpos = WorldToLocal(weight_bone_pos, weight_bone_ang, bone_pos, bone_ang)
+
+                        vert.pos = lpos * 0.7
+                    end
+                end
+            end
+        end
+
+        local new_tris = {}
+        local TRIS = MESH.triangles
+        for tri_idx = 1, #TRIS-2, 3 do
+            local strong_count = 0
+            local conn_count = 0
+
+            for offset = 0, 2 do
+                local vert = TRIS[tri_idx + offset]
+
+                if vert.is_strong then
+                    conn_count = conn_count + 1
+                    strong_count = strong_count + 1
+                else
+                    if vert.is_conn then
+                        conn_count = conn_count + 1
+                    end
+                end
+            end
+
+            if conn_count > 1 and strong_count < 3 then
+                for offset = 0, 2 do
+                    table.insert(new_tris, TRIS[tri_idx + offset])
+                end
+            end
+        end
+
+        if #new_tris ~= 0 then
+            local new_mesh = Mesh()
+            new_mesh:BuildFromTriangles(new_tris)
+            table.insert(new_meshes, {
+                Mesh = new_mesh,
+                Material = Material(MESH.material),
+                look_for_material = true
+            })
+        end
+    end
+
+    temp:Remove()
+
+    CACHE[mdl][bg_mask][phys_bone] = new_meshes
+    --print(CACHE, new_meshes)
+    return new_meshes
+end
+
+
+print(GetModelMeshes(ClientsideModel(""), 0))
+--print(CACHE)
