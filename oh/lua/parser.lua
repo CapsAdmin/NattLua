@@ -532,7 +532,7 @@ do -- expression
         elseif syntax.IsPrefixOperator(self:GetToken()) then
             node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
-            node.right = self:ReadExpression(0, no_ambigious_calls)
+            node.right = self:ReadExpression(math.huge, no_ambigious_calls)
         elseif self:IsFunctionValue() then
             node = self:ReadFunctionValue()
         elseif self:IsImportExpression() then

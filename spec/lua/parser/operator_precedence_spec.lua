@@ -66,13 +66,14 @@ end
 describe("parser operator precedence", function()
     it("correct order", function()
         check {
-            {C'-2 ^ 2', C'-(^(2, 2))'},
+            {C'-2 ^ 2', C'^(-(2), 2)'},
             {C'pcall(require, "ffi")', C'call(pcall, require, "ffi")'},
             {C"1 / #a", C"/(1, #(a))"},
             {C"jit.status and jit.status()", C"and(.(jit, status), call(.(jit, status)))"},
             {C"a.b.c.d.e.f()", C"call(.(.(.(.(.(a, b), c), d), e), f))"},
             {C"(foo.bar())", C"call(.(foo, bar))"},
-            {C[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], C[[-(+(+(^(1, 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), "")))))]]},
+            {C[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], C[[+(+(^(-(1), 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), ""))))]]},
+            {C[[#{} - 2]], C[[-(#({}), 2)]]}
         }
     end)
 end)
