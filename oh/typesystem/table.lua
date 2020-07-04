@@ -253,6 +253,15 @@ function META:Set(key, val, raw)
         return false, "key is nil"
     end
 
+    if key.Type == "set" then
+        local set = key
+        for _, key in ipairs(set:GetElements()) do
+            if key.Type == "symbol" and key:GetData() == nil then
+                return false, set:GetLength() == 1 and "key is nil" or "can be nil"
+            end
+        end
+    end
+
     -- delete entry
     if val == nil or (val.Type == "symbol" and val:GetData() == nil) then
         return self:Delete(key)
