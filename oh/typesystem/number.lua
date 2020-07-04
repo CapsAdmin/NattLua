@@ -118,18 +118,14 @@ function META:__tostring()
     end
 
     if self.literal then
-        if self.data == nil then
-            return "number"
-        end
-
-        return tostring(self.data) .. (self.max and (".." .. tostring(self.max.data)) or "")
+        return tostring(self.data) .. (self.max and (".." .. tostring(self.max)) or "")
     end
 
     if self.data == nil then
         return "number"
     end
 
-    return "number" .. "(".. tostring(self.data) .. (self.max and (".." .. self.max.data) or "") .. ")"
+    return "number" .. "(".. tostring(self.data) .. (self.max and (".." .. tostring(self.max)) or "") .. ")"
 end
 
 function META:Serialize()
@@ -137,9 +133,36 @@ function META:Serialize()
 end
 
 function META:Max(val)
-    if "number" == "number" then
-        self.max = val
+    if val.Type == "set" then
+        local max = {}
+        for _, obj in ipairs(val:GetElements()) do
+            if obj.Type ~= "number" then
+                return false, "the set contains non numbers"
+            end
+            if obj:IsLiteral() then
+                table.insert(max, obj)
+            else
+                self.literal = false
+                self.data = nil
+                return self
+            end
+        end
+        table.sort(max, function(a, b) return a.data > b.data end)
+        val = max[1]
     end
+
+    if val.Type ~= "number" then
+        return false, "max must be a number"
+    end
+
+    if not val:IsLiteral() then
+        self.literal = false
+        self.data = nil
+        return self
+    end
+
+
+    self.max = val
     return self
 end
 

@@ -1055,7 +1055,7 @@ function META:AnalyzeStatement(statement)
         self:PopScope()
     elseif statement.kind == "numeric_for" then
         self:PushScope(statement)
-        local range = self:AnalyzeExpression(statement.expressions[1]):Max(self:AnalyzeExpression(statement.expressions[2]))
+        local range = self:Assert(statement.expressions[1], self:AnalyzeExpression(statement.expressions[1]):Max(self:AnalyzeExpression(statement.expressions[2])))
         self:SetUpvalue(statement.identifiers[1], range, "runtime")
 
         if statement.expressions[3] then

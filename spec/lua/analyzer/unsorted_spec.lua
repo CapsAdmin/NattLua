@@ -858,10 +858,13 @@ R[[
     type_assert(a, 1)
 ]]
 R[[
-    -- 1..any
-    for i = 1, _ do
-
+    -- 1..number
+    local max = nil as number
+    local type a
+    for i = 1, max do
+        type a = i
     end
+    print(nil as a)
 ]]
 R[[
     local a, b = 0, 0
