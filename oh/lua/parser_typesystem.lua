@@ -455,7 +455,7 @@ do
         node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
         local oh = require("oh")
-        local root, err = oh.FileToAST(node.path, self.root)
+        local root, err = oh.ParseFile(node.path, self.root).SyntaxTree
 
         if not root then
             self:Error("error importing file: $1", start, start, err)
@@ -488,7 +488,7 @@ do
         node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
         local oh = require("oh")
-        local root, err = oh.FileToAST2(node.path, self.root)
+        local root, err = oh.ParseFile(node.path, self.root)
 
         if not root then
             self:Error("error importing file: $1", start, start, err)

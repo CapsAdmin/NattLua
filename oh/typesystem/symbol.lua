@@ -8,13 +8,17 @@ function META:GetSignature()
     return "symbol" .. "-" .. tostring(self.data)
 end
 
+function META:__tostring()
+    return tostring(self.data)
+end
+
 function META:Get(key)
-    return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."]"
+    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."]")
     --return self.data
 end
 
 function META:Set(key, val)
-    return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val)
+    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val))
     --self.data = val
 end
 
@@ -41,7 +45,7 @@ function META.SubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return false, table.concat(errors, "\n")
+        return types.errors.other(table.concat(errors, "\n"))
     end
 
     if A.Type == "any" or A.volatile then return true end
@@ -49,19 +53,12 @@ function META.SubsetOf(A, B)
 
 
     if A.data ~= B.data then
-        return false, tostring(A) .. " is not the same as " .. tostring(B)
+        return types.errors.other(tostring(A) .. " is not the same as " .. tostring(B))
     end
 
     return true
 end
 
-function META:__tostring()
-    return tostring(self.data)
-end
-
-function META:Serialize()
-    return self:__tostring()
-end
 
 function META:IsVolatile()
     return self.volatile == true

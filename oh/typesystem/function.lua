@@ -7,7 +7,11 @@ META.Type = "function"
 META.__index = META
 
 function META:GetSignature()
-    return "function" .. "-"..types.GetSignature(self.data)
+    return "function" .. "-"..self:GetArguments():GetSignature() .. ":" .. self:GetReturnTypes():GetSignature()
+end
+
+function META:__tostring()
+    return "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
 end
 
 function META:Get(key)
@@ -24,12 +28,12 @@ function META:Get(key)
 end
 
 function META:Get(key)
-    return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."]"
+    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."]")
     --return self.data
 end
 
 function META:Set(key, val)
-    return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val)
+    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val))
     --self.data = val
 end
 
@@ -58,12 +62,12 @@ function META.SubsetOf(A, B)
     if B.Type == "function" then
         local ok, reason = A:GetArguments():SubsetOf(B:GetArguments())
         if not ok then
-            return false, "function arguments don't match because " .. reason
+            return types.errors.other("function arguments don't match because " .. reason)
         end
 
         local ok, reason = A:GetReturnTypes():SubsetOf(B:GetReturnTypes())
         if not ok then
-            return false, "return types don't match because " .. reason
+            return types.errors.other("return types don't match because " .. reason)
         end
 
         return true
@@ -71,16 +75,7 @@ function META.SubsetOf(A, B)
         return types.Set({A}):SubsetOf(B)
     end
 
-    return false, "NYI " .. tostring(B)
-end
-
-function META:__tostring()
-    --return "「"..self.uid .. " 〉" .. self:GetSignature() .. "」"
-    return "function" .. tostring(self.data.arg) .. ": " .. tostring(self.data.ret)
-end
-
-function META:Serialize()
-    return self:__tostring()
+    return types.errors.other("NYI " .. tostring(B))
 end
 
 function META:IsVolatile()

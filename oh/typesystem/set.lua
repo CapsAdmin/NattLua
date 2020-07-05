@@ -8,8 +8,8 @@ local sort = function(a, b) return a < b end
 function META:GetSignature()
     local s = {}
 
-    for _, v in ipairs(self.datai) do
-        table.insert(s, types.GetSignature(v))
+    for _, v in ipairs(self:GetElements()) do
+        table.insert(s, v:GetSignature())
     end
 
     table.sort(s, sort)
@@ -20,7 +20,7 @@ end
 function META:__tostring()
     local s = {}
 
-    for _, v in ipairs(self.datai) do
+    for _, v in ipairs(self:GetElements()) do
         table.insert(s, tostring(v))
     end
 
@@ -29,9 +29,6 @@ function META:__tostring()
     return "⦃" .. table.concat(s, ", ") .. "⦄"
 end
 
-function META:Serialize()
-    return self:__tostring()
-end
 
 function META:AddElement(e)
     if e.Type == "set" then
@@ -42,27 +39,29 @@ function META:AddElement(e)
         return self
     end
 
-    if not self.data[types.GetSignature(e)] then
-        self.data[types.GetSignature(e)] = e
-        table.insert(self.datai, e)
+    local sig = e:GetSignature()
+
+    if not self.data[sig] then
+        self.data[sig] = e
+        table.insert(self:GetElements(), e)
     end
 
     return self
-end
-
-function META:GetLength()
-    return #self.datai
 end
 
 function META:GetElements()
     return self.datai
 end
 
+function META:GetLength()
+    return #self:GetElements()
+end
+
 function META:RemoveElement(e)
-    self.data[types.GetSignature(e)] = nil
-    for i,v in ipairs(self.datai) do
-        if types.GetSignature(v) == types.GetSignature(e) then
-            table.remove(self.datai, i)
+    self.data[e:GetSignature()] = nil
+    for i,v in ipairs(self:GetElements()) do
+        if v:GetSignature() == e:GetSignature() then
+            table.remove(self:GetElements(), i)
             return
         end
     end
@@ -72,7 +71,7 @@ function META:Get(key, from_table)
     key = types.Cast(key)
 
     if from_table then
-        for _, obj in ipairs(self.datai) do
+        for _, obj in ipairs(self:GetElements()) do
             if obj.Get then
                 local val = obj:Get(key)
                 if val then
@@ -84,7 +83,7 @@ function META:Get(key, from_table)
 
     local errors = {}
 
-    for _, obj in ipairs(self.datai) do
+    for _, obj in ipairs(self:GetElements()) do
         if obj.volatile then
             return obj
         end
@@ -98,7 +97,7 @@ function META:Get(key, from_table)
         table.insert(errors, reason)
     end
 
-    return false, table.concat(errors, "\n")
+    return types.errors.other(table.concat(errors, "\n"))
 end
 
 function META:Set(key, val)
@@ -107,11 +106,11 @@ function META:Set(key, val)
 end
 
 function META:IsEmpty()
-    return self.datai[1] == nil
+    return self:GetElements()[1] == nil
 end
 
 function META:GetData()
-    return self.datai
+    return self:GetElements()
 end
 
 
@@ -172,7 +171,7 @@ function META.SubsetOf(A, B)
         if B:GetLength() == 1 then
             B = B:Get(1)
         else
-            return false, tostring(A) .. " cannot contain tuple " .. tostring(B)
+            return types.errors.other(tostring(A) .. " cannot contain tuple " .. tostring(B))
         end
     end
 
@@ -204,7 +203,7 @@ end
 function META:Union(set)
     local copy = self:Copy()
 
-    for _, e in ipairs(set.datai) do
+    for _, e in ipairs(set:GetElements()) do
         copy:AddElement(e)
     end
 
@@ -215,7 +214,7 @@ end
 function META:Intersect(set)
     local copy = types.Set()
 
-    for _, e in ipairs(self.datai) do
+    for _, e in ipairs(self:GetElements()) do
         if set:Get(e) then
             copy:AddElement(e)
         end
@@ -228,7 +227,7 @@ end
 function META:Subtract(set)
     local copy = self:Copy()
 
-    for _, e in ipairs(self.datai) do
+    for _, e in ipairs(self:GetElements()) do
         copy:RemoveElement(e)
     end
 
@@ -237,14 +236,14 @@ end
 
 function META:Copy()
     local copy = types.Set()
-    for _, e in ipairs(self.datai) do
+    for _, e in ipairs(self:GetElements()) do
         copy:AddElement(e)
     end
     return copy
 end
 
 function META:IsLiteral()
-    for _, v in ipairs(self.datai) do
+    for _, v in ipairs(self:GetElements()) do
         if not v:IsLiteral() then
             return false
         end
@@ -254,7 +253,7 @@ function META:IsLiteral()
 end
 
 function META:IsTruthy()
-    for _, v in ipairs(self.datai) do
+    for _, v in ipairs(self:GetElements()) do
         if v:IsTruthy() then
             return true
         end
@@ -265,7 +264,7 @@ end
 
 
 function META:IsFalsy()
-    for _, v in ipairs(self.datai) do
+    for _, v in ipairs(self:GetElements()) do
         if v:IsFalsy() then
             return true
         end

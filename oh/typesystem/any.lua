@@ -32,10 +32,6 @@ function META:__tostring()
     return "any"
 end
 
-function META:Serialize()
-    return self:__tostring()
-end
-
 function META:IsVolatile()
     return self.volatile == true
 end

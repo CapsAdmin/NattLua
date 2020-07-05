@@ -1,13 +1,13 @@
-local oh = {}
+local helpers = {}
 
-function oh.QuoteToken(str)
+function helpers.QuoteToken(str)
 	return "❲" .. str .. "❳"
 end
 
-function oh.QuoteTokens(var)
+function helpers.QuoteTokens(var)
 	local str = ""
 	for i, v in ipairs(var) do
-		str = str .. oh.QuoteToken(v)
+		str = str .. helpers.QuoteToken(v)
 
 		if i == #var - 1 then
 			str = str .. " or "
@@ -21,7 +21,7 @@ end
 local tab_size = 1
 
 do
-	function oh.LinePositionToSubPosition(code, line, character)
+	function helpers.LinePositionToSubPosition(code, line, character)
 		local line_pos = 1
 		for i = 1, #code do
 			local c = code:sub(i, i)
@@ -54,7 +54,7 @@ do
 		return #code
 	end
 
-	function oh.SubPositionToLinePosition(code, start, stop)
+	function helpers.SubPositionToLinePosition(code, start, stop)
 		local line = 1
 
 		local line_start
@@ -168,11 +168,11 @@ do
 		local fmt = function(num)
 			num = tonumber(num)
 			if type(args[num]) == "table" then
-				return oh.QuoteTokens(args[num])
+				return helpers.QuoteTokens(args[num])
 			end
-			return oh.QuoteToken(args[num] or "?")
+			return helpers.QuoteToken(args[num] or "?")
 		end
-		function oh.FormatMessage(msg, ...)
+		function helpers.FormatMessage(msg, ...)
 			args = {...}
 			msg = msg:gsub("$(%d)", fmt)
 
@@ -182,13 +182,13 @@ do
 
 	local function clamp(num, min, max) return math.min(math.max(num, min), max) end
 
-	function oh.FormatError(code, path, msg, start, stop, ...)
-		msg = oh.FormatMessage(msg, ...)
+	function helpers.FormatError(code, path, msg, start, stop, ...)
+		msg = helpers.FormatMessage(msg, ...)
 
 		start = clamp(start, 1, #code)
 		stop = clamp(stop, 1, #code)
 
-		local data = oh.SubPositionToLinePosition(code, start, stop)
+		local data = helpers.SubPositionToLinePosition(code, start, stop)
 
 		if not data then
 			local str = ""
@@ -267,7 +267,7 @@ do
 	end
 end
 
-function oh.GetErrorsFormatted(error_table, code, path)
+function helpers.GetErrorsFormatted(error_table, code, path)
 	if not error_table[1] then
 		return ""
 	end
@@ -276,7 +276,7 @@ function oh.GetErrorsFormatted(error_table, code, path)
 	local max_width = 0
 
 	for i, data in ipairs(error_table) do
-		local msg = oh.FormatError(code, path, data.msg, data.start, data.stop)
+		local msg = helpers.FormatError(code, path, data.msg, data.start, data.stop)
 
 		for _, line in ipairs(msg:split("\n")) do
 			max_width = math.max(max_width, #line)
@@ -321,7 +321,7 @@ do
         end
     end
 
-	function oh.LazyFindStartStop(tbl)
+	function helpers.LazyFindStartStop(tbl)
 		if tbl.start and tbl.stop then
 			return tbl.start, tbl.stop
 		end
@@ -331,4 +331,4 @@ do
     end
 end
 
-return oh
+return helpers

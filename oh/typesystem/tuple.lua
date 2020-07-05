@@ -8,10 +8,20 @@ function META:GetSignature()
     local s = {}
 
     for i,v in ipairs(self.data) do
-        s[i] = types.GetSignature(v)
+        s[i] = v:GetSignature()
     end
 
     return table.concat(s, " ")
+end
+
+function META:__tostring()
+    local s = {}
+
+    for i,v in ipairs(self.data) do
+        s[i] = tostring(v)
+    end
+
+    return (self.ElementType and tostring(self.ElementType) or "") .. "⦅" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or (self.max and ("#" .. self.max)) or "") .. "⦆"
 end
 
 function META:Merge(tup, dont_extend)
@@ -80,12 +90,12 @@ function META.SubsetOf(A, B)
 
     if B.Type == "table" then
         if not B:IsNumericallyIndexed() then
-            return false, tostring(B) .. " cannot be treated as a tuple because it contains non a numeric index " .. tostring(A)
+            return types.errors.other(tostring(B) .. " cannot be treated as a tuple because it contains non a numeric index " .. tostring(A))
         end
     end
 
     if A:GetLength() > B:GetLength() and A:GetLength() > B:GetMaxLength() then
-        return false, tostring(A) .. " is larger than " .. tostring(B)
+        return types.errors.other(tostring(A) .. " is larger than " .. tostring(B))
     end
 
 
@@ -137,19 +147,6 @@ function META:Set(key, val)
     return true
 end
 
-function META:__tostring()
-    local s = {}
-
-    for i,v in ipairs(self.data) do
-        s[i] = tostring(v)
-    end
-
-    return (self.ElementType and tostring(self.ElementType) or "") .. "⦅" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or (self.max and ("#" .. self.max)) or "") .. "⦆"
-end
-
-function META:Serialize()
-    return self:__tostring()
-end
 
 function META:IsConst()
     for _, obj in ipairs(self.data) do

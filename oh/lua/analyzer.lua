@@ -46,7 +46,7 @@ do -- type operators
                 return types.Number()
             end
 
-            return false, "no operator for " .. operator .. tostring(l) .. " in runtime"
+            return types.errors.other("no operator for " .. operator .. tostring(l) .. " in runtime")
         end
 
         function META:PrefixOperator(node, l, env)
@@ -58,7 +58,7 @@ do -- type operators
                 local new_set = types.Set()
 
                 for _, l in ipairs(l:GetElements()) do
-                    new_set:AddElement(assert(self:PrefixOperator(node, l, env)))
+                    new_set:AddElement(self:Assert(node, self:PrefixOperator(node, l, env)))
                 end
 
                 return new_set
@@ -72,16 +72,16 @@ do -- type operators
                 if op == "typeof" then
                     local obj = self:GetValue(node.right, "runtime")
                     if not obj then
-                        return false, "cannot find " .. self:Hash(node.right) .. " in the current typesystem scope"
+                        return types.errors.other("cannot find " .. self:Hash(node.right) .. " in the current typesystem scope")
                     end
                     return obj.contract or obj
                 elseif op == "$" then
                     local obj = self:AnalyzeExpression(node.right, "typesystem")
                     if obj.Type ~= "string" then
-                        return false, "must evaluate to a string"
+                        return types.errors.other("must evaluate to a string")
                     end
                     if not obj:IsLiteral() then
-                        return false, "must be a literal"
+                        return types.errors.other("must be a literal")
                     end
 
                     obj.pattern_contract = obj:GetData()
@@ -180,7 +180,7 @@ do -- type operators
                 return types.Number()
             end
 
-            return false, "no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime"
+            return types.errors.other("no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime")
         end
 
         function META:BinaryOperator(node, l, r, env)
@@ -199,7 +199,7 @@ do -- type operators
 
                 for _, l in ipairs(l:GetElements()) do
                     for _, r in ipairs(r:GetElements()) do
-                        new_set:AddElement(assert(self:BinaryOperator(node, l, r, env)))
+                        new_set:AddElement(self:Assert(node, self:BinaryOperator(node, l, r, env)))
                     end
                 end
 
@@ -419,7 +419,7 @@ do -- type operators
                     return types.StringType
                 end
 
-                return false, "no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r)
+                return types.errors.other("no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r))
             end
 
             if op == "+" then return arithmetic(l,r, "number", op)
@@ -470,7 +470,7 @@ do -- type operators
 
 
         if not obj.Set then
-            return false, "undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type
+            return types.errors.other("undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type)
         end
 
         return obj:Set(key, val)
@@ -492,7 +492,7 @@ do -- type operators
 
         --TODO: not needed? Get and Set should error
         if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then
-            return false, "undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]"
+            return types.errors.other("undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
         end
 
         if obj.Type == "table" and obj.meta and not obj:Contains(key) then
@@ -622,12 +622,12 @@ do -- types
 
         if obj.Type == "set" then
             if obj:IsEmpty() then
-                return false, "cannot call empty set"
+                return types.errors.other("cannot call empty set")
             end
 
             for _, obj in ipairs(obj:GetData()) do
                 if obj.Type ~= "function" and obj.Type ~= "table" then
-                    return false, "set contains uncallable object " .. tostring(obj)
+                    return types.errors.other("set contains uncallable object " .. tostring(obj))
                 end
             end
 
@@ -647,7 +647,7 @@ do -- types
                 end
             end
 
-            return false, table.concat(errors, "\n")
+            return types.errors.other(table.concat(errors, "\n"))
         end
 
         if obj.Type == "any" then
@@ -671,7 +671,7 @@ do -- types
         end
 
         if obj.Type ~= "function" then
-            return false, tostring(obj) .. " cannot be called"
+            return types.errors.other(tostring(obj) .. " cannot be called")
         end
 
         do
@@ -697,7 +697,7 @@ do -- types
                 local ok, reason = a:SubsetOf(b)
 
                 if not ok then
-                    return false, "argument #" .. i .. " - " .. tostring(a) .. " is not a subset of " .. tostring(b) .. " because " .. reason
+                    return types.errors.other("argument #" .. i .. " - " .. tostring(a) .. " is not a subset of " .. tostring(b) .. " because " .. reason)
                 end
             end
         end

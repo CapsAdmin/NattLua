@@ -6,7 +6,7 @@ local Tuple = T.Tuple
 
 describe("typesystem", function()
     it("a set should not contain duplicates", function()
-        assert.equal(Set("a", "b", "a", "a"):Serialize(), Set("a", "b"):Serialize())
+        assert.equal(Set("a", "b", "a", "a"):GetSignature(), Set("a", "b"):GetSignature())
     end)
 
     local larger = Set("a", "b", "c")
@@ -46,7 +46,7 @@ describe("typesystem", function()
     end)
 
     it("a smaller set within an empty set should be identical to the smaller set", function()
-        assert.equal(smaller:Serialize(), Set(smaller):Serialize())
+        assert.equal(smaller:GetSignature(), Set(smaller):GetSignature())
     end)
 
     it("a set containing one literal number should be a subset of a set containing a number", function()

@@ -7,11 +7,17 @@ META.Type = "string"
 META.__index = META
 
 function META:GetSignature()
+    local s = "string"
+
     if self.literal then
-        return "string" .. "-" .. types.GetSignature(self.data)
+        s = s .. "-" .. self:GetData()
     end
 
-    return "string"
+    if self.pattern_contract then
+        s = s .. "-" .. tostring(self.pattern_contract)
+    end
+
+    return s
 end
 
 function META:Get(key)
@@ -28,7 +34,7 @@ function META:Get(key)
 end
 
 function META:Set(key, val)
-    return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .. "] = " .. tostring(val)
+    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .. "] = " .. tostring(val))
 end
 
 function META:GetData()
@@ -55,21 +61,21 @@ function META.SubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return false, table.concat(errors, "\n")
+        return types.errors.other(table.concat(errors, "\n"))
     end
 
     if A.Type == "any" or A.volatile then return true end
     if B.Type == "any" or B.volatile then return true end
 
     if B.Type == "string" then
-        
+
         if B.pattern_contract then
             if not A:IsLiteral() then
-                return false, "must be a literal"
+                return types.errors.other("must be a literal")
             end
 
             if not A:GetData():find(B.pattern_contract) then
-                return false, "the pattern failed to match"
+                return types.errors.other("the pattern failed to match")
             end
 
             return true
@@ -97,7 +103,7 @@ function META.SubsetOf(A, B)
         -- number == number
         return true
     else
-        return false, tostring(A) .. " is not the same type as " .. tostring(B)
+        return types.errors.other(tostring(A) .. " is not the same type as " .. tostring(B))
     end
     error("this shouldn't be reached ")
 
@@ -138,9 +144,6 @@ function META:__tostring()
     return "string" .. "(".. tostring(self.data) .. (self.max and (".." .. self.max.data) or "") .. ")"
 end
 
-function META:Serialize()
-    return self:__tostring()
-end
 
 function META:IsVolatile()
     return self.volatile == true

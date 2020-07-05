@@ -283,7 +283,7 @@ type type_assert = function(what: any, type: any)
 		return
 	end
 
-	if what:Serialize() ~= type:Serialize() then
+	if what:GetSignature() ~= type:GetSignature() then
 		error("expected " .. tostring(type) .." got " .. tostring(what))
 	end
 end
@@ -352,7 +352,7 @@ type require = function(name)
 				if path:sub(1, 1) == "@" then
 					local path = path:sub(2)
 
-					local ast = assert(require("oh").FileToAST(path))
+					local ast = assert(require("oh").ParseFile(path))
 					analyzer:AnalyzeStatement(ast)
 
 					return table.unpack(analyzer.last_return)

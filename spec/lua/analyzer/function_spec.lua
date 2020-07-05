@@ -195,7 +195,7 @@ describe("function", function()
             local a = args:Get(1)
             local b = args:Get(2)
 
-            assert.equal(a:Serialize(), b:Serialize())
+            assert.equal(a:GetSignature(), b:GetSignature())
         end
 
         do
@@ -213,7 +213,7 @@ describe("function", function()
             local a = args:Get(1)
             local b = args:Get(2)
 
-            assert.equal(a:Serialize(), b:Serialize())
+            assert.equal(a:GetSignature(), b:GetSignature())
         end
 
 

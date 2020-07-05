@@ -5,12 +5,11 @@ if not table.unpack and _G.unpack then
 end
 
 local Lexer = require("oh.lua.lexer")
-local LuaEmitter = require("oh.lua.emitter")
 local Parser = require("oh.lua.parser")
 local Analyzer = require("oh.lua.analyzer")
+local LuaEmitter = require("oh.lua.emitter")
 
-local print_util = require("oh.print_util")
-
+local helpers = require("oh.print_util")
 
 function oh.GetBaseAnalyzer(ast)
 
@@ -18,7 +17,7 @@ function oh.GetBaseAnalyzer(ast)
         local base = Analyzer()
 		base.IndexNotFound = nil
 
-		local root = assert(ast or oh.FileToAST("oh/lua/base_typesystem.oh"))
+		local root = assert(ast or oh.ParseFile("oh/lua/base_typesystem.oh").SyntaxTree)
 		base:AnalyzeStatement(root)
 
 		local g = base:TypeFromImplicitNode(root, "table")
@@ -83,24 +82,8 @@ function oh.on_editor_save(path)
 	--assert(load(res))()
 end
 
-function oh.FileToAST(path, root)
-	local code, err = assert(oh.File(path, {path = path, root = root}))
-
-	if not code then
-		return err
-	end
-
-	return assert(code:Parse()).SyntaxTree
-end
-
-
-function oh.FileToAST2(path, root)
-	local code, err = assert(oh.File(path, {path = path, root = root}))
-
-	if not code then
-		return err
-	end
-
+function oh.ParseFile(path, root)
+	local code = assert(oh.File(path, {path = path, root = root}))
 	return assert(code:Parse()), code
 end
 
@@ -128,7 +111,7 @@ do
 
 	function META:OnError(msg, start, stop, ...)
 		local self = self.code_data
-		error(print_util.FormatError(self.code, self.name, msg, start, stop, ...))
+		error(helpers.FormatError(self.code, self.name, msg, start, stop, ...))
 	end
 
 	local function traceback_(msg)
@@ -162,7 +145,7 @@ do
 				s = s .. "\n===============\n"
 			end
 
-			if analyzer.current_expressionand and analyzer.current_expression.Render then
+			if analyzer.current_expression and analyzer.current_expression.Render then
 				s = s .. "======== expression =======\n"
 				s = s .. analyzer.current_expression:Render()
 				s = s .. "\n===============\n"
@@ -172,7 +155,18 @@ do
 				s = s .. "======== callstack =======\n"
 
 				for _, obj in ipairs(analyzer.callstack) do
-					s = s .. print_util.FormatError(analyzer.code_data.code, analyzer.code_data.name, tostring(obj), print_util.LazyFindStartStop(obj))
+					s = s .. helpers.FormatError(analyzer.code_data.code, analyzer.code_data.name, tostring(obj), helpers.LazyFindStartStop(obj))
+				end
+
+				s = s .. "\n===============\n"
+			end
+
+			if analyzer.error_stack then
+				s = s .. "======== error_stack =======\n"
+
+				for _, data in ipairs(analyzer.error_stack) do
+					s = s .. tostring(data.statement:Render())
+					s = s .. tostring(data.expression:Render())
 				end
 
 				s = s .. "\n===============\n"
@@ -306,7 +300,6 @@ do
 		f:close()
 		return oh.Code(code, "@" .. path, config)
 	end
-
 end
 
 return oh

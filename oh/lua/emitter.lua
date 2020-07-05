@@ -41,7 +41,7 @@ function META:EmitExpression(node)
     elseif node.kind == "type_table" then
         self:EmitTableType(node)
     elseif node.kind == "vararg_tuple" then
-        self:EmitVarargTuple(node) 
+        self:EmitVarargTuple(node)
     elseif node.kind == "type_list" then
        self:EmitTypeList(node)
     else
@@ -558,7 +558,7 @@ function META:EmitIdentifier(node)
             self:EmitTypeExpression(node.type_expression)
         elseif node.inferred_type then
             self:Emit(": ")
-            self:Emit((node.inferred_type.contract or node.inferred_type):Serialize())
+            self:Emit((node.inferred_type.contract or node.inferred_type):GetSignature())
         end
     end
 end

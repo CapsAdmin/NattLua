@@ -7,21 +7,26 @@ META.Type = "number"
 META.__index = META
 
 function META:GetSignature()
+    local s = "number"
 
     if self.literal then
-        return "number-" .. types.GetSignature(self.data)
+        s = s .. "-" .. tostring(self:GetData())
     end
 
-    return "number"
+    if self.max then
+        s = s .. "-" .. self.max:GetSignature()
+    end
+
+    return s
 end
 
 function META:Get(key)
-    return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."]"
+    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."]")
     --return self.data
 end
 
 function META:Set(key, val)
-    return false, "cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val)
+    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val))
     --self.data = val
 end
 
@@ -51,7 +56,7 @@ function META.SubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return false, table.concat(errors, "\n")
+        return types.errors.other(table.concat(errors, "\n"))
     end
 
     if A.Type == "any" or A.volatile then return true end
@@ -93,7 +98,7 @@ function META.SubsetOf(A, B)
         -- number == number
         return true
     else
-        return false, tostring(A) .. " is not the same type as " .. tostring(B)
+        return types.errors.other(tostring(A) .. " is not the same type as " .. tostring(B))
     end
     error("this shouldn't be reached ")
 
@@ -128,16 +133,13 @@ function META:__tostring()
     return "number" .. "(".. tostring(self.data) .. (self.max and (".." .. tostring(self.max)) or "") .. ")"
 end
 
-function META:Serialize()
-    return self:__tostring()
-end
 
 function META:Max(val)
     if val.Type == "set" then
         local max = {}
         for _, obj in ipairs(val:GetElements()) do
             if obj.Type ~= "number" then
-                return false, "the set contains non numbers"
+                return types.errors.other("the set contains non numbers")
             end
             if obj:IsLiteral() then
                 table.insert(max, obj)
@@ -152,7 +154,7 @@ function META:Max(val)
     end
 
     if val.Type ~= "number" then
-        return false, "max must be a number"
+        return types.errors.other("max must be a number")
     end
 
     if not val:IsLiteral() then

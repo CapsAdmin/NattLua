@@ -22,6 +22,19 @@ local types = {}
         A entails B
 ]]
 
+local function store_error(msg)
+    do return end -- WIP
+    local a = require("oh").current_analyzer
+    if a then
+        a.error_stack = a.error_stack or {}
+        table.insert(a.error_stack, {
+            msg = msg,
+            expression = a.current_expression,
+            statement = a.current_statement,
+        })
+    end
+
+end
 
 types.errors = {
     subset = function(a, b, reason)
@@ -31,11 +44,18 @@ types.errors = {
             msg = msg .. " because " .. reason
         end
 
+        store_error(msg)
         return false, msg
     end,
     missing = function(a, b)
-        return false, tostring(a) .. " does not contain " .. tostring(b)
-    end
+        local msg = tostring(a) .. " does not contain " .. tostring(b)
+        store_error(msg)
+        return false, msg
+    end,
+    other = function(msg)
+        store_error(msg)
+        return false, msg
+    end,
 }
 
 function types.Cast(val)
@@ -49,20 +69,13 @@ function types.Cast(val)
     return val
 end
 
-function types.GetSignature(obj)
-    if type(obj) == "table" and obj.GetSignature then
-        return obj:GetSignature()
-    end
-
-    return tostring(obj)
-end
-
 function types.IsPrimitiveType(val)
     return val == "string" or
     val == "number" or
     val == "boolean" or
     val == "true" or
-    val == "false"
+    val == "false" or
+    val == "nil"
 end
 
 function types.IsTypeObject(obj)
@@ -91,7 +104,7 @@ do
         error("NYI")
     end
 
-    function Base:Serialize()
+    function Base:GetSignature()
         error("NYI")
     end
 

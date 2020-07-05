@@ -4,48 +4,27 @@ local META = {}
 META.Type = "table"
 META.__index = META
 
+local function sort(a, b) return a < b end
+
 function META:GetSignature()
     if self.supress then
         return "*self*"
     end
-    self.supress = true
 
     local s = {}
 
+    self.supress = true
     for i, keyval in ipairs(self.data) do
         s[i] = keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature()
     end
     self.supress = nil
 
-    table.sort(s, function(a, b) return a > b end)
+    table.sort(s, sort)
 
     return table.concat(s, "\n")
 end
 
 local level = 0
-function META:Serialize()
-    if self.supress then
-        return "*self*"
-    end
-    self.supress = true
-
-    local s = {}
-
-    level = level + 1
-    for i, keyval in ipairs(self.data) do
-        local key, val = tostring(keyval.key), tostring(keyval.val)
-
-        s[i] = ("\t"):rep(level) .. key .. " = " .. val
-    end
-    level = level - 1
-
-    self.supress = nil
-
-    table.sort(s, function(a, b) return a < b end)
-
-    return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
-end
-
 function META:__tostring()
     if self.supress then
         return "*self*"
@@ -73,7 +52,7 @@ function META:__tostring()
 
     self.supress = nil
 
-    table.sort(s, function(a, b) return a < b end)
+    table.sort(s, sort)
 
     return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
@@ -111,13 +90,13 @@ function META.SubsetOf(A, B)
             local count = 0
             for i, a in ipairs(A.data) do
                 if a.key.data ~= i then
-                    return false, "index " .. tostring(a.key.data) .. " is not the same as " .. tostring(i)
+                    return types.errors.other("index " .. tostring(a.key) .. " is not the same as " .. tostring(i))
                 end
 
                 count = count + 1
             end
             if count ~= B:GetMaxLength() then
-                return false, " count " .. tostring(count) .. " is not the same as max length " .. tostring(B:GetMaxLength())
+                return types.errors.other(" count " .. tostring(count) .. " is not the same as max length " .. tostring(B:GetMaxLength()))
             end
         end
 
@@ -135,7 +114,7 @@ function META.SubsetOf(A, B)
                 local reasons = {}
 
                 if not B.data[1] then
-                    return false, "table is empty"
+                    return types.errors.other("table is empty")
                 end
 
                 for _, keyval in ipairs(B.data) do
@@ -148,11 +127,11 @@ function META.SubsetOf(A, B)
                 end
 
                 if not b then
-                    return false, table.concat(reasons, "\n")
+                    return types.errors.other(table.concat(reasons, "\n"))
                 end
             end
 
-            local key = a.val:Serialize() .. b.val:Serialize()
+            local key = a.val:GetSignature() .. b.val:GetSignature()
             if not done or not done[key] then
                 if done then
                     done[key] = true
@@ -199,7 +178,7 @@ function META:Delete(key)
             return true
         end
     end
-    return false, "cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self)
+    return types.errors.other("cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self))
 end
 
 function META:GetKeySet()
@@ -218,7 +197,7 @@ end
 
 function META:GetKeyVal(key, reverse_subset)
     if not self.data[1] then
-        return false, "table has no definitions"
+        return types.errors.other("table has no definitions")
     end
 
     local reasons = {}
@@ -242,22 +221,22 @@ function META:GetKeyVal(key, reverse_subset)
         table.insert(reasons, reason)
     end
 
-    return false, table.concat(reasons, "\n")
+    return types.errors.other(table.concat(reasons, "\n"))
 end
 
-function META:Set(key, val, raw)
+function META:Set(key, val)
     key = types.Cast(key)
     val = types.Cast(val)
 
     if key.Type == "symbol" and key:GetData() == nil then
-        return false, "key is nil"
+        return types.errors.other("key is nil")
     end
 
     if key.Type == "set" then
         local set = key
         for _, key in ipairs(set:GetElements()) do
             if key.Type == "symbol" and key:GetData() == nil then
-                return false, set:GetLength() == 1 and "key is nil" or "can be nil"
+                return types.errors.other(set:GetLength() == 1 and "key is nil" or "can be nil")
             end
         end
     end
@@ -287,7 +266,7 @@ function META:Set(key, val, raw)
     if not keyval then
         table.insert(self.data, {key = key, val = val})
     else
-        if keyval.val and keyval.key:Serialize() ~= key:Serialize() then
+        if keyval.val and keyval.key:GetSignature() ~= key:GetSignature() then
             keyval.val = types.Set({keyval.val, val})
         else
             keyval.val = val
@@ -306,7 +285,7 @@ function META:Get(key, raw)
         return keyval.val
     end
 
-    return false, reason
+    return types.errors.other(reason)
 end
 
 function META:IsNumericallyIndexed()
@@ -325,7 +304,7 @@ function META:CopyLiteralness(from)
         local keyval, reason = self:GetKeyVal(keyval_from.key)
 
         if not keyval then
-            return false, reason
+            return types.errors.other(reason)
         end
 
         if keyval_from.key.Type == "table" then
@@ -409,21 +388,21 @@ function META:IsLiteral()
         if v.val ~= self then
 
             if v.key.Type == "set" then
-                return false, "the key " .. tostring(v.key) .. " is a set"
+                return types.errors.other("the key " .. tostring(v.key) .. " is a set")
             end
 
             if v.val.Type == "set" then
-                return false, "the value " .. tostring(v.val) .. " is a set"
+                return types.errors.other("the value " .. tostring(v.val) .. " is a set")
             end
 
             local ok, reason = v.key:IsLiteral()
             if not ok then
-                return false, "the key " .. tostring(v.key) .. " is not a literal because " .. tostring(reason)
+                return types.errors.other("the key " .. tostring(v.key) .. " is not a literal because " .. tostring(reason))
             end
 
             local ok, reason = v.val:IsLiteral()
             if not ok then
-                return false, "the value " .. tostring(v.val) .. " is not a literal because " .. tostring(reason)
+                return types.errors.other("the value " .. tostring(v.val) .. " is not a literal because " .. tostring(reason))
             end
         end
     end
