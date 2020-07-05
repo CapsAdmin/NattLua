@@ -213,13 +213,13 @@ describe("analyzer", function()
         ]]
         local lib = analyzer:GetValue("lib", "runtime")
 
-        assert.equal(true, lib:Get("foo1"):GetArguments().data[1].Type == ("number"))
-        assert.equal(true, lib:Get("foo1"):GetArguments().data[2].Type == ("number"))
-        assert.equal(true, lib:Get("foo1"):GetReturnTypes().data[1].Type == ("number"))
+        assert.equal("number", lib:Get("foo1"):GetArguments():Get(1):GetType("number").Type)
+        assert.equal("number", lib:Get("foo1"):GetArguments():Get(2):GetType("number").Type)
+        assert.equal("number", lib:Get("foo1"):GetReturnTypes():Get(1).Type)
 
-        assert.equal(true, lib:Get("foo2"):GetArguments().data[1].Type == ("number"))
-        assert.equal(true, lib:Get("foo2"):GetArguments().data[2].Type == ("number"))
-        assert.equal(true, lib:Get("foo2"):GetReturnTypes().data[1].Type == ("number"))
+        assert.equal("number", lib:Get("foo2"):GetArguments():Get(1):GetType("number").Type)
+        assert.equal("number", lib:Get("foo2"):GetArguments():Get(2):GetType("number").Type)
+        assert.equal("number", lib:Get("foo2"):GetReturnTypes():Get(1):GetType("number").Type)
     end)
 
     it("should convert binary numbers to numbers", function()

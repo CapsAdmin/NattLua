@@ -658,8 +658,6 @@ do -- types
             local __call = obj.meta and obj.meta:Get("__call")
 
             if __call then
-                obj.volatile = true
-
                 local new_arguments = {obj}
 
                 for _, v in ipairs(arguments:GetData()) do
@@ -681,6 +679,7 @@ do -- types
 
             for i, a in ipairs(A:GetData()) do
                 local b = B:Get(i)
+
                 if not b then
                     break
                 end
@@ -775,25 +774,11 @@ do -- types
                     end
                 else
                     -- copy the entire tuple so we don't modify the return value of this call
-                    local ret_tuple = analyzed_return:Copy()
-
-                    for _,v in ipairs(ret_tuple:GetData()) do
-                        v.volatile = true
-                    end
-
-                    obj:GetReturnTypes():Merge(ret_tuple)
+                    obj:GetReturnTypes():Merge(analyzed_return)
                 end
             end
 
-            obj:GetArguments():Merge(arguments, true)
-
-            -- TODO
-            if call_node and call_node.self_call then
-                local first_arg = obj:GetArguments():Get(1)
-                if first_arg and not first_arg.contract then
-                    first_arg.volatile = true
-                end
-            end
+            obj:GetArguments():Merge(arguments)
 
             do -- this is for the emitter
                 if function_node.identifiers then
@@ -1205,23 +1190,15 @@ do
                         args[i] = self:GetInferredType(key)
                     end
                 end
-
-                if env == "runtime" then
-                    args[i].volatile = true
-                end
             end
         end
 
         if node.self_call and node.expression then
             local upvalue = self:GetUpvalue(node.expression.left, "runtime")
             if upvalue then
-                -- TODO: this will cause local META = {} .. to be volatile,
-                -- all the volatile things should be separated from types i think
-                upvalue.data.volatile = true
                 table.insert(args, 1, upvalue.data)
             end
         end
-
 
         local ret = {}
 
@@ -1261,7 +1238,6 @@ do
             ret = ret,
             lua_function = func
         })
-
 
         if env == "runtime" then
             self:CallMeLater(obj, args, node, true)

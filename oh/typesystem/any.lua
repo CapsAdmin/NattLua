@@ -32,10 +32,6 @@ function META:__tostring()
     return "any"
 end
 
-function META:IsVolatile()
-    return self.volatile == true
-end
-
 function META:IsFalsy()
     return true
 end

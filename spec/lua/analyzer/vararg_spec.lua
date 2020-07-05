@@ -27,11 +27,9 @@ describe("varargs", function()
                 local a,b,c = ...
                 return a+b+c
             end
-
             type_assert(test(test(1,2,3), test(1,2,3), test(1,2,3)), 18)
         ]]
     end)
-
 
     it("smoke", function()
         run[[

@@ -26,7 +26,7 @@ R[[
     test(true, true)
     test(false, false)
 
-    type_assert(test, _ as (function(a: any, b: any):))
+    type_assert(test, _ as (function(a: any | true | false, b: any | true | false):))
 ]]
 
 

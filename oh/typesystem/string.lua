@@ -42,11 +42,7 @@ function META:GetData()
 end
 
 function META:Copy()
-    local data = self.data
-
-    local copy = types.String(data):MakeLiteral(self.literal)
-    copy.volatile = self.volatile
-    return copy
+    return types.String(self.data):MakeLiteral(self.literal)
 end
 
 function META.SubsetOf(A, B)
@@ -64,8 +60,8 @@ function META.SubsetOf(A, B)
         return types.errors.other(table.concat(errors, "\n"))
     end
 
-    if A.Type == "any" or A.volatile then return true end
-    if B.Type == "any" or B.volatile then return true end
+    if A.Type == "any" then return true end
+    if B.Type == "any" then return true end
 
     if B.Type == "string" then
 
@@ -111,20 +107,6 @@ function META.SubsetOf(A, B)
 end
 
 function META:__tostring()
-    --return "「"..self.uid .. " 〉" .. self:GetSignature() .. "」"
-
-    if self.volatile then
-        local str = "string"
-
-        if self.data ~= nil then
-            str = str .. "(" .. tostring(self.data) .. ")"
-        end
-
-        str = str .. "💥"
-
-        return str
-    end
-
     if self.literal then
         if self.data then
             return ("%q"):format(self.data)
@@ -142,11 +124,6 @@ function META:__tostring()
     end
 
     return "string" .. "(".. tostring(self.data) .. (self.max and (".." .. self.max.data) or "") .. ")"
-end
-
-
-function META:IsVolatile()
-    return self.volatile == true
 end
 
 function META:IsFalsy()

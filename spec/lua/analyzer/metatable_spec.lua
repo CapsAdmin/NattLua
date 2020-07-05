@@ -26,6 +26,7 @@ describe("metatable", function()
             META.__index = META
 
             META.Foo = 2
+            META.Bar = 0 as number
 
             function META:Test(v)
                 return self.Bar + v, META.Foo + v

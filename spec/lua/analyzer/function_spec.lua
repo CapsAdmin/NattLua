@@ -23,14 +23,14 @@ describe("function", function()
         ]]
 
         local args = analyzer:GetValue("test", "runtime"):GetArguments()
-        assert.equal(true, args:Get(1).Type == ("number"))
-        assert.equal(true, args:Get(2).Type == ("string"))
-        assert.equal(true, args:Get(3).Type == ("number"))
+
+        assert.equal("number", args:Get(1):GetType("number").Type)
+        assert.equal("string", args:Get(2):GetType("string").Type)
+        assert.equal("number", args:Get(3):GetType("number").Type)
 
         local rets = analyzer:GetValue("test", "runtime"):GetReturnTypes()
-        assert.equal(true, rets:Get(1).Type == ("number"))
+        assert.equal("number", rets:Get(1).Type)
     end)
-
 
     it("arguments and return types are volatile", function()
         local analyzer = run[[
@@ -67,7 +67,6 @@ describe("function", function()
         local val = analyzer:GetValue("a", "runtime")
         assert.equal(true, val.Type == "symbol")
         assert.equal(true, val:GetData())
-        assert.equal(false, val:IsVolatile())
     end)
 
     it("which is explicitly annotated should error when the actual return value is different", function()
@@ -120,8 +119,8 @@ describe("function", function()
             local a = meta.Foo
         ]])
 
-        local self = analyzer:GetValue("a", "runtime"):GetArguments():Get(1)
-        assert(self.volatile)
+        local self = analyzer:GetValue("a", "runtime"):GetArguments():Get(1):GetType("table")
+        assert.equal("table", self.Type)
     end)
 
     it("arguments that are explicitly typed should error", function()
@@ -172,13 +171,11 @@ describe("function", function()
             local a = args:Get(1)
             local b = args:Get(2)
 
-            assert.equal("number", a.Type)
-            assert.equal(true, a.volatile)
-            assert.equal(1, a.data)
+            assert.equal("number", a:GetType("number").Type)
+            assert.equal(1, a:GetType("number").data)
 
-            assert.equal("string", b.Type)
-            assert.equal(true, b.volatile)
-            assert.equal("a", b.data)
+            assert.equal("string", b:GetType("string").Type)
+            assert.equal("a", b:GetType("string").data)
         end
 
         do
@@ -325,7 +322,11 @@ describe("function", function()
                     return foo(lol), nil
                 end
                 local complex = foo(a)
-                type_assert_superset(foo, nil as function(_:any, _:nil):number, nil )
+
+                type_assert_superset(
+                    foo,
+                    nil as (function(2 | any):any, nil)
+                )
             end
         ]]
     end)

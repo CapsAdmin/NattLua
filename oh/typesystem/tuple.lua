@@ -24,31 +24,20 @@ function META:__tostring()
     return (self.ElementType and tostring(self.ElementType) or "") .. "⦅" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or (self.max and ("#" .. self.max)) or "") .. "⦆"
 end
 
-function META:Merge(tup, dont_extend)
-    local src = self.data
-    local dst = tup.data
+function META:Merge(tup)
+    local src = self:GetElements()
+    local dst = tup:GetElements()
 
     for i,v in ipairs(dst) do
-        if src[i] and src[i].Type ~= "any" then
-            if src[i].volatile then
-                v = v:Copy()
-                v.volatile = true
+        if src[i] then
+
+            if src[i].Type == "tuple" and src[i].max == math.huge then
+                break
+            else
+                src[i] = types.Set({src[i], v})
             end
-            src[i] = types.Set({src[i], v})
         else
-            local prev = src[i]
-
-            if not dont_extend or prev then
-                if not prev or prev.volatile then
-                    src[i] = dst[i]:Copy()
-                    src[i].volatile = true
-                end
-
-                if prev and prev.volatile then
-                    src[i] = src[i]:Copy()
-                    src[i].volatile = true
-                end
-            end
+            src[i] = dst[i]:Copy()
         end
     end
 
@@ -97,7 +86,6 @@ function META.SubsetOf(A, B)
     if A:GetLength() > B:GetLength() and A:GetLength() > B:GetMaxLength() then
         return types.errors.other(tostring(A) .. " is larger than " .. tostring(B))
     end
-
 
     if A.ElementType and A.ElementType.Type == "any" then
         return true
@@ -164,16 +152,6 @@ end
 function META:SetLength()
 
 end
-
-function META:IsVolatile()
-    for i,v in ipairs(self.data) do
-        if not v:IsVolatile() then
-            return false
-        end
-    end
-    return true
-end
-
 
 function META:IsTruthy()
     return true

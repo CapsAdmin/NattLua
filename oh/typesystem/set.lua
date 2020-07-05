@@ -32,7 +32,7 @@ end
 
 function META:AddElement(e)
     if e.Type == "set" then
-        for _, e in ipairs(e.datai) do
+        for _, e in ipairs(e:GetElements()) do
             self:AddElement(e)
         end
 
@@ -84,10 +84,6 @@ function META:Get(key, from_table)
     local errors = {}
 
     for _, obj in ipairs(self:GetElements()) do
-        if obj.volatile then
-            return obj
-        end
-
         local ok, reason = key:SubsetOf(obj)
 
         if ok then
@@ -148,21 +144,15 @@ function META:IsType(typ)
 end
 
 function META:HasType(typ)
-    for _, obj in ipairs(self:GetElements()) do
-        if obj.Type == typ then
-            return true
-        end
-    end
-    return false
+    return self:GetType(typ) ~= false
 end
 
-function META:IsVolatile()
+function META:GetType(typ)
     for _, obj in ipairs(self:GetElements()) do
-        if obj.volatile then
-            return true
+        if obj.Type == typ then
+            return obj
         end
     end
-
     return false
 end
 
@@ -177,10 +167,6 @@ function META.SubsetOf(A, B)
 
     if B.Type ~= "set" then
         return A:SubsetOf(types.Set({B}))
-    end
-
-    if A:IsVolatile() then
-        return true
     end
 
     for _, a in ipairs(A:GetElements()) do

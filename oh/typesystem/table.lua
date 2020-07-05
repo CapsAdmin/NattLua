@@ -69,7 +69,7 @@ function META.SubsetOf(A, B)
         return true
     end
 
-    if B.Type == "any" or B.volatile then
+    if B.Type == "any" then
         return true
     end
 
@@ -344,7 +344,6 @@ function META:Copy()
     end
 
     copy.meta = self.meta
-    copy.volatile = self.volatile
 
     return copy
 end
@@ -416,10 +415,6 @@ end
 
 function META:IsTruthy()
     return true
-end
-
-function META:IsVolatile()
-    return self.volatile
 end
 
 function META:Initialize(data)

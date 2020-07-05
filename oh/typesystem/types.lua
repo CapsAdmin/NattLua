@@ -138,6 +138,7 @@ function types.RegisterType(meta)
         if self.Initialize then
             self:Initialize(data)
         end
+--        self.trace = debug.traceback()
         return self
     end
 end

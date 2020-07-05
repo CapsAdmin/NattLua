@@ -15,19 +15,6 @@ function META:__tostring()
 end
 
 function META:Get(key)
-    local val = type(self.data) == "table" and self.data:Get(key)
-
-    if not val and self.meta then
-        local index = self.meta:Get("__index")
-        if index.Type == "table" then
-            return index:Get(key)
-        end
-    end
-
-    return val
-end
-
-function META:Get(key)
     return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."]")
     --return self.data
 end
@@ -46,17 +33,17 @@ function META:GetReturnTypes()
 end
 
 function META:Copy()
-    local data = {ret = self.data.ret:Copy(), arg = self.data.arg:Copy()}
+    local copy = types.Function({
+        ret = self.data.ret:Copy(),
+        arg = self.data.arg:Copy()
+    }):MakeLiteral(self.literal)
 
-    local copy = types.Function(data):MakeLiteral(self.literal)
-    copy.volatile = self.volatile
     return copy
 end
 
 function META.SubsetOf(A, B)
-    if A.Type == "any" or A.volatile then return true end
-    if B.Type == "any" or B.volatile then return true end
-
+    if A.Type == "any" then return true end
+    if B.Type == "any" then return true end
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
     if B.Type == "function" then
@@ -76,10 +63,6 @@ function META.SubsetOf(A, B)
     end
 
     return types.errors.other("NYI " .. tostring(B))
-end
-
-function META:IsVolatile()
-    return self.volatile == true
 end
 
 function META:IsFalsy()

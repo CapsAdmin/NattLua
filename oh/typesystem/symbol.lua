@@ -48,20 +48,14 @@ function META.SubsetOf(A, B)
         return types.errors.other(table.concat(errors, "\n"))
     end
 
-    if A.Type == "any" or A.volatile then return true end
-    if B.Type == "any" or B.volatile then return true end
-
+    if A.Type == "any" then return true end
+    if B.Type == "any" then return true end
 
     if A.data ~= B.data then
         return types.errors.other(tostring(A) .. " is not the same as " .. tostring(B))
     end
 
     return true
-end
-
-
-function META:IsVolatile()
-    return self.volatile == true
 end
 
 function META:IsFalsy()
