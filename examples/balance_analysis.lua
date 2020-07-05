@@ -1,5 +1,5 @@
 local oh = require("oh")
-local print_util = require("oh.print_util")
+local helpers = require("oh.helpers")
 
 local check_tokens
 
@@ -52,7 +52,7 @@ do
                         table_insert(env[b.name], tk)
                     elseif b.r[tk.value] then
                         if not env[b.name][1] then
-                            io.write(print_util.FormatError(code, name, "could not find the opening " .. b.name, tk.start, tk.stop))
+                            io.write(helpers.FormatError(code, name, "could not find the opening " .. b.name, tk.start, tk.stop))
                         else
                             table_remove(env[b.name])
                         end
@@ -63,7 +63,7 @@ do
 
         for name, tokens in pairs(env) do
             for _, tk in ipairs(tokens) do
-                io.write(print_util.FormatError(code, name, "could not the closing " .. name, tk.start, tk.stop))
+                io.write(helpers.FormatError(code, name, "could not the closing " .. name, tk.start, tk.stop))
             end
         end
     end

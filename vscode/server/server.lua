@@ -236,7 +236,7 @@ local Lexer = require("oh.lua.lexer")
 local Parser = require("oh.lua.parser")
 local LuaEmitter = require("oh.lua.emitter")
 local Analyzer = require("oh.lua.analyzer")
-local print_util = require("oh.print_util")
+local helpers = require("oh.helpers")
 
 local oh = require("oh")
 
@@ -261,8 +261,8 @@ local function compile(uri, server, client)
 
 	local file = oh.Code(code, "test", {annotate = true})
 	function file:OnError(msg, start, stop, ...)
-		msg = print_util.FormatMessage(msg, ...)
-		local data = print_util.SubPositionToLinePosition(code, start, stop)
+		msg = helpers.FormatMessage(msg, ...)
+		local data = helpers.SubPositionToLinePosition(code, start, stop)
 
 		if not data then
 			print(self, msg, start, stop, ...)
@@ -337,11 +337,11 @@ function server:HandleMessage(resp, client)
 		local tokens, ast = compile(resp.params.textDocument.uri, self, client)
 		local code = assert(document_cache[resp.params.textDocument.uri])
 
-		local sub_pos = print_util.LinePositionToSubPosition(code, pos.line + 1, pos.character)
+		local sub_pos = helpers.LinePositionToSubPosition(code, pos.line + 1, pos.character)
 
 		for i,v in ipairs(tokens) do
 			if sub_pos >= v.start and sub_pos <= v.stop then
-				local data = print_util.SubPositionToLinePosition(code, v.start, v.stop)
+				local data = helpers.SubPositionToLinePosition(code, v.start, v.stop)
 
 				self:Respond(client, {
 					id = resp.id,

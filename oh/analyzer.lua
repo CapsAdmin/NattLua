@@ -232,7 +232,7 @@ return function(analyzer_meta)
         return ok
     end
 
-    local utl = require("oh.pri".."nt_util")
+    local helpers = require("oh.helpers")
 
     function META:Error(node, msg)
         if not node then
@@ -245,12 +245,12 @@ return function(analyzer_meta)
         end
 
         if self.OnError then
-            self:OnError(msg, utl.LazyFindStartStop(node))
+            self:OnError(msg, helpers.LazyFindStartStop(node))
         end
 
         if self.code then
-            local start, stop = utl.LazyFindStartStop(node)
-            io.write(utl.FormatError(self.code, node.type, msg, start, stop), "\n")
+            local start, stop = helpers.LazyFindStartStop(node)
+            io.write(helpers.FormatError(self.code, node.type, msg, start, stop), "\n")
         else
             local s = tostring(self)
             s = s .. ": " .. msg

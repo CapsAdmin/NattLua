@@ -1,5 +1,5 @@
-return function(lexer_meta, syntax)        
-    local print_util = require("oh.print_util")
+return function(lexer_meta, syntax)
+    local helpers = require("oh.helpers")
 
     local function Token(type, start, stop, value)
         return {
@@ -220,7 +220,7 @@ return function(lexer_meta, syntax)
             end
         end
     end
-    
+
     do
         function META:IsSpace()
             return syntax.IsSpace(self:GetChar())

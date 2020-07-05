@@ -1,5 +1,5 @@
 local syntax = require("oh.lua.syntax")
-local print_util = require("oh.print_util")
+local helpers = require("oh.helpers")
 
 local META = {}
 
@@ -19,7 +19,7 @@ local function ReadLiteralString(self, multiline_comment)
 
     if not self:IsValue("[") then
         if multiline_comment then return false end
-        return nil, "expected " .. print_util.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. print_util.QuoteToken(self:GetChars(start, self.i))
+        return nil, "expected " .. helpers.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. helpers.QuoteToken(self:GetChars(start, self.i))
     end
 
     self:Advance(1)
@@ -31,7 +31,7 @@ local function ReadLiteralString(self, multiline_comment)
         return true
     end
 
-    return nil, "expected "..print_util.QuoteToken(closing).." reached end of code"
+    return nil, "expected "..helpers.QuoteToken(closing).." reached end of code"
 end
 
 do

@@ -1,4 +1,4 @@
-local print_util = require("oh.print_util")
+local helpers = require("oh.helpers")
 local code = [==[
 for i = 1, #code do
     local char = code:sub(i, i)
@@ -39,4 +39,4 @@ local function example(code)
 end
 local start, stop = example(code)
 
-print(print_util.FormatError(code, "format_error.lua", "pointing at this multiline string", start, stop))
+print(helpers.FormatError(code, "format_error.lua", "pointing at this multiline string", start, stop))

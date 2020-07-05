@@ -9,7 +9,7 @@ local Parser = require("oh.lua.parser")
 local Analyzer = require("oh.lua.analyzer")
 local LuaEmitter = require("oh.lua.emitter")
 
-local helpers = require("oh.print_util")
+local helpers = require("oh.helpers")
 
 function oh.GetBaseAnalyzer(ast)
 
@@ -60,7 +60,7 @@ function oh.on_editor_save(path)
 		return
 	end
 
-	if path:find("oh/oh", nil, true) and not path:find("print_util") then
+	if path:find("oh/oh", nil, true) and not path:find("helpers") then
 		os.execute("busted --lua luajit")
 		return
 	end
