@@ -2,6 +2,38 @@ local T = require("spec.lua.helpers")
 local run = T.RunCode
 
 describe("analyzer", function()
+    run([[
+        
+        local a: number
+        local b: number
+        
+        local c = 0
+
+        if a == b then
+            c = c + 1    
+        else
+            c = c + 1
+        end
+
+        type_assert(c, 2)
+    ]])
+    
+    run([[
+        
+        local a: 1
+        local b: 1
+        
+        local c = 0
+
+        if a == b then
+            c = c + 1    
+        else
+            c = c + 1
+        end
+
+        type_assert(c, 1)
+    ]])
+
     it("type_assert works", function()
         run("type_assert(1, 2)", "expected.-2 got 1")
         run("type_assert(nil as 1|2, 1)", "expected.-1")

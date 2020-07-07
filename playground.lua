@@ -1,5 +1,23 @@
-type positive_numbers = 0 .. inf
-type table_index_range = 0 .. inf
+local a: 1
+local b: number
+
+local c = 0
+
+if a == b then
+    c = c + 1
+elseif a == _ as number then
+    c = c + 1
+else
+    c = c + 1
+end
+
+print(c)
+
+--[=======[
+
+
+type positive_numbers = number
+type table_index_range = number
 
 type TAngle = {
     p = number,
@@ -91,7 +109,7 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
 
     for _, data in pairs(ent:GetBodyGroups()) do
         local bg = ent:GetBodygroup(data.id)
-        if bg ~= 0 then print(data.name, bg)
+        if bg ~= 0 then
             bg_mask = bit.bor(bg_mask, bit.lshift(1, data.id-1))
         end
     end
@@ -115,7 +133,7 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
     --local bone_length = temp:BoneLength(bone)
     local bone_length = ent:BoneLength(ent:GetChildBones(bone)[1] or 0)
     bone_length = math.min(bone_length, temp:BoneLength(temp:GetChildBones(bone)[1] or 0))
-    --print("LEN:",bone_length, temp:BoneLength(temp:GetChildBones(bone)[1]), ent:GetChildBones(bone)[1], temp:GetChildBones(bone)[1])
+    
     local new_meshes = {}
 
     local MESHES = util.GetModelMeshes(mdl, 0, bg_mask)
@@ -127,7 +145,6 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
         local new_tris = {}
         local TRIS = MESH.triangles
         for tri_idx = 1, #TRIS-2, 3 do
-            print(tri_idx, #TRIS-2)
             local is_strong = true
             for offset = 0, 2 do
                 local vert = TRIS[tri_idx + offset]
@@ -167,6 +184,7 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
         for _, vert in pairs(MESH.verticies) do
             if not vert.is_strong then
                 for _, weight in pairs(vert.weights) do
+                    -- branch hits here but not in else
                     if temp:TranslateBoneToPhysBone(weight.bone) == phys_bone then
                         vert.is_conn = true
                     else
@@ -181,6 +199,7 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
 
                         if (parent_bone ~= -1) then
                             local weight_bone_matrix = temp:GetBoneMatrix(weight.bone)
+
 
                             local weight_bone_pos, weight_bone_ang = weight_bone_matrix:GetTranslation(), weight_bone_matrix:GetAngles()
 
@@ -283,3 +302,7 @@ end
 
 print(GetModelMeshes(ClientsideModel(""), 0))
 --print(CACHE)
+
+
+
+]=======]

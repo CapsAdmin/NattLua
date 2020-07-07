@@ -984,7 +984,10 @@ function META:AnalyzeStatement(statement)
                             self:AnalyzeStatements(statements)
                         obj:PopTruthy()
                     self:PopScope()
-                    break
+                    
+                    if not obj:IsFalsy() then
+                        break
+                    end
                 end
             else
                 -- else part
