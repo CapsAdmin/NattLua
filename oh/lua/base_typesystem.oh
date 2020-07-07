@@ -304,19 +304,28 @@ type type_assert_superset = function(what: any, type: any)
 end
 
 type next = function(t: {[any] = any}, k: any)
-	if not t.data then
-		return
+
+	if t.Type == "set" then
+		t = t:GetElements()	
+	else
+		t = {t}
 	end
 
 	local k = types.Set()
 	local v = types.Set()
 
-	for _, kv in ipairs(t.data) do
-		kv.key.node = t.node
-		kv.val.node = t.node
+	for _, t in ipairs(t) do
+		if not t.data then
+			return
+		end
 
-		k:AddElement(kv.key)
-		v:AddElement(kv.val)
+		for _, kv in ipairs(t.data) do
+			kv.key.node = t.node
+			kv.val.node = t.node
+
+			k:AddElement(kv.key)
+			v:AddElement(kv.val)
+		end
 	end
 
 	return k,v
