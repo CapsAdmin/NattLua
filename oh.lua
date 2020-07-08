@@ -61,8 +61,14 @@ function oh.on_editor_save(path)
 	end
 
 	if path:find("oh/oh", nil, true) and not path:find("helpers") then
-		os.execute("busted --lua luajit")
-		return
+		local f = io.open("test_focus.lua")
+		if f and #f:read("*all") == 0 then
+			f:close()
+			os.execute("busted --lua luajit")
+			return
+		else
+			path = "./test_focus.lua"
+		end
 	end
 
 	if path:find("examples/") then

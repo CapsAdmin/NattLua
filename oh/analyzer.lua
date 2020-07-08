@@ -88,12 +88,12 @@ return function(analyzer_meta)
             return self.scope
         end
 
-        function META:SetUpvalue(key, val, env)
-            assert(val == nil or types.IsTypeObject(val))
+        function META:SetUpvalue(key, obj, env)
+            assert(obj == nil or types.IsTypeObject(obj))
 
             local upvalue = {
                 key = key,
-                data = val,
+                data = obj,
                 scope = self.scope,
                 events = {},
                 shadow = self:GetUpvalue(key, env),
@@ -102,7 +102,7 @@ return function(analyzer_meta)
             table_insert(self.scope.upvalues[env].list, upvalue)
             self.scope.upvalues[env].map[self:Hash(key)] = upvalue
 
-            self:FireEvent("upvalue", key, val, env)
+            self:FireEvent("upvalue", key, obj, env)
 
             return upvalue
         end
@@ -131,6 +131,12 @@ return function(analyzer_meta)
             local upvalue = self:GetUpvalue(key, env)
 
             if upvalue then
+                if self.scope.uncertain then
+                return upvalue.data
+                elseif upvalue.uncertain_data then
+                    return upvalue.uncertain_data
+            end
+
                 return upvalue.data
             end
 
@@ -149,7 +155,12 @@ return function(analyzer_meta)
 
                 local upvalue = self:GetUpvalue(key, env)
                 if upvalue then
-                    upvalue.data = val
+                    if self.scope.uncertain then
+                        upvalue.uncertain_data = types.Set({val, upvalue.uncertain_data or upvalue.data})
+                    end
+
+                    self:SetUpvalue(key, val, env)
+
                     self:FireEvent("mutate_upvalue", key, val, env)
                 else
                     if self.ENV then

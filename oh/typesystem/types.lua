@@ -85,19 +85,8 @@ end
 do
     local Base = {}
 
-    do
-        Base.truthy_level = 0
-
-        function Base:GetTruthy()
-            return self.truthy_level > 0
-        end
-
-        function Base:PushTruthy()
-            self.truthy_level = self.truthy_level + 1
-        end
-        function Base:PopTruthy()
-            self.truthy_level = self.truthy_level - 1
-        end
+    function Base:IsUncertain()
+        return self:IsTruthy() and self:IsFalsy()
     end
 
     function Base:GetSignature()

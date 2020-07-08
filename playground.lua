@@ -1,21 +1,3 @@
-local a: 1
-local b: number
-
-local c = 0
-
-if a == b then
-    c = c + 1
-elseif a == _ as number then
-    c = c + 1
-else
-    c = c + 1
-end
-
-print(c)
-
---[=======[
-
-
 type positive_numbers = number
 type table_index_range = number
 
@@ -24,13 +6,25 @@ type TAngle = {
     y = number,
     r = number,
 }
+type Angle = function(number, number, number): TAngle
+
 type TVector = {
     x = number,
     y = number,
     z = number,
 }
 
-type Angle = function(number, number, number): TAngle
+type setmeta = function(T, M)
+    T.meta = M
+end
+
+type Vector = function(number, number, number): TVector
+
+setmeta(TVector, {
+    __sub = TVector,
+    __add = TVector,
+    __mul = TVector,
+})
 
 type BodyGroup = {
     id = positive_numbers,
@@ -58,7 +52,8 @@ type Entity = {
     GetBoneMatrix = (function(self, number): TMatrix),
     GetChildBones = (function(self, number): {[table_index_range] = number}),
     BoneLength = (function(self, number): number),
-    Remove = (function(self): nil)
+    Remove = (function(self): nil),
+    GetBoneParent = (function(self): number),
 }
 
 type ClientsideModel = function(string): Entity
@@ -71,7 +66,7 @@ type Triangle = {
     u = number,
     v = number,
     userdata = {number, number, number, number},
-    weights = {[table_index_range] = {bone = number}}
+    weights = {[table_index_range] = {bone = number, weight = number}}
 }
 type ModelMeshes = {
     [table_index_range] = {
@@ -133,7 +128,7 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
     --local bone_length = temp:BoneLength(bone)
     local bone_length = ent:BoneLength(ent:GetChildBones(bone)[1] or 0)
     bone_length = math.min(bone_length, temp:BoneLength(temp:GetChildBones(bone)[1] or 0))
-    
+
     local new_meshes = {}
 
     local MESHES = util.GetModelMeshes(mdl, 0, bg_mask)
@@ -218,11 +213,13 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
                         end
                     end
                 end
-
+                print(vert.is_conn, "?")
                 if not vert.is_conn then
                     vert.pos = vec_zero
                     local high_bone
                     local high_weight
+                    print(vert) -- vert is any here, but not any outside of the if function?
+
                     for _, weight in pairs(vert.weights) do
                         if (weight.bone ~= bone) then
                             local parent_bone = weight.bone
@@ -240,6 +237,7 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
                             end
                         end
                     end
+                    print(high_bone)
                     if not high_bone then
                         vert.pos = vec_zero
                     else
@@ -302,7 +300,3 @@ end
 
 print(GetModelMeshes(ClientsideModel(""), 0))
 --print(CACHE)
-
-
-
-]=======]

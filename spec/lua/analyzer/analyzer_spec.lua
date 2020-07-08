@@ -3,36 +3,108 @@ local run = T.RunCode
 
 describe("analyzer", function()
     run([[
-        
+        local a = false
+
+        if _ as any then
+            type_assert(a, false)
+            a = true
+            type_assert(a, true)
+        end
+        type_assert(a, _ as false | true)
+    ]])
+
+    run([[
+        local a = false
+
+        if _ as any then
+            a = true
+        else
+            a = 1
+        end
+
+        type_assert(a, _ as true | false | 1)
+    ]])
+
+    run([[
+        local a = false
+
+        if _ as any then
+            type_assert(a, false)
+            a = true
+            type_assert(a, true)
+        else
+            type_assert(a, false)
+            a = 1
+            type_assert(a, 1)
+        end
+
+        type_assert(a, _ as true | false | 1)
+    ]])
+
+    run([[
+        local a = nil
+
+        if _ as any then
+            a = true
+        end
+
+        type_assert(a, _ as true | nil)
+    ]])
+
+    run([[
+        type hit = function()
+            lol = (lol or 0) + 1
+        end
+
         local a: number
         local b: number
-        
-        local c = 0
 
         if a == b then
-            c = c + 1    
+            hit()
         else
-            c = c + 1
+            hit()
         end
-
-        type_assert(c, 2)
     ]])
-    
+
+    assert.equal(2, _G.lol)
+    _G.lol = nil
+
     run([[
-        
+
         local a: 1
         local b: 1
-        
+
         local c = 0
 
         if a == b then
-            c = c + 1    
+            c = c + 1
         else
             c = c + 1
         end
 
-        type_assert(c, 1)
+        type_assert(c, 0)
     ]])
+
+    it("runtime reassignment should work", function()
+        local v = run[[
+            local a = 1
+            do
+                a = 2
+            end
+        ]]:GetValue("a", "runtime")
+
+        assert.equal(v:GetData(), 2)
+
+        local v = run[[
+            local a = 1
+            if true then
+                a = 2
+            end
+        ]]:GetValue("a", "runtime")
+
+        assert.equal(v:GetData(), 2)
+    end)
+
 
     it("type_assert works", function()
         run("type_assert(1, 2)", "expected.-2 got 1")
@@ -100,17 +172,6 @@ describe("analyzer", function()
         ]]:GetValue("a", "runtime")
 
         assert.equal(v:GetData(), 1)
-    end)
-
-    it("runtime reassignment should work", function()
-        local v = run[[
-            local a = 1
-            do
-                a = 2
-            end
-        ]]:GetValue("a", "runtime")
-
-        assert.equal(v:GetData(), 2)
     end)
 
     it("typesystem differs from runtime", function()

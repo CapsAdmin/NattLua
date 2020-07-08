@@ -154,7 +154,11 @@ do -- type operators
                 local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
 
                 if func then
-                    return self:Call(func, types.Tuple({l, r})):Get(1)
+                    if func.Type == "function" then
+                        return self:Assert(self.current_expression, self:Call(func, types.Tuple({l, r}))):Get(1)
+                    else
+                        return func
+                    end
                 end
             end
         end
@@ -191,7 +195,7 @@ do -- type operators
             if r.Type == "tuple" then r = r:Get(1) end
 
             -- normalize l and r to be both sets to reduce complexity
-            if l.Type == "set" and r.Type == "set" then l = types.Set({l}) end
+            if l.Type ~= "set" and r.Type == "set" then l = types.Set({l}) end
             if l.Type == "set" and r.Type ~= "set" then r = types.Set({r}) end
 
             if l.Type == "set" and r.Type == "set" then
@@ -669,7 +673,7 @@ do -- types
         end
 
         if obj.Type ~= "function" then
-            return types.errors.other(tostring(obj) .. " cannot be called")
+            return types.errors.other("type " .. obj.Type .. ": " .. tostring(obj) .. " cannot be called")
         end
 
         do
@@ -974,17 +978,23 @@ function META:AnalyzeStatement(statement)
     elseif statement.kind == "local_type_function" or statement.kind == "local_type_function2" then
         self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement, "typesystem"), "typesystem")
     elseif statement.kind == "if" then
+        local prev_expression
         for i, statements in ipairs(statement.statements) do
             if statement.expressions[i] then
                 local obj = self:AnalyzeExpression(statement.expressions[i], "runtime")
 
+                prev_expression = obj
+
                 if obj:IsTruthy() then
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                        obj:PushTruthy()
-                            self:AnalyzeStatements(statements)
-                        obj:PopTruthy()
+
+                        if obj:IsUncertain() then
+                            self:GetScope().uncertain = true
+                        end
+
+                        self:AnalyzeStatements(statements)
                     self:PopScope()
-                    
+
                     if not obj:IsFalsy() then
                         break
                     end
@@ -992,6 +1002,11 @@ function META:AnalyzeStatement(statement)
             else
                 -- else part
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
+
+                    if prev_expression and prev_expression:IsUncertain() then
+                        self:GetScope().uncertain = true
+                    end
+
                     self:AnalyzeStatements(statements)
                 self:PopScope()
             end
