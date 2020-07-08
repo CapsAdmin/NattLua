@@ -132,10 +132,10 @@ return function(analyzer_meta)
 
             if upvalue then
                 if self.scope.uncertain then
-                return upvalue.data
+                    return upvalue.data
                 elseif upvalue.uncertain_data then
                     return upvalue.uncertain_data
-            end
+                end
 
                 return upvalue.data
             end
@@ -156,10 +156,21 @@ return function(analyzer_meta)
                 local upvalue = self:GetUpvalue(key, env)
                 if upvalue then
                     if self.scope.uncertain then
-                        upvalue.uncertain_data = types.Set({val, upvalue.uncertain_data or upvalue.data})
-                    end
+                        if self.scope.no_test_expression and upvalue.uncertain_data then
+                            -- if we're in an uncertain else block, we remove the original upvalue from the set
 
-                    self:SetUpvalue(key, val, env)
+                            -- local foo = nil; if maybe then foo = 1 else foo = 2 end;
+                            -- foo is 1 or 2. it cannot be nil because one of the branches will hit.
+                            upvalue.uncertain_data:AddElement(val)
+                            upvalue.uncertain_data:RemoveElement(upvalue.data)
+                        else
+                            upvalue.uncertain_data = types.Set({val, upvalue.uncertain_data or upvalue.data})
+                        end
+                        self:SetUpvalue(key, val, env)
+                    else
+                        upvalue.data = val
+                    end
+                    --self:SetUpvalue(key, val, env)
 
                     self:FireEvent("mutate_upvalue", key, val, env)
                 else

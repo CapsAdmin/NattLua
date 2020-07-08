@@ -1005,6 +1005,7 @@ function META:AnalyzeStatement(statement)
 
                     if prev_expression and prev_expression:IsUncertain() then
                         self:GetScope().uncertain = true
+                        self:GetScope().no_test_expression = true
                     end
 
                     self:AnalyzeStatements(statements)

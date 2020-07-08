@@ -55,8 +55,8 @@ function oh.on_editor_save(path)
 		return
 	end
 
-	if path:find("_spec") then
-		os.execute("busted --lua luajit " .. path)
+	if path:find("test/") then
+		os.execute("luajit test/run.lua " .. path)
 		return
 	end
 
@@ -64,7 +64,7 @@ function oh.on_editor_save(path)
 		local f = io.open("test_focus.lua")
 		if f and #f:read("*all") == 0 then
 			f:close()
-			os.execute("busted --lua luajit")
+			os.execute("luajit test/run.lua")
 			return
 		else
 			path = "./test_focus.lua"
