@@ -159,20 +159,6 @@ function META:IsDynamic()
     return true
 end
 
-function META:Union(tbk)
-    local copy = types.Table({})
-
-    for _, keyval in ipairs(self.data) do
-        copy:Set(keyval.key, keyval.val)
-    end
-
-    for _, keyval in ipairs(tbk.data) do
-        copy:Set(keyval.key, keyval.val)
-    end
-
-    return copy
-end
-
 function META:Delete(key)
     for i, keyval in ipairs(self.data) do
         if key:SubsetOf(keyval.key) then
@@ -365,32 +351,9 @@ function META:pairs()
     end
 end
 
-function META:Extend(t)
-    local copy = self:Copy()
-
-    for _, keyval in ipairs(t.data) do
-        if not copy:Get(keyval.key) then
-            local k,v = keyval.key, keyval.val
-            if k == t then
-                k = copy
-            else
-                k = k:Copy(copy, t)
-            end
-            if v == t then
-                v = copy
-            else
-                v = v:Copy(copy, t)
-            end
-            copy:Set(k,v)
-        end
-    end
-
-    return copy
-end
-
 function META:IsLiteral()
     if self.suppress then
-        return true, "lOL"
+        return true
     end
 
     for _, v in ipairs(self.data) do
@@ -423,6 +386,50 @@ end
 
 function META:IsTruthy()
     return true
+end
+
+local function unpack_keyval(keyval, tbl, copy)
+    local key, val = keyval.key, keyval.val
+
+    if key == tbl then
+        key = copy
+    else
+        key = key:Copy(copy, tbl)
+    end
+
+    if val == tbl then
+        val = copy
+    else
+        val = val:Copy(copy, tbl)
+    end
+
+    return key, val
+end
+
+function META.Extend(A, B)
+    local copy = A:Copy()
+
+    for _, keyval in ipairs(B:GetData()) do
+        if not copy:Get(keyval.key) then
+            copy:Set(unpack_keyval(keyval, B, copy))
+        end
+    end
+
+    return copy
+end
+
+function META.Union(A, B)
+    local copy = types.Table({})
+
+    for _, keyval in ipairs(A:GetData()) do
+        copy:Set(unpack_keyval(keyval, A, copy))
+    end
+
+    for _, keyval in ipairs(B:GetData()) do
+        copy:Set(unpack_keyval(keyval, B, copy))
+    end
+
+    return copy
 end
 
 function META:Initialize(data)

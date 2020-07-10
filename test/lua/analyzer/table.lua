@@ -199,3 +199,32 @@ it("self reference", function()
         type_assert<(b.foo, b)>
     ]]
 end)
+
+it("table extending table", function()
+    run[[
+        local type A = {
+            Foo = true,
+        }
+
+        local type B = {
+            Bar = false,
+        }
+
+        type_assert<(A extends B, {Foo = true, Bar = false})>
+    ]]
+end)
+
+it("table + table", function()
+    run[[
+        local type A = {
+            Foo = true,
+            Bar = 1,
+        }
+
+        local type B = {
+            Bar = false,
+        }
+
+        type_assert<(A + B, {Foo = true, Bar = false})>
+    ]]
+end)

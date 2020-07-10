@@ -227,6 +227,10 @@ do -- type operators
                     return types.Symbol((r:SubsetOf(l)))
                 elseif op == "<" then
                     return types.Symbol((l:SubsetOf(r)))
+                elseif op == "+" then
+                    if l.Type == "table" and r.Type == "table" then
+                        return l:Union(r)
+                    end
                 end
             end
 
