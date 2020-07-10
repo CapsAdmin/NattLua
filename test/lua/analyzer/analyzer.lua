@@ -1,107 +1,38 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-run([[
-    local a = false
 
-    if _ as any then
-        type_assert(a, false)
-        a = true
-        type_assert(a, true)
-    end
-    type_assert(a, _ as false | true)
-]])
-
-run([[
-    local a = false
-
-    if _ as any then
-        a = true
-    else
-        a = 1
-    end
-
-    type_assert(a, _ as true | 1)
-]])
-
-run([[
-    local a = false
-
-    if _ as any then
-        type_assert(a, false)
-        a = true
-        type_assert(a, true)
-    else
-        type_assert(a, false)
-        a = 1
-        type_assert(a, 1)
-    end
-
-    type_assert(a, _ as true | 1)
-]])
-
-run([[
-    local a = nil
-
-    if _ as any then
-        a = true
-    end
-
-    type_assert(a, _ as true | nil)
-]])
-
-do
-    _G.lol = nil
-
-    run([[
-        type hit = function()
-            lol = (lol or 0) + 1
+it("declaring base types", function()
+    run[[
+        local type Symbol = function(T)
+            return types.Symbol(loadstring("return " .. T.node.value.value)(), true)
         end
 
-        local a: number
-        local b: number
+        local type Nil = Symbol(nil)
+        local type True = Symbol(true)
+        local type False = Symbol(false)
+        local type Boolean = True | False
+        local type Number = -inf .. inf | nan
+        local type String = $".-"
+        local type Table = {[Number | Boolean | String | self] = Number | Boolean | String | Nil | self}
+        local type Any = Number | Boolean | String | Nil | Table
 
-        if a == b then
-            hit()
-        else
-            hit()
-        end
-    ]])
+        local str: String = "asdasdawd"
+        local b: Boolean = true
+        local b: Boolean = false
 
-    equal(2, _G.lol)
-    _G.lol = nil
-end
+        local tbl: Table = {
+            foo1 = true,
+            bar = false,
+            asdf = "asdf",
+            [{foo2 = "bar"}] = "aaaaa",
+            [{foo3 = "bar"}] = {[{1}] = {}},
+        }
 
-run([[
-    local a: 1
-    local b: 1
-
-    local c = 0
-
-    if a == b then
-        c = c + 1
-    else
-        c = c - 1
-    end
-
-    type_assert(c, 1)
-]])
-
-
-run([[
-    local a: number
-    local b: number
-
-    local c = 0
-
-    if a == b then
-        c = c + 1
-    else
-        c = c - 1
-    end
-
-    type_assert(c, _ as -1 | 1)
-]])
+        local type Foo = Symbol("asdf")
+        type_assert<(Foo == "asdf", false)>
+    ]]
+end)
 
 it("runtime reassignment should work", function()
     local v = run[[
@@ -341,7 +272,7 @@ it("should convert binary numbers to numbers", function()
 end)
 
 it("undefined types should error", function()
-    run([[local a: ASDF = true]], "true is not a subset of nil")
+    run([[local a: ASDF = true]], "true is not the same as nil")
 end)
 
 it("type functions should return a tuple with types", function()
@@ -375,7 +306,7 @@ it("exclude type function should work", function()
             return T
         end
 
-        local a: Exclude<1|2|3, 2>
+        local a: Exclude<(1|2|3, 2)>
 
         type_assert(a, _ as 1|3)
     ]])
@@ -386,7 +317,7 @@ it("exclude type function should work", function()
             return T
         end
 
-        local a: Exclude<1|2|3, 2>
+        local a: Exclude<(1|2|3, 2)>
 
         type_assert(a, _ as 11|31)
     ]], "expected ⦃11, 31⦄ got ⦃1, 3⦄")

@@ -557,8 +557,9 @@ function META:EmitIdentifier(node)
             self:EmitToken(node.tokens[":"])
             self:EmitTypeExpression(node.type_expression)
         elseif node.inferred_type then
+            print(node.inferred_type)
             self:Emit(": ")
-            self:Emit((node.inferred_type.contract or node.inferred_type):GetSignature())
+            self:Emit(tostring((node.inferred_type.contract or node.inferred_type)))
         end
     end
 end

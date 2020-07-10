@@ -32,11 +32,11 @@ function META:GetReturnTypes()
     return self.data.ret
 end
 
-function META:Copy()
+function META:Copy(self_reference, current_table)
     local copy = types.Function({
-        ret = self.data.ret:Copy(),
-        arg = self.data.arg:Copy()
-    }):MakeLiteral(self.literal)
+        ret = self.data.ret:Copy(self_reference, current_table),
+        arg = self.data.arg:Copy(self_reference, current_table)
+    }):MakeLiteral(self:IsLiteral())
 
     return copy
 end

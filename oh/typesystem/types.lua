@@ -99,6 +99,11 @@ do
 
     Base.literal = false
 
+    function Base:MakeExplicitNotLiteral(b)
+        self.explicit_not_literal = b
+        return self
+    end
+
     function Base:MakeLiteral(b)
         self.literal = b
         return self
@@ -125,7 +130,10 @@ function types.RegisterType(meta)
         self.uid = uid
         uid = uid + 1
         if self.Initialize then
-            self:Initialize(data)
+            local ok, err = self:Initialize(data)
+            if not ok then
+                return ok, err
+            end
         end
 --        self.trace = debug.traceback()
         return self
@@ -146,7 +154,7 @@ function types.Initialize()
     types.True = types.Symbol(true)
     types.False = types.Symbol(false)
     types.AnyType = types.Any()
-    types.Boolean = types.Set({types.True, types.False})
+    types.Boolean = types.Set({types.True, types.False}):MakeExplicitNotLiteral(true)
     types.NumberType = types.Number()
     types.StringType = types.String()
 end

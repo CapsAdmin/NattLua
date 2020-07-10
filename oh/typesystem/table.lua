@@ -54,7 +54,9 @@ function META:__tostring()
 
     table.sort(s, sort)
 
-    return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
+    local str = "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
+
+    return str
 end
 
 function META:GetLength()
@@ -175,10 +177,10 @@ function META:Delete(key)
     for i, keyval in ipairs(self.data) do
         if key:SubsetOf(keyval.key) then
             table.remove(self.data, i)
-            return true
         end
     end
-    return types.errors.other("cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self))
+    return true
+    --return types.errors.other("cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self))
 end
 
 function META:GetKeySet()
@@ -212,10 +214,6 @@ function META:GetKeyVal(key, reverse_subset)
         end
 
         if ok then
-            if keyval.val.self then
-                keyval.val = self
-            end
-
             return keyval
         end
         table.insert(reasons, reason)
@@ -322,22 +320,22 @@ function META:CopyLiteralness(from)
     return true
 end
 
-function META:Copy()
+function META:Copy(self_reference)
     local copy = types.Table({})
 
     for _, keyval in ipairs(self.data) do
         local k,v = keyval.key, keyval.val
 
         if k == self then
-            k = copy
+            k = self_reference or copy
         else
-            k = k:Copy()
+            k = k:Copy(copy, self)
         end
 
         if v == self then
-            v = copy
+            v = self_reference or copy
         else
-            k = k:Copy()
+            v = v:Copy(copy, self)
         end
 
         copy:Set(k,v)
@@ -372,10 +370,18 @@ function META:Extend(t)
 
     for _, keyval in ipairs(t.data) do
         if not copy:Get(keyval.key) then
-            if keyval.val.self then
-                keyval.val = copy
+            local k,v = keyval.key, keyval.val
+            if k == t then
+                k = copy
+            else
+                k = k:Copy(copy, t)
             end
-            copy:Set(keyval.key, keyval.val)
+            if v == t then
+                v = copy
+            else
+                v = v:Copy(copy, t)
+            end
+            copy:Set(k,v)
         end
     end
 
@@ -383,23 +389,25 @@ function META:Extend(t)
 end
 
 function META:IsLiteral()
+    if self.suppress then
+        return true, "lOL"
+    end
+
     for _, v in ipairs(self.data) do
-        if v.val ~= self then
+        if v.val ~= self and v.key ~= self then
 
-            if v.key.Type == "set" then
-                return types.errors.other("the key " .. tostring(v.key) .. " is a set")
-            end
-
-            if v.val.Type == "set" then
-                return types.errors.other("the value " .. tostring(v.val) .. " is a set")
-            end
-
+            self.suppress = true
             local ok, reason = v.key:IsLiteral()
+            self.suppress = false
+
             if not ok then
                 return types.errors.other("the key " .. tostring(v.key) .. " is not a literal because " .. tostring(reason))
             end
 
+            self.suppress = true
             local ok, reason = v.val:IsLiteral()
+            self.suppress = false
+
             if not ok then
                 return types.errors.other("the value " .. tostring(v.val) .. " is not a literal because " .. tostring(reason))
             end
@@ -422,9 +430,14 @@ function META:Initialize(data)
 
     if data then
         for _, v in ipairs(data) do
-            self:Set(v.key, v.val)
+            local ok, err = self:Set(v.key, v.val)
+            if not ok then
+                return ok, err
+            end
         end
     end
+
+    return true
 end
 
 return types.RegisterType(META)

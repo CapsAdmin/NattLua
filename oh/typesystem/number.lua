@@ -120,7 +120,7 @@ function META:Max(val)
         local max = {}
         for _, obj in ipairs(val:GetElements()) do
             if obj.Type ~= "number" then
-                return types.errors.other("the set contains non numbers")
+                return types.errors.other("unable to set the max value of "..tostring(self).." because "..tostring(val).." contains non numbers")
             end
             if obj:IsLiteral() then
                 table.insert(max, obj)

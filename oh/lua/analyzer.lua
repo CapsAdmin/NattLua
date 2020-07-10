@@ -217,17 +217,16 @@ do -- type operators
                     if l.Type == "table" and r.Type == "table" then
                         return l:Extend(r)
                     end
-                end
-
-                if op == "extends" then
+                elseif op == "extends" then
                     return l:Extend(r)
-                end
-
-                -- number range
-                if op == ".." then
+                elseif op == ".." then
                     local new = l:Copy()
                     new.max = r
                     return new
+                elseif op == ">" then
+                    return types.Symbol((r:SubsetOf(l)))
+                elseif op == "<" then
+                    return types.Symbol((l:SubsetOf(r)))
                 end
             end
 
@@ -278,7 +277,7 @@ do -- type operators
                     return res
                 end
 
-                if l:IsLiteral() and r:IsLiteral() then
+                if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
                     return l.data == r.data and types.True or types.False
                 end
 
@@ -361,11 +360,11 @@ do -- type operators
 
                 return types.Boolean
             elseif op == "or" then
-                if l:IsTruthy() and l:IsFalsy() then
+                if l:IsUncertain() then
                     return types.Set({l,r})
                 end
 
-                if r:IsTruthy() and r:IsFalsy() then
+                if r:IsUncertain() then
                     return types.Set({l,r})
                 end
 
@@ -493,6 +492,9 @@ do -- type operators
             return copy
         end
 
+        if obj.Type == "any" then
+            return types.Any()
+        end
 
         --TODO: not needed? Get and Set should error
         if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then
@@ -537,15 +539,15 @@ do -- types
 
         local obj
 
-        if type == "table" or type == "self" then
-            obj = types.Table(data)
+        if type == "table" then
+            obj = self:Assert(node, types.Table(data))
         elseif type == "..." then
-            obj = types.Tuple(data)
+            obj = self:Assert(node, types.Tuple(data))
             obj.max = math.huge
         elseif type == "number" then
-            obj = types.Number(data):MakeLiteral(literal)
+            obj = self:Assert(node, types.Number(data):MakeLiteral(literal))
         elseif type == "string" then
-            obj = types.String(data):MakeLiteral(literal)
+            obj = self:Assert(node, types.String(data):MakeLiteral(literal))
         elseif type == "boolean" then
             if literal then
                 obj = types.Symbol(data)
@@ -553,15 +555,11 @@ do -- types
                 obj = types.Boolean
             end
         elseif type == "nil" then
-            obj = types.Symbol(nil)
+            obj = self:Assert(node, types.Symbol(nil))
         elseif type == "any" then
-            obj = types.Any()
+            obj = self:Assert(node, types.Any())
         elseif type == "function" then
-            obj = types.Function(data)
-        end
-
-        if type == "self" then
-            obj.self = true
+            obj = self:Assert(node, types.Function(data))
         end
 
         if type == "string" then
@@ -913,7 +911,7 @@ function META:AnalyzeStatement(statement)
                     local ok, reason = val:SubsetOf(contract)
 
                     if not ok then
-                        self:Error(val.node or exp_key.type_expression, tostring(val) .. " is not a subset of " .. tostring(contract) .. " because " .. reason)
+                        self:Error(val.node or exp_key.type_expression, reason)
                     end
                 end
 
@@ -1139,7 +1137,7 @@ do
                 if node.value.value == "any" then
                     return self:TypeFromImplicitNode(node, "any")
                 elseif node.value.value == "self" then
-                    return self:TypeFromImplicitNode(node, "self")
+                    return self.current_table
                 elseif node.value.value == "inf" then
                     return self:TypeFromImplicitNode(node, "number", math.huge, true)
                 elseif node.value.value == "nan" then
@@ -1266,43 +1264,31 @@ do
     end
 
     function META:AnalyzeTable(node, env)
-        local out = {}
-        for i, node in ipairs(node.children) do
+        local tbl = self:TypeFromImplicitNode(node, "table", nil, env == "typesystem")
+        self.current_table = tbl
+        for _, node in ipairs(node.children) do
             if node.kind == "table_key_value" then
+                local key = self:TypeFromImplicitNode(node.tokens["identifier"], "string", node.tokens["identifier"].value, true)
                 local val = self:AnalyzeExpression(node.expression, env)
-                out[i] = {
-                    key = node.tokens["identifier"].value,
-                    val = val
-                }
+                tbl:Set(key, val)
             elseif node.kind == "table_expression_value" then
-
                 local key = self:AnalyzeExpression(node.expressions[1], env)
                 local obj = self:AnalyzeExpression(node.expressions[2], env)
 
-
-                if key.Type == "string" and key.value then
-                    out[i] = {key = key.value, val = obj}
-                else
-                    out[i] = {key = key, val = obj}
-                end
+                tbl:Set(key, obj)
             elseif node.kind == "table_index_value" then
                 local val = {self:AnalyzeExpression(node.expression, env)}
                 if node.i then
-                    out[i] = {
-                        key = node.i,
-                        val = val[1]
-                    }
+                    tbl:Set(node.i, val[1])
                 elseif val then
-                    for i, val in ipairs(val) do
-                        table.insert(out, {
-                            key = #out + 1,
-                            val = val
-                        })
+                    for _, val in ipairs(val) do
+                        tbl:Set(#tbl.data + 1, val)
                     end
                 end
             end
         end
-        return self:TypeFromImplicitNode(node, "table", out, env == "typesystem")
+        self.current_table = nil
+        return tbl
     end
 end
 

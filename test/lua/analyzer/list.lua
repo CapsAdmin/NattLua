@@ -88,18 +88,18 @@ end)
 
 it("traditional array", function()
     run[[
-        local function Array<T: any, L: number>
+        local function Array<(T: any, L: number)>
             return {[1 .. L] = T}
         end
 
-        local list: Array<number, 3> = {1, 2, 3}
+        local list: Array<(number, 3)> = {1, 2, 3}
     ]]
 
     run([[
-        local function Array<T: any, L: number>
+        local function Array<(T: any, L: number)>
             return {[1 .. L] = T}
         end
 
-        local list: Array<number, 3> = {1, 2, 3, 4}
-    ]], "because 4 is not a subset of 1%.%.3")
+        local list: Array<(number, 3)> = {1, 2, 3, 4}
+    ]], "4 is not a subset of 1%.%.3")
 end)

@@ -735,7 +735,7 @@ R[[
 ]]
 R[[
     type lol = function(a) return a end
-    local a: lol<string>
+    local a: lol<(string)>
     type_assert(a, _ as string)
 ]]
 R[[

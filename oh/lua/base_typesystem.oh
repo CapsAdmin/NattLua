@@ -10,14 +10,18 @@ type io = {
 }
 
 type f = {
-	close = (function(file: file): boolean|nil, string, number|nil),
-	write = (function(file: file, ...): file|nil, string|nil),
-	flush = (function(file: file): boolean|nil, string|nil),
-	read = (function(file: file, ...): ...),
-	lines = (function(file: file, ...): empty_function),
-	setvbuf = (function(file: file, mode: string, size: number): boolean|nil, string|nil)    |    (function(file: file, mode: string): boolean|nil, string|nil),
-	seek = (function(file: file, whence: string, offset: number): number|nil, string|nil)    |    (function(file: file, whence: string): number|nil, string|nil)    |    (function(file: file,): number|nil, string|nil)
+	close = (function(self): boolean|nil, string, number|nil),
+	write = (function(self, ...): file|nil, string|nil),
+	flush = (function(self): boolean|nil, string|nil),
+	read = (function(self, ...): ...),
+	lines = (function(self, ...): empty_function),
+	setvbuf = (function(self, string, number): boolean|nil, string|nil)    |    (function(file: file, mode: string): boolean|nil, string|nil),
+	seek = (function(self, string, number): number|nil, string|nil)    |    (function(file: file, whence: string): number|nil, string|nil)    |    (function(file: file,): number|nil, string|nil)
 }
+
+type io.open = function(): f
+type io.popen = function(): f
+
 type ffi = {
 	C = {[string] = any},
 	cdef = (function(string): nil),
@@ -124,6 +128,7 @@ type ^string = {
 	pack = (function(fmt: string, v1, v2, ...): string)
 }
 type ipairs = (function(t: table): empty_function, table, number)
+type tonumber = (function(e: number | string, base: number | nil): number | nil)
 type m = {
 	__le = (function(op1, op2): boolean),
 	__ipairs = (function(table): iterator, table, index),
@@ -306,7 +311,7 @@ end
 type next = function(t: {[any] = any}, k: any)
 
 	if t.Type == "set" then
-		t = t:GetElements()	
+		t = t:GetElements()
 	else
 		t = {t}
 	end
@@ -416,7 +421,7 @@ type getmetatable = function(tbl)
 	return tbl.meta
 end
 
-type math.floor = function(num)
+type math.floor = function(num: number)
 	if num.data then
 		return math.floor(num.data)
 	end
@@ -471,4 +476,14 @@ end
 
 type select = function(index: 1 .. inf | "#", ...)
 	return select(index:GetData(), ...)
+end
+
+
+
+type tonumber2 = function(str: string | number, base: string | nil)
+	if str.Type == "number" then
+		return str
+	end
+
+	return types.Set({types.Number(), types.Nil})
 end

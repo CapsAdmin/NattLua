@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("control path within a function should work", function()
+it("if statement within a function should work", function()
     run([[
         local a = 1
         function b(lol)
@@ -13,9 +13,8 @@ it("control path within a function should work", function()
         local d = b(a)
         type_assert(d, "foo")
     ]])
-end)
 
-it("lol", function()
+
     run[[
         local function test(i)
             if i == 20 then
@@ -37,9 +36,7 @@ it("lol", function()
         type_assert(b, true)
         type_assert(c, "lol")
     ]]
-end)
 
-it("lol", function()
     run[[
         local function test(max)
             for i = 1, max do
@@ -57,3 +54,105 @@ it("lol", function()
         type_assert(a, _ as true | false)
     ]]
 end)
+
+run([[
+    local a = false
+
+    if _ as any then
+        type_assert(a, false)
+        a = true
+        type_assert(a, true)
+    end
+    type_assert(a, _ as false | true)
+]])
+
+run([[
+    local a = false
+
+    if _ as any then
+        a = true
+    else
+        a = 1
+    end
+
+    type_assert(a, _ as true | 1)
+]])
+
+run([[
+    local a = false
+
+    if _ as any then
+        type_assert(a, false)
+        a = true
+        type_assert(a, true)
+    else
+        type_assert(a, false)
+        a = 1
+        type_assert(a, 1)
+    end
+
+    type_assert(a, _ as true | 1)
+]])
+
+run([[
+    local a = nil
+
+    if _ as any then
+        a = true
+    end
+
+    type_assert(a, _ as true | nil)
+]])
+
+do
+    _G.lol = nil
+
+    run([[
+        type hit = function()
+            lol = (lol or 0) + 1
+        end
+
+        local a: number
+        local b: number
+
+        if a == b then
+            hit()
+        else
+            hit()
+        end
+    ]])
+
+    equal(2, _G.lol)
+    _G.lol = nil
+end
+
+run([[
+    local a: 1
+    local b: 1
+
+    local c = 0
+
+    if a == b then
+        c = c + 1
+    else
+        c = c - 1
+    end
+
+    type_assert(c, 1)
+]])
+
+
+run([[
+    local a: number
+    local b: number
+
+    local c = 0
+
+    if a == b then
+        c = c + 1
+    else
+        c = c - 1
+    end
+
+    type_assert(c, _ as -1 | 1)
+]])

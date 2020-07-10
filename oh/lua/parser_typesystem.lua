@@ -62,7 +62,7 @@ end
 
 do
     function META:IsLocalTypeFunctionStatement2()
-        return self:IsValue("local") and self:IsValue("function", 1) and self:IsValue("<", 3)
+        return self:IsValue("local") and self:IsValue("function", 1) and self:IsValue("<", 3) and self:IsValue("(", 4)
     end
 
     function META:ReadLocalTypeFunctionStatement2()
@@ -121,6 +121,7 @@ end
 
 function META:ReadTypeFunctionBody2(node)
     node.tokens["<"] = self:ReadValue("<")
+    node.tokens["("] = self:ReadValue("(")
 
     node.identifiers = self:ReadIdentifierList()
 
@@ -130,6 +131,7 @@ function META:ReadTypeFunctionBody2(node)
         table.insert(node.identifiers, vararg)
     end
 
+    node.tokens[")"] = self:ReadValue(")", node.tokens["("])
     node.tokens[">"] = self:ReadValue(">", node.tokens["<"])
 
     if self:IsValue(":") then
@@ -309,11 +311,13 @@ function META:ReadTypeExpression(priority)
                 node = self:Expression("postfix_operator")
                 node.left = left
                 node.value = self:ReadTokenLoose()
-            elseif self:IsValue("<") then
+            elseif self:IsValue("<") and self:IsValue("(", 1) then
                 node = self:Expression("postfix_call")
                 node.left = left
                 node.tokens["call("] = self:ReadValue("<")
+                node.tokens["call(2"] = self:ReadValue("(")
                 node.expressions = self:ReadTypeExpressionList()
+                node.tokens["call)2"] = self:ReadValue(")")
                 node.tokens["call)"] = self:ReadValue(">")
                 node.type_call = true
             elseif self:IsValue("(") then

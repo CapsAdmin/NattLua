@@ -69,6 +69,8 @@ end
 function META:Initialize(data)
     self.literal = true
     self.truthy = not not data
+
+    return true
 end
 
 return types.RegisterType(META)

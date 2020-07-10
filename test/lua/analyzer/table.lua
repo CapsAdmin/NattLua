@@ -151,22 +151,51 @@ it("is literal", function()
     local a = run[[
         local type a = {a = 1, b = 2}
     ]]
-    assert(a:GetValue("a", "typesystem"):IsLiteral() == true)
+    equal(a:GetValue("a", "typesystem"):IsLiteral(), true)
 
     local a = run[[
         local type a = {a = 1, b = 2, c = {c = true}}
     ]]
-    assert(a:GetValue("a", "typesystem"):IsLiteral() == true)
+    equal(a:GetValue("a", "typesystem"):IsLiteral(), true)
 end)
 
 it("is not literal", function()
     local a = run[[
         local type a = {a = number, [string] = boolean}
     ]]
-    assert(a:GetValue("a", "typesystem"):IsLiteral() == false)
+    equal(a:GetValue("a", "typesystem"):IsLiteral(), false)
 
     local a = run[[
         local type a = {a = 1, b = 2, c = {c = boolean}}
     ]]
-    assert(a:GetValue("a", "typesystem"):IsLiteral() == false)
+    equal(a:GetValue("a", "typesystem"):IsLiteral(), false)
+end)
+
+it("self reference", function()
+    run[[
+        local type Base = {
+            Test = function(self): number,
+        }
+
+        local type Foo = Base extends {
+            GetPos = (function(self): number),
+        }
+
+        -- have to use as here because {} would not be a subset of Foo
+        local x = {} as Foo
+
+        type_assert(x:GetPos(), _ as number)
+    ]]
+    run[[
+        local type a = {
+            foo = self,
+        }
+
+        local type b = {
+            bar = true,
+        } extends a
+
+        type_assert<(b.bar, true)>
+        type_assert<(b.foo, b)>
+    ]]
 end)

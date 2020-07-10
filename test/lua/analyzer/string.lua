@@ -16,5 +16,5 @@ it("patterns", function()
 
     run([[
         local a: $"FOO_.-" = "lol"
-    ]], "because the pattern failed to match")
+    ]], "the pattern failed to match")
 end)

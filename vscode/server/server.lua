@@ -246,7 +246,6 @@ local function compile(uri, server, client)
 	local code = document_cache[uri]
 	if not code then
 		local f = assert(io.open(uri:sub(#"file://" + 1), "r"))
-		print(uri, "!!!")
 		code = f:read("*all")
 		f:close()
 		document_cache[uri] = code

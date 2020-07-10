@@ -229,6 +229,10 @@ function META:Copy()
 end
 
 function META:IsLiteral()
+    if self.explicit_not_literal then
+        return false, "explicitly not literal"
+    end
+
     for _, v in ipairs(self:GetElements()) do
         if not v:IsLiteral() then
             return false
@@ -268,6 +272,8 @@ function META:Initialize(data)
             self:AddElement(v)
         end
     end
+
+    return true
 end
 
 return types.RegisterType(META)

@@ -64,10 +64,14 @@ function META:GetData()
     return self.data
 end
 
-function META:Copy()
+function META:Copy(self_reference, current_table)
     local copy = {}
     for i, v in ipairs(self.data) do
-        copy[i] = v:Copy()
+        if v == current_table then
+            copy[i] = self_reference
+        else
+            copy[i] = v:Copy(self_reference)
+        end
     end
     return types.Tuple(copy)
 end
@@ -171,7 +175,7 @@ function META:Initialize(data)
         end
     end
 
-    return self
+    return true
 end
 
 return types.RegisterType(META)
