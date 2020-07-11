@@ -27,7 +27,10 @@ it("set string and get constant string should work", function()
     local tbl = Table()
     tbl.contract = contract
     tbl:Set(String(), Number(1337))
-    equal(1337, assert(tbl:Get(String())):GetData())
+    local set = assert(tbl:Get(String()))
+    equal("set", set.Type)
+    equal(1337, set:GetType("number"):GetData())
+    equal(nil, set:GetType("symbol"):GetData())
 
     assert(tbl:SubsetOf(contract))
     assert(not contract:SubsetOf(tbl))

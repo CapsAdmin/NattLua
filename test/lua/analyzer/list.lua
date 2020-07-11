@@ -48,7 +48,7 @@ it("indirect only works for numeric keys", function()
             [BLUE] = 3,
             [GREEN] = 4,
         }
-        type_assert(x[GREEN], 4)
+        type_assert(x[GREEN], _ as 4 | nil)
     ]]
     run([[
         local RED = 1
