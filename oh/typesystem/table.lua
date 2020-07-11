@@ -260,8 +260,28 @@ function META:Set(key, val)
     return true
 end
 
-function META:Get(key, raw)
+function META:Get(key)
     key = types.Cast(key)
+
+    if key.Type == "string" and not key:IsLiteral() then
+        local set = types.Set({types.Nil})
+        for _, keyval in ipairs(self:GetData()) do
+            if keyval.key.Type == "string" then
+                set:AddElement(keyval.val)
+            end
+        end
+        return set
+    end
+
+    if key.Type == "number" and not key:IsLiteral() then
+        local set = types.Set({types.Nil})
+        for _, keyval in ipairs(self:GetData()) do
+            if keyval.key.Type == "number" then
+                set:AddElement(keyval.val)
+            end
+        end
+        return set
+    end
 
     local keyval, reason = self:GetKeyVal(key, true)
 

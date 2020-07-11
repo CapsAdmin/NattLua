@@ -228,3 +228,16 @@ it("table + table", function()
         type_assert<(A + B, {Foo = true, Bar = false})>
     ]]
 end)
+
+it("index literal table with string", function()
+    run[[
+        local tbl = {
+            [ '"' ] = 1,
+            [ "0" ] = 2,
+        }
+
+        local key: string
+        local val = tbl[key]
+        type_assert(val, _ as 1 | 2 | nil)
+    ]]
+end)
