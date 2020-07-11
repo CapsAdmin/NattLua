@@ -6,7 +6,10 @@ return function(analyzer_meta)
     local META = {}
     META.__index = META
 
-        local function DefaultIndex(self, node)
+    local function DefaultIndex(self, node)
+        if _G.DISABLE_BASE_TYPES then
+            return nil
+        end
         local oh = require("oh")
         return oh.GetBaseAnalyzer():GetValue(node, "typesystem")
     end
@@ -272,7 +275,7 @@ return function(analyzer_meta)
 
         if self.code then
             local start, stop = helpers.LazyFindStartStop(node)
-            io.write(helpers.FormatError(self.code, node.type, msg, start, stop), "\n")
+            io.write(helpers.FormatError(self.code, self.path or node.type, msg, start, stop), "\n")
         else
             local s = tostring(self)
             s = s .. ": " .. msg
@@ -418,6 +421,7 @@ return function(analyzer_meta)
         end
 
         function meta:Push(val)
+            assert(val)
             if val.Type == "tuple" then
                 for _,v in ipairs(val) do
                     assert(types.IsTypeObject(v))

@@ -27,7 +27,7 @@ end)
 
 it("exclude type function should work", function()
     run([[
-        type Exclude = function(T, U)
+        type function Exclude(T, U)
             T:RemoveElement(U)
             return T
         end
@@ -38,7 +38,7 @@ it("exclude type function should work", function()
     ]])
 
     run([[
-        type Exclude = function(T, U)
+        type function Exclude(T, U)
             T:RemoveElement(U)
             return T
         end
@@ -126,7 +126,6 @@ it("parenthesis around vararg should work", function()
     run[[
         local a = select(2, 1,2,3)
         type_assert(a, 2)
-
         type_assert((select(2, 1,2,3)), 2)
     ]]
 end)
@@ -144,7 +143,7 @@ end)
 
 it("exlcude", function()
     run[[
-        type Exclude = function(T, U)
+        type function Exclude(T, U)
             T:RemoveElement(U)
             return T
         end

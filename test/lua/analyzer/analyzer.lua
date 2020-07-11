@@ -4,7 +4,7 @@ local run = T.RunCode
 
 it("declaring base types", function()
     run[[
-        local type Symbol = function(T)
+        local type Symbol = function(T: any)
             return types.Symbol(loadstring("return " .. T.node.value.value)(), true)
         end
 
@@ -272,7 +272,7 @@ it("should convert binary numbers to numbers", function()
 end)
 
 it("undefined types should error", function()
-    run([[local a: ASDF = true]], "true is not the same as nil")
+    run([[local a: ASDF = true]], "cannot find value ASDF")
 end)
 
 it("type functions should return a tuple with types", function()
@@ -301,7 +301,7 @@ end)
 
 it("exclude type function should work", function()
     run([[
-        type Exclude = function(T, U)
+        type function Exclude(T, U)
             T:RemoveElement(U)
             return T
         end
@@ -312,7 +312,7 @@ it("exclude type function should work", function()
     ]])
 
     run([[
-        type Exclude = function(T, U)
+        type function Exclude(T, U)
             T:RemoveElement(U)
             return T
         end

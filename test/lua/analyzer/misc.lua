@@ -619,7 +619,7 @@ R[[
     local a: string = "1"
     type a = string | number | (boolean | string)
 
-    type type_func = function(a,b,c) return types.String(), types.Number() end
+    type type_func = function(a: any,b: any,c: any) return types.String(), types.Number() end
     local a, b = type_func(a,2,3)
     type_assert(a, _ as string)
     type_assert(b, _ as number)
@@ -734,7 +734,7 @@ R[[
     local a = test.sin(1)
 ]]
 R[[
-    type lol = function(a) return a end
+    type lol = function(a: string) return a end
     local a: lol<(string)>
     type_assert(a, _ as string)
 ]]
@@ -910,7 +910,7 @@ R[[
     type_assert(a, nil)
  ]]
 R[[
-    type test = function(name)
+    type test = function(name: string)
          return analyzer:GetValue(name.data, "typesystem")
     end
     local type lol = {}
@@ -963,8 +963,8 @@ R[[
     test(false, true)
     test(1, "")
 
-    local type check = function(func)
-        local a = func.data.arg.data[1]
+    local type function check(func: any)
+        local a = func:GetArguments():Get(1)     -- this is being crawled for some reason
         local b = types.Set({
             types.Number(1),
             types.False,

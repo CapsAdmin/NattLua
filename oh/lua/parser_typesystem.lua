@@ -55,7 +55,44 @@ do
         node.tokens["type"] = self:ReadValue("type")
         node.tokens["function"] = self:ReadValue("function")
         node.identifier = self:ReadIdentifier()
-        return self:ReadTypeFunctionBody(node)
+        return self:ReadTypeFunctionBody(node, true)
+    end
+end
+
+
+do
+    function META:IsTypeFunctionStatement()
+        return self:IsValue("type") and self:IsValue("function", 1)
+    end
+
+    function META:ReadTypeFunctionStatement()
+        local node = self:Statement("type_function")
+        node.tokens["type"] = self:ReadValue("type")
+        node.tokens["function"] = self:ReadValue("function")
+        local force_upvalue
+        if self:IsValue("^") then
+            force_upvalue = true
+            self:Advance(1)
+        end
+        node.expression = self:ReadIndexExpression()
+
+        do -- hacky
+            if node.expression.left then
+                node.expression.left.upvalue_or_global = node
+                node.expression.left.force_upvalue = force_upvalue
+            else
+                node.expression.upvalue_or_global = node
+                node.expression.force_upvalue = force_upvalue
+            end
+
+            if node.expression.value.value == ":" then
+                node.self_call = true
+            end
+        end
+
+        self:ReadTypeFunctionBody(node, true)
+
+        return node
     end
 end
 
@@ -74,7 +111,7 @@ do
     end
 end
 
-function META:ReadFunctionArgument()
+function META:ReadTypeFunctionArgument()
     if (self:IsType("letter") or self:IsValue("...")) and self:IsValue(":", 1) then
         local identifier = self:ReadTokenLoose()
         local token = self:ReadValue(":")
@@ -88,14 +125,18 @@ function META:ReadFunctionArgument()
 end
 
 
-function META:ReadTypeFunctionBody(node)
+function META:ReadTypeFunctionBody(node, plain_args)
     node.tokens["("] = self:ReadValue("(")
 
-    node.identifiers = {}
+    if plain_args then
+        node.identifiers = self:ReadIdentifierList()
+    else
+        node.identifiers = {}
 
-    for i = 1, math_huge do
-        if self:HandleListSeparator(node.identifiers, i, self:ReadFunctionArgument()) then
-            break
+        for i = 1, math_huge do
+            if self:HandleListSeparator(node.identifiers, i, self:ReadTypeFunctionArgument()) then
+                break
+            end
         end
     end
 
@@ -146,10 +187,10 @@ function META:ReadTypeFunctionBody2(node)
     return node
 end
 
-function META:ReadTypeFunction()
+function META:ReadTypeFunction(plain_args)
     local node = self:Expression("type_function")
     node.tokens["function"] = self:ReadValue("function")
-    return self:ReadTypeFunctionBody(node)
+    return self:ReadTypeFunctionBody(node, plain_args)
 end
 
 

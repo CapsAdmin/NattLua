@@ -1,289 +1,14 @@
+local type boolean = true | false
+
+local type table = {[any] = any}
+local type userdata = table
+local type cdata = table
+local type ctype = table
+local type thread = table
+
 local type empty_function = function(...): any
 
-type io = {
-	write = (function(...): nil),
-	flush = (function(): boolean|nil, string|nil),
-	read = (function(...): ...),
-	lines = (function(...): empty_function),
-	setvbuf = (function(mode: string, size: number): boolean|nil, string|nil)    |    (function(mode: string): boolean|nil, string|nil),
-	seek = (function(whence: string, offset: number): number|nil, string|nil)    |    (function(whence: string): number|nil, string|nil)    |    (function(): number|nil, string|nil)
-}
-
-type f = {
-	close = (function(self): boolean|nil, string, number|nil),
-	write = (function(self, ...): file|nil, string|nil),
-	flush = (function(self): boolean|nil, string|nil),
-	read = (function(self, ...): ...),
-	lines = (function(self, ...): empty_function),
-	setvbuf = (function(self, string, number): boolean|nil, string|nil)    |    (function(file: file, mode: string): boolean|nil, string|nil),
-	seek = (function(self, string, number): number|nil, string|nil)    |    (function(file: file, whence: string): number|nil, string|nil)    |    (function(file: file,): number|nil, string|nil)
-}
-
-type io.open = function(): f
-type io.popen = function(): f
-
-type ffi = {
-	C = {[string] = any},
-	cdef = (function(string): nil),
-	abi = (function(string): boolean),
-	metatype = (function(ct,table): cdata),
-	new = (function(string | ctype,nelement,init...): cdata),
-	copy = (function(dst,src,len | string): nil)    |    (function(dst,src,len): nil)    |    (function(dst): nil),
-	alignof = (function(ct): number),
-	cast = (function(ctype,cdata): cdata),
-	typeof = (function(ct): ctype),
-	load = (function(string,global): userdata)    |    (function(string,): userdata),
-	sizeof = (function(ct,nelem): number)    |    (function(ct,): number),
-	string = (function(ptr, number): string)    |    (function(ptr,): string),
-	gc = (function(ct,empty_function): cdata),
-	istype = (function(ct,obj): boolean),
-	fill = (function(dst, len, c): nil)    |    (function(dst, len,): nil),
-	offsetof = (function(ct, field): number)
-}
-type jit = {
-	attach = (function(function): nil),
-	flush = (function(): nil),
-	opt = {
-		start = (function(...): nil)
-	},
-	tracebarrier = (function(): nil)
-}
-type debug = {
-	sethook = (function(thread: thread, hook: empty_function, mask: string, count: number): nil)    |    (function(thread: thread, hook: empty_function, mask: string): nil)    |    (function( hook: empty_function, mask: string): nil),
-	getregistry = (function(): nil),
-	traceback = (function(thread: thread, message: any, level: number): string)    |    (function(thread: thread, message: any): string)    |    (function(thread: thread,): string)    |    (function(): string),
-	setlocal = (function(thread: thread, level: number, local_: number, value: any): string|nil)    |    (function( level: number, local_: number, value: any): string|nil),
-	getinfo = (function(thread: thread, f: empty_function|number, what: string): table|nil)    |    (function(thread: thread, f: empty_function|number): table|nil)    |    (function( f: empty_function|number): table|nil),
-	upvalueid = (function(f: empty_function, n: number): userdata),
-	setupvalue = (function(f: empty_function, up: number, value: any): string|nil),
-	getlocal = (function(thread: thread, f: number|empty_function, local_: number): string|nil, any)    |    (function( f: number|empty_function, local_: number): string|nil, any),
-	upvaluejoin = (function(f1: empty_function, n1: number, f2: empty_function, n2: number): nil),
-	getupvalue = (function(f: empty_function, up: number): string|nil, any),
-	getmetatable = (function(value: any): table|nil),
-	setmetatable = (function(value: any, table: table|nil): any),
-	gethook = (function(thread: thread): empty_function, string, number)    |    (function(): empty_function, string, number),
-	getuservalue = (function(u: userdata): table|nil),
-	debug = (function(): nil),
-	getfenv = (function(o: any): table),
-	setfenv = (function(object: any, table: table): any),
-	setuservalue = (function(udata: userdata, value: table|nil): userdata)
-}
-type pairs = (function(t: table): empty_function, table, nil)
-type rawequal = (function(v1: any, v2: any): boolean)
-type loadstring = (function(string: string, chunkname: string): empty_function|nil, string|nil)    |    (function(string: string): empty_function|nil, string|nil)
-type package = {
-	searchpath = (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil)    |    (function(name: string, path: string, sep: string): string|nil, string|nil)    |    (function(name: string, path: string): string|nil, string|nil),
-	seeall = (function(module: table): nil),
-	loadlib = (function(libname: string, funcname: string): empty_function|nil)
-}
-type error = (function(message: string, level: number): nil)    |    (function(message: string): nil)
-type bit32 = {
-	lrotate = (function(x: number, disp: number): number),
-	bor = (function(...): number),
-	rshift = (function(x: number, disp: number): number),
-	band = (function(...): number),
-	lshift = (function(x: number, disp: number): number),
-	rrotate = (function(x: number, disp: number): number),
-	replace = (function(n: number, v: number, field: number, width: number): number)    |    (function(n: number, v: number, field: number): number),
-	bxor = (function(...): number),
-	arshift = (function(x: number, disp: number): number),
-	extract = (function(n: number, field: number, width: number): number)    |    (function(n: number, field: number): number),
-	bnot = (function(x: number): number),
-	btest = (function(...): boolean),
-	tobit = (function(...): number)
-}
-type bit = bit32
-type loadfile = (function(filename: string, mode: string, env: table): empty_function|nil, string|nil)    |    (function(filename: string, mode: string): empty_function|nil, string|nil)    |    (function(filename: string): empty_function|nil, string|nil)    |    (function(): empty_function|nil, string|nil)
-type dofile = (function(filename: string): ...)    |    (function(): ...)
-type table = {
-	maxn = (function(table: table): number),
-	move = (function(a1: table, f, e, t ,a2: table): nil)    |    (function(a1: table, f, e, t): nil),
-	remove = (function(list: table, pos: number): any)    |    (function(list: table): any),
-	sort = (function(list: table, comp: empty_function): nil)    |    (function(list: table): nil),
-	unpack = (function(list: table, i: number, j: number): ...)    |    (function(list: table, i: number): ...)    |    (function(list: table): ...),
-	insert = (function(list: table, pos: number, value: any): nil)    |    (function(list: table,  value: any): nil),
-	concat = (function(list: table, sep: string, i: number, j: number): string)    |    (function(list: table, sep: string, i: number): string)    |    (function(list: table, sep: string): string)    |    (function(list: table): string),
-	pack = (function(...): table)
-}
-type ^string = {
-	find = (function(s: string, pattern: string, init: number, plain: boolean): number|nil, number, ...|nil|nil)    |    (function(s: string, pattern: string, init: number): number|nil, number, ...|nil|nil)    |    (function(s: string, pattern: string): number|nil, number, ...|nil|nil),
-	len = (function(s: string): number),
-	packsize = (function(fmt: string): number),
-	match = (function(s: string, pattern: string, init: number): string|nil ,...|nil)    |    (function(s: string, pattern: string): string|nil ,...|nil),
-	upper = (function(s: string): string),
-	sub = (function(s: string, i: number, j: number): string)    |    (function(s: string, i: number): string),
-	char = (function(...): string),
-	rep = (function(s: string, n: number, sep: string): string)    |    (function(s: string, n: number): string),
-	lower = (function(s: string): string),
-	dump = (function(empty_function: empty_function): string),
-	gmatch = (function(s: string, pattern: string): empty_function),
-	reverse = (function(s: string): string),
-	byte =             (function(s: string, i: number, j: number): ...) |
-            (function(s: string, i: number): number | nil) |
-			(function(s: string): number)
-		,
-	unpack = (function(fmt: string, s: string, pos: number): values)    |    (function(fmt: string, s: string): values),
-	gsub = (function(s: string, pattern: string, repl: string|table|empty_function, n: number): string, number)    |    (function(s: string, pattern: string, repl: string|table|empty_function): string, number),
-	format = (function(formatstring, ...): string),
-	pack = (function(fmt: string, v1, v2, ...): string)
-}
-type ipairs = (function(t: table): empty_function, table, number)
-type tonumber = (function(e: number | string, base: number | nil): number | nil)
-type m = {
-	__le = (function(op1, op2): boolean),
-	__ipairs = (function(table): iterator, table, index),
-	__lt = (function(op1, op2): boolean),
-	__concat = (function(op1, op2): value),
-	__sub = (function(op1, op2): value),
-	__div = (function(op1, op2): value),
-	__index = (function(table, key): value),
-	__unm = (function(op): value),
-	__gc = (function(func, ...): values),
-	__mod = (function(op1, op2): value),
-	__call = (function(func, ...): values),
-	__newindex = (function(table, key, value): value),
-	__pairs = (function(table): iterator, table, key),
-	__tostring = (function(op): value),
-	__eq = (function(op1, op2): boolean),
-	__len = (function(op): value),
-	__mul = (function(op1, op2): value),
-	__add = (function(op1, op2): value),
-	__pow = (function(op1, op2): value)
-}
-type type = (function(v: any): string)
-type collectgarbage = (function(opt: string, arg: number): ...)    |    (function(opt: string): ...)    |    (function(): ...)
-type getfenv = (function(f: empty_function|number): table)    |    (function(): table)
---type next = (function(table: table, index: any): any, any|nil)    |    (function(table: table): any, any|nil)
-type math = {
-	ceil = (function(x: number): number),
-	tan = (function(x: number): number),
-	log10 = (function(x: number): number),
-	sinh = (function(x: number): number),
-	ldexp = (function(m: number, e: number): number),
-	tointeger = (function(x: number): number),
-	cosh = (function(x: number): number),
-	min = (function(x: number, ...): number),
-	fmod = (function(x: number, y: number): number),
-	exp = (function(x: number): number),
-	random = (function(m: number, n: number): number)    |    (function(m: number): number)    |    (function(): number),
-	rad = (function(x: number): number),
-	log = (function(x: number, base: number): number)    |    (function(x: number): number),
-	cos = (function(x: number): number),
-	randomseed = (function(x: number): nil),
-	floor = (function(x: number): number),
-	tanh = (function(x: number): number),
-	max = (function(x: number, ...): number),
-	pow = (function(x: number, y: number): number),
-	ult = (function(m: number, n: number): boolean),
-	acos = (function(x: number): number),
-	type = (function(x: number): string),
-	abs = (function(x: number): number),
-	frexp = (function(x: number): number, number),
-	deg = (function(x: number): number),
-	modf = (function(x: number): number, number),
-	atan2 = (function(y: number, x: number): number),
-	asin = (function(x: number): number),
-	atan = (function(x: number): number),
-	sqrt = (function(x: number): number),
-	sin = (function(x: number): number)
-}
-type load = (function(ld: string|empty_function, source: string, mode: string, env: table): empty_function|nil, string|nil)    |    (function(ld: string|empty_function, source: string, mode: string): empty_function|nil, string|nil)    |    (function(ld: string|empty_function, source: string): empty_function|nil, string|nil)    |    (function(ld: string|empty_function): empty_function|nil, string|nil)
-type os = {
-	execute = (function(command: string): boolean|nil, string, number|nil)    |    (function(): boolean|nil, string, number|nil),
-	rename = (function(oldname: string, newname: string): boolean|nil, string, number|nil),
-	getenv = (function(varname: string): string|nil),
-	difftime = (function(t2: number, t1: number): number),
-	exit = (function(code: boolean|number, close: boolean): nil)    |    (function(code: boolean|number): nil)    |    (function(): nil),
-	remove = (function(filename: string): boolean|nil, string, number|nil),
-	setlocale = (function(local_e: string, category: string): string|nil)    |    (function(local_e: string): string|nil),
-	date = (function(format: string, time: number): string|table)    |    (function(format: string): string|table)    |    (function(): string|table),
-	time = (function(table: table): number)    |    (function(): number),
-	clock = (function(): number),
-	tmpname = (function(): string)
-}
-type setmetatable = (function(table: table, metatable: table|nil): table)
-type select = (function(index: number|string, ...): ...)
-type rawlen = (function(v: table|string): number)
-type unpack = (function(list: table, i: number, j: number): ...)    |    (function(list: table, i: number): ...)    |    (function(list: table): ...)
-type require = (function(modname: string): any)
-type rawset = (function(table: table, index: any, value: any): table)
-type getmetatable = (function(object: any): table|nil)
-
--- overrides
-
--- ^string is just to circumvent getting the primitive type string
-
-type ^string.match = function(s, pattern, init)
-	if s.data and pattern.data then
-		local res = {s.data:match(pattern.data)}
-		for i,v in ipairs(res) do
-			res[i] = types.String(v)
-		end
-		return table.unpack(res)
-	end
-
-	if pattern.data then
-		local out = {}
-		for s in pattern.data:gmatch("%b()") do
-			table.insert(out, types.String() + types.Nil)
-		end
-		return table.unpack(out)
-	end
-end
-
-type ^string.len = function(str: string)
-	if str.Type == "set" then
-		local copy = types.Set()
-		for _, obj in ipairs(str:GetElements()) do
-			if obj:IsLiteral() then
-				copy:AddElement(types.Number(#obj:GetData()):MakeLiteral(true))
-			else
-				copy:AddElement(types.Number())
-			end
-		end
-		return copy
-	end
-
-	if str:IsLiteral() then
-		return types.Number(#str.data):MakeLiteral(true)
-	end
-
-	return types.Number()
-end
-
-type ^string.gsub = function(str, pattern, val)
-	if val.Type == "function" then
-		local args = {}
-
-		if pattern.data then
-			for group in pattern.data:gmatch("%b()") do
-				table.insert(args, types.String())
-			end
-		end
-
-		if not args[1] then
-			args[1] = types.String()
-		end
-
-		for i,v in ipairs(args) do
-			val.data.arg.data[i] = v
-		end
-
-		val.data.ret.data[1] = types.String()
-
-	end
-
-	return types.String()
-end
-
-type assert = function(obj, err)
-	if obj:IsTruthy() then
-		return obj
-	end
-	error(err and err.data or "assertion failed")
-end
-
-type type_assert = function(what: any, type: any)
+type function type_assert(what, type)
 	if what.Type == type.Type and what.data == type.data then
 		return
 	end
@@ -293,7 +18,7 @@ type type_assert = function(what: any, type: any)
 	end
 end
 
-type subset_of = function(A: any, B: any)
+type function subset_of(A, B)
 	local ok, err = A:SubsetOf(B)
 	if not ok then
 		error(err)
@@ -302,190 +27,453 @@ type subset_of = function(A: any, B: any)
 	return ok
 end
 
-type type_assert_superset = function(what: any, type: any)
+type function type_assert_superset(what, type)
 	if not what:SubsetOf(type) or (what.type == "any" and type.type ~= "any") then
 		error("expected " .. tostring(type) .." got " .. tostring(what))
 	end
 end
 
-type next = function(t: {[any] = any}, k: any)
+do -- globals
+	type setmetatable = (function(table: table, metatable: table|nil): table)
+	type select = (function(index: number|string, ...): ...)
+	type rawlen = (function(v: table|string): number)
+	type unpack = (function(list: table, i: number, j: number): ...) | (function(list: table, i: number): ...) | (function(list: table): ...)
+	type require = (function(modname: string): any)
+	type rawset = (function(table: table, index: any, value: any): table)
+	type getmetatable = (function(object: any): table|nil)
+	type load = (function(ld: string|empty_function, source: string, mode: string, env: table): empty_function|nil, string|nil) | (function(ld: string|empty_function, source: string, mode: string): empty_function|nil, string|nil) | (function(ld: string|empty_function, source: string): empty_function|nil, string|nil) | (function(ld: string|empty_function): empty_function|nil, string|nil)
+	type type = (function(v: any): string)
+	type collectgarbage = (function(opt: string, arg: number): ...) | (function(opt: string): ...) | (function(): ...)
+	type getfenv = (function(f: empty_function|number): table) | (function(): table)
+	type pairs = (function(t: table): empty_function, table, nil)
+	type rawequal = (function(v1: any, v2: any): boolean)
+	type loadstring = (function(string: string, chunkname: string): empty_function|nil, string|nil) | (function(string: string): empty_function|nil, string|nil)
+	type error = (function(message: string, level: number): nil) | (function(message: string): nil)
+	type loadfile = (function(filename: string, mode: string, env: table): empty_function|nil, string|nil) | (function(filename: string, mode: string): empty_function|nil, string|nil) | (function(filename: string): empty_function|nil, string|nil) | (function(): empty_function|nil, string|nil)
+	type dofile = (function(filename: string): ...) | (function(): ...)
+	type ipairs = (function(t: table): empty_function, table, number)
+	type tonumber = (function(e: number | string, base: number | nil): number | nil)
+	type function print(...) print(...) end
 
-	if t.Type == "set" then
-		t = t:GetElements()
-	else
-		t = {t}
+	type function assert(obj, err)
+		if obj:IsTruthy() then
+			return obj
+		end
+		error(err and err.data or "assertion failed")
 	end
 
-	local k = types.Set()
-	local v = types.Set()
-
-	for _, t in ipairs(t) do
-		if not t.data then
-			return
+	type function next(t: {[any] = any}, k: any)
+		if t.Type == "set" then
+			t = t:GetElements()
+		else
+			t = {t}
 		end
 
-		for _, kv in ipairs(t.data) do
-			kv.key.node = t.node
-			kv.val.node = t.node
+		local k = types.Set()
+		local v = types.Set()
 
-			k:AddElement(kv.key)
-			v:AddElement(kv.val)
+		for _, t in ipairs(t) do
+			if not t.data then
+				return
+			end
+
+			for _, kv in ipairs(t.data) do
+				kv.key.node = t.node
+				kv.val.node = t.node
+
+				k:AddElement(kv.key)
+				v:AddElement(kv.val)
+			end
 		end
+
+		return k,v
 	end
 
-	return k,v
-end
-
-type pairs = function(tbl)
-	local next = analyzer:GetValue("next", "typesystem")
-	return next, tbl, nil
-end
-
-type ipairs = function(tbl)
-	local next = analyzer:GetValue("next", "typesystem")
-	return next, tbl, nil
-end
-
-
-type require = function(name)
-	local str = name.data
-
-	if oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get(str) then
-		return oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get(str)
+	type function pairs(tbl)
+		local next = analyzer:GetValue("next", "typesystem")
+		return next, tbl, nil
 	end
 
-	if self:GetValue(str, "typesystem") then
-		return self:GetValue(str, "typesystem")
+	type function ipairs(tbl)
+		local next = analyzer:GetValue("next", "typesystem")
+		return next, tbl, nil
 	end
 
-	if package.loaders then
-		for _, searcher in ipairs(package.loaders) do
-			local loader = searcher(str)
-			if type(loader) == "function" then
-				local path = debug.getinfo(loader).source
-				if path:sub(1, 1) == "@" then
-					local path = path:sub(2)
+	type function require(name)
+		local str = name.data
 
-					local ast = assert(require("oh").ParseFile(path))
-					analyzer:AnalyzeStatement(ast)
+		if oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get(str) then
+			return oh.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get(str)
+		end
 
-					return table.unpack(analyzer.last_return)
+		if self:GetValue(str, "typesystem") then
+			return self:GetValue(str, "typesystem")
+		end
+
+		if package.loaders then
+			for _, searcher in ipairs(package.loaders) do
+				local loader = searcher(str)
+				if type(loader) == "function" then
+					local path = debug.getinfo(loader).source
+					if path:sub(1, 1) == "@" then
+						local path = path:sub(2)
+
+						local ast = assert(require("oh").ParseFile(path))
+						analyzer:AnalyzeStatement(ast)
+
+						return table.unpack(analyzer.last_return)
+					end
 				end
 			end
 		end
+
+		error("unable to find module " .. str)
 	end
 
-	error("unable to find module " .. str)
-end
-
-type table.insert = function(tbl: {[1 .. inf] = any}, ...)
-	local pos, val = ...
-
-	if not val then
-		val = ...
-		pos = #tbl.data + 1
-	else
-		pos = pos.data
-	end
-
-	tbl:Set(pos, val)
-end
-
-type print = function(...) print(...) end
-
-type table.sort = function(tbl, func)
-	local set = types.Set()
-
-	if tbl.Type == "tuple" then
-		for i,v in ipairs(tbl:GetData()) do
-			set:AddElement(v)
+	type function load(str, huh, huh, env)
+		if not str.data then
+			return types.Any
 		end
-	elseif tbl.Type == "table" then
-		for i,v in ipairs(tbl.data) do
-			set:AddElement(v.val)
+
+		local code = oh.Code(str.data)
+
+		local ok, err = code:Lex()
+		if not ok then
+			return ok, err
+		end
+
+		local ok, err = code:Parse()
+		if not ok then
+			return ok, err
+		end
+
+		return self:TypeFromImplicitNode(code.SyntaxTree, "function", {
+			arg = types.Tuple({}),
+			ret = types.Tuple({}),
+			lua_function = function()
+				types.collected_return_tuples = types.collected_return_tuples or {}
+				table.insert(types.collected_return_tuples,  1, {})
+				local ret = types.collected_return_tuples[1]
+				local old_env = analyzer.ENV
+				analyzer.ENV = env
+				analyzer:AnalyzeStatement(code.SyntaxTree)
+				analyzer.ENV = old_env
+				table.remove(types.collected_return_tuples, 1)
+				return table.unpack(ret)
+			end
+		})
+	end
+
+	type function rawset(tbl: {[any] = any}, key: any, val: any)
+		tbl:Set(key, val, true)
+	end
+
+	type function rawget(tbl: {[any] = any}, key: any)
+		return tbl:Get(key, true)
+	end
+
+	type function error(msg: string, level: number)
+		if msg.data then
+			error(msg.data)
 		end
 	end
-	func:GetArguments():GetData()[1] = set
-	func:GetArguments():GetData()[2] = set
-end
 
-type setmetatable = function(tbl, meta)
-	if meta.data then
-		tbl.meta = meta
+	type function select(index: 1 .. inf | "#", ...)
+		return select(index:GetData(), ...)
 	end
 
-	return tbl
-end
-
-type getmetatable = function(tbl)
-	return tbl.meta
-end
-
-type math.floor = function(num: number)
-	if num.data then
-		return math.floor(num.data)
-	end
-	return types.Number()
-end
-
-local type load = function(str, huh, huh, env)
-	if not str.data then
-		return types.Any
-	end
-
-	local code = oh.Code(str.data)
-
-	local ok, err = code:Lex()
-	if not ok then
-		return ok, err
-	end
-
-	local ok, err = code:Parse()
-	if not ok then
-		return ok, err
-	end
-
-	return self:TypeFromImplicitNode(code.SyntaxTree, "function", {
-		arg = types.Tuple({}),
-		ret = types.Tuple({}),
-		lua_function = function()
-			types.collected_return_tuples = types.collected_return_tuples or {}
-			table.insert(types.collected_return_tuples,  1, {})
-			local ret = types.collected_return_tuples[1]
-			local old_env = analyzer.ENV
-			analyzer.ENV = env
-			analyzer:AnalyzeStatement(code.SyntaxTree)
-			analyzer.ENV = old_env
-			table.remove(types.collected_return_tuples, 1)
-			return table.unpack(ret)
+	type function setmetatable(tbl, meta)
+		if meta.data then
+			tbl.meta = meta
 		end
-	})
-end
 
-type rawset = function(tbl: {[any] = any}, key: any, val: any)
-	tbl:Set(key, val, true)
-end
+		return tbl
+	end
 
-type rawget = function(tbl: {[any] = any}, key: any)
-	return tbl:Get(key, true)
-end
-
-type error = function(msg: string, level: number)
-	if msg.data then
-		error(msg.data)
+	type function getmetatable(tbl)
+		return tbl.meta
 	end
 end
 
-type select = function(index: 1 .. inf | "#", ...)
-	return select(index:GetData(), ...)
+do
+	type io = {
+		write = (function(...): nil),
+		flush = (function(): boolean|nil, string|nil),
+		read = (function(...): ...),
+		lines = (function(...): empty_function),
+		setvbuf = (function(mode: string, size: number): boolean|nil, string|nil) | (function(mode: string): boolean|nil, string|nil),
+		seek = (function(whence: string, offset: number): number|nil, string|nil) | (function(whence: string): number|nil, string|nil) | (function(): number|nil, string|nil)
+	}
+
+	type File = {
+		close = (function(self): boolean|nil, string, number|nil),
+		write = (function(self, ...): self|nil, string|nil),
+		flush = (function(self): boolean|nil, string|nil),
+		read = (function(self, ...): ...),
+		lines = (function(self, ...): empty_function),
+		setvbuf = (function(self, string, number): boolean|nil, string|nil) | (function(file: self, mode: string): boolean|nil, string|nil),
+		seek = (function(self, string, number): number|nil, string|nil) | (function(file: self, whence: string): number|nil, string|nil) | (function(file: self,): number|nil, string|nil)
+	}
+
+	type function io.open(): File
+	type function io.popen(): File
 end
 
+type ffi = {
+	C = {[string] = any},
+	cdef = (function(string): nil),
+	abi = (function(string): boolean),
+	metatype = (function(ctype, table): cdata),
+	new = (function(string | ctype, number, any...): cdata),
+	copy = (function(cdata, cdata | nil, number | string | nil): nil),
+	alignof = (function(ctype): number),
+	cast = (function(ctype, cdata): cdata),
+	typeof = (function(ctype): ctype),
+	load = (function(string, boolean): userdata) | (function(string): userdata),
+	sizeof = (function(ctype, number): number) | (function(ctype): number),
+	string = (function(cdata, number): string),
+	gc = (function(ctype, empty_function): cdata),
+	istype = (function(ctype, any): boolean),
+	fill = (function(cdata, number, any): nil) | (function(cdata, len: number): nil),
+	offsetof = (function(cdata, number): number)
+}
 
+type jit = {
+	attach = (function(empty_function): nil),
+	flush = (function(): nil),
+	opt = {
+		start = (function(...): nil)
+	},
+	tracebarrier = (function(): nil)
+}
 
-type tonumber2 = function(str: string | number, base: string | nil)
-	if str.Type == "number" then
-		return str
+type debug = {
+	sethook = (function(thread: thread, hook: empty_function, mask: string, count: number): nil) | (function(thread: thread, hook: empty_function, mask: string): nil) | (function( hook: empty_function, mask: string): nil),
+	getregistry = (function(): nil),
+	traceback = (function(thread: thread, message: any, level: number): string) | (function(thread: thread, message: any): string) | (function(thread: thread,): string) | (function(): string),
+	setlocal = (function(thread: thread, level: number, local_: number, value: any): string|nil) | (function( level: number, local_: number, value: any): string|nil),
+	getinfo = (function(thread: thread, f: empty_function|number, what: string): table|nil) | (function(thread: thread, f: empty_function|number): table|nil) | (function( f: empty_function|number): table|nil),
+	upvalueid = (function(f: empty_function, n: number): userdata),
+	setupvalue = (function(f: empty_function, up: number, value: any): string|nil),
+	getlocal = (function(thread: thread, f: number|empty_function, local_: number): string|nil, any) | (function( f: number|empty_function, local_: number): string|nil, any),
+	upvaluejoin = (function(f1: empty_function, n1: number, f2: empty_function, n2: number): nil),
+	getupvalue = (function(f: empty_function, up: number): string|nil, any),
+	getmetatable = (function(value: any): table|nil),
+	setmetatable = (function(value: any, table: table|nil): any),
+	gethook = (function(thread: thread): empty_function, string, number) | (function(): empty_function, string, number),
+	getuservalue = (function(u: userdata): table|nil),
+	debug = (function(): nil),
+	getfenv = (function(o: any): table),
+	setfenv = (function(object: any, table: table): any),
+	setuservalue = (function(udata: userdata, value: table|nil): userdata)
+}
+
+type package = {
+	searchpath = (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil) | (function(name: string, path: string, sep: string): string|nil, string|nil) | (function(name: string, path: string): string|nil, string|nil),
+	seeall = (function(module: table): nil),
+	loadlib = (function(libname: string, funcname: string): empty_function|nil)
+}
+
+type bit32 = {
+	lrotate = (function(x: number, disp: number): number),
+	bor = (function(...): number),
+	rshift = (function(x: number, disp: number): number),
+	band = (function(...): number),
+	lshift = (function(x: number, disp: number): number),
+	rrotate = (function(x: number, disp: number): number),
+	replace = (function(n: number, v: number, field: number, width: number): number) | (function(n: number, v: number, field: number): number),
+	bxor = (function(...): number),
+	arshift = (function(x: number, disp: number): number),
+	extract = (function(n: number, field: number, width: number): number) | (function(n: number, field: number): number),
+	bnot = (function(x: number): number),
+	btest = (function(...): boolean),
+	tobit = (function(...): number)
+}
+
+type bit = bit32
+
+do
+	type table = {
+		maxn = (function(table: table): number),
+		move = (function(a1: table, f: any, e: any, t: any ,a2: table): nil) | (function(a1: table, f: any, e: any, t: any): nil),
+		remove = (function(list: table, pos: number): any) | (function(list: table): any),
+		sort = (function(list: table, comp: empty_function): nil) | (function(list: table): nil),
+		unpack = (function(list: table, i: number, j: number): ...) | (function(list: table, i: number): ...) | (function(list: table): ...),
+		insert = (function(list: table, pos: number, value: any): nil) | (function(list: table,  value: any): nil),
+		concat = (function(list: table, sep: string, i: number, j: number): string) | (function(list: table, sep: string, i: number): string) | (function(list: table, sep: string): string) | (function(list: table): string),
+		pack = (function(...): table)
+	}
+
+	type function table.insert(tbl: {[1 .. inf] = any}, ...)
+		local pos, val = ...
+
+		if not val then
+			val = ...
+			pos = #tbl.data + 1
+		else
+			pos = pos.data
+		end
+
+		tbl:Set(pos, val)
 	end
 
-	return types.Set({types.Number(), types.Nil})
+	type function table.sort(tbl, func)
+		local set = types.Set()
+
+		if tbl.Type == "tuple" then
+			for i,v in ipairs(tbl:GetData()) do
+				set:AddElement(v)
+			end
+		elseif tbl.Type == "table" then
+			for i,v in ipairs(tbl.data) do
+				set:AddElement(v.val)
+			end
+		end
+		func:GetArguments():GetData()[1] = set
+		func:GetArguments():GetData()[2] = set
+	end
 end
+
+do
+	type ^string = {
+		find = (function(s: string, pattern: string, init: number, plain: boolean): number|nil, number, ...|nil|nil) | (function(s: string, pattern: string, init: number): number|nil, number, ...|nil|nil) | (function(s: string, pattern: string): number|nil, number, ...|nil|nil),
+		len = (function(s: string): number),
+		packsize = (function(fmt: string): number),
+		match = (function(s: string, pattern: string, init: number): string|nil ,...|nil) | (function(s: string, pattern: string): string|nil ,...|nil),
+		upper = (function(s: string): string),
+		sub = (function(s: string, i: number, j: number): string) | (function(s: string, i: number): string),
+		char = (function(...): string),
+		rep = (function(s: string, n: number, sep: string): string) | (function(s: string, n: number): string),
+		lower = (function(s: string): string),
+		dump = (function(empty_function: empty_function): string),
+		gmatch = (function(s: string, pattern: string): empty_function),
+		reverse = (function(s: string): string),
+		byte = (function(s: string, i: number, j: number): ...) |
+			(function(s: string, i: number): number | nil) |
+			(function(s: string): number),
+		unpack = (function(fmt: string, s: string, pos: number): ...) | (function(fmt: string, s: string): ...),
+		gsub = (function(s: string, pattern: string, repl: string|table|empty_function, n: number): string, number) | (function(s: string, pattern: string, repl: string|table|empty_function): string, number),
+		format = (function(string, ...): string),
+		pack = (function(fmt: string, ...): string)
+	}
+
+	type function ^string.match(s, pattern, init)
+		if s.data and pattern.data then
+			local res = {s.data:match(pattern.data)}
+			for i,v in ipairs(res) do
+				res[i] = types.String(v)
+			end
+			return table.unpack(res)
+		end
+
+		if pattern.data then
+			local out = {}
+			for s in pattern.data:gmatch("%b()") do
+				table.insert(out, types.String() + types.Nil)
+			end
+			return table.unpack(out)
+		end
+	end
+
+	type function ^string.len(str: string)
+		if str.Type == "set" then
+			local copy = types.Set()
+			for _, obj in ipairs(str:GetElements()) do
+				if obj:IsLiteral() then
+					copy:AddElement(types.Number(#obj:GetData()):MakeLiteral(true))
+				else
+					copy:AddElement(types.Number())
+				end
+			end
+			return copy
+		end
+
+		if str:IsLiteral() then
+			return types.Number(#str.data):MakeLiteral(true)
+		end
+
+		return types.Number()
+	end
+
+	type function ^string.gsub(str, pattern, val)
+		if val.Type == "function" then
+			local args = {}
+
+			if pattern.data then
+				for group in pattern.data:gmatch("%b()") do
+					table.insert(args, types.String())
+				end
+			end
+
+			if not args[1] then
+				args[1] = types.String()
+			end
+
+			for i,v in ipairs(args) do
+				val.data.arg.data[i] = v
+			end
+
+			val.data.ret.data[1] = types.String()
+
+		end
+
+		return types.String()
+	end
+end
+
+do
+	type math = {
+		ceil = (function(x: number): number),
+		tan = (function(x: number): number),
+		log10 = (function(x: number): number),
+		sinh = (function(x: number): number),
+		ldexp = (function(m: number, e: number): number),
+		tointeger = (function(x: number): number),
+		cosh = (function(x: number): number),
+		min = (function(x: number, ...): number),
+		fmod = (function(x: number, y: number): number),
+		exp = (function(x: number): number),
+		random = (function(m: number, n: number): number) | (function(m: number): number) | (function(): number),
+		rad = (function(x: number): number),
+		log = (function(x: number, base: number): number) | (function(x: number): number),
+		cos = (function(x: number): number),
+		randomseed = (function(x: number): nil),
+		floor = (function(x: number): number),
+		tanh = (function(x: number): number),
+		max = (function(x: number, ...): number),
+		pow = (function(x: number, y: number): number),
+		ult = (function(m: number, n: number): boolean),
+		acos = (function(x: number): number),
+		type = (function(x: number): string),
+		abs = (function(x: number): number),
+		frexp = (function(x: number): number, number),
+		deg = (function(x: number): number),
+		modf = (function(x: number): number, number),
+		atan2 = (function(y: number, x: number): number),
+		asin = (function(x: number): number),
+		atan = (function(x: number): number),
+		sqrt = (function(x: number): number),
+		sin = (function(x: number): number)
+	}
+
+	type function math.floor(num: number)
+		if num.data then
+			return math.floor(num.data)
+		end
+		return types.Number()
+	end
+end
+
+type os = {
+	execute = (function(command: string): boolean|nil, string, number|nil) | (function(): boolean|nil, string, number|nil),
+	rename = (function(oldname: string, newname: string): boolean|nil, string, number|nil),
+	getenv = (function(varname: string): string|nil),
+	difftime = (function(t2: number, t1: number): number),
+	exit = (function(code: boolean|number, close: boolean): nil) | (function(code: boolean|number): nil) | (function(): nil),
+	remove = (function(filename: string): boolean|nil, string, number|nil),
+	setlocale = (function(local_e: string, category: string): string|nil) | (function(local_e: string): string|nil),
+	date = (function(format: string, time: number): string|table) | (function(format: string): string|table) | (function(): string|table),
+	time = (function(table: table): number) | (function(): number),
+	clock = (function(): number),
+	tmpname = (function(): string)
+}

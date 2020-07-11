@@ -723,6 +723,7 @@ do -- statements
             self:IsGotoLabelStatement() then                        return self:ReadGotoLabelStatement() elseif
             self:IsLSXStatement() then                              return self:ReadLSXStatement() elseif
             self:IsRepeatStatement() then                           return self:ReadRepeatStatement() elseif
+            self:IsTypeFunctionStatement() then                     return self:ReadTypeFunctionStatement() elseif
             self:IsFunctionStatement() then                         return self:ReadFunctionStatement() elseif
             self:IsLocalTypeFunctionStatement2() then               return self:ReadLocalTypeFunctionStatement2() elseif
             self:IsLocalFunctionStatement() then                    return self:ReadLocalFunctionStatement() elseif

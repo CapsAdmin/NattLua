@@ -11,17 +11,22 @@ local LuaEmitter = require("oh.lua.emitter")
 
 local helpers = require("oh.helpers")
 
-function oh.GetBaseAnalyzer(ast)
+function oh.GetBaseAnalyzer()
 
     if not oh.base_analyzer then
         local base = Analyzer()
 		base.IndexNotFound = nil
 
-		local root = assert(ast or oh.ParseFile("oh/lua/base_typesystem.oh").SyntaxTree)
-		base:AnalyzeStatement(root)
+		local root, code_data = assert(oh.ParseFile("oh/lua/base_typesystem.oh"))
+
+		oh.current_analyzer = base
+		base.code = code_data.code
+		base.path = "oh/lua/base_typesystem.oh"
+		base:AnalyzeStatement(root.SyntaxTree)
+		oh.current_analyzer = nil
 
 		local g = base:TypeFromImplicitNode(root, "table")
-		for k,v in pairs(base.env.typesystem) do
+		for k, v in pairs(base.env.typesystem) do
 			g:Set(k, v)
 		end
 		-- TODO: string library isn't in base.env.typesystem
@@ -77,7 +82,13 @@ function oh.on_editor_save(path)
 	end
 
 	local c = oh.File(path, {annotate = true})
+	if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
+		_G.DISABLE_BASE_TYPES = true
+	end
 	local ok, err = c:Analyze()
+	if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
+		_G.DISABLE_BASE_TYPES = nil
+	end
 	if not ok then
 		io.write(err, "\n")
 		return

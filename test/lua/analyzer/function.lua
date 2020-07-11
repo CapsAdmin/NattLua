@@ -266,7 +266,7 @@ it("defining a type for a function should type the arguments", function()
     ]]
 
     run([[
-        local type test = function(number, string): 1
+        local type test = function(a: number, b: string): 1
 
         function test(a, b)
             return 1

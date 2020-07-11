@@ -184,6 +184,18 @@ do
         self:EmitExpression(node.expression or node.identifier)
         emit_function_body(self, node)
     end
+
+    function META:EmitTypeFunctionStatement(node)
+        self:Whitespace("\t")
+        if node.tokens["local"] then
+            self:EmitToken(node.tokens["local"])
+            self:Whitespace(" ")
+        end
+        self:EmitToken(node.tokens["function"])
+        self:Whitespace(" ")
+        self:EmitExpression(node.expression or node.identifier)
+        emit_function_body(self, node)
+    end
 end
 
 function META:EmitTable(tree)
@@ -480,6 +492,8 @@ function META:EmitStatement(node)
         self:EmitGenericForStatement(node)
     elseif node.kind == "do" then
         self:EmitDoStatement(node)
+    elseif node.kind == "type_function" then
+        self:EmitTypeFunctionStatement(node)
     elseif node.kind == "function" then
         self:EmitFunction(node)
     elseif node.kind == "local_function" then
@@ -557,7 +571,6 @@ function META:EmitIdentifier(node)
             self:EmitToken(node.tokens[":"])
             self:EmitTypeExpression(node.type_expression)
         elseif node.inferred_type then
-            print(node.inferred_type)
             self:Emit(": ")
             self:Emit(tostring((node.inferred_type.contract or node.inferred_type)))
         end

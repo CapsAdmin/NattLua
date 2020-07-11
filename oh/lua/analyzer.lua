@@ -848,7 +848,6 @@ function META:AnalyzeStatement(statement)
 
                     -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
                     arguments = obj:GetArguments()
-
                     self:Assert(node, self:Call(obj, arguments, node))
                 end
             end
@@ -974,10 +973,24 @@ function META:AnalyzeStatement(statement)
             end
         end
     elseif statement.kind == "function" then
-        self:SetValue(statement.expression, self:GetValue(statement.expression, "typesystem") or self:AnalyzeFunction(statement, "runtime"), "runtime")
+        self:SetValue(
+            statement.expression,
+            -- see if this function has been defined by the typesystem
+            self:GetValue(statement.expression, "typesystem") or self:AnalyzeFunction(statement, "runtime"),
+            "runtime"
+        )
+    elseif statement.kind == "type_function" then
+        self:SetValue(
+            statement.expression,
+            self:AnalyzeFunction(statement:ToExpression("type_function"),
+            "typesystem"
+        ), "typesystem")
+
     elseif statement.kind == "local_function" then
         self:SetUpvalue(statement.tokens["identifier"], self:AnalyzeFunction(statement, "runtime"), "runtime")
-    elseif statement.kind == "local_type_function" or statement.kind == "local_type_function2" then
+    elseif statement.kind == "local_type_function" then
+        self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement:ToExpression("type_function"), "typesystem"), "typesystem")
+    elseif statement.kind == "local_type_function2" then
         self:SetUpvalue(statement.identifier, self:AnalyzeFunction(statement, "typesystem"), "typesystem")
     elseif statement.kind == "if" then
         local prev_expression
@@ -1103,6 +1116,9 @@ do
         elseif node.kind == "binary_operator" then
             local right, left = stack:Pop(), stack:Pop()
 
+            assert(left)
+            assert(right)
+
             -- TODO: more elegant way of dealing with self?
             if node.value.value == ":" then
                 stack:Push(left)
@@ -1146,6 +1162,8 @@ do
                     return self:TypeFromImplicitNode(node, "number", math.huge, true)
                 elseif node.value.value == "nan" then
                     return self:TypeFromImplicitNode(node, "number", 0/0, true)
+                elseif node.value.value == "..." then
+                    return self:TypeFromImplicitNode(node, "...", {self:TypeFromImplicitNode(node, "any")})
                 elseif types.IsPrimitiveType(node.value.value) then
                     -- string, number, boolean, etc
                     return self:TypeFromImplicitNode(node, node.value.value)
@@ -1153,6 +1171,15 @@ do
             end
 
             local obj = self:GetValue(node, env)
+
+            if not obj and env == "typesystem" and node.value.value ~= "_" then
+                if not obj and self.IndexNotFound then
+                    obj = self:IndexNotFound(node)
+                 end
+                if not obj then
+                    self:Error(node, "cannot find value " .. node.value.value)
+                end
+            end
 
             if not obj and env == "runtime" then
                 obj = self:GetValue(node, "typesystem")
@@ -1162,7 +1189,8 @@ do
                obj = self:IndexNotFound(node)
             end
 
-            -- last resort. the identifier itemCount could become a number
+            -- last resort
+            -- an identifier like "itemCount" becomes a number because it contains "count"
             if not obj then
                 obj = self:GetInferredType(node, env)
             end
@@ -1195,10 +1223,14 @@ do
 
         for i, key in ipairs(node.identifiers) do
             -- if this node is already explicitly annotated with foo: mytype or foo as mytype use that
-            if key.type_expression then
+            if key.identifier then
+                args[i] = self:AnalyzeExpression(key, "typesystem")
+            elseif key.type_expression then
                 args[i] = self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
             else
-                if key.kind == "value" and key.value.value == "..." then
+                if node.kind == "type_function" then
+                    args[i] = self:GetInferredType(key)
+                elseif key.kind == "value" and key.value.value == "..." then
                     args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
                 elseif key.kind == "type_table" then
                     args[i] = self:AnalyzeExpression(key)
@@ -1242,12 +1274,14 @@ do
 
         local func
         if env == "typesystem" then
-            if node.statements and node.kind == "type_function" then
+            if node.statements and (node.kind == "type_function" or node.kind == "local_type_function") then
                 local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
                 local load_func, err = load(str, "")
                 if not load_func then
                     -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
+                    io.write("==CODE==\n")
                     io.write(str, "\n")
+                    io.write("==-==\n")
                     error(err)
                 end
                 func = load_func(require("oh"), self, types, node)
