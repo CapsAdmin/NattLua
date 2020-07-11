@@ -52,8 +52,8 @@ return function(emitter_meta, syntax)
 
     function META:GetPrevChar()
         local prev = self.out[self.i - 1]
-        local char = prev:sub(-1)
-        return prev and char:byte()
+        local char = prev and prev:sub(-1)
+        return char and char:byte() or 0
     end
 
     function META:EmitWhitespace(token)

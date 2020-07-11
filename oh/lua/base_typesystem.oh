@@ -471,7 +471,9 @@ type rawget = function(tbl: {[any] = any}, key: any)
 end
 
 type error = function(msg: string, level: number)
-	error(msg.data)
+	if msg.data then
+		error(msg.data)
+	end
 end
 
 type select = function(index: 1 .. inf | "#", ...)

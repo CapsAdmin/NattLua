@@ -121,6 +121,8 @@ do
 	end
 
 	local function traceback_(msg)
+		msg = msg or "no error"
+
 		local s = ""
 		s = msg .. "\n" .. s
 		for i = 2, math.huge do

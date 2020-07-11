@@ -135,7 +135,7 @@ function META:Max(val)
     end
 
     if val.Type ~= "number" then
-        return types.errors.other("max must be a number")
+        return types.errors.other("max must be a number, got " .. tostring(val))
     end
 
     if not val:IsLiteral() then
