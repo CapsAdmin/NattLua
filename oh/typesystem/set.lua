@@ -263,6 +263,42 @@ function META:IsFalsy()
     return false
 end
 
+function META:DisableTruthy()
+    local found = {}
+    for _, v in ipairs(self:GetElements()) do
+        if v:IsTruthy() then
+            table.insert(found, v)
+            self:RemoveElement(v)
+        end
+    end
+    self.truthy_disabled = found
+end
+
+function META:EnableTruthy()
+    if not self.truthy_disabled then return end
+    for _, v in ipairs(self.truthy_disabled) do
+        self:AddElement(v)
+    end
+end
+
+function META:DisableFalsy()
+    local found = {}
+    for _, v in ipairs(self:GetElements()) do
+        if v:IsFalsy() then
+            table.insert(found, v)
+            self:RemoveElement(v)
+        end
+    end
+    self.falsy_disabled = found
+end
+
+function META:EnableFalsy()
+    if not self.falsy_disabled then return end
+    for _, v in ipairs(self.falsy_disabled) do
+        self:AddElement(v)
+    end
+end
+
 function META:Initialize(data)
     self.data = {}
     self.datai = {}

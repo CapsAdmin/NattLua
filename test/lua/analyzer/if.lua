@@ -104,6 +104,37 @@ run([[
     type_assert(a, _ as true | nil)
 ]])
 
+
+pending([[
+    local a: nil | 1
+
+    if a then
+        type_assert(a, _ as 1 | 1)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]])
+
+pending([[
+    local a: nil | 1
+
+    if a or true and a or false then
+        type_assert(a, _ as 1 | 1)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]])
+
+pending([[
+    local a: nil | 1
+
+    if not a or true and a or false then
+        type_assert(a, _ as 1 | nil)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]])
+
 do
     _G.lol = nil
 
