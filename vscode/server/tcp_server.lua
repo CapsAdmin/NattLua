@@ -12,12 +12,12 @@ function META:assert(val, err)
     return val, err
 end
 
-function META:__tostring()
-    return tostring(self.socket)
+function META:__tostring2()
+    return "[" .. tostring(self.socket) .. "]"
 end
 
-function META:Initialize(socket)
-    self:SocketRestart(socket)
+function META:Initialize()
+    self:SocketRestart()
 end
 
 function META:SocketRestart()
@@ -25,9 +25,6 @@ function META:SocketRestart()
     assert(self.socket:set_blocking(false))
     self.socket:set_option("nodelay", true, "tcp")
     self.socket:set_option("reuseaddr", true)
-
-    self.connected = nil
-    self.connecting = nil
 end
 
 function META:OnRemove()
@@ -40,11 +37,18 @@ function META:Close(reason)
 end
 
 function META:Host(host, service)
-    local info = ljsocket.find_first_address(host, service)
+    local ok, err = self.socket:bind(host, service)
 
-    if self:assert(self.socket:bind(info)) and self:assert(self.socket:listen()) then
-        self.hosting = true
+    if ok then
+        ok, err = self.socket:listen()
     end
+
+    if ok then
+        self.hosting = true
+        return
+    end
+
+    return self:Error("Unable host " .. host .. ":" .. service .. " - " .. err)
 end
 
 function META:Update()
@@ -76,7 +80,7 @@ function META:Error(message, ...)
     return false
 end
 
-function META:OnError(str, tr) print(tr, str) self:Remove() end
+function META:OnError(str, tr) print(tr, str) self:OnRemove() end
 function META:OnReceiveChunk(str) end
 function META:OnClose() self:Close() end
 function META:OnConnect() end

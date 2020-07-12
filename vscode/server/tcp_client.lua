@@ -12,7 +12,7 @@ function META:assert(val, err)
 end
 
 function META:__tostring()
-    return tostring(self.socket)
+    return "[" .. tostring(self.socket) .. "]"
 end
 
 function META:Initialize(socket)
@@ -38,30 +38,43 @@ function META:Close(reason)
 end
 
 function META:Connect(host, service)
-    if self:assert(self.socket:connect(host, service)) then
+    local ok, err = self.socket:connect(host, service)
+
+    if ok then
         self.connecting = true
+        return
     end
+
+    return self:Error("Unable to connect to " .. host .. ":" .. service .. ": " .. err)
 end
 
 function META:Send(data)
     local ok, err
-
     if self.socket:is_connected() and not self.connecting then
         local pos = 0
+        local t = os.clock() + 1
         for i = 1, math.huge do
             ok, err = self.socket:send(data:sub(pos + 1))
-            if ok then
-                pos = pos + tonumber(ok)
+
+            if t < os.clock() then
+                return false, "timeout"
             end
 
-            if pos >= #data then
-                break
+            if not ok and err ~= "timeout" then
+                return self:Error(err)
+            end
+
+            if err ~= "timeout" then
+                pos = pos + tonumber(ok)
+
+                if pos >= #data then
+                    break
+                end
             end
         end
     else
         ok, err = false, "timeout"
     end
-
     if not ok then
         if err == "timeout" then
             self.buffered_send = self.buffered_send or {}
@@ -71,7 +84,6 @@ function META:Send(data)
 
         return self:Error(err)
     end
-
     return ok, err
 end
 
@@ -136,10 +148,10 @@ end
 function META:Error(message, ...)
     local tr = debug.traceback()
     self:OnError(message, tr, ...)
-    return false
+    return false, message
 end
 
-function META:OnError(str, tr) print(tr) print(str) self:Remove(str) end
+function META:OnError(str, tr) print(tr, str) self:Remove(str) end
 function META:OnReceiveChunk(str) end
 function META:OnClose() self:Close() end
 function META:OnConnect() end

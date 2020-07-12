@@ -386,7 +386,6 @@ end
 
 function json.decode(str)
   if type(str) ~= "string" then
-	table.print(str)
     error("expected argument of type string, got " .. type(str))
   end
   local res, idx = parse(str, next_char(str, 1, space_chars, true))
@@ -399,4 +398,4 @@ end
 
 
 return json
- 
+

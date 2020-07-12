@@ -32,27 +32,16 @@ export function activate(context: ExtensionContext) {
         return new Promise((resolve, reject) => {
             const server = spawn(path, args, {
                 cwd: workspace.rootPath,
-                stdio: "inherit",
-                env: Object.create(process.env),
-                detached: false
             })
 
             output.appendLine("RUNNING: " + path + " " + args.join(" "))
 
-            if (server.stdout) {
-                server.stdout.on("data", (s) => {
-                    output.append(s)
-                })
-            }
-            if (server.stderr) { server.stderr.on("data", (s) => output.append(s)) }
+            server.stdout.on("data", (str) => output.appendLine(str))
+            server.stderr.on("data", (str) => output.appendLine(str))
 
-            server.on("error", (err) => {
-                output.appendLine(err.toString())
-            })
+            server.on("error", (err) => output.appendLine("error: " + err.toString()))
 
-            process.on("exit", () => {
-                server.kill()
-            })
+            process.on("exit", () => server.kill())
 
             let client = new Socket()
 
