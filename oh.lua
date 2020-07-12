@@ -128,7 +128,12 @@ do
 
 	function META:OnError(msg, start, stop, ...)
 		local self = self.code_data
-		error(helpers.FormatError(self.code, self.name, msg, start, stop, ...))
+		local msg = helpers.FormatError(self.code, self.name, msg, start, stop, ...)
+		if self.NoThrow then
+			io.write(msg)
+		else
+			error(msg)
+		end
 	end
 
 	local function traceback_(msg)

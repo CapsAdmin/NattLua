@@ -443,7 +443,7 @@ do -- type operators
             elseif op == "<<" then return arithmetic(l,r, "number", op)
             elseif op == ">>" then return arithmetic(l,r, "number", op) end
 
-            error("no operator for "..tostring(l).." "..op.. " "..tostring(r) .. " in " .. env)
+            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
         end
     end
 
@@ -1074,7 +1074,14 @@ function META:AnalyzeStatement(statement)
         self:PopScope()
     elseif statement.kind == "numeric_for" then
         self:PushScope(statement)
-        local range = self:Assert(statement.expressions[1], self:AnalyzeExpression(statement.expressions[1]):Max(self:AnalyzeExpression(statement.expressions[2])))
+        local init = self:AnalyzeExpression(statement.expressions[1])
+        local max = self:AnalyzeExpression(statement.expressions[2])
+
+        if init.Type == "number" and (max.Type == "number" or (max.Type == "set" and max:IsType("number"))) then
+            init = init:Max(max)
+        end
+
+        local range = self:Assert(statement.expressions[1], init)
         self:SetUpvalue(statement.identifiers[1], range, "runtime")
 
         if statement.expressions[3] then

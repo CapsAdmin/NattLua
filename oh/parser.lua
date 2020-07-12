@@ -45,7 +45,7 @@ return function(parser_meta, syntax, Emitter)
             id = id + 1
 
             setmetatable(node, META)
-            self.current_node = node
+            self.current_expression = node
 
             if self.OnNode then
                 self:OnNode(node)
@@ -125,7 +125,7 @@ return function(parser_meta, syntax, Emitter)
             id = id + 1
 
             setmetatable(node, META)
-            self.current_node = node
+            self.current_statement = node
 
             if self.OnNode then
                 self:OnNode(node)
@@ -230,7 +230,8 @@ return function(parser_meta, syntax, Emitter)
     end
 
     function META:Advance(offset)
-        self.tokens[self.i].parent = self.current_node
+        self.tokens[self.i].parent_expression = self.current_expression
+        self.tokens[self.i].parent_statement = self.current_statement
 
         self.i = self.i + offset
     end

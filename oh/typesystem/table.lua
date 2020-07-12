@@ -220,7 +220,7 @@ function META:Set(key, val)
         local set = key
         for _, key in ipairs(set:GetElements()) do
             if key.Type == "symbol" and key:GetData() == nil then
-                return types.errors.other(set:GetLength() == 1 and "key is nil" or "can be nil")
+                return types.errors.other(set:GetLength() == 1 and "key is nil" or "key can be nil")
             end
         end
     end

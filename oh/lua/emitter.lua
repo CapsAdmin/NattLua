@@ -44,6 +44,10 @@ function META:EmitExpression(node)
         self:EmitVarargTuple(node)
     elseif node.kind == "type_list" then
        self:EmitTypeList(node)
+    elseif node.kind == "table_expression_value" then
+        self:EmitTableExpressionValue(node)
+    elseif node.kind == "table_key_value" then
+        self:EmitTableKeyValue(node)
     else
         error("unhandled token type " .. node.kind)
     end
@@ -198,6 +202,24 @@ do
     end
 end
 
+function META:EmitTableExpressionValue(node)
+    self:EmitToken(node.tokens["["])
+    self:Whitespace("(")
+    self:EmitExpression(node.expressions[1])
+    self:Whitespace(")")
+    self:EmitToken(node.tokens["]"])
+
+    self:EmitToken(node.tokens["="])
+
+    self:EmitExpression(node.expressions[2])
+end
+
+function META:EmitTableKeyValue(node)
+    self:EmitToken(node.tokens["identifier"])
+    self:EmitToken(node.tokens["="])
+    self:EmitExpression(node.expression)
+end
+
 function META:EmitTable(tree)
     if tree.spread then
         self:Emit("table.mergetables")
@@ -227,20 +249,9 @@ function META:EmitTable(tree)
                         during_spread = true
                         self:Emit("{")
                     end
-                    self:EmitToken(node.tokens["identifier"])
-                    self:EmitToken(node.tokens["="])
-                    self:EmitExpression(node.expression)
+                    self:EmitTableKeyValue(node)
                 elseif node.kind == "table_expression_value" then
-
-                    self:EmitToken(node.tokens["["])
-                    self:Whitespace("(")
-                    self:EmitExpression(node.expressions[1])
-                    self:Whitespace(")")
-                    self:EmitToken(node.tokens["]"])
-
-                    self:EmitToken(node.tokens["="])
-
-                    self:EmitExpression(node.expressions[2])
+                    self:EmitTableExpressionValue(node)
                 end
 
                 if tree.tokens["separators"][i] then
@@ -748,6 +759,10 @@ do -- types
             self:EmitTableType(node)
         elseif node.kind == "type_list" then
             self:EmitListType(node)
+        elseif node.kind == "table_expression_value" then
+            self:EmitTableExpressionValue(node)
+        elseif node.kind == "table_key_value" then
+            self:EmitTableKeyValue(node)
         else
             error("unhandled token type " .. node.kind)
         end

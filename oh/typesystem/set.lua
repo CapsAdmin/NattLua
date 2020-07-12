@@ -312,4 +312,12 @@ function META:Initialize(data)
     return true
 end
 
+function META:Max(val)
+    local copy = self:Copy()
+    for _, e in ipairs(copy:GetElements()) do
+        e:Max(val)
+    end
+    return copy
+end
+
 return types.RegisterType(META)

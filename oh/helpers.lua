@@ -18,8 +18,6 @@ function helpers.QuoteTokens(var)
 	return str
 end
 
-local tab_size = 1
-
 do
 	function helpers.LinePositionToSubPosition(code, line, character)
 		local line_pos = 1
@@ -36,11 +34,7 @@ do
 						return i
 					end
 
-					if c == "\t" then
-						char_pos = char_pos +tab_size
-					else
-						char_pos = char_pos + 1
-					end
+					char_pos = char_pos + 1
 				end
 
 				return i
@@ -93,11 +87,7 @@ do
 				line_pos = i
 				char_pos = 0
 			else
-				if char == "\t" then
-					char_pos = char_pos + tab_size
-				else
-					char_pos = char_pos + 1
-				end
+				char_pos = char_pos + 1
 			end
 		end
 
@@ -226,7 +216,7 @@ do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 
 					if line == line_start then
-						prefix = prefix .. code:sub(table.unpack(data.sub_line_before)):gsub("\t", (" "):rep(tab_size))
+						prefix = prefix .. code:sub(table.unpack(data.sub_line_before)):gsub("\t", (" "):rep(1))
 					end
 
 					local test = str
@@ -329,6 +319,31 @@ do
 		traverse(tbl, {}, out)
         return out.max, out.min
     end
+end
+
+function helpers.GetDataFromLineCharPosition(tokens, code, line, char)
+	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
+
+	for _, token in ipairs(tokens) do
+		local found = token.start >= sub_pos-- and token.stop <= sub_pos
+
+		if not found and token.whitespace then
+			for _, token in ipairs(token.whitespace) do
+				if token.start >= sub_pos--[[ and token.stop <= sub_pos]] then
+					found = true
+					break
+				end
+			end
+		end
+
+		if found then
+			return
+				token,
+				token.parent_expression,
+				token.parent_statement,
+				helpers.SubPositionToLinePosition(code, token.start, token.stop)
+		end
+	end
 end
 
 return helpers

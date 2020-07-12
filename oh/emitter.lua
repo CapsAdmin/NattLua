@@ -69,7 +69,9 @@ return function(emitter_meta, syntax)
     function META:EmitToken(node, translate)
         if node.whitespace then
             for _, data in ipairs(node.whitespace) do
-                self:EmitWhitespace(data)
+                if self.config.no_comments ~= true or (data.type ~= "multiline_comment" and data.type ~= "line_comment") then
+                    self:EmitWhitespace(data)
+                end
             end
         end
 
