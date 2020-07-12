@@ -75,10 +75,6 @@ local function getprettysource(level, append_line, full_folder)
 		if info.source:sub(1, 1) == "@" then
 			pretty_source = info.source:sub(2)
 
-			if not full_folder and vfs then
-				pretty_source = vfs.FixPathSlashes(pretty_source:replace(e.ROOT_FOLDER, ""))
-			end
-
 			if append_line then
 				local line = info.currentline
 				if line == -1 then
@@ -186,8 +182,6 @@ luadata.SetModifier("table", function(tbl, context)
 		else
 			for i = 1, #tbl do
 				str[#str+1] = ("%s%s,\n"):format(("\t"):rep(context.tab), luadata.ToString(tbl[i], context))
-
-				if context.thread then thread:Wait() end
 			end
 		end
 	else
@@ -205,8 +199,6 @@ luadata.SetModifier("table", function(tbl, context)
 					end
 				end
 			end
-
-			if context.thread then thread:Wait() end
 		end
 	end
 
@@ -263,51 +255,25 @@ function luadata.FromString(str)
 	return func()
 end
 
-function luadata.Encode(tbl, callback)
-	if callback then
-		local thread = tasks.CreateTask()
-
-		function thread:OnStart()
-			return luadata.ToString(tbl, {thread = self})
-		end
-
-		function thread:OnFinish(...)
-			callback(...)
-		end
-
-		function thread:OnError(msg)
-			callback(false, msg)
-		end
-
-		thread:Start()
-	else
-		return luadata.ToString(tbl)
-	end
+function luadata.Encode(tbl)
+	return luadata.ToString(tbl)
 end
 
-function luadata.Decode(str, skip_error)
+function luadata.Decode(str)
 	if not str then return {} end
 
 	local func, err = load("return {\n" .. str .. "\n}", "luadata")
 
 	if not func then
-		if not skip_error then wlog("luadata syntax error: ", err, 2) end
-		return {}
+		return func, err
 	end
 
 	setfenv(func, env)
 
-	local ok, err
-
-	if not skip_error then
-		ok, err = xpcall(func, system and system.OnError or print)
-	else
-		ok, err = pcall(func)
-	end
+	local ok, err = pcall(func)
 
 	if not ok then
-		if not skip_error then wlog("luadata runtime error: ", err, 2) end
-		return {}
+		return func, err
 	end
 
 	return err
