@@ -338,9 +338,7 @@ function helpers.GetDataFromLineCharPosition(tokens, code, line, char)
 
 		if found then
 			return
-				token,
-				token.parent_expression,
-				token.parent_statement,
+				tokens[_-1] or token,
 				helpers.SubPositionToLinePosition(code, token.start, token.stop)
 		end
 	end

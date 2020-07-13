@@ -163,7 +163,9 @@ return function(parser_meta, syntax, Emitter)
 
     function META:ReadTokenLoose()
         self:Advance(1)
-        return self:GetToken(-1)
+        local tk = self:GetToken(-1)
+        tk.parent = self.nodes[1]
+        return tk
     end
 
     function META:AddTokens(tokens)
@@ -230,9 +232,6 @@ return function(parser_meta, syntax, Emitter)
     end
 
     function META:Advance(offset)
-        self.tokens[self.i].parent_expression = self.current_expression
-        self.tokens[self.i].parent_statement = self.current_statement
-
         self.i = self.i + offset
     end
 
@@ -246,7 +245,7 @@ return function(parser_meta, syntax, Emitter)
 
 
     function META:Root(root)
-        local node = self:Statement("root")
+        local node = self:BeginStatement("root", true)
         self.root = root or node
 
         local shebang
@@ -268,7 +267,7 @@ return function(parser_meta, syntax, Emitter)
             table_insert(node.statements, eof)
         end
 
-        return node
+        return self:EndStatement()
     end
 
     function META:ReadStatements(stop_token)
@@ -299,18 +298,31 @@ return function(parser_meta, syntax, Emitter)
     end
 
     do -- functional-like helpers. makes the code easier to read and maintain but does not always work
-        function META:BeginStatement(kind)
+        function META:BeginStatement(kind, return_node)
             self.nodes = self.nodes or {}
 
-            table.insert(self.nodes, 1, self:Statement(kind))
+            local node = self:Statement(kind)
+            node.parent = self.nodes[1]
+
+            table.insert(self.nodes, 1, node)
+
+            if return_node then
+                return node
+            end
 
             return self
         end
 
-        function META:BeginExpression(kind)
+        function META:BeginExpression(kind, return_node)
             self.nodes = self.nodes or {}
 
-            table.insert(self.nodes, 1, self:Expression(kind))
+            local node = self:Expression(kind)
+            node.parent = self.nodes[1]
+            table.insert(self.nodes, 1, node)
+
+            if return_node then
+                return node
+            end
 
             return self
         end
@@ -343,6 +355,8 @@ return function(parser_meta, syntax, Emitter)
                 tokens[what] = token
             end
 
+            token.parent = self.nodes[1]
+
             return self
         end
 
@@ -350,12 +364,8 @@ return function(parser_meta, syntax, Emitter)
             return expect(self, self.ReadValue, what, start, stop)
         end
 
-        function META:ExpectType(what, start, stop)
-            return expect(self, self.ReadType, what, start, stop)
-        end
-
         function META:StatementsUntil(what)
-            self.nodes[1].statements = self:ReadStatements({[what] = true})
+            self.nodes[1].statements = self:ReadStatements(type(what) == "table" and what or {[what] = true})
 
             return self
         end

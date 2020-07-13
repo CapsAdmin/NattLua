@@ -217,9 +217,7 @@ function META:ReadFunctionBody(node)
     node.identifiers = self:ReadIdentifierList()
 
     if self:IsValue("...") then
-        local vararg = self:Expression("value")
-        vararg.value = self:ReadValue("...")
-        table_insert(node.identifiers, vararg)
+        table_insert(node.identifiers, self:BeginExpression("value"):Store("value", self:ReadValue()):EndExpression())
     end
 
     node.tokens[")"] = self:ReadValue(")")
@@ -246,29 +244,29 @@ function META:ReadFunctionBody(node)
 end
 
 do  -- function
-    local function read_function_expression(self)
-        local val = self:Expression("value")
+    function META:ReadIndexExpression()
+        self:BeginExpression("value")
+        local val = self:GetNode()
         val.value = self:ReadType("letter")
 
         while self:IsValue(".") or self:IsValue(":") do
             local op = self:GetToken()
             if not op then break end
+            op.parent = self.nodes[1]
             self:Advance(1)
 
             local left = val
-            local right = read_function_expression(self)
 
-            val = self:Expression("binary_operator")
+            self:EndExpression()
+            val = self:BeginExpression("binary_operator", true)
             val.value = op
             val.left = val.left or left
-            val.right = val.right or right
+            val.right = val.right or self:ReadIndexExpression()
         end
 
-        return val
-    end
+        self:EndExpression()
 
-    function META:ReadIndexExpression()
-        return read_function_expression(self)
+        return val
     end
 
     do
@@ -277,9 +275,9 @@ do  -- function
         end
 
         function META:ReadFunctionStatement()
-            local node = self:Statement("function")
+            local node = self:BeginStatement("function", true)
             node.tokens["function"] = self:ReadValue("function")
-            node.expression = read_function_expression(self)
+            node.expression = self:ReadIndexExpression()
 
             do -- hacky
                 if node.expression.left then
@@ -295,7 +293,7 @@ do  -- function
 
             self:ReadFunctionBody(node)
 
-            return node
+            return self:EndStatement()
         end
     end
 end
@@ -312,8 +310,7 @@ do
         :ExpectKeyword("function")
         :ExpectSimpleIdentifier()
 
-        local node = self:GetNode()
-        self:ReadFunctionBody(node)
+        self:ReadFunctionBody(self:GetNode())
 
         return self:EndStatement()
     end
@@ -325,7 +322,7 @@ do
     end
 
     function META:ReadIfStatement()
-        local node = self:Statement("if")
+        local node = self:BeginStatement("if", true)
 
         node.expressions = {}
         node.statements = {}
@@ -359,7 +356,7 @@ do
 
         node.tokens["end"] = self:ReadValue("end")
 
-        return node
+        return self:EndStatement()
     end
 end
 
@@ -379,7 +376,7 @@ end
 
 do -- identifier
     function META:ReadIdentifier()
-        local node = self:Expression("value")
+        local node = self:BeginExpression("value", true)
 
         if self:IsValue("...") then
             node.value = self:ReadValue("...")
@@ -392,7 +389,7 @@ do -- identifier
             node.type_expression = self:ReadTypeExpression()
         end
 
-        return node
+        return self:EndExpression()
     end
 
     function META:ReadIdentifierList(max)
@@ -416,10 +413,9 @@ do -- expression
         end
 
         function META:ReadFunctionValue()
-            local node = self:Expression("function")
-            node.tokens["function"] = self:ReadValue("function")
-            self:ReadFunctionBody(node)
-            return node
+            self:BeginExpression("function"):ExpectKeyword("function")
+            self:ReadFunctionBody(self:GetNode())
+            return self:EndExpression()
         end
     end
 
@@ -463,10 +459,9 @@ do -- expression
     end
 
     function META:ReadTable()
-        self:BeginExpression("table")
+        local tree = self:BeginExpression("table", true)
         self:ExpectKeyword("{")
 
-        local tree = self:GetNode()
         tree.children = {}
         tree.tokens["separators"] = {}
 
@@ -504,9 +499,7 @@ do -- expression
         end
 
         function META:ReadExpressionValue()
-            local node = self:Expression("value")
-            node.value = self:ReadTokenLoose()
-            return node
+            return self:BeginExpression("value"):Store("value", self:ReadTokenLoose()):EndExpression()
         end
     end
 
@@ -530,9 +523,10 @@ do -- expression
             table_insert(node.tokens[")"], self:ReadValue(")"))
 
         elseif syntax.IsPrefixOperator(self:GetToken()) then
-            node = self:Expression("prefix_operator")
+            node = self:BeginExpression("prefix_operator", true)
             node.value = self:ReadTokenLoose()
             node.right = self:ReadExpression(math.huge, no_ambigious_calls)
+            self:EndExpression()
         elseif self:IsFunctionValue() then
             node = self:ReadFunctionValue()
         elseif self:IsImportExpression() then
@@ -553,36 +547,29 @@ do -- expression
                 if not self:GetToken() then break end
 
                 if self:IsValue(".") and self:IsType("letter", 1) then
-                    local op = self:ReadTokenLoose()
-
-                    local right = self:Expression("value")
-                    right.value = self:ReadType("letter")
-
-                    node = self:Expression("binary_operator")
-                    node.value = op
+                    node = self:BeginExpression("binary_operator", true)
+                    node.value = self:ReadTokenLoose()
+                    node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
                     node.left = left
-                    node.right = right
+                    self:EndExpression()
                 elseif self:IsValue(":") then
                     if self:IsType("letter", 1) and (self:IsValue("(", 2) or (not no_ambigious_calls and self:IsValue("{", 2) or self:IsType("string", 2))) then
-                        local op = self:ReadTokenLoose()
-
-                        local right = self:Expression("value")
-                        right.value = self:ReadType("letter")
-
-                        node = self:Expression("binary_operator")
-                        node.value = op
+                        node = self:BeginExpression("binary_operator", true)
+                        node.value = self:ReadTokenLoose()
+                        node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
                         node.left = left
-                        node.right = right
+                        self:EndExpression()
                     else
                         node.tokens[":"] = self:ReadValue(":")
                         node.type_expression = self:ReadTypeExpression()
                     end
                 elseif syntax.IsPostfixOperator(self:GetToken()) then
-                    node = self:Expression("postfix_operator")
+                    node = self:BeginExpression("postfix_operator", true)
                     node.left = left
                     node.value = self:ReadTokenLoose()
+                    self:EndExpression()
                 elseif self:IsValue("(") then
-                    node = self:Expression("postfix_call")
+                    node = self:BeginExpression("postfix_call", true)
                     node.left = left
                     node.tokens["call("] = self:ReadValue("(")
                     node.expressions = self:ReadExpressionList()
@@ -591,8 +578,9 @@ do -- expression
                     if left.value and left.value.value == ":" then
                         node.self_call = true
                     end
+                    self:EndExpression()
                 elseif self:IsValue("<") and self:IsValue("(", 1) then
-                    node = self:Expression("postfix_call")
+                    node = self:BeginExpression("postfix_call", true)
                     node.left = left
                     node.tokens["call("] = self:ReadValue("<")
                     node.tokens["call(2"] = self:ReadValue("(")
@@ -604,22 +592,23 @@ do -- expression
                     if left.value and left.value.value == ":" then
                         node.self_call = true
                     end
+                    self:EndExpression()
                 elseif not no_ambigious_calls and (self:IsValue("{") or self:IsType("string")) then
-                    node = self:Expression("postfix_call")
+                    node = self:BeginExpression("postfix_call", true)
                     node.left = left
                     if self:IsValue("{") then
                         node.expressions = {self:ReadTable()}
                     else
-                        local val = self:Expression("value")
-                        val.value = self:ReadTokenLoose()
-                        node.expressions = {val}
+                        node.expressions = {self:BeginExpression("value"):Store("value", self:ReadTokenLoose()):EndExpression()}
                     end
+                    self:EndExpression()
                 elseif self:IsValue("[") then
-                    node = self:Expression("postfix_expression_index")
+                    node = self:BeginExpression("postfix_expression_index", true)
                     node.left = left
                     node.tokens["["] = self:ReadValue("[")
                     node.expression = self:ReadExpectExpression()
                     node.tokens["]"] = self:ReadValue("]")
+                    self:EndExpression()
                 elseif self:IsValue("as") then
                     node.tokens["as"] = self:ReadValue("as")
                     node.type_expression = self:ReadTypeExpression()
@@ -641,18 +630,21 @@ do -- expression
         end
 
         while syntax.IsBinaryOperator(self:GetToken()) and syntax.GetLeftOperatorPriority(self:GetToken()) > priority do
+            self:BeginExpression("binary_operator", true)
+
             local op = self:GetToken()
+            op.parent = self.nodes[1]
             local right_priority = syntax.GetRightOperatorPriority(op)
-            if not op or not right_priority then break end
             self:Advance(1)
 
             local left = node
             local right = self:ReadExpression(right_priority, no_ambigious_calls)
 
-            node = self:Expression("binary_operator")
+            node = self:GetNode()
             node.value = op
             node.left = node.left or left
             node.right = node.right or right
+            self:EndExpression()
         end
 
         return node
@@ -697,17 +689,18 @@ do -- statements
         local left = self:ReadExpressionList(math_huge)
 
         if self:IsValue("=") then
-            local node = self:Statement("assignment")
+            local node = self:BeginStatement("assignment", true)
             node.tokens["="] = self:ReadValue("=")
             node.left = left
             node.right = self:ReadExpressionList(math_huge)
-            return node
+
+            return self:EndStatement()
         end
 
         if left[1] and left[1].kind == "postfix_call" and not left[2] then
-            local node = self:Statement("call_expression")
+            local node = self:BeginStatement("call_expression", true)
             node.value = left[1]
-            return node
+            return self:EndStatement()
         end
 
         self:Error("expected assignment or call expression got $1 ($2)", start, self:GetToken(), self:GetToken().type, self:GetToken().value)

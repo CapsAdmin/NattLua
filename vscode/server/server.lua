@@ -142,7 +142,7 @@ function server:HandleMessage(resp, client)
 		local code, tokens = compile(resp.params.textDocument.uri, self, client)
 		local pos = resp.params.position
 
-		local token, expression, statement, data = helpers.GetDataFromLineCharPosition(tokens, code, pos.line + 1, pos.character + 1)
+		local token, data = helpers.GetDataFromLineCharPosition(tokens, code, pos.line + 1, pos.character + 1)
 
 		if not token then
 			self:Respond(client, {
@@ -154,6 +154,32 @@ function server:HandleMessage(resp, client)
 			return
 		end
 
+
+		local found = {}
+		local node = token
+		repeat
+			table.insert(found, node)
+			node = node.parent
+		until not node
+
+		local expression
+		for i,v in ipairs(found) do
+			if v.type == "expression" then
+				expression = v
+				break
+			end
+		end
+		local statement
+		for i,v in ipairs(found) do
+			if v.type == "statement" then
+				statement = v
+				break
+			end
+		end
+
+		print(expression, statement)
+
+
 		local str = ""
 
 		if statement then
@@ -162,10 +188,6 @@ function server:HandleMessage(resp, client)
 				str = str .. tostring(statement.inferred_type)
 				str = str .. "\n```\n"
 			end
-
-			str = str .. "### statement\n```lua\n"
-			str = str .. statement:Render({preserve_whitespace = false, no_comments = true})
-			str = str .. "\n```\n"
 		end
 
 		if expression then
@@ -174,11 +196,6 @@ function server:HandleMessage(resp, client)
 				str = str .. tostring(expression.inferred_type)
 				str = str .. "\n```\n"
 			end
-
-			str = str .. "### expression\n```lua\n"
-			str = str .. expression:Render({preserve_whitespace = false, no_comments = true})
-			str = str .. "\n```\n"
-
 		end
 
 		str = str .. "### token\n```lua\n"
@@ -191,6 +208,25 @@ function server:HandleMessage(resp, client)
 			str = str .. "```lua\n"
 			str = str .. tostring(expression.inferred_type)
 			str = str .. "\n```\n"
+		end
+
+		if token and token.parent then
+			local s = ""
+			s = s .. "### parent\n```lua\n"
+
+			local temp = {}
+			for i,v in ipairs(found) do
+				if v.type == "expression" then
+					temp[i] = tostring(v) .. ": " .. v:Render({preserve_whitespace = false, no_comments = true})
+				else
+					temp[i] = tostring(v)
+				end
+			end
+
+			s = s .. table.concat(temp, "\n")
+			s = s .. "\n```\n"
+
+			str = s .. str
 		end
 
 		self:Respond(client, {
