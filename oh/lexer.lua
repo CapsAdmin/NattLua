@@ -1,13 +1,21 @@
 return function(lexer_meta, syntax)
     local helpers = require("oh.helpers")
 
+    local ref = 0
+    local meta = {}
+    meta.__index = meta
+    function meta:__tostring()
+        return string.format("[token - %s][ %s ] %d", self.type, self.value, self.ref)
+    end
     local function Token(type, start, stop, value)
-        return {
+        ref = ref + 1
+        return setmetatable({
+            ref = ref,
             type = type,
             start = start,
             stop = stop,
             value = value,
-        }
+        }, meta)
     end
 
     local B = string.byte

@@ -267,6 +267,23 @@ function META:ReadTypeTable()
     return self:EndExpression()
 end
 
+do
+    function META:IsTypeCall()
+        return self:IsValue("<") and self:IsValue("(", 1)
+    end
+
+    function META:ReadTypeCall()
+        local node = self:BeginExpression("postfix_call", true)
+        node.tokens["call("] = self:ReadValue("<")
+        node.tokens["call(2"] = self:ReadValue("(")
+        node.expressions = self:ReadTypeExpressionList()
+        node.tokens["call)2"] = self:ReadValue(")")
+        node.tokens["call)"] = self:ReadValue(">")
+        node.type_call = true
+        return self:EndExpression()
+    end
+end
+
 function META:ReadTypeExpression(priority)
     priority = priority or 0
 
@@ -326,53 +343,33 @@ function META:ReadTypeExpression(priority)
             local left = node
             if not self:GetToken() then break end
 
-            if self:IsValue(".") and self:IsType("letter", 1) then
-                local op = self:ReadTokenLoose()
-
-                local right = self:Expression("value")
-                right.value = self:ReadType("letter")
-
-                node = self:Expression("binary_operator")
-                node.value = op
-                node.left = left
-                node.right = right
-            elseif self:IsValue(":") then
-                if self:IsType("letter", 1) and (self:IsValue("(", 2) or self:IsValue("{", 2) or self:IsValue("\"", 2) or self:IsValue("'", 2)) then
-                    local op = self:ReadTokenLoose()
-
-                    local right = self:Expression("value")
-                    right.value = self:ReadType("letter")
-
-                    node = self:Expression("binary_operator")
-                    node.value = op
+            if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
+                if self:IsValue(".") or self:IsCallExpression(no_ambigious_calls, 2) then
+                    node = self:BeginExpression("binary_operator", true)
+                    node.value = self:ReadTokenLoose()
+                    node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
                     node.left = left
-                    node.right = right
+                    self:EndExpression()
+                elseif self:IsValue(":") then
+                    node.tokens[":"] = self:ReadValue(":")
+                    node.type_expression = self:ReadTypeExpression()
                 end
             elseif syntax.IsPostfixTypeOperator(self:GetToken()) then
                 node = self:Expression("postfix_operator")
                 node.left = left
                 node.value = self:ReadTokenLoose()
-            elseif self:IsValue("<") and self:IsValue("(", 1) then
-                node = self:Expression("postfix_call")
+            elseif self:IsTypeCall() then
+                node = self:ReadTypeCall()
                 node.left = left
-                node.tokens["call("] = self:ReadValue("<")
-                node.tokens["call(2"] = self:ReadValue("(")
-                node.expressions = self:ReadTypeExpressionList()
-                node.tokens["call)2"] = self:ReadValue(")")
-                node.tokens["call)"] = self:ReadValue(">")
-                node.type_call = true
-            elseif self:IsValue("(") then
-                node = self:Expression("postfix_call")
+            elseif self:IsCallExpression(no_ambigious_calls) then
+                node = self:ReadCallExpression(no_ambigious_calls)
                 node.left = left
-                node.tokens["call("] = self:ReadValue("(")
-                node.expressions = self:ReadTypeExpressionList()
-                node.tokens["call)"] = self:ReadValue(")")
-            elseif self:IsValue("[") then
-                node = self:Expression("type_list")
-                node.left = left
-                node.tokens["["] = self:ReadValue("[")
-                node.types = self:ReadTypeExpressionList()
-                node.tokens["]"] = self:ReadValue("]")
+                if left.value and left.value.value == ":" then
+                    node.self_call = true
+                end
+            elseif self:IsPostfixExpressionIndex() then
+                    node = self:ReadPostfixExpressionIndex()
+                    node.left = left
             elseif self:IsValue("as") then
                 node.tokens["as"] = self:ReadValue("as")
                 node.type_expression = self:ReadTypeExpression()

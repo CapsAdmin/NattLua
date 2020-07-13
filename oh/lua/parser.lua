@@ -503,6 +503,47 @@ do -- expression
         end
     end
 
+
+    do
+        function META:IsCallExpression(no_ambigious_calls, offset)
+            if no_ambigious_calls then
+                return self:IsValue("(", offset)
+            end
+
+            return self:IsValue("(", offset) or self:IsValue("{", offset) or self:IsType("string", offset)
+        end
+
+        function META:ReadCallExpression(no_ambigious_calls)
+            local node = self:BeginExpression("postfix_call", true)
+
+            if self:IsValue("{") then
+                node.expressions = {self:ReadTable()}
+            elseif self:IsType("string") then
+                node.expressions = {self:BeginExpression("value"):Store("value", self:ReadTokenLoose()):EndExpression()}
+            else
+                node.tokens["call("] = self:ReadValue("(")
+                node.expressions = self:ReadExpressionList()
+                node.tokens["call)"] = self:ReadValue(")")
+            end
+
+            return self:EndExpression()
+        end
+    end
+
+    do
+        function META:IsPostfixExpressionIndex()
+            return self:IsValue("[")
+        end
+
+        function META:ReadPostfixExpressionIndex()
+            return self:BeginExpression("postfix_expression_index")
+                :ExpectKeyword("[")
+                :ExpectExpression()
+                :ExpectKeyword("]")
+            :EndExpression()
+        end
+    end
+
     function META:ReadExpression(priority, no_ambigious_calls)
         priority = priority or 0
 
@@ -546,75 +587,45 @@ do -- expression
                 local left = node
                 if not self:GetToken() then break end
 
-                if self:IsValue(".") and self:IsType("letter", 1) then
-                    node = self:BeginExpression("binary_operator", true)
-                    node.value = self:ReadTokenLoose()
-                    node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
-                    node.left = left
-                    self:EndExpression()
-                elseif self:IsValue(":") then
-                    if self:IsType("letter", 1) and (self:IsValue("(", 2) or (not no_ambigious_calls and self:IsValue("{", 2) or self:IsType("string", 2))) then
+                if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
+                    if self:IsValue(".") or self:IsCallExpression(no_ambigious_calls, 2) then
                         node = self:BeginExpression("binary_operator", true)
                         node.value = self:ReadTokenLoose()
                         node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
                         node.left = left
                         self:EndExpression()
-                    else
+                    elseif self:IsValue(":") then
                         node.tokens[":"] = self:ReadValue(":")
                         node.type_expression = self:ReadTypeExpression()
                     end
                 elseif syntax.IsPostfixOperator(self:GetToken()) then
-                    node = self:BeginExpression("postfix_operator", true)
+                    node = self
+                        :BeginExpression("postfix_operator")
+                            :Store("left", left)
+                            :Store("value", self:ReadTokenLoose())
+                        :EndExpression()
+                elseif self:IsCallExpression(no_ambigious_calls) then
+                    node = self:ReadCallExpression(no_ambigious_calls)
                     node.left = left
-                    node.value = self:ReadTokenLoose()
-                    self:EndExpression()
-                elseif self:IsValue("(") then
-                    node = self:BeginExpression("postfix_call", true)
-                    node.left = left
-                    node.tokens["call("] = self:ReadValue("(")
-                    node.expressions = self:ReadExpressionList()
-                    node.tokens["call)"] = self:ReadValue(")")
-
                     if left.value and left.value.value == ":" then
                         node.self_call = true
                     end
-                    self:EndExpression()
-                elseif self:IsValue("<") and self:IsValue("(", 1) then
-                    node = self:BeginExpression("postfix_call", true)
+                elseif self:IsPostfixExpressionIndex() then
+                    node = self:ReadPostfixExpressionIndex()
                     node.left = left
-                    node.tokens["call("] = self:ReadValue("<")
-                    node.tokens["call(2"] = self:ReadValue("(")
-                    node.expressions = self:ReadTypeExpressionList()
-                    node.tokens["call)2"] = self:ReadValue(")")
-                    node.tokens["call)"] = self:ReadValue(">")
-                    node.type_call = true
-
-                    if left.value and left.value.value == ":" then
-                        node.self_call = true
-                    end
-                    self:EndExpression()
-                elseif not no_ambigious_calls and (self:IsValue("{") or self:IsType("string")) then
-                    node = self:BeginExpression("postfix_call", true)
-                    node.left = left
-                    if self:IsValue("{") then
-                        node.expressions = {self:ReadTable()}
-                    else
-                        node.expressions = {self:BeginExpression("value"):Store("value", self:ReadTokenLoose()):EndExpression()}
-                    end
-                    self:EndExpression()
-                elseif self:IsValue("[") then
-                    node = self:BeginExpression("postfix_expression_index", true)
-                    node.left = left
-                    node.tokens["["] = self:ReadValue("[")
-                    node.expression = self:ReadExpectExpression()
-                    node.tokens["]"] = self:ReadValue("]")
-                    self:EndExpression()
                 elseif self:IsValue("as") then
                     node.tokens["as"] = self:ReadValue("as")
                     node.type_expression = self:ReadTypeExpression()
                 elseif self:IsValue("is") then
                     node.tokens["is"] = self:ReadValue("is")
                     node.type_expression = self:ReadTypeExpression()
+                elseif self:IsTypeCall() then
+                    node = self:ReadTypeCall()
+
+                    node.left = left
+                    if left.value and left.value.value == ":" then
+                        node.self_call = true
+                    end
                 else
                     break
                 end
@@ -623,27 +634,18 @@ do -- expression
                     node.primary = first
                 end
             end
-        end
 
-        if first and first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
-            first.upvalue_or_global = node
+            if first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
+                first.upvalue_or_global = node
+            end
         end
 
         while syntax.IsBinaryOperator(self:GetToken()) and syntax.GetLeftOperatorPriority(self:GetToken()) > priority do
-            self:BeginExpression("binary_operator", true)
-
-            local op = self:GetToken()
-            op.parent = self.nodes[1]
-            local right_priority = syntax.GetRightOperatorPriority(op)
-            self:Advance(1)
-
             local left = node
-            local right = self:ReadExpression(right_priority, no_ambigious_calls)
-
-            node = self:GetNode()
-            node.value = op
-            node.left = node.left or left
-            node.right = node.right or right
+            node = self:BeginExpression("binary_operator", true)
+            node.value = self:ReadTokenLoose()
+            node.left = left
+            node.right = self:ReadExpression(syntax.GetRightOperatorPriority(node.value), no_ambigious_calls)
             self:EndExpression()
         end
 
