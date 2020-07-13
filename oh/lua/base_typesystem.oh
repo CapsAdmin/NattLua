@@ -217,6 +217,9 @@ do
 
 	type function io.open(): File
 	type function io.popen(): File
+	type io.stdout = File
+	type io.stdin = File
+	type io.stderr = File
 end
 
 type ffi = {
