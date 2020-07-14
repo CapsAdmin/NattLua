@@ -363,8 +363,14 @@ parse = function(str--[[#: string]], idx--[[#: number]])--[[#: any, number]]
 	local chr = str:sub(idx, idx)
 	local f = char_func_map[chr]
 	if f then
-		--[[#type lol = function(T) T:RemoveElement(types.Nil) end]]
-		--[[#lol(f)]]
+		--[[#
+			type lol = function(T)
+				if T.Type == "set" then
+					T:RemoveElement(types.Nil)
+				end
+			end
+			lol(f)
+		]]
 		return f(str, idx)
 	end
 	decode_error(str, idx, "unexpected character '" .. chr .. "'")

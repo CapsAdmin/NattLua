@@ -727,7 +727,6 @@ do -- statements
             self:IsLocalDestructureAssignmentStatement() then       return self:ReadLocalDestructureAssignmentStatement() elseif
             self:IsLocalAssignmentStatement() then                  return self:ReadLocalAssignmentStatement() elseif
             self:IsTypeAssignment() then                            return self:ReadTypeAssignment() elseif
-            self:IsTypeComment() then                               return self:ReadTypeComment() elseif
             self:IsInterfaceStatement() then                        return self:ReadInterfaceStatement() elseif
             self:IsDoStatement() then                               return self:ReadDoStatement() elseif
             self:IsIfStatement() then                               return self:ReadIfStatement() elseif

@@ -843,13 +843,19 @@ end
 function META:AnalyzeFile(path)
     local oh = require("oh")
     local root, code_data = assert(oh.ParseFile(path))
-    oh.PushAnalyzer(self)
     self.code = code_data.code
     self.path = path
-    self:AnalyzeStatement(root.SyntaxTree)
+
+    oh.PushAnalyzer(self)
+    self:PushScope(root.SyntaxTree)
+    self:ReturnFromThisScope()
+    self:AnalyzeStatements(root.SyntaxTree.statements)
+    local analyzed_return = types.Tuple(self:GetReturnExpressions())
+    self:ClearReturnExpressions()
+    self:PopScope()
     oh.PopAnalyzer()
 
-    return types.Tuple(self:GetReturnExpressions()), root, code_data
+    return analyzed_return, root, code_data
 end
 
 function META:AnalyzeStatement(statement)

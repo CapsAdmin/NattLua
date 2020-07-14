@@ -548,18 +548,4 @@ do
     end
 end
 
-do
-    -- todo: GetLength > while
-    function META:IsTypeComment()
-        return self:IsType("type_comment")
-    end
-
-    function META:ReadTypeComment()
-        local code = self:ReadType("type_comment").value:sub(#"--:"+1)
-        local lexer = require("oh.lua.lexer")(code)
-        self:AddTokens(lexer:GetTokens())
-        return self:ReadStatement()
-    end
-end
-
 return META

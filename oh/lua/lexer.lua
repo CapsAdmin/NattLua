@@ -71,8 +71,6 @@ end
 do
     function META:IsLineComment()
         return self:IsValue("-") and self:IsValue("-", 1)
-        -- we have to add this check here becuse line comments / whitespace is read before non whitespace
-        and not self:IsValue(":", 2) -- type comment
     end
 
     function META:ReadLineComment()

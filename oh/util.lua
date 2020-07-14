@@ -1,6 +1,6 @@
 local util = {}
 
-function util.FetchCode(path, url) --: type util.FetchCode = function(string, string): string
+function util.FetchCode(path--[[#: string]], url--[[#: string]]) --: type util.FetchCode = function(string, string): string
     local f = io.open(path, "rb")
     if not f then
         os.execute("wget -O "..path.." " .. url)
@@ -51,7 +51,7 @@ do
 		end
     end
 
-    function util.TablePrint(tbl, blacklist)
+    function util.TablePrint(tbl--[[#: {[any] = any}]], blacklist--[[#: {[string] = string} ]])
         dump(tbl, blacklist, {})
     end
 end
