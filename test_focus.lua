@@ -1,21 +1,13 @@
---DISABLE_BASE_TYPE S
-local function test(a, b)
+local type Base = {
+    Test = function(self, number): number,
+}
 
-end
+local type Foo = Base extends {
+    GetPos = (function(self): number),
+}
 
-test(true, false)
-test(false, true)
-test(1, "")
+-- have to use as here because {} would not be a subset of Foo
+local x = {} as Foo
 
-local type function check(func: any)
-    local a = func:GetArguments():Get(1)     -- this is being crawled for some reason
-    local b = types.Set({
-        types.Number(1),
-        types.False,
-        types.True
-    })
-
-    assert(b:SubsetOf(a))
-end
-
-check(test, "!")
+type_assert(x:Test(1), _ as number)
+type_assert(x:GetPos(), _ as number)

@@ -56,6 +56,20 @@ function META:GetElements()
     return self.data
 end
 
+function META:GetMinimumLength()
+    for i, v in ipairs(self:GetElements()) do
+        if v.Type == "symbol" and v:GetData() == nil then
+            return i - 1
+        end
+
+        if v.Type == "set" and v:Get(types.Nil) then
+            return i - 1
+        end
+    end
+
+    return #self.data
+end
+
 function META:GetLength()
     return #self.data
 end
@@ -65,15 +79,17 @@ function META:GetData()
 end
 
 function META:Copy(self_reference, current_table)
-    local copy = {}
+    local copy = types.Tuple({})
     for i, v in ipairs(self.data) do
         if v == current_table then
-            copy[i] = self_reference
+            copy:Set(i, self_reference)
         else
-            copy[i] = v:Copy(self_reference)
+            copy:Set(i, v:Copy(self_reference))
         end
     end
-    return types.Tuple(copy)
+    copy.node = self.node
+
+    return copy
 end
 
 function META.SubsetOf(A, B)
@@ -177,5 +193,6 @@ function META:Initialize(data)
 
     return true
 end
+
 
 return types.RegisterType(META)

@@ -25,7 +25,7 @@ function META:Get(key)
 
     if not val and self.meta then
         local index = self.meta:Get("__index")
-        if index.Type == "table" then
+        if index and index.Type == "table" then
             return index:Get(key)
         end
     end
@@ -42,7 +42,9 @@ function META:GetData()
 end
 
 function META:Copy()
-    return types.String(self.data):MakeLiteral(self.literal)
+    local copy =  types.String(self.data):MakeLiteral(self.literal)
+    copy.node = self.node
+    return copy
 end
 
 function META.SubsetOf(A, B)

@@ -763,6 +763,8 @@ do -- types
             self:EmitTableExpressionValue(node)
         elseif node.kind == "table_key_value" then
             self:EmitTableKeyValue(node)
+        elseif node.kind == "vararg_tuple" then
+            --self:EmitVarargTuple(node)
         else
             error("unhandled token type " .. node.kind)
         end

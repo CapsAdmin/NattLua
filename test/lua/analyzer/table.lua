@@ -172,9 +172,9 @@ it("is not literal", function()
 end)
 
 it("self reference", function()
-    run[[
+    local a = run[[
         local type Base = {
-            Test = function(self): number,
+            Test = function(self, number): number,
         }
 
         local type Foo = Base extends {
@@ -184,8 +184,15 @@ it("self reference", function()
         -- have to use as here because {} would not be a subset of Foo
         local x = {} as Foo
 
+        type_assert(x:Test(1), _ as number)
         type_assert(x:GetPos(), _ as number)
+
+        local func = x.Test
     ]]
+
+    equal(a:GetValue("func", "runtime"):GetArguments():Get(1):Get("GetPos").Type, "function")
+    equal(a:GetValue("func", "runtime"):GetArguments():Get(1):Get("Test").Type, "function")
+
     run[[
         local type a = {
             foo = self,

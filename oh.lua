@@ -11,24 +11,33 @@ local LuaEmitter = require("oh.lua.emitter")
 
 local helpers = require("oh.helpers")
 
+oh.current_analyzer = {}
+function oh.PushAnalyzer(a)
+    table.insert(oh.current_analyzer, 1, a)
+end
+
+function oh.PopAnalyzer()
+	table.remove(oh.current_analyzer, 1)
+end
+
+function oh.GetCurrentAnalyzer()
+	return oh.current_analyzer[1]
+end
+
 function oh.GetBaseAnalyzer()
 
     if not oh.base_analyzer then
         local base = Analyzer()
 		base.IndexNotFound = nil
 
-		local root, code_data = assert(oh.ParseFile("oh/lua/base_typesystem.oh"))
-
-		oh.current_analyzer = base
-		base.code = code_data.code
-		base.path = "oh/lua/base_typesystem.oh"
-		base:AnalyzeStatement(root.SyntaxTree)
-		oh.current_analyzer = nil
+		local ret, root, code_data = base:AnalyzeFile("oh/lua/base_typesystem.oh")
 
 		local g = base:TypeFromImplicitNode(root, "table")
+
 		for k, v in pairs(base.env.typesystem) do
 			g:Set(k, v)
 		end
+
 		-- TODO: string library isn't in base.env.typesystem
 		g:Set("string", base:GetValue("string", "typesystem"))
 		base:SetValue("_G", g, "typesystem")
@@ -160,8 +169,8 @@ do
 			end
 		end
 
-		if oh.current_analyzer then
-			local analyzer = oh.current_analyzer
+		if oh.GetCurrentAnalyzer() then
+			local analyzer = oh.GetCurrentAnalyzer()
 
 			if analyzer.current_statement and analyzer.current_statement.Render then
 				s = s .. "======== statement =======\n"
@@ -267,9 +276,9 @@ do
 		analyzer.code_data = self
 		analyzer.OnError = self.OnError
 
-		oh.current_analyzer = analyzer
+		oh.PushAnalyzer(analyzer)
 		local ok, ast = xpcall(analyzer.AnalyzeStatement, traceback, analyzer, self.SyntaxTree)
-		oh.current_analyzer = nil
+		oh.PopAnalyzer()
 		self.Analyzer = analyzer
 
 		if not ok then

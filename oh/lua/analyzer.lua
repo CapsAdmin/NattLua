@@ -564,6 +564,7 @@ do -- types
             obj = self:Assert(node, types.Any())
         elseif type == "function" then
             obj = self:Assert(node, types.Function(data))
+            obj.node = node
         end
 
         if type == "string" then
@@ -578,8 +579,8 @@ do -- types
 
         if not obj then error("NYI: " .. type) end
 
-        obj.node = node
-        node.inferred_type = obj
+        obj.node = obj.node or node
+        obj.node.inferred_type = obj
 
         return obj
     end
@@ -640,8 +641,8 @@ do -- types
             local errors = {}
 
             for _, obj in ipairs(obj:GetData()) do
-                if arguments:GetLength() ~= obj:GetArguments():GetLength() then
-                    table.insert(errors, "invalid amount of arguments")
+                if arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
+                    table.insert(errors, "invalid amount of arguments: " .. tostring(arguments) .. " ~= " .. tostring(obj:GetArguments()))
                 else
                     local res, reason = self:Call(obj, arguments, call_node)
 
@@ -657,7 +658,7 @@ do -- types
         end
 
         if obj.Type == "any" then
-            return self:TypeFromImplicitNode(function_node, "any")
+            return self:TypeFromImplicitNode(function_node or call_node, "any")
         end
 
         if obj.Type == "table" then
@@ -728,7 +729,7 @@ do -- types
             self:FireEvent("external_call", call_node, obj)
         else
             if not function_node.statements then
-                error("cannot call " .. tostring(function_node) .. " because it has no statements")
+                self:Error(call_node, "cannot call "..tostring(function_node:Render()).." because it has no statements")
             end
 
             do -- recursive guard
@@ -739,6 +740,11 @@ do -- types
             end
 
             self:PushScope(function_node)
+
+                local arguments = arguments
+                if obj.explicit_arguments and not call_node.type_call and not obj.data.lua_function then
+                    arguments = obj:GetArguments()
+                end
 
                 -- TODO: function_node can be a root statement because of loadstring
                 if function_node.identifiers then
@@ -834,6 +840,18 @@ do -- types
     end
 end
 
+function META:AnalyzeFile(path)
+    local oh = require("oh")
+    local root, code_data = assert(oh.ParseFile(path))
+    oh.PushAnalyzer(self)
+    self.code = code_data.code
+    self.path = path
+    self:AnalyzeStatement(root.SyntaxTree)
+    oh.PopAnalyzer()
+
+    return types.Tuple(self:GetReturnExpressions()), root, code_data
+end
+
 function META:AnalyzeStatement(statement)
     self.current_statement = statement
 
@@ -843,7 +861,17 @@ function META:AnalyzeStatement(statement)
         self:PopScope()
         if self.deferred_calls then
             for _,v in ipairs(self.deferred_calls) do
-                if not v[1].called then
+                if not v[1].called and v[1].explicit_arguments then
+                    local obj, arguments, node = table.unpack(v)
+
+                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+                    arguments = obj:GetArguments()
+                    self:Assert(node, self:Call(obj, arguments, node))
+                end
+            end
+
+            for _,v in ipairs(self.deferred_calls) do
+                if not v[1].called and not v[1].explicit_arguments then
                     local obj, arguments, node = table.unpack(v)
 
                     -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
@@ -1202,6 +1230,8 @@ do
                 obj = self:GetInferredType(node, env)
             end
 
+            node.inferred_type = node.inferred_type or obj
+
             return obj
         elseif node.value.type == "number" then
             return self:TypeFromImplicitNode(node, "number", self:StringToNumber(node.value.value), true)
@@ -1226,17 +1256,26 @@ do
     end
 
     function META:AnalyzeFunction(node, env)
+        local explicit_arguments = false
+        local explicit_return = false
+
         local args = {}
 
         for i, key in ipairs(node.identifiers) do
             -- if this node is already explicitly annotated with foo: mytype or foo as mytype use that
             if key.identifier then
                 args[i] = self:AnalyzeExpression(key, "typesystem")
+                explicit_arguments = true
             elseif key.type_expression then
                 args[i] = self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
+                explicit_arguments = true
             else
                 if node.kind == "type_function" then
-                    args[i] = self:GetInferredType(key)
+                    if key.kind == "value" and key.value.value == "self" then
+                        args[i] = self.current_table
+                    else
+                        args[i] = self:GetInferredType(key)
+                    end
                 elseif key.kind == "value" and key.value.value == "..." then
                     args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
                 elseif key.kind == "type_table" then
@@ -1263,6 +1302,7 @@ do
         local ret = {}
 
 		if node.return_types then
+            explicit_return = true
 			self:PushScope(node)
                 for i, key in ipairs(node.identifiers) do
                     if key.kind == "value" then
@@ -1295,11 +1335,15 @@ do
             end
         end
 
+
         local obj = self:TypeFromImplicitNode(node, "function", {
             arg = args,
             ret = ret,
             lua_function = func
         })
+
+        obj.explicit_arguments = explicit_arguments
+        obj.explicit_return = explicit_return
 
         if env == "runtime" then
             self:CallMeLater(obj, args, node, true)

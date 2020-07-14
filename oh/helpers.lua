@@ -288,6 +288,7 @@ end
 
 do
 	local blacklist = {
+		parent = true,
 		inferred_type = true,
 		scope = true,
 	}
@@ -325,11 +326,11 @@ function helpers.GetDataFromLineCharPosition(tokens, code, line, char)
 	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
 
 	for _, token in ipairs(tokens) do
-		local found = token.start >= sub_pos-- and token.stop <= sub_pos
+		local found = token.stop >= sub_pos-- and token.stop <= sub_pos
 
 		if not found and token.whitespace then
 			for _, token in ipairs(token.whitespace) do
-				if token.start >= sub_pos--[[ and token.stop <= sub_pos]] then
+				if token.stop >= sub_pos--[[ and token.stop <= sub_pos]] then
 					found = true
 					break
 				end
@@ -337,9 +338,7 @@ function helpers.GetDataFromLineCharPosition(tokens, code, line, char)
 		end
 
 		if found then
-			return
-				tokens[_-1] or token,
-				helpers.SubPositionToLinePosition(code, token.start, token.stop)
+			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
 		end
 	end
 end

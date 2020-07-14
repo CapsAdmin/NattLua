@@ -24,7 +24,7 @@ local types = {}
 
 local function store_error(msg)
     do return end -- WIP
-    local a = require("oh").current_analyzer
+    local a = require("oh").GetCurrentAnalyzer()
     if a then
         a.error_stack = a.error_stack or {}
         table.insert(a.error_stack, {
@@ -116,6 +116,7 @@ do
     types.BaseObject = Base
 end
 
+local oof = false
 local uid = 0
 function types.RegisterType(meta)
     for k, v in pairs(types.BaseObject) do
@@ -136,6 +137,14 @@ function types.RegisterType(meta)
             end
         end
 --        self.trace = debug.traceback()
+
+        if oof then
+            local a = require("oh").GetCurrentAnalyzer()
+            if a then
+                self.node = a.current_expression
+            end
+        end
+
         return self
     end
 end
@@ -156,6 +165,8 @@ function types.Initialize()
     types.Boolean = types.Set({types.True, types.False}):MakeExplicitNotLiteral(true)
     types.NumberType = types.Number()
     types.StringType = types.String()
+
+    oof = true
 end
 
 return types

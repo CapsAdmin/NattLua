@@ -1,8 +1,5 @@
 io.stdout:setvbuf("no")
 io.stderr:setvbuf("no")
-
-print("HELLO WORLD")
-
 io.flush()
 --if not ... then return end
 
@@ -10,6 +7,7 @@ local ffi = require("ffi")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
 ffi.C.chdir("/home/caps/oh/")
 
+local json = require("vscode.server.json")
 local oh = require("oh")
 local helpers = require("oh.helpers")
 local tprint = require("oh.util").TablePrint
@@ -43,44 +41,48 @@ local function compile(uri, server, client)
 
 	local file = oh.Code(code, uri, {annotate = true})
 
+	local resp = {
+		method = "textDocument/publishDiagnostics",
+		params = {
+			uri = uri,
+			diagnostics = {},
+		}
+	}
+
 	function file:OnError(msg, start, stop, ...)
-		print(msg, start, stop)
 		msg = helpers.FormatMessage(msg, ...)
 		local data = helpers.SubPositionToLinePosition(code, start, stop)
 
 		if not data then
-			print("INTERNAL ERROR: ", self, msg, start, stop, ...)
-			return
+			local code = io.open(oh.GetBaseAnalyzer().path):read("*all")
+			data = helpers.SubPositionToLinePosition(code, start, stop)
+			if not data then
+				print("INTERNAL ERROR: ", self, msg, start, stop, ...)
+				return
+			end
 		end
 
-		local resp = {
-			method = "textDocument/publishDiagnostics",
-			params = {
-				uri = uri,
-				diagnostics = {
-					{
-						severity = DiagnosticSeverity.error,
-						range = {
-							start = {
-								line = data.line_start-1,
-								character = data.character_start,
-							},
-							["end"] = {
-								line = data.line_stop-1,
-								character = data.character_stop,
-							},
-						},
-						message = msg,
-					}
-				}
-			}
-		}
+		table.insert(resp.params.diagnostics, {
+			severity = DiagnosticSeverity.error,
+			range = {
+				start = {
+					line = data.line_start-1,
+					character = data.character_start,
+				},
+				["end"] = {
+					line = data.line_stop-1,
+					character = data.character_stop,
+				},
+			},
+			message = msg,
+		})
 
-		server:Respond(client, resp)
 	end
 
+	print("analyzing " .. uri)
 	file:Analyze()
 
+	server:Respond(client, resp)
 
 	return code, file.Tokens, file.Syntaxtree
 end
@@ -92,7 +94,10 @@ function server:HandleMessage(resp, client)
 			id = resp.id,
 			result = {
 				capabilities = {
-					textDocumentSync = TextDocumentSyncKind.Full,
+					textDocumentSync = {
+						openClose = true,
+						change = TextDocumentSyncKind.Full,
+					},
 					hoverProvider = true,
 					completionProvider = {
 						resolveProvider = true,
@@ -126,9 +131,20 @@ function server:HandleMessage(resp, client)
 		})
 		return
 	elseif resp.method == "textDocument/didOpen" then
-		document_cache[resp.params.textDocument.uri] = resp.params.textDocument.text
+
+		document_cache[resp.params.textDocument.uri] = assert(resp.params.textDocument.text)
+
 		compile(resp.params.textDocument.uri, self, client)
+
+
+
+
+
+
 	elseif resp.method == "textDocument/didSave" then
+
+		document_cache[resp.params.textDocument.uri] = nil
+
 		if resp.params.textDocument.uri:find("oh/vscode/server/") then
 			local ok, err = pcall(function() assert(loadfile(resp.params.textDocument.uri:sub(#"file://" + 1)))() end)
 			if not ok then
@@ -162,96 +178,67 @@ function server:HandleMessage(resp, client)
 			node = node.parent
 		until not node
 
-		local expression
-		for i,v in ipairs(found) do
-			if v.type == "expression" then
-				expression = v
-				break
-			end
-		end
-		local statement
-		for i,v in ipairs(found) do
-			if v.type == "statement" then
-				statement = v
-				break
-			end
-		end
-
-		print(expression, statement)
-
-
 		local str = ""
 
-		if statement then
-			if statement.inferred_type then
-				str = str .. "### statement type:\n```lua\n"
-				str = str .. tostring(statement.inferred_type)
+		for i,v in ipairs(found) do
+			if v.inferred_type then
+				str = str .. "\n```lua\n"
+				str = str .. tostring(v.inferred_type)
 				str = str .. "\n```\n"
+				break
 			end
-		end
-
-		if expression then
-			if expression.inferred_type then
-				str = str .. "# expression type:\n```lua\n"
-				str = str .. tostring(expression.inferred_type)
-				str = str .. "\n```\n"
-			end
-		end
-
-		str = str .. "### token\n```lua\n"
-		str = str .. token.value
-		str = str .. "\n```\n"
-
-		if expression and expression.inferred_type then
-			str = ""
-
-			str = str .. "```lua\n"
-			str = str .. tostring(expression.inferred_type)
-			str = str .. "\n```\n"
 		end
 
 		if token and token.parent then
-			local s = ""
-			s = s .. "### parent\n```lua\n"
-
-			local temp = {}
-			for i,v in ipairs(found) do
-				if v.type == "expression" then
-					temp[i] = tostring(v) .. ": " .. v:Render({preserve_whitespace = false, no_comments = true})
-				else
-					temp[i] = tostring(v)
-				end
+			local min, max = helpers.LazyFindStartStop(token.parent)
+			if min then
+				data = helpers.SubPositionToLinePosition(code, min, max)
 			end
-
-			s = s .. table.concat(temp, "\n")
-			s = s .. "\n```\n"
-
-			str = s .. str
 		end
 
 		self:Respond(client, {
 			id = resp.id,
 			result = {
 				contents = str,
+				range = {
+					start = {
+						line = data.line_start-1,
+						character = data.character_start,
+					},
+					["end"] = {
+						line = data.line_stop-1,
+						character = data.character_stop+1,
+					},
+				}
 			},
-			range = data and {
-				start = {
-					line = data.line_start-1,
-					character = data.character_start,
-				},
-				["end"] = {
-					line = data.line_stop-1,
-					character = data.character_stop,
-				},
-			} or nil,
 		})
 		return
 	end
 
-	self:Respond(client, {
-		id = resp.id,
-		result = true,
-	})
+	if not resp.method then
+		tprint(resp)
+		return
+	end
+
+	if resp.params.id then
+		if resp.method:sub(1,1) == "$" then
+			print("responding to " .. resp.method .. " id " .. resp.params.id)
+
+			self:Respond(client, {
+				id = resp.id,
+				method = resp.method,
+				result = json.null,
+			})
+		else
+			print("responding to " .. resp.method .. " id " .. resp.id)
+
+			self:Respond(client, {
+				id = resp.id,
+				method = resp.method,
+				result = json.null,
+			})
+		end
+	end
 end
 
 if not server.clients then

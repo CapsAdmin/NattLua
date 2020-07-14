@@ -16,7 +16,7 @@ R[[
     test(true, true)
     test(false, false)
 
-    --type_assert(test, _ as (function(a: false|true, b: false|true):))
+    type_assert(test, _ as (function(a: false|true|any, b: false|true|any):))
 ]]
 R[[
     local function test(a: any,b: any)
@@ -26,7 +26,7 @@ R[[
     test(true, true)
     test(false, false)
 
-    type_assert(test, _ as (function(a: any | true | false, b: any | true | false):))
+    type_assert(test, _ as (function(a: any, b: any):))
 ]]
 
 
@@ -486,7 +486,7 @@ R[[
 
 ]]
 R[[
-    function string(ok: boolean)
+    function string(ok)
         if ok then
             return 2
         else
@@ -976,12 +976,6 @@ R[[
 
     check(test, "!")
 ]]
-
-
-R([[
-    --: local type a = 1
-    type_assert(a, 1)
-]])
 
 R([[
     type a = {}

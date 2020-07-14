@@ -1,7 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-
 it("declaring base types", function()
     run[[
         local type Symbol = function(T: any)
@@ -32,6 +31,24 @@ it("declaring base types", function()
         local type Foo = Symbol("asdf")
         type_assert<(Foo == "asdf", false)>
     ]]
+end)
+
+it("comment types should work", function()
+    run([=[
+        -- local function foo(str--[[#: string]], idx--[[#: number]], msg--[[#: string]])
+
+        local function foo(str, idx, msg)
+            local a = arg:sub(1,2)
+
+            return a
+        end
+
+        function bar()
+            foo(4, {}, true)
+        end
+
+        --print(foo(1))
+    ]=], "because 4 is not the same type as string")
 end)
 
 it("runtime reassignment should work", function()
@@ -70,10 +87,10 @@ it("runtime scopes should work", function()
 end)
 
 it("comment types", function()
-    run([[
-        --: local type a = 1
+    run([=[
+        --[[#local type a = 1]]
         type_assert(a, 1)
-    ]])
+    ]=])
 end)
 
 it("default declaration is literal", function()

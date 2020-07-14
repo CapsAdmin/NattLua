@@ -555,7 +555,7 @@ do
     end
 
     function META:ReadTypeComment()
-        local code = self:ReadType("type_comment").value:sub(4)
+        local code = self:ReadType("type_comment").value:sub(#"--:"+1)
         local lexer = require("oh.lua.lexer")(code)
         self:AddTokens(lexer:GetTokens())
         return self:ReadStatement()

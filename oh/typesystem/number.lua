@@ -35,7 +35,9 @@ function META:GetData()
 end
 
 function META:Copy()
-    return types.Number(self.data):MakeLiteral(self.literal)
+    local copy = types.Number(self.data):MakeLiteral(self.literal)
+    copy.node = self.node
+    return copy
 end
 
 function META.SubsetOf(A, B)

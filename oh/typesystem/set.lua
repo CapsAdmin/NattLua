@@ -225,6 +225,7 @@ function META:Copy()
     for _, e in ipairs(self:GetElements()) do
         copy:AddElement(e)
     end
+    copy.node = self.node
     return copy
 end
 

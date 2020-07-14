@@ -54,6 +54,7 @@ do -- globals
 	type ipairs = (function(t: table): empty_function, table, number)
 	type tonumber = (function(e: number | string, base: number | nil): number | nil)
 	type function print(...) print(...) end
+	type tostring = (function(val: any): string)
 
 	type function assert(obj, err)
 		if obj:IsTruthy() then
@@ -110,6 +111,7 @@ do -- globals
 			return self:GetValue(str, "typesystem")
 		end
 
+
 		if package.loaders then
 			for _, searcher in ipairs(package.loaders) do
 				local loader = searcher(str)
@@ -118,10 +120,16 @@ do -- globals
 					if path:sub(1, 1) == "@" then
 						local path = path:sub(2)
 
-						local ast = assert(require("oh").ParseFile(path))
-						analyzer:AnalyzeStatement(ast)
+						if analyzer.loaded and analyzer.loaded[path] then
+							return analyzer.loaded[path]
+						end
 
-						return table.unpack(analyzer.last_return)
+						local tup = analyzer:AnalyzeFile(path)
+
+						analyzer.loaded = analyzer.loaded or {}
+						analyzer.loaded[path] = tup
+
+						return tup
 					end
 				end
 			end
@@ -172,12 +180,13 @@ do -- globals
 		return tbl:Get(key, true)
 	end
 
+--[[
 	type function error(msg: string, level: number)
 		if msg.data then
 			error(msg.data)
 		end
 	end
-
+]]
 	type function select(index: 1 .. inf | "#", ...)
 		return select(index:GetData(), ...)
 	end
@@ -369,13 +378,11 @@ do
 				for _, str in ipairs(str:GetElements()) do
 					if from and from:IsLiteral() and to and to:IsLiteral() then
 						copy:AddElement(types.Number(str.data:byte(from:GetData(), to:GetData())):MakeLiteral(true))
-					end
-
-					if from then
+					elseif from then
 						copy:AddElement(types.Number(str.data:byte(from:GetData())):MakeLiteral(true))
+					else
+						copy:AddElement(types.Number(str.data:byte()):MakeLiteral(true))
 					end
-
-					copy:AddElement(types.Number(str.data:byte()):MakeLiteral(true))
 				end
 
 				return copy
@@ -392,7 +399,7 @@ do
 			return str.data:byte()
 		end
 
-		return types.String()
+		return types.Number()
 	end
 
 	type function ^string.match(s, pattern, init)
@@ -493,6 +500,8 @@ do
 		sqrt = (function(x: number): number),
 		sin = (function(x: number): number)
 	}
+
+	type math.huge = inf
 
 	type function math.floor(num: number)
 		if num.data then

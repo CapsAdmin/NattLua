@@ -328,6 +328,7 @@ end
 
 function META:Copy(self_reference)
     local copy = types.Table({})
+    copy.node = self.node
 
     for _, keyval in ipairs(self.data) do
         local k,v = keyval.key, keyval.val

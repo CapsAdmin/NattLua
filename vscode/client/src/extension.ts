@@ -20,7 +20,6 @@ export function activate(context: ExtensionContext) {
 
     const extensions = getConfig<string[]>('extensions');
 
-
     const clientOptions: LanguageClientOptions = {
         documentSelector: extensions,
         synchronize: {

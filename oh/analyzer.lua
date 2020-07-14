@@ -265,10 +265,6 @@ return function(analyzer_meta)
             error(msg)
         end
 
-        if require("oh").current_analyzer and require("oh").current_analyzer ~= self then
-            return require("oh").current_analyzer:Error(node, msg)
-        end
-
         if self.OnError then
             self:OnError(msg, helpers.LazyFindStartStop(node))
         end

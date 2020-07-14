@@ -89,24 +89,6 @@ do
     end
 end
 
-do
-    function META:IsTypeComment()
-        return self:IsValue("-") and self:IsValue("-", 1) and self:IsValue(":", 2)
-    end
-
-    function META:ReadTypeComment()
-        self:Advance(#"--:")
-
-        for _ = self.i, self:GetLength() do
-            if self:IsValue("\n") then
-                break
-            end
-            self:Advance(1)
-        end
-
-        return "type_comment"
-    end
-end
 
 do
     function META:IsMultilineString()
@@ -390,16 +372,13 @@ end
 function META:ReadWhiteSpace()
     if
     self:IsSpace() then                 return self:ReadSpace() elseif
-
     self:IsMultilineComment() then      return self:ReadMultilineComment() elseif
     self:IsLineComment() then           return self:ReadLineComment() elseif
-
     false then end
 end
 
 function META:ReadNonWhiteSpace()
     if
-    self:IsTypeComment() then           return self:ReadTypeComment() elseif
     self:IsMultilineString() then       return self:ReadMultilineString() elseif
     self:IsNumber() then                return self:ReadNumber() elseif
     self:IsSingleString() then          return self:ReadSingleString() elseif

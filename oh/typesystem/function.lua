@@ -38,6 +38,8 @@ function META:Copy(self_reference, current_table)
         arg = self.data.arg:Copy(self_reference, current_table)
     }):MakeLiteral(self:IsLiteral())
 
+    copy.node = self.node
+
     return copy
 end
 
