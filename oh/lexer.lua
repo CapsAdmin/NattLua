@@ -303,7 +303,7 @@ return function(lexer_meta, syntax)
 
     function META:ReadToken()
 
-        if self:IsShebang() then
+        if not self.NoShebang and self:IsShebang() then
             self:ReadShebang()
             local tk = self:NewToken("shebang", 1, self.i - 1)
             tk.whitespace = {}

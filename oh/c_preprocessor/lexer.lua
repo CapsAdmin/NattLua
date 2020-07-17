@@ -1,4 +1,4 @@
-local syntax = require("oh.c.syntax")
+local syntax = require("oh.c_preprocessor.syntax")
 local helpers = require("oh.helpers")
 
 local META = {}
@@ -380,4 +380,4 @@ function META:ReadNonWhiteSpace()
     false then end
 end
 
-return require("oh.lexer")(META, require("oh.c.syntax"))
+return require("oh.lexer")(META, syntax)

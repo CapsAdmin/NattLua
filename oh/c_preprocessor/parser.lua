@@ -6,7 +6,7 @@ local pairs = pairs
 local table_insert = table.insert
 local table_concat = table.concat
 
-local syntax = require("oh.c.syntax")
+local syntax = require("oh.c_preprocessor.syntax")
 
 local META = {}
 
@@ -648,18 +648,6 @@ do -- expression
     end
 end
 
-do
-    local reverse = {}
-    for _, qualifier in ipairs(syntax.TypeDeclarationQualifiers) do
-        reverse[qualifier] = qualifier
-    end
-
-    function META:IsQualifier()
-        return reverse[self:GetToken().value]
-    end
-end
-
-
 do -- statements
     function META:ReadRemainingStatement()
         if self:IsType("end_of_file") then
@@ -688,12 +676,11 @@ do -- statements
     end
 
     function META:ReadStatement()
-        if self:IsType("macro") then
-            local lex = require("oh.c_preprocessor.lexer")(self:GetToken().value:sub(2))
-            local parser = require("oh.c.parser")()
-            parser:BuildAST(lex:GetTokens())
-
-            self:Advance(1)
+        if self:IsValue("define") then
+            self:BeginStatement("#define")
+                self:ExpectIdentifier()
+                self:ExpectIdentifier()
+            self:EndStatement()
         end
 
         do return end
@@ -745,4 +732,4 @@ do -- statements
 end
 
 
-return require("oh.parser")(META, require("oh.c.syntax"), require("oh.c.emitter"))
+return require("oh.parser")(META, syntax, require("oh.c_preprocessor.emitter"))
