@@ -3,7 +3,7 @@ local socket = {}
 local e = {}
 
 do
-    local C
+    local C --[[#: ffi.C]]
 
     if ffi.os == "Windows" then
         C = assert(ffi.load("ws2_32"))
@@ -206,7 +206,7 @@ do
             );
         ]]
 
-        local function WORD(low, high)
+        local function WORD(low--[[#: number]], high--[[#: number]])
             return bit.bor(low , bit.lshift(high , 8))
         end
 
@@ -441,6 +441,7 @@ do
 
     do
         ffi.cdef[[SOCKET socket(int af, int type, int protocol);]]
+        --[[type C.socket = function(number, number, number): number]]
 
         function socket.create(af, type, protocol)
             local fd = C.socket(af, type, protocol)
@@ -747,6 +748,7 @@ local function capture_flags(what)
         strict_reverse = function(key)
             if not key then
                 error("invalid " .. what:sub(0, -2) .. " flag: nil")
+                return
             end
             if not reverse[key] then
                 error("invalid "..what:sub(0, -2).." flag: " .. key, 2)
@@ -756,6 +758,7 @@ local function capture_flags(what)
         strict_lookup = function(key)
             if not key then
                 error("invalid " .. what:sub(0, -2) .. " flag: nil")
+                return
             end
             if not flags[key] then
                 error("invalid "..what:sub(0, -2).." flag: " .. key, 2)
@@ -1035,6 +1038,10 @@ do
         end
 
         return true
+    end
+
+    function meta:on_connect()
+
     end
 
     function meta:poll_connect()

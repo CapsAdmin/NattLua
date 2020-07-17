@@ -71,6 +71,7 @@ do -- type operators
             if env == "typesystem" then
                 if op == "typeof" then
                     local obj = self:GetValue(node.right, "runtime")
+
                     if not obj then
                         return types.errors.other("cannot find " .. self:Hash(node.right) .. " in the current typesystem scope")
                     end
@@ -416,8 +417,9 @@ do -- type operators
 
             if op == ".." then
                 if
-                    (l.Type == "string" or r.Type == "string") and
-                    (l.Type == "number" or r.Type == "number" or l.Type == "string" or l.Type == "string")
+                    (l.Type == "string" and r.Type == "string") or
+                    (l.Type == "number" and r.Type == "string") or
+                    (l.Type == "string" and r.Type == "number")
                 then
                     if l:IsLiteral() and r:IsLiteral() then
                         return types.String(l.data ..  r.data):MakeLiteral(true)
@@ -703,7 +705,11 @@ do -- types
                 local ok, reason = a:SubsetOf(b)
 
                 if not ok then
-                    return types.errors.other("argument #" .. i .. " - " .. tostring(a) .. " is not a subset of " .. tostring(b) .. " because " .. reason)
+                    if b.node then
+                        return types.errors.other("function argument '" .. b.node:Render() .. "': " .. reason)
+                    else
+                        return types.errors.other("argument #" .. i .. " - " .. reason)
+                    end
                 end
             end
         end
@@ -717,7 +723,11 @@ do -- types
 
             for i,v in ipairs(res) do
                 if not types.IsTypeObject(v) then
-                    res[i] = self:TypeFromImplicitNode(obj.node, type(v), v, true)
+                    if type(v) == "function" then
+                        res[i] = self:TypeFromImplicitNode(obj.node, "function", {lua_function = v, arg = types.Tuple(), ret = types.Tuple()}, true)
+                    else
+                        res[i] = self:TypeFromImplicitNode(obj.node, type(v), v, true)
+                    end
                 end
             end
             return_tuple = types.Tuple(res)
@@ -1096,14 +1106,29 @@ function META:AnalyzeStatement(statement)
 
         if obj then
             table.remove(args, 1)
-            local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
+            for i = 1, 1000 do
+                local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
 
-            for i,v in ipairs(statement.identifiers) do
-                self:SetUpvalue(v, values:Get(i), "runtime")
+                if not values:Get(1) or values:Get(1).Type == "symbol" and values:Get(1).data == nil then
+                    break
+                end
+
+                for i,v in ipairs(statement.identifiers) do
+                    self:SetUpvalue(v, values:Get(i), "runtime")
+                end
+
+                self:AnalyzeStatements(statement.statements)
+
+                if i == 1000 then
+                    self:Error(statement, "too many iterations")
+                end
+
+                table.insert(values.data, 1, args[1])
+
+                args = values:GetData()
             end
         end
 
-        self:AnalyzeStatements(statement.statements)
 
         self:PopScope()
     elseif statement.kind == "numeric_for" then
@@ -1218,7 +1243,11 @@ do
                     obj = self:IndexNotFound(node)
                  end
                 if not obj then
-                    self:Error(node, "cannot find value " .. node.value.value)
+                    obj = self:GetValue(node, "runtime")
+
+                    if not obj then
+                        self:Error(node, "cannot find value " .. node.value.value)
+                    end
                 end
             end
 

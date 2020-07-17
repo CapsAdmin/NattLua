@@ -26,7 +26,7 @@ function META:__tostring()
 
     table.sort(s, function(a, b) return a < b end)
 
-    return "⦃" .. table.concat(s, ", ") .. "⦄"
+    return table.concat(s, " | ")
 end
 
 
