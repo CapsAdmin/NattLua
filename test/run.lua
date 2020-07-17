@@ -21,10 +21,13 @@ end
 
 
 local path = ...
-if path then
+
+if path and path:sub(-4) == ".lua" then
     assert(loadfile(path))()
 else
-    for path in io.popen("find test/lua"):lines() do
+    local what = path
+    local path = "test/" .. ((what and what .. "/") or "lua/")
+    for path in io.popen("find " .. path):lines() do
         if path:sub(-4) == ".lua" then
             assert(loadfile(path))()
         end

@@ -3,7 +3,7 @@ local oh = require("oh")
 local function check(code)
     local c = assert(assert(oh.Code(code)):Parse())
     --c.SyntaxTree:Dump()
-    local new_code = assert(c:BuildLua())
+    local new_code = assert(c:Emit())
     equal(new_code, code)
     return new_code
 end

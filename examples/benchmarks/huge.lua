@@ -13,7 +13,7 @@ local code = oh.Code(assert(util.FetchCode("examples/benchmarks/10mb.lua", "http
 local start = os.clock()
 local tokens = util.Measure("code:Lex()", function() return assert(code:Lex()).Tokens end)
 local ast = util.Measure("code:Parse()", function() return assert(code:Parse()).SyntaxTree end)
-local lua_code = util.Measure("code:BuildLua()", function() return assert(code:BuildLua()) end)
+local lua_code = util.Measure("code:Emit()", function() return assert(code:Emit()) end)
 print("==========================================")
 print((os.clock() - start) .. " seconds total")
 print("==========================================")

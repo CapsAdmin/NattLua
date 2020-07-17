@@ -3,6 +3,8 @@ local syntax = {}
 return function(syntax)
     do -- extend the symbol characters from grammar rules
         local function add_symbols(tbl)
+            if not tbl then return end
+
             for _, symbol in pairs(tbl) do
                 if symbol:find("%p") then
                     table.insert(syntax.SymbolCharacters, symbol)
@@ -11,6 +13,8 @@ return function(syntax)
         end
 
         local function add_binary_symbols(tbl)
+            if not tbl then return end
+
             for _, group in ipairs(tbl) do
                 for _, token in ipairs(group) do
                     if token:find("%p") then
@@ -47,19 +51,25 @@ return function(syntax)
     end
 
     do
-        for k, v in pairs(syntax.BinaryOperatorFunctionTranslate) do
-            local a,b,c = v:match("(.-)A(.-)B(.*)")
-            syntax.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
+        if syntax.BinaryOperatorFunctionTranslate then
+            for k, v in pairs(syntax.BinaryOperatorFunctionTranslate) do
+                local a,b,c = v:match("(.-)A(.-)B(.*)")
+                syntax.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
+            end
         end
 
-        for k, v in pairs(syntax.PrefixOperatorFunctionTranslate) do
-            local a, b = v:match("^(.-)A(.-)$")
-            syntax.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+        if syntax.PrefixOperatorFunctionTranslate then
+            for k, v in pairs(syntax.PrefixOperatorFunctionTranslate) do
+                local a, b = v:match("^(.-)A(.-)$")
+                syntax.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+            end
         end
 
-        for k, v in pairs(syntax.PostfixOperatorFunctionTranslate) do
-            local a, b = v:match("^(.-)A(.-)$")
-            syntax.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+        if syntax.PostfixOperatorFunctionTranslate then
+            for k, v in pairs(syntax.PostfixOperatorFunctionTranslate) do
+                local a, b = v:match("^(.-)A(.-)$")
+                syntax.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+            end
         end
     end
 
@@ -171,6 +181,8 @@ return function(syntax)
 
 
         local function convert_binary_operators(tbl)
+            if not tbl then return end
+
             local temp = {}
             for priority, group in ipairs(tbl) do
                 for _, token in ipairs(group) do
@@ -188,6 +200,8 @@ return function(syntax)
         syntax.BinaryTypeOperators = convert_binary_operators(syntax.BinaryTypeOperators)
 
         local function to_lookup(tbl)
+            if not tbl then return end
+
             local out = {}
             for _, v in pairs(tbl) do
                 out[v] = v

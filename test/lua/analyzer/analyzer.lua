@@ -48,7 +48,7 @@ it("comment types should work", function()
         end
 
         --print(foo(1))
-    ]=], "because 4 is not the same type as string")
+    ]=], "4 is not the same type as string")
 end)
 
 it("runtime reassignment should work", function()
@@ -337,7 +337,7 @@ it("exclude type function should work", function()
         local a: Exclude<(1|2|3, 2)>
 
         type_assert(a, _ as 11|31)
-    ]], "expected ⦃11, 31⦄ got ⦃1, 3⦄")
+    ]], "expected 11 | 31 got 1 | 3")
 end)
 
 it("parenthesis around varargs should only return the first value in the tuple", function()

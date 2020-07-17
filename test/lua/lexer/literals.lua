@@ -2,7 +2,7 @@ local oh = require("oh")
 
 local function check(code)
    local o = oh.Code(code)
-   equal(o:Parse():BuildLua(), code)
+   equal(o:Parse():Emit(), code)
    return o.Tokens
 end
 

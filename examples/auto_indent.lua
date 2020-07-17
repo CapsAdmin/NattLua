@@ -123,4 +123,4 @@ local code = [[
     end))
 ]]
 
-print(assert(oh.Code(code, nil, {preserve_whitespace = false}):BuildLua()))
+print(assert(oh.Code(code, nil, {preserve_whitespace = false}):Emit()))

@@ -4,11 +4,6 @@ if not table.unpack and _G.unpack then
 	table.unpack = _G.unpack
 end
 
-local Lexer = require("oh.lua.lexer")
-local Parser = require("oh.lua.parser")
-local Analyzer = require("oh.lua.analyzer")
-local LuaEmitter = require("oh.lua.emitter")
-
 local helpers = require("oh.helpers")
 
 oh.current_analyzer = {}
@@ -27,7 +22,7 @@ end
 function oh.GetBaseAnalyzer()
 
     if not oh.base_analyzer then
-        local base = Analyzer()
+        local base = require("oh.lua.analyzer")()
 		base.IndexNotFound = nil
 
 		local ret, root, code_data = base:AnalyzeFile("oh/lua/base_typesystem.oh")
@@ -52,14 +47,14 @@ end
 
 function oh.load(code, name, config)
 	local obj = oh.Code(code, name, config)
-	local code, err = obj:BuildLua()
+	local code, err = obj:Emit()
 	if not code then return nil, err end
     return load(code, name)
 end
 
 function oh.loadfile(path, config)
 	local obj = oh.File(path, config)
-	local code, err = obj:BuildLua()
+	local code, err = obj:Emit()
 	if not code then return nil, err end
     return load(code, path)
 end
@@ -78,7 +73,13 @@ function oh.on_editor_save(path)
 		local f = io.open("test_focus.lua")
 		if f and #f:read("*all") == 0 then
 			f:close()
-			os.execute("luajit test/run.lua")
+			if path:find("/lua/") then
+				os.execute("luajit test/run.lua c")
+			elseif path:find("/c/") then
+				os.execute("luajit test/run.lua c")
+			else
+				os.execute("luajit test/run.lua c")
+			end
 			return
 		else
 			path = "./test_focus.lua"
@@ -102,7 +103,7 @@ function oh.on_editor_save(path)
 		io.write(err, "\n")
 		return
 	end
-	local res = assert(c:BuildLua())
+	local res = assert(c:Emit())
 	require("oh.lua.base_runtime")
 	io.write(res, "\n")
 	--assert(load(res))()
@@ -218,7 +219,7 @@ do
 	end
 
 	function META:Lex()
-		local lexer = Lexer(self.code)
+		local lexer = self.Lexer(self.code)
 		lexer.code_data = self
 		lexer.OnError = self.OnError
 
@@ -241,7 +242,7 @@ do
 			end
 		end
 
-		local parser = Parser(self.config)
+		local parser = self.Parser(self.config)
 		parser.code_data = self
 		parser.OnError = self.OnError
 
@@ -269,7 +270,7 @@ do
 			end
 		end
 
-		local analyzer = Analyzer()
+		local analyzer = self.Analyzer()
 		if dump_events or self.config and self.config.dump_analyzer_events then
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
@@ -290,7 +291,7 @@ do
 		return self
 	end
 
-	function META:BuildLua()
+	function META:Emit()
 		if not self.SyntaxTree then
 			local ok, err = self:Parse()
 			if not ok then
@@ -298,7 +299,7 @@ do
 			end
 		end
 
-		local em = LuaEmitter(self.config)
+		local em = self.Emitter(self.config)
     	return em:BuildCode(self.SyntaxTree), em
 	end
 
@@ -316,6 +317,11 @@ do
 			parent_name = parent_name,
 			name = name,
 			config = config,
+			Lexer = require("oh.lua.lexer"),
+			Parser = require("oh.lua.parser"),
+			Analyzer = require("oh.lua.analyzer"),
+			Emitter = require("oh.lua.emitter"),
+
 		}, META)
 	end
 

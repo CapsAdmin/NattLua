@@ -646,13 +646,18 @@ R[[
 
     local t = {foo = true}
     for k,v in pairs(t) do
-        type_assert(k, _ as "foo" | "foo")
-        type_assert(v, _ as true | true)
+        type_assert(k, _ as "foo")
+        type_assert(v, _ as true)
     end
+]]
+--[[
 
     for i,v in ipairs({"LOL",2,3}) do
-        type_assert(i, _ as 1)
-        type_assert(v, _ as "LOL")
+        if i == 1 then
+            print(i,v)
+            type_assert(i, _ as 1)
+            type_assert(v, _ as "LOL")
+        end
     end
 ]]
 R[[
