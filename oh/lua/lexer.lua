@@ -34,46 +34,49 @@ local function ReadLiteralString(self, multiline_comment)
     return nil, "expected "..helpers.QuoteToken(closing).." reached end of code"
 end
 
-do
-    function META:IsMultilineComment()
-        return
-            self:IsValue("-") and self:IsValue("-", 1) and self:IsValue("[", 2) and (
-                self:IsValue("[", 3) or self:IsValue("=", 3)
-            )
-    end
+function META:ReadCommentEscape()
+    if
+        self:IsValue("-") and
+        self:IsValue("-", 1) and
+        self:IsValue("[", 2) and
+        self:IsValue("[", 3) and
+        self:IsValue("#", 4)
+    then
+        self:Advance(5)
 
-    function META:ReadMultilineComment()
+        -- the remaining ]] will be read internally
+        self.comment_escape = true
+
+        return true
+    end
+end
+
+function META:ReadMultilineComment()
+    if  self:IsValue("-") and self:IsValue("-", 1) and self:IsValue("[", 2) and (
+        self:IsValue("[", 3) or self:IsValue("=", 3)
+    ) then
         local start = self.i
         self:Advance(2)
-
-        if self:IsValue("#", 2) then
-            self:Advance(3)
-            self.comment_escape = true
-            return "comment_escape_start"
-        end
 
         local ok, err = ReadLiteralString(self, true)
 
         if not ok then
-            if err then
-                self.i = start + 2
-                self:Error("expected multiline comment to end: " .. err, start, start + 1)
-            else
-                self.i = start
-                return self:ReadLineComment()
-            end
-        end
 
-        return "multiline_comment"
+            if err then
+                self:Error("expected multiline comment to end: " .. err, start, start + 1)
+                self:SetPosition(start + 2)
+            else
+                self:SetPosition(start)
+            end
+
+            return false
+        end
+        return true
     end
 end
 
-do
-    function META:IsLineComment()
-        return self:IsValue("-") and self:IsValue("-", 1)
-    end
-
-    function META:ReadLineComment()
+function META:ReadLineComment()
+    if self:IsValue("-") and self:IsValue("-", 1)then
         self:Advance(#"--")
 
         for _ = self.i, self:GetLength() do
@@ -83,29 +86,26 @@ do
             self:Advance(1)
         end
 
-        return "line_comment"
+        return true
     end
+
+    return false
 end
 
-
-do
-    function META:IsMultilineString()
-        return self:IsValue("[") and (
-            self:IsValue("[", 1) or self:IsValue("=", 1)
-        )
-    end
-
-    function META:ReadMultilineString()
+function META:ReadMultilineString()
+    if self:IsValue("[") and (self:IsValue("[", 1) or self:IsValue("=", 1)) then
         local start = self.i
         local ok, err = ReadLiteralString(self, false)
 
         if not ok then
             self:Error("expected multiline string to end: " .. err, start, start + 1)
-            return
+            return true
         end
 
-        return "string"
+        return true
     end
+
+    return false
 end
 
 do
@@ -117,7 +117,7 @@ do
         return out
     end
 
-    function META.GenerateLookupFunction(tbl, lower)
+    function META.BuildReadFunction(tbl, lower)
         local copy = {}
         local done = {}
 
@@ -159,7 +159,7 @@ do
 
     local allowed_hex = META.GenerateMap("1234567890abcdefABCDEF")
 
-    META.IsInNumberAnnotation = META.GenerateLookupFunction(syntax.NumberAnnotations, true)
+    META.IsInNumberAnnotation = META.BuildReadFunction(syntax.NumberAnnotations, true)
 
     function META:ReadNumberAnnotations(what)
         if what == "hex" then
@@ -225,15 +225,13 @@ do
 
             if allowed_hex[self:GetChar()] then
                 self:Advance(1)
-            elseif self:IsSymbol() or self:IsSpace() then
+            elseif syntax.IsSpace(self:GetChar()) or syntax.IsSymbol(self:GetChar()) then
                 break
             elseif self:GetChar() ~= 0 then
                 self:Error("malformed number "..string.char(self:GetChar()).." in hex notation")
                 return
             end
         end
-
-        return "number"
     end
 
     function META:ReadBinaryNumber()
@@ -244,7 +242,7 @@ do
 
             if self:IsValue("1") or self:IsValue("0") then
                 self:Advance(1)
-            elseif self:IsSymbol() or self:IsSpace() then
+            elseif syntax.IsSpace(self:GetChar()) or syntax.IsSymbol(self:GetChar()) then
                 break
             elseif self:GetChar() ~= 0 then
                 self:Error("malformed number "..string.char(self:GetChar()).." in binary notation")
@@ -255,8 +253,6 @@ do
                 break
             end
         end
-
-        return "number"
     end
 
     function META:ReadDecimalNumber()
@@ -287,22 +283,27 @@ do
                 break
             end
         end
-
-        return "number"
     end
 
     function META:IsNumber()
-        return syntax.IsNumber(self:GetChar()) or (self:IsValue(".") and syntax.IsNumber(self:GetChar(1)))
+        return
     end
 
     function META:ReadNumber()
-        if self:IsValue("x", 1) or self:IsValue("X", 1) then
-            return self:ReadHexNumber()
-        elseif self:IsValue("b", 1) or self:IsValue("B", 1) then
-            return self:ReadBinaryNumber()
+        if syntax.IsNumber(self:GetChar()) or (self:IsValue(".") and syntax.IsNumber(self:GetChar(1))) then
+
+            if self:IsValue("x", 1) or self:IsValue("X", 1) then
+                self:ReadHexNumber()
+            elseif self:IsValue("b", 1) or self:IsValue("B", 1) then
+                self:ReadBinaryNumber()
+            else
+                self:ReadDecimalNumber()
+            end
+
+            return true
         end
 
-        return self:ReadDecimalNumber()
+        return false
     end
 end
 
@@ -316,10 +317,6 @@ do
     }
 
     for name, quote in pairs(quotes) do
-        META["Is" .. name .. "String"] = function(self)
-            return self:IsValue(quote)
-        end
-
         local key = "string_escape_" .. name
         local function escape(self, c)
             if self[key] then
@@ -340,6 +337,10 @@ do
         end
 
         META["Read" .. name .. "String"] = function(self)
+            if not self:IsValue(quote) then
+                return false
+            end
+
             local start = self.i
             self:Advance(1)
 
@@ -351,40 +352,42 @@ do
                     if char == B"\n" then
                         self:Advance(-1)
                         self:Error("expected " .. name:lower() .. " quote to end", start, self.i - 1)
-                        return false
+                        return true
                     end
 
                     if char == B(quote) then
-                        return "string"
+                        return true
                     end
                 end
             end
 
             self:Error("expected " .. name:lower() .. " quote to end: reached end of file", start, self.i - 1)
 
-            return false
+            return true
         end
     end
 end
 
 function META:ReadWhiteSpace()
     if
-    self:IsSpace() then                 return self:ReadSpace() elseif
-    self:IsMultilineComment() then      return self:ReadMultilineComment() elseif
-    self:IsLineComment() then           return self:ReadLineComment() elseif
+    self:ReadSpace() then               return "space" elseif
+    self:ReadCommentEscape() then       return "comment_escape" elseif
+    self:ReadMultilineComment() then    return "multiline_comment" elseif
+    self:ReadLineComment() then         return "line_comment" elseif
     false then end
 end
 
 function META:ReadNonWhiteSpace()
     if
-    self:IsMultilineString() then       return self:ReadMultilineString() elseif
-    self:IsNumber() then                return self:ReadNumber() elseif
-    self:IsSingleString() then          return self:ReadSingleString() elseif
-    self:IsDoubleString() then          return self:ReadDoubleString() elseif
+    self:ReadNumber() then              return "number" elseif
 
-    self:IsEndOfFile() then             return self:ReadEndOfFile() elseif
-    self:IsLetter() then                return self:ReadLetter() elseif
-    self:IsSymbol() then                return self:ReadSymbol() elseif
+    self:ReadMultilineString() then     return "string" elseif
+    self:ReadSingleString() then        return "string" elseif
+    self:ReadDoubleString() then        return "string" elseif
+
+    self:ReadEndOfFile() then           return "end_of_file" elseif
+    self:ReadLetter() then              return "letter" elseif
+    self:ReadSymbol() then              return "symbol" elseif
     false then end
 end
 

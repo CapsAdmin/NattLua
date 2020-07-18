@@ -54,7 +54,7 @@ gen_all_passes(passes, "0x", hexs, "P", decs)
 gen_all_passes(passes, "0X", hexs, "p", decs)
 gen_all_passes(passes, "0X", hexs, "P", decs)
 
-it("accepts valid literals", function()
+it("valid literals", function()
    local code = {}
    for i, p in ipairs(passes) do
       table.insert(code, "local x" .. i .. " = " .. p)
@@ -71,11 +71,11 @@ it("accepts valid literals", function()
    end
 end)
 
-it("should handle shebang", function()
+it("shebang", function()
    check"#foo\nlocal lol = 1"
 end)
 
-it("should handle multiline comments", function()
+it("multiline comments", function()
    equal(#check"--[[foo]]", 1)
    equal(#check"--[=[foo]=]", 1)
    equal(#check"--[==[foo]==]", 1)
@@ -84,13 +84,13 @@ it("should handle multiline comments", function()
    equal(#check"foo--[[]].--[[]]bar--[[]]:--[[]]test--[[]](--[[]]1--[[]]--[[]],2--[[]])--------[[]]--[[]]--[[]]", 11)
 end)
 
-it("should handle strings", function()
+it("strings", function()
    check'a = "a"'
    check"a = 'a'"
    check'a = "a\\z\na"'
 end)
 
-it("should handle unicode", function()
+it("unicode", function()
    equal(6, #check"🐵=😍+🙅")
    equal(5, #check"foo(･✿ヾ╲｡◕‿◕｡╱✿･ﾟ)")
    equal(5, #check"foo(ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็)")

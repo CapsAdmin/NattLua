@@ -74,7 +74,9 @@ function oh.on_editor_save(path)
 		if f and #f:read("*all") == 0 then
 			f:close()
 			if path:find("/lua/") then
-				os.execute("luajit test/run.lua c")
+				os.execute("luajit test/run.lua lua")
+			elseif path:find("/c_preprocessor/") then
+				os.execute("luajit test/run.lua c_preprocessor")
 			elseif path:find("/c/") then
 				os.execute("luajit test/run.lua c")
 			else

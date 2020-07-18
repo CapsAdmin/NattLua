@@ -110,6 +110,10 @@ return function(lexer_meta, syntax)
         self.i = self.i + len
     end
 
+    function META:SetPosition(i)
+        self.i = i
+    end
+
     function META:IsValue(what, offset)
         return self:IsByte(B(what), offset)
     end
@@ -129,7 +133,7 @@ return function(lexer_meta, syntax)
         return out
     end
 
-    function META.GenerateLookupFunction(tbl, lower)
+    function META.BuildReadFunction(tbl, lower)
         local copy = {}
         local done = {}
 
@@ -193,118 +197,100 @@ return function(lexer_meta, syntax)
         return Token(type, start, stop, value)
     end
 
-    do
-        function META:IsLetter()
-            if syntax.IsLetter(self:GetChar()) then
-                return true
+    if ffi then
+        local C = ffi.C
+        local tonumber = tonumber
+        local chars = ""
+
+        for i = 1, 255 do
+            if syntax.IsDuringLetter(i) then
+                chars = chars .. string.char(i)
             end
         end
 
-        if ffi then
-            local C = ffi.C
-            local tonumber = tonumber
-            local chars = ""
-
-            for i = 1, 255 do
-                if syntax.IsDuringLetter(i) then
-                    chars = chars .. string.char(i)
-                end
-            end
-
-            function META:ReadLetter()
+        function META:ReadLetter()
+            if syntax.IsLetter(self:GetChar()) then
                 self:Advance(tonumber(C.strspn(self.code_ptr + self.i - 1, chars)))
-                return "letter"
+                return true
             end
-        else
-            function META:ReadLetter()
+
+            return false
+        end
+    else
+        function META:ReadLetter()
+            if syntax.IsLetter(self:GetChar()) then
                 for _ = self.i, self:GetLength() do
                     self:Advance(1)
                     if not syntax.IsDuringLetter(self:GetChar()) then
                         break
                     end
                 end
-
-                return "letter"
+                return true
             end
+
+            return false
         end
     end
 
     do
-        function META:IsSpace()
-            return syntax.IsSpace(self:GetChar())
-        end
-
         if ffi then
             local chars = "\32\t\n\r"
             local C = ffi.C
             local tonumber = tonumber
 
             function META:ReadSpace()
-                self:Advance(tonumber(C.strspn(self.code_ptr + self.i - 1, chars)))
-                return "space"
+                if syntax.IsSpace(self:GetChar()) then
+                    self:Advance(tonumber(C.strspn(self.code_ptr + self.i - 1, chars)))
+                    return true
+                end
+
+                return false
             end
         else
             function META:ReadSpace()
-                for _ = self.i, self:GetLength() do
-                    self:Advance(1)
-                    if not syntax.IsSpace(self:GetChar()) then
-                        break
+                if syntax.IsSpace(self:GetChar()) then
+                    for _ = self.i, self:GetLength() do
+                        self:Advance(1)
+                        if not syntax.IsSpace(self:GetChar()) then
+                            break
+                        end
                     end
+                    return true
                 end
 
-                return "space"
+                return false
             end
         end
     end
 
-    do
-        function META:IsSymbol()
-            return syntax.IsSymbol(self:GetChar())
-        end
+    META.ReadSymbol = META.BuildReadFunction(syntax.SymbolCharacters)
 
-        META.IsInSymbol = META.GenerateLookupFunction(syntax.SymbolCharacters)
-
-        function META:ReadSymbol()
-            if self:IsInSymbol() then
-                return "symbol"
-            end
-
-            return nil
-        end
-    end
-
-    do
-        function META:IsShebang()
-            return self.i == 1 and self:IsValue("#")
-        end
-
-        function META:ReadShebang()
+    function META:ReadShebang()
+        if self.i == 1 and self:IsValue("#") then
             for _ = self.i, self:GetLength() do
                 self:Advance(1)
                 if self:IsValue("\n") then
                     break
                 end
             end
-            return "shebang"
+            return true
         end
+        return false
     end
 
-    do
-        function META:IsEndOfFile()
-            return self.i > self:GetLength()
-        end
-
-        function META:ReadEndOfFile()
+    function META:ReadEndOfFile()
+        if self.i > self:GetLength()then
             -- nothing to capture, but remaining whitespace will be added
             self:Advance(1)
-            return "end_of_file"
+            return true
         end
+
+        return false
     end
 
     function META:ReadToken()
 
-        if not self.NoShebang and self:IsShebang() then
-            self:ReadShebang()
+        if not self.NoShebang and self:ReadShebang() then
             local tk = self:NewToken("shebang", 1, self.i - 1)
             tk.whitespace = {}
             return tk

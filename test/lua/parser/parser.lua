@@ -8,39 +8,39 @@ local function check(code)
     return new_code
 end
 
-it("should handle empty code", function()
+it("empty code", function()
     check""
 end)
 
-it("should handle an empty return statement", function()
+it("empty return statement", function()
     check"return true"
 end)
 
-it("should handle do statement", function()
+it("do statement", function()
     check"do end"
     check"do do end end"
 end)
 
-it("should parse while statement", function()
+it("while statement", function()
     check"while 1 do end"
 end)
 
-it("should parse repeat until statement", function()
+it("repeat until statement", function()
     check"repeat until 1"
 end)
 
-it("should parse numeric for loop", function()
+it("numeric for loop", function()
     check"for i = 1, 1 do end"
     check"for i = 1, 1, 1 do end"
 end)
 
-it("should parse generic for loop", function()
+it("generic for loop", function()
     check"for k,v in a do end"
     check"for a,b,c,d,e,f,g in a do end"
     check"for a,b,c,d,e,f,g in a,b,c,d,e,f,g do end"
 end)
 
-it("should parse function statements", function()
+it("function statements", function()
     check"function test() end"
     check"local function test() end"
     check"function foo.bar() end"
@@ -49,7 +49,7 @@ it("should parse function statements", function()
     check"local test = function() end"
 end)
 
-it("should parse call expressions", function()
+it("call expressions", function()
     check"a()"
     check"a.b()"
     check"a.b.c()"
@@ -61,14 +61,14 @@ it("should parse call expressions", function()
     check"lol({...})"
 end)
 
-it("should parse if statements", function()
+it("if statements", function()
     check"if 1 then end"
     check"if 1 then else end"
     check"if 1 then elseif 2 then else end"
     check"if 1 then elseif 2 then elseif 3 then else end"
 end)
 
-it("should parse local declarations", function()
+it("local declarations", function()
     check"local a"
     check"local a = 1"
     check"local a = 1,2,3"
@@ -76,14 +76,14 @@ it("should parse local declarations", function()
     check"local a,c = 1,2,3"
 end)
 
-it("should parse global declarations", function()
+it("global declarations", function()
     check"a = 1"
     check"a = 1,2,3"
     check"a,b,c = 1,2,3"
     check"a,c = 1,2,3"
 end)
 
-it("should parse object assignments", function()
+it("object assignments", function()
     check"a[b] = a"
     check"(a)[b] = a"
     check"foo.bar.baz[b] = a"
@@ -91,7 +91,7 @@ it("should parse object assignments", function()
     check"foo.bar.baz = a"
 end)
 
-it("should handle optional semicolons", function()
+it("optional semicolons", function()
     check"local a = 1;"
     check"local a = 1;local a = 1"
     check"local a = 1;;;"
@@ -100,7 +100,7 @@ it("should handle optional semicolons", function()
     check"do ;;; end\n; do ; a = 3; assert(a == 3) end;\n;"
 end)
 
-it("should parse parenthesis", function()
+it("parenthesis", function()
     check"local a = (1)+(1)"
     check"local a = (1)+(((((1)))))"
     check"local a = 1 --[[a]];"
@@ -110,7 +110,7 @@ it("should parse parenthesis", function()
     check"a = (--[[a]]((-a)))"
 end)
 
-it("should error properly", function()
+it("parser errors", function()
     local function check(tbl)
         for i,v in ipairs(tbl) do
             local ok, err = oh.load(v[1])
