@@ -19,11 +19,11 @@ type TVector = {
 
 type Vector = function(number, number, number): TVector
 
-setmetatable<(TVector, {
+setmetatable<|TVector, {
     __sub = TVector,
     __add = TVector,
     __mul = TVector,
-})>
+}|>
 
 type BodyGroup = {
     id = positive_numbers,

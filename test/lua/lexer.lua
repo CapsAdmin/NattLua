@@ -91,12 +91,12 @@ do
     local hex = "0123456789abcdefABCDEF"
 
     local function r(l, min, max)
-    local out = {}
-    for _ = 1, math.random(max - min + 1) + min - 1 do
-        local x = math.random(#l)
-        table.insert(out, l:sub(x, x))
-    end
-    return table.concat(out)
+        local out = {}
+        for _ = 1, math.random(max - min + 1) + min - 1 do
+            local x = math.random(#l)
+            table.insert(out, l:sub(x, x))
+        end
+        return table.concat(out)
     end
 
     local decs = { "0", "0" .. r(dec, 1, 3), "1", r(dec, 1, 3) }

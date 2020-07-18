@@ -202,8 +202,8 @@ test("self reference", function()
             bar = true,
         } extends a
 
-        type_assert<(b.bar, true)>
-        type_assert<(b.foo, b)>
+        type_assert<|b.bar, true|>
+        type_assert<|b.foo, b|>
     ]]
 end)
 
@@ -217,7 +217,7 @@ test("table extending table", function()
             Bar = false,
         }
 
-        type_assert<(A extends B, {Foo = true, Bar = false})>
+        type_assert<|A extends B, {Foo = true, Bar = false}|>
     ]]
 end)
 
@@ -232,7 +232,7 @@ test("table + table", function()
             Bar = false,
         }
 
-        type_assert<(A + B, {Foo = true, Bar = false})>
+        type_assert<|A + B, {Foo = true, Bar = false}|>
     ]]
 end)
 

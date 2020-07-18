@@ -32,7 +32,7 @@ test("exclude type function", function()
             return T
         end
 
-        local a: Exclude<(1|2|3, 2)>
+        local a: Exclude<|1|2|3, 2|>
 
         type_assert(a, _ as 1|3)
     ]])
@@ -43,7 +43,7 @@ test("exclude type function", function()
             return T
         end
 
-        local a: Exclude<(1|2|3, 2)>
+        local a: Exclude<|1|2|3, 2|>
 
         type_assert(a, _ as 11|31)
     ]], "expected 11 | 31 got 1 | 3")
@@ -148,7 +148,7 @@ test("exlcude", function()
             return T
         end
 
-        local a: Exclude<(1|2|3, 2)>
+        local a: Exclude<|1|2|3, 2|>
         type_assert(a, _ as 1|3)
     ]]
 end)

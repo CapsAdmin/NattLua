@@ -4,6 +4,8 @@ syntax.SymbolCharacters = {
     ",", ";",
     "(", ")", "{", "}", "[", "]",
     "=", "::", "\"", "'",
+
+    "<|", "|>"
 }
 
 syntax.NumberAnnotations = {
