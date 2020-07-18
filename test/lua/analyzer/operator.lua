@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("prefix", function()
+test("prefix", function()
     run([[
         local a = 1
         a = -a
@@ -9,7 +9,7 @@ it("prefix", function()
     ]])
 end)
 
-it("postfix", function()
+test("postfix", function()
     run([[
         local a = 1++
         type_assert(a, 2)

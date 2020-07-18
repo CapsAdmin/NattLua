@@ -2,45 +2,44 @@ local oh = require("oh")
 
 local function check(code)
     local c = assert(assert(oh.Code(code)):Parse())
-    --c.SyntaxTree:Dump()
     local new_code = assert(c:Emit())
     equal(new_code, code)
     return new_code
 end
 
-it("empty code", function()
+test("empty code", function()
     check""
 end)
 
-it("empty return statement", function()
+test("empty return statement", function()
     check"return true"
 end)
 
-it("do statement", function()
+test("do statement", function()
     check"do end"
     check"do do end end"
 end)
 
-it("while statement", function()
+test("while statement", function()
     check"while 1 do end"
 end)
 
-it("repeat until statement", function()
+test("repeat until statement", function()
     check"repeat until 1"
 end)
 
-it("numeric for loop", function()
+test("numeric for loop", function()
     check"for i = 1, 1 do end"
     check"for i = 1, 1, 1 do end"
 end)
 
-it("generic for loop", function()
+test("generic for loop", function()
     check"for k,v in a do end"
     check"for a,b,c,d,e,f,g in a do end"
     check"for a,b,c,d,e,f,g in a,b,c,d,e,f,g do end"
 end)
 
-it("function statements", function()
+test("function statements", function()
     check"function test() end"
     check"local function test() end"
     check"function foo.bar() end"
@@ -49,7 +48,7 @@ it("function statements", function()
     check"local test = function() end"
 end)
 
-it("call expressions", function()
+test("call expressions", function()
     check"a()"
     check"a.b()"
     check"a.b.c()"
@@ -61,14 +60,14 @@ it("call expressions", function()
     check"lol({...})"
 end)
 
-it("if statements", function()
+test("if statements", function()
     check"if 1 then end"
     check"if 1 then else end"
     check"if 1 then elseif 2 then else end"
     check"if 1 then elseif 2 then elseif 3 then else end"
 end)
 
-it("local declarations", function()
+test("local declarations", function()
     check"local a"
     check"local a = 1"
     check"local a = 1,2,3"
@@ -76,14 +75,14 @@ it("local declarations", function()
     check"local a,c = 1,2,3"
 end)
 
-it("global declarations", function()
+test("global declarations", function()
     check"a = 1"
     check"a = 1,2,3"
     check"a,b,c = 1,2,3"
     check"a,c = 1,2,3"
 end)
 
-it("object assignments", function()
+test("object assignments", function()
     check"a[b] = a"
     check"(a)[b] = a"
     check"foo.bar.baz[b] = a"
@@ -91,7 +90,7 @@ it("object assignments", function()
     check"foo.bar.baz = a"
 end)
 
-it("optional semicolons", function()
+test("optional semicolons", function()
     check"local a = 1;"
     check"local a = 1;local a = 1"
     check"local a = 1;;;"
@@ -100,7 +99,7 @@ it("optional semicolons", function()
     check"do ;;; end\n; do ; a = 3; assert(a == 3) end;\n;"
 end)
 
-it("parenthesis", function()
+test("parenthesis", function()
     check"local a = (1)+(1)"
     check"local a = (1)+(((((1)))))"
     check"local a = 1 --[[a]];"
@@ -110,7 +109,83 @@ it("parenthesis", function()
     check"a = (--[[a]]((-a)))"
 end)
 
-it("parser errors", function()
+test("operator precedence", function()
+    local function expand(node, tbl)
+
+        if node.kind == "prefix_operator" or node.kind == "postfix_operator" then
+            table.insert(tbl, node.value.value)
+            table.insert(tbl, "(")
+            expand(node.right or node.left, tbl)
+            table.insert(tbl, ")")
+            return tbl
+        elseif node.kind:sub(1, #"postfix") == "postfix" then
+            table.insert(tbl, node.kind:sub(#"postfix"+2))
+        elseif node.kind ~= "binary_operator" then
+            table.insert(tbl, node:Render())
+        else
+            table.insert(tbl, node.value.value)
+        end
+
+        if node.left then
+            table.insert(tbl, "(")
+            expand(node.left, tbl)
+        end
+
+
+        if node.right then
+            table.insert(tbl, ", ")
+            expand(node.right, tbl)
+            table.insert(tbl, ")")
+        end
+
+        if node.kind:sub(1, #"postfix") == "postfix" then
+            local str = {""}
+            for _, exp in ipairs(node.expressions or {node.expression}) do
+                table.insert(str, exp:Render())
+            end
+            table.insert(tbl, table.concat(str, ", "))
+            table.insert(tbl, ")")
+        end
+
+        return tbl
+    end
+
+    local function dump_precedence(expr)
+        local list = expand(expr, {})
+        local a = table.concat(list)
+        return a
+    end
+
+    local function check(tbl)
+        for i, val in ipairs(tbl) do
+            val[1].code = "a = " .. val[1].code
+            local ast = assert(val[1]:Parse()).SyntaxTree
+
+            local expr = ast:FindStatementsByType("assignment")[1].right[1]
+            local res = dump_precedence(expr)
+            if val[2] and val[2].code ~= res then
+                io.write("EXPECT: " .. val[2].code, "\n")
+                io.write("GOT   : " .. res, "\n")
+            end
+        end
+    end
+
+
+    local C = oh.Code
+
+    check {
+        {C'-2 ^ 2', C'^(-(2), 2)'},
+        {C'pcall(require, "ffi")', C'call(pcall, require, "ffi")'},
+        {C"1 / #a", C"/(1, #(a))"},
+        {C"jit.status and jit.status()", C"and(.(jit, status), call(.(jit, status)))"},
+        {C"a.b.c.d.e.f()", C"call(.(.(.(.(.(a, b), c), d), e), f))"},
+        {C"(foo.bar())", C"call(.(foo, bar))"},
+        {C[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], C[[+(+(^(-(1), 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), ""))))]]},
+        {C[[#{} - 2]], C[[-(#({}), 2)]]}
+    }
+end)
+
+test("parser errors", function()
     local function check(tbl)
         for i,v in ipairs(tbl) do
             local ok, err = oh.load(v[1])

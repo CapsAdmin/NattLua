@@ -10,7 +10,7 @@ pending("typed vararg", function()
     print(foo)
 end)
 
-it("vararg", function()
+test("vararg", function()
     run[[
         local function test(...)
 
@@ -20,7 +20,7 @@ it("vararg", function()
     ]]
 end)
 
-it("vararg", function()
+test("vararg", function()
     run[[
         local function test(...)
             local a,b,c = ...
@@ -30,7 +30,7 @@ it("vararg", function()
     ]]
 end)
 
-it("smoke", function()
+test("smoke", function()
     run[[
         local function test()
             return 1,2
@@ -55,7 +55,7 @@ it("smoke", function()
     ]]
 end)
 
-it("vararg in table", function()
+test("vararg in table", function()
     run[[
         local function test(...)
             local a = {...}
@@ -68,7 +68,7 @@ it("vararg in table", function()
     ]]
 end)
 
-it("var arg in table and return", function()
+test("var arg in table and return", function()
     run[[
         local a,b,c = test(1,2,3)
 
@@ -84,7 +84,7 @@ it("var arg in table and return", function()
     ]]
 end)
 
-it("asadawd", function()
+test("asadawd", function()
     run[[
         local function test(...)
             return 1,2,3, ...

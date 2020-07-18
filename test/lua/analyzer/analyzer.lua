@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("declaring base types", function()
+test("declaring base types", function()
     run[[
         local type Symbol = function(T: any)
             return types.Symbol(loadstring("return " .. T.node.value.value)(), true)
@@ -33,7 +33,7 @@ it("declaring base types", function()
     ]]
 end)
 
-it("comment types should work", function()
+test("comment types", function()
     run([=[
         -- local function foo(str--[[#: string]], idx--[[#: number]], msg--[[#: string]])
 
@@ -51,7 +51,7 @@ it("comment types should work", function()
     ]=], "4 is not the same type as string")
 end)
 
-it("runtime reassignment should work", function()
+test("runtime reassignment", function()
     local v = run[[
         local a = 1
         do
@@ -72,7 +72,7 @@ it("runtime reassignment should work", function()
 end)
 
 
-it("type_assert works", function()
+test("type_assert works", function()
     run("type_assert(1, 2)", "expected.-2 got 1")
     run("type_assert(nil as 1|2, 1)", "expected.-1")
 
@@ -81,19 +81,19 @@ it("type_assert works", function()
     run"type_assert(nil==nil, true)"
 end)
 
-it("runtime scopes should work", function()
+test("runtime scopes", function()
     local v = run("local a = 1"):GetValue("a", "runtime")
     equal(true, v.Type == "number")
 end)
 
-it("comment types", function()
+test("comment types", function()
     run([=[
         --[[#local type a = 1]]
         type_assert(a, 1)
     ]=])
 end)
 
-it("default declaration is literal", function()
+test("default declaration is literal", function()
     local analyzer = run([[
         local a = 1
         local t = {k = 1}
@@ -103,7 +103,7 @@ it("default declaration is literal", function()
     assert(analyzer:GetValue("b", "runtime"):IsLiteral())
 end)
 
-it("branching", function()
+test("branching", function()
     run([[
         type a = {}
 
@@ -124,7 +124,7 @@ it("branching", function()
     ]])
 end)
 
-it("runtime block scopes should work", function()
+test("runtime block scopes", function()
 
     local analyzer = run("do local a = 1 end")
     equal(nil, analyzer:GetValue("a", "runtime"))
@@ -140,7 +140,7 @@ it("runtime block scopes should work", function()
     equal(v:GetData(), 1)
 end)
 
-it("typesystem differs from runtime", function()
+test("typesystem differs from runtime", function()
     local analyzer = run[[
         local a = 1
         local type a = 2
@@ -150,7 +150,7 @@ it("typesystem differs from runtime", function()
     equal(analyzer:GetValue("a", "typesystem"):GetData(), 2)
 end)
 
-it("global types should work", function()
+test("global types", function()
     local analyzer = run[[
         do
             type a = 2
@@ -161,7 +161,7 @@ it("global types should work", function()
     equal(2, analyzer:GetValue("b", "runtime"):GetData())
 end)
 
-it("constant types should work", function()
+test("constant types", function()
     local analyzer = run[[
         local a: 1
         local b: number
@@ -172,7 +172,7 @@ it("constant types should work", function()
 end)
 
 -- literal + vague = vague
-it("1 + number = number", function()
+test("1 + number = number", function()
     local analyzer = run[[
         local a: 1
         local b: number
@@ -184,7 +184,7 @@ it("1 + number = number", function()
     equal(false, v:IsLiteral())
 end)
 
-it("1 + 2 = 3", function()
+test("1 + 2 = 3", function()
     local analyzer = run[[
         local a = 1
         local b = 2
@@ -196,7 +196,7 @@ it("1 + 2 = 3", function()
     equal(3, v:GetData())
 end)
 
-it("function return value should work", function()
+test("function return value", function()
     local analyzer = run[[
         local function test()
             return 1+2+3
@@ -208,7 +208,7 @@ it("function return value should work", function()
     equal(6, v:GetData())
 end)
 
-it("multiple function return values should work", function()
+test("multiple function return values", function()
     local analyzer = run[[
         local function test()
             return 1,2,3
@@ -222,7 +222,7 @@ it("multiple function return values should work", function()
 end)
 
 
-it("scopes shouldn't leak", function()
+test("scopes shouldn't leak", function()
     local analyzer = run[[
         local a = {}
         function a:test(a, b)
@@ -234,13 +234,13 @@ it("scopes shouldn't leak", function()
     equal(3, analyzer:GetValue("a", "runtime"):GetData())
 end)
 
-it("explicitly annotated variables need to be set properly", function()
+test("explicitly annotated variables need to be set properly", function()
     local analyzer = run[[
         local a: number | string = 1
     ]]
 end)
 
-it("functions can modify parent scope", function()
+test("functions can modify parent scope", function()
     local analyzer = run[[
         local a = 1
         local c = a
@@ -254,7 +254,7 @@ it("functions can modify parent scope", function()
     equal(1, analyzer:GetValue("c", "runtime"):GetData())
 end)
 
-it("uncalled functions should be called", function()
+test("uncalled functions should be called", function()
     local analyzer = run[[
         local lib = {}
 
@@ -281,18 +281,18 @@ it("uncalled functions should be called", function()
     equal("number", lib:Get("foo2"):GetReturnTypes():Get(1):GetType("number").Type)
 end)
 
-it("should convert binary numbers to numbers", function()
+test("should convert binary numbers to numbers", function()
     local analyzer = run[[
         local a = 0b01
     ]]
     equal(1, analyzer:GetValue("a", "runtime"):GetData())
 end)
 
-it("undefined types should error", function()
+test("undefined types should error", function()
     run([[local a: ASDF = true]], "cannot find value ASDF")
 end)
 
-it("type functions should return a tuple with types", function()
+test("type functions should return a tuple with types", function()
     local analyzer = run([[
         local type test = function()
             return 1,2,3
@@ -306,7 +306,7 @@ it("type functions should return a tuple with types", function()
     equal(3, analyzer:GetValue("c", "typesystem"):GetData())
 end)
 
-it("type should be able to error", function()
+test("type should be able to error", function()
     run([[
         local type test = function()
             error("test")
@@ -316,7 +316,7 @@ it("type should be able to error", function()
     ]], "test")
 end)
 
-it("exclude type function should work", function()
+test("exclude type function", function()
     run([[
         type function Exclude(T, U)
             T:RemoveElement(U)
@@ -340,7 +340,7 @@ it("exclude type function should work", function()
     ]], "expected 11 | 31 got 1 | 3")
 end)
 
-it("parenthesis around varargs should only return the first value in the tuple", function()
+test("parenthesis around varargs should only return the first value in the tuple", function()
     run[[
         local function s(...) return ... end
         local a,b,c = (s(1, 2, 3))
@@ -350,7 +350,7 @@ it("parenthesis around varargs should only return the first value in the tuple",
     ]]
 end)
 
-it("type function varargs", function()
+test("type function varargs", function()
     run[[
         local lol = function(...)
             local a,b,c = ...

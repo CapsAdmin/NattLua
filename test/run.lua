@@ -1,4 +1,4 @@
-function _G.it(name, cb)
+function _G.test(name, cb)
     local ok, err = pcall(cb)
     if ok then
         io.write(".")

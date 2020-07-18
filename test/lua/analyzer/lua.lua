@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("logic operators", function()
+test("logic operators", function()
     run[[
         local function lt(x, y)
             if x < y then return true else return false end
@@ -223,7 +223,7 @@ it("logic operators", function()
     ]]
 end)
 
-it("boolean and or logic", function() -- and or
+test("boolean and or logic", function() -- and or
     -- when false, or returns its second argument
     run"type_assert(nil or false, false)"
     run"type_assert(false or nil, nil)"
@@ -287,7 +287,7 @@ it("boolean and or logic", function() -- and or
     end
 end)
 
-it("bit operations", function()
+test("bit operations", function()
     run[[
         for i=1,100 do
             assert(bit.tobit(i+0x7fffffff) < 0)
@@ -298,7 +298,7 @@ it("bit operations", function()
     ]]
 end)
 
-it("string comparisons", function()
+test("string comparisons", function()
     run[[
         do
             local a = "\255\255\255\255"
@@ -347,7 +347,7 @@ it("string comparisons", function()
     ]]
 end)
 
-it("object equality", function()
+test("object equality", function()
     run[[
         local function obj_eq(a, b)
             type_assert(a==b, true)

@@ -2,7 +2,7 @@ local T = require("test.helpers")
 
 local i = 1
 local function R(code, expect)
-    it("unsorted analyzer test #" .. i, function()
+    test("unsorted analyzer test #" .. i, function()
         T.RunCode(code, expect)
     end)
     i = i + 1

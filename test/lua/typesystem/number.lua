@@ -11,26 +11,26 @@ _32_to_52:Max(T.Number(52))
 
 local _42 = T.Number(42)
 
-it("a literal number should be contained within all numbers", function()
+test("a literal number should be contained within all numbers", function()
     assert(_42:SubsetOf(all_numbers))
 end)
 
-it("all numbers should not be contained within a literal number", function()
+test("all numbers should not be contained within a literal number", function()
     assert(not all_numbers:SubsetOf(_42))
 end)
 
-it("42 should be contained within any", function()
+test("42 should be contained within any", function()
     assert(_42:SubsetOf(any))
 end)
 
-it("any should be contained within 42", function()
+test("any should be contained within 42", function()
     assert(any:SubsetOf(_42))
 end)
 
-it("42 should be contained within 32..52", function()
+test("42 should be contained within 32..52", function()
     assert(_42:SubsetOf(_32_to_52))
 end)
 
-it("32..52 should not be contained within 42", function()
+test("32..52 should not be contained within 42", function()
     assert(not _32_to_52:SubsetOf(_42))
 end)

@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("reassignment should work", function()
+test("reassignment", function()
     local analyzer = run[[
         local tbl = {}
         tbl.foo = true
@@ -21,14 +21,14 @@ it("reassignment should work", function()
     equal(false, tbl:Get("foo"):GetData())
 end)
 
-it("typed field should work", function()
+test("typed field", function()
     local analyzer = run[[
         local tbl: {foo = boolean} = {foo = true}
     ]]
     equal(true, analyzer:GetValue("tbl", "runtime"):Get("foo"):GetData())
 end)
 
-it("typed table invalid reassignment should error", function()
+test("typed table invalid reassignment should error", function()
     local analyzer = run(
         [[
             local tbl: {foo = 1} = {foo = 2}
@@ -37,7 +37,7 @@ it("typed table invalid reassignment should error", function()
     )
 end)
 
-it("typed table invalid reassignment should error", function()
+test("typed table invalid reassignment should error", function()
     local analyzer = run(
         [[
             local tbl: {foo = 1} = {foo = 1}
@@ -57,14 +57,14 @@ it("typed table invalid reassignment should error", function()
     )
 end)
 
-it("typed table correct assignment not should error", function()
+test("typed table correct assignment not should error", function()
     run([[
         local tbl: {foo = true} = {foo = true}
         tbl.foo = true
     ]])
 end)
 
-it("self referenced tables should be equal", function()
+test("self referenced tables should be equal", function()
     local analyzer = run([[
         local a = {a=true}
         a.foo = {lol = a}
@@ -79,7 +79,7 @@ it("self referenced tables should be equal", function()
     equal(true, a:SubsetOf(b))
 end)
 
-it("indexing nil in a table should be allowed", function()
+test("indexing nil in a table should be allowed", function()
     local analyzer = run([[
         local tbl = {foo = true}
         local a = tbl.bar
@@ -89,14 +89,14 @@ it("indexing nil in a table should be allowed", function()
     equal(nil, analyzer:GetValue("a", "runtime"):GetData())
 end)
 
-it("indexing nil in a table with a contract should error", function()
+test("indexing nil in a table with a contract should error", function()
     run([[
         local tbl: {foo = true} = {foo = true}
         local a = tbl.bar
     ]], "\"bar\" is not a subset of \"foo\"")
 end)
 
-it("string: any", function()
+test("string: any", function()
     run([[
         local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)
         a.lol = "aaa"
@@ -105,20 +105,20 @@ it("string: any", function()
     ]])
 end)
 
-it("empty type table shouldn't be writable", function()
+test("empty type table shouldn't be writable", function()
     run([[
         local a: {} = {}
         a.lol = true
     ]], "table has no definitions")
 end)
 
-it("wrong right hand type should error", function()
+test("wrong right hand type should error", function()
     run([[
         local {a,b} = nil
     ]], "expected a table on the right hand side, got")
 end)
 
-it("should error when key doesn't match the type", function()
+test("should error when key doesn't match the type", function()
     run([[
         local a: {[string] = string} = {}
         a.lol = "a"
@@ -126,14 +126,14 @@ it("should error when key doesn't match the type", function()
     ]], "is not the same type as string")
 end)
 
-it("with typed numerically indexed table should error", function()
+test("with typed numerically indexed table should error", function()
     run([[
         local tbl: {1,true,3} = {1, true, 3}
         tbl[2] = false
     ]], "false is not the same as true")
 end)
 
-it("which has no data but contract says it does should return what the contract says", function()
+test("which has no data but contract says it does should return what the contract says", function()
     run[[
         local tbl = {} as {[string] = 1}
         type_assert(tbl.foo, 1)
@@ -147,7 +147,7 @@ it("which has no data but contract says it does should return what the contract 
     ]])
 end)
 
-it("is literal", function()
+test("is literal", function()
     local a = run[[
         local type a = {a = 1, b = 2}
     ]]
@@ -159,7 +159,7 @@ it("is literal", function()
     equal(a:GetValue("a", "typesystem"):IsLiteral(), true)
 end)
 
-it("is not literal", function()
+test("is not literal", function()
     local a = run[[
         local type a = {a = number, [string] = boolean}
     ]]
@@ -171,7 +171,7 @@ it("is not literal", function()
     equal(a:GetValue("a", "typesystem"):IsLiteral(), false)
 end)
 
-it("self reference", function()
+test("self reference", function()
     local a = run[[
         local type Base = {
             Test = function(self, number): number,
@@ -207,7 +207,7 @@ it("self reference", function()
     ]]
 end)
 
-it("table extending table", function()
+test("table extending table", function()
     run[[
         local type A = {
             Foo = true,
@@ -221,7 +221,7 @@ it("table extending table", function()
     ]]
 end)
 
-it("table + table", function()
+test("table + table", function()
     run[[
         local type A = {
             Foo = true,
@@ -236,7 +236,7 @@ it("table + table", function()
     ]]
 end)
 
-it("index literal table with string", function()
+test("index literal table with string", function()
     run[[
         local tbl = {
             [ '"' ] = 1,

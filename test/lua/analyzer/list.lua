@@ -6,7 +6,7 @@ local check = function(analyzer, to)
 end
 
 
-it("can be simple", function()
+test("can be simple", function()
     run[[
         local x = {1, 2, 3}
         x[2] = 10
@@ -15,7 +15,7 @@ it("can be simple", function()
     ]]
 end)
 
-it("can be sparse", function()
+test("can be sparse", function()
     run[[
         local x = {
             [2] = 2,
@@ -26,7 +26,7 @@ it("can be sparse", function()
     ]]
 end)
 
-it("can be indirect", function()
+test("can be indirect", function()
     run[[
         local RED = 1
         local BLUE = 2
@@ -38,7 +38,7 @@ it("can be indirect", function()
     ]]
 end)
 
-it("indirect only works for numeric keys", function()
+test("indirect only works for numeric keys", function()
     run[[
         local RED = 1
         local BLUE = 2
@@ -63,7 +63,7 @@ it("indirect only works for numeric keys", function()
     ]], "hello.- is not the same type as 1%.%.inf")
 end)
 
-it("indirect works array-records", function()
+test("indirect works array-records", function()
     run[[
         local tbl = {}
         for i = 1, 100 do
@@ -74,19 +74,19 @@ it("indirect works array-records", function()
     ]]
 end)
 
-it("{[number]: any}", function()
+test("{[number]: any}", function()
     check(run[[local a: {[number] = any} = {[1] = 1}]], "{ number ⊃ number(1) = any ⊃ number(1) }")
     run([[local a: {[number] = any} = {foo = 1}]], [[is not the same type as number]])
 end)
 
 
-it("{[1 .. inf]: any}", function()
+test("{[1 .. inf]: any}", function()
     check(run[[local a: {[1 .. inf] = any} = {[1234] = 1}]], "{ 1..inf ⊃ 1234 = any ⊃ number(1) }")
 
     run([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[%-1234 is not a subset of 1%.%.inf]])
 end)
 
-it("traditional array", function()
+test("traditional array", function()
     run[[
         local function Array<(T: any, L: number)>
             return {[1 .. L] = T}

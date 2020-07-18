@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("if statement within a function should work", function()
+test("if statement within a function", function()
     run([[
         local a = 1
         function b(lol)

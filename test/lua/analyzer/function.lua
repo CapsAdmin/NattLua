@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("arguments should work", function()
+test("arguments", function()
     local analyzer = run[[
         local function test(a,b,c)
             return a+b+c
@@ -12,7 +12,7 @@ it("arguments should work", function()
     equal(6, analyzer:GetValue("a", "runtime"):GetData())
 end)
 
-it("arguments should get annotated", function()
+test("arguments should get annotated", function()
     local analyzer = run[[
         local function test(a,b,c)
             return a+c
@@ -31,7 +31,7 @@ it("arguments should get annotated", function()
     equal("number", rets:Get(1).Type)
 end)
 
-it("arguments and return types are volatile", function()
+test("arguments and return types are volatile", function()
     local analyzer = run[[
         local function test(a)
             return a
@@ -52,7 +52,7 @@ it("arguments and return types are volatile", function()
     equal(true, rets:Get(1):HasType("string"))
 end)
 
-it("which is not explicitly annotated should not dictate return values", function()
+test("which is not explicitly annotated should not dictate return values", function()
     local analyzer = run[[
         local function test(a)
             return a
@@ -68,7 +68,7 @@ it("which is not explicitly annotated should not dictate return values", functio
     equal(true, val:GetData())
 end)
 
-it("which is explicitly annotated should error when the actual return value is different", function()
+test("which is explicitly annotated should error when the actual return value is different", function()
     run([[
         local function test(a)
             return a
@@ -78,7 +78,7 @@ it("which is explicitly annotated should error when the actual return value is d
     ]], "1.-is not the same type as string")
 end)
 
-it("which is explicitly annotated should error when the actual return value is unknown", function()
+test("which is explicitly annotated should error when the actual return value is unknown", function()
     run([[
         local function test(a: number): string
             return a
@@ -86,7 +86,7 @@ it("which is explicitly annotated should error when the actual return value is u
     ]], "number is not the same type as string")
 end)
 
-it("call within a function shouldn't mess up collected return types", function()
+test("call within a function shouldn't mess up collected return types", function()
     local analyzer = run[[
         local function b()
             (function() return 888 end)()
@@ -99,7 +99,7 @@ it("call within a function shouldn't mess up collected return types", function()
     equal(1337, c:GetData())
 end)
 
-it("arguments with any should work", function()
+test("arguments with any", function()
     run([[
         local function test(b: any, a: any)
 
@@ -109,7 +109,7 @@ it("arguments with any should work", function()
     ]])
 end)
 
-it("self argument should be volatile", function()
+test("self argument should be volatile", function()
     local analyzer = run([[
         local meta = {}
         function meta:Foo(b)
@@ -122,7 +122,7 @@ it("self argument should be volatile", function()
     equal("table", self.Type)
 end)
 
-it("arguments that are explicitly typed should error", function()
+test("arguments that are explicitly typed should error", function()
     run([[
         local function test(a: 1)
 
@@ -156,7 +156,7 @@ it("arguments that are explicitly typed should error", function()
     ]], "\"a\" is not the same type as number")
 end)
 
-it("arguments that are not explicitly typed should be volatile", function()
+test("arguments that are not explicitly typed should be volatile", function()
     do
         local analyzer = run[[
             local function test(a, b)
@@ -224,7 +224,7 @@ it("arguments that are not explicitly typed should be volatile", function()
     local b = analyzer:GetValue("b", "runtime")
 end)
 
-it("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", function()
+test("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", function()
     local analyzer = run[[
         function f1()
             return { data = function () return 1, 2, 3 end }
@@ -248,13 +248,13 @@ it("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", func
     equal(3, c:GetData())
 end)
 
-it("return type should work", function()
+test("return type", function()
     local analyzer = run[[
         function foo(a: number):string return '' end
     ]]
 end)
 
-it("defining a type for a function should type the arguments", function()
+test("defining a type for a function should type the arguments", function()
     run[[
         local type test = function(number, string): 1
 
@@ -276,7 +276,7 @@ it("defining a type for a function should type the arguments", function()
     ]], "true is not the same as number")
 end)
 
-it("calling a set should work", function()
+test("calling a set", function()
     run[[
         type test = (function(boolean, boolean): number) | (function(boolean): string)
 
@@ -288,7 +288,7 @@ it("calling a set should work", function()
     ]]
 end)
 
-it("calling a set that does not contain a function should error", function()
+test("calling a set that does not contain a function should error", function()
     run([[
         type test = (function(boolean, boolean): number) | (function(boolean): string) | number
 
@@ -296,7 +296,7 @@ it("calling a set that does not contain a function should error", function()
     ]], "set contains uncallable object number")
 end)
 
-it("pcall", function()
+test("pcall", function()
     run[[
         type pcall = function(cb: any, ...)
             return types.Boolean, table.unpack(analyzer:Call(cb, types.Tuple({...})):GetData())
@@ -311,7 +311,7 @@ it("pcall", function()
         type_assert(err, _ as boolean)
     ]]
 end)
-it("complex", function()
+test("complex", function()
     run[[
         local a
         a = 2
@@ -329,7 +329,7 @@ it("complex", function()
         end
     ]]
 end)
-it("lol", function()
+test("lol", function()
     run[[
         do
             type x = boolean | number
@@ -344,7 +344,7 @@ it("lol", function()
     ]]
 end)
 
-it("lol2", function()
+test("lol2", function()
     run[[
         local function test(a:number,b: number)
             return a + b

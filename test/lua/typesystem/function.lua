@@ -14,7 +14,7 @@ local overloads = Set(Function({
     ret = Tuple(Symbol("LOL")),
 }))
 
-it("overload should work", function()
+test("overload", function()
     local a = require("oh.lua.analyzer")()
     assert(assert(a:Call(overloads, Tuple(String(), Number()))):Get(1):GetData() == "LOL")
     assert(assert(a:Call(overloads, Tuple(Number(5), String()))):Get(1):GetData() == "ROFL")

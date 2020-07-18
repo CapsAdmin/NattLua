@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("meta library should work", function()
+test("meta library", function()
     run[[
         local a = "1234"
         type_assert(string.len(a), 4)
@@ -9,7 +9,7 @@ it("meta library should work", function()
     ]]
 end)
 
-it("patterns", function()
+test("patterns", function()
     run[[
         local a: $"FOO_.-" = "FOO_BAR"
     ]]

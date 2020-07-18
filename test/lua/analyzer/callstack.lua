@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 do return end
 
-it("lol", function()
+test("lol", function()
     run[[
 
         local function foo()

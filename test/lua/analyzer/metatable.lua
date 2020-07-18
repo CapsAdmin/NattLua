@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-it("index function should work", function()
+test("index function", function()
     local analyzer = run[[
         local t = setmetatable({}, {__index = function() return 1 end})
         local a = t.lol
@@ -19,7 +19,7 @@ it("index function should work", function()
     ]]
 end)
 
-it("basic inheritance should work", function()
+test("basic inheritance", function()
     local analyzer = run[[
         local META = {}
         META.__index = META
@@ -44,7 +44,7 @@ it("basic inheritance should work", function()
     equal(3, b:GetData())
 end)
 
-it("__call method should work", function()
+test("__call method", function()
     local analyzer = run[[
         local META = {}
         META.__index = META
@@ -63,7 +63,7 @@ it("__call method should work", function()
     equal(105, analyzer:GetValue("lol", "runtime"):GetData())
 end)
 
-it("__call method should not mess with scopes", function()
+test("__call method should not mess with scopes", function()
     local analyzer = run[[
         local META = {}
         META.__index = META
@@ -80,7 +80,7 @@ it("__call method should not mess with scopes", function()
     equal(105, a:GetData())
 end)
 
-it("vector test", function()
+test("vector test", function()
     local analyzer = run[[
         local Vector = {}
         Vector.__index = Vector
@@ -98,7 +98,7 @@ it("vector test", function()
     equal(123, v:GetData())
 end)
 
-it("vector test2", function()
+test("vector test2", function()
     local analyzer = run[[
         local Vector = {}
         Vector.__index = Vector
@@ -126,7 +126,7 @@ it("vector test2", function()
     equal(103, z:GetData())
 end)
 
-it("interface extensions", function()
+test("interface extensions", function()
     run[[
         local type Vec2 = {x = number, y = number}
         local type Vec3 = {z = number} extends Vec2
@@ -155,7 +155,7 @@ it("interface extensions", function()
     ]]
 end)
 
-it("error on newindex", function()
+test("error on newindex", function()
     run([[
         type error = function(msg: string)
             assert(type(msg.data) == "string", "msg does not contain a string?")
@@ -180,7 +180,7 @@ it("error on newindex", function()
     ]], "cannot use foo")
 end)
 
-it("tutorialspoint", function()
+test("tutorialspoint", function()
     run[[
         mytable = setmetatable({key1 = "value1"}, {
             __index = function(mytable, key)

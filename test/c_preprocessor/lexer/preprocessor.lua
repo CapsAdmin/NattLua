@@ -46,28 +46,28 @@ local function parse(code)
     return o.SyntaxTree
 end
 
-it("macro newline escape", function()
+test("macro newline escape", function()
     local tokens = tokenize("define\\\n FOO \\\n 1\\\n 2 foo 3\\\n 4 \\\n5")
     equal(tokens[1].type, "keyword")
     equal(#tokens, 9)
 end)
 
-it("define identifier token-string", function()
+test("define identifier token-string", function()
     local syntax_tree = parse("define FOO 1 2 3")
     equal(syntax_tree.statements[1].kind, "define")
 end)
 
-it("define identifier args", function()
+test("define identifier args", function()
     local syntax_tree = parse("define FOO(foo, bar, faz) 1 2 foo 3 4 5")
     equal(syntax_tree.statements[1].kind, "define")
 end)
 
-it("include double quote", function()
+test("include double quote", function()
     local syntax_tree = parse("include \"foo/bar/faz.c\"")
     equal(syntax_tree.statements[1].path.value, "\"foo/bar/faz.c\"")
 end)
 
-it("include angle bracket", function()
+test("include angle bracket", function()
     local syntax_tree = parse("include <foo/bar/faz.c>")
 
     local path = ""
@@ -77,16 +77,16 @@ it("include angle bracket", function()
     equal(path, "foo/bar/faz.c")
 end)
 
-it("define", function()
+test("define", function()
     local syntax_tree = parse("define foo")
 end)
 do return end
 
 
-it("line", function()
+test("line", function()
     check("line 123 \"aaaa.lua\"")
 end)
-it("macro expansion", function()
+test("macro expansion", function()
     check[[
         #define HE HI
 		#define LLO _THERE

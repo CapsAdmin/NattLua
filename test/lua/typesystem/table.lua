@@ -5,7 +5,7 @@ local Table = T.Table
 local Set = T.Set
 local Tuple = T.Tuple
 
-it("set and get should work", function()
+test("set and get", function()
     local contract = Table()
     assert(contract:Set(String("foo"), Number()))
     assert(assert(contract:Get("foo")).Type == "number")
@@ -20,7 +20,7 @@ it("set and get should work", function()
     assert(not contract:SubsetOf(tbl))
 end)
 
-it("set string and get constant string should work", function()
+test("set string and get constant string", function()
     local contract = Table()
     assert(contract:Set(String(), Number()))
 
@@ -36,13 +36,13 @@ it("set string and get constant string should work", function()
     assert(not contract:SubsetOf(tbl))
 end)
 
-it("errors when trying to modify a table without a defined structure", function()
+test("errors when trying to modify a table without a defined structure", function()
     local tbl = Table()
     tbl.contract = Table()
     assert(not tbl:Set(String("foo"), Number(1337)))
 end)
 
-it("copy from constness should work", function()
+test("copy from constness", function()
     local contract = Table()
     contract:Set(String("foo"), String("bar"))
     contract:Set(String("a"), Number())
