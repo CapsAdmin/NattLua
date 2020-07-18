@@ -385,7 +385,7 @@ do -- identifier
         local out = {}
 
         for i = 1, max or self:GetLength() do
-            if (not self:IsType("letter") and not self:IsValue("...")) or self:HandleListSeparator(out, i, self:ReadIdentifier()) then
+            if not self:IsType("letter") or self:HandleListSeparator(out, i, self:ReadIdentifier()) then
                 break
             end
         end
@@ -676,11 +676,46 @@ do -- statements
     end
 
     function META:ReadStatement()
+
         if self:IsValue("define") then
-            self:BeginStatement("#define")
+            self:BeginStatement("define")
+                self:ExpectKeyword("define")
                 self:ExpectIdentifier()
-                self:ExpectIdentifier()
-            self:EndStatement()
+                local node = self:GetNode()
+
+                if self:IsValue("(") then
+                    node.tokens["("] = self:ReadValue("(")
+                    node.identifiers = self:ReadIdentifierList()
+                    node.tokens[")"] = self:ReadValue(")")
+                end
+
+                node.rest = {}
+                while true do
+                    local tk = self:ReadTokenLoose()
+                    if tk.type == "end_of_file" then break end
+                    table.insert(node.rest, tk)
+                end
+            return self:EndStatement()
+        end
+
+        if self:IsValue("include") then
+            self:BeginStatement("include")
+                self:ExpectKeyword("include")
+                if self:IsValue("<") then
+                    local node = self:GetNode()
+                    node.tokens["<"] = self:ReadValue("<")
+                    local path = {}
+                    while not self:IsValue(">") do
+                        table.insert(path, self:ReadTokenLoose())
+                    end
+                    node.tokens[">"] = self:ReadValue(">")
+                    self:Store("path", path)
+                elseif self:IsType("letter") then
+                    self:Store("path", self:ReadType("letter"))
+                else
+                    self:Store("path", self:ReadType("string"))
+                end
+            return self:EndStatement()
         end
 
         do return end

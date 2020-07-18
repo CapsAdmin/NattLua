@@ -1,5 +1,31 @@
 local oh = require("oh")
 
+
+local f = io.open("./temp.c", "w")
+f:write([[
+
+
+    #define MIN(a,b) ((a)<(b)?(a):(b))
+
+#define l2ol <stdio.h>
+
+#define lol(a) int main()      a
+
+lol({
+    printf(l2ol
+
+    "Hello World");
+
+    MIN(5,2)
+
+    return 0;
+})
+
+]])
+f:close()
+print(io.popen("gcc -E ./temp.c", "r"):read("*all"))
+os.remove("./temp.c")
+
 local tprint = require("libraries.tprint")
 
 local function tokenize(code)
@@ -22,32 +48,44 @@ end
 
 it("macro newline escape", function()
     local tokens = tokenize("define\\\n FOO \\\n 1\\\n 2 foo 3\\\n 4 \\\n5")
-    equal(tokens[1].type, "macro")
-    equal(#tokens, 2)
+    equal(tokens[1].type, "keyword")
+    equal(#tokens, 9)
 end)
 
 it("define identifier token-string", function()
-    local syntax_tree = parse("define FOO 1 2 foo 3 4 5")
-    tprint(syntax_tree)
+    local syntax_tree = parse("define FOO 1 2 3")
+    equal(syntax_tree.statements[1].kind, "define")
+end)
+
+it("define identifier args", function()
+    local syntax_tree = parse("define FOO(foo, bar, faz) 1 2 foo 3 4 5")
+    equal(syntax_tree.statements[1].kind, "define")
+end)
+
+it("include double quote", function()
+    local syntax_tree = parse("include \"foo/bar/faz.c\"")
+    equal(syntax_tree.statements[1].path.value, "\"foo/bar/faz.c\"")
+end)
+
+it("include angle bracket", function()
+    local syntax_tree = parse("include <foo/bar/faz.c>")
+
+    local path = ""
+    for _, token in ipairs(syntax_tree.statements[1].path) do
+        path = path .. token.value
+    end
+    equal(path, "foo/bar/faz.c")
+end)
+
+it("define", function()
+    local syntax_tree = parse("define foo")
 end)
 do return end
-it("define identifier args", function()
-    check("#define FOO(foo, bar, faz) 1 2 foo 3 4 5")
-end)
 
-it("include", function()
-    check("#include \"foo/bar/faz.c\"")
-    check("#include <foo/bar/faz.c>")
-end)
 
 it("line", function()
-    check("#line 123 \"aaaa.lua\"")
+    check("line 123 \"aaaa.lua\"")
 end)
-
-it("undef", function()
-    check("#undef")
-end)
-
 it("macro expansion", function()
     check[[
         #define HE HI

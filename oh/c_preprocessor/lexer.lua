@@ -92,7 +92,7 @@ do
         return out
     end
 
-    function META.GenerateLookupFunction(tbl)
+    function META.BuildReadFunction(tbl)
         local copy = {}
         local done = {}
 
@@ -136,7 +136,7 @@ do
 
     local allowed_hex = META.GenerateMap("1234567890abcdefABCDEF")
 
-    META.ConsumeNumberAnnotation = META.GenerateLookupFunction(syntax.NumberAnnotations)
+    META.ConsumeNumberAnnotation = META.BuildReadFunction(syntax.NumberAnnotations)
 
     function META:ReadNumberAnnotations(what)
         if what == "hex" then
@@ -358,8 +358,16 @@ function META:ConsumeMacro()
     return "macro"
 end
 
+function META:ConsumeNewlineEscape()
+    if self:IsValue("\\") and self:IsValue("\n", 1) then
+        self:Advance(2)
+        return true
+    end
+end
+
 function META:ReadWhiteSpace()
     if
+    self:ConsumeNewlineEscape() then    return "space" elseif
     self:IsSpace() then                 return self:ReadSpace() elseif
     self:ConsumeMultilineComment() then return "multiline_comment" elseif
     self:ConsumeLineComment() then      return "line_comment" elseif
