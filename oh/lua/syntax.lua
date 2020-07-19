@@ -5,7 +5,7 @@ syntax.SymbolCharacters = {
     "(", ")", "{", "}", "[", "]",
     "=", "::", "\"", "'",
 
-    "<|", "|>"
+    "<|", "|>",
 }
 
 syntax.NumberAnnotations = {
@@ -35,7 +35,7 @@ syntax.KeywordValues = {
 }
 
 syntax.PrefixOperators = {
-    "-", "#", "not", "~",
+    "-", "#", "not", "!", "~",
 }
 
 syntax.PrefixTypeOperators = {
@@ -54,16 +54,16 @@ syntax.PostfixTypeOperators = {
 }
 
 syntax.BinaryOperators = {
-    {"or"},
-    {"and"},
-    {"<", ">", "<=", ">=", "~=", "=="},
+    {"or", "||"},
+    {"and", "&&"},
+    {"<", ">", "<=", ">=", "~=", "==", "!="},
     {"|"},
     {"~"},
     {"&"},
     {"<<", ">>"},
     {"R.."}, -- right associative
     {"+", "-"},
-    {"*", "/", "//", "%"},
+    {"*", "/", "/idiv/", "%"},
     {"R^"}, -- right associative
 }
 
@@ -86,7 +86,7 @@ syntax.BinaryTypeOperators = {
     {"<<", ">>"},
     {"R.."}, -- right associative
     {"+", "-"},
-    {"*", "/", "//", "%"},
+    {"*", "/", "/idiv/", "%"},
     {"R^"}, -- right associative
 }
 

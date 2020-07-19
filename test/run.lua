@@ -13,9 +13,10 @@ function pending()
 
 end
 
-function _G.equal(a, b)
+function _G.equal(a, b, level)
+    level = level or 1
     if a ~= b then
-        error(tostring(a) .. " ~= " .. tostring(b), 2)
+        error(tostring(a) .. " ~= " .. tostring(b), level + 1)
     end
 end
 

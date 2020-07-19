@@ -1,9 +1,9 @@
 local oh = require("oh")
 
-local function check(code)
+local function check(code, eq)
     local c = assert(assert(oh.Code(code)):Parse())
     local new_code = assert(c:Emit())
-    equal(new_code, code)
+    equal(new_code, eq or code)
     return new_code
 end
 
@@ -107,6 +107,10 @@ test("parenthesis", function()
     check"local a = (--[[1]](--[[2]](--[[3]](--[[4]]4))))"
     check"local a = 1 --[=[a]=] + (((1)));"
     check"a = (--[[a]]((-a)))"
+end)
+
+test("// binary operator", function()
+    check("// lol\nprint(3 // (5 // 2))", "// lol\nprint(3/idiv/ (5/idiv/ 2))")
 end)
 
 test("operator precedence", function()
@@ -223,14 +227,14 @@ test("parser errors", function()
         {"a = 0b1LOL01", "malformed number L in binary notation"},
         {"a = 'aaaa", "expected single quote.-reached end of file"},
         {"a = 'aaaa \ndawd=1", "expected single quote"},
-        {"foo = !", "expected assignment or call expression got.-unknown"},
+        {"foo = !", "expected beginning of expression.-end_of_file"},
         {"foo = then", "expected beginning of expression.-got.-then"},
         {"--[[aaaa", "expected multiline comment.-reached end of code"},
         {"--[[aaaa\na=1", "expected multiline comment.-reached end of code"},
         {"::1::", "expected.-letter.-got.-number"},
         {"::", "expected.-letter.-got.-end_of_file"},
-        {"!!!!!!!!!!!", "expected.-got.-unknown"},
+        {"!!!!!!!!!!!", "expected.-got.-end_of_file"},
         {"do do end", "expected.-end.-got.-"},
-        {"\n\n\nif !test then end", "expected.-then.-got.-!"},
+        {"\n\n\nif $test then end", "expected.-then.-got.-$"},
     })
 end)

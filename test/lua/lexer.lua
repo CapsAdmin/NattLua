@@ -11,7 +11,7 @@ end
 
 local function one_token(tokens)
     assert(#tokens, 2)
-    equal(tokens[2].type, "end_of_file")
+    equal(tokens[2] and tokens[2].type, "end_of_file", 2)
     return tokens[1]
 end
 
@@ -52,7 +52,7 @@ test("multiline comments", function()
    equal(#parse"--[==[foo]==]", 1)
    equal(#parse"--[=======[foo]=======]", 1)
    equal(#parse"--[=TESTSUITE\n-- utilities\nlocal ops = {}\n--]=]", 6)
-   equal(#parse"foo--[[]].--[[]]bar--[[]]:--[[]]test--[[]](--[[]]1--[[]]--[[]],2--[[]])--------[[]]--[[]]--[[]]", 11)
+   equal(#parse"foo--[[]].--[[]]bar--[[]]:--[==[]==]test--[[]](--[=[]=]1--[[]]--[[]],2--[[]])--------[[]]--[[]]--[===[]]", 11)
 end)
 
 test("unicode", function()
@@ -61,30 +61,43 @@ test("unicode", function()
    equal(5, #tokenize"foo(ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็ด้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็็้้้้้้้้็็็็็้้้้้็็็็)")
 end)
 
+test("glua", function()
+    equal(one_token(tokenize("/**/foo")).type, "letter")
+    equal(one_token(tokenize("/*B*/foo")).type, "letter")
+    equal(one_token(tokenize("/*-----*/foo")).type, "letter")
+    equal(one_token(tokenize("--asdafsadw\nfoo--awsad asd")).type, "letter")
+
+    equal(tokenize("!a")[1].type, "operator_prefix")
+
+    equal(tokenize("a != 1")[2].type, "operator_binary")
+    equal(tokenize("a && b")[2].type, "operator_binary")
+    equal(tokenize("a || b")[2].type, "operator_binary")
+end)
+
 do
     math.randomseed(os.time())
 
     local function gen_all_passes(out, prefix, parts, psign, powers)
-    local passes = {}
-    for _, p in ipairs(parts) do
-        table.insert(passes, p)
-    end
-    for _, p in ipairs(parts) do
-        table.insert(passes, "." .. p)
-    end
-    for _, a in ipairs(parts) do
-        for _, b in ipairs(parts) do
-            table.insert(passes, a .. "." .. b)
+        local passes = {}
+        for _, p in ipairs(parts) do
+            table.insert(passes, p)
         end
-    end
-    for _, a in ipairs(passes) do
-        table.insert(out, prefix .. a)
-        for _, b in ipairs(powers) do
-            table.insert(out, prefix .. a .. psign .. b)
-            table.insert(out, prefix .. a .. psign .. "-" .. b)
-            table.insert(out, prefix .. a .. psign .. "+" .. b)
+        for _, p in ipairs(parts) do
+            table.insert(passes, "." .. p)
         end
-    end
+        for _, a in ipairs(parts) do
+            for _, b in ipairs(parts) do
+                table.insert(passes, a .. "." .. b)
+            end
+        end
+        for _, a in ipairs(passes) do
+            table.insert(out, prefix .. a)
+            for _, b in ipairs(powers) do
+                table.insert(out, prefix .. a .. psign .. b)
+                table.insert(out, prefix .. a .. psign .. "-" .. b)
+                table.insert(out, prefix .. a .. psign .. "+" .. b)
+            end
+        end
     end
 
     local dec = "0123456789"

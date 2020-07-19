@@ -77,6 +77,18 @@ do
 end
 
 do
+    function META:IsContinueStatement()
+        return self:IsValue("continue")
+    end
+
+    function META:ReadContinueStatement()
+        return self:BeginStatement("continue")
+            :ExpectKeyword("continue")
+        :EndStatement()
+    end
+end
+
+do
     function META:IsReturnStatement()
         return self:IsValue("return")
     end
@@ -566,7 +578,7 @@ do -- expression
         elseif syntax.IsPrefixOperator(self:GetToken()) then
             node = self:BeginExpression("prefix_operator", true)
             node.value = self:ReadTokenLoose()
-            node.right = self:ReadExpression(math.huge, no_ambigious_calls)
+            node.right = self:ReadExpectExpression(math.huge, no_ambigious_calls)
             self:EndExpression()
         elseif self:IsFunctionValue() then
             node = self:ReadFunctionValue()
@@ -637,6 +649,23 @@ do -- expression
 
             if first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
                 first.upvalue_or_global = node
+            end
+        end
+
+        do
+            local node = self:GetToken()
+            if node and node.potential_lua54_division_operator then
+                for _, v in ipairs(node.whitespace) do
+                    if v.type == "line_comment" and v.value:sub(1,2) == "//" then
+                        local tokens = require("oh.lua.lexer")("/idiv" .. v.value:sub(2)):GetTokens()
+                        self:RemoveToken(self:GetLength())
+                        local eof = tokens[#tokens]
+                        self:AddTokens(tokens)
+                        table.insert(self.tokens, eof)
+                        self.tokens_length = #self.tokens
+                        break
+                    end
+                end
             end
         end
 
@@ -712,6 +741,7 @@ do -- statements
         if
             self:IsReturnStatement() then                           return self:ReadReturnStatement() elseif
             self:IsBreakStatement() then                            return self:ReadBreakStatement() elseif
+            self:IsContinueStatement() then                         return self:ReadContinueStatement() elseif
             self:IsSemicolonStatement() then                        return self:ReadSemicolonStatement() elseif
             self:IsGotoStatement() then                             return self:ReadGotoStatement() elseif
             self:IsImportStatement() then                           return self:ReadImportStatement() elseif

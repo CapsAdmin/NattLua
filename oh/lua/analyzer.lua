@@ -95,7 +95,7 @@ do -- type operators
             elseif op == "~" then local res = metatable_function(self, "__bxor", l) if res then return res end
             elseif op == "#" then local res = metatable_function(self, "__len", l) if res then return res end end
 
-            if op == "not" then
+            if op == "not" or op == "!" then
                 if l:IsTruthy() and l:IsFalsy() then
                     return types.Boolean
                 end
@@ -130,7 +130,7 @@ do -- type operators
             ["-"] = function(l,r) return l-r end,
             ["*"] = function(l,r) return l*r end,
             ["/"] = function(l,r) return l/r end,
-            ["//"] = function(l,r) return math.floor(l/r) end,
+            ["/idiv/"] = function(l,r) return math.floor(l/r) end,
             ["%"] = function(l,r) return l%r end,
             ["^"] = function(l,r) return l^r end,
             [".."] = function(l,r) return l..r end,
@@ -247,7 +247,7 @@ do -- type operators
             elseif op == "-" then local res = metatable_function(self, "__sub", l, r) if res then return res end
             elseif op == "*" then local res = metatable_function(self, "__mul", l, r) if res then return res end
             elseif op == "/" then local res = metatable_function(self, "__div", l, r) if res then return res end
-            elseif op == "//" then local res = metatable_function(self, "__idiv", l, r) if res then return res end
+            elseif op == "/idiv/" then local res = metatable_function(self, "__idiv", l, r) if res then return res end
             elseif op == "%" then local res = metatable_function(self, "__mod", l, r) if res then return res end
             elseif op == "^" then local res = metatable_function(self, "__pow", l, r) if res then return res end
             elseif op == "&" then local res = metatable_function(self, "__band", l, r) if res then return res end
@@ -257,7 +257,7 @@ do -- type operators
             elseif op == ">>" then local res = metatable_function(self, "__rshift", l, r) if res then return res end end
 
             if l.Type == "number" and r.Type == "number" then
-                if op == "~=" then
+                if op == "~=" or op == "!=" then
                     if l.max and l.max.data then
                         return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.False
                     end
@@ -364,7 +364,7 @@ do -- type operators
                 end
 
                 return types.Boolean
-            elseif op == "or" then
+            elseif op == "or" or op == "||" then
                 if l:IsUncertain() then
                     return types.Set({l,r})
                 end
@@ -383,7 +383,7 @@ do -- type operators
                 end
 
                 return r
-            elseif op == "and" then
+            elseif op == "and" or op == "&&" then
                 if l:IsTruthy() and r:IsFalsy() then
                     if l:IsFalsy() or r:IsTruthy() then
                         return types.Set({l,r})
@@ -435,7 +435,7 @@ do -- type operators
             elseif op == "-" then return arithmetic(l,r, "number", op)
             elseif op == "*" then return arithmetic(l,r, "number", op)
             elseif op == "/" then return arithmetic(l,r, "number", op)
-            elseif op == "//" then return arithmetic(l,r, "number", op)
+            elseif op == "/idiv/" then return arithmetic(l,r, "number", op)
             elseif op == "%" then return arithmetic(l,r, "number", op)
             elseif op == "^" then return arithmetic(l,r, "number", op)
 

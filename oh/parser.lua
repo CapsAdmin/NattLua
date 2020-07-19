@@ -168,6 +168,13 @@ return function(parser_meta, syntax, Emitter)
         return tk
     end
 
+    function META:RemoveToken(i)
+        local t = self.tokens[i]
+        table.remove(self.tokens, i)
+        self.tokens_length = #self.tokens
+        return t
+    end
+
     function META:AddTokens(tokens)
         for i, token in ipairs(tokens) do
             if token.type == "end_of_file" then

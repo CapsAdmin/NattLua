@@ -92,6 +92,43 @@ function META:ReadLineComment()
     return false
 end
 
+
+function META:ReadCMultilineComment()
+    if self:IsValue("/") and self:IsValue("*", 1) then
+        self:Advance(2)
+        for _ = self.i, self:GetLength() do
+            if self:IsValue("*") and self:IsValue("/", 1) then
+                self:Advance(2)
+                break
+            end
+            self:Advance(1)
+        end
+
+        return true
+    end
+
+    return false
+end
+
+function META:ReadCLineComment()
+    if self:IsValue("/") and self:IsValue("/", 1)then
+
+        self.potential_lua54_division_operator = true
+        self:Advance(2)
+
+        for _ = self.i, self:GetLength() do
+            if self:IsValue("\n") then
+                break
+            end
+            self:Advance(1)
+        end
+
+        return true
+    end
+
+    return false
+end
+
 function META:ReadMultilineString()
     if self:IsValue("[") and (self:IsValue("[", 1) or self:IsValue("=", 1)) then
         local start = self.i
@@ -163,24 +200,16 @@ do
 
     function META:ReadNumberAnnotations(what)
         if what == "hex" then
-            if self:IsNumberPow() then
+            if self:IsValue("p") or self:IsValue("P") then
                 return self:ReadNumberPowExponent("pow")
             end
         elseif what == "decimal" then
-            if self:IsNumberExponent() then
+            if self:IsValue("e") or self:IsValue("E") then
                 return self:ReadNumberPowExponent("exponent")
             end
         end
 
         return self:IsInNumberAnnotation()
-    end
-
-    function META:IsNumberExponent()
-        return self:IsValue("e") or self:IsValue("E")
-    end
-
-    function META:IsNumberPow()
-        return self:IsValue("p") or self:IsValue("P")
     end
 
     function META:ReadNumberPowExponent(what)
@@ -285,10 +314,6 @@ do
         end
     end
 
-    function META:IsNumber()
-        return
-    end
-
     function META:ReadNumber()
         if syntax.IsNumber(self:GetChar()) or (self:IsValue(".") and syntax.IsNumber(self:GetChar(1))) then
 
@@ -372,6 +397,10 @@ function META:ReadWhiteSpace()
     if
     self:ReadSpace() then               return "space" elseif
     self:ReadCommentEscape() then       return "comment_escape" elseif
+
+    self:ReadCMultilineComment() then   return "multiline_comment" elseif
+    self:ReadCLineComment() then        return "line_comment" elseif
+
     self:ReadMultilineComment() then    return "multiline_comment" elseif
     self:ReadLineComment() then         return "line_comment" elseif
     false then end
@@ -385,9 +414,9 @@ function META:ReadNonWhiteSpace()
     self:ReadSingleString() then        return "string" elseif
     self:ReadDoubleString() then        return "string" elseif
 
-    self:ReadEndOfFile() then           return "end_of_file" elseif
     self:ReadLetter() then              return "letter" elseif
     self:ReadSymbol() then              return "symbol" elseif
+    self:ReadEndOfFile() then           return "end_of_file" elseif
     false then end
 end
 

@@ -324,6 +324,12 @@ return function(lexer_meta, syntax)
 
         local tk = self:NewToken(type, start, self.i - 1)
         tk.whitespace = wbuffer
+
+        if self.potential_lua54_division_operator then
+            tk.potential_lua54_division_operator = true
+            self.potential_lua54_division_operator = false
+        end
+
         return tk
     end
 
