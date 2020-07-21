@@ -80,7 +80,7 @@ function oh.on_editor_save(path)
 			elseif path:find("/c/") then
 				os.execute("luajit test/run.lua c")
 			else
-				os.execute("luajit test/run.lua c")
+				os.execute("luajit test/run.lua")
 			end
 			return
 		else
@@ -233,7 +233,7 @@ do
 
 		self.Tokens = tokens
 
-		return self
+		return self, lexer
 	end
 
 	function META:Parse(cb)

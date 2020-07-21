@@ -223,7 +223,6 @@ return function(parser_meta, syntax, Emitter)
         if not self:GetToken() or not values[self:GetToken().value] then
             local tk = self:GetToken()
             if not tk then
-
                 self:Error("expected $1: reached end of code", start, stop, values)
             end
             local array = {}
@@ -352,7 +351,6 @@ return function(parser_meta, syntax, Emitter)
             local token = func(self, what, start, stop)
 
             if tokens[what] then
-
                 if not tokens[what][1] then
                     tokens[what] = {tokens[what]}
                 end

@@ -1216,8 +1216,10 @@ do
         end
     end
 
+    local syntax = require("oh.lua.syntax")
+
     function META:AnalyzeValue(node, env)
-        if (node.value.type == "letter" and node.upvalue_or_global) or node.value.value == "..." then
+        if (syntax.GetTokenType(node.value) == "letter" and node.upvalue_or_global) or node.value.value == "..." then
 
             if env == "typesystem" and not node.force_upvalue then
                 if node.value.value == "any" then
@@ -1272,7 +1274,7 @@ do
             return self:TypeFromImplicitNode(node, "number", self:StringToNumber(node.value.value), true)
         elseif node.value.type == "string" then
             return self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true)
-        elseif node.value.type == "letter" then
+        elseif syntax.GetTokenType(node.value) == "letter" then
             return self:TypeFromImplicitNode(node, "string", node.value.value, true)
         elseif node.value.value == "nil" then
             return self:TypeFromImplicitNode(node, "nil", nil, env == "typesystem")
@@ -1286,6 +1288,8 @@ do
                 ret = types.Tuple({})
             })
         end
+
+        print(syntax.GetTokenType(node.value), node.upvalue_or_global, "?!??!")
 
         error("unhandled value type " .. node.value.type .. " " .. node:Render())
     end

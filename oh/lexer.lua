@@ -1,21 +1,14 @@
 return function(lexer_meta, syntax)
     local helpers = require("oh.helpers")
 
-    local ref = 0
-    local meta = {}
-    meta.__index = meta
-    function meta:__tostring()
-        return string.format("[token - %s][ %s ] %d", self.type, self.value, self.ref)
-    end
     local function Token(type, start, stop, value)
-        ref = ref + 1
-        return setmetatable({
+        return {
             ref = ref,
             type = type,
             start = start,
             stop = stop,
             value = value,
-        }, meta)
+        }
     end
 
     local B = string.byte
@@ -69,10 +62,6 @@ return function(lexer_meta, syntax)
             end
             return self.code_ptr[self.i - 1]
         end
-
-        function META:ResetState()
-            self.i = 1
-        end
     else
         function META:GetChars(start, stop)
             return self.code:sub(start, stop)
@@ -84,10 +73,10 @@ return function(lexer_meta, syntax)
             end
             return self.code:byte(self.i) or 0
         end
+    end
 
-        function META:ResetState()
-            self.i = 1
-        end
+    function META:ResetState()
+        self.i = 1
     end
 
     function META:FindNearest(str)
@@ -179,26 +168,57 @@ return function(lexer_meta, syntax)
         end
     end
 
-    function META:NewToken(type, start, stop)
-        local value = self:GetChars(start, stop)
 
-        if type == "letter" and syntax.Keywords[value] then
-            type = "keyword"
-        elseif type == "symbol" then
-            if syntax.PrefixOperators[value] then
-                type = "operator_prefix"
-            elseif syntax.PostfixOperators[value] then
-                type = "operator_postfix"
-            elseif syntax.BinaryOperators[value] then
-                type = "operator_binary"
+    do
+        function table.pool(alloc, size)
+            size = size or 4000000
+            local i = 1
+            local pool = {}
+
+            local function grow()
+                for i = #pool + 1, #pool + size do
+                    pool[i] = alloc()
+                end
+            end
+
+            grow()
+
+            return function()
+                local tbl = pool[i]
+
+                if not tbl then
+                    grow()
+                    tbl = pool[i]
+                end
+
+                i = i + 1
+
+                return tbl
             end
         end
 
-        return Token(type, start, stop, value)
+        local get = table.pool(function() return {
+            type = "something",
+            value = "something",
+            whitespace = false,
+            start = 0,
+            stop = 0,
+        } end)
+
+        function META:NewToken(type, start, stop)
+            local tk = get()
+
+            tk.type = type
+            tk.start = start
+            tk.stop = stop
+           -- tk.value = self:GetChars(start, stop)
+
+            return tk
+        end
     end
 
     if ffi then
-        local C = ffi.C
+        local string_span = ffi.C.strspn
         local tonumber = tonumber
         local chars = ""
 
@@ -210,7 +230,7 @@ return function(lexer_meta, syntax)
 
         function META:ReadLetter()
             if syntax.IsLetter(self:GetChar()) then
-                self:Advance(tonumber(C.strspn(self.code_ptr + self.i - 1, chars)))
+                self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
                 return true
             end
 
@@ -235,12 +255,12 @@ return function(lexer_meta, syntax)
     do
         if ffi then
             local chars = "\32\t\n\r"
-            local C = ffi.C
             local tonumber = tonumber
+            local string_span = ffi.C.strspn
 
             function META:ReadSpace()
                 if syntax.IsSpace(self:GetChar()) then
-                    self:Advance(tonumber(C.strspn(self.code_ptr + self.i - 1, chars)))
+                    self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
                     return true
                 end
 
@@ -344,10 +364,20 @@ return function(lexer_meta, syntax)
             tokens[i] = token
 
             if token.type == "end_of_file" then
-                token.value = ""
                 break
             end
         end
+
+        for _, token in ipairs(tokens) do
+            token.value = self:GetChars(token.start, token.stop)
+            if token.whitespace then
+                for _, token in ipairs(token.whitespace) do
+                    token.value = self:GetChars(token.start, token.stop)
+                end
+            end
+        end
+
+        tokens[#tokens].value = ""
 
         return tokens
     end

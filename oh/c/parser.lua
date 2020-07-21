@@ -484,7 +484,7 @@ do -- expression
 
     do
         function META:IsExpressionValue()
-            return syntax.IsValue(self:GetToken()) or self:IsType("letter")
+            return syntax.IsValue(self:GetToken())
         end
 
         function META:ReadExpressionValue()

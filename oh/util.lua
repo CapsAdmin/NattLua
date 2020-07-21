@@ -158,14 +158,14 @@ function util.Measure(what, cb) -- type util.Measure = function(string, function
     local time = os.clock()
     io.flush()
 
-    local ok, err = pcall(cb)
+    local res = {pcall(cb)}
 
-    if ok then
+    if res[1] then
         io.write((" "):rep(40 - #what)," - OK ", (os.clock() - time) .. " seconds\n")
-        return err
+        return table.unpack(res, 2)
     else
-        io.write(" - FAIL: ", err)
-        error(err, 2)
+        io.write(" - FAIL: ", res[2])
+        error(res[2], 2)
     end
 end
 

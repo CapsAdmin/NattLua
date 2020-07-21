@@ -316,7 +316,7 @@ function META:ReadTypeExpression(priority)
         node.tokens["..."] = self:ReadValue("...")
     elseif self:IsValue("function") and self:IsValue("(", 1) then
         node = self:ReadTypeFunction()
-    elseif syntax.IsTypeValue(self:GetToken()) or self:IsType("letter") then
+    elseif syntax.IsTypeValue(self:GetToken()) then
         node = self:Expression("value")
         node.value = self:ReadTokenLoose()
     elseif self:IsValue("{") then
@@ -404,7 +404,7 @@ end
 
 do
     function META:IsLocalTypeDeclarationStatement()
-        return self:IsValue("local") and self:IsValue("type", 1) and self:IsType("letter", 2)
+        return self:IsValue("local") and self:IsValue("type", 1) and syntax.GetTokenType(self:GetToken(2)) == "letter"
     end
 
     function META:ReadLocalTypeDeclarationStatement()

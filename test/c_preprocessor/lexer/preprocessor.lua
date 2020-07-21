@@ -1,5 +1,5 @@
 local oh = require("oh")
-
+local syntax = require("oh.lua.syntax")
 
 local f = io.open("./temp.c", "w")
 f:write([[
@@ -48,7 +48,7 @@ end
 
 test("macro newline escape", function()
     local tokens = tokenize("define\\\n FOO \\\n 1\\\n 2 foo 3\\\n 4 \\\n5")
-    equal(tokens[1].type, "keyword")
+    equal(syntax.Keywords[tokens[1].type] ~= nil, true)
     equal(#tokens, 9)
 end)
 

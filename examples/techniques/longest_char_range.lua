@@ -1,7 +1,8 @@
+local ffi = require("ffi")
+ffi.cdef("size_t strspn ( const char * str1, const char * str2 );")
+local string_span = ffi.C.strspn
+
 local chars = "\32\t\n\r"
-
-local noise = {}
-
 local patterns = {"...", "..", "=", "==", "~=", ">>>", "<<", ">", ">>"}
 
 local function random_whitespace()
@@ -12,17 +13,28 @@ local function random_whitespace()
     return table.concat(w)
 end
 
-for i = 1, 5000000 do
-    noise[i] = math.random() > 0.8 and random_whitespace() or string.char(math.random(32, 127))
+local function build_noise()
+    local noise = {}
+    math.randomseed(0)
+    for i = 1, 50000000 do
+        noise[i] = math.random() > 0.8 and random_whitespace() or string.char(math.random(32, 127))
+    end
+
+    noise = table.concat(noise)
+
+    return noise, ffi.cast("uint8_t *", noise), #noise
 end
 
-noise = table.concat(noise)
+print("building noise...")
 
-local ffi = require("ffi")
+local noise, noise_pointer, noise_length = build_noise()
 
-local noiseptr = ffi.cast("uint8_t *", noise)
+print("noise built, " .. #noise .. " bytes long")
 
 local i = 1
+local found
+local foundi
+local time
 
 local function char(offset)
     if offset then
@@ -33,118 +45,230 @@ end
 
 local function byte(offset)
     if offset then
-        return noiseptr[i + offset - 1]
+        return noise_pointer[i + offset - 1]
     end
-    return noise[i - 1]
-end
 
-local function is_byte(b, offset)
-    return byte(offset) == b
+    return noise_pointer[i - 1]
 end
 
 local function advance(len)
     i = i + len
 end
 
+local function is_space_byte()
+    return byte() == 9 or byte() == 10 or byte() == 13 or byte() == 32
+end
+
+local function is_space_char()
+    return char() == "\n" or char() == "\r" or char() == "\t" or char() == " "
+end
+
+local function start(msg)
+    i = 1
+    found = {}
+    foundi = 1
+
+    print("================")
+    print(msg)
+    time = os.clock()
+end
+
+local function add(str)
+    found[foundi] = str
+    foundi = foundi + 1
+end
+
+local function stop()
+    print("found " .. foundi .. " spaces")
+    print(os.clock() - time)
+    print("================")
+    for i, chars in ipairs(found) do
+        if type(chars) ~= "string" then
+            chars = ffi.string(noise_pointer + chars.start, chars.stop - chars.start)
+        end
+
+        for char = 1, #chars do
+            char = chars:sub(char, char)
+
+            if char == "\n" or char == "\r" or char == "\t" or char == " " then
+            else
+                error("chunk " .. i  .. " contains invalid character " .. char .. " (" .. char:byte() .. ")", 2)
+            end
+        end
+    end
+end
+
+if true then
+    local view = ffi.typeof([[
+        struct {
+            uint32_t start;
+            uint32_t stop;
+        }
+    ]])
+
+    local views = {}
+
+    local function grow()
+        for i = #views + 1, #views + 8242526/2 do
+            views[i] = view()
+        end
+    end
+
+    grow()
+
+    start("advance(tonumber(strspn())) but with string views")
+
+    while i <= noise_length do
+        if is_space_byte() then
+            local start = i
+            advance(tonumber(string_span(noise_pointer + i - 1, chars)))
+
+            local view = views[foundi]
+
+            if not view then
+                grow()
+                view = views[foundi]
+            end
+
+            view.start = start
+            view.stop = i - 1
+
+            add(view)
+        else
+            advance(1)
+        end
+    end
+    stop()
+end
+
 if true then
     local ipairs = ipairs
 
-    local function is_space()
-        return byte() == 9 or byte() == 10 or byte() == 13 or byte() == 32
-    end
+    start("while not is_space_char() do advance(1) end")
 
-    i = 1
-    local found = {}
-    local foundi = 1
-
-    print("================")
-    print("loop over each char until no space")
-    local time = os.clock()
-    for _ = 1, #noise do
-        if is_space() then
+    while i <= noise_length do
+        if is_space_char() then
             local start = i
-            local stop = i + 1
             advance(1)
-            while not not is_space() do
+            while i <= noise_length do
+                if not is_space_char() then
+                    break
+                end
                 advance(1)
             end
-            found[foundi] = noise:sub(start, i-1)
-            foundi = foundi + 1
+            add(noise:sub(start, i-1))
         else
             advance(1)
         end
     end
 
-    --for i,v in ipairs(found) do print(i,#v) end
-    print("found " .. foundi .. " spaces")
-    print(os.clock() - time)
-    print("================")
+    stop()
 end
 
 if true then
-    local ffi = require("ffi")
-    ffi.cdef("size_t strspn ( const char * str1, const char * str2 );")
-    local C = ffi.C
-    local strptr = ffi.cast("uint8_t *", noise)
+    local ipairs = ipairs
 
-    local function is_space()
-        return byte() == 9 or byte() == 10 or byte() == 13 or byte() == 32
-    end
+    start("while not is_space_byte() do advance(1) end")
 
-    i = 1
-    local found = {}
-    local foundi = 1
-
-    print("================")
-    print("advance(strspn())")
-
-    local time = os.clock()
-    for _ = 1, #noise do
-        if is_space() then
+    while i <= noise_length do
+        if is_space_byte() then
             local start = i
-            advance(tonumber(C.strspn(strptr + i - 1, chars)))
-            found[foundi] = noise:sub(start, i-1)
-            foundi = foundi + 1
+            advance(1)
+            while i <= noise_length do
+                if not is_space_byte() then
+                    break
+                end
+                advance(1)
+            end
+            add(noise:sub(start, i-1))
         else
             advance(1)
         end
     end
-    --for i,v in ipairs(found) do print(i,#v) end
-    print("found " .. foundi .. " spaces")
-    print(os.clock() - time)
-    print("================")
+
+    stop()
 end
 
 if true then
-    local ffi = require("ffi")
-    ffi.cdef("size_t strspn ( const char * str1, const char * str2 );")
-    local C = ffi.C
-    local strptr = ffi.cast("uint8_t *", noise)
-
-    local function is_space()
-        return byte() == 9 or byte() == 10 or byte() == 13 or byte() == 32
-    end
-
-    i = 1
-    local found = {}
-    local foundi = 1
-
-    print("================")
-    print("advance(strspn())")
-
-    local time = os.clock()
-    for _ = 1, #noise do
-        if is_space() then
+    start("advance(tonumber(strspn()))")
+    while i <= noise_length do
+        if is_space_byte() then
             local start = i
-            advance(C.strspn(strptr + i - 1, chars))
-            found[foundi] = noise:sub(start, i-1)
-            foundi = foundi + 1
+            advance(tonumber(string_span(noise_pointer + i - 1, chars)))
+            add(noise:sub(start, i-1))
         else
             advance(1)
         end
     end
-    --for i,v in ipairs(found) do print(i,#v) end
-    print("found " .. foundi .. " spaces")
-    print(os.clock() - time)
-    print("================")
+    stop()
+end
+
+if true then
+    start("advance(tonumber(strspn())) but with string views")
+
+    local view = ffi.typeof[[
+        struct {
+            size_t start;
+            size_t stop;
+        }
+    ]]
+
+
+    local time = os.clock()
+    local views = {}
+    for i = 1, 1648501 do
+        views[i] = view()
+    end
+    print("allocating string views took " .. (os.clock() - time) .. " seconds")
+
+    while i <= noise_length do
+        if is_space_byte() then
+            local start = i
+            local ptr_start = noise_pointer + i - 1
+            advance(tonumber(string_span(ptr_start, chars)))
+            local view = views[foundi]
+            view.start = start
+            view.stop = i-1
+            add(view)
+        else
+            advance(1)
+        end
+    end
+    stop()
+end
+
+
+if true then
+    start("advance(string.find())")
+    local find = string.find
+    local pattern = "["..chars.."]+"
+
+    while i <= noise_length do
+        if is_space_byte() then
+            local start, stop = find(noise, pattern, i)
+            advance(stop - start + 1)
+            add(noise:sub(start, stop))
+        else
+            advance(1)
+        end
+    end
+    stop()
+end
+
+
+if true then
+    start("advance(string.find())")
+    local find = string.find
+    local pattern = "["..chars.."]+"
+
+    while i <= noise_length do
+        if is_space_byte() then
+            local start, stop = find(noise, pattern, i)
+            advance(stop - start + 1)
+            add(noise:sub(start, stop))
+        else
+            advance(1)
+        end
+    end
+    stop()
 end

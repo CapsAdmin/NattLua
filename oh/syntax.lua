@@ -133,11 +133,57 @@ return function(syntax)
 
     do -- grammar rules
         function syntax.IsValue(token)
-            return token.type == "number" or token.type == "string" or syntax.KeywordValues[token.value]
+            if token.type == "number" or token.type == "string" then
+                return true
+            end
+
+            if syntax.Keywords[token.value] then
+                if syntax.KeywordValues[token.value] then
+                    return true
+                end
+
+                return false
+            end
+
+            if token.type == "letter" then
+                return true
+            end
+
+            return false
+        end
+
+        function syntax.GetTokenType(tk)
+            if tk.type == "letter" and syntax.Keywords[tk.value] then
+                return "keyword"
+            elseif tk.type == "symbol" then
+                if syntax.PrefixOperators[tk.value] then
+                    return "operator_prefix"
+                elseif syntax.PostfixOperators[tk.value] then
+                    return "operator_postfix"
+                elseif syntax.BinaryOperators[tk.value] then
+                    return "operator_binary"
+                end
+            end
+            return tk.type
         end
 
         function syntax.IsTypeValue(token)
-            return token.type == "number" or token.type == "string" or token.value == "function" or syntax.KeywordValues[token.value]
+            if token.type == "number" or token.type == "string" or token.value == "function" then
+                return true
+            end
+
+            if syntax.Keywords[token.value] then
+                if syntax.KeywordValues[token.value] then
+                    return true
+                end
+
+                return false
+            end
+
+            if token.type == "letter" then
+                return true
+            end
+            return false
         end
 
         function syntax.IsDefinetlyNotStartOfExpression(token)

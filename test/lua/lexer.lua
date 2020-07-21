@@ -1,4 +1,5 @@
 local oh = require("oh")
+local syntax = require("oh.lua.syntax")
 local tprint = require("libraries.tprint")
 
 local function tokenize(code)
@@ -67,11 +68,11 @@ test("glua", function()
     equal(one_token(tokenize("/*-----*/foo")).type, "letter")
     equal(one_token(tokenize("--asdafsadw\nfoo--awsad asd")).type, "letter")
 
-    equal(tokenize("!a")[1].type, "operator_prefix")
+    equal(syntax.PrefixOperators[tokenize("!a")[1].value] ~= nil, true)
 
-    equal(tokenize("a != 1")[2].type, "operator_binary")
-    equal(tokenize("a && b")[2].type, "operator_binary")
-    equal(tokenize("a || b")[2].type, "operator_binary")
+    equal(syntax.BinaryOperators[tokenize("a != 1")[2].value] ~= nil, true)
+    equal(syntax.BinaryOperators[tokenize("a && b")[2].value] ~= nil, true)
+    equal(syntax.BinaryOperators[tokenize("a || b")[2].value] ~= nil, true)
 end)
 
 do
