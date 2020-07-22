@@ -173,7 +173,7 @@ function util.EnhancedJITSettings()
     if not jit then return end
     jit.opt.start(
 		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
-		"maxrecord=16000", -- 4000: maximum number of recorded IR instructions
+		"maxrecord=32000", -- 4000: maximum number of recorded IR instructions
 		"maxirconst=500", -- 500: maximum number of IR constants of a trace
 		"maxside=100", -- 100: maximum number of side traces of a root trace
 		"maxsnap=500", -- 500: maximum number of snapshots for a trace
@@ -183,8 +183,8 @@ function util.EnhancedJITSettings()
 		"instunroll=4", -- 4: maximum unroll factor for instable loops
 		"loopunroll=15", -- 15: maximum unroll factor for loop ops in side traces
 		"callunroll=3", -- 3: maximum unroll factor for pseudo-recursive calls
-		"recunroll=0", -- 2: minimum unroll factor for true recursion
-		"maxmcode=40960", -- 512: maximum total size of all machine code areas in KBytes
+		"recunroll=2", -- 2: minimum unroll factor for true recursion
+		"maxmcode=4096", -- 512: maximum total size of all machine code areas in KBytes
 		--jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
 		"+fold", -- Constant Folding, Simplifications and Reassociation
 		"+cse", -- Common-Subexpression Elimination

@@ -169,7 +169,7 @@ do
 
         local kernel = "return function(self)\n"
 
-        for _, str in ipairs(copy) do
+            for _, str in ipairs(copy) do
             local lua = "if "
 
             for i = 1, #str do
@@ -393,31 +393,29 @@ do
     end
 end
 
-function META:ReadWhiteSpace()
+function META:Read()
     if
-    self:ReadSpace() then               return "space" elseif
-    self:ReadCommentEscape() then       return "comment_escape" elseif
+        self:ReadSpace() then               return "space", true elseif
+        self:ReadCommentEscape() then       return "comment_escape", true elseif
 
-    self:ReadCMultilineComment() then   return "multiline_comment" elseif
-    self:ReadCLineComment() then        return "line_comment" elseif
+        self:ReadCMultilineComment() then   return "multiline_comment", true elseif
+        self:ReadCLineComment() then        return "line_comment", true elseif
 
-    self:ReadMultilineComment() then    return "multiline_comment" elseif
-    self:ReadLineComment() then         return "line_comment" elseif
+        self:ReadMultilineComment() then    return "multiline_comment", true elseif
+        self:ReadLineComment() then         return "line_comment", true elseif
+
+        self:ReadNumber() then              return "number", false elseif
+
+        self:ReadMultilineString() then     return "string", false elseif
+        self:ReadSingleString() then        return "string", false elseif
+        self:ReadDoubleString() then        return "string", false elseif
+
+        self:ReadLetter() then              return "letter", false elseif
+        self:ReadSymbol() then              return "symbol", false elseif
+        self:ReadEndOfFile() then           return "end_of_file", false elseif
     false then end
-end
 
-function META:ReadNonWhiteSpace()
-    if
-    self:ReadNumber() then              return "number" elseif
-
-    self:ReadMultilineString() then     return "string" elseif
-    self:ReadSingleString() then        return "string" elseif
-    self:ReadDoubleString() then        return "string" elseif
-
-    self:ReadLetter() then              return "letter" elseif
-    self:ReadSymbol() then              return "symbol" elseif
-    self:ReadEndOfFile() then           return "end_of_file" elseif
-    false then end
+    return self:ReadUnknown()
 end
 
 return require("oh.lexer")(META, require("oh.lua.syntax"))

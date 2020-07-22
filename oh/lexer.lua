@@ -1,3 +1,63 @@
+local table_new = require("table.new")
+
+local function pool(alloc, size)
+    size = size or 3105585
+
+    local records = 0
+    for k,v in pairs(alloc()) do
+        records = records + 1
+    end
+
+    local i
+    local pool = table_new(size, records)
+
+    local function refill()
+        i = 1
+
+        for i = 1, size do
+            pool[i] = alloc()
+        end
+    end
+
+    refill()
+
+    return function()
+        local tbl = pool[i]
+
+        if not tbl then
+            refill()
+            tbl = pool[i]
+        end
+
+        i = i + 1
+
+        return tbl
+    end
+end
+
+local function list()
+    local tbl
+    local i
+
+    local self = {
+        clear = function(self)
+            tbl = {}
+            i = 1
+        end,
+        add = function(self, val)
+            tbl[i] = val
+            i = i + 1
+        end,
+        get = function(self)
+            return tbl
+        end
+    }
+
+    self:clear()
+
+    return self
+end
+
 return function(lexer_meta, syntax)
     local helpers = require("oh.helpers")
 
@@ -141,10 +201,15 @@ return function(lexer_meta, syntax)
             local lua = "if "
 
             for i = 1, #str do
+                local second_arg = "," .. i-1
+                if i == 1 then
+                    second_arg = ""
+                end
+
                 if lower then
-                    lua = lua .. "(self:IsByte(" .. str:byte(i) .. "," .. i-1 .. ")" .. " or " .. "self:IsByte(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
+                    lua = lua .. "(self:IsByte(" .. str:byte(i) .. second_arg .. ")" .. " or " .. "self:IsByte(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
                 else
-                    lua = lua .. "self:IsByte(" .. str:byte(i) .. "," .. i-1 .. ") "
+                    lua = lua .. "self:IsByte(" .. str:byte(i) .. second_arg .. ") "
                 end
 
                 if i ~= #str then
@@ -168,36 +233,8 @@ return function(lexer_meta, syntax)
         end
     end
 
-
     do
-        function table.pool(alloc, size)
-            size = size or 4000000
-            local i = 1
-            local pool = {}
-
-            local function grow()
-                for i = #pool + 1, #pool + size do
-                    pool[i] = alloc()
-                end
-            end
-
-            grow()
-
-            return function()
-                local tbl = pool[i]
-
-                if not tbl then
-                    grow()
-                    tbl = pool[i]
-                end
-
-                i = i + 1
-
-                return tbl
-            end
-        end
-
-        local get = table.pool(function() return {
+        local get = pool(function() return {
             type = "something",
             value = "something",
             whitespace = false,
@@ -205,13 +242,13 @@ return function(lexer_meta, syntax)
             stop = 0,
         } end)
 
-        function META:NewToken(type, start, stop)
+        function META:NewToken(type, start, stop, is_whitespace)
             local tk = get()
 
             tk.type = type
+            tk.whitespace = is_whitespace
             tk.start = start
             tk.stop = stop
-           -- tk.value = self:GetChars(start, stop)
 
             return tk
         end
@@ -220,8 +257,8 @@ return function(lexer_meta, syntax)
     if ffi then
         local string_span = ffi.C.strspn
         local tonumber = tonumber
-        local chars = ""
 
+        local chars = ""
         for i = 1, 255 do
             if syntax.IsDuringLetter(i) then
                 chars = chars .. string.char(i)
@@ -254,9 +291,15 @@ return function(lexer_meta, syntax)
 
     do
         if ffi then
-            local chars = "\32\t\n\r"
             local tonumber = tonumber
             local string_span = ffi.C.strspn
+
+            local chars = ""
+            for i = 1, 255 do
+                if syntax.IsSpace(i) then
+                    chars = chars .. string.char(i)
+                end
+            end
 
             function META:ReadSpace()
                 if syntax.IsSpace(self:GetChar()) then
@@ -308,42 +351,25 @@ return function(lexer_meta, syntax)
         return false
     end
 
-    function META:ReadToken()
+    function META:ReadUnknown()
+        self:Advance(1)
+        return "unknown", false
+    end
 
+    function META:ReadToken()
         if not self.NoShebang and self:ReadShebang() then
-            local tk = self:NewToken("shebang", 1, self.i - 1)
-            tk.whitespace = {}
-            return tk
+            return self:NewToken("shebang", 1, self.i - 1, false)
         end
 
-        local wbuffer
-
-        for i = 1, self:GetLength() do
-            local start = self.i
-
-            if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
-                self.comment_escape = false
-                self:Advance(2)
-            end
-
-            local type = self:ReadWhiteSpace()
-            if not type then
-                break
-            end
-            wbuffer = wbuffer or {}
-            wbuffer[i] = self:NewToken(type, start, self.i - 1)
+        if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
+            self.comment_escape = false
+            self:Advance(2)
         end
 
         local start = self.i
-        local type = self:ReadNonWhiteSpace()
+        local type, whitespace = self:Read()
 
-        if type == nil then
-            type = "unknown"
-            self:Advance(1)
-        end
-
-        local tk = self:NewToken(type, start, self.i - 1)
-        tk.whitespace = wbuffer
+        local tk = self:NewToken(type, start, self.i - 1, whitespace)
 
         if self.potential_lua54_division_operator then
             tk.potential_lua54_division_operator = true
@@ -359,23 +385,35 @@ return function(lexer_meta, syntax)
         local tokens = {}
 
         for i = self.i, self:GetLength() + 1 do
-            local token = self:ReadToken()
+            tokens[i] = self:ReadToken()
 
-            tokens[i] = token
-
-            if token.type == "end_of_file" then
+            if tokens[i].type == "end_of_file" then
                 break
             end
         end
 
         for _, token in ipairs(tokens) do
             token.value = self:GetChars(token.start, token.stop)
+        end
+
+        local buffer = list()
+        local non_whitespace = list()
+
+        for _, token in ipairs(tokens) do
             if token.whitespace then
-                for _, token in ipairs(token.whitespace) do
-                    token.value = self:GetChars(token.start, token.stop)
-                end
+                token.whitespace = false
+
+                buffer:add(token)
+            else
+                token.whitespace = buffer:get()
+
+                non_whitespace:add(token)
+
+                buffer:clear()
             end
         end
+
+        tokens = non_whitespace:get()
 
         tokens[#tokens].value = ""
 
@@ -388,6 +426,9 @@ return function(lexer_meta, syntax)
 
     return function(code)
         local self = setmetatable({}, META)
+        self.potential_lua54_division_operator = false
+        self.comment_escape = false
+        self.NoShebang = false
         self:OnInitialize(code)
         return self
     end
