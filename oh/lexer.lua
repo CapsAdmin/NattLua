@@ -399,13 +399,25 @@ return function(lexer_meta, syntax)
         local buffer = list()
         local non_whitespace = list()
 
+        local potential_whitespace = false
+
         for _, token in ipairs(tokens) do
             if token.whitespace then
                 token.whitespace = false
 
+                if token.potential_lua54_division_operator then
+                    potential_whitespace = true
+                end
+
+
                 buffer:add(token)
             else
                 token.whitespace = buffer:get()
+
+                if potential_whitespace then
+                    token.potential_lua54_division_operator = true
+                    potential_whitespace = false
+                end
 
                 non_whitespace:add(token)
 
