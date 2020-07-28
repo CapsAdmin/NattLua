@@ -1,10 +1,10 @@
-local type boolean = true | false
+type boolean = true | false
 
-local type table = {[any] = any}
-local type userdata = table
-local type cdata = table
-local type ctype = table
-local type thread = table
+type table = {[any] = any}
+type userdata = table
+type cdata = table
+type ctype = table
+type thread = table
 
 local type empty_function = function(...): any
 
