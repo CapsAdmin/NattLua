@@ -105,6 +105,10 @@ return function(lexer_meta, syntax)
         self:ResetState()
     end
 
+    function META:GetPosition()
+        return self.i
+    end
+
     function META:GetLength()
         return #self.code
     end
