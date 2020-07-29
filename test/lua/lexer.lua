@@ -23,6 +23,11 @@ test("smoke", function()
     equal(one_token(tokenize("(")).type, "symbol")
 end)
 
+test("bom", function()
+    equal(tokenize("\xFE\xFFLOL")[1].value, "LOL")
+    equal(tokenize("\xEF\xBB\xBFLOL")[1].value, "LOL")
+end)
+
 test("shebang", function()
     equal(tokenize("#foo\nlocal lol = 1")[1].type, "shebang")
 end)

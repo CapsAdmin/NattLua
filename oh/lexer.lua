@@ -59,18 +59,6 @@ local function list()
 end
 
 return function(lexer_meta, syntax)
-    local helpers = require("oh.helpers")
-
-    local function Token(type, start, stop, value)
-        return {
-            ref = ref,
-            type = type,
-            start = start,
-            stop = stop,
-            value = value,
-        }
-    end
-
     local B = string.byte
 
     local ffi = jit and require("ffi")
@@ -84,17 +72,7 @@ return function(lexer_meta, syntax)
     local META = {}
     META.__index = META
 
-    local function remove_bom_header(str)
-        if str:sub(1, 2) == "\xFE\xFF" then
-            return str:sub(3)
-        elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-            return str:sub(4)
-        end
-        return str
-    end
-
     function META:OnInitialize(str)
-        str = remove_bom_header(str)
         self.code = str
 
         if ffi then
@@ -103,6 +81,10 @@ return function(lexer_meta, syntax)
         end
 
         self:ResetState()
+    end
+
+    function META:ResetState()
+        self.i = 1
     end
 
     function META:GetPosition()
@@ -137,10 +119,6 @@ return function(lexer_meta, syntax)
             end
             return self.code:byte(self.i) or 0
         end
-    end
-
-    function META:ResetState()
-        self.i = 1
     end
 
     function META:FindNearest(str)
@@ -237,6 +215,80 @@ return function(lexer_meta, syntax)
         end
     end
 
+    META.ReadSymbol = META.BuildReadFunction(syntax.SymbolCharacters)
+
+    local function optimized_read_function(name, is, is_during)
+        is_during = is_during or is
+
+        if ffi then
+            local string_span = ffi.C.strspn
+            local tonumber = tonumber
+
+            local chars = ""
+            for i = 1, 255 do
+                if is_during(i) then
+                    chars = chars .. string.char(i)
+                end
+            end
+
+            META["Read" .. name] = function(self)
+                if is(self:GetChar()) then
+                    self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
+                    return true
+                end
+
+                return false
+            end
+        else
+            META["Read" .. name] = function(self)
+                if is(self:GetChar()) then
+                    while not is_during(self:GetChar()) do
+                        self:Advance(1)
+                    end
+                    return true
+                end
+
+                return false
+            end
+        end
+    end
+
+    optimized_read_function("Letter", syntax.IsLetter, syntax.IsDuringLetter)
+    optimized_read_function("Space", syntax.IsSpace)
+
+    function META:ReadShebang()
+        if self:IsValue("#") then
+            while not self:IsValue("\n") do
+                self:Advance(1)
+            end
+            return true
+        end
+        return false
+    end
+
+    function META:ReadBOMHeader()
+        if self:IsValue("\xFE") and self:IsValue("\xFF", 1) then
+            self:Advance(2)
+        elseif self:IsValue("\xEF") and self:IsValue("\xBB", 1) and self:IsValue("\xBF", 2) then
+            self:Advance(3)
+        end
+    end
+
+    function META:ReadEndOfFile()
+        if self.i > self:GetLength()then
+            -- nothing to capture, but remaining whitespace will be added
+            self:Advance(1)
+            return true
+        end
+
+        return false
+    end
+
+    function META:ReadUnknown()
+        self:Advance(1)
+        return "unknown", false
+    end
+
     do
         local get = pool(function() return {
             type = "something",
@@ -258,111 +310,12 @@ return function(lexer_meta, syntax)
         end
     end
 
-    if ffi then
-        local string_span = ffi.C.strspn
-        local tonumber = tonumber
-
-        local chars = ""
-        for i = 1, 255 do
-            if syntax.IsDuringLetter(i) then
-                chars = chars .. string.char(i)
-            end
-        end
-
-        function META:ReadLetter()
-            if syntax.IsLetter(self:GetChar()) then
-                self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
-                return true
-            end
-
-            return false
-        end
-    else
-        function META:ReadLetter()
-            if syntax.IsLetter(self:GetChar()) then
-                for _ = self.i, self:GetLength() do
-                    self:Advance(1)
-                    if not syntax.IsDuringLetter(self:GetChar()) then
-                        break
-                    end
-                end
-                return true
-            end
-
-            return false
-        end
-    end
-
-    do
-        if ffi then
-            local tonumber = tonumber
-            local string_span = ffi.C.strspn
-
-            local chars = ""
-            for i = 1, 255 do
-                if syntax.IsSpace(i) then
-                    chars = chars .. string.char(i)
-                end
-            end
-
-            function META:ReadSpace()
-                if syntax.IsSpace(self:GetChar()) then
-                    self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
-                    return true
-                end
-
-                return false
-            end
-        else
-            function META:ReadSpace()
-                if syntax.IsSpace(self:GetChar()) then
-                    for _ = self.i, self:GetLength() do
-                        self:Advance(1)
-                        if not syntax.IsSpace(self:GetChar()) then
-                            break
-                        end
-                    end
-                    return true
-                end
-
-                return false
-            end
-        end
-    end
-
-    META.ReadSymbol = META.BuildReadFunction(syntax.SymbolCharacters)
-
-    function META:ReadShebang()
-        if self.i == 1 and self:IsValue("#") then
-            for _ = self.i, self:GetLength() do
-                self:Advance(1)
-                if self:IsValue("\n") then
-                    break
-                end
-            end
-            return true
-        end
-        return false
-    end
-
-    function META:ReadEndOfFile()
-        if self.i > self:GetLength()then
-            -- nothing to capture, but remaining whitespace will be added
-            self:Advance(1)
-            return true
-        end
-
-        return false
-    end
-
-    function META:ReadUnknown()
-        self:Advance(1)
-        return "unknown", false
-    end
-
     function META:ReadToken()
-        if not self.NoShebang and self:ReadShebang() then
-            return self:NewToken("shebang", 1, self.i - 1, false)
+        if self.i == 1 then
+            self:ReadBOMHeader()
+            if not self.NoShebang and self:ReadShebang() then
+                return self:NewToken("shebang", 1, self.i - 1, false)
+            end
         end
 
         if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
@@ -387,13 +340,16 @@ return function(lexer_meta, syntax)
         self:ResetState()
 
         local tokens = {}
+        local i = 1
 
-        for i = self.i, self:GetLength() + 1 do
+        while true do
             tokens[i] = self:ReadToken()
 
             if tokens[i].type == "end_of_file" then
                 break
             end
+
+            i = i + 1
         end
 
         for _, token in ipairs(tokens) do
