@@ -4,12 +4,12 @@ local helpers = require("oh.helpers")
 local META = {}
 
 local function ReadLiteralString(self, multiline_comment)
-    local start = self.i
+    local start = self:GetPosition()
 
     self:Advance(1)
 
     if self:IsValue("=") then
-        for _ = self.i, self:GetLength() do
+        for _ = self:GetPosition(), self:GetLength() do
             self:Advance(1)
             if not self:IsValue("=") then
                 break
@@ -19,12 +19,12 @@ local function ReadLiteralString(self, multiline_comment)
 
     if not self:IsValue("[") then
         if multiline_comment then return false end
-        return nil, "expected " .. helpers.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. helpers.QuoteToken(self:GetChars(start, self.i))
+        return nil, "expected " .. helpers.QuoteToken(self:GetChars(start, self:GetPosition() - 1) .. "[") .. " got " .. helpers.QuoteToken(self:GetChars(start, self:GetPosition()))
     end
 
     self:Advance(1)
 
-    local closing = "]" .. string.rep("=", (self.i - start) - 2) .. "]"
+    local closing = "]" .. string.rep("=", (self:GetPosition() - start) - 2) .. "]"
     local pos = self:FindNearest(closing)
     if pos then
         self:Advance(pos)
@@ -55,7 +55,7 @@ function META:ReadMultilineComment()
     if  self:IsValue("-") and self:IsValue("-", 1) and self:IsValue("[", 2) and (
         self:IsValue("[", 3) or self:IsValue("=", 3)
     ) then
-        local start = self.i
+        local start = self:GetPosition()
         self:Advance(2)
 
         local ok, err = ReadLiteralString(self, true)
@@ -79,7 +79,7 @@ function META:ReadLineComment()
     if self:IsValue("-") and self:IsValue("-", 1)then
         self:Advance(#"--")
 
-        for _ = self.i, self:GetLength() do
+        for _ = self:GetPosition(), self:GetLength() do
             if self:IsValue("\n") then
                 break
             end
@@ -96,7 +96,7 @@ end
 function META:ReadCMultilineComment()
     if self:IsValue("/") and self:IsValue("*", 1) then
         self:Advance(2)
-        for _ = self.i, self:GetLength() do
+        for _ = self:GetPosition(), self:GetLength() do
             if self:IsValue("*") and self:IsValue("/", 1) then
                 self:Advance(2)
                 break
@@ -116,7 +116,7 @@ function META:ReadCLineComment()
         self.potential_lua54_division_operator = true
         self:Advance(2)
 
-        for _ = self.i, self:GetLength() do
+        for _ = self:GetPosition(), self:GetLength() do
             if self:IsValue("\n") then
                 break
             end
@@ -131,7 +131,7 @@ end
 
 function META:ReadMultilineString()
     if self:IsValue("[") and (self:IsValue("[", 1) or self:IsValue("=", 1)) then
-        local start = self.i
+        local start = self:GetPosition()
         local ok, err = ReadLiteralString(self, false)
 
         if not ok then
@@ -217,11 +217,11 @@ do
         if self:IsValue("+") or self:IsValue("-") then
             self:Advance(1)
             if not syntax.IsNumber(self:GetChar()) then
-                self:Error("malformed " .. what .. " expected number, got " .. string.char(self:GetChar()), self.i - 2)
+                self:Error("malformed " .. what .. " expected number, got " .. string.char(self:GetChar()), self:GetPosition() - 2)
                 return false
             end
         end
-        for _ = self.i, self:GetLength() do
+        for _ = self:GetPosition(), self:GetLength() do
             if not syntax.IsNumber(self:GetChar()) then
                 break
             end
@@ -236,7 +236,7 @@ do
 
         local dot = false
 
-        for _ = self.i, self:GetLength() do
+        for _ = self:GetPosition(), self:GetLength() do
             if self:IsValue("_") then self:Advance(1) end
 
             if self:IsValue(".") then
@@ -266,7 +266,7 @@ do
     function META:ReadBinaryNumber()
         self:Advance(2)
 
-        for _ = self.i, self:GetLength() do
+        for _ = self:GetPosition(), self:GetLength() do
             if self:IsValue("_") then self:Advance(1) end
 
             if self:IsValue("1") or self:IsValue("0") then
@@ -287,7 +287,7 @@ do
     function META:ReadDecimalNumber()
         local dot = false
 
-        for _ = self.i, self:GetLength() do
+        for _ = self:GetPosition(), self:GetLength() do
             if self:IsValue("_") then self:Advance(1) end
 
             if self:IsValue(".") then
@@ -366,17 +366,17 @@ do
                 return false
             end
 
-            local start = self.i
+            local start = self:GetPosition()
             self:Advance(1)
 
-            for _ = self.i, self:GetLength() do
+            for _ = self:GetPosition(), self:GetLength() do
                 local char = self:ReadChar()
 
                 if not escape(self, char) then
 
                     if char == B"\n" then
                         self:Advance(-1)
-                        self:Error("expected " .. name:lower() .. " quote to end", start, self.i - 1)
+                        self:Error("expected " .. name:lower() .. " quote to end", start, self:GetPosition() - 1)
                         return true
                     end
 
@@ -386,7 +386,7 @@ do
                 end
             end
 
-            self:Error("expected " .. name:lower() .. " quote to end: reached end of file", start, self.i - 1)
+            self:Error("expected " .. name:lower() .. " quote to end: reached end of file", start, self:GetPosition() - 1)
 
             return true
         end
