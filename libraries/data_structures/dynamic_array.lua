@@ -1,22 +1,22 @@
 local ffi = require("ffi")
 local u32 = require("libraries.data_structures.primitives").u32
-local Struct = require("libraries.data_structures.struct")
 
-return function(T)
+return function(T, growth_size)
+    growth_size = growth_size or 32
     local ctype = ffi.typeof("struct { $ pos; $ len; $ * items; }", u32, u32, T)
     local size = ffi.sizeof(T)
 
     local META = {}
     META.__index = META
 
-    local function check_bounds(self, i)
+    local function check_bounds(i)
         if i < 0 then
             error("index " .. i .. " is out of bounds")
         end
     end
 
     function META:Push(val)
-        check_bounds(self, self.pos)
+        check_bounds(self.pos)
 
         while self.pos >= self.len do
             self:Grow()
@@ -34,13 +34,11 @@ return function(T)
             end
         end
 
-        check_bounds(self, i)
-
         self.items[i] = val
     end
 
     function META:Get(i)
-        check_bounds(self, i)
+        check_bounds(i)
         return self.items[i]
     end
 
@@ -49,7 +47,7 @@ return function(T)
     end
 
     function META:Grow()
-        self.len = self.len + 32
+        self.len = self.len + growth_size
 
         if self.items == nil then
             self.items = ffi.C.malloc(size * self.len)

@@ -19,7 +19,5 @@ return {
     f64 = ffi.typeof("double"),
     ssize = ffi.typeof("intptr_t"),
     usize = ffi.typeof("uintptr_t"),
-    pointer = function(val)
-        return ffi.typeof("$ *", val)
-    end,
+    pointer = function(val) return ffi.typeof("$ *", val) end,
 }
