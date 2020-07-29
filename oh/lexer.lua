@@ -121,14 +121,31 @@ return function(lexer_meta, syntax)
         end
     end
 
-    function META:FindNearest(str)
-        local _, stop = self.code:find(str, self.i, true)
 
-        if stop then
-            return stop - self.i + 1
+    if ffi then
+        ffi.cdef("char *strstr(const char *haystack, const char *needle);")
+
+        local strstr = ffi.C.strstr
+
+        function META:FindNearest(str)
+            local found = strstr(self.code_ptr + self.i - 1, str)
+
+            if found ~= nil then
+                return (found - self.code_ptr + #str) - self.i + 1
+            end
+
+            return false
         end
+    else
+        function META:FindNearest(str)
+            local _, stop = self.code:find(str, self.i, true)
 
-        return false
+            if stop then
+                return stop - self.i + 1
+            end
+
+            return false
+        end
     end
 
     function META:ReadChar()
