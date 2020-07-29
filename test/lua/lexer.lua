@@ -11,7 +11,7 @@ local function parse(code)
 end
 
 local function one_token(tokens)
-    assert(#tokens, 2)
+    equal(#tokens, 2)
     equal(tokens[2] and tokens[2].type, "end_of_file", 2)
     return tokens[1]
 end
