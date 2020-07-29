@@ -56,21 +56,20 @@ return function(emitter_meta, syntax)
         return char and char:byte() or 0
     end
 
-    function META:EmitWhitespace(token)
-        if token.type ~= "space" or self.config.preserve_whitespace == nil then
-            self:EmitToken(token)
-            if token.type ~= "space" then
-                self:Whitespace("\n")
-                self:Whitespace("\t")
-            end
-        end
-    end
-
     function META:EmitToken(node, translate)
         if node.whitespace then
-            for _, data in ipairs(node.whitespace) do
-                if self.config.no_comments ~= true or (data.type ~= "multiline_comment" and data.type ~= "line_comment") then
-                    self:EmitWhitespace(data)
+            --for _, token in ipairs(node.whitespace) do
+            for i = 1, #node.whitespace do
+                local token = node.whitespace[i]
+
+                if self.config.no_comments ~= true or (token.type ~= "multiline_comment" and token.type ~= "line_comment") then
+                    if token.type ~= "space" or self.config.preserve_whitespace == nil then
+                        self:Emit(token.value)
+                        if token.type ~= "space" then
+                            self:Whitespace("\n")
+                            self:Whitespace("\t")
+                        end
+                    end
                 end
             end
         end

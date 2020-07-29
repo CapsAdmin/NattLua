@@ -176,13 +176,13 @@ function util.EnhancedJITSettings()
 		"maxrecord=32000", -- 4000: maximum number of recorded IR instructions
 		"maxirconst=500", -- 500: maximum number of IR constants of a trace
 		"maxside=100", -- 100: maximum number of side traces of a root trace
-		"maxsnap=500", -- 500: maximum number of snapshots for a trace
+		"maxsnap=800", -- 500: maximum number of snapshots for a trace
 		"hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
 		"hotexit=10", -- 10: number of taken exits to start a side trace
 		"tryside=8", -- 4: number of attempts to compile a side trace
 		"instunroll=4", -- 4: maximum unroll factor for instable loops
 		"loopunroll=15", -- 15: maximum unroll factor for loop ops in side traces
-		"callunroll=3", -- 3: maximum unroll factor for pseudo-recursive calls
+		"callunroll=30", -- 3: maximum unroll factor for pseudo-recursive calls
 		"recunroll=2", -- 2: minimum unroll factor for true recursion
 		"maxmcode=4096", -- 512: maximum total size of all machine code areas in KBytes
 		--jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
