@@ -9,11 +9,8 @@ local function ReadLiteralString(self, multiline_comment)
     self:Advance(1)
 
     if self:IsValue("=") then
-        for _ = self:GetPosition(), self:GetLength() do
+        while self:IsValue("=") do
             self:Advance(1)
-            if not self:IsValue("=") then
-                break
-            end
         end
     end
 
@@ -221,10 +218,7 @@ do
                 return false
             end
         end
-        for _ = self:GetPosition(), self:GetLength() do
-            if not syntax.IsNumber(self:GetChar()) then
-                break
-            end
+        while syntax.IsNumber(self:GetChar()) do
             self:Advance(1)
         end
 
@@ -236,7 +230,7 @@ do
 
         local dot = false
 
-        for _ = self:GetPosition(), self:GetLength() do
+        while true do
             if self:IsValue("_") then self:Advance(1) end
 
             if self:IsValue(".") then
@@ -266,7 +260,7 @@ do
     function META:ReadBinaryNumber()
         self:Advance(2)
 
-        for _ = self:GetPosition(), self:GetLength() do
+        while true do
             if self:IsValue("_") then self:Advance(1) end
 
             if self:IsValue("1") or self:IsValue("0") then
@@ -287,7 +281,7 @@ do
     function META:ReadDecimalNumber()
         local dot = false
 
-        for _ = self:GetPosition(), self:GetLength() do
+        while true do
             if self:IsValue("_") then self:Advance(1) end
 
             if self:IsValue(".") then
