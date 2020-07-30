@@ -248,7 +248,7 @@ return function(lexer_meta, syntax)
                 end
             end
 
-            META["Read" .. name] = function(self)
+            return function(self)
                 if is(self:GetChar()) then
                     self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
                     return true
@@ -257,7 +257,7 @@ return function(lexer_meta, syntax)
                 return false
             end
         else
-            META["Read" .. name] = function(self)
+            return function(self)
                 if is(self:GetChar()) then
                     while not is_during(self:GetChar()) do
                         self:Advance(1)
@@ -270,8 +270,8 @@ return function(lexer_meta, syntax)
         end
     end
 
-    optimized_read_function("Letter", syntax.IsLetter, syntax.IsDuringLetter)
-    optimized_read_function("Space", syntax.IsSpace)
+    META.ReadLetter = optimized_read_function("Letter", syntax.IsLetter, syntax.IsDuringLetter)
+    META.ReadSpace = optimized_read_function("Space", syntax.IsSpace)
 
     function META:ReadShebang()
         if self:IsValue("#") then

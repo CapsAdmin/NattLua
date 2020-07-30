@@ -1,8 +1,6 @@
 local syntax = {}
 
 return function(syntax)
-
-
     do
         local B = string.byte
 
@@ -14,11 +12,7 @@ return function(syntax)
         end
 
         function syntax.IsDuringLetter(c)
-            return
-                (c >= B'a' and c <= B'z') or
-                (c >= B'0' and c <= B'9') or
-                (c >= B'A' and c <= B'Z') or
-                (c == B'_' or c >= 127)
+            return syntax.IsLetter(c) or syntax.IsNumber(c)
         end
 
         function syntax.IsNumber(c)
