@@ -1,67 +1,17 @@
-local table_new = require("table.new")
+local ffi = jit and require("ffi")
 
-local function pool(alloc, size)
-    size = size or 3105585
-
-    local records = 0
-    for k,v in pairs(alloc()) do
-        records = records + 1
-    end
-
-    local i
-    local pool = table_new(size, records)
-
-    local function refill()
-        i = 1
-
-        for i = 1, size do
-            pool[i] = alloc()
-        end
-    end
-
-    refill()
-
-    return function()
-        local tbl = pool[i]
-
-        if not tbl then
-            refill()
-            tbl = pool[i]
-        end
-
-        i = i + 1
-
-        return tbl
-    end
+_G.refs = {}
+local function hold_ref(ref)
+    local key = tostring(ffi.cast("uintptr_t", ref))
+    refs[key] = ref
 end
-
-local function list()
-    local tbl
-    local i
-
-    local self = {
-        clear = function(self)
-            tbl = {}
-            i = 1
-        end,
-        add = function(self, val)
-            tbl[i] = val
-            i = i + 1
-        end,
-        get = function(self)
-            return tbl
-        end
-    }
-
-    self:clear()
-
-    return self
+local function release_ref(ref)
+    local key = tostring(ffi.cast("uintptr_t", ref))
+    refs[ref] = nil
 end
 
 return function(lexer_meta, syntax)
     local B = string.byte
-
-    local ffi = jit and require("ffi")
 
     if ffi then
         ffi.cdef([[
@@ -73,7 +23,11 @@ return function(lexer_meta, syntax)
     META.__index = META
 
     function META:OnInitialize(str)
+
+        hold_ref(str)
+
         self.code = str
+        self.code_length = #str
 
         if ffi then
             self.code_ptr_ref = str
@@ -81,6 +35,12 @@ return function(lexer_meta, syntax)
         end
 
         self:ResetState()
+    end
+
+
+    function META:__gc()
+        release_ref(self.code)
+        self.OnError:free()
     end
 
     function META:ResetState()
@@ -92,7 +52,7 @@ return function(lexer_meta, syntax)
     end
 
     function META:GetLength()
-        return #self.code
+        return self.code_length
     end
 
     if ffi then
@@ -227,9 +187,7 @@ return function(lexer_meta, syntax)
     end
 
     function META:Error(msg, start, stop)
-        if self.OnError then
-            self:OnError(msg, start or self.i, stop or self.i)
-        end
+        self:OnError(msg, start or self.i, stop or self.i)
     end
 
     META.ReadSymbol = META.BuildReadFunction(syntax.SymbolCharacters)
@@ -306,25 +264,15 @@ return function(lexer_meta, syntax)
         return "unknown", false
     end
 
-    do
-        local get = pool(function() return {
-            type = "something",
-            value = "something",
-            whitespace = false,
-            start = 0,
-            stop = 0,
-        } end)
+    function META:NewToken(type, start, stop, is_whitespace)
+        local tk = {}
 
-        function META:NewToken(type, start, stop, is_whitespace)
-            local tk = get()
+        tk.type = type
+        tk.whitespace = is_whitespace
+        tk.start = start
+        tk.stop = stop
 
-            tk.type = type
-            tk.whitespace = is_whitespace
-            tk.start = start
-            tk.stop = stop
-
-            return tk
-        end
+        return tk
     end
 
     function META:ReadToken()
@@ -373,8 +321,8 @@ return function(lexer_meta, syntax)
             token.value = self:GetChars(token.start, token.stop)
         end
 
-        local buffer = list()
-        local non_whitespace = list()
+        local buffer = {}
+        local non_whitespace = {}
 
         local potential_whitespace = false
 
@@ -387,22 +335,22 @@ return function(lexer_meta, syntax)
                 end
 
 
-                buffer:add(token)
+                table.insert(buffer, token)
             else
-                token.whitespace = buffer:get()
+                token.whitespace = buffer
 
                 if potential_whitespace then
                     token.potential_lua54_division_operator = true
                     potential_whitespace = false
                 end
 
-                non_whitespace:add(token)
+                table.insert(non_whitespace, token)
 
-                buffer:clear()
+                buffer = {}
             end
         end
 
-        tokens = non_whitespace:get()
+        tokens = non_whitespace
 
         tokens[#tokens].value = ""
 
@@ -413,8 +361,26 @@ return function(lexer_meta, syntax)
         META[k] = v
     end
 
+    local Struct =require("libraries.data_structures.struct")
+    local Lexer = Struct({
+        {"string_escape_Double", "bool"},
+        {"string_escape_Single", "bool"},
+        {"potential_lua54_division_operator", "bool"},
+        {"comment_escape", "bool"},
+        {"NoShebang", "bool"},
+        {"code", "const uint8_t *"},
+        {"code_length", "uint32_t"},
+        {"code_ptr_ref", "const uint8_t *"},
+        {"code_ptr", "const uint8_t *"},
+        {"i", "uint32_t"},
+        {"code_data", "uint32_t"},
+        {"OnError", "void (*)(void *, const char *, uint32_t, uint32_t)"},
+    })
+
+    ffi.metatype(Lexer, META)
+
     return function(code)
-        local self = setmetatable({}, META)
+        local self = Lexer()
         self.potential_lua54_division_operator = false
         self.comment_escape = false
         self.NoShebang = false

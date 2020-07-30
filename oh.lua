@@ -222,7 +222,7 @@ do
 
 	function META:Lex()
 		local lexer = self.Lexer(self.code)
-		lexer.code_data = self
+		--lexer.code_data = self
 		lexer.OnError = self.OnError
 
 		local ok, tokens = xpcall(lexer.GetTokens, traceback, lexer)
