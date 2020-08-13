@@ -101,19 +101,28 @@ function META:EmitBinaryOperator(node)
         self:Emit(func_chunks[3])
         self.operator_transformed = true
     else
+        -- move whitespace
+        self:EmitToken(node.left.value, "")
+        node.left.value.whitespace = nil
+        
+        self:Emit("OP['")        
+        self:Emit(node.value.value)
+        self:Emit("'](")
+
         if node.left then self:EmitExpression(node.left) end
-        if node.value.value == "." or node.value.value == ":" then
-            self:EmitToken(node.value, ".")
-        else
-            self:Whitespace(" ")
-            if translate[node.value.value] then
-                self:EmitToken(node.value, translate[node.value.value])
+        self:Emit(",")
+        if node.right then 
+            if node.value.value == "." or node.value.value == ":" then
+                self:EmitToken(node.right, "")
+                self:Emit("'")
+                self:EmitToken(node.right.value)
+                self:Emit("'")
             else
-                self:EmitToken(node.value)
+                self:EmitExpression(node.right) 
             end
-            self:Whitespace(" ")
         end
-        if node.right then self:EmitExpression(node.right) end
+
+        self:Emit(")")
     end
 end
 
@@ -167,11 +176,13 @@ do
 
     function META:EmitLocalFunction(node)
         self:Whitespace("\t")
+        
+        self:EmitToken(node.tokens["function"], "")
+
         self:EmitToken(node.tokens["local"], "let")
         self:EmitToken(node.tokens["identifier"])
         self:Emit(";")
-        
-        self:Whitespace(" ")
+
         self:EmitToken(node.tokens["identifier"])
         self:Emit("=")
         emit_function_body(self, node)
@@ -205,6 +216,7 @@ do
             self:EmitToken(node.tokens["local"])
             self:Whitespace(" ")
         end
+        self:EmitToken(node.tokens["function"], "")
         self:Whitespace(" ")
         self:EmitToken(node.tokens["function"], "")
         self:EmitExpression(node.expression or node.identifier)
@@ -411,6 +423,10 @@ function META:EmitGenericForStatement(node)
     self:Emit("[")
     self:Whitespace(" ")
 
+    self:Emit("(")
+
+    self:Emit("let [")
+
     self:EmitIdentifierList(node.identifiers)
     self:Whitespace(" ")
     self:Emit("]")
@@ -420,7 +436,6 @@ function META:EmitGenericForStatement(node)
 
     self:Whitespace(" ")
     self:Emit(")")
-
     self:EmitToken(node.tokens["do"], "{")
     self:Whitespace("\n")
     self:EmitBlock(node.statements)
@@ -488,15 +503,18 @@ end
 
 function META:EmitRepeatStatement(node)
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["repeat"])
+    self:EmitToken(node.tokens["repeat"], "while (true) {")
     self:Whitespace("\n")
 
     self:EmitBlock(node.statements)
 
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["until"])
-    self:Whitespace(" ")
+
+    self:Emit(";if (")
     self:EmitExpression(node.expression)
+    self:Emit(") break;")
+
+    self:EmitToken(node.tokens["until"], "}")
 end
 
 function META:EmitLabelStatement(node)
@@ -546,20 +564,31 @@ function META:EmitLocalAssignment(node)
 
     self:Whitespace("\t")
 
-    self:EmitToken(node.tokens["local"], "let")
-
     if node.environment == "typesystem" then
         self:EmitToken(node.tokens["type"])
     end
 
     self:Whitespace(" ")
-    self:EmitIdentifierList(node.left)
 
-    if node.tokens["="] then
-        self:Whitespace(" ")
-        self:EmitToken(node.tokens["="])
-        self:Whitespace(" ")
-        self:EmitExpressionList(node.right)
+    self:EmitToken(node.tokens["local"], "let")
+
+    for i, left in ipairs(node.left) do
+        local right = node.right[i]
+
+        self:EmitIdentifier(left)
+
+        if right then
+            self:EmitToken(node.tokens["="])
+            self:EmitExpression(right)
+
+            if right.tokens[","] then
+                self:EmitToken(right.tokens[","], "")
+            end
+        end
+
+        if left.tokens[","] then
+            self:EmitToken(left.tokens[","])
+        end
     end
 end
 
@@ -572,13 +601,16 @@ function META:EmitAssignment(node)
         self:EmitToken(node.tokens["type"])
     end
 
-    self:EmitExpressionList(node.left)
+    for i, left in ipairs(node.left) do
+        local right = node.right[i]
 
-    if node.tokens["="] then
-        self:Whitespace(" ")
-        self:EmitToken(node.tokens["="])
-        self:Whitespace(" ")
-        self:EmitExpressionList(node.right)
+        self:EmitExpression(left)
+
+        if right then
+            self:Emit(" = ")
+            self:EmitExpression(right)
+            self:Emit(";")
+        end
     end
 end
 
