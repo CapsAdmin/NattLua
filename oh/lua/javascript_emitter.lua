@@ -1,4 +1,4 @@
-local syntax = require("oh.c.syntax")
+local syntax = require("oh.lua.syntax")
 local ipairs = ipairs
 local assert = assert
 local type = type
@@ -84,6 +84,11 @@ function META:EmitCall(node)
     end
 end
 
+local translate = {
+    ["and"] = "&&",
+    ["or"] = "||",
+}
+
 function META:EmitBinaryOperator(node)
     local func_chunks = syntax.GetFunctionForBinaryOperator(node.value)
     if func_chunks then
@@ -96,10 +101,14 @@ function META:EmitBinaryOperator(node)
     else
         if node.left then self:EmitExpression(node.left) end
         if node.value.value == "." or node.value.value == ":" then
-            self:EmitToken(node.value)
+            self:EmitToken(node.value, ".")
         else
             self:Whitespace(" ")
-            self:EmitToken(node.value)
+            if translate[node.value.value] then
+                self:EmitToken(node.value, translate[node.value.value])
+            else
+                self:EmitToken(node.value)
+            end
             self:Whitespace(" ")
         end
         if node.right then self:EmitExpression(node.right) end
@@ -109,8 +118,18 @@ end
 do
     local function emit_function_body(self, node, type_function)
         self:EmitToken(node.tokens["("] or node.tokens["<"])
+
+        if node.self_call then
+            self:Emit("self")
+            if #node.identifiers >= 1 then
+                self:Emit(", ")
+            end
+        end
+
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens[")"] or node.tokens[">"])
+
+        self:Emit(" => {")
 
 
         if self.config.annotate and node.inferred_type and not type_function then
@@ -137,7 +156,7 @@ do
         self:EmitBlock(node.statements)
 
         self:Whitespace("\t")
-        self:EmitToken(node.tokens["end"])
+        self:EmitToken(node.tokens["end"], "}")
     end
 
     function META:EmitAnonymousFunction(node)
@@ -183,9 +202,11 @@ do
             self:EmitToken(node.tokens["local"])
             self:Whitespace(" ")
         end
-        self:EmitToken(node.tokens["function"])
         self:Whitespace(" ")
         self:EmitExpression(node.expression or node.identifier)
+
+        self:Emit(" = ")
+
         emit_function_body(self, node)
     end
 
@@ -315,23 +336,46 @@ function META:EmitBlock(statements)
     self:Whitespace("\t-")
 end
 
+
+function META:TranslateToken(token)
+    if token.type == "line_comment" then
+        return "//" .. token.value:sub(3)
+    elseif token.type == "multiline_comment" then
+        local content = token.value:sub(5, -3)
+        :gsub("%*/", "* /"):gsub("/%*", "/ *")
+        return "/*" .. content .. "*/"
+    end
+end
+
 function META:EmitIfStatement(node)
     for i = 1, #node.statements do
         self:Whitespace("\t")
         if node.expressions[i] then
-            self:EmitToken(node.tokens["if/else/elseif"][i])
-            self:Whitespace(" ")
+            if node.tokens["if/else/elseif"][i].value == "if" then
+                self:EmitToken(node.tokens["if/else/elseif"][i], "if")
+            elseif node.tokens["if/else/elseif"][i].value == "elseif" then
+                self:EmitToken(node.tokens["if/else/elseif"][i], "else if" )            
+            end
+            
+            if not node.expressions[i].tokens["("] then self:Emit("(") end
             self:EmitExpression(node.expressions[i])
-            self:Whitespace(" ")
-            self:EmitToken(node.tokens["then"][i])
+            if not node.expressions[i].tokens[")"] then self:Emit(")") end
+            self:EmitToken(node.tokens["then"][i], "{")
         elseif node.tokens["if/else/elseif"][i] then
             self:EmitToken(node.tokens["if/else/elseif"][i])
+            self:Whitespace(" ")
+            self:Emit("{")
         end
         self:Whitespace("\n")
+        self:Whitespace("\t")
         self:EmitBlock(node.statements[i])
+        self:Whitespace("\t")
+        if i ~= #node.statements then
+            self:Emit("}")
+        end
     end
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["end"])
+    self:EmitToken(node.tokens["end"], "}")
 end
 
 
@@ -357,20 +401,44 @@ end
 function META:EmitNumericForStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["for"])
+    self:Emit("(")
+    self:Emit("let")
     self:Whitespace(" ")
 
-    self:EmitIdentifierList(node.identifiers)
+    self:EmitIdentifier(node.identifiers[1])
     self:Whitespace(" ")
     self:EmitToken(node.tokens["="])
     self:Whitespace(" ")
-    self:EmitExpressionList(node.expressions)
+    self:EmitExpression(node.expressions[1])
+
+    self:EmitToken(node.expressions[1].tokens[","], ";")
+
+    self:EmitIdentifier(node.identifiers[1])
+    self:Emit("<=")
+    self:EmitExpression(node.expressions[2])
+    if node.expressions[2].tokens[","] then
+        self:EmitToken(node.expressions[2].tokens[","], ";")
+    else
+        self:Emit(";")
+    end
+
+    self:EmitIdentifier(node.identifiers[1])
+    if node.expressions[3] then
+        self:Emit(" ")
+        self:Emit("+")
+        self:Emit("=")
+        self:EmitExpression(node.expressions[3])
+    else
+        self:Emit("++")
+    end
 
     self:Whitespace(" ")
-    self:EmitToken(node.tokens["do"])
+    self:Emit(")")
+    self:EmitToken(node.tokens["do"], "{")
     self:Whitespace("\n")
     self:EmitBlock(node.statements)
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["end"])
+    self:EmitToken(node.tokens["end"], "}")
 end
 
 function META:EmitWhileStatement(node)
@@ -421,13 +489,13 @@ end
 
 function META:EmitDoStatement(node)
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["do"])
+    self:EmitToken(node.tokens["do"], "{")
     self:Whitespace("\n")
 
     self:EmitBlock(node.statements)
 
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["end"])
+    self:EmitToken(node.tokens["end"], "}")
 end
 
 function META:EmitReturnStatement(node)
@@ -446,7 +514,7 @@ function META:EmitLocalAssignment(node)
 
     self:Whitespace("\t")
 
-    self:EmitToken(node.tokens["local"])
+    self:EmitToken(node.tokens["local"], "let")
 
     if node.environment == "typesystem" then
         self:EmitToken(node.tokens["type"])
@@ -891,4 +959,4 @@ do -- extra
     end
 end
 
-return require("oh.emitter")(META, require("oh.c.syntax"))
+return require("oh.emitter")(META, require("oh.lua.syntax"))

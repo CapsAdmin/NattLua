@@ -69,6 +69,10 @@ function oh.on_editor_save(path)
 		return
 	end
 
+	if path:find("javascript_emitter") then
+		path = "./examples/lua_to_js.lua"
+	end
+
 	if path:find("oh/oh", nil, true) and not path:find("helpers") then
 		local f = io.open("test_focus.lua")
 		if f and #f:read("*all") == 0 then
@@ -322,7 +326,7 @@ do
 			Lexer = require("oh.lua.lexer"),
 			Parser = require("oh.lua.parser"),
 			Analyzer = require("oh.lua.analyzer"),
-			Emitter = require("oh.lua.emitter"),
+			Emitter = config and config.js and require("oh.lua.javascript_emitter") or require("oh.lua.emitter"),
 
 		}, META)
 	end
