@@ -87,6 +87,8 @@ end
 local translate = {
     ["and"] = "&&",
     ["or"] = "||",
+    [".."] = "+",
+    ["~="] = "!=",
 }
 
 function META:EmitBinaryOperator(node)
@@ -160,17 +162,18 @@ do
     end
 
     function META:EmitAnonymousFunction(node)
-        self:EmitToken(node.tokens["function"])
         emit_function_body(self, node)
     end
 
     function META:EmitLocalFunction(node)
         self:Whitespace("\t")
-        self:EmitToken(node.tokens["local"])
-        self:Whitespace(" ")
-        self:EmitToken(node.tokens["function"])
+        self:EmitToken(node.tokens["local"], "let")
+        self:EmitToken(node.tokens["identifier"])
+        self:Emit(";")
+        
         self:Whitespace(" ")
         self:EmitToken(node.tokens["identifier"])
+        self:Emit("=")
         emit_function_body(self, node)
     end
 
@@ -203,6 +206,7 @@ do
             self:Whitespace(" ")
         end
         self:Whitespace(" ")
+        self:EmitToken(node.tokens["function"], "")
         self:EmitExpression(node.expression or node.identifier)
 
         self:Emit(" = ")
@@ -237,7 +241,7 @@ end
 
 function META:EmitTableKeyValue(node)
     self:EmitToken(node.tokens["identifier"])
-    self:EmitToken(node.tokens["="])
+    self:EmitToken(node.tokens["="], ":")
     self:EmitExpression(node.expression)
 end
 
@@ -248,7 +252,11 @@ function META:EmitTable(tree)
 
     local during_spread = false
 
-    self:EmitToken(tree.tokens["{"])
+    if tree.is_array then
+        self:EmitToken(tree.tokens["{"], "[")
+    else
+        self:EmitToken(tree.tokens["{"])
+    end
 
     if tree.children[1] then
         self:Whitespace("\n")
@@ -289,10 +297,18 @@ function META:EmitTable(tree)
     if during_spread then
         self:Emit("}")
     end
-    self:EmitToken(tree.tokens["}"])
+    if tree.is_array then
+        self:EmitToken(tree.tokens["}"], "]")
+    else
+        self:EmitToken(tree.tokens["}"])
+    end
 end
 
-function META:EmitPrefixOperator(node)
+local translate = {
+    ["not"] = "!",
+}
+
+function META:EmitPrefixOperator(node) 
     local func_chunks = syntax.GetFunctionForPrefixOperator(node.value)
 
     if self.TranslatePrefixOperator then
@@ -307,11 +323,19 @@ function META:EmitPrefixOperator(node)
     else
         if syntax.IsKeyword(node.value) then
             self:Whitespace("?")
-            self:EmitToken(node.value)
+            if translate[node.value.value] then
+                self:EmitToken(node.value, translate[node.value.value])
+            else
+                self:EmitToken(node.value)
+            end
             self:Whitespace("?")
             self:EmitExpression(node.right)
         else
-            self:EmitToken(node.value)
+            if translate[node.value.value] then
+                self:EmitToken(node.value, translate[node.value.value])
+            else
+                self:EmitToken(node.value)
+            end
             self:EmitExpression(node.right)
         end
     end
@@ -382,20 +406,26 @@ end
 function META:EmitGenericForStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["for"])
+    self:Emit("(")
+    self:Emit("let ")
+    self:Emit("[")
     self:Whitespace(" ")
 
     self:EmitIdentifierList(node.identifiers)
     self:Whitespace(" ")
-    self:EmitToken(node.tokens["in"])
+    self:Emit("]")
+    self:EmitToken(node.tokens["in"], "of")
     self:Whitespace(" ")
     self:EmitExpressionList(node.expressions)
 
     self:Whitespace(" ")
-    self:EmitToken(node.tokens["do"])
+    self:Emit(")")
+
+    self:EmitToken(node.tokens["do"], "{")
     self:Whitespace("\n")
     self:EmitBlock(node.statements)
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["end"])
+    self:EmitToken(node.tokens["end"], "}")
 end
 
 function META:EmitNumericForStatement(node)
@@ -445,13 +475,15 @@ function META:EmitWhileStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["while"])
     self:Whitespace(" ")
+    self:Emit("(")
     self:EmitExpression(node.expression)
+    self:Emit(")")
     self:Whitespace(" ")
-    self:EmitToken(node.tokens["do"])
+    self:EmitToken(node.tokens["do"], "{")
     self:Whitespace("\n")
     self:EmitBlock(node.statements)
     self:Whitespace("\t")
-    self:EmitToken(node.tokens["end"])
+    self:EmitToken(node.tokens["end"], "}")
 end
 
 function META:EmitRepeatStatement(node)
@@ -618,6 +650,8 @@ function META:EmitStatement(node)
         error("unhandled statement: " .. node.kind)
     end
 
+    self:Emit(";")
+
     if self.OnEmitStatement then
         if node.kind ~= "end_of_file" then
             self:OnEmitStatement()
@@ -644,6 +678,10 @@ end
 
 function META:EmitIdentifier(node)
     self:EmitToken(node.value)
+
+    if node.value.value == "..." then
+        self:Emit("__args")
+    end
 
     if self.config.annotate then
         if node.type_expression then
