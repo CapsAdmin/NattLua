@@ -1,10 +1,7 @@
 local table_insert = table.insert
 local setmetatable = setmetatable
 local type = type
-local math_huge = math.huge
 local pairs = pairs
-local table_insert = table.insert
-local table_concat = table.concat
 
 return function(parser_meta, syntax, Emitter)
     local META = {}
