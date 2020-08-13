@@ -1,10 +1,6 @@
 local table_insert = table.insert
-local setmetatable = setmetatable
-local type = type
 local math_huge = math.huge
 local pairs = pairs
-local table_insert = table.insert
-local table_concat = table.concat
 
 local syntax = require("oh.lua.syntax")
 
@@ -483,6 +479,12 @@ do -- expression
             end
 
             local entry = self:ReadTableEntry(i)
+
+            if entry.kind == "table_index_value" then
+                tree.is_array = true
+            else
+                tree.is_dictionary = true
+            end
 
             if entry.spread then
                 tree.spread = true

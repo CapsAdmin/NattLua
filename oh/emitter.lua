@@ -82,6 +82,8 @@ return function(emitter_meta, syntax)
         if translate then
             if type(translate) == "table" then
                 self:Emit(translate[node.value] or node.value)
+            elseif type(translate) == "function" then
+                self:Emit(translate(node.value))
             elseif translate ~= "" then
                 self:Emit(translate)
             end
