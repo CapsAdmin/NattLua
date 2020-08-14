@@ -71,17 +71,24 @@ function META:EmitExpressionIndex(node)
 end
 
 function META:EmitCall(node)
+    self:Emit("OP['call']")
+    self:Emit("(")
     self:EmitExpression(node.left)
+    if node.expressions[1] then
+        self:Emit(",")
 
-    if node.tokens["call("] then
-        self:EmitToken(node.tokens["call("])
+        if node.tokens["call("] then
+            self:EmitToken(node.tokens["call("], "")
+        end
+
+        self:EmitExpressionList(node.expressions)
+
+        if node.tokens["call)"] then
+            self:EmitToken(node.tokens["call)"], "")
+        end
     end
 
-    self:EmitExpressionList(node.expressions)
-
-    if node.tokens["call)"] then
-        self:EmitToken(node.tokens["call)"])
-    end
+    self:Emit(")")
 end
 
 local translate = {
@@ -102,10 +109,12 @@ function META:EmitBinaryOperator(node)
         self.operator_transformed = true
     else
         -- move whitespace
-        self:EmitToken(node.left.value, "")
-        node.left.value.whitespace = nil
-        
-        self:Emit("OP['")        
+        if node.left then
+            self:EmitToken(node.left.value, "")
+            node.left.value.whitespace = nil
+        end
+
+        self:Emit("OP['")
         self:Emit(node.value.value)
         self:Emit("'](")
 
@@ -219,11 +228,23 @@ do
         self:EmitToken(node.tokens["function"], "")
         self:Whitespace(" ")
         self:EmitToken(node.tokens["function"], "")
-        self:EmitExpression(node.expression or node.identifier)
 
-        self:Emit(" = ")
+        if node.expression and node.expression.value.value == "." or node.expression.value.value == ":" then
+            self:Emit("OP['='](")
+            self:EmitExpression(node.expression.left)
+            self:Emit(",")
+            self:Emit("'")
+            self:EmitExpression(node.expression.right)
+            self:Emit("'")
+            self:Emit(",")
+        else
+            self:EmitExpression(node.expression or node.identifier)
+            self:Emit(" = ")
+        end
 
         emit_function_body(self, node)
+
+        self:Emit(")")
     end
 
     function META:EmitTypeFunctionStatement(node)
@@ -343,12 +364,20 @@ function META:EmitPrefixOperator(node)
             self:Whitespace("?")
             self:EmitExpression(node.right)
         else
-            if translate[node.value.value] then
-                self:EmitToken(node.value, translate[node.value.value])
+            if node.value.value == "#" then
+                self:Emit("OP['")
+                self:Emit(node.value.value)
+                self:Emit("'](")                
+                self:EmitExpression(node.right)  
+                self:Emit(")")
             else
-                self:EmitToken(node.value)
+                if translate[node.value.value] then
+                    self:EmitToken(node.value, translate[node.value.value])
+                else
+                    self:EmitToken(node.value)
+                end
+                self:EmitExpression(node.right)
             end
-            self:EmitExpression(node.right)
         end
     end
 end
@@ -422,10 +451,6 @@ function META:EmitGenericForStatement(node)
     self:Emit("let ")
     self:Emit("[")
     self:Whitespace(" ")
-
-    self:Emit("(")
-
-    self:Emit("let [")
 
     self:EmitIdentifierList(node.identifiers)
     self:Whitespace(" ")
@@ -573,7 +598,7 @@ function META:EmitLocalAssignment(node)
     self:EmitToken(node.tokens["local"], "let")
 
     for i, left in ipairs(node.left) do
-        local right = node.right[i]
+        local right = node.right and node.right[i]
 
         self:EmitIdentifier(left)
 
@@ -601,16 +626,26 @@ function META:EmitAssignment(node)
         self:EmitToken(node.tokens["type"])
     end
 
+
     for i, left in ipairs(node.left) do
+        self:Emit("OP['='](")
         local right = node.right[i]
 
-        self:EmitExpression(left)
+        if left.value.value == "." or left.value.value == ":" then
+            self:EmitExpression(left.left)
+            self:Emit(",")
+            self:Emit("'")
+            self:EmitExpression(left.right)
+            self:Emit("'")
+        else
+            self:EmitExpression(left)
+        end
 
         if right then
-            self:Emit(" = ")
+            self:Emit(",")
             self:EmitExpression(right)
-            self:Emit(";")
         end
+        self:Emit(");")
     end
 end
 
@@ -801,7 +836,7 @@ do -- types
                         self:EmitTypeExpression(node.value)
                     elseif node.kind == "table_key_value" then
                         self:EmitToken(node.tokens["identifier"])
-                        self:EmitToken(node.tokens["="])
+                        self:EmitToken(node.tokens["="], ":")
                         self:EmitTypeExpression(node.expression)
                     elseif node.kind == "table_expression_value" then
                         self:EmitToken(node.tokens["["])
@@ -809,7 +844,7 @@ do -- types
                         self:EmitTypeExpression(node.expressions[1])
                         self:Whitespace(")")
                         self:EmitToken(node.tokens["]"])
-                        self:EmitToken(node.tokens["="])
+                        self:EmitToken(node.tokens["="], ":")
                         self:EmitTypeExpression(node.expressions[2])
                     end
 
