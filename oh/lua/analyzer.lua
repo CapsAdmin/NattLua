@@ -1268,6 +1268,7 @@ do
             end
 
             node.inferred_type = node.inferred_type or obj
+            node.is_upvalue = self:GetUpvalue(node, env) ~= nil
 
             return obj
         elseif node.value.type == "number" then

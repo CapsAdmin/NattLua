@@ -4,11 +4,6 @@ local code = io.open("oh/parser.lua"):read("*all")
 
 code = [==[
 
-local a = {
-    b = true,
-    c = function(self) print(self, "!!") end,
-}
-
 local META = {}
 META.__index = META
 
@@ -27,9 +22,15 @@ self:Test(1,2,3)
 
 print(self + self)
 
+local a = GLOBAL
+
+local test = {foo = {}}
+
+test.foo.bar = aa.bb.cc
+
 ]==]
 
-local ast = assert(oh.Code(code):Parse()).SyntaxTree
+local ast = assert(assert(oh.Code(code):Parse()):Analyze()).SyntaxTree
 
 local em = LuaEmitter()
 
@@ -38,16 +39,25 @@ if f then pcall(f) end
 
 local code = em:BuildCode(ast)
 code = ([[
-    
-let print = console.log;
+
+globalThis.print = console.log;
 
 let metatables = new Map()
 
-let setmetatable = (obj, meta) => {
+globalThis.table = {}
+table.insert = (tbl, i, val) => {
+    if (!val) {
+        val = i
+    }
+
+    tbl.push(val)
+}
+
+globalThis.setmetatable = (obj, meta) => {
     metatables.set(obj, meta)
     return obj
 }
-let getmetatable = (obj) => {
+globalThis.getmetatable = (obj) => {
     return metatables.get(obj)
 }
 
@@ -99,7 +109,7 @@ let OP = {}
         return obj.apply(obj, args)
     }
 }
-]]):gsub("%$OPERATORS%$", function() 
+]]):gsub("%$OPERATORS%$", function()
     
     local operators = {
         ["+"] = "__add",

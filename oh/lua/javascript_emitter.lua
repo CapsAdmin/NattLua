@@ -29,10 +29,20 @@ function META:EmitExpression(node)
     elseif node.kind == "postfix_expression_index" then
         self:EmitExpressionIndex(node)
     elseif node.kind == "value" then
-        if node.tokens["is"] then
-            self:EmitToken(node.value, tostring(node.result_is))
-        else
+
+        if node.is_upvalue == false then
+            self:EmitToken(node.value, "")
+            node.value.whitespace = nil
+            self:Emit("globalThis.")
             self:EmitToken(node.value)
+        elseif node.value.value == "..." then
+            self:EmitToken(node.value, "__args")
+        else
+            if node.tokens["is"] then
+                self:EmitToken(node.value, tostring(node.result_is))
+            else
+                self:EmitToken(node.value)
+            end
         end
     elseif node.kind == "import" then
         self:EmitImportExpression(node)
@@ -109,7 +119,7 @@ function META:EmitBinaryOperator(node)
         self.operator_transformed = true
     else
         -- move whitespace
-        if node.left then
+        if node.left and node.left.value then
             self:EmitToken(node.left.value, "")
             node.left.value.whitespace = nil
         end
@@ -267,7 +277,7 @@ function META:EmitTableExpressionValue(node)
     self:Whitespace(")")
     self:EmitToken(node.tokens["]"])
 
-    self:EmitToken(node.tokens["="])
+    self:EmitToken(node.tokens["="], ":")
 
     self:EmitExpression(node.expressions[2])
 end
@@ -457,7 +467,9 @@ function META:EmitGenericForStatement(node)
     self:Emit("]")
     self:EmitToken(node.tokens["in"], "of")
     self:Whitespace(" ")
+    self:Emit("(")
     self:EmitExpressionList(node.expressions)
+    self:Emit(")")
 
     self:Whitespace(" ")
     self:Emit(")")
@@ -631,7 +643,7 @@ function META:EmitAssignment(node)
         self:Emit("OP['='](")
         local right = node.right[i]
 
-        if left.value.value == "." or left.value.value == ":" then
+        if left.kind == "binary_operator" and (left.value.value == "." or left.value.value == ":") then
             self:EmitExpression(left.left)
             self:Emit(",")
             self:Emit("'")
