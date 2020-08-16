@@ -27,8 +27,14 @@ print(self + self)
 local a = GLOBAL
 
 local test = {foo = {}}
+local aa = {bb = {cc = 1}}
 
 test.foo.bar = aa.bb.cc
+print(test.foo.bar)
+
+local c = {}
+table.insert(c, 1)
+print(a)
 
 ]==]
 
@@ -183,6 +189,8 @@ if f then pcall(f) end
 local code = em:BuildCode(ast)
 code = ([[
 
+let globalThis = {}
+
 globalThis.print = console.log;
 globalThis.tonumber = (str) => {
     let n = parseFloat(str)
@@ -208,7 +216,7 @@ globalThis.string.format = sprintf
 let metatables = new Map()
 
 globalThis.table = {}
-table.insert = (tbl, i, val) => {
+globalThis.table.insert = (tbl, i, val) => {
     if (!val) {
         val = i
     }
@@ -242,7 +250,7 @@ let OP = {}
             return l[r]
         }
 
-        let lmeta = getmetatable(l)
+        let lmeta = globalThis.getmetatable(l)
         
         if (lmeta && lmeta.__index) {
             if (lmeta.__index === lmeta) {
@@ -301,12 +309,12 @@ let OP = {}
     for operator, name in pairs(operators) do
         code = code .. [[
             OP["]] .. operator ..[["] = (l,r) => {
-                let lmeta = getmetatable(l)
+                let lmeta = globalThis.getmetatable(l)
                 if (lmeta && lmeta.]]..name..[[) {
                     return lmeta.]]..name..[[(l, r)
                 }
         
-                let rmeta = getmetatable(r)
+                let rmeta = globalThis.getmetatable(r)
         
                 if (rmeta && rmeta.]]..name..[[) {
                     return rmeta.]]..name..[[(l, r)

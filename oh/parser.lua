@@ -281,6 +281,10 @@ return function(parser_meta, syntax, Emitter)
             end
 
             out[i] = self:ReadStatement()
+
+            if self.config and self.config.on_statement then
+                out[i] = self.config.on_statement(self, out[i]) or out[i]
+            end
         end
 
         return out
