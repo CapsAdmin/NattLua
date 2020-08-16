@@ -910,6 +910,14 @@ function META:AnalyzeStatement(statement)
             else
                 left[i] = self:AnalyzeExpression(exp_key.right, env)
             end
+            
+            if left[i] then 
+                if left[i].kind == "binary_operator" then
+                    left[i].left.is_upvalue = self:GetUpvalue(left[i].left, env) ~= nil
+                elseif left[i].kind == "value" then
+                    left[i].is_upvalue = self:GetUpvalue(left[i], env) ~= nil
+                end
+            end
         end
 
         if statement.right then
@@ -1269,7 +1277,7 @@ do
 
             node.inferred_type = node.inferred_type or obj
             node.is_upvalue = self:GetUpvalue(node, env) ~= nil
-
+            
             return obj
         elseif node.value.type == "number" then
             return self:TypeFromImplicitNode(node, "number", self:StringToNumber(node.value.value), true)

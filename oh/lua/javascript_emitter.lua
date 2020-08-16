@@ -74,10 +74,12 @@ function META:EmitVarargTuple(node)
 end
 
 function META:EmitExpressionIndex(node)
+    self:Emit("OP['.']")
+    self:EmitToken(node.tokens["["], "(")
     self:EmitExpression(node.left)
-    self:EmitToken(node.tokens["["])
+    self:Emit(",")
     self:EmitExpression(node.expression)
-    self:EmitToken(node.tokens["]"])
+    self:EmitToken(node.tokens["]"], ")")
 end
 
 function META:EmitCall(node)
@@ -640,24 +642,42 @@ function META:EmitAssignment(node)
 
 
     for i, left in ipairs(node.left) do
-        self:Emit("OP['='](")
         local right = node.right[i]
+        if left.kind == "binary_operator"  then
+            self:Emit("OP['='](")
 
-        if left.kind == "binary_operator" and (left.value.value == "." or left.value.value == ":") then
+            if left.kind == "binary_operator" and (left.value.value == "." or left.value.value == ":") then
+                self:EmitExpression(left.left)
+                self:Emit(",")
+                self:Emit("'")
+                self:EmitExpression(left.right)
+                self:Emit("'")
+            else
+                self:EmitExpression(left)
+            end
+
+            if right then
+                self:Emit(",")
+                self:EmitExpression(right)
+            end
+            self:Emit(");")
+        elseif left.kind == "postfix_expression_index" then
+            self:Emit("OP['='](")
+
             self:EmitExpression(left.left)
             self:Emit(",")
-            self:Emit("'")
-            self:EmitExpression(left.right)
-            self:Emit("'")
+            self:EmitExpression(left.expression)
+          
+            if right then
+                self:Emit(",")
+                self:EmitExpression(right)
+            end
+            self:Emit(");")
         else
             self:EmitExpression(left)
-        end
-
-        if right then
-            self:Emit(",")
+            self:Emit("=")
             self:EmitExpression(right)
         end
-        self:Emit(");")
     end
 end
 
