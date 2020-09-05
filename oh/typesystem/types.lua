@@ -1,6 +1,6 @@
+local analyzer_env = require("oh.lua.analyzer_env")
+
 local types = {}
-
-
 
 --[[
     this keeps confusing me
@@ -24,7 +24,7 @@ local types = {}
 
 local function store_error(msg)
     do return end -- WIP
-    local a = require("oh").GetCurrentAnalyzer()
+    local a = analyzer_env.GetCurrentAnalyzer()
     if a then
         a.error_stack = a.error_stack or {}
         table.insert(a.error_stack, {
@@ -139,7 +139,7 @@ function types.RegisterType(meta)
 --        self.trace = debug.traceback()
 
         if oof then
-            local a = require("oh").GetCurrentAnalyzer()
+            local a = analyzer_env.GetCurrentAnalyzer()
             if a then
                 self.node = a.current_expression
             end

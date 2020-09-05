@@ -1,4 +1,5 @@
 local types = require("oh.typesystem.types")
+local analyzer_env = require("oh.lua.analyzer_env")
 
 local META = {}
 META.Type = "any"
@@ -42,7 +43,7 @@ end
 
 function META:Initialize()
     --[[
-    local a = require("oh").GetCurrentAnalyzer()
+    local a = analyzer_env.GetCurrentAnalyzer()
     if a then
         if a.path and a.path:find("base_typesystem") then
             return self

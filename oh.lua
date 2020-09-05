@@ -1,49 +1,11 @@
-local oh = {}
-
 if not table.unpack and _G.unpack then
 	table.unpack = _G.unpack
 end
 
 local helpers = require("oh.helpers")
+local analyzer_env = require("oh.lua.analyzer_env")
 
-oh.current_analyzer = {}
-function oh.PushAnalyzer(a)
-    table.insert(oh.current_analyzer, 1, a)
-end
-
-function oh.PopAnalyzer()
-	table.remove(oh.current_analyzer, 1)
-end
-
-function oh.GetCurrentAnalyzer()
-	return oh.current_analyzer[1]
-end
-
-function oh.GetBaseAnalyzer()
-
-    if not oh.base_analyzer then
-        local base = require("oh.lua.analyzer")()
-		base.IndexNotFound = nil
-
-		local ret, root, code_data = base:AnalyzeFile("oh/lua/base_typesystem.oh")
-
-		local g = base:TypeFromImplicitNode(root, "table")
-
-		for k, v in pairs(base.env.typesystem) do
-			g:Set(k, v)
-		end
-
-		-- TODO: string library isn't in base.env.typesystem
-		g:Set("string", base:GetValue("string", "typesystem"))
-		base:SetValue("_G", g, "typesystem")
-		base:GetValue("_G", "typesystem"):Set("_G", g)
-
-        oh.base_analyzer = base
-    end
-
-    return oh.base_analyzer
-end
-
+local oh = {}
 
 function oh.load(code, name, config)
 	local obj = oh.Code(code, name, config)
@@ -57,62 +19,6 @@ function oh.loadfile(path, config)
 	local code, err = obj:Emit()
 	if not code then return nil, err end
     return load(code, path)
-end
-
-function oh.on_editor_save(path)
-	if path:sub(-4) ~= ".lua" and path:sub(-3) ~= ".oh" then
-		return
-	end
-
-	if path:find("test/") then
-		os.execute("luajit test/run.lua " .. path)
-		return
-	end
-
-	if path:find("javascript_emitter") then
-		path = "./examples/lua_to_js.lua"
-	end
-
-	if path:find("oh/oh", nil, true) and not path:find("helpers") then
-		local f = io.open("test_focus.lua")
-		if f and #f:read("*all") == 0 then
-			f:close()
-			if path:find("/lua/") then
-				os.execute("luajit test/run.lua lua")
-			elseif path:find("/c_preprocessor/") then
-				os.execute("luajit test/run.lua c_preprocessor")
-			elseif path:find("/c/") then
-				os.execute("luajit test/run.lua c")
-			else
-				os.execute("luajit test/run.lua")
-			end
-			return
-		else
-			path = "./test_focus.lua"
-		end
-	end
-
-	if path:find("examples/") then
-		os.execute("luajit " .. path)
-		return
-	end
-
-	local c = oh.File(path, {annotate = true})
-	if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
-		_G.DISABLE_BASE_TYPES = true
-	end
-	local ok, err = c:Analyze()
-	if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
-		_G.DISABLE_BASE_TYPES = nil
-	end
-	if not ok then
-		io.write(err, "\n")
-		return
-	end
-	local res = assert(c:Emit())
-	require("oh.lua.base_runtime")
-	io.write(res, "\n")
-	--assert(load(res))()
 end
 
 function oh.ParseFile(path, root)
@@ -176,8 +82,8 @@ do
 			end
 		end
 
-		if oh.GetCurrentAnalyzer() then
-			local analyzer = oh.GetCurrentAnalyzer()
+		if analyzer_env.GetCurrentAnalyzer() then
+			local analyzer = analyzer_env.GetCurrentAnalyzer()
 
 			if analyzer.current_statement and analyzer.current_statement.Render then
 				s = s .. "======== statement =======\n"
@@ -283,9 +189,9 @@ do
 		analyzer.code_data = self
 		analyzer.OnError = self.OnError
 
-		oh.PushAnalyzer(analyzer)
+		analyzer_env.PushAnalyzer(analyzer)
 		local ok, ast = xpcall(analyzer.AnalyzeStatement, traceback, analyzer, self.SyntaxTree)
-		oh.PopAnalyzer()
+		analyzer_env.PopAnalyzer()
 		self.Analyzer = analyzer
 
 		if not ok then
@@ -332,8 +238,8 @@ do
 	end
 
 	function oh.File(path, config)
-
 		config = config or {}
+		
 		config.path = config.path or path
 		config.name = config.name or path
 

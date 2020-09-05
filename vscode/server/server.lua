@@ -54,7 +54,7 @@ local function compile(uri, server, client)
 		local data = helpers.SubPositionToLinePosition(code, start, stop)
 
 		if not data then
-			local code = io.open(oh.GetBaseAnalyzer().path):read("*all")
+			local code = io.open(require("oh.lua.analyzer_env").GetBaseAnalyzer().path):read("*all")
 			data = helpers.SubPositionToLinePosition(code, start, stop)
 			if not data then
 				print("INTERNAL ERROR: ", self, msg, start, stop, ...)

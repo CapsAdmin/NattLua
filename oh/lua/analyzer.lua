@@ -1,5 +1,7 @@
 
 local oh = require("oh")
+local analyzer_env = require("oh.lua.analyzer_env")
+
 local types = require("oh.typesystem.types")
 types.Initialize()
 
@@ -855,19 +857,18 @@ do -- types
 end
 
 function META:AnalyzeFile(path)
-    local oh = require("oh")
     local root, code_data = assert(oh.ParseFile(path))
     self.code = code_data.code
     self.path = path
 
-    oh.PushAnalyzer(self)
+    analyzer_env.PushAnalyzer(self)
     self:PushScope(root.SyntaxTree)
     self:ReturnFromThisScope()
     self:AnalyzeStatements(root.SyntaxTree.statements)
     local analyzed_return = types.Tuple(self:GetReturnExpressions())
     self:ClearReturnExpressions()
     self:PopScope()
-    oh.PopAnalyzer()
+    analyzer_env.PopAnalyzer()
 
     return analyzed_return, root, code_data
 end
@@ -1438,7 +1439,7 @@ local function DefaultIndex(self, node)
         return nil
     end
     
-    return oh.GetBaseAnalyzer():GetValue(node, "typesystem")
+    return analyzer_env.GetBaseAnalyzer():GetValue(node, "typesystem")
 end
 
 return function()
