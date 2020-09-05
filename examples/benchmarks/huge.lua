@@ -3,7 +3,7 @@ if _G.ravi then
 end
 
 local oh = require("oh")
-local util = require("oh.util")
+local util = require("examples.util")
 
 --util.LogTraceAbort()
 util.EnhancedJITSettings()

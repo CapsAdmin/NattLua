@@ -10,7 +10,7 @@ ffi.C.chdir("/home/caps/oh/")
 local json = require("vscode.server.json")
 local oh = require("oh")
 local helpers = require("oh.helpers")
-local tprint = require("oh.util").TablePrint
+local tprint = require("examples.util").TablePrint
 local server = _G.SERVER or require("vscode.server.lsp")
 _G.SERVER = server
 

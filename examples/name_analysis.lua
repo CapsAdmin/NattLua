@@ -2,7 +2,7 @@
 
 local oh = require("oh")
 local syntax = require("oh.lua.syntax")
-local util = require("oh.util")
+local util = require("examples.util")
 
 local function levenshtein(s, t, lim)
     local s_len, t_len = #s, #t -- Calculate the sizes of the strings or arrays

@@ -18,97 +18,97 @@ function helpers.QuoteTokens(var)
 	return str
 end
 
-do
-	function helpers.LinePositionToSubPosition(code, line, character)
-		local line_pos = 1
-		for i = 1, #code do
-			local c = code:sub(i, i)
+function helpers.LinePositionToSubPosition(code, line, character)
+	local line_pos = 1
+	for i = 1, #code do
+		local c = code:sub(i, i)
 
-			if line_pos == line then
-				local char_pos = 1
+		if line_pos == line then
+			local char_pos = 1
 
-				for i = i, i + character do
-					local c = code:sub(i, i)
+			for i = i, i + character do
+				local c = code:sub(i, i)
 
-					if char_pos == character then
-						return i
-					end
-
-					char_pos = char_pos + 1
+				if char_pos == character then
+					return i
 				end
 
-				return i
-			end
-
-			if c == "\n" then
-				line_pos = line_pos + 1
-			end
-		end
-
-		return #code
-	end
-
-	function helpers.SubPositionToLinePosition(code, start, stop)
-		local line = 1
-
-		local line_start
-		local line_stop
-
-		local within_start
-		local within_stop
-
-		local character_start
-		local character_stop
-
-		local line_pos = 0
-		local char_pos = 0
-
-		for i = 1, #code do
-			local char = code:sub(i, i)
-
-			if i == stop then
-				line_stop = line
-				character_stop = char_pos
-			end
-
-			if i == start then
-				line_start = line
-				within_start = line_pos
-				character_start = char_pos
-			end
-
-			if char == "\n" then
-				if line_stop then
-					within_stop = i
-					break
-				end
-
-				line = line + 1
-				line_pos = i
-				char_pos = 0
-			else
 				char_pos = char_pos + 1
 			end
+
+			return i
 		end
 
-		if not within_stop then
-			within_stop = #code + 1
+		if c == "\n" then
+			line_pos = line_pos + 1
 		end
-
-		if not within_start then
-			return
-		end
-
-		return {
-			character_start = character_start,
-			character_stop = character_stop,
-			sub_line_before = {within_start + 1, start - 1},
-			sub_line_after = {stop + 1, within_stop - 1},
-			line_start = line_start,
-			line_stop = line_stop,
-		}
 	end
 
+	return #code
+end
+
+function helpers.SubPositionToLinePosition(code, start, stop)
+	local line = 1
+
+	local line_start
+	local line_stop
+
+	local within_start
+	local within_stop
+
+	local character_start
+	local character_stop
+
+	local line_pos = 0
+	local char_pos = 0
+
+	for i = 1, #code do
+		local char = code:sub(i, i)
+
+		if i == stop then
+			line_stop = line
+			character_stop = char_pos
+		end
+
+		if i == start then
+			line_start = line
+			within_start = line_pos
+			character_start = char_pos
+		end
+
+		if char == "\n" then
+			if line_stop then
+				within_stop = i
+				break
+			end
+
+			line = line + 1
+			line_pos = i
+			char_pos = 0
+		else
+			char_pos = char_pos + 1
+		end
+	end
+
+	if not within_stop then
+		within_stop = #code + 1
+	end
+
+	if not within_start then
+		return
+	end
+
+	return {
+		character_start = character_start,
+		character_stop = character_stop,
+		sub_line_before = {within_start + 1, start - 1},
+		sub_line_after = {stop + 1, within_stop - 1},
+		line_start = line_start,
+		line_stop = line_stop,
+	}
+end
+
+do
 	local function get_lines_before(code, pos, lines)
 		local line = 1
 		local first_line_pos = 1
@@ -182,6 +182,7 @@ do
 
 		if not data then
 			local str = ""
+			
 			if path then
 				str = str .. path .. ":INVALID: "
 			end
@@ -189,6 +190,7 @@ do
 			if msg then
 				str = str .. msg
 			end
+
 			return str
 		end
 
@@ -257,34 +259,6 @@ do
 	end
 end
 
-function helpers.GetErrorsFormatted(error_table, code, path)
-	if not error_table[1] then
-		return ""
-	end
-
-	local errors = {}
-	local max_width = 0
-
-	for i, data in ipairs(error_table) do
-		local msg = helpers.FormatError(code, path, data.msg, data.start, data.stop)
-
-		for _, line in ipairs(msg:split("\n")) do
-			max_width = math.max(max_width, #line)
-		end
-
-		errors[i] = msg
-	end
-
-	local str = ""
-
-	for _, msg in ipairs(errors) do
-		str = str .. ("="):rep(max_width) .. "\n" .. msg .. "\n"
-	end
-
-	str = str .. ("="):rep(max_width) .. "\n"
-
-	return str
-end
 
 do
 	local blacklist = {
