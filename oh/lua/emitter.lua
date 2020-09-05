@@ -4,6 +4,10 @@ local assert = assert
 local type = type
 
 local META = {}
+META.__index = META
+
+META.syntax = syntax
+assert(loadfile("oh/base_emitter.lua"))(META)
 
 function META:EmitExpression(node)
     if node.tokens["("] then
@@ -891,4 +895,9 @@ do -- extra
     end
 end
 
-return require("oh.emitter")(META, require("oh.lua.syntax"))
+return function(config)
+    local self = setmetatable({}, META)
+    self.config = config or {}
+    self:Initialize()
+    return self
+end

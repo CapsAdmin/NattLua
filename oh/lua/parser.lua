@@ -1,21 +1,18 @@
+local syntax = require("oh.lua.syntax")
+
 local table_insert = table.insert
 local math_huge = math.huge
 local pairs = pairs
 
-local syntax = require("oh.lua.syntax")
-
 local META = {}
+META.__index = META
 
-local extended = {
-    "oh.lua.parser_typesystem",
-    "oh.lua.parser_extra",
-}
+META.Emitter = require("oh.lua.emitter")
+META.syntax = syntax
 
-for _, name in ipairs(extended) do
-    for k, v in pairs(require(name)) do
-        META[k] = v
-    end
-end
+assert(loadfile("oh/base_parser.lua"))(META)
+assert(loadfile("oh/lua/parser_typesystem.lua"))(META)
+assert(loadfile("oh/lua/parser_extra.lua"))(META)
 
 do -- functional helpers
     function META:ExpectExpression(what)
@@ -656,7 +653,7 @@ do -- expression
 
         do
             local node = self:GetToken()
-            if node and node.potential_lua54_division_operator then
+            if node then
                 for _, v in ipairs(node.whitespace) do
                     if v.type == "line_comment" and v.value:sub(1,2) == "//" then
                         local tokens = require("oh.lua.lexer")("/idiv" .. v.value:sub(2)):GetTokens()
@@ -671,20 +668,34 @@ do -- expression
             end
         end
 
-        while syntax.IsBinaryOperator(self:GetToken()) and syntax.GetLeftOperatorPriority(self:GetToken()) > priority do
+        while syntax.GetBinaryOperatorInfo(self:GetToken()) and syntax.GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
             local left = node
             node = self:BeginExpression("binary_operator", true)
             node.value = self:ReadTokenLoose()
             node.left = left
-            node.right = self:ReadExpression(syntax.GetRightOperatorPriority(node.value), no_ambigious_calls)
+            node.right = self:ReadExpression(syntax.GetBinaryOperatorInfo(node.value).right_priority, no_ambigious_calls)
             self:EndExpression()
         end
 
         return node
     end
 
+
+    local function IsDefinetlyNotStartOfExpression(token)
+        return
+        not token or token.type == "end_of_file" or
+        token.value == "}" or token.value == "," or
+        --[[token.value == "[" or]] token.value == "]" or
+        (
+            syntax.IsKeyword(token) and
+            not syntax.IsPrefixOperator(token) and
+            not syntax.IsValue(token) and
+            token.value ~= "function"
+        )
+    end
+
     function META:ReadExpectExpression(priority, no_ambigious_calls)
-        if syntax.IsDefinetlyNotStartOfExpression(self:GetToken()) then
+        if IsDefinetlyNotStartOfExpression(self:GetToken()) then
             self:Error("expected beginning of expression, got $1", nil, nil, self:GetToken() and self:GetToken().value ~= "" and self:GetToken().value or self:GetToken().type)
             return
         end
@@ -771,5 +782,6 @@ do -- statements
     end
 end
 
-
-return require("oh.parser")(META, require("oh.lua.syntax"), require("oh.lua.emitter"))
+return function(config)
+    return setmetatable({config = config}, META)
+end

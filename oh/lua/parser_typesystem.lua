@@ -1,8 +1,8 @@
+local META = ...
+
 local table_insert = table.insert
 local math_huge = math.huge
 local syntax = require("oh.lua.syntax")
-
-local META = {}
 
 function META:HandleTypeListSeparator(out, i, node)
     if not node then
@@ -306,7 +306,7 @@ function META:ReadTypeExpression(priority)
         node.tokens[")"] = node.tokens[")"] or {}
         table_insert(node.tokens[")"], self:ReadValue(")"))
 
-    elseif syntax.IsTypePrefixOperator(self:GetToken()) then
+    elseif syntax.IsPrefixTypeOperator(self:GetToken()) then
         node = self:Expression("prefix_operator")
         node.value = self:ReadTokenLoose()
         node.right = self:ReadTypeExpression(math_huge)
@@ -384,9 +384,9 @@ function META:ReadTypeExpression(priority)
         first.force_upvalue = force_upvalue
     end
 
-    while syntax.IsBinaryTypeOperator(self:GetToken()) and syntax.GetLeftTypeOperatorPriority(self:GetToken()) > priority do
+    while syntax.GetBinaryTypeOperatorInfo(self:GetToken()) and syntax.GetBinaryTypeOperatorInfo(self:GetToken()).left_priority > priority do
         local op = self:GetToken()
-        local right_priority = syntax.GetRightTypeOperatorPriority(op)
+        local right_priority = syntax.GetBinaryTypeOperatorInfo(op).right_priority
         if not op or not right_priority then break end
         self:Advance(1)
 
@@ -543,5 +543,3 @@ do
         return node
     end
 end
-
-return META

@@ -68,11 +68,11 @@ test("glua", function()
     equal(one_token(tokenize("/*-----*/foo")).type, "letter")
     equal(one_token(tokenize("--asdafsadw\nfoo--awsad asd")).type, "letter")
 
-    equal(syntax.PrefixOperators[tokenize("!a")[1].value] ~= nil, true)
+    equal(syntax.IsPrefixOperator(tokenize("!a")[1]), true)
 
-    equal(syntax.BinaryOperators[tokenize("a != 1")[2].value] ~= nil, true)
-    equal(syntax.BinaryOperators[tokenize("a && b")[2].value] ~= nil, true)
-    equal(syntax.BinaryOperators[tokenize("a || b")[2].value] ~= nil, true)
+    equal(syntax.GetBinaryOperatorInfo(tokenize("a != 1")[2]) ~= nil, true)
+    equal(syntax.GetBinaryOperatorInfo(tokenize("a && b")[2]) ~= nil, true)
+    equal(syntax.GetBinaryOperatorInfo(tokenize("a || b")[2]) ~= nil, true)
 end)
 
 do

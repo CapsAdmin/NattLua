@@ -1,8 +1,12 @@
 
+local oh = require("oh")
 local types = require("oh.typesystem.types")
 types.Initialize()
 
 local META = {}
+META.__index = META
+
+assert(loadfile("oh/base_analyzer.lua"))(META)
 
 do -- type operators
     function META:PostfixOperator(node, r, env)
@@ -1429,6 +1433,16 @@ do
     end
 end
 
+local function DefaultIndex(self, node)
+    if _G.DISABLE_BASE_TYPES then
+        return nil
+    end
+    
+    return oh.GetBaseAnalyzer():GetValue(node, "typesystem")
+end
 
-
-return require("oh.analyzer")(META)
+return function()
+    local self = setmetatable({env = {runtime = {}, typesystem = {}}}, META)
+    self.IndexNotFound = DefaultIndex
+    return self
+end

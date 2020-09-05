@@ -1,3 +1,5 @@
+local META = ...
+
 local table_insert = table.insert
 local setmetatable = setmetatable
 local type = type
@@ -9,8 +11,6 @@ local table_concat = table.concat
 local table_insert = table.insert
 
 local syntax = require("oh.lua.syntax")
-
-local META = {}
 
 do
     function META:IsDestructureStatement(offset)
@@ -116,5 +116,3 @@ do
         return node
     end
 end
-
-return META

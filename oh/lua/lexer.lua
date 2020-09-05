@@ -2,6 +2,10 @@ local syntax = require("oh.lua.syntax")
 local helpers = require("oh.helpers")
 
 local META = {}
+META.__index = META
+
+META.syntax = syntax
+assert(loadfile("oh/base_lexer.lua"))(META)
 
 local function ReadLiteralString(self, multiline_comment)
     local start = self.i
@@ -393,7 +397,16 @@ do
     end
 end
 
+function META:OnInitialize()
+    self.comment_escape = false
+end
+
 function META:Read()
+    if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
+        self.comment_escape = false
+        self:Advance(2)
+    end
+
     if
         self:ReadSpace() then               return "space", true elseif
         self:ReadCommentEscape() then       return "comment_escape", true elseif
@@ -418,4 +431,8 @@ function META:Read()
     return self:ReadUnknown()
 end
 
-return require("oh.lexer")(META, require("oh.lua.syntax"))
+return function(code)
+    local self = setmetatable({}, META)
+    self:Initialize(code)
+    return self
+end

@@ -109,4 +109,6 @@ syntax.PostfixOperatorFunctionTranslate = {
     ["ÆØÅÆ"] = "(A)",
 }
 
-return require("oh.syntax")(syntax)
+assert(loadfile("oh/base_syntax.lua"))(syntax)
+
+return syntax
