@@ -7,7 +7,7 @@ I see this project as 5 parts at the moment. The lexer, parser, analyzer and emi
 I wrote the lexer and lua parser trying not to look at existing lua parsers as a learning experience. The syntax errors it can produce are more verbose than the original lua parser and it differentiates between some cases. Whitespace (which i define as whitespace and comments) are also preserved properly.
 
 # analyzer and typesystem
-This will basically execute the syntax tree node by node. It uses the typesystem to build types. Each type can have data associated to it too, so in many cases you can see the potential output of a program. It handles scopes, executes functions, metatables, etc. Just like you'd expect a Lua VM to do.
+The analyzer will execute the syntax tree by walking through it. I believe it works similar to how the lua vm works. Every branch of an if statement is executed unless it's known for sure to be false, a `for i = 1, 10 do` loop would be run once where i is a number type with a range from 1 to 10.
 
 # emitter
 This part is a bit boring, it just emits lua code from the syntax tree. The analyzer can also annotate the syntax tree so you can see the output with types.
@@ -17,8 +17,6 @@ The analyzer and typesystem has been the hardest part of the project so far, I t
 
 I focus strongly on correctness at the moment and not performance. I tend to refactor code in one swoop and after I get tests working.
 
-It requires busted to be installed via luarocks to run the tests.
+to run tests run `luajit test/run`
 
-https://github.com/teal-language/tl
-
-Is a language similar to this, with a much higher likelyhood of succeeding. It does not intend to be as verbose as this project though. I'm thinking another nice goal is that I can contribute what I've learned here.
+Teal (https://github.com/teal-language/tl) is a language similar to this, with a much higher likelyhood of succeeding as it does not intend to be as verbose as this project. I'm thinking another nice goal is that I can contribute what I've learned here.
