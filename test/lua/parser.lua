@@ -185,7 +185,8 @@ test("operator precedence", function()
         {C"a.b.c.d.e.f()", C"call(.(.(.(.(.(a, b), c), d), e), f))"},
         {C"(foo.bar())", C"call(.(foo, bar))"},
         {C[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], C[[+(+(^(-(1), 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), ""))))]]},
-        {C[[#{} - 2]], C[[-(#({}), 2)]]}
+        {C[[#{} - 2]], C[[-(#({}), 2)]]},
+        {C[[a or true and false or 4 or 5 and 5]], C[[or(or(or(a, and(true, false)), 4), and(5, 5))]]},
     }
 end)
 
