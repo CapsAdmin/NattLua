@@ -38,17 +38,7 @@ syntax.PrefixOperators = {
     "-", "#", "not", "!", "~",
 }
 
-syntax.PrefixTypeOperators = {
-    "-", "#", "not", "~", "typeof", "$"
-}
-
-
 syntax.PostfixOperators = {
-    -- these are just to make sure all code is covered by tests
-    "++", "ÆØÅ", "ÆØÅÆ",
-}
-
-syntax.PostfixTypeOperators = {
     -- these are just to make sure all code is covered by tests
     "++", "ÆØÅ", "ÆØÅÆ",
 }
@@ -71,25 +61,6 @@ syntax.PrimaryBinaryOperators = {
     ".", ":",
 }
 
-syntax.PrimaryBinaryTypeOperators = {
-    ".",
-}
-
-syntax.BinaryTypeOperators = {
-    {"or"},
-    {"and"},
-    {"extends"},
-    {"<", ">", "<=", ">=", "~=", "=="},
-    {"|"},
-    {"~"},
-    {"&"},
-    {"<<", ">>"},
-    {"R.."}, -- right associative
-    {"+", "-"},
-    {"*", "/", "/idiv/", "%"},
-    {"R^"}, -- right associative
-}
-
 syntax.BinaryOperatorFunctionTranslate = {
     [">>"] = "bit.rshift(A, B)",
     ["<<"] = "bit.lshift(A, B)",
@@ -108,6 +79,39 @@ syntax.PostfixOperatorFunctionTranslate = {
     ["ÆØÅ"] = "(A)",
     ["ÆØÅÆ"] = "(A)",
 }
+
+do 
+    syntax.typesystem = {}
+
+    for k,v in pairs(syntax) do
+        syntax.typesystem[k] = v
+    end
+
+    syntax.typesystem.PrefixOperators = {
+        "-", "#", "not", "~", "typeof", "$"
+    }
+
+    syntax.typesystem.PrimaryBinaryOperators = {
+        ".",
+    }
+
+    syntax.typesystem.BinaryOperators = {
+        {"or"},
+        {"and"},
+        {"extends"},
+        {"<", ">", "<=", ">=", "~=", "=="},
+        {"|"},
+        {"~"},
+        {"&"},
+        {"<<", ">>"},
+        {"R.."}, -- right associative
+        {"+", "-"},
+        {"*", "/", "/idiv/", "%"},
+        {"R^"}, -- right associative
+    }
+
+    assert(loadfile("oh/base_syntax.lua"))(syntax.typesystem)
+end
 
 assert(loadfile("oh/base_syntax.lua"))(syntax)
 

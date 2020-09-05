@@ -1,7 +1,7 @@
 local META = ...
 
 assert(META.syntax)
-assert(META.syntax.SymbolCharacters)
+assert(META.syntax.GetSymbols)
 assert(META.syntax.IsDuringLetter)
 assert(META.syntax.IsLetter)
 assert(META.syntax.IsSpace)
@@ -314,7 +314,7 @@ do
     end
 end
 
-META.ReadSymbol = META.BuildReadFunction(META.syntax.SymbolCharacters)
+META.ReadSymbol = META.BuildReadFunction(META.syntax.GetSymbols())
 
 function META:ReadShebang()
     if self.i == 1 and self:IsValue("#") then

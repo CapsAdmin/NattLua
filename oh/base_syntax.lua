@@ -36,17 +36,19 @@ do
     end
 end
 
-do -- extend the symbol characters from grammar rules
-    local function add_symbols(tbl)
-        if not tbl then return end
+local symbols = {}
 
-        for _, symbol in pairs(tbl) do
-            if symbol:find("%p") then
-                table.insert(syntax.SymbolCharacters, symbol)
-            end
+local function add_symbols(tbl)
+    if not tbl then return end
+
+    for _, symbol in pairs(tbl) do
+        if symbol:find("%p") then
+            table.insert(symbols, symbol)
         end
     end
+end
 
+do -- extend the symbol characters from grammar rules
     local function add_binary_symbols(tbl)
         if not tbl then return end
 
@@ -57,68 +59,63 @@ do -- extend the symbol characters from grammar rules
                         token = token:sub(2)
                     end
 
-                    table.insert(syntax.SymbolCharacters, token)
+                    table.insert(symbols, token)
                 end
             end
         end
     end
 
     add_binary_symbols(syntax.BinaryOperators)
-    add_binary_symbols(syntax.BinaryTypeOperators)
-
     add_symbols(syntax.PrefixOperators)
     add_symbols(syntax.PostfixOperators)
     add_symbols(syntax.PrimaryBinaryOperators)
 
-    add_symbols(syntax.PrefixTypeOperators)
-    add_symbols(syntax.PostfixTypeOperators)
-    add_symbols(syntax.PrimaryBinaryTypeOperators)
-
-    for _, str in ipairs(syntax.KeywordValues) do
-        table.insert(syntax.Keywords, str)
+    for _, str in ipairs(syntax.SymbolCharacters) do
+        table.insert(symbols, str)
     end
 
-    for _, symbol in ipairs(syntax.Keywords) do
-        if symbol:find("%p") then
-            table.insert(syntax.SymbolCharacters, symbol)
-        end
+    function syntax.GetSymbols()
+        return symbols
     end
 end
 
 do
-    syntax.BinaryOperatorFunctionTranslate = syntax.BinaryOperatorFunctionTranslate or {}
-    for k, v in pairs(syntax.BinaryOperatorFunctionTranslate) do
+    local lookup = {}
+
+    for k, v in pairs(syntax.BinaryOperatorFunctionTranslate or {}) do
         local a,b,c = v:match("(.-)A(.-)B(.*)")
-        syntax.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
+        lookup[k] = {" " .. a, b, c .. " "}
     end
 
     function syntax.GetFunctionForBinaryOperator(token)
-        return syntax.BinaryOperatorFunctionTranslate[token.value]
+        return lookup[token.value]
     end
 end
 
 do
-    syntax.PrefixOperatorFunctionTranslate = syntax.PrefixOperatorFunctionTranslate or {}
+    local lookup = {}
+
     for k, v in pairs(syntax.PrefixOperatorFunctionTranslate or {}) do
         local a, b = v:match("^(.-)A(.-)$")
-        syntax.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+        lookup[k] = {" " .. a, b .. " "}
     end
 
     function syntax.GetFunctionForPrefixOperator(token)
-        return syntax.PrefixOperatorFunctionTranslate[token.value]
+        return lookup[token.value]
     end
 end
 
 
 do
-    syntax.PostfixOperatorFunctionTranslate = syntax.PostfixOperatorFunctionTranslate or {}
-    for k, v in pairs(syntax.PostfixOperatorFunctionTranslate) do
+    local lookup = {}
+
+    for k, v in pairs(syntax.PostfixOperatorFunctionTranslate or {}) do
         local a, b = v:match("^(.-)A(.-)$")
-        syntax.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+        lookup[k] = {" " .. a, b .. " "}
     end
 
     function syntax.GetFunctionForPostfixOperator(token)
-        return syntax.PostfixOperatorFunctionTranslate[token.value]
+        return lookup[token.value]
     end            
 end
 
@@ -162,26 +159,6 @@ do -- grammar rules
         return false
     end
 
-    function syntax.IsTypeValue(token)
-        if token.type == "number" or token.type == "string" or token.value == "function" then
-            return true
-        end
-
-        if syntax.IsKeywordValue(token) then
-            return true
-        end
-
-        if syntax.IsKeyword(token) then
-            return false
-        end
-
-        if token.type == "letter" then
-            return true
-        end
-
-        return false
-    end
-
     function syntax.GetTokenType(tk)
         if tk.type == "letter" and syntax.IsKeyword(tk) then
             return "keyword"
@@ -198,48 +175,56 @@ do -- grammar rules
     end
 
     do
-        local function build_lookup(tbl, func_name)
-            if not tbl then return end
+        local lookup = {}
 
-            local lookup = {}
-
-            for priority, group in ipairs(tbl) do
-                for _, token in ipairs(group) do
-                    if token:sub(1, 1) == "R" then
-                        lookup[token:sub(2)] = {left_priority = priority + 1, right_priority = priority}
-                    else
-                        lookup[token] = {left_priority = priority, right_priority = priority}
-                    end
+        for priority, group in ipairs(syntax.BinaryOperators or {}) do
+            for _, token in ipairs(group) do
+                if token:sub(1, 1) == "R" then
+                    lookup[token:sub(2)] = {left_priority = priority + 1, right_priority = priority}
+                else
+                    lookup[token] = {left_priority = priority, right_priority = priority}
                 end
             end
-
-            syntax[func_name] = function(tk) return lookup[tk.value] end
         end
 
-        build_lookup(syntax.BinaryOperators, "GetBinaryOperatorInfo")
-        build_lookup(syntax.BinaryTypeOperators, "GetBinaryTypeOperatorInfo")
+        function syntax.GetBinaryOperatorInfo(tk)
+            return lookup[tk.value]
+        end
     end
 
     do
         local function build_lookup(tbl, func_name)
-            if not tbl then return end
-
             local lookup = {}
-            for _, v in pairs(tbl) do
+
+            for _, v in pairs(tbl or {}) do
                 lookup[v] = v
             end
 
-            syntax[func_name] = function(token) return lookup[token.value] ~= nil end
+            syntax[func_name] = function(token) 
+                return lookup[token.value] ~= nil 
+            end
         end
 
         build_lookup(syntax.PrimaryBinaryOperators, "IsPrimaryBinaryOperator")
         build_lookup(syntax.PrefixOperators, "IsPrefixOperator")
         build_lookup(syntax.PostfixOperators, "IsPostfixOperator")
-        build_lookup(syntax.Keywords, "IsKeyword")
         build_lookup(syntax.KeywordValues, "IsKeywordValue")
 
-        build_lookup(syntax.PrimaryBinaryTypeOperators, "IsPrimaryBinaryTypeOperator")
-        build_lookup(syntax.PrefixTypeOperators, "IsPrefixTypeOperator")
-        build_lookup(syntax.PostfixTypeOperators, "IsPostfixTypeOperator")
+
+        do
+            local keywords = {}
+
+            for _, str in ipairs(syntax.KeywordValues) do
+                table.insert(keywords, str)
+            end
+            
+            for _, str in ipairs(syntax.Keywords) do
+                table.insert(keywords, str)
+            end
+            
+            add_symbols(keywords)
+
+            build_lookup(keywords, "IsKeyword")
+        end
     end
 end

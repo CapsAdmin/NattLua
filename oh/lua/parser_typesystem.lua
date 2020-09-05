@@ -306,7 +306,7 @@ function META:ReadTypeExpression(priority)
         node.tokens[")"] = node.tokens[")"] or {}
         table_insert(node.tokens[")"], self:ReadValue(")"))
 
-    elseif syntax.IsPrefixTypeOperator(self:GetToken()) then
+    elseif syntax.typesystem.IsPrefixOperator(self:GetToken()) then
         node = self:Expression("prefix_operator")
         node.value = self:ReadTokenLoose()
         node.right = self:ReadTypeExpression(math_huge)
@@ -316,7 +316,7 @@ function META:ReadTypeExpression(priority)
         node.tokens["..."] = self:ReadValue("...")
     elseif self:IsValue("function") and self:IsValue("(", 1) then
         node = self:ReadTypeFunction()
-    elseif syntax.IsTypeValue(self:GetToken()) then
+    elseif syntax.typesystem.IsValue(self:GetToken()) then
         node = self:Expression("value")
         node.value = self:ReadTokenLoose()
     elseif self:IsValue("{") then
@@ -350,7 +350,7 @@ function META:ReadTypeExpression(priority)
                     node.tokens[":"] = self:ReadValue(":")
                     node.type_expression = self:ReadTypeExpression()
                 end
-            elseif syntax.IsPostfixTypeOperator(self:GetToken()) then
+            elseif syntax.typesystem.IsPostfixOperator(self:GetToken()) then
                 node = self:Expression("postfix_operator")
                 node.left = left
                 node.value = self:ReadTokenLoose()
@@ -384,9 +384,9 @@ function META:ReadTypeExpression(priority)
         first.force_upvalue = force_upvalue
     end
 
-    while syntax.GetBinaryTypeOperatorInfo(self:GetToken()) and syntax.GetBinaryTypeOperatorInfo(self:GetToken()).left_priority > priority do
+    while syntax.typesystem.GetBinaryOperatorInfo(self:GetToken()) and syntax.typesystem.GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
         local op = self:GetToken()
-        local right_priority = syntax.GetBinaryTypeOperatorInfo(op).right_priority
+        local right_priority = syntax.typesystem.GetBinaryOperatorInfo(op).right_priority
         if not op or not right_priority then break end
         self:Advance(1)
 
