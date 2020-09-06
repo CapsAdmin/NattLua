@@ -24,9 +24,9 @@ function analyzer_env.GetBaseAnalyzer()
         local base = require("oh.lua.analyzer")()
 		base.IndexNotFound = nil
 
-		local ret, root, code_data = base:AnalyzeFile("oh/lua/base_typesystem.oh")
+		local ret, code_data = base:AnalyzeFile("oh/lua/base_typesystem.oh")
 
-		local g = base:TypeFromImplicitNode(root, "table")
+		local g = base:TypeFromImplicitNode(code_data.SyntaxTree, "table")
 
 		for k, v in pairs(base.env.typesystem) do
 			g:Set(k, v)

@@ -168,10 +168,10 @@ do -- globals
 	type function require(name)
 		local str = name.data
 
-		local analyzer_env = require("oh.lua.analyzer_env")
+		local base_analyzer = require("oh.lua.analyzer_env").GetBaseAnalyzer()
 
-		if analyzer_env.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get(str) then
-			return analyzer_env.GetBaseAnalyzer():GetValue("_G", "typesystem"):Get(str)
+		if base_analyzer:GetValue("_G", "typesystem"):Get(str) then
+			return base_analyzer:GetValue("_G", "typesystem"):Get(str)
 		end
 
 		if self:GetValue(str, "typesystem") then

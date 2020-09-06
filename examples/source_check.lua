@@ -36,9 +36,9 @@ for _, path in ipairs(paths) do
 
     local list = {}
 
-    c:Parse(function(_, node)
+    c.OnNode = function(_, node)
         table.insert(list, node)
-    end)
+    end
 
     for _, node in ipairs(list) do
         if node.kind == "local_function" then

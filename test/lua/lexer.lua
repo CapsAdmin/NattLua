@@ -132,12 +132,12 @@ do
         local input = table.concat(code, "\n")
 
         -- make sure the amount of tokens
-        local tokens = assert(oh.Code(input):Lex())
-        equal(#tokens.Tokens, #code*4 + 1)
+        local code_data = assert(oh.Code(input):Lex())
+        equal(#code_data.Tokens, #code*4 + 1)
 
         -- make sure all the tokens are numbers
-        for i = 1, #tokens.Tokens - 1, 4 do
-            equal("number", tokens.Tokens[i+3].type)
+        for i = 1, #code_data.Tokens - 1, 4 do
+            equal("number", code_data.Tokens[i+3].type)
         end
     end)
 end

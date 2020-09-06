@@ -130,13 +130,15 @@ function types.RegisterType(meta)
         self.data = data
         self.uid = uid
         uid = uid + 1
+        
         if self.Initialize then
             local ok, err = self:Initialize(data)
             if not ok then
                 return ok, err
             end
         end
---        self.trace = debug.traceback()
+        
+        -- self.trace = debug.traceback()
 
         if oof then
             local a = analyzer_env.GetCurrentAnalyzer()

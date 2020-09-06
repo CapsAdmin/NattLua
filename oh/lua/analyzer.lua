@@ -857,20 +857,20 @@ do -- types
 end
 
 function META:AnalyzeFile(path)
-    local root, code_data = assert(oh.ParseFile(path))
+    local code_data = assert(oh.ParseFile(path))
     self.code = code_data.code
     self.path = path
 
     analyzer_env.PushAnalyzer(self)
-    self:PushScope(root.SyntaxTree)
+    self:PushScope(code_data.SyntaxTree)
     self:ReturnFromThisScope()
-    self:AnalyzeStatements(root.SyntaxTree.statements)
+    self:AnalyzeStatements(code_data.SyntaxTree.statements)
     local analyzed_return = types.Tuple(self:GetReturnExpressions())
     self:ClearReturnExpressions()
     self:PopScope()
     analyzer_env.PopAnalyzer()
 
-    return analyzed_return, root, code_data
+    return analyzed_return, code_data
 end
 
 function META:AnalyzeStatement(statement)

@@ -49,7 +49,6 @@ do
 	end
 
 	function META:OnError(msg, start, stop, ...)
-		local self = self.code_data
 		local msg = helpers.FormatError(self.code, self.name, msg, start, stop, ...)
 		if self.NoThrow then
 			io.write(msg)
@@ -58,7 +57,7 @@ do
 		end
 	end
 
-	local function traceback_(msg)
+	local function traceback_(self, obj, msg)
 		msg = msg or "no error"
 
 		local s = ""
@@ -82,8 +81,8 @@ do
 			end
 		end
 
-		if analyzer_env.GetCurrentAnalyzer() then
-			local analyzer = analyzer_env.GetCurrentAnalyzer()
+		if self.analyzer then
+			local analyzer = self.analyzer
 
 			if analyzer.current_statement and analyzer.current_statement.Render then
 				s = s .. "======== statement =======\n"
@@ -122,8 +121,8 @@ do
 		return s
 	end
 
-	local traceback = function(...)
-		local ret = {pcall(traceback_, ...)}
+	local traceback = function(self, obj, msg)
+		local ret = {pcall(traceback_, self, obj, msg)}
 		if not ret[1] then
 			return "error in error handling: " .. ret[2]
 		end
@@ -132,10 +131,9 @@ do
 
 	function META:Lex()
 		local lexer = self.Lexer(self.code)
-		lexer.code_data = self
-		lexer.OnError = self.OnError
-
-		local ok, tokens = xpcall(lexer.GetTokens, traceback, lexer)
+		self.lexer = lexer
+		lexer.OnError = function(lexer, ...) self:OnError(...) end
+		local ok, tokens = xpcall(lexer.GetTokens, function(msg) return traceback(self, lexer, msg) end, lexer)
 
 		if not ok then
 			return nil, tokens
@@ -143,10 +141,10 @@ do
 
 		self.Tokens = tokens
 
-		return self, lexer
+		return self
 	end
 
-	function META:Parse(cb)
+	function META:Parse()
 		if not self.Tokens then
 			local ok, err = self:Lex()
 			if not ok then
@@ -155,21 +153,20 @@ do
 		end
 
 		local parser = self.Parser(self.config)
-		parser.code_data = self
-		parser.OnError = self.OnError
+		self.parser = parser
+		parser.OnError = function(parser, ...) self:OnError(...) end
 
-		if cb then
-			parser.OnNode = function(self, node) cb(self, node) end
+		if self.OnNode then
+			parser.OnNode = function(_, node) self:OnNode(node) end
 		end
 
-		local ok, ast = xpcall(parser.BuildAST, traceback, parser, self.Tokens)
+		local ok, res = xpcall(parser.BuildAST, function(msg) return traceback(self, parser, msg) end, parser, self.Tokens)
 
 		if not ok then
-			return nil, ast
+			return nil, res
 		end
 
-		self.SyntaxTree = ast
-
+		self.SyntaxTree = res
 
 		return self
 	end
@@ -178,27 +175,25 @@ do
 		if not self.SyntaxTree then
 			local ok, err = self:Parse()
 			if not ok then
+				assert(err)
 				return ok, err
 			end
 		end
 
 		local analyzer = self.Analyzer()
+		self.analyzer = analyzer
 		if dump_events or self.config and self.config.dump_analyzer_events then
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
-		analyzer.code_data = self
-		analyzer.OnError = self.OnError
+		analyzer.OnError = function(analyzer, ...) self:OnError(...) end
 
 		analyzer_env.PushAnalyzer(analyzer)
-		local ok, ast = xpcall(analyzer.AnalyzeStatement, traceback, analyzer, self.SyntaxTree)
+		local ok, res = xpcall(analyzer.AnalyzeStatement, function(msg) return traceback(self, analyzer, msg) end, analyzer, self.SyntaxTree)
 		analyzer_env.PopAnalyzer()
-		self.Analyzer = analyzer
 
 		if not ok then
-			return nil, ast
+			return nil, res
 		end
-
-		self.Analyzed = true
 
 		return self
 	end
@@ -211,8 +206,9 @@ do
 			end
 		end
 
-		local em = self.Emitter(self.config)
-    	return em:BuildCode(self.SyntaxTree), em
+		local emitter = self.Emitter(self.config)
+		self.emitter = emitter
+    	return emitter:BuildCode(self.SyntaxTree)
 	end
 
 	function oh.Code(code, name, config, level)

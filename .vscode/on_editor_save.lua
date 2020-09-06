@@ -15,8 +15,8 @@ end
 
 if path:find("oh/oh", nil, true) and not path:find("helpers") then
     local f = io.open("test_focus.lua")
-    if f and #f:read("*all") == 0 then
-        f:close()
+    if not f or (f and #f:read("*all") == 0) then
+        if f then f:close() end
         if path:find("/lua/") then
             os.execute("luajit test/run.lua lua")
         elseif path:find("/c_preprocessor/") then
@@ -37,10 +37,11 @@ if path:find("examples/") then
     return
 end
 
-local c = oh.File(path, {annotate = true})
+local c = assert(oh.File(path, {annotate = true}))
 if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
     _G.DISABLE_BASE_TYPES = true
 end
+
 local ok, err = c:Analyze()
 if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
     _G.DISABLE_BASE_TYPES = nil

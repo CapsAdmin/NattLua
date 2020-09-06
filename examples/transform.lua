@@ -1,6 +1,6 @@
 local oh = require("oh")
 local LuaEmitter = require("oh.lua.emitter")
-local code = io.open("oh/parser.lua"):read("*all")
+local code = io.open("oh/base_parser.lua"):read("*all")
 
 local ast = assert(oh.Code(code):Parse()).SyntaxTree
 

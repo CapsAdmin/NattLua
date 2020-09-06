@@ -43,7 +43,7 @@ local function run(code, expect_error)
         end
     end
 
-    return code_data.Analyzer
+    return code_data.analyzer
 end
 
 return {
