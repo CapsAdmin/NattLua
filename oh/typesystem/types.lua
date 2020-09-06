@@ -116,7 +116,6 @@ do
     types.BaseObject = Base
 end
 
-local oof = false
 local uid = 0
 function types.RegisterType(meta)
     for k, v in pairs(types.BaseObject) do
@@ -137,14 +136,10 @@ function types.RegisterType(meta)
                 return ok, err
             end
         end
-        
-        -- self.trace = debug.traceback()
-
-        if oof then
-            local a = analyzer_env.GetCurrentAnalyzer()
-            if a then
-                self.node = a.current_expression
-            end
+    
+        local a = analyzer_env.GetCurrentAnalyzer()
+        if a then
+            self.node = a.current_expression
         end
 
         return self
@@ -167,8 +162,6 @@ function types.Initialize()
     types.Boolean = types.Set({types.True, types.False}):MakeExplicitNotLiteral(true)
     types.NumberType = types.Number()
     types.StringType = types.String()
-
-    oof = true
 end
 
 return types
