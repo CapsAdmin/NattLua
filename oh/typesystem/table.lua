@@ -7,17 +7,17 @@ META.__index = META
 local function sort(a, b) return a < b end
 
 function META:GetSignature()
-    if self.supress then
+    if self.suppress then
         return "*self*"
     end
 
     local s = {}
 
-    self.supress = true
+    self.suppress = true
     for i, keyval in ipairs(self.data) do
         s[i] = keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature()
     end
-    self.supress = nil
+    self.suppress = nil
 
     table.sort(s, sort)
 
@@ -26,10 +26,10 @@ end
 
 local level = 0
 function META:__tostring()
-    if self.supress then
+    if self.suppress then
         return "*self*"
     end
-    self.supress = true
+    self.suppress = true
 
     local s = {}
 
@@ -50,7 +50,7 @@ function META:__tostring()
     end
     level = level - 1
 
-    self.supress = nil
+    self.suppress = nil
 
     table.sort(s, sort)
 

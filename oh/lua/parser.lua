@@ -516,15 +516,15 @@ do -- expression
 
 
     do
-        function META:IsCallExpression(no_ambigious_calls, offset)
-            if no_ambigious_calls then
+        function META:IsCallExpression(no_ambiguous_calls, offset)
+            if no_ambiguous_calls then
                 return self:IsValue("(", offset)
             end
 
             return self:IsValue("(", offset) or self:IsValue("{", offset) or self:IsType("string", offset)
         end
 
-        function META:ReadCallExpression(no_ambigious_calls)
+        function META:ReadCallExpression(no_ambiguous_calls)
             local node = self:BeginExpression("postfix_call", true)
 
             if self:IsValue("{") then
@@ -555,14 +555,14 @@ do -- expression
         end
     end
 
-    function META:ReadExpression(priority, no_ambigious_calls)
+    function META:ReadExpression(priority, no_ambiguous_calls)
         priority = priority or 0
 
         local node
 
         if self:IsValue("(") then
             local pleft = self:ReadValue("(")
-            node = self:ReadExpression(0, no_ambigious_calls)
+            node = self:ReadExpression(0, no_ambiguous_calls)
             if not node then
                 self:Error("empty parentheses group", pleft)
                 return
@@ -577,7 +577,7 @@ do -- expression
         elseif syntax.IsPrefixOperator(self:GetToken()) then
             node = self:BeginExpression("prefix_operator", true)
             node.value = self:ReadTokenLoose()
-            node.right = self:ReadExpectExpression(math.huge, no_ambigious_calls)
+            node.right = self:ReadExpectExpression(math.huge, no_ambiguous_calls)
             self:EndExpression()
         elseif self:IsFunctionValue() then
             node = self:ReadFunctionValue()
@@ -599,7 +599,7 @@ do -- expression
                 if not self:GetToken() then break end
 
                 if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
-                    if self:IsValue(".") or self:IsCallExpression(no_ambigious_calls, 2) then
+                    if self:IsValue(".") or self:IsCallExpression(no_ambiguous_calls, 2) then
                         node = self:BeginExpression("binary_operator", true)
                         node.value = self:ReadTokenLoose()
                         node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
@@ -615,8 +615,8 @@ do -- expression
                             :Store("left", left)
                             :Store("value", self:ReadTokenLoose())
                         :EndExpression()
-                elseif self:IsCallExpression(no_ambigious_calls) then
-                    node = self:ReadCallExpression(no_ambigious_calls)
+                elseif self:IsCallExpression(no_ambiguous_calls) then
+                    node = self:ReadCallExpression(no_ambiguous_calls)
                     node.left = left
                     if left.value and left.value.value == ":" then
                         node.self_call = true
@@ -673,7 +673,7 @@ do -- expression
             node = self:BeginExpression("binary_operator", true)
             node.value = self:ReadTokenLoose()
             node.left = left
-            node.right = self:ReadExpression(syntax.GetBinaryOperatorInfo(node.value).right_priority, no_ambigious_calls)
+            node.right = self:ReadExpression(syntax.GetBinaryOperatorInfo(node.value).right_priority, no_ambiguous_calls)
             self:EndExpression()
         end
 
@@ -694,13 +694,13 @@ do -- expression
         )
     end
 
-    function META:ReadExpectExpression(priority, no_ambigious_calls)
+    function META:ReadExpectExpression(priority, no_ambiguous_calls)
         if IsDefinetlyNotStartOfExpression(self:GetToken()) then
             self:Error("expected beginning of expression, got $1", nil, nil, self:GetToken() and self:GetToken().value ~= "" and self:GetToken().value or self:GetToken().type)
             return
         end
 
-        return self:ReadExpression(priority, no_ambigious_calls)
+        return self:ReadExpression(priority, no_ambiguous_calls)
     end
 
     function META:ReadExpressionList(max)

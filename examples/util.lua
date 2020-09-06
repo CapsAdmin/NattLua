@@ -1,5 +1,19 @@
 local util = {}
 
+function util.GetFilesRecursively(dir, ext)
+    ext = ext or ".lua"
+
+    local f = assert(io.popen("find " .. dir))
+    local lines = f:read("*all")
+    local paths = {}
+    for line in lines:gmatch("(.-)\n") do
+        if line:sub(-4) == ext then
+            table.insert(paths, line)
+        end
+    end
+    return paths
+end
+
 function util.FetchCode(path--[[#: string]], url--[[#: string]]) --: type util.FetchCode = function(string, string): string
     local f = io.open(path, "rb")
     if not f then

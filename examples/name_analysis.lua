@@ -68,21 +68,70 @@ local function levenshtein(s, t, lim)
     return d[ #d ]
 end
 
+local blacklist = {}
+blacklist.self = true
+
+for k,v in pairs(_G) do
+    blacklist[k] =  true
+    if type(v) == "table" then
+        for k,v in pairs(v) do
+            blacklist[k] = true
+        end
+    end
+end
 
 local function check_tokens(tokens)
+    local words = {}
     local score = {}
+
     for i, tk in ipairs(tokens) do
         if tk.type == "letter" and not syntax.IsKeyword(tk) then
             score[tk.value] = score[tk.value] or {}
+
+            if tk.value:sub(1,1) == tk.value:sub(1,1):upper() then
+                for word in tk.value:gmatch("(%u%l.-)%u") do
+                    word = word:lower()
+                    words[word] = words[word] or {}
+                    table.insert(words[word], tk)
+                end
+            elseif tk.value:find("_", nil, true) then
+                for word in (tk.value .. "_"):gmatch("([^_]+)_") do
+                    word = word:lower()
+                    words[word] = words[word] or {}
+                    table.insert(words[word], tk)
+                end
+            else
+                words[tk.value] = words[tk.value] or {}
+                table.insert(words[tk.value], tk)
+            end
+
+
             table.insert(score[tk.value], tk)
         end
     end
+
     local temp = {}
     for k,v in pairs(score) do
         table.insert(temp, {value = k, tokens = v})
     end
 
+
+    local temp2 = {}
+    for k,v in pairs(words) do
+        table.insert(temp2, {value = k, tokens = v})
+    end
+
     table.sort(temp, function(a, b) return #a.tokens > #b.tokens end)
+    table.sort(temp2, function(a, b) return #a.tokens > #b.tokens end)
+
+    print("there are " .. #temp2 .. " different names")
+
+    print("these are all the names:")
+    for _, token in ipairs(temp2) do
+        if not blacklist[token.value] then
+            io.write(token.value, " ")
+        end
+    end
 
     print("these identifiers are very similar:")
 
@@ -103,14 +152,20 @@ local function check_tokens(tokens)
                 end
             end
         end
-        collectgarbage()
+    end
+    collectgarbage()
+end
+
+local paths = util.GetFilesRecursively("./oh")
+local all_tokens = {}
+for _, path in ipairs(paths) do
+    local code = oh.File(path):Parse()
+    local tokens = code.Tokens
+    for _, token in ipairs(tokens) do
+        table.insert(all_tokens, token)
     end
 end
 
-local name = "oh/lua/parser.lua"
-local code = oh.Code(assert(io.open(name)):read("*all"), name)
-local tokens = assert(code:Lex()).Tokens
-
 local time = os.clock()
-check_tokens(tokens, code)
+check_tokens(all_tokens, code)
 print(os.clock() - time)

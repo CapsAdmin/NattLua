@@ -340,7 +340,7 @@ function META:ReadTypeExpression(priority)
             if not self:GetToken() then break end
 
             if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
-                if self:IsValue(".") or self:IsCallExpression(no_ambigious_calls, 2) then
+                if self:IsValue(".") or self:IsCallExpression(no_ambiguous_calls, 2) then
                     node = self:BeginExpression("binary_operator", true)
                     node.value = self:ReadTokenLoose()
                     node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
@@ -357,8 +357,8 @@ function META:ReadTypeExpression(priority)
             elseif self:IsTypeCall() then
                 node = self:ReadTypeCall()
                 node.left = left
-            elseif self:IsCallExpression(no_ambigious_calls) then
-                node = self:ReadCallExpression(no_ambigious_calls)
+            elseif self:IsCallExpression(no_ambiguous_calls) then
+                node = self:ReadCallExpression(no_ambiguous_calls)
                 node.left = left
                 if left.value and left.value.value == ":" then
                     node.self_call = true
