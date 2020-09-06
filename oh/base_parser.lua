@@ -281,6 +281,10 @@ function META:ReadStatements(stop_token)
 
         out[i] = self:ReadStatement()
 
+        if not out[i] then
+            break
+        end
+
         if self.config and self.config.on_statement then
             out[i] = self.config.on_statement(self, out[i]) or out[i]
         end
