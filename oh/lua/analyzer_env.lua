@@ -32,10 +32,8 @@ function analyzer_env.GetBaseAnalyzer()
 			g:Set(k, v)
 		end
 
-		-- TODO: string library isn't in base.env.typesystem
-		g:Set("string", base:GetValue("string", "typesystem"))
-		base:SetValue("_G", g, "typesystem")
-		base:GetValue("_G", "typesystem"):Set("_G", g)
+		g:Set("_G", g)
+        base:SetValue("_G", g, "typesystem")
 
         analyzer_env.base_analyzer = base
     end
