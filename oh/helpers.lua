@@ -203,8 +203,8 @@ do
 		local lines = {}
 
 		do
-			if lines_before > 0 then
-				local line = line_start - lines_before - 1
+			if lines_before >= 0 then
+				local line = math.max(line_start - lines_before- 1, 1)
 				for str in (code:sub(pre_start_pos, pre_stop_pos)):gmatch("(.-)\n") do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 					table.insert(lines, prefix .. str)
