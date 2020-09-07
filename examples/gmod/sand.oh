@@ -1,46 +1,46 @@
 type cvar3 = {}
 
-interface engine {
-	LightStyle = function(number, string): nil
+type engine = {
+	LightStyle = function(number, string): nil,
 }
 
-interface hook {
-	Remove = (function(string, string): nil)
-	Add = (function(string, string, function): nil)
+type hook = {
+	Remove = (function(string, string): nil),
+	Add = (function(string, string, (function(...): nil)): nil),
 }
 
-interface player {
+type player = {
 	GetBots = function(): {}
 }
 
-interface all {
-	ReplicateData = function(table, string, string): nil
-	Cexec = function(table, string, string | nil): nil
+type all = {
+	ReplicateData = (function(table, string, string): nil),
+	Cexec = (function(table, string, string | nil): nil),
 }
 
-interface Entity {
+type Entity = {
 	Fire = function(self, string, string): nil
 }
 
 type ConVar = {}
 type Texture = {}
-interface MaterialObject {
-	IsError = function(self): boolean
-	GetTexture = function(self, string): Texture
+
+type MaterialObject = {
+	IsError = (function(self): boolean),
+	GetTexture = (function(self, string): Texture)
 }
 
 type check = function(any, string): nil
 type Material = function(string): MaterialObject
-type GetConVarString = function(string): ConVar
+type GetConVarString = function(string): string
 
 type timer = {
-	Simple = (function(number, function): nil),
+	Simple = (function(number, (function(...): nil)): nil),
 	Remove = (function(string): nil),
 }
 
 type fog = Entity
 type materials = nil
-
 
 if SERVER then
 	engine.LightStyle(0, "d")

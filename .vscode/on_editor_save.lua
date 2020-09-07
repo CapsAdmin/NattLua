@@ -32,7 +32,7 @@ if path:find("oh/oh", nil, true) and not path:find("helpers") then
     end
 end
 
-if path:find("examples/") then
+if path:find("examples/") and path:sub(-3) ~= ".oh" then
     os.execute("luajit " .. path)
     return
 end

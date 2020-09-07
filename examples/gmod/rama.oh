@@ -37,6 +37,13 @@ type TMatrix = {
     GetAngles = (function(self): TAngle),
 }
 
+type Color = {
+    r = number,
+    g = number,
+    b = number,
+    a = number,
+}
+
 type Triangle = {
     color = Color,
     normal = TVector,
@@ -50,7 +57,7 @@ type Triangle = {
 
 type TMesh = {
     Draw = (function(self): nil),
-    BuildFromTriangles = (function(self, {[table_index_range] = Triangle}): TMesh),
+    BuildFromTriangles = (function(self, {[table_index_range] = Triangle}): self),
 }
 
 type Mesh = function(): TMesh
@@ -117,7 +124,7 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
     end
 
     CACHE[mdl][bg_mask] = CACHE[mdl][bg_mask] or {}
-
+    
     if CACHE[mdl][bg_mask][phys_bone] then
         return CACHE[mdl][bg_mask][phys_bone]
     end

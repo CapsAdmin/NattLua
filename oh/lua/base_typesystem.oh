@@ -92,7 +92,9 @@ do -- globals
 				end
 			else
 				local kv = t:GetData()[1]
-				return kv.key, kv.val
+				if kv then
+					return kv.key, kv.val
+				end
 			end
 		end
 

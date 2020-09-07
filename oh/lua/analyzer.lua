@@ -242,7 +242,7 @@ do -- type operators
             end
 
             if op == "." or op == ":" then
-                return self:GetOperator(l, r)
+                return self:GetOperator(l, r, node)
             end
 
             if l.Type == "any" or r.Type == "any" then
@@ -428,10 +428,10 @@ do -- type operators
                     (l.Type == "string" and r.Type == "number")
                 then
                     if l:IsLiteral() and r:IsLiteral() then
-                        return types.String(l.data ..  r.data):MakeLiteral(true)
+                        return self:TypeFromImplicitNode(node, "string", l.data .. r.data, true)
                     end
 
-                    return types.StringType
+                    return self:TypeFromImplicitNode(node, "string")
                 end
 
                 return types.errors.other("no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r))
@@ -491,11 +491,12 @@ do -- type operators
         return obj:Set(key, val)
     end
 
-    function META:GetOperator(obj, key)
+    function META:GetOperator(obj, key, node)
+        assert(key.node)
         if obj.Type == "set" then
             local copy = types.Set()
             for _,v in ipairs(obj:GetElements()) do
-                local val, err = self:GetOperator(v, key)
+                local val, err = self:GetOperator(v, key, node)
                 if not val then
                     return val, err
                 end
@@ -535,10 +536,10 @@ do -- type operators
             return obj:Get(key)
         end
 
-        local val = obj:Get(key)
+        local val, err = obj:Get(key)
 
         if not val then
-            return self:TypeFromImplicitNode(obj.node, "nil")
+            return self:TypeFromImplicitNode(node or obj.node, "nil")
         end
 
         return val
@@ -603,15 +604,18 @@ do -- types
         table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
 
         function META:GetInferredType(node, env)
-            local str = node.value.value:lower()
 
-            for _, v in ipairs(guesses) do
-                if str:find(v.pattern, nil, true) then
-                    local obj = self:TypeFromImplicitNode(node, v.type)
-                    if v.ctor then
-                        v.ctor(obj)
+            if node.value then
+                local str = node.value.value:lower()
+
+                for _, v in ipairs(guesses) do
+                    if str:find(v.pattern, nil, true) then
+                        local obj = self:TypeFromImplicitNode(node, v.type)
+                        if v.ctor then
+                            v.ctor(obj)
+                        end
+                        return obj
                     end
-                    return obj
                 end
             end
 
@@ -1200,13 +1204,13 @@ do
                 stack:Push(left)
             end
 
-                stack:Push(self:Assert(node, self:BinaryOperator(node, left, right, env)))
+            stack:Push(self:Assert(node, self:BinaryOperator(node, left, right, env)))
         elseif node.kind == "prefix_operator" then
             stack:Push(self:Assert(node, self:PrefixOperator(node, stack:Pop(), env)))
         elseif node.kind == "postfix_operator" then
             stack:Push(self:Assert(node, self:PostfixOperator(node, stack:Pop(), env)))
         elseif node.kind == "postfix_expression_index" then
-            stack:Push(self:Assert(node, self:GetOperator(stack:Pop(), self:AnalyzeExpression(node.expression))))
+            stack:Push(self:Assert(node, self:GetOperator(stack:Pop(), self:AnalyzeExpression(node.expression), node)))
         elseif node.kind == "postfix_call" then
             local obj = stack:Pop()
 
