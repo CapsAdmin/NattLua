@@ -218,7 +218,7 @@ do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 
 					if line == line_start then
-						prefix = prefix .. code:sub(table.unpack(data.sub_line_before)):gsub("\t", (" "):rep(1))
+						prefix = prefix .. code:sub(table.unpack(data.sub_line_before))
 					end
 
 					local test = str
@@ -254,6 +254,8 @@ do
 		local pre = ("="):rep(100)
 
 		str = pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n" .. pre
+
+		str = str:gsub("\t", " ")
 
 		return str
 	end
