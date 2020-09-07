@@ -703,11 +703,6 @@ do -- types
                     b = b:Get(1)
                 end
 
-                -- TODO: not sure about this..
-                if b.self then
-                    b = arguments:Get(1)
-                end
-
                 local ok, reason = a:SubsetOf(b)
 
                 if not ok then
@@ -1176,12 +1171,7 @@ end
 do
     function META:HandleExpression(stack, node, env)
         if node.type_expression then
-            -- TODO: move to AnalyzeValue?
-            local val = self:AnalyzeExpression(node.type_expression, "typesystem")
-            stack:Push(val)
-            if node.tokens["is"] then
-                node.result_is = self:GetValue(node, env).Type == val
-            end
+            stack:Push(self:AnalyzeExpression(node.type_expression, "typesystem"))
         elseif node.kind == "value" then
             stack:Push(self:AnalyzeValue(node, env))
         elseif node.kind == "function" or node.kind == "type_function" then
