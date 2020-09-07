@@ -139,12 +139,10 @@ test("which has no data but contract says it does should return what the contrac
         type_assert(tbl.foo, 1)
     ]]
 
-
-    -- TODO: error or not error?
     run([[
         local tbl = {} as {[string] = 1}
         type_assert(tbl[true], nil)
-    ]])
+    ]], "true is not the same as string")
 end)
 
 test("is literal", function()

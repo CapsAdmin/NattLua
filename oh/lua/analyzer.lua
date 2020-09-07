@@ -930,6 +930,12 @@ function META:AnalyzeStatement(statement)
                     else
                         right[i + i2 - 1] = obj
                     end
+
+                    -- if the type has been cast with the as operator 
+                    -- use it as its contract
+                    if exp.type_expression then
+                        obj.contract = obj
+                    end
                 end
             end
 
@@ -1170,6 +1176,7 @@ end
 
 do
     function META:HandleExpression(stack, node, env)
+        -- usually from "as", "local a = myval as true"
         if node.type_expression then
             stack:Push(self:AnalyzeExpression(node.type_expression, "typesystem"))
         elseif node.kind == "value" then
