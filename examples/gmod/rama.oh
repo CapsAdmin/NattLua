@@ -157,14 +157,16 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
             local is_strong = true
             for offset = 0, 2 do
                 local vert = TRIS[tri_idx + offset]
-                for _, weight in pairs(vert.weights) do
-                    if temp:TranslateBoneToPhysBone(weight.bone) ~= phys_bone then
-                        is_strong = false
+                if vert then
+                    for _, weight in pairs(vert.weights) do
+                        if temp:TranslateBoneToPhysBone(weight.bone) ~= phys_bone then
+                            is_strong = false
+                            break
+                        end
+                    end
+                    if not is_strong then
                         break
                     end
-                end
-                if not is_strong then
-                    break
                 end
             end
             if is_strong then

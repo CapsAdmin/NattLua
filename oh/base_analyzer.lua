@@ -105,14 +105,46 @@ do
 
         local key_hash = self:Hash(key)
 
-        if self.scope.upvalues[env].map[key_hash] then
-            return self.scope.upvalues[env].map[key_hash]
-        end
-
-        local scope = self.scope.parent
+        local scope = self.scope
+        local original_scope = scope
+        
         while scope do
             if scope.upvalues[env].map[key_hash] then
-                return scope.upvalues[env].map[key_hash]
+                local found = scope.upvalues[env].map[key_hash]
+
+                if found.data and found.data.Type == "set" then
+                    if original_scope.responsible_truthy_expression then
+                        if original_scope.responsible_truthy_expression == found.data then
+                            local copy = {}
+
+                            for k,v in pairs(found.data) do
+                                copy[k] = V
+                            end
+
+                            copy.data = found.data:Copy()
+                            copy.data:DisableFalsy()
+
+                            return copy
+                        end
+                    end
+                    
+                    if original_scope.responsible_falsy_expression then
+                        if original_scope.responsible_falsy_expression == found.data then
+                            local copy = {}
+
+                            for k,v in pairs(found.data) do
+                                copy[k] = V
+                            end
+
+                            copy.data = found.data:Copy()
+                            copy.data:DisableTruthy()
+
+                            return copy
+                        end
+                    end
+                end
+
+                return found
             end
             scope = scope.parent
         end
@@ -148,6 +180,7 @@ do
 
             local upvalue = self:GetUpvalue(key, env)
             if upvalue then
+
                 if self.scope.uncertain then
                     if self.scope.no_test_expression and upvalue.uncertain_data then
                         -- if we're in an uncertain else block, we remove the original upvalue from the set

@@ -105,11 +105,37 @@ run([[
 ]])
 
 
+run([[
+    local a: nil | 1
+
+    if a then
+        type_assert(a, _ as 1 | 1)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]])
+
+
+run([[
+    local a: nil | 1
+
+    if a then
+        type_assert(a, _ as 1 | 1)
+    else
+        type_assert(a, _ as nil | nil)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]])
+
 pending([[
     local a: nil | 1
 
     if a then
         type_assert(a, _ as 1 | 1)
+        if a then
+            type_assert(a, _ as 1 | 1)
+        end
     end
 
     type_assert(a, _ as 1 | nil)

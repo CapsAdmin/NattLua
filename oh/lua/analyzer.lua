@@ -1072,6 +1072,8 @@ function META:AnalyzeStatement(statement)
                 if obj:IsTruthy() then
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
 
+                        self:GetScope().responsible_truthy_expression = obj
+
                         if obj:IsUncertain() then
                             self:GetScope().uncertain = true
                         end
@@ -1086,6 +1088,8 @@ function META:AnalyzeStatement(statement)
             else
                 -- else part
                 self:PushScope(statement, statement.tokens["if/else/elseif"][i])
+
+                    self:GetScope().responsible_falsy_expression = prev_expression
 
                     if prev_expression and prev_expression:IsUncertain() then
                         self:GetScope().uncertain = true

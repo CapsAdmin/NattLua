@@ -22,12 +22,20 @@ type Entity = {
 	Fire = function(self, string, string): nil
 }
 
+type VectorObject = {
+	x = number,
+	y = number,
+	z = number,
+}
+
 type ConVar = {}
 type Texture = {}
 
 type MaterialObject = {
 	IsError = (function(self): boolean),
-	GetTexture = (function(self, string): Texture)
+	GetTexture = (function(self, string): Texture),
+	GetVector = (function(self, string): VectorObject),
+	SetVector = (function(self, string, any): nil),
 }
 
 type check = function(any, string): nil
@@ -166,7 +174,7 @@ function materials.ReplaceTexture(path, to)
 
 		self.Replaced[path].OldTexture = self.Replaced[path].OldTexture or mat:GetTexture("$basetexture")
 		self.Replaced[path].NewTexture = tex
-mat:SetTexture("$basetexture2",tex)
+		mat:SetTexture("$basetexture2",tex)
 		mat:SetTexture("$basetexture",tex)
 
 		return true
