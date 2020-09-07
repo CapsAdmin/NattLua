@@ -246,3 +246,16 @@ test("index literal table with string", function()
         type_assert(val, _ as 1 | 2 | nil)
     ]]
 end)
+
+test("non literal keys should be treated as literals when used multiple times in the same scope", function() 
+    run[[
+        local foo: string
+        local bar: string
+
+        local a = {}
+        a[foo] = a[foo] or {}
+        a[foo][bar] = a[foo][bar] or 1
+
+        type_assert(a[foo][bar], 1)
+    ]]
+end)

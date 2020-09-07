@@ -488,6 +488,9 @@ do -- type operators
             return types.errors.other("undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type)
         end
 
+        obj.last_set = obj.last_set or {}
+        obj.last_set[key] = val
+
         return obj:Set(key, val)
     end
 
@@ -534,6 +537,10 @@ do -- type operators
 
         if obj.contract then
             return obj:Get(key)
+        end
+
+        if obj.last_set and not key:IsLiteral() and obj.last_set[key] then
+            return obj.last_set[key]
         end
 
         local val, err = obj:Get(key)
