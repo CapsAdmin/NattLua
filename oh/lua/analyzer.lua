@@ -67,7 +67,7 @@ do -- type operators
                     new_set:AddElement(self:Assert(node, self:PrefixOperator(node, l, env)))
                 end
 
-                return new_set
+                return new_set:SetSource(node, l)
             end
 
             if l.Type == "any" then
@@ -103,15 +103,15 @@ do -- type operators
 
             if op == "not" or op == "!" then
                 if l:IsTruthy() and l:IsFalsy() then
-                    return types.Boolean
+                    return self:TypeFromImplicitNode(node, "boolean", nil, false, l):SetSource(node, l)
                 end
 
                 if l:IsTruthy() then
-                    return types.False
+                    return self:TypeFromImplicitNode(node, "boolean", false, true, l):SetSource(node, l)
                 end
 
                 if l:IsFalsy() then
-                    return types.True
+                    return self:TypeFromImplicitNode(node, "boolean", true, true, l):SetSource(node, l)
                 end
             end
 
@@ -170,25 +170,26 @@ do -- type operators
             end
         end
 
-        local function arithmetic(l,r, type, operator)
+        local function arithmetic(node, l,r, type, operator)
             assert(operators[operator], "cannot map operator " .. tostring(operator))
+
             if type and l.Type == type and r.Type == type then
                 if l:IsLiteral() and r:IsLiteral() then
-
                     local obj = types.Number(operators[operator](l.data, r.data)):MakeLiteral(true)
 
                     if r.max then
-                        obj.max = arithmetic(l, r.max, type, operator)
+                        obj.max = arithmetic(node, l, r.max, type, operator)
                     end
 
                     if l.max then
-                        obj.max = arithmetic(l.max, r, type, operator)
+                        obj.max = arithmetic(node, l.max, r, type, operator)
                     end
 
-                    return obj
+                    return obj:SetSource(node, obj, l,r)
                 end
 
-                return types.Number()
+                local obj = types.Number():Copy()
+                return obj:SetSource(node, obj, l,r)
             end
 
             return types.errors.other("no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime")
@@ -214,7 +215,7 @@ do -- type operators
                     end
                 end
 
-                return new_set
+                return new_set:SetSource(node, new_set, l,r)
             end
 
             if env == "typesystem" then
@@ -371,53 +372,54 @@ do -- type operators
 
                 return types.Boolean
             elseif op == "or" or op == "||" then
-                if l:IsUncertain() then
-                    return types.Set({l,r})
-                end
-
-                if r:IsUncertain() then
-                    return types.Set({l,r})
+                if l:IsUncertain() or r:IsUncertain() then
+                    local set = types.Set({l,r})
+                    return set:SetSource(node, set, l,r)
                 end
 
                 -- when true, or returns its first argument
                 if l:IsTruthy() then
-                    return l
+                    return l:Copy():SetSource(node, l, l,r)
                 end
 
                 if r:IsTruthy() then
-                    return r
+                    return r:Copy():SetSource(node, r, l,r)
                 end
 
-                return r
+                return r:Copy():SetSource(node, r)
             elseif op == "and" or op == "&&" then
                 if l:IsTruthy() and r:IsFalsy() then
                     if l:IsFalsy() or r:IsTruthy() then
-                        return types.Set({l,r})
+                        local set = types.Set({l,r})
+                        return set:SetSource(node, set, l,r)
                     end
 
-                    return r
+                    return r:Copy():SetSource(node, r, l,r)
                 end
 
                 if l:IsFalsy() and r:IsTruthy() then
                     if l:IsTruthy() or r:IsFalsy() then
-                        return types.Set({l,r})
+                        local set = types.Set({l,r})
+                        return set:SetSource(node, set, l,r)
                     end
 
-                    return l
+                    return l:Copy():SetSource(node, l, l,r)
                 end
 
                 if l:IsTruthy() and r:IsTruthy() then
                     if l:IsFalsy() and r:IsFalsy() then
-                        return types.Set({l,r})
+                        local set = types.Set({l,r})
+                        return set:SetSource(node, set, l,r)
                     end
 
-                    return r
+                    return r:Copy():SetSource(node, r, l,r)
                 else
                     if l:IsTruthy() and r:IsTruthy() then
-                        return types.Set({l,r})
+                        local set = types.Set({l,r})
+                        return set:SetSource(node, set, l,r)
                     end
 
-                    return l
+                    return l:Copy():SetSource(node, l, l,r)
                 end
             end
 
@@ -437,19 +439,19 @@ do -- type operators
                 return types.errors.other("no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r))
             end
 
-            if op == "+" then return arithmetic(l,r, "number", op)
-            elseif op == "-" then return arithmetic(l,r, "number", op)
-            elseif op == "*" then return arithmetic(l,r, "number", op)
-            elseif op == "/" then return arithmetic(l,r, "number", op)
-            elseif op == "/idiv/" then return arithmetic(l,r, "number", op)
-            elseif op == "%" then return arithmetic(l,r, "number", op)
-            elseif op == "^" then return arithmetic(l,r, "number", op)
+            if op == "+" then return arithmetic(node, l,r, "number", op)
+            elseif op == "-" then return arithmetic(node, l,r, "number", op)
+            elseif op == "*" then return arithmetic(node, l,r, "number", op)
+            elseif op == "/" then return arithmetic(node, l,r, "number", op)
+            elseif op == "/idiv/" then return arithmetic(node, l,r, "number", op)
+            elseif op == "%" then return arithmetic(node, l,r, "number", op)
+            elseif op == "^" then return arithmetic(node, l,r, "number", op)
 
-            elseif op == "&" then return arithmetic(l,r, "number", op)
-            elseif op == "|" then return arithmetic(l,r, "number", op)
-            elseif op == "~" then return arithmetic(l,r, "number", op)
-            elseif op == "<<" then return arithmetic(l,r, "number", op)
-            elseif op == ">>" then return arithmetic(l,r, "number", op) end
+            elseif op == "&" then return arithmetic(node, l,r, "number", op)
+            elseif op == "|" then return arithmetic(node, l,r, "number", op)
+            elseif op == "~" then return arithmetic(node, l,r, "number", op)
+            elseif op == "<<" then return arithmetic(node, l,r, "number", op)
+            elseif op == ">>" then return arithmetic(node, l,r, "number", op) end
 
             return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
         end
@@ -554,7 +556,7 @@ do -- type operators
 end
 
 do -- types
-    function META:TypeFromImplicitNode(node, type, data, literal)
+    function META:TypeFromImplicitNode(node, type, data, literal, parent)
         node.scope = self.scope -- move this out of here
 
         local obj
@@ -572,7 +574,7 @@ do -- types
             if literal then
                 obj = types.Symbol(data)
             else
-                obj = types.Boolean
+                obj = types.Boolean:Copy()
             end
         elseif type == "nil" then
             obj = self:Assert(node, types.Symbol(nil))
@@ -730,7 +732,11 @@ do -- types
 
         if obj.data.lua_function then
             _G.self = self
-            local res = {obj.data.lua_function(table.unpack(arguments.data))}
+            local res = {pcall(obj.data.lua_function, table.unpack(arguments.data))}
+            local ok = table.remove(res, 1)
+            if not ok then
+                self:Error(call_node, res[1])
+            end
             _G.self = nil
 
             for i,v in ipairs(res) do

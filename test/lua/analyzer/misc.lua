@@ -219,15 +219,16 @@ R[[
         local a = nil
         local b = {}
         local t = {[true] = a, [false] = b or 1}
-        assert(t[true] == nil)
-        assert(t[false] == b)
+        
+        type_assert(t[true], nil)
+        type_assert(t[false], b)
     end
 
     do --- tdup
         local b = {}
         local t = {[true] = nil, [false] = b or 1}
-        assert(t[true] == nil)
-        assert(t[false] == b)
+        type_assert(t[true], nil)
+        type_assert(t[false], b)
     end
 ]]
 

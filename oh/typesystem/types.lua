@@ -89,6 +89,14 @@ do
         return self:IsTruthy() and self:IsFalsy()
     end
 
+    function Base:SetSource(node, source, l,r)
+        self.source = source
+        self.node = node
+        self.source_left = l
+        self.source_right = r
+        return self
+    end 
+
     function Base:GetSignature()
         error("NYI")
     end

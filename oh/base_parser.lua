@@ -15,7 +15,13 @@ do
     META.type = "expression"
 
     function META:__tostring()
-        return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%s"):format(self.id)
+        local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
+
+        if self.kind == "value" then
+            str = str ..  ": " .. require("oh.helpers").QuoteToken(self.value.value)
+        end
+
+        return str
     end
 
     function META:Dump()

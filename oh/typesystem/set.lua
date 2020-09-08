@@ -226,6 +226,7 @@ function META:Copy()
         copy:AddElement(e)
     end
     copy.node = self.node
+    copy.explicit_not_literal = self.explicit_not_literal
     return copy
 end
 
