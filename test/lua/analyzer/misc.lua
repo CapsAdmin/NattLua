@@ -371,14 +371,6 @@ R[[
     end
 
     local a,b,c = META:Test(1,2,3)
-
-    local ret
-
-    if someunknownglobal as any then
-        ret = a+b+c
-    end
-
-    type_assert(ret, _ as 12 | nil)
 ]]
 R[[
     local function test(a)
@@ -853,15 +845,7 @@ R[[
         type_assert(lol, _ as any)
     end)
 ]]
-R[[
-    local _: boolean
-    local a = 0
 
-    if _ then
-        a = 1
-    end
-    type_assert(a, _ as 0 | 1)
-]]
 R[[
     local a, b = 0, 0
     for i = 1, 10 do

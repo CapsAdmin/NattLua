@@ -55,78 +55,73 @@ test("if statement within a function", function()
     ]]
 end)
 
-run([[
-    local a = false
+test("assigning a value inside an uncertain branch", function()
+    run([[
+        local a = false
 
-    if _ as any then
-        type_assert(a, false)
-        a = true
-        type_assert(a, true)
-    end
-    type_assert(a, _ as false | true)
-]])
+        if _ as any then
+            type_assert(a, false)
+            a = true
+            type_assert(a, true)
+        end
+        type_assert(a, _ as false | true)
+    ]])
+end)
 
-run([[
-    local a = false
+test("assigning in uncertain branch and else part", function()
+    run([[
+        local a = false
 
-    if _ as any then
-        a = true
-    else
-        a = 1
-    end
+        if _ as any then
+            type_assert(a, false)
+            a = true
+            type_assert(a, true)
+        else
+            type_assert(a, false)
+            a = 1
+            type_assert(a, 1)
+        end
 
-    type_assert(a, _ as true | 1)
-]])
+        type_assert(a, _ as true | 1)
+    ]])
+end)
 
-run([[
-    local a = false
+test("nil | 1 should be 1 inside branch when tested for", function()
+    run([[
+        local a: nil | 1
 
-    if _ as any then
-        type_assert(a, false)
-        a = true
-        type_assert(a, true)
-    else
-        type_assert(a, false)
-        a = 1
-        type_assert(a, 1)
-    end
+        if a then
+            type_assert(a, _ as 1 | 1)
+        end
 
-    type_assert(a, _ as true | 1)
-]])
+        type_assert(a, _ as 1 | nil)
+    ]])
 
-run([[
-    local a = nil
+    run([[
+        local a: nil | 1
 
-    if _ as any then
-        a = true
-    end
+        if a then
+            type_assert(a, _ as 1 | 1)
+        else
+            type_assert(a, _ as nil | nil)
+        end
 
-    type_assert(a, _ as true | nil)
-]])
-
-
-run([[
-    local a: nil | 1
-
-    if a then
-        type_assert(a, _ as 1 | 1)
-    end
-
-    type_assert(a, _ as 1 | nil)
-]])
+        type_assert(a, _ as 1 | nil)
+    ]])
+end)
 
 
-run([[
-    local a: nil | 1
-
-    if a then
-        type_assert(a, _ as 1 | 1)
-    else
-        type_assert(a, _ as nil | nil)
-    end
-
-    type_assert(a, _ as 1 | nil)
-]])
+test("uncertain branches should add nil to assignment", function()
+    run([[
+        local _: boolean
+        local a = 0
+    
+        if _ then
+            a = 1
+        end
+        type_assert(a, _ as 0 | 1)
+    ]])
+end)
 
 pending([[
     local a: nil | 1
