@@ -366,3 +366,12 @@ test("type function varargs", function()
         lol2(1,2,3)
     ]]
 end)
+
+test("pairs loop", function()
+    run[[
+        local tbl = {1,2,3}
+        for key, val in pairs(tbl) do
+        end
+
+    ]]
+end)

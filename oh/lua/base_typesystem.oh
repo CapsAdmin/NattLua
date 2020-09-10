@@ -112,7 +112,7 @@ do -- globals
 				return
 			end
 
-			for _, kv in ipairs(t.data) do
+			for _, kv in ipairs(t.contract and t.contract.data or t.data) do
 				kv.key.node = t.node
 				kv.val.node = t.node
 
@@ -125,6 +125,7 @@ do -- globals
 	end
 
 	type function pairs(tbl)
+
 		if tbl:IsLiteral() then
 			local i = 1
 			return function(key, val)

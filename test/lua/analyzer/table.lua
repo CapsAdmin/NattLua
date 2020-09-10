@@ -259,3 +259,13 @@ test("non literal keys should be treated as literals when used multiple times in
         type_assert(a[foo][bar], 1)
     ]]
 end)
+
+test("table is not literal", function()
+    run[[
+        local tbl:{[number] = number} = {1,2,3}
+        type function check_literal(tbl)
+            print(tbl:IsLiteral())
+        end
+        check_literal(tbl)
+    ]]
+end)
