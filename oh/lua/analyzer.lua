@@ -885,6 +885,92 @@ function META:AnalyzeFile(path)
     return analyzed_return, code_data
 end
 
+do -- scope branching
+
+    -- this turns out to be really hard so I'm trying 
+    -- to isolate the code for this here and do 
+    -- naive approaches while writing tests
+
+    function META:OnEnterScope(scope, obj, truthy)
+        scope.test_condition = obj
+
+        if not truthy then
+            scope.test_condition_inverted = true
+        end
+
+        if obj:IsUncertain() then
+            scope.uncertain = true
+        end
+    end
+
+    function META:OnGetUpvalue(found, key, env, scope)
+        --local scope = self:GetScope()
+        
+        if found.data and found.data.Type == "set" then
+            local condition = scope.test_condition
+
+            if condition and (condition.source or condition) == found.data then
+                if condition.node.kind == "prefix_operator" then
+                    local op = condition.node.value.value
+
+                    if op == "not" then
+                        if found.data:IsTruthy() then
+                            local copy = self:CopyUpvalue(found)
+                            copy.data:DisableTruthy()
+                            copy.original = found.data
+                            return copy
+                        elseif found.data:IsFalsy()then
+                            local copy = self:CopyUpvalue(found)
+                            copy.data:DisableFalsy()
+                            copy.original = found.data
+                            return copy
+                        end
+                    end
+                end
+
+                if scope.test_condition_inverted then 
+                    if found.data:IsFalsy() then
+                        local copy = self:CopyUpvalue(found)
+                        copy.data:DisableTruthy()
+                        copy.original = found.data
+                        return copy
+                    end
+                else
+                    if found.data:IsTruthy() then
+                        local copy = self:CopyUpvalue(found)
+                        copy.data:DisableFalsy()
+                        copy.original = found.data
+                        return copy
+                    end
+                end
+            end
+        end
+
+        if not self.scope.uncertain and found.uncertain_data then
+            found = self:CopyUpvalue(found, found.uncertain_data:Copy())
+        end
+
+        return found
+    end
+    
+    function META:OnSetUpvalue(upvalue, key, val, env)
+        if self.scope.uncertain then
+            if self.scope.test_condition_inverted and upvalue.uncertain_data then
+                -- if we're in an uncertain else block, we remove the original upvalue from the set
+
+                -- local foo = nil; if maybe then foo = 1 else foo = 2 end;
+                -- foo is 1 or 2. it cannot be nil because one of the branches will hit.
+                upvalue.uncertain_data:AddElement(val)
+                upvalue.uncertain_data:RemoveElement(upvalue.data)
+            else
+                upvalue.uncertain_data = types.Set({val, upvalue.uncertain_data or upvalue.data})
+            end
+            self:SetUpvalue(key, val, env)
+            return true
+        end
+    end
+end
+
 function META:AnalyzeStatement(statement)
     self.current_statement = statement
 
@@ -1077,12 +1163,7 @@ function META:AnalyzeStatement(statement)
 
                 if obj:IsTruthy() then
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-
-                        self:GetScope().responsible_truthy_expression = obj
-
-                        if obj:IsUncertain() then
-                            self:GetScope().uncertain = true
-                        end
+                        self:OnEnterScope(self:GetScope(), obj, true)
 
                         self:AnalyzeStatements(statements)
                     self:PopScope()
@@ -1093,17 +1174,14 @@ function META:AnalyzeStatement(statement)
                 end
             else
                 -- else part
-                self:PushScope(statement, statement.tokens["if/else/elseif"][i])
 
-                    self:GetScope().responsible_falsy_expression = prev_expression
+                if prev_expression:IsFalsy() then
+                    self:PushScope(statement, statement.tokens["if/else/elseif"][i])
+                        self:OnEnterScope(self:GetScope(), prev_expression, false)
 
-                    if prev_expression and prev_expression:IsUncertain() then
-                        self:GetScope().uncertain = true
-                        self:GetScope().no_test_expression = true
-                    end
-
-                    self:AnalyzeStatements(statements)
-                self:PopScope()
+                        self:AnalyzeStatements(statements)
+                    self:PopScope()
+                end
             end
         end
     elseif statement.kind == "while" then

@@ -81,14 +81,18 @@ do
         return self.scope
     end
 
+    function META:CopyUpvalue(upvalue, data)
+        return {
+            data = data or upvalue.data:Copy(),
+            shadow = upvalue.shadow
+        }
+    end
+
     function META:SetUpvalue(key, obj, env)
         assert(obj == nil or types.IsTypeObject(obj))
 
         local upvalue = {
-            key = key,
             data = obj,
-            scope = self.scope,
-            events = {},
             shadow = self:GetUpvalue(key, env),
         }
 
@@ -99,6 +103,14 @@ do
 
         return upvalue
     end
+    
+    function META:OnGetUpvalue(found, key, env, original_scope)
+        
+    end
+
+    function META:OnSetUpvalue(upvalue, key, val, env)
+        
+    end
 
     function META:GetUpvalue(key, env)
         if not self.scope then return end
@@ -106,46 +118,14 @@ do
         local key_hash = self:Hash(key)
 
         local scope = self.scope
-        local original_scope = scope
+        local current_scope = scope
         
         while scope do
             if scope.upvalues[env].map[key_hash] then
                 local found = scope.upvalues[env].map[key_hash]
-
-                if found.data and found.data.Type == "set" then
-                    if original_scope.responsible_truthy_expression then
-                        if original_scope.responsible_truthy_expression == found.data then
-                            local copy = {}
-
-                            for k,v in pairs(found.data) do
-                                copy[k] = V
-                            end
-
-                            copy.data = found.data:Copy()
-                            copy.data:DisableFalsy()
-
-                            return copy
-                        end
-                    end
-                    
-                    if original_scope.responsible_falsy_expression then
-                        if original_scope.responsible_falsy_expression == found.data then
-                            local copy = {}
-
-                            for k,v in pairs(found.data) do
-                                copy[k] = V
-                            end
-
-                            copy.data = found.data:Copy()
-                            copy.data:DisableTruthy()
-
-                            return copy
-                        end
-                    end
-                end
-
-                return found
+                return self:OnGetUpvalue(found, key, env, current_scope) or found
             end
+            current_scope = scope
             scope = scope.parent
         end
     end
@@ -156,12 +136,6 @@ do
         local upvalue = self:GetUpvalue(key, env)
 
         if upvalue then
-            if self.scope.uncertain then
-                return upvalue.data
-            elseif upvalue.uncertain_data then
-                return upvalue.uncertain_data
-            end
-
             return upvalue.data
         end
 
@@ -181,21 +155,10 @@ do
             local upvalue = self:GetUpvalue(key, env)
             if upvalue then
 
-                if self.scope.uncertain then
-                    if self.scope.no_test_expression and upvalue.uncertain_data then
-                        -- if we're in an uncertain else block, we remove the original upvalue from the set
-
-                        -- local foo = nil; if maybe then foo = 1 else foo = 2 end;
-                        -- foo is 1 or 2. it cannot be nil because one of the branches will hit.
-                        upvalue.uncertain_data:AddElement(val)
-                        upvalue.uncertain_data:RemoveElement(upvalue.data)
-                    else
-                        upvalue.uncertain_data = types.Set({val, upvalue.uncertain_data or upvalue.data})
-                    end
-                    self:SetUpvalue(key, val, env)
-                else
+                if not self:OnSetUpvalue(upvalue, key, val, env) then
                     upvalue.data = val
                 end
+
                 --self:SetUpvalue(key, val, env)
 
                 self:FireEvent("mutate_upvalue", key, val, env)

@@ -123,28 +123,83 @@ test("uncertain branches should add nil to assignment", function()
     ]])
 end)
 
-pending([[
-    local a: nil | 1
-
-    if a then
-        type_assert(a, _ as 1 | 1)
+test("nested assignment", function()
+    run[[
+        local a: nil | 1
+    
         if a then
             type_assert(a, _ as 1 | 1)
+            if a then
+                if a then
+                    type_assert(a, _ as 1 | 1)
+                end
+                type_assert(a, _ as 1 | 1)
+            end
         end
-    end
+    
+        type_assert(a, _ as 1 | nil)
+    ]]
+end)
 
-    type_assert(a, _ as 1 | nil)
-]])
+test("inverted", function()
+    run([[
+        local a: nil | 1
+    
+        if not a then
+            type_assert(a, _ as nil | nil)
+        end
+    
+        type_assert(a, _ as 1 | nil)
+    ]])
+end)
 
-pending([[
-    local a: nil | 1
+pending("type function", function()
+    run([[
+        local a: number | string
 
-    if a or true and a or false then
-        type_assert(a, _ as 1 | 1)
-    end
+        if type(a) == "number" then
+            type_assert(a, _ as number)
+        end
 
-    type_assert(a, _ as 1 | nil)
-]])
+        type_assert(a, _ as number | string)
+    ]])
+end)
+
+pending("inverted", function()
+    run([[
+        local a: nil | 1
+    
+        if not not a then
+            type_assert(a, _ as nil | nil)
+        end
+    
+        type_assert(a, _ as 1 | nil)
+    ]])
+end)
+
+pending("inverted2", function()
+    run([[
+        local a: nil | 1
+    
+        if not not a then
+            type_assert(a, _ as 1 | 1)
+        end
+    
+        type_assert(a, _ as 1 | nil)
+    ]])
+end)
+
+pending("inverted", function()
+    run([[
+        local a: nil | 1
+
+        if a or true and a or false then
+            type_assert(a, _ as 1 | 1)
+        end
+
+        type_assert(a, _ as 1 | nil)
+    ]])
+end)
 
 pending([[
     local a: nil | 1
