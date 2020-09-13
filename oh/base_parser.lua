@@ -17,7 +17,7 @@ do
     function META:__tostring()
         local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
 
-        if self.kind == "value" then
+        if self.value and type(self.value.value) == "string" then
             str = str ..  ": " .. require("oh.helpers").QuoteToken(self.value.value)
         end
 
