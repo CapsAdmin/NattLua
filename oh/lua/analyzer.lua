@@ -1309,8 +1309,26 @@ do
             obj:SetElementType(self:GetValue(node.value, "typesystem"))
             return obj
         elseif node.kind == "binary_operator" then
-            local left = self:AnalyzeExpression(node.left, env)
-            local right = self:AnalyzeExpression(node.right, env)
+            local left
+            local right
+
+            if node.value.value == "and" then
+                left = self:AnalyzeExpression(node.left, env)
+                if left:IsFalsy() and left:IsTruthy() then
+                    -- if it's uncertain, remove uncertainty while analysing
+                    left:DisableFalsy()
+                    right = self:AnalyzeExpression(node.right, env)
+                    left:EnableFalsy()
+                elseif left:IsFalsy() and not left:IsTruthy() then
+                    -- if it's really false do nothing
+                    right = self:TypeFromImplicitNode(node.right, "nil")
+                else
+                    right = self:AnalyzeExpression(node.right, env)    
+                end
+            else
+                left = self:AnalyzeExpression(node.left, env)
+                right = self:AnalyzeExpression(node.right, env)    
+            end
 
             if node.and_expr then
                 if node.and_expr.and_res == left then
