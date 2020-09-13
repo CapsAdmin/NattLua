@@ -903,6 +903,12 @@ do -- scope branching
         end
     end
 
+    function META:OnEnterNumericForLoop(scope, init, max)
+        if not init:IsLiteral() or not max:IsLiteral() then
+            scope.uncertain = true
+        end
+    end
+
     function META:OnGetUpvalue(found, key, env, scope)
         --local scope = self:GetScope()
         
@@ -1253,12 +1259,19 @@ function META:AnalyzeStatement(statement)
             init = init:Max(max)
         end
 
+        if max.Type == "any" then
+            init:MakeLiteral(false)
+        end
+
         local range = self:Assert(statement.expressions[1], init)
+
         self:SetUpvalue(statement.identifiers[1], range, "runtime")
 
         if statement.expressions[3] then
             self:AnalyzeExpression(statement.expressions[3])
         end
+
+        self:OnEnterNumericForLoop(self:GetScope(), init, max)
 
         self:AnalyzeStatements(statement.statements)
         self:PopScope()
