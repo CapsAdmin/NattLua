@@ -585,13 +585,7 @@ do -- types
         end
 
         if type == "string" then
-            if not self.string_meta then
-                local meta = types.Table({})
-                meta:Set("__index", self.IndexNotFound and self:IndexNotFound("string") or self:GetValue("string", "typesystem"))
-                self.string_meta = meta
-            end
-
-            obj.meta = self.string_meta
+            obj.meta = analyzer_env.string_meta
         end
 
         if not obj then error("NYI: " .. type) end
