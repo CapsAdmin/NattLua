@@ -460,46 +460,25 @@ do
     end
 end
 
-function META:ExpandExpression(exp, out)
-    out = out or {}
-
-    if exp.left then
-        self:ExpandExpression(exp.left, out)
-    end
-
-    if exp.right then
-        self:ExpandExpression(exp.right, out)
-    end
-
-    table.insert(out, exp)
-
-    return out
-end
-
-function META:AnalyzeExpression(exp, env)
+function META:AnalyzeExpression(exp, env, stack)
     assert(exp and exp.type == "expression")
     env = env or "runtime"
+    stack = stack or self:CreateStack()
 
     if self.PreferTypesystem then
         env = "typesystem"
     end
 
-    local stack = self:CreateStack()
-
-    for _, node in ipairs(self:ExpandExpression(exp)) do
-        self.current_expression = node
-
-        self:HandleExpression(stack, node, env)
-    end
+    self:HandleExpression(stack, exp, env)
 
     return stack:Unpack()
 end
 
-function META:AnalyzeExpressions(expressions, ...)
+function META:AnalyzeExpressions(expressions, env)
     if not expressions then return end
     local out = {}
     for _, expression in ipairs(expressions) do
-        local ret = {self:AnalyzeExpression(expression, ...)}
+        local ret = {self:AnalyzeExpression(expression, env)}
         for _,v in ipairs(ret) do
             table.insert(out, v)
         end

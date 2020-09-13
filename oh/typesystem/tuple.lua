@@ -181,6 +181,10 @@ function META:IsFalsy()
     return false
 end
 
+function META:Unpack()
+    return table.unpack(self:GetData())
+end
+
 function META:Initialize(data)
     self.data = data or {}
 
