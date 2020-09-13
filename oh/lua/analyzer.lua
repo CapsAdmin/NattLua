@@ -646,9 +646,10 @@ do -- types
                 return types.errors.other("cannot call empty set")
             end
 
+            local set = obj
             for _, obj in ipairs(obj:GetData()) do
                 if obj.Type ~= "function" and obj.Type ~= "table" then
-                    return types.errors.other("set contains uncallable object " .. tostring(obj))
+                    return types.errors.other("set "..tostring(set).." contains uncallable object " .. tostring(obj))
                 end
             end
 
@@ -1291,7 +1292,7 @@ do
 
         -- usually from "as", "local a = myval as true"
         if node.type_expression then
-            return self:AnalyzeExpression(node.type_expression, "typesystem", stack)
+            return self:AnalyzeExpression(node.type_expression, "typesystem")
         elseif node.kind == "value" then
             return self:AnalyzeValue(node, env)
         elseif node.kind == "function" or node.kind == "type_function" then
@@ -1319,6 +1320,16 @@ do
                 else
                     right = self:AnalyzeExpression(node.right, env)    
                 end
+            elseif node.value.value == "or" then
+                left = self:AnalyzeExpression(node.left, env)
+
+                if left:IsTruthy() and not left:IsFalsy() then
+                    right = self:TypeFromImplicitNode(node.right, "nil")
+                elseif left:IsFalsy() and not left:IsTruthy() then
+                    right = self:AnalyzeExpression(node.right, env)
+                else
+                    right = self:AnalyzeExpression(node.right, env)
+                end
             else
                 left = self:AnalyzeExpression(node.left, env)
                 right = self:AnalyzeExpression(node.right, env)    
@@ -1343,17 +1354,17 @@ do
 
             return self:Assert(node, self:BinaryOperator(node, left, right, env))
         elseif node.kind == "prefix_operator" then
-            local val = self:AnalyzeExpression(node.right, env, stack)
+            local val = self:AnalyzeExpression(node.right, env)
             return self:Assert(node, self:PrefixOperator(node, val, env))
         elseif node.kind == "postfix_operator" then
-            local val = self:AnalyzeExpression(node.left, env, stack)
+            local val = self:AnalyzeExpression(node.left, env)
             return self:Assert(node, self:PostfixOperator(node, val, env))
         elseif node.kind == "postfix_expression_index" then
-            local val = self:AnalyzeExpression(node.left, env, stack)
-            local exp = self:AnalyzeExpression(node.expression, env, stack)
+            local val = self:AnalyzeExpression(node.left, env)
+            local exp = self:AnalyzeExpression(node.expression, env)
             return self:Assert(node, self:GetOperator(val, exp, node))
         elseif node.kind == "postfix_call" then
-            local obj = self:AnalyzeExpression(node.left, env, stack)
+            local obj = self:AnalyzeExpression(node.left, env)
             local arguments = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
 
             if self.self_call_arg then
