@@ -1,5 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
+local types = require("oh.typesystem.types")
 
 test("a and b", function()
     local obj = run[[
@@ -69,19 +70,29 @@ test("not a or 1", function()
     equal(obj.source.data, 1)
 end)
 
+
 test("1 or 2 or 3 or 4", function()
-    local obj = run[[local result = 1 or 2 or 3 or 4]]:GetValue("result", "runtime")
+    -- each value here has to be 1 | nil, otherwise it won't traverse the or chain
+    local obj = run[[local result = (_ as 1 | nil) or (_ as 2 | nil) or (_ as 3 | nil) or (_ as 4 | nil)]]:GetValue("result", "runtime")
+    local function set_equal(a, b)
+        local literal_set = {types.Symbol(nil)}
+        for _, num in ipairs(b) do
+            table.insert(literal_set, types.Number(num):MakeLiteral(true))
+        end
+        equal(a:GetSignature(), types.Set(literal_set):GetSignature())
+        types.Set({types.Number(1):MakeLiteral(true),types.Number(2):MakeLiteral(true),types.Number(3):MakeLiteral(true),types.Symbol(nil)}):GetSignature()
+    end
     -- (>1< or 2 or 3) or (>4<)
-    equal(obj.source_left.data, 1)
-    equal(obj.source_right.data, 4)
+    set_equal(obj.source_left, {1,2,3})
+    set_equal(obj.source_right, {4})
 
     local obj = obj.source_left
     -- (>1< or 2) or (>3<)
-    equal(obj.source_left.data, 1)
-    equal(obj.source_right.data, 3)
+    set_equal(obj.source_left, {1,2})
+    set_equal(obj.source_right, {3})
 
     local obj = obj.source_left
     -- (>1<) or (>2<)
-    equal(obj.source_left.data, 1)
-    equal(obj.source_right.data, 2)
+    set_equal(obj.source_left, {1})
+    set_equal(obj.source_right, {2})
 end)

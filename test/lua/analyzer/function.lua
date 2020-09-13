@@ -293,7 +293,7 @@ test("calling a set that does not contain a function should error", function()
         type test = (function(boolean, boolean): number) | (function(boolean): string) | number
 
         test(true, true)
-    ]], "set contains uncallable object number")
+    ]], "set .- contains uncallable object number")
 end)
 
 test("pcall", function()
