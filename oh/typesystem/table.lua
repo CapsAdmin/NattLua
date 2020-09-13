@@ -54,9 +54,11 @@ function META:__tostring()
 
     table.sort(s, sort)
 
-    local str = "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
-
-    return str
+    if #self.data == 1 then
+        return "{" .. table.concat(s, ""):gsub("\t", " ") .. " }"
+    end
+    
+    return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
 function META:GetLength()
