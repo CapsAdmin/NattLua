@@ -81,6 +81,44 @@ do
         return self.scope
     end
 
+    function META:CloneCurrentScope(node)
+        local current_scope = self:GetScope()
+        self:PopScope()
+
+        self:PushScope(node or current_scope.node, current_scope.extra_node)
+
+        local old_scope = current_scope
+        local scope = self:GetScope()
+        scope.parent = current_scope.parent
+
+        for i, obj in ipairs(old_scope.upvalues.runtime.list) do
+            scope.upvalues.runtime.list[i] = obj
+        end
+
+        for key, obj in pairs(old_scope.upvalues.runtime.map) do
+            scope.upvalues.runtime.map[key] = obj
+        end
+
+        for i, obj in ipairs(old_scope.upvalues.typesystem.list) do
+            scope.upvalues.runtime.list[i] = obj
+        end
+
+        for key, obj in pairs(old_scope.upvalues.typesystem.map) do
+            scope.upvalues.runtime.map[key] = obj
+        end
+    end
+
+    function META:DumpScope()
+        print("scope:")
+        for i,v in ipairs(self.scope.upvalues.runtime.list) do
+            print("\t",i,v.data)
+        end
+
+        for i,v in ipairs(self.scope.upvalues.typesystem.list) do
+            print("\t",i,v.data)
+        end
+    end
+
     function META:CopyUpvalue(upvalue, data)
         return {
             data = data or upvalue.data:Copy(),
@@ -151,7 +189,7 @@ do
             local upvalue = self:GetUpvalue(key, env)
             if upvalue then
 
-                if not self:OnSetUpvalue(upvalue, key, val, env) then
+                if not self:OnMutateUpvalue(upvalue, key, val, env) then
                     upvalue.data = val
                 end
 

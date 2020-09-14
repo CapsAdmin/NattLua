@@ -153,6 +153,18 @@ test("inverted", function()
     ]])
 end)
 
+test("inverted else", function()
+    run[[
+        local a: true | false
+
+        if not a then
+            type_assert(a, false)
+        else
+            type_assert(a, true)
+        end
+    ]]
+end)
+
 pending("type function", function()
     run([[
         local a: number | string
@@ -262,4 +274,103 @@ run([[
     end
 
     type_assert(c, _ as -1 | 1)
+]])
+
+
+run[[
+local a = false
+
+type_assert(a, false)
+
+if maybe then
+    a = true
+    type_assert(a, true)
+end
+
+type_assert(a, _ as true | false)
+]]
+
+run[[
+local a: true | false
+
+if a then
+    type_assert(a, true)
+else
+    type_assert(a, false)
+end
+
+if not a then
+    type_assert(a, false)
+else
+    type_assert(a, true)
+end
+
+if not a then
+    if a then
+        type_assert("this should never be reached")
+    end
+else
+    if a then
+        type_assert(a, true)
+    else
+        type_assert("unreachable code!!")
+    end
+end
+]]
+
+
+run[[
+local a: nil | 1
+    
+if a then
+    type_assert(a, _ as 1 | 1)
+    if a then
+        if a then
+            type_assert(a, _ as 1 | 1)
+        end
+        type_assert(a, _ as 1 | 1)
+    end
+end
+
+type_assert(a, _ as 1 | nil)
+]]
+
+run[[
+    local x: true | false
+    
+    if x then return end
+    
+    type_assert(x, false)
+]]
+
+run[[
+    local x: true | false
+    
+    if not x then return end
+    
+    type_assert(x, true)
+]]
+
+run[[
+    local c = 0
+
+    if maybe then
+        c = c + 1
+    else
+        c = c - 1
+    end
+
+    type_assert(c, _ as -1 | 1)
+]]
+
+pending([[
+    local a: nil | 1
+    if not a then return end
+    type_assert(a, 1)
+]])
+
+pending([[
+    local a: nil | 1
+    if a then return end
+    type_assert(a, nil)
 ]])

@@ -876,7 +876,7 @@ function META:AnalyzeSyntaxTree(syntax_tree)
     return analyzed_return
 end
 
-do -- scope branching
+do -- control flow analysis
 
     -- this turns out to be really hard so I'm trying 
     -- to isolate the code for this here and do 
@@ -894,75 +894,124 @@ do -- scope branching
         end
     end
 
+    function META:OnExitScope(scope, returned, truthy)
+        if scope.uncertain and returned then           
+            self:CloneCurrentScope()
+
+            self:GetScope().uncertain = true
+            self:GetScope().test_condition = scope.test_condition
+            self:GetScope().test_condition_inverted = true
+        end
+    end
+
     function META:OnEnterNumericForLoop(scope, init, max)
         if not init:IsLiteral() or not max:IsLiteral() then
             scope.uncertain = true
         end
     end
 
-    function META:OnGetUpvalue(found, key, env, scope)
-        --local scope = self:GetScope()
-        
-        if found.data and found.data.Type == "set" then
+    function META:OnGetUpvalue(upvalue, key, env, scope)
+
+        if upvalue.data.Type == "set" then
             local condition = scope.test_condition
 
-            if condition and (condition.source or condition) == found.data then
+            if condition and (condition.source or condition) == upvalue.data then
                 if condition.node and condition.node.kind == "prefix_operator" then
                     local op = condition.node.value.value
 
                     if op == "not" then
-                        if found.data:IsTruthy() then
-                            local copy = self:CopyUpvalue(found)
-                            copy.data:DisableTruthy()
-                            copy.original = found.data
-                            return copy
-                        elseif found.data:IsFalsy()then
-                            local copy = self:CopyUpvalue(found)
-                            copy.data:DisableFalsy()
-                            copy.original = found.data
-                            return copy
+                        if scope.test_condition_inverted then 
+                            if upvalue.data:IsFalsy() then
+                                local copy = self:CopyUpvalue(upvalue)
+                                copy.data:DisableFalsy()
+                                copy.original = upvalue.data
+                                return copy
+                            elseif upvalue.data:IsTruthy()then
+                                local copy = self:CopyUpvalue(upvalue)
+                                copy.data:DisableTruthy()
+                                copy.original = upvalue.data
+                                return copy
+                            end
+                        else
+                            if upvalue.data:IsTruthy() then
+                                local copy = self:CopyUpvalue(upvalue)
+                                copy.data:DisableTruthy()
+                                copy.original = upvalue.data
+                                return copy
+                            elseif upvalue.data:IsFalsy()then
+                                local copy = self:CopyUpvalue(upvalue)
+                                copy.data:DisableFalsy()
+                                copy.original = upvalue.data
+                                return copy
+                            end
                         end
                     end
                 end
 
                 if scope.test_condition_inverted then 
-                    if found.data:IsFalsy() then
-                        local copy = self:CopyUpvalue(found)
+                    if upvalue.data:IsFalsy() then
+                        local copy = self:CopyUpvalue(upvalue)
                         copy.data:DisableTruthy()
-                        copy.original = found.data
+                        copy.original = upvalue.data
                         return copy
                     end
                 else
-                    if found.data:IsTruthy() then
-                        local copy = self:CopyUpvalue(found)
+                    if upvalue.data:IsTruthy() then
+                        local copy = self:CopyUpvalue(upvalue)
                         copy.data:DisableFalsy()
-                        copy.original = found.data
+                        copy.original = upvalue.data
                         return copy
                     end
                 end
             end
-        end
+        end 
 
-        if not self.scope.uncertain and found.uncertain_data then
-            found = self:CopyUpvalue(found, found.uncertain_data:Copy())
-        end
+        return upvalue
+    end
 
-        return found
+    function META:OnLeaveIfStatement()
+        for _, obj in ipairs(self:GetScope().upvalues.runtime.list) do
+            if obj.data_outside_of_if_blocks then
+               obj.data = obj.data_outside_of_if_blocks
+               obj.data_outside_of_if_blocks = nil
+            end
+        end
     end
     
-    function META:OnSetUpvalue(upvalue, key, val, env)
+    function META:OnMutateUpvalue(upvalue, key, val, env)
         if self.scope.uncertain then
-            if self.scope.test_condition_inverted and upvalue.uncertain_data then
-                -- if we're in an uncertain else block, we remove the original upvalue from the set
+            --[[
+                local x = false -- << shadowed upvalue
 
-                -- local foo = nil; if maybe then foo = 1 else foo = 2 end;
-                -- foo is 1 or 2. it cannot be nil because one of the branches will hit.
-                upvalue.uncertain_data:AddElement(val)
-                upvalue.uncertain_data:RemoveElement(upvalue.data)
-            else
-                upvalue.uncertain_data = types.Set({val, upvalue.uncertain_data or upvalue.data})
-            end
+                if maybe then
+                    -- uncertain scope
+
+                    -- instead of mutating the upvalue, create a new one
+                    x = true
+
+                    -- then turn the shadowed upvalue into a set of true | false
+                else
+                    !! but x should not be true | false here !!
+                end
+
+            ]]
+
+            -- new upvalue
             self:SetUpvalue(key, val, env)
+
+            -- mutate shadowed upvalue
+            if self.scope.test_condition_inverted and upvalue.data_outside_of_if_blocks then
+                -- if we're in an uncertain else block, 
+                -- we remove the original shadowed upvalue from the set
+                -- because it has to be either true or false
+
+                upvalue.data_outside_of_if_blocks:AddElement(val)
+                upvalue.data_outside_of_if_blocks:RemoveElement(upvalue.data)
+            else
+                upvalue.data_outside_of_if_blocks = types.Set({upvalue.data, val})
+            end
+
+
             return true
         end
     end
@@ -1162,11 +1211,16 @@ function META:AnalyzeStatement(statement)
                 prev_expression = obj
 
                 if obj:IsTruthy() then
+                    local scope
+
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                        self:OnEnterScope(self:GetScope(), obj, true)
+                        scope = self:GetScope()
+                        self:OnEnterScope(scope, obj, true)
 
                         self:AnalyzeStatements(statements)
                     self:PopScope()
+
+                    self:OnExitScope(scope, self.Returned2, true)
 
                     if not obj:IsFalsy() then
                         break
@@ -1177,13 +1231,17 @@ function META:AnalyzeStatement(statement)
 
                 if prev_expression:IsFalsy() then
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                        self:OnEnterScope(self:GetScope(), prev_expression, false)
+                        scope = self:GetScope()
+                        self:OnEnterScope(scope, prev_expression, false)
 
                         self:AnalyzeStatements(statements)
                     self:PopScope()
+
+                    self:OnExitScope(scope, self.Returned2)
                 end
             end
         end
+        self:OnLeaveIfStatement()
     elseif statement.kind == "while" then
         if self:AnalyzeExpression(statement.expression):IsTruthy() then
             self:PushScope(statement)
@@ -1203,8 +1261,14 @@ function META:AnalyzeStatement(statement)
         self:PopScope()
     elseif statement.kind == "return" then
         local ret = self:AnalyzeExpressions(statement.expressions)
+        
+        -- do return end > do return nil end
+        if not ret[1] then
+            ret[1] = self:TypeFromImplicitNode(statement, "nil")
+        end
         self:CollectReturnExpressions(ret)
-        self.Returned = true
+        self.Returned = not self:GetScope().uncertain
+        self.Returned2 = true
         self:FireEvent("return", ret)
     elseif statement.kind == "break" then
         self:FireEvent("break")
