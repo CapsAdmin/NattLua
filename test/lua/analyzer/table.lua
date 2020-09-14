@@ -264,7 +264,7 @@ test("table is not literal", function()
     run[[
         local tbl:{[number] = number} = {1,2,3}
         type function check_literal(tbl)
-            print(tbl:IsLiteral())
+            assert(tbl:IsLiteral() == false)
         end
         check_literal(tbl)
     ]]
