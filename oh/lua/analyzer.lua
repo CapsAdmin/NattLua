@@ -862,21 +862,18 @@ do -- types
     end
 end
 
-function META:AnalyzeFile(path)
-    local code_data = assert(oh.ParseFile(path))
-    self.code = code_data.code
-    self.path = path
-
+function META:AnalyzeSyntaxTree(syntax_tree)
     analyzer_env.PushAnalyzer(self)
-    self:PushScope(code_data.SyntaxTree)
+    self:PushScope(syntax_tree)
     self:ReturnFromThisScope()
-    self:AnalyzeStatements(code_data.SyntaxTree.statements)
+    self:AnalyzeStatements(syntax_tree.statements)
     local analyzed_return = types.Tuple(self:GetReturnExpressions())
     self:ClearReturnExpressions()
     self:PopScope()
+    self:ProcessDeferredCalls()
     analyzer_env.PopAnalyzer()
 
-    return analyzed_return, code_data
+    return analyzed_return
 end
 
 do -- scope branching
@@ -971,35 +968,38 @@ do -- scope branching
     end
 end
 
+function META:ProcessDeferredCalls()
+    if not self.deferred_calls then
+        return
+    end
+
+    for _,v in ipairs(self.deferred_calls) do
+        if not v[1].called and v[1].explicit_arguments then
+            local obj, arguments, node = table.unpack(v)
+
+            -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+            arguments = obj:GetArguments()
+            self:Assert(node, self:Call(obj, arguments, node))
+        end
+    end
+
+    for _,v in ipairs(self.deferred_calls) do
+        if not v[1].called and not v[1].explicit_arguments then
+            local obj, arguments, node = table.unpack(v)
+
+            -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+            arguments = obj:GetArguments()
+            self:Assert(node, self:Call(obj, arguments, node))
+        end
+    end
+
+    self.deferred_calls = nil
+end
+
 function META:AnalyzeStatement(statement)
     self.current_statement = statement
 
-    if statement.kind == "root" then
-        self:PushScope(statement)
-        self:AnalyzeStatements(statement.statements)
-        self:PopScope()
-        if self.deferred_calls then
-            for _,v in ipairs(self.deferred_calls) do
-                if not v[1].called and v[1].explicit_arguments then
-                    local obj, arguments, node = table.unpack(v)
-
-                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                    arguments = obj:GetArguments()
-                    self:Assert(node, self:Call(obj, arguments, node))
-                end
-            end
-
-            for _,v in ipairs(self.deferred_calls) do
-                if not v[1].called and not v[1].explicit_arguments then
-                    local obj, arguments, node = table.unpack(v)
-
-                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                    arguments = obj:GetArguments()
-                    self:Assert(node, self:Call(obj, arguments, node))
-                end
-            end
-        end
-    elseif statement.kind == "assignment" or statement.kind == "local_assignment" then
+    if statement.kind == "assignment" or statement.kind == "local_assignment" then
         local env = self.PreferTypesystem and "typesystem" or statement.environment or "runtime"
 
         local left = {}
@@ -1311,9 +1311,13 @@ do
                 left = self:AnalyzeExpression(node.left, env)
                 if left:IsFalsy() and left:IsTruthy() then
                     -- if it's uncertain, remove uncertainty while analysing
-                    left:DisableFalsy()
+                    if left.Type == "set" then
+                        left:DisableFalsy()
+                    end
                     right = self:AnalyzeExpression(node.right, env)
-                    left:EnableFalsy()
+                    if left.Type == "set" then
+                        left:EnableFalsy()
+                    end
                 elseif left:IsFalsy() and not left:IsTruthy() then
                     -- if it's really false do nothing
                     right = self:TypeFromImplicitNode(node.right, "nil")
@@ -1601,7 +1605,7 @@ local function DefaultIndex(self, node)
     if _G.DISABLE_BASE_TYPES then
         return nil
     end
-    
+
     return analyzer_env.GetBaseAnalyzer():GetValue(node, "typesystem")
 end
 

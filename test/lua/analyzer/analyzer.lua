@@ -375,3 +375,7 @@ test("pairs loop", function()
 
     ]]
 end)
+
+test("file import", function()
+    equal(8, require("oh").File("test/lua/analyzer/file_importing/main.oh"):Analyze().AnalyzedResult:Get(1):GetData())
+end)

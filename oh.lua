@@ -49,6 +49,8 @@ do
 	end
 
 	function META:OnError(msg, start, stop, ...)
+		self = analyzer_env.code_data or self
+
 		local msg = helpers.FormatError(self.code, self.name, msg, start, stop, ...)
 		if self.NoThrow then
 			io.write(msg)
@@ -133,7 +135,12 @@ do
 		local lexer = self.Lexer(self.code)
 		self.lexer = lexer
 		lexer.OnError = function(lexer, ...) self:OnError(...) end
-		local ok, tokens = xpcall(lexer.GetTokens, function(msg) return traceback(self, lexer, msg) end, lexer)
+		
+		local ok, tokens = xpcall(
+			lexer.GetTokens, 
+			function(msg) return traceback(self, lexer, msg) end, 
+			lexer
+		)
 
 		if not ok then
 			return nil, tokens
@@ -160,7 +167,12 @@ do
 			parser.OnNode = function(_, node) self:OnNode(node) end
 		end
 
-		local ok, res = xpcall(parser.BuildAST, function(msg) return traceback(self, parser, msg) end, parser, self.Tokens)
+		local ok, res = xpcall(
+			parser.BuildAST, 
+			function(msg) return traceback(self, parser, msg) end, 
+			parser, 
+			self.Tokens
+		)
 
 		if not ok then
 			return nil, res
@@ -181,15 +193,21 @@ do
 		end
 
 		local analyzer = self.Analyzer()
-		self.analyzer = analyzer
+		self.analyzer = analyzer		
+		analyzer.OnError = function(analyzer, ...) self:OnError(...) end
+
 		if dump_events or self.config and self.config.dump_analyzer_events then
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
-		analyzer.OnError = function(analyzer, ...) self:OnError(...) end
 
-		analyzer_env.PushAnalyzer(analyzer)
-		local ok, res = xpcall(analyzer.AnalyzeStatement, function(msg) return traceback(self, analyzer, msg) end, analyzer, self.SyntaxTree)
-		analyzer_env.PopAnalyzer()
+		local ok, res = xpcall(
+			analyzer.AnalyzeSyntaxTree, 
+			function(msg) return traceback(self, analyzer, msg) end, 
+			analyzer, 
+			self.SyntaxTree
+		)
+		
+		self.AnalyzedResult = res
 
 		if not ok then
 			return nil, res
@@ -214,8 +232,8 @@ do
 	function oh.Code(code, name, config, level)
 		local info = debug.getinfo(level or 2)
 
-		local parent_line = info and info.currentline or nil
-		local parent_name = info and info.source:sub(2) or nil
+		local parent_line = info and info.currentline or "unknown line"
+		local parent_name = info and info.source:sub(2) or "unknown name"
 
 		name = name or (parent_name .. ":" .. parent_line)
 

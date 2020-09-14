@@ -139,10 +139,6 @@ do
             return upvalue.data
         end
 
-        if self.ENV then
-            return self.ENV:Get(self:Hash(key), env)
-        end
-
         return self.env[env][self:Hash(key)]
     end
 
@@ -163,13 +159,9 @@ do
 
                 self:FireEvent("mutate_upvalue", key, val, env)
             else
-                if self.ENV then
-                    self.ENV:Set(self:Hash(key), val)
-                else
-                    -- key = val
-                    self.env[env][self:Hash(key)] = val
-                    self:FireEvent("set_global", key, val, env)
-                end
+                -- key = val
+                self.env[env][self:Hash(key)] = val
+                self:FireEvent("set_global", key, val, env)
             end
         else
             local obj = self:AnalyzeExpression(key.left, env)

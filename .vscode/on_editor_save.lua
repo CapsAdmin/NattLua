@@ -4,7 +4,7 @@ if path:sub(-4) ~= ".lua" and path:sub(-3) ~= ".oh" then
     return
 end
 
-if path:find("test/") then
+if path:find("test/") and path:sub(-3) ~= ".oh" then
     os.execute("luajit test/run.lua " .. path)
     return
 end
