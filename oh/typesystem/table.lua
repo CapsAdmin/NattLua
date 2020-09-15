@@ -246,6 +246,14 @@ function META:Set(key, val)
         end
     end
 
+    -- shortcut for setting a metatable on a type
+    -- type tbl = { }; setmetatable<|tbl, tbl|>
+    -- becomes
+    -- type tbl = { __meta = self }
+    if key.Type == "string" and key:IsLiteral() and key:GetData() == "__meta" then
+        self.meta = val
+    end
+
     -- if the key exists, check if we can replace it and maybe the value
     local keyval, reason = self:GetKeyVal(key, true)
 
