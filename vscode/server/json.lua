@@ -23,7 +23,6 @@ for k, v in pairs(escape_char_map) do
 end
 
 local function escape_char(c--[[#: string]])
-	local lola = 1
 	return escape_char_map[c] or string.format("\\u%04x", c:byte())
 end
 
