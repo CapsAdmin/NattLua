@@ -136,4 +136,18 @@ function META:IsTruthy()
     return true
 end
 
+local analyzer_env = require("oh.lua.analyzer_env")
+
+-- TODO:
+-- maybe this doesn't belong here? 
+-- the is idea was that the string 
+-- behavior should be independent 
+-- from the analyzer
+
+function META:Initialize()
+    self.meta = analyzer_env.string_meta
+
+    return self
+end
+
 return types.RegisterType(META)

@@ -584,10 +584,6 @@ do -- types
             obj.node = node
         end
 
-        if type == "string" then
-            obj.meta = analyzer_env.string_meta
-        end
-
         if not obj then error("NYI: " .. type) end
 
         obj.node = obj.node or node
@@ -634,6 +630,12 @@ do -- types
         local function_node = obj.node
 
         obj.called = true
+
+        self.call_stack = self.call_stack or {}
+        table.insert(self.call_stack, {
+            func = obj.node,
+            call_expression = call_node
+        })
 
         local env = self.PreferTypesystem and "typesystem" or "runtime"
 
