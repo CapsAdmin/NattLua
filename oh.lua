@@ -51,7 +51,7 @@ do
 	function META:OnError(msg, start, stop, ...)
 		self = analyzer_env.code_data or self
 
-		local msg = helpers.FormatError(self.code, self.name, msg, start, stop, ...)
+		local msg = helpers.FormatError(self.code, self.name, msg, start, stop, nil, ...)
 		if self.NoThrow then
 			io.write(msg)
 		else
@@ -193,7 +193,8 @@ do
 		end
 
 		local analyzer = self.Analyzer()
-		self.analyzer = analyzer		
+		self.analyzer = analyzer	
+		analyzer.code_data = self	
 		analyzer.OnError = function(analyzer, ...) self:OnError(...) end
 
 		if dump_events or self.config and self.config.dump_analyzer_events then

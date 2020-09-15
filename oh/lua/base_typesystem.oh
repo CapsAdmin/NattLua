@@ -43,6 +43,22 @@ type function type_assert_superset(what, type)
 	end
 end
 
+type function type_traceback() 
+	local helpers = require("oh.helpers")
+	if not analyzer.call_stack then return end
+	for i,v in ipairs(analyzer.call_stack) do 
+		local callexp = v.call_expression
+		
+		local lol =  v.func.statements
+		v.func.statements = {}
+		local func_str = v.func:Render()
+		v.func.statements = lol
+
+		local start, stop = helpers.LazyFindStartStop(callexp)
+		print(helpers.FormatError(analyzer.code_data.code, analyzer.code_data.name, "#" .. tostring(i) .. ": " .. analyzer.code_data.name, start, stop, 1))
+	end
+end
+
 do -- globals
 	type setmetatable = (function(table: table, metatable: table|nil): table)
 	type select = (function(index: number|string, ...): ...)
@@ -608,8 +624,8 @@ do
 	type math.huge = inf
 
 	type function math.floor(num: number)
-		if num.data then
-			return math.floor(num.data)
+		if num:IsLiteral() then
+			return math.floor(num:GetData())
 		end
 		return types.Number()
 	end

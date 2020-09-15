@@ -172,7 +172,8 @@ do
 
 	local function clamp(num, min, max) return math.min(math.max(num, min), max) end
 
-	function helpers.FormatError(code, path, msg, start, stop, ...)
+	function helpers.FormatError(code, path, msg, start, stop, size, ...)
+		size = size or 2
 		msg = helpers.FormatMessage(msg, ...)
 
 		start = clamp(start, 1, #code)
@@ -196,8 +197,8 @@ do
 
 		local line_start, line_stop = data.line_start, data.line_stop
 
-		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(code, start, 5, line_start)
-		local post_start_pos, post_stop_pos, lines_after = get_lines_after(code, stop, 5, line_stop)
+		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(code, start, size, line_start)
+		local post_start_pos, post_stop_pos, lines_after = get_lines_after(code, stop, size, line_stop)
 
 		local spacing = #tostring(data.line_stop + lines_after)
 		local lines = {}
@@ -251,9 +252,9 @@ do
 		local msg = path .. (msg and ": " .. msg or "")
 		local post = (" "):rep(spacing - 2) .. "-> | " .. msg
 
-		local pre = ("="):rep(100)
+		local pre = ("-"):rep(100)
 
-		str = pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n" .. pre
+		str = "\n" .. pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n" .. pre
 
 		str = str:gsub("\t", " ")
 
