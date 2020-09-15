@@ -766,7 +766,7 @@ do -- types
             self:PushScope(function_node)
 
                 local arguments = arguments
-                if obj.explicit_arguments and not call_node.type_call and not obj.data.lua_function then
+                if env ~= "typesystem" and obj.explicit_arguments and not call_node.type_call and not obj.data.lua_function then
                     arguments = obj:GetArguments()
                 end
 
@@ -1118,7 +1118,7 @@ function META:AnalyzeStatement(statement)
 
                 if statement.right and statement.right[i] then
 
-                    if contract.Type == "table" then
+                    if contract.Type == "table" and val.Type == "table" then
                         val:CopyLiteralness(contract)
                     else
                         -- local a: 1 = 1
