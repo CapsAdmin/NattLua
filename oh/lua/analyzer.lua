@@ -766,7 +766,7 @@ do -- types
             self:PushScope(function_node)
 
                 local arguments = arguments
-                if env ~= "typesystem" and obj.explicit_arguments and not call_node.type_call and not obj.data.lua_function then
+                if env ~= "typesystem" and (obj.node and obj.node.kind ~= "local_type_function2") and obj.explicit_arguments and not call_node.type_call and not obj.data.lua_function then
                     arguments = obj:GetArguments()
                 end
 
