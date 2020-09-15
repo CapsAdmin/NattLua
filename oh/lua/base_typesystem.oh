@@ -275,7 +275,7 @@ do -- globals
 	end
 
 	type function setmetatable(tbl, meta)
-		if meta.data then
+		if meta.Type == "table" then
 			tbl.meta = meta
 		end
 
