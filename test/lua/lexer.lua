@@ -40,11 +40,39 @@ test("z escaped string", function()
 end)
 
 test("comment escape", function()
-    local tokens = tokenize("a--[[#1]]a")
-    equal(tokens[1].type, "letter")
-    equal(tokens[2].type, "number")
-    equal(tokens[3].type, "letter")
-    equal(tokens[4].type, "end_of_file")
+    local i
+    local tokens
+    local function check(what) equal(tokens[i].value, what) i = i + 1 end
+    
+    tokens = tokenize("a--[[#1]]--[[#1]]a--[[#1]]")
+    i = 1
+
+    check("a")
+    check("1")
+    check("1")
+    check("a")
+    check("1")
+    check("")
+
+    tokens = tokenize("function foo(str--[[#: string]], idx--[[#: number]], msg--[[#: string]]) end")
+    i = 1
+
+    check("function")
+    check("foo")
+    check("(")
+    check("str")
+    check(":")
+    check("string")
+    check(",")
+    check("idx")
+    check(":")
+    check("number")
+    check(",")
+    check("msg")
+    check(":")
+    check("string")
+    check(")")
+    check("end")
 end)
 
 test("multiline comments", function()

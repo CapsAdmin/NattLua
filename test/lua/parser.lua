@@ -1,7 +1,11 @@
 local oh = require("oh")
 
+local function parse(code)
+    return assert(assert(oh.Code(code)):Parse())
+end
+
 local function check(code, eq)
-    local c = assert(assert(oh.Code(code)):Parse())
+    local c = parse(code)
     local new_code = assert(c:Emit())
     equal(new_code, eq or code)
     return new_code
@@ -111,6 +115,25 @@ end)
 
 test("// binary operator", function()
     check("// lol\nprint(3 // (5 // 2))", "// lol\nprint(3/idiv/ (5/idiv/ 2))")
+end)
+
+test("type comments", function()
+    local tprint = require("libraries.tprint")
+
+    local tree = parse("function foo(str: string, idx: number, msg: string) end").SyntaxTree
+    local func = tree.statements[1]
+
+    assert(func.identifiers[1].type_expression)
+    assert(func.identifiers[2].type_expression)
+    assert(func.identifiers[3].type_expression)
+
+
+    local tree = parse("function foo(str--[[#: string]], idx--[[#: number]], msg--[[#: string]]) end").SyntaxTree
+    local func = tree.statements[1]
+
+    assert(func.identifiers[1].type_expression)
+    assert(func.identifiers[2].type_expression)
+    assert(func.identifiers[3].type_expression)
 end)
 
 test("operator precedence", function()

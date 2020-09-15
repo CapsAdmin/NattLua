@@ -380,16 +380,18 @@ function META:GetTokens()
     local non_whitespace = list()
 
     for _, token in ipairs(tokens) do
-        if token.whitespace then
-            token.whitespace = false
+        if token.type ~= "discard" then
+            if token.whitespace then
+                token.whitespace = false
 
-            buffer:add(token)
-        else
-            token.whitespace = buffer:get()
+                buffer:add(token)
+            else
+                token.whitespace = buffer:get()
 
-            non_whitespace:add(token)
+                non_whitespace:add(token)
 
-            buffer:clear()
+                buffer:clear()
+            end
         end
     end
 

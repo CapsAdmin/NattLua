@@ -46,9 +46,26 @@ test("comment types", function()
         function bar()
             foo(4, {}, true)
         end
-
-        --print(foo(1))
     ]=], "4 is not the same type as string")
+
+    run[=[
+        local a=--[[#1^]]--[[#-1]]*3--[[#*1]]
+        type_expect(a, 3)
+    ]=]
+
+    local func = run([=[
+        local function foo(aaa--[[#: string]], idx--[[#: number]], msg--[[#: string]]) end
+    ]=]):GetValue("foo", "runtime")
+
+    local a,b,c = func:GetArguments():Unpack()
+
+    equal("set", a.Type)
+    equal("set", b.Type)
+    equal("set", c.Type)
+
+    equal("string", a:GetType("string").Type)
+    equal("number", b:GetType("number").Type)
+    equal("string", c:GetType("string").Type)
 end)
 
 test("runtime reassignment", function()

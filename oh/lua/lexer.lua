@@ -38,20 +38,27 @@ local function ReadLiteralString(self, multiline_comment)
     return nil, "expected "..helpers.QuoteToken(closing).." reached end of code"
 end
 
-function META:ReadCommentEscape()
-    if
-        self:IsValue("-") and
-        self:IsValue("-", 1) and
-        self:IsValue("[", 2) and
-        self:IsValue("[", 3) and
-        self:IsValue("#", 4)
-    then
-        self:Advance(5)
+do
+    function META:ReadCommentEscape()
+        if
+            self:IsValue("-") and
+            self:IsValue("-", 1) and
+            self:IsValue("[", 2) and
+            self:IsValue("[", 3) and
+            self:IsValue("#", 4)
+        then
+            self:Advance(5)
+            self.comment_escape = string.char(self:GetChar())
+            return true
+        end
+    end
 
-        -- the remaining ]] will be read internally
-        self.comment_escape = true
+    function META:ReadRemainingCommentEscape()
+        if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
+            self:Advance(2)
 
-        return true
+            return true
+        end
     end
 end
 
@@ -402,10 +409,7 @@ function META:OnInitialize()
 end
 
 function META:Read()
-    if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
-        self.comment_escape = false
-        self:Advance(2)
-    end
+    if self:ReadRemainingCommentEscape() then return "discard" end
 
     if
         self:ReadSpace() then               return "space", true elseif
