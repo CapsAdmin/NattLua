@@ -251,9 +251,9 @@ end
 function META:AnalyzeStatements(statements)
     for _, val in ipairs(statements) do
         self:AnalyzeStatement(val)
-        if self.Returned and self.ReturnFromFunction == #self.scope_stack then
+        if self.returned_from_certain_scope and self.ReturnFromFunction == #self.scope_stack then
             self.ReturnFromFunction = nil
-            self.Returned = nil
+            self.returned_from_certain_scope = nil
             break
         end
     end

@@ -353,3 +353,19 @@ test("lol2", function()
         type_assert_superset(test, nil as function(_:number, _:number): number)
     ]]
 end)
+
+test("make sure analyzer return flags dont leak over to deferred calls", function()
+    local foo = run([[
+        local function bar() end
+        bar()
+        
+        function foo()
+            a = 1
+            return true
+        end
+        
+        return nil
+    ]]):GetValue("foo", "runtime")
+    
+    equal(foo:GetReturnTypes():Get(1):GetData(), true)
+end)

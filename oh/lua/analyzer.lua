@@ -1024,6 +1024,9 @@ function META:ProcessDeferredCalls()
         return
     end
 
+    self.returned_from_certain_scope = nil
+    self.returned_from_block = nil
+
     for _,v in ipairs(self.deferred_calls) do
         if not v[1].called and v[1].explicit_arguments then
             local obj, arguments, node = table.unpack(v)
@@ -1222,7 +1225,7 @@ function META:AnalyzeStatement(statement)
                         self:AnalyzeStatements(statements)
                     self:PopScope()
 
-                    self:OnExitScope(scope, self.Returned2, true)
+                    self:OnExitScope(scope, self.returned_from_block, true)
 
                     if not obj:IsFalsy() then
                         break
@@ -1239,7 +1242,7 @@ function META:AnalyzeStatement(statement)
                         self:AnalyzeStatements(statements)
                     self:PopScope()
 
-                    self:OnExitScope(scope, self.Returned2)
+                    self:OnExitScope(scope, self.returned_from_block)
                 end
             end
         end
@@ -1269,8 +1272,8 @@ function META:AnalyzeStatement(statement)
             ret[1] = self:TypeFromImplicitNode(statement, "nil")
         end
         self:CollectReturnExpressions(ret)
-        self.Returned = not self:GetScope().uncertain
-        self.Returned2 = true
+        self.returned_from_certain_scope = not self:GetScope().uncertain
+        self.returned_from_block = true
         self:FireEvent("return", ret)
     elseif statement.kind == "break" then
         self:FireEvent("break")
