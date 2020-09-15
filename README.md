@@ -4,22 +4,22 @@ This is a Lua based language that transpiles to Lua. It's mostly just a toy proj
 I see this project as 5 parts at the moment. The lexer, parser, analyzer and emitter. And the typesystem which tries to exist separate from the analyzer.
 
 # lexer and parser
-I wrote the lexer and lua parser trying not to look at existing lua parsers as a learning experience. The syntax errors it can produce are more verbose than the original lua parser and it differentiates between some cases. Whitespace (which i define as whitespace and comments) are also preserved properly.
+I wrote the lexer and lua parser trying not to look at existing lua parsers as a learning experience. The syntax errors it can produce are more verbose than the original lua parser and it differentiates between some cases. Whitespace is also preserved properly.
 
 # analyzer and typesystem
-The analyzer will execute the syntax tree by walking through it. I believe it works similar to how the lua vm works. Every branch of an if statement is executed unless it's known for sure to be false, a `for i = 1, 10 do` loop would be run once where i is a number type with a range from 1 to 10.
+The analyzer works by walking through the syntax tree node by node. It runs similar to how lua runs, but on a more general level. If everything is known about a program you may get the actual output.
 
 # emitter
-This part is a bit boring, it just emits lua code from the syntax tree. The analyzer can also annotate the syntax tree so you can see the output with types.
+The emitter is a bit boring, it just emits lua code from the syntax tree. The analyzer can also annotate the syntax tree so that you can see the output with types.
 
-# status
-I focus strongly on correctness at the moment and not performance. I tend to refactor code in one swoop and after I get tests working. I'm mostly driven by curiosity and challenges with designing the typesystem.
+# current goals
+I focus strongly on correctness and making things general and low-level. 
+
+For instance, I prefer `boolean` to be a set of 2 unique symbols `true` and `false` rather than its own type.
 
 # types
 
-Fundementally the typesystem consists of number, string, table, function, symbol, set, tuple and any. These types can be literal
-
-All the basic lua types could be defined as following to give an idea of how the typesystem works.
+Fundementally the typesystem consists of number, string, table, function, symbol, set, tuple and any. They can be described by the typesystem like this:
 
 ```lua
 type boolean = true | false
@@ -109,41 +109,28 @@ for example this case:
 
 ```lua
 local x = 0
+-- x is 0 here
 
 if math.random() > 0.5 then
     x = 1
+    -- x is 1 here
 end
+
+-- x is 1 | 0 here
 ```
 
-The analyzer will say that x is `1 | 0` (1 or 0) 
-
-This happens because `math.random()` returns `number` and `number > 0.5` is `true | false`. So when x is assigned in an uncertain scope it will become a set of its old value and its new value.
+This happens because `math.random()` returns `number` and `number > 0.5` is `true | false`.
 
 ```lua
 local x = 0
-
+-- x is 0 here
 if true then
     x = 1
+    -- x is 1 here
 end
+-- x is still 1 here
 ```
-
-In this case however x is 0 before the if statement and 1 after. Mutation is allowed because we didn't define what x should be. 
-
-If we add a type annotation `local x: 0 = 0` it will error inside the if statement.
-
-# other examples
-
-we can for example define a list type:
-
-```lua
-type StringList = { [1 .. inf] = string}
-
-local names: StringList = {}
-names[1] = "foo"
-names[2] = "bar"
-names[-1] = "faz"
-^^^^^^^^^: -1 is not a subset of 1 .. inf
-```
+This happens because there's no doubt that `true` is true and so there's no uncertainty of what x is inside the if block or after it.
 
 # type functions
 Type functions are lua functions. We can for example define math.ceil and a print function like this:
@@ -223,6 +210,41 @@ type Array<T extends any, length extends number> = {[key: 1 .. length]: T}
 (assuming typescript supports number ranges)
 
 Type function arguments needs to be explicitly typed.
+
+# examples
+
+## list type
+
+```lua
+type StringList = { [1 .. inf] = string}
+
+local names: StringList = {}
+names[1] = "foo"
+names[2] = "bar"
+names[-1] = "faz"
+^^^^^^^^^: -1 is not a subset of 1 .. inf
+```
+
+## ffi.cdef errors in the compiler
+```lua
+type function ffi.cdef(c_declaration: string)
+    if c_declaration:IsLiteral() then
+        local ffi = require("ffi")
+        ffi.cdef(c_declaration:GetData())
+    end
+end
+
+ffi.cdef("bad c declaration")
+```
+
+```lua
+4 | d
+5 | end
+6 | 
+8 | ffi.cdef("bad c declaration")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-> | test.lua:8:0 : declaration specifier expected near 'bad'
+```
 
 # development
 
