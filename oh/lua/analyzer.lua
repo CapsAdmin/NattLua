@@ -10,619 +10,169 @@ META.__index = META
 
 assert(loadfile("oh/base_analyzer.lua"))(META)
 
-do -- type operators
-    function META:PostfixOperator(node, r, env)
-        local op = node.value.value
+function META:SetOperator(obj, key, val)
 
-        if op == "++" then
-            return self:BinaryOperator({value = {value = "+"}}, r, r, env)
+    if obj.Type == "set" then
+        local copy = types.Set()
+        for _,v in ipairs(obj:GetElements()) do
+            local ok, err = self:SetOperator(v, key, val)
+            if not ok then
+                return ok, err
+            end
+            copy:AddElement(val)
+        end
+        return copy
+    end
+
+    if obj.meta then
+        local func = obj.meta:Get("__newindex")
+
+        if func then
+            if func.Type == "table" then
+                return func:Set(key, val)
+            end
+
+            if func.Type == "function" or func.Type == "table" then
+                return self:Call(func, types.Tuple({obj, key, val}), key.node):Get(1)
+            end
         end
     end
 
-    do -- prefix
-        local operators = {
-            ["-"] = function(l) return -l end,
-            ["~"] = function(l) return bit.bnot(l) end,
-            ["#"] = function(l) return #l end,
-        }
 
-        local function metatable_function(self, meta_method, l)
-            if l.meta then
-                local func = l.meta:Get(meta_method)
-
-                if func then
-                    return self:Call(func, types.Tuple({l})):Get(1)
-                end
-            end
-        end
-
-        local function arithmetic(l, type, operator)
-            assert(operators[operator], "cannot map operator " .. tostring(operator))
-            if l.Type == type then
-                if l:IsLiteral() then
-                    local obj = types.Number(operators[operator](l.data)):MakeLiteral(true)
-
-                    if l.max then
-                        obj.max = arithmetic(l.max, type, operator)
-                    end
-
-                    return obj
-                end
-
-                return types.Number()
-            end
-
-            return types.errors.other("no operator for " .. operator .. tostring(l) .. " in runtime")
-        end
-
-        function META:PrefixOperator(node, l, env)
-            local op = node.value.value
-
-            if l.Type == "tuple" then l = l:Get(1) end
-
-            if l.Type == "set" then
-                local new_set = types.Set()
-
-                for _, l in ipairs(l:GetElements()) do
-                    new_set:AddElement(self:Assert(node, self:PrefixOperator(node, l, env)))
-                end
-
-                return new_set:SetSource(node, l)
-            end
-
-            if l.Type == "any" then
-                return types.Any()
-            end
-
-            if env == "typesystem" then
-                if op == "typeof" then
-                    local obj = self:GetValue(node.right, "runtime")
-
-                    if not obj then
-                        return types.errors.other("cannot find " .. self:Hash(node.right) .. " in the current typesystem scope")
-                    end
-                    return obj.contract or obj
-                elseif op == "$" then
-                    local obj = self:AnalyzeExpression(node.right, "typesystem")
-                    if obj.Type ~= "string" then
-                        return types.errors.other("must evaluate to a string")
-                    end
-                    if not obj:IsLiteral() then
-                        return types.errors.other("must be a literal")
-                    end
-
-                    obj.pattern_contract = obj:GetData()
-
-                    return obj
-                end
-            end
-
-            if op == "-" then local res = metatable_function(self, "__unm", l) if res then return res end
-            elseif op == "~" then local res = metatable_function(self, "__bxor", l) if res then return res end
-            elseif op == "#" then local res = metatable_function(self, "__len", l) if res then return res end end
-
-            if op == "not" or op == "!" then
-                if l:IsTruthy() and l:IsFalsy() then
-                    return self:TypeFromImplicitNode(node, "boolean", nil, false, l):SetSource(node, l)
-                end
-
-                if l:IsTruthy() then
-                    return self:TypeFromImplicitNode(node, "boolean", false, true, l):SetSource(node, l)
-                end
-
-                if l:IsFalsy() then
-                    return self:TypeFromImplicitNode(node, "boolean", true, true, l):SetSource(node, l)
-                end
-            end
-
-
-            if op == "-" then return arithmetic(l, "number", op)
-            elseif op == "~" then return arithmetic(l, "number", op)
-            elseif op == "#" then
-                if l.Type == "table" then
-                    return types.Number(l:GetLength()):MakeLiteral(l:IsLiteral())
-                elseif l.Type == "string" then
-                    return types.Number(l:GetData() and #l:GetData() or nil):MakeLiteral(l:IsLiteral())
-                end
-            end
-
-            error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
-        end
+    if not obj.Set then
+        return types.errors.other("undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type)
     end
 
-    do -- binary
-        local operators = {
-            ["+"] = function(l,r) return l+r end,
-            ["-"] = function(l,r) return l-r end,
-            ["*"] = function(l,r) return l*r end,
-            ["/"] = function(l,r) return l/r end,
-            ["/idiv/"] = function(l,r) return math.floor(l/r) end,
-            ["%"] = function(l,r) return l%r end,
-            ["^"] = function(l,r) return l^r end,
-            [".."] = function(l,r) return l..r end,
+    obj.last_set = obj.last_set or {}
+    obj.last_set[key] = val
 
-            ["&"] = function(l, r) return bit.band(l,r) end, -- bitwise AND (&) operation.
-            ["|"] = function(l, r) return bit.bor(l,r) end, -- bitwise OR (|) operation.
-            ["~"] = function(l,r) return bit.bxor(l,r) end, -- bitwise exclusive OR (binary ~) operation.
-            ["<<"] = function(l, r) return bit.lshift(l,r) end, -- bitwise left shift (<<) operation.
-            [">>"] = function(l, r) return bit.rshift(l,r) end, -- bitwise right shift (>>) operation.
-
-            ["=="] = function(l,r) return l==r end,
-            ["<"] = function(l,r) return l<r end,
-            ["<="] = function(l,r) return l<=r end,
-        }
-
-        local function metatable_function(self, meta_method, l,r, swap)
-            if swap then
-                l,r = r,l
-            end
-
-            if r.meta or l.meta then
-                local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
-
-                if func then
-                    if func.Type == "function" then
-                        return self:Assert(self.current_expression, self:Call(func, types.Tuple({l, r}))):Get(1)
-                    else
-                        return func
-                    end
-                end
-            end
-        end
-
-        local function arithmetic(node, l,r, type, operator)
-            assert(operators[operator], "cannot map operator " .. tostring(operator))
-
-            if type and l.Type == type and r.Type == type then
-                if l:IsLiteral() and r:IsLiteral() then
-                    local obj = types.Number(operators[operator](l.data, r.data)):MakeLiteral(true)
-
-                    if r.max then
-                        obj.max = arithmetic(node, l, r.max, type, operator)
-                    end
-
-                    if l.max then
-                        obj.max = arithmetic(node, l.max, r, type, operator)
-                    end
-
-                    return obj:SetSource(node, obj, l,r)
-                end
-
-                local obj = types.Number():Copy()
-                return obj:SetSource(node, obj, l,r)
-            end
-
-            return types.errors.other("no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime")
-        end
-
-        function META:BinaryOperator(node, l, r, env)
-            local op = node.value.value
-
-            -- adding two tuples at runtime in lua will practically do this
-            if l.Type == "tuple" then l = l:Get(1) end
-            if r.Type == "tuple" then r = r:Get(1) end
-
-            -- normalize l and r to be both sets to reduce complexity
-            if l.Type ~= "set" and r.Type == "set" then l = types.Set({l}) end
-            if l.Type == "set" and r.Type ~= "set" then r = types.Set({r}) end
-
-            if l.Type == "set" and r.Type == "set" then
-                local new_set = types.Set()
-
-                for _, l in ipairs(l:GetElements()) do
-                    for _, r in ipairs(r:GetElements()) do
-                        new_set:AddElement(self:Assert(node, self:BinaryOperator(node, l, r, env)))
-                    end
-                end
-
-                return new_set:SetSource(node, new_set, l,r)
-            end
-
-            if env == "typesystem" then
-                if op == "|" then
-                    return types.Set({l, r})
-                elseif op == "&" then
-                    if l.Type == "table" and r.Type == "table" then
-                        return l:Extend(r)
-                    end
-                elseif op == "extends" then
-                    return l:Extend(r)
-                elseif op == ".." then
-                    local new = l:Copy()
-                    new.max = r
-                    return new
-                elseif op == ">" then
-                    return types.Symbol((r:SubsetOf(l)))
-                elseif op == "<" then
-                    return types.Symbol((l:SubsetOf(r)))
-                elseif op == "+" then
-                    if l.Type == "table" and r.Type == "table" then
-                        return l:Union(r)
-                    end
-                end
-            end
-
-            if op == "." or op == ":" then
-                return self:GetOperator(l, r, node)
-            end
-
-            if l.Type == "any" or r.Type == "any" then
-                return types.Any()
-            end
-
-            if op == "+" then local res = metatable_function(self, "__add", l, r) if res then return res end
-            elseif op == "-" then local res = metatable_function(self, "__sub", l, r) if res then return res end
-            elseif op == "*" then local res = metatable_function(self, "__mul", l, r) if res then return res end
-            elseif op == "/" then local res = metatable_function(self, "__div", l, r) if res then return res end
-            elseif op == "/idiv/" then local res = metatable_function(self, "__idiv", l, r) if res then return res end
-            elseif op == "%" then local res = metatable_function(self, "__mod", l, r) if res then return res end
-            elseif op == "^" then local res = metatable_function(self, "__pow", l, r) if res then return res end
-            elseif op == "&" then local res = metatable_function(self, "__band", l, r) if res then return res end
-            elseif op == "|" then local res = metatable_function(self, "__bor", l, r) if res then return res end
-            elseif op == "~" then local res = metatable_function(self, "__bxor", l, r) if res then return res end
-            elseif op == "<<" then local res = metatable_function(self, "__lshift", l, r) if res then return res end
-            elseif op == ">>" then local res = metatable_function(self, "__rshift", l, r) if res then return res end end
-
-            if l.Type == "number" and r.Type == "number" then
-                if op == "~=" or op == "!=" then
-                    if l.max and l.max.data then
-                        return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.False
-                    end
-
-                    if r.max and r.max.data then
-                        return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.False
-                    end
-                elseif op == "==" then
-                    if l.max and l.max.data then
-                        return r.data >= l.data and r.data <= l.max.data and types.True or types.False
-                    end
-
-                    if r.max and r.max.data then
-                        return l.data >= r.data and l.data <= r.max.data and types.True or types.False
-                    end
-                end
-            end
-
-            if op == "==" then
-                local res = metatable_function(self, "__eq", l, r)
-                if res then
-                    return res
-                end
-
-                if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
-                    return l.data == r.data and types.True or types.False
-                end
-
-                if l.Type == "symbol" and r.Type == "symbol" and l:GetData() == nil and r:GetData() == nil then
-                    return types.True
-                end
-
-                if l.Type ~= r.Type then
-                    return types.False
-                end
-
-                if l == r then
-                    return types.True
-                end
-
-                return types.Boolean
-            elseif op == "~=" then
-                local res = metatable_function(self, "__eq", l, r)
-                if res then
-                    if res:IsLiteral() then
-                        res.data = not res.data
-                    end
-                    return res
-                end
-                if l:IsLiteral() and r:IsLiteral() then
-                    return l.data ~= r.data and types.True or types.False
-                end
-
-                if l == types.Nil and r == types.Nil then
-                    return types.True
-                end
-
-                if l.Type ~= r.Type then
-                    return types.True
-                end
-
-                if l == r then
-                    return types.False
-                end
-
-                return types.Boolean
-            elseif op == "<" then
-                local res = metatable_function(self, "__lt", l, r)
-                if res then
-                    return res
-                end
-                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                    return types.Symbol(l.data < r.data)
-                end
-
-                return types.Boolean
-            elseif op == "<=" then
-                local res = metatable_function(self, "__le", l, r)
-                if res then
-                    return res
-                end
-                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                    return types.Symbol(l.data <= r.data)
-                end
-
-                return types.Boolean
-            elseif op == ">" then
-                local res = metatable_function(self, "__lt", l, r)
-                if res then
-                    return res
-                end
-                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                    return types.Symbol(l.data > r.data)
-                end
-
-                return types.Boolean
-            elseif op == ">=" then
-                local res = metatable_function(self, "__le", l, r)
-                if res then
-                    return res
-                end
-                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                    return types.Symbol(l.data >= r.data)
-                end
-
-                return types.Boolean
-            elseif op == "or" or op == "||" then
-                if l:IsUncertain() or r:IsUncertain() then
-                    local set = types.Set({l,r})
-                    return set:SetSource(node, set, l,r)
-                end
-
-                -- when true, or returns its first argument
-                if l:IsTruthy() then
-                    return l:Copy():SetSource(node, l, l,r)
-                end
-
-                if r:IsTruthy() then
-                    return r:Copy():SetSource(node, r, l,r)
-                end
-
-                return r:Copy():SetSource(node, r)
-            elseif op == "and" or op == "&&" then
-                if l:IsTruthy() and r:IsFalsy() then
-                    if l:IsFalsy() or r:IsTruthy() then
-                        local set = types.Set({l,r})
-                        return set:SetSource(node, set, l,r)
-                    end
-
-                    return r:Copy():SetSource(node, r, l,r)
-                end
-
-                if l:IsFalsy() and r:IsTruthy() then
-                    if l:IsTruthy() or r:IsFalsy() then
-                        local set = types.Set({l,r})
-                        return set:SetSource(node, set, l,r)
-                    end
-
-                    return l:Copy():SetSource(node, l, l,r)
-                end
-
-                if l:IsTruthy() and r:IsTruthy() then
-                    if l:IsFalsy() and r:IsFalsy() then
-                        local set = types.Set({l,r})
-                        return set:SetSource(node, set, l,r)
-                    end
-
-                    return r:Copy():SetSource(node, r, l,r)
-                else
-                    if l:IsTruthy() and r:IsTruthy() then
-                        local set = types.Set({l,r})
-                        return set:SetSource(node, set, l,r)
-                    end
-
-                    return l:Copy():SetSource(node, l, l,r)
-                end
-            end
-
-            if op == ".." then
-                if
-                    (l.Type == "string" and r.Type == "string") or
-                    (l.Type == "number" and r.Type == "string") or
-                    (l.Type == "string" and r.Type == "number")
-                then
-                    if l:IsLiteral() and r:IsLiteral() then
-                        return self:TypeFromImplicitNode(node, "string", l.data .. r.data, true)
-                    end
-
-                    return self:TypeFromImplicitNode(node, "string")
-                end
-
-                return types.errors.other("no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r))
-            end
-
-            if op == "+" then return arithmetic(node, l,r, "number", op)
-            elseif op == "-" then return arithmetic(node, l,r, "number", op)
-            elseif op == "*" then return arithmetic(node, l,r, "number", op)
-            elseif op == "/" then return arithmetic(node, l,r, "number", op)
-            elseif op == "/idiv/" then return arithmetic(node, l,r, "number", op)
-            elseif op == "%" then return arithmetic(node, l,r, "number", op)
-            elseif op == "^" then return arithmetic(node, l,r, "number", op)
-
-            elseif op == "&" then return arithmetic(node, l,r, "number", op)
-            elseif op == "|" then return arithmetic(node, l,r, "number", op)
-            elseif op == "~" then return arithmetic(node, l,r, "number", op)
-            elseif op == "<<" then return arithmetic(node, l,r, "number", op)
-            elseif op == ">>" then return arithmetic(node, l,r, "number", op) end
-
-            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
-        end
-    end
-
-    function META:SetOperator(obj, key, val)
-
-        if obj.Type == "set" then
-            local copy = types.Set()
-            for _,v in ipairs(obj:GetElements()) do
-                local ok, err = self:SetOperator(v, key, val)
-                if not ok then
-                    return ok, err
-                end
-                copy:AddElement(val)
-            end
-            return copy
-        end
-
-        if obj.meta then
-            local func = obj.meta:Get("__newindex")
-
-            if func then
-                if func.Type == "table" then
-                    return func:Set(key, val)
-                end
-
-                if func.Type == "function" or func.Type == "table" then
-                    return self:Call(func, types.Tuple({obj, key, val}), key.node):Get(1)
-                end
-            end
-        end
-
-
-        if not obj.Set then
-            return types.errors.other("undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type)
-        end
-
-        obj.last_set = obj.last_set or {}
-        obj.last_set[key] = val
-
-        return obj:Set(key, val)
-    end
-
-    function META:GetOperator(obj, key, node)
-        if obj.Type == "set" then
-            local copy = types.Set()
-            for _,v in ipairs(obj:GetElements()) do
-                local val, err = self:GetOperator(v, key, node)
-                if not val then
-                    return val, err
-                end
-                copy:AddElement(val)
-            end
-            return copy
-        end
-
-        if obj.Type == "any" then
-            return types.Any()
-        end
-
-        --TODO: not needed? Get and Set should error
-        if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then
-            return types.errors.other("undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
-        end
-
-        if obj.Type == "table" and obj.meta and not obj:Contains(key) then
-            local index = obj.meta:Get("__index")
-
-            if index then
-                if index.Type == "table" then
-                    if index.contract then
-                        return index.contract:Get(key)
-                    else
-                        return index:Get(key)
-                    end
-                end
-
-                if index.Type == "function" or index.Type == "table" then
-                    return self:Call(index, types.Tuple({obj, key}), key.node):Get(1)
-                end
-            end
-        end
-
-        if obj.contract then
-            return obj:Get(key)
-        end
-
-        if obj.last_set and not key:IsLiteral() and obj.last_set[key] then
-            return obj.last_set[key]
-        end
-
-        local val, err = obj:Get(key)
-
-        if not val then
-            return self:TypeFromImplicitNode(node or obj.node, "nil")
-        end
-
-        return val
-    end
+    return obj:Set(key, val)
 end
 
-do -- types
-    function META:TypeFromImplicitNode(node, type, data, literal, parent)
-        node.scope = self.scope -- move this out of here
-
-        local obj
-
-        if type == "table" then
-            obj = self:Assert(node, types.Table(data))
-        elseif type == "..." then
-            obj = self:Assert(node, types.Tuple(data))
-            obj.max = math.huge
-        elseif type == "number" then
-            obj = self:Assert(node, types.Number(data):MakeLiteral(literal))
-        elseif type == "string" then
-            obj = self:Assert(node, types.String(data):MakeLiteral(literal))
-        elseif type == "boolean" then
-            if literal then
-                obj = types.Symbol(data)
-            else
-                obj = types.Boolean:Copy()
+function META:GetOperator(obj, key, node)
+    if obj.Type == "set" then
+        local copy = types.Set()
+        for _,v in ipairs(obj:GetElements()) do
+            local val, err = self:GetOperator(v, key, node)
+            if not val then
+                return val, err
             end
-        elseif type == "nil" then
-            obj = self:Assert(node, types.Symbol(nil))
-        elseif type == "any" then
-            obj = self:Assert(node, types.Any())
-        elseif type == "function" then
-            obj = self:Assert(node, types.Function(data))
-            obj.node = node
+            copy:AddElement(val)
         end
-
-        if not obj then error("NYI: " .. type) end
-
-        obj.node = obj.node or node
-        obj.node.inferred_type = obj
-
-        return obj
+        return copy
     end
 
-    do
-        local guesses = {
-            {pattern = "count", type = "number"},
-            {pattern = "tbl", type = "table", ctor = function(obj) obj:Set(types.Any(), types.Any()) end},
-            {pattern = "str", type = "string"},
-        }
+    if obj.Type == "any" then
+        return types.Any()
+    end
 
-        table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
+    --TODO: not needed? Get and Set should error
+    if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then
+        return types.errors.other("undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
+    end
 
-        function META:GetInferredType(node, env)
+    if obj.Type == "table" and obj.meta and not obj:Contains(key) then
+        local index = obj.meta:Get("__index")
 
-            if node.value then
-                local str = node.value.value:lower()
-
-                for _, v in ipairs(guesses) do
-                    if str:find(v.pattern, nil, true) then
-                        local obj = self:TypeFromImplicitNode(node, v.type)
-                        if v.ctor then
-                            v.ctor(obj)
-                        end
-                        return obj
-                    end
+        if index then
+            if index.Type == "table" then
+                if index.contract then
+                    return index.contract:Get(key)
+                else
+                    return index:Get(key)
                 end
             end
 
-            if env == "typesystem" then
-                return self:TypeFromImplicitNode(node, "nil")
+            if index.Type == "function" or index.Type == "table" then
+                return self:Call(index, types.Tuple({obj, key}), key.node):Get(1)
             end
-
-            return self:TypeFromImplicitNode(node, "any")
         end
+    end
+
+    if obj.contract then
+        return obj:Get(key)
+    end
+
+    if obj.last_set and not key:IsLiteral() and obj.last_set[key] then
+        return obj.last_set[key]
+    end
+
+    local val, err = obj:Get(key)
+
+    if not val then
+        return self:TypeFromImplicitNode(node or obj.node, "nil")
+    end
+
+    return val
+end
+
+function META:TypeFromImplicitNode(node, type, data, literal, parent)
+    node.scope = self.scope -- move this out of here
+
+    local obj
+
+    if type == "table" then
+        obj = self:Assert(node, types.Table(data))
+    elseif type == "..." then
+        obj = self:Assert(node, types.Tuple(data))
+        obj.max = math.huge
+    elseif type == "number" then
+        obj = self:Assert(node, types.Number(data):MakeLiteral(literal))
+    elseif type == "string" then
+        obj = self:Assert(node, types.String(data):MakeLiteral(literal))
+    elseif type == "boolean" then
+        if literal then
+            obj = types.Symbol(data)
+        else
+            obj = types.Boolean:Copy()
+        end
+    elseif type == "nil" then
+        obj = self:Assert(node, types.Symbol(nil))
+    elseif type == "any" then
+        obj = self:Assert(node, types.Any())
+    elseif type == "function" then
+        obj = self:Assert(node, types.Function(data))
+        obj.node = node
+    end
+
+    if not obj then error("NYI: " .. type) end
+
+    obj.node = obj.node or node
+    obj.node.inferred_type = obj
+
+    return obj
+end
+
+do
+    local guesses = {
+        {pattern = "count", type = "number"},
+        {pattern = "tbl", type = "table", ctor = function(obj) obj:Set(types.Any(), types.Any()) end},
+        {pattern = "str", type = "string"},
+    }
+
+    table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
+
+    function META:GetInferredType(node, env)
+
+        if node.value then
+            local str = node.value.value:lower()
+
+            for _, v in ipairs(guesses) do
+                if str:find(v.pattern, nil, true) then
+                    local obj = self:TypeFromImplicitNode(node, v.type)
+                    if v.ctor then
+                        v.ctor(obj)
+                    end
+                    return obj
+                end
+            end
+        end
+
+        if env == "typesystem" then
+            return self:TypeFromImplicitNode(node, "nil")
+        end
+
+        return self:TypeFromImplicitNode(node, "any")
     end
 end
 
@@ -1389,60 +939,523 @@ do -- statements
 end
 
 do -- expressions
-    function META:AnalyzeBinaryOperatorExpression(node, env)
-        local left
-        local right
+    do -- binary operator
+        local operators = {
+            ["+"] = function(l,r) return l+r end,
+            ["-"] = function(l,r) return l-r end,
+            ["*"] = function(l,r) return l*r end,
+            ["/"] = function(l,r) return l/r end,
+            ["/idiv/"] = function(l,r) return math.floor(l/r) end,
+            ["%"] = function(l,r) return l%r end,
+            ["^"] = function(l,r) return l^r end,
+            [".."] = function(l,r) return l..r end,
 
-        if node.value.value == "and" then
-            left = self:AnalyzeExpression(node.left, env)
-            if left:IsFalsy() and left:IsTruthy() then
-                -- if it's uncertain, remove uncertainty while analysing
-                if left.Type == "set" then
-                    left:DisableFalsy()
+            ["&"] = function(l, r) return bit.band(l,r) end, -- bitwise AND (&) operation.
+            ["|"] = function(l, r) return bit.bor(l,r) end, -- bitwise OR (|) operation.
+            ["~"] = function(l,r) return bit.bxor(l,r) end, -- bitwise exclusive OR (binary ~) operation.
+            ["<<"] = function(l, r) return bit.lshift(l,r) end, -- bitwise left shift (<<) operation.
+            [">>"] = function(l, r) return bit.rshift(l,r) end, -- bitwise right shift (>>) operation.
+
+            ["=="] = function(l,r) return l==r end,
+            ["<"] = function(l,r) return l<r end,
+            ["<="] = function(l,r) return l<=r end,
+        }
+
+        local function metatable_function(self, meta_method, l,r, swap)
+            if swap then
+                l,r = r,l
+            end
+
+            if r.meta or l.meta then
+                local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
+
+                if func then
+                    if func.Type == "function" then
+                        return self:Assert(self.current_expression, self:Call(func, types.Tuple({l, r}))):Get(1)
+                    else
+                        return func
+                    end
                 end
-                right = self:AnalyzeExpression(node.right, env)
-                if left.Type == "set" then
-                    left:EnableFalsy()
+            end
+        end
+
+        local function arithmetic(node, l,r, type, operator)
+            assert(operators[operator], "cannot map operator " .. tostring(operator))
+
+            if type and l.Type == type and r.Type == type then
+                if l:IsLiteral() and r:IsLiteral() then
+                    local obj = types.Number(operators[operator](l.data, r.data)):MakeLiteral(true)
+
+                    if r.max then
+                        obj.max = arithmetic(node, l, r.max, type, operator)
+                    end
+
+                    if l.max then
+                        obj.max = arithmetic(node, l.max, r, type, operator)
+                    end
+
+                    return obj:SetSource(node, obj, l,r)
                 end
-            elseif left:IsFalsy() and not left:IsTruthy() then
-                -- if it's really false do nothing
-                right = self:TypeFromImplicitNode(node.right, "nil")
+
+                local obj = types.Number():Copy()
+                return obj:SetSource(node, obj, l,r)
+            end
+
+            return types.errors.other("no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime")
+        end
+
+        function META:BinaryOperator(node, l, r, env)
+            local op = node.value.value
+
+            -- adding two tuples at runtime in lua will practically do this
+            if l.Type == "tuple" then l = l:Get(1) end
+            if r.Type == "tuple" then r = r:Get(1) end
+
+            -- normalize l and r to be both sets to reduce complexity
+            if l.Type ~= "set" and r.Type == "set" then l = types.Set({l}) end
+            if l.Type == "set" and r.Type ~= "set" then r = types.Set({r}) end
+
+            if l.Type == "set" and r.Type == "set" then
+                local new_set = types.Set()
+
+                for _, l in ipairs(l:GetElements()) do
+                    for _, r in ipairs(r:GetElements()) do
+                        new_set:AddElement(self:Assert(node, self:BinaryOperator(node, l, r, env)))
+                    end
+                end
+
+                return new_set:SetSource(node, new_set, l,r)
+            end
+
+            if env == "typesystem" then
+                if op == "|" then
+                    return types.Set({l, r})
+                elseif op == "&" then
+                    if l.Type == "table" and r.Type == "table" then
+                        return l:Extend(r)
+                    end
+                elseif op == "extends" then
+                    return l:Extend(r)
+                elseif op == ".." then
+                    local new = l:Copy()
+                    new.max = r
+                    return new
+                elseif op == ">" then
+                    return types.Symbol((r:SubsetOf(l)))
+                elseif op == "<" then
+                    return types.Symbol((l:SubsetOf(r)))
+                elseif op == "+" then
+                    if l.Type == "table" and r.Type == "table" then
+                        return l:Union(r)
+                    end
+                end
+            end
+
+            if op == "." or op == ":" then
+                return self:GetOperator(l, r, node)
+            end
+
+            if l.Type == "any" or r.Type == "any" then
+                return types.Any()
+            end
+
+            if op == "+" then local res = metatable_function(self, "__add", l, r) if res then return res end
+            elseif op == "-" then local res = metatable_function(self, "__sub", l, r) if res then return res end
+            elseif op == "*" then local res = metatable_function(self, "__mul", l, r) if res then return res end
+            elseif op == "/" then local res = metatable_function(self, "__div", l, r) if res then return res end
+            elseif op == "/idiv/" then local res = metatable_function(self, "__idiv", l, r) if res then return res end
+            elseif op == "%" then local res = metatable_function(self, "__mod", l, r) if res then return res end
+            elseif op == "^" then local res = metatable_function(self, "__pow", l, r) if res then return res end
+            elseif op == "&" then local res = metatable_function(self, "__band", l, r) if res then return res end
+            elseif op == "|" then local res = metatable_function(self, "__bor", l, r) if res then return res end
+            elseif op == "~" then local res = metatable_function(self, "__bxor", l, r) if res then return res end
+            elseif op == "<<" then local res = metatable_function(self, "__lshift", l, r) if res then return res end
+            elseif op == ">>" then local res = metatable_function(self, "__rshift", l, r) if res then return res end end
+
+            if l.Type == "number" and r.Type == "number" then
+                if op == "~=" or op == "!=" then
+                    if l.max and l.max.data then
+                        return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.False
+                    end
+
+                    if r.max and r.max.data then
+                        return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.False
+                    end
+                elseif op == "==" then
+                    if l.max and l.max.data then
+                        return r.data >= l.data and r.data <= l.max.data and types.True or types.False
+                    end
+
+                    if r.max and r.max.data then
+                        return l.data >= r.data and l.data <= r.max.data and types.True or types.False
+                    end
+                end
+            end
+
+            if op == "==" then
+                local res = metatable_function(self, "__eq", l, r)
+                if res then
+                    return res
+                end
+
+                if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
+                    return l.data == r.data and types.True or types.False
+                end
+
+                if l.Type == "symbol" and r.Type == "symbol" and l:GetData() == nil and r:GetData() == nil then
+                    return types.True
+                end
+
+                if l.Type ~= r.Type then
+                    return types.False
+                end
+
+                if l == r then
+                    return types.True
+                end
+
+                return types.Boolean
+            elseif op == "~=" then
+                local res = metatable_function(self, "__eq", l, r)
+                if res then
+                    if res:IsLiteral() then
+                        res.data = not res.data
+                    end
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() then
+                    return l.data ~= r.data and types.True or types.False
+                end
+
+                if l == types.Nil and r == types.Nil then
+                    return types.True
+                end
+
+                if l.Type ~= r.Type then
+                    return types.True
+                end
+
+                if l == r then
+                    return types.False
+                end
+
+                return types.Boolean
+            elseif op == "<" then
+                local res = metatable_function(self, "__lt", l, r)
+                if res then
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                    return types.Symbol(l.data < r.data)
+                end
+
+                return types.Boolean
+            elseif op == "<=" then
+                local res = metatable_function(self, "__le", l, r)
+                if res then
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                    return types.Symbol(l.data <= r.data)
+                end
+
+                return types.Boolean
+            elseif op == ">" then
+                local res = metatable_function(self, "__lt", l, r)
+                if res then
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                    return types.Symbol(l.data > r.data)
+                end
+
+                return types.Boolean
+            elseif op == ">=" then
+                local res = metatable_function(self, "__le", l, r)
+                if res then
+                    return res
+                end
+                if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
+                    return types.Symbol(l.data >= r.data)
+                end
+
+                return types.Boolean
+            elseif op == "or" or op == "||" then
+                if l:IsUncertain() or r:IsUncertain() then
+                    local set = types.Set({l,r})
+                    return set:SetSource(node, set, l,r)
+                end
+
+                -- when true, or returns its first argument
+                if l:IsTruthy() then
+                    return l:Copy():SetSource(node, l, l,r)
+                end
+
+                if r:IsTruthy() then
+                    return r:Copy():SetSource(node, r, l,r)
+                end
+
+                return r:Copy():SetSource(node, r)
+            elseif op == "and" or op == "&&" then
+                if l:IsTruthy() and r:IsFalsy() then
+                    if l:IsFalsy() or r:IsTruthy() then
+                        local set = types.Set({l,r})
+                        return set:SetSource(node, set, l,r)
+                    end
+
+                    return r:Copy():SetSource(node, r, l,r)
+                end
+
+                if l:IsFalsy() and r:IsTruthy() then
+                    if l:IsTruthy() or r:IsFalsy() then
+                        local set = types.Set({l,r})
+                        return set:SetSource(node, set, l,r)
+                    end
+
+                    return l:Copy():SetSource(node, l, l,r)
+                end
+
+                if l:IsTruthy() and r:IsTruthy() then
+                    if l:IsFalsy() and r:IsFalsy() then
+                        local set = types.Set({l,r})
+                        return set:SetSource(node, set, l,r)
+                    end
+
+                    return r:Copy():SetSource(node, r, l,r)
+                else
+                    if l:IsTruthy() and r:IsTruthy() then
+                        local set = types.Set({l,r})
+                        return set:SetSource(node, set, l,r)
+                    end
+
+                    return l:Copy():SetSource(node, l, l,r)
+                end
+            end
+
+            if op == ".." then
+                if
+                    (l.Type == "string" and r.Type == "string") or
+                    (l.Type == "number" and r.Type == "string") or
+                    (l.Type == "string" and r.Type == "number")
+                then
+                    if l:IsLiteral() and r:IsLiteral() then
+                        return self:TypeFromImplicitNode(node, "string", l.data .. r.data, true)
+                    end
+
+                    return self:TypeFromImplicitNode(node, "string")
+                end
+
+                return types.errors.other("no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r))
+            end
+
+            if op == "+" then return arithmetic(node, l,r, "number", op)
+            elseif op == "-" then return arithmetic(node, l,r, "number", op)
+            elseif op == "*" then return arithmetic(node, l,r, "number", op)
+            elseif op == "/" then return arithmetic(node, l,r, "number", op)
+            elseif op == "/idiv/" then return arithmetic(node, l,r, "number", op)
+            elseif op == "%" then return arithmetic(node, l,r, "number", op)
+            elseif op == "^" then return arithmetic(node, l,r, "number", op)
+
+            elseif op == "&" then return arithmetic(node, l,r, "number", op)
+            elseif op == "|" then return arithmetic(node, l,r, "number", op)
+            elseif op == "~" then return arithmetic(node, l,r, "number", op)
+            elseif op == "<<" then return arithmetic(node, l,r, "number", op)
+            elseif op == ">>" then return arithmetic(node, l,r, "number", op) end
+
+            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
+        end
+
+        function META:AnalyzeBinaryOperatorExpression(node, env)
+            local left
+            local right
+
+            if node.value.value == "and" then
+                left = self:AnalyzeExpression(node.left, env)
+                if left:IsFalsy() and left:IsTruthy() then
+                    -- if it's uncertain, remove uncertainty while analysing
+                    if left.Type == "set" then
+                        left:DisableFalsy()
+                    end
+                    right = self:AnalyzeExpression(node.right, env)
+                    if left.Type == "set" then
+                        left:EnableFalsy()
+                    end
+                elseif left:IsFalsy() and not left:IsTruthy() then
+                    -- if it's really false do nothing
+                    right = self:TypeFromImplicitNode(node.right, "nil")
+                else
+                    right = self:AnalyzeExpression(node.right, env)    
+                end
+            elseif node.value.value == "or" then
+                left = self:AnalyzeExpression(node.left, env)
+
+                if left:IsTruthy() and not left:IsFalsy() then
+                    right = self:TypeFromImplicitNode(node.right, "nil")
+                elseif left:IsFalsy() and not left:IsTruthy() then
+                    right = self:AnalyzeExpression(node.right, env)
+                else
+                    right = self:AnalyzeExpression(node.right, env)
+                end
             else
+                left = self:AnalyzeExpression(node.left, env)
                 right = self:AnalyzeExpression(node.right, env)    
             end
-        elseif node.value.value == "or" then
-            left = self:AnalyzeExpression(node.left, env)
 
-            if left:IsTruthy() and not left:IsFalsy() then
-                right = self:TypeFromImplicitNode(node.right, "nil")
-            elseif left:IsFalsy() and not left:IsTruthy() then
-                right = self:AnalyzeExpression(node.right, env)
-            else
-                right = self:AnalyzeExpression(node.right, env)
+            if node.and_expr then
+                if node.and_expr.and_res == left then
+                    if left.Type == "set" then
+                        left = left:Copy()
+                        left:DisableFalsy()
+                    end
+                end
             end
-        else
-            left = self:AnalyzeExpression(node.left, env)
-            right = self:AnalyzeExpression(node.right, env)    
-        end
 
-        if node.and_expr then
-            if node.and_expr.and_res == left then
-                if left.Type == "set" then
-                    left = left:Copy()
-                    left:DisableFalsy()
+            assert(left)
+            assert(right)
+
+            -- TODO: more elegant way of dealing with self?
+            if node.value.value == ":" then
+                self.self_call_arg = left
+            end
+
+            return self:Assert(node, self:BinaryOperator(node, left, right, env))
+        end
+    end
+
+    do -- prefix operator
+        local operators = {
+            ["-"] = function(l) return -l end,
+            ["~"] = function(l) return bit.bnot(l) end,
+            ["#"] = function(l) return #l end,
+        }
+
+        local function metatable_function(self, meta_method, l)
+            if l.meta then
+                local func = l.meta:Get(meta_method)
+
+                if func then
+                    return self:Call(func, types.Tuple({l})):Get(1)
                 end
             end
         end
 
-        assert(left)
-        assert(right)
+        local function arithmetic(l, type, operator)
+            assert(operators[operator], "cannot map operator " .. tostring(operator))
+            if l.Type == type then
+                if l:IsLiteral() then
+                    local obj = types.Number(operators[operator](l.data)):MakeLiteral(true)
 
-        -- TODO: more elegant way of dealing with self?
-        if node.value.value == ":" then
-            self.self_call_arg = left
+                    if l.max then
+                        obj.max = arithmetic(l.max, type, operator)
+                    end
+
+                    return obj
+                end
+
+                return types.Number()
+            end
+
+            return types.errors.other("no operator for " .. operator .. tostring(l) .. " in runtime")
         end
 
-        return self:Assert(node, self:BinaryOperator(node, left, right, env))
+        function META:PrefixOperator(node, l, env)
+            local op = node.value.value
+
+            if l.Type == "tuple" then l = l:Get(1) end
+
+            if l.Type == "set" then
+                local new_set = types.Set()
+
+                for _, l in ipairs(l:GetElements()) do
+                    new_set:AddElement(self:Assert(node, self:PrefixOperator(node, l, env)))
+                end
+
+                return new_set:SetSource(node, l)
+            end
+
+            if l.Type == "any" then
+                return types.Any()
+            end
+
+            if env == "typesystem" then
+                if op == "typeof" then
+                    local obj = self:GetValue(node.right, "runtime")
+
+                    if not obj then
+                        return types.errors.other("cannot find " .. self:Hash(node.right) .. " in the current typesystem scope")
+                    end
+                    return obj.contract or obj
+                elseif op == "$" then
+                    local obj = self:AnalyzeExpression(node.right, "typesystem")
+                    if obj.Type ~= "string" then
+                        return types.errors.other("must evaluate to a string")
+                    end
+                    if not obj:IsLiteral() then
+                        return types.errors.other("must be a literal")
+                    end
+
+                    obj.pattern_contract = obj:GetData()
+
+                    return obj
+                end
+            end
+
+            if op == "-" then local res = metatable_function(self, "__unm", l) if res then return res end
+            elseif op == "~" then local res = metatable_function(self, "__bxor", l) if res then return res end
+            elseif op == "#" then local res = metatable_function(self, "__len", l) if res then return res end end
+
+            if op == "not" or op == "!" then
+                if l:IsTruthy() and l:IsFalsy() then
+                    return self:TypeFromImplicitNode(node, "boolean", nil, false, l):SetSource(node, l)
+                end
+
+                if l:IsTruthy() then
+                    return self:TypeFromImplicitNode(node, "boolean", false, true, l):SetSource(node, l)
+                end
+
+                if l:IsFalsy() then
+                    return self:TypeFromImplicitNode(node, "boolean", true, true, l):SetSource(node, l)
+                end
+            end
+
+
+            if op == "-" then return arithmetic(l, "number", op)
+            elseif op == "~" then return arithmetic(l, "number", op)
+            elseif op == "#" then
+                if l.Type == "table" then
+                    return types.Number(l:GetLength()):MakeLiteral(l:IsLiteral())
+                elseif l.Type == "string" then
+                    return types.Number(l:GetData() and #l:GetData() or nil):MakeLiteral(l:IsLiteral())
+                end
+            end
+
+            error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
+        end
+
+        function META:AnalyzePrefixOperatorExpression(node, env)
+            return self:Assert(node, self:PrefixOperator(node, self:AnalyzeExpression(node.right, env), env))
+        end
+    end
+
+    do -- postfix operator
+        function META:PostfixOperator(node, r, env)
+            local op = node.value.value
+    
+            if op == "++" then
+                return self:BinaryOperator({value = {value = "+"}}, r, r, env)
+            end
+        end
+
+        function META:AnalyzePostfixOperatorExpression(node, env)
+            return self:Assert(
+                node, 
+                self:PostfixOperator(
+                    node, 
+                    self:AnalyzeExpression(node.left, env), 
+                    env
+                )
+            )
+        end
     end
     
     function META:AnalyzePostfixCallExpression(node, env)
@@ -1476,25 +1489,10 @@ do -- expressions
         )
     end
 
-    function META:AnalyzePostfixOperatorExpression(node, env)
-        return self:Assert(
-            node, 
-            self:PostfixOperator(
-                node, 
-                self:AnalyzeExpression(node.left, env), 
-                env
-            )
-        )
-    end
-
     function META:AnalyzeVarargTupleExpression(node, env)
         local obj = self:TypeFromImplicitNode(node, "...")
         obj:SetElementType(self:GetValue(node.value, "typesystem"))
         return obj
-    end
-
-    function META:AnalyzePrefixOperatorExpression(node, env)
-        return self:Assert(node, self:PrefixOperator(node, self:AnalyzeExpression(node.right, env), env))
     end
 
     local syntax = require("oh.lua.syntax")
