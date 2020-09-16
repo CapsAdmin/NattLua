@@ -45,7 +45,7 @@ local function pool(alloc, size)
 end
 
 local function list()
-    local tbl
+    local tbl --[[#: {[number] = any}]]
     local i
 
     local self = {

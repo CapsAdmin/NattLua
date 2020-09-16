@@ -388,7 +388,7 @@ function META:IsLiteral()
     end
 
     for _, v in ipairs(self.data) do
-        if v.val ~= self and v.key ~= self then
+        if v.val ~= self and v.key ~= self and v.val.Type ~= "function" and v.key.Type ~= "function" then
 
             self.suppress = true
             local ok, reason = v.key:IsLiteral()

@@ -4,7 +4,7 @@ function helpers.QuoteToken(str)
 	return "❲" .. str .. "❳"
 end
 
-function helpers.QuoteTokens(var)
+function helpers.QuoteTokens(var--[[#: {[number] = string}]])
 	local str = ""
 	for i, v in ipairs(var) do
 		str = str .. helpers.QuoteToken(v)
@@ -47,7 +47,7 @@ function helpers.LinePositionToSubPosition(code, line, character)
 	return #code
 end
 
-function helpers.SubPositionToLinePosition(code, start, stop)
+function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
 	local line = 1
 
 	local line_start
@@ -99,12 +99,12 @@ function helpers.SubPositionToLinePosition(code, start, stop)
 	end
 
 	return {
-		character_start = character_start,
-		character_stop = character_stop,
+		character_start = character_start or 0,
+		character_stop = character_stop or 0,
 		sub_line_before = {within_start + 1, start - 1},
 		sub_line_after = {stop + 1, within_stop - 1},
-		line_start = line_start,
-		line_stop = line_stop,
+		line_start = line_start or 0,
+		line_stop = line_stop or 0,
 	}
 end
 
@@ -154,16 +154,17 @@ do
 	end
 
 	do
+		-- TODO: wtf am i doing here?
 		local args
 		local fmt = function(num)
 			num = tonumber(num)
 			if type(args[num]) == "table" then
-				return helpers.QuoteTokens(args[num])
+				return helpers.QuoteTokens(args[num] --[[# as {[number] = string}]])
 			end
 			return helpers.QuoteToken(args[num] or "?")
 		end
-		function helpers.FormatMessage(msg, ...)
-			args = {...}
+		function helpers.FormatMessage(msg--[[#:string]], ...)
+			args = {...}--[[# as {[number] = string}]]
 			msg = msg:gsub("$(%d)", fmt)
 
 			return msg
@@ -172,7 +173,7 @@ do
 
 	local function clamp(num, min, max) return math.min(math.max(num, min), max) end
 
-	function helpers.FormatError(code, path, msg, start, stop, size, ...)
+	function helpers.FormatError(code--[[#: string]], path--[[#: string]], msg--[[#: string]], start--[[#:number]], stop--[[#: number]], size--[[#: number]], ...)
 		size = size or 2
 		msg = helpers.FormatMessage(msg, ...)
 

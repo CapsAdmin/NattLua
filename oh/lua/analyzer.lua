@@ -209,7 +209,7 @@ function META:Call(obj, arguments, call_node)
         local errors = {}
 
         for _, obj in ipairs(obj:GetData()) do
-            if arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
+            if obj.Type == "function" and arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
                 table.insert(errors, "invalid amount of arguments: " .. tostring(arguments) .. " ~= " .. tostring(obj:GetArguments()))
             else
                 local res, reason = self:Call(obj, arguments, call_node)
@@ -555,10 +555,11 @@ do -- control flow analysis
 end
 
 do -- statements
-    function META:AnalyzeRootStatement(statement)
+    function META:AnalyzeRootStatement(statement, ...)
+        local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):SetElementType(types.Any()):Max(math.huge)
         analyzer_env.PushAnalyzer(self)
         self:PushScope(statement)
-        self:SetUpvalue("...", types.Tuple():SetElementType(types.Any()):Max(math.huge), "runtime")
+        self:SetUpvalue("...", argument_tuple, "runtime")
         self:PushReturn()
         self:AnalyzeStatements(statement.statements)
         local analyzed_return = types.Tuple(self:PopReturn())
@@ -812,7 +813,6 @@ do -- statements
 
         local args = self:AnalyzeExpressions(statement.expressions)
         local obj = args[1]
-
 
         if obj then
             table.remove(args, 1)

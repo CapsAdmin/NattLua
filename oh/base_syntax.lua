@@ -124,7 +124,6 @@ local ffi = jit and require("ffi")
 
 if ffi then
     for key, func in pairs(syntax) do
-
         if key:sub(1, 2) == "Is" then
             local map = ffi.new("uint8_t[256]", 0)
 

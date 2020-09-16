@@ -47,3 +47,17 @@ test("pairs on non literal table", function()
         end
     ]]
 end)
+
+test("pairs on any should at least make k,v any", function()
+    run[[
+        local key, val
+
+        for k,v in pairs(unknown) do
+            key = k
+            val = v
+        end
+
+        type_assert(key, _ as any)
+        type_assert(val, _ as any)
+    ]]
+end)

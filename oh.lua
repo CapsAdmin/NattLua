@@ -183,7 +183,7 @@ do
 		return self
 	end
 
-	function META:Analyze(dump_events, analyzer)
+	function META:Analyze(dump_events, analyzer, ...)
 		if not self.SyntaxTree then
 			local ok, err = self:Parse()
 			if not ok then
@@ -204,8 +204,9 @@ do
 		local ok, res = xpcall(
 			analyzer.AnalyzeRootStatement, 
 			function(msg) return traceback(self, analyzer, msg) end, 
-			analyzer, 
-			self.SyntaxTree
+			analyzer,
+			self.SyntaxTree,
+			...
 		)
 		
 		self.AnalyzedResult = res

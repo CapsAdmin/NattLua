@@ -162,3 +162,11 @@ test("table.insert", function()
         type_assert(a[3], 1337)
     ]]
 end)
+
+test("string sub on set", function()
+    run[[
+        local lol: "foo" | "bar"
+
+        type_assert(lol:sub(1,1), _ as "f" | "b")
+    ]]
+end)

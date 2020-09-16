@@ -91,6 +91,10 @@ do -- globals
 
 	type function next(t: {[any] = any}, k: any)
 
+		if t.Type == "any" then
+			return types.Any(), types.Any()
+		end
+
 		if t:IsLiteral() then
 			if k and not (k.Type == "symbol" and k.data == nil) then
 				for i, kv in ipairs(t:GetData()) do
@@ -141,7 +145,6 @@ do -- globals
 	end
 
 	type function pairs(tbl)
-
 		if tbl:IsLiteral() then
 			local i = 1
 			return function(key, val)
@@ -155,6 +158,7 @@ do -- globals
 		local next = analyzer:GetValue("next", "typesystem")
 		local k,v = next.data.lua_function(tbl)
 		local done = false
+
 		return function()
 			if done then return nil end
 			done = true
@@ -191,6 +195,10 @@ do -- globals
 
 		if base_analyzer:GetValue("_G", "typesystem"):Get(str) then
 			return base_analyzer:GetValue("_G", "typesystem"):Get(str)
+		end
+		
+		if str == "table.new" then
+			return base_analyzer:GetValue("table", "typesystem"):Get("new")
 		end
 
 		if self:GetValue(str, "typesystem") then
@@ -240,9 +248,9 @@ do -- globals
 		return self:TypeFromImplicitNode(code_data.SyntaxTree, "function", {
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
-			lua_function = function()
-				assert(code_data:Analyze())
-				return table.unpack(code_data.AnalyzedResult)
+			lua_function = function(...)
+				assert(code_data:Analyze(nil, nil, ...))
+				return code_data.AnalyzedResult
 			end
 		})
 	end
@@ -413,7 +421,8 @@ do
 		unpack = (function(list: table, i: number, j: number): ...) | (function(list: table, i: number): ...) | (function(list: table): ...),
 		insert = (function(list: table, pos: number, value: any): nil) | (function(list: table,  value: any): nil),
 		concat = (function(list: table, sep: string, i: number, j: number): string) | (function(list: table, sep: string, i: number): string) | (function(list: table, sep: string): string) | (function(list: table): string),
-		pack = (function(...): table)
+		pack = (function(...): table),
+		new = (function(number, number): table),
 	}
 
 	type function table.insert(tbl: {[1 .. inf] = any}, ...)
@@ -478,6 +487,22 @@ do
 	end
 
 	type function ^string.sub(str: string, a: number, b: number | nil)
+		if str.Type == "set" then
+			local copy = types.Set()
+
+			for _, str in ipairs(str:GetElements()) do
+				if str:IsLiteral() and a:IsLiteral() then
+					if b and b:IsLiteral() then
+						copy:AddElement(types.String(str:GetData():sub(a:GetData(), b:GetData())):MakeLiteral(true))
+					else
+						copy:AddElement(types.String(str:GetData():sub(a:GetData())))
+					end
+				end
+			end
+
+			return copy
+		end
+
 		if str:IsLiteral() and a:IsLiteral() then
 			if b and b:IsLiteral() then
 				return str:GetData():sub(a:GetData(), b:GetData())
@@ -523,21 +548,23 @@ do
 	end
 
 	type function ^string.match(s, pattern, init)
-		if s.data and pattern.data then
+		if s:IsLiteral() and pattern:IsLiteral() then
 			local res = {s.data:match(pattern.data)}
 			for i,v in ipairs(res) do
-				res[i] = types.String(v)
+				res[i] = types.String(v):MakeLiteral(true)
 			end
 			return table.unpack(res)
 		end
 
-		if pattern.data then
+		if pattern:IsLiteral() then
 			local out = {}
 			for s in pattern.data:gmatch("%b()") do
-				table.insert(out, types.String() + types.Nil)
+				table.insert(out, types.Set({types.String(), types.Nil}))
 			end
 			return table.unpack(out)
 		end
+
+		return types.Set({types.String(), types.Nil})
 	end
 
 	type function ^string.len(str: string)
