@@ -106,6 +106,8 @@ do
         for key, obj in pairs(old_scope.upvalues.typesystem.map) do
             scope.upvalues.runtime.map[key] = obj
         end
+
+        scope.returns = old_scope.returns
     end
 
     function META:DumpScope()
@@ -219,24 +221,30 @@ function META:FireEvent(what, ...)
     end
 end
 
-function META:CollectReturnExpressions(val)
-    self.return_types = self.return_types or {}
-    table.insert(self.return_types, val)
+function META:CollectReturnExpressions(types)    
+    assert(self.returns)
+    assert(self.returns[1])
+
+    table.insert(self.returns[1], types)
 end
 
-function META:ClearReturnExpressions()
-    self.return_types = {}
+function META:PushReturn()
+    self.returns = self.returns or {}
+    table.insert(self.returns, 1, {})
 end
 
-function META:GetReturnExpressions()
+function META:PopReturn()
     local out = {}
-    if self.return_types then
-        for _, ret in ipairs(self.return_types) do
-            for i, obj in ipairs(ret) do
-                if out[i] then
-                    out[i] = types.Set({out[i], obj})
-                else
-                    out[i] = obj
+    if self.returns then
+        local return_types = table.remove(self.returns, 1)
+        if return_types then
+            for _, ret in ipairs(return_types) do
+                for i, obj in ipairs(ret) do
+                    if out[i] then
+                        out[i] = types.Set({out[i], obj})
+                    else
+                        out[i] = obj
+                    end
                 end
             end
         end
@@ -244,16 +252,18 @@ function META:GetReturnExpressions()
     return out
 end
 
-function META:ReturnFromThisScope()
+function META:ReturnToThisScope()
     self.ReturnFromFunction = #self.scope_stack
+    self.returned_from_certain_scope = nil
 end
 
 function META:AnalyzeStatements(statements)
-    for _, val in ipairs(statements) do
-        self:AnalyzeStatement(val)
+    for i, statement in ipairs(statements) do
+        self:AnalyzeStatement(statement)
         if self.returned_from_certain_scope and self.ReturnFromFunction == #self.scope_stack then
             self.ReturnFromFunction = nil
             self.returned_from_certain_scope = nil
+
             break
         end
     end

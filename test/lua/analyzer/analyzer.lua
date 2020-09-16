@@ -396,3 +396,35 @@ end)
 test("file import", function()
     equal(8, require("oh").File("test/lua/analyzer/file_importing/main.oh"):Analyze().AnalyzedResult:Get(1):GetData())
 end)
+
+run[[
+    local function list()
+        local tbl
+        local i
+
+        local self = {
+            clear = function(self)
+                tbl = {}
+                i = 1
+            end,
+            add = function(self, val)
+                tbl[i] = val
+                i = i + 1
+            end,
+            get = function(self)
+                return tbl
+            end
+        }
+
+        self:clear()
+
+        return self
+    end
+
+
+    local a = list()
+    a:add(1)
+    a:add(2)
+    a:add(3)
+    type_assert(a:get(), {1,2,3})
+]]

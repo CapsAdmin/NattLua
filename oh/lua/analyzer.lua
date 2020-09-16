@@ -343,12 +343,10 @@ function META:Call(obj, arguments, call_node)
             end
 
             -- crawl and collect return values from function statements
-            local old_ret = self.return_types
-            self:ClearReturnExpressions()
-            self:ReturnFromThisScope()
-            self:AnalyzeStatements(function_node.statements)
-            local analyzed_return = types.Tuple(self:GetReturnExpressions())
-            self.return_types = old_ret
+            self:ReturnToThisScope()
+            self:PushReturn()
+                self:AnalyzeStatements(function_node.statements)
+            local analyzed_return = types.Tuple(self:PopReturn())
         self:PopScope()
 
         self.calling_function = nil
@@ -561,10 +559,9 @@ do -- statements
         analyzer_env.PushAnalyzer(self)
         self:PushScope(statement)
         self:SetUpvalue("...", types.Tuple():SetElementType(types.Any()):Max(math.huge), "runtime")
-        self:ReturnFromThisScope()
+        self:PushReturn()
         self:AnalyzeStatements(statement.statements)
-        local analyzed_return = types.Tuple(self:GetReturnExpressions())
-        self:ClearReturnExpressions()
+        local analyzed_return = types.Tuple(self:PopReturn())
         self:PopScope()
         self:ProcessDeferredCalls()
         analyzer_env.PopAnalyzer()
