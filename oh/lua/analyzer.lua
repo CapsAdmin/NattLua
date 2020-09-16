@@ -868,6 +868,7 @@ end
 function META:AnalyzeSyntaxTree(syntax_tree)
     analyzer_env.PushAnalyzer(self)
     self:PushScope(syntax_tree)
+    self:SetUpvalue("...", types.Tuple():SetElementType(types.Any()):Max(math.huge), "runtime")
     self:ReturnFromThisScope()
     self:AnalyzeStatements(syntax_tree.statements)
     local analyzed_return = types.Tuple(self:GetReturnExpressions())
@@ -1082,8 +1083,14 @@ function META:AnalyzeStatement(statement)
             for i, exp in ipairs(statement.right) do
                 for i2, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
                     if obj.Type == "tuple" then
-                        for i3,v in ipairs(obj:GetData()) do
-                            right[i + i2 - 1 + i3 - 1 ] = v
+                        if obj.max and obj.ElementType then
+                            for i3 = 1, #statement.left do
+                                right[i + i2 - 1 + i3 - 1 ] = obj:Get(i3)
+                            end
+                        else
+                            for i3,v in ipairs(obj:GetData()) do
+                                right[i + i2 - 1 + i3 - 1 ] = v
+                            end
                         end
                     else
                         right[i + i2 - 1] = obj
@@ -1445,7 +1452,7 @@ do
                 table.insert(arguments, 1, self.self_call_arg)
                 self.self_call_arg = nil
             end
-            
+
             self.PreferTypesystem = node.type_call
             local obj = self:Assert(node, self:Call(obj, types.Tuple(arguments), node))
             self.PreferTypesystem = nil
@@ -1489,7 +1496,7 @@ do
             if not obj and env == "typesystem" and node.value.value ~= "_" then
                 if not obj and self.IndexNotFound then
                     obj = self:IndexNotFound(node)
-                 end
+                end
                 if not obj then
                     obj = self:GetValue(node, "runtime")
 
@@ -1657,11 +1664,18 @@ do
                 tbl:Set(key, obj)
             elseif node.kind == "table_index_value" then
                 local val = {self:AnalyzeExpression(node.expression, env)}
-                if node.i then
-                    tbl:Set(node.i, val[1])
-                elseif val then
-                    for _, val in ipairs(val) do
-                        tbl:Set(#tbl.data + 1, val)
+
+                if val[1].Type == "tuple" then
+
+                    tbl:Set(types.Number(node.i):Max(types.Number(val[1].max)), val[1].ElementType)
+
+                else 
+                    if node.i then
+                        tbl:Set(node.i, val[1])
+                    elseif val then
+                        for _, val in ipairs(val) do
+                            tbl:Set(#tbl.data + 1, val)
+                        end
                     end
                 end
             end

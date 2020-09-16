@@ -269,3 +269,12 @@ test("table is not literal", function()
         check_literal(tbl)
     ]]
 end)
+
+test("var args with unknown length", function()
+    run[[
+        local tbl = {...}
+        type_assert(tbl[1], _ as any)
+        type_assert(tbl[2], _ as any)
+        type_assert(tbl[100], _ as any)
+    ]]
+end)

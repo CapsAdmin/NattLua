@@ -99,3 +99,25 @@ test("asadawd", function()
     ]]
 end)
 
+run[[
+    local a,b,c = ...
+    type_assert(a, _ as any)
+    type_assert(b, _ as any)
+    type_assert(c, _ as any)
+]]
+    
+run[[
+    local tbl = {...}
+    type_assert(tbl[1], _ as any)
+    type_assert(tbl[2], _ as any)
+    type_assert(tbl[100], _ as any)
+]]
+
+run[[
+    ;(function(...)   
+        local tbl = {...}
+        type_assert(tbl[1], 1)
+        type_assert(tbl[2], 2)
+        type_assert(tbl[100], _ as nil)
+    end)(1,2)
+]]

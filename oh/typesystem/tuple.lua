@@ -46,10 +46,20 @@ end
 
 function META:SetElementType(typ)
     self.ElementType = typ
+    return self
+end
+
+function META:GetElementType()
+    return self.ElementType
 end
 
 function META:GetMaxLength()
     return self.max or 0
+end
+
+function META:Max(len)
+    self.max = len
+    return self
 end
 
 function META:GetElements()
@@ -103,13 +113,14 @@ function META.SubsetOf(A, B)
         end
     end
 
+    if A.ElementType and A.ElementType.Type == "any" then
+        return true
+    end
+
     if A:GetLength() > B:GetLength() and A:GetLength() > B:GetMaxLength() then
         return types.errors.other(tostring(A) .. " is larger than " .. tostring(B))
     end
 
-    if A.ElementType and A.ElementType.Type == "any" then
-        return true
-    end
 
     -- vararg
     if B.max == math.huge then
@@ -139,6 +150,12 @@ function META.SubsetOf(A, B)
 end
 
 function META:Get(key)
+    if self.max and self.ElementType then
+        if key <= self.max then
+            return self.ElementType:Copy()
+        end
+    end
+
     if type(key) == "number" then
         return self.data[key]
     end
@@ -182,6 +199,10 @@ function META:IsFalsy()
 end
 
 function META:Unpack()
+    if self.max and self.ElementType then
+        return self
+    end
+
     return table.unpack(self:GetData())
 end
 
