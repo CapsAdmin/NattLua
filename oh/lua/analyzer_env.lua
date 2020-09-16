@@ -25,15 +25,17 @@ function analyzer_env.GetBaseAnalyzer()
         
         assert(code_data:Lex())
         assert(code_data:Parse())
-        
 
         local meta = require("oh.typesystem.types").Table({})
         analyzer_env.string_meta = meta
 
-        assert(code_data:Analyze())
-
-        local base = code_data.analyzer
+        local base = code_data.Analyzer()
         base.IndexNotFound = nil
+
+        analyzer_env.base_analyzer = base
+
+        assert(code_data:Analyze(nil, base))
+
 
 		local g = base:TypeFromImplicitNode(code_data.SyntaxTree, "table")
 
@@ -47,7 +49,6 @@ function analyzer_env.GetBaseAnalyzer()
 
         base:SetValue("_G", g, "typesystem")
 
-        analyzer_env.base_analyzer = base
     end
 
     return analyzer_env.base_analyzer

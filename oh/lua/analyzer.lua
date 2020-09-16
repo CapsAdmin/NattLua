@@ -792,11 +792,12 @@ do -- types
                 end
 
                 -- crawl and collect return values from function statements
+                local old_ret = self.return_types
+                self:ClearReturnExpressions()
                 self:ReturnFromThisScope()
                 self:AnalyzeStatements(function_node.statements)
                 local analyzed_return = types.Tuple(self:GetReturnExpressions())
-                self:ClearReturnExpressions()
-
+                self.return_types = old_ret
             self:PopScope()
 
             self.calling_function = nil
@@ -1440,11 +1441,11 @@ do
             local obj = self:AnalyzeExpression(node.left, env)
             local arguments = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
 
-            if self.self_call_arg then
+            if self.self_call_arg and node.left.kind == "binary_operator" and node.left.value.value == ":" then
                 table.insert(arguments, 1, self.self_call_arg)
                 self.self_call_arg = nil
             end
-
+            
             self.PreferTypesystem = node.type_call
             local obj = self:Assert(node, self:Call(obj, types.Tuple(arguments), node))
             self.PreferTypesystem = nil

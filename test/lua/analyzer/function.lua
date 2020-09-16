@@ -369,3 +369,26 @@ test("make sure analyzer return flags dont leak over to deferred calls", functio
     
     equal(foo:GetReturnTypes():Get(1):GetData(), true)
 end)
+
+run[[
+    local a = function()
+        if maybe then
+            -- the return value here sneaks into val
+            return ""
+        end
+        
+        -- val is "" | 1
+        local val = (function() return 1 end)()
+        
+        type_assert(val, 1)
+
+        return val
+    end
+
+    type_assert(a(), _ as 1 | "")
+]]
+
+run[[
+    local x = (" "):rep(#tostring(_ as string))
+    type_assert(x, _ as string)
+]]

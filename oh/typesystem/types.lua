@@ -168,8 +168,6 @@ function types.Initialize()
     types.True = types.Symbol(true)
     types.False = types.Symbol(false)
     types.Boolean = types.Set({types.True, types.False}):MakeExplicitNotLiteral(true)
-    types.NumberType = types.Number()
-    types.StringType = types.String()
 end
 
 return types

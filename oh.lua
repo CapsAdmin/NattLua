@@ -183,7 +183,7 @@ do
 		return self
 	end
 
-	function META:Analyze(dump_events)
+	function META:Analyze(dump_events, analyzer)
 		if not self.SyntaxTree then
 			local ok, err = self:Parse()
 			if not ok then
@@ -192,7 +192,7 @@ do
 			end
 		end
 
-		local analyzer = self.Analyzer()
+		local analyzer = analyzer or self.Analyzer()
 		self.analyzer = analyzer	
 		analyzer.code_data = self	
 		analyzer.OnError = function(analyzer, ...) self:OnError(...) end

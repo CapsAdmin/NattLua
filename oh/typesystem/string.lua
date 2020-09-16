@@ -136,18 +136,24 @@ function META:IsTruthy()
     return true
 end
 
-local analyzer_env = require("oh.lua.analyzer_env")
+do
+    -- TODO!
 
--- TODO:
--- maybe this doesn't belong here? 
--- the is idea was that the string 
--- behavior should be independent 
--- from the analyzer
+    -- this doesn't belong here
+    -- the is idea was that the string 
+    -- behavior should be independent 
+    -- from the analyzer
+    
+    local analyzer_env = require("oh.lua.analyzer_env")
 
-function META:Initialize()
-    self.meta = analyzer_env.string_meta
+    function META:Initialize()
+        analyzer_env.GetBaseAnalyzer()
 
-    return self
+        self.meta = analyzer_env.string_meta
+        assert(self.meta)
+
+        return self
+    end
 end
 
 return types.RegisterType(META)
