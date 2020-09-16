@@ -202,7 +202,7 @@ do
 		end
 
 		local ok, res = xpcall(
-			analyzer.AnalyzeSyntaxTree, 
+			analyzer.AnalyzeRootStatement, 
 			function(msg) return traceback(self, analyzer, msg) end, 
 			analyzer, 
 			self.SyntaxTree

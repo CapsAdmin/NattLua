@@ -422,88 +422,6 @@ do
     end
 end
 
-do
-    local meta = {}
-    meta.__index = meta
-
-    function META:CreateStack()
-        return setmetatable({values = {}, i = 1}, meta)
-    end
-
-    function meta:Push(val)
-        assert(val)
-        if val.Type == "tuple" then
-            for _,v in ipairs(val) do
-                assert(types.IsTypeObject(v))
-            end
-        else
-            if not types.IsTypeObject(val) then
-                if not next(val) then
-                    error("cannot push empty table", 2)
-                end
-                for k,v in pairs(val) do print(k,v) end
-                error("cannot push non type object", 2)
-            end
-        end
-
-        self.values[self.i] = val
-        self.i = self.i + 1
-    end
-
-    function meta:Pop()
-        self.i = self.i - 1
-
-        if self.i < 1 then
-            if self.last_val then
-                self.last_val:Error("stack underflow")
-            end
-            error("stack underflow", 2)
-        end
-
-        local val = self.values[self.i]
-        self.values[self.i] = nil
-
-        if val.Type == "tuple" then
-            return val:Get(1)
-        end
-
-        self.last_val = val
-
-        assert(types.IsTypeObject(val))
-
-        return val
-    end
-
-    function meta:Unpack()
-        local out = {}
-
-        for _,v in ipairs(self.values) do
-            if v.Type == "tuple" then
-                for _, v in ipairs(v:GetData()) do
-                    table.insert(out, v)
-                end
-            else
-                table.insert(out, v)
-            end
-        end
-        return table.unpack(out)
-    end
-end
-
-function META:AnalyzeExpression(exp, env, stack)
-    assert(exp and exp.type == "expression")
-    env = env or "runtime"
-    stack = stack or self:CreateStack()
-
-    if self.PreferTypesystem then
-        env = "typesystem"
-    end
-
-    self:HandleExpression(stack, exp, env)
-
-    return stack:Unpack()
-end
-
 function META:AnalyzeExpressions(expressions, env)
     if not expressions then return end
     local out = {}
@@ -514,4 +432,35 @@ function META:AnalyzeExpressions(expressions, env)
         end
     end
     return out
+end
+
+function META:ProcessDeferredCalls()
+    if not self.deferred_calls then
+        return
+    end
+
+    self.returned_from_certain_scope = nil
+    self.returned_from_block = nil
+
+    for _,v in ipairs(self.deferred_calls) do
+        if not v[1].called and v[1].explicit_arguments then
+            local obj, arguments, node = table.unpack(v)
+
+            -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+            arguments = obj:GetArguments()
+            self:Assert(node, self:Call(obj, arguments, node))
+        end
+    end
+
+    for _,v in ipairs(self.deferred_calls) do
+        if not v[1].called and not v[1].explicit_arguments then
+            local obj, arguments, node = table.unpack(v)
+
+            -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+            arguments = obj:GetArguments()
+            self:Assert(node, self:Call(obj, arguments, node))
+        end
+    end
+
+    self.deferred_calls = nil
 end
