@@ -201,7 +201,7 @@ function META:Call(obj, arguments, call_node)
 
         local set = obj
         for _, obj in ipairs(obj:GetData()) do
-            if obj.Type ~= "function" and obj.Type ~= "table" then
+            if obj.Type ~= "function" and obj.Type ~= "table" and obj.Type ~= "any" then
                 return types.errors.other("set "..tostring(set).." contains uncallable object " .. tostring(obj))
             end
         end

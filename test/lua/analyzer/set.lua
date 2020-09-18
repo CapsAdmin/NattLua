@@ -63,3 +63,8 @@ test("is not literal", function()
     ]]
     assert(a:GetValue("a", "typesystem"):IsLiteral() == false)
 end)
+
+run[[
+    local x: any | function(): boolean
+    x()
+]]
