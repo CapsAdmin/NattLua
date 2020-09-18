@@ -255,7 +255,7 @@ do
 
 		local pre = ("-"):rep(100)
 
-		str = "\n" .. pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n" .. pre
+		str = "\n" .. pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n"
 
 		str = str:gsub("\t", " ")
 
