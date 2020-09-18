@@ -5,7 +5,7 @@ local META = {}
 META.__index = META
 
 META.syntax = syntax
-assert(loadfile("oh/base_lexer.lua"))(META)
+require("oh.base_lexer")(META)
 
 local function ReadLiteralString(self, multiline_comment)
     local start = self.i

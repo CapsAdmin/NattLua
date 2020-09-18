@@ -10,9 +10,9 @@ META.__index = META
 META.Emitter = require("oh.lua.emitter")
 META.syntax = syntax
 
-assert(loadfile("oh/base_parser.lua"))(META)
-assert(loadfile("oh/lua/parser_typesystem.lua"))(META)
-assert(loadfile("oh/lua/parser_extra.lua"))(META)
+require("oh.base_parser")(META)
+require("oh.lua.parser_typesystem")(META)
+require("oh.lua.parser_extra")(META)
 
 do -- functional helpers
     function META:ExpectExpression(what)

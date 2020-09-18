@@ -110,9 +110,9 @@ do
         {"R^"}, -- right associative
     }
 
-    assert(loadfile("oh/base_syntax.lua"))(syntax.typesystem)
+    require("oh.base_syntax")(syntax.typesystem)
 end
 
-assert(loadfile("oh/base_syntax.lua"))(syntax)
+require("oh.base_syntax")(syntax)
 
 return syntax

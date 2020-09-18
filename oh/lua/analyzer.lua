@@ -8,7 +8,7 @@ types.Initialize()
 local META = {}
 META.__index = META
 
-assert(loadfile("oh/base_analyzer.lua"))(META)
+require("oh.base_analyzer")(META)
 
 function META:SetOperator(obj, key, val)
 

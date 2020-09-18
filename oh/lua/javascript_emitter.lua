@@ -7,7 +7,7 @@ local META = {}
 META.__index = META
 
 META.syntax = syntax
-assert(loadfile("oh/base_emitter.lua"))(META)
+require("oh.base_emitter")(META)
 
 function META:EmitExpression(node)
     if node.tokens["("] then
