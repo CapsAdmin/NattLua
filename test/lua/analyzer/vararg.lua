@@ -121,3 +121,10 @@ run[[
         type_assert(tbl[100], _ as nil)
     end)(1,2)
 ]]
+
+run[[
+    local a,b,c = unknown()
+    type_assert(a, _ as any)
+    type_assert(b, _ as any)
+    type_assert(c, _ as any)
+]]

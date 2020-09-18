@@ -226,7 +226,7 @@ function META:Call(obj, arguments, call_node)
     end
 
     if obj.Type == "any" then
-        return self:TypeFromImplicitNode(function_node or call_node, "any")
+        return types.Tuple({}):SetElementType(types.Any()):Max(math.huge)
     end
 
     if obj.Type == "table" then
