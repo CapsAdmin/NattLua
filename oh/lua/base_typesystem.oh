@@ -241,7 +241,6 @@ do -- globals
 		end
 
 		local code_data = oh.Code(code:GetData(), chunk_name and chunk_name:GetData() or nil)
-
 		assert(code_data:Lex())
 		assert(code_data:Parse())
 		
@@ -260,7 +259,18 @@ do -- globals
 		local code = f:read("*all")
 		f:close()
 
-		return analyzer:GetValue("load", "typesystem").data.lua_function(types.String(code):MakeLiteral(true), types.String("@" .. path:GetData()):MakeLiteral(true))
+		local code_data = oh.Code(code, "@" .. path:GetData())
+		assert(code_data:Lex())
+		assert(code_data:Parse())
+		
+		return self:TypeFromImplicitNode(code_data.SyntaxTree, "function", {
+			arg = types.Tuple({}),
+			ret = types.Tuple({}),
+			lua_function = function(...)
+				assert(code_data:Analyze(nil, nil, ...))
+				return code_data.AnalyzedResult
+			end
+		})
 	end
 
 	type function rawset(tbl: {[any] = any}, key: any, val: any)
