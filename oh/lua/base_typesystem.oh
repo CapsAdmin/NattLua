@@ -23,7 +23,7 @@ type function type_assert(what, type)
 		return
 	end
 
-	if what:GetSignature() ~= type:GetSignature() then
+	if (what.contract or what):GetSignature() ~= type:GetSignature() then
 		error("expected " .. tostring(type) .." got " .. tostring(what))
 	end
 end

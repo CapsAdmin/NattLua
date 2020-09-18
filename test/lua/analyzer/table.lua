@@ -278,3 +278,16 @@ test("var args with unknown length", function()
         type_assert(tbl[100], _ as any)
     ]]
 end)
+
+run[[
+    local list: {[number] = any}
+    list = {}
+    type_assert(list, _ as {[number] = any})
+]]
+
+
+run[[
+    type list = {[number] = any}
+    list = {}
+    type_assert(list, _ as {[number] = any})
+]]

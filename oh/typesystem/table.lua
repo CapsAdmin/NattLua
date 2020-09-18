@@ -299,6 +299,13 @@ function META:Get(key)
         return keyval.val
     end
 
+    if not keyval and self.contract then
+        local keyval, reason = self.contract:GetKeyVal(key, true)
+        if keyval then
+            return keyval.val
+        end
+    end
+
     return types.errors.other(reason)
 end
 

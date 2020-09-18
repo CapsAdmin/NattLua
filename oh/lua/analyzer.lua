@@ -659,7 +659,8 @@ do -- statements
                 val.contract = contract
 
                 if not right[i] then
-                    val = contract
+                    val = contract:Copy()
+                    val.contract = contract                    
                 end
 
                 --val = contract
@@ -674,8 +675,27 @@ do -- statements
                 self:SetUpvalue(exp_key, val, env)
             elseif statement.kind == "assignment" then
                 local key = left[i]
-
+                
                 if exp_key.kind == "value" then
+                    local upvalue = self:GetValue(key, env)
+                    local contract = upvalue and upvalue.contract
+
+                    if not contract and env == "runtime" then
+                        upvalue = self:GetValue(key, "typesystem")
+                        if upvalue then
+                            contract = upvalue
+                        end
+                    end
+
+                    if contract then
+                        local ok, reason = upvalue:SubsetOf(contract)
+
+                        if not ok then
+                            self:Error(val.node or exp_key.type_expression, reason)
+                        end
+
+                        val.contract = contract
+                    end
                     self:SetValue(key, val, env)
                 else
                     local obj = self:AnalyzeExpression(exp_key.left, env)
