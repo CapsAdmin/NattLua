@@ -212,3 +212,20 @@ test("tutorialspoint", function()
     ]]
 end)
 
+run[[
+    local META = {}
+
+    function META:Foo()
+        return 1
+    end
+    
+    function META:Bar()
+        return 2
+    end
+
+    function META:Faz(a, b)
+        print(a,b)
+    end
+
+    META:Faz(META:Foo(), META:Bar())
+]]

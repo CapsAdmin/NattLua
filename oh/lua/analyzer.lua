@@ -1332,7 +1332,8 @@ do -- expressions
 
             -- TODO: more elegant way of dealing with self?
             if node.value.value == ":" then
-                self.self_call_arg = left
+                self.self_arg_stack = self.self_arg_stack or {}
+                table.insert(self.self_arg_stack, left)
             end
 
             return self:Assert(node, self:BinaryOperator(node, left, right, env))
@@ -1479,12 +1480,12 @@ do -- expressions
         local obj = self:AnalyzeExpression(node.left, env)
         local arguments = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
 
-        if self.self_call_arg and node.left.kind == "binary_operator" and node.left.value.value == ":" then
-            table.insert(arguments, 1, self.self_call_arg)
-            self.self_call_arg = nil
+        if self.self_arg_stack and node.left.kind == "binary_operator" and node.left.value.value == ":" then
+            table.insert(arguments, 1, table.remove(self.self_arg_stack))
         end
 
         self.PreferTypesystem = node.type_call
+
         local obj = self:Assert(node, self:Call(obj, types.Tuple(arguments), node))
         self.PreferTypesystem = nil
 
