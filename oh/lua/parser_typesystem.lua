@@ -339,7 +339,7 @@ return function(META)
                 if not self:GetToken() then break end
 
                 if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
-                    if self:IsValue(".") or self:IsCallExpression(no_ambiguous_calls, 2) then
+                    if self:IsValue(".") or self:IsCallExpression(true, 2) then
                         node = self:BeginExpression("binary_operator", true)
                         node.value = self:ReadTokenLoose()
                         node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
@@ -347,7 +347,7 @@ return function(META)
                         self:EndExpression()
                     elseif self:IsValue(":") then
                         node.tokens[":"] = self:ReadValue(":")
-                        node.type_expression = self:ReadTypeExpression()
+                        node.explicit_type = self:ReadTypeExpression()
                     end
                 elseif syntax.typesystem.IsPostfixOperator(self:GetToken()) then
                     node = self:Expression("postfix_operator")
@@ -356,8 +356,8 @@ return function(META)
                 elseif self:IsTypeCall() then
                     node = self:ReadTypeCall()
                     node.left = left
-                elseif self:IsCallExpression(no_ambiguous_calls) then
-                    node = self:ReadCallExpression(no_ambiguous_calls)
+                elseif self:IsCallExpression(true) then
+                    node = self:ReadCallExpression(true)
                     node.left = left
                     if left.value and left.value.value == ":" then
                         node.self_call = true
@@ -367,7 +367,7 @@ return function(META)
                         node.left = left
                 elseif self:IsValue("as") then
                     node.tokens["as"] = self:ReadValue("as")
-                    node.type_expression = self:ReadTypeExpression()
+                    node.explicit_type = self:ReadTypeExpression()
                 else
                     break
                 end

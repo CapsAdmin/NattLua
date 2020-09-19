@@ -787,9 +787,9 @@ function META:EmitIdentifier(node)
     end
 
     if self.config.annotate then
-        if node.type_expression then
+        if node.explicit_type then
             self:EmitToken(node.tokens[":"])
-            self:EmitTypeExpression(node.type_expression)
+            self:EmitTypeExpression(node.explicit_type)
         elseif node.inferred_type then
             self:Emit(": ")
             self:Emit(tostring((node.inferred_type.contract or node.inferred_type)))
@@ -823,9 +823,9 @@ do -- types
     function META:EmitType(node)
         self:EmitToken(node.value)
 
-        if node.type_expression then
+        if node.explicit_type then
             self:EmitToken(node.tokens[":"])
-            self:EmitTypeExpression(node.type_expression)
+            self:EmitTypeExpression(node.explicit_type)
         end
     end
 

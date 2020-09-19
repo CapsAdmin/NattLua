@@ -579,42 +579,36 @@ do -- statements
         for i, exp_key in ipairs(statement.left) do
             if statement.kind == "local_assignment" or (statement.kind == "assignment" and exp_key.kind == "value") then
                 left[i] = exp_key
+                if exp_key.kind == "value" then
+                    exp_key.is_upvalue = self:GetUpvalue(exp_key, env) ~= nil
+                end
             elseif exp_key.kind == "postfix_expression_index" then
                 left[i] = self:AnalyzeExpression(exp_key.expression, env)
-            else
+            elseif exp_key.kind == "binary_operator" then
                 left[i] = self:AnalyzeExpression(exp_key.right, env)
-            end
-            
-            if left[i] then 
-                if left[i].kind == "binary_operator" then
-                    left[i].left.is_upvalue = self:GetUpvalue(left[i].left, env) ~= nil
-                elseif left[i].kind == "value" then
-                    left[i].is_upvalue = self:GetUpvalue(left[i], env) ~= nil
-                end
             end
         end
 
         if statement.right then
-            for i, exp in ipairs(statement.right) do
-                for i2, obj in ipairs({self:AnalyzeExpression(exp, env)}) do
+            for right_pos, exp_val in ipairs(statement.right) do
+                for tuple_index, obj in ipairs({self:AnalyzeExpression(exp_val, env)}) do
                     if obj.Type == "tuple" then
+                        
                         if obj.max and obj.ElementType then
-                            for i3 = 1, #statement.left do
-                                right[i + i2 - 1 + i3 - 1 ] = obj:Get(i3)
+                            for left_pos = 1, #statement.left do
+                                right[right_pos + tuple_index - 1 + left_pos - 1 ] = obj:Get(left_pos)
                             end
                         else
                             for i3,v in ipairs(obj:GetData()) do
-                                right[i + i2 - 1 + i3 - 1 ] = v
+                                right[right_pos + tuple_index - 1 + i3 - 1 ] = v
                             end
                         end
                     else
-                        right[i + i2 - 1] = obj
+                        right[right_pos + tuple_index - 1] = obj
                     end
 
-                    -- if the type has been cast with the as operator 
-                    -- use it as its contract
-                    if exp.type_expression then
-                        obj.contract = obj
+                    if exp_val.explicit_type then
+                        obj.contract = obj:Copy()
                     end
                 end
             end
@@ -632,11 +626,11 @@ do -- statements
             local val = right[i] or self:TypeFromImplicitNode(exp_key, "nil")
 
             -- if there's a type expression override the right value
-            if exp_key.type_expression then
-                local contract = self:AnalyzeExpression(exp_key.type_expression, "typesystem")
+            if exp_key.explicit_type then
+                local contract = self:AnalyzeExpression(exp_key.explicit_type, "typesystem")
                 if contract.type == "nil" then
                     -- TODO: better error
-                    self:Error(exp_key.type_expression, "cannot be nil")
+                    self:Error(exp_key.explicit_type, "cannot be nil")
                 end
 
                 if statement.right and statement.right[i] then
@@ -652,14 +646,14 @@ do -- statements
                     local ok, reason = val:SubsetOf(contract)
 
                     if not ok then
-                        self:Error(val.node or exp_key.type_expression, reason)
+                        self:Error(val.node or exp_key.explicit_type, reason)
                     end
 
                     if contract.Type == "table" then
                         local ok, reason = val:ContainsAllKeysIn(contract)
                     
                         if not ok then
-                            self:Error(val.node or exp_key.type_expression, reason)
+                            self:Error(val.node or exp_key.explicit_type, reason)
                         end
                     end
                 end
@@ -668,13 +662,8 @@ do -- statements
 
                 if not right[i] then
                     val = contract:Copy()
-                    val.contract = contract                    
+                    val.contract = contract
                 end
-
-                --val = contract
-            else
-                -- by default assignments are not constant, even though TypeFromImplicitNode is const by default
-            --  val.literal = false
             end
 
             exp_key.inferred_type = val
@@ -699,7 +688,7 @@ do -- statements
                         local ok, reason = upvalue:SubsetOf(contract)
 
                         if not ok then
-                            self:Error(val.node or exp_key.type_expression, reason)
+                            self:Error(val.node or exp_key.explicit_type, reason)
                         end
 
                         val.contract = contract
@@ -761,13 +750,14 @@ do -- statements
     function META:AnalyzeIfStatement(statement)
         local prev_expression
         for i, statements in ipairs(statement.statements) do
+            local scope
+            
             if statement.expressions[i] then
                 local obj = self:AnalyzeExpression(statement.expressions[i], "runtime")
 
                 prev_expression = obj
 
                 if obj:IsTruthy() then
-                    local scope
 
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
                         scope = self:GetScope()
@@ -783,8 +773,6 @@ do -- statements
                     end
                 end
             else
-                -- else part
-
                 if prev_expression:IsFalsy() then
                     self:PushScope(statement, statement.tokens["if/else/elseif"][i])
                         scope = self:GetScope()
@@ -1615,8 +1603,8 @@ do -- expressions
             if key.identifier then
                 args[i] = self:AnalyzeExpression(key, "typesystem")
                 explicit_arguments = true
-            elseif key.type_expression then
-                args[i] = self:AnalyzeExpression(key.type_expression, "typesystem") or self:GetInferredType(key)
+            elseif key.explicit_type then
+                args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem") or self:GetInferredType(key)
                 explicit_arguments = true
             else
                 if node.kind == "type_function" then
@@ -1747,8 +1735,8 @@ do -- expressions
         end
 
         -- usually from "as", "local a = myval as true"
-        if node.type_expression then
-            return self:AnalyzeExpression(node.type_expression, "typesystem")
+        if node.explicit_type then
+            return self:AnalyzeExpression(node.explicit_type, "typesystem")
         elseif node.kind == "value" then
             return self:AnalyzeSingleValueExpression(node, env)
         elseif node.kind == "function" or node.kind == "type_function" then

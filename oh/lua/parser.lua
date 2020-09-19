@@ -391,7 +391,7 @@ do -- identifier
 
         if self.ReadTypeExpression and self:IsValue(":") then
             node.tokens[":"] = self:ReadValue(":")
-            node.type_expression = self:ReadTypeExpression()
+            node.explicit_type = self:ReadTypeExpression()
         end
 
         return self:EndExpression()
@@ -607,7 +607,7 @@ do -- expression
                         self:EndExpression()
                     elseif self:IsValue(":") then
                         node.tokens[":"] = self:ReadValue(":")
-                        node.type_expression = self:ReadTypeExpression()
+                        node.explicit_type = self:ReadTypeExpression()
                     end
                 elseif syntax.IsPostfixOperator(self:GetToken()) then
                     node = self
@@ -626,10 +626,10 @@ do -- expression
                     node.left = left
                 elseif self:IsValue("as") then
                     node.tokens["as"] = self:ReadValue("as")
-                    node.type_expression = self:ReadTypeExpression()
+                    node.explicit_type = self:ReadTypeExpression()
                 elseif self:IsValue("is") then
                     node.tokens["is"] = self:ReadValue("is")
-                    node.type_expression = self:ReadTypeExpression()
+                    node.explicit_type = self:ReadTypeExpression()
                 elseif self:IsTypeCall() then
                     node = self:ReadTypeCall()
 

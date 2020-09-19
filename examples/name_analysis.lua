@@ -167,5 +167,5 @@ for _, path in ipairs(paths) do
 end
 
 local time = os.clock()
-check_tokens(all_tokens, code)
+check_tokens(all_tokens)
 print(os.clock() - time)

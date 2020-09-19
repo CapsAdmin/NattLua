@@ -18,6 +18,11 @@ return function(key_type, val_type)
     local META = {}
     META.__index = META
 
+    local function address_hash(val)
+        local address = ffi.cast("uint64_t", ffi.cast("void *", val))
+        return tonumber(address)
+    end
+
     local function hash(ptr, max)
         if type(ptr) == "string" then
             local idx = 0

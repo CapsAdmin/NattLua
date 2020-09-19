@@ -37,11 +37,6 @@ local function cast8(ptr)
     return ffi.cast("uint8_t*", ptr)[0]
 end
 
-local function address_hash(val)
-    local address = ffi.cast("uint64_t", ffi.cast("void *", val))
-    return tonumber(address)
-end
-
 local function meiyan_hash(key)
     local count = u64(#key)
     local h = u64(0x811c9dc5)
