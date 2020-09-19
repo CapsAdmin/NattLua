@@ -268,11 +268,6 @@ return function(META)
         end
     end
 
-    function META:CallMeLater(...)
-        self.deferred_calls = self.deferred_calls or {}
-        table.insert(self.deferred_calls, 1, {...})
-    end
-
     function META:Assert(node, ok, err)
         if ok == false then
             err = err or "unknown error"
@@ -443,34 +438,49 @@ return function(META)
         return out
     end
 
-    function META:ProcessDeferredCalls()
-        if not self.deferred_calls then
-            return
+    do
+        function META:CallMeLater(...)
+            local analyzers = require("oh.lua.analyzer_env").current_analyzer
+            
+            self = analyzers[#analyzers] or self
+
+            self.deferred_calls = self.deferred_calls or {}
+            table.insert(self.deferred_calls, 1, {...})
         end
 
-        self.returned_from_certain_scope = nil
-        self.returned_from_block = nil
-
-        for _,v in ipairs(self.deferred_calls) do
-            if not v[1].called and v[1].explicit_arguments then
-                local obj, arguments, node = table.unpack(v)
-
-                -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                arguments = obj:GetArguments()
-                self:Assert(node, self:Call(obj, arguments, node))
+        function META:ProcessDeferredCalls()
+            if not self.deferred_calls then
+                return
             end
-        end
 
-        for _,v in ipairs(self.deferred_calls) do
-            if not v[1].called and not v[1].explicit_arguments then
-                local obj, arguments, node = table.unpack(v)
+            self.processing_deferred_calls = true 
 
-                -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                arguments = obj:GetArguments()
-                self:Assert(node, self:Call(obj, arguments, node))
+            self.returned_from_certain_scope = nil
+            self.returned_from_block = nil
+
+            for _,v in ipairs(self.deferred_calls) do
+                if not v[1].called and v[1].explicit_arguments then
+                    local obj, arguments, node = table.unpack(v)
+
+                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+                    arguments = obj:GetArguments()
+                    self:Assert(node, self:Call(obj, arguments, node))
+                end
             end
-        end
 
-        self.deferred_calls = nil
+            for _,v in ipairs(self.deferred_calls) do
+                if not v[1].called and not v[1].explicit_arguments then
+                    local obj, arguments, node = table.unpack(v)
+
+                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+                    arguments = obj:GetArguments()
+                    self:Assert(node, self:Call(obj, arguments, node))
+                end
+            end
+
+            self.processing_deferred_calls = false
+
+            self.deferred_calls = nil
+        end
     end
 end

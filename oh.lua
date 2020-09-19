@@ -49,9 +49,37 @@ do
 	end
 
 	function META:OnError(msg, start, stop, ...)
-		self = analyzer_env.code_data or self
+		local code = self.code
+		local name = self.name
 
-		local msg = helpers.FormatError(self.code, self.name, msg, start, stop, nil, ...)
+		local obj_called = self.analyzer and self.analyzer.calling_function
+		local real_analyzer = obj_called and obj_called.analyzer_needed_for_error_handling
+
+		if real_analyzer then
+			code = real_analyzer.code_data.code
+			name = real_analyzer.code_data.name
+		end
+
+		local level = 0
+		for i,v in ipairs(analyzer_env.current_analyzer) do
+			if self.analyzer == v then
+				level = i - 1
+				break
+			end
+		end
+
+		if self.analyzer and self.analyzer.processing_deferred_calls then
+			msg = "DEFERRED CALL: " .. msg 
+		end
+
+		local msg = helpers.FormatError(code, name, msg, start, stop, nil, ...)
+
+		local msg2 = ""
+		for line in msg:gmatch("(.-)\n") do
+			msg2 = msg2 .. (" "):rep(4-level*2) .. line .. "\n"
+		end
+		msg = msg2
+
 		if self.NoThrow then
 			io.write(msg)
 		else

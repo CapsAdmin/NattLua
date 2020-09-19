@@ -428,3 +428,7 @@ run[[
     a:add(3)
     type_assert(a:get(), {1,2,3})
 ]]
+
+run[[
+    type_assert(require("test.lua.analyzer.file_importing.foo.expect5")(5), 1337)
+]]
