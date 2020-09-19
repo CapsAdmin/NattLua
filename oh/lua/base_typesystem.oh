@@ -188,7 +188,7 @@ do -- globals
 		end
 	end
 
-	type function require(name)
+	type function require(name: string)
 		local str = name.data
 
 		local base_analyzer = require("oh.lua.analyzer_env").GetBaseAnalyzer()
