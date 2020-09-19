@@ -177,6 +177,8 @@ do
 end
 
 function META:Call(obj, arguments, call_node)
+    if obj.Type == "tuple" then obj = obj:Get(1) end
+
     call_node = call_node or obj.node
     local function_node = obj.node
 
@@ -189,10 +191,6 @@ function META:Call(obj, arguments, call_node)
     })
 
     local env = self.PreferTypesystem and "typesystem" or "runtime"
-
-    if obj.Type == "tuple" then
-        obj = obj:Get(1)
-    end
 
     if obj.Type == "set" then
         if obj:IsEmpty() then
