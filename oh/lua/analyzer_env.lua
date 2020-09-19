@@ -2,21 +2,6 @@
 
 local analyzer_env = {}
 
-do
-    analyzer_env.current_analyzer = {}
-
-    function analyzer_env.PushAnalyzer(a)
-        table.insert(analyzer_env.current_analyzer, 1, a)
-    end
-
-    function analyzer_env.PopAnalyzer()
-        table.remove(analyzer_env.current_analyzer, 1)
-    end
-
-    function analyzer_env.GetCurrentAnalyzer()
-        return analyzer_env.current_analyzer[1]
-    end
-end
 
 function analyzer_env.GetBaseAnalyzer()
 

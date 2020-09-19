@@ -559,28 +559,14 @@ do -- control flow analysis
 end
 
 do -- statements
-    local function analyze_root(self, argument_tuple, statement, ...)
+    function META:AnalyzeRootStatement(statement, ...)
+        local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):SetElementType(types.Any()):Max(math.huge)
         self:PushScope(statement)
         self:SetUpvalue("...", argument_tuple, "runtime")
         self:PushReturn()
         self:AnalyzeStatements(statement.statements)
         local analyzed_return = types.Tuple(self:PopReturn())
         self:PopScope()
-        self:ProcessDeferredCalls()
-        return analyzed_return
-    end
-
-    function META:AnalyzeRootStatement(statement, ...)
-        local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):SetElementType(types.Any()):Max(math.huge)
-        
-        analyzer_env.PushAnalyzer(self)
-        local ok, analyzed_return = pcall(analyze_root, self, argument_tuple, statement, ...)
-        analyzer_env.PopAnalyzer()
-    
-        if not ok then
-            error(analyzed_return)
-        end
-    
         return analyzed_return
     end
 

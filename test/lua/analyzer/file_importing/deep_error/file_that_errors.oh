@@ -1,0 +1,19 @@
+
+--- here comes the error!
+
+-- almost!
+
+
+
+
+-- !!!
+
+
+-- !!
+
+type function error(msg)
+    error(msg:GetData())
+end
+
+-- ERROR4
+error("finally the error!")

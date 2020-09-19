@@ -48,25 +48,8 @@ do
 		return str
 	end
 
-	function META:OnError(msg, start, stop, ...)
-		local code = self.code
-		local name = self.name
-
-		local obj_called = self.analyzer and self.analyzer.calling_function
-		local real_analyzer = obj_called and obj_called.analyzer_needed_for_error_handling
-
-		if real_analyzer then
-			code = real_analyzer.code_data.code
-			name = real_analyzer.code_data.name
-		end
-
+	function META:OnError(code, name, msg, start, stop, ...)
 		local level = 0
-		for i,v in ipairs(analyzer_env.current_analyzer) do
-			if self.analyzer == v then
-				level = i - 1
-				break
-			end
-		end
 
 		if self.analyzer and self.analyzer.processing_deferred_calls then
 			msg = "DEFERRED CALL: " .. msg 
@@ -79,7 +62,7 @@ do
 			msg2 = msg2 .. (" "):rep(4-level*2) .. line .. "\n"
 		end
 		msg = msg2
-
+		
 		if self.NoThrow then
 			io.write(msg)
 		else
@@ -87,7 +70,7 @@ do
 		end
 	end
 
-	local function traceback_(self, obj, msg)
+	local function traceback_(self, obj, msg)-- do return msg end
 		msg = msg or "no error"
 
 		local s = ""
@@ -161,6 +144,7 @@ do
 
 	function META:Lex()
 		local lexer = self.Lexer(self.code)
+		lexer.name = self.name
 		self.lexer = lexer
 		lexer.OnError = function(lexer, ...) self:OnError(...) end
 		
@@ -188,6 +172,8 @@ do
 		end
 
 		local parser = self.Parser(self.config)
+		parser.code = self.code
+		parser.name = self.name
 		self.parser = parser
 		parser.OnError = function(parser, ...) self:OnError(...) end
 
@@ -229,14 +215,14 @@ do
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
 
-		local ok, res = xpcall(
-			analyzer.AnalyzeRootStatement, 
-			function(msg) return traceback(self, analyzer, msg) end, 
-			analyzer,
-			self.SyntaxTree,
+		local ok, res = xpcall(function(...) 
+				local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, ...)
+				analyzer:AnalyzeUnreachableCode()
+				return res
+			end,
+			function(msg) return traceback(self, analyzer, msg) end,
 			...
-		)
-		
+		)		
 		self.AnalyzedResult = res
 
 		if not ok then

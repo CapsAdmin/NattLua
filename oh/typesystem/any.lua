@@ -41,19 +41,4 @@ function META:IsTruthy()
     return true
 end
 
-function META:Initialize()
-    --[[
-    local a = analyzer_env.GetCurrentAnalyzer()
-    if a then
-        if a.path and a.path:find("base_typesystem") then
-            return self
-        end
-        if a.current_expression then
-            a:Error(a.current_expression, "implicit any")
-        end
-    end
-]]
-    return self
-end
-
 return types.RegisterType(META)

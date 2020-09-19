@@ -145,11 +145,6 @@ function types.RegisterType(meta)
             end
         end
     
-        local a = analyzer_env.GetCurrentAnalyzer()
-        if a then
-            self.node = a.current_expression
-        end
-
         return self
     end
 end

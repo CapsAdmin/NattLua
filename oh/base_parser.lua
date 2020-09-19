@@ -44,6 +44,8 @@ return function(META)
             node.tokens = {}
             node.kind = kind
             node.id = id
+            node.code = self.code
+            node.name = self.name
             id = id + 1
 
             setmetatable(node, META)
@@ -123,6 +125,8 @@ return function(META)
             node.tokens = {}
             node.kind = kind
             node.id = id
+            node.code = self.code
+            node.name = self.name
             id = id + 1
 
             setmetatable(node, META)
@@ -152,7 +156,7 @@ return function(META)
 
         --msg = debug.traceback(msg)
 
-        self:OnError(msg, start, stop, ...)
+        self:OnError(self.code, self.name, msg, start, stop, ...)
     end
 
     function META:GetToken(offset)

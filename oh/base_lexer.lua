@@ -216,7 +216,7 @@ return function(META)
 
     function META:Error(msg, start, stop)
         if self.OnError then
-            self:OnError(msg, start or self.i, stop or self.i)
+            self:OnError(self.code, self.name, msg, start or self.i, stop or self.i)
         end
     end
 

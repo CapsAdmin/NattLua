@@ -284,12 +284,12 @@ return function(META)
         end
 
         if self.OnError then
-            self:OnError(msg, helpers.LazyFindStartStop(node))
+            self:OnError(node.code, node.name, msg, helpers.LazyFindStartStop(node))
         end
 
-        if self.code then
+        if node.code then
             local start, stop = helpers.LazyFindStartStop(node)
-            io.write(helpers.FormatError(self.code, self.path or node.type, msg, start, stop), "\n")
+            io.write(helpers.FormatError(node.code, node.name or node.type, msg, start, stop), "\n")
         else
             local s = tostring(self)
             s = s .. ": " .. msg
@@ -440,46 +440,38 @@ return function(META)
 
     do
         function META:CallMeLater(...)
-            local analyzers = require("oh.lua.analyzer_env").current_analyzer
-            
-            self = analyzers[#analyzers] or self
-
             self.deferred_calls = self.deferred_calls or {}
             table.insert(self.deferred_calls, 1, {...})
         end
 
-        function META:ProcessDeferredCalls()
+        function META:AnalyzeUnreachableCode()
             if not self.deferred_calls then
                 return
             end
 
             self.processing_deferred_calls = true 
-
             self.returned_from_certain_scope = nil
             self.returned_from_block = nil
 
+            local function call(obj, arguments, node)
+                -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+                arguments = obj:GetArguments()
+                self:Assert(node, self:Call(obj, arguments, node))
+            end
+
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and v[1].explicit_arguments then
-                    local obj, arguments, node = table.unpack(v)
-
-                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                    arguments = obj:GetArguments()
-                    self:Assert(node, self:Call(obj, arguments, node))
+                    call(table.unpack(v))
                 end
             end
 
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and not v[1].explicit_arguments then
-                    local obj, arguments, node = table.unpack(v)
-
-                    -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                    arguments = obj:GetArguments()
-                    self:Assert(node, self:Call(obj, arguments, node))
+                    call(table.unpack(v))
                 end
             end
 
             self.processing_deferred_calls = false
-
             self.deferred_calls = nil
         end
     end

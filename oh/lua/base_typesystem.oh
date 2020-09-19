@@ -8,6 +8,11 @@ local type thread = table
 
 local type empty_function = function(...): any
 
+type function error_inside_base_typesystem()	
+	-- a comment to match from test
+	local a = nil + true
+end
+
 type function keysof(tbl: table)
 	local set = types.Set()
 
@@ -221,12 +226,13 @@ do -- globals
 
 						assert(code_data:Lex())
 						assert(code_data:Parse())
-						assert(code_data:Analyze())
+
+						local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
 						
 						analyzer.loaded = analyzer.loaded or {}
-						analyzer.loaded[path] = code_data.AnalyzedResult
+						analyzer.loaded[path] = res
 
-						return code_data.AnalyzedResult
+						return res
 					end
 				end
 			end
@@ -251,8 +257,7 @@ do -- globals
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
 			lua_function = function(...)
-				assert(code_data:Analyze(nil, nil, ...))
-				return code_data.AnalyzedResult
+				return analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
 			end
 		})
 	end
@@ -270,8 +275,7 @@ do -- globals
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
 			lua_function = function(...)
-				assert(code_data:Analyze(nil, nil, ...))
-				return code_data.AnalyzedResult
+				return analyzer:AnalyzeRootStatement(code_data.SyntaxTree, ...)
 			end
 		})
 	end
