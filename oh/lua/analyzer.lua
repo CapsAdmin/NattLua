@@ -84,7 +84,13 @@ function META:GetOperator(obj, key, node)
             end
 
             if index.Type == "function" or index.Type == "table" then
-                return self:Call(index, types.Tuple({obj, key}), key.node):Get(1)
+                local obj, err = self:Call(index, types.Tuple({obj, key}), key.node)
+                
+                if not obj then
+                    return obj, err
+                end
+
+                return obj:Get(1)
             end
         end
     end
