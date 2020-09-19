@@ -1,10 +1,10 @@
 local type boolean = true | false
 
-local type table = {[any] = any}
-local type userdata = table
-local type cdata = table
-local type ctype = table
-local type thread = table
+local type Table = {[any] = any}
+local type userdata = Table
+local type cdata = Table
+local type ctype = Table
+local type thread = Table
 
 local type empty_function = function(...): any
 
@@ -13,7 +13,7 @@ type function error_inside_base_typesystem()
 	local a = nil + true
 end
 
-type function keysof(tbl: table)
+type function keysof(tbl: Table)
 	local set = types.Set()
 
 	for _, keyval in ipairs(tbl:GetData()) do
@@ -65,24 +65,24 @@ type function type_traceback()
 end
 
 do -- globals
-	type setmetatable = (function(table: table, metatable: table|nil): table)
+	type setmetatable = (function(table: Table, metatable: Table|nil): Table)
 	type select = (function(index: number|string, ...): ...)
-	type rawlen = (function(v: table|string): number)
-	type unpack = (function(list: table, i: number, j: number): ...) | (function(list: table, i: number): ...) | (function(list: table): ...)
+	type rawlen = (function(v: Table|string): number)
+	type unpack = (function(list: Table, i: number, j: number): ...) | (function(list: Table, i: number): ...) | (function(list: Table): ...)
 	type require = (function(modname: string): any)
-	type rawset = (function(table: table, index: any, value: any): table)
-	type getmetatable = (function(object: any): table|nil)
-	type load = (function(ld: string|empty_function, source: string, mode: string, env: table): empty_function|nil, string|nil) | (function(ld: string|empty_function, source: string, mode: string): empty_function|nil, string|nil) | (function(ld: string|empty_function, source: string): empty_function|nil, string|nil) | (function(ld: string|empty_function): empty_function|nil, string|nil)
+	type rawset = (function(table: Table, index: any, value: any): Table)
+	type getmetatable = (function(object: any): Table|nil)
+	type load = (function(ld: string|empty_function, source: string, mode: string, env: Table): empty_function|nil, string|nil) | (function(ld: string|empty_function, source: string, mode: string): empty_function|nil, string|nil) | (function(ld: string|empty_function, source: string): empty_function|nil, string|nil) | (function(ld: string|empty_function): empty_function|nil, string|nil)
 	type type = (function(v: any): string)
 	type collectgarbage = (function(opt: string, arg: number): ...) | (function(opt: string): ...) | (function(): ...)
-	type getfenv = (function(f: empty_function|number): table) | (function(): table)
-	type pairs = (function(t: table): empty_function, table, nil)
+	type getfenv = (function(f: empty_function|number): Table) | (function(): Table)
+	type pairs = (function(t: Table): empty_function, Table, nil)
 	type rawequal = (function(v1: any, v2: any): boolean)
 	type loadstring = (function(string: string, chunkname: string): empty_function|nil, string|nil) | (function(string: string): empty_function|nil, string|nil)
 	type error = (function(message: string, level: number): nil) | (function(message: string): nil)
-	type loadfile = (function(filename: string, mode: string, env: table): empty_function|nil, string|nil) | (function(filename: string, mode: string): empty_function|nil, string|nil) | (function(filename: string): empty_function|nil, string|nil) | (function(): empty_function|nil, string|nil)
+	type loadfile = (function(filename: string, mode: string, env: Table): empty_function|nil, string|nil) | (function(filename: string, mode: string): empty_function|nil, string|nil) | (function(filename: string): empty_function|nil, string|nil) | (function(): empty_function|nil, string|nil)
 	type dofile = (function(filename: string): ...) | (function(): ...)
-	type ipairs = (function(t: table): empty_function, table, number)
+	type ipairs = (function(t: Table): empty_function, Table, number)
 	type tonumber = (function(e: number | string, base: number | nil): number | nil)
 	type function print(...) print(...) end
 	type tostring = (function(val: any): string)
@@ -343,7 +343,7 @@ type ffi = {
 	C = {},
 	cdef = (function(string): nil),
 	abi = (function(string): boolean),
-	metatype = (function(ctype, table): cdata),
+	metatype = (function(ctype, Table): cdata),
 	new = (function(string | ctype, number, any...): cdata),
 	copy = (function(cdata, cdata | nil, number | string | nil): nil),
 	alignof = (function(ctype): number),
@@ -395,19 +395,19 @@ type debug = {
 	getlocal = (function(thread: thread, f: number|empty_function, local_: number): string|nil, any) | (function( f: number|empty_function, local_: number): string|nil, any),
 	upvaluejoin = (function(f1: empty_function, n1: number, f2: empty_function, n2: number): nil),
 	getupvalue = (function(f: empty_function, up: number): string|nil, any),
-	getmetatable = (function(value: any): table|nil),
-	setmetatable = (function(value: any, table: table|nil): any),
+	getmetatable = (function(value: any): Table|nil),
+	setmetatable = (function(value: any, Table: Table|nil): any),
 	gethook = (function(thread: thread): empty_function, string, number) | (function(): empty_function, string, number),
-	getuservalue = (function(u: userdata): table|nil),
+	getuservalue = (function(u: userdata): Table|nil),
 	debug = (function(): nil),
-	getfenv = (function(o: any): table),
-	setfenv = (function(object: any, table: table): any),
-	setuservalue = (function(udata: userdata, value: table|nil): userdata)
+	getfenv = (function(o: any): Table),
+	setfenv = (function(object: any, Table: Table): any),
+	setuservalue = (function(udata: userdata, value: Table|nil): userdata)
 }
 
 type package = {
 	searchpath = (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil) | (function(name: string, path: string, sep: string): string|nil, string|nil) | (function(name: string, path: string): string|nil, string|nil),
-	seeall = (function(module: table): nil),
+	seeall = (function(module: Table): nil),
 	loadlib = (function(libname: string, funcname: string): empty_function|nil)
 }
 
@@ -431,15 +431,15 @@ type bit = bit32
 
 do
 	type table = {
-		maxn = (function(table: table): number),
-		move = (function(a1: table, f: any, e: any, t: any ,a2: table): nil) | (function(a1: table, f: any, e: any, t: any): nil),
-		remove = (function(list: table, pos: number): any) | (function(list: table): any),
-		sort = (function(list: table, comp: empty_function): nil) | (function(list: table): nil),
-		unpack = (function(list: table, i: number, j: number): ...) | (function(list: table, i: number): ...) | (function(list: table): ...),
-		insert = (function(list: table, pos: number, value: any): nil) | (function(list: table,  value: any): nil),
-		concat = (function(list: table, sep: string, i: number, j: number): string) | (function(list: table, sep: string, i: number): string) | (function(list: table, sep: string): string) | (function(list: table): string),
-		pack = (function(...): table),
-		new = (function(number, number): table),
+		maxn = (function(table: Table): number),
+		move = (function(a1: Table, f: any, e: any, t: any ,a2: Table): nil) | (function(a1: Table, f: any, e: any, t: any): nil),
+		remove = (function(list: Table, pos: number): any) | (function(list: Table): any),
+		sort = (function(list: Table, comp: empty_function): nil) | (function(list: Table): nil),
+		unpack = (function(list: Table, i: number, j: number): ...) | (function(list: Table, i: number): ...) | (function(list: Table): ...),
+		insert = (function(list: Table, pos: number, value: any): nil) | (function(list: Table,  value: any): nil),
+		concat = (function(list: Table, sep: string, i: number, j: number): string) | (function(list: Table, sep: string, i: number): string) | (function(list: Table, sep: string): string) | (function(list: Table): string),
+		pack = (function(...): Table),
+		new = (function(number, number): Table),
 	}
 
 	type function table.insert(tbl: {[1 .. inf] = any}, ...)
@@ -490,7 +490,7 @@ do
 			(function(s: string, i: number): number | nil) |
 			(function(s: string): number),
 		unpack = (function(fmt: string, s: string, pos: number): ...) | (function(fmt: string, s: string): ...),
-		gsub = (function(s: string, pattern: string, repl: string|table|empty_function, n: number): string, number) | (function(s: string, pattern: string, repl: string|table|empty_function): string, number),
+		gsub = (function(s: string, pattern: string, repl: string|Table|empty_function, n: number): string, number) | (function(s: string, pattern: string, repl: string|Table|empty_function): string, number),
 		format = (function(string, ...): string),
 		pack = (function(fmt: string, ...): string)
 	}
@@ -683,8 +683,8 @@ type os = {
 	exit = (function(code: boolean|number, close: boolean): nil) | (function(code: boolean|number): nil) | (function(): nil),
 	remove = (function(filename: string): boolean|nil, string, number|nil),
 	setlocale = (function(local_e: string, category: string): string|nil) | (function(local_e: string): string|nil),
-	date = (function(format: string, time: number): string|table) | (function(format: string): string|table) | (function(): string|table),
-	time = (function(table: table): number) | (function(): number),
+	date = (function(format: string, time: number): string|Table) | (function(format: string): string|Table) | (function(): string|Table),
+	time = (function(table: Table): number) | (function(): number),
 	clock = (function(): number),
 	tmpname = (function(): string)
 }
