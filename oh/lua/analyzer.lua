@@ -654,6 +654,14 @@ do -- statements
                     if not ok then
                         self:Error(val.node or exp_key.type_expression, reason)
                     end
+
+                    if contract.Type == "table" then
+                        local ok, reason = val:ContainsAllKeysIn(contract)
+                    
+                        if not ok then
+                            self:Error(val.node or exp_key.type_expression, reason)
+                        end
+                    end
                 end
 
                 val.contract = contract

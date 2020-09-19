@@ -112,6 +112,7 @@ function META.SubsetOf(A, B)
         end
 
         done = done or {}
+
         for _, a in ipairs(A.data) do
             local b
             do
@@ -155,6 +156,18 @@ function META.SubsetOf(A, B)
     end
 
     return types.errors.subset(A, B)
+end
+
+function META:ContainsAllKeysIn(contract)
+    for _, keyval in ipairs(contract.data) do
+        if keyval.key:IsLiteral() then
+            local ok, err = self:GetKeyVal(keyval.key)
+            if not ok then
+                return types.errors.other(tostring(keyval.key) .. " is missing from " .. tostring(contract))
+            end
+        end
+    end
+    return true
 end
 
 function META:IsDynamic()

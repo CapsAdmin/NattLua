@@ -441,3 +441,12 @@ run([[
         assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)
     end
 end)
+
+run([[
+    type Foo = {
+        a = 1,
+        b = 2,
+    }
+
+    local a: Foo = { a = 1 }    
+]], " is missing from ")
