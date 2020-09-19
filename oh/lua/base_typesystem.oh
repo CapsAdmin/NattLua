@@ -240,7 +240,10 @@ do -- globals
 			return types.Any
 		end
 
-		local code_data = oh.Code(code:GetData(), chunk_name and chunk_name:GetData() or nil)
+		local str = code:GetData()
+		str = str:gsub("\\(.)", function(char) return load("return '\\" .. char .. "'")() end)
+
+		local code_data = oh.Code(str, chunk_name and chunk_name:GetData() or nil)
 		assert(code_data:Lex())
 		assert(code_data:Parse())
 		
