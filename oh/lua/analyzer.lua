@@ -271,7 +271,7 @@ function META:Call(obj, arguments, call_node)
 
             if not ok then
                 if b.node then
-                    return types.errors.other("function argument '" .. b.node:Render() .. "': " .. reason)
+                    return types.errors.other("function argument #"..i.." '" .. tostring(b) .. "': " .. reason)
                 else
                     return types.errors.other("argument #" .. i .. " - " .. reason)
                 end
