@@ -1,40 +1,4 @@
-local analyzer_env = require("oh.lua.analyzer_env")
-
 local types = {}
-
---[[
-    this keeps confusing me
-
-    subset:
-        A subsetof B
-        A within B
-        A inside B
-        A compatible with B
-        A child of B
-
-    superset:
-        A parent of B
-        A supersetof B
-        A covers B
-        A contains B
-        A has B
-        A owns B
-        A entails B
-]]
-
-local function store_error(msg)
-    do return end -- WIP
-    local a = analyzer_env.GetCurrentAnalyzer()
-    if a then
-        a.error_stack = a.error_stack or {}
-        table.insert(a.error_stack, {
-            msg = msg,
-            expression = a.current_expression,
-            statement = a.current_statement,
-        })
-    end
-
-end
 
 types.errors = {
     subset = function(a, b, reason)
@@ -44,16 +8,13 @@ types.errors = {
             msg = msg .. " because " .. reason
         end
 
-        store_error(msg)
         return false, msg
     end,
     missing = function(a, b)
         local msg = tostring(a) .. " does not contain " .. tostring(b)
-        store_error(msg)
         return false, msg
     end,
     other = function(msg)
-        store_error(msg)
         return false, msg
     end,
 }

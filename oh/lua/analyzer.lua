@@ -1,7 +1,3 @@
-
-local oh = require("oh")
-local analyzer_env = require("oh.lua.analyzer_env")
-
 local types = require("oh.typesystem.types")
 types.Initialize()
 
@@ -1762,7 +1758,7 @@ local function DefaultIndex(self, node)
         return nil
     end
 
-    return analyzer_env.GetBaseAnalyzer():GetValue(node, "typesystem")
+    return require("oh.lua.shared_analyzer"):GetValue(node, "typesystem")
 end
 
 return function()

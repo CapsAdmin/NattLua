@@ -1,5 +1,4 @@
 local types = require("oh.typesystem.types")
-local analyzer_env = require("oh.lua.analyzer_env")
 
 local META = {}
 META.Type = "any"

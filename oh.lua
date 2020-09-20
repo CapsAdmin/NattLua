@@ -3,7 +3,6 @@ if not table.unpack and _G.unpack then
 end
 
 local helpers = require("oh.helpers")
-local analyzer_env = require("oh.lua.analyzer_env")
 
 local oh = {}
 

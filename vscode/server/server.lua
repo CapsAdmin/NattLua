@@ -11,7 +11,7 @@ local json = require("vscode.server.json")
 local oh = require("oh")
 local helpers = require("oh.helpers")
 local tprint = require("examples.util").TablePrint
-local analyzer_env = require("oh.lua.analyzer_env")
+local shared_analyzer = require("oh.lua.shared_analyzer")
 local server = _G.SERVER or require("vscode.server.lsp")
 _G.SERVER = server
 
@@ -55,7 +55,7 @@ local function compile(uri, server, client)
 		local data = helpers.SubPositionToLinePosition(code, start, stop)
 
 		if not data then
-			local code = io.open(analyzer_env.GetBaseAnalyzer().path):read("*all")
+			local code = io.open(shared_analyzer.path):read("*all")
 			data = helpers.SubPositionToLinePosition(code, start, stop)
 			if not data then
 				print("INTERNAL ERROR: ", self, msg, start, stop, ...)

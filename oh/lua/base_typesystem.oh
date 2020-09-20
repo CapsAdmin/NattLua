@@ -196,14 +196,14 @@ do -- globals
 	type function require(name: string)
 		local str = name.data
 
-		local base_analyzer = require("oh.lua.analyzer_env").GetBaseAnalyzer()
+		local shared_analyzer = require("oh.lua.shared_analyzer")
 
-		if base_analyzer:GetValue("_G", "typesystem"):Get(str) then
-			return base_analyzer:GetValue("_G", "typesystem"):Get(str)
+		if shared_analyzer:GetValue("_G", "typesystem"):Get(str) then
+			return shared_analyzer:GetValue("_G", "typesystem"):Get(str)
 		end
 		
 		if str == "table.new" then
-			return base_analyzer:GetValue("table", "typesystem"):Get("new")
+			return shared_analyzer:GetValue("table", "typesystem"):Get("new")
 		end
 
 		if self:GetValue(str, "typesystem") then
