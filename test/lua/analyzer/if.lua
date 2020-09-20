@@ -363,6 +363,16 @@ run[[
     type_assert(c, _ as -1 | 1)
 ]]
 
+run[[
+    local a: true
+
+    if a then
+        return
+    end
+
+    type_assert(a, _ as never)
+]]
+
 pending([[
     local a: nil | 1
     if not a then return end

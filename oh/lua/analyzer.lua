@@ -132,6 +132,8 @@ function META:TypeFromImplicitNode(node, type, data, literal, parent)
         obj = self:Assert(node, types.Symbol(nil))
     elseif type == "any" then
         obj = self:Assert(node, types.Any())
+    elseif type == "never" then
+        obj = self:Assert(node, types.Never())
     elseif type == "function" then
         obj = self:Assert(node, types.Function(data))
         obj.node = node
@@ -448,6 +450,9 @@ do -- control flow analysis
     end
 
     function META:OnGetUpvalue(upvalue, key, env, scope)
+        if self:GetScope().unreachable then
+            return self:CopyUpvalue(upvalue, types.Never())
+        end
 
         if upvalue.data.Type == "set" then
             local condition = scope.test_condition
@@ -1522,6 +1527,8 @@ do -- expressions
             if env == "typesystem" and not node.force_upvalue then
                 if node.value.value == "any" then
                     return self:TypeFromImplicitNode(node, "any")
+                elseif node.value.value == "never" then
+                        return self:TypeFromImplicitNode(node, "never")
                 elseif node.value.value == "self" then
                     return self.current_table
                 elseif node.value.value == "inf" then
