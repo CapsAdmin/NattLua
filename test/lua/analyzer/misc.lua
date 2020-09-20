@@ -310,7 +310,7 @@ R[[
             break
         end
     end
-    type_assert(c, 1)
+    type_assert(c, _ as 0 | 1)
 ]]
 R[[
     local a = 0
@@ -856,8 +856,8 @@ R[[
             b = 1
         end
     end
-    type_assert(a, 1)
-    type_assert(b, 1)
+    type_assert(a, _ as 1 | 0)
+    type_assert(b, _ as 1 | 0)
 ]]
 R[[
     local def,{a,b,c} = {a=1,b=2,c=3}

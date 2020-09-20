@@ -28,7 +28,7 @@ return function(META)
             return node.value.value
         end
 
-        function META:PushScope(node, extra_node)
+        function META:PushScope(node, extra_node, event_data)
             assert(type(node) == "table" and node.kind, "expected an associated ast node")
 
             local parent = self.scope
@@ -63,17 +63,30 @@ return function(META)
 
             self.scope = node.scope or scope
 
+            if event_data and self.OnEnterScope then
+                self:OnEnterScope(node.kind, event_data)
+            end
+
             return scope
         end
 
-        function META:PopScope()
+        function META:PopScope(event_data)
             local old = table.remove(self.scope_stack)
 
             self:FireEvent("leave_scope", self.scope.node, self.scope.extra_node, old)
 
             if old then
+                self.last_scope = self.scope
                 self.scope = old
             end
+
+            if event_data and self.OnExitScope then
+                self:OnExitScope(self.last_scope.node.kind, event_data)
+            end
+        end
+
+        function META:GetLastScope()
+            return self.last_scope or self.scope
         end
 
         function META:GetScope()

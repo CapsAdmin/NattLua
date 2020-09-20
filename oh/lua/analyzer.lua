@@ -351,6 +351,7 @@ function META:Call(obj, arguments, call_node)
             local analyzed_return = types.Tuple(self:PopReturn())
         self:PopScope()
 
+        self.returned_from_block = nil
         self.calling_function = nil
 
         do
@@ -421,28 +422,58 @@ do -- control flow analysis
     -- to isolate the code for this here and do 
     -- naive approaches while writing tests
 
-    function META:OnEnterScope(scope, obj, truthy)
-        scope.test_condition = obj
+    function META:OnEnterScope(kind, data)
+        local scope = self:GetScope()
 
-        if not truthy then
-            scope.test_condition_inverted = true
-        end
+        if kind == "if" then
+            scope.test_condition = data.condition
 
-        if obj:IsUncertain() then
-            scope.uncertain = true
-        end
-    end
+            if data.is_else then
+                scope.test_condition_inverted = true
+            end
 
-    function META:OnExitScope(scope, returned, truthy)
-        if scope.uncertain and returned then           
-            self:CloneCurrentScope()
-
-            self:GetScope().uncertain = true
-            self:GetScope().test_condition = scope.test_condition
-            self:GetScope().test_condition_inverted = true
+            if data.condition:IsUncertain() then
+                scope.uncertain = true
+            end
         end
     end
 
+    function META:MakeUncertainDataOutsideInParentScopes()
+        for _, obj in ipairs(self:GetScope().upvalues.runtime.list) do
+            if obj.data_outside_of_if_blocks then
+               obj.data = obj.data_outside_of_if_blocks
+               obj.data_outside_of_if_blocks = nil
+            end
+        end
+    end
+
+    function META:OnExitScope(kind, data)
+        local scope = self:GetLastScope()
+
+        if kind == "if" then
+            if data.returned then
+                if scope.uncertain then           
+                    self:CloneCurrentScope()
+
+                    self:GetScope().uncertain = true
+                    self:GetScope().test_condition = scope.test_condition
+                    self:GetScope().test_condition_inverted = true
+                else
+                    self:CloneCurrentScope()
+
+                    self:GetScope().unreachable = true
+                end
+            end
+        else
+            self:MakeUncertainDataOutsideInParentScopes()
+        end
+    end
+
+    function META:OnLeaveIfStatement()
+        -- this has to be done after all if blocks have been processed
+        self:MakeUncertainDataOutsideInParentScopes()
+    end
+    
     function META:OnEnterNumericForLoop(scope, init, max)
         if not init:IsLiteral() or not max:IsLiteral() then
             scope.uncertain = true
@@ -478,6 +509,7 @@ do -- control flow analysis
                             if upvalue.data:IsTruthy() then
                                 local copy = self:CopyUpvalue(upvalue)
                                 copy.data:DisableTruthy()
+
                                 copy.original = upvalue.data
                                 return copy
                             elseif upvalue.data:IsFalsy()then
@@ -500,26 +532,18 @@ do -- control flow analysis
                 else
                     if upvalue.data:IsTruthy() then
                         local copy = self:CopyUpvalue(upvalue)
+                        
                         copy.data:DisableFalsy()
                         copy.original = upvalue.data
                         return copy
                     end
                 end
             end
-        end 
+        end
 
         return upvalue
     end
 
-    function META:OnLeaveIfStatement()
-        for _, obj in ipairs(self:GetScope().upvalues.runtime.list) do
-            if obj.data_outside_of_if_blocks then
-               obj.data = obj.data_outside_of_if_blocks
-               obj.data_outside_of_if_blocks = nil
-            end
-        end
-    end
-    
     function META:OnMutateUpvalue(upvalue, key, val, env)
         if self.scope.uncertain then
             --[[
@@ -552,7 +576,6 @@ do -- control flow analysis
             else
                 upvalue.data_outside_of_if_blocks = types.Set({upvalue.data, val})
             end
-
 
             return true
         end
@@ -758,23 +781,24 @@ do -- statements
     function META:AnalyzeIfStatement(statement)
         local prev_expression
         for i, statements in ipairs(statement.statements) do
-            local scope
-            
             if statement.expressions[i] then
                 local obj = self:AnalyzeExpression(statement.expressions[i], "runtime")
 
                 prev_expression = obj
 
                 if obj:IsTruthy() then
+                    self:PushScope(statement, statement.tokens["if/else/elseif"][i], {                            
+                        if_position = i, 
+                        condition = obj
+                    })
+                        
+                    self:AnalyzeStatements(statements)
 
-                    self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                        scope = self:GetScope()
-                        self:OnEnterScope(scope, obj, true)
-
-                        self:AnalyzeStatements(statements)
-                    self:PopScope()
-
-                    self:OnExitScope(scope, self.returned_from_block, true)
+                    self:PopScope({
+                        if_position = i, 
+                        returned = self.returned_from_block, 
+                        condition = obj
+                    })
 
                     if not obj:IsFalsy() then
                         break
@@ -782,14 +806,20 @@ do -- statements
                 end
             else
                 if prev_expression:IsFalsy() then
-                    self:PushScope(statement, statement.tokens["if/else/elseif"][i])
-                        scope = self:GetScope()
-                        self:OnEnterScope(scope, prev_expression, false)
+                    self:PushScope(statement, statement.tokens["if/else/elseif"][i], {
+                        if_position = i, 
+                        is_else = true,
+                        condition = prev_expression
+                    })
 
-                        self:AnalyzeStatements(statements)
-                    self:PopScope()
+                    self:AnalyzeStatements(statements)
 
-                    self:OnExitScope(scope, self.returned_from_block)
+                    self:PopScope({
+                        if_position = i,
+                        is_else = true,
+                        returned = self.returned_from_block, 
+                        condition = prev_expression
+                    })
                 end
             end
         end
@@ -797,10 +827,16 @@ do -- statements
     end
 
     function META:AnalyzeWhileStatement(statement)
-        if self:AnalyzeExpression(statement.expression):IsTruthy() then
-            self:PushScope(statement)
+        local obj = self:AnalyzeExpression(statement.expression)
+        if obj:IsTruthy() then
+            self:PushScope(statement, nil, {
+                condition = obj
+            })
             self:AnalyzeStatements(statement.statements)
-            self:PopScope()
+            self:PopScope({
+                returned = self.returned_from_block, 
+                condition = obj
+            })
         end
     end
 
@@ -833,18 +869,24 @@ do -- statements
     end
 
     function META:AnalyzeGenericForStatement(statement)
-        self:PushScope(statement)
-
         local args = self:AnalyzeExpressions(statement.expressions)
         local obj = args[1]
 
         if obj then
             table.remove(args, 1)
+
+            local ran = false
+
             for i = 1, 1000 do
                 local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
 
                 if not values:Get(1) or values:Get(1).Type == "symbol" and values:Get(1).data == nil then
                     break
+                end
+
+                if i == 1 then
+                    ran = true
+                    self:PushScope(statement, nil, {condition = obj})
                 end
 
                 for i,v in ipairs(statement.identifiers) do
@@ -861,15 +903,19 @@ do -- statements
 
                 args = values:GetData()
             end
+
+            if ran then
+                self:PopScope({condition = obj})
+            end
         end
 
-        self:PopScope()
     end
 
     function META:AnalyzeNumericForStatement(statement)
-        self:PushScope(statement)
         local init = self:AnalyzeExpression(statement.expressions[1])
         local max = self:AnalyzeExpression(statement.expressions[2])
+        
+        self:PushScope(statement, nil, {init = init, max = max})
 
         if init.Type == "number" and (max.Type == "number" or (max.Type == "set" and max:IsType("number"))) then
             init = init:Max(max)
@@ -887,10 +933,8 @@ do -- statements
             self:AnalyzeExpression(statement.expressions[3])
         end
 
-        self:OnEnterNumericForLoop(self:GetScope(), init, max)
-
         self:AnalyzeStatements(statement.statements)
-        self:PopScope()
+        self:PopScope({init = init, max = max})
     end
 
     function META:AnalyzeLocalFunctionStatement(statement)
@@ -1098,19 +1142,19 @@ do -- expressions
             if l.Type == "number" and r.Type == "number" then
                 if op == "~=" or op == "!=" then
                     if l.max and l.max.data then
-                        return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.False
+                        return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.Set({types.True, types.False})
                     end
 
                     if r.max and r.max.data then
-                        return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.False
+                        return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.Set({types.True, types.False})
                     end
                 elseif op == "==" then
                     if l.max and l.max.data then
-                        return r.data >= l.data and r.data <= l.max.data and types.True or types.False
+                        return r.data >= l.data and r.data <= l.max.data and types.Set({types.True, types.False}) or types.False
                     end
 
                     if r.max and r.max.data then
-                        return l.data >= r.data and l.data <= r.max.data and types.True or types.False
+                        return l.data >= r.data and l.data <= r.max.data and types.Set({types.True, types.False}) or types.False
                     end
                 end
             end
