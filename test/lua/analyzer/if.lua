@@ -384,3 +384,54 @@ pending([[
     if a then return end
     type_assert(a, nil)
 ]])
+
+
+run[[
+    local a = true
+
+    if a then
+        error("!")
+    end
+
+    type_assert(a, _ as never)
+]]
+
+run[[
+    local a = true
+
+    if maybe then
+        error("!")
+    end
+
+    type_assert(a, true)
+]]
+
+run[[
+    local a = true
+
+    while maybe do
+        a = false
+    end
+
+    type_assert(a, _ as true | false)
+]]
+
+run[[
+    local a = true
+
+    for i = 1, 10 do
+        a = false
+    end
+
+    type_assert(a, _ as false)
+]]
+
+run[[
+    local a = true
+
+    for i = 1, _ as number do
+        a = false
+    end
+
+    type_assert(a, _ as true | false)
+]]

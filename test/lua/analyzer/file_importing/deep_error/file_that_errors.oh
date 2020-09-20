@@ -11,9 +11,9 @@
 
 -- !!
 
-type function error(msg)
+type function error_(msg)
     error(msg:GetData())
 end
 
 -- ERROR4
-error("finally the error!")
+error_("finally the error!")

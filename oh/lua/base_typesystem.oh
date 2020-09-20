@@ -79,7 +79,6 @@ do -- globals
 	type pairs = (function(t: Table): empty_function, Table, nil)
 	type rawequal = (function(v1: any, v2: any): boolean)
 	type loadstring = (function(string: string, chunkname: string): empty_function|nil, string|nil) | (function(string: string): empty_function|nil, string|nil)
-	type error = (function(message: string, level: number): nil) | (function(message: string): nil)
 	type loadfile = (function(filename: string, mode: string, env: Table): empty_function|nil, string|nil) | (function(filename: string, mode: string): empty_function|nil, string|nil) | (function(filename: string): empty_function|nil, string|nil) | (function(): empty_function|nil, string|nil)
 	type dofile = (function(filename: string): ...) | (function(): ...)
 	type ipairs = (function(t: Table): empty_function, Table, number)
@@ -288,13 +287,18 @@ do -- globals
 		return tbl:Get(key, true)
 	end
 
---[[
-	type function error(msg: string, level: number)
-		if msg.data then
-			error(msg.data)
-		end
+	type function error(msg: string, level: number | nil)
+		self.lua_error_thrown = msg
 	end
-]]
+
+	type function pcall(callable: any, ...)
+		return callable:Call(callable, types.Tuple(...), node)
+	end
+
+	type function xpcall(callable: any, error_cb: any, ...)
+		return callable:Call(callable, types.Tuple(...), node)
+	end
+
 	type function select(index: 1 .. inf | "#", ...)
 		return select(index:GetData(), ...)
 	end

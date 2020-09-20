@@ -425,7 +425,7 @@ do -- control flow analysis
     function META:OnEnterScope(kind, data)
         local scope = self:GetScope()
 
-        if kind == "if" then
+        if kind == "if" or kind == "while" then
             scope.test_condition = data.condition
 
             if data.is_else then
@@ -433,6 +433,20 @@ do -- control flow analysis
             end
 
             if data.condition:IsUncertain() then
+                scope.uncertain = true
+            end
+        elseif kind == "numeric_for" then
+            local condition = types.Set()
+            if data.init:IsLiteral() and data.max:IsLiteral() then
+                    condition:AddElement(types.Symbol(data.init:GetData() <= data.max:GetData()))
+            else
+                condition:AddElement(types.Symbol(true))
+                condition:AddElement(types.Symbol(false))
+            end
+
+            scope.test_condition = condition
+
+            if condition:IsUncertain() then
                 scope.uncertain = true
             end
         end
@@ -451,7 +465,7 @@ do -- control flow analysis
         local scope = self:GetLastScope()
 
         if kind == "if" then
-            if data.returned then
+            if self.returned_from_block or self.lua_error_thrown then
                 if scope.uncertain then           
                     self:CloneCurrentScope()
 
@@ -775,7 +789,9 @@ do -- statements
     function META:AnalyzeTypeCodeStatement(statement)
         local code = statement.code.value:sub(3)
         
+        _G.self = self
         assert(load("local oh, analyzer, types, node = ...; " .. code, ""))(require("oh"), self, types, statement)
+        _G.self = nil
     end
 
     function META:AnalyzeIfStatement(statement)
@@ -796,7 +812,6 @@ do -- statements
 
                     self:PopScope({
                         if_position = i, 
-                        returned = self.returned_from_block, 
                         condition = obj
                     })
 
@@ -817,7 +832,6 @@ do -- statements
                     self:PopScope({
                         if_position = i,
                         is_else = true,
-                        returned = self.returned_from_block, 
                         condition = prev_expression
                     })
                 end
@@ -834,7 +848,6 @@ do -- statements
             })
             self:AnalyzeStatements(statement.statements)
             self:PopScope({
-                returned = self.returned_from_block, 
                 condition = obj
             })
         end
