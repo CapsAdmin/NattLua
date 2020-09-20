@@ -435,3 +435,25 @@ run[[
 
     type_assert(a, _ as true | false)
 ]]
+
+run[[
+    local a: {[string] = number}
+    local b = true
+
+    for k,v in pairs(a) do
+        b = false
+    end
+
+    type_assert(b, _ as true | false)
+]]
+
+run[[
+    local a: {foo = number}
+    local b = true
+
+    for k,v in pairs(a) do
+        b = false
+    end
+
+    type_assert(b, _ as false)
+]]

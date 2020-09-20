@@ -31,8 +31,8 @@ test("pairs on non literal table", function()
             type_assert(val, _ as number)
         end
         
-        type_assert(key_sum, _ as number)
-        type_assert(val_sum, _ as number)
+        type_assert(key_sum, _ as number | 0)
+        type_assert(val_sum, _ as number | 0)
     ]]
 end)
 
@@ -57,7 +57,7 @@ test("pairs on any should at least make k,v any", function()
             val = v
         end
 
-        type_assert(key, _ as any)
-        type_assert(val, _ as any)
+        type_assert(key, _ as any | nil)
+        type_assert(val, _ as any | nil)
     ]]
 end)

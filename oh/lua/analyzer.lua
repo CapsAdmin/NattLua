@@ -425,30 +425,14 @@ do -- control flow analysis
     function META:OnEnterScope(kind, data)
         local scope = self:GetScope()
 
-        if kind == "if" or kind == "while" then
-            scope.test_condition = data.condition
+        scope.test_condition = data.condition
 
-            if data.is_else then
-                scope.test_condition_inverted = true
-            end
+        if data.is_else then
+            scope.test_condition_inverted = true
+        end
 
-            if data.condition:IsUncertain() then
-                scope.uncertain = true
-            end
-        elseif kind == "numeric_for" then
-            local condition = types.Set()
-            if data.init:IsLiteral() and data.max:IsLiteral() then
-                    condition:AddElement(types.Symbol(data.init:GetData() <= data.max:GetData()))
-            else
-                condition:AddElement(types.Symbol(true))
-                condition:AddElement(types.Symbol(false))
-            end
-
-            scope.test_condition = condition
-
-            if condition:IsUncertain() then
-                scope.uncertain = true
-            end
+        if data.condition:IsUncertain() then
+            scope.uncertain = true
         end
     end
 
@@ -464,21 +448,21 @@ do -- control flow analysis
     function META:OnExitScope(kind, data)
         local scope = self:GetLastScope()
 
-        if kind == "if" then
-            if self.returned_from_block or self.lua_error_thrown then
-                if scope.uncertain then           
-                    self:CloneCurrentScope()
+        if self.returned_from_block or self.lua_error_thrown then
+            if scope.uncertain then           
+                self:CloneCurrentScope()
 
-                    self:GetScope().uncertain = true
-                    self:GetScope().test_condition = scope.test_condition
-                    self:GetScope().test_condition_inverted = true
-                else
-                    self:CloneCurrentScope()
+                self:GetScope().uncertain = true
+                self:GetScope().test_condition = scope.test_condition
+                self:GetScope().test_condition_inverted = true
+            else
+                self:CloneCurrentScope()
 
-                    self:GetScope().unreachable = true
-                end
+                self:GetScope().unreachable = true
             end
-        else
+        end
+        
+        if kind ~= "if" then
             self:MakeUncertainDataOutsideInParentScopes()
         end
     end
@@ -888,7 +872,7 @@ do -- statements
         if obj then
             table.remove(args, 1)
 
-            local ran = false
+            local returned_key = nil
 
             for i = 1, 1000 do
                 local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
@@ -898,8 +882,11 @@ do -- statements
                 end
 
                 if i == 1 then
-                    ran = true
-                    self:PushScope(statement, nil, {condition = obj})
+                    returned_key = values:Get(1)
+                    if not returned_key:IsLiteral() then
+                        returned_key = types.Set({types.Symbol(nil), returned_key})
+                    end
+                    self:PushScope(statement, nil, {condition = returned_key})
                 end
 
                 for i,v in ipairs(statement.identifiers) do
@@ -917,8 +904,8 @@ do -- statements
                 args = values:GetData()
             end
 
-            if ran then
-                self:PopScope({condition = obj})
+            if returned_key then
+                self:PopScope({condition = returned_key})
             end
         end
 
@@ -927,8 +914,17 @@ do -- statements
     function META:AnalyzeNumericForStatement(statement)
         local init = self:AnalyzeExpression(statement.expressions[1])
         local max = self:AnalyzeExpression(statement.expressions[2])
+
+        local condition = types.Set()
+
+        if init:IsLiteral() and max:IsLiteral() then
+            condition:AddElement(types.Symbol(init:GetData() <= max:GetData()))
+        else
+            condition:AddElement(types.Symbol(true))
+            condition:AddElement(types.Symbol(false))
+        end
         
-        self:PushScope(statement, nil, {init = init, max = max})
+        self:PushScope(statement, nil, {init = init, max = max, condition = condition})
 
         if init.Type == "number" and (max.Type == "number" or (max.Type == "set" and max:IsType("number"))) then
             init = init:Max(max)
@@ -947,7 +943,7 @@ do -- statements
         end
 
         self:AnalyzeStatements(statement.statements)
-        self:PopScope({init = init, max = max})
+        self:PopScope({init = init, max = max, condition = condition})
     end
 
     function META:AnalyzeLocalFunctionStatement(statement)
