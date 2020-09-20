@@ -147,9 +147,7 @@ do
     local analyzer_env = require("oh.lua.analyzer_env")
 
     function META:Initialize()
-        analyzer_env.GetBaseAnalyzer()
-
-        self.meta = analyzer_env.string_meta
+        self.meta = analyzer_env.GetStringMeta()
         assert(self.meta)
 
         return self

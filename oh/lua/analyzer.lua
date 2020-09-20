@@ -158,7 +158,7 @@ do
 
     table.sort(guesses, function(a, b) return #a.pattern > #b.pattern end)
 
-    function META:GetInferredType(node, env)
+    function META:GuessTypeFromIdentifier(node, env)
 
         if node.value then
             local str = node.value.value:lower()
@@ -321,7 +321,7 @@ function META:Call(obj, arguments, call_node)
         self:PushScope(function_node)
 
             local arguments = arguments
-            if env ~= "typesystem" and (obj.node and obj.node.kind ~= "local_type_function2") and obj.explicit_arguments and not call_node.type_call and not obj.data.lua_function then
+            if env ~= "typesystem" and (obj.node and obj.node.kind ~= "local_generics_type_function") and obj.explicit_arguments and not call_node.type_call and not obj.data.lua_function then
                 arguments = obj:GetArguments()
             end
 
@@ -730,16 +730,17 @@ do -- statements
         end
     end
 
-    function META:AnalyzeFunctionExpressionStatement(statement)
-        self:SetValue(
-            statement.expression,
-            -- see if this function has been defined by the typesystem
-            self:GetValue(statement.expression, "typesystem") or self:AnalyzeFunctionExpression(statement, "runtime"),
-            "runtime"
-        )
+    function META:AnalyzeFunctionStatement(statement)
+        local existing_type = self:GetValue(statement.expression, "typesystem")
+
+        if existing_type then
+            self:SetValue(statement.expression, existing_type, "runtime")
+        else
+            self:SetValue(statement.expression, self:AnalyzeFunctionExpression(statement, "runtime"), "runtime")
+        end
     end
 
-    function META:AnalyzeTypeFunction(statement)
+    function META:AnalyzeTypeFunctionStatement(statement)
         self:SetValue(
             statement.expression,
             self:AnalyzeFunctionExpression(statement:ToExpression("type_function"),
@@ -889,7 +890,7 @@ do -- statements
         self:SetUpvalue(statement.tokens["identifier"], self:AnalyzeFunctionExpression(statement, "runtime"), "runtime")
     end
 
-    function META:AnalyzeLocalTypeFunction(statement)
+    function META:AnalyzeLocalTypeFunctionStatement(statement)
         if statement.kind == "local_type_function" then
             self:SetUpvalue(statement.identifier, self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem"), "typesystem")
         else
@@ -914,13 +915,13 @@ do -- statements
         elseif statement.kind == "destructure_assignment" or statement.kind == "local_destructure_assignment" then
             self:AnalyzeDestructureStatement(statement)
         elseif statement.kind == "function" then
-            self:AnalyzeFunctionExpressionStatement(statement)
+            self:AnalyzeFunctionStatement(statement)
         elseif statement.kind == "type_function" then
-            self:AnalyzeTypeFunction(statement)
+            self:AnalyzeTypeFunctionStatement(statement)
         elseif statement.kind == "local_function" then
             self:AnalyzeLocalFunctionStatement(statement)
-        elseif statement.kind == "local_type_function2" or statement.kind == "local_type_function" then
-            self:AnalyzeLocalTypeFunction(statement)
+        elseif statement.kind == "local_generics_type_function" or statement.kind == "local_type_function" then
+            self:AnalyzeLocalTypeFunctionStatement(statement)
         elseif statement.kind == "if" then
             self:AnalyzeIfStatement(statement)
         elseif statement.kind == "while" then
@@ -963,11 +964,11 @@ do -- expressions
             ["^"] = function(l,r) return l^r end,
             [".."] = function(l,r) return l..r end,
 
-            ["&"] = function(l, r) return bit.band(l,r) end, -- bitwise AND (&) operation.
-            ["|"] = function(l, r) return bit.bor(l,r) end, -- bitwise OR (|) operation.
-            ["~"] = function(l,r) return bit.bxor(l,r) end, -- bitwise exclusive OR (binary ~) operation.
-            ["<<"] = function(l, r) return bit.lshift(l,r) end, -- bitwise left shift (<<) operation.
-            [">>"] = function(l, r) return bit.rshift(l,r) end, -- bitwise right shift (>>) operation.
+            ["&"] = function(l, r) return bit.band(l,r) end,
+            ["|"] = function(l, r) return bit.bor(l,r) end,
+            ["~"] = function(l,r) return bit.bxor(l,r) end,
+            ["<<"] = function(l, r) return bit.lshift(l,r) end,
+            [">>"] = function(l, r) return bit.rshift(l,r) end,
 
             ["=="] = function(l,r) return l==r end,
             ["<"] = function(l,r) return l<r end,
@@ -1526,7 +1527,6 @@ do -- expressions
                 elseif node.value.value == "..." then
                     return self:TypeFromImplicitNode(node, "...", {self:TypeFromImplicitNode(node, "any")})
                 elseif types.IsPrimitiveType(node.value.value) then
-                    -- string, number, boolean, etc
                     return self:TypeFromImplicitNode(node, node.value.value)
                 end
             end
@@ -1554,10 +1554,8 @@ do -- expressions
                obj = self:IndexNotFound(node)
             end
 
-            -- last resort
-            -- an identifier like "itemCount" becomes a number because it contains "count"
             if not obj then
-                obj = self:GetInferredType(node, env)
+                obj = self:GuessTypeFromIdentifier(node, env)
             end
 
             node.inferred_type = node.inferred_type or obj
@@ -1599,19 +1597,18 @@ do -- expressions
         local args = {}
 
         for i, key in ipairs(node.identifiers) do
-            -- if this node is already explicitly annotated with foo: mytype or foo as mytype use that
             if key.identifier then
                 args[i] = self:AnalyzeExpression(key, "typesystem")
                 explicit_arguments = true
             elseif key.explicit_type then
-                args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem") or self:GetInferredType(key)
+                args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem")
                 explicit_arguments = true
             else
                 if node.kind == "type_function" then
                     if key.kind == "value" and key.value.value == "self" then
                         args[i] = self.current_table
                     else
-                        args[i] = self:GetInferredType(key)
+                        args[i] = self:GuessTypeFromIdentifier(key)
                     end
                 elseif key.kind == "value" and key.value.value == "..." then
                     args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
@@ -1623,7 +1620,7 @@ do -- expressions
                     end
 
                     if not args[i] or args[i].Type == "symbol" and args[i]:GetData() == nil then
-                        args[i] = self:GetInferredType(key)
+                        args[i] = self:GuessTypeFromIdentifier(key)
                     end
                 end
             end
@@ -1734,7 +1731,6 @@ do -- expressions
             env = "typesystem"
         end
 
-        -- usually from "as", "local a = myval as true"
         if node.explicit_type then
             return self:AnalyzeExpression(node.explicit_type, "typesystem")
         elseif node.kind == "value" then
@@ -1755,8 +1751,6 @@ do -- expressions
             return self:AnalyzePostfixExpressionIndexExpression(node, env)
         elseif node.kind == "postfix_call" then
             return self:AnalyzePostfixCallExpression(node, env)
-        elseif node.kind == "import" or node.kind == "lsx" then
-            --stack:Push(self:AnalyzeStatement(node.root))
         else
             error("unhandled expression " .. node.kind)
         end

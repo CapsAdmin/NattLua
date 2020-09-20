@@ -2,6 +2,12 @@
 
 local analyzer_env = {}
 
+function analyzer_env.GetStringMeta()
+    if not analyzer_env.string_meta then
+        analyzer_env.GetBaseAnalyzer()
+    end
+    return analyzer_env.string_meta
+end
 
 function analyzer_env.GetBaseAnalyzer()
 
@@ -21,7 +27,6 @@ function analyzer_env.GetBaseAnalyzer()
 
         assert(code_data:Analyze(nil, base))
 
-
 		local g = base:TypeFromImplicitNode(code_data.SyntaxTree, "table")
 
 		for k, v in pairs(base.env.typesystem) do
@@ -33,7 +38,6 @@ function analyzer_env.GetBaseAnalyzer()
         meta:Set("__index", g:Get("string"))
 
         base:SetValue("_G", g, "typesystem")
-
     end
 
     return analyzer_env.base_analyzer

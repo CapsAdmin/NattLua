@@ -97,12 +97,12 @@ return function(META)
 
 
     do
-        function META:IsLocalTypeFunctionStatement2()
+        function META:IsLocalGenericsTypeFunctionStatement()
             return self:IsValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)
         end
 
-        function META:ReadLocalTypeFunctionStatement2()
-            local node = self:Statement("local_type_function2")
+        function META:ReadLocalGenericsTypeFunctionStatement()
+            local node = self:Statement("local_generics_type_function")
             node.tokens["local"] = self:ReadValue("local")
             node.tokens["function"] = self:ReadValue("function")
             node.identifier = self:ReadIdentifier()

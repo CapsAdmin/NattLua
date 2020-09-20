@@ -515,7 +515,7 @@ function META:EmitStatement(node)
         self:EmitLocalFunction(node)
     elseif node.kind == "local_type_function" then
         self:EmitLocalTypeFunction(node)
-    elseif node.kind == "local_type_function2" then
+    elseif node.kind == "local_generics_type_function" then
         self:EmitLocalTypeFunction2(node)
     elseif node.kind == "destructure_assignment" then
         self:EmitDestructureAssignment(node)
