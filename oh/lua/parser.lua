@@ -752,6 +752,7 @@ do -- statements
 
     function META:ReadStatement()
         if
+            self:IsInlineTypeCode() then                            return self:ReadInlineTypeCode() elseif
             self:IsReturnStatement() then                           return self:ReadReturnStatement() elseif
             self:IsBreakStatement() then                            return self:ReadBreakStatement() elseif
             self:IsContinueStatement() then                         return self:ReadContinueStatement() elseif

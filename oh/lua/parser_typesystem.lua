@@ -3,6 +3,18 @@ return function(META)
     local math_huge = math.huge
     local syntax = require("oh.lua.syntax")
 
+    do
+        function META:IsInlineTypeCode()
+            return self:IsType("type_code")
+        end
+
+        function META:ReadInlineTypeCode()
+            local code = self:ReadType("type_code")
+            local node = self:Statement("type_code")
+            node.code = code
+            return node
+        end
+    end
     function META:HandleTypeListSeparator(out, i, node)
         if not node then
             return true

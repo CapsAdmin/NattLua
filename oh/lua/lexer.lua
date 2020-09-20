@@ -343,6 +343,20 @@ do
     end
 end
 
+function META:ReadInlineTypeCode()
+    if self:IsValue("§") then
+        self:Advance(1)
+        for _ = self.i, self:GetLength() do
+            if self:IsValue("\n") then
+                break
+            end
+            self:Advance(1)
+        end
+
+        return true
+    end
+end
+
 do
     local B = string.byte
 
@@ -420,6 +434,8 @@ function META:Read()
 
         self:ReadMultilineComment() then    return "multiline_comment", true elseif
         self:ReadLineComment() then         return "line_comment", true elseif
+        
+        self:ReadInlineTypeCode() then      return "type_code", false elseif
 
         self:ReadNumber() then              return "number", false elseif
 

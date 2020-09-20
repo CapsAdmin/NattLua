@@ -744,6 +744,12 @@ do -- statements
         ), "typesystem")
     end
 
+    function META:AnalyzeTypeCodeStatement(statement)
+        local code = statement.code.value:sub(3)
+        
+        assert(load("local oh, analyzer, types, node = ...; " .. code, ""))(require("oh"), self, types, statement)
+    end
+
     function META:AnalyzeIfStatement(statement)
         local prev_expression
         for i, statements in ipairs(statement.statements) do
@@ -936,6 +942,8 @@ do -- statements
             self:AnalyzeGenericForStatement(statement)
         elseif statement.kind == "numeric_for" then
             self:AnalyzeNumericForStatement(statement)
+        elseif statement.kind == "type_code" then
+            self:AnalyzeTypeCodeStatement(statement)
         elseif
             statement.kind ~= "end_of_file" and
             statement.kind ~= "semicolon" and
