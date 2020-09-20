@@ -480,7 +480,7 @@ do -- control flow analysis
 
     function META:OnGetUpvalue(upvalue, key, env, scope)
         if self:GetScope().unreachable then
-            return self:CopyUpvalue(upvalue, types.Never())
+      --      return self:CopyUpvalue(upvalue, types.Never())
         end
 
         if upvalue.data.Type == "set" then
@@ -1769,15 +1769,13 @@ do -- expressions
                 local val = {self:AnalyzeExpression(node.expression, env)}
 
                 if val[1].Type == "tuple" then
-
                     tbl:Set(types.Number(node.i):Max(types.Number(val[1].max)), val[1].ElementType)
-
                 else 
                     if node.i then
-                        tbl:Set(node.i, val[1])
+                        tbl:Insert(val[1])
                     elseif val then
                         for _, val in ipairs(val) do
-                            tbl:Set(#tbl.data + 1, val)
+                            tbl:Insert(val)
                         end
                     end
                 end

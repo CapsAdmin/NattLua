@@ -363,16 +363,28 @@ run[[
     type_assert(c, _ as -1 | 1)
 ]]
 
-run[[
-    local a: true
+pending("never", function()
+    run[[
+        local a: true
 
-    if a then
-        return
-    end
+        if a then
+            return
+        end
 
-    type_assert(a, _ as never)
-]]
+        type_assert(a, _ as never)
+    ]]
 
+
+    run[[
+        local a = true
+
+        if a then
+            error("!")
+        end
+
+        type_assert(a, _ as never)
+    ]]
+end)
 pending([[
     local a: nil | 1
     if not a then return end
@@ -386,15 +398,6 @@ pending([[
 ]])
 
 
-run[[
-    local a = true
-
-    if a then
-        error("!")
-    end
-
-    type_assert(a, _ as never)
-]]
 
 run[[
     local a = true
