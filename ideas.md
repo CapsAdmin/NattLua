@@ -64,3 +64,33 @@ local a = (_ as nil | 1)!
 print(a)
 >> 1
 ```
+
+this would pass never into my_type_function
+
+should I check for never for all type functions?
+```lua
+local a = 1
+do return end
+my_type_function(a)
+```
+
+# table expressed as a set of table and array
+```lua
+local a = {1,2,3, foo = true}
+print(a)
+>> [1,2,3] | {foo = true}
+table.insert(a, 4)
+print(a)
+>> [1,2,3,4] | {foo = true}
+a.foo = nil
+>> [1,2,3,4] | {}
+print(a)
+```
+
+```lua
+local a: number[] = {1,2,3}
+print(a)
+>> [1,2,3]
+a.foo = true
+^^^^^ error
+```
