@@ -15,7 +15,10 @@ function META:GetSignature()
 
     self.suppress = true
     for i, keyval in ipairs(self.data) do
-        s[i] = keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature()
+        table.insert(s, keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature())
+    end
+    for i, keyval in ipairs(self.datai) do
+        table.insert(s, keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature())
     end
     self.suppress = nil
 
@@ -37,16 +40,32 @@ function META:__tostring()
     local indent = ("\t"):rep(level)
 
     if self.contract then
+        for i, keyval in ipairs(self.contract.datai) do
+            local key, val = tostring(self.datai[i] and self.datai[i].key or "undefined"), tostring(self.datai[i] and self.datai[i].val or "undefined")
+            local tkey, tval = tostring(keyval.key), tostring(keyval.val)
+            table.insert(s, indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val)
+        end
+
+        table.insert(s, "|")
+
         for i, keyval in ipairs(self.contract.data) do
             local key, val = tostring(self.data[i] and self.data[i].key or "undefined"), tostring(self.data[i] and self.data[i].val or "undefined")
             local tkey, tval = tostring(keyval.key), tostring(keyval.val)
-            s[i] = indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val
+            table.insert(s, indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val)
         end
     else
         for i, keyval in ipairs(self.data) do
             local key, val = tostring(keyval.key), tostring(keyval.val)
-            s[i] = indent .. key .. " = " .. val
+            table.insert(s, indent .. key .. " = " .. val)
         end
+
+        local array_str = {}
+        for i, keyval in ipairs(self.datai) do
+            local key, val = tostring(keyval.key), tostring(keyval.val)
+            table.insert(array_str, indent .. "\t" .. key .. " = " .. val)
+        end
+        table.sort(array_str, sort)
+        table.insert(s, indent .. "[\n" .. table.concat(array_str, ",\n") .. "\n" .. indent .. "]")
     end
     level = level - 1
 
@@ -54,7 +73,7 @@ function META:__tostring()
 
     table.sort(s, sort)
 
-    if #self.data == 1 then
+    if #self.data <= 1 and #self.datai <= 1 then
         return "{" .. table.concat(s, ""):gsub("\t", " ") .. " }"
     end
     
@@ -62,7 +81,7 @@ function META:__tostring()
 end
 
 function META:GetLength()
-    return #self.data
+    return #self.datai
 end
 
 -- TODO
@@ -118,11 +137,50 @@ function META.SubsetOf(A, B)
             do
                 local reasons = {}
 
-                if not B.data[1] then
+                if not B.data[1] and not B.datai[1] then
                     return types.errors.other("table is empty")
                 end
 
                 for _, keyval in ipairs(B.data) do
+                    local ok, reason = a.key:SubsetOf(keyval.key)
+                    if ok then
+                        b = keyval
+                        break
+                    end
+                    table.insert(reasons, reason)
+                end
+
+                if not b and reasons[1] then
+                    return types.errors.other(table.concat(reasons, "\n"))
+                end
+            end
+
+            if b then
+
+                local key = a.val:GetSignature() .. b.val:GetSignature()
+                if not done or not done[key] then
+                    if done then
+                        done[key] = true
+                    end
+
+                    local ok, reason = a.val:SubsetOf(b.val)
+                    if not ok then
+                        return types.errors.subset(a.val, b.val, reason)
+                    end
+                end
+            end
+        end
+
+        for _, a in ipairs(A.datai) do
+            local b
+            do
+                local reasons = {}
+
+                if not B.data[1] and not B.datai[1] then
+                    return types.errors.other("table is empty")
+                end
+
+                for _, keyval in ipairs(B.datai) do
                     local ok, reason = a.key:SubsetOf(keyval.key)
                     if ok then
                         b = keyval
@@ -199,12 +257,30 @@ function META:Contains(key)
 end
 
 function META:GetKeyVal(key, reverse_subset)
-    if not self.data[1] then
+    if not self.data[1] and not self.datai[1] then
         return types.errors.other("table has no definitions")
     end
 
     local reasons = {}
+    
+    if key.Type == "number" then
 
+        for _, keyval in ipairs(self.datai) do
+            local ok, reason
+    
+            if reverse_subset then
+                ok, reason = key:SubsetOf(keyval.key)
+            else
+                ok, reason = keyval.key:SubsetOf(key)
+            end
+    
+            if ok then
+                return keyval
+            end
+            table.insert(reasons, reason)
+        end
+    end
+    
     for _, keyval in ipairs(self.data) do
         local ok, reason
 
@@ -221,6 +297,11 @@ function META:GetKeyVal(key, reverse_subset)
     end
 
     return types.errors.other(table.concat(reasons, "\n"))
+end
+
+function META:Insert(val, pos)
+    pos = pos or #self.datai + 1
+    self:Set(pos, val)
 end
 
 function META:Set(key, val)
@@ -271,7 +352,11 @@ function META:Set(key, val)
     local keyval, reason = self:GetKeyVal(key, true)
 
     if not keyval then
-        table.insert(self.data, {key = key, val = val})
+        if key.Type == "number" then
+            table.insert(self.datai, {key = key, val = val})
+        else
+            table.insert(self.data, {key = key, val = val})
+        end
     else
         if keyval.val and keyval.key:GetSignature() ~= key:GetSignature() then
             keyval.val = types.Set({keyval.val, val})
@@ -288,7 +373,7 @@ function META:Get(key)
 
     if key.Type == "string" and not key:IsLiteral() then
         local set = types.Set({types.Nil})
-        for _, keyval in ipairs(self:GetData()) do
+        for _, keyval in ipairs(self.data) do
             if keyval.key.Type == "string" then
                 set:AddElement(keyval.val)
             end
@@ -298,7 +383,7 @@ function META:Get(key)
 
     if key.Type == "number" and not key:IsLiteral() then
         local set = types.Set({types.Nil})
-        for _, keyval in ipairs(self:GetData()) do
+        for _, keyval in ipairs(self.datai) do
             if keyval.key.Type == "number" then
                 set:AddElement(keyval.val)
             end
@@ -428,6 +513,28 @@ function META:IsLiteral()
         end
     end
 
+
+    for _, v in ipairs(self.datai) do
+        if v.val ~= self and v.key ~= self and v.val.Type ~= "function" and v.key.Type ~= "function" then
+
+            self.suppress = true
+            local ok, reason = v.key:IsLiteral()
+            self.suppress = false
+
+            if not ok then
+                return types.errors.other("the key " .. tostring(v.key) .. " is not a literal because " .. tostring(reason))
+            end
+
+            self.suppress = true
+            local ok, reason = v.val:IsLiteral()
+            self.suppress = false
+
+            if not ok then
+                return types.errors.other("the value " .. tostring(v.val) .. " is not a literal because " .. tostring(reason))
+            end
+        end
+    end
+
     return true
 end
 
@@ -485,6 +592,7 @@ end
 
 function META:Initialize(data)
     self.data = {}
+    self.datai = {}
 
     if data then
         for _, v in ipairs(data) do

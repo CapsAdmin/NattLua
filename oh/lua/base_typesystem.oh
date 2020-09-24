@@ -152,7 +152,7 @@ do -- globals
 		if tbl:IsLiteral() then
 			local i = 1
 			return function(key, val)
-				local kv = tbl:GetData()[i]
+				local kv = tbl.datai[i] or tbl.data[i]
 				if not kv then return nil end
 				i = i + 1
 				return kv.key, kv.val
@@ -175,7 +175,7 @@ do -- globals
 		if tbl:IsLiteral() then
 			local i = 1
 			return function(key, val)
-				local kv = tbl:GetData()[i]
+				local kv = tbl.datai[i]
 				if not kv then return nil end
 				i = i + 1
 				return kv.key, kv.val
@@ -451,12 +451,12 @@ do
 
 		if not val then
 			val = ...
-			pos = #tbl.data + 1
+			pos = tbl:GetLength() + 1
 		else
-			pos = pos.data
+			pos = pos:GetData()
 		end
 
-		tbl:Set(pos, val)
+		tbl:Insert(val, pos)
 	end
 
 	type function table.sort(tbl, func)

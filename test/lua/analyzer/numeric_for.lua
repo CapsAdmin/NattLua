@@ -41,3 +41,14 @@ pending("uncertain numeric for loop arithmetic", function()
         type_assert(a, _ as number) -- we could say that a+=1 would make a 1 .. inf but not sure if it's worth it
     ]]
 end)
+
+test([[
+    local a = {
+        foo = true,
+        1,2,3,4
+    }
+    
+    for i,v in ipairs(a) do 
+        type_assert(i, v) 
+    end
+]])
