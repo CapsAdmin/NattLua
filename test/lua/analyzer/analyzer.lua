@@ -450,3 +450,28 @@ run([[
 
     local a: Foo = { a = 1 }    
 ]], " is missing from ")
+
+
+run([[
+    local type Person = unique {
+        id = number,
+        name = string,
+    }
+    
+    local type Pet = unique {
+        id = number,
+        name = string,
+    }
+    
+    local dog: Pet = {
+        id = 1,
+        name = "pete"
+    }
+    
+    local human: Person = {
+        id = 6,
+        name = "persinger"
+    }
+    
+    local c: Pet = human    
+]], "is not the same unique type as")

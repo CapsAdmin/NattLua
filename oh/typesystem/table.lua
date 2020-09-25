@@ -69,6 +69,11 @@ end
 local done
 
 function META.SubsetOf(A, B)
+    local ok, err = types.IsSameUniqueType(A, B)
+    if not ok then
+        return ok, err
+    end
+
     if A == B then
         return true
     end
@@ -221,6 +226,18 @@ function META:GetKeyVal(key, reverse_subset)
     end
 
     return types.errors.other(table.concat(reasons, "\n"))
+end
+
+function META:Insert(val)
+    self:Set(#self.data + 1, val)
+end
+
+function META:GetValues()
+    local values = {}
+    for i, keyval in ipairs(self.data) do
+        values[i] = keyval.val
+    end
+    return values
 end
 
 function META:Set(key, val)

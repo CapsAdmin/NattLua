@@ -88,7 +88,7 @@ do
     end
 
     syntax.typesystem.PrefixOperators = {
-        "-", "#", "not", "~", "typeof", "$"
+        "-", "#", "not", "~", "typeof", "$", "unique",
     }
 
     syntax.typesystem.PrimaryBinaryOperators = {

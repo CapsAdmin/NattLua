@@ -73,6 +73,54 @@ do
         return self
     end
 
+
+    do
+        local ref = 0
+
+        function Base:MakeUnique(b)
+            if b then
+                self.unique_id = ref
+                ref = ref + 1
+            else 
+                self.unique_id = nil
+            end
+            return self
+        end
+
+        function Base:IsUnique()
+            return self.unique_id ~= nil
+        end
+
+        function Base:GetUniqueID()
+            return self.unique_id
+        end
+
+        function Base:DisableUniqueness()
+            self.disabled_unique_id = self.unique_id
+            self.unique_id = nil
+        end
+
+        function Base:EnableUniqueness()
+            self.unique_id = self.disabled_unique_id
+        end
+
+        function types.IsSameUniqueType(a, b)
+            if a.unique_id and not b.unique_id then
+                return types.errors.other(tostring(a) .. "is a unique type")
+            end
+
+            if b.unique_id and not a.unique_id then
+                return types.errors.other(tostring(b) .. "is a unique type")
+            end
+
+            if a.unique_id ~= b.unique_id then
+                return types.errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a))
+            end
+
+            return true
+        end
+    end
+
     function Base:MakeLiteral(b)
         self.literal = b
         return self
@@ -113,6 +161,7 @@ end
 function types.Initialize()
     types.Set = require("oh.typesystem.set")
     types.Table = require("oh.typesystem.table")
+    types.List = require("oh.typesystem.list")
     types.Tuple = require("oh.typesystem.tuple")
     types.Number = require("oh.typesystem.number")
     types.Function = require("oh.typesystem.function")

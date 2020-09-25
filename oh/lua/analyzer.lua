@@ -657,7 +657,9 @@ do -- statements
 
                 if statement.right and statement.right[i] then
 
-                    if contract.Type == "table" and val.Type == "table" then
+                    if contract.Type == "list" and val.Type == "table" then
+                        val = types.List(val:GetValues())
+                    elseif contract.Type == "table" and val.Type == "table" then
                         val:CopyLiteralness(contract)
                     else
                         -- local a: 1 = 1
@@ -665,10 +667,24 @@ do -- statements
                         val:MakeLiteral(contract:IsLiteral())
                     end
 
+                    
+                    local skip_uniqueness =contract:IsUnique() and not val:IsUnique()
+
+                    if skip_uniqueness then
+                        contract:DisableUniqueness()
+                    end
+
                     local ok, reason = val:SubsetOf(contract)
 
+                    if skip_uniqueness then
+                        contract:EnableUniqueness()
+                        val.unique_id = contract.unique_id
+                    end
+
+                    
+
                     if not ok then
-                        self:Error(val.node or exp_key.explicit_type, reason)
+                        self:Error(statement or val.node or exp_key.explicit_type, reason)
                     end
 
                     if contract.Type == "table" then
@@ -1462,6 +1478,10 @@ do -- expressions
                         return types.errors.other("cannot find " .. self:Hash(node.right) .. " in the current typesystem scope")
                     end
                     return obj.contract or obj
+                elseif op == "unique" then
+                    local obj = self:AnalyzeExpression(node.right, "typesystem")
+                    obj:MakeUnique(true)
+                    return obj
                 elseif op == "$" then
                     local obj = self:AnalyzeExpression(node.right, "typesystem")
                     if obj.Type ~= "string" then
