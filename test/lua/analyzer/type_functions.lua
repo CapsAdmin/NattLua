@@ -191,3 +191,56 @@ run[[
     type_assert(ok, true)
     type_assert(val, 1)
 ]]
+
+run([[
+    type function Exclude(T, U)
+        T:RemoveElement(U)
+        return T
+    end
+
+    local a: Exclude<|1|2|3, 2|>
+
+    type_assert(a, _ as 1|3)
+]])
+
+run([[
+    type function Exclude(T, U)
+        T:RemoveElement(U)
+        return T
+    end
+
+    local a: Exclude<|1|2|3, 2|>
+
+    type_assert(a, _ as 11|31)
+]], "expected 11 | 31 got 1 | 3")
+
+
+test("pairs loop", function()
+    run[[
+        local tbl = {4,5,6}
+        local k, v = 0, 0
+        
+        for key, val in pairs(tbl) do
+            k = k + key
+            v = v + val
+        end
+
+        type_assert(k, 6)
+        type_assert(v, 15)
+    ]]
+end)
+
+test("type functions should return a tuple with types", function()
+    local analyzer = run([[
+        local type test = function()
+            return 1,2,3
+        end
+
+        local type a,b,c = test()
+    ]])
+
+    equal(1, analyzer:GetValue("a", "typesystem"):GetData())
+    equal(2, analyzer:GetValue("b", "typesystem"):GetData())
+    equal(3, analyzer:GetValue("c", "typesystem"):GetData())
+end)
+

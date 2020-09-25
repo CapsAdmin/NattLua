@@ -460,3 +460,25 @@ run[[
 
     type_assert(b, _ as false)
 ]]
+
+
+test("branching", function()
+    run([[
+        type a = {}
+
+        if not a then
+            -- shouldn't reach
+            type_assert(1, 2)
+        else
+            type_assert(1, 1)
+        end
+    ]])
+
+    run([[
+        type a = {}
+        if not a then
+            -- shouldn't reach
+            type_assert(1, 2)
+        end
+    ]])
+end)

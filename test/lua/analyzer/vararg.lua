@@ -128,3 +128,30 @@ run[[
     type_assert(b, _ as any)
     type_assert(c, _ as any)
 ]]
+
+test("parenthesis around varargs should only return the first value in the tuple", function()
+    run[[
+        local function s(...) return ... end
+        local a,b,c = (s(1, 2, 3))
+        type_assert(a, 1)
+        type_assert(b, nil)
+        type_assert(c, nil)
+    ]]
+end)
+
+test("type function varargs", function()
+    run[[
+        local lol = function(...)
+            local a,b,c = ...
+            type_assert(a, 1)
+            type_assert(b, 2)
+            type_assert(c, 3)
+        end
+
+        local function lol2(...)
+            lol(...)
+        end
+
+        lol2(1,2,3)
+    ]]
+end)

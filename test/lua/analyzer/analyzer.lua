@@ -1,6 +1,15 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
+test("type_assert works", function()
+    run("type_assert(1, 2)", "expected.-2 got 1")
+    run("type_assert(nil as 1|2, 1)", "expected.-1")
+
+    run"type_assert(not true, false)"
+    run"type_assert(not 1, false)"
+    run"type_assert(nil==nil, true)"
+end)
+
 test("declaring base types", function()
     run[[
         local type Symbol = function(T: any)
@@ -68,36 +77,6 @@ test("comment types", function()
     equal("string", c:GetType("string").Type)
 end)
 
-test("runtime reassignment", function()
-    local v = run[[
-        local a = 1
-        do
-            a = 2
-        end
-    ]]:GetValue("a", "runtime")
-
-    equal(v:GetData(), 2)
-
-    local v = run[[
-        local a = 1
-        if true then
-            a = 2
-        end
-    ]]:GetValue("a", "runtime")
-
-    equal(v:GetData(), 2)
-end)
-
-
-test("type_assert works", function()
-    run("type_assert(1, 2)", "expected.-2 got 1")
-    run("type_assert(nil as 1|2, 1)", "expected.-1")
-
-    run"type_assert(not true, false)"
-    run"type_assert(not 1, false)"
-    run"type_assert(nil==nil, true)"
-end)
-
 test("runtime scopes", function()
     local v = run("local a = 1"):GetValue("a", "runtime")
     equal(true, v.Type == "number")
@@ -120,26 +99,6 @@ test("default declaration is literal", function()
     assert(analyzer:GetValue("b", "runtime"):IsLiteral())
 end)
 
-test("branching", function()
-    run([[
-        type a = {}
-
-        if not a then
-            -- shouldn't reach
-            type_assert(1, 2)
-        else
-            type_assert(1, 1)
-        end
-    ]])
-
-    run([[
-        type a = {}
-        if not a then
-            -- shouldn't reach
-            type_assert(1, 2)
-        end
-    ]])
-end)
 
 test("runtime block scopes", function()
 
@@ -309,20 +268,6 @@ test("undefined types should error", function()
     run([[local a: ASDF = true]], "cannot find value ASDF")
 end)
 
-test("type functions should return a tuple with types", function()
-    local analyzer = run([[
-        local type test = function()
-            return 1,2,3
-        end
-
-        local type a,b,c = test()
-    ]])
-
-    equal(1, analyzer:GetValue("a", "typesystem"):GetData())
-    equal(2, analyzer:GetValue("b", "typesystem"):GetData())
-    equal(3, analyzer:GetValue("c", "typesystem"):GetData())
-end)
-
 test("type should be able to error", function()
     run([[
         local type test = function()
@@ -331,66 +276,6 @@ test("type should be able to error", function()
 
         test()
     ]], "test")
-end)
-
-test("exclude type function", function()
-    run([[
-        type function Exclude(T, U)
-            T:RemoveElement(U)
-            return T
-        end
-
-        local a: Exclude<|1|2|3, 2|>
-
-        type_assert(a, _ as 1|3)
-    ]])
-
-    run([[
-        type function Exclude(T, U)
-            T:RemoveElement(U)
-            return T
-        end
-
-        local a: Exclude<|1|2|3, 2|>
-
-        type_assert(a, _ as 11|31)
-    ]], "expected 11 | 31 got 1 | 3")
-end)
-
-test("parenthesis around varargs should only return the first value in the tuple", function()
-    run[[
-        local function s(...) return ... end
-        local a,b,c = (s(1, 2, 3))
-        type_assert(a, 1)
-        type_assert(b, nil)
-        type_assert(c, nil)
-    ]]
-end)
-
-test("type function varargs", function()
-    run[[
-        local lol = function(...)
-            local a,b,c = ...
-            type_assert(a, 1)
-            type_assert(b, 2)
-            type_assert(c, 3)
-        end
-
-        local function lol2(...)
-            lol(...)
-        end
-
-        lol2(1,2,3)
-    ]]
-end)
-
-test("pairs loop", function()
-    run[[
-        local tbl = {1,2,3}
-        for key, val in pairs(tbl) do
-        end
-
-    ]]
 end)
 
 test("file import", function()
@@ -441,37 +326,3 @@ run([[
         assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)
     end
 end)
-
-run([[
-    type Foo = {
-        a = 1,
-        b = 2,
-    }
-
-    local a: Foo = { a = 1 }    
-]], " is missing from ")
-
-
-run([[
-    local type Person = unique {
-        id = number,
-        name = string,
-    }
-    
-    local type Pet = unique {
-        id = number,
-        name = string,
-    }
-    
-    local dog: Pet = {
-        id = 1,
-        name = "pete"
-    }
-    
-    local human: Person = {
-        id = 6,
-        name = "persinger"
-    }
-    
-    local c: Pet = human    
-]], "is not the same unique type as")
