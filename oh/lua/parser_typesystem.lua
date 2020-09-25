@@ -339,7 +339,7 @@ return function(META)
         elseif self:IsValue("[") then
             node = self:Expression("type_list")
             node.tokens["["] = self:ReadValue("[")
-            node.types = self:ReadTypeExpressionList()
+            node.expressions = self:ReadTypeExpressionList()
             node.tokens["]"] = self:ReadValue("]")
         end
 

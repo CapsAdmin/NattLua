@@ -103,3 +103,8 @@ test("traditional array", function()
         local list: Array<|number, 3|> = {1, 2, 3, 4}
     ]], "4 is not a subset of 1%.%.3")
 end)
+
+run[[
+    local a: [1,2,3] = {1,2,3}
+    type_assert(a[1], 1)
+]]

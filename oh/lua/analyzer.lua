@@ -63,7 +63,7 @@ function META:GetOperator(obj, key, node)
     end
 
     --TODO: not needed? Get and Set should error
-    if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then
+    if obj.Type ~= "table" and obj.Type ~= "tuple" and obj.Type ~= "list" and (obj.Type ~= "string") then
         return types.errors.other("undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
     end
 
@@ -115,6 +115,8 @@ function META:TypeFromImplicitNode(node, type, data, literal, parent)
 
     if type == "table" then
         obj = self:Assert(node, types.Table(data))
+    elseif type == "list" then
+        obj = self:Assert(node, types.List(data))
     elseif type == "..." then
         obj = self:Assert(node, types.Tuple(data))
         obj.max = math.huge
@@ -1805,8 +1807,20 @@ do -- expressions
         return tbl
     end
 
+    function META:AnalyzeListExpression(node, env)
+        local list = self:TypeFromImplicitNode(node, "list", nil, env == "typesystem")
+        self.current_table = list
+        for _, node in ipairs(node.expressions) do
+            local val = self:AnalyzeExpression(node, env)
+            list:Insert(val)
+        end
+        self.current_table = nil
+        return list
+    end
+
     function META:AnalyzeExpression(node, env)
-        assert(node and node.type == "expression")
+        if not node then error("node is nil", 2) end
+        if node.type ~= "expression" then error("node is not an expression", 2) end
         env = env or "runtime"
     
         if self.PreferTypesystem then
@@ -1821,6 +1835,8 @@ do -- expressions
             return self:AnalyzeFunctionExpression(node, env)
         elseif node.kind == "table" or node.kind == "type_table" then
             return self:AnalyzeTableExpression(node, env)
+        elseif node.kind == "type_list" then
+            return self:AnalyzeListExpression(node, env)
         elseif node.kind == "vararg_tuple" then
             return self:AnalyzeVarargTupleExpression(node, env)
         elseif node.kind == "binary_operator" then

@@ -641,8 +641,7 @@ do -- types
     end
 
     function META:EmitListType(node)
-        self:EmitTypeExpression(node.left)
-        self:EmitTypeList(node)
+--        self:EmitTypeList(node)
     end
 
 
