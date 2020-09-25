@@ -926,7 +926,6 @@ do -- statements
                 args = values:GetData()
 
                 if one_loop then
-                    print(table.unpack(args))
                     break
                 end
             end
