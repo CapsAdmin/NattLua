@@ -337,3 +337,37 @@ run[[
     local x: FOO = 2
     type_assert(x, FOO)
 ]]
+
+run[[
+    type Foo = {
+        x = number,
+        y = self,
+    }
+
+    local x = {} as Foo
+
+    type_assert(x.y.y.y.x, _ as number)
+]]
+
+run[[
+    type Foo = {
+        x = number,
+        y = self,
+    }
+
+    local x = {} as Foo
+
+    type_assert(x.y.y.y.x, _ as number)
+]]
+
+
+run[[
+    type Foo = {
+        x = number,
+        y = Foo,
+    }
+
+    local x = {} as Foo
+
+    type_assert(x.y.y.y.x, _ as number)
+]]
