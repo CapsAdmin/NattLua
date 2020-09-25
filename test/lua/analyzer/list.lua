@@ -42,7 +42,7 @@ test("indirect only works for numeric keys", function()
     run[[
         local RED = 1
         local BLUE = 2
-        local GREEN: string = (function():string return "hello" end)()
+        local GREEN: string
         local x = {
             [RED] = 2,
             [BLUE] = 3,
@@ -53,14 +53,13 @@ test("indirect only works for numeric keys", function()
     run([[
         local RED = 1
         local BLUE = 2
-        local GREEN: string = (function():string return "hello" end)()
-
+        local GREEN: string
         local x: {[1 .. inf] = number} = {
             [RED] = 2,
             [BLUE] = 3,
             [GREEN] = 4,
         }
-    ]], "hello.- is not the same type as 1%.%.inf")
+    ]], "string.- is not the same type as 1%.%.inf")
 end)
 
 test("indirect works array-records", function()
