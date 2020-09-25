@@ -1822,6 +1822,11 @@ do -- expressions
             local val = self:AnalyzeExpression(node, env)
             list:Insert(val)
         end
+
+        if node.left then
+            list.ElementType = self:AnalyzeExpression(node.left, env)
+        end
+
         return list
     end
 

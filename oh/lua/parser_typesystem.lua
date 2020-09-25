@@ -365,6 +365,12 @@ return function(META)
                     node = self:Expression("postfix_operator")
                     node.left = left
                     node.value = self:ReadTokenLoose()
+                elseif self:IsValue("[") and self:IsValue("]", 1) then
+                    node = self:Expression("type_list")
+                    node.tokens["["] = self:ReadValue("[")
+                    node.expressions = self:ReadTypeExpressionList()
+                    node.tokens["]"] = self:ReadValue("]")
+                    node.left = left
                 elseif self:IsTypeCall() then
                     node = self:ReadTypeCall()
                     node.left = left

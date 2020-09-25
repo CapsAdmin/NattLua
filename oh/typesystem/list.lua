@@ -195,11 +195,16 @@ function META:GetKeySet()
 end
 
 function META:Contains(key)
+    if self.ElementType then 
+        return true
+    end
+
     return self:GetKeyVal(key, true)
 end
 
 function META:GetKeyVal(key, reverse_subset)
     if not self.data[1] then
+
         return types.errors.other("list has no definitions")
     end
 
@@ -294,6 +299,10 @@ end
 function META:Get(key)
     key = types.Cast(key)
 
+    if self.ElementType then
+        return self.ElementType
+    end
+
     if key.Type == "string" and not key:IsLiteral() then
         local set = types.Set({types.Nil})
         for _, keyval in ipairs(self:GetData()) do
@@ -321,6 +330,10 @@ function META:Get(key)
     end
 
     if not keyval and self.contract then
+        if self.contract.ElementType then
+            return self.contract.ElementType
+        end
+
         local keyval, reason = self.contract:GetKeyVal(key, true)
         if keyval then
             return keyval.val

@@ -107,3 +107,8 @@ run[[
     local a: [1,2,3] = {1,2,3}
     type_assert(a[1], 1)
 ]]
+
+run[[
+    local a: string[]
+    type_assert(a[1], _ as string)
+]]
