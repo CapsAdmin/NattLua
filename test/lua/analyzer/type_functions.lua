@@ -170,3 +170,24 @@ test("string sub on set", function()
         type_assert(lol:sub(1,1), _ as "f" | "b")
     ]]
 end)
+
+run[[
+    local a = {1,2,3}
+
+    local type type_pcall = function(func, ...) 
+        return pcall(self.Call, self, func, types.Tuple({...}))
+    end
+
+    local ok, err = type_pcall(function()
+        type_assert(1, 2)
+        return 1
+    end)
+
+    type_assert(ok, false)
+    type_assert_superset(err, _ as string)
+
+    local ok, val = type_pcall(function() return 1 end)
+
+    type_assert(ok, true)
+    type_assert(val, 1)
+]]
