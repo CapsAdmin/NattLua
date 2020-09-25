@@ -1831,6 +1831,8 @@ do -- expressions
     end
 
     function META:AnalyzeExpression(node, env)
+        self.current_expression = node
+
         if not node then error("node is nil", 2) end
         if node.type ~= "expression" then error("node is not an expression", 2) end
         env = env or "runtime"
