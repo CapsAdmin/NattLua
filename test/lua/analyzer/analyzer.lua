@@ -326,3 +326,14 @@ run([[
         assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)
     end
 end)
+
+run[[
+    local FOO = enum<|{
+        A = 1,
+        B = 2,
+        C = 3,
+    }|>
+    
+    local x: FOO = 2
+    type_assert(x, FOO)
+]]

@@ -8,6 +8,17 @@ local type thread = Table
 
 local type empty_function = function(...): any
 
+type function enum(tbl)
+	assert(tbl:IsLiteral())
+	
+	local set = types.Set()
+	for key, val in tbl:pairs() do
+		self:SetValue(key:GetData(), val, "typesystem")
+		set:AddElement(val)
+	end
+	return set
+end
+
 type function error_inside_base_typesystem()	
 	-- a comment to match from test
 	local a = nil + true
