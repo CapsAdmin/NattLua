@@ -21,7 +21,7 @@ function META:GetSignature()
 
     table.sort(s, sort)
 
-    return table.concat(s, "\n")
+    return "[" .. table.concat(s, "\n") .. "]"
 end
 
 local level = 0
