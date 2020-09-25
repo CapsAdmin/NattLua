@@ -229,7 +229,9 @@ function META:GetKeyVal(key, reverse_subset)
 end
 
 function META:Insert(val)
-    self:Set(#self.data + 1, val)
+    self.size = self.size or 1
+    self:Set(self.size, val)
+    self.size = self.size + 1
 end
 
 function META:GetValues()

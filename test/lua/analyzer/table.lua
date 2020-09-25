@@ -291,3 +291,10 @@ run[[
     list = {}
     type_assert(list, _ as {[number] = any})
 ]]
+
+run[[
+    local a = {foo = true, bar = false, 1,2,3}
+    type_assert(a[1], 1)
+    type_assert(a[2], 2)
+    type_assert(a[3], 3)
+]]
