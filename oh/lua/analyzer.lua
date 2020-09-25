@@ -118,8 +118,12 @@ function META:TypeFromImplicitNode(node, type, data, literal, parent)
     elseif type == "list" then
         obj = self:Assert(node, types.List(data))
     elseif type == "..." then
-        obj = self:Assert(node, types.Tuple(data))
-        obj.max = math.huge
+        if not data then
+            obj = self:Assert(node, types.Tuple({}):SetElementType(types.Any()):Max(math.huge))
+        else
+            obj = self:Assert(node, types.Tuple(data))
+            obj:Max(math.huge)
+        end
     elseif type == "number" then
         obj = self:Assert(node, types.Number(data):MakeLiteral(literal))
     elseif type == "string" then
@@ -889,6 +893,8 @@ do -- statements
             table.remove(args, 1)
 
             local returned_key = nil
+            
+            local one_loop = args[1] and args[1].Type == "any"
 
             for i = 1, 1000 do
                 local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
@@ -918,6 +924,11 @@ do -- statements
                 table.insert(values.data, 1, args[1])
 
                 args = values:GetData()
+
+                if one_loop then
+                    print(table.unpack(args))
+                    break
+                end
             end
 
             if returned_key then
@@ -1695,7 +1706,7 @@ do -- expressions
                         args[i] = self:GuessTypeFromIdentifier(key)
                     end
                 elseif key.kind == "value" and key.value.value == "..." then
-                    args[i] = self:TypeFromImplicitNode(key, "...", {self:TypeFromImplicitNode(key, "any")})
+                    args[i] = self:TypeFromImplicitNode(key, "...")
                 elseif key.kind == "type_table" then
                     args[i] = self:AnalyzeExpression(key)
                 else

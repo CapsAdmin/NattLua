@@ -114,6 +114,15 @@ run[[
 ]]
 
 run[[
+    function foo(...)
+        local tbl = {...}
+        type_assert(tbl[1], _ as any)
+        type_assert(tbl[2], _ as any)
+        type_assert(tbl[100], _ as any)
+    end
+]]
+
+run[[
     ;(function(...)   
         local tbl = {...}
         type_assert(tbl[1], 1)
