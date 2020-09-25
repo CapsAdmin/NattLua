@@ -683,8 +683,6 @@ do -- statements
                         val.unique_id = contract.unique_id
                     end
 
-                    
-
                     if not ok then
                         self:Error(statement or val.node or exp_key.explicit_type, reason)
                     end
@@ -1809,12 +1807,10 @@ do -- expressions
 
     function META:AnalyzeListExpression(node, env)
         local list = self:TypeFromImplicitNode(node, "list", nil, env == "typesystem")
-        self.current_table = list
         for _, node in ipairs(node.expressions) do
             local val = self:AnalyzeExpression(node, env)
             list:Insert(val)
         end
-        self.current_table = nil
         return list
     end
 
