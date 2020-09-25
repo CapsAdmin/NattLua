@@ -1602,7 +1602,7 @@ do -- expressions
                     return self:TypeFromImplicitNode(node, "any")
                 elseif node.value.value == "never" then
                         return self:TypeFromImplicitNode(node, "never")
-                elseif node.value.value == "self" then
+                elseif node.value.value == "self" and self.current_table then
                     return self.current_table
                 elseif node.value.value == "inf" then
                     return self:TypeFromImplicitNode(node, "number", math.huge, true)
