@@ -21,6 +21,10 @@ function META:GetSignature()
 
     table.sort(s, sort)
 
+    if self:IsUnique() then
+        table.insert(s, tostring(self:GetUniqueID()))
+    end
+
     return table.concat(s, "\n")
 end
 
@@ -69,16 +73,16 @@ end
 local done
 
 function META.SubsetOf(A, B)
+    if B.Type == "any" then
+        return true
+    end
+
     local ok, err = types.IsSameUniqueType(A, B)
     if not ok then
         return ok, err
     end
 
     if A == B then
-        return true
-    end
-
-    if B.Type == "any" then
         return true
     end
 

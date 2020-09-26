@@ -136,7 +136,8 @@ return function(META)
         function META:CopyUpvalue(upvalue, data)
             return {
                 data = data or upvalue.data:Copy(),
-                shadow = upvalue.shadow
+                key = upvalue.key,
+                shadow = upvalue.shadow,
             }
         end
 
@@ -145,8 +146,11 @@ return function(META)
 
             local upvalue = {
                 data = obj,
+                key = key,
                 shadow = self:GetUpvalue(key, env),
             }
+
+            obj.upvalue = upvalue
 
             table_insert(self.scope.upvalues[env].list, upvalue)
             self.scope.upvalues[env].map[self:Hash(key)] = upvalue

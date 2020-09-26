@@ -283,6 +283,10 @@ function META:Call(obj, arguments, call_node)
         end
     end
 
+    if self.OnFunctionCall then
+        self:OnFunctionCall(obj, arguments)
+    end
+
     local return_tuple
 
     if obj.data.lua_function then
@@ -447,6 +451,18 @@ do -- control flow analysis
             if obj.data_outside_of_if_blocks then
                obj.data = obj.data_outside_of_if_blocks
                obj.data_outside_of_if_blocks = nil
+            end
+        end
+    end
+
+    function META:OnFunctionCall(obj, arguments)
+        for i = 1, arguments:GetLength() do
+            local arg = obj:GetArguments():Get(i)
+            if arg and arg.out then
+                local upvalue = arguments:Get(i).upvalue
+                if upvalue then
+                    self:SetValue(upvalue.key, arguments:Get(i):Copy():MakeUnique(true), "runtime")
+                end
             end
         end
     end
@@ -1525,6 +1541,10 @@ do -- expressions
                 elseif op == "unique" then
                     local obj = self:AnalyzeExpression(node.right, "typesystem")
                     obj:MakeUnique(true)
+                    return obj
+                elseif op == "out" then
+                    local obj = self:AnalyzeExpression(node.right, "typesystem")
+                    obj.out = true
                     return obj
                 elseif op == "$" then
                     local obj = self:AnalyzeExpression(node.right, "typesystem")
