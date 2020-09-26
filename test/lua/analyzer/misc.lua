@@ -310,7 +310,7 @@ R[[
             break
         end
     end
-    type_assert(c, _ as 0 | 1)
+    type_assert(c, _ as 1)
 ]]
 R[[
     local a = 0
@@ -391,14 +391,14 @@ R[[
 ]]
 R[[
     local a = 1337
-    for i = 1, 10 do
+    for i = 1, a do
         type_assert(i, 1)
         if i == 15 then
             a = 7777
             break
         end
     end
-    type_assert(a, 1337)
+    type_assert(a, _ as 1337 | 7777)
 ]]
 R[[
     local function lol(a, ...)
@@ -848,7 +848,7 @@ R[[
 
 R[[
     local a, b = 0, 0
-    for i = 1, 10 do
+    for i = 1, 5000 do
         if 5 == i then
             a = 1
         end

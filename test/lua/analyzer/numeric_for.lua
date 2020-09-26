@@ -1,10 +1,10 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-test("for i = 1, 10", function()
+test("for i = 1, 10000", function()
     run[[
-        for i = 1, 10 do
-            type_assert(i, _ as 1 .. 10)
+        for i = 1, 10000 do
+            type_assert(i, _ as 1 .. 10000)
         end
     ]]
 end)

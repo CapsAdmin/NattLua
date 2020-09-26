@@ -65,11 +65,11 @@ end)
 test("indirect works array-records", function()
     run[[
         local tbl = {}
-        for i = 1, 100 do
+        for i = 1, 10000 do
             tbl[i] = i*100
         end
         tbl[50] = true
-        type_assert(tbl[20], _ as 100 .. 10000 | true)
+        type_assert(tbl[20], _ as 100 .. 1000000 | true)
     ]]
 end)
 
