@@ -244,3 +244,52 @@ test("type functions should return a tuple with types", function()
     equal(3, analyzer:GetValue("c", "typesystem"):GetData())
 end)
 
+run[[
+    local function build_numeric_for(tbl)
+        local lua = {}
+        table.insert(lua, "local sum = 0")
+        table.insert(lua, "for i = " .. tbl.init .. ", " .. tbl.max .. " do")
+        table.insert(lua, tbl.body)
+        table.insert(lua, "end")
+        table.insert(lua, "return sum")
+        return load(table.concat(lua, "\n"), tbl.name)
+    end
+    
+    local func = build_numeric_for({
+        name = "myfunc",
+        init = 1,
+        max = 10,
+        body = "sum = sum + i"
+    })
+    
+    type_assert(func(), 55)
+]]
+
+run([[
+    local function build_summary_function(tbl)
+        local lua = {}
+        table.insert(lua, "local sum = 0")
+        table.insert(lua, "for i = " .. tbl.init .. ", " .. tbl.max .. " do")
+        table.insert(lua, tbl.body)
+        table.insert(lua, "end")
+        table.insert(lua, "return sum")
+        return load(table.concat(lua, "\n"), tbl.name)
+    end
+
+    local func = build_summary_function({
+        name = "myfunc",
+        init = 1,
+        max = 10,
+        body = "sum = sum + i CHECKME"
+    })
+]], "CHECKME")
+
+run[[
+    local a = {"1", "2", "3"}
+    type_assert(table.concat(a), "123")
+]]
+
+run[[
+    local a = {"1", "2", "3", _ as string}
+    type_assert(table.concat(a), _ as string)
+]]

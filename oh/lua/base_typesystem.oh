@@ -31,6 +31,7 @@ type function keysof(tbl: Table)
 		set:AddElement(keyval.key)
 	end
 
+
 	return set
 end
 
@@ -456,6 +457,23 @@ do
 		pack = (function(...): Table),
 		new = (function(number, number): Table),
 	}
+
+	type function table.concat(tbl: {[1 .. inf] = string}, separator: string | nil) 
+		if not tbl:IsLiteral() then
+			return types.String()
+		end
+
+		if separator and (separator.Type ~= "string" or not separator:IsLiteral()) then
+			return types.String()
+		end
+
+		local out = {}
+		for i, keyval in ipairs(tbl.data) do
+			out[i] = keyval.val:GetData()
+		end
+
+		return table.concat(out, separator and separator:GetData() or nil)
+	end
 
 	type function table.insert(tbl: {[1 .. inf] = any}, ...)
 		local pos, val = ...
