@@ -1646,7 +1646,7 @@ do -- expressions
                     return self:TypeFromImplicitNode(node, "any")
                 elseif node.value.value == "never" then
                         return self:TypeFromImplicitNode(node, "never")
-                elseif (node.value.value == "self" and self.current_table) or (self.current_table and self.left_assigned and self.left_assigned.value.value == node.value.value) then
+                elseif (node.value.value == "self" and self.current_table) or (self.current_table and self.left_assigned and self.left_assigned.value.value == node.value.value and not types.IsPrimitiveType(node.value.value)) then
                     return self.current_table
                 elseif node.value.value == "inf" then
                     return self:TypeFromImplicitNode(node, "number", math.huge, true)
