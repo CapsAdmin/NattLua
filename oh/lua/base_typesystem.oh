@@ -315,6 +315,27 @@ do -- globals
 		return select(index:GetData(), ...)
 	end
 
+	type function type(obj: any)
+		self.type_checked = obj
+
+		if obj.Type == "set" then
+			local copy = types.Set()
+			for _, v in ipairs(obj:GetElements()) do
+				if v.GetLuaType then
+					copy:AddElement(types.String(v:GetLuaType()):MakeLiteral(true))
+				end
+			end
+
+			return copy
+		end
+
+		if obj.GetLuaType then
+			return obj:GetLuaType()
+		end
+
+		return types.String()
+	end
+
 	type function setmetatable(tbl, meta)
 		if meta.Type == "table" then
 			tbl.meta = meta

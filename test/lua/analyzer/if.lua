@@ -165,7 +165,7 @@ test("inverted else", function()
     ]]
 end)
 
-pending("type function", function()
+test("type function", function()
     run([[
         local a: number | string
 
@@ -175,6 +175,19 @@ pending("type function", function()
 
         type_assert(a, _ as number | string)
     ]])
+    run[[
+        local a: 1 | false | true
+
+        if type(a) == "boolean" then
+            type_assert(a, _ as boolean)
+        end
+
+        if type(a) ~= "boolean" then
+            type_assert(a, 1)
+        else
+            type_assert(a, _ as boolean)
+        end
+    ]]
 end)
 
 pending("inverted", function()
@@ -482,3 +495,21 @@ test("branching", function()
         end
     ]])
 end)
+
+run[[
+    local a: true | false | number | "foo" | "bar" | nil | 1
+
+    if a then
+        type_assert(a, _ as true | number | "foo" | "bar" | 1)
+    else
+        type_assert(a, _ as false | nil)
+    end
+
+    if not a then
+        type_assert(a, _ as false | nil)
+    end
+
+    if a == "foo" then
+        type_assert(a, "foo")
+    end
+]]

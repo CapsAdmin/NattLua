@@ -4,6 +4,10 @@ local META = {}
 META.Type = "symbol"
 META.__index = META
 
+function META:GetLuaType()
+    return type(self.data)
+end
+
 function META:GetSignature()
     return "symbol" .. "-" .. tostring(self.data)
 end

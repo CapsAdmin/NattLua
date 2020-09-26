@@ -132,6 +132,26 @@ function META:IsFalsy()
     return false
 end
 
+function META:GetTruthy()
+    local copy = self:Copy()
+    for _, obj in ipairs(self:GetElements()) do
+        if not obj:IsTruthy() then
+            copy:RemoveElement(obj)
+        end
+    end
+    return copy
+end
+
+function META:GetFalsy()
+    local copy = self:Copy()
+    for _, obj in ipairs(self:GetElements()) do
+        if not obj:IsFalsy() then
+            copy:RemoveElement(obj)
+        end
+    end
+    return copy
+end
+
 function META:IsType(typ)
     if self:IsEmpty() then return false end
 

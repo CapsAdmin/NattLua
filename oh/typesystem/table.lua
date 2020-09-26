@@ -6,6 +6,10 @@ META.__index = META
 
 local function sort(a, b) return a < b end
 
+function META:GetLuaType()
+    return self.Type
+end
+
 function META:GetSignature()
     if self.suppress then
         return "*self*"

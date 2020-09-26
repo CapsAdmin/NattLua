@@ -508,55 +508,25 @@ do -- control flow analysis
         if upvalue.data.Type == "set" then
             local condition = scope.test_condition
 
-            if condition and (condition.source or condition) == upvalue.data then
-                if condition.node and condition.node.kind == "prefix_operator" then
-                    local op = condition.node.value.value
+            if condition then                 
+                -- not sure how to deal with "if not not (true | false) then" yet
+                if 
+                    condition == upvalue.data or 
+                    condition.source == upvalue.data or 
+                    condition.source_left == upvalue.data or 
+                    condition.source_right == upvalue.data or
+                    condition.type_checked == upvalue.data 
+                then
+                    local copy = self:CopyUpvalue(upvalue)
 
-                    if op == "not" then
-                        if scope.test_condition_inverted then 
-                            if upvalue.data:IsFalsy() then
-                                local copy = self:CopyUpvalue(upvalue)
-                                copy.data:DisableFalsy()
-                                copy.original = upvalue.data
-                                return copy
-                            elseif upvalue.data:IsTruthy()then
-                                local copy = self:CopyUpvalue(upvalue)
-                                copy.data:DisableTruthy()
-                                copy.original = upvalue.data
-                                return copy
-                            end
-                        else
-                            if upvalue.data:IsTruthy() then
-                                local copy = self:CopyUpvalue(upvalue)
-                                copy.data:DisableTruthy()
+                    if scope.test_condition_inverted then
+                        copy.data = (condition.falsy_set or copy.data:GetFalsy()):Copy()
+                    else
+                        copy.data = (condition.truthy_set or copy.data:GetTruthy()):Copy()
+                    end
 
-                                copy.original = upvalue.data
-                                return copy
-                            elseif upvalue.data:IsFalsy()then
-                                local copy = self:CopyUpvalue(upvalue)
-                                copy.data:DisableFalsy()
-                                copy.original = upvalue.data
-                                return copy
-                            end
-                        end
-                    end
-                end
-
-                if scope.test_condition_inverted then 
-                    if upvalue.data:IsFalsy() then
-                        local copy = self:CopyUpvalue(upvalue)
-                        copy.data:DisableTruthy()
-                        copy.original = upvalue.data
-                        return copy
-                    end
-                else
-                    if upvalue.data:IsTruthy() then
-                        local copy = self:CopyUpvalue(upvalue)
-                        
-                        copy.data:DisableFalsy()
-                        copy.original = upvalue.data
-                        return copy
-                    end
+                    copy.original = upvalue.data
+                    return copy
                 end
             end
         end
@@ -1169,12 +1139,50 @@ do -- expressions
 
             if l.Type == "set" and r.Type == "set" then
                 local new_set = types.Set()
-
+                local truthy_set = types.Set()
+                local falsy_set = types.Set()
+                
                 for _, l in ipairs(l:GetElements()) do
                     for _, r in ipairs(r:GetElements()) do
-                        new_set:AddElement(self:Assert(node, self:BinaryOperator(node, l, r, env)))
+                        local res = self:Assert(node, self:BinaryOperator(node, l, r, env))
+                        if res:IsTruthy() then
+                            if self.type_checked then
+                                
+                                for _, t in ipairs(self.type_checked:GetElements()) do
+                                    if t:GetLuaType() == l:GetData() then
+                                        truthy_set:AddElement(t)
+                                    end
+                                end                                
+                                
+                            else
+                                truthy_set:AddElement(l)
+                            end
+                        end
+    
+                        if res:IsFalsy() then
+                            if self.type_checked then                                
+                                for _, t in ipairs(self.type_checked:GetElements()) do
+                                    if t:GetLuaType() == l:GetData() then
+                                        falsy_set:AddElement(t)
+                                    end
+                                end                                
+                                
+                            else
+                                falsy_set:AddElement(l)
+                            end
+                        end
+
+                        new_set:AddElement(res)
                     end
                 end
+                
+                if self.type_checked then
+                    new_set.type_checked = self.type_checked
+                    self.type_checked = nil
+                end
+
+                new_set.truthy_set = truthy_set
+                new_set.falsy_set = falsy_set
 
                 return new_set:SetSource(node, new_set, l,r)
             end
@@ -1518,10 +1526,25 @@ do -- expressions
 
             if l.Type == "set" then
                 local new_set = types.Set()
+                local truthy_set = types.Set()
+                local falsy_set = types.Set()
 
                 for _, l in ipairs(l:GetElements()) do
-                    new_set:AddElement(self:Assert(node, self:PrefixOperator(node, l, env)))
+                    local res = self:Assert(node, self:PrefixOperator(node, l, env))
+                    new_set:AddElement(res)
+
+
+                    if res:IsTruthy() then
+                        truthy_set:AddElement(l)
+                    end
+
+                    if res:IsFalsy() then
+                        falsy_set:AddElement(l)
+                    end
                 end
+
+                new_set.truthy_set = truthy_set
+                new_set.falsy_set = falsy_set
 
                 return new_set:SetSource(node, l)
             end

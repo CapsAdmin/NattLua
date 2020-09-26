@@ -6,6 +6,10 @@ local META = {}
 META.Type = "number"
 META.__index = META
 
+function META:GetLuaType()
+    return self.Type
+end
+
 function META:GetSignature()
     local s = "number"
 
