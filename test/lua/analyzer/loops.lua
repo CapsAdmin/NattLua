@@ -61,3 +61,33 @@ test("pairs on any should at least make k,v any", function()
         type_assert(val, _ as any | nil)
     ]]
 end)
+
+run[[
+    local x = 0
+    for i = 1, 10 do
+        x = x + i
+    end
+    type_assert(x, 55)
+]]
+
+run[[
+    local x = 0
+    for i = 1, 10 do
+        x = x + i
+        if i == 4 then
+            break
+        end
+    end
+    type_assert(x, 10)
+]]
+
+run[[
+    local x = 0
+    for i = 1, 10 do
+        x = x + i
+        if i == maybe then
+            break
+        end
+    end
+    type_assert(x, _ as number)
+]]
