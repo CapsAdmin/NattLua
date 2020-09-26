@@ -246,6 +246,50 @@ ffi.cdef("bad c declaration")
 -> | test.lua:8:0 : declaration specifier expected near 'bad'
 ```
 
+## `load` evaluation
+
+```lua
+    local function build_summary_function(tbl)
+        local lua = {}
+        table.insert(lua, "local sum = 0")
+        table.insert(lua, "for i = " .. tbl.init .. ", " .. tbl.max .. " do")
+        table.insert(lua, tbl.body)
+        table.insert(lua, "end")
+        table.insert(lua, "return sum")
+        return load(table.concat(lua, "\n"), tbl.name)
+    end
+
+    local func = build_summary_function({
+        name = "myfunc",
+        init = 1,
+        max = 10,
+        body = "sum = sum + i !!ManuallyInsertedSyntaxError!!"
+    })
+```
+
+```lua
+    ----------------------------------------------------------------------------------------------------
+     4 | )
+     5 |  table.insert(lua, "end")
+     6 |  table.insert(lua, "return sum")
+     8 |  return load(table.concat(lua, "\n"))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     9 | end
+    10 | 
+    ----------------------------------------------------------------------------------------------------
+    -> | test.lua:8:8
+        ----------------------------------------------------------------------------------------------------
+        1 | local sum = 0
+        2 | for i = 1, 10 do
+        3 | sum = sum + i !!ManuallyInsertedSyntaxError!!
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        4 | end
+        5 | return sum
+        ----------------------------------------------------------------------------------------------------
+        -> | myfunc:3:14 : expected assignment or call expression got ❲symbol❳ (❲!❳)
+```
+This works because there is no uncertainty about the code generated passed to the load function. If there was, lets say we did `body = "sum = sum + 1" .. (unknown_global as string)`, this would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
+
 # development
 
 To run tests run `luajit test/run`
