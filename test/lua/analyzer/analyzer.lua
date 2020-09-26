@@ -371,3 +371,22 @@ run[[
 
     type_assert(x.y.y.y.x, _ as number)
 ]]
+
+pending("forward declare types", function()
+    run[[
+        type Ping
+        type Pong
+
+        type Ping = {
+            pong = Pong,
+        }
+
+        type Pong = {
+            ping = Ping,
+        }
+
+        local x: Pong
+
+        print(x.ping.pong)
+    ]]
+end)
