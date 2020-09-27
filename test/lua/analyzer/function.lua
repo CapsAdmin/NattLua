@@ -313,20 +313,13 @@ test("pcall", function()
 end)
 test("complex", function()
     run[[
-        local a
-        a = 2
-
-        if true then
-            local function foo(lol)
-                return foo(lol), nil
-            end
-            local complex = foo(a)
-
-            type_assert_superset(
-                foo,
-                nil as (function(2 | any):any, nil)
-            )
+        local function foo()
+            return foo()
         end
+        
+        foo()
+
+        type_assert_superset(foo, nil as (function():any))
     ]]
 end)
 test("lol", function()
