@@ -181,7 +181,7 @@ test("self reference", function()
 
         -- have to use as here because {} would not be a subset of Foo
         local x = {} as Foo
-
+        
         type_assert(x:Test(1), _ as number)
         type_assert(x:GetPos(), _ as number)
 
@@ -298,3 +298,15 @@ run[[
     type_assert(a[2], 2)
     type_assert(a[3], 3)
 ]]
+
+test("deep nested copy", function() 
+    local a = run([[
+        local a = {nested = {}}
+        a.a = a
+        a.nested.a = a
+    ]]):GetValue("a", "runtime")
+
+    equal(a:Get("nested"):Get("a"), a)
+    equal(a:Get("a"), a)
+    equal(a:Get("a"), a:Get("nested"):Get("a"))
+end)

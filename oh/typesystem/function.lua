@@ -32,11 +32,14 @@ function META:GetReturnTypes()
     return self.data.ret
 end
 
-function META:Copy(self_reference, current_table)
-    local copy = types.Function({
-        ret = self.data.ret:Copy(self_reference, current_table),
-        arg = self.data.arg:Copy(self_reference, current_table)
-    }):MakeLiteral(self:IsLiteral())
+function META:Copy(map)
+    map = map or {}
+
+    local copy = types.Function({})
+    map[self] = map[self] or copy
+    copy.data.ret = self.data.ret:Copy(map)
+    copy.data.arg = self.data.arg:Copy(map)
+    copy:MakeLiteral(self:IsLiteral())
 
     copy.node = self.node
 

@@ -377,26 +377,24 @@ function META:CopyLiteralness(from)
     return true
 end
 
-function META:Copy(self_reference)
+function META:Copy(map)
+    map = map or {}
+
     local copy = types.List({})
+    map[self] = map[self] or copy
+
     copy.node = self.node
 
     for _, keyval in ipairs(self.data) do
-        local k,v = keyval.key, keyval.val
+        local k, v = keyval.key, keyval.val
 
-        if k == self then
-            k = self_reference or copy
-        else
-            k = k:Copy(copy, self)
-        end
+        k = map[keyval.key] or k:Copy(map)
+        map[keyval.key] = map[keyval.key] or k
 
-        if v == self then
-            v = self_reference or copy
-        else
-            v = v:Copy(copy, self)
-        end
-
-        copy:Set(k,v)
+        v = map[keyval.val] or v:Copy(map)
+        map[keyval.val] = map[keyval.val] or v
+                
+        copy:Set(k, v)
     end
 
     copy.meta = self.meta

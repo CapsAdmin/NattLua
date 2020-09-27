@@ -88,15 +88,18 @@ function META:GetData()
     return self.data
 end
 
-function META:Copy(self_reference, current_table)
+function META:Copy(map)
+    map = map or {}
+
     local copy = types.Tuple({})
+    map[self] = map[self] or copy
+    
     for i, v in ipairs(self.data) do
-        if v == current_table then
-            copy:Set(i, self_reference)
-        else
-            copy:Set(i, v:Copy(self_reference))
-        end
+        v = map[v] or v:Copy(map)
+        map[v] = map[v] or v
+        copy:Set(i, v)
     end
+
     copy.node = self.node
 
     return copy

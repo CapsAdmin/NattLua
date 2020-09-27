@@ -383,26 +383,24 @@ function META:CopyLiteralness(from)
     return true
 end
 
-function META:Copy(self_reference)
+function META:Copy(map)
+    map = map or {}
+
     local copy = types.Table({})
+    map[self] = map[self] or copy
+
     copy.node = self.node
 
     for _, keyval in ipairs(self.data) do
-        local k,v = keyval.key, keyval.val
+        local k, v = keyval.key, keyval.val
 
-        if k == self then
-            k = self_reference or copy
-        else
-            k = k:Copy(copy, self)
-        end
+        k = map[keyval.key] or k:Copy(map)
+        map[keyval.key] = map[keyval.key] or k
 
-        if v == self then
-            v = self_reference or copy
-        else
-            v = v:Copy(copy, self)
-        end
-
-        copy:Set(k,v)
+        v = map[keyval.val] or v:Copy(map)
+        map[keyval.val] = map[keyval.val] or v
+                
+        copy:Set(k, v)
     end
 
     copy.meta = self.meta
@@ -466,34 +464,25 @@ function META:IsTruthy()
     return true
 end
 
-local function unpack_keyval(keyval, tbl, copy)
+local function unpack_keyval(keyval, tbl)
     local key, val = keyval.key, keyval.val
-
-    if key == tbl then
-        key = copy
-    else
-        key = key:Copy(copy, tbl)
-    end
-
-    if val == tbl then
-        val = copy
-    else
-        val = val:Copy(copy, tbl)
-    end
-
     return key, val
 end
 
 function META.Extend(A, B)
-    local copy = A:Copy()
+    local map = {}
+    A = A:Copy(map)
+    
+    map[B] = A
+    B = B:Copy(map)
 
     for _, keyval in ipairs(B:GetData()) do
-        if not copy:Get(keyval.key) then
-            copy:Set(unpack_keyval(keyval, B, copy))
+        if not A:Get(keyval.key) then
+            A:Set(unpack_keyval(keyval, B))
         end
     end
 
-    return copy
+    return A
 end
 
 function META.Union(A, B)
