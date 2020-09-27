@@ -247,3 +247,16 @@ run[[
     rawset(a, "foo", "hello")
     type_assert(rawget(a, "foo"), "hello")
 ]]
+
+run[[
+    local self = setmetatable({}, {
+        __index = setmetatable({foo = true}, {
+            __index = {
+                bar = true,
+            }
+        })
+    })
+    
+    type_assert(self.foo, true)
+    type_assert(self.bar, true)
+]]

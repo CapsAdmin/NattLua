@@ -72,11 +72,7 @@ function META:GetOperator(obj, key, node)
 
         if index then
             if index.Type == "table" then
-                if index.contract then
-                    return index.contract:Get(key)
-                else
-                    return index:Get(key)
-                end
+                return self:GetOperator(index.contract or index, key, node)
             end
 
             if index.Type == "function" or index.Type == "table" then
