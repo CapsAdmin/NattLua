@@ -224,8 +224,10 @@ run[[
     end
 
     function META:Faz(a, b)
-        print(a,b)
+        return a, b
     end
 
-    META:Faz(META:Foo(), META:Bar())
+    local a,b = META:Faz(META:Foo(), META:Bar())
+    type_assert(a, 1)
+    type_assert(b, 2)
 ]]
