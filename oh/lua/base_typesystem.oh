@@ -731,6 +731,8 @@ do
 
 	type math.huge = inf
 
+	type math.pi = 3.14159265358979323864338327950288
+
 	type function math.floor(num: number)
 		if num:IsLiteral() then
 			return math.floor(num:GetData())
