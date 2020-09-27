@@ -1559,10 +1559,10 @@ do -- expressions
 
             if env == "typesystem" then
                 if op == "typeof" then
-                    local obj = self:GetValue(node.right, "runtime")
+                    local obj = self:AnalyzeExpression(node.right, "runtime")
 
                     if not obj then
-                        return types.errors.other("cannot find " .. self:Hash(node.right) .. " in the current typesystem scope")
+                        return types.errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
                     end
                     return obj.contract or obj
                 elseif op == "unique" then

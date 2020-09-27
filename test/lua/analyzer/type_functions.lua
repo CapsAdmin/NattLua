@@ -309,3 +309,15 @@ run[[
     
     type_assert(a.foo, _ as "bar" | nil)
 ]]
+
+run[[
+    local a = {
+        b = {
+            foo = true,
+            bar = false,
+            faz = 1,
+        }
+    }
+    
+    type_assert(_ as keysof<|typeof a.b|>, _ as "bar" | "faz" | "foo")
+]]
