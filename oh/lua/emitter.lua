@@ -138,10 +138,12 @@ do
         end
 
         self:Whitespace("\n")
-        self:EmitBlock(node.statements)
-
-        self:Whitespace("\t")
-        self:EmitToken(node.tokens["end"])
+        if node.statements then
+            self:EmitBlock(node.statements)
+            
+            self:Whitespace("\t")
+            self:EmitToken(node.tokens["end"])
+        end
     end
 
     function META:EmitAnonymousFunction(node)
