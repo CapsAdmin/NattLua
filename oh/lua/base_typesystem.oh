@@ -98,11 +98,17 @@ do -- globals
 	type function print(...) print(...) end
 	type tostring = (function(val: any): string)
 
-	type function assert(obj, err)
+	type function type_assert_truthy(obj, err)
 		if obj:IsTruthy() then
 			return obj
 		end
 		error(err and err.data or "assertion failed")
+	end
+
+	type function assert(obj)
+		if obj:IsTruthy() then
+			return obj
+		end
 	end
 
 	type function next(t: {[any] = any}, k: any)

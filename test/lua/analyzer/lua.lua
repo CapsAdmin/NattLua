@@ -290,10 +290,10 @@ end)
 test("bit operations", function()
     run[[
         for i=1,100 do
-            assert(bit.tobit(i+0x7fffffff) < 0)
+            type_assert_truthy(bit.tobit(i+0x7fffffff) < 0)
         end
         for i=1,100 do
-            assert(bit.tobit(i+0x7fffffff) <= 0)
+            type_assert_truthy(bit.tobit(i+0x7fffffff) <= 0)
         end
     ]]
 end)
@@ -304,22 +304,22 @@ test("string comparisons", function()
             local a = "\255\255\255\255"
             local b = "\1\1\1\1"
 
-            assert(a > b)
-            assert(a > b)
-            assert(a >= b)
-            assert(b <= a)
+            type_assert_truthy(a > b)
+            type_assert_truthy(a > b)
+            type_assert_truthy(a >= b)
+            type_assert_truthy(b <= a)
         end
 
         do --- String comparisons:
             local function str_cmp(a, b, lt, gt, le, ge)
-                assert(a<b == lt)
-                assert(a>b == gt)
-                assert(a<=b == le)
-                assert(a>=b == ge)
-                assert((not (a<b)) == (not lt))
-                assert((not (a>b)) == (not gt))
-                assert((not (a<=b)) == (not le))
-                assert((not (a>=b)) == (not ge))
+                type_assert_truthy(a<b == lt)
+                type_assert_truthy(a>b == gt)
+                type_assert_truthy(a<=b == le)
+                type_assert_truthy(a>=b == ge)
+                type_assert_truthy((not (a<b)) == (not lt))
+                type_assert_truthy((not (a>b)) == (not gt))
+                type_assert_truthy((not (a<=b)) == (not le))
+                type_assert_truthy((not (a>=b)) == (not ge))
             end
 
             local function str_lo(a, b)
