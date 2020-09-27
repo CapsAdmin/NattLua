@@ -323,10 +323,11 @@ function META:Call(obj, arguments, call_node)
         end
 
         do -- recursive guard
-            if self.calling_function == obj then
+            self.calling_functions = self.calling_functions or {}
+            if self.calling_functions[obj] then
                 return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes():Get(1)) or types.Tuple({self:TypeFromImplicitNode(call_node, "any")})
             end
-            self.calling_function = obj
+            self.calling_functions[obj] = true
         end
 
         self:PushScope(function_node)
@@ -365,7 +366,7 @@ function META:Call(obj, arguments, call_node)
         self:PopScope()
 
         self.returned_from_block = nil
-        self.calling_function = nil
+        self.calling_functions = nil
 
         do
             -- if this function has an explicit return type

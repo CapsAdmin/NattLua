@@ -410,3 +410,19 @@ run[[
     local f = genfunc("foo")
     type_assert(f(), "foo")
 ]]
+
+run[[
+    function faz(a)
+        return foo(a + 1)
+    end
+    
+    function bar(a)
+        return faz(a + 1)
+    end
+    
+    function foo(a)
+        return bar(a + 1)
+    end
+    
+    type_assert(foo(1), _ as any)
+]]
