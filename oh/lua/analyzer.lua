@@ -269,7 +269,7 @@ function META:Call(obj, arguments, call_node)
 
             if b.Type == "tuple" then
                 b = b:Get(1)
-            end
+                end
 
             local ok, reason = a:SubsetOf(b)
 
@@ -1800,7 +1800,11 @@ do -- expressions
         if node.self_call and node.expression then
             local upvalue = self:GetUpvalue(node.expression.left, "runtime")
             if upvalue then
-                table.insert(args, 1, upvalue.data)
+                if upvalue.data.contract then
+                    table.insert(args, 1, upvalue.data)
+                else
+                    table.insert(args, 1, types.Set({types.Any(), upvalue.data}))
+                end
             end
         end
 
