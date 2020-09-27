@@ -81,22 +81,12 @@ end)
 
 test("assert", function()
     run([[
-        assert(1 == 2, "lol")
+        type_assert_truthy(1 == 2, "lol")
     ]],"lol")
 end)
 
 test("require should error when not finding a module", function()
     run([[require("adawdawddwaldwadwadawol")]], "unable to find module")
-end)
-
-test("load", function()
-    run[[
-        type_assert(assert(load("type_assert(1, 1) return 2"))(), 2)
-    ]]
-
-    run[[
-        type_assert(assert(load("return " .. 2))(), 2)
-    ]]
 end)
 
 test("rawset rawget", function()
