@@ -139,6 +139,10 @@ function META:TypeFromImplicitNode(node, type, data, literal, parent)
     elseif type == "function" then
         obj = self:Assert(node, types.Function(data))
         obj.node = node
+
+        if node.statements then 
+            obj.function_body_node = node
+        end
     end
 
     if not obj then error("NYI: " .. type) end
@@ -186,7 +190,7 @@ function META:Call(obj, arguments, call_node)
     if obj.Type == "tuple" then obj = obj:Get(1) end
 
     call_node = call_node or obj.node
-    local function_node = obj.node
+    local function_node = obj.function_body_node or obj.node
 
     obj.called = true
 

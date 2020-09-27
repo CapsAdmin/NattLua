@@ -392,3 +392,21 @@ run[[
     local x = (" "):rep(#tostring(_ as string))
     type_assert(x, _ as string)
 ]]
+
+run[[
+    local function foo()
+        return "foo"
+    end
+    
+    local function bar()
+        return "bar"
+    end
+    
+    local function genfunc(name)
+        local f = name == "foo" and foo or bar
+        return f
+    end
+    
+    local f = genfunc("foo")
+    type_assert(f(), "foo")
+]]

@@ -42,6 +42,7 @@ function META:Copy(map)
     copy:MakeLiteral(self:IsLiteral())
 
     copy.node = self.node
+    copy.function_body_node = self.function_body_node
 
     return copy
 end
