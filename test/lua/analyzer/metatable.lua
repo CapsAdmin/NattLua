@@ -231,3 +231,19 @@ run[[
     type_assert(a, 1)
     type_assert(b, 2)
 ]]
+
+run[[
+    local a = setmetatable({c = true}, {
+        __index = {
+            foo = true,
+            bar = 2,
+        }
+    })
+    
+    type_assert(rawget(a, "bar"), nil)
+    type_assert(rawget(a, "foo"), nil)
+    type_assert(rawget(a, "c"), true)
+    
+    rawset(a, "foo", "hello")
+    type_assert(rawget(a, "foo"), "hello")
+]]

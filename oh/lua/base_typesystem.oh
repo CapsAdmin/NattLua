@@ -302,7 +302,10 @@ do -- globals
 	end
 
 	type function rawget(tbl: {[any] = any}, key: any)
-		return tbl:Get(key, true)
+		local t, err = tbl:Get(key, true)
+		if t then
+			return t
+		end
 	end
 
 	type function error(msg: string, level: number | nil)
@@ -322,9 +325,10 @@ do -- globals
 	end
 
 	type function type(obj: any)
-		self.type_checked = obj
 
 		if obj.Type == "set" then
+			self.type_checked = obj
+
 			local copy = types.Set()
 			for _, v in ipairs(obj:GetElements()) do
 				if v.GetLuaType then
