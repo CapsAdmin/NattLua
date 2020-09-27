@@ -269,7 +269,10 @@ function META:Call(obj, arguments, call_node)
 
             if b.Type == "tuple" then
                 b = b:Get(1)
+                if not b then
+                    break
                 end
+            end
 
             local ok, reason = a:SubsetOf(b)
 
