@@ -40,4 +40,8 @@ function META:IsTruthy()
     return true
 end
 
+function META:Call()
+    return types.Tuple({}):SetElementType(types.Any()):Max(math.huge)
+end
+
 return types.RegisterType(META)

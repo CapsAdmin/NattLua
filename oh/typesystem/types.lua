@@ -138,6 +138,10 @@ do
         self:MakeLiteral(obj:IsLiteral())    
     end
 
+    function Base:Call()
+        return types.errors.other("type " .. self.Type .. ": " .. tostring(self) .. " cannot be called")        
+    end
+
     types.BaseObject = Base
 end
 

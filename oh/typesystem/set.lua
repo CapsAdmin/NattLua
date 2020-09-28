@@ -342,4 +342,35 @@ function META:Max(val)
     return copy
 end
 
+function META:Call(analyzer, arguments, ...)
+    if self:IsEmpty() then
+        return types.errors.other("cannot call empty set")
+    end
+
+    local set = self
+    for _, obj in ipairs(self:GetData()) do
+        if obj.Type ~= "function" and obj.Type ~= "table" and obj.Type ~= "any" then
+            return types.errors.other("set "..tostring(set).." contains uncallable object " .. tostring(obj))
+        end
+    end
+
+    local errors = {}
+
+    for _, obj in ipairs(self:GetData()) do
+        if obj.Type == "function" and arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
+            table.insert(errors, "invalid amount of arguments: " .. tostring(arguments) .. " ~= " .. tostring(obj:GetArguments()))
+        else
+            local res, reason = analyzer:Call(obj, arguments, ...)
+
+            if res then
+                return res
+            end
+
+            table.insert(errors, reason)
+        end
+    end
+
+    return types.errors.other(table.concat(errors, "\n"))
+end
+
 return types.RegisterType(META)

@@ -79,4 +79,37 @@ function META:IsTruthy()
     return true
 end
 
+function META:CheckArguments(arguments)
+    local A = arguments -- incoming
+    local B = self:GetArguments() -- the contract
+    -- A should be a subset of B
+
+    for i, a in ipairs(A:GetData()) do
+        local b = B:Get(i)
+
+        if not b then
+            break
+        end
+
+        if b.Type == "tuple" then
+            b = b:Get(1)
+            if not b then
+                break
+            end
+        end
+
+        local ok, reason = a:SubsetOf(b)
+
+        if not ok then
+            if b.node then
+                return types.errors.other("function argument #"..i.." '" .. tostring(b) .. "': " .. reason)
+            else
+                return types.errors.other("argument #" .. i .. " - " .. reason)
+            end
+        end
+    end
+
+    return true
+end
+
 return types.RegisterType(META)

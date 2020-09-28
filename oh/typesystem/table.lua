@@ -514,4 +514,20 @@ function META:Initialize(data)
     return true
 end
 
+function META:Call(analyzer, arguments, ...)
+    local __call = self.meta and self.meta:Get("__call")
+
+    if __call then
+        local new_arguments = {self}
+
+        for _, v in ipairs(arguments:GetData()) do
+            table.insert(new_arguments, v)
+        end
+
+        return analyzer:Call(__call, types.Tuple(new_arguments), ...)
+    end
+
+    return types.errors.other("table has no __call metamethod")
+end
+
 return types.RegisterType(META)

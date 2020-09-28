@@ -186,15 +186,68 @@ do
     end
 end
 
-function META:Call(obj, arguments, call_node)
-    if obj.Type == "tuple" then obj = obj:Get(1) end
+function META:LuaTypesToTuple(node, tps)
+    local tbl = {}
+    
+    for i,v in ipairs(tps) do
+        if types.IsTypeObject(v) then
+            tbl[i] = v
+        else
+            if type(v) == "function" then
+                tbl[i] = self:NewType(node, "function", {lua_function = v, arg = types.Tuple(), ret = types.Tuple()}, true)
+            else
+                tbl[i] = self:NewType(node, type(v), v, true)
+            end
+        end
+    end
 
+    if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then
+        return tbl[1]
+    end
+
+    return types.Tuple(tbl)
+end
+
+function META:AnalyzeFunctionBody(function_node, arguments, env)
+    self:PushScope(function_node)
+        if function_node.self_call then
+            self:SetUpvalue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env)
+        end
+
+        for i, identifier in ipairs(function_node.identifiers) do
+            local argi = function_node.self_call and (i+1) or i
+
+            if identifier.value.value == "..." then
+                local values = {}
+                for i = argi, arguments:GetLength() do
+                    table.insert(values, arguments:Get(i))
+                end
+                self:SetUpvalue(identifier, self:NewType(identifier, "...", values), env)
+            else
+                self:SetUpvalue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
+            end
+        end
+
+        -- crawl and collect return values from function statements
+        self:ReturnToThisScope()
+        self:PushReturn()
+            self:AnalyzeStatements(function_node.statements)
+        local analyzed_return = types.Tuple(self:PopReturn())
+    self:PopScope()
+
+    self.returned_from_block = nil
+
+    return analyzed_return
+end
+
+function META:Call(obj, arguments, call_node)
     call_node = call_node or obj.node
     local function_node = obj.function_body_node or obj.node
 
     obj.called = true
 
     self.call_stack = self.call_stack or {}
+
     table.insert(self.call_stack, {
         func = obj.node,
         call_expression = call_node
@@ -202,95 +255,19 @@ function META:Call(obj, arguments, call_node)
 
     local env = self.PreferTypesystem and "typesystem" or "runtime"
 
-    if obj.Type == "set" then
-        if obj:IsEmpty() then
-            return types.errors.other("cannot call empty set")
-        end
-
-        local set = obj
-        for _, obj in ipairs(obj:GetData()) do
-            if obj.Type ~= "function" and obj.Type ~= "table" and obj.Type ~= "any" then
-                return types.errors.other("set "..tostring(set).." contains uncallable object " .. tostring(obj))
-            end
-        end
-
-        local errors = {}
-
-        for _, obj in ipairs(obj:GetData()) do
-            if obj.Type == "function" and arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
-                table.insert(errors, "invalid amount of arguments: " .. tostring(arguments) .. " ~= " .. tostring(obj:GetArguments()))
-            else
-                local res, reason = self:Call(obj, arguments, call_node)
-
-                if res then
-                    return res
-                end
-
-                table.insert(errors, reason)
-            end
-        end
-
-        return types.errors.other(table.concat(errors, "\n"))
-    end
-
-    if obj.Type == "any" then
-        return types.Tuple({}):SetElementType(types.Any()):Max(math.huge)
-    end
-
-    if obj.Type == "table" then
-        local __call = obj.meta and obj.meta:Get("__call")
-
-        if __call then
-            local new_arguments = {obj}
-
-            for _, v in ipairs(arguments:GetData()) do
-                table.insert(new_arguments, v)
-            end
-
-            return self:Call(__call, types.Tuple(new_arguments), call_node)
-        end
-    end
-
     if obj.Type ~= "function" then
-        return types.errors.other("type " .. obj.Type .. ": " .. tostring(obj) .. " cannot be called")
+        return obj:Call(self, arguments, call_node)
     end
 
-    do
-        local A = arguments -- incoming
-        local B = obj:GetArguments() -- the contract
-        -- A should be a subset of B
+    local ok, err = obj:CheckArguments(arguments)
 
-        for i, a in ipairs(A:GetData()) do
-            local b = B:Get(i)
-
-            if not b then
-                break
-            end
-
-            if b.Type == "tuple" then
-                b = b:Get(1)
-                if not b then
-                    break
-                end
-            end
-
-            local ok, reason = a:SubsetOf(b)
-
-            if not ok then
-                if b.node then
-                    return types.errors.other("function argument #"..i.." '" .. tostring(b) .. "': " .. reason)
-                else
-                    return types.errors.other("argument #" .. i .. " - " .. reason)
-                end
-            end
-        end
+    if not ok then
+        return ok, err
     end
 
     if self.OnFunctionCall then
         self:OnFunctionCall(obj, arguments)
     end
-
-    local return_tuple
 
     if obj.data.lua_function then
         _G.self = self
@@ -301,25 +278,12 @@ function META:Call(obj, arguments, call_node)
         end
         _G.self = nil
 
-        for i,v in ipairs(res) do
-            if not types.IsTypeObject(v) then
-                if type(v) == "function" then
-                    res[i] = self:NewType(obj.node, "function", {lua_function = v, arg = types.Tuple(), ret = types.Tuple()}, true)
-                else
-                    res[i] = self:NewType(obj.node, type(v), v, true)
-                end
-            end
-        end
-        return_tuple = types.Tuple(res)
-    else
-        return_tuple = obj:GetReturnTypes()
-    end
-
-    if not function_node or function_node.kind == "type_function" then
+        return self:LuaTypesToTuple(obj.node, res)
+    elseif not function_node or function_node.kind == "type_function" then
         self:FireEvent("external_call", call_node, obj)
     else
         if not function_node.statements then
-            self:Error(call_node, "cannot call "..tostring(function_node:Render()).." because it has no statements")
+            return types.errors.other("cannot call "..tostring(function_node:Render()).." because it has no statements")
         end
 
         do -- recursive guard
@@ -330,67 +294,33 @@ function META:Call(obj, arguments, call_node)
             obj.call_count = obj.call_count + 1
         end
 
-        self:PushScope(function_node)
+        local arguments = arguments
 
-            local arguments = arguments
-            if env ~= "typesystem" and (obj.node and obj.node.kind ~= "local_generics_type_function") and obj.explicit_arguments and not call_node.type_call and not obj.data.lua_function then
-                arguments = obj:GetArguments()
-            end
+        if 
+            obj.explicit_arguments and 
+            env ~= "typesystem" and 
+            function_node.kind ~= "local_generics_type_function" and 
+            not call_node.type_call
+        then
+            arguments = obj:GetArguments()
+        end
 
-            -- TODO: function_node can be a root statement because of loadstring
-            if function_node.identifiers then
-                if function_node.self_call then
-                    self:SetUpvalue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env)
-                end
-
-                for i, identifier in ipairs(function_node.identifiers) do
-                    local argi = function_node.self_call and (i+1) or i
-
-                    if identifier.value.value == "..." then
-                        local values = {}
-                        for i = argi, arguments:GetLength() do
-                            table.insert(values, arguments:Get(i))
-                        end
-                        self:SetUpvalue(identifier, self:NewType(identifier, "...", values), env)
-                    else
-                        self:SetUpvalue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
-                    end
-                end
-            end
-
-            -- crawl and collect return values from function statements
-            self:ReturnToThisScope()
-            self:PushReturn()
-                self:AnalyzeStatements(function_node.statements)
-            local analyzed_return = types.Tuple(self:PopReturn())
-        self:PopScope()
-
-        self.returned_from_block = nil
+        local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
             
         do
             -- if this function has an explicit return type
             if function_node.return_types then
-                local ok, reason = analyzed_return:SubsetOf(return_tuple)
+                local ok, reason = return_tuple:SubsetOf(obj:GetReturnTypes())
                 if not ok then
                     return ok, reason
                 end
             else
                 -- copy the entire tuple so we don't modify the return value of this call
-                obj:GetReturnTypes():Merge(analyzed_return)
+                obj:GetReturnTypes():Merge(return_tuple)
             end
         end
 
         obj:GetArguments():Merge(arguments)
-
-        do -- this is for the emitter
-            if function_node.identifiers then
-                for i, node in ipairs(function_node.identifiers) do
-                    node.inferred_type = obj:GetArguments():Get(i)
-                end
-            end
-
-            function_node.inferred_type = obj
-        end
 
         self:FireEvent("function_spec", obj)
 
@@ -403,26 +333,25 @@ function META:Call(obj, arguments, call_node)
                 end
 
                 for i, type_exp in ipairs(function_node.return_types) do
-                    analyzed_return:Set(i, self:AnalyzeExpression(type_exp, "typesystem"))
+                    return_tuple:Set(i, self:AnalyzeExpression(type_exp, "typesystem"))
                 end
             self:PopScope()
         end
 
-        return_tuple = analyzed_return
+        do -- this is for the emitter
+            if function_node.identifiers then
+                for i, node in ipairs(function_node.identifiers) do
+                    node.inferred_type = obj:GetArguments():Get(i)
+                end
+            end
+
+            function_node.inferred_type = obj
+        end
+
+        return return_tuple
     end
 
-    -- TODO: hacky workaround for trimming the returned tuple
-    -- local a,b,c = (foo())
-    -- b and c should be nil, a should be something
-    if not return_tuple:IsEmpty() and call_node and call_node.tokens["("] and call_node.tokens[")"] then
-        return_tuple.data = {return_tuple:Get(1)}
-    end
-
-    if return_tuple:IsEmpty() then
-        return_tuple:Set(1, self:NewType(call_node, "nil"))
-    end
-
-    return return_tuple
+    return obj:GetReturnTypes()
 end
 
 do -- control flow analysis
@@ -1640,9 +1569,19 @@ do -- expressions
         end
 
         self.PreferTypesystem = node.type_call
-
         local obj = self:Assert(node, self:Call(obj, types.Tuple(arguments), node))
         self.PreferTypesystem = nil
+
+        if obj:IsEmpty() then
+            obj:Set(1, self:NewType(node, "nil"))
+        end
+
+        -- TODO: hacky workaround for trimming the returned tuple
+        -- local a,b,c = (foo())
+        -- b and c should be nil, a should be something
+        if not obj:IsEmpty() and node.tokens["("] and node.tokens[")"] then
+            obj = obj:Get(1)
+        end
 
         if obj.Type == "tuple" then
             return obj:Unpack()
