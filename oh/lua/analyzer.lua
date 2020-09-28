@@ -1680,32 +1680,24 @@ do -- expressions
 
     local syntax = require("oh.lua.syntax")
 
-    function META:ResolveUpvalue(node, env)
-        local obj = self:GetValue(node, env)
+    function META:LookupValue(node, env)
+        local obj
 
-        if not obj and env == "typesystem" and node.value.value ~= "_" then
-            if not obj and self.IndexNotFound then
-                obj = self:IndexNotFound(node)
-            end
+        if env == "typesystem" then
+            obj = 
+                self:GetValue(node, env) or
+                self:IndexNotFound(node) or
+                self:GetValue(node, "runtime")
+            
             if not obj then
-                obj = self:GetValue(node, "runtime")
-
-                if not obj then
-                    self:Error(node, "cannot find value " .. node.value.value)
-                end
+                self:Error(node, "cannot find value " .. node.value.value)
             end
-        end
-
-        if not obj and env == "runtime" then
-            obj = self:GetValue(node, "typesystem")
-        end
-
-        if not obj and self.IndexNotFound then
-        obj = self:IndexNotFound(node)
-        end
-
-        if not obj then
-            obj = self:GuessTypeFromIdentifier(node, env)
+        else
+            obj = 
+                self:GetValue(node, env) or 
+                self:GetValue(node, "typesystem") or 
+                self:IndexNotFound(node) or 
+                self:GuessTypeFromIdentifier(node, env)
         end
 
         node.inferred_type = node.inferred_type or obj
@@ -1740,7 +1732,7 @@ do -- expressions
         end
 
         if standalone_letter or value == "..." or node.force_upvalue then
-            return self:ResolveUpvalue(node, env)
+            return self:LookupValue(node, env)
         end
 
         if type == "keyword" then

@@ -321,3 +321,13 @@ run[[
     
     type_assert(_ as keysof<|typeof a.b|>, _ as "bar" | "faz" | "foo")
 ]]
+
+run[[
+    local function foo<|a: any, b: any|>
+        return a, b
+    end
+
+    local x, y = foo<|1, 2|>
+    type_assert(x, 1)
+    type_assert(y, 2)
+]]

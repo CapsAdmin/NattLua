@@ -5,7 +5,7 @@ assert(code_data:Lex())
 assert(code_data:Parse())
 
 local base = code_data.Analyzer()
-base.IndexNotFound = nil
+base.IndexNotFound = function() end
 
 assert(code_data:Analyze(nil, base))
 
