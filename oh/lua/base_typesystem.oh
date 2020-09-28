@@ -76,6 +76,19 @@ type function type_traceback()
 	end
 end
 
+type function seal(tbl)
+	for key, val in tbl:pairs() do
+		if val.Type == "function" and val:GetArguments():Get(1).Type == "set" then 
+			local first_arg = val:GetArguments():Get(1)
+			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
+				val:GetArguments():Set(1, tbl)
+			end
+		end
+	end
+
+	tbl.contract = tbl
+end
+
 do -- globals
 	type setmetatable = (function(table: Table, metatable: Table|nil): Table)
 	type select = (function(index: number|string, ...): ...)
