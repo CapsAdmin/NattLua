@@ -98,13 +98,13 @@ function META:GetOperator(obj, key, node)
     local val, err = obj:Get(key)
 
     if not val then
-        return self:TypeFromImplicitNode(node or obj.node, "nil")
+        return self:NewType(node or obj.node, "nil")
     end
 
     return val
 end
 
-function META:TypeFromImplicitNode(node, type, data, literal, parent)
+function META:NewType(node, type, data, literal, parent)
     node.scope = self.scope -- move this out of here
 
     local obj
@@ -169,7 +169,7 @@ do
 
             for _, v in ipairs(guesses) do
                 if str:find(v.pattern, nil, true) then
-                    local obj = self:TypeFromImplicitNode(node, v.type)
+                    local obj = self:NewType(node, v.type)
                     if v.ctor then
                         v.ctor(obj)
                     end
@@ -179,10 +179,10 @@ do
         end
 
         if env == "typesystem" then
-            return self:TypeFromImplicitNode(node, "nil")
+            return self:NewType(node, "nil")
         end
 
-        return self:TypeFromImplicitNode(node, "any")
+        return self:NewType(node, "any")
     end
 end
 
@@ -304,9 +304,9 @@ function META:Call(obj, arguments, call_node)
         for i,v in ipairs(res) do
             if not types.IsTypeObject(v) then
                 if type(v) == "function" then
-                    res[i] = self:TypeFromImplicitNode(obj.node, "function", {lua_function = v, arg = types.Tuple(), ret = types.Tuple()}, true)
+                    res[i] = self:NewType(obj.node, "function", {lua_function = v, arg = types.Tuple(), ret = types.Tuple()}, true)
                 else
-                    res[i] = self:TypeFromImplicitNode(obj.node, type(v), v, true)
+                    res[i] = self:NewType(obj.node, type(v), v, true)
                 end
             end
         end
@@ -325,7 +325,7 @@ function META:Call(obj, arguments, call_node)
         do -- recursive guard
             obj.call_count = obj.call_count or 0
             if obj.call_count > 10 then
-                return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes():Get(1)) or types.Tuple({self:TypeFromImplicitNode(call_node, "any")})
+                return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes():Get(1)) or types.Tuple({self:NewType(call_node, "any")})
             end
             obj.call_count = obj.call_count + 1
         end
@@ -340,7 +340,7 @@ function META:Call(obj, arguments, call_node)
             -- TODO: function_node can be a root statement because of loadstring
             if function_node.identifiers then
                 if function_node.self_call then
-                    self:SetUpvalue("self", arguments:Get(1) or self:TypeFromImplicitNode(function_node, "nil"), env)
+                    self:SetUpvalue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env)
                 end
 
                 for i, identifier in ipairs(function_node.identifiers) do
@@ -351,9 +351,9 @@ function META:Call(obj, arguments, call_node)
                         for i = argi, arguments:GetLength() do
                             table.insert(values, arguments:Get(i))
                         end
-                        self:SetUpvalue(identifier, self:TypeFromImplicitNode(identifier, "...", values), env)
+                        self:SetUpvalue(identifier, self:NewType(identifier, "...", values), env)
                     else
-                        self:SetUpvalue(identifier, arguments:Get(argi) or self:TypeFromImplicitNode(identifier, "nil"), env)
+                        self:SetUpvalue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
                     end
                 end
             end
@@ -415,15 +415,11 @@ function META:Call(obj, arguments, call_node)
     -- local a,b,c = (foo())
     -- b and c should be nil, a should be something
     if not return_tuple:IsEmpty() and call_node and call_node.tokens["("] and call_node.tokens[")"] then
-        if return_tuple:Get(1).Type == "tuple" then
-            return_tuple:Set(1, return_tuple:Get(1):Get(1))
-        end
-
         return_tuple.data = {return_tuple:Get(1)}
     end
 
     if return_tuple:IsEmpty() then
-        return_tuple:Set(1, self:TypeFromImplicitNode(call_node, "nil"))
+        return_tuple:Set(1, self:NewType(call_node, "nil"))
     end
 
     return return_tuple
@@ -641,7 +637,7 @@ do -- statements
         end
 
         for i, exp_key in ipairs(statement.left) do
-            local val = right[i] or self:TypeFromImplicitNode(exp_key, "nil")
+            local val = right[i] or self:NewType(exp_key, "nil")
 
             -- if there's a type expression override the right value
             if exp_key.explicit_type then
@@ -752,7 +748,7 @@ do -- statements
         end
 
         for _, node in ipairs(statement.left) do
-            local obj = node.value and obj:Get(node.value.value, env) or self:TypeFromImplicitNode(node, "nil")
+            local obj = node.value and obj:Get(node.value.value, env) or self:NewType(node, "nil")
 
             if statement.kind == "local_destructure_assignment" then
                 self:SetUpvalue(node, obj, env)
@@ -867,7 +863,7 @@ do -- statements
         
         -- do return end > do return nil end
         if not ret[1] then
-            ret[1] = self:TypeFromImplicitNode(statement, "nil")
+            ret[1] = self:NewType(statement, "nil")
         end
         self:CollectReturnExpressions(ret)
         self.returned_from_certain_scope = not self:GetScope().uncertain
@@ -951,7 +947,7 @@ do -- statements
         if literal_init and literal_max and literal_step and literal_max < 1000 then
             local uncertain_break = nil
             for i = literal_init, literal_max, literal_step do
-                local i = self:TypeFromImplicitNode(statement.expressions[1], "number", i):MakeLiteral(true)
+                local i = self:NewType(statement.expressions[1], "number", i):MakeLiteral(true)
                 local brk = false
                 
                 if uncertain_break then
@@ -1402,10 +1398,10 @@ do -- expressions
                     (l.Type == "string" and r.Type == "number")
                 then
                     if l:IsLiteral() and r:IsLiteral() then
-                        return self:TypeFromImplicitNode(node, "string", l.data .. r.data, true)
+                        return self:NewType(node, "string", l.data .. r.data, true)
                     end
 
-                    return self:TypeFromImplicitNode(node, "string")
+                    return self:NewType(node, "string")
                 end
 
                 return types.errors.other("no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r))
@@ -1445,7 +1441,7 @@ do -- expressions
                     end
                 elseif left:IsFalsy() and not left:IsTruthy() then
                     -- if it's really false do nothing
-                    right = self:TypeFromImplicitNode(node.right, "nil")
+                    right = self:NewType(node.right, "nil")
                 else
                     right = self:AnalyzeExpression(node.right, env)    
                 end
@@ -1453,7 +1449,7 @@ do -- expressions
                 left = self:AnalyzeExpression(node.left, env)
 
                 if left:IsTruthy() and not left:IsFalsy() then
-                    right = self:TypeFromImplicitNode(node.right, "nil")
+                    right = self:NewType(node.right, "nil")
                 elseif left:IsFalsy() and not left:IsTruthy() then
                     right = self:AnalyzeExpression(node.right, env)
                 else
@@ -1593,15 +1589,15 @@ do -- expressions
 
             if op == "not" or op == "!" then
                 if l:IsTruthy() and l:IsFalsy() then
-                    return self:TypeFromImplicitNode(node, "boolean", nil, false, l):SetSource(node, l)
+                    return self:NewType(node, "boolean", nil, false, l):SetSource(node, l)
                 end
 
                 if l:IsTruthy() then
-                    return self:TypeFromImplicitNode(node, "boolean", false, true, l):SetSource(node, l)
+                    return self:NewType(node, "boolean", false, true, l):SetSource(node, l)
                 end
 
                 if l:IsFalsy() then
-                    return self:TypeFromImplicitNode(node, "boolean", true, true, l):SetSource(node, l)
+                    return self:NewType(node, "boolean", true, true, l):SetSource(node, l)
                 end
             end
 
@@ -1677,91 +1673,95 @@ do -- expressions
     end
 
     function META:AnalyzeVarargTupleExpression(node, env)
-        local obj = self:TypeFromImplicitNode(node, "...")
+        local obj = self:NewType(node, "...")
         obj:SetElementType(self:GetValue(node.value, "typesystem"))
         return obj
     end
 
     local syntax = require("oh.lua.syntax")
 
-    function META:AnalyzeSingleValueExpression(node, env)
-        if (syntax.GetTokenType(node.value) == "letter" and node.upvalue_or_global) or node.value.value == "..." then
+    function META:ResolveUpvalue(node, env)
+        local obj = self:GetValue(node, env)
 
-            if env == "typesystem" and not node.force_upvalue then
-                if node.value.value == "any" then
-                    return self:TypeFromImplicitNode(node, "any")
-                elseif node.value.value == "never" then
-                        return self:TypeFromImplicitNode(node, "never")
-                elseif (node.value.value == "self" and self.current_table) or (self.current_table and self.left_assigned and self.left_assigned.value.value == node.value.value and not types.IsPrimitiveType(node.value.value)) then
-                    return self.current_table
-                elseif node.value.value == "inf" then
-                    return self:TypeFromImplicitNode(node, "number", math.huge, true)
-                elseif node.value.value == "nan" then
-                    return self:TypeFromImplicitNode(node, "number", 0/0, true)
-                elseif node.value.value == "..." then
-                    return self:TypeFromImplicitNode(node, "...", {self:TypeFromImplicitNode(node, "any")})
-                elseif types.IsPrimitiveType(node.value.value) then
-                    return self:TypeFromImplicitNode(node, node.value.value)
-                end
-            end
-
-            local obj = self:GetValue(node, env)
-
-            if not obj and env == "typesystem" and node.value.value ~= "_" then
-                if not obj and self.IndexNotFound then
-                    obj = self:IndexNotFound(node)
-                end
-                if not obj then
-                    obj = self:GetValue(node, "runtime")
-
-                    if not obj then
-                        self:Error(node, "cannot find value " .. node.value.value)
-                    end
-                end
-            end
-
-            if not obj and env == "runtime" then
-                obj = self:GetValue(node, "typesystem")
-            end
-
+        if not obj and env == "typesystem" and node.value.value ~= "_" then
             if not obj and self.IndexNotFound then
-               obj = self:IndexNotFound(node)
+                obj = self:IndexNotFound(node)
             end
-
             if not obj then
-                obj = self:GuessTypeFromIdentifier(node, env)
-            end
+                obj = self:GetValue(node, "runtime")
 
-            node.inferred_type = node.inferred_type or obj
-            node.is_upvalue = self:GetUpvalue(node, env) ~= nil
-            
-            if obj.Type == "tuple" then
-                return obj:Unpack()
+                if not obj then
+                    self:Error(node, "cannot find value " .. node.value.value)
+                end
             end
-            
-            return obj
-        elseif node.value.type == "number" then
-            return self:TypeFromImplicitNode(node, "number", self:StringToNumber(node.value.value), true)
-        elseif node.value.type == "string" then
-            return self:TypeFromImplicitNode(node, "string", node.value.value:sub(2, -2), true)
-        elseif syntax.GetTokenType(node.value) == "letter" then
-            return self:TypeFromImplicitNode(node, "string", node.value.value, true)
-        elseif node.value.value == "nil" then
-            return self:TypeFromImplicitNode(node, "nil", nil, env == "typesystem")
-        elseif node.value.value == "true" then
-            return self:TypeFromImplicitNode(node, "boolean", true, true)
-        elseif node.value.value == "false" then
-            return self:TypeFromImplicitNode(node, "boolean", false, true)
-        elseif node.value.value == "function" then
-            return self:TypeFromImplicitNode(node, "function", {
-                args = types.Tuple({}),
-                ret = types.Tuple({})
-            })
         end
 
-        print(syntax.GetTokenType(node.value), node.upvalue_or_global, "?!??!")
+        if not obj and env == "runtime" then
+            obj = self:GetValue(node, "typesystem")
+        end
 
-        error("unhandled value type " .. node.value.type .. " " .. node:Render())
+        if not obj and self.IndexNotFound then
+        obj = self:IndexNotFound(node)
+        end
+
+        if not obj then
+            obj = self:GuessTypeFromIdentifier(node, env)
+        end
+
+        node.inferred_type = node.inferred_type or obj
+        node.is_upvalue = self:GetUpvalue(node, env) ~= nil
+        
+        if obj.Type == "tuple" then
+            return obj:Unpack()
+        end
+        
+        return obj
+    end
+
+    function META:AnalyzeSingleValueExpression(node, env)
+        local value = node.value.value
+        local type = syntax.GetTokenType(node.value)
+        local standalone_letter = type == "letter" and node.standalone_letter
+
+        if env == "typesystem" and standalone_letter and not node.force_upvalue then
+            if value == "any" then
+                return self:NewType(node, "any")
+            elseif value == "never" then
+                return self:NewType(node, "never")
+            elseif (value == "self" and self.current_table) or (self.current_table and self.left_assigned and self.left_assigned.value.value == value and not types.IsPrimitiveType(value)) then
+                return self.current_table
+            elseif value == "inf" then
+                return self:NewType(node, "number", math.huge, true)
+            elseif value == "nan" then
+                return self:NewType(node, "number", 0/0, true)
+            elseif types.IsPrimitiveType(value) then
+                return self:NewType(node, value)
+            end
+        end
+
+        if standalone_letter or value == "..." or node.force_upvalue then
+            return self:ResolveUpvalue(node, env)
+        end
+
+        if type == "keyword" then
+            if value == "nil" then
+                return self:NewType(node, "nil", nil, env == "typesystem")
+            elseif value == "true" then
+                return self:NewType(node, "boolean", true, true)
+            elseif value == "false" then
+                return self:NewType(node, "boolean", false, true)
+            end
+        end
+
+        if type == "number" then
+            return self:NewType(node, "number", self:StringToNumber(value), true)
+        elseif type == "string" then
+            return self:NewType(node, "string", value:sub(2, -2), true)
+        elseif type == "letter" then
+            return self:NewType(node, "string", value, true)
+        end
+
+        self:FatalError("unhandled value type " .. type .. " " .. node:Render())
     end
 
     function META:AnalyzeFunctionExpression(node, env)
@@ -1785,7 +1785,7 @@ do -- expressions
                         args[i] = self:GuessTypeFromIdentifier(key)
                     end
                 elseif key.kind == "value" and key.value.value == "..." then
-                    args[i] = self:TypeFromImplicitNode(key, "...")
+                    args[i] = self:NewType(key, "...")
                 elseif key.kind == "type_table" then
                     args[i] = self:AnalyzeExpression(key)
                 else
@@ -1848,7 +1848,7 @@ do -- expressions
         end
 
 
-        local obj = self:TypeFromImplicitNode(node, "function", {
+        local obj = self:NewType(node, "function", {
             arg = args,
             ret = ret,
             lua_function = func
@@ -1867,11 +1867,11 @@ do -- expressions
     end
 
     function META:AnalyzeTableExpression(node, env)
-        local tbl = self:TypeFromImplicitNode(node, "table", nil, env == "typesystem")
+        local tbl = self:NewType(node, "table", nil, env == "typesystem")
         self.current_table = tbl
         for _, node in ipairs(node.children) do
             if node.kind == "table_key_value" then
-                local key = self:TypeFromImplicitNode(node.tokens["identifier"], "string", node.tokens["identifier"].value, true)
+                local key = self:NewType(node.tokens["identifier"], "string", node.tokens["identifier"].value, true)
                 local val = self:AnalyzeExpression(node.expression, env)
                 tbl:Set(key, val)
             elseif node.kind == "table_expression_value" then
@@ -1900,7 +1900,7 @@ do -- expressions
     end
 
     function META:AnalyzeListExpression(node, env)
-        local list = self:TypeFromImplicitNode(node, "list", nil, env == "typesystem")
+        local list = self:NewType(node, "list", nil, env == "typesystem")
         for _, node in ipairs(node.expressions) do
             local val = self:AnalyzeExpression(node, env)
             list:Insert(val)
@@ -1934,8 +1934,6 @@ do -- expressions
             return self:AnalyzeTableExpression(node, env)
         elseif node.kind == "type_list" then
             return self:AnalyzeListExpression(node, env)
-        elseif node.kind == "vararg_tuple" then
-            return self:AnalyzeVarargTupleExpression(node, env)
         elseif node.kind == "binary_operator" then
             return self:AnalyzeBinaryOperatorExpression(node, env)
         elseif node.kind == "prefix_operator" then
@@ -1947,7 +1945,7 @@ do -- expressions
         elseif node.kind == "postfix_call" then
             return self:AnalyzePostfixCallExpression(node, env)
         else
-            error("unhandled expression " .. node.kind)
+            self:FatalError("unhandled expression " .. node.kind)
         end
     end
 end

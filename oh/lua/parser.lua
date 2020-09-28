@@ -286,9 +286,9 @@ do  -- function
 
             do -- hacky
                 if node.expression.left then
-                    node.expression.left.upvalue_or_global = node
+                    node.expression.left.standalone_letter = node
                 else
-                    node.expression.upvalue_or_global = node
+                    node.expression.standalone_letter = node
                 end
 
                 if node.expression.value.value == ":" then
@@ -647,7 +647,7 @@ do -- expression
             end
 
             if first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
-                first.upvalue_or_global = node
+                first.standalone_letter = node
             end
         end
 

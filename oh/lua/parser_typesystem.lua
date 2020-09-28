@@ -89,10 +89,10 @@ return function(META)
 
             do -- hacky
                 if node.expression.left then
-                    node.expression.left.upvalue_or_global = node
+                    node.expression.left.standalone_letter = node
                     node.expression.left.force_upvalue = force_upvalue
                 else
-                    node.expression.upvalue_or_global = node
+                    node.expression.standalone_letter = node
                     node.expression.force_upvalue = force_upvalue
                 end
 
@@ -397,7 +397,7 @@ return function(META)
         end
 
         if first and first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
-            first.upvalue_or_global = node
+            first.standalone_letter = node
             first.force_upvalue = force_upvalue
         end
 

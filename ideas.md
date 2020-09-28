@@ -94,3 +94,21 @@ print(a)
 a.foo = true
 ^^^^^ error
 ```
+
+
+## import export
+
+i like C++'s import export int hat it ignores files
+
+```lua
+local mylib {}
+
+...
+
+return mylib
+```
+
+to import mylib you need to write 
+
+`import mylib` and not `import "path/to/my_lib.lua"
+

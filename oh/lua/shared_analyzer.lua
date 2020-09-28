@@ -9,7 +9,7 @@ base.IndexNotFound = nil
 
 assert(code_data:Analyze(nil, base))
 
-local g = base:TypeFromImplicitNode(code_data.SyntaxTree, "table")
+local g = base:NewType(code_data.SyntaxTree, "table")
 
 for k, v in pairs(base.env.typesystem) do
     g:Set(k, v)

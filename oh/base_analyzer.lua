@@ -289,7 +289,7 @@ return function(META)
         if ok == false then
             err = err or "unknown error"
             self:Error(node, err)
-            return self:TypeFromImplicitNode(node, "any")
+            return self:NewType(node, "any")
         end
         return ok
     end

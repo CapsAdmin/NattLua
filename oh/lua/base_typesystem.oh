@@ -283,7 +283,7 @@ do -- globals
 		assert(code_data:Lex())
 		assert(code_data:Parse())
 		
-		return self:TypeFromImplicitNode(code_data.SyntaxTree, "function", {
+		return self:NewType(code_data.SyntaxTree, "function", {
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
 			lua_function = function(...)
@@ -301,7 +301,7 @@ do -- globals
 		assert(code_data:Lex())
 		assert(code_data:Parse())
 		
-		return self:TypeFromImplicitNode(code_data.SyntaxTree, "function", {
+		return self:NewType(code_data.SyntaxTree, "function", {
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
 			lua_function = function(...)
