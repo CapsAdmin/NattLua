@@ -571,6 +571,35 @@ do -- control flow analysis
     end
 end
 
+function META:CheckTypeAgainstContract(val, contract)
+    if contract.Type == "list" and val.Type == "table" then
+        val = types.List(val:GetValues())
+    end
+    
+    local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
+
+    if skip_uniqueness then
+        contract:DisableUniqueness()
+    end
+
+    local ok, reason = val:SubsetOf(contract)
+
+    if skip_uniqueness then
+        contract:EnableUniqueness()
+        val.unique_id = contract.unique_id
+    end
+
+    if not ok then
+        return ok, reason
+    end
+
+    if contract.Type == "table" then
+        return val:ContainsAllKeysIn(contract)
+    end
+
+    return true
+end
+
 do -- statements
     function META:AnalyzeRootStatement(statement, ...)
         local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):SetElementType(types.Any()):Max(math.huge)
@@ -590,7 +619,7 @@ do -- statements
         local right = {}
 
         for i, exp_key in ipairs(statement.left) do
-            if statement.kind == "local_assignment" or (statement.kind == "assignment" and exp_key.kind == "value") then
+            if exp_key.kind == "value" then
                 left[i] = exp_key
                 if exp_key.kind == "value" then
                     exp_key.is_upvalue = self:GetUpvalue(exp_key, env) ~= nil
@@ -599,38 +628,38 @@ do -- statements
                 left[i] = self:AnalyzeExpression(exp_key.expression, env)
             elseif exp_key.kind == "binary_operator" then
                 left[i] = self:AnalyzeExpression(exp_key.right, env)
+            else
+                self:FatalError("unhandled expression " .. tostring(exp_key))
             end
         end
 
         if statement.right then
             for right_pos, exp_val in ipairs(statement.right) do
+                
                 self.left_assigned = left[right_pos]
+
                 for tuple_index, obj in ipairs({self:AnalyzeExpression(exp_val, env)}) do
+                    local index = right_pos + tuple_index - 1
+
                     if obj.Type == "tuple" then
-                        
-                        if obj.max and obj.ElementType then
-                            for left_pos = 1, #statement.left do
-                                right[right_pos + tuple_index - 1 + left_pos - 1 ] = obj:Get(left_pos)
-                            end
-                        else
-                            for i3,v in ipairs(obj:GetData()) do
-                                right[right_pos + tuple_index - 1 + i3 - 1 ] = v
-                            end
+                        for i = 1, #statement.left do
+                            right[index + i - 1] = obj:Get(i)
                         end
                     else
-                        right[right_pos + tuple_index - 1] = obj
+                        right[index] = obj
                     end
 
                     if exp_val.explicit_type then
-                        obj.contract = obj:Copy()
+                        obj:Seal()
                     end
                 end
             end
 
-            -- TODO: remove this if possible, it's just to pass tests
-            local cut = #right - #statement.right
-            if cut > 0 and (statement.right[#statement.right] and statement.right[#statement.right].value and statement.right[#statement.right].value.value ~= "...") then
-                for i = 1, cut do
+            -- complicated
+            local last = statement.right[#statement.right]
+            
+            if last.kind == "value" and last.value.value ~= "..." then
+                for _ = 1, #right - #statement.right do
                     table.remove(right, #right)
                 end
             end
@@ -639,51 +668,12 @@ do -- statements
         for i, exp_key in ipairs(statement.left) do
             local val = right[i] or self:NewType(exp_key, "nil")
 
-            -- if there's a type expression override the right value
             if exp_key.explicit_type then
                 local contract = self:AnalyzeExpression(exp_key.explicit_type, "typesystem")
-                if contract.type == "nil" then
-                    -- TODO: better error
-                    self:Error(exp_key.explicit_type, "cannot be nil")
-                end
-
-                if statement.right and statement.right[i] then
-
-                    if contract.Type == "list" and val.Type == "table" then
-                        val = types.List(val:GetValues())
-                    elseif contract.Type == "table" and val.Type == "table" then
-                        val:CopyLiteralness(contract)
-                    else
-                        -- local a: 1 = 1
-                        -- should turn the right side into a constant number rather than number(1)
-                        val:MakeLiteral(contract:IsLiteral())
-                    end
-
-                    
-                    local skip_uniqueness =contract:IsUnique() and not val:IsUnique()
-
-                    if skip_uniqueness then
-                        contract:DisableUniqueness()
-                    end
-
-                    local ok, reason = val:SubsetOf(contract)
-
-                    if skip_uniqueness then
-                        contract:EnableUniqueness()
-                        val.unique_id = contract.unique_id
-                    end
-
-                    if not ok then
-                        self:Error(statement or val.node or exp_key.explicit_type, reason)
-                    end
-
-                    if contract.Type == "table" then
-                        local ok, reason = val:ContainsAllKeysIn(contract)
-                    
-                        if not ok then
-                            self:Error(val.node or exp_key.explicit_type, reason)
-                        end
-                    end
+        
+                if right[i] then
+                    val:CopyLiteralness(contract)
+                    self:Assert(statement or val.node or exp_key.explicit_type, self:CheckTypeAgainstContract(val, contract))
                 end
 
                 val.contract = contract
@@ -702,25 +692,25 @@ do -- statements
                 local key = left[i]
                 
                 if exp_key.kind == "value" then
-                    local upvalue = self:GetValue(key, env)
-                    local contract = upvalue and upvalue.contract
 
-                    if not contract and env == "runtime" then
-                        upvalue = self:GetValue(key, "typesystem")
-                        if upvalue then
-                            contract = upvalue
+                    do -- check for any previous upvalues
+                        local upvalue = self:GetValue(key, env)
+                        local upvalues_contract = upvalue and upvalue.contract
+
+                        if not upvalues_contract and env == "runtime" then
+                            upvalue = self:GetValue(key, "typesystem")
+                            if upvalue then
+                                upvalues_contract = upvalue
+                            end
+                        end
+                        
+                        if upvalues_contract then
+                            val:CopyLiteralness(upvalues_contract)
+                            self:Assert(statement or val.node or exp_key.explicit_type, self:CheckTypeAgainstContract(val, upvalues_contract))
+                            val.contract = upvalues_contract
                         end
                     end
-
-                    if contract then
-                        local ok, reason = upvalue:SubsetOf(contract)
-
-                        if not ok then
-                            self:Error(val.node or exp_key.explicit_type, reason)
-                        end
-
-                        val.contract = contract
-                    end
+                    
                     self:SetValue(key, val, env)
                 else
                     local obj = self:AnalyzeExpression(exp_key.left, env)

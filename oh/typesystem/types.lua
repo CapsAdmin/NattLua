@@ -130,6 +130,14 @@ do
         return self.literal
     end
 
+    function Base:Seal()
+        self.contract = self:Copy()
+    end
+
+    function Base:CopyLiteralness(obj)
+        self:MakeLiteral(obj:IsLiteral())    
+    end
+
     types.BaseObject = Base
 end
 
