@@ -1691,36 +1691,35 @@ do -- expressions
 
         local args = {}
 
-        for i, key in ipairs(node.identifiers) do
-            if key.identifier then
-                args[i] = self:AnalyzeExpression(key, "typesystem")
-                explicit_arguments = true
-            elseif key.explicit_type then
-                args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem")
-                explicit_arguments = true
-            else
-                if node.kind == "type_function" then
-                    if key.kind == "value" and key.value.value == "self" then
-                        args[i] = self.current_table
-                    else
-                        args[i] = self:GuessTypeFromIdentifier(key)
-                    end
-                elseif key.kind == "value" and key.value.value == "..." then
+        if node.kind == "function" or node.kind == "local_function" then
+            for i, key in ipairs(node.identifiers) do
+                if key.explicit_type then
+                    args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem")
+                    explicit_arguments = true
+                elseif key.value.value == "..." then
                     args[i] = self:NewType(key, "...")
-                elseif key.kind == "type_table" then
-                    args[i] = self:AnalyzeExpression(key)
-                else
-                    if env == "typesystem" then
-                        args[i] = self:AnalyzeExpression(key, env)
-                    end
-
-                    if not args[i] or args[i].Type == "symbol" and args[i]:GetData() == nil then
-                        args[i] = self:GuessTypeFromIdentifier(key)
-                    end
+                else    
+                    args[i] = self:GuessTypeFromIdentifier(key)
                 end
             end
+        else
+            for i, key in ipairs(node.identifiers) do
+                if key.identifier then
+                    args[i] = self:AnalyzeExpression(key, "typesystem")
+                    explicit_arguments = true
+                elseif key.explicit_type then
+                    args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem")
+                    explicit_arguments = true
+                elseif key.value.value == "self" then
+                    args[i] = self.current_table
+                elseif key.value.value == "..." then
+                    args[i] = self:NewType(key, "...")
+                else
+                    args[i] = self:NewType(key, "any")
+                end
+            end    
         end
-
+      
         if node.self_call and node.expression then
             local upvalue = self:GetUpvalue(node.expression.left, "runtime")
             if upvalue then
