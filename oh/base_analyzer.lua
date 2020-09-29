@@ -3,6 +3,10 @@ return function(META)
     local types = require("oh.typesystem.types")
     local helpers = require("oh.helpers")
 
+    function META:FatalError(msg)
+        error(msg, 2)
+    end
+
     function META:StringToNumber(str)
         if str:sub(1,2) == "0b" then
             return tonumber(str:sub(3))
