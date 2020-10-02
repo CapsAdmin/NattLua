@@ -547,6 +547,11 @@ do
 		func:GetArguments():GetData()[1] = set
 		func:GetArguments():GetData()[2] = set
 	end
+
+	type function table.getn(tbl: table)
+		if tbl.Type == "any" then return types.Any() end
+		return tbl:GetLength()
+	end
 end
 
 do

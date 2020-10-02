@@ -350,7 +350,7 @@ function META:Call(obj, arguments, call_node)
         return return_tuple
     end
 
-    return obj:GetReturnTypes()
+    return obj:GetReturnTypes():Copy():SetReferenceId(nil)
 end
 
 do -- control flow analysis
@@ -1114,9 +1114,7 @@ do -- expressions
                 elseif op == "extends" then
                     return l:Extend(r)
                 elseif op == ".." then
-                    local new = l:Copy()
-                    new.max = r
-                    return new
+                    return l:Copy():Max(r)
                 elseif op == ">" then
                     return types.Symbol((r:SubsetOf(l)))
                 elseif op == "<" then
@@ -1176,7 +1174,29 @@ do -- expressions
                 end
 
                 if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
+
+                    if l.Type == "table" then
+                        if env == "runtime" then
+                            if l.reference_id and r.reference_id then
+                                return l.reference_id == r.reference_id and types.True or types.False
+                            end
+                        end
+
+                        if env == "typesystem" then
+                            return l:SubsetOf(r) and r:SubsetOf(l) and types.True or types.False
+                        end 
+
+                        return types.Boolean
+                    end
+
+
                     return l.data == r.data and types.True or types.False
+                end
+
+                if l.Type == "table" and r.Type == "table" then
+                    if env == "typesystem" then
+                        return l:SubsetOf(r) and r:SubsetOf(l) and types.True or types.False
+                    end
                 end
 
                 if l.Type == "symbol" and r.Type == "symbol" and l:GetData() == nil and r:GetData() == nil then
@@ -1641,6 +1661,8 @@ do -- expressions
     function META:AnalyzeSingleValueExpression(node, env)
         local value = node.value.value
         local type = syntax.GetTokenType(node.value)
+
+        -- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
         local standalone_letter = type == "letter" and node.standalone_letter
 
         if env == "typesystem" and standalone_letter and not node.force_upvalue then
@@ -1787,6 +1809,9 @@ do -- expressions
 
     function META:AnalyzeTableExpression(node, env)
         local tbl = self:NewType(node, "table", nil, env == "typesystem")
+        if env == "runtime" then
+            tbl:SetReferenceId(tostring(tbl.data))
+        end
         self.current_table = tbl
         for _, node in ipairs(node.children) do
             if node.kind == "table_key_value" then

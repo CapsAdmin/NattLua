@@ -142,6 +142,11 @@ do
         return types.errors.other("type " .. self.Type .. ": " .. tostring(self) .. " cannot be called")        
     end
 
+    function Base:SetReferenceId(ref)
+        self.reference_id = ref
+        return self
+    end
+
     types.BaseObject = Base
 end
 

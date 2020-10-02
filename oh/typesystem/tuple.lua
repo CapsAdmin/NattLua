@@ -80,6 +80,15 @@ function META:GetMinimumLength()
     return #self.data
 end
 
+function META:SetReferenceId(id)
+
+    for i = 1, #self:GetElements() do
+        self:Get(i):SetReferenceId(id)
+    end
+
+    return self
+end
+
 function META:GetLength()
     return #self.data
 end
