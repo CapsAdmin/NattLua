@@ -105,8 +105,6 @@ function META:GetOperator(obj, key, node)
 end
 
 function META:NewType(node, type, data, literal, parent)
-    node.scope = self.scope -- move this out of here
-
     local obj
 
     if type == "table" then
@@ -149,6 +147,7 @@ function META:NewType(node, type, data, literal, parent)
 
     obj.node = obj.node or node
     obj.node.inferred_type = obj
+    node.scope = self.scope -- move this out of here
 
     return obj
 end
