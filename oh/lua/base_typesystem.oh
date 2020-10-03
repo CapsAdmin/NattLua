@@ -465,6 +465,23 @@ type debug = {
 	setuservalue = (function(udata: userdata, value: Table|nil): userdata)
 }
 
+type function debug.setfenv(func, table)
+    if func and func.node and func.node.scope then
+        self:SetEnvironment(func.node.scope, table, "runtime")
+    end
+end
+
+type function debug.getfenv(func)
+    if func and func.node and func.node.scope and func.node.scope.env and func.node.scope.env["runtime"] then
+        return func.node.scope.env["runtime"]
+    end
+    return analyzer:GetValue("_G", "runtime")
+end
+
+type getfenv = debug.getfenv
+type setfenv = debug.setfenv
+
+
 type package = {
 	searchpath = (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil) | (function(name: string, path: string, sep: string): string|nil, string|nil) | (function(name: string, path: string): string|nil, string|nil),
 	seeall = (function(module: Table): nil),

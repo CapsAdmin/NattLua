@@ -190,6 +190,11 @@ return function(META)
             end
         end
 
+        function META:SetEnvironment(scope, tbl, env)
+            scope.env = scope.env or {runtime = {}, typesystem = {}}
+            scope.env[env] = tbl
+        end
+        
         function META:GetValue(key, env)
             env = env or "runtime"
 
@@ -198,8 +203,14 @@ return function(META)
             if upvalue then
                 return upvalue.data
             end
+            
+            local base = self.scope.env or self.env
 
-            return self.env[env][self:Hash(key)]
+            if types.IsTypeObject(base[env]) and base[env].Type == "table" then
+                return base[env]:Get(self:Hash(key))
+            end
+
+            return base[env][self:Hash(key)]
         end
 
         function META:SetValue(key, val, env)
@@ -231,6 +242,7 @@ return function(META)
                 self:FireEvent("newindex", obj, key, val, env)
             end
         end
+
     end
 
     function META:FireEvent(what, ...)
