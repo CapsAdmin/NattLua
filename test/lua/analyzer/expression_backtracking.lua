@@ -8,7 +8,7 @@ test("a and b", function()
         local result = a and b
 
         type_assert(result, 2)
-    ]]:GetValue("result", "runtime")
+    ]]:GetEnvironmentValue("result", "runtime")
 
     equal(obj.node.kind, "binary_operator") 
     equal(obj.source.data, 2)
@@ -23,7 +23,7 @@ test("a + b", function()
         local result = a + b
         
         type_assert(result, 3)
-    ]]:GetValue("result", "runtime")
+    ]]:GetEnvironmentValue("result", "runtime")
 
     equal(obj.node.kind, "binary_operator")
     equal(obj.source.data, 3)
@@ -37,7 +37,7 @@ test("not a", function()
         local result = not a
         
         type_assert(result, false)
-    ]]:GetValue("result", "runtime")
+    ]]:GetEnvironmentValue("result", "runtime")
 
     equal(obj.node.kind, "prefix_operator") 
     equal(obj.source.data, true)
@@ -49,7 +49,7 @@ test("not not a", function()
         local result = not not a
         
         type_assert(result, true)
-    ]]:GetValue("result", "runtime")
+    ]]:GetEnvironmentValue("result", "runtime")
 
     equal(obj.node.kind, "prefix_operator") 
     equal(obj.source.data, false)
@@ -62,7 +62,7 @@ test("not a or 1", function()
         local result = not a or 1
         
         type_assert(result, 1)
-    ]]:GetValue("result", "runtime")
+    ]]:GetEnvironmentValue("result", "runtime")
 
     equal(obj.node.kind, "binary_operator")
     equal(obj.source_left.node.kind, "prefix_operator")
@@ -73,7 +73,7 @@ end)
 
 test("1 or 2 or 3 or 4", function()
     -- each value here has to be 1 | nil, otherwise it won't traverse the or chain
-    local obj = run[[local result = (_ as 1 | nil) or (_ as 2 | nil) or (_ as 3 | nil) or (_ as 4 | nil)]]:GetValue("result", "runtime")
+    local obj = run[[local result = (_ as 1 | nil) or (_ as 2 | nil) or (_ as 3 | nil) or (_ as 4 | nil)]]:GetEnvironmentValue("result", "runtime")
     local function set_equal(a, b)
         local literal_set = {types.Symbol(nil)}
         for _, num in ipairs(b) do

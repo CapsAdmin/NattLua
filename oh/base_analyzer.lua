@@ -1,7 +1,118 @@
+local types = require("oh.typesystem.types")
+local helpers = require("oh.helpers")
+
+local LexicalScope
+
+--[[
+    https://leafo.net/guides/setfenv-in-lua52-and-above.html
+
+    analyzer:PushEnvironment(type_table)
+    analyzer:PopEnvironment()
+
+    scope:CreateLexicalValue(): upvalue
+    scope:FindUpvalue(): upvalue
+
+    upvalue:Mutate(type_table)
+
+    separate typesystem and runtime
+]]
+
+
+
+do
+    local table_insert = table.insert
+    local META = {}
+    META.__index = META
+
+    function META:Initialize(node, extra_node, event_data)
+       
+    end
+
+    function META:SetParent(parent)
+        self.parent = parent
+        parent:AddChild(self)
+    end
+
+    function META:AddChild(scope)
+        table_insert(self.children, scope)
+    end
+
+    function META:Hash(node)
+        if type(node) == "string" then
+            return node
+        end
+
+        if type(node.value) == "string" then
+            return node.value
+        end
+
+        return node.value.value
+    end
+
+    function META:FindValue(key, env)
+        local key_hash = self:Hash(key)
+
+        local scope = self
+        local current_scope = scope
+        
+        while scope do
+            if scope.upvalues[env].map[key_hash] then
+                return scope.upvalues[env].map[key_hash], current_scope
+            end
+            current_scope = scope
+            scope = scope.parent
+        end
+    end
+
+    function META:CreateValue(key, obj, env)
+        assert(obj == nil or types.IsTypeObject(obj))
+
+        local upvalue = {
+            data = obj,
+            key = key,
+            shadow = self:FindValue(key, env),
+        }
+
+        table_insert(self.upvalues[env].list, upvalue)
+        self.upvalues[env].map[self:Hash(key)] = upvalue
+
+        return upvalue
+    end
+
+
+    function LexicalScope(node, extra_node, parent)
+        assert(type(node) == "table" and node.kind, "expected an associated ast node")
+
+        local scope = {
+            children = {},
+
+            upvalues = {
+                runtime = {
+                    list = {},
+                    map = {},
+                },
+                typesystem = {
+                    list = {},
+                    map = {},
+                }
+            },
+
+            node = node,
+            extra_node = extra_node,
+        }
+
+        setmetatable(scope, META)
+
+        if parent then
+            scope:SetParent(parent)
+        end
+
+        return scope
+    end
+end
+
 return function(META)
     local table_insert = table.insert
-    local types = require("oh.typesystem.types")
-    local helpers = require("oh.helpers")
 
     function META:FatalError(msg)
         error(msg, 2)
@@ -37,30 +148,9 @@ return function(META)
 
             local parent = self.scope
 
-            local scope = {
-                children = {},
-                parent = parent,
-
-                upvalues = {
-                    runtime = {
-                        list = {},
-                        map = {},
-                    },
-                    typesystem = {
-                        list = {},
-                        map = {},
-                    }
-                },
-
-                node = node,
-                extra_node = extra_node,
-            }
+            local scope = LexicalScope(node, extra_node, parent)
 
             self:FireEvent("enter_scope", node, extra_node, scope)
-
-            if parent then
-                table_insert(parent.children, scope)
-            end
 
             self.scope_stack = self.scope_stack or {}
             table.insert(self.scope_stack, self.scope)
@@ -145,48 +235,28 @@ return function(META)
             }
         end
 
-        function META:SetUpvalue(key, obj, env)
-            assert(obj == nil or types.IsTypeObject(obj))
-
-            local upvalue = {
-                data = obj,
-                key = key,
-                shadow = self:GetUpvalue(key, env),
-            }
-
+        function META:CreateLocalValue(key, obj, env)
+            local upvalue = self.scope:CreateValue(key, obj, env)
             obj.upvalue = upvalue
-
-            table_insert(self.scope.upvalues[env].list, upvalue)
-            self.scope.upvalues[env].map[self:Hash(key)] = upvalue
-
             self:FireEvent("upvalue", key, obj, env)
-
             return upvalue
         end
         
-        function META:OnGetUpvalue(found, key, env, original_scope)
+        function META:OnFindLocalValue(found, key, env, original_scope)
             
         end
 
-        function META:OnSetUpvalue(upvalue, key, val, env)
+        function META:OnCreateLocalValue(upvalue, key, val, env)
             
         end
 
-        function META:GetUpvalue(key, env)
+        function META:FindLocalValue(key, env)
             if not self.scope then return end
-
-            local key_hash = self:Hash(key)
-
-            local scope = self.scope
-            local current_scope = scope
             
-            while scope do
-                if scope.upvalues[env].map[key_hash] then
-                    local found = scope.upvalues[env].map[key_hash]
-                    return self:OnGetUpvalue(found, key, env, current_scope) or found
-                end
-                current_scope = scope
-                scope = scope.parent
+            local found, scope = self.scope:FindValue(key, env)
+            
+            if found then
+                return self:OnFindLocalValue(found, key, env, scope) or found
             end
         end
 
@@ -195,10 +265,10 @@ return function(META)
             scope.env[env] = tbl
         end
         
-        function META:GetValue(key, env)
+        function META:GetEnvironmentValue(key, env)
             env = env or "runtime"
 
-            local upvalue = self:GetUpvalue(key, env)
+            local upvalue = self:FindLocalValue(key, env)
 
             if upvalue then
                 return upvalue.data
@@ -213,20 +283,20 @@ return function(META)
             return base[env][self:Hash(key)]
         end
 
-        function META:SetValue(key, val, env)
+        function META:SetEnvironmentValue(key, val, env)
             assert(val == nil or types.IsTypeObject(val))
 
             if type(key) == "string" or key.kind == "value" then
                 -- local key = val; key = val
 
-                local upvalue = self:GetUpvalue(key, env)
+                local upvalue = self:FindLocalValue(key, env)
                 if upvalue then
 
                     if not self:OnMutateUpvalue(upvalue, key, val, env) then
                         upvalue.data = val
                     end
 
-                    --self:SetUpvalue(key, val, env)
+                    --self:CreateLocalValue(key, val, env)
 
                     self:FireEvent("mutate_upvalue", key, val, env)
                 else

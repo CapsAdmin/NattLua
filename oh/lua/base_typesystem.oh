@@ -13,7 +13,7 @@ type function enum(tbl)
 	
 	local set = types.Set()
 	for key, val in tbl:pairs() do
-		self:SetValue(key:GetData(), val, "typesystem")
+		self:SetEnvironmentValue(key:GetData(), val, "typesystem")
 		set:AddElement(val)
 	end
 	return set
@@ -190,7 +190,7 @@ do -- globals
 			end
 		end
 
-		local next = analyzer:GetValue("next", "typesystem")
+		local next = analyzer:GetEnvironmentValue("next", "typesystem")
 		local k,v = next.data.lua_function(tbl)
 		local done = false
 
@@ -213,7 +213,7 @@ do -- globals
 			end
 		end
 
-		local next = analyzer:GetValue("next", "typesystem")
+		local next = analyzer:GetEnvironmentValue("next", "typesystem")
 		local k,v = next.data.lua_function(tbl)
 		local done = false
 		return function()
@@ -228,16 +228,16 @@ do -- globals
 
 		local shared_analyzer = require("oh.lua.shared_analyzer")
 
-		if shared_analyzer:GetValue("_G", "typesystem"):Get(str) then
-			return shared_analyzer:GetValue("_G", "typesystem"):Get(str)
+		if shared_analyzer:GetEnvironmentValue("_G", "typesystem"):Get(str) then
+			return shared_analyzer:GetEnvironmentValue("_G", "typesystem"):Get(str)
 		end
 		
 		if str == "table.new" then
-			return shared_analyzer:GetValue("table", "typesystem"):Get("new")
+			return shared_analyzer:GetEnvironmentValue("table", "typesystem"):Get("new")
 		end
 
-		if self:GetValue(str, "typesystem") then
-			return self:GetValue(str, "typesystem")
+		if self:GetEnvironmentValue(str, "typesystem") then
+			return self:GetEnvironmentValue(str, "typesystem")
 		end
 
 		if package.loaders then
@@ -475,7 +475,7 @@ type function debug.getfenv(func)
     if func and func.node and func.node.scope and func.node.scope.env and func.node.scope.env["runtime"] then
         return func.node.scope.env["runtime"]
     end
-    return analyzer:GetValue("_G", "runtime")
+    return analyzer:GetEnvironmentValue("_G", "runtime")
 end
 
 type getfenv = debug.getfenv

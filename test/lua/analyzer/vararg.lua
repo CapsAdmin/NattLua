@@ -6,7 +6,7 @@ pending("typed vararg", function()
     local a = run[[
         local foo: string... = 1,2,3
     ]]
-    local foo = a:GetValue("foo", "typesystem")
+    local foo = a:GetEnvironmentValue("foo", "typesystem")
     print(foo)
 end)
 

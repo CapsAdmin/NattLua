@@ -10,9 +10,9 @@ test("should return a tuple with types", function()
         local type a,b,c = test()
     ]])
 
-    equal(1, analyzer:GetValue("a", "typesystem"):GetData())
-    equal(2, analyzer:GetValue("b", "typesystem"):GetData())
-    equal(3, analyzer:GetValue("c", "typesystem"):GetData())
+    equal(1, analyzer:GetEnvironmentValue("a", "typesystem"):GetData())
+    equal(2, analyzer:GetEnvironmentValue("b", "typesystem"):GetData())
+    equal(3, analyzer:GetEnvironmentValue("c", "typesystem"):GetData())
 end)
 
 test("should be able to error", function()
@@ -229,9 +229,9 @@ test("type functions should return a tuple with types", function()
         local type a,b,c = test()
     ]])
 
-    equal(1, analyzer:GetValue("a", "typesystem"):GetData())
-    equal(2, analyzer:GetValue("b", "typesystem"):GetData())
-    equal(3, analyzer:GetValue("c", "typesystem"):GetData())
+    equal(1, analyzer:GetEnvironmentValue("a", "typesystem"):GetData())
+    equal(2, analyzer:GetEnvironmentValue("b", "typesystem"):GetData())
+    equal(3, analyzer:GetEnvironmentValue("c", "typesystem"):GetData())
 end)
 
 run[[

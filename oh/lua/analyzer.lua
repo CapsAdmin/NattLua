@@ -210,7 +210,7 @@ end
 function META:AnalyzeFunctionBody(function_node, arguments, env)
     self:PushScope(function_node)
         if function_node.self_call then
-            self:SetUpvalue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env)
+            self:CreateLocalValue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env)
         end
 
         for i, identifier in ipairs(function_node.identifiers) do
@@ -221,9 +221,9 @@ function META:AnalyzeFunctionBody(function_node, arguments, env)
                 for i = argi, arguments:GetLength() do
                     table.insert(values, arguments:Get(i))
                 end
-                self:SetUpvalue(identifier, self:NewType(identifier, "...", values), env)
+                self:CreateLocalValue(identifier, self:NewType(identifier, "...", values), env)
             else
-                self:SetUpvalue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
+                self:CreateLocalValue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
             end
         end
 
@@ -328,7 +328,7 @@ function META:Call(obj, arguments, call_node)
         if function_node.return_types then
             self:PushScope(function_node)
                 for i, key in ipairs(function_node.identifiers) do
-                    self:SetUpvalue(key, arguments:Get(i), "typesystem")
+                    self:CreateLocalValue(key, arguments:Get(i), "typesystem")
                 end
 
                 for i, type_exp in ipairs(function_node.return_types) do
@@ -388,7 +388,7 @@ do -- control flow analysis
             if arg and arg.out then
                 local upvalue = arguments:Get(i).upvalue
                 if upvalue then
-                    self:SetValue(upvalue.key, arguments:Get(i):Copy():MakeUnique(true), "runtime")
+                    self:SetEnvironmentValue(upvalue.key, arguments:Get(i):Copy():MakeUnique(true), "runtime")
                 end
             end
         end
@@ -427,7 +427,7 @@ do -- control flow analysis
         end
     end
 
-    function META:OnGetUpvalue(upvalue, key, env, scope)
+    function META:OnFindLocalValue(upvalue, key, env, scope)
         if self:GetScope().unreachable then
       --      return self:CopyUpvalue(upvalue, types.Never())
         end
@@ -480,7 +480,7 @@ do -- control flow analysis
             ]]
 
             -- new upvalue
-            self:SetUpvalue(key, val, env)
+            self:CreateLocalValue(key, val, env)
 
             -- mutate shadowed upvalue
             if self.scope.test_condition_inverted and upvalue.data_outside_of_if_blocks then
@@ -501,7 +501,7 @@ end
 
 function META:CheckTypeAgainstContract(val, contract)
     if contract.Type == "list" and val.Type == "table" then
-        val = types.List(val:GetValues())
+        val = types.List(val:GetEnvironmentValues())
     end
     
     local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
@@ -532,7 +532,7 @@ do -- statements
     function META:AnalyzeRootStatement(statement, ...)
         local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):SetElementType(types.Any()):Max(math.huge)
         self:PushScope(statement)
-        self:SetUpvalue("...", argument_tuple, "runtime")
+        self:CreateLocalValue("...", argument_tuple, "runtime")
         self:PushReturn()
         self:AnalyzeStatements(statement.statements)
         local analyzed_return = types.Tuple(self:PopReturn())
@@ -550,7 +550,7 @@ do -- statements
             if exp_key.kind == "value" then
                 left[i] = exp_key
                 if exp_key.kind == "value" then
-                    exp_key.is_upvalue = self:GetUpvalue(exp_key, env) ~= nil
+                    exp_key.is_upvalue = self:FindLocalValue(exp_key, env) ~= nil
                 end
             elseif exp_key.kind == "postfix_expression_index" then
                 left[i] = self:AnalyzeExpression(exp_key.expression, env)
@@ -615,18 +615,18 @@ do -- statements
             exp_key.inferred_type = val
 
             if statement.kind == "local_assignment" then
-                self:SetUpvalue(exp_key, val, env)
+                self:CreateLocalValue(exp_key, val, env)
             elseif statement.kind == "assignment" then
                 local key = left[i]
                 
                 if exp_key.kind == "value" then
 
                     do -- check for any previous upvalues
-                        local upvalue = self:GetValue(key, env)
+                        local upvalue = self:GetEnvironmentValue(key, env)
                         local upvalues_contract = upvalue and upvalue.contract
 
                         if not upvalues_contract and env == "runtime" then
-                            upvalue = self:GetValue(key, "typesystem")
+                            upvalue = self:GetEnvironmentValue(key, "typesystem")
                             if upvalue then
                                 upvalues_contract = upvalue
                             end
@@ -639,7 +639,7 @@ do -- statements
                         end
                     end
                     
-                    self:SetValue(key, val, env)
+                    self:SetEnvironmentValue(key, val, env)
                 else
                     local obj = self:AnalyzeExpression(exp_key.left, env)
                     self:Assert(exp_key, self:SetOperator(obj, key, val, env))
@@ -659,9 +659,9 @@ do -- statements
 
         if statement.default then
             if statement.kind == "local_destructure_assignment" then
-                self:SetUpvalue(statement.default, obj, env)
+                self:CreateLocalValue(statement.default, obj, env)
             elseif statement.kind == "destructure_assignment" then
-                self:SetValue(statement.default, obj, env)
+                self:SetEnvironmentValue(statement.default, obj, env)
             end
         end
 
@@ -669,25 +669,25 @@ do -- statements
             local obj = node.value and obj:Get(node.value.value, env) or self:NewType(node, "nil")
 
             if statement.kind == "local_destructure_assignment" then
-                self:SetUpvalue(node, obj, env)
+                self:CreateLocalValue(node, obj, env)
             elseif statement.kind == "destructure_assignment" then
-                self:SetValue(node, obj, env)
+                self:SetEnvironmentValue(node, obj, env)
             end
         end
     end
 
     function META:AnalyzeFunctionStatement(statement)
-        local existing_type = self:GetValue(statement.expression, "typesystem")
+        local existing_type = self:GetEnvironmentValue(statement.expression, "typesystem")
 
         if existing_type then
-            self:SetValue(statement.expression, existing_type, "runtime")
+            self:SetEnvironmentValue(statement.expression, existing_type, "runtime")
         else
-            self:SetValue(statement.expression, self:AnalyzeFunctionExpression(statement, "runtime"), "runtime")
+            self:SetEnvironmentValue(statement.expression, self:AnalyzeFunctionExpression(statement, "runtime"), "runtime")
         end
     end
 
     function META:AnalyzeTypeFunctionStatement(statement)
-        self:SetValue(
+        self:SetEnvironmentValue(
             statement.expression,
             self:AnalyzeFunctionExpression(statement:ToExpression("type_function"),
             "typesystem"
@@ -816,7 +816,7 @@ do -- statements
                 end
 
                 for i,v in ipairs(statement.identifiers) do
-                    self:SetUpvalue(v, values:Get(i), "runtime")
+                    self:CreateLocalValue(v, values:Get(i), "runtime")
                 end
 
                 self:AnalyzeStatements(statement.statements)
@@ -873,7 +873,7 @@ do -- statements
                     brk = true
                 end
 
-                self:SetUpvalue(statement.identifiers[1], i, "runtime")
+                self:CreateLocalValue(statement.identifiers[1], i, "runtime")
                 self:AnalyzeStatements(statement.statements)
                 if self.break_out then
                     if self.break_out.scope.uncertain then
@@ -900,21 +900,21 @@ do -- statements
 
             local range = self:Assert(statement.expressions[1], init)
 
-            self:SetUpvalue(statement.identifiers[1], range, "runtime")
+            self:CreateLocalValue(statement.identifiers[1], range, "runtime")
             self:AnalyzeStatements(statement.statements)
         end
         self:PopScope({init = init, max = max, condition = condition})
     end
 
     function META:AnalyzeLocalFunctionStatement(statement)
-        self:SetUpvalue(statement.tokens["identifier"], self:AnalyzeFunctionExpression(statement, "runtime"), "runtime")
+        self:CreateLocalValue(statement.tokens["identifier"], self:AnalyzeFunctionExpression(statement, "runtime"), "runtime")
     end
 
     function META:AnalyzeLocalTypeFunctionStatement(statement)
         if statement.kind == "local_type_function" then
-            self:SetUpvalue(statement.identifier, self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem"), "typesystem")
+            self:CreateLocalValue(statement.identifier, self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem"), "typesystem")
         else
-            self:SetUpvalue(statement.identifier, self:AnalyzeFunctionExpression(statement, "typesystem"), "typesystem")
+            self:CreateLocalValue(statement.identifier, self:AnalyzeFunctionExpression(statement, "typesystem"), "typesystem")
         end
     end
 
@@ -1622,7 +1622,7 @@ do -- expressions
 
     function META:AnalyzeVarargTupleExpression(node, env)
         local obj = self:NewType(node, "...")
-        obj:SetElementType(self:GetValue(node.value, "typesystem"))
+        obj:SetElementType(self:GetEnvironmentValue(node.value, "typesystem"))
         return obj
     end
 
@@ -1633,23 +1633,23 @@ do -- expressions
 
         if env == "typesystem" then
             obj = 
-                self:GetValue(node, env) or
+                self:GetEnvironmentValue(node, env) or
                 self:IndexNotFound(node) or
-                self:GetValue(node, "runtime")
+                self:GetEnvironmentValue(node, "runtime")
             
             if not obj then
                 self:Error(node, "cannot find value " .. node.value.value)
             end
         else
             obj = 
-                self:GetValue(node, env) or 
-                self:GetValue(node, "typesystem") or 
+                self:GetEnvironmentValue(node, env) or 
+                self:GetEnvironmentValue(node, "typesystem") or 
                 self:IndexNotFound(node) or 
                 self:GuessTypeFromIdentifier(node, env)
         end
 
         node.inferred_type = node.inferred_type or obj
-        node.is_upvalue = self:GetUpvalue(node, env) ~= nil
+        node.is_upvalue = self:FindLocalValue(node, env) ~= nil
         
         if obj.Type == "tuple" then
             return obj:Unpack()
@@ -1742,7 +1742,7 @@ do -- expressions
         end
       
         if node.self_call and node.expression then
-            local upvalue = self:GetUpvalue(node.expression.left, "runtime")
+            local upvalue = self:FindLocalValue(node.expression.left, "runtime")
             if upvalue then
                 if upvalue.data.contract then
                     table.insert(args, 1, upvalue.data)
@@ -1759,7 +1759,7 @@ do -- expressions
 			self:PushScope(node)
                 for i, key in ipairs(node.identifiers) do
                     if key.kind == "value" then
-                        self:SetUpvalue(key, args[i], "typesystem")
+                        self:CreateLocalValue(key, args[i], "typesystem")
                     end
 				end
 
@@ -1899,7 +1899,7 @@ local function DefaultIndex(self, node)
         return nil
     end
 
-    return require("oh.lua.shared_analyzer"):GetValue(node, "typesystem")
+    return require("oh.lua.shared_analyzer"):GetEnvironmentValue(node, "typesystem")
 end
 
 return function()

@@ -19,6 +19,6 @@ g:Set("_G", g)
 
 require("oh.lua.string_meta"):Set("__index", g:Get("string"))
 
-base:SetValue("_G", g, "typesystem")
+base:SetEnvironmentValue("_G", g, "typesystem")
 
 return base

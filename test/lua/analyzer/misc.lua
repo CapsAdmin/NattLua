@@ -664,7 +664,7 @@ R[[
 
     type b = function()
         _G.LOL = nil
-        local t = analyzer:GetValue("a", "typesystem")
+        local t = analyzer:GetEnvironmentValue("a", "typesystem")
         local func = t.data.lua_function
         func()
         if not _G.LOL then
@@ -861,7 +861,7 @@ R[[
  ]]
 R[[
     type test = function(name: string)
-         return analyzer:GetValue(name.data, "typesystem")
+         return analyzer:GetEnvironmentValue(name.data, "typesystem")
     end
     local type lol = {}
     type_assert(test("lol"), lol)

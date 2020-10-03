@@ -24,7 +24,7 @@ type ffi.C = {
 		local function call_typesystem_upvalue(name, ...)
 			-- this is very internal-ish code
 			-- not sure what a nice interface for this really should be yet
-			local generics_func = analyzer:GetValue(name, "typesystem")
+			local generics_func = analyzer:GetEnvironmentValue(name, "typesystem")
 			local argument_tuple = types.Tuple({...})
 			analyzer.PreferTypesystem = true
 			local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
@@ -34,7 +34,7 @@ type ffi.C = {
 
 		local function ctype_to_oh_type(type_info)
 			if type_info.what == "ptr" then
-				return analyzer:GetValue("VoidPointer", "typesystem")
+				return analyzer:GetEnvironmentValue("VoidPointer", "typesystem")
 			elseif type_info.what == "int" then
 				return types.Number()
 			else

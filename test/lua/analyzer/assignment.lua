@@ -84,7 +84,7 @@ test("runtime reassignment", function()
         do
             a = 2
         end
-    ]]:GetValue("a", "runtime")
+    ]]:GetEnvironmentValue("a", "runtime")
 
     equal(v:GetData(), 2)
 
@@ -93,7 +93,7 @@ test("runtime reassignment", function()
         if true then
             a = 2
         end
-    ]]:GetValue("a", "runtime")
+    ]]:GetEnvironmentValue("a", "runtime")
 
     equal(v:GetData(), 2)
 end)

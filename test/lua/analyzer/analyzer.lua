@@ -64,7 +64,7 @@ test("comment types", function()
 
     local func = run([=[
         local function foo(aaa--[[#: string]], idx--[[#: number]], msg--[[#: string]]) end
-    ]=]):GetValue("foo", "runtime")
+    ]=]):GetEnvironmentValue("foo", "runtime")
 
     local a,b,c = func:GetArguments():Unpack()
 
@@ -78,7 +78,7 @@ test("comment types", function()
 end)
 
 test("runtime scopes", function()
-    local v = run("local a = 1"):GetValue("a", "runtime")
+    local v = run("local a = 1"):GetEnvironmentValue("a", "runtime")
     equal(true, v.Type == "number")
 end)
 
@@ -95,15 +95,15 @@ test("default declaration is literal", function()
         local t = {k = 1}
         local b = t.k
     ]])
-    assert(analyzer:GetValue("a", "runtime"):IsLiteral())
-    assert(analyzer:GetValue("b", "runtime"):IsLiteral())
+    assert(analyzer:GetEnvironmentValue("a", "runtime"):IsLiteral())
+    assert(analyzer:GetEnvironmentValue("b", "runtime"):IsLiteral())
 end)
 
 
 test("runtime block scopes", function()
 
     local analyzer = run("do local a = 1 end")
-    equal(nil, analyzer:GetValue("a", "runtime"))
+    equal(nil, analyzer:GetEnvironmentValue("a", "runtime"))
     equal(1, analyzer:GetScope().children[1].upvalues.runtime.map.a.data:GetData()) -- TODO: awkward access
 
     local v = run[[
@@ -111,7 +111,7 @@ test("runtime block scopes", function()
         do
             local a = 2
         end
-    ]]:GetValue("a", "runtime")
+    ]]:GetEnvironmentValue("a", "runtime")
 
     equal(v:GetData(), 1)
 end)
@@ -122,8 +122,8 @@ test("typesystem differs from runtime", function()
         local type a = 2
     ]]
 
-    equal(analyzer:GetValue("a", "runtime"):GetData(), 1)
-    equal(analyzer:GetValue("a", "typesystem"):GetData(), 2)
+    equal(analyzer:GetEnvironmentValue("a", "runtime"):GetData(), 1)
+    equal(analyzer:GetEnvironmentValue("a", "typesystem"):GetData(), 2)
 end)
 
 test("global types", function()
@@ -134,7 +134,7 @@ test("global types", function()
         local b: a
     ]]
 
-    equal(2, analyzer:GetValue("b", "runtime"):GetData())
+    equal(2, analyzer:GetEnvironmentValue("b", "runtime"):GetData())
 end)
 
 test("constant types", function()
@@ -143,8 +143,8 @@ test("constant types", function()
         local b: number
     ]]
 
-    equal(true, analyzer:GetValue("a", "runtime"):IsLiteral())
-    equal(false, analyzer:GetValue("b", "runtime"):IsLiteral())
+    equal(true, analyzer:GetEnvironmentValue("a", "runtime"):IsLiteral())
+    equal(false, analyzer:GetEnvironmentValue("b", "runtime"):IsLiteral())
 end)
 
 -- literal + vague = vague
@@ -155,7 +155,7 @@ test("1 + number = number", function()
         local c = a + b
     ]]
 
-    local v = analyzer:GetValue("c", "runtime")
+    local v = analyzer:GetEnvironmentValue("c", "runtime")
     equal(true, v.Type == ("number"))
     equal(false, v:IsLiteral())
 end)
@@ -167,7 +167,7 @@ test("1 + 2 = 3", function()
         local c = a + b
     ]]
 
-    local v = analyzer:GetValue("c", "runtime")
+    local v = analyzer:GetEnvironmentValue("c", "runtime")
     equal(true, v.Type == ("number"))
     equal(3, v:GetData())
 end)
@@ -180,7 +180,7 @@ test("function return value", function()
         local a = test()
     ]]
 
-    local v = analyzer:GetValue("a", "runtime")
+    local v = analyzer:GetEnvironmentValue("a", "runtime")
     equal(6, v:GetData())
 end)
 
@@ -192,9 +192,9 @@ test("multiple function return values", function()
         local a,b,c = test()
     ]]
 
-    equal(1, analyzer:GetValue("a", "runtime"):GetData())
-    equal(2, analyzer:GetValue("b", "runtime"):GetData())
-    equal(3, analyzer:GetValue("c", "runtime"):GetData())
+    equal(1, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
+    equal(2, analyzer:GetEnvironmentValue("b", "runtime"):GetData())
+    equal(3, analyzer:GetEnvironmentValue("c", "runtime"):GetData())
 end)
 
 
@@ -207,7 +207,7 @@ test("scopes shouldn't leak", function()
         local _, a = a:test(1, 2)
     ]]
 
-    equal(3, analyzer:GetValue("a", "runtime"):GetData())
+    equal(3, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
 end)
 
 test("explicitly annotated variables need to be set properly", function()
@@ -226,8 +226,8 @@ test("functions can modify parent scope", function()
         test()
     ]]
 
-    equal(2, analyzer:GetValue("a", "runtime"):GetData())
-    equal(1, analyzer:GetValue("c", "runtime"):GetData())
+    equal(2, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
+    equal(1, analyzer:GetEnvironmentValue("c", "runtime"):GetData())
 end)
 
 test("uncalled functions should be called", function()
@@ -246,7 +246,7 @@ test("uncalled functions should be called", function()
             return a + b
         end
     ]]
-    local lib = analyzer:GetValue("lib", "runtime")
+    local lib = analyzer:GetEnvironmentValue("lib", "runtime")
 
     equal("number", lib:Get("foo1"):GetArguments():Get(1):GetType("number").Type)
     equal("number", lib:Get("foo1"):GetArguments():Get(2):GetType("number").Type)
@@ -261,7 +261,7 @@ test("should convert binary numbers to numbers", function()
     local analyzer = run[[
         local a = 0b01
     ]]
-    equal(1, analyzer:GetValue("a", "runtime"):GetData())
+    equal(1, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
 end)
 
 test("undefined types should error", function()

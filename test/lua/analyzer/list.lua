@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 local check = function(analyzer, to)
-    equal(to:gsub("%s+", " "), tostring(analyzer:GetValue("a", "runtime")):gsub("%s+", " "))
+    equal(to:gsub("%s+", " "), tostring(analyzer:GetEnvironmentValue("a", "runtime")):gsub("%s+", " "))
 end
 
 

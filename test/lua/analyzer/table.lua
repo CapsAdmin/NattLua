@@ -8,7 +8,7 @@ test("reassignment", function()
         tbl.foo = false
     ]]
 
-    local tbl = analyzer:GetValue("tbl", "runtime")
+    local tbl = analyzer:GetEnvironmentValue("tbl", "runtime")
 
     equal(false, tbl:Get("foo"):GetData())
 
@@ -17,7 +17,7 @@ test("reassignment", function()
         tbl.foo = false
     ]]
 
-    local tbl = analyzer:GetValue("tbl", "runtime")
+    local tbl = analyzer:GetEnvironmentValue("tbl", "runtime")
     equal(false, tbl:Get("foo"):GetData())
 end)
 
@@ -25,7 +25,7 @@ test("typed field", function()
     local analyzer = run[[
         local tbl: {foo = boolean} = {foo = true}
     ]]
-    equal(true, analyzer:GetValue("tbl", "runtime"):Get("foo"):GetData())
+    equal(true, analyzer:GetEnvironmentValue("tbl", "runtime"):Get("foo"):GetData())
 end)
 
 test("typed table invalid reassignment should error", function()
@@ -45,7 +45,7 @@ test("typed table invalid reassignment should error", function()
         ]]
         ,"2 is not a subset of 1"
     )
-    local v = analyzer:GetValue("tbl", "runtime")
+    local v = analyzer:GetEnvironmentValue("tbl", "runtime")
 
     run(
         [[
@@ -73,8 +73,8 @@ test("self referenced tables should be equal", function()
         b.foo = {lol = b}
     ]])
 
-    local a = analyzer:GetValue("a", "runtime")
-    local b = analyzer:GetValue("b", "runtime")
+    local a = analyzer:GetEnvironmentValue("a", "runtime")
+    local b = analyzer:GetEnvironmentValue("b", "runtime")
 
     equal(true, a:SubsetOf(b))
 end)
@@ -85,8 +85,8 @@ test("indexing nil in a table should be allowed", function()
         local a = tbl.bar
     ]])
 
-    equal("symbol", analyzer:GetValue("a", "runtime").Type)
-    equal(nil, analyzer:GetValue("a", "runtime"):GetData())
+    equal("symbol", analyzer:GetEnvironmentValue("a", "runtime").Type)
+    equal(nil, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
 end)
 
 test("indexing nil in a table with a contract should error", function()
@@ -149,24 +149,24 @@ test("is literal", function()
     local a = run[[
         local type a = {a = 1, b = 2}
     ]]
-    equal(a:GetValue("a", "typesystem"):IsLiteral(), true)
+    equal(a:GetEnvironmentValue("a", "typesystem"):IsLiteral(), true)
 
     local a = run[[
         local type a = {a = 1, b = 2, c = {c = true}}
     ]]
-    equal(a:GetValue("a", "typesystem"):IsLiteral(), true)
+    equal(a:GetEnvironmentValue("a", "typesystem"):IsLiteral(), true)
 end)
 
 test("is not literal", function()
     local a = run[[
         local type a = {a = number, [string] = boolean}
     ]]
-    equal(a:GetValue("a", "typesystem"):IsLiteral(), false)
+    equal(a:GetEnvironmentValue("a", "typesystem"):IsLiteral(), false)
 
     local a = run[[
         local type a = {a = 1, b = 2, c = {c = boolean}}
     ]]
-    equal(a:GetValue("a", "typesystem"):IsLiteral(), false)
+    equal(a:GetEnvironmentValue("a", "typesystem"):IsLiteral(), false)
 end)
 
 test("self reference", function()
@@ -188,8 +188,8 @@ test("self reference", function()
         local func = x.Test
     ]]
 
-    equal(a:GetValue("func", "runtime"):GetArguments():Get(1):Get("GetPos").Type, "function")
-    equal(a:GetValue("func", "runtime"):GetArguments():Get(1):Get("Test").Type, "function")
+    equal(a:GetEnvironmentValue("func", "runtime"):GetArguments():Get(1):Get("GetPos").Type, "function")
+    equal(a:GetEnvironmentValue("func", "runtime"):GetArguments():Get(1):Get("Test").Type, "function")
 
     run[[
         local type a = {
@@ -304,7 +304,7 @@ test("deep nested copy", function()
         local a = {nested = {}}
         a.a = a
         a.nested.a = a
-    ]]):GetValue("a", "runtime")
+    ]]):GetEnvironmentValue("a", "runtime")
 
     equal(a:Get("nested"):Get("a"), a)
     equal(a:Get("a"), a)
