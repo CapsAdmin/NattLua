@@ -240,7 +240,7 @@ do
     _G.lol = nil
 
     run([[
-        type hit = function()
+        local type hit = function()
             lol = (lol or 0) + 1
         end
 
@@ -477,7 +477,7 @@ run[[
 
 test("branching", function()
     run([[
-        type a = {}
+        local type a = {}
 
         if not a then
             -- shouldn't reach
@@ -488,7 +488,7 @@ test("branching", function()
     ]])
 
     run([[
-        type a = {}
+        local type a = {}
         if not a then
             -- shouldn't reach
             type_assert(1, 2)

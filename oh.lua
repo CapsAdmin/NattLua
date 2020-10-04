@@ -196,7 +196,15 @@ do
 		return self
 	end
 
-	function META:Analyze(dump_events, analyzer, ...)
+	function META:EnableEventDump(b)
+		self.dump_events = b
+	end
+
+	function META:SetDefaultEnvironment(obj)
+		self.default_environment = obj
+	end
+
+	function META:Analyze(analyzer, ...)
 		if not self.SyntaxTree then
 			local ok, err = self:Parse()
 			if not ok then
@@ -207,10 +215,17 @@ do
 
 		local analyzer = analyzer or self.Analyzer()
 		self.analyzer = analyzer	
-		analyzer.code_data = self	
+		analyzer.code_data = self
 		analyzer.OnError = function(analyzer, ...) self:OnError(...) end
 
-		if dump_events or self.config and self.config.dump_analyzer_events then
+		if self.default_environment then
+			analyzer:SetDefaultEnvironment(self.default_environment, "typesystem")
+		elseif self.default_environment ~= false then
+			-- this is studid, trying to stop the base analyzer from causing a require() loop
+			analyzer:SetDefaultEnvironment(require("oh.lua.shared_analyzer"), "typesystem")
+		end
+
+		if self.dump_events or self.config and self.config.dump_analyzer_events then
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
 

@@ -278,7 +278,7 @@ end)
 
 test("calling a set", function()
     run[[
-        type test = (function(boolean, boolean): number) | (function(boolean): string)
+        local type test = (function(boolean, boolean): number) | (function(boolean): string)
 
         local a = test(true, true)
         local b = test(true)
@@ -290,7 +290,7 @@ end)
 
 test("calling a set that does not contain a function should error", function()
     run([[
-        type test = (function(boolean, boolean): number) | (function(boolean): string) | number
+        local type test = (function(boolean, boolean): number) | (function(boolean): string) | number
 
         test(true, true)
     ]], "set .- contains uncallable object number")
@@ -298,7 +298,7 @@ end)
 
 test("pcall", function()
     run[[
-        type pcall = function(cb: any, ...)
+        local type pcall = function(cb: any, ...)
             return types.Boolean, table.unpack(analyzer:Call(cb, types.Tuple({...})):GetData())
         end
 
@@ -328,12 +328,14 @@ test("lol", function()
             type x = boolean | number
         end
 
-        type c = x
+        local type c = x
         local a: c
-        type b = {foo = a as any}
+        local type b = {foo = a as any}
         local c: function(a: number, b:number): b, b
 
         type_assert_superset(c, nil as function(_:number, _:number): {foo = any}, {foo = any})
+
+        type x = nil
     ]]
 end)
 

@@ -157,7 +157,7 @@ end)
 
 test("error on newindex", function()
     run([[
-        type error = function(msg: string)
+        local type error = function(msg: string)
             assert(type(msg.data) == "string", "msg does not contain a string?")
             error(msg.data)
         end

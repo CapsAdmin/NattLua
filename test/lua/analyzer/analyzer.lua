@@ -102,8 +102,8 @@ end)
 
 test("runtime block scopes", function()
 
-    local analyzer = run("do local a = 1 end")
-    equal(nil, analyzer:GetEnvironmentValue("a", "runtime"))
+    local analyzer, syntax_tree = run("do local a = 1 end")
+    equal(false, (syntax_tree.environments.runtime:Get("a")))
     equal(1, analyzer:GetScope().children[1].upvalues.runtime.map.a.data:GetData()) -- TODO: awkward access
 
     local v = run[[
@@ -132,6 +132,7 @@ test("global types", function()
             type a = 2
         end
         local b: a
+        type a = nil
     ]]
 
     equal(2, analyzer:GetEnvironmentValue("b", "runtime"):GetData())
@@ -319,10 +320,15 @@ run[[
     
     local x: FOO = 2
     type_assert(x, FOO)
+
+    -- make a way to undefine enums
+    type A = nil
+    type B = nil
+    type C = nil
 ]]
 
 run[[
-    type Foo = {
+    local type Foo = {
         x = number,
         y = self,
     }
@@ -333,7 +339,7 @@ run[[
 ]]
 
 run[[
-    type Foo = {
+    local type Foo = {
         x = number,
         y = self,
     }
@@ -345,7 +351,7 @@ run[[
 
 
 run[[
-    type Foo = {
+    local type Foo = {
         x = number,
         y = Foo,
     }
@@ -357,14 +363,14 @@ run[[
 
 pending("forward declare types", function()
     run[[
-        type Ping
-        type Pong
+        local type Ping
+        local type Pong
 
-        type Ping = {
+        local type Ping = {
             pong = Pong,
         }
 
-        type Pong = {
+        local type Pong = {
             ping = Ping,
         }
 

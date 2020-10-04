@@ -46,13 +46,14 @@ local function run(code, expect_error)
     else
         if not ok then
             code_data = C(code_data.code)
-            local ok, err2 = code_data:Analyze(true)
+            code_data:EnableEventDump(true)
+            local ok, err2 = code_data:Analyze()
             io.write(code_data.code, "\n")
             error(err)
         end
     end
 
-    return code_data.analyzer
+    return code_data.analyzer, code_data.SyntaxTree
 end
 
 return {

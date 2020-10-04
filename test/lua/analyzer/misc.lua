@@ -439,7 +439,7 @@ R[[
 
 ]]
 R[[
-    function string(ok)
+    function aaa(ok)
         if ok then
             return 2
         else
@@ -447,8 +447,8 @@ R[[
         end
     end
 
-    string(true)
-    local ag = string(false)
+    aaa(true)
+    local ag = aaa(false)
 
     type_assert(ag, "hello")
 
@@ -522,7 +522,7 @@ R[[
 ]]
 
 R[[
-    type lol = number
+    local type lol = number
 
     local type math = {
         sin = (function(a: lol, b: string): lol),
@@ -537,6 +537,8 @@ R[[
 
     type_assert(a, nil as number)
     type_assert(b, nil as number)
+
+    type math.lol = nil
 ]]
 R[[
     local type foo = {
@@ -570,9 +572,9 @@ R[[
 ]]
 R[[
     local a: string = "1"
-    type a = string | number | (boolean | string)
+    local type a = string | number | (boolean | string)
 
-    type type_func = function(a: any,b: any,c: any) return types.String(), types.Number() end
+    local type type_func = function(a: any,b: any,c: any) return types.String(), types.Number() end
     local a, b = type_func(a,2,3)
     type_assert(a, _ as string)
     type_assert(b, _ as number)
@@ -649,20 +651,23 @@ R[[
         sin = function(number): number
     }
 
+    local type old = math.cos
     type math.cos = function(number): number
 
     local a = math.sin(1)
 
     type_assert(a, _ as number)
+
+    type math.cos = old
 ]]
 
 
 R[[
-    type a = function()
+    local type a = function()
         _G.LOL = true
     end
 
-    type b = function()
+    local type b = function()
         _G.LOL = nil
         local t = analyzer:GetEnvironmentValue("a", "typesystem")
         local func = t.data.lua_function
@@ -684,7 +689,7 @@ R[[
     a.b: boolean, a.c: number = LOL as any, LOL2 as any
 ]]
 R[[
-    type test = {
+    local type test = {
         sin = (function(number): number),
         cos = (function(number): number),
     }
@@ -692,7 +697,7 @@ R[[
     local a = test.sin(1)
 ]]
 R[[
-    type lol = function(a: string) return a end
+    local type lol = function(a: string) return a end
     local a: lol<|string|>
     type_assert(a, _ as string)
 ]]
@@ -806,19 +811,7 @@ R[[
     end)
 ]]
 
-R[[
-    local a, b = 0, 0
-    for i = 1, 5000 do
-        if 5 == i then
-            a = 1
-        end
-        if i == 5 then
-            b = 1
-        end
-    end
-    type_assert(a, _ as 1 | 0)
-    type_assert(b, _ as 1 | 0)
-]]
+
 R[[
     local def,{a,b,c} = {a=1,b=2,c=3}
     type_assert(a, 1)
@@ -859,17 +852,7 @@ R[[
     local a = pl:IsValid()
     type_assert(a, nil)
  ]]
-R[[
-    type test = function(name: string)
-         return analyzer:GetEnvironmentValue(name.data, "typesystem")
-    end
-    local type lol = {}
-    type_assert(test("lol"), lol)
-]]
-R[[
-    local type lol = {}
-    type_assert(require("lol"), lol)
-]]
+
 R[[
     local tbl = {}
     local test = "asdawd"
@@ -928,7 +911,7 @@ R[[
 ]]
 
 R([[
-    type a = {}
+    local type a = {}
 
     if not a then
         -- shouldn't reach
@@ -939,7 +922,7 @@ R([[
 ]])
 
 R([[
-    type a = {}
+    local type a = {}
     if not a then
         -- shouldn't reach
         type_assert(1, 2)

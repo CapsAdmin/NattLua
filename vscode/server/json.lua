@@ -363,7 +363,7 @@ parse = function(str--[[#: string]], idx--[[#: number]])--[[#: any, number]]
 	local f = char_func_map[chr]
 	if f then
 		--[[#
-			type lol = function(T)
+			local type lol = function(T)
 				if T.Type == "set" then
 					T:RemoveElement(types.Nil)
 				end

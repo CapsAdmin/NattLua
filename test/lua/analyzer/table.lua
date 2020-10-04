@@ -263,7 +263,7 @@ end)
 test("table is not literal", function()
     run[[
         local tbl:{[number] = number} = {1,2,3}
-        type function check_literal(tbl)
+        local type function check_literal(tbl)
             assert(tbl:IsLiteral() == false)
         end
         check_literal(tbl)
@@ -287,7 +287,7 @@ run[[
 
 
 run[[
-    type list = {[number] = any}
+    local type list = {[number] = any}
     list = {}
     type_assert(list, _ as {[number] = any})
 ]]

@@ -27,3 +27,25 @@ run([[
         assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)
     end
 end)
+
+run[[
+    type_assert(require("table.new"), table.new)
+]]
+
+run[[
+    type_assert(require("string"), string)
+    type_assert(require("io"), io)
+]]
+
+run[[
+    local type test = function(name: string)
+         return analyzer:GetEnvironmentValue(name.data, "typesystem")
+    end
+    local type lol = {}
+    type_assert(test("lol"), lol)
+]]
+
+run[[
+    local type lol = {}
+    type_assert(require("lol"), lol)
+]]

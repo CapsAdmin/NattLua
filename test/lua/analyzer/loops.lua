@@ -91,3 +91,17 @@ run[[
     end
     type_assert(x, _ as number)
 ]]
+
+run[[
+    local a, b = 0, 0
+    for i = 1, 5000 do
+        if 5 == i then
+            a = 1
+        end
+        if i == 5 then
+            b = 1
+        end
+    end
+    type_assert(a, _ as 1 | 0)
+    type_assert(b, _ as 1 | 0)
+]]

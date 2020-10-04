@@ -27,7 +27,7 @@ end)
 
 test("exclude type function", function()
     run([[
-        type function Exclude(T, U)
+        local type function Exclude(T, U)
             T:RemoveElement(U)
             return T
         end
@@ -38,7 +38,7 @@ test("exclude type function", function()
     ]])
 
     run([[
-        type function Exclude(T, U)
+        local type function Exclude(T, U)
             T:RemoveElement(U)
             return T
         end
@@ -122,7 +122,7 @@ end)
 
 test("varargs", function()
     run[[
-    type test = function(...) end
+    local type test = function(...) end
     local a = {}
     a[1] = true
     a[2] = false
@@ -133,7 +133,7 @@ end)
 
 test("exlcude", function()
     run[[
-        type function Exclude(T, U)
+        local type function Exclude(T, U)
             T:RemoveElement(U)
             return T
         end
@@ -183,7 +183,7 @@ run[[
 ]]
 
 run([[
-    type function Exclude(T, U)
+    local type function Exclude(T, U)
         T:RemoveElement(U)
         return T
     end
@@ -194,7 +194,7 @@ run([[
 ]])
 
 run([[
-    type function Exclude(T, U)
+    local type function Exclude(T, U)
         T:RemoveElement(U)
         return T
     end

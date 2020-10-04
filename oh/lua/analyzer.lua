@@ -209,29 +209,31 @@ end
 
 function META:AnalyzeFunctionBody(function_node, arguments, env)
     self:PushScope(function_node)
-        if function_node.self_call then
-            self:CreateLocalValue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env)
-        end
+    self:PushEnvironment(function_node, nil, env)
 
-        for i, identifier in ipairs(function_node.identifiers) do
-            local argi = function_node.self_call and (i+1) or i
+    if function_node.self_call then
+        self:CreateLocalValue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env)
+    end
 
-            if identifier.value.value == "..." then
-                local values = {}
-                for i = argi, arguments:GetLength() do
-                    table.insert(values, arguments:Get(i))
-                end
-                self:CreateLocalValue(identifier, self:NewType(identifier, "...", values), env)
-            else
-                self:CreateLocalValue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
+    for i, identifier in ipairs(function_node.identifiers) do
+        local argi = function_node.self_call and (i+1) or i
+
+        if identifier.value.value == "..." then
+            local values = {}
+            for i = argi, arguments:GetLength() do
+                table.insert(values, arguments:Get(i))
             end
+            self:CreateLocalValue(identifier, self:NewType(identifier, "...", values), env)
+        else
+            self:CreateLocalValue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
         end
+    end
 
-        -- crawl and collect return values from function statements
-        self:ReturnToThisScope()
-        self:PushReturn()
-            self:AnalyzeStatements(function_node.statements)
-        local analyzed_return = types.Tuple(self:PopReturn())
+    self:ReturnToThisScope()
+    self:PushReturn()
+    local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
+
+    self:PopEnvironment(env)
     self:PopScope()
 
     self.returned_from_block = nil
@@ -532,10 +534,15 @@ do -- statements
     function META:AnalyzeRootStatement(statement, ...)
         local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):SetElementType(types.Any()):Max(math.huge)
         self:PushScope(statement)
+        self:PushEnvironment(statement, nil, "runtime")
+        self:PushEnvironment(statement, nil, "typesystem")
+
         self:CreateLocalValue("...", argument_tuple, "runtime")
         self:PushReturn()
-        self:AnalyzeStatements(statement.statements)
-        local analyzed_return = types.Tuple(self:PopReturn())
+        local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
+
+        self:PopEnvironment("runtime")
+        self:PopEnvironment("typesystem")
         self:PopScope()
         return analyzed_return
     end
@@ -1634,7 +1641,6 @@ do -- expressions
         if env == "typesystem" then
             obj = 
                 self:GetEnvironmentValue(node, env) or
-                self:IndexNotFound(node) or
                 self:GetEnvironmentValue(node, "runtime")
             
             if not obj then
@@ -1644,7 +1650,6 @@ do -- expressions
             obj = 
                 self:GetEnvironmentValue(node, env) or 
                 self:GetEnvironmentValue(node, "typesystem") or 
-                self:IndexNotFound(node) or 
                 self:GuessTypeFromIdentifier(node, env)
         end
 
@@ -1894,16 +1899,9 @@ do -- expressions
     end
 end
 
-local function DefaultIndex(self, node)
-    if _G.DISABLE_BASE_TYPES then
-        return nil
-    end
-
-    return require("oh.lua.shared_analyzer"):GetEnvironmentValue(node, "typesystem")
-end
-
 return function()
-    local self = setmetatable({env = {runtime = {}, typesystem = {}}}, META)
-    self.IndexNotFound = DefaultIndex
+    local self = setmetatable({}, META)
+    self.default_environment = {runtime = types.Table({}), typesystem = types.Table({})}
+    self.environments = {runtime = {}, typesystem = {}}
     return self
 end

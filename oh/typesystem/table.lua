@@ -250,7 +250,7 @@ function META:GetEnvironmentValues()
     return values
 end
 
-function META:Set(key, val)
+function META:Set(key, val, no_delete)
     key = types.Cast(key)
     val = types.Cast(val)
 
@@ -268,8 +268,10 @@ function META:Set(key, val)
     end
 
     -- delete entry
-    if val == nil or (val.Type == "symbol" and val:GetData() == nil) then
-        return self:Delete(key)
+    if not no_delete then
+        if (val == nil or (val.Type == "symbol" and val:GetData() == nil)) then
+            return self:Delete(key)
+        end
     end
 
     if self.contract then

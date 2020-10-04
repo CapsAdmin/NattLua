@@ -228,12 +228,14 @@ do -- globals
 
 		local shared_analyzer = require("oh.lua.shared_analyzer")
 
-		if shared_analyzer:GetEnvironmentValue("_G", "typesystem"):Get(str) then
-			return shared_analyzer:GetEnvironmentValue("_G", "typesystem"):Get(str)
+		local val = shared_analyzer:Get(str)
+
+		if val then
+			return val
 		end
 		
 		if str == "table.new" then
-			return shared_analyzer:GetEnvironmentValue("table", "typesystem"):Get("new")
+			return shared_analyzer:Get("table", "typesystem"):Get("new")
 		end
 
 		if self:GetEnvironmentValue(str, "typesystem") then
@@ -466,16 +468,13 @@ type debug = {
 }
 
 type function debug.setfenv(func, table)
-    if func and func.node and func.node.scope then
-        self:SetEnvironment(func.node.scope, table, "runtime")
+    if func and func.node and func.node then
+        self:SetEnvironmentOverride(func.node, table, "runtime")
     end
 end
 
 type function debug.getfenv(func)
-    if func and func.node and func.node.scope and func.node.scope.env and func.node.scope.env["runtime"] then
-        return func.node.scope.env["runtime"]
-    end
-    return analyzer:GetEnvironmentValue("_G", "runtime")
+    return self:GetEnvironmentOverride(func.function_body_node or func, "runtime")
 end
 
 type getfenv = debug.getfenv

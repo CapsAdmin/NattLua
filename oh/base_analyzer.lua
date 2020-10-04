@@ -260,9 +260,51 @@ return function(META)
             end
         end
 
-        function META:SetEnvironment(scope, tbl, env)
-            scope.env = scope.env or {runtime = {}, typesystem = {}}
-            scope.env[env] = tbl
+        function META:SetEnvironmentOverride(node, obj, env)
+            if not obj then
+                if not env then
+                    node.environments_override = nil
+                else
+                    node.environments_override[env] = nil
+                end
+            else
+                node.environments_override = node.environments_override or {}
+                node.environments_override[env] = obj
+            end
+        end
+
+        function META:GetEnvironmentOverride(node, env)
+            if node.environments_override then
+                return node.environments_override[env]
+            end
+        end
+
+        function META:SetDefaultEnvironment(obj, env)
+            self.default_environment[env] = obj
+        end
+
+        function META:PushEnvironment(node, obj, env)
+            obj = obj or self.default_environment[env]
+
+            if #self.environments[env] == 0 then
+                -- this is needed for when calling GetEnvironmentValue when analysis is done
+                -- it's mostly useful for tests, but maybe a better solution can be done here
+                self.first_environment = self.first_environment or {}
+                self.first_environment[env] = obj
+            end
+
+            table.insert(self.environments[env], 1, obj)
+
+            node.environments = node.environments or {}
+            node.environments[env] = obj
+
+            self.environment_nodes = self.environment_nodes or {}
+            table.insert(self.environment_nodes, 1, node)
+        end
+
+        function META:PopEnvironment(env)
+            table.remove(self.environment_nodes)            
+            table.remove(self.environments[env])            
         end
         
         function META:GetEnvironmentValue(key, env)
@@ -273,14 +315,26 @@ return function(META)
             if upvalue then
                 return upvalue.data
             end
-            
-            local base = self.scope.env or self.env
 
-            if types.IsTypeObject(base[env]) and base[env].Type == "table" then
-                return base[env]:Get(self:Hash(key))
+            local string_key = types.String(self:Hash(key)):MakeLiteral(true)
+
+            if self.environment_nodes[1] and self.environment_nodes[1].environments_override and self.environment_nodes[1].environments_override[env] then
+                return self.environment_nodes[1].environments_override[env]:Get(string_key)
             end
 
-            return base[env][self:Hash(key)]
+            if not self.environments[env][1] then
+                return self.first_environment[env]:Get(string_key)
+            end
+        
+            local val, err = self.environments[env][1]:Get(string_key)
+
+            if val then
+                return val
+            end
+
+            -- log error maybe?
+
+            return  nil
         end
 
         function META:SetEnvironmentValue(key, val, env)
@@ -301,7 +355,13 @@ return function(META)
                     self:FireEvent("mutate_upvalue", key, val, env)
                 else
                     -- key = val
-                    self.env[env][self:Hash(key)] = val
+
+                    if not self.environments[env][1] then
+                        error("tried to get environment value outside of Push/Pop/Environment", 2)
+                    end
+
+                    local ok, err = self.environments[env][1]:Set(types.String(self:Hash(key)):MakeLiteral(true), val, env == "runtime")
+
                     self:FireEvent("set_global", key, val, env)
                 end
             else
@@ -357,6 +417,11 @@ return function(META)
     function META:ReturnToThisScope()
         self.ReturnFromFunction = #self.scope_stack
         self.returned_from_certain_scope = nil
+    end
+
+    function META:AnalyzeStatementsAndCollectReturnTypes(statement)
+        self:AnalyzeStatements(statement.statements)
+        return types.Tuple(self:PopReturn())
     end
 
     function META:AnalyzeStatements(statements)

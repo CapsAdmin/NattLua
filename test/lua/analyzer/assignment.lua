@@ -42,10 +42,12 @@ type_assert(æ, 4)
 type_assert(ø, 5)
 type_assert(å, 6)
 
+A, B, C, D = nil, nil, nil, nil
+
 ]]
 
 run([[
-    type Foo = {
+    local type Foo = {
         a = 1,
         b = 2,
     }
