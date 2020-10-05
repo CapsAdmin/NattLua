@@ -57,7 +57,7 @@ do
 		local msg = helpers.FormatError(code, name, msg, start, stop, nil, ...)
 
 		local msg2 = ""
-		for line in msg:gmatch("(.-)\n") do
+		for line in (msg .. "\n"):gmatch("(.-)\n") do
 			msg2 = msg2 .. (" "):rep(4-level*2) .. line .. "\n"
 		end
 		msg = msg2
