@@ -468,7 +468,7 @@ type debug = {
 }
 
 type function debug.setfenv(val, table)
-    if val and val:IsLiteral() then 
+    if val and (val:IsLiteral() or val.Type == "function") then 
 		if val.Type == "number" then
 			self:SetEnvironmentOverride(self.environment_nodes[val:GetData()], table, "runtime")
 		elseif val.node then
