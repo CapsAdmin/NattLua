@@ -176,18 +176,18 @@ return function(META)
     function META:RemoveToken(i)
         local t = self.tokens[i]
         table.remove(self.tokens, i)
-        self.tokens_length = #self.tokens
         return t
     end
 
     function META:AddTokens(tokens)
+        local eof = table.remove(self.tokens)
         for i, token in ipairs(tokens) do
             if token.type == "end_of_file" then
                 break
             end
             table.insert(self.tokens, self.i + i - 1, token)
         end
-        self.tokens_length = #self.tokens
+        table.insert(self.tokens, eof)
     end
 
     function META:IsValue(str, offset)
@@ -239,7 +239,7 @@ return function(META)
     end
 
     function META:GetLength()
-        return self.tokens_length
+        return #self.tokens
     end
 
     function META:Advance(offset)
@@ -248,7 +248,6 @@ return function(META)
 
     function META:BuildAST(tokens)
         self.tokens = tokens
-        self.tokens_length = #tokens
         self.i = 1
 
         return self:Root(self.config and self.config.root)
