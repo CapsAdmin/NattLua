@@ -1703,7 +1703,12 @@ do -- expressions
         if type == "number" then
             return self:NewType(node, "number", self:StringToNumber(value), true)
         elseif type == "string" then
+            if value:sub(1, 1) == "[" then
+                local start = value:match("(%[[%=]*%[)")
+                return self:NewType(node, "string", value:sub(#start+1, -#start-1), true)
+            else
             return self:NewType(node, "string", value:sub(2, -2), true)
+            end
         elseif type == "letter" then
             return self:NewType(node, "string", value, true)
         end

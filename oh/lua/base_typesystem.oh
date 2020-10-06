@@ -279,7 +279,14 @@ do -- globals
 		end
 
 		local str = code:GetData()
-		str = str:gsub("\\(.)", function(char) return load("return '\\" .. char .. "'")() end)
+
+		local ok, err = pcall(function()
+			str = str:gsub("\\(.)", function(char) return assert(load("return '\\" .. char .. "'"))() end)
+		end)
+
+		if not ok then
+			return ok, err
+		end
 
 		local code_data = oh.Code(str, chunk_name and chunk_name:GetData() or nil)
 		assert(code_data:Lex())
