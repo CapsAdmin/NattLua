@@ -991,7 +991,7 @@ do -- expressions
             ["-"] = function(l,r) return l-r end,
             ["*"] = function(l,r) return l*r end,
             ["/"] = function(l,r) return l/r end,
-            ["/idiv/"] = function(l,r) return math.floor(l/r) end,
+            ["/idiv/"] = function(l,r) return (math.modf(l/r)) end,
             ["%"] = function(l,r) return l%r end,
             ["^"] = function(l,r) return l^r end,
             [".."] = function(l,r) return l..r end,

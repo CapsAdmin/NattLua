@@ -555,6 +555,27 @@ do -- expression
         end
     end
 
+    function META:CheckForIntegerDivisionOperator(node)
+        if node and not node.idiv_resolved then
+            for i, token in ipairs(node.whitespace) do
+                if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
+                    table.remove(node.whitespace, i)
+
+                    local tokens = require("oh.lua.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
+                    
+                    for _, token in ipairs(tokens) do
+                        self:CheckForIntegerDivisionOperator(token)
+                    end
+                    
+                    self:AddTokens(tokens)
+                    node.idiv_resolved = true
+                    
+                    break
+                end
+            end
+        end
+    end
+
     function META:ReadExpression(priority, no_ambiguous_calls)
         priority = priority or 0
 
@@ -651,22 +672,7 @@ do -- expression
             end
         end
 
-        do
-            local node = self:GetToken()
-            if node then
-                for _, v in ipairs(node.whitespace) do
-                    if v.type == "line_comment" and v.value:sub(1,2) == "//" then
-                        local tokens = require("oh.lua.lexer")("/idiv" .. v.value:sub(2)):GetTokens()
-                        self:RemoveToken(self:GetLength())
-                        local eof = tokens[#tokens]
-                        self:AddTokens(tokens)
-                        table.insert(self.tokens, eof)
-                        self.tokens_length = #self.tokens
-                        break
-                    end
-                end
-            end
-        end
+        self:CheckForIntegerDivisionOperator(self:GetToken())
 
         while syntax.GetBinaryOperatorInfo(self:GetToken()) and syntax.GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
             local left = node

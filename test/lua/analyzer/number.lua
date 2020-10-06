@@ -55,3 +55,12 @@ test("nan", function()
         assert(not isNaN(1/0))
     ]])
 end)
+
+test("integer division", function()
+    run[[
+        local foo = ((500 // 2) + 3) // 2 // 3 // 3
+        local bar = 5
+        type_assert(foo, 14)
+        type_assert(bar, 5)
+    ]]
+end)
