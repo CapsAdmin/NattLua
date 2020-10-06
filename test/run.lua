@@ -28,6 +28,12 @@ end
 function _G.equal(a, b, level)
     level = level or 1
     if a ~= b then
+        if type(a) == "string" then
+            a = string.format("%q", a)
+        end
+        if type(b) == "string" then
+            b = string.format("%q", b)
+        end
         error(tostring(a) .. " ~= " .. tostring(b), level + 1)
     end
 end

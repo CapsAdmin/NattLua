@@ -114,7 +114,7 @@ test("parenthesis", function()
 end)
 
 test("// binary operator", function()
-    check("// lol\nprint(3 // (5 // 2))", "// lol\nprint(3/idiv/ (5/idiv/ 2))")
+    check("// lol\nprint(3 // (5 // 2))", "// lol\nprint(3/idiv/ (5/idiv/ 2)) ")
 end)
 
 test("type comments", function()
