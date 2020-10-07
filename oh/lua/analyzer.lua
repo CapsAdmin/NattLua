@@ -1340,6 +1340,7 @@ do -- expressions
                 if
                     (l.Type == "string" and r.Type == "string") or
                     (l.Type == "number" and r.Type == "string") or
+                    (l.Type == "number" and r.Type == "number") or
                     (l.Type == "string" and r.Type == "number")
                 then
                     if l:IsLiteral() and r:IsLiteral() then
