@@ -13,7 +13,7 @@ function META:Get(key)
 end
 
 function META:Set(key, val)
-
+    return true
 end
 
 function META:GetData()
