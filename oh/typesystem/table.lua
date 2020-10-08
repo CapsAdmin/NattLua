@@ -189,7 +189,7 @@ end
 
 function META:Delete(key)
     for i, keyval in ipairs(self.data) do
-        if key:SubsetOf(keyval.key) then
+        if key:SubsetOf(keyval.key) and keyval.key:IsLiteral() then
             table.remove(self.data, i)
         end
     end
@@ -473,8 +473,8 @@ end
 
 function META.Extend(A, B)
     local map = {}
-    A = A:Copy(map)
-    
+        A = A:Copy(map)
+
     map[B] = A
     B = B:Copy(map)
 
