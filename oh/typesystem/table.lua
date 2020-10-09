@@ -471,10 +471,13 @@ local function unpack_keyval(keyval, tbl)
     return key, val
 end
 
-function META.Extend(A, B)
+function META.Extend(A, B, dont_copy_self)
     local map = {}
-        A = A:Copy(map)
 
+    if not dont_copy_self then
+        A = A:Copy(map)
+    end
+    
     map[B] = A
     B = B:Copy(map)
 

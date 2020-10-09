@@ -290,3 +290,22 @@ run([[
 
     type_assert(obj:Test(), 1)
 ]], "\"foo\" is not a subset of")
+
+run([[
+    local meta = {}
+    meta.__index = meta
+
+    function meta:foo()
+        self.data = self.data + 1
+        return self.data
+    end
+
+    local function foo()
+        return setmetatable({data = 0}, meta)
+    end
+
+    local obj = foo()
+    type_assert(obj.data, 0)
+    type_assert(meta.data, 0)
+    type_assert(obj:foo(), 1)
+]])

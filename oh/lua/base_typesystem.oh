@@ -370,6 +370,11 @@ do -- globals
 
 	type function setmetatable(tbl, meta)
 		if meta.Type == "table" then
+			
+			if not meta.contract then
+				meta:Extend(tbl, true)
+			end
+
 			tbl.meta = meta
 		end
 
