@@ -68,3 +68,17 @@ run[[
     local x: any | function(): boolean
     x()
 ]]
+
+run[[
+    local a: nil | {}
+    a.foo = true
+    type_assert(a, {foo = true})
+    §assert(self:GetDiagnostics()[1].msg:find("cannot nil.- = true"))
+]]
+
+run[[
+    local b: nil | {foo = true}
+    local c = b.foo
+    type_assert(c, true)
+    §assert(self:GetDiagnostics()[1].msg:find("undefined get: nil.-foo"))
+]]

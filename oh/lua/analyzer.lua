@@ -6,18 +6,33 @@ META.__index = META
 
 require("oh.base_analyzer")(META)
 
-function META:SetOperator(obj, key, val)
-
+function META:SetOperator(obj, key, val, node)
+    
     if obj.Type == "set" then
-        local copy = types.Set()
-        for _,v in ipairs(obj:GetElements()) do
-            local ok, err = self:SetOperator(v, key, val)
-            if not ok then
-                return ok, err
-            end
-            copy:AddElement(val)
+        local new_set = types.Set()
+        local truthy_set = types.Set()
+        local falsy_set = types.Set()
+
+        for _, v in ipairs(obj:GetElements()) do
+            local ok, err = self:SetOperator(v, key, val, node)
+
+            if ok then
+                truthy_set:AddElement(v)
+                new_set:AddElement(v)
+            else
+                assert(err, tostring(v) .. "!?!?!")
+                falsy_set:AddElement(v)
+                self:Report(node, err or "invalid set error")
+
+                self:CloneCurrentScope()
+                self:GetScope().test_condition = obj
+            end            
         end
-        return copy
+
+        new_set.truthy_set = truthy_set
+        new_set.falsy_set = falsy_set
+
+        return new_set:SetSource(node, new_set, obj)
     end
 
     if obj.meta then
@@ -134,6 +149,8 @@ function META:NewType(node, type, data, literal, parent)
         obj = self:Assert(node, types.Any())
     elseif type == "never" then
         obj = self:Assert(node, types.Never())
+    elseif type == "error" then
+        obj = self:Assert(node, types.Error(data))
     elseif type == "function" then
         obj = self:Assert(node, types.Function(data))
         obj.node = node
@@ -256,6 +273,31 @@ function META:Call(obj, arguments, call_node)
 
     local env = self.PreferTypesystem and "typesystem" or "runtime"
 
+    if obj.Type == "set" then
+        local new_set = types.Set()
+        local truthy_set = types.Set()
+        local falsy_set = types.Set()
+
+        for _, v in ipairs(obj:GetData()) do               
+            if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
+                falsy_set:AddElement(v)
+
+                self:Report(call_node, "set "..tostring(obj).." contains uncallable object " .. tostring(v))
+
+                self:CloneCurrentScope()
+                self:GetScope().test_condition = obj
+            else
+                truthy_set:AddElement(v)
+                new_set:AddElement(v)
+            end
+        end
+
+        new_set.truthy_set = truthy_set
+        new_set.falsy_set = falsy_set
+
+        obj = truthy_set:SetSource(node, new_set, obj)
+    end
+
     if obj.Type ~= "function" then
         return obj:Call(self, arguments, call_node)
     end
@@ -289,8 +331,12 @@ function META:Call(obj, arguments, call_node)
 
         do -- recursive guard
             obj.call_count = obj.call_count or 0
-            if obj.call_count > 10 then
-                return (obj:GetReturnTypes() and obj:GetReturnTypes().data and obj:GetReturnTypes():Get(1)) or types.Tuple({self:NewType(call_node, "any")})
+            if obj.call_count > 10 or debug.getinfo(30) then
+                local ret = obj:GetReturnTypes()
+                if ret and ret:Get(1) then
+                    return types.Tuple({ret:Get(1)})
+                end
+                return types.Tuple({self:NewType(call_node, "any")})
             end
             obj.call_count = obj.call_count + 1
         end
@@ -433,10 +479,10 @@ do -- control flow analysis
         if self:GetScope().unreachable then
       --      return self:CopyUpvalue(upvalue, types.Never())
         end
-
+        
         if upvalue.data.Type == "set" then
             local condition = scope.test_condition
-
+            
             if condition then                 
                 -- not sure how to deal with "if not not (true | false) then" yet
                 if 
@@ -649,7 +695,7 @@ do -- statements
                     self:SetEnvironmentValue(key, val, env)
                 else
                     local obj = self:AnalyzeExpression(exp_key.left, env)
-                    self:Assert(exp_key, self:SetOperator(obj, key, val, env))
+                    self:Assert(exp_key, self:SetOperator(obj, key, val, exp_key))
                     self:FireEvent("newindex", obj, key, val, env)
                 end
             end
@@ -1065,38 +1111,45 @@ do -- expressions
                 local new_set = types.Set()
                 local truthy_set = types.Set()
                 local falsy_set = types.Set()
+                local condition = l
                 
                 for _, l in ipairs(l:GetElements()) do
                     for _, r in ipairs(r:GetElements()) do
-                        local res = self:Assert(node, self:BinaryOperator(node, l, r, env))
-                        if res:IsTruthy() then
-                            if self.type_checked then
-                                
-                                for _, t in ipairs(self.type_checked:GetElements()) do
-                                    if t:GetLuaType() == l:GetData() then
-                                        truthy_set:AddElement(t)
-                                    end
-                                end                                
-                                
-                            else
-                                truthy_set:AddElement(l)
-                            end
-                        end
-    
-                        if res:IsFalsy() then
-                            if self.type_checked then                                
-                                for _, t in ipairs(self.type_checked:GetElements()) do
-                                    if t:GetLuaType() == l:GetData() then
-                                        falsy_set:AddElement(t)
-                                    end
-                                end                                
-                                
-                            else
-                                falsy_set:AddElement(l)
-                            end
-                        end
+                        local res, err = self:BinaryOperator(node, l, r, env)
 
-                        new_set:AddElement(res)
+                        if not res then
+                            self:Report(node, err)
+                            self:CloneCurrentScope()
+                            self:GetScope().test_condition = condition
+                        else
+                            if res:IsTruthy() then
+                                if self.type_checked then                                
+                                    for _, t in ipairs(self.type_checked:GetElements()) do
+                                        if t:GetLuaType() == l:GetData() then
+                                            truthy_set:AddElement(t)
+                                        end
+                                    end                                
+                                    
+                                else
+                                    truthy_set:AddElement(l)
+                                end
+                            end
+        
+                            if res:IsFalsy() then
+                                if self.type_checked then                                
+                                    for _, t in ipairs(self.type_checked:GetElements()) do
+                                        if t:GetLuaType() == l:GetData() then
+                                            falsy_set:AddElement(t)
+                                        end
+                                    end                                
+                                    
+                                else
+                                    falsy_set:AddElement(l)
+                                end
+                            end
+
+                            new_set:AddElement(res)
+                        end
                     end
                 end
                 
@@ -1598,7 +1651,7 @@ do -- expressions
         self.PreferTypesystem = node.type_call
         local obj = self:Assert(node, self:Call(obj, types.Tuple(arguments), node))
         self.PreferTypesystem = nil
-
+        
         if obj:IsEmpty() then
             obj:Set(1, self:NewType(node, "nil"))
         end
@@ -1676,6 +1729,8 @@ do -- expressions
                 return self:NewType(node, "any")
             elseif value == "never" then
                 return self:NewType(node, "never")
+            elseif value == "error" then
+                return self:NewType(node, "error")
             elseif (value == "self" and self.current_table) or (self.current_table and self.left_assigned and self.left_assigned.value.value == value and not types.IsPrimitiveType(value)) then
                 return self.current_table
             elseif value == "inf" then
@@ -1708,7 +1763,7 @@ do -- expressions
                 local start = value:match("(%[[%=]*%[)")
                 return self:NewType(node, "string", value:sub(#start+1, -#start-1), true)
             else
-            return self:NewType(node, "string", value:sub(2, -2), true)
+                return self:NewType(node, "string", value:sub(2, -2), true)
             end
         elseif type == "letter" then
             return self:NewType(node, "string", value, true)
@@ -1907,6 +1962,7 @@ end
 
 return function()
     local self = setmetatable({}, META)
+    self.diagnostics = {}
     self.default_environment = {runtime = types.Table({}), typesystem = types.Table({})}
     self.environments = {runtime = {}, typesystem = {}}
     return self

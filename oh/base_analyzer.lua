@@ -466,6 +466,23 @@ return function(META)
         end
     end
 
+    function META:Report(node, msg)
+        local start, stop = helpers.LazyFindStartStop(node)
+
+        if self.OnReport then
+            self:OnReport(node.code, node.name, msg, start, stop)
+        else
+            if not _G.TEST then 
+                io.write(helpers.FormatError(node.code, node.name or node.type, msg, start, stop), "\n")
+            end
+        end
+
+        table.insert(self.diagnostics, {node = node, msg = msg})
+    end
+
+    function META:GetDiagnostics()
+        return self.diagnostics
+    end
 
     do
         local t = 0

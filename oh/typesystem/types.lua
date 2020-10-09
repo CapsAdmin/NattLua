@@ -186,6 +186,7 @@ function types.Initialize()
     types.Any = require("oh.typesystem.any")
     types.Symbol = require("oh.typesystem.symbol")
     types.Never = require("oh.typesystem.never")
+    types.Error = require("oh.typesystem.error")
 
     types.Nil = types.Symbol()
     types.True = types.Symbol(true)

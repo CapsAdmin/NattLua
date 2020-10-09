@@ -120,6 +120,10 @@ do -- globals
 
 	type function assert(obj)
 		if obj:IsTruthy() then
+			if obj.Type == "set" then
+				obj = obj:Copy()
+				obj:DisableFalsy()
+			end
 			return obj
 		end
 	end
@@ -433,6 +437,8 @@ type ffi = {
 }
 
 type jit = {
+	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
+	arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
 	attach = (function(empty_function): nil),
 	flush = (function(): nil),
 	opt = {
@@ -610,6 +616,16 @@ do
 	}
 
 	type function ^string.lower(str: string)
+		if str.Type == "set" then
+			local copy = types.Set()
+
+			for _, str in ipairs(str:GetElements()) do
+				copy:AddElement(types.String(str:GetData():lower()))
+			end
+
+			return copy
+		end
+
 		if str:IsLiteral() then
 			return str:GetData():lower()
 		end
@@ -824,7 +840,8 @@ do
 	type function coroutine.resume(thread, ...)
 		analyzer:Call(thread.co_func, types.Tuple({...}))
 
-		return types.Boolean	end
+		return types.Boolean
+	end
 
 	type function coroutine.create(func, ...)
 		local t = types.Table({})
@@ -833,8 +850,8 @@ do
 	end
 
 	type function coroutine.wrap(cb)
-		return function()
-			analyzer:Call(cb, types.Tuple({}))
+		return function(...)
+			analyzer:Call(cb, types.Tuple({...}))
 			local res = analyzer.yielded_results
 			if res then
 				analyzer.yielded_results = nil

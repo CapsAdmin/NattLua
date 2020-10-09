@@ -25,8 +25,10 @@ local function cast(...)
 end
 
 local function run(code, expect_error)
+    _G.TEST = true
     local code_data = oh.Code(code, nil, nil, 3)
     local ok, err = code_data:Analyze()
+    _G.TEST = false
 
     if expect_error then
         if not err or err == "" then

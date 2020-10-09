@@ -1,11 +1,11 @@
 local types = require("oh.typesystem.types")
 
 local META = {}
-META.Type = "never"
+META.Type = "error"
 META.__index = META
 
 function META:GetSignature()
-    return "never"
+    return "error"
 end
 
 function META:Get(key)
@@ -13,7 +13,7 @@ function META:Get(key)
 end
 
 function META:Set(key, val)
-    return false, "cannot newindex never"
+
 end
 
 function META:GetData()
@@ -29,7 +29,7 @@ function META.SubsetOf(A, B)
 end
 
 function META:__tostring()
-    return "never"
+    return "ERROR(" .. tostring(self.data) .. ")"
 end
 
 function META:IsFalsy()
@@ -38,6 +38,11 @@ end
 
 function META:IsTruthy()
     return false
+end
+
+function META:Initialize(msg)
+    self.data = msg
+    return self
 end
 
 return types.RegisterType(META)
