@@ -379,3 +379,13 @@ pending("forward declare types", function()
         print(x.ping.pong)
     ]]
 end)
+
+run([[type_error("hey over here")]], "type function type_error")
+
+run([[
+local a    
+local b    
+§error("LOL")
+local c    
+
+]], [[3 | §error%("LOL"%)]])

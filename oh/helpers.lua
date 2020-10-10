@@ -48,6 +48,10 @@ function helpers.LinePositionToSubPosition(code, line, character)
 end
 
 function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
+	assert(type(code) == "string")
+	assert(type(start) == "number")
+	assert(type(stop) == "number")
+	
 	local line = 1
 
 	local line_start

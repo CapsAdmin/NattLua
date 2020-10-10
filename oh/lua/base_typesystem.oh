@@ -276,8 +276,8 @@ do -- globals
 		error("unable to find module " .. str)
 	end
 
-	type function overhere()
-		error("hey over here")
+	type function type_error(error: string, level: number)
+		error(error, level)
 	end
 
 	type function load(code: string, chunk_name: string | nil)

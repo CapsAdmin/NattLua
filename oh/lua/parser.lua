@@ -770,7 +770,7 @@ do -- statements
             self:IsRepeatStatement() then                           return self:ReadRepeatStatement() elseif
             self:IsTypeFunctionStatement() then                     return self:ReadTypeFunctionStatement() elseif
             self:IsFunctionStatement() then                         return self:ReadFunctionStatement() elseif
-            self:IsLocalGenericsTypeFunctionStatement() then               return self:ReadLocalGenericsTypeFunctionStatement() elseif
+            self:IsLocalGenericsTypeFunctionStatement() then        return self:ReadLocalGenericsTypeFunctionStatement() elseif
             self:IsLocalFunctionStatement() then                    return self:ReadLocalFunctionStatement() elseif
             self:IsLocalTypeFunctionStatement() then                return self:ReadLocalTypeFunctionStatement() elseif
             self:IsLocalTypeDeclarationStatement() then             return self:ReadLocalTypeDeclarationStatement() elseif

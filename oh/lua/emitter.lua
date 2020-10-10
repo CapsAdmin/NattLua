@@ -555,7 +555,7 @@ function META:EmitStatement(node)
     elseif node.kind == "root" then
         self:EmitStatements(node.statements)
     elseif node.kind == "type_code" then
-        self:Emit("--" .. node.code.value)
+        self:Emit("--" .. node.lua_code.value.value)
     else
         error("unhandled statement: " .. node.kind)
     end

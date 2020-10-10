@@ -9,9 +9,12 @@ return function(META)
         end
 
         function META:ReadInlineTypeCode()
-            local code = self:ReadType("type_code")
             local node = self:Statement("type_code")
-            node.code = code
+
+            local code = self:Expression("value")
+            code.value = self:ReadType("type_code")
+            node.lua_code = code
+            
             return node
         end
     end
