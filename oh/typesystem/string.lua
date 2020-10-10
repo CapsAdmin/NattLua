@@ -24,19 +24,6 @@ function META:GetSignature()
     return s
 end
 
-function META:Get(key)
-    local val = type(self.data) == "table" and self.data:Get(key)
-
-    if not val and self.meta then
-        local index = self.meta:Get("__index")
-        if index and index.Type == "table" then
-            return index:Get(key)
-        end
-    end
-
-    return val
-end
-
 function META:GetData()
     return self.data
 end

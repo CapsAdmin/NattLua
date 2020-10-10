@@ -68,16 +68,11 @@ function META:GetOperator(obj, key, node)
         return copy
     end
 
-    if obj.Type == "any" then
-        return types.Any()
-    end
-
-    --TODO: not needed? Get and Set should error
     if obj.Type ~= "table" and obj.Type ~= "tuple" and obj.Type ~= "list" and (obj.Type ~= "string") then
         return obj:Get(key)
     end
 
-    if obj.Type == "table" and obj.meta and not obj:Contains(key) then
+    if obj.meta and (obj.Type ~= "table" or not obj:Contains(key)) then
         local index = obj.meta:Get("__index")
 
         if index then
