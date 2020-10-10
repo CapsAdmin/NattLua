@@ -9,6 +9,10 @@ require("oh.base_analyzer")(META)
 function META:SetOperator(obj, key, val, node)
     
     if obj.Type == "set" then
+        -- local x: nil | {foo = true}
+        -- print(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the set
+        -- print(x.foo) << no error, because now x does not contain nil
+        
         local new_set = types.Set()
         local truthy_set = types.Set()
         local falsy_set = types.Set()
@@ -43,12 +47,16 @@ function META:SetOperator(obj, key, val, node)
                 return func:Set(key, val)
             end
 
-            if func.Type == "function" or func.Type == "table" then
-                return self:Call(func, types.Tuple({obj, key, val}), key.node):Get(1)
+            if func.Type == "function" then
+                return self:Call(func, types.Tuple({obj, key, val}), key.node)
             end
         end
     end
 
+    -- local obj: {string = number}
+    -- obj.foo = 1
+    -- print(obj.foo) << since the contract states that key is a string, then obj.foo would be nil or a number
+    -- this adds some additional context
     obj.last_set = obj.last_set or {}
     obj.last_set[key] = val
 
@@ -71,7 +79,7 @@ function META:GetOperator(obj, key, node)
     if obj.Type ~= "table" and obj.Type ~= "tuple" and obj.Type ~= "list" and (obj.Type ~= "string") then
         return obj:Get(key)
     end
-
+    
     if obj.meta and (obj.Type ~= "table" or not obj:Contains(key)) then
         local index = obj.meta:Get("__index")
 
@@ -80,7 +88,7 @@ function META:GetOperator(obj, key, node)
                 return self:GetOperator(index.contract or index, key, node)
             end
 
-            if index.Type == "function" or index.Type == "table" then
+            if index.Type == "function" then
                 local obj, err = self:Call(index, types.Tuple({obj, key}), key.node)
                 
                 if not obj then
@@ -96,6 +104,10 @@ function META:GetOperator(obj, key, node)
         return obj:Get(key)
     end
 
+    -- local obj: {string = number}
+    -- obj.foo = 1
+    -- print(obj.foo) << since the contract states that key is a string, then obj.foo would be nil or a number
+    -- this adds some additional context
     if obj.last_set and not key:IsLiteral() and obj.last_set[key] then
         return obj.last_set[key]
     end
@@ -246,68 +258,6 @@ function META:AnalyzeFunctionBody(function_node, arguments, env)
     self.returned_from_block = nil
 
     return analyzed_return
-end
-
-do
-    local helpers = require("oh.helpers")
-
-    function META:CompileLuaTypeCode(code, node)
-        
-        -- append newlines so that potential line errors are correct
-        if node.code then
-            local start, stop = helpers.LazyFindStartStop(node)
-            local line = helpers.SubPositionToLinePosition(node.code, start, stop).line_start
-            code = ("\n"):rep(line - 1) .. code
-        end
-
-        local func, err = load(code, node.name)
-
-        if not func then
-            self:FatalError(err)
-        end
-
-        return func
-    end
-
-    function META:CallLuaTypeFunction(node, func, ...)
-        setfenv(func, setmetatable({
-            oh = require("oh"),
-            types = types,
-            analyzer = self,
-        }, {
-            __index = _G
-        }))
-
-        local res = {pcall(func, ...)}
-
-        local ok = table.remove(res, 1)
-
-        if not ok then 
-            local msg = res[1]          
-
-            local name = debug.getinfo(func).source
-            if name:sub(1, 1) == "@" then -- is this a name that is a location?
-                local line, rest = res[1]:sub(#name):match("^:(%d+):(.+)") -- remove the file name and grab the line number
-                if line then
-                    local f, err = io.open(name:sub(2), "r")
-                    if f then
-                        local code = f:read("*all")
-                        f:close()
-                        
-                        local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
-                        local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-
-                        msg = helpers.FormatError(code, name, rest, start, stop)
-                    end
-                end
-            end
-
-            self:Error(node, msg)
-        end
-
-        return table.unpack(res)
-    end
-
 end
 
 function META:Call(obj, arguments, call_node)

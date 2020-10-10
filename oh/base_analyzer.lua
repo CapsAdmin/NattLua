@@ -644,4 +644,91 @@ return function(META)
             self.deferred_calls = nil
         end
     end
+
+    do
+        local helpers = require("oh.helpers")
+
+        function META:CompileLuaTypeCode(code, node)
+            
+            -- append newlines so that potential line errors are correct
+            if node.code then
+                local start, stop = helpers.LazyFindStartStop(node)
+                local line = helpers.SubPositionToLinePosition(node.code, start, stop).line_start
+                code = ("\n"):rep(line - 1) .. code
+            end
+
+            local func, err = load(code, node.name)
+
+            if not func then
+                self:FatalError(err)
+            end
+
+            return func
+        end
+
+        function META:CallLuaTypeFunction(node, func, ...)
+            setfenv(func, setmetatable({
+                oh = require("oh"),
+                types = types,
+                analyzer = self,
+            }, {
+                __index = _G
+            }))
+
+            local res = {pcall(func, ...)}
+
+            local ok = table.remove(res, 1)
+
+            if not ok then 
+                local msg = tostring(res[1])
+
+                local name = debug.getinfo(func).source
+                if name:sub(1, 1) == "@" then -- is this a name that is a location?
+                    local line, rest = msg:sub(#name):match("^:(%d+):(.+)") -- remove the file name and grab the line number
+                    if line then
+                        local f, err = io.open(name:sub(2), "r")
+                        if f then
+                            local code = f:read("*all")
+                            f:close()
+                            
+                            local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
+                            local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
+
+                            msg = helpers.FormatError(code, name, rest, start, stop)
+                        end
+                    end
+                end
+                
+                local trace = self:TypeTraceBack()
+                if trace then
+                    msg = msg .. "\ntraceback:\n" .. trace
+                end
+
+                self:Error(node, msg)
+            end
+
+            return table.unpack(res)
+        end
+
+        function META:TypeTraceBack()
+            if not self.call_stack then return "" end
+
+            local str = ""
+
+            for i,v in ipairs(self.call_stack) do 
+                local callexp = v.call_expression
+                
+                local lol =  v.func.statements
+                v.func.statements = {}
+                local func_str = v.func:Render()
+                v.func.statements = lol
+        
+                local start, stop = helpers.LazyFindStartStop(callexp)
+                str = str .. helpers.FormatError(self.code_data.code, self.code_data.name, "#" .. tostring(i) .. ": " .. self.code_data.name, start, stop, 1)
+            end
+
+            return str
+        end
+    end
+
 end
