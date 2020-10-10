@@ -608,6 +608,14 @@ return function(META)
     end
 
     do
+
+        local function call(self, obj, arguments, node)
+            -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+            arguments = obj:GetArguments()
+            self:Assert(node, self:Call(obj, arguments, node))
+        end
+
+
         function META:CallMeLater(...)
             self.deferred_calls = self.deferred_calls or {}
             table.insert(self.deferred_calls, 1, {...})
@@ -622,21 +630,15 @@ return function(META)
             self.returned_from_certain_scope = nil
             self.returned_from_block = nil
 
-            local function call(obj, arguments, node)
-                -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-                arguments = obj:GetArguments()
-                self:Assert(node, self:Call(obj, arguments, node))
-            end
-
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and v[1].explicit_arguments then
-                    call(table.unpack(v))
+                    call(self, table.unpack(v))
                 end
             end
 
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and not v[1].explicit_arguments then
-                    call(table.unpack(v))
+                    call(self, table.unpack(v))
                 end
             end
 
