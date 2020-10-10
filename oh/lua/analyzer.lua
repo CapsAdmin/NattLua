@@ -258,34 +258,45 @@ function META:AnalyzeFunctionBody(function_node, arguments, env)
     return analyzed_return
 end
 
-function META:CompileLuaTypeCode(code, node)
-    local func, err = load(code, "")
+do
+    local helpers = require("oh.helpers")
 
-    if not func then
-        self:FatalError(err)
+    function META:CompileLuaTypeCode(code, node)
+        
+        -- append newlines so that potential line errors are correct
+        local start, stop = helpers.LazyFindStartStop(node)
+        local line = helpers.SubPositionToLinePosition(node.code, start, stop).line_start
+        code = ("\n"):rep(line - 1) .. code
+
+        local func, err = load(code, node.name)
+
+        if not func then
+            self:FatalError(err)
+        end
+
+        return func
     end
 
-    return func
-end
+    function META:CallLuaTypeFunction(node, func, ...)
+        setfenv(func, setmetatable({
+            oh = require("oh"),
+            types = types,
+            analyzer = self,
+        }, {
+            __index = _G
+        }))
 
-function META:CallLuaTypeFunction(node, func, ...)
-    setfenv(func, setmetatable({
-        oh = require("oh"),
-        types = types,
-        analyzer = self,
-    }, {
-        __index = _G
-    }))
+        local res = {pcall(func, ...)}
 
-    local res = {pcall(func, ...)}
+        local ok = table.remove(res, 1)
 
-    local ok = table.remove(res, 1)
+        if not ok then
+            self:Error(node, res[1])
+        end
 
-    if not ok then
-        self:Error(node, res[1])
+        return table.unpack(res)
     end
 
-    return table.unpack(res)
 end
 
 function META:Call(obj, arguments, call_node)
