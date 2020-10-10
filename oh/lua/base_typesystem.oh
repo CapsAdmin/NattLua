@@ -276,8 +276,8 @@ do -- globals
 		error("unable to find module " .. str)
 	end
 
-	type function type_error(error: string, level: number)
-		error(error, level)
+	type function type_error(str: string, level: number)
+		error(str:GetData(), level:GetData())
 	end
 
 	type function load(code: string, chunk_name: string | nil)
