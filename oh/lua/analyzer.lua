@@ -13,14 +13,14 @@ function META:SetOperator(obj, key, val, node)
         local truthy_set = types.Set()
         local falsy_set = types.Set()
 
-        for _, v in ipairs(obj:GetElements()) do
+        for _, v in ipairs(obj:GetTypes()) do
             local ok, err = self:SetOperator(v, key, val, node)
 
             if ok then
-                truthy_set:AddElement(v)
-                new_set:AddElement(v)
+                truthy_set:AddType(v)
+                new_set:AddType(v)
             else
-                falsy_set:AddElement(v)
+                falsy_set:AddType(v)
                 
                 self:Report(node, err or "invalid set error")
 
@@ -58,12 +58,12 @@ end
 function META:GetOperator(obj, key, node)
     if obj.Type == "set" then
         local copy = types.Set()
-        for _,v in ipairs(obj:GetElements()) do
+        for _,v in ipairs(obj:GetTypes()) do
             local val, err = self:GetOperator(v, key, node)
             if not val then
                 return val, err
             end
-            copy:AddElement(val)
+            copy:AddType(val)
         end
         return copy
     end
@@ -332,15 +332,15 @@ function META:Call(obj, arguments, call_node)
 
         for _, v in ipairs(obj:GetData()) do               
             if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-                falsy_set:AddElement(v)
+                falsy_set:AddType(v)
 
                 self:Report(call_node, "set "..tostring(obj).." contains uncallable object " .. tostring(v))
 
                 self:CloneCurrentScope()
                 self:GetScope().test_condition = obj
             else
-                truthy_set:AddElement(v)
-                new_set:AddElement(v)
+                truthy_set:AddType(v)
+                new_set:AddType(v)
             end
         end
 
@@ -582,8 +582,8 @@ do -- control flow analysis
                 -- we remove the original shadowed upvalue from the set
                 -- because it has to be either true or false
 
-                upvalue.data_outside_of_if_blocks:AddElement(val)
-                upvalue.data_outside_of_if_blocks:RemoveElement(upvalue.data)
+                upvalue.data_outside_of_if_blocks:AddType(val)
+                upvalue.data_outside_of_if_blocks:RemoveType(upvalue.data)
             else
                 upvalue.data_outside_of_if_blocks = types.Set({upvalue.data, val})
             end
@@ -950,10 +950,10 @@ do -- statements
 
         if literal_init and literal_max then
             -- also check step
-            condition:AddElement(types.Symbol(init:GetData() <= max:GetData()))
+            condition:AddType(types.Symbol(init:GetData() <= max:GetData()))
         else
-            condition:AddElement(types.Symbol(true))
-            condition:AddElement(types.Symbol(false))
+            condition:AddType(types.Symbol(true))
+            condition:AddType(types.Symbol(false))
         end
         
         self:PushScope(statement, nil, {init = init, max = max, condition = condition})
@@ -1156,8 +1156,8 @@ do -- expressions
                 local falsy_set = types.Set()
                 local condition = l
                 
-                for _, l in ipairs(l:GetElements()) do
-                    for _, r in ipairs(r:GetElements()) do
+                for _, l in ipairs(l:GetTypes()) do
+                    for _, r in ipairs(r:GetTypes()) do
                         local res, err = self:BinaryOperator(node, l, r, env)
 
                         if not res then
@@ -1167,31 +1167,31 @@ do -- expressions
                         else
                             if res:IsTruthy() then
                                 if self.type_checked then                                
-                                    for _, t in ipairs(self.type_checked:GetElements()) do
+                                    for _, t in ipairs(self.type_checked:GetTypes()) do
                                         if t:GetLuaType() == l:GetData() then
-                                            truthy_set:AddElement(t)
+                                            truthy_set:AddType(t)
                                         end
                                     end                                
                                     
                                 else
-                                    truthy_set:AddElement(l)
+                                    truthy_set:AddType(l)
                                 end
                             end
         
                             if res:IsFalsy() then
                                 if self.type_checked then                                
-                                    for _, t in ipairs(self.type_checked:GetElements()) do
+                                    for _, t in ipairs(self.type_checked:GetTypes()) do
                                         if t:GetLuaType() == l:GetData() then
-                                            falsy_set:AddElement(t)
+                                            falsy_set:AddType(t)
                                         end
                                     end                                
                                     
                                 else
-                                    falsy_set:AddElement(l)
+                                    falsy_set:AddType(l)
                                 end
                             end
 
-                            new_set:AddElement(res)
+                            new_set:AddType(res)
                         end
                     end
                 end
@@ -1570,17 +1570,17 @@ do -- expressions
                 local truthy_set = types.Set()
                 local falsy_set = types.Set()
 
-                for _, l in ipairs(l:GetElements()) do
+                for _, l in ipairs(l:GetTypes()) do
                     local res = self:Assert(node, self:PrefixOperator(node, l, env))
-                    new_set:AddElement(res)
+                    new_set:AddType(res)
 
 
                     if res:IsTruthy() then
-                        truthy_set:AddElement(l)
+                        truthy_set:AddType(l)
                     end
 
                     if res:IsFalsy() then
-                        falsy_set:AddElement(l)
+                        falsy_set:AddType(l)
                     end
                 end
 

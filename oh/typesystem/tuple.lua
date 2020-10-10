@@ -25,8 +25,8 @@ function META:__tostring()
 end
 
 function META:Merge(tup)
-    local src = self:GetElements()
-    local dst = tup:GetElements()
+    local src = self:GetTypes()
+    local dst = tup:GetTypes()
 
     for i,v in ipairs(dst) do
         if src[i] then
@@ -62,12 +62,12 @@ function META:Max(len)
     return self
 end
 
-function META:GetElements()
+function META:GetTypes()
     return self.data
 end
 
 function META:GetMinimumLength()
-    for i, v in ipairs(self:GetElements()) do
+    for i, v in ipairs(self:GetTypes()) do
         if v.Type == "symbol" and v:GetData() == nil then
             return i - 1
         end
@@ -82,7 +82,7 @@ end
 
 function META:SetReferenceId(id)
 
-    for i = 1, #self:GetElements() do
+    for i = 1, #self:GetTypes() do
         self:Get(i):SetReferenceId(id)
     end
 

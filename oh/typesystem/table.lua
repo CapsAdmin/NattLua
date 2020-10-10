@@ -201,7 +201,7 @@ function META:GetKeySet()
     local set = types.Set()
 
     for _, keyval in ipairs(self.data) do
-        set:AddElement(keyval.key:Copy())
+        set:AddType(keyval.key:Copy())
     end
 
     return set
@@ -260,7 +260,7 @@ function META:Set(key, val, no_delete)
 
     if key.Type == "set" then
         local set = key
-        for _, key in ipairs(set:GetElements()) do
+        for _, key in ipairs(set:GetTypes()) do
             if key.Type == "symbol" and key:GetData() == nil then
                 return types.errors.other(set:GetLength() == 1 and "key is nil" or "key can be nil")
             end
@@ -319,7 +319,7 @@ function META:Get(key)
         local set = types.Set({types.Nil})
         for _, keyval in ipairs(self:GetData()) do
             if keyval.key.Type == "string" then
-                set:AddElement(keyval.val)
+                set:AddType(keyval.val)
             end
         end
         return set
@@ -329,7 +329,7 @@ function META:Get(key)
         local set = types.Set({types.Nil})
         for _, keyval in ipairs(self:GetData()) do
             if keyval.key.Type == "number" then
-                set:AddElement(keyval.val)
+                set:AddType(keyval.val)
             end
         end
         return set
@@ -353,7 +353,7 @@ end
 
 function META:IsNumericallyIndexed()
 
-    for _, keyval in ipairs(self:GetElements()) do
+    for _, keyval in ipairs(self:GetTypes()) do
         if keyval.key.Type ~= "number" then
             return false
         end

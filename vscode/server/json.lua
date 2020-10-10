@@ -108,7 +108,7 @@ encode = function(val--[[#: any]], stack--[[#: {[any] = true | nil}]])--[[:strin
 	local f = type_func_map[t]
 
 	if f then
-		--[[#type lol = function(T) T:RemoveElement(types.Nil) end]]
+		--[[#type lol = function(T) T:RemoveType(types.Nil) end]]
 		--[[#lol(f)]]
 		return f(val, stack)
 	end
@@ -365,7 +365,7 @@ parse = function(str--[[#: string]], idx--[[#: number]])--[[#: any, number]]
 		--[[#
 			local type lol = function(T)
 				if T.Type == "set" then
-					T:RemoveElement(types.Nil)
+					T:RemoveType(types.Nil)
 				end
 			end
 			lol(f)

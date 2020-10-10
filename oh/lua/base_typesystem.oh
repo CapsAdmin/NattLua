@@ -14,7 +14,7 @@ type function enum(tbl)
 	local set = types.Set()
 	for key, val in tbl:pairs() do
 		analyzer:SetEnvironmentValue(key:GetData(), val, "typesystem")
-		set:AddElement(val)
+		set:AddType(val)
 	end
 	return set
 end
@@ -28,7 +28,7 @@ type function keysof(tbl: Table)
 	local set = types.Set()
 
 	for _, keyval in ipairs(tbl:GetData()) do
-		set:AddElement(keyval.key)
+		set:AddType(keyval.key)
 	end
 
 	return set
@@ -157,7 +157,7 @@ do -- globals
 		end
 
 		if t.Type == "set" then
-			t = t:GetElements()
+			t = t:GetTypes()
 		else
 			t = {t}
 		end
@@ -174,8 +174,8 @@ do -- globals
 				kv.key.node = t.node
 				kv.val.node = t.node
 
-				k:AddElement(kv.key)
-				v:AddElement(kv.val)
+				k:AddType(kv.key)
+				v:AddType(kv.val)
 			end
 		end
 
@@ -361,9 +361,9 @@ do -- globals
 			analyzer.type_checked = obj
 
 			local copy = types.Set()
-			for _, v in ipairs(obj:GetElements()) do
+			for _, v in ipairs(obj:GetTypes()) do
 				if v.GetLuaType then
-					copy:AddElement(types.String(v:GetLuaType()):MakeLiteral(true))
+					copy:AddType(types.String(v:GetLuaType()):MakeLiteral(true))
 				end
 			end
 
@@ -580,11 +580,11 @@ do
 
 		if tbl.Type == "tuple" then
 			for i,v in ipairs(tbl:GetData()) do
-				set:AddElement(v)
+				set:AddType(v)
 			end
 		elseif tbl.Type == "table" then
 			for i,v in ipairs(tbl.data) do
-				set:AddElement(v.val)
+				set:AddType(v.val)
 			end
 		end
 		func:GetArguments():GetData()[1] = set
@@ -624,8 +624,8 @@ do
 		if str.Type == "set" then
 			local copy = types.Set()
 
-			for _, str in ipairs(str:GetElements()) do
-				copy:AddElement(types.String(str:GetData():lower()))
+			for _, str in ipairs(str:GetTypes()) do
+				copy:AddType(types.String(str:GetData():lower()))
 			end
 
 			return copy
@@ -642,12 +642,12 @@ do
 		if str.Type == "set" then
 			local copy = types.Set()
 
-			for _, str in ipairs(str:GetElements()) do
+			for _, str in ipairs(str:GetTypes()) do
 				if str:IsLiteral() and a:IsLiteral() then
 					if b and b:IsLiteral() then
-						copy:AddElement(types.String(str:GetData():sub(a:GetData(), b:GetData())):MakeLiteral(true))
+						copy:AddType(types.String(str:GetData():sub(a:GetData(), b:GetData())):MakeLiteral(true))
 					else
-						copy:AddElement(types.String(str:GetData():sub(a:GetData())))
+						copy:AddType(types.String(str:GetData():sub(a:GetData())))
 					end
 				end
 			end
@@ -672,13 +672,13 @@ do
 			if str.Type == "set" then
 				local copy = types.Set()
 
-				for _, str in ipairs(str:GetElements()) do
+				for _, str in ipairs(str:GetTypes()) do
 					if from and from:IsLiteral() and to and to:IsLiteral() then
-						copy:AddElement(types.Number(str.data:byte(from:GetData(), to:GetData())):MakeLiteral(true))
+						copy:AddType(types.Number(str.data:byte(from:GetData(), to:GetData())):MakeLiteral(true))
 					elseif from then
-						copy:AddElement(types.Number(str.data:byte(from:GetData())):MakeLiteral(true))
+						copy:AddType(types.Number(str.data:byte(from:GetData())):MakeLiteral(true))
 					else
-						copy:AddElement(types.Number(str.data:byte()):MakeLiteral(true))
+						copy:AddType(types.Number(str.data:byte()):MakeLiteral(true))
 					end
 				end
 
@@ -722,11 +722,11 @@ do
 	type function ^string.len(str: string)
 		if str.Type == "set" then
 			local copy = types.Set()
-			for _, obj in ipairs(str:GetElements()) do
+			for _, obj in ipairs(str:GetTypes()) do
 				if obj:IsLiteral() then
-					copy:AddElement(types.Number(#obj:GetData()):MakeLiteral(true))
+					copy:AddType(types.Number(#obj:GetData()):MakeLiteral(true))
 				else
-					copy:AddElement(types.Number())
+					copy:AddType(types.Number())
 				end
 			end
 			return copy

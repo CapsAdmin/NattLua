@@ -182,7 +182,7 @@ Here's an Exclude function, similar to how you would find in typescript.
 
 ```lua
 type function Exclude(T, U)
-    T:RemoveElement(U)
+    T:RemoveType(U)
     return T
 end
 

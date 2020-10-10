@@ -4,8 +4,8 @@ local run = T.RunCode
 test("smoke", function()
     local a = run[[local type a = 1337 | 8888]]:GetEnvironmentValue("a", "typesystem")
     equal(2, a:GetLength())
-    equal(1337, a:GetElements()[1].data)
-    equal(8888, a:GetElements()[2].data)
+    equal(1337, a:GetTypes()[1].data)
+    equal(8888, a:GetTypes()[2].data)
 end)
 
 test("union operator", function()

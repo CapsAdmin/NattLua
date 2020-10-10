@@ -11,7 +11,7 @@ local function keysof<|tbl: {[any] = any}|>
 	local set = types.Set()
 
 	for _, keyval in ipairs(tbl:GetData()) do
-		set:AddElement(keyval.key)
+		set:AddType(keyval.key)
 	end
 
 	return set

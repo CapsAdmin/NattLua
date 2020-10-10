@@ -39,7 +39,7 @@ function META.SubsetOf(A, B)
 
     if B.Type == "set" then
         local errors = {}
-        for _, b in ipairs(B:GetElements()) do
+        for _, b in ipairs(B:GetTypes()) do
             local ok, reason = A:SubsetOf(b)
             if ok then
                 return true
@@ -114,7 +114,7 @@ end
 function META:Max(val)
     if val.Type == "set" then
         local max = {}
-        for _, obj in ipairs(val:GetElements()) do
+        for _, obj in ipairs(val:GetTypes()) do
             if obj.Type ~= "number" then
                 return types.errors.other("unable to set the max value of "..tostring(self).." because "..tostring(val).." contains non numbers")
             end

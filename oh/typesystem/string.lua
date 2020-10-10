@@ -39,7 +39,7 @@ function META.SubsetOf(A, B)
 
     if B.Type == "set" then
         local errors = {}
-        for _, b in ipairs(B:GetElements()) do
+        for _, b in ipairs(B:GetTypes()) do
             local ok, reason = A:SubsetOf(b)
             if ok then
                 return true

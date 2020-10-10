@@ -8,7 +8,7 @@ local sort = function(a, b) return a < b end
 function META:GetSignature()
     local s = {}
 
-    for _, v in ipairs(self:GetElements()) do
+    for _, v in ipairs(self:GetTypes()) do
         table.insert(s, v:GetSignature())
     end
 
@@ -20,7 +20,7 @@ end
 function META:__tostring()
     local s = {}
 
-    for _, v in ipairs(self:GetElements()) do
+    for _, v in ipairs(self:GetTypes()) do
         table.insert(s, tostring(v))
     end
 
@@ -30,10 +30,10 @@ function META:__tostring()
 end
 
 
-function META:AddElement(e)
+function META:AddType(e)
     if e.Type == "set" then
-        for _, e in ipairs(e:GetElements()) do
-            self:AddElement(e)
+        for _, e in ipairs(e:GetTypes()) do
+            self:AddType(e)
         end
 
         return self
@@ -43,25 +43,25 @@ function META:AddElement(e)
 
     if not self.data[sig] then
         self.data[sig] = e
-        table.insert(self:GetElements(), e)
+        table.insert(self:GetTypes(), e)
     end
 
     return self
 end
 
-function META:GetElements()
+function META:GetTypes()
     return self.datai
 end
 
 function META:GetLength()
-    return #self:GetElements()
+    return #self:GetTypes()
 end
 
-function META:RemoveElement(e)
+function META:RemoveType(e)
     self.data[e:GetSignature()] = nil
-    for i,v in ipairs(self:GetElements()) do
+    for i,v in ipairs(self:GetTypes()) do
         if v:GetSignature() == e:GetSignature() then
-            table.remove(self:GetElements(), i)
+            table.remove(self:GetTypes(), i)
             return
         end
     end
@@ -71,7 +71,7 @@ function META:Get(key, from_table)
     key = types.Cast(key)
 
     if from_table then
-        for _, obj in ipairs(self:GetElements()) do
+        for _, obj in ipairs(self:GetTypes()) do
             if obj.Get then
                 local val = obj:Get(key)
                 if val then
@@ -83,7 +83,7 @@ function META:Get(key, from_table)
 
     local errors = {}
 
-    for _, obj in ipairs(self:GetElements()) do
+    for _, obj in ipairs(self:GetTypes()) do
         local ok, reason = key:SubsetOf(obj)
 
         if ok then
@@ -97,23 +97,23 @@ function META:Get(key, from_table)
 end
 
 function META:Set(key, val)
-    self:AddElement(val)
+    self:AddType(val)
     return true
 end
 
 function META:IsEmpty()
-    return self:GetElements()[1] == nil
+    return self:GetTypes()[1] == nil
 end
 
 function META:GetData()
-    return self:GetElements()
+    return self:GetTypes()
 end
 
 
 function META:IsTruthy()
     if self:IsEmpty() then return false end
 
-    for _, obj in ipairs(self:GetElements()) do
+    for _, obj in ipairs(self:GetTypes()) do
         if obj:IsTruthy() then
             return true
         end
@@ -124,7 +124,7 @@ end
 function META:IsFalsy()
     if self:IsEmpty() then return false end
 
-    for _, obj in ipairs(self:GetElements()) do
+    for _, obj in ipairs(self:GetTypes()) do
         if obj:IsFalsy() then
             return true
         end
@@ -134,9 +134,9 @@ end
 
 function META:GetTruthy()
     local copy = self:Copy()
-    for _, obj in ipairs(self:GetElements()) do
+    for _, obj in ipairs(self:GetTypes()) do
         if not obj:IsTruthy() then
-            copy:RemoveElement(obj)
+            copy:RemoveType(obj)
         end
     end
     return copy
@@ -144,9 +144,9 @@ end
 
 function META:GetFalsy()
     local copy = self:Copy()
-    for _, obj in ipairs(self:GetElements()) do
+    for _, obj in ipairs(self:GetTypes()) do
         if not obj:IsFalsy() then
-            copy:RemoveElement(obj)
+            copy:RemoveType(obj)
         end
     end
     return copy
@@ -155,7 +155,7 @@ end
 function META:IsType(typ)
     if self:IsEmpty() then return false end
 
-    for _, obj in ipairs(self:GetElements()) do
+    for _, obj in ipairs(self:GetTypes()) do
         if obj.Type ~= typ then
             return false
         end
@@ -168,7 +168,7 @@ function META:HasType(typ)
 end
 
 function META:GetType(typ)
-    for _, obj in ipairs(self:GetElements()) do
+    for _, obj in ipairs(self:GetTypes()) do
         if obj.Type == typ then
             return obj
         end
@@ -189,7 +189,7 @@ function META.SubsetOf(A, B)
         return A:SubsetOf(types.Set({B}))
     end
 
-    for _, a in ipairs(A:GetElements()) do
+    for _, a in ipairs(A:GetTypes()) do
         local b, reason = B:Get(a)
 
         if not b then
@@ -209,8 +209,8 @@ end
 function META:Union(set)
     local copy = self:Copy()
 
-    for _, e in ipairs(set:GetElements()) do
-        copy:AddElement(e)
+    for _, e in ipairs(set:GetTypes()) do
+        copy:AddType(e)
     end
 
     return copy
@@ -220,9 +220,9 @@ end
 function META:Intersect(set)
     local copy = types.Set()
 
-    for _, e in ipairs(self:GetElements()) do
+    for _, e in ipairs(self:GetTypes()) do
         if set:Get(e) then
-            copy:AddElement(e)
+            copy:AddType(e)
         end
     end
 
@@ -233,8 +233,8 @@ end
 function META:Subtract(set)
     local copy = self:Copy()
 
-    for _, e in ipairs(self:GetElements()) do
-        copy:RemoveElement(e)
+    for _, e in ipairs(self:GetTypes()) do
+        copy:RemoveType(e)
     end
 
     return copy
@@ -242,8 +242,8 @@ end
 
 function META:Copy()
     local copy = types.Set()
-    for _, e in ipairs(self:GetElements()) do
-        copy:AddElement(e)
+    for _, e in ipairs(self:GetTypes()) do
+        copy:AddType(e)
     end
     copy.node = self.node
     copy.explicit_not_literal = self.explicit_not_literal
@@ -255,7 +255,7 @@ function META:IsLiteral()
         return false, "explicitly not literal"
     end
 
-    for _, v in ipairs(self:GetElements()) do
+    for _, v in ipairs(self:GetTypes()) do
         if not v:IsLiteral() then
             return false
         end
@@ -265,7 +265,7 @@ function META:IsLiteral()
 end
 
 function META:IsTruthy()
-    for _, v in ipairs(self:GetElements()) do
+    for _, v in ipairs(self:GetTypes()) do
         if v:IsTruthy() then
             return true
         end
@@ -276,7 +276,7 @@ end
 
 
 function META:IsFalsy()
-    for _, v in ipairs(self:GetElements()) do
+    for _, v in ipairs(self:GetTypes()) do
         if v:IsFalsy() then
             return true
         end
@@ -287,10 +287,10 @@ end
 
 function META:DisableTruthy()
     local found = {}
-    for _, v in ipairs(self:GetElements()) do
+    for _, v in ipairs(self:GetTypes()) do
         if v:IsTruthy() then
             table.insert(found, v)
-            self:RemoveElement(v)
+            self:RemoveType(v)
         end
     end
     self.truthy_disabled = found
@@ -299,16 +299,16 @@ end
 function META:EnableTruthy()
     if not self.truthy_disabled then return end
     for _, v in ipairs(self.truthy_disabled) do
-        self:AddElement(v)
+        self:AddType(v)
     end
 end
 
 function META:DisableFalsy()
     local found = {}
-    for _, v in ipairs(self:GetElements()) do
+    for _, v in ipairs(self:GetTypes()) do
         if v:IsFalsy() then
             table.insert(found, v)
-            self:RemoveElement(v)
+            self:RemoveType(v)
         end
     end
     self.falsy_disabled = found
@@ -317,7 +317,7 @@ end
 function META:EnableFalsy()
     if not self.falsy_disabled then return end
     for _, v in ipairs(self.falsy_disabled) do
-        self:AddElement(v)
+        self:AddType(v)
     end
 end
 
@@ -327,7 +327,7 @@ function META:Initialize(data)
 
     if data then
         for _, v in ipairs(data) do
-            self:AddElement(v)
+            self:AddType(v)
         end
     end
 
@@ -336,7 +336,7 @@ end
 
 function META:Max(val)
     local copy = self:Copy()
-    for _, e in ipairs(copy:GetElements()) do
+    for _, e in ipairs(copy:GetTypes()) do
         e:Max(val)
     end
     return copy
