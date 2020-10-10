@@ -20,8 +20,8 @@ function META:SetOperator(obj, key, val, node)
                 truthy_set:AddElement(v)
                 new_set:AddElement(v)
             else
-                assert(err, tostring(v) .. "!?!?!")
                 falsy_set:AddElement(v)
+                
                 self:Report(node, err or "invalid set error")
 
                 self:CloneCurrentScope()
@@ -91,7 +91,7 @@ function META:GetOperator(obj, key, node)
             end
         end
     end
-
+    
     if obj.contract then
         return obj:Get(key)
     end
