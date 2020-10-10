@@ -13,7 +13,7 @@ type function enum(tbl)
 	
 	local set = types.Set()
 	for key, val in tbl:pairs() do
-		self:SetEnvironmentValue(key:GetData(), val, "typesystem")
+		analyzer:SetEnvironmentValue(key:GetData(), val, "typesystem")
 		set:AddElement(val)
 	end
 	return set
@@ -30,7 +30,6 @@ type function keysof(tbl: Table)
 	for _, keyval in ipairs(tbl:GetData()) do
 		set:AddElement(keyval.key)
 	end
-
 
 	return set
 end
@@ -195,7 +194,7 @@ do -- globals
 		end
 
 		local next = analyzer:GetEnvironmentValue("next", "typesystem")
-		local k,v = next.data.lua_function(tbl)
+		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, tbl)
 		local done = false
 
 		return function()
@@ -218,7 +217,7 @@ do -- globals
 		end
 
 		local next = analyzer:GetEnvironmentValue("next", "typesystem")
-		local k,v = next.data.lua_function(tbl)
+		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, tbl)
 		local done = false
 		return function()
 			if done then return nil end
@@ -242,8 +241,8 @@ do -- globals
 			return shared_analyzer:Get("table", "typesystem"):Get("new")
 		end
 
-		if self:GetEnvironmentValue(str, "typesystem") then
-			return self:GetEnvironmentValue(str, "typesystem")
+		if analyzer:GetEnvironmentValue(str, "typesystem") then
+			return analyzer:GetEnvironmentValue(str, "typesystem")
 		end
 
 		if package.loaders then
@@ -277,6 +276,10 @@ do -- globals
 		error("unable to find module " .. str)
 	end
 
+	type function overhere()
+		error("hey over here")
+	end
+
 	type function load(code: string, chunk_name: string | nil)
 		if not code:IsLiteral() then
 			return types.Any
@@ -296,7 +299,7 @@ do -- globals
 		assert(code_data:Lex())
 		assert(code_data:Parse())
 		
-		return self:NewType(code_data.SyntaxTree, "function", {
+		return analyzer:NewType(code_data.SyntaxTree, "function", {
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
 			lua_function = function(...)
@@ -306,6 +309,8 @@ do -- globals
 	end
 
 	type function loadfile(path: string)
+		if path.Type == "any" then return types.Any() end
+
 		local f = assert(io.open(path:GetData(), "rb"))
 		local code = f:read("*all")
 		f:close()
@@ -314,7 +319,7 @@ do -- globals
 		assert(code_data:Lex())
 		assert(code_data:Parse())
 		
-		return self:NewType(code_data.SyntaxTree, "function", {
+		return analyzer:NewType(code_data.SyntaxTree, "function", {
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
 			lua_function = function(...)
@@ -335,7 +340,7 @@ do -- globals
 	end
 
 	type function error(msg: string, level: number | nil)
-		self.lua_error_thrown = msg
+		analyzer.lua_error_thrown = msg
 	end
 
 	type function pcall(callable: any, ...)
@@ -353,7 +358,7 @@ do -- globals
 	type function type(obj: any)
 
 		if obj.Type == "set" then
-			self.type_checked = obj
+			analyzer.type_checked = obj
 
 			local copy = types.Set()
 			for _, v in ipairs(obj:GetElements()) do
@@ -488,15 +493,15 @@ type debug = {
 type function debug.setfenv(val, table)
     if val and (val:IsLiteral() or val.Type == "function") then 
 		if val.Type == "number" then
-			self:SetEnvironmentOverride(self.environment_nodes[val:GetData()], table, "runtime")
+			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
 		elseif val.node then
-        	self:SetEnvironmentOverride(val.node, table, "runtime")
+        	analyzer:SetEnvironmentOverride(val.node, table, "runtime")
 		end
     end
 end
 
 type function debug.getfenv(func)
-    return self:GetEnvironmentOverride(func.function_body_node or func, "runtime")
+    return analyzer:GetEnvironmentOverride(func.function_body_node or func, "runtime")
 end
 
 type getfenv = debug.getfenv

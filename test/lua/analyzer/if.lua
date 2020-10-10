@@ -241,7 +241,7 @@ do
 
     run([[
         local type hit = function()
-            lol = (lol or 0) + 1
+            _G.lol = (_G.lol or 0) + 1
         end
 
         local a: number
@@ -457,6 +457,8 @@ run[[
     local b = true
 
     for k,v in pairs(a) do
+        type_assert(k, _ as string)
+        type_assert(v, _ as number)
         b = false
     end
 

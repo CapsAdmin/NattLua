@@ -165,7 +165,7 @@ run[[
     local a = {1,2,3}
 
     local type type_pcall = function(func, ...) 
-        return pcall(self.Call, self, func, types.Tuple({...}))
+        return pcall(analyzer.Call, analyzer, func, types.Tuple({...}))
     end
 
     local ok, err = type_pcall(function()

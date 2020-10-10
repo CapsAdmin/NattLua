@@ -258,6 +258,36 @@ function META:AnalyzeFunctionBody(function_node, arguments, env)
     return analyzed_return
 end
 
+function META:CompileLuaTypeCode(code, node)
+    local func, err = load(code, "")
+
+    if not func then
+        self:FatalError(err)
+    end
+
+    return func
+end
+
+function META:CallLuaTypeFunction(node, func, ...)
+    setfenv(func, setmetatable({
+        oh = require("oh"),
+        types = types,
+        analyzer = self,
+    }, {
+        __index = _G
+    }))
+
+    local res = {pcall(func, ...)}
+
+    local ok = table.remove(res, 1)
+
+    if not ok then
+        self:Error(node, res[1])
+    end
+
+    return table.unpack(res)
+end
+
 function META:Call(obj, arguments, call_node)
     call_node = call_node or obj.node
     local function_node = obj.function_body_node or obj.node
@@ -313,14 +343,8 @@ function META:Call(obj, arguments, call_node)
     end
 
     if obj.data.lua_function then
-        _G.self = self
-        local res = {pcall(obj.data.lua_function, table.unpack(arguments.data))}
-        local ok = table.remove(res, 1)
-        if not ok then
-            self:Error(call_node, res[1])
-        end
-        _G.self = nil
-
+        local res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Unpack())}
+        
         return self:LuaTypesToTuple(obj.node, res)
     elseif not function_node or function_node.kind == "type_function" then
         self:FireEvent("external_call", call_node, obj)
@@ -749,10 +773,7 @@ do -- statements
 
     function META:AnalyzeTypeCodeStatement(statement)
         local code = statement.code.value:sub(3)
-        
-        _G.self = self
-        assert(load("local oh, analyzer, types, node = ...; " .. code, ""))(require("oh"), self, types, statement)
-        _G.self = nil
+        self:CallLuaTypeFunction(statement, self:CompileLuaTypeCode(code))
     end
 
     function META:AnalyzeIfStatement(statement)
@@ -1841,19 +1862,9 @@ do -- expressions
         local func
         if env == "typesystem" then
             if node.statements and (node.kind == "type_function" or node.kind == "local_type_function") then
-                local str = "local oh, analyzer, types, node = ...; return " .. node:Render({})
-                local load_func, err = load(str, "")
-                if not load_func then
-                    -- this should never happen unless node:Render() produces bad code or the parser didn't catch any errors
-                    io.write("==CODE==\n")
-                    io.write(str, "\n")
-                    io.write("==-==\n")
-                    error(err)
-                end
-                func = load_func(require("oh"), self, types, node)
+                func = self:CompileLuaTypeCode("return " .. node:Render({}), node)()
             end
         end
-
 
         local obj = self:NewType(node, "function", {
             arg = args,

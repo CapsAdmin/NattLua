@@ -294,7 +294,7 @@ test("calling a set that does not contain a function should error", function()
 
         test(true, true)
 
-        §self:GetDiagnostics()[1].msg:find("set .- contains uncallable object number")
+        §analyzer:GetDiagnostics()[1].msg:find("set .- contains uncallable object number")
     ]])
 end)
 
