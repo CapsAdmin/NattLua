@@ -8,14 +8,6 @@ function META:GetSignature()
     return "error"
 end
 
-function META:Get(key)
-    return self
-end
-
-function META:Set(key, val)
-
-end
-
 function META:GetData()
     return self.data
 end

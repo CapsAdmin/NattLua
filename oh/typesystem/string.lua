@@ -37,10 +37,6 @@ function META:Get(key)
     return val
 end
 
-function META:Set(key, val)
-    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .. "] = " .. tostring(val))
-end
-
 function META:GetData()
     return self.data
 end

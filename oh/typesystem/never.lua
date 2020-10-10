@@ -8,14 +8,6 @@ function META:GetSignature()
     return "never"
 end
 
-function META:Get(key)
-    return self
-end
-
-function META:Set(key, val)
-    return false, "cannot newindex never"
-end
-
 function META:GetData()
     return self.data
 end

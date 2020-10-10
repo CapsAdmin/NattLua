@@ -14,16 +14,6 @@ function META:__tostring()
     return "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
 end
 
-function META:Get(key)
-    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."]")
-    --return self.data
-end
-
-function META:Set(key, val)
-    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val))
-    --self.data = val
-end
-
 function META:GetArguments()
     return self.data.arg
 end

@@ -16,16 +16,6 @@ function META:__tostring()
     return tostring(self.data)
 end
 
-function META:Get(key)
-    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."]")
-    --return self.data
-end
-
-function META:Set(key, val)
-    return types.errors.other("cannot " .. tostring(self) .. "[" .. tostring(key) .."] = " .. tostring(val))
-    --self.data = val
-end
-
 function META:GetData()
     return self.data
 end

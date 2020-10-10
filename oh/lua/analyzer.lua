@@ -49,11 +49,6 @@ function META:SetOperator(obj, key, val, node)
         end
     end
 
-
-    if not obj.Set then
-        return types.errors.other("undefined set: " .. tostring(obj) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. obj.Type)
-    end
-
     obj.last_set = obj.last_set or {}
     obj.last_set[key] = val
 
@@ -79,7 +74,7 @@ function META:GetOperator(obj, key, node)
 
     --TODO: not needed? Get and Set should error
     if obj.Type ~= "table" and obj.Type ~= "tuple" and obj.Type ~= "list" and (obj.Type ~= "string") then
-        return types.errors.other("undefined get: " .. tostring(obj) .. "[" .. tostring(key) .. "]")
+        return obj:Get(key)
     end
 
     if obj.Type == "table" and obj.meta and not obj:Contains(key) then

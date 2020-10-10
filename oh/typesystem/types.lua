@@ -147,6 +147,14 @@ do
         return self
     end
 
+    function Base:Set(key, val)
+        return types.errors.other("undefined set: " .. tostring(self) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. self.Type)
+    end
+
+    function Base:Get(key)
+        return types.errors.other("undefined get: " .. tostring(self) .. "[" .. tostring(key) .. "]" .. " on type " .. self.Type)
+    end
+
     types.BaseObject = Base
 end
 

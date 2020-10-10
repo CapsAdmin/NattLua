@@ -73,7 +73,7 @@ run[[
     local a: nil | {}
     a.foo = true
     type_assert(a, {foo = true})
-    §assert(analyzer:GetDiagnostics()[1].msg:find("cannot nil.- = true"))
+    §assert(analyzer:GetDiagnostics()[1].msg:find("undefined set.- = true"))
 ]]
 
 run[[
