@@ -515,3 +515,17 @@ run[[
         type_assert(a, "foo")
     end
 ]]
+
+run[[
+    local x: nil | true
+
+    if not x then
+        return
+    end
+
+    do
+        do
+            type_assert(x, true)
+        end
+    end
+]]

@@ -492,7 +492,7 @@ do -- control flow analysis
         end
         
         if upvalue.data.Type == "set" then
-            local condition = scope.test_condition
+            local condition, inverted = scope:GetTestCondition()
             
             if condition then                 
                 -- not sure how to deal with "if not not (true | false) then" yet
@@ -505,13 +505,14 @@ do -- control flow analysis
                 then
                     local copy = self:CopyUpvalue(upvalue)
 
-                    if scope.test_condition_inverted then
+                    if inverted then
                         copy.data = (condition.falsy_set or copy.data:GetFalsy()):Copy()
                     else
                         copy.data = (condition.truthy_set or copy.data:GetTruthy()):Copy()
                     end
 
                     copy.original = upvalue.data
+
                     return copy
                 end
             end

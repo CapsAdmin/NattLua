@@ -63,6 +63,19 @@ do
         return upvalue
     end
 
+    function META:GetTestCondition()
+        local scope = self
+        while true do
+            if scope.test_condition then
+                break
+            end
+            scope = scope.parent
+            if not scope then
+                return
+            end
+        end
+        return scope.test_condition, scope.test_condition_inverted
+    end
 
     function LexicalScope(node, extra_node, parent)
         assert(type(node) == "table" and node.kind, "expected an associated ast node")
@@ -719,11 +732,16 @@ return function(META)
 
             for i,v in ipairs(self.call_stack) do 
                 local callexp = v.call_expression
-                
-                local lol =  v.func.statements
-                v.func.statements = {}
-                local func_str = v.func:Render()
-                v.func.statements = lol
+                local func_str
+
+                if not v.func then
+                    func_str = tostring(v.obj)
+                else
+                    local lol =  v.func.statements
+                    v.func.statements = {}
+                    func_str = v.func:Render()
+                    v.func.statements = lol
+                end
         
                 local start, stop = helpers.LazyFindStartStop(callexp)
                 str = str .. helpers.FormatError(self.code_data.code, self.code_data.name, "#" .. tostring(i) .. ": " .. self.code_data.name, start, stop, 1)
