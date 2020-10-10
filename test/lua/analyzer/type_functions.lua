@@ -331,3 +331,11 @@ run[[
     type_assert(x, 1)
     type_assert(y, 2)
 ]]
+
+run[[
+    for str in ("lol1\nlol2\nlol3\n"):gmatch("(.-)\n") do
+        if str ~= "lol1" and str ~= "lol2" and str ~= "lol3" then
+            type_error(str)
+        end
+    end
+]]

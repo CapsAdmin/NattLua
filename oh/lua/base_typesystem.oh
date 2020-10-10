@@ -620,6 +620,29 @@ do
 		pack = (function(fmt: string, ...): string)
 	}
 
+	type function ^string.gmatch(s: string, pattern: string)
+		if s:IsLiteral() and pattern:IsLiteral() then
+			local f = s:GetData():gmatch(pattern:GetData())
+			local i = 1
+			return function()
+				local strings = {f()}
+				if strings[1] then
+					for i,v in ipairs(strings) do
+						strings[i] = types.String(v):MakeLiteral(true)
+					end
+					return types.Tuple(strings)
+				end
+			end
+		end
+
+		local done = false
+		return function()
+			if done then return end
+			done = true
+			return types.String()
+		end
+	end
+
 	type function ^string.lower(str: string)
 		if str.Type == "set" then
 			local copy = types.Set()
