@@ -3,22 +3,6 @@ local helpers = require("oh.helpers")
 
 local LexicalScope
 
---[[
-    https://leafo.net/guides/setfenv-in-lua52-and-above.html
-
-    analyzer:PushEnvironment(type_table)
-    analyzer:PopEnvironment()
-
-    scope:CreateLexicalValue(): upvalue
-    scope:FindUpvalue(): upvalue
-
-    upvalue:Mutate(type_table)
-
-    separate typesystem and runtime
-]]
-
-
-
 do
     local table_insert = table.insert
     local META = {}
