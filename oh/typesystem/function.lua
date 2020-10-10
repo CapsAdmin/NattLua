@@ -27,8 +27,8 @@ function META:Copy(map)
 
     local copy = types.Function({})
     map[self] = map[self] or copy
-    copy.data.ret = self.data.ret:Copy(map)
-    copy.data.arg = self.data.arg:Copy(map)
+    copy.data.ret = self:GetReturnTypes():Copy(map)
+    copy.data.arg = self:GetArguments():Copy(map)
     copy:MakeLiteral(self:IsLiteral())
 
     copy.node = self.node
@@ -49,6 +49,10 @@ function META.SubsetOf(A, B)
         end
 
         local ok, reason = A:GetReturnTypes():SubsetOf(B:GetReturnTypes())
+        if not ok and ((not B.called and not B.explicit_return) or (not A.called and not A.explicit_return)) then
+            return true
+        end
+
         if not ok then
             return types.errors.other("return types don't match because " .. reason)
         end
@@ -74,7 +78,8 @@ function META:CheckArguments(arguments)
     local B = self:GetArguments() -- the contract
     -- A should be a subset of B
 
-    for i, a in ipairs(A:GetData()) do
+    for i = 1, math.max(B:GetLength(), A:GetLength()) do
+        local a = A:Get(i)
         local b = B:Get(i)
 
         if not b then
@@ -87,6 +92,9 @@ function META:CheckArguments(arguments)
                 break
             end
         end
+        
+        a = a or types.Nil
+        b = b or types.Nil
 
         local ok, reason = a:SubsetOf(b)
 

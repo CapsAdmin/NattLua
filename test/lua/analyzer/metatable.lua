@@ -277,7 +277,28 @@ run[[
 ]]
 
 run([[
-    local meta = {} as {__index = self, Test = function(self): number}
+    local meta = {} as {
+        __index = self,
+        Test = function(self): number
+    }
+    meta.__index = meta
+    
+    function meta:Test()
+        return self.foo
+    end
+    
+    local obj = setmetatable({
+        foo = 1
+    }, meta)
+    
+    obj:Test()
+]], "\"foo\" is not a subset of")
+
+run([[
+    local meta = {} as {
+        __index = self, 
+        Test = function(self): number
+    }
     meta.__index = meta
 
     function meta:Test()

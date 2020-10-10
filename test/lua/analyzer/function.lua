@@ -347,6 +347,8 @@ test("lol2", function()
             return a + b
         end
 
+        test(1,1)
+
         type_assert_superset(test, nil as function(_:number, _:number): number)
     ]]
 end)

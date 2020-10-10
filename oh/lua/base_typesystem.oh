@@ -40,7 +40,7 @@ type function type_assert(what, type)
 	end
 
 	if (what.contract or what):GetSignature() ~= type:GetSignature() then
-		error("expected " .. tostring(type) .." got " .. tostring(what))
+		error("expected " .. tostring(type) .." got " .. tostring(what), 2)
 	end
 end
 
@@ -55,7 +55,7 @@ end
 
 type function type_assert_superset(what, type)
 	if not what:SubsetOf(type) or (what.type == "any" and type.type ~= "any") then
-		error("expected " .. tostring(type) .." got " .. tostring(what))
+		error("expected " .. tostring(type) .." got " .. tostring(what), 2)
 	end
 end
 
@@ -276,8 +276,8 @@ do -- globals
 		error("unable to find module " .. str)
 	end
 
-	type function type_error(str: string, level: number)
-		error(str:GetData(), level:GetData())
+	type function type_error(str: string, level: number | nil)
+		error(str:GetData(), level and level:GetData() or nil)
 	end
 
 	type function load(code: string, chunk_name: string | nil)
@@ -757,7 +757,7 @@ do
 				val.data.arg.data[i] = v
 			end
 
-			val.data.ret.data[1] = types.String()
+			val:GetReturnTypes():Set(1, types.String())
 
 		end
 

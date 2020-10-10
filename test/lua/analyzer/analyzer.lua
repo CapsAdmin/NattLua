@@ -389,3 +389,13 @@ local b
 local c    
 
 ]], [[3 | §error%("LOL"%)]])
+
+run([[
+    local foo = function() return "hello" end
+
+    local function test(cb: function(): number)
+
+    end
+
+    test(foo)
+]], '"hello" is not the same type as')

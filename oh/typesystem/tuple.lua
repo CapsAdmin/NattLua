@@ -133,6 +133,9 @@ function META.SubsetOf(A, B)
         return types.errors.other(tostring(A) .. " is larger than " .. tostring(B))
     end
 
+    if B:GetLength() > A:GetLength() and B:GetLength() > A:GetMaxLength() then
+        return types.errors.other(tostring(A) .. " is smaller than " .. tostring(B))
+    end
 
     -- vararg
     if B.max == math.huge then

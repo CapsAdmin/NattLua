@@ -15,8 +15,8 @@ test(tostring(SN) .. " should be a subset of " .. tostring(SN), function()
     assert(SN:SubsetOf(SN))
 end)
 
-test(tostring(SN) .. " should be a subset of " .. tostring(SNS), function()
-    assert(SN:SubsetOf(SNS))
+test(tostring(SN) .. " should not be a subset of " .. tostring(SNS), function()
+    assert(not SN:SubsetOf(SNS))
 end)
 
 test(tostring(SNS) .. " should not be a subset of " .. tostring(SN), function()

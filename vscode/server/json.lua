@@ -99,7 +99,7 @@ local type_func_map = {
 	[ "boolean" ] = tostring,
 }
 
-encode = function(val--[[#: any]], stack--[[#: {[any] = true | nil}]])--[[:string]]
+encode = function(val--[[#: any]], stack--[[#: {[any] = true | nil}]])
 	if val == json.null then
 		return encode_null(val, stack)
 	end
@@ -108,8 +108,6 @@ encode = function(val--[[#: any]], stack--[[#: {[any] = true | nil}]])--[[:strin
 	local f = type_func_map[t]
 
 	if f then
-		--[[#type lol = function(T) T:RemoveType(types.Nil) end]]
-		--[[#lol(f)]]
 		return f(val, stack)
 	end
 
@@ -315,7 +313,7 @@ local function parse_object(str--[[#: string]], i--[[#: number]])
 		if str:sub(i, i) ~= '"' then
 			decode_error(str, i, "expected string for key")
 		end
-		key, i = parse(str--[[#: string]], i--[[#: number]])
+		key, i = parse(str, i)
 		-- Read ':' delimiter
 		i = next_char(str, i, space_chars, true)
 		if str:sub(i, i) ~= ":" then
@@ -323,7 +321,7 @@ local function parse_object(str--[[#: string]], i--[[#: number]])
 		end
 		i = next_char(str, i + 1, space_chars, true)
 		-- Read value
-		val, i = parse(str--[[#: string]], i--[[#: number]])
+		val, i = parse(str, i)
 		-- Set
 		res[key] = val
 		-- Next token
@@ -358,18 +356,10 @@ local char_func_map = {
 }
 
 
-parse = function(str--[[#: string]], idx--[[#: number]])--[[#: any, number]]
+parse = function(str--[[#: string]], idx--[[#: number]])
 	local chr = str:sub(idx, idx)
 	local f = char_func_map[chr]
 	if f then
-		--[[#
-			local type lol = function(T)
-				if T.Type == "set" then
-					T:RemoveType(types.Nil)
-				end
-			end
-			lol(f)
-		]]
 		return f(str, idx)
 	end
 	decode_error(str, idx, "unexpected character '" .. chr .. "'")

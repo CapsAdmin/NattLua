@@ -304,6 +304,21 @@ function META:Call(obj, arguments, call_node)
         return obj:Call(self, arguments, call_node)
     end
 
+    -- if the arguments passed are not called we need to crawl them to check its return type
+    for i, v in ipairs(arguments.data) do
+        if v.Type == "function" and not v.called and not v.explicit_return then
+            local a = obj:GetArguments():Get(i)
+            local b = v
+
+            if 
+                (a.Type == "function" and b.Type == "function" and not a:GetReturnTypes():SubsetOf(b:GetReturnTypes()))
+                or not a:SubsetOf(b)
+            then
+                self:Call(b, b:GetArguments():Copy())
+            end
+        end
+    end
+
     local ok, err = obj:CheckArguments(arguments)
 
     if not ok then
@@ -349,7 +364,7 @@ function META:Call(obj, arguments, call_node)
         end
 
         local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
-            
+
         do
             -- if this function has an explicit return type
             if function_node.return_types then
@@ -1850,8 +1865,6 @@ do -- expressions
         if env == "runtime" then
             self:CallMeLater(obj, args, node, true)
         end
-
-        obj.analyzer_needed_for_error_handling = self
 
         return obj
     end

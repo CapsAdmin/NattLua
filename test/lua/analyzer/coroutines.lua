@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 run[[
-    local co = coroutine.create(function (a,b,c)
+    local co = coroutine.create(function(a,b,c)
         type_assert(a, 1)
         type_assert(b, 2)
         type_assert(c, 3)
