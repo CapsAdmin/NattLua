@@ -357,7 +357,7 @@ return function(META)
                     -- key = val
 
                     if not self.environments[env][1] then
-                        error("tried to get environment value outside of Push/Pop/Environment", 2)
+                        error("tried to set environment value outside of Push/Pop/Environment", 2)
                     end
 
                     local ok, err = self.environments[env][1]:Set(types.String(self:Hash(key)):MakeLiteral(true), val, env == "runtime")
