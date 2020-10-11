@@ -744,7 +744,12 @@ return function(META)
                 end
         
                 local start, stop = helpers.LazyFindStartStop(callexp)
-                str = str .. helpers.FormatError(self.code_data.code, self.code_data.name, "#" .. tostring(i) .. ": " .. self.code_data.name, start, stop, 1)
+                local part = helpers.FormatError(self.code_data.code, self.code_data.name, "", start, stop, 1)
+                if str:find(part, nil, true) then
+                    str = str .. "*"
+                else
+                    str = str .. part .. "#" .. tostring(i) .. ": " .. self.code_data.name
+                end
             end
 
             return str

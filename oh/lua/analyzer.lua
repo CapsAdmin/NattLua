@@ -269,7 +269,8 @@ function META:Call(obj, arguments, call_node)
     self.call_stack = self.call_stack or {}
 
     table.insert(self.call_stack, {
-        func = obj.node,
+        obj = obj,
+        func = function_node,
         call_expression = call_node
     })
 
@@ -310,7 +311,7 @@ function META:Call(obj, arguments, call_node)
             local a = obj:GetArguments():Get(i)
             local b = v
 
-            if 
+            if a and b and
                 (a.Type == "function" and b.Type == "function" and not a:GetReturnTypes():SubsetOf(b:GetReturnTypes()))
                 or not a:SubsetOf(b)
             then
