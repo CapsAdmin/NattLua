@@ -399,3 +399,22 @@ run([[
 
     test(foo)
 ]], '"hello" is not the same type as')
+
+run[[
+    return function()
+
+        local function foo(x)
+            return x+3
+        end
+    
+        local function bar(x)
+            return foo(3)+x
+        end
+    
+        local function faz(x)
+            return bar(2)+x
+        end
+    
+        type_expect(faz(1), 12)
+    end
+]]
