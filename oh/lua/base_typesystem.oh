@@ -595,6 +595,25 @@ do
 		if tbl.Type == "any" then return types.Any() end
 		return tbl:GetLength()
 	end
+
+	type function table.unpack(tbl: {[number] = any})
+		if tbl.Type == "set" and tbl:GetLength() == 1 then
+			tbl = tbl:GetTypes()[1]
+			if not tbl then
+				return
+			end
+		end
+		
+		local t = {}
+	    for i = 1, 32 do
+			local v = tbl:Get(i)
+			if not v then
+				break
+			end
+			t[i] = v
+		end
+		return table.unpack(t)
+	end
 end
 
 do

@@ -164,3 +164,29 @@ test("type function varargs", function()
         lol2(1,2,3)
     ]]
 end)
+
+run[[
+    type lol = (function(): ...)
+
+    local a,b,c = lol()
+
+    type_assert(a, _ as any)
+    type_assert(b, _ as any)
+    type_assert(c, _ as any)    
+
+    type test = function(a,b,c) 
+        assert(a.Type == "any")
+        assert(b.Type == "any")
+        assert(c.Type == "any")
+    end
+
+    test(lol())
+
+    type test = function(a,b,c) 
+        assert(a.Type == "tuple")
+        assert(b == nil)
+        assert(c == nil)
+    end
+
+    test<|lol()|>
+]]

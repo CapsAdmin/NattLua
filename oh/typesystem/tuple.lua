@@ -110,6 +110,8 @@ function META:Copy(map)
     end
 
     copy.node = self.node
+    copy.ElementType = self.ElementType
+    copy.max = self.max
 
     return copy
 end
@@ -117,6 +119,10 @@ end
 function META.SubsetOf(A, B)
     if A:GetLength() == 1 then
         return A:Get(1):SubsetOf(B)
+    end
+
+    if B.Type == "any" then
+        return true
     end
 
     if B.Type == "table" then
@@ -128,7 +134,7 @@ function META.SubsetOf(A, B)
     if A.ElementType and A.ElementType.Type == "any" then
         return true
     end
-
+    
     if A:GetLength() > B:GetLength() and A:GetLength() > B:GetMaxLength() then
         return types.errors.other(tostring(A) .. " is larger than " .. tostring(B))
     end
@@ -213,12 +219,20 @@ function META:IsFalsy()
     return false
 end
 
-function META:Unpack()
+function META:Unpack(length)
     if self.max and self.ElementType then
+        if length then
+            local t = {}
+            for i = 1, length do
+                t[i] = self.ElementType:Copy()
+            end
+            return table.unpack(t)
+        end
+
         return self
     end
 
-    return table.unpack(self:GetData())
+    return table.unpack(self:GetData(), 1, length)
 end
 
 function META:Initialize(data)
