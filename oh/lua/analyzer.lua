@@ -1734,14 +1734,22 @@ do -- expressions
         local standalone_letter = type == "letter" and node.standalone_letter
 
         if env == "typesystem" and standalone_letter and not node.force_upvalue then
+            if self.current_table then
+                if value == "self" then
+                    return self.current_table
+                end
+
+                if self.left_assigned and self.left_assigned.kind == "value" and self.left_assigned.value.value == value and not types.IsPrimitiveType(value) then
+                    return self.current_table
+                end
+            end
+
             if value == "any" then
                 return self:NewType(node, "any")
             elseif value == "never" then
                 return self:NewType(node, "never")
             elseif value == "error" then
                 return self:NewType(node, "error")
-            elseif (value == "self" and self.current_table) or (self.current_table and self.left_assigned and self.left_assigned.value.value == value and not types.IsPrimitiveType(value)) then
-                return self.current_table
             elseif value == "inf" then
                 return self:NewType(node, "number", math.huge, true)
             elseif value == "nan" then
