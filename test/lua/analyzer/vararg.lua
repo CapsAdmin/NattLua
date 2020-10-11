@@ -190,3 +190,14 @@ run[[
 
     test<|lol()|>
 ]]
+
+run[[
+    local function resume(a, ...)
+        local a, b, c = a, ...
+        type_assert(a, _ as 1)
+        type_assert(b, _ as 2)
+        type_assert(c, _ as 3)
+    end
+    
+    resume(1, 2, 3)
+]]
