@@ -273,7 +273,9 @@ do -- globals
 			end
 		end
 
-		error("unable to find module " .. str)
+		analyzer:Report(name.node, "unable to find module " .. str)
+
+		return types.Any
 	end
 
 	type function type_error(str: string, level: number | nil)
