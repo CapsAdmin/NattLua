@@ -330,7 +330,11 @@ function META:Call(obj, arguments, call_node)
     end
 
     if obj.data.lua_function then
-        local res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Unpack())}
+        if arguments:GetLength() == 1 and arguments:Get(1).Type == "tuple" then
+            arguments = arguments:Unpack()
+        end
+        
+        local res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Unpack(env == "runtime" and obj:GetArguments():GetLength() or nil))}
         
         return self:LuaTypesToTuple(obj.node, res)
     elseif not function_node or function_node.kind == "type_function" then
