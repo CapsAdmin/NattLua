@@ -10,8 +10,8 @@ function META:SetOperator(obj, key, val, node)
     
     if obj.Type == "set" then
         -- local x: nil | {foo = true}
-        -- print(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the set
-        -- print(x.foo) << no error, because now x does not contain nil
+        -- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the set
+        -- log(x.foo) << no error, because now x does not contain nil
         
         local new_set = types.Set()
         local truthy_set = types.Set()
@@ -55,7 +55,7 @@ function META:SetOperator(obj, key, val, node)
 
     -- local obj: {string = number}
     -- obj.foo = 1
-    -- print(obj.foo) << since the contract states that key is a string, then obj.foo would be nil or a number
+    -- log(obj.foo) << since the contract states that key is a string, then obj.foo would be nil or a number
     -- this adds some additional context
     obj.last_set = obj.last_set or {}
     obj.last_set[key] = val
@@ -106,7 +106,7 @@ function META:GetOperator(obj, key, node)
 
     -- local obj: {string = number}
     -- obj.foo = 1
-    -- print(obj.foo) << since the contract states that key is a string, then obj.foo would be nil or a number
+    -- log(obj.foo) << since the contract states that key is a string, then obj.foo would be nil or a number
     -- this adds some additional context
     if obj.last_set and not key:IsLiteral() and obj.last_set[key] then
         return obj.last_set[key]
