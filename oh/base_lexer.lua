@@ -1,14 +1,28 @@
-return function(META)
-    assert(META.syntax)
-    assert(META.syntax.GetSymbols)
-    assert(META.syntax.IsDuringLetter)
-    assert(META.syntax.IsLetter)
-    assert(META.syntax.IsSpace)
+return function(META --[[#: 
+    {
+        syntax = {
+            GetSymbols = any,
+            IsDuringLetter = any,
+            IsLetter = any,
+            IsSpace = any,
+        }
+    }
+]])
+    --[[# 
+    
+    type META.code = string
+    type META.i = number 
+    type META.code_ptr = {
+        [number] = number,
+        __add = (function(self, number): self)
+    }
+    
+    ]]
 
     local table_new = require("table.new")
     local ffi = jit and require("ffi")
 
-    local function pool(alloc, size)
+    local function pool(alloc --[[#: (function(): {[string] = any})]], size --[[#: nil | number]])
         size = size or 3105585
 
         local records = 0
@@ -66,7 +80,7 @@ return function(META)
         return self
     end
 
-    local function remove_bom_header(str)
+    local function remove_bom_header(str --[[#: string]])
         if str:sub(1, 2) == "\xFE\xFF" then
             return str:sub(3)
         elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
@@ -75,7 +89,7 @@ return function(META)
         return str
     end
 
-    local function Token(type, start, stop, value)
+    local function Token(type --[[#: string]], start --[[#: number]], stop --[[#: number]], value --[[#: string]])
         return {
             type = type,
             start = start,
@@ -99,22 +113,22 @@ return function(META)
     if ffi then
         local ffi_string = ffi.string
 
-        function META:GetChars(start, stop)
+        function META:GetChars(start --[[#: number]], stop --[[#: number]])
             return ffi_string(self.code_ptr + start - 1, (stop - start) + 1)
         end
 
-        function META:GetChar(offset)
+        function META:GetChar(offset --[[#: number]])
             if offset then
                 return self.code_ptr[self.i + offset - 1]
             end
             return self.code_ptr[self.i - 1]
         end
     else
-        function META:GetChars(start, stop)
+        function META:GetChars(start --[[#: number]], stop --[[#: number]])
             return self.code:sub(start, stop)
         end
 
-        function META:GetChar(offset)
+        function META:GetChar(offset --[[#: number]])
             if offset then
                 return self.code:byte(self.i + offset) or 0
             end
@@ -126,7 +140,7 @@ return function(META)
         self.i = 1
     end
 
-    function META:FindNearest(str)
+    function META:FindNearest(str --[[#: string]])
         local _, stop = self.code:find(str, self.i, true)
 
         if stop then
@@ -142,11 +156,11 @@ return function(META)
         return char
     end
 
-    function META:Advance(len)
+    function META:Advance(len --[[#: number]])
         self.i = self.i + len
     end
 
-    function META:SetPosition(i)
+    function META:SetPosition(i --[[#: number]])
         self.i = i
     end
 
@@ -242,7 +256,7 @@ return function(META)
     end
 
     if ffi then
-        local string_span = ffi.C.strspn
+        local string_span = ffi.C.strspn --[[# as function(any, any): number]]
         local tonumber = tonumber
 
         local chars = ""
@@ -279,7 +293,7 @@ return function(META)
     do
         if ffi then
             local tonumber = tonumber
-            local string_span = ffi.C.strspn
+            local string_span = ffi.C.strspn --[[# as function(any, any): number]]
 
             local chars = ""
             for i = 1, 255 do
@@ -409,7 +423,7 @@ return function(META)
         
     end
 
-    function META:Initialize(code)
+    function META:Initialize(code --[[#: number]])
         self.code = remove_bom_header(code)
 
         if ffi then

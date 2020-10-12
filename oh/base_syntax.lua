@@ -1,15 +1,23 @@
+--[[# 
+
+type Token = {
+    value = string,
+    type = string,
+}
+]]
+
 return function(syntax)
     do
         local B = string.byte
 
-        function syntax.IsLetter(c)
+        function syntax.IsLetter(c --[[#: number]]) --[[#: boolean]]
             return
                 (c >= B'a' and c <= B'z') or
                 (c >= B'A' and c <= B'Z') or
                 (c == B'_' or c >= 127)
         end
 
-        function syntax.IsDuringLetter(c)
+        function syntax.IsDuringLetter(c --[[#: number]]) --[[#: boolean]]
             return
                 (c >= B'a' and c <= B'z') or
                 (c >= B'0' and c <= B'9') or
@@ -17,15 +25,15 @@ return function(syntax)
                 (c == B'_' or c >= 127)
         end
 
-        function syntax.IsNumber(c)
+        function syntax.IsNumber(c --[[#: number]]) --[[#: boolean]]
             return (c >= B'0' and c <= B'9')
         end
 
-        function syntax.IsSpace(c)
+        function syntax.IsSpace(c --[[#: number]]) --[[#: boolean]]
             return c > 0 and c <= 32
         end
 
-        function syntax.IsSymbol(c)
+        function syntax.IsSymbol(c --[[#: number]]) --[[#: boolean]]
             return c ~= B'_' and (
                 (c >= B'!' and c <= B'/') or
                 (c >= B':' and c <= B'@') or
@@ -37,7 +45,7 @@ return function(syntax)
 
     local symbols = {}
 
-    local function add_symbols(tbl)
+    local function add_symbols(tbl --[[#: {[number] = string}]])
         if not tbl then return end
 
         for _, symbol in pairs(tbl) do
@@ -48,7 +56,7 @@ return function(syntax)
     end
 
     do -- extend the symbol characters from grammar rules
-        local function add_binary_symbols(tbl)
+        local function add_binary_symbols(tbl --[[#: {[number] = {[number] = string}}]])
             if not tbl then return end
 
             for _, group in ipairs(tbl) do
@@ -86,7 +94,7 @@ return function(syntax)
             lookup[k] = {" " .. a, b, c .. " "}
         end
 
-        function syntax.GetFunctionForBinaryOperator(token)
+        function syntax.GetFunctionForBinaryOperator(token --[[#: Token]])
             return lookup[token.value]
         end
     end
@@ -99,7 +107,7 @@ return function(syntax)
             lookup[k] = {" " .. a, b .. " "}
         end
 
-        function syntax.GetFunctionForPrefixOperator(token)
+        function syntax.GetFunctionForPrefixOperator(token --[[#: Token]])
             return lookup[token.value]
         end
     end
@@ -113,7 +121,7 @@ return function(syntax)
             lookup[k] = {" " .. a, b .. " "}
         end
 
-        function syntax.GetFunctionForPostfixOperator(token)
+        function syntax.GetFunctionForPostfixOperator(token --[[#: Token]])
             return lookup[token.value]
         end            
     end
@@ -137,7 +145,7 @@ return function(syntax)
     end
 
     do -- grammar rules
-        function syntax.IsValue(token)
+        function syntax.IsValue(token --[[#: Token]])
             if token.type == "number" or token.type == "string" then
                 return true
             end
@@ -157,7 +165,7 @@ return function(syntax)
             return false
         end
 
-        function syntax.GetTokenType(tk)
+        function syntax.GetTokenType(tk --[[#: Token]])
             if tk.type == "letter" and syntax.IsKeyword(tk) then
                 return "keyword"
             elseif tk.type == "symbol" then
@@ -185,7 +193,7 @@ return function(syntax)
                 end
             end
 
-            function syntax.GetBinaryOperatorInfo(tk)
+            function syntax.GetBinaryOperatorInfo(tk --[[#: Token]])
                 return lookup[tk.value]
             end
         end
@@ -198,7 +206,7 @@ return function(syntax)
                     lookup[v] = v
                 end
 
-                syntax[func_name] = function(token) 
+                syntax[func_name] = function(token --[[#: Token]]) --[[#: boolean]] 
                     return lookup[token.value] ~= nil 
                 end
             end
@@ -207,7 +215,6 @@ return function(syntax)
             build_lookup(syntax.PrefixOperators, "IsPrefixOperator")
             build_lookup(syntax.PostfixOperators, "IsPostfixOperator")
             build_lookup(syntax.KeywordValues, "IsKeywordValue")
-
 
             do
                 local keywords = {}

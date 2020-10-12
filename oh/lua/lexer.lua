@@ -4,6 +4,8 @@ local helpers = require("oh.helpers")
 local META = {}
 META.__index = META
 
+--[[# type META.i = number ]]
+
 META.syntax = syntax
 require("oh.base_lexer")(META)
 
