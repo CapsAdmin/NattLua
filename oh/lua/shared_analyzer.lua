@@ -1,3 +1,7 @@
+if _G.DISABLE_BASE_TYPES then
+    return require("oh.typesystem.types").Table({})
+end
+
 local oh = require("oh")
 local code_data = oh.File("oh/lua/base_typesystem.oh")
 
