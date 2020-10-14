@@ -105,3 +105,11 @@ run[[
     type_assert(a, _ as 1 | 0)
     type_assert(b, _ as 1 | 0)
 ]]
+
+run[[
+    local t = {foo = true}
+    for k,v in pairs(t) do
+        type_assert(k, _ as "foo")
+        type_assert(v, _ as true)
+    end
+]]

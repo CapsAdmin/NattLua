@@ -54,26 +54,6 @@ do -- assignment
         type_assert(a[5], 5)
     ]]
 
-    R[[
-        local a = {}
-
-        local i = 0
-        function test(n)
-            i = i + 1
-
-            if i ~= n then
-                local test = function(n) TPRINT(n) return n end
-                a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)
-                type_assert(i, n)
-            end
-
-            return n
-        end
-
-        -- test should be executed in the numeric order
-
-        a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)
-    ]]
 
 
     R[[
@@ -580,31 +560,6 @@ R[[
     type_assert(b, _ as number)
 ]]
 
-R[[
-    function pairs(t)
-        return next, t, nil
-    end
-
-    do
-        local function iter(a, i)
-            i = i + 1
-            local v = a[i]
-            if v then
-                return i, v
-            end
-        end
-
-        function ipairs(a)
-            return iter, a, 0
-        end
-    end
-
-    local t = {foo = true}
-    for k,v in pairs(t) do
-        type_assert(k, _ as "foo")
-        type_assert(v, _ as true)
-    end
-]]
 --[[
 
     for i,v in ipairs({"LOL",2,3}) do

@@ -181,14 +181,6 @@ run[[
     end
 
     test(lol())
-
-    type test = function(a,b,c) 
-        assert(a.Type == "tuple")
-        assert(b == nil)
-        assert(c == nil)
-    end
-
-    test<|lol()|>
 ]]
 
 run[[
@@ -200,4 +192,96 @@ run[[
     end
     
     resume(1, 2, 3)
+]]
+
+run[[
+    type lol = (function(): 1,...)
+
+    local a,b,c,d = lol()
+    type_assert(a, 1)
+    type_assert(b, _ as any)
+    type_assert(c, _ as any)
+    type_assert(d, _ as any)
+    
+    
+    local a,b,c,d = lol(), 2,3,4
+    
+    type_assert(a,1)
+    type_assert(b,2)
+    type_assert(c,3)
+    type_assert(d,4)
+    
+    
+    local function foo(a, ...)
+        local a, b, c = a, ...
+        type_assert(a, 1)
+        type_assert(b, 2)
+        type_assert(c, 3)
+    end
+    
+    foo(1, 2, 3)
+    
+    type test = function(a,b,c,...) 
+        assert(a.data == 1)
+        assert(b.Type == "any")
+        assert(c.Type == "any")
+    end
+    
+    test(lol())
+    
+    type test = function(a,b,c,...)
+        assert(a.data == 1)
+        assert(b.data == 2)
+        assert(c.data == 3)
+        assert(... == nil)
+    end
+    
+    test(lol(),2,3)
+]]
+
+run[[
+    local a = {}
+
+    local i = 0
+    local function test(n)
+        i = i + 1
+
+        if i ~= n then
+            type_error("uh oh")
+        end
+
+        return n
+    end
+
+    -- test should be executed in the numeric order
+
+    a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)
+]]
+
+run[[
+    local t = {foo = true}
+    for k,v in pairs(t) do
+        type_assert(k, _ as "foo")
+        type_assert(v, _ as true)
+    end
+]]
+
+run[[
+    local type function create(func)
+        local t = types.Table({})
+        t.func = func
+        return t
+    end
+    
+    local type function call(obj, ...)
+        analyzer:Call(obj.func, types.Tuple({...}))
+    end
+    
+    local co = create(function(a,b,c)
+        type_assert(a, 1)
+        type_assert(b, 2)
+        type_assert(c, 3)
+    end)
+    
+    call(co,1,2,3)
 ]]
