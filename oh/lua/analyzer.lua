@@ -212,7 +212,11 @@ function META:LuaTypesToTuple(node, tps)
             tbl[i] = v
         else
             if type(v) == "function" then
-                tbl[i] = self:NewType(node, "function", {lua_function = v, arg = types.Tuple(), ret = types.Tuple()}, true)
+                tbl[i] = self:NewType(node, "function", {
+                    lua_function = v, 
+                    arg = types.Tuple({}):SetElementType(types.Any()):Max(math.huge), 
+                    ret = types.Tuple({}):SetElementType(types.Any()):Max(math.huge)
+                }, true)
             else
                 tbl[i] = self:NewType(node, type(v), v, true)
             end
