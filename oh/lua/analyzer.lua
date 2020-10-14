@@ -862,13 +862,13 @@ do -- statements
 
     function META:AnalyzeGenericForStatement(statement)
         local args = self:AnalyzeExpressions(statement.expressions)
-        local obj = args[1]
+        local obj = table.remove(args, 1)
+        
+        if not obj then return end
 
-        if obj then
-            table.remove(args, 1)
+        if obj.Type == "tuple" then obj = obj:Get(1) end
 
             local returned_key = nil
-            
             local one_loop = args[1] and args[1].Type == "any"
 
             for i = 1, 1000 do
@@ -908,7 +908,6 @@ do -- statements
             if returned_key then
                 self:PopScope({condition = returned_key})
             end
-        end
 
     end
 
