@@ -129,12 +129,8 @@ function META:NewType(node, type, data, literal, parent)
     elseif type == "list" then
         obj = self:Assert(node, types.List(data))
     elseif type == "..." then
-        if not data then
-            obj = self:Assert(node, types.Tuple({types.Any()}):SetRepeat(math.huge))
-        else
-            obj = self:Assert(node, types.Tuple(data))
-            obj:SetRepeat(math.huge)
-        end
+        obj = self:Assert(node, types.Tuple(data or {types.Any()}))
+        obj:SetRepeat(math.huge)
     elseif type == "number" then
         obj = self:Assert(node, types.Number(data):MakeLiteral(literal))
     elseif type == "string" then
@@ -150,9 +146,9 @@ function META:NewType(node, type, data, literal, parent)
     elseif type == "any" then
         obj = self:Assert(node, types.Any())
     elseif type == "never" then
-        obj = self:Assert(node, types.Never())
+        obj = self:Assert(node, types.Never()) -- TEST ME
     elseif type == "error" then
-        obj = self:Assert(node, types.Error(data))
+        obj = self:Assert(node, types.Error(data)) -- TEST ME
     elseif type == "function" then
         obj = self:Assert(node, types.Function(data))
         obj.node = node
@@ -197,7 +193,7 @@ do
         end
 
         if env == "typesystem" then
-            return self:NewType(node, "nil")
+            return self:NewType(node, "nil") -- TEST ME
         end
 
         return self:NewType(node, "any")
@@ -346,6 +342,7 @@ function META:Call(obj, arguments, call_node)
         self:FireEvent("external_call", call_node, obj)
     else
         if not function_node.statements then
+            -- TEST ME
             return types.errors.other("cannot call "..tostring(function_node:Render()).." because it has no statements")
         end
 
@@ -354,6 +351,7 @@ function META:Call(obj, arguments, call_node)
             if obj.call_count > 10 or debug.getinfo(500) then
                 local ret = obj:GetReturnTypes()
                 if ret and ret:Get(1) then
+                    -- TEST ME
                     return types.Tuple({ret:Get(1)})
                 end
                 return types.Tuple({self:NewType(call_node, "any")})
@@ -373,11 +371,6 @@ function META:Call(obj, arguments, call_node)
         end
         
         local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
-
-        -- todo
-        if return_tuple:GetLength() == 1 and return_tuple:Get(1).Type == "tuple" then
-            return_tuple = return_tuple:Get(1)
-        end
 
         do
             -- if this function has an explicit return type
@@ -497,6 +490,7 @@ do -- control flow analysis
     
     function META:OnEnterNumericForLoop(scope, init, max)
         if not init:IsLiteral() or not max:IsLiteral() then
+            -- TEST ME
             scope.uncertain = true
         end
     end
@@ -652,7 +646,7 @@ do -- statements
                     for i = 1, #statement.left do
                         right[right_pos + i - 1] = obj:Get(i)
                         if exp_val.explicit_type then
-                            right[right_pos + i - 1]:Seal()
+                            right[right_pos + i - 1]:Seal() -- TEST ME
                         end
                     end
                 else
@@ -683,11 +677,6 @@ do -- statements
             if exp_key.explicit_type then
                 local contract = self:AnalyzeExpression(exp_key.explicit_type, "typesystem")
 
-                --TODO
-                if contract.Type == "tuple" and contract:GetLength() == 1 then
-                    contract = contract:Get(1)
-                end
-        
                 if right[i] then
                     val:CopyLiteralness(contract)
                     self:Assert(statement or val.node or exp_key.explicit_type, self:CheckTypeAgainstContract(val, contract))
