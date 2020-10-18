@@ -127,7 +127,7 @@ run[[
         local tbl = {...}
         type_assert(tbl[1], 1)
         type_assert(tbl[2], 2)
-        type_assert(tbl[100], _ as nil)
+        type_assert(tbl[100], _ as nil) -- or nil?
     end)(1,2)
 ]]
 
@@ -166,7 +166,7 @@ test("type function varargs", function()
 end)
 
 run[[
-    type lol = (function(): ...)
+    local type lol = (function(): ...)
 
     local a,b,c = lol()
 
@@ -174,7 +174,7 @@ run[[
     type_assert(b, _ as any)
     type_assert(c, _ as any)    
 
-    type test = function(a,b,c) 
+    local type test = function(a,b,c) 
         assert(a.Type == "any")
         assert(b.Type == "any")
         assert(c.Type == "any")
@@ -195,7 +195,7 @@ run[[
 ]]
 
 run[[
-    type lol = (function(): 1,...)
+    local type lol = (function(): 1,...)
 
     local a,b,c,d = lol()
     type_assert(a, 1)
@@ -221,7 +221,7 @@ run[[
     
     foo(1, 2, 3)
     
-    type test = function(a,b,c,...) 
+    local type test = function(a,b,c,...) 
         assert(a.data == 1)
         assert(b.Type == "any")
         assert(c.Type == "any")
@@ -229,7 +229,7 @@ run[[
     
     test(lol())
     
-    type test = function(a,b,c,...)
+    local type test = function(a,b,c,...)
         assert(a.data == 1)
         assert(b.data == 2)
         assert(c.data == 3)
@@ -284,4 +284,106 @@ run[[
     end)
     
     call(co,1,2,3)
+]]
+
+run[[
+    
+    local function foo(...)
+
+        -- make sure var args don't leak onto return type var args
+
+        local type lol = (function(): ...)
+        local a,b,c = lol()
+        type_assert(a, _ as any)
+        type_assert(b, _ as any)
+        type_assert(c, _ as any)
+    end
+    
+    foo(1,2,3)
+]]
+
+run[[
+    ;(function(...: number) 
+        local a,b,c,d = ...
+        type_assert(a, 1)
+        type_assert(b, 2)
+        type_assert(c, 3)
+        type_assert(d, nil)
+    end)(1,2,3)
+]]
+
+run([[
+    ;(function(...: number) 
+        print("!", ...)
+    end)(1,2,"foo",4,5)
+]], "foo.-is not the same type as number")
+
+run[[
+    local function foo()
+        return foo()
+    end
+
+    foo()
+
+    -- should not be a nested tuple
+    type_assert_superset(foo, nil as (function():any))
+]]
+
+run[[
+    local type function foo(a)
+        assert(a == nil)
+    end
+
+    foo()
+]]
+
+run[[
+    local type function foo(a)
+        assert(a.Type == "symbol")
+        assert(a.data == nil)
+    end
+
+    foo(nil)
+]]
+
+do
+    _G.LOL = nil
+    run[[
+        local type function test()
+            return function() _G.LOL = true end
+        end
+        
+        -- make sure the tuple is unpacked, otherwise we get "cannot call tuple"
+        test()()
+    ]]
+    assert(_G.LOL == true)
+    _G.LOL = nil
+end
+
+run[[
+    local type function foo() 
+        return 1
+    end
+    
+    local a = {
+        foo = foo()
+    }
+    
+    §assert(analyzer:GetScope():FindValue("a", "runtime").data:Get("foo").Type ~= "tuple")
+]]
+
+run[[
+    local a,b,c = 1,2,3
+    local function test(...)
+        return a,b,c, ...
+    end
+    local z,x,y,æ,ø,å = test(4,5,6)
+
+    type_assert(z, 1)
+    type_assert(x, 2)
+    type_assert(y, 3)
+    type_assert(æ, 4)
+    type_assert(ø, 5)
+    type_assert(å, 6)
+
 ]]

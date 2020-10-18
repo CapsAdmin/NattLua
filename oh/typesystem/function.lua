@@ -78,7 +78,30 @@ function META:CheckArguments(arguments)
     local B = self:GetArguments() -- the contract
     -- A should be a subset of B
 
-    for i = 1, math.max(B:GetLength(), A:GetLength()) do
+    if A:GetSignature() == B:GetSignature() then
+        return true
+    end
+
+    if A:GetLength() == math.huge and B:GetLength() == math.huge then
+   --     local ok, err = A.Remainder:SubsetOf(B.Remainder)
+     --   if not ok then
+       --     return ok, err
+        --end
+
+        for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
+            local a = A:Get(i)
+            local b = B:Get(i)
+
+            local ok, err = a:SubsetOf(b)
+            if not ok then
+                return ok, err
+            end
+        end
+
+        return true
+    end
+
+    for i = 1, math.min(A:GetLength(), B:GetLength()) do
         local a = A:Get(i)
         local b = B:Get(i)
 

@@ -77,10 +77,18 @@ do
         return scope.test_condition, scope.test_condition_inverted
     end
 
+    local ref = 0
+
+    function META:__tostring()
+        return "scope[" .. self.ref .. "]"
+    end
+
     function LexicalScope(node, extra_node, parent)
         assert(type(node) == "table" and node.kind, "expected an associated ast node")
+        ref = ref + 1
 
         local scope = {
+            ref = ref,
             children = {},
 
             upvalues = {
@@ -151,8 +159,12 @@ return function(META)
 
             self.scope_stack = self.scope_stack or {}
             table.insert(self.scope_stack, self.scope)
+            
+            if node.scope then
+                scope:SetParent(node.scope)
+            end
 
-            self.scope = node.scope or scope
+            self.scope = scope
 
             if event_data and self.OnEnterScope then
                 self:OnEnterScope(node.kind, event_data)
@@ -377,6 +389,8 @@ return function(META)
 
         if self.OnEvent then
             self:OnEvent(what, ...)
+        else
+            --self:DumpEvent(what, ...)
         end
     end
 
@@ -539,19 +553,14 @@ return function(META)
                 else
                     io.write(node.kind)
                 end
-                io.write(" {")
-                io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
+                io.write(" ", tostring(scope))
+                io.write(" {")                
                 io.write("\n")
             elseif what == "leave_scope" then
                 local _, extra_node, scope = ...
                 t = t - 1
                 io.write((" "):rep(t))
                 io.write("}")
-                io.write("[", tostring(tonumber(("%p"):format(scope))), "]")
-                --io.write(node.kind)
-                if extra_node then
-                --  io.write(tostring(extra_node))
-                end
                 io.write("\n")
             elseif what == "external_call" then
                 io.write((" "):rep(t))

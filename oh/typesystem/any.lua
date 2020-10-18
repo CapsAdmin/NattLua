@@ -41,7 +41,7 @@ function META:IsTruthy()
 end
 
 function META:Call()
-    return types.Tuple({}):SetElementType(types.Any()):Max(math.huge)
+    return types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
 end
 
 return types.RegisterType(META)

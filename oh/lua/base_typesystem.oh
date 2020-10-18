@@ -35,6 +35,9 @@ type function keysof(tbl: Table)
 end
 
 type function type_assert(what, type)
+	what = what or types.Nil
+	type = type or types.Nil
+
 	if what.Type == type.Type and what.data == type.data then
 		return
 	end

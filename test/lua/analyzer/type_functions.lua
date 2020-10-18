@@ -86,7 +86,8 @@ test("assert", function()
 end)
 
 test("require should error when not finding a module", function()
-    run([[require("adawdawddwaldwadwadawol")]], "unable to find module")
+    local a = run([[require("adawdawddwaldwadwadawol")]])
+    assert(a:GetDiagnostics()[1].msg:find("unable to find module"))
 end)
 
 test("rawset rawget", function()

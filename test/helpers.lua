@@ -60,7 +60,7 @@ end
 
 return {
     Set = function(...) return types.Set(cast(...)) end,
-    Tuple = function(...) return types.Tuple({...}) end,
+    Tuple = function(...) return types.Tuple(cast(...)) end,
     Number = function(n) return types.Number(n):MakeLiteral(n ~= nil) end,
     Function = function(d) return types.Function(d) end,
     String = function(n) return types.String(n):MakeLiteral(n ~= nil) end,

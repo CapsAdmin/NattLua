@@ -130,10 +130,10 @@ function META:NewType(node, type, data, literal, parent)
         obj = self:Assert(node, types.List(data))
     elseif type == "..." then
         if not data then
-            obj = self:Assert(node, types.Tuple({}):SetElementType(types.Any()):Max(math.huge))
+            obj = self:Assert(node, types.Tuple({types.Any()}):SetRepeat(math.huge))
         else
             obj = self:Assert(node, types.Tuple(data))
-            obj:Max(math.huge)
+            obj:SetRepeat(math.huge)
         end
     elseif type == "number" then
         obj = self:Assert(node, types.Number(data):MakeLiteral(literal))
@@ -166,7 +166,7 @@ function META:NewType(node, type, data, literal, parent)
 
     obj.node = obj.node or node
     obj.node.inferred_type = obj
-    node.scope = self.scope -- move this out of here
+    node.scope = self:GetScope() -- move this out of here
 
     return obj
 end
@@ -214,8 +214,8 @@ function META:LuaTypesToTuple(node, tps)
             if type(v) == "function" then
                 tbl[i] = self:NewType(node, "function", {
                     lua_function = v, 
-                    arg = types.Tuple({}):SetElementType(types.Any()):Max(math.huge), 
-                    ret = types.Tuple({}):SetElementType(types.Any()):Max(math.huge)
+                    arg = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)), 
+                    ret = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
                 }, true)
             else
                 tbl[i] = self:NewType(node, type(v), v, true)
@@ -242,11 +242,7 @@ function META:AnalyzeFunctionBody(function_node, arguments, env)
         local argi = function_node.self_call and (i+1) or i
 
         if identifier.value.value == "..." then
-            local values = {}
-            for i = argi, arguments:GetLength() do
-                table.insert(values, arguments:Get(i))
-            end
-            self:CreateLocalValue(identifier, self:NewType(identifier, "...", values), env)
+            self:CreateLocalValue(identifier, arguments:Slice(argi), env)
         else
             self:CreateLocalValue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
         end
@@ -255,7 +251,7 @@ function META:AnalyzeFunctionBody(function_node, arguments, env)
     self:ReturnToThisScope()
     self:PushReturn()
     local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
-
+    
     self:PopEnvironment(env)
     self:PopScope()
 
@@ -333,14 +329,18 @@ function META:Call(obj, arguments, call_node)
     if self.OnFunctionCall then
         self:OnFunctionCall(obj, arguments)
     end
-
-    if obj.data.lua_function then
-        if arguments:GetLength() == 1 and arguments:Get(1).Type == "tuple" then
-            arguments = arguments:Unpack()
+    
+    if obj.data.lua_function then 
+        local args = obj:GetArguments()
+        local len = args:GetLength()
+        local res
+        if len == math.huge and arguments:GetLength() == math.huge then
+            local longest = math.max(args:GetMinimumLength(), arguments:GetMinimumLength())
+            res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Copy():Unpack(longest))}
+        else
+            res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Unpack(len))}
         end
-        
-        local res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Unpack(env == "runtime" and obj:GetArguments():GetLength() or nil))}
-        
+
         return self:LuaTypesToTuple(obj.node, res)
     elseif not function_node or function_node.kind == "type_function" then
         self:FireEvent("external_call", call_node, obj)
@@ -351,7 +351,7 @@ function META:Call(obj, arguments, call_node)
 
         do -- recursive guard
             obj.call_count = obj.call_count or 0
-            if obj.call_count > 10 or debug.getinfo(30) then
+            if obj.call_count > 10 or debug.getinfo(500) then
                 local ret = obj:GetReturnTypes()
                 if ret and ret:Get(1) then
                     return types.Tuple({ret:Get(1)})
@@ -371,8 +371,13 @@ function META:Call(obj, arguments, call_node)
         then
             arguments = obj:GetArguments()
         end
-
+        
         local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
+
+        -- todo
+        if return_tuple:GetLength() == 1 and return_tuple:Get(1).Type == "tuple" then
+            return_tuple = return_tuple:Get(1)
+        end
 
         do
             -- if this function has an explicit return type
@@ -386,7 +391,6 @@ function META:Call(obj, arguments, call_node)
                 obj:GetReturnTypes():Merge(return_tuple)
             end
         end
-
         obj:GetArguments():Merge(arguments)
 
         self:FireEvent("function_spec", obj)
@@ -415,7 +419,9 @@ function META:Call(obj, arguments, call_node)
             function_node.inferred_type = obj
         end
 
-        return return_tuple
+        if not function_node.return_types then
+            return return_tuple
+        end
     end
 
     return obj:GetReturnTypes():Copy():SetReferenceId(nil)
@@ -451,7 +457,7 @@ do -- control flow analysis
     end
 
     function META:OnFunctionCall(obj, arguments)
-        for i = 1, arguments:GetLength() do
+        for i = 1, arguments:GetMinimumLength() do
             local arg = obj:GetArguments():Get(i)
             if arg and arg.out then
                 local upvalue = arguments:Get(i).upvalue
@@ -499,7 +505,7 @@ do -- control flow analysis
         if self:GetScope().unreachable then
       --      return self:CopyUpvalue(upvalue, types.Never())
         end
-        
+
         if upvalue.data.Type == "set" then
             local condition, inverted = scope:GetTestCondition()
             
@@ -599,7 +605,7 @@ end
 
 do -- statements
     function META:AnalyzeRootStatement(statement, ...)
-        local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):SetElementType(types.Any()):Max(math.huge)
+        local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
         self:PushScope(statement)
         self:PushEnvironment(statement, nil, "runtime")
         self:PushEnvironment(statement, nil, "typesystem")
@@ -640,16 +646,17 @@ do -- statements
                 
                 self.left_assigned = left[right_pos]
 
-                for tuple_index, obj in ipairs({self:AnalyzeExpression(exp_val, env)}) do
-                    local index = right_pos + tuple_index - 1
+                local obj = self:AnalyzeExpression(exp_val, env)
 
-                    if obj.Type == "tuple" then
-                        for i = 1, #statement.left do
-                            right[index + i - 1] = obj:Get(i)
+                if obj.Type == "tuple" then
+                    for i = 1, #statement.left do
+                        right[right_pos + i - 1] = obj:Get(i)
+                        if exp_val.explicit_type then
+                            right[right_pos + i - 1]:Seal()
                         end
-                    else
-                        right[index] = obj
                     end
+                else
+                    right[right_pos] = obj
 
                     if exp_val.explicit_type then
                         obj:Seal()
@@ -658,6 +665,9 @@ do -- statements
             end
 
             -- complicated
+            -- cuts the last arguments
+            -- local a,b,c = (any...), 1
+            -- should be any, 1, nil
             local last = statement.right[#statement.right]
             
             if last.kind == "value" and last.value.value ~= "..." then
@@ -672,6 +682,11 @@ do -- statements
 
             if exp_key.explicit_type then
                 local contract = self:AnalyzeExpression(exp_key.explicit_type, "typesystem")
+
+                --TODO
+                if contract.Type == "tuple" and contract:GetLength() == 1 then
+                    contract = contract:Get(1)
+                end
         
                 if right[i] then
                     val:CopyLiteralness(contract)
@@ -854,6 +869,7 @@ do -- statements
         if not ret[1] then
             ret[1] = self:NewType(statement, "nil")
         end
+        
         self:CollectReturnExpressions(ret)
         self.returned_from_certain_scope = not self:GetScope().uncertain
         self.returned_from_block = true
@@ -867,47 +883,47 @@ do -- statements
         if not obj then return end
 
         if obj.Type == "tuple" then obj = obj:Get(1) end
+    
+        local returned_key = nil
+        local one_loop = args[1] and args[1].Type == "any"
+        
+        for i = 1, 1000 do
+            local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
 
-            local returned_key = nil
-            local one_loop = args[1] and args[1].Type == "any"
-
-            for i = 1, 1000 do
-                local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
-
-                if not values:Get(1) or values:Get(1).Type == "symbol" and values:Get(1).data == nil then
-                    break
-                end
-
-                if i == 1 then
-                    returned_key = values:Get(1)
-                    if not returned_key:IsLiteral() then
-                        returned_key = types.Set({types.Symbol(nil), returned_key})
-                    end
-                    self:PushScope(statement, nil, {condition = returned_key})
-                end
-
-                for i,v in ipairs(statement.identifiers) do
-                    self:CreateLocalValue(v, values:Get(i), "runtime")
-                end
-
-                self:AnalyzeStatements(statement.statements)
-
-                if i == 1000 then
-                    self:Error(statement, "too many iterations")
-                end
-
-                table.insert(values.data, 1, args[1])
-
-                args = values:GetData()
-
-                if one_loop then
-                    break
-                end
+            if not values:Get(1) or values:Get(1).Type == "symbol" and values:Get(1).data == nil then
+                break
             end
 
-            if returned_key then
-                self:PopScope({condition = returned_key})
+            if i == 1 then
+                returned_key = values:Get(1)
+                if not returned_key:IsLiteral() then
+                    returned_key = types.Set({types.Symbol(nil), returned_key})
+                end
+                self:PushScope(statement, nil, {condition = returned_key})
             end
+
+            for i,v in ipairs(statement.identifiers) do
+                self:CreateLocalValue(v, values:Get(i), "runtime")
+            end
+
+            self:AnalyzeStatements(statement.statements)
+
+            if i == 1000 then
+                self:Error(statement, "too many iterations")
+            end
+
+            table.insert(values.data, 1, args[1])
+
+            args = values:GetData()
+
+            if one_loop then
+                break
+            end
+        end
+
+        if returned_key then
+            self:PopScope({condition = returned_key})
+        end
 
     end
 
@@ -1664,14 +1680,29 @@ do -- expressions
         if self.self_arg_stack and node.left.kind == "binary_operator" and node.left.value.value == ":" then
             table.insert(arguments, 1, table.remove(self.self_arg_stack))
         end
-
-        self.PreferTypesystem = node.type_call
-        local obj = self:Assert(node, self:Call(obj, types.Tuple(arguments), node))
-        self.PreferTypesystem = nil
         
-        if obj:IsEmpty() then
-            obj:Set(1, self:NewType(node, "nil"))
+        self.PreferTypesystem = node.type_call
+
+        local temp = {}
+        if #arguments == 1 and arguments[1].Type == "tuple" then
+            arguments = arguments[1]
+        else
+            for i,v in ipairs(arguments) do
+                if v.Type == "tuple" then
+                    temp[i] = v:Get(1)
+                else
+                    temp[i] = v
+                end
+            end
+            arguments = types.Tuple(temp)
         end
+        
+        if obj.Type == "tuple" then
+            obj = obj:Get(1)
+        end
+        
+        local obj = self:Assert(node, self:Call(obj, arguments, node))
+        self.PreferTypesystem = nil
 
         -- TODO: hacky workaround for trimming the returned tuple
         -- local a,b,c = (foo())
@@ -1680,10 +1711,10 @@ do -- expressions
             obj = obj:Get(1)
         end
 
-        if obj.Type == "tuple" then
-            return obj:Unpack()
+        if obj.Type == "tuple" and obj:GetLength() == 1 then
+            obj = obj:Get(1)
         end
-        
+
         return obj
     end
 
@@ -1700,7 +1731,7 @@ do -- expressions
 
     function META:AnalyzeVarargTupleExpression(node, env)
         local obj = self:NewType(node, "...")
-        obj:SetElementType(self:GetEnvironmentValue(node.value, "typesystem"))
+        obj:AddRemainder(types.Tuple(({self:GetEnvironmentValue(node.value, "typesystem")})))
         return obj
     end
 
@@ -1726,11 +1757,7 @@ do -- expressions
 
         node.inferred_type = node.inferred_type or obj
         node.is_upvalue = self:FindLocalValue(node, env) ~= nil
-        
-        if obj.Type == "tuple" then
-            return obj:Unpack()
-        end
-        
+                
         return obj
     end
 
@@ -1805,11 +1832,16 @@ do -- expressions
 
         if node.kind == "function" or node.kind == "local_function" then
             for i, key in ipairs(node.identifiers) do
-                if key.explicit_type then
+                if key.value.value == "..." then
+                    if key.explicit_type then
+                        args[i] = self:NewType(key, "...")
+                        args[i]:Set(1, self:AnalyzeExpression(key.explicit_type, "typesystem"))
+                    else
+                        args[i] = self:NewType(key, "...")
+                    end
+                elseif key.explicit_type then
                     args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem")
                     explicit_arguments = true
-                elseif key.value.value == "..." then
-                    args[i] = self:NewType(key, "...")
                 else    
                     args[i] = self:GuessTypeFromIdentifier(key)
                 end
@@ -1854,12 +1886,17 @@ do -- expressions
                     end
 				end
 
-				for i, type_exp in ipairs(node.return_types) do
-					ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
+                for i, type_exp in ipairs(node.return_types) do
+                    if type_exp.kind == "value" and type_exp.value.value == "..." then
+                        local tup = self:NewType(type_exp, "...")
+                        ret[i] = tup
+                    else
+                        ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
+                    end
 				end
 			self:PopScope()
         end
-
+        
         args = types.Tuple(args)
         ret = types.Tuple(ret)
 
@@ -1904,9 +1941,18 @@ do -- expressions
                 tbl:Set(key, obj)
             elseif node.kind == "table_index_value" then
                 local val = {self:AnalyzeExpression(node.expression, env)}
-
+                
                 if val[1].Type == "tuple" then
-                    tbl:Set(types.Number(node.i):Max(types.Number(val[1].max)), val[1].ElementType)
+                    local tup = val[1]
+                    for i = 1, tup:GetMinimumLength() do
+                        tbl:Set(tbl:GetLength() + 1, tup:Get(i))
+                    end
+
+                    if tup.Remainder then
+                        local current_index = types.Number(tbl:GetLength() + 1):MakeLiteral(true)
+                        local max = types.Number(tup.Remainder:GetLength()):MakeLiteral(true)
+                        tbl:Set(current_index:Max(max), tup.Remainder:Get(1))
+                    end
                 else 
                     if node.i then
                         tbl:Insert(val[1])

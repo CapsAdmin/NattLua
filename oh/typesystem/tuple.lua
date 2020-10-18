@@ -11,6 +11,15 @@ function META:GetSignature()
         s[i] = v:GetSignature()
     end
 
+    if self.Remainder then
+        table.insert(s, self.Remainder:GetSignature())
+    end
+
+    if self.Repeat then
+        table.insert(s, "x")
+        table.insert(s, tostring(self.Repeat))
+    end
+
     return table.concat(s, " ")
 end
 
@@ -21,63 +30,40 @@ function META:__tostring()
         s[i] = tostring(v)
     end
 
-    return (self.ElementType and tostring(self.ElementType) or "") .. "⦅" .. table.concat(s, ", ") .. (self.max == math.huge and "..." or (self.max and ("#" .. self.max)) or "") .. "⦆"
+    if self.Remainder then
+        table.insert(s, tostring(self.Remainder))
+    end
+
+    local s = "⦅" .. table.concat(s, ", ") .. "⦆"
+
+    if self.Repeat then
+        s = s .. "×" .. tostring(self.Repeat)
+    end
+
+    return s
 end
 
 function META:Merge(tup)
-    local src = self:GetTypes()
-    local dst = tup:GetTypes()
+    local src = self.data
 
-    for i,v in ipairs(dst) do
-        if src[i] then
-
-            if src[i].Type == "tuple" and src[i].max == math.huge then
-                break
-            else
-                src[i] = types.Set({src[i], v})
-            end
+    for i = 1, tup:GetMinimumLength() do
+        local a = self:Get(i)
+        local b = tup:Get(i)
+        if a then
+            src[i] = types.Set({a, b})
         else
-            src[i] = dst[i]:Copy()
+            src[i] = b:Copy()
         end
     end
 
-    return self
-end
+    self.Remainder = tup.Remainder or self.Remainder
+    self.Repeat = tup.Repeat or self.Repeat
 
-function META:SetElementType(typ)
-    self.ElementType = typ
-    return self
-end
-
-function META:GetElementType()
-    return self.ElementType
-end
-
-function META:GetMaxLength()
-    return self.max or 0
-end
-
-function META:Max(len)
-    self.max = len
     return self
 end
 
 function META:GetTypes()
     return self.data
-end
-
-function META:GetMinimumLength()
-    for i, v in ipairs(self:GetTypes()) do
-        if v.Type == "symbol" and v:GetData() == nil then
-            return i - 1
-        end
-
-        if v.Type == "set" and v:Get(types.Nil) then
-            return i - 1
-        end
-    end
-
-    return #self.data
 end
 
 function META:SetReferenceId(id)
@@ -87,10 +73,6 @@ function META:SetReferenceId(id)
     end
 
     return self
-end
-
-function META:GetLength()
-    return #self.data
 end
 
 function META:GetData()
@@ -110,8 +92,8 @@ function META:Copy(map)
     end
 
     copy.node = self.node
-    copy.ElementType = self.ElementType
-    copy.max = self.max
+    copy.Remainder = self.Remainder
+    copy.Repeat = self.Repeat
 
     return copy
 end
@@ -131,33 +113,12 @@ function META.SubsetOf(A, B)
         end
     end
 
-    if A.ElementType and A.ElementType.Type == "any" then
-        return true
-    end
-    
-    if A:GetLength() > B:GetLength() and A:GetLength() > B:GetMaxLength() then
-        return types.errors.other(tostring(A) .. " is larger than " .. tostring(B))
-    end
-
-    if B:GetLength() > A:GetLength() and B:GetLength() > A:GetMaxLength() then
-        return types.errors.other(tostring(A) .. " is smaller than " .. tostring(B))
-    end
-
-    -- vararg
-    if B.max == math.huge then
-        local ok, reason = B:Get(1):SubsetOf(A)
-        if not ok then
-            return types.errors.subset(B:Get(1), A, reason)
-        end
-        return true
-    end
-
     for i = 1, A:GetLength() do
         local a = A:Get(i)
         local b = B:Get(i)
 
         if not b then
-            return types.errors.missing(B, i)
+            return types.errors.missing(B, "index " .. i .. ": " ..tostring(a))
         end
 
         local ok, reason = a:SubsetOf(b)
@@ -171,21 +132,20 @@ function META.SubsetOf(A, B)
 end
 
 function META:Get(key)
-    if self.max and self.ElementType then
-        if key <= self.max then
-            return self.ElementType:Copy()
-        end
+    local real_key = key
+    assert(type(key) == "number", "key must be a number")
+    
+    local val = self.data[key]
+
+    if not val and self.Repeat and key <= (#self.data * self.Repeat) then
+        return self.data[((key-1) % #self.data) + 1]
     end
 
-    if type(key) == "number" then
-        return self.data[key]
+    if not val and self.Remainder then
+        return self.Remainder:Get(key - #self.data)
     end
 
-    if key.Type == "number" or key.Type == "string" and key:IsLiteral() then
-        key = key.data
-    end
-
-    return self.data[key]
+    return val
 end
 
 function META:Set(key, val)
@@ -212,38 +172,101 @@ function META:SetLength()
 end
 
 function META:IsTruthy()
-    return true
+    return self:Get(1):IsTruthy()
 end
 
 function META:IsFalsy()
-    return false
+    return self:Get(1):IsFalsy()
+end
+
+function META:GetLength()
+    if self.Remainder then
+        return #self.data + self.Remainder:GetLength()
+    end
+    
+    if self.Repeat then
+        if self.Repeat == math.huge then
+--            print(debug.traceback())
+        end
+        return #self.data * self.Repeat
+    end
+
+    return #self.data
+end
+
+function META:GetMinimumLength()
+    return #self.data
+end
+
+function META:AddRemainder(obj)
+    self.Remainder = obj
+    return self
+end
+
+function META:SetRepeat(amt)
+    self.Repeat = amt
+    return self
 end
 
 function META:Unpack(length)
-    if self.max and self.ElementType then
-        if length then
-            local t = {}
-            for i = 1, length do
-                t[i] = self.ElementType:Copy()
-            end
-            return table.unpack(t)
-        end
+    length = length or self:GetLength()
+    length = math.min(length, self:GetLength())
 
-        return self
+    assert(length ~= math.huge, "length must be finite")
+
+    local out = {}
+
+    local i = 1
+    for _ = 1, length do
+        out[i] = self:Get(i)
+        if out[i] and out[i].Type == "tuple" then
+            if i == length then
+                for _, v in ipairs({out[i]:Unpack(out[i]:GetMinimumLength())}) do
+                    out[i] = v
+                    i = i + 1
+                end
+            else
+                out[i] = out[i]:Get(1)
+            end
+        end
+        i = i + 1
     end
 
-    return table.unpack(self:GetData(), 1, length)
+    return table.unpack(out)
+end
+
+function META:Slice(start, stop)
+    -- NOT ACCURATE YET
+
+    start = start or 1
+    stop = stop or #self.data
+
+    local copy = self:Copy()
+    copy.data = {}
+    for i = start, stop do
+        table.insert(copy.data, self.data[i])
+    end
+    return copy
 end
 
 function META:Initialize(data)
-    self.data = data or {}
-
-    for _,v in ipairs(self.data) do
+    self.data = {}
+    data = data or {}
+    
+    for i, v in ipairs(data) do
         if not types.IsTypeObject(v) then
             for k,v in pairs(v) do print(k,v) end
             error(tostring(v) .. " is not a type object")
         end
+
+        if i == #data and v.Type == "tuple" and not v.Remainder then
+            self:AddRemainder(v)
+        else
+            --if v.Type == "tuple" then print(debug.traceback("uh oh: " .. tostring(v) .. " " .. i))end
+            self:Set(i, v)
+        end
     end
+
 
     return true
 end
