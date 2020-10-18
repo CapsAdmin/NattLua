@@ -1,23 +1,41 @@
-# what this is
-This is a Lua based language that transpiles to Lua. It's mostly just a toy project and place for me to explore how programming languages are built.
+# What
+"oh" is a Lua based language that transpiles to Lua. It started as a toy project and place for me to explore how programming languages are built, but my eventual goal is to use this language in (goluwa)[https://github.com/CapsAdmin/goluwa].
 
 I see this project as 5 parts at the moment. The lexer, parser, analyzer and emitter. And the typesystem which tries to exist separate from the analyzer.
 
-# lexer and parser
-I wrote the lexer and lua parser trying not to look at existing lua parsers as a learning experience. The syntax errors it can produce are more verbose than the original lua parser and it differentiates between some cases. Whitespace is also preserved properly.
+# Parsing and transpiling
+I wrote the lexer and Lua parser trying not to look at existing Lua parsers as a learning experience. The syntax errors it can produce are character based and more can be more verbose than the original Lua parser. 
 
-# analyzer and typesystem
-The analyzer works by walking through the syntax tree node by node. It runs similar to how lua runs, but on a more general level. If everything is known about a program you may get the actual output.
+* Handles Luajit, lua 5.1-5.4 and Garry's mod Lua (which just adds optional C syntax).
+* Errors are reported with character ranges
+* Can continue when there's an error (useful for editors)
+* Whitespace is preserved
+* Can differantiate between single-line C comments and lua 5.4 divison operators.
+* Transpiles bitwise operators, integer division, _ENV, etc down to luajit.
 
-# emitter
-The emitter is a bit boring, it just emits lua code from the syntax tree. The analyzer can also annotate the syntax tree so that you can see the output with types.
+# Code analysis
+The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level. If everything is known about a program you may get its actual output at evaluation time. 
 
-# current goals
+It's recommended that you add types to your code, but by default you don't need to. I try to achieve maximum inference and the ability to add break early if you wish to do so.
+
+For example:
+
+```lua
+local obj: nil | (function(): number)
+local x = obj()
+local y = x + 1
+```
+
+This code will log an error about potentially calling a nil value, but it will continue while removing nil from the set.
+
+# Current goals
 I focus strongly on correctness and making things general and low-level. 
 
-For instance, I prefer `boolean` to be a set of 2 unique symbols `true` and `false` rather than its own type.
+I personally feel this is similar to how CryEngine strives to make its engine real-time and WYSIWYG without taking baked lighting shortcuts. It's a fun and challenging at the same time.
 
-# types
+In the end I'm making this language for myself, but it's here for people to see and use if they want.
+
+# Types
 
 Fundementally the typesystem consists of number, string, table, function, symbol, set, tuple and any. They can be described by the typesystem like this:
 
