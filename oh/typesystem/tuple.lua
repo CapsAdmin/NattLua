@@ -185,9 +185,6 @@ function META:GetLength()
     end
     
     if self.Repeat then
-        if self.Repeat == math.huge then
---            print(debug.traceback())
-        end
         return #self.data * self.Repeat
     end
 

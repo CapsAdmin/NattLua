@@ -373,4 +373,27 @@ function META:Call(analyzer, arguments, ...)
     return types.errors.other(table.concat(errors, "\n"))
 end
 
+function META:MakeCallableSet(analyzer, node)
+    local new_set = types.Set()
+    local truthy_set = types.Set()
+    local falsy_set = types.Set()
+
+    for _, v in ipairs(self:GetData()) do               
+        if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
+            falsy_set:AddType(v)
+            analyzer:Report(node, "set "..tostring(self).." contains uncallable object " .. tostring(v))
+            analyzer:CloneCurrentScope()
+            analyzer:GetScope().test_condition = self
+        else
+            truthy_set:AddType(v)
+            new_set:AddType(v)
+        end
+    end
+
+    new_set.truthy_set = truthy_set
+    new_set.falsy_set = falsy_set
+
+    return truthy_set:SetSource(node, new_set, self)
+end
+
 return types.RegisterType(META)

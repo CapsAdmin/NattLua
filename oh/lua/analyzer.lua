@@ -121,7 +121,7 @@ function META:GetOperator(obj, key, node)
     return val
 end
 
-function META:NewType(node, type, data, literal, parent)
+function META:NewType(node, type, data, literal)
     local obj
 
     if type == "table" then
@@ -271,45 +271,28 @@ function META:Call(obj, arguments, call_node)
     })
 
     local env = self.PreferTypesystem and "typesystem" or "runtime"
-
+    
     if obj.Type == "set" then
-        local new_set = types.Set()
-        local truthy_set = types.Set()
-        local falsy_set = types.Set()
-
-        for _, v in ipairs(obj:GetData()) do               
-            if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-                falsy_set:AddType(v)
-
-                self:Report(call_node, "set "..tostring(obj).." contains uncallable object " .. tostring(v))
-
-                self:CloneCurrentScope()
-                self:GetScope().test_condition = obj
-            else
-                truthy_set:AddType(v)
-                new_set:AddType(v)
-            end
-        end
-
-        new_set.truthy_set = truthy_set
-        new_set.falsy_set = falsy_set
-
-        obj = truthy_set:SetSource(node, new_set, obj)
+        obj = obj:MakeCallableSet(self, call_node)
     end
-
+    
     if obj.Type ~= "function" then
         return obj:Call(self, arguments, call_node)
     end
+    
+    local function_arguments = obj:GetArguments()
 
     -- if the arguments passed are not called we need to crawl them to check its return type
-    for i, v in ipairs(arguments.data) do
-        if v.Type == "function" and not v.called and not v.explicit_return then
-            local a = obj:GetArguments():Get(i)
-            local b = v
+    for i, b in ipairs(arguments:GetData()) do
+        if b.Type == "function" and not b.called and not b.explicit_return then
+            local a = function_arguments:Get(i)
 
-            if a and b and
-                (a.Type == "function" and b.Type == "function" and not a:GetReturnTypes():SubsetOf(b:GetReturnTypes()))
-                or not a:SubsetOf(b)
+            if a and
+                (
+                    a.Type == "function" and 
+                    not a:GetReturnTypes():SubsetOf(b:GetReturnTypes())
+                )
+                    or not a:SubsetOf(b)
             then
                 self:Call(b, b:GetArguments():Copy())
             end
@@ -327,11 +310,10 @@ function META:Call(obj, arguments, call_node)
     end
     
     if obj.data.lua_function then 
-        local args = obj:GetArguments()
-        local len = args:GetLength()
+        local len = function_arguments:GetLength()
         local res
         if len == math.huge and arguments:GetLength() == math.huge then
-            local longest = math.max(args:GetMinimumLength(), arguments:GetMinimumLength())
+            local longest = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
             res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Copy():Unpack(longest))}
         else
             res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Unpack(len))}
@@ -380,10 +362,10 @@ function META:Call(obj, arguments, call_node)
                     return ok, reason
                 end
             else
-                -- copy the entire tuple so we don't modify the return value of this call
                 obj:GetReturnTypes():Merge(return_tuple)
             end
         end
+
         obj:GetArguments():Merge(arguments)
 
         self:FireEvent("function_spec", obj)
@@ -1651,60 +1633,54 @@ do -- expressions
         end
 
         function META:AnalyzePostfixOperatorExpression(node, env)
-            return self:Assert(
-                node, 
-                self:PostfixOperator(
-                    node, 
-                    self:AnalyzeExpression(node.left, env), 
-                    env
-                )
-            )
+            return self:Assert(node, self:PostfixOperator(node, self:AnalyzeExpression(node.left, env), env))
         end
     end
     
+    local Tuple = types.Tuple
     function META:AnalyzePostfixCallExpression(node, env)
-        local obj = self:AnalyzeExpression(node.left, env)
-        local arguments = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
+        local callable = self:AnalyzeExpression(node.left, env)
+        if callable.Type == "tuple" then
+            callable = callable:Get(1)
+        end
+
+        local types = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
 
         if self.self_arg_stack and node.left.kind == "binary_operator" and node.left.value.value == ":" then
-            table.insert(arguments, 1, table.remove(self.self_arg_stack))
+            table.insert(types, 1, table.remove(self.self_arg_stack))
         end
         
         self.PreferTypesystem = node.type_call
 
-        local temp = {}
-        if #arguments == 1 and arguments[1].Type == "tuple" then
-            arguments = arguments[1]
+        local arguments
+
+        if #types == 1 and types[1].Type == "tuple" then
+            arguments = types[1]
         else
-            for i,v in ipairs(arguments) do
+            local temp = {}
+            for i,v in ipairs(types) do
                 if v.Type == "tuple" then
                     temp[i] = v:Get(1)
                 else
                     temp[i] = v
                 end
             end
-            arguments = types.Tuple(temp)
+            arguments = Tuple(temp)
         end
         
-        if obj.Type == "tuple" then
-            obj = obj:Get(1)
-        end
+        local returned_tuple = self:Assert(node, self:Call(callable, arguments, node))
         
-        local obj = self:Assert(node, self:Call(obj, arguments, node))
         self.PreferTypesystem = nil
 
-        -- TODO: hacky workaround for trimming the returned tuple
-        -- local a,b,c = (foo())
-        -- b and c should be nil, a should be something
-        if not obj:IsEmpty() and node.tokens["("] and node.tokens[")"] then
-            obj = obj:Get(1)
+        if node:IsWrappedInParenthesis() then
+            returned_tuple = returned_tuple:Get(1)
         end
 
-        if obj.Type == "tuple" and obj:GetLength() == 1 then
-            obj = obj:Get(1)
+        if returned_tuple.Type == "tuple" and returned_tuple:GetLength() == 1 then
+            returned_tuple = returned_tuple:Get(1)
         end
 
-        return obj
+        return returned_tuple
     end
 
     function META:AnalyzePostfixExpressionIndexExpression(node, env)

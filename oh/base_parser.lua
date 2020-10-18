@@ -35,6 +35,10 @@ return function(META)
             return em:Concat()
         end
 
+        function META:IsWrappedInParenthesis()
+            return self.tokens["("] and self.tokens[")"]
+        end
+        
         PARSER.ExpressionMeta = META
 
         local id = 0
