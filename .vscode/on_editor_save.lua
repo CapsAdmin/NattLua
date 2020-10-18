@@ -4,8 +4,12 @@ if path:sub(-4) ~= ".lua" and path:sub(-3) ~= ".oh" then
     return
 end
 
+local function run(path, ...)
+    assert(loadfile(path))(...)
+end
+
 if path:find("test/") and path:sub(-3) ~= ".oh" then
-    os.execute("luajit test/run.lua " .. path)
+    run("test/run.lua", path)
     return
 end
 
@@ -18,13 +22,13 @@ if path:find("oh/oh", nil, true) and not path:find("helpers") then
     if not f or (f and #f:read("*all") == 0) then
         if f then f:close() end
         if path:find("/lua/") then
-            os.execute("luajit test/run.lua lua")
+            run("test/run.lua", "lua")
         elseif path:find("/c_preprocessor/") then
-            os.execute("luajit test/run.lua c_preprocessor")
+            run("test/run.lua", "c_preprocessor")
         elseif path:find("/c/") then
-            os.execute("luajit test/run.lua c")
+            run("test/run.lua", "c")
         else
-            os.execute("luajit test/run.lua")
+            run("test/run.lua")
         end
         return
     else
@@ -33,7 +37,7 @@ if path:find("oh/oh", nil, true) and not path:find("helpers") then
 end
 
 if path:find("examples/") and path:sub(-3) ~= ".oh" then
-    os.execute("luajit " .. path)
+    run(path)
     return
 end
 
