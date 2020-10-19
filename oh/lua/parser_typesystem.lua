@@ -1,5 +1,6 @@
+local list = require("oh.library.list")
+
 return function(META)
-    local table_insert = table.insert
     local math_huge = math.huge
     local syntax = require("oh.lua.syntax")
 
@@ -140,12 +141,12 @@ return function(META)
 
 
     function META:ReadTypeFunctionBody(node, plain_args)
-        node.tokens["("] = self:ReadValue("(")
+        node.tokens["arguments("] = self:ReadValue("(")
 
         if plain_args then
             node.identifiers = self:ReadIdentifierList()
         else
-            node.identifiers = {}
+            node.identifiers = list.new()
 
             for i = 1, math_huge do
                 if self:HandleListSeparator(node.identifiers, i, self:ReadTypeFunctionArgument()) then
@@ -161,10 +162,10 @@ return function(META)
             if self:IsType("letter") then
                 vararg.explicit_type = self:ReadValue()
             end
-            table.insert(node.identifiers, vararg)
+            node.identifiers:insert(vararg)
         end
 
-        node.tokens[")"] = self:ReadValue(")", node.tokens["("])
+        node.tokens["arguments)"] = self:ReadValue(")", node.tokens["arguments("])
 
         if self:IsValue(":") then
             node.tokens[":"] = self:ReadValue(":")
@@ -179,17 +180,17 @@ return function(META)
     end
 
     function META:ReadTypeFunctionBody2(node)
-        node.tokens["("] = self:ReadValue("<|")
+        node.tokens["arguments("] = self:ReadValue("<|")
 
         node.identifiers = self:ReadIdentifierList()
 
         if self:IsValue("...") then
             local vararg = self:Expression("value")
             vararg.value = self:ReadValue("...")
-            table.insert(node.identifiers, vararg)
+            node.identifiers:insert(vararg)
         end
 
-        node.tokens[")"] = self:ReadValue("|>", node.tokens["("])
+        node.tokens["arguments)"] = list.new(self:ReadValue("|>", node.tokens["arguments("]))
 
         if self:IsValue(":") then
             node.tokens[":"] = self:ReadValue(":")
@@ -212,11 +213,11 @@ return function(META)
 
     function META:ExpectTypeExpression(what)
         if self.nodes[1].expressions then
-            table.insert(self.nodes[1].expressions, self:ReadTypeExpression())
+            self.nodes[1].expressions:insert(self:ReadTypeExpression())
         elseif self.nodes[1].expression then
-            self.nodes[1].expressions = {self.nodes[1].expression}
+            self.nodes[1].expressions = list.new(self.nodes[1].expression)
             self.nodes[1].expression = nil
-            table.insert(self.nodes[1].expressions, self:ReadTypeExpression())
+            self.nodes[1].expressions:insert(self:ReadTypeExpression())
         else
             self.nodes[1].expression = self:ReadTypeExpression()
         end
@@ -252,8 +253,8 @@ return function(META)
         self:ExpectKeyword("{")
 
         local tree = self:GetNode()
-        tree.children = {}
-        tree.tokens["separators"] = {}
+        tree.children = list.new()
+        tree.tokens["separators"] = list.new()
 
         for i = 1, math_huge do
             if self:IsValue("}") then
@@ -317,12 +318,12 @@ return function(META)
                 return
             end
 
-            node.tokens["("] = node.tokens["("] or {}
-            table_insert(node.tokens["("], 1, pleft)
+            node.tokens["("] = node.tokens["("] or list.new()
+            node.tokens["("]:insert(1, pleft)
 
 
-            node.tokens[")"] = node.tokens[")"] or {}
-            table_insert(node.tokens[")"], self:ReadValue(")"))
+            node.tokens[")"] = node.tokens[")"] or list.new()
+            node.tokens[")"]:insert(self:ReadValue(")"))
 
         elseif syntax.typesystem.IsPrefixOperator(self:GetToken()) then
             node = self:Expression("prefix_operator")
@@ -463,7 +464,7 @@ return function(META)
             node.tokens["interface"] = self:ReadValue("interface")
             node.key = self:ReadIndexExpression()
             node.tokens["{"] = self:ReadValue("{")
-            local list = {}
+            local list = list.new()
             for i = 1, math_huge do
                 if not self:IsType("letter") then break end
                 local node = self:Statement("interface_declaration")
@@ -529,8 +530,8 @@ return function(META)
 
             node.root = root
 
-            self.root.imports = self.root.imports or {}
-            table.insert(self.root.imports, node)
+            self.root.imports = self.root.imports or list.new()
+            self.root.imports:insert(node)
 
             return node
         end
@@ -544,7 +545,7 @@ return function(META)
         function META:ReadImportExpression()
             local node = self:Expression("import")
             node.tokens["import"] = self:ReadValue("import")
-            node.tokens["("] = self:ReadValue("(")
+            node.tokens["("] = list.new(self:ReadValue("("))
 
             local start = self:GetToken()
 
@@ -563,10 +564,10 @@ return function(META)
             node.root = root.SyntaxTree
             node.analyzer = root
 
-            node.tokens[")"] = self:ReadValue(")")
+            node.tokens[")"] = list.new(self:ReadValue(")"))
 
-            self.root.imports = self.root.imports or {}
-            table.insert(self.root.imports, node)
+            self.root.imports = self.root.imports or list.new()
+            self.root.imports:insert(node)
 
             return node
         end

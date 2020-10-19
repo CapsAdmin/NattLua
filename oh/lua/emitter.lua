@@ -112,9 +112,9 @@ end
 
 do
     local function emit_function_body(self, node, type_function)
-        self:EmitToken(node.tokens["("] or node.tokens["<"])
+        self:EmitToken(node.tokens["arguments("] or node.tokens["arguments<"])
         self:EmitIdentifierList(node.identifiers)
-        self:EmitToken(node.tokens[")"] or node.tokens[">"])
+        self:EmitToken(node.tokens["arguments)"] or node.tokens["arguments>"])
 
 
         if self.config.annotate and node.inferred_type and not type_function then
@@ -700,7 +700,7 @@ do -- types
 
     function META:EmitTypeFunction(node)
         self:EmitToken(node.tokens["function"])
-        self:EmitToken(node.tokens["("])
+        self:EmitToken(node.tokens["arguments("])
         for i, exp in ipairs(node.identifiers) do
 
             if not self.config.annotate and node.statements then
@@ -724,7 +724,7 @@ do -- types
                 end
             end
         end
-        self:EmitToken(node.tokens[")"])
+        self:EmitToken(node.tokens["arguments)"])
         if node.tokens[":"] then
             self:EmitToken(node.tokens[":"])
             for i, exp in ipairs(node.return_types) do

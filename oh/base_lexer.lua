@@ -1,3 +1,5 @@
+local list = require("oh.library.list")
+
 return function(META --[[#: 
     {
         syntax = {
@@ -57,7 +59,7 @@ return function(META --[[#:
         end
     end
 
-    local function list()
+    local function list2()
         local tbl --[[#: {[number] = any}]]
         local i
 
@@ -71,7 +73,7 @@ return function(META --[[#:
                 i = i + 1
             end,
             get = function(self)
-                return tbl
+                return list.fromtable(tbl)
             end
         }
 
@@ -389,8 +391,8 @@ return function(META --[[#:
             token.value = self:GetChars(token.start, token.stop)
         end
 
-        local buffer = list()
-        local non_whitespace = list()
+        local buffer = list2()
+        local non_whitespace = list2()
 
         for _, token in ipairs(tokens) do
             if token.type ~= "discard" then

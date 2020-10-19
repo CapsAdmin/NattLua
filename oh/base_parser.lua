@@ -1,10 +1,10 @@
+local list = require("oh.library.list")
+
 return function(META)
     local tprint = require("libraries.tprint")
 
-    local table_insert = table.insert
     local setmetatable = setmetatable
     local type = type
-    local pairs = pairs
 
     do
         local PARSER = META
@@ -45,7 +45,7 @@ return function(META)
 
         function PARSER:Expression(kind)
             local node = {}
-            node.tokens = {}
+            node.tokens = list.new()
             node.kind = kind
             node.id = id
             node.code = self.code
@@ -88,10 +88,10 @@ return function(META)
 
         function META:GetStatements()
             if self.kind == "if" then
-                local flat = {}
-                for _, statements in ipairs(self.statements) do
-                    for _, v in ipairs(statements) do
-                        table_insert(flat, v)
+                local flat = list.new()
+                for _, statements in self.statements:pairs() do
+                    for _, v in statements:pairs() do
+                        flat:insert(v)
                     end
                 end
                 return flat
@@ -104,10 +104,10 @@ return function(META)
         end
 
         function META:FindStatementsByType(what, out)
-            out = out or {}
-            for _, child in ipairs(self:GetStatements()) do
+            out = out or list.new()
+            for _, child in self:GetStatements():pairs() do
                 if child.kind == what then
-                    table_insert(out, child)
+                    out:insert(child)
                 elseif child:GetStatements() then
                     child:FindStatementsByType(what, out)
                 end
@@ -126,7 +126,7 @@ return function(META)
         function PARSER:Statement(kind)
             local node = {}
 
-            node.tokens = {}
+            node.tokens = list.new()
             node.kind = kind
             node.id = id
             node.code = self.code
@@ -145,8 +145,6 @@ return function(META)
     end
 
     function META:Error(msg, start, stop, ...)
-        if not self.OnError then return end
-
         if type(start) == "table" then
             start = start.start
         end
@@ -158,9 +156,11 @@ return function(META)
         start = start or tk and tk.start or 0
         stop = stop or tk and tk.stop or 0
 
-        --msg = debug.traceback(msg)
-
         self:OnError(self.code, self.name, msg, start, stop, ...)
+    end
+
+    function META:OnError()
+
     end
 
     function META:GetToken(offset)
@@ -179,19 +179,19 @@ return function(META)
 
     function META:RemoveToken(i)
         local t = self.tokens[i]
-        table.remove(self.tokens, i)
+        self.tokens:remove(i)
         return t
     end
 
     function META:AddTokens(tokens)
-        local eof = table.remove(self.tokens)
-        for i, token in ipairs(tokens) do
+        local eof = self.tokens:remove()
+        for i, token in tokens:pairs() do
             if token.type == "end_of_file" then
                 break
             end
-            table.insert(self.tokens, self.i + i - 1, token)
+            self.tokens:insert(self.i + i - 1, token)
         end
-        table.insert(self.tokens, eof)
+        self.tokens:insert(eof)
     end
 
     function META:IsValue(str, offset)
@@ -234,8 +234,8 @@ return function(META)
             if not tk then
                 self:Error("expected $1: reached end of code", start, stop, values)
             end
-            local array = {}
-            for k in pairs(values) do table_insert(array, k) end
+            local array = list.new()
+            for k in pairs(values) do array:insert(k) end
             self:Error("expected $1 got $2", start, stop, array, tk.type)
         end
 
@@ -251,7 +251,7 @@ return function(META)
     end
 
     function META:BuildAST(tokens)
-        self.tokens = tokens
+        self.tokens = list.fromtable(tokens)
         self.i = 1
 
         return self:Root(self.config and self.config.root)
@@ -272,20 +272,21 @@ return function(META)
         node.statements = self:ReadStatements()
 
         if shebang then
-            table_insert(node.statements, 1, shebang)
+            node.statements:insert(1, shebang)
         end
 
         if self:IsType("end_of_file") then
             local eof = self:Statement("end_of_file")
             eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-            table_insert(node.statements, eof)
+            node.statements:insert(eof)
         end
 
         return self:EndStatement()
     end
 
     function META:ReadStatements(stop_token)
-        local out = {}
+        local out = list.new()
+
         for i = 1, self:GetLength() do
             if not self:GetToken() or stop_token and stop_token[self:GetToken().value] then
                 break
@@ -321,12 +322,10 @@ return function(META)
 
     do -- functional-like helpers. makes the code easier to read and maintain but does not always work
         function META:BeginStatement(kind, return_node)
-            self.nodes = self.nodes or {}
-
             local node = self:Statement(kind)
             node.parent = self.nodes[1]
 
-            table.insert(self.nodes, 1, node)
+            self.nodes:insert(1, node)
 
             if return_node then
                 return node
@@ -336,11 +335,9 @@ return function(META)
         end
 
         function META:BeginExpression(kind, return_node)
-            self.nodes = self.nodes or {}
-
             local node = self:Expression(kind)
             node.parent = self.nodes[1]
-            table.insert(self.nodes, 1, node)
+            self.nodes:insert(1, node)
 
             if return_node then
                 return node
@@ -368,10 +365,10 @@ return function(META)
 
             if tokens[what] then
                 if not tokens[what][1] then
-                    tokens[what] = {tokens[what]}
+                    tokens[what] = list.new(tokens[what])
                 end
 
-                table.insert(tokens[what], token)
+                tokens[what]:insert(token)
             else
                 tokens[what] = token
             end
@@ -392,12 +389,12 @@ return function(META)
         end
 
         function META:EndStatement()
-            local node = table.remove(self.nodes, 1)
+            local node = self.nodes:remove(1)
             return node
         end
 
         function META:EndExpression()
-            local node = table.remove(self.nodes, 1)
+            local node = self.nodes:remove(1)
             return node
         end
 

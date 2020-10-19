@@ -1,13 +1,9 @@
+local list = require("oh.library.list")
+
 return function(META)
-    local table_insert = table.insert
     local setmetatable = setmetatable
     local type = type
     local math_huge = math.huge
-    local pairs = pairs
-    local table_insert = table.insert
-    local table_concat = table.concat
-
-    local table_insert = table.insert
 
     local syntax = require("oh.lua.syntax")
 
@@ -80,20 +76,20 @@ return function(META)
             node.tokens["["] = self:ReadValue("[")
             node.tag = self:ReadType("letter")
 
-            local props = {}
+            local props = list.new()
 
             while true do
                 if self:IsType("letter") and self:IsValue("=", 1) then
                     local key = self:ReadType("letter")
                     self:ReadValue("=")
                     local val = self:ReadExpectExpression(nil, true)
-                    table.insert(props, {
+                    props:insert({
                         key = key,
                         val = val,
                     })
                 elseif self:IsValue("...") then
                     self:ReadTokenLoose() -- !
-                    table.insert(props, {
+                    props:insert({
                         val = self:ReadExpression(nil, true),
                         spread = true,
                     })

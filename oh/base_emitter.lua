@@ -26,7 +26,10 @@ return function(META)
         end
     end
 
-    function META:Emit(str) assert(type(str) == "string")
+    function META:Emit(str)
+        if type(str) ~= "string" then
+            error(debug.traceback("attempted to emit a non string " .. tostring(str)))
+        end
         self.out[self.i] = str or ""
         self.i = self.i + 1
     end

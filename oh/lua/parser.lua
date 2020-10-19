@@ -1,8 +1,5 @@
+local list = require("oh.library.list")
 local syntax = require("oh.lua.syntax")
-
-local table_insert = table.insert
-local math_huge = math.huge
-local pairs = pairs
 
 local META = {}
 META.__index = META
@@ -17,11 +14,11 @@ require("oh.lua.parser_extra")(META)
 do -- functional helpers
     function META:ExpectExpression(what)
         if self.nodes[1].expressions then
-            table.insert(self.nodes[1].expressions, self:ReadExpectExpression())
+            self.nodes[1].expressions:insert(self:ReadExpectExpression())
         elseif self.nodes[1].expression then
-            self.nodes[1].expressions = {self.nodes[1].expression}
+            self.nodes[1].expressions = list.new(self.nodes[1].expression)
             self.nodes[1].expression = nil
-            table.insert(self.nodes[1].expressions, self:ReadExpectExpression())
+            self.nodes[1].expressions:insert(self:ReadExpectExpression())
         else
             self.nodes[1].expression = self:ReadExpectExpression()
         end
@@ -218,22 +215,22 @@ do
 end
 
 function META:ReadFunctionBody(node)
-    node.tokens["("] = self:ReadValue("(")
+    node.tokens["arguments("] = self:ReadValue("(")
     node.identifiers = self:ReadIdentifierList()
 
     if self:IsValue("...") then
-        table_insert(node.identifiers, self:BeginExpression("value"):Store("value", self:ReadValue()):EndExpression())
+        node.identifiers:insert(self:BeginExpression("value"):Store("value", self:ReadValue()):EndExpression())
         if self:IsType("letter") then
             node.identifiers[#node.identifiers].explicit_type = self:ReadValue()
         end
     end
 
-    node.tokens[")"] = self:ReadValue(")")
+    node.tokens["arguments)"] = self:ReadValue(")")
 
     if self:IsValue(":") then
         node.tokens[":"] = self:ReadValue(":")
 
-        local out = {}
+        local out = list.new()
         for i = 1, self:GetLength() do
 
             local typ = self:ReadTypeExpression()
@@ -332,10 +329,10 @@ do
     function META:ReadIfStatement()
         local node = self:BeginStatement("if", true)
 
-        node.expressions = {}
-        node.statements = {}
-        node.tokens["if/else/elseif"] = {}
-        node.tokens["then"] = {}
+        node.expressions = list.new()
+        node.statements = list.new()
+        node.tokens["if/else/elseif"] = list.new()
+        node.tokens["then"] = list.new()
 
         for i = 1, self:GetLength() do
             local token
@@ -401,7 +398,7 @@ do -- identifier
     end
 
     function META:ReadIdentifierList(max)
-        local out = {}
+        local out = list.new()
 
         for i = 1, max or self:GetLength() do
             if (not self:IsType("letter") and not self:IsValue("...")) or self:HandleListSeparator(out, i, self:ReadIdentifier()) then
@@ -470,8 +467,8 @@ do -- expression
         local tree = self:BeginExpression("table", true)
         self:ExpectKeyword("{")
 
-        tree.children = {}
-        tree.tokens["separators"] = {}
+        tree.children = list.new()
+        tree.tokens["separators"] = list.new()
 
         for i = 1, self:GetLength() do
             if self:IsValue("}") then
@@ -560,13 +557,13 @@ do -- expression
 
     function META:CheckForIntegerDivisionOperator(node)
         if node and not node.idiv_resolved then
-            for i, token in ipairs(node.whitespace) do
+            for i, token in node.whitespace:pairs() do
                 if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
-                    table.remove(node.whitespace, i)
+                    node.whitespace:remove(i)
 
                     local tokens = require("oh.lua.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
                     
-                    for _, token in ipairs(tokens) do
+                    for _, token in tokens:pairs() do
                         self:CheckForIntegerDivisionOperator(token)
                     end
                     
@@ -592,11 +589,11 @@ do -- expression
                 return
             end
 
-            node.tokens["("] = node.tokens["("] or {}
-            table_insert(node.tokens["("], 1, pleft)
+            node.tokens["("] = node.tokens["("] or list.new()
+            node.tokens["("]:insert(1, pleft)
 
-            node.tokens[")"] = node.tokens[")"] or {}
-            table_insert(node.tokens[")"], self:ReadValue(")"))
+            node.tokens[")"] = node.tokens[")"] or list.new()
+            node.tokens[")"]:insert(self:ReadValue(")"))
 
         elseif syntax.IsPrefixOperator(self:GetToken()) then
             node = self:BeginExpression("prefix_operator", true)
@@ -713,7 +710,7 @@ do -- expression
     end
 
     function META:ReadExpressionList(max)
-        local out = {}
+        local out = list.new()
 
         for i = 1, max or self:GetLength() do
             local exp = max and self:ReadExpectExpression() or self:ReadExpression()
@@ -739,13 +736,13 @@ do -- statements
         end
 
         local start = self:GetToken()
-        local left = self:ReadExpressionList(math_huge)
+        local left = self:ReadExpressionList(math.huge)
 
         if self:IsValue("=") then
             local node = self:BeginStatement("assignment", true)
             node.tokens["="] = self:ReadValue("=")
             node.left = left
-            node.right = self:ReadExpressionList(math_huge)
+            node.right = self:ReadExpressionList(math.huge)
 
             return self:EndStatement()
         end
@@ -793,5 +790,16 @@ do -- statements
 end
 
 return function(config)
-    return setmetatable({config = config}, META)
+    return setmetatable({
+        config = config,
+        nodes = list.new(),
+        name = "",
+        code = "",
+        current_statement = false,
+        current_expression = false,
+        root = false,
+        i = 1,
+        tokens = list.new(),
+        OnError = function() end,
+    }, META)
 end
