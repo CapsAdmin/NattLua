@@ -1,10 +1,10 @@
 # What
-"oh" is a Lua based language that transpiles to Lua. It started as a toy project and place for me to explore how programming languages are built, but my eventual goal is to use this language in (goluwa)[https://github.com/CapsAdmin/goluwa].
+"oh" is a Lua based language with a typesystem that transpiles to Lua. It started as a toy project and place for me to explore how programming languages are built, but my eventual goal is to use this language in (goluwa)[https://github.com/CapsAdmin/goluwa].
 
-I see this project as 5 parts at the moment. The lexer, parser, analyzer and emitter. And the typesystem which tries to exist separate from the analyzer.
+I see this project as 5 parts at the moment. The lexer, parser, analyzer and emitter and the algebraic types.
 
 # Parsing and transpiling
-I wrote the lexer and Lua parser trying not to look at existing Lua parsers as a learning experience. The syntax errors it can produce are character based and more can be more verbose than the original Lua parser. 
+I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it a little bit different in some ways. The syntax errors it can report are not standard and a bit more detailed. It's written in a way to be easily extendable for new syntax.
 
 * Handles Luajit, lua 5.1-5.4 and Garry's mod Lua (which just adds optional C syntax).
 * Errors are reported with character ranges
@@ -13,10 +13,14 @@ I wrote the lexer and Lua parser trying not to look at existing Lua parsers as a
 * Can differantiate between single-line C comments and lua 5.4 divison operators.
 * Transpiles bitwise operators, integer division, _ENV, etc down to luajit.
 
-# Code analysis
-The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level. If everything is known about a program you may get its actual output at evaluation time. 
+I have not fully decided the syntax for the language and runtime semantics for lua 5.3/4 features. But I feel this is more of a detail that can easily be changed later.
 
-It's recommended that you add types to your code, but by default you don't need to. I try to achieve maximum inference and the ability to add break early if you wish to do so.
+# Code analysis and typesystem
+The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure. If everything is known about a program you may get its actual output at evaluation time. The typesystem is optional can be used similar to how you'd use it in Typescript.
+
+The typesystem is designed to be non-opinionated and low level, kind of like the spirit of Lua. 
+
+I try to achieve maximum type inference (for no real reason other than it's fun and challenging to make), but this can lead to some cryptic errors so in practice it's best to type your code, especially in functions.
 
 For example:
 
@@ -26,18 +30,17 @@ local x = obj()
 local y = x + 1
 ```
 
-This code will log an error about potentially calling a nil value, but it will continue while removing nil from the set.
+This code will log an error about potentially calling a nil value, but it will continue while removing nil from the set onwards. It does this by copying the current scope where.
 
-# Current goals
-I focus strongly on type inferrence and adding tests. The parsing part of the project is mostly done except I have some ideas to make it cleaner.
+# Current status and goals
+At the moment I focus strongly on type inferrence and adding tests while trying to keep the code sane.
 
-I personally feel this is similar to how CryEngine strived to make its engine real-time and WYSIWYG without taking precomputation shortcuts. It's fun and challenging at the same time.
-
-In the end I'm making this language for myself, but it's here for people to see and use if they want.
+The parsing part of the project is mostly done except I have some ideas to make it cleaner and more extendable.
 
 # Types
 
-Fundementally the typesystem consists of number, string, table, function, symbol, set, tuple and any. As an example, some of the types can be described by the typesystem like this:
+Fundementally the typesystem consists of number, string, table, function, symbol, set, tuple and any. 
+As an example, types can be described by the language like this:
 
 ```lua
 local type Boolean = true | false
@@ -56,10 +59,11 @@ local type Function = ( function(...Any): ...Any )
 It's not entirely accurate but those types should behave the same way as number, string, boolean, etc.
 
 # Numbers 
-From the narrow to wide
+From literal to loose
 
 ```lua
 type N = 1
+
 local foo: N = 1
 local foo: N = 2
       ^^^: 2 is not a subset of 1
@@ -67,6 +71,7 @@ local foo: N = 2
 
 ```lua
 type N = 1 .. 10
+
 local foo: N = 1
 local foo: N = 4
 local foo: N = 11
@@ -95,7 +100,7 @@ local qux: N = 0/0
 The logical progression here is to define N as `-inf .. inf | nan` but that has semantically the same meaning as `number`
 
 # Strings
-can be defined as lua string patterns to constrain them:
+Strings can be defined as lua string patterns to constrain them:
 
 ```lua
 local type mystring = $"FOO_.-"
@@ -104,12 +109,12 @@ local a: mystring = "FOO_BAR"
 local b: mystring = "lol"
                     ^^^^^ : the pattern failed to match
 ```
-a literal value:
+A literal value:
 ```lua
 type foo = "foo"
 ```
 
-or loose:
+Or loose:
 ```lua
 type one = string
 ```
@@ -144,9 +149,9 @@ local type mytable = {
 ```
 
 # Sets
-are types separated by `|` these are mostly used in uncertain conditions.
+A Set is a type separated by the bor operator `|` these are often used in uncertain conditions.
 
-for example this case:
+For example this case:
 
 ```lua
 local x = 0
@@ -330,6 +335,61 @@ local func = build_summary_function({
     -> | myfunc:3:14 : expected assignment or call expression got ❲symbol❳ (❲!❳)
 ```
 This works because there is no uncertainty about the code generated passed to the load function. If there was, lets say we did `body = "sum = sum + 1" .. (unknown_global as string)`, this would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
+
+# Dictionary
+
+I'm not an academic person and so I struggle a bit with naming things properly in the typesystem, but I think I'm getting the hang of it. Here are some definitions, some public and some private.
+
+## Type hiearchy
+The way I see types is that they are like parent / children. This can be visualized in "mind maps" neatly.
+
+## Subset
+If something is "sub" of /lower/inside/contains something larger. For example `1` is a subset of `number` because `number` contains all the numbers.
+`1` is also a subset of `1 | 2` since the set contains `1`. But `number` is not a subset of `1` since `1` does not contain numbers like 2, 4, 100, 1337, 90377, etc.
+
+```lua
+    -- pseduo code
+
+    local one = {1}
+    local number = {1,2,3,4,5,6,7,...} -- all possible numbers
+    
+    local function is_subset(a, b)
+        for _, val in ipairs(a) do
+            if not table.contains(val, b) then
+                return false, "a is not a subset of b: type b does not contain " .. tostring(val)
+            end
+        end
+        return true
+    end
+
+    assert(is_subset(one, number))
+    assert(not is_subset(number, one))
+```
+
+## Superset
+The logical opposite of subset
+```lua
+local is_superset = function(a, b) return is_subset(b, a) end
+```
+
+## Literal
+Something of which nothing can be a subset of, except itself. It is similar to an atom or unit in other languages.
+
+## runtime / typesystem
+The analyzer will analyze code in these two different contexts. Locals and environment variables are stored in separate scopes and code behaves a little bit different in each environment. They are 2 different worlds where the typesystem watches and tells you about how the runtime beahves.
+```lua
+local a: *type expression analyzed in "typesystem"* = *runtime expression anlyzed in "runtime"*
+```
+
+## Contract
+If a runtime object is given a contract, it cannot be anything that breaks this contract.
+
+
+```lua
+local a: 1 .. 5 = 3 -- 3 is within 1 .. 5 so the contract is not broken
+a = 1 -- 1 is still within the contract
+a = 6 -- the contract was broken, so log an error.
+```
 
 # Development
 
