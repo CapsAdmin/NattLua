@@ -3,7 +3,7 @@ local map --= {}
 if map then
     debug.sethook(function(evt)
         if evt ~= "line" then return end
-        local info = debug.getinfo(2, "ls")
+        local info = debug.getinfo(2)
         local src = info.source:sub(2)
         map[src] = map[src] or {}    
         map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
