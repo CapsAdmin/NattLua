@@ -7,11 +7,27 @@ META.Type = "function"
 META.__index = META
 
 function META:GetSignature()
-    return "function" .. "-"..self:GetArguments():GetSignature() .. ":" .. self:GetReturnTypes():GetSignature()
+    if self.suppress then
+        return "*self*"
+    end
+
+    self.suppress = true
+    local s = "function" .. "-"..self:GetArguments():GetSignature() .. ":" .. self:GetReturnTypes():GetSignature()
+    self.suppress = false
+
+    return s
 end
 
 function META:__tostring()
-    return "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
+    if self.suppress then
+        return "*self*"
+    end
+
+    self.suppress = true
+    local s = "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
+    self.suppress = false
+
+    return s
 end
 
 function META:GetArguments()

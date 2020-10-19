@@ -157,6 +157,10 @@ return function(META)
         if self:IsValue("...") then
             local vararg = self:Expression("value")
             vararg.value = self:ReadValue("...")
+            
+            if self:IsType("letter") then
+                vararg.explicit_type = self:ReadValue()
+            end
             table.insert(node.identifiers, vararg)
         end
 
@@ -324,6 +328,10 @@ return function(META)
             node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
             node.right = self:ReadTypeExpression(math_huge)
+        elseif self:IsValue("...") and self:IsType("letter", 1) then
+            node = self:Expression("value")
+            node.value = self:ReadValue("...")
+            node.explicit_type = self:ReadTypeExpression()
         elseif self:IsType("letter") and self:IsValue("...", 1) then
             node = self:Expression("vararg_tuple")
             node.value = self:ReadTokenLoose()

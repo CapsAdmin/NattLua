@@ -96,6 +96,11 @@ function META.SubsetOf(A, B)
 end
 
 function META:__tostring()
+
+    if self.pattern_contract then
+        return "$(" .. self.pattern_contract .. ")"
+    end
+
     if self.literal then
         if self.data then
             return ("%q"):format(self.data)

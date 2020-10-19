@@ -223,6 +223,9 @@ function META:ReadFunctionBody(node)
 
     if self:IsValue("...") then
         table_insert(node.identifiers, self:BeginExpression("value"):Store("value", self:ReadValue()):EndExpression())
+        if self:IsType("letter") then
+            node.identifiers[#node.identifiers].explicit_type = self:ReadValue()
+        end
     end
 
     node.tokens[")"] = self:ReadValue(")")

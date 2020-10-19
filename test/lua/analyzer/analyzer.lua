@@ -418,3 +418,38 @@ run[[
         type_expect(faz(1), 12)
     end
 ]]
+
+run[[
+    local type Boolean = true | false
+    local type Number = -inf .. inf | nan
+    local type String = $".*"
+    local type Any = Number | Boolean | String | nil
+    local type Table = {[exclude<|Any, nil|> | self] = Any | self}
+    local type Function = (function(...Any): ...Any)
+
+    do
+        -- At this point, Any does not include the Function and Table type.
+        -- We work around this by mutating the type after its declaration
+
+        local type function extend_any(obj, func, tbl)
+            obj:AddType(tbl)
+            obj:AddType(func)
+        end
+
+        --extend_any<|Any, Function, Table|>
+    end
+
+    local a: Any
+    local b: Boolean
+    local a: String = "adawkd"
+
+    local t: {
+        [String] = Function,
+    }
+
+    local x,y,z = t.foo(a, b)
+    
+    type_assert(x, _ as Any)
+    type_assert(y, _ as Any)
+    type_assert(z, _ as Any)
+]]

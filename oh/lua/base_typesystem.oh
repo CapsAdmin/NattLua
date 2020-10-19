@@ -8,6 +8,12 @@ local type thread = Table
 
 local type empty_function = function(...): any
 
+type function exclude(T, U)
+	T = T:Copy()
+    T:RemoveType(U)
+    return T
+end
+
 type function enum(tbl)
 	assert(tbl:IsLiteral())
 	

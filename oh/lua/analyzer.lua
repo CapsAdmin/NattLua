@@ -256,19 +256,11 @@ function META:AnalyzeFunctionBody(function_node, arguments, env)
     return analyzed_return
 end
 
-function META:Call(obj, arguments, call_node)
+local function Call(self, obj, arguments, call_node)
     call_node = call_node or obj.node
     local function_node = obj.function_body_node or obj.node
 
     obj.called = true
-
-    self.call_stack = self.call_stack or {}
-
-    table.insert(self.call_stack, {
-        obj = obj,
-        func = function_node,
-        call_expression = call_node
-    })
 
     local env = self.PreferTypesystem and "typesystem" or "runtime"
     
@@ -400,6 +392,22 @@ function META:Call(obj, arguments, call_node)
     end
 
     return obj:GetReturnTypes():Copy():SetReferenceId(nil)
+end
+
+function META:Call(obj, arguments, call_node)
+    self.call_stack = self.call_stack or {}
+
+    table.insert(self.call_stack, {
+        obj = obj,
+        func = function_node,
+        call_expression = call_node
+    })
+
+    local ok, err = Call(self, obj, arguments, call_node)
+
+    table.remove(self.call_stack)
+
+    return ok, err
 end
 
 do -- control flow analysis
@@ -1573,6 +1581,7 @@ do -- expressions
                     return obj
                 elseif op == "$" then
                     local obj = self:AnalyzeExpression(node.right, "typesystem")
+
                     if obj.Type ~= "string" then
                         return types.errors.other("must evaluate to a string")
                     end
@@ -1581,7 +1590,7 @@ do -- expressions
                     end
 
                     obj.pattern_contract = obj:GetData()
-
+                
                     return obj
                 end
             end
@@ -1752,6 +1761,8 @@ do -- expressions
                 return self:NewType(node, "error")
             elseif value == "inf" then
                 return self:NewType(node, "number", math.huge, true)
+            elseif value == "nil" then
+                return self:NewType(node, "nil")
             elseif value == "nan" then
                 return self:NewType(node, "number", 0/0, true)
             elseif types.IsPrimitiveType(value) then
@@ -1853,7 +1864,12 @@ do -- expressions
 
                 for i, type_exp in ipairs(node.return_types) do
                     if type_exp.kind == "value" and type_exp.value.value == "..." then
-                        local tup = self:NewType(type_exp, "...")
+                        local tup
+                        if type_exp.explicit_type then
+                            tup = types.Tuple({self:AnalyzeExpression(type_exp.explicit_type, "typesystem")}):SetRepeat(math.huge)
+                        else
+                            tup = self:NewType(type_exp, "...")
+                        end
                         ret[i] = tup
                     else
                         ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
