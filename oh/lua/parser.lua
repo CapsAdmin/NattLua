@@ -7,10 +7,6 @@ META.__index = META
 META.Emitter = require("oh.lua.emitter")
 META.syntax = syntax
 
-require("oh.base_parser")(META)
-require("oh.lua.parser_typesystem")(META)
-require("oh.lua.parser_extra")(META)
-
 do -- functional helpers
     function META:ExpectExpression(what)
         if self.nodes[1].expressions then
@@ -53,6 +49,10 @@ do -- functional helpers
         :ExpectKeyword("end", "do")
     end
 end
+
+require("oh.base_parser")(META)
+require("oh.lua.parser_typesystem")(META)
+require("oh.lua.parser_extra")(META)
 
 do
     function META:IsBreakStatement()
@@ -217,30 +217,10 @@ end
 function META:ReadFunctionBody(node)
     node.tokens["arguments("] = self:ReadValue("(")
     node.identifiers = self:ReadIdentifierList()
-
-    if self:IsValue("...") then
-        node.identifiers:insert(self:BeginExpression("value"):Store("value", self:ReadValue()):EndExpression())
-        if self:IsType("letter") then
-            node.identifiers[#node.identifiers].explicit_type = self:ReadValue()
-        end
-    end
-
     node.tokens["arguments)"] = self:ReadValue(")")
 
-    if self:IsValue(":") then
-        node.tokens[":"] = self:ReadValue(":")
-
-        local out = list.new()
-        for i = 1, self:GetLength() do
-
-            local typ = self:ReadTypeExpression()
-
-            if self:HandleListSeparator(out, i, typ) then
-                break
-            end
-        end
-
-        node.return_types = out
+    if self:HasExplicitFunctionReturn() then
+        self:ReadExplicitFunctionReturn(node)
     end
 
     local start = self:GetToken()
@@ -528,9 +508,9 @@ do -- expression
             local node = self:BeginExpression("postfix_call", true)
 
             if self:IsValue("{") then
-                node.expressions = {self:ReadTable()}
+                node.expressions = list.new(self:ReadTable())
             elseif self:IsType("string") then
-                node.expressions = {self:BeginExpression("value"):Store("value", self:ReadTokenLoose()):EndExpression()}
+                node.expressions = list.new(self:BeginExpression("value"):Store("value", self:ReadTokenLoose()):EndExpression())
             else
                 node.tokens["call("] = self:ReadValue("(")
                 node.expressions = self:ReadExpressionList()
@@ -731,10 +711,6 @@ do -- statements
             return
         end
 
-        if self:IsDestructureStatement(0) then
-            return self:ReadDestructureAssignmentStatement()
-        end
-
         local start = self:GetToken()
         local left = self:ReadExpressionList(math.huge)
 
@@ -782,8 +758,10 @@ do -- statements
             self:IsIfStatement() then                               return self:ReadIfStatement() elseif
             self:IsWhileStatement() then                            return self:ReadWhileStatement() elseif
             self:IsNumericForStatement() then                       return self:ReadNumericForStatement() elseif
-            self:IsGenericForStatement() then                       return self:ReadGenericForStatement()
-        end
+            self:IsGenericForStatement() then                       return self:ReadGenericForStatement() elseif
+            self:IsDestructureStatement() then                      return self:ReadDestructureAssignmentStatement() elseif
+
+            false then end
 
         return self:ReadRemainingStatement()
     end

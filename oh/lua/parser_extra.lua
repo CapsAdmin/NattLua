@@ -9,6 +9,7 @@ return function(META)
 
     do
         function META:IsDestructureStatement(offset)
+            offset = offset or 0
             return
                 (self:IsValue("{", offset + 0) and self:IsType("letter", offset + 1)) or
                 (self:IsType("letter", offset + 0) and self:IsValue(",", offset + 1) and self:IsValue("{", offset + 2))

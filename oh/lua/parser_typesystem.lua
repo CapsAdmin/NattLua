@@ -139,6 +139,25 @@ return function(META)
         return self:ReadTypeExpression()
     end
 
+    function META:HasExplicitFunctionReturn()
+        return self:IsValue(":") 
+    end
+
+    function META:ReadExplicitFunctionReturn(node)
+        node.tokens[":"] = self:ReadValue(":")
+
+        local out = list.new()
+        for i = 1, self:GetLength() do
+
+            local typ = self:ReadTypeExpression()
+
+            if self:HandleListSeparator(out, i, typ) then
+                break
+            end
+        end
+
+        node.return_types = out
+    end
 
     function META:ReadTypeFunctionBody(node, plain_args)
         node.tokens["arguments("] = self:ReadValue("(")

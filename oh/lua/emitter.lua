@@ -1,3 +1,4 @@
+local list = require("oh.library.list")
 local syntax = require("oh.lua.syntax")
 local ipairs = ipairs
 local assert = assert
@@ -11,7 +12,7 @@ require("oh.base_emitter")(META)
 
 function META:EmitExpression(node)
     if node.tokens["("] then
-        for _, node in ipairs(node.tokens["("]) do
+        for _, node in node.tokens["("]:pairs() do
             self:EmitToken(node)
         end
     end
@@ -57,7 +58,7 @@ function META:EmitExpression(node)
     end
 
     if node.tokens[")"] then
-        for _, node in ipairs(node.tokens[")"]) do
+        for _, node in node.tokens[")"]:pairs() do
             self:EmitToken(node)
         end
     end
@@ -119,7 +120,7 @@ do
 
         if self.config.annotate and node.inferred_type and not type_function then
             --self:Emit(" --[[ : ")
-            local str = {}
+            local str = list.new()
             -- this iterates the first return tuple
             local obj = node.inferred_type.contract or node.inferred_type
 
@@ -132,7 +133,7 @@ do
             end
             if str[1] then
                 self:Emit(": ")
-                self:Emit(table.concat(str, ", "))
+                self:Emit(str:concat(", "))
             end
             --self:Emit(" ]] ")
         end
@@ -238,7 +239,7 @@ function META:EmitTable(tree)
     if tree.children[1] then
         self:Whitespace("\n")
             self:Whitespace("\t+")
-            for i,node in ipairs(tree.children) do
+            for i,node in tree.children:pairs() do
                 self:Whitespace("\t")
                 if node.kind == "table_index_value" then
                     if node.spread then
@@ -568,7 +569,7 @@ function META:EmitStatement(node)
 end
 
 function META:EmitStatements(tbl)
-    for _, node in ipairs(tbl) do
+    for _, node in tbl:pairs() do
         self:EmitStatement(node)
         self:Whitespace("\n")
     end
@@ -651,7 +652,7 @@ do -- types
         self:EmitToken(node.tokens["interface"])
         self:EmitExpression(node.key)
         self:EmitToken(node.tokens["{"])
-        for _,node in ipairs(node.expressions) do
+        for _,node in node.expressions:pairs() do
             self:EmitToken(node.left)
             self:EmitToken(node.tokens["="])
             self:EmitTypeExpression(node.right)
@@ -666,7 +667,7 @@ do -- types
         if node.children[1] then
             self:Whitespace("\n")
                 self:Whitespace("\t+")
-                for i, node in ipairs(node.children) do
+                for i, node in node.children:pairs() do
                     self:Whitespace("\t")
                     if node.kind == "table_index_value" then
                         self:EmitTypeExpression(node.value)
@@ -701,7 +702,7 @@ do -- types
     function META:EmitTypeFunction(node)
         self:EmitToken(node.tokens["function"])
         self:EmitToken(node.tokens["arguments("])
-        for i, exp in ipairs(node.identifiers) do
+        for i, exp in node.identifiers:pairs() do
 
             if not self.config.annotate and node.statements then
                 if exp.identifier then
@@ -727,7 +728,7 @@ do -- types
         self:EmitToken(node.tokens["arguments)"])
         if node.tokens[":"] then
             self:EmitToken(node.tokens[":"])
-            for i, exp in ipairs(node.return_types) do
+            for i, exp in node.return_types:pairs() do
                 self:EmitTypeExpression(exp)
                 if i ~= #node.return_types then
                     self:EmitToken(exp.tokens[","])
@@ -743,7 +744,7 @@ do -- types
 
     function META:EmitTypeExpression(node)
         if node.tokens["("] then
-            for _, node in ipairs(node.tokens["("]) do
+            for _, node in node.tokens["("]:pairs() do
                 self:EmitToken(node)
             end
         end
@@ -779,7 +780,7 @@ do -- types
         end
 
         if node.tokens[")"] then
-            for _, node in ipairs(node.tokens[")"]) do
+            for _, node in node.tokens[")"]:pairs() do
                 self:EmitToken(node)
             end
         end
@@ -808,7 +809,7 @@ do -- extra
         self:EmitExpression(node.right)
         self:Emit(", ")
         self:Emit("{")
-        for i, v in ipairs(node.left) do
+        for i, v in node.left:pairs() do
             self:Emit("\"")
             self:Emit(v.value.value)
             self:Emit("\"")
@@ -832,7 +833,7 @@ do -- extra
         end
 
     function META:Emit_ENVFromAssignment(node)
-        for i,v in ipairs(node.left) do
+        for i,v in node.left:pairs() do
             if v.kind == "value" and v.value.value == "_ENV" then
                 if node.right[i] then
                     local key = node.left[i]
@@ -860,7 +861,7 @@ do -- extra
         end
         self:EmitToken(node.tag) self:Emit(" = {type=\""..node.tag.value.."\",")
 
-        for _, prop in ipairs(node.props) do
+        for _, prop in node.props:pairs() do
             self:EmitToken(prop.key)
             self:Emit("=")
             self:EmitExpression(prop.val)
