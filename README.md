@@ -29,26 +29,49 @@ local y = x + 1
 This code will log an error about potentially calling a nil value, but it will continue while removing nil from the set.
 
 # Current goals
-I focus strongly on correctness and making things general and low-level. 
+I focus strongly on type inferrence and adding tests. The parsing part of the project is mostly done except I have some ideas to make it cleaner.
 
-I personally feel this is similar to how CryEngine strives to make its engine real-time and WYSIWYG without taking baked lighting shortcuts. It's a fun and challenging at the same time.
+I personally feel this is similar to how CryEngine strived to make its engine real-time and WYSIWYG without taking precomputation shortcuts. It's fun and challenging at the same time.
 
 In the end I'm making this language for myself, but it's here for people to see and use if they want.
 
 # Types
 
-Fundementally the typesystem consists of number, string, table, function, symbol, set, tuple and any. They can be described by the typesystem like this:
+Fundementally the typesystem consists of number, string, table, function, symbol, set, tuple and any. As an example, some of the types can be described by the typesystem like this:
 
 ```lua
-type boolean = true | false
-type number = -inf .. inf | nan
-type string = $".-"
-type table = {[number | boolean | string | self] = number | boolean | string | nil | self}
-type any = number | boolean | string | nil | table
+local type Boolean = true | false
+local type Number = -inf .. inf | nan
+local type String = $".*"
+local type Any = Number | Boolean | String | nil
+
+local type Table = { [exclude<|Any, nil|> | self] = Any | self }
+type Any = Any | Table
+
+local type Function = ( function(...Any): ...Any )
+
+-- note that Function's Any does not include itself. This can be done but it's too complicated as an example
 ```
 
-# numbers 
-can be ranged:
+It's not entirely accurate but those types should behave the same way as number, string, boolean, etc.
+
+# Numbers 
+From the narrow to wide
+
+```lua
+type N = 1
+local foo: N = 1
+local foo: N = 2
+      ^^^: 2 is not a subset of 1
+```
+
+```lua
+type N = 1 .. 10
+local foo: N = 1
+local foo: N = 4
+local foo: N = 11
+      ^^^: 11 is not a subset of 1 .. 10
+```
 
 ```lua
 type N = 1 .. inf
@@ -59,19 +82,19 @@ local faz: N = -1
       ^^^: -1 is not a subset of 1 .. inf
 ```
 
-a literal value:
 ```lua
-type one = 1
+type N = -inf .. inf
+
+local foo: N = 0
+local bar: N = 200
+local faz: N = -10
+local qux: N = 0/0
+      ^^^: nan is not a subset of -inf .. inf
 ```
 
-or loose:
-```lua
-type one = number
-```
+The logical progression here is to define N as `-inf .. inf | nan` but that has semantically the same meaning as `number`
 
-`-inf .. inf | nan` is semantically the same as `number`
-
-# strings
+# Strings
 can be defined as lua string patterns to constrain them:
 
 ```lua
@@ -93,7 +116,7 @@ type one = string
 
 `$".-"` is semantically the same as `string` but internally using `string` would be faster as it avoids string matching all the time
 
-# tables 
+# Tables 
 are similar to lua tables, where its key and value can be any type. 
 
 the only special syntax is `self` which is used for self referencing types
@@ -120,7 +143,7 @@ local type mytable = {
 }
 ```
 
-# sets
+# Sets
 are types separated by `|` these are mostly used in uncertain conditions.
 
 for example this case:
@@ -150,7 +173,7 @@ end
 ```
 This happens because there's no doubt that `true` is true and so there's no uncertainty of what x is inside the if block or after it.
 
-# type functions
+# Type functions
 Type functions are lua functions. We can for example define math.ceil and a print function like this:
 
 ```lua
@@ -229,9 +252,9 @@ type Array<T extends any, length extends number> = {[key: 1 .. length]: T}
 
 Type function arguments needs to be explicitly typed.
 
-# examples
+# Examples
 
-## list type
+## List type
 
 ```lua
 type StringList = { [1 .. inf] = string}
@@ -267,48 +290,48 @@ ffi.cdef("bad c declaration")
 ## `load` evaluation
 
 ```lua
-    local function build_summary_function(tbl)
-        local lua = {}
-        table.insert(lua, "local sum = 0")
-        table.insert(lua, "for i = " .. tbl.init .. ", " .. tbl.max .. " do")
-        table.insert(lua, tbl.body)
-        table.insert(lua, "end")
-        table.insert(lua, "return sum")
-        return load(table.concat(lua, "\n"), tbl.name)
-    end
+local function build_summary_function(tbl)
+    local lua = {}
+    table.insert(lua, "local sum = 0")
+    table.insert(lua, "for i = " .. tbl.init .. ", " .. tbl.max .. " do")
+    table.insert(lua, tbl.body)
+    table.insert(lua, "end")
+    table.insert(lua, "return sum")
+    return load(table.concat(lua, "\n"), tbl.name)
+end
 
-    local func = build_summary_function({
-        name = "myfunc",
-        init = 1,
-        max = 10,
-        body = "sum = sum + i !!ManuallyInsertedSyntaxError!!"
-    })
+local func = build_summary_function({
+    name = "myfunc",
+    init = 1,
+    max = 10,
+    body = "sum = sum + i !!ManuallyInsertedSyntaxError!!"
+})
 ```
 
 ```lua
+----------------------------------------------------------------------------------------------------
+    4 | )
+    5 |  table.insert(lua, "end")
+    6 |  table.insert(lua, "return sum")
+    8 |  return load(table.concat(lua, "\n"))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    9 | end
+10 | 
+----------------------------------------------------------------------------------------------------
+-> | test.lua:8:8
     ----------------------------------------------------------------------------------------------------
-     4 | )
-     5 |  table.insert(lua, "end")
-     6 |  table.insert(lua, "return sum")
-     8 |  return load(table.concat(lua, "\n"))
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-     9 | end
-    10 | 
+    1 | local sum = 0
+    2 | for i = 1, 10 do
+    3 | sum = sum + i !!ManuallyInsertedSyntaxError!!
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    4 | end
+    5 | return sum
     ----------------------------------------------------------------------------------------------------
-    -> | test.lua:8:8
-        ----------------------------------------------------------------------------------------------------
-        1 | local sum = 0
-        2 | for i = 1, 10 do
-        3 | sum = sum + i !!ManuallyInsertedSyntaxError!!
-                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        4 | end
-        5 | return sum
-        ----------------------------------------------------------------------------------------------------
-        -> | myfunc:3:14 : expected assignment or call expression got ❲symbol❳ (❲!❳)
+    -> | myfunc:3:14 : expected assignment or call expression got ❲symbol❳ (❲!❳)
 ```
 This works because there is no uncertainty about the code generated passed to the load function. If there was, lets say we did `body = "sum = sum + 1" .. (unknown_global as string)`, this would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
 
-# development
+# Development
 
 To run tests run `luajit test/run`
 
@@ -316,6 +339,8 @@ I've setup vscode to run the task `onsave` when a file is saved with the plugin 
 
 I also have a file called `test_focus.lua` in root which will override the test suite when the file is not empty. This makes it easier for me to debug specific cases.
 
-# similar projects
+# Similar projects
 
-Teal (https://github.com/teal-language/tl) is a language similar to this, with a much higher likelyhood of succeeding as it does not intend to be as verbose as this project. I'm thinking another nice goal is that I can contribute what I've learned here.
+Teal (https://github.com/teal-language/tl) is a language similar to this, with a much higher likelyhood of succeeding as it does not intend to be as verbose as this project. I'm thinking a nice goal is that I can contribute what I've learned here, be it through tests or other things.
+
+
