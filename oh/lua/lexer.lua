@@ -9,7 +9,7 @@ META.__index = META
 META.syntax = syntax
 require("oh.base_lexer")(META)
 
-local function ReadLiteralString(self, multiline_comment)
+local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: boolean, (nil | string)]]
     local start = self.i
 
     self:Advance(1)
@@ -41,7 +41,7 @@ local function ReadLiteralString(self, multiline_comment)
 end
 
 do
-    function META:ReadCommentEscape()
+    function META:ReadCommentEscape() --[[#: boolean]]
         if
             self:IsValue("-") and
             self:IsValue("-", 1) and
@@ -53,18 +53,22 @@ do
             self.comment_escape = string.char(self:GetChar())
             return true
         end
+
+        return false
     end
 
-    function META:ReadRemainingCommentEscape()
+    function META:ReadRemainingCommentEscape() --[[#: boolean]]
         if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
             self:Advance(2)
 
             return true
         end
+
+        return false
     end
 end
 
-function META:ReadMultilineComment()
+function META:ReadMultilineComment() --[[#: boolean]]
     if  self:IsValue("-") and self:IsValue("-", 1) and self:IsValue("[", 2) and (
         self:IsValue("[", 3) or self:IsValue("=", 3)
     ) then
@@ -74,21 +78,19 @@ function META:ReadMultilineComment()
         local ok, err = ReadLiteralString(self, true)
 
         if not ok then
-
             if err then
                 self:Error("expected multiline comment to end: " .. err, start, start + 1)
                 self:SetPosition(start + 2)
             else
                 self:SetPosition(start)
             end
-
-            return false
         end
-        return true
+
+        return ok
     end
 end
 
-function META:ReadLineComment()
+function META:ReadLineComment() --[[#: boolean]]
     if self:IsValue("-") and self:IsValue("-", 1)then
         self:Advance(#"--")
 
@@ -106,7 +108,7 @@ function META:ReadLineComment()
 end
 
 
-function META:ReadCMultilineComment()
+function META:ReadCMultilineComment() --[[#: boolean]]
     if self:IsValue("/") and self:IsValue("*", 1) then
         self:Advance(2)
         for _ = self.i, self:GetLength() do
@@ -123,7 +125,7 @@ function META:ReadCMultilineComment()
     return false
 end
 
-function META:ReadCLineComment()
+function META:ReadCLineComment() --[[#: boolean]]
     if self:IsValue("/") and self:IsValue("/", 1)then
 
         self.potential_lua54_division_operator = true
@@ -142,7 +144,7 @@ function META:ReadCLineComment()
     return false
 end
 
-function META:ReadMultilineString()
+function META:ReadMultilineString() --[[#: boolean]]
     if self:IsValue("[") and (self:IsValue("[", 1) or self:IsValue("=", 1)) then
         local start = self.i
         local ok, err = ReadLiteralString(self, false)
