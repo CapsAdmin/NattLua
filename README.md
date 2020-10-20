@@ -1,4 +1,4 @@
-# What
+# About
 "oh" is a Lua compatible language with a typesystem that transpiles to readable luajit. Its purpose is to provide you with tools to analyze, refactor and gradually type your code. It comes with a language server and a library to manipulate and analyze Lua code.
 
 It started as a toy project and place for me to explore how programming languages are built. My main goal is to use this language in [goluwa](https://github.com/CapsAdmin/goluwa).
@@ -6,7 +6,7 @@ It started as a toy project and place for me to explore how programming language
 Some self contained modules in this project are: lua lexer, lua parser, lua analyzer, algebraic types.
 
 # Parsing and transpiling
-I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it a little bit different in some ways. The syntax errors it can report are not standard and a bit more detailed. It's written in a way to be easily extendable for new syntax.
+I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it different in some ways. The syntax errors it can report are not standard and are bit more detailed. It's also written in a way to be easily extendable for new syntax.
 
 * Handles Luajit, lua 5.1-5.4 and Garry's mod Lua (which just adds optional C syntax).
 * Errors are reported with character ranges
@@ -18,11 +18,11 @@ I wrote the lexer and parser trying not to look at existing Lua parsers (as a le
 I have not fully decided the syntax for the language and runtime semantics for lua 5.3/4 features. But I feel this is more of a detail that can easily be changed later.
 
 # Code analysis and typesystem
-The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure. If everything is known about a program you may get its actual output at evaluation time. The typesystem is optional can be used similar to how you'd use it in Typescript.
+The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about conditions. If everything is known about a program you may get its actual output at evaluation time. 
 
-The typesystem is designed to be non-opinionated and low level, kind of like the spirit of Lua. 
+The typesystem is designed to be non-opinionated and low level, kind of like the spirit of Lua.
 
-I try to achieve maximum type inference (for no real reason other than it's fun and challenging to make), but this can lead to some cryptic errors so in practice it's best to type your code, especially in functions.
+I try to achieve maximum type inference, but this can lead to some cryptic errors so in practice it's best to type your code, especially in functions.
 
 For example:
 
@@ -32,10 +32,10 @@ local x = obj()
 local y = x + 1
 ```
 
-This code will log an error about potentially calling a nil value, but it will continue while removing nil from the set onwards. It does this by copying the current scope where.
+This code will log an error about potentially calling a nil value. It would then duplicate the scope and remove nil from the set in the new scope.
 
 # Current status and goals
-At the moment I focus strongly on type inferrence and adding tests while trying to keep the code sane.
+At the moment I focus strongly on type inferrence and adding tests while trying to keep the code maintainable.
 
 The parsing part of the project is mostly done except I have some ideas to make it cleaner and more extendable.
 
@@ -338,12 +338,25 @@ local func = build_summary_function({
 ```
 This works because there is no uncertainty about the code generated passed to the load function. If there was, lets say we did `body = "sum = sum + 1" .. (unknown_global as string)`, this would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
 
+# Development
+
+To run tests run `luajit test/run`
+
+I've setup vscode to run the task `onsave` when a file is saved with the plugin `gruntfuggly.triggertaskonsave`. This runs `on_editor_save.lua` which run tests when modifying the core of the language.
+
+I also have a file called `test_focus.lua` in root which will override the test suite when the file is not empty. This makes it easier for me to debug specific cases.
+
+# Similar projects
+
+[Teal](https://github.com/teal-language/tl) is a language similar to this, with a much higher likelyhood of succeeding as it does not intend to be as verbose as this project. I'm thinking a nice goal is that I can contribute what I've learned here, be it through tests or other things.
+
+
 # Dictionary
 
-I'm not an academic person and so I struggle a bit with naming things properly in the typesystem, but I think I'm getting the hang of it. Here are some definitions, some public and some private.
+I'm not an academic person and so I struggle a bit with naming things properly in the typesystem, but I think I'm getting the hang of it. Here are some definitions, some used in code and some used in my head.
 
 ## Type hiearchy
-The way I see types is that they are like parent / children. This can be visualized in "mind maps" neatly.
+The way I see types is that they are like a parent / children hiearchy. This can be visualized in "mind maps" neatly.
 
 ## Subset
 If something is "sub" of /lower/inside/contains something larger. For example `1` is a subset of `number` because `number` contains all the numbers.
@@ -375,34 +388,19 @@ local is_superset = function(a, b) return is_subset(b, a) end
 ```
 
 ## Literal
-Something of which nothing can be a subset of, except itself. It is similar to an atom or unit in other languages.
+Something of which nothing can be a subset of, except itself. It is similar to an atom or unit.
 
-## runtime / typesystem
-The analyzer will analyze code in these two different contexts. Locals and environment variables are stored in separate scopes and code behaves a little bit different in each environment. They are 2 different worlds where the typesystem watches and tells you about how the runtime beahves.
+## `"runtime"` / `"typesystem"`
+The analyzer will analyze code in these two different contexts. Locals and environment variables are stored in separate scopes and code behaves a little bit different in each environment. They are like 2 different worlds where the typesystem watches and tells you about how the runtime beahves.
 ```lua
 local a: *type expression analyzed in "typesystem"* = *runtime expression anlyzed in "runtime"*
 ```
 
 ## Contract
-If a runtime object is given a contract, it cannot be anything that breaks this contract.
-
+If a runtime object has a contract, it cannot be anything that breaks this contract. It's more like a constrain (maybe i should call it constraints!)
 
 ```lua
 local a: 1 .. 5 = 3 -- 3 is within 1 .. 5 so the contract is not broken
 a = 1 -- 1 is still within the contract
 a = 6 -- the contract was broken, so log an error.
 ```
-
-# Development
-
-To run tests run `luajit test/run`
-
-I've setup vscode to run the task `onsave` when a file is saved with the plugin `gruntfuggly.triggertaskonsave`. This runs `on_editor_save.lua` which run tests when modifying the core of the language.
-
-I also have a file called `test_focus.lua` in root which will override the test suite when the file is not empty. This makes it easier for me to debug specific cases.
-
-# Similar projects
-
-[Teal](https://github.com/teal-language/tl) is a language similar to this, with a much higher likelyhood of succeeding as it does not intend to be as verbose as this project. I'm thinking a nice goal is that I can contribute what I've learned here, be it through tests or other things.
-
-
