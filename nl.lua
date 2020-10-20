@@ -2,7 +2,7 @@ if not table.unpack and _G.unpack then
 	table.unpack = _G.unpack
 end
 
-local helpers = require("nattlua.helpers")
+local helpers = require("nattlua.util.helpers")
 
 local nl = {}
 
@@ -222,7 +222,7 @@ do
 			analyzer:SetDefaultEnvironment(self.default_environment, "typesystem")
 		elseif self.default_environment ~= false then
 			-- this is studid, trying to stop the base analyzer from causing a require() loop
-			analyzer:SetDefaultEnvironment(require("nattlua.lua.shared_analyzer"), "typesystem")
+			analyzer:SetDefaultEnvironment(require("nattlua.analyzer.shared_analyzer"), "typesystem")
 		end
 
 		if self.dump_events or self.config and self.config.dump_analyzer_events then
@@ -273,10 +273,10 @@ do
 			parent_name = parent_name,
 			name = name,
 			config = config,
-			Lexer = require("nattlua.lua.lexer"),
-			Parser = require("nattlua.lua.parser"),
-			Analyzer = require("nattlua.lua.analyzer"),
-			Emitter = config and config.js and require("nattlua.lua.javascript_emitter") or require("nattlua.lua.emitter"),
+			Lexer = require("nattlua.lexer.lexer"),
+			Parser = require("nattlua.parser.parser"),
+			Analyzer = require("nattlua.analyzer.analyzer"),
+			Emitter = config and config.js and require("nattlua.transpiler.javascript_emitter") or require("nattlua.transpiler.emitter"),
 
 		}, META)
 	end

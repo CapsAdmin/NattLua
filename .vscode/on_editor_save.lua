@@ -55,6 +55,6 @@ if not ok then
     return
 end
 local res = assert(c:Emit())
-require("nattlua.lua.base_runtime")
+require("nattlua.runtime.base_runtime")
 io.write(res, "\n")
 --assert(load(res))()

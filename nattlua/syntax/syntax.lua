@@ -110,9 +110,9 @@ do
         {"R^"}, -- right associative
     }
 
-    require("nattlua.base_syntax")(syntax.typesystem)
+    require("nattlua.syntax.base_syntax")(syntax.typesystem)
 end
 
-require("nattlua.base_syntax")(syntax)
+require("nattlua.syntax.base_syntax")(syntax)
 
 return syntax

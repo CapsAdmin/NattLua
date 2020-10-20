@@ -1,11 +1,11 @@
-local types = require("nattlua.typesystem.types")
+local types = require("nattlua.types.types")
 
 local META = {}
-META.Type = "error"
+META.Type = "never"
 META.__index = META
 
 function META:GetSignature()
-    return "error"
+    return "never"
 end
 
 function META:GetData()
@@ -21,7 +21,7 @@ function META.SubsetOf(A, B)
 end
 
 function META:__tostring()
-    return "ERROR(" .. tostring(self.data) .. ")"
+    return "never"
 end
 
 function META:IsFalsy()
@@ -30,11 +30,6 @@ end
 
 function META:IsTruthy()
     return false
-end
-
-function META:Initialize(msg)
-    self.data = msg
-    return self
 end
 
 return types.RegisterType(META)

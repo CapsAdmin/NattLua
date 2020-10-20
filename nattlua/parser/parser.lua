@@ -1,15 +1,15 @@
-local list = require("nattlua.library.list")
-local syntax = require("nattlua.lua.syntax")
+local list = require("nattlua.util.list")
+local syntax = require("nattlua.syntax.syntax")
 
 local META = {}
 META.__index = META
 
-META.Emitter = require("nattlua.lua.emitter")
+META.Emitter = require("nattlua.transpiler.emitter")
 META.syntax = syntax
 
-require("nattlua.base_parser")(META)
-require("nattlua.lua.parser_typesystem")(META)
-require("nattlua.lua.parser_extra")(META)
+require("nattlua.parser.base_parser")(META)
+require("nattlua.parser.parser_typesystem")(META)
+require("nattlua.parser.parser_extra")(META)
 
 do
     function META:IsBreakStatement()
@@ -507,7 +507,7 @@ do -- expression
                 if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
                     node.whitespace:remove(i)
 
-                    local tokens = require("nattlua.lua.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
+                    local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
                     
                     for _, token in tokens:pairs() do
                         self:CheckForIntegerDivisionOperator(token)

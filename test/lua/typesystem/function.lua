@@ -15,7 +15,7 @@ local overloads = Union(Function({
 }))
 
 test("overload", function()
-    local a = require("nattlua.lua.analyzer")()
+    local a = require("nattlua.analyzer.analyzer")()
     assert(assert(a:Call(overloads, Tuple(String(), Number()))):Get(1):GetData() == "LOL")
     assert(assert(a:Call(overloads, Tuple(Number(5), String()))):Get(1):GetData() == "ROFL")
 end)

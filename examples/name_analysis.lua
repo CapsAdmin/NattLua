@@ -1,7 +1,7 @@
 -- split by casing as well? SetCleint GetClient TransferCleint
 
 local nl = require("nl")
-local syntax = require("nattlua.lua.syntax")
+local syntax = require("nattlua.syntax.syntax")
 local util = require("examples.util")
 
 local function levenshtein(s, t, lim)
@@ -156,7 +156,7 @@ local function check_tokens(tokens)
     collectgarbage()
 end
 
-local paths = util.GetFilesRecursively("./nl")
+local paths = util.GetFilesRecursively("./nattlua")
 local all_tokens = {}
 for _, path in ipairs(paths) do
     local code = nl.File(path):Parse()

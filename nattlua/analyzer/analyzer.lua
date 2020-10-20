@@ -1,10 +1,10 @@
-local types = require("nattlua.typesystem.types")
+local types = require("nattlua.types.types")
 types.Initialize()
 
 local META = {}
 META.__index = META
 
-require("nattlua.base_analyzer")(META)
+require("nattlua.analyzer.base_analyzer")(META)
 
 function META:SetOperator(obj, key, val, node)
     
@@ -1709,7 +1709,7 @@ do -- expressions
         return obj
     end
 
-    local syntax = require("nattlua.lua.syntax")
+    local syntax = require("nattlua.syntax.syntax")
 
     function META:LookupValue(node, env)
         local obj

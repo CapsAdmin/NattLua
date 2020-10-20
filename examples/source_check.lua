@@ -3,7 +3,7 @@ local tprint = require("libraries.tprint")
 local function get_all_files()
     local paths = {}
 
-    local all = assert(io.popen("find nl/")):read("*all") .. "\n"
+    local all = assert(io.popen("find nattlua/")):read("*all") .. "\n"
     for path in all:gmatch("(.-)\n") do
         if path:sub(-4) == ".lua" then
             table.insert(paths, path)

@@ -1,4 +1,4 @@
-local list = require("nattlua.library.list")
+local list = require("nattlua.util.list")
 
 return function(META --[[#: 
     {

@@ -9,9 +9,9 @@ ffi.C.chdir("/home/caps/nl/")
 
 local json = require("vscode.server.json")
 local nl = require("nl")
-local helpers = require("nattlua.helpers")
+local helpers = require("nattlua.util.helpers")
 local tprint = require("examples.util").TablePrint
-local shared_analyzer = require("nattlua.lua.shared_analyzer")
+local shared_analyzer = require("nattlua.analyzer.shared_analyzer")
 local server = _G.SERVER or require("vscode.server.lsp")
 _G.SERVER = server
 

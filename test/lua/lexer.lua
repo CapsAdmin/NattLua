@@ -1,5 +1,5 @@
 local nl = require("nl")
-local syntax = require("nattlua.lua.syntax")
+local syntax = require("nattlua.syntax.syntax")
 local tprint = require("libraries.tprint")
 
 local function tokenize(code)

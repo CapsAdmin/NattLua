@@ -1,5 +1,5 @@
-local types = require("nattlua.typesystem.types")
-local syntax = require("nattlua.lua.syntax")
+local types = require("nattlua.types.types")
+local syntax = require("nattlua.syntax.syntax")
 local bit = not _G.bit and require("bit32") or _G.bit
 
 local META = {}
@@ -129,7 +129,7 @@ function META:IsTruthy()
 end
 
 function META:Initialize()
-    self.meta = require("nattlua.lua.string_meta")
+    self.meta = require("nattlua.analyzer.string_meta")
 
     return self
 end

@@ -1,5 +1,5 @@
-local syntax = require("nattlua.lua.syntax")
-local helpers = require("nattlua.helpers")
+local syntax = require("nattlua.syntax.syntax")
+local helpers = require("nattlua.util.helpers")
 
 local META = {}
 META.__index = META
@@ -7,7 +7,7 @@ META.__index = META
 --[[# type META.i = number ]]
 
 META.syntax = syntax
-require("nattlua.base_lexer")(META)
+require("nattlua.lexer.base_lexer")(META)
 
 local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: boolean, (nil | string)]]
     local start = self.i

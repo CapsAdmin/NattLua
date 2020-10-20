@@ -1,6 +1,6 @@
-local types = require("nattlua.typesystem.types")
-local helpers = require("nattlua.helpers")
-local list = require("nattlua.library.list")
+local types = require("nattlua.types.types")
+local helpers = require("nattlua.util.helpers")
+local list = require("nattlua.util.list")
 
 local LexicalScope
 
@@ -671,7 +671,7 @@ return function(META)
     end
 
     do
-        local helpers = require("nattlua.helpers")
+        local helpers = require("nattlua.util.helpers")
 
         function META:CompileLuaTypeCode(code, node)
             

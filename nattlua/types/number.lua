@@ -1,5 +1,5 @@
-local types = require("nattlua.typesystem.types")
-local syntax = require("nattlua.lua.syntax")
+local types = require("nattlua.types.types")
+local syntax = require("nattlua.syntax.syntax")
 local bit = not _G.bit and require("bit32") or _G.bit
 
 local META = {}

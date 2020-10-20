@@ -1,8 +1,8 @@
-local list = require("nattlua.library.list")
+local list = require("nattlua.util.list")
 
 return function(META)
     local math_huge = math.huge
-    local syntax = require("nattlua.lua.syntax")
+    local syntax = require("nattlua.syntax.syntax")
 
     do
         function META:IsInlineTypeCode()

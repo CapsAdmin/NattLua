@@ -1,4 +1,4 @@
-local list = require("nattlua.library.list")
+local list = require("nattlua.util.list")
 
 return function(META)
     local tprint = require("libraries.tprint")
@@ -47,7 +47,7 @@ return function(META)
             local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
 
             if self.value and type(self.value.value) == "string" then
-                str = str ..  ": " .. require("nattlua.helpers").QuoteToken(self.value.value)
+                str = str ..  ": " .. require("nattlua.util.helpers").QuoteToken(self.value.value)
             end
 
             return str

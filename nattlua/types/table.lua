@@ -1,4 +1,4 @@
-local types = require("nattlua.typesystem.types")
+local types = require("nattlua.types.types")
 
 local META = {}
 META.Type = "table"

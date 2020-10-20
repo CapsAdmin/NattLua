@@ -69,7 +69,7 @@ type function type_assert_superset(what, type)
 end
 
 type function type_traceback() 
-	local helpers = require("nattlua.helpers")
+	local helpers = require("nattlua.util.helpers")
 	if not analyzer.call_stack then return end
 	for i,v in ipairs(analyzer.call_stack) do 
 		local callexp = v.call_expression
@@ -238,7 +238,7 @@ do -- globals
 	type function require(name: string)
 		local str = name.data
 
-		local shared_analyzer = require("nattlua.lua.shared_analyzer")
+		local shared_analyzer = require("nattlua.analyzer.shared_analyzer")
 
 		local val = shared_analyzer:Get(str)
 

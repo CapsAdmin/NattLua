@@ -1,4 +1,4 @@
-local syntax = require("nattlua.lua.syntax")
+local syntax = require("nattlua.syntax.syntax")
 local ipairs = ipairs
 local assert = assert
 local type = type
@@ -7,7 +7,7 @@ local META = {}
 META.__index = META
 
 META.syntax = syntax
-require("nattlua.base_emitter")(META)
+require("nattlua.transpiler.base_emitter")(META)
 
 function META:EmitExpression(node)
     if node.tokens["("] then

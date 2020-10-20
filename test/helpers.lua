@@ -1,5 +1,5 @@
 local nl = require("nl")
-local types = require("nattlua.typesystem.types")
+local types = require("nattlua.types.types")
 
 local C = nl.Code
 
