@@ -17,7 +17,7 @@ test("order of 'and' expression", function()
     ]]
 end)
 
-test("if left side is false or something, return a set of the left and right side", function()
+test("if left side is false or something, return a union of the left and right side", function()
     run[[
         local a: false | {foo = true}
         local b = a and a.foo

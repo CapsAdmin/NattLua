@@ -322,7 +322,7 @@ local function parse_object(str--[[#: string]], i--[[#: number]])
 		i = next_char(str, i + 1, space_chars, true)
 		-- Read value
 		val, i = parse(str, i)
-		-- Set
+		-- Union
 		res[key] = val
 		-- Next token
 		i = next_char(str, i, space_chars, true)

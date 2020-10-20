@@ -50,7 +50,7 @@ function META:Merge(tup)
         local a = self:Get(i)
         local b = tup:Get(i)
         if a then
-            src[i] = types.Set({a, b})
+            src[i] = types.Union({a, b})
         else
             src[i] = b:Copy()
         end

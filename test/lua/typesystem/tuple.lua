@@ -125,8 +125,8 @@ test("merge tuples", function()
 
     assert(infinite_any:GetLength() == math.huge)
 
-    assert(infinite_any:Get(1).Type == "set")
-    assert(infinite_any:Get(2).Type == "set")
+    assert(infinite_any:Get(1).Type == "union")
+    assert(infinite_any:Get(2).Type == "union")
 
     assert(infinite_any:Get(1):GetType("number"))
     assert(infinite_any:Get(1):GetType("any"))

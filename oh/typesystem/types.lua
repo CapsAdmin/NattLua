@@ -184,7 +184,7 @@ function types.RegisterType(meta)
 end
 
 function types.Initialize()
-    types.Set = require("oh.typesystem.set")
+    types.Union = require("oh.typesystem.union")
     types.Table = require("oh.typesystem.table")
     types.List = require("oh.typesystem.list")
     types.Tuple = require("oh.typesystem.tuple")
@@ -199,7 +199,7 @@ function types.Initialize()
     types.Nil = types.Symbol()
     types.True = types.Symbol(true)
     types.False = types.Symbol(false)
-    types.Boolean = types.Set({types.True, types.False}):MakeExplicitNotLiteral(true)
+    types.Boolean = types.Union({types.True, types.False}):MakeExplicitNotLiteral(true)
 end
 
 return types

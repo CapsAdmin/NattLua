@@ -276,7 +276,7 @@ test("defining a type for a function should type the arguments", function()
     ]], "true is not the same as number")
 end)
 
-test("calling a set", function()
+test("calling a union", function()
     run[[
         local type test = (function(boolean, boolean): number) | (function(boolean): string)
 
@@ -288,13 +288,13 @@ test("calling a set", function()
     ]]
 end)
 
-test("calling a set that does not contain a function should error", function()
+test("calling a union that does not contain a function should error", function()
     run([[
         local type test = (function(boolean, boolean): number) | (function(boolean): string) | number
 
         test(true, true)
 
-        §analyzer:GetDiagnostics()[1].msg:find("set .- contains uncallable object number")
+        §analyzer:GetDiagnostics()[1].msg:find("union .- contains uncallable object number")
     ]])
 end)
 

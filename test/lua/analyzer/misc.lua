@@ -853,7 +853,7 @@ R[[
 
     local type function check(func: any)
         local a = func:GetArguments():Get(1)     -- this is being crawled for some reason
-        local b = types.Set({
+        local b = types.Union({
             types.Number(1),
             types.False,
             types.True

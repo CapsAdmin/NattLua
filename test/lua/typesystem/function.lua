@@ -3,10 +3,10 @@ local Function = T.Function
 local Number = T.Number
 local String = T.String
 local Symbol = T.Symbol
-local Set = T.Set
+local Union = T.Union
 local Tuple = T.Tuple
 
-local overloads = Set(Function({
+local overloads = Union(Function({
     arg = Tuple(Number(), String()),
     ret = Tuple(Symbol("ROFL")),
 }), Function({

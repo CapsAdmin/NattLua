@@ -22,7 +22,7 @@ test("number range -inf .. inf", function()
 end)
 
 test("number range -inf .. inf | nan", function()
-    assert(run("local a: -inf .. inf | nan = 0/0"):GetEnvironmentValue("a", "runtime").contract.Type == "set")
+    assert(run("local a: -inf .. inf | nan = 0/0"):GetEnvironmentValue("a", "runtime").contract.Type == "union")
 end)
 
 test("cannot not be called", function()

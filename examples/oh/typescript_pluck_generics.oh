@@ -8,13 +8,13 @@
 ]]
 
 local function keysof<|tbl: {[any] = any}|>
-	local set = types.Set()
+	local union = types.Union()
 
 	for _, keyval in ipairs(tbl:GetData()) do
-		set:AddType(keyval.key)
+		union:AddType(keyval.key)
 	end
 
-	return set
+	return union
 end
 
 local function pluck<|o: any, propertyNames: {[1 .. inf] = string}|>

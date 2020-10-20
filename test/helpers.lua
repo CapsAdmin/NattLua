@@ -59,7 +59,7 @@ local function run(code, expect_error)
 end
 
 return {
-    Set = function(...) return types.Set(cast(...)) end,
+    Union = function(...) return types.Union(cast(...)) end,
     Tuple = function(...) return types.Tuple(cast(...)) end,
     Number = function(n) return types.Number(n):MakeLiteral(n ~= nil) end,
     Function = function(d) return types.Function(d) end,

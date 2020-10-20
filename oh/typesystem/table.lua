@@ -164,8 +164,8 @@ function META.SubsetOf(A, B)
         done = nil
 
         return true
-    elseif B.Type == "set" then
-        return types.Set({A}):SubsetOf(B)
+    elseif B.Type == "union" then
+        return types.Union({A}):SubsetOf(B)
     end
 
     return types.errors.subset(A, B)
@@ -177,7 +177,7 @@ function META:ContainsAllKeysIn(contract)
             local ok, err = self:GetKeyVal(keyval.key)
             if not ok then
                 
-                if (keyval.val.Type == "symbol" and keyval.val.data == nil) or (keyval.val.Type == "set" and keyval.val:HasNil()) then
+                if (keyval.val.Type == "symbol" and keyval.val.data == nil) or (keyval.val.Type == "union" and keyval.val:HasNil()) then
                     return true
                 end
 
@@ -202,14 +202,14 @@ function META:Delete(key)
     --return types.errors.other("cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self))
 end
 
-function META:GetKeySet()
-    local set = types.Set()
+function META:GetKeyUnion()
+    local union = types.Union()
 
     for _, keyval in ipairs(self.data) do
-        set:AddType(keyval.key:Copy())
+        union:AddType(keyval.key:Copy())
     end
 
-    return set
+    return union
 end
 
 function META:Contains(key)
@@ -263,11 +263,11 @@ function META:Set(key, val, no_delete)
         return types.errors.other("key is nil")
     end
 
-    if key.Type == "set" then
-        local set = key
-        for _, key in ipairs(set:GetTypes()) do
+    if key.Type == "union" then
+        local union = key
+        for _, key in ipairs(union:GetTypes()) do
             if key.Type == "symbol" and key:GetData() == nil then
-                return types.errors.other(set:GetLength() == 1 and "key is nil" or "key can be nil")
+                return types.errors.other(union:GetLength() == 1 and "key is nil" or "key can be nil")
             end
         end
     end
@@ -308,7 +308,7 @@ function META:Set(key, val, no_delete)
         table.insert(self.data, {key = key, val = val})
     else
         if keyval.val and keyval.key:GetSignature() ~= key:GetSignature() then
-            keyval.val = types.Set({keyval.val, val})
+            keyval.val = types.Union({keyval.val, val})
         else
             keyval.val = val
         end
@@ -321,23 +321,23 @@ function META:Get(key)
     key = types.Cast(key)
 
     if key.Type == "string" and not key:IsLiteral() then
-        local set = types.Set({types.Nil})
+        local union = types.Union({types.Nil})
         for _, keyval in ipairs(self:GetData()) do
             if keyval.key.Type == "string" then
-                set:AddType(keyval.val)
+                union:AddType(keyval.val)
             end
         end
-        return set
+        return union
     end
 
     if key.Type == "number" and not key:IsLiteral() then
-        local set = types.Set({types.Nil})
+        local union = types.Union({types.Nil})
         for _, keyval in ipairs(self:GetData()) do
             if keyval.key.Type == "number" then
-                set:AddType(keyval.val)
+                union:AddType(keyval.val)
             end
         end
-        return set
+        return union
     end
 
     local keyval, reason = self:GetKeyVal(key, true)

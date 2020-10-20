@@ -17,14 +17,14 @@ test("union operator", function()
     equal(4, a:GetLength())
 end)
 
-test("set + object", function()
+test("union + object", function()
     run[[
         local a = _ as (1 | 2) + 3
         type_assert(a, _ as 4 | 5)
     ]]
 end)
 
-test("set + set", function()
+test("union + union", function()
     run[[
         local a = _ as 1 | 2
         local b = _ as 10 | 20
@@ -33,7 +33,7 @@ test("set + set", function()
     ]]
 end)
 
-test("set.foo", function()
+test("union.foo", function()
     run[[
         local a = _ as {foo = true} | {foo = false}
 
@@ -41,7 +41,7 @@ test("set.foo", function()
     ]]
 end)
 
-test("set.foo = bar", function()
+test("union.foo = bar", function()
     run[[
         local a = { foo = 4 } as { foo = 1|2 } | { foo = 3 }
         type_assert(a.foo,  _ as 1 | 2 | 3)

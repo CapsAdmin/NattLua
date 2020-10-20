@@ -37,7 +37,7 @@ end
 function META.SubsetOf(A, B)
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
-    if B.Type == "set" then
+    if B.Type == "union" then
         local errors = {}
         for _, b in ipairs(B:GetTypes()) do
             local ok, reason = A:SubsetOf(b)

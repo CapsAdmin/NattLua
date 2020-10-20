@@ -74,7 +74,7 @@ do return end
 my_type_function(a)
 ```
 
-# table expressed as a set of table and array
+# table expressed as a union of table and array
 ```lua
 local a = {1,2,3, foo = true}
 print(a)

@@ -1,6 +1,6 @@
 local types = require("oh.typesystem.types")
 local META = {}
-META.Type = "set"
+META.Type = "union"
 META.__index = META
 
 local sort = function(a, b) return a < b end
@@ -31,7 +31,7 @@ end
 
 
 function META:AddType(e)
-    if e.Type == "set" then
+    if e.Type == "union" then
         for _, e in ipairs(e:GetTypes()) do
             self:AddType(e)
         end
@@ -194,8 +194,8 @@ function META.SubsetOf(A, B)
         end
     end
 
-    if B.Type ~= "set" then
-        return A:SubsetOf(types.Set({B}))
+    if B.Type ~= "union" then
+        return A:SubsetOf(types.Union({B}))
     end
 
     for _, a in ipairs(A:GetTypes()) do
@@ -215,10 +215,10 @@ function META.SubsetOf(A, B)
     return true
 end
 
-function META:Union(set)
+function META:Union(union)
     local copy = self:Copy()
 
-    for _, e in ipairs(set:GetTypes()) do
+    for _, e in ipairs(union:GetTypes()) do
         copy:AddType(e)
     end
 
@@ -226,11 +226,11 @@ function META:Union(set)
 end
 
 
-function META:Intersect(set)
-    local copy = types.Set()
+function META:Intersect(union)
+    local copy = types.Union()
 
     for _, e in ipairs(self:GetTypes()) do
-        if set:Get(e) then
+        if union:Get(e) then
             copy:AddType(e)
         end
     end
@@ -239,7 +239,7 @@ function META:Intersect(set)
 end
 
 
-function META:Subtract(set)
+function META:Subtract(union)
     local copy = self:Copy()
 
     for _, e in ipairs(self:GetTypes()) do
@@ -250,7 +250,7 @@ function META:Subtract(set)
 end
 
 function META:Copy()
-    local copy = types.Set()
+    local copy = types.Union()
     for _, e in ipairs(self:GetTypes()) do
         copy:AddType(e)
     end
@@ -353,13 +353,13 @@ end
 
 function META:Call(analyzer, arguments, ...)
     if self:IsEmpty() then
-        return types.errors.other("cannot call empty set")
+        return types.errors.other("cannot call empty union")
     end
 
-    local set = self
+    local union = self
     for _, obj in ipairs(self:GetData()) do
         if obj.Type ~= "function" and obj.Type ~= "table" and obj.Type ~= "any" then
-            return types.errors.other("set "..tostring(set).." contains uncallable object " .. tostring(obj))
+            return types.errors.other("union "..tostring(union).." contains uncallable object " .. tostring(obj))
         end
     end
 
@@ -382,27 +382,27 @@ function META:Call(analyzer, arguments, ...)
     return types.errors.other(table.concat(errors, "\n"))
 end
 
-function META:MakeCallableSet(analyzer, node)
-    local new_set = types.Set()
-    local truthy_set = types.Set()
-    local falsy_set = types.Set()
+function META:MakeCallableUnion(analyzer, node)
+    local new_union = types.Union()
+    local truthy_union = types.Union()
+    local falsy_union = types.Union()
 
     for _, v in ipairs(self:GetData()) do               
         if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-            falsy_set:AddType(v)
-            analyzer:Report(node, "set "..tostring(self).." contains uncallable object " .. tostring(v))
+            falsy_union:AddType(v)
+            analyzer:Report(node, "union "..tostring(self).." contains uncallable object " .. tostring(v))
             analyzer:CloneCurrentScope()
             analyzer:GetScope().test_condition = self
         else
-            truthy_set:AddType(v)
-            new_set:AddType(v)
+            truthy_union:AddType(v)
+            new_union:AddType(v)
         end
     end
 
-    new_set.truthy_set = truthy_set
-    new_set.falsy_set = falsy_set
+    new_union.truthy_union = truthy_union
+    new_union.falsy_union = falsy_union
 
-    return truthy_set:SetSource(node, new_set, self)
+    return truthy_union:SetSource(node, new_union, self)
 end
 
 return types.RegisterType(META)

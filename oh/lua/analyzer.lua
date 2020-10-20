@@ -8,23 +8,23 @@ require("oh.base_analyzer")(META)
 
 function META:SetOperator(obj, key, val, node)
     
-    if obj.Type == "set" then
+    if obj.Type == "union" then
         -- local x: nil | {foo = true}
-        -- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the set
+        -- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
         -- log(x.foo) << no error, because now x does not contain nil
         
-        local new_set = types.Set()
-        local truthy_set = types.Set()
-        local falsy_set = types.Set()
+        local new_union = types.Union()
+        local truthy_union = types.Union()
+        local falsy_union = types.Union()
 
         for _, v in ipairs(obj:GetTypes()) do
             local ok, err = self:SetOperator(v, key, val, node)
 
             if ok then
-                truthy_set:AddType(v)
-                new_set:AddType(v)
+                truthy_union:AddType(v)
+                new_union:AddType(v)
             else
-                falsy_set:AddType(v)
+                falsy_union:AddType(v)
                 
                 self:Report(node, err or "invalid set error")
 
@@ -33,10 +33,10 @@ function META:SetOperator(obj, key, val, node)
             end            
         end
 
-        new_set.truthy_set = truthy_set
-        new_set.falsy_set = falsy_set
+        new_union.truthy_union = truthy_union
+        new_union.falsy_union = falsy_union
 
-        return new_set:SetSource(node, new_set, obj)
+        return new_union:SetSource(node, new_union, obj)
     end
 
     if obj.meta then
@@ -64,8 +64,8 @@ function META:SetOperator(obj, key, val, node)
 end
 
 function META:GetOperator(obj, key, node)
-    if obj.Type == "set" then
-        local copy = types.Set()
+    if obj.Type == "union" then
+        local copy = types.Union()
         for _,v in ipairs(obj:GetTypes()) do
             local val, err = self:GetOperator(v, key, node)
             if not val then
@@ -264,8 +264,8 @@ local function Call(self, obj, arguments, call_node)
 
     local env = self.PreferTypesystem and "typesystem" or "runtime"
     
-    if obj.Type == "set" then
-        obj = obj:MakeCallableSet(self, call_node)
+    if obj.Type == "union" then
+        obj = obj:MakeCallableUnion(self, call_node)
     end
     
     if obj.Type ~= "function" then
@@ -490,7 +490,7 @@ do -- control flow analysis
       --      return self:CopyUpvalue(upvalue, types.Never())
         end
 
-        if upvalue.data.Type == "set" then
+        if upvalue.data.Type == "union" then
             local condition, inverted = scope:GetTestCondition()
             
             if condition then                 
@@ -505,9 +505,9 @@ do -- control flow analysis
                     local copy = self:CopyUpvalue(upvalue)
 
                     if inverted then
-                        copy.data = (condition.falsy_set or copy.data:GetFalsy()):Copy()
+                        copy.data = (condition.falsy_union or copy.data:GetFalsy()):Copy()
                     else
-                        copy.data = (condition.truthy_set or copy.data:GetTruthy()):Copy()
+                        copy.data = (condition.truthy_union or copy.data:GetTruthy()):Copy()
                     end
 
                     copy.original = upvalue.data
@@ -531,7 +531,7 @@ do -- control flow analysis
                     -- instead of mutating the upvalue, create a new one
                     x = true
 
-                    -- then turn the shadowed upvalue into a set of true | false
+                    -- then turn the shadowed upvalue into a union of true | false
                 else
                     !! but x should not be true | false here !!
                 end
@@ -544,13 +544,13 @@ do -- control flow analysis
             -- mutate shadowed upvalue
             if self.scope.test_condition_inverted and upvalue.data_outside_of_if_blocks then
                 -- if we're in an uncertain else block, 
-                -- we remove the original shadowed upvalue from the set
+                -- we remove the original shadowed upvalue from the union
                 -- because it has to be either true or false
 
                 upvalue.data_outside_of_if_blocks:AddType(val)
                 upvalue.data_outside_of_if_blocks:RemoveType(upvalue.data)
             else
-                upvalue.data_outside_of_if_blocks = types.Set({upvalue.data, val})
+                upvalue.data_outside_of_if_blocks = types.Union({upvalue.data, val})
             end
 
             return true
@@ -876,7 +876,7 @@ do -- statements
             if i == 1 then
                 returned_key = values:Get(1)
                 if not returned_key:IsLiteral() then
-                    returned_key = types.Set({types.Symbol(nil), returned_key})
+                    returned_key = types.Union({types.Symbol(nil), returned_key})
                 end
                 self:PushScope(statement, nil, {condition = returned_key})
             end
@@ -915,7 +915,7 @@ do -- statements
         local literal_max = max:IsLiteral() and max:GetData() or nil
         local literal_step = not step and 1 or step:IsLiteral() and step:GetData() or nil
 
-        local condition = types.Set()
+        local condition = types.Union()
 
         if literal_init and literal_max then
             -- also check step
@@ -955,7 +955,7 @@ do -- statements
                 end
             end
         else
-            if init.Type == "number" and (max.Type == "number" or (max.Type == "set" and max:IsType("number"))) then
+            if init.Type == "number" and (max.Type == "number" or (max.Type == "union" and max:IsType("number"))) then
                 init = init:Max(max)
             end
 
@@ -1116,13 +1116,13 @@ do -- expressions
             if r.Type == "tuple" then r = r:Get(1) end
 
             -- normalize l and r to be both sets to reduce complexity
-            if l.Type ~= "set" and r.Type == "set" then l = types.Set({l}) end
-            if l.Type == "set" and r.Type ~= "set" then r = types.Set({r}) end
+            if l.Type ~= "union" and r.Type == "union" then l = types.Union({l}) end
+            if l.Type == "union" and r.Type ~= "union" then r = types.Union({r}) end
 
-            if l.Type == "set" and r.Type == "set" then
-                local new_set = types.Set()
-                local truthy_set = types.Set()
-                local falsy_set = types.Set()
+            if l.Type == "union" and r.Type == "union" then
+                local new_union = types.Union()
+                local truthy_union = types.Union()
+                local falsy_union = types.Union()
                 local condition = l
                 
                 for _, l in ipairs(l:GetTypes()) do
@@ -1138,12 +1138,12 @@ do -- expressions
                                 if self.type_checked then                                
                                     for _, t in ipairs(self.type_checked:GetTypes()) do
                                         if t:GetLuaType() == l:GetData() then
-                                            truthy_set:AddType(t)
+                                            truthy_union:AddType(t)
                                         end
                                     end                                
                                     
                                 else
-                                    truthy_set:AddType(l)
+                                    truthy_union:AddType(l)
                                 end
                             end
         
@@ -1151,34 +1151,34 @@ do -- expressions
                                 if self.type_checked then                                
                                     for _, t in ipairs(self.type_checked:GetTypes()) do
                                         if t:GetLuaType() == l:GetData() then
-                                            falsy_set:AddType(t)
+                                            falsy_union:AddType(t)
                                         end
                                     end                                
                                     
                                 else
-                                    falsy_set:AddType(l)
+                                    falsy_union:AddType(l)
                                 end
                             end
 
-                            new_set:AddType(res)
+                            new_union:AddType(res)
                         end
                     end
                 end
                 
                 if self.type_checked then
-                    new_set.type_checked = self.type_checked
+                    new_union.type_checked = self.type_checked
                     self.type_checked = nil
                 end
 
-                new_set.truthy_set = truthy_set
-                new_set.falsy_set = falsy_set
+                new_union.truthy_union = truthy_union
+                new_union.falsy_union = falsy_union
 
-                return new_set:SetSource(node, new_set, l,r)
+                return new_union:SetSource(node, new_union, l,r)
             end
 
             if env == "typesystem" then
                 if op == "|" then
-                    return types.Set({l, r})
+                    return types.Union({l, r})
                 elseif op == "&" then
                     if l.Type == "table" and r.Type == "table" then
                         return l:Extend(r)
@@ -1222,19 +1222,19 @@ do -- expressions
             if l.Type == "number" and r.Type == "number" then
                 if op == "~=" or op == "!=" then
                     if l.max and l.max.data then
-                        return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.Set({types.True, types.False})
+                        return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.Union({types.True, types.False})
                     end
 
                     if r.max and r.max.data then
-                        return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.Set({types.True, types.False})
+                        return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.Union({types.True, types.False})
                     end
                 elseif op == "==" then
                     if l.max and l.max.data then
-                        return r.data >= l.data and r.data <= l.max.data and types.Set({types.True, types.False}) or types.False
+                        return r.data >= l.data and r.data <= l.max.data and types.Union({types.True, types.False}) or types.False
                     end
 
                     if r.max and r.max.data then
-                        return l.data >= r.data and l.data <= r.max.data and types.Set({types.True, types.False}) or types.False
+                        return l.data >= r.data and l.data <= r.max.data and types.Union({types.True, types.False}) or types.False
                     end
                 end
             end
@@ -1351,8 +1351,8 @@ do -- expressions
                 return types.Boolean
             elseif op == "or" or op == "||" then
                 if l:IsUncertain() or r:IsUncertain() then
-                    local set = types.Set({l,r})
-                    return set:SetSource(node, set, l,r)
+                    local union = types.Union({l,r})
+                    return union:SetSource(node, union, l,r)
                 end
 
                 -- when true, or returns its first argument
@@ -1368,8 +1368,8 @@ do -- expressions
             elseif op == "and" or op == "&&" then
                 if l:IsTruthy() and r:IsFalsy() then
                     if l:IsFalsy() or r:IsTruthy() then
-                        local set = types.Set({l,r})
-                        return set:SetSource(node, set, l,r)
+                        local union = types.Union({l,r})
+                        return union:SetSource(node, union, l,r)
                     end
 
                     return r:Copy():SetSource(node, r, l,r)
@@ -1377,8 +1377,8 @@ do -- expressions
 
                 if l:IsFalsy() and r:IsTruthy() then
                     if l:IsTruthy() or r:IsFalsy() then
-                        local set = types.Set({l,r})
-                        return set:SetSource(node, set, l,r)
+                        local union = types.Union({l,r})
+                        return union:SetSource(node, union, l,r)
                     end
 
                     return l:Copy():SetSource(node, l, l,r)
@@ -1386,15 +1386,15 @@ do -- expressions
 
                 if l:IsTruthy() and r:IsTruthy() then
                     if l:IsFalsy() and r:IsFalsy() then
-                        local set = types.Set({l,r})
-                        return set:SetSource(node, set, l,r)
+                        local union = types.Union({l,r})
+                        return union:SetSource(node, union, l,r)
                     end
 
                     return r:Copy():SetSource(node, r, l,r)
                 else
                     if l:IsTruthy() and r:IsTruthy() then
-                        local set = types.Set({l,r})
-                        return set:SetSource(node, set, l,r)
+                        local union = types.Union({l,r})
+                        return union:SetSource(node, union, l,r)
                     end
 
                     return l:Copy():SetSource(node, l, l,r)
@@ -1443,11 +1443,11 @@ do -- expressions
                 left = self:AnalyzeExpression(node.left, env)
                 if left:IsFalsy() and left:IsTruthy() then
                     -- if it's uncertain, remove uncertainty while analysing
-                    if left.Type == "set" then
+                    if left.Type == "union" then
                         left:DisableFalsy()
                     end
                     right = self:AnalyzeExpression(node.right, env)
-                    if left.Type == "set" then
+                    if left.Type == "union" then
                         left:EnableFalsy()
                     end
                 elseif left:IsFalsy() and not left:IsTruthy() then
@@ -1473,7 +1473,7 @@ do -- expressions
 
             if node.and_expr then
                 if node.and_expr.and_res == left then
-                    if left.Type == "set" then
+                    if left.Type == "union" then
                         left = left:Copy()
                         left:DisableFalsy()
                     end
@@ -1534,29 +1534,29 @@ do -- expressions
 
             if l.Type == "tuple" then l = l:Get(1) end
 
-            if l.Type == "set" then
-                local new_set = types.Set()
-                local truthy_set = types.Set()
-                local falsy_set = types.Set()
+            if l.Type == "union" then
+                local new_union = types.Union()
+                local truthy_union = types.Union()
+                local falsy_union = types.Union()
 
                 for _, l in ipairs(l:GetTypes()) do
                     local res = self:Assert(node, self:PrefixOperator(node, l, env))
-                    new_set:AddType(res)
+                    new_union:AddType(res)
 
 
                     if res:IsTruthy() then
-                        truthy_set:AddType(l)
+                        truthy_union:AddType(l)
                     end
 
                     if res:IsFalsy() then
-                        falsy_set:AddType(l)
+                        falsy_union:AddType(l)
                     end
                 end
 
-                new_set.truthy_set = truthy_set
-                new_set.falsy_set = falsy_set
+                new_union.truthy_union = truthy_union
+                new_union.falsy_union = falsy_union
 
-                return new_set:SetSource(node, l)
+                return new_union:SetSource(node, l)
             end
 
             if l.Type == "any" then
@@ -1846,7 +1846,7 @@ do -- expressions
                 if upvalue.data.contract then
                     table.insert(args, 1, upvalue.data)
                 else
-                    table.insert(args, 1, types.Set({types.Any(), upvalue.data}))
+                    table.insert(args, 1, types.Union({types.Any(), upvalue.data}))
                 end
             end
         end

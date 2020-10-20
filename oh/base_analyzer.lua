@@ -415,7 +415,7 @@ return function(META)
                 for _, ret in ipairs(return_types) do
                     for i, obj in ipairs(ret) do
                         if out[i] then
-                            out[i] = types.Set({out[i], obj})
+                            out[i] = types.Union({out[i], obj})
                         else
                             out[i] = obj
                         end

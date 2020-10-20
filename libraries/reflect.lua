@@ -185,7 +185,7 @@ local CTs = {[0] =
   },
 }
 
--- Set of CType::cid roles which are a CTypeID.
+-- Union of CType::cid roles which are a CTypeID.
 local type_keys = {
   element_type = true,
   return_type = true,

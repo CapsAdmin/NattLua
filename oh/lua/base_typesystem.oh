@@ -17,12 +17,12 @@ end
 type function enum(tbl)
 	assert(tbl:IsLiteral())
 	
-	local set = types.Set()
+	local union = types.Union()
 	for key, val in tbl:pairs() do
 		analyzer:SetEnvironmentValue(key:GetData(), val, "typesystem")
-		set:AddType(val)
+		union:AddType(val)
 	end
-	return set
+	return union
 end
 
 type function error_inside_base_typesystem()	
@@ -31,13 +31,13 @@ type function error_inside_base_typesystem()
 end
 
 type function keysof(tbl: Table)
-	local set = types.Set()
+	local union = types.Union()
 
 	for _, keyval in ipairs(tbl:GetData()) do
-		set:AddType(keyval.key)
+		union:AddType(keyval.key)
 	end
 
-	return set
+	return union
 end
 
 type function type_assert(what, type)
@@ -86,7 +86,7 @@ end
 
 type function seal(tbl)
 	for key, val in tbl:pairs() do
-		if val.Type == "function" and val:GetArguments():Get(1).Type == "set" then 
+		if val.Type == "function" and val:GetArguments():Get(1).Type == "union" then 
 			local first_arg = val:GetArguments():Get(1)
 			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
 				val:GetArguments():Set(1, tbl)
@@ -128,7 +128,7 @@ do -- globals
 
 	type function assert(obj)
 		if obj:IsTruthy() then
-			if obj.Type == "set" then
+			if obj.Type == "union" then
 				obj = obj:Copy()
 				obj:DisableFalsy()
 			end
@@ -149,7 +149,7 @@ do -- globals
 						local kv = t:GetData()[i+1]
 						if kv then
 							if not k:IsLiteral() then
-								return type.Set({types.Nil, kv.key}), type.Set({types.Nil, kv.val})
+								return type.Union({types.Nil, kv.key}), type.Union({types.Nil, kv.val})
 							end
 
 							return kv.key, kv.val
@@ -165,14 +165,14 @@ do -- globals
 			end
 		end
 
-		if t.Type == "set" then
+		if t.Type == "union" then
 			t = t:GetTypes()
 		else
 			t = {t}
 		end
 
-		local k = types.Set()
-		local v = types.Set()
+		local k = types.Union()
+		local v = types.Union()
 
 		for _, t in ipairs(t) do
 			if not t.data then
@@ -368,10 +368,10 @@ do -- globals
 
 	type function type(obj: any)
 
-		if obj.Type == "set" then
+		if obj.Type == "union" then
 			analyzer.type_checked = obj
 
-			local copy = types.Set()
+			local copy = types.Union()
 			for _, v in ipairs(obj:GetTypes()) do
 				if v.GetLuaType then
 					copy:AddType(types.String(v:GetLuaType()):MakeLiteral(true))
@@ -587,19 +587,19 @@ do
 	end
 
 	type function table.sort(tbl, func)
-		local set = types.Set()
+		local union = types.Union()
 
 		if tbl.Type == "tuple" then
 			for i,v in ipairs(tbl:GetData()) do
-				set:AddType(v)
+				union:AddType(v)
 			end
 		elseif tbl.Type == "table" then
 			for i,v in ipairs(tbl.data) do
-				set:AddType(v.val)
+				union:AddType(v.val)
 			end
 		end
-		func:GetArguments():GetData()[1] = set
-		func:GetArguments():GetData()[2] = set
+		func:GetArguments():GetData()[1] = union
+		func:GetArguments():GetData()[2] = union
 	end
 
 	type function table.getn(tbl: table)
@@ -608,7 +608,7 @@ do
 	end
 
 	type function table.unpack(tbl: {[number] = any})
-		if tbl.Type == "set" and tbl:GetLength() == 1 then
+		if tbl.Type == "union" and tbl:GetLength() == 1 then
 			tbl = tbl:GetTypes()[1]
 			if not tbl then
 				return
@@ -674,8 +674,8 @@ do
 	end
 
 	type function ^string.lower(str: string)
-		if str.Type == "set" then
-			local copy = types.Set()
+		if str.Type == "union" then
+			local copy = types.Union()
 
 			for _, str in ipairs(str:GetTypes()) do
 				copy:AddType(types.String(str:GetData():lower()))
@@ -692,8 +692,8 @@ do
 	end
 
 	type function ^string.sub(str: string, a: number, b: number | nil)
-		if str.Type == "set" then
-			local copy = types.Set()
+		if str.Type == "union" then
+			local copy = types.Union()
 
 			for _, str in ipairs(str:GetTypes()) do
 				if str:IsLiteral() and a:IsLiteral() then
@@ -722,8 +722,8 @@ do
 	type function ^string.byte(str: string, from: number | nil, to: number | nil)
 		if str:IsLiteral() then
 
-			if str.Type == "set" then
-				local copy = types.Set()
+			if str.Type == "union" then
+				local copy = types.Union()
 
 				for _, str in ipairs(str:GetTypes()) do
 					if from and from:IsLiteral() and to and to:IsLiteral() then
@@ -764,17 +764,17 @@ do
 		if pattern:IsLiteral() then
 			local out = {}
 			for s in pattern.data:gmatch("%b()") do
-				table.insert(out, types.Set({types.String(), types.Nil}))
+				table.insert(out, types.Union({types.String(), types.Nil}))
 			end
 			return table.unpack(out)
 		end
 
-		return types.Set({types.String(), types.Nil})
+		return types.Union({types.String(), types.Nil})
 	end
 
 	type function ^string.len(str: string)
-		if str.Type == "set" then
-			local copy = types.Set()
+		if str.Type == "union" then
+			local copy = types.Union()
 			for _, obj in ipairs(str:GetTypes()) do
 				if obj:IsLiteral() then
 					copy:AddType(types.Number(#obj:GetData()):MakeLiteral(true))

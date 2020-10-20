@@ -1,11 +1,11 @@
 local T = require("test.helpers")
 local N = T.Number
 local Symbol = T.Number
-local Set = T.Set
+local Union = T.Union
 
 local yes = Symbol(true)
 local no = Symbol(false)
-local yes_and_no =  Set(yes, no)
+local yes_and_no =  Union(yes, no)
 
 test(tostring(yes) .. " should be a subset of " .. tostring(yes_and_no), function()
     assert(yes:SubsetOf(yes_and_no))

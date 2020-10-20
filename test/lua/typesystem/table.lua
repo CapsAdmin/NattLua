@@ -2,10 +2,10 @@ local T = require("test.helpers")
 local Number = T.Number
 local String = T.String
 local Table = T.Table
-local Set = T.Set
+local Union = T.Union
 local Tuple = T.Tuple
 
-test("set and get", function()
+test("union and get", function()
     local contract = Table()
     assert(contract:Set(String("foo"), Number()))
     assert(assert(contract:Get("foo")).Type == "number")
@@ -20,17 +20,17 @@ test("set and get", function()
     assert(not contract:SubsetOf(tbl))
 end)
 
-test("set string and get constant string", function()
+test("union string and get constant string", function()
     local contract = Table()
     assert(contract:Set(String(), Number()))
 
     local tbl = Table()
     tbl.contract = contract
     tbl:Set(String(), Number(1337))
-    local set = assert(tbl:Get(String()))
-    equal("set", set.Type)
-    equal(1337, set:GetType("number"):GetData())
-    equal(nil, set:GetType("symbol"):GetData())
+    local union = assert(tbl:Get(String()))
+    equal("union", union.Type)
+    equal(1337, union:GetType("number"):GetData())
+    equal(nil, union:GetType("symbol"):GetData())
 
     assert(tbl:SubsetOf(contract))
     assert(not contract:SubsetOf(tbl))

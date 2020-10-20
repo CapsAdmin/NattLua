@@ -68,9 +68,9 @@ test("comment types", function()
 
     local a,b,c = func:GetArguments():Unpack()
 
-    equal("set", a.Type)
-    equal("set", b.Type)
-    equal("set", c.Type)
+    equal("union", a.Type)
+    equal("union", b.Type)
+    equal("union", c.Type)
 
     equal("string", a:GetType("string").Type)
     equal("number", b:GetType("number").Type)

@@ -52,7 +52,7 @@ local x = obj()
 local y = x + 1
 ```
 
-This code will log an error about potentially calling a nil value. It would then duplicate the scope and remove nil from the set in the new scope.
+This code will log an error about potentially calling a nil value. It would then duplicate the scope and remove nil from the union in the new scope.
 
 # Current status and goals
 
@@ -64,7 +64,7 @@ The parsing part of the project is mostly done except I have some ideas to make 
 
 # Types
 
-Fundementally the typesystem consists of number, string, table, function, symbol, set, tuple and any. 
+Fundementally the typesystem consists of number, string, table, function, symbol, union, tuple and any. 
 As an example, types can be described by the language like this:
 
 ```lua
@@ -173,8 +173,8 @@ local type mytable = {
 }
 ```
 
-# Sets
-A Set is a type separated by the bor operator `|` these are often used in uncertain conditions.
+# Unions
+A Union is a type separated by the bor operator `|` these are often used in uncertain conditions.
 
 For example this case:
 
@@ -383,7 +383,7 @@ The way I see types is that they are like a parent / children hiearchy. This can
 
 ## Subset
 If something is "sub" of /lower/inside/contains something larger. For example `1` is a subset of `number` because `number` contains all the numbers.
-`1` is also a subset of `1 | 2` since the set contains `1`. But `number` is not a subset of `1` since `1` does not contain numbers like 2, 4, 100, 1337, 90377, etc.
+`1` is also a subset of `1 | 2` since the union contains `1`. But `number` is not a subset of `1` since `1` does not contain numbers like 2, 4, 100, 1337, 90377, etc.
 
 ```lua
     -- pseduo code

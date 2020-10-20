@@ -74,8 +74,8 @@ function META.SubsetOf(A, B)
         end
 
         return true
-    elseif B.Type == "set" then
-        return types.Set({A}):SubsetOf(B)
+    elseif B.Type == "union" then
+        return types.Union({A}):SubsetOf(B)
     end
 
     return types.errors.other("NYI " .. tostring(B))

@@ -154,7 +154,7 @@ test("table.insert", function()
     ]]
 end)
 
-test("string sub on set", function()
+test("string sub on union", function()
     run[[
         local lol: "foo" | "bar"
 
