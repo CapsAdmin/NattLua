@@ -1,7 +1,9 @@
 # What
-"oh" is a Lua based language with a typesystem that transpiles to Lua. It started as a toy project and place for me to explore how programming languages are built, but my eventual goal is to use this language in (goluwa)[https://github.com/CapsAdmin/goluwa].
+"oh" is a Lua compatible language with a typesystem that transpiles to readable luajit. Its purpose is to provide you with tools to analyze, refactor and gradually type your code. It comes with a language server and a library to manipulate and analyze Lua code.
 
-I see this project as 5 parts at the moment. The lexer, parser, analyzer and emitter and the algebraic types.
+It started as a toy project and place for me to explore how programming languages are built. My main goal is to use this language in [goluwa](https://github.com/CapsAdmin/goluwa).
+
+Some self contained modules in this project are: lua lexer, lua parser, lua analyzer, algebraic types.
 
 # Parsing and transpiling
 I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it a little bit different in some ways. The syntax errors it can report are not standard and a bit more detailed. It's written in a way to be easily extendable for new syntax.
@@ -401,6 +403,6 @@ I also have a file called `test_focus.lua` in root which will override the test 
 
 # Similar projects
 
-Teal (https://github.com/teal-language/tl) is a language similar to this, with a much higher likelyhood of succeeding as it does not intend to be as verbose as this project. I'm thinking a nice goal is that I can contribute what I've learned here, be it through tests or other things.
+[Teal](https://github.com/teal-language/tl) is a language similar to this, with a much higher likelyhood of succeeding as it does not intend to be as verbose as this project. I'm thinking a nice goal is that I can contribute what I've learned here, be it through tests or other things.
 
 
