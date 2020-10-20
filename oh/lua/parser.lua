@@ -7,49 +7,6 @@ META.__index = META
 META.Emitter = require("oh.lua.emitter")
 META.syntax = syntax
 
-do -- functional helpers
-    function META:ExpectExpression(what)
-        if self.nodes[1].expressions then
-            self.nodes[1].expressions:insert(self:ReadExpectExpression())
-        elseif self.nodes[1].expression then
-            self.nodes[1].expressions = list.new(self.nodes[1].expression)
-            self.nodes[1].expression = nil
-            self.nodes[1].expressions:insert(self:ReadExpectExpression())
-        else
-            self.nodes[1].expression = self:ReadExpectExpression()
-        end
-
-        return self
-    end
-
-
-    function META:ExpectSimpleIdentifier()
-        self.nodes[1].tokens["identifier"] = self:ReadType("letter")
-        return self
-    end
-
-    function META:ExpectIdentifier()
-        self:Store("identifier", self:ReadIdentifier())
-        return self
-    end
-
-    function META:ExpectIdentifierList(length)
-        self:Store("identifiers", self:ReadIdentifierList(length))
-        return self
-    end
-
-    function META:ExpectExpressionList(length)
-        self:Store("expressions", self:ReadExpressionList(length))
-        return self
-    end
-
-    function META:ExpectDoBlock()
-        return self:ExpectKeyword("do")
-            :StatementsUntil("end")
-        :ExpectKeyword("end", "do")
-    end
-end
-
 require("oh.base_parser")(META)
 require("oh.lua.parser_typesystem")(META)
 require("oh.lua.parser_extra")(META)
@@ -60,9 +17,9 @@ do
     end
 
     function META:ReadBreakStatement()
-        return self:BeginStatement("break")
+        return self:Statement("break")
             :ExpectKeyword("break")
-        :EndStatement()
+        :End()
     end
 end
 
@@ -72,9 +29,9 @@ do
     end
 
     function META:ReadContinueStatement()
-        return self:BeginStatement("continue")
+        return self:Statement("continue")
             :ExpectKeyword("continue")
-        :EndStatement()
+        :End()
     end
 end
 
@@ -84,10 +41,10 @@ do
     end
 
     function META:ReadReturnStatement()
-        return self:BeginStatement("return")
+        return self:Statement("return")
             :ExpectKeyword("return")
             :ExpectExpressionList()
-        :EndStatement()
+        :End()
     end
 end
 
@@ -97,9 +54,11 @@ do
     end
 
     function META:ReadDoStatement()
-        return self:BeginStatement("do")
-            :ExpectDoBlock()
-        :EndStatement()
+        return self:Statement("do")
+            :ExpectKeyword("do")
+                :StatementsUntil("end")
+            :ExpectKeyword("end", "do")
+        :End()
     end
 end
 
@@ -110,11 +69,13 @@ do
     end
 
     function META:ReadWhileStatement()
-        return self:BeginStatement("while")
+        return self:Statement("while")
             :ExpectKeyword("while")
             :ExpectExpression()
-            :ExpectDoBlock()
-        :EndStatement()
+            :ExpectKeyword("do")
+            :ExpectStatementsUntil("end")
+            :ExpectKeyword("end", "do")
+        :End()
     end
 end
 
@@ -124,12 +85,12 @@ do
     end
 
     function META:ReadRepeatStatement()
-        return self:BeginStatement("repeat")
+        return self:Statement("repeat")
             :ExpectKeyword("repeat")
                 :StatementsUntil("until")
             :ExpectKeyword("until")
             :ExpectExpression()
-        :EndStatement()
+        :End()
     end
 end
 
@@ -139,11 +100,11 @@ do
     end
 
     function META:ReadGotoLabelStatement()
-        return self:BeginStatement("goto_label")
+        return self:Statement("goto_label")
             :ExpectKeyword("::")
                 :ExpectSimpleIdentifier()
             :ExpectKeyword("::")
-        :EndStatement()
+        :End()
     end
 end
 
@@ -153,10 +114,10 @@ do
     end
 
     function META:ReadGotoStatement()
-        return self:BeginStatement("goto")
+        return self:Statement("goto")
             :ExpectKeyword("goto")
             :ExpectSimpleIdentifier()
-        :EndStatement()
+        :End()
     end
 end
 
@@ -166,16 +127,16 @@ do
     end
 
     function META:ReadLocalAssignmentStatement()
-        self:BeginStatement("local_assignment")
-        self:ExpectKeyword("local")
-        self:Store("left", self:ReadIdentifierList())
+        local node = self:Statement("local_assignment")
+        node:ExpectKeyword("local")
+        node.left = self:ReadIdentifierList()
 
         if self:IsValue("=") then
-            self:ExpectKeyword("=")
-            self:Store("right", self:ReadExpressionList())
+            node:ExpectKeyword("=")
+            node.right = self:ReadExpressionList()
         end
 
-        return self:EndStatement()
+        return node:End()
     end
 end
 
@@ -186,14 +147,17 @@ do
     end
 
     function META:ReadNumericForStatement()
-        return self:BeginStatement("numeric_for")
+        return self:Statement("numeric_for")
             :Store("is_local", true)
             :ExpectKeyword("for")
             :ExpectIdentifierList(1)
             :ExpectKeyword("=")
             :ExpectExpressionList(3)
-            :ExpectDoBlock()
-        :EndStatement()
+            
+            :ExpectKeyword("do")
+                :StatementsUntil("end")
+            :ExpectKeyword("end", "do")
+        :End()
     end
 end
 
@@ -203,14 +167,16 @@ do
     end
 
     function META:ReadGenericForStatement()
-        return self:BeginStatement("generic_for")
+        return self:Statement("generic_for")
             :Store("is_local", true)
             :ExpectKeyword("for")
             :ExpectIdentifierList()
             :ExpectKeyword("in")
             :ExpectExpressionList()
-            :ExpectDoBlock()
-        :EndStatement()
+            :ExpectKeyword("do")
+                :StatementsUntil("end")
+            :ExpectKeyword("end", "do")
+        :End()
     end
 end
 
@@ -230,8 +196,7 @@ end
 
 do  -- function
     function META:ReadIndexExpression()
-        self:BeginExpression("value")
-        local val = self:GetNode()
+        local val = self:Expression("value")
         val.value = self:ReadType("letter")
 
         while self:IsValue(".") or self:IsValue(":") do
@@ -242,14 +207,14 @@ do  -- function
 
             local left = val
 
-            self:EndExpression()
-            val = self:BeginExpression("binary_operator", true)
+            val:End()
+            val = self:Expression("binary_operator")
             val.value = op
             val.left = val.left or left
             val.right = val.right or self:ReadIndexExpression()
         end
 
-        self:EndExpression()
+        val:End()
 
         return val
     end
@@ -260,7 +225,7 @@ do  -- function
         end
 
         function META:ReadFunctionStatement()
-            local node = self:BeginStatement("function", true)
+            local node = self:Statement("function")
             node.tokens["function"] = self:ReadValue("function")
             node.expression = self:ReadIndexExpression()
 
@@ -278,7 +243,7 @@ do  -- function
 
             self:ReadFunctionBody(node)
 
-            return self:EndStatement()
+            return node:End()
         end
     end
 end
@@ -290,14 +255,14 @@ do
     end
 
     function META:ReadLocalFunctionStatement()
-        self:BeginStatement("local_function")
+        local node = self:Statement("local_function")
         :ExpectKeyword("local")
         :ExpectKeyword("function")
         :ExpectSimpleIdentifier()
 
-        self:ReadFunctionBody(self:GetNode())
+        self:ReadFunctionBody(node)
 
-        return self:EndStatement()
+        return node:End()
     end
 end
 
@@ -307,7 +272,7 @@ do
     end
 
     function META:ReadIfStatement()
-        local node = self:BeginStatement("if", true)
+        local node = self:Statement("if")
 
         node.expressions = list.new()
         node.statements = list.new()
@@ -339,9 +304,9 @@ do
             end
         end
 
-        node.tokens["end"] = self:ReadValue("end")
+        node:ExpectKeyword("end")
 
-        return self:EndStatement()
+        return node:End()
     end
 end
 
@@ -361,7 +326,7 @@ end
 
 do -- identifier
     function META:ReadIdentifier()
-        local node = self:BeginExpression("value", true)
+        local node = self:Expression("value")
 
         if self:IsValue("...") then
             node.value = self:ReadValue("...")
@@ -370,11 +335,11 @@ do -- identifier
         end
 
         if self.ReadTypeExpression and self:IsValue(":") then
-            node.tokens[":"] = self:ReadValue(":")
+            node:ExpectKeyword(":")
             node.explicit_type = self:ReadTypeExpression()
         end
 
-        return self:EndExpression()
+        return node:End()
     end
 
     function META:ReadIdentifierList(max)
@@ -398,9 +363,9 @@ do -- expression
         end
 
         function META:ReadFunctionValue()
-            self:BeginExpression("function"):ExpectKeyword("function")
-            self:ReadFunctionBody(self:GetNode())
-            return self:EndExpression()
+            local node = self:Expression("function"):ExpectKeyword("function")
+            self:ReadFunctionBody(node)
+            return node:End()
         end
     end
 
@@ -410,42 +375,43 @@ do -- expression
         end
 
         function META:ReadTableSpread()
-            return self:BeginExpression("table_spread")
+            return self:Expression("table_spread")
             :ExpectKeyword("...")
             :ExpectExpression()
-            :EndExpression()
+            :End()
         end
     end
 
     function META:ReadTableEntry(i)
+        local node
         if self:IsValue("[") then
-            self:BeginExpression("table_expression_value")
+            node = self:Expression("table_expression_value")
             :Store("expression_key", true)
             :ExpectKeyword("[")
             :ExpectExpression()
             :ExpectKeyword("]")
             :ExpectKeyword("=")
         elseif self:IsType("letter") and self:IsValue("=", 1) then
-            self:BeginExpression("table_key_value")
+            node = self:Expression("table_key_value")
             :ExpectSimpleIdentifier()
             :ExpectKeyword("=")
         else
-            self:BeginExpression("table_index_value")
-            :GetNode().key = i
+            node = self:Expression("table_index_value")
+            node.key = i
         end
 
         if self:IsTableSpread() then
-            self:Store("spread", self:ReadTableSpread())
+            node.spread = self:ReadTableSpread()
         else
-            self:ExpectExpression()
+            node:ExpectExpression()
         end
 
-        return self:EndExpression()
+        return node:End()
     end
 
     function META:ReadTable()
-        local tree = self:BeginExpression("table", true)
-        self:ExpectKeyword("{")
+        local tree = self:Expression("table")
+        tree:ExpectKeyword("{")
 
         tree.children = list.new()
         tree.tokens["separators"] = list.new()
@@ -479,9 +445,9 @@ do -- expression
             end
         end
 
-        self:ExpectKeyword("}")
+        tree:ExpectKeyword("}")
 
-        return self:EndExpression()
+        return tree:End()
     end
 
     do
@@ -490,7 +456,7 @@ do -- expression
         end
 
         function META:ReadExpressionValue()
-            return self:BeginExpression("value"):Store("value", self:ReadTokenLoose()):EndExpression()
+            return self:Expression("value"):Store("value", self:ReadTokenLoose()):End()
         end
     end
 
@@ -505,19 +471,19 @@ do -- expression
         end
 
         function META:ReadCallExpression(no_ambiguous_calls)
-            local node = self:BeginExpression("postfix_call", true)
+            local node = self:Expression("postfix_call")
 
             if self:IsValue("{") then
                 node.expressions = list.new(self:ReadTable())
             elseif self:IsType("string") then
-                node.expressions = list.new(self:BeginExpression("value"):Store("value", self:ReadTokenLoose()):EndExpression())
+                node.expressions = list.new(self:Expression("value"):Store("value", self:ReadTokenLoose()):End())
             else
                 node.tokens["call("] = self:ReadValue("(")
                 node.expressions = self:ReadExpressionList()
                 node.tokens["call)"] = self:ReadValue(")")
             end
 
-            return self:EndExpression()
+            return node:End()
         end
     end
 
@@ -527,11 +493,11 @@ do -- expression
         end
 
         function META:ReadPostfixExpressionIndex()
-            return self:BeginExpression("postfix_expression_index")
+            return self:Expression("postfix_expression_index")
                 :ExpectKeyword("[")
                 :ExpectExpression()
                 :ExpectKeyword("]")
-            :EndExpression()
+            :End()
         end
     end
 
@@ -576,10 +542,10 @@ do -- expression
             node.tokens[")"]:insert(self:ReadValue(")"))
 
         elseif syntax.IsPrefixOperator(self:GetToken()) then
-            node = self:BeginExpression("prefix_operator", true)
+            node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
             node.right = self:ReadExpectExpression(math.huge, no_ambiguous_calls)
-            self:EndExpression()
+            node:End()
         elseif self:IsFunctionValue() then
             node = self:ReadFunctionValue()
         elseif self:IsImportExpression() then
@@ -601,21 +567,21 @@ do -- expression
 
                 if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
                     if self:IsValue(".") or self:IsCallExpression(no_ambiguous_calls, 2) then
-                        node = self:BeginExpression("binary_operator", true)
+                        node = self:Expression("binary_operator")
                         node.value = self:ReadTokenLoose()
-                        node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
+                        node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
                         node.left = left
-                        self:EndExpression()
+                        node:End()
                     elseif self:IsValue(":") then
                         node.tokens[":"] = self:ReadValue(":")
                         node.explicit_type = self:ReadTypeExpression()
                     end
                 elseif syntax.IsPostfixOperator(self:GetToken()) then
                     node = self
-                        :BeginExpression("postfix_operator")
+                        :Expression("postfix_operator")
                             :Store("left", left)
                             :Store("value", self:ReadTokenLoose())
-                        :EndExpression()
+                        :End()
                 elseif self:IsCallExpression(no_ambiguous_calls) then
                     node = self:ReadCallExpression(no_ambiguous_calls)
                     node.left = left
@@ -656,11 +622,11 @@ do -- expression
 
         while syntax.GetBinaryOperatorInfo(self:GetToken()) and syntax.GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
             local left = node
-            node = self:BeginExpression("binary_operator", true)
+            node = self:Expression("binary_operator")
             node.value = self:ReadTokenLoose()
             node.left = left
             node.right = self:ReadExpression(syntax.GetBinaryOperatorInfo(node.value).right_priority, no_ambiguous_calls)
-            self:EndExpression()
+            node:End()
         end
 
         return node
@@ -715,18 +681,18 @@ do -- statements
         local left = self:ReadExpressionList(math.huge)
 
         if self:IsValue("=") then
-            local node = self:BeginStatement("assignment", true)
-            node.tokens["="] = self:ReadValue("=")
+            local node = self:Statement("assignment")
+            node:ExpectKeyword("=")
             node.left = left
             node.right = self:ReadExpressionList(math.huge)
 
-            return self:EndStatement()
+            return node:End()
         end
 
         if left[1] and left[1].kind == "postfix_call" and not left[2] then
-            local node = self:BeginStatement("call_expression", true)
+            local node = self:Statement("call_expression")
             node.value = left[1]
-            return self:EndStatement()
+            return node:End()
         end
 
         self:Error("expected assignment or call expression got $1 ($2)", start, self:GetToken(), self:GetToken().type, self:GetToken().value)

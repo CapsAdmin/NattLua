@@ -569,6 +569,7 @@ function META:EmitStatement(node)
 end
 
 function META:EmitStatements(tbl)
+    if not tbl then print(debug.traceback("uh oh")) end
     for _, node in tbl:pairs() do
         self:EmitStatement(node)
         self:Whitespace("\n")

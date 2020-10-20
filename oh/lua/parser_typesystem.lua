@@ -230,48 +230,50 @@ return function(META)
     end
 
 
-    function META:ExpectTypeExpression(what)
-        if self.nodes[1].expressions then
-            self.nodes[1].expressions:insert(self:ReadTypeExpression())
-        elseif self.nodes[1].expression then
-            self.nodes[1].expressions = list.new(self.nodes[1].expression)
-            self.nodes[1].expression = nil
-            self.nodes[1].expressions:insert(self:ReadTypeExpression())
+    function META:ExpectTypeExpression(node)
+        if node.expressions then
+            node.expressions:insert(self:ReadTypeExpression())
+        elseif node.expression then
+            node.expressions = list.new(node.expression)
+            node.expression = nil
+            node.expressions:insert(self:ReadTypeExpression())
         else
-            self.nodes[1].expression = self:ReadTypeExpression()
+            node.expression = self:ReadTypeExpression()
         end
 
-        return self
+        return node
     end
 
 
     function META:ReadTypeTableEntry(i)
+        local node
         if self:IsValue("[") then
-            self:BeginExpression("table_expression_value")
+            node = self:Expression("table_expression_value")
             :Store("expression_key", true)
             :ExpectKeyword("[")
-            :ExpectTypeExpression()
-            :ExpectKeyword("]")
+
+            self:ExpectTypeExpression(node)
+
+            node:ExpectKeyword("]")
             :ExpectKeyword("=")
         elseif self:IsType("letter") and self:IsValue("=", 1) then
-            self:BeginExpression("table_key_value")
+            node = self:Expression("table_key_value")
             :ExpectSimpleIdentifier()
             :ExpectKeyword("=")
         else
-            self:BeginExpression("table_index_value")
-            :GetNode().key = i
+            node = self:Expression("table_index_value")
+            :Store("key", i)
         end
 
-        self:ExpectTypeExpression()
+        self:ExpectTypeExpression(node)
 
-        return self:EndExpression()
+        return node:End()
     end
 
     function META:ReadTypeTable()
-        self:BeginExpression("type_table")
-        self:ExpectKeyword("{")
+        local tree = self:Expression("type_table")
+        tree:ExpectKeyword("{")
 
-        local tree = self:GetNode()
         tree.children = list.new()
         tree.tokens["separators"] = list.new()
 
@@ -298,9 +300,9 @@ return function(META)
             end
         end
 
-        self:ExpectKeyword("}")
+        tree:ExpectKeyword("}")
 
-        return self:EndExpression()
+        return tree:End()
     end
 
     do
@@ -309,12 +311,12 @@ return function(META)
         end
 
         function META:ReadTypeCall()
-            local node = self:BeginExpression("postfix_call", true)
+            local node = self:Expression("postfix_call")
             node.tokens["call("] = self:ReadValue("<|")
             node.expressions = self:ReadTypeExpressionList()
             node.tokens["call)"] = self:ReadValue("|>")
             node.type_call = true
-            return self:EndExpression()
+            return node:End()
         end
     end
 
@@ -383,11 +385,11 @@ return function(META)
 
                 if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
                     if self:IsValue(".") or self:IsCallExpression(true, 2) then
-                        node = self:BeginExpression("binary_operator", true)
+                        node = self:Expression("binary_operator")
                         node.value = self:ReadTokenLoose()
-                        node.right = self:BeginExpression("value"):Store("value", self:ReadType("letter")):EndExpression()
+                        node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
                         node.left = left
-                        self:EndExpression()
+                        node:End()
                     elseif self:IsValue(":") then
                         node.tokens[":"] = self:ReadValue(":")
                         node.explicit_type = self:ReadTypeExpression()

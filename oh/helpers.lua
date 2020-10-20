@@ -273,6 +273,7 @@ do
 		parent = true,
 		inferred_type = true,
 		scope = true,
+		parser = true,
 	}
     local function traverse(tbl, done, out)
 		for k, v in pairs(tbl) do

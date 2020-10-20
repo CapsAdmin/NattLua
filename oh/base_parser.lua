@@ -6,6 +6,36 @@ return function(META)
     local setmetatable = setmetatable
     local type = type
 
+    local function expect(node, parser, func, what, start, stop)
+        local tokens = node.tokens
+
+        if start then
+            start = tokens[start]
+        end
+
+        if stop then
+            stop = tokens[stop]
+        end
+
+        if start and not stop then
+            stop = tokens[start]
+        end
+
+        local token = func(parser, what, start, stop)
+
+        if tokens[what] then
+            if not tokens[what][1] then
+                tokens[what] = list.new(tokens[what])
+            end
+
+            tokens[what]:insert(token)
+        else
+            tokens[what] = token
+        end
+
+        token.parent = node
+    end
+
     do
         local PARSER = META
 
@@ -38,7 +68,52 @@ return function(META)
         function META:IsWrappedInParenthesis()
             return self.tokens["("] and self.tokens[")"]
         end
+
+        function META:ExpectKeyword(what, start, stop)
+            expect(self, self.parser, self.parser.ReadValue, what, start, stop)
+            return self
+        end
         
+        function META:ExpectExpression(what)
+            if self.expressions then
+                self.expressions:insert(self.parser:ReadExpectExpression())
+            elseif self.expression then
+                self.expressions = list.new(self.expression)
+                self.expression = nil
+                self.expressions:insert(self.parser:ReadExpectExpression())
+            else
+                self.expression = self.parser:ReadExpectExpression()
+            end
+    
+            return self
+        end    
+    
+        function META:ExpectSimpleIdentifier()
+            self.tokens["identifier"] = self.parser:ReadType("letter")
+            return self
+        end
+
+        function META:Store(key, val)
+            self[key] = val
+            return self
+        end
+    
+        function META:ExpectIdentifier()
+            self.identifier = self:ReadIdentifier()
+            return self
+        end
+    
+        function META:ExpectIdentifierList(length)
+            self.identifiers = self.parser:ReadIdentifierList(length)
+            return self
+        end
+
+        function META:End()
+            self.parser.nodes:remove(1)
+            return self
+        end
+
+
         PARSER.ExpressionMeta = META
 
         local id = 0
@@ -50,6 +125,7 @@ return function(META)
             node.id = id
             node.code = self.code
             node.name = self.name
+            node.parser = self
             id = id + 1
 
             setmetatable(node, META)
@@ -115,9 +191,63 @@ return function(META)
             return out
         end
 
+        function META:StatementsUntil(what)
+            self.statements = self.parser:ReadStatements(type(what) == "table" and what or {[what] = true})
+
+            return self
+        end
+
         function META:ToExpression(kind)
             setmetatable(self, PARSER.ExpressionMeta)
             self.kind = kind
+            return self
+        end
+
+        function META:ExpectSimpleIdentifier()
+            self.tokens["identifier"] = self.parser:ReadType("letter")
+            return self
+        end
+
+        function META:Store(key, val)
+            self[key] = val
+            return self
+        end
+            
+        function META:ExpectExpressionList(length)
+            self.expressions = self.parser:ReadExpressionList(length)
+            return self
+        end  
+            
+        function META:ExpectIdentifierList(length)
+            self.identifiers = self.parser:ReadIdentifierList(length)
+            return self
+        end
+
+        function META:ExpectExpression()
+            if self.expressions then
+                self.expressions:insert(self.parser:ReadExpectExpression())
+            elseif self.expression then
+                self.expressions = list.new(self.expression)
+                self.expression = nil
+                self.expressions:insert(self.parser:ReadExpectExpression())
+            else
+                self.expression = self.parser:ReadExpectExpression()
+            end
+            return self
+        end
+
+        function META:ExpectStatementsUntil(what)
+            self.statements = self.parser:ReadStatements(type(what) == "table" and what or {[what] = true})
+            return self
+        end
+
+        function META:ExpectKeyword(what, start, stop)
+            expect(self, self.parser, self.parser.ReadValue, what, start, stop)
+            return self
+        end
+
+        function META:End()
+            self.parser.nodes:remove(1)
             return self
         end
 
@@ -131,6 +261,7 @@ return function(META)
             node.id = id
             node.code = self.code
             node.name = self.name
+            node.parser = self
             id = id + 1
 
             setmetatable(node, META)
@@ -140,8 +271,13 @@ return function(META)
                 self:OnNode(node)
             end
 
+            node.parent = self.nodes[1]
+
+            self.nodes:insert(1, node)
+
             return node
         end
+
     end
 
     function META:Error(msg, start, stop, ...)
@@ -259,7 +395,7 @@ return function(META)
 
 
     function META:Root(root)
-        local node = self:BeginStatement("root", true)
+        local node = self:Statement("root")
         self.root = root or node
 
         local shebang
@@ -281,7 +417,7 @@ return function(META)
             node.statements:insert(eof)
         end
 
-        return self:EndStatement()
+        return node:End()
     end
 
     function META:ReadStatements(stop_token)
@@ -317,94 +453,6 @@ return function(META)
             node.tokens[";"] = self:ReadValue(";")
 
             return node
-        end
-    end
-
-    do -- functional-like helpers. makes the code easier to read and maintain but does not always work
-        function META:BeginStatement(kind, return_node)
-            local node = self:Statement(kind)
-            node.parent = self.nodes[1]
-
-            self.nodes:insert(1, node)
-
-            if return_node then
-                return node
-            end
-
-            return self
-        end
-
-        function META:BeginExpression(kind, return_node)
-            local node = self:Expression(kind)
-            node.parent = self.nodes[1]
-            self.nodes:insert(1, node)
-
-            if return_node then
-                return node
-            end
-
-            return self
-        end
-
-        local function expect(self, func, what, start, stop)
-            local tokens = self.nodes[1].tokens
-
-            if start then
-                start = tokens[start]
-            end
-
-            if stop then
-                stop = tokens[stop]
-            end
-
-            if start and not stop then
-                stop = tokens[start]
-            end
-
-            local token = func(self, what, start, stop)
-
-            if tokens[what] then
-                if not tokens[what][1] then
-                    tokens[what] = list.new(tokens[what])
-                end
-
-                tokens[what]:insert(token)
-            else
-                tokens[what] = token
-            end
-
-            token.parent = self.nodes[1]
-
-            return self
-        end
-
-        function META:ExpectKeyword(what, start, stop)
-            return expect(self, self.ReadValue, what, start, stop)
-        end
-
-        function META:StatementsUntil(what)
-            self.nodes[1].statements = self:ReadStatements(type(what) == "table" and what or {[what] = true})
-
-            return self
-        end
-
-        function META:EndStatement()
-            local node = self.nodes:remove(1)
-            return node
-        end
-
-        function META:EndExpression()
-            local node = self.nodes:remove(1)
-            return node
-        end
-
-        function META:GetNode()
-            return self.nodes[1]
-        end
-
-        function META:Store(key, val)
-            self.nodes[1][key] = val
-            return self
         end
     end
 end
