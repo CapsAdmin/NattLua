@@ -1,4 +1,4 @@
-local nl = require("nl")
+local nl = require("nattlua")
 local util = require("examples.util")
 
 local code = nl.Code(assert(util.FetchCode("examples/benchmarks/10mb.lua", "https://gist.githubusercontent.com/CapsAdmin/0bc3fce0624a72d83ff0667226511ecd/raw/b84b097b0382da524c4db36e644ee8948dd4fb20/10mb.lua")), "10mb.lua")

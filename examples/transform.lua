@@ -1,4 +1,4 @@
-local nl = require("nl")
+local nl = require("nattlua")
 local LuaEmitter = require("nattlua.transpiler.emitter")
 local code = io.open("nattlua/parser/base_parser.lua"):read("*all")
 

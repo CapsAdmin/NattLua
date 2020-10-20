@@ -542,7 +542,7 @@ return function(META)
             local root = self.config.path:match("(.+/)")
             node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
-            local nl = require("nl")
+            local nl = require("nattlua")
             local root, err = nl.ParseFile(node.path, self.root).SyntaxTree
 
             if not root then
@@ -575,7 +575,7 @@ return function(META)
             local root = self.config.path:match("(.+/)")
             node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
-            local nl = require("nl")
+            local nl = require("nattlua")
             local root, err = nl.ParseFile(node.path, self.root)
 
             if not root then

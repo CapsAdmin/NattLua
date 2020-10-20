@@ -1,6 +1,6 @@
 -- split by casing as well? SetCleint GetClient TransferCleint
 
-local nl = require("nl")
+local nl = require("nattlua")
 local syntax = require("nattlua.syntax.syntax")
 local util = require("examples.util")
 

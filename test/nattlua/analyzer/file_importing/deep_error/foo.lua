@@ -4,4 +4,4 @@
 
 local a = 2 + 1
 -- ERROR3
-assert(loadfile("test/lua/analyzer/file_importing/deep_error/file_that_errors.nl"))()
+assert(loadfile("test/nattlua/analyzer/file_importing/deep_error/file_that_errors.nlua"))()

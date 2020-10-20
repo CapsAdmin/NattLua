@@ -8,7 +8,7 @@ ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
 ffi.C.chdir("/home/caps/nl/")
 
 local json = require("vscode.server.json")
-local nl = require("nl")
+local nl = require("nattlua")
 local helpers = require("nattlua.util.helpers")
 local tprint = require("examples.util").TablePrint
 local shared_analyzer = require("nattlua.analyzer.shared_analyzer")

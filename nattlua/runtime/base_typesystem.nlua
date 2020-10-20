@@ -266,7 +266,7 @@ do -- globals
 							return analyzer.loaded[path]
 						end
 
-						local code_data = require("nl").File(path)
+						local code_data = require("nattlua").File(path)
 
 						assert(code_data:Lex())
 						assert(code_data:Parse())

@@ -1,4 +1,4 @@
-local nl = require("nl")
+local nl = require("nattlua")
 local syntax = require("nattlua.syntax.syntax")
 local tprint = require("nattlua.util.tprint")
 

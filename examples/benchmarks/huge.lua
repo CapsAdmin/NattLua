@@ -2,7 +2,7 @@ if _G.ravi then
     _G.ravi.jit(true)
 end
 
-local nl = require("nl")
+local nl = require("nattlua")
 local util = require("examples.util")
 
 --util.LogTraceAbort()

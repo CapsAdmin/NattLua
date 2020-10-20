@@ -1,6 +1,6 @@
-local nl = require("nl")
+local nl = require("nattlua")
 local path = ...
-if path:sub(-4) ~= ".lua" and path:sub(-3) ~= ".nl" then
+if path:sub(-4) ~= ".lua" and path:sub(-5) ~= ".nlua" then
     return
 end
 
@@ -8,7 +8,7 @@ local function run(path, ...)
     assert(loadfile(path))(...)
 end
 
-if path:find("test/") and path:sub(-3) ~= ".nl" then
+if path:find("test/") and path:sub(-5) ~= ".nlua" then
     run("test/run.lua", path)
     return
 end
@@ -32,7 +32,7 @@ if path:find("nl/nl", nil, true) and not path:find("helpers") then
     end
 end
 
-if path:find("examples/") and path:sub(-3) ~= ".nl" then
+if path:find("examples/") and path:sub(-5) ~= ".nlua" then
     run(path)
     return
 end

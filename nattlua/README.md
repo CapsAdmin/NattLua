@@ -12,7 +12,7 @@ Parses the lua code into an abstract syntax tree
 # analyzer
 An optional step which traverses the AST and runs type checking on it.
 
-uses base_typesystem.nl
+uses base_typesystem.nlua
 
 # transpiler
 Emits the lua code ready to be executed along with runtime.lua

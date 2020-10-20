@@ -1,4 +1,4 @@
-local nl = require("nl")
+local nl = require("nattlua")
 
 local files = {}
 

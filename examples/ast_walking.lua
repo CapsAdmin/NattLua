@@ -1,4 +1,4 @@
-local nl = require("nl")
+local nl = require("nattlua")
 local ast = assert(nl.Code(assert(io.open("nattlua/parser/parser.lua")):read("*all")):Parse()).SyntaxTree
 
 print("==================================================")

@@ -693,7 +693,7 @@ return function(META)
 
         function META:CallLuaTypeFunction(node, func, ...)
             setfenv(func, setmetatable({
-                nl = require("nl"),
+                nl = require("nattlua"),
                 types = types,
                 analyzer = self,
             }, {
