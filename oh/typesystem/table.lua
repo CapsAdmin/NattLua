@@ -176,6 +176,11 @@ function META:ContainsAllKeysIn(contract)
         if keyval.key:IsLiteral() then
             local ok, err = self:GetKeyVal(keyval.key)
             if not ok then
+                
+                if (keyval.val.Type == "symbol" and keyval.val.data == nil) or (keyval.val.Type == "set" and keyval.val:HasNil()) then
+                    return true
+                end
+
                 return types.errors.other(tostring(keyval.key) .. " is missing from " .. tostring(contract))
             end
         end

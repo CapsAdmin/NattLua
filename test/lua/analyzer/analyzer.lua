@@ -453,3 +453,12 @@ run[[
     type_assert(y, _ as Any)
     type_assert(z, _ as Any)
 ]]
+
+run[[
+    -- we should be able to initialize with no value if the value can be nil
+    local x: { y = number | nil } = {}
+]]
+
+run([[
+    local x: { y = number } = {}
+]], "y.-is missing from")
