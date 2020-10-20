@@ -1,7 +1,7 @@
-local oh = require("oh")
-local types = require("oh.typesystem.types")
+local nl = require("nl")
+local types = require("nattlua.typesystem.types")
 
-local C = oh.Code
+local C = nl.Code
 
 types.Initialize()
 
@@ -26,7 +26,7 @@ end
 
 local function run(code, expect_error)
     _G.TEST = true
-    local code_data = oh.Code(code, nil, nil, 3)
+    local code_data = nl.Code(code, nil, nil, 3)
     local ok, err = code_data:Analyze()
     _G.TEST = false
 

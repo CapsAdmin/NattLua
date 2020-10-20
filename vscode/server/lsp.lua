@@ -1,6 +1,6 @@
 local ffi = require("ffi")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
-ffi.C.chdir("/home/caps/oh/")
+ffi.C.chdir("/home/caps/nl/")
 
 local JSON_RPC_VERSION = "3.15"
 

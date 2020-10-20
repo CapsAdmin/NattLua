@@ -1,0 +1,84 @@
+-- a "generic type"
+local function CDataPointer<|T: any|>
+	return {
+		[number] = T,
+	}
+end
+
+type VoidPointer = {
+	__meta = self, -- this is a shortcut to setmetatable<|VoidPointer, VoidPointer|>
+	__index = function() error("cannot index a void pointer") end,
+	__newindex = function() error("cannot index a void pointer") end
+}
+
+type ffi.C = {
+	__meta = self,
+	__index = function(self, field: string)
+		-- this is a type function, but the code here is executed by the checker
+
+		if not field:IsLiteral() then error("field must be a literal") end
+
+		local ffi = require("ffi")
+		local reflect = require("libraries.reflect")
+
+		local function call_typesystem_upvalue(name, ...)
+			-- this is very internal-ish code
+			-- not sure what a nice interface for this really should be yet
+			local generics_func = analyzer:GetEnvironmentValue(name, "typesystem")
+			local argument_tuple = types.Tuple({...})
+			analyzer.PreferTypesystem = true
+			local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
+			analyzer.PreferTypesystem = nil
+			return returned_tuple:Unpack()
+		end
+
+		local function ctype_to_nl_type(type_info)
+			if type_info.what == "ptr" then
+				return analyzer:GetEnvironmentValue("VoidPointer", "typesystem")
+			elseif type_info.what == "int" then
+				return types.Number()
+			else
+				error("dunno how to cast " .. type_info.what)
+			end
+		end
+		
+		local cdata = ffi.C[field:GetData()]
+		local info = reflect.typeof(cdata)
+
+		if info.what == "func" then
+			local arguments = {}
+			
+			for arg_info in info:arguments() do
+				table.insert(arguments, ctype_to_nl_type(arg_info.type))
+			end
+
+			local type
+
+			if info.return_type.what == "ptr" then
+				type = ctype_to_nl_type(info.return_type)
+			else
+				type = call_typesystem_upvalue("CDataPointer", ctype_to_nl_type(info.return_type))
+			end
+
+			return types.Function({
+				ret = types.Tuple({type}),
+				arg = types.Tuple(arguments)
+			})
+		end
+
+	end
+}
+
+type function ffi.cdef(c_declaration: string, ...)
+	assert(c_declaration:IsLiteral(), "c_declaration must be a literal")
+
+	local ffi = require("ffi")
+	ffi.cdef(c_declaration:GetData(), ...)
+end
+
+--- from now it's normal lua code
+
+local ffi = require("ffi")
+ffi.cdef("void * malloc(size_t)")
+print(ffi.C.malloc()[5])
+                  -- ^ should error

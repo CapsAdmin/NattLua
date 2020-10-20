@@ -1,4 +1,4 @@
-local oh = require("oh")
+local nl = require("nl")
 
 local files = {}
 
@@ -16,7 +16,7 @@ for full_path in io.popen("locate .lua"):read("*all"):gmatch("(.-)\n") do
 end
 
 for _, full_path in ipairs(files) do
-    local func, err = oh.loadfile(full_path)
+    local func, err = nl.loadfile(full_path)
     if not func then
         print(err)
     end

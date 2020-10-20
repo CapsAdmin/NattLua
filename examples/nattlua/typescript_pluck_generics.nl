@@ -1,0 +1,51 @@
+
+--[[
+    https://www.typescriptlang.org/play?#code/GYVwdgxgLglg9mABABwDYggawDwBUA0iA0ogKYAeUpYAJgM6KakCecwiuAfABRwBcHQsgBOcZKWFRmAOQCGAW1J0BRANoBdAJQDcqouo2IA3gChEiYaSghhSEWIlS5iugDp5s5N25hNiALyciHCqYFoA3CYAviYmMGBUwsCyEKSIAMKywsZmiB5gIMnQNhICdFDC8QDmkebycDSkqGUV1bWIzKRZAgXyAEYSkTEmqFaIULLkMAKZ2f45dbIFRdaWwgIARLhwrBMb+Ln1jc2IG5nywsz7uZ3diABMAAwAjAAsB1GRJgD034gAsktCilVhJEEsaHkGk1wZZEH04FAABbBdhScSIcqVMBVA6-TFwRAAdzSECWKHQWHGSNI8nhiJR8SghNk42Y4khWOqsOEsmYIzGHiYAEFaP9oScuTjDPM0BhMNwJlNCKoNvlgcU1vtTkcmhsIrF8QBJdgk8aXcaEuVU3WocG0DpdYSEM1VMZLH5-LK85io8GIcDwJDo0gCbhSqqIAA+iF6A2Emg0AqgUOOAE0nQEKfLFZMYCq1RLtRtbsJ9ZpwkA
+
+    the above link is the source code to the original code
+    behaviorally it should be identical, but once difference is 
+    that NattLua will error inside of the pluck function instead of at the caller
+]]
+
+local function keysof<|tbl: {[any] = any}|>
+	local union = types.Union()
+
+	for _, keyval in ipairs(tbl:GetData()) do
+		union:AddType(keyval.key)
+	end
+
+	return union
+end
+
+local function pluck<|o: any, propertyNames: {[1 .. inf] = string}|>
+	local list = {}
+
+	for _, propertyName in ipairs(propertyNames) do
+		table.insert(list, o[propertyName])
+	end
+
+	return list
+end
+
+type Car = {
+	manufacturer = string,
+  	model = string,
+  	year = number,
+}
+
+local taxi: Car = {
+	manufacturer = "Toyota",
+	model = "Camry",
+	year = 2014,
+}
+
+-- Manufacturer and model are both of type string,
+-- so we can pluck them both into a typed string array
+local makeAndModel = pluck(taxi, {"manufactuwrer", "model"})
+
+-- If we try to pluck model and year, we get an
+-- array of a union type: (string | number)[]
+local modelYear = pluck(taxi, {"model", "year"})
+
+type_assert(makeAndModel, {_ as string, _ as string})
+type_assert(modelYear, {_ as string, _ as number})

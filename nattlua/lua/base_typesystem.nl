@@ -1,0 +1,920 @@
+local type boolean = true | false
+
+local type Table = {[any] = any}
+local type userdata = Table
+local type cdata = Table
+local type ctype = Table
+local type thread = Table
+
+local type empty_function = function(...): any
+
+type function exclude(T, U)
+	T = T:Copy()
+    T:RemoveType(U)
+    return T
+end
+
+type function enum(tbl)
+	assert(tbl:IsLiteral())
+	
+	local union = types.Union()
+	for key, val in tbl:pairs() do
+		analyzer:SetEnvironmentValue(key:GetData(), val, "typesystem")
+		union:AddType(val)
+	end
+	return union
+end
+
+type function error_inside_base_typesystem()	
+	-- a comment to match from test
+	local a = nil + true
+end
+
+type function keysof(tbl: Table)
+	local union = types.Union()
+
+	for _, keyval in ipairs(tbl:GetData()) do
+		union:AddType(keyval.key)
+	end
+
+	return union
+end
+
+type function type_assert(what, type)
+	what = what or types.Nil
+	type = type or types.Nil
+
+	if what.Type == type.Type and what.data == type.data then
+		return
+	end
+
+	if (what.contract or what):GetSignature() ~= type:GetSignature() then
+		error("expected " .. tostring(type) .." got " .. tostring(what), 2)
+	end
+end
+
+type function subset_of(A, B)
+	local ok, err = A:SubsetOf(B)
+	if not ok then
+		error(err)
+	end
+
+	return ok
+end
+
+type function type_assert_superset(what, type)
+	if not what:SubsetOf(type) or (what.type == "any" and type.type ~= "any") then
+		error("expected " .. tostring(type) .." got " .. tostring(what), 2)
+	end
+end
+
+type function type_traceback() 
+	local helpers = require("nattlua.helpers")
+	if not analyzer.call_stack then return end
+	for i,v in ipairs(analyzer.call_stack) do 
+		local callexp = v.call_expression
+		
+		local lol =  v.func.statements
+		v.func.statements = {}
+		local func_str = v.func:Render()
+		v.func.statements = lol
+
+		local start, stop = helpers.LazyFindStartStop(callexp)
+		print(helpers.FormatError(analyzer.code_data.code, analyzer.code_data.name, "#" .. tostring(i) .. ": " .. analyzer.code_data.name, start, stop, 1))
+	end
+end
+
+type function seal(tbl)
+	for key, val in tbl:pairs() do
+		if val.Type == "function" and val:GetArguments():Get(1).Type == "union" then 
+			local first_arg = val:GetArguments():Get(1)
+			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
+				val:GetArguments():Set(1, tbl)
+			end
+		end
+	end
+
+	tbl.contract = tbl
+end
+
+do -- globals
+	type setmetatable = (function(table: Table, metatable: Table|nil): Table)
+	type select = (function(index: number|string, ...): ...)
+	type rawlen = (function(v: Table|string): number)
+	type unpack = (function(list: Table, i: number, j: number): ...) | (function(list: Table, i: number): ...) | (function(list: Table): ...)
+	type require = (function(modname: string): any)
+	type rawset = (function(table: Table, index: any, value: any): Table)
+	type getmetatable = (function(object: any): Table|nil)
+	type load = (function(ld: string|empty_function, source: string, mode: string, env: Table): empty_function|nil, string|nil) | (function(ld: string|empty_function, source: string, mode: string): empty_function|nil, string|nil) | (function(ld: string|empty_function, source: string): empty_function|nil, string|nil) | (function(ld: string|empty_function): empty_function|nil, string|nil)
+	type type = (function(v: any): string)
+	type collectgarbage = (function(opt: string, arg: number): ...) | (function(opt: string): ...) | (function(): ...)
+	type getfenv = (function(f: empty_function|number): Table) | (function(): Table)
+	type pairs = (function(t: Table): empty_function, Table, nil)
+	type rawequal = (function(v1: any, v2: any): boolean)
+	type loadstring = (function(string: string, chunkname: string): empty_function|nil, string|nil) | (function(string: string): empty_function|nil, string|nil)
+	type loadfile = (function(filename: string, mode: string, env: Table): empty_function|nil, string|nil) | (function(filename: string, mode: string): empty_function|nil, string|nil) | (function(filename: string): empty_function|nil, string|nil) | (function(): empty_function|nil, string|nil)
+	type dofile = (function(filename: string): ...) | (function(): ...)
+	type ipairs = (function(t: Table): empty_function, Table, number)
+	type tonumber = (function(e: number | string, base: number | nil): number | nil)
+	type function print(...) print(...) end
+	type tostring = (function(val: any): string)
+
+	type function type_assert_truthy(obj, err)
+		if obj:IsTruthy() then
+			return obj
+		end
+		error(err and err.data or "assertion failed")
+	end
+
+	type function assert(obj)
+		if obj:IsTruthy() then
+			if obj.Type == "union" then
+				obj = obj:Copy()
+				obj:DisableFalsy()
+			end
+			return obj
+		end
+	end
+
+	type function next(t: {[any] = any}, k: any)
+
+		if t.Type == "any" then
+			return types.Any(), types.Any()
+		end
+
+		if t:IsLiteral() then
+			if k and not (k.Type == "symbol" and k.data == nil) then
+				for i, kv in ipairs(t:GetData()) do
+					if kv.key:SubsetOf(k) then
+						local kv = t:GetData()[i+1]
+						if kv then
+							if not k:IsLiteral() then
+								return type.Union({types.Nil, kv.key}), type.Union({types.Nil, kv.val})
+							end
+
+							return kv.key, kv.val
+						end
+						return nil
+					end
+				end
+			else
+				local kv = t:GetData()[1]
+				if kv then
+					return kv.key, kv.val
+				end
+			end
+		end
+
+		if t.Type == "union" then
+			t = t:GetTypes()
+		else
+			t = {t}
+		end
+
+		local k = types.Union()
+		local v = types.Union()
+
+		for _, t in ipairs(t) do
+			if not t.data then
+				return
+			end
+
+			for _, kv in ipairs(t.contract and t.contract.data or t.data) do
+				kv.key.node = t.node
+				kv.val.node = t.node
+
+				k:AddType(kv.key)
+				v:AddType(kv.val)
+			end
+		end
+
+		return k,v
+	end
+
+	type function pairs(tbl)
+		if tbl:IsLiteral() then
+			local i = 1
+			return function(key, val)
+				local kv = tbl:GetData()[i]
+				if not kv then return nil end
+				i = i + 1
+				return kv.key, kv.val
+			end
+		end
+
+		local next = analyzer:GetEnvironmentValue("next", "typesystem")
+		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, tbl)
+		local done = false
+
+		return function()
+			if done then return nil end
+			done = true
+			return k, v
+		end
+	end
+
+	type function ipairs(tbl)
+
+		if tbl:IsLiteral() then
+			local i = 1
+			return function(key, val)
+				local kv = tbl:GetData()[i]
+				if not kv then return nil end
+				i = i + 1
+				return kv.key, kv.val
+			end
+		end
+
+		local next = analyzer:GetEnvironmentValue("next", "typesystem")
+		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, tbl)
+		local done = false
+		return function()
+			if done then return nil end
+			done = true
+			return k, v
+		end
+	end
+
+	type function require(name: string)
+		local str = name.data
+
+		local shared_analyzer = require("nattlua.lua.shared_analyzer")
+
+		local val = shared_analyzer:Get(str)
+
+		if val then
+			return val
+		end
+		
+		if str == "table.new" then
+			return shared_analyzer:Get("table", "typesystem"):Get("new")
+		end
+
+		if analyzer:GetEnvironmentValue(str, "typesystem") then
+			return analyzer:GetEnvironmentValue(str, "typesystem")
+		end
+
+		if package.loaders then
+			for _, searcher in ipairs(package.loaders) do
+				local loader = searcher(str)
+				if type(loader) == "function" then
+					local path = debug.getinfo(loader).source
+					if path:sub(1, 1) == "@" then
+						local path = path:sub(2)
+
+						if analyzer.loaded and analyzer.loaded[path] then
+							return analyzer.loaded[path]
+						end
+
+						local code_data = require("nl").File(path)
+
+						assert(code_data:Lex())
+						assert(code_data:Parse())
+
+						local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
+						
+						analyzer.loaded = analyzer.loaded or {}
+						analyzer.loaded[path] = res
+
+						return res
+					end
+				end
+			end
+		end
+
+		analyzer:Report(name.node, "unable to find module " .. str)
+
+		return types.Any
+	end
+
+	type function type_error(str: string, level: number | nil)
+		error(str:GetData(), level and level:GetData() or nil)
+	end
+
+	type function load(code: string, chunk_name: string | nil)
+		if not code:IsLiteral() then
+			return types.Any
+		end
+
+		local str = code:GetData()
+
+		local ok, err = pcall(function()
+			str = str:gsub("\\(.)", function(char) return assert(load("return '\\" .. char .. "'"))() end)
+		end)
+
+		if not ok then
+			return ok, err
+		end
+
+		local code_data = nl.Code(str, chunk_name and chunk_name:GetData() or nil)
+		assert(code_data:Lex())
+		assert(code_data:Parse())
+		
+		return analyzer:NewType(code_data.SyntaxTree, "function", {
+			arg = types.Tuple({}),
+			ret = types.Tuple({}),
+			lua_function = function(...)
+				return analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
+			end
+		})
+	end
+
+	type function loadfile(path: string)
+		if path.Type == "any" then return types.Any() end
+
+		local f = assert(io.open(path:GetData(), "rb"))
+		local code = f:read("*all")
+		f:close()
+
+		local code_data = nl.Code(code, "@" .. path:GetData())
+		assert(code_data:Lex())
+		assert(code_data:Parse())
+		
+		return analyzer:NewType(code_data.SyntaxTree, "function", {
+			arg = types.Tuple({}),
+			ret = types.Tuple({}),
+			lua_function = function(...)
+				return analyzer:AnalyzeRootStatement(code_data.SyntaxTree, ...)
+			end
+		})
+	end
+
+	type function rawset(tbl: {[any] = any}, key: any, val: any)
+		tbl:Set(key, val, true)
+	end
+
+	type function rawget(tbl: {[any] = any}, key: any)
+		local t, err = tbl:Get(key, true)
+		if t then
+			return t
+		end
+	end
+
+	type function error(msg: string, level: number | nil)
+		analyzer.lua_error_thrown = msg
+	end
+
+	type function pcall(callable: any, ...)
+		return callable:Call(callable, types.Tuple(...), node)
+	end
+
+	type function xpcall(callable: any, error_cb: any, ...)
+		return callable:Call(callable, types.Tuple(...), node)
+	end
+
+	type function select(index: 1 .. inf | "#", ...)
+		return select(index:GetData(), ...)
+	end
+
+	type function type(obj: any)
+
+		if obj.Type == "union" then
+			analyzer.type_checked = obj
+
+			local copy = types.Union()
+			for _, v in ipairs(obj:GetTypes()) do
+				if v.GetLuaType then
+					copy:AddType(types.String(v:GetLuaType()):MakeLiteral(true))
+				end
+			end
+
+			return copy
+		end
+
+		if obj.GetLuaType then
+			return obj:GetLuaType()
+		end
+
+		return types.String()
+	end
+
+	type function setmetatable(tbl, meta)
+		if meta.Type == "table" then
+			
+			if not meta.contract then
+				meta:Extend(tbl, true)
+			end
+
+			tbl.meta = meta
+		end
+
+		return tbl
+	end
+
+	type function getmetatable(tbl)
+		return tbl.meta
+	end
+end
+
+do
+	type io = {
+		write = (function(...): nil),
+		flush = (function(): boolean|nil, string|nil),
+		read = (function(...): ...),
+		lines = (function(...): empty_function),
+		setvbuf = (function(mode: string, size: number): boolean|nil, string|nil) | (function(mode: string): boolean|nil, string|nil),
+		seek = (function(whence: string, offset: number): number|nil, string|nil) | (function(whence: string): number|nil, string|nil) | (function(): number|nil, string|nil)
+	}
+
+	type File = {
+		close = (function(self): boolean|nil, string, number|nil),
+		write = (function(self, ...): self|nil, string|nil),
+		flush = (function(self): boolean|nil, string|nil),
+		read = (function(self, ...): ...),
+		lines = (function(self, ...): empty_function),
+		setvbuf = (function(self, string, number): boolean|nil, string|nil) | (function(file: self, mode: string): boolean|nil, string|nil),
+		seek = (function(self, string, number): number|nil, string|nil) | (function(file: self, whence: string): number|nil, string|nil) | (function(file: self,): number|nil, string|nil)
+	}
+
+	type function io.open(): File
+	type function io.popen(): File
+	type io.stdout = File
+	type io.stdin = File
+	type io.stderr = File
+end
+
+type ffi = {
+	C = {},
+	cdef = (function(string): nil),
+	abi = (function(string): boolean),
+	metatype = (function(ctype, Table): cdata),
+	new = (function(string | ctype, number, any...): cdata),
+	copy = (function(cdata, cdata | nil, number | string | nil): nil),
+	alignof = (function(ctype): number),
+	cast = (function(ctype, cdata): cdata),
+	typeof = (function(ctype): ctype),
+	load = (function(string, boolean): userdata) | (function(string): userdata),
+	sizeof = (function(ctype, number): number) | (function(ctype): number),
+	string = (function(cdata, number): string),
+	gc = (function(ctype, empty_function): cdata),
+	istype = (function(ctype, any): boolean),
+	fill = (function(cdata, number, any): nil) | (function(cdata, len: number): nil),
+	offsetof = (function(cdata, number): number)
+}
+
+type jit = {
+	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
+	arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
+	attach = (function(empty_function): nil),
+	flush = (function(): nil),
+	opt = {
+		start = (function(...): nil)
+	},
+	tracebarrier = (function(): nil)
+}
+
+type debug_getinfo = {
+	name = string,
+	namewhat = string,
+	source = string,
+	short_src = string,
+	linedefined = number,
+	lastlinedefined = number,
+	what = string,
+	currentline = number,
+	istailcall = boolean,
+	nups = number,
+	nparams = number,
+	isvararg = boolean,
+	func = any,
+	activelines = {[number] = boolean},
+}
+
+type debug = {
+	sethook = (function(thread: thread, hook: empty_function, mask: string, count: number): nil) | (function(thread: thread, hook: empty_function, mask: string): nil) | (function( hook: empty_function, mask: string): nil),
+	getregistry = (function(): nil),
+	traceback = (function(thread: thread, message: any, level: number): string) | (function(thread: thread, message: any): string) | (function(thread: thread,): string) | (function(): string),
+	setlocal = (function(thread: thread, level: number, local_: number, value: any): string|nil) | (function( level: number, local_: number, value: any): string|nil),
+	getinfo = (function(thread: thread, f: empty_function|number, what: string): debug_getinfo|nil) | (function(thread: thread, f: empty_function|number): debug_getinfo|nil) | (function( f: empty_function|number): debug_getinfo|nil),
+	upvalueid = (function(f: empty_function, n: number): userdata),
+	setupvalue = (function(f: empty_function, up: number, value: any): string|nil),
+	getlocal = (function(thread: thread, f: number|empty_function, local_: number): string|nil, any) | (function( f: number|empty_function, local_: number): string|nil, any),
+	upvaluejoin = (function(f1: empty_function, n1: number, f2: empty_function, n2: number): nil),
+	getupvalue = (function(f: empty_function, up: number): string|nil, any),
+	getmetatable = (function(value: any): Table|nil),
+	setmetatable = (function(value: any, Table: Table|nil): any),
+	gethook = (function(thread: thread): empty_function, string, number) | (function(): empty_function, string, number),
+	getuservalue = (function(u: userdata): Table|nil),
+	debug = (function(): nil),
+	getfenv = (function(o: any): Table),
+	setfenv = (function(object: any, Table: Table): any),
+	setuservalue = (function(udata: userdata, value: Table|nil): userdata)
+}
+
+type function debug.setfenv(val, table)
+    if val and (val:IsLiteral() or val.Type == "function") then 
+		if val.Type == "number" then
+			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
+		elseif val.node then
+        	analyzer:SetEnvironmentOverride(val.node, table, "runtime")
+		end
+    end
+end
+
+type function debug.getfenv(func)
+    return analyzer:GetEnvironmentOverride(func.function_body_node or func, "runtime")
+end
+
+type getfenv = debug.getfenv
+type setfenv = debug.setfenv
+
+
+type package = {
+	searchpath = (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil) | (function(name: string, path: string, sep: string): string|nil, string|nil) | (function(name: string, path: string): string|nil, string|nil),
+	seeall = (function(module: Table): nil),
+	loadlib = (function(libname: string, funcname: string): empty_function|nil)
+}
+
+type bit32 = {
+	lrotate = (function(x: number, disp: number): number),
+	bor = (function(...): number),
+	rshift = (function(x: number, disp: number): number),
+	band = (function(...): number),
+	lshift = (function(x: number, disp: number): number),
+	rrotate = (function(x: number, disp: number): number),
+	replace = (function(n: number, v: number, field: number, width: number): number) | (function(n: number, v: number, field: number): number),
+	bxor = (function(...): number),
+	arshift = (function(x: number, disp: number): number),
+	extract = (function(n: number, field: number, width: number): number) | (function(n: number, field: number): number),
+	bnot = (function(x: number): number),
+	btest = (function(...): boolean),
+	tobit = (function(...): number)
+}
+
+type bit = bit32
+
+do
+	type table = {
+		maxn = (function(table: Table): number),
+		move = (function(a1: Table, f: any, e: any, t: any ,a2: Table): nil) | (function(a1: Table, f: any, e: any, t: any): nil),
+		remove = (function(list: Table, pos: number): any) | (function(list: Table): any),
+		sort = (function(list: Table, comp: empty_function): nil) | (function(list: Table): nil),
+		unpack = (function(list: Table, i: number, j: number): ...) | (function(list: Table, i: number): ...) | (function(list: Table): ...),
+		insert = (function(list: Table, pos: number, value: any): nil) | (function(list: Table,  value: any): nil),
+		concat = (function(list: Table, sep: string, i: number, j: number): string) | (function(list: Table, sep: string, i: number): string) | (function(list: Table, sep: string): string) | (function(list: Table): string),
+		pack = (function(...): Table),
+		new = (function(number, number): Table),
+	}
+
+	type function table.concat(tbl: {[1 .. inf] = string}, separator: string | nil) 
+		if not tbl:IsLiteral() then
+			return types.String()
+		end
+
+		if separator and (separator.Type ~= "string" or not separator:IsLiteral()) then
+			return types.String()
+		end
+
+		local out = {}
+		for i, keyval in ipairs(tbl.data) do
+			out[i] = keyval.val:GetData()
+		end
+
+		return table.concat(out, separator and separator:GetData() or nil)
+	end
+
+	type function table.insert(tbl: {[1 .. inf] = any}, ...)
+		local pos, val = ...
+
+		if not val then
+			val = ...
+			pos = #tbl.data + 1
+		else
+			pos = pos.data
+		end
+
+		tbl:Set(pos, val)
+	end
+
+	type function table.sort(tbl, func)
+		local union = types.Union()
+
+		if tbl.Type == "tuple" then
+			for i,v in ipairs(tbl:GetData()) do
+				union:AddType(v)
+			end
+		elseif tbl.Type == "table" then
+			for i,v in ipairs(tbl.data) do
+				union:AddType(v.val)
+			end
+		end
+		func:GetArguments():GetData()[1] = union
+		func:GetArguments():GetData()[2] = union
+	end
+
+	type function table.getn(tbl: table)
+		if tbl.Type == "any" then return types.Any() end
+		return tbl:GetLength()
+	end
+
+	type function table.unpack(tbl: {[number] = any})
+		if tbl.Type == "union" and tbl:GetLength() == 1 then
+			tbl = tbl:GetTypes()[1]
+			if not tbl then
+				return
+			end
+		end
+		
+		local t = {}
+	    for i = 1, 32 do
+			local v = tbl:Get(i)
+			if not v then
+				break
+			end
+			t[i] = v
+		end
+		return table.unpack(t)
+	end
+end
+
+do
+	type ^string = {
+		find = (function(s: string, pattern: string, init: number, plain: boolean): number|nil, number, ...|nil|nil) | (function(s: string, pattern: string, init: number): number|nil, number, ...|nil|nil) | (function(s: string, pattern: string): number|nil, number, ...|nil|nil),
+		len = (function(s: string): number),
+		packsize = (function(fmt: string): number),
+		match = (function(s: string, pattern: string, init: number): string|nil ,...|nil) | (function(s: string, pattern: string): string|nil ,...|nil),
+		upper = (function(s: string): string),
+		sub = (function(s: string, i: number, j: number): string) | (function(s: string, i: number): string),
+		char = (function(...): string),
+		rep = (function(s: string, n: number, sep: string): string) | (function(s: string, n: number): string),
+		lower = (function(s: string): string),
+		dump = (function(empty_function: empty_function): string),
+		gmatch = (function(s: string, pattern: string): empty_function),
+		reverse = (function(s: string): string),
+		byte = (function(s: string, i: number, j: number): ...) |
+			(function(s: string, i: number): number | nil) |
+			(function(s: string): number),
+		unpack = (function(fmt: string, s: string, pos: number): ...) | (function(fmt: string, s: string): ...),
+		gsub = (function(s: string, pattern: string, repl: string|Table|empty_function, n: number): string, number) | (function(s: string, pattern: string, repl: string|Table|empty_function): string, number),
+		format = (function(string, ...): string),
+		pack = (function(fmt: string, ...): string)
+	}
+
+	type function ^string.gmatch(s: string, pattern: string)
+		if s:IsLiteral() and pattern:IsLiteral() then
+			local f = s:GetData():gmatch(pattern:GetData())
+			local i = 1
+			return function()
+				local strings = {f()}
+				if strings[1] then
+					for i,v in ipairs(strings) do
+						strings[i] = types.String(v):MakeLiteral(true)
+					end
+					return types.Tuple(strings)
+				end
+			end
+		end
+
+		local done = false
+		return function()
+			if done then return end
+			done = true
+			return types.String()
+		end
+	end
+
+	type function ^string.lower(str: string)
+		if str.Type == "union" then
+			local copy = types.Union()
+
+			for _, str in ipairs(str:GetTypes()) do
+				copy:AddType(types.String(str:GetData():lower()))
+			end
+
+			return copy
+		end
+
+		if str:IsLiteral() then
+			return str:GetData():lower()
+		end
+
+		return types.String()
+	end
+
+	type function ^string.sub(str: string, a: number, b: number | nil)
+		if str.Type == "union" then
+			local copy = types.Union()
+
+			for _, str in ipairs(str:GetTypes()) do
+				if str:IsLiteral() and a:IsLiteral() then
+					if b and b:IsLiteral() then
+						copy:AddType(types.String(str:GetData():sub(a:GetData(), b:GetData())):MakeLiteral(true))
+					else
+						copy:AddType(types.String(str:GetData():sub(a:GetData())))
+					end
+				end
+			end
+
+			return copy
+		end
+
+		if str:IsLiteral() and a:IsLiteral() then
+			if b and b:IsLiteral() then
+				return str:GetData():sub(a:GetData(), b:GetData())
+			end
+
+			return str:GetData():sub(a:GetData())
+		end
+
+		return types.String()
+	end
+
+	type function ^string.byte(str: string, from: number | nil, to: number | nil)
+		if str:IsLiteral() then
+
+			if str.Type == "union" then
+				local copy = types.Union()
+
+				for _, str in ipairs(str:GetTypes()) do
+					if from and from:IsLiteral() and to and to:IsLiteral() then
+						copy:AddType(types.Number(str.data:byte(from:GetData(), to:GetData())):MakeLiteral(true))
+					elseif from then
+						copy:AddType(types.Number(str.data:byte(from:GetData())):MakeLiteral(true))
+					else
+						copy:AddType(types.Number(str.data:byte()):MakeLiteral(true))
+					end
+				end
+
+				return copy
+			end
+
+			if from and from:IsLiteral() and to and to:IsLiteral() then
+				return str.data:byte(from:GetData(), to:GetData())
+			end
+
+			if from then
+				return str.data:byte(from:GetData())
+			end
+
+			return str.data:byte()
+		end
+
+		return types.Number()
+	end
+
+	type function ^string.match(s, pattern, init)
+		if s:IsLiteral() and pattern:IsLiteral() then
+			local res = {s.data:match(pattern.data)}
+			for i,v in ipairs(res) do
+				res[i] = types.String(v):MakeLiteral(true)
+			end
+			return table.unpack(res)
+		end
+
+		if pattern:IsLiteral() then
+			local out = {}
+			for s in pattern.data:gmatch("%b()") do
+				table.insert(out, types.Union({types.String(), types.Nil}))
+			end
+			return table.unpack(out)
+		end
+
+		return types.Union({types.String(), types.Nil})
+	end
+
+	type function ^string.len(str: string)
+		if str.Type == "union" then
+			local copy = types.Union()
+			for _, obj in ipairs(str:GetTypes()) do
+				if obj:IsLiteral() then
+					copy:AddType(types.Number(#obj:GetData()):MakeLiteral(true))
+				else
+					copy:AddType(types.Number())
+				end
+			end
+			return copy
+		end
+
+		if str:IsLiteral() then
+			return types.Number(#str.data):MakeLiteral(true)
+		end
+
+		return types.Number()
+	end
+
+	type function ^string.gsub(str, pattern, val)
+		if val.Type == "function" then
+			local args = {}
+
+			if pattern.data then
+				for group in pattern.data:gmatch("%b()") do
+					table.insert(args, types.String())
+				end
+			end
+
+			if not args[1] then
+				args[1] = types.String()
+			end
+
+			for i,v in ipairs(args) do
+				val.data.arg.data[i] = v
+			end
+
+			val:GetReturnTypes():Set(1, types.String())
+
+		end
+
+		return types.String()
+	end
+end
+
+do
+	type math = {
+		ceil = (function(x: number): number),
+		tan = (function(x: number): number),
+		log10 = (function(x: number): number),
+		sinh = (function(x: number): number),
+		ldexp = (function(m: number, e: number): number),
+		tointeger = (function(x: number): number),
+		cosh = (function(x: number): number),
+		min = (function(x: number, ...): number),
+		fmod = (function(x: number, y: number): number),
+		exp = (function(x: number): number),
+		random = (function(m: number, n: number): number) | (function(m: number): number) | (function(): number),
+		rad = (function(x: number): number),
+		log = (function(x: number, base: number): number) | (function(x: number): number),
+		cos = (function(x: number): number),
+		randomseed = (function(x: number): nil),
+		floor = (function(x: number): number),
+		tanh = (function(x: number): number),
+		max = (function(x: number, ...): number),
+		pow = (function(x: number, y: number): number),
+		ult = (function(m: number, n: number): boolean),
+		acos = (function(x: number): number),
+		type = (function(x: number): string),
+		abs = (function(x: number): number),
+		frexp = (function(x: number): number, number),
+		deg = (function(x: number): number),
+		modf = (function(x: number): number, number),
+		atan2 = (function(y: number, x: number): number),
+		asin = (function(x: number): number),
+		atan = (function(x: number): number),
+		sqrt = (function(x: number): number),
+		sin = (function(x: number): number)
+	}
+
+	type math.huge = inf
+
+	type math.pi = 3.14159265358979323864338327950288
+
+	type function math.floor(num: number)
+		if num:IsLiteral() then
+			return math.floor(num:GetData())
+		end
+		return types.Number()
+	end
+end
+
+type os = {
+	execute = (function(command: string): boolean|nil, string, number|nil) | (function(): boolean|nil, string, number|nil),
+	rename = (function(oldname: string, newname: string): boolean|nil, string, number|nil),
+	getenv = (function(varname: string): string|nil),
+	difftime = (function(t2: number, t1: number): number),
+	exit = (function(code: boolean|number, close: boolean): nil) | (function(code: boolean|number): nil) | (function(): nil),
+	remove = (function(filename: string): boolean|nil, string, number|nil),
+	setlocale = (function(local_e: string, category: string): string|nil) | (function(local_e: string): string|nil),
+	date = (function(format: string, time: number): string|Table) | (function(format: string): string|Table) | (function(): string|Table),
+	time = (function(table: Table): number) | (function(): number),
+	clock = (function(): number),
+	tmpname = (function(): string)
+}
+
+do
+	type coroutine = {
+		create = (function(empty_function): thread),
+		close = (function(thread):boolean, string),
+		isyieldable = (function(): boolean),
+		resume = (function(thread, ...): boolean, ...),
+		running = (function():thread, boolean),
+		status = (function(thread): string),
+		wrap = (function(empty_function): empty_function),
+		yield = (function(...): ...),
+	}
+
+	type function coroutine.yield(...)
+		analyzer.yielded_results = {...}
+	end
+
+	type function coroutine.resume(thread, ...)
+		analyzer:Call(thread.co_func, types.Tuple({...}))
+
+		return types.Boolean
+	end
+
+	type function coroutine.create(func, ...)
+		local t = types.Table({})
+		t.co_func = func
+		return t
+	end
+
+	type function coroutine.wrap(cb)
+		return function(...)
+			analyzer:Call(cb, types.Tuple({...}))
+			local res = analyzer.yielded_results
+			if res then
+				analyzer.yielded_results = nil
+				return table.unpack(res)
+			end
+		end
+	end
+end

@@ -247,7 +247,7 @@ run[[
         i = i + 1
 
         if i ~= n then
-            type_error("uh oh")
+            type_error("wrong")
         end
 
         return n

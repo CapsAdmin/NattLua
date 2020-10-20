@@ -1,4 +1,4 @@
-local oh = require("oh")
+local nl = require("nl")
 
 local code = [[
     BlueTeam = game.Teams["BlueTeam"]:Clone()
@@ -123,4 +123,4 @@ local code = [[
     end))
 ]]
 
-print(assert(oh.Code(code, nil, {preserve_whitespace = false}):Emit()))
+print(assert(nl.Code(code, nil, {preserve_whitespace = false}):Emit()))

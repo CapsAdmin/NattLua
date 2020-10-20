@@ -1,5 +1,5 @@
 # About
-"oh" is a superset of Lua that introduces an informal type system. It's compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1). It provides you with tools to analyze, refactor and gradually type your code. It comes with a language server and a library to manipulate and analyze Lua code.
+NattLua is a superset of Lua that introduces an informal type system. It's compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1). It provides you with tools to analyze, refactor and gradually type your code. It comes with a language server and a library to manipulate and analyze Lua code.
 
 Complex type structures, involving array-like tables, map-like tables, and metatables are supported:
 

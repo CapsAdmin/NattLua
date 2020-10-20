@@ -1,13 +1,13 @@
-local oh = require("oh")
-local syntax = require("oh.lua.syntax")
+local nl = require("nl")
+local syntax = require("nattlua.lua.syntax")
 local tprint = require("libraries.tprint")
 
 local function tokenize(code)
-    return assert(oh.Code(code):Lex()).Tokens
+    return assert(nl.Code(code):Lex()).Tokens
  end
 
 local function parse(code)
-    return assert(oh.Code(code):Parse()).Tokens
+    return assert(nl.Code(code):Parse()).Tokens
 end
 
 local function one_token(tokens)
@@ -160,7 +160,7 @@ do
         local input = table.concat(code, "\n")
 
         -- make sure the amount of tokens
-        local code_data = assert(oh.Code(input):Lex())
+        local code_data = assert(nl.Code(input):Lex())
         equal(#code_data.Tokens, #code*4 + 1)
 
         -- make sure all the tokens are numbers

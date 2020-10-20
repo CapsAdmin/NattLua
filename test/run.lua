@@ -57,7 +57,7 @@ io.write("\n")
 
 if map then
     for k,v in pairs(map) do
-        if k:find("oh/", 1, true) then
+        if k:find("nl/", 1, true) then
             local f = io.open(k .. ".coverage", "w")
 
             local i = 1

@@ -1,7 +1,7 @@
-local oh = require("oh")
+local nl = require("nl")
 
 local function parse(code)
-    return assert(assert(oh.Code(code)):Parse())
+    return assert(assert(nl.Code(code)):Parse())
 end
 
 local function check(code, eq)
@@ -198,7 +198,7 @@ test("operator precedence", function()
     end
 
 
-    local C = oh.Code
+    local C = nl.Code
 
     check {
         {C'-2 ^ 2', C'^(-(2), 2)'},
@@ -216,7 +216,7 @@ end)
 test("parser errors", function()
     local function check(tbl)
         for i,v in ipairs(tbl) do
-            local ok, err = oh.load(v[1])
+            local ok, err = nl.load(v[1])
             if ok then
                 io.write(ok, v[1], "\n")
                 error("expected error, but code compiled", 2)

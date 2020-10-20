@@ -1,9 +1,9 @@
-local oh = require("oh")
+local nl = require("nl")
 local tprint = require("libraries.tprint")
 local function get_all_files()
     local paths = {}
 
-    local all = assert(io.popen("find oh/")):read("*all") .. "\n"
+    local all = assert(io.popen("find nl/")):read("*all") .. "\n"
     for path in all:gmatch("(.-)\n") do
         if path:sub(-4) == ".lua" then
             table.insert(paths, path)
@@ -24,7 +24,7 @@ local stats = {
 }
 
 for _, path in ipairs(paths) do
-    local c = oh.File(path)
+    local c = nl.File(path)
     local tokens = c:Lex().Tokens
     stats.tokens = stats.tokens + #tokens
 

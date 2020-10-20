@@ -1,6 +1,6 @@
-local oh = require("oh")
-local LuaEmitter = require("oh.lua.javascript_emitter")
-local code = io.open("oh/base_parser.lua"):read("*all")
+local nl = require("nl")
+local LuaEmitter = require("nattlua.lua.javascript_emitter")
+local code = io.open("nl/base_parser.lua"):read("*all")
 
 
 
@@ -179,7 +179,7 @@ codew =[[
     a[1] = true
     print(a[1])
 ]]
-local ast = assert(assert(oh.Code(code):Parse()):Analyze()).SyntaxTree
+local ast = assert(assert(nl.Code(code):Parse()):Analyze()).SyntaxTree
 
 local em = LuaEmitter()
 

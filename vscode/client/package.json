@@ -41,7 +41,7 @@
           "type": "array",
           "default": [
             "lua",
-            "oh"
+            "nl"
           ],
           "items": {
             "type": "string"

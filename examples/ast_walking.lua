@@ -1,5 +1,5 @@
-local oh = require("oh")
-local ast = assert(oh.Code(assert(io.open("oh/lua/parser.lua")):read("*all")):Parse()).SyntaxTree
+local nl = require("nl")
+local ast = assert(nl.Code(assert(io.open("nl/lua/parser.lua")):read("*all")):Parse()).SyntaxTree
 
 print("==================================================")
 print("all while statements:")

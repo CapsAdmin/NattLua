@@ -5,13 +5,13 @@ io.flush()
 
 local ffi = require("ffi")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
-ffi.C.chdir("/home/caps/oh/")
+ffi.C.chdir("/home/caps/nl/")
 
 local json = require("vscode.server.json")
-local oh = require("oh")
-local helpers = require("oh.helpers")
+local nl = require("nl")
+local helpers = require("nattlua.helpers")
 local tprint = require("examples.util").TablePrint
-local shared_analyzer = require("oh.lua.shared_analyzer")
+local shared_analyzer = require("nattlua.lua.shared_analyzer")
 local server = _G.SERVER or require("vscode.server.lsp")
 _G.SERVER = server
 
@@ -40,7 +40,7 @@ local function compile(uri, server, client)
 		document_cache[uri] = code
 	end
 
-	local file = oh.Code(code, uri, {annotate = true})
+	local file = nl.Code(code, uri, {annotate = true})
 
 	local resp = {
 		method = "textDocument/publishDiagnostics",
@@ -146,7 +146,7 @@ function server:HandleMessage(resp, client)
 
 		document_cache[resp.params.textDocument.uri] = nil
 
-		if resp.params.textDocument.uri:find("oh/vscode/server/") then
+		if resp.params.textDocument.uri:find("nl/vscode/server/") then
 			local ok, err = pcall(function() assert(loadfile(resp.params.textDocument.uri:sub(#"file://" + 1)))() end)
 			if not ok then
 				print("error loading " .. resp.params.textDocument.uri .. ": " .. err)

@@ -1,6 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
-local types = require("oh.typesystem.types")
+local types = require("nattlua.typesystem.types")
 
 test("a and b", function()
     local obj = run[[

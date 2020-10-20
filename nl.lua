@@ -1,0 +1,300 @@
+if not table.unpack and _G.unpack then
+	table.unpack = _G.unpack
+end
+
+local helpers = require("nattlua.helpers")
+
+local nl = {}
+
+function nl.load(code, name, config)
+	local obj = nl.Code(code, name, config)
+	local code, err = obj:Emit()
+	if not code then return nil, err end
+    return load(code, name)
+end
+
+function nl.loadfile(path, config)
+	local obj = nl.File(path, config)
+	local code, err = obj:Emit()
+	if not code then return nil, err end
+    return load(code, path)
+end
+
+function nl.ParseFile(path, root)
+	local code = assert(nl.File(path, {path = path, root = root}))
+	return assert(code:Parse()), code
+end
+
+do
+	local META = {}
+	META.__index = META
+
+	function META:__tostring()
+		local str = ""
+
+		if self.parent_name then
+			str = str .. "[" .. self.parent_name .. ":" .. self.parent_line .. "] "
+		end
+
+		local line = self.code:match("(.-)\n")
+
+		if line then
+			str = str .. line .. "..."
+		else
+			str = str .. self.code
+		end
+
+		return str
+	end
+
+	function META:OnError(code, name, msg, start, stop, ...)
+		local level = 0
+
+		if self.analyzer and self.analyzer.processing_deferred_calls then
+			msg = "DEFERRED CALL: " .. msg 
+		end
+
+		local msg = helpers.FormatError(code, name, msg, start, stop, nil, ...)
+
+		local msg2 = ""
+		for line in (msg .. "\n"):gmatch("(.-)\n") do
+			msg2 = msg2 .. (" "):rep(4-level*2) .. line .. "\n"
+		end
+		msg = msg2
+		
+		if self.NoThrow then
+			io.write(msg)
+		else
+			error(msg)
+		end
+	end
+
+	local function traceback_(self, obj, msg)-- do return msg end
+		msg = msg or "no error"
+
+		local s = ""
+		s = msg .. "\n" .. s
+		for i = 2, math.huge do
+			local info = debug.getinfo(i)
+			if not info then
+				break
+			end
+
+			if info.source:find("/busted/") then
+				break
+			end
+
+			if info.source:sub(1,1) == "@" then
+				if info.name == "Error" or info.name == "OnError" then
+
+				else
+					s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (info.name or "?") .. "\n"
+				end
+			end
+		end
+
+		if self.analyzer then
+			local analyzer = self.analyzer
+
+			if analyzer.current_statement and analyzer.current_statement.Render then
+				s = s .. "======== statement =======\n"
+				s = s .. analyzer.current_statement:Render()
+				s = s .. "\n===============\n"
+			end
+
+			if analyzer.current_expression and analyzer.current_expression.Render then
+				s = s .. "======== expression =======\n"
+				s = s .. analyzer.current_expression:Render()
+				s = s .. "\n===============\n"
+			end
+
+			if analyzer.callstack then
+				s = s .. "======== callstack =======\n"
+
+				for _, obj in ipairs(analyzer.callstack) do
+					s = s .. helpers.FormatError(analyzer.code_data.code, analyzer.code_data.name, tostring(obj), helpers.LazyFindStartStop(obj))
+				end
+
+				s = s .. "\n===============\n"
+			end
+
+			if analyzer.error_stack then
+				s = s .. "======== error_stack =======\n"
+
+				for _, data in ipairs(analyzer.error_stack) do
+					s = s .. tostring(data.statement:Render())
+					s = s .. tostring(data.expression:Render())
+				end
+
+				s = s .. "\n===============\n"
+			end
+		end
+
+		return s
+	end
+
+	local traceback = function(self, obj, msg)
+		local ret = {pcall(traceback_, self, obj, msg)}
+		if not ret[1] then
+			return "error in error handling: " .. ret[2]
+		end
+		return table.unpack(ret, 2)
+	end
+
+	function META:Lex()
+		local lexer = self.Lexer(self.code)
+		lexer.name = self.name
+		self.lexer = lexer
+		lexer.OnError = function(lexer, ...) self:OnError(...) end
+		
+		local ok, tokens = xpcall(
+			lexer.GetTokens, 
+			function(msg) return traceback(self, lexer, msg) end, 
+			lexer
+		)
+
+		if not ok then
+			return nil, tokens
+		end
+
+		self.Tokens = tokens
+
+		return self
+	end
+
+	function META:Parse()
+		if not self.Tokens then
+			local ok, err = self:Lex()
+			if not ok then
+				return ok, err
+			end
+		end
+
+		local parser = self.Parser(self.config)
+		parser.code = self.code
+		parser.name = self.name
+		self.parser = parser
+		parser.OnError = function(parser, ...) self:OnError(...) end
+
+		if self.OnNode then
+			parser.OnNode = function(_, node) self:OnNode(node) end
+		end
+
+		local ok, res = xpcall(
+			parser.BuildAST, 
+			function(msg) return traceback(self, parser, msg) end, 
+			parser, 
+			self.Tokens
+		)
+
+		if not ok then
+			return nil, res
+		end
+
+		self.SyntaxTree = res
+
+		return self
+	end
+
+	function META:EnableEventDump(b)
+		self.dump_events = b
+	end
+
+	function META:SetDefaultEnvironment(obj)
+		self.default_environment = obj
+	end
+
+	function META:Analyze(analyzer, ...)
+		if not self.SyntaxTree then
+			local ok, err = self:Parse()
+			if not ok then
+				assert(err)
+				return ok, err
+			end
+		end
+
+		local analyzer = analyzer or self.Analyzer()
+		self.analyzer = analyzer	
+		analyzer.code_data = self
+		analyzer.OnError = function(analyzer, ...) self:OnError(...) end
+
+		if self.default_environment then
+			analyzer:SetDefaultEnvironment(self.default_environment, "typesystem")
+		elseif self.default_environment ~= false then
+			-- this is studid, trying to stop the base analyzer from causing a require() loop
+			analyzer:SetDefaultEnvironment(require("nattlua.lua.shared_analyzer"), "typesystem")
+		end
+
+		if self.dump_events or self.config and self.config.dump_analyzer_events then
+			analyzer.OnEvent = analyzer.DumpEvent
+		end
+
+		local ok, res = xpcall(function(...) 
+				local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, ...)
+				analyzer:AnalyzeUnreachableCode()
+				return res
+			end,
+			function(msg) return traceback(self, analyzer, msg) end,
+			...
+		)		
+		self.AnalyzedResult = res
+
+		if not ok then
+			return nil, res
+		end
+
+		return self
+	end
+
+	function META:Emit()
+		if not self.SyntaxTree then
+			local ok, err = self:Parse()
+			if not ok then
+				return ok, err
+			end
+		end
+
+		local emitter = self.Emitter(self.config)
+		self.emitter = emitter
+    	return emitter:BuildCode(self.SyntaxTree)
+	end
+
+	function nl.Code(code, name, config, level)
+		local info = debug.getinfo(level or 2)
+
+		local parent_line = info and info.currentline or "unknown line"
+		local parent_name = info and info.source:sub(2) or "unknown name"
+
+		name = name or (parent_name .. ":" .. parent_line)
+
+		return setmetatable({
+			code = code,
+			parent_line = parent_line,
+			parent_name = parent_name,
+			name = name,
+			config = config,
+			Lexer = require("nattlua.lua.lexer"),
+			Parser = require("nattlua.lua.parser"),
+			Analyzer = require("nattlua.lua.analyzer"),
+			Emitter = config and config.js and require("nattlua.lua.javascript_emitter") or require("nattlua.lua.emitter"),
+
+		}, META)
+	end
+
+	function nl.File(path, config)
+		config = config or {}
+		
+		config.path = config.path or path
+		config.name = config.name or path
+
+		local f, err = io.open(path, "rb")
+		if not f then
+			return nil, err
+		end
+		local code = f:read("*all")
+		f:close()
+		return nl.Code(code, "@" .. path, config)
+	end
+end
+
+return nl
