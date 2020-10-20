@@ -21,12 +21,8 @@ if path:find("nl/nl", nil, true) and not path:find("helpers") then
     local f = io.open("test_focus.lua")
     if not f or (f and #f:read("*all") == 0) then
         if f then f:close() end
-        if path:find("/lua/") then
+        if path:find("/nattlua/") then
             run("test/run.lua", "lua")
-        elseif path:find("/c_preprocessor/") then
-            run("test/run.lua", "c_preprocessor")
-        elseif path:find("/c/") then
-            run("test/run.lua", "c")
         else
             run("test/run.lua")
         end

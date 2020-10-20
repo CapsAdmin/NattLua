@@ -1,7 +1,7 @@
 local list = require("nattlua.util.list")
 
 return function(META)
-    local tprint = require("libraries.tprint")
+    local tprint = require("nattlua.util.tprint")
 
     local setmetatable = setmetatable
     local type = type

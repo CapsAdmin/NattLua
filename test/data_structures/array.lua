@@ -1,5 +1,5 @@
-local ArrayType = require("libraries.data_structures.array")
-local u32 = require("libraries.data_structures.primitives").u32
+local ArrayType = require("nattlua.util.data_structures.array")
+local u32 = require("nattlua.util.data_structures.primitives").u32
 
 local Uint32Array = ArrayType(u32)
 

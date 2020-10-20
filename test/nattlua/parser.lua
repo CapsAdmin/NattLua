@@ -118,7 +118,7 @@ test("// binary operator", function()
 end)
 
 test("type comments", function()
-    local tprint = require("libraries.tprint")
+    local tprint = require("nattlua.util.tprint")
 
     local tree = parse("function foo(str: string, idx: number, msg: string) end").SyntaxTree
     local func = tree.statements[1]

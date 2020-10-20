@@ -1,5 +1,5 @@
-local StaticArrayType = require("libraries.data_structures.static_array")
-local u8 = require("libraries.data_structures.primitives").u8
+local StaticArrayType = require("nattlua.util.data_structures.static_array")
+local u8 = require("nattlua.util.data_structures.primitives").u8
 
 
 local UInt8Array10 = StaticArrayType(u8, 10)

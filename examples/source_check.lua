@@ -1,5 +1,5 @@
 local nl = require("nl")
-local tprint = require("libraries.tprint")
+local tprint = require("nattlua.util.tprint")
 local function get_all_files()
     local paths = {}
 

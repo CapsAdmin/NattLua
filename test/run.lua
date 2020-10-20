@@ -45,7 +45,7 @@ if path and path:sub(-4) == ".lua" then
     assert(loadfile(path))()
 else
     local what = path
-    local path = "test/" .. ((what and what .. "/") or "lua/")
+    local path = "test/" .. ((what and what .. "/") or "nattlua/")
     for path in io.popen("find " .. path):lines() do
         if path:sub(-4) == ".lua" and not path:find("/file_importing/", nil, true) then
             assert(loadfile(path))()

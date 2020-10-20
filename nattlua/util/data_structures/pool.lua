@@ -1,5 +1,5 @@
 local ffi = require("ffi")
-local DynamicArrayType = require("libraries.data_structures.dynamic_array")
+local DynamicArrayType = require("nattlua.util.data_structures.dynamic_array")
 
 return function(T, growth_size)
     growth_size = growth_size or 4096
