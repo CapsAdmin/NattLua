@@ -140,18 +140,17 @@ test("interface extensions", function()
             GetPos = (function(self): Vec3),
         }
 
-        -- have to use as here because {} would not be a subset of Foo
+        -- have to use the as operator here because {} would not be a subset of Foo
         local x = {} as Foo
 
         x:SetPos({x = 1, y = 2, z = 3})
-        --[==[x:SetPos({x = 1, y = 2, z = 3})
         local a = x:GetPos()
         local z = a.x + 1
 
         type_assert(z, _ as number)
 
         local test = x:Test()
-        type_assert(test, _ as number)]==]
+        type_assert(test, _ as number)
     ]]
 end)
 
@@ -330,3 +329,50 @@ run([[
     type_assert(meta.data, 0)
     type_assert(obj:foo(), 1)
 ]])
+
+run[[
+    local Vector = {}
+    Vector.__index = Vector
+
+    type Vector.x = number
+    type Vector.y = number
+    type Vector.z = number
+
+    function Vector.__add(a: Vector, b: Vector)
+        return Vector(a.x + b.x, a.y + b.y, a.z + b.z)
+    end
+
+    setmetatable(Vector, {
+        __call = function(_, x: number, y: number, z: number)
+            return setmetatable({x=x,y=y,z=z}, Vector)
+        end
+    })
+
+    local newvector = Vector(1,2,3) + Vector(100,100,100)
+
+    type_assert(newvector, _ as {x = number, y = number, z = number})
+]]
+
+
+run([[
+    local Vector = {}
+    Vector.__index = Vector
+
+    type Vector.x = number
+    type Vector.y = number
+    type Vector.z = number
+
+    function Vector.__add(a: Vector, b: Vector)
+        return Vector(a.x + b.x, a.y + b.y, a.z + b.z)
+    end
+
+    setmetatable(Vector, {
+        __call = function(_, x: number, y: number, z: number)
+            return setmetatable({x=x,y=y,z=z}, Vector)
+        end
+    })
+
+    local new_vector = Vector(1,2,3) + 4
+
+    type_assert(new_vector, _ as {x = number, y = number, z = number})
+]], "4 is not the same type as")

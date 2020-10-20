@@ -1,5 +1,6 @@
 local types = require("oh.typesystem.types")
 local helpers = require("oh.helpers")
+local list = require("oh.library.list")
 
 local LexicalScope
 
@@ -619,7 +620,7 @@ return function(META)
 
     function META:AnalyzeExpressions(expressions, env)
         if not expressions then return end
-        local out = {}
+        local out = list.new()
         for _, expression in ipairs(expressions) do
             local ret = {self:AnalyzeExpression(expression, env)}
             for _,v in ipairs(ret) do

@@ -40,7 +40,7 @@ return function(META)
 
     do -- identifier
         function META:ReadTypeExpressionList(max)
-            local out = {}
+            local out = list.new()
 
             for i = 1, math_huge do
                 if self:HandleTypeListSeparator(out, i, self:ReadTypeExpression()) then

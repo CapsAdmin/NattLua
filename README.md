@@ -1,18 +1,38 @@
 # About
-"oh" is a Lua compatible language with a typesystem that transpiles to readable luajit. Its purpose is to provide you with tools to analyze, refactor and gradually type your code. It comes with a language server and a library to manipulate and analyze Lua code.
+"oh" is a superset of Lua that introduces an informal type system. It's compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1). It provides you with tools to analyze, refactor and gradually type your code. It comes with a language server and a library to manipulate and analyze Lua code.
 
-It started as a toy project and place for me to explore how programming languages are built. My main goal is to use this language in [goluwa](https://github.com/CapsAdmin/goluwa).
+Complex type structures, involving array-like tables, map-like tables, and metatables are supported:
 
-Some self contained modules in this project are: lua lexer, lua parser, lua analyzer, algebraic types.
+```lua
+local Vector = {}
+Vector.__index = Vector
+
+type Vector.x = number
+type Vector.y = number
+type Vector.z = number
+
+function Vector.__add(a: Vector, b: Vector)
+    return Vector(a.x + b.x, a.y + b.y, a.z + b.z)
+end
+
+setmetatable(Vector, {
+    __call = function(_, x: number, y: number, z: number)
+        return setmetatable({x=x,y=y,z=z}, Vector)
+    end
+})
+
+local new_vector = Vector(1,2,3) + Vector(100,100,100)
+```
+
+See more examples further down this readme.
 
 # Parsing and transpiling
 I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it different in some ways. The syntax errors it can report are not standard and are bit more detailed. It's also written in a way to be easily extendable for new syntax.
 
-* Handles Luajit, lua 5.1-5.4 and Garry's mod Lua (which just adds optional C syntax).
-* Errors are reported with character ranges
-* Can continue when there's an error (useful for editors)
+* Syntax errors are nicer than standard Lua parsers. Errors are reported with character ranges.
+* Additionally, the lexer and parser continue after encountering an error, which is useful for editor integration.
 * Whitespace is preserved
-* Can differantiate between single-line C comments and lua 5.4 divison operators.
+* Both single-line C comments and the Lua 5.4 division operator can be used in the same source file.
 * Transpiles bitwise operators, integer division, _ENV, etc down to luajit.
 
 I have not fully decided the syntax for the language and runtime semantics for lua 5.3/4 features. But I feel this is more of a detail that can easily be changed later.
@@ -35,6 +55,9 @@ local y = x + 1
 This code will log an error about potentially calling a nil value. It would then duplicate the scope and remove nil from the set in the new scope.
 
 # Current status and goals
+
+This is currently an educational project, but my end goal is to develop a capable language to use for my other projects (such as [goluwa](https://github.com/CapsAdmin/goluwa)).
+
 At the moment I focus strongly on type inferrence and adding tests while trying to keep the code maintainable.
 
 The parsing part of the project is mostly done except I have some ideas to make it cleaner and more extendable.
