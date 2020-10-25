@@ -262,7 +262,7 @@ do -- globals
 					if path:sub(1, 1) == "@" then
 						local path = path:sub(2)
 
-						if analyzer.loaded and analyzer.loaded[path] then
+                        if analyzer.loaded and analyzer.loaded[path] then
 							return analyzer.loaded[path]
 						end
 
@@ -272,7 +272,7 @@ do -- globals
 						assert(code_data:Parse())
 
 						local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
-						
+
 						analyzer.loaded = analyzer.loaded or {}
 						analyzer.loaded[path] = res
 
@@ -704,6 +704,10 @@ do
 					end
 				end
 			end
+
+            if copy:IsEmpty() then
+                return types.String()
+            end
 
 			return copy
 		end

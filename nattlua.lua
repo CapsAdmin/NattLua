@@ -259,8 +259,8 @@ do
     	return emitter:BuildCode(self.SyntaxTree)
 	end
 
-	function nl.Code(code, name, config, level)
-		local info = debug.getinfo(level or 2)
+	function nl.Code(code--[[#: string]], name--[[#: string]], config--[[#: {[any] = any}]], level--[[#: number | nil]])
+        local info = debug.getinfo(level or 2)
 
 		local parent_line = info and info.currentline or "unknown line"
 		local parent_name = info and info.source:sub(2) or "unknown name"

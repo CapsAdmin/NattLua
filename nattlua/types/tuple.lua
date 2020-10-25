@@ -192,7 +192,19 @@ function META:GetLength()
 end
 
 function META:GetMinimumLength()
-    return #self.data
+    local len = #self.data
+    local found_nil = false
+
+    for i = #self.data, 1, -1 do
+        if self.data[i].Type == "union" and self.data[i]:HasNil() then
+            found_nil = true
+        elseif found_nil then
+            len = i
+            break
+        end
+    end
+
+    return len
 end
 
 function META:AddRemainder(obj)

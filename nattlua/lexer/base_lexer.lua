@@ -1,15 +1,6 @@
 local list = require("nattlua.util.list")
 
-return function(META --[[#: 
-    {
-        syntax = {
-            GetSymbols = any,
-            IsDuringLetter = any,
-            IsLetter = any,
-            IsSpace = any,
-        }
-    }
-]])
+return function(META)
     --[[# 
     
     type META.code = string

@@ -258,7 +258,7 @@ end
 
 local function Call(self, obj, arguments, call_node)
     call_node = call_node or obj.node
-    local function_node = obj.function_body_node or obj.node
+    local function_node = obj.function_body_node-- or obj.node
 
     obj.called = true
 

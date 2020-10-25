@@ -11,17 +11,17 @@ test("load", function()
     ]]
 end)
 
-test("file import", function()
-    equal(8, assert(require("nattlua").File("test/nattlua/analyzer/file_importing/main.nlua")):Analyze().AnalyzedResult:Get(1):GetData())
-end)
-
 run[[
-    type_assert(require("test.nattlua.analyzer.file_importing.foo.expect5")(5), 1337)
+    type_assert(require("test.nattlua.analyzer.file_importing.expect_5")(5), 1337)
 ]]
+
+test("file import", function()
+    equal(8, assert(require("nattlua").File("test/nattlua/analyzer/file_importing/test/main.nlua")):Analyze().AnalyzedResult:Get(1):GetData())
+end)
 
 run([[
     -- ERROR1
-    loadfile("test/nattlua/analyzer/file_importing/deep_error.nlua")()
+    loadfile("test/nattlua/analyzer/file_importing/deep_error/main.nlua")()
 ]], function(err)
     for i = 1, 4 do
         assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)

@@ -1,3 +1,3 @@
 local nl = require("nattlua")
 
-print(nl.File("./nattlua/lexer/lexer.lua"):Analyze())
+print(nl.File("./ASDF/nattlua.lua"):Analyze()) 

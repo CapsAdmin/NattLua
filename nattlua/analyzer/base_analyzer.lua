@@ -442,7 +442,6 @@ return function(META)
             if self.returned_from_certain_scope and self.ReturnFromFunction == #self.scope_stack then
                 self.ReturnFromFunction = nil
                 self.returned_from_certain_scope = nil
-
                 break
             end
         end
