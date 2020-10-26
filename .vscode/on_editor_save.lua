@@ -18,11 +18,11 @@ if path:find("javascript_emitter") then
     path = "./examples/lua_to_js.lua"
 end
 
-if path:find("nattlua/nattlua", nil, true) and not path:find("helpers") then
+if path:find("/nattlua", nil, true) and not path:find("helpers") then
     local f = io.open("test_focus.lua")
     if not f or (f and #f:read("*all") == 0) then
         if f then f:close() end
-        if path:find("/nattlua/") then
+        if path:find("/nattlua/", nil, true) then
             run("test/run.lua", "nattlua")
         else
             run("test/run.lua")
