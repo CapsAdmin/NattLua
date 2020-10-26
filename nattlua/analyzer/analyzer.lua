@@ -421,9 +421,7 @@ do -- control flow analysis
             scope.test_condition_inverted = true
         end
 
-        if data.condition:IsUncertain() then
-            scope.uncertain = true
-        end
+        scope.uncertain = data.condition:IsUncertain()
     end
 
     function META:MakeUncertainDataOutsideInParentScopes()
@@ -452,10 +450,10 @@ do -- control flow analysis
         -- body
 
         if self:DidJustReturnFromBlock() or self.lua_error_thrown then
+            self:GetScope().uncertain = scope.uncertain
+
             if scope.uncertain then           
                 self:CloneCurrentScope()
-
-                self:GetScope().uncertain = true
                 self:GetScope().test_condition = scope.test_condition
                 self:GetScope().test_condition_inverted = true
             else
@@ -476,10 +474,7 @@ do -- control flow analysis
     end
     
     function META:OnEnterNumericForLoop(scope, init, max)
-        if not init:IsLiteral() or not max:IsLiteral() then
-            -- TEST ME
-            scope.uncertain = true
-        end
+        scope.uncertain = not init:IsLiteral() or not max:IsLiteral()
     end
 
     function META:OnFindLocalValue(upvalue, key, env, scope)

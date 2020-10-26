@@ -396,25 +396,28 @@ return function(META)
     end
 
     do
+        -- return statement
         function META:CollectReturnExpressions(types)
             table.insert(self.returns[1], types)
 
             self.returned_from_certain_scope = not self:GetScope().uncertain
-            self.returned_from_block = true
+            self.returned_from_block = (self.returned_from_block or 0) + 1
         end
 
         function META:ResetReturnState()
             self.returned_from_certain_scope = nil
-            self.returned_from_block = nil
         end
 
+        -- used in exit scope
         function META:DidJustReturnFromBlock()
-            return self.returned_from_block
+            local a = self.returned_from_block and self.returned_from_block > 0
+            self.returned_from_block = (self.returned_from_block or 0) - 1
+            return a
         end
 
         function META:AnalyzeStatementsAndCollectReturnTypes(statement)
-            self.returned_from_function = #self.scope_stack
             self:ResetReturnState()
+            self.return_to_this_level = #self.scope_stack
             self.returns = self.returns or {}
             table.insert(self.returns, 1, {})
             self:AnalyzeStatements(statement.statements)
@@ -433,16 +436,25 @@ return function(META)
                     end
                 end
             end
-            self.returned_from_block = nil
             return types.Tuple(out)
         end
 
         function META:AnalyzeStatements(statements)
             for i, statement in ipairs(statements) do
                 self:AnalyzeStatement(statement)
-                if self.returned_from_certain_scope and self.returned_from_function == #self.scope_stack then
-                    self.returned_from_function = nil
-                    self:ResetReturnState()
+
+                -- if we're analyzing statements and encounter a return statement
+                -- certain: do return x end
+                -- certain: if true then return x end
+                -- uncertain: if math.random() > 0.5 then return x end
+                if self.returned_from_certain_scope and self.return_to_this_level == #self.scope_stack then
+                    if statement.kind ~= "return" and statement.kind ~= "if" and statement.kind ~= "numeric_for" then
+                        self:FatalError("returning from invalid statement: " .. tostring(statement))
+                    end
+                    
+                    self.return_to_this_level = nil
+                    self.returned_from_certain_scope = nil
+                    
                     break
                 end
             end

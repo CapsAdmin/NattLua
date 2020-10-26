@@ -117,9 +117,9 @@ test("vector test2", function()
         local x, y, z = v.x, v.y, v.z
     ]]
 
-    local x = analyzer:GetEnvironmentValue("x", "runtime")
-    local y = analyzer:GetEnvironmentValue("y", "runtime")
-    local z = analyzer:GetEnvironmentValue("z", "runtime")
+    local x = assert(analyzer:GetEnvironmentValue("x", "runtime"))
+    local y = assert(analyzer:GetEnvironmentValue("y", "runtime"))
+    local z = assert(analyzer:GetEnvironmentValue("z", "runtime"))
 
     equal(101, x:GetData())
     equal(102, y:GetData())

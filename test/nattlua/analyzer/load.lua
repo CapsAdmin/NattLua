@@ -28,6 +28,14 @@ run([[
     end
 end)
 
+run([[
+    type_assert(loadfile("test/nattlua/analyzer/file_importing/complex/main.nlua")(), 14)
+]])
+
+run[[
+    type_assert(require("test.nattlua.analyzer.file_importing.complex.adapter"), 14)
+]]
+
 run[[
     type_assert(require("table.new"), table.new)
 ]]
