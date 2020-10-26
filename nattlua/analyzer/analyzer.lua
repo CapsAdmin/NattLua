@@ -244,14 +244,10 @@ function META:AnalyzeFunctionBody(function_node, arguments, env)
         end
     end
 
-    self:ReturnToThisScope()
-    self:PushReturn()
     local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
     
     self:PopEnvironment(env)
     self:PopScope()
-
-    self.returned_from_block = nil
 
     return analyzed_return
 end
@@ -453,8 +449,9 @@ do -- control flow analysis
 
     function META:OnExitScope(kind, data)
         local scope = self:GetLastScope()
+        -- body
 
-        if self.returned_from_block or self.lua_error_thrown then
+        if self:DidJustReturnFromBlock() or self.lua_error_thrown then
             if scope.uncertain then           
                 self:CloneCurrentScope()
 
@@ -595,7 +592,6 @@ do -- statements
         self:PushEnvironment(statement, nil, "typesystem")
 
         self:CreateLocalValue("...", argument_tuple, "runtime")
-        self:PushReturn()
         local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
 
         self:PopEnvironment("runtime")
@@ -850,8 +846,7 @@ do -- statements
         end
         
         self:CollectReturnExpressions(ret)
-        self.returned_from_certain_scope = not self:GetScope().uncertain
-        self.returned_from_block = true
+        
         self:FireEvent("return", ret)
     end
 

@@ -395,54 +395,56 @@ return function(META)
         end
     end
 
-    function META:CollectReturnExpressions(types)    
-        assert(self.returns)
-        assert(self.returns[1])
+    do
+        function META:CollectReturnExpressions(types)
+            table.insert(self.returns[1], types)
 
-        table.insert(self.returns[1], types)
-    end
+            self.returned_from_certain_scope = not self:GetScope().uncertain
+            self.returned_from_block = true
+        end
 
-    function META:PushReturn()
-        self.returns = self.returns or {}
-        table.insert(self.returns, 1, {})
-    end
+        function META:ResetReturnState()
+            self.returned_from_certain_scope = nil
+            self.returned_from_block = nil
+        end
 
-    function META:PopReturn()
-        local out = {}
-        if self.returns then
-            local return_types = table.remove(self.returns, 1)
-            if return_types then
-                for _, ret in ipairs(return_types) do
-                    for i, obj in ipairs(ret) do
-                        if out[i] then
-                            out[i] = types.Union({out[i], obj})
-                        else
-                            out[i] = obj
+        function META:DidJustReturnFromBlock()
+            return self.returned_from_block
+        end
+
+        function META:AnalyzeStatementsAndCollectReturnTypes(statement)
+            self.returned_from_function = #self.scope_stack
+            self:ResetReturnState()
+            self.returns = self.returns or {}
+            table.insert(self.returns, 1, {})
+            self:AnalyzeStatements(statement.statements)
+            local out = {}
+            if self.returns then
+                local return_types = table.remove(self.returns, 1)
+                if return_types then
+                    for _, ret in ipairs(return_types) do
+                        for i, obj in ipairs(ret) do
+                            if out[i] then
+                                out[i] = types.Union({out[i], obj})
+                            else
+                                out[i] = obj
+                            end
                         end
                     end
                 end
             end
+            self.returned_from_block = nil
+            return types.Tuple(out)
         end
-        return out
-    end
 
-    function META:ReturnToThisScope()
-        self.ReturnFromFunction = #self.scope_stack
-        self.returned_from_certain_scope = nil
-    end
-
-    function META:AnalyzeStatementsAndCollectReturnTypes(statement)
-        self:AnalyzeStatements(statement.statements)
-        return types.Tuple(self:PopReturn())
-    end
-
-    function META:AnalyzeStatements(statements)
-        for i, statement in ipairs(statements) do
-            self:AnalyzeStatement(statement)
-            if self.returned_from_certain_scope and self.ReturnFromFunction == #self.scope_stack then
-                self.ReturnFromFunction = nil
-                self.returned_from_certain_scope = nil
-                break
+        function META:AnalyzeStatements(statements)
+            for i, statement in ipairs(statements) do
+                self:AnalyzeStatement(statement)
+                if self.returned_from_certain_scope and self.returned_from_function == #self.scope_stack then
+                    self.returned_from_function = nil
+                    self:ResetReturnState()
+                    break
+                end
             end
         end
     end
@@ -630,13 +632,11 @@ return function(META)
     end
 
     do
-
         local function call(self, obj, arguments, node)
             -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
             arguments = obj:GetArguments()
             self:Assert(node, self:Call(obj, arguments, node))
         end
-
 
         function META:CallMeLater(...)
             self.deferred_calls = self.deferred_calls or {}
@@ -649,8 +649,8 @@ return function(META)
             end
 
             self.processing_deferred_calls = true 
-            self.returned_from_certain_scope = nil
-            self.returned_from_block = nil
+
+            self:ResetReturnState()
 
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and v[1].explicit_arguments then
