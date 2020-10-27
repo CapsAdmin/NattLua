@@ -7,6 +7,7 @@ return function(META)
     type META.i = number 
     type META.code_ptr = {
         [number] = number,
+        __meta = self,
         __add = (function(self, number): self)
     }
     
