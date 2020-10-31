@@ -25,7 +25,7 @@ local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: bo
 
     if not self:IsValue("[") then
         if multiline_comment then return false end
-        return nil, "expected " .. helpers.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. helpers.QuoteToken(self:GetChars(start, self.i))
+        return false, "expected " .. helpers.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. helpers.QuoteToken(self:GetChars(start, self.i))
     end
 
     self:Advance(1)
@@ -37,7 +37,7 @@ local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: bo
         return true
     end
 
-    return nil, "expected "..helpers.QuoteToken(closing).." reached end of code"
+    return false, "expected "..helpers.QuoteToken(closing).." reached end of code"
 end
 
 do

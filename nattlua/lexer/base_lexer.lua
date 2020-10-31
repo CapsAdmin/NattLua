@@ -417,7 +417,7 @@ return function(META)
         
     end
 
-    function META:Initialize(code --[[#: number]])
+    function META:Initialize(code --[[#: string]])
         self.code = remove_bom_header(code)
 
         if ffi then
