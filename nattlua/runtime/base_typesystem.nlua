@@ -1,3 +1,4 @@
+
 local type boolean = true | false
 
 local type Table = {[any] = any}
@@ -7,6 +8,14 @@ local type ctype = Table
 local type thread = Table
 
 local type empty_function = function(...): any
+
+type function return_type(func)
+	return func:GetReturnTypes()
+end
+
+type function argument_type(func)
+	return func:GetArguments()
+end
 
 type function exclude(T, U)
 	T = T:Copy()

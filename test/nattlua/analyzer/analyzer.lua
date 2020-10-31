@@ -1,17 +1,17 @@
 local T = require("test.helpers")
-local run = T.RunCode
+local R = T.RunCode
+local E = T.RunCode
 
-test("type_assert works", function()
-    run("type_assert(1, 2)", "expected.-2 got 1")
-    run("type_assert(nil as 1|2, 1)", "expected.-1")
+-- check that type assert works
+E("type_assert(1, 2)", "expected.-2 got 1")
+E("type_assert(nil as 1|2, 1)", "expected.-1")
 
-    run"type_assert(not true, false)"
-    run"type_assert(not 1, false)"
-    run"type_assert(nil==nil, true)"
-end)
+R"type_assert(not true, false)"
+R"type_assert(not 1, false)"
+R"type_assert(nil == nil, true)"
 
 test("declaring base types", function()
-    run[[
+    R[[
         local type Symbol = function(T: any)
             return types.Symbol(loadstring("return " .. T.node.value.value)(), true)
         end
@@ -43,7 +43,7 @@ test("declaring base types", function()
 end)
 
 test("comment types", function()
-    run([=[
+    R([=[
         -- local function foo(str--[[#: string]], idx--[[#: number]], msg--[[#: string]])
 
         local function foo(str, idx, msg)
@@ -57,13 +57,22 @@ test("comment types", function()
         end
     ]=], "4 is not the same type as string")
 
-    run[=[
-        local a=--[[#1^]]--[[#-1]]*3--[[#*1]]
-        type_expect(a, 3)
+    R[=[
+        local a = --[[# 1  ^ ]] --[[# -1]] * 3 --[[# * 1]]
+        local b = 1 ^ -1 * 3 + 1 * 1
+        
+        type_expect(a, b)
     ]=]
 
-    local func = run([=[
-        local function foo(aaa--[[#: string]], idx--[[#: number]], msg--[[#: string]]) end
+    local func = R([=[
+        local function foo(
+            aaa --[[#: string]], 
+            idx --[[#: number]], 
+            msg --[[#: string]]) 
+        end
+         
+        local type R = return_type
+        
     ]=]):GetEnvironmentValue("foo", "runtime")
 
     local a,b,c = func:GetArguments():Unpack()
@@ -78,19 +87,19 @@ test("comment types", function()
 end)
 
 test("runtime scopes", function()
-    local v = run("local a = 1"):GetEnvironmentValue("a", "runtime")
+    local v = R("local a = 1"):GetEnvironmentValue("a", "runtime")
     equal(true, v.Type == "number")
 end)
 
 test("comment types", function()
-    run([=[
+    R([=[
         --[[#local type a = 1]]
         type_assert(a, 1)
     ]=])
 end)
 
 test("default declaration is literal", function()
-    local analyzer = run([[
+    local analyzer = R([[
         local a = 1
         local t = {k = 1}
         local b = t.k
@@ -102,11 +111,11 @@ end)
 
 test("runtime block scopes", function()
 
-    local analyzer, syntax_tree = run("do local a = 1 end")
+    local analyzer, syntax_tree = R("do local a = 1 end")
     equal(false, (syntax_tree.environments.runtime:Get("a")))
     equal(1, analyzer:GetScope().children[1].upvalues.runtime.map.a.data:GetData()) -- TODO: awkward access
 
-    local v = run[[
+    local v = R[[
         local a = 1
         do
             local a = 2
@@ -117,7 +126,7 @@ test("runtime block scopes", function()
 end)
 
 test("typesystem differs from runtime", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local a = 1
         local type a = 2
     ]]
@@ -127,7 +136,7 @@ test("typesystem differs from runtime", function()
 end)
 
 test("global types", function()
-    local analyzer = run[[
+    local analyzer = R[[
         do
             type a = 2
         end
@@ -139,7 +148,7 @@ test("global types", function()
 end)
 
 test("constant types", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local a: 1
         local b: number
     ]]
@@ -150,7 +159,7 @@ end)
 
 -- literal + vague = vague
 test("1 + number = number", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local a: 1
         local b: number
         local c = a + b
@@ -162,7 +171,7 @@ test("1 + number = number", function()
 end)
 
 test("1 + 2 = 3", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local a = 1
         local b = 2
         local c = a + b
@@ -174,7 +183,7 @@ test("1 + 2 = 3", function()
 end)
 
 test("function return value", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local function test()
             return 1+2+3
         end
@@ -186,7 +195,7 @@ test("function return value", function()
 end)
 
 test("multiple function return values", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local function test()
             return 1,2,3
         end
@@ -200,7 +209,7 @@ end)
 
 
 test("scopes shouldn't leak", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local a = {}
         function a:test(a, b)
             return nil, a+b
@@ -212,13 +221,13 @@ test("scopes shouldn't leak", function()
 end)
 
 test("explicitly annotated variables need to be set properly", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local a: number | string = 1
     ]]
 end)
 
 test("functions can modify parent scope", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local a = 1
         local c = a
         local function test()
@@ -232,7 +241,7 @@ test("functions can modify parent scope", function()
 end)
 
 test("uncalled functions should be called", function()
-    local analyzer = run[[
+    local analyzer = R[[
         local lib = {}
 
         function lib.foo1(a, b)
@@ -258,28 +267,26 @@ test("uncalled functions should be called", function()
     equal("number", lib:Get("foo2"):GetReturnTypes():Get(1):GetType("number").Type)
 end)
 
-test("should convert binary numbers to numbers", function()
-    local analyzer = run[[
-        local a = 0b01
-    ]]
-    equal(1, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
-end)
+R[[
+    local num = 0b01 -- binary numbers
+    type_assert(num, 1)
+]]
 
-test("undefined types should error", function()
-    run([[local a: ASDF = true]], "cannot find value ASDF")
-end)
+R([[
+    local a: UNKNOWN_GLOBAL = true
+]],
+    "cannot find value UNKNOWN_GLOBAL"
+)
 
-test("type should be able to error", function()
-    run([[
-        local type test = function()
-            error("test")
-        end
+R([[
+    local type shouldError = function()
+        error("the error")
+    end
 
-        test()
-    ]], "test")
-end)
+    shouldError()
+]], "the error")
 
-run[[
+R[[
     local function list()
         local tbl
         local i
@@ -311,7 +318,7 @@ run[[
     type_assert(a:get(), {1,2,3})
 ]]
 
-run[[
+R[[
     local FOO = enum<|{
         A = 1,
         B = 2,
@@ -327,7 +334,7 @@ run[[
     type C = nil
 ]]
 
-run[[
+R[[
     local type Foo = {
         x = number,
         y = self,
@@ -338,7 +345,7 @@ run[[
     type_assert(x.y.y.y.x, _ as number)
 ]]
 
-run[[
+R[[
     local type Foo = {
         x = number,
         y = self,
@@ -350,7 +357,7 @@ run[[
 ]]
 
 
-run[[
+R[[
     local type Foo = {
         x = number,
         y = Foo,
@@ -362,7 +369,7 @@ run[[
 ]]
 
 pending("forward declare types", function()
-    run[[
+    R[[
         local type Ping
         local type Pong
 
@@ -380,9 +387,9 @@ pending("forward declare types", function()
     ]]
 end)
 
-run([[type_error("hey over here")]], "type function type_error")
+R([[type_error("hey over here")]], "type function type_error")
 
-run([[
+R([[
 local a    
 local b    
 §error("LOL")
@@ -390,7 +397,7 @@ local c
 
 ]], [[3 | §error%("LOL"%)]])
 
-run([[
+R([[
     local foo = function() return "hello" end
 
     local function test(cb: function(): number)
@@ -400,7 +407,7 @@ run([[
     test(foo)
 ]], '"hello" is not the same type as')
 
-run[[
+R[[
     return function()
 
         local function foo(x)
@@ -419,7 +426,7 @@ run[[
     end
 ]]
 
-run[[
+R[[
     local type Boolean = true | false
     local type Number = -inf .. inf | nan
     local type String = $".*"
@@ -454,11 +461,11 @@ run[[
     type_assert(z, _ as Any)
 ]]
 
-run[[
+R[[
     -- we should be able to initialize with no value if the value can be nil
     local x: { y = number | nil } = {}
 ]]
 
-run([[
+R([[
     local x: { y = number } = {}
 ]], "y.-is missing from")
