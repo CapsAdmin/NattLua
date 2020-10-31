@@ -225,7 +225,7 @@ do
         emit_function_body(self, node)
     end
 
-    function META:EmitLocalTypeFunction2(node)
+    function META:EmitLocalGenericsTypeFunction(node)
         self:Whitespace("\t")
         self:EmitToken(node.tokens["local"])
         self:Whitespace(" ")

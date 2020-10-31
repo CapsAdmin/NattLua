@@ -113,9 +113,9 @@ end
 
 do
     local function emit_function_body(self, node, type_function)
-        self:EmitToken(node.tokens["arguments("] or node.tokens["arguments<"])
+        self:EmitToken(node.tokens["arguments("])
         self:EmitIdentifierList(node.identifiers)
-        self:EmitToken(node.tokens["arguments)"] or node.tokens["arguments>"])
+        self:EmitToken(node.tokens["arguments)"])
 
 
         if self.config.annotate and node.inferred_type and not type_function then
@@ -174,7 +174,7 @@ do
         emit_function_body(self, node)
     end
 
-    function META:EmitLocalTypeFunction2(node)
+    function META:EmitLocalGenericsTypeFunction(node)
         self:Whitespace("\t")
         self:EmitToken(node.tokens["local"])
         self:Whitespace(" ")
@@ -519,7 +519,7 @@ function META:EmitStatement(node)
     elseif node.kind == "local_type_function" then
         self:EmitLocalTypeFunction(node)
     elseif node.kind == "local_generics_type_function" then
-        self:EmitLocalTypeFunction2(node)
+        self:EmitLocalGenericsTypeFunction(node)
     elseif node.kind == "destructure_assignment" then
         self:EmitDestructureAssignment(node)
     elseif node.kind == "assignment" then
