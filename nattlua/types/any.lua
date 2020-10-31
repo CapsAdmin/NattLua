@@ -24,7 +24,7 @@ function META:Copy()
     return self
 end
 
-function META.SubsetOf(A, B)
+function META.IsSubsetOf(A, B)
     return true
 end
 

@@ -16,8 +16,8 @@ test("union and get", function()
     assert(tbl:Set(String("foo"), Number(1337)))
     equal(1337, tbl:Get(String("foo")):GetData())
 
-    assert(tbl:SubsetOf(contract))
-    assert(not contract:SubsetOf(tbl))
+    assert(tbl:IsSubsetOf(contract))
+    assert(not contract:IsSubsetOf(tbl))
 end)
 
 test("union string and get constant string", function()
@@ -32,8 +32,8 @@ test("union string and get constant string", function()
     equal(1337, union:GetType("number"):GetData())
     equal(nil, union:GetType("symbol"):GetData())
 
-    assert(tbl:SubsetOf(contract))
-    assert(not contract:SubsetOf(tbl))
+    assert(tbl:IsSubsetOf(contract))
+    assert(not contract:IsSubsetOf(tbl))
 end)
 
 test("errors when trying to modify a table without a defined structure", function()

@@ -8,17 +8,17 @@ local no = Symbol(false)
 local yes_and_no =  Union(yes, no)
 
 test(tostring(yes) .. " should be a subset of " .. tostring(yes_and_no), function()
-    assert(yes:SubsetOf(yes_and_no))
+    assert(yes:IsSubsetOf(yes_and_no))
 end)
 
 test(tostring(no) .. "  should be a subset of " .. tostring(yes_and_no), function()
-    assert(no:SubsetOf(yes_and_no))
+    assert(no:IsSubsetOf(yes_and_no))
 end)
 
 test(tostring(yes_and_no) .. " is NOT a subset of " .. tostring(yes), function()
-    assert(not yes_and_no:SubsetOf(yes))
+    assert(not yes_and_no:IsSubsetOf(yes))
 end)
 
 test(tostring(yes_and_no) .. " is NOT a subset of " .. tostring(no), function()
-    assert(not yes_and_no:SubsetOf(no))
+    assert(not yes_and_no:IsSubsetOf(no))
 end)

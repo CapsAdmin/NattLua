@@ -76,7 +76,7 @@ test("self referenced tables should be equal", function()
     local a = analyzer:GetEnvironmentValue("a", "runtime")
     local b = analyzer:GetEnvironmentValue("b", "runtime")
 
-    equal(true, a:SubsetOf(b))
+    equal(true, a:IsSubsetOf(b))
 end)
 
 test("indexing nil in a table should be allowed", function()

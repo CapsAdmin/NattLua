@@ -98,9 +98,9 @@ function META:Copy(map)
     return copy
 end
 
-function META.SubsetOf(A, B)
+function META.IsSubsetOf(A, B)
     if A:GetLength() == 1 then
-        return A:Get(1):SubsetOf(B)
+        return A:Get(1):IsSubsetOf(B)
     end
 
     if B.Type == "any" then
@@ -121,7 +121,7 @@ function META.SubsetOf(A, B)
             return types.errors.missing(B, "index " .. i .. ": " ..tostring(a))
         end
 
-        local ok, reason = a:SubsetOf(b)
+        local ok, reason = a:IsSubsetOf(b)
 
         if not ok then
             return types.errors.subset(a, b, reason)

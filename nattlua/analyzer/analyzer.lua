@@ -278,9 +278,9 @@ local function Call(self, obj, arguments, call_node)
             if a and
                 (
                     a.Type == "function" and 
-                    not a:GetReturnTypes():SubsetOf(b:GetReturnTypes())
+                    not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
                 )
-                    or not a:SubsetOf(b)
+                    or not a:IsSubsetOf(b)
             then
                 self:Call(b, b:GetArguments():Copy())
             end
@@ -345,7 +345,7 @@ local function Call(self, obj, arguments, call_node)
         do
             -- if this function has an explicit return type
             if function_node.return_types then
-                local ok, reason = return_tuple:SubsetOf(obj:GetReturnTypes())
+                local ok, reason = return_tuple:IsSubsetOf(obj:GetReturnTypes())
                 if not ok then
                     return ok, reason
                 end
@@ -561,7 +561,7 @@ function META:CheckTypeAgainstContract(val, contract)
         contract:DisableUniqueness()
     end
 
-    local ok, reason = val:SubsetOf(contract)
+    local ok, reason = val:IsSubsetOf(contract)
 
     if skip_uniqueness then
         contract:EnableUniqueness()
@@ -1178,9 +1178,9 @@ do -- expressions
                 elseif op == ".." then
                     return l:Copy():Max(r)
                 elseif op == ">" then
-                    return types.Symbol((r:SubsetOf(l)))
+                    return types.Symbol((r:IsSubsetOf(l)))
                 elseif op == "<" then
-                    return types.Symbol((l:SubsetOf(r)))
+                    return types.Symbol((l:IsSubsetOf(r)))
                 elseif op == "+" then
                     if l.Type == "table" and r.Type == "table" then
                         return l:Union(r)
@@ -1245,7 +1245,7 @@ do -- expressions
                         end
 
                         if env == "typesystem" then
-                            return l:SubsetOf(r) and r:SubsetOf(l) and types.True or types.False
+                            return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True or types.False
                         end 
 
                         return types.Boolean
@@ -1257,7 +1257,7 @@ do -- expressions
 
                 if l.Type == "table" and r.Type == "table" then
                     if env == "typesystem" then
-                        return l:SubsetOf(r) and r:SubsetOf(l) and types.True or types.False
+                        return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True or types.False
                     end
                 end
 

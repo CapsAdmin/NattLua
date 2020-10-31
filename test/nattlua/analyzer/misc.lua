@@ -859,7 +859,7 @@ R[[
             types.True
         })
 
-        assert(b:SubsetOf(a))
+        assert(b:IsSubsetOf(a))
     end
 
     check(test, "!")

@@ -68,7 +68,7 @@ end
 -- TODO
 local done
 
-function META.SubsetOf(A, B)
+function META.IsSubsetOf(A, B)
     if A == B then
         return true
     end
@@ -85,7 +85,7 @@ function META.SubsetOf(A, B)
                         return types.errors.missing(B, i)
                     end
 
-                    if not a.val:SubsetOf(B:Get(i)) then
+                    if not a.val:IsSubsetOf(B:Get(i)) then
                         return types.errors.subset(a.val, B:Get(i))
                     end
                 end
@@ -123,7 +123,7 @@ function META.SubsetOf(A, B)
                 end
 
                 for _, keyval in ipairs(B.data) do
-                    local ok, reason = a.key:SubsetOf(keyval.key)
+                    local ok, reason = a.key:IsSubsetOf(keyval.key)
                     if ok then
                         b = keyval
                         break
@@ -142,7 +142,7 @@ function META.SubsetOf(A, B)
                     done[key] = true
                 end
 
-                local ok, reason = a.val:SubsetOf(b.val)
+                local ok, reason = a.val:IsSubsetOf(b.val)
                 if not ok then
                     return types.errors.subset(a.val, b.val, reason)
                 end
@@ -152,7 +152,7 @@ function META.SubsetOf(A, B)
 
         return true
     elseif B.Type == "union" then
-        return types.Union({A}):SubsetOf(B)
+        return types.Union({A}):IsSubsetOf(B)
     end
 
     return types.errors.subset(A, B)
@@ -176,7 +176,7 @@ end
 
 function META:Delete(key)
     for i, keyval in ipairs(self.data) do
-        if key:SubsetOf(keyval.key) then
+        if key:IsSubsetOf(keyval.key) then
             table.remove(self.data, i)
         end
     end
@@ -218,9 +218,9 @@ function META:GetKeyVal(key, reverse_subset)
         local ok, reason
 
         if reverse_subset then
-            ok, reason = key:SubsetOf(keyval.key)
+            ok, reason = key:IsSubsetOf(keyval.key)
         else
-            ok, reason = keyval.key:SubsetOf(key)
+            ok, reason = keyval.key:IsSubsetOf(key)
         end
 
         if ok then
@@ -265,7 +265,7 @@ function META:Set(key, val)
             return keyval, reason
         end
 
-        local keyval, reason = val:SubsetOf(keyval.val)
+        local keyval, reason = val:IsSubsetOf(keyval.val)
 
         if not keyval then
             return keyval, reason

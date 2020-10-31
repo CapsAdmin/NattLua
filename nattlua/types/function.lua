@@ -53,18 +53,18 @@ function META:Copy(map)
     return copy
 end
 
-function META.SubsetOf(A, B)
+function META.IsSubsetOf(A, B)
     if A.Type == "any" then return true end
     if B.Type == "any" then return true end
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
     if B.Type == "function" then
-        local ok, reason = A:GetArguments():SubsetOf(B:GetArguments())
+        local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
         if not ok then
             return types.errors.other("function arguments don't match because " .. reason)
         end
 
-        local ok, reason = A:GetReturnTypes():SubsetOf(B:GetReturnTypes())
+        local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
         if not ok and ((not B.called and not B.explicit_return) or (not A.called and not A.explicit_return)) then
             return true
         end
@@ -75,7 +75,7 @@ function META.SubsetOf(A, B)
 
         return true
     elseif B.Type == "union" then
-        return types.Union({A}):SubsetOf(B)
+        return types.Union({A}):IsSubsetOf(B)
     end
 
     return types.errors.other("NYI " .. tostring(B))
@@ -99,7 +99,7 @@ function META:CheckArguments(arguments)
     end
 
     if A:GetLength() == math.huge and B:GetLength() == math.huge then
-   --     local ok, err = A.Remainder:SubsetOf(B.Remainder)
+   --     local ok, err = A.Remainder:IsSubsetOf(B.Remainder)
      --   if not ok then
        --     return ok, err
         --end
@@ -108,7 +108,7 @@ function META:CheckArguments(arguments)
             local a = A:Get(i)
             local b = B:Get(i)
 
-            local ok, err = a:SubsetOf(b)
+            local ok, err = a:IsSubsetOf(b)
             if not ok then
                 return ok, err
             end
@@ -135,7 +135,7 @@ function META:CheckArguments(arguments)
         a = a or types.Nil
         b = b or types.Nil
 
-        local ok, reason = a:SubsetOf(b)
+        local ok, reason = a:IsSubsetOf(b)
 
         if not ok then
             if b.node then

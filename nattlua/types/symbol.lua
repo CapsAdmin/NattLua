@@ -28,13 +28,13 @@ function META:Copy()
     return copy
 end
 
-function META.SubsetOf(A, B)
+function META.IsSubsetOf(A, B)
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
     if B.Type == "union" then
         local errors = {}
         for _, b in ipairs(B:GetTypes()) do
-            local ok, reason = A:SubsetOf(b)
+            local ok, reason = A:IsSubsetOf(b)
             if ok then
                 return true
             end

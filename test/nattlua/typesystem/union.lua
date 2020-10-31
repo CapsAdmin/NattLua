@@ -13,35 +13,35 @@ local smaller = Union("a", "b")
 local different = Union("b", "x", "y")
 
 test("a union should be a subset of an identical union", function()
-    assert(smaller:SubsetOf(smaller))
+    assert(smaller:IsSubsetOf(smaller))
 end)
 
 test("a smaller union should be a subset of a larger union", function()
-    assert(smaller:SubsetOf(larger))
+    assert(smaller:IsSubsetOf(larger))
 end)
 
 test("a larger union should not be a subset of a smaller union", function()
-    assert(not larger:SubsetOf(smaller))
+    assert(not larger:IsSubsetOf(smaller))
 end)
 
 test("a different union should not be a subset of a union", function()
-    assert(not different:SubsetOf(larger))
+    assert(not different:IsSubsetOf(larger))
 end)
 
 test("a larger union should not be a subset of a different union", function()
-    assert(not larger:SubsetOf(different))
+    assert(not larger:IsSubsetOf(different))
 end)
 
 test("a tuple of one smaller union should be a subset of a larger union", function()
-    assert(Tuple(smaller):SubsetOf(larger))
+    assert(Tuple(smaller):IsSubsetOf(larger))
 end)
 
 test("a smaller union should be a subset of a tuple containing 1 larger union", function()
-    assert(smaller:SubsetOf(Tuple(larger)))
+    assert(smaller:IsSubsetOf(Tuple(larger)))
 end)
 
 test("a number should be a subset of a union with numbers", function()
-    assert(Number(24)):SubsetOf(Union(Number(), Number()))
+    assert(Number(24)):IsSubsetOf(Union(Number(), Number()))
 end)
 
 test("a smaller union within an empty union should be identical to the smaller union", function()
@@ -49,7 +49,7 @@ test("a smaller union within an empty union should be identical to the smaller u
 end)
 
 test("a union containing one literal number should be a subset of a union containing a number", function()
-    assert(Union(1):SubsetOf(Number()))
+    assert(Union(1):IsSubsetOf(Number()))
 end)
 
 local A = Union(1, 4, 5, 9, 13)
@@ -66,5 +66,5 @@ local B = Union(1, 2, 3, 4)
 test(tostring(B) .. " should equal the union of " .. tostring(A) .. " and " .. tostring(B), function()
     equal(B:GetSignature(), A:Union(B):GetSignature())
     equal(4, B:GetLength())
-    assert(A:SubsetOf(B))
+    assert(A:IsSubsetOf(B))
 end)

@@ -84,7 +84,7 @@ function META:Get(key, from_table)
     local errors = {}
 
     for _, obj in ipairs(self:GetTypes()) do
-        local ok, reason = key:SubsetOf(obj)
+        local ok, reason = key:IsSubsetOf(obj)
 
         if ok then
             return obj
@@ -185,7 +185,7 @@ function META:GetType(typ)
     return false
 end
 
-function META.SubsetOf(A, B)
+function META.IsSubsetOf(A, B)
     if B.Type == "tuple" then
         if B:GetLength() == 1 then
             B = B:Get(1)
@@ -195,7 +195,7 @@ function META.SubsetOf(A, B)
     end
 
     if B.Type ~= "union" then
-        return A:SubsetOf(types.Union({B}))
+        return A:IsSubsetOf(types.Union({B}))
     end
 
     for _, a in ipairs(A:GetTypes()) do
@@ -205,7 +205,7 @@ function META.SubsetOf(A, B)
             return types.errors.missing(B, a)
         end
 
-        local ok, reason = a:SubsetOf(b)
+        local ok, reason = a:IsSubsetOf(b)
 
         if not ok then
             return types.errors.subset(a, b, reason)

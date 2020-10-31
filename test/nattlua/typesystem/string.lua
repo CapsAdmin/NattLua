@@ -8,17 +8,17 @@ local all_letters = T.String()
 local foo_bar = T.String("foo bar")
 
 test("'foo' should be contained within all letters", function()
-    assert(foo:SubsetOf(all_letters))
+    assert(foo:IsSubsetOf(all_letters))
 end)
 
 test("all letters should not be contained within 'foo'", function()
-    assert(not all_letters:SubsetOf(foo))
+    assert(not all_letters:IsSubsetOf(foo))
 end)
 
 test("'foo' should be contained in any", function()
-    assert(foo:SubsetOf(any))
+    assert(foo:IsSubsetOf(any))
 end)
 
 test("any should be contained within 'foo'", function()
-    assert(any:SubsetOf(foo))
+    assert(any:IsSubsetOf(foo))
 end)

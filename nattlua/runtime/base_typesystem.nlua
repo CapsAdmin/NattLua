@@ -54,7 +54,7 @@ type function type_assert(what, type)
 end
 
 type function subset_of(A, B)
-	local ok, err = A:SubsetOf(B)
+	local ok, err = A:IsSubsetOf(B)
 	if not ok then
 		error(err)
 	end
@@ -63,7 +63,7 @@ type function subset_of(A, B)
 end
 
 type function type_assert_superset(what, type)
-	if not what:SubsetOf(type) or (what.type == "any" and type.type ~= "any") then
+	if not what:IsSubsetOf(type) or (what.type == "any" and type.type ~= "any") then
 		error("expected " .. tostring(type) .." got " .. tostring(what), 2)
 	end
 end
@@ -145,7 +145,7 @@ do -- globals
 		if t:IsLiteral() then
 			if k and not (k.Type == "symbol" and k.data == nil) then
 				for i, kv in ipairs(t:GetData()) do
-					if kv.key:SubsetOf(k) then
+					if kv.key:IsSubsetOf(k) then
 						local kv = t:GetData()[i+1]
 						if kv then
 							if not k:IsLiteral() then
