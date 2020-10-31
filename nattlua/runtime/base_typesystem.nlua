@@ -13,8 +13,8 @@ type function return_type(func)
 	return func:GetReturnTypes()
 end
 
-type function argument_type(func)
-	return func:GetArguments()
+type function argument_type(func, i: number)
+	return func:GetArguments():Slice(i:GetData(), i:GetData())
 end
 
 type function exclude(T, U)
@@ -69,6 +69,10 @@ type function subset_of(A, B)
 	end
 
 	return ok
+end
+
+type function type_assert_literal(val)
+    assert(val:IsLiteral(), "not a literal")
 end
 
 type function type_assert_superset(what, type)

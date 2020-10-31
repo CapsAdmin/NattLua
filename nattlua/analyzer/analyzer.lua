@@ -1638,12 +1638,14 @@ do -- expressions
     
     local Tuple = types.Tuple
     function META:AnalyzePostfixCallExpression(node, env)
+        local env =  node.type_call and "typesystem" or env
+
         local callable = self:AnalyzeExpression(node.left, env)
         if callable.Type == "tuple" then
             callable = callable:Get(1)
         end
 
-        local types = self:AnalyzeExpressions(node.expressions, node.type_call and "typesystem" or env)
+        local types = self:AnalyzeExpressions(node.expressions, env)
 
         if self.self_arg_stack and node.left.kind == "binary_operator" and node.left.value.value == ":" then
             table.insert(types, 1, table.remove(self.self_arg_stack))

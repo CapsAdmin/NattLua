@@ -5,6 +5,7 @@ local E = T.RunCode
 -- check that type assert works
 E("type_assert(1, 2)", "expected.-2 got 1")
 E("type_assert(nil as 1|2, 1)", "expected.-1")
+E("type_assert<|string, number|>", "expected number got string")
 
 R"type_assert(not true, false)"
 R"type_assert(not 1, false)"
@@ -42,21 +43,7 @@ test("declaring base types", function()
     ]]
 end)
 
-test("comment types", function()
-    R([=[
-        -- local function foo(str--[[#: string]], idx--[[#: number]], msg--[[#: string]])
-
-        local function foo(str, idx, msg)
-            local a = arg:sub(1,2)
-
-            return a
-        end
-
-        function bar()
-            foo(4, {}, true)
-        end
-    ]=], "4 is not the same type as string")
-
+test("escape comments", function()
     R[=[
         local a = --[[# 1  ^ ]] --[[# -1]] * 3 --[[# * 1]]
         local b = 1 ^ -1 * 3 + 1 * 1
@@ -64,26 +51,22 @@ test("comment types", function()
         type_expect(a, b)
     ]=]
 
-    local func = R([=[
+    R([=[
         local function foo(
-            aaa --[[#: string]], 
-            idx --[[#: number]], 
-            msg --[[#: string]]) 
+            a --[[#: string]], 
+            b --[[#: number]], 
+            c --[[#: string]]) 
         end
          
-        local type R = return_type
-        
-    ]=]):GetEnvironmentValue("foo", "runtime")
+        type_assert<|argument_type<|foo, 1|>, string|>
+        type_assert<|argument_type<|foo, 2|>, number|>
+        type_assert<|argument_type<|foo, 3|>, string|>
+    ]=])
 
-    local a,b,c = func:GetArguments():Unpack()
-
-    equal("union", a.Type)
-    equal("union", b.Type)
-    equal("union", c.Type)
-
-    equal("string", a:GetType("string").Type)
-    equal("number", b:GetType("number").Type)
-    equal("string", c:GetType("string").Type)
+    R[=[
+        --[[# local type a = 1 ]]
+        type_assert(a, 1)
+    ]=]
 end)
 
 test("runtime scopes", function()
@@ -91,23 +74,16 @@ test("runtime scopes", function()
     equal(true, v.Type == "number")
 end)
 
-test("comment types", function()
-    R([=[
-        --[[#local type a = 1]]
-        type_assert(a, 1)
-    ]=])
-end)
-
 test("default declaration is literal", function()
-    local analyzer = R([[
+    R([[
         local a = 1
         local t = {k = 1}
         local b = t.k
-    ]])
-    assert(analyzer:GetEnvironmentValue("a", "runtime"):IsLiteral())
-    assert(analyzer:GetEnvironmentValue("b", "runtime"):IsLiteral())
-end)
 
+        type_assert_literal<|a|>
+        type_assert_literal<|b|>
+    ]])
+end)
 
 test("runtime block scopes", function()
 
@@ -279,11 +255,17 @@ R([[
 )
 
 R([[
-    local type shouldError = function()
+    unknown_type_function<|1,2,3|>
+]],
+    "cannot find value unknown_type_function"
+)
+
+R([[
+    local type should_error = function()
         error("the error")
     end
 
-    shouldError()
+    should_error()
 ]], "the error")
 
 R[[
@@ -370,20 +352,16 @@ R[[
 
 pending("forward declare types", function()
     R[[
-        local type Ping
-        local type Pong
+        local type Ping = {}
+        local type Pong = {}
 
-        local type Ping = {
-            pong = Pong,
-        }
-
-        local type Pong = {
-            ping = Ping,
-        }
+        type Ping.pong = Pong
+        type Pong.ping = Ping
 
         local x: Pong
 
-        print(x.ping.pong)
+        type_assert(x.ping.pong.ping, Ping)
+        type_assert(x.ping.pong.ping.pong, Pong)
     ]]
 end)
 

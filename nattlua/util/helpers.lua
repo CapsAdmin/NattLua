@@ -100,8 +100,8 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 
 	if not within_start then
 		return
-	end
-
+    end
+    
 	return {
 		character_start = character_start or 0,
 		character_stop = character_stop or 0,
