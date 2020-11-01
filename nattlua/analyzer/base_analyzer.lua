@@ -78,6 +78,30 @@ do
         return scope.test_condition, scope.test_condition_inverted
     end
 
+    function META:FindTestCondition(test)
+        local scope = self
+        while true do
+            if scope.test_condition then
+                local condition = scope.test_condition
+                if 
+                    condition == test or 
+                    condition.source == test or 
+                    condition.source_left == test or 
+                    condition.source_right == test or
+                    condition.type_checked == test 
+                then
+                    break
+                end
+            end
+            scope = scope.parent
+            if not scope then
+                return
+            end
+        end
+        return scope.test_condition, scope.test_condition_inverted
+    end
+
+
     local ref = 0
 
     function META:__tostring()

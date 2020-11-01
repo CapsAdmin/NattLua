@@ -529,3 +529,32 @@ run[[
         end
     end
 ]]
+
+run[[
+    local function parse_unicode_escape(s: string)
+        local n = tonumber(s:sub(1, 1))
+        
+        if not n then
+            return
+        end
+        
+        if true then
+            return n + 1
+        end
+    end
+]]
+
+run[[
+    local function parse_unicode_escape(s: string)
+        local n = tonumber(s:sub(1, 1))
+        
+        if not n then
+            return
+        end
+        
+        if true then
+            local a = n
+            return a + 1
+        end
+    end
+]]

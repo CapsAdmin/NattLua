@@ -483,17 +483,9 @@ do -- control flow analysis
         end
 
         if upvalue.data.Type == "union" then
-            local condition, inverted = scope:GetTestCondition()
+            local condition, inverted = scope:FindTestCondition(upvalue.data)
             
             if condition then                 
-                -- not sure how to deal with "if not not (true | false) then" yet
-                if 
-                    condition == upvalue.data or 
-                    condition.source == upvalue.data or 
-                    condition.source_left == upvalue.data or 
-                    condition.source_right == upvalue.data or
-                    condition.type_checked == upvalue.data 
-                then
                     local copy = self:CopyUpvalue(upvalue)
 
                     if inverted then
