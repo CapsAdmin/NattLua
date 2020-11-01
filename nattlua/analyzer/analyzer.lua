@@ -227,7 +227,9 @@ function META:LuaTypesToTuple(node, tps)
 end
 
 function META:AnalyzeFunctionBody(function_node, arguments, env)
-    self:PushScope(function_node)
+    self:PushScope(function_node, nil, {
+        type = "function"
+    })
     self:PushEnvironment(function_node, nil, env)
 
     if function_node.self_call then
@@ -361,7 +363,9 @@ local function Call(self, obj, arguments, call_node)
         -- this is so that the return type of a function can access its arguments, to generics
         -- local function foo(a: number, b: number): Foo(a, b) return a + b end
         if function_node.return_types then
-            self:PushScope(function_node)
+            self:PushScope(function_node, nil, {
+                type = "function_return_type"
+            })
                 for i, key in ipairs(function_node.identifiers) do
                     self:CreateLocalValue(key, arguments:Get(i), "typesystem")
                 end
@@ -395,7 +399,7 @@ function META:Call(obj, arguments, call_node)
 
     table.insert(self.call_stack, {
         obj = obj,
-        func = function_node,
+        func = call_node,
         call_expression = call_node
     })
 
@@ -413,6 +417,8 @@ do -- control flow analysis
     -- naive approaches while writing tests
 
     function META:OnEnterScope(kind, data)
+        if not data.condition then return end
+        
         local scope = self:GetScope()
 
         scope.test_condition = data.condition
@@ -451,7 +457,7 @@ do -- control flow analysis
 
         if self:DidJustReturnFromBlock() or self.lua_error_thrown then
             self:GetScope().uncertain = scope.uncertain
-
+        
             if scope.uncertain then           
                 self:CloneCurrentScope()
                 self:GetScope().test_condition = scope.test_condition
@@ -484,20 +490,19 @@ do -- control flow analysis
 
         if upvalue.data.Type == "union" then
             local condition, inverted = scope:FindTestCondition(upvalue.data)
-            
+
             if condition then                 
-                    local copy = self:CopyUpvalue(upvalue)
+                local copy = self:CopyUpvalue(upvalue)
 
-                    if inverted then
-                        copy.data = (condition.falsy_union or copy.data:GetFalsy()):Copy()
-                    else
-                        copy.data = (condition.truthy_union or copy.data:GetTruthy()):Copy()
-                    end
-
-                    copy.original = upvalue.data
-
-                    return copy
+                if inverted then
+                    copy.data = (condition.falsy_union or copy.data:GetFalsy()):Copy()
+                else
+                    copy.data = (condition.truthy_union or copy.data:GetTruthy()):Copy()
                 end
+
+                copy.original = upvalue.data
+
+                return copy
             end
         end
 
@@ -574,7 +579,9 @@ end
 do -- statements
     function META:AnalyzeRootStatement(statement, ...)
         local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
-        self:PushScope(statement)
+        self:PushScope(statement, nil, {
+            type = "root"
+        })
         self:PushEnvironment(statement, nil, "runtime")
         self:PushEnvironment(statement, nil, "typesystem")
 
@@ -759,7 +766,8 @@ do -- statements
                 prev_expression = obj
 
                 if obj:IsTruthy() then
-                    self:PushScope(statement, statement.tokens["if/else/elseif"][i], {                            
+                    self:PushScope(statement, statement.tokens["if/else/elseif"][i], {    
+                        type = "if",                        
                         if_position = i, 
                         condition = obj
                     })
@@ -800,6 +808,7 @@ do -- statements
         local obj = self:AnalyzeExpression(statement.expression)
         if obj:IsTruthy() then
             self:PushScope(statement, nil, {
+                type = "while",
                 condition = obj
             })
             self:AnalyzeStatements(statement.statements)
@@ -810,13 +819,17 @@ do -- statements
     end
 
     function META:AnalyzeDoStatement(statement)
-        self:PushScope(statement)
+        self:PushScope(statement, nil, {
+            type = "do"
+        })
         self:AnalyzeStatements(statement.statements)
         self:PopScope()
     end
 
     function META:AnalyzeRepeatStatement(statement)
-        self:PushScope(statement)
+        self:PushScope(statement, nil, {
+            type = "repeat",
+        })
         self:AnalyzeStatements(statement.statements)
         if self:AnalyzeExpression(statement.expression):IsTruthy() then
             self:FireEvent("break")
@@ -860,7 +873,10 @@ do -- statements
                 if not returned_key:IsLiteral() then
                     returned_key = types.Union({types.Symbol(nil), returned_key})
                 end
-                self:PushScope(statement, nil, {condition = returned_key})
+                self:PushScope(statement, nil, {
+                    type = "generic_for",
+                    condition = returned_key
+                })
             end
 
             for i,v in ipairs(statement.identifiers) do
@@ -907,7 +923,12 @@ do -- statements
             condition:AddType(types.Symbol(false))
         end
         
-        self:PushScope(statement, nil, {init = init, max = max, condition = condition})
+        self:PushScope(statement, nil, {
+            type = "numeric_for",
+            init = init, 
+            max = max, 
+            condition = condition
+        })
 
         if literal_init and literal_max and literal_step and literal_max < 1000 then
             local uncertain_break = nil

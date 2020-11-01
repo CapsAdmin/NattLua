@@ -105,7 +105,7 @@ do
     local ref = 0
 
     function META:__tostring()
-        return "scope[" .. self.ref .. "]"
+        return "scope[" .. self.ref .. "]" .. "[".. (self.uncertain and "uncertain" or "certain") .."]" .. "[" .. tostring(self:GetTestCondition() or nil) .. "]"
     end
 
     function LexicalScope(node, extra_node, parent)
@@ -180,8 +180,6 @@ return function(META)
 
             local scope = LexicalScope(node, extra_node, parent)
 
-            self:FireEvent("enter_scope", node, extra_node, scope)
-
             self.scope_stack = self.scope_stack or {}
             table.insert(self.scope_stack, self.scope)
             
@@ -189,7 +187,11 @@ return function(META)
                 scope:SetParent(node.scope)
             end
 
+            scope.event_data = event_data
+
             self.scope = scope
+
+            self:FireEvent("enter_scope", node, extra_node, scope, event_data)
 
             if event_data and self.OnEnterScope then
                 self:OnEnterScope(node.kind, event_data)
@@ -224,8 +226,7 @@ return function(META)
         function META:CloneCurrentScope(node)
             local current_scope = self:GetScope()
             self:PopScope()
-
-            self:PushScope(node or current_scope.node, current_scope.extra_node)
+            self:PushScope(node or current_scope.node, current_scope.extra_node, current_scope.event_data)
 
             local old_scope = current_scope
             local scope = self:GetScope()
@@ -535,10 +536,13 @@ return function(META)
 
     do
         local t = 0
+        local function tab()
+            io.write(("    "):rep(t))
+        end
         function META:DumpEvent(what, ...)
 
             if what == "create_global" then
-                io.write((" "):rep(t))
+                tab()
                 io.write(what, " - ")
                 local key, val = ...
                 io.write(key:Render())
@@ -548,23 +552,19 @@ return function(META)
                 end
                 io.write("\n")
             elseif what == "newindex" then
-                io.write((" "):rep(t))
-                io.write(what, " - ")
+                tab()
                 local obj, key, val = ...
                 io.write(tostring(obj), "[", (tostring(key)), "] = ", tostring(val))
                 io.write("\n")
             elseif what == "mutate_upvalue" then
-                io.write((" "):rep(t))
-                io.write(what, " - ")
+                tab()
                 local key, val = ...
                 io.write(self:Hash(key), " = ", tostring(val))
                 io.write("\n")
             elseif what == "upvalue" then
-                io.write((" "):rep(t))
+                tab()
 
-
-
-                io.write(what, "  - ")
+                io.write("local ")
                 local key, val = ...
                 io.write(self:Hash(key))
                 if val then
@@ -573,40 +573,37 @@ return function(META)
                 end
                 io.write("\n")
             elseif what == "set_global" then
-                io.write((" "):rep(t))
-                io.write(what, " - ")
+                tab()
                 local key, val = ...
-                io.write(self:Hash(key))
-                if val then
-                    io.write(" = ")
-                    io.write(tostring(val))
-                end
+                io.write("_ENV.", self:Hash(key), " = ", tostring(val))
                 io.write("\n")
             elseif what == "enter_scope" then
-                local node, extra_node, scope = ...
-                io.write((" "):rep(t))
+                local node, extra_node, scope, data = ...
+                tab()
                 t = t + 1
-                if extra_node then
-                    io.write(extra_node.value)
-                else
-                    io.write(node.kind)
+
+                --local test_condition, inverted = scope:GetTestCondition()
+                
+                io.write(data.type, " ")
+                
+                if data and data.condition then
+                    io.write(tostring(data.condition), " then")
                 end
-                io.write(" ", tostring(scope))
-                io.write(" {")                
+
                 io.write("\n")
             elseif what == "leave_scope" then
                 local _, extra_node, scope = ...
                 t = t - 1
-                io.write((" "):rep(t))
-                io.write("}")
+                tab()
+                io.write("end")
                 io.write("\n")
             elseif what == "external_call" then
-                io.write((" "):rep(t))
+                tab()
                 local node, type = ...
                 io.write(node:Render(), " - (", tostring(type), ")")
                 io.write("\n")
             elseif what == "call" then
-                io.write((" "):rep(t))
+                tab()
                 --io.write(what, " - ")
                 local exp, return_values = ...
                 if return_values then
@@ -619,7 +616,7 @@ return function(META)
                 io.write(" = ", exp:Render())
                 io.write("\n")
             elseif what == "deferred_call" then
-                io.write((" "):rep(t))
+                tab()
                 --io.write(what, " - ")
                 local exp, return_values = ...
                 if return_values then
@@ -633,22 +630,26 @@ return function(META)
                 io.write("\n")
             elseif what == "function_spec" then
                 local func = ...
-                io.write((" "):rep(t))
+                tab()
                 io.write(what, " - ")
                 io.write(tostring(func))
                 io.write("\n")
             elseif what == "return" then
-                io.write((" "):rep(t))
-                io.write(what, "   - ")
+                tab()
+                io.write(what)
                 local values = ...
                 if values then
-                    for _,v in ipairs(values) do
-                        io.write(tostring(v), ", ")
+                    io.write(" ")
+                    for i, v in ipairs(values) do
+                        io.write(tostring(v))
+                        if i ~= #values then
+                            io.write(", ")
+                        end
                     end
                 end
                 io.write("\n")
             else
-                io.write((" "):rep(t))
+                tab()
                 io.write(what .. " - ", ...)
                 io.write("\n")
             end
