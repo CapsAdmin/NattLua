@@ -13,7 +13,10 @@ return function(META)
     
     ]]
 
-    local table_new = require("table.new")
+    local ok, table_new = pcall(require, "table.new")
+    if not ok then
+        table_new = function() return {} end
+    end
     local ffi = jit and require("ffi")
 
     local function pool(alloc --[[#: (function(): {[string] = any})]], size --[[#: nil | number]])
