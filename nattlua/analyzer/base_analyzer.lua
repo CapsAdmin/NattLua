@@ -277,7 +277,7 @@ return function(META)
         function META:CloneCurrentScope(node)
             local current_scope = self:GetScope()
             self:PopScope()
-            self:PushScope(current_scope:Copy(node))
+            return self:PushScope(current_scope:Copy(node))
         end
 
         function META:DumpScope()

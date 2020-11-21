@@ -453,19 +453,20 @@ do -- control flow analysis
     end
 
     function META:OnExitScope(kind, data)
-        local scope = self:GetLastScope()
+        local exited_scope = self:GetLastScope()
         -- body
-
-        if self:DidJustReturnFromBlock() or self.lua_error_thrown then
-            self:GetScope().uncertain = scope.uncertain
         
-            self:CloneCurrentScope()
+        if self:DidJustReturnFromBlock() or self.lua_error_thrown then
+            local current_scope = self:GetScope()
+            current_scope.uncertain = exited_scope.uncertain
+        
+            current_scope = self:CloneCurrentScope()
 
-            if scope.uncertain then
-                self:GetScope().test_condition = scope.test_condition
-                self:GetScope().test_condition_inverted = true
+            if exited_scope.uncertain then
+                current_scope.test_condition = exited_scope.test_condition
+                current_scope.test_condition_inverted = true
             else
-                self:GetScope().unreachable = true
+                current_scope.unreachable = true
             end
         end
         
