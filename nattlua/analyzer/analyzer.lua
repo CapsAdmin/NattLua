@@ -227,7 +227,7 @@ function META:LuaTypesToTuple(node, tps)
 end
 
 function META:AnalyzeFunctionBody(function_node, arguments, env)
-    self:PushScope(function_node, nil, {
+    self:CreateAndPushScope(function_node, nil, {
         type = "function"
     })
     self:PushEnvironment(function_node, nil, env)
@@ -363,7 +363,7 @@ local function Call(self, obj, arguments, call_node)
         -- this is so that the return type of a function can access its arguments, to generics
         -- local function foo(a: number, b: number): Foo(a, b) return a + b end
         if function_node.return_types then
-            self:PushScope(function_node, nil, {
+            self:CreateAndPushScope(function_node, nil, {
                 type = "function_return_type"
             })
                 for i, key in ipairs(function_node.identifiers) do
@@ -416,7 +416,8 @@ do -- control flow analysis
     -- to isolate the code for this here and do 
     -- naive approaches while writing tests
 
-    function META:OnEnterScope(kind, data)
+    function META:OnEnterScope(kind)
+        local data = self:GetScope().event_data
         if not data.condition then return end
         
         local scope = self:GetScope()
@@ -579,7 +580,7 @@ end
 do -- statements
     function META:AnalyzeRootStatement(statement, ...)
         local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
-        self:PushScope(statement, nil, {
+        self:CreateAndPushScope(statement, nil, {
             type = "root"
         })
         self:PushEnvironment(statement, nil, "runtime")
@@ -766,7 +767,7 @@ do -- statements
                 prev_expression = obj
 
                 if obj:IsTruthy() then
-                    self:PushScope(statement, statement.tokens["if/else/elseif"][i], {    
+                    self:CreateAndPushScope(statement, statement.tokens["if/else/elseif"][i], {    
                         type = "if",                        
                         if_position = i, 
                         condition = obj
@@ -785,7 +786,7 @@ do -- statements
                 end
             else
                 if prev_expression:IsFalsy() then
-                    self:PushScope(statement, statement.tokens["if/else/elseif"][i], {
+                    self:CreateAndPushScope(statement, statement.tokens["if/else/elseif"][i], {
                         if_position = i, 
                         is_else = true,
                         condition = prev_expression
@@ -807,7 +808,7 @@ do -- statements
     function META:AnalyzeWhileStatement(statement)
         local obj = self:AnalyzeExpression(statement.expression)
         if obj:IsTruthy() then
-            self:PushScope(statement, nil, {
+            self:CreateAndPushScope(statement, nil, {
                 type = "while",
                 condition = obj
             })
@@ -819,7 +820,7 @@ do -- statements
     end
 
     function META:AnalyzeDoStatement(statement)
-        self:PushScope(statement, nil, {
+        self:CreateAndPushScope(statement, nil, {
             type = "do"
         })
         self:AnalyzeStatements(statement.statements)
@@ -827,7 +828,7 @@ do -- statements
     end
 
     function META:AnalyzeRepeatStatement(statement)
-        self:PushScope(statement, nil, {
+        self:CreateAndPushScope(statement, nil, {
             type = "repeat",
         })
         self:AnalyzeStatements(statement.statements)
@@ -873,7 +874,7 @@ do -- statements
                 if not returned_key:IsLiteral() then
                     returned_key = types.Union({types.Symbol(nil), returned_key})
                 end
-                self:PushScope(statement, nil, {
+                self:CreateAndPushScope(statement, nil, {
                     type = "generic_for",
                     condition = returned_key
                 })
@@ -923,7 +924,7 @@ do -- statements
             condition:AddType(types.Symbol(false))
         end
         
-        self:PushScope(statement, nil, {
+        self:CreateAndPushScope(statement, nil, {
             type = "numeric_for",
             init = init, 
             max = max, 
@@ -1860,7 +1861,7 @@ do -- expressions
 
 		if node.return_types then
             explicit_return = true
-			self:PushScope(node)
+			self:CreateAndPushScope(node)
                 for i, key in ipairs(node.identifiers) do
                     if key.kind == "value" then
                         self:CreateLocalValue(key, args[i], "typesystem")

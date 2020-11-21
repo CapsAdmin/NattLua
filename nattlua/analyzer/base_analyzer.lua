@@ -64,6 +64,20 @@ do
         return upvalue
     end
 
+    function META:Copy(node)
+        local copy = LexicalScope(node or self.node, self.extra_node, self.event_data)
+
+        for env, data in pairs(self.upvalues) do
+            for key, obj in pairs(data.map) do
+                copy:CreateValue(key, obj.data, env)
+            end
+        end
+        
+        copy.returns = self.returns
+
+        return copy
+    end
+
     function META:GetTestCondition()
         local scope = self
         while true do
@@ -139,7 +153,7 @@ do
         return "scope[" .. self.ref .. "]" .. "[".. (self.uncertain and "uncertain" or "certain") .."]" .. "[" .. tostring(self:GetTestCondition() or nil) .. "]"
     end
 
-    function LexicalScope(node, extra_node, parent)
+    function LexicalScope(node, extra_node, event_data)
         assert(type(node) == "table" and node.kind, "expected an associated ast node")
         ref = ref + 1
 
@@ -160,13 +174,10 @@ do
 
             node = node,
             extra_node = extra_node,
+            event_data = event_data,
         }
 
         setmetatable(scope, META)
-
-        if parent then
-            scope:SetParent(parent)
-        end
 
         return scope
     end
@@ -204,32 +215,41 @@ return function(META)
             return node.value.value
         end
 
-        function META:PushScope(node, extra_node, event_data)
-            assert(type(node) == "table" and node.kind, "expected an associated ast node")
+        function META:PushScope(scope)
+            local parent = self:GetScope()
 
-            local parent = self.scope
+            if parent then
+                scope:SetParent(parent)
+            end
 
-            local scope = LexicalScope(node, extra_node, parent)
+            if scope.node and scope.node.scope then
+                scope:SetParent(scope.node.scope)
+            end
 
             self.scope_stack = self.scope_stack or {}
             table.insert(self.scope_stack, self.scope)
-            
-            if node.scope then
-                scope:SetParent(node.scope)
-            end
-
-            scope.event_data = event_data
 
             self.scope = scope
 
-            self:FireEvent("enter_scope", node, extra_node, scope, event_data)
+            self:FireEvent("enter_scope", scope)
 
-            if event_data and self.OnEnterScope then
-                self:OnEnterScope(node.kind, event_data)
+            if scope.event_data and self.OnEnterScope then
+                self:OnEnterScope(scope.node.kind, scope.event_data)
             end
 
             return scope
         end
+
+        function META:CreateAndPushScope(node, extra_node, event_data)
+            return self:PushScope(self:CreateScope(node, extra_node, event_data))
+        end
+
+        function META:CreateScope(node, extra_node, event_data)
+            assert(type(node) == "table" and node.kind, "expected an associated ast node")
+
+            return LexicalScope(node, extra_node, event_data)
+        end
+
 
         function META:PopScope(event_data)
             local old = table.remove(self.scope_stack)
@@ -257,21 +277,7 @@ return function(META)
         function META:CloneCurrentScope(node)
             local current_scope = self:GetScope()
             self:PopScope()
-            self:PushScope(node or current_scope.node, current_scope.extra_node, current_scope.event_data)
-
-            local old_scope = current_scope
-            local scope = self:GetScope()
-            scope.parent = current_scope.parent
-
-            for key, obj in pairs(old_scope.upvalues.runtime.map) do
-                self:CreateLocalValue(key, obj.data, "runtime")
-            end
-
-            for key, obj in pairs(old_scope.upvalues.typesystem.map) do
-                self:CreateLocalValue(key, obj.data, "typesystem")
-            end
-
-            scope.returns = old_scope.returns
+            self:PushScope(current_scope:Copy(node))
         end
 
         function META:DumpScope()
@@ -606,7 +612,8 @@ return function(META)
                 io.write("_ENV.", self:Hash(key), " = ", tostring(val))
                 io.write("\n")
             elseif what == "enter_scope" then
-                local node, extra_node, scope, data = ...
+                local scope = ...
+                local node, extra_node, event_data = scope.node, scope.extra_node, scope.event_data
                 tab()
                 t = t + 1
 
