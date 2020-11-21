@@ -613,14 +613,12 @@ return function(META)
                 io.write("\n")
             elseif what == "enter_scope" then
                 local scope = ...
-                local node, extra_node, event_data = scope.node, scope.extra_node, scope.event_data
                 tab()
                 t = t + 1
 
-                --local test_condition, inverted = scope:GetTestCondition()
+                io.write(scope.event_data.type, " ")
                 
-                io.write(data.type, " ")
-                
+                local data = scope.event_data
                 if data and data.condition then
                     io.write(tostring(data.condition), " then")
                 end
