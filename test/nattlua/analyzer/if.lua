@@ -558,3 +558,23 @@ run[[
         end
     end
 ]]
+
+run[[
+    do
+        local s: string
+        local _1337_false: false | 1337
+        local _7777_false: false | 7777
+    
+        if not _1337_false then
+            return
+        end
+    
+        if not _7777_false then
+            return
+        end
+    
+        if _7777_false then
+            return _1337_false - 1
+        end
+    end
+]]

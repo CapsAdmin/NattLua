@@ -458,13 +458,12 @@ do -- control flow analysis
         if self:DidJustReturnFromBlock() or self.lua_error_thrown then
             self:GetScope().uncertain = scope.uncertain
         
-            if scope.uncertain then           
-                self:CloneCurrentScope()
+            self:CloneCurrentScope()
+
+            if scope.uncertain then
                 self:GetScope().test_condition = scope.test_condition
                 self:GetScope().test_condition_inverted = true
             else
-                self:CloneCurrentScope()
-
                 self:GetScope().unreachable = true
             end
         end
@@ -491,8 +490,9 @@ do -- control flow analysis
         if upvalue.data.Type == "union" then
             local condition, inverted = scope:FindTestCondition(upvalue.data)
 
-            if condition then                 
+            if condition then
                 local copy = self:CopyUpvalue(upvalue)
+
 
                 if inverted then
                     copy.data = (condition.falsy_union or copy.data:GetFalsy()):Copy()

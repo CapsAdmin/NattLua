@@ -78,25 +78,56 @@ do
         return scope.test_condition, scope.test_condition_inverted
     end
 
-    function META:FindTestCondition(test)
+    function META:FindTestCondition(obj)
         local scope = self
         while true do
             if scope.test_condition then
                 local condition = scope.test_condition
                 if 
-                    condition == test or 
-                    condition.source == test or 
-                    condition.source_left == test or 
-                    condition.source_right == test or
-                    condition.type_checked == test 
+                    condition == obj or 
+                    condition.source == obj or 
+                    condition.source_left == obj or 
+                    condition.source_right == obj or
+                    condition.type_checked == obj 
                 then
                     break
                 end
             end
-            scope = scope.parent
+            
+            scope = scope.parent            
+            
             if not scope then
                 return
             end
+
+
+            -- find in siblings too, if they have returned
+            local found = nil
+
+            for _, child in ipairs(scope.children) do
+                if child ~= scope then
+                    if child.test_condition then
+                        local condition = child.test_condition
+                        if 
+                            condition == obj or 
+                            condition.source == obj or 
+                            condition.source_left == obj or 
+                            condition.source_right == obj or
+                            condition.type_checked == obj 
+                        then
+                            found = child
+                            break
+                        end
+                    end                    
+                end
+            end
+
+            if found then
+                scope = found
+                break
+            end
+
+
         end
         return scope.test_condition, scope.test_condition_inverted
     end
@@ -232,20 +263,12 @@ return function(META)
             local scope = self:GetScope()
             scope.parent = current_scope.parent
 
-            for i, obj in ipairs(old_scope.upvalues.runtime.list) do
-                scope.upvalues.runtime.list[i] = obj
-            end
-
             for key, obj in pairs(old_scope.upvalues.runtime.map) do
-                scope.upvalues.runtime.map[key] = obj
-            end
-
-            for i, obj in ipairs(old_scope.upvalues.typesystem.list) do
-                scope.upvalues.runtime.list[i] = obj
+                self:CreateLocalValue(key, obj.data, "runtime")
             end
 
             for key, obj in pairs(old_scope.upvalues.typesystem.map) do
-                scope.upvalues.runtime.map[key] = obj
+                self:CreateLocalValue(key, obj.data, "typesystem")
             end
 
             scope.returns = old_scope.returns
@@ -473,7 +496,12 @@ return function(META)
                 -- certain: if true then return x end
                 -- uncertain: if math.random() > 0.5 then return x end
                 if self.returned_from_certain_scope and self.return_to_this_level == #self.scope_stack then
-                    if statement.kind ~= "return" and statement.kind ~= "if" and statement.kind ~= "numeric_for" then
+                    if 
+                        statement.kind ~= "return" and 
+                        statement.kind ~= "if" and 
+                        statement.kind ~= "numeric_for" and
+                        statement.kind ~= "do"
+                    then
                         self:FatalError("returning from invalid statement: " .. tostring(statement))
                     end
                     
