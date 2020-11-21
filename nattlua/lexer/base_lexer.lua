@@ -8,7 +8,8 @@ return function(META)
     type META.code_ptr = {
         [number] = number,
         __meta = self,
-        __add = (function(self, number): self)
+        __add = (function(self, number): self),
+        __sub = (function(self, number): self)
     }
     
     ]]
