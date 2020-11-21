@@ -39,6 +39,7 @@ if path:find("examples/") and path:sub(-5) ~= ".nlua" then
 end
 
 local c = assert(nl.File(path, {annotate = true}))
+c:EnableEventDump(true)
 if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
     _G.DISABLE_BASE_TYPES = true
 end
