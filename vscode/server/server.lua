@@ -9,9 +9,9 @@ ffi.C.chdir("/home/caps/nl/")
 
 local json = require("vscode.server.json")
 local nl = require("nattlua")
-local helpers = require("nattlua.util.helpers")
+local helpers = require("nattlua.other.helpers")
 local tprint = require("examples.util").TablePrint
-local shared_analyzer = require("nattlua.analyzer.shared_analyzer")
+local base_environment = require("nattlua.runtime.base_environment")
 local server = _G.SERVER or require("vscode.server.lsp")
 _G.SERVER = server
 
@@ -55,7 +55,7 @@ local function compile(uri, server, client)
 		local data = helpers.SubPositionToLinePosition(code, start, stop)
 
 		if not data then
-			local code = io.open(shared_analyzer.path):read("*all")
+			local code = io.open(base_environment.path):read("*all")
 			data = helpers.SubPositionToLinePosition(code, start, stop)
 			if not data then
 				print("INTERNAL ERROR: ", self, msg, start, stop, ...)

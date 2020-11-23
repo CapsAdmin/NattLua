@@ -1,5 +1,5 @@
 local ffi = require("ffi")
-local u32 = require("nattlua.util.data_structures.primitives").u32
+local u32 = require("nattlua.other.data_structures.primitives").u32
 local malloc = ffi.C.malloc
 local realloc = ffi.C.realloc
 

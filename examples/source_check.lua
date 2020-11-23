@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local tprint = require("nattlua.util.tprint")
+local tprint = require("nattlua.other.tprint")
 local function get_all_files()
     local paths = {}
 
@@ -40,6 +40,8 @@ for _, path in ipairs(paths) do
         table.insert(list, node)
     end
 
+    c:Parse()
+
     for _, node in ipairs(list) do
         if node.kind == "local_function" then
             stats.locals = stats.locals + 1
@@ -58,9 +60,9 @@ for _, path in ipairs(paths) do
         end
 
         if node.type == "expression" then
-         --   stats.expressions[node.kind] = (stats.expressions[node.kind] or 0) + 1
+            stats.expressions[node.kind] = (stats.expressions[node.kind] or 0) + 1
         else
-           -- stats.statements[node.kind] = (stats.statements[node.kind] or 0) + 1
+            stats.statements[node.kind] = (stats.statements[node.kind] or 0) + 1
         end
     end
 end

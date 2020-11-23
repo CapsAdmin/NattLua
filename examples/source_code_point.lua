@@ -1,4 +1,4 @@
-local helpers = require("nattlua.util.helpers")
+local helpers = require("nattlua.other.helpers")
 local code = [==[
 for i = 1, #code do
     local char = code:sub(i, i)

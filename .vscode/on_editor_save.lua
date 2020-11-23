@@ -40,13 +40,13 @@ end
 
 local c = assert(nl.File(path, {annotate = true}))
 c:EnableEventDump(true)
-if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
-    _G.DISABLE_BASE_TYPES = true
+if c.code:find("--DISABLE_BASE_ENV", nil, true) then
+    _G.DISABLE_BASE_ENV = true
 end
 
 local ok, err = c:Analyze()
-if c.code:find("--DISABLE_BASE_TYPES", nil, true) then
-    _G.DISABLE_BASE_TYPES = nil
+if c.code:find("--DISABLE_BASE_ENV", nil, true) then
+    _G.DISABLE_BASE_ENV = nil
 end
 if not ok then
     io.write(err, "\n")

@@ -159,7 +159,7 @@ end
 local paths = util.GetFilesRecursively("./nattlua")
 local all_tokens = {}
 for _, path in ipairs(paths) do
-    local code = nl.File(path):Parse()
+    local code = assert(assert(nl.File(path)):Parse())
     local tokens = code.Tokens
     for _, token in ipairs(tokens) do
         table.insert(all_tokens, token)

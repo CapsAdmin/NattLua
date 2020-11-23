@@ -1,7 +1,7 @@
-local list = require("nattlua.util.list")
+local list = require("nattlua.other.list")
 
 return function(META)
-    local tprint = require("nattlua.util.tprint")
+    local tprint = require("nattlua.other.tprint")
 
     local setmetatable = setmetatable
     local type = type
@@ -47,7 +47,7 @@ return function(META)
             local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
 
             if self.value and type(self.value.value) == "string" then
-                str = str ..  ": " .. require("nattlua.util.helpers").QuoteToken(self.value.value)
+                str = str ..  ": " .. require("nattlua.other.helpers").QuoteToken(self.value.value)
             end
 
             return str

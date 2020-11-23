@@ -19,7 +19,7 @@ type ffi.C = {
 		if not field:IsLiteral() then error("field must be a literal") end
 
 		local ffi = require("ffi")
-		local reflect = require("nattlua.util.reflect")
+		local reflect = require("nattlua.other.reflect")
 
 		local function call_typesystem_upvalue(name, ...)
 			-- this is very internal-ish code

@@ -36,7 +36,7 @@ function LSX(tag, constructor, props, children)
     return e
 end
 
-local tprint = require("nattlua.util.tprint")
+local tprint = require("nattlua.other.tprint")
 
 function table.print(...)
     return tprint(...)

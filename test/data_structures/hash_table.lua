@@ -1,6 +1,6 @@
 local ffi = require("ffi")
-local HashTableType = require("nattlua.util.data_structures.hash_table")
-local f64 = require("nattlua.util.data_structures.primitives").f64
+local HashTableType = require("nattlua.other.data_structures.hash_table")
+local f64 = require("nattlua.other.data_structures.primitives").f64
 
 math.randomseed(0)
 local keys = {}

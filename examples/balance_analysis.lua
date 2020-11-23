@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local helpers = require("nattlua.util.helpers")
+local helpers = require("nattlua.other.helpers")
 
 local check_tokens
 

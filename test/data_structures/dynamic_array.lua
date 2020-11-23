@@ -1,6 +1,6 @@
 
-local DynamicArrayType = require("nattlua.util.data_structures.dynamic_array")
-local u32 = require("nattlua.util.data_structures.primitives").u32
+local DynamicArrayType = require("nattlua.other.data_structures.dynamic_array")
+local u32 = require("nattlua.other.data_structures.primitives").u32
 
 local Uint32Array = DynamicArrayType(u32)
 

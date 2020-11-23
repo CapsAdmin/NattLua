@@ -1,6 +1,6 @@
-local Struct = require("nattlua.util.data_structures.struct")
-local DynamicArrayType = require("nattlua.util.data_structures.dynamic_array")
-local u32 = require("nattlua.util.data_structures.primitives").u32
+local Struct = require("nattlua.other.data_structures.struct")
+local DynamicArrayType = require("nattlua.other.data_structures.dynamic_array")
+local u32 = require("nattlua.other.data_structures.primitives").u32
 
 local MyStruct = Struct({
     {"index", u32},

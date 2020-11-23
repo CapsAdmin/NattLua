@@ -34,7 +34,7 @@ type function enum(tbl)
 	return union
 end
 
-type function error_inside_base_typesystem()	
+type function error_inside_base_environment()	
 	-- a comment to match from test
 	local a = nil + true
 end
@@ -82,7 +82,7 @@ type function type_assert_superset(what, type)
 end
 
 type function type_traceback() 
-	local helpers = require("nattlua.util.helpers")
+	local helpers = require("nattlua.other.helpers")
 	if not analyzer.call_stack then return end
 	for i,v in ipairs(analyzer.call_stack) do 
 		local callexp = v.call_expression
@@ -251,16 +251,16 @@ do -- globals
 	type function require(name: string)
 		local str = name.data
 
-		local shared_analyzer = require("nattlua.analyzer.shared_analyzer")
+		local base_environment = require("nattlua.runtime.base_environment")
 
-		local val = shared_analyzer:Get(str)
+		local val = base_environment:Get(str)
 
 		if val then
 			return val
 		end
 		
 		if str == "table.new" then
-			return shared_analyzer:Get("table", "typesystem"):Get("new")
+			return base_environment:Get("table", "typesystem"):Get("new")
 		end
 
 		if analyzer:GetEnvironmentValue(str, "typesystem") then

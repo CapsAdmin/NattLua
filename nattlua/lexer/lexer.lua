@@ -1,5 +1,5 @@
 local syntax = require("nattlua.syntax.syntax")
-local helpers = require("nattlua.util.helpers")
+local helpers = require("nattlua.other.helpers")
 
 local META = {}
 META.__index = META

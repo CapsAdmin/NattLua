@@ -129,7 +129,7 @@ function META:IsTruthy()
 end
 
 function META:Initialize()
-    self.meta = require("nattlua.analyzer.string_meta")
+    self.meta = require("nattlua.runtime.string_meta")
 
     return self
 end

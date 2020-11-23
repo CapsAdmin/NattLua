@@ -153,7 +153,7 @@ end
 
 do
     local function emit_function_body(self, node, type_function)
-        self:EmitToken(node.tokens["("] or node.tokens["<"])
+        self:EmitToken(node.tokens["arguments("])
 
         if node.self_call then
             self:Emit("self")
@@ -163,7 +163,7 @@ do
         end
 
         self:EmitIdentifierList(node.identifiers)
-        self:EmitToken(node.tokens[")"] or node.tokens[">"])
+        self:EmitToken(node.tokens["arguments)"])
 
         self:Emit(" => {")
 

@@ -1,0 +1,138 @@
+-- this turns out to be really hard so I'm trying 
+-- naive approaches while writing tests
+
+local types = require("nattlua.types.types")
+
+return function(META)
+    function META:OnEnterScope(kind)
+        local data = self:GetScope().event_data
+        if not data.condition then return end
+        
+        local scope = self:GetScope()
+
+        scope.test_condition = data.condition
+
+        if data.is_else then
+            scope.test_condition_inverted = true
+        end
+
+        scope.uncertain = data.condition:IsUncertain()
+    end
+
+    function META:MakeUncertainDataOutsideInParentScopes()
+        for _, obj in ipairs(self:GetScope().upvalues.runtime.list) do
+            if obj.data_outside_of_if_blocks then
+               obj.data = obj.data_outside_of_if_blocks
+               obj.data_outside_of_if_blocks = nil
+            end
+        end
+    end
+
+    function META:OnFunctionCall(obj, arguments)
+        for i = 1, arguments:GetMinimumLength() do
+            local arg = obj:GetArguments():Get(i)
+            if arg and arg.out then
+                local upvalue = arguments:Get(i).upvalue
+                if upvalue then
+                    self:SetEnvironmentValue(upvalue.key, arguments:Get(i):Copy():MakeUnique(true), "runtime")
+                end
+            end
+        end
+    end
+
+    function META:OnExitScope(kind, data)
+        local exited_scope = self:GetLastScope()
+        -- body
+        
+        if self:DidJustReturnFromBlock() or self.lua_error_thrown then
+            local current_scope = self:GetScope()
+            current_scope.uncertain = exited_scope.uncertain
+        
+            current_scope = self:CloneCurrentScope()
+
+            if exited_scope.uncertain then
+                current_scope.test_condition = exited_scope.test_condition
+                current_scope.test_condition_inverted = true
+            else
+                current_scope.unreachable = true
+            end
+        end
+        
+        if kind ~= "if" then
+            self:MakeUncertainDataOutsideInParentScopes()
+        end
+    end
+
+    function META:OnLeaveIfStatement()
+        -- this has to be done after all if blocks have been processed
+        self:MakeUncertainDataOutsideInParentScopes()
+    end
+    
+    function META:OnEnterNumericForLoop(scope, init, max)
+        scope.uncertain = not init:IsLiteral() or not max:IsLiteral()
+    end
+
+    function META:OnFindLocalValue(upvalue, key, env, scope)
+        if self:GetScope().unreachable then
+      --      return self:CopyUpvalue(upvalue, types.Never())
+        end
+
+        if upvalue.data.Type == "union" then
+            local condition, inverted = scope:FindTestCondition(upvalue.data)
+
+            if condition then
+                local copy = self:CopyUpvalue(upvalue)
+
+
+                if inverted then
+                    copy.data = (condition.falsy_union or copy.data:GetFalsy()):Copy()
+                else
+                    copy.data = (condition.truthy_union or copy.data:GetTruthy()):Copy()
+                end
+
+                copy.original = upvalue.data
+
+                return copy
+            end
+        end
+
+        return upvalue
+    end
+
+    function META:OnMutateUpvalue(upvalue, key, val, env)
+        if self.scope.uncertain then
+            --[[
+                local x = false -- << shadowed upvalue
+
+                if maybe then
+                    -- uncertain scope
+
+                    -- instead of mutating the upvalue, create a new one
+                    x = true
+
+                    -- then turn the shadowed upvalue into a union of true | false
+                else
+                    !! but x should not be true | false here !!
+                end
+
+            ]]
+
+            -- new upvalue
+            self:CreateLocalValue(key, val, env)
+
+            -- mutate shadowed upvalue
+            if self.scope.test_condition_inverted and upvalue.data_outside_of_if_blocks then
+                -- if we're in an uncertain else block, 
+                -- we remove the original shadowed upvalue from the union
+                -- because it has to be either true or false
+
+                upvalue.data_outside_of_if_blocks:AddType(val)
+                upvalue.data_outside_of_if_blocks:RemoveType(upvalue.data)
+            else
+                upvalue.data_outside_of_if_blocks = types.Union({upvalue.data, val})
+            end
+
+            return true
+        end
+    end
+end

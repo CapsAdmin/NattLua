@@ -2,7 +2,7 @@ if not table.unpack and _G.unpack then
 	table.unpack = _G.unpack
 end
 
-local helpers = require("nattlua.util.helpers")
+local helpers = require("nattlua.other.helpers")
 
 local nl = {}
 
@@ -134,9 +134,9 @@ do
 	end
 
 	local traceback = function(self, obj, msg)
-		local ret = {pcall(traceback_, self, obj, msg)}
-		if not ret[1] then
-			return "error in error handling: " .. ret[2]
+		local ret = {xpcall(traceback_, function(msg) return debug.traceback(tostring(msg)) end, self, obj, msg)}
+        if not ret[1] then
+			return "error in error handling: " .. tostring(ret[2])
 		end
 		return table.unpack(ret, 2)
 	end
@@ -222,7 +222,7 @@ do
 			analyzer:SetDefaultEnvironment(self.default_environment, "typesystem")
 		elseif self.default_environment ~= false then
 			-- this is studid, trying to stop the base analyzer from causing a require() loop
-			analyzer:SetDefaultEnvironment(require("nattlua.analyzer.shared_analyzer"), "typesystem")
+			analyzer:SetDefaultEnvironment(require("nattlua.runtime.base_environment"), "typesystem")
 		end
 
 		if self.dump_events or self.config and self.config.dump_analyzer_events then

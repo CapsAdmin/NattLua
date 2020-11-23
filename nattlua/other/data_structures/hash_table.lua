@@ -1,7 +1,7 @@
 local ffi = require("ffi")
-local Struct = require("nattlua.util.data_structures.struct")
-local DynamicArrayType = require("nattlua.util.data_structures.dynamic_array")
-local ArrayType = require("nattlua.util.data_structures.array")
+local Struct = require("nattlua.other.data_structures.struct")
+local DynamicArrayType = require("nattlua.other.data_structures.dynamic_array")
+local ArrayType = require("nattlua.other.data_structures.array")
 
 return function(key_type, val_type)
 
