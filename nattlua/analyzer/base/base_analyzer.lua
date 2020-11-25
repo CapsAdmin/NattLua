@@ -20,7 +20,6 @@ return function(META)
 
     require("nattlua.analyzer.base.scopes")(META)
     require("nattlua.analyzer.base.events")(META)
-    require("nattlua.analyzer.base.return_statements")(META)
     require("nattlua.analyzer.base.error_handling")(META)
 
     function META:AnalyzeExpressions(expressions, env)
@@ -55,8 +54,6 @@ return function(META)
             self:FireEvent("analyze_unreachable_code_start")
 
             self.processing_deferred_calls = true 
-
-            self:ResetReturnState()
 
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and v[1].explicit_arguments then

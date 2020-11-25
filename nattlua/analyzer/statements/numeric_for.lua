@@ -41,7 +41,7 @@ return function(META)
                 self:CreateLocalValue(statement.identifiers[1], i, "runtime")
                 self:AnalyzeStatements(statement.statements)
                 if self.break_out then
-                    if self.break_out.scope.uncertain then
+                    if self.break_out.scope:IsUncertain() then
                         uncertain_break = i
                         self.break_out = nil
                     else

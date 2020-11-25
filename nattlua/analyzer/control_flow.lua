@@ -4,6 +4,46 @@
 local types = require("nattlua.types.types")
 
 return function(META)
+    function META:Return(types)
+        local scope = self:GetScope()
+        scope:CollectReturnTypes(types)
+        scope:Return(scope:IsUncertain())
+    end
+
+    function META:AnalyzeStatements(statements)
+        for i, statement in ipairs(statements) do
+            self:AnalyzeStatement(statement)
+
+            if self:GetScope():DidReturn() then
+                self:GetScope():ClearReturn()
+                break
+            end
+        end
+    end
+
+    function META:AnalyzeStatementsAndCollectReturnTypes(statement)
+        local scope = self:GetScope()
+        scope:MakeFunctionScope()
+
+        self:AnalyzeStatements(statement.statements)
+
+        local out = {}
+
+        for _, ret in ipairs(scope:GetReturnTypes()) do
+            for i, obj in ipairs(ret) do
+                if out[i] then
+                    out[i] = types.Union({out[i], obj})
+                else
+                    out[i] = obj
+                end
+            end
+        end
+
+        scope:ClearReturnTypes()
+
+        return types.Tuple(out)
+    end
+
     function META:OnEnterScope(kind)
         local data = self:GetScope().event_data
         if not data.condition then return end
@@ -16,7 +56,7 @@ return function(META)
             scope.test_condition_inverted = true
         end
 
-        scope.uncertain = data.condition:IsUncertain()
+        scope:MakeUncertain(data.condition:IsUncertain())
     end
 
     function META:MakeUncertainDataOutsideInParentScopes()
@@ -44,17 +84,14 @@ return function(META)
         local exited_scope = self:GetLastScope()
         -- body
         
-        if self:DidJustReturnFromBlock() or self.lua_error_thrown then
-            local current_scope = self:GetScope()
-            current_scope.uncertain = exited_scope.uncertain
-        
-            current_scope = self:CloneCurrentScope()
-
-            if exited_scope.uncertain then
-                current_scope.test_condition = exited_scope.test_condition
-                current_scope.test_condition_inverted = true
-            else
-                current_scope.unreachable = true
+        local current_scope = self:GetScope()
+        if current_scope:DidReturn() or self.lua_error_thrown then
+            current_scope:MakeUncertain(exited_scope:IsUncertain())
+            
+            if exited_scope:IsUncertain() then
+                local copy = self:CloneCurrentScope()
+                copy.test_condition = exited_scope.test_condition
+                copy.test_condition_inverted = true
             end
         end
         
@@ -69,7 +106,7 @@ return function(META)
     end
     
     function META:OnEnterNumericForLoop(scope, init, max)
-        scope.uncertain = not init:IsLiteral() or not max:IsLiteral()
+        scope:MakeUncertain(not init:IsLiteral() or not max:IsLiteral())
     end
 
     function META:OnFindLocalValue(upvalue, key, env, scope)
@@ -82,7 +119,6 @@ return function(META)
 
             if condition then
                 local copy = self:CopyUpvalue(upvalue)
-
 
                 if inverted then
                     copy.data = (condition.falsy_union or copy.data:GetFalsy()):Copy()
@@ -100,7 +136,7 @@ return function(META)
     end
 
     function META:OnMutateUpvalue(upvalue, key, val, env)
-        if self.scope.uncertain then
+        if self.scope:IsUncertain() then
             --[[
                 local x = false -- << shadowed upvalue
 

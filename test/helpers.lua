@@ -51,7 +51,7 @@ local function run(code, expect_error)
             code_data:EnableEventDump(true)
             local ok, err2 = code_data:Analyze()
             io.write(code_data.code, "\n")
-            error(err)
+            error(err, 2)
         end
     end
 

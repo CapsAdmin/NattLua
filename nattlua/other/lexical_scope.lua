@@ -102,20 +102,13 @@ function META:FindTestCondition(obj)
             end
         end
         
-        scope = scope.parent            
-        
-        if not scope then
-            return
-        end
-
 
         -- find in siblings too, if they have returned
         -- ideally when cloning a scope, the new scope should be 
         -- inside of the returned scope, then we wouldn't need this code
-        local found = nil
-
+        
         for _, child in ipairs(scope.children) do
-            if child ~= scope then
+            if child ~= scope and child.uncertain_returned then
                 if child.test_condition then
                     local condition = child.test_condition
                     if 
@@ -125,28 +118,103 @@ function META:FindTestCondition(obj)
                         condition.source_right == obj or
                         condition.type_checked == obj 
                     then
-                        found = child
-                        break
+                        return child.test_condition, not child.test_condition_inverted
                     end
                 end                    
             end
         end
 
-        if found then
-            scope = found
-            break
+        scope = scope.parent            
+        
+        if not scope then
+            return
         end
-
-
     end
     return scope.test_condition, scope.test_condition_inverted
 end
 
+do
+    function META:MakeFunctionScope()
+        self.returns = {}
+    end
+
+    function META:CollectReturnTypes(types)
+        table.insert(self:GetNearestFunctionScope().returns, types)
+    end
+
+    function META:DidReturn()
+        return self.returned ~= nil
+    end
+
+    function META:ClearReturn()
+        self.returned = nil
+    end
+
+    function META:Return(uncertain)
+        local scope = self
+        while true do
+
+            if uncertain then
+                scope.uncertain_returned = true
+            else 
+                scope.returned = true
+            end
+            if scope.returns then
+                break
+            end
+
+            scope = scope.parent
+
+            if not scope then
+                break
+            end
+        end
+    end
+
+    function META:GetNearestFunctionScope()
+        local scope = self
+        while true do
+            
+            if scope.returns then
+                return scope 
+            end
+
+            scope = scope.parent
+
+            if not scope then
+                break
+            end
+        end
+
+        error("cannot find a scope to return to", 2)
+    end
+
+    function META:GetReturnTypes()
+        return self.returns
+    end
+
+    function META:ClearReturnTypes()
+        self.returns = {}
+    end
+
+    function META:IsUncertain()
+        return self.uncertain
+    end
+
+    function META:MakeUncertain(b)
+        self.uncertain = b
+    end
+end
 
 local ref = 0
 
 function META:__tostring()
-    return "scope[" .. self.ref .. "]" .. "[".. (self.uncertain and "uncertain" or "certain") .."]" .. "[" .. tostring(self:GetTestCondition() or nil) .. "]"
+    local s = "scope[" .. self.ref .. "]" .. "[".. (self:IsUncertain() and "uncertain" or "certain") .."]" .. "[" .. tostring(self:GetTestCondition() or nil) .. "]"
+    if self.returns then
+        s = s .. "[function scope]"
+    end
+
+    return s
 end
 
 function LexicalScope(node, extra_node, event_data)
