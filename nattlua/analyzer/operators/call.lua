@@ -30,21 +30,24 @@ return function(META)
 
     function META:AnalyzeFunctionBody(function_node, arguments, env)
         self:CreateAndPushScope(function_node, nil, {
-            type = "function"
+            type = "function",
+            function_node = function_node,
+            arguments = arguments,
+            env = env,
         })
         self:PushEnvironment(function_node, nil, env)
     
         if function_node.self_call then
-            self:CreateLocalValue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env)
+            self:CreateLocalValue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env, "self")
         end
     
         for i, identifier in ipairs(function_node.identifiers) do
             local argi = function_node.self_call and (i+1) or i
     
             if identifier.value.value == "..." then
-                self:CreateLocalValue(identifier, arguments:Slice(argi), env)
+                self:CreateLocalValue(identifier, arguments:Slice(argi), env, argi)
             else
-                self:CreateLocalValue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env)
+                self:CreateLocalValue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env, argi)
             end
         end
     
@@ -169,7 +172,7 @@ return function(META)
                     type = "function_return_type"
                 })
                     for i, key in ipairs(function_node.identifiers) do
-                        self:CreateLocalValue(key, arguments:Get(i), "typesystem")
+                        self:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
                     end
     
                     for i, type_exp in ipairs(function_node.return_types) do

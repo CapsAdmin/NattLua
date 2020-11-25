@@ -9,7 +9,7 @@ return function(META)
     end)
 
     -- return statement
-    function META:CollectReturnExpressions(types)
+    function META:Return(types)
         table.insert(self.returns[1], types)
 
         self.returned_from_certain_scope = not self:GetScope().uncertain
@@ -27,11 +27,47 @@ return function(META)
         return a
     end
 
+    function META:AnalyzeStatements(statements)
+        for i, statement in ipairs(statements) do
+            self:AnalyzeStatement(statement)
+
+            -- if we're analyzing statements and encounter a return statement
+            -- certain: do return x end
+            -- certain: if true then return x end
+            -- uncertain: if math.random() > 0.5 then return x end
+            if self.returned_from_certain_scope and self.return_to_this_level == #self:GetScopeStack() then
+                if 
+                    statement.kind ~= "return" and 
+                    statement.kind ~= "if" and 
+                    statement.kind ~= "numeric_for" and
+                    statement.kind ~= "do"
+                then
+                    
+                    print("returned_from_certain_scope", self.returned_from_certain_scope)
+                    print("returned_from_block", self.returned_from_block)
+                    print("return_to_this_level", self.return_to_this_level)
+                    for k,v in pairs(self.returns) do
+                        print("returns", k,v)
+                    end
+
+                    self:FatalError("returning from invalid statement: " .. tostring(statement))
+                end
+                
+                self.return_to_this_level = nil
+                self.returned_from_certain_scope = false
+                
+                break
+            end
+        end
+    end
+
     function META:AnalyzeStatementsAndCollectReturnTypes(statement)
         self:ResetReturnState()
         self.return_to_this_level = #self:GetScopeStack()
         table.insert(self.returns, 1, {})
+
         self:AnalyzeStatements(statement.statements)
+        
         local out = {}
         if self.returns then
             local return_types = table.remove(self.returns, 1)
@@ -50,29 +86,4 @@ return function(META)
         return types.Tuple(out)
     end
 
-    function META:AnalyzeStatements(statements)
-        for i, statement in ipairs(statements) do
-            self:AnalyzeStatement(statement)
-
-            -- if we're analyzing statements and encounter a return statement
-            -- certain: do return x end
-            -- certain: if true then return x end
-            -- uncertain: if math.random() > 0.5 then return x end
-            if self.returned_from_certain_scope and self.return_to_this_level == #self:GetScopeStack() then
-                if 
-                    statement.kind ~= "return" and 
-                    statement.kind ~= "if" and 
-                    statement.kind ~= "numeric_for" and
-                    statement.kind ~= "do"
-                then
-                    self:FatalError("returning from invalid statement: " .. tostring(statement))
-                end
-                
-                self.return_to_this_level = nil
-                self.returned_from_certain_scope = false
-                
-                break
-            end
-        end
-    end
 end

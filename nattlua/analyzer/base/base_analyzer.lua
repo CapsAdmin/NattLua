@@ -52,6 +52,8 @@ return function(META)
                 return
             end
 
+            self:FireEvent("analyze_unreachable_code_start")
+
             self.processing_deferred_calls = true 
 
             self:ResetReturnState()
@@ -70,6 +72,8 @@ return function(META)
 
             self.processing_deferred_calls = false
             self.deferred_calls = nil
+
+            self:FireEvent("analyze_unreachable_code_stop")
         end
     end
 
@@ -151,7 +155,7 @@ return function(META)
                     func_str = tostring(v.obj)
                 else
                     local lol =  v.func.statements
-                    v.func.statements = {}
+                    v.func.statements = require("nattlua.other.list").new()
                     func_str = v.func:Render()
                     v.func.statements = lol
                 end

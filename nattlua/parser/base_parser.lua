@@ -147,7 +147,17 @@ return function(META)
         META.type = "statement"
 
         function META:__tostring()
-            return "[" .. self.type .. " - " .. self.kind .. "] " .. ("%s"):format(self.id)
+            local str = "[" .. self.type .. " - " .. self.kind .. "]"
+
+            if self.code and self.name and self.name:sub(1,1) == "@" then
+                local helpers = require("nattlua.other.helpers")
+                local data = helpers.SubPositionToLinePosition(self.code, helpers.LazyFindStartStop(self))
+                str = str .. " @ " .. self.name:sub(2) .. ":" .. data.line_start
+            else
+                str = str .. " " .. ("%s"):format(self.id)
+            end
+
+            return str
         end
 
         function META:Dump()

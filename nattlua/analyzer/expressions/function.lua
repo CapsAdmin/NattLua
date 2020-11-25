@@ -59,7 +59,7 @@ return function(META)
             self:CreateAndPushScope(node)
                 for i, key in ipairs(node.identifiers) do
                     if key.kind == "value" then
-                        self:CreateLocalValue(key, args[i], "typesystem")
+                        self:CreateLocalValue(key, args[i], "typesystem", true)
                     end
                 end
 

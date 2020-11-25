@@ -87,8 +87,8 @@ type function type_traceback()
 	for i,v in ipairs(analyzer.call_stack) do 
 		local callexp = v.call_expression
 		
-		local lol =  v.func.statements
-		v.func.statements = {}
+		local lol = v.func.statements
+		v.func.statements = require("nattlua.other.list").new()
 		local func_str = v.func:Render()
 		v.func.statements = lol
 

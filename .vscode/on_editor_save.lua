@@ -54,5 +54,6 @@ if not ok then
 end
 local res = assert(c:Emit())
 require("nattlua.runtime.base_runtime")
+io.write("== code result ==\n")
 io.write(res, "\n")
 --assert(load(res))()

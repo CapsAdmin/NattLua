@@ -557,8 +557,11 @@ function META:EmitStatement(node)
         self:EmitStatements(node.statements)
     elseif node.kind == "type_code" then
         self:Emit("--" .. node.lua_code.value.value)
-    else
+    elseif node.kind then
         error("unhandled statement: " .. node.kind)
+    else
+        for k,v in pairs(node) do print(k,v) end
+        error("invalid statement: " .. tostring(node))
     end
 
     if self.OnEmitStatement then

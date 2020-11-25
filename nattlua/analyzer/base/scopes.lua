@@ -96,10 +96,10 @@ return function(META)
         }
     end
 
-    function META:CreateLocalValue(key, obj, env)
+    function META:CreateLocalValue(key, obj, env, function_argument)
         local upvalue = self.scope:CreateValue(key, obj, env)
         obj.upvalue = upvalue
-        self:FireEvent("upvalue", key, obj, env)
+        self:FireEvent("upvalue", key, obj, env, function_argument)
         return upvalue
     end
 

@@ -118,16 +118,7 @@ do
 				s = s .. "\n===============\n"
 			end
 
-			if analyzer.error_stack then
-				s = s .. "======== error_stack =======\n"
-
-				for _, data in ipairs(analyzer.error_stack) do
-					s = s .. tostring(data.statement:Render())
-					s = s .. tostring(data.expression:Render())
-				end
-
-				s = s .. "\n===============\n"
-			end
+			s = s .. analyzer:TypeTraceBack()
 		end
 
 		return s
