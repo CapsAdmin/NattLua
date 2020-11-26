@@ -71,13 +71,16 @@ return function(META)
 
                 tab()
 
-                if scope.event_data.type == "function" then
-                    write("do -- ", scope.event_data.function_node)
+                local data = scope.event_data
+
+                if data then
+                    if data.type == "function" then
+                        write("do -- ", data.function_node)
                 else
-                    write(scope.event_data.type, " ")
+                        write(data.type, " ")
+                    end
                 end
 
-                local data = scope.event_data
                 if data and data.condition then
                     write(tostring(data.condition), " then")
                 end
