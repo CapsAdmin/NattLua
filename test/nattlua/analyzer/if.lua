@@ -349,6 +349,18 @@ type_assert(a, _ as 1 | nil)
 ]]
 
 run[[
+    local x: false | 1
+    assert(not x)
+    type_assert(x, false)
+]]
+
+run[[
+    local x: false | 1
+    assert(x)
+    type_assert(x, 1)
+]]
+
+run[[
     local x: true | false
     
     if x then return end

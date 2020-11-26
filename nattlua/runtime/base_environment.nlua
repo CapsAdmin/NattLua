@@ -139,14 +139,25 @@ do -- globals
 		error(err and err.data or "assertion failed")
 	end
 
-	type function assert(obj)
-		if obj:IsTruthy() then
+	type function assert(obj, msg)
+		if obj:IsTruthy() and not obj:IsFalsy() then
 			if obj.Type == "union" then
 				obj = obj:Copy()
 				obj:DisableFalsy()
 			end
 			return obj
 		end
+        if obj:IsFalsy() then        
+            analyzer.lua_assert_error_thrown = {
+                msg = msg,
+                obj = obj,
+            }
+    
+            analyzer:GetScope():Return(obj:IsTruthy())
+            local copy = analyzer:CloneCurrentScope()
+            copy:MakeUncertain(obj:IsTruthy())
+            copy.test_condition = obj
+        end
 	end
 
 	type function next(t: {[any] = any}, k: any)

@@ -85,7 +85,7 @@ return function(META)
         -- body
         
         local current_scope = self:GetScope()
-        if current_scope:DidReturn() or self.lua_error_thrown then
+        if current_scope:DidReturn() or self.lua_error_thrown or self.lua_assert_error_thrown then
             current_scope:MakeUncertain(exited_scope:IsUncertain())
             
             if exited_scope:IsUncertain() then
