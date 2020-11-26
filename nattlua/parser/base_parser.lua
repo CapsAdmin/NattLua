@@ -151,8 +151,14 @@ return function(META)
 
             if self.code and self.name and self.name:sub(1,1) == "@" then
                 local helpers = require("nattlua.other.helpers")
+                
                 local data = helpers.SubPositionToLinePosition(self.code, helpers.LazyFindStartStop(self))
-                str = str .. " @ " .. self.name:sub(2) .. ":" .. data.line_start
+                if data and data.line_start then
+                    str = str .. " @ " .. self.name:sub(2) .. ":" .. data.line_start
+                else
+                    str = str .. " @ " .. self.name:sub(2) .. ":" .. "?"
+                end
+            
             else
                 str = str .. " " .. ("%s"):format(self.id)
             end

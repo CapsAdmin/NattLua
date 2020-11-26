@@ -168,6 +168,49 @@ return function(META)
 
             return str
         end
+
+        local function attempt_render(node)
+            local s = ""
+            local ok, err
+                
+            ok, err = pcall(function() s = s .. node:Render() end)
+
+            if not ok then
+                print("DebugStateString: failed to render node: " .. tostring(err))
+                
+                ok, err = pcall(function() s = s .. tostring(node) end)
+                
+                if not ok then
+                    print("DebugStateString: failed to tostring node: " .. tostring(err))
+
+                    s = s .. "* error in rendering statement * "
+                end
+            end
+
+            return s
+        end
+
+        function META:DebugStateToString()
+            local s = ""
+
+            if self.current_statement and self.current_statement.Render then
+                s = s .. "======== statement =======\n"
+                s = s .. attempt_render(self.current_statement)              
+                s = s .. "==========================\n"
+            end
+
+            if self.current_expression and self.current_expression.Render then
+                s = s .. "======== expression =======\n"
+                s = s .. attempt_render(self.current_expression)
+                s = s .. "===========================\n"
+            end
+
+            pcall(function() 
+                s = s .. self:TypeTraceBack()
+            end)
+
+            return s
+        end
     end
 
 end

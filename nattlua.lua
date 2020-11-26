@@ -67,20 +67,13 @@ do
 		else
 			error(msg)
 		end
-	end
-
-	local function traceback_(self, obj, msg)-- do return msg end
-		msg = msg or "no error"
-
-		local s = ""
-		s = msg .. "\n" .. s
-		for i = 2, math.huge do
+    end
+    
+    local function stack_trace()
+        local s = ""
+        for i = 2, 50 do
 			local info = debug.getinfo(i)
 			if not info then
-				break
-			end
-
-			if info.source:find("/busted/") then
 				break
 			end
 
@@ -91,34 +84,17 @@ do
 					s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (info.name or "?") .. "\n"
 				end
 			end
-		end
+        end
+        return s
+    end
 
-		if self.analyzer then
-			local analyzer = self.analyzer
+	local function traceback_(self, obj, msg)
+		msg = msg or "no error"
 
-			if analyzer.current_statement and analyzer.current_statement.Render then
-				s = s .. "======== statement =======\n"
-				s = s .. analyzer.current_statement:Render()
-				s = s .. "\n===============\n"
-			end
+        local s = msg .. "\n" .. stack_trace()
 
-			if analyzer.current_expression and analyzer.current_expression.Render then
-				s = s .. "======== expression =======\n"
-				s = s .. analyzer.current_expression:Render()
-				s = s .. "\n===============\n"
-			end
-
-			if analyzer.callstack then
-				s = s .. "======== callstack =======\n"
-
-				for _, obj in ipairs(analyzer.callstack) do
-					s = s .. helpers.FormatError(analyzer.code_data.code, analyzer.code_data.name, tostring(obj), helpers.LazyFindStartStop(obj))
-				end
-
-				s = s .. "\n===============\n"
-			end
-
-			s = s .. analyzer:TypeTraceBack()
+        if self.analyzer then
+            s = s .. self.analyzer:DebugStateToString()
 		end
 
 		return s
