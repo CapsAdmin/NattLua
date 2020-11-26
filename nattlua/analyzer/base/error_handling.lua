@@ -1,6 +1,19 @@
 local helpers = require("nattlua.other.helpers")
 
-return function(META)    
+return function(META)
+    
+    --[[# 
+        type META.diagnostics = {
+            [1 .. inf] = {
+                node = any, 
+                start = number, 
+                stop = number,
+                msg = string,
+                severity = "warning" | "error",
+                traceback = string,
+            }
+        }    
+    ]]
     table.insert(META.OnInitialize, function(self) 
         self.diagnostics = {}
     end)
@@ -42,6 +55,7 @@ return function(META)
     end
     
     function META:FatalError(msg)
+        assert(type(msg) == "string")
         error(msg, 2)
     end
 
