@@ -673,7 +673,7 @@ do -- types
                 for i, node in node.children:pairs() do
                     self:Whitespace("\t")
                     if node.kind == "table_index_value" then
-                        self:EmitTypeExpression(node.value)
+                        self:EmitTypeExpression(node.expression)
                     elseif node.kind == "table_key_value" then
                         self:EmitToken(node.tokens["identifier"])
                         self:EmitToken(node.tokens["="])
