@@ -59,6 +59,10 @@ function META.IsSubsetOf(A, B)
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
     if B.Type == "function" then
+        if A == B or A:GetSignature() == B:GetSignature() then
+            return true
+        end
+
         local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
         if not ok then
             return types.errors.other("function arguments don't match because " .. reason)

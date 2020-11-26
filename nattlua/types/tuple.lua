@@ -5,6 +5,12 @@ META.Type = "tuple"
 META.__index = META
 
 function META:GetSignature()
+    if self.suppress then
+        return "*self*"
+    end
+
+    self.suppress = true
+
     local s = {}
 
     for i,v in ipairs(self.data) do
@@ -20,10 +26,18 @@ function META:GetSignature()
         table.insert(s, tostring(self.Repeat))
     end
 
+    self.suppress = false
+
     return table.concat(s, " ")
 end
 
 function META:__tostring()
+    if self.suppress then
+        return "*self*"
+    end
+
+    self.suppress = true
+
     local s = {}
 
     for i,v in ipairs(self.data) do
@@ -39,6 +53,8 @@ function META:__tostring()
     if self.Repeat then
         s = s .. "×" .. tostring(self.Repeat)
     end
+
+    self.suppress = false
 
     return s
 end
@@ -99,6 +115,10 @@ function META:Copy(map)
 end
 
 function META.IsSubsetOf(A, B)
+    if A == B then
+        return true
+    end
+
     if A:GetLength() == 1 then
         return A:Get(1):IsSubsetOf(B)
     end
