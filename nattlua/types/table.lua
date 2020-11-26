@@ -320,6 +320,17 @@ end
 function META:Get(key)
     key = types.Cast(key)
 
+    if key.Type == "union" then
+        for _, k in ipairs(key:GetTypes()) do
+            local ok, reason = self:Get(k)
+            if ok then
+                return ok
+            end
+            table.insert(errors, reason)
+        end
+        return types.errors.other(table.concat(errors, "\n"))
+    end
+
     if key.Type == "string" and not key:IsLiteral() then
         local union = types.Union({types.Nil})
         for _, keyval in ipairs(self:GetData()) do

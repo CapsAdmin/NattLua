@@ -310,3 +310,19 @@ test("deep nested copy", function()
     equal(a:Get("a"), a)
     equal(a:Get("a"), a:Get("nested"):Get("a"))
 end)
+
+run[[
+    local lol = {
+        foo = true,
+        bar = false,
+        lol = 1,
+    }
+    
+    local function test(token)
+        -- here token is, string | string, but it should be string when being used as key
+        return lol[token]
+    end         
+    
+    local x = test(lol as string | string)
+    type_assert(x, _ as 1 | true | false | nil)    
+]]
