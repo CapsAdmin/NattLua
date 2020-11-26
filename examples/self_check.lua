@@ -1,2 +1,5 @@
 local nl = require("nattlua")
-assert(assert(nl.File("./nattlua.lua")):Analyze())
+
+local c = assert(nl.File("./nattlua.lua"))
+c:EnableEventDump(true)
+assert(c:Analyze())
