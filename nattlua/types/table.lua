@@ -352,7 +352,7 @@ function META:Get(key)
     end
 
     local keyval, reason = self:GetKeyVal(key, true)
-
+    
     if keyval then
         return keyval.val
     end
@@ -362,6 +362,8 @@ function META:Get(key)
         if keyval then
             return keyval.val
         end
+        
+        return types.errors.other(reason)
     end
 
     return types.errors.other(reason)

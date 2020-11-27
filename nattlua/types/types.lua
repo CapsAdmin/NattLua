@@ -54,7 +54,7 @@ do
         self.source = source
         self.node = node
         self.source_left = l
-        self.source_right = r
+        self.source_right = r        
         return self
     end 
 
@@ -155,6 +155,24 @@ do
         return types.errors.other("undefined get: " .. tostring(self) .. "[" .. tostring(key) .. "]" .. " on type " .. self.Type)
     end
 
+    function Base:AddReasonForExistance(reason, ...)
+        table.insert(self.reasons, {
+            msg = reason,
+            data = {...}
+        })
+        return self
+    end
+
+    function Base:GetReasonForExistance()
+        local str = ""
+        
+        for k,v in ipairs(self.reasons) do
+            str = str .. v.msg .. "\n"
+        end
+
+        return str
+    end
+
     types.BaseObject = Base
 end
 
@@ -168,6 +186,7 @@ function types.RegisterType(meta)
 
     return function(data)
         local self = setmetatable({}, meta)
+        self.reasons = {}
         self.data = data
         self.uid = uid
         uid = uid + 1

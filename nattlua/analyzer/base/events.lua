@@ -52,14 +52,18 @@ return function(META)
             elseif what == "upvalue" then
                 local key, val, env, argument_position = ...
                 tab()
-                write("local ")
+
+                if not argument_position then
+                    write("local ")
+                end
                 write(self:Hash(key))
                 if val then
                     write(" = ")
                     write(tostring(val))
                 end
-                if argument_position then
-                    write(" -- argument #", argument_position)
+
+                if val.reasons[1] then
+                    write(" -- ", val:GetReasonForExistance())
                 end
                 write("\n")
             elseif what == "set_global" then
@@ -75,8 +79,23 @@ return function(META)
 
                 if data then
                     if data.type == "function" then
-                        write("do -- ", data.function_node)
-                else
+                        local em = require("nattlua.transpiler.emitter")({preserve_whitespace = false})
+                        local node = data.function_node
+                        
+                        if node.tokens["identifier"] then
+                            em:EmitToken(node.tokens["identifier"])
+                        elseif node.expression then
+                            em:EmitEpression(node.expression)
+                        else
+                            em:Emit("function")
+                        end
+
+                        em:EmitToken(node.tokens["arguments("])
+                        em:EmitIdentifierList(node.identifiers)
+                        em:EmitToken(node.tokens["arguments)"])
+
+                        write(em:Concat(), " do")
+                    else
                         write(data.type, " ")
                     end
                 end
@@ -89,10 +108,21 @@ return function(META)
                 write("\n")
             elseif what == "leave_scope" then
                 local _, extra_node, scope = ...
+                local data = scope and scope.event_data
+
                 t = t - 1
                 tab()
-                write("end")
+
+                if data then
+                    if data.type == "function" then
+                        write("end")
+                    else
+                        write("end")
+                    end
+                end
                 write("\n")
+
+                
             elseif what == "external_call" then
                 local node, type = ...
                 tab()
@@ -114,7 +144,7 @@ return function(META)
             elseif what == "function_spec" then
                 local func = ...
                 tab()
-                write(what, " - ")
+                write("-- ", what, " - ")
                 write(tostring(func))
                 write("\n")
             elseif what == "return" then
@@ -133,11 +163,11 @@ return function(META)
                 write("\n")
             elseif what == "analyze_unreachable_code_start" then
                 tab()
-                write("=== BEGIN ANALYZE UNREACHABLE CODE ===")                
+                write("-- BEGIN ANALYZING UNREACHABLE CODE")                
                 write("\n")
             elseif what == "analyze_unreachable_code_stop" then
                 tab()
-                write("=== ===")
+                write("-- STOP ANALYZING UNREACHABLE CODE")
                 write("\n")
             else
                 tab()
