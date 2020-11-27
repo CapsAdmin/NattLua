@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 test("smoke", function()
-    local a = run[[local type a = 1337 | 8888]]:GetEnvironmentValue("a", "typesystem")
+    local a = run[[local type a = 1337 | 8888]]:GetLocalOrEnvironmentValue("a", "typesystem")
     equal(2, a:GetLength())
     equal(1337, a:GetTypes()[1].data)
     equal(8888, a:GetTypes()[2].data)
@@ -13,7 +13,7 @@ test("union operator", function()
         local type a = 1337 | 888
         local type b = 666 | 777
         local type c = a | b
-    ]]:GetEnvironmentValue("c", "typesystem")
+    ]]:GetLocalOrEnvironmentValue("c", "typesystem")
     equal(4, a:GetLength())
 end)
 
@@ -54,14 +54,14 @@ test("is literal", function()
     local a = run[[
         local type a = 1 | 2 | 3
     ]]
-    assert(a:GetEnvironmentValue("a", "typesystem"):IsLiteral() == true)
+    assert(a:GetLocalOrEnvironmentValue("a", "typesystem"):IsLiteral() == true)
 end)
 
 test("is not literal", function()
     local a = run[[
         local type a = 1 | 2 | 3 | string
     ]]
-    assert(a:GetEnvironmentValue("a", "typesystem"):IsLiteral() == false)
+    assert(a:GetLocalOrEnvironmentValue("a", "typesystem"):IsLiteral() == false)
 end)
 
 run[[

@@ -86,7 +86,7 @@ test("runtime reassignment", function()
         do
             a = 2
         end
-    ]]:GetEnvironmentValue("a", "runtime")
+    ]]:GetLocalOrEnvironmentValue("a", "runtime")
 
     equal(v:GetData(), 2)
 
@@ -95,7 +95,7 @@ test("runtime reassignment", function()
         if true then
             a = 2
         end
-    ]]:GetEnvironmentValue("a", "runtime")
+    ]]:GetLocalOrEnvironmentValue("a", "runtime")
 
     equal(v:GetData(), 2)
 end)

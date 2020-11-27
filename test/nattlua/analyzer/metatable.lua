@@ -7,7 +7,7 @@ test("index function", function()
         local a = t.lol
     ]]
 
-    local a = analyzer:GetEnvironmentValue("a", "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue("a", "runtime")
     equal(1, a:GetData())
 
     run[[
@@ -35,10 +35,10 @@ test("basic inheritance", function()
         local a, b = obj:Test(1)
     ]]
 
-    local obj = analyzer:GetEnvironmentValue("obj", "runtime")
+    local obj = analyzer:GetLocalOrEnvironmentValue("obj", "runtime")
 
-    local a = analyzer:GetEnvironmentValue("a", "runtime")
-    local b = analyzer:GetEnvironmentValue("b", "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue("a", "runtime")
+    local b = analyzer:GetLocalOrEnvironmentValue("b", "runtime")
 
     equal(2, a:GetData())
     equal(3, b:GetData())
@@ -58,9 +58,9 @@ test("__call method", function()
         local lol = obj(100,2,3)
     ]]
 
-    local obj = analyzer:GetEnvironmentValue("obj", "runtime")
+    local obj = analyzer:GetLocalOrEnvironmentValue("obj", "runtime")
 
-    equal(105, analyzer:GetEnvironmentValue("lol", "runtime"):GetData())
+    equal(105, analyzer:GetLocalOrEnvironmentValue("lol", "runtime"):GetData())
 end)
 
 test("__call method should not mess with scopes", function()
@@ -75,7 +75,7 @@ test("__call method should not mess with scopes", function()
         local a = setmetatable({}, META)(100,2,3)
     ]]
 
-    local a = analyzer:GetEnvironmentValue("a", "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue("a", "runtime")
 
     equal(105, a:GetData())
 end)
@@ -94,7 +94,7 @@ test("vector test", function()
         local v = Vector(123).lol
     ]]
 
-    local v = analyzer:GetEnvironmentValue("v", "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue("v", "runtime")
     equal(123, v:GetData())
 end)
 
@@ -117,9 +117,9 @@ test("vector test2", function()
         local x, y, z = v.x, v.y, v.z
     ]]
 
-    local x = assert(analyzer:GetEnvironmentValue("x", "runtime"))
-    local y = assert(analyzer:GetEnvironmentValue("y", "runtime"))
-    local z = assert(analyzer:GetEnvironmentValue("z", "runtime"))
+    local x = assert(analyzer:GetLocalOrEnvironmentValue("x", "runtime"))
+    local y = assert(analyzer:GetLocalOrEnvironmentValue("y", "runtime"))
+    local z = assert(analyzer:GetLocalOrEnvironmentValue("z", "runtime"))
 
     equal(101, x:GetData())
     equal(102, y:GetData())

@@ -11,7 +11,7 @@ return function(META)
             if statement.kind == "local_destructure_assignment" then
                 self:CreateLocalValue(statement.default, obj, env)
             elseif statement.kind == "destructure_assignment" then
-                self:SetEnvironmentValue(statement.default, obj, env)
+                self:SetLocalOrEnvironmentValue(statement.default, obj, env)
             end
         end
 
@@ -21,7 +21,7 @@ return function(META)
             if statement.kind == "local_destructure_assignment" then
                 self:CreateLocalValue(node, obj, env)
             elseif statement.kind == "destructure_assignment" then
-                self:SetEnvironmentValue(node, obj, env)
+                self:SetLocalOrEnvironmentValue(node, obj, env)
             end
         end
     end

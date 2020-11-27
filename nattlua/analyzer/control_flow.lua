@@ -74,7 +74,7 @@ return function(META)
             if arg and arg.out then
                 local upvalue = arguments:Get(i).upvalue
                 if upvalue then
-                    self:SetEnvironmentValue(upvalue.key, arguments:Get(i):Copy():MakeUnique(true), "runtime")
+                    self:SetLocalOrEnvironmentValue(upvalue.key, arguments:Get(i):Copy():MakeUnique(true), "runtime")
                 end
             end
         end

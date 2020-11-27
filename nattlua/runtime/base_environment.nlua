@@ -28,7 +28,7 @@ type function enum(tbl)
 	
 	local union = types.Union()
 	for key, val in tbl:pairs() do
-		analyzer:SetEnvironmentValue(key:GetData(), val, "typesystem")
+		analyzer:SetLocalOrEnvironmentValue(key:GetData(), val, "typesystem")
 		union:AddType(val)
 	end
 	return union
@@ -226,7 +226,7 @@ do -- globals
 			end
 		end
 
-		local next = analyzer:GetEnvironmentValue("next", "typesystem")
+		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
 		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, tbl)
 		local done = false
 
@@ -249,7 +249,7 @@ do -- globals
 			end
 		end
 
-		local next = analyzer:GetEnvironmentValue("next", "typesystem")
+		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
 		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, tbl)
 		local done = false
 		return function()
@@ -274,8 +274,8 @@ do -- globals
 			return base_environment:Get("table", "typesystem"):Get("new")
 		end
 
-		if analyzer:GetEnvironmentValue(str, "typesystem") then
-			return analyzer:GetEnvironmentValue(str, "typesystem")
+		if analyzer:GetLocalOrEnvironmentValue(str, "typesystem") then
+			return analyzer:GetLocalOrEnvironmentValue(str, "typesystem")
 		end
 
 		if package.loaders then

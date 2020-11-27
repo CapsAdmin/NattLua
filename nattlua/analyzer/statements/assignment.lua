@@ -116,11 +116,11 @@ return function(META)
                 if exp_key.kind == "value" then
 
                     do -- check for any previous upvalues
-                        local upvalue = self:GetEnvironmentValue(key, env)
+                        local upvalue = self:GetLocalOrEnvironmentValue(key, env)
                         local upvalues_contract = upvalue and upvalue.contract
 
                         if not upvalues_contract and env == "runtime" then
-                            upvalue = self:GetEnvironmentValue(key, "typesystem")
+                            upvalue = self:GetLocalOrEnvironmentValue(key, "typesystem")
                             if upvalue then
                                 upvalues_contract = upvalue
                             end
@@ -133,7 +133,7 @@ return function(META)
                         end
                     end
                     
-                    self:SetEnvironmentValue(key, val, env)
+                    self:SetLocalOrEnvironmentValue(key, val, env)
                 else
                     local obj = self:AnalyzeExpression(exp_key.left, env)
                     self:Assert(exp_key, self:NewIndexOperator(obj, key, val, exp_key))

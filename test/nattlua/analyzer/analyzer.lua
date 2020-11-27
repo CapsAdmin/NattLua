@@ -70,7 +70,7 @@ test("escape comments", function()
 end)
 
 test("runtime scopes", function()
-    local v = R("local a = 1"):GetEnvironmentValue("a", "runtime")
+    local v = R("local a = 1"):GetLocalOrEnvironmentValue("a", "runtime")
     equal(true, v.Type == "number")
 end)
 
@@ -96,7 +96,7 @@ test("runtime block scopes", function()
         do
             local a = 2
         end
-    ]]:GetEnvironmentValue("a", "runtime")
+    ]]:GetLocalOrEnvironmentValue("a", "runtime")
 
     equal(v:GetData(), 1)
 end)
@@ -107,8 +107,8 @@ test("typesystem differs from runtime", function()
         local type a = 2
     ]]
 
-    equal(analyzer:GetEnvironmentValue("a", "runtime"):GetData(), 1)
-    equal(analyzer:GetEnvironmentValue("a", "typesystem"):GetData(), 2)
+    equal(analyzer:GetLocalOrEnvironmentValue("a", "runtime"):GetData(), 1)
+    equal(analyzer:GetLocalOrEnvironmentValue("a", "typesystem"):GetData(), 2)
 end)
 
 test("global types", function()
@@ -120,7 +120,7 @@ test("global types", function()
         type a = nil
     ]]
 
-    equal(2, analyzer:GetEnvironmentValue("b", "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue("b", "runtime"):GetData())
 end)
 
 test("constant types", function()
@@ -129,8 +129,8 @@ test("constant types", function()
         local b: number
     ]]
 
-    equal(true, analyzer:GetEnvironmentValue("a", "runtime"):IsLiteral())
-    equal(false, analyzer:GetEnvironmentValue("b", "runtime"):IsLiteral())
+    equal(true, analyzer:GetLocalOrEnvironmentValue("a", "runtime"):IsLiteral())
+    equal(false, analyzer:GetLocalOrEnvironmentValue("b", "runtime"):IsLiteral())
 end)
 
 -- literal + vague = vague
@@ -141,7 +141,7 @@ test("1 + number = number", function()
         local c = a + b
     ]]
 
-    local v = analyzer:GetEnvironmentValue("c", "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue("c", "runtime")
     equal(true, v.Type == ("number"))
     equal(false, v:IsLiteral())
 end)
@@ -153,7 +153,7 @@ test("1 + 2 = 3", function()
         local c = a + b
     ]]
 
-    local v = analyzer:GetEnvironmentValue("c", "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue("c", "runtime")
     equal(true, v.Type == ("number"))
     equal(3, v:GetData())
 end)
@@ -166,7 +166,7 @@ test("function return value", function()
         local a = test()
     ]]
 
-    local v = analyzer:GetEnvironmentValue("a", "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue("a", "runtime")
     equal(6, v:GetData())
 end)
 
@@ -178,9 +178,9 @@ test("multiple function return values", function()
         local a,b,c = test()
     ]]
 
-    equal(1, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
-    equal(2, analyzer:GetEnvironmentValue("b", "runtime"):GetData())
-    equal(3, analyzer:GetEnvironmentValue("c", "runtime"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue("a", "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue("b", "runtime"):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue("c", "runtime"):GetData())
 end)
 
 
@@ -193,7 +193,7 @@ test("scopes shouldn't leak", function()
         local _, a = a:test(1, 2)
     ]]
 
-    equal(3, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue("a", "runtime"):GetData())
 end)
 
 test("explicitly annotated variables need to be set properly", function()
@@ -212,8 +212,8 @@ test("functions can modify parent scope", function()
         test()
     ]]
 
-    equal(2, analyzer:GetEnvironmentValue("a", "runtime"):GetData())
-    equal(1, analyzer:GetEnvironmentValue("c", "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue("a", "runtime"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue("c", "runtime"):GetData())
 end)
 
 test("uncalled functions should be called", function()
@@ -232,7 +232,7 @@ test("uncalled functions should be called", function()
             return a + b
         end
     ]]
-    local lib = analyzer:GetEnvironmentValue("lib", "runtime")
+    local lib = analyzer:GetLocalOrEnvironmentValue("lib", "runtime")
 
     equal("number", lib:Get("foo1"):GetArguments():Get(1):GetType("number").Type)
     equal("number", lib:Get("foo1"):GetArguments():Get(2):GetType("number").Type)

@@ -624,7 +624,7 @@ R[[
 
     local type b = function()
         _G.LOL = nil
-        local t = analyzer:GetEnvironmentValue("a", "typesystem")
+        local t = analyzer:GetLocalOrEnvironmentValue("a", "typesystem")
         local func = t.data.lua_function
         func()
         if not _G.LOL then

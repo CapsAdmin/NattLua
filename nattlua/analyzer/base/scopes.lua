@@ -148,7 +148,7 @@ return function(META)
         obj = obj or self.default_environment[env]
 
         if #self.environments[env] == 0 then
-            -- this is needed for when calling GetEnvironmentValue when analysis is done
+            -- this is needed for when calling GetLocalOrEnvironmentValue when analysis is done
             -- it's mostly useful for tests, but maybe a better solution can be done here
             self.first_environment = self.first_environment or {}
             self.first_environment[env] = obj
@@ -168,7 +168,7 @@ return function(META)
         table.remove(self.environments[env])            
     end
 
-    function META:GetEnvironmentValue(key, env)
+    function META:GetLocalOrEnvironmentValue(key, env)
         env = env or "runtime"
 
         local upvalue = self:FindLocalValue(key, env)
@@ -198,7 +198,7 @@ return function(META)
         return  nil
     end
 
-    function META:SetEnvironmentValue(key, val, env)
+    function META:SetLocalOrEnvironmentValue(key, val, env)
         assert(val == nil or types.IsTypeObject(val))
 
         if type(key) == "string" or key.kind == "value" then

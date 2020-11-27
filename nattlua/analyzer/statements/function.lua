@@ -19,23 +19,23 @@ return function(META)
                 "typesystem"
             )
         elseif statement.kind == "function" then
-            local existing_type = self:GetEnvironmentValue(statement.expression, "typesystem")
+            local existing_type = self:GetLocalOrEnvironmentValue(statement.expression, "typesystem")
 
             if existing_type then
-                self:SetEnvironmentValue(
+                self:SetLocalOrEnvironmentValue(
                     statement.expression, 
                     existing_type, 
                     "runtime"
                 )
             else
-                self:SetEnvironmentValue(
+                self:SetLocalOrEnvironmentValue(
                     statement.expression, 
                     self:AnalyzeFunctionExpression(statement, "runtime"), 
                     "runtime"
                 )
             end
         elseif statement.kind == "type_function" then
-            self:SetEnvironmentValue(
+            self:SetLocalOrEnvironmentValue(
                 statement.expression,
                 self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem"), 
                 "typesystem"

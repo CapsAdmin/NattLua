@@ -53,7 +53,7 @@ return function(META)
         local val, err = obj:Get(key)
     
         if not val then
-            return self:NewType(node or obj.node, "nil"):AddReasonForExistance("failed to get " .. tostring(key) .. " from table because " .. err)
+            return self:NewType(node or obj.node, "nil"):AddReason("failed to get " .. tostring(key) .. " from table because " .. err)
         end
     
         return val

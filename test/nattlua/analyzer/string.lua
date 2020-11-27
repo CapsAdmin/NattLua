@@ -16,5 +16,5 @@ test("patterns", function()
 
     run([[
         local a: $"FOO_.-" = "lol"
-    ]], "the pattern failed to match")
+    ]], "cannot find .- in pattern")
 end)

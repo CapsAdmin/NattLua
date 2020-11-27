@@ -7,17 +7,23 @@ return function(META)
 
         if env == "typesystem" then
             obj = 
-                self:GetEnvironmentValue(node, env) or
-                self:GetEnvironmentValue(node, "runtime")
+                self:GetLocalOrEnvironmentValue(node, env) or
+                self:GetLocalOrEnvironmentValue(node, "runtime")
             
             if not obj then
                 self:Error(node, "cannot find value " .. node.value.value)
             end
         else
             obj = 
-                self:GetEnvironmentValue(node, env) or 
-                self:GetEnvironmentValue(node, "typesystem") or 
-                self:GuessTypeFromIdentifier(node, env)
+                self:GetLocalOrEnvironmentValue(node, env) or 
+                self:GetLocalOrEnvironmentValue(node, "typesystem")
+
+            if not obj then
+                obj = self:GuessTypeFromIdentifier(node, env)
+                if obj.Type == "any" then
+                    obj:AddReason("cannot find environment value " .. node.value.value)
+                end
+            end
         end
 
         node.inferred_type = node.inferred_type or obj
