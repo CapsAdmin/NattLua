@@ -62,8 +62,9 @@ return function(META)
                     write(tostring(val))
                 end
 
-                if val.reasons[1] then
-                    write(" -- ", val:GetReasonForExistance())
+                local reason = val:GetReasonForExistance()
+                if reason ~= "" then
+                    write(" -- ", reason)
                 end
                 write("\n")
             elseif what == "set_global" then

@@ -36,7 +36,7 @@ end
 
 function META.IsSubsetOf(A, B)
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
-
+    
     if B.Type == "union" then
         local errors = {}
         for _, b in ipairs(B:GetTypes()) do
@@ -49,50 +49,33 @@ function META.IsSubsetOf(A, B)
         return types.errors.other(table.concat(errors, "\n"))
     end
 
-    if A.Type == "any" then return true end
     if B.Type == "any" then return true end
 
-    if B.Type == "string" then
-
-        if B.pattern_contract then
-            if not A:IsLiteral() then
-                return types.errors.other("must be a literal")
-            end
-
-            if not A:GetData():find(B.pattern_contract) then
-                return types.errors.other("the pattern failed to match")
-            end
-
-            return true
-        end
-
-
-        if A.literal == true and B.literal == true then
-            -- compare against literals
-            if A.data == B.data then
-                return true
-            end
-
-            return types.errors.subset(A, B)
-        elseif A.data == nil and B.data == nil then
-            -- number contains number
-            return true
-        elseif A.literal and not B.literal then
-            -- 42 subset of number?
-            return true
-        elseif not A.literal and B.literal then
-            -- number subset of 42 ?
-            return types.errors.subset(A, B)
-        end
-
-        -- number == number
-        return true
-    else
+    if B.Type ~= "string" then
         return types.errors.other(tostring(A) .. " is not the same type as " .. tostring(B))
     end
-    error("this shouldn't be reached ")
 
-    return false
+    if 
+        (A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData()) or -- "A" subsetof "B"
+        (A:IsLiteral() and not B:IsLiteral()) or -- "A" subsetof string
+        (not A:IsLiteral() and not B:IsLiteral()) -- string subsetof string
+    then
+        return true
+    end
+
+    if B.pattern_contract then
+        if not A:IsLiteral() then
+            return types.errors.other("must be a literal when comparing against pattern")
+        end
+
+        if not A:GetData():find(B.pattern_contract) then
+            return types.errors.other("cannot find \""..A:GetData().."\" in pattern \"" .. B.pattern_contract .. "\"")
+        end
+
+        return true
+    end
+
+    return types.errors.subset(A, B)
 end
 
 function META:__tostring()

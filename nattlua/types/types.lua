@@ -155,7 +155,7 @@ do
         return types.errors.other("undefined get: " .. tostring(self) .. "[" .. tostring(key) .. "]" .. " on type " .. self.Type)
     end
 
-    function Base:AddReasonForExistance(reason, ...)
+    function Base:AddReason(reason, ...)
         table.insert(self.reasons, {
             msg = reason,
             data = {...}
