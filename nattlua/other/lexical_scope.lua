@@ -86,41 +86,41 @@ function META:GetTestCondition()
     return scope.test_condition, scope.test_condition_inverted
 end
 
-function META:FindTestCondition(obj)
+local function compare_condition(scope, obj)
+    local condition = scope.test_condition
+    if 
+        condition and (
+            -- this is not correct for complex conditions like 
+            -- if not not not false and true or not true then
+            condition == obj or 
+            condition.source == obj or 
+            condition.source_left == obj or 
+            condition.source_right == obj or
+            condition.type_checked == obj
+        )
+    then
+        return true
+    end
+
+    return false
+end
+
+function META:FindScopeFromTestCondition(obj)
     local scope = self
     while true do
-        if scope.test_condition then
-            local condition = scope.test_condition
-            if 
-                condition == obj or 
-                condition.source == obj or 
-                condition.source_left == obj or 
-                condition.source_right == obj or
-                condition.type_checked == obj 
-            then
-                break
-            end
+        if compare_condition(scope, obj) then
+            break
         end
         
-
         -- find in siblings too, if they have returned
         -- ideally when cloning a scope, the new scope should be 
         -- inside of the returned scope, then we wouldn't need this code
         
         for _, child in ipairs(scope.children) do
             if child ~= scope and child.uncertain_returned then
-                if child.test_condition then
-                    local condition = child.test_condition
-                    if 
-                        condition == obj or 
-                        condition.source == obj or 
-                        condition.source_left == obj or 
-                        condition.source_right == obj or
-                        condition.type_checked == obj 
-                    then
-                        return child.test_condition, not child.test_condition_inverted
-                    end
-                end                    
+                if compare_condition(child, obj) then
+                    return child
+                end
             end
         end
 
@@ -130,7 +130,8 @@ function META:FindTestCondition(obj)
             return
         end
     end
-    return scope.test_condition, scope.test_condition_inverted
+
+    return scope
 end
 
 do
@@ -156,6 +157,7 @@ do
 
             if uncertain then
                 scope.uncertain_returned = true
+                scope.test_condition_inverted = not scope.test_condition_inverted
             else 
                 scope.returned = true
             end

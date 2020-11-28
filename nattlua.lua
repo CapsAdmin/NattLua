@@ -47,7 +47,8 @@ do
 		return str
 	end
 
-	function META:OnError(code, name, msg, start, stop, ...)
+
+	function META:OnDiagnostic(code, name, msg, severity, start, stop, ...)
 		local level = 0
 
 		if self.analyzer and self.analyzer.processing_deferred_calls then
@@ -62,12 +63,19 @@ do
 		end
 		msg = msg2
 		
-		if self.NoThrow then
-			io.write(msg)
-		else
-			error(msg)
-		end
+        if severity == "error" then
+            if self.NoThrow then
+                io.write(msg)
+            else
+                error(msg)
+            end
+        else
+            if not _G.test then
+                io.write(msg)
+            end
+        end
     end
+
     
     local function stack_trace()
         local s = ""
@@ -78,8 +86,7 @@ do
 			end
 
 			if info.source:sub(1,1) == "@" then
-				if info.name == "Error" or info.name == "OnError" then
-
+				if info.name == "Error" or info.name == "OnDiagnostic" then
 				else
 					s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (info.name or "?") .. "\n"
 				end
@@ -112,7 +119,9 @@ do
 		local lexer = self.Lexer(self.code)
 		lexer.name = self.name
 		self.lexer = lexer
-		lexer.OnError = function(lexer, ...) self:OnError(...) end
+        lexer.OnError = function(lexer, code, name, msg, start, stop, ...) 
+            self:OnDiagnostic(code, name, msg, "error", start, stop, ...) 
+        end
 		
 		local ok, tokens = xpcall(
 			lexer.GetTokens, 
@@ -141,7 +150,9 @@ do
 		parser.code = self.code
 		parser.name = self.name
 		self.parser = parser
-		parser.OnError = function(parser, ...) self:OnError(...) end
+        parser.OnError = function(parser, code, name, msg, start, stop, ...) 
+            self:OnDiagnostic(code, name, msg, "error", start, stop, ...) 
+        end
 
 		if self.OnNode then
 			parser.OnNode = function(_, node) self:OnNode(node) end
@@ -183,7 +194,7 @@ do
 		local analyzer = analyzer or self.Analyzer()
 		self.analyzer = analyzer	
 		analyzer.code_data = self
-		analyzer.OnError = function(analyzer, ...) self:OnError(...) end
+		analyzer.OnDiagnostic = function(analyzer, ...) self:OnDiagnostic(...) end
 
 		if self.default_environment then
 			analyzer:SetDefaultEnvironment(self.default_environment, "typesystem")

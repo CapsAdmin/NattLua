@@ -47,16 +47,21 @@ return function(META)
             local falsy_union = types.Union()
 
             for _, l in ipairs(l:GetTypes()) do
-                local res = self:Assert(node, self:PrefixOperator(node, l, env))
-                new_union:AddType(res)
+                local res, err = self:PrefixOperator(node, l, env)
 
-
-                if res:IsTruthy() then
-                    truthy_union:AddType(l)
-                end
-
-                if res:IsFalsy() then
+                if not res then
+                    self:ErrorAndCloneCurrentScope(node, err, l)
                     falsy_union:AddType(l)
+                else
+                    new_union:AddType(res)
+
+                    if res:IsTruthy() then
+                        truthy_union:AddType(l)
+                    end
+
+                    if res:IsFalsy() then
+                        falsy_union:AddType(l)
+                    end
                 end
             end
 

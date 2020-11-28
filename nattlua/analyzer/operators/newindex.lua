@@ -14,17 +14,13 @@ return function(META)
             for _, v in ipairs(obj:GetTypes()) do
                 local ok, err = self:NewIndexOperator(v, key, val, node)
     
-                if ok then
+                if not ok then
+                    self:ErrorAndCloneCurrentScope(node, err or "invalid set error", obj)
+                    falsy_union:AddType(v)
+                else
                     truthy_union:AddType(v)
                     new_union:AddType(v)
-                else
-                    falsy_union:AddType(v)
-                    
-                    self:Report(node, err or "invalid set error")
-    
-                    self:CloneCurrentScope()
-                    self:GetScope().test_condition = obj
-                end            
+                end
             end
     
             new_union.truthy_union = truthy_union

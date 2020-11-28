@@ -590,3 +590,28 @@ run[[
         end
     end
 ]]
+
+run[[
+    local a: 1 | nil
+
+    if not a then
+        error("!")
+    end
+
+    type_assert(a, 1)
+]]
+
+run[[
+    local a: 1 | nil
+
+    if not a then
+        assert(false)
+    end
+
+    type_assert(a, 1)
+]]
+
+run[[
+    local a = assert(_ as 1 | nil)
+    --type_assert(a, 1)
+]]

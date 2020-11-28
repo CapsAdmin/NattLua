@@ -27,17 +27,12 @@ return function(META)
         return ok
     end
 
-    function META:Report(node, msg --[[#: string ]], severity --[[#: "warning" | "error" ]])
+    function META:ReportDiagnostic(node, msg --[[#: string ]], severity --[[#: "warning" | "error" ]])
+        severity = severity or "warning"
         local start, stop = helpers.LazyFindStartStop(node)
 
-        if severity == "error" then
-            if self.OnError then
-                self:OnError(node.code, node.name, msg, start, stop)
-            end
-        end
-
-        if self.OnReport then
-            self:OnReport(node.code, node.name, msg, severity, start, stop)
+        if self.OnDiagnostic then
+            self:OnDiagnostic(node.code, node.name, msg, severity, start, stop)
         end
 
         table.insert(self.diagnostics, {
@@ -51,7 +46,7 @@ return function(META)
     end
 
     function META:Error(node, msg)
-        return self:Report(node, msg, "error")
+        return self:ReportDiagnostic(node, msg, "error")
     end
     
     function META:FatalError(msg)

@@ -82,10 +82,16 @@ return function(META)
         return self.scope_stack
     end
 
-    function META:CloneCurrentScope(node)
+    function META:CloneCurrentScope()
         local current_scope = self:GetScope()
         self:PopScope()
-        return self:PushScope(current_scope:Copy(node))
+        return self:PushScope(current_scope:Copy())
+    end
+
+    function META:ErrorAndCloneCurrentScope(node, err, condition)
+        self:ReportDiagnostic(node, err)
+        self:CloneCurrentScope()
+        self:GetScope().test_condition = condition
     end
 
     function META:CopyUpvalue(upvalue, data)

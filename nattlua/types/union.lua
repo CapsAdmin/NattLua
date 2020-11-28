@@ -390,9 +390,7 @@ function META:MakeCallableUnion(analyzer, node)
     for _, v in ipairs(self:GetData()) do               
         if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
             falsy_union:AddType(v)
-            analyzer:Report(node, "union "..tostring(self).." contains uncallable object " .. tostring(v))
-            analyzer:CloneCurrentScope()
-            analyzer:GetScope().test_condition = self
+            analyzer:ErrorAndCloneCurrentScope(node, "union "..tostring(self).." contains uncallable object " .. tostring(v), self)
         else
             truthy_union:AddType(v)
             new_union:AddType(v)

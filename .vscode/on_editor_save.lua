@@ -40,7 +40,7 @@ end
 
 local c = assert(nl.File(path, {annotate = true}))
 c:EnableEventDump(true)
-if c.code:find("--DISABLE_BASE_ENV", nil, true) then
+if c.code:find("%-%-%s-DISABLE_BASE_ENV") then
     _G.DISABLE_BASE_ENV = true
 end
 

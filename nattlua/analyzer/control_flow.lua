@@ -80,6 +80,22 @@ return function(META)
         end
     end
 
+    function META:ThrowError(msg, obj)
+        if obj then
+            self.lua_assert_error_thrown = {
+                msg = msg,
+                obj = obj,
+            }
+
+            self:GetScope():Return(obj:IsTruthy())
+            local copy = self:CloneCurrentScope()
+            copy:MakeUncertain(obj:IsTruthy())
+            copy.test_condition = obj
+        else
+            self.lua_error_thrown = msg
+        end
+    end
+
     function META:OnExitScope(kind, data)
         local exited_scope = self:GetLastScope()
         -- body
@@ -115,15 +131,15 @@ return function(META)
         end
 
         if upvalue.data.Type == "union" then
-            local condition, inverted = scope:FindTestCondition(upvalue.data)
+            local scope = scope:FindScopeFromTestCondition(upvalue.data)
 
-            if condition then
+            if scope then
                 local copy = self:CopyUpvalue(upvalue)
 
-                if inverted then
-                    copy.data = (condition.falsy_union or copy.data:GetFalsy()):Copy()
+                if scope.test_condition_inverted then
+                    copy.data = (scope.test_condition.falsy_union or copy.data:GetFalsy()):Copy()
                 else
-                    copy.data = (condition.truthy_union or copy.data:GetTruthy()):Copy()
+                    copy.data = (scope.test_condition.truthy_union or copy.data:GetTruthy()):Copy()
                 end
 
                 copy.original = upvalue.data

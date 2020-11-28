@@ -87,9 +87,7 @@ return function(META)
                     local res, err = self:BinaryOperator(node, l, r, env)
 
                     if not res then
-                        self:Report(node, err)
-                        self:CloneCurrentScope()
-                        self:GetScope().test_condition = condition
+                        self:ErrorAndCloneCurrentScope(node, err, condition)
                     else
                         if res:IsTruthy() then
                             if self.type_checked then                                

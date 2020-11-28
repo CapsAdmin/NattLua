@@ -86,7 +86,7 @@ return function(META)
                         if node.tokens["identifier"] then
                             em:EmitToken(node.tokens["identifier"])
                         elseif node.expression then
-                            em:EmitEpression(node.expression)
+                            em:EmitExpression(node.expression)
                         else
                             em:Emit("function")
                         end
