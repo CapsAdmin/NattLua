@@ -56,6 +56,8 @@ return function(META)
             self:AnalyzeNumericForStatement(statement)
         elseif statement.kind == "type_code" then
             self:AnalyzeTypeCodeStatement(statement)
+        elseif statement.kind == "import" then
+            
         elseif
             statement.kind ~= "end_of_file" and
             statement.kind ~= "semicolon" and

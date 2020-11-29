@@ -23,7 +23,7 @@ return function(META)
                     args[i] = self:GuessTypeFromIdentifier(key)
                 end
             end
-        else
+        elseif node.kind == "type_function" or node.kind == "local_type_function" or node.kind == "local_generics_type_function" then
             for i, key in ipairs(node.identifiers) do
                 if key.identifier then
                     args[i] = self:AnalyzeExpression(key, "typesystem")
@@ -31,14 +31,22 @@ return function(META)
                 elseif key.explicit_type then
                     args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem")
                     explicit_arguments = true
-                elseif key.value.value == "self" then
-                    args[i] = self.current_table
-                elseif key.value.value == "..." then
-                    args[i] = self:NewType(key, "...")
+                elseif key.kind == "value" then
+                    if key.value.value == "..." then
+                        args[i] = self:NewType(key, "...")
+                    elseif key.value.value == "self" then
+                        args[i] = self.current_table
+                    elseif not node.statements then
+                        args[i] = self:AnalyzeExpression(key, "typesystem")
+                    else 
+                        args[i] = self:NewType(key, "any")
+                    end
                 else
                     args[i] = self:NewType(key, "any")
                 end
-            end    
+            end
+        else
+            self:FatalError("unhandled statement " .. tostring(node))
         end
     
         if node.self_call and node.expression then
@@ -58,7 +66,7 @@ return function(META)
             explicit_return = true
             self:CreateAndPushScope(node)
                 for i, key in ipairs(node.identifiers) do
-                    if key.kind == "value" then
+                    if key.kind == "value" and args[i] then
                         self:CreateLocalValue(key, args[i], "typesystem", true)
                     end
                 end

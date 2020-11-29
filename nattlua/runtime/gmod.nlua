@@ -1,0 +1,102 @@
+local type positive_numbers = number -- 0 .. inf
+local type table_index_range = number -- 1 .. inf
+
+local type TAngle = {
+    p = number,
+    y = number,
+    r = number,
+}
+
+local type Angle = function(number, number, number): TAngle
+
+local type TVector = {
+    x = number,
+    y = number,
+    z = number,
+}
+
+local type Vector = function(number, number, number): TVector
+
+setmetatable<|TVector, {
+    __sub = TVector,
+    __add = TVector,
+    __mul = TVector,
+}|>
+
+local type BodyGroup = {
+    id = positive_numbers,
+    name = string,
+    num = positive_numbers,
+    submodels = {[table_index_range] = any} -- not sure what's in here
+}
+
+local type TMatrix = {
+    GetTranslation = (function(self): TVector),
+    GetAngles = (function(self): TAngle),
+}
+
+local type Color = {
+    r = number,
+    g = number,
+    b = number,
+    a = number,
+}
+
+local type Triangle = {
+    color = Color,
+    normal = TVector,
+    binormal = TVector,
+    pos = TVector,
+    u = number,
+    v = number,
+    userdata = {number, number, number, number},
+    weights = {[table_index_range] = {bone = number, weight = number}}
+}
+
+local type TMesh = {
+    Draw = (function(self): nil),
+    BuildFromTriangles = (function(self, {[table_index_range] = Triangle}): self),
+}
+
+local type Mesh = function(): TMesh
+
+local type Entity = {
+    SetAngles = (function(self, TAngle): nil),
+    GetModel = (function(self): string),
+    GetBodyGroups = (function(self, positive_numbers): {[table_index_range] = BodyGroup}),
+    GetBodygroup = (function(self, positive_numbers): positive_numbers),
+    LookupSequence = (function(self, string): positive_numbers),
+    ResetSequence = (function(self, positive_numbers): nil),
+    SetCycle = (function(self, positive_numbers): nil),
+    SetupBones = (function(self): nil),
+    TranslatePhysBoneToBone = (function(self, number): number),
+    TranslateBoneToPhysBone = (function(self, number): number),
+    GetBoneMatrix = (function(self, number): TMatrix),
+    GetChildBones = (function(self, number): {[table_index_range] = number}),
+    BoneLength = (function(self, number): number),
+    Remove = (function(self): nil),
+    GetBoneParent = (function(self): number),
+}
+
+local type ClientsideModel = function(string): Entity
+
+local type ModelMeshes = {
+    [table_index_range] = {
+        material = string,
+        triangles = {[table_index_range] = Triangle},
+        verticies = {[table_index_range] = Triangle},
+    }
+}
+
+local type util = {}
+type util.GetModelMeshes = (function(string, number, number): ModelMeshes)
+
+local type WorldToLocal = (function(TVector, TAngle, TVector, TAngle): TVector, TAngle)
+
+return {
+    WorldToLocal = WorldToLocal,
+    Vector = Vector,
+    Angle = Angle,
+    TAngle = TAngle,
+    TVector = TVector,
+}

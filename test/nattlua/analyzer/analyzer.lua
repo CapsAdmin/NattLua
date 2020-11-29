@@ -447,3 +447,9 @@ R[[
 R([[
     local x: { y = number } = {}
 ]], "y.-is missing from")
+
+R[[
+    local Foo = {Bar = {}}
+
+    function Foo.Bar:init() end
+]]

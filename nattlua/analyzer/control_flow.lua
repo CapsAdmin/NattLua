@@ -127,7 +127,7 @@ return function(META)
 
     function META:OnFindLocalValue(upvalue, key, env, scope)
         if self:GetScope().unreachable then
-      --      return self:CopyUpvalue(upvalue, types.Never())
+            -- return self:CopyUpvalue(upvalue, types.Never())
         end
 
         if upvalue.data.Type == "union" then

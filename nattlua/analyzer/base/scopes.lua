@@ -233,7 +233,19 @@ return function(META)
             end
         else
             local obj = self:AnalyzeExpression(key.left, env)
-            local key = key.kind == "postfix_expression_index" and self:AnalyzeExpression(key.expression, env) or self:AnalyzeExpression(key.right, env)
+
+            if key.kind == "postfix_expression_index" then
+                key = self:AnalyzeExpression(key.expression, env)
+            elseif key.kind == "binary_operator" then
+                -- this is not really correct yet
+                if key.right and key.right.right then
+                    key = self:AnalyzeExpression(key.right.right, env)
+                else 
+                    key = self:AnalyzeExpression(key.right, env)
+                end
+            else
+                self:FatalError("unhandled function expression identifier")
+            end
 
             self:Assert(key.node, self:NewIndexOperator(obj, key, val, env))
             self:FireEvent("newindex", obj, key, val, env)
