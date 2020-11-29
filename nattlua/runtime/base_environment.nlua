@@ -23,6 +23,10 @@ type function exclude(T, U)
     return T
 end
 
+type function Tuple(...)
+    return types.Tuple({...})
+end
+
 type function enum(tbl)
 	assert(tbl:IsLiteral())
 	

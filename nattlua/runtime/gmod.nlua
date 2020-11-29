@@ -1,78 +1,123 @@
-local type positive_numbers = number -- 0 .. inf
-local type table_index_range = number -- 1 .. inf
-
-local type TAngle = {
-    p = number,
-    y = number,
-    r = number,
-}
-
-local type Angle = function(number, number, number): TAngle
-
-local type TVector = {
-    x = number,
-    y = number,
-    z = number,
-}
-
-local type Vector = function(number, number, number): TVector
-
-setmetatable<|TVector, {
-    __sub = TVector,
-    __add = TVector,
-    __mul = TVector,
-}|>
-
-local type BodyGroup = {
-    id = positive_numbers,
-    name = string,
-    num = positive_numbers,
-    submodels = {[table_index_range] = any} -- not sure what's in here
-}
-
-local type TMatrix = {
-    GetTranslation = (function(self): TVector),
-    GetAngles = (function(self): TAngle),
-}
 
 local type Color = {
     r = number,
     g = number,
     b = number,
     a = number,
+    __index = self, -- __index = self is shortcut for type Color.__index = Color,
+    __meta = self, -- shortcut for setmetatable<|Color, Color|>,
+}
+
+local type Angle = {
+    p = number,
+    y = number,
+    r = number,
+    __index = Angle,
+    __call = function(self, number, number, number): Angle,
+    __meta = self,
+}
+
+local type ToScreenData = {
+    x = number,
+    y = number,
+    visible = boolean,
+}
+
+local type Vector = {
+    x = number,
+    y = number,
+    z = number,
+}
+
+-- We can mutate the Vector type if we want
+type Vector.__index = Vector
+type Vector.__call = function(self, number, number, number): Vector
+type Vector.__add = function(Vector, Vector): Vector
+
+-- Or we can add a table like so
+type Vector = Vector & {
+    Zero = (function(self): nil),
+    WithinAABox = (function(self, boxStart: Vector, boxEnd: Vector): boolean),
+    ToScreen = (function(self): ToScreenData),
+    ToColor = (function(self): Color),
+    Sub = (function(self, vector: Vector): nil),
+    Set = (function(self, vector: Vector): nil),
+    Rotate = (function(self, rotation: Angle): nil),
+    Normalize = (function(self): nil),
+    Mul = (function(self, multiplier: number): nil),
+    LengthSqr = (function(self): number),
+    Length2DSqr = (function(self): number),
+    Length2D = (function(self): number),
+    Length = (function(self): number),
+    IsZero = (function(self): boolean),
+    IsEqualTol = (function(self, compare: Vector, tolerance: number): boolean),
+    GetNormalized = (function(self): Vector),
+    GetNormal = (function(self): Vector),
+    DotProduct = (function(self, Vector: Vector): number),
+    Dot = (function(self, otherVector: Vector): number),
+    Div = (function(self, divisor: number): nil),
+    DistToSqr = (function(self, otherVec: Vector): number),
+    Distance = (function(self, otherVector: Vector): number),
+    Cross = (function(self, otherVector: Vector): Vector),
+    AngleEx = (function(self, up: Vector): Angle),
+    Angle = (function(self): Angle),
+    Add = (function(self, vector: Vector): nil),
+}
+
+setmetatable<|Vector, Vector|>
+
+-- because we can't easily forward declare types
+-- we add a ToVector function here
+type Color.ToVector = (function(self): Vector), 
+
+
+local type BodyGroup = {
+    id = number,
+    name = string,
+    num = number,
+    submodels = {[number] = any} -- not sure what's in here
+}
+
+local type Matrix = {
+    GetTranslation = (function(self): Vector),
+    GetAngles = (function(self): Angle),
 }
 
 local type Triangle = {
     color = Color,
-    normal = TVector,
-    binormal = TVector,
-    pos = TVector,
+    normal = Vector,
+    binormal = Vector,
+    pos = Vector,
     u = number,
     v = number,
     userdata = {number, number, number, number},
-    weights = {[table_index_range] = {bone = number, weight = number}}
+    weights = {[number] = {
+        bone = number, 
+        weight = number
+    }}
 }
 
-local type TMesh = {
+local type Mesh = {
     Draw = (function(self): nil),
-    BuildFromTriangles = (function(self, {[table_index_range] = Triangle}): self),
+    BuildFromTriangles = (function(self, {[number] = Triangle}): self),
+    __meta = self,
+    __index = self,
+    __call = function(self, number, number, number): self
 }
-
-local type Mesh = function(): TMesh
 
 local type Entity = {
-    SetAngles = (function(self, TAngle): nil),
+    SetAngles = (function(self, Angle): nil),
     GetModel = (function(self): string),
-    GetBodyGroups = (function(self, positive_numbers): {[table_index_range] = BodyGroup}),
-    GetBodygroup = (function(self, positive_numbers): positive_numbers),
-    LookupSequence = (function(self, string): positive_numbers),
-    ResetSequence = (function(self, positive_numbers): nil),
-    SetCycle = (function(self, positive_numbers): nil),
+    GetBodyGroups = (function(self, number): {[number] = BodyGroup}),
+    GetBodygroup = (function(self, number): number),
+    LookupSequence = (function(self, string): number),
+    ResetSequence = (function(self, number): nil),
+    SetCycle = (function(self, number): nil),
     SetupBones = (function(self): nil),
     TranslatePhysBoneToBone = (function(self, number): number),
     TranslateBoneToPhysBone = (function(self, number): number),
-    GetBoneMatrix = (function(self, number): TMatrix),
-    GetChildBones = (function(self, number): {[table_index_range] = number}),
+    GetBoneMatrix = (function(self, number): Matrix),
+    GetChildBones = (function(self, number): {[number] = number}),
     BoneLength = (function(self, number): number),
     Remove = (function(self): nil),
     GetBoneParent = (function(self): number),
@@ -81,22 +126,24 @@ local type Entity = {
 local type ClientsideModel = function(string): Entity
 
 local type ModelMeshes = {
-    [table_index_range] = {
+    [number] = {
         material = string,
-        triangles = {[table_index_range] = Triangle},
-        verticies = {[table_index_range] = Triangle},
+        triangles = {[number] = Triangle},
+        verticies = {[number] = Triangle},
     }
 }
 
 local type util = {}
 type util.GetModelMeshes = (function(string, number, number): ModelMeshes)
 
-local type WorldToLocal = (function(TVector, TAngle, TVector, TAngle): TVector, TAngle)
+local type WorldToLocal = (function(Vector, Angle, Vector, Angle): Vector, Angle)
 
 return {
     WorldToLocal = WorldToLocal,
     Vector = Vector,
     Angle = Angle,
-    TAngle = TAngle,
-    TVector = TVector,
+    Matrix = Matrix,
+    util = util,
+    Mesh = Mesh,
+    ClientsideModel = ClientsideModel,
 }
