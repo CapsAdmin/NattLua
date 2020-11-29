@@ -118,10 +118,16 @@ function META.IsSubsetOf(A, B)
     if A == B then
         return true
     end
-
+    
+    
     if A:GetLength() == 1 then
+        if B.Type == "tuple" and B:Get(1) then
+            B = B:Get(1)
+        end
+
         return A:Get(1):IsSubsetOf(B)
     end
+
 
     if B.Type == "any" then
         return true

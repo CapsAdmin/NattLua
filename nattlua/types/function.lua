@@ -38,6 +38,19 @@ function META:GetReturnTypes()
     return self.data.ret
 end
 
+function META:HasExplicitReturnTypes()
+    return self.explicit_return_set
+end
+
+function META:SetReturnTypes(tup)
+    self.data.ret = tup
+    self.explicit_return_set = tup
+end
+
+function META:SetArguments(tup)
+    self.data.arg = tup
+end
+
 function META:Copy(map)
     map = map or {}
 

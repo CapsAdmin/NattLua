@@ -77,7 +77,8 @@ return function(META)
         
         local function_arguments = obj:GetArguments()
     
-        -- if the arguments passed are not called we need to crawl them to check its return type
+        -- if there are any function arguments passed that are not called/inferred
+        -- we need to do so before using them inside the function
         for i, b in ipairs(arguments:GetData()) do
             if b.Type == "function" and not b.called and not b.explicit_return then
                 local a = function_arguments:Get(i)
@@ -148,17 +149,17 @@ return function(META)
             end
             
             local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
+
+            -- if this function has an explicit return type
+            local return_types = obj:HasExplicitReturnTypes() and obj:GetReturnTypes() or function_node.return_types
     
-            do
-                -- if this function has an explicit return type
-                if function_node.return_types then
-                    local ok, reason = return_tuple:IsSubsetOf(obj:GetReturnTypes())
-                    if not ok then
-                        return ok, reason
-                    end
-                else
-                    obj:GetReturnTypes():Merge(return_tuple)
+            if return_types then
+                local ok, reason = return_tuple:IsSubsetOf(return_types)
+                if not ok then
+                    return ok, reason
                 end
+            else
+                obj:GetReturnTypes():Merge(return_tuple)
             end
     
             obj:GetArguments():Merge(arguments)
@@ -167,15 +168,19 @@ return function(META)
     
             -- this is so that the return type of a function can access its arguments, to generics
             -- local function foo(a: number, b: number): Foo(a, b) return a + b end
-            if function_node.return_types then
+
+            if return_types then
                 self:CreateAndPushScope(function_node, nil, {
                     type = "function_return_type"
                 })
                     for i, key in ipairs(function_node.identifiers) do
-                        self:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
+                        local arg = arguments:Get(i)
+                        if arg then
+                            self:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
+                        end
                     end
     
-                    for i, type_exp in ipairs(function_node.return_types) do
+                    for i, type_exp in ipairs(return_types) do
                         return_tuple:Set(i, self:AnalyzeExpression(type_exp, "typesystem"))
                     end
                 self:PopScope()

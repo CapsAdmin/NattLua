@@ -138,7 +138,7 @@ do
         self:MakeLiteral(obj:IsLiteral())    
     end
 
-    function Base:Call()
+    function Base:Call(...)
         return types.errors.other("type " .. self.Type .. ": " .. tostring(self) .. " cannot be called")        
     end
 
@@ -219,6 +219,14 @@ function types.Initialize()
     types.True = types.Symbol(true)
     types.False = types.Symbol(false)
     types.Boolean = types.Union({types.True, types.False}):MakeExplicitNotLiteral(true)
+end
+
+function types.View(obj)
+    return setmetatable({obj = obj, GetType = function() return obj end}, {
+        __index = function(_, key) return types.View(assert(obj:Get(key))) end,
+        __newindex = function(_, key, val) assert(obj:Set(key, val)) end,
+        __call = function(_, ...) return types.View(assert(obj:Call(...))) end,
+    })
 end
 
 return types

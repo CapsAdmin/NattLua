@@ -95,11 +95,35 @@ return function(META)
             return func
         end
 
+        function META:GetScopeHelper()
+            if not self.scope_helper then
+
+                local function scope(env)
+                    return setmetatable({}, {
+                        __index = function(_, key)
+                            return types.View(self:GetLocalOrEnvironmentValue(key, env))
+                        end,
+                        __newindex = function(_, key, val)
+                            return self:SetLocalOrEnvironmentValue(key, val, env)
+                        end
+                    })
+                end
+
+                self.scope_helper = {
+                    typesystem = scope("typesystem"),
+                    runtime = scope("runtime")
+                }
+            end
+
+            return self.scope_helper
+        end
+
         function META:CallLuaTypeFunction(node, func, ...)
             setfenv(func, setmetatable({
                 nl = require("nattlua"),
                 types = types,
                 analyzer = self,
+                env = self:GetScopeHelper(),
             }, {
                 __index = _G
             }))

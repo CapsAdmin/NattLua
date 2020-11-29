@@ -453,3 +453,13 @@ R[[
 
     function Foo.Bar:init() end
 ]]
+
+R[[
+    function test(callback: (function(...): ...)) 
+
+    end
+
+    test(function(lol: boolean) 
+    
+    end)
+]]

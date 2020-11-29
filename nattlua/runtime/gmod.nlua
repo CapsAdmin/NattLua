@@ -13,7 +13,7 @@ local type Angle = {
     y = number,
     r = number,
     __index = Angle,
-    __call = function(self, number, number, number): Angle,
+    __call = (function(self, number, number, number): Angle),
     __meta = self,
 }
 
