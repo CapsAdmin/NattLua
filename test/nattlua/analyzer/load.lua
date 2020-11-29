@@ -54,6 +54,6 @@ run[[
 ]]
 
 run[[
-    local type lol = {}
+    type lol = {}
     type_assert(require("lol"), lol)
 ]]

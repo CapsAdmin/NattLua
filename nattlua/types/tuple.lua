@@ -118,7 +118,10 @@ function META.IsSubsetOf(A, B)
     if A == B then
         return true
     end
-    
+
+    if A:Get(1) and A:Get(1).Type == "any" and B:GetLength() == 0 then
+        return true
+    end
     
     if A:GetLength() == 1 then
         if B.Type == "tuple" and B:Get(1) then
@@ -127,7 +130,6 @@ function META.IsSubsetOf(A, B)
 
         return A:Get(1):IsSubsetOf(B)
     end
-
 
     if B.Type == "any" then
         return true
@@ -142,6 +144,10 @@ function META.IsSubsetOf(A, B)
     for i = 1, A:GetLength() do
         local a = A:Get(i)
         local b = B:Get(i)
+
+        if not b and a.Type == "any" then
+            break
+        end
 
         if not b then
             return types.errors.missing(B, "index " .. i .. ": " ..tostring(a))

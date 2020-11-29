@@ -340,3 +340,19 @@ run[[
         end
     end
 ]]
+
+
+run[[
+    -- test's scope should be from where the function was made
+
+    local type lol = 2
+
+    local type function test()
+        assert(env.typesystem.lol:GetType():GetData() == 2)
+    end
+
+    do
+        local type lol = 1
+        test()
+    end
+]]

@@ -138,7 +138,23 @@ type util.GetModelMeshes = (function(string, number, number): ModelMeshes)
 
 local type WorldToLocal = (function(Vector, Angle, Vector, Angle): Vector, Angle)
 
+local type hook = {}
+
+local type Events = {
+    OnStart = (function(string, boolean): nil),
+    OnStop = (function(string, string, string): number)
+}
+
+type function hook.Add(eventName: string, obj: any, callback: (function(...): ...))    
+    local event_callback = env.typesystem.Events[eventName]:GetType()
+
+    callback:SetReturnTypes(event_callback:GetReturnTypes())
+    callback:SetArguments(event_callback:GetArguments())
+end
+
+
 return {
+    hook = hook,
     WorldToLocal = WorldToLocal,
     Vector = Vector,
     Angle = Angle,

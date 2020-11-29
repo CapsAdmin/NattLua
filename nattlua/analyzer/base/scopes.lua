@@ -58,10 +58,10 @@ return function(META)
     function META:PopScope(event_data)
         local old = table.remove(self.scope_stack)
 
-        self:FireEvent("leave_scope", self.scope.node, self.scope.extra_node, old)
+        self:FireEvent("leave_scope", self:GetScope().node, self:GetScope().extra_node, old)
 
         if old then
-            self.last_scope = self.scope
+            self.last_scope = self:GetScope()
             self.scope = old
         end
 
@@ -103,7 +103,7 @@ return function(META)
     end
 
     function META:CreateLocalValue(key, obj, env, function_argument)
-        local upvalue = self.scope:CreateValue(key, obj, env)
+        local upvalue = self:GetScope():CreateValue(key, obj, env)
         obj.upvalue = upvalue
         self:FireEvent("upvalue", key, obj, env, function_argument)
         return upvalue
@@ -117,10 +117,12 @@ return function(META)
         
     end
 
-    function META:FindLocalValue(key, env)
-        if not self.scope then return end
+    function META:FindLocalValue(key, env, scope)
+        if not self:GetScope() then return end
         
-        local found, scope = self.scope:FindValue(key, env)
+        if type(scope) == "function" then print(debug.traceback()) end
+        
+        local found, scope = (scope or self:GetScope()):FindValue(key, env)
         
         if found then
             return self:OnFindLocalValue(found, key, env, scope) or found
@@ -174,10 +176,10 @@ return function(META)
         table.remove(self.environments[env])            
     end
 
-    function META:GetLocalOrEnvironmentValue(key, env)
+    function META:GetLocalOrEnvironmentValue(key, env, scope)
         env = env or "runtime"
 
-        local upvalue = self:FindLocalValue(key, env)
+        local upvalue = self:FindLocalValue(key, env, scope)
 
         if upvalue then
             return upvalue.data
@@ -204,13 +206,13 @@ return function(META)
         return  nil
     end
 
-    function META:SetLocalOrEnvironmentValue(key, val, env)
+    function META:SetLocalOrEnvironmentValue(key, val, env, scope)
         assert(val == nil or types.IsTypeObject(val))
 
         if type(key) == "string" or key.kind == "value" then
             -- local key = val; key = val
 
-            local upvalue = self:FindLocalValue(key, env)
+            local upvalue = self:FindLocalValue(key, env, scope)
             if upvalue then
 
                 if not self:OnMutateUpvalue(upvalue, key, val, env) then

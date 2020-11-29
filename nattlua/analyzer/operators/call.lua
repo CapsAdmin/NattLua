@@ -82,7 +82,7 @@ return function(META)
         for i, b in ipairs(arguments:GetData()) do
             if b.Type == "function" and not b.called and not b.explicit_return then
                 local a = function_arguments:Get(i)
-    
+     
                 if a and
                     (
                         a.Type == "function" and 
@@ -108,13 +108,14 @@ return function(META)
         if obj.data.lua_function then 
             local len = function_arguments:GetLength()
             local res
+
             if len == math.huge and arguments:GetLength() == math.huge then
                 local longest = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
-                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Copy():Unpack(longest))}
+                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.scope or self:GetScope(), arguments:Copy():Unpack(longest))}
             else
-                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, arguments:Unpack(len))}
+                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.scope or self:GetScope(), arguments:Unpack(len))}
             end
-    
+
             return self:LuaTypesToTuple(obj.node, res)
         elseif not function_node or function_node.kind == "type_function" then
             self:FireEvent("external_call", call_node, obj)
@@ -151,8 +152,8 @@ return function(META)
             local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
 
             -- if this function has an explicit return type
-            local return_types = obj:HasExplicitReturnTypes() and obj:GetReturnTypes() or function_node.return_types
-    
+            local return_types = obj:HasExplicitReturnTypes() and obj:GetReturnTypes() or function_node.return_types and types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
+            
             if return_types then
                 local ok, reason = return_tuple:IsSubsetOf(return_types)
                 if not ok then
@@ -180,9 +181,7 @@ return function(META)
                         end
                     end
     
-                    for i, type_exp in ipairs(return_types) do
-                        return_tuple:Set(i, self:AnalyzeExpression(type_exp, "typesystem"))
-                    end
+                    return_tuple = return_types
                 self:PopScope()
             end
     
@@ -196,7 +195,7 @@ return function(META)
                 function_node.inferred_type = obj
             end
     
-            if not function_node.return_types then
+            if not return_types then
                 return return_tuple
             end
         end

@@ -45,10 +45,12 @@ end
 function META:SetReturnTypes(tup)
     self.data.ret = tup
     self.explicit_return_set = tup
+    self.called = nil
 end
 
 function META:SetArguments(tup)
     self.data.arg = tup
+    self.called = nil
 end
 
 function META:Copy(map)

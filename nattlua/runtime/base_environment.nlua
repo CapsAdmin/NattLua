@@ -210,7 +210,7 @@ do -- globals
 		end
 
 		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
-		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, tbl)
+		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, analyzer:GetScope(), tbl)
 		local done = false
 
 		return function()
@@ -233,7 +233,7 @@ do -- globals
 		end
 
 		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
-		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, tbl)
+		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, analyzer:GetScope(), tbl)
 		local done = false
 		return function()
 			if done then return nil end

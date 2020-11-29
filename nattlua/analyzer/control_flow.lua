@@ -152,7 +152,7 @@ return function(META)
     end
 
     function META:OnMutateUpvalue(upvalue, key, val, env)
-        if self.scope:IsUncertain() then
+        if self:GetScope():IsUncertain() then
             --[[
                 local x = false -- << shadowed upvalue
 
@@ -173,7 +173,7 @@ return function(META)
             self:CreateLocalValue(key, val, env)
 
             -- mutate shadowed upvalue
-            if self.scope.test_condition_inverted and upvalue.data_outside_of_if_blocks then
+            if self:GetScope().test_condition_inverted and upvalue.data_outside_of_if_blocks then
                 -- if we're in an uncertain else block, 
                 -- we remove the original shadowed upvalue from the union
                 -- because it has to be either true or false

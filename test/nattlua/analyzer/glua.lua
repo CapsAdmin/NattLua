@@ -10,31 +10,16 @@ run[[
 ]]
 
 run[[
-    type hook = {}
-
-    local type Events = {
-        OnStart = (function(string, boolean): nil),
-        OnStop = (function(string, string, string): number)
-    }
-    
-    type function hook.Add(eventName: string, obj: any, callback: (function(...): ...))    
-        -- swap the argument and return tuple type
-        local cb = env.typesystem.Events[eventName]
-        
-        callback:SetReturnTypes(cb:GetType():GetReturnTypes())
-        callback:SetArguments(cb:GetType():GetArguments())
-    
-        -- call the function
-        analyzer:Assert(analyzer.current_statement, analyzer:Call(callback, callback:GetArguments(), analyzer.current_expression))
-    end
+    local { hook } = loadfile("nattlua/runtime/gmod.nlua")()
     
     hook.Add("OnStart", "mytest", function(a,b,c, d)
-        print(a,b,c, d)
+        type_assert(a, _ as string)
+        type_assert(b, _ as boolean)        
     end)
     
     hook.Add("OnStop", "mytest", function(a,b,c, d)
-        print(a,b,c, d)
-        
+        type_assert(a, _ as string)
+        type_assert(b, _ as string)
         return 1
     end)
 ]]

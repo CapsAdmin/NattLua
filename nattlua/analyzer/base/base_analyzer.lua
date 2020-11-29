@@ -95,35 +95,35 @@ return function(META)
             return func
         end
 
-        function META:GetScopeHelper()
-            if not self.scope_helper then
+        function META:GetScopeHelper(scope)
 
-                local function scope(env)
-                    return setmetatable({}, {
-                        __index = function(_, key)
-                            return types.View(self:GetLocalOrEnvironmentValue(key, env))
-                        end,
-                        __newindex = function(_, key, val)
-                            return self:SetLocalOrEnvironmentValue(key, val, env)
-                        end
-                    })
-                end
-
-                self.scope_helper = {
-                    typesystem = scope("typesystem"),
-                    runtime = scope("runtime")
-                }
+            local function genscopemeta(env)
+                return setmetatable({}, {
+                    __index = function(_, key)
+                        return types.View(self:GetLocalOrEnvironmentValue(key, env, scope))
+                    end,
+                    __newindex = function(_, key, val)
+                        return self:SetLocalOrEnvironmentValue(key, val, env, scope)
+                    end
+                })
             end
+
+            self.scope_helper = {
+                typesystem = genscopemeta("typesystem"),
+                runtime = genscopemeta("runtime")
+            }
+
+            self.scope_helper.scope = scope
 
             return self.scope_helper
         end
 
-        function META:CallLuaTypeFunction(node, func, ...)
+        function META:CallLuaTypeFunction(node, func, scope, ...)
             setfenv(func, setmetatable({
                 nl = require("nattlua"),
                 types = types,
                 analyzer = self,
-                env = self:GetScopeHelper(),
+                env = self:GetScopeHelper(scope),
             }, {
                 __index = _G
             }))
@@ -181,12 +181,14 @@ return function(META)
                     v.func.statements = lol
                 end
         
-                local start, stop = helpers.LazyFindStartStop(callexp)
-                local part = helpers.FormatError(self.code_data.code, self.code_data.name, "", start, stop, 1)
-                if str:find(part, nil, true) then
-                    str = str .. "*"
-                else
-                    str = str .. part .. "#" .. tostring(i) .. ": " .. self.code_data.name
+                if callexp then
+                    local start, stop = helpers.LazyFindStartStop(callexp)
+                    local part = helpers.FormatError(self.code_data.code, self.code_data.name, "", start, stop, 1)
+                    if str:find(part, nil, true) then
+                        str = str .. "*"
+                    else
+                        str = str .. part .. "#" .. tostring(i) .. ": " .. self.code_data.name
+                    end
                 end
             end
 
