@@ -119,7 +119,7 @@ return function(META)
                         local upvalue = self:GetLocalOrEnvironmentValue(key, env)
                         local upvalues_contract = upvalue and upvalue.contract
 
-                        if not upvalues_contract and env == "runtime" then
+                        if not upvalue and not upvalues_contract and env == "runtime" then
                             upvalue = self:GetLocalOrEnvironmentValue(key, "typesystem")
                             if upvalue then
                                 upvalues_contract = upvalue

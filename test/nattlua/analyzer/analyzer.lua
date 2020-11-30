@@ -463,3 +463,10 @@ R[[
     
     end)
 ]]
+
+R[[
+    local math = {}
+    -- since math is defined explicitly as a local here
+    -- it should not get its type from the base environment
+    math = {}
+]]
