@@ -169,26 +169,10 @@ return function(META)
             local str = ""
 
             for i,v in ipairs(self.call_stack) do 
-                local callexp = v.call_expression
-                local func_str
-
-                if not v.func then
-                    func_str = tostring(v.obj)
-                else
-                    local lol =  v.func.statements
-                    v.func.statements = require("nattlua.other.list").new()
-                    func_str = v.func:Render()
-                    v.func.statements = lol
-                end
-        
-                if callexp then
-                    local start, stop = helpers.LazyFindStartStop(callexp)
+                if v.call_node then
+                    local start, stop = helpers.LazyFindStartStop(v.call_node)
                     local part = helpers.FormatError(self.code_data.code, self.code_data.name, "", start, stop, 1)
-                    if str:find(part, nil, true) then
-                        str = str .. "*"
-                    else
-                        str = str .. part .. "#" .. tostring(i) .. ": " .. self.code_data.name
-                    end
+                    str = str .. part .. "#" .. tostring(i) .. ": " .. self.code_data.name
                 end
             end
 

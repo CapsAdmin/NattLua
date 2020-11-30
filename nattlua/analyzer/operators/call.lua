@@ -208,8 +208,8 @@ return function(META)
     
         table.insert(self.call_stack, {
             obj = obj,
-            func = call_node,
-            call_expression = call_node
+            function_node = obj.function_body_node,
+            call_node = call_node
         })
     
         local ok, err = Call(self, obj, arguments, call_node)

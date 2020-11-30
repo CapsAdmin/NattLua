@@ -86,19 +86,7 @@ type function type_assert_superset(what, type)
 end
 
 type function type_traceback() 
-	local helpers = require("nattlua.other.helpers")
-	if not analyzer.call_stack then return end
-	for i,v in ipairs(analyzer.call_stack) do 
-		local callexp = v.call_expression
-		
-		local lol = v.func.statements
-		v.func.statements = require("nattlua.other.list").new()
-		local func_str = v.func:Render()
-		v.func.statements = lol
-
-		local start, stop = helpers.LazyFindStartStop(callexp)
-		print(helpers.FormatError(analyzer.code_data.code, analyzer.code_data.name, "#" .. tostring(i) .. ": " .. analyzer.code_data.name, start, stop, 1))
-	end
+	print(analyzer:TypeTraceback())
 end
 
 type function seal(tbl)
@@ -298,7 +286,7 @@ do -- globals
 		error(str:GetData(), level and level:GetData() or nil)
 	end
 
-	type function load(code: string, chunk_name: string | nil)
+	type function load(code: string | (function(): string | nil), chunk_name: string | nil)
 		if not code:IsLiteral() then
 			return types.Any
 		end
@@ -449,9 +437,27 @@ do
 
 	type function io.open(): File
 	type function io.popen(): File
+	type function io.output(): File
 	type io.stdout = File
 	type io.stdin = File
 	type io.stderr = File
+
+    type function io.type(obj)
+        local flags = types.Union()
+        flags:AddType(types.String("file"):MakeLiteral(true))
+        flags:AddType(types.String("closed file"):MakeLiteral(true))
+
+
+        print(("%p"):format(obj), ("%p"):format(env.typesystem.File:GetType()))
+
+        if false and obj:IsSubsetOf(env.typesystem.File:GetType()) then
+            return flags
+        end
+
+        flags:AddType(types.Nil)
+
+        return flags
+    end
 end
 
 type ffi = {
