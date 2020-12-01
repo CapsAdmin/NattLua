@@ -56,18 +56,18 @@ if path:lower():find("/nattlua/", nil, true) then
         return
     end
 
-    if is_nattlua then
+    if path:find("test/", nil, true) then
+        run_lua("test/run.lua", path)  
+    elseif is_nattlua then
         run_nattlua(path)
-    elseif has_test_focus() then
-        run_nattlua("./test_focus.lua")
     elseif path:find("javascript_emitter") then
         run_lua("./examples/lua_to_js.lua")
-    elseif (path:find("/nattlua/nattlua/", nil, true) or path:find("/nattlua/nattlua.lua", nil, true)) and not path:find("helpers") then
-        run_lua("test/run.lua")  
-    elseif path:find("test/", nil, true) then
-        run_lua("test/run.lua", path)  
     elseif path:find("examples/", nil, true) then
         run_lua(path)
+    elseif has_test_focus() then
+        run_nattlua("./test_focus.lua")
+    elseif (path:find("/nattlua/nattlua/", nil, true) or path:find("/nattlua/nattlua.lua", nil, true)) and not path:find("helpers") then
+        run_lua("test/run.lua")  
     end
 end
 
