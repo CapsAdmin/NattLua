@@ -57,5 +57,5 @@ do
 
     assert(code:find("i: 1 | 2 = 1", nil, true) ~= nil)
     assert(code:find("local a: false | true = x", nil, true) ~= nil)
-    assert(code:find("local b: false | true = x", nil, true) ~= nil)
+    assert(code:find("local b: false = x", nil, true) ~= nil)
 end

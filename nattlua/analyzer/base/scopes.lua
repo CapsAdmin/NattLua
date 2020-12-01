@@ -21,16 +21,6 @@ return function(META)
     end
 
     function META:PushScope(scope)
-        local parent = self:GetScope()
-
-        if parent then
-            scope:SetParent(parent)
-        end
-
-        if scope.node and scope.node.scope then
-            scope:SetParent(scope.node.scope)
-        end
-
         table.insert(self.scope_stack, self.scope)
 
         self.scope = scope
@@ -45,7 +35,19 @@ return function(META)
     end
 
     function META:CreateAndPushScope(node, extra_node, event_data)
-        return self:PushScope(self:CreateScope(node, extra_node, event_data))
+        local scope = self:CreateScope(node, extra_node, event_data)
+
+        local parent = self:GetScope()
+
+        if parent then
+            scope:SetParent(parent)
+        end
+
+        if scope.node and scope.node.scope then
+            scope:SetParent(scope.node.scope)
+        end
+
+        return self:PushScope(scope)
     end
 
     function META:CreateScope(node, extra_node, event_data)
@@ -85,7 +87,19 @@ return function(META)
     function META:CloneCurrentScope()
         local current_scope = self:GetScope()
         self:PopScope()
-        return self:PushScope(current_scope:Copy())
+        local scope = current_scope:Copy()
+
+        local parent = self:GetScope()
+
+        if parent then
+            scope:SetParent(parent)
+        end
+
+        if scope.node and scope.node.scope then
+            scope:SetParent(scope.node.scope)
+        end
+
+        return self:PushScope(scope)
     end
 
     function META:ErrorAndCloneCurrentScope(node, err, condition)
@@ -119,13 +133,12 @@ return function(META)
 
     function META:FindLocalValue(key, env, scope)
         if not self:GetScope() then return end
-        
-        if type(scope) == "function" then print(debug.traceback()) end
-        
+                
         local found, scope = (scope or self:GetScope()):FindValue(key, env)
         
         if found then
-            return self:OnFindLocalValue(found, key, env, scope) or found
+            local t = self:OnFindLocalValue(found, key, env, scope)
+            return t or found, scope
         end
     end
 
@@ -180,7 +193,7 @@ return function(META)
         env = env or "runtime"
 
         local upvalue = self:FindLocalValue(key, env, scope)
-
+        
         if upvalue then
             return upvalue.data
         end
@@ -212,10 +225,16 @@ return function(META)
         if type(key) == "string" or key.kind == "value" then
             -- local key = val; key = val
 
-            local upvalue = self:FindLocalValue(key, env, scope)
+            local upvalue, found_scope = self:FindLocalValue(key, env, scope)
             if upvalue then
-
                 if not self:OnMutateUpvalue(upvalue, key, val, env) then
+                    if self:GetScope():IsReadOnly() then
+                        if self:GetScope() ~= found_scope then 
+                            self:CreateLocalValue(key, val, env)
+                            return    
+                        end
+                    end
+
                     upvalue.data = val
                 end
 
@@ -228,6 +247,8 @@ return function(META)
                 if not self.environments[env][1] then
                     self:FatalError("tried to set environment value outside of Push/Pop/Environment")
                 end
+
+                if self:GetScope():IsReadOnly() then return end
 
                 local ok, err = self.environments[env][1]:Set(types.String(self:Hash(key)):MakeLiteral(true), val, env == "runtime")
 

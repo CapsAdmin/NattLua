@@ -15,7 +15,20 @@ function META:SetParent(parent)
 end
 
 function META:AddChild(scope)
+    scope.parent = self
     table_insert(self.children, scope)
+end
+
+function META:Unparent()
+    if self.parent then
+        for i,v in ipairs(self.parent:GetChildren()) do
+            if v == self then
+                table.remove(i, self.parent:GetChildren())
+                break
+            end
+        end
+    end
+    self.parent = nil
 end
 
 function META:GetChildren()
@@ -32,6 +45,14 @@ function META:Hash(node)
     end
 
     return node.value.value
+end
+
+function META:MakeReadOnly(b)
+    self.read_only = b
+end
+
+function META:IsReadOnly()
+    return self.read_only
 end
 
 function META:FindValue(key, env)

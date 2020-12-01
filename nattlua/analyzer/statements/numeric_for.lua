@@ -95,6 +95,9 @@ return function(META)
                 merged_scope:Merge(children[i])
             end
 
+            merged_scope:MakeReadOnly(true)
+            self:GetScope():AddChild(merged_scope)
+
             self:FireEvent("merge_iteration_scopes", merged_scope)
 
             self:PushScope(merged_scope)
