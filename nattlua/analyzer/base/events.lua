@@ -101,7 +101,7 @@ return function(META)
                     elseif data.type == "numeric_for" then
                         write("for i = ", data.init, ", ", data.max, ", ", data.step, " do")
                     elseif data.condition then
-                        write(tostring(data.condition), " then")
+                        write("if ", tostring(data.condition), " then")
                     else
                         write(data.type, " ")
                     end
