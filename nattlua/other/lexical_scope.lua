@@ -51,8 +51,39 @@ function META:MakeReadOnly(b)
     self.read_only = b
 end
 
+function META:GetParents()
+    local list = {}
+
+    local scope = self
+
+    while true do
+        table.insert(list, scope)
+        scope = scope.parent
+        if not scope then
+            break
+        end
+    end
+
+    return list
+end
+
+function META:GetMemberInParents(what)
+    for _, scope in ipairs(self:GetParents()) do
+        if scope[what] then
+            return scope[what], scope
+        end
+    end
+
+    return nil
+end
+
 function META:IsReadOnly()
-    return self.read_only
+    return self:GetMemberInParents("read_only")
+end
+
+function META:GetIterationScope()
+    local boolean, scope = self:GetMemberInParents("is_iteration_scope")
+    return scope
 end
 
 function META:FindValue(key, env)
@@ -214,18 +245,9 @@ do
     end
 
     function META:GetNearestFunctionScope()
-        local scope = self
-        while true do
-            
-            if scope.returns then
-                return scope 
-            end
-
-            scope = scope.parent
-
-            if not scope then
-                break
-            end
+        local ok, scope = self:GetMemberInParents("returns")
+        if ok then
+            return scope
         end
 
         error("cannot find a scope to return to", 2)
