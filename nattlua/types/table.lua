@@ -269,7 +269,10 @@ function META:Set(key, val, no_delete)
             if key.Type == "symbol" and key:GetData() == nil then
                 return types.errors.other(union:GetLength() == 1 and "key is nil" or "key can be nil")
             end
+
+            self:Set(key, val, no_delete)
         end
+        return
     end
 
     -- delete entry
