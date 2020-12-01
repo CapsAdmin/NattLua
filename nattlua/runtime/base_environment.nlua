@@ -769,13 +769,31 @@ do
 				return copy
 			end
 
-			if from and from:IsLiteral() and to and to:IsLiteral() then
-				return str.data:byte(from:GetData(), to:GetData())
-			end
+            if from then
+                if from.Type == "number" then
+                    if from:IsLiteral() and to and to:IsLiteral() then
+                        return str.data:byte(from:GetData(), to:GetData())
+                    end
 
-			if from then
-				return str.data:byte(from:GetData())
-			end
+                    return str.data:byte(from:GetData())
+                elseif from.Type == "union" then
+                    if to and to.Type == "union" then
+                        local union = types.Union()
+                        for _, ta in ipairs(from:GetTypes()) do
+                            for _, tb in ipairs(from:GetTypes()) do
+                                union:AddType(analyzer:Call(env.typesystem.string.byte:GetType(), types.Tuple({str, ta, tb})))
+                            end
+                        end
+                        return union
+                    else
+                        local union = types.Union()
+                        for _, ta in ipairs(from:GetTypes()) do
+                            union:AddType(analyzer:Call(env.typesystem.string.byte:GetType(), types.Tuple({str, ta})):Unpack())
+                        end
+                        return union
+                    end
+                end
+            end
 
 			return str.data:byte()
 		end
