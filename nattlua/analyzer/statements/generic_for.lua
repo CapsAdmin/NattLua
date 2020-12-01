@@ -24,7 +24,7 @@ return function(META)
                 if not returned_key:IsLiteral() then
                     returned_key = types.Union({types.Symbol(nil), returned_key})
                 end
-                self:CreateAndPushScope(statement, nil, {
+                self:CreateAndPushScope({
                     type = "generic_for",
                     condition = returned_key
                 })

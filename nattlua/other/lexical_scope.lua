@@ -5,13 +5,15 @@ META.__index = META
 
 local LexicalScope
 
-function META:Initialize(node, extra_node, event_data)
+function META:Initialize()
     
 end
 
 function META:SetParent(parent)
     self.parent = parent
-    parent:AddChild(self)
+    if parent then
+        parent:AddChild(self)
+    end
 end
 
 function META:AddChild(scope)
@@ -116,8 +118,8 @@ function META:CreateValue(key, obj, env)
     return upvalue
 end
 
-function META:Copy(node)
-    local copy = LexicalScope(node or self.node, self.extra_node, self.event_data)
+function META:Copy()
+    local copy = LexicalScope()
 
     for env, data in pairs(self.upvalues) do
         for _, obj in ipairs(data.list) do
@@ -292,8 +294,7 @@ function META:DumpScope()
     return table.concat(s, "\n")
 end
 
-function LexicalScope(node, extra_node, event_data)
-    assert(type(node) == "table" and node.kind, "expected an associated ast node")
+function LexicalScope(parent)    
     ref = ref + 1
 
     local scope = {
@@ -310,13 +311,11 @@ function LexicalScope(node, extra_node, event_data)
                 map = {},
             }
         },
-
-        node = node,
-        extra_node = extra_node,
-        event_data = event_data,
     }
 
     setmetatable(scope, META)
+
+    scope:SetParent(parent)
 
     return scope
 end

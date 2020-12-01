@@ -8,7 +8,7 @@ return function(META)
                 prev_expression = obj
 
                 if obj:IsTruthy() then
-                    self:CreateAndPushScope(statement, statement.tokens["if/else/elseif"][i], {    
+                    self:CreateAndPushScope({    
                         type = "if",                        
                         if_position = i, 
                         condition = obj
@@ -17,6 +17,7 @@ return function(META)
                     self:AnalyzeStatements(statements)
 
                     self:PopScope({
+                        type = "if",
                         if_position = i, 
                         condition = obj
                     })
@@ -27,7 +28,8 @@ return function(META)
                 end
             else
                 if prev_expression:IsFalsy() then
-                    self:CreateAndPushScope(statement, statement.tokens["if/else/elseif"][i], {
+                    self:CreateAndPushScope({
+                        type = "if",
                         if_position = i, 
                         is_else = true,
                         condition = prev_expression
@@ -36,6 +38,7 @@ return function(META)
                     self:AnalyzeStatements(statements)
 
                     self:PopScope({
+                        type = "if",
                         if_position = i,
                         is_else = true,
                         condition = prev_expression

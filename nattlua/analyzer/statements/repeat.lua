@@ -1,6 +1,6 @@
 return function(META)
     function META:AnalyzeRepeatStatement(statement)
-        self:CreateAndPushScope(statement, nil, {
+        self:CreateAndPushScope({
             type = "repeat",
         })
         self:AnalyzeStatements(statement.statements)

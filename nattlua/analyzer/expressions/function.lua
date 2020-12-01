@@ -64,7 +64,7 @@ return function(META)
 
         if node.return_types then
             explicit_return = true
-            self:CreateAndPushScope(node)
+            self:CreateAndPushFunctionScope(node)
                 for i, key in ipairs(node.identifiers) do
                     if key.kind == "value" and args[i] then
                         self:CreateLocalValue(key, args[i], "typesystem", true)
@@ -109,6 +109,8 @@ return function(META)
         if env == "runtime" then
             self:CallMeLater(obj, args, node, true)
         end
+
+        node.function_scope = self:GetScope()
 
         return obj
     end

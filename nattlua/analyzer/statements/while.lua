@@ -2,7 +2,7 @@ return function(META)
     function META:AnalyzeWhileStatement(statement)
         local obj = self:AnalyzeExpression(statement.expression)
         if obj:IsTruthy() then
-            self:CreateAndPushScope(statement, nil, {
+            self:CreateAndPushScope({
                 type = "while",
                 condition = obj
             })

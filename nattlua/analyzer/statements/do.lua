@@ -1,6 +1,6 @@
 return function(META) 
     function META:AnalyzeDoStatement(statement)
-        self:CreateAndPushScope(statement, nil, {
+        self:CreateAndPushScope({
             type = "do"
         })
         self:AnalyzeStatements(statement.statements)

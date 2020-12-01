@@ -44,9 +44,8 @@ return function(META)
         return types.Tuple(out)
     end
 
-    function META:OnEnterScope(kind)
-        local data = self:GetScope().event_data
-        if not data.condition then return end
+    function META:OnEnterScope(data)
+        if not data or not data.condition then return end
         
         local scope = self:GetScope()
 
@@ -96,7 +95,7 @@ return function(META)
         end
     end
 
-    function META:OnExitScope(kind, data)
+    function META:OnExitScope(data)
         local exited_scope = self:GetLastScope()
         -- body
         
@@ -111,7 +110,7 @@ return function(META)
             end
         end
         
-        if kind ~= "if" then
+        if data.type ~= "if" then
             self:MakeUncertainDataOutsideInParentScopes()
         end
     end
@@ -126,10 +125,6 @@ return function(META)
     end
 
     function META:OnFindLocalValue(upvalue, key, env, scope)
-        if self:GetScope().unreachable then
-            -- return self:CopyUpvalue(upvalue, types.Never())
-        end
-
         if upvalue.data.Type == "union" then
             local scope = scope:FindScopeFromTestCondition(upvalue.data)
 

@@ -22,7 +22,7 @@ return function(META)
 
         statement.identifiers[1].inferred_type = init
         
-        self:CreateAndPushScope(statement, nil, {
+        self:CreateAndPushScope({
             type = "numeric_for",
             init = init, 
             max = max, 
@@ -33,7 +33,7 @@ return function(META)
         if literal_init and literal_max and literal_step and literal_max < 1000 then
             local uncertain_break = nil
             for i = literal_init, literal_max, literal_step do
-                self:CreateAndPushScope(statement, nil, {
+                self:CreateAndPushScope({
                     type = "numeric_for_iteration",
                     i = i, 
                 })

@@ -3,7 +3,7 @@ local types = require("nattlua.types.types")
 return function(META)
     function META:AnalyzeRootStatement(statement, ...)
         local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
-        self:CreateAndPushScope(statement, nil, {
+        self:CreateAndPushFunctionScope(statement, nil, {
             type = "root"
         })
         self:PushEnvironment(statement, nil, "runtime")

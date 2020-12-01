@@ -29,7 +29,7 @@ return function(META)
     end
 
     function META:AnalyzeFunctionBody(function_node, arguments, env)
-        self:CreateAndPushScope(function_node, nil, {
+        self:CreateAndPushFunctionScope(function_node, nil, {
             type = "function",
             function_node = function_node,
             arguments = arguments,
@@ -111,9 +111,9 @@ return function(META)
 
             if len == math.huge and arguments:GetLength() == math.huge then
                 local longest = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
-                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.scope or self:GetScope(), arguments:Copy():Unpack(longest))}
+                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.function_scope or self:GetScope(), arguments:Copy():Unpack(longest))}
             else
-                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.scope or self:GetScope(), arguments:Unpack(len))}
+                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.function_scope or self:GetScope(), arguments:Unpack(len))}
             end
 
             return self:LuaTypesToTuple(obj.node, res)
@@ -171,7 +171,7 @@ return function(META)
             -- local function foo(a: number, b: number): Foo(a, b) return a + b end
 
             if return_types then
-                self:CreateAndPushScope(function_node, nil, {
+                self:CreateAndPushFunctionScope(function_node, nil, {
                     type = "function_return_type"
                 })
                     for i, key in ipairs(function_node.identifiers) do

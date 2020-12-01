@@ -57,8 +57,7 @@ function META:NewType(node, type, data, literal)
 
     obj.node = obj.node or node
     obj.node.inferred_type = obj
-    node.scope = self:GetScope() -- move this out of here
-
+    
     return obj
 end
 

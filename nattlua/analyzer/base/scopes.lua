@@ -20,47 +20,32 @@ return function(META)
         return node.value.value
     end
 
-    function META:PushScope(scope)
+    function META:PushScope(scope, event_data)
         table.insert(self.scope_stack, self.scope)
 
         self.scope = scope
 
-        self:FireEvent("enter_scope", scope)
+        self:FireEvent("enter_scope", scope, event_data)
 
-        if scope.event_data and self.OnEnterScope then
-            self:OnEnterScope(scope.node.kind, scope.event_data)
+        if self.OnEnterScope then
+            self:OnEnterScope(event_data)
         end
 
         return scope
     end
 
-    function META:CreateAndPushScope(node, extra_node, event_data)
-        local scope = self:CreateScope(node, extra_node, event_data)
-
-        local parent = self:GetScope()
-
-        if parent then
-            scope:SetParent(parent)
-        end
-
-        if scope.node and scope.node.scope then
-            scope:SetParent(scope.node.scope)
-        end
-
-        return self:PushScope(scope)
+    function META:CreateAndPushFunctionScope(node, event_data)
+        return self:PushScope(LexicalScope(node and node.function_scope or self:GetScope()), event_data)
     end
 
-    function META:CreateScope(node, extra_node, event_data)
-        assert(type(node) == "table" and node.kind, "expected an associated ast node")
-
-        return LexicalScope(node, extra_node, event_data)
+    function META:CreateAndPushScope(event_data)
+        return self:PushScope(LexicalScope(self:GetScope()), event_data)
     end
-
 
     function META:PopScope(event_data)
         local old = table.remove(self.scope_stack)
 
-        self:FireEvent("leave_scope", self:GetScope().node, self:GetScope().extra_node, old)
+        self:FireEvent("leave_scope", self:GetScope().node, old, event_data)
 
         if old then
             self.last_scope = self:GetScope()
@@ -68,7 +53,7 @@ return function(META)
         end
 
         if event_data and self.OnExitScope then
-            self:OnExitScope(self.last_scope.node.kind, event_data)
+            self:OnExitScope(event_data)
         end
     end
 
@@ -88,15 +73,11 @@ return function(META)
         local current_scope = self:GetScope()
         self:PopScope()
         local scope = current_scope:Copy()
-
+        
         local parent = self:GetScope()
 
         if parent then
             scope:SetParent(parent)
-        end
-
-        if scope.node and scope.node.scope then
-            scope:SetParent(scope.node.scope)
         end
 
         return self:PushScope(scope)

@@ -72,11 +72,9 @@ return function(META)
                 tab()
                 write("_ENV.", self:Hash(key), " = ", tostring(val))
             elseif what == "enter_scope" then
-                local scope = ...
+                local scope, data = ...
 
                 tab()
-
-                local data = scope.event_data
 
                 if data then
                     if data.type == "function" then
@@ -110,8 +108,7 @@ return function(META)
                 t = t + 1
                 write("\n")
             elseif what == "leave_scope" then
-                local _, extra_node, scope = ...
-                local data = scope and scope.event_data
+                local new_scope, old_scope, data = ...
 
                 t = t - 1
                 tab()
