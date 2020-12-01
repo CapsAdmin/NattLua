@@ -44,7 +44,7 @@ local path = ...
 
 if path:find("on_editor_save.lua", nil, true) then return end
 
-if path:lower():find("/nattlua/") then
+if path:lower():find("/nattlua/", nil, true) then
     if not path then
         error("no path")
     end
@@ -62,9 +62,11 @@ if path:lower():find("/nattlua/") then
         run_nattlua("./test_focus.lua")
     elseif path:find("javascript_emitter") then
         run_lua("./examples/lua_to_js.lua")
-    elseif path:find("/nattlua", nil, true) and not path:find("helpers") then
+    elseif (path:find("/nattlua/nattlua/", nil, true) or path:find("/nattlua/nattlua.lua", nil, true)) and not path:find("helpers") then
         run_lua("test/run.lua")  
-    elseif path:find("examples/") then
+    elseif path:find("test/", nil, true) then
+        run_lua("test/run.lua", path)  
+    elseif path:find("examples/", nil, true) then
         run_lua(path)
     end
 end
