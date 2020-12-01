@@ -383,8 +383,6 @@ function META:Copy(map)
     local copy = types.List({})
     map[self] = map[self] or copy
 
-    copy.node = self.node
-
     for _, keyval in ipairs(self.data) do
         local k, v = keyval.key, keyval.val
 
@@ -398,6 +396,7 @@ function META:Copy(map)
     end
 
     copy.meta = self.meta
+    copy:CopyInternalsFrom(self)
 
     return copy
 end

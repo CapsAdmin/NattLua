@@ -62,7 +62,7 @@ function META:Copy(map)
     copy.data.arg = self:GetArguments():Copy(map)
     copy:MakeLiteral(self:IsLiteral())
 
-    copy.node = self.node
+    copy:CopyInternalsFrom(self)
     copy.function_body_node = self.function_body_node
 
     return copy

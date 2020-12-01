@@ -254,8 +254,7 @@ function META:Copy()
     for _, e in ipairs(self:GetTypes()) do
         copy:AddType(e)
     end
-    copy.node = self.node
-    copy.explicit_not_literal = self.explicit_not_literal
+    copy:CopyInternalsFrom(self)
     return copy
 end
 

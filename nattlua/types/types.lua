@@ -50,6 +50,16 @@ do
         return self:IsTruthy() and self:IsFalsy()
     end
 
+    function Base:CopyInternalsFrom(obj)
+        self.name = obj.name
+        self.node = obj.node
+        self.node_label = obj.node_label
+        self.source = obj.source
+        self.source_left = obj.source_left
+        self.source_right = obj.source_right
+        self.explicit_not_literal = obj.explicit_not_literal
+    end
+
     function Base:SetSource(node, source, l,r)
         self.source = source
         self.node = node

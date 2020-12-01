@@ -23,7 +23,7 @@ end
 function META:Copy()
     local copy = types.Symbol(self:GetData())
     copy.truthy = self.truthy
-    copy.node = self.node
+    copy:CopyInternalsFrom(self)
 
     return copy
 end

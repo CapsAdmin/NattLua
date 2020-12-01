@@ -107,7 +107,7 @@ function META:Copy(map)
         copy:Set(i, v)
     end
 
-    copy.node = self.node
+    copy:CopyInternalsFrom(self)
     copy.Remainder = self.Remainder
     copy.Repeat = self.Repeat
 

@@ -424,6 +424,7 @@ function META:Copy(map)
     end
 
     copy.meta = self.meta
+    copy:CopyInternalsFrom(self)
 
     return copy
 end

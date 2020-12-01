@@ -30,7 +30,7 @@ end
 
 function META:Copy()
     local copy = types.Number(self.data):MakeLiteral(self.literal)
-    copy.node = self.node
+    copy:CopyInternalsFrom(self)
     return copy
 end
 
