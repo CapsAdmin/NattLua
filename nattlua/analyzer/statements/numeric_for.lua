@@ -30,6 +30,10 @@ return function(META)
         if literal_init and literal_max and literal_step and literal_max < 1000 then
             local uncertain_break = nil
             for i = literal_init, literal_max, literal_step do
+                self:CreateAndPushScope(statement, nil, {
+                    type = "numeric_for_iteration",
+                    i = i, 
+                })
                 local i = self:NewType(statement.expressions[1], "number", i):MakeLiteral(true)
                 local brk = false
                 
@@ -40,15 +44,20 @@ return function(META)
 
                 self:CreateLocalValue(statement.identifiers[1], i, "runtime")
                 self:AnalyzeStatements(statement.statements)
-                if self.break_out then
-                    if self.break_out.scope:IsUncertain() then
+                if self.break_out_scope then
+                    if self.break_out_scope:IsUncertain() then
                         uncertain_break = i
-                        self.break_out = nil
+                        self.break_out_scope = nil
                     else
-                        self.break_out = nil
+                        self.break_out_scope = nil
                         brk = true
                     end
                 end
+
+                self:PopScope({
+                    type = "numeric_for_iteration",
+                    i = i, 
+                })
 
                 if brk then
                     break
@@ -68,6 +77,27 @@ return function(META)
             self:CreateLocalValue(statement.identifiers[1], range, "runtime")
             self:AnalyzeStatements(statement.statements)
         end
+
+    
+        local children = self:GetScope():GetChildren()
+        if children[1] then
+            local merged_scope = children[1]:Copy()
+            for i = 2, #children do
+                merged_scope:Merge(children[i])
+            end
+
+            for i,v in ipairs(merged_scope.upvalues.runtime.list) do
+                if v.data.node_label then
+                    v.data.node_label.inferred_type = v.data
+                end
+            end
+        end
+
         self:PopScope({init = init, max = max, condition = condition})
-    end 
+    end
+
+    function META:AnalyzeBreakStatement(statement)
+        self.break_out_scope = self:GetScope()
+        self:FireEvent("break")
+    end
 end

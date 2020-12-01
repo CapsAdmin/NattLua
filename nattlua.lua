@@ -224,7 +224,7 @@ do
 		return self
 	end
 
-	function META:Emit()
+	function META:Emit(cfg)
 		if not self.SyntaxTree then
 			local ok, err = self:Parse()
 			if not ok then
@@ -232,7 +232,7 @@ do
 			end
 		end
 
-		local emitter = self.Emitter(self.config)
+		local emitter = self.Emitter(cfg or self.config)
 		self.emitter = emitter
     	return emitter:BuildCode(self.SyntaxTree)
 	end

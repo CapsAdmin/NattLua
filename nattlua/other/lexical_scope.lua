@@ -18,6 +18,10 @@ function META:AddChild(scope)
     table_insert(self.children, scope)
 end
 
+function META:GetChildren()
+    return self.children
+end
+
 function META:Hash(node)
     if type(node) == "string" then
         return node
@@ -46,14 +50,16 @@ function META:FindValue(key, env)
 end
 
 function META:CreateValue(key, obj, env)
+    local key_hash = self:Hash(key)
+
     local upvalue = {
         data = obj,
-        key = key,
+        key = key_hash,
         shadow = self:FindValue(key, env),
     }
 
     table_insert(self.upvalues[env].list, upvalue)
-    self.upvalues[env].map[self:Hash(key)] = upvalue
+    self.upvalues[env].map[key_hash] = upvalue
 
     return upvalue
 end
@@ -62,14 +68,27 @@ function META:Copy(node)
     local copy = LexicalScope(node or self.node, self.extra_node, self.event_data)
 
     for env, data in pairs(self.upvalues) do
-        for key, obj in pairs(data.map) do
-            copy:CreateValue(key, obj.data, env)
+        for _, obj in ipairs(data.list) do
+            copy:CreateValue(obj.key, obj.data, env)
         end
     end
     
     copy.returns = self.returns
 
     return copy
+end
+
+function META:Merge(scope)
+    local types = require("nattlua.types.types")
+    for i, a in ipairs(self.upvalues.runtime.list) do
+        local b = scope.upvalues.runtime.list[i]
+        if a and b and a.key == b.key then
+            a.data = types.Union({a.data, b.data})
+            a.data.node = b.data.node
+            a.data.node_label = b.data.node_label
+            self.upvalues.runtime.map[a.key].data = a.data
+        end
+    end
 end
 
 function META:GetTestCondition()
@@ -217,6 +236,17 @@ function META:__tostring()
     end
 
     return s
+end
+
+function META:DumpScope()
+    local s = {}
+    for i, v in ipairs(self.upvalues.runtime.list) do
+        table.insert(s, "local " .. tostring(v.key) .. " = " .. tostring(v.data))
+    end
+    for i,v in ipairs(self.children) do
+        table.insert(s, "do\n" .. v:DumpScope() .. "\nend\n")
+    end
+    return table.concat(s, "\n")
 end
 
 function LexicalScope(node, extra_node, event_data)

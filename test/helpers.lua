@@ -55,7 +55,7 @@ local function run(code, expect_error)
         end
     end
 
-    return code_data.analyzer, code_data.SyntaxTree
+    return code_data.analyzer, code_data.SyntaxTree, code_data
 end
 
 return {
