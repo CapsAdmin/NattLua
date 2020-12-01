@@ -471,17 +471,3 @@ R[[
     math = {}
 ]]
 
-local _,_,c =R([[
-    local x
-    for i = 1, 2 do
-        x = i == 1
-        local a = x
-        -- x should be true | false, because from the users point of view x is both x = 1 == 1 and x = 2 == 1 at the same time
-        -- we need to merge the 2 iterations somehow
-    end
-    -- x should be false, because i == 2 is the last statement
-    local b = x
-]])
-local code = c:Emit({annotate = true})
-assert(code:find("b: false = x", nil, true) ~= nil)
-assert(code:find("a: false | true = x", nil, true) ~= nil)

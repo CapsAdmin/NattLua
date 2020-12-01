@@ -19,12 +19,15 @@ return function(META)
             condition:AddType(types.Symbol(true))
             condition:AddType(types.Symbol(false))
         end
+
+        statement.identifiers[1].inferred_type = init
         
         self:CreateAndPushScope(statement, nil, {
             type = "numeric_for",
             init = init, 
             max = max, 
-            condition = condition
+            condition = condition,
+            step = step,
         })
 
         if literal_init and literal_max and literal_step and literal_max < 1000 then
@@ -36,6 +39,12 @@ return function(META)
                 })
                 local i = self:NewType(statement.expressions[1], "number", i):MakeLiteral(true)
                 local brk = false
+
+                if not statement.identifiers[1].inferred_type then
+                    statement.identifiers[1].inferred_type = types.Union({i})
+                else
+                    statement.identifiers[1].inferred_type = types.Union({statement.identifiers[1].inferred_type, i})
+                end
                 
                 if uncertain_break then
                     i:MakeLiteral(false)
@@ -86,11 +95,11 @@ return function(META)
                 merged_scope:Merge(children[i])
             end
 
-            for i,v in ipairs(merged_scope.upvalues.runtime.list) do
-                if v.data.node_label then
-                    v.data.node_label.inferred_type = v.data
-                end
-            end
+            self:FireEvent("merge_iteration_scopes", merged_scope)
+
+            self:PushScope(merged_scope)
+                self:AnalyzeStatements(statement.statements)
+            self:PopScope()
         end
 
         self:PopScope({init = init, max = max, condition = condition})

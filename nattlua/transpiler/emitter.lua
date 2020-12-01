@@ -10,7 +10,7 @@ META.__index = META
 META.syntax = syntax
 require("nattlua.transpiler.base_emitter")(META)
 
-function META:EmitExpression(node)
+function META:EmitExpression(node, from_assignment)
     if node.tokens["("] then
         for _, node in node.tokens["("]:pairs() do
             self:EmitToken(node)
@@ -61,6 +61,11 @@ function META:EmitExpression(node)
         for _, node in node.tokens[")"]:pairs() do
             self:EmitToken(node)
         end
+    end
+
+    if from_assignment and self.config.annotate and node.inferred_type then
+        self:Emit(": ")
+        self:Emit(tostring((node.inferred_type.contract or node.inferred_type)))
     end
 end
 
@@ -479,7 +484,7 @@ function META:EmitAssignment(node)
         self:EmitToken(node.tokens["type"])
     end
 
-    self:EmitExpressionList(node.left)
+    self:EmitExpressionList(node.left, nil, true)
 
     if node.tokens["="] then
         self:Whitespace(" ")
@@ -578,9 +583,9 @@ function META:EmitStatements(tbl)
     end
 end
 
-function META:EmitExpressionList(tbl, delimiter)
+function META:EmitExpressionList(tbl, delimiter, from_assignment)
     for i = 1, #tbl do
-        self:EmitExpression(tbl[i])
+        self:EmitExpression(tbl[i], from_assignment)
         if i ~= #tbl then
             self:EmitToken(tbl[i].tokens[","], delimiter)
             self:Whitespace(" ")

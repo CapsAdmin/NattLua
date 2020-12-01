@@ -55,7 +55,7 @@ local function run(code, expect_error)
         end
     end
 
-    return code_data.analyzer, code_data.SyntaxTree, code_data
+    return code_data
 end
 
 return {
@@ -67,5 +67,11 @@ return {
     Table = function(data) return types.Table(data or {}) end,
     Symbol = function(data) return types.Symbol(data) end,
     Any = function() return types.Any() end,
-    RunCode = run,
+    RunCode = function(code, expect_error)
+        local code_data = run(code, expect_error)
+        return code_data.analyzer, code_data.SyntaxTree
+    end,
+    Transpile = function(code)
+        return run(code):Emit({annotate = true})
+    end,
 }

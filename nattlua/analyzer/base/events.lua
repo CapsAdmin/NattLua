@@ -96,13 +96,15 @@ return function(META)
                         em:EmitToken(node.tokens["arguments)"])
 
                         write(em:Concat(), " do")
+                    elseif data.type == "numeric_for_iteration" then
+                        write("do -- ", data.i)
+                    elseif data.type == "numeric_for" then
+                        write("for i = ", data.init, ", ", data.max, ", ", data.step, " do")
+                    elseif data.condition then
+                        write(tostring(data.condition), " then")
                     else
                         write(data.type, " ")
                     end
-                end
-
-                if data and data.condition then
-                    write(tostring(data.condition), " then")
                 end
 
                 t = t + 1
@@ -162,6 +164,9 @@ return function(META)
                     end
                 end
                 write("\n")
+            elseif what == "merge_iteration_scopes" then
+                tab()
+                write("-- merged scope result: \n")
             elseif what == "analyze_unreachable_code_start" then
                 tab()
                 write("-- BEGIN ANALYZING UNREACHABLE CODE")                
