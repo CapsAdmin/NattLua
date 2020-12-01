@@ -177,6 +177,10 @@ function META:Get(key)
         return self.Remainder:Get(key - #self.data)
     end
 
+    if not val then
+        return types.errors.other("index " .. key .. " does not exist")
+    end
+
     return val
 end
 

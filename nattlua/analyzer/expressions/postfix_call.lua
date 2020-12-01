@@ -6,8 +6,9 @@ return function(META)
         local env =  node.type_call and "typesystem" or env
 
         local callable = self:AnalyzeExpression(node.left, env)
+
         if callable.Type == "tuple" then
-            callable = callable:Get(1)
+            callable = self:Assert(node, callable:Get(1))
         end
 
         local types = self:AnalyzeExpressions(node.expressions, env)
@@ -26,9 +27,12 @@ return function(META)
             local temp = {}
             for i,v in ipairs(types) do
                 if v.Type == "tuple" then
-                    temp[i] = v:Get(1)
+                    local obj = v:Get(1)
+                    if obj then
+                        table.insert(temp, obj)
+                    end
                 else
-                    temp[i] = v
+                    table.insert(temp, v)
                 end
             end
             arguments = Tuple(temp)

@@ -40,7 +40,7 @@ test("remainder", function()
     assert(tup:Get(18).Type == "string")
     assert(tup:Get(19).Type == "string")
     assert(tup:Get(20).Type == "string")
-    assert(tup:Get(21) == nil)
+    assert(tup:Get(21) == false)
 end) 
 
 test("remainder with repeated tuple structure", function()
