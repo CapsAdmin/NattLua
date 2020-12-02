@@ -615,3 +615,38 @@ run[[
     local a = assert(_ as 1 | nil)
     --type_assert(a, 1)
 ]]
+
+
+run[[
+    local MAYBE: function(): boolean
+    local x = 0
+    if MAYBE() then x = x + 1 end -- 1
+    if MAYBE() then x = x - 1 end -- -1 | 0
+    type_assert(x, _ as -1 | 0 | 1)
+]]
+
+run[[
+    local MAYBE: boolean
+    local x = 0
+    if MAYBE then x = x + 1 end -- 1
+    if MAYBE then x = x - 1 end -- 0
+    type_assert(x, 0)
+]]
+
+run[[
+    local x = 0
+    if MAYBE then
+        x = 1
+    else
+        x = -1
+    end
+    type_assert(x, _ as -1 | 1)
+]]
+
+run[[
+    local x = 0
+    if MAYBE then
+        x = 1
+    end
+    type_assert(x, _ as 0 | 1)
+]]

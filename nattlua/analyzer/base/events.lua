@@ -123,6 +123,59 @@ return function(META)
                 write("\n")
 
                 
+            
+            elseif what == "enter_conditional_scope" then
+                local scope, data = ...
+
+                tab()
+
+                if data then
+                    if data.type == "function" then
+                        local em = require("nattlua.transpiler.emitter")({preserve_whitespace = false})
+                        local node = data.function_node
+                        
+                        if node.tokens["identifier"] then
+                            em:EmitToken(node.tokens["identifier"])
+                        elseif node.expression then
+                            em:EmitExpression(node.expression)
+                        else
+                            em:Emit("function")
+                        end
+
+                        em:EmitToken(node.tokens["arguments("])
+                        em:EmitIdentifierList(node.identifiers)
+                        em:EmitToken(node.tokens["arguments)"])
+
+                        write(em:Concat(), " do")
+                    elseif data.type == "numeric_for_iteration" then
+                        write("do -- ", data.i)
+                    elseif data.type == "numeric_for" then
+                        write("for i = ", data.init, ", ", data.max, ", ", data.step, " do")
+                    elseif data.condition then
+                        write("if ", tostring(data.condition), " then")
+                    else
+                        write(data.type, " ")
+                    end
+                end
+
+                t = t + 1
+                write("\n")
+            elseif what == "leave_conditional_scope" then
+                local new_scope, old_scope, data = ...
+
+                t = t - 1
+                tab()
+
+                if data then
+                    if data.type == "function" then
+                        write("end")
+                    else
+                        write("end")
+                    end
+                end
+                write("\n")
+
+                
             elseif what == "external_call" then
                 local node, type = ...
                 tab()

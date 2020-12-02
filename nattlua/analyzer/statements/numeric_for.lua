@@ -37,6 +37,7 @@ return function(META)
                 self:CreateAndPushScope()
                 self:OnEnterConditionalScope({
                     type = "numeric_for_iteration",
+                    condition = condition,
                     i = i, 
                 })
                 local i = self:NewType(statement.expressions[1], "number", i):MakeLiteral(true)

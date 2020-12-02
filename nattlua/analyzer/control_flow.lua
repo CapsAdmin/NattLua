@@ -106,11 +106,40 @@ return function(META)
             end
         end
 
+        if upvalue.conditions then
+            local val = not scope.test_condition_inverted and upvalue.conditions.truthy[scope.test_condition]
+
+            local union = types.Union({})
+            
+            local hits = 0
+
+            for cond, v in pairs(upvalue.conditions.truthy) do
+                hits = hits + 1
+                if not scope.test_condition_inverted or cond ~= scope.test_condition then
+                    union:AddType(v)
+                end
+            end
+
+            for cond, v in pairs(upvalue.conditions.falsy) do
+                hits = hits - 1
+                union:AddType(v)
+            end
+
+            if hits ~= 0 then
+                union:AddType(val or upvalue.data)
+            end
+
+            local copy = self:CopyUpvalue(upvalue, union)
+            copy.conditions = upvalue.conditions
+            return copy
+        end
+
         return upvalue
     end
 
     function META:OnEnterConditionalScope(data)
         local scope = self:GetScope()
+        self:FireEvent("enter_conditional_scope", scope, data)
 
         scope:SetTestCondition(data.condition, data.is_else)
         scope:MakeUncertain(data.condition:IsUncertain())
@@ -135,6 +164,14 @@ return function(META)
             upvalue.data_outside_of_if_blocks = types.Union({upvalue.data, val})
         end
 
+        upvalue.conditions = upvalue.conditions or {truthy = {}, falsy = {}}
+
+        if scope.test_condition_inverted then
+            upvalue.conditions.falsy[scope.test_condition] = val
+        else
+            upvalue.conditions.truthy[scope.test_condition] = val
+        end
+
         return true
     end
 
@@ -150,22 +187,7 @@ return function(META)
                 copy:SetTestCondition(exited_scope:GetTestCondition())
             end
         end
-        
-        if data.type ~= "if" then
-            self:MakeUncertainDataOutsideInParentScopes()
-        end
-    end
-
-    function META:OnLeaveIfStatement()
-        self:MakeUncertainDataOutsideInParentScopes()
-    end
-
-    function META:MakeUncertainDataOutsideInParentScopes()
-        for _, obj in ipairs(self:GetScope().upvalues.runtime.list) do
-            if obj.data_outside_of_if_blocks then
-               obj.data = obj.data_outside_of_if_blocks
-               obj.data_outside_of_if_blocks = nil
-            end
-        end
+    
+        self:FireEvent("leave_conditional_scope", current_scope, exited_scope, data)
     end
 end

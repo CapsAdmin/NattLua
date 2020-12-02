@@ -50,6 +50,5 @@ return function(META)
                 end
             end
         end
-        self:OnLeaveIfStatement()
     end
 end

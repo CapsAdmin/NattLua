@@ -25,8 +25,6 @@ return function(META)
 
         self.scope = scope
 
-        self:FireEvent("enter_scope", scope)
-
         return scope
     end
 
@@ -40,8 +38,6 @@ return function(META)
 
     function META:PopScope()
         local old = table.remove(self.scope_stack)
-
-        self:FireEvent("leave_scope", self:GetScope().node, old)
 
         if old then
             self.last_scope = self:GetScope()
