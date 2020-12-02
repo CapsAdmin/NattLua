@@ -3,13 +3,13 @@ return function(META)
         local obj = self:AnalyzeExpression(statement.expression)
         if obj:IsTruthy() then
             self:CreateAndPushScope()
-            self:OnEnterScope({
+            self:OnEnterConditionalScope({
                 type = "while",
                 condition = obj
             })
             self:AnalyzeStatements(statement.statements)
             self:PopScope()
-            self:OnExitScope({
+            self:OnExitConditionalScope({
                 condition = obj
             })
         end

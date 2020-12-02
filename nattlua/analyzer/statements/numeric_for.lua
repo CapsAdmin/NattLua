@@ -23,7 +23,7 @@ return function(META)
         statement.identifiers[1].inferred_type = init
         
         self:CreateAndPushScope()
-        self:OnEnterScope({
+        self:OnEnterConditionalScope({
             type = "numeric_for",
             init = init, 
             max = max, 
@@ -35,7 +35,7 @@ return function(META)
             local uncertain_break = nil
             for i = literal_init, literal_max, literal_step do
                 self:CreateAndPushScope()
-                self:OnEnterScope({
+                self:OnEnterConditionalScope({
                     type = "numeric_for_iteration",
                     i = i, 
                 })
@@ -66,7 +66,7 @@ return function(META)
                 end
 
                 self:PopScope()
-                self:OnExitScope({
+                self:OnExitConditionalScope({
                     type = "numeric_for_iteration",
                     i = i, 
                 })
@@ -109,7 +109,7 @@ return function(META)
         end
 
         self:PopScope()
-        self:OnExitScope({init = init, max = max, condition = condition})
+        self:OnExitConditionalScope({init = init, max = max, condition = condition})
     end
 
     function META:AnalyzeBreakStatement(statement)

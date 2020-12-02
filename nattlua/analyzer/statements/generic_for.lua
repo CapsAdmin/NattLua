@@ -25,7 +25,7 @@ return function(META)
                     returned_key = types.Union({types.Symbol(nil), returned_key})
                 end
                 self:CreateAndPushScope()
-                self:OnEnterScope({
+                self:OnEnterConditionalScope({
                     type = "generic_for",
                     condition = returned_key
                 })
@@ -52,7 +52,7 @@ return function(META)
 
         if returned_key then
             self:PopScope()
-            self:OnExitScope({condition = returned_key})
+            self:OnExitConditionalScope({condition = returned_key})
         end
 
     end

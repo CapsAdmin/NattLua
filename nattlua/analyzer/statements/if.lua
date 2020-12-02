@@ -9,7 +9,7 @@ return function(META)
 
                 if obj:IsTruthy() then
                     self:CreateAndPushScope()
-                    self:OnEnterScope({    
+                    self:OnEnterConditionalScope({    
                         type = "if",                        
                         if_position = i, 
                         condition = obj
@@ -18,7 +18,7 @@ return function(META)
                     self:AnalyzeStatements(statements)
 
                     self:PopScope()
-                    self:OnExitScope({
+                    self:OnExitConditionalScope({
                         type = "if",
                         if_position = i, 
                         condition = obj
@@ -31,7 +31,7 @@ return function(META)
             else
                 if prev_expression:IsFalsy() then
                     self:CreateAndPushScope()
-                    self:OnEnterScope({
+                    self:OnEnterConditionalScope({
                         type = "if",
                         if_position = i, 
                         is_else = true,
@@ -41,7 +41,7 @@ return function(META)
                     self:AnalyzeStatements(statements)
 
                     self:PopScope()
-                    self:OnExitScope({
+                    self:OnExitConditionalScope({
                         type = "if",
                         if_position = i,
                         is_else = true,

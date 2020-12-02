@@ -109,13 +109,10 @@ return function(META)
         return upvalue
     end
 
-    function META:OnEnterScope(data)
-        if not data then print(debug.traceback()) end
-        if not data or not data.condition then return end
-        
+    function META:OnEnterConditionalScope(data)
         local scope = self:GetScope()
 
-        scope:SetTestCondition(data.condition, data.is_else )
+        scope:SetTestCondition(data.condition, data.is_else)
         scope:MakeUncertain(data.condition:IsUncertain())
     end
 
@@ -141,10 +138,10 @@ return function(META)
         return true
     end
 
-    function META:OnExitScope(data)
+    function META:OnExitConditionalScope(data)
         local exited_scope = self:GetLastScope()
-        
         local current_scope = self:GetScope()
+        
         if current_scope:DidReturn() or self.lua_error_thrown or self.lua_assert_error_thrown then
             current_scope:MakeUncertain(exited_scope:IsUncertain())
             
