@@ -1,22 +1,44 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-test("if statement within a function", function()
-    run([[
-        local a = 1
-        function b(lol)
-            if lol == 1 then return "foo" end
-            return lol + 4, true
+run([[
+    local a = 1
+    function b(lol)
+        if lol == 1 then return "foo" end
+        return lol + 4, true
+    end
+    local d = b(2)
+    type_assert(d, 6)
+    local d = b(a)
+    type_assert(d, "foo")
+]])
+
+
+run[[
+    local function test(i)
+        if i == 20 then
+            return false
         end
-        local d = b(2)
-        type_assert(d, 6)
-        local d = b(a)
-        type_assert(d, "foo")
-    ]])
 
+        if i == 5 then
+            return true
+        end
 
-    run[[
-        local function test(i)
+        return "lol"
+    end
+
+    local a = test(20) -- false
+    local b = test(5) -- true
+    local c = test(1) -- "lol"
+
+    type_assert(a, false)
+    type_assert(b, true)
+    type_assert(c, "lol")
+]]
+
+run[[
+    local function test(max)
+        for i = 1, max do
             if i == 20 then
                 return false
             end
@@ -24,209 +46,134 @@ test("if statement within a function", function()
             if i == 5 then
                 return true
             end
-
-            return "lol"
         end
+    end
 
-        local a = test(20) -- false
-        local b = test(5) -- true
-        local c = test(1) -- "lol"
+    local a = test(20)
+    type_assert(a, _ as true | false)
+]]
 
+run([[
+    -- assigning a value inside an uncertain branch
+    local a = false
+
+    if _ as any then
         type_assert(a, false)
-        type_assert(b, true)
-        type_assert(c, "lol")
-    ]]
+        a = true
+        type_assert(a, true)
+    end
+    type_assert(a, _ as false | true)
+]])
 
-    run[[
-        local function test(max)
-            for i = 1, max do
-                if i == 20 then
-                    return false
-                end
+run([[
+    -- assigning in uncertain branch and else part
+    local a = false
 
-                if i == 5 then
-                    return true
-                end
-            end
-        end
+    if _ as any then
+        type_assert(a, false)
+        a = true
+        type_assert(a, true)
+    else
+        type_assert(a, false)
+        a = 1
+        type_assert(a, 1)
+    end
 
-        local a = test(20)
-        type_assert(a, _ as true | false)
-    ]]
-end)
+    type_assert(a, _ as true | 1)
+]])
 
-test("assigning a value inside an uncertain branch", function()
-    run([[
-        local a = false
+run([[
+    local a: nil | 1
 
-        if _ as any then
-            type_assert(a, false)
-            a = true
-            type_assert(a, true)
-        end
-        type_assert(a, _ as false | true)
-    ]])
-end)
+    if a then
+        type_assert(a, _ as 1)
+    end
 
-test("assigning in uncertain branch and else part", function()
-    run([[
-        local a = false
+    type_assert(a, _ as 1 | nil)
+]])
 
-        if _ as any then
-            type_assert(a, false)
-            a = true
-            type_assert(a, true)
-        else
-            type_assert(a, false)
-            a = 1
-            type_assert(a, 1)
-        end
+run([[
+    local a: nil | 1
 
-        type_assert(a, _ as true | 1)
-    ]])
-end)
+    if a then
+        type_assert(a, _ as 1 | 1)
+    else
+        type_assert(a, _ as nil | nil)
+    end
 
-test("nil | 1 should be 1 inside branch when tested for", function()
-    run([[
-        local a: nil | 1
+    type_assert(a, _ as 1 | nil)
+]])
 
+run([[
+    local a = 0
+
+    if MAYBE then
+        a = 1
+    end
+    type_assert(a, _ as 0 | 1)
+]])
+
+run[[
+    local a: nil | 1
+
+    if a then
+        type_assert(a, _ as 1 | 1)
         if a then
-            type_assert(a, _ as 1 | 1)
-        end
-
-        type_assert(a, _ as 1 | nil)
-    ]])
-
-    run([[
-        local a: nil | 1
-
-        if a then
-            type_assert(a, _ as 1 | 1)
-        else
-            type_assert(a, _ as nil | nil)
-        end
-
-        type_assert(a, _ as 1 | nil)
-    ]])
-end)
-
-
-test("uncertain branches should add nil to assignment", function()
-    run([[
-        local _: boolean
-        local a = 0
-    
-        if _ then
-            a = 1
-        end
-        type_assert(a, _ as 0 | 1)
-    ]])
-end)
-
-test("nested assignment", function()
-    run[[
-        local a: nil | 1
-    
-        if a then
-            type_assert(a, _ as 1 | 1)
             if a then
-                if a then
-                    type_assert(a, _ as 1 | 1)
-                end
                 type_assert(a, _ as 1 | 1)
             end
-        end
-    
-        type_assert(a, _ as 1 | nil)
-    ]]
-end)
-
-test("inverted", function()
-    run([[
-        local a: nil | 1
-    
-        if not a then
-            type_assert(a, _ as nil | nil)
-        end
-    
-        type_assert(a, _ as 1 | nil)
-    ]])
-end)
-
-test("inverted else", function()
-    run[[
-        local a: true | false
-
-        if not a then
-            type_assert(a, false)
-        else
-            type_assert(a, true)
-        end
-    ]]
-end)
-
-test("type function", function()
-    run([[
-        local a: number | string
-
-        if type(a) == "number" then
-            type_assert(a, _ as number)
-        end
-
-        type_assert(a, _ as number | string)
-    ]])
-    run[[
-        local a: 1 | false | true
-
-        if type(a) == "boolean" then
-            type_assert(a, _ as boolean)
-        end
-
-        if type(a) ~= "boolean" then
-            type_assert(a, 1)
-        else
-            type_assert(a, _ as boolean)
-        end
-    ]]
-end)
-
-pending("inverted", function()
-    run([[
-        local a: nil | 1
-    
-        if not not a then
-            type_assert(a, _ as nil | nil)
-        end
-    
-        type_assert(a, _ as 1 | nil)
-    ]])
-end)
-
-pending("inverted2", function()
-    run([[
-        local a: nil | 1
-    
-        if not not a then
             type_assert(a, _ as 1 | 1)
         end
-    
-        type_assert(a, _ as 1 | nil)
-    ]])
-end)
+    end
 
-pending("inverted", function()
-    run([[
-        local a: nil | 1
+    type_assert(a, _ as 1 | nil)
+]]
 
-        if a or true and a or false then
-            type_assert(a, _ as 1 | 1)
-        end
+run([[
+    local a: nil | 1
 
-        type_assert(a, _ as 1 | nil)
-    ]])
-end)
+    if not a then
+        type_assert(a, _ as nil | nil)
+    end
 
-pending([[
+    type_assert(a, _ as 1 | nil)
+]])
+
+run[[
+    local a: true | false
+
+    if not a then
+        type_assert(a, false)
+    else
+        type_assert(a, true)
+    end
+]]
+
+run([[
+    local a: number | string
+
+    if type(a) == "number" then
+        type_assert(a, _ as number)
+    end
+
+    type_assert(a, _ as number | string)
+]])
+
+run[[
+    local a: 1 | false | true
+
+    if type(a) == "boolean" then
+        type_assert(a, _ as boolean)
+    end
+
+    if type(a) ~= "boolean" then
+        type_assert(a, 1)
+    else
+        type_assert(a, _ as boolean)
+    end
+]]
+
+run([[
     local a: nil | 1
 
     if not a or true and a or false then
@@ -291,61 +238,61 @@ run([[
 
 
 run[[
-local a = false
+    local a = false
 
-type_assert(a, false)
+    type_assert(a, false)
 
-if maybe then
-    a = true
-    type_assert(a, true)
-end
+    if maybe then
+        a = true
+        type_assert(a, true)
+    end
 
-type_assert(a, _ as true | false)
+    type_assert(a, _ as true | false)
 ]]
 
 run[[
-local a: true | false
+    local a: true | false
 
-if a then
-    type_assert(a, true)
-else
-    type_assert(a, false)
-end
-
-if not a then
-    type_assert(a, false)
-else
-    type_assert(a, true)
-end
-
-if not a then
-    if a then
-        type_assert("this should never be reached")
-    end
-else
     if a then
         type_assert(a, true)
     else
-        type_assert("unreachable code!!")
+        type_assert(a, false)
     end
-end
+
+    if not a then
+        type_assert(a, false)
+    else
+        type_assert(a, true)
+    end
+
+    if not a then
+        if a then
+            type_assert("this should never be reached")
+        end
+    else
+        if a then
+            type_assert(a, true)
+        else
+            type_assert("unreachable code!!")
+        end
+    end
 ]]
 
 
 run[[
-local a: nil | 1
-    
-if a then
-    type_assert(a, _ as 1 | 1)
+    local a: nil | 1
+        
     if a then
+        type_assert(a, _ as 1 | 1)
         if a then
+            if a then
+                type_assert(a, _ as 1 | 1)
+            end
             type_assert(a, _ as 1 | 1)
         end
-        type_assert(a, _ as 1 | 1)
     end
-end
 
-type_assert(a, _ as 1 | nil)
+    type_assert(a, _ as 1 | nil)
 ]]
 
 run[[
@@ -388,41 +335,17 @@ run[[
     type_assert(c, _ as -1 | 1)
 ]]
 
-pending("never", function()
-    run[[
-        local a: true
-
-        if a then
-            return
-        end
-
-        type_assert(a, _ as never)
-    ]]
-
-
-    run[[
-        local a = true
-
-        if a then
-            error("!")
-        end
-
-        type_assert(a, _ as never)
-    ]]
-end)
-pending([[
+run([[
     local a: nil | 1
     if not a then return end
     type_assert(a, 1)
 ]])
 
-pending([[
+run([[
     local a: nil | 1
     if a then return end
     type_assert(a, nil)
 ]])
-
-
 
 run[[
     local a = true
@@ -488,27 +411,24 @@ run[[
     type_assert(b, _ as false)
 ]]
 
+run([[
+    local type a = {}
 
-test("branching", function()
-    run([[
-        local type a = {}
+    if not a then
+        -- shouldn't reach
+        type_assert(1, 2)
+    else
+        type_assert(1, 1)
+    end
+]])
 
-        if not a then
-            -- shouldn't reach
-            type_assert(1, 2)
-        else
-            type_assert(1, 1)
-        end
-    ]])
-
-    run([[
-        local type a = {}
-        if not a then
-            -- shouldn't reach
-            type_assert(1, 2)
-        end
-    ]])
-end)
+run([[
+    local type a = {}
+    if not a then
+        -- shouldn't reach
+        type_assert(1, 2)
+    end
+]])
 
 run[[
     local a: true | false | number | "foo" | "bar" | nil | 1
@@ -650,3 +570,41 @@ run[[
     end
     type_assert(x, _ as 0 | 1)
 ]]
+
+
+
+pending("inverted", function()
+    run([[
+        local a: nil | 1
+    
+        if not not a then
+            type_assert(a, _ as nil | nil)
+        end
+    
+        type_assert(a, _ as 1 | nil)
+    ]])
+end)
+
+pending("inverted2", function()
+    run([[
+        local a: nil | 1
+    
+        if not not a then
+            type_assert(a, _ as 1 | 1)
+        end
+    
+        type_assert(a, _ as 1 | nil)
+    ]])
+end)
+
+pending("inverted", function()
+    run([[
+        local a: nil | 1
+
+        if a or true and a or false then
+            type_assert(a, _ as 1 | 1)
+        end
+
+        type_assert(a, _ as 1 | nil)
+    ]])
+end)
