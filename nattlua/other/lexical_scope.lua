@@ -145,18 +145,14 @@ function META:Merge(scope)
     end
 end
 
+function META:SetTestCondition(obj, inverted)
+    self.test_condition = obj
+    self.test_condition_inverted = inverted
+end
+
 function META:GetTestCondition()
-    local scope = self
-    while true do
-        if scope.test_condition then
-            break
-        end
-        scope = scope.parent
-        if not scope then
-            return
-        end
-    end
-    return scope.test_condition, scope.test_condition_inverted
+    local obj, scope = self:GetMemberInParents("test_condition")
+    return obj, scope.test_condition
 end
 
 local function compare_condition(scope, obj)

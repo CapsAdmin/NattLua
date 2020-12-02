@@ -82,13 +82,7 @@ return function(META)
 
         return self:PushScope(scope)
     end
-
-    function META:ErrorAndCloneCurrentScope(node, err, condition)
-        self:ReportDiagnostic(node, err)
-        self:CloneCurrentScope()
-        self:GetScope().test_condition = condition
-    end
-
+    
     function META:CopyUpvalue(upvalue, data)
         return {
             data = data or upvalue.data:Copy(),
