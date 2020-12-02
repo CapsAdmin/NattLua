@@ -20,40 +20,32 @@ return function(META)
         return node.value.value
     end
 
-    function META:PushScope(scope, event_data)
+    function META:PushScope(scope)
         table.insert(self.scope_stack, self.scope)
 
         self.scope = scope
 
-        self:FireEvent("enter_scope", scope, event_data)
-
-        if self.OnEnterScope then
-            self:OnEnterScope(event_data)
-        end
+        self:FireEvent("enter_scope", scope)
 
         return scope
     end
 
-    function META:CreateAndPushFunctionScope(node, event_data)
-        return self:PushScope(LexicalScope(node and node.function_scope or self:GetScope()), event_data)
+    function META:CreateAndPushFunctionScope(node)
+        return self:PushScope(LexicalScope(node and node.function_scope or self:GetScope()))
     end
 
-    function META:CreateAndPushScope(event_data)
-        return self:PushScope(LexicalScope(self:GetScope()), event_data)
+    function META:CreateAndPushScope()
+        return self:PushScope(LexicalScope(self:GetScope()))
     end
 
-    function META:PopScope(event_data)
+    function META:PopScope()
         local old = table.remove(self.scope_stack)
 
-        self:FireEvent("leave_scope", self:GetScope().node, old, event_data)
+        self:FireEvent("leave_scope", self:GetScope().node, old)
 
         if old then
             self.last_scope = self:GetScope()
             self.scope = old
-        end
-
-        if event_data and self.OnExitScope then
-            self:OnExitScope(event_data)
         end
     end
 

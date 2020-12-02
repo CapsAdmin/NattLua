@@ -110,6 +110,7 @@ return function(META)
     end
 
     function META:OnEnterScope(data)
+        if not data then print(debug.traceback()) end
         if not data or not data.condition then return end
         
         local scope = self:GetScope()
@@ -125,18 +126,19 @@ return function(META)
     end
 
     function META:OnMutateUpvalue(upvalue, key, val, env)
-        if self:GetScope():IsUncertain() then
-            self:CreateLocalValue(key, val, env)
-            
-            if self:GetScope().test_condition_inverted and upvalue.data_outside_of_if_blocks then
-                upvalue.data_outside_of_if_blocks:AddType(val)
-                upvalue.data_outside_of_if_blocks:RemoveType(upvalue.data)
-            else
-                upvalue.data_outside_of_if_blocks = types.Union({upvalue.data, val})
-            end
+        local scope = self:GetScope()
+        if not scope:IsUncertain() then return end
 
-            return true
+        self:CreateLocalValue(key, val, env)
+        
+        if scope.test_condition_inverted and upvalue.data_outside_of_if_blocks then
+            upvalue.data_outside_of_if_blocks:AddType(val)
+            upvalue.data_outside_of_if_blocks:RemoveType(upvalue.data)
+        else
+            upvalue.data_outside_of_if_blocks = types.Union({upvalue.data, val})
         end
+
+        return true
     end
 
     function META:OnExitScope(data)
@@ -148,7 +150,7 @@ return function(META)
             
             if exited_scope:IsUncertain() then
                 local copy = self:CloneCurrentScope()
-                copy:SetTestCondition(exited_scope.test_condition, true)
+                copy:SetTestCondition(exited_scope:GetTestCondition())
             end
         end
         

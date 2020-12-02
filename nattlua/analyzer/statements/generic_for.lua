@@ -24,7 +24,8 @@ return function(META)
                 if not returned_key:IsLiteral() then
                     returned_key = types.Union({types.Symbol(nil), returned_key})
                 end
-                self:CreateAndPushScope({
+                self:CreateAndPushScope()
+                self:OnEnterScope({
                     type = "generic_for",
                     condition = returned_key
                 })
@@ -50,7 +51,8 @@ return function(META)
         end
 
         if returned_key then
-            self:PopScope({condition = returned_key})
+            self:PopScope()
+            self:OnExitScope({condition = returned_key})
         end
 
     end
