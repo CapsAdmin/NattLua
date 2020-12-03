@@ -70,7 +70,7 @@ return function(META)
             elseif what == "set_global" then
                 local key, val = ...
                 tab()
-                write("_ENV.", self:Hash(key), " = ", tostring(val))
+                write("_ENV.", self:Hash(key), " = ", tostring(val), "\n")
             elseif what == "enter_scope" then
                 local scope, data = ...
 
