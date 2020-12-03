@@ -76,6 +76,10 @@ return function(META)
         scope:MakeUncertain(not init:IsLiteral() or not max:IsLiteral())
     end
 
+    function META:OnFindEnvironmentValue(g, key, env)
+        
+    end
+
     function META:OnFindLocalValue(upvalue, key, env, scope)
         if upvalue.data.Type == "union" then
             --[[
@@ -158,13 +162,24 @@ return function(META)
         if not scope:IsUncertain() then return end
 
         self:CreateLocalValue(key, val, env)
-        
+    
         upvalue.conditions = upvalue.conditions or {truthy = {}, falsy = {}}
 
         if scope.test_condition_inverted then
             upvalue.conditions.falsy[scope.test_condition] = val
         else
             upvalue.conditions.truthy[scope.test_condition] = val
+        end
+
+        return true
+    end
+
+    function META:OnMutateEnvironment(g, key, val, env)
+        local scope = self:GetScope()
+        if not scope:IsUncertain() then return end
+
+        if g:Contains(key) then
+            self:Assert(key, g:Set(key, types.Union({g:Get(key), val})))
         end
 
         return true

@@ -571,40 +571,66 @@ run[[
     type_assert(x, _ as 0 | 1)
 ]]
 
+run[[
+    x = 1
 
+    if MAYBE then
+        x = 2
+    end
 
-pending("inverted", function()
-    run([[
-        local a: nil | 1
-    
-        if not not a then
-            type_assert(a, _ as nil | nil)
-        end
-    
-        type_assert(a, _ as 1 | nil)
-    ]])
-end)
+    if MAYBE then
+        x = 3
+    end
 
-pending("inverted2", function()
-    run([[
-        local a: nil | 1
-    
-        if not not a then
-            type_assert(a, _ as 1 | 1)
-        end
-    
-        type_assert(a, _ as 1 | nil)
-    ]])
-end)
+    type_assert(x, _ as 1|2|3)
 
-pending("inverted", function()
-    run([[
-        local a: nil | 1
+    x = nil
+]]
 
-        if a or true and a or false then
-            type_assert(a, _ as 1 | 1)
-        end
+pending[[
+    local MAYBE: boolean
 
-        type_assert(a, _ as 1 | nil)
-    ]])
-end)
+    x = 1
+
+    if MAYBE then
+        x = 2
+    end
+
+    if MAYBE then
+        x = 3
+    end
+
+    type_assert(x, _ as 2|3)
+
+    x = nil
+]]
+
+pending[[
+    local a: nil | 1
+
+    if not not a then
+        type_assert(a, _ as nil | nil)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]]
+
+pending[[
+    local a: nil | 1
+
+    if not not a then
+        type_assert(a, _ as 1 | 1)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]]
+
+pending[[
+    local a: nil | 1
+
+    if a or true and a or false then
+        type_assert(a, _ as 1 | 1)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]]
