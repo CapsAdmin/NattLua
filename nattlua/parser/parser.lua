@@ -195,28 +195,45 @@ function META:ReadFunctionBody(node)
 end
 
 do  -- function
+
     function META:ReadIndexExpression()
-        local val = self:Expression("value")
-        val.value = self:ReadType("letter")
+        local node = self:ReadExpressionValue()
+        local first = node
 
-        while self:IsValue(".") or self:IsValue(":") do
-            local op = self:GetToken()
-            if not op then break end
-            op.parent = self.nodes[1]
-            self:Advance(1)
+        for _ = 1, self:GetLength() do
+            local left = node
+            if not self:GetToken() then break end
 
-            local left = val
+            if self:IsValue(".") or self:IsValue(":") then
+                local self_call = self:IsValue(":")
+                
+                node = self:Expression("binary_operator")
+                node.value = self:ReadTokenLoose()
+                node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
+                node.left = left
+                node:End()
+                node.right.self_call = self_call
+            else
+                break
+            end
 
-            val:End()
-            val = self:Expression("binary_operator")
-            val.value = op
-            val.left = val.left or left
-            val.right = val.right or self:ReadIndexExpression()
+            if node then
+                node.primary = first
+            end
         end
 
-        val:End()
+        first.standalone_letter = node
 
-        return val
+        while self:IsValue(".") or self:IsValue(":") do
+            local left = node
+            node = self:Expression("binary_operator")
+            node.value = self:ReadTokenLoose()
+            node.left = left
+            node.right = self:ReadIndexExpression()
+            node:End()
+        end
+
+        return node
     end
 
     do
@@ -228,17 +245,9 @@ do  -- function
             local node = self:Statement("function")
             node.tokens["function"] = self:ReadValue("function")
             node.expression = self:ReadIndexExpression()
-
-            do -- hacky
-                if node.expression.left then
-                    node.expression.left.standalone_letter = node
-                else
-                    node.expression.standalone_letter = node
-                end
-
-                if node.expression.value.value == ":" then
-                    node.self_call = true
-                end
+            
+            if node.expression.kind == "binary_operator" then
+                node.self_call = node.expression.right.self_call
             end
 
             self:ReadFunctionBody(node)

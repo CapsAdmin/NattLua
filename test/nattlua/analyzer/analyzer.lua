@@ -481,3 +481,20 @@ R[[
     
     type_assert(a, true)
 ]]
+
+R[[
+    a = {b = {c = {d = {lol = true}}}}
+    function a.b.c.d:e()
+        type_assert(self.lol, true)
+    end
+    a.b.c.d:e()
+    a = nil
+]]
+
+R[[
+    local a = {b = {c = {d = {lol = true}}}}
+    function a.b.c.d:e()
+        type_assert(self.lol, true)
+    end
+    a.b.c.d:e()
+]]

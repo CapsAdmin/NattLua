@@ -19,27 +19,36 @@ return function(META)
                 "typesystem"
             )
         elseif statement.kind == "function" then
-            local existing_type = self:GetLocalOrEnvironmentValue(statement.expression, "typesystem")
+            local key = statement.expression
+            
+            if key.kind == "binary_operator" then
+                -- TODO: lookup existing types here
 
-            if existing_type then
-                self:SetLocalOrEnvironmentValue(
-                    statement.expression, 
-                    existing_type, 
-                    "runtime"
-                )
+                local obj = self:AnalyzeExpression(key.left, "runtime")
+                local key = self:AnalyzeExpression(key.right, "runtime")
+                local val = self:AnalyzeFunctionExpression(statement, "runtime")
+
+                self:NewIndexOperator(obj, key, val, statement)
             else
-                self:SetLocalOrEnvironmentValue(
-                    statement.expression, 
-                    self:AnalyzeFunctionExpression(statement, "runtime"), 
-                    "runtime"
-                )
+                local existing_type = self:GetLocalOrEnvironmentValue(key, "typesystem")
+                local val = existing_type or self:AnalyzeFunctionExpression(statement, "runtime")
+                self:SetLocalOrEnvironmentValue(key, val, "runtime")
             end
         elseif statement.kind == "type_function" then
-            self:SetLocalOrEnvironmentValue(
-                statement.expression,
-                self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem"), 
-                "typesystem"
-            )
+            local key = statement.expression
+            
+            if key.kind == "binary_operator" then
+                -- TODO: lookup existing types here
+
+                local obj = self:AnalyzeExpression(key.left, "typesystem")
+                local key = self:AnalyzeExpression(key.right, "typesystem")
+                local val = self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem")
+
+                self:NewIndexOperator(obj, key, val, statement)
+            else
+                local val = self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem")
+                self:SetLocalOrEnvironmentValue(key, val, "typesystem")
+            end
         else
             self:FatalError("unhandled statement: " .. statement.kind)
         end
