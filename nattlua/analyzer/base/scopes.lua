@@ -162,6 +162,9 @@ return function(META)
             return upvalue.data
         end
 
+        -- TODO: LEGACY BEHAVIOR
+        if type(key) == "table" and key.kind ~= "value" then return end
+
         local string_key = key--types.String(self:Hash(key)):MakeLiteral(true)
         local g = self.environments[env][1] or self.first_environment[env]
 
