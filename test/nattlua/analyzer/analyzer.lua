@@ -471,3 +471,13 @@ R[[
     math = {}
 ]]
 
+R[[
+    local type function nothing()
+        return -- return nothing, not even nil
+    end
+
+    -- when using in a comparison, the empty tuple should become a nil value instead
+    local a = nothing() == nil
+    
+    type_assert(a, true)
+]]

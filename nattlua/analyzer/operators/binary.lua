@@ -69,8 +69,8 @@ return function(META)
         local op = node.value.value
 
         -- adding two tuples at runtime in lua will practically do this
-        if l.Type == "tuple" then l = l:Get(1) end
-        if r.Type == "tuple" then r = r:Get(1) end
+        if l.Type == "tuple" then l = self:Assert(node, l:Get(1)) end
+        if r.Type == "tuple" then r = self:Assert(node, r:Get(1)) end
 
         -- normalize l and r to be both sets to reduce complexity
         if l.Type ~= "union" and r.Type == "union" then l = types.Union({l}) end
@@ -433,6 +433,14 @@ return function(META)
                     left:DisableFalsy()
                 end
             end
+        end
+
+        if left.Type == "tuple" and not left:Get(1) then
+            left = types.Nil
+        end
+
+        if right.Type == "tuple" and not right:Get(1) then
+            right = types.Nil
         end
 
         assert(left)

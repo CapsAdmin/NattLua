@@ -411,7 +411,9 @@ do -- globals
 	end
 
 	type function getmetatable(tbl)
-		return tbl.meta
+        if tbl.Type == "table" then
+		    return tbl.meta
+        end
 	end
 end
 
