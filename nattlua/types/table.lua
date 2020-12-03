@@ -34,6 +34,10 @@ end
 
 local level = 0
 function META:__tostring()
+    if self:Get("__name") then
+        return tostring(self:Get("__name"):GetData())
+    end
+
     if self.suppress then
         return "*self*"
     end
