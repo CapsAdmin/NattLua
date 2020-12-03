@@ -6,6 +6,14 @@ local type Color = {
     a = number,
     __index = self, -- __index = self is shortcut for type Color.__index = Color,
     __meta = self, -- shortcut for setmetatable<|Color, Color|>,
+    __name = "Color",
+}
+
+
+local type Vector = {
+    x = number,
+    y = number,
+    z = number,
 }
 
 local type Angle = {
@@ -15,6 +23,8 @@ local type Angle = {
     __index = Angle,
     __call = (function(self, number, number, number): Angle),
     __meta = self,
+    __name = "Angle",
+    Right = (function(self): Vector), -- TODO: Vector():Angle():Right() seems to cause infinte loop if Right is not defined
 }
 
 local type ToScreenData = {
@@ -23,16 +33,14 @@ local type ToScreenData = {
     visible = boolean,
 }
 
-local type Vector = {
-    x = number,
-    y = number,
-    z = number,
-}
 
 -- We can mutate the Vector type if we want
 type Vector.__index = Vector
 type Vector.__call = function(self, number, number, number): Vector
 type Vector.__add = function(Vector, Vector): Vector
+type Vector.__name = "Vector"
+type Vector.__mul = function(number | Vector, number | Vector): Vector
+type Vector.__unm = function(Vector): Vector
 
 -- Or we can add a table like so
 type Vector = Vector & {
@@ -105,6 +113,11 @@ local type Mesh = {
     __call = function(self, number, number, number): self
 }
 
+local type PhysicsObject = {
+    __name = "PhysicsObject",
+    IsValid = (function(self): boolean),
+}
+
 local type Entity = {
     SetAngles = (function(self, Angle): nil),
     GetModel = (function(self): string),
@@ -121,7 +134,20 @@ local type Entity = {
     BoneLength = (function(self, number): number),
     Remove = (function(self): nil),
     GetBoneParent = (function(self): number),
+    GetPos = (function(self): Vector),
+    IsStuck = (function(self): boolean),
+    GetAimVector = (function(self): Vector),
+    SetPos = (function(self, Vector): nil),
+    IsValid = (function(self): boolean),
+    GetPhysicsObject = (function(self): PhysicsObject),
+    GetVelocity = (function(self): Vector),
+    SetVelocity = (function(self, Vector): Vector),
 }
+
+type Entity.__name = "Entity"
+
+local type Player = Entity & {}
+type Player.__name = "Player"
 
 local type ClientsideModel = function(string): Entity
 
@@ -159,6 +185,7 @@ return {
     Vector = Vector,
     Angle = Angle,
     Matrix = Matrix,
+    Player = Player,
     util = util,
     Mesh = Mesh,
     ClientsideModel = ClientsideModel,
