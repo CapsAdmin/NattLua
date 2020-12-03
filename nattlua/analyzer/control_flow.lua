@@ -107,31 +107,33 @@ return function(META)
         end
 
         if upvalue.conditions then
-            local val = not scope.test_condition_inverted and upvalue.conditions.truthy[scope.test_condition]
-
             local union = types.Union({})
             
-            local hits = 0
+            local if_else_balance = 0
 
+            -- if part
             for cond, v in pairs(upvalue.conditions.truthy) do
-                hits = hits + 1
+                if_else_balance = if_else_balance + 1
                 if not scope.test_condition_inverted or cond ~= scope.test_condition then
                     union:AddType(v)
                 end
             end
 
+            -- else part
             for cond, v in pairs(upvalue.conditions.falsy) do
-                hits = hits - 1
+                if_else_balance = if_else_balance - 1
                 union:AddType(v)
             end
 
-            if hits ~= 0 then
-                union:AddType(val or upvalue.data)
+            -- if the balance is not 0
+            if if_else_balance ~= 0 then
+                union:AddType(
+                    not scope.test_condition_inverted and upvalue.conditions.truthy[scope.test_condition] or 
+                    upvalue.data
+                )
             end
 
-            local copy = self:CopyUpvalue(upvalue, union)
-            copy.conditions = upvalue.conditions
-            return copy
+            return self:CopyUpvalue(upvalue, union)
         end
 
         return upvalue
@@ -157,13 +159,6 @@ return function(META)
 
         self:CreateLocalValue(key, val, env)
         
-        if scope.test_condition_inverted and upvalue.data_outside_of_if_blocks then
-            upvalue.data_outside_of_if_blocks:AddType(val)
-            upvalue.data_outside_of_if_blocks:RemoveType(upvalue.data)
-        else
-            upvalue.data_outside_of_if_blocks = types.Union({upvalue.data, val})
-        end
-
         upvalue.conditions = upvalue.conditions or {truthy = {}, falsy = {}}
 
         if scope.test_condition_inverted then

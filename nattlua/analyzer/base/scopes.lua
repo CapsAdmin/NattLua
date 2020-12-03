@@ -76,6 +76,7 @@ return function(META)
             data = data or upvalue.data:Copy(),
             key = upvalue.key,
             shadow = upvalue.shadow,
+            conditions = upvalue.conditions,
         }
     end
 
@@ -161,25 +162,14 @@ return function(META)
             return upvalue.data
         end
 
-        local string_key = types.String(self:Hash(key)):MakeLiteral(true)
+        local string_key = key--types.String(self:Hash(key)):MakeLiteral(true)
+        local g = self.environments[env][1] or self.first_environment[env]
 
         if self.environment_nodes[1] and self.environment_nodes[1].environments_override and self.environment_nodes[1].environments_override[env] then
-            return self.environment_nodes[1].environments_override[env]:Get(string_key)
+            g = self.environment_nodes[1].environments_override[env]
         end
-
-        if not self.environments[env][1] then
-            return self.first_environment[env]:Get(string_key)
-        end
-
-        local val, err = self.environments[env][1]:Get(string_key)
-
-        if val then
-            return val
-        end
-
-        -- log error maybe?
-
-        return  nil
+        
+        return g:Get(key)
     end
 
     function META:SetLocalOrEnvironmentValue(key, val, env, scope)
@@ -206,14 +196,16 @@ return function(META)
                 self:FireEvent("mutate_upvalue", key, val, env)
             else
                 -- key = val
-
-                if not self.environments[env][1] then
+                local g = self.environments[env][1]
+                if not g then
                     self:FatalError("tried to set environment value outside of Push/Pop/Environment")
                 end
 
                 if self:GetScope():IsReadOnly() then return end
 
-                local ok, err = self.environments[env][1]:Set(types.String(self:Hash(key)):MakeLiteral(true), val, env == "runtime")
+                if not self:OnMutateEnvironment(g, key, val, env) then 
+                    self:Assert(key, g:Set(key, val, env == "runtime"))
+                end
 
                 self:FireEvent("set_global", key, val, env)
             end
