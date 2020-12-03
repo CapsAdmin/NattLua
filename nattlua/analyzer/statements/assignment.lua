@@ -46,8 +46,6 @@ return function(META)
                 left[i] = self:AnalyzeExpression(exp_key.expression, env)
             elseif exp_key.kind == "binary_operator" then
                 left[i] = self:AnalyzeExpression(exp_key.right, env)
-                -- here it gets the last index
-                -- a.b.c.d.>>e<<
             else
                 self:FatalError("unhandled expression " .. tostring(exp_key))
             end
@@ -138,8 +136,6 @@ return function(META)
                     
                     self:SetLocalOrEnvironmentValue(key, val, env)
                 else
-                    -- the left side of the >>a.b.c.d<<.e is
-                    -- so (a.b.c.d)["e"] = val
                     local obj = self:AnalyzeExpression(exp_key.left, env)
                     self:Assert(exp_key, self:NewIndexOperator(obj, key, val, exp_key))
                     self:FireEvent("newindex", obj, key, val, env)

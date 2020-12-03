@@ -426,10 +426,10 @@ run[[
     type_assert(foo(1), _ as any)
 ]]
 
-pending[[
+run[[
     local Foo = {Bar = {foo = {bar={test={}}}}}
 
     function Foo.Bar.foo.bar.test:init() end
 
-    type_assert(Foo.Bar.foo.bar.test.init, _ as function(): any)
+    type_assert(Foo.Bar.foo.bar.test.init, _ as function():)
 ]]

@@ -1,53 +1,34 @@
 return function(META)
     function META:AnalyzeFunctionStatement(statement)
-        if statement.kind == "local_function" then
+        if statement.kind == "local_function" or statement.kind == "local_type_function" or statement.kind == "local_generics_type_function" then
+            local env = statement.kind == "local_function" and "runtime" or "typesystem"
             self:CreateLocalValue(
                 statement.tokens["identifier"], 
-                self:AnalyzeFunctionExpression(statement, "runtime"), 
-                "runtime"
+                self:AnalyzeFunctionExpression(statement, env), 
+                env
             )
-        elseif statement.kind == "local_type_function" then
-            self:CreateLocalValue(
-                statement.identifier, 
-                self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem"), 
-                "typesystem"
-            )
-        elseif statement.kind == "local_generics_type_function" then
-            self:CreateLocalValue(
-                statement.identifier, 
-                self:AnalyzeFunctionExpression(statement, "typesystem"), 
-                "typesystem"
-            )
-        elseif statement.kind == "function" then
+        elseif statement.kind == "function" or statement.kind == "type_function" then
+            local env = statement.kind == "function" and "runtime" or "typesystem"
             local key = statement.expression
             
             if key.kind == "binary_operator" then
-                -- TODO: lookup existing types here
+                local existing_type
 
-                local obj = self:AnalyzeExpression(key.left, "runtime")
-                local key = self:AnalyzeExpression(key.right, "runtime")
-                local val = self:AnalyzeFunctionExpression(statement, "runtime")
+                if env == "runtime" then
+                    local obj = self:AnalyzeExpression(key.left, "typesystem")
+                    local key = self:AnalyzeExpression(key.right, "typesystem")
+                    existing_type = obj:Get(key)
+                end
 
+                local obj = self:AnalyzeExpression(key.left, env)
+                local key = self:AnalyzeExpression(key.right, env)
+                local val = existing_type or self:AnalyzeFunctionExpression(statement, env)
                 self:NewIndexOperator(obj, key, val, statement)
             else
-                local existing_type = self:GetLocalOrEnvironmentValue(key, "typesystem")
-                local val = existing_type or self:AnalyzeFunctionExpression(statement, "runtime")
-                self:SetLocalOrEnvironmentValue(key, val, "runtime")
-            end
-        elseif statement.kind == "type_function" then
-            local key = statement.expression
-            
-            if key.kind == "binary_operator" then
-                -- TODO: lookup existing types here
+                local existing_type = env == "runtime" and self:GetLocalOrEnvironmentValue(key, "typesystem")
 
-                local obj = self:AnalyzeExpression(key.left, "typesystem")
-                local key = self:AnalyzeExpression(key.right, "typesystem")
-                local val = self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem")
-
-                self:NewIndexOperator(obj, key, val, statement)
-            else
-                local val = self:AnalyzeFunctionExpression(statement:ToExpression("type_function"), "typesystem")
-                self:SetLocalOrEnvironmentValue(key, val, "typesystem")
+                local val = existing_type or self:AnalyzeFunctionExpression(statement, env)
+                self:SetLocalOrEnvironmentValue(key, val, env)
             end
         else
             self:FatalError("unhandled statement: " .. statement.kind)

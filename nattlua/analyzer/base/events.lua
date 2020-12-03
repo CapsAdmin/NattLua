@@ -67,7 +67,7 @@ return function(META)
                     write(" -- ", reason)
                 end
                 write("\n")
-            elseif what == "set_global" then
+            elseif what == "set_environment_value" then
                 local key, val = ...
                 tab()
                 write("_ENV.", self:Hash(key), " = ", tostring(val), "\n")

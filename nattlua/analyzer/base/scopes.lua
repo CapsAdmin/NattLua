@@ -162,10 +162,7 @@ return function(META)
             return upvalue.data
         end
 
-        -- TODO: LEGACY BEHAVIOR
-        if type(key) == "table" and key.kind ~= "value" then return end
-
-        local string_key = key--types.String(self:Hash(key)):MakeLiteral(true)
+        local string_key = key
         local g = self.environments[env][1] or self.first_environment[env]
 
         if self.environment_nodes[1] and self.environment_nodes[1].environments_override and self.environment_nodes[1].environments_override[env] then
@@ -176,60 +173,36 @@ return function(META)
     end
 
     function META:SetLocalOrEnvironmentValue(key, val, env, scope)
-        assert(val == nil or types.IsTypeObject(val))
+        local upvalue, found_scope = self:FindLocalValue(key, env, scope)
+        
+        if upvalue then
+            if not self:OnMutateUpvalue(upvalue, key, val, env) then
+                if self:GetScope():IsReadOnly() then
+                    if self:GetScope() ~= found_scope then 
+                        
+                        self:CreateLocalValue(key, val, env)
 
-        if type(key) == "string" or key.kind == "value" then
-            -- local key = val; key = val
-
-            local upvalue, found_scope = self:FindLocalValue(key, env, scope)
-            if upvalue then
-                if not self:OnMutateUpvalue(upvalue, key, val, env) then
-                    if self:GetScope():IsReadOnly() then
-                        if self:GetScope() ~= found_scope then 
-                            self:CreateLocalValue(key, val, env)
-                            return    
-                        end
+                        return    
                     end
-
-                    upvalue.data = val
                 end
 
-                --self:CreateLocalValue(key, val, env)
-
+                upvalue.data = val
                 self:FireEvent("mutate_upvalue", key, val, env)
-            else
-                -- key = val
-                local g = self.environments[env][1]
-                if not g then
-                    self:FatalError("tried to set environment value outside of Push/Pop/Environment")
-                end
-
-                if self:GetScope():IsReadOnly() then return end
-
-                if not self:OnMutateEnvironment(g, key, val, env) then 
-                    self:Assert(key, g:Set(key, val, env == "runtime"))
-                end
-
-                self:FireEvent("set_global", key, val, env)
             end
         else
-            local obj = self:AnalyzeExpression(key.left, env)
+            local g = self.environments[env][1]
 
-            if key.kind == "postfix_expression_index" then
-                key = self:AnalyzeExpression(key.expression, env)
-            elseif key.kind == "binary_operator" then
-                -- this is not really correct yet
-                if key.right and key.right.right then
-                    key = self:AnalyzeExpression(key.right.right, env)
-                else 
-                    key = self:AnalyzeExpression(key.right, env)
-                end
-            else
-                self:FatalError("unhandled function expression identifier")
+            if not g then
+                self:FatalError("tried to set environment value outside of Push/Pop/Environment")
             end
 
-            self:Assert(key.node, self:NewIndexOperator(obj, key, val, env))
-            self:FireEvent("newindex", obj, key, val, env)
+            if self:GetScope():IsReadOnly() then return end
+
+            if not self:OnMutateEnvironment(g, key, val, env) then 
+                self:Assert(key, g:Set(key, val, env == "runtime"))
+            end
+
+            self:FireEvent("set_environment_value", key, val, env)
         end
     end
 end

@@ -66,11 +66,12 @@ return function(META)
 
         function META:ReadLocalTypeFunctionStatement()
             local node = self:Statement("local_type_function")
-            node.tokens["local"] = self:ReadValue("local")
-            node.tokens["type"] = self:ReadValue("type")
-            node.tokens["function"] = self:ReadValue("function")
-            node.identifier = self:ReadIdentifier()
-            return self:ReadTypeFunctionBody(node, true)
+            :ExpectKeyword("local")
+            :ExpectKeyword("type")
+            :ExpectKeyword("function")
+            :ExpectSimpleIdentifier()
+            self:ReadTypeFunctionBody(node, true)
+            return node:End() 
         end
     end
 
@@ -119,10 +120,11 @@ return function(META)
 
         function META:ReadLocalGenericsTypeFunctionStatement()
             local node = self:Statement("local_generics_type_function")
-            node.tokens["local"] = self:ReadValue("local")
-            node.tokens["function"] = self:ReadValue("function")
-            node.identifier = self:ReadIdentifier()
-            return self:ReadTypeFunctionBody2(node)
+            :ExpectKeyword("local")
+            :ExpectKeyword("function")
+            :ExpectSimpleIdentifier()
+            self:ReadTypeFunctionBody2(node)
+            return node:End()
         end
     end
 

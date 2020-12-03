@@ -498,3 +498,16 @@ R[[
     end
     a.b.c.d:e()
 ]]
+
+R[[
+    type lib = {}
+    type lib.myfunc = function(number, string): boolean
+
+    local lib = {}
+
+    function lib.myfunc(a, b)
+
+    end
+
+    type_assert(lib.myfunc, _ as function(number, string): boolean)
+]]

@@ -2,6 +2,11 @@ local types = require("nattlua.types.types")
 
 return function(META)
     function META:AnalyzeFunctionExpression(node, env)
+
+        if node.type == "statement" and (node.kind == "local_type_function" or node.kind == "type_function") then
+            node = node:ToExpression("type_function")
+        end
+
         local explicit_arguments = false
         local explicit_return = false
 
