@@ -34,14 +34,14 @@ end
 
 local level = 0
 function META:__tostring()
-    if self:Get("__name") then
-        return tostring(self:Get("__name"):GetData())
-    end
-
     if self.suppress then
         return "*self*"
     end
     self.suppress = true
+
+    if self:Contains("__name") then
+        return tostring(self:Get("__name"):GetData())
+    end
 
     local s = {}
 
@@ -217,6 +217,8 @@ function META:GetKeyUnion()
 end
 
 function META:Contains(key)
+    key = types.Cast(key)
+
     return self:GetKeyVal(key, true)
 end
 
@@ -498,6 +500,11 @@ local function unpack_keyval(keyval, tbl)
 end
 
 function META.Extend(A, B, dont_copy_self)
+    
+    if B.Type ~= "table" then
+        return false, "cannot extend non table"
+    end
+
     local map = {}
 
     if not dont_copy_self then
