@@ -26,7 +26,14 @@ function types.Cast(val)
         return types.Symbol(val)
     elseif type(val) == "number" then
         return types.Number(val):MakeLiteral(true)
+    elseif type(val) == "table" and val.kind == "value" then
+        return types.String(val.value.value):MakeLiteral(true)
     end
+
+    if not types.IsTypeObject(val) then
+        error("cannot cast" .. tostring(val), 2)
+    end
+
     return val
 end
 
