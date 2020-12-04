@@ -511,3 +511,13 @@ R[[
 
     type_assert(lib.myfunc, _ as function(number, string): boolean)
 ]]
+
+R[[
+    local val: nan
+    type_assert(val, 0/0)
+]]
+
+R[[
+    local val: nil
+    type_assert(val, nil)
+]]

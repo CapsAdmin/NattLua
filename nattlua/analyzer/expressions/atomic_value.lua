@@ -52,10 +52,6 @@ return function(META)
 
             if value == "any" then
                 return self:NewType(node, "any")
-            elseif value == "never" then
-                return self:NewType(node, "never")
-            elseif value == "error" then
-                return self:NewType(node, "error")
             elseif value == "inf" then
                 return self:NewType(node, "number", math.huge, true)
             elseif value == "nil" then

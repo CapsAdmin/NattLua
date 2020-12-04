@@ -1,19 +1,20 @@
-local map --= {}
+local map-- = {}
 
 if map then
     debug.sethook(function(evt)
         if evt ~= "line" then return end
-        local info = debug.getinfo(2)
-        local src = info.source:sub(2)
-        map[src] = map[src] or {}    
-        map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
+        local info = debug.getinfo(2, "Sl")
+        if info.source:sub(1, 10) == "@./nattlua" then
+            local src = info.source:sub(2)
+            map[src] = map[src] or {}    
+            map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
+        end
     end, "l")
 end
 
 function _G.test(name, cb)
     local ok, err = pcall(cb)
     if ok then
-        io.write(".")
         io.output():flush()
     else
         io.write("\n")
@@ -57,7 +58,7 @@ io.write("\n")
 
 if map then
     for k,v in pairs(map) do
-        if k:find("nl/", 1, true) then
+        if k:find("nattlua/", 1, true) then
             local f = io.open(k .. ".coverage", "w")
 
             local i = 1

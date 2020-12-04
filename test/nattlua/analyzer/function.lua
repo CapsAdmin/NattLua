@@ -433,3 +433,9 @@ run[[
 
     type_assert(Foo.Bar.foo.bar.test.init, _ as function():)
 ]]
+
+run[[
+    function foo(...: number)
+        print(...)
+    end
+]]

@@ -18,3 +18,13 @@ test("patterns", function()
         local a: $"FOO_.-" = "lol"
     ]], "cannot find .- in pattern")
 end)
+
+run[===[
+    local foo = [[foo]]
+    local bar = [=[foo]=]
+    local faz = [==[foo]==]
+    
+    type_assert(foo, "foo")
+    type_assert(bar, "foo")
+    type_assert(faz, "foo")
+]===]
