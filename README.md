@@ -1,7 +1,7 @@
 # About
-NattLua is a superset of LuaJIT that introduces a structural type system. Its purpose is to provide you with tools to optionally constrain your code in spirit of Lua.
+NattLua is a superset of LuaJIT that introduces a structural type system and verbose inference. Its purpose is to provide you with tools to analyze and optionally constrain your code with types in spirit of Lua. 
 
-Complex type structures, involving array-like tables, map-like tables, and metatables are supported:
+Complex type structures, involving array-like tables, map-like tables, metatables, and more are supported:
 
 ```lua
 local Vector = {}
