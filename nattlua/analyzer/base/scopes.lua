@@ -77,6 +77,8 @@ return function(META)
             key = upvalue.key,
             shadow = upvalue.shadow,
             conditions = upvalue.conditions,
+            original_upvalue = upvalue,
+            is_copy = true,
         }
     end
 
@@ -159,7 +161,7 @@ return function(META)
         local upvalue = self:FindLocalValue(key, env, scope)
         
         if upvalue then
-            return upvalue.data
+            return upvalue.data_override or upvalue.data
         end
 
         local string_key = key

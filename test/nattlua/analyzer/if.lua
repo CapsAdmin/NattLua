@@ -587,6 +587,34 @@ run[[
     x = nil
 ]]
 
+run[[
+    local foo = false
+
+    if MAYBE then
+        foo = true
+    end
+
+    if true then
+        foo = true
+    end
+
+    type_assert(foo, true)
+]]
+
+pending[[
+    local foo = false
+
+    if MAYBE then
+        foo = true
+    end
+
+    if not foo then
+        return
+    end
+
+    type_assert(foo, true)
+]]
+
 pending[[
     local MAYBE: boolean
 
@@ -604,6 +632,7 @@ pending[[
 
     x = nil
 ]]
+
 
 pending[[
     local a: nil | 1

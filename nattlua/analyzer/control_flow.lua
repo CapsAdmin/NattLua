@@ -83,6 +83,7 @@ return function(META)
     end
 
     function META:OnFindLocalValue(upvalue, key, env, scope)
+
         if upvalue.data.Type == "union" then
             --[[
 
@@ -131,7 +132,8 @@ return function(META)
                 union:AddType(v)
             end
 
-            -- if the balance is not 0
+            -- if the balance is not 0 then not all branches have been hit
+            -- and we include the original value
             if if_else_balance ~= 0 then
                 union:AddType(
                     not scope.test_condition_inverted and upvalue.conditions.truthy[scope.test_condition] or 
@@ -139,7 +141,7 @@ return function(META)
                 )
             end
         
-            return self:CopyUpvalue(upvalue, union)
+            upvalue.data_override = union
         end
 
         return upvalue
@@ -161,19 +163,23 @@ return function(META)
 
     function META:OnMutateUpvalue(upvalue, key, val, env)
         local scope = self:GetScope()
-        if not scope:IsUncertain() then return end
 
-        self:CreateLocalValue(key, val, env)
-    
-        upvalue.conditions = upvalue.conditions or {truthy = {}, falsy = {}}
+        if scope:IsUncertain() then 
+            self:CreateLocalValue(key, val, env)
+        
+            upvalue.conditions = upvalue.conditions or {truthy = {}, falsy = {}}
 
-        if scope.test_condition_inverted then
-            upvalue.conditions.falsy[scope.test_condition] = val
+            if scope.test_condition_inverted then
+                upvalue.conditions.falsy[scope.test_condition] = val
+            else
+                upvalue.conditions.truthy[scope.test_condition] = val
+            end
+
+            return true
         else
-            upvalue.conditions.truthy[scope.test_condition] = val
+            upvalue.conditions = nil
+            upvalue.data_override = nil
         end
-
-        return true
     end
 
     function META:OnMutateEnvironment(g, key, val, env)
