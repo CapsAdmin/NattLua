@@ -116,9 +116,10 @@ return function(META)
         end
 
         function META:GetChar(offset --[[#: number]])
-            if offset then
                 return self.code_ptr[self.i + offset - 1]
             end
+
+        function META:GetCurrentChar()
             return self.code_ptr[self.i - 1]
         end
     else
@@ -127,10 +128,11 @@ return function(META)
         end
 
         function META:GetChar(offset --[[#: number]])
-            if offset then
-                return self.code:byte(self.i + offset) or 0
+            return self.code:byte(self.i + offset)
             end
-            return self.code:byte(self.i) or 0
+
+        function META:GetCurrentChar()
+            return self.code:byte(self.i)
         end
     end
 
@@ -149,7 +151,7 @@ return function(META)
     end
 
     function META:ReadChar()
-        local char = self:GetChar()
+        local char = self:GetCurrentChar()
         self.i = self.i + 1
         return char
     end
@@ -166,12 +168,17 @@ return function(META)
         return self:IsByte(B(what), offset)
     end
 
+    function META:IsCurrentValue(what)
+        return self:IsCurrentByte(B(what))
+    end
+
+    function META:IsCurrentByte(what)
+        return self:GetCurrentChar() == what
+    end
+
     function META:IsByte(what, offset)
-        if offset then
             return self:GetChar(offset) == what
         end
-        return self:GetChar() == what
-    end
 
     function META.GenerateMap(str)
         local out = {}
@@ -206,9 +213,9 @@ return function(META)
                 end
 
                 if lower then
-                    lua = lua .. "(self:IsByte(" .. str:byte(i) .. second_arg .. ")" .. " or " .. "self:IsByte(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
+                    lua = lua .. "(self:IsByte(" .. str:byte(i) .. second_arg .. ", 0)" .. " or " .. "self:IsByte(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
                 else
-                    lua = lua .. "self:IsByte(" .. str:byte(i) .. second_arg .. ") "
+                    lua = lua .. "self:IsByte(" .. str:byte(i) .. second_arg .. ", 0) "
                 end
 
                 if i ~= #str then
@@ -265,7 +272,7 @@ return function(META)
         end
 
         function META:ReadLetter()
-            if META.syntax.IsLetter(self:GetChar()) then
+            if META.syntax.IsLetter(self:GetCurrentChar()) then
                 self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
                 return true
             end
@@ -274,10 +281,10 @@ return function(META)
         end
     else
         function META:ReadLetter()
-            if META.syntax.IsLetter(self:GetChar()) then
+            if META.syntax.IsLetter(self:GetCurrentChar()) then
                 for _ = self.i, self:GetLength() do
                     self:Advance(1)
-                    if not META.syntax.IsDuringLetter(self:GetChar()) then
+                    if not META.syntax.IsDuringLetter(self:GetCurrentChar()) then
                         break
                     end
                 end
@@ -301,7 +308,7 @@ return function(META)
             end
 
             function META:ReadSpace()
-                if META.syntax.IsSpace(self:GetChar()) then
+                if META.syntax.IsSpace(self:GetCurrentChar()) then
                     self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
                     return true
                 end
@@ -310,10 +317,10 @@ return function(META)
             end
         else
             function META:ReadSpace()
-                if META.syntax.IsSpace(self:GetChar()) then
+                if META.syntax.IsSpace(self:GetCurrentChar()) then
                     for _ = self.i, self:GetLength() do
                         self:Advance(1)
-                        if not META.syntax.IsSpace(self:GetChar()) then
+                        if not META.syntax.IsSpace(self:GetCurrentChar()) then
                             break
                         end
                     end
@@ -328,10 +335,10 @@ return function(META)
     META.ReadSymbol = META.BuildReadFunction(META.syntax.GetSymbols())
 
     function META:ReadShebang()
-        if self.i == 1 and self:IsValue("#") then
+        if self.i == 1 and self:IsCurrentValue("#") then
             for _ = self.i, self:GetLength() do
                 self:Advance(1)
-                if self:IsValue("\n") then
+                if self:IsCurrentValue("\n") then
                     break
                 end
             end

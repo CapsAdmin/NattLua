@@ -16,7 +16,7 @@ return function(META)
         end
 
         local function read_remaining(self, node)
-            if self:IsType("letter") then
+            if self:IsCurrentType("letter") then
 
                 local val = self:Expression("value")
                 val.value = self:ReadTokenLoose()
@@ -42,7 +42,7 @@ return function(META)
 
         do
             function META:IsLocalDestructureAssignmentStatement() 
-                return self:IsValue("local") and self:IsDestructureStatement(1) 
+                return self:IsCurrentValue("local") and self:IsDestructureStatement(1) 
             end
 
             function META:ReadLocalDestructureAssignmentStatement()
@@ -58,7 +58,7 @@ return function(META)
 
     do
         function META:IsLSXExpression()
-            return self:IsValue("[") and self:IsType("letter", 1)
+            return self:IsCurrentValue("[") and self:IsType("letter", 1)
         end
 
         do
@@ -80,7 +80,7 @@ return function(META)
             local props = list.new()
 
             while true do
-                if self:IsType("letter") and self:IsValue("=", 1) then
+                if self:IsCurrentType("letter") and self:IsValue("=", 1) then
                     local key = self:ReadType("letter")
                     self:ReadValue("=")
                     local val = self:ReadExpectExpression(nil, true)
@@ -88,7 +88,7 @@ return function(META)
                         key = key,
                         val = val,
                     })
-                elseif self:IsValue("...") then
+                elseif self:IsCurrentValue("...") then
                     self:ReadTokenLoose() -- !
                     props:insert({
                         val = self:ReadExpression(nil, true),
@@ -103,7 +103,7 @@ return function(META)
 
             node.props = props
 
-            if self:IsValue("{") then
+            if self:IsCurrentValue("{") then
                 node.tokens["{"] = self:ReadValue("{")
                 node.statements = self:ReadStatements({["}"] = true})
                 node.tokens["}"] = self:ReadValue("}")

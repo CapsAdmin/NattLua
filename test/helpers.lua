@@ -25,8 +25,6 @@ local function cast(...)
 end
 
 local function run(code, expect_error)
-    io.write(".")
-
     _G.TEST = true
     local code_data = nl.Code(code, nil, nil, 3)
     local ok, err = code_data:Analyze()

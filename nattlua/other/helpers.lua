@@ -326,4 +326,66 @@ function helpers.GetDataFromLineCharPosition(tokens, code, line, char)
 	end
 end
 
+local function has_jit()
+    return pcall(require, "jit.opt")
+end
+
+function helpers.JITOptimize()
+    if not has_jit() then return end
+    jit.opt.start(
+        "maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
+        "maxrecord=20000", -- 4000: maximum number of recorded IR instructions
+        "maxirconst=500", -- 500: maximum number of IR constants of a trace
+        "maxside=100", -- 100: maximum number of side traces of a root trace
+        "maxsnap=800", -- 500: maximum number of snapshots for a trace
+        "hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
+        "hotexit=10", -- 10: number of taken exits to start a side trace
+        "tryside=4", -- 4: number of attempts to compile a side trace
+        "instunroll=500", -- 4: maximum unroll factor for instable loops
+        "loopunroll=500", -- 15: maximum unroll factor for loop ops in side traces
+        "callunroll=500", -- 3: maximum unroll factor for pseudo-recursive calls
+        "recunroll=2", -- 2: minimum unroll factor for true recursion
+        "maxmcode=8192", -- 512: maximum total size of all machine code areas in KBytes
+        --jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
+        "+fold", -- Constant Folding, Simplifications and Reassociation
+        "+cse", -- Common-Subexpression Elimination
+        "+dce", -- Dead-Code Elimination
+        "+narrow", -- Narrowing of numbers to integers
+        "+loop", -- Loop Optimizations (code hoisting)
+        "+fwd", -- Load Forwarding (L2L) and Store Forwarding (S2L)
+        "+dse", -- Dead-Store Elimination
+        "+abc", -- Array Bounds Check Elimination
+        "+sink", -- Allocation/Store Sinking
+        "+fuse" -- Fusion of operands into instructions
+    )
+    
+    if jit.version_num >= 20100 then
+        jit.opt.start("minstitch=0") -- 0: minimum number of IR ins for a stitched trace.
+    end
+end
+
+local function inject_full_path()
+    local lib = require("jit.util")
+    if lib.funcinfo then
+        lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
+
+        function lib.funcinfo(...)
+            local ret = {lib._old_funcinfo(...)}
+            local info = ret[1]
+            if info and type(info) == "table" and type(info.loc) == "string" and type(info.source) == "string" and type(info.currentline) == "number" and info.source:sub(1,1) == "@" then
+                info.loc = info.source:sub(2) .. ":" .. info.currentline
+            end
+            return unpack(ret)
+        end
+    end
+end
+
+function helpers.EnableJITDumper()
+    if not has_jit() then return end
+
+    inject_full_path()
+    
+    require("jit.v").on()
+end
+
 return helpers

@@ -14,16 +14,16 @@ local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: bo
 
     self:Advance(1)
 
-    if self:IsValue("=") then
+    if self:IsCurrentValue("=") then
         for _ = self.i, self:GetLength() do
             self:Advance(1)
-            if not self:IsValue("=") then
+            if not self:IsCurrentValue("=") then
                 break
             end
         end
     end
 
-    if not self:IsValue("[") then
+    if not self:IsCurrentValue("[") then
         if multiline_comment then return false end
         return false, "expected " .. helpers.QuoteToken(self:GetChars(start, self.i - 1) .. "[") .. " got " .. helpers.QuoteToken(self:GetChars(start, self.i))
     end
@@ -43,14 +43,14 @@ end
 do
     function META:ReadCommentEscape() --[[#: boolean]]
         if
-            self:IsValue("-") and
+            self:IsValue("-", 0) and
             self:IsValue("-", 1) and
             self:IsValue("[", 2) and
             self:IsValue("[", 3) and
             self:IsValue("#", 4)
         then
             self:Advance(5)
-            self.comment_escape = string.char(self:GetChar())
+            self.comment_escape = string.char(self:GetCurrentChar())
             return true
         end
 
@@ -58,7 +58,7 @@ do
     end
 
     function META:ReadRemainingCommentEscape() --[[#: boolean]]
-        if self.comment_escape and self:IsValue("]") and self:IsValue("]", 1) then
+        if self.comment_escape and self:IsValue("]", 0) and self:IsValue("]", 1) then
             self:Advance(2)
 
             return true
@@ -69,7 +69,7 @@ do
 end
 
 function META:ReadMultilineComment() --[[#: boolean]]
-    if  self:IsValue("-") and self:IsValue("-", 1) and self:IsValue("[", 2) and (
+    if  self:IsValue("-", 0) and self:IsValue("-", 1) and self:IsValue("[", 2) and (
         self:IsValue("[", 3) or self:IsValue("=", 3)
     ) then
         local start = self.i
@@ -91,11 +91,11 @@ function META:ReadMultilineComment() --[[#: boolean]]
 end
 
 function META:ReadLineComment() --[[#: boolean]]
-    if self:IsValue("-") and self:IsValue("-", 1)then
+    if self:IsValue("-", 0) and self:IsValue("-", 1)then
         self:Advance(#"--")
 
         for _ = self.i, self:GetLength() do
-            if self:IsValue("\n") then
+            if self:IsCurrentValue("\n") then
                 break
             end
             self:Advance(1)
@@ -109,10 +109,10 @@ end
 
 
 function META:ReadCMultilineComment() --[[#: boolean]]
-    if self:IsValue("/") and self:IsValue("*", 1) then
+    if self:IsValue("/", 0) and self:IsValue("*", 1) then
         self:Advance(2)
         for _ = self.i, self:GetLength() do
-            if self:IsValue("*") and self:IsValue("/", 1) then
+            if self:IsValue("*", 0) and self:IsValue("/", 1) then
                 self:Advance(2)
                 break
             end
@@ -126,13 +126,13 @@ function META:ReadCMultilineComment() --[[#: boolean]]
 end
 
 function META:ReadCLineComment() --[[#: boolean]]
-    if self:IsValue("/") and self:IsValue("/", 1)then
+    if self:IsValue("/", 0) and self:IsValue("/", 1) then
 
         self.potential_lua54_division_operator = true
         self:Advance(2)
 
         for _ = self.i, self:GetLength() do
-            if self:IsValue("\n") then
+            if self:IsCurrentValue("\n") then
                 break
             end
             self:Advance(1)
@@ -145,7 +145,7 @@ function META:ReadCLineComment() --[[#: boolean]]
 end
 
 function META:ReadMultilineString() --[[#: boolean]]
-    if self:IsValue("[") and (self:IsValue("[", 1) or self:IsValue("=", 1)) then
+    if self:IsValue("[", 0) and (self:IsValue("[", 1) or self:IsValue("=", 1)) then
         local start = self.i
         local ok, err = ReadLiteralString(self, false)
 
@@ -215,11 +215,11 @@ do
 
     function META:ReadNumberAnnotations(what)
         if what == "hex" then
-            if self:IsValue("p") or self:IsValue("P") then
+            if self:IsCurrentValue("p") or self:IsCurrentValue("P") then
                 return self:ReadNumberPowExponent("pow")
             end
         elseif what == "decimal" then
-            if self:IsValue("e") or self:IsValue("E") then
+            if self:IsCurrentValue("e") or self:IsCurrentValue("E") then
                 return self:ReadNumberPowExponent("exponent")
             end
         end
@@ -229,15 +229,15 @@ do
 
     function META:ReadNumberPowExponent(what)
         self:Advance(1)
-        if self:IsValue("+") or self:IsValue("-") then
+        if self:IsCurrentValue("+") or self:IsCurrentValue("-") then
             self:Advance(1)
-            if not syntax.IsNumber(self:GetChar()) then
-                self:Error("malformed " .. what .. " expected number, got " .. string.char(self:GetChar()), self.i - 2)
+            if not syntax.IsNumber(self:GetCurrentChar()) then
+                self:Error("malformed " .. what .. " expected number, got " .. string.char(self:GetCurrentChar()), self.i - 2)
                 return false
             end
         end
         for _ = self.i, self:GetLength() do
-            if not syntax.IsNumber(self:GetChar()) then
+            if not syntax.IsNumber(self:GetCurrentChar()) then
                 break
             end
             self:Advance(1)
@@ -252,9 +252,9 @@ do
         local dot = false
 
         for _ = self.i, self:GetLength() do
-            if self:IsValue("_") then self:Advance(1) end
+            if self:IsCurrentValue("_") then self:Advance(1) end
 
-            if self:IsValue(".") then
+            if self:IsCurrentValue(".") then
                 if dot then
                     --self:Error("dot can only be placed once")
                     return
@@ -267,12 +267,12 @@ do
                 break
             end
 
-            if allowed_hex[self:GetChar()] then
+            if allowed_hex[self:GetCurrentChar()] then
                 self:Advance(1)
-            elseif syntax.IsSpace(self:GetChar()) or syntax.IsSymbol(self:GetChar()) then
+            elseif syntax.IsSpace(self:GetCurrentChar()) or syntax.IsSymbol(self:GetCurrentChar()) then
                 break
-            elseif self:GetChar() ~= 0 then
-                self:Error("malformed number "..string.char(self:GetChar()).." in hex notation")
+            elseif self:GetCurrentChar() ~= 0 then
+                self:Error("malformed number "..string.char(self:GetCurrentChar()).." in hex notation")
                 return
             end
         end
@@ -282,14 +282,14 @@ do
         self:Advance(2)
 
         for _ = self.i, self:GetLength() do
-            if self:IsValue("_") then self:Advance(1) end
+            if self:IsCurrentValue("_") then self:Advance(1) end
 
-            if self:IsValue("1") or self:IsValue("0") then
+            if self:IsCurrentValue("1") or self:IsCurrentValue("0") then
                 self:Advance(1)
-            elseif syntax.IsSpace(self:GetChar()) or syntax.IsSymbol(self:GetChar()) then
+            elseif syntax.IsSpace(self:GetCurrentChar()) or syntax.IsSymbol(self:GetCurrentChar()) then
                 break
-            elseif self:GetChar() ~= 0 then
-                self:Error("malformed number "..string.char(self:GetChar()).." in binary notation")
+            elseif self:GetCurrentChar() ~= 0 then
+                self:Error("malformed number "..string.char(self:GetCurrentChar()).." in binary notation")
                 return
             end
 
@@ -303,9 +303,9 @@ do
         local dot = false
 
         for _ = self.i, self:GetLength() do
-            if self:IsValue("_") then self:Advance(1) end
+            if self:IsCurrentValue("_") then self:Advance(1) end
 
-            if self:IsValue(".") then
+            if self:IsCurrentValue(".") then
                 if dot then
                     --self:Error("dot can only be placed once")
                     return
@@ -318,19 +318,19 @@ do
                 break
             end
 
-            if syntax.IsNumber(self:GetChar()) then
+            if syntax.IsNumber(self:GetCurrentChar()) then
                 self:Advance(1)
             --elseif self:IsSymbol() or self:IsSpace() then
                 --break
-            else--if self:GetChar() ~= 0 then
-                --self:Error("malformed number "..self:GetChar().." in hex notation")
+            else--if self:GetCurrentChar() ~= 0 then
+                --self:Error("malformed number "..self:GetCurrentChar().." in hex notation")
                 break
             end
         end
     end
 
     function META:ReadNumber()
-        if syntax.IsNumber(self:GetChar()) or (self:IsValue(".") and syntax.IsNumber(self:GetChar(1))) then
+        if syntax.IsNumber(self:GetCurrentChar()) or (self:IsCurrentValue(".") and syntax.IsNumber(self:GetChar(1))) then
 
             if self:IsValue("x", 1) or self:IsValue("X", 1) then
                 self:ReadHexNumber()
@@ -348,10 +348,10 @@ do
 end
 
 function META:ReadInlineTypeCode()
-    if self:IsValue("§") then
+    if self:IsCurrentValue("§") then
         self:Advance(1)
         for _ = self.i, self:GetLength() do
-            if self:IsValue("\n") then
+            if self:IsCurrentValue("\n") then
                 break
             end
             self:Advance(1)
@@ -375,7 +375,7 @@ do
         local function escape(self, c)
             if self[key] then
 
-                if c == B"z" and not self:IsValue(quote) then
+                if c == B"z" and not self:IsCurrentValue(quote) then
                     self:ReadSpace(self)
                 end
 
@@ -391,7 +391,7 @@ do
         end
 
         META["Read" .. name .. "String"] = function(self)
-            if not self:IsValue(quote) then
+            if not self:IsCurrentValue(quote) then
                 return false
             end
 

@@ -13,7 +13,7 @@ require("nattlua.parser.parser_extra")(META)
 
 do
     function META:IsBreakStatement()
-        return self:IsValue("break")
+        return self:IsCurrentValue("break")
     end
 
     function META:ReadBreakStatement()
@@ -25,7 +25,7 @@ end
 
 do
     function META:IsContinueStatement()
-        return self:IsValue("continue")
+        return self:IsCurrentValue("continue")
     end
 
     function META:ReadContinueStatement()
@@ -37,7 +37,7 @@ end
 
 do
     function META:IsReturnStatement()
-        return self:IsValue("return")
+        return self:IsCurrentValue("return")
     end
 
     function META:ReadReturnStatement()
@@ -50,7 +50,7 @@ end
 
 do
     function META:IsDoStatement()
-        return self:IsValue("do")
+        return self:IsCurrentValue("do")
     end
 
     function META:ReadDoStatement()
@@ -65,7 +65,7 @@ end
 
 do
     function META:IsWhileStatement()
-        return self:IsValue("while")
+        return self:IsCurrentValue("while")
     end
 
     function META:ReadWhileStatement()
@@ -81,7 +81,7 @@ end
 
 do
     function META:IsRepeatStatement()
-        return self:IsValue("repeat")
+        return self:IsCurrentValue("repeat")
     end
 
     function META:ReadRepeatStatement()
@@ -96,7 +96,7 @@ end
 
 do
     function META:IsGotoLabelStatement()
-        return self:IsValue("::")
+        return self:IsCurrentValue("::")
     end
 
     function META:ReadGotoLabelStatement()
@@ -110,7 +110,7 @@ end
 
 do
     function META:IsGotoStatement()
-        return self:IsValue("goto") and self:IsType("letter", 1)
+        return self:IsCurrentValue("goto") and self:IsType("letter", 1)
     end
 
     function META:ReadGotoStatement()
@@ -123,7 +123,7 @@ end
 
 do
     function META:IsLocalAssignmentStatement()
-        return self:IsValue("local")
+        return self:IsCurrentValue("local")
     end
 
     function META:ReadLocalAssignmentStatement()
@@ -131,7 +131,7 @@ do
         node:ExpectKeyword("local")
         node.left = self:ReadIdentifierList()
 
-        if self:IsValue("=") then
+        if self:IsCurrentValue("=") then
             node:ExpectKeyword("=")
             node.right = self:ReadExpressionList()
         end
@@ -143,7 +143,7 @@ end
 
 do
     function META:IsNumericForStatement()
-        return self:IsValue("for") and self:IsValue("=", 2)
+        return self:IsCurrentValue("for") and self:IsValue("=", 2)
     end
 
     function META:ReadNumericForStatement()
@@ -163,7 +163,7 @@ end
 
 do
     function META:IsGenericForStatement()
-        return self:IsValue("for")
+        return self:IsCurrentValue("for")
     end
 
     function META:ReadGenericForStatement()
@@ -189,7 +189,7 @@ function META:ReadFunctionBody(node)
         self:ReadExplicitFunctionReturn(node)
     end
 
-    local start = self:GetToken()
+    local start = self:GetCurrentToken()
     node.statements = self:ReadStatements({["end"] = true})
     node.tokens["end"] = self:ReadValue("end", start, start)
 end
@@ -202,10 +202,10 @@ do  -- function
 
         for _ = 1, self:GetLength() do
             local left = node
-            if not self:GetToken() then break end
+            if not self:GetCurrentToken() then break end
 
-            if self:IsValue(".") or self:IsValue(":") then
-                local self_call = self:IsValue(":")
+            if self:IsCurrentValue(".") or self:IsCurrentValue(":") then
+                local self_call = self:IsCurrentValue(":")
                 
                 node = self:Expression("binary_operator")
                 node.value = self:ReadTokenLoose()
@@ -224,7 +224,7 @@ do  -- function
 
         first.standalone_letter = node
 
-        while self:IsValue(".") or self:IsValue(":") do
+        while self:IsCurrentValue(".") or self:IsCurrentValue(":") do
             local left = node
             node = self:Expression("binary_operator")
             node.value = self:ReadTokenLoose()
@@ -238,7 +238,7 @@ do  -- function
 
     do
         function META:IsFunctionStatement()
-            return self:IsValue("function")
+            return self:IsCurrentValue("function")
         end
 
         function META:ReadFunctionStatement()
@@ -260,7 +260,7 @@ end
 
 do
     function META:IsLocalFunctionStatement()
-        return self:IsValue("local") and self:IsValue("function", 1)
+        return self:IsCurrentValue("local") and self:IsValue("function", 1)
     end
 
     function META:ReadLocalFunctionStatement()
@@ -277,7 +277,7 @@ end
 
 do
     function META:IsIfStatement()
-        return self:IsValue("if")
+        return self:IsCurrentValue("if")
     end
 
     function META:ReadIfStatement()
@@ -308,7 +308,7 @@ do
 
             node.statements[i] = self:ReadStatements({["end"] = true, ["else"] = true, ["elseif"] = true})
 
-            if self:IsValue("end") then
+            if self:IsCurrentValue("end") then
                 break
             end
         end
@@ -326,7 +326,7 @@ function META:HandleListSeparator(out, i, node)
 
     out[i] = node
 
-    if not self:IsValue(",") then
+    if not self:IsCurrentValue(",") then
         return true
     end
 
@@ -337,13 +337,13 @@ do -- identifier
     function META:ReadIdentifier()
         local node = self:Expression("value")
 
-        if self:IsValue("...") then
+        if self:IsCurrentValue("...") then
             node.value = self:ReadValue("...")
         else
             node.value = self:ReadType("letter")
         end
 
-        if self.ReadTypeExpression and self:IsValue(":") then
+        if self.ReadTypeExpression and self:IsCurrentValue(":") then
             node:ExpectKeyword(":")
             node.explicit_type = self:ReadTypeExpression()
         end
@@ -355,7 +355,7 @@ do -- identifier
         local out = list.new()
 
         for i = 1, max or self:GetLength() do
-            if (not self:IsType("letter") and not self:IsValue("...")) or self:HandleListSeparator(out, i, self:ReadIdentifier()) then
+            if (not self:IsCurrentType("letter") and not self:IsCurrentValue("...")) or self:HandleListSeparator(out, i, self:ReadIdentifier()) then
                 break
             end
         end
@@ -368,7 +368,7 @@ do -- expression
 
     do
         function META:IsFunctionValue()
-            return self:IsValue("function")
+            return self:IsCurrentValue("function")
         end
 
         function META:ReadFunctionValue()
@@ -380,7 +380,7 @@ do -- expression
 
     do
         function META:IsTableSpread()
-            return self:IsValue("...") and (self:IsType("letter", 1) or self:IsValue("{", 1) or self:IsValue("(", 1))
+            return self:IsCurrentValue("...") and (self:IsType("letter", 1) or self:IsValue("{", 1) or self:IsValue("(", 1))
         end
 
         function META:ReadTableSpread()
@@ -393,14 +393,14 @@ do -- expression
 
     function META:ReadTableEntry(i)
         local node
-        if self:IsValue("[") then
+        if self:IsCurrentValue("[") then
             node = self:Expression("table_expression_value")
             :Store("expression_key", true)
             :ExpectKeyword("[")
             :ExpectExpression()
             :ExpectKeyword("]")
             :ExpectKeyword("=")
-        elseif self:IsType("letter") and self:IsValue("=", 1) then
+        elseif self:IsCurrentType("letter") and self:IsValue("=", 1) then
             node = self:Expression("table_key_value")
             :ExpectSimpleIdentifier()
             :ExpectKeyword("=")
@@ -426,7 +426,7 @@ do -- expression
         tree.tokens["separators"] = list.new()
 
         for i = 1, self:GetLength() do
-            if self:IsValue("}") then
+            if self:IsCurrentValue("}") then
                 break
             end
 
@@ -444,12 +444,12 @@ do -- expression
 
             tree.children[i] = entry
 
-            if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
-                self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
+            if not self:IsCurrentValue(",") and not self:IsCurrentValue(";") and not self:IsCurrentValue("}") then
+                self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetCurrentToken() and self:GetCurrentToken().value) or "no token")
                 break
             end
 
-            if not self:IsValue("}") then
+            if not self:IsCurrentValue("}") then
                 tree.tokens["separators"][i] = self:ReadTokenLoose()
             end
         end
@@ -461,7 +461,7 @@ do -- expression
 
     do
         function META:IsExpressionValue()
-            return syntax.IsValue(self:GetToken())
+            return syntax.IsValue(self:GetCurrentToken())
         end
 
         function META:ReadExpressionValue()
@@ -472,6 +472,7 @@ do -- expression
 
     do
         function META:IsCallExpression(no_ambiguous_calls, offset)
+            offset = offset or 0
             if no_ambiguous_calls then
                 return self:IsValue("(", offset)
             end
@@ -482,9 +483,9 @@ do -- expression
         function META:ReadCallExpression(no_ambiguous_calls)
             local node = self:Expression("postfix_call")
 
-            if self:IsValue("{") then
+            if self:IsCurrentValue("{") then
                 node.expressions = list.new(self:ReadTable())
-            elseif self:IsType("string") then
+            elseif self:IsCurrentType("string") then
                 node.expressions = list.new(self:Expression("value"):Store("value", self:ReadTokenLoose()):End())
             else
                 node.tokens["call("] = self:ReadValue("(")
@@ -498,7 +499,7 @@ do -- expression
 
     do
         function META:IsPostfixExpressionIndex()
-            return self:IsValue("[")
+            return self:IsCurrentValue("[")
         end
 
         function META:ReadPostfixExpressionIndex()
@@ -536,7 +537,7 @@ do -- expression
 
         local node
 
-        if self:IsValue("(") then
+        if self:IsCurrentValue("(") then
             local pleft = self:ReadValue("(")
             node = self:ReadExpression(0, no_ambiguous_calls)
             if not node then
@@ -550,7 +551,7 @@ do -- expression
             node.tokens[")"] = node.tokens[")"] or list.new()
             node.tokens[")"]:insert(self:ReadValue(")"))
 
-        elseif syntax.IsPrefixOperator(self:GetToken()) then
+        elseif syntax.IsPrefixOperator(self:GetCurrentToken()) then
             node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
             node.right = self:ReadExpectExpression(math.huge, no_ambiguous_calls)
@@ -563,7 +564,7 @@ do -- expression
             node = self:ReadLSXExpression()
         elseif self:IsExpressionValue() then
             node = self:ReadExpressionValue()
-        elseif self:IsValue("{") then
+        elseif self:IsCurrentValue("{") then
             node = self:ReadTable()
         end
 
@@ -572,20 +573,20 @@ do -- expression
         if node then
             for _ = 1, self:GetLength() do
                 local left = node
-                if not self:GetToken() then break end
+                if not self:GetCurrentToken() then break end
 
-                if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
-                    if self:IsValue(".") or self:IsCallExpression(no_ambiguous_calls, 2) then
+                if (self:IsCurrentValue(".") or self:IsCurrentValue(":")) and self:IsType("letter", 1) then
+                    if self:IsCurrentValue(".") or self:IsCallExpression(no_ambiguous_calls, 2) then
                         node = self:Expression("binary_operator")
                         node.value = self:ReadTokenLoose()
                         node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
                         node.left = left
                         node:End()
-                    elseif self:IsValue(":") then
+                    elseif self:IsCurrentValue(":") then
                         node.tokens[":"] = self:ReadValue(":")
                         node.explicit_type = self:ReadTypeExpression()
                     end
-                elseif syntax.IsPostfixOperator(self:GetToken()) then
+                elseif syntax.IsPostfixOperator(self:GetCurrentToken()) then
                     node = self
                         :Expression("postfix_operator")
                             :Store("left", left)
@@ -600,10 +601,10 @@ do -- expression
                 elseif self:IsPostfixExpressionIndex() then
                     node = self:ReadPostfixExpressionIndex()
                     node.left = left
-                elseif self:IsValue("as") then
+                elseif self:IsCurrentValue("as") then
                     node.tokens["as"] = self:ReadValue("as")
                     node.explicit_type = self:ReadTypeExpression()
-                elseif self:IsValue("is") then
+                elseif self:IsCurrentValue("is") then
                     node.tokens["is"] = self:ReadValue("is")
                     node.explicit_type = self:ReadTypeExpression()
                 elseif self:IsTypeCall() then
@@ -627,9 +628,9 @@ do -- expression
             end
         end
 
-        self:CheckForIntegerDivisionOperator(self:GetToken())
+        self:CheckForIntegerDivisionOperator(self:GetCurrentToken())
 
-        while syntax.GetBinaryOperatorInfo(self:GetToken()) and syntax.GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
+        while syntax.GetBinaryOperatorInfo(self:GetCurrentToken()) and syntax.GetBinaryOperatorInfo(self:GetCurrentToken()).left_priority > priority do
             local left = node
             node = self:Expression("binary_operator")
             node.value = self:ReadTokenLoose()
@@ -656,8 +657,8 @@ do -- expression
     end
 
     function META:ReadExpectExpression(priority, no_ambiguous_calls)
-        if IsDefinetlyNotStartOfExpression(self:GetToken()) then
-            self:Error("expected beginning of expression, got $1", nil, nil, self:GetToken() and self:GetToken().value ~= "" and self:GetToken().value or self:GetToken().type)
+        if IsDefinetlyNotStartOfExpression(self:GetCurrentToken()) then
+            self:Error("expected beginning of expression, got $1", nil, nil, self:GetCurrentToken() and self:GetCurrentToken().value ~= "" and self:GetCurrentToken().value or self:GetCurrentToken().type)
             return
         end
 
@@ -682,14 +683,14 @@ end
 
 do -- statements
     function META:ReadRemainingStatement()
-        if self:IsType("end_of_file") then
+        if self:IsCurrentType("end_of_file") then
             return
         end
 
-        local start = self:GetToken()
+        local start = self:GetCurrentToken()
         local left = self:ReadExpressionList(math.huge)
 
-        if self:IsValue("=") then
+        if self:IsCurrentValue("=") then
             local node = self:Statement("assignment")
             node:ExpectKeyword("=")
             node.left = left
@@ -704,7 +705,7 @@ do -- statements
             return node:End()
         end
 
-        self:Error("expected assignment or call expression got $1 ($2)", start, self:GetToken(), self:GetToken().type, self:GetToken().value)
+        self:Error("expected assignment or call expression got $1 ($2)", start, self:GetCurrentToken(), self:GetCurrentToken().type, self:GetCurrentToken().value)
     end
 
     function META:ReadStatement()

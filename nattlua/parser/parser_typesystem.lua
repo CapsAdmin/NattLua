@@ -6,7 +6,7 @@ return function(META)
 
     do
         function META:IsInlineTypeCode()
-            return self:IsType("type_code")
+            return self:IsCurrentType("type_code")
         end
 
         function META:ReadInlineTypeCode()
@@ -26,11 +26,11 @@ return function(META)
 
         out[i] = node
 
-        if not self:IsValue(",") and not self:IsValue(";") then
+        if not self:IsCurrentValue(",") and not self:IsCurrentValue(";") then
             return true
         end
 
-        if self:IsValue(";") then
+        if self:IsCurrentValue(";") then
             node.tokens[","] = self:ReadValue(";")
         else
             node.tokens[","] = self:ReadValue(",")
@@ -61,7 +61,7 @@ return function(META)
 
     do
         function META:IsLocalTypeFunctionStatement()
-            return self:IsValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2)
+            return self:IsCurrentValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2)
         end
 
         function META:ReadLocalTypeFunctionStatement()
@@ -78,7 +78,7 @@ return function(META)
 
     do
         function META:IsTypeFunctionStatement()
-            return self:IsValue("type") and self:IsValue("function", 1)
+            return self:IsCurrentValue("type") and self:IsValue("function", 1)
         end
 
         function META:ReadTypeFunctionStatement()
@@ -86,7 +86,7 @@ return function(META)
             node.tokens["type"] = self:ReadValue("type")
             node.tokens["function"] = self:ReadValue("function")
             local force_upvalue
-            if self:IsValue("^") then
+            if self:IsCurrentValue("^") then
                 force_upvalue = true
                 self:Advance(1)
             end
@@ -115,7 +115,7 @@ return function(META)
 
     do
         function META:IsLocalGenericsTypeFunctionStatement()
-            return self:IsValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)
+            return self:IsCurrentValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)
         end
 
         function META:ReadLocalGenericsTypeFunctionStatement()
@@ -129,7 +129,7 @@ return function(META)
     end
 
     function META:ReadTypeFunctionArgument()
-        if (self:IsType("letter") or self:IsValue("...")) and self:IsValue(":", 1) then
+        if (self:IsCurrentType("letter") or self:IsCurrentValue("...")) and self:IsValue(":", 1) then
             local identifier = self:ReadTokenLoose()
             local token = self:ReadValue(":")
             local exp = self:ReadTypeExpression()
@@ -142,7 +142,7 @@ return function(META)
     end
 
     function META:HasExplicitFunctionReturn()
-        return self:IsValue(":") 
+        return self:IsCurrentValue(":") 
     end
 
     function META:ReadExplicitFunctionReturn(node)
@@ -176,11 +176,11 @@ return function(META)
             end
         end
 
-        if self:IsValue("...") then
+        if self:IsCurrentValue("...") then
             local vararg = self:Expression("value")
             vararg.value = self:ReadValue("...")
             
-            if self:IsType("letter") then
+            if self:IsCurrentType("letter") then
                 vararg.explicit_type = self:ReadValue()
             end
             node.identifiers:insert(vararg)
@@ -188,11 +188,11 @@ return function(META)
 
         node.tokens["arguments)"] = self:ReadValue(")", node.tokens["arguments("])
 
-        if self:IsValue(":") then
+        if self:IsCurrentValue(":") then
             node.tokens[":"] = self:ReadValue(":")
             node.return_types = self:ReadTypeExpressionList()
         else
-            local start = self:GetToken()
+            local start = self:GetCurrentToken()
             node.statements = self:ReadStatements({["end"] = true})
             node.tokens["end"] = self:ReadValue("end", start, start)
         end
@@ -205,7 +205,7 @@ return function(META)
 
         node.identifiers = self:ReadIdentifierList()
 
-        if self:IsValue("...") then
+        if self:IsCurrentValue("...") then
             local vararg = self:Expression("value")
             vararg.value = self:ReadValue("...")
             node.identifiers:insert(vararg)
@@ -213,11 +213,11 @@ return function(META)
 
         node.tokens["arguments)"] = list.new(self:ReadValue("|>", node.tokens["arguments("]))
 
-        if self:IsValue(":") then
+        if self:IsCurrentValue(":") then
             node.tokens[":"] = self:ReadValue(":")
             node.return_types = self:ReadTypeExpressionList()
         else
-            local start = self:GetToken()
+            local start = self:GetCurrentToken()
             node.statements = self:ReadStatements({["end"] = true})
             node.tokens["end"] = self:ReadValue("end", start, start)
         end
@@ -249,7 +249,7 @@ return function(META)
 
     function META:ReadTypeTableEntry(i)
         local node
-        if self:IsValue("[") then
+        if self:IsCurrentValue("[") then
             node = self:Expression("table_expression_value")
             :Store("expression_key", true)
             :ExpectKeyword("[")
@@ -258,7 +258,7 @@ return function(META)
 
             node:ExpectKeyword("]")
             :ExpectKeyword("=")
-        elseif self:IsType("letter") and self:IsValue("=", 1) then
+        elseif self:IsCurrentType("letter") and self:IsValue("=", 1) then
             node = self:Expression("table_key_value")
             :ExpectSimpleIdentifier()
             :ExpectKeyword("=")
@@ -280,7 +280,7 @@ return function(META)
         tree.tokens["separators"] = list.new()
 
         for i = 1, math_huge do
-            if self:IsValue("}") then
+            if self:IsCurrentValue("}") then
                 break
             end
 
@@ -292,12 +292,12 @@ return function(META)
 
             tree.children[i] = entry
 
-            if not self:IsValue(",") and not self:IsValue(";") and not self:IsValue("}") then
-                self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetToken() and self:GetToken().value) or "no token")
+            if not self:IsCurrentValue(",") and not self:IsCurrentValue(";") and not self:IsCurrentValue("}") then
+                self:Error("expected $1 got $2", nil, nil,  {",", ";", "}"}, (self:GetCurrentToken() and self:GetCurrentToken().value) or "no token")
                 break
             end
 
-            if not self:IsValue("}") then
+            if not self:IsCurrentValue("}") then
                 tree.tokens["separators"][i] = self:ReadTokenLoose()
             end
         end
@@ -309,7 +309,7 @@ return function(META)
 
     do
         function META:IsTypeCall()
-            return self:IsValue("<|")
+            return self:IsCurrentValue("<|")
         end
 
         function META:ReadTypeCall()
@@ -328,12 +328,12 @@ return function(META)
         local node
 
         local force_upvalue
-        if self:IsValue("^") then
+        if self:IsCurrentValue("^") then
             force_upvalue = true
             self:Advance(1)
         end
 
-        if self:IsValue("(") then
+        if self:IsCurrentValue("(") then
             local pleft = self:ReadValue("(")
             node = self:ReadTypeExpression(0)
             if not node then
@@ -348,30 +348,30 @@ return function(META)
             node.tokens[")"] = node.tokens[")"] or list.new()
             node.tokens[")"]:insert(self:ReadValue(")"))
 
-        elseif syntax.typesystem.IsPrefixOperator(self:GetToken()) then
+        elseif syntax.typesystem.IsPrefixOperator(self:GetCurrentToken()) then
             node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
             node.right = self:ReadTypeExpression(math_huge)
-        elseif self:IsValue("...") and self:IsType("letter", 1) then
+        elseif self:IsCurrentValue("...") and self:IsType("letter", 1) then
             node = self:Expression("value")
             node.value = self:ReadValue("...")
             node.explicit_type = self:ReadTypeExpression()
-        elseif self:IsType("letter") and self:IsValue("...", 1) then
+        elseif self:IsCurrentType("letter") and self:IsValue("...", 1) then
             node = self:Expression("vararg_tuple")
             node.value = self:ReadTokenLoose()
             node.tokens["..."] = self:ReadValue("...")
-        elseif self:IsValue("function") and self:IsValue("(", 1) then
+        elseif self:IsCurrentValue("function") and self:IsValue("(", 1) then
             node = self:ReadTypeFunction()
-        elseif syntax.typesystem.IsValue(self:GetToken()) then
+        elseif syntax.typesystem.IsValue(self:GetCurrentToken()) then
             node = self:Expression("value")
             node.value = self:ReadTokenLoose()
-        elseif self:IsValue("{") then
+        elseif self:IsCurrentValue("{") then
             node = self:ReadTypeTable()
-        elseif self:IsType("$") and self:IsType("string", 1) then
+        elseif self:IsCurrentType("$") and self:IsType("string", 1) then
             node = self:Expression("type_string")
             node.tokens["$"] = self:ReadTokenLoose("...")
             node.value = self:ReadType("string")
-        elseif self:IsValue("[") then
+        elseif self:IsCurrentValue("[") then
             node = self:Expression("type_list")
             node.tokens["["] = self:ReadValue("[")
             node.expressions = self:ReadTypeExpressionList()
@@ -383,24 +383,24 @@ return function(META)
         if node then
             for _ = 1, self:GetLength() do
                 local left = node
-                if not self:GetToken() then break end
+                if not self:GetCurrentToken() then break end
 
-                if (self:IsValue(".") or self:IsValue(":")) and self:IsType("letter", 1) then
-                    if self:IsValue(".") or self:IsCallExpression(true, 2) then
+                if (self:IsCurrentValue(".") or self:IsCurrentValue(":")) and self:IsType("letter", 1) then
+                    if self:IsCurrentValue(".") or self:IsCallExpression(true, 2) then
                         node = self:Expression("binary_operator")
                         node.value = self:ReadTokenLoose()
                         node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
                         node.left = left
                         node:End()
-                    elseif self:IsValue(":") then
+                    elseif self:IsCurrentValue(":") then
                         node.tokens[":"] = self:ReadValue(":")
                         node.explicit_type = self:ReadTypeExpression()
                     end
-                elseif syntax.typesystem.IsPostfixOperator(self:GetToken()) then
+                elseif syntax.typesystem.IsPostfixOperator(self:GetCurrentToken()) then
                     node = self:Expression("postfix_operator")
                     node.left = left
                     node.value = self:ReadTokenLoose()
-                elseif self:IsValue("[") and self:IsValue("]", 1) then
+                elseif self:IsCurrentValue("[") and self:IsValue("]", 1) then
                     node = self:Expression("type_list")
                     node.tokens["["] = self:ReadValue("[")
                     node.expressions = self:ReadTypeExpressionList()
@@ -418,7 +418,7 @@ return function(META)
                 elseif self:IsPostfixExpressionIndex() then
                         node = self:ReadPostfixExpressionIndex()
                         node.left = left
-                elseif self:IsValue("as") then
+                elseif self:IsCurrentValue("as") then
                     node.tokens["as"] = self:ReadValue("as")
                     node.explicit_type = self:ReadTypeExpression()
                 else
@@ -436,8 +436,8 @@ return function(META)
             first.force_upvalue = force_upvalue
         end
 
-        while syntax.typesystem.GetBinaryOperatorInfo(self:GetToken()) and syntax.typesystem.GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
-            local op = self:GetToken()
+        while syntax.typesystem.GetBinaryOperatorInfo(self:GetCurrentToken()) and syntax.typesystem.GetBinaryOperatorInfo(self:GetCurrentToken()).left_priority > priority do
+            local op = self:GetCurrentToken()
             local right_priority = syntax.typesystem.GetBinaryOperatorInfo(op).right_priority
             if not op or not right_priority then break end
             self:Advance(1)
@@ -456,7 +456,7 @@ return function(META)
 
     do
         function META:IsLocalTypeDeclarationStatement()
-            return self:IsValue("local") and self:IsValue("type", 1) and syntax.GetTokenType(self:GetToken(2)) == "letter"
+            return self:IsCurrentValue("local") and self:IsValue("type", 1) and syntax.GetTokenType(self:GetToken(2)) == "letter"
         end
 
         function META:ReadLocalTypeDeclarationStatement()
@@ -468,7 +468,7 @@ return function(META)
             node.left = self:ReadIdentifierList()
             node.environment = "typesystem"
 
-            if self:IsValue("=") then
+            if self:IsCurrentValue("=") then
                 node.tokens["="] = self:ReadValue("=")
                 node.right = self:ReadTypeExpressionList()
             end
@@ -479,7 +479,7 @@ return function(META)
 
     do
         function META:IsInterfaceStatement()
-            return self:IsValue("interface") and self:IsType("letter", 1)
+            return self:IsCurrentValue("interface") and self:IsType("letter", 1)
         end
 
         function META:ReadInterfaceStatement()
@@ -489,7 +489,7 @@ return function(META)
             node.tokens["{"] = self:ReadValue("{")
             local list = list.new()
             for i = 1, math_huge do
-                if not self:IsType("letter") then break end
+                if not self:IsCurrentType("letter") then break end
                 local node = self:Statement("interface_declaration")
                 node.left = self:ReadType("letter")
                 node.tokens["="] = self:ReadValue("=")
@@ -507,7 +507,7 @@ return function(META)
 
     do
         function META:IsTypeAssignment()
-            return self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))
+            return self:IsCurrentValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))
         end
 
         function META:ReadTypeAssignment()
@@ -517,7 +517,7 @@ return function(META)
             node.left = self:ReadTypeExpressionList()
             node.environment = "typesystem"
 
-            if self:IsValue("=") then
+            if self:IsCurrentValue("=") then
                 node.tokens["="] = self:ReadValue("=")
                 node.right = self:ReadTypeExpressionList()
             end
@@ -528,7 +528,7 @@ return function(META)
 
     do
         function META:IsImportStatement()
-            return self:IsValue("import")
+            return self:IsCurrentValue("import")
         end
 
         function META:ReadImportStatement()
@@ -537,7 +537,7 @@ return function(META)
             node.left = self:ReadIdentifierList()
             node.tokens["from"] = self:ReadValue("from")
 
-            local start = self:GetToken()
+            local start = self:GetCurrentToken()
 
             node.expressions = self:ReadExpressionList()
 
@@ -562,7 +562,7 @@ return function(META)
 
     do
         function META:IsImportExpression()
-            return self:IsValue("import") and self:IsValue("(", 1)
+            return self:IsCurrentValue("import") and self:IsValue("(", 1)
         end
 
         function META:ReadImportExpression()
@@ -570,7 +570,7 @@ return function(META)
             node.tokens["import"] = self:ReadValue("import")
             node.tokens["("] = list.new(self:ReadValue("("))
 
-            local start = self:GetToken()
+            local start = self:GetCurrentToken()
 
             node.expressions = self:ReadExpressionList()
 

@@ -4,6 +4,9 @@ end
 
 local helpers = require("nattlua.other.helpers")
 
+helpers.JITOptimize()
+--helpers.EnableJITDumper()
+
 local nl = {}
 
 function nl.load(code, name, config)

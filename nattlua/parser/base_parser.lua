@@ -287,9 +287,9 @@ return function(META)
                 self:OnNode(node)
             end
 
-            node.parent = self.nodes[1]
+            node.parent = self.nodes[#self.nodes]
 
-            self.nodes:insert(1, node)
+            self.nodes:insert(node)
 
             return node
         end
@@ -304,7 +304,7 @@ return function(META)
             stop = stop.stop
         end
 
-        local tk = self:GetToken()
+        local tk = self:GetCurrentToken()
         start = start or tk and tk.start or 0
         stop = stop or tk and tk.stop or 0
 
@@ -315,17 +315,18 @@ return function(META)
 
     end
 
-    function META:GetToken(offset)
-        if offset then
-            return self.tokens[self.i + offset]
-        end
+    function META:GetCurrentToken()
         return self.tokens[self.i]
+    end
+
+    function META:GetToken(offset)
+        return self.tokens[self.i + offset]
     end
 
     function META:ReadTokenLoose()
         self:Advance(1)
         local tk = self:GetToken(-1)
-        tk.parent = self.nodes[1]
+        tk.parent = self.nodes[#self.nodes]
         return tk
     end
 
@@ -354,17 +355,25 @@ return function(META)
         return self:GetToken(offset) and self:GetToken(offset).type == str
     end
 
+    function META:IsCurrentValue(str)
+        return self:GetCurrentToken() and self:GetCurrentToken().value == str
+    end
+
+    function META:IsCurrentType(str)
+        return self:GetCurrentToken() and self:GetCurrentToken().type == str
+    end
+
     do
         local function error_expect(self, str, what, start, stop)
-            if not self:GetToken() then
+            if not self:GetCurrentToken() then
                 self:Error("expected $1 $2: reached end of code", start, stop, what, str)
             else
-                self:Error("expected $1 $2: got $3", start, stop, what, str, self:GetToken()[what])
+                self:Error("expected $1 $2: got $3", start, stop, what, str, self:GetCurrentToken()[what])
             end
         end
 
         function META:ReadValue(str, start, stop)
-            if not self:IsValue(str) then
+            if not self:IsCurrentValue(str) then
                 error_expect(self, str, "value", start, stop)
             end
 
@@ -372,7 +381,7 @@ return function(META)
         end
 
         function META:ReadType(str, start, stop)
-            if not self:IsType(str) then
+            if not self:IsCurrentType(str) then
                 error_expect(self, str, "type", start, stop)
             end
 
@@ -381,8 +390,8 @@ return function(META)
     end
 
     function META:ReadValues(values, start, stop)
-        if not self:GetToken() or not values[self:GetToken().value] then
-            local tk = self:GetToken()
+        if not self:GetCurrentToken() or not values[self:GetCurrentToken().value] then
+            local tk = self:GetCurrentToken()
             if not tk then
                 self:Error("expected $1: reached end of code", start, stop, values)
             end
@@ -416,7 +425,7 @@ return function(META)
 
         local shebang
 
-        if self:IsType("shebang") then
+        if self:IsCurrentType("shebang") then
             shebang = self:Statement("shebang")
             shebang.tokens["shebang"] = self:ReadType("shebang")
         end
@@ -427,7 +436,7 @@ return function(META)
             node.statements:insert(1, shebang)
         end
 
-        if self:IsType("end_of_file") then
+        if self:IsCurrentType("end_of_file") then
             local eof = self:Statement("end_of_file")
             eof.tokens["end_of_file"] = self.tokens[#self.tokens]
             node.statements:insert(eof)
@@ -440,7 +449,7 @@ return function(META)
         local out = list.new()
 
         for i = 1, self:GetLength() do
-            if not self:GetToken() or stop_token and stop_token[self:GetToken().value] then
+            if not self:GetCurrentToken() or stop_token and stop_token[self:GetCurrentToken().value] then
                 break
             end
 
@@ -460,7 +469,7 @@ return function(META)
 
     do
         function META:IsSemicolonStatement()
-            return self:IsValue(";")
+            return self:IsCurrentValue(";")
         end
 
         function META:ReadSemicolonStatement()
