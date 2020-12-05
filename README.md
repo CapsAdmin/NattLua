@@ -1,7 +1,7 @@
 # About
-NattLua is a superset of Lua that introduces an informal type system. It's compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1). It provides you with tools to analyze, refactor and gradually type your code. It comes with a language server and a library to manipulate and analyze Lua code.
+NattLua is a superset of LuaJIT that introduces a structural type system and verbose inference. Its purpose is to provide you with tools to analyze and optionally constrain your code with types in spirit of Lua. 
 
-Complex type structures, involving array-like tables, map-like tables, and metatables are supported:
+Complex type structures, involving array-like tables, map-like tables, metatables, and more are supported:
 
 ```lua
 local Vector = {}
@@ -23,6 +23,8 @@ setmetatable(Vector, {
 
 local new_vector = Vector(1,2,3) + Vector(100,100,100)
 ```
+
+It's compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1). 
 
 See more examples further down this readme.
 
