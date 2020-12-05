@@ -25,8 +25,10 @@ local function run_nattlua(path)
     end
     local res = assert(c:Emit())
     require("nattlua.runtime.base_runtime")
-    io.write("== code result ==\n")
-    io.write(res, "\n")
+    if not c.code:find("%-%-%s-DISABLE_CODE_RESULT") then
+        io.write("== code result ==\n")
+        io.write(res, "\n")
+    end
     --assert(load(res))()
 end
 
