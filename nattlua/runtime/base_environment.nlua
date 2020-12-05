@@ -287,19 +287,24 @@ do -- globals
 	end
 
 	type function load(code: string | (function(): string | nil), chunk_name: string | nil)
-		if not code:IsLiteral() then
+		if not code:IsLiteral() or code.Type == "union" then
 			return types.Any
 		end
 
-		local str = code:GetData()
+		local str
+        
+        if code.Type == "string" and code:IsLiteral() then
+            str = code:GetData()
 
-		local ok, err = pcall(function()
-			str = str:gsub("\\(.)", function(char) return assert(load("return '\\" .. char .. "'"))() end)
-		end)
+            local ok, err = pcall(function()
+                str = str:gsub("\\(.)", function(char) return assert(load("return '\\" .. char .. "'"))() end)
+            end)
 
-		if not ok then
-			return ok, err
-		end
+            if not ok then
+                return ok, err
+            end
+        end
+
 
 		local code_data = nl.Code(str, chunk_name and chunk_name:GetData() or nil)
 		assert(code_data:Lex())
@@ -355,12 +360,14 @@ do -- globals
 		end
 
         if obj:IsFalsy() then
-            analyzer:ThrowError(msg, obj)
+            analyzer:ThrowError(msg and msg:GetData() or "unknown error", obj)
         end
+
+        return types.Any()
 	end
 
 	type function error(msg: string, level: number | nil)
-        analyzer:ThrowError(msg)
+        analyzer:ThrowError(msg:GetData())
 	end
 
 	type function pcall(callable: any, ...)
@@ -470,7 +477,7 @@ type ffi = {
 	new = (function(string | ctype, number, any...): cdata),
 	copy = (function(cdata, cdata | nil, number | string | nil): nil),
 	alignof = (function(ctype): number),
-	cast = (function(ctype | string, cdata): cdata),
+	cast = (function(ctype | string, cdata | string): cdata),
 	typeof = (function(ctype): ctype),
 	load = (function(string, boolean): userdata) | (function(string): userdata),
 	sizeof = (function(ctype, number): number) | (function(ctype): number),

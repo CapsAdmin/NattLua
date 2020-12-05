@@ -64,6 +64,8 @@ return function(META)
         else
             self.lua_error_thrown = msg
         end
+
+        self:ReportDiagnostic(self.current_statement, msg)
     end
 
     function META:Return(types)
@@ -136,7 +138,7 @@ return function(META)
                     upvalue.data
                 )
             end
-
+        
             return self:CopyUpvalue(upvalue, union)
         end
 
