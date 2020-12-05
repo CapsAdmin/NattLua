@@ -229,7 +229,6 @@ return function(META)
         end
 
         kernel = kernel .. "\nend"
-
         return assert(load(kernel))()
     end
 
@@ -394,26 +393,34 @@ return function(META)
             token.value = self:GetChars(token.start, token.stop)
         end
 
-        local buffer = list2()
-        local non_whitespace = list2()
+        local whitespace_buffer = {}
+        local whitespace_buffer_i = 1
+
+        local non_whitespace = {}
+        local non_whitespace_i = 1
+
 
         for _, token in ipairs(tokens) do
             if token.type ~= "discard" then
                 if token.whitespace then
                     token.whitespace = false
 
-                    buffer:add(token)
+                    whitespace_buffer[whitespace_buffer_i] = token
+                    whitespace_buffer_i = whitespace_buffer_i + 1
+
                 else
-                    token.whitespace = buffer:get()
+                    token.whitespace = list.fromtable(whitespace_buffer)
 
-                    non_whitespace:add(token)
+                    non_whitespace[non_whitespace_i] = token
+                    non_whitespace_i = non_whitespace_i + 1
 
-                    buffer:clear()
+                    whitespace_buffer = {}
+                    whitespace_buffer_i = 1
                 end
             end
         end
 
-        tokens = non_whitespace:get()
+        local tokens = list.fromtable(non_whitespace)
 
         tokens[#tokens].value = ""
 

@@ -427,7 +427,7 @@ function META:OnInitialize()
 end
 
 function META:Read()
-    if self:ReadRemainingCommentEscape() then return "discard" end
+    if self:ReadRemainingCommentEscape() then return "discard", false end
 
     if
         self:ReadSpace() then               return "space", true elseif

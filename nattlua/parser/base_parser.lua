@@ -348,19 +348,19 @@ return function(META)
     end
 
     function META:IsValue(str, offset)
-        return self:GetToken(offset) and self:GetToken(offset).value == str
+        return self:GetToken(offset).value == str
     end
 
     function META:IsType(str, offset)
-        return self:GetToken(offset) and self:GetToken(offset).type == str
+        return self:GetToken(offset).type == str
     end
 
     function META:IsCurrentValue(str)
-        return self:GetCurrentToken() and self:GetCurrentToken().value == str
+        return self:GetCurrentToken().value == str
     end
 
     function META:IsCurrentType(str)
-        return self:GetCurrentToken() and self:GetCurrentToken().type == str
+        return self:GetCurrentToken().type == str
     end
 
     do
