@@ -56,7 +56,7 @@ return function(META)
                 msg = msg,
                 obj = obj,
             }
-
+            
             self:GetScope():Return(obj:IsTruthy())
             local copy = self:CloneCurrentScope()
             copy:MakeUncertain(obj:IsTruthy())
@@ -92,17 +92,24 @@ return function(META)
 
                 do
                     local mutations = {}
-                    do
-                        local scope = upvalue.mutations[1]
-                        for i,v in ipairs(upvalue.mutations) do
-                            if v.change ~= scope then
-                                scope = v.scope
 
+
+                    local function belongs_to_right_if_clause(subject, scope)
+                        if subject.if_statement and subject.if_statement == scope.if_statement then
+                            return subject == scope
+                        end
+
+                        return true
+                    end
+
+                    do
+                        local current_scope-- = upvalue.mutations[1].scope
+                        for i, mutation in ipairs(upvalue.mutations) do
+                            do -- longest match backwards to same scope
                                 local from = #mutations
-                                local to
 
                                 for i = #mutations, 1, -1 do
-                                    if mutations[i].scope == v.scope then
+                                    if mutations[i].scope == mutation.scope then
                                         for i = i, from do 
                                             mutations[i].remove_me = true 
                                         end
@@ -115,8 +122,44 @@ return function(META)
                                         table.remove(mutations, i)
                                     end
                                 end
-                                
-                                table.insert(mutations, v)
+                            end
+                            
+                            table.insert(mutations, mutation)                            
+                        end
+
+                        -- remove scopes that are related to this if clause
+                        if scope.if_statement then
+                            for i = #mutations, 1, -1 do
+                                if mutations[i].scope.if_statement == scope.if_statement and scope ~= mutations[i].scope then
+                                    table.remove(mutations, i)
+                                end
+                            end
+                        end
+
+                        do -- remove anything before the last else part
+                            local found_else = false
+                            for i = #mutations, 1, -1 do
+                                local change = mutations[i]
+
+                                if change.scope.if_statement and change.scope.test_condition_inverted then
+                                    
+                                    local start = i
+                                    local statement = change.scope.if_statement
+                                    while true do
+                                        local change = mutations[i]
+                                        if not change then break end
+                                        if change.scope.if_statement ~= statement then
+                                            for i = i, 1, -1 do
+                                                table.remove(mutations, i)
+                                            end
+                                            break
+                                        end                                       
+                                    
+                                        i = i - 1
+                                    end
+
+                                    break
+                                end
                             end
                         end
                     end
@@ -135,9 +178,9 @@ return function(META)
                     return union
                 end
             end
-
-            local union = resolve(#upvalue.mutations, scope)
             
+            local union = resolve(#upvalue.mutations, scope)
+
             value = union
         end
 
@@ -156,13 +199,15 @@ return function(META)
             ]]
 
             local scope = scope:FindScopeFromTestCondition(value)
-
+            
             if scope then 
+                local t
                 if scope.test_condition_inverted then
-                    return scope.test_condition.falsy_union or value:GetFalsy()
+                    t = scope.test_condition.falsy_union or value:GetFalsy()
                 else
-                    return scope.test_condition.truthy_union or value:GetTruthy()
+                    t = scope.test_condition.truthy_union or value:GetTruthy()
                 end
+                return t
             end
         end
 
@@ -172,7 +217,6 @@ return function(META)
     function META:OnEnterConditionalScope(data)
         local scope = self:GetScope()
         self:FireEvent("enter_conditional_scope", scope, data)
-
         scope.if_statement = data.type == "if" and data.statement
         scope:SetTestCondition(data.condition, data.is_else)
         scope:MakeUncertain(data.condition:IsUncertain())

@@ -152,7 +152,7 @@ function META:Copy()
 
     for env, data in pairs(self.upvalues) do
         for _, obj in ipairs(data.list) do
-            copy:CreateValue(obj.key, obj.data, env)
+            --copy:CreateValue(obj.key, obj.data, env)
         end
     end
     
@@ -194,14 +194,22 @@ function META:GetTestCondition()
     return obj, scope and scope.test_condition
 end
 
-local function compare_condition(condition, obj)
-    if not condition then return false end
+local compare_condition
 
-    if condition == obj then return true end
-
-    if condition.type_checked == obj then
-        return true
+local function cmp(a, b, context)
+    if not context[a] then
+        context[a] = {}
+        context[a][b] = compare_condition(a, b, context)
     end
+    return context[a][b]
+end
+
+function compare_condition(condition, obj, context)
+    context = context or {}
+
+    if not condition then return false end
+    
+    if condition == obj then return true end
         
     if condition.upvalue and obj.upvalue then
         if condition.upvalue == obj.upvalue then
@@ -209,16 +217,20 @@ local function compare_condition(condition, obj)
         end
     end
 
-    if condition.source then
-        return compare_condition(condition.source, obj)
+    if condition.type_checked then
+        return cmp(condition.type_checked, obj, context)
     end
 
     if condition.source_left then
-        return compare_condition(condition.source_left, obj)
+        return cmp(condition.source_left, obj, context)
     end
 
     if condition.source_right then
-        return compare_condition(condition.source_right, obj)
+        return cmp(condition.source_right, obj, context)
+    end
+
+    if condition.source then
+        return cmp(condition.source, obj, context)
     end
 
     return false

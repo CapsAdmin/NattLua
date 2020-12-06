@@ -119,6 +119,7 @@ return function(META)
                     end
                 end
             end
+
             
             if self.type_checked then
                 new_union.type_checked = self.type_checked

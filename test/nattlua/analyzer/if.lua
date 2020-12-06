@@ -173,7 +173,7 @@ run[[
     end
 ]]
 
-run([[
+pending([[
     local a: nil | 1
 
     if not a or true and a or false then
@@ -545,7 +545,7 @@ run[[
     type_assert(x, _ as -1 | 0 | 1)
 ]]
 
-run[[
+pending[[
     local MAYBE: boolean
     local x = 0
     if MAYBE then x = x + 1 end -- 1
@@ -736,3 +736,185 @@ pending[[
 
     type_assert(a, _ as 1 | nil)
 ]]
+
+run[=[
+    --DISABLE_CODE_RESULT
+
+    local type function type_assewrt(what, expect)
+        print(tostring(what) .. " == " .. tostring(expect))
+    end
+    
+    do
+        local x = 1
+        type_assert<|x, 1|>
+    end
+    
+    do
+        local x = 1
+        do
+            type_assert<|x, 1|>
+        end
+    end
+    
+    do
+        local x = 1
+        x = 2
+        type_assert<|x, 2|>
+    end
+    
+    do
+        local x = 1
+        if true then
+            x = 2
+        end
+        type_assert<|x, 2|>
+    end
+    
+    do
+        local x = 1
+        if MAYBE then
+            x = 2
+        end
+        type_assert<|x, 1 | 2|>
+    end
+    
+    do
+        local x = 1
+        if MAYBE then
+            type_assert<|x, 1|>
+            x = 2
+            type_assert<|x, 2|>
+        end
+        type_assert<|x, 1|2|>
+    end
+    
+    do
+        local x = 1
+    
+        if MAYBE then
+            type_assert<|x, 1|>
+            x = 1.5
+            type_assert<|x, 1.5|>
+            x = 1.75
+            type_assert<|x, 1.75|>
+            if MAYBE then
+                x = 2
+                if MAYBE then
+                    x = 2.5
+                end
+                type_assert<|x, 2 | 2.5|>
+            end
+            x = 3
+            type_assert<|x, 3|>
+        end
+        
+        type_assert<|x, 1 | 3|>
+    end
+    
+    do return end
+    do
+        local x = 1
+    
+        if MAYBE then
+            if true then
+                do
+                    x = 1337
+                end
+            end
+            type_assert<|x, 1337|>
+            x = 2
+            type_assert<|x, 2|>
+        else
+            type_assert<|x, 1|>
+            x = 66
+        end
+        
+        type_assert<|x, 1 | 2|>
+    end 
+    
+    do
+        local x = 1
+    
+        if MAYBE then
+            x = 2
+            type_assert<|x, 2|>
+        else
+            type_assert<|x, 1|>
+            x = 3
+        end
+        type_assert<|x, 2 | 3|>
+    end
+
+    do
+        local x = 1
+    
+        if MAYBE then
+            x = 2
+        elseif MAYBE then
+            x = 3
+        elseif MAYBE then
+            x = 4
+        end
+    
+        type_assert<|x, 1|2|3|4|>
+    end
+
+    do
+        local x = 1
+    
+        if MAYBE then
+            x = 2
+        elseif MAYBE then
+            x = 3
+        elseif MAYBE then
+            x = 4
+        else
+            x = 5
+        end
+    
+        type_assert<|x, 5|2|3|4|>
+    end
+
+    do
+        local x = 1
+    
+        
+        if MAYBE then
+            x = 2
+    
+            if MAYBE then
+                x = 1337
+            end
+    
+            x = 0 -- the last one counts
+    
+        elseif MAYBE then
+            x = 3
+        elseif MAYBE then
+            x = 4
+        end
+    
+        type_assert<|x, 0 | 1 | 3 | 4|>
+    end
+    
+    do return end
+    --[[
+    elseif MAYBE then
+        type_assert<|x, 1|>
+        x = 3
+        type_assert<|x, 3|>
+    elseif MAYBE then
+        type_assert<|x, 1|>
+        x = 4
+        type_assert<|x, 4|>
+    else
+        type_assert<|x, 1|>
+        x = 5
+        type_assert<|x, 5|>
+    end
+    
+    print(x)
+    
+    --type_assert<|x, 1 | 2 | 3 | 4|>
+    ]]
+]=]

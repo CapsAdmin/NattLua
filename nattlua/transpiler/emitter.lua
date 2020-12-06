@@ -201,7 +201,7 @@ do
         emit_function_body(self, node)
     end
 
-    function META:EmitTypeFunctionStatement(node)
+    function META:EmitTypeFunctionStatement(node) do return end
         self:Whitespace("\t")
         if node.tokens["local"] then
             self:EmitToken(node.tokens["local"])
