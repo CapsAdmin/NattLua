@@ -67,6 +67,12 @@ function META:RemoveType(e)
     end
 end
 
+
+function META:Clear()
+    self.datai = {}
+    self.data = {}
+end
+
 function META:Get(key, from_table)
     key = types.Cast(key)
 

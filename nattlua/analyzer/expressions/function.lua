@@ -55,12 +55,12 @@ return function(META)
         end
     
         if node.self_call and node.expression then
-            local upvalue = self:FindLocalValue(node.expression.left, "runtime")
-            if upvalue then
-                if upvalue.data.contract then
-                    table.insert(args, 1, upvalue.data)
+            local val = self:FindLocalValue(node.expression.left, "runtime")
+            if val then
+                if val.contract then
+                    table.insert(args, 1, val)
                 else
-                    table.insert(args, 1, types.Union({types.Any(), upvalue.data}))
+                    table.insert(args, 1, types.Union({types.Any(), val}))
                 end
             end
         end

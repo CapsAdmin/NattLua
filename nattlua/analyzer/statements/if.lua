@@ -4,7 +4,6 @@ return function(META)
         for i, statements in ipairs(statement.statements) do
             if statement.expressions[i] then
                 local obj = self:AnalyzeExpression(statement.expressions[i], "runtime")
-
                 prev_expression = obj
 
                 if obj:IsTruthy() then
@@ -12,7 +11,8 @@ return function(META)
                     self:OnEnterConditionalScope({    
                         type = "if",                        
                         if_position = i, 
-                        condition = obj
+                        condition = obj,
+                        statement = statement,
                     })
                         
                     self:AnalyzeStatements(statements)
@@ -21,7 +21,8 @@ return function(META)
                     self:OnExitConditionalScope({
                         type = "if",
                         if_position = i, 
-                        condition = obj
+                        condition = obj,
+                        statement = statement,
                     })
 
                     if not obj:IsFalsy() then
@@ -35,7 +36,8 @@ return function(META)
                         type = "if",
                         if_position = i, 
                         is_else = true,
-                        condition = prev_expression
+                        condition = prev_expression,
+                        statement = statement,
                     })
 
                     self:AnalyzeStatements(statements)
@@ -45,7 +47,8 @@ return function(META)
                         type = "if",
                         if_position = i,
                         is_else = true,
-                        condition = prev_expression
+                        condition = prev_expression,
+                        statement = statement,
                     })
                 end
             end

@@ -82,9 +82,75 @@ return function(META)
         
     end
 
-    function META:OnFindLocalValue(upvalue, key, env, scope)
+    function META:OnFindLocalValue(upvalue, key, env, scope)    
+        local value = upvalue:GetValue()
+        local scope = scope or self:GetScope()
 
-        if upvalue.data.Type == "union" then
+        if upvalue.mutations then
+
+            local function resolve(from, scope)
+                local union = types.Union({})
+                union.upvalue = upvalue
+                local i = from
+                while true do
+                    local change = upvalue.mutations[i]
+                    if not change then break end
+                    
+                    if change.scope ~= scope then
+                        local val, i2 = resolve(i, change.scope)
+                        union:AddType(val)
+                    else
+                        union:AddType(change.value)              
+                    end
+                
+                    i = i - 1
+                    
+                    if change.scope:IsCertain(scope) then
+                        print("BREAK")
+                        break
+                    end
+                end
+
+
+                print(from, i, scope, union)
+                return union, i
+            end
+            
+            print("resolving")
+            for i,v in ipairs(upvalue.mutations) do
+                print(i, v.resolved or v.value)
+            end
+            print("==")
+            
+            local union = resolve(#upvalue.mutations, scope)
+            
+            --[[
+            for i = #upvalue.mutations, 1, -1 do
+                local change = upvalue.mutations[i]
+                
+                if change.scope.if_statement and in_if ~= change.scope.if_statement then
+                    in_if = false
+                end
+
+                if last_scope ~= change.scope and not change.scope.if_statement then
+                    union:AddType(change.value)
+                end
+
+                in_if = change.scope.if_statement
+                last_scope = change.scope
+                
+                if not change.scope:IsUncertain() or change.scope == scope then
+                    break
+                end
+            end
+            ]]
+
+            if union:Get(1) then
+                value = union
+            end
+        end
+
+        if value.Type == "union" then
             --[[
 
                 this is only for when unions have been tested for
@@ -96,61 +162,27 @@ return function(META)
                 then
                     print(x) -- x is true here
                 end
-    
             ]]
-            local scope = scope:FindScopeFromTestCondition(upvalue.data)
 
-            if scope then
-                local copy = self:CopyUpvalue(upvalue)
+            local scope = scope:FindScopeFromTestCondition(value)
 
+            if scope then 
                 if scope.test_condition_inverted then
-                    copy.data = (scope.test_condition.falsy_union or copy.data:GetFalsy()):Copy()
+                    return scope.test_condition.falsy_union or value:GetFalsy()
                 else
-                    copy.data = (scope.test_condition.truthy_union or copy.data:GetTruthy()):Copy()
+                    return scope.test_condition.truthy_union or value:GetTruthy()
                 end
-
-                return copy
             end
         end
 
-        if upvalue.conditions then
-            local union = types.Union({})
-            
-            local if_else_balance = 0
-
-            -- if part
-            for cond, v in pairs(upvalue.conditions.truthy) do
-                if_else_balance = if_else_balance + 1
-                if not scope.test_condition_inverted or cond ~= scope.test_condition then
-                    union:AddType(v)
-                end
-            end
-
-            -- else part
-            for cond, v in pairs(upvalue.conditions.falsy) do
-                if_else_balance = if_else_balance - 1
-                union:AddType(v)
-            end
-
-            -- if the balance is not 0 then not all branches have been hit
-            -- and we include the original value
-            if if_else_balance ~= 0 then
-                union:AddType(
-                    not scope.test_condition_inverted and upvalue.conditions.truthy[scope.test_condition] or 
-                    upvalue.data
-                )
-            end
-        
-            upvalue.data_override = union
-        end
-
-        return upvalue
+        return value
     end
 
     function META:OnEnterConditionalScope(data)
         local scope = self:GetScope()
         self:FireEvent("enter_conditional_scope", scope, data)
 
+        scope.if_statement = data.type == "if" and data.statement
         scope:SetTestCondition(data.condition, data.is_else)
         scope:MakeUncertain(data.condition:IsUncertain())
     end
@@ -164,22 +196,14 @@ return function(META)
     function META:OnMutateUpvalue(upvalue, key, val, env)
         local scope = self:GetScope()
 
-        if scope:IsUncertain() then 
-            self:CreateLocalValue(key, val, env)
-        
-            upvalue.conditions = upvalue.conditions or {truthy = {}, falsy = {}}
+        val.upvalue = upvalue
+        upvalue.mutations = upvalue.mutations or {}
 
-            if scope.test_condition_inverted then
-                upvalue.conditions.falsy[scope.test_condition] = val
-            else
-                upvalue.conditions.truthy[scope.test_condition] = val
-            end
-
-            return true
-        else
-            upvalue.conditions = nil
-            upvalue.data_override = nil
-        end
+        table.insert(upvalue.mutations, {
+            scope = scope,
+            value = val,
+            env = env,
+        })
     end
 
     function META:OnMutateEnvironment(g, key, val, env)

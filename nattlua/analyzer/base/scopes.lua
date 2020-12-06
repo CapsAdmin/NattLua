@@ -70,17 +70,6 @@ return function(META)
 
         return self:PushScope(scope)
     end
-    
-    function META:CopyUpvalue(upvalue, data)
-        return {
-            data = data or upvalue.data:Copy(),
-            key = upvalue.key,
-            shadow = upvalue.shadow,
-            conditions = upvalue.conditions,
-            original_upvalue = upvalue,
-            is_copy = true,
-        }
-    end
 
     function META:CreateLocalValue(key, obj, env, function_argument)
         local upvalue = self:GetScope():CreateValue(key, obj, env)
@@ -97,15 +86,30 @@ return function(META)
         
     end
 
-    function META:FindLocalValue(key, env, scope)
+    function META:FindLocalUpvalue(key, env, scope)
         if not self:GetScope() then return end
                 
         local found, scope = (scope or self:GetScope()):FindValue(key, env)
         
         if found then
-            local t = self:OnFindLocalValue(found, key, env, scope)
-            return t or found, scope
+            return found, scope
         end
+    end
+
+    function META:FindLocalValue(key, env, scope)
+        local upvalue = self:FindLocalUpvalue(key, env, scope)
+        if upvalue then
+            local t = self:OnFindLocalValue(upvalue, key, env, scope)
+            return t or upvalue:GetValue()
+        end 
+    end
+
+    function META:LocalValueExists(key, env, scope)
+        if not self:GetScope() then return end
+                
+        local found, scope = (scope or self:GetScope()):FindValue(key, env)
+        
+        return found ~= nil
     end
 
     function META:SetEnvironmentOverride(node, obj, env)
@@ -158,10 +162,10 @@ return function(META)
     function META:GetLocalOrEnvironmentValue(key, env, scope)
         env = env or "runtime"
 
-        local upvalue = self:FindLocalValue(key, env, scope)
+        local val = self:FindLocalValue(key, env, scope)
         
-        if upvalue then
-            return upvalue.data_override or upvalue.data
+        if val then
+            return val
         end
 
         local string_key = key
@@ -175,7 +179,7 @@ return function(META)
     end
 
     function META:SetLocalOrEnvironmentValue(key, val, env, scope)
-        local upvalue, found_scope = self:FindLocalValue(key, env, scope)
+        local upvalue, found_scope = self:FindLocalUpvalue(key, env, scope)
         
         if upvalue then
             if not self:OnMutateUpvalue(upvalue, key, val, env) then
@@ -188,7 +192,7 @@ return function(META)
                     end
                 end
 
-                upvalue.data = val
+                upvalue:SetValue(val)
                 self:FireEvent("mutate_upvalue", key, val, env)
             end
         else

@@ -65,8 +65,8 @@ local function arithmetic(node, l,r, type, operator)
 end
 
 return function(META)
-    function META:BinaryOperator(node, l, r, env)
-        local op = node.value.value
+    function META:BinaryOperator(node, l, r, env, op)
+        op = op or node.value.value
 
         -- adding two tuples at runtime in lua will practically do this
         if l.Type == "tuple" then l = self:Assert(node, l:Get(1)) end
@@ -84,7 +84,7 @@ return function(META)
             
             for _, l in ipairs(l:GetTypes()) do
                 for _, r in ipairs(r:GetTypes()) do
-                    local res, err = self:BinaryOperator(node, l, r, env)
+                    local res, err = self:BinaryOperator(node, l, r, env, op)
 
                     if not res then
                         self:ErrorAndCloneCurrentScope(node, err, condition)
@@ -423,7 +423,7 @@ return function(META)
             end
         else
             left = self:AnalyzeExpression(node.left, env)
-            right = self:AnalyzeExpression(node.right, env)    
+            right = self:AnalyzeExpression(node.right, env)
         end
 
         if node.and_expr then

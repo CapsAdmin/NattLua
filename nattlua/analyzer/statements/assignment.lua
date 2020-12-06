@@ -40,7 +40,7 @@ return function(META)
             if exp_key.kind == "value" then
                 left[i] = exp_key
                 if exp_key.kind == "value" then
-                    exp_key.is_upvalue = self:FindLocalValue(exp_key, env) ~= nil
+                    exp_key.is_upvalue = self:LocalValueExists(exp_key, env)
                 end
             elseif exp_key.kind == "postfix_expression_index" then
                 left[i] = self:AnalyzeExpression(exp_key.expression, env)

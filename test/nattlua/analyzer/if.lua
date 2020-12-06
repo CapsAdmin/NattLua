@@ -601,6 +601,79 @@ run[[
     type_assert(foo, true)
 ]]
 
+
+run[[
+    local x: true | false | 2
+
+    if x then    
+        type_assert(x, _ as true | 2)
+        x = 1
+    end
+
+    type_assert(x, _ as true | false | 2 | 1)
+]]
+
+run[[
+    local x = 1
+
+    if MAYBE then
+        if true then
+            x = 2
+        end
+    end
+
+    type_assert(x, _ as 1 | 2)
+]]
+
+run[[
+    local x = 1
+
+    if false then
+        
+    else
+        x = 2
+    end
+
+    type_assert(x, _ as 2)
+]]
+
+run[[
+    local x = 1
+
+    if MAYBE then
+        x = 2
+    end
+
+    if MAYBE then
+        x = 3
+    end
+
+    type_assert(x, _ as 1 | 2 | 3)
+]]
+
+
+run[[
+    --DISABLE_CODE_RESULT
+
+    local x = 1
+
+    if MAYBE then
+        type_assert<|x, 1|>
+        x = 2
+        type_assert<|x, 2|>
+    elseif MAYBE then
+        type_assert<|x, 1|>
+        x = 3
+        type_assert<|x, 3|>
+    elseif MAYBE then
+        type_assert<|x, 1|>
+        x = 4
+        type_assert<|x, 4|>
+    end
+
+    type_assert<|x, 1 | 2 | 3 | 4|>
+]]
+
 pending[[
     local foo = false
 

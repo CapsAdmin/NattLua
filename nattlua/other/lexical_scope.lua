@@ -103,6 +103,27 @@ function META:FindValue(key, env)
     end
 end
 
+local upvalue_meta
+
+do
+    local META = {}
+    META.__index = META
+
+    function META:__tostring()
+        return "[" .. self.key .. ":" .. tostring(self.data) .. "]"
+    end
+
+    function META:GetValue()
+        return self.data
+    end
+
+    function META:SetValue(data)
+        self.data = data
+    end
+
+    upvalue_meta = META
+end
+
 function META:CreateValue(key, obj, env)
     local key_hash = self:Hash(key)
 
@@ -110,7 +131,15 @@ function META:CreateValue(key, obj, env)
         data = obj,
         key = key_hash,
         shadow = self:FindValue(key, env),
+        mutations = {
+            {
+                scope = self,
+                value = obj,
+            }
+        }
     }
+
+    setmetatable(upvalue, upvalue_meta)
 
     table_insert(self.upvalues[env].list, upvalue)
     self.upvalues[env].map[key_hash] = upvalue
@@ -145,6 +174,16 @@ function META:Merge(scope)
     end
 end
 
+function META:HasParent(scope)
+    for _, parent in ipairs(self:GetParents()) do
+        if parent == scope then
+            return true 
+        end
+    end
+
+    return false
+end
+
 function META:SetTestCondition(obj, inverted)
     self.test_condition = obj
     self.test_condition_inverted = inverted
@@ -152,23 +191,34 @@ end
 
 function META:GetTestCondition()
     local obj, scope = self:GetMemberInParents("test_condition")
-    return obj, scope.test_condition
+    return obj, scope and scope.test_condition
 end
 
-local function compare_condition(scope, obj)
-    local condition = scope.test_condition
-    if 
-        condition and (
-            -- this is not correct for complex conditions like 
-            -- if not not not false and true or not true then
-            condition == obj or 
-            condition.source == obj or 
-            condition.source_left == obj or 
-            condition.source_right == obj or
-            condition.type_checked == obj
-        )
-    then
+local function compare_condition(condition, obj)
+    if not condition then return false end
+
+    if condition == obj then return true end
+
+    if condition.type_checked == obj then
         return true
+    end
+        
+    if condition.upvalue and obj.upvalue then
+        if condition.upvalue == obj.upvalue then
+            return true
+        end
+    end
+
+    if condition.source then
+        return compare_condition(condition.source, obj)
+    end
+
+    if condition.source_left then
+        return compare_condition(condition.source_left, obj)
+    end
+
+    if condition.source_right then
+        return compare_condition(condition.source_right, obj)
     end
 
     return false
@@ -177,7 +227,7 @@ end
 function META:FindScopeFromTestCondition(obj)
     local scope = self
     while true do
-        if compare_condition(scope, obj) then
+        if compare_condition(scope.test_condition, obj) then
             break
         end
         
@@ -187,7 +237,7 @@ function META:FindScopeFromTestCondition(obj)
         
         for _, child in ipairs(scope.children) do
             if child ~= scope and child.uncertain_returned then
-                if compare_condition(child, obj) then
+                if compare_condition(child.test_condition, obj) then
                     return child
                 end
             end
@@ -259,8 +309,20 @@ do
         self.returns = {}
     end
 
-    function META:IsUncertain()
-        return self.uncertain
+    function META:IsCertain(from)
+        return not self:IsUncertain(from)
+    end
+
+    function META:IsUncertain(from)
+        if from == self then return false end
+        for _, scope in ipairs(self:GetParents()) do
+            if scope == from then break end
+            if scope.uncertain then
+                return true, scope
+            end
+        end
+
+        return false
     end
 
     function META:MakeUncertain(b)
@@ -271,7 +333,18 @@ end
 local ref = 0
 
 function META:__tostring()
-    local s = "scope[" .. self.ref .. "]" .. "[".. (self:IsUncertain() and "uncertain" or "certain") .."]" .. "[" .. tostring(self:GetTestCondition() or nil) .. "]"
+    local x = #self:GetParents()
+    local y = 1
+    if self.parent then
+        for i, v in ipairs(self.parent:GetChildren()) do
+            if v == self then
+                y = i
+                break
+            end
+        end
+    end
+
+    local s = "scope["..x..","..y.."]" .. "[".. (self:IsUncertain() and "uncertain" or "certain") .."]" .. "[" .. tostring(self:GetTestCondition() or nil) .. "]"
     if self.returns then
         s = s .. "[function scope]"
     end

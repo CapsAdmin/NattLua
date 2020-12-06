@@ -27,7 +27,7 @@ return function(META)
         end
 
         node.inferred_type = node.inferred_type or obj
-        node.is_upvalue = self:FindLocalValue(node, env) ~= nil
+        node.is_upvalue = self:LocalValueExists(node, env)
                 
         return obj
     end
