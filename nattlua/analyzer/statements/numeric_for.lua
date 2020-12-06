@@ -1,20 +1,39 @@
 local types = require("nattlua.types.types")
 
 return function(META)
+
+    local function get_largest_number(obj)
+        if obj:IsLiteral() then
+            if obj.Type == "union" then
+                local max = -math.huge
+                for i, v in ipairs(obj:GetData()) do
+                    max = math.max(max, v:GetData())
+                end
+                return max
+            end
+            return obj:GetData()
+        end
+    end
+
     function META:AnalyzeNumericForStatement(statement)
         local init = self:AnalyzeExpression(statement.expressions[1])
+        assert(init.Type == "number")
         local max = self:AnalyzeExpression(statement.expressions[2])
+        assert(init.Type == "number")
         local step = statement.expressions[3] and self:AnalyzeExpression(statement.expressions[3]) or nil
+        if step then
+            assert(step.Type == "number")
+        end
 
-        local literal_init = init:IsLiteral() and init:GetData() or nil
-        local literal_max = max:IsLiteral() and max:GetData() or nil
-        local literal_step = not step and 1 or step:IsLiteral() and step:GetData() or nil
+        local literal_init = get_largest_number(init)
+        local literal_max = get_largest_number(max)
+        local literal_step = not step and 1 or get_largest_number(step)
 
         local condition = types.Union()
 
         if literal_init and literal_max then
             -- also check step
-            condition:AddType(types.Symbol(init:GetData() <= max:GetData()))
+            condition:AddType(self:BinaryOperator(statement, init, max, "runtime", "<="))
         else
             condition:AddType(types.Symbol(true))
             condition:AddType(types.Symbol(false))
