@@ -89,65 +89,56 @@ return function(META)
         if upvalue.mutations then
 
             local function resolve(from, scope)
-                local union = types.Union({})
-                union.upvalue = upvalue
-                local i = from
-                while true do
-                    local change = upvalue.mutations[i]
-                    if not change then break end
-                    
-                    if change.scope ~= scope then
-                        local val, i2 = resolve(i, change.scope)
-                        union:AddType(val)
-                    else
-                        union:AddType(change.value)              
+
+                do
+                    local mutations = {}
+                    do
+                        local scope = upvalue.mutations[1]
+                        for i,v in ipairs(upvalue.mutations) do
+                            if v.change ~= scope then
+                                scope = v.scope
+
+                                local from = #mutations
+                                local to
+
+                                for i = #mutations, 1, -1 do
+                                    if mutations[i].scope == v.scope then
+                                        for i = i, from do 
+                                            mutations[i].remove_me = true 
+                                        end
+                                        break
+                                    end
+                                end
+
+                                for i = #mutations, 1, -1 do
+                                    if mutations[i].remove_me then
+                                        table.remove(mutations, i)
+                                    end
+                                end
+                                
+                                table.insert(mutations, v)
+                            end
+                        end
                     end
-                
-                    i = i - 1
                     
-                    if change.scope:IsCertain(scope) then
-                        print("BREAK")
-                        break
+                    local union = types.Union({})
+                    union.upvalue = upvalue
+                    
+                    for _, change in ipairs(mutations) do
+                        if change.scope:IsCertain(scope) then
+                            union:Clear()
+                        end
+
+                        union:AddType(change.value)
                     end
+
+                    return union
                 end
-
-
-                print(from, i, scope, union)
-                return union, i
             end
-            
-            print("resolving")
-            for i,v in ipairs(upvalue.mutations) do
-                print(i, v.resolved or v.value)
-            end
-            print("==")
-            
+
             local union = resolve(#upvalue.mutations, scope)
             
-            --[[
-            for i = #upvalue.mutations, 1, -1 do
-                local change = upvalue.mutations[i]
-                
-                if change.scope.if_statement and in_if ~= change.scope.if_statement then
-                    in_if = false
-                end
-
-                if last_scope ~= change.scope and not change.scope.if_statement then
-                    union:AddType(change.value)
-                end
-
-                in_if = change.scope.if_statement
-                last_scope = change.scope
-                
-                if not change.scope:IsUncertain() or change.scope == scope then
-                    break
-                end
-            end
-            ]]
-
-            if union:Get(1) then
-                value = union
-            end
+            value = union
         end
 
         if value.Type == "union" then
