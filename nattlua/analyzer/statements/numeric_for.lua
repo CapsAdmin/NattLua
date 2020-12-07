@@ -113,7 +113,7 @@ return function(META)
     
         local children = self:GetScope():GetChildren()
         if children[1] then
-            local merged_scope = children[1]:Copy()
+            local merged_scope = children[1]:Copy(true)
             for i = 2, #children do
                 merged_scope:Merge(children[i])
             end

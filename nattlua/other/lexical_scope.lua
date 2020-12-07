@@ -147,12 +147,14 @@ function META:CreateValue(key, obj, env)
     return upvalue
 end
 
-function META:Copy()
+function META:Copy(upvalues)
     local copy = LexicalScope()
 
-    for env, data in pairs(self.upvalues) do
-        for _, obj in ipairs(data.list) do
-            --copy:CreateValue(obj.key, obj.data, env)
+    if upvalues then
+        for env, data in pairs(self.upvalues) do
+            for _, obj in ipairs(data.list) do
+                copy:CreateValue(obj.key, obj.data, env)
+            end
         end
     end
     
@@ -194,52 +196,12 @@ function META:GetTestCondition()
     return obj, scope and scope.test_condition
 end
 
-local compare_condition
-
-local function cmp(a, b, context)
-    if not context[a] then
-        context[a] = {}
-        context[a][b] = compare_condition(a, b, context)
-    end
-    return context[a][b]
-end
-
-function compare_condition(condition, obj, context)
-    context = context or {}
-
-    if not condition then return false end
-    
-    if condition == obj then return true end
-        
-    if condition.upvalue and obj.upvalue then
-        if condition.upvalue == obj.upvalue then
-            return true
-        end
-    end
-
-    if condition.type_checked then
-        return cmp(condition.type_checked, obj, context)
-    end
-
-    if condition.source_left then
-        return cmp(condition.source_left, obj, context)
-    end
-
-    if condition.source_right then
-        return cmp(condition.source_right, obj, context)
-    end
-
-    if condition.source then
-        return cmp(condition.source, obj, context)
-    end
-
-    return false
-end
+local types = require("nattlua.types.types")
 
 function META:FindScopeFromTestCondition(obj)
     local scope = self
     while true do
-        if compare_condition(scope.test_condition, obj) then
+        if types.FindInType(scope.test_condition, obj) then
             break
         end
         
@@ -249,7 +211,7 @@ function META:FindScopeFromTestCondition(obj)
         
         for _, child in ipairs(scope.children) do
             if child ~= scope and child.uncertain_returned then
-                if compare_condition(child.test_condition, obj) then
+                if types.FindInType(child.test_condition, obj) then
                     return child
                 end
             end

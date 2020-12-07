@@ -86,6 +86,8 @@ return function(META)
         local value = upvalue:GetValue()
         local scope = scope or self:GetScope()
 
+        if scope:IsReadOnly() then return upvalue.data end
+
         if upvalue.mutations then
 
             local function resolve(from, scope)
@@ -162,6 +164,23 @@ return function(META)
                                 end
                             end
                         end
+
+                        -- if the same reference type is used in a condition, all conditions must be either true or false at the same time
+                        for _, a in ipairs(mutations) do
+                            for _, b in ipairs(mutations) do
+                                if a.scope.test_condition and b.scope.test_condition and a ~= b then
+                                    if types.FindInType(a.scope.test_condition, b.scope.test_condition) then
+                                        a.linked_mutations = a.linked_mutations or {}
+                                        table.insert(a.linked_mutations, b)
+
+                                        
+                                        if types.FindInType(a.scope.test_condition, value) then
+                                   --         a.certain_override = true
+                                        end
+                                    end
+                                end
+                            end
+                        end
                     end
                     
                     local union = types.Union({})
@@ -172,7 +191,11 @@ return function(META)
                             union:Clear()
                         end
 
-                        union:AddType(change.value)
+                        if _ == 1 and change.value.Type == "union" then
+                            union = change.value--:Copy()
+                        else
+                            union:AddType(change.value)
+                        end
                     end
 
                     return union
@@ -180,8 +203,12 @@ return function(META)
             end
             
             local union = resolve(#upvalue.mutations, scope)
-
-            value = union
+            
+            if #union:GetData() == 1 then
+                value = union:GetData()[1]
+            else
+                value = union
+            end
         end
 
         if value.Type == "union" then
@@ -230,7 +257,7 @@ return function(META)
 
     function META:OnMutateUpvalue(upvalue, key, val, env)
         local scope = self:GetScope()
-
+        if scope:IsReadOnly() then return end
         val.upvalue = upvalue
         upvalue.mutations = upvalue.mutations or {}
 

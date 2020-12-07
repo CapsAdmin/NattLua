@@ -278,7 +278,7 @@ function META:Set(key, val, no_delete)
 
             self:Set(key, val, no_delete)
         end
-        return
+        return true
     end
 
     -- delete entry

@@ -50,6 +50,51 @@ function types.IsTypeObject(obj)
     return type(obj) == "table" and obj.Type ~= nil
 end
 
+
+do
+    local compare_condition
+
+    local function cmp(a, b, context)
+        if not context[a] then
+            context[a] = {}
+            context[a][b] = types.FindInType(a, b, context)
+        end
+        return context[a][b]
+    end
+
+    function types.FindInType(a, b, context)
+        context = context or {}
+
+        if not a then return false end
+        
+        if a == b then return true end
+            
+        if a.upvalue and b.upvalue then
+            if a.upvalue == b.upvalue then
+                return true
+            end
+        end
+
+        if a.type_checked then
+            return cmp(a.type_checked, b, context)
+        end
+
+        if a.source_left then
+            return cmp(a.source_left, b, context)
+        end
+
+        if a.source_right then
+            return cmp(a.source_right, b, context)
+        end
+
+        if a.source then
+            return cmp(a.source, b, context)
+        end
+
+        return false
+    end
+end
+
 do
     local Base = {}
 

@@ -61,8 +61,16 @@ type function type_assert(what, type)
 		return
 	end
 
-	if (what.contract or what):GetSignature() ~= type:GetSignature() then
-		error("expected " .. tostring(type) .." got " .. tostring(what), 2)
+	if (what.contract or what):GetSignature() ~= type:GetSignature() and (what):GetSignature() ~= type:GetSignature() then
+        local a = tostring(type)
+        local b = tostring(what.contract or what)
+
+        if a == b then
+            a = type:GetSignature()
+            b = (what.contract or what):GetSignature()
+        end
+
+		error("expected " .. a .." got " .. b, 2)
 	end
 end
 

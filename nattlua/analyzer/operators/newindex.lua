@@ -49,7 +49,6 @@ return function(META)
         -- this adds some additional context
         obj.last_set = obj.last_set or {}
         obj.last_set[key] = val
-    
         return obj:Set(key, val)
     end
 end

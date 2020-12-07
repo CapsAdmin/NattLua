@@ -173,16 +173,6 @@ run[[
     end
 ]]
 
-pending([[
-    local a: nil | 1
-
-    if not a or true and a or false then
-        type_assert(a, _ as 1 | nil)
-    end
-
-    type_assert(a, _ as 1 | nil)
-]])
-
 do
     _G.lol = nil
 
@@ -545,14 +535,6 @@ run[[
     type_assert(x, _ as -1 | 0 | 1)
 ]]
 
-pending[[
-    local MAYBE: boolean
-    local x = 0
-    if MAYBE then x = x + 1 end -- 1
-    if MAYBE then x = x - 1 end -- 0
-    type_assert(x, 0)
-]]
-
 run[[
     local x = 0
     if MAYBE then
@@ -610,7 +592,7 @@ run[[
         x = 1
     end
 
-    type_assert(x, _ as true | false | 2 | 1)
+    type_assert<|x, true | false | 2 | 1|>
 ]]
 
 run[[
@@ -674,67 +656,17 @@ run[[
     type_assert<|x, 1 | 2 | 3 | 4|>
 ]]
 
-pending[[
+run[[
     local foo = false
 
     if MAYBE then
         foo = true
     end
-
     if not foo then
         return
     end
 
     type_assert(foo, true)
-]]
-
-pending[[
-    local MAYBE: boolean
-
-    x = 1
-
-    if MAYBE then
-        x = 2
-    end
-
-    if MAYBE then
-        x = 3
-    end
-
-    type_assert(x, _ as 2|3)
-
-    x = nil
-]]
-
-
-pending[[
-    local a: nil | 1
-
-    if not not a then
-        type_assert(a, _ as nil | nil)
-    end
-
-    type_assert(a, _ as 1 | nil)
-]]
-
-pending[[
-    local a: nil | 1
-
-    if not not a then
-        type_assert(a, _ as 1 | 1)
-    end
-
-    type_assert(a, _ as 1 | nil)
-]]
-
-pending[[
-    local a: nil | 1
-
-    if a or true and a or false then
-        type_assert(a, _ as 1 | 1)
-    end
-
-    type_assert(a, _ as 1 | nil)
 ]]
 
 run[=[
@@ -918,3 +850,70 @@ run[=[
     --type_assert<|x, 1 | 2 | 3 | 4|>
     ]]
 ]=]
+
+pending([[
+    local a: nil | 1
+
+    if not a or true and a or false then
+        type_assert(a, _ as 1 | nil)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]])
+
+pending[[
+    local MAYBE: boolean
+    local x = 0
+    if MAYBE then x = x + 1 end -- 1
+    if MAYBE then x = x - 1 end -- 0
+    type_assert(x, 0)
+]]
+
+pending[[
+    local MAYBE: boolean
+
+    x = 1
+
+    if MAYBE then
+        x = 2
+    end
+
+    if MAYBE then
+        x = 3
+    end
+
+    type_assert(x, _ as 2|3)
+
+    x = nil
+]]
+
+
+pending[[
+    local a: nil | 1
+
+    if not not a then
+        type_assert(a, _ as nil | nil)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]]
+
+pending[[
+    local a: nil | 1
+
+    if not not a then
+        type_assert(a, _ as 1 | 1)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]]
+
+pending[[
+    local a: nil | 1
+
+    if a or true and a or false then
+        type_assert(a, _ as 1 | 1)
+    end
+
+    type_assert(a, _ as 1 | nil)
+]]
