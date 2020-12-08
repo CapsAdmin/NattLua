@@ -439,3 +439,19 @@ run[[
         print(...)
     end
 ]]
+
+run([[
+    local function func(): number, number
+        return 1
+    end
+]], "returned tuple does not match")
+
+run([[
+    local function func(): number, number
+        if MAYBE then
+            return 1, 2
+        end
+
+        return 3
+    end
+]], "number does not contain nil")

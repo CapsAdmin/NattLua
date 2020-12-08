@@ -23,8 +23,15 @@ return function(META)
 
         local out = {}
 
+        local longest = 0
+        for i, ret in ipairs(scope:GetReturnTypes()) do
+            longest = math.max(longest, #ret)
+        end
+
         for _, ret in ipairs(scope:GetReturnTypes()) do
-            for i, obj in ipairs(ret) do
+            for i = 1, longest do
+                local obj = ret[i] or self:NewType(statement, "nil")
+            
                 if out[i] then
                     out[i] = types.Union({out[i], obj})
                 else

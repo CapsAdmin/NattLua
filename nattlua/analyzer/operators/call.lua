@@ -153,8 +153,12 @@ return function(META)
 
             -- if this function has an explicit return type
             local return_types = obj:HasExplicitReturnTypes() and obj:GetReturnTypes() or function_node.return_types and types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
-            
+           
             if return_types then
+                if return_tuple:GetLength() ~= return_types:GetLength() then
+                    return false, "returned tuple does not match the typed tuple length"
+                end
+                
                 local ok, reason = return_tuple:IsSubsetOf(return_types)
                 if not ok then
                     return ok, reason
