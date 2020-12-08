@@ -5,7 +5,7 @@ local types = require("nattlua.types.types")
 
 return function(META)
     function META:AnalyzeStatements(statements)
-        for i, statement in ipairs(statements) do
+        for _, statement in ipairs(statements) do
             self:AnalyzeStatement(statement)
 
             if self:GetScope():DidReturn() then
@@ -96,102 +96,106 @@ return function(META)
         if scope:IsReadOnly() then return upvalue.data end
 
         if upvalue.mutations then
+            local mutations = {}
 
-            local function resolve(from, scope)
+            do
+                for from, mutation in ipairs(upvalue.mutations) do
+                    do --[[
+                        Remove redundant mutations that happen in the same same scope. 
+                        The last mutation is the one that matters.
 
-                do
-                    local mutations = {}
-
-                    do
-                        local current_scope-- = upvalue.mutations[1].scope
-                        for i, mutation in ipairs(upvalue.mutations) do
-                            
-                            do -- longest match backwards to same scope
-                                local from = #mutations
-
-                                for i = #mutations, 1, -1 do
-                                    if mutations[i].scope == mutation.scope then
-                                        for i = from, i, -1 do 
-                                            table.remove(mutations, i)    
-                                        end
-                                        break
-                                    end
-                                end
-                            end
-
-                            if scope.if_statement and mutation.scope.if_statement == scope.if_statement and scope ~= mutation.scope then
-                            else 
-                                table.insert(mutations, mutation)                            
-                            end
-                        end
-
-                        do -- remove anything before the last else part
-                            for i = #mutations, 1, -1 do
-                                local change = mutations[i]
-
-                                if change.scope.if_statement and change.scope.test_condition_inverted then
-                                    
-                                    local start = i
-                                    local statement = change.scope.if_statement
-                                    while true do
-                                        local change = mutations[i]
-                                        if not change then break end
-                                        if change.scope.if_statement ~= statement then
-                                            for i = i, 1, -1 do
-                                                table.remove(mutations, i)
-                                            end
-                                            break
-                                        end                                       
-                                    
-                                        i = i - 1
-                                    end
-
-                                    break
-                                end
-                            end
-                        end
+                        local a = 1 --<< from here
                         
-                        -- if the same reference type is used in a condition, all conditions must be either true or false at the same time
-                        for _, a in ipairs(mutations) do
-                            for _, b in ipairs(mutations) do
-                                if a.scope.test_condition and b.scope.test_condition then
-                                    if types.FindInType(a.scope.test_condition, b.scope.test_condition) then
-                                        a.linked_mutations = a.linked_mutations or {}
-                                        table.insert(a.linked_mutations, b)
+                        if true then
+                            a = 6
+                            do a = 100 end
+                            a = 2
+                        end
+
+                        a = 2 --<< to here
+
+                    ]]
+                        for i = #mutations, 1, -1 do
+                            if mutations[i].scope == mutation.scope then
+                                for i = from, i, -1 do 
+                                    table.remove(mutations, i)    
+                                end
+                                break
+                            end
+                        end
+                    end
+
+                    -- if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
+                    if scope.if_statement and mutation.scope.if_statement == scope.if_statement and scope ~= mutation.scope then
+                    else 
+                        table.insert(mutations, mutation)                            
+                    end
+                end
+
+                do --[[
+                    if mutations occured in an if statement that has an else part, remove all mutations before the if statement
+    
+                ]] 
+                    for i = #mutations, 1, -1 do
+                        local change = mutations[i]
+
+                        if change.scope.if_statement and change.scope.test_condition_inverted then
+                            
+                            local statement = change.scope.if_statement
+                            while true do
+                                local change = mutations[i]
+                                if not change then break end
+                                if change.scope.if_statement ~= statement then
+                                    for i = i, 1, -1 do
+                                        table.remove(mutations, i)
                                     end
-                                end
+                                    break
+                                end                                       
+                            
+                                i = i - 1
                             end
-                        end
 
-                        if scope.test_condition then -- make scopes that use the same type condition certrain
-                            for _, change in ipairs(mutations) do
-                                if change.scope ~= scope and change.scope.test_condition and types.FindInType(change.scope.test_condition, scope.test_condition) then
-                                    change.certain_override = true
-                                end
+                            break
+                        end
+                    end
+                end
+                
+                -- if the same reference type is used in a condition, all conditions must be either true or false at the same time
+                for _, a in ipairs(mutations) do
+                    for _, b in ipairs(mutations) do
+                        if a.scope.test_condition and b.scope.test_condition then
+                            if types.FindInType(a.scope.test_condition, b.scope.test_condition) then
+                                a.linked_mutations = a.linked_mutations or {}
+                                table.insert(a.linked_mutations, b)
                             end
                         end
                     end
-                    
-                    local union = types.Union({})
-                    union.upvalue = upvalue
-                    
+                end
+
+                if scope.test_condition then -- make scopes that use the same type condition certrain
                     for _, change in ipairs(mutations) do
-                        if change.certain_override or change.scope:IsCertain(scope) then
-                            union:Clear()
-                        end
-
-                        if _ == 1 and change.value.Type == "union" then
-                            union = change.value--:Copy()
-                        else
-                            union:AddType(change.value)
+                        if change.scope ~= scope and change.scope.test_condition and types.FindInType(change.scope.test_condition, scope.test_condition) then
+                            change.certain_override = true
                         end
                     end
-
-                    return union
                 end
             end
             
-            local union = resolve(#upvalue.mutations, scope)
+            local union = types.Union({})
+            union.upvalue = upvalue
+            
+            for _, change in ipairs(mutations) do
+                if change.certain_override or change.scope:IsCertain(scope) then
+                    union:Clear()
+                end
+
+                if _ == 1 and change.value.Type == "union" then
+                    union = change.value--:Copy()
+                else
+                    union:AddType(change.value)
+                end
+            end
+
             
             if #union:GetData() == 1 then
                 value = union:GetData()[1]
