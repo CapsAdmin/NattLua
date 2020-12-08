@@ -379,11 +379,11 @@ do -- globals
 	end
 
 	type function pcall(callable: any, ...)
-		return callable:Call(callable, types.Tuple(...), node)
+		return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
 	end
 
 	type function xpcall(callable: any, error_cb: any, ...)
-		return callable:Call(callable, types.Tuple(...), node)
+		return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
 	end
 
 	type function select(index: 1 .. inf | "#", ...)
