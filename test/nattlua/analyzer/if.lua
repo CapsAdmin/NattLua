@@ -851,6 +851,20 @@ run[=[
     ]]
 ]=]
 
+run([[
+    local x = 1
+
+    if x == 1 then
+        x = 2
+    end
+
+    if x == 2 then
+        x = 3
+    end
+
+    type_assert<|x, 3|>
+]])
+
 pending([[
     local a: nil | 1
 
