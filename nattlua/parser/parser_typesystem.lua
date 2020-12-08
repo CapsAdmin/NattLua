@@ -191,7 +191,7 @@ return function(META)
         if self:IsCurrentValue(":") then
             node.tokens[":"] = self:ReadValue(":")
             node.return_types = self:ReadTypeExpressionList()
-        else
+        elseif not self:IsCurrentValue(",") then
             local start = self:GetCurrentToken()
             node.statements = self:ReadStatements({["end"] = true})
             node.tokens["end"] = self:ReadValue("end", start, start)
