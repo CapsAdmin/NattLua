@@ -95,51 +95,30 @@ return function(META)
                 do
                     local mutations = {}
 
-
-                    local function belongs_to_right_if_clause(subject, scope)
-                        if subject.if_statement and subject.if_statement == scope.if_statement then
-                            return subject == scope
-                        end
-
-                        return true
-                    end
-
                     do
                         local current_scope-- = upvalue.mutations[1].scope
                         for i, mutation in ipairs(upvalue.mutations) do
+                            
                             do -- longest match backwards to same scope
                                 local from = #mutations
 
                                 for i = #mutations, 1, -1 do
                                     if mutations[i].scope == mutation.scope then
-                                        for i = i, from do 
-                                            mutations[i].remove_me = true 
+                                        for i = from, i, -1 do 
+                                            table.remove(mutations, i)    
                                         end
                                         break
                                     end
                                 end
-
-                                for i = #mutations, 1, -1 do
-                                    if mutations[i].remove_me then
-                                        table.remove(mutations, i)
-                                    end
-                                end
                             end
-                            
-                            table.insert(mutations, mutation)                            
-                        end
 
-                        -- remove scopes that are related to this if clause
-                        if scope.if_statement then
-                            for i = #mutations, 1, -1 do
-                                if mutations[i].scope.if_statement == scope.if_statement and scope ~= mutations[i].scope then
-                                    table.remove(mutations, i)
-                                end
+                            if scope.if_statement and mutation.scope.if_statement == scope.if_statement and scope ~= mutation.scope then
+                            else 
+                                table.insert(mutations, mutation)                            
                             end
                         end
 
                         do -- remove anything before the last else part
-                            local found_else = false
                             for i = #mutations, 1, -1 do
                                 local change = mutations[i]
 
@@ -164,20 +143,23 @@ return function(META)
                                 end
                             end
                         end
-
+                        
                         -- if the same reference type is used in a condition, all conditions must be either true or false at the same time
                         for _, a in ipairs(mutations) do
                             for _, b in ipairs(mutations) do
-                                if a.scope.test_condition and b.scope.test_condition and a ~= b then
+                                if a.scope.test_condition and b.scope.test_condition then
                                     if types.FindInType(a.scope.test_condition, b.scope.test_condition) then
                                         a.linked_mutations = a.linked_mutations or {}
                                         table.insert(a.linked_mutations, b)
-
-                                        
-                                        if types.FindInType(a.scope.test_condition, value) then
-                                   --         a.certain_override = true
-                                        end
                                     end
+                                end
+                            end
+                        end
+
+                        if scope.test_condition then -- make scopes that use the same type condition certrain
+                            for _, change in ipairs(mutations) do
+                                if change.scope ~= scope and change.scope.test_condition and types.FindInType(change.scope.test_condition, scope.test_condition) then
+                                    change.certain_override = true
                                 end
                             end
                         end
@@ -187,7 +169,7 @@ return function(META)
                     union.upvalue = upvalue
                     
                     for _, change in ipairs(mutations) do
-                        if change.scope:IsCertain(scope) then
+                        if change.certain_override or change.scope:IsCertain(scope) then
                             union:Clear()
                         end
 

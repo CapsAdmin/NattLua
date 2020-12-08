@@ -53,6 +53,25 @@ run[[
     type_assert(a, _ as true | false)
 ]]
 
+run[[
+    local x = 0
+    local MAYBE: true | false
+
+    if MAYBE then
+        x = 1
+    end
+
+    if MAYBE2 then
+        type_assert<|x, 0 | 1|>
+        x = 2
+    end
+
+    if MAYBE then
+        type_assert<|x, 1 | 2|>
+    end
+
+]]
+
 run([[
     -- assigning a value inside an uncertain branch
     local a = false
@@ -670,11 +689,6 @@ run[[
 ]]
 
 run[=[
-    --DISABLE_CODE_RESULT
-
-    local type function type_assewrt(what, expect)
-        print(tostring(what) .. " == " .. tostring(expect))
-    end
     
     do
         local x = 1
