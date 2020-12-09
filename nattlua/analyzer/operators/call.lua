@@ -107,14 +107,12 @@ return function(META)
         
         if obj.data.lua_function then 
             local len = function_arguments:GetLength()
-            local res
-
+            
             if len == math.huge and arguments:GetLength() == math.huge then
-                local longest = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
-                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.function_scope or self:GetScope(), arguments:Copy():Unpack(longest))}
-            else
-                res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.function_scope or self:GetScope(), arguments:Unpack(len))}
+                len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
             end
+
+            local res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.function_scope or self:GetScope(), arguments:Unpack(len))}
 
             return self:LuaTypesToTuple(obj.node, res)
         elseif not function_node or function_node.kind == "type_function" then
