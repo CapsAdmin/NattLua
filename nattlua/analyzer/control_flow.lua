@@ -8,6 +8,10 @@ return function(META)
         for _, statement in ipairs(statements) do
             self:AnalyzeStatement(statement)
 
+            if self.break_out_scope then
+                break
+            end
+
             if self:GetScope():DidReturn() then
                 self:GetScope():ClearReturn()
                 break

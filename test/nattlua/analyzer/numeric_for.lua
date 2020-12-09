@@ -59,3 +59,21 @@ do
     assert(code:find("local a: false | true = x", nil, true) ~= nil)
     assert(code:find("local b: false = x", nil, true) ~= nil)
 end
+
+run[[
+    local lol = 0
+
+    for i = 1, 5 do
+        if i == 3 then
+            break
+        end
+        
+        lol = lol + 1
+
+        if i == 3 then
+            type_assert("should never reach")
+        end
+    end
+
+    type_assert(lol, 2)
+]]

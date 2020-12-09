@@ -75,14 +75,16 @@ return function(META)
 
                 self:CreateLocalValue(statement.identifiers[1], i, "runtime")
                 self:AnalyzeStatements(statement.statements)
+
                 if self.break_out_scope then
+
                     if self.break_out_scope:IsUncertain() then
                         uncertain_break = i
-                        self.break_out_scope = nil
                     else
-                        self.break_out_scope = nil
                         brk = true
                     end
+
+                    self.break_out_scope = nil
                 end
 
                 self:PopScope()
@@ -126,6 +128,8 @@ return function(META)
             self:PushScope(merged_scope)
                 self:AnalyzeStatements(statement.statements)
             self:PopScope()
+            
+            self.break_out_scope = nil
         end
 
         self:PopScope()
@@ -134,6 +138,7 @@ return function(META)
 
     function META:AnalyzeBreakStatement(statement)
         self.break_out_scope = self:GetScope()
+        self.break_loop = true
         self:FireEvent("break")
     end
 end
