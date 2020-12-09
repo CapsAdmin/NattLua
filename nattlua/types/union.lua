@@ -62,9 +62,10 @@ function META:RemoveType(e)
     for i,v in ipairs(self:GetTypes()) do
         if v:GetSignature() == e:GetSignature() then
             table.remove(self:GetTypes(), i)
-            return
+            break
         end
     end
+    return self
 end
 
 

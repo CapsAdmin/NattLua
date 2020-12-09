@@ -382,6 +382,16 @@ do -- globals
 		return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
 	end
 
+    type function type_pcall(func, ...) 
+        local ok, val = pcall(analyzer.Call, analyzer, func, types.Tuple({...}))
+        
+        if not ok then
+            return ok, val
+        end
+
+        return ok, val:Unpack()
+    end
+
 	type function xpcall(callable: any, error_cb: any, ...)
 		return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
 	end
@@ -391,7 +401,6 @@ do -- globals
 	end
 
 	type function type(obj: any)
-
 		if obj.Type == "union" then
 			analyzer.type_checked = obj
 
@@ -647,18 +656,10 @@ do
 	end
 
 	type function table.getn(tbl: table)
-		if tbl.Type == "any" then return types.Any() end
 		return tbl:GetLength()
 	end
 
 	type function table.unpack(tbl: {[number] = any})
-		if tbl.Type == "union" and tbl:GetLength() == 1 then
-			tbl = tbl:GetTypes()[1]
-			if not tbl then
-				return
-			end
-		end
-		
 		local t = {}
 	    for i = 1, 32 do
 			local v = tbl:Get(i)
@@ -718,16 +719,6 @@ do
 	end
 
 	type function ^string.lower(str: string)
-		if str.Type == "union" then
-			local copy = types.Union()
-
-			for _, str in ipairs(str:GetTypes()) do
-				copy:AddType(types.String(str:GetData():lower()))
-			end
-
-			return copy
-		end
-
 		if str:IsLiteral() then
 			return str:GetData():lower()
 		end
@@ -736,26 +727,6 @@ do
 	end
 
 	type function ^string.sub(str: string, a: number, b: number | nil)
-		if str.Type == "union" then
-			local copy = types.Union()
-
-			for _, str in ipairs(str:GetTypes()) do
-				if str:IsLiteral() and a:IsLiteral() then
-					if b and b:IsLiteral() then
-						copy:AddType(types.String(str:GetData():sub(a:GetData(), b:GetData())):MakeLiteral(true))
-					else
-						copy:AddType(types.String(str:GetData():sub(a:GetData())))
-					end
-				end
-			end
-
-            if copy:IsEmpty() then
-                return types.String()
-            end
-
-			return copy
-		end
-
 		if str:IsLiteral() and a:IsLiteral() then
 			if b and b:IsLiteral() then
 				return str:GetData():sub(a:GetData(), b:GetData())
@@ -769,47 +740,12 @@ do
 
 	type function ^string.byte(str: string, from: number | nil, to: number | nil)
 		if str:IsLiteral() then
-
-			if str.Type == "union" then
-				local copy = types.Union()
-
-				for _, str in ipairs(str:GetTypes()) do
-					if from and from:IsLiteral() and to and to:IsLiteral() then
-						copy:AddType(types.Number(str.data:byte(from:GetData(), to:GetData())):MakeLiteral(true))
-					elseif from then
-						copy:AddType(types.Number(str.data:byte(from:GetData())):MakeLiteral(true))
-					else
-						copy:AddType(types.Number(str.data:byte()):MakeLiteral(true))
-					end
-				end
-
-				return copy
-			end
-
             if from then
-                if from.Type == "number" then
-                    if from:IsLiteral() and to and to:IsLiteral() then
-                        return str.data:byte(from:GetData(), to:GetData())
-                    end
-
-                    return str.data:byte(from:GetData())
-                elseif from.Type == "union" then
-                    if to and to.Type == "union" then
-                        local union = types.Union()
-                        for _, ta in ipairs(from:GetTypes()) do
-                            for _, tb in ipairs(from:GetTypes()) do
-                                union:AddType(analyzer:Call(env.typesystem.string.byte:GetType(), types.Tuple({str, ta, tb})))
-                            end
-                        end
-                        return union
-                    else
-                        local union = types.Union()
-                        for _, ta in ipairs(from:GetTypes()) do
-                            union:AddType(analyzer:Call(env.typesystem.string.byte:GetType(), types.Tuple({str, ta})):Unpack())
-                        end
-                        return union
-                    end
+                if from:IsLiteral() and to and to:IsLiteral() then
+                    return str.data:byte(from:GetData(), to:GetData())
                 end
+
+                return str.data:byte(from:GetData())
             end
 
 			return str.data:byte()
@@ -839,18 +775,6 @@ do
 	end
 
 	type function ^string.len(str: string)
-		if str.Type == "union" then
-			local copy = types.Union()
-			for _, obj in ipairs(str:GetTypes()) do
-				if obj:IsLiteral() then
-					copy:AddType(types.Number(#obj:GetData()):MakeLiteral(true))
-				else
-					copy:AddType(types.Number())
-				end
-			end
-			return copy
-		end
-
 		if str:IsLiteral() then
 			return types.Number(#str.data):MakeLiteral(true)
 		end
@@ -858,7 +782,7 @@ do
 		return types.Number()
 	end
 
-	type function ^string.gsub(str, pattern, val)
+	type function ^string.gsub(str: string, pattern: string, val)
 		if val.Type == "function" then
 			local args = {}
 

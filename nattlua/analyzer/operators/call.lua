@@ -58,6 +58,66 @@ return function(META)
     
         return analyzed_return
     end
+
+    local function unpack_union_tuples(input, function_arguments)
+        local out = {}
+
+        local d = {}
+        local function get_signature(tup)
+            local sig = {}
+            for i,v in ipairs(tup) do
+                sig[i] = v:GetSignature()
+            end
+            return table.concat(sig, "-")
+        end
+        local function done(tup)
+            d[get_signature(tup)] = true
+        end
+        local function is_done(tup)
+            return d[get_signature(tup)]
+        end
+    
+        local function expand(args, out)
+            local tup = {}
+            for i, t in ipairs(args) do  
+                local type = function_arguments:Get(i)
+                
+                local should_expand = t.Type == "union"
+
+                if type.Type == "any" then
+                    should_expand = false
+                end
+
+                if type.Type == "union" then
+                    should_expand = false
+                end
+
+                if t.Type == "union" and type.Type == "union" and type:HasNil() then
+                    should_expand = true
+                end
+                
+                if should_expand then
+                    for i2,v in ipairs(t:GetData()) do
+                        local args2 = {}
+                        for i, v in ipairs(args) do args2[i] = v end
+                        args2[i] = v
+                        expand(args2, out)
+                    end
+                else
+                    table.insert(tup, t)
+                end
+            end
+            if #tup == #input and not is_done(tup) then
+                table.insert(out, tup)
+                done(tup)
+            end
+        end
+        
+        local out = {}
+        expand(input, out)
+    
+        return out
+    end
     
     local function Call(self, obj, arguments, call_node)
         call_node = call_node or obj.node
@@ -107,14 +167,43 @@ return function(META)
         
         if obj.data.lua_function then 
             local len = function_arguments:GetLength()
-            
+
             if len == math.huge and arguments:GetLength() == math.huge then
                 len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
             end
 
-            local res = {self:CallLuaTypeFunction(call_node, obj.data.lua_function, function_node.function_scope or self:GetScope(), arguments:Unpack(len))}
+            local ret = {}
+            for i, arg in ipairs(unpack_union_tuples({arguments:Unpack(len)}, function_arguments)) do
+                ret[i] = self:LuaTypesToTuple(
+                    obj.node, {
+                        self:CallLuaTypeFunction(
+                            call_node, 
+                            obj.data.lua_function, 
+                            function_node.function_scope or self:GetScope(), 
+                            table.unpack(arg)
+                        )
+                    }
+                )
+            end
 
-            return self:LuaTypesToTuple(obj.node, res)
+            local tup = types.Tuple({})
+
+            for i, t in ipairs(ret) do
+                for i,v in ipairs(t:GetData()) do
+                    local existing = tup:Get(i)
+                    if existing then
+                        if existing.Type == "union" then
+                            existing:AddType(v)
+                        else
+                            tup:Set(i, types.Union({v, existing}))
+                        end
+                    else
+                        tup:Set(i, v)
+                    end
+                end
+            end
+
+            return tup
         elseif not function_node or function_node.kind == "type_function" then
             self:FireEvent("external_call", call_node, obj)
         else

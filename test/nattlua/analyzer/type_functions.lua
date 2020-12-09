@@ -159,16 +159,53 @@ test("string sub on union", function()
         local lol: "foo" | "bar"
 
         type_assert(lol:sub(1,1), _ as "f" | "b")
+        type_assert(lol:sub(_ as 2 | 3), _ as "ar" | "o" | "oo" | "r")
     ]]
 end)
 
+do 
+    _G.test_var = 0
+    run[[
+        
+        local type function test(foo: number)
+            -- when defined as number the function should be called twice for each number in the union
+            
+            _G.test_var = _G.test_var + 1
+        end
+        
+        test(_ as 1 | 2)
+    ]]
+    assert(_G.test_var == 2)
+
+    _G.test_var = 0
+    run[[
+        
+        local type function test(foo: any)
+            -- when defined as anything, or no type it should just pass the union directly
+
+            _G.test_var = _G.test_var + 1
+        end
+        
+        test(_ as 1 | 2)
+    ]]
+    assert(_G.test_var == 1)
+
+    _G.test_var = 0
+    run[[
+        
+        local type function test(foo: number | nil)
+            -- if the only type added to the union is nil it should still be called twice
+            _G.test_var = _G.test_var + 1
+        end
+        
+        test(_ as 1 | 2)
+    ]]
+    assert(_G.test_var == 2)
+
+    _G.test_var = nil
+end
+
 run[[
-    local a = {1,2,3}
-
-    local type type_pcall = function(func, ...) 
-        return pcall(analyzer.Call, analyzer, func, types.Tuple({...}))
-    end
-
     local ok, err = type_pcall(function()
         type_assert(1, 2)
         return 1
@@ -178,7 +215,7 @@ run[[
     type_assert_superset(err, _ as string)
 
     local ok, val = type_pcall(function() return 1 end)
-
+    
     type_assert(ok, true)
     type_assert(val, 1)
 ]]
