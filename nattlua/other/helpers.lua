@@ -273,13 +273,16 @@ do
 		parent = true,
 		inferred_type = true,
 		scope = true,
-		parser = true,
+        parser = true,
+        children = true,
+        mutations = true,
+        code = true,
 	}
     local function traverse(tbl, done, out)
 		for k, v in pairs(tbl) do
-			if not blacklist[k] then
+            if not blacklist[k] then
 				if type(v) == "table" and not done[v] then
-					done[v] = true
+                    done[v] = true
 					traverse(v, done, out)
 				end
 				if type(v) == "number" then
@@ -295,12 +298,34 @@ do
         end
     end
 
-	function helpers.LazyFindStartStop(tbl)
+    function helpers.LazyFindStartStop(tbl)
 		if tbl.start and tbl.stop then
 			return tbl.start, tbl.stop
-		end
+        end
+        
+        if tbl.type == "statement" then
+            if tbl.kind == "call_expression" then
+                return helpers.LazyFindStartStop(tbl.value)
+            end
+        elseif tbl.type == "expression" then
+            if tbl.kind == "value" then
+                return helpers.LazyFindStartStop(tbl.value)
+            end 
+            if tbl.kind == "binary_operator" then
+                local l = helpers.LazyFindStartStop(tbl.left)
+                local _, r = helpers.LazyFindStartStop(tbl.right)
+                return l,r
+            end
+        end
+
         local out = {min = -math.huge, max = math.huge}
-		traverse(tbl, {}, out)
+
+        if not next(tbl.tokens) then 
+            error("NO TOKENS!!! " .. tostring(tbl)) 
+        end
+
+        traverse(tbl.tokens, {}, out)
+
         return out.max, out.min
     end
 end

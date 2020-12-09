@@ -171,8 +171,10 @@ return function(META)
             for i,v in ipairs(self.call_stack) do 
                 if v.call_node then
                     local start, stop = helpers.LazyFindStartStop(v.call_node)
-                    local part = helpers.FormatError(self.code_data.code, self.code_data.name, "", start, stop, 1)
-                    str = str .. part .. "#" .. tostring(i) .. ": " .. self.code_data.name
+                    if start and stop then
+                        local part = helpers.FormatError(self.code_data.code, self.code_data.name, "", start, stop, 1)
+                        str = str .. part .. "#" .. tostring(i) .. ": " .. self.code_data.name
+                    end
                 end
             end
 
