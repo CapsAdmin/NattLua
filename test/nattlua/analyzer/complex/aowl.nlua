@@ -1,0 +1,136 @@
+do
+    local totable = string.ToTable
+    local string_sub = string.sub
+    local string_find = string.find
+    local string_len = string.len
+    function string.Explode(separator, str, withpattern)
+        if ( separator == "" ) then return totable( str ) end
+        if ( withpattern == nil ) then withpattern = false end
+    
+        local ret = {}
+        local current_pos = 1
+    
+        for i = 1, string_len( str ) do
+            local start_pos, end_pos = string_find( str, separator, current_pos, !withpattern )
+            if ( !start_pos ) then break end
+            ret[ i ] = string_sub( str, current_pos, start_pos - 1 )
+            current_pos = end_pos + 1
+        end
+    
+        ret[ #ret + 1 ] = string_sub( str, current_pos )
+    
+        return ret
+    end
+    
+    function string.Split( str, delimiter )
+        return string.Explode( delimiter, str )
+    end    
+end
+
+
+local aowl = {}
+aowl.commands = {}
+
+aowl.ArgumentTypes = {
+    ["nil"] = function(str) return str end,
+    boolean = function(arg)
+        arg = arg:lower()
+
+        if arg == "1" or arg == "true" or arg == "on" or arg == "yes" or arg == "y" then
+            return true
+        end
+
+        if arg == "0" or arg == "false" or arg == "off" or arg == "no" or arg == "n" then
+            return false
+        end
+
+        return false
+    end,
+    number = function(arg)
+        return tonumber(arg)
+    end,
+    string = function(arg)
+        if #arg > 0 then
+            return arg
+        end
+    end,
+    string_trim = function(arg)
+        arg = arg:Trim()
+        if #arg > 0 then
+            return arg
+        end
+    end,
+    string_rest = function(arg) return arg end,
+}
+
+function aowl.StringToType(type, ...)
+    return aowl.ArgumentTypes[type](...)
+end
+
+function aowl.AddCommand(command, callback, group)
+    -- AOWL LEGACY
+    if type(command) == "table" then
+        command = table.concat(command, "|")
+    end
+
+    local aliases = command
+    local argtypes
+    local defaults
+
+    if command:find("=") then
+        aliases, argtypes =  command:match("(.+)=(.+)")
+        if not aliases then
+            aliases = command
+        end
+    end
+
+    aliases = aliases:Split("|")
+
+    if argtypes then
+        argtypes = argtypes:Split(",")
+
+        for i, v in ipairs(argtypes) do
+            if v:find("|", nil, true) then
+                argtypes[i] = v:Split("|")
+            else
+                argtypes[i] = {v}
+            end
+        end
+
+        for i, types in ipairs(argtypes) do
+            for i2, arg in ipairs(types) do
+                if arg:find("[", nil, true) then
+                    local temp, default = arg:match("(.+)(%b[])")
+                    if aowl.ArgumentTypes[temp] then
+                        defaults = defaults or {}
+                        default = default:sub(2, -2)
+
+                        -- special case
+                        if temp == "string" then
+                            defaults[i] = default
+                        else
+                            defaults[i] = aowl.StringToType(temp, default)
+                        end
+
+                        types[i2] = temp
+                    else
+                        log(aliases[1] .. ": no type information found for \"" .. temp .. "\"")
+                    end
+                end
+            end
+        end
+    end
+
+    aowl.commands[aliases[1]] = {
+        aliases = aliases,
+        argtypes = argtypes,
+        callback = callback,
+        group = group,
+        defaults = defaults
+    }
+end
+
+aowl.AddCommand("help|usage=string", function(ply, line, cmd) end)
+
+type_assert(aowl.commands.help.aliases, {"help", "usage"})
+type_assert(aowl.commands.help.argtypes, {"string"})

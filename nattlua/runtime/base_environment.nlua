@@ -695,6 +695,27 @@ do
 		pack = (function(fmt: string, ...): string)
 	}
 
+    type function ^string.format(s: string, ...)
+        if not s:IsLiteral() then
+            return types.String()
+        end
+
+        local types = {...}
+        for i,v in ipairs(types) do
+            if v.Type == "string" or v.Type == "number" or v.Type == "any" then
+                if v:IsLiteral() then
+                    types[i] = v:GetData()
+                else
+                    types[i] = "~"
+                end
+            else
+                error("expected string or number at argument #" .. i .. " got " .. tostring(v))
+            end
+        end
+
+        return string.format(s:GetData(), table.unpack(types))
+    end
+
 	type function ^string.gmatch(s: string, pattern: string)
 		if s:IsLiteral() and pattern:IsLiteral() then
 			local f = s:GetData():gmatch(pattern:GetData())
@@ -754,24 +775,39 @@ do
 		return types.Number()
 	end
 
-	type function ^string.match(s, pattern, init)
-		if s:IsLiteral() and pattern:IsLiteral() then
-			local res = {s.data:match(pattern.data)}
+	type function ^string.match(str: string, pattern: string, start_position: number | nil)
+        str = str:IsLiteral() and str:GetData()
+        pattern = pattern:IsLiteral() and pattern:GetData()
+        start_position = start_position and start_position:IsLiteral() or 1
+
+        if not str or not pattern then
+            return types.Union({types.String(), types.Nil})
+        end
+    
+        local res = {str:match(pattern, start_position)}
 			for i,v in ipairs(res) do
 				res[i] = types.String(v):MakeLiteral(true)
 			end
+        
 			return table.unpack(res)
 		end
 
-		if pattern:IsLiteral() then
-			local out = {}
-			for s in pattern.data:gmatch("%b()") do
-				table.insert(out, types.Union({types.String(), types.Nil}))
+    type function ^string.find(str: string, pattern: string, start_position: number | nil, no_pattern: boolean | nil)
+        str = str:IsLiteral() and str:GetData()
+        pattern = pattern:IsLiteral() and pattern:GetData()
+        start_position = start_position and start_position:IsLiteral() and start_position:GetData() or 1
+        no_pattern = no_pattern and no_pattern:IsLiteral() and no_pattern:GetData() or false
+
+        if not str or not pattern then
+            return types.Union({types.Number(), types.Number(), types.String()})
 			end
-			return table.unpack(out)
+    
+        local start, stop, found = str:find(pattern, start_position, no_pattern)
+        if found then
+            types.String(found):MakeLiteral(true)
 		end
 
-		return types.Union({types.String(), types.Nil})
+        return start, stop, found
 	end
 
 	type function ^string.len(str: string)
