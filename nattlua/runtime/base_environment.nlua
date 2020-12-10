@@ -375,7 +375,11 @@ do -- globals
 	end
 
 	type function error(msg: string, level: number | nil)
-        analyzer:ThrowError(msg:GetData())
+        if msg:IsLiteral() then
+            analyzer:ThrowError(msg:GetData())
+        else
+            analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
+        end
 	end
 
 	type function pcall(callable: any, ...)
@@ -785,12 +789,12 @@ do
         end
     
         local res = {str:match(pattern, start_position)}
-			for i,v in ipairs(res) do
-				res[i] = types.String(v):MakeLiteral(true)
-			end
+        for i,v in ipairs(res) do
+            res[i] = types.String(v):MakeLiteral(true)
+        end
         
-			return table.unpack(res)
-		end
+        return table.unpack(res)
+	end
 
     type function ^string.find(str: string, pattern: string, start_position: number | nil, no_pattern: boolean | nil)
         str = str:IsLiteral() and str:GetData()
@@ -800,12 +804,12 @@ do
 
         if not str or not pattern then
             return types.Union({types.Number(), types.Number(), types.String()})
-			end
+        end
     
         local start, stop, found = str:find(pattern, start_position, no_pattern)
         if found then
             types.String(found):MakeLiteral(true)
-		end
+        end
 
         return start, stop, found
 	end
