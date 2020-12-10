@@ -208,11 +208,19 @@ function META:SetLength()
 end
 
 function META:IsTruthy()
-    return self:Get(1):IsTruthy()
+    local obj = self:Get(1)
+    if obj then
+        return obj:IsTruthy()
+    end
+    return false
 end
 
 function META:IsFalsy()
-    return self:Get(1):IsFalsy()
+    local obj = self:Get(1)
+    if obj then
+        return obj:IsFalsy()
+    end
+    return false
 end
 
 function META:GetLength()
