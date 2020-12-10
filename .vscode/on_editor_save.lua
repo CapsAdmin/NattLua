@@ -58,10 +58,10 @@ if path:lower():find("/nattlua/", nil, true) then
         return
     end
 
-    if path:find("test/", nil, true) then
-        run_lua("test/run.lua", path)  
-    elseif is_nattlua then
+    if is_nattlua then
         run_nattlua(path)
+    elseif path:find("test/", nil, true) then
+        run_lua("test/run.lua", path)  
     elseif path:find("javascript_emitter") then
         run_lua("./examples/lua_to_js.lua")
     elseif path:find("examples/", nil, true) then
