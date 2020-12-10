@@ -48,8 +48,12 @@ else
     local what = path
     local path = "test/" .. ((what and what .. "/") or "nattlua/")
     for path in io.popen("find " .. path):lines() do
-        if path:sub(-4) == ".lua" and not path:find("/file_importing/", nil, true) then
-            assert(loadfile(path))()
+        if not path:find("/file_importing/", nil, true) then
+            if path:sub(-5) == ".nlua" then
+                require("test.helpers").RunCode(io.open(path, "r"):read("*all"))
+            elseif path:sub(-4) == ".lua" then
+                assert(loadfile(path))()
+            end
         end
     end
 end
