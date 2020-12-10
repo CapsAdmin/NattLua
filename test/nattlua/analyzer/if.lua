@@ -688,6 +688,37 @@ run[[
     type_assert(foo, true)
 ]]
 
+run[[
+    local x: 1 | "1"
+    local y = type(x) == "number"
+    if y then
+        type_assert(y, 1)
+    else
+        type_assert(y, "1")
+    end
+]]
+
+run[[
+    local x: 1 | "1"
+    local y = type(x) ~= "number"
+    if y then
+        type_assert(y, "1")
+    else
+        type_assert(y, 1)
+    end
+]]
+
+run[[
+    local x: 1 | "1"
+    local t = "number"
+    local y = type(x) ~= t
+    if y then
+        type_assert(y, "1")
+    else
+        type_assert(y, 1)
+    end
+]]
+
 run[=[
     
     do
