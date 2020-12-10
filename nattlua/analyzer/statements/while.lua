@@ -12,6 +12,8 @@ return function(META)
             self:OnExitConditionalScope({
                 condition = obj
             })
+
+            self.break_out_scope = nil
         end
     end
 end
