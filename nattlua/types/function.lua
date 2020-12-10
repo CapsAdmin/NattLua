@@ -30,6 +30,10 @@ function META:__tostring()
     return s
 end
 
+function META:GetLuaType()
+    return "function"
+end
+
 function META:GetArguments()
     return self.data.arg
 end
