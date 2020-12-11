@@ -361,15 +361,20 @@ return function(META)
         return "unknown", false
     end
 
+    function META:ReadSimple()
+        local start = self.i
+        local type, is_whitespace = self:Read()
+        return type, is_whitespace, start, self.i - 1
+    end
+
     function META:ReadToken()
         if self:ReadShebang() then
             return self:NewToken("shebang", 1, self.i - 1, false)
         end
+        
+        local type, is_whitespace, start, stop = self:ReadSimple()
 
-        local start = self.i
-        local type, whitespace = self:Read()
-
-        local tk = self:NewToken(type, start, self.i - 1, whitespace)
+        local tk = self:NewToken(type, start, stop, is_whitespace)
 
         self:OnTokenRead(tk)
 

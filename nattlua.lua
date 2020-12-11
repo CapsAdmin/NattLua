@@ -2,6 +2,8 @@ if not table.unpack and _G.unpack then
 	table.unpack = _G.unpack
 end
 
+require("nattlua.other.color_print")
+
 local helpers = require("nattlua.other.helpers")
 
 helpers.JITOptimize()
@@ -275,7 +277,7 @@ do
 		local code = f:read("*all")
 		f:close()
 		return nl.Code(code, "@" .. path, config)
-	end
+    end
 end
 
 return nl
