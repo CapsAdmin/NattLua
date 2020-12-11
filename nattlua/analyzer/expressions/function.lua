@@ -35,6 +35,12 @@ return function(META)
                     explicit_arguments = true
                 elseif key.explicit_type then
                     args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem")
+
+                    if key.value.value == "..." then
+                        local vararg = self:NewType(key, "...")
+                        vararg:Set(1, args[i])
+                        args[i] = vararg
+                    end
                     explicit_arguments = true
                 elseif key.kind == "value" then
                     if key.value.value == "..." then
