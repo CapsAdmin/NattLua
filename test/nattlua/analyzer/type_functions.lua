@@ -418,3 +418,9 @@ run[[
     local y = type(x) == "number" and math.ceil(x)
     type_assert(y, _ as 2 | false)
 ]]
+
+run[[
+    local str, count = string.gsub("hello there!", "hello", "hi")
+    type_assert<|str, "hi there!"|>
+    type_assert<|count, 1|>
+]]

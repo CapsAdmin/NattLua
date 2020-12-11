@@ -822,30 +822,35 @@ do
 		return types.Number()
 	end
 
-	type function ^string.gsub(str: string, pattern: string, val)
-		if val.Type == "function" then
-			local args = {}
+	type function ^string.gsub(
+            str: string, 
+            pattern: string, 
+            replacement: (function(...string): (...string)) | string, 
+            max_replacements: number | nil
+        )
 
-			if pattern.data then
-				for group in pattern.data:gmatch("%b()") do
-					table.insert(args, types.String())
-				end
-			end
+        str = str:IsLiteral() and str:GetData()
+        pattern = pattern:IsLiteral() and pattern:GetData()
+        replacement = replacement.Type == "string" and replacement:IsLiteral() and replacement:GetData() or replacement
+        max_replacements = max_replacements and max_replacements:GetData()    
 
-			if not args[1] then
-				args[1] = types.String()
-			end
+        if str and pattern and replacement then
+            --replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
 
-			for i,v in ipairs(args) do
-				val.data.arg.data[i] = v
-			end
+            if type(replacement) == "string" then
+                return string.gsub(str, pattern, replacement, max_replacements)
+            else
+                return string.gsub(str, pattern, function(...)
+                    print("!!!")
+                    print(analyzer:Assert(replacement.node, analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement.node, {...}) )))
+                    print("???")
+                end, max_replacements)
+            end
+        end
 
-			val:GetReturnTypes():Set(1, types.String())
 
-		end
-
-		return types.String()
-	end
+        return types.String(), types.Number()
+    end
 end
 
 do

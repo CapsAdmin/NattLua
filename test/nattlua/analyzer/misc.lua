@@ -740,16 +740,6 @@ R[[
     type_assert(a.num, _ as number)
 ]]
 
-
-R[[
-    local function lol()
-        return "hello", 1337
-    end
-
-    local a = lol():gsub("", "")
-
-    type_assert(a, _ as string)
-]]
 R[[
 
     local a,b,c = string.match("1 2 3", "(%d) (%d) (%d)")
@@ -758,14 +748,6 @@ R[[
     type_assert(c, nil as "3")
 
 ]]
-R[[
-    -- val should be a string and lol should be any
-    string.gsub("foo bar", "(%s)", function(val, lol)
-        type_assert(val, _ as string)
-        type_assert(lol, _ as any)
-    end)
-]]
-
 
 R[[
     local def,{a,b,c} = {a=1,b=2,c=3}
