@@ -76,6 +76,10 @@ return function(META)
                 self:CreateLocalValue(statement.identifiers[1], i, "runtime")
                 self:AnalyzeStatements(statement.statements)
 
+                if self._continue_ then
+                    self._continue_ = nil
+                end
+
                 if self.break_out_scope then
 
                     if self.break_out_scope:IsUncertain() then

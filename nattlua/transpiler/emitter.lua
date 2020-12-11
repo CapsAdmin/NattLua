@@ -431,6 +431,11 @@ function META:EmitBreakStatement(node)
     self:EmitToken(node.tokens["break"])
 end
 
+function META:EmitContinueStatement(node)
+    self:Whitespace("\t")
+    self:EmitToken(node.tokens["continue"])
+end
+
 function META:EmitDoStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["do"])
@@ -548,6 +553,8 @@ function META:EmitStatement(node)
         self:EmitInterfaceType(node)
     elseif node.kind == "lsx" then
         self:EmitLSXStatement(node)
+    elseif node.kind == "continue" then
+        self:EmitContinueStatement(node)
     elseif node.kind == "semicolon" then
         self:EmitSemicolonStatement(node)
 

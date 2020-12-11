@@ -47,6 +47,8 @@ return function(META)
             self:AnalyzeReturnStatement(statement)
         elseif statement.kind == "break" then
             self:AnalyzeBreakStatement(statement)
+        elseif statement.kind == "continue" then
+            self:AnalyzeContinueStatement(statement)
         elseif statement.kind == "call_expression" then
             self:AnalyzeCallExpressionStatement(statement)
         elseif statement.kind == "generic_for" then
