@@ -713,7 +713,7 @@ do
                     types[i] = "~"
                 end
             else
-                error("expected string or number at argument #" .. i .. " got " .. tostring(v))
+               return types.String()
             end
         end
 
