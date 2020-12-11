@@ -133,6 +133,12 @@ return function(META)
                 table.insert(self.current_statement.checks[upvalue], new_union)
             end
 
+            if op == "~=" then
+                new_union.inverted = true
+            end
+            
+            truthy_union.upvalue = condition.upvalue
+            falsy_union.upvalue = condition.upvalue
             new_union.truthy_union = truthy_union
             new_union.falsy_union = falsy_union
 
@@ -304,9 +310,11 @@ return function(META)
             return types.Boolean
         elseif op == ">=" then
             local res = metatable_function(self, "__le", l, r)
+
             if res then
                 return res
             end
+
             if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
                 return types.Symbol(l.data >= r.data)
             end
@@ -409,7 +417,16 @@ return function(META)
                 if left.Type == "union" then
                     left:DisableFalsy()
                 end
+
                 right = self:AnalyzeExpression(node.right, env)
+
+                if self.current_statement.checks and right.upvalue then
+                    local checks = self.current_statement.checks[right.upvalue]
+                    if checks then
+                        right = checks[#checks].truthy_union
+                    end
+                end
+
                 if left.Type == "union" then
                     left:EnableFalsy()
                 end
@@ -421,7 +438,7 @@ return function(META)
             end
         elseif node.value.value == "or" then
             left = self:AnalyzeExpression(node.left, env)
-
+            
             if left:IsTruthy() and not left:IsFalsy() then
                 right = self:NewType(node.right, "nil")
             elseif left:IsFalsy() and not left:IsTruthy() then

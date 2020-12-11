@@ -326,6 +326,7 @@ function META:DisableFalsy()
             self:RemoveType(v)
         end
     end
+    
     self.falsy_disabled = found
 end
 
@@ -403,6 +404,8 @@ function META:MakeCallableUnion(analyzer, node)
         end
     end
 
+    truthy_union.upvalue = self.upvalue
+    falsy_union.upvalue = self.upvalue
     new_union.truthy_union = truthy_union
     new_union.falsy_union = falsy_union
 

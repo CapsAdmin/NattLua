@@ -910,6 +910,59 @@ run([[
     type_assert<|x, 3|>
 ]])
 
+
+run[[
+    local x: -1 | 0 | 1 | 2 | 3
+
+    if x >= 0 then
+        if x >= 1 then
+            type_assert<|x, 1|2|3|>
+        end
+    end
+]]
+
+run[[
+    local x: -1 | 0 | 1 | 2 | 3
+    local y = x >= 0 and x or nil
+    type_assert<|y, 0 | 1 | 2 | 3 | nil|>
+
+    local y = x >= 0 and x >= 1 and x or nil
+    type_assert<|y, 1 | 2 | 3 | nil|>
+]]
+
+run[[
+    local function test(LOL)
+        type_assert(LOL, 1)
+    end
+    
+    local x: 1 | "str"
+    if x == 1 or test(x) then
+    
+    end
+]]
+
+run[[
+    local function test(LOL)
+        type_assert(LOL, 1)
+    end
+    
+    local x: 1 | "str"
+    if x ~= 1 or test(x) then
+    
+    end
+]]
+
+run[[
+    local function test(LOL)
+        return LOL
+    end
+    
+    local x: 1 | "str"
+    local y = x ~= 1 or test(x)
+    
+    type_assert<|y, 1 | true|>
+]]
+
 pending([[
     local a: nil | 1
 

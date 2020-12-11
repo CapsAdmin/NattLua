@@ -23,6 +23,8 @@ return function(META)
                 end
             end
     
+            truthy_union.upvalue = obj.upvalue
+            falsy_union.upvalue = obj.upvalue
             new_union.truthy_union = truthy_union
             new_union.falsy_union = falsy_union
     
