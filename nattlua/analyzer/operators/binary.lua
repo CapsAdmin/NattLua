@@ -120,10 +120,17 @@ return function(META)
                 end
             end
 
-            
             if self.type_checked then
                 new_union.type_checked = self.type_checked
                 self.type_checked = nil
+            end
+
+            local upvalue = condition.upvalue or new_union.type_checked and new_union.type_checked.upvalue
+
+            if upvalue then
+                self.current_statement.checks = self.current_statement.checks or {}
+                self.current_statement.checks[upvalue] = self.current_statement.checks[upvalue] or {}
+                table.insert(self.current_statement.checks[upvalue], new_union)
             end
 
             new_union.truthy_union = truthy_union

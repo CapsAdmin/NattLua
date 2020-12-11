@@ -893,6 +893,13 @@ do
 		end
 		return types.Number()
 	end
+
+    type function math.ceil(num: number)
+		if num:IsLiteral() then
+			return math.ceil(num:GetData())
+		end
+		return types.Number()
+	end
 end
 
 type os = {

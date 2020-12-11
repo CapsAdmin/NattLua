@@ -119,6 +119,7 @@ do
 
     function META:SetValue(data)
         self.data = data
+        data.upvalue = self
     end
 
     upvalue_meta = META
@@ -128,7 +129,6 @@ function META:CreateValue(key, obj, env)
     local key_hash = self:Hash(key)
 
     local upvalue = {
-        data = obj,
         key = key_hash,
         shadow = self:FindValue(key, env),
         mutations = {
@@ -143,6 +143,8 @@ function META:CreateValue(key, obj, env)
 
     table_insert(self.upvalues[env].list, upvalue)
     self.upvalues[env].map[key_hash] = upvalue
+
+    upvalue:SetValue(obj)
 
     return upvalue
 end

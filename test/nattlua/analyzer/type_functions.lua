@@ -393,3 +393,28 @@ run[[
         test()
     end
 ]]
+
+run[[
+    local function lol(x)
+        type_assert(x, 1)
+    end
+    
+    local x: 1 | "STRING"
+    local z = x == 1 and lol(x)
+]]
+
+run[[
+    local function lol(x)
+        type_assert(x, _ as 1 | "STRING")
+    end
+    
+    local x: 1 | "STRING"
+    local a = x == 1
+    local z = lol(x)
+]]
+
+run[[
+    local x: 1.5 | "STRING"
+    local y = type(x) == "number" and math.ceil(x)
+    type_assert(y, _ as 2 | false)
+]]

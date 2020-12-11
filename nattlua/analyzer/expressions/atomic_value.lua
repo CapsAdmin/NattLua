@@ -28,6 +28,12 @@ return function(META)
 
         node.inferred_type = node.inferred_type or obj
 
+        if self.current_statement.checks and obj.upvalue then
+            local checks = self.current_statement.checks[obj.upvalue]
+            if checks then
+                return checks[#checks].truthy_union
+            end
+        end
                 
         return obj
     end
