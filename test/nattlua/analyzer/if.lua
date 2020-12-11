@@ -963,6 +963,19 @@ run[[
     type_assert<|y, 1 | true|>
 ]]
 
+run[[
+    local function foo(input)
+        local x = tonumber(input)
+        if not x then
+            error("!")
+        end
+        return x
+    end
+    
+    local y = foo(_ as string)
+    type_assert<|y, number|>
+]]
+
 pending([[
     local a: nil | 1
 

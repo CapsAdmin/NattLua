@@ -226,7 +226,7 @@ return function(META)
                     print(x) -- x is true here
                 end
             ]]
-
+            
             local scope = scope:FindScopeFromTestCondition(value)
             
             if scope then 
@@ -289,7 +289,7 @@ return function(META)
             current_scope:MakeUncertain(exited_scope:IsUncertain())
             
             if exited_scope:IsUncertain() then
-                local copy = self:CloneCurrentScope()
+                local copy = self:CloneCurrentScope(true)
                 copy:SetTestCondition(exited_scope:GetTestCondition())
             end
         end

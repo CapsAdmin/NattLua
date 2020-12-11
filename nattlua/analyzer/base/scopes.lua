@@ -57,10 +57,10 @@ return function(META)
         return self.scope_stack
     end
 
-    function META:CloneCurrentScope()
+    function META:CloneCurrentScope(upvalues)
         local current_scope = self:GetScope()
         self:PopScope()
-        local scope = current_scope:Copy()
+        local scope = current_scope:Copy(upvalues)
         
         local parent = self:GetScope()
 
