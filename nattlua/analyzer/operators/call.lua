@@ -236,10 +236,29 @@ return function(META)
             then
                 local contracts = obj:GetArguments()
                 for i = 1, contracts:GetLength() do
-                    local arg = arguments:Get(i)
-                    if arg then
+                    local arg, err = arguments:Get(i)
+                    local contract = contracts:Get(i)
+
+                    local ok, reason = arg:IsSubsetOf(contract)
+                    if not ok then
+
+                        local contracts = obj:GetArguments()
+
+                        for i = 1, contracts:GetLength() do
+                            local arg = arguments:Get(i)
+                            if arg then
+                                arg.contract = arg.old_contract
+                            end
+                        end
+
+                        return types.errors.other("argument #" .. i .. " " .. tostring(arg) .. ": " .. reason)
+                    end
+
+                    if arg.Type == "table" then
                         arg.old_contract = arg.contract
-                        arg.contract = contracts:Get(i)
+                        arg.contract = contract
+                    else
+                        arguments:Set(i, contract:Copy())
                     end
                 end
 

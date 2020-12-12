@@ -446,7 +446,7 @@ R[[
 
 R([[
     local x: { y = number } = {}
-]], "y.-is missing from")
+]], "table is empty")
 
 R[[
     local Foo = {Bar = {}}
@@ -530,3 +530,44 @@ R[[
 R([[
     local type {Foo} = {}
 ]], "Foo does not exist")
+
+R[[
+    local function test(num: number)
+        type_assert<|num, number|>
+        return num
+    end
+    
+    local a = test(1)
+    type_assert<|a, number|>
+    
+    
+    local function test(num)
+        type_assert<|num, 1|>
+        return num
+    end
+    
+    local a = test(1)
+    type_assert<|a, 1|>
+]]
+
+R[[
+    local type Shape = {
+        Foo = number,
+    }
+    
+    local function mutate(a: Shape)
+        a.Foo = 5
+    end
+    
+    local tbl = {Foo = 1}
+    mutate(tbl)
+    type_assert<|tbl.Foo, 5|>
+    
+    local function mutate(a)
+        a.Foo = 5
+    end
+    
+    local tbl: Shape = {Foo = 1}
+    mutate(tbl)
+    type_assert_superset<|tbl.Foo, number|>
+]]

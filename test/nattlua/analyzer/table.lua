@@ -33,7 +33,7 @@ test("typed table invalid reassignment should error", function()
         [[
             local tbl: {foo = 1} = {foo = 2}
         ]]
-        ,"because 2 is not a subset of 1"
+        ,"2 is not a subset of 1"
     )
 end)
 
@@ -53,7 +53,7 @@ test("typed table invalid reassignment should error", function()
             tbl.foo = {66,66}
             tbl.foo = {1,true}
         ]]
-        ,"true is not a subset of number"
+        ,"true is not the same as number"
     )
 end)
 
@@ -76,9 +76,13 @@ test("self referenced tables should be equal", function()
     local a = analyzer:GetLocalOrEnvironmentValue("a", "runtime")
     local b = analyzer:GetLocalOrEnvironmentValue("b", "runtime")
 
-    equal(true, a:IsSubsetOf(b))
+    local ok, err = a:IsSubsetOf(b)
+    if not ok then
+        error(err)
+    end
+    equal(true, ok)
 end)
-
+do return end
 test("indexing nil in a table should be allowed", function()
     local analyzer = run([[
         local tbl = {foo = true}
@@ -120,7 +124,7 @@ end)
 
 test("should error when key doesn't match the type", function()
     run([[
-        local a: {[string] = string} = {}
+        local a: {[string] = string | nil} = {}
         a.lol = "a"
         a[1] = "a"
     ]], "is not the same type as string")
@@ -180,7 +184,7 @@ test("self reference", function()
         }
 
         -- have to use as here because {} would not be a subset of Foo
-        local x = {} as Foo
+        local x = _ as Foo
         
         type_assert(x:Test(1), _ as number)
         type_assert(x:GetPos(), _ as number)
@@ -280,16 +284,9 @@ test("var args with unknown length", function()
 end)
 
 run[[
-    local list: {[number] = any}
+    local list: {[number] = any} | {}
     list = {}
-    type_assert(list, _ as {[number] = any})
-]]
-
-
-run[[
-    local type list = {[number] = any}
-    list = {}
-    type_assert(list, _ as {[number] = any})
+    type_assert(list, _ as {[number] = any} | {})
 ]]
 
 run[[
@@ -361,7 +358,46 @@ run[[
         t.foo = true
     end
     
-    local tbl = {bar = 1}
+    local tbl = {bar = 1, foo = false}
     fill(tbl)
     type_assert(tbl.foo, true)
+]]
+
+run[[
+    local type ShapeA = {Foo = boolean | nil}
+    local type ShapeB = {Bar = string | nil}
+    
+    local function mutate(obj: ShapeA & ShapeB)
+        obj.Bar = "asdf"
+    end
+    
+    local obj = {}
+    mutate(obj)
+    type_assert<|obj.Bar, "asdf"|>
+]]
+
+run([[
+    local type ShapeA = {Foo = boolean | nil}
+    local type ShapeB = {Bar = string | nil}
+
+    local function mutate(obj: ShapeA & ShapeB)
+        obj.Bar = "asdf"
+    end
+
+    local obj = {Foo = "hm"}
+    mutate(obj)
+    type_assert<|obj.Bar, "asdf"|>
+]], "is not the same type as true")
+
+run[[
+    local type ShapeA = {Foo = boolean | nil}
+    local type ShapeB = {Bar = string | nil}
+
+    local function mutate(obj: ShapeA & ShapeB)
+
+    end
+
+    local obj = {}
+    -- should be okay, because all the values in the contract can be nil
+    mutate(obj)
 ]]

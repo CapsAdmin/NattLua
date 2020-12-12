@@ -211,7 +211,7 @@ return function(META)
             node.identifiers:insert(vararg)
         end
 
-        node.tokens["arguments)"] = list.new(self:ReadValue("|>", node.tokens["arguments("]))
+        node.tokens["arguments)"] = self:ReadValue("|>", node.tokens["arguments("])
 
         if self:IsCurrentValue(":") then
             node.tokens[":"] = self:ReadValue(":")

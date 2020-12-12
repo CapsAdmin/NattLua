@@ -43,10 +43,8 @@ end)
 
 test("union.foo = bar", function()
     run[[
-        local a = { foo = 4 } as { foo = 1|2 } | { foo = 3 }
-        type_assert(a.foo,  _ as 1 | 2 | 3)
-        a.foo = 4
-        type_assert(a.foo, _ as 4|4)
+        local type a = { foo = 4 } | { foo = 1|2 } | { foo = 3 }
+        type_assert<|a.foo, 1 | 2 | 3 | 4|>
     ]]
 end)
 

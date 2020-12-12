@@ -130,43 +130,40 @@ function META.IsSubsetOf(A, B)
 
         done = done or {}
 
-        for _, a in ipairs(A.data) do
-            local b
-            do
-                local reasons = {}
-
-                if not B.data[1] then
-                    return types.errors.other("table is empty")
-                end
-
-                for _, keyval in ipairs(B.data) do
-                    local ok, reason = a.key:IsSubsetOf(keyval.key)
-                    if ok then
-                        b = keyval
-                        break
-                    end
-                    table.insert(reasons, reason)
-                end
-
-                if not b then
-                    return types.errors.other(table.concat(reasons, "\n"))
-                end
-            end
-
-            local key = a.val:GetSignature() .. b.val:GetSignature()
-            if not done or not done[key] then
-                if done then
-                    done[key] = true
-                end
-
-                local ok, reason = a.val:IsSubsetOf(b.val)
-                if not ok then
-                    return types.errors.subset(a.val, b.val, reason)
-                end
+        local can_be_empty = true
+        
+        for _, val in B:pairs() do
+            if not types.Nil:IsSubsetOf(val) then
+                can_be_empty = false
+                break
             end
         end
-        done = nil
 
+        if not A.data[1] and (not A.contract or not A.contract.data[1]) then
+            if can_be_empty then
+                return true
+            else
+                return types.errors.other("table is empty")
+            end
+        end
+
+        for akey, aval in A:pairs() do
+            local keyval, reason = B:GetKeyVal(akey, true) 
+            if keyval then
+
+                local cachekey = aval:GetSignature()..keyval.val:GetSignature()
+                if not done[cachekey] then
+                    done[cachekey] = true
+                    local ok, err = aval:IsSubsetOf(keyval.val)
+                    if not ok then
+                        return ok, err
+                    end
+                end
+            else
+                return keyval, reason
+            end
+        end
+        
         return true
     elseif B.Type == "union" then
         return types.Union({A}):IsSubsetOf(B)
@@ -445,7 +442,7 @@ end
 function META:pairs()
     local i = 1
     return function()
-        local keyval = self.data and self.data[i]
+        local keyval = self.data and self.data[i] or self.contract and self.contract[i]
 
         if not keyval then
             return nil

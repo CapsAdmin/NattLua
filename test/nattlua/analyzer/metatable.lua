@@ -141,7 +141,7 @@ test("interface extensions", function()
         }
 
         -- have to use the as operator here because {} would not be a subset of Foo
-        local x = {} as Foo
+        local x = _ as Foo
 
         x:SetPos({x = 1, y = 2, z = 3})
         local a = x:GetPos()
@@ -349,7 +349,6 @@ run[[
     })
 
     local newvector = Vector(1,2,3) + Vector(100,100,100)
-
     type_assert(newvector, _ as {x = number, y = number, z = number})
 ]]
 

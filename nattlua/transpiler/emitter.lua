@@ -185,7 +185,7 @@ do
         self:Whitespace(" ")
         self:EmitToken(node.tokens["function"])
         self:Whitespace(" ")
-        self:EmitIdentifier(node.identifier)
+        self:EmitToken(node.tokens["identifier"])
         emit_function_body(self, node, true)
     end
 
