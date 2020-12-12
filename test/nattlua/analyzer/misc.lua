@@ -594,7 +594,7 @@ R[[
 
 ]]
 R[[
-    local a = math.cos(1)
+    local a = math.cos(_ as number)
     type_assert(a, nil as number)
 
     if a is number then
