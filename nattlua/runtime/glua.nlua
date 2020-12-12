@@ -178,6 +178,10 @@ type function hook.Add(eventName: string, obj: any, callback: (function(...): ..
     callback:SetArguments(event_callback:GetArguments())
 end
 
+local type EntityAttachment = {
+    Ang = Angle,
+    Pos = Vector,
+}
 
 return {
     hook = hook,
@@ -189,4 +193,5 @@ return {
     util = util,
     Mesh = Mesh,
     ClientsideModel = ClientsideModel,
+    EntityAttachment = EntityAttachment,
 }

@@ -1,4 +1,4 @@
-local { Vector, Angle, Player } = loadfile("nattlua/runtime/gmod.nlua")()
+local { Vector, Angle, Player } = loadfile("nattlua/runtime/glua.nlua")()
 
 local ply = nil
 
