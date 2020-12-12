@@ -554,6 +554,7 @@ do -- expression
         elseif syntax.IsPrefixOperator(self:GetCurrentToken()) then
             node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
+            node.tokens[1] = node.value
             node.right = self:ReadExpectExpression(math.huge, no_ambiguous_calls)
             node:End()
         elseif self:IsFunctionValue() then
@@ -702,6 +703,7 @@ do -- statements
         if left[1] and left[1].kind == "postfix_call" and not left[2] then
             local node = self:Statement("call_expression")
             node.value = left[1]
+            node.tokens = left[1].tokens
             return node:End()
         end
 

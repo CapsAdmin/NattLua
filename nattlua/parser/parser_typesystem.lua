@@ -351,6 +351,7 @@ return function(META)
         elseif syntax.typesystem.IsPrefixOperator(self:GetCurrentToken()) then
             node = self:Expression("prefix_operator")
             node.value = self:ReadTokenLoose()
+            node.tokens[1] = node.value
             node.right = self:ReadTypeExpression(math_huge)
         elseif self:IsCurrentValue("...") and self:IsType("letter", 1) then
             node = self:Expression("value")
