@@ -382,9 +382,15 @@ do -- globals
         end
 	end
 
-	type function pcall(callable: any, ...)
-		return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
-	end
+	type function pcall(callable: (function(...any): (...any)), ...)
+        local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple(...), node))
+        local err = analyzer.lua_error_thrown
+        if err then
+            analyzer.lua_error_thrown = nil
+            return types.False, err
+        end
+		return types.True, res:Unpack()
+    end
 
     type function type_pcall(func, ...) 
         local ok, val = pcall(analyzer.Call, analyzer, func, types.Tuple({...}))
@@ -443,6 +449,49 @@ do -- globals
 		    return tbl.meta
         end
 	end
+
+    type function tostring(val: any)
+        if not val:IsLiteral() then
+            return types.String()
+        end
+
+        if val.Type == "string" then
+            return val
+        end
+
+        if val.Type == "number" then
+            return tostring(val:GetData())
+        end
+
+        if val.Type == "table" then
+            if val.meta then
+                local func = val.meta:Get("__tostring")
+                if func then
+                    if func.Type == "function" then
+                        return analyzer:Assert(analyzer.current_expression, analyzer:Call(func, types.Tuple({val})))
+                    else
+                        return func
+                    end
+                end 
+            end
+
+            return tostring(val:GetData())
+        end
+    end
+
+    type function tonumber(val: string | number, base: number)
+        if not val:IsLiteral() or base and not base:IsLiteral() then
+            return types.Union({types.Nil, types.Number()})
+        end
+
+        if val:IsLiteral() then
+            base = base and base:IsLiteral() and base:GetData()
+            
+            return tonumber(val:GetData(), base)
+        end
+
+        return val
+    end
 end
 
 do
@@ -579,7 +628,8 @@ type setfenv = debug.setfenv
 type package = {
 	searchpath = (function(name: string, path: string, sep: string, rep: string): string|nil, string|nil) | (function(name: string, path: string, sep: string): string|nil, string|nil) | (function(name: string, path: string): string|nil, string|nil),
 	seeall = (function(module: Table): nil),
-	loadlib = (function(libname: string, funcname: string): empty_function|nil)
+	loadlib = (function(libname: string, funcname: string): empty_function|nil),
+    config = "/\n;\n?\n!\n-\n"
 }
 
 type bit32 = {
@@ -624,6 +674,9 @@ do
 
 		local out = {}
 		for i, keyval in ipairs(tbl.data) do
+            if not keyval.val:IsLiteral() or keyval.val.Type == "union" then
+                return types.String()
+            end
 			out[i] = keyval.val:GetData()
 		end
 
@@ -704,20 +757,19 @@ do
             return types.String()
         end
 
-        local types = {...}
-        for i,v in ipairs(types) do
-            if v.Type == "string" or v.Type == "number" or v.Type == "any" then
-                if v:IsLiteral() then
-                    types[i] = v:GetData()
-                else
-                    types[i] = "~"
-                end
+        local ret = {...}
+        for i,v in ipairs(ret) do
+            if v:IsLiteral() and (v.Type == "string" or v.Type == "number") then
+                ret[i] = v:GetData()
             else
-               return types.String()
+                return types.String()
             end
         end
 
-        return string.format(s:GetData(), table.unpack(types))
+print(s)
+        print(#ret, table.unpack(ret))
+
+        return string.format(s:GetData(), table.unpack(ret))
     end
 
 	type function ^string.gmatch(s: string, pattern: string)
@@ -782,7 +834,7 @@ do
 	type function ^string.match(str: string, pattern: string, start_position: number | nil)
         str = str:IsLiteral() and str:GetData()
         pattern = pattern:IsLiteral() and pattern:GetData()
-        start_position = start_position and start_position:IsLiteral() or 1
+        start_position = start_position and start_position:IsLiteral() and start_position:GetData() or 1
 
         if not str or not pattern then
             return types.Union({types.String(), types.Nil})
@@ -790,8 +842,14 @@ do
     
         local res = {str:match(pattern, start_position)}
         for i,v in ipairs(res) do
-            res[i] = types.String(v):MakeLiteral(true)
+            if type(v) == "string" then
+                res[i] = types.String(v):MakeLiteral(true)
+            else
+                res[i] = types.Number(v):MakeLiteral(true)
+            end
         end
+
+        print(table.unpack(res))
         
         return table.unpack(res)
 	end

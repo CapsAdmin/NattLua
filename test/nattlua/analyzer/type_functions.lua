@@ -424,3 +424,21 @@ run[[
     type_assert<|str, "hi there!"|>
     type_assert<|count, 1|>
 ]]
+
+run[[
+    local function test(x)
+        error("LOL")
+        return "foo"
+    end
+    local ok, err = pcall(test, "foo")
+    type_assert<|ok, false|>
+    type_assert<|err, "LOL"|>
+
+
+    local function test(x)
+        return "foo"
+    end
+    local ok, err = pcall(test, "foo")
+    type_assert<|ok, true|>
+    type_assert<|err, "foo"|>
+]]
