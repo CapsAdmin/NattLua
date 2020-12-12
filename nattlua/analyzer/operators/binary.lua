@@ -148,11 +148,10 @@ return function(META)
         if env == "typesystem" then
             if op == "|" then
                 return types.Union({l, r})
-            elseif op == "&" then
-                if l.Type == "table" and r.Type == "table" then
-                    return l:Extend(r)
+            elseif op == "&" or op == "extends" then
+                if l.Type ~= "table" then
+                    return false, "type ".. tostring(l) .. " cannot be extended"
                 end
-            elseif op == "extends" then
                 return l:Extend(r)
             elseif op == ".." then
                 return l:Copy():Max(r)
