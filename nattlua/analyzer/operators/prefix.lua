@@ -39,7 +39,9 @@ return function(META)
     function META:PrefixOperator(node, l, env)
         local op = node.value.value
 
-        if l.Type == "tuple" then l = l:Get(1) end
+        if l.Type == "tuple" then 
+            l = l:Get(1) or types.Nil
+        end
 
         if l.Type == "union" then
             local new_union = types.Union()

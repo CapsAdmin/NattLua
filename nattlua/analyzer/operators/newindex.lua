@@ -1,7 +1,7 @@
 local types = require("nattlua.types.types")
 
 return function(META) 
-    function META:NewIndexOperator(obj, key, val, node)
+    function META:NewIndexOperator(obj, key, val, node, env)
         if obj.Type == "union" then
             -- local x: nil | {foo = true}
             -- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
@@ -12,7 +12,7 @@ return function(META)
             local falsy_union = types.Union()
     
             for _, v in ipairs(obj:GetTypes()) do
-                local ok, err = self:NewIndexOperator(v, key, val, node)
+                local ok, err = self:NewIndexOperator(v, key, val, node, env)
     
                 if not ok then
                     self:ErrorAndCloneCurrentScope(node, err or "invalid set error", obj)

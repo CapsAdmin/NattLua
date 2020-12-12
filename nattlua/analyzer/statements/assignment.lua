@@ -137,7 +137,7 @@ return function(META)
                     self:SetLocalOrEnvironmentValue(key, val, env)
                 else
                     local obj = self:AnalyzeExpression(exp_key.left, env)
-                    self:Assert(exp_key, self:NewIndexOperator(obj, key, val, exp_key))
+                    self:Assert(exp_key, self:NewIndexOperator(obj, key, val, exp_key, env))
                     self:FireEvent("newindex", obj, key, val, env)
                 end
             end

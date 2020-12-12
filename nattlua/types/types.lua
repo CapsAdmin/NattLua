@@ -193,7 +193,7 @@ do
     end
 
     function Base:Seal()
-        self.contract = self:Copy()
+        self.contract = self.contract or self:Copy()
     end
 
     function Base:CopyLiteralness(obj)

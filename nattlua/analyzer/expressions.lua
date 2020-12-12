@@ -25,6 +25,12 @@ return function(META)
         end
 
         if node.explicit_type then
+            if node.kind == "table" then
+                local obj = self:AnalyzeTableExpression(node, env)
+                obj.contract = self:AnalyzeExpression(node.explicit_type, "typesystem")
+                return obj
+            end
+
             return self:AnalyzeExpression(node.explicit_type, "typesystem")
         elseif node.kind == "value" then
             return self:AnalyzeAtomicValueExpression(node, env)

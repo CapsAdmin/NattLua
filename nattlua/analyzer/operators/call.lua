@@ -40,7 +40,7 @@ return function(META)
         if function_node.self_call then
             self:CreateLocalValue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env, "self")
         end
-    
+        
         for i, identifier in ipairs(function_node.identifiers) do
             local argi = function_node.self_call and (i+1) or i
     
@@ -226,6 +226,7 @@ return function(META)
             end
     
             local arguments = arguments
+            local used_contract = false
     
             if 
                 obj.explicit_arguments and 
@@ -233,10 +234,31 @@ return function(META)
                 function_node.kind ~= "local_generics_type_function" and 
                 not call_node.type_call
             then
-                arguments = obj:GetArguments()
+                local contracts = obj:GetArguments()
+                for i = 1, contracts:GetLength() do
+                    local arg = arguments:Get(i)
+                    if arg then
+                        arg.old_contract = arg.contract
+                        arg.contract = contracts:Get(i)
+                    end
+                end
+
+                used_contract = true
             end
             
             local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
+
+            if used_contract then
+                local contracts = obj:GetArguments()
+
+                for i = 1, contracts:GetLength() do
+                    local arg = arguments:Get(i)
+                    if arg then
+                        arg.contract = arg.old_contract
+                    end
+                end
+            end
+            
 
             -- if this function has an explicit return type
             local return_types = obj:HasExplicitReturnTypes() and obj:GetReturnTypes() or function_node.return_types and types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))

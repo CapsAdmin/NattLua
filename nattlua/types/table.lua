@@ -48,7 +48,7 @@ function META:__tostring()
     level = level + 1
     local indent = ("\t"):rep(level)
 
-    if self.contract then
+    if self.contract and self.contract.Type == "table" then
         for i, keyval in ipairs(self.contract.data) do
             local key, val = tostring(self.data[i] and self.data[i].key or "undefined"), tostring(self.data[i] and self.data[i].val or "undefined")
             local tkey, tval = tostring(keyval.key), tostring(keyval.val)
@@ -282,7 +282,7 @@ function META:Set(key, val, no_delete)
     end
 
     -- delete entry
-    if not no_delete then
+    if not no_delete and not self.contract then
         if (val == nil or (val.Type == "symbol" and val:GetData() == nil)) then
             return self:Delete(key)
         end
@@ -460,6 +460,10 @@ end
 function META:IsLiteral()
     if self.suppress then
         return true
+    end
+
+    if self.contract then
+        return false
     end
 
     for _, v in ipairs(self.data) do

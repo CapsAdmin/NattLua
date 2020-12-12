@@ -9,7 +9,7 @@ return function(META)
             obj = 
                 self:GetLocalOrEnvironmentValue(node, env) or
                 self:GetLocalOrEnvironmentValue(node, "runtime")
-            
+
             if not obj then
                 self:Error(node, "cannot find value " .. node.value.value)
             end

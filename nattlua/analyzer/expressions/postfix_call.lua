@@ -11,6 +11,11 @@ return function(META)
             callable = self:Assert(node, callable:Get(1))
         end
 
+        if callable.Type == "symbol" then
+            self:Error(node, tostring(node.left:Render()) .. " is nil")
+            return types.Tuple({types.Any()})
+        end
+
         local types = self:AnalyzeExpressions(node.expressions, env)
 
         if self.self_arg_stack and node.left.kind == "binary_operator" and node.left.value.value == ":" then

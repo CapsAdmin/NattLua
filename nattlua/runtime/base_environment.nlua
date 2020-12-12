@@ -98,6 +98,9 @@ type function type_traceback()
 end
 
 type function seal(tbl)
+
+    if tbl.contract then return end
+
 	for key, val in tbl:pairs() do
 		if val.Type == "function" and val:GetArguments():Get(1).Type == "union" then 
 			local first_arg = val:GetArguments():Get(1)
@@ -195,6 +198,7 @@ do -- globals
 	end
 
 	type function pairs(tbl)
+
 		if tbl:IsLiteral() then
 			local i = 1
 			return function(key, val)
@@ -437,6 +441,17 @@ do -- globals
 			if not meta.contract then
 				meta:Extend(tbl, true)
 			end
+
+            if not tbl.contract and false then
+                local contract = types.Table({})
+                for _, keyval in ipairs(tbl:GetData()) do
+                    local val = meta:Get(keyval.key)
+                    if val then
+                        contract:Set(keyval.key, val)
+                    end
+                end
+                tbl.contract = contract
+            end
 
 			tbl.meta = meta
 		end
@@ -866,7 +881,7 @@ do
         no_pattern = no_pattern and no_pattern:IsLiteral() and no_pattern:GetData() or false
 
         if not str or not pattern then
-            return types.Union({types.Number(), types.Number(), types.String()})
+            return types.Union({types.Union({types.Number(), types.Nil}), types.Union({types.Number(), types.Nil}), types.Union({types.String(), types.Nil})})
         end
     
         local start, stop, found = str:find(pattern, start_position, no_pattern)

@@ -326,3 +326,42 @@ run[[
     local x = test(lol as string | string)
     type_assert(x, _ as 1 | true | false | nil)    
 ]]
+
+run[[
+    local type T = {Foo = "something" | nil, Bar = "definetly"}
+
+    local a = {} as T
+    type_assert<|a.Foo, nil | "something"|>
+
+    a.Foo = nil
+    type_assert<|a.Foo, nil|>
+
+    a.Foo = "something"
+    type_assert<|a.Foo, "something"|>
+
+
+    a.Foo = _ as "something" | nil
+    type_assert<|a.Foo, "something" | nil|>
+
+    type_assert<|a.Bar, "definetly"|>
+]]
+
+run[[
+    local function fill(t)
+        t.foo = true
+    end
+    
+    local tbl = {}
+    fill(tbl)
+    type_assert(tbl.foo, true)
+]]
+
+run[[
+    local function fill(t: {foo = boolean, bar = number})
+        t.foo = true
+    end
+    
+    local tbl = {bar = 1}
+    fill(tbl)
+    type_assert(tbl.foo, true)
+]]
