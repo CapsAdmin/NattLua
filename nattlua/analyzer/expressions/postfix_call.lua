@@ -27,9 +27,13 @@ return function(META)
             local temp = {}
             for i,v in ipairs(types) do
                 if v.Type == "tuple" then
-                    local obj = v:Get(1)
-                    if obj then
-                        table.insert(temp, obj)
+                    if i == #types then
+                        table.insert(temp, v)
+                    else
+                        local obj = v:Get(1)
+                        if obj then
+                            table.insert(temp, obj)
+                        end
                     end
                 else
                     table.insert(temp, v)

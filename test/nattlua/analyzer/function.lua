@@ -455,3 +455,19 @@ run([[
         return 3
     end
 ]], "number does not contain nil")
+
+run[[
+    local type function test2(a, ...)
+        local b,c,d = ...
+        assert(a:GetData() == "1")
+        assert(b:GetData() == 2)
+        assert(c:GetData() == 3)
+        assert(d:GetData() == 4)
+    end
+    
+    local function test(a, ...)
+        test2(a, ...)
+    end
+    
+    test("1",2,3,4)
+]]
