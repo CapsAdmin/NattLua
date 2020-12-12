@@ -42,12 +42,22 @@ return function(META)
 
         do
             function META:IsLocalDestructureAssignmentStatement() 
-                return self:IsCurrentValue("local") and self:IsDestructureStatement(1) 
+                if self:IsCurrentValue("local") then
+                    if self:IsValue("type", 1) then
+                        return self:IsDestructureStatement(2) 
+                    end
+                    return self:IsDestructureStatement(1) 
+                end 
             end
 
             function META:ReadLocalDestructureAssignmentStatement()
                 local node = self:Statement("local_destructure_assignment")
                 node.tokens["local"] = self:ReadValue("local")
+
+                if self:IsCurrentValue("type") then
+                    node.tokens["type"] = self:ReadValue("type")
+                    node.environment = "typesystem"
+                end
 
                 read_remaining(self, node)
 

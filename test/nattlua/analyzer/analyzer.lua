@@ -521,3 +521,12 @@ R[[
     local val: nil
     type_assert(val, nil)
 ]]
+
+R[[
+    local {Foo} = {}
+    type_assert(Foo, nil)
+]]
+
+R([[
+    local type {Foo} = {}
+]], "Foo does not exist")

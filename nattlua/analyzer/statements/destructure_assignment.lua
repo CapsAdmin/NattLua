@@ -16,7 +16,15 @@ return function(META)
         end
 
         for _, node in ipairs(statement.left) do
-            local obj = node.value and obj:Get(node.value.value, env) or self:NewType(node, "nil")
+            local obj = node.value and obj:Get(node.value.value, env)
+
+            if not obj then
+                if env == "runtime" then
+                    obj = self:NewType(node, "nil")
+                else
+                    self:Error(node, "field " .. tostring(node.value.value) .. " does not exist")
+                end
+            end
 
             if statement.kind == "local_destructure_assignment" then
                 self:CreateLocalValue(node, obj, env)
