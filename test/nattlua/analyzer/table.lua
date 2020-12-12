@@ -401,3 +401,29 @@ run[[
     -- should be okay, because all the values in the contract can be nil
     mutate(obj)
 ]]
+
+run([[
+    local type ShapeA = {Foo = boolean}
+    local type ShapeB = {Bar = string}
+
+    local function mutate(obj: ShapeA & ShapeB)
+
+    end
+
+    local obj = {}
+    -- should be okay, because all the values in the contract can be nil
+    mutate(obj)
+]], "table is empty")
+
+run([[
+    local type ShapeA = {Foo = boolean}
+    local type ShapeB = {Bar = string}
+
+    local function mutate(obj: ShapeA & ShapeB)
+
+    end
+
+    local obj = {Foo = true}
+    -- should be okay, because all the values in the contract can be nil
+    mutate(obj)
+]], "table is empty")

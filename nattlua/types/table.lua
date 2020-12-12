@@ -77,6 +77,27 @@ function META:GetLength()
     return #self.data
 end
 
+function META:FollowsContract(contract)
+    for _, keyval in ipairs(contract:GetData()) do
+        local res, err = self:GetKeyVal(keyval.key)
+
+        if not res and self.meta then
+            res, err = self.meta:GetKeyVal(keyval.key)
+        end
+
+        if not res then
+            return res, err
+        end
+
+        local ok, err = res.val:IsSubsetOf(keyval.val)
+        if not ok then
+            return ok, err
+        end
+    end
+
+    return true
+end
+
 -- TODO
 local done
 
@@ -150,19 +171,24 @@ function META.IsSubsetOf(A, B)
         for akey, aval in A:pairs() do
             local keyval, reason = B:GetKeyVal(akey, true) 
             if keyval then
-
                 local cachekey = aval:GetSignature()..keyval.val:GetSignature()
-                if not done[cachekey] then
-                    done[cachekey] = true
+                if not done or not done[cachekey] then
+                    if done then
+                        done[cachekey] = true
+                    end
                     local ok, err = aval:IsSubsetOf(keyval.val)
                     if not ok then
+                        done = nil
                         return ok, err
                     end
                 end
             else
+                done = nil
                 return keyval, reason
             end
         end
+
+        done = nil
         
         return true
     elseif B.Type == "union" then

@@ -239,7 +239,14 @@ return function(META)
                     local arg, err = arguments:Get(i)
                     local contract = contracts:Get(i)
 
-                    local ok, reason = arg:IsSubsetOf(contract)
+                    local ok, reason
+
+                    if arg.Type == "table" and contract.Type == "table" then
+                        ok, reason = arg:FollowsContract(contract)
+                    else
+                        ok, reason = arg:IsSubsetOf(contract)
+                    end                
+
                     if not ok then
 
                         local contracts = obj:GetArguments()

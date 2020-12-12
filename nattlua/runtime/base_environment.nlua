@@ -436,22 +436,10 @@ do -- globals
 	end
 
 	type function setmetatable(tbl, meta)
-		if meta.Type == "table" then
-			
+		if meta.Type == "table" then			
 			if not meta.contract then
 				meta:Extend(tbl, true)
 			end
-
-            if not tbl.contract and false then
-                local contract = types.Table({})
-                for _, keyval in ipairs(tbl:GetData()) do
-                    local val = meta:Get(keyval.key)
-                    if val then
-                        contract:Set(keyval.key, val)
-                    end
-                end
-                tbl.contract = contract
-            end
 
 			tbl.meta = meta
 		end

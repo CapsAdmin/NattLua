@@ -26,14 +26,14 @@ test("union string and get constant string", function()
 
     local tbl = Table()
     tbl.contract = contract
-    tbl:Set(String(), Number(1337))
+    tbl:Set(String(), Number(1337):MakeLiteral(true))
     local union = assert(tbl:Get(String()))
     equal("union", union.Type)
     equal(1337, union:GetType("number"):GetData())
     equal(nil, union:GetType("symbol"):GetData())
 
     assert(tbl:IsSubsetOf(contract))
-    assert(not contract:IsSubsetOf(tbl))
+    assert(not contract:IsSubsetOf(tbl))    
 end)
 
 test("errors when trying to modify a table without a defined structure", function()
