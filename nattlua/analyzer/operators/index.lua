@@ -41,16 +41,15 @@ return function(META)
         if obj.contract then
             return obj:Get(key)
         end
-    
-        -- local obj: {string = number}
-        -- obj.foo = 1
-        -- log(obj.foo) << since the contract states that key is a string, then obj.foo would be nil or a number
-        -- this adds some additional context
-        if obj.last_set and not key:IsLiteral() and obj.last_set[key] then
-            return obj.last_set[key]
-        end
-    
+
         local val, err = obj:Get(key)
+
+        if val then
+            local o = self:OnFindLocalValue(obj, key, val, "runtime", self:GetScope())
+            if o then
+                return o
+            end
+        end
     
         if not val then
             return self:NewType(node or obj.node, "nil"):AddReason("failed to get " .. tostring(key) .. " from table because " .. err)

@@ -976,6 +976,15 @@ run[[
     type_assert<|y, number|>
 ]]
 
+run[[
+    local a = {}
+    if MAYBE then
+        a.lol = true
+        type_assert(a.lol, true)
+    end
+    type_assert(a.lol, _ as nil | true)
+]]
+
 pending([[
     local a: nil | 1
 

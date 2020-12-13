@@ -98,17 +98,33 @@ return function(META)
         
     end
 
-    function META:OnFindLocalValue(upvalue, key, env, scope)    
-        local value = upvalue:GetValue()
-        local scope = scope or self:GetScope()
+    local function cast_key(key)
+        if type(key) == "string" then
+            return key
+        end
 
-        if scope:IsReadOnly() then return upvalue.data end
+        if type(key) == "table" then
+            if key.type == "expression" and key.kind == "value" then
+                return key.value.value
+            else
+                return key:GetData()
+            end
+        end
 
-        if upvalue.mutations then
+        error("aaaa")
+    end
+
+    function META:OnFindLocalValue(upvalue, key, value, env, scope)    
+        scope = scope or self:GetScope()
+        if scope:IsReadOnly() then return value end
+        
+        key = cast_key(key)
+        
+        if upvalue.mutations and upvalue.mutations[key] then
             local mutations = {}
 
             do
-                for from, mutation in ipairs(upvalue.mutations) do
+                for from, mutation in ipairs(upvalue.mutations[key]) do
                     do --[[
                         Remove redundant mutations that happen in the same same scope. 
                         The last mutation is the one that matters.
@@ -228,7 +244,6 @@ return function(META)
             ]]
             
             local scope = scope:FindScopeFromTestCondition(value)
-            
             if scope then 
                 local t
                 if scope.test_condition_inverted then
@@ -257,13 +272,18 @@ return function(META)
         self:GetScope():SetTestCondition(condition)
     end
 
-    function META:OnMutateUpvalue(upvalue, key, val, env)
-        local scope = self:GetScope()
+    function META:OnMutateUpvalue(upvalue, key, val, env, scope)
+        scope = scope or self:GetScope()
         if scope:IsReadOnly() then return end
+        
+        key = cast_key(key)
+        
         val.upvalue = upvalue
+        
         upvalue.mutations = upvalue.mutations or {}
-
-        table.insert(upvalue.mutations, {
+        upvalue.mutations[key] = upvalue.mutations[key] or {}
+        
+        table.insert(upvalue.mutations[key], {
             scope = scope,
             value = val,
             env = env,

@@ -21,6 +21,7 @@ function META:NewType(node, type, data, literal)
 
     if type == "table" then
         obj = self:Assert(node, types.Table(data))
+        obj.creation_scope = self:GetScope()
     elseif type == "list" then
         obj = self:Assert(node, types.List(data))
     elseif type == "..." then

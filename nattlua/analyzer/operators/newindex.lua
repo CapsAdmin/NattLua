@@ -44,13 +44,13 @@ return function(META)
                 end
             end
         end
+
+        if not obj:Get(key) then
+            self:OnMutateUpvalue(obj, key, types.Nil, env, obj.creation_scope)
+        end
     
-        -- local obj: {string = number}
-        -- obj.foo = 1
-        -- log(obj.foo) << since the contract states that key is a string, then obj.foo would be nil or a number
-        -- this adds some additional context
-        obj.last_set = obj.last_set or {}
-        obj.last_set[key] = val
-        return obj:Set(key, val)
+        if not self:OnMutateUpvalue(obj, key, val, env) then -- always false?
+            return obj:Set(key, val)
+        end
     end
 end

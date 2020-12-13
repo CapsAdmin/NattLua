@@ -131,10 +131,14 @@ function META:CreateValue(key, obj, env)
     local upvalue = {
         key = key_hash,
         shadow = self:FindValue(key, env),
+
+        -- TODO: weird structure, it's like this to deal with tables
         mutations = {
-            {
-                scope = self,
-                value = obj,
+            [key_hash] = { 
+                {
+                    scope = self,
+                    value = obj,
+                }
             }
         }
     }

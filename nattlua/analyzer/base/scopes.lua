@@ -77,7 +77,7 @@ return function(META)
         return upvalue
     end
 
-    function META:OnFindLocalValue(found, key, env, original_scope)
+    function META:OnFindLocalValue(found, key, env, value, original_scope)
         
     end
 
@@ -98,7 +98,7 @@ return function(META)
     function META:FindLocalValue(key, env, scope)
         local upvalue = self:FindLocalUpvalue(key, env, scope)
         if upvalue then
-            local t = self:OnFindLocalValue(upvalue, key, env, scope)
+            local t = self:OnFindLocalValue(upvalue, key, upvalue:GetValue(), env, scope)
             return t or upvalue:GetValue()
         end 
     end
