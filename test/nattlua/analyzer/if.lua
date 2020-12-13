@@ -1019,6 +1019,20 @@ run[[
     type_assert(x.field, _ as number | nil)
 ]]
 
+run[[
+    local x = _ as nil | 1 | false
+    if x then x = false end
+    type_assert<|x, nil | false|>
+
+    local x = _ as nil | 1
+    if not x then x = 1 end
+    type_assert<|x, 1|>
+
+    local x = _ as nil | 1
+    if x then x = nil end
+    type_assert<|x, nil|>
+]]
+
 pending([[
     local a: nil | 1
 

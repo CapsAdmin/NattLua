@@ -211,6 +211,23 @@ return function(META)
             union.upvalue = upvalue
             
             for _, change in ipairs(mutations) do
+                
+                do
+                    local scope = change.scope:FindScopeFromTestCondition(value)
+                    if scope and scope.test_condition.Type == "union" then
+                        local t
+                        if scope.test_condition_inverted then
+                            t = scope.test_condition.falsy_union or scope.test_condition:GetFalsy()
+                        else
+                            t = scope.test_condition.truthy_union or scope.test_condition:GetTruthy()
+                        end
+
+                        if t then
+                            union:RemoveType(t)
+                        end
+                    end
+                end
+
                 if change.certain_override or change.scope:IsCertain(scope) then
                     union:Clear()
                 end
@@ -225,7 +242,6 @@ return function(META)
                     union:AddType(change.value)
                 end
             end
-
             
             if #union:GetData() == 1 then
                 value = union:GetData()[1]
@@ -233,6 +249,7 @@ return function(META)
                 value = union
             end
         end
+
 
         if value.Type == "union" then
             --[[
@@ -251,6 +268,9 @@ return function(META)
             local scope = scope:FindScopeFromTestCondition(value)
             if scope then 
                 local t
+
+                -- the or part here refers to if *condition* then
+                -- truthy/falsy_union is only created from binary operators and some others
                 if scope.test_condition_inverted then
                     t = scope.test_condition.falsy_union or value:GetFalsy()
                 else
