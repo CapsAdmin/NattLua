@@ -1,15 +1,14 @@
-local type { Entity, Vector, Angle, EntityAttachment, EntityAttachments } = loadfile("nattlua/runtime/glua.nlua")()
+
+local type { Entity, Vector, Angle } = loadfile("nattlua/runtime/glua.nlua")()
 
 local type HeadPos = {
     findheadpos_head_bone = number | nil,
     findheadpos_head_attachment = number | nil,
     findheadpos_last_mdl = string | nil,
-	findheadpos_attachment_eyes = EntityAttachments,
 }
 
 local function get_first_attachment_by_name(ent, name)
 	local attachments = ent:GetAttachments()
-
 	for i,v in ipairs(attachments) do
 		if v.name == name then
 			return v.id
@@ -35,7 +34,6 @@ local function FindHeadPosition(ent: Entity & HeadPos)
 		end
     end
     
-
 	if ent.findheadpos_head_bone then
 		local m = ent:GetBoneMatrix(ent.findheadpos_head_bone)
 		if m then
