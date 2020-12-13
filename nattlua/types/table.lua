@@ -40,8 +40,9 @@ function META:__tostring()
     self.suppress = true
 
     if self:Contains("__name") then
+        local str = tostring(self:Get("__name"):GetData())
         self.suppress = nil
-        return tostring(self:Get("__name"):GetData())
+        return str
     end
 
     local s = {}
