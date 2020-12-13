@@ -121,8 +121,8 @@ local type PhysicsObject = {
 
 local type EntityAttachments = {
     [1 .. inf] = {
-        id: number,
-        name: string,
+        id = number,
+        name = string,
     }
 }
 
