@@ -40,6 +40,7 @@ function META:__tostring()
     self.suppress = true
 
     if self:Contains("__name") then
+        self.suppress = nil
         return tostring(self:Get("__name"):GetData())
     end
 
