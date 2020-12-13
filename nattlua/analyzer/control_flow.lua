@@ -49,6 +49,15 @@ return function(META)
             end
         end
 
+        if scope.uncertain_function_return then
+            local obj = types.Nil:Copy()
+            if out[1] then
+                out[1] = types.Union({out[1], obj})
+            else
+                out[1] = obj
+            end
+        end
+
         scope:ClearReturnTypes()
 
         return types.Tuple(out)
@@ -86,6 +95,16 @@ return function(META)
 
     function META:Return(types)
         local scope = self:GetScope()
+
+        if not scope:IsReadOnly()  then
+            local function_scope = scope:GetNearestFunctionScope()
+            if scope:IsUncertain() then
+                function_scope.uncertain_function_return = true
+            elseif function_scope.uncertain_function_return then
+                function_scope.uncertain_function_return = false
+            end
+        end
+
         scope:CollectReturnTypes(types)
         scope:Return(scope:IsUncertain())
     end
@@ -214,7 +233,7 @@ return function(META)
                 
                 do
                     local scope = change.scope:FindScopeFromTestCondition(value)
-                    if scope and scope.test_condition.Type == "union" then
+                    if scope and change.scope == scope and scope.test_condition.Type == "union" then
                         local t
                         if scope.test_condition_inverted then
                             t = scope.test_condition.falsy_union or scope.test_condition:GetFalsy()
@@ -235,6 +254,7 @@ return function(META)
                 if _ == 1 and change.value.Type == "union" then
                     if upvalue.Type == "table" then
                         union = change.value:Copy()
+                        union.upvalue = upvalue
                     else 
                         union = change.value
                     end
@@ -316,9 +336,12 @@ return function(META)
                     creation_scope = scope:GetRoot()
                 end
 
+                local val =(upvalue.contract or upvalue):Get(key) or types.Nil:Copy()
+                val.upvalue = upvalue
+
                 table.insert(upvalue.mutations[key], {
                     scope = creation_scope,
-                    value = (upvalue.contract or upvalue):Get(key) or types.Nil,
+                    value = val,
                     env = env,
                 })
             end

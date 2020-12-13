@@ -1033,6 +1033,36 @@ run[[
     type_assert<|x, nil|>
 ]]
 
+run[[
+    local x = { lol = _ as false | 1 }
+    if not x.lol then
+        x.lol = 1 
+    end
+    type_assert<|x.lol, 1|>
+]]
+
+run[[
+    local x = { lol = _ as false | 1 }
+    if not x.lol then
+        if MAYBE then
+            x.lol = 1 
+        end
+    end
+    type_assert<|x.lol, false | 1|>
+]]
+
+run[[
+    local function lol()
+        if MAYBE then
+            return 1
+        end
+    end
+    
+    local x = lol()
+    
+    type_assert<|x, 1 | nil|>
+]]
+
 pending([[
     local a: nil | 1
 
