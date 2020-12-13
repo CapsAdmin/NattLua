@@ -985,6 +985,40 @@ run[[
     type_assert(a.lol, _ as nil | true)
 ]]
 
+run[[
+    local tbl = {foo = 1}
+
+    if MAYBE then
+        tbl.foo = 2
+        type_assert(tbl.foo, 2)
+    end
+    
+    type_assert(tbl.foo, _ as 1 | 2)
+]]
+
+run[[
+    local tbl = {foo = {bar = 1}}
+
+    if MAYBE then
+        tbl.foo.bar = 2
+        type_assert(tbl.foo.bar, 2)
+    end
+
+    type_assert(tbl.foo.bar, _ as 1 | 2)
+]]
+
+run[[
+    local x: {
+        field = number | nil,
+    } = {}
+    
+    if MAYBE then
+        x.field = nil
+        type_assert(x.field, nil)
+    end
+    type_assert(x.field, _ as number | nil)
+]]
+
 pending([[
     local a: nil | 1
 

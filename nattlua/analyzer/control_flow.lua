@@ -216,7 +216,11 @@ return function(META)
                 end
 
                 if _ == 1 and change.value.Type == "union" then
-                    union = change.value--:Copy()
+                    if upvalue.Type == "table" then
+                        union = change.value:Copy()
+                    else 
+                        union = change.value
+                    end
                 else
                     union:AddType(change.value)
                 end
@@ -229,7 +233,6 @@ return function(META)
                 value = union
             end
         end
-
 
         if value.Type == "union" then
             --[[
@@ -288,12 +291,14 @@ return function(META)
 
         if upvalue.Type == "table" then
             if not upvalue.mutations[key][1] then
-                local uv, creation_scope = scope:FindUpvalueFromObject(upvalue, env)
-                assert(creation_scope)
-               
+                local uv, creation_scope = scope:FindUpvalueFromObject(upvalue:GetRoot(), env)
+                if not creation_scope then
+                    creation_scope = scope:GetRoot()
+                end
+
                 table.insert(upvalue.mutations[key], {
                     scope = creation_scope,
-                    value = upvalue:Get(key) or types.Nil,
+                    value = (upvalue.contract or upvalue):Get(key) or types.Nil,
                     env = env,
                 })
             end

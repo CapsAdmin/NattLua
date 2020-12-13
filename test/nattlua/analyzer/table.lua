@@ -461,3 +461,28 @@ run[[
         type_assert(ent.field, _ as nil)
     end
 ]]
+
+run[[
+    local type Entity = {
+        GetModel = (function(self): string),
+        GetBodygroup = (function(self, number): number),
+    }
+
+    type Entity.__name = "Entity"
+
+    local type HeadPos = {
+        findheadpos_head_bone = number | nil,
+        findheadpos_head_attachment = string | nil,
+        findheadpos_last_mdl = string | nil,
+    }
+
+    local function FindHeadPosition(ent: Entity & HeadPos)
+        
+        if ent.findheadpos_last_mdl ~= ent:GetModel() then
+            ent.findheadpos_head_bone = nil
+            ent.findheadpos_head_attachment = nil
+            ent.findheadpos_last_mdl = ent:GetModel()
+        end
+        
+    end
+]]

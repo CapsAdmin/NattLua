@@ -174,23 +174,18 @@ function META.IsSubsetOf(A, B)
             local keyval, reason = B:GetKeyVal(akey, true) 
             if keyval then
                 local cachekey = aval:GetSignature()..keyval.val:GetSignature()
-                if not done or not done[cachekey] then
-                    if done then
-                        done[cachekey] = true
-                    end
+                if not done[cachekey] then
+                    done[cachekey] = true
                     local ok, err = aval:IsSubsetOf(keyval.val)
+                    done[cachekey] = nil
                     if not ok then
-                        done = nil
                         return ok, err
                     end
                 end
             else
-                done = nil
                 return keyval, reason
             end
         end
-
-        done = nil
         
         return true
     elseif B.Type == "union" then
@@ -224,6 +219,8 @@ end
 function META:Delete(key)
     for i, keyval in ipairs(self.data) do
         if key:IsSubsetOf(keyval.key) and keyval.key:IsLiteral() then
+            keyval.val:SetParent()
+            keyval.key:SetParent()
             table.remove(self.data, i)
         end
     end
@@ -339,6 +336,8 @@ function META:Set(key, val, no_delete)
     local keyval, reason = self:GetKeyVal(key, true)
 
     if not keyval then
+        val:SetParent(self)
+        key:SetParent(self)
         table.insert(self.data, {key = key, val = val})
     else
         if keyval.val and keyval.key:GetSignature() ~= key:GetSignature() then

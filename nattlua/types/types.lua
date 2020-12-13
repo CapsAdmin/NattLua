@@ -235,6 +235,27 @@ do
         return str
     end
 
+    function Base:SetParent(parent)
+        if parent then
+            if parent ~= self then
+                self.parent = parent
+            end
+        else
+            self.parent = nil
+        end
+    end
+
+    function Base:GetRoot()
+        local parent = self
+        while true do
+            if not parent.parent then
+                break
+            end
+            parent = parent.parent
+        end
+        return parent
+    end
+
     types.BaseObject = Base
 end
 

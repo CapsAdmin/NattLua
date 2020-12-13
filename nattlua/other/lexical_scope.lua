@@ -216,6 +216,17 @@ function META:GetTestCondition()
     return obj, scope and scope.test_condition
 end
 
+function META:GetRoot()
+    local parent = self
+    while true do
+        if not parent.parent then
+            break
+        end
+        parent = parent.parent
+    end
+    return parent
+end
+
 local types = require("nattlua.types.types")
 
 function META:FindScopeFromTestCondition(obj)

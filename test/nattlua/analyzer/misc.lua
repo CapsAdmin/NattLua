@@ -299,6 +299,7 @@ R[[
     end
     type_assert(a, 0)
 ]]
+
 R[[
     local function lol(a,b,c)
         if true then
@@ -342,6 +343,7 @@ R[[
 
     type_assert(c, 2)
 ]]
+
 R[[
     local META = {}
     META.__index = META
@@ -352,6 +354,7 @@ R[[
 
     local a,b,c = META:Test(1,2,3)
 ]]
+
 R[[
     local function test(a)
         if a then
@@ -395,6 +398,7 @@ R[[
     type_assert(b, 4)
     type_assert(c, 3)
 ]]
+
 R[[
     function foo(a, b) return a+b end
 
@@ -490,6 +494,7 @@ R[[
 
     type_assert(test(1), nil as number)
 ]]
+
 R[[
     local a: string | number = 1
 
@@ -520,6 +525,7 @@ R[[
 
     type math.lol = nil
 ]]
+
 R[[
     local type foo = {
         a = number,

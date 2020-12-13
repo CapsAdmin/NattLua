@@ -43,11 +43,15 @@ return function(META)
 
         if obj.contract then
             local val, err = obj.contract:Get(key)
-            
-            local o = self:OnFindLocalValue(obj, key, val, "runtime", self:GetScope())
 
-            if o then
-                return o
+            if val then
+                local o = self:OnFindLocalValue(obj, key, val, "runtime", self:GetScope())
+
+                if o then
+                    return o
+                end
+
+                return val
             end
 
             return val, err
@@ -60,6 +64,7 @@ return function(META)
             if o then
                 return o
             end
+            return val
         end
     
         if not val then
