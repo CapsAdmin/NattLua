@@ -118,6 +118,20 @@ local type PhysicsObject = {
     IsValid = (function(self): boolean),
 }
 
+
+local type EntityAttachments = {
+    [1 .. inf] = {
+        id: number,
+        name: string,
+    }
+}
+
+local type EntityAttachment = {
+    Ang = Angle,
+    Pos = Vector,
+}
+
+
 local type Entity = {
     SetAngles = (function(self, Angle): nil),
     GetModel = (function(self): string),
@@ -146,6 +160,8 @@ local type Entity = {
     GetPhysicsObject = (function(self): PhysicsObject),
     GetVelocity = (function(self): Vector),
     SetVelocity = (function(self, Vector): Vector),
+    GetAttachment = (function(self, number): EntityAttachment),
+    GetAttachments = (function(self): EntityAttachments),
 }
 
 type Entity.__name = "Entity"
@@ -182,11 +198,6 @@ type function hook.Add(eventName: string, obj: any, callback: (function(...): ..
     callback:SetArguments(event_callback:GetArguments())
 end
 
-local type EntityAttachment = {
-    Ang = Angle,
-    Pos = Vector,
-}
-
 return {
     hook = hook,
     WorldToLocal = WorldToLocal,
@@ -198,5 +209,6 @@ return {
     Mesh = Mesh,
     ClientsideModel = ClientsideModel,
     EntityAttachment = EntityAttachment,
+    EntityAttachments = EntityAttachments,
     Entity = Entity,
 }

@@ -1,10 +1,21 @@
-local type { Entity, Vector, Angle, EntityAttachment } = loadfile("nattlua/runtime/glua.nlua")()
+local type { Entity, Vector, Angle, EntityAttachment, EntityAttachments } = loadfile("nattlua/runtime/glua.nlua")()
 
 local type HeadPos = {
     findheadpos_head_bone = number | nil,
-    findheadpos_head_attachment = EntityAttachment | nil,
+    findheadpos_head_attachment = number | nil,
     findheadpos_last_mdl = string | nil,
+	findheadpos_attachment_eyes = EntityAttachments,
 }
+
+local function get_first_attachment_by_name(ent, name)
+	local attachments = ent:GetAttachments()
+
+	for i,v in ipairs(attachments) do
+		if v.name == name then
+			return v.id
+		end
+	end
+end
 
 local function FindHeadPosition(ent: Entity & HeadPos)
     
@@ -13,8 +24,6 @@ local function FindHeadPosition(ent: Entity & HeadPos)
 		ent.findheadpos_head_attachment = nil
 		ent.findheadpos_last_mdl = ent:GetModel()
 	end
-    
-    local lol = ent.findheadpos_head_bone
 
 	if not ent.findheadpos_head_bone then
 		for i = 0, ent:GetBoneCount() or 0 do
@@ -36,8 +45,10 @@ local function FindHeadPosition(ent: Entity & HeadPos)
 			end
 		end
 	else
-		if not ent.findheadpos_attachment_eyes then
-			ent.findheadpos_head_attachment = ent:GetAttachments().eyes or ent:GetAttachments().forward
+		if not ent.findheadpos_head_attachment then
+			ent.findheadpos_head_attachment = 
+				get_first_attachment_by_name(ent, "eyes") or 
+				get_first_attachment_by_name(ent, "forward")
 		end
 
 		if ent.findheadpos_head_attachment then
