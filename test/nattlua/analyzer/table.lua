@@ -427,3 +427,37 @@ run([[
     -- should be okay, because all the values in the contract can be nil
     mutate(obj)
 ]], "table is empty")
+
+
+run[[
+    local type Foo = {}
+    local type Bar = {
+        field = number | nil,
+    }
+
+    local function test(ent: Foo & Bar)
+        type_assert(ent.field, _ as nil | number)
+        ent.field = 1
+        type_assert(ent.field, _ as 1)
+        ent.field = nil
+        type_assert(ent.field, _ as nil)
+    end
+
+    test(_ as Foo & Bar)
+]]
+
+
+run[[
+    local type Foo = {}
+    local type Bar = {
+        field = number | nil,
+    }
+
+    local function test(ent: Foo & Bar)
+        type_assert(ent.field, _ as nil | number)
+        ent.field = 1
+        type_assert(ent.field, _ as 1)
+        ent.field = nil
+        type_assert(ent.field, _ as nil)
+    end
+]]

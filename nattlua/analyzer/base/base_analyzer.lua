@@ -37,7 +37,7 @@ return function(META)
     do
         local function call(self, obj, arguments, node)
             -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-            arguments = obj:GetArguments()
+            arguments = obj:GetArguments():Copy()
             self:Assert(node, self:Call(obj, arguments, node))
         end
 
