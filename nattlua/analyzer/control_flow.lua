@@ -115,6 +115,7 @@ return function(META)
     end
 
     function META:OnFindLocalValue(upvalue, key, value, env, scope)    
+        if env == "typesystem" then return end
         scope = scope or self:GetScope()
         if scope:IsReadOnly() then return value end
         
@@ -229,6 +230,7 @@ return function(META)
             end
         end
 
+
         if value.Type == "union" then
             --[[
 
@@ -273,16 +275,30 @@ return function(META)
     end
 
     function META:OnMutateUpvalue(upvalue, key, val, env, scope)
+        if env == "typesystem" then return end
         scope = scope or self:GetScope()
         if scope:IsReadOnly() then return end
         
         key = cast_key(key)
         
         val.upvalue = upvalue
-        
+
         upvalue.mutations = upvalue.mutations or {}
         upvalue.mutations[key] = upvalue.mutations[key] or {}
-        
+
+        if upvalue.Type == "table" then
+            if not upvalue.mutations[key][1] then
+                local uv, creation_scope = scope:FindUpvalueFromObject(upvalue, env)
+                assert(creation_scope)
+               
+                table.insert(upvalue.mutations[key], {
+                    scope = creation_scope,
+                    value = upvalue:Get(key) or types.Nil,
+                    env = env,
+                })
+            end
+        end
+
         table.insert(upvalue.mutations[key], {
             scope = scope,
             value = val,
@@ -291,6 +307,7 @@ return function(META)
     end
 
     function META:OnMutateEnvironment(g, key, val, env)
+        assert(env)
         local scope = self:GetScope()
         if not scope:IsUncertain() then return end
 

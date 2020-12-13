@@ -103,6 +103,20 @@ function META:FindValue(key, env)
     end
 end
 
+function META:FindUpvalueFromObject(obj, env)
+    local scope = self
+    
+    while scope do
+        for i,v in ipairs(scope.upvalues[env].list) do
+            if obj == v:GetValue() then
+                return v, scope
+            end
+        end
+
+        scope = scope.parent
+    end
+end
+
 local upvalue_meta
 
 do

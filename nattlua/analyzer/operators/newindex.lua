@@ -44,10 +44,6 @@ return function(META)
                 end
             end
         end
-
-        if not obj:Get(key) then
-            self:OnMutateUpvalue(obj, key, types.Nil, env, obj.creation_scope)
-        end
     
         if not self:OnMutateUpvalue(obj, key, val, env) then -- always false?
             return obj:Set(key, val)

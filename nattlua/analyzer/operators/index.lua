@@ -38,8 +38,19 @@ return function(META)
             end
         end
         
+
+        -- changes in tables would have to be stored in a change list..
+
         if obj.contract then
-            return obj:Get(key)
+            local val, err = obj.contract:Get(key)
+            
+            local o = self:OnFindLocalValue(obj, key, val, "runtime", self:GetScope())
+
+            if o then
+                return o
+            end
+
+            return val, err
         end
 
         local val, err = obj:Get(key)
