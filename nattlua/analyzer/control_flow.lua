@@ -132,9 +132,8 @@ return function(META)
         error("aaaa")
     end
 
-    function META:GetMutatedValue(obj, key, value, env, scope)    
-        if env == "typesystem" then return end
-        scope = scope or self:GetScope()
+    function META:GetMutatedValue(obj, key, value) 
+        local scope = self:GetScope()
         if scope:IsReadOnly() then return value end
         
         key = cast_key(key)

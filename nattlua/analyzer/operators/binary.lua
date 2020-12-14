@@ -167,7 +167,7 @@ return function(META)
         end
 
         if op == "." or op == ":" then
-            return self:IndexOperator(l, r, node)
+            return self:IndexOperator(node, l, r, env)
         end
 
         if l.Type == "any" or r.Type == "any" then

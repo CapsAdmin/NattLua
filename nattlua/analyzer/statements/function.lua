@@ -23,7 +23,7 @@ return function(META)
                 local obj = self:AnalyzeExpression(key.left, env)
                 local key = self:AnalyzeExpression(key.right, env)
                 local val = existing_type or self:AnalyzeFunctionExpression(statement, env)
-                self:NewIndexOperator(obj, key, val, statement, env)
+                self:NewIndexOperator(statement, obj, key, val, env)
             else
                 local existing_type = env == "runtime" and self:GetLocalOrEnvironmentValue(key, "typesystem")
 

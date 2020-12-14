@@ -1,11 +1,11 @@
 local types = require("nattlua.types.types")
 
 return function(META) 
-    function META:IndexOperator(obj, key, node)
+    function META:IndexOperator(node, obj, key, env)
         if obj.Type == "union" then
             local copy = types.Union()
             for _,v in ipairs(obj:GetTypes()) do
-                local val, err = self:IndexOperator(v, key, node)
+                local val, err = self:IndexOperator(node, v, key, env)
                 if not val then
                     return val, err
                 end
@@ -23,7 +23,7 @@ return function(META)
     
             if index then
                 if index.Type == "table" then
-                    return self:IndexOperator(index.contract or index, key, node)
+                    return self:IndexOperator(node, index.contract or index, key, env)
                 end
     
                 if index.Type == "function" then
@@ -37,7 +37,6 @@ return function(META)
                 end
             end
         end
-        
 
         -- changes in tables would have to be stored in a change list..
 
@@ -45,7 +44,7 @@ return function(META)
             local val, err = obj.contract:Get(key)
 
             if val then
-                local o = self:GetMutatedValue(obj, key, val, "runtime", self:GetScope())
+                local o = self:GetMutatedValue(obj, key, val)
 
                 if o then
                     return o
@@ -60,10 +59,12 @@ return function(META)
         local val, err = obj:Get(key)
 
         if val then
-            local o = self:GetMutatedValue(obj, key, val, "runtime", self:GetScope())
+            local o = self:GetMutatedValue(obj, key, val)
+
             if o then
                 return o
             end
+
             return val
         end
     

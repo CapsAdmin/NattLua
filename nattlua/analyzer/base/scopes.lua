@@ -83,10 +83,6 @@ return function(META)
         return upvalue
     end
 
-    function META:GetMutatedValue(found, key, env, value, original_scope)
-        
-    end
-
     function META:OnCreateLocalValue(upvalue, key, val, env)
         
     end
@@ -103,10 +99,14 @@ return function(META)
 
     function META:FindLocalValue(key, env, scope)
         local upvalue = self:FindLocalUpvalue(key, env, scope)
+        
         if upvalue then
-            local t = self:GetMutatedValue(upvalue, key, upvalue:GetValue(), env, scope)
-            return t or upvalue:GetValue()
-        end 
+            if env == "runtime" then
+                return self:GetMutatedValue(upvalue, key, upvalue:GetValue()) or upvalue:GetValue()
+            end 
+
+            return upvalue:GetValue()
+        end
     end
 
     function META:LocalValueExists(key, env, scope)
@@ -176,12 +176,13 @@ return function(META)
 
     function META:FindEnvironmentValue(key, env)
         local g = self:GetEnvironment(env)
+
         local val, err = g:Get(key)
-        if val then
-            -- over here
-            local t = self:GetMutatedValue(g, key, val, env)
-            return t or val
+
+        if val and env == "runtime" then
+            return self:GetMutatedValue(g, key, val) or val
         end
+
         return val, err
     end
 
