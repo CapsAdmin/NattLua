@@ -96,3 +96,15 @@ test("1 or 2 or 3 or 4", function()
     set_equal(obj.source_left, {1})
     set_equal(obj.source_right, {2})
 end)
+
+
+pending[[
+    local a: false | 1
+
+    local x = not a
+    § assert(env.runtime.x:GetType():GetSignature() == "symbol-false|symbol-true")
+    § assert(env.runtime.x:GetType().source:GetSignature() == "number-1|symbol-false")
+    § assert(env.runtime.x:GetType().falsy_union:GetSignature() == "number-1")
+    § assert(env.runtime.x:GetType().truthy_union:GetSignature() == "symbol-false")
+
+]]
