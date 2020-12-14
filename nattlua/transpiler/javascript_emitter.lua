@@ -54,8 +54,6 @@ function META:EmitExpression(node)
         self:EmitLSXExpression(node)
     elseif node.kind == "type_table" then
         self:EmitTableType(node)
-    elseif node.kind == "vararg_tuple" then
-        self:EmitVarargTuple(node)
     elseif node.kind == "type_list" then
        self:EmitTypeList(node)
     elseif node.kind == "table_expression_value" then
@@ -972,8 +970,6 @@ do -- types
             self:EmitTableExpressionValue(node)
         elseif node.kind == "table_key_value" then
             self:EmitTableKeyValue(node)
-        elseif node.kind == "vararg_tuple" then
-            --self:EmitVarargTuple(node)
         else
             error("unhandled token type " .. node.kind)
         end

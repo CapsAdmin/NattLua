@@ -11,7 +11,6 @@ return function(META)
     require("nattlua.analyzer.expressions.table")(META)
     require("nattlua.analyzer.expressions.atomic_value")(META)
     require("nattlua.analyzer.expressions.list")(META)
-    require("nattlua.analyzer.expressions.vararg_tuple")(META)    
 
     function META:AnalyzeExpression(node, env)
         self.current_expression = node

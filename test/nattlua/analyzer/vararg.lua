@@ -2,14 +2,6 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 
-pending("typed vararg", function()
-    local a = run[[
-        local foo: string... = 1,2,3
-    ]]
-    local foo = a:GetLocalOrEnvironmentValue("foo", "typesystem")
-    print(foo)
-end)
-
 test("vararg", function()
     run[[
         local function test(...)

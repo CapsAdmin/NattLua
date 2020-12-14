@@ -357,10 +357,6 @@ return function(META)
             node = self:Expression("value")
             node.value = self:ReadValue("...")
             node.explicit_type = self:ReadTypeExpression()
-        elseif self:IsCurrentType("letter") and self:IsValue("...", 1) then
-            node = self:Expression("vararg_tuple")
-            node.value = self:ReadTokenLoose()
-            node.tokens["..."] = self:ReadValue("...")
         elseif self:IsCurrentValue("function") and self:IsValue("(", 1) then
             node = self:ReadTypeFunction()
         elseif syntax.typesystem.IsValue(self:GetCurrentToken()) then

@@ -350,7 +350,7 @@ R[[
     type_assert(x.y.y.y.x, _ as number)
 ]]
 
-pending("forward declare types", function()
+test("forward declare types", function()
     R[[
         local type Ping = {}
         local type Pong = {}

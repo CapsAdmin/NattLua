@@ -17,7 +17,7 @@ test("for i = 1, number", function()
     ]]
 end)
 
-pending("for i = 1, number is an uncertain scope", function()
+test("for i = 1, number is an uncertain scope", function()
     --  1, number is not the same as 1, inf because if the max
     -- value is below 1 it will not execute
 

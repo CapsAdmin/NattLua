@@ -17,9 +17,7 @@ return function(META)
 
     function META:AnalyzeNumericForStatement(statement)
         local init = self:AnalyzeExpression(statement.expressions[1])
-        assert(init.Type == "number")
         local max = self:AnalyzeExpression(statement.expressions[2])
-        assert(init.Type == "number")
         local step = statement.expressions[3] and self:AnalyzeExpression(statement.expressions[3]) or nil
         if step then
             assert(step.Type == "number")
