@@ -148,11 +148,6 @@ function META:CreateValue(key, obj, env)
     local upvalue = {
         key = key_hash,
         shadow = self:FindValue(key, env),
-
-        -- TODO: weird structure, it's like this to deal with tables
-        mutations = {
-            [key_hash] = MutationTracker():Mutate(obj, self)
-        }
     }
 
     setmetatable(upvalue, upvalue_meta)
@@ -169,9 +164,9 @@ function META:Copy(upvalues)
     local copy = LexicalScope()
 
     if upvalues then
-        for env, data in pairs(self.upvalues) do
-            for _, obj in ipairs(data.list) do
-                copy:CreateValue(obj.key, obj.data, env)
+        for env, upvalues in pairs(self.upvalues) do
+            for _, upvalue in ipairs(upvalues.list) do
+                copy:CreateValue(upvalue.key, upvalue:GetValue(), env)
             end
         end
     end

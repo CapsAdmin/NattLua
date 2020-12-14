@@ -61,6 +61,11 @@ return function(META)
         local current_scope = self:GetScope()
         self:PopScope()
         local scope = current_scope:Copy(upvalues)
+        for env, upvalues in pairs(scope.upvalues) do
+            for _, upvalue in ipairs(upvalues.list) do
+                self:MutateValue(upvalue, upvalue.key, upvalue:GetValue(), env)
+            end
+        end
         
         local parent = self:GetScope()
 
@@ -74,10 +79,11 @@ return function(META)
     function META:CreateLocalValue(key, obj, env, function_argument)
         local upvalue = self:GetScope():CreateValue(key, obj, env)
         self:FireEvent("upvalue", key, obj, env, function_argument)
+        self:MutateValue(upvalue, key, obj, env)
         return upvalue
     end
 
-    function META:OnFindLocalValue(found, key, env, value, original_scope)
+    function META:GetMutatedValue(found, key, env, value, original_scope)
         
     end
 
@@ -98,7 +104,7 @@ return function(META)
     function META:FindLocalValue(key, env, scope)
         local upvalue = self:FindLocalUpvalue(key, env, scope)
         if upvalue then
-            local t = self:OnFindLocalValue(upvalue, key, upvalue:GetValue(), env, scope)
+            local t = self:GetMutatedValue(upvalue, key, upvalue:GetValue(), env, scope)
             return t or upvalue:GetValue()
         end 
     end
@@ -158,6 +164,27 @@ return function(META)
         table.remove(self.environments[env])            
     end
 
+    function META:GetEnvironment(env)
+        local g = self.environments[env][1] or self.first_environment[env]
+
+        if self.environment_nodes[1] and self.environment_nodes[1].environments_override and self.environment_nodes[1].environments_override[env] then
+            g = self.environment_nodes[1].environments_override[env]
+        end
+
+        return g
+    end
+
+    function META:FindEnvironmentValue(key, env)
+        local g = self:GetEnvironment(env)
+        local val, err = g:Get(key)
+        if val then
+            -- over here
+            local t = self:GetMutatedValue(g, key, val, env)
+            return t or val
+        end
+        return val, err
+    end
+
     function META:GetLocalOrEnvironmentValue(key, env, scope)
         env = env or "runtime"
 
@@ -167,21 +194,14 @@ return function(META)
             return val
         end
 
-        local string_key = key
-        local g = self.environments[env][1] or self.first_environment[env]
-
-        if self.environment_nodes[1] and self.environment_nodes[1].environments_override and self.environment_nodes[1].environments_override[env] then
-            g = self.environment_nodes[1].environments_override[env]
-        end
-        
-        return g:Get(key)
+        return self:FindEnvironmentValue(key, env)
     end
 
     function META:SetLocalOrEnvironmentValue(key, val, env, scope)
         local upvalue, found_scope = self:FindLocalUpvalue(key, env, scope)
         
         if upvalue then
-            if not self:OnMutateUpvalue(upvalue, key, val, env) then
+            if not self:MutateValue(upvalue, key, val, env) then
                 if self:GetScope():IsReadOnly() then
                     if self:GetScope() ~= found_scope then 
                         
@@ -203,7 +223,7 @@ return function(META)
 
             if self:GetScope():IsReadOnly() then return end
 
-            if not self:OnMutateEnvironment(g, key, val, env) then 
+            if not self:MutateValue(g, key, val, env) then 
                 self:Assert(key, g:Set(key, val, env == "runtime"))
             end
 

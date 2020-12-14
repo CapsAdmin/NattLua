@@ -45,7 +45,7 @@ return function(META)
             local val, err = obj.contract:Get(key)
 
             if val then
-                local o = self:OnFindLocalValue(obj, key, val, "runtime", self:GetScope())
+                local o = self:GetMutatedValue(obj, key, val, "runtime", self:GetScope())
 
                 if o then
                     return o
@@ -60,7 +60,7 @@ return function(META)
         local val, err = obj:Get(key)
 
         if val then
-            local o = self:OnFindLocalValue(obj, key, val, "runtime", self:GetScope())
+            local o = self:GetMutatedValue(obj, key, val, "runtime", self:GetScope())
             if o then
                 return o
             end

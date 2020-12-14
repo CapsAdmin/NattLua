@@ -45,7 +45,7 @@ return function(META)
             end
         end
     
-        if not self:OnMutateUpvalue(obj, key, val, env) then -- always false?
+        if not self:MutateValue(obj, key, val, env) then -- always false?
             return obj:Set(key, val)
         end
     end

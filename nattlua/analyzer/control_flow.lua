@@ -114,10 +114,6 @@ return function(META)
         scope:MakeUncertain(not init:IsLiteral() or not max:IsLiteral())
     end
 
-    function META:OnFindEnvironmentValue(g, key, env)
-        
-    end
-
     local function cast_key(key)
         if type(key) == "string" then
             return key
@@ -126,6 +122,8 @@ return function(META)
         if type(key) == "table" then
             if key.type == "expression" and key.kind == "value" then
                 return key.value.value
+            elseif key.type == "letter" then
+                return key.value
             else
                 return key:GetData()
             end
@@ -134,15 +132,15 @@ return function(META)
         error("aaaa")
     end
 
-    function META:OnFindLocalValue(upvalue, key, value, env, scope)    
+    function META:GetMutatedValue(obj, key, value, env, scope)    
         if env == "typesystem" then return end
         scope = scope or self:GetScope()
         if scope:IsReadOnly() then return value end
         
         key = cast_key(key)
 
-        if upvalue.mutations and upvalue.mutations[key] then
-            return upvalue.mutations[key]:GetValueFromScope(scope, upvalue, key) or value
+        if obj.mutations and obj.mutations[key] then
+            return obj.mutations[key]:GetValueFromScope(scope, obj, key) or value
         end
 
         return value
@@ -162,47 +160,37 @@ return function(META)
         self:GetScope():SetTestCondition(condition)
     end
 
-    function META:OnMutateUpvalue(upvalue, key, val, env, scope)
+    function META:MutateValue(obj, key, val, env)
         if env == "typesystem" then return end
-        scope = scope or self:GetScope()
+        local scope = self:GetScope()
         if scope:IsReadOnly() then return end
         
         key = cast_key(key)
         
-        val.upvalue = upvalue
+        val.upvalue = obj
         val.upvalue_keyref = key
 
-        upvalue.mutations = upvalue.mutations or {}
-        upvalue.mutations[key] = upvalue.mutations[key] or MutationTracker()
+        obj.mutations = obj.mutations or {}
+        obj.mutations[key] = obj.mutations[key] or MutationTracker()
 
-        if upvalue.Type == "table" then
-            if not upvalue.mutations[key]:HasMutations() then
-                local uv, creation_scope = scope:FindUpvalueFromObject(upvalue:GetRoot(), env)
+        if not obj.mutations[key]:HasMutations() then
+            if obj.Type == "table" then
+                local uv, creation_scope = scope:FindUpvalueFromObject(obj:GetRoot(), env)
                 if not creation_scope then
                     creation_scope = scope:GetRoot()
                 end
 
-                local val =(upvalue.contract or upvalue):Get(key) or types.Nil:Copy()
-                val.upvalue = upvalue.mutations[key]
+                local val = (obj.contract or obj):Get(key) or types.Nil:Copy()
+                val.upvalue = obj.mutations[key]
                 val.upvalue_keyref = key
 
-                upvalue.mutations[key]:Mutate(val, creation_scope)
+                obj.mutations[key]:Mutate(val, creation_scope)
+            else
+                obj.mutations[key]:Mutate(val, scope)
             end
         end
 
-        upvalue.mutations[key]:Mutate(val, scope)
-    end
-
-    function META:OnMutateEnvironment(g, key, val, env)
-        assert(env)
-        local scope = self:GetScope()
-        if not scope:IsUncertain() then return end
-
-        if g:Contains(key) then
-            self:Assert(key, g:Set(key, types.Union({g:Get(key), val})))
-        end
-
-        return true
+        obj.mutations[key]:Mutate(val, scope)
     end
 
     function META:OnExitConditionalScope(data)
