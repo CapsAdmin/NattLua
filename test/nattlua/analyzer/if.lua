@@ -688,37 +688,6 @@ run[[
     type_assert(foo, true)
 ]]
 
-run[[
-    local x: 1 | "1"
-    local y = type(x) == "number"
-    if y then
-        type_assert(y, 1)
-    else
-        type_assert(y, "1")
-    end
-]]
-
-run[[
-    local x: 1 | "1"
-    local y = type(x) ~= "number"
-    if y then
-        type_assert(y, "1")
-    else
-        type_assert(y, 1)
-    end
-]]
-
-run[[
-    local x: 1 | "1"
-    local t = "number"
-    local y = type(x) ~= t
-    if y then
-        type_assert(y, "1")
-    else
-        type_assert(y, 1)
-    end
-]]
-
 run[=[
     
     do
@@ -913,16 +882,6 @@ run([[
 
 run[[
     local x: -1 | 0 | 1 | 2 | 3
-
-    if x >= 0 then
-        if x >= 1 then
-            type_assert<|x, 1|2|3|>
-        end
-    end
-]]
-
-run[[
-    local x: -1 | 0 | 1 | 2 | 3
     local y = x >= 0 and x or nil
     type_assert<|y, 0 | 1 | 2 | 3 | nil|>
 
@@ -1052,6 +1011,22 @@ run[[
 ]]
 
 run[[
+    local function test() 
+        if MAYBE then
+            return nil
+        end
+        return 2
+    end
+    
+    local x = { lol = _ as false | 1 }
+    if not x.lol then
+        x.lol = test()
+        type_assert<|x.lol, 2 | nil|>
+    end
+    type_assert<|x.lol, 1 | 2 | nil|>
+]]
+
+run[[
     local function lol()
         if MAYBE then
             return 1
@@ -1061,6 +1036,36 @@ run[[
     local x = lol()
     
     type_assert<|x, 1 | nil|>
+]]
+
+run[[
+    --DISABLE_CODE_RESULT
+
+    local type HeadPos = {
+        findheadpos_head_bone = number | false,
+        findheadpos_head_attachment = number | nil,
+        findheadpos_last_mdl = string | nil,
+        __name = "BlackBox",
+    }
+
+    local function FindHeadPosition(ent: HeadPos)
+        
+        if MAYBE then
+            ent.findheadpos_head_bone = false
+        end
+        
+        print("\t\t\t\t", ent.findheadpos_head_bone)
+
+        if ent.findheadpos_head_bone then
+
+        else
+            if not ent.findheadpos_head_attachment then
+                ent.findheadpos_head_attachment = _ as nil | number 
+            end
+
+            type_assert<|ent.findheadpos_head_attachment, nil | number|>
+        end
+    end
 ]]
 
 pending([[
@@ -1128,4 +1133,48 @@ pending[[
     end
 
     type_assert(a, _ as 1 | nil)
+]]
+
+
+
+pending[[
+    local x: -1 | 0 | 1 | 2 | 3
+
+    if x >= 0 then
+        if x >= 1 then
+            type_assert<|x, 1|2|3|>
+        end
+    end
+]]
+
+
+pending[[
+    local x: 1 | "1"
+    local y = type(x) == "number"
+    if y then
+        type_assert(x, 1)
+    else
+        type_assert(x, "1")
+    end
+]]
+
+pending[[
+    local x: 1 | "1"
+    local y = type(x) ~= "number"
+    if y then
+        type_assert(x, "1")
+    else
+        type_assert(x, 1)
+    end
+]]
+
+pending[[
+    local x: 1 | "1"
+    local t = "number"
+    local y = type(x) ~= t
+    if y then
+        type_assert(x, "1")
+    else
+        type_assert(x, 1)
+    end
 ]]

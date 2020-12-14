@@ -70,6 +70,11 @@ do
         if a == b then return true end
             
         if a.upvalue and b.upvalue then
+
+            if a.upvalue_keyref or b.upvalue_keyref then
+                return a.upvalue_keyref == b.upvalue_keyref
+            end
+
             if a.upvalue == b.upvalue then
                 return true
             end

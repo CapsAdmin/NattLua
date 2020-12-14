@@ -228,11 +228,14 @@ return function(META)
             
             local union = types.Union({})
             union.upvalue = upvalue
-            
+            union.upvalue_keyref = key
+         
             for _, change in ipairs(mutations) do
+        
                 
                 do
-                    local scope = change.scope:FindScopeFromTestCondition(value)
+                    local current_scope = scope
+                    local scope = change.scope:FindScopeFromTestCondition(change.value)
                     if scope and change.scope == scope and scope.test_condition.Type == "union" then
                         local t
                         if scope.test_condition_inverted then
@@ -246,7 +249,7 @@ return function(META)
                         end
                     end
                 end
-
+            
                 if change.certain_override or change.scope:IsCertain(scope) then
                     union:Clear()
                 end
@@ -255,8 +258,11 @@ return function(META)
                     if upvalue.Type == "table" then
                         union = change.value:Copy()
                         union.upvalue = upvalue
+                        union.upvalue_keyref = key
                     else 
-                        union = change.value
+                        union = change.value:Copy()
+                        union.upvalue = upvalue
+                        union.upvalue_keyref = key
                     end
                 else
                     union:AddType(change.value)
@@ -268,6 +274,7 @@ return function(META)
             else
                 value = union
             end
+            
         end
 
 
@@ -285,8 +292,24 @@ return function(META)
                 end
             ]]
             
+            local current_scope = scope
             local scope = scope:FindScopeFromTestCondition(value)
+
             if scope then 
+
+                local current_scope = scope
+
+                if #upvalue.mutations[key] > 1 then
+                    for i = #upvalue.mutations[key], 1, -1 do
+                        if upvalue.mutations[key][i].scope == current_scope then
+                            return value
+                        else
+                            break
+                        end
+                    end
+                end
+         
+
                 local t
 
                 -- the or part here refers to if *condition* then
@@ -325,6 +348,7 @@ return function(META)
         key = cast_key(key)
         
         val.upvalue = upvalue
+        val.upvalue_keyref = key
 
         upvalue.mutations = upvalue.mutations or {}
         upvalue.mutations[key] = upvalue.mutations[key] or {}
@@ -337,7 +361,8 @@ return function(META)
                 end
 
                 local val =(upvalue.contract or upvalue):Get(key) or types.Nil:Copy()
-                val.upvalue = upvalue
+                val.upvalue = upvalue.mutations[key]
+                val.upvalue_keyref = key
 
                 table.insert(upvalue.mutations[key], {
                     scope = creation_scope,
