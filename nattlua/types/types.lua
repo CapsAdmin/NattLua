@@ -54,46 +54,47 @@ end
 do
     local compare_condition
 
-    local function cmp(a, b, context)
+    local function cmp(a, b, context, source)
         if not context[a] then
             context[a] = {}
-            context[a][b] = types.FindInType(a, b, context)
+            context[a][b] = types.FindInType(a, b, context, source)
         end
         return context[a][b]
     end
 
-    function types.FindInType(a, b, context)
+    function types.FindInType(a, b, context, source)
+        source = source or b
         context = context or {}
 
         if not a then return false end
         
-        if a == b then return true end
+        if a == b then return source end
             
         if a.upvalue and b.upvalue then
 
             if a.upvalue_keyref or b.upvalue_keyref then
-                return a.upvalue_keyref == b.upvalue_keyref
+                return a.upvalue_keyref == b.upvalue_keyref and source or false
             end
 
             if a.upvalue == b.upvalue then
-                return true
+                return source
             end
         end
 
         if a.type_checked then
-            return cmp(a.type_checked, b, context)
+            return cmp(a.type_checked, b, context, a)
         end
 
         if a.source_left then
-            return cmp(a.source_left, b, context)
+            return cmp(a.source_left, b, context, a)
         end
 
         if a.source_right then
-            return cmp(a.source_right, b, context)
+            return cmp(a.source_right, b, context, a)
         end
 
         if a.source then
-            return cmp(a.source, b, context)
+            return cmp(a.source, b, context, a)
         end
 
         return false
@@ -115,6 +116,12 @@ do
         self.source_left = obj.source_left
         self.source_right = obj.source_right
         self.explicit_not_literal = obj.explicit_not_literal
+
+        -- what about these?
+        --self.truthy_union = obj.truthy_union
+        --self.falsy_union = obj.falsy_union
+        --self.upvalue_keyref = obj.upvalue_keyref
+        --self.upvalue = obj.upvalue
     end
 
     function Base:SetSource(node, source, l,r)

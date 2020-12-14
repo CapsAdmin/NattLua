@@ -1,4 +1,7 @@
 
+
+local MutationTracker = require("nattlua.analyzer.mutation_tracker")
+
 local table_insert = table.insert
 local META = {}
 META.__index = META
@@ -148,12 +151,7 @@ function META:CreateValue(key, obj, env)
 
         -- TODO: weird structure, it's like this to deal with tables
         mutations = {
-            [key_hash] = { 
-                {
-                    scope = self,
-                    value = obj,
-                }
-            }
+            [key_hash] = MutationTracker():Mutate(obj, self)
         }
     }
 
@@ -231,8 +229,11 @@ local types = require("nattlua.types.types")
 
 function META:FindScopeFromTestCondition(obj)
     local scope = self
+    local found_type
     while true do
-        if types.FindInType(scope.test_condition, obj) then
+        found_type = types.FindInType(scope.test_condition, obj)
+
+        if found_type then
             break
         end
         
@@ -242,8 +243,9 @@ function META:FindScopeFromTestCondition(obj)
         
         for _, child in ipairs(scope.children) do
             if child ~= scope and child.uncertain_returned then
-                if types.FindInType(child.test_condition, obj) then
-                    return child
+                local found_type = types.FindInType(child.test_condition, obj)
+                if found_type then
+                    return child, found_type
                 end
             end
         end
@@ -255,7 +257,7 @@ function META:FindScopeFromTestCondition(obj)
         end
     end
 
-    return scope
+    return scope, found_type
 end
 
 do
