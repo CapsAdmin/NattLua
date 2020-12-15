@@ -1,12 +1,9 @@
 io.stdout:setvbuf("no")
 io.stderr:setvbuf("no")
 io.flush()
---if not ... then return end
+--if not ... then return endw
 
 local ffi = require("ffi")
-ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
-ffi.C.chdir("/home/caps/nl/")
-
 local json = require("vscode.server.json")
 local nl = require("nattlua")
 local helpers = require("nattlua.other.helpers")
@@ -50,9 +47,12 @@ local function compile(uri, server, client)
 		}
 	}
 
-	function file:OnError(msg, start, stop, ...)
-		msg = helpers.FormatMessage(msg, ...)
-		local data = helpers.SubPositionToLinePosition(code, start, stop)
+	function file:OnDiagnostic(code, name, msg, severity, start, stop, ...)
+        msg = helpers.FormatMessage(msg, ...)
+        
+        local data = helpers.SubPositionToLinePosition(code, start, stop)
+        
+        print(msg, data)
 
 		if not data then
 			local code = io.open(base_environment.path):read("*all")
@@ -64,7 +64,7 @@ local function compile(uri, server, client)
 		end
 
 		table.insert(resp.params.diagnostics, {
-			severity = DiagnosticSeverity.error,
+			severity = DiagnosticSeverity[severity],
 			range = {
 				start = {
 					line = data.line_start-1,
@@ -159,8 +159,8 @@ function server:HandleMessage(resp, client)
 		local code, tokens = compile(resp.params.textDocument.uri, self, client)
 		local pos = resp.params.position
 
-		local token, data = helpers.GetDataFromLineCharPosition(tokens, code, pos.line + 1, pos.character + 1)
-
+        local token, data = helpers.GetDataFromLineCharPosition(tokens, code, pos.line + 1, pos.character + 1)
+        
 		if not token then
 			self:Respond(client, {
 				id = resp.id,
