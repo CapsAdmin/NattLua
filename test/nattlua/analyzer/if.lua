@@ -1068,6 +1068,20 @@ run[[
     end
 ]]
 
+run[[
+    local function test()
+        if MAYBE then
+            return "test"
+        else
+            return "foo"
+        end
+    end
+    
+    local x = test()
+    
+    type_assert(x, _ as "test" | "foo")
+]]
+
 pending([[
     local a: nil | 1
 

@@ -66,6 +66,9 @@ function string.ToTable( str: string )
 	return tbl
 end
 
+local CLIENT = true
+local SERVER = false
+
 do
     local totable = string.ToTable
     local string_sub = string.sub
@@ -277,7 +280,7 @@ function luadev.Run(script, chunkname, extra)
 		local ret, new_chunkname = hook.Run("LuaDevProcess",luadev.STAGE_PREPROCESS,script,chunkname,extra)
 
 		if ret == false then
-			return
+			return true
 		end
 
 		if ret ~=nil and ret~=true then
@@ -311,7 +314,7 @@ function luadev.Run(script, chunkname, extra)
 		local ret = hook.Run("LuaDevProcess",luadev.STAGE_COMPILED,script,chunkname,extra,func)
 
 		-- replace function
-		if ret == false then return end
+		if ret == false then return true end
 		if ret ~= nil and isfunction(ret) then
 			func = ret
 			luadev.compileerr = false
@@ -343,7 +346,7 @@ function luadev.Run(script, chunkname, extra)
 			while p2 and p2<p1 do
 				local new=tracestr:find("\n",p2+1,true)
 
-				if new>p1 then
+				if new and new>p1 then
 					tracestr=tracestr:sub(1,new)
 					break
 				end
@@ -455,8 +458,10 @@ function luadev.CanLuaDev(ply,script,command,target,target_ply,extra)
 	end
 end
 
-function luadev.RejectCommand(pl,x)
-	luadev.S2C(pl,"No Access"..(x and (": "..tostring(x)) or ""))
+if SERVER then
+    function luadev.RejectCommand(pl,x)
+        luadev.S2C(pl,"No Access"..(x and (": "..tostring(x)) or ""))
+    end
 end
 
 function luadev.COMMAND(str,func,complete)
@@ -539,11 +544,11 @@ if SERVER then
 		return #targets, targets
 	end
 
-	function luadev.RunOnServer(script, chunkname, extra)
+	function luadev.RunOnServer(script: string, chunkname: string, extra: any)
 		return luadev.Run(script, chunkname, extra)
 	end
 
-	function luadev.RunOnSelf(script, chunkname, extra)
+	function luadev.RunOnSelf(script: string, chunkname: string, extra: any)
 		return luadev.RunOnServer(script, chunkname, extra)
 	end
 
@@ -726,7 +731,7 @@ function luadev.AddCommands()
 		luadev.RunOnClient(content,cl,chunkname,luadev.MakeExtras(ply))
 	end)
 
-	local function handle(ply, c, func)
+	local function handle(ply, c, func: function(script: string, chunkname: string, extra: any): boolean, nil | string)
 		local Path,searchpath=luadev.RealFilePath(c[2] and luadev.TableToString(c) or c[1])
 		if not Path then luadev.Print("Could not find the file\n") return end
 
@@ -792,7 +797,7 @@ if CLIENT then
 	end
 
 	function luadev.ToServer(data)
-		if luadev.TransmitHook(data)~=nil then return end
+		if luadev.TransmitHook(data)~=nil then return false end
 
 		luadev.CheckStore(data.src)
 

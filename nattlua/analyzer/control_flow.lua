@@ -101,6 +101,13 @@ return function(META)
             local function_scope = scope:GetNearestFunctionScope()
             if scope:IsUncertain() then
                 function_scope.uncertain_function_return = true
+                
+                -- else always hits, so even if the else part is uncertain
+                -- it does mean that this function at least returns something
+                if scope.is_else then
+                    function_scope.uncertain_function_return = false
+                end
+
             elseif function_scope.uncertain_function_return then
                 function_scope.uncertain_function_return = false
             end
@@ -149,6 +156,7 @@ return function(META)
         local scope = self:GetScope()
         self:FireEvent("enter_conditional_scope", scope, data)
         scope.if_statement = data.type == "if" and data.statement
+        scope.is_else = data.is_else
         scope:SetTestCondition(data.condition, data.is_else)
         scope:MakeUncertain(data.condition:IsUncertain())
     end
