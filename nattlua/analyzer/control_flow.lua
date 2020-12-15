@@ -76,7 +76,7 @@ return function(META)
         end
     end
 
-    function META:ThrowError(msg, obj)
+    function META:ThrowError(msg, obj, no_report)
         if obj then
             self.lua_assert_error_thrown = {
                 msg = msg,
@@ -91,7 +91,9 @@ return function(META)
             self.lua_error_thrown = msg
         end
 
-        self:ReportDiagnostic(self.current_statement, msg)
+        if not no_report then
+            self:ReportDiagnostic(self.current_statement, msg)
+        end
     end
 
     function META:Return(types)

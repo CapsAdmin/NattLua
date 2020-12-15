@@ -486,3 +486,8 @@ run[[
         
     end
 ]]
+
+run[[
+    type_assert({Unknown()}, _ as {[1 .. inf] = any})
+    type_assert({Unknown(), 1}, _ as {any, 1})
+]]

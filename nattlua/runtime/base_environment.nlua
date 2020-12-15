@@ -372,7 +372,7 @@ do -- globals
 		end
 
         if obj:IsFalsy() then
-            analyzer:ThrowError(msg and msg:GetData() or "unknown error", obj)
+            analyzer:ThrowError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy() )
         end
 
         return types.Any()
@@ -730,6 +730,8 @@ do
 		end
 		return table.unpack(t)
 	end
+
+    type unpack = table.unpack
 end
 
 do
@@ -962,6 +964,34 @@ do
 	type function math.cos(n: number) return n:IsLiteral() and math.cos(n:GetData()) or types.Number() end
 	type function math.ceil(n: number) return n:IsLiteral() and math.ceil(n:GetData()) or types.Number() end
 	type function math.floor(n: number) return n:IsLiteral() and math.floor(n:GetData()) or types.Number() end
+	
+    type function math.min(...: number) 
+        local numbers = {}
+        for i = 1, select("#", ...) do
+            local obj = select(i, ...)
+            if not obj:IsLiteral() then
+                return types.Number()
+            else
+                numbers[i] = obj:GetData()
+            end
+        end
+
+        return math.min(table.unpack(numbers))
+    end
+
+
+    type function math.max(...: number) 
+        local numbers = {}
+        for i = 1, select("#", ...) do
+            local obj = select(i, ...)
+            if not obj:IsLiteral() then
+                return types.Number()
+            else
+                numbers[i] = obj:GetData()
+            end
+        end
+
+    end
 end
 
 type os = {
