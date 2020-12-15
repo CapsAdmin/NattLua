@@ -1,102 +1,8 @@
 -- DISABLE_CODE_RESULT
-local type { Entity, ClientsideModel } = loadfile("nattlua/runtime/glua.nlua")()
+local type { Entity, ClientsideModel, CompileString, isentity, istable, isstring } = loadfile("nattlua/runtime/glua.nlua")()
+local type CLIENT = false
+local type SERVER = true
 
-type function Entity:IsPlayer()
-    return types.Boolean
-end
-
-type function CompileString(code: string, name: string, should_throw: boolean | nil)
-    should_throw = should_throw and should_throw:IsLiteral() and should_throw:GetData()
-    if should_throw == nil then should_throw = true end
-
-    code = code:IsLiteral() and code:GetData() or nil
-    name = name and name:IsLiteral() and name:GetData() or nil
-
-    if code then
-        local func, err = nl.load(code, name)
-
-        if func then
-            return func
-        end
-
-        if should_throw then
-            error(err)
-        end
-        
-        return err
-    end
-end
-
-type function isstring(obj: any)
-    local typ = analyzer:Call(env.typesystem.type:GetType(), types.Tuple({obj}), analyzer.current_expression):Get(1)
-    return analyzer:BinaryOperator(analyzer.current_expression, typ, types.String("string"):MakeLiteral(true), "runtime", "==")
-end
-
-type function istable(obj: any)
-    local typ = analyzer:Call(env.typesystem.type:GetType(), types.Tuple({obj}), analyzer.current_expression):Get(1)
-    return analyzer:BinaryOperator(analyzer.current_expression, typ, types.String("table"):MakeLiteral(true), "runtime", "==")
-end
-
-type function isentity(obj: any)
-    local Entity = env.typesystem.Entity:GetType()
-    return analyzer:BinaryOperator(analyzer.current_expression, obj.meta or obj, Entity, "typesystem", "==")
-end
-
-type function table.Count(tbl: any): number
-
-function string.Implode( seperator, Table ) return
-	table.concat( Table, seperator )
-end
-function string.GetFileFromFilename( path )
-	if ( !path:find( "\\" ) && !path:find( "/" ) ) then return path end 
-	return path:match( "[\\/]([^/\\]+)$" ) or ""
-end
-
-function string.GetPathFromFilename( path )
-	return path:match( "^(.*[/\\])[^/\\]-$" ) or ""
-end
-
-function string.ToTable( str: string )
-	local tbl = {}
-
-	for i = 1, string.len( str ) do
-		tbl[i] = string.sub( str, i, i )
-	end
-
-	return tbl
-end
-
-local CLIENT = true
-local SERVER = false
-
-do
-    local totable = string.ToTable
-    local string_sub = string.sub
-    local string_find = string.find
-    local string_len = string.len
-    function string.Explode(separator: string, str: string, withpattern: boolean)
-        if ( separator == "" ) then return totable( str ) end
-        if ( withpattern == nil ) then withpattern = false end
-    
-        local ret = {}
-        local current_pos = 1
-    
-        for i = 1, string_len( str ) do
-            local start_pos, end_pos = string_find( str, separator, current_pos, !withpattern )
-            if ( !start_pos ) then break end
-            ret[ i ] = string_sub( str, current_pos, start_pos - 1 )
-            current_pos = end_pos + 1
-        end
-    
-        ret[ #ret + 1 ] = string_sub( str, current_pos )
-    
-        return ret
-    end
-    
-    function string.Split( str: string, delimiter: string )
-        return string.Explode( delimiter, str )
-    end    
-end
 
 local luadev = {}
 type luadev.__name = "luadev"
@@ -530,14 +436,14 @@ if SERVER then
 		end
 
 		if table.Count(targets) == 0 then
-			return nil,"no players"
+			return false,"no players"
 		end
 
 		net.Start(Tag)
 			luadev.WriteCompressed(script)
 			net.WriteTable(data)
 			if net.BytesWritten() == 65536 then
-				return nil,"too big"
+				return false,"too big"
 			end
 		net.Send(targets)
 
