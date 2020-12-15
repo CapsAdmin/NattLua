@@ -65,7 +65,7 @@ end
 do
     local guesses = {
         {pattern = "count", type = "number"},
-        {pattern = "tbl", type = "table", ctor = function(obj) obj:Set(types.Any(), types.Any()) end},
+        --{pattern = "tbl", type = "table", ctor = function(obj) obj:Set(types.Any(), types.Any()) end},
         {pattern = "str", type = "string"},
     }
 

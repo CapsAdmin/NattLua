@@ -241,7 +241,14 @@ return function(META)
 
                     local ok, reason
 
-                    if arg.Type == "table" and contract.Type == "table" then
+                    if not arg then
+                        if contract:IsFalsy() then
+                            arg = types.Nil:Copy()
+                            ok = true
+                        else
+                            ok, reason = types.errors.other("argument #" .. i .. " expected " .. tostring(contract) .. " got nil")
+                        end
+                    elseif arg.Type == "table" and contract.Type == "table" then
                         ok, reason = arg:FollowsContract(contract)
                     else
                         ok, reason = arg:IsSubsetOf(contract)
@@ -271,7 +278,7 @@ return function(META)
 
                 used_contract = true
             end
-            
+
             local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
 
             if used_contract then
@@ -301,8 +308,8 @@ return function(META)
             else
                 obj:GetReturnTypes():Merge(return_tuple)
             end
-    
-            obj:GetArguments():Merge(arguments)
+
+            obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
     
             self:FireEvent("function_spec", obj)
     

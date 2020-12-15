@@ -124,12 +124,12 @@ return function(META)
                 return key.value.value
             elseif key.type == "letter" then
                 return key.value
-            else
+            elseif key.Type == "string" and key:IsLiteral() then
+                return key:GetData()
+            elseif key.Type == "number" and key:IsLiteral() then
                 return key:GetData()
             end
         end
-
-        error("aaaa")
     end
 
     function META:GetMutatedValue(obj, key, value) 
@@ -165,6 +165,8 @@ return function(META)
         if scope:IsReadOnly() then return end
         
         key = cast_key(key)
+
+        if not key then return end -- no mutation?
         
         val.upvalue = obj
         val.upvalue_keyref = key

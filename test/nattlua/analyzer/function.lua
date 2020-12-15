@@ -299,18 +299,14 @@ test("calling a union that does not contain a function should error", function()
 end)
 
 test("pcall", function()
-    run[[
-        local type pcall = function(cb: any, ...)
-            return types.Boolean, table.unpack(analyzer:Call(cb, types.Tuple({...})):GetData())
-        end
-
+    pending[[
         local ok, err = pcall(function()
             local a, b = 10.5, nil
             return a < b
         end)
 
-        type_assert(ok, _ as boolean)
-        type_assert(err, _ as boolean)
+        type_assert(ok, _ as false)
+        type_assert(err, _ as "no operator for")
     ]]
 end)
 test("complex", function()
@@ -470,4 +466,23 @@ run[[
     end
     
     test("1",2,3,4)
+]]
+
+run[[
+    local function foo(a,b,c,d)
+        type_assert(a, 1)
+        type_assert(b, 2)
+        type_assert(c, _ as any)
+        type_assert(d, _ as any)
+    end
+    
+    something(function(...)
+        foo(1,2,...)
+    end)
+]]
+
+run[[
+    local func = function(one) end
+    func(1, 2)
+    func(1, "2")
 ]]

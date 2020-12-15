@@ -2,7 +2,7 @@ if not table.unpack and _G.unpack then
 	table.unpack = _G.unpack
 end
 
-require("nattlua.other.color_print")
+--require("nattlua.other.color_print")
 
 local helpers = require("nattlua.other.helpers")
 

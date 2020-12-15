@@ -462,10 +462,6 @@ do -- globals
             return val
         end
 
-        if val.Type == "number" then
-            return tostring(val:GetData())
-        end
-
         if val.Type == "table" then
             if val.meta then
                 local func = val.meta:Get("__tostring")
@@ -480,6 +476,8 @@ do -- globals
 
             return tostring(val:GetData())
         end
+
+        return tostring(val:GetData())
     end
 
     type function tonumber(val: string | number, base: number)
@@ -687,6 +685,8 @@ do
 	end
 
 	type function table.insert(tbl: {[1 .. inf] = any}, ...)
+        if not tbl:IsLiteral() then return end
+        
 		local pos, val = ...
 
 		if not val then

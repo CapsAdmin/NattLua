@@ -18,10 +18,6 @@ test("for i = 1, number", function()
 end)
 
 test("for i = 1, number is an uncertain scope", function()
-    --  1, number is not the same as 1, inf because if the max
-    -- value is below 1 it will not execute
-
-    -- so either the scope runs with number, or not at all
     run[[
         local a = 0
         for i = 1, _ as number do

@@ -310,7 +310,7 @@ function META:Set(key, val, no_delete)
         end
     end
 
-    if self.contract then
+    if self.contract and self.contract.Type == "table" then -- TODO
         local keyval, reason = self.contract:GetKeyVal(key, true)
 
         if not keyval then

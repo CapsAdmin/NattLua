@@ -282,31 +282,44 @@ return function(META)
             if res then
                 return res
             end
-            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                return types.Symbol(l.data < r.data)
+
+            if (l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number") then
+                if l:IsLiteral() and r:IsLiteral() then
+                    return types.Symbol(l.data < r.data)
+                end
+                return types.Boolean
             end
 
-            return types.Boolean
+            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
         elseif op == "<=" then
             local res = metatable_function(self, "__le", l, r)
             if res then
                 return res
             end
-            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                return types.Symbol(l.data <= r.data)
+
+            if (l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number") then
+                if l:IsLiteral() and r:IsLiteral() then
+                    return types.Symbol(l.data <= r.data)
+                end
+                return types.Boolean
             end
 
-            return types.Boolean
+            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
         elseif op == ">" then
             local res = metatable_function(self, "__lt", l, r)
             if res then
                 return res
             end
-            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                return types.Symbol(l.data > r.data)
+
+
+            if (l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number") then
+                if l:IsLiteral() and r:IsLiteral() then
+                    return types.Symbol(l.data > r.data)
+                end
+                return types.Boolean
             end
 
-            return types.Boolean
+            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
         elseif op == ">=" then
             local res = metatable_function(self, "__le", l, r)
 
@@ -314,11 +327,15 @@ return function(META)
                 return res
             end
 
-            if l:IsLiteral() and r:IsLiteral() and ((l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number")) then
-                return types.Symbol(l.data >= r.data)
+
+            if (l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number") then
+                if l:IsLiteral() and r:IsLiteral() then
+                    return types.Symbol(l.data >= r.data)
+                end
+                return types.Boolean
             end
 
-            return types.Boolean
+            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
         elseif op == "or" or op == "||" then
             if l:IsUncertain() or r:IsUncertain() then
                 local union = types.Union({l,r})

@@ -119,7 +119,7 @@ function META.IsSubsetOf(A, B)
         return true
     end
 
-    if A:Get(1) and A:Get(1).Type == "any" and B:GetLength() == 0 then
+    if A:Get(1) and A:Get(1).Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
         return true
     end
     
@@ -175,6 +175,10 @@ function META:Get(key)
 
     if not val and self.Remainder then
         return self.Remainder:Get(key - #self.data)
+    end
+
+    if not val and self.data[#self.data] and (self.data[#self.data].Repeat or self.data[#self.data].Remainder) then
+        return self.data[#self.data]:Get(key)
     end
 
     if not val then
