@@ -39,7 +39,7 @@ function META:__tostring()
     end
     self.suppress = true
 
-    if self:Contains("__name") then
+    if self:Contains("__name") and self:Get("__name"):IsLiteral() then
         local str = tostring(self:Get("__name"):GetData())
         self.suppress = nil
         return str
@@ -266,7 +266,7 @@ function META:GetKeyVal(key, reverse_subset)
         table.insert(reasons, reason)
     end
 
-    return types.errors.other(table.concat(reasons, "\n"))
+    return types.errors.other(tostring(self) .. "[" .. tostring(key) .. "] == nil: " .. table.concat(reasons))
 end
 
 function META:Insert(val)

@@ -28,6 +28,10 @@ return function(META)
     end
 
     function META:ReportDiagnostic(node, msg --[[#: string ]], severity --[[#: "warning" | "error" ]])
+        assert(node)
+        assert(msg)
+        assert(severity)
+
         severity = severity or "warning"
         local start, stop = helpers.LazyFindStartStop(node)
 
@@ -48,10 +52,13 @@ return function(META)
     function META:Error(node, msg)
         return self:ReportDiagnostic(node, msg, "error")
     end
+
+    function META:Warning(node, msg)
+        return self:ReportDiagnostic(node, msg, "warning")
+    end
     
     function META:FatalError(msg)
-        assert(type(msg) == "string")
-        error(msg, 2)
+        return self:ReportDiagnostic(self.current_statement, msg, "fatal")
     end
 
     function META:GetDiagnostics()

@@ -75,6 +75,10 @@ function META.IsSubsetOf(A, B)
         return true
     end
 
+    if A:IsLiteral() and B:IsLiteral() then
+        return types.errors.other(tostring(A) .. " is not the same value as " .. tostring(B))
+    end
+
     return types.errors.subset(A, B)
 end
 

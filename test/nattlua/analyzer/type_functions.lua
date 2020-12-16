@@ -85,10 +85,14 @@ test("assert", function()
     ]],"lol")
 end)
 
-test("require should error when not finding a module", function()
-    local a = run([[require("adawdawddwaldwadwadawol")]])
-    assert(a:GetDiagnostics()[1].msg:find("unable to find module"))
-end)
+do
+    _G.TEST_DISABLE_ERROR_PRINT = true
+    test("require should error when not finding a module", function()
+        local a = run([[require("adawdawddwaldwadwadawol")]])
+        assert(a:GetDiagnostics()[1].msg:find("unable to find module"))
+    end)
+    _G.TEST_DISABLE_ERROR_PRINT = false
+end
 
 test("rawset rawget", function()
     run[[
@@ -425,20 +429,24 @@ run[[
     type_assert<|count, 1|>
 ]]
 
-run[[
-    local function test(x)
-        error("LOL")
-        return "foo"
-    end
-    local ok, err = pcall(test, "foo")
-    type_assert<|ok, false|>
-    type_assert<|err, "LOL"|>
+do
+    _G.TEST_DISABLE_ERROR_PRINT = true
+    run[[
+        local function test(x)
+            error("LOL")
+            return "foo"
+        end
+        local ok, err = pcall(test, "foo")
+        type_assert<|ok, false|>
+        type_assert<|err, "LOL"|>
 
 
-    local function test(x)
-        return "foo"
-    end
-    local ok, err = pcall(test, "foo")
-    type_assert<|ok, true|>
-    type_assert<|err, "foo"|>
-]]
+        local function test(x)
+            return "foo"
+        end
+        local ok, err = pcall(test, "foo")
+        type_assert<|ok, true|>
+        type_assert<|err, "foo"|>
+    ]]
+    _G.TEST_DISABLE_ERROR_PRINT = false
+end

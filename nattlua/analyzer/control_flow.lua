@@ -92,7 +92,7 @@ return function(META)
         end
 
         if not no_report then
-            self:ReportDiagnostic(self.current_statement, msg)
+            self:Error(self.current_statement, msg)
         end
     end
 
@@ -164,7 +164,7 @@ return function(META)
     end
 
     function META:ErrorAndCloneCurrentScope(node, err, condition)
-        self:ReportDiagnostic(node, err)
+        self:Error(node, err)
         self:CloneCurrentScope()
         self:GetScope():SetTestCondition(condition)
     end

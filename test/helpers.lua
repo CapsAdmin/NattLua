@@ -47,9 +47,11 @@ local function run(code, expect_error)
         end
     else
         if not ok then
+            _G.TEST = true
             code_data = C(code_data.code)
             code_data:EnableEventDump(true)
             local ok, err2 = code_data:Analyze()
+            _G.TEST = false
             io.write(code_data.code, "\n")
             error(err, 3)
         end

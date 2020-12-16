@@ -293,9 +293,7 @@ test("calling a union that does not contain a function should error", function()
         local type test = (function(boolean, boolean): number) | (function(boolean): string) | number
 
         test(true, true)
-
-        §analyzer:GetDiagnostics()[1].msg:find("union .- contains uncallable object number")
-    ]])
+    ]], "union .- contains uncallable object number")
 end)
 
 test("pcall", function()
@@ -485,4 +483,24 @@ run[[
     local func = function(one) end
     func(1, 2)
     func(1, "2")
+]]
+
+run[[
+    local type Token = {
+        type = string,
+        value = string,
+    }
+    
+    local tbl = {
+        foo = 1,
+        bar = 2,
+        faz = 3,
+    }
+    
+    local function foo(arg: Token)
+        return tbl[arg.value]
+    end
+    
+    type_assert(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
+    type_assert(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
 ]]

@@ -291,7 +291,7 @@ run([[
     }, meta)
     
     obj:Test()
-]], "\"foo\" is not a subset of")
+]], "\"foo\" is not the same value as")
 
 run([[
     local meta = {} as {
@@ -309,7 +309,7 @@ run([[
     }, meta)
 
     type_assert(obj:Test(), 1)
-]], "\"foo\" is not a subset of")
+]], "\"foo\" is not the same value as")
 
 run([[
     local meta = {}

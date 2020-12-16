@@ -67,16 +67,14 @@ run[[
     x()
 ]]
 
-run[[
+run([[
     local a: nil | {}
     a.foo = true
     type_assert(a, {foo = true})
-    §assert(analyzer:GetDiagnostics()[1].msg:find("undefined set.- = true"))
-]]
+]], "undefined set.- = true")
 
-run[[
+run([[
     local b: nil | {foo = true}
     local c = b.foo
     type_assert(c, true)
-    §assert(analyzer:GetDiagnostics()[1].msg:find("undefined get: nil.-foo"))
-]]
+]], "undefined get: nil.-foo")

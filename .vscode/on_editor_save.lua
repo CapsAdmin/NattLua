@@ -10,7 +10,11 @@ end
 local function run_nattlua(path)
     did_something = true
     local c = assert(nl.File(path, {annotate = true}))
-    c:EnableEventDump(true)
+
+    if c.code:find("%-%-%s-EVENT_DUMP") then
+        c:EnableEventDump(true)
+    end
+
     if c.code:find("%-%-%s-DISABLE_BASE_ENV") then
         _G.DISABLE_BASE_ENV = true
     end

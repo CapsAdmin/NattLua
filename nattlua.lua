@@ -52,7 +52,6 @@ do
 		return str
 	end
 
-
 	function META:OnDiagnostic(code, name, msg, severity, start, stop, ...)
 		local level = 0
 
@@ -62,22 +61,21 @@ do
 
 		local msg = helpers.FormatError(code, name, msg, start, stop, nil, ...)
 
-		local msg2 = ""
+        local msg2 = ""
+        
 		for line in (msg .. "\n"):gmatch("(.-)\n") do
 			msg2 = msg2 .. (" "):rep(4-level*2) .. line .. "\n"
-		end
-		msg = msg2
-		
-        if severity == "error" then
-            if self.NoThrow then
-                io.write(msg)
-            else
-                error(msg)
-            end
-        else
-            if not _G.test then
-                io.write(msg)
-            end
+        end
+        
+        msg = msg2
+        
+        if not _G.TEST then
+            io.write(msg)
+            print(debug.traceback())
+        end
+
+        if severity == "fatal" or (_G.TEST and severity == "error" and not _G.TEST_DISABLE_ERROR_PRINT) then
+            error(msg, 2)
         end
     end
 
@@ -100,24 +98,34 @@ do
         return s
     end
 
-	local function traceback_(self, obj, msg)
-		msg = msg or "no error"
+    local traceback = function(self, obj, msg)
+        if self.debug then
+            local ret = {xpcall(
+                function(self, obj, msg)
+                    msg = msg or "no error"
+                    
+                    local s = msg .. "\n" .. stack_trace()
+            
+                    if self.analyzer then
+                        s = s .. self.analyzer:DebugStateToString()
+                    end
+            
+                    return s
+                end    
+                ,function(msg) 
+                    return debug.traceback(tostring(msg)) 
+                end, 
+                self, obj, msg
+            )}
 
-        local s = msg .. "\n" .. stack_trace()
+            if not ret[1] then
+                return "error in error handling: " .. tostring(ret[2])
+            end
+            
+            return table.unpack(ret, 2)
+        end
 
-        if self.analyzer then
-            s = s .. self.analyzer:DebugStateToString()
-		end
-
-		return s
-	end
-
-	local traceback = function(self, obj, msg)
-		local ret = {xpcall(traceback_, function(msg) return debug.traceback(tostring(msg)) end, self, obj, msg)}
-        if not ret[1] then
-			return "error in error handling: " .. tostring(ret[2])
-		end
-		return table.unpack(ret, 2)
+        return msg
 	end
 
 	function META:Lex()
@@ -125,7 +133,7 @@ do
 		lexer.name = self.name
 		self.lexer = lexer
         lexer.OnError = function(lexer, code, name, msg, start, stop, ...) 
-            self:OnDiagnostic(code, name, msg, "error", start, stop, ...) 
+            self:OnDiagnostic(code, name, msg, "fatal", start, stop, ...) 
         end
 		
 		local ok, tokens = xpcall(
@@ -156,7 +164,7 @@ do
 		parser.name = self.name
 		self.parser = parser
         parser.OnError = function(parser, code, name, msg, start, stop, ...) 
-            self:OnDiagnostic(code, name, msg, "error", start, stop, ...) 
+            self:OnDiagnostic(code, name, msg, "fatal", start, stop, ...) 
         end
 
 		if self.OnNode then

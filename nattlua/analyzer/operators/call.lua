@@ -309,7 +309,9 @@ return function(META)
                 obj:GetReturnTypes():Merge(return_tuple)
             end
 
-            obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
+            if not used_contract then
+                obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
+            end
     
             self:FireEvent("function_spec", obj)
     

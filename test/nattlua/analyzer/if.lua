@@ -356,15 +356,20 @@ run([[
     type_assert(a, nil)
 ]])
 
-run[[
-    local a = true
 
-    if maybe then
-        error("!")
-    end
+do
+    _G.TEST_DISABLE_ERROR_PRINT = true
+    run[[
+        local a = true
 
-    type_assert(a, true)
-]]
+        if maybe then
+            error("!")
+        end
+
+        type_assert(a, true)
+    ]]
+    _G.TEST_DISABLE_ERROR_PRINT = false
+end
 
 run[[
     local a = true
@@ -520,15 +525,18 @@ run[[
     end
 ]]
 
-run[[
-    local a: 1 | nil
+do
+    _G.TEST_DISABLE_ERROR_PRINT = true
+    run[[
+        local a: 1 | nil
 
-    if not a then
-        error("!")
-    end
+        if not a then
+            error("!")
+        end
 
-    type_assert(a, 1)
-]]
+        type_assert(a, 1)
+    ]]
+end
 
 run[[
     local a: 1 | nil
@@ -922,18 +930,22 @@ run[[
     type_assert<|y, 1 | true|>
 ]]
 
-run[[
-    local function foo(input)
-        local x = tonumber(input)
-        if not x then
-            error("!")
+do
+    _G.TEST_DISABLE_ERROR_PRINT = true
+    run[[
+        local function foo(input)
+            local x = tonumber(input)
+            if not x then
+                error("!")
+            end
+            return x
         end
-        return x
-    end
-    
-    local y = foo(_ as string)
-    type_assert<|y, number|>
-]]
+        
+        local y = foo(_ as string)
+        type_assert<|y, number|>
+    ]]
+    _G.TEST_DISABLE_ERROR_PRINT = false
+end
 
 run[[
     local a = {}

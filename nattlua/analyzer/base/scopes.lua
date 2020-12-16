@@ -224,6 +224,11 @@ return function(META)
 
             if self:GetScope():IsReadOnly() then return end
 
+
+            if not obj and env == "runtime" then
+                self:Warning(key, "_G[\"" .. key:Render() .. "\"] = " .. tostring(val))
+            end
+
             if not self:MutateValue(g, key, val, env) then 
                 self:Assert(key, g:Set(key, val, env == "runtime"))
             end

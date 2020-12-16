@@ -1,9 +1,8 @@
 --[[# 
-
-type Token = {
-    value = string,
-    type = string,
-}
+    local type Token = {
+        value = string,
+        type = string,
+    }
 ]]
 
 return function(syntax)
@@ -139,7 +138,7 @@ return function(syntax)
                         map[i] = 1
                     end
                 end
-                syntax[key] = function(i) return map[i] == 1 end
+                syntax[key] = function(i --[[#: number]]) return map[i] == 1 end
             end
         end
     end
@@ -194,12 +193,21 @@ return function(syntax)
             end
 
             function syntax.GetBinaryOperatorInfo(tk --[[#: Token]])
+                --[[#
+                    print("what")
+                    print(tk)
+                    print(tk.value)
+                    print(Token)
+                    print(lookup)
+                    print(lookup[tk.value])
+                ]]
+
                 return lookup[tk.value]
             end
         end
 
-        do
-            local function build_lookup(tbl, func_name)
+        do           
+            local function build_lookup(tbl--[[#: {[number] = string} ]], func_name--[[#: string ]])
                 local lookup = {}
 
                 for _, v in pairs(tbl or {}) do

@@ -25,6 +25,7 @@ return function(META)
                     args[i] = self:AnalyzeExpression(key.explicit_type, "typesystem")
                     explicit_arguments = true
                 else    
+                    self:Warning(key, "argument is untyped")
                     args[i] = self:GuessTypeFromIdentifier(key)
                 end
             end

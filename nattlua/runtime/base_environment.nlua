@@ -1,3 +1,4 @@
+type __name = "_G"
 
 local type boolean = true | false
 
@@ -243,7 +244,10 @@ do -- globals
 	end
 
 	type function require(name: string)
-		local str = name.data
+        if not name:IsLiteral() then
+            return types.Any
+        end
+		local str = name:GetData()
 
 		local base_environment = require("nattlua.runtime.base_environment")
 
@@ -289,7 +293,7 @@ do -- globals
 			end
 		end
 
-		analyzer:ReportDiagnostic(name.node, "unable to find module " .. str)
+		analyzer:Error(name.node, "unable to find module " .. str)
 
 		return types.Any
 	end
