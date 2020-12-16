@@ -1,6 +1,6 @@
 local helpers = {}
 
-function helpers.QuoteToken(str)
+function helpers.QuoteToken(str--[[#: string]])
 	return "❲" .. str .. "❳"
 end
 
@@ -113,7 +113,7 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 end
 
 do
-	local function get_lines_before(code, pos, lines)
+	local function get_lines_before(code--[[#:string]], pos--[[#:number]], lines--[[#:number]])
 		local line = 1
 		local first_line_pos = 1
 
@@ -135,7 +135,7 @@ do
 		return 1, first_line_pos, line
 	end
 
-	local function get_lines_after(code, pos, lines)
+	local function get_lines_after(code--[[#:string]], pos--[[#:number]], lines--[[#:number]])
 		local line = 1
 		local first_line_pos = 1
 
@@ -160,7 +160,7 @@ do
 	do
 		-- TODO: wtf am i doing here?
 		local args
-		local fmt = function(num)
+		local fmt = function(num--[[#:number]])
 			num = tonumber(num)
 			if type(args[num]) == "table" then
 				return helpers.QuoteTokens(args[num] --[[# as {[number] = string}]])
@@ -175,7 +175,7 @@ do
 		end
 	end
 
-	local function clamp(num, min, max) return math.min(math.max(num, min), max) end
+	local function clamp(num--[[#:number]], min--[[#:number]], max--[[#:number]]) return math.min(math.max(num, min), max) end
 
 	function helpers.FormatError(code--[[#: string]], path--[[#: string]], msg--[[#: string]], start--[[#:number]], stop--[[#: number]], size--[[#: number]], ...)
 		size = size or 2

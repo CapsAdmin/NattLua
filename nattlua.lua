@@ -71,11 +71,21 @@ do
         
         if not _G.TEST then
             io.write(msg)
-            print(debug.traceback())
         end
 
         if severity == "fatal" or (_G.TEST and severity == "error" and not _G.TEST_DISABLE_ERROR_PRINT) then
-            error(msg, 2)
+            local level = 2
+            if _G.TEST then
+                for i = 1, math.huge do
+                    local info = debug.getinfo(i)
+                    if not info then break end
+                    if info.source:find("@test/nattlua", nil, true) then
+                        level = i
+                        break
+                    end
+                end
+            end
+            error(msg, level)
         end
     end
 

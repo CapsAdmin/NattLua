@@ -278,7 +278,7 @@ run[[
 run([[
     local meta = {} as {
         __index = self,
-        Test = function(self): number
+        Test = function(self): string
     }
     meta.__index = meta
     
@@ -291,12 +291,13 @@ run([[
     }, meta)
     
     obj:Test()
-]], "\"foo\" is not the same value as")
+]], "foo.- is not a subset of")
 
 run([[
     local meta = {} as {
         __index = self, 
-        Test = function(self): number
+        Test = (function(self): number),
+        foo = number,
     }
     meta.__index = meta
 
@@ -308,8 +309,8 @@ run([[
         foo = 1
     }, meta)
 
-    type_assert(obj:Test(), 1)
-]], "\"foo\" is not the same value as")
+    type_assert(obj:Test(), _ as number)
+]])
 
 run([[
     local meta = {}

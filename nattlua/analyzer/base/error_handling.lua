@@ -28,9 +28,25 @@ return function(META)
     end
 
     function META:ReportDiagnostic(node, msg --[[#: string ]], severity --[[#: "warning" | "error" ]])
+        if not node then
+            io.write("reporting diagnostic without node, defaulting to current expression or statement\n")
+            io.write(debug.traceback(), "\n")
+            node = self.current_expression or self.current_statement
+        end
+
         assert(node)
         assert(msg)
         assert(severity)
+
+        local key = msg .. "-" .. ("%p"):format(node) .. "-" .. "severity"
+
+        self.diagnostics_map = self.diagnostics_map or {}
+
+        if self.diagnostics_map[key] then
+            return
+        end
+
+        self.diagnostics_map[key] = true
 
         severity = severity or "warning"
         local start, stop = helpers.LazyFindStartStop(node)
@@ -58,7 +74,11 @@ return function(META)
     end
     
     function META:FatalError(msg)
-        return self:ReportDiagnostic(self.current_statement, msg, "fatal")
+        if self.current_expression or self.current_statement then
+            return self:ReportDiagnostic(self.current_expression or self.current_statement, msg, "fatal")
+        end
+
+        error(msg, 2)
     end
 
     function META:GetDiagnostics()

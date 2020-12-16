@@ -450,3 +450,44 @@ do
     ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
+
+
+do
+    _G.TEST_DISABLE_ERROR_PRINT = true
+    run[[
+        local ok, table_new = pcall(require, "lol")
+        if not ok then
+            table_new = "ok"
+        end
+
+        type_assert(ok, false)
+        type_assert(table_new, "ok")
+    ]]
+    _G.TEST_DISABLE_ERROR_PRINT = false
+end
+run[[
+    local tbl = {
+        foo = true,
+        bar = false,
+        faz = 1
+    }
+    table.sort(tbl, function(a, b) end)
+]]
+
+run[[
+    local META = {}
+    META.__index = META
+    META.MyField = true
+
+    local function extend(tbl: {
+        __index = self,
+        MyField = boolean,
+        [string] = any,
+    })
+        tbl.ExtraField = 1
+    end
+
+    extend(META)
+
+    type_assert(META.ExtraField, 1)
+]]

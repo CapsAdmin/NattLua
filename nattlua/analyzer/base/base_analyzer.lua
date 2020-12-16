@@ -161,6 +161,10 @@ return function(META)
                 self:Error(node, msg)
             end
 
+            if res[1] == nil then
+                res[1] = types.Nil:Copy()
+            end
+
             return table.unpack(res)
         end
 

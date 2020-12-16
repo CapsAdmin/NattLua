@@ -156,7 +156,7 @@ function META.IsSubsetOf(A, B)
         local ok, reason = a:IsSubsetOf(b)
 
         if not ok then
-            return types.errors.subset(a, b, reason)
+            return types.errors.subset(A, B, "index " .. i .. ": " .. reason)
         end
     end
 

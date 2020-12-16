@@ -113,3 +113,15 @@ run[[
         type_assert(v, _ as true)
     end
 ]]
+
+run[[
+    local tbl: {
+        foo = nil | string,
+        bar = nil | number,
+    }
+
+    for k, v in pairs(tbl) do
+        type_assert(k, _ as "foo" | "bar")
+        type_assert(v, _ as number | string)
+    end
+]]

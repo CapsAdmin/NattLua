@@ -273,7 +273,7 @@ test("defining a type for a function should type the arguments", function()
         end
 
         test(true, 2)
-    ]], "true is not the same as number")
+    ]], "true is not a subset of number")
 end)
 
 test("calling a union", function()

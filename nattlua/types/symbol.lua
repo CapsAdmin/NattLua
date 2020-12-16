@@ -47,7 +47,7 @@ function META.IsSubsetOf(A, B)
     if B.Type == "any" then return true end
 
     if A.Type ~= B.Type or A.data ~= B.data then
-        return types.errors.other(tostring(A) .. " is not the same as " .. tostring(B))
+        return types.errors.other("symbol " .. tostring(A) .. " is not the same value as symbol " .. tostring(B))
     end
 
     return true

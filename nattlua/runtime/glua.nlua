@@ -272,7 +272,7 @@ do
     local string_sub = string.sub
     local string_find = string.find
     local string_len = string.len
-    function string.Explode(separator: string, str: string, withpattern: boolean)
+    function string.Explode(separator, str, withpattern)
         if ( separator == "" ) then return totable( str ) end
         if ( withpattern == nil ) then withpattern = false end
     
@@ -291,7 +291,7 @@ do
         return ret
     end
     
-    function string.Split( str: string, delimiter: string )
+    function string.Split( str, delimiter )
         return string.Explode( delimiter, str )
     end    
 end

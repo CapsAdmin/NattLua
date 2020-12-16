@@ -1,17 +1,25 @@
 local list = require("nattlua.other.list")
 
-return function(META)
-    --[[# 
-    
-    type META.code = string
-    type META.i = number 
-    type META.code_ptr = {
-        [number] = number,
-        __meta = self,
-        __add = (function(self, number): self),
-        __sub = (function(self, number): self)
-    }
-    
+return function(META--[[#: {
+    syntax = {
+        IsDuringLetter = (function(number): boolean),        
+        IsLetter = (function(number): boolean),
+        IsSpace = (function(number): boolean),
+        GetSymbols = (function(): {[number] = string}),
+        [string] = any,
+    },
+    [string] = any,
+}]])
+
+    --[[#
+        type META.code = string
+        type META.i = number
+        type META.code_ptr = {
+            [number] = number,
+            __meta = self,
+            __add = (function(self, number): self),
+            __sub = (function(self, number): self)
+        }
     ]]
 
     local ok, table_new = pcall(require, "table.new")
@@ -164,23 +172,23 @@ return function(META)
         self.i = i
     end
 
-    function META:IsValue(what, offset)
+    function META:IsValue(what--[[#:string]], offset--[[#:number]])
         return self:IsByte(B(what), offset)
     end
 
-    function META:IsCurrentValue(what)
+    function META:IsCurrentValue(what--[[#:string]])
         return self:IsCurrentByte(B(what))
     end
 
-    function META:IsCurrentByte(what)
+    function META:IsCurrentByte(what--[[#:string]])
         return self:GetCurrentChar() == what
     end
 
-    function META:IsByte(what, offset)
+    function META:IsByte(what--[[#:string]], offset--[[#:number]])
             return self:GetChar(offset) == what
         end
 
-    function META.GenerateMap(str)
+    function META.GenerateMap(str--[[#:string]])
         local out = {}
         for i = 1, #str do
             out[str:byte(i)] = true
@@ -188,7 +196,7 @@ return function(META)
         return out
     end
 
-    function META.BuildReadFunction(tbl, lower)
+    function META.BuildReadFunction(tbl--[[#:{[number] = string}]], lower--[[#: boolean]])
         local copy = {}
         local done = {}
 
@@ -232,7 +240,7 @@ return function(META)
         return assert(load(kernel))()
     end
 
-    function META:Error(msg, start, stop)
+    function META:Error(msg--[[#:string]], start--[[#:number]], stop--[[#:number]])
         if self.OnError then
             self:OnError(self.code, self.name, msg, start or self.i, stop or self.i)
         end
@@ -247,7 +255,7 @@ return function(META)
             stop = 0,
         } end)
 
-        function META:NewToken(type, start, stop, is_whitespace)
+        function META:NewToken(type--[[#:string]], start--[[#:number]], stop--[[#:number]], is_whitespace--[[#:boolean]])
             local tk = get()
 
             tk.type = type

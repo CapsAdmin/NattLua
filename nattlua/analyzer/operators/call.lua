@@ -310,6 +310,22 @@ return function(META)
             end
 
             if not used_contract then
+
+                
+                if not obj.arguments_inferred then
+                    for i, obj in ipairs(obj:GetArguments():GetData()) do
+                        if function_node.self_call then
+                            local node = function_node.identifiers[i + 1]
+                            if not node then
+                                node = function_node
+                            end
+                            self:Warning(node, "argument is untyped")
+                        else 
+                            self:Warning(function_node.identifiers[i], "argument is untyped")
+                        end
+                    end
+                end
+
                 obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
             end
     

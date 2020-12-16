@@ -1,32 +1,4 @@
-do
-    local totable = string.ToTable
-    local string_sub = string.sub
-    local string_find = string.find
-    local string_len = string.len
-    function string.Explode(separator, str, withpattern)
-        if ( separator == "" ) then return totable( str ) end
-        if ( withpattern == nil ) then withpattern = false end
-    
-        local ret = {}
-        local current_pos = 1
-    
-        for i = 1, string_len( str ) do
-            local start_pos, end_pos = string_find( str, separator, current_pos, !withpattern )
-            if ( !start_pos ) then break end
-            ret[ i ] = string_sub( str, current_pos, start_pos - 1 )
-            current_pos = end_pos + 1
-        end
-    
-        ret[ #ret + 1 ] = string_sub( str, current_pos )
-    
-        return ret
-    end
-    
-    function string.Split( str, delimiter )
-        return string.Explode( delimiter, str )
-    end    
-end
-
+loadfile("nattlua/runtime/glua.nlua")()
 
 local aowl = {}
 aowl.commands = {}
@@ -67,7 +39,8 @@ function aowl.StringToType(type, ...)
     return aowl.ArgumentTypes[type](...)
 end
 
-function aowl.AddCommand(command, callback, group)
+function aowl.AddCommand(command)
+    type_assert(command, "help|usage=string")
     -- AOWL LEGACY
     if type(command) == "table" then
         command = table.concat(command, "|")
@@ -84,24 +57,37 @@ function aowl.AddCommand(command, callback, group)
         end
     end
 
+    type_assert(aliases, "help|usage")
+    type_assert(argtypes, "string")
+
     aliases = aliases:Split("|")
+    type_assert(aliases, {"help", "usage"})
 
     if argtypes then
         argtypes = argtypes:Split(",")
+        type_assert(argtypes, {"string"})
 
         for i, v in ipairs(argtypes) do
+            type_assert(i, 1)
+            type_assert(v, "string")
+
             if v:find("|", nil, true) then
+            
+                type_assert(nil, "should not hit")
                 argtypes[i] = v:Split("|")
             else
                 argtypes[i] = {v}
+                type_assert(argtypes, {{"string"}})
             end
         end
+
+        type_assert(argtypes, {{"string"}})
 
         for i, types in ipairs(argtypes) do
             for i2, arg in ipairs(types) do
                 if arg:find("[", nil, true) then
                     local temp, default = arg:match("(.+)(%b[])")
-                    if aowl.ArgumentTypes[temp] then
+                    if temp and default and aowl.ArgumentTypes[temp] then
                         defaults = defaults or {}
                         default = default:sub(2, -2)
 
@@ -114,7 +100,7 @@ function aowl.AddCommand(command, callback, group)
 
                         types[i2] = temp
                     else
-                        log(aliases[1] .. ": no type information found for \"" .. temp .. "\"")
+                        log(aliases[1] .. ": no type information found for \"" .. arg .. "\"")
                     end
                 end
             end
@@ -124,13 +110,11 @@ function aowl.AddCommand(command, callback, group)
     aowl.commands[aliases[1]] = {
         aliases = aliases,
         argtypes = argtypes,
-        callback = callback,
-        group = group,
         defaults = defaults
     }
 end
 
-aowl.AddCommand("help|usage=string", function(ply, line, cmd) end)
+aowl.AddCommand("help|usage=string")
 
 type_assert(aowl.commands.help.aliases, {"help", "usage"})
-type_assert(aowl.commands.help.argtypes, {"string"})
+type_assert(aowl.commands.help.argtypes, {{"string"}})

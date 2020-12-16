@@ -84,6 +84,8 @@ function META.IsSubsetOf(A, B)
 
         local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
         if not ok then
+            print(A:GetArguments(), B:GetArguments())
+            print(debug.traceback())
             return types.errors.other("function arguments don't match because " .. reason)
         end
 
@@ -133,7 +135,7 @@ function META:CheckArguments(arguments)
 
             local ok, err = a:IsSubsetOf(b)
             if not ok then
-                return ok, err
+                return types.errors.subset(a, b, err)
             end
         end
 
@@ -162,9 +164,9 @@ function META:CheckArguments(arguments)
 
         if not ok then
             if b.node then
-                return types.errors.other("function argument #"..i.." '" .. tostring(b) .. "': " .. reason)
+                return types.errors.subset(a, b, "function argument #"..i.." '" .. tostring(b) .. "': " .. reason)
             else
-                return types.errors.other("argument #" .. i .. " - " .. reason)
+                return types.errors.subset(a, b, "argument #" .. i .. " - " .. reason)
             end
         end
     end

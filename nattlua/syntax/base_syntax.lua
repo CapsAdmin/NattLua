@@ -5,7 +5,21 @@
     }
 ]]
 
-return function(syntax)
+return function(syntax--[[#: {
+    BinaryOperators = {[number] = {[number] = string}},
+    PrefixOperators = {[number] = string},
+    PostfixOperators = {[number] = string},
+    PrimaryBinaryOperators = {[number] = string},
+    SymbolCharacters = {[number] = string},
+    KeywordValues = {[number] = string},
+    Keywords = {[number] = string},
+    
+    BinaryOperatorFunctionTranslate = {[string] = string} | nil,
+    PostfixOperatorFunctionTranslate = {[string] = string} | nil,
+    PrefixOperatorFunctionTranslate = {[string] = string} | nil,
+
+    [string] = any,
+}]])
     do
         local B = string.byte
 

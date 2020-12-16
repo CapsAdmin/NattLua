@@ -3,13 +3,6 @@ local META = {}
 META.Type = "union"
 META.__index = META
 
-function META:__newindex(key, val)
-    if self.LOL then
-        print(key, val)
-    end
-    rawset(self, key, val)
-end
-
 local sort = function(a, b) return a < b end
 
 function META:GetSignature()
@@ -79,10 +72,6 @@ end
 function META:Clear()
     self.datai = {}
     self.data = {}
-    if self.LOL then
-        print("LOL")
-        print(debug.traceback())
-    end
 end
 
 function META:Get(key, from_table)

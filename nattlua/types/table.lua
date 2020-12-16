@@ -179,7 +179,7 @@ function META.IsSubsetOf(A, B)
                     local ok, err = aval:IsSubsetOf(keyval.val)
                     done[cachekey] = nil
                     if not ok then
-                        return ok, err
+                        return types.errors.subset(aval, keyval.val, err)
                     end
                 end
             else
@@ -266,7 +266,7 @@ function META:GetKeyVal(key, reverse_subset)
         table.insert(reasons, reason)
     end
 
-    return types.errors.other(tostring(self) .. "[" .. tostring(key) .. "] == nil: " .. table.concat(reasons))
+    return types.errors.other(tostring(self) .. "[" .. tostring(key) .. "] == nil")
 end
 
 function META:Insert(val)

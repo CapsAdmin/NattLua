@@ -4,10 +4,15 @@ local helpers = require("nattlua.other.helpers")
 local META = {}
 META.__index = META
 
---[[# type META.i = number ]]
+--[[# 
+    type META.i = number 
+    type META.__name = "Lexer"
+    type META.string_escape_Single = boolean
+    type META.string_escape_Double = boolean
+
+]]
 
 META.syntax = syntax
-require("nattlua.lexer.base_lexer")(META)
 
 local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: boolean, (nil | string)]]
     local start = self.i
@@ -161,7 +166,7 @@ function META:ReadMultilineString() --[[#: boolean]]
 end
 
 do
-    function META.GenerateMap(str)
+    function META.GenerateMap(str --[[#: string]])
         local out = {}
         for i = 1, #str do
             out[str:byte(i)] = true
@@ -169,7 +174,7 @@ do
         return out
     end
 
-    function META.BuildReadFunction(tbl, lower)
+    function META.BuildReadFunction(tbl --[[#: {[number] = string}]], lower --[[#: boolean]])
         local copy = {}
         local done = {}
 
@@ -213,7 +218,7 @@ do
 
     META.IsInNumberAnnotation = META.BuildReadFunction(syntax.NumberAnnotations, true)
 
-    function META:ReadNumberAnnotations(what)
+    function META:ReadNumberAnnotations(what --[[#: "hex" | "decimal"]])
         if what == "hex" then
             if self:IsCurrentValue("p") or self:IsCurrentValue("P") then
                 return self:ReadNumberPowExponent("pow")
@@ -227,7 +232,7 @@ do
         return self:IsInNumberAnnotation()
     end
 
-    function META:ReadNumberPowExponent(what)
+    function META:ReadNumberPowExponent(what --[[#: string]])
         self:Advance(1)
         if self:IsCurrentValue("+") or self:IsCurrentValue("-") then
             self:Advance(1)
@@ -372,7 +377,7 @@ do
 
     for name, quote in pairs(quotes) do
         local key = "string_escape_" .. name
-        local function escape(self, c)
+        local function escape(self --[[#: META]], c --[[#: number]])
             if self[key] then
 
                 if c == B"z" and not self:IsCurrentValue(quote) then
@@ -390,7 +395,7 @@ do
             return false
         end
 
-        META["Read" .. name .. "String"] = function(self)
+        META["Read" .. name .. "String"] = function(self --[[#: META]])
             if not self:IsCurrentValue(quote) then
                 return false
             end
@@ -455,7 +460,9 @@ function META:Read()
     return self:ReadUnknown()
 end
 
-return function(code)
+require("nattlua.lexer.base_lexer")(META)
+
+return function(code --[[#: string]])
     local self = setmetatable({}, META)
     self:Initialize(code)
     return self
