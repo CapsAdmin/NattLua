@@ -354,6 +354,7 @@ function META:Get(key)
     key = types.Cast(key)
 
     if key.Type == "union" then
+        local errors = {}
         for _, k in ipairs(key:GetTypes()) do
             local ok, reason = self:Get(k)
             if ok then
