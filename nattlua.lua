@@ -73,7 +73,7 @@ do
             io.write(msg)
         end
 
-        if severity == "fatal" or (_G.TEST and severity == "error" and not _G.TEST_DISABLE_ERROR_PRINT) then
+        if severity == "fatal" or (_G.TEST and severity == "error" and not _G.TEST_DISABLE_ERROR_PRINT) or self.debug then
             local level = 2
             if _G.TEST then
                 for i = 1, math.huge do

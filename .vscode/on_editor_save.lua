@@ -15,6 +15,10 @@ local function run_nattlua(path)
         c:EnableEventDump(true)
     end
 
+    if c.code:find("%-%-%s-VERBOSE_STACKTRACE") then
+        c.debug = true
+    end
+
     if c.code:find("%-%-%s-DISABLE_BASE_ENV") then
         _G.DISABLE_BASE_ENV = true
     end
