@@ -34,7 +34,7 @@ test("cannot be indexed", function()
 end)
 
 test("cannot be added to another type", function()
-    run([[local a = 1 + true]], "no operator for 1 %+ .-true in runtime")
+    run([[local a = 1 + true]], "1 %+ .-true is not a valid binary operation")
 end)
 
 test("literal number + number = number", function()

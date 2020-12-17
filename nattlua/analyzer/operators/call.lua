@@ -300,7 +300,7 @@ return function(META)
            
             if return_types then
                 if return_tuple:GetLength() ~= return_types:GetLength() then
-                    return false, "returned tuple does not match the typed tuple length"
+                    return false, "returned tuple "..tostring(return_tuple).." does not match the typed tuple length " .. tostring(return_types)
                 end
                 
                 local ok, reason = return_tuple:IsSubsetOf(return_types)
@@ -317,11 +317,11 @@ return function(META)
                 if not obj.arguments_inferred then
                     for i, obj in ipairs(obj:GetArguments():GetData()) do
                         if function_node.self_call then
+                            -- we don't count the actual self argument
                             local node = function_node.identifiers[i + 1]
-                            if not node then
-                                node = function_node
+                            if node then
+                                self:Warning(node, "argument is untyped")
                             end
-                            self:Warning(node, "argument is untyped")
                         else 
                             self:Warning(function_node.identifiers[i], "argument is untyped")
                         end

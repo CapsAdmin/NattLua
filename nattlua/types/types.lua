@@ -32,6 +32,15 @@ types.errors = {
     empty = function(obj)
         return false, tostring(obj) .. " is empty"
     end,
+    binary = function(op, l,r)
+        return false, tostring(l) .. " " .. op .. " " .. tostring(r) .. " is not a valid binary operation"
+    end,
+    prefix = function(op, l)
+        return false, op .. " " .. tostring(l) .. " is not a valid prefix operation"
+    end,
+    postfix = function(op, r)
+        return false, op .. " " .. tostring(r) .. " is not a valid postfix operation"
+    end,
     literal = function(obj, reason)
         local msg = tostring(obj) .. " is not a literal"
         if reason then

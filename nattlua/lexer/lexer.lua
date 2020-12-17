@@ -93,6 +93,7 @@ function META:ReadMultilineComment() --[[#: boolean]]
 
         return ok
     end
+    return false
 end
 
 function META:ReadLineComment() --[[#: boolean]]
@@ -154,7 +155,7 @@ function META:ReadMultilineString() --[[#: boolean]]
         local start = self.i
         local ok, err = ReadLiteralString(self, false)
 
-        if not ok then
+        if not ok and err then -- TODO, err is nil | string
             self:Error("expected multiline string to end: " .. err, start, start + 1)
             return true
         end

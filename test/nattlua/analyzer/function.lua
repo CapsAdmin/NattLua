@@ -304,7 +304,7 @@ test("pcall", function()
         end)
 
         type_assert(ok, _ as false)
-        type_assert(err, _ as "no operator for")
+        type_assert(err, _ as "not a valid binary operation")
     ]]
 end)
 test("complex", function()
@@ -438,7 +438,7 @@ run([[
     local function func(): number, number
         return 1
     end
-]], "returned tuple does not match")
+]], "does not match the typed")
 
 run([[
     local function func(): number, number

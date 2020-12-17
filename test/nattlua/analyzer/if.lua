@@ -1066,8 +1066,6 @@ run[[
             ent.findheadpos_head_bone = false
         end
         
-        print("\t\t\t\t", ent.findheadpos_head_bone)
-
         if ent.findheadpos_head_bone then
 
         else

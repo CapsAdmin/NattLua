@@ -60,8 +60,8 @@ local function arithmetic(node, l,r, type, operator)
         local obj = types.Number():Copy()
         return obj:SetSource(node, obj, l,r)
     end
-
-    return types.errors.other("no operator for " .. tostring(l) .. " " .. operator .. " " .. tostring(r) .. " in runtime")
+    
+    return types.errors.binary(operator, l,r)
 end
 
 return function(META)
@@ -69,8 +69,10 @@ return function(META)
         op = op or node.value.value
 
         -- adding two tuples at runtime in lua will practically do this
-        if l.Type == "tuple" then l = self:Assert(node, l:Get(1)) end
-        if r.Type == "tuple" then r = self:Assert(node, r:Get(1)) end
+        if env == "runtime" then
+            if l.Type == "tuple" then l = self:Assert(node, l:Get(1)) end
+            if r.Type == "tuple" then r = self:Assert(node, r:Get(1)) end
+        end
 
         -- normalize l and r to be both sets to reduce complexity
         if l.Type ~= "union" and r.Type == "union" then l = types.Union({l}) end
@@ -290,7 +292,7 @@ return function(META)
                 return types.Boolean
             end
 
-            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
+            return types.errors.binary(op, l,r)
         elseif op == "<=" then
             local res = metatable_function(self, "__le", l, r)
             if res then
@@ -304,7 +306,7 @@ return function(META)
                 return types.Boolean
             end
 
-            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
+            return types.errors.binary(op, l,r)
         elseif op == ">" then
             local res = metatable_function(self, "__lt", l, r)
             if res then
@@ -319,7 +321,7 @@ return function(META)
                 return types.Boolean
             end
 
-            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
+            return types.errors.binary(op, l,r)
         elseif op == ">=" then
             local res = metatable_function(self, "__le", l, r)
 
@@ -335,7 +337,7 @@ return function(META)
                 return types.Boolean
             end
 
-            return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
+            return types.errors.binary(op, l,r)
         elseif op == "or" or op == "||" then
             if l:IsUncertain() or r:IsUncertain() then
                 local union = types.Union({l,r})
@@ -402,7 +404,7 @@ return function(META)
                 return self:NewType(node, "string")
             end
 
-            return types.errors.other("no operator for " .. tostring(l) .. " " .. ".." .. " " .. tostring(r))
+            return types.errors.binary(op, l,r)
         end
 
         if op == "+" then return arithmetic(node, l,r, "number", op)
@@ -419,7 +421,7 @@ return function(META)
         elseif op == "<<" then return arithmetic(node, l,r, "number", op)
         elseif op == ">>" then return arithmetic(node, l,r, "number", op) end
 
-        return types.errors.other("no operator for " .. tostring(l) .. " " .. op .. " " .. tostring(r))
+        return types.errors.binary(op, l,r)
     end
 
     function META:AnalyzeBinaryOperatorExpression(node, env)

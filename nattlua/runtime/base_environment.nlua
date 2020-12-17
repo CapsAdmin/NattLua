@@ -8,7 +8,7 @@ local type cdata = Table
 local type ctype = Table
 local type thread = Table
 
-local type empty_function = function(...): any
+local type empty_function = function(...): ...:any
 
 type function return_type(func)
 	return func:GetReturnTypes()
@@ -590,7 +590,14 @@ type jit = {
 	opt = {
 		start = (function(...): nil)
 	},
-	tracebarrier = (function(): nil)
+	tracebarrier = (function(): nil),
+    version_num = number,
+    version = string,
+    on = function(empty_function | true, boolean | nil),
+    off = function(empty_function | true, boolean | nil),
+    flush = function(empty_function | true, boolean | nil),
+    status = (function(): boolean, ...:string),
+
 }
 
 type debug_getinfo = {
@@ -1006,6 +1013,7 @@ do
 
 
     type function math.max(...: number) 
+
         local numbers = {}
         for i = 1, select("#", ...) do
             local obj = select(i, ...)
@@ -1015,7 +1023,8 @@ do
                 numbers[i] = obj:GetData()
             end
         end
-
+        
+        return math.max(table.unpack(numbers))
     end
 end
 

@@ -68,15 +68,15 @@ return function(META--[[#: {
         local i
 
         local self = {
-            clear = function(self)
+            clear = function(self--[[#: self]])
                 tbl = {}
                 i = 1
             end,
-            add = function(self, val)
+            add = function(self--[[#: self]], val--[[#: any]])
                 tbl[i] = val
                 i = i + 1
             end,
-            get = function(self)
+            get = function(self--[[#: self]])
                 return list.fromtable(tbl)
             end
         }

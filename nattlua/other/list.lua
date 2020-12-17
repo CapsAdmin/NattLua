@@ -9,7 +9,7 @@ function list.new(...)
     return setmetatable({...}, list)
 end
 
-function list.fromtable(tbl)
+function list.fromtable(tbl --[[#: {[number] = any} ]] )
     return setmetatable(tbl, list)
 end
 

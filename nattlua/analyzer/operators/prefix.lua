@@ -32,7 +32,7 @@ local function arithmetic(l, type, operator)
         return types.Number()
     end
 
-    return types.errors.other("no operator for " .. operator .. tostring(l) .. " in runtime")
+    return types.error.prefix(operator, r)
 end
 
 return function(META)

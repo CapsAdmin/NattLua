@@ -18,7 +18,7 @@ function helpers.QuoteTokens(var--[[#: {[number] = string}]])
 	return str
 end
 
-function helpers.LinePositionToSubPosition(code, line, character)
+function helpers.LinePositionToSubPosition(code --[[#: string]], line --[[#: number]], character --[[#: number]])
 	local line_pos = 1
 	for i = 1, #code do
 		local c = code:sub(i, i)
@@ -278,7 +278,7 @@ do
         mutations = true,
         code = true,
 	}
-    local function traverse(tbl, done, out)
+    local function traverse(tbl--[[#: any]], done--[[#: any]], out--[[#: any]])
 		for k, v in pairs(tbl) do
             if not blacklist[k] then
 				if type(v) == "table" and not done[v] then
@@ -298,7 +298,7 @@ do
         end
     end
 
-    function helpers.LazyFindStartStop(tbl)
+    function helpers.LazyFindStartStop(tbl--[[#: any]])
 		if tbl.start and tbl.stop then
 			return tbl.start, tbl.stop
         end
@@ -330,7 +330,7 @@ do
     end
 end
 
-function helpers.GetDataFromLineCharPosition(tokens, code, line, char)
+function helpers.GetDataFromLineCharPosition(tokens, code --[[#: string]], line--[[#: number]], char --[[#: number]])
 	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
 
 	for _, token in ipairs(tokens) do
