@@ -84,8 +84,6 @@ function META.IsSubsetOf(A, B)
 
         local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
         if not ok then
-            print(A:GetArguments(), B:GetArguments())
-            print(debug.traceback())
             return types.errors.other("function arguments don't match because " .. reason)
         end
 
