@@ -235,7 +235,9 @@ return function(META)
                 not call_node.type_call
             then
                 local contracts = obj:GetArguments()
-                for i = 1, contracts:GetLength() do
+                local len = contracts:GetSafeLength(arguments)
+
+                for i = 1, len do
                     local arg, err = arguments:Get(i)
                     local contract = contracts:Get(i)
 
@@ -284,7 +286,7 @@ return function(META)
             if used_contract then
                 local contracts = obj:GetArguments()
 
-                for i = 1, contracts:GetLength() do
+                for i = 1, contracts:GetSafeLength(arguments) do
                     local arg = arguments:Get(i)
                     if arg then
                         arg.contract = arg.old_contract

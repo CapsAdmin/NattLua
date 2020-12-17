@@ -190,6 +190,9 @@ end
 
 function META:Set(key, val)
     self.data[key] =  val
+    if #self.data > 32 then
+        error("tuple too long", 2)
+    end
     return true
 end
 
@@ -250,6 +253,16 @@ function META:GetMinimumLength()
             len = i
             break
         end
+    end
+
+    return len
+end
+
+function META:GetSafeLength(arguments)
+    local len = self:GetLength()
+
+    if len == math.huge or arguments:GetLength() == math.huge then
+        return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
     end
 
     return len
