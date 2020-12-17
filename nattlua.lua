@@ -53,7 +53,16 @@ do
 	end
 
 	function META:OnDiagnostic(code, name, msg, severity, start, stop, ...)
-		local level = 0
+        local level = 0
+        
+        local t = 0
+        msg = msg:gsub(" because ", function() 
+            t = t + 1
+            return ("\t"):rep(t) .. "\nbecause "
+        end)
+        if t > 0 then
+            msg = "\n" .. msg 
+        end
 
 		if self.analyzer and self.analyzer.processing_deferred_calls then
 			msg = "DEFERRED CALL: " .. msg 

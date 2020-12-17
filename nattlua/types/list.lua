@@ -81,12 +81,13 @@ function META.IsSubsetOf(A, B)
         if B:GetLength() > 0 then
             for i, a in ipairs(A.data) do
                 if a.key.Type == "number" then
-                    if not B:Get(i) then
-                        return types.errors.missing(B, i)
+                    local b, reason = B:Get(i)
+                    if not b then
+                        return types.errors.missing(B, i, reason)
                     end
 
-                    if not a.val:IsSubsetOf(B:Get(i)) then
-                        return types.errors.subset(a.val, B:Get(i))
+                    if not a.val:IsSubsetOf(b) then
+                        return types.errors.subset(a.val, b)
                     end
                 end
             end

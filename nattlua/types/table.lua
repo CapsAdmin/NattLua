@@ -122,29 +122,25 @@ function META.IsSubsetOf(A, B)
     end
 
     if B.Type == "tuple" then
+        if not A:IsNumericallyIndexed() then
+            return types.errors.other("cannot compare against tuple when I'm not numerically indexed")
+        end
+
         if B:GetLength() > 0 then
             for i, a in ipairs(A.data) do
                 if a.key.Type == "number" then
-                    if not B:Get(i) then
-                        return types.errors.missing(B, i)
+                    local b, reason = B:Get(i)
+
+                    if not b then
+                        return types.errors.missing(B, a.key, reason)
                     end
 
-                    if not a.val:IsSubsetOf(B:Get(i)) then
-                        return types.errors.subset(a.val, B:Get(i))
+                    local ok, reason = a.val:IsSubsetOf(b)
+
+                    if not ok then
+                        return types.errors.subset(a.val, b, reason)
                     end
                 end
-            end
-        else
-            local count = 0
-            for i, a in ipairs(A.data) do
-                if a.key.data ~= i then
-                    return types.errors.other("index " .. tostring(a.key) .. " is not the same as " .. tostring(i))
-                end
-
-                count = count + 1
-            end
-            if count ~= B:GetMaxLength() then
-                return types.errors.other(" count " .. tostring(count) .. " is not the same as max length " .. tostring(B:GetMaxLength()))
             end
         end
 
@@ -176,18 +172,19 @@ function META.IsSubsetOf(A, B)
 
         for akey, aval in A:pairs() do
             local keyval, reason = B:GetKeyVal(akey, true) 
-            if keyval then
-                local cachekey = aval:GetSignature()..keyval.val:GetSignature()
-                if not done[cachekey] then
-                    done[cachekey] = true
-                    local ok, err = aval:IsSubsetOf(keyval.val)
-                    done[cachekey] = nil
-                    if not ok then
-                        return types.errors.subset(aval, keyval.val, err)
-                    end
-                end
-            else
+            if not keyval then
                 return keyval, reason
+            end
+        
+            local cachekey = aval:GetSignature()..keyval.val:GetSignature()
+
+            if not done[cachekey] then
+                done[cachekey] = true
+                local ok, err = aval:IsSubsetOf(keyval.val)
+                done[cachekey] = nil
+                if not ok then
+                    return types.errors.subset(aval, keyval.val, err)
+                end
             end
         end
         
@@ -250,7 +247,7 @@ end
 
 function META:GetKeyVal(key, reverse_subset)
     if not self.data[1] then
-        return types.errors.other("table has no definitions")
+        return types.errors.missing(self, key, "table is empty")
     end
 
     local reasons = {}
@@ -270,7 +267,7 @@ function META:GetKeyVal(key, reverse_subset)
         table.insert(reasons, reason)
     end
 
-    return types.errors.other(tostring(self) .. "[" .. tostring(key) .. "] == nil")
+    return types.errors.missing(self, key, table.concat(reasons, "\n"))
 end
 
 function META:Insert(val)
@@ -409,7 +406,7 @@ end
 
 function META:IsNumericallyIndexed()
 
-    for _, keyval in ipairs(self:GetTypes()) do
+    for _, keyval in ipairs(self:GetData()) do
         if keyval.key.Type ~= "number" then
             return false
         end

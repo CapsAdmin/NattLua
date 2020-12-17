@@ -137,26 +137,26 @@ function META.IsSubsetOf(A, B)
 
     if B.Type == "table" then
         if not B:IsNumericallyIndexed() then
-            return types.errors.other(tostring(B) .. " cannot be treated as a tuple because it contains non a numeric index " .. tostring(A))
+            return types.errors.numerically_indexed(B)
         end
     end
 
     for i = 1, A:GetLength() do
         local a = A:Get(i)
-        local b = B:Get(i)
+        local b, err = B:Get(i)
 
         if not b and a.Type == "any" then
             break
         end
 
         if not b then
-            return types.errors.missing(B, "index " .. i .. ": " ..tostring(a))
+            return types.errors.missing(B, i, err)
         end
 
         local ok, reason = a:IsSubsetOf(b)
 
         if not ok then
-            return types.errors.subset(A, B, "index " .. i .. ": " .. reason)
+            return types.errors.subset(a, b, reason)
         end
     end
 

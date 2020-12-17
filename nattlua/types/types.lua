@@ -10,13 +10,38 @@ types.errors = {
 
         return false, msg
     end,
-    missing = function(a, b)
-        local msg = tostring(a) .. " does not contain " .. tostring(b)
+    missing = function(a, b, reason)
+        local msg = tostring(a) .. " does not contain " .. tostring(b) .. " because " .. reason
         return false, msg
     end,
     other = function(msg)
         return false, msg
     end,
+    type_mismatch = function(a, b)
+        return false, tostring(a) .. " is not the same type as " .. tostring(b)
+    end,
+    value_mismatch = function(a, b)
+        return false, tostring(a) .. " is not the same value as " .. tostring(b)
+    end,
+    operation = function(op, obj, subject)
+        return false, "cannot " .. op .. " " .. tostring(subject)
+    end,
+    numerically_indexed = function(obj)
+        return false, tostring(obj) .. " is not numerically indexed"
+    end,
+    empty = function(obj)
+        return false, tostring(obj) .. " is empty"
+    end,
+    literal = function(obj, reason)
+        local msg = tostring(obj) .. " is not a literal"
+        if reason then
+            msg = msg .. " because " .. reason
+        end
+        return msg
+    end,
+    string_pattern = function(a, b)
+        return false, "cannot find "..tostring(a).." in pattern \"" .. b.pattern_contract .. "\""
+    end
 }
 
 function types.Cast(val)

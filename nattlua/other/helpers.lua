@@ -160,7 +160,7 @@ do
 	do
 		-- TODO: wtf am i doing here?
 		local args
-		local fmt = function(num--[[#:number]])
+		local fmt = function(num--[[#:string]])
 			num = tonumber(num)
 			if type(args[num]) == "table" then
 				return helpers.QuoteTokens(args[num] --[[# as {[number] = string}]])

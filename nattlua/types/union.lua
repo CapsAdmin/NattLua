@@ -197,8 +197,9 @@ function META.IsSubsetOf(A, B)
         if B:GetLength() == 1 then
             B = B:Get(1)
         else
-            return types.errors.other(tostring(A) .. " cannot contain tuple " .. tostring(B))
+            return types.errors.subset(A, B, "a tuple cannot be a subset of another tuple")
         end
+        -- TODO: given error above, the unpack probably should probably be moved out
     end
 
     if B.Type ~= "union" then
@@ -209,7 +210,7 @@ function META.IsSubsetOf(A, B)
         local b, reason = B:Get(a)
 
         if not b then
-            return types.errors.missing(B, a)
+            return types.errors.missing(B, a, reason)
         end
 
         local ok, reason = a:IsSubsetOf(b)
@@ -359,13 +360,13 @@ end
 
 function META:Call(analyzer, arguments, ...)
     if self:IsEmpty() then
-        return types.errors.other("cannot call empty union")
+        return types.errors.operation("call", nil)
     end
 
     local union = self
     for _, obj in ipairs(self:GetData()) do
         if obj.Type ~= "function" and obj.Type ~= "table" and obj.Type ~= "any" then
-            return types.errors.other("union "..tostring(union).." contains uncallable object " .. tostring(obj))
+            return types.errors.operation("call", obj)
         end
     end
 

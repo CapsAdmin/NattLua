@@ -84,7 +84,7 @@ function META.IsSubsetOf(A, B)
 
         local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
         if not ok then
-            return types.errors.other("function arguments don't match because " .. reason)
+            return types.errors.subset(A:GetArguments(), B:GetArguments(), reason)
         end
 
         local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
@@ -93,7 +93,7 @@ function META.IsSubsetOf(A, B)
         end
 
         if not ok then
-            return types.errors.other("return types don't match because " .. reason)
+            return types.errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
         end
 
         return true
@@ -101,7 +101,7 @@ function META.IsSubsetOf(A, B)
         return types.Union({A}):IsSubsetOf(B)
     end
 
-    return types.errors.other("NYI " .. tostring(B))
+    return types.errors.type_mismatch(A, B)
 end
 
 function META:IsFalsy()

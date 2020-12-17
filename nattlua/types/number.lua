@@ -46,7 +46,7 @@ function META.IsSubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return types.errors.other(table.concat(errors, "\n"))
+        return types.errors.subset(A, b, table.concat(errors, "\n"))
     end
 
     if A.Type == "any" then return true end
@@ -88,10 +88,10 @@ function META.IsSubsetOf(A, B)
         -- number == number
         return true
     else
-        return types.errors.other(tostring(A) .. " is not the same type as " .. tostring(B))
+        return types.errors.type_mismatch(A, B)
     end
-    error("this shouldn't be reached ")
 
+    error("this shouldn't be reached")
 
     return false
 end

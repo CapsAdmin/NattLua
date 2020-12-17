@@ -56,7 +56,7 @@ function META.IsSubsetOf(A, B)
     if B.Type == "any" then return true end
 
     if B.Type ~= "string" then
-        return types.errors.other(tostring(A) .. " is not the same type as " .. tostring(B))
+        return types.errors.type_mismatch(A, B)
     end
 
     if 
@@ -69,18 +69,18 @@ function META.IsSubsetOf(A, B)
 
     if B.pattern_contract then
         if not A:IsLiteral() then
-            return types.errors.other("must be a literal when comparing against pattern")
+            return types.errors.literal(A, "must be a literal when comparing against string pattern")
         end
 
         if not A:GetData():find(B.pattern_contract) then
-            return types.errors.other("cannot find \""..A:GetData().."\" in pattern \"" .. B.pattern_contract .. "\"")
+            return types.errors.string_pattern(A, B)
         end
 
         return true
     end
 
     if A:IsLiteral() and B:IsLiteral() then
-        return types.errors.other(tostring(A) .. " is not the same value as " .. tostring(B))
+        return types.errors.value_mismatch(A, B)
     end
 
     return types.errors.subset(A, B)

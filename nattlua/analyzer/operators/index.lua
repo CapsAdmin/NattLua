@@ -69,6 +69,7 @@ return function(META)
         end
     
         if not val then
+            self:Warning(node or obj.node, err)
             return self:NewType(node or obj.node, "nil"):AddReason("failed to get " .. tostring(key) .. " from table because " .. err)
         end
     

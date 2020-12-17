@@ -40,14 +40,18 @@ function META.IsSubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return types.errors.other(table.concat(errors, "\n"))
+        return types.errors.subset(A, b, table.concat(errors, "\n"))
     end
 
     if A.Type == "any" then return true end
     if B.Type == "any" then return true end
 
-    if A.Type ~= B.Type or A.data ~= B.data then
-        return types.errors.other("symbol " .. tostring(A) .. " is not the same value as symbol " .. tostring(B))
+    if A.Type ~= B.Type then
+        return types.errors.type_mismatch(A, B)
+    end
+
+    if A:GetData() ~= B:GetData() then
+        return types.errors.value_mismatch(A, B)
     end
 
     return true
