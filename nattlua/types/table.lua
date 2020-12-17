@@ -4,32 +4,36 @@ local META = {}
 META.Type = "table"
 META.__index = META
 
-local function sort(a, b) return a < b end
 
 function META:GetLuaType()
     return self.Type
 end
 
+local function sort(a, b) return a < b end
+
 function META:GetSignature()
+    if self:IsUnique() then
+        return tostring(self:GetUniqueID())
+    end
+
     if self.suppress then
         return "*self*"
     end
 
     local s = {}
-
+    local i = 1
     self.suppress = true
-    for i, keyval in ipairs(self.data) do
-        s[i] = keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature()
+    for _, keyval in ipairs(self.data) do
+        s[i] = keyval.key:GetSignature() 
+        i = i + 1
+        s[i] = keyval.val:GetSignature()
+        i = i + 1
     end
     self.suppress = nil
 
     table.sort(s, sort)
 
-    if self:IsUnique() then
-        table.insert(s, tostring(self:GetUniqueID()))
-    end
-
-    return table.concat(s, "\n")
+    return table.concat(s)
 end
 
 local level = 0

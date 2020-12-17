@@ -13,12 +13,12 @@ end
 function META:GetSignature()
     local s = "string"
 
-    if self.literal then
+    if self:IsLiteral() then
         s = s .. "-" .. self:GetData()
     end
 
     if self.pattern_contract then
-        s = s .. "-" .. tostring(self.pattern_contract)
+        s = s .. "-" .. self.pattern_contract
     end
 
     return s
@@ -32,6 +32,10 @@ function META:Copy()
     local copy =  types.String(self.data):MakeLiteral(self.literal)
     copy:CopyInternalsFrom(self)
     return copy
+end
+
+function META:SetPattern(str)
+    self.pattern_contract = str
 end
 
 function META.IsSubsetOf(A, B)

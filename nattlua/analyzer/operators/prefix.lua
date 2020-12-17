@@ -105,7 +105,7 @@ return function(META)
                     return types.errors.other("must be a literal")
                 end
 
-                obj.pattern_contract = obj:GetData()
+                obj:SetPattern(obj:GetData())
             
                 return obj
             end
