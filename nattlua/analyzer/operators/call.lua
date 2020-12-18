@@ -357,7 +357,7 @@ return function(META)
                             if node and not node.explicit_type then
                                 self:Warning(node, "argument is untyped")
                             end
-                        else 
+                        elseif not function_node.identifiers[i].explicit_type then
                             self:Warning(function_node.identifiers[i], "argument is untyped")
                         end
                     end
