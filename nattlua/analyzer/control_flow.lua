@@ -33,35 +33,27 @@ return function(META)
 
         local out = {}
 
-        local longest = 0
+        local union = types.Union({})
+    
         for i, ret in ipairs(scope:GetReturnTypes()) do
-            longest = math.max(longest, #ret)
+            local tup = types.Tuple(ret.types)
+            tup.node = ret.node
+            union:AddType(tup)
         end
 
-        for _, ret in ipairs(scope:GetReturnTypes()) do
-            for i = 1, longest do
-                local obj = ret[i] or self:NewType(statement, "nil")
-            
-                if out[i] then
-                    out[i] = types.Union({out[i], obj})
-                else
-                    out[i] = obj
-                end
-            end
-        end
-
-        if scope.uncertain_function_return then
-            local obj = types.Nil:Copy()
-            if out[1] then
-                out[1] = types.Union({out[1], obj})
-            else
-                out[1] = obj
-            end
+        if scope.uncertain_function_return or #scope:GetReturnTypes() == 0 then
+            local tup = types.Tuple({types.Nil:Copy()})
+            tup.node = statement
+            union:AddType(tup)
         end
 
         scope:ClearReturnTypes()
 
-        return types.Tuple(out)
+        if #union:GetData() == 1 then
+            return union:GetData()[1]
+        end
+
+        return union
     end
 
     function META:OnFunctionCall(obj, arguments)
@@ -96,7 +88,7 @@ return function(META)
         end
     end
 
-    function META:Return(types)
+    function META:Return(node, types)
         local scope = self:GetScope()
 
         if not scope:IsReadOnly()  then
@@ -115,7 +107,7 @@ return function(META)
             end
         end
 
-        scope:CollectReturnTypes(types)
+        scope:CollectReturnTypes(node, types)
         scope:Return(scope:IsUncertain())
     end
     

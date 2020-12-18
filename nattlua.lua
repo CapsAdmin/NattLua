@@ -118,7 +118,7 @@ do
     end
 
     local traceback = function(self, obj, msg)
-        if self.debug then
+        if self.debug or _G.TEST then
             local ret = {xpcall(
                 function(self, obj, msg)
                     msg = msg or "no error"

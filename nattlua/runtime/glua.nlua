@@ -187,7 +187,7 @@ local type WorldToLocal = (function(Vector, Angle, Vector, Angle): Vector, Angle
 local type hook = {}
 
 local type Events = {
-    OnStart = function(string, boolean),
+    OnStart = (function(string, boolean): nil),
     OnStop = (function(string, string, string): number)
 }
 

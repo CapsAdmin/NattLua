@@ -15,6 +15,7 @@ return function(META)
         self:PopEnvironment("runtime")
         self:PopEnvironment("typesystem")
         self:PopScope()
+        
         return analyzed_return
     end
 end

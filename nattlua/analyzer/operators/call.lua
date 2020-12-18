@@ -299,21 +299,43 @@ return function(META)
             local return_types = obj:HasExplicitReturnTypes() and obj:GetReturnTypes() or function_node.return_types and types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
            
             if return_types then
-                if return_tuple:GetLength() ~= return_types:GetLength() then
-                    return false, "returned tuple "..tostring(return_tuple).." does not match the typed tuple length " .. tostring(return_types)
-                end
-                
-                local ok, reason = return_tuple:IsSubsetOf(return_types)
-                if not ok then
-                    return ok, reason
+                if return_tuple.Type == "union" then
+                    local errors = {}
+                    for _, tuple in ipairs(return_tuple:GetData()) do
+                        if tuple:GetMinimumLength() ~= return_types:GetLength() then
+                            table.insert(errors, {tuple = tuple, msg = "returned tuple "..tostring(tuple).." does not match the typed tuple length " .. tostring(return_types)})
+                        end
+                    end
+
+                    if errors[1] then
+                        for _, info in ipairs(errors) do
+                            self:Error(info.tuple.node, info.msg)
+                        end
+                    end
+
+                    for _, tuple in ipairs(return_tuple:GetData()) do
+                        local ok, reason = tuple:IsSubsetOf(return_types)
+                        
+                        if not ok then
+                            self:Error(tuple.node, reason)
+                        end
+                    end
+                else
+                    if return_tuple:GetMinimumLength() ~= return_types:GetLength() then
+                        self:Error(return_tuple.node, "returned tuple "..tostring(return_tuple).." does not match the typed tuple length " .. tostring(return_types))
+                    end
+
+                    local ok, reason = return_tuple:IsSubsetOf(return_types)
+                    
+                    if not ok then
+                        return ok, reason
+                    end
                 end
             else
                 obj:GetReturnTypes():Merge(return_tuple)
             end
 
             if not used_contract then
-
-                
                 if not obj.arguments_inferred then
                     for i, obj in ipairs(obj:GetArguments():GetData()) do
                         if function_node.self_call then

@@ -16,7 +16,7 @@ R[[
     test(true, true)
     test(false, false)
 
-    type_assert(test, _ as (function(a: false|true|any, b: false|true|any):))
+    type_assert(test, _ as (function(a: false|true|any, b: false|true|any): nil))
 ]]
 R[[
     local function test(a: any,b: any)
@@ -26,7 +26,7 @@ R[[
     test(true, true)
     test(false, false)
 
-    type_assert(test, _ as (function(a: any, b: any):))
+    type_assert(test, _ as (function(a: any, b: any): nil))
 ]]
 
 

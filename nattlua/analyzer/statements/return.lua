@@ -7,7 +7,7 @@ return function(META)
             ret[1] = self:NewType(statement, "nil")
         end
         
-        self:Return(ret)
+        self:Return(statement, ret)
         
         self:FireEvent("return", ret)
     end

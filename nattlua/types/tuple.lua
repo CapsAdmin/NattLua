@@ -60,6 +60,14 @@ function META:__tostring()
 end
 
 function META:Merge(tup)
+
+    if tup.Type == "union" then
+        for _, obj in ipairs(tup:GetData()) do
+            self:Merge(obj)
+        end
+        return self
+    end
+
     local src = self.data
 
     for i = 1, tup:GetMinimumLength() do
@@ -165,7 +173,7 @@ end
 
 function META:Get(key)
     local real_key = key
-    assert(type(key) == "number", "key must be a number")
+    assert(type(key) == "number", "key must be a number, got " .. tostring(type(key)))
     
     local val = self.data[key]
 

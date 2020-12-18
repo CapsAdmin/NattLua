@@ -197,7 +197,7 @@ function META.IsSubsetOf(A, B)
         if B:GetLength() == 1 then
             B = B:Get(1)
         else
-            return types.errors.subset(A, B, "a tuple cannot be a subset of another tuple")
+            --return types.errors.subset(A, B, "a tuple cannot be a subset of another tuple")
         end
         -- TODO: given error above, the unpack probably should probably be moved out
     end

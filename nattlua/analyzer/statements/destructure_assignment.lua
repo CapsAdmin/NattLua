@@ -3,8 +3,16 @@ return function(META)
         local env = statement.environment or "runtime"
         local obj = self:AnalyzeExpression(statement.right, env)
 
+        if obj.Type == "union" then
+            obj = obj:GetData()[1]
+        end
+
+        if obj.Type == "tuple" then
+            obj = obj:Get(1)
+        end
+
         if obj.Type ~= "table" then
-            self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj))
+            self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))
         end
 
         if statement.default then

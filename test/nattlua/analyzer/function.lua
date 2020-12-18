@@ -438,7 +438,7 @@ run([[
     local function func(): number, number
         return 1
     end
-]], "does not match the typed")
+]], "1.- does not match the typed tuple length")
 
 run([[
     local function func(): number, number
@@ -448,7 +448,7 @@ run([[
 
         return 3
     end
-]], "number does not contain nil")
+]], "does not match the typed tuple length")
 
 run[[
     local type function test2(a, ...)
@@ -504,3 +504,35 @@ run[[
     type_assert(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
     type_assert(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
 ]]
+
+run[[
+    local function test()
+        if MAYBE then
+            return true
+        end
+    end
+    
+    local x = test()
+    type_assert(x, _ as nil | true)
+]]
+
+run([[
+    local function func(): number, number
+        if math.random() > 0.5 then
+            return 1, 2
+        end
+    
+        return 3 -- HERE
+    end
+]], "return 3 %-%- HERE")
+
+
+run([[
+    local function func(): number, number
+        if math.random() > 0.5 then
+            return 1, "" -- HERE
+        end
+    
+        return 1,2
+    end
+]], "return 1, \"\" %-%- HERE")

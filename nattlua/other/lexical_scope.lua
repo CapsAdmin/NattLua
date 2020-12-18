@@ -260,8 +260,8 @@ do
         self.returns = {}
     end
 
-    function META:CollectReturnTypes(types)
-        table.insert(self:GetNearestFunctionScope().returns, types)
+    function META:CollectReturnTypes(node, types)
+        table.insert(self:GetNearestFunctionScope().returns, {node = node, types = types})
     end
 
     function META:DidReturn()
