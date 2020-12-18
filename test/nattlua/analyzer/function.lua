@@ -536,3 +536,9 @@ run([[
         return 1,2
     end
 ]], "return 1, \"\" %-%- HERE")
+
+run[[
+    local function test(): Tuple<|1,"lol1"|> | Tuple<|2,"lol2"|>
+        return 2, "lol2"
+    end    
+]]

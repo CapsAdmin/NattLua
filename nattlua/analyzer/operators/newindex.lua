@@ -40,7 +40,7 @@ return function(META)
                 end
     
                 if func.Type == "function" then
-                    return self:Call(func, types.Tuple({obj, key, val}), key.node)
+                    return self:Assert(node, self:Call(func, types.Tuple({obj, key, val}), key.node))
                 end
             end
         end

@@ -19,7 +19,7 @@ test("file import", function()
     equal(8, assert(require("nattlua").File("test/nattlua/analyzer/file_importing/test/main.nlua")):Analyze().AnalyzedResult:Get(1):GetData())
 end)
 
-run([[
+pending([[
     -- ERROR1
     loadfile("test/nattlua/analyzer/file_importing/deep_error/main.nlua")()
 ]], function(err)

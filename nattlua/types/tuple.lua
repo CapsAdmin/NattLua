@@ -127,6 +127,19 @@ function META.IsSubsetOf(A, B)
         return true
     end
 
+    if B.Type == "union" then
+        local errors = {}
+        for _, tup in ipairs(B:GetData()) do
+            local ok, reason = A:IsSubsetOf(tup)
+            if ok then
+                return true
+            else
+                table.insert(errors, reason)
+            end
+        end
+        return types.errors.subset(A, B, table.concat(errors, "\n"))
+    end
+
     if A:Get(1) and A:Get(1).Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
         return true
     end

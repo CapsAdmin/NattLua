@@ -60,8 +60,6 @@ return function(META)
     end
 
     local function unpack_union_tuples(input, function_arguments)
-        local out = {}
-
         local d = {}
         local function get_signature(tup)
             local sig = {}
@@ -118,7 +116,167 @@ return function(META)
     
         return out
     end
+
+    local function infer_uncalled_functions(self, call_node, tuple, function_arguments)
+        for i, b in ipairs(tuple:GetData()) do
+            if b.Type == "function" and not b.called and not b.explicit_return then
+                local a = function_arguments:Get(i)
+        
+                if a and
+                    (
+                        a.Type == "function" and 
+                        not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
+                    )
+                        or not a:IsSubsetOf(b)
+                then
+                    self:Assert(call_node, self:Call(b, b:GetArguments():Copy()))
+                end
+            end
+        end
+    end
+
+    local function call_type_function(self, obj, call_node, function_node, function_arguments, arguments)
+        local len = function_arguments:GetLength()
+
+        if len == math.huge and arguments:GetLength() == math.huge then
+            len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
+        end
+
+        local ret = {}
+        for i, arg in ipairs(unpack_union_tuples({arguments:Unpack(len)}, function_arguments)) do
+            ret[i] = self:LuaTypesToTuple(
+                obj.node, {
+                    self:CallLuaTypeFunction(
+                        call_node, 
+                        obj.data.lua_function, 
+                        function_node.function_scope or self:GetScope(), 
+                        table.unpack(arg)
+                    )
+                }
+            )
+        end
+
+        local tup = types.Tuple({})
+
+        for i, t in ipairs(ret) do
+            for i,v in ipairs(t:GetData()) do
+                local existing = tup:Get(i)
+                if existing then
+                    if existing.Type == "union" then
+                        existing:AddType(v)
+                    else
+                        tup:Set(i, types.Union({v, existing}))
+                    end
+                else
+                    tup:Set(i, v)
+                end
+            end
+        end
+
+        return tup
+    end
     
+    local function restore_mutated_types(self)
+        if not self.mutated_types then return end
+
+        for _, arg in ipairs(self.mutated_types) do
+            arg.contract = arg.old_contract
+        end
+        self.mutated_types = nil
+    end
+
+
+    local function check_and_setup_arguments(self, obj, arguments, contracts)
+        self.mutated_types = {}
+
+        local len = contracts:GetSafeLength(arguments)
+
+        for i = 1, len do
+            local arg, err = arguments:Get(i)
+            local contract = contracts:Get(i)
+
+            local ok, reason
+
+            if not arg then
+                if contract:IsFalsy() then
+                    arg = types.Nil:Copy()
+                    ok = true
+                else
+                    ok, reason = types.errors.other("argument #" .. i .. " expected " .. tostring(contract) .. " got nil")
+                end
+            elseif arg.Type == "table" and contract.Type == "table" then
+                ok, reason = arg:FollowsContract(contract)
+            else
+                ok, reason = arg:IsSubsetOf(contract)
+            end                
+
+            if not ok then
+                restore_mutated_types(self)                        
+                return types.errors.other("argument #" .. i .. " " .. tostring(arg) .. ": " .. reason)
+            end
+
+            if arg.Type == "table" then
+                arg.old_contract = arg.contract
+                arg.contract = contract
+                table.insert(self.mutated_types, arg)
+            else
+                arguments:Set(i, contract:Copy())
+            end
+        end
+    end
+
+    local function check_return_result(self, return_result, return_contract)
+        if return_result.Type == "union" then
+            local errors = {}
+            
+            for _, tuple in ipairs(return_result:GetData()) do
+                if tuple:GetMinimumLength() ~= return_contract:GetLength() then
+                    table.insert(errors, {tuple = tuple, msg = "returned tuple "..tostring(tuple).." does not match the typed tuple length " .. tostring(return_contract)})
+                end
+            end
+
+            if errors[1] then
+                for _, info in ipairs(errors) do
+                    self:Error(info.tuple.node, info.msg)
+                end
+            end
+
+
+            local errors = {}
+
+            for _, tuple in ipairs(return_result:GetData()) do
+                local ok, reason = tuple:IsSubsetOf(return_contract)
+                if ok then
+                    break
+                else
+                    table.insert(errors, {tuple = tuple, reason = reason})
+                end
+            end
+
+            if errors[1] then
+                for _, info in ipairs(errors) do
+                    self:Error(info.tuple.node, info.reason)
+                end
+            end
+        else 
+            if return_contract.Type == "tuple" and return_contract:Get(1).Type == "union" and return_contract:GetLength() == 1 then
+                return_contract = return_contract:Get(1)
+            end
+
+            local len = (return_contract.Type == "tuple" or return_contract.Type == "union") and return_contract:GetLength() or 1
+
+            if return_result:GetMinimumLength() ~= len then
+                self:Error(return_result.node, "returned tuple "..tostring(return_result).." does not match the typed tuple length " .. tostring(return_contract))
+            end
+
+            local ok, reason = return_result:IsSubsetOf(return_contract)
+            if not ok then
+                self:Error(return_result.node, reason)
+            end
+        end
+    end
+
+
     local function Call(self, obj, arguments, call_node)
         call_node = call_node or obj.node
         local function_node = obj.function_body_node-- or obj.node
@@ -136,25 +294,9 @@ return function(META)
         end
         
         local function_arguments = obj:GetArguments()
-    
-        -- if there are any function arguments passed that are not called/inferred
-        -- we need to do so before using them inside the function
-        for i, b in ipairs(arguments:GetData()) do
-            if b.Type == "function" and not b.called and not b.explicit_return then
-                local a = function_arguments:Get(i)
-     
-                if a and
-                    (
-                        a.Type == "function" and 
-                        not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
-                    )
-                        or not a:IsSubsetOf(b)
-                then
-                    self:Call(b, b:GetArguments():Copy())
-                end
-            end
-        end
-    
+
+        infer_uncalled_functions(self, call_node, arguments, function_arguments)
+
         local ok, err = obj:CheckArguments(arguments)
     
         if not ok then
@@ -166,52 +308,10 @@ return function(META)
         end
         
         if obj.data.lua_function then 
-            local len = function_arguments:GetLength()
-
-            if len == math.huge and arguments:GetLength() == math.huge then
-                len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
-            end
-
-            local ret = {}
-            for i, arg in ipairs(unpack_union_tuples({arguments:Unpack(len)}, function_arguments)) do
-                ret[i] = self:LuaTypesToTuple(
-                    obj.node, {
-                        self:CallLuaTypeFunction(
-                            call_node, 
-                            obj.data.lua_function, 
-                            function_node.function_scope or self:GetScope(), 
-                            table.unpack(arg)
-                        )
-                    }
-                )
-            end
-
-            local tup = types.Tuple({})
-
-            for i, t in ipairs(ret) do
-                for i,v in ipairs(t:GetData()) do
-                    local existing = tup:Get(i)
-                    if existing then
-                        if existing.Type == "union" then
-                            existing:AddType(v)
-                        else
-                            tup:Set(i, types.Union({v, existing}))
-                        end
-                    else
-                        tup:Set(i, v)
-                    end
-                end
-            end
-
-            return tup
+            return call_type_function(self, obj, call_node, function_node, function_arguments, arguments)
         elseif not function_node or function_node.kind == "type_function" then
             self:FireEvent("external_call", call_node, obj)
-        else
-            if not function_node.statements then
-                -- TEST ME
-                return types.errors.other("cannot call "..tostring(function_node:Render()).." because it has no statements")
-            end
-    
+        else    
             do -- recursive guard
                 obj.call_count = obj.call_count or 0
                 if obj.call_count > 10 or debug.getinfo(500) then
@@ -224,124 +324,37 @@ return function(META)
                 end
                 obj.call_count = obj.call_count + 1
             end
-    
-            local arguments = arguments
-            local used_contract = false
-    
-            if 
-                obj.explicit_arguments and 
+
+            local use_contract = obj.explicit_arguments and 
                 env ~= "typesystem" and 
                 function_node.kind ~= "local_generics_type_function" and 
                 not call_node.type_call
-            then
-                local contracts = obj:GetArguments()
-                local len = contracts:GetSafeLength(arguments)
 
-                for i = 1, len do
-                    local arg, err = arguments:Get(i)
-                    local contract = contracts:Get(i)
-
-                    local ok, reason
-
-                    if not arg then
-                        if contract:IsFalsy() then
-                            arg = types.Nil:Copy()
-                            ok = true
-                        else
-                            ok, reason = types.errors.other("argument #" .. i .. " expected " .. tostring(contract) .. " got nil")
-                        end
-                    elseif arg.Type == "table" and contract.Type == "table" then
-                        ok, reason = arg:FollowsContract(contract)
-                    else
-                        ok, reason = arg:IsSubsetOf(contract)
-                    end                
-
-                    if not ok then
-
-                        local contracts = obj:GetArguments()
-
-                        for i = 1, contracts:GetLength() do
-                            local arg = arguments:Get(i)
-                            if arg then
-                                arg.contract = arg.old_contract
-                            end
-                        end
-
-                        return types.errors.other("argument #" .. i .. " " .. tostring(arg) .. ": " .. reason)
-                    end
-
-                    if arg.Type == "table" then
-                        arg.old_contract = arg.contract
-                        arg.contract = contract
-                    else
-                        arguments:Set(i, contract:Copy())
-                    end
-                end
-
-                used_contract = true
+            if use_contract then
+                check_and_setup_arguments(self, obj, arguments, obj:GetArguments())
             end
 
-            local return_tuple = self:AnalyzeFunctionBody(function_node, arguments, env)
+            local return_result = self:AnalyzeFunctionBody(function_node, arguments, env)
 
-            if used_contract then
-                local contracts = obj:GetArguments()
-
-                for i = 1, contracts:GetSafeLength(arguments) do
-                    local arg = arguments:Get(i)
-                    if arg then
-                        arg.contract = arg.old_contract
-                    end
-                end
-            end
+            restore_mutated_types(self)    
             
-
             -- if this function has an explicit return type
-            local return_types = obj:HasExplicitReturnTypes() and obj:GetReturnTypes() or function_node.return_types and types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
-           
-            if return_types then
-                if return_tuple.Type == "union" then
-                    local errors = {}
-                    for _, tuple in ipairs(return_tuple:GetData()) do
-                        if tuple:GetMinimumLength() ~= return_types:GetLength() then
-                            table.insert(errors, {tuple = tuple, msg = "returned tuple "..tostring(tuple).." does not match the typed tuple length " .. tostring(return_types)})
-                        end
-                    end
+            local return_contract = obj:HasExplicitReturnTypes() and 
+                obj:GetReturnTypes() or 
+                    function_node.return_types and 
+                    types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
 
-                    if errors[1] then
-                        for _, info in ipairs(errors) do
-                            self:Error(info.tuple.node, info.msg)
-                        end
-                    end
-
-                    for _, tuple in ipairs(return_tuple:GetData()) do
-                        local ok, reason = tuple:IsSubsetOf(return_types)
-                        
-                        if not ok then
-                            self:Error(tuple.node, reason)
-                        end
-                    end
-                else
-                    if return_tuple:GetMinimumLength() ~= return_types:GetLength() then
-                        self:Error(return_tuple.node, "returned tuple "..tostring(return_tuple).." does not match the typed tuple length " .. tostring(return_types))
-                    end
-
-                    local ok, reason = return_tuple:IsSubsetOf(return_types)
-                    
-                    if not ok then
-                        return ok, reason
-                    end
-                end
+            if return_contract then
+                check_return_result(self, return_result, return_contract) 
             else
-                obj:GetReturnTypes():Merge(return_tuple)
-            end
+                obj:GetReturnTypes():Merge(return_result)
 
-            if not used_contract then
                 if not obj.arguments_inferred then
                     for i, obj in ipairs(obj:GetArguments():GetData()) do
                         if function_node.self_call then
                             -- we don't count the actual self argument
                             local node = function_node.identifiers[i + 1]
-                            if node then
+                            if node and not node.explicit_type then
                                 self:Warning(node, "argument is untyped")
                             end
                         else 
@@ -349,16 +362,17 @@ return function(META)
                         end
                     end
                 end
+            end
 
+            if not use_contract then
                 obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
             end
     
             self:FireEvent("function_spec", obj)
-    
-            -- this is so that the return type of a function can access its arguments, to generics
-            -- local function foo(a: number, b: number): Foo(a, b) return a + b end
-
-            if return_types then
+            
+            if return_contract then
+                -- this is so that the return type of a function can access its arguments, to generics
+                -- local function foo(a: number, b: number): Foo(a, b) return a + b end
                 self:CreateAndPushFunctionScope(function_node, nil, {
                     type = "function_return_type"
                 })
@@ -369,7 +383,7 @@ return function(META)
                         end
                     end
     
-                    return_tuple = return_types
+                    return_result = return_contract
                 self:PopScope()
             end
     
@@ -383,8 +397,8 @@ return function(META)
                 function_node.inferred_type = obj
             end
     
-            if not return_types then
-                return return_tuple
+            if not return_contract then
+                return return_result
             end
         end
     

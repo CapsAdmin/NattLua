@@ -11,7 +11,7 @@ local function metatable_function(self, meta_method, l)
         local func = l.meta:Get(meta_method)
 
         if func then
-            return self:Call(func, types.Tuple({l})):Get(1)
+            return self:Assert(l.node, self:Call(func, types.Tuple({l})):Get(1))
         end
     end
 end
