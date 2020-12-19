@@ -383,7 +383,7 @@ R([[
     end
 
     test(foo)
-]], '"hello" is not the same type as')
+]], 'hello.-is not a subset of.-number')
 
 R[[
     return function()

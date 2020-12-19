@@ -127,10 +127,20 @@ function META.IsSubsetOf(A, B)
         return true
     end
 
+    if A.suppress then
+        return true
+    end
+    
+    if A.Remainder and A:Get(1).Type == "any" and #A:GetData() == 0 then
+        return true
+    end
+
     if B.Type == "union" then
         local errors = {}
         for _, tup in ipairs(B:GetData()) do
+            A.suppress = true
             local ok, reason = A:IsSubsetOf(tup)
+            A.suppress = false
             if ok then
                 return true
             else
@@ -143,14 +153,6 @@ function META.IsSubsetOf(A, B)
     if A:Get(1) and A:Get(1).Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
         return true
     end
-    
-    if A:GetLength() == 1 then
-        if B.Type == "tuple" and B:Get(1) then
-            B = B:Get(1)
-        end
-
-        return A:Get(1):IsSubsetOf(B)
-    end
 
     if B.Type == "any" then
         return true
@@ -162,8 +164,12 @@ function META.IsSubsetOf(A, B)
         end
     end
 
-    for i = 1, A:GetLength() do
-        local a = A:Get(i)
+    for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
+        local a, err = A:Get(i)
+        if not a then
+            return types.errors.subset(A, B, err)
+        end
+
         local b, err = B:Get(i)
 
         if not b and a.Type == "any" then
@@ -174,11 +180,17 @@ function META.IsSubsetOf(A, B)
             return types.errors.missing(B, i, err)
         end
 
+        A.suppress = true
         local ok, reason = a:IsSubsetOf(b)
+        A.suppress = false
 
         if not ok then
             return types.errors.subset(a, b, reason)
         end
+    end
+
+    if A:GetMinimumLength() < B:GetMinimumLength() then
+        return false, "length differs"
     end
 
     return true
@@ -187,7 +199,7 @@ end
 function META:Get(key)
     local real_key = key
     assert(type(key) == "number", "key must be a number, got " .. tostring(type(key)))
-    
+
     local val = self.data[key]
 
     if not val and self.Repeat and key <= (#self.data * self.Repeat) then
@@ -268,7 +280,9 @@ function META:GetMinimumLength()
     local found_nil = false
 
     for i = #self.data, 1, -1 do
-        if self.data[i].Type == "union" and self.data[i]:HasNil() then
+        local obj = self.data[i]
+        
+        if obj.Type == "union" and obj:HasNil() then
             found_nil = true
         elseif found_nil then
             len = i

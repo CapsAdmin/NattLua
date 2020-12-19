@@ -9,12 +9,13 @@ META.__index = META
     type META.__name = "Lexer"
     type META.string_escape_Single = boolean
     type META.string_escape_Double = boolean
+    type META.comment_escape = boolean
 
 ]]
 
 META.syntax = syntax
 
-local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: boolean, (nil | string)]]
+local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: Tuple<|boolean|> | Tuple<|nil | string|>]]
     local start = self.i
 
     self:Advance(1)

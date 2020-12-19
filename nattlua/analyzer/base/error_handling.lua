@@ -34,9 +34,13 @@ return function(META)
             node = self.current_expression or self.current_statement
         end
 
-        assert(node)
-        assert(msg)
-        assert(severity)
+        if not msg or not severity then
+
+            io.write("msg = ", tostring(msg), "\n")
+            io.write("severity = ", tostring(severity), "\n")
+            io.write(debug.traceback(), "\n")
+            error("bad call to ReportDiagnostic")
+        end
 
         local key = msg .. "-" .. ("%p"):format(node) .. "-" .. "severity"
 

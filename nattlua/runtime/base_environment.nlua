@@ -941,9 +941,7 @@ do
                 return string.gsub(str, pattern, replacement, max_replacements)
             else
                 return string.gsub(str, pattern, function(...)
-                    print("!!!")
-                    print(analyzer:Assert(replacement.node, analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement.node, {...}) )))
-                    print("???")
+                    analyzer:Assert(replacement.node, analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement.node, {...}) ))
                 end, max_replacements)
             end
         end

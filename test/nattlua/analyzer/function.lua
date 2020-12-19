@@ -438,7 +438,7 @@ run([[
     local function func(): number, number
         return 1
     end
-]], "1.- does not match the typed tuple length")
+]], "because index 2 does not exist")
 
 run([[
     local function func(): number, number

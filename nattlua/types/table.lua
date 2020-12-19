@@ -29,7 +29,7 @@ function META:GetSignature()
         s[i] = keyval.val:GetSignature()
         i = i + 1
     end
-    self.suppress = nil
+    self.suppress = false
 
     table.sort(s, sort)
 
@@ -41,6 +41,7 @@ function META:__tostring()
     if self.suppress then
         return "*self*"
     end
+
     self.suppress = true
 
     if self:Contains("__name") and self:Get("__name"):IsLiteral() then
@@ -67,8 +68,7 @@ function META:__tostring()
         end
     end
     level = level - 1
-
-    self.suppress = nil
+    self.suppress = false
 
     table.sort(s, sort)
 
@@ -104,10 +104,11 @@ function META:FollowsContract(contract)
     return true
 end
 
--- TODO
-local done
-
 function META.IsSubsetOf(A, B)
+    if A.suppress then
+        return true
+    end
+
     if B.Type == "any" then
         return true
     end
@@ -135,7 +136,9 @@ function META.IsSubsetOf(A, B)
                         return types.errors.missing(B, a.key, reason)
                     end
 
+                    A.suppress = true
                     local ok, reason = a.val:IsSubsetOf(b)
+                    A.suppress = false
 
                     if not ok then
                         return types.errors.subset(a.val, b, reason)
@@ -151,16 +154,15 @@ function META.IsSubsetOf(A, B)
             return true
         end
 
-        done = done or {}
-
         local can_be_empty = true
-        
+        A.suppress = true
         for _, val in B:pairs() do
             if not types.Nil:IsSubsetOf(val) then
                 can_be_empty = false
                 break
             end
         end
+        A.suppress = false
 
         if not A.data[1] and (not A.contract or not A.contract.data[1]) then
             if can_be_empty then
@@ -176,21 +178,21 @@ function META.IsSubsetOf(A, B)
                 return keyval, reason
             end
         
-            local cachekey = aval:GetSignature()..keyval.val:GetSignature()
+            A.suppress = true
+            local ok, err = aval:IsSubsetOf(keyval.val)
+            A.suppress = false
 
-            if not done[cachekey] then
-                done[cachekey] = true
-                local ok, err = aval:IsSubsetOf(keyval.val)
-                done[cachekey] = nil
-                if not ok then
-                    return types.errors.subset(aval, keyval.val, err)
-                end
+            if not ok then
+                return types.errors.subset(aval, keyval.val, err)
             end
         end
         
         return true
     elseif B.Type == "union" then
-        return types.Union({A}):IsSubsetOf(B)
+        A.suppress = true
+        local u = types.Union({A}):IsSubsetOf(B)
+        A.suppress = false
+        return u
     end
 
     return types.errors.subset(A, B)

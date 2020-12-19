@@ -263,12 +263,6 @@ return function(META)
                 return_contract = return_contract:Get(1)
             end
 
-            local len = (return_contract.Type == "tuple" or return_contract.Type == "union") and return_contract:GetLength() or 1
-
-            if return_result:GetMinimumLength() ~= len then
-                self:Error(return_result.node, "returned tuple "..tostring(return_result).." does not match the typed tuple length " .. tostring(return_contract))
-            end
-
             local ok, reason = return_result:IsSubsetOf(return_contract)
             if not ok then
                 self:Error(return_result.node, reason)
