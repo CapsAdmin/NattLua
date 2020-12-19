@@ -75,12 +75,13 @@ test("1 or 2 or 3 or 4", function()
     -- each value here has to be 1 | nil, otherwise it won't traverse the or chain
     local obj = run[[local result = (_ as 1 | nil) or (_ as 2 | nil) or (_ as 3 | nil) or (_ as 4 | nil)]]:GetLocalOrEnvironmentValue("result", "runtime")
     local function set_equal(a, b)
+        if not a then error("a is nil", 2) end
+        
         local literal_union = {types.Symbol(nil)}
         for _, num in ipairs(b) do
             table.insert(literal_union, types.Number(num):MakeLiteral(true))
         end
         equal(a:GetSignature(), types.Union(literal_union):GetSignature())
-        types.Union({types.Number(1):MakeLiteral(true),types.Number(2):MakeLiteral(true),types.Number(3):MakeLiteral(true),types.Symbol(nil)}):GetSignature()
     end
     -- (>1< or 2 or 3) or (>4<)
     set_equal(obj.source_left, {1,2,3})

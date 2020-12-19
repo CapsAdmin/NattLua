@@ -225,27 +225,28 @@ return function(META)
         end
     end
 
-    local function check_return_result(self, return_result, return_contract)
-        if return_result.Type == "union" then
+    local function check_return_result(self, result, contract)
+        if result.Type == "union" then
             local errors = {}
             
-            for _, tuple in ipairs(return_result:GetData()) do
-                if tuple:GetMinimumLength() ~= return_contract:GetLength() then
-                    table.insert(errors, {tuple = tuple, msg = "returned tuple "..tostring(tuple).." does not match the typed tuple length " .. tostring(return_contract)})
+            -- all return results must match the length
+            for _, tuple in ipairs(result:GetData()) do
+                if tuple:GetMinimumLength() ~= contract:GetLength() then
+                    table.insert(errors, {tuple = tuple, msg = "returned tuple "..tostring(tuple).." does not match the typed tuple length " .. tostring(contract)})
                 end
             end
 
             if errors[1] then
                 for _, info in ipairs(errors) do
-                    self:Error(info.tuple.node, info.msg)
+                    print(result, contract, #contract:GetData())
+                    self:Error(info.tuple.node, info.msg .. " union")
                 end
             end
 
-
             local errors = {}
 
-            for _, tuple in ipairs(return_result:GetData()) do
-                local ok, reason = tuple:IsSubsetOf(return_contract)
+            for _, tuple in ipairs(result:GetData()) do
+                local ok, reason = tuple:IsSubsetOf(contract)
                 if ok then
                     break
                 else
@@ -259,13 +260,13 @@ return function(META)
                 end
             end
         else 
-            if return_contract.Type == "tuple" and return_contract:Get(1).Type == "union" and return_contract:GetLength() == 1 then
-                return_contract = return_contract:Get(1)
+            if contract.Type == "tuple" and contract:Get(1).Type == "union" and contract:GetLength() == 1 then
+                contract = contract:Get(1)
             end
 
-            local ok, reason = return_result:IsSubsetOf(return_contract)
+            local ok, reason = result:IsSubsetOf(contract)
             if not ok then
-                self:Error(return_result.node, reason)
+                self:Error(result.node, reason .. " not union")
             end
         end
     end
@@ -337,7 +338,7 @@ return function(META)
                 obj:GetReturnTypes() or 
                     function_node.return_types and 
                     types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
-
+                    
             if return_contract then
                 check_return_result(self, return_result, return_contract) 
             else

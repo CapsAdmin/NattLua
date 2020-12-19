@@ -74,6 +74,46 @@ function META:Clear()
     self.data = {}
 end
 
+function META:GetAtIndex(i)
+    local val
+    local errors = {}
+    
+    for _, obj in ipairs(self:GetTypes()) do
+        if obj.Type == "tuple" then
+            local found, err = obj:Get(i)
+            if found then
+                if val then
+                    val = types.Union({val, found})
+                    val:SetSource(found.node, found, found.source_left, found.source_right)
+                else
+                    val = found
+                end
+            else
+                if val then
+                    val = types.Union({val, types.Nil:Copy()})
+                else
+                    val = types.Nil:Copy()
+                end
+
+                table.insert(errors, err)
+            end
+        else
+            if val then
+                val = types.Union({val, obj})
+                val:SetSource(self.node, self, self.source_left, self.source_right)
+            else
+                val = obj
+            end
+        end
+    end
+    
+    if not val then
+        return false, table.concat(errors, "\n")
+    end
+
+    return val
+end
+
 function META:Get(key, from_table)
     key = types.Cast(key)
 

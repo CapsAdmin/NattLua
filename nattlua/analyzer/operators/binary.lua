@@ -79,72 +79,78 @@ return function(META)
         if l.Type == "union" and r.Type ~= "union" then r = types.Union({r}) end
 
         if l.Type == "union" and r.Type == "union" then
-            local new_union = types.Union()
-            local truthy_union = types.Union()
-            local falsy_union = types.Union()
-            local condition = l
-            
-            for _, l in ipairs(l:GetTypes()) do
-                for _, r in ipairs(r:GetTypes()) do
-                    local res, err = self:BinaryOperator(node, l, r, env, op)
+            if op == "|" and env == "typesystem" then
+                local new_union = types.Union({l, r})                
 
-                    if not res then
-                        self:ErrorAndCloneCurrentScope(node, err, condition)
-                    else
-                        if res:IsTruthy() then
-                            if self.type_checked then                                
-                                for _, t in ipairs(self.type_checked:GetTypes()) do
-                                    if t:GetLuaType() == l:GetData() then
-                                        truthy_union:AddType(t)
-                                    end
-                                end                                
-                                
-                            else
-                                truthy_union:AddType(l)
-                            end
-                        end
-    
-                        if res:IsFalsy() then
-                            if self.type_checked then                                
-                                for _, t in ipairs(self.type_checked:GetTypes()) do
-                                    if t:GetLuaType() == l:GetData() then
-                                        falsy_union:AddType(t)
-                                    end
-                                end                                
-                                
-                            else
-                                falsy_union:AddType(l)
-                            end
-                        end
+                return new_union:SetSource(node, new_union, l, r)
+            else                
+                local new_union = types.Union()
+                local truthy_union = types.Union()
+                local falsy_union = types.Union()
+                local condition = l
+                
+                for _, l in ipairs(l:GetTypes()) do
+                    for _, r in ipairs(r:GetTypes()) do
+                        local res, err = self:BinaryOperator(node, l, r, env, op)
 
-                        new_union:AddType(res)
+                        if not res then
+                            self:ErrorAndCloneCurrentScope(node, err, condition)
+                        else
+                            if res:IsTruthy() then
+                                if self.type_checked then                                
+                                    for _, t in ipairs(self.type_checked:GetTypes()) do
+                                        if t:GetLuaType() == l:GetData() then
+                                            truthy_union:AddType(t)
+                                        end
+                                    end                                
+                                    
+                                else
+                                    truthy_union:AddType(l)
+                                end
+                            end
+        
+                            if res:IsFalsy() then
+                                if self.type_checked then                                
+                                    for _, t in ipairs(self.type_checked:GetTypes()) do
+                                        if t:GetLuaType() == l:GetData() then
+                                            falsy_union:AddType(t)
+                                        end
+                                    end                                
+                                    
+                                else
+                                    falsy_union:AddType(l)
+                                end
+                            end
+
+                            new_union:AddType(res)
+                        end
                     end
                 end
+
+                if self.type_checked then
+                    new_union.type_checked = self.type_checked
+                    self.type_checked = nil
+                end
+
+                local upvalue = condition.upvalue or new_union.type_checked and new_union.type_checked.upvalue
+
+                if upvalue then
+                    self.current_statement.checks = self.current_statement.checks or {}
+                    self.current_statement.checks[upvalue] = self.current_statement.checks[upvalue] or {}
+                    table.insert(self.current_statement.checks[upvalue], new_union)
+                end
+
+                if op == "~=" then
+                    new_union.inverted = true
+                end
+                
+                truthy_union.upvalue = condition.upvalue
+                falsy_union.upvalue = condition.upvalue
+                new_union.truthy_union = truthy_union
+                new_union.falsy_union = falsy_union
+
+                return new_union:SetSource(node, new_union, l,r)
             end
-
-            if self.type_checked then
-                new_union.type_checked = self.type_checked
-                self.type_checked = nil
-            end
-
-            local upvalue = condition.upvalue or new_union.type_checked and new_union.type_checked.upvalue
-
-            if upvalue then
-                self.current_statement.checks = self.current_statement.checks or {}
-                self.current_statement.checks[upvalue] = self.current_statement.checks[upvalue] or {}
-                table.insert(self.current_statement.checks[upvalue], new_union)
-            end
-
-            if op == "~=" then
-                new_union.inverted = true
-            end
-            
-            truthy_union.upvalue = condition.upvalue
-            falsy_union.upvalue = condition.upvalue
-            new_union.truthy_union = truthy_union
-            new_union.falsy_union = falsy_union
-
-            return new_union:SetSource(node, new_union, l,r)
         end
 
         if env == "typesystem" then

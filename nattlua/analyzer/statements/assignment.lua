@@ -58,33 +58,31 @@ return function(META)
 
                 local obj = self:AnalyzeExpression(exp_val, env)
 
-                if obj.Type == "tuple" or (obj.Type == "union" and obj:GetType("tuple")) then
+                if obj.Type == "tuple" then
                     for i = 1, #statement.left do
-                        if obj.Type == "union" then
-                            for _, obj in ipairs(obj:GetTypes()) do
-                                if obj.Get then
-                                    local val, err = obj:Get(i)
-                                    if val then
-                                        if right[right_pos + i - 1] then
-                                            right[right_pos + i - 1] = types.Union({right[right_pos + i - 1], val})
-                                        else
-                                            right[right_pos + i - 1] = val
-                                        end
-                                    elseif i == 1 then
-                                        if right[right_pos + i - 1] then
-                                            right[right_pos + i - 1] = types.Union({right[right_pos + i - 1], obj})
-                                        else
-                                            right[right_pos + i - 1] = obj
-                                        end
-                                    end
-                                end
-                            end
-                        else
-                            right[right_pos + i - 1] = obj:Get(i)
-                        end
+                        local index = right_pos + i - 1
+                       
+                        right[index] = obj:Get(i)
                         
                         if exp_val.explicit_type then
-                            right[right_pos + i - 1]:Seal() -- TEST ME
+                            right[index]:Seal() -- TEST ME
+                        end
+                    end
+                elseif obj.Type == "union" then
+                    for i = 1, #statement.left do
+                        local index = right_pos + i - 1
+                        local val, err = obj:GetAtIndex(index)
+
+                        if val then
+                            if right[index] then
+                                right[index] = types.Union({right[index], val})
+                            else
+                                right[index] = val
+                            end
+                            
+                            if exp_val.explicit_type then
+                                right[index]:Seal() -- TEST ME
+                            end
                         end
                     end
                 else

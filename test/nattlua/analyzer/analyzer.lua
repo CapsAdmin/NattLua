@@ -571,3 +571,8 @@ R[[
     mutate(tbl)
     type_assert_superset<|tbl.Foo, number|>
 ]]
+
+R[[
+    local T: Tuple<|boolean|> | Tuple<|1|2|>
+    type_assert<|T, Tuple<|boolean|> | Tuple<|1|2|>|>
+]]

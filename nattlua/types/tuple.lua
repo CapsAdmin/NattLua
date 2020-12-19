@@ -164,6 +164,10 @@ function META.IsSubsetOf(A, B)
         end
     end
 
+    if B.Type ~= "tuple" then
+        return types.errors.type_mismatch(A, B)
+    end
+
     for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
         local a, err = A:Get(i)
         if not a then
