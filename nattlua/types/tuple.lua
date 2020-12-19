@@ -48,7 +48,7 @@ function META:__tostring()
         table.insert(s, tostring(self.Remainder))
     end
 
-    local s = "⦅" .. table.concat(s, ", ") .. "⦆"
+    local s = "⦗" .. table.concat(s, ", ") .. "⦘"
 
     if self.Repeat then
         s = s .. "×" .. tostring(self.Repeat)
