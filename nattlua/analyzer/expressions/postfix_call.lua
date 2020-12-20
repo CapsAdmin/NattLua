@@ -55,7 +55,7 @@ return function(META)
             returned_tuple = returned_tuple:Get(1)
         end
 
-        if returned_tuple.Type == "tuple" and returned_tuple:GetLength() == 1 then
+        if env == "runtime" and returned_tuple.Type == "tuple" and returned_tuple:GetLength() == 1 then
             returned_tuple = returned_tuple:Get(1)
         end
 

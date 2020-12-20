@@ -99,6 +99,24 @@ return function(META)
                     break
                 end
             end
+
+            local children = self:GetScope():GetChildren()
+            if children[1] then
+                local merged_scope = children[1]:Copy(true)
+                for i = 2, #children do
+                    merged_scope:Merge(children[i])
+                end
+    
+                merged_scope:MakeReadOnly(true)
+                self:GetScope():AddChild(merged_scope)
+    
+                self:FireEvent("merge_iteration_scopes", merged_scope)
+    
+                self:PushScope(merged_scope)
+                    self:AnalyzeStatements(statement.statements)
+                self:PopScope()
+            end
+            
         else
             if init.Type == "number" and (max.Type == "number" or (max.Type == "union" and max:IsType("number"))) then
                 init = init:Max(max)
@@ -114,25 +132,7 @@ return function(META)
             self:AnalyzeStatements(statement.statements)
         end
 
-    
-        local children = self:GetScope():GetChildren()
-        if children[1] then
-            local merged_scope = children[1]:Copy(true)
-            for i = 2, #children do
-                merged_scope:Merge(children[i])
-            end
-
-            merged_scope:MakeReadOnly(true)
-            self:GetScope():AddChild(merged_scope)
-
-            self:FireEvent("merge_iteration_scopes", merged_scope)
-
-            self:PushScope(merged_scope)
-                self:AnalyzeStatements(statement.statements)
-            self:PopScope()
-            
-            self.break_out_scope = nil
-        end
+        self.break_out_scope = nil
 
         self:PopScope()
         self:OnExitConditionalScope({init = init, max = max, condition = condition})

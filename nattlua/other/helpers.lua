@@ -391,7 +391,7 @@ function helpers.JITOptimize()
 end
 
 local function inject_full_path()
-    local lib = require("jit.util")
+    local lib = require("jit.util") --[[# as jit.util & {_old_funcinfo = jit.util.funcinfo} ]]
     if lib.funcinfo then
         lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
 

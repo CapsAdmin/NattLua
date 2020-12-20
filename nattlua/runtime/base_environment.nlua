@@ -4,8 +4,8 @@ local type boolean = true | false
 
 local type Table = {[any] = any}
 local type userdata = Table
-local type cdata = Table
-local type ctype = Table
+local type cdata = any
+local type ctype = any
 local type thread = Table
 
 local type empty_function = function(...): ...:any

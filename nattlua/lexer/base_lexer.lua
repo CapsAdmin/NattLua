@@ -14,6 +14,7 @@ return function(META--[[#: {
     --[[#
         type META.code = string
         type META.i = number
+        type META.code_ptr_ref = string
         type META.code_ptr = {
             [number] = number,
             __meta = self,
@@ -388,6 +389,8 @@ return function(META--[[#: {
         for i = self.i, self:GetLength() + 1 do
             tokens[i] = self:ReadToken()
 
+            if not tokens[i] then break end -- TODO
+
             if tokens[i].type == "end_of_file" then
                 break
             end
@@ -411,7 +414,6 @@ return function(META--[[#: {
 
                     whitespace_buffer[whitespace_buffer_i] = token
                     whitespace_buffer_i = whitespace_buffer_i + 1
-
                 else
                     token.whitespace = list.fromtable(whitespace_buffer)
 

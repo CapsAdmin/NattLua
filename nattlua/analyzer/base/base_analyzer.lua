@@ -89,7 +89,6 @@ return function(META)
             local func, err = load(code, node.name)
 
             if not func then
-                print(code)
                 self:FatalError(err)
             end
 

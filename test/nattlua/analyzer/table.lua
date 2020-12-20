@@ -491,3 +491,33 @@ run[[
     type_assert({Unknown()}, _ as {[1 .. inf] = any})
     type_assert({Unknown(), 1}, _ as {any, 1})
 ]]
+
+
+run[[
+
+    local function test(tbl: {
+        Foo = boolean,
+        Bar = number,
+        [string] = any,
+    })
+        type_assert(tbl.Foo, _ as boolean)
+        type_assert(tbl.Bar, _ as number)
+        type_assert(tbl.lol, _ as any)
+    
+        tbl.NewField = 8888
+        tbl.NewField2 = 9999
+    
+        type_assert(tbl.NewField, 8888)
+        type_assert(tbl.NewField2, 9999)
+    end
+    
+    local tbl = {Foo = true, Bar = 1337}
+    
+    test(tbl)
+    
+    type_assert(tbl.Foo, _ as boolean)
+    type_assert(tbl.Bar, _ as number)
+    type_assert(tbl.NewField, 8888)
+    type_assert(tbl.NewField2, 9999)
+    
+]]

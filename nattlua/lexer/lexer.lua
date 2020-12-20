@@ -27,7 +27,8 @@ META.__index = META
     type META.__name = "Lexer"
     type META.string_escape_Single = boolean
     type META.string_escape_Double = boolean
-    type META.comment_escape = boolean
+    type META.comment_escape = string
+    type META.potential_lua54_division_operator = boolean
 
 ]]
 
@@ -174,8 +175,10 @@ function META:ReadMultilineString() --[[#: boolean]]
         local start = self.i
         local ok, err = ReadLiteralString(self, false)
 
-        if not ok and err then -- TODO, err is nil | string
+        if not ok and err then
+            if err then -- TODO, err is nil | string
             self:Error("expected multiline string to end: " .. err, start, start + 1)
+            end
             return true
         end
 

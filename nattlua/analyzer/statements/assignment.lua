@@ -114,6 +114,10 @@ return function(META)
                 local contract = self:AnalyzeExpression(exp_key.explicit_type, "typesystem")
 
                 if right[i] then
+                    local contract = contract
+                    if contract.Type == "tuple" and contract:GetLength() == 1 then
+                        contract = contract:Get(1)
+                    end
                     val:CopyLiteralness(contract)
                     self:Assert(statement or val.node or exp_key.explicit_type, self:CheckTypeAgainstContract(val, contract))
                 end

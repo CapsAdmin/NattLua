@@ -78,3 +78,14 @@ run([[
     local c = b.foo
     type_assert(c, true)
 ]], "undefined get: nil.-foo")
+
+pending[[
+    local function test(x: {}  | {foo = nil | 1})
+        print(x.foo)
+        if x.foo then
+            print(x.foo)
+        end
+    end
+
+    test({})
+]]
