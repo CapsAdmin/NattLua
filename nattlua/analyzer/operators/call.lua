@@ -228,18 +228,21 @@ return function(META)
     local function check_return_result(self, result, contract)
         if result.Type == "union" then
             local errors = {}
+
+            if contract.Type == "tuple" and contract:GetLength() == 1 and contract:Get(1).Type == "union" then
+                contract = contract:Get(1)
+            end
             
             -- all return results must match the length
             for _, tuple in ipairs(result:GetData()) do
-                if tuple:GetMinimumLength() ~= contract:GetLength() then
-                    table.insert(errors, {tuple = tuple, msg = "returned tuple "..tostring(tuple).." does not match the typed tuple length " .. tostring(contract)})
+                if tuple:GetMinimumLength() < contract:GetMinimumLength() then
+                    table.insert(errors, {tuple = tuple, msg = "returned tuple "..tostring(tuple).." of length "..tuple:GetMinimumLength().." does not match the typed tuple length " .. tostring(contract) .. " of length " .. contract:GetMinimumLength()})
                 end
             end
 
             if errors[1] then
                 for _, info in ipairs(errors) do
-                    print(result, contract, #contract:GetData())
-                    self:Error(info.tuple.node, info.msg .. " union")
+                    self:Error(info.tuple.node, info.msg)
                 end
             end
 

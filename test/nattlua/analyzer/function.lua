@@ -558,3 +558,19 @@ run[[
     type_assert(y, _ as 1 | string)
     type_assert(z, _ as 2 | nil)
 ]]
+run[[
+    local MAYBE: boolean
+
+    local function ReadLiteralString(multiline_comment : boolean): Tuple<|true|> | Tuple<|false, string|>
+        if MAYBE then
+            if multiline_comment then return false, "multiline comment not allowed" end
+            return false, "a string"
+        end
+    
+        if MAYBE then
+            return true
+        end
+    
+        return false, "another string"
+    end
+]]

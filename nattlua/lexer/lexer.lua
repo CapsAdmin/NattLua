@@ -15,7 +15,7 @@ META.__index = META
 
 META.syntax = syntax
 
-local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: Tuple<|boolean|> | Tuple<|nil | string|>]]
+local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: Tuple<|boolean|> | Tuple<|false, string|>]]
     local start = self.i
 
     self:Advance(1)

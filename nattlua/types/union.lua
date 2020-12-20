@@ -74,6 +74,20 @@ function META:Clear()
     self.data = {}
 end
 
+function META:GetMinimumLength()
+    local min = 1000
+
+    for _, obj in ipairs(self:GetTypes()) do
+        if obj.Type == "tuple" then
+            min = math.min(min, obj:GetMinimumLength())
+        else
+            min = math.min(min, 1)
+        end
+    end
+
+    return min
+end
+
 function META:GetAtIndex(i)
     local val
     local errors = {}
