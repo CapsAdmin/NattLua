@@ -133,17 +133,42 @@ return function(META)
         end
     end
 
-    function META:GetMutatedValue(obj, key, value) 
+    local function initialize_mutation_tracker(obj, scope, key, env)
+        obj.mutations = obj.mutations or {}
+        obj.mutations[key] = obj.mutations[key] or MutationTracker()
+
+        if not obj.mutations[key]:HasMutations() then
+            if obj.Type == "table" then
+                local uv, creation_scope = scope:FindUpvalueFromObject(obj:GetRoot(), env)
+                if not creation_scope then
+                    creation_scope = scope:GetRoot()
+                end
+
+                local val = (obj.contract or obj):Get(key) or types.Nil:Copy()
+                val.upvalue = obj.mutations[key]
+                val.upvalue_keyref = key
+
+                obj.mutations[key]:Mutate(val, creation_scope)
+            end
+        end
+    end
+
+    function META:GetMutatedValue(obj, key, value, env)
+        if env == "typesystem" then return end
+        if obj.Type == "list" then return end
+        
         local scope = self:GetScope()
         if scope:IsReadOnly() then return value end
         
         key = cast_key(key)
 
-        if obj.mutations and obj.mutations[key] then
-            return obj.mutations[key]:GetValueFromScope(scope, obj, key) or value
+        if not key then
+            return value
         end
 
-        return value
+        initialize_mutation_tracker(obj, scope, key, env)
+        
+        return obj.mutations[key]:GetValueFromScope(scope, obj, key) or value
     end
 
     function META:OnEnterConditionalScope(data)
@@ -173,24 +198,10 @@ return function(META)
         val.upvalue = obj
         val.upvalue_keyref = key
 
-        obj.mutations = obj.mutations or {}
-        obj.mutations[key] = obj.mutations[key] or MutationTracker()
+        initialize_mutation_tracker(obj, scope, key, env)
 
         if not obj.mutations[key]:HasMutations() then
-            if obj.Type == "table" then
-                local uv, creation_scope = scope:FindUpvalueFromObject(obj:GetRoot(), env)
-                if not creation_scope then
-                    creation_scope = scope:GetRoot()
-                end
-
-                local val = (obj.contract or obj):Get(key) or types.Nil:Copy()
-                val.upvalue = obj.mutations[key]
-                val.upvalue_keyref = key
-
-                obj.mutations[key]:Mutate(val, creation_scope)
-            else
-                obj.mutations[key]:Mutate(val, scope)
-            end
+            obj.mutations[key]:Mutate(val, scope)
         end
 
         obj.mutations[key]:Mutate(val, scope)

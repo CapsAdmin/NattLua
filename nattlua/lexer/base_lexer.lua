@@ -95,15 +95,6 @@ return function(META--[[#: {
         return str
     end
 
-    local function Token(type --[[#: string]], start --[[#: number]], stop --[[#: number]], value --[[#: string]])
-        return {
-            type = type,
-            start = start,
-            stop = stop,
-            value = value,
-        }
-    end
-
     local B = string.byte
 
     if ffi then
@@ -255,11 +246,11 @@ return function(META--[[#: {
             stop = 0,
         } end)
 
-        function META:NewToken(type--[[#:string]], start--[[#:number]], stop--[[#:number]], is_whitespace--[[#:boolean]])
-            local tk = get()
+        function META:NewToken(type--[[#:string]], start--[[#:number]], stop--[[#:number]], is_whitespace--[[#:boolean]]) --[[#: Token ]]
+            local tk = get() --[[# as Token ]]
 
             tk.type = type
-            tk.whitespace = is_whitespace
+            tk.has_whitespace = is_whitespace
             tk.start = start
             tk.stop = stop
 
@@ -375,7 +366,7 @@ return function(META--[[#: {
         return type, is_whitespace, start, self.i - 1
     end
 
-    function META:ReadToken()
+    function META:ReadToken() --[[:# Token ]]
         if self:ReadShebang() then
             return self:NewToken("shebang", 1, self.i - 1, false)
         end
@@ -415,7 +406,7 @@ return function(META--[[#: {
 
         for _, token in ipairs(tokens) do
             if token.type ~= "discard" then
-                if token.whitespace then
+                if token.has_whitespace then
                     token.whitespace = false
 
                     whitespace_buffer[whitespace_buffer_i] = token

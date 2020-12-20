@@ -73,16 +73,3 @@ run[[
 
     type_assert(lol, 2)
 ]]
-
-run([[
-    local type i = 0
-    for k,v in ipairs(_ as any) do 
-        type_assert(k, _ as any)
-        type_assert(v, _ as any)
-        type_assert<|i, 0|>
-    
-        type i = i + 1
-    end
-    
-    type_assert<|i, 1|>
-]])

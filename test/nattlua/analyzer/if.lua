@@ -1019,7 +1019,7 @@ run[[
             x.lol = 1 
         end
     end
-    type_assert<|x.lol, false | 1|>
+    type_assert(x.lol, _ as false | 1)
 ]]
 
 run[[
@@ -1033,9 +1033,9 @@ run[[
     local x = { lol = _ as false | 1 }
     if not x.lol then
         x.lol = test()
-        type_assert<|x.lol, 2 | nil|>
+        type_assert(x.lol, _ as 2 | nil)
     end
-    type_assert<|x.lol, 1 | 2 | nil|>
+    type_assert(x.lol, _ as 1 | 2 | nil)
 ]]
 
 run[[
@@ -1090,6 +1090,14 @@ run[[
     local x = test()
     
     type_assert(x, _ as "test" | "foo")
+]]
+
+run[[
+    local x: {foo = nil | 1}
+
+    if x.foo then
+        type_assert(x.foo, 1)
+    end
 ]]
 
 pending([[

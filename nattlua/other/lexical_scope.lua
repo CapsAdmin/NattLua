@@ -97,27 +97,35 @@ function META:FindValue(key, env)
     local scope = self
     local current_scope = scope
     
-    while scope do
+    for i = 1, 1000 do
+        if not scope then return end
+
         if scope.upvalues[env].map[key_hash] then
             return scope.upvalues[env].map[key_hash], current_scope
         end
         current_scope = scope
         scope = scope.parent
     end
+
+    error("this should never happen")
 end
 
 function META:FindUpvalueFromObject(obj, env)
     local scope = self
     
-    while scope do
+    for i = 1, 1000 do
+        if not scope then return end
+
         for i,v in ipairs(scope.upvalues[env].list) do
             if obj == v:GetValue() then
                 return v, scope
             end
         end
-
+        
         scope = scope.parent
     end
+
+    error("this should never happen")
 end
 
 local upvalue_meta
@@ -211,7 +219,7 @@ end
 
 function META:GetRoot()
     local parent = self
-    while true do
+    for i = 1, 1000 do
         if not parent.parent then
             break
         end

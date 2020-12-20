@@ -330,19 +330,21 @@ do
     end
 end
 
-function helpers.GetDataFromLineCharPosition(tokens, code --[[#: string]], line--[[#: number]], char --[[#: number]])
+function helpers.GetDataFromLineCharPosition(tokens--[[#: {[number] = Token} ]], code --[[#: string]], line--[[#: number]], char --[[#: number]])
 	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
 
 	for _, token in ipairs(tokens) do
 		local found = token.stop >= sub_pos-- and token.stop <= sub_pos
 
-		if not found and token.whitespace then
-			for _, token in ipairs(token.whitespace) do
-				if token.stop >= sub_pos--[[ and token.stop <= sub_pos]] then
-					found = true
-					break
-				end
-			end
+        if not found then
+            if token.whitespace then
+                for _, token in ipairs(token.whitespace) do
+                    if token.stop >= sub_pos--[[ and token.stop <= sub_pos]] then
+                        found = true
+                        break
+                    end
+                end
+            end
 		end
 
 		if found then
@@ -351,12 +353,11 @@ function helpers.GetDataFromLineCharPosition(tokens, code --[[#: string]], line-
 	end
 end
 
-local function has_jit()
-    return pcall(require, "jit.opt")
-end
-
 function helpers.JITOptimize()
-    if not has_jit() then return end
+    if not _G.jit then return end
+
+    require("jit.opt")
+
     jit.opt.start(
         "maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
         "maxrecord=20000", -- 4000: maximum number of recorded IR instructions
@@ -406,7 +407,7 @@ local function inject_full_path()
 end
 
 function helpers.EnableJITDumper()
-    if not has_jit() then return end
+    if not _G.jit then return end
     inject_full_path()
 
     local jit = require("jit")

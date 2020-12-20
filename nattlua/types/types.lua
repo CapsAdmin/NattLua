@@ -293,10 +293,12 @@ do
 
     function Base:GetRoot()
         local parent = self
+        local done = {}
         while true do
-            if not parent.parent then
+            if not parent.parent or done[parent] then
                 break
             end
+            done[parent] = true
             parent = parent.parent
         end
         return parent

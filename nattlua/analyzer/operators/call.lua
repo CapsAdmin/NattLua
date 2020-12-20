@@ -223,6 +223,8 @@ return function(META)
                 arguments:Set(i, contract:Copy())
             end
         end
+
+        return true
     end
 
     local function check_return_result(self, result, contract)
@@ -296,7 +298,7 @@ return function(META)
         infer_uncalled_functions(self, call_node, arguments, function_arguments)
 
         local ok, err = obj:CheckArguments(arguments)
-    
+
         if not ok then
             return ok, err
         end
@@ -329,7 +331,10 @@ return function(META)
                 not call_node.type_call
 
             if use_contract then
-                check_and_setup_arguments(self, obj, arguments, obj:GetArguments())
+                local ok, err = check_and_setup_arguments(self, obj, arguments, obj:GetArguments())
+                if not ok then 
+                    return ok, err 
+                end
             end
 
             local return_result = self:AnalyzeFunctionBody(function_node, arguments, env)
@@ -411,7 +416,7 @@ return function(META)
             function_node = obj.function_body_node,
             call_node = call_node
         })
-    
+
         local ok, err = Call(self, obj, arguments, call_node)
     
         table.remove(self.call_stack)

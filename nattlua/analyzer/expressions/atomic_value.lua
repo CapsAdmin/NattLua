@@ -7,12 +7,15 @@ return function(META)
 
         if env == "typesystem" then
             obj, err = self:GetLocalOrEnvironmentValue(node, env)
+            
             if not obj then
                 obj, err = self:GetLocalOrEnvironmentValue(node, "runtime")
             end
 
             if not obj then
                 self:Error(node, "cannot find value " .. node.value.value)
+
+                return types.Nil:Copy()
             end
         else
             obj, err = self:GetLocalOrEnvironmentValue(node, env)

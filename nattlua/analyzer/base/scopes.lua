@@ -102,7 +102,7 @@ return function(META)
         
         if upvalue then
             if env == "runtime" then
-                return self:GetMutatedValue(upvalue, key, upvalue:GetValue()) or upvalue:GetValue()
+                return self:GetMutatedValue(upvalue, key, upvalue:GetValue(), env) or upvalue:GetValue()
             end 
 
             return upvalue:GetValue()
@@ -180,7 +180,7 @@ return function(META)
         local val, err = g:Get(key)
 
         if val and env == "runtime" then
-            return self:GetMutatedValue(g, key, val) or val
+            return self:GetMutatedValue(g, key, val, env) or val
         end
 
         return val, err

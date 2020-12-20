@@ -1,3 +1,21 @@
+--[[#
+
+    type Token = {
+        type = string,
+        start = number,
+        stop = number,
+        has_whitespace = boolean,
+        whitespace = nil | {
+            [number] = {
+                type = string,
+                start = number,
+                stop = number,
+            }
+        },
+    }
+
+]]
+
 local syntax = require("nattlua.syntax.syntax")
 local helpers = require("nattlua.other.helpers")
 

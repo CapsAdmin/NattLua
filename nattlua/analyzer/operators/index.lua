@@ -5,6 +5,7 @@ return function(META)
         if obj.Type == "union" then
             local copy = types.Union()
             for _,v in ipairs(obj:GetTypes()) do
+
                 local val, err = self:IndexOperator(node, v, key, env)
                 if not val then
                     return val, err
@@ -44,7 +45,7 @@ return function(META)
             local val, err = obj.contract:Get(key)
 
             if val then
-                local o = self:GetMutatedValue(obj, key, val)
+                local o = self:GetMutatedValue(obj, key, val, env)
 
                 if o then
                     return o
@@ -59,7 +60,7 @@ return function(META)
         local val, err = obj:Get(key)
 
         if val then
-            local o = self:GetMutatedValue(obj, key, val)
+            local o = self:GetMutatedValue(obj, key, val, env)
 
             if o then
                 return o
