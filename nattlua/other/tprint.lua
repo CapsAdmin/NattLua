@@ -1,5 +1,4 @@
-local serializer = ... or _G.serializer
-local luadata = _G.luadata or {}
+local luadata = {}
 local encode_table
 
 local function count(tbl)
