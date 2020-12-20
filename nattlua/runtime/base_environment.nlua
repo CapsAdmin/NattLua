@@ -226,7 +226,6 @@ do -- globals
 	end
 
 	type function ipairs(tbl: {[number] = any})
-
 		if tbl:IsLiteral() then
 			local i = 1
 			return function(key, val)
@@ -236,6 +235,17 @@ do -- globals
 				return kv.key, kv.val
 			end
 		end
+
+        if tbl.Type == "table" and not tbl:IsNumericallyIndexed() then
+            analyzer:Error(tbl.node, "input table is not numerically indexed")
+
+            local done = false
+            return function()
+                if done then return nil end
+                done = true
+                return types.Any(), types.Any()
+            end
+        end
 
 		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
 		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, analyzer:GetScope(), tbl)

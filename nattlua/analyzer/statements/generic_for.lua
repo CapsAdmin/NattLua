@@ -10,7 +10,7 @@ return function(META)
         if obj.Type == "tuple" then obj = obj:Get(1) end
     
         local returned_key = nil
-        local one_loop = args[1] and args[1].Type == "any"
+        local one_loop = obj and obj.Type == "any"
         
         for i = 1, 1000 do
             local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
