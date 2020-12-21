@@ -425,7 +425,7 @@ run[[
 
     function Foo.Bar.foo.bar.test:init() end
 
-    type_assert(Foo.Bar.foo.bar.test.init, _ as function():)
+    type_assert_superset(Foo.Bar.foo.bar.test.init, _ as (function(...any): ...any))
 ]]
 
 run[[
@@ -480,7 +480,7 @@ run[[
 ]]
 
 run[[
-    local func = function(one) end
+    local func = function(one, two) end
     func(1, 2)
     func(1, "2")
 ]]

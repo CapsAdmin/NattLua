@@ -1,6 +1,8 @@
 local syntax = {}
 
-syntax.SymbolCharacters = {
+--[[# type syntax.__name = "Syntax" ]]
+
+syntax.SymbolCharacters --[[#: {[number] = string} ]] = {
     ",", ";",
     "(", ")", "{", "}", "[", "]",
     "=", "::", "\"", "'",
@@ -8,11 +10,11 @@ syntax.SymbolCharacters = {
     "<|", "|>",
 }
 
-syntax.NumberAnnotations = {
+syntax.NumberAnnotations --[[#: {[number] = string} ]]  = {
     "ull", "ll", "ul", "i",
 }
 
-syntax.Keywords = {
+syntax.Keywords --[[#: {[number] = string} ]]  = {
     "do", "end",
     "if", "then", "else", "elseif",
     "for", "in",
@@ -27,23 +29,23 @@ syntax.Keywords = {
     "ÆØÅ", "ÆØÅÆ",
 }
 
-syntax.KeywordValues = {
+syntax.KeywordValues --[[#: {[number] = string} ]]  = {
     "...",
     "nil",
     "true",
     "false",
 }
 
-syntax.PrefixOperators = {
+syntax.PrefixOperators --[[#: {[number] = string} ]]  = {
     "-", "#", "not", "!", "~",
 }
 
-syntax.PostfixOperators = {
+syntax.PostfixOperators --[[#: {[number] = string} ]]  = {
     -- these are just to make sure all code is covered by tests
     "++", "ÆØÅ", "ÆØÅÆ",
 }
 
-syntax.BinaryOperators = {
+syntax.BinaryOperators --[[#: {[number] = {[number] = string}} ]]  = {
     {"or", "||"},
     {"and", "&&"},
     {"<", ">", "<=", ">=", "~=", "==", "!="},
@@ -57,11 +59,11 @@ syntax.BinaryOperators = {
     {"R^"}, -- right associative
 }
 
-syntax.PrimaryBinaryOperators = {
+syntax.PrimaryBinaryOperators --[[#: {[number] = string} ]]  = {
     ".", ":",
 }
 
-syntax.BinaryOperatorFunctionTranslate = {
+syntax.BinaryOperatorFunctionTranslate --[[#: {[string] = string} ]]  = {
     [">>"] = "bit.rshift(A, B)",
     ["<<"] = "bit.lshift(A, B)",
     ["|"] = "bit.bor(A, B)",
@@ -70,11 +72,11 @@ syntax.BinaryOperatorFunctionTranslate = {
     ["~"] = "bit.bxor(A, B)",
 }
 
-syntax.PrefixOperatorFunctionTranslate = {
+syntax.PrefixOperatorFunctionTranslate --[[#: {[string] = string} ]]  = {
     ["~"] = "bit.bnot(A)",
 }
 
-syntax.PostfixOperatorFunctionTranslate = {
+syntax.PostfixOperatorFunctionTranslate --[[#: {[string] = string} ]]  = {
     ["++"] = "(A+1)",
     ["ÆØÅ"] = "(A)",
     ["ÆØÅÆ"] = "(A)",
@@ -87,15 +89,18 @@ do
         syntax.typesystem[k] = v
     end
 
-    syntax.typesystem.PrefixOperators = {
+    --[[# type syntax.typesystem.__name = "SyntaxTypesystem" ]]
+
+
+    syntax.typesystem.PrefixOperators --[[#: {[number] = string} ]]  = {
         "-", "#", "not", "~", "typeof", "$", "unique", "out"
     }
 
-    syntax.typesystem.PrimaryBinaryOperators = {
+    syntax.typesystem.PrimaryBinaryOperators --[[#: {[number] = string} ]]  = {
         ".",
     }
 
-    syntax.typesystem.BinaryOperators = {
+    syntax.typesystem.BinaryOperators --[[#: {[number] = {[number] = string}} ]]  = {
         {"or"},
         {"and"},
         {"extends"},

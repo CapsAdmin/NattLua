@@ -67,7 +67,7 @@ return function(META)
             end
         end
         
-        local parent = self:GetScope()
+        local parent = current_scope.parent or self:GetScope()
 
         if parent then
             scope:SetParent(parent)

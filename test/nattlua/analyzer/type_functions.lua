@@ -491,3 +491,13 @@ run[[
 
     type_assert(META.ExtraField, 1)
 ]]
+
+run[[
+    local type Entity = {
+        GetChildBones = (function(string, number): {[number] = number}),
+        GetBoneCount = (function(self): number),
+    }
+    
+    local e = _ as Entity
+    type_assert(e:GetBoneCount(), _ as number)
+]]

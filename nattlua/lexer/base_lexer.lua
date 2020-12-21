@@ -1,3 +1,7 @@
+--[[#  
+    local type { Token } = import_type("nattlua/lexer/token.nlua")
+]]
+
 local list = require("nattlua.other.list")
 
 return function(META--[[#: {
@@ -248,7 +252,7 @@ return function(META--[[#: {
         } end)
 
         function META:NewToken(type--[[#:string]], start--[[#:number]], stop--[[#:number]], is_whitespace--[[#:boolean]]) --[[#: Token ]]
-            local tk = get() --[[# as Token ]]
+            local tk = get()
 
             tk.type = type
             tk.has_whitespace = is_whitespace

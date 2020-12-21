@@ -200,7 +200,7 @@ do -- globals
 
 	type function pairs(tbl)
 
-		if tbl:IsLiteral() then
+		if tbl.Type == "table" and tbl:HasLiteralKeys() then
 			local i = 1
 			return function(key, val)
 				local kv = tbl:GetData()[i]
@@ -302,7 +302,7 @@ do -- globals
 						assert(code_data:Parse())
 
 						local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
-
+                        
 						analyzer.loaded = analyzer.loaded or {}
 						analyzer.loaded[path] = res
 
@@ -315,6 +315,30 @@ do -- globals
 		analyzer:Error(name.node, "unable to find module " .. str)
 
 		return types.Any
+	end
+
+    type function import_type(name: string)
+        if not name:IsLiteral() then
+            error("path must be a literal string")
+        end
+
+		local path = name:GetData()
+
+        if analyzer.loaded and analyzer.loaded[path] then
+            return analyzer.loaded[path]
+        end
+
+        local code_data = require("nattlua").File(path)
+
+        assert(code_data:Lex())
+        assert(code_data:Parse())
+
+        local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
+        
+        analyzer.loaded = analyzer.loaded or {}
+        analyzer.loaded[path] = res
+
+        return res
 	end
 
 	type function type_error(str: string, level: number | nil)
@@ -517,7 +541,7 @@ do -- globals
         return tostring(val:GetData())
     end
 
-    type function tonumber(val: string | number, base: number)
+    type function tonumber(val: string | number, base: number | nil)
         if not val:IsLiteral() or base and not base:IsLiteral() then
             return types.Union({types.Nil, types.Number()})
         end
@@ -915,10 +939,11 @@ do
         start_position = start_position and start_position:IsLiteral() and start_position:GetData() or 1
 
         if not str or not pattern then
-            return types.Union({types.String(), types.Nil})
+            return types.Tuple({types.Union({types.String(), types.Nil})}):SetRepeat(math.huge)
         end
     
         local res = {str:match(pattern, start_position)}
+        
         for i,v in ipairs(res) do
             if type(v) == "string" then
                 res[i] = types.String(v):MakeLiteral(true)

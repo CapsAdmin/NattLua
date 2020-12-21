@@ -576,7 +576,10 @@ do -- expression
                 local left = node
                 if not self:GetCurrentToken() then break end
 
-                if (self:IsCurrentValue(".") or self:IsCurrentValue(":")) and self:IsType("letter", 1) then
+                if self:IsCurrentValue(":") and (not self:IsType("letter", 1) and not self:IsCallExpression(nil, 2)) then
+                    node.tokens[":"] = self:ReadValue(":")
+                    node.explicit_type = self:ReadTypeExpression()
+                elseif (self:IsCurrentValue(".") or self:IsCurrentValue(":")) and self:IsType("letter", 1) then
                     if self:IsCurrentValue(".") or self:IsCallExpression(no_ambiguous_calls, 2) then
                         node = self:Expression("binary_operator")
                         node.value = self:ReadTokenLoose()

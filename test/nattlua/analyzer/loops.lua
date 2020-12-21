@@ -17,7 +17,7 @@ test("pairs on literal table", function()
     ]]
 end)
 
-test("pairs on non literal table", function()
+pending("pairs on non literal table", function()
     run[[
         local tbl = {1,2,3} as {[number] = number}
         local key_sum = 0
@@ -37,7 +37,7 @@ test("pairs on non literal table", function()
 end)
 
 
-test("pairs on non literal table", function()
+pending("pairs on non literal table", function()
     run[[
         local tbl:{[number] = number} = {1,2,3}
         
@@ -114,7 +114,7 @@ run[[
     end
 ]]
 
-run[[
+pending[[
     local tbl: {
         foo = nil | string,
         bar = nil | number,

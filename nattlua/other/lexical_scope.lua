@@ -1,6 +1,5 @@
-
-
 local MutationTracker = require("nattlua.analyzer.mutation_tracker")
+local types = require("nattlua.types.types")
 
 local table_insert = table.insert
 local META = {}
@@ -185,7 +184,6 @@ function META:Copy(upvalues)
 end
 
 function META:Merge(scope)
-    local types = require("nattlua.types.types")
     for i, a in ipairs(self.upvalues.runtime.list) do
         local b = scope.upvalues.runtime.list[i]
         if a and b and a.key == b.key then
@@ -227,8 +225,6 @@ function META:GetRoot()
     end
     return parent
 end
-
-local types = require("nattlua.types.types")
 
 function META:FindScopeFromTestCondition(obj)
     local scope = self

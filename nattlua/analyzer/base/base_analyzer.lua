@@ -50,27 +50,34 @@ return function(META)
             if not self.deferred_calls then
                 return
             end
-
-            self:FireEvent("analyze_unreachable_code_start")
+            local total = #self.deferred_calls
+            
+            self:FireEvent("analyze_unreachable_code_start", total)
 
             self.processing_deferred_calls = true 
+            
+            local called_count = 0
 
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and v[1].explicit_arguments then
+                    self:FireEvent("analyze_unreachable_function", v[1])
                     call(self, table.unpack(v))
+                    called_count = called_count + 1
                 end
             end
 
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and not v[1].explicit_arguments then
+                    self:FireEvent("analyze_unreachable_function", v[1])
                     call(self, table.unpack(v))
+                    called_count = called_count + 1
                 end
             end
 
             self.processing_deferred_calls = false
             self.deferred_calls = nil
 
-            self:FireEvent("analyze_unreachable_code_stop")
+            self:FireEvent("analyze_unreachable_code_stop", called_count, total)
         end
     end
 

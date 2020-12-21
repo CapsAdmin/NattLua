@@ -46,7 +46,10 @@ return function(META)
                     if key.value.value == "..." then
                         args[i] = self:NewType(key, "...")
                     elseif key.value.value == "self" then
-                        args[i] = self.current_table
+                        args[i] = self.current_tables[#self.current_tables]
+                        if not args[i] then
+                            self:Error(key, "cannot find value self")
+                        end
                     elseif not node.statements then
                         args[i] = self:AnalyzeExpression(key, "typesystem")
                     else 
@@ -61,7 +64,8 @@ return function(META)
         end
     
         if node.self_call and node.expression then
-            local val = self:FindLocalValue(node.expression.left, "runtime")
+
+            local val = self:AnalyzeExpression(node.expression.left, "runtime")
             if val then
                 if val.contract then
                     table.insert(args, 1, val)
@@ -97,10 +101,11 @@ return function(META)
                 end
             self:PopScope()
         end
+
         
         args = types.Tuple(args)
         ret = types.Tuple(ret)
-
+                
         local func
         if env == "typesystem" then
             if node.statements and (node.kind == "type_function" or node.kind == "local_type_function") then

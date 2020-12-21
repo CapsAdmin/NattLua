@@ -140,12 +140,20 @@ function META:CheckArguments(arguments)
         return true
     end
 
-    for i = 1, math.min(A:GetLength(), B:GetLength()) do
-        local a = A:Get(i)
-        local b = B:Get(i)
+    for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
+        local a, a_err = A:Get(i)
+        local b, b_err = B:Get(i)
+        
+        if not a then
+            if b and b.Type == "any" then
+                a = types.Any()
+            else
+                return a, a_err
+            end
+        end
 
         if not b then
-            break
+            return b, b_err
         end
 
         if b.Type == "tuple" then

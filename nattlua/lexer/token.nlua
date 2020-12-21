@@ -1,0 +1,19 @@
+local type Token = {
+    __name = "Token",
+    type = string,
+    value = string,
+    start = number,
+    stop = number,
+    has_whitespace = boolean,
+    whitespace = nil | {
+        [number] = {
+            type = string,
+            start = number,
+            stop = number,
+        }
+    },
+}
+
+return {
+    Token = Token
+}

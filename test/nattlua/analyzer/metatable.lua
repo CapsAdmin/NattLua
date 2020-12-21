@@ -3,7 +3,7 @@ local run = T.RunCode
 
 test("index function", function()
     local analyzer = run[[
-        local t = setmetatable({}, {__index = function() return 1 end})
+        local t = setmetatable({}, {__index = function(self, key) return 1 end})
         local a = t.lol
     ]]
 

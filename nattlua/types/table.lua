@@ -485,6 +485,27 @@ function META:pairs()
     end
 end
 
+function META:HasLiteralKeys()
+    if self.suppress then
+        return true
+    end
+
+    for _, v in ipairs(self.data) do
+        if v.val ~= self and v.key ~= self and v.val.Type ~= "function" and v.key.Type ~= "function" then
+
+            self.suppress = true
+            local ok, reason = v.key:IsLiteral()
+            self.suppress = false
+
+            if not ok then
+                return types.errors.other("the key " .. tostring(v.key) .. " is not a literal because " .. tostring(reason))
+            end
+        end
+    end
+
+    return true
+end
+
 function META:IsLiteral()
     if self.suppress then
         return true

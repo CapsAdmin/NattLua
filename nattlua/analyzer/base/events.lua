@@ -21,7 +21,7 @@ return function(META)
             end
 
             if buffer:find("\n.") then
-                buffer = buffer:gsub("\n%s+",  "\n" .. ("    "):rep(t-1))
+                --buffer = buffer:gsub("\n%s+",  "\n" .. ("    "):rep(t-1))
                 buffer = buffer:gsub("\n", "\n" .. ("    "):rep(t))
             end
 
@@ -42,7 +42,12 @@ return function(META)
             elseif what == "newindex" then
                 local obj, key, val = ...
                 tab()
-                write(tostring(obj), "[", (tostring(key)), "] = ", tostring(val))
+                if obj.upvalue then
+                    write(obj.upvalue.key)
+                else
+                    write(obj)
+                end
+                write("[", (tostring(key)), "] = ", tostring(val))
                 write("\n")
             elseif what == "mutate_upvalue" then
                 local key, val = ...
@@ -217,13 +222,22 @@ return function(META)
             elseif what == "merge_iteration_scopes" then
                 tab()
                 write("-- merged scope result: \n")
+            elseif what == "analyze_unreachable_function" then
+                local statement = ...
+                write("-- analyzing unreachable function ", tostring(statement.node))                
+                write("\n")
             elseif what == "analyze_unreachable_code_start" then
+                local total = ...
                 tab()
                 write("-- BEGIN ANALYZING UNREACHABLE CODE")                
                 write("\n")
+                write("-- going to analyze ", total, " functions")
+                write("\n")
             elseif what == "analyze_unreachable_code_stop" then
+                local count, total = ...
                 tab()
                 write("-- STOP ANALYZING UNREACHABLE CODE")
+                write("-- analyzed ", count, "/", total, " functions")
                 write("\n")
             else
                 tab()

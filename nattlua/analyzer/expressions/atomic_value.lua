@@ -65,13 +65,14 @@ return function(META)
         local standalone_letter = type == "letter" and node.standalone_letter
 
         if env == "typesystem" and standalone_letter and not node.force_upvalue then
-            if self.current_table then
+            local current_table = self.current_tables and self.current_tables[#self.current_tables]
+            if current_table then
                 if value == "self" then
-                    return self.current_table
+                    return current_table
                 end
 
                 if self.left_assigned and self.left_assigned.kind == "value" and self.left_assigned.value.value == value and not types.IsPrimitiveType(value) then
-                    return self.current_table
+                    return current_table
                 end
             end
 

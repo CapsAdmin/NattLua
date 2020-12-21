@@ -382,7 +382,7 @@ return function(META)
                 local left = node
                 if not self:GetCurrentToken() then break end
 
-                if (self:IsCurrentValue(".") or self:IsCurrentValue(":")) and self:IsType("letter", 1) then
+                if self:IsCurrentValue(".") or self:IsCurrentValue(":") then
                     if self:IsCurrentValue(".") or self:IsCallExpression(true, 2) then
                         node = self:Expression("binary_operator")
                         node.value = self:ReadTokenLoose()

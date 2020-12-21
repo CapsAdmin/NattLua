@@ -1,10 +1,14 @@
+--[[#  
+    local type { Token } = import_type("nattlua/lexer/token.nlua")
+]]
+
 local helpers = {}
 
-function helpers.QuoteToken(str--[[#: string]])
+function helpers.QuoteToken(str--[[#: string]]) --[[#: string]]
 	return "❲" .. str .. "❳"
 end
 
-function helpers.QuoteTokens(var--[[#: {[number] = string}]])
+function helpers.QuoteTokens(var--[[#: {[number] = string}]]) --[[#: string]]
 	local str = ""
 	for i, v in ipairs(var) do
 		str = str .. helpers.QuoteToken(v)
@@ -18,7 +22,7 @@ function helpers.QuoteTokens(var--[[#: {[number] = string}]])
 	return str
 end
 
-function helpers.LinePositionToSubPosition(code --[[#: string]], line --[[#: number]], character --[[#: number]])
+function helpers.LinePositionToSubPosition(code --[[#: string]], line --[[#: number]], character --[[#: number]]) --[[#: number]]
 	local line_pos = 1
 	for i = 1, #code do
 		local c = code:sub(i, i)
@@ -113,7 +117,7 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 end
 
 do
-	local function get_lines_before(code--[[#:string]], pos--[[#:number]], lines--[[#:number]])
+	local function get_lines_before(code--[[#:string]], pos--[[#:number]], lines--[[#:number]]) --[[#: number, number, number]]
 		local line = 1
 		local first_line_pos = 1
 
@@ -135,7 +139,7 @@ do
 		return 1, first_line_pos, line
 	end
 
-	local function get_lines_after(code--[[#:string]], pos--[[#:number]], lines--[[#:number]])
+	local function get_lines_after(code--[[#:string]], pos--[[#:number]], lines--[[#:number]]) --[[#: number, number, number]]
 		local line = 1
 		local first_line_pos = 1
 

@@ -732,7 +732,7 @@ R[[
 
     local c = b
 ]]
-R[[
+pending[[
     for k,v in next, {1,2,3} do
         type_assert(_ as 1 | 2 | 3, _ as 1 | 2 | 3)
     end
@@ -839,7 +839,7 @@ R[[
     test(false, true)
     test(1, "")
 
-    local type function check(func: any)
+    local type function check(func: any, other)
         local a = func:GetArguments():Get(1)     -- this is being crawled for some reason
         local b = types.Union({
             types.Number(1),

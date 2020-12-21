@@ -1,8 +1,5 @@
---[[# 
-    local type Token = {
-        value = string,
-        type = string,
-    }
+--[[#  
+    local type { Token } = import_type("nattlua/lexer/token.nlua")
 ]]
 
 return function(syntax--[[#: {
@@ -104,7 +101,9 @@ return function(syntax--[[#: {
 
         for k, v in pairs(syntax.BinaryOperatorFunctionTranslate or {}) do
             local a,b,c = v:match("(.-)A(.-)B(.*)")
-            lookup[k] = {" " .. a, b, c .. " "}
+            if a and b and c then
+                lookup[k] = {" " .. a, b, c .. " "}
+            end
         end
 
         function syntax.GetFunctionForBinaryOperator(token --[[#: Token]])
@@ -117,7 +116,11 @@ return function(syntax--[[#: {
 
         for k, v in pairs(syntax.PrefixOperatorFunctionTranslate or {}) do
             local a, b = v:match("^(.-)A(.-)$")
-            lookup[k] = {" " .. a, b .. " "}
+            if a then -- TODO
+                if b then -- TODO
+                    lookup[k] = {" " .. a, b .. " "}
+                end
+            end
         end
 
         function syntax.GetFunctionForPrefixOperator(token --[[#: Token]])
@@ -131,7 +134,9 @@ return function(syntax--[[#: {
 
         for k, v in pairs(syntax.PostfixOperatorFunctionTranslate or {}) do
             local a, b = v:match("^(.-)A(.-)$")
-            lookup[k] = {" " .. a, b .. " "}
+            if a and b then
+                lookup[k] = {" " .. a, b .. " "}
+            end
         end
 
         function syntax.GetFunctionForPostfixOperator(token --[[#: Token]])
@@ -207,15 +212,6 @@ return function(syntax--[[#: {
             end
 
             function syntax.GetBinaryOperatorInfo(tk --[[#: Token]])
-                --[[#
-                    print("what")
-                    print(tk)
-                    print(tk.value)
-                    print(Token)
-                    print(lookup)
-                    print(lookup[tk.value])
-                ]]
-
                 return lookup[tk.value]
             end
         end

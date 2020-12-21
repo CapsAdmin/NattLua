@@ -6,7 +6,9 @@ return function(META)
         if env == "runtime" then
             tbl:SetReferenceId(tostring(tbl.data))
         end
-        self.current_table = tbl
+        self.current_tables = self.current_tables or {}
+        table.insert(self.current_tables, tbl)
+
         local tree = node
         for i, node in ipairs(node.children) do
             if node.kind == "table_key_value" then
@@ -49,7 +51,7 @@ return function(META)
                 end
             end
         end
-        self.current_table = nil
+        table.remove(self.current_tables)
         return tbl
     end
 end

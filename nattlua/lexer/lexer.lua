@@ -1,19 +1,5 @@
---[[#
-
-    type Token = {
-        type = string,
-        start = number,
-        stop = number,
-        has_whitespace = boolean,
-        whitespace = nil | {
-            [number] = {
-                type = string,
-                start = number,
-                stop = number,
-            }
-        },
-    }
-
+--[[#  
+    local type { Token } = import_type("nattlua/lexer/token.nlua")
 ]]
 
 local syntax = require("nattlua.syntax.syntax")
@@ -29,7 +15,6 @@ META.__index = META
     type META.string_escape_Double = boolean
     type META.comment_escape = string
     type META.potential_lua54_division_operator = boolean
-
 ]]
 
 META.syntax = syntax
@@ -404,7 +389,7 @@ do
             if self[key] then
 
                 if c == B"z" and not self:IsCurrentValue(quote) then
-                    self:ReadSpace(self)
+                    self:ReadSpace()
                 end
 
                 self[key] = false
