@@ -5,6 +5,7 @@
 local list = require("nattlua.other.list")
 
 return function(META--[[#: {
+    __name = "BaseLexer",
     syntax = {
         IsDuringLetter = (function(number): boolean),        
         IsLetter = (function(number): boolean),
@@ -12,21 +13,17 @@ return function(META--[[#: {
         GetSymbols = (function(): {[number] = string}),
         [string] = any,
     },
-    [string] = any,
-}]])
-
-    --[[#
-        type META.code = string
-        type META.i = number
-        type META.code_ptr_ref = string
-        type META.code_ptr = {
+    code = string,
+    i = number,
+    code_ptr_ref = string,
+    code_ptr = {
             [number] = number,
             __meta = self,
             __add = (function(self, number): self),
             __sub = (function(self, number): self)
-        }
-    ]]
-
+    },
+    [string] = any,
+}]])
     local ok, table_new = pcall(require, "table.new")
     if not ok then
         table_new = function() return {} end
@@ -91,7 +88,7 @@ return function(META--[[#: {
         return self
     end
 
-    local function remove_bom_header(str --[[#: string]])
+    local function remove_bom_header(str --[[#: string]]) --[[#: string]]
         if str:sub(1, 2) == "\xFE\xFF" then
             return str:sub(3)
         elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
@@ -335,7 +332,7 @@ return function(META--[[#: {
         end
     end
 
-    META.ReadSymbol = META.BuildReadFunction(META.syntax.GetSymbols())
+    META.ReadSymbol = META.BuildReadFunction(META.syntax.GetSymbols(), false)
 
     function META:ReadShebang()
         if self.i == 1 and self:IsCurrentValue("#") then
@@ -430,9 +427,12 @@ return function(META--[[#: {
             end
         end
 
-        local tokens = list.fromtable(non_whitespace)
+        local tokens = list.fromtable(non_whitespace) --[[# as {[number] = Token} ]]
+        local last = tokens[#tokens]
 
-        tokens[#tokens].value = ""
+        if last then
+            last.value = ""
+        end
 
         return tokens
     end

@@ -1,5 +1,5 @@
 -- DISABLE_CODE_RESULT
-local type { Entity, ClientsideModel, CompileString, isentity, istable, isstring } = loadfile("nattlua/runtime/glua.nlua")()
+local type { Entity, ClientsideModel, CompileString, isentity, istable, isstring } = import_type("nattlua/runtime/glua.nlua")
 local type CLIENT = false
 local type SERVER = true
 

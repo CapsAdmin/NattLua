@@ -3,23 +3,26 @@ local types = require("nattlua.types.types")
 
 return function(META)
     function META:LookupValue(node, env)
-        local obj, err
+        local obj
+        local errors = {}
 
         if env == "typesystem" then
             obj, err = self:GetLocalOrEnvironmentValue(node, env)
             
             if not obj then
+                table.insert(errors, err)
                 obj, err = self:GetLocalOrEnvironmentValue(node, "runtime")
             end
 
             if not obj then
-                self:Error(node, "cannot find value " .. node.value.value)
-
+                table.insert(errors, err)
+                self:Error(node, table.concat(errors))
                 return types.Nil:Copy()
             end
         else
             obj, err = self:GetLocalOrEnvironmentValue(node, env)
             if not obj then
+                table.insert(errors, err)
                 obj, err = self:GetLocalOrEnvironmentValue(node, "typesystem")
             end
 

@@ -57,10 +57,10 @@ return function(META)
         return self.scope_stack
     end
 
-    function META:CloneCurrentScope(upvalues)
+    function META:CloneCurrentScope()
         local current_scope = self:GetScope()
         self:PopScope()
-        local scope = current_scope:Copy(upvalues)
+        local scope = current_scope:Copy(true)
         for env, upvalues in pairs(scope.upvalues) do
             for _, upvalue in ipairs(upvalues.list) do
                 self:MutateValue(upvalue, upvalue.key, upvalue:GetValue(), env)

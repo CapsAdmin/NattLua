@@ -15,14 +15,25 @@ return function(META)
                 local existing_type
 
                 if env == "runtime" then
-                    local obj = self:AnalyzeExpression(key.left, "typesystem")
-                    local key = self:AnalyzeExpression(key.right, "typesystem")
-                    existing_type = obj:Get(key)
+                    
+                    self.SuppressDiagnostics = true
+                    existing_type = self:AnalyzeExpression(key, "typesystem")
+                    self.SuppressDiagnostics = false
+
+                    if existing_type.Type == "symbol" and existing_type:GetData() == nil then
+                        existing_type = nil
+                    end
                 end
 
                 local obj = self:AnalyzeExpression(key.left, env)
                 local key = self:AnalyzeExpression(key.right, env)
-                local val = existing_type or self:AnalyzeFunctionExpression(statement, env)
+                local val = self:AnalyzeFunctionExpression(statement, env)
+
+                if existing_type and existing_type.Type == "function" then
+                    val:SetArguments(existing_type:GetArguments())
+                    val.data.ret = existing_type:GetReturnTypes() -- TODO
+                end
+                
                 self:NewIndexOperator(statement, obj, key, val, env)
             else
                 local existing_type = env == "runtime" and self:GetLocalOrEnvironmentValue(key, "typesystem")

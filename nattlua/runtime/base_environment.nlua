@@ -237,7 +237,7 @@ do -- globals
 		end
 
         if tbl.Type == "table" and not tbl:IsNumericallyIndexed() then
-            analyzer:Error(tbl.node, "input table is not numerically indexed")
+            analyzer:Warning(analyzer.current_expression, tostring(tbl) .. " is not numerically indexed")
 
             local done = false
             return function()
@@ -278,6 +278,10 @@ do -- globals
         
         if str == "jit.util" then
 			return base_environment:Get("jit", "typesystem"):Get("util")
+		end
+
+        if str == "jit.opt" then
+			return base_environment:Get("jit", "typesystem"):Get("opt")
 		end
 
 		if analyzer:GetLocalOrEnvironmentValue(str, "typesystem") then
@@ -623,7 +627,7 @@ type ffi = {
 type jit = {
 	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
 	arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
-	attach = (function(empty_function): nil),
+	attach = (function(empty_function, string): nil),
 	flush = (function(): nil),
 	opt = {
 		start = (function(...): nil)
@@ -635,6 +639,10 @@ type jit = {
     off = function(empty_function | true, boolean | nil),
     flush = function(empty_function | true, boolean | nil),
     status = (function(): boolean, ...:string),
+    opt = {
+        start = (function(...string): nil),
+        stop = (function(): nil),
+    },
     util = {
         funcinfo = function(empty_function, position: number | nil): {
             linedefined = number, -- as for debug.getinfo
@@ -962,7 +970,7 @@ do
         no_pattern = no_pattern and no_pattern:IsLiteral() and no_pattern:GetData() or false
 
         if not str or not pattern then
-            return types.Union({types.Union({types.Number(), types.Nil}), types.Union({types.Number(), types.Nil}), types.Union({types.String(), types.Nil})})
+            return types.Tuple({types.Union({types.Number(), types.Nil}), types.Union({types.Number(), types.Nil}), types.Union({types.String(), types.Nil})})
         end
     
         local start, stop, found = str:find(pattern, start_position, no_pattern)

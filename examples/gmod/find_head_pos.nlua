@@ -1,5 +1,5 @@
 
-local type { Entity, Vector, Angle } = loadfile("nattlua/runtime/glua.nlua")()
+local type { Entity, Vector, Angle } = import_type("nattlua/runtime/glua.nlua")
 
 local type HeadPos = {
     findheadpos_head_bone = number | nil,

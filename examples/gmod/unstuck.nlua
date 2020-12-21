@@ -1,4 +1,4 @@
-local { Vector, Angle, Player } = loadfile("nattlua/runtime/glua.nlua")()
+local { Vector, Angle, Player } = import_type("nattlua/runtime/glua.nlua")
 
 local ply = nil
 

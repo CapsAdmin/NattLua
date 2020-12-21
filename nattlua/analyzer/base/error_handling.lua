@@ -28,6 +28,9 @@ return function(META)
     end
 
     function META:ReportDiagnostic(node, msg --[[#: string ]], severity --[[#: "warning" | "error" ]])
+
+        if self.SuppressDiagnostics then return end
+        
         if not node then
             io.write("reporting diagnostic without node, defaulting to current expression or statement\n")
             io.write(debug.traceback(), "\n")

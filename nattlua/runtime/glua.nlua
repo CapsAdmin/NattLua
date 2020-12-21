@@ -257,7 +257,7 @@ function string.GetPathFromFilename( path )
 	return path:match( "^(.*[/\\])[^/\\]-$" ) or ""
 end
 
-function string.ToTable( str: string )
+function string.ToTable( str )
 	local tbl = {}
 
 	for i = 1, string.len( str ) do

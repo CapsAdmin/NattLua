@@ -1,4 +1,4 @@
-loadfile("nattlua/runtime/glua.nlua")()
+import_type("nattlua/runtime/glua.nlua")
 
 local aowl = {}
 aowl.commands = {}

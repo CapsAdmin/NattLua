@@ -38,6 +38,10 @@ return function(META)
         local function call(self, obj, arguments, node)
             -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
             arguments = obj:GetArguments():Copy()
+            -- arguments should be a contract
+            for i,v in ipairs(arguments:GetData()) do
+                v.contract = v
+            end
             self:Assert(node, self:Call(obj, arguments, node))
         end
 

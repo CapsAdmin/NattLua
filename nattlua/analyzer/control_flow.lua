@@ -215,7 +215,7 @@ return function(META)
             current_scope:MakeUncertain(exited_scope:IsUncertain())
             
             if exited_scope:IsUncertain() then
-                local copy = self:CloneCurrentScope(true)
+                local copy = self:CloneCurrentScope()
                 copy:SetTestCondition(exited_scope:GetTestCondition())
             end
         end

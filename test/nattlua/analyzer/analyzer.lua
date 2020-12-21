@@ -251,13 +251,13 @@ R[[
 R([[
     local a: UNKNOWN_GLOBAL = true
 ]],
-    "cannot find value UNKNOWN_GLOBAL"
+    "does not contain.-UNKNOWN_GLOBAL"
 )
 
 R([[
     unknown_type_function<|1,2,3|>
 ]],
-    "cannot find value unknown_type_function"
+    "does not contain.-unknown_type_function"
 )
 
 R([[
@@ -506,7 +506,7 @@ R[[
     local lib = {}
 
     function lib.myfunc(a, b)
-
+        return true
     end
 
     type_assert(lib.myfunc, _ as function(number, string): boolean)

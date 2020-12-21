@@ -501,3 +501,14 @@ run[[
     local e = _ as Entity
     type_assert(e:GetBoneCount(), _ as number)
 ]]
+
+run[[
+    local lol = {}
+    type lol.rofl = function(number, string): string
+        
+    function lol.rofl(a, b)
+        type_assert(a, _ as number)
+        type_assert(b, _ as string)
+        return ""
+    end
+]]

@@ -5,7 +5,7 @@ for key, func in pairs(table) do
     list[key] = func
 end
 
-function list.new(...)
+function list.new(...--[[#: any]])
     return setmetatable({...}, list)
 end
 
