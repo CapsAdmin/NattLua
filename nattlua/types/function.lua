@@ -122,11 +122,6 @@ function META:CheckArguments(arguments)
     end
 
     if A:GetLength() == math.huge and B:GetLength() == math.huge then
-   --     local ok, err = A.Remainder:IsSubsetOf(B.Remainder)
-     --   if not ok then
-       --     return ok, err
-        --end
-
         for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
             local a = A:Get(i)
             local b = B:Get(i)

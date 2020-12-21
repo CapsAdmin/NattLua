@@ -343,16 +343,22 @@ return function(META)
             
             -- if this function has an explicit return type
             local return_contract = obj:HasExplicitReturnTypes() and 
-                obj:GetReturnTypes() or 
-                    function_node.return_types and 
-                    types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
+                obj:GetReturnTypes()
+                
+            if not return_contract and function_node.return_types then
+                self:CreateAndPushFunctionScope(function_node, nil, {
+                    type = "function_return_type"
+                })        
+                    return_contract = types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
+                self:PopScope()
+            end
                     
             if return_contract then
                 check_return_result(self, return_result, return_contract) 
             else
                 obj:GetReturnTypes():Merge(return_result)
 
-                if not obj.arguments_inferred then
+                if not obj.arguments_inferred and function_node.identifiers then
                     for i, obj in ipairs(obj:GetArguments():GetData()) do
                         if function_node.self_call then
                             -- we don't count the actual self argument
@@ -360,7 +366,7 @@ return function(META)
                             if node and not node.explicit_type then
                                 self:Warning(node, "argument is untyped")
                             end
-                        elseif not function_node.identifiers[i].explicit_type then
+                        elseif function_node.identifiers[i] and not function_node.identifiers[i].explicit_type then
                             self:Warning(function_node.identifiers[i], "argument is untyped")
                         end
                     end
