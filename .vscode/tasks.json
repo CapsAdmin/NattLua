@@ -6,7 +6,7 @@
         {
             "label": "onsave",
             "type": "shell",
-            "command": "cd ${workspaceFolder} && luajit -jp=Fla -e \"assert(loadfile('.vscode/on_editor_save.lua'))('${file}','${workspaceFolder}')\""
+            "command": "cd ${workspaceFolder} && luajit -e \"assert(loadfile('.vscode/on_editor_save.lua'))('${file}','${workspaceFolder}')\""
         }
     ]
 }
