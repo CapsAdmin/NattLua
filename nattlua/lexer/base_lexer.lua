@@ -239,7 +239,7 @@ return function(META--[[#: {
         return assert(load(kernel))()
     end
 
-    function META:Error(msg--[[#:string]], start--[[#:number]], stop--[[#:number]])
+    function META:Error(msg--[[#:string]], start--[[#:number | nil]], stop--[[#:number | nil]])
         if self.OnError then
             self:OnError(self.code, self.name, msg, start or self.i, stop or self.i)
         end
@@ -258,7 +258,7 @@ return function(META--[[#: {
             local tk = get() --[[# as Token ]]
 
             tk.type = type
-            tk.has_whitespace = is_whitespace
+            tk.is_whitespace = is_whitespace
             tk.start = start
             tk.stop = stop
 
@@ -416,9 +416,7 @@ return function(META--[[#: {
 
         for _, token in ipairs(tokens) do
             if token.type ~= "discard" then
-                if token.has_whitespace then
-                    token.whitespace = false
-
+                if token.is_whitespace then
                     whitespace_buffer[whitespace_buffer_i] = token
                     whitespace_buffer_i = whitespace_buffer_i + 1
                 else
