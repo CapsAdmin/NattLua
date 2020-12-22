@@ -10,26 +10,38 @@ function META:Sort()
 end
 
 function META:GetSignature()
-    local s = {}
-
     if self.sort_me then
         table.sort(self:GetTypes(), sort)
         self.sort_me = false
     end
 
+    if self.suppress then
+        return "*"
+    end
+
+    local s = {}
+
+    self.suppress = true
     for i, v in ipairs(self:GetTypes()) do
         s[i] = v:GetSignature()
     end
+    self.suppress = false
 
     return table.concat(s)
 end
 
 function META:__tostring()
+    if self.suppress then
+        return "*self*"
+    end
+
     local s = {}
 
+    self.suppress = true
     for _, v in ipairs(self:GetTypes()) do
         table.insert(s, tostring(v))
     end
+    self.suppress = false
 
     return table.concat(s, " | ")
 end
@@ -339,7 +351,7 @@ end
 
 function META:IsLiteral()
     if self.explicit_not_literal then
-        return false, "explicitly not literal"
+        return false
     end
 
     for _, v in ipairs(self:GetTypes()) do
