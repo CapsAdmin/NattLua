@@ -59,7 +59,7 @@ test("indirect only works for numeric keys", function()
             [BLUE] = 3,
             [GREEN] = 4,
         }
-    ]], "does not contain string")
+    ]], "has no field string")
 end)
 
 test("indirect works array-records", function()
@@ -75,14 +75,14 @@ end)
 
 test("{[number]: any}", function()
     check(run[[local a: {[number] = any} = {[1] = 1}]], "{ number ⊃ number(1) = any ⊃ number(1) }")
-    run([[local a: {[number] = any} = {foo = 1}]], [[does not contain "foo"]])
+    run([[local a: {[number] = any} = {foo = 1}]], [[has no field "foo"]])
 end)
 
 
 test("{[1 .. inf]: any}", function()
     check(run[[local a: {[1 .. inf] = any} = {[1234] = 1}]], "{ 1..inf ⊃ 1234 = any ⊃ number(1) }")
 
-    run([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[does not contain %-1234]])
+    run([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[has no field %-1234]])
 end)
 
 test("traditional array", function()
@@ -100,7 +100,7 @@ test("traditional array", function()
         end
 
         local list: Array<|number, 3|> = {1, 2, 3, 4}
-    ]], "does not contain 4")
+    ]], "has no field 4")
 end)
 
 run[[

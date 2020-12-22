@@ -251,13 +251,13 @@ R[[
 R([[
     local a: UNKNOWN_GLOBAL = true
 ]],
-    "does not contain.-UNKNOWN_GLOBAL"
+    "has no field.-UNKNOWN_GLOBAL"
 )
 
 R([[
     unknown_type_function<|1,2,3|>
 ]],
-    "does not contain.-unknown_type_function"
+    "has no field.-unknown_type_function"
 )
 
 R([[

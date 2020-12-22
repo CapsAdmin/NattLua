@@ -5,7 +5,7 @@ return function(META)
         if obj.Type == "union" then
             -- local x: nil | {foo = true}
             -- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
-            -- log(x.foo) << no error, because now x does not contain nil
+            -- log(x.foo) << no error, because now x has no field nil
             
             local new_union = types.Union()
             local truthy_union = types.Union()

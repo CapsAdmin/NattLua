@@ -11,7 +11,7 @@ types.errors = {
         return false, msg
     end,
     missing = function(a, b, reason)
-        local msg = tostring(a) .. " does not contain " .. tostring(b) .. " because " .. reason
+        local msg = tostring(a) .. " has no field " .. tostring(b) .. " because " .. reason
         return false, msg
     end,
     other = function(msg)

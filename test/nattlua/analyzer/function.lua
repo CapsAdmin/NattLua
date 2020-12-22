@@ -288,7 +288,7 @@ test("calling a union", function()
     ]]
 end)
 
-test("calling a union that does not contain a function should error", function()
+test("calling a union that has no field a function should error", function()
     run([[
         local type test = (function(boolean, boolean): number) | (function(boolean): string) | number
 

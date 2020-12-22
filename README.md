@@ -385,7 +385,7 @@ The way I see types is that they are like a parent / children hiearchy. This can
 
 ## Subset
 If something is "sub" of /lower/inside/contains something larger. For example `1` is a subset of `number` because `number` contains all the numbers.
-`1` is also a subset of `1 | 2` since the union contains `1`. But `number` is not a subset of `1` since `1` does not contain numbers like 2, 4, 100, 1337, 90377, etc.
+`1` is also a subset of `1 | 2` since the union contains `1`. But `number` is not a subset of `1` since `1` has no field numbers like 2, 4, 100, 1337, 90377, etc.
 
 ```lua
     -- pseduo code
@@ -396,7 +396,7 @@ If something is "sub" of /lower/inside/contains something larger. For example `1
     local function is_subset(a, b)
         for _, val in ipairs(a) do
             if not table.contains(val, b) then
-                return false, "a is not a subset of b: type b does not contain " .. tostring(val)
+                return false, "a is not a subset of b: type b has no field " .. tostring(val)
             end
         end
         return true
