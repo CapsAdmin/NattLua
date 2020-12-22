@@ -42,7 +42,7 @@ return function(META)
         end
 
         if scope.uncertain_function_return or #scope:GetReturnTypes() == 0 then
-            local tup = types.Tuple({types.Nil:Copy()})
+            local tup = types.Tuple({types.Nil()})
             tup.node = statement
             union:AddType(tup)
         end
@@ -144,7 +144,7 @@ return function(META)
                     creation_scope = scope:GetRoot()
                 end
 
-                local val = (obj:GetContract() or obj):Get(key) or types.Nil:Copy()
+                local val = (obj:GetContract() or obj):Get(key) or types.Nil()
                 val.upvalue = obj.mutations[key]
                 val.upvalue_keyref = key
 

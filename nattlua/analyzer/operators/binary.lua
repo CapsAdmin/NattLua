@@ -198,19 +198,19 @@ return function(META)
         if l.Type == "number" and r.Type == "number" then
             if op == "~=" or op == "!=" then
                 if l.max and l.max.data then
-                    return (not (r.data >= l.data and r.data <= l.max.data)) and types.True or types.Union({types.True, types.False})
+                    return (not (r.data >= l.data and r.data <= l.max.data)) and types.True() or types.Boolean()
                 end
 
                 if r.max and r.max.data then
-                    return (not (l.data >= r.data and l.data <= r.max.data)) and types.True or types.Union({types.True, types.False})
+                    return (not (l.data >= r.data and l.data <= r.max.data)) and types.True() or types.Boolean()
                 end
             elseif op == "==" then
                 if l.max and l.max.data then
-                    return r.data >= l.data and r.data <= l.max.data and types.Union({types.True, types.False}) or types.False
+                    return r.data >= l.data and r.data <= l.max.data and types.Boolean() or types.False()
                 end
 
                 if r.max and r.max.data then
-                    return l.data >= r.data and l.data <= r.max.data and types.Union({types.True, types.False}) or types.False
+                    return l.data >= r.data and l.data <= r.max.data and types.Boolean() or types.False()
                 end
             end
         end
@@ -226,40 +226,40 @@ return function(META)
                 if l.Type == "table" then
                     if env == "runtime" then
                         if l.reference_id and r.reference_id then
-                            return l.reference_id == r.reference_id and types.True or types.False
+                            return l.reference_id == r.reference_id and types.True() or types.False()
                         end
                     end
 
                     if env == "typesystem" then
-                        return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True or types.False
+                        return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True() or types.False()
                     end 
 
-                    return types.Boolean
+                    return types.Boolean()
                 end
 
 
-                return l.data == r.data and types.True or types.False
+                return l.data == r.data and types.True() or types.False()
             end
 
             if l.Type == "table" and r.Type == "table" then
                 if env == "typesystem" then
-                    return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True or types.False
+                    return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True() or types.False()
                 end
             end
 
             if l.Type == "symbol" and r.Type == "symbol" and l:GetData() == nil and r:GetData() == nil then
-                return types.True
+                return types.True()
             end
 
             if l.Type ~= r.Type then
-                return types.False
+                return types.False()
             end
 
             if l == r then
-                return types.True
+                return types.True()
             end
 
-            return types.Boolean
+            return types.Boolean()
         elseif op == "~=" then
             local res = metatable_function(self, "__eq", l, r)
             if res then
@@ -269,22 +269,22 @@ return function(META)
                 return res
             end
             if l:IsLiteral() and r:IsLiteral() then
-                return l.data ~= r.data and types.True or types.False
+                return l.data ~= r.data and types.True() or types.False()
             end
 
-            if l == types.Nil and r == types.Nil then
-                return types.True
+            if l == types.Nil() and r == types.Nil() then
+                return types.True()
             end
 
             if l.Type ~= r.Type then
-                return types.True
+                return types.True()
             end
 
             if l == r then
-                return types.False
+                return types.False()
             end
 
-            return types.Boolean
+            return types.Boolean()
         elseif op == "<" then
             local res = metatable_function(self, "__lt", l, r)
             if res then
@@ -295,7 +295,7 @@ return function(META)
                 if l:IsLiteral() and r:IsLiteral() then
                     return types.Symbol(l.data < r.data)
                 end
-                return types.Boolean
+                return types.Boolean()
             end
 
             return types.errors.binary(op, l,r)
@@ -309,7 +309,7 @@ return function(META)
                 if l:IsLiteral() and r:IsLiteral() then
                     return types.Symbol(l.data <= r.data)
                 end
-                return types.Boolean
+                return types.Boolean()
             end
 
             return types.errors.binary(op, l,r)
@@ -324,7 +324,7 @@ return function(META)
                 if l:IsLiteral() and r:IsLiteral() then
                     return types.Symbol(l.data > r.data)
                 end
-                return types.Boolean
+                return types.Boolean()
             end
 
             return types.errors.binary(op, l,r)
@@ -340,7 +340,7 @@ return function(META)
                 if l:IsLiteral() and r:IsLiteral() then
                     return types.Symbol(l.data >= r.data)
                 end
-                return types.Boolean
+                return types.Boolean()
             end
 
             return types.errors.binary(op, l,r)
@@ -485,11 +485,11 @@ return function(META)
         end
 
         if left.Type == "tuple" and not left:Get(1) then
-            left = types.Nil
+            left = types.Nil()
         end
 
         if right.Type == "tuple" and not right:Get(1) then
-            right = types.Nil
+            right = types.Nil()
         end
 
         assert(left)

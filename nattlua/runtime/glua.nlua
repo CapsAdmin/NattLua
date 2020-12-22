@@ -202,7 +202,7 @@ end
 
 
 type function Entity:IsPlayer()
-    return types.Boolean
+    return types.Boolean()
 end
 
 local type function CompileString(code: string, name: string, should_throw: boolean | nil)

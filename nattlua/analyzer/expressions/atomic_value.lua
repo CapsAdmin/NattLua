@@ -17,7 +17,7 @@ return function(META)
             if not obj then
                 table.insert(errors, err)
                 self:Error(node, table.concat(errors))
-                return types.Nil:Copy()
+                return types.Nil()
             end
         else
             obj, err = self:GetLocalOrEnvironmentValue(node, env)

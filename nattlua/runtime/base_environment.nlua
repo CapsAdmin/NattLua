@@ -55,8 +55,8 @@ type function keysof(tbl: Table)
 end
 
 type function type_assert(what, type)
-	what = what or types.Nil
-	type = type or types.Nil
+	what = what or types.Nil()
+	type = type or types.Nil()
 
 	if what.Type == type.Type and what.data == type.data then
 		return
@@ -156,7 +156,7 @@ do -- globals
 						local kv = t:GetData()[i+1]
 						if kv then
 							if not k:IsLiteral() then
-								return type.Union({types.Nil, kv.key}), type.Union({types.Nil, kv.val})
+								return type.Union({types.Nil(), kv.key}), type.Union({types.Nil(), kv.val})
 							end
 
 							return kv.key, kv.val
@@ -442,9 +442,9 @@ do -- globals
         local err = analyzer.lua_error_thrown
         if err then
             analyzer.lua_error_thrown = nil
-            return types.False, err
+            return types.False(), err
         end
-		return types.True, res:Unpack()
+		return types.True(), res:Unpack()
     end
 
     type function type_pcall(func, ...)
@@ -547,7 +547,7 @@ do -- globals
 
     type function tonumber(val: string | number, base: number | nil)
         if not val:IsLiteral() or base and not base:IsLiteral() then
-            return types.Union({types.Nil, types.Number()})
+            return types.Union({types.Nil(), types.Number()})
         end
 
         if val:IsLiteral() then
@@ -599,7 +599,7 @@ do
             return flags
         end
 
-        flags:AddType(types.Nil)
+        flags:AddType(types.Nil())
 
         return flags
     end
@@ -947,7 +947,7 @@ do
         start_position = start_position and start_position:IsLiteral() and start_position:GetData() or 1
 
         if not str or not pattern then
-            return types.Tuple({types.Union({types.String(), types.Nil})}):SetRepeat(math.huge)
+            return types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(math.huge)
         end
     
         local res = {str:match(pattern, start_position)}
@@ -970,7 +970,7 @@ do
         no_pattern = no_pattern and no_pattern:IsLiteral() and no_pattern:GetData() or false
 
         if not str or not pattern then
-            return types.Tuple({types.Union({types.Number(), types.Nil}), types.Union({types.Number(), types.Nil}), types.Union({types.String(), types.Nil})})
+            return types.Tuple({types.Union({types.Number(), types.Nil()}), types.Union({types.Number(), types.Nil()}), types.Union({types.String(), types.Nil()})})
         end
     
         local start, stop, found = str:find(pattern, start_position, no_pattern)
@@ -1126,7 +1126,7 @@ do
 	type function coroutine.resume(thread, ...)
 		analyzer:Call(thread.co_func, types.Tuple({...}))
 
-		return types.Boolean
+		return types.Boolean()
 	end
 
 	type function coroutine.create(func, ...)

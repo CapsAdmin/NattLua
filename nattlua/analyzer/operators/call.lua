@@ -202,7 +202,7 @@ return function(META)
 
             if not arg then
                 if contract:IsFalsy() then
-                    arg = types.Nil:Copy()
+                    arg = types.Nil()
                     ok = true
                 else
                     ok, reason = types.errors.other("argument #" .. i .. " expected " .. tostring(contract) .. " got nil")

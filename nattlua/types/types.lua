@@ -362,10 +362,10 @@ function types.Initialize()
     types.Never = require("nattlua.types.never")
     types.Error = require("nattlua.types.error")
 
-    types.Nil = types.Symbol()
-    types.True = types.Symbol(true)
-    types.False = types.Symbol(false)
-    types.Boolean = types.Union({types.True, types.False}):MakeExplicitNotLiteral(true)
+    types.Nil = function() return types.Symbol() end
+    types.True = function() return types.Symbol(true) end
+    types.False = function() return types.Symbol(false) end
+    types.Boolean = function() return types.Union({types.True(), types.False()}):MakeExplicitNotLiteral(true) end
 end
 
 function types.View(obj)

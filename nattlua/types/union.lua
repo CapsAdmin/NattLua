@@ -115,9 +115,9 @@ function META:GetAtIndex(i)
                 end
             else
                 if val then
-                    val = types.Union({val, types.Nil:Copy()})
+                    val = types.Union({val, types.Nil()})
                 else
-                    val = types.Nil:Copy()
+                    val = types.Nil()
                 end
 
                 table.insert(errors, err)

@@ -179,7 +179,7 @@ function META.IsSubsetOf(A, B)
         local can_be_empty = true
         A.suppress = true
         for _, keyval in ipairs(B:GetData()) do
-            if not types.Nil:IsSubsetOf(keyval.val) then
+            if not types.Nil():IsSubsetOf(keyval.val) then
                 can_be_empty = false
                 break
             end
@@ -392,7 +392,7 @@ function META:Get(key)
     end
 
     if key.Type == "string" and not key:IsLiteral() then
-        local union = types.Union({types.Nil})
+        local union = types.Union({types.Nil()})
         for _, keyval in ipairs(self:GetData()) do
             if keyval.key.Type == "string" then
                 union:AddType(keyval.val)
@@ -402,7 +402,7 @@ function META:Get(key)
     end
 
     if key.Type == "number" and not key:IsLiteral() then
-        local union = types.Union({types.Nil})
+        local union = types.Union({types.Nil()})
         for _, keyval in ipairs(self:GetData()) do
             if keyval.key.Type == "number" then
                 union:AddType(keyval.val)

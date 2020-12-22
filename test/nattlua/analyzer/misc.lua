@@ -843,8 +843,8 @@ R[[
         local a = func:GetArguments():Get(1)     -- this is being crawled for some reason
         local b = types.Union({
             types.Number(1),
-            types.False,
-            types.True
+            types.False(),
+            types.True()
         })
 
         assert(b:IsSubsetOf(a))

@@ -35,7 +35,7 @@ function META:NewType(node, type, data, literal)
         if literal then
             obj = types.Symbol(data)
         else
-            obj = types.Boolean:Copy()
+            obj = types.Boolean()
         end
     elseif type == "nil" then
         obj = self:Assert(node, types.Symbol(nil))

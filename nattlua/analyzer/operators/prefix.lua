@@ -40,7 +40,7 @@ return function(META)
         local op = node.value.value
 
         if l.Type == "tuple" then 
-            l = l:Get(1) or types.Nil
+            l = l:Get(1) or types.Nil()
         end
 
         if l.Type == "union" then

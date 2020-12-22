@@ -177,7 +177,7 @@ return function(META)
             end
 
             if res[1] == nil then
-                res[1] = types.Nil:Copy()
+                res[1] = types.Nil()
             end
 
             return table.unpack(res)

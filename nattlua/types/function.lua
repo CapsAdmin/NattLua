@@ -158,8 +158,8 @@ function META:CheckArguments(arguments)
             end
         end
         
-        a = a or types.Nil
-        b = b or types.Nil
+        a = a or types.Nil()
+        b = b or types.Nil()
 
         local ok, reason = a:IsSubsetOf(b)
 
