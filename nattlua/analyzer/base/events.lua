@@ -222,9 +222,13 @@ return function(META)
             elseif what == "merge_iteration_scopes" then
                 tab()
                 write("-- merged scope result: \n")
-            elseif what == "analyze_unreachable_function" then
-                local statement = ...
-                write("-- analyzing unreachable function ", tostring(statement.node))                
+            elseif what == "analyze_unreachable_function_start" then
+                local statement, count, total = ...
+                write("-- START analyzing unreachable function ", tostring(statement.node), " ", count, "/", total)                
+                write("\n")
+            elseif what == "analyze_unreachable_function_stop" then
+                local statement, count, total, seconds = ...
+                write("-- STOP analyzing unreachable function ", tostring(statement.node), " ", count, "/", total , " took ", seconds , " seconds")                
                 write("\n")
             elseif what == "analyze_unreachable_code_start" then
                 local total = ...

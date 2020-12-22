@@ -19,8 +19,6 @@ function META:GetSignature()
     end
     self.suppress = nil
 
-    table.sort(s, sort)
-
     return "[" .. table.concat(s, "\n") .. "]"
 end
 

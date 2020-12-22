@@ -9,7 +9,7 @@ function META:GetLuaType()
 end
 
 function META:GetSignature()
-    return "symbol" .. "-" .. tostring(self.data)
+    return "SY" .. "-" .. tostring(self.data)
 end
 
 function META:__tostring()

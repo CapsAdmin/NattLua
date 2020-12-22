@@ -11,7 +11,7 @@ function META:GetLuaType()
 end
 
 function META:GetSignature()
-    local s = "number"
+    local s = "N"
 
     if self.literal then
         s = s .. "-" .. tostring(self:GetData())
@@ -30,6 +30,9 @@ end
 
 function META:Copy()
     local copy = types.Number(self.data):MakeLiteral(self.literal)
+    if self.max then
+        copy.max = self.max:Copy()
+    end
     copy:CopyInternalsFrom(self)
     return copy
 end

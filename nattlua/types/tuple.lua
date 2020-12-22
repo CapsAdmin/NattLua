@@ -6,15 +6,15 @@ META.__index = META
 
 function META:GetSignature()
     if self.suppress then
-        return "*self*"
+        return "*"
     end
 
     self.suppress = true
 
-    local s = {}
+    local s = {"T"}
 
     for i,v in ipairs(self.data) do
-        s[i] = v:GetSignature()
+        s[i+1] = v:GetSignature()
     end
 
     if self.Remainder then
@@ -28,7 +28,7 @@ function META:GetSignature()
 
     self.suppress = false
 
-    return table.concat(s, " ")
+    return table.concat(s)
 end
 
 function META:__tostring()
@@ -69,6 +69,10 @@ function META:Merge(tup)
     end
 
     local src = self.data
+
+    if tup:GetMinimumLength() > 512 then
+        error("tuple overflow")
+    end
 
     for i = 1, tup:GetMinimumLength() do
         local a = self:Get(i)
@@ -227,7 +231,7 @@ end
 
 function META:Set(key, val)
     self.data[key] =  val
-    if #self.data > 32 then
+    if key > 32 then
         error("tuple too long", 2)
     end
     return true

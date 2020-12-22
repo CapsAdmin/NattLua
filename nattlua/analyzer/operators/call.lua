@@ -59,7 +59,8 @@ return function(META)
         return analyzed_return
     end
 
-    local function unpack_union_tuples(input, function_arguments)
+    local unpack_union_tuples
+    do
         local d = {}
         local function get_signature(tup)
             local sig = {}
@@ -75,7 +76,7 @@ return function(META)
             return d[get_signature(tup)]
         end
     
-        local function expand(args, out)
+        local function expand(args, out, function_arguments)
             local tup = {}
             for i, t in ipairs(args) do  
                 local type = function_arguments:Get(i)
@@ -99,22 +100,24 @@ return function(META)
                         local args2 = {}
                         for i, v in ipairs(args) do args2[i] = v end
                         args2[i] = v
-                        expand(args2, out)
+                        expand(args2, out, function_arguments)
                     end
                 else
                     table.insert(tup, t)
                 end
             end
-            if #tup == #input and not is_done(tup) then
+            if #tup == #args and not is_done(tup) then
                 table.insert(out, tup)
                 done(tup)
             end
         end
-        
-        local out = {}
-        expand(input, out)
-    
-        return out
+
+        function unpack_union_tuples(input, function_arguments)
+            d = {}            
+            local out = {}
+            expand(input, out, function_arguments)
+            return out
+        end
     end
 
     local function infer_uncalled_functions(self, call_node, tuple, function_arguments)

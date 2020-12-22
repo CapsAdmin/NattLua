@@ -64,17 +64,22 @@ return function(META)
 
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and v[1].explicit_arguments then
-                    self:FireEvent("analyze_unreachable_function", v[1])
+                    local time = os.clock()
+
+                    self:FireEvent("analyze_unreachable_function_start", v[1], called_count, total)
                     call(self, table.unpack(v))
                     called_count = called_count + 1
+                    self:FireEvent("analyze_unreachable_function_stop", v[1], called_count, total, os.clock() - time)
                 end
             end
 
             for _,v in ipairs(self.deferred_calls) do
-                if not v[1].called and not v[1].explicit_arguments then
-                    self:FireEvent("analyze_unreachable_function", v[1])
+                if not v[1].called and not v[1].explicit_arguments then    
+                    local time = os.clock()
+                    self:FireEvent("analyze_unreachable_function_start", v[1], called_count, total)
                     call(self, table.unpack(v))
                     called_count = called_count + 1
+                    self:FireEvent("analyze_unreachable_function_stop", v[1], called_count, total, os.clock() - time)
                 end
             end
 

@@ -11,7 +11,7 @@ function META:GetLuaType()
 end
 
 function META:GetSignature()
-    local s = "string"
+    local s = "S"
 
     if self:IsLiteral() then
         s = s .. "-" .. self:GetData()
@@ -30,6 +30,7 @@ end
 
 function META:Copy()
     local copy =  types.String(self.data):MakeLiteral(self.literal)
+    copy.pattern_contract = self.pattern_contract
     copy:CopyInternalsFrom(self)
     return copy
 end

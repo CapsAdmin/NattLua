@@ -12,7 +12,7 @@ function META:GetSignature()
     end
 
     self.suppress = true
-    local s = "function" .. "-"..self:GetArguments():GetSignature() .. ":" .. self:GetReturnTypes():GetSignature()
+    local s = "F" .. "-"..self:GetArguments():GetSignature() .. ":" .. self:GetReturnTypes():GetSignature()
     self.suppress = false
 
     return s

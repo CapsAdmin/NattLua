@@ -576,3 +576,12 @@ R[[
     local T: Tuple<|boolean|> | Tuple<|1|2|>
     type_assert<|T, Tuple<|boolean|> | Tuple<|1|2|>|>
 ]]
+
+R[[
+    local x = {foo = 1, bar = 2}
+    x.__index = x
+    x.func = _ as (function(lol: x | nil): x)
+    x.bar = _ as (function(lol: x): {lol = x})
+
+    §assert(env.runtime.x:GetType():GetSignature() == env.runtime.x:GetType():Copy():GetSignature())
+]]

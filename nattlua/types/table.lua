@@ -9,21 +9,25 @@ function META:GetLuaType()
     return self.Type
 end
 
-local function sort(a, b) return a < b end
-
 function META:GetSignature()
     if self:IsUnique() then
         return tostring(self:GetUniqueID())
     end
 
-    if self.suppress then
-        return "*self*"
+    if self.Name then
+        self.suppress = nil
+        return self.Name:GetData()
     end
 
-    local s = {}
-    local i = 1
+    if self.suppress then
+        return "*"
+    end
+
     self.suppress = true
-    for _, keyval in ipairs(self.data) do
+
+    local s = {"T"}
+    local i = 2
+    for _, keyval in ipairs(self.contract or self.data) do
         s[i] = keyval.key:GetSignature() 
         i = i + 1
         s[i] = keyval.val:GetSignature()
@@ -31,9 +35,20 @@ function META:GetSignature()
     end
     self.suppress = false
 
-    table.sort(s, sort)
+    s = table.concat(s)
 
-    return table.concat(s)
+    if #s > 10000 then
+        NONAME = true
+        print("=============")
+        print(s)
+        print("------------")
+        print(self)
+        print("=============")
+        NONAME = false
+        ANALYZER:Warning(self.node, "signature is " .. #s .. " bytes")
+    end
+
+    return s
 end
 
 local level = 0
@@ -68,8 +83,6 @@ function META:__tostring()
     end
     level = level - 1
     self.suppress = false
-
-    table.sort(s, sort)
 
     if #self.data == 1 then
         return "{" .. table.concat(s, ""):gsub("\t", " ") .. " }"
@@ -166,8 +179,8 @@ function META.IsSubsetOf(A, B)
 
         local can_be_empty = true
         A.suppress = true
-        for _, val in B:pairs() do
-            if not types.Nil:IsSubsetOf(val) then
+        for _, keyval in ipairs(B:GetData()) do
+            if not types.Nil:IsSubsetOf(keyval.val) then
                 can_be_empty = false
                 break
             end
@@ -182,18 +195,18 @@ function META.IsSubsetOf(A, B)
             end
         end
 
-        for akey, aval in A:pairs() do
-            local keyval, reason = B:GetKeyVal(akey, true) 
-            if not keyval then
-                return keyval, reason
+        for _, akeyval in ipairs(A:GetData()) do
+            local bkeyval, reason = B:GetKeyVal(akeyval.key, true) 
+            if not bkeyval then
+                return bkeyval, reason
             end
         
             A.suppress = true
-            local ok, err = aval:IsSubsetOf(keyval.val)
+            local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
             A.suppress = false
 
             if not ok then
-                return types.errors.subset(aval, keyval.val, err)
+                return types.errors.subset(akeyval.val, bkeyval.val, err)
             end
         end
         
@@ -350,6 +363,9 @@ function META:Set(key, val, no_delete)
         val:SetParent(self)
         key:SetParent(self)
         table.insert(self.data, {key = key, val = val})
+        if #self.data > 512 then 
+            error("table is too large", 2)
+        end
     else
         if keyval.val and keyval.key:GetSignature() ~= key:GetSignature() then
             keyval.val = types.Union({keyval.val, val})

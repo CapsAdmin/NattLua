@@ -368,7 +368,7 @@ function helpers.JITOptimize()
         "maxirconst=500", -- 500: maximum number of IR constants of a trace
         "maxside=100", -- 100: maximum number of side traces of a root trace
         "maxsnap=800", -- 500: maximum number of snapshots for a trace
-        "hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
+        "hotloop=500", -- 56: number of iterations to detect a hot loop or hot call
         "hotexit=10", -- 10: number of taken exits to start a side trace
         "tryside=4", -- 4: number of attempts to compile a side trace
         "instunroll=500", -- 4: maximum unroll factor for instable loops

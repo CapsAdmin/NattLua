@@ -4,8 +4,13 @@ local Tuple = types.Tuple
 return function(META)
     function META:AnalyzePostfixCallExpression(node, env)
         local env =  node.type_call and "typesystem" or env
-
         local callable = self:AnalyzeExpression(node.left, env)
+
+        local self_arg
+
+        if self.self_arg_stack and node.left.kind == "binary_operator" and node.left.value.value == ":" then
+            self_arg = table.remove(self.self_arg_stack)
+        end
 
         if callable.Type == "tuple" then
             callable = self:Assert(node, callable:Get(1))
@@ -18,8 +23,8 @@ return function(META)
 
         local types = self:AnalyzeExpressions(node.expressions, env)
 
-        if self.self_arg_stack and node.left.kind == "binary_operator" and node.left.value.value == ":" then
-            table.insert(types, 1, table.remove(self.self_arg_stack))
+        if self_arg then
+            table.insert(types, 1, self_arg)
         end
         
         self.PreferTypesystem = node.type_call

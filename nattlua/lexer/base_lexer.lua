@@ -126,7 +126,7 @@ return function(META--[[#: {
                 return self.code_ptr[self.i + offset - 1]
             end
 
-        function META:GetCurrentChar()
+        function META:GetCurrentChar() --[[#: number]]
             return self.code_ptr[self.i - 1]
         end
     else
@@ -136,7 +136,7 @@ return function(META--[[#: {
 
         function META:GetChar(offset --[[#: number]])
             return self.code:byte(self.i + offset)
-            end
+        end
 
         function META:GetCurrentChar() --[[#: number]]
             return self.code:byte(self.i)
