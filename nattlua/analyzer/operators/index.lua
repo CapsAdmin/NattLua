@@ -19,8 +19,8 @@ return function(META)
             return obj:Get(key)
         end
         
-        if obj.meta and (obj.Type ~= "table" or not obj:Contains(key)) then
-            local index = obj.meta:Get("__index")
+        if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then
+            local index = obj:GetMetaTable():Get("__index")
     
             if index then
                 if index.Type == "table" then

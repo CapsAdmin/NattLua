@@ -24,7 +24,7 @@ return function(syntax--[[#: {
             return
                 (c >= B'a' and c <= B'z') or
                 (c >= B'A' and c <= B'Z') or
-                (c == B'_' or c >= 127)
+                (c == B'_' or c == B'@' or c >= 127)
         end
 
         function syntax.IsDuringLetter(c --[[#: number]]) --[[#: boolean]]
@@ -32,7 +32,7 @@ return function(syntax--[[#: {
                 (c >= B'a' and c <= B'z') or
                 (c >= B'0' and c <= B'9') or
                 (c >= B'A' and c <= B'Z') or
-                (c == B'_' or c >= 127)
+                (c == B'_' or c == B'@' or c >= 127)
         end
 
         function syntax.IsNumber(c --[[#: number]]) --[[#: boolean]]
@@ -46,7 +46,7 @@ return function(syntax--[[#: {
         function syntax.IsSymbol(c --[[#: number]]) --[[#: boolean]]
             return c ~= B'_' and (
                 (c >= B'!' and c <= B'/') or
-                (c >= B':' and c <= B'@') or
+                (c >= B':' and c <= B'?') or
                 (c >= B'[' and c <= B'`') or
                 (c >= B'{' and c <= B'~')
             )

@@ -5,7 +5,7 @@ local type SERVER = true
 
 
 local luadev = {}
-type luadev.__name = "luadev"
+type luadev.@Name = "luadev"
 local Tag="luadev"
 
 --net_retdata = Tag..'_retdata'

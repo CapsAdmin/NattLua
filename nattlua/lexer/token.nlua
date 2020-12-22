@@ -1,5 +1,5 @@
 local type Token = {
-    __name = "Token",
+    @Name = "Token",
     type = string,
     value = string,
     start = number,

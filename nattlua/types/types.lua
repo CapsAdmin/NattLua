@@ -304,6 +304,14 @@ do
         return parent
     end
 
+    function Base:SetMetaTable(tbl)
+        self.MetaTable = tbl
+    end
+
+    function Base:GetMetaTable()
+        return self.MetaTable
+    end
+
     types.BaseObject = Base
 end
 

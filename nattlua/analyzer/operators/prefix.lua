@@ -7,8 +7,8 @@ local operators = {
 }
 
 local function metatable_function(self, meta_method, l)
-    if l.meta then
-        local func = l.meta:Get(meta_method)
+    if l:GetMetaTable() then
+        local func = l:GetMetaTable():Get(meta_method)
 
         if func then
             return self:Assert(l.node, self:Call(func, types.Tuple({l})):Get(1))

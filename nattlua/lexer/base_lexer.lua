@@ -5,7 +5,7 @@
 local list = require("nattlua.other.list")
 
 return function(META--[[#: {
-    __name = "BaseLexer",
+    @Name = "BaseLexer",
     syntax = {
         IsDuringLetter = (function(number): boolean),        
         IsLetter = (function(number): boolean),
@@ -13,17 +13,23 @@ return function(META--[[#: {
         GetSymbols = (function(): {[number] = string}),
         [string] = any,
     },
-    code = string,
-    i = number,
-    code_ptr_ref = string,
-    code_ptr = {
-            [number] = number,
-            __meta = self,
-            __add = (function(self, number): self),
-            __sub = (function(self, number): self)
-    },
     [string] = any,
 }]])
+    --[[#
+        type META.code = string
+        type META.i = number
+        type META.code_ptr_ref = string
+        type META.code = string
+        type META.name = string
+        type META.OnError = nil | (function(META, string, string, string, number, number): nil)
+        type META.code_ptr = {
+            [number] = number,
+            @MetaTable = self,
+            __add = (function(self, number): self),
+            __sub = (function(self, number): self)
+        }
+    ]]
+
     local ok, table_new = pcall(require, "table.new")
     if not ok then
         table_new = function() return {} end
@@ -132,7 +138,7 @@ return function(META--[[#: {
             return self.code:byte(self.i + offset)
             end
 
-        function META:GetCurrentChar()
+        function META:GetCurrentChar() --[[#: number]]
             return self.code:byte(self.i)
         end
     end
@@ -151,7 +157,7 @@ return function(META--[[#: {
         return false
     end
 
-    function META:ReadChar()
+    function META:ReadChar() --[[#: number]]
         local char = self:GetCurrentChar()
         self.i = self.i + 1
         return char
@@ -173,11 +179,11 @@ return function(META--[[#: {
         return self:IsCurrentByte(B(what))
     end
 
-    function META:IsCurrentByte(what--[[#:string]])
+    function META:IsCurrentByte(what--[[#:number]])
         return self:GetCurrentChar() == what
     end
 
-    function META:IsByte(what--[[#:string]], offset--[[#:number]])
+    function META:IsByte(what--[[#:number]], offset--[[#:number]])
             return self:GetChar(offset) == what
         end
 
@@ -249,7 +255,7 @@ return function(META--[[#: {
         } end)
 
         function META:NewToken(type--[[#:string]], start--[[#:number]], stop--[[#:number]], is_whitespace--[[#:boolean]]) --[[#: Token ]]
-            local tk = get()
+            local tk = get() --[[# as Token ]]
 
             tk.type = type
             tk.has_whitespace = is_whitespace

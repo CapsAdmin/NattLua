@@ -44,10 +44,9 @@ function META:__tostring()
 
     self.suppress = true
 
-    if self:Contains("__name") and self:Get("__name"):IsLiteral() then
-        local str = tostring(self:Get("__name"):GetData())
+    if self.Name then
         self.suppress = nil
-        return str
+        return self.Name:GetData()
     end
 
     local s = {}
@@ -79,6 +78,17 @@ function META:__tostring()
     return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
+function META:SetName(name)
+    if name then
+        assert(name:IsLiteral())
+    end
+    self.Name = name
+end
+
+function META:GetName()
+    return self.Name
+end
+
 function META:GetLength()
     return #self.data
 end
@@ -87,8 +97,8 @@ function META:FollowsContract(contract)
     for _, keyval in ipairs(contract:GetData()) do
         local res, err = self:GetKeyVal(keyval.key)
 
-        if not res and self.meta then
-            res, err = self.meta:GetKeyVal(keyval.key)
+        if not res and self:GetMetaTable() then
+            res, err = self:GetMetaTable():GetKeyVal(keyval.key)
         end
 
         if not res then
@@ -150,7 +160,7 @@ function META.IsSubsetOf(A, B)
         return true
     elseif B.Type == "table" then
 
-        if B.meta and B.meta == A then
+        if B:GetMetaTable() and B:GetMetaTable() == A then
             return true
         end
 
@@ -266,6 +276,7 @@ function META:GetKeyVal(key, reverse_subset)
         if ok then
             return keyval
         end
+        
         table.insert(reasons, reason)
     end
 
@@ -289,6 +300,11 @@ end
 function META:Set(key, val, no_delete)
     key = types.Cast(key)
     val = types.Cast(val)
+
+    if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1,1) == "@" then
+        self["Set" .. key:GetData():sub(2)](self, val)
+        return true
+    end
 
     if key.Type == "symbol" and key:GetData() == nil then
         return types.errors.other("key is nil")
@@ -325,14 +341,6 @@ function META:Set(key, val, no_delete)
         if not keyval then
             return keyval, reason
         end
-    end
-
-    -- shortcut for setting a metatable on a type
-    -- type tbl = { }; setmetatable<|tbl, tbl|>
-    -- becomes
-    -- type tbl = { __meta = self }
-    if key.Type == "string" and key:IsLiteral() and key:GetData() == "__meta" then
-        self.meta = val
     end
 
     -- if the key exists, check if we can replace it and maybe the value
@@ -460,8 +468,9 @@ function META:Copy(map)
         copy:Set(k, v)
     end
 
-    copy.meta = self.meta
+    copy:SetMetaTable(self:GetMetaTable())
     copy:CopyInternalsFrom(self)
+    copy:SetName(self:GetName())
 
     return copy
 end
@@ -606,7 +615,7 @@ function META:Initialize(data)
 end
 
 function META:Call(analyzer, arguments, ...)
-    local __call = self.meta and self.meta:Get("__call")
+    local __call = self:GetMetaTable() and self:GetMetaTable():Get("__call")
 
     if __call then
         local new_arguments = {self}

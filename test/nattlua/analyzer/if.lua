@@ -1057,7 +1057,7 @@ run[[
         findheadpos_head_bone = number | false,
         findheadpos_head_attachment = number | nil,
         findheadpos_last_mdl = string | nil,
-        __name = "BlackBox",
+        @Name = "BlackBox",
     }
 
     local function FindHeadPosition(ent: HeadPos)

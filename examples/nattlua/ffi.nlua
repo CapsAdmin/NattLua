@@ -6,13 +6,13 @@ local function CDataPointer<|T: any|>
 end
 
 type VoidPointer = {
-	__meta = self, -- this is a shortcut to setmetatable<|VoidPointer, VoidPointer|>
+	@MetaTable = self, -- this is a shortcut to setmetatable<|VoidPointer, VoidPointer|>
 	__index = function() error("cannot index a void pointer") end,
 	__newindex = function() error("cannot index a void pointer") end
 }
 
 type ffi.C = {
-	__meta = self,
+	@MetaTable = self,
 	__index = function(self, field: string)
 		-- this is a type function, but the code here is executed by the checker
 

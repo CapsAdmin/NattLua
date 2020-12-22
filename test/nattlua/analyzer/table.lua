@@ -468,7 +468,7 @@ run[[
         GetBodygroup = (function(self, number): number),
     }
 
-    type Entity.__name = "Entity"
+    type Entity.@Name = "Entity"
 
     local type HeadPos = {
         findheadpos_head_bone = number | nil,

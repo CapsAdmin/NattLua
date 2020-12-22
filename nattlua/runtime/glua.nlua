@@ -5,8 +5,8 @@ local type Color = {
     b = number,
     a = number,
     __index = self, -- __index = self is shortcut for type Color.__index = Color,
-    __meta = self, -- shortcut for setmetatable<|Color, Color|>,
-    __name = "Color",
+    @MetaTable = self, -- shortcut for setmetatable<|Color, Color|>,
+    @Name = "Color",
 }
 
 
@@ -22,8 +22,8 @@ local type Angle = {
     r = number,
     __index = Angle,
     __call = (function(self, number, number, number): Angle),
-    __meta = self,
-    __name = "Angle",
+    @MetaTable = self,
+    @Name = "Angle",
     Right = (function(self): Vector), -- TODO: Vector():Angle():Right() seems to cause infinte loop if Right is not defined
 }
 
@@ -38,7 +38,7 @@ local type ToScreenData = {
 type Vector.__index = Vector
 type Vector.__call = function(Vector, number, number, number): Vector
 type Vector.__add = function(Vector, Vector): Vector
-type Vector.__name = "Vector"
+type Vector.@Name = "Vector"
 type Vector.__mul = function(number | Vector, number | Vector): Vector
 type Vector.__unm = function(Vector): Vector
 
@@ -108,13 +108,13 @@ local type Triangle = {
 local type Mesh = {
     Draw = (function(self): nil),
     BuildFromTriangles = (function(self, {[number] = Triangle}): self),
-    __meta = self,
+    @MetaTable = self,
     __index = self,
     __call = function(self, number, number, number): self
 }
 
 local type PhysicsObject = {
-    __name = "PhysicsObject",
+    @Name = "PhysicsObject",
     IsValid = (function(self): boolean),
 }
 
@@ -165,11 +165,11 @@ local type Entity = {
 }
 
 
-type Entity.__name = "Entity"
+type Entity.@Name = "Entity"
 
 
 local type Player = Entity & {}
-type Player.__name = "Player"
+type Player.@Name = "Player"
 
 local type ClientsideModel = function(string): Entity
 
@@ -239,7 +239,7 @@ end
 
 local type function isentity(obj: any)
     local Entity = env.typesystem.Entity:GetType()
-    return analyzer:BinaryOperator(analyzer.current_expression, obj.meta or obj, Entity, "typesystem", "==")
+    return analyzer:BinaryOperator(analyzer.current_expression, obj:GetMetaTable() or obj, Entity, "typesystem", "==")
 end
 
 type function table.Count(tbl: any): number

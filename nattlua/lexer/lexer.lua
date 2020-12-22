@@ -10,7 +10,7 @@ META.__index = META
 
 --[[# 
     type META.i = number 
-    type META.__name = "Lexer"
+    type META.@Name = "Lexer"
     type META.string_escape_Single = boolean
     type META.string_escape_Double = boolean
     type META.comment_escape = string

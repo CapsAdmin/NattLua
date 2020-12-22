@@ -31,8 +31,8 @@ return function(META)
             return new_union:SetSource(node, new_union, obj)
         end
     
-        if obj.meta then
-            local func = obj.meta:Get("__newindex")
+        if obj:GetMetaTable() then
+            local func = obj:GetMetaTable():Get("__newindex")
     
             if func then
                 if func.Type == "table" then

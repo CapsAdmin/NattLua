@@ -1,4 +1,4 @@
-type setmetatable = function(T, M) T.meta = M end
+type setmetatable = function(T, M) T:SetMetaTable(M) end
 
 type positive_numbers = number -- 0 .. inf
 type table_index_range = number -- 1 .. inf

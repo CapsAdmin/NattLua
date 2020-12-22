@@ -1,4 +1,4 @@
-type __name = "_G"
+type @Name = "_G"
 
 local type boolean = true | false
 
@@ -506,7 +506,7 @@ do -- globals
 				meta:Extend(tbl, true)
 			end
 
-			tbl.meta = meta
+			tbl:SetMetaTable(meta)
 		end
 
 		return tbl
@@ -514,7 +514,7 @@ do -- globals
 
 	type function getmetatable(tbl)
         if tbl.Type == "table" then
-		    return tbl.meta
+		    return tbl:GetMetaTable()
         end
 	end
 
@@ -528,8 +528,8 @@ do -- globals
         end
 
         if val.Type == "table" then
-            if val.meta then
-                local func = val.meta:Get("__tostring")
+            if val:GetMetaTable() then
+                local func = val:GetMetaTable():Get("__tostring")
                 if func then
                     if func.Type == "function" then
                         return analyzer:Assert(analyzer.current_expression, analyzer:Call(func, types.Tuple({val})))

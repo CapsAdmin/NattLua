@@ -108,7 +108,7 @@ function META.IsSubsetOf(A, B)
         return true
     elseif B.Type == "list" then
 
-        if B.meta and B.meta == A then
+        if B:GetMetaTable() and B:GetMetaTable() == A then
             return true
         end
 
@@ -273,14 +273,6 @@ function META:Set(key, val)
         end
     end
 
-    -- shortcut for setting a metatable on a type
-    -- type tbl = { }; setmetatable<|tbl, tbl|>
-    -- becomes
-    -- type tbl = { __meta = self }
-    if key.Type == "string" and key:IsLiteral() and key:GetData() == "__meta" then
-        self.meta = val
-    end
-
     -- if the key exists, check if we can replace it and maybe the value
     local keyval, reason = self:GetKeyVal(key, true)
 
@@ -396,7 +388,7 @@ function META:Copy(map)
         copy:Set(k, v)
     end
 
-    copy.meta = self.meta
+    copy:SetMetaTable(self:GetMetaTable())
     copy:CopyInternalsFrom(self)
 
     return copy

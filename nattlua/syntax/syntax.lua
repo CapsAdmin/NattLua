@@ -1,12 +1,11 @@
 local syntax = {}
 
---[[# type syntax.__name = "Syntax" ]]
+--[[# type syntax.@Name = "Syntax" ]]
 
 syntax.SymbolCharacters --[[#: {[number] = string} ]] = {
     ",", ";",
     "(", ")", "{", "}", "[", "]",
     "=", "::", "\"", "'",
-
     "<|", "|>",
 }
 
@@ -89,7 +88,7 @@ do
         syntax.typesystem[k] = v
     end
 
-    --[[# type syntax.typesystem.__name = "SyntaxTypesystem" ]]
+    --[[# type syntax.typesystem.@Name = "SyntaxTypesystem" ]]
 
 
     syntax.typesystem.PrefixOperators --[[#: {[number] = string} ]]  = {

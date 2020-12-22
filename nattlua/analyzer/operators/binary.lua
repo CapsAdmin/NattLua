@@ -26,8 +26,8 @@ local function metatable_function(self, meta_method, l,r, swap)
         l,r = r,l
     end
 
-    if r.meta or l.meta then
-        local func = (l.meta and l.meta:Get(meta_method)) or (r.meta and r.meta:Get(meta_method))
+    if r:GetMetaTable() or l:GetMetaTable() then
+        local func = (l:GetMetaTable() and l:GetMetaTable():Get(meta_method)) or (r:GetMetaTable() and r:GetMetaTable():Get(meta_method))
 
         if func then
             if func.Type == "function" then
