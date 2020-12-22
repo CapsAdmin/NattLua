@@ -90,17 +90,6 @@ function META:__tostring()
     return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
-function META:SetName(name)
-    if name then
-        assert(name:IsLiteral())
-    end
-    self.Name = name
-end
-
-function META:GetName()
-    return self.Name
-end
-
 function META:GetLength()
     return #self.data
 end
@@ -484,14 +473,6 @@ function META:Copy(map)
     end
 
     copy:SetMetaTable(self:GetMetaTable())
-
-    if self:GetName() then
-        copy:SetName(self:GetName():Copy())
-    end
-    
-    if self:GetContract() then
-        copy:SetContract(self:GetContract())
-    end
 
     copy:CopyInternalsFrom(self)
 

@@ -298,7 +298,6 @@ function META:Union(union)
     return copy
 end
 
-
 function META:Intersect(union)
     local copy = types.Union()
 
@@ -310,7 +309,6 @@ function META:Intersect(union)
 
     return copy
 end
-
 
 function META:Subtract(union)
     local copy = self:Copy()
@@ -335,16 +333,6 @@ function META:Copy(map)
     end
     copy:Sort()
     copy:CopyInternalsFrom(self)
-
-    if false and copy:GetSignature() ~= self:GetSignature() then
-        print(debug.traceback())
-        print("=========================")
-        print(copy)
-        print("!=")
-        print(self)
-        print("=========================")
-    end
-
 
     return copy
 end

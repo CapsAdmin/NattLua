@@ -135,194 +135,6 @@ do
     end
 end
 
-do
-    local Base = {}
-
-    function Base:IsUncertain()
-        return self:IsTruthy() and self:IsFalsy()
-    end
-
-    function Base:CopyInternalsFrom(obj)
-        self.name = obj.name
-        self.node = obj.node
-        self.node_label = obj.node_label
-        self.source = obj.source
-        self.source_left = obj.source_left
-        self.source_right = obj.source_right
-        self.explicit_not_literal = obj.explicit_not_literal
-
-        -- what about these?
-        --self.truthy_union = obj.truthy_union
-        --self.falsy_union = obj.falsy_union
-        --self.upvalue_keyref = obj.upvalue_keyref
-        --self.upvalue = obj.upvalue
-    end
-
-    function Base:SetSource(node, source, l,r)
-        self.source = source
-        self.node = node
-        self.source_left = l
-        self.source_right = r        
-        return self
-    end 
-
-    function Base:GetSignature()
-        error("NYI")
-    end
-
-    function Base:GetSignature()
-        error("NYI")
-    end
-
-    Base.literal = false
-
-    function Base:MakeExplicitNotLiteral(b)
-        self.explicit_not_literal = b
-        return self
-    end
-
-
-    do
-        local ref = 0
-
-        function Base:MakeUnique(b)
-            if b then
-                self.unique_id = ref
-                ref = ref + 1
-            else 
-                self.unique_id = nil
-            end
-            return self
-        end
-
-        function Base:IsUnique()
-            return self.unique_id ~= nil
-        end
-
-        function Base:GetUniqueID()
-            return self.unique_id
-        end
-
-        function Base:DisableUniqueness()
-            self.disabled_unique_id = self.unique_id
-            self.unique_id = nil
-        end
-
-        function Base:EnableUniqueness()
-            self.unique_id = self.disabled_unique_id
-        end
-
-        function types.IsSameUniqueType(a, b)
-            if a.unique_id and not b.unique_id then
-                return types.errors.other(tostring(a) .. "is a unique type")
-            end
-
-            if b.unique_id and not a.unique_id then
-                return types.errors.other(tostring(b) .. "is a unique type")
-            end
-
-            if a.unique_id ~= b.unique_id then
-                return types.errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a))
-            end
-
-            return true
-        end
-    end
-
-    function Base:MakeLiteral(b)
-        self.literal = b
-        return self
-    end
-
-    function Base:IsLiteral()
-        return self.literal
-    end
-
-    function Base:Seal()
-        self:SetContract(self:GetContract() or self:Copy())
-    end
-
-    function Base:CopyLiteralness(obj)
-        self:MakeLiteral(obj:IsLiteral())    
-    end
-
-    function Base:Call(...)
-        return types.errors.other("type " .. self.Type .. ": " .. tostring(self) .. " cannot be called")        
-    end
-
-    function Base:SetReferenceId(ref)
-        self.reference_id = ref
-        return self
-    end
-
-    function Base:Set(key, val)
-        return types.errors.other("undefined set: " .. tostring(self) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. self.Type)
-    end
-
-    function Base:Get(key)
-        return types.errors.other("undefined get: " .. tostring(self) .. "[" .. tostring(key) .. "]" .. " on type " .. self.Type)
-    end
-
-    function Base:AddReason(reason, ...)
-        table.insert(self.reasons, {
-            msg = reason,
-            data = {...}
-        })
-        return self
-    end
-
-    function Base:GetReasonForExistance()
-        local str = ""
-        
-        for k,v in ipairs(self.reasons) do
-            str = str .. v.msg .. "\n"
-        end
-
-        return str
-    end
-
-    function Base:SetParent(parent)
-        if parent then
-            if parent ~= self then
-                self.parent = parent
-            end
-        else
-            self.parent = nil
-        end
-    end
-
-    function Base:GetRoot()
-        local parent = self
-        local done = {}
-        while true do
-            if not parent.parent or done[parent] then
-                break
-            end
-            done[parent] = true
-            parent = parent.parent
-        end
-        return parent
-    end
-
-    function Base:SetMetaTable(tbl)
-        self.MetaTable = tbl
-    end
-
-    function Base:GetMetaTable()
-        return self.MetaTable
-    end
-
-    function Base:SetContract(val)
-        self.Contract = val
-    end
-
-    function Base:GetContract()
-        return self.Contract
-    end
-
-    types.BaseObject = Base
-end
-
 local uid = 0
 function types.RegisterType(meta)
     for k, v in pairs(types.BaseObject) do
@@ -350,6 +162,8 @@ function types.RegisterType(meta)
 end
 
 function types.Initialize()
+    types.BaseObject = require("nattlua.types.base")
+
     types.Union = require("nattlua.types.union")
     types.Table = require("nattlua.types.table")
     types.List = require("nattlua.types.list")
@@ -362,7 +176,7 @@ function types.Initialize()
     types.Never = require("nattlua.types.never")
     types.Error = require("nattlua.types.error")
 
-    types.Nil = function() return types.Symbol() end
+    types.Nil = function() return types.Symbol(nil) end
     types.True = function() return types.Symbol(true) end
     types.False = function() return types.Symbol(false) end
     types.Boolean = function() return types.Union({types.True(), types.False()}):MakeExplicitNotLiteral(true) end
