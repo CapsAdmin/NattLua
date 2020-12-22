@@ -489,6 +489,10 @@ function META:Copy(map)
         copy:SetName(self:GetName():Copy())
     end
     
+    if self.contract then
+        copy.contract = self.contract
+    end
+
     copy:CopyInternalsFrom(self)
 
     return copy
