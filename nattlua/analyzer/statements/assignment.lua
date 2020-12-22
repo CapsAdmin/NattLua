@@ -122,11 +122,11 @@ return function(META)
                     self:Assert(statement or val.node or exp_key.explicit_type, self:CheckTypeAgainstContract(val, contract))
                 end
 
-                val.contract = contract
+                val:SetContract(contract)
 
                 if not right[i] then
                     val = contract:Copy()
-                    val.contract = contract
+                    val:SetContract(contract)
                 end
             end
 
@@ -142,7 +142,7 @@ return function(META)
 
                     do -- check for any previous upvalues
                         local upvalue = self:GetLocalOrEnvironmentValue(key, env)
-                        local upvalues_contract = upvalue and upvalue.contract
+                        local upvalues_contract = upvalue and upvalue:GetContract()
 
                         if not upvalue and not upvalues_contract and env == "runtime" then
                             upvalue = self:GetLocalOrEnvironmentValue(key, "typesystem")
@@ -154,7 +154,7 @@ return function(META)
                         if upvalues_contract then
                             val:CopyLiteralness(upvalues_contract)
                             self:Assert(statement or val.node or exp_key.explicit_type, self:CheckTypeAgainstContract(val, upvalues_contract))
-                            val.contract = upvalues_contract
+                            val:SetContract(upvalues_contract)
                         end
                     end
                     

@@ -24,7 +24,7 @@ return function(META)
     
             if index then
                 if index.Type == "table" then
-                    return self:IndexOperator(node, index.contract or index, key, env)
+                    return self:IndexOperator(node, index:GetContract() or index, key, env)
                 end
     
                 if index.Type == "function" then
@@ -41,8 +41,8 @@ return function(META)
 
         -- changes in tables would have to be stored in a change list..
 
-        if obj.contract then
-            local val, err = obj.contract:Get(key)
+        if obj:GetContract() then
+            local val, err = obj:GetContract():Get(key)
 
             if val then
                 local o = self:GetMutatedValue(obj, key, val, env)

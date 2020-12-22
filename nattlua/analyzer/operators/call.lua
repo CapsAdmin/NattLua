@@ -183,7 +183,7 @@ return function(META)
         if not self.mutated_types then return end
 
         for _, arg in ipairs(self.mutated_types) do
-            arg.contract = arg.old_contract
+            arg:SetContract(arg.old_contract)
         end
         self.mutated_types = nil
     end
@@ -219,8 +219,8 @@ return function(META)
             end
 
             if arg.Type == "table" then
-                arg.old_contract = arg.contract
-                arg.contract = contract
+                arg.old_contract = arg:GetContract()
+                arg:SetContract(contract)
                 table.insert(self.mutated_types, arg)
             else
                 arguments:Set(i, contract:Copy())

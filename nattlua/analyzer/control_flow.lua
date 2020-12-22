@@ -144,7 +144,7 @@ return function(META)
                     creation_scope = scope:GetRoot()
                 end
 
-                local val = (obj.contract or obj):Get(key) or types.Nil:Copy()
+                local val = (obj:GetContract() or obj):Get(key) or types.Nil:Copy()
                 val.upvalue = obj.mutations[key]
                 val.upvalue_keyref = key
 

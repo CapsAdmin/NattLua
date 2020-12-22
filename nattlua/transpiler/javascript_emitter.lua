@@ -170,7 +170,7 @@ do
             --self:Emit(" --[[ : ")
             local str = {}
             -- this iterates the first return tuple
-            local obj = node.inferred_type.contract or node.inferred_type
+            local obj = node.inferred_type:GetContract() or node.inferred_type
 
             if obj.Type == "function" then
                 for i,v in ipairs(obj:GetReturnTypes():GetData()) do
@@ -790,7 +790,7 @@ function META:EmitIdentifier(node)
             self:EmitTypeExpression(node.explicit_type)
         elseif node.inferred_type then
             self:Emit(": ")
-            self:Emit(tostring((node.inferred_type.contract or node.inferred_type)))
+            self:Emit(tostring((node.inferred_type:GetContract() or node.inferred_type)))
         end
     end
 end

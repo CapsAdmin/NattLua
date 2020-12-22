@@ -40,7 +40,7 @@ return function(META)
             arguments = obj:GetArguments():Copy()
             -- arguments should be a contract
             for i,v in ipairs(arguments:GetData()) do
-                v.contract = v
+                v:SetContract(v)
             end
             self:Assert(node, self:Call(obj, arguments, node))
         end

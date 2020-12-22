@@ -86,7 +86,7 @@ return function(META)
                 if not obj then
                     return types.errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
                 end
-                return obj.contract or obj
+                return obj:GetContract() or obj
             elseif op == "unique" then
                 local obj = self:AnalyzeExpression(node.right, "typesystem")
                 obj:MakeUnique(true)

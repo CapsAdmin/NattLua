@@ -34,8 +34,8 @@ function META:__tostring()
     level = level + 1
     local indent = ("\t"):rep(level)
 
-    if self.contract then
-        for i, keyval in ipairs(self.contract.data) do
+    if self:GetContract() then
+        for i, keyval in ipairs(self:GetContract().data) do
             local key, val = tostring(self.data[i] and self.data[i].key or "undefined"), tostring(self.data[i] and self.data[i].val or "undefined")
             local tkey, tval = tostring(keyval.key), tostring(keyval.val)
             s[i] = indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val
@@ -257,8 +257,8 @@ function META:Set(key, val)
         return self:Delete(key)
     end
 
-    if self.contract then
-        local keyval, reason = self.contract:GetKeyVal(key, true)
+    if self:GetContract() then
+        local keyval, reason = self:GetContract():GetKeyVal(key, true)
 
         if not keyval then
             return keyval, reason
@@ -320,12 +320,12 @@ function META:Get(key)
         return keyval.val
     end
 
-    if not keyval and self.contract then
-        if self.contract.ElementType then
-            return self.contract.ElementType
+    if not keyval and self:GetContract() then
+        if self:GetContract().ElementType then
+            return self:GetContract().ElementType
         end
 
-        local keyval, reason = self.contract:GetKeyVal(key, true)
+        local keyval, reason = self:GetContract():GetKeyVal(key, true)
         if keyval then
             return keyval.val
         end

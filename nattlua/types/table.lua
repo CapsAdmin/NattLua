@@ -14,9 +14,9 @@ function META:GetSignature()
         return tostring(self:GetUniqueID())
     end
 
-    if self.contract and self.contract.Name then
+    if self:GetContract() and self:GetContract().Name then
         self.suppress = nil
-        return self.contract.Name:GetData()
+        return self:GetContract().Name:GetData()
     end
 
     if self.Name then
@@ -32,7 +32,7 @@ function META:GetSignature()
 
     local s = {"T"}
     local i = 2
-    for _, keyval in ipairs(self.contract or self.data) do
+    for _, keyval in ipairs(self:GetContract() or self.data) do
         s[i] = keyval.key:GetSignature() 
         i = i + 1
         s[i] = keyval.val:GetSignature()
@@ -53,9 +53,9 @@ function META:__tostring()
 
     self.suppress = true
 
-    if self.contract and self.contract.Name then
+    if self:GetContract() and self:GetContract().Name then
         self.suppress = nil
-        return self.contract.Name:GetData()
+        return self:GetContract().Name:GetData()
     end
 
     if self.Name then
@@ -68,8 +68,8 @@ function META:__tostring()
     level = level + 1
     local indent = ("\t"):rep(level)
 
-    if self.contract and self.contract.Type == "table" then
-        for i, keyval in ipairs(self.contract.data) do
+    if self:GetContract() and self:GetContract().Type == "table" then
+        for i, keyval in ipairs(self:GetContract().data) do
             local key, val = tostring(self.data[i] and self.data[i].key or "undefined"), tostring(self.data[i] and self.data[i].val or "undefined")
             local tkey, tval = tostring(keyval.key), tostring(keyval.val)
             s[i] = indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val
@@ -186,7 +186,7 @@ function META.IsSubsetOf(A, B)
         end
         A.suppress = false
 
-        if not A.data[1] and (not A.contract or not A.contract.data[1]) then
+        if not A.data[1] and (not A:GetContract() or not A:GetContract().data[1]) then
             if can_be_empty then
                 return true
             else
@@ -335,14 +335,14 @@ function META:Set(key, val, no_delete)
     end
 
     -- delete entry
-    if not no_delete and not self.contract then
+    if not no_delete and not self:GetContract() then
         if (val == nil or (val.Type == "symbol" and val:GetData() == nil)) then
             return self:Delete(key)
         end
     end
 
-    if self.contract and self.contract.Type == "table" then -- TODO
-        local keyval, reason = self.contract:GetKeyVal(key, true)
+    if self:GetContract() and self:GetContract().Type == "table" then -- TODO
+        local keyval, reason = self:GetContract():GetKeyVal(key, true)
 
         if not keyval then
             return keyval, reason
@@ -417,8 +417,8 @@ function META:Get(key)
         return keyval.val
     end
 
-    if not keyval and self.contract then
-        local keyval, reason = self.contract:GetKeyVal(key, true)
+    if not keyval and self:GetContract() then
+        local keyval, reason = self:GetContract():GetKeyVal(key, true)
         if keyval then
             return keyval.val
         end
@@ -489,8 +489,8 @@ function META:Copy(map)
         copy:SetName(self:GetName():Copy())
     end
     
-    if self.contract then
-        copy.contract = self.contract
+    if self:GetContract() then
+        copy:SetContract(self:GetContract())
     end
 
     copy:CopyInternalsFrom(self)
@@ -505,7 +505,7 @@ end
 function META:pairs()
     local i = 1
     return function()
-        local keyval = self.data and self.data[i] or self.contract and self.contract[i]
+        local keyval = self.data and self.data[i] or self:GetContract() and self:GetContract()[i]
 
         if not keyval then
             return nil
@@ -543,7 +543,7 @@ function META:IsLiteral()
         return true
     end
 
-    if self.contract then
+    if self:GetContract() then
         return false
     end
 

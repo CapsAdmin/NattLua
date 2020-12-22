@@ -67,7 +67,7 @@ return function(META)
 
             local val = self:AnalyzeExpression(node.expression.left, "runtime")
             if val then
-                if val.contract then
+                if val:GetContract() then
                     table.insert(args, 1, val)
                 else
                     table.insert(args, 1, types.Union({types.Any(), val}))

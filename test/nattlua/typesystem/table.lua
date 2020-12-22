@@ -12,7 +12,7 @@ test("union and get", function()
     equal(false, contract:Get(String("asdf")))
 
     local tbl = Table()
-    tbl.contract = contract
+    tbl:SetContract(contract)
     assert(tbl:Set(String("foo"), Number(1337)))
     equal(1337, tbl:Get(String("foo")):GetData())
 
@@ -25,7 +25,7 @@ test("union string and get constant string", function()
     assert(contract:Set(String(), Number()))
 
     local tbl = Table()
-    tbl.contract = contract
+    tbl:SetContract(contract)
     tbl:Set(String(), Number(1337):MakeLiteral(true))
     local union = assert(tbl:Get(String()))
     equal("union", union.Type)
@@ -38,7 +38,7 @@ end)
 
 test("errors when trying to modify a table without a defined structure", function()
     local tbl = Table()
-    tbl.contract = Table()
+    tbl:SetContract(Table())
     assert(not tbl:Set(String("foo"), Number(1337)))
 end)
 

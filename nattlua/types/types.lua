@@ -239,7 +239,7 @@ do
     end
 
     function Base:Seal()
-        self.contract = self.contract or self:Copy()
+        self:SetContract(self:GetContract() or self:Copy())
     end
 
     function Base:CopyLiteralness(obj)
@@ -310,6 +310,14 @@ do
 
     function Base:GetMetaTable()
         return self.MetaTable
+    end
+
+    function Base:SetContract(val)
+        self.Contract = val
+    end
+
+    function Base:GetContract()
+        return self.Contract
     end
 
     types.BaseObject = Base

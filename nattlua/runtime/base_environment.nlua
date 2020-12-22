@@ -62,13 +62,13 @@ type function type_assert(what, type)
 		return
 	end
 
-	if (what.contract or what):GetSignature() ~= type:GetSignature() and (what):GetSignature() ~= type:GetSignature() then
+	if (what:GetContract() or what):GetSignature() ~= type:GetSignature() and (what):GetSignature() ~= type:GetSignature() then
         local a = tostring(type)
-        local b = tostring(what.contract or what)
+        local b = tostring(what:GetContract() or what)
 
         if a == b then
             a = type:GetSignature()
-            b = (what.contract or what):GetSignature()
+            b = (what:GetContract() or what):GetSignature()
         end
 
 		error("expected " .. a .." got " .. b, 2)
@@ -100,7 +100,7 @@ end
 
 type function seal(tbl)
 
-    if tbl.contract then return end
+    if tbl:GetContract() then return end
 
 	for key, val in tbl:pairs() do
 		if val.Type == "function" and val:GetArguments():Get(1).Type == "union" then 
@@ -111,7 +111,7 @@ type function seal(tbl)
 		end
 	end
 
-	tbl.contract = tbl
+	tbl:SetContract(tbl)
 end
 
 do -- globals
@@ -186,7 +186,7 @@ do -- globals
 				return
 			end
 
-			for _, kv in ipairs(t.contract and t.contract.data or t.data) do
+			for _, kv in ipairs(t:GetContract() and t:GetContract().data or t.data) do
 				kv.key.node = t.node
 				kv.val.node = t.node
 
@@ -502,7 +502,7 @@ do -- globals
 
 	type function setmetatable(tbl, meta)
 		if meta.Type == "table" then			
-			if not meta.contract then
+			if not meta:GetContract() then
 				meta:Extend(tbl, true)
 			end
 

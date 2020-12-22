@@ -26,7 +26,7 @@ return function(META)
         if node.explicit_type then
             if node.kind == "table" then
                 local obj = self:AnalyzeTableExpression(node, env)
-                obj.contract = self:AnalyzeExpression(node.explicit_type, "typesystem")
+                obj:SetContract(self:AnalyzeExpression(node.explicit_type, "typesystem"))
                 return obj
             end
 
