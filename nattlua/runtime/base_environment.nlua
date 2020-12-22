@@ -467,7 +467,6 @@ do -- globals
             return false, table.concat(errors, "\n")
         end
 
-
         return ok, val:Unpack()
     end
 

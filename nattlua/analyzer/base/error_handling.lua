@@ -27,7 +27,7 @@ return function(META)
         return ok
     end
 
-    function META:ReportDiagnostic(node, msg --[[#: string ]], severity --[[#: "warning" | "error" ]])
+    function META:ReportDiagnostic(node, msg --[[#: {reasons = {[number] = string}} | {[number} = string} ]], severity --[[#: "warning" | "error" ]])
 
         if self.SuppressDiagnostics then return end
         
@@ -45,7 +45,29 @@ return function(META)
             error("bad call to ReportDiagnostic")
         end
 
-        local key = msg .. "-" .. ("%p"):format(node) .. "-" .. "severity"
+        local function expand(tbl)
+            if type(tbl) == "string" then
+                return tbl
+            end
+
+            local out = {}
+            for i, v in ipairs(tbl) do
+                if type(v) == "table" then
+                    if v.Type then
+                        table.insert(out, tostring(v))
+                    else
+                        table.insert(out, expand(v))
+                    end
+                else
+                    table.insert(out, tostring(v))
+                end
+            end
+            return table.concat(out)
+        end
+        
+        local msg_str = expand(msg)
+
+        local key = msg_str .. "-" .. ("%p"):format(node) .. "-" .. "severity"
 
         self.diagnostics_map = self.diagnostics_map or {}
 
@@ -59,14 +81,14 @@ return function(META)
         local start, stop = helpers.LazyFindStartStop(node)
 
         if self.OnDiagnostic then
-            self:OnDiagnostic(node.code, node.name, msg, severity, start, stop)
+            self:OnDiagnostic(node.code, node.name, msg_str, severity, start, stop)
         end
 
         table.insert(self.diagnostics, {
             node = node, 
             start = start, 
             stop = stop,
-            msg = msg,
+            msg = msg_str,
             severity = severity,
             traceback = debug.traceback(),
         })

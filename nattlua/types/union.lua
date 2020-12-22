@@ -133,7 +133,7 @@ function META:GetAtIndex(i)
     end
     
     if not val then
-        return false, table.concat(errors, "\n")
+        return false, errors
     end
 
     return val
@@ -165,7 +165,7 @@ function META:Get(key, from_table)
         table.insert(errors, reason)
     end
 
-    return types.errors.other(table.concat(errors, "\n"))
+    return types.errors.other(errors)
 end
 
 function META:Set(key, val)
@@ -457,7 +457,7 @@ function META:Call(analyzer, arguments, ...)
         end
     end
 
-    return types.errors.other(table.concat(errors, "\n"))
+    return types.errors.other(errors)
 end
 
 function META:MakeCallableUnion(analyzer, node)

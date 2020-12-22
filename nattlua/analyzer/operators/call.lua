@@ -266,7 +266,7 @@ return function(META)
 
             local ok, reason = result:IsSubsetOf(contract)
             if not ok then
-                self:Error(result.node, reason .. " not union")
+                self:Error(result.node, reason)
             end
         end
     end

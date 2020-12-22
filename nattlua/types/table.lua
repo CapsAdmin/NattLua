@@ -281,7 +281,7 @@ function META:GetKeyVal(key, reverse_subset)
         table.insert(reasons, reason)
     end
 
-    return types.errors.missing(self, key, table.concat(reasons, "\n"))
+    return types.errors.missing(self, key, reasons)
 end
 
 function META:Insert(val)
@@ -377,7 +377,7 @@ function META:Get(key)
             end
             table.insert(errors, reason)
         end
-        return types.errors.other(table.concat(errors, "\n"))
+        return types.errors.other(errors)
     end
 
     if key.Type == "string" and not key:IsLiteral() then

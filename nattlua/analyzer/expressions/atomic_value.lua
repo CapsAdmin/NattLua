@@ -16,7 +16,7 @@ return function(META)
 
             if not obj then
                 table.insert(errors, err)
-                self:Error(node, table.concat(errors))
+                self:Error(node, errors)
                 return types.Nil()
             end
         else

@@ -51,7 +51,7 @@ function META.IsSubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return types.errors.other(table.concat(errors, "\n"))
+        return types.errors.other(errors)
     end
 
     if B.Type == "any" then return true end

@@ -165,9 +165,9 @@ function META:CheckArguments(arguments)
 
         if not ok then
             if b.node then
-                return types.errors.subset(a, b, "function argument #"..i.." '" .. tostring(b) .. "': " .. reason)
+                return types.errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
             else
-                return types.errors.subset(a, b, "argument #" .. i .. " - " .. reason)
+                return types.errors.subset(a, b, {"argument #", i, " - ", reason})
             end
         end
     end

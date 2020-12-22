@@ -153,7 +153,7 @@ function META.IsSubsetOf(A, B)
                 table.insert(errors, reason)
             end
         end
-        return types.errors.subset(A, B, table.concat(errors, "\n"))
+        return types.errors.subset(A, B, errors)
     end
 
     if A:Get(1) and A:Get(1).Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then

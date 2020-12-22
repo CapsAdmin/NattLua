@@ -131,7 +131,7 @@ function META.IsSubsetOf(A, B)
                 end
 
                 if not b then
-                    return types.errors.other(table.concat(reasons, "\n"))
+                    return types.errors.other(reasons)
                 end
             end
 
@@ -228,7 +228,7 @@ function META:GetKeyVal(key, reverse_subset)
         table.insert(reasons, reason)
     end
 
-    return types.errors.other(table.concat(reasons, "\n"))
+    return types.errors.other(reasons)
 end
 
 function META:Insert(val)
