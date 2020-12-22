@@ -30,8 +30,8 @@ function META:GetSignature()
 
     self.suppress = true
 
-    local s = {"T"}
-    local i = 2
+    local s = {}
+    local i = 1
     for _, keyval in ipairs(self:GetContract() or self.data) do
         s[i] = keyval.key:GetSignature() 
         i = i + 1
@@ -471,8 +471,6 @@ function META:Copy(map)
                 
         copy.data[i] = {key = k, val = v}
     end
-
-    copy:SetMetaTable(self:GetMetaTable())
 
     copy:CopyInternalsFrom(self)
 

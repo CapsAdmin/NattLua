@@ -12,16 +12,12 @@ function META:CopyInternalsFrom(obj)
     self.node_label = obj.node_label
     self.source = obj.source
     self.source_left = obj.source_left
+    
     self.source_right = obj.source_right
     self.explicit_not_literal = obj.explicit_not_literal
-
-    if obj:GetName() then
-        self:SetName(obj:GetName():Copy())
-    end
     
-    if obj:GetContract() then
-        self:SetContract(obj:GetContract())
-    end
+    self:SetName(obj:GetName())    
+    self:SetContract(obj:GetContract())
 
     -- what about these?
     --self.truthy_union = obj.truthy_union

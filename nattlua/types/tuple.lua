@@ -11,10 +11,10 @@ function META:GetSignature()
 
     self.suppress = true
 
-    local s = {"T"}
+    local s = {}
 
     for i,v in ipairs(self.data) do
-        s[i+1] = v:GetSignature()
+        s[i] = v:GetSignature()
     end
 
     if self.Remainder then
@@ -119,11 +119,12 @@ function META:Copy(map)
         copy:Set(i, v)
     end
 
-    copy:CopyInternalsFrom(self)
     if self.Remainder then
         copy.Remainder = self.Remainder:Copy()
     end
     copy.Repeat = self.Repeat
+
+    copy:CopyInternalsFrom(self)
 
     return copy
 end

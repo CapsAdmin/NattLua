@@ -34,6 +34,7 @@ function META:Copy()
         copy.max = self.max:Copy()
     end
     copy:CopyInternalsFrom(self)
+
     return copy
 end
 
@@ -119,13 +120,14 @@ function META:Max(val)
         local max = {}
         for _, obj in ipairs(val:GetTypes()) do
             if obj.Type ~= "number" then
-                return types.errors.other("unable to set the max value of "..tostring(self).." because "..tostring(val).." contains non numbers")
+                return types.errors.other({"unable to set the max value of ", self, " because ", val, " contains non numbers"})
             end
             if obj:IsLiteral() then
                 table.insert(max, obj)
             else
                 self.literal = false
                 self.data = nil
+                
                 return self
             end
         end
@@ -140,11 +142,12 @@ function META:Max(val)
     if not val:IsLiteral() then
         self.literal = false
         self.data = nil
+        
         return self
     end
 
-
     self.max = val
+    
     return self
 end
 
