@@ -3,16 +3,23 @@ local META = {}
 META.Type = "union"
 META.__index = META
 
-local sort = function(a, b) return a < b end
+local sort = function(a, b) return a:GetSignature() < b:GetSignature() end
+
+function META:Sort()
+    self.sort_me = true
+end
 
 function META:GetSignature()
     local s = {}
 
+    if self.sort_me then
+        table.sort(self:GetTypes(), sort)
+        self.sort_me = false
+    end
+
     for i, v in ipairs(self:GetTypes()) do
         s[i] = v:GetSignature()
     end
-
-    table.sort(s, sort)
 
     return table.concat(s)
 end
@@ -23,8 +30,6 @@ function META:__tostring()
     for _, v in ipairs(self:GetTypes()) do
         table.insert(s, tostring(v))
     end
-
-    table.sort(s, sort)
 
     return table.concat(s, " | ")
 end
@@ -44,6 +49,7 @@ function META:AddType(e)
     if not self.data[sig] then
         self.data[sig] = e
         table.insert(self:GetTypes(), e)
+        self:Sort()
 
         if #self:GetTypes() > 512 then 
             error("union is too large", 2)
@@ -66,6 +72,7 @@ function META:RemoveType(e)
     for i,v in ipairs(self:GetTypes()) do
         if v:GetSignature() == e:GetSignature() then
             table.remove(self:GetTypes(), i)
+            self:Sort()
             break
         end
     end
@@ -323,10 +330,22 @@ function META:Copy(map)
     for _, e in ipairs(self:GetTypes()) do
         local c = map[e] or e:Copy(map)
         map[e] = map[e] or c
-        copy:AddType(c)
+        copy.data[c:GetSignature()] = c
+        table.insert(copy:GetTypes(), c)
+    end
+    copy:Sort()
+    copy:CopyInternalsFrom(self)
+
+    if false and copy:GetSignature() ~= self:GetSignature() then
+        print(debug.traceback())
+        print("=========================")
+        print(copy)
+        print("!=")
+        print(self)
+        print("=========================")
     end
 
-    copy:CopyInternalsFrom(self)
+
     return copy
 end
 

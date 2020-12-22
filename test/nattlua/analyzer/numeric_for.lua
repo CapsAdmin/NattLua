@@ -50,9 +50,9 @@ do
         -- x should be false, because i == 2 is the last statement
         local b = x
     ]])
-
+        
     assert(code:find("i: 1 | 2 = 1", nil, true) ~= nil)
-    assert(code:find("local a: false | true = x", nil, true) ~= nil)
+    assert(code:find("local a: true | false = x", nil, true) ~= nil)
     assert(code:find("local b: false = x", nil, true) ~= nil)
 end
 

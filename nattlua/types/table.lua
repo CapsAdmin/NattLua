@@ -14,6 +14,11 @@ function META:GetSignature()
         return tostring(self:GetUniqueID())
     end
 
+    if self.contract and self.contract.Name then
+        self.suppress = nil
+        return self.contract.Name:GetData()
+    end
+
     if self.Name then
         self.suppress = nil
         return self.Name:GetData()
@@ -37,17 +42,6 @@ function META:GetSignature()
 
     s = table.concat(s)
 
-    if #s > 10000 then
-        NONAME = true
-        print("=============")
-        print(s)
-        print("------------")
-        print(self)
-        print("=============")
-        NONAME = false
-        ANALYZER:Warning(self.node, "signature is " .. #s .. " bytes")
-    end
-
     return s
 end
 
@@ -58,6 +52,11 @@ function META:__tostring()
     end
 
     self.suppress = true
+
+    if self.contract and self.contract.Name then
+        self.suppress = nil
+        return self.contract.Name:GetData()
+    end
 
     if self.Name then
         self.suppress = nil
@@ -472,7 +471,7 @@ function META:Copy(map)
 
     copy.node = self.node
 
-    for _, keyval in ipairs(self.data) do
+    for i, keyval in ipairs(self.data) do
         local k, v = keyval.key, keyval.val
 
         k = map[keyval.key] or k:Copy(map)
@@ -481,12 +480,16 @@ function META:Copy(map)
         v = map[keyval.val] or v:Copy(map)
         map[keyval.val] = map[keyval.val] or v
                 
-        copy:Set(k, v)
+        copy.data[i] = {key = k, val = v}
     end
 
     copy:SetMetaTable(self:GetMetaTable())
+
+    if self:GetName() then
+        copy:SetName(self:GetName():Copy())
+    end
+    
     copy:CopyInternalsFrom(self)
-    copy:SetName(self:GetName())
 
     return copy
 end

@@ -255,16 +255,8 @@ return function(META)
 
             for _, tuple in ipairs(result:GetData()) do
                 local ok, reason = tuple:IsSubsetOf(contract)
-                if ok then
-                    break
-                else
-                    table.insert(errors, {tuple = tuple, reason = reason})
-                end
-            end
-
-            if errors[1] then
-                for _, info in ipairs(errors) do
-                    self:Error(info.tuple.node, info.reason)
+                if not ok then
+                    self:Error(tuple.node, reason)
                 end
             end
         else 

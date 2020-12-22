@@ -95,7 +95,7 @@ function META:__tostring()
 
     if self.literal then
         if self.data then
-            return ("%q"):format(self.data)
+            return "\"" .. self.data .. "\""
         end
 
         if self.data == nil then

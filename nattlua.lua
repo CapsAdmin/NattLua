@@ -241,7 +241,10 @@ do
 
 		local ok, res = xpcall(function(...) 
 				local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, ...)
-				analyzer:AnalyzeUnreachableCode()
+                analyzer:AnalyzeUnreachableCode()
+                if analyzer.OnFinish then
+                    analyzer:OnFinish()
+                end
 				return res
 			end,
 			function(msg) return traceback(self, analyzer, msg) end,

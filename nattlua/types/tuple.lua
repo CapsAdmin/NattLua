@@ -120,7 +120,9 @@ function META:Copy(map)
     end
 
     copy:CopyInternalsFrom(self)
-    copy.Remainder = self.Remainder
+    if self.Remainder then
+        copy.Remainder = self.Remainder:Copy()
+    end
     copy.Repeat = self.Repeat
 
     return copy
@@ -359,6 +361,7 @@ function META:Slice(start, stop)
     for i = start, stop do
         table.insert(copy.data, self.data[i])
     end
+    
     return copy
 end
 
