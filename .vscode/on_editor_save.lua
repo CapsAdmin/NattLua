@@ -9,8 +9,13 @@ end
 
 local function run_nattlua(path)
     did_something = true
-    local c = assert(nl.File(path, {annotate = true}))
 
+    if io.open(path, "r"):read("*all"):find("%-%-%s-PLAIN_LUA") then
+        return assert(loadfile(path))()
+    end
+    
+    local c = assert(nl.File(path, {annotate = true}))
+    
     if c.code:find("%-%-%s-EVENT_DUMP") then
         c:EnableEventDump(true)
     end
@@ -23,10 +28,20 @@ local function run_nattlua(path)
         _G.DISABLE_BASE_ENV = true
     end
 
+    if c.code:find("%-%-%s-PROFILE") then
+        require("jit.p").start("Flp")
+    end
+
     local ok, err = c:Analyze()
+
     if c.code:find("--DISABLE_BASE_ENV", nil, true) then
         _G.DISABLE_BASE_ENV = nil
     end
+
+    if c.code:find("%-%-%s-PROFILE") then
+        require("jit.p").stop()
+    end
+
     if not ok then
         io.write(err, "\n")
         return
