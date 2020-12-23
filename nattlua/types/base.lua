@@ -16,8 +16,9 @@ function META:CopyInternalsFrom(obj)
     self.source_right = obj.source_right
     self.explicit_not_literal = obj.explicit_not_literal
     
-    self:SetName(obj:GetName())    
     self:SetContract(obj:GetContract())
+    self:SetName(obj:GetName()) 
+    self.MetaTable = obj.MetaTable   
 
     -- what about these?
     --self.truthy_union = obj.truthy_union
@@ -178,6 +179,9 @@ function META:SetMetaTable(tbl)
 end
 
 function META:GetMetaTable()
+    if self.Contract and self.Contract.MetaTable then
+        return self.Contract.MetaTable
+    end
     return self.MetaTable
 end
 

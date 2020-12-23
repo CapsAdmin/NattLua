@@ -23,8 +23,8 @@ return function(META--[[#: {
         type META.name = string
         type META.OnError = nil | (function(META, string, string, string, number, number): nil)
         type META.code_ptr = {
-            [number] = number,
             @MetaTable = self,
+            [number] = number,
             __add = (function(self, number): self),
             __sub = (function(self, number): self)
         }
@@ -34,6 +34,7 @@ return function(META--[[#: {
     if not ok then
         table_new = function() return {} end
     end
+    
     local ffi = jit and require("ffi")
 
     local function pool(alloc --[[#: (function(): {[string] = any})]], size --[[#: nil | number]])

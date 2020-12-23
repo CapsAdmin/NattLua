@@ -376,3 +376,18 @@ run([[
 
     type_assert(new_vector, _ as {x = number, y = number, z = number})
 ]], "4 is not the same type as")
+
+run[[
+    type code_ptr = {
+        @Name = "codeptr",
+        @MetaTable = self,
+        [number] = number,
+        __add = (function(self | number, number | self): self),
+        __sub = (function(self | number, number | self): self)
+    }
+    
+    local x: code_ptr
+    local y = x + 50 - 1
+    
+    type_assert(y, _ as code_ptr)
+]]
