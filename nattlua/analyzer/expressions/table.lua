@@ -4,7 +4,7 @@ return function(META)
     function META:AnalyzeTableExpression(node, env)
         local tbl = self:NewType(node, "table", nil, env == "typesystem")
         if env == "runtime" then
-            tbl:SetReferenceId(tostring(tbl.data))
+            tbl:SetReferenceId(tostring(tbl:GetData()))
         end
         self.current_tables = self.current_tables or {}
         table.insert(self.current_tables, tbl)
@@ -35,8 +35,8 @@ return function(META)
                         end
 
                         if tup.Remainder then
-                            local current_index = types.Number(tbl:GetLength() + 1):MakeLiteral(true)
-                            local max = types.Number(tup.Remainder:GetLength()):MakeLiteral(true)
+                            local current_index = types.Number(tbl:GetLength() + 1):SetLiteral(true)
+                            local max = types.Number(tup.Remainder:GetLength()):SetLiteral(true)
                             tbl:Set(current_index:Max(max), tup.Remainder:Get(1))
                         end
                     end

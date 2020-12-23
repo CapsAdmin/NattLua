@@ -58,7 +58,7 @@ type function type_assert(what, type)
 	what = what or types.Nil()
 	type = type or types.Nil()
 
-	if what.Type == type.Type and what.data == type.data then
+	if what.Type == type.Type and what:GetData() == type:GetData() then
 		return
 	end
 
@@ -140,7 +140,7 @@ do -- globals
 		if obj:IsTruthy() then
 			return obj
 		end
-		error(err and err.data or "assertion failed")
+		error(err and err:GetData() or "assertion failed")
 	end
 
 	type function next(t: {[any] = any}, k: any)
@@ -150,7 +150,7 @@ do -- globals
 		end
 
 		if t:IsLiteral() then
-			if k and not (k.Type == "symbol" and k.data == nil) then
+			if k and not (k.Type == "symbol" and k:GetData() == nil) then
 				for i, kv in ipairs(t:GetData()) do
 					if kv.key:IsSubsetOf(k) then
 						local kv = t:GetData()[i+1]
@@ -182,13 +182,13 @@ do -- globals
 		local v = types.Union()
 
 		for _, t in ipairs(t) do
-			if not t.data then
+			if not t:GetData() then
 				return
 			end
 
-			for _, kv in ipairs(t:GetContract() and t:GetContract().data or t.data) do
-				kv.key.node = t.node
-				kv.val.node = t.node
+			for _, kv in ipairs(t:GetContract() and t:GetContract():GetData() or t:GetData()) do
+				kv.key:SetNode(t:GetNode())
+				kv.val:SetNode(t:GetNode())
 
 				k:AddType(kv.key)
 				v:AddType(kv.val)
@@ -211,7 +211,7 @@ do -- globals
 		end
 
 		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
-		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, analyzer:GetScope(), tbl)
+		local k,v = analyzer:CallLuaTypeFunction(node, next:GetData().lua_function, analyzer:GetScope(), tbl)
 		local done = false
 
         if v.Type == "union" then
@@ -248,7 +248,7 @@ do -- globals
         end
 
 		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
-		local k,v = analyzer:CallLuaTypeFunction(node, next.data.lua_function, analyzer:GetScope(), tbl)
+		local k,v = analyzer:CallLuaTypeFunction(node, next:GetData().lua_function, analyzer:GetScope(), tbl)
 		local done = false
 		return function()
 			if done then return nil end
@@ -316,7 +316,7 @@ do -- globals
 			end
 		end
 
-		analyzer:Error(name.node, "unable to find module " .. str)
+		analyzer:Error(name:GetNode(), "unable to find module " .. str)
 
 		return types.Any
 	end
@@ -485,7 +485,7 @@ do -- globals
 			local copy = types.Union()
 			for _, v in ipairs(obj:GetTypes()) do
 				if v.GetLuaType then
-					copy:AddType(types.String(v:GetLuaType()):MakeLiteral(true))
+					copy:AddType(types.String(v:GetLuaType()):SetLiteral(true))
 				end
 			end
 
@@ -588,8 +588,8 @@ do
 
     type function io.type(obj)
         local flags = types.Union()
-        flags:AddType(types.String("file"):MakeLiteral(true))
-        flags:AddType(types.String("closed file"):MakeLiteral(true))
+        flags:AddType(types.String("file"):SetLiteral(true))
+        flags:AddType(types.String("closed file"):SetLiteral(true))
 
 
         print(("%p"):format(obj), ("%p"):format(env.typesystem.File:GetType()))
@@ -707,8 +707,8 @@ type function debug.setfenv(val, table)
     if val and (val:IsLiteral() or val.Type == "function") then 
 		if val.Type == "number" then
 			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
-		elseif val.node then
-        	analyzer:SetEnvironmentOverride(val.node, table, "runtime")
+		elseif val:GetNode() then
+        	analyzer:SetEnvironmentOverride(val:GetNode(), table, "runtime")
 		end
     end
 end
@@ -769,7 +769,7 @@ do
 		end
 
 		local out = {}
-		for i, keyval in ipairs(tbl.data) do
+		for i, keyval in ipairs(tbl:GetData()) do
             if not keyval.val:IsLiteral() or keyval.val.Type == "union" then
                 return types.String()
             end
@@ -786,9 +786,9 @@ do
 
 		if not val then
 			val = ...
-			pos = #tbl.data + 1
+			pos = #tbl:GetData() + 1
 		else
-			pos = pos.data
+			pos = pos:GetData()
 		end
 
 		tbl:Set(pos, val)
@@ -802,7 +802,7 @@ do
 				union:AddType(v)
 			end
 		elseif tbl.Type == "table" then
-			for i,v in ipairs(tbl.data) do
+			for i,v in ipairs(tbl:GetData()) do
 				union:AddType(v.val)
 			end
 		end
@@ -889,7 +889,7 @@ do
 				local strings = {f()}
 				if strings[1] then
 					for i,v in ipairs(strings) do
-						strings[i] = types.String(v):MakeLiteral(true)
+						strings[i] = types.String(v):SetLiteral(true)
 					end
 					return types.Tuple(strings)
 				end
@@ -928,13 +928,13 @@ do
 		if str:IsLiteral() then
             if from then
                 if from:IsLiteral() and to and to:IsLiteral() then
-                    return str.data:byte(from:GetData(), to:GetData())
+                    return str:GetData():byte(from:GetData(), to:GetData())
                 end
 
-                return str.data:byte(from:GetData())
+                return str:GetData():byte(from:GetData())
             end
 
-			return str.data:byte()
+			return str:GetData():byte()
 		end
 
 		return types.Number()
@@ -953,9 +953,9 @@ do
         
         for i,v in ipairs(res) do
             if type(v) == "string" then
-                res[i] = types.String(v):MakeLiteral(true)
+                res[i] = types.String(v):SetLiteral(true)
             else
-                res[i] = types.Number(v):MakeLiteral(true)
+                res[i] = types.Number(v):SetLiteral(true)
             end
         end
         
@@ -974,7 +974,7 @@ do
     
         local start, stop, found = str:find(pattern, start_position, no_pattern)
         if found then
-            types.String(found):MakeLiteral(true)
+            types.String(found):SetLiteral(true)
         end
 
         return start, stop, found
@@ -982,7 +982,7 @@ do
 
 	type function ^string.len(str: string)
 		if str:IsLiteral() then
-			return types.Number(#str.data):MakeLiteral(true)
+			return types.Number(#str:GetData()):SetLiteral(true)
 		end
 
 		return types.Number()
@@ -1007,7 +1007,7 @@ do
                 return string.gsub(str, pattern, replacement, max_replacements)
             else
                 return string.gsub(str, pattern, function(...)
-                    analyzer:Assert(replacement.node, analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement.node, {...}) ))
+                    analyzer:Assert(replacement:GetNode(), analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}) ))
                 end, max_replacements)
             end
         end

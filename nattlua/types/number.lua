@@ -1,6 +1,7 @@
 local types = require("nattlua.types.types")
 local syntax = require("nattlua.syntax.syntax")
 local bit = not _G.bit and require("bit32") or _G.bit
+local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "number"
@@ -13,7 +14,7 @@ end
 function META:GetSignature()
     local s = "N"
 
-    if self.literal then
+    if self:IsLiteral() then
         s = s .. "-" .. tostring(self:GetData())
     end
 
@@ -24,12 +25,8 @@ function META:GetSignature()
     return s
 end
 
-function META:GetData()
-    return self.data
-end
-
 function META:Copy()
-    local copy = types.Number(self.data):MakeLiteral(self.literal)
+    local copy = types.Number(self:GetData()):SetLiteral(self:IsLiteral())
     if self.max then
         copy.max = self.max:Copy()
     end
@@ -50,49 +47,49 @@ function META.IsSubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return types.errors.subset(A, b, errors)
+        return type_errors.subset(A, b, errors)
     end
 
     if A.Type == "any" then return true end
     if B.Type == "any" then return true end
 
     if B.Type == "number" then
-        if A.literal == true and B.literal == true then
+        if A:IsLiteral() == true and B:IsLiteral() == true then
             -- compare against literals
 
             -- nan
             if A.Type == "number" and B.Type == "number" then
-                if A.data ~= A.data and B.data ~= B.data then
+                if A:GetData() ~= A:GetData() and B:GetData() ~= B:GetData() then
                     return true
                 end
             end
 
-            if A.data == B.data then
+            if A:GetData() == B:GetData() then
                 return true
             end
 
             if B.max then
-                if A.data >= B.data and A.data <= B.max.data then
+                if A:GetData() >= B:GetData() and A:GetData() <= B.max:GetData() then
                     return true
                 end
             end
 
-            return types.errors.subset(A, B)
-        elseif A.data == nil and B.data == nil then
+            return type_errors.subset(A, B)
+        elseif A:GetData() == nil and B:GetData() == nil then
             -- number contains number
             return true
-        elseif A.literal and not B.literal then
+        elseif A:IsLiteral() and not B:IsLiteral() then
             -- 42 subset of number?
             return true
-        elseif not A.literal and B.literal then
+        elseif not A:IsLiteral() and B:IsLiteral() then
             -- number subset of 42 ?
-            return types.errors.subset(A, B)
+            return type_errors.subset(A, B)
         end
 
         -- number == number
         return true
     else
-        return types.errors.type_mismatch(A, B)
+        return type_errors.type_mismatch(A, B)
     end
 
     error("this shouldn't be reached")
@@ -101,17 +98,15 @@ function META.IsSubsetOf(A, B)
 end
 
 function META:__tostring()
-    --return "「"..self.uid .. " 〉" .. self:GetSignature() .. "」"
-
-    if self.literal then
-        return tostring(self.data) .. (self.max and (".." .. tostring(self.max)) or "")
+    if self:IsLiteral() then
+        return tostring(self:GetData()) .. (self.max and (".." .. tostring(self.max)) or "")
     end
 
-    if self.data == nil then
+    if self:GetData() == nil then
         return "number"
     end
 
-    return "number" .. "(".. tostring(self.data) .. (self.max and (".." .. tostring(self.max)) or "") .. ")"
+    return "number" .. "(".. tostring(self:GetData()) .. (self.max and (".." .. tostring(self.max)) or "") .. ")"
 end
 
 
@@ -120,28 +115,28 @@ function META:Max(val)
         local max = {}
         for _, obj in ipairs(val:GetTypes()) do
             if obj.Type ~= "number" then
-                return types.errors.other({"unable to set the max value of ", self, " because ", val, " contains non numbers"})
+                return type_errors.other({"unable to set the max value of ", self, " because ", val, " contains non numbers"})
             end
             if obj:IsLiteral() then
                 table.insert(max, obj)
             else
-                self.literal = false
-                self.data = nil
+                self:SetLiteral(false)
+                self:SetData(nil)
                 
                 return self
             end
         end
-        table.sort(max, function(a, b) return a.data > b.data end)
+        table.sort(max, function(a, b) return a:GetData() > b:GetData() end)
         val = max[1]
     end
 
     if val.Type ~= "number" then
-        return types.errors.other("max must be a number, got " .. tostring(val))
+        return type_errors.other("max must be a number, got " .. tostring(val))
     end
 
     if not val:IsLiteral() then
-        self.literal = false
-        self.data = nil
+        self:SetLiteral(false)
+        self:SetData(nil)
         
         return self
     end

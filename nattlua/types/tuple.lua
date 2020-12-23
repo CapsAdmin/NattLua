@@ -1,4 +1,5 @@
 local types = require("nattlua.types.types")
+local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "tuple"
@@ -13,7 +14,7 @@ function META:GetSignature()
 
     local s = {}
 
-    for i,v in ipairs(self.data) do
+    for i,v in ipairs(self:GetData()) do
         s[i] = v:GetSignature()
     end
 
@@ -40,7 +41,7 @@ function META:__tostring()
 
     local s = {}
 
-    for i,v in ipairs(self.data) do
+    for i,v in ipairs(self:GetData()) do
         s[i] = tostring(v)
     end
 
@@ -68,7 +69,7 @@ function META:Merge(tup)
         return self
     end
 
-    local src = self.data
+    local src = self:GetData()
 
     if tup:GetMinimumLength() > 512 then
         error("tuple overflow")
@@ -91,7 +92,7 @@ function META:Merge(tup)
 end
 
 function META:GetTypes()
-    return self.data
+    return self:GetData()
 end
 
 function META:SetReferenceId(id)
@@ -103,17 +104,13 @@ function META:SetReferenceId(id)
     return self
 end
 
-function META:GetData()
-    return self.data
-end
-
 function META:Copy(map)
     map = map or {}
 
     local copy = types.Tuple({})
     map[self] = map[self] or copy
     
-    for i, v in ipairs(self.data) do
+    for i, v in ipairs(self:GetData()) do
         v = map[v] or v:Copy(map)
         map[v] = map[v] or v
         copy:Set(i, v)
@@ -154,7 +151,7 @@ function META.IsSubsetOf(A, B)
                 table.insert(errors, reason)
             end
         end
-        return types.errors.subset(A, B, errors)
+        return type_errors.subset(A, B, errors)
     end
 
     if A:Get(1) and A:Get(1).Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
@@ -167,18 +164,18 @@ function META.IsSubsetOf(A, B)
 
     if B.Type == "table" then
         if not B:IsNumericallyIndexed() then
-            return types.errors.numerically_indexed(B)
+            return type_errors.numerically_indexed(B)
         end
     end
 
     if B.Type ~= "tuple" then
-        return types.errors.type_mismatch(A, B)
+        return type_errors.type_mismatch(A, B)
     end
 
     for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
         local a, err = A:Get(i)
         if not a then
-            return types.errors.subset(A, B, err)
+            return type_errors.subset(A, B, err)
         end
 
         local b, err = B:Get(i)
@@ -188,7 +185,7 @@ function META.IsSubsetOf(A, B)
         end
 
         if not b then
-            return types.errors.missing(B, i, err)
+            return type_errors.missing(B, i, err)
         end
 
         A.suppress = true
@@ -196,7 +193,7 @@ function META.IsSubsetOf(A, B)
         A.suppress = false
 
         if not ok then
-            return types.errors.subset(a, b, reason)
+            return type_errors.subset(a, b, reason)
         end
     end
 
@@ -211,29 +208,29 @@ function META:Get(key)
     local real_key = key
     assert(type(key) == "number", "key must be a number, got " .. tostring(type(key)))
 
-    local val = self.data[key]
+    local val = self:GetData()[key]
 
-    if not val and self.Repeat and key <= (#self.data * self.Repeat) then
-        return self.data[((key-1) % #self.data) + 1]
+    if not val and self.Repeat and key <= (#self:GetData() * self.Repeat) then
+        return self:GetData()[((key-1) % #self:GetData()) + 1]
     end
 
     if not val and self.Remainder then
-        return self.Remainder:Get(key - #self.data)
+        return self.Remainder:Get(key - #self:GetData())
     end
 
-    if not val and self.data[#self.data] and (self.data[#self.data].Repeat or self.data[#self.data].Remainder) then
-        return self.data[#self.data]:Get(key)
+    if not val and self:GetData()[#self:GetData()] and (self:GetData()[#self:GetData()].Repeat or self:GetData()[#self:GetData()].Remainder) then
+        return self:GetData()[#self:GetData()]:Get(key)
     end
 
     if not val then
-        return types.errors.other("index " .. key .. " does not exist")
+        return type_errors.other("index " .. key .. " does not exist")
     end
 
     return val
 end
 
 function META:Set(key, val)
-    self.data[key] =  val
+    self:GetData()[key] =  val
     if key > 32 then
         error("tuple too long", 2)
     end
@@ -242,7 +239,7 @@ end
 
 
 function META:IsConst()
-    for _, obj in ipairs(self.data) do
+    for _, obj in ipairs(self:GetData()) do
         if not obj:IsConst() then
             return false
         end
@@ -276,22 +273,22 @@ end
 
 function META:GetLength()
     if self.Remainder then
-        return #self.data + self.Remainder:GetLength()
+        return #self:GetData() + self.Remainder:GetLength()
     end
     
     if self.Repeat then
-        return #self.data * self.Repeat
+        return #self:GetData() * self.Repeat
     end
 
-    return #self.data
+    return #self:GetData()
 end
 
 function META:GetMinimumLength()
-    local len = #self.data
+    local len = #self:GetData()
     local found_nil = false
 
-    for i = #self.data, 1, -1 do
-        local obj = self.data[i]
+    for i = #self:GetData(), 1, -1 do
+        local obj = self:GetData()[i]
         
         if obj.Type == "union" and obj:HasNil() then
             found_nil = true
@@ -355,19 +352,20 @@ function META:Slice(start, stop)
     -- NOT ACCURATE YET
 
     start = start or 1
-    stop = stop or #self.data
+    stop = stop or #self:GetData()
 
     local copy = self:Copy()
-    copy.data = {}
+    local data = {}
     for i = start, stop do
-        table.insert(copy.data, self.data[i])
+        table.insert(data, self:GetData()[i])
     end
+    copy:SetData(data)
     
     return copy
 end
 
 function META:Initialize(data)
-    self.data = {}
+    self:SetData({})
     data = data or {}
     
     for i, v in ipairs(data) do

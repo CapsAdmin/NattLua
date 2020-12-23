@@ -631,7 +631,7 @@ R[[
     local type b = function()
         _G.LOL = nil
         local t = analyzer:GetLocalOrEnvironmentValue("a", "typesystem")
-        local func = t.data.lua_function
+        local func = t:GetData().lua_function
         func()
         if not _G.LOL then
             error("test fail")

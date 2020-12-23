@@ -1,4 +1,6 @@
 local types = require("nattlua.types.types")
+local type_errors = require("nattlua.types.error_messages")
+
 local META = {}
 META.Type = "union"
 META.__index = META
@@ -58,8 +60,8 @@ function META:AddType(e)
 
     local sig = e:GetSignature()
 
-    if not self.data[sig] then
-        self.data[sig] = e
+    if not self:GetData()[sig] then
+        self:GetData()[sig] = e
         table.insert(self:GetTypes(), e)
         self:Sort()
 
@@ -75,12 +77,16 @@ function META:GetTypes()
     return self.datai
 end
 
+function META:GetData()
+    return self.datai
+end
+
 function META:GetLength()
     return #self:GetTypes()
 end
 
 function META:RemoveType(e)
-    self.data[e:GetSignature()] = nil
+    self:GetData()[e:GetSignature()] = nil
     for i,v in ipairs(self:GetTypes()) do
         if v:GetSignature() == e:GetSignature() then
             table.remove(self:GetTypes(), i)
@@ -121,7 +127,7 @@ function META:GetAtIndex(i)
             if found then
                 if val then
                     val = types.Union({val, found})
-                    val:SetSource(found.node, found, found.source_left, found.source_right)
+                    val:SetNode(found:GetNode()):SetSource(found, found.source_left, found.source_right)
                 else
                     val = found
                 end
@@ -137,7 +143,7 @@ function META:GetAtIndex(i)
         else
             if val then
                 val = types.Union({val, obj})
-                val:SetSource(self.node, self, self.source_left, self.source_right)
+                val:SetNode(self:GetNode()):SetSource(self, self.source_left, self.source_right)
             else
                 val = obj
             end
@@ -177,7 +183,7 @@ function META:Get(key, from_table)
         table.insert(errors, reason)
     end
 
-    return types.errors.other(errors)
+    return type_errors.other(errors)
 end
 
 function META:Set(key, val)
@@ -188,11 +194,6 @@ end
 function META:IsEmpty()
     return self:GetTypes()[1] == nil
 end
-
-function META:GetData()
-    return self:GetTypes()
-end
-
 
 function META:IsTruthy()
     if self:IsEmpty() then return false end
@@ -253,7 +254,7 @@ end
 
 function META:HasNil()
     for _, obj in ipairs(self:GetTypes()) do
-        if obj.Type == "symbol" and obj.data == nil then
+        if obj.Type == "symbol" and obj:GetData() == nil then
             return true
         end
     end
@@ -274,7 +275,7 @@ function META.IsSubsetOf(A, B)
         if B:GetLength() == 1 then
             B = B:Get(1)
         else
-            --return types.errors.subset(A, B, "a tuple cannot be a subset of another tuple")
+            --return type_errors.subset(A, B, "a tuple cannot be a subset of another tuple")
         end
         -- TODO: given error above, the unpack probably should probably be moved out
     end
@@ -287,13 +288,13 @@ function META.IsSubsetOf(A, B)
         local b, reason = B:Get(a)
 
         if not b then
-            return types.errors.missing(B, a, reason)
+            return type_errors.missing(B, a, reason)
         end
 
         local ok, reason = a:IsSubsetOf(b)
 
         if not ok then
-            return types.errors.subset(a, b, reason)
+            return type_errors.subset(a, b, reason)
         end
     end
 
@@ -340,7 +341,7 @@ function META:Copy(map)
     for _, e in ipairs(self:GetTypes()) do
         local c = map[e] or e:Copy(map)
         map[e] = map[e] or c
-        copy.data[c:GetSignature()] = c
+        copy:GetData()[c:GetSignature()] = c
         table.insert(copy:GetTypes(), c)
     end
     copy:Sort()
@@ -443,13 +444,13 @@ end
 
 function META:Call(analyzer, arguments, ...)
     if self:IsEmpty() then
-        return types.errors.operation("call", nil)
+        return type_errors.operation("call", nil)
     end
 
     local union = self
     for _, obj in ipairs(self:GetData()) do
         if obj.Type ~= "function" and obj.Type ~= "table" and obj.Type ~= "any" then
-            return types.errors.operation("call", obj)
+            return type_errors.operation("call", obj)
         end
     end
 
@@ -469,7 +470,7 @@ function META:Call(analyzer, arguments, ...)
         end
     end
 
-    return types.errors.other(errors)
+    return type_errors.other(errors)
 end
 
 function META:MakeCallableUnion(analyzer, node)
@@ -492,7 +493,7 @@ function META:MakeCallableUnion(analyzer, node)
     new_union.truthy_union = truthy_union
     new_union.falsy_union = falsy_union
 
-    return truthy_union:SetSource(node, new_union, self)
+    return truthy_union:SetNode(node):SetSource(new_union, self)
 end
 
 return types.RegisterType(META)

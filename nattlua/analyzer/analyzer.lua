@@ -28,9 +28,9 @@ function META:NewType(node, type, data, literal)
         obj = self:Assert(node, types.Tuple(data or {types.Any()}))
         obj:SetRepeat(math.huge)
     elseif type == "number" then
-        obj = self:Assert(node, types.Number(data):MakeLiteral(literal))
+        obj = self:Assert(node, types.Number(data):SetLiteral(literal))
     elseif type == "string" then
-        obj = self:Assert(node, types.String(data):MakeLiteral(literal))
+        obj = self:Assert(node, types.String(data):SetLiteral(literal))
     elseif type == "boolean" then
         if literal then
             obj = types.Symbol(data)
@@ -47,7 +47,7 @@ function META:NewType(node, type, data, literal)
         obj = self:Assert(node, types.Error(data)) -- TEST ME
     elseif type == "function" then
         obj = self:Assert(node, types.Function(data))
-        obj.node = node
+        obj:SetNode(node)
 
         if node.statements then 
             obj.function_body_node = node
@@ -56,8 +56,8 @@ function META:NewType(node, type, data, literal)
 
     if not obj then error("NYI: " .. type) end
 
-    obj.node = obj.node or node
-    obj.node.inferred_type = obj
+    obj:SetNode(obj:GetNode() or node)
+    obj:GetNode().inferred_type = obj
     
     return obj
 end

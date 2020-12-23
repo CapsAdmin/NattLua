@@ -16,10 +16,6 @@ function META:Set(key, val)
     return true
 end
 
-function META:GetData()
-    return self.data
-end
-
 function META:Copy()
     return self
 end

@@ -1,76 +1,15 @@
 local types = {}
-
-types.errors = {
-    subset = function(a, b, reason)
-        local msg = {a, " is not a subset of ", b}
-
-        if reason then
-            table.insert(msg, " because ")
-            if type(reason) == "table" then
-                for i,v in ipairs(reason) do
-                    table.insert(msg, v)
-                end
-            else
-                table.insert(msg, reason)
-            end
-        end
-
-        return false, msg
-    end,
-    missing = function(a, b, reason)
-        local msg = {a, " has no field ", b, " because ", reason}
-        return false, msg
-    end,
-    other = function(msg)
-        return false, msg
-    end,
-    type_mismatch = function(a, b)
-        return false, {a, " is not the same type as ", b}
-    end,
-    value_mismatch = function(a, b)
-        return false, {a, " is not the same value as ", b}
-    end,
-    operation = function(op, obj, subject)
-        return false, {"cannot ", op, " ", subject}
-    end,
-    numerically_indexed = function(obj)
-        return false, {obj, " is not numerically indexed"}
-    end,
-    empty = function(obj)
-        return false, {obj, " is empty"}
-    end,
-    binary = function(op, l,r)
-        return false, {l, " ", op, " ", r, " is not a valid binary operation"}
-    end,
-    prefix = function(op, l)
-        return false, {op, " ", l, " is not a valid prefix operation"}
-    end,
-    postfix = function(op, r)
-        return false, {op, " ", r, " is not a valid postfix operation"}
-    end,
-    literal = function(obj, reason)
-        local msg = {obj, " is not a literal"}
-        if reason then
-            table.insert(msg, " because ")
-            table.insert(msg, reason)
-        end
-
-        return msg
-    end,
-    string_pattern = function(a, b)
-        return false, {"cannot find ", a, " in pattern \"", b.pattern_contract, "\""}
-    end
-}
+local type_errors = require("nattlua.types.error_messages")
 
 function types.Cast(val)
     if type(val) == "string" then
-        return types.String(val):MakeLiteral(true)
+        return types.String(val):SetLiteral(true)
     elseif type(val) == "boolean" then
         return types.Symbol(val)
     elseif type(val) == "number" then
-        return types.Number(val):MakeLiteral(true)
+        return types.Number(val):SetLiteral(true)
     elseif type(val) == "table" and val.kind == "value" then
-        return types.String(val.value.value):MakeLiteral(true)
+        return types.String(val.value.value):SetLiteral(true)
     end
 
     if not types.IsTypeObject(val) then
@@ -144,7 +83,6 @@ do
     end
 end
 
-local uid = 0
 function types.RegisterType(meta)
     for k, v in pairs(types.BaseObject) do
         if not meta[k] then
@@ -153,12 +91,10 @@ function types.RegisterType(meta)
     end
 
     return function(data)
-        local self = setmetatable({}, meta)
-        self.reasons = {}
-        self.data = data
-        self.uid = uid
-        uid = uid + 1
-        
+        local self = setmetatable({
+            data = data,
+        }, meta)
+                
         if self.Initialize then
             local ok, err = self:Initialize(data)
             if not ok then
@@ -168,6 +104,30 @@ function types.RegisterType(meta)
     
         return self
     end
+end
+
+function types.View(obj)
+    return setmetatable({obj = obj, GetType = function() return obj end}, {
+        __index = function(_, key) return types.View(assert(obj:Get(key))) end,
+        __newindex = function(_, key, val) assert(obj:Set(key, val)) end,
+        __call = function(_, ...) return types.View(assert(obj:Call(...))) end,
+    })
+end
+
+function types.IsSameUniqueType(a, b)
+    if a.unique_id and not b.unique_id then
+        return type_errors.other(tostring(a) .. "is a unique type")
+    end
+
+    if b.unique_id and not a.unique_id then
+        return type_errors.other(tostring(b) .. "is a unique type")
+    end
+
+    if a.unique_id ~= b.unique_id then
+        return type_errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a))
+    end
+
+    return true
 end
 
 function types.Initialize()
@@ -184,19 +144,11 @@ function types.Initialize()
     types.Symbol = require("nattlua.types.symbol")
     types.Never = require("nattlua.types.never")
     types.Error = require("nattlua.types.error")
-
+    
     types.Nil = function() return types.Symbol(nil) end
     types.True = function() return types.Symbol(true) end
     types.False = function() return types.Symbol(false) end
     types.Boolean = function() return types.Union({types.True(), types.False()}):MakeExplicitNotLiteral(true) end
-end
-
-function types.View(obj)
-    return setmetatable({obj = obj, GetType = function() return obj end}, {
-        __index = function(_, key) return types.View(assert(obj:Get(key))) end,
-        __newindex = function(_, key, val) assert(obj:Set(key, val)) end,
-        __call = function(_, ...) return types.View(assert(obj:Call(...))) end,
-    })
 end
 
 return types

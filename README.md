@@ -215,7 +215,7 @@ end
 
 type function math.floor(T: number)
     if T:IsLiteral() then
-        return types.Number(math.floor(T:GetData())):MakeLiteral(true)
+        return types.Number(math.floor(T:GetData())):SetLiteral(true)
     end
 
     return types.Number()

@@ -8,10 +8,6 @@ function META:GetSignature()
     return "error"
 end
 
-function META:GetData()
-    return self.data
-end
-
 function META:Copy()
     return self
 end
@@ -21,7 +17,7 @@ function META.IsSubsetOf(A, B)
 end
 
 function META:__tostring()
-    return "ERROR(" .. tostring(self.data) .. ")"
+    return "ERROR(" .. tostring(self:GetData()) .. ")"
 end
 
 function META:IsFalsy()
@@ -33,7 +29,7 @@ function META:IsTruthy()
 end
 
 function META:Initialize(msg)
-    self.data = msg
+    self:SetData(msg)
     return self
 end
 

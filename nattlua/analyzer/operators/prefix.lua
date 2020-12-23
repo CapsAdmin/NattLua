@@ -1,4 +1,5 @@
 local types = require("nattlua.types.types")
+local type_errors = require("nattlua.types.error_messages")
 
 local operators = {
     ["-"] = function(l) return -l end,
@@ -11,7 +12,7 @@ local function metatable_function(self, meta_method, l)
         local func = l:GetMetaTable():Get(meta_method)
 
         if func then
-            return self:Assert(l.node, self:Call(func, types.Tuple({l})):Get(1))
+            return self:Assert(l:GetNode(), self:Call(func, types.Tuple({l})):Get(1))
         end
     end
 end
@@ -20,7 +21,7 @@ local function arithmetic(l, type, operator)
     assert(operators[operator], "cannot map operator " .. tostring(operator))
     if l.Type == type then
         if l:IsLiteral() then
-            local obj = types.Number(operators[operator](l.data)):MakeLiteral(true)
+            local obj = types.Number(operators[operator](l:GetData())):SetLiteral(true)
 
             if l.max then
                 obj.max = arithmetic(l.max, type, operator)
@@ -72,7 +73,7 @@ return function(META)
             new_union.truthy_union = truthy_union
             new_union.falsy_union = falsy_union
 
-            return new_union:SetSource(node, l)
+            return new_union:SetNode(node):SetSource(l)
         end
 
         if l.Type == "any" then
@@ -84,7 +85,7 @@ return function(META)
                 local obj = self:AnalyzeExpression(node.right, "runtime")
 
                 if not obj then
-                    return types.errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
+                    return type_errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
                 end
                 return obj:GetContract() or obj
             elseif op == "unique" then
@@ -99,10 +100,10 @@ return function(META)
                 local obj = self:AnalyzeExpression(node.right, "typesystem")
 
                 if obj.Type ~= "string" then
-                    return types.errors.other("must evaluate to a string")
+                    return type_errors.other("must evaluate to a string")
                 end
                 if not obj:IsLiteral() then
-                    return types.errors.other("must be a literal")
+                    return type_errors.other("must be a literal")
                 end
 
                 obj:SetPattern(obj:GetData())
@@ -117,15 +118,15 @@ return function(META)
 
         if op == "not" or op == "!" then
             if l:IsTruthy() and l:IsFalsy() then
-                return self:NewType(node, "boolean", nil, false, l):SetSource(node, l)
+                return self:NewType(node, "boolean", nil, false, l):SetNode(node):SetSource(l)
             end
 
             if l:IsTruthy() then
-                return self:NewType(node, "boolean", false, true, l):SetSource(node, l)
+                return self:NewType(node, "boolean", false, true, l):SetNode(node):SetSource(l)
             end
 
             if l:IsFalsy() then
-                return self:NewType(node, "boolean", true, true, l):SetSource(node, l)
+                return self:NewType(node, "boolean", true, true, l):SetNode(node):SetSource(l)
             end
         end
 
@@ -134,9 +135,9 @@ return function(META)
         elseif op == "~" then return arithmetic(l, "number", op)
         elseif op == "#" then
             if l.Type == "table" then
-                return types.Number(l:GetLength()):MakeLiteral(l:IsLiteral())
+                return types.Number(l:GetLength()):SetLiteral(l:IsLiteral())
             elseif l.Type == "string" then
-                return types.Number(l:GetData() and #l:GetData() or nil):MakeLiteral(l:IsLiteral())
+                return types.Number(l:GetData() and #l:GetData() or nil):SetLiteral(l:IsLiteral())
             end
         end
 

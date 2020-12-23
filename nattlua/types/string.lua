@@ -1,6 +1,7 @@
 local types = require("nattlua.types.types")
 local syntax = require("nattlua.syntax.syntax")
 local bit = not _G.bit and require("bit32") or _G.bit
+local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "string"
@@ -24,12 +25,8 @@ function META:GetSignature()
     return s
 end
 
-function META:GetData()
-    return self.data
-end
-
 function META:Copy()
-    local copy =  types.String(self.data):MakeLiteral(self.literal)
+    local copy =  types.String(self:GetData()):SetLiteral(self:IsLiteral())
     copy.pattern_contract = self.pattern_contract
     copy:CopyInternalsFrom(self)
     return copy
@@ -51,13 +48,13 @@ function META.IsSubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return types.errors.other(errors)
+        return type_errors.other(errors)
     end
 
     if B.Type == "any" then return true end
 
     if B.Type ~= "string" then
-        return types.errors.type_mismatch(A, B)
+        return type_errors.type_mismatch(A, B)
     end
 
     if 
@@ -70,21 +67,21 @@ function META.IsSubsetOf(A, B)
 
     if B.pattern_contract then
         if not A:IsLiteral() then
-            return types.errors.literal(A, "must be a literal when comparing against string pattern")
+            return type_errors.literal(A, "must be a literal when comparing against string pattern")
         end
 
         if not A:GetData():find(B.pattern_contract) then
-            return types.errors.string_pattern(A, B)
+            return type_errors.string_pattern(A, B)
         end
 
         return true
     end
 
     if A:IsLiteral() and B:IsLiteral() then
-        return types.errors.value_mismatch(A, B)
+        return type_errors.value_mismatch(A, B)
     end
 
-    return types.errors.subset(A, B)
+    return type_errors.subset(A, B)
 end
 
 function META:__tostring()
@@ -93,23 +90,23 @@ function META:__tostring()
         return "$(" .. self.pattern_contract .. ")"
     end
 
-    if self.literal then
-        if self.data then
-            return "\"" .. self.data .. "\""
+    if self:IsLiteral() then
+        if self:GetData() then
+            return "\"" .. self:GetData() .. "\""
         end
 
-        if self.data == nil then
+        if self:GetData() == nil then
             return "string"
         end
 
-        return tostring(self.data) .. (self.max and (".." .. tostring(self.max.data)) or "")
+        return tostring(self:GetData()) .. (self.max and (".." .. tostring(self.max:GetData())) or "")
     end
 
-    if self.data == nil then
+    if self:GetData() == nil then
         return "string"
     end
 
-    return "string" .. "(".. tostring(self.data) .. (self.max and (".." .. self.max.data) or "") .. ")"
+    return "string" .. "(".. tostring(self:GetData()) .. (self.max and (".." .. self.max:GetData()) or "") .. ")"
 end
 
 function META:IsFalsy()

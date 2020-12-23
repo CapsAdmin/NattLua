@@ -119,7 +119,7 @@ return function(META)
                         contract = contract:Get(1)
                     end
                     val:CopyLiteralness(contract)
-                    self:Assert(statement or val.node or exp_key.explicit_type, self:CheckTypeAgainstContract(val, contract))
+                    self:Assert(statement or val:GetNode() or exp_key.explicit_type, self:CheckTypeAgainstContract(val, contract))
                 end
 
                 val:SetContract(contract)
@@ -153,7 +153,7 @@ return function(META)
                         
                         if upvalues_contract then
                             val:CopyLiteralness(upvalues_contract)
-                            self:Assert(statement or val.node or exp_key.explicit_type, self:CheckTypeAgainstContract(val, upvalues_contract))
+                            self:Assert(statement or val:GetNode() or exp_key.explicit_type, self:CheckTypeAgainstContract(val, upvalues_contract))
                             val:SetContract(upvalues_contract)
                         end
                     end

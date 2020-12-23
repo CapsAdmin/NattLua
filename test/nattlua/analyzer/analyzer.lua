@@ -14,7 +14,7 @@ R"type_assert(nil == nil, true)"
 test("declaring base types", function()
     R[[
         local type Symbol = function(T: any)
-            return types.Symbol(loadstring("return " .. T.node.value.value)(), true)
+            return types.Symbol(loadstring("return " .. T:GetNode().value.value)(), true)
         end
 
         local type Nil = Symbol(nil)
@@ -89,7 +89,7 @@ test("runtime block scopes", function()
 
     local analyzer, syntax_tree = R("do local a = 1 end")
     equal(false, (syntax_tree.environments.runtime:Get("a")))
-    equal(1, analyzer:GetScope().children[1].upvalues.runtime.map.a.data:GetData()) -- TODO: awkward access
+    equal(1, analyzer:GetScope().children[1].upvalues.runtime.map.a:GetValue():GetData()) -- TODO: awkward access
 
     local v = R[[
         local a = 1

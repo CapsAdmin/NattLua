@@ -28,7 +28,7 @@ return function(META)
             new_union.truthy_union = truthy_union
             new_union.falsy_union = falsy_union
     
-            return new_union:SetSource(node, new_union, obj)
+            return new_union:SetNode(node):SetSource(new_union, obj)
         end
     
         if obj:GetMetaTable() then
@@ -40,7 +40,7 @@ return function(META)
                 end
     
                 if func.Type == "function" then
-                    return self:Assert(node, self:Call(func, types.Tuple({obj, key, val}), key.node))
+                    return self:Assert(node, self:Call(func, types.Tuple({obj, key, val}), key:GetNode()))
                 end
             end
         end

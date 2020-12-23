@@ -15,7 +15,7 @@ return function(META)
         for i = 1, 1000 do
             local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
 
-            if not values:Get(1) or values:Get(1).Type == "symbol" and values:Get(1).data == nil then
+            if not values:Get(1) or values:Get(1).Type == "symbol" and values:Get(1):GetData() == nil then
                 break
             end
 
@@ -41,7 +41,7 @@ return function(META)
                 self:Error(statement, "too many iterations")
             end
 
-            table.insert(values.data, 1, args[1])
+            table.insert(values:GetData(), 1, args[1])
 
             args = values:GetData()
 

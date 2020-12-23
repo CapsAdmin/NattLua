@@ -28,7 +28,7 @@ return function(META)
                 end
     
                 if index.Type == "function" then
-                    local obj, err = self:Call(index, types.Tuple({obj, key}), key.node)
+                    local obj, err = self:Call(index, types.Tuple({obj, key}), key:GetNode())
                     
                     if not obj then
                         return obj, err
@@ -70,8 +70,8 @@ return function(META)
         end
     
         if not val then
-            self:Warning(node or obj.node, err)
-            return self:NewType(node or obj.node, "nil")
+            self:Warning(node or obj:GetNode(), err)
+            return self:NewType(node or obj:GetNode(), "nil")
         end
     
         return val

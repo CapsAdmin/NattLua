@@ -1,5 +1,7 @@
 local types = require("nattlua.types.types")
 local syntax = require("nattlua.syntax.syntax")
+local type_errors = require("nattlua.types.error_messages")
+
 local bit = not _G.bit and require("bit32") or _G.bit
 
 local META = {}
@@ -35,11 +37,11 @@ function META:GetLuaType()
 end
 
 function META:GetArguments()
-    return self.data.arg
+    return self:GetData().arg
 end
 
 function META:GetReturnTypes()
-    return self.data.ret
+    return self:GetData().ret
 end
 
 function META:HasExplicitReturnTypes()
@@ -47,13 +49,13 @@ function META:HasExplicitReturnTypes()
 end
 
 function META:SetReturnTypes(tup)
-    self.data.ret = tup
+    self:GetData().ret = tup
     self.explicit_return_set = tup
     self.called = nil
 end
 
 function META:SetArguments(tup)
-    self.data.arg = tup
+    self:GetData().arg = tup
     self.called = nil
 end
 
@@ -62,9 +64,9 @@ function META:Copy(map)
 
     local copy = types.Function({})
     map[self] = map[self] or copy
-    copy.data.ret = self:GetReturnTypes():Copy(map)
-    copy.data.arg = self:GetArguments():Copy(map)
-    copy:MakeLiteral(self:IsLiteral())
+    copy:GetData().ret = self:GetReturnTypes():Copy(map)
+    copy:GetData().arg = self:GetArguments():Copy(map)
+    copy:SetLiteral(self:IsLiteral())
 
     copy:CopyInternalsFrom(self)
     copy.function_body_node = self.function_body_node
@@ -84,7 +86,7 @@ function META.IsSubsetOf(A, B)
 
         local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
         if not ok then
-            return types.errors.subset(A:GetArguments(), B:GetArguments(), reason)
+            return type_errors.subset(A:GetArguments(), B:GetArguments(), reason)
         end
 
         local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
@@ -93,7 +95,7 @@ function META.IsSubsetOf(A, B)
         end
 
         if not ok then
-            return types.errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
+            return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
         end
 
         return true
@@ -101,7 +103,7 @@ function META.IsSubsetOf(A, B)
         return types.Union({A}):IsSubsetOf(B)
     end
 
-    return types.errors.type_mismatch(A, B)
+    return type_errors.type_mismatch(A, B)
 end
 
 function META:IsFalsy()
@@ -128,7 +130,7 @@ function META:CheckArguments(arguments)
 
             local ok, err = a:IsSubsetOf(b)
             if not ok then
-                return types.errors.subset(a, b, err)
+                return type_errors.subset(a, b, err)
             end
         end
 
@@ -164,10 +166,10 @@ function META:CheckArguments(arguments)
         local ok, reason = a:IsSubsetOf(b)
 
         if not ok then
-            if b.node then
-                return types.errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
+            if b:GetNode() then
+                return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
             else
-                return types.errors.subset(a, b, {"argument #", i, " - ", reason})
+                return type_errors.subset(a, b, {"argument #", i, " - ", reason})
             end
         end
     end

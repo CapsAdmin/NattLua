@@ -26,7 +26,7 @@ test("union string and get constant string", function()
 
     local tbl = Table()
     tbl:SetContract(contract)
-    tbl:Set(String(), Number(1337):MakeLiteral(true))
+    tbl:Set(String(), Number(1337):SetLiteral(true))
     local union = assert(tbl:Get(String()))
     equal("union", union.Type)
     equal(1337, union:GetType("number"):GetData())

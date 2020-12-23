@@ -142,6 +142,6 @@ test("tuple in tuple", function()
     local T = Tuple(1, 2, 3, Tuple(4, 5, 6))
     assert(T:GetLength() == 6)
     for i = 1, 6 do
-        assert(T:Get(i).data == i)
+        assert(T:Get(i):GetData() == i)
     end
 end)

@@ -1,4 +1,4 @@
-local types = require("nattlua.types.types")
+local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 
@@ -26,13 +26,21 @@ function META:CopyInternalsFrom(obj)
     --self.upvalue = obj.upvalue
 end
 
-function META:SetSource(node, source, l,r)
+function META:SetSource(source, l,r)
     self.source = source
-    self.node = node
     self.source_left = l
     self.source_right = r        
     return self
 end 
+
+function META:SetNode(node)
+    self.node = node
+    return self
+end
+
+function META:GetNode(node)
+    return self.node
+end
 
 function META:GetSignature()
     error("NYI")
@@ -90,25 +98,25 @@ do
     function META:EnableUniqueness()
         self.unique_id = self.disabled_unique_id
     end
-
-    function types.IsSameUniqueType(a, b)
-        if a.unique_id and not b.unique_id then
-            return types.errors.other(tostring(a) .. "is a unique type")
-        end
-
-        if b.unique_id and not a.unique_id then
-            return types.errors.other(tostring(b) .. "is a unique type")
-        end
-
-        if a.unique_id ~= b.unique_id then
-            return types.errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a))
-        end
-
-        return true
-    end
 end
 
-function META:MakeLiteral(b)
+function META:IsFalsy()
+    return self.falsy
+end
+
+function META:IsTruthy()
+   return self.truthy
+end
+
+function META:SetTruthy(b)
+    self.truthy = b
+end
+
+function META:SetFalsy(b)
+    self.falsy = b
+end
+
+function META:SetLiteral(b)
     self.literal = b
     return self
 end
@@ -122,11 +130,11 @@ function META:Seal()
 end
 
 function META:CopyLiteralness(obj)
-    self:MakeLiteral(obj:IsLiteral())    
+    self:SetLiteral(obj:IsLiteral())    
 end
 
 function META:Call(...)
-    return types.errors.other("type " .. self.Type .. ": " .. tostring(self) .. " cannot be called")        
+    return type_errors.other("type " .. self.Type .. ": " .. tostring(self) .. " cannot be called")        
 end
 
 function META:SetReferenceId(ref)
@@ -135,29 +143,11 @@ function META:SetReferenceId(ref)
 end
 
 function META:Set(key, val)
-    return types.errors.other("undefined set: " .. tostring(self) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. self.Type)
+    return type_errors.other("undefined set: " .. tostring(self) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. self.Type)
 end
 
 function META:Get(key)
-    return types.errors.other("undefined get: " .. tostring(self) .. "[" .. tostring(key) .. "]" .. " on type " .. self.Type)
-end
-
-function META:AddReason(reason, ...)
-    table.insert(self.reasons, {
-        msg = reason,
-        data = {...}
-    })
-    return self
-end
-
-function META:GetReasonForExistance()
-    local str = ""
-    
-    for k,v in ipairs(self.reasons) do
-        str = str .. v.msg .. "\n"
-    end
-
-    return str
+    return type_errors.other("undefined get: " .. tostring(self) .. "[" .. tostring(key) .. "]" .. " on type " .. self.Type)
 end
 
 function META:SetParent(parent)
@@ -197,6 +187,14 @@ end
 
 function META:GetContract()
     return self.Contract
+end
+
+function META:SetData(data)
+    self.data = data
+end
+
+function META:GetData()
+    return self.data
 end
 
 return META

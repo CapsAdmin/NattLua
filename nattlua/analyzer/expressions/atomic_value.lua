@@ -27,15 +27,11 @@ return function(META)
             end
 
             if not obj then
-
                 if not obj then
                     self:Warning(node, err)
                 end
 
                 obj = self:GuessTypeFromIdentifier(node, env)
-                if obj.Type == "any" then
-                    obj:AddReason("cannot find environment value " .. node.value.value)
-                end
             end
         end
         

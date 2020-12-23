@@ -229,12 +229,12 @@ end
 
 local type function isstring(obj: any)
     local typ = analyzer:Call(env.typesystem.type:GetType(), types.Tuple({obj}), analyzer.current_expression):Get(1)
-    return analyzer:BinaryOperator(analyzer.current_expression, typ, types.String("string"):MakeLiteral(true), "runtime", "==")
+    return analyzer:BinaryOperator(analyzer.current_expression, typ, types.String("string"):SetLiteral(true), "runtime", "==")
 end
 
 local type function istable(obj: any)
     local typ = analyzer:Call(env.typesystem.type:GetType(), types.Tuple({obj}), analyzer.current_expression):Get(1)
-    return analyzer:BinaryOperator(analyzer.current_expression, typ, types.String("table"):MakeLiteral(true), "runtime", "==")
+    return analyzer:BinaryOperator(analyzer.current_expression, typ, types.String("table"):SetLiteral(true), "runtime", "==")
 end
 
 local type function isentity(obj: any)

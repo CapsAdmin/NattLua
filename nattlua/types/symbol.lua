@@ -1,30 +1,25 @@
 local types = require("nattlua.types.types")
+local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "symbol"
 META.__index = META
 
 function META:GetLuaType()
-    return type(self.data)
+    return type(self:GetData())
 end
 
 function META:GetSignature()
-    return "SY" .. "-" .. tostring(self.data)
+    return "SY" .. "-" .. tostring(self:GetData())
 end
 
 function META:__tostring()
-    return tostring(self.data)
-end
-
-function META:GetData()
-    return self.data
+    return tostring(self:GetData())
 end
 
 function META:Copy()
     local copy = types.Symbol(self:GetData())
-    copy.truthy = self.truthy
     copy:CopyInternalsFrom(self)
-
     return copy
 end
 
@@ -40,35 +35,27 @@ function META.IsSubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return types.errors.subset(A, b, errors)
+        return type_errors.subset(A, b, errors)
     end
 
     if A.Type == "any" then return true end
     if B.Type == "any" then return true end
 
     if A.Type ~= B.Type then
-        return types.errors.type_mismatch(A, B)
+        return type_errors.type_mismatch(A, B)
     end
 
     if A:GetData() ~= B:GetData() then
-        return types.errors.value_mismatch(A, B)
+        return type_errors.value_mismatch(A, B)
     end
 
     return true
 end
 
-function META:IsFalsy()
-    return not self.truthy
-end
-
-function META:IsTruthy()
-   return self.truthy
-end
-
 function META:Initialize(data)
-    self.literal = true
-    self.truthy = not not data
-
+    self:SetLiteral(true)
+    self:SetFalsy(not data)
+    self:SetTruthy(not not data)
     return true
 end
 

@@ -171,10 +171,10 @@ test("arguments that are not explicitly typed should be volatile", function()
         local b = args:Get(2)
 
         equal("number", a:GetType("number").Type)
-        equal(1, a:GetType("number").data)
+        equal(1, a:GetType("number"):GetData())
 
         equal("string", b:GetType("string").Type)
-        equal("a", b:GetType("string").data)
+        equal("a", b:GetType("string"):GetData())
     end
 
     do

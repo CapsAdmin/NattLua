@@ -37,13 +37,13 @@ return function(META)
     
         for i, ret in ipairs(scope:GetReturnTypes()) do
             local tup = types.Tuple(ret.types)
-            tup.node = ret.node
+            tup:SetNode(ret.node)
             union:AddType(tup)
         end
 
         if scope.uncertain_function_return or #scope:GetReturnTypes() == 0 then
             local tup = types.Tuple({types.Nil()})
-            tup.node = statement
+            tup:SetNode(statement)
             union:AddType(tup)
         end
 

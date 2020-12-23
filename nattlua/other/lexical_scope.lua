@@ -134,16 +134,16 @@ do
     META.__index = META
 
     function META:__tostring()
-        return "[" .. self.key .. ":" .. tostring(self.data) .. "]"
+        return "[" .. self.key .. ":" .. tostring(self.value) .. "]"
     end
 
     function META:GetValue()
-        return self.data
+        return self.value
     end
 
-    function META:SetValue(data)
-        self.data = data
-        data.upvalue = self
+    function META:SetValue(value)
+        self.value = value
+        value.upvalue = self
     end
 
     upvalue_meta = META
@@ -187,10 +187,10 @@ function META:Merge(scope)
     for i, a in ipairs(self.upvalues.runtime.list) do
         local b = scope.upvalues.runtime.list[i]
         if a and b and a.key == b.key then
-            a.data = types.Union({a.data, b.data})
-            a.data.node = b.data.node
-            a.data.node_label = b.data.node_label
-            self.upvalues.runtime.map[a.key].data = a.data
+            a:SetValue(types.Union({a:GetValue(), b:GetValue()}))
+            a:GetValue():SetNode(b:GetValue():GetNode())
+            a:GetValue().node_label = b:GetValue().node_label
+            self.upvalues.runtime.map[a.key]:GetValue(a:GetValue())
         end
     end
 end
@@ -361,7 +361,7 @@ end
 function META:DumpScope()
     local s = {}
     for i, v in ipairs(self.upvalues.runtime.list) do
-        table.insert(s, "local " .. tostring(v.key) .. " = " .. tostring(v.data))
+        table.insert(s, "local " .. tostring(v.key) .. " = " .. tostring(v:GetData()))
     end
     for i,v in ipairs(self.children) do
         table.insert(s, "do\n" .. v:DumpScope() .. "\nend\n")

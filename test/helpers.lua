@@ -3,17 +3,15 @@ local types = require("nattlua.types.types")
 
 local C = nl.Code
 
-types.Initialize()
-
 local function cast(...)
     local ret = {}
     for i = 1, select("#", ...) do
         local v = select(i, ...)
         local t = type(v)
         if t == "number" then
-            ret[i] = types.Number(v):MakeLiteral(true)
+            ret[i] = types.Number(v):SetLiteral(true)
         elseif t == "string" then
-            ret[i] = types.String(v):MakeLiteral(true)
+            ret[i] = types.String(v):SetLiteral(true)
         elseif t == "boolean" then
             ret[i] = types.Symbol(v)
         else
@@ -63,9 +61,9 @@ end
 return {
     Union = function(...) return types.Union(cast(...)) end,
     Tuple = function(...) return types.Tuple(cast(...)) end,
-    Number = function(n) return types.Number(n):MakeLiteral(n ~= nil) end,
+    Number = function(n) return types.Number(n):SetLiteral(n ~= nil) end,
     Function = function(d) return types.Function(d) end,
-    String = function(n) return types.String(n):MakeLiteral(n ~= nil) end,
+    String = function(n) return types.String(n):SetLiteral(n ~= nil) end,
     Table = function(data) return types.Table(data or {}) end,
     Symbol = function(data) return types.Symbol(data) end,
     Any = function() return types.Any() end,

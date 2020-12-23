@@ -1,4 +1,5 @@
 local types = require("nattlua.types.types")
+local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "list"
@@ -14,7 +15,7 @@ function META:GetSignature()
     local s = {}
 
     self.suppress = true
-    for i, keyval in ipairs(self.data) do
+    for i, keyval in ipairs(self:GetData()) do
         s[i] = keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature()
     end
     self.suppress = nil
@@ -35,13 +36,13 @@ function META:__tostring()
     local indent = ("\t"):rep(level)
 
     if self:GetContract() then
-        for i, keyval in ipairs(self:GetContract().data) do
-            local key, val = tostring(self.data[i] and self.data[i].key or "undefined"), tostring(self.data[i] and self.data[i].val or "undefined")
+        for i, keyval in ipairs(self:GetContract():GetData()) do
+            local key, val = tostring(self:GetData()[i] and self:GetData()[i].key or "undefined"), tostring(self:GetData()[i] and self:GetData()[i].val or "undefined")
             local tkey, tval = tostring(keyval.key), tostring(keyval.val)
             s[i] = indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val
         end
     else
-        for i, keyval in ipairs(self.data) do
+        for i, keyval in ipairs(self:GetData()) do
             local key, val = tostring(keyval.key), tostring(keyval.val)
             s[i] = indent .. key .. " = " .. val
         end
@@ -52,7 +53,7 @@ function META:__tostring()
 
     table.sort(s, sort)
 
-    if #self.data == 1 then
+    if #self:GetData() == 1 then
         return "[" .. table.concat(s, ""):gsub("\t", " ") .. " ]"
     end
     
@@ -60,7 +61,7 @@ function META:__tostring()
 end
 
 function META:GetLength()
-    return #self.data
+    return #self:GetData()
 end
 
 -- TODO
@@ -77,29 +78,29 @@ function META.IsSubsetOf(A, B)
 
     if B.Type == "tuple" then
         if B:GetLength() > 0 then
-            for i, a in ipairs(A.data) do
+            for i, a in ipairs(A:GetData()) do
                 if a.key.Type == "number" then
                     local b, reason = B:Get(i)
                     if not b then
-                        return types.errors.missing(B, i, reason)
+                        return type_errors.missing(B, i, reason)
                     end
 
                     if not a.val:IsSubsetOf(b) then
-                        return types.errors.subset(a.val, b)
+                        return type_errors.subset(a.val, b)
                     end
                 end
             end
         else
             local count = 0
-            for i, a in ipairs(A.data) do
-                if a.key.data ~= i then
-                    return types.errors.other("index " .. tostring(a.key) .. " is not the same as " .. tostring(i))
+            for i, a in ipairs(A:GetData()) do
+                if a.key:GetData() ~= i then
+                    return type_errors.other("index " .. tostring(a.key) .. " is not the same as " .. tostring(i))
                 end
 
                 count = count + 1
             end
             if count ~= B:GetMaxLength() then
-                return types.errors.other(" count " .. tostring(count) .. " is not the same as max length " .. tostring(B:GetMaxLength()))
+                return type_errors.other(" count " .. tostring(count) .. " is not the same as max length " .. tostring(B:GetMaxLength()))
             end
         end
 
@@ -112,16 +113,16 @@ function META.IsSubsetOf(A, B)
 
         done = done or {}
 
-        for _, a in ipairs(A.data) do
+        for _, a in ipairs(A:GetData()) do
             local b
             do
                 local reasons = {}
 
-                if not B.data[1] then
-                    return types.errors.other("list is empty")
+                if not B:GetData()[1] then
+                    return type_errors.other("list is empty")
                 end
 
-                for _, keyval in ipairs(B.data) do
+                for _, keyval in ipairs(B:GetData()) do
                     local ok, reason = a.key:IsSubsetOf(keyval.key)
                     if ok then
                         b = keyval
@@ -131,7 +132,7 @@ function META.IsSubsetOf(A, B)
                 end
 
                 if not b then
-                    return types.errors.other(reasons)
+                    return type_errors.other(reasons)
                 end
             end
 
@@ -143,7 +144,7 @@ function META.IsSubsetOf(A, B)
 
                 local ok, reason = a.val:IsSubsetOf(b.val)
                 if not ok then
-                    return types.errors.subset(a.val, b.val, reason)
+                    return type_errors.subset(a.val, b.val, reason)
                 end
             end
         end
@@ -154,15 +155,15 @@ function META.IsSubsetOf(A, B)
         return types.Union({A}):IsSubsetOf(B)
     end
 
-    return types.errors.subset(A, B)
+    return type_errors.subset(A, B)
 end
 
 function META:ContainsAllKeysIn(contract)
-    for _, keyval in ipairs(contract.data) do
+    for _, keyval in ipairs(contract:GetData()) do
         if keyval.key:IsLiteral() then
             local ok, err = self:GetKeyVal(keyval.key)
             if not ok then
-                return types.errors.other(tostring(keyval.key) .. " is missing from " .. tostring(contract))
+                return type_errors.other(tostring(keyval.key) .. " is missing from " .. tostring(contract))
             end
         end
     end
@@ -174,19 +175,19 @@ function META:IsDynamic()
 end
 
 function META:Delete(key)
-    for i, keyval in ipairs(self.data) do
+    for i, keyval in ipairs(self:GetData()) do
         if key:IsSubsetOf(keyval.key) then
-            table.remove(self.data, i)
+            table.remove(self:GetData(), i)
         end
     end
     return true
-    --return types.errors.other("cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self))
+    --return type_errors.other("cannot remove " .. tostring(key) .. " from table because it was not found in " .. tostring(self))
 end
 
 function META:GetKeyUnion()
     local union = types.Union()
 
-    for _, keyval in ipairs(self.data) do
+    for _, keyval in ipairs(self:GetData()) do
         union:AddType(keyval.key:Copy())
     end
 
@@ -202,18 +203,18 @@ function META:Contains(key)
 end
 
 function META:GetKeyVal(key, reverse_subset)
-    if not self.data[1] then
+    if not self:GetData()[1] then
 
-        return types.errors.other("list has no definitions")
+        return type_errors.other("list has no definitions")
     end
 
     if key.Type ~= "number" then
-        return types.errors.other("cannot index list with " .. tostring(key))
+        return type_errors.other("cannot index list with " .. tostring(key))
     end
 
     local reasons = {}
 
-    for _, keyval in ipairs(self.data) do
+    for _, keyval in ipairs(self:GetData()) do
         local ok, reason
 
         if reverse_subset then
@@ -228,11 +229,11 @@ function META:GetKeyVal(key, reverse_subset)
         table.insert(reasons, reason)
     end
 
-    return types.errors.other(reasons)
+    return type_errors.other(reasons)
 end
 
 function META:Insert(val)
-    return self:Set(#self.data + 1, val)
+    return self:Set(#self:GetData() + 1, val)
 end
 
 function META:Set(key, val)
@@ -240,14 +241,14 @@ function META:Set(key, val)
     val = types.Cast(val)
 
     if key.Type == "symbol" and key:GetData() == nil then
-        return types.errors.other("key is nil")
+        return type_errors.other("key is nil")
     end
 
     if key.Type == "union" then
         local union = key
         for _, key in ipairs(union:GetTypes()) do
             if key.Type == "symbol" and key:GetData() == nil then
-                return types.errors.other(union:GetLength() == 1 and "key is nil" or "key can be nil")
+                return type_errors.other(union:GetLength() == 1 and "key is nil" or "key can be nil")
             end
         end
     end
@@ -275,7 +276,7 @@ function META:Set(key, val)
     local keyval, reason = self:GetKeyVal(key, true)
 
     if not keyval then
-        table.insert(self.data, {key = key, val = val})
+        table.insert(self:GetData(), {key = key, val = val})
     else
         if keyval.val and keyval.key:GetSignature() ~= key:GetSignature() then
             keyval.val = types.Union({keyval.val, val})
@@ -331,7 +332,7 @@ function META:Get(key)
         end
     end
 
-    return types.errors.other(reason)
+    return type_errors.other(reason)
 end
 
 function META:IsNumericallyIndexed()
@@ -346,23 +347,23 @@ function META:IsNumericallyIndexed()
 end
 
 function META:CopyLiteralness(from)
-    for _, keyval_from in ipairs(from.data) do
+    for _, keyval_from in ipairs(from:GetData()) do
         local keyval, reason = self:GetKeyVal(keyval_from.key)
 
         if not keyval then
-            return types.errors.other(reason)
+            return type_errors.other(reason)
         end
 
         if keyval_from.key.Type == "list" then
             keyval.key:CopyLiteralness(keyval_from.key)
         else
-            keyval.key:MakeLiteral(keyval_from.key:IsLiteral())
+            keyval.key:SetLiteral(keyval_from.key:IsLiteral())
         end
 
         if keyval_from.val.Type == "list" then
             keyval.val:CopyLiteralness(keyval_from.val)
         else
-            keyval.val:MakeLiteral(keyval_from.val:IsLiteral())
+            keyval.val:SetLiteral(keyval_from.val:IsLiteral())
         end
     end
     return true
@@ -374,7 +375,7 @@ function META:Copy(map)
     local copy = types.List({})
     map[self] = map[self] or copy
 
-    for _, keyval in ipairs(self.data) do
+    for _, keyval in ipairs(self:GetData()) do
         local k, v = keyval.key, keyval.val
 
         k = map[keyval.key] or k:Copy(map)
@@ -392,14 +393,10 @@ function META:Copy(map)
     return copy
 end
 
-function META:GetData()
-    return self.data
-end
-
 function META:pairs()
     local i = 1
     return function()
-        local keyval = self.data and self.data[i]
+        local keyval = self:GetData() and self:GetData()[i]
 
         if not keyval then
             return nil
@@ -416,7 +413,7 @@ function META:IsLiteral()
         return true
     end
 
-    for _, v in ipairs(self.data) do
+    for _, v in ipairs(self:GetData()) do
         if v.val ~= self and v.key ~= self and v.val.Type ~= "function" and v.key.Type ~= "function" then
 
             self.suppress = true
@@ -424,7 +421,7 @@ function META:IsLiteral()
             self.suppress = false
 
             if not ok then
-                return types.errors.other("the key " .. tostring(v.key) .. " is not a literal because " .. tostring(reason))
+                return type_errors.other("the key " .. tostring(v.key) .. " is not a literal because " .. tostring(reason))
             end
 
             self.suppress = true
@@ -432,7 +429,7 @@ function META:IsLiteral()
             self.suppress = false
 
             if not ok then
-                return types.errors.other("the value " .. tostring(v.val) .. " is not a literal because " .. tostring(reason))
+                return type_errors.other("the value " .. tostring(v.val) .. " is not a literal because " .. tostring(reason))
             end
         end
     end
@@ -493,7 +490,7 @@ function META.Union(A, B)
 end
 
 function META:Initialize(data)
-    self.data = {}
+    self:SetData({})
 
     if data then
         for _, val in ipairs(data) do

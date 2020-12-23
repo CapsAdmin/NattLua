@@ -1,5 +1,6 @@
 
 local types = require("nattlua.types.types")
+local type_errors = require("nattlua.types.error_messages")
 
 return function(META) 
     function META:LuaTypesToTuple(node, tps)
@@ -148,10 +149,10 @@ return function(META)
         local ret = {}
         for i, arg in ipairs(unpack_union_tuples({arguments:Unpack(len)}, function_arguments)) do
             ret[i] = self:LuaTypesToTuple(
-                obj.node, {
+                obj:GetNode(), {
                     self:CallLuaTypeFunction(
                         call_node, 
-                        obj.data.lua_function, 
+                        obj:GetData().lua_function, 
                         function_node.function_scope or self:GetScope(), 
                         table.unpack(arg)
                     )
@@ -205,7 +206,7 @@ return function(META)
                     arg = types.Nil()
                     ok = true
                 else
-                    ok, reason = types.errors.other("argument #" .. i .. " expected " .. tostring(contract) .. " got nil")
+                    ok, reason = type_errors.other("argument #" .. i .. " expected " .. tostring(contract) .. " got nil")
                 end
             elseif arg.Type == "table" and contract.Type == "table" then
                 ok, reason = arg:FollowsContract(contract)
@@ -215,7 +216,7 @@ return function(META)
 
             if not ok then
                 restore_mutated_types(self)                        
-                return types.errors.other("argument #" .. i .. " " .. tostring(arg) .. ": " .. reason)
+                return type_errors.other("argument #" .. i .. " " .. tostring(arg) .. ": " .. reason)
             end
 
             if arg.Type == "table" then
@@ -247,7 +248,7 @@ return function(META)
 
             if errors[1] then
                 for _, info in ipairs(errors) do
-                    self:Error(info.tuple.node, info.msg)
+                    self:Error(info.tuple:GetNode(), info.msg)
                 end
             end
 
@@ -256,7 +257,7 @@ return function(META)
             for _, tuple in ipairs(result:GetData()) do
                 local ok, reason = tuple:IsSubsetOf(contract)
                 if not ok then
-                    self:Error(tuple.node, reason)
+                    self:Error(tuple:GetNode(), reason)
                 end
             end
         else 
@@ -266,15 +267,15 @@ return function(META)
 
             local ok, reason = result:IsSubsetOf(contract)
             if not ok then
-                self:Error(result.node, reason)
+                self:Error(result:GetNode(), reason)
             end
         end
     end
 
 
     local function Call(self, obj, arguments, call_node)
-        call_node = call_node or obj.node
-        local function_node = obj.function_body_node-- or obj.node
+        call_node = call_node or obj:GetNode()
+        local function_node = obj.function_body_node-- or obj:GetNode()
     
         obj.called = true
     
@@ -302,7 +303,7 @@ return function(META)
             self:OnFunctionCall(obj, arguments)
         end
         
-        if obj.data.lua_function then 
+        if obj:GetData().lua_function then 
             return call_type_function(self, obj, call_node, function_node, function_arguments, arguments)
         elseif not function_node or function_node.kind == "type_function" then
             self:FireEvent("external_call", call_node, obj)

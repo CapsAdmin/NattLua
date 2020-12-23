@@ -214,7 +214,7 @@ run[[
     foo(1, 2, 3)
     
     local type test = function(a,b,c,...) 
-        assert(a.data == 1)
+        assert(a:GetData() == 1)
         assert(b.Type == "any")
         assert(c.Type == "any")
     end
@@ -222,9 +222,9 @@ run[[
     test(lol())
     
     local type test = function(a,b,c,...)
-        assert(a.data == 1)
-        assert(b.data == 2)
-        assert(c.data == 3)
+        assert(a:GetData() == 1)
+        assert(b:GetData() == 2)
+        assert(c:GetData() == 3)
         assert(... == nil)
     end
     
@@ -332,7 +332,7 @@ run[[
 run[[
     local type function foo(a)
         assert(a.Type == "symbol")
-        assert(a.data == nil)
+        assert(a:GetData() == nil)
     end
 
     foo(nil)
@@ -361,7 +361,7 @@ run[[
         foo = foo()
     }
     
-    §assert(analyzer:GetScope():FindValue("a", "runtime").data:Get("foo").Type ~= "tuple")
+    §assert(analyzer:GetScope():FindValue("a", "runtime"):GetValue():Get("foo").Type ~= "tuple")
 ]]
 
 run[[

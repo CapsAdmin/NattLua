@@ -10,10 +10,10 @@ test("a and b", function()
         type_assert(result, 2)
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
-    equal(obj.node.kind, "binary_operator") 
-    equal(obj.source.data, 2)
-    equal(obj.source_left.data, 1)
-    equal(obj.source_right.data, 2)
+    equal(obj:GetNode().kind, "binary_operator") 
+    equal(obj.source:GetData(), 2)
+    equal(obj.source_left:GetData(), 1)
+    equal(obj.source_right:GetData(), 2)
     equal(obj.source_right, obj.source)
 end)
 
@@ -25,10 +25,10 @@ test("a + b", function()
         type_assert(result, 3)
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
-    equal(obj.node.kind, "binary_operator")
-    equal(obj.source.data, 3)
-    equal(obj.source_left.data, 1)
-    equal(obj.source_right.data, 2)
+    equal(obj:GetNode().kind, "binary_operator")
+    equal(obj.source:GetData(), 3)
+    equal(obj.source_left:GetData(), 1)
+    equal(obj.source_right:GetData(), 2)
 end)
 
 test("not a", function()
@@ -39,8 +39,8 @@ test("not a", function()
         type_assert(result, false)
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
-    equal(obj.node.kind, "prefix_operator") 
-    equal(obj.source.data, true)
+    equal(obj:GetNode().kind, "prefix_operator") 
+    equal(obj.source:GetData(), true)
 end)
 
 test("not not a", function()
@@ -51,9 +51,9 @@ test("not not a", function()
         type_assert(result, true)
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
-    equal(obj.node.kind, "prefix_operator") 
-    equal(obj.source.data, false)
-    equal(obj.source.source.data, true)
+    equal(obj:GetNode().kind, "prefix_operator") 
+    equal(obj.source:GetData(), false)
+    equal(obj.source.source:GetData(), true)
 end)
 
 test("not a or 1", function()
@@ -64,10 +64,10 @@ test("not a or 1", function()
         type_assert(result, 1)
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
-    equal(obj.node.kind, "binary_operator")
-    equal(obj.source_left.node.kind, "prefix_operator")
-    equal(obj.source_left.data, false)
-    equal(obj.source.data, 1)
+    equal(obj:GetNode().kind, "binary_operator")
+    equal(obj.source_left:GetNode().kind, "prefix_operator")
+    equal(obj.source_left:GetData(), false)
+    equal(obj.source:GetData(), 1)
 end)
 
 
@@ -79,7 +79,7 @@ test("1 or 2 or 3 or 4", function()
         
         local literal_union = {types.Symbol(nil)}
         for _, num in ipairs(b) do
-            table.insert(literal_union, types.Number(num):MakeLiteral(true))
+            table.insert(literal_union, types.Number(num):SetLiteral(true))
         end
         equal(a:GetSignature(), types.Union(literal_union):GetSignature())
     end

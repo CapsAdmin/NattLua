@@ -1,4 +1,5 @@
 local types = require("nattlua.types.types")
+local type_errors = require("nattlua.types.error_messages")
 
 local operators = {
     ["+"] = function(l,r) return l+r end,
@@ -44,7 +45,7 @@ local function arithmetic(node, l,r, type, operator)
 
     if type and l.Type == type and r.Type == type then
         if l:IsLiteral() and r:IsLiteral() then
-            local obj = types.Number(operators[operator](l.data, r.data)):MakeLiteral(true)
+            local obj = types.Number(operators[operator](l:GetData(), r:GetData())):SetLiteral(true)
 
             if r.max then
                 obj.max = arithmetic(node, l, r.max, type, operator)
@@ -54,14 +55,14 @@ local function arithmetic(node, l,r, type, operator)
                 obj.max = arithmetic(node, l.max, r, type, operator)
             end
 
-            return obj:SetSource(node, obj, l,r)
+            return obj:SetNode(node):SetSource(obj, l,r)
         end
 
         local obj = types.Number():Copy()
-        return obj:SetSource(node, obj, l,r)
+        return obj:SetNode(node):SetSource(obj, l,r)
     end
     
-    return types.errors.binary(operator, l,r)
+    return type_errors.binary(operator, l,r)
 end
 
 return function(META)
@@ -82,7 +83,7 @@ return function(META)
             if op == "|" and env == "typesystem" then
                 local new_union = types.Union({l, r})                
 
-                return new_union:SetSource(node, new_union, l, r)
+                return new_union:SetNode(node):SetSource(new_union, l, r)
             else                
                 local new_union = types.Union()
                 local truthy_union = types.Union()
@@ -149,7 +150,7 @@ return function(META)
                 new_union.truthy_union = truthy_union
                 new_union.falsy_union = falsy_union
 
-                return new_union:SetSource(node, new_union, l,r)
+                return new_union:SetNode(node):SetSource(new_union, l,r)
             end
         end
 
@@ -197,20 +198,20 @@ return function(META)
 
         if l.Type == "number" and r.Type == "number" then
             if op == "~=" or op == "!=" then
-                if l.max and l.max.data then
-                    return (not (r.data >= l.data and r.data <= l.max.data)) and types.True() or types.Boolean()
+                if l.max and l.max:GetData() then
+                    return (not (r:GetData() >= l:GetData() and r:GetData() <= l.max:GetData())) and types.True() or types.Boolean()
                 end
 
-                if r.max and r.max.data then
-                    return (not (l.data >= r.data and l.data <= r.max.data)) and types.True() or types.Boolean()
+                if r.max and r.max:GetData() then
+                    return (not (l:GetData() >= r:GetData() and l:GetData() <= r.max:GetData())) and types.True() or types.Boolean()
                 end
             elseif op == "==" then
-                if l.max and l.max.data then
-                    return r.data >= l.data and r.data <= l.max.data and types.Boolean() or types.False()
+                if l.max and l.max:GetData() then
+                    return r:GetData() >= l:GetData() and r:GetData() <= l.max:GetData() and types.Boolean() or types.False()
                 end
 
-                if r.max and r.max.data then
-                    return l.data >= r.data and l.data <= r.max.data and types.Boolean() or types.False()
+                if r.max and r.max:GetData() then
+                    return l:GetData() >= r:GetData() and l:GetData() <= r.max:GetData() and types.Boolean() or types.False()
                 end
             end
         end
@@ -238,7 +239,7 @@ return function(META)
                 end
 
 
-                return l.data == r.data and types.True() or types.False()
+                return l:GetData() == r:GetData() and types.True() or types.False()
             end
 
             if l.Type == "table" and r.Type == "table" then
@@ -264,12 +265,12 @@ return function(META)
             local res = metatable_function(self, "__eq", l, r)
             if res then
                 if res:IsLiteral() then
-                    res.data = not res.data
+                    res:SetData(not res:GetData())
                 end
                 return res
             end
             if l:IsLiteral() and r:IsLiteral() then
-                return l.data ~= r.data and types.True() or types.False()
+                return l:GetData() ~= r:GetData() and types.True() or types.False()
             end
 
             if l == types.Nil() and r == types.Nil() then
@@ -293,12 +294,12 @@ return function(META)
 
             if (l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number") then
                 if l:IsLiteral() and r:IsLiteral() then
-                    return types.Symbol(l.data < r.data)
+                    return types.Symbol(l:GetData() < r:GetData())
                 end
                 return types.Boolean()
             end
 
-            return types.errors.binary(op, l,r)
+            return type_errors.binary(op, l,r)
         elseif op == "<=" then
             local res = metatable_function(self, "__le", l, r)
             if res then
@@ -307,12 +308,12 @@ return function(META)
 
             if (l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number") then
                 if l:IsLiteral() and r:IsLiteral() then
-                    return types.Symbol(l.data <= r.data)
+                    return types.Symbol(l:GetData() <= r:GetData())
                 end
                 return types.Boolean()
             end
 
-            return types.errors.binary(op, l,r)
+            return type_errors.binary(op, l,r)
         elseif op == ">" then
             local res = metatable_function(self, "__lt", l, r)
             if res then
@@ -322,12 +323,12 @@ return function(META)
 
             if (l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number") then
                 if l:IsLiteral() and r:IsLiteral() then
-                    return types.Symbol(l.data > r.data)
+                    return types.Symbol(l:GetData() > r:GetData())
                 end
                 return types.Boolean()
             end
 
-            return types.errors.binary(op, l,r)
+            return type_errors.binary(op, l,r)
         elseif op == ">=" then
             local res = metatable_function(self, "__le", l, r)
 
@@ -338,61 +339,61 @@ return function(META)
 
             if (l.Type == "string" and r.Type == "string") or (l.Type == "number" and r.Type == "number") then
                 if l:IsLiteral() and r:IsLiteral() then
-                    return types.Symbol(l.data >= r.data)
+                    return types.Symbol(l:GetData() >= r:GetData())
                 end
                 return types.Boolean()
             end
 
-            return types.errors.binary(op, l,r)
+            return type_errors.binary(op, l,r)
         elseif op == "or" or op == "||" then
             if l:IsUncertain() or r:IsUncertain() then
                 local union = types.Union({l,r})
-                return union:SetSource(node, union, l,r)
+                return union:SetNode(node):SetSource(union, l,r)
             end
 
             -- when true, or returns its first argument
             if l:IsTruthy() then
-                return l:Copy():SetSource(node, l, l,r)
+                return l:Copy():SetNode(node):SetSource(l, l,r)
             end
 
             if r:IsTruthy() then
-                return r:Copy():SetSource(node, r, l,r)
+                return r:Copy():SetNode(node):SetSource(r, l,r)
             end
 
-            return r:Copy():SetSource(node, r)
+            return r:Copy():SetNode(node):SetSource(r)
         elseif op == "and" or op == "&&" then
             if l:IsTruthy() and r:IsFalsy() then
                 if l:IsFalsy() or r:IsTruthy() then
                     local union = types.Union({l,r})
-                    return union:SetSource(node, union, l,r)
+                    return union:SetNode(node):SetSource(union, l,r)
                 end
 
-                return r:Copy():SetSource(node, r, l,r)
+                return r:Copy():SetNode(node):SetSource(r, l,r)
             end
 
             if l:IsFalsy() and r:IsTruthy() then
                 if l:IsTruthy() or r:IsFalsy() then
                     local union = types.Union({l,r})
-                    return union:SetSource(node, union, l,r)
+                    return union:SetNode(node):SetSource(union, l,r)
                 end
 
-                return l:Copy():SetSource(node, l, l,r)
+                return l:Copy():SetNode(node):SetSource(l, l,r)
             end
 
             if l:IsTruthy() and r:IsTruthy() then
                 if l:IsFalsy() and r:IsFalsy() then
                     local union = types.Union({l,r})
-                    return union:SetSource(node, union, l,r)
+                    return union:SetNode(node):SetSource(union, l,r)
                 end
 
-                return r:Copy():SetSource(node, r, l,r)
+                return r:Copy():SetNode(node):SetSource(r, l,r)
             else
                 if l:IsTruthy() and r:IsTruthy() then
                     local union = types.Union({l,r})
-                    return union:SetSource(node, union, l,r)
+                    return union:SetNode(node):SetSource(union, l,r)
                 end
 
-                return l:Copy():SetSource(node, l, l,r)
+                return l:Copy():SetNode(node):SetSource(l, l,r)
             end
         end
 
@@ -404,13 +405,13 @@ return function(META)
                 (l.Type == "string" and r.Type == "number")
             then
                 if l:IsLiteral() and r:IsLiteral() then
-                    return self:NewType(node, "string", l.data .. r.data, true)
+                    return self:NewType(node, "string", l:GetData() .. r:GetData(), true)
                 end
 
                 return self:NewType(node, "string")
             end
 
-            return types.errors.binary(op, l,r)
+            return type_errors.binary(op, l,r)
         end
 
         if op == "+" then return arithmetic(node, l,r, "number", op)
@@ -427,7 +428,7 @@ return function(META)
         elseif op == "<<" then return arithmetic(node, l,r, "number", op)
         elseif op == ">>" then return arithmetic(node, l,r, "number", op) end
 
-        return types.errors.binary(op, l,r)
+        return type_errors.binary(op, l,r)
     end
 
     function META:AnalyzeBinaryOperatorExpression(node, env)

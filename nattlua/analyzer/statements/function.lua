@@ -31,7 +31,7 @@ return function(META)
 
                 if existing_type and existing_type.Type == "function" then
                     val:SetArguments(existing_type:GetArguments())
-                    val.data.ret = existing_type:GetReturnTypes() -- TODO
+                    val:GetData().ret = existing_type:GetReturnTypes() -- TODO
                 end
                 
                 self:NewIndexOperator(statement, obj, key, val, env)

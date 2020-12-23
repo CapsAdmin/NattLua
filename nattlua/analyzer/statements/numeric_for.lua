@@ -57,7 +57,7 @@ return function(META)
                     condition = condition,
                     i = i, 
                 })
-                local i = self:NewType(statement.expressions[1], "number", i):MakeLiteral(true)
+                local i = self:NewType(statement.expressions[1], "number", i):SetLiteral(true)
                 local brk = false
 
                 if not statement.identifiers[1].inferred_type then
@@ -67,7 +67,7 @@ return function(META)
                 end
                 
                 if uncertain_break then
-                    i:MakeLiteral(false)
+                    i:SetLiteral(false)
                     brk = true
                 end
 
@@ -123,7 +123,7 @@ return function(META)
             end
 
             if max.Type == "any" then
-                init:MakeLiteral(false)
+                init:SetLiteral(false)
             end
 
             local range = self:Assert(statement.expressions[1], init)

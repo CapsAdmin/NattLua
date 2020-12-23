@@ -67,10 +67,6 @@ return function(META)
                     write(tostring(val))
                 end
 
-                local reason = val:GetReasonForExistance()
-                if reason ~= "" then
-                    write(" -- ", reason)
-                end
                 write("\n")
             elseif what == "set_environment_value" then
                 local key, val = ...
@@ -223,12 +219,12 @@ return function(META)
                 tab()
                 write("-- merged scope result: \n")
             elseif what == "analyze_unreachable_function_start" then
-                local statement, count, total = ...
-                write("-- START analyzing unreachable function ", tostring(statement.node), " ", count, "/", total)                
+                local func, count, total = ...
+                write("-- START analyzing unreachable function ", tostring(func:GetNode()), " ", count, "/", total)                
                 write("\n")
             elseif what == "analyze_unreachable_function_stop" then
-                local statement, count, total, seconds = ...
-                write("-- STOP analyzing unreachable function ", tostring(statement.node), " ", count, "/", total , " took ", seconds , " seconds")                
+                local func, count, total, seconds = ...
+                write("-- STOP analyzing unreachable function ", tostring(func:GetNode()), " ", count, "/", total , " took ", seconds , " seconds")                
                 write("\n")
             elseif what == "analyze_unreachable_code_start" then
                 local total = ...

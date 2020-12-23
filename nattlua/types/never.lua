@@ -8,10 +8,6 @@ function META:GetSignature()
     return "never"
 end
 
-function META:GetData()
-    return self.data
-end
-
 function META:Copy()
     return self
 end

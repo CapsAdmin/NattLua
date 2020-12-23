@@ -157,8 +157,8 @@ end)
 test("error on newindex", function()
     run([[
         local type error = function(msg: string)
-            assert(type(msg.data) == "string", "msg has no field a string?")
-            error(msg.data)
+            assert(type(msg:GetData()) == "string", "msg has no field a string?")
+            error(msg:GetData())
         end
 
         local META = {}
