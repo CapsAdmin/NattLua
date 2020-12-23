@@ -76,35 +76,37 @@ return function(META)
         local function is_done(tup)
             return d[get_signature(tup)]
         end
-    
+        
+        local function should_expand(arg, contract)
+            local b = arg.Type == "union"
+
+            if contract.Type == "any" then
+                b = false
+            end
+
+            if contract.Type == "union" then
+                b = false
+            end
+
+            if arg.Type == "union" and contract.Type == "union" and contract:HasNil() then
+                b = true
+            end
+
+            return b
+        end
+
         local function expand(args, out, function_arguments)
             local tup = {}
-            for i, t in ipairs(args) do  
-                local type = function_arguments:Get(i)
-                
-                local should_expand = t.Type == "union"
-
-                if type.Type == "any" then
-                    should_expand = false
-                end
-
-                if type.Type == "union" then
-                    should_expand = false
-                end
-
-                if t.Type == "union" and type.Type == "union" and type:HasNil() then
-                    should_expand = true
-                end
-                
-                if should_expand then
-                    for i2,v in ipairs(t:GetData()) do
+            for i, arg in ipairs(args) do  
+                if should_expand(arg, function_arguments:Get(i)) then
+                    for i2,v in ipairs(arg:GetData()) do
                         local args2 = {}
                         for i, v in ipairs(args) do args2[i] = v end
                         args2[i] = v
                         expand(args2, out, function_arguments)
                     end
                 else
-                    table.insert(tup, t)
+                    table.insert(tup, arg)
                 end
             end
             if #tup == #args and not is_done(tup) then
