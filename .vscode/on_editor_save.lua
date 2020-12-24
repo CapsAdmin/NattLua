@@ -20,6 +20,10 @@ local function run_nattlua(path)
         c:EnableEventDump(true)
     end
 
+    if c.code:find("%-%-%s-COLOR_PRINT") then
+        require("nattlua.other.color_print")
+    end
+
     if c.code:find("%-%-%s-VERBOSE_STACKTRACE") then
         c.debug = true
     end
@@ -91,7 +95,7 @@ if path:lower():find("/nattlua/", nil, true) then
         run_lua(path)
     elseif has_test_focus() then
         run_nattlua("./test_focus.lua")
-    elseif (path:find("/nattlua/nattlua/", nil, true) or path:find("/nattlua/nattlua.lua", nil, true)) and not path:find("helpers") then
+    elseif (path:find("/nattlua/nattlua/", nil, true) or path:find("/nattlua/nattlua.lua", nil, true)) and not path:find("other") then
         run_lua("test/run.lua")  
     end
 end
