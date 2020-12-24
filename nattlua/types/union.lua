@@ -127,7 +127,7 @@ function META:GetAtIndex(i)
             if found then
                 if val then
                     val = types.Union({val, found})
-                    val:SetNode(found:GetNode()):SetSource(found, found.source_left, found.source_right)
+                    val:SetNode(found:GetNode()):SetSource(found):SetBinarySource(found.source_left, found.source_right)
                 else
                     val = found
                 end
@@ -143,7 +143,7 @@ function META:GetAtIndex(i)
         else
             if val then
                 val = types.Union({val, obj})
-                val:SetNode(self:GetNode()):SetSource(self, self.source_left, self.source_right)
+                val:SetNode(self:GetNode()):SetSource(self):SetBinarySource(self.source_left, self.source_right)
             else
                 val = obj
             end
@@ -493,7 +493,7 @@ function META:MakeCallableUnion(analyzer, node)
     new_union.truthy_union = truthy_union
     new_union.falsy_union = falsy_union
 
-    return truthy_union:SetNode(node):SetSource(new_union, self)
+    return truthy_union:SetNode(node):SetSource(new_union):SetBinarySource(self)
 end
 
 return types.RegisterType(META)

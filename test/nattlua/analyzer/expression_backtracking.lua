@@ -26,7 +26,7 @@ test("a + b", function()
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
     equal(obj:GetNode().kind, "binary_operator")
-    equal(obj.source:GetData(), 3)
+    equal(obj:GetData(), 3)
     equal(obj.source_left:GetData(), 1)
     equal(obj.source_right:GetData(), 2)
 end)

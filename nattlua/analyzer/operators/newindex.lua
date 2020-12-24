@@ -28,7 +28,7 @@ return function(META)
             new_union.truthy_union = truthy_union
             new_union.falsy_union = falsy_union
     
-            return new_union:SetNode(node):SetSource(new_union, obj)
+            return new_union:SetNode(node):SetSource(new_union):SetBinarySource(obj)
         end
     
         if obj:GetMetaTable() then

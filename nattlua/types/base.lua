@@ -27,8 +27,11 @@ function META:CopyInternalsFrom(obj)
     --self.upvalue = obj.upvalue
 end
 
-function META:SetSource(source, l,r)
+function META:SetSource(source)
     self.source = source
+    return self
+end 
+function META:SetBinarySource(l,r)
     self.source_left = l
     self.source_right = r        
     return self

@@ -55,11 +55,10 @@ local function arithmetic(node, l,r, type, operator)
                 obj.max = arithmetic(node, l.max, r, type, operator)
             end
 
-            return obj:SetNode(node):SetSource(obj, l,r)
+            return obj:SetNode(node):SetBinarySource(l,r)
         end
 
-        local obj = types.Number():Copy()
-        return obj:SetNode(node):SetSource(obj, l,r)
+        return types.Number():SetNode(node):SetBinarySource(l,r)
     end
     
     return type_errors.binary(operator, l,r)
@@ -81,9 +80,7 @@ return function(META)
 
         if l.Type == "union" and r.Type == "union" then
             if op == "|" and env == "typesystem" then
-                local new_union = types.Union({l, r})                
-
-                return new_union:SetNode(node):SetSource(new_union, l, r)
+                return types.Union({l, r}):SetNode(node):SetBinarySource(l, r)
             else                
                 local new_union = types.Union()
                 local truthy_union = types.Union()
@@ -150,7 +147,7 @@ return function(META)
                 new_union.truthy_union = truthy_union
                 new_union.falsy_union = falsy_union
 
-                return new_union:SetNode(node):SetSource(new_union, l,r)
+                return new_union:SetNode(node):SetSource(new_union):SetBinarySource(l,r)
             end
         end
 
@@ -347,53 +344,48 @@ return function(META)
             return type_errors.binary(op, l,r)
         elseif op == "or" or op == "||" then
             if l:IsUncertain() or r:IsUncertain() then
-                local union = types.Union({l,r})
-                return union:SetNode(node):SetSource(union, l,r)
+                return types.Union({l,r}):SetNode(node):SetBinarySource(l,r)
             end
 
             -- when true, or returns its first argument
             if l:IsTruthy() then
-                return l:Copy():SetNode(node):SetSource(l, l,r)
+                return l:Copy():SetNode(node):SetSource(l):SetBinarySource(l,r)
             end
 
             if r:IsTruthy() then
-                return r:Copy():SetNode(node):SetSource(r, l,r)
+                return r:Copy():SetNode(node):SetSource(r):SetBinarySource(l,r)
             end
 
             return r:Copy():SetNode(node):SetSource(r)
         elseif op == "and" or op == "&&" then
             if l:IsTruthy() and r:IsFalsy() then
                 if l:IsFalsy() or r:IsTruthy() then
-                    local union = types.Union({l,r})
-                    return union:SetNode(node):SetSource(union, l,r)
+                    return types.Union({l,r}):SetNode(node):SetBinarySource(l,r)
                 end
 
-                return r:Copy():SetNode(node):SetSource(r, l,r)
+                return r:Copy():SetNode(node):SetSource(r):SetBinarySource(l,r)
             end
 
             if l:IsFalsy() and r:IsTruthy() then
                 if l:IsTruthy() or r:IsFalsy() then
-                    local union = types.Union({l,r})
-                    return union:SetNode(node):SetSource(union, l,r)
+                    return types.Union({l,r}):SetNode(node):SetBinarySource(l,r)
                 end
 
-                return l:Copy():SetNode(node):SetSource(l, l,r)
+                return l:Copy():SetNode(node):SetSource(l):SetBinarySource(l,r)
             end
 
             if l:IsTruthy() and r:IsTruthy() then
                 if l:IsFalsy() and r:IsFalsy() then
-                    local union = types.Union({l,r})
-                    return union:SetNode(node):SetSource(union, l,r)
+                    return types.Union({l,r}):SetNode(node):SetBinarySource(l,r)
                 end
 
-                return r:Copy():SetNode(node):SetSource(r, l,r)
+                return r:Copy():SetNode(node):SetSource(r):SetBinarySource(l,r)
             else
                 if l:IsTruthy() and r:IsTruthy() then
-                    local union = types.Union({l,r})
-                    return union:SetNode(node):SetSource(union, l,r)
+                    return types.Union({l,r}):SetNode(node):SetBinarySource(l,r)
                 end
 
-                return l:Copy():SetNode(node):SetSource(l, l,r)
+                return l:Copy():SetNode(node):SetSource(l):SetBinarySource(l,r)
             end
         end
 
