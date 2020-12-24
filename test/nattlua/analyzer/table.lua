@@ -521,3 +521,18 @@ run[[
     type_assert(tbl.NewField2, 9999)
     
 ]]
+
+run[[
+    local e = {}
+
+    e.FOO = 1337
+    
+    if math.random() > 0.5 then
+        e.FOO = 666
+    end
+    
+    for k,v in pairs(e) do
+        type_assert(k, "FOO")
+        type_assert(v, _ as 666 | 1337)
+    end
+]]

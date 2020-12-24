@@ -512,3 +512,12 @@ run[[
         return ""
     end
 ]]
+
+run[[
+    local function test(a: const string)
+        return a:lower()
+    end
+    
+    local str = test("Foo")
+    type_assert(str, "foo")
+]]

@@ -139,6 +139,9 @@ return function(META)
             elseif l.Type == "string" then
                 return types.Number(l:GetData() and #l:GetData() or nil):SetLiteral(l:IsLiteral())
             end
+        elseif op == "const" then
+            l.const_argument = true
+            return l
         end
 
         error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))

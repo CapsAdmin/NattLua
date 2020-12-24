@@ -226,7 +226,10 @@ return function(META)
                 arg:SetContract(contract)
                 table.insert(self.mutated_types, arg)
             else
-                arguments:Set(i, contract:Copy())
+                -- if it's a const argument we pass the incoming value
+                if not contract.const_argument then
+                    arguments:Set(i, contract:Copy())
+                end
             end
         end
 
@@ -377,6 +380,8 @@ return function(META)
     
             self:FireEvent("function_spec", obj)
             
+            local lol = return_result
+
             if return_contract then
                 -- this is so that the return type of a function can access its arguments, to generics
                 -- local function foo(a: number, b: number): Foo(a, b) return a + b end
@@ -402,6 +407,10 @@ return function(META)
                 end
     
                 function_node.inferred_type = obj
+            end
+
+            if return_contract and not return_contract.const_argument then
+                return lol
             end
     
             if not return_contract then

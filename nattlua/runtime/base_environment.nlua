@@ -206,7 +206,10 @@ do -- globals
 				local kv = tbl:GetData()[i]
 				if not kv then return nil end
 				i = i + 1
-				return kv.key, kv.val
+
+                local o = analyzer:GetMutatedValue(tbl, kv.key, kv.val, "runtime")
+
+				return kv.key, o or kv.val
 			end
 		end
 
@@ -214,7 +217,7 @@ do -- globals
 		local k,v = analyzer:CallLuaTypeFunction(node, next:GetData().lua_function, analyzer:GetScope(), tbl)
 		local done = false
 
-        if v.Type == "union" then
+        if v and v.Type == "union" then
             v:RemoveType(types.Symbol(nil))
         end
 
@@ -605,18 +608,21 @@ do
 end
 
 type ffi = {
+    errno = number,
+    os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
+    arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
 	C = {},
 	cdef = (function(string): nil),
 	abi = (function(string): boolean),
 	metatype = (function(ctype, Table): cdata),
-	new = (function(string | ctype, number, any...): cdata),
+	new = (function(string | ctype, number | nil, any...): cdata),
 	copy = (function(cdata, cdata | nil, number | string | nil): nil),
 	alignof = (function(ctype): number),
 	cast = (function(ctype | string, cdata | string): cdata),
 	typeof = (function(ctype): ctype),
 	load = (function(string, boolean): userdata) | (function(string): userdata),
 	sizeof = (function(ctype, number): number) | (function(ctype): number),
-	string = (function(cdata, number): string),
+	string = (function(cdata, number | nil): string),
 	gc = (function(ctype, empty_function): cdata),
 	istype = (function(ctype, any): boolean),
 	fill = (function(cdata, number, any): nil) | (function(cdata, len: number): nil),
@@ -624,8 +630,8 @@ type ffi = {
 }
 
 type jit = {
-	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
-	arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
+	os = ffi.os,
+	arch = ffi.arch,
 	attach = (function(empty_function, string): nil),
 	flush = (function(): nil),
 	opt = {

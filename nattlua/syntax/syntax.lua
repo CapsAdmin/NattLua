@@ -92,7 +92,7 @@ do
 
 
     syntax.typesystem.PrefixOperators --[[#: {[number] = string} ]]  = {
-        "-", "#", "not", "~", "typeof", "$", "unique", "out"
+        "-", "#", "not", "~", "typeof", "$", "unique", "out", "const"
     }
 
     syntax.typesystem.PrimaryBinaryOperators --[[#: {[number] = string} ]]  = {

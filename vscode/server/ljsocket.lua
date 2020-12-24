@@ -3,17 +3,17 @@ local socket = {}
 local e = {}
 
 do
-    local C --[[#: ffi.C]]
+    --[[# type ffi.C = {[string] = any} ]]
+
+    local C--[[: ffi.C]] = ffi.C
 
     if ffi.os == "Windows" then
         C = assert(ffi.load("ws2_32"))
-    else
-        C = ffi.C
     end
 
     local M = {}
 
-    local function generic_function(C_name, cdef, alias, size_error_handling)
+    local function generic_function(C_name--[[#: const string ]], cdef--[[#: const string ]], alias--[[#: const string | nil ]], size_error_handling--[[#: nil | true | false ]])
         ffi.cdef(cdef)
 
         alias = alias or C_name
@@ -185,33 +185,22 @@ do
     assert(ffi.sizeof("struct sockaddr_in") == 16)
 
     if ffi.os == "Windows" then
-        ffi.cdef[[
-
-            struct pollfd {
-                SOCKET fd;
-                short events;
-                short revents;
-            };
-            int WSAPoll(struct pollfd *fds, unsigned long int nfds, int timeout);
-
-            uint32_t GetLastError();
-            uint32_t FormatMessageA(
-                uint32_t dwFlags,
-                const void* lpSource,
-                uint32_t dwMessageId,
-                uint32_t dwLanguageId,
-                char* lpBuffer,
-                uint32_t nSize,
-                va_list *Arguments
-            );
-        ]]
-
-        local function WORD(low--[[#: number]], high--[[#: number]])
-            return bit.bor(low , bit.lshift(high , 8))
-        end
-
         do
-            ffi.cdef[[int GetLastError();]]
+            ffi.cdef[[
+                uint32_t GetLastError();
+            ]]
+
+            ffi.cdef[[
+                uint32_t FormatMessageA(
+                    uint32_t dwFlags,
+                    const void* lpSource,
+                    uint32_t dwMessageId,
+                    uint32_t dwLanguageId,
+                    char* lpBuffer,
+                    uint32_t nSize,
+                    va_list *Arguments
+                );
+            ]]
 
             local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
             local FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
@@ -219,7 +208,7 @@ do
 
             local cache = {}
 
-            function socket.lasterror(num)
+            function socket.lasterror(num --[[#: number | nil]])
                 num = num or ffi.C.GetLastError()
 
                 if not cache[num] then
@@ -258,6 +247,10 @@ do
                     char * lpVendorInfo;
                 }]])
             end
+
+            local function WORD(low--[[#: number]], high--[[#: number]])
+                return bit.bor(low , bit.lshift(high , 8))
+            end    
 
             function socket.initialize()
                 local data = wsa_data()
@@ -303,7 +296,7 @@ do
 
             local IOCPARM_MASK    = 0x7
             local IOC_IN          = 0x80000000
-            local function _IOW(x,y,t)
+            local function _IOW(x--[[#: number]],y--[[#: number]],t--[[#: string]])
                 return bit.bor(IOC_IN, bit.lshift(bit.band(ffi.sizeof(t),IOCPARM_MASK),16), bit.lshift(x,8), y)
             end
 
@@ -318,6 +311,15 @@ do
                 return nil, socket.lasterror()
             end
         end
+
+        ffi.cdef[[
+            struct pollfd {
+                SOCKET fd;
+                short events;
+                short revents;
+            };
+            int WSAPoll(struct pollfd *fds, unsigned long int nfds, int timeout);
+        ]]
 
         function socket.poll(fds, ndfs, timeout)
             local ret = C.WSAPoll(fds, ndfs, timeout)
@@ -732,7 +734,12 @@ do
     end
 end
 
-local function capture_flags(what)
+local function capture_flags(what --[[#: const string]]) --[[#: const {
+    lookup = {[string] = number},
+    reverse = {[number] = string},
+    strict_reverse = (function(number): string),
+    strict_lookup = (function(string): number),
+} ]]
     local flags = {}
     local reverse = {}
     for k, v in pairs(e) do
@@ -776,6 +783,7 @@ local SOL = capture_flags("SOL_")
 local SO = capture_flags("SO_")
 local TCP = capture_flags("TCP_")
 local POLL = capture_flags("POLL")
+
 
 local function table_to_flags(flags, valid_flags, operation)
 	if type(flags) == "string" then
@@ -873,7 +881,21 @@ local function addrinfo_to_table(res, host, service)
     return info
 end
 
-function M.get_address_info(data)
+--[[#
+    local type AddressInfo = {
+        host = string,
+        service = number | string,
+        family = keysof(AF.lookup),
+        socket_type = keysof(SOCK.lookup),
+        protocol = keysof(IPPROTO.lookup),
+        flags = keysof(AI.lookup),
+    }
+
+    print<|"!!!!", AddressInfo|>
+]]
+
+
+function M.get_address_info(data --[[#: AddressInfo ]])
     local hints
 
     if data.socket_type or data.protocol or data.flags or data.family then
