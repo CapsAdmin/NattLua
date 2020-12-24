@@ -320,6 +320,15 @@ do
                 local _, r = helpers.LazyFindStartStop(tbl.right)
                 return l,r
             end
+            if tbl.kind == "postfix_call" then
+                if tbl.tokens["call("] then
+                    local l = helpers.LazyFindStartStop(tbl.tokens["call("])
+                    local _, r = helpers.LazyFindStartStop(tbl.tokens["call)"])
+                    return l,r
+                else
+                    return helpers.LazyFindStartStop(tbl.expressions[1])
+                end
+            end
         end
 
         local out = {min = -math.huge, max = math.huge}
