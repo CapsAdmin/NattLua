@@ -135,6 +135,7 @@ return function(META)
                     )
                         or not a:IsSubsetOf(b)
                 then
+                    b.arguments_inferred = true
                     self:Assert(call_node, self:Call(b, b:GetArguments():Copy()))
                 end
             end

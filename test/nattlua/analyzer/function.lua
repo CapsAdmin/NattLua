@@ -574,3 +574,15 @@ run[[
         return false, "another string"
     end
 ]]
+
+run[[
+    local function test(cb: function(string): string)
+
+    end
+    
+    test(function(s)
+        return ""
+    end)
+
+    §assert(#analyzer.diagnostics == 0)
+]]
