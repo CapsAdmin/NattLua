@@ -586,3 +586,20 @@ run[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
+
+run[[
+    local function test(): const number 
+        return 1
+    end 
+    
+    local x = test()
+    type_assert(x, 1)
+]]
+run[[
+    local function test(): number 
+        return 1
+    end 
+    
+    local x = test()
+    type_assert(x, _ as number)
+]]

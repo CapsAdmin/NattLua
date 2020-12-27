@@ -381,8 +381,6 @@ return function(META)
     
             self:FireEvent("function_spec", obj)
             
-            local lol = return_result
-
             if return_contract then
                 -- this is so that the return type of a function can access its arguments, to generics
                 -- local function foo(a: number, b: number): Foo(a, b) return a + b end
@@ -395,8 +393,6 @@ return function(META)
                             self:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
                         end
                     end
-    
-                    return_result = return_contract
                 self:PopScope()
             end
     
@@ -409,17 +405,23 @@ return function(META)
     
                 function_node.inferred_type = obj
             end
-
-            if return_contract and not return_contract.const_argument then
-                return lol
-            end
-    
+            
             if not return_contract then
                 return return_result
             end
-        end
-    
-        return obj:GetReturnTypes():Copy():SetReferenceId(nil)
+
+            local contract = obj:GetReturnTypes():Copy():SetReferenceId(nil)
+
+            for i,v in ipairs(return_contract:GetData()) do
+                if v.const_argument then
+                    contract:Set(i, return_result:Get(i))
+                end
+            end
+            
+            return contract
+        end 
+
+        return obj:GetReturnTypes():Copy():SetReferenceId(nil)   
     end
     
     function META:Call(obj, arguments, call_node)
