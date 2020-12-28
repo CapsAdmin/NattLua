@@ -74,9 +74,9 @@ function META:AddType(e)
     self:Sort()
     --table.sort(self.data.list, sort)
 
-        if #self.data.list > 512 then 
-            error("union is too large", 2)
-        end
+    if #self.data.list > 512 then 
+        error("union is too large", 2)
+    end
 
     return self
 end
@@ -189,11 +189,6 @@ function META:Get(key, from_table)
     end
 
     return type_errors.other(errors)
-end
-
-function META:Set(key, val)
-    self:AddType(val)
-    return true
 end
 
 function META:IsEmpty()

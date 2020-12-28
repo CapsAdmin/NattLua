@@ -38,7 +38,8 @@ test("declaring base types", function()
         AddToUnion<|Any, Function|>
         
         -- if the union sorting algorithm changes, we probably need to change this
-        §assert(tostring(env.typesystem.Any:GetType()) == "function⦗⦗*self-union*⦘×inf⦘: ⦗⦗*self-union*⦘×inf⦘ | { *self-union* = *self-union* } | -inf..inf | nan | $(.-) | false | nil | true")        
+        §assert(tostring(env.typesystem.Any:GetType()) == "{ *self-union* = *self-union* } | function⦗⦗*self-union*⦘×inf⦘: ⦗⦗*self-union*⦘×inf⦘ | -inf..inf | nan | $(.-) | false | nil | true")        
+        --§print(tostring(env.typesystem.Any:GetType()))
 
         local str: String = "asdasdawd"
         local b: Boolean = true

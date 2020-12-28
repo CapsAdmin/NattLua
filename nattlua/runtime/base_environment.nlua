@@ -165,7 +165,7 @@ do -- globals
 					end
 				end
 			else
-				local kv = t:GetData()[1]
+				local kv = t:GetData() and t:GetData()[1]
 				if kv then
 					return kv.key, kv.val
 				end
@@ -214,7 +214,7 @@ do -- globals
 		end
 
 		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
-		local k,v = analyzer:CallLuaTypeFunction(node, next:GetData().lua_function, analyzer:GetScope(), tbl)
+		local k,v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 		local done = false
 
         if v and v.Type == "union" then

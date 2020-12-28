@@ -37,11 +37,11 @@ function META:GetLuaType()
 end
 
 function META:GetArguments()
-    return self:GetData().arg
+    return self:GetData().arg or types.Tuple({})
 end
 
 function META:GetReturnTypes()
-    return self:GetData().ret
+    return self:GetData().ret or types.Tuple({})
 end
 
 function META:HasExplicitReturnTypes()
@@ -62,7 +62,7 @@ end
 function META:Copy(map)
     map = map or {}
 
-    local copy = types.Function({})
+    local copy = types.Function({arg = types.Tuple({}), ret = types.Tuple({})})
     map[self] = map[self] or copy
     copy:GetData().ret = self:GetReturnTypes():Copy(map)
     copy:GetData().arg = self:GetArguments():Copy(map)
@@ -72,6 +72,13 @@ function META:Copy(map)
     copy.function_body_node = self.function_body_node
 
     return copy
+end
+
+function META:Initialize(data)
+    if not data.ret or not data.arg then
+        error("function initialized without ret or arg", 2)
+    end
+    return self
 end
 
 function META.IsSubsetOf(A, B)

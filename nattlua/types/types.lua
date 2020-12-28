@@ -84,7 +84,7 @@ do
 end
 
 function types.RegisterType(meta)
-    for k, v in pairs(types.BaseObject) do
+    for k, v in pairs(require("nattlua.types.base")) do
         if not meta[k] then
             meta[k] = v
         end
@@ -131,8 +131,6 @@ function types.IsSameUniqueType(a, b)
 end
 
 function types.Initialize()
-    types.BaseObject = require("nattlua.types.base")
-
     types.Union = require("nattlua.types.union")
     types.Table = require("nattlua.types.table")
     types.List = require("nattlua.types.list")
