@@ -33,6 +33,11 @@ function META:GetSignature()
 end
 
 function META:__tostring()
+    if self.sort_me then
+        table.sort(self.data.list, sort)
+        self.sort_me = false
+    end
+
     if self.suppress then
         return "*self-union*"
     end
@@ -48,7 +53,6 @@ function META:__tostring()
     return table.concat(s, " | ")
 end
 
-
 function META:AddType(e)
     if e.Type == "union" then
         for _, e in ipairs(e.data.list) do
@@ -60,17 +64,19 @@ function META:AddType(e)
 
     local sig = e:GetSignature()
 
-    if not self.data.map[sig] then
-        --local e = e:Copy()
-        self.data.map[sig] = e
+    for i,v in ipairs(self.data.list) do
+        if v:GetSignature() == sig then
+            return self
+        end
+    end
 
-        table.insert(self.data.list, e)
-        table.sort(self.data.list, sort)
+    table.insert(self.data.list, 1, e)
+    self:Sort()
+    --table.sort(self.data.list, sort)
 
         if #self.data.list > 512 then 
             error("union is too large", 2)
         end
-    end
 
     return self
 end
@@ -86,8 +92,6 @@ end
 function META:RemoveType(e)
     local sig = e:GetSignature()
 
-    self.data.map[sig] = nil
-
     for i,v in ipairs(self.data.list) do
         if v:GetSignature() == sig then
             table.remove(self.data.list, i)
@@ -95,6 +99,7 @@ function META:RemoveType(e)
             break
         end
     end
+
     return self
 end
 
@@ -344,8 +349,11 @@ function META:Copy(map)
         map[e] = map[e] or c
         copy:AddType(c)
     end
+
     copy:Sort()
     copy:CopyInternalsFrom(self)
+
+    table.sort(copy.data.list, sort)
 
     return copy
 end
