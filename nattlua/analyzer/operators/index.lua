@@ -68,12 +68,7 @@ return function(META)
 
             return val
         end
-    
-        if not val then
-            self:Warning(node or obj:GetNode(), err)
-            return self:NewType(node or obj:GetNode(), "nil")
-        end
-    
-        return val
+
+        return types.Nil() -- no contract means nil value
     end
 end

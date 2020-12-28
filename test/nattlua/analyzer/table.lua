@@ -536,3 +536,32 @@ run[[
         type_assert(v, _ as 666 | 1337)
     end
 ]]
+
+run[[
+    local META = {}
+
+    function META:Test()
+
+    end
+
+    if not META["Foo"] then
+        
+    end
+
+    §assert(#analyzer.diagnostics == 0)
+]]
+
+
+run([[
+    local META = {} as {Test = function(self): nil}
+
+    function META:Test()
+    
+    end
+    
+    if not META["Foo"] then
+        
+    end
+
+    §assert(#analyzer.diagnostics == 1)
+]])
