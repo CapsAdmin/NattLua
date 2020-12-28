@@ -28,7 +28,7 @@ function META.IsSubsetOf(A, B)
 
     if B.Type == "union" then
         local errors = {}
-        for _, b in ipairs(B:GetTypes()) do
+        for _, b in ipairs(B:GetData()) do
             local ok, reason = A:IsSubsetOf(b)
             if ok then
                 return true

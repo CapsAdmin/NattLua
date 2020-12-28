@@ -81,14 +81,16 @@ return function(META)
         if l.Type == "union" and r.Type == "union" then
             if op == "|" and env == "typesystem" then
                 return types.Union({l, r}):SetNode(node):SetBinarySource(l, r)
-            else                
+            elseif op == "~" and env == "typesystem" then
+                return l:RemoveType(r):Copy()
+            else
                 local new_union = types.Union()
                 local truthy_union = types.Union()
                 local falsy_union = types.Union()
                 local condition = l
                 
-                for _, l in ipairs(l:GetTypes()) do
-                    for _, r in ipairs(r:GetTypes()) do
+                for _, l in ipairs(l:GetData()) do
+                    for _, r in ipairs(r:GetData()) do
                         local res, err = self:BinaryOperator(node, l, r, env, op)
 
                         if not res then
@@ -96,7 +98,7 @@ return function(META)
                         else
                             if res:IsTruthy() then
                                 if self.type_checked then                                
-                                    for _, t in ipairs(self.type_checked:GetTypes()) do
+                                    for _, t in ipairs(self.type_checked:GetData()) do
                                         if t:GetLuaType() == l:GetData() then
                                             truthy_union:AddType(t)
                                         end
@@ -109,7 +111,7 @@ return function(META)
         
                             if res:IsFalsy() then
                                 if self.type_checked then                                
-                                    for _, t in ipairs(self.type_checked:GetTypes()) do
+                                    for _, t in ipairs(self.type_checked:GetData()) do
                                         if t:GetLuaType() == l:GetData() then
                                             falsy_union:AddType(t)
                                         end
@@ -154,6 +156,8 @@ return function(META)
         if env == "typesystem" then
             if op == "|" then
                 return types.Union({l, r})
+            elseif op == "~" then
+                return l:RemoveType(r)
             elseif op == "&" or op == "extends" then
                 if l.Type ~= "table" then
                     return false, "type ".. tostring(l) .. " cannot be extended"

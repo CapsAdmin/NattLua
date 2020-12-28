@@ -11,7 +11,7 @@ return function(META)
             local truthy_union = types.Union()
             local falsy_union = types.Union()
     
-            for _, v in ipairs(obj:GetTypes()) do
+            for _, v in ipairs(obj:GetData()) do
                 local ok, err = self:NewIndexOperator(node, v, key, val, env)
     
                 if not ok then

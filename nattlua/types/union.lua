@@ -13,7 +13,7 @@ end
 
 function META:GetSignature()
     if self.sort_me then
-        table.sort(self:GetTypes(), sort)
+        table.sort(self.data.list, sort)
         self.sort_me = false
     end
 
@@ -24,7 +24,7 @@ function META:GetSignature()
     local s = {}
 
     self.suppress = true
-    for i, v in ipairs(self:GetTypes()) do
+    for i, v in ipairs(self.data.list) do
         s[i] = v:GetSignature()
     end
     self.suppress = false
@@ -34,13 +34,13 @@ end
 
 function META:__tostring()
     if self.suppress then
-        return "*self*"
+        return "*self-union*"
     end
 
     local s = {}
 
     self.suppress = true
-    for _, v in ipairs(self:GetTypes()) do
+    for _, v in ipairs(self.data.list) do
         table.insert(s, tostring(v))
     end
     self.suppress = false
@@ -51,7 +51,7 @@ end
 
 function META:AddType(e)
     if e.Type == "union" then
-        for _, e in ipairs(e:GetTypes()) do
+        for _, e in ipairs(e.data.list) do
             self:AddType(e)
         end
 
@@ -60,12 +60,14 @@ function META:AddType(e)
 
     local sig = e:GetSignature()
 
-    if not self:GetData()[sig] then
-        self:GetData()[sig] = e
-        table.insert(self:GetTypes(), e)
-        self:Sort()
+    if not self.data.map[sig] then
+        --local e = e:Copy()
+        self.data.map[sig] = e
 
-        if #self:GetTypes() > 512 then 
+        table.insert(self.data.list, e)
+        table.sort(self.data.list, sort)
+
+        if #self.data.list > 512 then 
             error("union is too large", 2)
         end
     end
@@ -73,23 +75,22 @@ function META:AddType(e)
     return self
 end
 
-function META:GetTypes()
-    return self.datai
-end
-
 function META:GetData()
-    return self.datai
+    return self.data.list
 end
 
 function META:GetLength()
-    return #self:GetTypes()
+    return #self.data.list
 end
 
 function META:RemoveType(e)
-    self:GetData()[e:GetSignature()] = nil
-    for i,v in ipairs(self:GetTypes()) do
-        if v:GetSignature() == e:GetSignature() then
-            table.remove(self:GetTypes(), i)
+    local sig = e:GetSignature()
+
+    self.data.map[sig] = nil
+
+    for i,v in ipairs(self.data.list) do
+        if v:GetSignature() == sig then
+            table.remove(self.data.list, i)
             self:Sort()
             break
         end
@@ -99,14 +100,13 @@ end
 
 
 function META:Clear()
-    self.datai = {}
-    self.data = {}
+    self.data = {map = {}, list = {}}
 end
 
 function META:GetMinimumLength()
     local min = 1000
 
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if obj.Type == "tuple" then
             min = math.min(min, obj:GetMinimumLength())
         else
@@ -121,7 +121,7 @@ function META:GetAtIndex(i)
     local val
     local errors = {}
     
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if obj.Type == "tuple" then
             local found, err = obj:Get(i)
             if found then
@@ -161,7 +161,7 @@ function META:Get(key, from_table)
     key = types.Cast(key)
 
     if from_table then
-        for _, obj in ipairs(self:GetTypes()) do
+        for _, obj in ipairs(self.data.list) do
             if obj.Get then
                 local val = obj:Get(key)
                 if val then
@@ -173,7 +173,7 @@ function META:Get(key, from_table)
 
     local errors = {}
 
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         local ok, reason = key:IsSubsetOf(obj)
 
         if ok then
@@ -192,13 +192,13 @@ function META:Set(key, val)
 end
 
 function META:IsEmpty()
-    return self:GetTypes()[1] == nil
+    return self.data.list[1] == nil
 end
 
 function META:IsTruthy()
     if self:IsEmpty() then return false end
 
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if obj:IsTruthy() then
             return true
         end
@@ -209,7 +209,7 @@ end
 function META:IsFalsy()
     if self:IsEmpty() then return false end
 
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if obj:IsFalsy() then
             return true
         end
@@ -219,7 +219,7 @@ end
 
 function META:GetTruthy()
     local copy = self:Copy()
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if not obj:IsTruthy() then
             copy:RemoveType(obj)
         end
@@ -229,7 +229,7 @@ end
 
 function META:GetFalsy()
     local copy = self:Copy()
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if not obj:IsFalsy() then
             copy:RemoveType(obj)
         end
@@ -240,7 +240,7 @@ end
 function META:IsType(typ)
     if self:IsEmpty() then return false end
 
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if obj.Type ~= typ then
             return false
         end
@@ -253,7 +253,7 @@ function META:HasType(typ)
 end
 
 function META:HasNil()
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if obj.Type == "symbol" and obj:GetData() == nil then
             return true
         end
@@ -262,7 +262,7 @@ function META:HasNil()
 end
 
 function META:GetType(typ)
-    for _, obj in ipairs(self:GetTypes()) do
+    for _, obj in ipairs(self.data.list) do
         if obj.Type == typ then
             return obj
         end
@@ -280,11 +280,12 @@ function META.IsSubsetOf(A, B)
         -- TODO: given error above, the unpack probably should probably be moved out
     end
 
+
     if B.Type ~= "union" then
         return A:IsSubsetOf(types.Union({B}))
     end
 
-    for _, a in ipairs(A:GetTypes()) do
+    for _, a in ipairs(A.data.list) do
         local b, reason = B:Get(a)
 
         if not b then
@@ -304,7 +305,7 @@ end
 function META:Union(union)
     local copy = self:Copy()
 
-    for _, e in ipairs(union:GetTypes()) do
+    for _, e in ipairs(union.data.list) do
         copy:AddType(e)
     end
 
@@ -314,7 +315,7 @@ end
 function META:Intersect(union)
     local copy = types.Union()
 
-    for _, e in ipairs(self:GetTypes()) do
+    for _, e in ipairs(self.data.list) do
         if union:Get(e) then
             copy:AddType(e)
         end
@@ -326,7 +327,7 @@ end
 function META:Subtract(union)
     local copy = self:Copy()
 
-    for _, e in ipairs(self:GetTypes()) do
+    for _, e in ipairs(self.data.list) do
         copy:RemoveType(e)
     end
 
@@ -338,11 +339,10 @@ function META:Copy(map)
     local copy = types.Union()
     map[self] = map[self] or copy
 
-    for _, e in ipairs(self:GetTypes()) do
+    for _, e in ipairs(self.data.list) do
         local c = map[e] or e:Copy(map)
         map[e] = map[e] or c
-        copy:GetData()[c:GetSignature()] = c
-        table.insert(copy:GetTypes(), c)
+        copy:AddType(c)
     end
     copy:Sort()
     copy:CopyInternalsFrom(self)
@@ -355,7 +355,7 @@ function META:IsLiteral()
         return false
     end
 
-    for _, v in ipairs(self:GetTypes()) do
+    for _, v in ipairs(self.data.list) do
         if not v:IsLiteral() then
             return false
         end
@@ -365,7 +365,7 @@ function META:IsLiteral()
 end
 
 function META:IsTruthy()
-    for _, v in ipairs(self:GetTypes()) do
+    for _, v in ipairs(self.data.list) do
         if v:IsTruthy() then
             return true
         end
@@ -376,7 +376,7 @@ end
 
 
 function META:IsFalsy()
-    for _, v in ipairs(self:GetTypes()) do
+    for _, v in ipairs(self.data.list) do
         if v:IsFalsy() then
             return true
         end
@@ -387,7 +387,7 @@ end
 
 function META:DisableTruthy()
     local found = {}
-    for _, v in ipairs(self:GetTypes()) do
+    for _, v in ipairs(self.data.list) do
         if v:IsTruthy() then
             table.insert(found, v)
             self:RemoveType(v)
@@ -405,7 +405,7 @@ end
 
 function META:DisableFalsy()
     local found = {}
-    for _, v in ipairs(self:GetTypes()) do
+    for _, v in ipairs(self.data.list) do
         if v:IsFalsy() then
             table.insert(found, v)
             self:RemoveType(v)
@@ -422,8 +422,7 @@ function META:EnableFalsy()
 end
 
 function META:Initialize(data)
-    self.data = {}
-    self.datai = {}
+    self:Clear()
 
     if data then
         for _, v in ipairs(data) do
@@ -436,7 +435,7 @@ end
 
 function META:Max(val)
     local copy = self:Copy()
-    for _, e in ipairs(copy:GetTypes()) do
+    for _, e in ipairs(copy.data.list) do
         e:Max(val)
     end
     return copy
@@ -448,7 +447,7 @@ function META:Call(analyzer, arguments, ...)
     end
 
     local union = self
-    for _, obj in ipairs(self:GetData()) do
+    for _, obj in ipairs(self.data.list) do
         if obj.Type ~= "function" and obj.Type ~= "table" and obj.Type ~= "any" then
             return type_errors.operation("call", obj)
         end
@@ -456,7 +455,7 @@ function META:Call(analyzer, arguments, ...)
 
     local errors = {}
 
-    for _, obj in ipairs(self:GetData()) do
+    for _, obj in ipairs(self.data.list) do
         if obj.Type == "function" and arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
             table.insert(errors, "invalid amount of arguments: " .. tostring(arguments) .. " ~= " .. tostring(obj:GetArguments()))
         else
@@ -478,7 +477,7 @@ function META:MakeCallableUnion(analyzer, node)
     local truthy_union = types.Union()
     local falsy_union = types.Union()
 
-    for _, v in ipairs(self:GetData()) do               
+    for _, v in ipairs(self.data.list) do               
         if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
             falsy_union:AddType(v)
             analyzer:ErrorAndCloneCurrentScope(node, "union "..tostring(self).." contains uncallable object " .. tostring(v), self)

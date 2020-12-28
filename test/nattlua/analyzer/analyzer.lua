@@ -16,15 +16,29 @@ test("declaring base types", function()
         local type Symbol = function(T: any)
             return types.Symbol(loadstring("return " .. T:GetNode().value.value)(), true)
         end
-
+        
+        -- primitive types
         local type Nil = Symbol(nil)
         local type True = Symbol(true)
         local type False = Symbol(false)
         local type Boolean = True | False
         local type Number = -inf .. inf | nan
         local type String = $".-"
-        local type Table = {[Number | Boolean | String | self] = Number | Boolean | String | Nil | self}
-        local type Any = Number | Boolean | String | Nil | Table
+        
+        -- the any type is all types, but we need to add function and table later
+        local type Any = Number | Boolean | String | Nil
+        local type Function = function(...Any): ...Any
+        local type Table = {[Any] = Any}
+        
+        local type function AddToUnion(union: any, what: any)
+            -- this modifies the existing type rather than creating a new one
+            union:AddType(what)
+        end
+        AddToUnion<|Any, Table|>
+        AddToUnion<|Any, Function|>
+        
+        -- if the union sorting algorithm changes, we probably need to change this
+        §assert(tostring(env.typesystem.Any:GetType()) == "function⦗⦗*self-union*⦘×inf⦘: ⦗⦗*self-union*⦘×inf⦘ | { *self-union* = *self-union* } | -inf..inf | nan | $(.-) | false | nil | true")        
 
         local str: String = "asdasdawd"
         local b: Boolean = true

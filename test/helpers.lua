@@ -1,6 +1,6 @@
 local nl = require("nattlua")
 local types = require("nattlua.types.types")
-
+types.Initialize()
 local C = nl.Code
 
 local function cast(...)

@@ -40,7 +40,7 @@ function META.IsSubsetOf(A, B)
 
     if B.Type == "union" then
         local errors = {}
-        for _, b in ipairs(B:GetTypes()) do
+        for _, b in ipairs(B:GetData()) do
             local ok, reason = A:IsSubsetOf(b)
             if ok then
                 return true
@@ -113,7 +113,7 @@ end
 function META:Max(val)
     if val.Type == "union" then
         local max = {}
-        for _, obj in ipairs(val:GetTypes()) do
+        for _, obj in ipairs(val:GetData()) do
             if obj.Type ~= "number" then
                 return type_errors.other({"unable to set the max value of ", self, " because ", val, " contains non numbers"})
             end

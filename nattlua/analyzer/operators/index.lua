@@ -4,7 +4,7 @@ return function(META)
     function META:IndexOperator(node, obj, key, env)
         if obj.Type == "union" then
             local copy = types.Union()
-            for _,v in ipairs(obj:GetTypes()) do
+            for _,v in ipairs(obj:GetData()) do
 
                 local val, err = self:IndexOperator(node, v, key, env)
                 if not val then

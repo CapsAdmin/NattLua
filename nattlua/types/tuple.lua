@@ -34,7 +34,7 @@ end
 
 function META:__tostring()
     if self.suppress then
-        return "*self*"
+        return "*self-tuple*"
     end
 
     self.suppress = true
@@ -91,13 +91,9 @@ function META:Merge(tup)
     return self
 end
 
-function META:GetTypes()
-    return self:GetData()
-end
-
 function META:SetReferenceId(id)
 
-    for i = 1, #self:GetTypes() do
+    for i = 1, #self:GetData() do
         self:Get(i):SetReferenceId(id)
     end
 
@@ -229,11 +225,13 @@ function META:Get(key)
     return val
 end
 
-function META:Set(key, val)
-    self:GetData()[key] =  val
-    if key > 32 then
+function META:Set(i, val)
+    self.data[i] =  val
+
+    if i > 32 then
         error("tuple too long", 2)
     end
+
     return true
 end
 
@@ -367,7 +365,7 @@ end
 function META:Initialize(data)
     self:SetData({})
     data = data or {}
-    
+
     for i, v in ipairs(data) do
         if not types.IsTypeObject(v) then
             for k,v in pairs(v) do print(k,v) end
@@ -380,7 +378,6 @@ function META:Initialize(data)
             self:Set(i, v)
         end
     end
-
 
     return true
 end

@@ -49,7 +49,7 @@ return function(META)
             local truthy_union = types.Union()
             local falsy_union = types.Union()
 
-            for _, l in ipairs(l:GetTypes()) do
+            for _, l in ipairs(l:GetData()) do
                 local res, err = self:PrefixOperator(node, l, env)
 
                 if not res then

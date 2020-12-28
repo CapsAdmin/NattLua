@@ -49,7 +49,7 @@ end
 local level = 0
 function META:__tostring()
     if self.suppress then
-        return "*self*"
+        return "*self-table*"
     end
 
     self.suppress = true
@@ -312,9 +312,9 @@ function META:Set(key, val, no_delete)
         return type_errors.other("key is nil")
     end
 
-    if key.Type == "union" then
+    if key.Type == "union" and false then
         local union = key
-        for _, key in ipairs(union:GetTypes()) do
+        for _, key in ipairs(union:GetData()) do
             if key.Type == "symbol" and key:GetData() == nil then
                 return type_errors.other(union:GetLength() == 1 and "key is nil" or "key can be nil")
             end
@@ -371,7 +371,7 @@ function META:Get(key)
 
     if key.Type == "union" then
         local errors = {}
-        for _, k in ipairs(key:GetTypes()) do
+        for _, k in ipairs(key:GetData()) do
             local ok, reason = self:Get(k)
             if ok then
                 return ok

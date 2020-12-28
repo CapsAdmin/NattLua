@@ -246,7 +246,7 @@ function META:Set(key, val)
 
     if key.Type == "union" then
         local union = key
-        for _, key in ipairs(union:GetTypes()) do
+        for _, key in ipairs(union:GetData()) do
             if key.Type == "symbol" and key:GetData() == nil then
                 return type_errors.other(union:GetLength() == 1 and "key is nil" or "key can be nil")
             end
@@ -337,7 +337,7 @@ end
 
 function META:IsNumericallyIndexed()
 
-    for _, keyval in ipairs(self:GetTypes()) do
+    for _, keyval in ipairs(self:GetData()) do
         if keyval.key.Type ~= "number" then
             return false
         end

@@ -22,7 +22,7 @@ end
 
 function META:__tostring()
     if self.suppress then
-        return "*self*"
+        --return "*self-function*"
     end
 
     self.suppress = true
