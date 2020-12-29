@@ -1,5 +1,5 @@
 # About
-NattLua is a superset of LuaJIT that introduces a structural type system and verbose inference. Its purpose is to provide you with tools to analyze and optionally constrain your code with types in spirit of Lua. 
+NattLua is a superset of LuaJIT that introduces a structural type system and verbose inference. Its purpose is to provide you with tools to analyze and optionally constrain your code with a typesystem made in spirit of Lua. 
 
 Complex type structures, involving array-like tables, map-like tables, metatables, and more are supported:
 
@@ -24,7 +24,7 @@ setmetatable(Vector, {
 local new_vector = Vector(1,2,3) + Vector(100,100,100)
 ```
 
-It's compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1). 
+It aims to be compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1). 
 
 See more examples further down this readme.
 
@@ -33,14 +33,14 @@ I wrote the lexer and parser trying not to look at existing Lua parsers (as a le
 
 * Syntax errors are nicer than standard Lua parsers. Errors are reported with character ranges.
 * Additionally, the lexer and parser continue after encountering an error, which is useful for editor integration.
-* Whitespace is preserved
-* Both single-line C comments and the Lua 5.4 division operator can be used in the same source file.
+* Whitespace can be preserved
+* Both single-line C comments (from GLua) and the Lua 5.4 division operator can be used in the same source file.
 * Transpiles bitwise operators, integer division, _ENV, etc down to luajit.
 
 I have not fully decided the syntax for the language and runtime semantics for lua 5.3/4 features. But I feel this is more of a detail that can easily be changed later.
 
 # Code analysis and typesystem
-The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about conditions. If everything is known about a program you may get its actual output at evaluation time. 
+The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program you may get its actual output at evaluation time. 
 
 The typesystem is designed to be non-opinionated and low level, kind of like the spirit of Lua.
 
@@ -54,11 +54,11 @@ local x = obj()
 local y = x + 1
 ```
 
-This code will log an error about potentially calling a nil value. It would then duplicate the scope and remove nil from the union in the new scope.
+This code will report an error about potentially calling a nil value. It would then duplicate the scope and remove nil from the obj union in the new scope, making x a number so the operation x + 1 is valid.
 
 # Current status and goals
 
-This is currently an educational project, but my end goal is to develop a capable language to use for my other projects (such as [goluwa](https://github.com/CapsAdmin/goluwa)).
+My goal is to develop a capable language to use for my other projects (such as [goluwa](https://github.com/CapsAdmin/goluwa)).
 
 At the moment I focus strongly on type inferrence and adding tests while trying to keep the code maintainable.
 
@@ -66,7 +66,7 @@ The parsing part of the project is mostly done except I have some ideas to make 
 
 # Types
 
-Fundementally the typesystem consists of number, string, table, function, symbol, union, tuple and any. 
+Fundementally the typesystem consists of number, string, table, function, symbol, union, tuple and any.
 As an example, types can be described by the language like this:
 
 ```lua
@@ -256,7 +256,7 @@ Here's an Exclude function, similar to how you would find in typescript.
 ```lua
 type function Exclude(T, U)
     T:RemoveType(U)
-    return T
+    return T:Copy()
 end
 
 local a: Exclude<|1|2|3, 2|>
@@ -361,7 +361,7 @@ local func = build_summary_function({
     ----------------------------------------------------------------------------------------------------
     -> | myfunc:3:14 : expected assignment or call expression got ❲symbol❳ (❲!❳)
 ```
-This works because there is no uncertainty about the code generated passed to the load function. If there was, lets say we did `body = "sum = sum + 1" .. (unknown_global as string)`, this would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
+This works because there is no uncertainty about the code generated passed to the load function. If we did `body = "sum = sum + 1" .. (unknown_global as string)`, that would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
 
 # Development
 
@@ -385,7 +385,7 @@ The way I see types is that they are like a parent / children hiearchy. This can
 
 ## Subset
 If something is "sub" of /lower/inside/contains something larger. For example `1` is a subset of `number` because `number` contains all the numbers.
-`1` is also a subset of `1 | 2` since the union contains `1`. But `number` is not a subset of `1` since `1` has no field numbers like 2, 4, 100, 1337, 90377, etc.
+`1` is also a subset of `1 | 2` since the union contains `1`. But `number` is not a subset of `1` since `1` does not contain numbers like 2, 4, 100, 1337, 90377, etc, only `1`.
 
 ```lua
     -- pseduo code
