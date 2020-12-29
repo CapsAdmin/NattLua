@@ -29,6 +29,7 @@ return function(META)
                     type = "generic_for",
                     condition = returned_key
                 })
+                self:FireEvent("enter_scope_generic_for", statement.identifiers, values)
             end
 
             for i,v in ipairs(statement.identifiers) do
@@ -51,6 +52,8 @@ return function(META)
         end
 
         if returned_key then
+            self:FireEvent("leave_scope")
+
             self:PopScope()
             self:OnExitConditionalScope({condition = returned_key})
         end

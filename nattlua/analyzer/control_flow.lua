@@ -173,7 +173,6 @@ return function(META)
 
     function META:OnEnterConditionalScope(data)
         local scope = self:GetScope()
-        self:FireEvent("enter_conditional_scope", scope, data)
         scope.if_statement = data.type == "if" and data.statement
         scope.is_else = data.is_else
         scope:SetTestCondition(data.condition, data.is_else)
@@ -219,7 +218,5 @@ return function(META)
                 copy:SetTestCondition(exited_scope:GetTestCondition())
             end
         end
-    
-        self:FireEvent("leave_conditional_scope", current_scope, exited_scope, data)
     end
 end

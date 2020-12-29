@@ -84,7 +84,7 @@ function META:__tostring()
     level = level - 1
     self.suppress = false
 
-    if #self:GetData() == 1 then
+    if #self:GetData() <= 1 then
         return "{" .. table.concat(s, ""):gsub("\t", " ") .. " }"
     end
     

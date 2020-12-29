@@ -47,7 +47,7 @@ return function(META)
             condition = condition,
             step = step,
         })
-
+        self:FireEvent("enter_scope_numeric_for", init, max, step)
         if literal_init and literal_max and literal_step and literal_max < 1000 then
             local uncertain_break = nil
             for i = literal_init, literal_max, literal_step do
@@ -131,6 +131,7 @@ return function(META)
             self:CreateLocalValue(statement.identifiers[1], range, "runtime")
             self:AnalyzeStatements(statement.statements)
         end
+        self:FireEvent("leave_scope")
 
         self.break_out_scope = nil
 

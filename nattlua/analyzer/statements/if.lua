@@ -14,9 +14,11 @@ return function(META)
                         condition = obj,
                         statement = statement,
                     })
+                    self:FireEvent("enter_scope_if", statement.expressions[i], obj, i == 1 and "if" or "elseif")
                         
                     self:AnalyzeStatements(statements)
 
+                    self:FireEvent("leave_scope")
                     self:PopScope()
                     self:OnExitConditionalScope({
                         type = "if",
@@ -39,8 +41,11 @@ return function(META)
                         condition = prev_expression,
                         statement = statement,
                     })
+                    self:FireEvent("enter_scope_if", obj, "else")
 
                     self:AnalyzeStatements(statements)
+
+                    self:FireEvent("leave_scope")
 
                     self:PopScope()
                     self:OnExitConditionalScope({

@@ -47,7 +47,7 @@ return function(META)
                 else
                     write(obj)
                 end
-                write("[", (tostring(key)), "] = ", tostring(val))
+                write("[", tostring(key), "] = ", tostring(val))
                 write("\n")
             elseif what == "mutate_upvalue" then
                 local key, val = ...
@@ -72,111 +72,73 @@ return function(META)
                 local key, val = ...
                 tab()
                 write("_ENV.", self:Hash(key), " = ", tostring(val), "\n")
-            elseif what == "enter_scope" then
+            elseif what == "enter_scope_do" then
                 local scope, data = ...
-
+                tab()
+                write("do")
+                t = t + 1
+                write("\n")
+            elseif what == "enter_scope_numeric_for" then
+                local init, max, step = ...
+                tab()
+                write("for i = ", init, ", ", max, ", ", step, " do")
+                t = t + 1
+                write("\n")
+            elseif what == "enter_scope_generic_for" then
+                local keys, values = ...
                 tab()
 
-                if data then
-                    if data.type == "function" then
-                        local em = require("nattlua.transpiler.emitter")({preserve_whitespace = false})
-                        local node = data.function_node
-                        
-                        if node.tokens["identifier"] then
-                            em:EmitToken(node.tokens["identifier"])
-                        elseif node.expression then
-                            em:EmitExpression(node.expression)
-                        else
-                            em:Emit("function")
-                        end
+                local keys_str = {}
+                for i,v in ipairs(keys) do keys_str[i] = v:Render() end
 
-                        em:EmitToken(node.tokens["arguments("])
-                        em:EmitIdentifierList(node.identifiers)
-                        em:EmitToken(node.tokens["arguments)"])
+                write("for ", table.concat(keys_str, ", "))
+                write(" in ")
 
-                        write(em:Concat(), " do")
-                    elseif data.type == "numeric_for_iteration" then
-                        write("do -- ", data.i)
-                    elseif data.type == "numeric_for" then
-                        write("for i = ", data.init, ", ", data.max, ", ", data.step, " do")
-                    elseif data.condition then
-                        write("if ", tostring(data.condition), " then")
-                    else
-                        write(data.type, " ")
-                    end
+                local values_str = {}
+                for i,v in ipairs(values:GetData()) do values_str[i] = tostring(v) end
+                write(table.concat(values_str, ", "))
+                write(" do")
+                    
+                t = t + 1
+                write("\n")
+            elseif what == "enter_scope_if" then
+                local exp, condition, kind = ...
+                tab()
+
+                if kind == "if" or kind == "elseif" then
+                    write(kind, " ", exp:Render(), " then -- = ", tostring(condition))
+                elseif kind == "else" then
+                    write("else")
                 end
 
+                t = t + 1
+                write("\n")
+            elseif what == "enter_scope_function" then
+                local function_node = ...
+                tab()
+                local em = require("nattlua.transpiler.emitter")({preserve_whitespace = false})
+                local node = function_node
+                
+                if node.tokens["identifier"] then
+                    em:EmitToken(node.tokens["identifier"])
+                elseif node.expression then
+                    em:EmitExpression(node.expression)
+                else
+                    em:Emit("function")
+                end
+
+                em:EmitToken(node.tokens["arguments("])
+                em:EmitIdentifierList(node.identifiers)
+                em:EmitToken(node.tokens["arguments)"])
+
+                write(em:Concat(), " do")
                 t = t + 1
                 write("\n")
             elseif what == "leave_scope" then
-                local new_scope, old_scope, data = ...
-
                 t = t - 1
                 tab()
-
-                if data then
-                    if data.type == "function" then
-                        write("end")
-                    else
-                        write("end")
-                    end
-                end
-                write("\n")
-
-                
-            
-            elseif what == "enter_conditional_scope" then
-                local scope, data = ...
-
-                tab()
-
-                if data then
-                    if data.type == "function" then
-                        local em = require("nattlua.transpiler.emitter")({preserve_whitespace = false})
-                        local node = data.function_node
-                        
-                        if node.tokens["identifier"] then
-                            em:EmitToken(node.tokens["identifier"])
-                        elseif node.expression then
-                            em:EmitExpression(node.expression)
-                        else
-                            em:Emit("function")
-                        end
-
-                        em:EmitToken(node.tokens["arguments("])
-                        em:EmitIdentifierList(node.identifiers)
-                        em:EmitToken(node.tokens["arguments)"])
-
-                        write(em:Concat(), " do")
-                    elseif data.type == "numeric_for_iteration" then
-                        write("do -- ", data.i)
-                    elseif data.type == "numeric_for" then
-                        write("for i = ", data.init, ", ", data.max, ", ", data.step, " do")
-                    elseif data.condition then
-                        write("if ", tostring(data.condition), " then")
-                    else
-                        write(data.type, " ")
-                    end
-                end
-
-                t = t + 1
-                write("\n")
-            elseif what == "leave_conditional_scope" then
-                local new_scope, old_scope, data = ...
-
-                t = t - 1
-                tab()
-
-                if data then
-                    if data.type == "function" then
-                        write("end")
-                    else
-                        write("end")
-                    end
-                end
-                write("\n")
-
-                
+                write("end")
+                write("\n")            
             elseif what == "external_call" then
                 local node, type = ...
                 tab()

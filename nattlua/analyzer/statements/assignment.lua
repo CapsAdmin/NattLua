@@ -162,7 +162,6 @@ return function(META)
                 else
                     local obj = self:AnalyzeExpression(exp_key.left, env)
                     self:Assert(exp_key, self:NewIndexOperator(exp_key, obj, key, val, env))
-                    self:FireEvent("newindex", obj, key, val, env)
                 end
             end
         end

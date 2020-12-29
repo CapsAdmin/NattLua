@@ -30,6 +30,8 @@ return function(META)
     
             return new_union:SetNode(node):SetSource(new_union):SetBinarySource(obj)
         end
+
+        self:FireEvent("newindex", obj, key, val, env)
     
         if obj:GetMetaTable() then
             local func = obj:GetMetaTable():Get("__newindex")
