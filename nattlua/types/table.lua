@@ -42,6 +42,11 @@ function META:GetSignature()
     self.suppress = false
 
     s = table.concat(s)
+    
+    if #s > 10000 then
+        print(self)
+        error("signature is too large")
+    end
 
     return s
 end

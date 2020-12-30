@@ -122,7 +122,7 @@ function types.Initialize()
     types.Nil = function() return types.Symbol(nil) end
     types.True = function() return types.Symbol(true) end
     types.False = function() return types.Symbol(false) end
-    types.Boolean = function() return types.Union({types.True(), types.False()}):MakeExplicitNotLiteral(true) end
+    types.Boolean = function() return types.Union({types.True(), types.False()}) end
 end
 
 return types

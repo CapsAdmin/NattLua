@@ -36,6 +36,7 @@ type function enum(tbl)
 		analyzer:SetLocalOrEnvironmentValue(key:GetData(), val, "typesystem")
 		union:AddType(val)
 	end
+    union:SetLiteral(true)
 	return union
 end
 

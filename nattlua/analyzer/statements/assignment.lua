@@ -18,6 +18,12 @@ return function(META)
             contract:EnableUniqueness()
             val.unique_id = contract.unique_id
         end
+
+        if not ok and contract.Type == "union" and not val:IsLiteral() then
+            val:SetLiteral(true)
+            ok, reason = val:IsSubsetOf(contract)
+            val:SetLiteral(false)
+        end
     
         if not ok then
             return ok, reason

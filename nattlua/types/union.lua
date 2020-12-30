@@ -353,20 +353,6 @@ function META:Copy(map)
     return copy
 end
 
-function META:IsLiteral()
-    if self.explicit_not_literal then
-        return false
-    end
-
-    for _, v in ipairs(self.data.list) do
-        if not v:IsLiteral() then
-            return false
-        end
-    end
-
-    return true
-end
-
 function META:IsTruthy()
     for _, v in ipairs(self.data.list) do
         if v:IsTruthy() then

@@ -14,7 +14,8 @@ function META:CopyInternalsFrom(obj)
     self.source_left = obj.source_left
     
     self.source_right = obj.source_right
-    self.explicit_not_literal = obj.explicit_not_literal
+
+    self.literal = obj.literal
     
     self:SetContract(obj:GetContract())
     self:SetName(obj:GetName()) 
@@ -67,12 +68,6 @@ function META:GetName()
 end
 
 META.literal = false
-
-function META:MakeExplicitNotLiteral(b)
-    self.explicit_not_literal = b
-    return self
-end
-
 
 do
     local ref = 0
