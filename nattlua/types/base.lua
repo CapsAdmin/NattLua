@@ -12,9 +12,7 @@ function META:CopyInternalsFrom(obj)
     self.node_label = obj.node_label
     self.source = obj.source
     self.source_left = obj.source_left
-    
     self.source_right = obj.source_right
-
     self.literal = obj.literal
     
     self:SetContract(obj:GetContract())

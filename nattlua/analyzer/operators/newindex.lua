@@ -31,13 +31,13 @@ return function(META)
             return new_union:SetNode(node):SetSource(new_union):SetBinarySource(obj)
         end
 
-        if val.Type == "function" and val.node.self_call then
+        if val.Type == "function" and val:GetNode().self_call then
             local arg = val:GetArguments():Get(1)
             if not arg:GetContract() then
                 val.called = true
                 val = val:Copy()
                 val:GetArguments():Set(1, types.Union({types.Any(), obj}))
-                self:CallMeLater(val, val:GetArguments(), val.node, true)
+                self:CallMeLater(val, val:GetArguments(), val:GetNode(), true)
             end
         end
 
