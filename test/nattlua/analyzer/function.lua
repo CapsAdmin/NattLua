@@ -603,3 +603,25 @@ run[[
     local x = test()
     type_assert(x, _ as number)
 ]]
+
+run[[
+    local A = {kind = "a"}
+    function A:Foo()
+        return self.kind
+    end
+    
+    local B = {kind = "b"}
+    function B:Bar()
+        return self.kind
+    end
+    
+    local C = {kind = "c"}
+    C.Foo = A.Foo
+    C.Bar = B.Bar
+    
+    type_assert(C:Foo(), "c")
+    type_assert(C:Bar(), "c")
+    
+    type_assert(A:Foo(), "a")
+    type_assert(B:Bar(), "b")
+]]

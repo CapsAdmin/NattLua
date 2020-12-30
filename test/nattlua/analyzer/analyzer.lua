@@ -509,9 +509,9 @@ R[[
 R[[
     local a = {b = {c = {d = {lol = true}}}}
     function a.b.c.d:e()
-        type_assert(self.lol, true)
+        return self.lol
     end
-    a.b.c.d:e()
+    type_assert(a.b.c.d:e(), true)
 ]]
 
 R[[

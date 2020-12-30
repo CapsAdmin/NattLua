@@ -31,6 +31,16 @@ return function(META)
             return new_union:SetNode(node):SetSource(new_union):SetBinarySource(obj)
         end
 
+        if val.Type == "function" and val.node.self_call then
+            local arg = val:GetArguments():Get(1)
+            if not arg:GetContract() then
+                val.called = true
+                val = val:Copy()
+                val:GetArguments():Set(1, types.Union({types.Any(), obj}))
+                self:CallMeLater(val, val:GetArguments(), val.node, true)
+            end
+        end
+
         self:FireEvent("newindex", obj, key, val, env)
     
         if obj:GetMetaTable() then

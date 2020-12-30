@@ -69,6 +69,10 @@ function META:__tostring()
     level = level + 1
     local indent = ("\t"):rep(level)
 
+    if #self:GetData() <= 1 then
+        indent = " "
+    end
+
     if self:GetContract() and self:GetContract().Type == "table" then
         for i, keyval in ipairs(self:GetContract():GetData()) do
             local key, val = tostring(self:GetData()[i] and self:GetData()[i].key or "undefined"), tostring(self:GetData()[i] and self:GetData()[i].val or "undefined")
@@ -85,7 +89,7 @@ function META:__tostring()
     self.suppress = false
 
     if #self:GetData() <= 1 then
-        return "{" .. table.concat(s, ""):gsub("\t", " ") .. " }"
+        return "{" .. table.concat(s) .. " }"
     end
     
     return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
