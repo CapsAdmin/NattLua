@@ -56,6 +56,16 @@ return function(META)
         return obj
     end
 
+    local function is_primitive(val)
+        return val == "string" or
+        val == "number" or
+        val == "boolean" or
+        val == "true" or
+        val == "false" or
+        val == "nil"
+    end
+    
+
     function META:AnalyzeAtomicValueExpression(node, env)
         local value = node.value.value
         local type = syntax.GetTokenType(node.value)
@@ -70,7 +80,7 @@ return function(META)
                     return current_table
                 end
 
-                if self.left_assigned and self.left_assigned.kind == "value" and self.left_assigned.value.value == value and not types.IsPrimitiveType(value) then
+                if self.left_assigned and self.left_assigned.kind == "value" and self.left_assigned.value.value == value and not is_primitive(value) then
                     return current_table
                 end
             end
@@ -83,7 +93,7 @@ return function(META)
                 return self:NewType(node, "nil")
             elseif value == "nan" then
                 return self:NewType(node, "number", 0/0, true)
-            elseif types.IsPrimitiveType(value) then
+            elseif is_primitive(value) then
                 return self:NewType(node, value)
             end
         end

@@ -367,11 +367,6 @@ function META:Initialize(data)
     data = data or {}
 
     for i, v in ipairs(data) do
-        if not types.IsTypeObject(v) then
-            for k,v in pairs(v) do print(k,v) end
-            error(tostring(v) .. " is not a type object")
-        end
-
         if i == #data and v.Type == "tuple" and not v.Remainder then
             self:AddRemainder(v)
         else

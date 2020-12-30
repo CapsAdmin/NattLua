@@ -1,5 +1,4 @@
 local types = {}
-local type_errors = require("nattlua.types.error_messages")
 
 function types.Cast(val)
     if type(val) == "string" then
@@ -8,30 +7,22 @@ function types.Cast(val)
         return types.Symbol(val)
     elseif type(val) == "number" then
         return types.Number(val):SetLiteral(true)
-    elseif type(val) == "table" and val.kind == "value" then
-        return types.String(val.value.value):SetLiteral(true)
-    end
+    elseif type(val) == "table" then
+        if val.kind == "value" then
+            return types.String(val.value.value):SetLiteral(true)
+        end
 
-    if not types.IsTypeObject(val) then
-        error("cannot cast" .. tostring(val), 2)
+        if not val.Type then
+            error("cannot cast" .. tostring(val), 2)
+        end
     end
 
     return val
 end
 
-function types.IsPrimitiveType(val)
-    return val == "string" or
-    val == "number" or
-    val == "boolean" or
-    val == "true" or
-    val == "false" or
-    val == "nil"
-end
-
 function types.IsTypeObject(obj)
     return type(obj) == "table" and obj.Type ~= nil
 end
-
 
 do
     local compare_condition
@@ -114,21 +105,6 @@ function types.View(obj)
     })
 end
 
-function types.IsSameUniqueType(a, b)
-    if a.unique_id and not b.unique_id then
-        return type_errors.other(tostring(a) .. "is a unique type")
-    end
-
-    if b.unique_id and not a.unique_id then
-        return type_errors.other(tostring(b) .. "is a unique type")
-    end
-
-    if a.unique_id ~= b.unique_id then
-        return type_errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a))
-    end
-
-    return true
-end
 
 function types.Initialize()
     types.Union = require("nattlua.types.union")

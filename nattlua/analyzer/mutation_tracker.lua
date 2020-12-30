@@ -69,18 +69,6 @@ function META:GetValueFromScope(scope, upvalue, key)
             end
         end
         
-        -- if the same reference type is used in a condition, all conditions must be either true or false at the same time
-        for _, a in ipairs(mutations) do
-            for _, b in ipairs(mutations) do
-                if a.scope.test_condition and b.scope.test_condition then
-                    if types.FindInType(a.scope.test_condition, b.scope.test_condition) then
-                        a.linked_mutations = a.linked_mutations or {}
-                        table.insert(a.linked_mutations, b)
-                    end
-                end
-            end
-        end
-
         if scope.test_condition then -- make scopes that use the same type condition certrain
             for _, change in ipairs(mutations) do
                 if change.scope ~= scope and change.scope.test_condition and types.FindInType(change.scope.test_condition, scope.test_condition) then

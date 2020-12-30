@@ -103,6 +103,22 @@ do
     function META:EnableUniqueness()
         self.unique_id = self.disabled_unique_id
     end
+
+    function META.IsSameUniqueType(a, b)
+        if a.unique_id and not b.unique_id then
+            return type_errors.other(tostring(a) .. "is a unique type")
+        end
+
+        if b.unique_id and not a.unique_id then
+            return type_errors.other(tostring(b) .. "is a unique type")
+        end
+
+        if a.unique_id ~= b.unique_id then
+            return type_errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a))
+        end
+
+        return true
+    end
 end
 
 function META:IsFalsy()

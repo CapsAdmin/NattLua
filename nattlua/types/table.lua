@@ -129,7 +129,7 @@ function META.IsSubsetOf(A, B)
         return true
     end
 
-    local ok, err = types.IsSameUniqueType(A, B)
+    local ok, err = A:IsSameUniqueType(B)
     if not ok then
         return ok, err
     end
@@ -355,8 +355,8 @@ function META:Set(key, val, no_delete)
     if not keyval then
         val:SetParent(self)
         key:SetParent(self)
-        table.insert(self:GetData(), {key = key, val = val})
-        if #self:GetData() > 512 then 
+        table.insert(self.data, {key = key, val = val})
+        if #self.data > 512 then 
             error("table is too large", 2)
         end
     else
