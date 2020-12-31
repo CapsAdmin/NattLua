@@ -71,10 +71,6 @@ function META:Merge(tup)
 
     local src = self:GetData()
 
-    if tup:GetMinimumLength() > 512 then
-        error("tuple overflow")
-    end
-
     for i = 1, tup:GetMinimumLength() do
         local a = self:Get(i)
         local b = tup:Get(i)
