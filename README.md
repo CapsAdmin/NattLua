@@ -1,5 +1,5 @@
 # About
-NattLua is a superset of LuaJIT that introduces a structural type system and verbose inference. Its purpose is to provide you with tools to analyze and optionally constrain your code with a typesystem made in spirit of Lua. 
+NattLua is a superset of LuaJIT that introduces a structural type system and verbose inference. It's built to be an analyzer first with a typesystem to guide or override it on top. Its typesystem is very flexible in the same way Lua is flexible.
 
 Complex type structures, involving array-like tables, map-like tables, metatables, and more are supported:
 
@@ -42,8 +42,6 @@ I have not fully decided the syntax for the language and runtime semantics for l
 # Code analysis and typesystem
 The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program you may get its actual output at evaluation time. 
 
-The typesystem is designed to be non-opinionated and low level, kind of like the spirit of Lua.
-
 I try to achieve maximum type inference, but this can lead to some cryptic errors so in practice it's best to type your code, especially in functions.
 
 For example:
@@ -54,7 +52,7 @@ local x = obj()
 local y = x + 1
 ```
 
-This code will report an error about potentially calling a nil value. It would then duplicate the scope and remove nil from the obj union in the new scope, making x a number so the operation x + 1 is valid.
+This code will report an error about potentially calling a nil value. Internally the analyzer would duplicate the scope, remove nil from the union "obj" so that x contains all the values that are valid in a call operation. 
 
 # Current status and goals
 
