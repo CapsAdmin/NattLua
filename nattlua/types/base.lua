@@ -46,6 +46,10 @@ function META:GetNode(node)
     return self.node
 end
 
+function META.Equal(a, b)
+    error("nyi " .. a.Type .." == " .. b.Type)
+end
+
 function META:GetSignature()
     error("NYI")
 end

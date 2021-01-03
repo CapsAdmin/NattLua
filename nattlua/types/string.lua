@@ -7,6 +7,20 @@ local META = {}
 META.Type = "string"
 META.__index = META
 
+function META.Equal(a, b)
+    if a.Type ~= b.Type then return false end
+    
+    if a:IsLiteral() and b:IsLiteral() then
+        return a:GetData() == b:GetData()
+    end
+    
+    if not a:IsLiteral() and not b:IsLiteral() then
+        return true
+    end
+
+    return false
+end
+
 function META:GetLuaType()
     return self.Type
 end

@@ -40,4 +40,8 @@ function META:Call()
     return types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
 end
 
+function META.Equal(a, b)
+    return a.Type == b.Type
+end
+
 return types.RegisterType(META)

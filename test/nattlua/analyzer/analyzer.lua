@@ -249,9 +249,9 @@ test("uncalled functions should be called", function()
     ]]
     local lib = analyzer:GetLocalOrEnvironmentValue("lib", "runtime")
 
-    equal("number", lib:Get("foo1"):GetArguments():Get(1):GetType("number").Type)
-    equal("number", lib:Get("foo1"):GetArguments():Get(2):GetType("number").Type)
-    equal("number", lib:Get("foo1"):GetReturnTypes():Get(1).Type)
+    equal("number", assert(lib:Get("foo1"):GetArguments():Get(1):GetType("number")).Type)
+    equal("number", assert(lib:Get("foo1"):GetArguments():Get(2):GetType("number")).Type)
+    equal("number", assert(lib:Get("foo1"):GetReturnTypes():Get(1)).Type)
 
     equal("number", lib:Get("foo2"):GetArguments():Get(1):GetType("number").Type)
     equal("number", lib:Get("foo2"):GetArguments():Get(2):GetType("number").Type)

@@ -5,6 +5,23 @@ local META = {}
 META.Type = "tuple"
 META.__index = META
 
+function META.Equal(a, b)
+    if a.Type ~= b.Type then return false end
+    if a.suppress then return true end
+    if #a.data ~= #b.data then return false end
+    
+    for i = 1, #a.data do
+        a.suppress = true
+        local ok = a.data[i]:Equal(b.data[i])
+        a.suppress = false
+        if not ok then
+            return false
+        end
+    end
+
+    return true
+end
+
 function META:GetSignature()
     if self.suppress then
         return "*"

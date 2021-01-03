@@ -5,6 +5,79 @@ local META = {}
 META.Type = "table"
 META.__index = META
 
+local sort = function(a, b) return a.key:GetSignature() < b.key:GetSignature() end
+
+function META:Sort()
+    self.sort_me = true
+end
+
+function META.Equal(a, b)
+    if a.Type ~= b.Type then return false end
+    
+    if a:IsUnique() then
+        return a:GetUniqueID() == b:GetUniqueID()
+    end
+
+    if a:GetContract() and a:GetContract().Name then
+
+        if not b:GetContract() or not b:GetContract().Name then
+            a.suppress = false
+            return false
+        end
+
+        a.suppress = false
+        return a:GetContract().Name:GetData() == b:GetContract().Name:GetData()
+    end
+
+    if a.Name then
+        a.suppress = false
+        if not b.Name then
+            return false
+        end
+        return a.Name:GetData() == b.Name:GetData()
+    end
+
+    if a.suppress then return true end
+
+    local adata = a:GetContract() or a:GetData()
+    local bdata = b:GetContract() or b:GetData()
+
+    if #adata ~= #bdata then return false end
+
+    a:SortNow()
+    b:SortNow()
+
+    a.suppress = true
+    for i = 1, #adata do
+        local ok = adata[i].key:Equal(bdata[i].key)        
+
+        if not ok then
+            a.suppress = false            
+            return false
+        end
+
+        local ok = adata[i].val:Equal(bdata[i].val)
+        if not ok then
+            a.suppress = false
+            return false
+        end
+    end
+    a.suppress = false
+
+    return true
+end
+
+
+function META:SortNow()
+    if self:GetContract() then 
+        self:GetContract():SortNow() 
+        return
+    end
+    if self.sort_me then
+        table.sort(self.data, sort)
+        self.sort_me = false
+    end
+end
 
 function META:GetLuaType()
     return self.Type
@@ -246,6 +319,7 @@ function META:Delete(key)
             keyval.val:SetParent()
             keyval.key:SetParent()
             table.remove(self:GetData(), i)
+            self:Sort()
         end
     end
     return true
@@ -361,11 +435,9 @@ function META:Set(key, val, no_delete)
         val:SetParent(self)
         key:SetParent(self)
         table.insert(self.data, {key = key, val = val})
-        if #self.data > 512 then 
-            error("table is too large", 2)
-        end
+        self:Sort()
     else
-        if keyval.val and keyval.key:GetSignature() ~= key:GetSignature() then
+        if not keyval.key:Equal(key) then
             keyval.val = types.Union({keyval.val, val})
         else
             keyval.val = val

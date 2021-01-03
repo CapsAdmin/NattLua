@@ -8,6 +8,16 @@ local META = {}
 META.Type = "function"
 META.__index = META
 
+function META.Equal(a, b)
+    if a.Type ~= b.Type then return false end
+
+    if a:GetArguments():Equal(b:GetArguments()) and a:GetReturnTypes():Equal(b:GetReturnTypes()) then
+        return true
+    end
+
+    return false
+end
+
 function META:GetSignature()
     if self.suppress then
         return "*self*"
@@ -87,11 +97,8 @@ function META.IsSubsetOf(A, B)
     if B.Type == "tuple" and B:GetLength() == 1 then B = B:Get(1) end
 
     if B.Type == "function" then
-        if A == B or A:GetSignature() == B:GetSignature() then
-            return true
-        end
-
         local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
+        
         if not ok then
             return type_errors.subset(A:GetArguments(), B:GetArguments(), reason)
         end
@@ -126,7 +133,7 @@ function META:CheckArguments(arguments)
     local B = self:GetArguments() -- the contract
     -- A should be a subset of B
 
-    if A:GetSignature() == B:GetSignature() then
+    if A:Equal(B) then
         return true
     end
 
