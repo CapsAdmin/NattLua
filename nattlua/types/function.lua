@@ -9,13 +9,10 @@ META.Type = "function"
 META.__index = META
 
 function META.Equal(a, b)
-    if a.Type ~= b.Type then return false end
-
-    if a:GetArguments():Equal(b:GetArguments()) and a:GetReturnTypes():Equal(b:GetReturnTypes()) then
-        return true
-    end
-
-    return false
+    return 
+        a.Type == b.Type and
+        a:GetArguments():Equal(b:GetArguments()) and 
+        a:GetReturnTypes():Equal(b:GetReturnTypes())
 end
 
 function META:GetSignature()
