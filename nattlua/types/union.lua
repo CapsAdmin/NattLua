@@ -446,10 +446,10 @@ function META:Initialize(data)
     return true
 end
 
-function META:Max(val)
+function META:SetMax(val)
     local copy = self:Copy()
     for _, e in ipairs(copy.data) do
-        e:Max(val)
+        e:SetMax(val)
     end
     return copy
 end

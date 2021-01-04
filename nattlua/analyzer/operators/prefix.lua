@@ -23,8 +23,8 @@ local function arithmetic(l, type, operator)
         if l:IsLiteral() then
             local obj = types.Number(operators[operator](l:GetData())):SetLiteral(true)
 
-            if l.max then
-                obj.max = arithmetic(l.max, type, operator)
+            if l:GetMax() then
+                obj:SetMax(arithmetic(l:GetMax(), type, operator))
             end
 
             return obj

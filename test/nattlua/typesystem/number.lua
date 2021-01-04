@@ -7,7 +7,7 @@ local any = T.Any()
 local all_numbers = T.Number()
 
 local _32_to_52 = T.Number(32)
-_32_to_52:Max(T.Number(52))
+_32_to_52:SetMax(T.Number(52))
 
 local _42 = T.Number(42)
 

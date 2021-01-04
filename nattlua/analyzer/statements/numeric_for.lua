@@ -119,7 +119,7 @@ return function(META)
             
         else
             if init.Type == "number" and (max.Type == "number" or (max.Type == "union" and max:IsType("number"))) then
-                init = init:Max(max)
+                init = init:SetMax(max)
             end
 
             if max.Type == "any" then

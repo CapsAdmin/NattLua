@@ -37,7 +37,7 @@ return function(META)
                         if tup.Remainder then
                             local current_index = types.Number(tbl:GetLength() + 1):SetLiteral(true)
                             local max = types.Number(tup.Remainder:GetLength()):SetLiteral(true)
-                            tbl:Set(current_index:Max(max), tup.Remainder:Get(1))
+                            tbl:Set(current_index:SetMax(max), tup.Remainder:Get(1))
                         end
                     end
                 else 

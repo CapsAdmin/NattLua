@@ -47,12 +47,12 @@ local function arithmetic(node, l,r, type, operator)
         if l:IsLiteral() and r:IsLiteral() then
             local obj = types.Number(operators[operator](l:GetData(), r:GetData())):SetLiteral(true)
 
-            if r.max then
-                obj.max = arithmetic(node, l, r.max, type, operator)
+            if r:GetMax() then
+                obj:SetMax(arithmetic(node, l, r:GetMax(), type, operator))
             end
 
-            if l.max then
-                obj.max = arithmetic(node, l.max, r, type, operator)
+            if l:GetMax() then
+                obj:SetMax(arithmetic(node, l:GetMax(), r, type, operator))
             end
 
             return obj:SetNode(node):SetBinarySource(l,r)
@@ -164,7 +164,7 @@ return function(META)
                 end
                 return l:Extend(r)
             elseif op == ".." then
-                return l:Copy():Max(r)
+                return l:Copy():SetMax(r)
             elseif op == ">" then
                 return types.Symbol((r:IsSubsetOf(l)))
             elseif op == "<" then
@@ -199,20 +199,20 @@ return function(META)
 
         if l.Type == "number" and r.Type == "number" then
             if op == "~=" or op == "!=" then
-                if l.max and l.max:GetData() then
-                    return (not (r:GetData() >= l:GetData() and r:GetData() <= l.max:GetData())) and types.True() or types.Boolean()
+                if l:GetMax() and l:GetMax():GetData() then
+                    return (not (r:GetData() >= l:GetData() and r:GetData() <= l:GetMax():GetData())) and types.True() or types.Boolean()
                 end
 
-                if r.max and r.max:GetData() then
-                    return (not (l:GetData() >= r:GetData() and l:GetData() <= r.max:GetData())) and types.True() or types.Boolean()
+                if r:GetMax() and r:GetMax():GetData() then
+                    return (not (l:GetData() >= r:GetData() and l:GetData() <= r:GetMax():GetData())) and types.True() or types.Boolean()
                 end
             elseif op == "==" then
-                if l.max and l.max:GetData() then
-                    return r:GetData() >= l:GetData() and r:GetData() <= l.max:GetData() and types.Boolean() or types.False()
+                if l:GetMax() and l:GetMax():GetData() then
+                    return r:GetData() >= l:GetData() and r:GetData() <= l:GetMax():GetData() and types.Boolean() or types.False()
                 end
 
-                if r.max and r.max:GetData() then
-                    return l:GetData() >= r:GetData() and l:GetData() <= r.max:GetData() and types.Boolean() or types.False()
+                if r:GetMax() and r:GetMax():GetData() then
+                    return l:GetData() >= r:GetData() and l:GetData() <= r:GetMax():GetData() and types.Boolean() or types.False()
                 end
             end
         end

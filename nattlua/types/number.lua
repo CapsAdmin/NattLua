@@ -131,8 +131,7 @@ function META:__tostring()
     return "number" .. "(".. tostring(self:GetData()) .. (self.max and (".." .. tostring(self.max)) or "") .. ")"
 end
 
-
-function META:Max(val)
+function META:SetMax(val)
     if val.Type == "union" then
         local max = {}
         for _, obj in ipairs(val:GetData()) do
@@ -166,6 +165,10 @@ function META:Max(val)
     self.max = val
     
     return self
+end
+
+function META:GetMax()
+    return self.max
 end
 
 function META:IsFalsy()
