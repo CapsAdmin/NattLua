@@ -3,7 +3,7 @@ local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "union"
-META.__index = META
+require("nattlua.types.base")(META)
 
 local sort = function(a, b) return a:GetSignature() < b:GetSignature() end
 
@@ -508,4 +508,4 @@ function META:MakeCallableUnion(analyzer, node)
     return truthy_union:SetNode(node):SetSource(new_union):SetBinarySource(self)
 end
 
-return types.RegisterType(META)
+return META

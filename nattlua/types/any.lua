@@ -2,7 +2,7 @@ local types = require("nattlua.types.types")
 
 local META = {}
 META.Type = "any"
-META.__index = META
+require("nattlua.types.base")(META)
 
 function META:GetSignature()
     return "any"
@@ -44,4 +44,4 @@ function META.Equal(a, b)
     return a.Type == b.Type
 end
 
-return types.RegisterType(META)
+return META

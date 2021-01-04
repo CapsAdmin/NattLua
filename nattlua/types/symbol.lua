@@ -1,9 +1,8 @@
-local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "symbol"
-META.__index = META
+require("nattlua.types.base")(META)
 
 function META.Equal(a, b)
     return a.Type == b.Type and a:GetData() == b:GetData()
@@ -22,7 +21,7 @@ function META:__tostring()
 end
 
 function META:Copy()
-    local copy = types.Symbol(self:GetData())
+    local copy = self:New(self:GetData())
     copy:CopyInternalsFrom(self)
     return copy
 end
@@ -63,4 +62,4 @@ function META:Initialize(data)
     return true
 end
 
-return types.RegisterType(META)
+return META

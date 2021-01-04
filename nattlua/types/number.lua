@@ -1,11 +1,14 @@
 local types = require("nattlua.types.types")
-local syntax = require("nattlua.syntax.syntax")
-local bit = not _G.bit and require("bit32") or _G.bit
 local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "number"
-META.__index = META
+require("nattlua.types.base")(META)
+
+--[[#
+    type META.max = META
+    type META.data = number
+]]
 
 function META.Equal(a, b)
     if a.Type ~= b.Type then return false end
@@ -48,7 +51,7 @@ function META:GetSignature()
 end
 
 function META:Copy()
-    local copy = types.Number(self:GetData()):SetLiteral(self:IsLiteral())
+    local copy = self:New(self:GetData()):SetLiteral(self:IsLiteral())
     if self.max then
         copy.max = self.max:Copy()
     end
@@ -120,15 +123,21 @@ function META.IsSubsetOf(A, B)
 end
 
 function META:__tostring()
+    local s = tostring(self:GetData())
+
+    if self.max then
+        s = s .. ".." .. tostring(self.max)
+    end
+
     if self:IsLiteral() then
-        return tostring(self:GetData()) .. (self.max and (".." .. tostring(self.max)) or "")
+        return s
     end
 
-    if self:GetData() == nil then
-        return "number"
+    if self:GetData() then
+        return "number(" .. s .. ")"
     end
 
-    return "number" .. "(".. tostring(self:GetData()) .. (self.max and (".." .. tostring(self.max)) or "") .. ")"
+    return "number"
 end
 
 function META:SetMax(val)
@@ -179,4 +188,4 @@ function META:IsTruthy()
     return true
 end
 
-return types.RegisterType(META)
+return META

@@ -3,7 +3,7 @@ local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "table"
-META.__index = META
+require("nattlua.types.base")(META)
 
 local sort = function(a, b) return a.key:GetSignature() < b.key:GetSignature() end
 
@@ -708,4 +708,4 @@ function META:Call(analyzer, arguments, ...)
     return type_errors.other("table has no __call metamethod")
 end
 
-return types.RegisterType(META)
+return META

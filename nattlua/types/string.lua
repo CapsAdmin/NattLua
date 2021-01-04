@@ -1,11 +1,8 @@
-local types = require("nattlua.types.types")
-local syntax = require("nattlua.syntax.syntax")
-local bit = not _G.bit and require("bit32") or _G.bit
 local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "string"
-META.__index = META
+require("nattlua.types.base")(META)
 
 function META.Equal(a, b)
     if a.Type ~= b.Type then return false end
@@ -40,7 +37,7 @@ function META:GetSignature()
 end
 
 function META:Copy()
-    local copy =  types.String(self:GetData()):SetLiteral(self:IsLiteral())
+    local copy =  self:New(self:GetData()):SetLiteral(self:IsLiteral())
     copy.pattern_contract = self.pattern_contract
     copy:CopyInternalsFrom(self)
     return copy
@@ -120,7 +117,7 @@ function META:__tostring()
         return "string"
     end
 
-    return "string" .. "(".. tostring(self:GetData()) .. ")"
+    return "string(".. tostring(self:GetData()) .. ")"
 end
 
 function META:IsFalsy()
@@ -137,4 +134,4 @@ function META:Initialize()
     return self
 end
 
-return types.RegisterType(META)
+return META

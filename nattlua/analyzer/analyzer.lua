@@ -41,10 +41,6 @@ function META:NewType(node, type, data, literal)
         obj = self:Assert(node, types.Symbol(nil))
     elseif type == "any" then
         obj = self:Assert(node, types.Any())
-    elseif type == "never" then
-        obj = self:Assert(node, types.Never()) -- TEST ME
-    elseif type == "error" then
-        obj = self:Assert(node, types.Error(data)) -- TEST ME
     elseif type == "function" then
         obj = self:Assert(node, types.Function(data))
         obj:SetNode(node)

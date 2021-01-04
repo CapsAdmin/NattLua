@@ -3,7 +3,7 @@ local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
 META.Type = "tuple"
-META.__index = META
+require("nattlua.types.base")(META)
 
 function META.Equal(a, b)
     if a.Type ~= b.Type then return false end
@@ -391,4 +391,4 @@ function META:Initialize(data)
 end
 
 
-return types.RegisterType(META)
+return META

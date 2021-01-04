@@ -75,12 +75,6 @@ do
 end
 
 function types.RegisterType(meta)
-    for k, v in pairs(require("nattlua.types.base")) do
-        if not meta[k] then
-            meta[k] = v
-        end
-    end
-
     return function(data)
         local self = setmetatable({
             data = data,
@@ -107,17 +101,15 @@ end
 
 
 function types.Initialize()
-    types.Union = require("nattlua.types.union")
-    types.Table = require("nattlua.types.table")
-    types.List = require("nattlua.types.list")
-    types.Tuple = require("nattlua.types.tuple")
-    types.Number = require("nattlua.types.number")
-    types.Function = require("nattlua.types.function")
-    types.String = require("nattlua.types.string")
-    types.Any = require("nattlua.types.any")
-    types.Symbol = require("nattlua.types.symbol")
-    types.Never = require("nattlua.types.never")
-    types.Error = require("nattlua.types.error")
+    types.Union = types.RegisterType(require("nattlua.types.union"))
+    types.Table = types.RegisterType(require("nattlua.types.table"))
+    types.List = types.RegisterType(require("nattlua.types.list"))
+    types.Tuple = types.RegisterType(require("nattlua.types.tuple"))
+    types.Number = types.RegisterType(require("nattlua.types.number"))
+    types.Function = types.RegisterType(require("nattlua.types.function"))
+    types.String = types.RegisterType(require("nattlua.types.string"))
+    types.Any = types.RegisterType(require("nattlua.types.any"))
+    types.Symbol = types.RegisterType(require("nattlua.types.symbol"))
     
     types.Nil = function() return types.Symbol(nil) end
     types.True = function() return types.Symbol(true) end

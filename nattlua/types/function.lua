@@ -6,7 +6,7 @@ local bit = not _G.bit and require("bit32") or _G.bit
 
 local META = {}
 META.Type = "function"
-META.__index = META
+require("nattlua.types.base")(META)
 
 function META.Equal(a, b)
     return 
@@ -16,27 +16,11 @@ function META.Equal(a, b)
 end
 
 function META:GetSignature()
-    if self.suppress then
-        return "*self*"
-    end
-
-    self.suppress = true
-    local s = "F" .. "-"..self:GetArguments():GetSignature() .. ":" .. self:GetReturnTypes():GetSignature()
-    self.suppress = false
-
-    return s
+    return "F" .. "-"..self:GetArguments():GetSignature() .. ":" .. self:GetReturnTypes():GetSignature()
 end
 
 function META:__tostring()
-    if self.suppress then
-        --return "*self-function*"
-    end
-
-    self.suppress = true
-    local s = "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
-    self.suppress = false
-
-    return s
+    return "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
 end
 
 function META:GetLuaType()
@@ -188,4 +172,4 @@ function META:CheckArguments(arguments)
     return true
 end
 
-return types.RegisterType(META)
+return META

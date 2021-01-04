@@ -1,9 +1,9 @@
-local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
+local types = require("nattlua.types.types")
 
 local META = {}
 META.Type = "list"
-META.__index = META
+require("nattlua.types.base")(META)
 
 local function sort(a, b) return a < b end
 
@@ -504,4 +504,4 @@ function META:Initialize(data)
     return true
 end
 
-return types.RegisterType(META)
+return META
