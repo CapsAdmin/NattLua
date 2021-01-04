@@ -113,14 +113,14 @@ function META:__tostring()
             return "string"
         end
 
-        return tostring(self:GetData()) .. (self.max and (".." .. tostring(self.max:GetData())) or "")
+        return tostring(self:GetData())
     end
 
     if self:GetData() == nil then
         return "string"
     end
 
-    return "string" .. "(".. tostring(self:GetData()) .. (self.max and (".." .. self.max:GetData()) or "") .. ")"
+    return "string" .. "(".. tostring(self:GetData()) .. ")"
 end
 
 function META:IsFalsy()
