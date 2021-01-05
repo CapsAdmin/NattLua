@@ -1,4 +1,3 @@
-local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
 
 local META = {}
@@ -72,7 +71,7 @@ function META.IsSubsetOf(A, B)
             end
             table.insert(errors, reason)
         end
-        return type_errors.subset(A, b, errors)
+        return type_errors.subset(A, B, errors)
     end
 
     if A.Type == "any" then return true end

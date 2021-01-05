@@ -187,12 +187,17 @@ do -- globals
 				return
 			end
 
-			for _, kv in ipairs(t:GetContract() and t:GetContract():GetData() or t:GetData()) do
-				kv.key:SetNode(t:GetNode())
-				kv.val:SetNode(t:GetNode())
+			for i, kv in ipairs(t:GetContract() and t:GetContract():GetData() or t:GetData()) do
+                if kv.Type then
+                    k:AddType(types.Number())
+                    v:AddType(kv)
+                else
+                    kv.key:SetNode(t:GetNode())
+                    kv.val:SetNode(t:GetNode())
 
-				k:AddType(kv.key)
-				v:AddType(kv.val)
+                    k:AddType(kv.key)
+                    v:AddType(kv.val)
+                end
 			end
 		end
 
@@ -252,7 +257,7 @@ do -- globals
         end
 
 		local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
-		local k,v = analyzer:CallLuaTypeFunction(node, next:GetData().lua_function, analyzer:GetScope(), tbl)
+		local k,v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 		local done = false
 		return function()
 			if done then return nil end

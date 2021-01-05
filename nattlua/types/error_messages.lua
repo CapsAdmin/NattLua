@@ -1,5 +1,5 @@
 local errors = {
-    subset = function(a, b, reason)
+    subset = function(a --[[#: any]], b --[[#: any]], reason --[[#: string | nil]])--[[#: false, string | {[number] = any | string} ]]
         local msg = {a, " is not a subset of ", b}
 
         if reason then
@@ -15,47 +15,48 @@ local errors = {
 
         return false, msg
     end,
-    missing = function(a, b, reason)
+    missing = function(a--[[#: any]], b--[[#: any]], reason --[[#: string | nil]])--[[#: false, string | {[number] = any | string} ]]
         local msg = {a, " has no field ", b, " because ", reason}
         return false, msg
     end,
-    other = function(msg)
+    other = function(msg --[[#: {[number] = any | string} | string]])--[[#: false, string | {[number] = any | string} ]]
         return false, msg
     end,
-    type_mismatch = function(a, b)
+    type_mismatch = function(a--[[#: any]], b--[[#: any]])--[[#: false, string | {[number] = any | string} ]]
         return false, {a, " is not the same type as ", b}
     end,
-    value_mismatch = function(a, b)
+    value_mismatch = function(a--[[#: any]], b--[[#: any]])--[[#: false, string | {[number] = any | string} ]]
         return false, {a, " is not the same value as ", b}
     end,
-    operation = function(op, obj, subject)
+    operation = function(op--[[#: any]], obj--[[#: any]], subject--[[#: string]])--[[#: false, string | {[number] = any | string} ]]
         return false, {"cannot ", op, " ", subject}
     end,
-    numerically_indexed = function(obj)
+    numerically_indexed = function(obj--[[#: any]])--[[#: false, string | {[number] = any | string} ]]
         return false, {obj, " is not numerically indexed"}
     end,
-    empty = function(obj)
+    empty = function(obj--[[#: any]])--[[#: false, string | {[number] = any | string} ]]
         return false, {obj, " is empty"}
     end,
-    binary = function(op, l,r)
+    binary = function(op--[[#: string]], l--[[#: any]],r--[[#: any]])--[[#: false, string | {[number] = any | string} ]]
         return false, {l, " ", op, " ", r, " is not a valid binary operation"}
     end,
-    prefix = function(op, l)
+    prefix = function(op--[[#: string]], l--[[#: any]])--[[#: false, string | {[number] = any | string} ]]
         return false, {op, " ", l, " is not a valid prefix operation"}
     end,
-    postfix = function(op, r)
+    postfix = function(op--[[#: string]], r--[[#: any]])--[[#: false, string | {[number] = any | string} ]]
         return false, {op, " ", r, " is not a valid postfix operation"}
     end,
-    literal = function(obj, reason)
-        local msg = {obj, " is not a literal"}
+    literal = function(obj--[[#: any]], reason--[[#: string | nil]])--[[#: false, string | {[number] = any | string} ]]
+        local msg = {obj, " needs to be a literal"}
+        
         if reason then
             table.insert(msg, " because ")
             table.insert(msg, reason)
         end
 
-        return msg
+        return false, msg
     end,
-    string_pattern = function(a, b)
+    string_pattern = function(a--[[#: any]], b--[[#: any]])--[[#: false, string | {[number] = any | string} ]]
         return false, {"cannot find ", a, " in pattern \"", b.pattern_contract, "\""}
     end
 }

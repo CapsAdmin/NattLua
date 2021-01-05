@@ -77,8 +77,8 @@ function META.IsSubsetOf(A, B)
     end
 
     if B.pattern_contract then
-        if not A:IsLiteral() then
-            return type_errors.literal(A, "must be a literal when comparing against string pattern")
+        if not A:GetData() then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
+            return type_errors.literal(A)
         end
 
         if not A:GetData():find(B.pattern_contract) then

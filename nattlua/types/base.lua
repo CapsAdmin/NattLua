@@ -1,6 +1,9 @@
 local type_errors = require("nattlua.types.error_messages")
 
-return function(META)
+return function(META --[[#: {
+    Type = string,
+    [string] = any,
+}]])
     META.__index = META
 
     function META:IsUncertain()
@@ -124,7 +127,7 @@ return function(META)
     end
 
     function META:IsTruthy()
-    return self.truthy
+        return self.truthy
     end
 
     function META:SetTruthy(b)
