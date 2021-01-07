@@ -66,21 +66,9 @@ return function(META)
 
     local unpack_union_tuples
     do
-        local d = {}
-        local function get_signature(tup)
-            local sig = {}
-            for i,v in ipairs(tup) do
-                sig[i] = v:GetSignature()
-            end
-            return table.concat(sig, "-")
-        end
-        local function done(tup)
-            d[get_signature(tup)] = true
-        end
-        local function is_done(tup)
-            return d[get_signature(tup)]
-        end
-        
+        local table_insert = table.insert
+        local ipairs = ipairs
+
         local function should_expand(arg, contract)
             local b = arg.Type == "union"
 
@@ -99,30 +87,46 @@ return function(META)
             return b
         end
 
-        local function expand(args, out, function_arguments)
-            local tup = {}
-            for i, arg in ipairs(args) do  
-                if should_expand(arg, function_arguments:Get(i)) then
-                    for i2,v in ipairs(arg:GetData()) do
-                        local args2 = {}
-                        for i, v in ipairs(args) do args2[i] = v end
-                        args2[i] = v
-                        expand(args2, out, function_arguments)
-                    end
+        function unpack_union_tuples(arguments, function_arguments)
+            local out = {}
+            local lengths = {}
+            local max = 1
+            local ys = {}
+            local arg_length = #arguments
+
+            for i, obj in ipairs(arguments) do
+                if should_expand(obj, function_arguments:Get(i)) then
+                    lengths[i] = #obj:GetData()
+                    max = max * lengths[i]
                 else
-                    table.insert(tup, arg)
+                    lengths[i] = 0
+                end
+                ys[i] = 1
+            end
+
+            for i = 1, max do
+                local args = {}
+                for i, obj in ipairs(arguments) do
+                    if lengths[i] == 0 then
+                        args[i] = obj
+                    else
+                        args[i] = obj:GetData()[ys[i]]
+                    end
+                end
+                
+                out[i] = args
+
+                for i = arg_length, 2, -1 do
+                    if i == arg_length then
+                        ys[i] = ys[i] + 1    
+                    end
+                    if ys[i] > lengths[i] then
+                        ys[i] = 1
+                        ys[i-1] = ys[i-1] + 1
+                    end
                 end
             end
-            if #tup == #args and not is_done(tup) then
-                table.insert(out, tup)
-                done(tup)
-            end
-        end
 
-        function unpack_union_tuples(input, function_arguments)
-            d = {}            
-            local out = {}
-            expand(input, out, function_arguments)
             return out
         end
     end
