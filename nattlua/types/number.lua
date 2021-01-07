@@ -113,7 +113,13 @@ function META.IsSubsetOf(A, B)
 end
 
 function META:__tostring()
-    local s = tostring(self:GetData())
+    local n = self:GetData()
+
+    if n ~= n then
+        n = "nan"
+    end
+
+    local s = tostring(n)
 
     if self.max then
         s = s .. ".." .. tostring(self.max)

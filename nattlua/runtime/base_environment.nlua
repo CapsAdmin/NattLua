@@ -370,7 +370,7 @@ do -- globals
             str = code:GetData()
 
             local ok, err = pcall(function()
-                str = str:gsub("\\(.)", function(char) return assert(load("return '\\" .. char .. "'"))() end)
+                str = str:gsub("\\(.)", function(char) return assert((loadstring or load)("return '\\" .. char .. "'"))() end)
             end)
 
             if not ok then

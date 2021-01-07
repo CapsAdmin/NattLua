@@ -2,8 +2,6 @@ local types = require("nattlua.types.types")
 local syntax = require("nattlua.syntax.syntax")
 local type_errors = require("nattlua.types.error_messages")
 
-local bit = not _G.bit and require("bit32") or _G.bit
-
 local META = {}
 META.Type = "function"
 require("nattlua.types.base")(META)

@@ -3,9 +3,10 @@ if not table.unpack and _G.unpack then
 end
 
 local helpers = require("nattlua.other.helpers")
-
 helpers.JITOptimize()
 --helpers.EnableJITDumper()
+
+local loadstring = loadstring or load
 
 local nl = {}
 
@@ -13,14 +14,14 @@ function nl.load(code, name, config)
 	local obj = nl.Code(code, name, config)
 	local code, err = obj:Emit()
 	if not code then return nil, err end
-    return load(code, name)
+    return loadstring(code, name)
 end
 
 function nl.loadfile(path, config)
 	local obj = nl.File(path, config)
 	local code, err = obj:Emit()
 	if not code then return nil, err end
-    return load(code, path)
+    return loadstring(code, path)
 end
 
 function nl.ParseFile(path, root)
@@ -118,7 +119,7 @@ do
     local traceback = function(self, obj, msg)
         if self.debug or _G.TEST then
             local ret = {xpcall(
-                function(self, obj, msg)
+                function()
                     msg = msg or "no error"
                     
                     local s = msg .. "\n" .. stack_trace()
@@ -131,8 +132,7 @@ do
                 end    
                 ,function(msg) 
                     return debug.traceback(tostring(msg)) 
-                end, 
-                self, obj, msg
+                end
             )}
 
             if not ret[1] then
@@ -154,9 +154,8 @@ do
         end
 		
 		local ok, tokens = xpcall(
-			lexer.GetTokens, 
-			function(msg) return traceback(self, lexer, msg) end, 
-			lexer
+			function() return lexer:GetTokens() end,
+			function(msg) return traceback(self, lexer, msg) end
 		)
 
 		if not ok then
@@ -189,10 +188,8 @@ do
 		end
 
 		local ok, res = xpcall(
-			parser.BuildAST, 
-			function(msg) return traceback(self, parser, msg) end, 
-			parser, 
-			self.Tokens
+			function() return parser:BuildAST(self.Tokens) end, 
+			function(msg) return traceback(self, parser, msg) end
 		)
 
 		if not ok then
@@ -236,17 +233,16 @@ do
 		if self.dump_events or self.config and self.config.dump_analyzer_events then
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
-
-		local ok, res = xpcall(function(...) 
-				local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, ...)
+		local args = {...}
+		local ok, res = xpcall(function() 
+				local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
                 analyzer:AnalyzeUnreachableCode()
                 if analyzer.OnFinish then
                     analyzer:OnFinish()
                 end
 				return res
 			end,
-			function(msg) return traceback(self, analyzer, msg) end,
-			...
+			function(msg) return traceback(self, analyzer, msg) end
 		)		
 		self.AnalyzedResult = res
 

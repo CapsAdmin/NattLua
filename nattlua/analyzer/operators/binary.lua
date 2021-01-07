@@ -1,5 +1,6 @@
 local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
+local bit = _G.bit or require("bit32")
 
 local operators = {
     ["+"] = function(l,r) return l+r end,

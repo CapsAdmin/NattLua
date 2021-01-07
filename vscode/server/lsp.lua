@@ -130,9 +130,10 @@ end
 function server:OnReceive(str, client)
 	local ok, data = pcall(json.decode, str)
 	if ok then
-		xpcall(self.HandleMessage, function(msg)
+		xpcall(
+			function() return self:HandleMessage(data, client) end, function(msg)
 			self:ShowMessage(client, "error", debug.traceback(msg))
-		end, self, data, client)
+		end)
 	else
 		print("error!")
 		print(data)

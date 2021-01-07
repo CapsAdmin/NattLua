@@ -1,3 +1,4 @@
+local load = loadstring or load
 local types = require("nattlua.types.types")
 local helpers = require("nattlua.other.helpers")
 local list = require("nattlua.other.list")

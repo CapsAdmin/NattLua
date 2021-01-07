@@ -4,6 +4,7 @@
 
 local syntax = require("nattlua.syntax.syntax")
 local helpers = require("nattlua.other.helpers")
+local load = loadstring or load
 
 local META = {}
 META.__index = META

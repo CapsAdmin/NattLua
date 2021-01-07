@@ -67,7 +67,7 @@ return function(META)
         
         local msg_str = expand(msg)
 
-        local key = msg_str .. "-" .. ("%p"):format(node) .. "-" .. "severity"
+        local key = msg_str .. "-" .. tostring(node) .. "-" .. "severity"
 
         self.diagnostics_map = self.diagnostics_map or {}
 

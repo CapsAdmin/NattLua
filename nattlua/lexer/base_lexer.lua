@@ -3,6 +3,7 @@
 ]]
 
 local list = require("nattlua.other.list")
+local load = loadstring or load
 
 return function(META--[[#: {
     @Name = "BaseLexer",
