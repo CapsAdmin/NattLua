@@ -67,11 +67,7 @@ function META:AddType(e)
         end
     end
 
-    table.insert(self.data, 1, e)
-
-    if #self.data > 512 then 
-        error("union is too large", 2)
-    end
+    table.insert(self.data, e)
 
     return self
 end
