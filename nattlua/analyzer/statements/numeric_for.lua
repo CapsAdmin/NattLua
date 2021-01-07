@@ -59,12 +59,6 @@ return function(META)
                 })
                 local i = self:NewType(statement.expressions[1], "number", i):SetLiteral(true)
                 local brk = false
-
-                if not statement.identifiers[1].inferred_type then
-                    statement.identifiers[1].inferred_type = types.Union({i})
-                else
-                    statement.identifiers[1].inferred_type = types.Union({statement.identifiers[1].inferred_type, i})
-                end
                 
                 if uncertain_break then
                     i:SetLiteral(false)
@@ -106,7 +100,7 @@ return function(META)
                 for i = 2, #children do
                     merged_scope:Merge(children[i])
                 end
-    
+
                 merged_scope:MakeReadOnly(true)
                 self:GetScope():AddChild(merged_scope)
     
@@ -114,6 +108,7 @@ return function(META)
     
                 self:PushScope(merged_scope)
                     self:AnalyzeStatements(statement.statements)
+                    statement.identifiers[1].inferred_type = self:GetScope():FindValue(statement.identifiers[1].value.value, "runtime"):GetValue()
                 self:PopScope()
             end
             
