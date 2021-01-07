@@ -4,10 +4,6 @@ local META = {}
 META.Type = "any"
 require("nattlua.types.base")(META)
 
-function META:GetSignature()
-    return "any"
-end
-
 function META:Get(key)
     return self
 end

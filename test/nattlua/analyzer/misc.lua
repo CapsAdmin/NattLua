@@ -9,7 +9,7 @@ local function R(code, expect)
 end
 
 R[[
-    local function test(a,b)
+    local function test(a,b): nil
 
     end
 
@@ -19,7 +19,7 @@ R[[
     type_assert(test, _ as (function(a: false|true|any, b: false|true|any): nil))
 ]]
 R[[
-    local function test(a: any,b: any)
+    local function test(a: any,b: any): nil
 
     end
 

@@ -22,33 +22,6 @@ function META.Equal(a, b)
     return true
 end
 
-function META:GetSignature()
-    if self.suppress then
-        return "*"
-    end
-
-    self.suppress = true
-
-    local s = {}
-
-    for i,v in ipairs(self:GetData()) do
-        s[i] = v:GetSignature()
-    end
-
-    if self.Remainder then
-        table.insert(s, self.Remainder:GetSignature())
-    end
-
-    if self.Repeat then
-        table.insert(s, "x")
-        table.insert(s, tostring(self.Repeat))
-    end
-
-    self.suppress = false
-
-    return table.concat(s)
-end
-
 function META:__tostring()
     if self.suppress then
         return "*self-tuple*"

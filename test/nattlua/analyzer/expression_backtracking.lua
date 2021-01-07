@@ -81,7 +81,7 @@ test("1 or 2 or 3 or 4", function()
         for _, num in ipairs(b) do
             table.insert(literal_union, types.Number(num):SetLiteral(true))
         end
-        equal(a:GetSignature(), types.Union(literal_union):GetSignature())
+        assert(a:Equal(types.Union(literal_union)))
     end
     -- (>1< or 2 or 3) or (>4<)
     set_equal(obj.source_left, {1,2,3})
@@ -103,9 +103,9 @@ pending[[
     local a: false | 1
 
     local x = not a
-    § assert(env.runtime.x:GetType():GetSignature() == "symbol-false|symbol-true")
-    § assert(env.runtime.x:GetType().source:GetSignature() == "number-1|symbol-false")
-    § assert(env.runtime.x:GetType().falsy_union:GetSignature() == "number-1")
-    § assert(env.runtime.x:GetType().truthy_union:GetSignature() == "symbol-false")
+    § assert(env.runtime.x:GetType():Equal(types.Boolean()))
+    § assert(env.runtime.x:GetType().source:Equal("number-1|symbol-false"))
+    § assert(env.runtime.x:GetType().falsy_union:Equal("number-1"))
+    § assert(env.runtime.x:GetType().truthy_union:Equal("symbol-false"))
 
 ]]

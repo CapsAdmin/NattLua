@@ -13,6 +13,11 @@ function META.Equal(a, b)
     if a.Type ~= b.Type then return false end
     
     if a:IsLiteral() and b:IsLiteral() then
+        -- nan
+        if a:GetData() ~= a:GetData() and b:GetData() ~= b:GetData() then
+            return true
+        end
+
         return a:GetData() == b:GetData()
     end
 
@@ -33,20 +38,6 @@ end
 
 function META:GetLuaType()
     return self.Type
-end
-
-function META:GetSignature()
-    local s = "N"
-
-    if self:IsLiteral() then
-        s = s .. "-" .. tostring(self:GetData())
-    end
-
-    if self.max then
-        s = s .. "-" .. self.max:GetSignature()
-    end
-
-    return s
 end
 
 function META:Copy()

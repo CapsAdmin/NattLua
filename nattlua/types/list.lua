@@ -7,20 +7,19 @@ require("nattlua.types.base")(META)
 
 local function sort(a, b) return a < b end
 
-function META:GetSignature()
-    if self.suppress then
-        return "*self*"
+function META.Equal(a, b)
+    if a.Type ~= b.Type then return false end
+
+    for i = 1, #self.data do
+        local a = a.data[i]
+        local b = a.data[i]
+
+        if not a:Equal(b) then
+            return false
+        end
     end
 
-    local s = {}
-
-    self.suppress = true
-    for i, keyval in ipairs(self:GetData()) do
-        s[i] = keyval.key:GetSignature() .. "=" .. keyval.val:GetSignature()
-    end
-    self.suppress = nil
-
-    return "[" .. table.concat(s, "\n") .. "]"
+    return true
 end
 
 local level = 0
@@ -111,44 +110,34 @@ function META.IsSubsetOf(A, B)
             return true
         end
 
-        done = done or {}
-
-        for _, a in ipairs(A:GetData()) do
-            local b
-            do
-                local reasons = {}
-
-                if not B:GetData()[1] then
-                    return type_errors.other("list is empty")
-                end
-
-                for _, keyval in ipairs(B:GetData()) do
-                    local ok, reason = a.key:IsSubsetOf(keyval.key)
-                    if ok then
-                        b = keyval
-                        break
-                    end
-                    table.insert(reasons, reason)
-                end
-
-                if not b then
-                    return type_errors.other(reasons)
-                end
-            end
-
-            local key = a.val:GetSignature() .. b.val:GetSignature()
-            if not done or not done[key] then
-                if done then
-                    done[key] = true
-                end
-
-                local ok, reason = a.val:IsSubsetOf(b.val)
-                if not ok then
-                    return type_errors.subset(a.val, b.val, reason)
-                end
+        local can_be_empty = true
+        A.suppress = true
+        for _, keyval in ipairs(B:GetData()) do
+            if not types.Nil():IsSubsetOf(keyval.val) then
+                can_be_empty = false
+                break
             end
         end
-        done = nil
+        A.suppress = false
+
+        if not A:GetData()[1] and (not A:GetContract() or not A:GetContract():GetData()[1]) then
+            if can_be_empty then
+                return true
+            else
+                return type_errors.other("list is empty")
+            end
+        end
+
+        for i, akeyval in ipairs(A:GetData()) do
+            local bkeyval = B:GetData()[i]
+            A.suppress = true
+            local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
+            A.suppress = false
+
+            if not ok then
+                return type_errors.subset(akeyval.val, bkeyval.val, err)
+            end
+        end
 
         return true
     elseif B.Type == "union" then
@@ -278,7 +267,7 @@ function META:Set(key, val)
     if not keyval then
         table.insert(self:GetData(), {key = key, val = val})
     else
-        if keyval.val and keyval.key:GetSignature() ~= key:GetSignature() then
+        if keyval.val and not keyval.key:Equal(key) then
             keyval.val = types.Union({keyval.val, val})
         else
             keyval.val = val

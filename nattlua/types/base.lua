@@ -53,15 +53,7 @@ return function(META --[[#: {
     function META.Equal(a, b)
         error("nyi " .. a.Type .." == " .. b.Type)
     end
-
-    function META:GetSignature()
-        error("NYI")
-    end
-
-    function META:GetSignature()
-        error("NYI")
-    end
-
+    
     function META:SetName(name)
         if name then
             assert(name:IsLiteral())

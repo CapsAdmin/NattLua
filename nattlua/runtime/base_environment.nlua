@@ -55,25 +55,26 @@ type function keysof(tbl: Table)
 	return union
 end
 
-type function type_assert(what, type)
+type function type_assert(what: any, type: any)
 	what = what or types.Nil()
 	type = type or types.Nil()
 
-	if what.Type == type.Type and what:GetData() == type:GetData() then
+	if what.Type == "union" and #what:GetData() == 1 then
+		what = what:GetData()[1]
+	end
+
+	if type.Type == "union" and #type:GetData() == 1 then
+		type = type:GetData()[1]
+	end
+
+	if what:Equal(type) or (what:GetContract() or what):Equal(type) then
 		return
 	end
 
-	if (what:GetContract() or what):GetSignature() ~= type:GetSignature() and (what):GetSignature() ~= type:GetSignature() then
-        local a = tostring(type)
-        local b = tostring(what:GetContract() or what)
+	local a = tostring(type)
+	local b = tostring(what:GetContract() or what)
 
-        if a == b then
-            a = type:GetSignature()
-            b = (what:GetContract() or what):GetSignature()
-        end
-
-		error("expected " .. a .." got " .. b, 2)
-	end
+	error("expected " .. a .." got " .. b, 2)
 end
 
 type function subset_of(A, B)

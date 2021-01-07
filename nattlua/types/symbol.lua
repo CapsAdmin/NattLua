@@ -12,10 +12,6 @@ function META:GetLuaType()
     return type(self:GetData())
 end
 
-function META:GetSignature()
-    return "SY" .. "-" .. tostring(self:GetData())
-end
-
 function META:__tostring()
     return tostring(self:GetData())
 end

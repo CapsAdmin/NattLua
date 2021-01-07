@@ -15,10 +15,6 @@ function META.Equal(a, b)
         a:GetReturnTypes():Equal(b:GetReturnTypes())
 end
 
-function META:GetSignature()
-    return "F" .. "-"..self:GetArguments():GetSignature() .. ":" .. self:GetReturnTypes():GetSignature()
-end
-
 function META:__tostring()
     return "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
 end

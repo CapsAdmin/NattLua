@@ -191,7 +191,7 @@ test("arguments that are not explicitly typed should be volatile", function()
         local a = args:Get(1)
         local b = args:Get(2)
 
-        equal(a:GetSignature(), b:GetSignature())
+        assert(a:Equal(b))
     end
 
     do
@@ -209,7 +209,7 @@ test("arguments that are not explicitly typed should be volatile", function()
         local a = args:Get(1)
         local b = args:Get(2)
 
-        equal(a:GetSignature(), b:GetSignature())
+        assert(a:Equal(b))
     end
 
 

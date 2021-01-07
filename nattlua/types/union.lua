@@ -5,25 +5,20 @@ local META = {}
 META.Type = "union"
 require("nattlua.types.base")(META)
 
-local sort = function(a, b) return a:GetSignature() < b:GetSignature() end
-
-function META:Sort()
-    self.sort_me = true
-end
-
 function META.Equal(a,b)
     if a.suppress then return true end
     if a.Type ~= b.Type then return false end
     if #a.data ~= #b.data then return false end
 
-    a.suppress = true
     for i = 1, #a.data do
         local ok = false
         local a = a.data[i]
         for i = 1, #b.data do
             local b = b.data[i]
-
+            
+            a.suppress = true
             ok = a:Equal(b)
+            a.suppress = false
             
             if ok then
                 break    
@@ -34,39 +29,13 @@ function META.Equal(a,b)
             return false
         end
     end
-    a.suppress = false
     
     return true
 end
 
-function META:SortNow()
-    if self.sort_me then
-        table.sort(self.data, sort)
-        self.sort_me = false
-    end
-end
-
-function META:GetSignature()
-    self:SortNow()
-
-    if self.suppress then
-        return "*"
-    end
-
-    local s = {}
-
-    self.suppress = true
-    for i, v in ipairs(self.data) do
-        s[i] = v:GetSignature()
-    end
-    self.suppress = false
-
-    return table.concat(s)
-end
+local sort = function(a, b) return a < b end
 
 function META:__tostring()
-    self:SortNow()
-
     if self.suppress then
         return "*self-union*"
     end
@@ -78,6 +47,8 @@ function META:__tostring()
         table.insert(s, tostring(v))
     end
     self.suppress = false
+
+    table.sort(s, sort)
 
     return table.concat(s, " | ")
 end
@@ -97,8 +68,6 @@ function META:AddType(e)
     end
 
     table.insert(self.data, 1, e)
-
-    self:Sort()
 
     if #self.data > 512 then 
         error("union is too large", 2)
@@ -125,11 +94,10 @@ function META:RemoveType(e)
     for i,v in ipairs(self.data) do
         if v:Equal(e) then
             table.remove(self.data, i)
-            self:Sort()
             break
         end
     end
-
+    
     return self
 end
 
@@ -375,11 +343,7 @@ function META:Copy(map)
         copy:AddType(c)
     end
 
-    copy:Sort()
     copy:CopyInternalsFrom(self)
-
-    table.sort(copy.data, sort)
-    copy.sort_me = false
 
     return copy
 end

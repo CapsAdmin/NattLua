@@ -5,12 +5,6 @@ local META = {}
 META.Type = "table"
 require("nattlua.types.base")(META)
 
-local sort = function(a, b) return a.key:GetSignature() < b.key:GetSignature() end
-
-function META:Sort()
-    self.sort_me = true
-end
-
 function META.Equal(a, b)
     if a.Type ~= b.Type then return false end
     
@@ -44,14 +38,15 @@ function META.Equal(a, b)
 
     if #adata ~= #bdata then return false end
 
-    a.suppress = true
     for i = 1, #adata do
         local akv = adata[i]
         local ok = false
         for i = 1, #bdata do
             local bkv = bdata[i]
             
+            a.suppress = true
             ok = akv.key:Equal(bkv.key) and akv.val:Equal(bkv.val)
+            a.suppress = false
 
             if ok then
                 break
@@ -62,61 +57,12 @@ function META.Equal(a, b)
             return false
         end
     end
-    a.suppress = false
 
     return true
 end
 
-
-function META:SortNow()
-    if self:GetContract() then 
-        self:GetContract():SortNow() 
-        return
-    end
-    if self.sort_me then
-        table.sort(self.data, sort)
-        self.sort_me = false
-    end
-end
-
 function META:GetLuaType()
     return self.Type
-end
-
-function META:GetSignature()
-    if self:IsUnique() then
-        return tostring(self:GetUniqueID())
-    end
-
-    if self:GetContract() and self:GetContract().Name then
-        self.suppress = nil
-        return self:GetContract().Name:GetData()
-    end
-
-    if self.Name then
-        self.suppress = nil
-        return self.Name:GetData()
-    end
-
-    if self.suppress then
-        return "*"
-    end
-
-    self.suppress = true
-
-    local s = {}
-    local i = 1
-    for _, keyval in ipairs(self:GetContract() or self:GetData()) do
-        s[i] = keyval.key:GetSignature() 
-        i = i + 1
-        s[i] = keyval.val:GetSignature()
-        i = i + 1
-    end
-    self.suppress = false
-
-    s = table.concat(s)
-    
-    return s
 end
 
 local level = 0
@@ -314,7 +260,6 @@ function META:Delete(key)
             keyval.val:SetParent()
             keyval.key:SetParent()
             table.remove(self:GetData(), i)
-            self:Sort()
         end
     end
     return true
@@ -430,7 +375,6 @@ function META:Set(key, val, no_delete)
         val:SetParent(self)
         key:SetParent(self)
         table.insert(self.data, {key = key, val = val})
-        self:Sort()
     else
         if not keyval.key:Equal(key) then
             keyval.val = types.Union({keyval.val, val})

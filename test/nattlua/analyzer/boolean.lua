@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 test("boolean is a union", function()
-    equal(T.Union(true, false):GetSignature(), run("local a: boolean"):GetLocalOrEnvironmentValue("a", "runtime"):GetSignature())
+    assert(T.Union(true, false):Equal(run("local a: boolean"):GetLocalOrEnvironmentValue("a", "runtime")))
 end)
 
 test("boolean is truthy and falsy", function()

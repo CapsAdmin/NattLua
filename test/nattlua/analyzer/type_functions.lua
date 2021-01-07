@@ -227,7 +227,7 @@ run[[
 run([[
     local type function Exclude(T, U)
         T:RemoveType(U)
-        return T
+        return T:Copy()
     end
 
     local a: Exclude<|1|2|3, 2|>
@@ -238,7 +238,7 @@ run([[
 run([[
     local type function Exclude(T, U)
         T:RemoveType(U)
-        return T
+        return T:Copy()
     end
 
     local a: Exclude<|1|2|3, 2|>

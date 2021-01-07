@@ -5,7 +5,7 @@ local Number = T.Number
 local Tuple = T.Tuple
 
 test("a union should not contain duplicates", function()
-    equal(Union("a", "b", "a", "a"):GetSignature(), Union("a", "b"):GetSignature())
+    assert(Union("a", "b", "a", "a"):Equal(Union("a", "b")))
 end)
 
 local larger = Union("a", "b", "c")
@@ -45,7 +45,7 @@ test("a number should be a subset of a union with numbers", function()
 end)
 
 test("a smaller union within an empty union should be identical to the smaller union", function()
-    equal(smaller:GetSignature(), Union(smaller):GetSignature())
+    assert(smaller:Equal(Union(smaller)))
 end)
 
 test("a union containing one literal number should be a subset of a union containing a number", function()
@@ -57,14 +57,14 @@ local B = Union(2, 5, 6, 8, 9)
 local expected = Union(5, 9)
 
 test(tostring(A) ..  " intersected with " .. tostring(B) .. " should result in " .. tostring(expected), function()
-    equal(A:Intersect(B):GetSignature(), expected:GetSignature())
+    assert(A:Intersect(B):Equal(expected))
 end)
 
 local A = Union(1, 2, 3)
 local B = Union(1, 2, 3, 4)
 
 test(tostring(B) .. " should equal the union of " .. tostring(A) .. " and " .. tostring(B), function()
-    equal(B:GetSignature(), A:Union(B):GetSignature())
+    assert(B:Equal(A:Union(B)))
     equal(4, B:GetLength())
     assert(A:IsSubsetOf(B))
 end)

@@ -22,20 +22,6 @@ function META:GetLuaType()
     return self.Type
 end
 
-function META:GetSignature()
-    local s = "S"
-
-    if self:IsLiteral() then
-        s = s .. "-" .. self:GetData()
-    end
-
-    if self.pattern_contract then
-        s = s .. "-" .. self.pattern_contract
-    end
-
-    return s
-end
-
 function META:Copy()
     local copy =  self:New(self:GetData()):SetLiteral(self:IsLiteral())
     copy.pattern_contract = self.pattern_contract
