@@ -89,3 +89,9 @@ pending[[
 
     test({})
 ]]
+
+run[[
+    local type a = 1 | 5 | 2 | 3 | 4
+    local type b = 5 | 3 | 4 | 2 | 1
+    type_assert<|a == b, true|>
+]]

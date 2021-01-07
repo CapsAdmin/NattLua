@@ -44,19 +44,19 @@ function META.Equal(a, b)
 
     if #adata ~= #bdata then return false end
 
-    a:SortNow()
-    b:SortNow()
-
     a.suppress = true
     for i = 1, #adata do
-        local ok = adata[i].key:Equal(bdata[i].key)        
+        local akv = adata[i]
+        local ok = false
+        for i = 1, #bdata do
+            local bkv = bdata[i]
+            
+            ok = akv.key:Equal(bkv.key) and akv.val:Equal(bkv.val)
 
-        if not ok then
-            a.suppress = false            
-            return false
+            if ok then
+                break
+            end
         end
-
-        local ok = adata[i].val:Equal(bdata[i].val)
         if not ok then
             a.suppress = false
             return false

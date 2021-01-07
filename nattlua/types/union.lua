@@ -16,19 +16,26 @@ function META.Equal(a,b)
     if a.Type ~= b.Type then return false end
     if #a.data ~= #b.data then return false end
 
-    a:SortNow()
-    b:SortNow()
-
+    a.suppress = true
     for i = 1, #a.data do
-        a.suppress = true
-        local ok = a.data[i]:Equal(b.data[i])
-        a.suppress = false
+        local ok = false
+        local a = a.data[i]
+        for i = 1, #b.data do
+            local b = b.data[i]
 
+            ok = a:Equal(b)
+            
+            if ok then
+                break    
+            end
+        end
         if not ok then
+            a.suppress = false
             return false
         end
     end
-
+    a.suppress = false
+    
     return true
 end
 

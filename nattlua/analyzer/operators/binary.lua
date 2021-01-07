@@ -81,6 +81,8 @@ return function(META)
         if l.Type == "union" and r.Type == "union" then
             if op == "|" and env == "typesystem" then
                 return types.Union({l, r}):SetNode(node):SetBinarySource(l, r)
+            elseif op == "==" and env == "typesystem" then
+                return l:Equal(r) and types.True() or types.False()
             elseif op == "~" and env == "typesystem" then
                 return l:RemoveType(r):Copy()
             else
@@ -156,6 +158,8 @@ return function(META)
         if env == "typesystem" then
             if op == "|" then
                 return types.Union({l, r})
+            elseif op == "==" then
+                return l:Equal(r) and types.True() or types.False()
             elseif op == "~" then
                 return l:RemoveType(r)
             elseif op == "&" or op == "extends" then
