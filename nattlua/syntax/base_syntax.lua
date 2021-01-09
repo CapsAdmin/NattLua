@@ -155,24 +155,6 @@ return function(syntax--[[#: {
         end            
     end
 
-    -- optimize lookup if we have ffi
-    local ffi = jit and require("ffi")
-
-    if ffi then
-        for key, func in pairs(syntax) do
-            if key:sub(1, 2) == "Is" then
-                local map = ffi.new("uint8_t[256]", 0)
-
-                for i = 0, 255 do
-                    if func(i) then
-                        map[i] = 1
-                    end
-                end
-                syntax[key] = function(i --[[#: number]]) return map[i] == 1 end
-            end
-        end
-    end
-
     do -- grammar rules
         function syntax.IsValue(token --[[#: Token]])
             if token.type == "number" or token.type == "string" then
