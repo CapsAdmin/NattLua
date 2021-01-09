@@ -106,8 +106,12 @@ return function(syntax--[[#: {
 
         for k, v in pairs(syntax.BinaryOperatorFunctionTranslate or {}) do
             local a,b,c = v:match("(.-)A(.-)B(.*)")
-            if a and b and c then
+            if a then
+                if b then
+                    if c then
                 lookup[k] = {" " .. a, b, c .. " "}
+            end
+        end
             end
         end
 
@@ -139,9 +143,11 @@ return function(syntax--[[#: {
 
         for k, v in pairs(syntax.PostfixOperatorFunctionTranslate or {}) do
             local a, b = v:match("^(.-)A(.-)$")
-            if a and b then
+            if a then
+                if b then
                 lookup[k] = {" " .. a, b .. " "}
             end
+        end
         end
 
         function syntax.GetFunctionForPostfixOperator(token --[[#: Token]])
