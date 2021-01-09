@@ -404,8 +404,8 @@ function helpers.JITOptimize()
 end
 
 local function inject_full_path()
-    local lib = require("jit.util") --[[# as jit.util & {_old_funcinfo = jit.util.funcinfo} ]]
-    if lib.funcinfo then
+    local ok, lib = pcall(require, "jit.util") --[[# as jit.util & {_old_funcinfo = jit.util.funcinfo} ]]
+    if ok and lib.funcinfo then
         lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
 
         function lib.funcinfo(...)
@@ -421,10 +421,10 @@ end
 
 function helpers.EnableJITDumper()
     if not _G.jit then return end
+    if jit.version_num ~= 20100 then return end
     inject_full_path()
 
     local jit = require("jit")
-    assert(jit.version_num == 20100, "LuaJIT core/library version mismatch")
     local jutil = require("jit.util")
     local vmdef = require("jit.vmdef")
     local funcinfo, traceinfo = jutil.funcinfo, jutil.traceinfo

@@ -135,16 +135,14 @@ return function(META)
         end
 
         function META:CallLuaTypeFunction(node, func, scope, ...)
-            setfenv(func, setmetatable({
-                nl = require("nattlua"),
-                types = types,
-                analyzer = self,
-                env = self:GetScopeHelper(scope),
-            }, {
-                __index = _G
-            }))
-
+            _G.nl = require("nattlua")
+            _G.types = types
+            _G.analyzer = self
+            _G.env = self:GetScopeHelper(scope)
+            
             local res = {pcall(func, ...)}
+
+  
 
             local ok = table.remove(res, 1)
 

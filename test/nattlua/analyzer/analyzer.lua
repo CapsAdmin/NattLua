@@ -14,7 +14,7 @@ R"type_assert(nil == nil, true)"
 test("declaring base types", function()
     R[[
         local type Symbol = function(T: any)
-            return types.Symbol(loadstring("return " .. T:GetNode().value.value)(), true)
+            return types.Symbol((loadstring or load)("return " .. T:GetNode().value.value)(), true)
         end
         
         -- primitive types

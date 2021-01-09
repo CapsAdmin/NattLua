@@ -27,7 +27,9 @@ function META:GetValueFromScope(scope, upvalue, key)
                 for i = #mutations, 1, -1 do
                     if mutations[i].scope == mutation.scope then
                         for i = from, i, -1 do 
-                            table.remove(mutations, i)    
+                            if mutations[i] then
+                                table.remove(mutations, i)    
+                            end
                         end
                         break
                     end
