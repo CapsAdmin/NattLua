@@ -136,38 +136,26 @@ function META:__tostring()
     return "number"
 end
 
-function META:SetMax(val)
+function META:SetMax(val)    
+    local err
+    
     if val.Type == "union" then
-        local max = {}
-        for _, obj in ipairs(val:GetData()) do
-            if obj.Type ~= "number" then
-                return type_errors.other({"unable to set the max value of ", self, " because ", val, " contains non numbers"})
-            end
-            if obj:IsLiteral() then
-                table.insert(max, obj)
-            else
-                self:SetLiteral(false)
-                self:SetData(nil)
-                
-                return self
-            end
+        val, err = val:GetLargestNumber()
+        if not val then
+            return val, err
         end
-        table.sort(max, function(a, b) return a:GetData() > b:GetData() end)
-        val = max[1]
     end
 
     if val.Type ~= "number" then
         return type_errors.other("max must be a number, got " .. tostring(val))
     end
 
-    if not val:IsLiteral() then
+    if val:IsLiteral() then
+        self.max = val
+    else
         self:SetLiteral(false)
         self:SetData(nil)
-        
-        return self
-    end
-
-    self.max = val
+    end 
     
     return self
 end

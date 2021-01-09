@@ -112,22 +112,21 @@ return function(META)
             return func
         end
 
+        local function genscopemeta(self, scope, env)
+            return setmetatable({}, {
+                __index = function(_, key)
+                    return types.View(self:GetLocalOrEnvironmentValue(key, env, scope))
+                end,
+                __newindex = function(_, key, val)
+                    return self:SetLocalOrEnvironmentValue(key, val, env, scope)
+                end
+            })
+        end
+
         function META:GetScopeHelper(scope)
-
-            local function genscopemeta(env)
-                return setmetatable({}, {
-                    __index = function(_, key)
-                        return types.View(self:GetLocalOrEnvironmentValue(key, env, scope))
-                    end,
-                    __newindex = function(_, key, val)
-                        return self:SetLocalOrEnvironmentValue(key, val, env, scope)
-                    end
-                })
-            end
-
             self.scope_helper = {
-                typesystem = genscopemeta("typesystem"),
-                runtime = genscopemeta("runtime")
+                typesystem = genscopemeta(self, scope, "typesystem"),
+                runtime = genscopemeta(self, scope, "runtime")
             }
 
             self.scope_helper.scope = scope

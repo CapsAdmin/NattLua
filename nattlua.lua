@@ -51,14 +51,14 @@ do
 		return str
 	end
 
+	local repl = function() 
+		return "\nbecause "
+	end
 	function META:OnDiagnostic(code, name, msg, severity, start, stop, ...)
         local level = 0
         
         local t = 0
-        msg = msg:gsub(" because ", function() 
-            t = t + 1
-            return ("\t"):rep(t) .. "\nbecause "
-        end)
+        msg = msg:gsub(" because ", repl)
         if t > 0 then
             msg = "\n" .. msg 
         end

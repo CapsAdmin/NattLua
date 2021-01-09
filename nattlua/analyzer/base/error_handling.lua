@@ -27,6 +27,26 @@ return function(META)
         return ok
     end
 
+    local function expand(tbl)
+        if type(tbl) == "string" then
+            return tbl
+        end
+
+        local out = {}
+        for i, v in ipairs(tbl) do
+            if type(v) == "table" then
+                if v.Type then
+                    table.insert(out, tostring(v))
+                else
+                    table.insert(out, expand(v))
+                end
+            else
+                table.insert(out, tostring(v))
+            end
+        end
+        return table.concat(out)
+    end
+    
     function META:ReportDiagnostic(node, msg --[[#: {reasons = {[number] = string}} | {[number} = string} ]], severity --[[#: "warning" | "error" ]])
 
         if self.SuppressDiagnostics then return end
@@ -45,26 +65,6 @@ return function(META)
             error("bad call to ReportDiagnostic")
         end
 
-        local function expand(tbl)
-            if type(tbl) == "string" then
-                return tbl
-            end
-
-            local out = {}
-            for i, v in ipairs(tbl) do
-                if type(v) == "table" then
-                    if v.Type then
-                        table.insert(out, tostring(v))
-                    else
-                        table.insert(out, expand(v))
-                    end
-                else
-                    table.insert(out, tostring(v))
-                end
-            end
-            return table.concat(out)
-        end
-        
         local msg_str = expand(msg)
 
         local key = msg_str .. "-" .. tostring(node) .. "-" .. "severity"

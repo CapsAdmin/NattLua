@@ -47,7 +47,7 @@ function META.Equal(a, b)
             a.suppress = true
             ok = akv.key:Equal(bkv.key) and akv.val:Equal(bkv.val)
             a.suppress = false
-
+            
             if ok then
                 break
             end
@@ -65,7 +65,6 @@ function META:GetLuaType()
     return self.Type
 end
 
-local level = 0
 function META:__tostring()
     if self.suppress then
         return "*self-table*"
@@ -85,8 +84,8 @@ function META:__tostring()
 
     local s = {}
 
-    level = level + 1
-    local indent = ("\t"):rep(level)
+    self.level = (self.level or 0) + 1
+    local indent = ("\t"):rep(self.level)
 
     if #self:GetData() <= 1 then
         indent = " "
@@ -104,14 +103,14 @@ function META:__tostring()
             s[i] = indent .. key .. " = " .. val
         end
     end
-    level = level - 1
+    self.level = self.level - 1
     self.suppress = false
 
     if #self:GetData() <= 1 then
         return "{" .. table.concat(s) .. " }"
     end
     
-    return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
+    return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(self.level) .. "}"
 end
 
 function META:GetLength()

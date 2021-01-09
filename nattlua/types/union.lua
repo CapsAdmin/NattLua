@@ -72,6 +72,33 @@ function META:AddType(e)
     return self
 end
 
+function META:RemoveDuplicates()
+    local indices = {}
+
+    for _, a in ipairs(self.data) do
+        for i, b in ipairs(self.data) do
+            if a ~= b and a:Equal(b) then
+                table.insert(indices, i)
+            end
+        end
+    end
+
+    if indices[1] then
+		local off = 0
+		local idx = 1
+
+		for i = 1, #self.data do
+			while i + off == indices[idx] do
+				off = off + 1
+				idx = idx + 1
+			end
+
+			self.data[i] = self.data[i + off]
+		end
+	end
+
+end
+
 function META:GetData()
     return self.data
 end
@@ -473,6 +500,30 @@ function META:MakeCallableUnion(analyzer, node)
     new_union.falsy_union = falsy_union
 
     return truthy_union:SetNode(node):SetSource(new_union):SetBinarySource(self)
+end
+
+function META:GetLargestNumber()
+    if #self:GetData() == 0 then
+        return type_errors.other({"union is empty"})
+    end
+
+    local max = {}
+    
+    for _, obj in ipairs(self:GetData()) do
+        if obj.Type ~= "number" then
+            return type_errors.other({"union must contain numbers only", self})
+        end
+
+        if obj:IsLiteral() then
+            table.insert(max, obj)
+        else
+            return obj
+        end
+    end
+    
+    table.sort(max, function(a, b) return a:GetData() > b:GetData() end)
+    
+    return max[1]
 end
 
 return META

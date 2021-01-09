@@ -171,9 +171,16 @@ function META:Copy(upvalues)
     local copy = LexicalScope()
 
     if upvalues then
-        for env, upvalues in pairs(self.upvalues) do
-            for _, upvalue in ipairs(upvalues.list) do
-                copy:CreateValue(upvalue.key, upvalue:GetValue(), env)
+        
+        if self.upvalues.typesystem then
+            for _, upvalue in ipairs(self.upvalues.typesystem.list) do
+                copy:CreateValue(upvalue.key, upvalue:GetValue(), "typesystem")
+            end
+        end
+
+        if self.upvalues.runtime then
+            for _, upvalue in ipairs(self.upvalues.runtime.list) do
+                copy:CreateValue(upvalue.key, upvalue:GetValue(), "runtime")
             end
         end
     end
