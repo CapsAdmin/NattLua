@@ -373,8 +373,8 @@ function helpers.JITOptimize()
 
     jit.opt.start(
         "maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
-        "maxrecord=4000", -- 4000: maximum number of recorded IR instructions
-        "maxirconst=5000", -- 500: maximum number of IR constants of a trace
+        "maxrecord=8000", -- 4000: maximum number of recorded IR instructions
+        "maxirconst=8000", -- 500: maximum number of IR constants of a trace
         "maxside=5000", -- 100: maximum number of side traces of a root trace
         "maxsnap=5000", -- 500: maximum number of snapshots for a trace
         "hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
@@ -405,17 +405,21 @@ end
 
 local function inject_full_path()
     local ok, lib = pcall(require, "jit.util") --[[# as jit.util & {_old_funcinfo = jit.util.funcinfo} ]]
-    if ok and lib.funcinfo then
-        lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
+	if ok then
+		if lib then
+			if lib.funcinfo then
+				lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
 
-        function lib.funcinfo(...)
-            local ret = {lib._old_funcinfo(...)}
-            local info = ret[1]
-            if info and type(info) == "table" and type(info.loc) == "string" and type(info.source) == "string" and type(info.currentline) == "number" and info.source:sub(1,1) == "@" then
-                info.loc = info.source:sub(2) .. ":" .. info.currentline
-            end
-            return unpack(ret)
-        end
+				function lib.funcinfo(...)
+					local ret = {lib._old_funcinfo(...)}
+					local info = ret[1]
+					if info and type(info) == "table" and type(info.loc) == "string" and type(info.source) == "string" and type(info.currentline) == "number" and info.source:sub(1,1) == "@" then
+						info.loc = info.source:sub(2) .. ":" .. info.currentline
+					end
+					return unpack(ret)
+				end
+			end
+		end
     end
 end
 
@@ -482,20 +486,20 @@ function helpers.EnableJITDumper()
                     out:write(format("[TRACE %3s %s%s -- fallback to interpreter]\n",
                     tr, startex, startloc))
                 elseif ltype == "stitch" then
-                 --   out:write(format("[TRACE %3s %s%s %s %s]\n",
-                  --  tr, startex, startloc, ltype, fmtfunc(func, pc)))
+                    out:write(format("[TRACE %3s %s%s %s %s]\n",
+                    tr, startex, startloc, ltype, fmtfunc(func, pc)))
                 elseif link == tr or link == 0 then
-                 --  out:write(format("[TRACE %3s %s%s %s]\n",
-                   -- tr, startex, startloc, ltype))
+                   out:write(format("[TRACE %3s %s%s %s]\n",
+                    tr, startex, startloc, ltype))
                 elseif ltype == "root" then
-                    --out:write(format("[TRACE %3s %s%s -> %d]\n",
-                    --tr, startex, startloc, link))
+                    out:write(format("[TRACE %3s %s%s -> %d]\n",
+                    tr, startex, startloc, link))
                 else
-                  --  out:write(format("[TRACE %3s %s%s -> %d %s]\n",
-                  --  tr, startex, startloc, link, ltype))
+                    out:write(format("[TRACE %3s %s%s -> %d %s]\n",
+					tr, startex, startloc, link, ltype))
                 end
             else
-            --    out:write(format("[TRACE %s]\n", what))
+				out:write(format("[TRACE %s]\n", what))
             end
             out:flush()
         end
