@@ -13,7 +13,7 @@ do
 
     local M = {}
 
-    local function generic_function(C_name--[[#: const string ]], cdef--[[#: const string ]], alias--[[#: const string | nil ]], size_error_handling--[[#: nil | true | false ]])
+    local function generic_function(C_name--[[#: literal string ]], cdef--[[#: literal string ]], alias--[[#: literal string | nil ]], size_error_handling--[[#: nil | true | false ]])
         ffi.cdef(cdef)
 
         alias = alias or C_name
@@ -734,7 +734,7 @@ do
     end
 end
 
-local function capture_flags(what --[[#: const string]]) --[[#: const {
+local function capture_flags(what --[[#: literal string]]) --[[#: literal {
     lookup = {[string] = number},
     reverse = {[number] = string},
     strict_reverse = (function(number): string),
