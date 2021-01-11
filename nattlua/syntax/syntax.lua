@@ -36,7 +36,7 @@ syntax.KeywordValues --[[#: {[number] = string} ]]  = {
 }
 
 syntax.PrefixOperators --[[#: {[number] = string} ]]  = {
-    "-", "#", "not", "!", "~",
+    "-", "#", "not", "!", "~", "supertype"
 }
 
 syntax.PostfixOperators --[[#: {[number] = string} ]]  = {
