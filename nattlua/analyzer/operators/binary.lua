@@ -169,7 +169,11 @@ return function(META)
                 end
                 return l:Extend(r)
             elseif op == ".." then
-                return l:Copy():SetMax(r)
+                if l.Type == "string" and r.Type == "string" then
+                    return types.String(l:GetData() .. r:GetData()):SetLiteral(true)
+                else
+                    return l:Copy():SetMax(r)
+                end
             elseif op == ">" then
                 return types.Symbol((r:IsSubsetOf(l)))
             elseif op == "<" then
