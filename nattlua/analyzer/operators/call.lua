@@ -236,7 +236,7 @@ return function(META)
                 table.insert(self.mutated_types, arg)
             else
                 -- if it's a const argument we pass the incoming value
-                if not contract.const_argument then
+                if not contract.literal_argument then
                     arguments:Set(i, contract:Copy())
                 end
             end

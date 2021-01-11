@@ -77,7 +77,11 @@ return function(META)
         end
 
         if l.Type == "any" then
-            return types.Any()
+            local obj = types.Any()
+            if op == "literal" then
+                obj.literal_argument = true
+            end
+            return obj
         end
 
         if env == "typesystem" then
@@ -88,6 +92,11 @@ return function(META)
                     return type_errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
                 end
                 return obj:GetContract() or obj
+            elseif op == "supertype" then
+                l = l:Copy()
+                l:SetData()
+                l:SetLiteral(false)
+                return l
             elseif op == "unique" then
                 local obj = self:AnalyzeExpression(node.right, "typesystem")
                 obj:MakeUnique(true)
@@ -139,8 +148,8 @@ return function(META)
             elseif l.Type == "string" then
                 return types.Number(l:GetData() and #l:GetData() or nil):SetLiteral(l:IsLiteral())
             end
-        elseif op == "const" then
-            l.const_argument = true
+        elseif op == "literal" then
+            l.literal_argument = true
             return l
         end
 

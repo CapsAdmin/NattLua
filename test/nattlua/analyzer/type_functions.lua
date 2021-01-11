@@ -514,7 +514,7 @@ run[[
 ]]
 
 run[[
-    local function test(a: const string)
+    local function test(a: literal string)
         return a:lower()
     end
     

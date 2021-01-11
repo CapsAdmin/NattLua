@@ -588,7 +588,7 @@ run[[
 ]]
 
 run[[
-    local function test(): const number 
+    local function test(): literal number 
         return 1
     end 
     
