@@ -95,7 +95,18 @@ function META:__tostring()
         for i, keyval in ipairs(self:GetContract():GetData()) do
             local key, val = tostring(self:GetData()[i] and self:GetData()[i].key or "undefined"), tostring(self:GetData()[i] and self:GetData()[i].val or "undefined")
             local tkey, tval = tostring(keyval.key), tostring(keyval.val)
-            s[i] = indent .. tkey .. " ⊃ ".. key .. " = " .. tval .. " ⊃ " .. val
+
+            if key == tkey then
+                s[i] = indent .. key
+            else
+                s[i] = indent .. tkey .. " ⊃ ".. key
+            end
+
+            if val == tval then
+                s[i] = s[i] .. " = " .. val
+            else
+                s[i] = s[i] .. " = " .. tval .. " ⊃ " .. val
+            end
         end
     else
         for i, keyval in ipairs(self:GetData()) do
