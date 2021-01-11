@@ -421,7 +421,7 @@ return function(META)
             local contract = obj:GetReturnTypes():Copy():SetReferenceId(nil)
 
             for i,v in ipairs(return_contract:GetData()) do
-                if v.const_argument then
+                if v.literal_argument then
                     contract:Set(i, return_result:Get(i))
                 end
             end
