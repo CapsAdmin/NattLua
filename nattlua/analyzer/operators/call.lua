@@ -217,7 +217,7 @@ return function(META)
                     arg = types.Nil()
                     ok = true
                 else
-                    ok, reason = type_errors.other("argument #" .. i .. " expected " .. tostring(contract) .. " got nil")
+                    ok, reason = type_errors.other({"argument #", i, " expected ", contract, " got nil"})
                 end
             elseif arg.Type == "table" and contract.Type == "table" then
                 ok, reason = arg:FollowsContract(contract)
@@ -227,7 +227,7 @@ return function(META)
 
             if not ok then
                 restore_mutated_types(self)                        
-                return type_errors.other("argument #" .. i .. " " .. tostring(arg) .. ": " .. reason)
+                return type_errors.other({"argument #", i, " ", arg, ": ", reason})
             end
 
             if arg.Type == "table" then
