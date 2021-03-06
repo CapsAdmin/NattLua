@@ -616,7 +616,7 @@ do
 end
 
 type ffi = {
-    errno = number,
+    errno = (function(nil | number): number),
     os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
     arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
 	C = {},
@@ -627,7 +627,7 @@ type ffi = {
 	copy = (function(cdata, cdata | nil, number | string | nil): nil),
 	alignof = (function(ctype): number),
 	cast = (function(ctype | string, cdata | string): cdata),
-	typeof = (function(ctype): ctype),
+	typeof = (function(ctype, any...): ctype),
 	load = (function(string, boolean): userdata) | (function(string): userdata),
 	sizeof = (function(ctype, number): number) | (function(ctype): number),
 	string = (function(cdata, number | nil): string),
