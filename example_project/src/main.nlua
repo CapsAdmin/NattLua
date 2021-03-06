@@ -6,7 +6,7 @@ ffi.cdef([[
     struct DIR {}
 ]])
 
-if jit.os ~= "OSX" then
+if jit.os == "OSX" then
     ffi.cdef([[
         struct dirent {
             int foo;
@@ -18,8 +18,8 @@ if jit.os ~= "OSX" then
 else
     ffi.cdef([[
         struct dirent {
-            long foo;
-            long bar;
+            const char* foo;
+            const char* bar;
         };
 
         void open(struct dirent, struct DIR);
