@@ -1,10 +1,45 @@
 local type_errors = require("nattlua.types.error_messages")
 
+--[[#
+
+    local function GetSet<|tbl: any, name: literal string, default: any|>
+        T[name] = default
+        
+        T["Set" .. name] = function(self, val: typeof default) 
+            self[name] = val 
+        end
+
+        T["Get" .. name] = function(self): typeof default
+            return self[name]
+        end
+    end
+
+    type BaseType = {
+
+    }
+
+]]
+
 return function(META --[[#: {
+    @Name = "BaseType",
     Type = string,
     [string] = any,
 }]])
     META.__index = META
+
+    --[[
+        type META.literal = boolean
+        type META.data = any
+        type META.Contract = any
+        type META.MetaTable = any
+        type META.parent = any
+        type META.reference_id = number
+        type META.source_right = any
+        type META.source_left = any
+        type META.source = any
+        type META.node = any
+        type META.node_label = any
+    ]]
 
     function META:IsUncertain()
         return self:IsTruthy() and self:IsFalsy()
@@ -35,7 +70,7 @@ return function(META --[[#: {
         return self
     end 
 
-    function META:SetBinarySource(l,r)
+    function META:SetBinarySource(l, r)
         self.source_left = l
         self.source_right = r        
         return self
