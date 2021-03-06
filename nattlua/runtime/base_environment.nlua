@@ -393,7 +393,9 @@ do -- globals
 	end
 
 	type function loadfile(path: string)
-		if path.Type == "any" then return types.Any() end
+		if not path:IsLiteral() then
+			return types.Any()
+		end
 
 		local f = assert(io.open(path:GetData(), "rb"))
 		local code = f:read("*all")
