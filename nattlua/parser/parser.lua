@@ -11,6 +11,10 @@ require("nattlua.parser.base_parser")(META)
 require("nattlua.parser.parser_typesystem")(META)
 require("nattlua.parser.parser_extra")(META)
 
+function META:ResolvePath(path)
+    return path
+end
+
 do
     function META:IsBreakStatement()
         return self:IsCurrentValue("break")
@@ -250,7 +254,13 @@ do  -- function
                 node.self_call = node.expression.right.self_call
             end
 
-            self:ReadFunctionBody(node)
+            if self:IsCurrentValue("<|") then
+                node.kind = "generics_type_function"
+                
+                self:ReadGenericsTypeFunctionBody(node)
+            else
+                self:ReadFunctionBody(node)
+            end
 
             return node:End()
         end

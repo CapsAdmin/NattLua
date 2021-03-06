@@ -29,6 +29,7 @@ return function(META)
             self:AnalyzeDestructureAssignment(statement)
         elseif 
             statement.kind == "function" or 
+            statement.kind == "generics_type_function" or 
             statement.kind == "local_function" or 
             statement.kind == "local_generics_type_function" or 
             statement.kind == "local_type_function" or 

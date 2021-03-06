@@ -11,6 +11,7 @@ return function(META)
     require("nattlua.analyzer.expressions.table")(META)
     require("nattlua.analyzer.expressions.atomic_value")(META)
     require("nattlua.analyzer.expressions.list")(META)
+    require("nattlua.analyzer.expressions.import")(META)
 
     function META:AnalyzeExpression(node, env)
         self.current_expression = node
@@ -49,6 +50,8 @@ return function(META)
             return self:AnalyzePostfixExpressionIndexExpression(node, env)
         elseif node.kind == "postfix_call" then
             return self:AnalyzePostfixCallExpression(node, env)
+        elseif node.kind == "import" then
+            return self:AnalyzeImportExpression(node, env)
         else
             self:FatalError("unhandled expression " .. node.kind)
         end

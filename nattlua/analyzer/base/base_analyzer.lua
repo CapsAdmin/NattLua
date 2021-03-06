@@ -142,8 +142,6 @@ return function(META)
             
             local res = {pcall(func, ...)}
 
-  
-
             local ok = table.remove(res, 1)
 
             if not ok then 

@@ -1,0 +1,29 @@
+import_type<|"typed_ffi.nlua"|>
+
+local ffi = require("ffi")
+
+ffi.cdef([[
+    struct DIR {}
+]])
+
+if jit.os ~= "OSX" then
+    ffi.cdef([[
+        struct dirent {
+            int foo;
+            int bar;
+        };
+
+        void open(struct dirent, struct DIR);
+    ]])
+else
+    ffi.cdef([[
+        struct dirent {
+            long foo;
+            long bar;
+        };
+
+        void open(struct dirent, struct DIR);
+    ]])    
+end
+
+print(ffi.C.open)

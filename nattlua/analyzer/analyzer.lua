@@ -58,6 +58,10 @@ function META:NewType(node, type, data, literal)
     return obj
 end
 
+function META:ResolvePath(path)
+    return path
+end
+
 do
     local guesses = {
         {pattern = "count", type = "number"},

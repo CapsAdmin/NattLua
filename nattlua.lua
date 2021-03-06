@@ -233,6 +233,9 @@ do
 		if self.dump_events or self.config and self.config.dump_analyzer_events then
 			analyzer.OnEvent = analyzer.DumpEvent
 		end
+
+		analyzer.ResolvePath = self.OnResolvePath
+
 		local args = {...}
 		local ok, res = xpcall(function() 
 				local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))

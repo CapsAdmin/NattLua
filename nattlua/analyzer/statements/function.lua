@@ -7,7 +7,7 @@ return function(META)
                 self:AnalyzeFunctionExpression(statement, env), 
                 env
             )
-        elseif statement.kind == "function" or statement.kind == "type_function" then
+        elseif statement.kind == "function" or statement.kind == "type_function" or statement.kind == "generics_type_function" then
             local env = statement.kind == "function" and "runtime" or "typesystem"
             local key = statement.expression
             

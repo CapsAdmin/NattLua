@@ -30,7 +30,11 @@ function META:EmitExpression(node, from_assignment)
     elseif node.kind == "postfix_operator" then
         self:EmitPostfixOperator(node)
     elseif node.kind == "postfix_call" then
-        self:EmitCall(node)
+        if node.type_call then
+            self:EmitInvalidLuaCode("EmitCall", node)
+        else
+            self:EmitCall(node)
+        end
     elseif node.kind == "postfix_expression_index" then
         self:EmitExpressionIndex(node)
     elseif node.kind == "value" then
@@ -775,7 +779,11 @@ do -- types
         elseif node.kind == "postfix_operator" then
             self:EmitPostfixOperator(node)
         elseif node.kind == "postfix_call" then
-            self:EmitCall(node)
+            if node.type_call then
+                self:EmitInvalidLuaCode("EmitCall", node)
+            else
+                self:EmitCall(node)
+            end
         elseif node.kind == "postfix_expression_index" then
             self:EmitExpressionIndex(node)
         elseif node.kind == "value" then

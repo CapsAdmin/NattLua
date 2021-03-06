@@ -123,7 +123,23 @@ return function(META)
             :ExpectKeyword("local")
             :ExpectKeyword("function")
             :ExpectSimpleIdentifier()
-            self:ReadTypeFunctionBody2(node)
+            self:ReadGenericsTypeFunctionBody(node)
+            return node:End()
+        end
+    end
+
+    do
+        function META:IsGenericsTypeFunctionStatement()
+            return self:IsValue("function") and self:IsValue("<|", 2)
+        end
+
+        function META:ReadGenericsTypeFunctionStatement()
+            local node = self:Statement("generics_type_function")
+            :ExpectKeyword("function")
+            node.expression = self:ReadIndexExpression()
+            node:ExpectSimpleIdentifier()
+    
+            self:ReadGenericsTypeFunctionBody(node)
             return node:End()
         end
     end
@@ -200,7 +216,7 @@ return function(META)
         return node
     end
 
-    function META:ReadTypeFunctionBody2(node)
+    function META:ReadGenericsTypeFunctionBody(node)
         node.tokens["arguments("] = self:ReadValue("<|")
 
         node.identifiers = self:ReadIdentifierList()
@@ -575,7 +591,7 @@ return function(META)
             node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
             local nl = require("nattlua")
-            local root, err = nl.ParseFile(node.path, self.root)
+            local root, err = nl.ParseFile(self:ResolvePath(node.path), self.root)
 
             if not root then
                 self:Error("error importing file: $1", start, start, err)

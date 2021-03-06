@@ -95,7 +95,14 @@ function types.View(obj)
     return setmetatable({obj = obj, GetType = function() return obj end}, {
         __index = function(_, key) return types.View(assert(obj:Get(key))) end,
         __newindex = function(_, key, val) assert(obj:Set(key, val)) end,
-        __call = function(_, ...) return types.View(assert(obj:Call(...))) end,
+        __call = function(_, analyzer, ...) 
+            
+            analyzer.PreferTypesystem = obj:GetNode().kind:find("type_function", nil, true)
+			local returned_tuple = assert(analyzer:Call(obj, types.Tuple({...})))
+			analyzer.PreferTypesystem = nil
+
+			return returned_tuple:Unpack()
+        end,
     })
 end
 

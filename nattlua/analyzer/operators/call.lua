@@ -338,6 +338,7 @@ return function(META)
             local use_contract = obj.explicit_arguments and 
                 env ~= "typesystem" and 
                 function_node.kind ~= "local_generics_type_function" and 
+                function_node.kind ~= "generics_type_function" and 
                 not call_node.type_call
 
             if use_contract then

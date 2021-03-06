@@ -310,7 +310,7 @@ do -- globals
 							return analyzer.loaded[path]
 						end
 
-						local code_data = require("nattlua").File(path)
+						local code_data = require("nattlua").File(analyzer:ResolvePath(path))
 
 						assert(code_data:Lex())
 						assert(code_data:Parse())
@@ -342,7 +342,9 @@ do -- globals
             return analyzer.loaded[path]
         end
 
-        local code_data = require("nattlua").File(path)
+
+
+        local code_data = assert(require("nattlua").File(analyzer:ResolvePath(path)))
 
         assert(code_data:Lex())
         assert(code_data:Parse())

@@ -81,7 +81,7 @@ return function(META --[[#: {
         return self
     end
 
-    function META:GetNode(node)
+    function META:GetNode()
         return self.node
     end
 

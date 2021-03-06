@@ -28,7 +28,7 @@ return function(META)
                     args[i] = self:GuessTypeFromIdentifier(key)
                 end
             end
-        elseif node.kind == "type_function" or node.kind == "local_type_function" or node.kind == "local_generics_type_function" then
+        elseif node.kind == "type_function" or node.kind == "local_type_function" or node.kind == "local_generics_type_function" or node.kind == "generics_type_function" then
             for i, key in ipairs(node.identifiers) do
                 if key.identifier then
                     args[i] = self:AnalyzeExpression(key, "typesystem")

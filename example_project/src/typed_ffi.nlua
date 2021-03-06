@@ -1,0 +1,140 @@
+-- a "generic type"
+function CDataPointer<|T: any|>
+	return {
+		[number] = T,
+	}
+end
+
+type VoidPointer = {
+	@MetaTable = self, -- this is a shortcut to setmetatable<|VoidPointer, VoidPointer|>
+	__index = function() error("cannot index a void pointer") end,
+	__newindex = function() error("cannot index a void pointer") end
+}
+
+type ffi.C = {
+	@MetaTable = self,
+	__index = function(self, field: string)
+		-- this is a type function, but the code here is executed by the checker
+
+		if not field:IsLiteral() then error("field must be a literal") end
+
+		local ffi = require("ffi")
+		local tprint = require("nattlua.other.tprint")
+
+		-- TODO: use current file or something
+		local id = "global"
+		if analyzer:GetScope():IsUncertain() then
+			id = tostring(analyzer:GetScope():FindResponsibleType(env.typesystem.jit.os:GetType()) or "global")
+		end
+
+
+		local function cast(info)
+			if info.what == "func" then
+				local arguments = {}
+				
+				for _, arg_info in ipairs(info.children) do
+					table.insert(arguments, (cast(arg_info.type)))
+				end
+
+				local f = types.Function({
+					node = analyzer.current_expression,
+					ret = types.Tuple({info.return_type.what == "void" and types.Nil() or cast(info.return_type)}),
+					arg = types.Tuple(arguments)
+				})
+				
+				f:SetNode(analyzer.current_expression)
+
+				return f
+			elseif info.what == "struct" then
+				
+				local union = types.Union()
+				for _, info in ipairs(analyzer.cdef_reflection[id][info.name]) do
+					local struct = types.Table()
+					
+					for _, info in ipairs(info.children) do
+						struct:Set(types.String(info.name):SetLiteral(true), cast(info.type))
+					end
+					
+					union:AddType(struct)
+				end
+
+				return union
+			elseif info.what == "ptr" then
+				if info.element_type.what == "void" then
+					return env.typesystem.VoidPointer:GetType()
+				else
+					return env.typesystem.CDataPointer(analyzer, cast(info.element_type))
+				end
+			elseif info.what == "int" then
+				return types.Number()
+			else
+				error(debug.traceback("NYI " .. info.what))
+			end
+		end
+
+		local union = types.Union()
+
+		local infos =  analyzer.cdef_reflection[id][field:GetData()]
+
+		if not infos then
+			error("no type information for '" .. field:GetData() .. "' in ffi.C", 2)
+		end
+
+		for _, info in ipairs(infos) do
+			union:AddType(cast(info))
+		end
+
+		return union
+	end
+}
+
+type function ffi.cdef(c_declaration: string, ...)
+	assert(c_declaration:IsLiteral(), "c_declaration must be a string literal")
+
+	analyzer.cdef_history = analyzer.cdef_history or {global = {}}
+	analyzer.cdef_reflection = analyzer.cdef_reflection or {global = {}}
+
+	local isolated_cdef = require("nattlua.other.isolated_ffi_cdef")
+
+	local ffi = require("ffi")
+
+	if ... then 
+		error("NYI")
+	end
+
+	-- TODO: use current file or something
+	local id = "global"
+	
+	if analyzer:GetScope():IsUncertain() then
+		id = analyzer:GetScope():FindResponsibleType(env.typesystem.jit.os:GetType())
+		id = id or analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.os:GetType())
+
+		if not id then
+			error("must use ffi.os or jit.os to enter scope")
+		end
+
+		id = tostring(id)
+
+		analyzer.cdef_reflection[id] = analyzer.cdef_reflection[id] or {}
+
+		-- replay global history so that we don't error inside cdef
+		for _, cdecl in ipairs(analyzer.cdef_history["global"]) do
+			isolated_cdef(id, cdecl)
+		end
+	end
+
+	analyzer.cdef_history[id] = analyzer.cdef_history[id] or {}
+	analyzer.cdef_reflection[id] = analyzer.cdef_reflection[id] or {}
+
+	table.insert(analyzer.cdef_history[id], c_declaration:GetData())
+
+	local types = isolated_cdef(id, c_declaration:GetData())
+
+	for _, info in ipairs(types) do
+		analyzer.cdef_reflection[id][info.name] = analyzer.cdef_reflection[id][info.name] or {}
+		table.insert(analyzer.cdef_reflection[id][info.name], info)
+
+		analyzer.cdef_reflection["global"][info.name] = analyzer.cdef_reflection["global"][info.name] or {}
+		table.insert(analyzer.cdef_reflection["global"][info.name], info)		
+	end
+end

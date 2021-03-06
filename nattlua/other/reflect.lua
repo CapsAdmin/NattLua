@@ -361,6 +361,10 @@ function reflect.typeof(x) -- refct = reflect.typeof(ct)
   return refct_from_id(tonumber(ffi.typeof(x)))
 end
 
+function reflect.typeof_id(id) -- refct = reflect.typeof(ct)
+  return refct_from_id(tonumber(id))
+end
+
 function reflect.getmetatable(x) -- mt = reflect.getmetatable(ct)
   return (miscmap or init_miscmap())[-tonumber(ffi.typeof(x))]
 end

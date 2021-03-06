@@ -222,6 +222,20 @@ function META:GetTestCondition()
     return obj, scope and scope.test_condition
 end
 
+function META:FindResponsibleType(obj)
+    local typ = self:GetTestCondition()
+    if typ then
+        local exp = types.FindInType(typ, obj)
+        if exp then
+            if self.test_condition_inverted then
+                return exp.truthy_union
+            else
+                return exp.falsy_union
+            end
+        end
+    end
+end
+
 function META:GetRoot()
     local parent = self
     for i = 1, 1000 do
