@@ -109,7 +109,7 @@ return function(META)
         local func
         if env == "typesystem" then
             if node.statements and (node.kind == "type_function" or node.kind == "local_type_function") then
-                func = self:CompileLuaTypeCode("return " .. node:Render({}), node)()
+                func = self:CompileLuaTypeCode("return " .. node:Render({uncomment_types = true}), node)()
             end
         end
 

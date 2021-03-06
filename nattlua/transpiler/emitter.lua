@@ -22,7 +22,7 @@ function META:EmitExpression(node, from_assignment)
     elseif node.kind == "function" then
         self:EmitAnonymousFunction(node)
     elseif node.kind == "type_function" then
-        self:EmitTypeFunction(node)
+        self:EmitInvalidLuaCode("EmitTypeFunction", node)
     elseif node.kind == "table" then
         self:EmitTable(node)
     elseif node.kind == "prefix_operator" then
@@ -199,7 +199,7 @@ do
         emit_function_body(self, node)
     end
 
-    function META:EmitTypeFunctionStatement(node) do return end
+    function META:EmitTypeFunctionStatement(node)
         self:Whitespace("\t")
         if node.tokens["local"] then
             self:EmitToken(node.tokens["local"])
@@ -207,7 +207,9 @@ do
         end
         self:EmitToken(node.tokens["function"])
         self:Whitespace(" ")
-        self:EmitExpression(node.expression or node.identifier)
+        if node.expression or node.identifier then
+            self:EmitExpression(node.expression or node.identifier)
+        end
         emit_function_body(self, node)
     end
 end
@@ -519,7 +521,7 @@ function META:EmitStatement(node)
     elseif node.kind == "do" then
         self:EmitDoStatement(node)
     elseif node.kind == "type_function" then
-        self:EmitTypeFunctionStatement(node)
+        self:EmitInvalidLuaCode("EmitTypeFunctionStatement", node)
     elseif node.kind == "function" then
         self:EmitFunction(node)
     elseif node.kind == "local_function" then
@@ -527,7 +529,7 @@ function META:EmitStatement(node)
     elseif node.kind == "local_type_function" then
         self:EmitLocalTypeFunction(node)
     elseif node.kind == "local_generics_type_function" then
-        self:EmitLocalGenericsTypeFunction(node)
+        self:EmitInvalidLuaCode("EmitLocalGenericsTypeFunction", node)
     elseif node.kind == "destructure_assignment" then
         self:EmitDestructureAssignment(node)
     elseif node.kind == "assignment" then
@@ -765,7 +767,7 @@ do -- types
         if node.kind == "binary_operator" then
             self:EmitTypeBinaryOperator(node)
         elseif node.kind == "type_function" then
-            self:EmitTypeFunction(node)
+            self:EmitInvalidLuaCode("EmitTypeFunction", node)
         elseif node.kind == "table" then
             self:EmitTable(node)
         elseif node.kind == "prefix_operator" then
@@ -794,6 +796,18 @@ do -- types
             for _, node in node.tokens[")"]:pairs() do
                 self:EmitToken(node)
             end
+        end
+    end
+
+    function META:EmitInvalidLuaCode(func, ...)
+        if not self.config.uncomment_types then
+            self:Emit("--[==[")
+        end
+        
+        self[func](self, ...)
+
+        if not self.config.uncomment_types then
+            self:Emit("]==]")
         end
     end
 end
