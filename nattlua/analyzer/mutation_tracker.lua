@@ -1,4 +1,5 @@
 local types = require("nattlua.types.types")
+local tprint = require("nattlua.other.tprint")
 
 local META = {}
 META.__index = META
@@ -45,6 +46,7 @@ function META:GetValueFromScope(scope, upvalue, key)
 
         do --[[
             if mutations occured in an if statement that has an else part, remove all mutations before the if statement
+            but only if we are inside that scope
 
         ]] 
             for i = #mutations, 1, -1 do
@@ -52,13 +54,15 @@ function META:GetValueFromScope(scope, upvalue, key)
 
                 if change.scope.if_statement and change.scope.test_condition_inverted then
                     
-                    local statement = change.scope.if_statement
+                    local if_statement = change.scope.if_statement
                     while true do
                         local change = mutations[i]
                         if not change then break end
-                        if change.scope.if_statement ~= statement then
+                        if change.scope.if_statement ~= if_statement then
                             for i = i, 1, -1 do
-                                table.remove(mutations, i)
+                                if mutations[i].scope == scope then
+                                    table.remove(mutations, i)
+                                end
                             end
                             break
                         end                                       

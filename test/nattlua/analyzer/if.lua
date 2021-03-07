@@ -1100,6 +1100,25 @@ run[[
     end
 ]]
 
+run[[
+    local MAYBE1: boolean
+    local MAYBE2: boolean
+
+    local x =  1
+
+    if MAYBE1 then
+        x = 2
+    else
+        if MAYBE2 then
+            x = 3
+        else
+            x = 4
+        end
+    end
+
+    type_assert(x, _ as 2 | 3 | 4)
+]]
+
 pending([[
     local a: nil | 1
 
@@ -1210,3 +1229,5 @@ pending[[
         type_assert(x, 1)
     end
 ]]
+
+
