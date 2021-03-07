@@ -7,6 +7,11 @@ require("nattlua.types.base")(META)
 
 function META.Equal(a,b)
     if a.suppress then return true end
+
+    if b.Type ~= "union" and #a.data == 1 then
+        return a.data[1]:Equal(b)
+    end
+
     if a.Type ~= b.Type then return false end
     if #a.data ~= #b.data then return false end
 
