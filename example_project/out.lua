@@ -42,7 +42,9 @@ function table.print(...)
     return tprint(...)
 end
 IMPORTS = IMPORTS or {}
-IMPORTS['example_project/src/platforms/unix/filesystem.nlua'] = function(...) local OSX = jit.os == "OSX"
+IMPORTS['example_project/src/platforms/unix/filesystem.nlua'] = function(...) -- we need to do this, doing if jit.os == "OSX" directly will work but i don't 
+-- yet support doing it in multiple places
+local OSX = jit.os == "OSX"
 local X64 = jit.arch == "x64"
 
 local fs = _G.fs or {}
@@ -655,17 +657,14 @@ return fs
 --[==[-- this will use some reflection api to track types from ffi.cdef
 import_type<|"typed_ffi.nlua"|>]==]
 
-local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))--[==[
+local ffi = require("ffi")
 
-local function()
-    analyzer:AnalyzeUnreachableCode()
-end]==]
-temp()--[==[
+local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))--[==[
 
 print<|fs|>]==] -- typesystem call, it won't be in build output
 
 --[[
-   {
+{
         "open" = function⦗nil | string, nil | string⦘: ⦗VoidPointer | nil⦘,
         "read" = function⦗VoidPointer | nil, number, number, VoidPointer | nil⦘: ⦗number⦘,
         "write" = function⦗VoidPointer | nil, number, number, VoidPointer | nil⦘: ⦗number⦘,
@@ -675,12 +674,17 @@ print<|fs|>]==] -- typesystem call, it won't be in build output
         "eof" = function⦗VoidPointer | nil⦘: ⦗number⦘,
         "setcustomattribute" = function⦗string, string⦘: ⦗nil | true, string⦘,
         "getcustomattribute" = function⦗string⦘: ⦗nil | string, string⦘,
-        "watch" = function⦗any, any⦘: ⦗⦘,
-        "get_files" = function⦗string⦘: ⦗nil | { }, string⦘,
-        "get_files_recursive" = function⦗string, false | nil | true⦘: ⦗
-            nil | {number ⊃ 0 = number | string ⊃ 2}, 
-            string | { number ⊃ undefined = {"path" = string, "error" = string} ⊃ undefined 
+        "watch" = function⦗string, { number = ⦗"access" | "attrib" | "close_nowrite" | "close_write" | "create" | "delete" | "delete_self" | "dont_follow" | "excl_unlink" | "ignored" | "isdir" | "mask_add" | "mask_create" | "modify" | "move_self" | "moved_from" | "moved_to" | "oneshot" | "onlydir" | "open" | "q_overflow" | "unmount"⦘ }⦘: ⦗nil | {
+            "Read" = function⦗*self-table* | any⦘: ⦗⦘,
+            "Remove" = function⦗*self-table* | any⦘: ⦗⦘
         }⦘,
+        "get_files" = function⦗string⦘: ⦗nil | { }, string⦘,
+        "get_files_recursive" = function⦗string, false | nil | true⦘: ⦗nil | {
+            number ⊃ 0 = number | string ⊃ 2
+        }, string | { number ⊃ undefined = {
+            "path" = string,
+            "error" = string
+        } ⊃ undefined }⦘,
         "get_attributes" = function⦗string, false | nil | true⦘: ⦗nil | {
             "last_accessed" = nil | number,
             "last_changed" = nil | number,
@@ -702,6 +706,4 @@ print<|fs|>]==] -- typesystem call, it won't be in build output
 }
 ]]
 
-for k,v in pairs(fs.get_files(".")) do
-    print(k,v)
-end
+--for k,v in pairs(fs.get_files(".")) do print(k,v) end

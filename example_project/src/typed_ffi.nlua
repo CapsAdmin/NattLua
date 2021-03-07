@@ -5,6 +5,17 @@ function CDataPointer<|T: any|>
 	}
 end
 
+type CType = {
+	@MetaTable = self,
+	__call = function(self, init) 
+		local t = self:Get("struct_type") 
+
+		analyzer:Assert(init:GetNode(), init:IsSubsetOf(t))
+
+		return t:Copy()
+	end,
+}
+
 type VoidPointer = {
 	@Name = "VoidPointer",
 	@MetaTable = self, -- this is a shortcut to setmetatable<|VoidPointer, VoidPointer|>
@@ -12,103 +23,148 @@ type VoidPointer = {
 	__newindex = function() error("cannot index a void pointer") end
 }
 
-type function ffi.cdef(c_declaration: string, ...)
-	assert(c_declaration:IsLiteral(), "c_declaration must be a string literal")
+local type function cast(info, ...)
+	local cast = env.typesystem.cast:GetType():GetData().lua_function 
 
-	local isolated_cdef = require("nattlua.other.isolated_ffi_cdef")
-
-	local id = "global"
+	if info.what == "func" then
+		local arguments = {}
 	
-	do
-		analyzer.cdef_history = analyzer.cdef_history or {global = {}}
-		
-		if analyzer:GetScope():IsUncertain() then
-			id = analyzer:GetScope():FindResponsibleType(env.typesystem.jit.os:GetType())
-			--id = id or analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.os:GetType())
-			--id = id or analyzer:GetScope():FindResponsibleType(env.typesystem.jit.arch:GetType())
-			--id = id or analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.arch:GetType())
+		for _, arg_info in ipairs(info.children) do
+			table.insert(arguments, (cast(arg_info.type, ...)))
+		end
 
-			if not id then
-				error("must use ffi.os or jit.os to enter scope", 2)
+		if info.vararg then
+			table.insert(arguments, types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)))
+		end
+
+		local f = types.Function({
+			node = analyzer.current_expression,
+			ret = types.Tuple({info.return_type.what == "void" and types.Nil() or cast(info.return_type, ...)}),
+			arg = types.Tuple(arguments)
+		})
+		
+		f:SetNode(analyzer.current_expression)
+
+		return f
+	elseif info.what == "struct" then
+		
+		if not info.children then
+			local val
+			local cdecl, index = ...
+			
+			if index then
+				val = index(info)
+			else
+				val = analyzer:IndexOperator(cdecl:GetNode(), env.typesystem.ffi.C:GetType(), types.String(info.name):SetLiteral(true), "runtime")
 			end
-		
-			id = tostring(id)
 
-			for _, cdecl in ipairs(analyzer.cdef_history["global"]) do
-				isolated_cdef(id, cdecl)
+			if val then
+				return val
 			end
 		end
+
+		local struct = types.Table()
+
+		for _, info in ipairs(info.children) do
+			struct:Set(types.String(info.name):SetLiteral(true), cast(info.type, ...))
+		end
 		
-		analyzer.cdef_history[id] = analyzer.cdef_history[id] or {}
-
-		table.insert(analyzer.cdef_history[id], c_declaration:GetData())
-	end
-	local tprint = require("nattlua.other.tprint")
-	local function cast(info)
-		if info.what == "func" then
-			local arguments = {}
-		
-			for _, arg_info in ipairs(info.children) do
-				table.insert(arguments, (cast(arg_info.type)))
-			end
-
-			if info.vararg then
-				table.insert(arguments, types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)))
-			end
-
-			local f = types.Function({
-				node = analyzer.current_expression,
-				ret = types.Tuple({info.return_type.what == "void" and types.Nil() or cast(info.return_type)}),
-				arg = types.Tuple(arguments)
-			})
-			
-			f:SetNode(analyzer.current_expression)
-
-			return f
-		elseif info.what == "struct" then
-			
-			if not info.children then
-				local val, err = analyzer:IndexOperator(c_declaration:GetNode(), env.typesystem.ffi.C:GetType(), types.String(info.name):SetLiteral(true), "runtime")
-			
-				if val then
-					return val
-				end
-			end
-
-			local struct = types.Table()
-	
-			for _, info in ipairs(info.children) do
-				struct:Set(types.String(info.name):SetLiteral(true), cast(info.type))
-			end
-			
-			return struct
-		elseif info.what == "ptr" then
-			if info.element_type.what == "void" then
-				return types.Union({env.typesystem.VoidPointer:GetType(), types.Nil()})
-			elseif info.element_type.const and info.element_type.what == "int" and info.element_type.size == 1 then
-				return types.Union({types.String(), types.Nil()})
-			else
-				return types.Union({env.typesystem.CDataPointer(analyzer, cast(info.element_type)), types.Nil()})
-			end
-		elseif info.what == "array" then
-			if info.element_type.what == "void" then
-				return env.typesystem.VoidPointer:GetType()
-			else
-				return env.typesystem.CDataPointer(analyzer, cast(info.element_type))
-			end
-		elseif info.what == "int" then
-			return types.Number()
+		return struct
+	elseif info.what == "ptr" then
+		if info.element_type.what == "void" then
+			return types.Union({env.typesystem.VoidPointer:GetType(), types.Nil()})
+		elseif info.element_type.const and info.element_type.what == "int" and info.element_type.size == 1 then
+			return types.Union({types.String(), types.Nil()})
 		else
-			error(debug.traceback("NYI " .. info.what))
+			return types.Union({env.typesystem.CDataPointer(analyzer, cast(info.element_type, ...)), types.Nil()})
+		end
+	elseif info.what == "array" then
+		if info.element_type.what == "void" then
+			return env.typesystem.VoidPointer:GetType()
+		else
+			return env.typesystem.CDataPointer(analyzer, cast(info.element_type, ...))
+		end
+	elseif info.what == "int" then
+		return types.Number()
+	else
+		error(debug.traceback("NYI " .. info.what))
+	end
+end
+
+local type function gen_id(cdecl)
+	local ffi_isolated = require("nattlua.other.isolated_ffi")
+
+	analyzer.cdef_history = analyzer.cdef_history or {}
+
+	local global_id = tostring(env.typesystem.jit.os:GetType()) .. "-" .. tostring(env.typesystem.jit.arch:GetType())
+		
+	local os_id = 
+		analyzer:GetScope():FindResponsibleType(env.typesystem.jit.os:GetType()) or 
+		analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.os:GetType()) or 
+		env.typesystem.jit.os:GetType()
+
+	local arch_id = 
+		analyzer:GetScope():FindResponsibleType(env.typesystem.jit.arch:GetType()) or
+		analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.arch:GetType()) or 
+		env.typesystem.jit.arch:GetType()
+	
+	local id = tostring(os_id) .. "-" .. tostring(arch_id)
+
+	if id ~= global_id and not analyzer.cdef_history[id] then
+		for _, cdecl in ipairs(analyzer.cdef_history[global_id]) do
+			ffi_isolated.cdef(id, cdecl)
 		end
 	end
 
-	for _, info in ipairs(isolated_cdef(id, c_declaration:GetData())) do
+	return id
+end
+
+type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
+	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
+
+	-- todo: how should type functions share code?
+	local ffi_isolated = require("nattlua.other.isolated_ffi")
+	local tprint = require("nattlua.other.tprint")
+	local cast = env.typesystem.cast:GetType():GetData().lua_function 
+	local gen_id = env.typesystem.gen_id:GetType():GetData().lua_function
+	
+	local typeids = {}
+	for i,v in ipairs({...}) do
+		typeids[i] = v.ffi_typeid
+	end
+
+	local id = gen_id(cdecl)
+	local info = ffi_isolated.typeof(id, cdecl:GetData(), unpack(typeids))
+	local CType = env.typesystem.CType:GetType():Copy()
+	
+	local function index(info) return cast(ffi_isolated.typeof(id, "$", info.typeid), cdecl, index) end
+	local tbl = cast(info, cdecl, index)
+
+	CType.ffi_typeid = info.typeid
+	CType:Set("struct_type", tbl)
+	
+	return CType
+end
+
+type function ffi.cdef(cdecl: string, ...)
+	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
+
+	-- todo: how should type functions share code?
+	local ffi_isolated = require("nattlua.other.isolated_ffi")
+	local cast = env.typesystem.cast:GetType():GetData().lua_function 
+	local gen_id = env.typesystem.gen_id:GetType():GetData().lua_function
+	
+	local id = gen_id(cdecl)
+
+	analyzer.cdef_history[id] = analyzer.cdef_history[id] or {}
+	table.insert(analyzer.cdef_history[id], cdecl:GetData())
+	
+	for _, info in ipairs(ffi_isolated.cdef(id, cdecl:GetData())) do
 		analyzer:NewIndexOperator(
-			c_declaration:GetNode(), 
+			cdecl:GetNode(), 
 			env.typesystem.ffi.C:GetType(), 
 			types.String(info.name):SetLiteral(true), 
-			cast(info), 
+			cast(info, cdecl), 
 			"runtime"
 		)
 	end

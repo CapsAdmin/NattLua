@@ -1,12 +1,9 @@
 -- this will use some reflection api to track types from ffi.cdef
 import_type<|"typed_ffi.nlua"|>
 
-local fs = import("platforms/unix/filesystem.nlua")
+local ffi = require("ffi")
 
-local type function temp()
-    analyzer:AnalyzeUnreachableCode()
-end
-temp()
+local fs = import("platforms/unix/filesystem.nlua")
 
 print<|fs|> -- typesystem call, it won't be in build output
 
@@ -53,6 +50,4 @@ print<|fs|> -- typesystem call, it won't be in build output
 }
 ]]
 
-for k,v in pairs(fs.get_files(".")) do
-    print(k,v)
-end
+--for k,v in pairs(fs.get_files(".")) do print(k,v) end
