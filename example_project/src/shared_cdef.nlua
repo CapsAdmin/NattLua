@@ -1,0 +1,7 @@
+-- just to show import
+
+return {
+    cdecl = [[
+        struct DIR {}
+    ]]
+}
