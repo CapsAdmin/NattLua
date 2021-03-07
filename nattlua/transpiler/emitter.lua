@@ -809,13 +809,20 @@ do -- types
 
     function META:EmitInvalidLuaCode(func, ...)
         if not self.config.uncomment_types then
-            self:Emit("--[==[")
+            if not self.during_comment_type or self.during_comment_type == 0 then
+                self:Emit("--[==[")
+            end
+            self.during_comment_type = self.during_comment_type or 0
+            self.during_comment_type = self.during_comment_type + 1
         end
         
         self[func](self, ...)
 
         if not self.config.uncomment_types then
-            self:Emit("]==]")
+            self.during_comment_type = self.during_comment_type - 1
+            if not self.during_comment_type or self.during_comment_type == 0 then
+                self:Emit("]==]")
+            end
         end
     end
 end
