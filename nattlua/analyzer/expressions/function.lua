@@ -11,7 +11,7 @@ return function(META)
         local explicit_return = false
 
         local args = {}
-
+        
         if node.kind == "function" or node.kind == "local_function" then
             for i, key in ipairs(node.identifiers) do
                 if key.value.value == "..." then
@@ -56,7 +56,7 @@ return function(META)
                         args[i] = self:NewType(key, "any")
                     end
                 else
-                    args[i] = self:NewType(key, "any")
+                    args[i] = self:AnalyzeExpression(key, "typesystem")
                 end
             end
         else
