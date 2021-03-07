@@ -2,6 +2,7 @@
 import_type<|"typed_ffi.nlua"|>
 
 local fs = import("platforms/unix/filesystem.nlua")
+
 local type function temp()
     analyzer:AnalyzeUnreachableCode()
 end
@@ -10,7 +11,7 @@ temp()
 print<|fs|> -- typesystem call, it won't be in build output
 
 --[[
-   {
+{
         "open" = function⦗nil | string, nil | string⦘: ⦗VoidPointer | nil⦘,
         "read" = function⦗VoidPointer | nil, number, number, VoidPointer | nil⦘: ⦗number⦘,
         "write" = function⦗VoidPointer | nil, number, number, VoidPointer | nil⦘: ⦗number⦘,
@@ -20,12 +21,17 @@ print<|fs|> -- typesystem call, it won't be in build output
         "eof" = function⦗VoidPointer | nil⦘: ⦗number⦘,
         "setcustomattribute" = function⦗string, string⦘: ⦗nil | true, string⦘,
         "getcustomattribute" = function⦗string⦘: ⦗nil | string, string⦘,
-        "watch" = function⦗any, any⦘: ⦗⦘,
-        "get_files" = function⦗string⦘: ⦗nil | { }, string⦘,
-        "get_files_recursive" = function⦗string, false | nil | true⦘: ⦗
-            nil | {number ⊃ 0 = number | string ⊃ 2}, 
-            string | { number ⊃ undefined = {"path" = string, "error" = string} ⊃ undefined 
+        "watch" = function⦗string, { number = ⦗"access" | "attrib" | "close_nowrite" | "close_write" | "create" | "delete" | "delete_self" | "dont_follow" | "excl_unlink" | "ignored" | "isdir" | "mask_add" | "mask_create" | "modify" | "move_self" | "moved_from" | "moved_to" | "oneshot" | "onlydir" | "open" | "q_overflow" | "unmount"⦘ }⦘: ⦗nil | {
+            "Read" = function⦗*self-table* | any⦘: ⦗⦘,
+            "Remove" = function⦗*self-table* | any⦘: ⦗⦘
         }⦘,
+        "get_files" = function⦗string⦘: ⦗nil | { }, string⦘,
+        "get_files_recursive" = function⦗string, false | nil | true⦘: ⦗nil | {
+            number ⊃ 0 = number | string ⊃ 2
+        }, string | { number ⊃ undefined = {
+            "path" = string,
+            "error" = string
+        } ⊃ undefined }⦘,
         "get_attributes" = function⦗string, false | nil | true⦘: ⦗nil | {
             "last_accessed" = nil | number,
             "last_changed" = nil | number,

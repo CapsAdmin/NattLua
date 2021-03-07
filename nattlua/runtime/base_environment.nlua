@@ -812,6 +812,14 @@ do
 		tbl:Set(pos, val)
 	end
 
+	type function table.remove(tbl: {[1 .. inf] = any}, index: number | nil)
+        if not tbl:IsLiteral() then return end
+        if index and not index:IsLiteral() then return end
+		index = index or 1
+
+		table.remove(pos:GetData(), index:GetData())
+	end
+
 	type function table.sort(tbl, func)
 		local union = types.Union()
 

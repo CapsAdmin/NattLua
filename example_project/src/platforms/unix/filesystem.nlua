@@ -1,28 +1,6 @@
 local OSX = jit.os == "OSX"
 local X64 = jit.arch == "x64"
 
-local function TableToFlags(flags, valid_flags, operation)
-	if type(flags) == "string" then
-		flags = {flags}
-	end
-
-	local out = 0
-
-	for k, v in pairs(flags) do
-		local flag = valid_flags[v] or valid_flags[k]
-		if not flag then
-			error("invalid flag", 2)
-		end
-		if type(operation) == "function" then
-			out = operation(out, tonumber(flag))
-		else
-			out = bit.band(out, tonumber(flag))
-		end
-	end
-
-	return out
-end
-
 local fs = _G.fs or {}
 
 local ffi = require("ffi")
@@ -281,9 +259,59 @@ if not OSX then
 	local max_length = 8192
 	local length = ffi.sizeof("struct inotify_event")
 	local buffer = ffi.new("char[?]", max_length)
-	local queue = {}
+	local queue: {[any] = any} = {}
 
-	function fs.watch(path, mask)
+
+
+	local function TableToFlags(flags: {[string | number] = any}, valid_flags: {[string] = any}, operation: (function(number, number): number) | nil)
+		if type(flags) == "string" then
+			flags = {flags}
+		end
+
+		local out = 0
+
+		for k, v in pairs(flags) do
+			local flag = valid_flags[v] or valid_flags[k]
+			if not flag then
+				error("invalid flag", 2)
+			end
+			if type(operation) == "function" then
+				local num = tonumber(flag)
+				if not num then
+					error("cannot convert flag " .. flag .. " to number")
+					return
+				end
+
+				-- TODO
+				if operation then
+					out = operation(out, num)
+				end
+			else
+				out = bit.band(out, tonumber(flag))
+			end
+		end
+
+		return out
+	end
+
+
+	local function FlagsToTable(flags: {[string | number] = any}, valid_flags: {[string] = any})
+
+		if not flags then return valid_flags.default_valid_flag end
+
+		local out = {}
+
+		for k, v in pairs(valid_flags) do
+			if bit.band(flags, v) > 0 then
+				out[k] = true
+			end
+		end
+
+		return out
+	end
+
+
+	function fs.watch(path: string, mask: {[number] = keysof<|typeof flags|>})
 		local wd = ffi.C.inotify_add_watch(fd, path, mask and TableToFlags(mask, flags) or 4095)
 		queue[wd] = {}
 
@@ -295,17 +323,17 @@ if not OSX then
 				table.insert(queue[res.wd], {
 					cookie = res.cookie,
 					name = ffi.string(res.name, res.len),
-					flags = utility.FlagsToTable(res.mask, flags),
+					flags = FlagsToTable(res.mask, flags),
 				})
 			end
 
-			if queue[wd][1] then
+			if queue[wd] and queue[wd][1] then
 				return table.remove(queue[wd])
 			end
 		end
 
 		function self:Remove()
-			ffi.C.inotify_rm_watch(inotify_fd, wd)
+			ffi.C.inotify_rm_watch(fd, wd)
 			queue[wd] = nil
 		end
 
@@ -410,7 +438,7 @@ do
 			if not walk(path, out, errors, can_traverse) then
 				return nil, errors[1].error
 			end
-			out[0] = nil
+			(out as any)[0] = nil
 			return out, errors[1] and errors or nil
 		end
 	end
@@ -565,7 +593,6 @@ do
 	end
 
 	function fs.set_current_directory(path: string)
-		print(ffi.C.chdir)
 		if ffi.C.chdir(path) ~= 0 then
 			return nil, last_error()
 		end

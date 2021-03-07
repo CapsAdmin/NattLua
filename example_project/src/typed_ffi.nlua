@@ -6,6 +6,7 @@ function CDataPointer<|T: any|>
 end
 
 type VoidPointer = {
+	@Name = "VoidPointer",
 	@MetaTable = self, -- this is a shortcut to setmetatable<|VoidPointer, VoidPointer|>
 	__index = function() error("cannot index a void pointer") end,
 	__newindex = function() error("cannot index a void pointer") end
@@ -49,6 +50,10 @@ type function ffi.cdef(c_declaration: string, ...)
 		
 			for _, arg_info in ipairs(info.children) do
 				table.insert(arguments, (cast(arg_info.type)))
+			end
+
+			if info.vararg then
+				table.insert(arguments, types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)))
 			end
 
 			local f = types.Function({

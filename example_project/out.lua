@@ -45,28 +45,6 @@ IMPORTS = IMPORTS or {}
 IMPORTS['example_project/src/platforms/unix/filesystem.nlua'] = function(...) local OSX = jit.os == "OSX"
 local X64 = jit.arch == "x64"
 
-local function TableToFlags(flags, valid_flags, operation)
-	if type(flags) == "string" then
-		flags = {flags}
-	end
-
-	local out = 0
-
-	for k, v in pairs(flags) do
-		local flag = valid_flags[v] or valid_flags[k]
-		if not flag then
-			error("invalid flag", 2)
-		end
-		if type(operation) == "function" then
-			out = operation(out, tonumber(flag))
-		else
-			out = bit.band(out, tonumber(flag))
-		end
-	end
-
-	return out
-end
-
 local fs = _G.fs or {}
 
 local ffi = require("ffi")
@@ -327,6 +305,56 @@ if not OSX then
 	local buffer = ffi.new("char[?]", max_length)
 	local queue = {}
 
+
+
+	local function TableToFlags(flags, valid_flags, operation)
+		if type(flags) == "string" then
+			flags = {flags}
+		end
+
+		local out = 0
+
+		for k, v in pairs(flags) do
+			local flag = valid_flags[v] or valid_flags[k]
+			if not flag then
+				error("invalid flag", 2)
+			end
+			if type(operation) == "function" then
+				local num = tonumber(flag)
+				if not num then
+					error("cannot convert flag " .. flag .. " to number")
+					return
+				end
+
+				-- TODO
+				if operation then
+					out = operation(out, num)
+				end
+			else
+				out = bit.band(out, tonumber(flag))
+			end
+		end
+
+		return out
+	end
+
+
+	local function FlagsToTable(flags, valid_flags)
+
+		if not flags then return valid_flags.default_valid_flag end
+
+		local out = {}
+
+		for k, v in pairs(valid_flags) do
+			if bit.band(flags, v) > 0 then
+				out[k] = true
+			end
+		end
+
+		return out
+	end
+
+
 	function fs.watch(path, mask)
 		local wd = ffi.C.inotify_add_watch(fd, path, mask and TableToFlags(mask, flags) or 4095)
 		queue[wd] = {}
@@ -339,17 +367,17 @@ if not OSX then
 				table.insert(queue[res.wd], {
 					cookie = res.cookie,
 					name = ffi.string(res.name, res.len),
-					flags = utility.FlagsToTable(res.mask, flags),
+					flags = FlagsToTable(res.mask, flags),
 				})
 			end
 
-			if queue[wd][1] then
+			if queue[wd] and queue[wd][1] then
 				return table.remove(queue[wd])
 			end
 		end
 
 		function self:Remove()
-			ffi.C.inotify_rm_watch(inotify_fd, wd)
+			ffi.C.inotify_rm_watch(fd, wd)
 			queue[wd] = nil
 		end
 
@@ -454,7 +482,7 @@ do
 			if not walk(path, out, errors, can_traverse) then
 				return nil, errors[1].error
 			end
-			out[0] = nil
+			(out)[0] = nil
 			return out, errors[1] and errors or nil
 		end
 	end
@@ -609,7 +637,6 @@ do
 	end
 
 	function fs.set_current_directory(path)
-		print(ffi.C.chdir)
 		if ffi.C.chdir(path) ~= 0 then
 			return nil, last_error()
 		end
@@ -630,63 +657,49 @@ import_type<|"typed_ffi.nlua"|>]==]
 
 local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))--[==[
 
+local function()
+    analyzer:AnalyzeUnreachableCode()
+end]==]
+temp()--[==[
 
--- typesystem call, won't be in build output
-print<|fs|>]==]
+print<|fs|>]==] -- typesystem call, it won't be in build output
 
 --[[
-    {
-        "open" = function⦗nil | string, nil | string⦘: ⦗nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}⦘,
-        "read" = function⦗nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}, number, number, nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}⦘: ⦗number⦘,
-        "write" = function⦗nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}, number, number, nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}⦘: ⦗number⦘,
-        "seek" = function⦗nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}, number, number⦘: ⦗number⦘,
-        "tell" = function⦗nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}⦘: ⦗number⦘,
-        "close" = function⦗nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}⦘: ⦗number⦘,
-        "eof" = function⦗nil | {
-        "__index" = function⦗⦘: ⦗⦘,
-        "__newindex" = function⦗⦘: ⦗⦘
-}⦘: ⦗number⦘,
-        "setcustomattribute" = function⦗string, string⦘: ⦗⦘,
-        "getcustomattribute" = function⦗string⦘: ⦗⦘,
+   {
+        "open" = function⦗nil | string, nil | string⦘: ⦗VoidPointer | nil⦘,
+        "read" = function⦗VoidPointer | nil, number, number, VoidPointer | nil⦘: ⦗number⦘,
+        "write" = function⦗VoidPointer | nil, number, number, VoidPointer | nil⦘: ⦗number⦘,
+        "seek" = function⦗VoidPointer | nil, number, number⦘: ⦗number⦘,
+        "tell" = function⦗VoidPointer | nil⦘: ⦗number⦘,
+        "close" = function⦗VoidPointer | nil⦘: ⦗number⦘,
+        "eof" = function⦗VoidPointer | nil⦘: ⦗number⦘,
+        "setcustomattribute" = function⦗string, string⦘: ⦗nil | true, string⦘,
+        "getcustomattribute" = function⦗string⦘: ⦗nil | string, string⦘,
         "watch" = function⦗any, any⦘: ⦗⦘,
-        "get_files" = function⦗string⦘: ⦗⦘,
-        "get_files_recursive" = function⦗string, false | nil | true⦘: ⦗⦘,
-        "get_attributes" = function⦗string, false | nil | true⦘: ⦗⦘,
-        "get_size" = function⦗string, false | nil | true⦘: ⦗⦘,
-        "get_type" = function⦗string⦘: ⦗⦘,
-        "copy" = function⦗string, string, false | nil | true⦘: ⦗⦘,
-        "link" = function⦗string, string, false | nil | true⦘: ⦗⦘,
-        "create_directory" = function⦗string⦘: ⦗⦘,
-        "remove_file" = function⦗string⦘: ⦗⦘,
-        "remove_directory" = function⦗string⦘: ⦗⦘,
-        "set_current_directory" = function⦗string⦘: ⦗⦘,
-        "get_current_directory" = function⦗⦘: ⦗⦘
+        "get_files" = function⦗string⦘: ⦗nil | { }, string⦘,
+        "get_files_recursive" = function⦗string, false | nil | true⦘: ⦗
+            nil | {number ⊃ 0 = number | string ⊃ 2}, 
+            string | { number ⊃ undefined = {"path" = string, "error" = string} ⊃ undefined 
+        }⦘,
+        "get_attributes" = function⦗string, false | nil | true⦘: ⦗nil | {
+            "last_accessed" = nil | number,
+            "last_changed" = nil | number,
+            "last_modified" = nil | number,
+            "type" = "directory" | "file",
+            "size" = nil | number,
+            "mode" = any,
+            "links" = any
+        }, string⦘,
+        "get_size" = function⦗string, false | nil | true⦘: ⦗nil, string⦘,
+        "get_type" = function⦗string⦘: ⦗"directory" | "file" | nil⦘,
+        "copy" = function⦗string, string, false | nil | true⦘: ⦗nil, string⦘,
+        "link" = function⦗string, string, false | nil | true⦘: ⦗nil | true, string⦘,
+        "create_directory" = function⦗string⦘: ⦗nil | true, string⦘,
+        "remove_file" = function⦗string⦘: ⦗nil | true, string⦘,
+        "remove_directory" = function⦗string⦘: ⦗nil | true, string⦘,
+        "set_current_directory" = function⦗string⦘: ⦗nil | true, string⦘,
+        "get_current_directory" = function⦗⦘: ⦗string⦘
 }
-function⦗nil | string⦘: ⦗number⦘
 ]]
 
 for k,v in pairs(fs.get_files(".")) do

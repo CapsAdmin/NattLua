@@ -157,7 +157,7 @@ return function(META)
                             end
                         end
                         
-                        if upvalues_contract then
+                        if upvalues_contract and upvalues_contract.Type ~= "any" then
                             val:CopyLiteralness(upvalues_contract)
                             self:Assert(statement or val:GetNode() or exp_key.explicit_type, self:CheckTypeAgainstContract(val, upvalues_contract))
                             val:SetContract(upvalues_contract)

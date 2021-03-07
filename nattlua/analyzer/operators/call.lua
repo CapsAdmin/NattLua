@@ -230,7 +230,7 @@ return function(META)
                 return type_errors.other({"argument #", i, " ", arg, ": ", reason})
             end
 
-            if arg.Type == "table" then
+            if arg.Type == "table" and contract.Type == "table" then
                 arg.old_contract = arg:GetContract()
                 arg:SetContract(contract)
                 table.insert(self.mutated_types, arg)

@@ -461,6 +461,7 @@ function META:IsNumericallyIndexed()
 end
 
 function META:CopyLiteralness(from)
+    if not from:GetData() then return false end
     for _, keyval_from in ipairs(from:GetData()) do
         local keyval, reason = self:GetKeyVal(keyval_from.key)
 
