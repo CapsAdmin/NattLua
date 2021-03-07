@@ -225,12 +225,18 @@ end
 function META:FindResponsibleType(obj)
     local typ = self:GetTestCondition()
     if typ then
-        local exp = types.FindInType(typ, obj)
+        
+        -- TODO: move this logic to types.FindInType
+        if typ.upvalue and typ.upvalue.value then
+            typ = typ.upvalue.value.source
+        end
+
+        local exp = types.FindInType(typ, obj)        
         if exp then
             if self.test_condition_inverted then
-                return exp.falsy_union
+                return typ.source_left
             else
-                return exp.truthy_union
+                return typ.source_right
             end
         end
     end

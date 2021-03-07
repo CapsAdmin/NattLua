@@ -54,6 +54,11 @@ do
             end
         end
 
+
+        if a.upvalue and a.upvalue.value then
+            return cmp(a.upvalue.value, b, context, a)
+        end
+
         if a.type_checked then
             return cmp(a.type_checked, b, context, a)
         end

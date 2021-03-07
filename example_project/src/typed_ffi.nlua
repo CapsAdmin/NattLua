@@ -23,10 +23,12 @@ type function ffi.cdef(c_declaration: string, ...)
 		
 		if analyzer:GetScope():IsUncertain() then
 			id = analyzer:GetScope():FindResponsibleType(env.typesystem.jit.os:GetType())
-			id = id or analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.os:GetType())
+			--id = id or analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.os:GetType())
+			--id = id or analyzer:GetScope():FindResponsibleType(env.typesystem.jit.arch:GetType())
+			--id = id or analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.arch:GetType())
 
 			if not id then
-				error("must use ffi.os or jit.os to enter scope")
+				error("must use ffi.os or jit.os to enter scope", 2)
 			end
 		
 			id = tostring(id)
@@ -40,7 +42,7 @@ type function ffi.cdef(c_declaration: string, ...)
 
 		table.insert(analyzer.cdef_history[id], c_declaration:GetData())
 	end
-	
+	local tprint = require("nattlua.other.tprint")
 	local function cast(info)
 		if info.what == "func" then
 			local arguments = {}
@@ -76,6 +78,14 @@ type function ffi.cdef(c_declaration: string, ...)
 			
 			return struct
 		elseif info.what == "ptr" then
+			if info.element_type.what == "void" then
+				return types.Union({env.typesystem.VoidPointer:GetType(), types.Nil()})
+			elseif info.element_type.const and info.element_type.what == "int" and info.element_type.size == 1 then
+				return types.Union({types.String(), types.Nil()})
+			else
+				return types.Union({env.typesystem.CDataPointer(analyzer, cast(info.element_type)), types.Nil()})
+			end
+		elseif info.what == "array" then
 			if info.element_type.what == "void" then
 				return env.typesystem.VoidPointer:GetType()
 			else

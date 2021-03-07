@@ -1,37 +1,67 @@
 -- this will use some reflection api to track types from ffi.cdef
 import_type<|"typed_ffi.nlua"|>
-local { cdecl } = import("shared_cdef.nlua")
-local ffi = require("ffi")
 
-ffi.cdef(cdecl)
+local fs = import("platforms/unix/filesystem.nlua")
 
--- both of these branches should hit, because jit.os == "OSX" is uncertain (jit.os is a union of "OSX" | "Linux" | "Windows", etc)
 
-if jit.os == "OSX" then
-    -- this will create a copy of the current cdef environment that is only available within this scope
-    ffi.cdef([[
-        struct dirent {
-            int foo;
-            int bar;
-        };
+-- typesystem call, won't be in build output
+print<|fs|>
 
-        void open(struct dirent, struct DIR);
-    ]])
+--[[
+    {
+        "open" = function⦗nil | string, nil | string⦘: ⦗nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}⦘,
+        "read" = function⦗nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}, number, number, nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}⦘: ⦗number⦘,
+        "write" = function⦗nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}, number, number, nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}⦘: ⦗number⦘,
+        "seek" = function⦗nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}, number, number⦘: ⦗number⦘,
+        "tell" = function⦗nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}⦘: ⦗number⦘,
+        "close" = function⦗nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}⦘: ⦗number⦘,
+        "eof" = function⦗nil | {
+        "__index" = function⦗⦘: ⦗⦘,
+        "__newindex" = function⦗⦘: ⦗⦘
+}⦘: ⦗number⦘,
+        "setcustomattribute" = function⦗string, string⦘: ⦗⦘,
+        "getcustomattribute" = function⦗string⦘: ⦗⦘,
+        "watch" = function⦗any, any⦘: ⦗⦘,
+        "get_files" = function⦗string⦘: ⦗⦘,
+        "get_files_recursive" = function⦗string, false | nil | true⦘: ⦗⦘,
+        "get_attributes" = function⦗string, false | nil | true⦘: ⦗⦘,
+        "get_size" = function⦗string, false | nil | true⦘: ⦗⦘,
+        "get_type" = function⦗string⦘: ⦗⦘,
+        "copy" = function⦗string, string, false | nil | true⦘: ⦗⦘,
+        "link" = function⦗string, string, false | nil | true⦘: ⦗⦘,
+        "create_directory" = function⦗string⦘: ⦗⦘,
+        "remove_file" = function⦗string⦘: ⦗⦘,
+        "remove_directory" = function⦗string⦘: ⦗⦘,
+        "set_current_directory" = function⦗string⦘: ⦗⦘,
+        "get_current_directory" = function⦗⦘: ⦗⦘
+}
+function⦗nil | string⦘: ⦗number⦘
+]]
 
-    type_assert<|typeof ffi.C.open, (function({foo=number, bar=number}, {}): nil)|>
-else
-    -- same goes for this scope
-    ffi.cdef([[
-        struct dirent {
-            const char* foo;
-            const char* bar;
-        };
-
-        void open(struct dirent, struct DIR);
-    ]])
-    
-    type_assert<|typeof ffi.C.open, (function({foo={[number] = number}, bar={[number] = number}}, {}): nil)|>
+for k,v in pairs(fs.get_files(".")) do
+    print(k,v)
 end
-
--- here we see a union of both scopes above
-type_assert<|typeof ffi.C.open, (function({foo={[number] = number}, bar={[number] = number}}, {}): nil) | (function({foo=number, bar=number}, {}): nil)|>
