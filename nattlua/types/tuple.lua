@@ -276,6 +276,7 @@ function META:GetMinimumLength()
         
         if obj.Type == "union" and obj:HasNil() then
             found_nil = true
+            len = i - 1
         elseif found_nil then
             len = i
             break

@@ -625,3 +625,11 @@ run[[
     type_assert(A:Foo(), "a")
     type_assert(B:Bar(), "b")
 ]]
+
+run[[
+    local function foo(str: boolean | nil)
+
+    end
+    
+    foo()
+]]
