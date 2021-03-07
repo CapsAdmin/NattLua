@@ -1,7 +1,5 @@
 {
-    "Lua.diagnostics.globals": [
-        "describe",
-        "it"
-    ],
-    "Lua.runtime.version": "LuaJIT"
+    "triggerTaskOnSave.tasks": {
+		"onsave": ["**/*.lua", "**/*.nlua"]
+	}
 }

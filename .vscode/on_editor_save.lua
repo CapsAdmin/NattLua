@@ -84,8 +84,9 @@ if path:lower():find("/nattlua/", nil, true) then
     if not is_lua and not is_nattlua then
         return
     end
-
-    if is_nattlua then
+    if path:find("example_project/", nil, true) then
+        run_lua("example_project/build.lua", path)  
+    elseif is_nattlua then
         run_nattlua(path)
     elseif path:find("test/", nil, true) then
         run_lua("test/run.lua", path)  
