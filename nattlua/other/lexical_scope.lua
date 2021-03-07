@@ -228,9 +228,9 @@ function META:FindResponsibleType(obj)
         local exp = types.FindInType(typ, obj)
         if exp then
             if self.test_condition_inverted then
-                return exp.truthy_union
-            else
                 return exp.falsy_union
+            else
+                return exp.truthy_union
             end
         end
     end

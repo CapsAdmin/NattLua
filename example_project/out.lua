@@ -67,9 +67,9 @@ if jit.os == "OSX" then
         };
 
         void open(struct dirent, struct DIR);
-    ]])--[==[
+    ]])
 
-    type_assert<|ffi.C.open, (function({foo=number, bar=number}, {}): nil)|>]==]
+    type_assert(ffi.C.open, _)
 else
     -- same goes for this scope
     ffi.cdef([[
@@ -79,10 +79,10 @@ else
         };
 
         void open(struct dirent, struct DIR);
-    ]])--[==[
+    ]])
     
-    type_assert<|ffi.C.open, (function({foo={[number] = number}, bar={[number] = number}}, {}): nil)|>]==]
-end--[==[
+    type_assert(ffi.C.open, _)
+end
 
 -- here we see a union of both scopes above
-type_assert<|ffi.C.open, (function({foo={[number] = number}, bar={[number] = number}} | {foo=number, bar=number}, {}): nil)|>]==]
+type_assert(ffi.C.open, _)

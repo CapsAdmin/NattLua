@@ -56,7 +56,7 @@ return function(META)
                 end
             end
         end
-    
+
         if not self:MutateValue(obj, key, val, env) then -- always false?
             return obj:Set(key, val)
         end

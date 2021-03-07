@@ -61,7 +61,7 @@ return function(META)
 
         if val then
             local o = self:GetMutatedValue(obj, key, val, env)
-
+        
             if o then
                 return o
             end
