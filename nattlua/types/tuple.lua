@@ -215,6 +215,7 @@ function META:Set(i, val)
     self.data[i] =  val
 
     if i > 32 then
+        print(debug.traceback())
         error("tuple too long", 2)
     end
 
