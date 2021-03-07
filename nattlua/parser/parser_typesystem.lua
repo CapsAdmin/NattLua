@@ -541,7 +541,7 @@ return function(META)
 
     do
         function META:IsImportStatement()
-            return self:IsCurrentValue("import")
+            return self:IsCurrentValue("import") and not self:IsValue("(", 1)
         end
 
         function META:ReadImportStatement()
