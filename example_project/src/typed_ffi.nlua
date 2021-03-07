@@ -5,16 +5,7 @@ function CDataPointer<|T: any|>
 	}
 end
 
-type CType = {
-	@MetaTable = self,
-	__call = function(self, init) 
-		local t = self:Get("struct_type") 
 
-		analyzer:Assert(init:GetNode(), init:IsSubsetOf(t))
-
-		return t:Copy()
-	end,
-}
 
 type VoidPointer = {
 	@Name = "VoidPointer",
@@ -110,7 +101,7 @@ local type function gen_id(cdecl)
 	
 	local id = tostring(os_id) .. "-" .. tostring(arch_id)
 
-	if id ~= global_id and not analyzer.cdef_history[id] then
+	if id ~= global_id and not analyzer.cdef_history[id] and analyzer.cdef_history[global_id] then
 		for _, cdecl in ipairs(analyzer.cdef_history[global_id]) do
 			ffi_isolated.cdef(id, cdecl)
 		end
@@ -127,7 +118,7 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	local tprint = require("nattlua.other.tprint")
 	local cast = env.typesystem.cast:GetType():GetData().lua_function 
 	local gen_id = env.typesystem.gen_id:GetType():GetData().lua_function
-	
+
 	local typeids = {}
 	for i,v in ipairs({...}) do
 		typeids[i] = v.ffi_typeid
@@ -135,15 +126,29 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 
 	local id = gen_id(cdecl)
 	local info = ffi_isolated.typeof(id, cdecl:GetData(), unpack(typeids))
-	local CType = env.typesystem.CType:GetType():Copy()
-	
+		
 	local function index(info) return cast(ffi_isolated.typeof(id, "$", info.typeid), cdecl, index) end
 	local tbl = cast(info, cdecl, index)
 
-	CType.ffi_typeid = info.typeid
-	CType:Set("struct_type", tbl)
-	
-	return CType
+	local func_type = types.Function({
+		arg = types.Tuple({tbl, types.Any()}), 
+		ret = types.Tuple({tbl}), 
+		lua_function = function(self, init) 
+			print("call")
+			if init then
+				analyzer:Assert(init:GetNode(), init:IsSubsetOf(tbl))
+			end
+
+			return tbl:Copy()
+		end
+	})
+
+	tbl:Set("__call", func_type)
+	tbl:SetMetaTable(tbl)
+
+	tbl.ffi_typeid = info.typeid
+
+	return tbl
 end
 
 type function ffi.cdef(cdecl: string, ...)
@@ -168,4 +173,37 @@ type function ffi.cdef(cdecl: string, ...)
 			"runtime"
 		)
 	end
+end
+
+-- some quick tests
+-- this code won't execute outside of the typesystem
+
+local ffi = require("ffi")
+
+do
+	local struct
+	local LINUX = jit.os == "Linux"
+	local X64 = jit.arch == "x64"
+
+	if LINUX then
+		struct = ffi.typeof([[struct {
+			uint32_t foo;
+			uint8_t uhoh;
+			uint64_t bar1;
+		}]])
+	else
+		if X64 then
+			struct = ffi.typeof([[struct {
+				uint32_t foo;
+				uint64_t bar2;
+			}]])
+		else
+			struct = ffi.typeof([[struct {
+				uint32_t foo;
+				uint32_t bar3;
+			}]])
+		end	
+	end
+
+	print(struct())
 end

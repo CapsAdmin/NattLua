@@ -164,7 +164,7 @@ return function(META)
                     self:CallLuaTypeFunction(
                         call_node, 
                         obj:GetData().lua_function, 
-                        function_node.function_scope or self:GetScope(), 
+                        function_node and function_node.function_scope or self:GetScope(), 
                         table.unpack(arg)
                     )
                 }
