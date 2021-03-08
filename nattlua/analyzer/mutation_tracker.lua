@@ -4,7 +4,7 @@ local tprint = require("nattlua.other.tprint")
 local META = {}
 META.__index = META
 
-function META:GetValueFromScope(scope, upvalue, key)
+function META:GetValueFromScope(scope, upvalue, key, analyzer)
     local mutations = {}
     
     do
@@ -89,6 +89,7 @@ function META:GetValueFromScope(scope, upvalue, key)
     union.upvalue_keyref = key
     
     for _, change in ipairs(mutations) do
+        local obj = change.value
 
         do
             --[[
@@ -99,7 +100,7 @@ function META:GetValueFromScope(scope, upvalue, key)
 
                 -- x is true here
             ]]
-            local scope, scope_union = change.scope:FindScopeFromTestCondition(change.value)
+            local scope, scope_union = change.scope:FindScopeFromTestCondition(obj)
             if scope and change.scope == scope and scope.test_condition.Type == "union" then
                 local t
                 if scope.test_condition_inverted then
@@ -118,18 +119,22 @@ function META:GetValueFromScope(scope, upvalue, key)
             union:Clear()
         end
 
-        if _ == 1 and change.value.Type == "union" then
+        if _ == 1 and obj.Type == "union" then
             if upvalue.Type == "table" then
-                union = change.value:Copy()
+                union = obj:Copy()
                 union.upvalue = upvalue
                 union.upvalue_keyref = key
             else 
-                union = change.value:Copy()
+                union = obj:Copy()
                 union.upvalue = upvalue
                 union.upvalue_keyref = key
             end
         else
-            union:AddType(change.value)
+            if obj.Type == "function" and not obj.called and not obj.explicit_return and union:HasType("function") then
+                analyzer:Assert(obj:GetNode() or analyzer.current_expression, analyzer:Call(obj, obj:GetArguments():Copy()))
+            end
+
+            union:AddType(obj)
         end
     end
 

@@ -458,12 +458,15 @@ function META:Call(analyzer, arguments, ...)
         return type_errors.operation("call", nil)
     end
 
-    local union = self
+    --[[
+    local new = types.Union({})
     for _, obj in ipairs(self.data) do
-        if obj.Type ~= "function" and obj.Type ~= "table" and obj.Type ~= "any" then
-            return type_errors.operation("call", obj)
-        end
+        local val = analyzer:Assert(obj:GetNode(), analyzer:Call(obj, arguments, ...))
+        new:AddType(val)
     end
+    do return new end
+    ]]
+
 
     local errors = {}
 

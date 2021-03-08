@@ -1155,6 +1155,13 @@ do
 	end
 
 	type function coroutine.resume(thread, ...)
+		if thread.Type == "any" then 
+			-- TODO: thread is untyped, when inferred
+			return types.Boolean()
+		end
+		if not thread.co_func then
+			error(tostring(thread) .. " is not a thread!", 2)
+		end
 		analyzer:Call(thread.co_func, types.Tuple({...}))
 
 		return types.Boolean()

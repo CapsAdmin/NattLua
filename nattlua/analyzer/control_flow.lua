@@ -168,7 +168,7 @@ return function(META)
 
         initialize_mutation_tracker(obj, scope, key, env)
         
-        return obj.mutations[key]:GetValueFromScope(scope, obj, key) or value
+        return obj.mutations[key]:GetValueFromScope(scope, obj, key, self) or value
     end
 
     function META:OnEnterConditionalScope(data)
