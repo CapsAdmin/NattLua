@@ -4,7 +4,6 @@ import_type<|"typed_ffi.nlua"|>
 local ffi = require("ffi")
 
 local fs = import("platforms/unix/filesystem.nlua")
-
 print<|fs|> -- typesystem call, it won't be in build output
 
 --[[

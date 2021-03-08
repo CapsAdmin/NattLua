@@ -76,7 +76,6 @@ fs.tell = ffi.C.ftell
 fs.close = ffi.C.fclose
 fs.eof = ffi.C.feof
 
--- NOTE: 64bit version
 if OSX then
 	ffi.cdef([[
 		int stat64(const char *path, void *buf);

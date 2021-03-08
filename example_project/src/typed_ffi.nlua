@@ -1,7 +1,7 @@
 local type function cast(node, args)
 	local tprint = require("nattlua.other.tprint")
 	local cast = env.typesystem.cast:GetType():GetData().lua_function 
-	if not node then print(debug.traceback()) end
+
 	if node.tag == "Struct" then
 		local tbl = types.Table({})
 		for _, node in ipairs(node) do
@@ -104,11 +104,11 @@ local type function cast(node, args)
 		return cast(node.t, args)
 	elseif node.tag == "Pointer" then
 		if node.t.tag == "Qualified" and node.t.t.n == "char" then
-			return types.String()
+			return types.Union({types.String(), types.Nil()})
 		end
 		local ptr = types.Table({})
 		ptr:Set(types.Number(), cast(node.t, args))
-		return ptr
+		return types.Union({ptr, types.Nil()})
 	else
 		tprint(node)
 		error("NYI: " .. node.tag)
@@ -123,7 +123,12 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	local cast = env.typesystem.cast:GetType():GetData().lua_function 
 	
 	local cparser = require("nattlua.other.cparser")
-	local tbl = cast(cparser.stringToType(cdecl:GetData()), {...}) 
+	local node, err = cparser.stringToType(cdecl:GetData())
+	if not node then 
+		error("error parsing c declaration", 2)
+		return types.Any() 
+	end
+	local tbl = cast(node, {...}) 
 	tbl:SetNode(cdecl:GetNode())
 
 	local nilable = tbl:Copy()
@@ -136,7 +141,7 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 		ret = types.Tuple({tbl}), 
 		lua_function = function(self, init) 
 			if init then
-				analyzer:Assert(init:GetNode(), init:IsSubsetOf(tbl))
+				analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable))
 			end
 
 			return tbl:Copy()
@@ -265,14 +270,25 @@ do
 
 	local val = struct()
 
-	--type_print<|typeof val|>
+	local type function remove_call_function(union)
+		local new_union = types.Union({})
+		for _, obj in ipairs(union:GetData()) do
+			obj:Delete(types.String("__call"):SetLiteral(true))
+			new_union:AddType(obj)
+		end
+		return new_union
+	end
+
+	local union = remove_call_function(val)
+
+	type_assert<|typeof union, {foo = number, bar2 = number} | {foo = number, bar3 = number} | {foo = number, uhoh = number, bar1 = number}|>
 end
 
 do
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
 	
-	type_assert<|(typeof ctype).foo, string|>
+	type_assert<|(typeof ctype).foo, string | nil|>
 end
 
 
@@ -284,15 +300,34 @@ do
 
 	if LINUX then
 		ffi.cdef("void foo(int a);")
+		type_assert<|typeof ffi.C.foo, (function(number): (nil)) |>
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
+			type_assert<|typeof ffi.C.foo, (function(string | nil): (nil)) |>
 		else
 			ffi.cdef("int foo(int a);")
+			type_assert<|typeof ffi.C.foo, (function(number): (number))|>
 		end	
 	end
 
-	type_assert_subset<|typeof ffi.C.foo, (function(number): (nil)) | (function(number): (number)) | (function(string): (nil)) |>
+	type_assert<|typeof ffi.C.foo, (function(number): (nil)) | (function(number): (number)) | (function(string | nil): (nil)) |>
+end
 
-	--type_print<|typeof val|>
+do
+	ffi.C = {}
+	ffi.cdef("void foo(void *ptr, int foo, const char *test);")
+
+	ffi.C.foo(nil, 1, nil)
+	ffi.C.foo(nil, 1, "")
+end
+
+
+do
+	ffi.C = {}
+	local ctype = ffi.typeof("struct { int foo; }")
+
+	local cdata = ctype({})
+
+	type_assert<|(typeof cdata).foo, number|>
 end

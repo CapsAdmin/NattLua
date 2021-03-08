@@ -393,11 +393,20 @@ run[[
 ]]
 
 run[[
-    local type tbl: {}
+    local type tbl = {}
     type tbl.@Name = "blackbox"
-    setmetatable<|tbl, {__call = function(self: typeof tbl, tbl: {foo = nil | number}) print(self, tbl) return tbl:Get("foo") end}|>
+    setmetatable<|tbl, {__call = function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get("foo") end}|>
 
     local lol = tbl({foo = 1337})
 
+    type_assert(lol, 1337)
+]]
+
+run[[
+    local type tbl = {}
+    type tbl.__call = function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get("foo") end
+    setmetatable<|tbl, tbl|>
+
+    local lol = tbl({foo = 1337})
     type_assert(lol, 1337)
 ]]
