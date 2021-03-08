@@ -1,113 +1,118 @@
--- a "generic type"
-function CDataPointer<|T: any|>
-	return {
-		[number] = T,
-	}
-end
-
-
-
-type VoidPointer = {
-	@Name = "VoidPointer",
-	@MetaTable = self, -- this is a shortcut to setmetatable<|VoidPointer, VoidPointer|>
-	__index = function() error("cannot index a void pointer") end,
-	__newindex = function() error("cannot index a void pointer") end
-}
-
-local type function cast(info, ...)
+local type function cast(node, args)
+	local tprint = require("nattlua.other.tprint")
 	local cast = env.typesystem.cast:GetType():GetData().lua_function 
+	if not node then print(debug.traceback()) end
+	if node.tag == "Struct" then
+		local tbl = types.Table({})
+		for _, node in ipairs(node) do
+			if node.tag == "Pair" then
+				local key = types.String(node[2]):SetLiteral(true)
+				local val = cast(node[1], args)
 
-	if info.what == "func" then
+				tbl:Set(key, val)
+			else
+				tprint(node)
+				error("NYI: " .. node.tag)
+			end
+		end
+		return tbl
+	elseif node.tag == "Function" then
 		local arguments = {}
 	
-		for _, arg_info in ipairs(info.children) do
-			table.insert(arguments, (cast(arg_info.type, ...)))
+		for _, arg in ipairs(node) do
+			if arg.ellipsis then
+				table.insert(arguments, types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)))
+			else
+				table.insert(arguments, (cast(arg[1], args)))
+			end
 		end
 
-		if info.vararg then
-			table.insert(arguments, types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)))
-		end
-
-		local f = types.Function({
-			node = analyzer.current_expression,
-			ret = types.Tuple({info.return_type.what == "void" and types.Nil() or cast(info.return_type, ...)}),
+		local obj = types.Function({
+			ret = types.Tuple({cast(node.t, args)}),
 			arg = types.Tuple(arguments)
 		})
 		
-		f:SetNode(analyzer.current_expression)
+		obj:SetNode(analyzer.current_expression)
 
-		return f
-	elseif info.what == "struct" then
-		
-		if not info.children then
-			local val
-			local cdecl, index = ...
-			
-			if index then
-				val = index(info)
-			else
-				val = analyzer:IndexOperator(cdecl:GetNode(), env.typesystem.ffi.C:GetType(), types.String(info.name):SetLiteral(true), "runtime")
-			end
+		return obj
+	elseif node.tag == "Array" then
+		local tbl = types.Table({})
+		-- todo node.size: array length
+		tbl:Set(types.Number(), cast(node.t, args))
+		return tbl
+	elseif node.tag == "Type" then
+		if 
+			node.n == "double" or node.n == "float" or
+			node.n == "int8_t" or node.n == "uint8_t" or
+			node.n == "int16_t" or node.n == "uint16_t" or
+			node.n == "int32_t" or node.n == "uint32_t" or
 
-			if val then
-				return val
-			end
-		end
 
-		local struct = types.Table()
+			node.n == "char" or
+			node.n == "signed char" or
+			node.n == "unsigned char" or
+			node.n == "short" or
+			node.n == "short int" or
+			node.n == "signed short" or
+			node.n == "signed short int" or
+			node.n == "unsigned short" or
+			node.n == "unsigned short int " or
+			node.n == "int" or
+			node.n == "signed" or
+			node.n == "signed int" or
+			node.n == "unsigned" or
+			node.n == "unsigned int" or
+			node.n == "long" or
+			node.n == "long int" or
+			node.n == "signed long" or
+			node.n == "signed long int" or
+			node.n == "unsigned long" or
+			node.n == "unsigned long int" or
+			node.n == "float" or
+			node.n == "double" or
+			node.n == "long double" or
+			node.n == "size_t" 
 
-		for _, info in ipairs(info.children) do
-			struct:Set(types.String(info.name):SetLiteral(true), cast(info.type, ...))
-		end
-		
-		return struct
-	elseif info.what == "ptr" then
-		if info.element_type.what == "void" then
-			return types.Union({env.typesystem.VoidPointer:GetType(), types.Nil()})
-		elseif info.element_type.const and info.element_type.what == "int" and info.element_type.size == 1 then
-			return types.Union({types.String(), types.Nil()})
+		then
+			return types.Number()
+		elseif 
+			node.n == "int64_t" or 
+			node.n == "uint64_t" or
+			node.n == "long long" or
+			node.n == "long long int" or
+			node.n == "signed long long" or
+			node.n == "signed long long int" or
+			node.n == "unsigned long long" or
+			node.n == "unsigned long long int" 
+		then
+			return types.Number()
+		elseif node.n == "bool" or node.n == "_Bool" then
+			return types.Boolean()
+		elseif node.n == "void" then
+			return types.Nil()
+		elseif node.n == "$" then
+			local val = table.remove(args, 1)
+			return val
 		else
-			return types.Union({env.typesystem.CDataPointer(analyzer, cast(info.element_type, ...)), types.Nil()})
+			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi.C:GetType(), types.String(node.n):SetLiteral(true), "runtime")
+			if not val then
+				return types.Any()
+			end
+			return val
 		end
-	elseif info.what == "array" then
-		if info.element_type.what == "void" then
-			return env.typesystem.VoidPointer:GetType()
-		else
-			return env.typesystem.CDataPointer(analyzer, cast(info.element_type, ...))
+	elseif node.tag == "Qualified" then
+		return cast(node.t, args)
+	elseif node.tag == "Pointer" then
+		if node.t.tag == "Qualified" and node.t.t.n == "char" then
+			return types.String()
 		end
-	elseif info.what == "int" then
-		return types.Number()
+		local ptr = types.Table({})
+		ptr:Set(types.Number(), cast(node.t, args))
+		return ptr
 	else
-		error(debug.traceback("NYI " .. info.what))
+		tprint(node)
+		error("NYI: " .. node.tag)
 	end
-end
-
-local type function gen_id(cdecl)
-	local ffi_isolated = require("nattlua.other.isolated_ffi")
-
-	analyzer.cdef_history = analyzer.cdef_history or {}
-
-	local global_id = tostring(env.typesystem.jit.os:GetType()) .. "-" .. tostring(env.typesystem.jit.arch:GetType())
-		
-	local os_id = 
-		analyzer:GetScope():FindResponsibleType(env.typesystem.jit.os:GetType()) or 
-		analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.os:GetType()) or 
-		env.typesystem.jit.os:GetType()
-
-	local arch_id = 
-		analyzer:GetScope():FindResponsibleType(env.typesystem.jit.arch:GetType()) or
-		analyzer:GetScope():FindResponsibleType(env.typesystem.ffi.arch:GetType()) or 
-		env.typesystem.jit.arch:GetType()
-	
-	local id = tostring(os_id) .. "-" .. tostring(arch_id)
-
-	if id ~= global_id and not analyzer.cdef_history[id] and analyzer.cdef_history[global_id] then
-		for _, cdecl in ipairs(analyzer.cdef_history[global_id]) do
-			ffi_isolated.cdef(id, cdecl)
-		end
-	end
-
-	return id
 end
 
 type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
@@ -115,26 +120,21 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 
 	-- todo: how should type functions share code?
 	local ffi_isolated = require("nattlua.other.isolated_ffi")
-	local tprint = require("nattlua.other.tprint")
 	local cast = env.typesystem.cast:GetType():GetData().lua_function 
-	local gen_id = env.typesystem.gen_id:GetType():GetData().lua_function
+	
+	local cparser = require("nattlua.other.cparser")
+	local tbl = cast(cparser.stringToType(cdecl:GetData()), {...}) 
+	tbl:SetNode(cdecl:GetNode())
 
-	local typeids = {}
-	for i,v in ipairs({...}) do
-		typeids[i] = v.ffi_typeid
+	local nilable = tbl:Copy()
+	for _, keyval in ipairs(nilable:GetData()) do
+		keyval.val = types.Union({types.Nil(), keyval.val})
 	end
 
-	local id = gen_id(cdecl)
-	local info = ffi_isolated.typeof(id, cdecl:GetData(), unpack(typeids))
-		
-	local function index(info) return cast(ffi_isolated.typeof(id, "$", info.typeid), cdecl, index) end
-	local tbl = cast(info, cdecl, index)
-
 	local func_type = types.Function({
-		arg = types.Tuple({tbl, types.Any()}), 
+		arg = types.Tuple({tbl, types.Union({types.Nil(), nilable})}), 
 		ret = types.Tuple({tbl}), 
 		lua_function = function(self, init) 
-			print("call")
 			if init then
 				analyzer:Assert(init:GetNode(), init:IsSubsetOf(tbl))
 			end
@@ -146,30 +146,30 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	tbl:Set("__call", func_type)
 	tbl:SetMetaTable(tbl)
 
-	tbl.ffi_typeid = info.typeid
-
 	return tbl
 end
 
-type function ffi.cdef(cdecl: string, ...)
+type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 
 	-- todo: how should type functions share code?
 	local ffi_isolated = require("nattlua.other.isolated_ffi")
-	local cast = env.typesystem.cast:GetType():GetData().lua_function 
-	local gen_id = env.typesystem.gen_id:GetType():GetData().lua_function
-	
-	local id = gen_id(cdecl)
+	local cast = env.typesystem.cast:GetType():GetData().lua_function	
 
-	analyzer.cdef_history[id] = analyzer.cdef_history[id] or {}
-	table.insert(analyzer.cdef_history[id], cdecl:GetData())
-	
-	for _, info in ipairs(ffi_isolated.cdef(id, cdecl:GetData())) do
+	local str = cdecl:GetData()
+
+	if str:sub(-1) ~= "\n" then str = str.."\n" end
+	local next_statement = cparser.declarationIterator({}, str:gmatch("(.-)\n"), "")
+	while true do
+		local info = next_statement()
+		if not info then break end
+		local obj = cast(info.type, {...})
+
 		analyzer:NewIndexOperator(
 			cdecl:GetNode(), 
 			env.typesystem.ffi.C:GetType(), 
 			types.String(info.name):SetLiteral(true), 
-			cast(info, cdecl), 
+			obj,
 			"runtime"
 		)
 	end
@@ -180,7 +180,65 @@ end
 
 local ffi = require("ffi")
 
+
 do
+	ffi.C = {}
+
+	local ctype = ffi.typeof([[struct {
+		uint32_t foo;
+		uint8_t uhoh;
+		uint64_t bar1;
+	}]])
+
+	local struct = ctype()
+	
+	type_assert_subset<|typeof struct, {
+		foo = number,
+		uhoh = number,
+		bar1 = number,
+	}|>
+end
+
+do
+	ffi.C = {}
+
+	local ctype = ffi.typeof([[struct {
+		uint32_t foo;
+		uint8_t uhoh;
+		uint64_t bar1;
+	}]])
+
+
+	local box = ffi.typeof("$[1]", ctype)
+	
+	local struct = box()
+	
+	type_assert_subset<|typeof struct, {
+		[number] = {
+			foo = number,
+			uhoh = number,
+			bar1 = number,
+		}
+	}|>
+end
+
+do
+	ffi.C = {}
+
+	ffi.cdef("typedef size_t lol;")
+
+	ffi.cdef([[
+		struct foo {int bar;};
+		struct foo {uint8_t bar;};
+		int foo(int, bool, lol);
+	]])
+
+	type_assert<|typeof ffi.C.foo, (function(number, boolean, number): number) |>
+end
+
+do
+	ffi.C = {}
+
 	local struct
 	local LINUX = jit.os == "Linux"
 	local X64 = jit.arch == "x64"
@@ -205,5 +263,36 @@ do
 		end	
 	end
 
-	print(struct())
+	local val = struct()
+
+	--type_print<|typeof val|>
+end
+
+do
+	ffi.C = {}
+	local ctype = ffi.typeof("struct { const char *foo; }")
+	
+	type_assert<|(typeof ctype).foo, string|>
+end
+
+
+do
+	ffi.C = {}
+	local struct
+	local LINUX = jit.os == "Linux"
+	local X64 = jit.arch == "x64"
+
+	if LINUX then
+		ffi.cdef("void foo(int a);")
+	else
+		if X64 then
+			ffi.cdef("void foo(const char *a);")
+		else
+			ffi.cdef("int foo(int a);")
+		end	
+	end
+
+	type_assert_subset<|typeof ffi.C.foo, (function(number): (nil)) | (function(number): (number)) | (function(string): (nil)) |>
+
+	--type_print<|typeof val|>
 end

@@ -96,6 +96,11 @@ type function type_assert_superset(what, type)
 	end
 end
 
+type function type_assert_subset(what, type)
+	local tassert = env.typesystem.type_assert_superset:GetType():GetData().lua_function
+	return tassert(type, what)
+end
+
 type function type_traceback() 
 	print(analyzer:TypeTraceback())
 end
@@ -135,6 +140,7 @@ do -- globals
 	type dofile = (function(filename: string): ...) | (function(): ...)
 	type ipairs = (function(t: Table): empty_function, Table, number)
 	type tonumber = (function(e: number | string, base: number | nil): number | nil)
+	type function type_print(...) print(...) end
 	type function print(...) print(...) end
 	type tostring = (function(val: any): string)
 

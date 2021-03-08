@@ -42,9 +42,7 @@ function table.print(...)
     return tprint(...)
 end
 IMPORTS = IMPORTS or {}
-IMPORTS['example_project/src/platforms/unix/filesystem.nlua'] = function(...) -- we need to do this, doing if jit.os == "OSX" directly will work but i don't 
--- yet support doing it in multiple places
-local OSX = jit.os == "OSX"
+IMPORTS['example_project/src/platforms/unix/filesystem.nlua'] = function(...) local OSX = jit.os == "OSX"
 local X64 = jit.arch == "x64"
 
 local fs = _G.fs or {}
@@ -660,7 +658,6 @@ import_type<|"typed_ffi.nlua"|>]==]
 local ffi = require("ffi")
 
 local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))--[==[
-
 print<|fs|>]==] -- typesystem call, it won't be in build output
 
 --[[
