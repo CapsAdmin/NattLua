@@ -633,3 +633,11 @@ run[[
     
     foo()
 ]]
+
+run[[
+    local function foo(x: { foo = nil | number })
+
+    end
+
+    foo({})
+]]

@@ -129,6 +129,28 @@ function META:GetLength()
 end
 
 function META:FollowsContract(contract)
+
+    do -- todo
+        -- i don't think this belongs here
+
+        if not self:GetData()[1] then
+            local can_be_empty = true
+            contract.suppress = true
+            for _, keyval in ipairs(contract:GetData()) do
+                if not types.Nil():IsSubsetOf(keyval.val) then
+                    can_be_empty = false
+                    break
+                end
+            end
+            contract.suppress = false
+
+            if can_be_empty then
+                return true
+            end
+        end
+    end
+
+
     for _, keyval in ipairs(contract:GetData()) do
         local res, err = self:GetKeyVal(keyval.key)
 
