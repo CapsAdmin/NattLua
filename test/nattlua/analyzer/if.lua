@@ -1140,6 +1140,24 @@ run[[
     type_assert(x(), _ as 1 | 2 | 3 | nil)
 ]]
 
+run[[
+    local x
+
+    if _ as boolean then
+        x = 1
+    else
+        x = 2
+    end
+
+    type_assert(x, _ as 1 | 2)
+
+    local function lol()
+        type_assert(x, _ as 1 | 2)
+    end
+
+    lol()
+]]
+
 pending([[
     local a: nil | 1
 

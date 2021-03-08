@@ -242,6 +242,22 @@ function META:FindResponsibleType(obj)
     end
 end
 
+function META:Contains(scope)
+    if scope == self then return true end
+
+    local parent = scope
+    for i = 1, 1000 do
+        if not parent then
+            break
+        end
+        if parent == self then
+            return true
+        end
+        parent = parent.parent
+    end
+    return false
+end
+
 function META:GetRoot()
     local parent = self
     for i = 1, 1000 do
