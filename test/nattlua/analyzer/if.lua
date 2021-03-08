@@ -1119,7 +1119,7 @@ run[[
     type_assert(x, _ as 2 | 3 | 4)
 ]]
 
-pending[[
+run[[
     local MAYBE1: boolean
     local MAYBE2: boolean
 
@@ -1137,7 +1137,7 @@ pending[[
     
     -- none of the functions are called anywhere when looking x up, so x becomes just "function()" from the union's point of view
     -- this ensures that they are inferred before being added
-    type_assert(x(), _ as 1 | 2 | 3)
+    type_assert(x(), _ as 1 | 2 | 3 | nil)
 ]]
 
 pending([[

@@ -458,33 +458,51 @@ function META:Call(analyzer, arguments, ...)
         return type_errors.operation("call", nil)
     end
 
-    --[[
-    local new = types.Union({})
+
+    local is_overload = true
     for _, obj in ipairs(self.data) do
-        local val = analyzer:Assert(obj:GetNode(), analyzer:Call(obj, arguments, ...))
-        new:AddType(val)
-    end
-    do return new end
-    ]]
-
-
-    local errors = {}
-
-    for _, obj in ipairs(self.data) do
-        if obj.Type == "function" and arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
-            table.insert(errors, "invalid amount of arguments: " .. tostring(arguments) .. " ~= " .. tostring(obj:GetArguments()))
-        else
-            local res, reason = analyzer:Call(obj, arguments, ...)
-
-            if res then
-                return res
-            end
-
-            table.insert(errors, reason)
+        if obj.Type ~= "function" or obj.function_body_node then
+            is_overload = false
+            break
         end
     end
 
-    return type_errors.other(errors)
+    if is_overload then
+        local errors = {}
+
+        for _, obj in ipairs(self.data) do
+            if obj.Type == "function" and arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
+                table.insert(errors, "invalid amount of arguments: " .. tostring(arguments) .. " ~= " .. tostring(obj:GetArguments()))
+            else
+                local res, reason = analyzer:Call(obj, arguments, ...)
+
+                if res then
+                    return res
+                end
+
+                table.insert(errors, reason)
+            end
+        end
+
+        return type_errors.other(errors)
+    end
+
+    local new = types.Union({})
+    
+    for _, obj in ipairs(self.data) do
+        local val = analyzer:Assert(obj:GetNode(), analyzer:Call(obj, arguments, ...))
+        
+        -- TODO
+        if val.Type == "tuple" and val:GetLength() == 1 then
+            val = val:Unpack(1)
+        elseif val.Type == "union" and val:GetMinimumLength() == 1 then
+            val = val:GetAtIndex(1)
+        end
+
+        new:AddType(val)
+    end
+
+    return new
 end
 
 function META:MakeCallableUnion(analyzer, node)
