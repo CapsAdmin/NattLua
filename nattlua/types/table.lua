@@ -235,7 +235,7 @@ function META.IsSubsetOf(A, B)
             if can_be_empty then
                 return true
             else
-                return type_errors.other("table is empty")
+                return type_errors.subset(A, B)
             end
         end
 
