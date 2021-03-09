@@ -21,7 +21,7 @@ return function(META)
         
         if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then
             local index = obj:GetMetaTable():Get("__index")
-    
+
             if index then
                 if index.Type == "table" then
                     return self:IndexOperator(node, index:GetContract() or index, key, env)

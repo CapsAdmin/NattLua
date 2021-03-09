@@ -2953,7 +2953,14 @@ cparser.parseString = function(cdecl, options, typeofargs)
          end
 
          local i = 1
-         str = str .. "typedef " .. cdecl:gsub("%$", function() return "$" .. i .. "$" end) .. " out;"
+         local temp = cdecl:gsub("%$", function() return "$" .. i .. "$" end)
+
+         if options.typeof then
+            str = str .. "typedef " .. temp .. " out;"
+         else
+            str = str .. temp
+         end
+
          str = str:gsub("%$(%[[%d]+%]) out;", function(x) return "$ out" .. x .. ";" end)
       end
 

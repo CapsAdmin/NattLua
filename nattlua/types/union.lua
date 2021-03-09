@@ -312,6 +312,12 @@ function META.IsSubsetOf(A, B)
     end
 
     for _, a in ipairs(A.data) do
+        if a.Type == "any" then
+            return true
+        end
+    end
+
+    for _, a in ipairs(A.data) do
         local b, reason = B:Get(a)
 
         if not b then

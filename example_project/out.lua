@@ -49,34 +49,81 @@ local fs = _G.fs or {}
 
 local ffi = require("ffi")
 
+local handle = ffi.typeof("struct {}")
+local pointer = ffi.typeof("$*", handle)
+
+local meta = {}
+meta.__index = meta
+do
+	local translate_mode = {
+		read = "r",
+		write = "write",
+		append = "a",
+	}
+
+	ffi.cdef("$ fopen(const char *, const char *);", pointer)
+	function meta:__new(file_name, mode)
+		local f = ffi.C.fopen(file_name, translate_mode[mode])
+		
+		if f == nil then
+			return nil, "cannot open file"
+		end
+		
+		return f
+	end
+
+	function meta:__gc()
+		self:close()
+	end
+
+	ffi.cdef("int fclose($);", pointer)
+	function meta:close()
+		ffi.C.fclose(self)
+	end
+end
+
+ffi.metatype(handle, meta)
+
+local f = handle("YES", "write")
+
+if f then
+	f:close()
+end
+
+do return end
+
 ffi.cdef([[
-	typedef unsigned long ssize_t;
 	char *strerror(int);
+
 	void *fopen(const char *filename, const char *mode);
-	int open(const char *pathname, int flags, ...);
 	size_t fread(void *ptr, size_t size, size_t nmemb, void *stream);
 	size_t fwrite(const void *ptr, size_t size, size_t nmemb, void *stream);
 	int fseek(void *stream, long offset, int whence);
-	long int ftell ( void * stream );
+	long int ftell(void * stream);
 	int fclose(void *fp);
-	int close(int fd);
 	int feof(void *stream);
+	
+	int fileno(void *stream);
+	int open(const char *pathname, int flags, ...);
+	int close(int fd);
+	int fchmod(int fd, int mode);
+	int inotify_add_watch(int fd, const char *pathname, uint32_t mask);
+	int inotify_rm_watch(int fd, int wd);
+
 	char *getcwd(char *buf, size_t size);
+
 	int chdir(const char *filename);
 	int mkdir(const char *filename, uint32_t mode);
 	int rmdir(const char *filename);
-	int fileno(void *stream);
+	
 	int remove(const char *pathname);
-	int fchmod(int fd, int mode);
 
-	typedef struct DIR DIR;
-	DIR *opendir(const char *name);
-	int closedir(DIR *dirp);
-	ssize_t syscall(int number, ...);
+	void *opendir(const char *name);
+	int closedir(void *dirp);
 
-
-	ssize_t read(int fd, void *buf, size_t count);
-
+	unsigned long syscall(int number, ...);
+	unsigned long read(int fd, void *buf, size_t count);
+	
 	struct inotify_event
 	{
 		int wd;
@@ -87,9 +134,6 @@ ffi.cdef([[
 	};
 	int inotify_init(void);
 	int inotify_init1(int flags);
-	int inotify_add_watch(int fd, const char *pathname, uint32_t mask);
-	int inotify_rm_watch(int fd, int wd);
-
 	static const uint32_t IN_MODIFY = 0x00000002;
 ]])
 
@@ -661,49 +705,3 @@ local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platf
 --[==[
 
 print<|fs|>]==] -- typesystem call, it won't be in build output
---[[
-{
-        "open" = function⦗nil | string, nil | string⦘: ⦗any⦘,
-        "read" = function⦗any, number, number, any⦘: ⦗number⦘,
-        "write" = function⦗nil | { }, number, number, any⦘: ⦗number⦘,
-        "seek" = function⦗any, number, number⦘: ⦗number⦘,
-        "tell" = function⦗any⦘: ⦗number⦘,
-        "close" = function⦗any⦘: ⦗number⦘,
-        "eof" = function⦗any⦘: ⦗number⦘,
-        "setcustomattribute" = function⦗string, string⦘: ⦗nil | true, string⦘,
-        "getcustomattribute" = function⦗string⦘: ⦗nil | string, string⦘,
-        "watch" = function⦗string, { number = ⦗"access" | "attrib" | "close_nowrite" | "close_write" | "create" | "delete" | "delete_self" | "dont_follow" | "excl_unlink" | "ignored" | "isdir" | "mask_add" | "mask_create" | "modify" | "move_self" | "moved_from" | "moved_to" | "oneshot" | "onlydir" | "open" | "q_overflow" | "unmount"⦘ }⦘: ⦗nil | {
-            "Read" = function⦗*self-table* | any⦘: ⦗⦘,
-            "Remove" = function⦗*self-table* | any⦘: ⦗⦘
-        }⦘,
-        "get_files" = function⦗string⦘: ⦗nil | { }, string⦘,
-        "get_files_recursive" = function⦗string, false | nil | true⦘: ⦗nil | {
-            number ⊃ 0 = number | string ⊃ 2
-        }, string | { number ⊃ undefined = {
-            "path" = string,
-            "error" = string
-        } ⊃ undefined }⦘,
-        "get_attributes" = function⦗string, false | nil | true⦘: ⦗nil | {
-            "last_accessed" = nil | number,
-            "last_changed" = nil | number,
-            "last_modified" = nil | number,
-            "type" = "directory" | "file",
-            "size" = nil | number,
-            "mode" = number,
-            "links" = number
-        }, string⦘,
-        "get_size" = function⦗string, false | nil | true⦘: ⦗nil, string⦘,
-        "get_type" = function⦗string⦘: ⦗"directory" | "file" | nil⦘,
-        "copy" = function⦗string, string, false | nil | true⦘: ⦗nil, string⦘,
-        "link" = function⦗string, string, false | nil | true⦘: ⦗nil | true, string⦘,
-        "create_directory" = function⦗string⦘: ⦗nil | true, string⦘,
-        "remove_file" = function⦗string⦘: ⦗nil | true, string⦘,
-        "remove_directory" = function⦗string⦘: ⦗nil | true, string⦘,
-        "set_current_directory" = function⦗string⦘: ⦗nil | true, string⦘,
-        "get_current_directory" = function⦗⦘: ⦗string⦘
-}    
-]]
-
-for k,v in pairs(fs.get_files(".")) do 
-    print(k,v) 
-end

@@ -87,7 +87,7 @@ return function(META)
             return b
         end
 
-        function unpack_union_tuples(arguments, function_arguments)
+        function unpack_union_tuples(func_obj, arguments, function_arguments)
             local out = {}
             local lengths = {}
             local max = 1
@@ -95,7 +95,7 @@ return function(META)
             local arg_length = #arguments
 
             for i, obj in ipairs(arguments) do
-                if should_expand(obj, function_arguments:Get(i)) then
+                if not func_obj.no_expansion and should_expand(obj, function_arguments:Get(i)) then
                     lengths[i] = #obj:GetData()
                     max = max * lengths[i]
                 else
@@ -158,7 +158,7 @@ return function(META)
         end
 
         local ret = {}
-        for i, arg in ipairs(unpack_union_tuples({arguments:Unpack(len)}, function_arguments)) do
+        for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
             ret[i] = self:LuaTypesToTuple(
                 obj:GetNode(), {
                     self:CallLuaTypeFunction(

@@ -1,6 +1,6 @@
 local type function cast(node, args)
 	local tprint = require("nattlua.other.tprint")
-	local cast = env.typesystem.cast:GetData().lua_function 
+	local cast = env.typesystem.cast
 
 	if node.tag == "Struct" then
 		local tbl = types.Table({})
@@ -92,6 +92,9 @@ local type function cast(node, args)
 			return types.Nil()
 		elseif node.n:find("%$%d+%$") then
 			local val = table.remove(args, 1)
+			if not val then
+				error("unable to lookup type $ #" .. (#args + 1), 2)
+			end
 			return val
 		else
 			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi:Get("C"), types.String(node.n):SetLiteral(true), "runtime")
@@ -109,8 +112,31 @@ local type function cast(node, args)
 		if node.t.tag == "Type" and node.t.n == "void" then
 			return types.Any()
 		end
+
 		local ptr = types.Table({})
-		ptr:Set(types.Number(), cast(node.t, args))
+		local ctype = cast(node.t, args)
+		ptr:Set(types.Number(), ctype)
+
+
+		local meta = types.Table({})
+
+		meta:Set("__index", types.LuaTypeFunction(
+			function(self, key)
+
+				if ctype:GetMetaTable() then
+					-- i'm not really sure about this
+					-- boxed luajit ctypes seem to just get the metatable from the ctype
+
+					return ctype:GetMetaTable():Get(key)
+				end
+
+			end,
+			{types.Any(), types.Any()},
+			{}
+		))
+
+		ptr:SetMetaTable(meta)
+
 		return types.Union({ptr, types.Nil()})
 	else
 		tprint(node)
@@ -118,10 +144,26 @@ local type function cast(node, args)
 	end
 end
 
+type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
+	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
+
+	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
+		analyzer:NewIndexOperator(
+			cdecl:GetNode(), 
+			env.typesystem.ffi:Get("C"),
+			types.String(ctype.name):SetLiteral(true),
+			env.typesystem.cast(ctype.type, {...}),
+			"runtime"
+		)
+	end
+end
+-- TODO
+§env.typesystem.ffi:Get("cdef").no_expansion = true
+
 type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 
-	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))
+	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
 
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...}) 
 	ctype:SetNode(cdecl:GetNode())
@@ -133,7 +175,7 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	end
 
 	ctype:Set("__call", types.LuaTypeFunction(
-		function(self, init) 
+		function(self, init)
 			if init then
 				analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
 			end
@@ -148,20 +190,23 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 
 	return ctype
 end
+-- TODO
+§env.typesystem.ffi:Get("typeof").no_expansion = true
 
-type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
-	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	if ... then error("NYI") end
+type function ffi.metatype(ctype, meta)
 	
-	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}))) do
-		analyzer:NewIndexOperator(
-			cdecl:GetNode(), 
-			env.typesystem.ffi:Get("C"),
-			types.String(ctype.name):SetLiteral(true),
-			env.typesystem.cast(ctype.type),
-			"runtime"
-		)
+	local new = meta:Get("__new")
+	if new then
+		meta:Set("__call", types.LuaTypeFunction(
+			function(self, ...)
+				return analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...})))
+			end,
+			new:GetArguments():GetData(),
+			new:GetReturnTypes():GetData(),
+		))
 	end
+
+	ctype:SetMetaTable(meta)
 end
 
 -- some tests
@@ -312,4 +357,53 @@ do
 	local cdata = ctype({})
 
 	type_assert<|(typeof cdata).foo, number|>
+end
+
+do
+	local handle = ffi.typeof("struct {}")
+	local pointer = ffi.typeof("$*", handle)
+
+	local meta = {}
+	meta.__index = meta
+	do
+		local translate_mode = {
+			read = "r",
+			write = "w",
+			append = "a",
+		}
+
+		ffi.cdef("$ fopen(const char *, const char *);", pointer)
+		function meta:__new(file_name: string, mode: "write" | "read" | "append")
+			mode = translate_mode[mode]
+
+			type_assert<|file_name, "YES"|>
+			type_assert<|mode, "w"|>
+
+			local f = ffi.C.fopen(file_name, mode)
+			
+			if f == nil then
+				return nil, "cannot open file"
+			end
+			
+			return f
+		end
+
+		function meta:__gc()
+			self:close()
+		end
+
+		ffi.cdef("int fclose($);", pointer)
+		function meta:close()
+			return ffi.C.fclose(self)
+		end
+	end
+
+	ffi.metatype(handle, meta)
+
+	local f = handle("YES", "write")
+
+	if f then
+		local int = f:close()
+		type_assert<|int, number|>
+	end
 end
