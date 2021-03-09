@@ -103,9 +103,9 @@ pending[[
     local a: false | 1
 
     local x = not a
-    § assert(env.runtime.x:GetType():Equal(types.Boolean()))
-    § assert(env.runtime.x:GetType().source:Equal("number-1|symbol-false"))
-    § assert(env.runtime.x:GetType().falsy_union:Equal("number-1"))
-    § assert(env.runtime.x:GetType().truthy_union:Equal("symbol-false"))
+    § assert(env.runtime.x:Equal(types.Boolean()))
+    § assert(env.runtime.x.source:Equal("number-1|symbol-false"))
+    § assert(env.runtime.x.falsy_union:Equal("number-1"))
+    § assert(env.runtime.x.truthy_union:Equal("symbol-false"))
 
 ]]

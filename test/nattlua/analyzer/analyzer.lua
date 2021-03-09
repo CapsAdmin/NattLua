@@ -39,7 +39,7 @@ test("declaring base types", function()
         
         -- if the union sorting algorithm changes, we probably need to change this
         local type function check()
-            local a = tostring(env.typesystem.Any:GetType())
+            local a = tostring(env.typesystem.Any)
             local b = "$(.-) | -inf..inf | false | function⦗⦗*self-union*⦘×inf⦘: ⦗⦗*self-union*⦘×inf⦘ | nan | nil | true | { *self-union* = *self-union* }"
             if a ~= b then
                 print(a)
@@ -607,5 +607,5 @@ R[[
     x.func = _ as (function(lol: x | nil): x)
     x.bar = _ as (function(lol: x): {lol = x})
 
-    §assert(env.runtime.x:GetType():Equal(env.runtime.x:GetType():Copy()))
+    §assert(env.runtime.x:Equal(env.runtime.x:Copy()))
 ]]

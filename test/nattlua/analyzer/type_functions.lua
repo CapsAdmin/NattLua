@@ -389,7 +389,7 @@ run[[
     local type lol = 2
 
     local type function test()
-        assert(env.typesystem.lol:GetType():GetData() == 2)
+        assert(env.typesystem.lol:GetData() == 2)
     end
 
     do

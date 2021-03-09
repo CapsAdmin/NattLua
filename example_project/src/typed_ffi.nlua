@@ -1,6 +1,6 @@
 local type function cast(node, args)
 	local tprint = require("nattlua.other.tprint")
-	local cast = env.typesystem.cast:GetType():GetData().lua_function 
+	local cast = env.typesystem.cast:GetData().lua_function 
 
 	if node.tag == "Struct" then
 		local tbl = types.Table({})
@@ -94,7 +94,7 @@ local type function cast(node, args)
 			local val = table.remove(args, 1)
 			return val
 		else
-			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi.C:GetType(), types.String(node.n):SetLiteral(true), "runtime")
+			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi:Get("C"), types.String(node.n):SetLiteral(true), "runtime")
 			if not val then
 				return types.Any()
 			end
@@ -122,7 +122,7 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 
 	-- todo: how should type functions share code?
-	local cast = env.typesystem.cast:GetType():GetData().lua_function 
+	local cast = env.typesystem.cast:GetData().lua_function 
 	local cparser = require("nattlua.other.cparser")
 	
 	local ctypes = assert(cparser.parseString(cdecl:GetData(), {}, {...}))
@@ -156,7 +156,7 @@ type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 
 	-- todo: how should type functions share code?
-	local cast = env.typesystem.cast:GetType():GetData().lua_function	
+	local cast = env.typesystem.cast:GetData().lua_function	
 	local cparser = require("nattlua.other.cparser")
 
 	if ... then error("NYI") end
@@ -166,7 +166,7 @@ type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	for _, ctype in ipairs(ctypes) do
 		analyzer:NewIndexOperator(
 			cdecl:GetNode(), 
-			env.typesystem.ffi.C:GetType(), 
+			assert(env.typesystem.ffi:Get("C")), 
 			types.String(ctype.name):SetLiteral(true), 
 			cast(ctype.type),
 			"runtime"

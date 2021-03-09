@@ -115,7 +115,7 @@ return function(META)
         local function genscopemeta(self, scope, env)
             return setmetatable({}, {
                 __index = function(_, key)
-                    return types.View(self:GetLocalOrEnvironmentValue(key, env, scope))
+                    return self:GetLocalOrEnvironmentValue(key, env, scope)
                 end,
                 __newindex = function(_, key, val)
                     return self:SetLocalOrEnvironmentValue(key, val, env, scope)

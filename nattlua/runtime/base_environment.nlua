@@ -97,7 +97,7 @@ type function type_assert_superset(what, type)
 end
 
 type function type_assert_subset(what, type)
-	local tassert = env.typesystem.type_assert_superset:GetType():GetData().lua_function
+	local tassert = env.typesystem.type_assert_superset:GetData().lua_function
 	return tassert(type, what)
 end
 
@@ -613,9 +613,9 @@ do
         flags:AddType(types.String("closed file"):SetLiteral(true))
 
 
-        print(("%p"):format(obj), ("%p"):format(env.typesystem.File:GetType()))
+        print(("%p"):format(obj), ("%p"):format(env.typesystem.File))
 
-        if false and obj:IsSubsetOf(env.typesystem.File:GetType()) then
+        if false and obj:IsSubsetOf(env.typesystem.File) then
             return flags
         end
 
