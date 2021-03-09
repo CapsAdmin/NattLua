@@ -122,64 +122,53 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 
 	-- todo: how should type functions share code?
-	local ffi_isolated = require("nattlua.other.isolated_ffi")
 	local cast = env.typesystem.cast:GetType():GetData().lua_function 
 	local cparser = require("nattlua.other.cparser")
 	
-	local node, err = cparser.parseString(cdecl:GetData(), {}, {...})
-	if not node then 
-		error(err)
-		return types.Any() 
-	end
+	local ctypes = assert(cparser.parseString(cdecl:GetData(), {}, {...}))
 
-	local tbl = cast(node[#node].type, {...}) 
-	tbl:SetNode(cdecl:GetNode())
+	local ctype = cast(ctypes[#ctypes].type, {...}) 
+	ctype:SetNode(cdecl:GetNode())
 
-	local nilable = tbl:Copy()
+	local nilable = ctype:Copy()
 	for _, keyval in ipairs(nilable:GetData()) do
 		keyval.val = types.Union({types.Nil(), keyval.val})
 	end
 
-	local func_type = types.Function({
-		arg = types.Tuple({tbl, types.Union({types.Nil(), nilable})}), 
-		ret = types.Tuple({tbl}), 
+	ctype:Set("__call", types.Function({
+		arg = types.Tuple({ctype, types.Union({types.Nil(), nilable})}),
+		ret = types.Tuple({ctype}), 
 		lua_function = function(self, init) 
 			if init then
 				analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable))
 			end
 
-			return tbl:Copy()
+			return ctype:Copy()
 		end
-	})
+	}))
 
-	tbl:Set("__call", func_type)
-	tbl:SetMetaTable(tbl)
+	ctype:SetMetaTable(ctype)
 
-	return tbl
+	return ctype
 end
 
 type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 
 	-- todo: how should type functions share code?
-	local ffi_isolated = require("nattlua.other.isolated_ffi")
 	local cast = env.typesystem.cast:GetType():GetData().lua_function	
 	local cparser = require("nattlua.other.cparser")
 
-	local str = cdecl:GetData()
+	if ... then error("NYI") end
 
-	if str:sub(-1) ~= "\n" then str = str.."\n" end
-	local next_statement = cparser.declarationIterator({}, str:gmatch("(.-)\n"), "")
-	while true do
-		local info = next_statement()
-		if not info then break end
-		local obj = cast(info.type, {...})
+	local ctypes = assert(cparser.parseString(cdecl:GetData(), {}))
 
+	for _, ctype in ipairs(ctypes) do
 		analyzer:NewIndexOperator(
 			cdecl:GetNode(), 
 			env.typesystem.ffi.C:GetType(), 
-			types.String(info.name):SetLiteral(true), 
-			obj,
+			types.String(ctype.name):SetLiteral(true), 
+			cast(ctype.type),
 			"runtime"
 		)
 	end
