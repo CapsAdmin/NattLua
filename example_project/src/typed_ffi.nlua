@@ -121,31 +121,28 @@ end
 type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 
-	-- todo: how should type functions share code?
-	local cast = env.typesystem.cast:GetData().lua_function 
-	local cparser = require("nattlua.other.cparser")
-	
-	local ctypes = assert(cparser.parseString(cdecl:GetData(), {}, {...}))
+	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))
 
-	local ctype = cast(ctypes[#ctypes].type, {...}) 
+	local ctype = env.typesystem.cast(declarations[#declarations].type, {...}) 
 	ctype:SetNode(cdecl:GetNode())
 
-	local nilable = ctype:Copy()
-	for _, keyval in ipairs(nilable:GetData()) do
-		keyval.val = types.Union({types.Nil(), keyval.val})
+	local nilable_ctype = ctype:Copy()
+
+	for _, keyval in ipairs(nilable_ctype:GetData()) do
+		keyval.val = types.Nilable(keyval.val)
 	end
 
-	ctype:Set("__call", types.Function({
-		arg = types.Tuple({ctype, types.Union({types.Nil(), nilable})}),
-		ret = types.Tuple({ctype}), 
-		lua_function = function(self, init) 
+	ctype:Set("__call", types.LuaTypeFunction(
+		function(self, init) 
 			if init then
-				analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable))
+				analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
 			end
 
 			return ctype:Copy()
-		end
-	}))
+		end,
+		{ctype, types.Nilable(nilable_ctype)},
+		{ctype}
+	))
 
 	ctype:SetMetaTable(ctype)
 
@@ -154,31 +151,23 @@ end
 
 type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-
-	-- todo: how should type functions share code?
-	local cast = env.typesystem.cast:GetData().lua_function	
-	local cparser = require("nattlua.other.cparser")
-
 	if ... then error("NYI") end
-
-	local ctypes = assert(cparser.parseString(cdecl:GetData(), {}))
-
-	for _, ctype in ipairs(ctypes) do
+	
+	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}))) do
 		analyzer:NewIndexOperator(
 			cdecl:GetNode(), 
-			assert(env.typesystem.ffi:Get("C")), 
-			types.String(ctype.name):SetLiteral(true), 
-			cast(ctype.type),
+			env.typesystem.ffi:Get("C"),
+			types.String(ctype.name):SetLiteral(true),
+			env.typesystem.cast(ctype.type),
 			"runtime"
 		)
 	end
 end
 
--- some quick tests
+-- some tests
 -- this code won't execute outside of the typesystem
 
 local ffi = require("ffi")
-
 
 do
 	ffi.C = {}

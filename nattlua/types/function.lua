@@ -6,6 +6,12 @@ local META = {}
 META.Type = "function"
 require("nattlua.types.base")(META)
 
+function META:__call(...)
+    if self:GetData().lua_function then
+        return self:GetData().lua_function(...)
+    end
+end
+
 function META.Equal(a, b)
     return 
         a.Type == b.Type and

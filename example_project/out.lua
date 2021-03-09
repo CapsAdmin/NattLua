@@ -83,7 +83,7 @@ ffi.cdef([[
 		uint32_t mask;
 		uint32_t cookie;
 		uint32_t len;
-		char name [];
+		char * name;
 	};
 	int inotify_init(void);
 	int inotify_init1(int flags);

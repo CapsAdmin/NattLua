@@ -106,11 +106,34 @@ function types.Initialize()
     types.String = types.RegisterType(require("nattlua.types.string"))
     types.Any = types.RegisterType(require("nattlua.types.any"))
     types.Symbol = types.RegisterType(require("nattlua.types.symbol"))
-    
-    types.Nil = function() return types.Symbol(nil) end
-    types.True = function() return types.Symbol(true) end
-    types.False = function() return types.Symbol(false) end
-    types.Boolean = function() return types.Union({types.True(), types.False()}) end
+end
+
+function types.Nil() 
+    return types.Symbol(nil) 
+end
+
+function types.True() 
+    return types.Symbol(true) 
+end
+
+function types.False() 
+    return types.Symbol(false) 
+end
+
+function types.Boolean() 
+    return types.Union({types.True(), types.False()}) 
+end
+
+function types.LuaTypeFunction(lua_function, arg, ret)
+    return types.Function({
+        arg = types.Tuple(arg),
+        ret = types.Tuple(ret), 
+        lua_function = lua_function
+    })
+end
+
+function types.Nilable(typ)
+    return types.Union({typ, types.Nil()})
 end
 
 return types
