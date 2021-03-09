@@ -453,7 +453,7 @@ function META:SetMax(val)
     return copy
 end
 
-function META:Call(analyzer, arguments, ...)
+function META:Call(analyzer, arguments, call_node)
     if self:IsEmpty() then
         return type_errors.operation("call", nil)
     end
@@ -474,7 +474,7 @@ function META:Call(analyzer, arguments, ...)
             if obj.Type == "function" and arguments:GetLength() < obj:GetArguments():GetMinimumLength() then
                 table.insert(errors, "invalid amount of arguments: " .. tostring(arguments) .. " ~= " .. tostring(obj:GetArguments()))
             else
-                local res, reason = analyzer:Call(obj, arguments, ...)
+                local res, reason = analyzer:Call(obj, arguments, call_node)
 
                 if res then
                     return res
@@ -490,7 +490,7 @@ function META:Call(analyzer, arguments, ...)
     local new = types.Union({})
     
     for _, obj in ipairs(self.data) do
-        local val = analyzer:Assert(obj:GetNode(), analyzer:Call(obj, arguments, ...))
+        local val = analyzer:Assert(call_node, analyzer:Call(obj, arguments, call_node))
         
         -- TODO
         if val.Type == "tuple" and val:GetLength() == 1 then
