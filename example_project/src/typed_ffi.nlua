@@ -90,7 +90,7 @@ local type function cast(node, args)
 			return types.Boolean()
 		elseif node.n == "void" then
 			return types.Nil()
-		elseif node.n == "$" then
+		elseif node.n:find("%$%d+%$") then
 			local val = table.remove(args, 1)
 			return val
 		else
@@ -105,6 +105,9 @@ local type function cast(node, args)
 	elseif node.tag == "Pointer" then
 		if node.t.tag == "Qualified" and node.t.t.n == "char" then
 			return types.Union({types.String(), types.Nil()})
+		end
+		if node.t.tag == "Type" and node.t.n == "void" then
+			return types.Any()
 		end
 		local ptr = types.Table({})
 		ptr:Set(types.Number(), cast(node.t, args))
@@ -121,14 +124,15 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	-- todo: how should type functions share code?
 	local ffi_isolated = require("nattlua.other.isolated_ffi")
 	local cast = env.typesystem.cast:GetType():GetData().lua_function 
-	
 	local cparser = require("nattlua.other.cparser")
-	local node, err = cparser.stringToType(cdecl:GetData())
+	
+	local node, err = cparser.parseString(cdecl:GetData(), {}, {...})
 	if not node then 
-		error("error parsing c declaration", 2)
+		error(err)
 		return types.Any() 
 	end
-	local tbl = cast(node, {...}) 
+
+	local tbl = cast(node[#node].type, {...}) 
 	tbl:SetNode(cdecl:GetNode())
 
 	local nilable = tbl:Copy()
@@ -160,6 +164,7 @@ type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	-- todo: how should type functions share code?
 	local ffi_isolated = require("nattlua.other.isolated_ffi")
 	local cast = env.typesystem.cast:GetType():GetData().lua_function	
+	local cparser = require("nattlua.other.cparser")
 
 	local str = cdecl:GetData()
 
@@ -321,7 +326,6 @@ do
 	ffi.C.foo(nil, 1, nil)
 	ffi.C.foo(nil, 1, "")
 end
-
 
 do
 	ffi.C = {}

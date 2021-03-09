@@ -2934,4 +2934,51 @@ cparser.typeToString = typeToString
 cparser.stringToType = stringToType
 cparser.declToString = declToString
 
+cparser.parseString = function(cdecl, options, typeofargs)
+   options = options or {}
+   options.filename = options.filename or cdecl
+   
+   local out = {}
+
+   options.silent = true
+   local ok, err = pcall(function() 
+
+
+      local str = cdecl
+
+      if typeofargs then
+         str = ""
+         for i, v in ipairs(typeofargs) do
+            str = str .. "typedef void* $" .. i .. ";\n"
+         end
+
+         local i = 1
+         str = str .. "typedef " .. cdecl:gsub("%$", function() return "$" .. i .. "$" end) .. " out;"
+         str = str:gsub("%$(%[[%d]+%]) out;", function(x) return "$ out" .. x .. ";" end)
+      end
+
+      local tokens = {}
+
+      for token in cppTokenIterator(options, (str .. "\n"):gmatch("(.-)\n"), options.filename) do
+         table.insert(tokens, token)
+      end
+      
+      local i = 0
+      local iterator = function() 
+         i = i + 1
+         return tokens[i]
+      end
+
+      for action in declarationIterator(options, iterator, options.filename) do
+         table.insert(out, action)
+      end
+   end)
+
+   if not ok then
+      return ok, err
+   end
+
+   return out
+end
+
 return cparser

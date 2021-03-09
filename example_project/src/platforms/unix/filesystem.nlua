@@ -134,6 +134,8 @@ if OSX then
 			int64_t  st_qspare[2];
 		}
 	]])
+
+	type stat_struct.@Name = "OSXStat"
 else
 	if X64 then
 		stat_struct = ffi.typeof([[
@@ -158,6 +160,8 @@ else
 				int64_t  __unused[3];
 			}
 		]])
+
+		type stat_struct.@Name = "UnixX64Stat"
 	else
 		stat_struct = ffi.typeof([[
 			struct {
@@ -182,6 +186,8 @@ else
 				uint64_t st_ino;
 			}
 		]])
+
+		type stat_struct.@Name = "UnixX32Stat"
 	end
 end
 

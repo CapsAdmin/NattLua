@@ -651,23 +651,25 @@ end
 
 return fs
  end
+
 --[==[-- this will use some reflection api to track types from ffi.cdef
 import_type<|"typed_ffi.nlua"|>]==]
 
 local ffi = require("ffi")
 
-local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))--[==[
-print<|fs|>]==] -- typesystem call, it won't be in build output
+local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))--§analyzer:AnalyzeUnreachableCode() 
+--[==[
 
+print<|fs|>]==] -- typesystem call, it won't be in build output
 --[[
 {
-        "open" = function⦗nil | string, nil | string⦘: ⦗VoidPointer | nil⦘,
-        "read" = function⦗VoidPointer | nil, number, number, VoidPointer | nil⦘: ⦗number⦘,
-        "write" = function⦗VoidPointer | nil, number, number, VoidPointer | nil⦘: ⦗number⦘,
-        "seek" = function⦗VoidPointer | nil, number, number⦘: ⦗number⦘,
-        "tell" = function⦗VoidPointer | nil⦘: ⦗number⦘,
-        "close" = function⦗VoidPointer | nil⦘: ⦗number⦘,
-        "eof" = function⦗VoidPointer | nil⦘: ⦗number⦘,
+        "open" = function⦗nil | string, nil | string⦘: ⦗any⦘,
+        "read" = function⦗any, number, number, any⦘: ⦗number⦘,
+        "write" = function⦗nil | { }, number, number, any⦘: ⦗number⦘,
+        "seek" = function⦗any, number, number⦘: ⦗number⦘,
+        "tell" = function⦗any⦘: ⦗number⦘,
+        "close" = function⦗any⦘: ⦗number⦘,
+        "eof" = function⦗any⦘: ⦗number⦘,
         "setcustomattribute" = function⦗string, string⦘: ⦗nil | true, string⦘,
         "getcustomattribute" = function⦗string⦘: ⦗nil | string, string⦘,
         "watch" = function⦗string, { number = ⦗"access" | "attrib" | "close_nowrite" | "close_write" | "create" | "delete" | "delete_self" | "dont_follow" | "excl_unlink" | "ignored" | "isdir" | "mask_add" | "mask_create" | "modify" | "move_self" | "moved_from" | "moved_to" | "oneshot" | "onlydir" | "open" | "q_overflow" | "unmount"⦘ }⦘: ⦗nil | {
@@ -687,8 +689,8 @@ print<|fs|>]==] -- typesystem call, it won't be in build output
             "last_modified" = nil | number,
             "type" = "directory" | "file",
             "size" = nil | number,
-            "mode" = any,
-            "links" = any
+            "mode" = number,
+            "links" = number
         }, string⦘,
         "get_size" = function⦗string, false | nil | true⦘: ⦗nil, string⦘,
         "get_type" = function⦗string⦘: ⦗"directory" | "file" | nil⦘,
@@ -699,7 +701,9 @@ print<|fs|>]==] -- typesystem call, it won't be in build output
         "remove_directory" = function⦗string⦘: ⦗nil | true, string⦘,
         "set_current_directory" = function⦗string⦘: ⦗nil | true, string⦘,
         "get_current_directory" = function⦗⦘: ⦗string⦘
-}
+}    
 ]]
 
---for k,v in pairs(fs.get_files(".")) do print(k,v) end
+for k,v in pairs(fs.get_files(".")) do 
+    print(k,v) 
+end
