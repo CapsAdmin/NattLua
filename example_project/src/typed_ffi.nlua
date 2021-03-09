@@ -2,7 +2,7 @@ local type function cast(node, args)
 	local tprint = require("nattlua.other.tprint")
 	local cast = env.typesystem.cast
 
-	if node.tag == "Struct" then
+	if node.tag == "Struct" or node.tag == "Union" then
 		local tbl = types.Table({})
 		for _, node in ipairs(node) do
 			if node.tag == "Pair" then
@@ -56,7 +56,7 @@ local type function cast(node, args)
 			node.n == "signed short" or
 			node.n == "signed short int" or
 			node.n == "unsigned short" or
-			node.n == "unsigned short int " or
+			node.n == "unsigned short int" or
 			node.n == "int" or
 			node.n == "signed" or
 			node.n == "signed int" or
@@ -116,7 +116,6 @@ local type function cast(node, args)
 		local ptr = types.Table({})
 		local ctype = cast(node.t, args)
 		ptr:Set(types.Number(), ctype)
-
 
 		local meta = types.Table({})
 
@@ -193,6 +192,13 @@ end
 -- TODO
 §env.typesystem.ffi:Get("typeof").no_expansion = true
 
+type function ffi.new(cdecl, ...)
+	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {ffinew = true}, {...}))
+	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
+
+	return ctype
+end
+
 type function ffi.metatype(ctype, meta)
 	
 	local new = meta:Get("__new")
@@ -207,6 +213,10 @@ type function ffi.metatype(ctype, meta)
 	end
 
 	ctype:SetMetaTable(meta)
+end
+
+type function ffi.load(lib: string)
+	return env.typesystem.ffi:Get("C")
 end
 
 -- some tests
@@ -406,4 +416,37 @@ do
 		local int = f:close()
 		type_assert<|int, number|>
 	end
+end
+
+do	
+	ffi.cdef([[
+		struct in6_addr {
+            union {
+                uint8_t u6_addr8[16];
+                uint16_t u6_addr16[8];
+                uint32_t u6_addr32[4];
+            } u6_addr;
+        };
+	]])
+
+	local lol = ffi.new("struct in6_addr")
+
+	type_assert<|lol.u6_addr.u6_addr16, {[number] = number}|>
+end
+
+do
+	ffi.cdef[[
+		typedef size_t SOCKET;
+	]]
+	
+	local num = ffi.new("SOCKET", -1)
+	type_assert<|num, number|>
+end
+
+do
+	local buffer = ffi.new("char[?]", 5)
+	type_assert<|buffer, {[number] = number}|>
+
+	local buffer = ffi.new("char[8]")
+	type_assert<|buffer, {[number] = number}|>
 end

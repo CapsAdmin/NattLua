@@ -2934,7 +2934,7 @@ cparser.typeToString = typeToString
 cparser.stringToType = stringToType
 cparser.declToString = declToString
 
-cparser.parseString = function(cdecl, options, typeofargs)
+cparser.parseString = function(cdecl, options, args)
    options = options or {}
    options.filename = options.filename or cdecl
    
@@ -2946,22 +2946,25 @@ cparser.parseString = function(cdecl, options, typeofargs)
 
       local str = cdecl
 
-      if typeofargs then
-         str = ""
-         for i, v in ipairs(typeofargs) do
+      str = ""
+      if args then
+         for i, v in ipairs(args) do
             str = str .. "typedef void* $" .. i .. ";\n"
          end
+      end
 
-         local i = 1
-         local temp = cdecl:gsub("%$", function() return "$" .. i .. "$" end)
+      local i = 1
+      local temp = cdecl:gsub("%$", function() return "$" .. i .. "$" end)
 
-         if options.typeof then
-            str = str .. "typedef " .. temp .. " out;"
-         else
-            str = str .. temp
-         end
-
+      if options.typeof then
+         str = str .. "typedef " .. temp .. " out;"
          str = str:gsub("%$(%[[%d]+%]) out;", function(x) return "$ out" .. x .. ";" end)
+      elseif options.ffinew then
+         str = str .. "extern " .. temp .. " out;"
+         str = str:gsub("(%[[%d%?]+%]) out;", function(x) return " out" .. x .. ";" end)
+         str = str:gsub("%[%?+%]", function(x) return "["..args[1]:GetData().."]" end)
+      else
+         str = str .. temp
       end
 
       local tokens = {}
