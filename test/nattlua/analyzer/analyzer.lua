@@ -470,7 +470,7 @@ R[[
 
 R([[
     local x: { y = number } = {}
-]], "table is empty")
+]], "is not a subset of")
 
 R[[
     local Foo = {Bar = {}}
