@@ -1,3 +1,10 @@
+--[[
+    this has probably been the most difficult part about the analyzer
+    the code here is not very elegant and i strongly favor readable code over optimizations
+
+    i hope that there's a much simpler way of doing this that will become apparent sometime
+]]
+
 local types = require("nattlua.types.types")
 local tprint = require("nattlua.other.tprint")
 
@@ -52,11 +59,35 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
                 end
             end
         end
-        
-        if scope.test_condition then -- make scopes that use the same type condition certrain
-            for _, mut in ipairs(mutations) do
-                if mut.scope ~= scope and mut.scope.test_condition and types.FindInType(mut.scope.test_condition, scope.test_condition) then
-                    mut.certain_override = true
+
+        do
+            --[[
+                make scopes that use the same type condition certrain
+
+                local MAYBE = math.random() > 0.5
+
+                if MAYBE then
+                    -- if this triggers
+                end
+
+                if MAYBE then
+                    -- then this also triggers
+                end
+            ]]
+
+            local test_a = scope:GetTestCondition()
+            
+            if test_a then
+                for _, mut in ipairs(mutations) do
+                    if mut.scope ~= scope then 
+                        local test_b = mut.scope:GetTestCondition()
+
+                        if test_b then
+                            if types.FindInType(test_a, test_b) then
+                                mut.certain_override = true
+                            end
+                        end
+                    end
                 end
             end
         end

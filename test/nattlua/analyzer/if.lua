@@ -1158,14 +1158,14 @@ run[[
     lol()
 ]]
 
-pending[[
+run[[
     if math.random() > 0.5 then
         FOO = 1
     
-        print(FOO)
+        type_assert(FOO, 1)
         
         do
-            print(FOO)
+            type_assert(FOO, 1)
         end
     end
 ]]
