@@ -1170,6 +1170,16 @@ run[[
     end
 ]]
 
+run[[
+    assert(math.random() > 0.5)
+
+    LOL = true
+
+    if math.random() > 0.5 then end
+
+    print(LOL)
+]]
+
 pending([[
     local a: nil | 1
 

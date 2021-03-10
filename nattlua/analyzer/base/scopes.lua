@@ -60,6 +60,13 @@ return function(META)
     function META:CloneCurrentScope()
         local current_scope = self:GetScope()
         self:PopScope()
+        self:PopEnvironment("runtime")
+
+        local env = self:GetEnvironment("runtime"):Copy()
+        for _, keyval in ipairs(env:GetData()) do
+            self:MutateValue(env, keyval.key, keyval.val, "runtime")
+        end
+
         local scope = current_scope:Copy(true)
         for env, upvalues in pairs(scope.upvalues) do
             for _, upvalue in ipairs(upvalues.list) do
@@ -73,6 +80,7 @@ return function(META)
             scope:SetParent(parent)
         end
 
+        self:PushEnvironment(self.current_statement, env, "runtime")
         return self:PushScope(scope)
     end
 
