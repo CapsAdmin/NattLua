@@ -4,43 +4,22 @@ local tprint = require("nattlua.other.tprint")
 local META = {}
 META.__index = META
 
+local DEBUG = true
+
+local function same_if_statement(a, b)
+    return a.if_statement and a.if_statement == b.if_statement
+end
+
 function META:GetValueFromScope(scope, upvalue, key, analyzer)
     local mutations = {}
-    
+
     do
-        for from, mutation in ipairs(self.mutations) do
-            do 
-                --[[
-                Remove redundant mutations that happen in the same same scope. 
-                The last mutation is the one that matters.
-
-                local a = 1 --<< from here
-                
-                if true then
-                    a = 6
-                    do a = 100 end
-                    a = 2
-                end
-
-                a = 2 --<< to here
-
-            ]]
-                for i = #mutations, 1, -1 do
-                    if mutations[i].scope == mutation.scope then
-                        for i = from, i, -1 do 
-                            if mutations[i] then
-                                table.remove(mutations, i)    
-                            end
-                        end
-                        break
-                    end
-                end
-            end
-
+        
+        for from, mut in ipairs(self.mutations) do
             -- if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
-            if scope.if_statement and mutation.scope.if_statement == scope.if_statement and scope ~= mutation.scope then
+            if same_if_statement(scope, mut.scope) and scope ~= mut.scope then
             else 
-                table.insert(mutations, mutation)                            
+                table.insert(mutations, mut)                            
             end
         end
 
@@ -49,15 +28,15 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
             but only if we are a sibling of the if statement's scope
         ]] 
             for i = #mutations, 1, -1 do
-                local change = mutations[i]
+                local mut = mutations[i]
 
-                if change.scope.if_statement and change.scope.test_condition_inverted then
+                if mut.scope.if_statement and mut.scope.test_condition_inverted then
                     
-                    local if_statement = change.scope.if_statement
+                    local if_statement = mut.scope.if_statement
                     while true do
-                        local change = mutations[i]
-                        if not change then break end
-                        if change.scope.if_statement ~= if_statement then
+                        local mut = mutations[i]
+                        if not mut then break end
+                        if mut.scope.if_statement ~= if_statement then
                             for i = i, 1, -1 do
                                 if mutations[i].scope:Contains(scope) then
                                     table.remove(mutations, i)
@@ -75,9 +54,9 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
         end
         
         if scope.test_condition then -- make scopes that use the same type condition certrain
-            for _, change in ipairs(mutations) do
-                if change.scope ~= scope and change.scope.test_condition and types.FindInType(change.scope.test_condition, scope.test_condition) then
-                    change.certain_override = true
+            for _, mut in ipairs(mutations) do
+                if mut.scope ~= scope and mut.scope.test_condition and types.FindInType(mut.scope.test_condition, scope.test_condition) then
+                    mut.certain_override = true
                 end
             end
         end
@@ -87,8 +66,8 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
     union.upvalue = upvalue
     union.upvalue_keyref = key
     
-    for _, change in ipairs(mutations) do
-        local obj = change.value
+    for _, mut in ipairs(mutations) do
+        local obj = mut.value
 
         do
             --[[
@@ -99,8 +78,8 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
 
                 -- x is true here
             ]]
-            local scope, scope_union = change.scope:FindScopeFromTestCondition(obj)
-            if scope and change.scope == scope and scope.test_condition.Type == "union" then
+            local scope, scope_union = mut.scope:FindScopeFromTestCondition(obj)
+            if scope and mut.scope == scope and scope.test_condition.Type == "union" then
                 local t
                 if scope.test_condition_inverted then
                     t = scope_union.falsy_union or scope.test_condition:GetFalsy()
@@ -114,7 +93,7 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
             end
         end
     
-        if change.certain_override or change.scope:IsCertain(scope) then
+        if mut.certain_override or mut.scope:IsCertain(scope) then
             union:Clear()
         end
 

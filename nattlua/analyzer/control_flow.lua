@@ -199,10 +199,6 @@ return function(META)
 
         initialize_mutation_tracker(obj, scope, key, env)
 
-        if not obj.mutations[key]:HasMutations() then
-            obj.mutations[key]:Mutate(val, scope)
-        end
-
         obj.mutations[key]:Mutate(val, scope)
     end
 
