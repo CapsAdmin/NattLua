@@ -327,7 +327,7 @@ run([[
 
     local obj = foo()
     type_assert(obj.data, 0)
-    type_assert(meta.data, 0)
+    type_assert(meta.data, nil)
     type_assert(obj:foo(), 1)
 ]])
 
@@ -409,4 +409,29 @@ run[[
 
     local lol = tbl({foo = 1337})
     type_assert(lol, 1337)
+]]
+
+run[[
+    local meta = {}
+    meta.__index = meta
+
+    function meta:Foo(a: number)
+        return self.foo + 1
+    end
+
+    local function ctor1()
+        return setmetatable({foo = 1}, meta)
+    end
+
+    local function ctor2()
+        local self = {}
+        self.foo = 2
+        setmetatable(self, meta)
+        return self
+    end
+
+    §analyzer:AnalyzeUnreachableCode()
+
+    local type ret = return_type<|meta.Foo|>
+    type_assert<|ret, 2 | 3|>
 ]]

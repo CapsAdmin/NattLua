@@ -522,10 +522,9 @@ do -- globals
 
 	type function setmetatable(tbl, meta)
 		if meta.Type == "table" then			
-			if not meta:GetContract() then
-				meta:Extend(tbl, true)
-			end
-
+			meta.potential_self = meta.potential_self or types.Union({})
+			meta.potential_self:AddType(tbl)
+			
 			tbl:SetMetaTable(meta)
 		end
 

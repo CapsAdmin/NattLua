@@ -526,6 +526,8 @@ function META:Copy(map)
 
     copy:CopyInternalsFrom(self)
 
+    copy.potential_self = self.potential_self
+
     return copy
 end
 

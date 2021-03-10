@@ -36,6 +36,41 @@ return function(META)
     end
 
     do
+
+        local function add_potential_self(tup)
+            local self = tup:Get(1)
+
+            if self and self.Type == "union" then
+                self = self:GetType("table")
+            end
+
+            if self and self.potential_self then
+                local meta = self
+                local self = self.potential_self:Copy()
+
+                if self.Type == "union" then
+                    for _, obj in ipairs(self:GetData()) do
+                        obj:SetMetaTable(meta)
+                    end
+                else
+                    self:SetMetaTable(meta)
+                end
+                
+                local new_tup = types.Tuple({})
+                for i, obj in ipairs(tup:GetData()) do
+                    if i == 1 then
+                        new_tup:Set(i, self)
+                    else
+                        new_tup:Set(i, obj)
+                    end
+                end
+                return new_tup
+            end
+
+            return tup
+        end
+
+
         local function call(self, obj, arguments, node)
             -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
             arguments = obj:GetArguments():Copy()
@@ -43,6 +78,9 @@ return function(META)
             for i,v in ipairs(arguments:GetData()) do
                 v:SetContract(v)
             end
+
+            arguments = add_potential_self(arguments)
+            
             self:Assert(node, self:Call(obj, arguments, node))
         end
 
@@ -66,7 +104,6 @@ return function(META)
             for _,v in ipairs(self.deferred_calls) do
                 if not v[1].called and v[1].explicit_arguments then
                     local time = os.clock()
-
                     self:FireEvent("analyze_unreachable_function_start", v[1], called_count, total)
                     call(self, table.unpack(v))
                     called_count = called_count + 1
