@@ -1158,6 +1158,18 @@ run[[
     lol()
 ]]
 
+pending[[
+    if math.random() > 0.5 then
+        FOO = 1
+    
+        print(FOO)
+        
+        do
+            print(FOO)
+        end
+    end
+]]
+
 pending([[
     local a: nil | 1
 
