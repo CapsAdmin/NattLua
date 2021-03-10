@@ -22,7 +22,7 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
 
     do
         
-        for from, mut in ipairs(self.mutations) do
+        for _, mut in ipairs(self.mutations) do
             -- if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
             if same_if_statement(scope, mut.scope) and scope ~= mut.scope then
             else 
