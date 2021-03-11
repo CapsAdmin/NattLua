@@ -293,7 +293,7 @@ return function(META)
     
         obj.called = true
     
-        local env = self.PreferTypesystem and "typesystem" or "runtime"
+        local env = self:GetPreferTypesystem() and "typesystem" or "runtime"
         
         if obj.Type == "union" then
             obj = obj:MakeCallableUnion(self, call_node)

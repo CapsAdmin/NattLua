@@ -26,9 +26,9 @@ type ffi.C = {
 			-- not sure what a nice interface for this really should be yet
 			local generics_func = analyzer:GetLocalOrEnvironmentValue(name, "typesystem")
 			local argument_tuple = types.Tuple({...})
-			analyzer.PreferTypesystem = true
+			analyzer:PushPreferTypesystem(true)
 			local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
-			analyzer.PreferTypesystem = nil
+			analyzer:PopPreferTypesystem()
 			return returned_tuple:Unpack()
 		end
 

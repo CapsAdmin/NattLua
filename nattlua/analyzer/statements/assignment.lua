@@ -37,7 +37,7 @@ return function(META)
     end
 
     function META:AnalyzeAssignmentStatement(statement)
-        local env = self.PreferTypesystem and "typesystem" or statement.environment or "runtime"
+        local env = self:GetPreferTypesystem() and "typesystem" or statement.environment or "runtime"
 
         local left = {}
         local right = {}

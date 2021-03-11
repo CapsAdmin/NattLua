@@ -3,7 +3,7 @@ local Tuple = types.Tuple
 
 return function(META)
     function META:AnalyzePostfixCallExpression(node, env)
-        local env =  node.type_call and "typesystem" or env
+        local env = node.type_call and "typesystem" or env
         local callable = self:AnalyzeExpression(node.left, env)
 
         local self_arg
@@ -27,8 +27,8 @@ return function(META)
             table.insert(types, 1, self_arg)
         end
         
-        self.PreferTypesystem = node.type_call
-
+        self:PushPreferTypesystem(node.type_call or callable:GetNode() and (callable:GetNode().kind == "local_generics_type_function" or callable:GetNode().kind == "generics_type_function"))
+        
         local arguments
 
         if #types == 1 and types[1].Type == "tuple" then
@@ -54,7 +54,7 @@ return function(META)
         
         local returned_tuple = self:Assert(node, self:Call(callable, arguments, node))
         
-        self.PreferTypesystem = nil
+        self:PopPreferTypesystem()
 
         if node:IsWrappedInParenthesis() then
             returned_tuple = returned_tuple:Get(1)

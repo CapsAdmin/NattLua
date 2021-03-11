@@ -20,7 +20,7 @@ return function(META)
         if node.type ~= "expression" then error("node is not an expression", 2) end
         env = env or "runtime"
     
-        if self.PreferTypesystem then
+        if self:GetPreferTypesystem() then
             env = "typesystem"
         end
 
