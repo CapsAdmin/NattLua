@@ -1183,3 +1183,5 @@ do
 		end
 	end
 end
+
+import_type<|"nattlua/runtime/typed_ffi.nlua"|>

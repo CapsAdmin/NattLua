@@ -49,81 +49,34 @@ local fs = _G.fs or {}
 
 local ffi = require("ffi")
 
-local handle = ffi.typeof("struct {}")
-local pointer = ffi.typeof("$*", handle)
-
-local meta = {}
-meta.__index = meta
-do
-	local translate_mode = {
-		read = "r",
-		write = "write",
-		append = "a",
-	}
-
-	ffi.cdef("$ fopen(const char *, const char *);", pointer)
-	function meta:__new(file_name, mode)
-		local f = ffi.C.fopen(file_name, translate_mode[mode])
-		
-		if f == nil then
-			return nil, "cannot open file"
-		end
-		
-		return f
-	end
-
-	function meta:__gc()
-		self:close()
-	end
-
-	ffi.cdef("int fclose($);", pointer)
-	function meta:close()
-		ffi.C.fclose(self)
-	end
-end
-
-ffi.metatype(handle, meta)
-
-local f = handle("YES", "write")
-
-if f then
-	f:close()
-end
-
-do return end
-
 ffi.cdef([[
+	typedef unsigned long ssize_t;
 	char *strerror(int);
-
 	void *fopen(const char *filename, const char *mode);
+	int open(const char *pathname, int flags, ...);
 	size_t fread(void *ptr, size_t size, size_t nmemb, void *stream);
 	size_t fwrite(const void *ptr, size_t size, size_t nmemb, void *stream);
 	int fseek(void *stream, long offset, int whence);
-	long int ftell(void * stream);
+	long int ftell ( void * stream );
 	int fclose(void *fp);
-	int feof(void *stream);
-	
-	int fileno(void *stream);
-	int open(const char *pathname, int flags, ...);
 	int close(int fd);
-	int fchmod(int fd, int mode);
-	int inotify_add_watch(int fd, const char *pathname, uint32_t mask);
-	int inotify_rm_watch(int fd, int wd);
-
+	int feof(void *stream);
 	char *getcwd(char *buf, size_t size);
-
 	int chdir(const char *filename);
 	int mkdir(const char *filename, uint32_t mode);
 	int rmdir(const char *filename);
-	
+	int fileno(void *stream);
 	int remove(const char *pathname);
+	int fchmod(int fd, int mode);
 
-	void *opendir(const char *name);
-	int closedir(void *dirp);
+	typedef struct DIR DIR;
+	DIR *opendir(const char *name);
+	int closedir(DIR *dirp);
+	ssize_t syscall(int number, ...);
 
-	unsigned long syscall(int number, ...);
-	unsigned long read(int fd, void *buf, size_t count);
-	
+
+	ssize_t read(int fd, void *buf, size_t count);
+
 	struct inotify_event
 	{
 		int wd;
@@ -134,6 +87,9 @@ ffi.cdef([[
 	};
 	int inotify_init(void);
 	int inotify_init1(int flags);
+	int inotify_add_watch(int fd, const char *pathname, uint32_t mask);
+	int inotify_rm_watch(int fd, int wd);
+
 	static const uint32_t IN_MODIFY = 0x00000002;
 ]])
 
@@ -695,12 +651,6 @@ end
 
 return fs
  end
-
---[==[-- this will use some reflection api to track types from ffi.cdef
-import_type<|"typed_ffi.nlua"|>]==]
-
-local ffi = require("ffi")
-
 local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))--§analyzer:AnalyzeUnreachableCode() 
 --[==[
 
