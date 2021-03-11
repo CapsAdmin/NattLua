@@ -327,32 +327,6 @@ run[[
 ]]
 
 run[[
-    local type function mutate_table(tbl: {[any] = any})
-        tbl:Set("foo", "bar")
-    end
-    
-    local a = {}
-    
-    mutate_table(a)
-    
-    type_assert(a.foo, "bar")    
-]]
-
-run[[
-    local type function mutate_table(tbl: out {[any] = any})
-        tbl:Set("foo", "bar")
-    end
-    
-    local a = {}
-    
-    if maybe then
-        mutate_table(a)
-    end
-    
-    type_assert(a.foo, _ as "bar" | nil)
-]]
-
-run[[
     local a = {
         b = {
             foo = true,

@@ -39,14 +39,18 @@ return function(META)
             end
         end
 
-        -- changes in tables would have to be stored in a change list..
-
         if obj:GetContract() then
             local val, err = obj:GetContract():Get(key)
 
             if val then
-                local o = self:GetMutatedValue(obj, key, val, env)
+                if not obj.argument_index or obj:GetContract().literal_argument then
+                    local o = self:GetMutatedValue(obj, key, val, env)
+                    if o then
+                        return o
+                    end
+                end
 
+                local o = self:GetMutatedValue(obj:GetContract(), key, val, env)
                 if o then
                     return o
                 end

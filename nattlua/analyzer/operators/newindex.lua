@@ -57,6 +57,10 @@ return function(META)
             end
         end
 
+        if obj.Type == "table" and obj.argument_index and (not obj:GetContract() or not obj:GetContract().mutable) then
+            self:Warning(node, "mutating function argument")
+        end
+
         if not self:MutateValue(obj, key, val, env) then -- always false?
             return obj:Set(key, val)
         end

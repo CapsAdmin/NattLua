@@ -38,11 +38,12 @@ local type ToScreenData = {
 type Vector.__index = Vector
 type Vector.__call = function(Vector, number, number, number): Vector
 type Vector.__add = function(Vector, Vector): Vector
-type Vector.@Name = "Vector"
 type Vector.__mul = function(number | Vector, number | Vector): Vector
 type Vector.__unm = function(Vector): Vector
 
--- Or we can add a table like so
+--type Vector.@Name = "Vector"
+
+-- Or we can add a table:
 type Vector = Vector & {
     Zero = (function(self): nil),
     WithinAABox = (function(self, boxStart: Vector, boxEnd: Vector): boolean),
@@ -244,20 +245,20 @@ end
 
 type function table.Count(tbl: any): number
 
-function string.Implode( seperator, Table ) return
-	table.concat( Table, seperator )
+function string.Implode( seperator: literal string, Table: literal {[1 .. inf] = string} ) 
+    return table.concat( Table, seperator )
 end
 
-function string.GetFileFromFilename( path )
+function string.GetFileFromFilename( path: literal string )
 	if ( !path:find( "\\" ) && !path:find( "/" ) ) then return path end 
 	return path:match( "[\\/]([^/\\]+)$" ) or ""
 end
 
-function string.GetPathFromFilename( path )
+function string.GetPathFromFilename( path: literal string )
 	return path:match( "^(.*[/\\])[^/\\]-$" ) or ""
 end
 
-function string.ToTable( str )
+function string.ToTable( str: literal string )
 	local tbl = {}
 
 	for i = 1, string.len( str ) do
@@ -267,14 +268,14 @@ function string.ToTable( str )
 	return tbl
 end
 
-function math.Clamp(low, n, high) return math.min(math.max(n, low), high) end
+function math.Clamp(low: literal number, n: literal number, high: literal number) return math.min(math.max(n, low), high) end
 
 do
     local totable = string.ToTable
     local string_sub = string.sub
     local string_find = string.find
     local string_len = string.len
-    function string.Explode(separator, str, withpattern)
+    function string.Explode(separator: literal string, str: literal string, withpattern: literal boolean | nil)
         if ( separator == "" ) then return totable( str ) end
         if ( withpattern == nil ) then withpattern = false end
     
@@ -293,7 +294,7 @@ do
         return ret
     end
     
-    function string.Split( str, delimiter )
+    function string.Split( str: literal string, delimiter: literal string )
         return string.Explode( delimiter, str )
     end    
 end

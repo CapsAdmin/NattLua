@@ -14,12 +14,13 @@ return function(META)
             if node.kind == "table_key_value" then
                 local key = self:NewType(node.tokens["identifier"], "string", node.tokens["identifier"].value, true)
                 local val = self:AnalyzeExpression(node.expression, env)
-                tbl:Set(key, val)
+                
+                self:NewIndexOperator(node, tbl, key, val, env)
             elseif node.kind == "table_expression_value" then
                 local key = self:AnalyzeExpression(node.expressions[1], env)
-                local obj = self:AnalyzeExpression(node.expressions[2], env)
+                local val = self:AnalyzeExpression(node.expressions[2], env)
 
-                tbl:Set(key, obj)
+                self:NewIndexOperator(node, tbl, key, val, env)
             elseif node.kind == "table_index_value" then
                 local val = {self:AnalyzeExpression(node.expression, env)}
                 

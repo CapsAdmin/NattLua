@@ -230,6 +230,8 @@ return function(META)
                 return type_errors.other({"argument #", i, " ", arg, ": ", reason})
             end
 
+            arg.argument_index = i
+
             if arg.Type == "table" and contract.Type == "table" then
                 arg.old_contract = arg:GetContract()
                 arg:SetContract(contract)
@@ -300,6 +302,24 @@ return function(META)
         end
         
         if obj.Type ~= "function" then
+            if obj.Type == "any" then
+
+                -- any can do anything with mutable arguments
+
+                for _, arg in ipairs(arguments:GetData()) do
+                    if arg.Type == "table" and arg.created_env == "runtime" then
+                        if arg:GetContract() then
+                            self:Error(call_node, "cannot mutate argument with contract " .. tostring(arg:GetContract()))
+                        else
+                            for _, keyval in ipairs(arg:GetData()) do
+                                keyval.key = types.Union({types.Any(), keyval.key})
+                                keyval.val = types.Union({types.Any(), keyval.val})
+                            end
+                        end
+                    end
+                end
+            end
+
             return obj:Call(self, arguments, call_node)
         end
         
@@ -320,6 +340,19 @@ return function(META)
         if obj:GetData().lua_function then 
             return call_type_function(self, obj, call_node, function_node, function_arguments, arguments)
         elseif not function_node or function_node.kind == "type_function" then
+            
+            for i, arg in ipairs(arguments:GetData()) do
+                if arg.Type == "table" and arg.created_env == "runtime" then
+                   
+                    for _, keyval in ipairs(arg:GetData()) do
+                        keyval.key = types.Union({types.Any(), keyval.key})
+                        keyval.val = types.Union({types.Any(), keyval.val})
+                    end
+
+                    self:Warning(call_node, "argument #" .. i .. " " .. tostring(arg) .. " can be mutated by external call")
+                end
+            end
+
             self:FireEvent("external_call", call_node, obj)
         else    
             do -- recursive guard

@@ -56,7 +56,9 @@ return function(META --[[#: {
         
         self:SetContract(obj:GetContract())
         self:SetName(obj:GetName()) 
-        self.MetaTable = obj.MetaTable   
+        self.MetaTable = obj.MetaTable
+
+        self.created_env = obj.created_env
 
         -- what about these?
         --self.truthy_union = obj.truthy_union

@@ -101,9 +101,9 @@ return function(META)
                 local obj = self:AnalyzeExpression(node.right, "typesystem")
                 obj:MakeUnique(true)
                 return obj
-            elseif op == "out" then
+            elseif op == "mutable" then
                 local obj = self:AnalyzeExpression(node.right, "typesystem")
-                obj.out = true
+                obj.mutable = true
                 return obj
             elseif op == "$" then
                 local obj = self:AnalyzeExpression(node.right, "typesystem")

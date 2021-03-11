@@ -138,6 +138,7 @@ return function(META)
 
             exp_key.inferred_type = val
             val.node_label = exp_key
+            val.created_env = env
 
             if statement.kind == "local_assignment" then
                 self:CreateLocalValue(exp_key, val, env)

@@ -57,9 +57,13 @@ return function(META)
     end
 
     function META:OnFunctionCall(obj, arguments)
+        --[[
+            if the function argument says it can be mutated, 
+            we need to make a blank mutation before calling the function
+        ]]
         for i = 1, arguments:GetMinimumLength() do
             local arg = obj:GetArguments():Get(i)
-            if arg and arg.out then
+            if arg and arg.mutable then
                 local upvalue = arguments:Get(i).upvalue
                 if upvalue then
                     self:SetLocalOrEnvironmentValue(upvalue.key, arguments:Get(i):Copy():MakeUnique(true), "runtime")

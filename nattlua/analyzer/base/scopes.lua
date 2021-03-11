@@ -59,10 +59,14 @@ return function(META)
 
     function META:CloneCurrentScope()
         local current_scope = self:GetScope()
+        local env = self:GetEnvironment("runtime"):Copy()
+        
+        local last_node = self.environment_nodes[#self.environment_nodes]
         self:PopScope()
         self:PopEnvironment("runtime")
+        
+        self:PushEnvironment(last_node, env, "runtime")
 
-        local env = self:GetEnvironment("runtime"):Copy()
         for _, keyval in ipairs(env:GetData()) do
             self:MutateValue(env, keyval.key, keyval.val, "runtime")
         end
@@ -80,7 +84,6 @@ return function(META)
             scope:SetParent(parent)
         end
 
-        self:PushEnvironment(self.current_statement, env, "runtime")
         return self:PushScope(scope)
     end
 
@@ -183,12 +186,30 @@ return function(META)
     end
 
     function META:FindEnvironmentValue(key, env)
+        -- look up in parent if not found
         local g = self:GetEnvironment(env)
 
+        local original_g = g
+        local parent_env_value = false 
         local val, err = g:Get(key)
+        if not val and env == "runtime" then
+            for i = 2, #self.environments[env] do
+                g = self.environments[env][i]
+                if not g then break end
+                val, err = g:Get(key)
+                if val then
+                    parent_env_value = true
+                    break 
+                end
+            end
+        end
 
         if val and env == "runtime" then
-            return self:GetMutatedValue(g, key, val, env) or val
+            local val = self:GetMutatedValue(g, key, val, env) or val
+            if val and parent_env_value then
+                --val = types.Nilable(val)
+            end
+            return val
         end
 
         return val, err
