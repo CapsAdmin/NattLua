@@ -52,6 +52,33 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
             end
         end
 
+    do
+
+        --[[
+                if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
+
+                local x = 1
+
+                x = 1 << repeated mutation is redudant
+                ...
+                x = 2
+            
+            >>  x == 2
+            ]]
+
+        local last_scope
+        for i = #mutations, 1, -1 do
+            local mut = mutations[i]
+
+            if last_scope and mut.scope == last_scope then
+                if DEBUG then dprint(mut, "redudant mutation") end
+                table.remove(mutations, i)
+            end
+
+            last_scope = mut.scope
+        end
+    end
+
         do --[[
             if mutations occured in an if statement that has an else part, remove all mutations before the entire if statement
             but only if we are a sibling of the if statement's scope

@@ -1177,7 +1177,18 @@ run[[
 
     if math.random() > 0.5 then end
 
-    print(LOL)
+    type_assert(LOL, true)
+]]
+
+run[[
+    local foo = {}
+    assert(math.random() > 0.5)
+
+    foo.bar = 1
+
+    if math.random() > 0.5 then end
+
+    type_assert<|typeof foo.bar, 1|>
 ]]
 
 pending([[
