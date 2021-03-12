@@ -21,6 +21,8 @@ return function(META)
     end
 
     function META:PushScope(scope)
+        self:FireEvent("enter_scope", scope)
+
         table.insert(self.scope_stack, self.scope)
 
         self.scope = scope
@@ -37,6 +39,9 @@ return function(META)
     end
 
     function META:PopScope()
+
+        self:FireEvent("leave_scope")
+
         local old = table.remove(self.scope_stack)
 
         if old then
@@ -67,7 +72,7 @@ return function(META)
         self:PopEnvironment("runtime")
         
         scope_copy:SetParent(scope_copy.parent or self:GetScope())
-        
+
         self:PushEnvironment(last_node, env, "runtime")
         self:PushScope(scope_copy)
 

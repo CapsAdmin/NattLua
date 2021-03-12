@@ -1191,6 +1191,25 @@ run[[
     type_assert<|typeof foo.bar, 1|>
 ]]
 
+pending[[
+    local foo = 1
+
+    assert(_ as boolean)
+
+    if _ as boolean then
+        foo = 2
+
+        -- current scope should be 2,2 not 3,2
+
+        if _ as boolean then
+            local a = 1
+        end
+
+        type_assert(foo, 2)
+    end
+
+]]
+
 pending([[
     local a: nil | 1
 

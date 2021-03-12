@@ -71,20 +71,18 @@ return function(META)
             elseif what == "set_environment_value" then
                 local key, val = ...
                 tab()
-                write("_ENV.", self:Hash(key), " = ", tostring(val), "\n")
-            elseif what == "enter_scope_do" then
+                write("_ENV.", self:Hash(key), " = ", tostring(val), "\n")             
+            elseif what == "do" then
                 local scope, data = ...
                 tab()
-                write("do")
-                t = t + 1
+                write("do:")
                 write("\n")
-            elseif what == "enter_scope_numeric_for" then
+            elseif what == "numeric_for" then
                 local init, max, step = ...
                 tab()
-                write("for i = ", init, ", ", max, ", ", step, " do")
-                t = t + 1
+                write("for i = ", init, ", ", max, ", ", step, ": ")
                 write("\n")
-            elseif what == "enter_scope_generic_for" then
+            elseif what == "generic_for" then
                 local keys, values = ...
                 tab()
 
@@ -97,23 +95,22 @@ return function(META)
                 local values_str = {}
                 for i,v in ipairs(values:GetData()) do values_str[i] = tostring(v) end
                 write(table.concat(values_str, ", "))
-                write(" do")
+                write(":")
                     
-                t = t + 1
                 write("\n")
-            elseif what == "enter_scope_if" then
-                local exp, condition, kind = ...
-                tab()
+            elseif what == "if" then
+                local what, enter = ...
 
-                if kind == "if" or kind == "elseif" then
-                    write(kind, " ", exp:Render(), " then -- = ", tostring(condition))
-                elseif kind == "else" then
-                    write("else")
+                if enter then
+                    tab()
+                    write(what, ":")
+
+                    t = t + 1
+                else
+                    t = t - 1
                 end
-
-                t = t + 1
                 write("\n")
-            elseif what == "enter_scope_function" then
+            elseif what == "function" then
                 local function_node = ...
                 tab()
                 local em = require("nattlua.transpiler.emitter")({preserve_whitespace = false})
@@ -134,10 +131,18 @@ return function(META)
                 write(em:Concat(), " do")
                 t = t + 1
                 write("\n")
+            
+            elseif what == "enter_scope" then
+                local scope = ...
+               
+                tab()
+                write(": ", (scope:GetTestCondition()))
+            
+                t = t + 1
+                write("\n")
             elseif what == "leave_scope" then
                 t = t - 1
                 tab()
-                write("end")
                 write("\n")            
             elseif what == "external_call" then
                 local node, type = ...

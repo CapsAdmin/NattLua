@@ -3,6 +3,7 @@ return function(META)
         local obj = self:AnalyzeExpression(statement.expression)
         if obj:IsTruthy() then
             self:CreateAndPushScope()
+            self:FireEvent("while", obj)
             self:OnEnterConditionalScope({
                 type = "while",
                 condition = obj

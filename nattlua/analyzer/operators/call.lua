@@ -38,8 +38,6 @@ return function(META)
         })
         self:PushEnvironment(function_node, nil, env)
         
-        self:FireEvent("enter_scope_function", function_node)
-
         if function_node.self_call then
             self:CreateLocalValue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env, "self")
         end
@@ -56,8 +54,6 @@ return function(META)
     
         local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
         
-        self:FireEvent("leave_scope")
-
         self:PopEnvironment(env)
         self:PopScope()
     
