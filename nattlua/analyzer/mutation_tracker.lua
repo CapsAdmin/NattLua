@@ -29,7 +29,6 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
     if DEBUG then print("looking up mutations for " .. tostring(upvalue) .. "." .. tostring(key) .. ":") end
 
     do
-        
         for _, mut in ipairs(self.mutations) do
             --[[
                 if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
@@ -52,32 +51,29 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
             end
         end
 
-    do
+        do
+            --[[
+                    local x = 1
 
-        --[[
-                if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
+                    x = 1 << repeated mutation is redudant
+                    ...
+                    x = 2
+                
+                >>  x == 2
+                ]]
 
-                local x = 1
+            local last_scope
+            for i = #mutations, 1, -1 do
+                local mut = mutations[i]
 
-                x = 1 << repeated mutation is redudant
-                ...
-                x = 2
-            
-            >>  x == 2
-            ]]
+                if last_scope and mut.scope == last_scope then
+                    if DEBUG then dprint(mut, "redudant mutation") end
+                    table.remove(mutations, i)
+                end
 
-        local last_scope
-        for i = #mutations, 1, -1 do
-            local mut = mutations[i]
-
-            if last_scope and mut.scope == last_scope then
-                if DEBUG then dprint(mut, "redudant mutation") end
-                table.remove(mutations, i)
+                last_scope = mut.scope
             end
-
-            last_scope = mut.scope
         end
-    end
 
         do --[[
             if mutations occured in an if statement that has an else part, remove all mutations before the entire if statement
@@ -96,13 +92,15 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
             for i = #mutations, 1, -1 do
                 local mut = mutations[i]
 
+                local test = mut.scope
+
                 if mut.scope.if_statement and mut.scope.test_condition_inverted then
                     
                     local if_statement = mut.scope.if_statement
                     while true do
                         local mut = mutations[i]
                         if not mut then break end
-                        if mut.scope.if_statement ~= if_statement then
+                        if not same_if_statement(mut.scope, scope) then
                             for i = i, 1, -1 do
                                 if mutations[i].scope:Contains(scope) then
                                     if DEBUG then dprint(mut, "redudant mutation before else part of if statement") end
@@ -173,16 +171,19 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
             >>  x == true
             ]]
             local scope, scope_union = mut.scope:FindScopeFromTestCondition(obj)
-            if scope and mut.scope == scope and scope.test_condition.Type == "union" then
-                local t
-                if scope.test_condition_inverted then
-                    t = scope_union.falsy_union or scope.test_condition:GetFalsy()
-                else
-                    t = scope_union.truthy_union or scope.test_condition:GetTruthy()
-                end
+            if scope and mut.scope == scope then
+                local test, inverted = scope:GetTestCondition() 
+                if test.Type == "union" then
+                    local t
+                    if inverted then
+                        t = scope_union.falsy_union or test:GetFalsy()
+                    else
+                        t = scope_union.truthy_union or test:GetTruthy()
+                    end
 
-                if t then
-                    union:RemoveType(t)
+                    if t then
+                        union:RemoveType(t)
+                    end
                 end
             end
         end
@@ -234,9 +235,9 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
         if scope then 
             local current_scope = scope
 
-            if #self.mutations > 1 then
-                for i = #self.mutations, 1, -1 do
-                    if self.mutations[i].scope == current_scope then
+            if #mutations > 1 then
+                for i = #mutations, 1, -1 do
+                    if mutations[i].scope == current_scope then
                         return value
                     else
                         break

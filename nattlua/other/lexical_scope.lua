@@ -219,7 +219,7 @@ end
 
 function META:GetTestCondition()
     local obj, scope = self:GetMemberInParents("test_condition")
-    return obj, scope and scope.test_condition
+    return obj, scope and scope.test_condition_inverted or nil
 end
 
 function META:FindResponsibleType(obj)

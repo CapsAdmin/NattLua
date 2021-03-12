@@ -1228,7 +1228,7 @@ pending[[
     type_assert(x, 0)
 ]]
 
-pending[[
+run[[
     local MAYBE: boolean
 
     x = 1
@@ -1247,11 +1247,11 @@ pending[[
 ]]
 
 
-pending[[
+run[[
     local a: nil | 1
 
     if not not a then
-        type_assert(a, _ as nil | nil)
+        type_assert(a, _ as nil)
     end
 
     type_assert(a, _ as 1 | nil)
@@ -1260,8 +1260,8 @@ pending[[
 pending[[
     local a: nil | 1
 
-    if not not a then
-        type_assert(a, _ as 1 | 1)
+    if not not not a then
+        type_assert(a, _ as 1)
     end
 
     type_assert(a, _ as 1 | nil)
@@ -1278,17 +1278,15 @@ pending[[
 ]]
 
 
-
-pending[[
+run[[
     local x: -1 | 0 | 1 | 2 | 3
 
     if x >= 0 then
         if x >= 1 then
-            type_assert<|x, 1|2|3|>
+            type_assert<|x, 0|1|2|3|>
         end
     end
 ]]
-
 
 pending[[
     local x: 1 | "1"
