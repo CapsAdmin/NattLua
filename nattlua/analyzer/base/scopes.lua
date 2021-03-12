@@ -58,33 +58,30 @@ return function(META)
     end
 
     function META:CloneCurrentScope()
-        local current_scope = self:GetScope()
+        local scope_copy = self:GetScope():Copy(true)
+
         local env = self:GetEnvironment("runtime"):Copy()
         
         local last_node = self.environment_nodes[#self.environment_nodes]
         self:PopScope()
         self:PopEnvironment("runtime")
         
+        scope_copy:SetParent(scope_copy.parent or self:GetScope())
+        
         self:PushEnvironment(last_node, env, "runtime")
+        self:PushScope(scope_copy)
 
         for _, keyval in ipairs(env:GetData()) do
+            self:FireEvent("set_environment_value", keyval.key, keyval.val, "runtime")
             self:MutateValue(env, keyval.key, keyval.val, "runtime")
         end
 
-        local scope = current_scope:Copy(true)
-        for env, upvalues in pairs(scope.upvalues) do
-            for _, upvalue in ipairs(upvalues.list) do
-                self:MutateValue(upvalue, upvalue.key, upvalue:GetValue(), env)
-            end
-        end
-        
-        local parent = current_scope.parent or self:GetScope()
-
-        if parent then
-            scope:SetParent(parent)
+        for _, upvalue in ipairs(scope_copy.upvalues.runtime.list) do
+            self:FireEvent("upvalue", upvalue.key, upvalue:GetValue(), env)
+            self:MutateValue(upvalue, upvalue.key, upvalue:GetValue(), env)
         end
 
-        return self:PushScope(scope)
+        return scope_copy
     end
 
     function META:CreateLocalValue(key, obj, env, function_argument)
