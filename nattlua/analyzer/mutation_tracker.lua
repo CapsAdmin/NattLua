@@ -29,29 +29,14 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
     if DEBUG then print("looking up mutations for " .. tostring(upvalue) .. "." .. tostring(key) .. ":") end
 
     do
-        for _, mut in ipairs(self.mutations) do
-            --[[
-                if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
 
-                local x = 1
-
-                if maybe then
-                    x = 2 << discard
-                elseif maybe then
-                    x = 3 << discard
-                else
-            >>      x = 4
-                end
-            ]]
-            if same_if_statement(scope, mut.scope) and scope ~= mut.scope then
-                if DEBUG then dprint(mut, "not inside the same if statement") end
-            else 
-                if DEBUG then dprint(mut, "adding") end
-                table.insert(mutations, mut)                            
-            end
+        for i, mut in ipairs(self.mutations) do
+            mutations[i] = mut
         end
 
-        do
+        do -- walk from last to first mutation
+
+
             --[[
                     local x = 1
 
@@ -72,6 +57,28 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
                 end
 
                 last_scope = mut.scope
+            end
+        end
+
+        for i = #mutations, 1, -1 do
+            local mut = mutations[i]
+
+            --[[
+                if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
+
+                local x = 1
+
+                if maybe then
+                    x = 2 << discard
+                elseif maybe then
+                    x = 3 << discard
+                else
+            >>      x = 4
+                end
+            ]]
+            if same_if_statement(scope, mut.scope) and scope ~= mut.scope then
+                if DEBUG then dprint(mut, "not inside the same if statement") end
+                table.remove(mutations, i)                            
             end
         end
 
