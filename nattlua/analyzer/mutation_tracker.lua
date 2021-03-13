@@ -23,28 +23,30 @@ local function same_if_statement(a, b)
     return a.if_statement and a.if_statement == b.if_statement
 end
 
-function META:GetValueFromScope(scope, upvalue, key, analyzer)
-    local mutations = {}
+local function copy(tbl)
+    local copy = {}
+    for i, val in ipairs(tbl) do
+        copy[i] = val
+    end
+    return copy
+end
 
-    if DEBUG then print("looking up mutations for " .. tostring(upvalue) .. "." .. tostring(key) .. ":") end
+
+function META:GetValueFromScope(scope, obj, key, analyzer)
+    local mutations = copy(self.mutations)
+
+    if DEBUG then print("looking up mutations for " .. tostring(obj) .. "." .. tostring(key) .. ":") end
 
     do
-
-        for i, mut in ipairs(self.mutations) do
-            mutations[i] = mut
-        end
-
         do -- walk from last to first mutation
-
-
             --[[
-                    local x = 1
-
-                    x = 1 << repeated mutation is redudant
-                    ...
-                    x = 2
-                
-                >>  x == 2
+                ^    local x = 1
+                ^
+                2    x = 1 << repeated mutation is redudant
+                ^    ...
+                1    x = 2
+                ^
+                >    x == 2
                 ]]
 
             local last_scope
@@ -71,10 +73,11 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
                 if maybe then
                     x = 2 << discard
                 elseif maybe then
-                    x = 3 << discard
-                else
-            >>      x = 4
+            1        x = 3 << discard
+            ^   else
+            >       x = 4
                 end
+            >> x = 
             ]]
             if same_if_statement(scope, mut.scope) and scope ~= mut.scope then
                 if DEBUG then dprint(mut, "not inside the same if statement") end
@@ -161,7 +164,7 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
     end
     
     local union = types.Union({})
-    union.upvalue = upvalue
+    union.upvalue = obj
     union.upvalue_keyref = key
     
     for _, mut in ipairs(mutations) do
@@ -200,16 +203,17 @@ function META:GetValueFromScope(scope, upvalue, key, analyzer)
         end
 
         if _ == 1 and obj.Type == "union" then
-            if upvalue.Type == "table" then
+            if obj.Type == "table" then
                 union = obj:Copy()
-                union.upvalue = upvalue
+                union.upvalue = obj
                 union.upvalue_keyref = key
             else 
                 union = obj:Copy()
-                union.upvalue = upvalue
+                union.upvalue = obj
                 union.upvalue_keyref = key
             end
         else
+            -- check if we have to infer the function, otherwise adding it to the union can cause collisions
             if obj.Type == "function" and not obj.called and not obj.explicit_return and union:HasType("function") then
                 analyzer:Assert(obj:GetNode() or analyzer.current_expression, analyzer:Call(obj, obj:GetArguments():Copy()))
             end
