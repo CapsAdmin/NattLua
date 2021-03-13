@@ -6,7 +6,7 @@ return function(META)
         if obj:IsLiteral() then
             if obj.Type == "union" then
                 local max = -math.huge
-                for i, v in ipairs(obj:GetData()) do
+                for _, v in ipairs(obj:GetData()) do
                     max = math.max(max, v:GetData())
                 end
                 return max

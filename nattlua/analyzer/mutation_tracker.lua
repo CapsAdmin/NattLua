@@ -6,7 +6,6 @@
 ]]
 
 local types = require("nattlua.types.types")
-local tprint = require("nattlua.other.tprint")
 
 local META = {}
 META.__index = META
@@ -102,11 +101,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
             for i = #mutations, 1, -1 do
                 local mut = mutations[i]
 
-                local test = mut.scope
-
                 if mut.scope.if_statement and mut.scope.test_condition_inverted then
-                    
-                    local if_statement = mut.scope.if_statement
                     while true do
                         local mut = mutations[i]
                         if not mut then break end
@@ -168,7 +163,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
     union.upvalue_keyref = key
     
     for _, mut in ipairs(mutations) do
-        local obj = mut.value
+        local value = mut.value
 
         do
             --[[
@@ -180,7 +175,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 
             >>  x == true
             ]]
-            local scope, scope_union = mut.scope:FindScopeFromTestCondition(obj)
+            local scope, scope_union = mut.scope:FindScopeFromTestCondition(value)
             if scope and mut.scope == scope then
                 local test, inverted = scope:GetTestCondition() 
                 if test.Type == "union" then
@@ -202,23 +197,23 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
             union:Clear()
         end
 
-        if _ == 1 and obj.Type == "union" then
-            if obj.Type == "table" then
-                union = obj:Copy()
+        if _ == 1 and value.Type == "union" then
+            if value.Type == "table" then
+                union = value:Copy()
                 union.upvalue = obj
                 union.upvalue_keyref = key
             else 
-                union = obj:Copy()
+                union = value:Copy()
                 union.upvalue = obj
                 union.upvalue_keyref = key
             end
         else
             -- check if we have to infer the function, otherwise adding it to the union can cause collisions
-            if obj.Type == "function" and not obj.called and not obj.explicit_return and union:HasType("function") then
-                analyzer:Assert(obj:GetNode() or analyzer.current_expression, analyzer:Call(obj, obj:GetArguments():Copy()))
+            if value.Type == "function" and not value.called and not value.explicit_return and union:HasType("function") then
+                analyzer:Assert(value:GetNode() or analyzer.current_expression, analyzer:Call(value, value:GetArguments():Copy()))
             end
 
-            union:AddType(obj)
+            union:AddType(value)
         end
     end
 

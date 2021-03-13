@@ -77,7 +77,7 @@ return function(META)
                 elseif obj.Type == "union" then
                     for i = 1, #statement.left do
                         local index = right_pos + i - 1
-                        local val, err = obj:GetAtIndex(index)
+                        local val = obj:GetAtIndex(index)
 
                         if val then
                             if right[index] then

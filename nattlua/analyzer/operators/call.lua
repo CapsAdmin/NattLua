@@ -62,7 +62,6 @@ return function(META)
 
     local unpack_union_tuples
     do
-        local table_insert = table.insert
         local ipairs = ipairs
 
         local function should_expand(arg, contract)
@@ -169,7 +168,7 @@ return function(META)
 
         local tup = types.Tuple({})
 
-        for i, t in ipairs(ret) do
+        for _, t in ipairs(ret) do
             for i,v in ipairs(t:GetData()) do
                 local existing = tup:Get(i)
                 if existing then
@@ -197,13 +196,13 @@ return function(META)
     end
 
 
-    local function check_and_setup_arguments(self, obj, arguments, contracts)
+    local function check_and_setup_arguments(self, arguments, contracts)
         self.mutated_types = {}
 
         local len = contracts:GetSafeLength(arguments)
 
         for i = 1, len do
-            local arg, err = arguments:Get(i)
+            local arg = arguments:Get(i)
             local contract = contracts:Get(i)
 
             local ok, reason
@@ -263,8 +262,6 @@ return function(META)
                     self:Error(info.tuple:GetNode(), info.msg)
                 end
             end
-
-            local errors = {}
 
             for _, tuple in ipairs(result:GetData()) do
                 local ok, reason = tuple:IsSubsetOf(contract)
@@ -371,7 +368,7 @@ return function(META)
                 not call_node.type_call
 
             if use_contract then
-                local ok, err = check_and_setup_arguments(self, obj, arguments, obj:GetArguments())
+                local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments())
                 if not ok then 
                     return ok, err 
                 end
@@ -399,7 +396,7 @@ return function(META)
                 obj:GetReturnTypes():Merge(return_result)
 
                 if not obj.arguments_inferred and function_node.identifiers then
-                    for i, obj in ipairs(obj:GetArguments():GetData()) do
+                    for i in ipairs(obj:GetArguments():GetData()) do
                         if function_node.self_call then
                             -- we don't count the actual self argument
                             local node = function_node.identifiers[i + 1]

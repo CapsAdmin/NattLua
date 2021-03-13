@@ -31,11 +31,9 @@ return function(META)
 
         self:AnalyzeStatements(statement.statements)
 
-        local out = {}
-
         local union = types.Union({})
     
-        for i, ret in ipairs(scope:GetReturnTypes()) do
+        for _, ret in ipairs(scope:GetReturnTypes()) do
             local tup = types.Tuple(ret.types)
             tup:SetNode(ret.node)
             union:AddType(tup)
@@ -143,7 +141,7 @@ return function(META)
 
         if not obj.mutations[key]:HasMutations() then
             if obj.Type == "table" then
-                local uv, creation_scope = scope:FindUpvalueFromObject(obj:GetRoot(), env)
+                local creation_scope = scope:FindScopeFromObject(obj:GetRoot(), env)
                 if not creation_scope then
                     creation_scope = scope:GetRoot()
                 end

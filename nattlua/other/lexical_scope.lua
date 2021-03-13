@@ -109,7 +109,7 @@ function META:FindValue(key, env)
     error("this should never happen")
 end
 
-function META:FindUpvalueFromObject(obj, env)
+function META:FindScopeFromObject(obj, env)
     local scope = self
     
     for i = 1, 1000 do
@@ -117,7 +117,7 @@ function META:FindUpvalueFromObject(obj, env)
 
         for i,v in ipairs(scope.upvalues[env].list) do
             if obj == v:GetValue() then
-                return v, scope
+                return scope
             end
         end
         
