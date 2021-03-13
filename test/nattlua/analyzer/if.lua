@@ -1285,6 +1285,18 @@ run[[
     type_assert(a, _ as 1 | nil)
 ]]
 
+run[[
+    local x = 1
+
+    do
+        assert(math.random() > 0.5)
+
+        x = 2
+    end
+
+    type_assert(x, 2)
+]]
+
 pending[[
     local a: nil | 1
 

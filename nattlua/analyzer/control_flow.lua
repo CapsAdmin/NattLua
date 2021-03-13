@@ -79,7 +79,6 @@ return function(META)
             
             self:GetScope():Return(obj:IsTruthy())
             local copy = self:CloneCurrentScope()
-            copy:MakeUncertain(obj:IsTruthy())
             copy:SetTestCondition(obj)
         else
             self.lua_error_thrown = msg
