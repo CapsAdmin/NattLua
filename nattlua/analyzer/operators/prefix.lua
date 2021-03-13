@@ -73,6 +73,10 @@ return function(META)
             new_union.truthy_union = truthy_union
             new_union.falsy_union = falsy_union
 
+            if op == "literal" then
+                new_union.literal_argument = true
+            end
+
             return new_union:SetNode(node):SetSource(l)
         end
 

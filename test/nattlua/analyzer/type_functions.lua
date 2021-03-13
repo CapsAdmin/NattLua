@@ -495,3 +495,18 @@ run[[
     local str = test("Foo")
     type_assert(str, "foo")
 ]]
+
+run[[
+    local i = 0
+    local function test(arg: literal (string | nil))
+        if i == 0 then
+            type_assert<|typeof arg, "foo"|>
+        elseif i == 1 then
+            type_assert<|typeof arg, nil|>
+        end
+        i = i + 1
+    end
+
+    test("foo")
+    test()
+]]
