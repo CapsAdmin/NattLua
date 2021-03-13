@@ -1,4 +1,5 @@
 local fs = import("platforms/unix/filesystem.nlua")
+local socket = import("platforms/socket.nlua")
 
 -- this is for fs to print its output correctly, 
 -- "§" is just a debug feature to quickly invoke the typesystem
