@@ -1039,6 +1039,19 @@ run[[
 ]]
 
 run[[
+    assert(maybe)
+
+    local y = 1
+
+    local function foo()
+        local x = 1
+        return 1
+    end    
+
+    type_assert(foo(), 1)
+]]
+
+run[[
     local function lol()
         if MAYBE then
             return 1
@@ -1137,7 +1150,7 @@ run[[
     
     -- none of the functions are called anywhere when looking x up, so x becomes just "function()" from the union's point of view
     -- this ensures that they are inferred before being added
-    type_assert(x(), _ as 1 | 2 | 3 | nil)
+    type_assert(x(), _ as 1 | 2 | 3)
 ]]
 
 run[[

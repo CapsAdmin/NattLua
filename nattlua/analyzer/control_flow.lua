@@ -93,9 +93,14 @@ return function(META)
     function META:Return(node, types)
         local scope = self:GetScope()
 
-        if not scope:IsReadOnly()  then
+        if not scope:IsReadOnly() then
             local function_scope = scope:GetNearestFunctionScope()
-            if scope:IsUncertain() then
+            
+            if scope == function_scope and function_scope.scope_is_being_called then
+                -- the root scope of the function when being called is definetly certain
+                function_scope.uncertain_function_return = false
+
+            elseif scope:IsUncertain() then
                 function_scope.uncertain_function_return = true
                 
                 -- else always hits, so even if the else part is uncertain
@@ -109,7 +114,8 @@ return function(META)
             end
         end
 
-        scope:CollectReturnTypes(node, types)
+        scope:CollectReturnTypes(node, types)        
+
         scope:Return(scope:IsUncertain())
     end
     
