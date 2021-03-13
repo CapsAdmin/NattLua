@@ -46,7 +46,6 @@ return function(META)
 
                     self:AnalyzeStatements(statements)
 
-                    self:PopScope()
                     self:OnExitConditionalScope({
                         type = "if",
                         if_position = i,
@@ -54,6 +53,8 @@ return function(META)
                         condition = prev_expression,
                         statement = statement,
                     })
+                    self:PopScope()
+
                     self:FireEvent("if", "else", false)
                 end
             end
