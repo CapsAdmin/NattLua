@@ -143,6 +143,20 @@ return function(META)
             local func, err = load(code, node.name)
 
             if not func then
+                --[[
+                    this happens rarely and randomly for some reason. 
+                    when a function is rendered it's supposed to result in "return function(a,b,c) ..."
+                    but instead what happens is something like "return ) ..." causing syntax error
+                ]]
+                print("========================")
+                print(func, err, code.name, code)
+                print(node)
+                print("=============NODE===========")
+                for k,v in pairs(node) do print(k,v) end
+                print("============TOKENS===========")
+                for k,v in pairs(node.tokens) do print(k,v) end
+                print("================================")
+
                 self:FatalError(err)
             end
 
