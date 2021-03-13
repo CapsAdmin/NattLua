@@ -63,6 +63,8 @@ return function(META)
     end
 
     function META:CloneCurrentScope()
+        self:FireEvent("clone_current_scope")
+
         local scope_copy = self:GetScope():Copy(true)
 
         local env = self:GetEnvironment("runtime"):Copy()

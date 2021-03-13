@@ -18,13 +18,13 @@ return function(META)
                         
                     self:AnalyzeStatements(statements)
 
-                    self:PopScope()
                     self:OnExitConditionalScope({
                         type = "if",
                         if_position = i, 
                         condition = obj,
                         statement = statement,
                     })
+                    self:PopScope()
 
                     self:FireEvent("if", i == 1 and "if" or "elseif", false)
 

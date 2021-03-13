@@ -1191,7 +1191,7 @@ run[[
     type_assert<|typeof foo.bar, 1|>
 ]]
 
-pending[[
+run[[
     local foo = 1
 
     assert(_ as boolean)
