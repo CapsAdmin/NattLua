@@ -347,7 +347,9 @@ return function(META)
                         keyval.val = types.Union({types.Any(), keyval.val})
                     end
 
-                    self:Warning(call_node, "argument #" .. i .. " " .. tostring(arg) .. " can be mutated by external call")
+                    if self.config.external_mutation then
+                        self:Warning(call_node, "argument #" .. i .. " " .. tostring(arg) .. " can be mutated by external call")
+                    end
                 end
             end
 

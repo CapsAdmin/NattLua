@@ -108,8 +108,9 @@ do
     end
 end
 
-return function()
-    local self = setmetatable({}, META)
+return function(config)
+    config = config or {}
+    local self = setmetatable({config = config}, META)
     for _, func in ipairs(META.OnInitialize) do
         func(self)
     end
