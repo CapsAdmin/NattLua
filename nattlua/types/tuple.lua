@@ -188,7 +188,12 @@ end
 
 function META:Get(key)
     local real_key = key
-    assert(type(key) == "number", "key must be a number, got " .. tostring(type(key)))
+
+    if type(key) == "table" and key.Type == "number" and key:IsLiteral() then
+        key = key:GetData()
+    end
+
+    assert(type(key) == "number", "key must be a number, got " .. tostring(key))
 
     local val = self:GetData()[key]
 

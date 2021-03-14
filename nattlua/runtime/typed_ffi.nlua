@@ -192,6 +192,17 @@ end
 -- TODO
 §env.typesystem.ffi:Get("typeof").no_expansion = true
 
+type function ffi.get_type(cdecl: string, ...: {[string] = any} | nil)
+	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
+
+	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
+
+	local ctype = env.typesystem.cast(declarations[#declarations].type, {...}) 
+	ctype:SetNode(cdecl:GetNode())
+
+	return ctype
+end
+
 type function ffi.new(cdecl, ...)
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {ffinew = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})

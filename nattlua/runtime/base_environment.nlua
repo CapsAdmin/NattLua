@@ -10,8 +10,24 @@ local type thread = Table
 
 local type empty_function = function(...): ...:any
 
+function nilable<|tbl: {[string] = any}|>
+    tbl = copy(tbl)
+    for key, val in pairs(tbl) do
+        tbl[key] = val | nil
+    end
+    return tbl
+end
+
+type function copy(obj: any)
+	return obj:Copy()
+end
+
 type function return_type(func)
 	return func:GetReturnTypes()
+end
+
+type function set_return_type(func, tup)
+	func:SetReturnTypes(tup)
 end
 
 type function argument_type(func, i: number)
