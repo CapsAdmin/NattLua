@@ -22,16 +22,18 @@ type function copy(obj: any)
 	return obj:Copy()
 end
 
-type function return_type(func)
-	return func:GetReturnTypes()
+type function return_type(func, i: number | nil)
+	local i = i and i:GetData() or 1
+	return func:GetReturnTypes():Slice(i, i)
 end
 
 type function set_return_type(func, tup)
 	func:SetReturnTypes(tup)
 end
 
-type function argument_type(func, i: number)
-	return func:GetArguments():Slice(i:GetData(), i:GetData())
+type function argument_type(func, i: number | nil)
+	local i = i and i:GetData() or 1
+	return func:GetArguments():Slice(i, i)
 end
 
 type function exclude(T, U)

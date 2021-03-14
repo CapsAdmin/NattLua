@@ -393,7 +393,7 @@ do
 			return out
 		end
 
-		local function walk(path: string, tbl: {[number] = string, [0] = number}, errors: any, can_traverse: boolean | nil)
+		local function walk(path: string, tbl: {[1 .. inf] = string, [0] = number}, errors: any, can_traverse: boolean | nil)
 			local ptr = opendir(path or "")
 
 			if ptr == nil then
@@ -434,7 +434,7 @@ do
 				path = path .. "/"
 			end
 
-			local out = {}
+			local out = {} as {[1 .. inf] = string, [0] = number}
 			
 			-- TODO
 			local errors: {[number] = {path = string, error = string}} = {} as {[number] = {path = string, error = string}}

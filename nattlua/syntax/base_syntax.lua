@@ -2,7 +2,7 @@
     local type { Token } = import_type("nattlua/lexer/token.nlua")
 ]]
 
-return function(syntax--[[#: {
+return function(syntax--[[#: mutable {
     BinaryOperators = {[number] = {[number] = string}},
     PrefixOperators = {[number] = string},
     PostfixOperators = {[number] = string},
