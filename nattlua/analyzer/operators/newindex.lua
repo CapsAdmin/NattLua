@@ -72,7 +72,39 @@ return function(META)
             end
         end
 
+        if env == "runtime" and obj:GetContract() then
+            local contract = obj:GetContract()
+            if contract then
+                local existing = contract:Get(key)
+                if existing then
+
+                    if val.Type == "function" and existing.Type == "function" then
+                        
+                        for i,v in ipairs(val:GetNode().identifiers) do
+                            if not existing:GetNode().identifiers[i] then
+                                self:Error(v, "too many arguments")
+                                break
+                            end
+                            val:GetNode().identifiers[i].explicit_type = existing:GetArguments():Get(i)
+                        end
+
+                        val:SetArguments(existing:GetArguments())
+                        val:SetReturnTypes(existing:GetReturnTypes())
+                    end
+                    
+                    local ok, err = val:IsSubsetOf(existing)
+                    
+                    if not ok then
+                        self:Error(node, err)
+                    end
+                end
+            end
+        end
+
         if not self:MutateValue(obj, key, val, env) then -- always false?
+            if env == "typesystem" and obj:GetContract() then
+                return obj:GetContract():Set(key, val)
+            end
             return obj:Set(key, val)
         end
     end

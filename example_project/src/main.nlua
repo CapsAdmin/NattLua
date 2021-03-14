@@ -1,8 +1,12 @@
 local fs = import("platforms/unix/filesystem.nlua")
-local socket = import("platforms/socket.nlua")
-
--- this is for fs to print its output correctly, 
--- "§" is just a debug feature to quickly invoke the typesystem
-§analyzer:AnalyzeUnreachableCode() 
 
 print<|fs|> -- typesystem call, it won't be in build output
+
+print("get files: ", assert(fs.get_files(".")))
+for k,v in ipairs(assert(fs.get_files("."))) do print(k,v) end
+print(assert(fs.get_current_directory()))
+
+for k,v in pairs(assert(fs.get_attributes("README.md"))) do
+    print(k,v)
+end
+

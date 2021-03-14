@@ -68,11 +68,11 @@ end
 
 function META:PushPreferTypesystem(b)
     self.prefer_typesystem_stack = self.prefer_typesystem_stack or {}
-    table.insert(self.prefer_typesystem_stack, b)
+    table.insert(self.prefer_typesystem_stack, 1, b)
 end
 
 function META:PopPreferTypesystem()
-    table.remove(self.prefer_typesystem_stack)
+    table.remove(self.prefer_typesystem_stack, 1)
 end
 
 do

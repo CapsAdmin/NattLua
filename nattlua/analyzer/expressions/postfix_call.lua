@@ -17,7 +17,7 @@ return function(META)
         end
 
         if callable.Type == "symbol" then
-            self:Error(node, tostring(node.left:Render()) .. " is nil")
+            self:Error(node, tostring(node.left:Render()) .. " is " .. tostring(callable:GetData()))
             return types.Tuple({types.Any()})
         end
 

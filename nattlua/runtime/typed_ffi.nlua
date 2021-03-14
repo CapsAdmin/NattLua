@@ -27,8 +27,18 @@ local type function cast(node, args)
 			end
 		end
 
+		local return_type
+
+		if node.t.tag == "Pointer" and node.t.t.tag == "Qualified" and node.t.t.t.n == "char" then
+			local ptr = types.Table({})
+			ptr:Set(types.Number(), types.Number())
+			return_type = types.Union({ptr, types.Nil()})
+		else
+			return_type = cast(node.t, args)
+		end
+
 		local obj = types.Function({
-			ret = types.Tuple({cast(node.t, args)}),
+			ret = types.Tuple({return_type}),
 			arg = types.Tuple(arguments)
 		})
 		
@@ -98,7 +108,9 @@ local type function cast(node, args)
 			return val
 		else
 			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi:Get("C"), types.String(node.n):SetLiteral(true), "runtime")
-			if not val then
+
+			if not val or val.Type == "symbol" and val:GetData() == nil then
+				analyzer:Error(analyzer.current_expression, "cannot find value " .. node.n)
 				return types.Any()
 			end
 			return val

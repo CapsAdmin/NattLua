@@ -1,4 +1,5 @@
 
+
 local type Color = {
     r = number,
     g = number,
@@ -295,6 +296,7 @@ do
     end
     
     function string.Split( str: literal string, delimiter: literal string )
+    
         return string.Explode( delimiter, str )
     end    
 end

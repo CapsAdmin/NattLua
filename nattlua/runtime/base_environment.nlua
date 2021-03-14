@@ -4,7 +4,7 @@ local type boolean = true | false
 
 local type Table = {[any] = any}
 local type userdata = Table
-local type cdata = any
+local type cdata = {[number] = any}
 local type ctype = any
 local type thread = Table
 
@@ -452,6 +452,14 @@ do -- globals
 	end
     
     type function assert(obj, msg)
+		if obj.Type == "union" then
+			for _, tup in ipairs(obj:GetData()) do
+				if tup.Type == "tuple" and tup:Get(1):IsTruthy() then
+					return tup
+				end
+			end
+		end
+
 		if obj:IsTruthy() and not obj:IsFalsy() then
 			if obj.Type == "union" then
 				obj = obj:Copy()

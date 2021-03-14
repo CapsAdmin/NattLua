@@ -80,6 +80,8 @@ return function(META)
         if node.return_types then
             explicit_return = true
             self:CreateAndPushFunctionScope(node)
+            self:PushPreferTypesystem(true)
+
                 for i, key in ipairs(node.identifiers) do
                     if key.kind == "value" and args[i] then
                         self:CreateLocalValue(key, args[i], "typesystem", true)
@@ -99,6 +101,7 @@ return function(META)
                         ret[i] = self:AnalyzeExpression(type_exp, "typesystem")
                     end
                 end
+            self:PopPreferTypesystem()
             self:PopScope()
         end
 

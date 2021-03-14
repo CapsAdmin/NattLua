@@ -527,7 +527,7 @@ R[[
     type lib = {}
     type lib.myfunc = function(number, string): boolean
 
-    local lib = {}
+    local lib = {} as lib
 
     function lib.myfunc(a, b)
         return true

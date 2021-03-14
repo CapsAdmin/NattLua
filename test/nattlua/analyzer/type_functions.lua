@@ -477,7 +477,8 @@ run[[
 ]]
 
 run[[
-    local lol = {}
+    -- we need to say that lol has a contract so that we can mutate it
+    local lol: {} = {}
     type lol.rofl = function(number, string): string
         
     function lol.rofl(a, b)

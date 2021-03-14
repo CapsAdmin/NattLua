@@ -19,5 +19,5 @@ code = io.open("nattlua/runtime/base_runtime.lua"):read("*all") .. "\n" .. code
 local file = io.open("example_project/out.lua", "w")
 file:write(code)
 file:close()
-
+print("===RUNNING CODE===")
 require("example_project.out")

@@ -1,7 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-
 run[[
     import_type("nattlua/runtime/glua.nlua")    
     type_assert(string.Split("1|2|3", "|"), {"1","2","3"})

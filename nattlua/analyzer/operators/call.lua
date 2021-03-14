@@ -392,8 +392,10 @@ return function(META)
             if not return_contract and function_node.return_types then
                 self:CreateAndPushFunctionScope(function_node, nil, {
                     type = "function_return_type"
-                })        
-                    return_contract = types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
+                })
+                self:PushPreferTypesystem(true)
+                return_contract = types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
+                self:PopPreferTypesystem()
                 self:PopScope()
             end
                     
