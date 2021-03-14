@@ -191,6 +191,14 @@ do
         emit_function_body(self, node, true)
     end
 
+    function META:EmitGenericsTypeFunction(node)
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["function"])
+        self:Whitespace(" ")
+        self:EmitExpression(node.expression or node.identifier)
+        emit_function_body(self, node, true)
+    end
+
     function META:EmitFunction(node)
         self:Whitespace("\t")
         if node.tokens["local"] then
@@ -534,6 +542,8 @@ function META:EmitStatement(node)
         self:EmitLocalTypeFunction(node)
     elseif node.kind == "local_generics_type_function" then
         self:EmitInvalidLuaCode("EmitLocalGenericsTypeFunction", node)
+    elseif node.kind == "generics_type_function" then
+        self:EmitInvalidLuaCode("EmitGenericsTypeFunction", node)
     elseif node.kind == "destructure_assignment" then
         self:EmitDestructureAssignment(node)
     elseif node.kind == "assignment" then
@@ -608,7 +618,7 @@ function META:EmitIdentifier(node)
     self:EmitToken(node.value)
 
     if self.config.annotate then
-        if node.explicit_type then
+        if node.explicit_type and node.tokens[":"] then
             self:EmitToken(node.tokens[":"])
             self:EmitTypeExpression(node.explicit_type)
         elseif node.inferred_type then

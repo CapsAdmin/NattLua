@@ -565,3 +565,14 @@ run([[
 
     §assert(#analyzer.diagnostics == 1)
 ]])
+
+run[[
+    local function tbl_get_foo(self)
+        type_assert(self.foo, 1337)
+        return tbl.foo
+    end
+
+    local tbl = {}
+    tbl.foo = 1337
+    tbl.get_foo = tbl_get_foo
+]]

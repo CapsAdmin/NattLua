@@ -61,6 +61,17 @@ return function(META)
             self:Warning(node, "mutating function argument")
         end
 
+        if val.Type == "function" and val:GetNode().kind == "local_function" then
+            local first_arg = val:GetArguments(1):Get(1)
+            if first_arg and not first_arg:GetContract() then
+                local node = first_arg:GetNode()
+                if node and node.kind == "value" and node.value.value == "self" then
+                    val:GetArguments(1):Set(1, obj)
+                    node.explicit_type = obj
+                end
+            end
+        end
+
         if not self:MutateValue(obj, key, val, env) then -- always false?
             return obj:Set(key, val)
         end
