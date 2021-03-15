@@ -434,21 +434,6 @@ run[[
     end
 ]]
 
-run([[
-    local function func(): number, number
-        return 1
-    end
-]], "because index 2 does not exist")
-
-run([[
-    local function func(): number, number
-        if MAYBE then
-            return 1, 2
-        end
-
-        return 3
-    end
-]], "does not match the typed tuple length")
 
 run[[
     local type function test2(a, ...)
@@ -516,33 +501,11 @@ run[[
     type_assert(x, _ as nil | true)
 ]]
 
-run([[
-    local function func(): number, number
-        if math.random() > 0.5 then
-            return 1, 2
-        end
-    
-        return 3 -- HERE
-    end
-]], "return 3 %-%- HERE")
-
-
-run([[
-    local function func(): number, number
-        if math.random() > 0.5 then
-            return 1, "" -- HERE
-        end
-    
-        return 1,2
-    end
-]], "return 1, \"\" %-%- HERE")
-
 run[[
     local function test(): Tuple<|1,"lol1"|> | Tuple<|2,"lol2"|>
         return 2, "lol2"
     end    
 ]]
-
 
 run[[
     local foo: function(): true | false, string | nil
@@ -558,22 +521,7 @@ run[[
     type_assert(y, _ as 1 | string)
     type_assert(z, _ as 2 | nil)
 ]]
-run[[
-    local MAYBE: boolean
 
-    local function ReadLiteralString(multiline_comment : boolean): Tuple<|true|> | Tuple<|false, string|>
-        if MAYBE then
-            if multiline_comment then return false, "multiline comment not allowed" end
-            return false, "a string"
-        end
-    
-        if MAYBE then
-            return true
-        end
-    
-        return false, "another string"
-    end
-]]
 
 run[[
     local function test(cb: function(string): string)

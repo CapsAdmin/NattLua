@@ -325,10 +325,16 @@ return function(META)
 
         infer_uncalled_functions(self, call_node, arguments, function_arguments)
 
-        local ok, err = obj:CheckArguments(arguments)
+        do
+            local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
         if not ok then
-            return ok, err
+                if b:GetNode() then
+                    return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
+                end
+                
+                return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+            end
         end
     
         if self.OnFunctionCall then
