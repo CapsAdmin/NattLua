@@ -42,21 +42,11 @@ function table.print(...)
     return tprint(...)
 end
 IMPORTS = IMPORTS or {}
-IMPORTS['example_project/src/platforms/unix/filesystem.nlua'] = function(...) local ffi = require("ffi")
+IMPORTS['example_project/src/platforms/unix/filesystem.nlua'] = function(...) 
+
+local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"
---[==[
-
-
--- helper type functions
-local function List<|typ|>
-	return {[number] = bit.bor( typ,  nil) }
-end]==]
---[==[
-
-local function ErrorReturn<|...|>
-	return bit.bor( Tuple<|...|>,  Tuple<|nil, string|>) 
-end]==]
 
 local fs = {}
 
@@ -300,13 +290,20 @@ do
 		if ret then
 			return ffi.string(ret, ffi.sizeof(temp))
 		end
+print("GET CURRENT DIRECTORY!!!", temp, ret, fs.get_current_directory)
+		if true then
+			return {}, 1,2,3,{"LOL"}
+		end
 
 		return nil, last_error()
 	end
 end
 
 return fs end
-local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))
+IMPORTS['example_project/src/filesystem.nlua'] = function(...) local fs =( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))
+
+return fs end
+local fs =( IMPORTS['example_project/src/filesystem.nlua']("filesystem.nlua"))
 --[==[
 
 print<|fs|>]==] -- typesystem call, it won't be in build output

@@ -151,11 +151,12 @@ return function(META)
                 print("========================")
                 print(func, err, code.name, code)
                 print(node)
+                
                 print("=============NODE===========")
                 for k,v in pairs(node) do print(k,v) end
                 print("============TOKENS===========")
-                for k,v in pairs(node.tokens) do print(k,v) end
-                print("================================")
+                for k,v in pairs(node.tokens) do print(k,v, v.value) end
+                print("===============>=================")
 
                 self:FatalError(err)
             end

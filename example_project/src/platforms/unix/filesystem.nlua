@@ -1,26 +1,10 @@
+local type contract = import_type<|"platforms/filesystem.nlua"|>
+
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"
 
-
--- helper type functions
-local function List<|typ: any|>
-	return {[number] = typ | nil}
-end
-
-local function ErrorReturn<|...|>
-	return Tuple<|...|> | Tuple<|nil, string|>
-end
-
-local fs = {}
-
-local type FileStat = {
-	last_accessed = number,
-	last_changed = number,
-	last_modified = number,
-	size = number,
-	type = "directory" | "file"
-}
+local fs = {} as contract
 
 ffi.cdef([[
 	const char *strerror(int);
@@ -155,7 +139,7 @@ do
 
 	local DIRECTORY = 0x4000
 
-	function fs.get_attributes(path: string, follow_link: boolean | nil): ErrorReturn<|FileStat|>
+	function fs.get_attributes(path, follow_link)
 		local buff = statbox()
 
 		local ret = follow_link and stat_link(path, buff) or stat(path, buff)
@@ -220,7 +204,7 @@ do
 		return false
 	end
 
-	function fs.get_files(path: string): ErrorReturn<|List<|string|>|>
+	function fs.get_files(path)
 		local out: List<|string|> = {}
 
 		local ptr = ffi.C.opendir(path or "")
@@ -253,7 +237,7 @@ do
 		int chdir(const char *filename);
 	]])
 
-	function fs.set_current_directory(path: string): ErrorReturn<|true|>
+	function fs.set_current_directory(path)
 		if ffi.C.chdir(path) == 0 then
 			return true
 		end
@@ -261,12 +245,16 @@ do
 		return nil, last_error()
 	end
 
-	function fs.get_current_directory(): ErrorReturn<|string|>
+	function fs.get_current_directory()
 		local temp = ffi.new("char[1024]")
 		local ret = ffi.C.getcwd(temp, ffi.sizeof(temp))
 		
 		if ret then
 			return ffi.string(ret, ffi.sizeof(temp))
+		end
+print("GET CURRENT DIRECTORY!!!", temp, ret, fs.get_current_directory)
+		if true then
+			return {}, 1,2,3,{"LOL"}
 		end
 
 		return nil, last_error()

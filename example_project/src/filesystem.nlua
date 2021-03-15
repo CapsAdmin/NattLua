@@ -1,0 +1,3 @@
+local fs = import("platforms/unix/filesystem.nlua")
+
+return fs

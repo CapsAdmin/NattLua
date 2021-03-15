@@ -1,4 +1,4 @@
-local fs = import("platforms/unix/filesystem.nlua")
+local fs = import("filesystem.nlua")
 
 print<|fs|> -- typesystem call, it won't be in build output
 

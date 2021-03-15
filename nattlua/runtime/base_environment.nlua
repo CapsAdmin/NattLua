@@ -10,6 +10,14 @@ local type thread = Table
 
 local type empty_function = function(...): ...:any
 
+function List<|typ: any|>
+	return {[number] = typ | nil}
+end
+
+function ErrorReturn<|...|>
+	return Tuple<|...|> | Tuple<|nil, string|>
+end
+
 function nilable<|tbl: {[string] = any}|>
     tbl = copy(tbl)
     for key, val in pairs(tbl) do
