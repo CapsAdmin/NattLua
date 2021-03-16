@@ -1318,12 +1318,22 @@ pending[[
 ]]
 
 
-run[[
-    local x: -1 | 0 | 1 | 2 | 3
+pending[[
+
+    local x: number
+    
+    if x >= 0 and x <= 10 then
+        type_assert<|x, 0 .. 10|>
+    end
+]]
+
+pending[[
+    local x: -3 | -2 | -1 | 0 | 1 | 2 | 3
 
     if x >= 0 then
+        type_assert<|x, 0|1|2|3|>
         if x >= 1 then
-            type_assert<|x, 0|1|2|3|>
+            type_assert<|x, 1|2|3|>
         end
     end
 ]]

@@ -502,28 +502,6 @@ run[[
 ]]
 
 run[[
-    local function test(): Tuple<|1,"lol1"|> | Tuple<|2,"lol2"|>
-        return 2, "lol2"
-    end    
-]]
-
-run[[
-    local foo: function(): true | false, string | nil
-    local ok, err = foo()
-    type_assert(ok, _ as true | false)
-    type_assert(err, _ as nil | string)
-]]
-
-run[[
-    local foo: function(): Tuple<|true, 1|> | Tuple<|false, string, 2|>
-    local x,y,z = foo() 
-    type_assert(x, _ as true | false)
-    type_assert(y, _ as 1 | string)
-    type_assert(z, _ as 2 | nil)
-]]
-
-
-run[[
     local function test(cb: function(string): string)
 
     end

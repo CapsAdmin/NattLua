@@ -56,4 +56,5 @@ run[[
 run[[
     type lol = {}
     type_assert(require("lol"), lol)
+    type lol = nil
 ]]

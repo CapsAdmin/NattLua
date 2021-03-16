@@ -248,40 +248,41 @@ return function(META)
     end
 
     local function check_return_result(self, result, contract)
+
+        if contract and contract:GetLength() == 1 and contract:Get(1).Type == "union" and contract:Get(1):HasType("tuple") then
+            contract = contract:Get(1)
+        end
+
+        if result and result:GetLength() == 1 and result:Get(1) and result:Get(1).Type == "union" and result:Get(1):HasType("tuple") then
+            result = result:Get(1)
+        end
+
         if result.Type == "union" then
-            local errors = {}
-
-            if contract.Type == "tuple" and contract:GetLength() == 1 and contract:Get(1).Type == "union" then
-                contract = contract:Get(1)
-            end
-            
-            -- all return results must match the length
             for _, tuple in ipairs(result:GetData()) do
-                if tuple:GetMinimumLength() < contract:GetMinimumLength() then
-                    table.insert(errors, {tuple = tuple, msg = "returned tuple "..tostring(tuple).." of length "..tuple:GetMinimumLength().." does not match the typed tuple length " .. tostring(contract) .. " of length " .. contract:GetMinimumLength()})
-                end
+                check_return_result(self, tuple, contract)
             end
-
-            if errors[1] then
-                for _, info in ipairs(errors) do
-                    self:Error(info.tuple:GetNode(), info.msg)
+        else            
+            if contract.Type == "union" then
+                local errors = {}
+                for _, contract in ipairs(contract:GetData()) do
+                    local ok, reason = result:IsSubsetOfTuple(contract)
+                
+                    if ok then
+                        return 
+                    else
+                        table.insert(errors, {contract = contract, reason = reason})
+                    end
                 end
-            end
 
-            for _, tuple in ipairs(result:GetData()) do
-                local ok, reason = tuple:IsSubsetOf(contract)
+                for _, error in ipairs(errors) do
+                    self:Error(result:GetNode(), error.reason)
+                end
+            else
+                local ok, reason = result:IsSubsetOfTuple(contract)
+                
                 if not ok then
-                    self:Error(tuple:GetNode(), reason)
+                    self:Error(result:GetNode(), reason)
                 end
-            end
-        else 
-            if contract.Type == "tuple" and contract:Get(1).Type == "union" and contract:GetLength() == 1 then
-                contract = contract:Get(1)
-            end
-
-            local ok, reason = result:IsSubsetOf(contract)
-            if not ok then
-                self:Error(result:GetNode(), reason)
             end
         end
     end
@@ -328,7 +329,7 @@ return function(META)
         do
             local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
-        if not ok then
+            if not ok then
                 if b:GetNode() then
                     return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
                 end
@@ -382,18 +383,20 @@ return function(META)
 
             if use_contract then
                 local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments())
+                
                 if not ok then 
                     return ok, err 
                 end
             end
 
             local return_result = self:AnalyzeFunctionBody(function_node, arguments, env)
-
+            
             restore_mutated_types(self)    
             
             -- if this function has an explicit return type
             local return_contract = obj:HasExplicitReturnTypes() and 
                 obj:GetReturnTypes()
+
                 
             if not return_contract and function_node.return_types then
                 self:CreateAndPushFunctionScope(function_node, nil, {
@@ -404,7 +407,7 @@ return function(META)
                 self:PopPreferTypesystem()
                 self:PopScope()
             end
-                    
+
             if return_contract then
                 check_return_result(self, return_result, return_contract) 
             else

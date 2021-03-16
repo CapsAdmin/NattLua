@@ -208,6 +208,10 @@ function META.IsSubsetOfTuple(A, B)
     for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
         local a, a_err = A:Get(i)
         local b, b_err = B:Get(i)
+
+        if b and b.Type == "union" then
+            b, b_err = b:GetAtIndex(i)
+        end
         
         if not a then
             if b and b.Type == "any" then
@@ -272,6 +276,10 @@ function META:Get(key)
 end
 
 function META:Set(i, val)
+    if val.Type == "tuple" and val:GetLength() == 1 then
+        val = val:Get(1)
+    end
+
     self.data[i] =  val
 
     if i > 32 then

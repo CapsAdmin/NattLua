@@ -67,15 +67,16 @@ return function(META)
                 local node = first_arg:GetNode()
                 if node and node.kind == "value" and node.value.value == "self" then
                     val:GetArguments(1):Set(1, obj)
-                    node.explicit_type = obj
+                    node.inferred_type = obj
                 end
             end
         end
-
+        
         if env == "runtime" and obj:GetContract() then
             local contract = obj:GetContract()
             if contract then
-                local existing = contract:Get(key)
+                local existing, err = contract:Get(key)
+                
                 if existing then
 
                     if val.Type == "function" and existing.Type == "function" then
@@ -85,18 +86,24 @@ return function(META)
                                 self:Error(v, "too many arguments")
                                 break
                             end
-                            val:GetNode().identifiers[i].explicit_type = existing:GetArguments():Get(i)
+                            val:GetNode().identifiers[i].inferred_type = existing:GetArguments():Get(i)
                         end
-
+                        
                         val:SetArguments(existing:GetArguments())
                         val:SetReturnTypes(existing:GetReturnTypes())
+
+                        val.explicit_arguments = true
                     end
                     
                     local ok, err = val:IsSubsetOf(existing)
+
+                    
                     
                     if not ok then
                         self:Error(node, err)
                     end
+                else
+                    self:Error(node, err)
                 end
             end
         end

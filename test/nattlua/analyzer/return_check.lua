@@ -27,7 +27,17 @@ run([[
     local function func(): number, number
         return 1
     end
-]], "because index 2 does not exist")
+]], "index 2 does not exist")
+
+run([[
+    local function func(): number, number
+        if MAYBE then
+            return 1, 2
+        end
+
+        return 3
+    end
+]], "index 2 does not exist")
 
 run[[
     local MAYBE: boolean
@@ -45,13 +55,3 @@ run[[
         return false, "another string"
     end
 ]]
-
-run([[
-    local function func(): number, number
-        if MAYBE then
-            return 1, 2
-        end
-
-        return 3
-    end
-]], "does not match the typed tuple length")
