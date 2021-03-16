@@ -198,23 +198,30 @@ do
 
         local kernel = "return function(self)\n"
 
-            for _, str in ipairs(copy) do
+        for _, str in ipairs(copy) do
             local lua = "if "
 
             for i = 1, #str do
-                if lower then
-                    lua = lua .. "(self:IsByte(" .. str:byte(i) .. "," .. i-1 .. ")" .. " or " .. "self:IsByte(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
-                else
-                    lua = lua .. "self:IsByte(" .. str:byte(i) .. "," .. i-1 .. ") "
+                local func = "self:IsByte"
+                local first_arg = str:byte(i)
+                local second_arg = i - 1
+
+                lua = lua .. "(" .. func .. "(" .. table.concat({first_arg, second_arg}, ",") .. ")"
+                
+                if lower then   
+                    lua = lua .. " or "
+                    lua = lua .. func .. "(" .. table.concat({first_arg - 32, second_arg}, ",") .. ") "
                 end
 
+                lua = lua .. ")"
+
                 if i ~= #str then
-                    lua = lua .. "and "
+                    lua = lua .. " and "
                 end
             end
 
-            lua = lua .. "then"
-            lua = lua .. " self:Advance("..#str..") return true end"
+            lua = lua .. " then"
+            lua = lua .. " self:Advance("..#str..") return true end -- " .. str
             kernel = kernel .. lua .. "\n"
         end
 
@@ -223,8 +230,7 @@ do
         return assert(load(kernel))()
     end
 
-    local allowed_hex = META.GenerateMap("1234567890abcdefABCDEF")
-
+    META.ReadSymbol = META.BuildReadFunction(syntax.GetSymbols(), false)
     META.IsInNumberAnnotation = META.BuildReadFunction(syntax.NumberAnnotations, true)
 
     function META:ReadNumberAnnotations(what --[[#: "hex" | "decimal"]])
@@ -259,6 +265,8 @@ do
 
         return true
     end
+
+    local allowed_hex = META.GenerateMap("1234567890abcdefABCDEF")
 
     function META:ReadHexNumber()
         self:Advance(2)

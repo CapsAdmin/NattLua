@@ -3,6 +3,7 @@
 ]]
 
 local list = require("nattlua.other.list")
+local table_pool = require("nattlua.other.table_pool")
 local load = loadstring or load
 
 return function(META--[[#: {
@@ -31,71 +32,6 @@ return function(META--[[#: {
         }
     ]]
 
-    local ok, table_new = pcall(require, "table.new")
-    if not ok then
-        table_new = function() return {} end
-    end
-    
-    local ffi = jit and require("ffi")
-
-    local function pool(alloc --[[#: (function(): {[string] = any})]], size --[[#: nil | number]])
-        size = size or 3105585
-
-        local records = 0
-        for k,v in pairs(alloc()) do
-            records = records + 1
-        end
-
-        local i
-        local pool = table_new(size, records)
-
-        local function refill()
-            i = 1
-
-            for i = 1, size do
-                pool[i] = alloc()
-            end
-        end
-
-        refill()
-
-        return function()
-            local tbl = pool[i]
-
-            if not tbl then
-                refill()
-                tbl = pool[i]
-            end
-
-            i = i + 1
-
-            return tbl
-        end
-    end
-
-    local function list2()
-        local tbl --[[#: {[number] = any}]]
-        local i
-
-        local self = {
-            clear = function(self--[[#: self]])
-                tbl = {}
-                i = 1
-            end,
-            add = function(self--[[#: self]], val--[[#: any]])
-                tbl[i] = val
-                i = i + 1
-            end,
-            get = function(self--[[#: self]])
-                return list.fromtable(tbl)
-            end
-        }
-
-        self:clear()
-
-        return self
-    end
-
     local function remove_bom_header(str --[[#: string]]) --[[#: string]]
         if str:sub(1, 2) == "\xFE\xFF" then
             return str:sub(3)
@@ -107,42 +43,20 @@ return function(META--[[#: {
 
     local B = string.byte
 
-    if ffi then
-        ffi.cdef([[
-            size_t strspn( const char * str1, const char * str2 );
-        ]])
-    end
-
     function META:GetLength()
         return #self.code
     end
+    
+    function META:GetChars(start --[[#: number]], stop --[[#: number]])
+        return self.code:sub(start, stop)
+    end
 
-    if ffi then
-        local ffi_string = ffi.string
+    function META:GetChar(offset --[[#: number]])
+        return self.code:byte(self.i + offset)
+    end
 
-        function META:GetChars(start --[[#: number]], stop --[[#: number]])
-            return ffi_string(self.code_ptr + start - 1, (stop - start) + 1)
-        end
-
-        function META:GetChar(offset --[[#: number]])
-                return self.code_ptr[self.i + offset - 1]
-            end
-
-        function META:GetCurrentChar() --[[#: number]]
-            return self.code_ptr[self.i - 1]
-        end
-    else
-        function META:GetChars(start --[[#: number]], stop --[[#: number]])
-            return self.code:sub(start, stop)
-        end
-
-        function META:GetChar(offset --[[#: number]])
-            return self.code:byte(self.i + offset)
-        end
-
-        function META:GetCurrentChar() --[[#: number]]
-            return self.code:byte(self.i)
-        end
+    function META:GetCurrentChar() --[[#: number]]
+        return self.code:byte(self.i)
     end
 
     function META:ResetState()
@@ -197,50 +111,6 @@ return function(META--[[#: {
         return out
     end
 
-    function META.BuildReadFunction(tbl--[[#:{[number] = string}]], lower--[[#: boolean]])
-        local copy = {}
-        local done = {}
-
-        for _, str in ipairs(tbl) do
-            if not done[str] then
-                table.insert(copy, str)
-                done[str] = true
-            end
-        end
-
-        table.sort(copy, function(a, b) return #a > #b end)
-
-        local kernel = "return function(self)\n"
-
-        for _, str in ipairs(copy) do
-            local lua = "if "
-
-            for i = 1, #str do
-                local second_arg = "," .. i-1
-                if i == 1 then
-                    second_arg = ""
-                end
-
-                if lower then
-                    lua = lua .. "(self:IsByte(" .. str:byte(i) .. second_arg .. ", 0)" .. " or " .. "self:IsByte(" .. str:byte(i) .. "-32," .. i-1 .. ")) "
-                else
-                    lua = lua .. "self:IsByte(" .. str:byte(i) .. second_arg .. ", 0) "
-                end
-
-                if i ~= #str then
-                    lua = lua .. "and "
-                end
-            end
-
-            lua = lua .. "then"
-            lua = lua .. " self:Advance("..#str..") return true end"
-            kernel = kernel .. lua .. "\n"
-        end
-
-        kernel = kernel .. "\nend"
-        return assert(load(kernel))()
-    end
-
     function META:Error(msg--[[#:string]], start--[[#:number | nil]], stop--[[#:number | nil]])
         if self.OnError then
             self:OnError(self.code, self.name, msg, start or self.i, stop or self.i)
@@ -248,16 +118,16 @@ return function(META--[[#: {
     end
 
     do
-        local get = pool(function() return {
+        local new_token = table_pool(function() return {
             type = "something",
             value = "something",
             whitespace = false,
             start = 0,
             stop = 0,
-        } end)
+        } end, 3105585)
 
         function META:NewToken(type--[[#:string]], start--[[#:number]], stop--[[#:number]], is_whitespace--[[#:boolean]]) --[[#: Token ]]
-            local tk = get() --[[# as Token ]]
+            local tk = new_token() --[[# as Token ]]
 
             tk.type = type
             tk.is_whitespace = is_whitespace
@@ -268,79 +138,33 @@ return function(META--[[#: {
         end
     end
 
-    if ffi then
-        local string_span = ffi.C.strspn --[[# as function(any, any): number]]
-        local tonumber = tonumber
-
-        local chars = ""
-        for i = 1, 255 do
-            if META.syntax.IsDuringLetter(i) then
-                chars = chars .. string.char(i)
-            end
-        end
-
-        function META:ReadLetter()
-            if META.syntax.IsLetter(self:GetCurrentChar()) then
-                self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
-                return true
-            end
-
-            return false
-        end
-    else
-        function META:ReadLetter()
-            if META.syntax.IsLetter(self:GetCurrentChar()) then
-                for _ = self.i, self:GetLength() do
-                    self:Advance(1)
-                    if not META.syntax.IsDuringLetter(self:GetCurrentChar()) then
-                        break
-                    end
+    function META:ReadLetter()
+        if META.syntax.IsLetter(self:GetCurrentChar()) then
+            for _ = self.i, self:GetLength() do
+                self:Advance(1)
+                if not META.syntax.IsDuringLetter(self:GetCurrentChar()) then
+                    break
                 end
-                return true
             end
-
-            return false
+            return true
         end
+
+        return false
     end
 
-    do
-        if ffi then
-            local tonumber = tonumber
-            local string_span = ffi.C.strspn --[[# as function(any, any): number]]
-
-            local chars = ""
-            for i = 1, 255 do
-                if META.syntax.IsSpace(i) then
-                    chars = chars .. string.char(i)
+    function META:ReadSpace()
+        if META.syntax.IsSpace(self:GetCurrentChar()) then
+            for _ = self.i, self:GetLength() do
+                self:Advance(1)
+                if not META.syntax.IsSpace(self:GetCurrentChar()) then
+                    break
                 end
             end
-
-            function META:ReadSpace()
-                if META.syntax.IsSpace(self:GetCurrentChar()) then
-                    self:Advance(tonumber(string_span(self.code_ptr + self.i - 1, chars)))
-                    return true
-                end
-
-                return false
-            end
-        else
-            function META:ReadSpace()
-                if META.syntax.IsSpace(self:GetCurrentChar()) then
-                    for _ = self.i, self:GetLength() do
-                        self:Advance(1)
-                        if not META.syntax.IsSpace(self:GetCurrentChar()) then
-                            break
-                        end
-                    end
-                    return true
-                end
-
-                return false
-            end
+            return true
         end
-    end
 
-    META.ReadSymbol = META.BuildReadFunction(META.syntax.GetSymbols(), false)
+        return false
+    end
 
     function META:ReadShebang()
         if self.i == 1 and self:IsCurrentValue("#") then
@@ -406,7 +230,7 @@ return function(META--[[#: {
         end
 
         for _, token in ipairs(tokens) do
-            token.value = self:GetChars(token.start, token.stop)
+           token.value = self:GetChars(token.start, token.stop)
         end
 
         local whitespace_buffer = {}
@@ -453,14 +277,7 @@ return function(META--[[#: {
 
     function META:Initialize(code --[[#: string]])
         self.code = remove_bom_header(code)
-
-        if ffi then
-            self.code_ptr_ref = self.code
-            self.code_ptr = ffi.cast("const uint8_t *", self.code_ptr_ref)
-        end
-
         self:ResetState()
-
         self:OnInitialize()
     end
 end
