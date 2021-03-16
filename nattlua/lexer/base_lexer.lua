@@ -4,7 +4,6 @@
 
 local list = require("nattlua.other.list")
 local table_pool = require("nattlua.other.table_pool")
-local load = loadstring or load
 
 return function(META--[[#: {
     @Name = "BaseLexer",
@@ -136,34 +135,6 @@ return function(META--[[#: {
 
             return tk
         end
-    end
-
-    function META:ReadLetter()
-        if META.syntax.IsLetter(self:GetCurrentChar()) then
-            for _ = self.i, self:GetLength() do
-                self:Advance(1)
-                if not META.syntax.IsDuringLetter(self:GetCurrentChar()) then
-                    break
-                end
-            end
-            return true
-        end
-
-        return false
-    end
-
-    function META:ReadSpace()
-        if META.syntax.IsSpace(self:GetCurrentChar()) then
-            for _ = self.i, self:GetLength() do
-                self:Advance(1)
-                if not META.syntax.IsSpace(self:GetCurrentChar()) then
-                    break
-                end
-            end
-            return true
-        end
-
-        return false
     end
 
     function META:ReadShebang()

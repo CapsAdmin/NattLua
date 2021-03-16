@@ -18,8 +18,6 @@ META.__index = META
     type META.potential_lua54_division_operator = boolean
 ]]
 
-META.syntax = syntax
-
 local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: Tuple<|boolean|> | Tuple<|false, string|>]]
     local start = self.i
 
@@ -232,6 +230,34 @@ do
 
     META.ReadSymbol = META.BuildReadFunction(syntax.GetSymbols(), false)
     META.IsInNumberAnnotation = META.BuildReadFunction(syntax.NumberAnnotations, true)
+
+    function META:ReadLetter()
+        if syntax.IsLetter(self:GetCurrentChar()) then
+            for _ = self.i, self:GetLength() do
+                self:Advance(1)
+                if not syntax.IsDuringLetter(self:GetCurrentChar()) then
+                    break
+                end
+            end
+            return true
+        end
+
+        return false
+    end
+
+    function META:ReadSpace()
+        if syntax.IsSpace(self:GetCurrentChar()) then
+            for _ = self.i, self:GetLength() do
+                self:Advance(1)
+                if not syntax.IsSpace(self:GetCurrentChar()) then
+                    break
+                end
+            end
+            return true
+        end
+
+        return false
+    end
 
     function META:ReadNumberAnnotations(what --[[#: "hex" | "decimal"]])
         if what == "hex" then
