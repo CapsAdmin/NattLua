@@ -252,10 +252,8 @@ do
 		if ret then
 			return ffi.string(ret, ffi.sizeof(temp))
 		end
-print("GET CURRENT DIRECTORY!!!", temp, ret, fs.get_current_directory)
-		if true then
-			return {}, 1,2,3,{"LOL"}
-		end
+
+		print(fs.get_current_directory)
 
 		return nil, last_error()
 	end

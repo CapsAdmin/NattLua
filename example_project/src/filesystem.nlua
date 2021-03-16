@@ -1,3 +1,7 @@
-local fs = import("platforms/unix/filesystem.nlua")
+if jit.os == "Windows" then
+  return import("platforms/windows/filesystem.nlua")
+else
+  return import("platforms/unix/filesystem.nlua")
+end
 
-return fs
+error("unknown platform")
