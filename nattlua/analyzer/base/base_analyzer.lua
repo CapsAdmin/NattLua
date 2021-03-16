@@ -10,6 +10,10 @@ return function(META)
     function META:StringToNumber(node, str)
         if str:sub(1,2) == "0b" then
             return tonumber(str:sub(3))
+        elseif str:lower():sub(-3) == "ull" then
+            return tonumber(str:sub(1, -4))
+        elseif str:lower():sub(-2) == "ll" then
+            return tonumber(str:sub(1, -3))
         end
 
         local num = tonumber(str)
