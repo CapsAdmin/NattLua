@@ -11,7 +11,7 @@ local lua_code = assert(util.FetchCode("examples/benchmarks/10mb.lua", "https://
 local code = nl.Code(lua_code, "10mb.lua")
 
 local start = os.clock()
-local tokens = util.Measure("code:Lex()", function() return assert(code:Lex()).Tokens end) do return end
+local tokens = util.Measure("code:Lex()", function() return assert(code:Lex()).Tokens end)
 local ast = util.Measure("code:Parse()", function() return assert(code:Parse()).SyntaxTree end)
 local lua_code = util.Measure("code:BuildLua()", function() return assert(code:Emit()) end)
 print("==========================================")
