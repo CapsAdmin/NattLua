@@ -423,7 +423,7 @@ return function(META)
                     node = self:ReadTypeCall()
                     node.left = left
                 elseif self:IsCallExpression(true) then
-                    node = self:ReadCallExpression(true)
+                    node = self:ReadCallExpression()
                     node.left = left
                     if left.value and left.value.value == ":" then
                         node.self_call = true

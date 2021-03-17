@@ -1,7 +1,6 @@
 local list = require("nattlua.other.list")
 
 return function(META)
-    local tprint = require("nattlua.other.tprint")
 
     local setmetatable = setmetatable
     local type = type
@@ -54,6 +53,7 @@ return function(META)
         end
 
         function META:Dump()
+            local tprint = require("nattlua.other.tprint")
             tprint(self)
         end
 
@@ -167,6 +167,7 @@ return function(META)
         end
 
         function META:Dump()
+            local tprint = require("nattlua.other.tprint")
             tprint(self)
         end
 

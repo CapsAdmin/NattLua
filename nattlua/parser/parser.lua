@@ -490,7 +490,7 @@ do -- expression
             return self:IsValue("(", offset) or self:IsValue("{", offset) or self:IsType("string", offset)
         end
 
-        function META:ReadCallExpression(no_ambiguous_calls)
+        function META:ReadCallExpression()
             local node = self:Expression("postfix_call")
 
             if self:IsCurrentValue("{") then
@@ -607,7 +607,7 @@ do -- expression
                             :Store("value", self:ReadTokenLoose())
                         :End()
                 elseif self:IsCallExpression(no_ambiguous_calls) then
-                    node = self:ReadCallExpression(no_ambiguous_calls)
+                    node = self:ReadCallExpression()
                     node.left = left
                     if left.value and left.value.value == ":" then
                         node.self_call = true

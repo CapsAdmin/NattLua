@@ -93,7 +93,7 @@ return function(META)
                 if self:IsCurrentType("letter") and self:IsValue("=", 1) then
                     local key = self:ReadType("letter")
                     self:ReadValue("=")
-                    local val = self:ReadExpectExpression(nil, true)
+                    local val = self:ReadExpectExpression()
                     props:insert({
                         key = key,
                         val = val,
