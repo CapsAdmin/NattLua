@@ -12,7 +12,6 @@ META.__index = META
 --[[# 
     type META.i = number 
     type META.@Name = "Lexer"
-    type META.comment_escape = string
 ]]
 
 local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: Tuple<|boolean|> | Tuple<|false, string|>]]
@@ -47,6 +46,8 @@ local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: bo
 end
 
 do
+    --[[# type META.comment_escape = string ]]
+    
     function META:ReadCommentEscape() --[[#: boolean]]
         if
             self:IsValue("-", 0) and
