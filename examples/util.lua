@@ -17,10 +17,10 @@ end
 function util.FetchCode(path--[[#: string]], url--[[#: string]]) --: type util.FetchCode = function(string, string): string
     local f = io.open(path, "rb")
     if not f then
-        os.execute("wget -O "..path.." " .. url)
+        os.execute("wget --force-directories -O "..path.." " .. url)
         f = io.open(path, "rb")
         if not f then
-            os.execute("curl "..url.." --output " .. path)
+            os.execute("curl  "..url.." --create-dirs --output " .. path)
         end
         if not io.open(path, "rb") then
             error("unable to download file?")
@@ -108,7 +108,7 @@ function util.Measure(what, cb) -- type util.Measure = function(string, function
         else
             io.write((" "):rep(40 - #what)," - OK ", (os.clock() - time) .. " seconds\n")
         end
-        return table.unpack(res, 2)
+        return (table.unpack or unpack)(res, 2)
     else
         io.write(" - FAIL: ", res[2])
         error(res[2], 2)
