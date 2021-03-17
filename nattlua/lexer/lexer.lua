@@ -12,10 +12,7 @@ META.__index = META
 --[[# 
     type META.i = number 
     type META.@Name = "Lexer"
-    type META.string_escape_Single = boolean
-    type META.string_escape_Double = boolean
     type META.comment_escape = string
-    type META.potential_lua54_division_operator = boolean
 ]]
 
 local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: boolean]]) --[[#: Tuple<|boolean|> | Tuple<|false, string|>]]
@@ -134,6 +131,8 @@ function META:ReadCMultilineComment() --[[#: boolean]]
 
     return false
 end
+
+--[[# type META.potential_lua54_division_operator = boolean ]]
 
 function META:ReadCLineComment() --[[#: boolean]]
     if self:IsValue("/", 0) and self:IsValue("/", 1) then
@@ -419,24 +418,6 @@ do
     }
 
     for name, quote in pairs(quotes) do
-        local key = "string_escape_" .. name
-        local function escape(self --[[#: META]], c --[[#: number]])
-            if self[key] then
-
-                if c == B"z" and not self:IsCurrentValue(quote) then
-                    self:ReadSpace()
-                end
-
-                self[key] = false
-                return "string"
-            end
-
-            if c == escape_character then
-                self[key] = true
-            end
-
-            return false
-        end
 
         META["Read" .. name .. "String"] = function(self --[[#: META]])
             if not self:IsCurrentValue(quote) then
@@ -449,17 +430,18 @@ do
             for _ = self.i, self:GetLength() do
                 local char = self:ReadChar()
 
-                if not escape(self, char) then
+                if char == escape_character then
+                    local char = self:ReadChar()
 
-                    if char == B"\n" then
-                        self:Advance(-1)
-                        self:Error("expected " .. name:lower() .. " quote to end", start, self.i - 1)
-                        return true
+                    if char == B"z" and not self:IsCurrentValue(quote) then
+                        self:ReadSpace()
                     end
-
-                    if char == B(quote) then
-                        return true
-                    end
+                elseif char == B"\n" then
+                    self:Advance(-1)
+                    self:Error("expected " .. name:lower() .. " quote to end", start, self.i - 1)
+                    return true
+                elseif char == B(quote) then
+                    return true
                 end
             end
 
