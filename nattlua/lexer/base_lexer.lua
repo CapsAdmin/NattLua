@@ -43,7 +43,7 @@ return function(META--[[#: {
     local B = string.byte
 
     function META:GetLength()
-        return #self.code
+        return self.code_length
     end
     
     function META:GetChars(start --[[#: number]], stop --[[#: number]])
@@ -80,10 +80,15 @@ return function(META--[[#: {
 
     function META:Advance(len --[[#: number]])
         self.i = self.i + len
+        return self.i <= self:GetLength()
     end
 
     function META:SetPosition(i --[[#: number]])
         self.i = i
+    end
+
+    function META:TheEnd()
+        return self.i > self:GetLength()
     end
 
     function META:IsValue(what--[[#:string]], offset--[[#:number]])
@@ -99,15 +104,7 @@ return function(META--[[#: {
     end
 
     function META:IsByte(what--[[#:number]], offset--[[#:number]])
-            return self:GetChar(offset) == what
-        end
-
-    function META.GenerateMap(str--[[#:string]])
-        local out = {}
-        for i = 1, #str do
-            out[str:byte(i)] = true
-        end
-        return out
+        return self:GetChar(offset) == what
     end
 
     function META:Error(msg--[[#:string]], start--[[#:number | nil]], stop--[[#:number | nil]])
@@ -248,6 +245,7 @@ return function(META--[[#: {
 
     function META:Initialize(code --[[#: string]])
         self.code = remove_bom_header(code)
+        self.code_length = #self.code
         self:ResetState()
         self:OnInitialize()
     end

@@ -21,7 +21,7 @@ local function ReadLiteralString(self --[[#: META]], multiline_comment --[[#: bo
     self:Advance(1)
 
     if self:IsCurrentValue("=") then
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             self:Advance(1)
             if not self:IsCurrentValue("=") then
                 break
@@ -101,7 +101,7 @@ function META:ReadLineComment() --[[#: boolean]]
     if self:IsValue("-", 0) and self:IsValue("-", 1)then
         self:Advance(#"--")
 
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             if self:IsCurrentValue("\n") then
                 break
             end
@@ -118,7 +118,7 @@ end
 function META:ReadCMultilineComment() --[[#: boolean]]
     if self:IsValue("/", 0) and self:IsValue("*", 1) then
         self:Advance(2)
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             if self:IsValue("*", 0) and self:IsValue("/", 1) then
                 self:Advance(2)
                 break
@@ -140,7 +140,7 @@ function META:ReadCLineComment() --[[#: boolean]]
         self.potential_lua54_division_operator = true
         self:Advance(2)
 
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             if self:IsCurrentValue("\n") then
                 break
             end
@@ -172,15 +172,7 @@ function META:ReadMultilineString() --[[#: boolean]]
 end
 
 do
-    function META.GenerateMap(str --[[#: string]])
-        local out = {}
-        for i = 1, #str do
-            out[str:byte(i)] = true
-        end
-        return out
-    end
-
-    function META.BuildReadFunction(tbl --[[#: {[number] = string}]], lower --[[#: boolean]])
+    local function build_read_function(tbl --[[#: {[number] = string}]], lower --[[#: boolean]])
         local copy = {}
         local done = {}
 
@@ -227,12 +219,12 @@ do
         return assert(load(kernel))()
     end
 
-    META.ReadSymbol = META.BuildReadFunction(syntax.GetSymbols(), false)
-    META.IsInNumberAnnotation = META.BuildReadFunction(syntax.NumberAnnotations, true)
+    META.ReadSymbol = build_read_function(syntax.GetSymbols(), false)
+    META.IsInNumberAnnotation = build_read_function(syntax.NumberAnnotations, true)
 
     function META:ReadLetter()
         if syntax.IsLetter(self:GetCurrentChar()) then
-            for _ = self.i, self:GetLength() do
+            while not self:TheEnd() do
                 self:Advance(1)
                 if not syntax.IsDuringLetter(self:GetCurrentChar()) then
                     break
@@ -246,7 +238,7 @@ do
 
     function META:ReadSpace()
         if syntax.IsSpace(self:GetCurrentChar()) then
-            for _ = self.i, self:GetLength() do
+            while not self:TheEnd() do
                 self:Advance(1)
                 if not syntax.IsSpace(self:GetCurrentChar()) then
                     break
@@ -281,7 +273,7 @@ do
                 return false
             end
         end
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             if not syntax.IsNumber(self:GetCurrentChar()) then
                 break
             end
@@ -291,14 +283,22 @@ do
         return true
     end
 
-    local allowed_hex = META.GenerateMap("1234567890abcdefABCDEF")
+    local function generate_map(str --[[#: string]])
+        local out = {}
+        for i = 1, #str do
+            out[str:byte(i)] = true
+        end
+        return out
+    end
+
+    local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
     function META:ReadHexNumber()
         self:Advance(2)
 
         local dot = false
 
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             if self:IsCurrentValue("_") then self:Advance(1) end
 
             if self:IsCurrentValue(".") then
@@ -328,7 +328,7 @@ do
     function META:ReadBinaryNumber()
         self:Advance(2)
 
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             if self:IsCurrentValue("_") then self:Advance(1) end
 
             if self:IsCurrentValue("1") or self:IsCurrentValue("0") then
@@ -349,7 +349,7 @@ do
     function META:ReadDecimalNumber()
         local dot = false
 
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             if self:IsCurrentValue("_") then self:Advance(1) end
 
             if self:IsCurrentValue(".") then
@@ -397,7 +397,7 @@ end
 function META:ReadInlineTypeCode()
     if self:IsCurrentValue("§") then
         self:Advance(1)
-        for _ = self.i, self:GetLength() do
+        while not self:TheEnd() do
             if self:IsCurrentValue("\n") then
                 break
             end
@@ -427,7 +427,7 @@ do
             local start = self.i
             self:Advance(1)
 
-            for _ = self.i, self:GetLength() do
+            while not self:TheEnd() do
                 local char = self:ReadChar()
 
                 if char == escape_character then
