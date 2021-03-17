@@ -103,12 +103,36 @@ function util.Measure(what, cb) -- type util.Measure = function(string, function
     local res = {pcall(cb)}
 
     if res[1] then
-        io.write((" "):rep(40 - #what)," - OK ", (os.clock() - time) .. " seconds\n")
+        if msg_callback then
+            msg_callback(os.clock() - time)
+        else
+            io.write((" "):rep(40 - #what)," - OK ", (os.clock() - time) .. " seconds\n")
+        end
         return table.unpack(res, 2)
     else
         io.write(" - FAIL: ", res[2])
         error(res[2], 2)
     end
 end
+
+function util.MeasureFunction(cb) 
+    local start = os.clock()
+    cb()
+    return os.clock() - start
+end
+
+function util.LoadGithub(url, path)
+    os.execute("mkdir -p examples/benchmarks/temp/")
+
+    local code = assert(util.FetchCode(
+        "examples/benchmarks/temp/"..path..".lua", 
+        "https://raw.githubusercontent.com/" .. url
+    ))
+
+    package.loaded[path] = assert(load(code))()
+
+    return package.loaded[path]
+end
+
 
 return util
