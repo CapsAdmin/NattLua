@@ -7,11 +7,7 @@ return function(META)
 
         if self.config.preserve_whitespace == nil and not force then return end
 
-        if str == "?" then
-            if self.syntax.IsLetter(self:GetPrevChar()) or self.syntax.IsNumber(self:GetPrevChar()) then
-                self:Emit(" ")
-            end
-        elseif str == "\t" then
+        if str == "\t" then
             self:EmitIndent()
         elseif str == "\t+" then
             self:Indent()

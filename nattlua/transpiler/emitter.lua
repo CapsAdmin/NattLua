@@ -7,8 +7,15 @@ local type = type
 local META = {}
 META.__index = META
 
-META.syntax = syntax
 require("nattlua.transpiler.base_emitter")(META)
+
+function META:OptionalWhitespace()
+    if self.config.preserve_whitespace == nil and not force then return end
+
+    if syntax.IsLetter(self:GetPrevChar()) or syntax.IsNumber(self:GetPrevChar()) then
+        self:Emit(" ")
+    end
+end
 
 function META:EmitExpression(node, from_assignment)
     if node.tokens["("] then
@@ -309,9 +316,9 @@ function META:EmitPrefixOperator(node)
         self.operator_transformed = true
     else
         if syntax.IsKeyword(node.value) then
-            self:Whitespace("?")
+            self:OptionalWhitespace()
             self:EmitToken(node.value)
-            self:Whitespace("?")
+            self:OptionalWhitespace()
             self:EmitExpression(node.right)
         else
             self:EmitToken(node.value)
