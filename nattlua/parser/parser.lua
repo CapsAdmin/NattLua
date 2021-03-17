@@ -469,14 +469,21 @@ do -- expression
         end
     end
 
-    function META:ReadExpression(priority, no_ambiguous_calls)
-        priority = priority or 0
+    function META:ReadPrefixOperatorExpression()
+        if not syntax.IsPrefixOperator(self:GetCurrentToken()) then return end
+        local node = self:Expression("prefix_operator")
+        node.value = self:ReadTokenLoose()
+        node.tokens[1] = node.value
+        node.right = self:ReadExpectExpression(math.huge, no_ambiguous_calls)
+        return node:End()
+    end
 
-        local node
+    function META:ReadParenthesisExpression(no_ambiguous_calls)
+        if not self:IsCurrentValue("(") then return end
 
-        if self:IsCurrentValue("(") then
             local pleft = self:ReadValue("(")
-            node = self:ReadExpression(0, no_ambiguous_calls)
+        local node = self:ReadExpression(0, no_ambiguous_calls)
+
             if not node then
                 self:Error("empty parentheses group", pleft)
                 return
@@ -488,20 +495,20 @@ do -- expression
             node.tokens[")"] = node.tokens[")"] or list.new()
             node.tokens[")"]:insert(self:ReadValue(")"))
 
-        elseif syntax.IsPrefixOperator(self:GetCurrentToken()) then
-            node = self:Expression("prefix_operator")
-            node.value = self:ReadTokenLoose()
-            node.tokens[1] = node.value
-            node.right = self:ReadExpectExpression(math.huge, no_ambiguous_calls)
-            node:End()
-        else
-            node =  
+        return node
+    end
+
+    function META:ReadExpression(priority, no_ambiguous_calls)
+        priority = priority or 0
+
+        local node =  
+            self:ReadParenthesisExpression(no_ambiguous_calls) or
+            self:ReadPrefixOperatorExpression() or
                 self:ReadFunctionValue() or 
                 self:ReadImportExpression() or 
                 self:ReadLSXExpression() or
                 self:ReadExpressionValue() or
                 self:ReadTable()
-        end
 
         local first = node
 
@@ -545,7 +552,7 @@ do -- expression
                 elseif self:IsCurrentValue("is") then
                     node.tokens["is"] = self:ReadValue("is")
                     node.explicit_type = self:ReadTypeExpression()
-                elseif self:IsTypeCall() then
+                elseif self:IsCurrentValue("<|") then
                     node = self:ReadTypeCall()
 
                     node.left = left

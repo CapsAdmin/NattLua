@@ -100,7 +100,7 @@ return function(META)
         end
 
         function META:ReadLocalGenericsTypeFunctionStatement()
-        if not (self:IsCurrentValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)) then return end
+            if not (self:IsCurrentValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)) then return end
 
             local node = self:Statement("local_generics_type_function")
             :ExpectKeyword("local")
@@ -111,7 +111,7 @@ return function(META)
         end
 
         function META:ReadGenericsTypeFunctionStatement()
-        if not (self:IsValue("function") and self:IsValue("<|", 2)) then return end
+            if not (self:IsValue("function") and self:IsValue("<|", 2)) then return end
 
             local node = self:Statement("generics_type_function")
             :ExpectKeyword("function")
@@ -299,19 +299,13 @@ return function(META)
         return tree:End()
     end
 
-    do
-        function META:IsTypeCall()
-            return self:IsCurrentValue("<|")
-        end
-
-        function META:ReadTypeCall()
-            local node = self:Expression("postfix_call")
-            node.tokens["call("] = self:ReadValue("<|")
-            node.expressions = self:ReadTypeExpressionList()
-            node.tokens["call)"] = self:ReadValue("|>")
-            node.type_call = true
-            return node:End()
-        end
+    function META:ReadTypeCall()
+        local node = self:Expression("postfix_call")
+        node.tokens["call("] = self:ReadValue("<|")
+        node.expressions = self:ReadTypeExpressionList()
+        node.tokens["call)"] = self:ReadValue("|>")
+        node.type_call = true
+        return node:End()
     end
 
     function META:ReadTypeExpression(priority)
@@ -395,7 +389,7 @@ return function(META)
                     node.expressions = self:ReadTypeExpressionList()
                     node.tokens["]"] = self:ReadValue("]")
                     node.left = left
-                elseif self:IsTypeCall() then
+                elseif self:IsCurrentValue("<|") then
                     node = self:ReadTypeCall()
                     node.left = left
                 elseif self:IsCallExpression(true) then
