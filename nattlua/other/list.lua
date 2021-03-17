@@ -5,6 +5,10 @@ for key, func in pairs(table) do
     list[key] = func
 end
 
+function list:last()
+    return self[#self]
+end
+
 function list.new(...--[[#: any]])
     return setmetatable({...}, list)
 end

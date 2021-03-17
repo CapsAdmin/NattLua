@@ -60,7 +60,7 @@ do
     function META:ReadDoStatement()
         return self:Statement("do")
             :ExpectKeyword("do")
-                :StatementsUntil("end")
+                :ExpectStatementsUntil("end")
             :ExpectKeyword("end", "do")
         :End()
     end
@@ -91,7 +91,7 @@ do
     function META:ReadRepeatStatement()
         return self:Statement("repeat")
             :ExpectKeyword("repeat")
-                :StatementsUntil("until")
+                :ExpectStatementsUntil("until")
             :ExpectKeyword("until")
             :ExpectExpression()
         :End()
@@ -159,7 +159,7 @@ do
             :ExpectExpressionList(3)
             
             :ExpectKeyword("do")
-                :StatementsUntil("end")
+                :ExpectStatementsUntil("end")
             :ExpectKeyword("end", "do")
         :End()
     end
@@ -178,7 +178,7 @@ do
             :ExpectKeyword("in")
             :ExpectExpressionList()
             :ExpectKeyword("do")
-                :StatementsUntil("end")
+                :ExpectStatementsUntil("end")
             :ExpectKeyword("end", "do")
         :End()
     end

@@ -208,12 +208,6 @@ return function(META)
             return out
         end
 
-        function META:StatementsUntil(what)
-            self.statements = self.parser:ReadStatements(type(what) == "table" and what or {[what] = true})
-
-            return self
-        end
-
         function META:ToExpression(kind)
             setmetatable(self, PARSER.ExpressionMeta)
             self.kind = kind
@@ -288,7 +282,7 @@ return function(META)
                 self:OnNode(node)
             end
 
-            node.parent = self.nodes[#self.nodes]
+            node.parent = self.nodes:last()
 
             self.nodes:insert(node)
 
@@ -327,7 +321,7 @@ return function(META)
     function META:ReadTokenLoose()
         self:Advance(1)
         local tk = self:GetToken(-1)
-        tk.parent = self.nodes[#self.nodes]
+        tk.parent = self.nodes:last()
         return tk
     end
 
@@ -439,7 +433,7 @@ return function(META)
 
         if self:IsCurrentType("end_of_file") then
             local eof = self:Statement("end_of_file")
-            eof.tokens["end_of_file"] = self.tokens[#self.tokens]
+            eof.tokens["end_of_file"] = self.tokens:last()
             node.statements:insert(eof)
         end
 
