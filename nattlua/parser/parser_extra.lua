@@ -33,6 +33,7 @@ return function(META)
         end
 
         function META:ReadDestructureAssignmentStatement()
+            if not self:IsDestructureStatement() then return end
             local node = self:Statement("destructure_assignment")
 
             read_remaining(self, node)
@@ -51,6 +52,8 @@ return function(META)
             end
 
             function META:ReadLocalDestructureAssignmentStatement()
+                if not self:IsLocalDestructureAssignmentStatement() then return end
+
                 local node = self:Statement("local_destructure_assignment")
                 node.tokens["local"] = self:ReadValue("local")
 
@@ -67,21 +70,13 @@ return function(META)
     end
 
     do
-        function META:IsLSXExpression()
-            return self:IsCurrentValue("[") and self:IsType("letter", 1)
-        end
-
-        do
-            function META:IsLSXStatement() 
-                return self:IsLSXExpression() 
-            end
-
-            function META:ReadLSXStatement()
-                return self:ReadLSXExpression(true)
-            end
+        function META:ReadLSXStatement()
+            return self:ReadLSXExpression(true)
         end
 
         function META:ReadLSXExpression(statement)
+            if not (self:IsCurrentValue("[") and self:IsType("letter", 1)) then return end
+
             local node = statement and self:Statement("lsx") or self:Expression("lsx")
 
             node.tokens["["] = self:ReadValue("[")

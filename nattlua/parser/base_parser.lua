@@ -461,18 +461,14 @@ return function(META)
 
         return out
     end
+    
+    function META:ReadSemicolonStatement()
+        if not self:IsCurrentValue(";") then return end
 
-    do
-        function META:IsSemicolonStatement()
-            return self:IsCurrentValue(";")
-        end
+        local node = self:Statement("semicolon")
 
-        function META:ReadSemicolonStatement()
-            local node = self:Statement("semicolon")
+        node.tokens[";"] = self:ReadValue(";")
 
-            node.tokens[";"] = self:ReadValue(";")
-
-            return node
-        end
+        return node
     end
 end

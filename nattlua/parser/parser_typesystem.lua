@@ -4,12 +4,9 @@ return function(META)
     local math_huge = math.huge
     local syntax = require("nattlua.syntax.syntax")
 
-    do
-        function META:IsInlineTypeCode()
-            return self:IsCurrentType("type_code")
-        end
-
         function META:ReadInlineTypeCode()
+        if not self:IsCurrentType("type_code") then return end
+
             local node = self:Statement("type_code")
 
             local code = self:Expression("value")
@@ -18,7 +15,7 @@ return function(META)
             
             return node
         end
-    end
+
     function META:HandleTypeListSeparator(out, i, node)
         if not node then
             return true
@@ -59,12 +56,8 @@ return function(META)
         end
     end
 
-    do
-        function META:IsLocalTypeFunctionStatement()
-            return self:IsCurrentValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2)
-        end
-
         function META:ReadLocalTypeFunctionStatement()
+        if not (self:IsCurrentValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2)) then return end
             local node = self:Statement("local_type_function")
             :ExpectKeyword("local")
             :ExpectKeyword("type")
@@ -73,15 +66,10 @@ return function(META)
             self:ReadTypeFunctionBody(node, true)
             return node:End() 
         end
-    end
-
-
-    do
-        function META:IsTypeFunctionStatement()
-            return self:IsCurrentValue("type") and self:IsValue("function", 1)
-        end
 
         function META:ReadTypeFunctionStatement()
+        if not (self:IsCurrentValue("type") and self:IsValue("function", 1)) then return end
+
             local node = self:Statement("type_function")
             node.tokens["type"] = self:ReadValue("type")
             node.tokens["function"] = self:ReadValue("function")
@@ -110,15 +98,10 @@ return function(META)
 
             return node
         end
-    end
-
-
-    do
-        function META:IsLocalGenericsTypeFunctionStatement()
-            return self:IsCurrentValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)
-        end
 
         function META:ReadLocalGenericsTypeFunctionStatement()
+        if not (self:IsCurrentValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)) then return end
+
             local node = self:Statement("local_generics_type_function")
             :ExpectKeyword("local")
             :ExpectKeyword("function")
@@ -126,14 +109,10 @@ return function(META)
             self:ReadGenericsTypeFunctionBody(node)
             return node:End()
         end
-    end
-
-    do
-        function META:IsGenericsTypeFunctionStatement()
-            return self:IsValue("function") and self:IsValue("<|", 2)
-        end
 
         function META:ReadGenericsTypeFunctionStatement()
+        if not (self:IsValue("function") and self:IsValue("<|", 2)) then return end
+
             local node = self:Statement("generics_type_function")
             :ExpectKeyword("function")
             node.expression = self:ReadIndexExpression()
@@ -142,7 +121,6 @@ return function(META)
             self:ReadGenericsTypeFunctionBody(node)
             return node:End()
         end
-    end
 
     function META:ReadTypeFunctionArgument()
         if (self:IsCurrentType("letter") or self:IsCurrentValue("...")) and self:IsValue(":", 1) then
@@ -247,7 +225,6 @@ return function(META)
         return self:ReadTypeFunctionBody(node, plain_args)
     end
 
-
     function META:ExpectTypeExpression(node)
         if node.expressions then
             node.expressions:insert(self:ReadTypeExpression())
@@ -261,7 +238,6 @@ return function(META)
 
         return node
     end
-
 
     function META:ReadTypeTableEntry(i)
         local node
@@ -467,12 +443,9 @@ return function(META)
         return node
     end
 
-    do
-        function META:IsLocalTypeDeclarationStatement()
-            return self:IsCurrentValue("local") and self:IsValue("type", 1) and syntax.GetTokenType(self:GetToken(2)) == "letter"
-        end
-
         function META:ReadLocalTypeDeclarationStatement()
+        if not (self:IsCurrentValue("local") and self:IsValue("type", 1) and syntax.GetTokenType(self:GetToken(2)) == "letter") then return end
+
             local node = self:Statement("local_assignment")
 
             node.tokens["local"] = self:ReadValue("local")
@@ -488,14 +461,10 @@ return function(META)
 
             return node
         end
-    end
-
-    do
-        function META:IsInterfaceStatement()
-            return self:IsCurrentValue("interface") and self:IsType("letter", 1)
-        end
 
         function META:ReadInterfaceStatement()
+        if not (self:IsCurrentValue("interface") and self:IsType("letter", 1)) then return end
+
             local node = self:Statement("type_interface")
             node.tokens["interface"] = self:ReadValue("interface")
             node.key = self:ReadIndexExpression()
@@ -515,15 +484,10 @@ return function(META)
 
             return node
         end
-    end
-
-
-    do
-        function META:IsTypeAssignment()
-            return self:IsCurrentValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))
-        end
 
         function META:ReadTypeAssignment()
+        if not (self:IsCurrentValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))) then return end
+
             local node = self:Statement("assignment")
 
             node.tokens["type"] = self:ReadValue("type")
@@ -537,14 +501,10 @@ return function(META)
 
             return node
         end
-    end
-
-    do
-        function META:IsImportStatement()
-            return self:IsCurrentValue("import") and not self:IsValue("(", 1)
-        end
 
         function META:ReadImportStatement()
+        if not (self:IsCurrentValue("import") and not self:IsValue("(", 1)) then return end
+
             local node = self:Statement("import")
             node.tokens["import"] = self:ReadValue("import")
             node.left = self:ReadIdentifierList()
@@ -571,14 +531,10 @@ return function(META)
 
             return node
         end
-    end
-
-    do
-        function META:IsImportExpression()
-            return self:IsCurrentValue("import") and self:IsValue("(", 1)
-        end
 
         function META:ReadImportExpression()
+        if not (self:IsCurrentValue("import") and self:IsValue("(", 1)) then return end
+
             local node = self:Expression("import")
             node.tokens["import"] = self:ReadValue("import")
             node.tokens["("] = list.new(self:ReadValue("("))
@@ -608,4 +564,3 @@ return function(META)
             return node
         end
     end
-end
