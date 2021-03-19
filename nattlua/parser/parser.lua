@@ -502,7 +502,7 @@ do -- expression
 
     do
         function META:ReadAndAddExplicitType(node, no_ambiguous_calls)
-            if self:IsCurrentValue(":") and self:IsType("letter", 1) and not self:IsCallExpression(no_ambiguous_calls, 2) then
+            if self:IsCurrentValue(":") and (not self:IsType("letter", 1) or not self:IsCallExpression(no_ambiguous_calls, 2)) then
                 node.tokens[":"] = self:ReadValue(":")
                 node.explicit_type = self:ReadTypeExpression()
             elseif self:IsCurrentValue("as") then
@@ -662,7 +662,7 @@ do -- statements
 
         local start = self:GetCurrentToken()
         local left = self:ReadExpressionList(math.huge)
-
+    
         if self:IsCurrentValue("=") then
             local node = self:Statement("assignment")
             node:ExpectKeyword("=")

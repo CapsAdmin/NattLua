@@ -118,6 +118,7 @@ test("// binary operator", function()
 end)
 
 test("types", function() 
+    check("syntax.SymbolCharacters --[[#: {[number] = string} ]]= {}", "syntax.SymbolCharacters = {}")
     check("a: number = (lol as function(): number)()", "a = (lol)()")
     check("local a = {} a.b: boolean, a.c: number = LOL as any, LOL2 as any", "local a = {} a.b, a.c = LOL, LOL2")
 end)
