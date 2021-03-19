@@ -135,11 +135,9 @@ return function(META)
         return self:ReadTypeExpression()
     end
 
-    function META:HasExplicitFunctionReturn()
-        return self:IsCurrentValue(":") 
-    end
+    function META:ReadExplicitFunctionReturnType(node)
+        if not self:IsCurrentValue(":") then return end
 
-    function META:ReadExplicitFunctionReturn(node)
         node.tokens[":"] = self:ReadValue(":")
 
         local out = list.new()
@@ -406,10 +404,6 @@ return function(META)
                     node.explicit_type = self:ReadTypeExpression()
                 else
                     break
-                end
-
-                if node then
-                    node.primary = first
                 end
             end
         end

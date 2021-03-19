@@ -117,6 +117,11 @@ test("// binary operator", function()
     check("// lol\nprint(3 // (5 // 2))", "// lol\nprint(3/idiv/ (5/idiv/ 2)) ")
 end)
 
+test("types", function() 
+    check("a: number = (lol as function(): number)()", "a = (lol)()")
+    check("local a = {} a.b: boolean, a.c: number = LOL as any, LOL2 as any", "local a = {} a.b, a.c = LOL, LOL2")
+end)
+
 test("type comments", function()
     local tprint = require("nattlua.other.tprint")
 

@@ -5,7 +5,7 @@ return function(META)
     local setmetatable = setmetatable
     local type = type
 
-    local function expect(node, parser, func, what, start, stop)
+    local function expect(node, parser, func, what, start, stop, alias)
         local tokens = node.tokens
 
         if start then
@@ -21,6 +21,8 @@ return function(META)
         end
 
         local token = func(parser, what, start, stop)
+
+        local what = alias or what
 
         if tokens[what] then
             if not tokens[what][1] then
@@ -73,6 +75,11 @@ return function(META)
             expect(self, self.parser, self.parser.ReadValue, what, start, stop)
             return self
         end
+
+        function META:ExpectAliasedKeyword(what, alias, start, stop)
+            expect(self, self.parser, self.parser.ReadValue, what, start, stop, alias)
+            return self
+        end
         
         function META:ExpectExpression(what)
             if self.expressions then
@@ -87,6 +94,11 @@ return function(META)
     
             return self
         end    
+
+        function META:ExpectStatementsUntil(what)
+            self.statements = self.parser:ReadStatements(type(what) == "table" and what or {[what] = true})
+            return self
+        end
     
         function META:ExpectSimpleIdentifier()
             self.tokens["identifier"] = self.parser:ReadType("letter")
@@ -254,6 +266,11 @@ return function(META)
 
         function META:ExpectKeyword(what, start, stop)
             expect(self, self.parser, self.parser.ReadValue, what, start, stop)
+            return self
+        end
+
+        function META:ExpectAliasedKeyword(what, alias, start, stop)
+            expect(self, self.parser, self.parser.ReadValue, what, start, stop, alias)
             return self
         end
 

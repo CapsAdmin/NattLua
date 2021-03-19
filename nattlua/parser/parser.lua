@@ -57,7 +57,7 @@ function META:ReadWhileStatement()
         :ExpectKeyword("while")
         :ExpectExpression()
         :ExpectKeyword("do")
-        :ExpectStatementsUntil("end")
+            :ExpectStatementsUntil("end")
         :ExpectKeyword("end", "do")
     :End()
 end
@@ -137,18 +137,18 @@ function META:ReadGenericForStatement()
 end
 
 function META:ReadFunctionBody(node)
-    node.tokens["arguments("] = self:ReadValue("(")
-    node.identifiers = self:ReadIdentifierList()
-    node.tokens["arguments)"] = self:ReadValue(")")
+    node:ExpectAliasedKeyword("(", "arguments(")
+    node:ExpectIdentifierList()
+    node:ExpectAliasedKeyword(")", "arguments)", "arguments)")
 
-    if self:HasExplicitFunctionReturn() then
-        self:ReadExplicitFunctionReturn(node)
-    end
+    self:ReadExplicitFunctionReturnType(node)
 
-    local start = self:GetCurrentToken()
-    node.statements = self:ReadStatements({["end"] = true})
-    node.tokens["end"] = self:ReadValue("end", start, start)
+    node:ExpectStatementsUntil("end")
+    node:ExpectKeyword("end", "function")
+
+    return node
 end
+
 
 do  -- function
     function META:ReadIndexExpression()
@@ -170,10 +170,6 @@ do  -- function
                 node.right.self_call = self_call
             else
                 break
-            end
-
-            if node then
-                node.primary = first
             end
         end
 
@@ -410,11 +406,12 @@ do -- expression
     do
         function META:IsCallExpression(no_ambiguous_calls, offset)
             offset = offset or 0
+
             if no_ambiguous_calls then
-                return self:IsValue("(", offset)
+                return self:IsValue("(", offset) or self:IsCurrentValue("<|", offset)
             end
 
-            return self:IsValue("(", offset) or self:IsValue("{", offset) or self:IsType("string", offset)
+            return self:IsValue("(", offset) or self:IsCurrentValue("<|", offset) or self:IsValue("{", offset) or self:IsType("string", offset)
         end
 
         function META:ReadCallExpression()
@@ -424,6 +421,11 @@ do -- expression
                 node.expressions = list.new(self:ReadTable())
             elseif self:IsCurrentType("string") then
                 node.expressions = list.new(self:Expression("value"):Store("value", self:ReadTokenLoose()):End())
+            elseif self:IsCurrentValue("<|") then
+                node.tokens["call("] = self:ReadValue("<|")
+                node.expressions = self:ReadTypeExpressionList()
+                node.tokens["call)"] = self:ReadValue("|>")
+                node.type_call = true
             else
                 node.tokens["call("] = self:ReadValue("(")
                 node.expressions = self:ReadExpressionList()
@@ -481,21 +483,100 @@ do -- expression
     function META:ReadParenthesisExpression(no_ambiguous_calls)
         if not self:IsCurrentValue("(") then return end
 
-            local pleft = self:ReadValue("(")
+        local pleft = self:ReadValue("(")
         local node = self:ReadExpression(0, no_ambiguous_calls)
 
-            if not node then
-                self:Error("empty parentheses group", pleft)
-                return
-            end
+        if not node then
+            self:Error("empty parentheses group", pleft)
+            return
+        end
 
-            node.tokens["("] = node.tokens["("] or list.new()
-            node.tokens["("]:insert(1, pleft)
+        node.tokens["("] = node.tokens["("] or list.new()
+        node.tokens["("]:insert(1, pleft)
 
-            node.tokens[")"] = node.tokens[")"] or list.new()
-            node.tokens[")"]:insert(self:ReadValue(")"))
+        node.tokens[")"] = node.tokens[")"] or list.new()
+        node.tokens[")"]:insert(self:ReadValue(")"))
 
         return node
+    end
+
+    do
+        function META:ReadAndAddExplicitType(node, no_ambiguous_calls)
+            if self:IsCurrentValue(":") and self:IsType("letter", 1) and not self:IsCallExpression(no_ambiguous_calls, 2) then
+                node.tokens[":"] = self:ReadValue(":")
+                node.explicit_type = self:ReadTypeExpression()
+            elseif self:IsCurrentValue("as") then
+                node.tokens["as"] = self:ReadValue("as")
+                node.explicit_type = self:ReadTypeExpression()
+            elseif self:IsCurrentValue("is") then
+                node.tokens["is"] = self:ReadValue("is")
+                node.explicit_type = self:ReadTypeExpression()
+            end
+        end
+
+        function META:ReadIndexSubExpression()
+            if not (self:IsCurrentValue(".") and self:IsType("letter", 1)) then return end
+            local node = self:Expression("binary_operator")
+            node.value = self:ReadTokenLoose()
+            node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
+            return node:End()
+        end
+
+        function META:ReadSelfCallSubExpression(no_ambiguous_calls)
+            if not (self:IsCurrentValue(":") and self:IsType("letter", 1) and self:IsCallExpression(no_ambiguous_calls, 2)) then return end
+            local node = self:Expression("binary_operator")
+            node.value = self:ReadTokenLoose()
+            node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
+            return node:End()
+        end
+
+        function META:ReadPostfixOperatorSubExpression()
+            if not syntax.IsPostfixOperator(self:GetCurrentToken()) then return end
+
+            return self:Expression("postfix_operator")
+                :Store("value", self:ReadTokenLoose())
+            :End()
+        end
+
+        function META:ReadCallSubExpression(no_ambiguous_calls)
+            if not self:IsCallExpression(no_ambiguous_calls) then return end
+            return self:ReadCallExpression()
+        end
+
+        function META:ReadPostfixExpressionIndexSubExpression()
+            if not self:IsPostfixExpressionIndex() then return end
+            return self:ReadPostfixExpressionIndex()            
+        end
+
+        function META:ReadSubExpression(node)
+            
+            for _ = 1, self:GetLength() do
+                local left_node = node
+
+                self:ReadAndAddExplicitType(node, no_ambiguous_calls)
+
+                local found = 
+                    self:ReadIndexSubExpression() or 
+                    self:ReadSelfCallSubExpression(no_ambiguous_calls) or
+                    self:ReadPostfixOperatorSubExpression() or 
+                    self:ReadCallSubExpression(no_ambiguous_calls) or 
+                    self:ReadPostfixExpressionIndexSubExpression()
+
+                if not found then
+                    break
+                end
+
+                found.left = left_node
+
+                if left_node.value and left_node.value.value == ":" then
+                    found.self_call = true
+                end
+
+                node = found
+            end
+            
+            return node
+        end
     end
 
     function META:ReadExpression(priority, no_ambiguous_calls)
@@ -513,60 +594,7 @@ do -- expression
         local first = node
 
         if node then
-            for _ = 1, self:GetLength() do
-                local left = node
-                if not self:GetCurrentToken() then break end
-
-                if self:IsCurrentValue(":") and (not self:IsType("letter", 1) and not self:IsCallExpression(nil, 2)) then
-                    node.tokens[":"] = self:ReadValue(":")
-                    node.explicit_type = self:ReadTypeExpression()
-                elseif (self:IsCurrentValue(".") or self:IsCurrentValue(":")) and self:IsType("letter", 1) then
-                    if self:IsCurrentValue(".") or self:IsCallExpression(no_ambiguous_calls, 2) then
-                        node = self:Expression("binary_operator")
-                        node.value = self:ReadTokenLoose()
-                        node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
-                        node.left = left
-                        node:End()
-                    elseif self:IsCurrentValue(":") then
-                        node.tokens[":"] = self:ReadValue(":")
-                        node.explicit_type = self:ReadTypeExpression()
-                    end
-                elseif syntax.IsPostfixOperator(self:GetCurrentToken()) then
-                    node = self
-                        :Expression("postfix_operator")
-                            :Store("left", left)
-                            :Store("value", self:ReadTokenLoose())
-                        :End()
-                elseif self:IsCallExpression(no_ambiguous_calls) then
-                    node = self:ReadCallExpression()
-                    node.left = left
-                    if left.value and left.value.value == ":" then
-                        node.self_call = true
-                    end
-                elseif self:IsPostfixExpressionIndex() then
-                    node = self:ReadPostfixExpressionIndex()
-                    node.left = left
-                elseif self:IsCurrentValue("as") then
-                    node.tokens["as"] = self:ReadValue("as")
-                    node.explicit_type = self:ReadTypeExpression()
-                elseif self:IsCurrentValue("is") then
-                    node.tokens["is"] = self:ReadValue("is")
-                    node.explicit_type = self:ReadTypeExpression()
-                elseif self:IsCurrentValue("<|") then
-                    node = self:ReadTypeCall()
-
-                    node.left = left
-                    if left.value and left.value.value == ":" then
-                        node.self_call = true
-                    end
-                else
-                    break
-                end
-
-                if node then
-                    node.primary = first
-                end
-            end
+            node = self:ReadSubExpression(node)
 
             if first.kind == "value" and (first.value.type == "letter" or first.value.value == "...") then
                 first.standalone_letter = node
@@ -576,10 +604,10 @@ do -- expression
         self:CheckForIntegerDivisionOperator(self:GetCurrentToken())
 
         while syntax.GetBinaryOperatorInfo(self:GetCurrentToken()) and syntax.GetBinaryOperatorInfo(self:GetCurrentToken()).left_priority > priority do
-            local left = node
+            local left_node = node
             node = self:Expression("binary_operator")
             node.value = self:ReadTokenLoose()
-            node.left = left
+            node.left = left_node
             node.right = self:ReadExpression(syntax.GetBinaryOperatorInfo(node.value).right_priority, no_ambiguous_calls)
             node:End()
         end
