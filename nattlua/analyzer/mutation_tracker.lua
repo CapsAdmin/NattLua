@@ -159,8 +159,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
     end
     
     local union = types.Union({})
-    union.upvalue = obj
-    union.upvalue_keyref = key
+    union:SetUpvalue(obj, key)
     
     for _, mut in ipairs(mutations) do
         local value = mut.value
@@ -198,15 +197,9 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
         end
 
         if _ == 1 and value.Type == "union" then
-            if value.Type == "table" then
-                union = value:Copy()
-                union.upvalue = obj
-                union.upvalue_keyref = key
-            else 
-                union = value:Copy()
-                union.upvalue = obj
-                union.upvalue_keyref = key
-            end
+            union = value:Copy()
+            union:SetUpvalue(obj, key)
+        
         else
             -- check if we have to infer the function, otherwise adding it to the union can cause collisions
             if value.Type == "function" and not value.called and not value.explicit_return and union:HasType("function") then

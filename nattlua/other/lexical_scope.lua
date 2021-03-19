@@ -143,7 +143,7 @@ do
 
     function META:SetValue(value)
         self.value = value
-        value.upvalue = self
+        value:SetUpvalue(self)
     end
 
     upvalue_meta = META

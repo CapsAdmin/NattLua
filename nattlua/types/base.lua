@@ -67,6 +67,13 @@ return function(META --[[#: {
         --self.upvalue = obj.upvalue
     end
 
+    function META:SetUpvalue(obj, key)
+        self.upvalue = obj
+        if key then
+            self.upvalue_keyref = key
+        end
+    end
+
     function META:SetSource(source)
         self.source = source
         return self

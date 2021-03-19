@@ -152,8 +152,7 @@ return function(META)
                 end
 
                 local val = (obj:GetContract() or obj):Get(key) or types.Nil()
-                val.upvalue = obj.mutations[key]
-                val.upvalue_keyref = key
+                val:SetUpvalue(obj.mutations[key], key)
 
                 obj.mutations[key]:Mutate(val, creation_scope)
             end
@@ -201,8 +200,7 @@ return function(META)
 
         if not key then return end -- no mutation?
         
-        val.upvalue = obj
-        val.upvalue_keyref = key
+        val:SetUpvalue(obj, key)
 
         initialize_mutation_tracker(obj, scope, key, env)
 

@@ -147,8 +147,9 @@ return function(META)
                     new_union.inverted = true
                 end
                 
-                truthy_union.upvalue = condition.upvalue
-                falsy_union.upvalue = condition.upvalue
+                truthy_union:SetUpvalue(condition.upvalue)
+                falsy_union:SetUpvalue(condition.upvalue)
+                
                 new_union.truthy_union = truthy_union
                 new_union.falsy_union = falsy_union
 

@@ -68,8 +68,9 @@ return function(META)
                 end
             end
 
-            truthy_union.upvalue = l.upvalue
-            falsy_union.upvalue = l.upvalue
+            truthy_union:SetUpvalue(l.upvalue)
+            falsy_union:SetUpvalue(l.upvalue)
+
             new_union.truthy_union = truthy_union
             new_union.falsy_union = falsy_union
 
