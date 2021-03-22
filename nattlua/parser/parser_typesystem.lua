@@ -4,17 +4,17 @@ return function(META)
     local math_huge = math.huge
     local syntax = require("nattlua.syntax.syntax")
 
-        function META:ReadInlineTypeCode()
+    function META:ReadInlineTypeCode()
         if not self:IsCurrentType("type_code") then return end
 
-            local node = self:Statement("type_code")
+        local node = self:Statement("type_code")
 
-            local code = self:Expression("value")
-            code.value = self:ReadType("type_code")
-            node.lua_code = code
-            
-            return node
-        end
+        local code = self:Expression("value")
+        code.value = self:ReadType("type_code")
+        node.lua_code = code
+        
+        return node
+    end
 
     function META:HandleTypeListSeparator(out, i, node)
         if not node then
@@ -35,92 +35,90 @@ return function(META)
     end
 
 
-    do -- identifier
-        function META:ReadTypeExpressionList(max)
-            local out = list.new()
+    function META:ReadTypeExpressionList(max)
+        local out = list.new()
 
-            for i = 1, math_huge do
-                if self:HandleTypeListSeparator(out, i, self:ReadTypeExpression()) then
+        for i = 1, math_huge do
+            if self:HandleTypeListSeparator(out, i, self:ReadTypeExpression()) then
+                break
+            end
+
+            if max then
+                max = max - 1
+                if max == 0 then
                     break
                 end
-
-                if max then
-                    max = max - 1
-                    if max == 0 then
-                        break
-                    end
-                end
             end
-
-            return out
         end
+
+        return out
     end
 
-        function META:ReadLocalTypeFunctionStatement()
+    function META:ReadLocalTypeFunctionStatement()
         if not (self:IsCurrentValue("local") and self:IsValue("type", 1) and self:IsValue("function", 2)) then return end
-            local node = self:Statement("local_type_function")
-            :ExpectKeyword("local")
-            :ExpectKeyword("type")
-            :ExpectKeyword("function")
-            :ExpectSimpleIdentifier()
-            self:ReadTypeFunctionBody(node, true)
-            return node:End() 
-        end
+        local node = self:Statement("local_type_function")
+        :ExpectKeyword("local")
+        :ExpectKeyword("type")
+        :ExpectKeyword("function")
+        :ExpectSimpleIdentifier()
+        self:ReadTypeFunctionBody(node, true)
+        return node:End() 
+    end
 
-        function META:ReadTypeFunctionStatement()
+    function META:ReadTypeFunctionStatement()
         if not (self:IsCurrentValue("type") and self:IsValue("function", 1)) then return end
 
-            local node = self:Statement("type_function")
-            node.tokens["type"] = self:ReadValue("type")
-            node.tokens["function"] = self:ReadValue("function")
-            local force_upvalue
-            if self:IsCurrentValue("^") then
-                force_upvalue = true
-                self:Advance(1)
-            end
-            node.expression = self:ReadIndexExpression()
+        local node = self:Statement("type_function")
+        node.tokens["type"] = self:ReadValue("type")
+        node.tokens["function"] = self:ReadValue("function")
+        local force_upvalue
+        if self:IsCurrentValue("^") then
+            force_upvalue = true
+            self:Advance(1)
+        end
+        node.expression = self:ReadIndexExpression()
 
-            do -- hacky
-                if node.expression.left then
-                    node.expression.left.standalone_letter = node
-                    node.expression.left.force_upvalue = force_upvalue
-                else
-                    node.expression.standalone_letter = node
-                    node.expression.force_upvalue = force_upvalue
-                end
-
-                if node.expression.value.value == ":" then
-                    node.self_call = true
-                end
+        do -- hacky
+            if node.expression.left then
+                node.expression.left.standalone_letter = node
+                node.expression.left.force_upvalue = force_upvalue
+            else
+                node.expression.standalone_letter = node
+                node.expression.force_upvalue = force_upvalue
             end
 
-            self:ReadTypeFunctionBody(node, true)
-
-            return node
+            if node.expression.value.value == ":" then
+                node.self_call = true
+            end
         end
 
-        function META:ReadLocalGenericsTypeFunctionStatement()
-            if not (self:IsCurrentValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)) then return end
+        self:ReadTypeFunctionBody(node, true)
 
-            local node = self:Statement("local_generics_type_function")
-            :ExpectKeyword("local")
-            :ExpectKeyword("function")
-            :ExpectSimpleIdentifier()
-            self:ReadGenericsTypeFunctionBody(node)
-            return node:End()
-        end
+        return node
+    end
 
-        function META:ReadGenericsTypeFunctionStatement()
-            if not (self:IsValue("function") and self:IsValue("<|", 2)) then return end
+    function META:ReadLocalGenericsTypeFunctionStatement()
+        if not (self:IsCurrentValue("local") and self:IsValue("function", 1) and self:IsValue("<|", 3)) then return end
 
-            local node = self:Statement("generics_type_function")
-            :ExpectKeyword("function")
-            node.expression = self:ReadIndexExpression()
-            node:ExpectSimpleIdentifier()
-    
-            self:ReadGenericsTypeFunctionBody(node)
-            return node:End()
-        end
+        local node = self:Statement("local_generics_type_function")
+        :ExpectKeyword("local")
+        :ExpectKeyword("function")
+        :ExpectSimpleIdentifier()
+        self:ReadGenericsTypeFunctionBody(node)
+        return node:End()
+    end
+
+    function META:ReadGenericsTypeFunctionStatement()
+        if not (self:IsValue("function") and self:IsValue("<|", 2)) then return end
+
+        local node = self:Statement("generics_type_function")
+        :ExpectKeyword("function")
+        node.expression = self:ReadIndexExpression()
+        node:ExpectSimpleIdentifier()
+
+        self:ReadGenericsTypeFunctionBody(node)
+        return node:End()
+    end
 
     function META:ReadTypeFunctionArgument()
         if (self:IsCurrentType("letter") or self:IsCurrentValue("...")) and self:IsValue(":", 1) then
@@ -396,9 +394,9 @@ return function(META)
                     if left.value and left.value.value == ":" then
                         node.self_call = true
                     end
-                elseif self:IsPostfixExpressionIndex() then
-                        node = self:ReadPostfixExpressionIndex()
-                        node.left = left
+                elseif self:IsCurrentValue("[") then
+                    node = self:ReadPostfixExpressionIndex()
+                    node.left = left
                 elseif self:IsCurrentValue("as") then
                     node.tokens["as"] = self:ReadValue("as")
                     node.explicit_type = self:ReadTypeExpression()
@@ -431,124 +429,124 @@ return function(META)
         return node
     end
 
-        function META:ReadLocalTypeDeclarationStatement()
+    function META:ReadLocalTypeDeclarationStatement()
         if not (self:IsCurrentValue("local") and self:IsValue("type", 1) and syntax.GetTokenType(self:GetToken(2)) == "letter") then return end
 
-            local node = self:Statement("local_assignment")
+        local node = self:Statement("local_assignment")
 
-            node.tokens["local"] = self:ReadValue("local")
-            node.tokens["type"] = self:ReadValue("type")
+        node.tokens["local"] = self:ReadValue("local")
+        node.tokens["type"] = self:ReadValue("type")
 
-            node.left = self:ReadIdentifierList()
-            node.environment = "typesystem"
+        node.left = self:ReadIdentifierList()
+        node.environment = "typesystem"
 
-            if self:IsCurrentValue("=") then
-                node.tokens["="] = self:ReadValue("=")
-                node.right = self:ReadTypeExpressionList()
-            end
-
-            return node
+        if self:IsCurrentValue("=") then
+            node.tokens["="] = self:ReadValue("=")
+            node.right = self:ReadTypeExpressionList()
         end
 
-        function META:ReadInterfaceStatement()
+        return node
+    end
+
+    function META:ReadInterfaceStatement()
         if not (self:IsCurrentValue("interface") and self:IsType("letter", 1)) then return end
 
-            local node = self:Statement("type_interface")
-            node.tokens["interface"] = self:ReadValue("interface")
-            node.key = self:ReadIndexExpression()
-            node.tokens["{"] = self:ReadValue("{")
-            local list = list.new()
-            for i = 1, math_huge do
-                if not self:IsCurrentType("letter") then break end
-                local node = self:Statement("interface_declaration")
-                node.left = self:ReadType("letter")
-                node.tokens["="] = self:ReadValue("=")
-                node.right = self:ReadTypeExpression()
+        local node = self:Statement("type_interface")
+        node.tokens["interface"] = self:ReadValue("interface")
+        node.key = self:ReadIndexExpression()
+        node.tokens["{"] = self:ReadValue("{")
+        local list = list.new()
+        for i = 1, math_huge do
+            if not self:IsCurrentType("letter") then break end
+            local node = self:Statement("interface_declaration")
+            node.left = self:ReadType("letter")
+            node.tokens["="] = self:ReadValue("=")
+            node.right = self:ReadTypeExpression()
 
-                list[i] = node
-            end
-            node.expressions = list
-            node.tokens["}"] = self:ReadValue("}")
-
-            return node
+            list[i] = node
         end
+        node.expressions = list
+        node.tokens["}"] = self:ReadValue("}")
 
-        function META:ReadTypeAssignment()
+        return node
+    end
+
+    function META:ReadTypeAssignment()
         if not (self:IsCurrentValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))) then return end
 
-            local node = self:Statement("assignment")
+        local node = self:Statement("assignment")
 
-            node.tokens["type"] = self:ReadValue("type")
-            node.left = self:ReadTypeExpressionList()
-            node.environment = "typesystem"
+        node.tokens["type"] = self:ReadValue("type")
+        node.left = self:ReadTypeExpressionList()
+        node.environment = "typesystem"
 
-            if self:IsCurrentValue("=") then
-                node.tokens["="] = self:ReadValue("=")
-                node.right = self:ReadTypeExpressionList()
-            end
-
-            return node
+        if self:IsCurrentValue("=") then
+            node.tokens["="] = self:ReadValue("=")
+            node.right = self:ReadTypeExpressionList()
         end
 
-        function META:ReadImportStatement()
+        return node
+    end
+
+    function META:ReadImportStatement()
         if not (self:IsCurrentValue("import") and not self:IsValue("(", 1)) then return end
 
-            local node = self:Statement("import")
-            node.tokens["import"] = self:ReadValue("import")
-            node.left = self:ReadIdentifierList()
-            node.tokens["from"] = self:ReadValue("from")
+        local node = self:Statement("import")
+        node.tokens["import"] = self:ReadValue("import")
+        node.left = self:ReadIdentifierList()
+        node.tokens["from"] = self:ReadValue("from")
 
-            local start = self:GetCurrentToken()
+        local start = self:GetCurrentToken()
 
-            node.expressions = self:ReadExpressionList()
+        node.expressions = self:ReadExpressionList()
 
-            local root = self.config.path:match("(.+/)")
-            node.path = root .. node.expressions[1].value.value:sub(2, -2)
+        local root = self.config.path:match("(.+/)")
+        node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
-            local nl = require("nattlua")
-            local root, err = nl.ParseFile(node.path, self.root).SyntaxTree
+        local nl = require("nattlua")
+        local root, err = nl.ParseFile(node.path, self.root).SyntaxTree
 
-            if not root then
-                self:Error("error importing file: $1", start, start, err)
-            end
-
-            node.root = root
-
-            self.root.imports = self.root.imports or list.new()
-            self.root.imports:insert(node)
-
-            return node
+        if not root then
+            self:Error("error importing file: $1", start, start, err)
         end
 
-        function META:ReadImportExpression()
+        node.root = root
+
+        self.root.imports = self.root.imports or list.new()
+        self.root.imports:insert(node)
+
+        return node
+    end
+
+    function META:ReadImportExpression()
         if not (self:IsCurrentValue("import") and self:IsValue("(", 1)) then return end
 
-            local node = self:Expression("import")
-            node.tokens["import"] = self:ReadValue("import")
-            node.tokens["("] = list.new(self:ReadValue("("))
+        local node = self:Expression("import")
+        node.tokens["import"] = self:ReadValue("import")
+        node.tokens["("] = list.new(self:ReadValue("("))
 
-            local start = self:GetCurrentToken()
+        local start = self:GetCurrentToken()
 
-            node.expressions = self:ReadExpressionList()
+        node.expressions = self:ReadExpressionList()
 
-            local root = self.config.path:match("(.+/)")
-            node.path = root .. node.expressions[1].value.value:sub(2, -2)
+        local root = self.config.path:match("(.+/)")
+        node.path = root .. node.expressions[1].value.value:sub(2, -2)
 
-            local nl = require("nattlua")
-            local root, err = nl.ParseFile(self:ResolvePath(node.path), self.root)
+        local nl = require("nattlua")
+        local root, err = nl.ParseFile(self:ResolvePath(node.path), self.root)
 
-            if not root then
-                self:Error("error importing file: $1", start, start, err)
-            end
-
-            node.root = root.SyntaxTree
-            node.analyzer = root
-
-            node.tokens[")"] = list.new(self:ReadValue(")"))
-
-            self.root.imports = self.root.imports or list.new()
-            self.root.imports:insert(node)
-
-            return node
+        if not root then
+            self:Error("error importing file: $1", start, start, err)
         end
+
+        node.root = root.SyntaxTree
+        node.analyzer = root
+
+        node.tokens[")"] = list.new(self:ReadValue(")"))
+
+        self.root.imports = self.root.imports or list.new()
+        self.root.imports:insert(node)
+
+        return node
     end
+end

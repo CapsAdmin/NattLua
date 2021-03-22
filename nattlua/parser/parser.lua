@@ -420,19 +420,14 @@ do -- expression
             return node:End()
         end
     end
-
-    do
-        function META:IsPostfixExpressionIndex()
-            return self:IsCurrentValue("[")
-        end
-
-        function META:ReadPostfixExpressionIndex()
-            return self:Expression("postfix_expression_index")
-                :ExpectKeyword("[")
-                :ExpectExpression()
-                :ExpectKeyword("]")
-            :End()
-        end
+    
+    function META:ReadPostfixExpressionIndex()
+        if not self:IsCurrentValue("[") then return end
+        return self:Expression("postfix_expression_index")
+            :ExpectKeyword("[")
+            :ExpectExpression()
+            :ExpectKeyword("]")
+        :End()
     end
 
     function META:CheckForIntegerDivisionOperator(node)
@@ -529,7 +524,7 @@ do -- expression
         end
 
         function META:ReadPostfixExpressionIndexSubExpression()
-            if not self:IsPostfixExpressionIndex() then return end
+            if not self:IsCurrentValue("[") then return end
             return self:ReadPostfixExpressionIndex()            
         end
 
@@ -570,11 +565,11 @@ do -- expression
         local node =  
             self:ReadParenthesisExpression(no_ambiguous_calls) or
             self:ReadPrefixOperatorExpression() or
-                self:ReadFunctionValue() or 
-                self:ReadImportExpression() or 
-                self:ReadLSXExpression() or
-                self:ReadExpressionValue() or
-                self:ReadTable()
+            self:ReadFunctionValue() or 
+            self:ReadImportExpression() or 
+            self:ReadLSXExpression() or
+            self:ReadExpressionValue() or
+            self:ReadTable()
 
         local first = node
 

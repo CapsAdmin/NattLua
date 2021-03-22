@@ -299,11 +299,7 @@ function META:EmitTable(tree)
 
     local during_spread = false
 
-    if tree.is_array then
-        self:EmitToken(tree.tokens["{"], "[")
-    else
-        self:EmitToken(tree.tokens["{"])
-    end
+    self:EmitToken(tree.tokens["{"])
 
     if tree.children[1] then
         self:Whitespace("\n")
@@ -344,11 +340,8 @@ function META:EmitTable(tree)
     if during_spread then
         self:Emit("}")
     end
-    if tree.is_array then
-        self:EmitToken(tree.tokens["}"], "]")
-    else
-        self:EmitToken(tree.tokens["}"])
-    end
+    
+    self:EmitToken(tree.tokens["}"])
 end
 
 local translate = {
