@@ -155,34 +155,19 @@ do  -- function
         local node = self:ReadExpressionValue()
         local first = node
 
-        for _ = 1, self:GetLength() do
+        while self:IsCurrentValue(".") or self:IsCurrentValue(":") do
             local left = node
-            if not self:GetCurrentToken() then break end
-
-            if self:IsCurrentValue(".") or self:IsCurrentValue(":") then
-                local self_call = self:IsCurrentValue(":")
-                
-                node = self:Expression("binary_operator")
-                node.value = self:ReadTokenLoose()
-                node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
-                node.left = left
-                node:End()
-                node.right.self_call = self_call
-            else
-                break
-            end
+            local self_call = self:IsCurrentValue(":")
+            
+            node = self:Expression("binary_operator")
+            node.value = self:ReadTokenLoose()
+            node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
+            node.left = left
+            node:End()
+            node.right.self_call = self_call
         end
 
         first.standalone_letter = node
-
-        while self:IsCurrentValue(".") or self:IsCurrentValue(":") do
-            local left = node
-            node = self:Expression("binary_operator")
-            node.value = self:ReadTokenLoose()
-            node.left = left
-            node.right = self:ReadIndexExpression()
-            node:End()
-        end
 
         return node
     end
