@@ -20,10 +20,6 @@ local function run_nattlua(path)
         c:EnableEventDump(true)
     end
 
-    if c.code:find("%-%-%s-COLOR_PRINT") then
-        require("nattlua.other.color_print")
-    end
-
     if c.code:find("%-%-%s-VERBOSE_STACKTRACE") then
         c.debug = true
     end

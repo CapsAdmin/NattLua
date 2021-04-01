@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local tprint = require("nattlua.other.tprint")
+local table_print = require("nattlua.other.table_print")
 local function get_all_files()
     local paths = {}
 
@@ -67,4 +67,4 @@ for _, path in ipairs(paths) do
     end
 end
 
-tprint(stats)
+table_print(stats)

@@ -55,8 +55,8 @@ return function(META)
         end
 
         function META:Dump()
-            local tprint = require("nattlua.other.tprint")
-            tprint(self)
+            local table_print = require("nattlua.other.table_print")
+            table_print(self)
         end
 
         function META:Render(op)
@@ -179,8 +179,8 @@ return function(META)
         end
 
         function META:Dump()
-            local tprint = require("nattlua.other.tprint")
-            tprint(self)
+            local table_print = require("nattlua.other.table_print")
+            table_print(self)
         end
 
         function META:Render(op)

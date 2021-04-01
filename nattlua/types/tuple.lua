@@ -198,7 +198,8 @@ function META.IsSubsetOfTuple(A, B)
 
             local ok, err = a:IsSubsetOf(b)
             if not ok then
-                return type_errors.subset(a, b, err)
+                local ok, err = type_errors.subset(a, b, err)
+                return ok, err, a, b, i
             end
         end
 
@@ -217,12 +218,12 @@ function META.IsSubsetOfTuple(A, B)
             if b and b.Type == "any" then
                 a = types.Any()
             else
-                return a, a_err
+                return a, a_err, a, b, i
             end
         end
 
         if not b then
-            return b, b_err
+            return b, b_err, a, b, i
         end
 
         if b.Type == "tuple" then

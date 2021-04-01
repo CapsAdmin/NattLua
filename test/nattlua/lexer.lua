@@ -1,6 +1,6 @@
 local nl = require("nattlua")
 local syntax = require("nattlua.syntax.syntax")
-local tprint = require("nattlua.other.tprint")
+local table_print = require("nattlua.other.table_print")
 
 local function tokenize(code)
     return assert(nl.Code(code):Lex()).Tokens

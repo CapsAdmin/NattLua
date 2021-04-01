@@ -124,7 +124,7 @@ test("types", function()
 end)
 
 test("type comments", function()
-    local tprint = require("nattlua.other.tprint")
+    local table_print = require("nattlua.other.table_print")
 
     local tree = parse("function foo(str: string, idx: number, msg: string) end").SyntaxTree
     local func = tree.statements[1]

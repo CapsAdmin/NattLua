@@ -7,7 +7,7 @@ local ffi = require("ffi")
 local json = require("vscode.server.json")
 local nl = require("nattlua")
 local helpers = require("nattlua.other.helpers")
-local tprint = require("examples.util").TablePrint
+local table_print = require("examples.util").TablePrint
 local base_environment = require("nattlua.runtime.base_environment")
 local server = _G.SERVER or require("vscode.server.lsp")
 _G.SERVER = server
@@ -217,7 +217,7 @@ function server:HandleMessage(resp, client)
 	end
 
 	if not resp.method then
-		tprint(resp)
+		table_print(resp)
 		return
 	end
 
