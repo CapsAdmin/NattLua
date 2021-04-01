@@ -39,6 +39,16 @@ function _G.equal(a, b, level)
     end
 end
 
+function diff(input, expect)
+    local a = os.tmpname()
+    local b = os.tmpname()
+
+    do local f = io.open(a, "w") f:write(input) f:close() end
+    do local f = io.open(b, "w") f:write(expect) f:close() end
+
+    os.execute("meld " .. a .. " " .. b)
+end
+
 
 local path = ...
 
