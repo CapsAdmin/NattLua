@@ -108,18 +108,18 @@ function META:EmitExpression(node, from_assignment)
         error("unhandled token type " .. node.kind)
     end
 
+    if pushed then
+        self:PopForceNewlines()
+    elseif node.tokens[")"] then
+        self:Outdent()
+        self:Whitespace("\n")
+        self:Whitespace("\t")
+    end
+
     if node.tokens[")"] then
-        if pushed then
-            self:PopForceNewlines()
-        else
-            self:Outdent()
-            self:Whitespace("\n")
-            self:Whitespace("\t")
-        end
         for _, node in node.tokens[")"]:pairs() do
             self:EmitToken(node)
         end
-
     end
 
     if from_assignment and self.config.annotate and node.inferred_type then
@@ -177,10 +177,6 @@ function META:EmitBreakableExpressionList(list, first_newline)
 end
 
 function META:EmitCall(node)
-    if node:GetLength() > 100 then
-        
-    end
-
     self:EmitExpression(node.left)
 
     if node.tokens["call("] then
@@ -435,7 +431,7 @@ function META:EmitTable(tree)
                 self:Whitespace(" ")
             else
                 if newline then
-                    self:Whitespace(",")
+                    self:Emit(",")
                 end
             end
 
@@ -632,8 +628,8 @@ function META:EmitSemicolonStatement(node)
     if self.config.no_semicolon then 
         self:EmitToken(node.tokens[";"], "")
     else
-    self:EmitToken(node.tokens[";"])
-end
+        self:EmitToken(node.tokens[";"])
+    end
 end
 
 function META:EmitLocalAssignment(node)
@@ -777,7 +773,7 @@ end
 
 function META:EmitStatements(tbl)
     for i, node in tbl:pairs() do
-        local last_statement = self.level == 0 and i >= #tbl - 1
+        local last_statement = node.kind == "end_of_file"
         
         if not last_statement then
             local kind = general_kind(node)

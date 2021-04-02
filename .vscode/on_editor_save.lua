@@ -61,6 +61,7 @@ local function run_nattlua(path)
     local res = assert(c:Emit({
         preserve_whitespace = preserve_whitespace, 
         string_quote = "\"",
+        no_semicolon = true,
         extra_indent = {
             StartStorableVars = true,
             EndStorableVars = false,
@@ -75,6 +76,7 @@ local function run_nattlua(path)
             SendToServer = false,
             Send = false,
             Broadcast = false,
+            End = false,
     
             SetPropertyGroup = "toggle",
         }

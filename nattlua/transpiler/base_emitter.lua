@@ -8,21 +8,23 @@ return function(META)
         if self.config.preserve_whitespace == nil and not force then return end
 
         if str == "\t" then
-            self:EmitIndent()
+            if self.config.no_newlines then
+                self:Emit(" ")
+            else
+                self:Emit(("\t"):rep(self.level))
+                self.last_indent_index = #self.out
+            end
         elseif str == "\t+" then
             self:Indent()
         elseif str == "\t-" then
             self:Outdent()
-        else
-            if self.config.no_newlines and str == "\n" then
-                self:Emit(" ")
-            else
-                self:Emit(str)
-            end
-        end
-
-        if str == "\n" then
+        elseif str == " " then
+            self:Emit(" ")
+        elseif str == "\n" then
+            self:Emit(self.config.no_newlines and " " or "\n")
             self.last_newline_index = #self.out
+        else
+            error("unknown whitespace " .. ("%q"):format(str))
         end
     end
 
@@ -42,15 +44,6 @@ return function(META)
         self.level = self.level - 1
     end
 
-    function META:EmitIndent()
-        if self.config.no_newlines then
-            --self:Emit("")
-        else
-            self:Emit(("\t"):rep(self.level))
-            self.last_indent_index = #self.out
-        end
-    end
-
     function META:GetPrevChar()
         local prev = self.out[self.i - 1]
         local char = prev and prev:sub(-1)
@@ -59,21 +52,7 @@ return function(META)
 
     function META:EmitWhitespace(token)
         if token.type ~= "space" or self.config.preserve_whitespace == nil then
-
-            
-            local prev
-
-            if self.config.preserve_whitespace == false then
-                prev = self.i
-                self.i = self.last_newline_index or prev
-                self:Emit(" ")
-            end
-            
             self:EmitToken(token)
-
-            if prev then
-                self.i = prev
-            end
 
             if token.type ~= "space" then
                 self:Whitespace("\n")
@@ -86,12 +65,18 @@ return function(META)
         if self.config.extra_indent and self.config.preserve_whitespace == false then
             if self.config.extra_indent[node.value] == true then
                 self:Indent()
-            end
-
-            if self.config.extra_indent[node.value] == false then
+            elseif self.config.extra_indent[node.value] == false then
                 self:Outdent()
                 if self.out[self.last_indent_index] then
                     self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+                end
+
+                if self.toggled_indents then
+                    self:Outdent()
+                    self.toggled_indents = {}
+                    if self.out[self.last_indent_index] then
+                        self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+                    end
                 end
             end
 
@@ -102,13 +87,12 @@ return function(META)
                     self.toggled_indents[node.value] = true 
                     self:Indent()
                 elseif self.toggled_indents[node.value] then
-                    self:Outdent()
-                    self.toggled_indents[node.value] = nil
+                    if self.out[self.last_indent_index] then
+                        self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+                    end
                 end
                 
-                if self.out[self.last_indent_index] then
-                    self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
-                end
+              
             end
         end
 
