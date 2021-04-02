@@ -302,31 +302,35 @@ do
         end
     end
 
-    function helpers.LazyFindStartStop(tbl--[[#: any]])
+    function helpers.LazyFindStartStop(tbl--[[#: any]], skip_function_body)
 		if tbl.start and tbl.stop then
 			return tbl.start, tbl.stop
         end
         
         if tbl.type == "statement" then
             if tbl.kind == "call_expression" then
-                return helpers.LazyFindStartStop(tbl.value)
+                return helpers.LazyFindStartStop(tbl.value, skip_function_body)
             end
         elseif tbl.type == "expression" then
             if tbl.kind == "value" then
-                return helpers.LazyFindStartStop(tbl.value)
+                return helpers.LazyFindStartStop(tbl.value, skip_function_body)
             end 
             if tbl.kind == "binary_operator" then
-                local l = helpers.LazyFindStartStop(tbl.left)
-                local _, r = helpers.LazyFindStartStop(tbl.right)
+                local l = helpers.LazyFindStartStop(tbl.left, skip_function_body)
+                local _, r = helpers.LazyFindStartStop(tbl.right, skip_function_body)
                 return l,r
             end
             if tbl.kind == "postfix_call" then
                 if tbl.tokens["call("] then
-                    local l = helpers.LazyFindStartStop(tbl.tokens["call("])
-                    local _, r = helpers.LazyFindStartStop(tbl.tokens["call)"])
+					if skip_function_body and tbl.left then
+						return helpers.LazyFindStartStop(tbl.left, skip_function_body)
+					end
+
+                    local l = helpers.LazyFindStartStop(tbl.tokens["call("], skip_function_body)
+                    local _, r = helpers.LazyFindStartStop(tbl.tokens["call)"], skip_function_body)
                     return l,r
                 else
-                    return helpers.LazyFindStartStop(tbl.expressions[1])
+                    return helpers.LazyFindStartStop(tbl.expressions[1], skip_function_body)
                 end
             end
         end
@@ -337,7 +341,12 @@ do
             error("NO TOKENS!!! " .. tostring(tbl)) 
         end
 
-        traverse(tbl.tokens, {}, out)
+		if skip_function_body and tbl.type == "expression" and tbl.kind == "function" then
+			out.min = math.min(out.min, tbl.tokens["function"].start)
+			out.max = math.min(out.max, tbl.tokens["arguments)"].stop)
+		else
+        	traverse(tbl.tokens, {}, out)
+		end
 
         return out.max, out.min
     end

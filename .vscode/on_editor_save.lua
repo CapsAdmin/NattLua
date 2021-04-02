@@ -13,9 +13,15 @@ local function run_nattlua(path)
     if io.open(path, "r"):read("*all"):find("%-%-%s-PLAIN_LUA") then
         return assert(loadfile(path))()
     end
-    
+
+   
     local c = assert(nl.File(path, {annotate = true}))
     
+    local preserve_whitespace = nil
+    if c.code:find("%-%-%s-PRETTY_PRINT") then
+        preserve_whitespace = false
+    end
+
     if c.code:find("%-%-%s-EVENT_DUMP") then
         c:EnableEventDump(true)
     end
@@ -32,7 +38,12 @@ local function run_nattlua(path)
         require("jit.p").start("Flp")
     end
 
-    local ok, err = c:Analyze()
+    local ok, err
+    
+    if not c.code:find("%-%-%s-DISABLE_ANALYSIS") then
+        ok, err = c:Analyze()
+    end
+
 
     if c.code:find("--DISABLE_BASE_ENV", nil, true) then
         _G.DISABLE_BASE_ENV = nil
@@ -42,11 +53,32 @@ local function run_nattlua(path)
         require("jit.p").stop()
     end
 
-    if not ok then
+    if not ok and err then
         io.write(err, "\n")
         return
     end
-    local res = assert(c:Emit())
+
+    local res = assert(c:Emit({
+        preserve_whitespace = preserve_whitespace, 
+        string_quote = "\"",
+        extra_indent = {
+            StartStorableVars = true,
+            EndStorableVars = false,
+    
+            Start2D = true,
+            Start3D = true,
+    
+            End2D = false,
+            End3D = false,
+    
+            Start = true,
+            SendToServer = false,
+            Send = false,
+            Broadcast = false,
+    
+            SetPropertyGroup = "toggle",
+        }
+    }))
     require("nattlua.runtime.base_runtime")
     if c.code:find("%-%-%s-ENABLE_CODE_RESULT") then
         io.write("== code result ==\n")

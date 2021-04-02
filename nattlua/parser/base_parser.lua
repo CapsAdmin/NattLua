@@ -125,6 +125,11 @@ return function(META)
             return self
         end
 
+        function META:GetLength()
+            local helpers = require("nattlua.other.helpers")
+            local start, stop = helpers.LazyFindStartStop(self, true)
+            return stop - start
+        end
 
         PARSER.ExpressionMeta = META
 
@@ -429,7 +434,6 @@ return function(META)
 
         return self:Root(self.config and self.config.root)
     end
-
 
     function META:Root(root)
         local node = self:Statement("root")

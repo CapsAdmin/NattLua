@@ -20,6 +20,10 @@ return function(META)
                 self:Emit(str)
             end
         end
+
+        if str == "\n" then
+            self.last_newline_index = #self.out
+        end
     end
 
     function META:Emit(str)
@@ -43,6 +47,7 @@ return function(META)
             --self:Emit("")
         else
             self:Emit(("\t"):rep(self.level))
+            self.last_indent_index = #self.out
         end
     end
 
@@ -54,7 +59,22 @@ return function(META)
 
     function META:EmitWhitespace(token)
         if token.type ~= "space" or self.config.preserve_whitespace == nil then
+
+            
+            local prev
+
+            if self.config.preserve_whitespace == false then
+                prev = self.i
+                self.i = self.last_newline_index or prev
+                self:Emit(" ")
+            end
+            
             self:EmitToken(token)
+
+            if prev then
+                self.i = prev
+            end
+
             if token.type ~= "space" then
                 self:Whitespace("\n")
                 self:Whitespace("\t")
@@ -63,6 +83,35 @@ return function(META)
     end
 
     function META:EmitToken(node, translate)
+        if self.config.extra_indent and self.config.preserve_whitespace == false then
+            if self.config.extra_indent[node.value] == true then
+                self:Indent()
+            end
+
+            if self.config.extra_indent[node.value] == false then
+                self:Outdent()
+                if self.out[self.last_indent_index] then
+                    self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+                end
+            end
+
+            if self.config.extra_indent[node.value] == "toggle" then
+                self.toggled_indents = self.toggled_indents or {}
+                
+                if not self.toggled_indents[node.value] then
+                    self.toggled_indents[node.value] = true 
+                    self:Indent()
+                elseif self.toggled_indents[node.value] then
+                    self:Outdent()
+                    self.toggled_indents[node.value] = nil
+                end
+                
+                if self.out[self.last_indent_index] then
+                    self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+                end
+            end
+        end
+
         if node.whitespace then
             for _, data in ipairs(node.whitespace) do
                 if self.config.no_comments ~= true or (data.type ~= "multiline_comment" and data.type ~= "line_comment") then
@@ -86,6 +135,7 @@ return function(META)
         else
             self:Emit(node.value)
         end
+
     end
 
     function META:Initialize()

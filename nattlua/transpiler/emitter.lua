@@ -17,11 +17,47 @@ function META:OptionalWhitespace()
     end
 end
 
+function META:EmitStringToken(token)
+    if self.config.string_quote then
+        local current = token.value:sub(1, 1)
+        local target = self.config.string_quote
+
+        if current == "\"" or current == "\'" then
+            local contents = token.value:sub(2, -2)
+            contents = contents:gsub("([\\])" .. current, current)
+            contents = contents:gsub(target, "\\" .. target)
+            self:EmitToken(token, target .. contents .. target)
+        else
+            self:EmitToken(token)
+        end
+    else
+        self:EmitToken(token)
+    end
+end
+
+function META:EmitNumberToken(token)
+    self:EmitToken(token)
+end
+
 function META:EmitExpression(node, from_assignment)
+    local pushed = false
+
     if node.tokens["("] then
         for _, node in node.tokens["("]:pairs() do
             self:EmitToken(node)
         end
+
+        if node.tokens["("] then
+            if node:GetLength() < 100 then
+                self:PushForceNewlines(false)
+                pushed = true
+            else
+                self:Indent()
+                self:Whitespace("\n")
+                self:Whitespace("\t")
+            end
+        end
+
     end
 
     if node.kind == "binary_operator" then
@@ -48,7 +84,13 @@ function META:EmitExpression(node, from_assignment)
         if node.tokens["is"] then
             self:EmitToken(node.value, tostring(node.result_is))
         else
-            self:EmitToken(node.value)
+            if node.value.type == "string" then
+                self:EmitStringToken(node.value)
+            elseif node.value.type == "number" then
+                self:EmitNumberToken(node.value)
+            else
+                self:EmitToken(node.value)
+            end
         end
     elseif node.kind == "import" then
         self:EmitImportExpression(node)
@@ -67,9 +109,17 @@ function META:EmitExpression(node, from_assignment)
     end
 
     if node.tokens[")"] then
+        if pushed then
+            self:PopForceNewlines()
+        else
+            self:Outdent()
+            self:Whitespace("\n")
+            self:Whitespace("\t")
+        end
         for _, node in node.tokens[")"]:pairs() do
             self:EmitToken(node)
         end
+
     end
 
     if from_assignment and self.config.annotate and node.inferred_type then
@@ -89,14 +139,63 @@ function META:EmitExpressionIndex(node)
     self:EmitToken(node.tokens["]"])
 end
 
+function META:PushForceNewlines(b)
+    self.force_newlines = self.force_newlines or {}
+    table.insert(self.force_newlines, b)
+end
+
+function META:PopForceNewlines()
+    table.remove(self.force_newlines)
+end
+
+function META:IsForcingNewlines()
+    return self.force_newlines and self.force_newlines[#self.force_newlines]
+end
+
+function META:EmitBreakableExpressionList(list, first_newline)
+    local newlines = self:ShouldBreakExpressionList(list)
+
+    if newlines then
+        self:Indent()
+        self:PushForceNewlines(true)
+        if first_newline then
+            self:Whitespace("\n")
+            self:Whitespace("\t")
+        end
+    end
+
+    self:EmitExpressionList(list)
+
+    if newlines then
+        self:Outdent()
+        self:Whitespace("\n")
+        self:Whitespace("\t")
+        self:PopForceNewlines()
+    end
+
+    return newlines
+end
+
 function META:EmitCall(node)
+    if node:GetLength() > 100 then
+        
+    end
+
     self:EmitExpression(node.left)
 
     if node.tokens["call("] then
         self:EmitToken(node.tokens["call("])
     end
 
-    self:EmitExpressionList(node.expressions)
+    if #node.expressions <= 2 then
+        self:PushForceNewlines(false)
+    end
+
+    self:EmitBreakableExpressionList(node.expressions, true)
+    
+    if #node.expressions <= 2 then
+        self:PopForceNewlines()
+    end
 
     if node.tokens["call)"] then
         self:EmitToken(node.tokens["call)"])
@@ -116,6 +215,17 @@ function META:EmitBinaryOperator(node)
         if node.left then self:EmitExpression(node.left) end
         if node.value.value == "." or node.value.value == ":" then
             self:EmitToken(node.value)
+        elseif node.value.value == "and" or node.value.value == "or" then
+            self:Whitespace(" ")
+            self:EmitToken(node.value)
+            
+            if self:IsForcingNewlines() or node:GetLength() > 100 then
+                self:Whitespace("\n")
+                self:Whitespace("\t")
+            else
+                self:Whitespace(" ")
+            end
+
         else
             self:Whitespace(" ")
             self:EmitToken(node.value)
@@ -131,6 +241,7 @@ do
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens["arguments)"])
 
+        
 
         if self.config.annotate and node.inferred_type and not type_function then
             --self:Emit(" --[[ : ")
@@ -152,11 +263,26 @@ do
             --self:Emit(" ]] ")
         end
 
-        self:Whitespace("\n")
+        
         if node.statements then
+            self:PushForceNewlines(false)
+
+            if #node.statements > 0 then
+                self:Whitespace("\n")
+            end
+
+            if #node.statements == 0 then
+                self:Whitespace(" ")
+            end
+
             self:EmitBlock(node.statements)
             
-            self:Whitespace("\t")
+            if #node.statements > 0 then
+                self:Whitespace("\t")
+            end
+
+            self:PopForceNewlines()
+
             self:EmitToken(node.tokens["end"])
         end
     end
@@ -235,20 +361,31 @@ end
 
 function META:EmitTableExpressionValue(node)
     self:EmitToken(node.tokens["["])
-    self:Whitespace("(")
     self:EmitExpression(node.expressions[1])
-    self:Whitespace(")")
     self:EmitToken(node.tokens["]"])
 
+    self:Whitespace(" ")
     self:EmitToken(node.tokens["="])
+    self:Whitespace(" ")
 
     self:EmitExpression(node.expressions[2])
 end
 
 function META:EmitTableKeyValue(node)
     self:EmitToken(node.tokens["identifier"])
+    self:Whitespace(" ")
     self:EmitToken(node.tokens["="])
+    self:Whitespace(" ")
     self:EmitExpression(node.expression)
+end
+
+local function has_function_value(tree)
+    for _, exp in ipairs(tree.children) do
+        if exp.expression and exp.expression.kind == "function" then
+            return true
+        end
+    end
+    return false
 end
 
 function META:EmitTable(tree)
@@ -259,42 +396,58 @@ function META:EmitTable(tree)
     local during_spread = false
 
     self:EmitToken(tree.tokens["{"])
+    local newline = tree:GetLength() > 100 or has_function_value(tree)
 
     if tree.children[1] then
-        self:Whitespace("\n")
+        if newline then
+            self:Whitespace("\n")
             self:Whitespace("\t+")
-            for i,node in tree.children:pairs() do
-                self:Whitespace("\t")
-                if node.kind == "table_index_value" then
-                    if node.spread then
-                        if during_spread then
-                            self:Emit("},")
-                            during_spread = false
-                        end
-                        self:EmitExpression(node.spread.expression)
-                    else
-                        self:EmitExpression(node.expression)
-                    end
-                elseif node.kind == "table_key_value" then
-                    if tree.spread and not during_spread then
-                        during_spread = true
-                        self:Emit("{")
-                    end
-                    self:EmitTableKeyValue(node)
-                elseif node.kind == "table_expression_value" then
-                    self:EmitTableExpressionValue(node)
-                end
+        end
+        
+        for i,node in tree.children:pairs() do
 
-                if tree.tokens["separators"][i] then
-                    self:EmitToken(tree.tokens["separators"][i])
+            if newline then
+                self:Whitespace("\t")
+            end
+
+            if node.kind == "table_index_value" then
+                if node.spread then
+                    if during_spread then
+                        self:Emit("},")
+                        during_spread = false
+                    end
+                    self:EmitExpression(node.spread.expression)
                 else
+                    self:EmitExpression(node.expression)
+                end
+            elseif node.kind == "table_key_value" then
+                if tree.spread and not during_spread then
+                    during_spread = true
+                    self:Emit("{")
+                end
+                self:EmitTableKeyValue(node)
+            elseif node.kind == "table_expression_value" then
+                self:EmitTableExpressionValue(node)
+            end
+
+            if tree.tokens["separators"][i] then
+                self:EmitToken(tree.tokens["separators"][i])
+                self:Whitespace(" ")
+            else
+                if newline then
                     self:Whitespace(",")
                 end
+            end
 
+            if newline then
                 self:Whitespace("\n")
             end
+        end
+
+        if newline then
             self:Whitespace("\t-")
-        self:Whitespace("\t")
+            self:Whitespace("\t")
+        end
     end
     if during_spread then
         self:Emit("}")
@@ -352,7 +505,7 @@ function META:EmitIfStatement(node)
         if node.expressions[i] then
             self:EmitToken(node.tokens["if/else/elseif"][i])
             self:Whitespace(" ")
-            self:EmitExpression(node.expressions[i])
+            self:EmitBreakableExpressionList({node.expressions[i]}, true)
             self:Whitespace(" ")
             self:EmitToken(node.tokens["then"][i])
         elseif node.tokens["if/else/elseif"][i] then
@@ -469,12 +622,18 @@ end
 function META:EmitReturnStatement(node)
     self:Whitespace("\t")
     self:EmitToken(node.tokens["return"])
-    self:Whitespace(" ")
-    self:EmitExpressionList(node.expressions)
+    if node.expressions[1] then
+        self:Whitespace(" ")
+        self:EmitBreakableExpressionList(node.expressions)
+    end
 end
 
 function META:EmitSemicolonStatement(node)
+    if self.config.no_semicolon then 
+        self:EmitToken(node.tokens[";"], "")
+    else
     self:EmitToken(node.tokens[";"])
+end
 end
 
 function META:EmitLocalAssignment(node)
@@ -495,7 +654,7 @@ function META:EmitLocalAssignment(node)
         self:Whitespace(" ")
         self:EmitToken(node.tokens["="])
         self:Whitespace(" ")
-        self:EmitExpressionList(node.right)
+        self:EmitBreakableExpressionList(node.right)
     end
 end
 
@@ -514,7 +673,7 @@ function META:EmitAssignment(node)
         self:Whitespace(" ")
         self:EmitToken(node.tokens["="])
         self:Whitespace(" ")
-        self:EmitExpressionList(node.right)
+        self:EmitBreakableExpressionList(node.right)
     end
 end
 
@@ -604,19 +763,85 @@ function META:EmitStatement(node)
     end
 end
 
-function META:EmitStatements(tbl)
-    for _, node in tbl:pairs() do
-        self:EmitStatement(node)
-        self:Whitespace("\n")
+local function general_kind(node)
+    if  
+        node.kind == "call_expression" or 
+        node.kind == "local_assignment" or 
+        node.kind == "assignment" or
+        node.kind == "return"
+    then
+        return "expression_statement"
     end
+    return "other"
+end
+
+function META:EmitStatements(tbl)
+    for i, node in tbl:pairs() do
+        local last_statement = self.level == 0 and i >= #tbl - 1
+        
+        if not last_statement then
+            local kind = general_kind(node)
+            if (kind == "other" and i > 1) or (tbl[i - 1] and general_kind(tbl[i - 1]) ~= kind) then
+                self:Whitespace("\n")
+            end
+        end
+
+        self:EmitStatement(node)
+
+        if not last_statement then
+            self:Whitespace("\n")
+        end
+    end
+end
+
+function META:ShouldBreakExpressionList(tbl)
+    if self.config.preserve_whitespace == false then
+        -- more than 5 arguments, always break everything into newline call
+        if #tbl > 5 then
+            return true
+        else
+            local total_length = 0
+            for _, exp in ipairs(tbl) do
+                local length = exp:GetLength()
+
+                total_length = total_length + length
+                
+                if total_length > 50 then
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
 end
 
 function META:EmitExpressionList(tbl, delimiter, from_assignment)
     for i = 1, #tbl do
+        if i > 1 and self:IsForcingNewlines() then
+            self:Whitespace("\n")
+            self:Whitespace("\t")
+        end
+
+        local pushed = false
+        if self:IsForcingNewlines() then
+            if tbl[i]:GetLength() < 50 then
+                self:PushForceNewlines(false)
+                pushed = true
+            end
+        end
+
         self:EmitExpression(tbl[i], from_assignment)
+
+        if pushed then
+            self:PopForceNewlines()
+        end
+
         if i ~= #tbl then
             self:EmitToken(tbl[i].tokens[","], delimiter)
-            self:Whitespace(" ")
+            if not self:IsForcingNewlines() then
+                self:Whitespace(" ")
+            end
         end
     end
 end
@@ -709,7 +934,9 @@ do -- types
                         self:EmitTypeExpression(node.expression)
                     elseif node.kind == "table_key_value" then
                         self:EmitToken(node.tokens["identifier"])
+                        self:Whitespace(" ")
                         self:EmitToken(node.tokens["="])
+                        self:Whitespace(" ")
                         self:EmitTypeExpression(node.expression)
                     elseif node.kind == "table_expression_value" then
                         self:EmitToken(node.tokens["["])
