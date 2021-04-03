@@ -85,6 +85,7 @@ local function run_nattlua(path)
     if c.code:find("%-%-%s-ENABLE_CODE_RESULT") then
         io.write("== code result ==\n")
         io.write(res, "\n")
+        io.write("=================\n")
     end
     --assert(load(res))()
 end

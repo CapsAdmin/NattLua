@@ -210,6 +210,12 @@ function META:EmitBinaryOperator(node)
     else
         if node.left then self:EmitExpression(node.left) end
         if node.value.value == "." or node.value.value == ":" then
+
+            if node:GetLength() > 100 then
+                self:Whitespace("\n")
+                self:Whitespace("\t")
+            end
+
             self:EmitToken(node.value)
         elseif node.value.value == "and" or node.value.value == "or" then
             self:Whitespace(" ")
@@ -392,12 +398,12 @@ function META:EmitTable(tree)
     local during_spread = false
 
     self:EmitToken(tree.tokens["{"])
-    local newline = tree:GetLength() > 100 or has_function_value(tree)
-
+    
+    local newline = tree:GetLength() > 50 or has_function_value(tree)
     if tree.children[1] then
+        
         if newline then
             self:Whitespace("\n")
-            self:Whitespace("\t+")
         end
         
         for i,node in tree.children:pairs() do
@@ -439,14 +445,16 @@ function META:EmitTable(tree)
                 self:Whitespace("\n")
             end
         end
-
-        if newline then
-            self:Whitespace("\t-")
-            self:Whitespace("\t")
-        end
     end
+
     if during_spread then
         self:Emit("}")
+    end
+    
+    if newline then
+        self:Outdent()
+        self:Whitespace("\t")
+        self:Indent()
     end
     self:EmitToken(tree.tokens["}"])
 end
@@ -773,7 +781,7 @@ end
 
 function META:EmitStatements(tbl)
     for i, node in tbl:pairs() do
-        local last_statement = node.kind == "end_of_file"
+        local last_statement = tbl[i + 1] and tbl[i + 1].kind == "end_of_file" or node.kind == "end_of_file"
         
         if not last_statement then
             local kind = general_kind(node)
@@ -802,7 +810,7 @@ function META:ShouldBreakExpressionList(tbl)
 
                 total_length = total_length + length
                 
-                if total_length > 50 then
+                if total_length > 100 then
                     return true
                 end
             end

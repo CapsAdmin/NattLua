@@ -51,13 +51,13 @@ return function(META)
     end
 
     function META:EmitWhitespace(token)
-        if token.type ~= "space" or self.config.preserve_whitespace == nil then
-            self:EmitToken(token)
+        if self.config.preserve_whitespace == false and token.type == "space" then return end
+    
+        self:EmitToken(token)
 
-            if token.type ~= "space" then
-                self:Whitespace("\n")
-                self:Whitespace("\t")
-            end
+        if token.type ~= "space" then
+            self:Whitespace("\n")
+            self:Whitespace("\t")
         end
     end
 
@@ -97,9 +97,31 @@ return function(META)
         end
 
         if node.whitespace then
-            for _, data in ipairs(node.whitespace) do
-                if self.config.no_comments ~= true or (data.type ~= "multiline_comment" and data.type ~= "line_comment") then
-                    self:EmitWhitespace(data)
+            if self.config.preserve_whitespace == false then
+                local emit_all_whitespace = false 
+                for _, token in node.whitespace:pairs() do
+                    if token.type == "line_comment" or token.type == "multiline_comment" then
+                        emit_all_whitespace = true
+                        break
+                    end
+                end
+
+                
+                if emit_all_whitespace then
+                    -- wipe out all space emitted before this
+                    if self.last_non_space_index then
+                        for i = self.last_non_space_index + 1, #self.out do
+                            self.out[i] = ""
+                        end
+                    end
+                    
+                    for _, token in node.whitespace:pairs() do
+                        self:EmitToken(token)
+                    end
+                end
+            else
+                for _, token in node.whitespace:pairs() do
+                    self:EmitWhitespace(token)
                 end
             end
         end
@@ -118,6 +140,9 @@ return function(META)
             end
         else
             self:Emit(node.value)
+            if node.type ~= "line_comment" and node.type ~= "multiline_comment" and node.type ~= "space" then
+                self.last_non_space_index = #self.out
+            end
         end
 
     end
