@@ -133,12 +133,9 @@ function META:ReadCMultilineComment() --[[#: boolean]]
     return false
 end
 
---[[# type META.potential_lua54_division_operator = boolean ]]
-
 function META:ReadCLineComment() --[[#: boolean]]
     if self:IsValue("/", 0) and self:IsValue("/", 1) then
 
-        self.potential_lua54_division_operator = true
         self:Advance(2)
 
         while not self:TheEnd() do
