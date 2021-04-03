@@ -365,7 +365,7 @@ return function(META)
                 if not self:GetCurrentToken() then break end
 
                 if self:IsCurrentValue(".") or self:IsCurrentValue(":") then
-                    if self:IsCurrentValue(".") or self:IsCallExpression(true, 2) then
+                    if self:IsCurrentValue(".") or self:IsCallExpression(2) then
                         node = self:Expression("binary_operator")
                         node.value = self:ReadTokenLoose()
                         node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
@@ -388,7 +388,7 @@ return function(META)
                 elseif self:IsCurrentValue("<|") then
                     node = self:ReadTypeCall()
                     node.left = left
-                elseif self:IsCallExpression(true) then
+                elseif self:IsCallExpression() then
                     node = self:ReadCallExpression()
                     node.left = left
                     if left.value and left.value.value == ":" then
