@@ -48,7 +48,7 @@ x = 3
 ]]
 )
 
-check({ extra_indent = {StartSomething = true, EndSomething = false}, preserve_whitespace = false },
+check({ extra_indent = {StartSomething = {to = "EndSomething"}}, preserve_whitespace = false },
 [[
 x = 1
 StartSomething()
@@ -66,7 +66,7 @@ EndSomething()
 x = 4]]
 )
 
-check({ extra_indent = {StartSomething = true, EndSomething = false}, preserve_whitespace = false },
+check({ extra_indent = {StartSomething = {to = "EndSomething"}}, preserve_whitespace = false },
 [[
 x = 1
 pac.StartSomething()

@@ -62,6 +62,8 @@ local function run_nattlua(path)
         preserve_whitespace = preserve_whitespace, 
         string_quote = "\"",
         no_semicolon = true,
+        use_comment_types = true,
+        annotate = true,
         extra_indent = {
             StartStorableVars = {
                 to = "EndStorableVars",

@@ -51,10 +51,10 @@ do
         local b = x
     ]])
         
-    assert(code:find("i: 1 | 2 = 1", nil, true) ~= nil)
+    assert(code:find("i--[[#:1 | 2]] = 1", nil, true) ~= nil)
     -- if the union sorting algorithm changes, we probably need to change this
-    assert(code:find("local a: false | true = x", nil, true) ~= nil)
-    assert(code:find("local b: false = x", nil, true) ~= nil)
+    assert(code:find("local a--[[#:false | true]] = x", nil, true) ~= nil)
+    assert(code:find("local b--[[#:false]] = x", nil, true) ~= nil)
 end
 
 run[[

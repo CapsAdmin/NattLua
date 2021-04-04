@@ -122,10 +122,7 @@ function META:EmitExpression(node, from_assignment)
         end
     end
 
-    if from_assignment and self.config.annotate and node.inferred_type then
-        self:Emit(": ")
-        self:Emit(tostring((node.inferred_type:GetContract() or node.inferred_type)))
-    end
+    self:EmitAnnotation(node)
 end
 
 function META:EmitVarargTuple(node)
@@ -269,8 +266,8 @@ do
         self:EmitToken(node.tokens["arguments)"])      
 
         if self.config.annotate and node.inferred_type and not type_function then
-            --self:Emit(" --[[ : ")
             local str = list.new()
+
             -- this iterates the first return tuple
             local obj = node.inferred_type:GetContract() or node.inferred_type
 
@@ -281,11 +278,11 @@ do
             else
                 str[1] = tostring(obj)
             end
+
             if str[1] then
                 self:Emit(": ")
                 self:Emit(str:concat(", "))
             end
-            --self:Emit(" ]] ")
         end
 
         if node.statements then
@@ -807,15 +804,17 @@ function META:EmitStatement(node)
         self:EmitInvalidLuaCode("EmitLocalGenericsTypeFunction", node)
     elseif node.kind == "generics_type_function" then
         self:EmitInvalidLuaCode("EmitGenericsTypeFunction", node)
-    elseif node.kind == "destructure_assignment" then
-        self:EmitDestructureAssignment(node)
+    elseif node.kind == "destructure_assignment" or node.kind == "local_destructure_assignment" then
+        if self.config.use_comment_types then
+            self:EmitInvalidLuaCode("EmitDestructureAssignment", node)
+        else
+            self:EmitTranspiledDestructureAssignment(node)
+        end
     elseif node.kind == "assignment" then
         self:EmitAssignment(node)
         self:Emit_ENVFromAssignment(node)
     elseif node.kind == "local_assignment" then
         self:EmitLocalAssignment(node)
-    elseif node.kind == "local_destructure_assignment" then
-        self:EmitLocalDestructureAssignment(node)
     elseif node.kind == "import" then
         self:Emit("local ")
         self:EmitIdentifierList(node.left)
@@ -968,18 +967,42 @@ function META:EmitExpressionList(tbl, delimiter, from_assignment)
     end
 end
 
-function META:EmitIdentifier(node)
-    self:EmitToken(node.value)
+function META:HasTypeNotation(node)
+    return node.explicit_type or node.inferred_type
+end
 
-    if self.config.annotate then
-        if node.explicit_type and node.tokens[":"] then
-            self:EmitToken(node.tokens[":"])
+function META:EmitAnnotationExpression(node)
+    if node.tokens[":"] then
+        self:EmitToken(node.tokens[":"])
+    else
+        self:Emit(":")
+    end
+
+    self:Whitespace(" ")
+
+    if self.config.annotate == "explicit" then
+        if node.explicit_type then
+            self:EmitTypeExpression(node.explicit_type)
+        end
+    else
+        if node.explicit_type then
             self:EmitTypeExpression(node.explicit_type)
         elseif node.inferred_type then
-            self:Emit(": ")
-            self:Emit(tostring((node.inferred_type:GetContract() or node.inferred_type)))
+            self:Emit(tostring(node.inferred_type:GetContract() or node.inferred_type))
         end
     end
+end
+
+function META:EmitAnnotation(node)
+    if not self.config.annotate then return end
+    if self:HasTypeNotation(node) then
+        self:EmitInvalidLuaCode("EmitAnnotationExpression", node)
+    end
+end
+
+function META:EmitIdentifier(node)
+    self:EmitToken(node.value)
+    self:EmitAnnotation(node)
 end
 
 function META:EmitIdentifierList(tbl)
@@ -1007,11 +1030,7 @@ do -- types
 
     function META:EmitType(node)
         self:EmitToken(node.value)
-
-        if node.explicit_type then
-            self:EmitToken(node.tokens[":"])
-            self:EmitTypeExpression(node.explicit_type)
-        end
+        self:EmitAnnotation(node)
     end
 
     function META:EmitTypeList(node)
@@ -1175,9 +1194,11 @@ do -- types
     end
 
     function META:EmitInvalidLuaCode(func, ...)
+        local emitted = false
         if not self.config.uncomment_types then
             if not self.during_comment_type or self.during_comment_type == 0 then
-                self:Emit("\n--[==[")
+                self:Emit("--[[#")
+                emitted = true
             end
             self.during_comment_type = self.during_comment_type or 0
             self.during_comment_type = self.during_comment_type + 1
@@ -1185,17 +1206,18 @@ do -- types
         
         self[func](self, ...)
 
+        if emitted then
+            self:Emit("]]")
+        end
+
         if not self.config.uncomment_types then
             self.during_comment_type = self.during_comment_type - 1
-            if not self.during_comment_type or self.during_comment_type == 0 then
-                self:Emit("]==]")
-            end
         end
     end
 end
 
 do -- extra
-    function META:EmitDestructureAssignment(node)
+    function META:EmitTranspiledDestructureAssignment(node)
         self:Whitespace("\t")
         self:EmitToken(node.tokens["{"], "")
 
@@ -1207,8 +1229,7 @@ do -- extra
         self:Whitespace(" ")
         self:EmitIdentifierList(node.left)
         self:EmitToken(node.tokens["}"], "")
-
-            self:Whitespace(" ")
+        self:Whitespace(" ")
         self:EmitToken(node.tokens["="])
         self:Whitespace(" ")
 
@@ -1233,11 +1254,26 @@ do -- extra
         self:Emit(")")
     end
 
-    function META:EmitLocalDestructureAssignment(node)
+    function META:EmitDestructureAssignment(node)
         self:Whitespace("\t")
-        self:EmitToken(node.tokens["local"])
-        self:EmitDestructureAssignment(node)
+        if node.tokens["local"] then
+            self:EmitToken(node.tokens["local"])
         end
+        if node.tokens["type"] then
+            self:Whitespace(" ")
+            self:EmitToken(node.tokens["type"])
+        end
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["{"])
+        self:Whitespace(" ")
+        self:EmitIdentifierList(node.left)
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["}"])
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["="])
+        self:Whitespace(" ")
+        self:EmitExpression(node.right)
+    end
 
     function META:Emit_ENVFromAssignment(node)
         for i,v in node.left:pairs() do
