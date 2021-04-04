@@ -221,7 +221,7 @@ function META:EmitCall(node)
 end
 
 function META:EmitBinaryOperator(node)
-    local func_chunks = syntax.GetFunctionForBinaryOperator(node.value)
+    local func_chunks = node.environment == "runtime" and syntax.GetFunctionForBinaryOperator(node.value)
     if func_chunks then
         self:Emit(func_chunks[1])
         if node.left then self:EmitExpression(node.left) end
@@ -464,7 +464,7 @@ function META:EmitTable(tree)
 end
 
 function META:EmitPrefixOperator(node)
-    local func_chunks = syntax.GetFunctionForPrefixOperator(node.value)
+    local func_chunks = node.environment == "runtime" and syntax.GetFunctionForPrefixOperator(node.value)
 
     if self.TranslatePrefixOperator then
         func_chunks = self:TranslatePrefixOperator(node) or func_chunks
@@ -489,7 +489,7 @@ function META:EmitPrefixOperator(node)
 end
 
 function META:EmitPostfixOperator(node)
-    local func_chunks = syntax.GetFunctionForPostfixOperator(node.value)
+    local func_chunks = node.environment == "runtime" and syntax.GetFunctionForPostfixOperator(node.value)
 
     -- no such thing as postfix operator in lua,
     -- so we have to assume that there's a translation
