@@ -3,8 +3,15 @@ local nl = require("nattlua")
 local function check(config, input, expect)
     expect = expect:gsub("    ", "\t")
     local new_lua_code = assert(nl.Code(input, nil, config)):Emit()
+    if new_lua_code ~= expect then
+        diff(new_lua_code, expect)
+    end
     equal(new_lua_code, expect, 2)
 end
+
+check({ preserve_whitespace = false },
+    [[x = "" -- foo]], [[x = "" -- foo]]
+)
 
 check({ string_quote = "'" },
     [[x = "foo"]], [[x = 'foo']]
@@ -77,6 +84,14 @@ pac.EndSomething()
 x = 4]]
 )
 
+check({preserve_whitespace = false}, [[local tbl = {foo = true,foo = true,foo = true,foo = true,foo = true}]], 
+[[local tbl = {
+    foo = true,
+    foo = true,
+    foo = true,
+    foo = true,
+    foo = true,
+}]])
 
 -- not ready yet
 if false then

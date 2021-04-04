@@ -64,13 +64,12 @@ end
 
 function META:ReadRepeatStatement()
     return 
-        self:IsCurrentValue("repeat") and 
-        self:Statement("repeat")
-        :ExpectKeyword("repeat")
-            :ExpectStatementsUntil("until")
-        :ExpectKeyword("until")
-        :ExpectExpression()
-    :End()
+        self:IsCurrentValue("repeat") and self:Statement("repeat")
+            :ExpectKeyword("repeat")
+                :ExpectStatementsUntil("until")
+            :ExpectKeyword("until")
+            :ExpectExpression()
+        :End()
 end
 
 function META:ReadGotoLabelStatement()

@@ -7,7 +7,7 @@ end
 local function check(code, eq)
     local c = parse(code)
     local new_code = assert(c:Emit())
-    equal(new_code, eq or code)
+    equal(new_code, eq or code, 2)
     return new_code
 end
 

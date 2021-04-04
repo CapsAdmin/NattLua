@@ -140,11 +140,11 @@ return function(META)
             end
         else
             self:Emit(node.value)
-            if node.type ~= "line_comment" and node.type ~= "multiline_comment" and node.type ~= "space" then
-                self.last_non_space_index = #self.out
-            end
         end
 
+        if node.type ~= "line_comment" and node.type ~= "multiline_comment" and node.type ~= "space" then
+            self.last_non_space_index = #self.out
+        end
     end
 
     function META:Initialize()

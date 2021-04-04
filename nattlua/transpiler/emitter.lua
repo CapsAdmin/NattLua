@@ -183,13 +183,15 @@ function META:EmitCall(node)
         self:EmitToken(node.tokens["call("])
     end
 
-    if #node.expressions <= 2 then
+    local newlines = self:ShouldBreakExpressionList(node.expressions)
+
+    if not newlines then
         self:PushForceNewlines(false)
     end
 
     self:EmitBreakableExpressionList(node.expressions, true)
     
-    if #node.expressions <= 2 then
+    if not newlines then
         self:PopForceNewlines()
     end
 
@@ -221,13 +223,14 @@ function META:EmitBinaryOperator(node)
             self:Whitespace(" ")
             self:EmitToken(node.value)
             
-            if self:IsForcingNewlines() or node:GetLength() > 100 then
-                self:Whitespace("\n")
-                self:Whitespace("\t")
-            else
-                self:Whitespace(" ")
+            if node.right then
+                if self:IsForcingNewlines() or node:GetLength() > 100 then
+                    self:Whitespace("\n")
+                    self:Whitespace("\t")
+                else
+                    self:Whitespace(" ")
+                end
             end
-
         else
             self:Whitespace(" ")
             self:EmitToken(node.value)
@@ -400,12 +403,13 @@ function META:EmitTable(tree)
     self:EmitToken(tree.tokens["{"])
     
     local newline = tree:GetLength() > 50 or has_function_value(tree)
+    
+    if newline then
+        self:Indent()
+        self:Whitespace("\n")
+    end
+
     if tree.children[1] then
-        
-        if newline then
-            self:Whitespace("\n")
-        end
-        
         for i,node in tree.children:pairs() do
 
             if newline then
@@ -434,7 +438,6 @@ function META:EmitTable(tree)
 
             if tree.tokens["separators"][i] then
                 self:EmitToken(tree.tokens["separators"][i])
-                self:Whitespace(" ")
             else
                 if newline then
                     self:Emit(",")
@@ -443,6 +446,10 @@ function META:EmitTable(tree)
 
             if newline then
                 self:Whitespace("\n")
+            else
+                if i ~= #tree.children then
+                    self:Whitespace(" ")
+                end
             end
         end
     end
@@ -454,8 +461,8 @@ function META:EmitTable(tree)
     if newline then
         self:Outdent()
         self:Whitespace("\t")
-        self:Indent()
     end
+
     self:EmitToken(tree.tokens["}"])
 end
 
@@ -503,14 +510,64 @@ function META:EmitBlock(statements)
     self:Whitespace("\t-")
 end
 
+local function is_short_statement(kind)
+    return kind == "return" or kind == "break" or kind == "continue"
+end
+
+function META:IsShortIfStatement(node)
+    return #node.statements == 1 and node.statements[1][1] and is_short_statement(node.statements[1][1].kind) and not self:ShouldBreakExpressionList({node.expressions[1]})
+end
+
 function META:EmitIfStatement(node)
+
+    if self:IsShortIfStatement(node) then
+        self:Whitespace("\t")
+        self:EmitToken(node.tokens["if/else/elseif"][1])
+        self:Whitespace(" ")
+        self:EmitExpression(node.expressions[1], true)
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["then"][1])
+        self:Whitespace(" ")
+        if node.statements[1][1].kind == "return" then
+            self:EmitReturnStatement(node.statements[1][1], true)
+        elseif node.statements[1][1].kind == "break" then
+            self:EmitBreakStatement(node.statements[1][1], true)
+        elseif node.statements[1][1].kind == "continue" then
+            self:EmitContinueStatement(node.statements[1][1], true)
+        end
+        self:Whitespace(" ")
+        self:EmitToken(node.tokens["end"])
+        return
+    end
+
     for i = 1, #node.statements do
         self:Whitespace("\t")
         if node.expressions[i] then
+
             self:EmitToken(node.tokens["if/else/elseif"][i])
-            self:Whitespace(" ")
-            self:EmitBreakableExpressionList({node.expressions[i]}, true)
-            self:Whitespace(" ")
+
+            local newlines = self:ShouldBreakExpressionList({node.expressions[i]})
+
+            if newlines then
+                self:Indent()
+                self:PushForceNewlines(true)
+                self:Whitespace("\n")
+                self:Whitespace("\t")
+            else
+                self:Whitespace(" ")
+            end
+
+            self:EmitExpression(node.expressions[i], true)
+
+            if newlines then
+                self:Outdent()
+                self:Whitespace("\n")
+                self:Whitespace("\t")
+                self:PopForceNewlines()
+            else
+                self:Whitespace(" ")
+            end
+
             self:EmitToken(node.tokens["then"][i])
         elseif node.tokens["if/else/elseif"][i] then
             self:EmitToken(node.tokens["if/else/elseif"][i])
@@ -602,13 +659,13 @@ function META:EmitGotoStatement(node)
     self:EmitToken(node.tokens["identifier"])
 end
 
-function META:EmitBreakStatement(node)
-    self:Whitespace("\t")
+function META:EmitBreakStatement(node, no_tab)
+    if not no_tab then self:Whitespace("\t") end
     self:EmitToken(node.tokens["break"])
 end
 
-function META:EmitContinueStatement(node)
-    self:Whitespace("\t")
+function META:EmitContinueStatement(node, no_tab)
+    if not no_tab then self:Whitespace("\t") end
     self:EmitToken(node.tokens["continue"])
 end
 
@@ -623,12 +680,16 @@ function META:EmitDoStatement(node)
     self:EmitToken(node.tokens["end"])
 end
 
-function META:EmitReturnStatement(node)
-    self:Whitespace("\t")
+function META:EmitReturnStatement(node, no_tab)
+    if not no_tab then
+        self:Whitespace("\t")
+    end
+
     self:EmitToken(node.tokens["return"])
+
     if node.expressions[1] then
         self:Whitespace(" ")
-        self:EmitBreakableExpressionList(node.expressions)
+        self:EmitBreakableExpressionList(node.expressions, true)
     end
 end
 
@@ -767,8 +828,22 @@ function META:EmitStatement(node)
     end
 end
 
-local function general_kind(node)
-    if  
+local function general_kind(self, node)
+    if node.kind == "call_expression" then
+        for i,v in ipairs(node.value.expressions) do
+            if v.kind == "function" then
+                return "other"
+            end
+        end
+    end
+
+    if node.kind == "if" then
+        if self:IsShortIfStatement(node) then
+            return "expression_statement"
+        end
+    end
+
+    if
         node.kind == "call_expression" or 
         node.kind == "local_assignment" or 
         node.kind == "assignment" or
@@ -779,21 +854,32 @@ local function general_kind(node)
     return "other"
 end
 
+local function find_previous(statements, i)
+    while true do
+        if not statements[i] then return end
+        if statements[i].kind ~= "semicolon" then
+            return statements[i]
+        end
+        i = i - 1
+    end
+end
+
 function META:EmitStatements(tbl)
     for i, node in tbl:pairs() do
-        local last_statement = tbl[i + 1] and tbl[i + 1].kind == "end_of_file" or node.kind == "end_of_file"
-        
-        if not last_statement then
-            local kind = general_kind(node)
-            if (kind == "other" and i > 1) or (tbl[i - 1] and general_kind(tbl[i - 1]) ~= kind) then
-                self:Whitespace("\n")
-            end
+        if i > 1 and general_kind(self, node) == "other" and node.kind ~= "end_of_file" then
+            self:Whitespace("\n")
         end
 
         self:EmitStatement(node)
 
-        if not last_statement then
+        if node.kind ~= "semicolon" and node.kind ~= "end_of_file" and tbl[i + 1] and tbl[i + 1].kind ~= "end_of_file" then
             self:Whitespace("\n")
+        end
+
+        if general_kind(self, node) == "other" then
+            if tbl[i + 1] and general_kind(self, tbl[i + 1]) == "expression_statement" then
+                self:Whitespace("\n")
+            end
         end
     end
 end
@@ -810,7 +896,7 @@ function META:ShouldBreakExpressionList(tbl)
 
                 total_length = total_length + length
                 
-                if total_length > 100 then
+                if total_length > 75 then
                     return true
                 end
             end
