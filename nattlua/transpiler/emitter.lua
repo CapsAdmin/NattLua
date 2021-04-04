@@ -266,26 +266,7 @@ do
         self:EmitIdentifierList(node.identifiers)
         self:EmitToken(node.tokens["arguments)"])      
 
-        if self.config.annotate and node.inferred_type and not type_function then
-            local str = list.new()
-
-            -- this iterates the first return tuple
-            local obj = node.inferred_type:GetContract() or node.inferred_type
-
-            if obj.Type == "function" then
-                for i,v in ipairs(obj:GetReturnTypes():GetData()) do
-                    str[i] = tostring(v)
-                end
-            else
-                str[1] = tostring(obj)
-            end
-
-            if str[1] then
-                self:EmitNonSpace(":")
-				self:EmitSpace(" ")
-                self:EmitNonSpace(str:concat(", "))
-            end
-        end
+        self:EmitFunctionReturnAnnotation(node)
 
         if node.statements then
             self:PushForceNewlines(false)
@@ -755,12 +736,11 @@ function META:EmitLocalAssignment(node)
 end
 
 function META:EmitAssignment(node)
-    if node.environment == "typesystem" then return end
-
     self:Whitespace("\t")
 
     if node.environment == "typesystem" then
         self:EmitToken(node.tokens["type"])
+        self:Whitespace(" ")
     end
 
     self:EmitExpressionList(node.left, nil, true)
@@ -813,7 +793,13 @@ function META:EmitStatement(node)
             self:EmitTranspiledDestructureAssignment(node)
         end
     elseif node.kind == "assignment" then
-        self:EmitAssignment(node)
+        if node.environment == "typesystem" then
+            if self.config.use_comment_types then
+                self:EmitInvalidLuaCode("EmitAssignment", node)
+            end
+        else
+            self:EmitAssignment(node)
+        end
         self:Emit_ENVFromAssignment(node)
     elseif node.kind == "local_assignment" then
         self:EmitLocalAssignment(node)
@@ -973,7 +959,50 @@ function META:EmitExpressionList(tbl, delimiter, from_assignment)
 end
 
 function META:HasTypeNotation(node)
-    return node.explicit_type or node.inferred_type
+    return node.explicit_type or node.inferred_type or node.return_types
+end
+
+function META:EmitFunctionReturnAnnotationExpression(node, type_function)
+    if node.tokens[":"] then
+        self:EmitToken(node.tokens[":"])
+    else
+        self:EmitNonSpace(":")
+    end
+
+    self:Whitespace(" ")
+
+    if node.return_types then
+        for i, exp in node.return_types:pairs() do
+            self:EmitTypeExpression(exp)
+            if i ~= #node.return_types then
+                self:EmitToken(exp.tokens[","])
+            end
+        end
+    elseif node.inferred_type and self.config.annotate ~= "explicit" then
+        local str = list.new()
+
+        -- this iterates the first return tuple
+        local obj = node.inferred_type:GetContract() or node.inferred_type
+    
+        if obj.Type == "function" then
+            for i,v in ipairs(obj:GetReturnTypes():GetData()) do
+                str[i] = tostring(v)
+            end
+        else
+            str[1] = tostring(obj)
+        end
+        
+        if str[1] then
+            self:EmitNonSpace(str:concat(", "))
+        end
+    end  
+end
+
+function META:EmitFunctionReturnAnnotation(node, type_function)
+    if not self.config.annotate then return end
+    if self:HasTypeNotation(node) then
+        self:EmitInvalidLuaCode("EmitFunctionReturnAnnotationExpression", node, type_function)
+    end
 end
 
 function META:EmitAnnotationExpression(node)
@@ -985,16 +1014,10 @@ function META:EmitAnnotationExpression(node)
 
     self:Whitespace(" ")
 
-    if self.config.annotate == "explicit" then
-        if node.explicit_type then
-            self:EmitTypeExpression(node.explicit_type)
-        end
-    else
-        if node.explicit_type then
-            self:EmitTypeExpression(node.explicit_type)
-        elseif node.inferred_type then
-            self:Emit(tostring(node.inferred_type:GetContract() or node.inferred_type))
-        end
+    if node.explicit_type then
+        self:EmitTypeExpression(node.explicit_type)
+    elseif node.inferred_type and self.config.annotate ~= "explicit" then
+        self:Emit(tostring(node.inferred_type:GetContract() or node.inferred_type))
     end
 end
 
