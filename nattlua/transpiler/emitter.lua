@@ -122,8 +122,6 @@ function META:EmitExpression(node, from_assignment)
             self:EmitToken(node)
         end
     end
-
-    self:EmitAnnotation(node)
 end
 
 function META:EmitVarargTuple(node)
