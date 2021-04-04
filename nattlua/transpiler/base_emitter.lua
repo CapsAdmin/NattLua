@@ -92,7 +92,7 @@ return function(META)
 				end
 			elseif self.tracking_indents[node.value] then
 				for _, info in ipairs(self.tracking_indents[node.value]) do
-					if info.level == self.level then
+					if info.level == self.level or info.level == self.pre_toggle_level then
 						self:Outdent()
 						local info = self.tracking_indents[node.value]
 
@@ -125,6 +125,7 @@ return function(META)
 
 				if not self.toggled_indents[node.value] then
 					self.toggled_indents[node.value] = true
+					self.pre_toggle_level = self.level
 					self:Indent()
 				elseif self.toggled_indents[node.value] then
 					if self.out[self.last_indent_index] then

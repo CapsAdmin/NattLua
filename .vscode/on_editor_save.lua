@@ -66,7 +66,8 @@ local function run_nattlua(path)
         annotate = true,
         force_parenthesis = true,
         extra_indent = {
-            Start = {to = "Stop"}
+            Start = {to = "Stop"},
+            Toggle = "toggle",
         }
     }))
     require("nattlua.runtime.base_runtime")
