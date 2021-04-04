@@ -9,6 +9,15 @@ local function check(config, input, expect)
     equal(new_lua_code, expect, 2)
 end
 
+check({ preserve_whitespace = false, force_parenthesis = true, string_quote = '"' }, 
+[[local foo = aaa 'aaa'
+-- dawdwa
+local x = 1]],
+[[local foo = aaa("aaa")
+-- dawdwa
+local x = 1]]
+)
+
 check({ preserve_whitespace = false },
     [[x = "" -- foo]], [[x = "" -- foo]]
 )

@@ -13,7 +13,7 @@ function META:OptionalWhitespace()
     if self.config.preserve_whitespace == nil and not force then return end
 
     if syntax.IsLetter(self:GetPrevChar()) or syntax.IsNumber(self:GetPrevChar()) then
-        self:Emit(" ")
+        self:EmitSpace(" ")
     end
 end
 
@@ -184,7 +184,7 @@ function META:EmitCall(node)
         self:EmitToken(node.tokens["call("])
     else
         if self.config.force_parenthesis then
-            self:Emit("(")
+            self:EmitNonSpace("(")
         end
     end
 
@@ -213,7 +213,7 @@ function META:EmitCall(node)
                 self:Whitespace("\n")
                 self:Whitespace("\t")
             end
-            self:Emit(")")
+            self:EmitNonSpace(")")
         end
     end
 
@@ -281,8 +281,9 @@ do
             end
 
             if str[1] then
-                self:Emit(": ")
-                self:Emit(str:concat(", "))
+                self:EmitNonSpace(":")
+				self:EmitSpace(" ")
+                self:EmitNonSpace(str:concat(", "))
             end
         end
 
@@ -410,7 +411,7 @@ end
 
 function META:EmitTable(tree)
     if tree.spread then
-        self:Emit("table.mergetables")
+        self:EmitNonSpace("table.mergetables")
     end
 
     local during_spread = false
@@ -434,7 +435,7 @@ function META:EmitTable(tree)
             if node.kind == "table_index_value" then
                 if node.spread then
                     if during_spread then
-                        self:Emit("},")
+                        self:EmitNonSpace("},")
                         during_spread = false
                     end
                     self:EmitExpression(node.spread.expression)
@@ -444,7 +445,7 @@ function META:EmitTable(tree)
             elseif node.kind == "table_key_value" then
                 if tree.spread and not during_spread then
                     during_spread = true
-                    self:Emit("{")
+                    self:EmitNonSpace("{")
                 end
                 self:EmitTableKeyValue(node)
             elseif node.kind == "table_expression_value" then
@@ -455,7 +456,7 @@ function META:EmitTable(tree)
                 self:EmitToken(tree.tokens["separators"][i])
             else
                 if newline then
-                    self:Emit(",")
+                    self:EmitNonSpace(",")
                 end
             end
 
@@ -470,7 +471,7 @@ function META:EmitTable(tree)
     end
 
     if during_spread then
-        self:Emit("}")
+        self:EmitNonSpace("}")
     end
     
     if newline then
@@ -817,9 +818,12 @@ function META:EmitStatement(node)
     elseif node.kind == "local_assignment" then
         self:EmitLocalAssignment(node)
     elseif node.kind == "import" then
-        self:Emit("local ")
+        self:EmitNonSpace("local")
+		self:EmitSpace(" ")
         self:EmitIdentifierList(node.left)
-        self:Emit(" = ")
+		self:EmitSpace(" ")
+		self:EmitNonSpace("=")
+		self:EmitSpace(" ")
         self:EmitImportExpression(node)
     elseif node.kind == "call_expression" then
         self:Whitespace("\t")
@@ -845,7 +849,7 @@ function META:EmitStatement(node)
     elseif node.kind == "root" then
         self:EmitStatements(node.statements)
     elseif node.kind == "type_code" then
-        self:Emit("--" .. node.lua_code.value.value)
+        self:EmitNonSpace("--" .. node.lua_code.value.value)
     elseif node.kind then
         error("unhandled statement: " .. node.kind)
     else
@@ -976,7 +980,7 @@ function META:EmitAnnotationExpression(node)
     if node.tokens[":"] then
         self:EmitToken(node.tokens[":"])
     else
-        self:Emit(":")
+        self:EmitNonSpace(":")
     end
 
     self:Whitespace(" ")
@@ -1091,7 +1095,7 @@ do -- types
                     if tree.tokens["separators"][i] then
                         self:EmitToken(tree.tokens["separators"][i])
                     else
-                        self:Emit(",")
+                        self:EmitNonSpace(",")
                     end
 
                     self:Whitespace("\n")
@@ -1196,7 +1200,7 @@ do -- types
         local emitted = false
         if not self.config.uncomment_types then
             if not self.during_comment_type or self.during_comment_type == 0 then
-                self:Emit("--[[#")
+                self:EmitNonSpace("--[[#")
                 emitted = true
             end
             self.during_comment_type = self.during_comment_type or 0
@@ -1206,7 +1210,7 @@ do -- types
         self[func](self, ...)
 
         if emitted then
-            self:Emit("]]")
+            self:EmitNonSpace("]]")
         end
 
         if not self.config.uncomment_types then
@@ -1232,25 +1236,29 @@ do -- extra
         self:EmitToken(node.tokens["="])
         self:Whitespace(" ")
 
-        self:Emit("table.destructure(")
+        self:EmitNonSpace("table.destructure(")
         self:EmitExpression(node.right)
-        self:Emit(", ")
-        self:Emit("{")
+        self:EmitNonSpace(",")
+		self:EmitSpace(" ")
+        self:EmitNonSpace("{")
         for i, v in node.left:pairs() do
-            self:Emit("\"")
+            self:EmitNonSpace("\"")
             self:Emit(v.value.value)
-            self:Emit("\"")
+            self:EmitNonSpace("\"")
             if i ~= #node.left then
-                self:Emit(", ")
+                self:EmitNonSpace(",")
+				self:EmitSpace(" ")
             end
         end
-        self:Emit("}")
+        self:EmitNonSpace("}")
 
         if node.default then
-            self:Emit(", true")
+            self:EmitNonSpace(",")
+			self:EmitSpace(" ")
+			self:EmitNonSpace("true")
         end
 
-        self:Emit(")")
+        self:EmitNonSpace(")")
     end
 
     function META:EmitDestructureAssignment(node)
@@ -1281,65 +1289,75 @@ do -- extra
                     local key = node.left[i]
                     local val = node.right[i]
 
-                    self:Emit(";setfenv(1, _ENV);")
+                    self:EmitNonSpace(";setfenv(1, _ENV);")
                 end
             end
         end
     end
 
     function META:EmitImportExpression(node)
-        self:Emit(" IMPORTS['" .. node.path .. "'](")
+		self:EmitSpace(" ")
+        self:EmitNonSpace("IMPORTS['" .. node.path .. "'](")
         self:EmitExpressionList(node.expressions)
-        self:Emit(")")
+        self:EmitNonSpace(")")
     end
 
     function META:EmitLSXStatement(node, root)
         if not root then
             self:Whitespace("\n", true)
             self:Whitespace("\t", true)
-            self:Emit("local ")
+            self:EmitNonSpace("local")
+            self:EmitSpace(" ")
         else
             self:Whitespace("\t", true)
         end
-        self:EmitToken(node.tag) self:Emit(" = {type=\""..node.tag.value.."\",")
+        self:EmitToken(node.tag) 
+		self:EmitSpace(" ")
+		self:EmitNonSpace("=")
+		self:EmitSpace(" ")
+		self:EmitNonSpace("{type=\""..node.tag.value.."\",")
 
         for _, prop in node.props:pairs() do
             self:EmitToken(prop.key)
-            self:Emit("=")
+            self:EmitNonSpace("=")
             self:EmitExpression(prop.val)
-            self:Emit(",")
+            self:EmitNonSpace(",")
         end
 
-        self:Emit("}\n")
+        self:EmitNonSpace("}\n")
         if not root then
             self:Whitespace("\t", true)
-            self:Emit("table.insert(parent.children, ") self:EmitToken(node.tag) self:Emit(")\n")
+            self:EmitNonSpace("table.insert(parent.children, ") self:EmitToken(node.tag) self:EmitNonSpace(")\n")
         end
         if node.statements then
             self:Whitespace("\t", true)
             self:EmitToken(node.tag)
-            self:Emit(".children={}")
+            self:EmitNonSpace(".children={}")
             self:Whitespace("\n", true)
             self:Whitespace("\t", true)
-            self:Emit("do")
+            self:EmitNonSpace("do")
             self:Indent()
             self:Whitespace("\n", true)
             self:Whitespace("\t", true)
-            self:Emit("local parent = "..node.tag.value.."\n")
+            self:EmitNonSpace("local parent = "..node.tag.value.."\n")
             self:EmitStatements(node.statements)
             self:Outdent()
             self:Whitespace("\t", true)
-            self:Emit("end")
+            self:EmitNonSpace("end")
             self:Whitespace("\n", true)
         end
     end
 
     function META:EmitLSXExpression(node)
-        self:Emit("(function()\n\tlocal ") self:EmitToken(node.tag) self:Emit(" do\n")
+        self:EmitNonSpace("(function()\n\tlocal ") self:EmitToken(node.tag) self:EmitSpace(" ") self:EmitNonSpace("do") self:EmitSpace("\n")
             self:Indent()
             self:EmitLSXStatement(node, true)
             self:Outdent()
-        self:Emit(" end\n\treturn ") self:EmitToken(node.tag) self:Emit("\nend)()")
+		self:EmitSpace(" ")
+		self:EmitNonSpace("end")
+		self:EmitSpace("\n\t")
+		self:EmitNonSpace("return")
+		self:EmitToken(node.tag) self:EmitNonSpace("\nend)()")
     end
 end
 

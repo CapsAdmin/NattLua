@@ -36,6 +36,15 @@ return function(META)
         self.i = self.i + 1
     end
 
+    function META:EmitNonSpace(str)
+        self:Emit(str)
+        self.last_non_space_index = #self.out
+    end
+
+    function META:EmitSpace(str)
+        self:Emit(str)
+    end
+
     function META:Indent()
         self.level = self.level + 1
     end
@@ -125,7 +134,6 @@ return function(META)
                         break
                     end
                 end
-
                 
                 if emit_all_whitespace then
                     -- wipe out all space emitted before this
