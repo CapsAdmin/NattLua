@@ -47,7 +47,7 @@ return function(META)
         return table.concat(out)
     end
     
-    function META:ReportDiagnostic(node, msg --[[#: {reasons = {[number] = string}} | {[number} = string} ]], severity --[[#: "warning" | "error" ]])
+    function META:ReportDiagnostic(node, msg --[[#: {reasons = {[number] = string}} | {[number] = string} ]], severity --[[#: "warning" | "error" ]])
 
         if self.SuppressDiagnostics then return end
         
