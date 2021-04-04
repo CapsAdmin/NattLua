@@ -21,6 +21,10 @@ check({ string_quote = '"' },
     [[x = 'foo']], [[x = "foo"]]
 )
 
+check({ string_quote = '"', preserve_whitespace = false },
+    [[x = '\"']], [[x = "\""]]
+)
+
 check({ string_quote = '"' },
     [[x = '"foo"']], [[x = "\"foo\""]]
 )

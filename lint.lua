@@ -33,32 +33,17 @@ local config = {
 	preserve_whitespace = false,
 	string_quote = "\"",
 	no_semicolon = true,
+	use_comment_types = true,
+	annotate = "explicit",
 	force_parenthesis = true,
 	extra_indent = {
-		StartStorableVars = {
-			to = "EndStorableVars",
+		CreateAndPushScope = {
+			to = "PopScope",
 		},
 
-		Start2D = {to = "End2D"},
-		Start3D = {to = "End3D"},
-		Start3D2D = {to = "End3D2D"},
-
-		-- in case it's localized
-		cam_Start2D = {to = "cam_End2D"},
-		cam_Start3D = {to = "cam_End3D"},
-		cam_Start3D2D = {to = "cam_End3D2D"},
-		cam_Start = {to = "cam_End"},
-
-		Start = {
-			to = {
-				SendToServer = true,
-				Send = true,
-				Broadcast = true,
-				End = true,
-			}
+		PushScope = {
+			to = "PopScope",
 		},
-
-		SetPropertyGroup = "toggle",
 	}
 }
 

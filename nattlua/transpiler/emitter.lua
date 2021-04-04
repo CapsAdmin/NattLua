@@ -25,6 +25,7 @@ function META:EmitStringToken(token)
         if current == "\"" or current == "\'" then
             local contents = token.value:sub(2, -2)
             contents = contents:gsub("([\\])" .. current, current)
+            contents = contents:gsub("([\\])" .. target, target)
             contents = contents:gsub(target, "\\" .. target)
             self:EmitToken(token, target .. contents .. target)
         else
@@ -1081,9 +1082,7 @@ do -- types
                         self:EmitTypeExpression(node.expression)
                     elseif node.kind == "table_expression_value" then
                         self:EmitToken(node.tokens["["])
-                        self:Whitespace("(")
                         self:EmitTypeExpression(node.expressions[1])
-                        self:Whitespace(")")
                         self:EmitToken(node.tokens["]"])
                         self:EmitToken(node.tokens["="])
                         self:EmitTypeExpression(node.expressions[2])
@@ -1092,7 +1091,7 @@ do -- types
                     if tree.tokens["separators"][i] then
                         self:EmitToken(tree.tokens["separators"][i])
                     else
-                        self:Whitespace(",")
+                        self:Emit(",")
                     end
 
                     self:Whitespace("\n")
