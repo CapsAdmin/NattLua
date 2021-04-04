@@ -63,27 +63,35 @@ local function run_nattlua(path)
         string_quote = "\"",
         no_semicolon = true,
         extra_indent = {
-            StartStorableVars = true,
-            EndStorableVars = false,
+            StartStorableVars = {
+                to = "EndStorableVars",
+            },
     
-            Start2D = true,
-            Start3D = true,
+            Start2D = {
+                to = "End2D"
+            },
+
+            Start2D = {
+                to = "End3D"
+            },
     
-            End2D = false,
-            End3D = false,
-    
-            Start = true,
-            SendToServer = false,
-            Send = false,
-            Broadcast = false,
-            End = false,
-    
+            Start = {
+                to = {
+                    SendToServer = true,
+                    Send = true,
+                    Broadcast = true,
+                }
+            },
+                
             SetPropertyGroup = "toggle",
         }
     }))
     require("nattlua.runtime.base_runtime")
     if c.code:find("%-%-%s-ENABLE_CODE_RESULT") then
         io.write("== code result ==\n")
+        if c.code:find("%-%-%s-SHOW_NEWLINES") then
+            res = res:gsub("\n", "⏎\n")
+        end
         io.write(res, "\n")
         io.write("=================\n")
     end

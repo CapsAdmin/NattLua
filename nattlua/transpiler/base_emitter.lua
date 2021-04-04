@@ -62,11 +62,31 @@ return function(META)
     end
 
     function META:EmitToken(node, translate)
-        if self.config.extra_indent and self.config.preserve_whitespace == false then
-            if self.config.extra_indent[node.value] == true then
+        if self.config.extra_indent and self.config.preserve_whitespace == false and self.inside_call_expression then
+            self.tracking_indents = self.tracking_indents or {}
+
+            if type(self.config.extra_indent[node.value]) == "table" then
                 self:Indent()
-            elseif self.config.extra_indent[node.value] == false then
+
+                local info = self.config.extra_indent[node.value]
+                if type(info.to) == "table" then
+                    for to in pairs(info.to) do
+                        self.tracking_indents[to] = info
+                    end
+                else
+                    self.tracking_indents[info.to] = info
+                end
+
+            elseif self.tracking_indents[node.value] then
                 self:Outdent()
+
+                local info = self.tracking_indents[node.value]
+                for key, val in pairs(self.tracking_indents) do
+                    if info == val then
+                        self.tracking_indents[key] = nil
+                    end
+                end
+
                 if self.out[self.last_indent_index] then
                     self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
                 end

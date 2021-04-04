@@ -168,8 +168,8 @@ function META:EmitBreakableExpressionList(list, first_newline)
 
     if newlines then
         self:Outdent()
-        self:Whitespace("\n")
-        self:Whitespace("\t")
+        --self:Whitespace("\n")
+--        self:Whitespace("\t")
         self:PopForceNewlines()
     end
 
@@ -177,10 +177,17 @@ function META:EmitBreakableExpressionList(list, first_newline)
 end
 
 function META:EmitCall(node)
+    -- this will not work for calls with functions that contain statements
+    self.inside_call_expression = true
+
     self:EmitExpression(node.left)
 
     if node.tokens["call("] then
         self:EmitToken(node.tokens["call("])
+    else
+        if self.config.force_parenthesis then
+            self:Emit("(")
+        end
     end
 
     local newlines = self:ShouldBreakExpressionList(node.expressions)
@@ -196,8 +203,23 @@ function META:EmitCall(node)
     end
 
     if node.tokens["call)"] then
+        if newlines then
+            self:Whitespace("\n")
+            self:Whitespace("\t")
+        end
+
         self:EmitToken(node.tokens["call)"])
+    else
+        if self.config.force_parenthesis then
+            if newlines then
+                self:Whitespace("\n")
+                self:Whitespace("\t")
+            end
+            self:Emit(")")
+        end
     end
+
+    self.inside_call_expression = false
 end
 
 function META:EmitBinaryOperator(node)
@@ -244,9 +266,7 @@ do
     local function emit_function_body(self, node, type_function)
         self:EmitToken(node.tokens["arguments("])
         self:EmitIdentifierList(node.identifiers)
-        self:EmitToken(node.tokens["arguments)"])
-
-        
+        self:EmitToken(node.tokens["arguments)"])      
 
         if self.config.annotate and node.inferred_type and not type_function then
             --self:Emit(" --[[ : ")
@@ -268,7 +288,6 @@ do
             --self:Emit(" ]] ")
         end
 
-        
         if node.statements then
             self:PushForceNewlines(false)
 
@@ -281,13 +300,11 @@ do
             end
 
             self:EmitBlock(node.statements)
-            
-            if #node.statements > 0 then
-                self:Whitespace("\t")
-            end
 
             self:PopForceNewlines()
 
+            self:Whitespace("\n")
+            self:Whitespace("\t")
             self:EmitToken(node.tokens["end"])
         end
     end
@@ -541,9 +558,15 @@ function META:EmitIfStatement(node)
     end
 
     for i = 1, #node.statements do
-        self:Whitespace("\t")
+        if i == 1 then
+            self:Whitespace("\t")
+        end
+        
         if node.expressions[i] then
-
+            if i > 1 then
+                self:Whitespace("\n")
+                self:Whitespace("\t")
+            end            
             self:EmitToken(node.tokens["if/else/elseif"][i])
 
             local newlines = self:ShouldBreakExpressionList({node.expressions[i]})
@@ -570,11 +593,14 @@ function META:EmitIfStatement(node)
 
             self:EmitToken(node.tokens["then"][i])
         elseif node.tokens["if/else/elseif"][i] then
+            self:Whitespace("\n")
+            self:Whitespace("\t")
             self:EmitToken(node.tokens["if/else/elseif"][i])
         end
         self:Whitespace("\n")
         self:EmitBlock(node.statements[i])
     end
+    self:Whitespace("\n")
     self:Whitespace("\t")
     self:EmitToken(node.tokens["end"])
 end
@@ -595,6 +621,7 @@ function META:EmitGenericForStatement(node)
     self:EmitToken(node.tokens["do"])
     self:Whitespace("\n")
     self:EmitBlock(node.statements)
+    self:Whitespace("\n")
     self:Whitespace("\t")
     self:EmitToken(node.tokens["end"])
 end
@@ -614,6 +641,7 @@ function META:EmitNumericForStatement(node)
     self:EmitToken(node.tokens["do"])
     self:Whitespace("\n")
     self:EmitBlock(node.statements)
+    self:Whitespace("\n")
     self:Whitespace("\t")
     self:EmitToken(node.tokens["end"])
 end
@@ -627,6 +655,7 @@ function META:EmitWhileStatement(node)
     self:EmitToken(node.tokens["do"])
     self:Whitespace("\n")
     self:EmitBlock(node.statements)
+    self:Whitespace("\n")
     self:Whitespace("\t")
     self:EmitToken(node.tokens["end"])
 end
@@ -676,6 +705,7 @@ function META:EmitDoStatement(node)
 
     self:EmitBlock(node.statements)
 
+    self:Whitespace("\n")
     self:Whitespace("\t")
     self:EmitToken(node.tokens["end"])
 end
@@ -688,7 +718,9 @@ function META:EmitReturnStatement(node, no_tab)
     self:EmitToken(node.tokens["return"])
 
     if node.expressions[1] then
-        self:Whitespace(" ")
+        if not self:ShouldBreakExpressionList(node.expressions) then
+            self:Whitespace(" ")
+        end
         self:EmitBreakableExpressionList(node.expressions, true)
     end
 end
@@ -1090,6 +1122,7 @@ do -- types
         else
             self:Whitespace("\n")
             self:EmitBlock(node.statements)
+            self:Whitespace("\n")
             self:Whitespace("\t")
             self:EmitToken(node.tokens["end"])
         end
