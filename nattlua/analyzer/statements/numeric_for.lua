@@ -1,143 +1,144 @@
 local types = require("nattlua.types.types")
-
 return function(META)
+	local function get_largest_number(obj)
+		if obj:IsLiteral() then
+			if obj.Type == "union" then
+				local max = -math.huge
 
-    local function get_largest_number(obj)
-        if obj:IsLiteral() then
-            if obj.Type == "union" then
-                local max = -math.huge
-                for _, v in ipairs(obj:GetData()) do
-                    max = math.max(max, v:GetData())
-                end
-                return max
-            end
-            return obj:GetData()
-        end
-    end
+				for _, v in ipairs(obj:GetData()) do
+					max = math.max(max, v:GetData())
+				end
 
-    function META:AnalyzeNumericForStatement(statement)
-        local init = self:AnalyzeExpression(statement.expressions[1])
-        local max = self:AnalyzeExpression(statement.expressions[2])
-        local step = statement.expressions[3] and self:AnalyzeExpression(statement.expressions[3]) or nil
-        if step then
-            assert(step.Type == "number")
-        end
+				return max
+			end
 
-        local literal_init = get_largest_number(init)
-        local literal_max = get_largest_number(max)
-        local literal_step = not step and 1 or get_largest_number(step)
+			return obj:GetData()
+		end
+	end
 
-        local condition = types.Union()
+	function META:AnalyzeNumericForStatement(statement)
+		local init = self:AnalyzeExpression(statement.expressions[1])
+		local max = self:AnalyzeExpression(statement.expressions[2])
+		local step = statement.expressions[3] and self:AnalyzeExpression(statement.expressions[3]) or nil
 
-        if literal_init and literal_max then
+		if step then
+			assert(step.Type == "number")
+		end
+
+		local literal_init = get_largest_number(init)
+		local literal_max = get_largest_number(max)
+		local literal_step = not step and 1 or get_largest_number(step)
+		local condition = types.Union()
+
+		if literal_init and literal_max then
             -- also check step
             condition:AddType(self:BinaryOperator(statement, init, max, "runtime", "<="))
-        else
-            condition:AddType(types.Symbol(true))
-            condition:AddType(types.Symbol(false))
-        end
+		else
+			condition:AddType(types.Symbol(true))
+			condition:AddType(types.Symbol(false))
+		end
 
-        statement.identifiers[1].inferred_type = init
-        
-        self:CreateAndPushScope()
-        self:OnEnterConditionalScope({
-            type = "numeric_for",
-            init = init, 
-            max = max, 
-            condition = condition,
-            step = step,
-        })
-        self:FireEvent("numeric_for", init, max, step)
+		statement.identifiers[1].inferred_type = init
+		self:CreateAndPushScope()
+			self:OnEnterConditionalScope(
+				{
+					type = "numeric_for",
+					init = init,
+					max = max,
+					condition = condition,
+					step = step,
+				}
+			)
+			self:FireEvent("numeric_for", init, max, step)
 
-        if literal_init and literal_max and literal_step and literal_max < 1000 then
-            local uncertain_break = nil
-            for i = literal_init, literal_max, literal_step do
-                self:CreateAndPushScope()
-                self:OnEnterConditionalScope({
-                    type = "numeric_for_iteration",
-                    condition = condition,
-                    i = i, 
-                })
-                local i = self:NewType(statement.expressions[1], "number", i):SetLiteral(true)
-                local brk = false
-                
-                if uncertain_break then
-                    i:SetLiteral(false)
-                    brk = true
-                end
+			if literal_init and literal_max and literal_step and literal_max < 1000 then
+				local uncertain_break = nil
 
-                self:CreateLocalValue(statement.identifiers[1], i, "runtime")
-                self:AnalyzeStatements(statement.statements)
+				for i = literal_init, literal_max, literal_step do
+					self:CreateAndPushScope()
+						self:OnEnterConditionalScope(
+							{
+								type = "numeric_for_iteration",
+								condition = condition,
+								i = i,
+							}
+						)
+						local i = self:NewType(statement.expressions[1], "number", i):SetLiteral(true)
+						local brk = false
 
-                if self._continue_ then
-                    self._continue_ = nil
-                end
+						if uncertain_break then
+							i:SetLiteral(false)
+							brk = true
+						end
 
-                if self.break_out_scope then
+						self:CreateLocalValue(statement.identifiers[1], i, "runtime")
+						self:AnalyzeStatements(statement.statements)
 
-                    if self.break_out_scope:IsUncertain() then
-                        uncertain_break = i
-                    else
-                        brk = true
-                    end
+						if self._continue_ then
+							self._continue_ = nil
+						end
 
-                    self.break_out_scope = nil
-                end
+						if self.break_out_scope then
+							if self.break_out_scope:IsUncertain() then
+								uncertain_break = i
+							else
+								brk = true
+							end
 
-                self:PopScope()
-                self:OnExitConditionalScope({
-                    type = "numeric_for_iteration",
-                    i = i, 
-                })
+							self.break_out_scope = nil
+						end
 
-                if brk then
-                    break
-                end
-            end
+					self:PopScope()
+					self:OnExitConditionalScope({
+						type = "numeric_for_iteration",
+						i = i,
+					})
+					if brk then break end
+				end
 
-            local children = self:GetScope():GetChildren()
-            if children[1] then
-                local merged_scope = children[1]:Copy(true)
-                for i = 2, #children do
-                    merged_scope:Merge(children[i])
-                end
+				local children = self:GetScope():GetChildren()
 
-                merged_scope:MakeReadOnly(true)
-                self:GetScope():AddChild(merged_scope)
-    
-                self:FireEvent("merge_iteration_scopes", merged_scope)
-    
-                self:PushScope(merged_scope)
-                    self:AnalyzeStatements(statement.statements)
-                    statement.identifiers[1].inferred_type = self:GetScope():FindValue(statement.identifiers[1].value.value, "runtime"):GetValue()
-                self:PopScope()
-            end
-            
-        else
-            if init.Type == "number" and (max.Type == "number" or (max.Type == "union" and max:IsType("number"))) then
-                init = self:Assert(statement.expressions[1], init:SetMax(max))
-            end
+				if children[1] then
+					local merged_scope = children[1]:Copy(true)
 
-            if max.Type == "any" then
-                init:SetLiteral(false)
-            end
+					for i = 2, #children do
+						merged_scope:Merge(children[i])
+					end
 
-            local range = self:Assert(statement.expressions[1], init)
+					merged_scope:MakeReadOnly(true)
+					self:GetScope():AddChild(merged_scope)
+					self:FireEvent("merge_iteration_scopes", merged_scope)
+					self:PushScope(merged_scope)
+						self:AnalyzeStatements(statement.statements)
+						statement.identifiers[1].inferred_type = self:GetScope():FindValue(statement.identifiers[1].value.value, "runtime"):GetValue()
+					self:PopScope()
+				end
+			else
+				if
+					init.Type == "number" and
+					(max.Type == "number" or (max.Type == "union" and max:IsType("number")))
+				then
+					init = self:Assert(statement.expressions[1], init:SetMax(max))
+				end
 
-            self:CreateLocalValue(statement.identifiers[1], range, "runtime")
-            self:AnalyzeStatements(statement.statements)
-        end
-        self:FireEvent("leave_scope")
+				if max.Type == "any" then
+					init:SetLiteral(false)
+				end
 
-        self.break_out_scope = nil
+				local range = self:Assert(statement.expressions[1], init)
+				self:CreateLocalValue(statement.identifiers[1], range, "runtime")
+				self:AnalyzeStatements(statement.statements)
+			end
 
-        self:PopScope()
-        self:OnExitConditionalScope({init = init, max = max, condition = condition})
-    end
+			self:FireEvent("leave_scope")
+			self.break_out_scope = nil
+		self:PopScope()
+		self:OnExitConditionalScope({init = init, max = max, condition = condition})
+	end
 
-    function META:AnalyzeBreakStatement(statement)
-        self.break_out_scope = self:GetScope()
-        self.break_loop = true
-        self:FireEvent("break")
-    end
+	function META:AnalyzeBreakStatement(statement)
+		self.break_out_scope = self:GetScope()
+		self.break_loop = true
+		self:FireEvent("break")
+	end
 end

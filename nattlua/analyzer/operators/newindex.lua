@@ -1,119 +1,110 @@
 local types = require("nattlua.types.types")
-
-return function(META) 
-    function META:NewIndexOperator(node, obj, key, val, env)
-        if obj.Type == "union" then
+return function(META)
+	function META:NewIndexOperator(node, obj, key, val, env)
+		if obj.Type == "union" then
             -- local x: nil | {foo = true}
             -- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
             -- log(x.foo) << no error, because now x has no field nil
             
             local new_union = types.Union()
-            local truthy_union = types.Union()
-            local falsy_union = types.Union()
-    
-            for _, v in ipairs(obj:GetData()) do
-                local ok, err = self:NewIndexOperator(node, v, key, val, env)
-    
-                if not ok then
-                    self:ErrorAndCloneCurrentScope(node, err or "invalid set error", obj)
-                    falsy_union:AddType(v)
-                else
-                    truthy_union:AddType(v)
-                    new_union:AddType(v)
-                end
-            end
-    
-            truthy_union:SetUpvalue(obj.upvalue)
-            falsy_union:SetUpvalue(obj.upvalue)
+			local truthy_union = types.Union()
+			local falsy_union = types.Union()
 
-            new_union.truthy_union = truthy_union
-            new_union.falsy_union = falsy_union
-    
-            return new_union:SetNode(node):SetSource(new_union):SetBinarySource(obj)
-        end
+			for _, v in ipairs(obj:GetData()) do
+				local ok, err = self:NewIndexOperator(node, v, key, val, env)
 
-        if val.Type == "function" and val:GetNode().self_call then
-            local arg = val:GetArguments():Get(1)
-            if not arg:GetContract() then
-                val.called = true
-                val = val:Copy()
-                val:GetArguments():Set(1, types.Union({types.Any(), obj}))
-                self:CallMeLater(val, val:GetArguments(), val:GetNode(), true)
-            end
-        end
+				if not ok then
+					self:ErrorAndCloneCurrentScope(node, err or "invalid set error", obj)
+					falsy_union:AddType(v)
+				else
+					truthy_union:AddType(v)
+					new_union:AddType(v)
+				end
+			end
 
-        self:FireEvent("newindex", obj, key, val, env)
-    
-        if obj:GetMetaTable() then
-            local func = obj:GetMetaTable():Get("__newindex")
-    
-            if func then
-                if func.Type == "table" then
-                    return func:Set(key, val)
-                end
-    
-                if func.Type == "function" then
-                    return self:Assert(node, self:Call(func, types.Tuple({obj, key, val}), key:GetNode()))
-                end
-            end
-        end
+			truthy_union:SetUpvalue(obj.upvalue)
+			falsy_union:SetUpvalue(obj.upvalue)
+			new_union.truthy_union = truthy_union
+			new_union.falsy_union = falsy_union
+			return new_union:SetNode(node):SetSource(new_union):SetBinarySource(obj)
+		end
 
-        if obj.Type == "table" and obj.argument_index and (not obj:GetContract() or not obj:GetContract().mutable) then
-            self:Warning(node, "mutating function argument")
-        end
+		if val.Type == "function" and val:GetNode().self_call then
+			local arg = val:GetArguments():Get(1)
 
-        if val.Type == "function" and val:GetNode().kind == "local_function" then
-            local first_arg = val:GetArguments(1):Get(1)
-            if first_arg and not first_arg:GetContract() then
-                local node = first_arg:GetNode()
-                if node and node.kind == "value" and node.value.value == "self" then
-                    val:GetArguments(1):Set(1, obj)
-                    node.inferred_type = obj
-                end
-            end
-        end
-        
-        if env == "runtime" and obj:GetContract() then
-            local contract = obj:GetContract()
-            if contract then
-                local existing, err = contract:Get(key)
-                
-                if existing then
+			if not arg:GetContract() then
+				val.called = true
+				val = val:Copy()
+				val:GetArguments():Set(1, types.Union({types.Any(), obj}))
+				self:CallMeLater(val, val:GetArguments(), val:GetNode(), true)
+			end
+		end
 
-                    if val.Type == "function" and existing.Type == "function" then
-                        
-                        for i,v in ipairs(val:GetNode().identifiers) do
-                            if not existing:GetNode().identifiers[i] then
-                                self:Error(v, "too many arguments")
-                                break
-                            end
-                            val:GetNode().identifiers[i].inferred_type = existing:GetArguments():Get(i)
-                        end
-                        
-                        val:SetArguments(existing:GetArguments())
-                        val:SetReturnTypes(existing:GetReturnTypes())
+		self:FireEvent("newindex", obj, key, val, env)
 
-                        val.explicit_arguments = true
-                    end
-                    
-                    local ok, err = val:IsSubsetOf(existing)
+		if obj:GetMetaTable() then
+			local func = obj:GetMetaTable():Get("__newindex")
 
-                    
-                    
-                    if not ok then
-                        self:Error(node, err)
-                    end
-                else
-                    self:Error(node, err)
-                end
-            end
-        end
+			if func then
+				if func.Type == "table" then return func:Set(key, val) end
+				if func.Type == "function" then return self:Assert(node, self:Call(func, types.Tuple({obj, key, val}), key:GetNode())) end
+			end
+		end
 
-        if not self:MutateValue(obj, key, val, env) then -- always false?
-            if env == "typesystem" and obj:GetContract() then
-                return obj:GetContract():Set(key, val)
-            end
-            return obj:Set(key, val)
-        end
-    end
+		if obj.Type == "table" and obj.argument_index and (not obj:GetContract() or not obj:GetContract().mutable) then
+			self:Warning(node, "mutating function argument")
+		end
+
+		if val.Type == "function" and val:GetNode().kind == "local_function" then
+			local first_arg = val:GetArguments(1):Get(1)
+
+			if first_arg and not first_arg:GetContract() then
+				local node = first_arg:GetNode()
+
+				if node and node.kind == "value" and node.value.value == "self" then
+					val:GetArguments(1):Set(1, obj)
+					node.inferred_type = obj
+				end
+			end
+		end
+
+		if env == "runtime" and obj:GetContract() then
+			local contract = obj:GetContract()
+
+			if contract then
+				local existing, err = contract:Get(key)
+
+				if existing then
+					if val.Type == "function" and existing.Type == "function" then
+						for i, v in ipairs(val:GetNode().identifiers) do
+							if not existing:GetNode().identifiers[i] then
+								self:Error(v, "too many arguments")
+
+								break
+							end
+
+							val:GetNode().identifiers[i].inferred_type = existing:GetArguments():Get(i)
+						end
+
+						val:SetArguments(existing:GetArguments())
+						val:SetReturnTypes(existing:GetReturnTypes())
+						val.explicit_arguments = true
+					end
+
+					local ok, err = val:IsSubsetOf(existing)
+
+					if not ok then
+						self:Error(node, err)
+					end
+				else
+					self:Error(node, err)
+				end
+			end
+		end
+
+		if not self:MutateValue(obj, key, val, env) then -- always false?
+            if env == "typesystem" and obj:GetContract() then return obj:GetContract():Set(key, val) end
+			return obj:Set(key, val)
+		end
+	end
 end

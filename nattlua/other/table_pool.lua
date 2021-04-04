@@ -1,38 +1,39 @@
 local ok, table_new = pcall(require, "table.new")
 
 if not ok then
-    table_new = function() return {} end
+	table_new = function()
+		return {}
+	end
 end
 
-return function(alloc --[[#: (function(): {[string] = any})]], size --[[#: nil | number]])
-    local records = 0
-    for k,v in pairs(alloc()) do
-        records = records + 1
-    end
+return function(alloc--[[#: (function(): {[string] = any})]], size--[[#: nil | number]])
+	local records = 0
 
-    local i
-    local pool = table_new(size, records)
+	for k, v in pairs(alloc()) do
+		records = records + 1
+	end
 
-    local function refill()
-        i = 1
+	local i
+	local pool = table_new(size, records)
 
-        for i = 1, size do
-            pool[i] = alloc()
-        end
-    end
+	local function refill()
+		i = 1
 
-    refill()
+		for i = 1, size do
+			pool[i] = alloc()
+		end
+	end
 
-    return function()
-        local tbl = pool[i]
+	refill()
+	return function()
+		local tbl = pool[i]
 
-        if not tbl then
-            refill()
-            tbl = pool[i]
-        end
+		if not tbl then
+			refill()
+			tbl = pool[i]
+		end
 
-        i = i + 1
-
-        return tbl
-    end
+		i = i + 1
+		return tbl
+	end
 end

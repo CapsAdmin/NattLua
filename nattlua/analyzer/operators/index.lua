@@ -1,78 +1,66 @@
 local types = require("nattlua.types.types")
+return function(META)
+	function META:IndexOperator(node, obj, key, env)
+		if obj.Type == "union" then
+			local copy = types.Union()
 
-return function(META) 
-    function META:IndexOperator(node, obj, key, env)
-        if obj.Type == "union" then
-            local copy = types.Union()
-            for _,v in ipairs(obj:GetData()) do
+			for _, v in ipairs(obj:GetData()) do
+				local val, err = self:IndexOperator(node, v, key, env)
+				if not val then return val, err end
+				copy:AddType(val)
+			end
 
-                local val, err = self:IndexOperator(node, v, key, env)
-                if not val then
-                    return val, err
-                end
-                copy:AddType(val)
-            end
-            return copy
-        end
-    
-        if obj.Type ~= "table" and obj.Type ~= "tuple" and obj.Type ~= "list" and (obj.Type ~= "string") then
-            return obj:Get(key)
-        end
-        
-        if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then
-            local index = obj:GetMetaTable():Get("__index")
+			return copy
+		end
 
-            if index then
-                if index.Type == "table" then
-                    return self:IndexOperator(node, index:GetContract() or index, key, env)
-                end
-    
-                if index.Type == "function" then
-                    local obj, err = self:Call(index, types.Tuple({obj, key}), key:GetNode())
-                    
-                    if not obj then
-                        return obj, err
-                    end
-    
-                    return obj:Get(1)
-                end
-            end
-        end
+		if
+			obj.Type ~= "table" and
+			obj.Type ~= "tuple" and
+			obj.Type ~= "list" and
+			(obj.Type ~= "string")
+		then
+			return obj:Get(key)
+		end
 
-        if obj:GetContract() then
-            local val, err = obj:GetContract():Get(key)
+		if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then
+			local index = obj:GetMetaTable():Get("__index")
 
-            if val then
-                if not obj.argument_index or obj:GetContract().literal_argument then
-                    local o = self:GetMutatedValue(obj, key, val, env)
-                    if o then
-                        return o
-                    end
-                end
+			if index then
+				if index.Type == "table" then return self:IndexOperator(node, index:GetContract() or index, key, env) end
 
-                local o = self:GetMutatedValue(obj:GetContract(), key, val, env)
-                if o then
-                    return o
-                end
+				if index.Type == "function" then
+					local obj, err = self:Call(index, types.Tuple({obj, key}), key:GetNode())
+					if not obj then return obj, err end
+					return obj:Get(1)
+				end
+			end
+		end
 
-                return val
-            end
+		if obj:GetContract() then
+			local val, err = obj:GetContract():Get(key)
 
-            return val, err
-        end
+			if val then
+				if not obj.argument_index or obj:GetContract().literal_argument then
+					local o = self:GetMutatedValue(obj, key, val, env)
+					if o then return o end
+				end
 
-        local val, err = obj:Get(key)
+				local o = self:GetMutatedValue(obj:GetContract(), key, val, env)
+				if o then return o end
+				return val
+			end
 
-        if val then
-            local o = self:GetMutatedValue(obj, key, val, env)
-        
-            if o then
-                return o
-            end
+			return val, err
+		end
 
-            return val
-        end
+		local val, err = obj:Get(key)
 
-        return types.Nil() -- no contract means nil value
+		if val then
+			local o = self:GetMutatedValue(obj, key, val, env)
+			if o then return o end
+			return val
+		end
+
+		return types.Nil() -- no contract means nil value
     end
 end
