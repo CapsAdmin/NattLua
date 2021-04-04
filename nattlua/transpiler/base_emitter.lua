@@ -80,18 +80,17 @@ return function(META)
                 local info = self.config.extra_indent[node.value]
                 if type(info.to) == "table" then
                     for to in pairs(info.to) do
-                        self.tracking_indents[to] = info
-                    end
-                else
-                    self.tracking_indents[info.to] = info
-                end
-
-            elseif self.tracking_indents[node.value] then
+                        self.tracking_indents[to] = {info = info, level = self.level}
+					end
+				else
+					self.tracking_indents[info.to] = {info = info, level = self.level}
+				end
+			elseif self.tracking_indents[node.value] and self.tracking_indents[node.value].level == self.level then
                 self:Outdent()
 
                 local info = self.tracking_indents[node.value]
                 for key, val in pairs(self.tracking_indents) do
-                    if info == val then
+                    if info == val.info then
                         self.tracking_indents[key] = nil
                     end
                 end
