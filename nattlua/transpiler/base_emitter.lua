@@ -80,30 +80,37 @@ return function(META)
                 local info = self.config.extra_indent[node.value]
                 if type(info.to) == "table" then
                     for to in pairs(info.to) do
-                        self.tracking_indents[to] = {info = info, level = self.level}
+                        self.tracking_indents[to] = self.tracking_indents[to] or {}
+                        table.insert(self.tracking_indents[to], {info = info, level = self.level})
 					end
 				else
-					self.tracking_indents[info.to] = {info = info, level = self.level}
+                    self.tracking_indents[info.to] = self.tracking_indents[info.to] or {}
+                    table.insert(self.tracking_indents[info.to], {info = info, level = self.level})
 				end
-			elseif self.tracking_indents[node.value] and self.tracking_indents[node.value].level == self.level then
-                self:Outdent()
+			elseif self.tracking_indents[node.value] then
+                for _, info in ipairs(self.tracking_indents[node.value]) do
+                    if info.level == self.level then
+                        self:Outdent()
 
-                local info = self.tracking_indents[node.value]
-                for key, val in pairs(self.tracking_indents) do
-                    if info == val.info then
-                        self.tracking_indents[key] = nil
-                    end
-                end
+                        local info = self.tracking_indents[node.value]
+                        for key, val in pairs(self.tracking_indents) do
+                            if info == val.info then
+                                self.tracking_indents[key] = nil
+                            end
+                        end
 
-                if self.out[self.last_indent_index] then
-                    self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
-                end
+                        if self.out[self.last_indent_index] then
+                            self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+                        end
 
-                if self.toggled_indents then
-                    self:Outdent()
-                    self.toggled_indents = {}
-                    if self.out[self.last_indent_index] then
-                        self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+                        if self.toggled_indents then
+                            self:Outdent()
+                            self.toggled_indents = {}
+                            if self.out[self.last_indent_index] then
+                                self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+                            end
+                        end
+                        break
                     end
                 end
             end

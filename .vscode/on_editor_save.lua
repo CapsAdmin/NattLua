@@ -65,6 +65,9 @@ local function run_nattlua(path)
         use_comment_types = true,
         annotate = true,
         force_parenthesis = true,
+        extra_indent = {
+            Start = {to = "Stop"}
+        }
     }))
     require("nattlua.runtime.base_runtime")
     if c.code:find("%-%-%s-ENABLE_CODE_RESULT") then
