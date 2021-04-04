@@ -1167,6 +1167,7 @@ do -- types
                 if exp.identifier then
                     self:EmitToken(exp.identifier)
                     self:EmitToken(exp.tokens[":"])
+                    self:Whitespace(" ")
                 end
 
                 self:EmitTypeExpression(exp)
@@ -1175,16 +1176,19 @@ do -- types
             if i ~= #node.identifiers then
                 if exp.tokens[","]then
                     self:EmitToken(exp.tokens[","])
+                    self:Whitespace(" ")
                 end
             end
         end
         self:EmitToken(node.tokens["arguments)"])
         if node.tokens[":"] then
             self:EmitToken(node.tokens[":"])
+            self:Whitespace(" ")
             for i, exp in node.return_types:pairs() do
                 self:EmitTypeExpression(exp)
                 if i ~= #node.return_types then
                     self:EmitToken(exp.tokens[","])
+                    self:Whitespace(" ")
                 end
             end
         else
