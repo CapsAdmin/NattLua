@@ -1,4 +1,3 @@
-local list = require("nattlua.other.list")
 return function(META)
 	local math_huge = math.huge
 	local syntax = require("nattlua.syntax.syntax")
@@ -25,7 +24,7 @@ return function(META)
 	end
 
 	function META:ReadTypeExpressionList(max)
-		local out = list.new()
+		local out = {}
 
 		for i = 1, math_huge do
 			if self:HandleTypeListSeparator(out, i, self:ReadTypeExpression()) then break end
@@ -112,7 +111,7 @@ return function(META)
 	function META:ReadExplicitFunctionReturnType(node)
 		if not self:IsCurrentValue(":") then return end
 		node.tokens[":"] = self:ReadValue(":")
-		local out = list.new()
+		local out = {}
 
 		for i = 1, self:GetLength() do
 			local typ = self:ReadTypeExpression()
@@ -128,7 +127,7 @@ return function(META)
 		if plain_args then
 			node.identifiers = self:ReadIdentifierList()
 		else
-			node.identifiers = list.new()
+			node.identifiers = {}
 
 			for i = 1, math_huge do
 				if self:HandleListSeparator(node.identifiers, i, self:ReadTypeFunctionArgument()) then break end
@@ -143,7 +142,7 @@ return function(META)
 				vararg.explicit_type = self:ReadValue()
 			end
 
-			node.identifiers:insert(vararg)
+			table.insert(node.identifiers, vararg)
 		end
 
 		node.tokens["arguments)"] = self:ReadValue(")", node.tokens["arguments("])
@@ -167,7 +166,7 @@ return function(META)
 		if self:IsCurrentValue("...") then
 			local vararg = self:Expression("value")
 			vararg.value = self:ReadValue("...")
-			node.identifiers:insert(vararg)
+			table.insert(node.identifiers, vararg)
 		end
 
 		node.tokens["arguments)"] = self:ReadValue("|>", node.tokens["arguments("])
@@ -192,11 +191,11 @@ return function(META)
 
 	function META:ExpectTypeExpression(node)
 		if node.expressions then
-			node.expressions:insert(self:ReadTypeExpression())
+			table.insert(node.expressions, self:ReadTypeExpression())
 		elseif node.expression then
-			node.expressions = list.new(node.expression)
+			node.expressions = {node.expression}
 			node.expression = nil
-			node.expressions:insert(self:ReadTypeExpression())
+			table.insert(node.expressions, self:ReadTypeExpression())
 		else
 			node.expression = self:ReadTypeExpression()
 		end
@@ -224,8 +223,8 @@ return function(META)
 	function META:ReadTypeTable()
 		local tree = self:Expression("type_table")
 		tree:ExpectKeyword("{")
-		tree.children = list.new()
-		tree.tokens["separators"] = list.new()
+		tree.children = {}
+		tree.tokens["separators"] = {}
 
 		for i = 1, math_huge do
 			if self:IsCurrentValue("}") then break end
@@ -287,10 +286,10 @@ return function(META)
 				return
 			end
 
-			node.tokens["("] = node.tokens["("] or list.new()
-			node.tokens["("]:insert(1, pleft)
-			node.tokens[")"] = node.tokens[")"] or list.new()
-			node.tokens[")"]:insert(self:ReadValue(")"))
+			node.tokens["("] = node.tokens["("] or {}
+			table.insert(node.tokens["("], 1, pleft)
+			node.tokens[")"] = node.tokens[")"] or {}
+			table.insert(node.tokens[")"], self:ReadValue(")"))
 		elseif syntax.typesystem.IsPrefixOperator(self:GetCurrentToken()) then
 			node = self:Expression("prefix_operator")
 			node.value = self:ReadTokenLoose()
@@ -419,7 +418,7 @@ return function(META)
 		node.tokens["interface"] = self:ReadValue("interface")
 		node.key = self:ReadIndexExpression()
 		node.tokens["{"] = self:ReadValue("{")
-		local list = list.new()
+		local list = {}
 
 		for i = 1, math_huge do
 			if not self:IsCurrentType("letter") then break end
@@ -468,8 +467,8 @@ return function(META)
 		end
 
 		node.root = root
-		self.root.imports = self.root.imports or list.new()
-		self.root.imports:insert(node)
+		self.root.imports = self.root.imports or {}
+		table.insert(self.root.imports, node)
 		return node
 	end
 
@@ -477,7 +476,7 @@ return function(META)
 		if not (self:IsCurrentValue("import") and self:IsValue("(", 1)) then return end
 		local node = self:Expression("import")
 		node.tokens["import"] = self:ReadValue("import")
-		node.tokens["("] = list.new(self:ReadValue("("))
+		node.tokens["("] = {self:ReadValue("(")}
 		local start = self:GetCurrentToken()
 		node.expressions = self:ReadExpressionList()
 		local root = self.config.path:match("(.+/)")
@@ -491,9 +490,9 @@ return function(META)
 
 		node.root = root.SyntaxTree
 		node.analyzer = root
-		node.tokens[")"] = list.new(self:ReadValue(")"))
-		self.root.imports = self.root.imports or list.new()
-		self.root.imports:insert(node)
+		node.tokens[")"] = {self:ReadValue(")")}
+		self.root.imports = self.root.imports or {}
+		table.insert(self.root.imports, node)
 		return node
 	end
 end

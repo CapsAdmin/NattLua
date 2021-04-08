@@ -1,6 +1,5 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
 
-local list = require("nattlua.other.list")
 local table_pool = require("nattlua.other.table_pool")
 return function(META--[[#: {
 	@Name = "BaseLexer",
@@ -195,7 +194,7 @@ return function(META--[[#: {
 					whitespace_buffer[whitespace_buffer_i] = token
 					whitespace_buffer_i = whitespace_buffer_i + 1
 				else
-					token.whitespace = list.fromtable(whitespace_buffer)
+					token.whitespace = whitespace_buffer
 					non_whitespace[non_whitespace_i] = token
 					non_whitespace_i = non_whitespace_i + 1
 					whitespace_buffer = {}
@@ -204,7 +203,7 @@ return function(META--[[#: {
 			end
 		end
 
-		local tokens = list.fromtable(non_whitespace)
+		local tokens = non_whitespace
 		local last = tokens[#tokens]
 
 		if last then

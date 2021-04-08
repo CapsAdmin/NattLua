@@ -1,4 +1,3 @@
-local list = require("nattlua.other.list")
 return function(META)
 	local setmetatable = setmetatable
 	local type = type
@@ -23,10 +22,10 @@ return function(META)
 
 		if tokens[what] then
 			if not tokens[what][1] then
-				tokens[what] = list.new(tokens[what])
+				tokens[what] = {tokens[what]}
 			end
 
-			tokens[what]:insert(token)
+			table.insert(tokens[what], token)
 		else
 			tokens[what] = token
 		end
@@ -92,11 +91,11 @@ return function(META)
 
 		function META:ExpectExpression(what)
 			if self.expressions then
-				self.expressions:insert(self.parser:ReadExpectExpression())
+				table.insert(self.expressions, self.parser:ReadExpectExpression())
 			elseif self.expression then
-				self.expressions = list.new(self.expression)
+				self.expressions = {self.expression}
 				self.expression = nil
-				self.expressions:insert(self.parser:ReadExpectExpression())
+				table.insert(self.expressions, self.parser:ReadExpectExpression())
 			else
 				self.expression = self.parser:ReadExpectExpression()
 			end
@@ -130,7 +129,7 @@ return function(META)
 		end
 
 		function META:End()
-			self.parser.nodes:remove(1)
+			table.remove(self.parser.nodes, 1)
 			return self
 		end
 
@@ -145,7 +144,7 @@ return function(META)
 
 		function PARSER:Expression(kind)
 			local node = {}
-			node.tokens = list.new()
+			node.tokens = {}
 			node.kind = kind
 			node.id = id
 			node.code = self.code
@@ -201,11 +200,11 @@ return function(META)
 
 		function META:GetStatements()
 			if self.kind == "if" then
-				local flat = list.new()
+				local flat = {}
 
-				for _, statements in self.statements:pairs() do
-					for _, v in statements:pairs() do
-						flat:insert(v)
+				for _, statements in ipairs(self.statements) do
+					for _, v in ipairs(statements) do
+						table.insert(flat, v)
 					end
 				end
 
@@ -220,11 +219,11 @@ return function(META)
 		end
 
 		function META:FindStatementsByType(what, out)
-			out = out or list.new()
+			out = out or {}
 
-			for _, child in self:GetStatements():pairs() do
+			for _, child in ipairs(self:GetStatements()) do
 				if child.kind == what then
-					out:insert(child)
+					table.insert(out, child)
 				elseif child:GetStatements() then
 					child:FindStatementsByType(what, out)
 				end
@@ -261,11 +260,11 @@ return function(META)
 
 		function META:ExpectExpression()
 			if self.expressions then
-				self.expressions:insert(self.parser:ReadExpectExpression())
+				table.insert(self.expressions, self.parser:ReadExpectExpression())
 			elseif self.expression then
-				self.expressions = list.new(self.expression)
+				self.expressions = {self.expression}
 				self.expression = nil
-				self.expressions:insert(self.parser:ReadExpectExpression())
+				table.insert(self.expressions, self.parser:ReadExpectExpression())
 			else
 				self.expression = self.parser:ReadExpectExpression()
 			end
@@ -304,7 +303,7 @@ return function(META)
 		end
 
 		function META:End()
-			self.parser.nodes:remove(1)
+			table.remove(self.parser.nodes, 1)
 			return self
 		end
 
@@ -312,7 +311,7 @@ return function(META)
 
 		function PARSER:Statement(kind)
 			local node = {}
-			node.tokens = list.new()
+			node.tokens = {}
 			node.kind = kind
 			node.id = id
 			node.code = self.code
@@ -326,8 +325,8 @@ return function(META)
 				self:OnNode(node)
 			end
 
-			node.parent = self.nodes:last()
-			self.nodes:insert(node)
+			node.parent = self.nodes[#self.nodes]
+			table.insert(self.nodes, node)
 			return node
 		end
 	end
@@ -368,25 +367,25 @@ return function(META)
 	function META:ReadTokenLoose()
 		self:Advance(1)
 		local tk = self:GetToken(-1)
-		tk.parent = self.nodes:last()
+		tk.parent = self.nodes[#self.nodes]
 		return tk
 	end
 
 	function META:RemoveToken(i)
 		local t = self.tokens[i]
-		self.tokens:remove(i)
+		table.remove(self.tokens, i)
 		return t
 	end
 
 	function META:AddTokens(tokens)
-		local eof = self.tokens:remove()
+		local eof = table.remove(self.tokens)
 
-		for i, token in tokens:pairs() do
+		for i, token in ipairs(tokens) do
 			if token.type == "end_of_file" then break end
-			self.tokens:insert(self.i + i - 1, token)
+			table.insert(self.tokens, self.i + i - 1, token)
 		end
 
-		self.tokens:insert(eof)
+		table.insert(self.tokens, eof)
 	end
 
 	function META:IsValue(str, offset)
@@ -446,10 +445,10 @@ return function(META)
 				self:Error("expected $1: reached end of code", start, stop, values)
 			end
 
-			local array = list.new()
+			local array = {}
 
 			for k in pairs(values) do
-				array:insert(k)
+				table.insert(array, k)
 			end
 
 			self:Error("expected $1 got $2", start, stop, array, tk.type)
@@ -467,7 +466,7 @@ return function(META)
 	end
 
 	function META:BuildAST(tokens)
-		self.tokens = list.fromtable(tokens)
+		self.tokens = tokens
 		self.i = 1
 		return self:Root(self.config and self.config.root)
 	end
@@ -485,20 +484,20 @@ return function(META)
 		node.statements = self:ReadStatements()
 
 		if shebang then
-			node.statements:insert(1, shebang)
+			table.insert(node.statements, 1, shebang)
 		end
 
 		if self:IsCurrentType("end_of_file") then
 			local eof = self:Statement("end_of_file")
-			eof.tokens["end_of_file"] = self.tokens:last()
-			node.statements:insert(eof)
+			eof.tokens["end_of_file"] = self.tokens[#self.tokens]
+			table.insert(node.statements, eof)
 		end
 
 		return node:End()
 	end
 
 	function META:ReadStatements(stop_token)
-		local out = list.new()
+		local out = {}
 
 		for i = 1, self:GetLength() do
 			if

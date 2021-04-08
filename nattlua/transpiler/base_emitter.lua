@@ -139,7 +139,7 @@ return function(META)
 			if self.config.preserve_whitespace == false then
 				local emit_all_whitespace = false
 
-				for _, token in node.whitespace:pairs() do
+				for _, token in ipairs(node.whitespace) do
 					if token.type == "line_comment" or token.type == "multiline_comment" then
 						emit_all_whitespace = true
 
@@ -155,12 +155,12 @@ return function(META)
 						end
 					end
 
-					for _, token in node.whitespace:pairs() do
+					for _, token in ipairs(node.whitespace) do
 						self:EmitToken(token)
 					end
 				end
 			else
-				for _, token in node.whitespace:pairs() do
+				for _, token in ipairs(node.whitespace) do
 					self:EmitWhitespace(token)
 				end
 			end

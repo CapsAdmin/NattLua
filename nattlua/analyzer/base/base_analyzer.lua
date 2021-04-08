@@ -1,7 +1,6 @@
 local load = loadstring or load
 local types = require("nattlua.types.types")
 local helpers = require("nattlua.other.helpers")
-local list = require("nattlua.other.list")
 local LexicalScope = require("nattlua.other.lexical_scope")
 return function(META)
 	local table_insert = table.insert
@@ -30,7 +29,7 @@ return function(META)
 
 	function META:AnalyzeExpressions(expressions, env)
 		if not expressions then return end
-		local out = list.new()
+		local out = {}
 
 		for _, expression in ipairs(expressions) do
 			local ret = {self:AnalyzeExpression(expression, env)}

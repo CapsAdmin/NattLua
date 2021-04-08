@@ -1,4 +1,3 @@
-local list = require("nattlua.other.list")
 local syntax = require("nattlua.syntax.syntax")
 local ipairs = ipairs
 local assert = assert
@@ -42,7 +41,7 @@ function META:EmitExpression(node, from_assignment)
 	local pushed = false
 
 	if node.tokens["("] then
-		for _, node in node.tokens["("]:pairs() do
+		for _, node in ipairs(node.tokens["("]) do
 			self:EmitToken(node)
 		end
 
@@ -115,7 +114,7 @@ function META:EmitExpression(node, from_assignment)
 	end
 
 	if node.tokens[")"] then
-		for _, node in node.tokens[")"]:pairs() do
+		for _, node in ipairs(node.tokens[")"]) do
 			self:EmitToken(node)
 		end
 	end
@@ -415,7 +414,7 @@ function META:EmitTable(tree)
 	end
 
 	if tree.children[1] then
-		for i, node in tree.children:pairs() do
+		for i, node in ipairs(tree.children) do
 			if newline then
 				self:Whitespace("\t")
 			end
@@ -899,7 +898,7 @@ local function find_previous(statements, i)
 end
 
 function META:EmitStatements(tbl)
-	for i, node in tbl:pairs() do
+	for i, node in ipairs(tbl) do
 		if i > 1 and general_kind(self, node) == "other" and node.kind ~= "end_of_file" then
 			self:Whitespace("\n")
 		end
@@ -988,7 +987,7 @@ function META:EmitFunctionReturnAnnotationExpression(node, type_function)
 	self:Whitespace(" ")
 
 	if node.return_types then
-		for i, exp in node.return_types:pairs() do
+		for i, exp in ipairs(node.return_types) do
 			self:EmitTypeExpression(exp)
 
 			if i ~= #node.return_types then
@@ -996,7 +995,7 @@ function META:EmitFunctionReturnAnnotationExpression(node, type_function)
 			end
 		end
 	elseif node.inferred_type and self.config.annotate ~= "explicit" then
-		local str = list.new()
+		local str = {}
 
         -- this iterates the first return tuple
         local obj = node.inferred_type:GetContract() or node.inferred_type
@@ -1111,7 +1110,7 @@ do -- types
 		self:EmitExpression(node.key)
 		self:EmitToken(node.tokens["{"])
 
-		for _, node in node.expressions:pairs() do
+		for _, node in ipairs(node.expressions) do
 			self:EmitToken(node.left)
 			self:EmitToken(node.tokens["="])
 			self:EmitTypeExpression(node.right)
@@ -1131,7 +1130,7 @@ do -- types
 		end
 
 		if tree.children[1] then
-			for i, node in tree.children:pairs() do
+			for i, node in ipairs(tree.children) do
 				if newline then
 					self:Whitespace("\t")
 				end
@@ -1184,7 +1183,7 @@ do -- types
 		self:EmitToken(node.tokens["function"])
 		self:EmitToken(node.tokens["arguments("])
 
-		for i, exp in node.identifiers:pairs() do
+		for i, exp in ipairs(node.identifiers) do
 			if not self.config.annotate and node.statements then
 				if exp.identifier then
 					self:EmitToken(exp.identifier)
@@ -1215,7 +1214,7 @@ do -- types
 			self:EmitToken(node.tokens[":"])
 			self:Whitespace(" ")
 
-			for i, exp in node.return_types:pairs() do
+			for i, exp in ipairs(node.return_types) do
 				self:EmitTypeExpression(exp)
 
 				if i ~= #node.return_types then
@@ -1234,7 +1233,7 @@ do -- types
 
 	function META:EmitTypeExpression(node)
 		if node.tokens["("] then
-			for _, node in node.tokens["("]:pairs() do
+			for _, node in ipairs(node.tokens["("]) do
 				self:EmitToken(node)
 			end
 		end
@@ -1272,7 +1271,7 @@ do -- types
 		end
 
 		if node.tokens[")"] then
-			for _, node in node.tokens[")"]:pairs() do
+			for _, node in ipairs(node.tokens[")"]) do
 				self:EmitToken(node)
 			end
 		end
@@ -1326,7 +1325,7 @@ do -- extra
 		self:EmitSpace(" ")
 		self:EmitNonSpace("{")
 
-		for i, v in node.left:pairs() do
+		for i, v in ipairs(node.left) do
 			self:EmitNonSpace("\"")
 			self:Emit(v.value.value)
 			self:EmitNonSpace("\"")
@@ -1373,7 +1372,7 @@ do -- extra
 	end
 
 	function META:Emit_ENVFromAssignment(node)
-		for i, v in node.left:pairs() do
+		for i, v in ipairs(node.left) do
 			if v.kind == "value" and v.value.value == "_ENV" then
 				if node.right[i] then
 					local key = node.left[i]
@@ -1407,7 +1406,7 @@ do -- extra
 		self:EmitSpace(" ")
 		self:EmitNonSpace("{type=\"" .. node.tag.value .. "\",")
 
-		for _, prop in node.props:pairs() do
+		for _, prop in ipairs(node.props) do
 			self:EmitToken(prop.key)
 			self:EmitNonSpace("=")
 			self:EmitExpression(prop.val)

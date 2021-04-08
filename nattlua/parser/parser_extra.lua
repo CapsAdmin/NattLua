@@ -1,4 +1,3 @@
-local list = require("nattlua.other.list")
 return function(META)
 	local setmetatable = setmetatable
 	local type = type
@@ -69,17 +68,17 @@ return function(META)
 			local node = statement and self:Statement("lsx") or self:Expression("lsx")
 			node.tokens["["] = self:ReadValue("[")
 			node.tag = self:ReadType("letter")
-			local props = list.new()
+			local props = {}
 
 			while true do
 				if self:IsCurrentType("letter") and self:IsValue("=", 1) then
 					local key = self:ReadType("letter")
 					self:ReadValue("=")
 					local val = self:ReadExpectExpression()
-					props:insert({key = key, val = val,})
+					table.insert(props, {key = key, val = val,})
 				elseif self:IsCurrentValue("...") then
 					self:ReadTokenLoose() -- !
-                    props:insert({
+                    table.insert(props, {
 						val = self:ReadExpression(nil, true),
 						spread = true,
 					})

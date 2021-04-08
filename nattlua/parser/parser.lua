@@ -1,4 +1,3 @@
-local list = require("nattlua.other.list")
 local syntax = require("nattlua.syntax.syntax")
 local META = {}
 META.__index = META
@@ -166,10 +165,10 @@ end
 function META:ReadIfStatement()
 	if not self:IsCurrentValue("if") then return end
 	local node = self:Statement("if")
-	node.expressions = list.new()
-	node.statements = list.new()
-	node.tokens["if/else/elseif"] = list.new()
-	node.tokens["then"] = list.new()
+	node.expressions = {}
+	node.statements = {}
+	node.tokens["if/else/elseif"] = {}
+	node.tokens["then"] = {}
 
 	for i = 1, self:GetLength() do
 		local token
@@ -230,7 +229,7 @@ do -- identifier
 	end
 
 	function META:ReadIdentifierList(max)
-		local out = list.new()
+		local out = {}
 
 		for i = 1, max or self:GetLength() do
 			if
@@ -287,8 +286,8 @@ do -- expression
 		if not self:IsCurrentValue("{") then return end
 		local tree = self:Expression("table")
 		tree:ExpectKeyword("{")
-		tree.children = list.new()
-		tree.tokens["separators"] = list.new()
+		tree.children = {}
+		tree.tokens["separators"] = {}
 
 		for i = 1, self:GetLength() do
 			if self:IsCurrentValue("}") then break end
@@ -347,9 +346,9 @@ do -- expression
 			local node = self:Expression("postfix_call")
 
 			if self:IsCurrentValue("{") then
-				node.expressions = list.new(self:ReadTable())
+				node.expressions = {self:ReadTable()}
 			elseif self:IsCurrentType("string") then
-				node.expressions = list.new(self:Expression("value"):Store("value", self:ReadTokenLoose()):End())
+				node.expressions = {self:Expression("value"):Store("value", self:ReadTokenLoose()):End()}
 			elseif self:IsCurrentValue("<|") then
 				node.tokens["call("] = self:ReadValue("<|")
 				node.expressions = self:ReadTypeExpressionList()
@@ -374,12 +373,12 @@ do -- expression
 
 	function META:CheckForIntegerDivisionOperator(node)
 		if node and not node.idiv_resolved then
-			for i, token in node.whitespace:pairs() do
+			for i, token in ipairs(node.whitespace) do
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
-					node.whitespace:remove(i)
+					table.remove(node.whitespace, i)
 					local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
 
-					for _, token in tokens:pairs() do
+					for _, token in ipairs(tokens) do
 						self:CheckForIntegerDivisionOperator(token)
 					end
 
@@ -411,10 +410,10 @@ do -- expression
 			return
 		end
 
-		node.tokens["("] = node.tokens["("] or list.new()
-		node.tokens["("]:insert(1, pleft)
-		node.tokens[")"] = node.tokens[")"] or list.new()
-		node.tokens[")"]:insert(self:ReadValue(")"))
+		node.tokens["("] = node.tokens["("] or {}
+		table.insert(node.tokens["("], 1, pleft)
+		node.tokens[")"] = node.tokens[")"] or {}
+		table.insert(node.tokens[")"], self:ReadValue(")"))
 		return node
 	end
 
@@ -557,7 +556,7 @@ do -- expression
 	end
 
 	function META:ReadExpressionList(max)
-		local out = list.new()
+		local out = {}
 
 		for i = 1, max or self:GetLength() do
 			local exp = max and self:ReadExpectExpression() or self:ReadExpression()
@@ -634,14 +633,14 @@ return function(config)
 	return setmetatable(
 		{
 			config = config,
-			nodes = list.new(),
+			nodes = {},
 			name = "",
 			code = "",
 			current_statement = false,
 			current_expression = false,
 			root = false,
 			i = 1,
-			tokens = list.new(),
+			tokens = {},
 			OnError = function() 
 			end,
 		},
