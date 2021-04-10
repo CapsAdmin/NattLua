@@ -124,12 +124,13 @@ end
 function util.LoadGithub(url, path)
     os.execute("mkdir -p examples/benchmarks/temp/")
 
+    local full_path = "examples/benchmarks/temp/"..path..".lua"
     local code = assert(util.FetchCode(
-        "examples/benchmarks/temp/"..path..".lua", 
+        full_path, 
         "https://raw.githubusercontent.com/" .. url
     ))
 
-    package.loaded[path] = assert(load(code))()
+    package.loaded[path] = assert(load(code, "@" .. full_path))()
 
     return package.loaded[path]
 end
