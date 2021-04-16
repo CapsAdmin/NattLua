@@ -214,6 +214,87 @@ local function emit(key, val, self_argument)
     end
 end
 
+
+local function get_env_guard(val)
+    local envs = {}
+    if val.CLIENT then
+        table.insert(envs, "CLIENT")
+    end
+
+    if val.SERVER then
+        table.insert(envs, "SERVER")
+    end
+
+    if val.MENU then
+        table.insert(envs, "MENU")
+    end
+
+    return table.concat(envs, " or ")
+end
+
+local envs = {"CLIENT", "SERVER", "MENU"}
+local function get_env(members)
+    local found = {}
+    local consistent = true
+
+    for key, val in spairs(members) do
+        for _, env in pairs(envs) do
+            if val[env] then
+                found[env] = (found[env] or 0) + 1
+            end
+        end
+    end
+
+    local count    
+    local out = {}
+
+    for _, env in pairs(envs) do
+        for key, val in pairs(found) do
+
+            if count and count ~= val then
+                consistent = false
+            else
+                count = count or val
+            end
+
+            if key == env then
+                table.insert(out, env)
+            end
+        end
+    end
+
+    return table.concat(out, " or "), consistent
+end
+
+local function emit_if_guard(members)
+    local env_guard, consistent = get_env(members)
+    local guards = {}
+    local need_guard = 0
+
+    for key, val in spairs(members) do
+        local guard = get_env_guard(val)
+        if not guards[guard] then need_guard = need_guard + 1 end
+        guards[guard] = guards[guard] or {}
+        guards[guard][key] = val
+    end
+
+    if consistent then
+        indent() e("if " .. env_guard .. " then\n")
+        t = t + 1
+    else
+        e("do\n")
+        t = t + 1
+    end
+
+    return guards, need_guard > 1, consistent
+end
+
+local function emit_description(desc)
+    desc = desc:gsub("\n", function() return "\n" .. ("\t"):rep(t) end)
+    e("\n")
+    indent() e("--[[ " .. desc .. " ]]\n")
+end
+
 for class_name in spairs(wiki_json.CLASSES) do
     class_name = Class(class_name)
     e("type ") e(class_name) e(" = {}\n")
@@ -245,47 +326,69 @@ for class_name, lib in spairs(wiki_json.CLASSES) do
     local original_name = class_name
     class_name = Class(class_name)
 
-    e("do\n")
-    t = t + 1
+    if class_name == "IVector" or class_name == "IAngle" then
+        lib.MEMBERS.__add = binary_operator(original_name, original_name,  original_name)
+        lib.MEMBERS.__sub = binary_operator(original_name, original_name, original_name)
+        lib.MEMBERS.__mul = binary_operator(original_name, original_name, original_name)
+        lib.MEMBERS.__div = binary_operator(original_name, original_name, original_name)
+    end
+            
+    if class_name == "IMatrix" then
+        lib.MEMBERS.__mul = binary_operator(original_name, original_name .. "|Vector", original_name)
+        lib.MEMBERS.__sub = binary_operator(original_name, original_name, original_name)
+        lib.MEMBERS.__add = binary_operator(original_name, original_name, original_name)
+    end
+
+    local guards, need_guard, consistent = emit_if_guard(lib.MEMBERS)
 
     indent() e("type ") e(class_name) e(".@MetaTable = ") e(class_name) e("\n")
     indent() e("type ") e(class_name) e(".@Name = \"") e(class_name) e("\"\n")
     indent() e("type ") e(class_name) e(".__index = ") e(class_name) e("\n")
 
-    
     do -- these are not defined in the wiki json
-        if class_name == "IVector" or class_name == "IAngle" then
-            lib.MEMBERS.__add = binary_operator(original_name, original_name,  original_name)
-            lib.MEMBERS.__sub = binary_operator(original_name, original_name, original_name)
-            lib.MEMBERS.__mul = binary_operator(original_name, original_name, original_name)
-            lib.MEMBERS.__div = binary_operator(original_name, original_name, original_name)
-        end
-
         if class_name == "IVector" then
-            indent() e("type ") e(class_name) e(".") e("x") e(" = ") e("number") e("\n")
-            indent() e("type ") e(class_name) e(".") e("y") e(" = ") e("number") e("\n")
-            indent() e("type ") e(class_name) e(".") e("z") e(" = ") e("number") e("\n")
+            for _, v in ipairs({"x", "y", "z", "X", "Y", "Z"}) do
+                indent() e("type ") e(class_name) e(".") e(v) e(" = ") e("number") e("\n")
+            end
         elseif class_name == "IAngle" then
-            indent() e("type ") e(class_name) e(".") e("p") e(" = ") e("number") e("\n")
-            indent() e("type ") e(class_name) e(".") e("y") e(" = ") e("number") e("\n")
-            indent() e("type ") e(class_name) e(".") e("r") e(" = ") e("number") e("\n")
-        end
-        
-        if class_name == "IMatrix" then
-            lib.MEMBERS.__mul = binary_operator(original_name, original_name .. "|Vector", original_name)
-            lib.MEMBERS.__sub = binary_operator(original_name, original_name, original_name)
-            lib.MEMBERS.__add = binary_operator(original_name, original_name, original_name)
+            for _, v in ipairs({"p", "y", "r", "P", "Y", "R"}) do
+                indent() e("type ") e(class_name) e(".") e(v) e(" = ") e("number") e("\n")
+            end
         end
     end
+    
+    for guard, members in spairs(guards) do
+        if need_guard then
+            indent() e("if ")
+            e(guard)
+            e(" then") e("\n")
+            t = t + 1
+        end
 
-    for key, val in spairs(lib.MEMBERS) do
-        indent() e("type ") e(class_name) e(".") e(key) e(" = ") emit(key, val, not val.binary_operator and original_name) e("\n")
+        for key, val in spairs(members) do
+            
+            if val.DESCRIPTION then
+                emit_description(val.DESCRIPTION)
+            end       
+
+            indent() e("type ") e(class_name) e(".") e(key) e(" = ") emit(key, val, not val.binary_operator and original_name) e("\n")
+        end
+
+        if need_guard then
+            t = t - 1
+            indent() e("end\n")
+        end
     end
 
     indent() e("type ") e(class_name) e(".@Contract = ") e(class_name) e("\n")
-
-    t = t - 1
-    e("end\n")
+    
+    if consistent then
+        t = t - 1
+        indent() e("end\n")
+    else
+        t = t - 1
+        e("end\n")
+    end
 end
 
 for key, val in spairs(wiki_json.GLOBALS) do
@@ -293,6 +396,10 @@ for key, val in spairs(wiki_json.GLOBALS) do
         if key == "Matrix" then
             val.ARGUMENTS[1].TYPE = "table|nil"
         end
+        
+        if val.DESCRIPTION then
+            emit_description(val.DESCRIPTION)
+        end       
 
         e("type ") e(key) e(" = ") emit(key, val) e("\n")
     end
@@ -300,14 +407,56 @@ end
 
 for lib_name, lib in spairs(wiki_json.LIBRARIES) do
     if not base_env:Get(lib_name) then
-        e("type ") e(lib_name) e(" = ") emit(lib_name, lib)
+
+        local guards, need_guard, consistent = emit_if_guard(lib.MEMBERS)
+
+        indent() e("type ") e(lib_name) e(" = {}\n")
+
+        for guard, members in spairs(guards) do
+            if need_guard and guard ~= "" then
+                indent() e("if ")
+                e(guard)
+                e(" then") e("\n")
+                t = t + 1
+            end
+    
+            for key, val in spairs(members) do
+
+                if val.DESCRIPTION then
+                    emit_description(val.DESCRIPTION)
+                end       
+
+                indent() e("type ") e(lib_name) e(".") e(key, val) e(" = ") emit(key, val) e("\n")
+            end
+    
+            if need_guard and guard ~= "" then
+                t = t - 1
+                indent() e("end\n")
+            end
+        end
+            
+        if consistent then
+            t = t - 1
+            indent() e("end\n")
+        else
+            t = t - 1
+            e("end\n")
+        end
     end
 end
 
 code = table.concat(code)
 
 -- pixvis and "sensor is never defined on the wiki as a class
-code = "type IPixVis = {}\ntype ISensor = {}\n" .. code .. "\n"
+local header = ""
+header = header .. "type IPixVis = {}\n"
+header = header .. "type ISensor = {}\n"
+
+header = header .. "local CLIENT = true\n"
+header = header .. "local SERVER = true\n"
+header = header .. "local MENU = true\n"
+
+code = header .. code
 
 code = code .. [[
     local m = Matrix()
