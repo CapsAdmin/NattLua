@@ -111,12 +111,12 @@ end
 type function include(path: string)
     local full_path = analyzer:ResolvePath(path:GetData())
 
-    local code_data = assert(require("nattlua").File(full_path))
+    local compiler = assert(require("nattlua").File(full_path))
 
-    assert(code_data:Lex())
-    assert(code_data:Parse())
+    assert(compiler:Lex())
+    assert(compiler:Parse())
 
-    local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
+    local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 
     analyzer.loaded = analyzer.loaded or {}
     analyzer.loaded[path] = res
