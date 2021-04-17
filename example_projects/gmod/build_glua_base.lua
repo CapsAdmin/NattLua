@@ -4,7 +4,7 @@ local json = require("vscode.server.json")
 local tprint = require("nattlua.other.table_print")
 local util = require("examples.util")
 
-local blob = assert(util.FetchCode("examples/gmod/gmod_wiki.json", "https://github.com/WilliamVenner/vscode-glua-enhanced/blob/master/resources/wiki.json?raw=true"))
+local blob = assert(util.FetchCode("example_projects/gmod/nattlua/gmod_wiki.json", "https://venner.io/gmod-wiki.json"))
 local wiki_json = json.decode(blob)
 
 -- i prefix all types with I to avoid conflicts when defining functions like Entity(entindex) in the typesystem
@@ -131,7 +131,6 @@ local function emit_atomic_type(val)
     end
 
     if false then 
-    
     elseif val.TYPE == "function" then e("(function(...any): any)")
     elseif val.TYPE == "table" then e("{[any] = any}")
     elseif val.TYPE == "userdata" then e("{[any] = any}")
@@ -180,7 +179,13 @@ local function emit(key, val, self_argument)
                 })
             end
 
+            local rest_is_probably_optional = false
+
             for i, val in ipairs(list) do
+                if rest_is_probably_optional or val.DEFAULT and val.DEFAULT ~= "" then
+                    val.TYPE = val.TYPE .. "|nil"
+                    rest_is_probably_optional = true
+                end
                 emit_atomic_type(val)
                 if i ~= #list then
                     e(", ")
@@ -206,6 +211,8 @@ local function emit(key, val, self_argument)
         e('{ClassName = string, Description = string, BaseClass = string}')
     elseif val.LINK == "derma.SkinList" then
         e('{[number] = any}') -- numeric list?
+    elseif val.VALUE then
+        e(val.VALUE)
     else
         for k,v in pairs(val) do
             print(k, "\t\t=\t\t", v)
@@ -445,6 +452,23 @@ for lib_name, lib in spairs(wiki_json.LIBRARIES) do
     end
 end
 
+e("type EventCallbacks = {}\n")
+
+for key, val in spairs(wiki_json.HOOKS.GM.MEMBERS) do
+    val.FUNCTION = true
+    e("if ") e(get_env_guard(val)) e(" then\n")
+        t = t + 1
+        indent() e("type EventCallbacks.") e(key) e(" = ") emit(key, val) e("\n")
+        t = t - 1
+    e("end\n")
+end
+
+for key, val in spairs(wiki_json.ENUMS) do
+    key = key:gsub("%.", "_")
+
+    indent() e("type ") e(key) e(" = ") emit(key, val) e("\n")
+end
+
 code = table.concat(code)
 
 -- pixvis and "sensor is never defined on the wiki as a class
@@ -452,22 +476,16 @@ local header = ""
 header = header .. "type IPixVis = {}\n"
 header = header .. "type ISensor = {}\n"
 
-header = header .. "local CLIENT = true\n"
-header = header .. "local SERVER = true\n"
-header = header .. "local MENU = true\n"
-
 code = header .. code
 
-code = code .. [[
-    local m = Matrix()
-    type_assert<|m * Vector(1,1,0), IMatrix|>
-    
-    local ent = ents.GetByIndex(5)
-    type_assert<|ent:GetPos().x, number|>
-]]
-
-local f = io.open("examples/gmod/glua.nlua", "w")
+local f = io.open("example_projects/gmod/nattlua/glua_base.nlua", "w")
 f:write(code)
 f:close()
+
+local code = [[
+    type CLIENT = true
+    type SERVER = true
+    type MENU = true
+]] .. code
 
 nl.Code(code):Analyze()
