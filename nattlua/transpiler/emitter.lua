@@ -1009,7 +1009,7 @@ function META:EmitFunctionReturnAnnotationExpression(node, type_function)
 		end
 
 		if str[1] then
-			self:EmitNonSpace(str:concat(", "))
+			self:EmitNonSpace(table.concat(str, ", "))
 		end
 	end
 end
