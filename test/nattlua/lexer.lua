@@ -3,11 +3,11 @@ local syntax = require("nattlua.syntax.syntax")
 local table_print = require("nattlua.other.table_print")
 
 local function tokenize(code)
-    return assert(nl.Code(code):Lex()).Tokens
+    return assert(nl.Compiler(code):Lex()).Tokens
  end
 
 local function parse(code)
-    return assert(nl.Code(code):Parse()).Tokens
+    return assert(nl.Compiler(code):Parse()).Tokens
 end
 
 local function one_token(tokens)
@@ -160,12 +160,12 @@ do
         local input = table.concat(code, "\n")
 
         -- make sure the amount of tokens
-        local code_data = assert(nl.Code(input):Lex())
-        equal(#code_data.Tokens, #code*4 + 1)
+        local compiler = assert(nl.Compiler(input):Lex())
+        equal(#compiler.Tokens, #code*4 + 1)
 
         -- make sure all the tokens are numbers
-        for i = 1, #code_data.Tokens - 1, 4 do
-            equal("number", code_data.Tokens[i+3].type)
+        for i = 1, #compiler.Tokens - 1, 4 do
+            equal("number", compiler.Tokens[i+3].type)
         end
     end)
 end

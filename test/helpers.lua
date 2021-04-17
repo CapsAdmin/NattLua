@@ -1,7 +1,7 @@
 local nl = require("nattlua")
 local types = require("nattlua.types.types")
 types.Initialize()
-local C = nl.Code
+local C = nl.Compiler
 
 local function cast(...)
     local ret = {}
@@ -24,8 +24,8 @@ end
 
 local function run(code, expect_error)
     _G.TEST = true
-    local code_data = nl.Code(code, nil, nil, 3)
-    local ok, err = code_data:Analyze()
+    local compiler = nl.Compiler(code, nil, nil, 3)
+    local ok, err = compiler:Analyze()
     _G.TEST = false
 
     if expect_error then
@@ -46,16 +46,16 @@ local function run(code, expect_error)
     else
         if not ok then
             _G.TEST = true
-            code_data = C(code_data.code)
-            code_data:EnableEventDump(true)
-            local ok, err2 = code_data:Analyze()
+            compiler = C(compiler.code)
+            compiler:EnableEventDump(true)
+            local ok, err2 = compiler:Analyze()
             _G.TEST = false
-            io.write(code_data.code, "\n")
+            io.write(compiler.code, "\n")
             error(err, 3)
         end
     end
 
-    return code_data
+    return compiler
 end
 
 return {
@@ -68,8 +68,8 @@ return {
     Symbol = function(data) return types.Symbol(data) end,
     Any = function() return types.Any() end,
     RunCode = function(code, expect_error)
-        local code_data = run(code, expect_error)
-        return code_data.analyzer, code_data.SyntaxTree
+        local compiler = run(code, expect_error)
+        return compiler.analyzer, compiler.SyntaxTree
     end,
     Transpile = function(code)
         return run(code):Emit({annotate = true})

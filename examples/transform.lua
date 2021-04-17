@@ -2,7 +2,7 @@ local nl = require("nattlua")
 local LuaEmitter = require("nattlua.transpiler.emitter")
 local code = io.open("nattlua/parser/base_parser.lua"):read("*all")
 
-local ast = assert(nl.Code(code):Parse()).SyntaxTree
+local ast = assert(nl.Compiler(code):Parse()).SyntaxTree
 
 local em = LuaEmitter({preserve_whitespace = false})
 

@@ -342,12 +342,12 @@ do -- globals
 							return analyzer.loaded[path]
 						end
 
-						local code_data = require("nattlua").File(analyzer:ResolvePath(path))
+						local compiler = require("nattlua").File(analyzer:ResolvePath(path))
 
-						assert(code_data:Lex())
-						assert(code_data:Parse())
+						assert(compiler:Lex())
+						assert(compiler:Parse())
 
-						local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
+						local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
                         
 						analyzer.loaded = analyzer.loaded or {}
 						analyzer.loaded[path] = res
@@ -376,12 +376,12 @@ do -- globals
 
 
 
-        local code_data = assert(require("nattlua").File(analyzer:ResolvePath(path)))
+        local compiler = assert(require("nattlua").File(analyzer:ResolvePath(path)))
 
-        assert(code_data:Lex())
-        assert(code_data:Parse())
+        assert(compiler:Lex())
+        assert(compiler:Parse())
 
-        local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
+        local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
         
         analyzer.loaded = analyzer.loaded or {}
         analyzer.loaded[path] = res
@@ -413,15 +413,15 @@ do -- globals
         end
 
 
-		local code_data = nl.Code(str, chunk_name and chunk_name:GetData() or nil)
-		assert(code_data:Lex())
-		assert(code_data:Parse())
+		local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
+		assert(compiler:Lex())
+		assert(compiler:Parse())
 		
-		return analyzer:NewType(code_data.SyntaxTree, "function", {
+		return analyzer:NewType(compiler.SyntaxTree, "function", {
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
 			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
+				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 			end
 		})
 	end
@@ -435,15 +435,15 @@ do -- globals
 		local code = f:read("*all")
 		f:close()
 
-		local code_data = nl.Code(code, "@" .. path:GetData())
-		assert(code_data:Lex())
-		assert(code_data:Parse())
+		local compiler = nl.Compiler(code, "@" .. path:GetData())
+		assert(compiler:Lex())
+		assert(compiler:Parse())
 		
-		return analyzer:NewType(code_data.SyntaxTree, "function", {
+		return analyzer:NewType(compiler.SyntaxTree, "function", {
 			arg = types.Tuple({}),
 			ret = types.Tuple({}),
 			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(code_data.SyntaxTree, ...)
+				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
 			end
 		})
 	end
@@ -515,7 +515,7 @@ do -- globals
         local errors = {}
         for i = diagnostics_index+1, #analyzer.diagnostics do
             local d = analyzer.diagnostics[i]
-            table.insert(errors, require("nattlua.other.helpers").FormatError(analyzer.code_data.code, analyzer.code_data.name, d.msg, d.start, d.stop))
+            table.insert(errors, require("nattlua.other.helpers").FormatError(analyzer.compiler.code, analyzer.compiler.name, d.msg, d.start, d.stop))
         end
 
         if errors[1] then

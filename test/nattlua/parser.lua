@@ -1,7 +1,7 @@
 local nl = require("nattlua")
 
 local function parse(code)
-    return assert(assert(nl.Code(code)):Parse())
+    return assert(assert(nl.Compiler(code)):Parse())
 end
 
 local function check(code, eq)
@@ -204,7 +204,7 @@ test("operator precedence", function()
     end
 
 
-    local C = nl.Code
+    local C = nl.Compiler
 
     check {
         {C'-2 ^ 2', C'^(-(2), 2)'},

@@ -123,4 +123,4 @@ local code = [[
     end))
 ]]
 
-print(assert(nl.Code(code, nil, {preserve_whitespace = false}):Emit()))
+print(assert(nl.Compiler(code, nil, {preserve_whitespace = false}):Emit()))

@@ -37,7 +37,7 @@ local function compile(uri, server, client)
 		document_cache[uri] = code
 	end
 
-	local file = nl.Code(code, uri, {annotate = true})
+	local file = nl.Compiler(code, uri, {annotate = true})
 
 	local resp = {
 		method = "textDocument/publishDiagnostics",

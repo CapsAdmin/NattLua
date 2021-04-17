@@ -179,7 +179,7 @@ codew =[[
     a[1] = true
     print(a[1])
 ]]
-local ast = assert(assert(nl.Code(code):Parse()):Analyze()).SyntaxTree
+local ast = assert(assert(nl.Compiler(code):Parse()):Analyze()).SyntaxTree
 
 local em = LuaEmitter()
 

@@ -246,14 +246,14 @@ return function(META)
 
 					if start and stop then
 						local part = helpers.FormatError(
-							self.code_data.code,
-							self.code_data.name,
+							self.compiler.code,
+							self.compiler.name,
 							"",
 							start,
 							stop,
 							1
 						)
-						str = str .. part .. "#" .. tostring(i) .. ": " .. self.code_data.name
+						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler.name
 					end
 				end
 			end

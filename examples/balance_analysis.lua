@@ -193,7 +193,7 @@ local code = [[
     end))
 ]]
 local name = "https://scriptinghelpers.org/questions/10176/expected-near-end-whats-that-mean"
-local tokens = assert(nl.Code(code):Lex()).Tokens
+local tokens = assert(nl.Compiler(code):Lex()).Tokens
 
 local time = os.clock()
 check_tokens(tokens, name, code)

@@ -2,7 +2,7 @@ local nl = require("nattlua")
 
 local function check(config, input, expect)
     expect = expect:gsub("    ", "\t")
-    local new_lua_code = assert(nl.Code(input, nil, config)):Emit()
+    local new_lua_code = assert(nl.Compiler(input, nil, config)):Emit()
     if new_lua_code ~= expect then
         diff(new_lua_code, expect)
     end

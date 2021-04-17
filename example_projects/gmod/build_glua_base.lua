@@ -482,10 +482,4 @@ local f = io.open("example_projects/gmod/nattlua/glua_base.nlua", "w")
 f:write(code)
 f:close()
 
-local code = [[
-    type CLIENT = true
-    type SERVER = true
-    type MENU = true
-]] .. code
-
-nl.Code(code):Analyze()
+nl.Compiler(code):Analyze()
