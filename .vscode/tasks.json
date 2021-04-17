@@ -1,12 +1,10 @@
-{
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
+    // -jp=Fpa -
     "version": "2.0.0",
     "tasks": [
         {
             "label": "onsave",
             "type": "shell",
-            "command": "cd ${workspaceFolder} && luajit -e \"assert(loadfile('.vscode/on_editor_save.lua'))('${file}','${workspaceFolder}')\""
+            "command": "cd ${workspaceFolder} && luajit e \"assert(loadfile('.vscode/on_editor_save.lua'))('${file}','${workspaceFolder}')\""
         }
     ]
 }
