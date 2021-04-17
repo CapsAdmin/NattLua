@@ -585,3 +585,9 @@ run[[
     t[lol] = 2
     type_assert(t[lol], _  as 1 | 2 | nil)
 ]]
+
+run[[
+    local type Foo = { bar = 1337 }
+    local type Bar = { foo = 8888 }
+    type_assert<|Foo + Bar, Foo & Bar|>
+]]
