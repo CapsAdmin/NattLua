@@ -223,7 +223,7 @@ function META:Get(key)
 		return self:GetData()[#self:GetData()]:Get(key)
 	end
 
-	if not val then return type_errors.other("index " .. key .. " does not exist") end
+	if not val then return type_errors.other("index " .. tostring(real_key) .. " does not exist") end
 	return val
 end
 
