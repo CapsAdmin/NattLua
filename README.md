@@ -4,15 +4,15 @@ NattLua is a superset of LuaJIT that introduces a structural type system and typ
 Complex type structures, involving array-like tables, map-like tables, metatables, and more are supported:
 
 ```lua
-    local list: {[number] = string} = {}
-    local list: {[1 .. inf] = string} = {}
-    
-    local map: {[string] = string} = {}
-    
-    local map: {foo = string, bar = string} = {}    
-    local a = "fo"
-    local b = string.char(string.byte("o"))
-    map[a..b] = "hello" --"fo" and "o" are literals and will be treated as such by the type inference
+local list: {[number] = string} = {}
+local list: {[1 .. inf] = string} = {}
+
+local map: {[string] = string} = {}
+
+local map: {foo = string, bar = string} = {}    
+local a = "fo"
+local b = string.char(string.byte("o"))
+map[a..b] = "hello" --"fo" and "o" are literals and will be treated as such by the type inference
 ```
 
 ```lua
