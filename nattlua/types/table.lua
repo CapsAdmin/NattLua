@@ -361,7 +361,7 @@ end
 function META:Get(key)
 	key = types.Cast(key)
 
-	if key.Type == "union" then 
+	if key.Type == "union" then
 		local errors = {}
 
 		for _, k in ipairs(key:GetData()) do
@@ -372,7 +372,7 @@ function META:Get(key)
 
 		return type_errors.other(errors)
 	end
-	
+
 	if (key.Type == "string" or key.Type == "number") and not key:IsLiteral() then
 		local union = types.Union({types.Nil()})
 
@@ -555,10 +555,8 @@ function META.Union(A, B)
 	return copy
 end
 
-
 function META:Initialize()
 	self:SetData({})
-
 	return true
 end
 
