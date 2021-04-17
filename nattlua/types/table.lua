@@ -194,7 +194,7 @@ function META.IsSubsetOf(A, B)
 		end
 
 		for _, akeyval in ipairs(A:GetData()) do
-			local bkeyval, reason = B:GetKeyVal(akeyval.key, true)
+			local bkeyval, reason = B:GetKeyValReverse(akeyval.key)
 			if not bkeyval then return bkeyval, reason end
 			A.suppress = true
 			local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
@@ -263,22 +263,28 @@ end
 
 function META:Contains(key)
 	key = types.Cast(key)
-	return self:GetKeyVal(key, true)
+	return self:GetKeyValReverse(key)
 end
 
-function META:GetKeyVal(key, reverse_subset)
+function META:GetKeyVal(key)
 	if not self:GetData()[1] then return type_errors.missing(self, key, "table is empty") end
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
-		local ok, reason
+		local ok, reason = keyval.key:IsSubsetOf(key)
+		if ok then return keyval end
+		table.insert(reasons, reason)
+	end
 
-		if reverse_subset then
-			ok, reason = key:IsSubsetOf(keyval.key)
-		else
-			ok, reason = keyval.key:IsSubsetOf(key)
-		end
+	return type_errors.missing(self, key, reasons)
+end
 
+function META:GetKeyValReverse(key)
+	if not self:GetData()[1] then return type_errors.missing(self, key, "table is empty") end
+	local reasons = {}
+
+	for _, keyval in ipairs(self:GetData()) do
+		local ok, reason = key:IsSubsetOf(keyval.key)
 		if ok then return keyval end
 		table.insert(reasons, reason)
 	end
@@ -330,14 +336,14 @@ function META:Set(key, val, no_delete)
 	end
 
 	if self:GetContract() and self:GetContract().Type == "table" then -- TODO
-        local keyval, reason = self:GetContract():GetKeyVal(key, true)
+        local keyval, reason = self:GetContract():GetKeyValReverse(key)
 		if not keyval then return keyval, reason end
 		local keyval, reason = val:IsSubsetOf(keyval.val)
 		if not keyval then return keyval, reason end
 	end
 
     -- if the key exists, check if we can replace it and maybe the value
-    local keyval, reason = self:GetKeyVal(key, true)
+    local keyval, reason = self:GetKeyValReverse(key)
 
 	if not keyval then
 		val:SetParent(self)
@@ -393,11 +399,11 @@ function META:Get(key)
 		return union
 	end
 
-	local keyval, reason = self:GetKeyVal(key, true)
+	local keyval, reason = self:GetKeyValReverse(key)
 	if keyval then return keyval.val end
 
 	if not keyval and self:GetContract() then
-		local keyval, reason = self:GetContract():GetKeyVal(key, true)
+		local keyval, reason = self:GetContract():GetKeyValReverse(key)
 		if keyval then return keyval.val end
 		return type_errors.other(reason)
 	end
