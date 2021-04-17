@@ -107,3 +107,19 @@ do
         return string.Explode( delimiter, str )
     end
 end
+
+type function include(path: string)
+    local full_path = analyzer:ResolvePath(path:GetData())
+
+    local code_data = assert(require("nattlua").File(full_path))
+
+    assert(code_data:Lex())
+    assert(code_data:Parse())
+
+    local res = analyzer:AnalyzeRootStatement(code_data.SyntaxTree)
+
+    analyzer.loaded = analyzer.loaded or {}
+    analyzer.loaded[path] = res
+
+    return res
+end
