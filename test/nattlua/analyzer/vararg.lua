@@ -260,7 +260,7 @@ run[[
 
 run[[
     local type function create(func)
-        local t = types.Table({})
+        local t = types.Table()
         t.func = func
         return t
     end

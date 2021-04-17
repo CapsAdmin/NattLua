@@ -3,8 +3,8 @@ local types = require("nattlua.types.types")
 return function(META)
 	table.insert(META.OnInitialize, function(self)
 		self.default_environment = {
-			runtime = types.Table({}),
-			typesystem = types.Table({}),
+			runtime = types.Table(),
+			typesystem = types.Table(),
 		}
 		self.environments = {runtime = {}, typesystem = {}}
 		self.scope_stack = {}

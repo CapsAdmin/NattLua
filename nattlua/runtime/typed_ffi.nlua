@@ -3,7 +3,7 @@ local type function cast(node, args)
 	local cast = env.typesystem.cast
 
 	if node.tag == "Struct" or node.tag == "Union" then
-		local tbl = types.Table({})
+		local tbl = types.Table()
 		for _, node in ipairs(node) do
 			if node.tag == "Pair" then
 				local key = types.String(node[2]):SetLiteral(true)
@@ -30,7 +30,7 @@ local type function cast(node, args)
 		local return_type
 
 		if node.t.tag == "Pointer" and node.t.t.tag == "Qualified" and node.t.t.t.n == "char" then
-			local ptr = types.Table({})
+			local ptr = types.Table()
 			ptr:Set(types.Number(), types.Number())
 			return_type = types.Union({ptr, types.Nil()})
 		else
@@ -46,7 +46,7 @@ local type function cast(node, args)
 
 		return obj
 	elseif node.tag == "Array" then
-		local tbl = types.Table({})
+		local tbl = types.Table()
 		-- todo node.size: array length
 		tbl:Set(types.Number(), cast(node.t, args))
 		return tbl
@@ -125,11 +125,11 @@ local type function cast(node, args)
 			return types.Any()
 		end
 
-		local ptr = types.Table({})
+		local ptr = types.Table()
 		local ctype = cast(node.t, args)
 		ptr:Set(types.Number(), ctype)
 
-		local meta = types.Table({})
+		local meta = types.Table()
 
 		meta:Set("__index", types.LuaTypeFunction(
 			function(self, key)

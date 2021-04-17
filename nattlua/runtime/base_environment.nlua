@@ -1201,7 +1201,7 @@ do
 	end
 
 	type function coroutine.create(func, ...)
-		local t = types.Table({})
+		local t = types.Table()
 		t.co_func = func
 		return t
 	end
