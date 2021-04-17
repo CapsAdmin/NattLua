@@ -227,7 +227,7 @@ do
 			analyzer:SetDefaultEnvironment(self.default_environment, "typesystem")
 		elseif self.default_environment ~= false then
 			-- this is stupid, trying to stop the base analyzer from causing a require() loop
-			analyzer:SetDefaultEnvironment(require("nattlua.runtime.base_environment"), "typesystem")
+			analyzer:SetDefaultEnvironment(require("nattlua.runtime.base_environment"):Copy(), "typesystem")
 		end
 
 		if self.dump_events or self.config and self.config.dump_analyzer_events then
