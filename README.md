@@ -1,7 +1,19 @@
 # About
-NattLua is a superset of LuaJIT that introduces a structural type system and verbose inference. It's built to be an analyzer first with a typesystem to guide or override it on top. Its typesystem is very flexible in the same way Lua is flexible.
+NattLua is a superset of LuaJIT that introduces a structural type system and type inference that aims to reflect the truth. It's built to be an analyzer first with a typesystem to guide or override it on top. 
 
 Complex type structures, involving array-like tables, map-like tables, metatables, and more are supported:
+
+```lua
+    local list: {[number] = string} = {}
+    local list: {[1 .. inf] = string} = {}
+    
+    local map: {[string] = string} = {}
+    
+    local map: {foo = string, bar = string} = {}    
+    local a = "fo"
+    local b = string.char(string.byte("o"))
+    map[a..b] = "hello" --"fo" and "o" are literals and will be treated as such by the type inference
+```
 
 ```lua
 local Vector = {}
@@ -28,23 +40,10 @@ It aims to be compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a 
 
 See more examples further down this readme.
 
-# Parsing and transpiling
-I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it different in some ways. The syntax errors it can report are not standard and are bit more detailed. It's also written in a way to be easily extendable for new syntax.
-
-* Syntax errors are nicer than standard Lua parsers. Errors are reported with character ranges.
-* Additionally, the lexer and parser continue after encountering an error, which is useful for editor integration.
-* Whitespace can be preserved
-* Both single-line C comments (from GLua) and the Lua 5.4 division operator can be used in the same source file.
-* Transpiles bitwise operators, integer division, _ENV, etc down to luajit.
-
-I have not fully decided the syntax for the language and runtime semantics for lua 5.3/4 features. But I feel this is more of a detail that can easily be changed later.
-
 # Code analysis and typesystem
-The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program you may get its actual output at evaluation time. 
+The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program you may get its actual output at type-check time. 
 
-I try to achieve maximum type inference, but this can lead to some cryptic errors so in practice it's best to type your code, especially in functions.
-
-For example:
+When the inferencer detects an error, it will try to recover from the error and continue. For example:
 
 ```lua
 local obj: nil | (function(): number)
@@ -360,6 +359,17 @@ local func = build_summary_function({
     -> | myfunc:3:14 : expected assignment or call expression got ❲symbol❳ (❲!❳)
 ```
 This works because there is no uncertainty about the code generated passed to the load function. If we did `body = "sum = sum + 1" .. (unknown_global as string)`, that would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
+
+# Parsing and transpiling
+I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it different in some ways. The syntax errors it can report are not standard and are bit more detailed. It's also written in a way to be easily extendable for new syntax.
+
+* Syntax errors are nicer than standard Lua parsers. Errors are reported with character ranges.
+* Additionally, the lexer and parser continue after encountering an error, which is useful for editor integration.
+* Whitespace can be preserved
+* Both single-line C comments (from GLua) and the Lua 5.4 division operator can be used in the same source file.
+* Transpiles bitwise operators, integer division, _ENV, etc down to luajit.
+
+I have not fully decided the syntax for the language and runtime semantics for lua 5.3/4 features. But I feel this is more of a detail that can easily be changed later.
 
 # Development
 
