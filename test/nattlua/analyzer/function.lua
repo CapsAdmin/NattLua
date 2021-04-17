@@ -567,3 +567,15 @@ run[[
 
     foo({})
 ]]
+
+pending[[
+    -- strange error
+    type foo = (function(
+        boolean | nil, 
+        boolean | nil, 
+        string, 
+        number | nil
+    ): nil)
+    
+    foo(true)
+]]
