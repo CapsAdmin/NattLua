@@ -39,16 +39,17 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 	end
 
 	do
-		do -- walk from last to first mutation
-            --[[
-                ^    local x = 1
-                ^
-                2    x = 1 << repeated mutation is redudant
-                ^    ...
-                1    x = 2
-                ^
-                >    x == 2
-                ]]
+		do --[[
+			walk from last to first mutation
+
+			^    local x = 1
+			^
+			2    x = 1 << repeated mutation is redudant
+			^    ...
+			1    x = 2
+			^
+			>    x == 2
+			]]
 
             local last_scope
 
@@ -115,7 +116,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 						local mut = mutations[i]
 						if not mut then break end
 
-						if not same_if_statement(mut.scope, scope) then
+						if not same_if_statement(mut.scope, scope) and not mut.scope:Contains(scope) then
 							for i = i, 1, -1 do
 								if mutations[i].scope:Contains(scope) then
 									if DEBUG then

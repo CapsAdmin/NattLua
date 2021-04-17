@@ -1297,6 +1297,33 @@ run[[
     type_assert(x, 2)
 ]]
 
+run[[
+    if false then
+    else
+        local x = 1
+        do
+            type_assert(x, 1)
+        end
+    end
+]]
+
+run[[
+    local bar
+
+    if false then
+    else
+        local function foo()
+            return 1
+        end
+
+        bar = function()
+            return foo() + 1
+        end
+    end
+
+    type_assert(bar(), 2)
+]]
+
 pending[[
     local a: nil | 1
 
