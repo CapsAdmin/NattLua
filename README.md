@@ -1,5 +1,5 @@
 # About
-NattLua is a superset of LuaJIT that introduces a structural type system and type inference that aims to reflect the truth. It's built to be an analyzer first with a typesystem to guide or override it on top. 
+NattLua is a superset of LuaJIT that introduces a structural type system and type inference that aims to be accurate. It's built to be an analyzer first with a typesystem to guide or override it on top. 
 
 Complex type structures, involving array-like tables, map-like tables, metatables, and more are supported:
 
