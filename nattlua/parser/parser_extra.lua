@@ -78,10 +78,13 @@ return function(META)
 					table.insert(props, {key = key, val = val,})
 				elseif self:IsCurrentValue("...") then
 					self:ReadTokenLoose() -- !
-                    table.insert(props, {
-						val = self:ReadExpression(nil, true),
-						spread = true,
-					})
+                    table.insert(
+						props,
+						{
+							val = self:ReadExpression(nil, true),
+							spread = true,
+						}
+					)
 				else
 					break
 				end

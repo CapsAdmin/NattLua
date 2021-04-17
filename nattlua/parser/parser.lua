@@ -348,7 +348,9 @@ do -- expression
 			if self:IsCurrentValue("{") then
 				node.expressions = {self:ReadTable()}
 			elseif self:IsCurrentType("string") then
-				node.expressions = {self:Expression("value"):Store("value", self:ReadTokenLoose()):End()}
+				node.expressions = {
+						self:Expression("value"):Store("value", self:ReadTokenLoose()):End(),
+					}
 			elseif self:IsCurrentValue("<|") then
 				node.tokens["call("] = self:ReadValue("<|")
 				node.expressions = self:ReadTypeExpressionList()

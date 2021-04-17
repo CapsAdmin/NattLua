@@ -2,7 +2,6 @@
 
 local table_pool = require("nattlua.other.table_pool")
 local ipairs = ipairs
-
 return function(META--[[#: {
 	@Name = "BaseLexer",
 	syntax = {
