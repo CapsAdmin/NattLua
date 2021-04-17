@@ -1,48 +1,50 @@
 function table.destructure(tbl, fields, with_default)
-    local out = {}
-    for i, key in ipairs(fields) do
-        out[i] = tbl[key]
-    end
-    if with_default then
-        table.insert(out, 1, tbl)
-    end
-    return table.unpack(out)
+	local out = {}
+
+	for i, key in ipairs(fields) do
+		out[i] = tbl[key]
+	end
+
+	if with_default then
+		table.insert(out, 1, tbl)
+	end
+
+	return table.unpack(out)
 end
 
 function table.mergetables(tables)
-    local out = {}
-    for i, tbl in ipairs(tables) do
-        for k,v in pairs(tbl) do
-            out[k] = v
-        end
-    end
-    return out
+	local out = {}
+
+	for i, tbl in ipairs(tables) do
+		for k, v in pairs(tbl) do
+			out[k] = v
+		end
+	end
+
+	return out
 end
 
 function table.spread(tbl)
-    if not tbl then
-        return nil
-    end
-
-    return table.unpack(tbl)
+	if not tbl then return nil end
+	return table.unpack(tbl)
 end
 
 function LSX(tag, constructor, props, children)
-    local e = constructor and constructor(props, children) or {
-        props = props,
-        children = children,
-    }
-    e.tag = tag
-    return e
+	local e = constructor and
+		constructor(props, children) or
+		{props = props, children = children,}
+	e.tag = tag
+	return e
 end
 
 local table_print = require("nattlua.other.table_print")
 
 function table.print(...)
-    return table_print(...)
+	return table_print(...)
 end
+
 IMPORTS = IMPORTS or {}
-IMPORTS['example_project/src/platforms/windows/filesystem.nlua'] = function(...) 
+IMPORTS['example_projects/luajit/src/platforms/windows/filesystem.nlua'] = function(...) 
 
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
@@ -236,7 +238,7 @@ do
 end
 
 return fs end
-IMPORTS['example_project/src/platforms/unix/filesystem.nlua'] = function(...) 
+IMPORTS['example_projects/luajit/src/platforms/unix/filesystem.nlua'] = function(...) 
 
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
@@ -492,14 +494,14 @@ do
 end
 
 return fs end
-IMPORTS['example_project/src/filesystem.nlua'] = function(...) if jit.os == "Windows" then
-  return( IMPORTS['example_project/src/platforms/windows/filesystem.nlua']("platforms/windows/filesystem.nlua"))
+IMPORTS['example_projects/luajit/src/filesystem.nlua'] = function(...) if jit.os == "Windows" then
+  return( IMPORTS['example_projects/luajit/src/platforms/windows/filesystem.nlua']("platforms/windows/filesystem.nlua"))
 else
-  return( IMPORTS['example_project/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))
+  return( IMPORTS['example_projects/luajit/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))
 end
 
 error("unknown platform") end
-local fs =( IMPORTS['example_project/src/filesystem.nlua']("filesystem.nlua"))
+local fs =( IMPORTS['example_projects/luajit/src/filesystem.nlua']("filesystem.nlua"))
 
 print("get files: ", assert(fs.get_files(".")))
 for k,v in ipairs(assert(fs.get_files("."))) do print(k,v) end

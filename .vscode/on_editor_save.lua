@@ -108,8 +108,10 @@ if path:lower():find("/nattlua/", nil, true) then
         return
     end
 
-    if path:find("example_project/", nil, true) or path:find("cparser.lua", nil, true) then
-        run_lua("example_project/build.lua", path)  
+    if path:find("example_projects/luajit/", nil, true) or path:find("cparser.lua", nil, true) then
+        run_lua("example_projects/luajit/build.lua", path)
+    elseif path:find("example_projects/gmod/", nil, true) then
+        run_lua("example_projects/gmod/nattlua.lua", path)
     elseif is_nattlua then
         run_nattlua(path)
     elseif path:find("test/", nil, true) then
