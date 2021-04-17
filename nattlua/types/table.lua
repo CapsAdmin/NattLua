@@ -350,10 +350,10 @@ function META:Set(key, val, no_delete)
 		key:SetParent(self)
 		table.insert(self.data, {key = key, val = val})
 	else
-		if not keyval.key:Equal(key) then
-			keyval.val = types.Union({keyval.val, val})
-		else
+		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
+		else
+			keyval.val = types.Union({keyval.val, val})
 		end
 	end
 

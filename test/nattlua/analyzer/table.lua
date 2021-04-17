@@ -576,3 +576,12 @@ run[[
     tbl.foo = 1337
     tbl.get_foo = tbl_get_foo
 ]]
+
+run[[
+    local lol = 1 as number
+    local t = {}
+
+    t[lol] = 1
+    t[lol] = 2
+    type_assert(t[lol], _  as 1 | 2 | nil)
+]]
