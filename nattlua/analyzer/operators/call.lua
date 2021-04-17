@@ -350,7 +350,7 @@ return function(META)
 			local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
 			if not ok then
-				if b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
+				if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
 		end
