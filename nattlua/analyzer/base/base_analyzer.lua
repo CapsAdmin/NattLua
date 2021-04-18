@@ -183,11 +183,14 @@ return function(META)
 
 			function META:GetScopeHelper(scope)
 				self.scope_helper = {
-						typesystem = setmetatable({
-							analyzer = self,
-							scope = scope,
-							env = "typesystem",
-						}, scope_meta),
+						typesystem = setmetatable(
+							{
+								analyzer = self,
+								scope = scope,
+								env = "typesystem",
+							},
+							scope_meta
+						),
 						runtime = setmetatable({analyzer = self, scope = scope, env = "runtime"}, scope_meta),
 					}
 				self.scope_helper.scope = scope
