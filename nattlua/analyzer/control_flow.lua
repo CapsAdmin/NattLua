@@ -49,7 +49,6 @@ return function(META)
 		return union
 	end
 
-
 	function META:ThrowError(msg, obj, no_report)
 		if obj then
 			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
@@ -163,9 +162,9 @@ return function(META)
 		if not key then return end -- no mutation?
         
 		if obj.Type == "upvalue" then
-        	val:SetUpvalue(obj, key)
+			val:SetUpvalue(obj, key)
 		end
-		
+
 		initialize_mutation_tracker(obj, scope, key, env)
 		obj.mutations[key]:Mutate(val, scope)
 	end

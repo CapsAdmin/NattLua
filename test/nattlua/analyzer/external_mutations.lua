@@ -231,6 +231,25 @@ run[[
 ]]
 
 pending[[
+    local function mutate2(tbl: mutable {[string] = any})
+        tbl.lol2 = 2
+    end
+    
+    local function mutate1(tbl: mutable {[string] = any})
+        tbl.lol1 = 1
+    
+        mutate2(tbl)
+    end
+    
+    local tbl = {}
+    
+    mutate1(tbl)
+    
+    type_assert(tbl.lol1, 1)
+    type_assert(tbl.lol2, 2)
+]]
+
+pending[[
     local function string_mutator<|tbl: mutable {[any] = any}|>
         for key, val in pairs(tbl) do
             tbl[key] = nil

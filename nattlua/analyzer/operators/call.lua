@@ -198,21 +198,20 @@ return function(META)
 	end
 
 	local function restore_mutated_types(self)
-		if not self.mutated_types then return end
+		if not self.mutated_types or not self.mutated_types[1] then return end
+		local mutated_types = table.remove(self.mutated_types, 1)
 
-		for _, data in ipairs(self.mutated_types) do
-			local post_mutated = data.post
-			local pre_mutated = data.pre
-			
-			post_mutated:SetContract(pre_mutated:GetContract())
-			self:MutateValue(pre_mutated.upvalue, pre_mutated.upvalue.key, post_mutated, "runtime")
+		for _, data in ipairs(mutated_types) do
+			local original = data.original
+			local modified = data.modified
+			modified:SetContract(original:GetContract())
+			self:MutateValue(original.upvalue, original.upvalue.key, modified, "runtime")
 		end
-
-		self.mutated_types = nil
 	end
 
 	local function check_and_setup_arguments(self, arguments, contracts)
-		self.mutated_types = {}
+		self.mutated_types = self.mutated_types or {}
+		table.insert(self.mutated_types, 1, {})
 		local len = contracts:GetSafeLength(arguments)
 
 		for i = 1, len do
@@ -246,19 +245,15 @@ return function(META)
 				return type_errors.other({"argument #", i, " ", arg, ": ", reason})
 			end
 
-			arg.argument_index = i
-
 			if arg.Type == "table" and contract.Type == "table" and arg.upvalue then
-				local pre_mutate = arg
-				local post_mutate = arg:Copy()
-				
-				post_mutate.argument_index = i			
-				post_mutate:SetContract(contract)
-				arguments:Set(i, post_mutate)
-
-				table.insert(self.mutated_types, {
-					pre = pre_mutate,
-					post = post_mutate,
+				local original = arg
+				local modified = arg:Copy()
+				modified:SetContract(contract)
+				arguments:Set(i, modified)
+				modified.argument_index = i
+				table.insert(self.mutated_types[1], {
+					original = original,
+					modified = modified,
 				})
 			else
                 -- if it's a const argument we pass the incoming value
