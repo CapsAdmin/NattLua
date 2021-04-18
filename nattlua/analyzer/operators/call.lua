@@ -199,7 +199,7 @@ return function(META)
 
 	local function restore_mutated_types(self)
 		if not self.mutated_types or not self.mutated_types[1] then return end
-		local mutated_types = table.remove(self.mutated_types, 1)
+		local mutated_types = table.remove(self.mutated_types)
 
 		for _, data in ipairs(mutated_types) do
 			local original = data.original

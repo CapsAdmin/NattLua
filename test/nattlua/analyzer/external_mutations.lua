@@ -230,23 +230,26 @@ run[[
     type_assert(tbl.foo, 4)
 ]]
 
-pending[[
-    local function mutate2(tbl: mutable {[string] = any})
-        tbl.lol2 = 2
-    end
+run[[
+    local t = {lol = "lol"}
+
+    ;(function(val: mutable {[string] = string})
+        val.foo = "foo"
+        ;(function(val: mutable {[string] = string})
+            val.bar = "bar"
+            ;(function(val: mutable {[string] = string})
+                val.faz = "faz"
+                val.lol = "ROFL"
+            end)(val)
+        end)(val)
+    end)(t)
     
-    local function mutate1(tbl: mutable {[string] = any})
-        tbl.lol1 = 1
-    
-        mutate2(tbl)
-    end
-    
-    local tbl = {}
-    
-    mutate1(tbl)
-    
-    type_assert(tbl.lol1, 1)
-    type_assert(tbl.lol2, 2)
+    type_assert(t, {
+        foo = "foo",
+        bar = "bar",
+        faz = "faz",
+        lol = "ROFL",
+    })
 ]]
 
 pending[[
