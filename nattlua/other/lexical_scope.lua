@@ -134,6 +134,7 @@ end
 
 function META:CreateValue(key, obj, env)
 	local key_hash = self:Hash(key)
+	assert(key_hash)
 	local upvalue = {
 		key = key_hash,
 		shadow = self:FindValue(key, env),

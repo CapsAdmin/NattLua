@@ -316,7 +316,7 @@ do
 
 		local out = {min = -math.huge, max = math.huge}
 
-		if not next(tbl.tokens) then
+		if not tbl.tokens or not next(tbl.tokens) then
 			error("NO TOKENS!!! " .. tostring(tbl))
 		end
 
