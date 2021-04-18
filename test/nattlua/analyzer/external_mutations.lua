@@ -206,6 +206,30 @@ run[[
     
 ]]
 
+run[[
+    local function mutate(tbl: mutable {foo = number, [string] = any})
+        tbl.lol = true
+        tbl.foo = 3
+    end
+    
+    local tbl = {foo = 1}
+    
+    type_assert(tbl.foo, 1)
+    
+    tbl = {foo = 2}
+    
+    type_assert(tbl.foo, 2)
+    
+    mutate(tbl)
+    
+    type_assert(tbl.foo, 3)
+    type_assert(tbl.lol, true)
+    
+    tbl = {foo = 4}
+    
+    type_assert(tbl.foo, 4)
+]]
+
 pending[[
     local function string_mutator<|tbl: mutable {[any] = any}|>
         for key, val in pairs(tbl) do

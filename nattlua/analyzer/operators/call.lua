@@ -200,8 +200,12 @@ return function(META)
 	local function restore_mutated_types(self)
 		if not self.mutated_types then return end
 
-		for _, arg in ipairs(self.mutated_types) do
-			arg:SetContract(arg.old_contract)
+		for _, data in ipairs(self.mutated_types) do
+			local post_mutated = data.post
+			local pre_mutated = data.pre
+			
+			post_mutated:SetContract(pre_mutated:GetContract())
+			self:MutateValue(pre_mutated.upvalue, pre_mutated.upvalue.key, post_mutated, "runtime")
 		end
 
 		self.mutated_types = nil
@@ -244,10 +248,18 @@ return function(META)
 
 			arg.argument_index = i
 
-			if arg.Type == "table" and contract.Type == "table" then
-				arg.old_contract = arg:GetContract()
-				arg:SetContract(contract)
-				table.insert(self.mutated_types, arg)
+			if arg.Type == "table" and contract.Type == "table" and arg.upvalue then
+				local pre_mutate = arg
+				local post_mutate = arg:Copy()
+				
+				post_mutate.argument_index = i			
+				post_mutate:SetContract(contract)
+				arguments:Set(i, post_mutate)
+
+				table.insert(self.mutated_types, {
+					pre = pre_mutate,
+					post = post_mutate,
+				})
 			else
                 -- if it's a const argument we pass the incoming value
                 if not contract.literal_argument then
@@ -353,10 +365,6 @@ return function(META)
 				if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
-		end
-
-		if self.OnFunctionCall then
-			self:OnFunctionCall(obj, arguments)
 		end
 
 		if obj:GetData().lua_function then

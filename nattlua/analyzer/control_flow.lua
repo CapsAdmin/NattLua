@@ -49,23 +49,6 @@ return function(META)
 		return union
 	end
 
-	function META:OnFunctionCall(obj, arguments)
-        --[[
-            if the function argument says it can be mutated, 
-            we need to make a blank mutation before calling the function
-        ]]
-        for i = 1, arguments:GetMinimumLength() do
-			local arg = obj:GetArguments():Get(i)
-
-			if arg and arg.mutable then
-				local upvalue = arguments:Get(i).upvalue
-
-				if upvalue then
-					self:SetLocalOrEnvironmentValue(upvalue.key, arguments:Get(i):Copy():MakeUnique(true), "runtime")
-				end
-			end
-		end
-	end
 
 	function META:ThrowError(msg, obj, no_report)
 		if obj then
@@ -179,7 +162,6 @@ return function(META)
 		key = cast_key(key)
 		if not key then return end -- no mutation?
         
-        val:SetUpvalue(obj, key)
 		initialize_mutation_tracker(obj, scope, key, env)
 		obj.mutations[key]:Mutate(val, scope)
 	end
