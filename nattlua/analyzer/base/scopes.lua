@@ -207,7 +207,7 @@ return function(META)
 
 					if self:GetScope():IsReadOnly() then return end
 
-					if not obj and env == "runtime" then
+					if env == "runtime" then
 						self:Warning(key, "_G[\"" .. key:Render() .. "\"] = " .. tostring(val))
 					end
 
