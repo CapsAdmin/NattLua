@@ -187,11 +187,11 @@ do
 				local func = "self:IsByte"
 				local first_arg = str:byte(i)
 				local second_arg = i - 1
-				lua = lua .. "(" .. func .. "(" .. table.concat({first_arg, second_arg}, ",") .. ")"
+				lua = lua .. "(" .. func .. "(" .. table.concat({tostring(first_arg), tostring(second_arg)}, ",") .. ")"
 
 				if lower then
 					lua = lua .. " or "
-					lua = lua .. func .. "(" .. table.concat({first_arg - 32, second_arg}, ",") .. ") "
+					lua = lua .. func .. "(" .. table.concat({tostring(first_arg - 32), tostring(second_arg)}, ",") .. ") "
 				end
 
 				lua = lua .. ")"
