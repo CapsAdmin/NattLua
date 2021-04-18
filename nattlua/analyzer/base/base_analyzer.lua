@@ -170,27 +170,29 @@ return function(META)
 			return func
 		end
 
-		local function genscopemeta(self, scope, env)
-			return setmetatable(
-				{},
-				{
-					__index = function(_, key)
-						return self:GetLocalOrEnvironmentValue(key, env, scope)
-					end,
-					__newindex = function(_, key, val)
-						return self:SetLocalOrEnvironmentValue(key, val, env, scope)
-					end,
-				}
-			)
-		end
+		do
+			local scope_meta = {}
 
-		function META:GetScopeHelper(scope)
-			self.scope_helper = {
-					typesystem = genscopemeta(self, scope, "typesystem"),
-					runtime = genscopemeta(self, scope, "runtime"),
-				}
-			self.scope_helper.scope = scope
-			return self.scope_helper
+			function scope_meta:__index(key)
+				return self.analyzer:GetLocalOrEnvironmentValue(key, self.env, self.scope)
+			end
+
+			function scope_meta:__newindex(key, val)
+				return self.analyzer:SetLocalOrEnvironmentValue(key, val, self.env, self.scope)
+			end
+
+			function META:GetScopeHelper(scope)
+				self.scope_helper = {
+						typesystem = setmetatable({
+							analyzer = self,
+							scope = scope,
+							env = "typesystem",
+						}, scope_meta),
+						runtime = setmetatable({analyzer = self, scope = scope, env = "runtime"}, scope_meta),
+					}
+				self.scope_helper.scope = scope
+				return self.scope_helper
+			end
 		end
 
 		function META:CallLuaTypeFunction(node, func, scope, ...)

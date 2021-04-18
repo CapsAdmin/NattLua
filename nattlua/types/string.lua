@@ -1,4 +1,5 @@
 local type_errors = require("nattlua.types.error_messages")
+local string_meta = require("nattlua.runtime.string_meta")
 local META = {}
 META.Type = "string"
 require("nattlua.types.base")(META)
@@ -86,7 +87,7 @@ function META:IsTruthy()
 end
 
 function META:Initialize()
-	self:SetMetaTable(require("nattlua.runtime.string_meta"))
+	self:SetMetaTable(string_meta)
 	return self
 end
 
