@@ -504,23 +504,6 @@ return function(META)
 			right = self:AnalyzeExpression(node.right, env)
 		end
 
-		if node.and_expr then
-			if node.and_expr.and_res == left then
-				if left.Type == "union" then
-					left = left:Copy()
-					left:DisableFalsy()
-				end
-			end
-		end
-
-		if left.Type == "tuple" and not left:Get(1) then
-			left = types.Nil()
-		end
-
-		if right.Type == "tuple" and not right:Get(1) then
-			right = types.Nil()
-		end
-
 		assert(left)
 		assert(right)
 

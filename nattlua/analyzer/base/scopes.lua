@@ -111,16 +111,8 @@ return function(META)
 			end
 
 			function META:SetEnvironmentOverride(node, obj, env)
-				if not obj then
-					if not env then
-						node.environments_override = nil
-					else
-						node.environments_override[env] = nil
-					end
-				else
-					node.environments_override = node.environments_override or {}
-					node.environments_override[env] = obj
-				end
+				node.environments_override = node.environments_override or {}
+				node.environments_override[env] = obj
 			end
 
 			function META:GetEnvironmentOverride(node, env)
@@ -168,10 +160,8 @@ return function(META)
 			end
 
 			function META:FindEnvironmentValue(key, env)
-        -- look up in parent if not found
-        local g = self:GetEnvironment(env)
-				local original_g = g
-				local parent_env_value = false
+				-- look up in parent if not found
+				local g = self:GetEnvironment(env)
 				local val, err = g:Get(key)
 
 				if not val and env == "runtime" then
@@ -179,25 +169,10 @@ return function(META)
 						g = self.environments[env][i]
 						if not g then break end
 						val, err = g:Get(key)
-
-						if val then
-							parent_env_value = true
-
-							break
-						end
 					end
 				end
 
-				if val and env == "runtime" then
-					local val = self:GetMutatedValue(g, key, val, env) or val
-
-					if val and parent_env_value then
-                --val = types.Nilable(val)
-            end
-
-					return val
-				end
-
+				if val and env == "runtime" then return self:GetMutatedValue(g, key, val, env) or val end
 				return val, err
 			end
 
