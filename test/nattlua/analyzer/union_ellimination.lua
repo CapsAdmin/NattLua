@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-pending[[
+run[[
     local function test() 
         if MAYBE then
             return nil
@@ -14,10 +14,11 @@ pending[[
         x.lol = test()
         type_assert(x.lol, _ as 2 | nil)
     end
-    type_assert(x.lol, _ as 1 | 2 | nil)
+
+    type_assert(x.lol, _ as 1 | 2 | false | nil)
 ]]
 
-pending[[
+run[[
     local x = _ as nil | 1 | false
     if x then x = false end
     type_assert<|x, nil | false|>

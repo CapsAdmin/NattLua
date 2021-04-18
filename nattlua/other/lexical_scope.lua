@@ -115,6 +115,7 @@ local upvalue_meta
 do
 	local META = {}
 	META.__index = META
+	META.Type = "upvalue"
 
 	function META:__tostring()
 		return "[" .. self.key .. ":" .. tostring(self.value) .. "]"

@@ -162,6 +162,10 @@ return function(META)
 		key = cast_key(key)
 		if not key then return end -- no mutation?
         
+		if obj.Type == "upvalue" then
+        	val:SetUpvalue(obj, key)
+		end
+		
 		initialize_mutation_tracker(obj, scope, key, env)
 		obj.mutations[key]:Mutate(val, scope)
 	end
