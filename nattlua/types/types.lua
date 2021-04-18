@@ -23,8 +23,6 @@ function types.IsTypeObject(obj)
 end
 
 do
-	local compare_condition
-
 	local function cmp(a, b, context, source)
 		if not context[a] then
 			context[a] = {}
