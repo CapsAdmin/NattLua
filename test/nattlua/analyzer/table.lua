@@ -591,3 +591,17 @@ run[[
     local type Bar = { foo = 8888 }
     type_assert<|Foo + Bar, Foo & Bar|>
 ]]
+
+run[[
+    local tbl = {}
+    tbl.foo = true
+    tbl.bar = false
+
+    local key = _ as "foo" | "bar"
+    type_assert<|tbl[key], true | false|>
+]]
+
+run[[
+    local tbl = _ as {foo = true} | {foo = false}
+    type_assert<|tbl.foo, true | false|>
+]]
