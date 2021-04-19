@@ -1,18 +1,21 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
 
-return function(syntax--[[#: literalmutable{
-	BinaryOperators = {[number] = {[number] = string}},
-	PrefixOperators = {[number] = string},
-	PostfixOperators = {[number] = string},
-	PrimaryBinaryOperators = {[number] = string},
-	SymbolCharacters = {[number] = string},
-	KeywordValues = {[number] = string},
-	Keywords = {[number] = string},
-	BinaryOperatorFunctionTranslate = {[string] = string} | nil,
-	PostfixOperatorFunctionTranslate = {[string] = string} | nil,
-	PrefixOperatorFunctionTranslate = {[string] = string} | nil,
-	[string] = any,
-}]])
+return function(syntax--[[#: literal mutable (
+	{
+		BinaryOperators = {[number] = {[number] = string}},
+		PrefixOperators = {[number] = string},
+		PostfixOperators = {[number] = string},
+		PrimaryBinaryOperators = {[number] = string},
+		SymbolCharacters = {[number] = string},
+		KeywordValues = {[number] = string},
+		Keywords = {[number] = string},
+		NonStandardKeywords = {[number] = string},
+		BinaryOperatorFunctionTranslate = {[string] = string} | nil,
+		PostfixOperatorFunctionTranslate = {[string] = string} | nil,
+		PrefixOperatorFunctionTranslate = {[string] = string} | nil,
+		[string] = any,
+	}
+)]])
 	do
 		local B = string.byte
 
@@ -58,7 +61,7 @@ return function(syntax--[[#: literalmutable{
 
 	local symbols = {}
 
-	local function add_symbols(tbl--[[#: literal{[number] = string}]])
+	local function add_symbols(tbl--[[#: literal {[number] = string}]])
 		if not tbl then return end
 
 		for _, symbol in pairs(tbl) do
@@ -69,7 +72,7 @@ return function(syntax--[[#: literalmutable{
 	end
 
 	do -- extend the symbol characters from grammar rules
-        local function add_binary_symbols(tbl--[[#: literal{[number] = {[number] = string}}]])
+        local function add_binary_symbols(tbl--[[#: literal {[number] = {[number] = string}}]])
 			if not tbl then return end
 
 			for _, group in ipairs(tbl) do
@@ -235,6 +238,16 @@ return function(syntax--[[#: literalmutable{
 
 				add_symbols(keywords)
 				build_lookup(keywords, "IsKeyword")
+			end
+
+			do
+				local keywords = {}
+
+				for _, str in ipairs(syntax.NonStandardKeywords) do
+					table.insert(keywords, str)
+				end
+
+				build_lookup(keywords, "IsNonStandardKeyword")
 			end
 		end
 	end

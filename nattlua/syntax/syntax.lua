@@ -37,17 +37,18 @@ syntax.Keywords = {
 		"not",
 		"or",
 
-    --"import",
-
-    -- these are just to make sure all code is covered by tests
-    "ÆØÅ",
+		-- these are just to make sure all code is covered by tests
+		"ÆØÅ",
 		"ÆØÅÆ",
 	}
+
+-- these are keywords, but can be used as names
+syntax.NonStandardKeywords = {"continue", "import", "literal", "mutable",}
 syntax.KeywordValues = {"...", "nil", "true", "false",}
 syntax.PrefixOperators = {"-", "#", "not", "!", "~", "supertype"}
 syntax.PostfixOperators = {
-    -- these are just to make sure all code is covered by tests
-    "++",
+		-- these are just to make sure all code is covered by tests
+		"++",
 		"ÆØÅ",
 		"ÆØÅÆ",
 	}
@@ -60,7 +61,7 @@ syntax.BinaryOperators = {
 		{"&"},
 		{"<<", ">>"},
 		{"R.."}, -- right associative
-    {"+", "-"},
+		{"+", "-"},
 		{"*", "/", "/idiv/", "%"},
 		{"R^"}, -- right associative
 }
@@ -111,7 +112,7 @@ do
 			{"&"},
 			{"<<", ">>"},
 			{"R.."}, -- right associative
-        {"+", "-"},
+			{"+", "-"},
 			{"*", "/", "/idiv/", "%"},
 			{"R^"}, -- right associative
     }

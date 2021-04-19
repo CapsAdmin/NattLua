@@ -484,7 +484,7 @@ function META:EmitPrefixOperator(node)
 		self:Emit(func_chunks[2])
 		self.operator_transformed = true
 	else
-		if syntax.IsKeyword(node.value) then
+		if syntax.IsKeyword(node.value) or syntax.IsNonStandardKeyword(node.value) then
 			self:OptionalWhitespace()
 			self:EmitToken(node.value)
 			self:OptionalWhitespace()
