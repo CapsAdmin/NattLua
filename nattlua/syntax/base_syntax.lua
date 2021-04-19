@@ -1,6 +1,6 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
 
-return function(syntax--[[#: mutable{
+return function(syntax--[[#: literalmutable{
 	BinaryOperators = {[number] = {[number] = string}},
 	PrefixOperators = {[number] = string},
 	PostfixOperators = {[number] = string},
@@ -58,7 +58,7 @@ return function(syntax--[[#: mutable{
 
 	local symbols = {}
 
-	local function add_symbols(tbl--[[#: {[number] = string}]])
+	local function add_symbols(tbl--[[#: literal{[number] = string}]])
 		if not tbl then return end
 
 		for _, symbol in pairs(tbl) do
@@ -69,7 +69,7 @@ return function(syntax--[[#: mutable{
 	end
 
 	do -- extend the symbol characters from grammar rules
-        local function add_binary_symbols(tbl--[[#: {[number] = {[number] = string}}]])
+        local function add_binary_symbols(tbl--[[#: literal{[number] = {[number] = string}}]])
 			if not tbl then return end
 
 			for _, group in ipairs(tbl) do

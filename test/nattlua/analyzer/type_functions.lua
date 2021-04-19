@@ -453,7 +453,7 @@ run[[
     META.__index = META
     META.MyField = true
 
-    local function extend(tbl: {
+    local function extend(tbl: mutable {
         __index = self,
         MyField = boolean,
         [string] = any,

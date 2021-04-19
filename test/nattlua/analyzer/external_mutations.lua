@@ -37,9 +37,7 @@ run([[
     mutate_table(tbl)
     
     type_assert(tbl.lol, 1)
-
-    §assert(analyzer:GetDiagnostics()[1].msg:find("mutating"))
-]])
+]], "immutable contract")
 
 
 pending[[
@@ -100,9 +98,7 @@ run([[
     mutate_table(tbl)
     
     type_assert(tbl.lol, 1)
-
-    §assert(analyzer:GetDiagnostics()[1].msg:find("mutating"))
-]])
+]], "immutable contract")
 
 run([[
     local function mutate_table(tbl: mutable {lol = number})
@@ -114,8 +110,6 @@ run([[
     mutate_table(tbl)
     
     type_assert(tbl.lol, 1)
-
-    §assert(not analyzer:GetDiagnostics()[1])
 ]])
 
 run([[

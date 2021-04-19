@@ -1,0 +1,2 @@
+local syntax = require("nattlua.syntax.syntax")
+type_assert(#syntax.GetSymbols(), 44)

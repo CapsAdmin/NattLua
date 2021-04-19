@@ -52,7 +52,17 @@ return function(META)
 		end
 
 		if obj.Type == "table" and obj.argument_index and (not obj:GetContract() or not obj:GetContract().mutable) then
-			self:Warning(node, "mutating function argument")
+			if not obj:GetContract() then
+				self:Warning(
+					node,
+					"mutating function argument " .. tostring(obj) .. " #" .. obj.argument_index .. " without a contract"
+				)
+			else
+				self:Error(
+					node,
+					"mutating function argument " .. tostring(obj) .. " #" .. obj.argument_index .. " with an immutable contract"
+				)
+			end
 		end
 
 		if val.Type == "function" and val:GetNode().kind == "local_function" then

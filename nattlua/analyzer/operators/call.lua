@@ -245,16 +245,16 @@ return function(META)
 				return type_errors.other({"argument #", i, " ", arg, ": ", reason})
 			end
 
-			if arg.Type == "table" and contract.Type == "table" and arg.upvalue then
+			if arg.Type == "table" and contract.Type == "table" and arg.upvalue and not contract.literal_argument then
 				local original = arg
 				local modified = arg:Copy()
 				modified:SetContract(contract)
-				arguments:Set(i, modified)
 				modified.argument_index = i
 				table.insert(self.mutated_types[1], {
 					original = original,
 					modified = modified,
 				})
+				arguments:Set(i, modified)
 			else
                 -- if it's a const argument we pass the incoming value
                 if not contract.literal_argument then
