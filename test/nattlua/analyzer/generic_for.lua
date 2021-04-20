@@ -26,3 +26,39 @@ run[[
         end
     end
 ]]
+
+run[[
+    local function test(): number
+        local foo = 1
+        return 1
+    end
+    
+    for _, token in ipairs({1}) do
+        break
+    end
+
+    -- make sure break does not leak onto deferred analysis of test()
+]]
+
+run[[
+    local sum = 0
+
+    for i, num in ipairs({10, 20}) do
+        sum = sum + i + num
+    end
+    
+    type_assert(sum, 33)
+]]
+
+run[[
+    local sum = 0
+
+    for i, num in ipairs({10, 20}) do
+        sum = sum + i + num
+        if math.random() > 0.5 then
+            break
+        end
+    end
+
+    type_assert(sum, _ as number)
+]]

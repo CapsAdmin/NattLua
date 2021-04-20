@@ -52,7 +52,7 @@ return function(META)
 			self:FireEvent("numeric_for", init, max, step)
 
 			if literal_init and literal_max and literal_step and literal_max < 1000 then
-				local uncertain_break = nil
+				local uncertain_break = false
 
 				for i = literal_init, literal_max, literal_step do
 					self:CreateAndPushScope()
@@ -80,7 +80,7 @@ return function(META)
 
 						if self.break_out_scope then
 							if self.break_out_scope:IsUncertain() then
-								uncertain_break = i
+								uncertain_break = true
 							else
 								brk = true
 							end

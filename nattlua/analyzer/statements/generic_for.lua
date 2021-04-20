@@ -11,6 +11,7 @@ return function(META)
 
 		local returned_key = nil
 		local one_loop = obj and obj.Type == "any"
+		local uncertain_break = nil
 
 		for i = 1, 1000 do
 			local values = self:Assert(statement.expressions[1], self:Call(obj, types.Tuple(args), statement.expressions[1]))
@@ -38,11 +39,34 @@ return function(META)
 					self:FireEvent("generic_for", statement.identifiers, values)
 				end
 
-				for i, v in ipairs(statement.identifiers) do
-					self:CreateLocalValue(v, values:Get(i), "runtime")
+				local brk = false
+
+				for i, identifier in ipairs(statement.identifiers) do
+					local obj = values:Get(i)
+
+					if uncertain_break then
+						obj:SetLiteral(false)
+						brk = true
+					end
+
+					self:CreateLocalValue(identifier, obj, "runtime")
 				end
 
 				self:AnalyzeStatements(statement.statements)
+
+				if self._continue_ then
+					self._continue_ = nil
+				end
+
+				if self.break_out_scope then
+					if self.break_out_scope:IsUncertain() then
+						uncertain_break = true
+					else
+						brk = true
+					end
+
+					self.break_out_scope = nil
+				end
 
 				if i == 1000 then
 					self:Error(statement, "too many iterations")
@@ -51,6 +75,7 @@ return function(META)
 				table.insert(values:GetData(), 1, args[1])
 				args = values:GetData()
 				if one_loop then break end
+				if brk then break end
 			end
 
 			if returned_key then
