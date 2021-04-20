@@ -143,7 +143,7 @@ return function(META)
 							if res:IsTruthy() then
 								if self.type_checked then
 									for _, t in ipairs(self.type_checked:GetData()) do
-										if t:GetLuaType() == l:GetData() then
+										if t.GetLuaType and t:GetLuaType() == l:GetData() then
 											truthy_union:AddType(t)
 										end
 									end
@@ -155,7 +155,7 @@ return function(META)
 							if res:IsFalsy() then
 								if self.type_checked then
 									for _, t in ipairs(self.type_checked:GetData()) do
-										if t:GetLuaType() == l:GetData() then
+										if t.GetLuaType and t:GetLuaType() == l:GetData() then
 											falsy_union:AddType(t)
 										end
 									end
