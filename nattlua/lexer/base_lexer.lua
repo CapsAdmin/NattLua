@@ -2,15 +2,8 @@
 
 local table_pool = require("nattlua.other.table_pool")
 local ipairs = ipairs
-return function(META--[[#: {
+return function(META--[[#: mutable literal {
 	@Name = "BaseLexer",
-	syntax = {
-		IsDuringLetter = (function(number): boolean),
-		IsLetter = (function(number): boolean),
-		IsSpace = (function(number): boolean),
-		GetSymbols = (function(): {[number] = string}),
-		[string] = any,
-	},
 	[string] = any,
 }]])
 --[[#	type META.code = string]]
@@ -109,11 +102,11 @@ return function(META--[[#: {
 		local new_token = table_pool(function()
 			return
 				{
-					type = "something",
-					value = "something",
-					whitespace = false,
-					start = 0,
-					stop = 0,
+					type = "something" --[[# as string]],
+					value = "something" --[[# as string]],
+					whitespace = false --[[# as boolean]],
+					start = 0 --[[# as number]],
+					stop = 0 --[[# as number]],
 				}
 		end, 3105585)
 

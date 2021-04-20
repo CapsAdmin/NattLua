@@ -1,2 +1,29 @@
-local syntax = require("nattlua.syntax.syntax")
-type_assert(#syntax.GetSymbols(), 44)
+do
+    local syntax = require("nattlua.syntax.syntax")
+    type_assert(#syntax.GetSymbols(), 44)
+end
+
+do
+    local table_pool = require("nattlua.other.table_pool")
+
+    local new_token = table_pool(function()
+        return
+            {
+                type = "something" as string,
+                value = "something" as string,
+                whitespace = false as boolean,
+                start = 0 as number,
+                stop = 0 as number,
+            }
+    end, 3105585)
+
+    local token = new_token()
+
+    type_assert(token, _ as {
+        type = string,
+        value = string,
+        whitespace = boolean,
+        start = number,
+        stop = number,
+    })
+end

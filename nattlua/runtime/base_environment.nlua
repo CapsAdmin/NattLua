@@ -813,7 +813,7 @@ do
 		insert = (function(list: Table, pos: number, value: any): nil) | (function(list: Table,  value: any): nil),
 		concat = (function(list: Table, sep: string, i: number, j: number): string) | (function(list: Table, sep: string, i: number): string) | (function(list: Table, sep: string): string) | (function(list: Table): string),
 		pack = (function(...): Table),
-		new = (function(number, number): Table),
+		new = (function(number, number): {[number] = any}),
 	}
 
 	type function table.concat(tbl: {[1 .. inf] = string}, separator: string | nil) 

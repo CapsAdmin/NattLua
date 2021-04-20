@@ -6,7 +6,7 @@ if not ok then
 	end
 end
 
-return function(alloc--[[#: (function(): {[string] = any})]], size--[[#: nil | number]])
+return function(alloc--[[#: literal (function(): {[string] = any})]], size--[[#: number]])
 	local records = 0
 
 	for k, v in pairs(alloc()) do
@@ -14,7 +14,7 @@ return function(alloc--[[#: (function(): {[string] = any})]], size--[[#: nil | n
 	end
 
 	local i
-	local pool = table_new(size, records)
+	local pool = table_new(size, records) --[[# as {[number] = return_type<|alloc|>[1]}]]
 
 	local function refill()
 		i = 1
