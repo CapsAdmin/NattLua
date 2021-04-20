@@ -11,7 +11,7 @@ return function(META--[[#: mutable literal {
 --[[#	type META.code_ptr_ref = string]]
 --[[#	type META.code = string]]
 --[[#	type META.name = string]]
---[[#	type META.OnError = nil | (function(META, string, string, string, number, number): nil)]]
+--[[#	type META.code_length = number]]
 --[[#	type META.code_ptr = {
 			@MetaTable = self,
 			[number] = number,
@@ -92,10 +92,14 @@ return function(META--[[#: mutable literal {
 		return self:GetChar(offset) == what
 	end
 
+	function META:OnError(code --[[#: string]], name --[[#: string]], msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
+
+	end
+
 	function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
-		if self.OnError then
-			self:OnError(self.code, self.name, msg, start or self.i, stop or self.i)
-		end
+		if not self.OnError then return end
+		
+		self:OnError(self.code, self.name, msg, start or self.i, stop or self.i)
 	end
 
 	do

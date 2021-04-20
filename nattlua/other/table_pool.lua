@@ -9,7 +9,7 @@ end
 return function(alloc--[[#: literal (function(): {[string] = any})]], size--[[#: number]])
 	local records = 0
 
-	for k, v in pairs(alloc()) do
+	for _, _ in pairs(alloc()) do
 		records = records + 1
 	end
 
