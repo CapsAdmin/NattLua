@@ -89,6 +89,11 @@ export function activate(context: ExtensionContext) {
         }, 10000);
       })
 
+      client.on("close", () => {
+        output.appendLine(`Generic LSP Connection closed, retrying`)
+        retry()
+      })
+
       retry();
     })
   }, clientOptions);

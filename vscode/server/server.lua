@@ -1,16 +1,14 @@
 io.stdout:setvbuf("no")
 io.stderr:setvbuf("no")
 io.flush()
---if not ... then return endw
 
 local ffi = require("ffi")
-local json = require("vscode.server.json")
+local json = require("nattlua.other.json")
 local nl = require("nattlua")
 local helpers = require("nattlua.other.helpers")
 local table_print = require("examples.util").TablePrint
 local base_environment = require("nattlua.runtime.base_environment")
-local server = _G.SERVER or require("vscode.server.lsp")
-_G.SERVER = server
+local server = require("vscode.server.lsp")
 
 local TextDocumentSyncKind = {
 	None = 0,
@@ -25,19 +23,12 @@ local DiagnosticSeverity = {
 	Hint = 4,
 }
 
-local document_cache = {}
-
 local function compile(uri, server, client)
-	local code = document_cache[uri]
+	local f = assert(io.open(uri:sub(#"file://" + 1), "r"))
+	local code = f:read("*all")
+	f:close()
 
-	if not code then
-		local f = assert(io.open(uri:sub(#"file://" + 1), "r"))
-		code = f:read("*all")
-		f:close()
-		document_cache[uri] = code
-	end
-
-	local file = nl.Compiler(code, uri, {annotate = true})
+	local compiler = nl.Compiler(code, uri, {annotate = true})
 
 	local resp = {
 		method = "textDocument/publishDiagnostics",
@@ -47,13 +38,11 @@ local function compile(uri, server, client)
 		}
 	}
 
-	function file:OnDiagnostic(code, name, msg, severity, start, stop, ...)
+	function compiler:OnDiagnostic(code, name, msg, severity, start, stop, ...)
         msg = helpers.FormatMessage(msg, ...)
         
         local data = helpers.SubPositionToLinePosition(code, start, stop)
         
-        print(msg, data)
-
 		if not data then
 			local code = io.open(base_environment.path):read("*all")
 			data = helpers.SubPositionToLinePosition(code, start, stop)
@@ -80,168 +69,107 @@ local function compile(uri, server, client)
 
 	end
 
-	print("analyzing " .. uri)
-	file:Analyze()
-
+	--compiler:Analyze()
 	server:Respond(client, resp)
 
-	return code, file.Tokens, file.Syntaxtree
+	return code, compiler:Lex().Tokens, compiler:Parse().SyntaxTree
 end
 
-function server:HandleMessage(resp, client)
-	print(resp.method)
-	if resp.method == "initialize" then
-		self:Respond(client, {
-			id = resp.id,
-			result = {
-				capabilities = {
-					textDocumentSync = {
-						openClose = true,
-						change = TextDocumentSyncKind.Full,
-					},
-					hoverProvider = true,
-					completionProvider = {
-						resolveProvider = true,
-						triggerCharacters = { ".", ":" },
-					},
-					signatureHelpProvider = {
-						triggerCharacters = { "(" },
-					},
-					definitionProvider = true,
-					referencesProvider = true,
-					documentHighlightProvider = true,
-					documentSymbolProvider = true,
-					workspaceSymbolProvider = true,
-					codeActionProvider = true,
-					codeLensProvider = {
-						resolveProvider = true,
-					},
-					documentFormattingProvider = true,
-					documentRangeFormattingProvider = true,
-					documentOnTypeFormattingProvider = {
-						firstTriggerCharacter = "}",
-						moreTriggerCharacter = { "end" },
-					},
-					renameProvider = true,
-					publishDiagnostics = {
-						relatedInformation = true,
-						tags = {1,2},
-					},
-				}
+server.methods["initialize"] = function(params, self, client) 
+	return {
+		capabilities = {
+			textDocumentSync = {
+				openClose = true,
+				change = TextDocumentSyncKind.Full,
 			},
-		})
-		return
-	elseif resp.method == "textDocument/didOpen" then
-
-		document_cache[resp.params.textDocument.uri] = assert(resp.params.textDocument.text)
-
-		compile(resp.params.textDocument.uri, self, client)
-
-
-
-
-
-
-	elseif resp.method == "textDocument/didSave" then
-
-		document_cache[resp.params.textDocument.uri] = nil
-
-		if resp.params.textDocument.uri:find("nl/vscode/server/") then
-			local ok, err = pcall(function() assert(loadfile(resp.params.textDocument.uri:sub(#"file://" + 1)))() end)
-			if not ok then
-				print("error loading " .. resp.params.textDocument.uri .. ": " .. err)
-			end
-		end
-	elseif resp.method == "textDocument/didChange" then
-		document_cache[resp.params.textDocument.uri] = assert(resp.params.contentChanges[1].text)
-		compile(resp.params.textDocument.uri, self, client)
-	elseif resp.method == "textDocument/hover" then
-		local code, tokens = compile(resp.params.textDocument.uri, self, client)
-		local pos = resp.params.position
-
-        local token, data = helpers.GetDataFromLineCharPosition(tokens, code, pos.line + 1, pos.character + 1)
-        
-		if not token then
-			self:Respond(client, {
-				id = resp.id,
-				result = {
-					contents = "cannot find anything at " .. resp.params.textDocument.uri .. ":" .. pos.line .. ":" .. pos.character,
-				},
-			})
-			return
-		end
-
-
-		local found = {}
-		local node = token
-		repeat
-			table.insert(found, node)
-			node = node.parent
-		until not node
-
-		local str = ""
-
-		for i,v in ipairs(found) do
-			if v.inferred_type then
-				str = str .. "\n```lua\n"
-				str = str .. tostring(v.inferred_type)
-				str = str .. "\n```\n"
-				break
-			end
-		end
-
-		if token and token.parent then
-			local min, max = helpers.LazyFindStartStop(token.parent)
-			if min then
-				data = helpers.SubPositionToLinePosition(code, min, max)
-			end
-		end
-
-		self:Respond(client, {
-			id = resp.id,
-			result = {
-				contents = str,
-				range = {
-					start = {
-						line = data.line_start-1,
-						character = data.character_start,
-					},
-					["end"] = {
-						line = data.line_stop-1,
-						character = data.character_stop+1,
-					},
-				}
+			hoverProvider = true,
+			--[[completionProvider = {
+				resolveProvider = true,
+				triggerCharacters = { ".", ":" },
 			},
-		})
-		return
+			signatureHelpProvider = {
+				triggerCharacters = { "(" },
+			},
+			definitionProvider = true,
+			referencesProvider = true,
+			documentHighlightProvider = true,
+			documentSymbolProvider = true,
+			workspaceSymbolProvider = true,
+			codeActionProvider = true,
+			codeLensProvider = {
+				resolveProvider = true,
+			},
+			documentFormattingProvider = true,
+			documentRangeFormattingProvider = true,
+			documentOnTypeFormattingProvider = {
+				firstTriggerCharacter = "}",
+				moreTriggerCharacter = { "end" },
+			},
+			renameProvider = true,
+			publishDiagnostics = {
+				relatedInformation = true,
+				tags = {1,2},
+			},]]
+		}
+	}
+end
+
+server.methods["textDocument/didOpen"] = function(params, self, client) end
+server.methods["textDocument/didChange"] = function(params, self, client) end
+server.methods["textDocument/didSave"] = function(params, self, client) end
+
+server.methods["textDocument/hover"] = function(params, self, client)
+	local code, tokens = compile(params.textDocument.uri, self, client)
+	local pos = params.position
+
+	print("FINDING TOKEN FROM: ", pos.line + 1, pos.character + 1)
+
+	local token, data = helpers.GetDataFromLineCharPosition(tokens, code, pos.line + 1, pos.character + 1)
+	
+	if not token then
+		error("cannot find anything at " .. params.textDocument.uri .. ":" .. pos.line .. ":" .. pos.character)
 	end
 
-	if not resp.method then
-		table_print(resp)
-		return
-	end
+	local found = {}
+	local node = token
+	repeat
+		table.insert(found, node)
+		node = node.parent
+	until not node
 
-	if resp.params.id then
-		if resp.method:sub(1,1) == "$" then
-			print("responding to " .. resp.method .. " id " .. resp.params.id)
+	local str = ""
 
-			self:Respond(client, {
-				id = resp.id,
-				method = resp.method,
-				result = json.null,
-			})
-		else
-			print("responding to " .. resp.method .. " id " .. resp.id)
+	str = str .. token.value
 
-			self:Respond(client, {
-				id = resp.id,
-				method = resp.method,
-				result = json.null,
-			})
+	for i,v in ipairs(found) do
+		if v.inferred_type then
+			str = str .. "\n```lua\n"
+			str = str .. tostring(v.inferred_type)
+			str = str .. "\n```\n"
+			break
 		end
 	end
+
+	if token and token.parent then
+		local min, max = helpers.LazyFindStartStop(token.parent)
+		if min then
+			data = helpers.SubPositionToLinePosition(code, min, max)
+		end
+	end
+
+	return {
+		contents = str,
+		range = {
+			start = {
+				line = data.line_start-1,
+				character = data.character_start,
+			},
+			["end"] = {
+				line = data.line_stop-1,
+				character = data.character_stop+1,
+			},
+		}
+	}
 end
 
-if not server.clients then
-	server:Loop()
-end
+server:Loop()

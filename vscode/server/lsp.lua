@@ -1,31 +1,12 @@
 local ffi = require("ffi")
+local ljsocket = require("vscode.server.ljsocket")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
 ffi.C.chdir("/home/caps/nl/")
+local rpc_util = require("nattlua.other.jsonrpc")
 
-local JSON_RPC_VERSION = "3.15"
+local LSP_VERSION = "3.15"
 
--- Constants as defined by the JSON-RPC 2.0 specification
-local JSON_RPC_ERROR = {
-	PARSE = {
-		code = -32700,
-		message = "Parse error",
-	},
-	REQUEST = {
-		code = -32600,
-		message = "Invalid request",
-	},
-	UNKNOWN_METHOD = {
-		code = -32601,
-		message = "Unknown method",
-	},
-	INVALID_PARAMS = {
-		code = -32602,
-		message = "Invalid parameters",
-	},
-	INTERNAL_ERROR = {
-		code = -32603,
-		message = "Internal error",
-	},
+local LSP_ERRORS = {
 	SERVER_NOT_INITALIZED = {
 		code = -32002,
 		message = "Server not initialized",
@@ -38,11 +19,7 @@ local JSON_RPC_ERROR = {
 		code = -32800,
 		message = "Request Cancelled"
 	},
-	-- -32000 to -32099 is reserved for implementation-defined server-errors
 }
-
-local LSP_ERROR = -32000
-
 
 local MessageType = {
 	error = 1,
@@ -78,30 +55,9 @@ local CompletionItemKind = {
 	Reference = 18,
 }
 
-local server = require("vscode.server.tcp_server")()
-local json = require("vscode.server.json")
+local server = {}
 
-function server:OnClientConnected(client)
-	self.clients = self.clients or {}
-	table.insert(self.clients, client)
-	function client:OnReceiveChunk(str)
-		local header = str:match("^(Content%-Length: %d+%s+)")
-		if header then
-			local size = header:match("Length: (%d+)")
-
-			local data = str:sub(#header+1, #header + size)
-			if data ~= "" then
-				server:OnReceive(data, client)
-			end
-
-			local next = str:sub(size + 1, #str)
-			if next ~= "" then
-				self:OnReceiveChunk(next)
-				return
-			end
-		end
-	end
-end
+server.methods = {}
 
 function server:ShowMessage(client, type, msg)
 	self:Respond(client, {
@@ -127,43 +83,96 @@ function server:OnError(msg)
     error(msg)
 end
 
-function server:OnReceive(str, client)
-	local ok, data = pcall(json.decode, str)
-	if ok then
-		xpcall(
-			function() return self:HandleMessage(data, client) end, function(msg)
-			self:ShowMessage(client, "error", debug.traceback(msg))
-		end)
-	else
-		print("error!")
-		print(data)
-		print(">" .. str .. "<")
-	end
+function server:OnReceiveBody(client, str)
+	table.insert(self.responses, {client = client, thread = coroutine.create(function() return rpc_util.ReceiveJSON(str, self.methods, self, client) end)})
 end
 
+local json = require("nattlua.other.json")
+
 function server:Respond(client, res)
-	res.jsonrpc = JSON_RPC_VERSION
 	local encoded = json.encode(res)
 	local msg = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
-	client:Send(msg)
+	client:send(msg)
 end
 
 function server:Loop()
-    --os.execute("fuser -k 1337/tcp")
+	self.responses = {}
 
-    server:Host("*", 1337)
+    local socket = ljsocket.create("inet", "stream", "tcp")
+	assert(socket:set_blocking(false))
+    socket:set_option("nodelay", true, "tcp")
+    socket:set_option("reuseaddr", true)
+
+	assert(socket:bind("*", 1337))
+	assert(socket:listen())	
 
 	io.write("HOSTING AT: *:1337\n")
 
+	local clients = {}
+
     while true do
-        self:Update()
-        if self.clients then
-            for i,v in ipairs(self.clients) do
-                v:Update()
-            end
-        end
+		local client, err = socket:accept()
+
+		if client then
+			assert(client:set_blocking(false))
+			client:set_option("nodelay", true, "tcp")
+			client:set_option("cork", false, "tcp")
+			print("client joined", client)
+			table.insert(clients, client)
+		end
+
+		for i = #clients, 1, -1 do
+			local client = clients[i]
+			local chunk, err = client:receive()
+			
+			if err and err ~= "timeout" then
+				print(client, chunk, err)
+			end
+
+			local body = rpc_util.ReceiveHTTP(client, chunk)
+
+			if body then
+				self:OnReceiveBody(client, body)
+			end
+
+			if not chunk then
+				if err == "closed" then
+					table.remove(clients, i)
+				elseif err ~= "timeout" then
+					table.remove(clients, i)
+					client:close()
+					print("error: ", err)
+				end
+			end
+		end
+
+		for i = #self.responses, 1, -1 do
+			local data = self.responses[i]
+			local ok, msg = coroutine.resume(data.thread)
+			if not ok then
+				if msg ~= "suspended" then
+					table.remove(self.responses, i)
+				end
+			else
+				if type(msg) == "table" then
+					self:Respond(data.client, msg)
+					table.remove(self.responses, i)
+				end
+			end
+		end
 
         ffi.C.usleep(50000)
+
+		local f = io.open("vscode/server/restart_me")
+		if f then
+			os.remove("vscode/server/restart_me")
+			for _, client in ipairs(clients) do
+				client:close()
+			end
+			socket:close()
+			f:close()
+			loadfile("vscode/server/server.lua")()
+		end
     end
 end
 
