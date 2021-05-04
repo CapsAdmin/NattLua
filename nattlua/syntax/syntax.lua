@@ -43,7 +43,7 @@ syntax.Keywords = {
 	}
 
 -- these are keywords, but can be used as names
-syntax.NonStandardKeywords = {"continue", "import", "literal", "mutable",}
+syntax.NonStandardKeywords = {"continue", "import", "literal", "mutable", "type"}
 syntax.KeywordValues = {"...", "nil", "true", "false",}
 syntax.PrefixOperators = {"-", "#", "not", "!", "~", "supertype"}
 syntax.PostfixOperators = {

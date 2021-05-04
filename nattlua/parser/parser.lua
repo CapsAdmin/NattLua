@@ -187,7 +187,9 @@ function META:ReadIfStatement()
 		node.tokens["if/else/elseif"][i] = token
 
 		if token.value ~= "else" then
+			print(#self.nodes)
 			node.expressions[i] = self:ReadExpectExpression()
+			print(#self.nodes)
 			node.tokens["then"][i] = self:ReadValue("then")
 		end
 
