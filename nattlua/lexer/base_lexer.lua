@@ -106,12 +106,12 @@ return function(META--[[#: mutable literal {
 		local new_token = table_pool(function()
 			return
 				{
-					type = "something" --[[# as string]],
-					value = "something" --[[# as string]],
-					whitespace = false --[[# as boolean]],
-					start = 0 --[[# as number]],
-					stop = 0 --[[# as number]],
-				}
+					type = "something",
+					value = "something",
+					whitespace = false,
+					start = 0,
+					stop = 0,
+				} --[[# as Token]]
 		end, 3105585)
 
 		function META:NewToken(type--[[#: string]], start--[[#: number]], stop--[[#: number]], is_whitespace--[[#: boolean]])--[[#: Token]]

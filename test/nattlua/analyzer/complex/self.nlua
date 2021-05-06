@@ -27,3 +27,69 @@ do
         stop = number,
     })
 end
+
+do
+    local type { Token } = import_type("nattlua/lexer/token.nlua")
+
+    local table_pool = require("nattlua.other.table_pool")
+
+    local new_token = table_pool(function()
+        return
+            {
+                type = "something",
+                value = "something",
+                whitespace = false,
+                start = 0,
+                stop = 0,
+            } --[[# as Token]]
+    end, 3105585)
+
+    local function NewToken(type--[[#: string]], start--[[#: number]], stop--[[#: number]], is_whitespace--[[#: boolean]])--[[#: Token]]
+        local tk = new_token()
+        tk.type = type
+        tk.is_whitespace = is_whitespace
+        tk.start = start
+        tk.stop = stop
+        return tk
+    end
+
+    local tk = NewToken("test", 1, 2, false)
+
+    type_assert(tk.start, _ as number)
+    type_assert(tk.stop, _ as number)
+    type_assert(tk.type, _ as string)
+end
+
+do
+    -- mutable: suppress warnings about mutating the argument within this function
+    -- literal: passes the literal type from caller to this function instead of making a copy
+
+    local function AddFunction(META: mutable literal {
+        i = number,
+        code = string,
+        -- I want to express the ability to mutate this type within some constraint
+        [string] = any,
+    })
+        -- mutates META by adding a function
+        function META:GetCurrentChar()--[[#: number]]
+            local b = self.code:byte(self.i)
+            return b
+        end
+    end
+
+    local META = {} -- as {fails here}
+    META.__index = META
+
+    type META.i = number
+    type META.code = string
+
+    AddFunction(META)
+
+    function META:Foo()
+        return self:GetCurrentChar() + 21
+    end
+
+    local self = setmetatable({}, META)
+
+    type_assert(self:Foo(), _ as number)
+end
