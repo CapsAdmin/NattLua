@@ -288,7 +288,7 @@ do
 		end
 	end
 
-	function helpers.LazyFindStartStop(tbl--[[#: any]], skip_function_body--[[#: boolean | nil]])
+	function helpers.LazyFindStartStop(tbl--[[#: any]], skip_function_body--[[#: boolean | nil]])--[[#: number, number ]]
 		if tbl.start and tbl.stop then return tbl.start, tbl.stop end
 
 		if tbl.type == "statement" then

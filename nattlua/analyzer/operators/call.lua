@@ -308,10 +308,13 @@ return function(META)
 					self:Error(result:GetNode(), error.reason)
 				end
 			else
-				local ok, reason = result:IsSubsetOfTuple(contract)
-
+				local ok, reason, a,b,i = result:IsSubsetOfTuple(contract)
 				if not ok then
-					self:Error(result:GetNode(), reason)
+					if result:Get(i) then
+						self:Error(result:Get(i):GetNode(), reason)
+					else
+						self:Error(result:GetNode(), reason)
+					end
 				end
 			end
 		end
@@ -390,20 +393,6 @@ return function(META)
 
 			self:FireEvent("external_call", call_node, obj)
 		else
-			do -- recursive guard
-                obj.call_count = obj.call_count or 0
-
-				if obj.call_count > 10 or debug.getinfo(500) then
-					local ret = obj:GetReturnTypes()
-					if ret and ret:Get(1) then
-                        -- TEST ME
-                        return types.Tuple({ret:Get(1)}) end
-					return types.Tuple({self:NewType(call_node, "any")})
-				end
-
-				obj.call_count = obj.call_count + 1
-			end
-
 			local use_contract = obj.explicit_arguments and
 				env ~= "typesystem" and
 				function_node.kind ~= "local_generics_type_function" and
@@ -499,6 +488,17 @@ return function(META)
 
 	function META:Call(obj, arguments, call_node)
 		self.call_stack = self.call_stack or {}
+
+		for _, v in ipairs(self.call_stack) do
+			if v.obj == obj and v.call_node == call_node then
+				if obj.explicit_return then
+					return obj:GetReturnTypes():Copy()
+				else
+					return types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
+				end
+			end
+		end
+
 		table.insert(
 			self.call_stack,
 			{
