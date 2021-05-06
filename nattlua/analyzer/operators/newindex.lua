@@ -78,10 +78,9 @@ return function(META)
 			end
 		end
 
-		if env == "runtime" and obj:GetContract() then
-			local contract = obj:GetContract()
-
-			if contract then
+		local contract = obj:GetContract()
+		if contract then
+			if env == "runtime" then
 				local existing, err = contract:Get(key)
 
 				if existing then
@@ -109,7 +108,13 @@ return function(META)
 				else
 					self:Error(node, err)
 				end
+			elseif env == "typesystem" then
+				return obj:GetContract():SetExplicit(key, val)
 			end
+		end
+
+		if env == "typesystem" then
+			return obj:SetExplicit(key, val)
 		end
 
 		if not self:MutateValue(obj, key, val, env) then -- always false?

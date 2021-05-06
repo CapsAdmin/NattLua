@@ -1,4 +1,3 @@
-local MutationTracker = require("nattlua.analyzer.mutation_tracker")
 local types = require("nattlua.types.types")
 local table_insert = table.insert
 local META = {}

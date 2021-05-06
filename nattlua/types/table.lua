@@ -288,7 +288,29 @@ function META:FindKeyValReverse(key)
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
+		local ok, reason = key:Equal(keyval.key)
+		if ok then return keyval end
+	end
+
+	for _, keyval in ipairs(self:GetData()) do
 		local ok, reason = key:IsSubsetOf(keyval.key)
+		if ok then return keyval end
+		table.insert(reasons, reason)
+	end
+
+	if not reasons[1] then
+		local ok, reason = type_errors.missing(self, key, "table is empty")
+		reasons[1] = reason
+	end
+
+	return type_errors.missing(self, key, reasons)
+end
+
+function META:FindKeyValReverseEqual(key)
+	local reasons = {}
+
+	for _, keyval in ipairs(self:GetData()) do
+		local ok, reason = key:Equal(keyval.key)
 		if ok then return keyval end
 		table.insert(reasons, reason)
 	end
@@ -342,6 +364,35 @@ function META:Set(key, val, no_delete)
 
     -- if the key exists, check if we can replace it and maybe the value
     local keyval, reason = self:FindKeyValReverse(key)
+
+	if not keyval then
+		val:SetParent(self)
+		key:SetParent(self)
+		table.insert(self.data, {key = key, val = val})
+	else
+		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
+			keyval.val = val
+		else
+			keyval.val = types.Union({keyval.val, val})
+		end
+	end
+
+	return true
+end
+
+function META:SetExplicit(key, val)
+	key = types.Cast(key)
+	val = types.Cast(val)
+
+	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
+		self["Set" .. key:GetData():sub(2)](self, val)
+		return true
+	end
+
+	if key.Type == "symbol" and key:GetData() == nil then return type_errors.other("key is nil") end
+
+    -- if the key exists, check if we can replace it and maybe the value
+    local keyval, reason = self:FindKeyValReverseEqual(key)
 
 	if not keyval then
 		val:SetParent(self)

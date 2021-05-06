@@ -34,3 +34,24 @@ run[[
         return "test"
     end
 ]]
+
+run[[
+    local META = {} as {[string] = any}
+    META.__index = META
+    
+    type META.i = number
+    type META.code = string
+    
+    type_assert(META.i, _ as number)
+    type_assert(META.code, _ as string)
+    type_assert(META.codeawdawd, _ as any) 
+]]
+
+run[[
+    local META = {} as {[string] = any, i = number, code = string}
+    META.__index = META
+
+    type_assert(META.i, _ as number)
+    type_assert(META.code, _ as string)
+    type_assert(META.codeawdawd, _ as any)
+]]
