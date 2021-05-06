@@ -810,6 +810,124 @@ type bit32 = {
 type bit = bit32
 
 do
+	type function bit.bor(...: ...number)
+		local out = {}
+
+		for i, num in ipairs({...}) do
+			if not num:IsLiteral() then
+				return types.Number()
+			end
+
+			out[i] = num:GetData()
+		end
+
+		return bit.bor(table.unpack(out))
+	end
+
+	type function bit.band(...: ...number)
+		local out = {}
+
+		for i, num in ipairs({...}) do
+			if not num:IsLiteral() then
+				return types.Number()
+			end
+
+			out[i] = num:GetData()
+		end
+
+		return bit.band(table.unpack(out))
+	end
+
+	type function bit.bxor(...: ...number)
+		local out = {}
+
+		for i, num in ipairs({...}) do
+			if not num:IsLiteral() then
+				return types.Number()
+			end
+
+			out[i] = num:GetData()
+		end
+
+		return bit.bxor(table.unpack(out))
+	end
+
+	type function bit.tobit(n: number)
+		if n:IsLiteral() then
+			return bit.tobit(n:GetData())
+		end
+
+		return types.Number()
+	end	
+	
+	type function bit.bnot(n: number)
+		if n:IsLiteral() then
+			return bit.bnot(n:GetData())
+		end
+
+		return types.Number()
+	end	
+	
+	type function bit.bswap(n: number)
+		if n:IsLiteral() then
+			return bit.bswap(n:GetData())
+		end
+
+		return types.Number()
+	end
+
+	type function bit.tohex(x: number, n: number)
+		if x:IsLiteral() and n:IsLiteral() then
+			return bit.tohex(x:GetData(), n:GetData())
+		end
+
+		return types.String()
+	end
+
+	type function bit.lshift(x: number, n: number)
+		if x:IsLiteral() and n:IsLiteral() then
+			return bit.lshift(x:GetData(), n:GetData())
+		end
+
+		return types.Number()
+	end
+
+	type function bit.rshift(x: number, n: number)
+		if x:IsLiteral() and n:IsLiteral() then
+			return bit.rshift(x:GetData(), n:GetData())
+		end
+
+		return types.Number()
+	end
+
+	type function bit.arshift(x: number, n: number)
+		if x:IsLiteral() and n:IsLiteral() then
+			return bit.arshift(x:GetData(), n:GetData())
+		end
+
+		return types.Number()
+	end
+
+	type function bit.rol(x: number, n: number)
+		if x:IsLiteral() and n:IsLiteral() then
+			return bit.rol(x:GetData(), n:GetData())
+		end
+
+		return types.Number()
+	end
+
+	type function bit.ror(x: number, n: number)
+		if x:IsLiteral() and n:IsLiteral() then
+			return bit.ror(x:GetData(), n:GetData())
+		end
+
+		return types.Number()
+	end
+
+
+end
+
+do
 	type table = {
 		maxn = (function(table: Table): number),
 		move = (function(a1: Table, f: any, e: any, t: any ,a2: Table): nil) | (function(a1: Table, f: any, e: any, t: any): nil),
@@ -926,11 +1044,26 @@ do
 		pack = (function(fmt: string, ...): string)
 	}
 
-    type function ^string.char(n: number)
-        if n:IsLiteral() then
-            return types.String(string.char(n:GetData()))
+	type function ^string.rep(self: string, n: number)
+        if self:IsLiteral() and n:IsLiteral() then
+            return types.String(string.rep(self:GetData(), n:GetData())):SetLiteral(true)
         end
+
         return types.String()
+    end
+
+    type function ^string.char(...: ...number)
+		local out = {}
+
+		for i, num in ipairs({...}) do
+			if not num:IsLiteral() then
+				return types.String()
+			end
+
+			out[i] = num:GetData()
+		end
+
+		return string.char(table.unpack(out))
     end
     
     type function ^string.format(s: string, ...)
@@ -996,19 +1129,23 @@ do
 	end
 
 	type function ^string.byte(str: string, from: number | nil, to: number | nil)
-		if str:IsLiteral() then
-            if from then
-                if from:IsLiteral() and to and to:IsLiteral() then
-                    return str:GetData():byte(from:GetData(), to:GetData())
-                end
+		if str:IsLiteral() and not from and not to then
+			return string.byte(str:GetData())
+		end	
 
-                return str:GetData():byte(from:GetData())
-            end
+		if str:IsLiteral() and from and from:IsLiteral() and not to then
+			return string.byte(str:GetData(), from:GetData())
+		end	
 
-			return str:GetData():byte()
+		if str:IsLiteral() and from and from:IsLiteral() and to and to:IsLiteral() then
+			return string.byte(str:GetData(), from:GetData(), to:GetData())
+		end
+		
+		if from and from:IsLiteral() and to and to:IsLiteral() then
+			return types.Tuple({}):AddRemainder(types.Tuple({types.Number()}):SetRepeat(to:GetData() - from:GetData() + 1))
 		end
 
-		return types.Number()
+		return types.Tuple({}):AddRemainder(types.Tuple({types.Number()}):SetRepeat(math.huge))
 	end
 
 	type function ^string.match(str: string, pattern: string, start_position: number | nil)

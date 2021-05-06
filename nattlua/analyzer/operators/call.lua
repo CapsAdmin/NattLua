@@ -7,6 +7,7 @@ return function(META)
 		for i, v in ipairs(tps) do
 			if types.IsTypeObject(v) then
 				tbl[i] = v
+				v:SetNode(node)
 			else
 				if type(v) == "function" then
 					tbl[i] = self:NewType(
@@ -158,10 +159,10 @@ return function(META)
 			len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
 		end
 
-		local ret = {}
+		local tuples = {}
 
 		for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
-			ret[i] = self:LuaTypesToTuple(
+			tuples[i] = self:LuaTypesToTuple(
 				obj:GetNode(),
 				{
 					self:CallLuaTypeFunction(
@@ -176,25 +177,34 @@ return function(META)
 			)
 		end
 
-		local tup = types.Tuple({})
+		local ret = types.Tuple({})
 
-		for _, t in ipairs(ret) do
-			for i, v in ipairs(t:GetData()) do
-				local existing = tup:Get(i)
+		for _, tuple in ipairs(tuples) do
+			
+			local len = tuple:GetMinimumLength()
 
-				if existing then
-					if existing.Type == "union" then
-						existing:AddType(v)
+			if len == 0 then
+				return tuple
+			else
+				for i = 1, len do
+
+					local v = tuple:Get(i)
+					local existing = ret:Get(i)
+
+					if existing then
+						if existing.Type == "union" then
+							existing:AddType(v)
+						else
+							ret:Set(i, types.Union({v, existing}))
+						end
 					else
-						tup:Set(i, types.Union({v, existing}))
+						ret:Set(i, v)
 					end
-				else
-					tup:Set(i, v)
 				end
 			end
 		end
 
-		return tup
+		return ret
 	end
 
 	local function restore_mutated_types(self)

@@ -511,3 +511,27 @@ run[[
     test("foo")
     test()
 ]]
+
+run[[
+    local a,b,c,d =  string.byte(_ as string, _ as number, _ as number)
+    
+    type_assert<|a, number|>
+    type_assert<|b, number|>
+    type_assert<|c, number|>
+    type_assert<|d, number|>
+]]
+
+run[[
+    local a,b,c,d =  string.byte("foo", 1, 2)
+    type_assert(a, 102)
+    type_assert(b, 111)
+    type_assert(c, nil)
+]]
+
+run[[
+    local a,b,c,d =  string.byte(_ as string, 1, 2)
+    type_assert(a, _ as number)
+    type_assert(b, _ as number)
+    type_assert(c, nil)
+    type_assert(d, nil)
+]]
