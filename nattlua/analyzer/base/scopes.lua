@@ -127,9 +127,9 @@ return function(META)
 				obj = obj or self.default_environment[env]
 
 				if #self.environments[env] == 0 then
-            -- this is needed for when calling GetLocalOrEnvironmentValue when analysis is done
-            -- it's mostly useful for tests, but maybe a better solution can be done here
-            self.first_environment = self.first_environment or {}
+					-- this is needed for when calling GetLocalOrEnvironmentValue when analysis is done
+					-- it's mostly useful for tests, but maybe a better solution can be done here
+					self.first_environment = self.first_environment or {}
 					self.first_environment[env] = obj
 				end
 
