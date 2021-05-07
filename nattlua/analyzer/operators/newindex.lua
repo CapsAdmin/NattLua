@@ -114,7 +114,11 @@ return function(META)
 		end
 
 		if env == "typesystem" then
-			return obj:SetExplicit(key, val)
+			if obj.Type == "table" then
+				return obj:SetExplicit(key, val)
+			else
+				return obj:Set(key, val)
+			end
 		end
 
 		if not self:MutateValue(obj, key, val, env) then -- always false?
