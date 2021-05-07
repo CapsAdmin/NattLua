@@ -81,12 +81,12 @@ end
 function META:FindValue(key, env)
 	local key_hash = self:Hash(key)
 	local scope = self
-	local current_scope = scope
 
-	for i = 1, 1000 do
+	for _ = 1, 1000 do
 		if not scope then return end
-		if scope.upvalues[env].map[key_hash] then return scope.upvalues[env].map[key_hash], current_scope end
-		current_scope = scope
+		if scope.upvalues[env].map[key_hash] then 
+			return scope.upvalues[env].map[key_hash]
+		end
 		scope = scope.parent
 	end
 
