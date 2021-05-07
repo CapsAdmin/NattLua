@@ -508,6 +508,10 @@ return function(META)
 			end
 		end
 
+		if debug.getinfo(100) then
+			return false, "call stack is too deep"
+		end
+
 		table.insert(
 			self.call_stack,
 			{
