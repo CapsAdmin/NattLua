@@ -3,6 +3,7 @@ local types = require("nattlua.types.types")
 return function(META)
 	function META:LookupValue(node, env)
 		local obj
+		local err
 		local errors = {}
 
 		if env == "typesystem" then
