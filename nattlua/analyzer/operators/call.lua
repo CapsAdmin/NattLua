@@ -417,11 +417,10 @@ return function(META)
 			local return_result = self:AnalyzeFunctionBody(function_node, arguments, env)
 			restore_mutated_types(self)    
             
-            -- if this function has an explicit return type
             local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
 			if not return_contract and function_node.return_types then
-				self:CreateAndPushFunctionScope(function_node, nil, {type = "function_return_type",})
+				self:CreateAndPushFunctionScope(function_node)
 				self:PushPreferTypesystem(true)
 				return_contract = types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
 				self:PopPreferTypesystem()
