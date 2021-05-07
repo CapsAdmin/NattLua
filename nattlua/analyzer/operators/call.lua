@@ -31,16 +31,7 @@ return function(META)
 	end
 
 	function META:AnalyzeFunctionBody(function_node, arguments, env)
-		local scope = self:CreateAndPushFunctionScope(
-			function_node,
-			nil,
-			{
-				type = "function",
-				function_node = function_node,
-				arguments = arguments,
-				env = env,
-			}
-		)
+		local scope = self:CreateAndPushFunctionScope(function_node)
 		scope.scope_is_being_called = true
 		self:PushEnvironment(function_node, nil, env)
 
@@ -457,7 +448,7 @@ return function(META)
 			if return_contract then
                 -- this is so that the return type of a function can access its arguments, to generics
                 -- local function foo(a: number, b: number): Foo(a, b) return a + b end
-                self:CreateAndPushFunctionScope(function_node, nil, {type = "function_return_type",})
+                self:CreateAndPushFunctionScope(function_node)
 
 				for i, key in ipairs(function_node.identifiers) do
 					local arg = arguments:Get(i)
