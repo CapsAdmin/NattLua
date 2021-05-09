@@ -288,7 +288,7 @@ do
 		end
 	end
 
-	function helpers.LazyFindStartStop(tbl--[[#: any]], skip_function_body--[[#: boolean | nil]])--[[#: number, number ]]
+	function helpers.LazyFindStartStop(tbl--[[#: any]], skip_function_body--[[#: boolean | nil]])--[[#: number,number]]
 		if tbl.start and tbl.stop then return tbl.start, tbl.stop end
 
 		if tbl.type == "statement" then
@@ -434,7 +434,7 @@ function helpers.EnableJITDumper()
 
     local startloc, startex
 
-	local function fmtfunc(func --[[#: any]], pc --[[#: any]])
+	local function fmtfunc(func--[[#: any]], pc--[[#: any]])
 		local fi = funcinfo(func, pc)
 
 		if fi.loc then
@@ -449,7 +449,7 @@ function helpers.EnableJITDumper()
 	end
 
     -- Format trace error message.
-    local function fmterr(err --[[#: any]], info --[[#: any]])
+    local function fmterr(err--[[#: any]], info--[[#: any]])
 		if type(err) == "number" then
 			if type(info) == "function" then
 				info = fmtfunc(info)
@@ -462,7 +462,7 @@ function helpers.EnableJITDumper()
 	end
 
     -- Dump trace states.
-    local function dump_trace(what --[[#: any]], tr --[[#: any]], func --[[#: any]], pc--[[#: any]], otr --[[#: any]], oex --[[#: any]])
+    local function dump_trace(what--[[#: any]], tr--[[#: any]], func--[[#: any]], pc--[[#: any]], otr--[[#: any]], oex--[[#: any]])
 		if what == "start" then
 			startloc = fmtfunc(func, pc)
 			startex = otr and "(" .. otr .. "/" .. (oex == -1 and "stitch" or oex) .. ") " or ""

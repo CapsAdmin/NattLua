@@ -171,14 +171,12 @@ return function(META)
 		local ret = types.Tuple({})
 
 		for _, tuple in ipairs(tuples) do
-			
 			local len = tuple:GetMinimumLength()
 
 			if len == 0 then
 				return tuple
 			else
 				for i = 1, len do
-
 					local v = tuple:Get(i)
 					local existing = ret:Get(i)
 
@@ -309,7 +307,8 @@ return function(META)
 					self:Error(result:GetNode(), error.reason)
 				end
 			else
-				local ok, reason, a,b,i = result:IsSubsetOfTuple(contract)
+				local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
+
 				if not ok then
 					if result:Get(i) then
 						self:Error(result:Get(i):GetNode(), reason)
@@ -407,9 +406,8 @@ return function(META)
 
 			local return_result, scope = self:AnalyzeFunctionBody(function_node, arguments, env)
 			obj:AddScope(arguments, return_result, scope)
-			restore_mutated_types(self)    
-            
-            local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
+			restore_mutated_types(self)
+			local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
 			if not return_contract and function_node.return_types then
 				self:CreateAndPushFunctionScope(function_node)
@@ -500,10 +498,7 @@ return function(META)
 			end
 		end
 
-		if debug.getinfo(100) then
-			return false, "call stack is too deep"
-		end
-
+		if debug.getinfo(100) then return false, "call stack is too deep" end
 		table.insert(
 			self.call_stack,
 			{

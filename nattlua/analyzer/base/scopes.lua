@@ -219,7 +219,6 @@ return function(META)
 				end
 
 				self:FireEvent("set_environment_value", key, val, env)
-
 				return val
 			end
 		end

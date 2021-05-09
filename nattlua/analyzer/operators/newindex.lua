@@ -79,6 +79,7 @@ return function(META)
 		end
 
 		local contract = obj:GetContract()
+
 		if contract then
 			if env == "runtime" then
 				local existing, err = contract:Get(key)

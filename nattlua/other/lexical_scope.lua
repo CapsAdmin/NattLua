@@ -79,17 +79,19 @@ function META:GetIterationScope()
 end
 
 function META:AddDependency(val)
-	self.dependencies = self.dependencies or {}	
+	self.dependencies = self.dependencies or {}
 	self.dependencies[val] = val
 end
 
 function META:GetDependencies()
 	local out = {}
+
 	if self.dependencies then
 		for val in pairs(self.dependencies) do
 			table.insert(out, val)
 		end
 	end
+
 	return out
 end
 
@@ -99,9 +101,7 @@ function META:FindValue(key, env)
 
 	for _ = 1, 1000 do
 		if not scope then return end
-		if scope.upvalues[env].map[key_hash] then 
-			return scope.upvalues[env].map[key_hash]
-		end
+		if scope.upvalues[env].map[key_hash] then return scope.upvalues[env].map[key_hash] end
 		scope = scope.parent
 	end
 

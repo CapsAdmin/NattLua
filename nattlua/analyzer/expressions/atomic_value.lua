@@ -106,7 +106,7 @@ return function(META)
 
 		if standalone_letter or value == "..." or node.force_upvalue then
 			local val = self:LookupValue(node, env)
-		
+
 			if val.upvalue then
 				self:GetScope():AddDependency(val.upvalue)
 			end

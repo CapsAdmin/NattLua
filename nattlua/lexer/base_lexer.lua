@@ -2,10 +2,7 @@
 
 local table_pool = require("nattlua.other.table_pool")
 local ipairs = ipairs
-return function(META--[[#: mutable literal {
-	@Name = "BaseLexer",
-	[string] = any,
-}]])
+return function(META--[[#: mutable literal {@Name = "BaseLexer", [string] = any,}]])
 --[[#	type META.code = string]]
 --[[#	type META.i = number]]
 --[[#	type META.code_ptr_ref = string]]
@@ -92,13 +89,11 @@ return function(META--[[#: mutable literal {
 		return self:GetChar(offset) == what
 	end
 
-	function META:OnError(code --[[#: string]], name --[[#: string]], msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
-
+	function META:OnError(code--[[#: string]], name--[[#: string]], msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]]) 
 	end
 
 	function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
 		if not self.OnError then return end
-		
 		self:OnError(self.code, self.name, msg, start or self.i, stop or self.i)
 	end
 
@@ -111,7 +106,7 @@ return function(META--[[#: mutable literal {
 					whitespace = false,
 					start = 0,
 					stop = 0,
-				} --[[# as Token]]
+				}
 		end, 3105585)
 
 		function META:NewToken(type--[[#: string]], start--[[#: number]], stop--[[#: number]], is_whitespace--[[#: boolean]])--[[#: Token]]

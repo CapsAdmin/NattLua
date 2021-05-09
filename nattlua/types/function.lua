@@ -106,22 +106,27 @@ end
 
 function META:AddScope(arguments, return_result, scope)
 	self.scopes = self.scopes or {}
-	table.insert(self.scopes, {
-		arguments = arguments,
-		return_result = return_result,
-		scope = scope,
-	})
+	table.insert(
+		self.scopes,
+		{
+			arguments = arguments,
+			return_result = return_result,
+			scope = scope,
+		}
+	)
 end
 
 function META:GetSideEffects()
 	local out = {}
+
 	for _, call_info in ipairs(self.scopes) do
 		for _, val in ipairs(call_info.scope:GetDependencies()) do
 			if val.scope ~= call_info.scope then
 				table.insert(out, val)
 			end
 		end
-	end	
+	end
+
 	return out
 end
 
