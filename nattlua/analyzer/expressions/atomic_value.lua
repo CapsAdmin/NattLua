@@ -104,7 +104,15 @@ return function(META)
 			end
 		end
 
-		if standalone_letter or value == "..." or node.force_upvalue then return self:LookupValue(node, env) end
+		if standalone_letter or value == "..." or node.force_upvalue then
+			local val = self:LookupValue(node, env)
+		
+			if val.upvalue then
+				self:GetScope():AddDependency(val.upvalue)
+			end
+
+			return val
+		end
 
 		if type == "keyword" then
 			if value == "nil" then

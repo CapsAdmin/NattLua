@@ -170,7 +170,13 @@ return function(META)
 						end
 					end
 
-					self:SetLocalOrEnvironmentValue(key, val, env)
+					local val = self:SetLocalOrEnvironmentValue(key, val, env)
+
+					if val.Type == "upvalue" then
+						self:GetScope():AddDependency(val)
+					else
+						self:GetScope():AddDependency({key = key, val = val})
+					end
 				else
 					local obj = self:AnalyzeExpression(exp_key.left, env)
 					self:Assert(exp_key, self:NewIndexOperator(exp_key, obj, key, val, env))

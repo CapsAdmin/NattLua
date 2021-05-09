@@ -78,6 +78,21 @@ function META:GetIterationScope()
 	return scope
 end
 
+function META:AddDependency(val)
+	self.dependencies = self.dependencies or {}	
+	self.dependencies[val] = val
+end
+
+function META:GetDependencies()
+	local out = {}
+	if self.dependencies then
+		for val in pairs(self.dependencies) do
+			table.insert(out, val)
+		end
+	end
+	return out
+end
+
 function META:FindValue(key, env)
 	local key_hash = self:Hash(key)
 	local scope = self
@@ -143,6 +158,7 @@ function META:CreateValue(key, obj, env)
 	table_insert(self.upvalues[env].list, upvalue)
 	self.upvalues[env].map[key_hash] = upvalue
 	upvalue:SetValue(obj)
+	upvalue.scope = self
 	return upvalue
 end
 

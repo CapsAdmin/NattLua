@@ -53,7 +53,7 @@ return function(META)
 		scope.scope_is_being_called = false
 		self:PopEnvironment(env)
 		self:PopScope()
-		return analyzed_return
+		return analyzed_return, scope
 	end
 
 	local unpack_union_tuples
@@ -405,7 +405,8 @@ return function(META)
 				if not ok then return ok, err end
 			end
 
-			local return_result = self:AnalyzeFunctionBody(function_node, arguments, env)
+			local return_result, scope = self:AnalyzeFunctionBody(function_node, arguments, env)
+			obj:AddScope(arguments, return_result, scope)
 			restore_mutated_types(self)    
             
             local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
