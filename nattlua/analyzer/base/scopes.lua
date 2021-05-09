@@ -190,32 +190,36 @@ return function(META)
 					if not self:MutateValue(upvalue, key, val, env) then
 						if self:GetScope():IsReadOnly() then
 							if self:GetScope() ~= found_scope then
-								self:CreateLocalValue(key, val, env)
-								return
+								local upvalue = self:CreateLocalValue(key, val, env)
+								return upvalue
 							end
 						end
 
 						upvalue:SetValue(val)
 						self:FireEvent("mutate_upvalue", key, val, env)
 					end
-				else
-					local g = self.environments[env][1]
 
-					if not g then
-						self:FatalError("tried to set environment value outside of Push/Pop/Environment")
-					end
-
-					if self:GetScope():IsReadOnly() then return end
-
-					if env == "runtime" then
-						self:Warning(key, "_G[\"" .. key:Render() .. "\"] = " .. tostring(val))
-					end
-
-					if not self:MutateValue(g, key, val, env) then
-						self:Assert(key, g:Set(key, val, env == "runtime"))
-					end
-
-					self:FireEvent("set_environment_value", key, val, env)
+					return upvalue
 				end
+
+				local g = self.environments[env][1]
+
+				if not g then
+					self:FatalError("tried to set environment value outside of Push/Pop/Environment")
+				end
+
+				if self:GetScope():IsReadOnly() then return end
+
+				if env == "runtime" then
+					self:Warning(key, "_G[\"" .. key:Render() .. "\"] = " .. tostring(val))
+				end
+
+				if not self:MutateValue(g, key, val, env) then
+					self:Assert(key, g:Set(key, val, env == "runtime"))
+				end
+
+				self:FireEvent("set_environment_value", key, val, env)
+
+				return val
 			end
 		end
