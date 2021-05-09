@@ -4,21 +4,23 @@ local table_pool = require("nattlua.other.table_pool")
 local ipairs = ipairs
 local META = {}
 META.__index = META
---[[#type META.Buffer = string]]
---[[#type META.Position = number]]
---[[#type META.name = string]]
---[[#type META.BufferLength = number]]
+--[[#
+	type META.Buffer = string
+	type META.Position = number
+	type META.name = string
+	type META.BufferLength = number
+]]
 local B = string.byte
 
-function META:GetLength()
+function META:GetLength()--[[#: number]]
 	return self.BufferLength
 end
 
-function META:GetChars(start--[[#: number]], stop--[[#: number]])
+function META:GetChars(start--[[#: number]], stop--[[#: number]])--[[#: string]]
 	return self.Buffer:sub(start, stop)
 end
 
-function META:GetChar(offset--[[#: number]])
+function META:GetChar(offset--[[#: number]])--[[#: number]]
 	return self.Buffer:byte(self.Position + offset)
 end
 
@@ -42,7 +44,7 @@ function META:ReadChar()--[[#: number]]
 	return char
 end
 
-function META:Advance(len--[[#: number]])
+function META:Advance(len--[[#: number]])--[[#: boolean]]
 	self.Position = self.Position + len
 	return self.Position <= self:GetLength()
 end
@@ -51,23 +53,23 @@ function META:SetPosition(i--[[#: number]])
 	self.Position = i
 end
 
-function META:TheEnd()
+function META:TheEnd() --[[#: boolean]]
 	return self.Position > self:GetLength()
 end
 
-function META:IsValue(what--[[#: string]], offset--[[#: number]])
+function META:IsValue(what--[[#: string]], offset--[[#: number]])--[[#: boolean]]
 	return self:IsByte(B(what), offset)
 end
 
-function META:IsCurrentValue(what--[[#: string]])
+function META:IsCurrentValue(what--[[#: string]])--[[#: boolean]]
 	return self:IsCurrentByte(B(what))
 end
 
-function META:IsCurrentByte(what--[[#: number]])
+function META:IsCurrentByte(what--[[#: number]])--[[#: boolean]]
 	return self:GetCurrentChar() == what
 end
 
-function META:IsByte(what--[[#: number]], offset--[[#: number]])
+function META:IsByte(what--[[#: number]], offset--[[#: number]])--[[#: boolean]]
 	return self:GetChar(offset) == what
 end
 
@@ -91,7 +93,7 @@ do
 			}
 	end, 3105585)
 
-	function META:NewToken(type--[[#: TokenType]], start--[[#: number]], stop--[[#: number]], is_whitespace--[[#: boolean]])--[[#: Token]]
+	function META:NewToken(type--[[#: TokenType]], is_whitespace--[[#: boolean]], start--[[#: number]], stop--[[#: number]])--[[#: Token]]
 		local tk = new_token()
 		tk.type = type
 		tk.is_whitespace = is_whitespace
@@ -129,7 +131,13 @@ function META:ReadUnknown()
 	return "unknown", false
 end
 
+function META:Read()--[[#: string,boolean]]
+	return self:ReadUnknown()
+end
+
 function META:ReadSimple()
+	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
+	
 	local start = self.Position
 	local type, is_whitespace = self:Read()
 
@@ -147,11 +155,7 @@ function META:ReadSimple()
 end
 
 function META:ReadToken()
-	if self:ReadShebang() then return self:NewToken("shebang", 1, self.Position - 1, false) end
-	local type, is_whitespace, start, stop = self:ReadSimple()
-	local tk = self:NewToken(type, start, stop, is_whitespace)
-	self:OnTokenRead(tk)
-	return tk
+	return self:NewToken(self:ReadSimple())
 end
 
 function META:GetTokens()
@@ -199,12 +203,6 @@ function META:GetTokens()
 	return tokens
 end
 
-function META:OnInitialize() 
-end
-
-function META:OnTokenRead(tk) 
-end
-
 local function remove_bom_header(str--[[#: string]])--[[#: string]]
 	if str:sub(1, 2) == "\xFE\xFF" then
 		return str:sub(3)
@@ -215,15 +213,12 @@ local function remove_bom_header(str--[[#: string]])--[[#: string]]
 	return str
 end
 
-function META:Initialize(code--[[#: string]])
+function META:New(code--[[#: string]])
+	local self = setmetatable({}, META)
 	self.Buffer = remove_bom_header(code)
 	self.BufferLength = #self.Buffer
 	self:ResetState()
-	self:OnInitialize()
-end
-
-function META:Read()--[[#: string,boolean]]
-	return self:ReadUnknown()
+	return self
 end
 
 return META

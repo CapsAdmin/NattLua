@@ -18,7 +18,7 @@ do
     -- should take around 0.8 seconds
     local tokens = util.Measure("code:Lex()", function() 
         while true do 
-            local type, is_whitespace, start, stop = lexer:ReadSimple()
+            local type, start, stop, is_whitespace = lexer:ReadSimple()
             if type == "end_of_file" then break end
         end
     end)

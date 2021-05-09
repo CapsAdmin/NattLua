@@ -1,10 +1,11 @@
 local META = dofile("nattlua/lexer/lexer.lua")
 
-
 --[[#	
 	type META.comment_escape = boolean
 	type Lexer = typeof META
 ]]
+
+META.comment_escape = false
 
 do
 	local read_space = require("nattlua.lexer.readers.space")
@@ -49,8 +50,5 @@ do
 end
 
 return function(code--[[#: string]])
-	local self = setmetatable({}, META)
-	self.comment_escape = false
-	self:Initialize(code)
-	return self
+	return META:New(code)
 end
