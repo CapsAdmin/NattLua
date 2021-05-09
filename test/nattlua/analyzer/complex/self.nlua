@@ -29,7 +29,7 @@ do
 end
 
 do
-    local type { Token } = import_type("nattlua/lexer/token.nlua")
+    local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")
 
     local table_pool = require("nattlua.other.table_pool")
 
@@ -44,7 +44,7 @@ do
             } --[[# as Token]]
     end, 3105585)
 
-    local function NewToken(type--[[#: string]], start--[[#: number]], stop--[[#: number]], is_whitespace--[[#: boolean]])--[[#: Token]]
+    local function NewToken(type--[[#: TokenType]], start--[[#: number]], stop--[[#: number]], is_whitespace--[[#: boolean]])--[[#: Token]]
         local tk = new_token()
         tk.type = type
         tk.is_whitespace = is_whitespace
@@ -53,11 +53,10 @@ do
         return tk
     end
 
-    local tk = NewToken("test", 1, 2, false)
+    local tk = NewToken("symbol", 1, 2, false)
 
     type_assert(tk.start, _ as number)
     type_assert(tk.stop, _ as number)
-    type_assert(tk.type, _ as string)
 end
 
 do

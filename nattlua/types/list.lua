@@ -11,7 +11,7 @@ end
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 
-	for i = 1, #self.data do
+	for i = 1, #lexer.data do
 		local a = a.data[i]
 		local b = a.data[i]
 		if not a:Equal(b) then return false end

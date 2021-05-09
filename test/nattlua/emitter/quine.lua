@@ -4,17 +4,17 @@ end
 
 local x = 1 + 2
 local y = draw_type(1, 2, 3, 4, 5)
-local x = self.OnDraw and
+local x = lexer.OnDraw and
 	(
 		draw_type == "viewmodel" or
 		draw_type == "hands" or
-		((self.Translucent == true or self.force_translucent == true) and draw_type == "translucent") or
-		((self.Translucent == false or self.force_translucent == false) and draw_type == "opaque")
+		((lexer.Translucent == true or lexer.force_translucent == true) and draw_type == "translucent") or
+		((lexer.Translucent == false or lexer.force_translucent == false) and draw_type == "opaque")
 	)
 
 pos, ang = LocalToWorld(
-	self.Position or Vector(),
-	self.Angles or Angle(),
+	lexer.Position or Vector(),
+	lexer.Angles or Angle(),
 	pos or owner:GetPos(),
 	ang or owner:GetAngles()
 )
@@ -33,16 +33,16 @@ local cond = key ~= "ParentUID" and
 		table.HasValue(pac.AimPartNames, value)
 	)
 
-ent = pac.HandleOwnerName(self:GetPlayerOwner(),
-	self.OwnerName,
+ent = pac.HandleOwnerName(lexer:GetPlayerOwner(),
+	lexer.OwnerName,
 	ent,
-	self,
+	lexer,
 	function(e)
-		return e.pac_duplicate_attach_uid ~= self.UniqueID
+		return e.pac_duplicate_attach_uid ~= lexer.UniqueID
 	end) or
 	NULL
 
-render.OverrideBlendFunc(true, self.blend_override[1], self.blend_override[2], self.blend_override[3], self.blend_override[4])
+render.OverrideBlendFunc(true, lexer.blend_override[1], lexer.blend_override[2], lexer.blend_override[3], lexer.blend_override[4])
 foo(function() end) -- space here
 foo(function() end)
 pac.AimPartNames = {
@@ -54,14 +54,14 @@ pac.AimPartNames = {
 
 
 if not outfit.self then
-	return self:AttachPACSession(outfit, owner)
+	return lexer:AttachPACSession(outfit, owner)
 end
 if 
 	(outfit.self.OwnerName == "viewmodel" or outfit.self.OwnerName == "hands") and
-	self:IsWeapon() and
-	self.Owner:IsValid() and
-	self.Owner:IsPlayer() and
-	self.Owner ~= LocalPlayer()
+	lexer:IsWeapon() and
+	lexer.Owner:IsValid() and
+	lexer.Owner:IsPlayer() and
+	lexer.Owner ~= LocalPlayer()
  then
 	return
 end

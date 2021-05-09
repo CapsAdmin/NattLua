@@ -1,26 +1,8 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
 
+local quote = require("nattlua.other.quote")
+
 local helpers = {}
-
-function helpers.QuoteToken(str--[[#: string]])--[[#: string]]
-	return "❲" .. str .. "❳"
-end
-
-function helpers.QuoteTokens(var--[[#: {[number] = string}]])--[[#: string]]
-	local str = ""
-
-	for i, v in ipairs(var) do
-		str = str .. helpers.QuoteToken(v)
-
-		if i == #var - 1 then
-			str = str .. " or "
-		elseif i ~= #var then
-			str = str .. ", "
-		end
-	end
-
-	return str
-end
 
 function helpers.LinePositionToSubPosition(code--[[#: string]], line--[[#: number]], character--[[#: number]])--[[#: number]]
 	local line_pos = 1
@@ -157,8 +139,8 @@ do
 		local args
 		local fmt = function(num--[[#: string]])
 			num = tonumber(num)
-			if type(args[num]) == "table" then return helpers.QuoteTokens(args[num]) end
-			return helpers.QuoteToken(args[num] or "?")
+			if type(args[num]) == "table" then return quote.QuoteTokens(args[num]) end
+			return quote.QuoteToken(args[num] or "?")
 		end
 
 		function helpers.FormatMessage(msg--[[#: string]], ...)
@@ -340,7 +322,7 @@ function helpers.GetDataFromLineCharPosition(tokens--[[#: {[number] = Token}]], 
         if not found then
 			if token.whitespace then
 				for _, token in ipairs(token.whitespace) do
-					if token.stop >= sub_pos--[[ and token.stop <= sub_pos]] then
+					if token.stop >= sub_pos then
 						found = true
 
 						break

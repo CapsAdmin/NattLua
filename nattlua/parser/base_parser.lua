@@ -43,7 +43,7 @@ return function(META)
 			local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
 
 			if self.value and type(self.value.value) == "string" then
-				str = str .. ": " .. require("nattlua.other.helpers").QuoteToken(self.value.value)
+				str = str .. ": " .. require("nattlua.other.quote").QuoteToken(self.value.value)
 			end
 
 			return str

@@ -18,21 +18,7 @@ return function(META--[[#: {
 }]])
 	META.__index = META
 
-    --[[
-        type META.literal = boolean
-        type META.data = any
-        type META.Contract = any
-        type META.MetaTable = any
-        type META.parent = any
-        type META.reference_id = number
-        type META.source_right = any
-        type META.source_left = any
-        type META.source = any
-        type META.node = any
-        type META.node_label = any
-    ]]
-
-    function META:IsUncertain()
+	function META:IsUncertain()
 		return self:IsTruthy() and self:IsFalsy()
 	end
 

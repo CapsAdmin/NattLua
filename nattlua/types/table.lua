@@ -249,16 +249,6 @@ function META:Contains(key)
 end
 
 function META:FindKeyVal(key)
-	--[[
-		local tbl = {
-			number = "foo"
-		}
-		local key = 1
-	
-		-- number:IsSubsetOf(1)	
-		assert(tbl:FindKeyVal(key) == nil)
-	]]
-
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -276,15 +266,6 @@ function META:FindKeyVal(key)
 end
 
 function META:FindKeyValReverse(key)
-	--[[
-		local tbl = {
-			number = "foo"
-		}
-		local key = 1
-	
-		-- 1:IsSubsetOf(number)	
-		assert(tbl:FindKeyValReverse(key) == 1)
-	]]
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do

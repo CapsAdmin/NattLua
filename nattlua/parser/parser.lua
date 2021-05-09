@@ -378,7 +378,7 @@ do -- expression
 			for i, token in ipairs(node.whitespace) do
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table.remove(node.whitespace, i)
-					local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
+					local tokens = require("nattlua.lexer.lua")("/idiv" .. token.value:sub(2)):GetTokens()
 
 					for _, token in ipairs(tokens) do
 						self:CheckForIntegerDivisionOperator(token)
@@ -531,7 +531,7 @@ do -- expression
 			token.type == "end_of_file" or
 			token.value == "}" or
 			token.value == "," or
-            --[[token.value == "[" or]] token.value == "]" or
+			token.value == "]" or
 			(
 				syntax.IsKeyword(token) and
 				not syntax.IsPrefixOperator(token) and

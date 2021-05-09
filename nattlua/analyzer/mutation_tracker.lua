@@ -1,10 +1,3 @@
---[[
-    this has probably been the most difficult part about the analyzer
-    the code here is not very elegant and i strongly favor readable code over optimizations
-
-    i hope that there's a much simpler way of doing this that will become apparent sometime
-]]
-
 local types = require("nattlua.types.types")
 local META = {}
 META.__index = META
@@ -39,19 +32,8 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 	end
 
 	do
-		do --[[
-			walk from last to first mutation
-
-			^    local x = 1
-			^
-			2    x = 1 << repeated mutation is redudant
-			^    ...
-			1    x = 2
-			^
-			>    x == 2
-			]]
-
-            local last_scope
+		do
+			local last_scope
 
 			for i = #mutations, 1, -1 do
 				local mut = mutations[i]
@@ -71,21 +53,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 		for i = #mutations, 1, -1 do
 			local mut = mutations[i]
 
-            --[[
-                if we're inside an if statement, we know for sure that the other parts of that if statements have not been hit
-
-                local x = 1
-
-                if maybe then
-                    x = 2 << discard
-                elseif maybe then
-            1        x = 3 << discard
-            ^   else
-            >       x = 4
-                end
-            >> x = 
-            ]]
-            if same_if_statement(scope, mut.scope) and scope ~= mut.scope then
+			if same_if_statement(scope, mut.scope) and scope ~= mut.scope then
 				if DEBUG then
 					dprint(mut, "not inside the same if statement")
 				end
@@ -94,21 +62,8 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 			end
 		end
 
-		do --[[
-            if mutations occured in an if statement that has an else part, remove all mutations before the entire if statement
-            but only if we are a sibling of the if statement's scope
-
-            local x = 1 << discard
-             
-            if maybe then
-                x = 2
-            else
-                x = 3
-            end
-
-        >>  x == 2 | 3
-        ]] 
-            for i = #mutations, 1, -1 do
+		do
+			for i = #mutations, 1, -1 do
 				local mut = mutations[i]
 
 				if mut.scope.if_statement and mut.scope.test_condition_inverted then
@@ -139,22 +94,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 		end
 
 		do
-            --[[
-                make scopes that use the same test condition certrain
-
-                local x = 1
-                local test = maybe
-
-                if test then  << this becomes certain from the other scopes point of view
-                    x = 2
-                end
-
-                if test then
-            >>      x == 2    
-                end
-            ]]
-
-            local test_a = scope:GetTestCondition()
+			local test_a = scope:GetTestCondition()
 
 			if test_a then
 				for _, mut in ipairs(mutations) do
@@ -186,16 +126,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 		local value = mut.value
 
 		do
-            --[[
-                local x: nil | true
-
-                if not x then
-                    x = true
-                end
-
-            >>  x == true
-            ]]
-            local scope, scope_union = mut.scope:FindScopeFromTestCondition(value)
+			local scope, scope_union = mut.scope:FindScopeFromTestCondition(value)
 
 			if scope and mut.scope == scope then
 				local test, inverted = scope:GetTestCondition()
@@ -245,18 +176,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 	end
 
 	if value.Type == "union" then
-        --[[
-
-            this is only for when unions have been tested for
-
-            local x = true | false
-
-            if x then
-        >>      x == true
-            end
-        ]]
-
-        local scope, union = scope:FindScopeFromTestCondition(value)
+		local scope, union = scope:FindScopeFromTestCondition(value)
 
 		if scope then
 			local current_scope = scope
