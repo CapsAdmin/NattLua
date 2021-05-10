@@ -435,3 +435,23 @@ run[[
     local type ret = return_type<|meta.Foo|>
     type_assert<|ret, 2 | 3|>
 ]]
+
+run[[
+    local META = {}
+    META.__index = META
+
+    type META.@Self = {
+        Foo = number
+    }
+
+    function META:GetBar()
+        return 1337
+    end
+
+    function META:GetFoo()
+        return self.Foo + self:GetBar()
+    end
+
+    local s = setmetatable({Foo = 1337}, META)
+    type_assert(s:GetFoo(), _ as number)
+]]

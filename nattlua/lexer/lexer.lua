@@ -5,10 +5,12 @@ local ipairs = ipairs
 local META = {}
 META.__index = META
 --[[#type META.@Name = "Lexer"]]
---[[#type META.Buffer = string]]
---[[#type META.Position = number]]
---[[#type META.name = string]]
---[[#type META.BufferLength = number]]
+--[[#type META.@Self = {
+		Buffer = string,
+		Position = number,
+		name = string,
+		BufferLength = number,
+	}]]
 local B = string.byte
 
 function META:GetLength()--[[#: number]]
@@ -20,11 +22,11 @@ function META:GetChars(start--[[#: number]], stop--[[#: number]])--[[#: string]]
 end
 
 function META:GetChar(offset--[[#: number]])--[[#: number]]
-	return self.Buffer:byte(self.Position + offset)
+	return (self.Buffer:byte(self.Position + offset))
 end
 
 function META:GetCurrentChar()--[[#: number]]
-	return self.Buffer:byte(self.Position)
+	return (self.Buffer:byte(self.Position))
 end
 
 function META:ResetState()
@@ -93,7 +95,7 @@ do
 				whitespace = false,
 				start = 0,
 				stop = 0,
-			}
+			} --[[# as Token]]
 	end, 3105585)
 
 	function META:NewToken(type--[[#: TokenType]], is_whitespace--[[#: boolean]], start--[[#: number]], stop--[[#: number]])--[[#: Token]]
@@ -138,7 +140,7 @@ function META:Read()
 	return self:ReadUnknown()
 end
 
-function META:ReadSimple()
+function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
 	local start = self.Position
 	local type, is_whitespace = self:Read()
@@ -153,11 +155,13 @@ function META:ReadSimple()
 		type, is_whitespace = self:ReadUnknown()
 	end
 
+	is_whitespace = is_whitespace or false
 	return type, is_whitespace, start, self.Position - 1
 end
 
 function META:ReadToken()
-	return self:NewToken(self:ReadSimple())
+	local a, b, c, d = self:ReadSimple() -- TODO: unpack not working
+	return self:NewToken(a, b, c, d)
 end
 
 function META:GetTokens()
@@ -216,7 +220,12 @@ local function remove_bom_header(str--[[#: string]])--[[#: string]]
 end
 
 function META.New(code--[[#: string]])
-	local self = setmetatable({}, META)
+	local self = setmetatable({
+		Buffer = "",
+		name = "",
+		BufferLength = 0,
+		Position = 0,
+	}, META)
 	self.Buffer = remove_bom_header(code)
 	self.BufferLength = #self.Buffer
 	self:ResetState()

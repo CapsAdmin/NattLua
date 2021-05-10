@@ -583,9 +583,14 @@ do -- globals
 
 	type function setmetatable(tbl, meta)
 		if meta.Type == "table" then			
-			meta.potential_self = meta.potential_self or types.Union({})
-			meta.potential_self:AddType(tbl)
-			
+			if meta.Self then
+				analyzer:Assert(tbl.node, tbl:IsSubsetOf(meta.Self))
+				tbl:CopyLiteralness(meta.Self)
+			else
+				meta.potential_self = meta.potential_self or types.Union({})
+				meta.potential_self:AddType(tbl)
+			end
+				
 			tbl:SetMetaTable(meta)
 		end
 

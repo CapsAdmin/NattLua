@@ -11,7 +11,7 @@ return
 				lexer:IsValue("#", 4)
 			then
 				lexer:Advance(5)
-				lexer.comment_escape = string.char(lexer:GetCurrentChar())
+				lexer.comment_escape = true
 				return "comment_escape"
 			end
 

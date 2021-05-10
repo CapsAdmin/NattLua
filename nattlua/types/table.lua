@@ -4,6 +4,16 @@ local META = {}
 META.Type = "table"
 require("nattlua.types.base")(META)
 
+function META:SetSelf(tbl)
+	tbl:SetMetaTable(self)
+	tbl.mutable = true
+	self.Self = tbl
+end
+
+function META:GetSelf()
+	return self.Self
+end
+
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 	if a:IsUnique() then return a:GetUniqueID() == b:GetUniqueID() end
@@ -392,6 +402,7 @@ end
 
 function META:Get(key)
 	key = types.Cast(key)
+	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then return self["Get" .. key:GetData():sub(2)](self) end
 
 	if key.Type == "union" then
 		local union = types.Union({})

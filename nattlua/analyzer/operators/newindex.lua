@@ -32,7 +32,9 @@ return function(META)
 		if val.Type == "function" and val:GetNode().self_call then
 			local arg = val:GetArguments():Get(1)
 
-			if not arg:GetContract() then
+			if obj.Self then
+				val:GetArguments():Set(1, obj:GetSelf())
+			elseif not arg:GetContract() then
 				val.called = true
 				val = val:Copy()
 				val:GetArguments():Set(1, types.Union({types.Any(), obj}))
@@ -51,7 +53,12 @@ return function(META)
 			end
 		end
 
-		if obj.Type == "table" and obj.argument_index and (not obj:GetContract() or not obj:GetContract().mutable) then
+		if
+			obj.Type == "table" and
+			obj.argument_index and
+			(not obj:GetContract() or not obj:GetContract().mutable) and
+			not obj.mutable
+		then
 			if not obj:GetContract() then
 				self:Warning(
 					node,

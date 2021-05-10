@@ -10,7 +10,9 @@ local type TokenType =
     "space" |
     "symbol" |
     "end_of_file" | 
-    "shebang"
+    "shebang" |
+    "discard" |
+    "unknown"
 
 local type Token = {
     @Name = "Token",
