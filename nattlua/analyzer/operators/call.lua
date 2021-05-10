@@ -498,7 +498,35 @@ return function(META)
 			end
 		end
 
-		if debug.getinfo(100) then return false, "call stack is too deep" end
+		if debug.getinfo(300) then
+			local level = 1
+			print("Trace:")
+
+			while true do
+				local info = debug.getinfo(level, "Sln")
+				if not info then break end
+
+				if info.what == "C" then
+					print(string.format("\t%i: C function\t\"%s\"", level, info.name))
+				else
+					local path = info.source
+
+					if path:sub(1, 1) == "@" then
+						path = path:sub(2)
+					else
+						path = info.short_src
+					end
+
+					print(string.format("%i: %s\t%s:%s\t", level, info.name, path, info.currentline))
+				end
+
+				level = level + 1
+			end
+
+			print("")
+			return false, "call stack is too deep"
+		end
+
 		table.insert(
 			self.call_stack,
 			{
