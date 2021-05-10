@@ -1,6 +1,6 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
-return function(lexer--[[#: Lexer]]) --[[#: TokenReturnType ]]
+return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 	if lexer:IsValue("/", 0) and lexer:IsValue("*", 1) then
 		lexer:Advance(2)
 

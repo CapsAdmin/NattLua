@@ -11,7 +11,10 @@ local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 		lexer:Advance(1)
 
 		if not syntax.IsNumber(lexer:GetCurrentChar()) then
-			lexer:Error("malformed " .. what .. " expected number, got " .. string.char(lexer:GetCurrentChar()), lexer.Position - 2)
+			lexer:Error(
+				"malformed " .. what .. " expected number, got " .. string.char(lexer:GetCurrentChar()),
+				lexer.Position - 2
+			)
 			return false
 		end
 	end
@@ -130,7 +133,7 @@ local function read_decimal_number(lexer--[[#: Lexer]])
 	end
 end
 
-return function(lexer--[[#: Lexer]]) --[[#: TokenReturnType ]]
+return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 	if
 		syntax.IsNumber(lexer:GetCurrentChar()) or
 		(lexer:IsCurrentValue(".") and syntax.IsNumber(lexer:GetChar(1)))

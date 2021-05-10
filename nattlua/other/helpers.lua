@@ -1,7 +1,6 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
 
 local quote = require("nattlua.other.quote")
-
 local helpers = {}
 
 function helpers.LinePositionToSubPosition(code--[[#: string]], line--[[#: number]], character--[[#: number]])--[[#: number]]

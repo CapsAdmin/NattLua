@@ -1,7 +1,5 @@
-
 local load = loadstring or load
-
-return function (tbl--[[#: {[number] = string}]], lower--[[#: boolean]])
+return function(tbl--[[#: {[number] = string}]], lower--[[#: boolean]])
 	local copy = {}
 	local done = {}
 

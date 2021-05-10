@@ -1,7 +1,7 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
 local syntax = require("nattlua.syntax.syntax")
-return function(lexer--[[#: Lexer]]) --[[#: TokenReturnType ]]
+return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 	if syntax.IsSpace(lexer:GetCurrentChar()) then
 		while not lexer:TheEnd() do
 			lexer:Advance(1)

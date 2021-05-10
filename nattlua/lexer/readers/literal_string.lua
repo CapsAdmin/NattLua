@@ -1,7 +1,6 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
 local helpers = require("nattlua.other.quote")
-
 return function(lexer--[[#: Lexer]], multiline_comment--[[#: boolean]])--[[#: Tuple<|boolean|> | Tuple<|false, string|>]]
 	local start = lexer.Position
 	lexer:Advance(1)

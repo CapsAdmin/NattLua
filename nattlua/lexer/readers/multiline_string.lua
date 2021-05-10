@@ -1,7 +1,7 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
 local read_literal_string = require("nattlua.lexer.readers.literal_string")
-return function(lexer--[[#: Lexer]]) --[[#: TokenReturnType ]]
+return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 	if lexer:IsValue("[", 0) and (lexer:IsValue("[", 1) or lexer:IsValue("=", 1)) then
 		local start = lexer.Position
 		local ok, err = read_literal_string(lexer, false)

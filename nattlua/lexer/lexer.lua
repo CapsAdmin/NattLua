@@ -4,12 +4,10 @@ local table_pool = require("nattlua.other.table_pool")
 local ipairs = ipairs
 local META = {}
 META.__index = META
---[[#
-	type META.Buffer = string
-	type META.Position = number
-	type META.name = string
-	type META.BufferLength = number
-]]
+--[[#type META.Buffer = string]]
+--[[#type META.Position = number]]
+--[[#type META.name = string]]
+--[[#type META.BufferLength = number]]
 local B = string.byte
 
 function META:GetLength()--[[#: number]]
@@ -53,7 +51,7 @@ function META:SetPosition(i--[[#: number]])
 	self.Position = i
 end
 
-function META:TheEnd() --[[#: boolean]]
+function META:TheEnd()--[[#: boolean]]
 	return self.Position > self:GetLength()
 end
 
@@ -137,7 +135,6 @@ end
 
 function META:ReadSimple()
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
-	
 	local start = self.Position
 	local type, is_whitespace = self:Read()
 

@@ -1,6 +1,6 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
-return function(lexer--[[#: Lexer]]) --[[#: TokenReturnType ]]
+return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 	if lexer:IsCurrentValue("§") then
 		lexer:Advance(1)
 
