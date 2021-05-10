@@ -8,7 +8,9 @@ local type TokenType =
     "string" |
     "number" |
     "space" |
-    "symbol"
+    "symbol" |
+    "end_of_file" | 
+    "shebang"
 
 local type Token = {
     @Name = "Token",

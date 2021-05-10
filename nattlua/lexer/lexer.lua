@@ -61,11 +61,11 @@ function META:TheEnd()--[[#: boolean]]
 end
 
 function META:IsValue(what--[[#: string]], offset--[[#: number]])--[[#: boolean]]
-	return self:IsByte(B(what), offset)
+	return self:IsByte((B(what)), offset)
 end
 
 function META:IsCurrentValue(what--[[#: string]])--[[#: boolean]]
-	return self:IsCurrentByte(B(what))
+	return self:IsCurrentByte((B(what)))
 end
 
 function META:IsCurrentByte(what--[[#: number]])--[[#: boolean]]
@@ -134,7 +134,7 @@ function META:ReadUnknown()
 	return "unknown", false
 end
 
-function META:Read()--[[#: string,boolean]]
+function META:Read()
 	return self:ReadUnknown()
 end
 
@@ -215,7 +215,7 @@ local function remove_bom_header(str--[[#: string]])--[[#: string]]
 	return str
 end
 
-function META:New(code--[[#: string]]) 
+function META.New(code--[[#: string]])
 	local self = setmetatable({}, META)
 	self.Buffer = remove_bom_header(code)
 	self.BufferLength = #self.Buffer

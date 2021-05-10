@@ -45,6 +45,4 @@ do
 	end
 end
 
-return function(code--[[#: string]])
-	return META:New(code)
-end
+return META.New
