@@ -4,6 +4,7 @@ local table_pool = require("nattlua.other.table_pool")
 local ipairs = ipairs
 local META = {}
 META.__index = META
+--[[#type META.@Name = "Lexer"]]
 --[[#type META.Buffer = string]]
 --[[#type META.Position = number]]
 --[[#type META.name = string]]
@@ -214,7 +215,7 @@ local function remove_bom_header(str--[[#: string]])--[[#: string]]
 	return str
 end
 
-function META:New(code--[[#: string]])
+function META:New(code--[[#: string]]) 
 	local self = setmetatable({}, META)
 	self.Buffer = remove_bom_header(code)
 	self.BufferLength = #self.Buffer
