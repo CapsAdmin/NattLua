@@ -505,6 +505,11 @@ do -- globals
             analyzer.lua_error_thrown = nil
             return types.False(), err
         end
+		local err = analyzer.lua_assert_error_thrown
+        if err then
+            analyzer.lua_assert_error_thrown = nil
+            return types.False(), err.msg
+        end
 		return types.True(), res:Unpack()
     end
 

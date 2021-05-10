@@ -88,6 +88,8 @@ return function(META)
 
 			arguments = add_potential_self(arguments)
 			self:Assert(node, self:Call(obj, arguments, node))
+			self.lua_assert_error_thrown = nil
+			self.lua_error_thrown = nil
 		end
 
 		function META:CallMeLater(...)

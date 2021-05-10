@@ -437,6 +437,12 @@ do
         type_assert(ok, false)
         type_assert(table_new, "ok")
     ]]
+    run[[
+        local ok, err = pcall(function() assert(false, "LOL") end)
+
+        type_assert(ok, false)
+        type_assert(err, "LOL")
+    ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
 run[[

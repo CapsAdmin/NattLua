@@ -609,3 +609,25 @@ R[[
 
     §assert(env.runtime.x:Equal(env.runtime.x:Copy()))
 ]]
+
+R[[
+    -- this has to do with the analyzer 
+    -- not clearing self.lua_error_thrown when analyzing unreachable code
+
+    local function build(name: string)
+        return function()
+            while math.random() > 0.5 do end
+            type_assert(name, _ as string)
+        end
+    end
+    
+    local function lol(tbl: {[number] = string})
+        return assert(loadstring("kernel"))
+    end
+    
+    local foo = build("double")
+    
+    local function Read()    
+        foo()
+    end
+]]

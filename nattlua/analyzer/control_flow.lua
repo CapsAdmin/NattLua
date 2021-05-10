@@ -169,7 +169,7 @@ return function(META)
 		obj.mutations[key]:Mutate(val, scope)
 	end
 
-	function META:OnExitConditionalScope(data)
+	function META:OnExitConditionalScope()
 		local exited_scope = self:GetLastScope()
 		local current_scope = self:GetScope()
 
@@ -184,6 +184,9 @@ return function(META)
 				local copy = self:CloneCurrentScope()
 				copy:SetTestCondition(exited_scope:GetTestCondition())
 			end
+
+			self.lua_assert_error_thrown = nil
+			self.lua_error_thrown = nil
 		end
 	end
 end
