@@ -7,7 +7,7 @@ local escape_character = B([[\]])
 local function build_string_reader(name--[[#: string]], quote--[[#: string]])
 	return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if not lexer:IsCurrentValue(quote) then return false end
-		local start = lexer.Position
+		local start = lexer:GetPosition()
 		lexer:Advance(1)
 
 		while not lexer:TheEnd() do
@@ -21,7 +21,7 @@ local function build_string_reader(name--[[#: string]], quote--[[#: string]])
 				end
 			elseif char == B("\n") then
 				lexer:Advance(-1)
-				lexer:Error("expected " .. name:lower() .. " quote to end", start, lexer.Position - 1)
+				lexer:Error("expected " .. name:lower() .. " quote to end", start, lexer:GetPosition() - 1)
 				return "string"
 			elseif char == B(quote) then
 				return "string"
@@ -31,7 +31,7 @@ local function build_string_reader(name--[[#: string]], quote--[[#: string]])
 		lexer:Error(
 			"expected " .. name:lower() .. " quote to end: reached end of file",
 			start,
-			lexer.Position - 1
+			lexer:GetPosition() - 1
 		)
 		return "string"
 	end

@@ -13,7 +13,7 @@ local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 		if not syntax.IsNumber(lexer:GetCurrentChar()) then
 			lexer:Error(
 				"malformed " .. what .. " expected number, got " .. string.char(lexer:GetCurrentChar()),
-				lexer.Position - 2
+				lexer:GetPosition() - 2
 			)
 			return false
 		end

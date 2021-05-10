@@ -1,6 +1,5 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
-local read_literal_string = require("nattlua.lexer.readers.literal_string")
 return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 	if
 		lexer:IsValue("-", 0) and
@@ -8,22 +7,31 @@ return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		lexer:IsValue("[", 2) and
 		(lexer:IsValue("[", 3) or lexer:IsValue("=", 3))
 	then
-		local start = lexer.Position
-		lexer:Advance(2)
-		local ok, err = read_literal_string(lexer, true)
+		local start = lexer:GetPosition()
+		lexer:Advance(3)
 
-		if not ok then
-			if err then
-				lexer:Error("expected multiline comment to end: " .. err, start, start + 1)
-				lexer:SetPosition(start + 2)
-			else
-				lexer:SetPosition(start)
+		if lexer:IsCurrentValue("=") then
+			while not lexer:TheEnd() do
+				lexer:Advance(1)
+				if not lexer:IsCurrentValue("=") then break end
 			end
+		end
 
+		if not lexer:IsCurrentValue("[") then
+			lexer:SetPosition(start)
 			return false
 		end
 
-		return "multiline_comment"
+		lexer:Advance(1)
+		local pos = lexer:FindNearest("]" .. string.rep("=", (lexer:GetPosition() - start) - 4) .. "]")
+
+		if pos then
+			lexer:SetPosition(pos)
+			return "multiline_comment"
+		end
+
+		lexer:Error("expected multiline comment to end, reached end of code", start, start + 1)
+		lexer:SetPosition(start + 2)
 	end
 
 	return false

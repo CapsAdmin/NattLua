@@ -32,7 +32,7 @@ end
 
 function META:FindNearest(str--[[#: string]])
 	local _, stop = self.Buffer:find(str, self.Position, true)
-	if stop then return stop - self.Position + 1 end
+	if stop then return stop + 1 end
 	return false
 end
 
@@ -49,6 +49,10 @@ end
 
 function META:SetPosition(i--[[#: number]])
 	self.Position = i
+end
+
+function META:GetPosition()
+	return self.Position
 end
 
 function META:TheEnd()--[[#: boolean]]
