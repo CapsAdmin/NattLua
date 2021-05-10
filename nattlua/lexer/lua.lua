@@ -1,6 +1,6 @@
 local META = dofile("nattlua/lexer/lexer.lua")
 --[[#type META.comment_escape = boolean]]
---[[#type Lexer = typeofMETA]]
+--[[#type Lexer = typeof META]]
 META.comment_escape = false
 
 do

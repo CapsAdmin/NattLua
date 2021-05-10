@@ -491,6 +491,7 @@ function META:EmitPrefixOperator(node)
 			self:EmitExpression(node.right)
 		else
 			self:EmitToken(node.value)
+			self:OptionalWhitespace()
 			self:EmitExpression(node.right)
 		end
 	end
