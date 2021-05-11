@@ -1,8 +1,5 @@
 local META = dofile("nattlua/lexer/lexer.lua")
---[[#type META.@Self.comment_escape = boolean]]
 --[[#type Lexer = META.@Self]]
-META.comment_escape = false
-
 do
 	local space = require("nattlua.lexer.readers.space")
 	local letter = require("nattlua.lexer.readers.letter")

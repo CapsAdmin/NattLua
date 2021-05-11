@@ -81,11 +81,6 @@ return function(META)
 		local function call(self, obj, arguments, node)
             -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
             arguments = obj:GetArguments():Copy()
-            -- arguments should be a contract
-            for i, v in ipairs(arguments:GetData()) do
-				v:SetContract(v)
-			end
-
 			arguments = add_potential_self(arguments)
 			self:Assert(node, self:Call(obj, arguments, node))
 			self.lua_assert_error_thrown = nil
