@@ -148,9 +148,11 @@ function META:FollowsContract(contract)
 			res, err = self:GetMetaTable():FindKeyVal(keyval.key)
 		end
 
-		if not res then return res, err end
-		local ok, err = res.val:IsSubsetOf(keyval.val)
-		if not ok then return ok, err end
+		if not types.Nil():IsSubsetOf(keyval.val) then
+			if not res then return res, err end
+			local ok, err = res.val:IsSubsetOf(keyval.val)
+			if not ok then return ok, err end
+		end
 	end
 
 	return true
@@ -188,11 +190,13 @@ function META.IsSubsetOf(A, B)
 
 		for _, akeyval in ipairs(A:GetData()) do
 			local bkeyval, reason = B:FindKeyValReverse(akeyval.key)
-			if not bkeyval then return bkeyval, reason end
-			A.suppress = true
-			local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
-			A.suppress = false
-			if not ok then return type_errors.subset(akeyval.val, bkeyval.val, err) end
+			if not types.Nil():IsSubsetOf(akeyval.val) then
+				if not bkeyval then return bkeyval, reason end
+				A.suppress = true
+				local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
+				A.suppress = false
+				if not ok then return type_errors.subset(akeyval.val, bkeyval.val, err) end
+			end
 		end
 
 		return true

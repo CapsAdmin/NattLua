@@ -568,6 +568,23 @@ run[[
     foo({})
 ]]
 
+run[[
+    local type MyTable = {foo = number}
+
+    local function foo(tbl: MyTable & {bar = boolean | nil})
+        type_assert<|tbl.foo, number|>
+        type_assert<|tbl.bar, boolean | nil|>
+        return tbl
+    end
+
+    local tbl = foo({
+        foo = 1337
+    })
+
+    type_assert<|tbl.foo, number|>
+    type_assert<|tbl.bar, boolean | nil|>
+]]
+
 pending[[
     -- strange error
     type foo = (function(

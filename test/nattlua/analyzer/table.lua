@@ -605,3 +605,11 @@ run[[
     local tbl = _ as {foo = true} | {foo = false}
     type_assert<|tbl.foo, true | false|>
 ]]
+
+run[[
+    local type function test(a, b)
+        analyzer:Assert(analyzer.current_expression, b:IsSubsetOf(a))
+    end
+    
+    test(_ as {foo = number}, _ as {foo = number, bar = nil | number})
+]]
