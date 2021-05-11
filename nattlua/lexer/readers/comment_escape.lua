@@ -3,7 +3,6 @@
 return
 	{
 		read = function(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
-
 			if
 				lexer:IsValue("-", 0) and
 				lexer:IsValue("-", 1) and

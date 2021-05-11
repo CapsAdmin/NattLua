@@ -190,6 +190,7 @@ function META.IsSubsetOf(A, B)
 
 		for _, akeyval in ipairs(A:GetData()) do
 			local bkeyval, reason = B:FindKeyValReverse(akeyval.key)
+
 			if not types.Nil():IsSubsetOf(akeyval.val) then
 				if not bkeyval then return bkeyval, reason end
 				A.suppress = true

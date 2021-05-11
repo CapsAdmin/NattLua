@@ -1,5 +1,6 @@
 local META = dofile("nattlua/lexer/lexer.lua")
 --[[#type Lexer = META.@Self]]
+
 do
 	local space = require("nattlua.lexer.readers.space")
 	local letter = require("nattlua.lexer.readers.letter")
