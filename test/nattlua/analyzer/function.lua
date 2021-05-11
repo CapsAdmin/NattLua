@@ -585,6 +585,28 @@ run[[
     type_assert<|tbl.bar, boolean | nil|>
 ]]
 
+run[[
+    local meta = {}
+    meta.__index = meta
+    type meta.@Self = {foo = number}
+
+    local function test(tbl: meta.@Self & {bar = boolean | nil})
+        return tbl:Foo() + 1
+    end
+
+    function meta:Foo()
+        type_assert<|self.foo, number|>
+        return 1336
+    end
+
+    local obj = setmetatable({
+        foo = 1
+    }, meta)
+
+    type_assert(obj:Foo(), 1336)
+    type_assert(test(obj), 1337)
+]]
+
 pending[[
     -- strange error
     type foo = (function(
