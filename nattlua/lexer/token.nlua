@@ -1,29 +1,36 @@
 
-local type TokenType =
+local type TokenWhitespaceType =
     "line_comment" |
     "multiline_comment" |
     "comment_escape" |
+    "space"
+
+local type TokenType =
     "type_code" |
     "letter" |
     "string" |
     "number" |
-    "space" |
     "symbol" |
-    "end_of_file" | 
+    "end_of_file" |
     "shebang" |
     "discard" |
-    "unknown"
+    "unknown" |
+    TokenWhitespaceType
 
 local type Token = {
     @Name = "Token",
+
     type = TokenType,
     value = string,
     start = number,
     stop = number,
-    is_whitespace = boolean,
-    whitespace = false | {
-        [number] = {
-            type = string,
+
+    is_whitespace = boolean | nil,
+    whitespace = nil |
+    {
+        [1 .. inf] = {
+            type = TokenWhitespaceType,
+            value = string,
             start = number,
             stop = number,
         }

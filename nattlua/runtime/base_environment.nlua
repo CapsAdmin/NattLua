@@ -966,7 +966,7 @@ do
 		new = (function(number, number): {[number] = any}),
 	}
 
-	type function table.concat(tbl: {[1 .. inf] = string}, separator: string | nil) 
+	type function table.concat(tbl: {[1 .. inf] = string} | {}, separator: string | nil) 
 		if not tbl:IsLiteral() then
 			return types.String()
 		end
