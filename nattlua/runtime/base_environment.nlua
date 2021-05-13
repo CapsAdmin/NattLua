@@ -470,11 +470,11 @@ do -- globals
 		})
 	end
 
-	type function rawset(tbl: {[any] = any}, key: any, val: any)
+	type function rawset(tbl: {[any] = any} | {}, key: any, val: any)
 		tbl:Set(key, val, true)
 	end
 
-	type function rawget(tbl: {[any] = any}, key: any)
+	type function rawget(tbl: {[any] = any} | {}, key: any)
 		local t, err = tbl:Get(key, true)
 		if t then
 			return t
@@ -966,7 +966,9 @@ do
 		new = (function(number, number): {[number] = any}),
 	}
 
-	type function table.concat(tbl: {[1 .. inf] = string}, separator: string | nil) 
+	local type List = {[1 .. inf] = any} | {}
+
+	type function table.concat(tbl: List, separator: string | nil) 
 		if not tbl:IsLiteral() then
 			return types.String()
 		end
@@ -986,7 +988,7 @@ do
 		return table.concat(out, separator and separator:GetData() or nil)
 	end
 
-	type function table.insert(tbl: {[1 .. inf] = any}, ...)
+	type function table.insert(tbl: List, ...)
         if not tbl:IsLiteral() then return end
         
 		local pos, val = ...
@@ -1001,7 +1003,7 @@ do
 		tbl:Set(pos, val)
 	end
 
-	type function table.remove(tbl: {[1 .. inf] = any}, index: number | nil)
+	type function table.remove(tbl: List, index: number | nil)
         if not tbl:IsLiteral() then return end
         if index and not index:IsLiteral() then return end
 		index = index or 1
@@ -1009,7 +1011,7 @@ do
 		table.remove(pos:GetData(), index:GetData())
 	end
 
-	type function table.sort(tbl, func)
+	type function table.sort(tbl:  List, func)
 		local union = types.Union()
 
 		if tbl.Type == "tuple" then
@@ -1028,11 +1030,11 @@ do
         func.arguments_inferred = true
 	end
 
-	type function table.getn(tbl: table)
+	type function table.getn(tbl: List)
 		return tbl:GetLength()
 	end
 
-	type function table.unpack(tbl: {[number] = any})
+	type function table.unpack(tbl: List)
 		local t = {}
 	    for i = 1, 32 do
 			local v = tbl:Get(i)

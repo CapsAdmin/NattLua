@@ -129,7 +129,7 @@ function META:FollowsContract(contract)
 			contract.suppress = true
 
 			for _, keyval in ipairs(contract:GetData()) do
-				if not types.Nil():IsSubsetOf(keyval.val) then
+				if not keyval.val:CanBeNil() then
 					can_be_empty = false
 
 					break
@@ -169,7 +169,7 @@ function META.IsSubsetOf(A, B)
 		A.suppress = true
 
 		for _, keyval in ipairs(B:GetData()) do
-			if not types.Nil():IsSubsetOf(keyval.val) then
+			if not keyval.val:CanBeNil() then
 				can_be_empty = false
 
 				break

@@ -16,7 +16,7 @@ run([[
 ]])
 
 run[[
-    local type function unknown(tbl: {[any] = any})
+    local type function unknown(tbl: {[any] = any} | {} )
         tbl:Set("foo", "bar")
     end
     
