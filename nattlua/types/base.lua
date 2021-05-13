@@ -233,6 +233,10 @@ return function(META--[[#: {
 		return self.data
 	end
 
+	function META:HasNil()
+		return false
+	end
+
 	function META:New(data)
 		local self = setmetatable({data = data,}, getmetatable(self))
 

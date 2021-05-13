@@ -455,3 +455,17 @@ run[[
     local s = setmetatable({Foo = 1337}, META)
     type_assert(s:GetFoo(), _ as number)
 ]]
+
+run([[
+    local META = {}
+    META.__index = META
+
+    type META.@Self = {
+        foo = {[number] = string},
+        i = number,
+    }
+
+    function META:Lol()
+        self.foo[self.i] = {"bad type"}
+    end
+]], "bad type.-is not a subset of string")

@@ -49,8 +49,22 @@ return function(META)
 			if self and self.Type == "union" then
 				self = self:GetType("table")
 			end
+			
+			if self and self.Self then
+				local self = self.Self
 
-			if self and self.potential_self then
+				local new_tup = types.Tuple({})
+
+				for i, obj in ipairs(tup:GetData()) do
+					if i == 1 then
+						new_tup:Set(i, self)
+					else
+						new_tup:Set(i, obj)
+					end
+				end
+
+				return new_tup
+			elseif self and self.potential_self then
 				local meta = self
 				local self = self.potential_self:Copy()
 

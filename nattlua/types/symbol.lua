@@ -7,6 +7,10 @@ function META.Equal(a, b)
 	return a.Type == b.Type and a:GetData() == b:GetData()
 end
 
+function META:HasNil()
+	return self:GetData() == nil
+end
+
 function META:GetLuaType()
 	return type(self:GetData())
 end
