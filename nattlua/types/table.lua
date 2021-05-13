@@ -165,7 +165,7 @@ function META:FollowsContract(contract)
 		if not res and self:GetMetaTable() then
 			res, err = self:GetMetaTable():FindKeyVal(keyval.key)
 		end
-		if not keyval.val:HasNil() then
+		if not keyval.val:CanBeNil() then
 			if not res then return res, err end
 			local ok, err = res.val:IsSubsetOf(keyval.val)
 			if not ok then return ok, err end
