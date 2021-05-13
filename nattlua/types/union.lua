@@ -261,7 +261,7 @@ function META:HasType(typ)
 	return self:GetType(typ) ~= false
 end
 
-function META:HasNil()
+function META:CanBeNil()
 	for _, obj in ipairs(self.data) do
 		if obj.Type == "symbol" and obj:GetData() == nil then return true end
 	end

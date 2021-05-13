@@ -282,7 +282,7 @@ function META:GetMinimumLength()
 	for i = #self:GetData(), 1, -1 do
 		local obj = self:GetData()[i]
 
-		if obj.Type == "union" and obj:HasNil() then
+		if obj.Type == "union" and obj:CanBeNil() then
 			found_nil = true
 			len = i - 1
 		elseif found_nil then

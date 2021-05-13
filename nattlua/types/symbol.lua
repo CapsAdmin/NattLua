@@ -21,6 +21,10 @@ function META:Copy()
 	return copy
 end
 
+function META:CanBeNil()
+	return self:GetData() == nil
+end
+
 function META.IsSubsetOf(A, B)
 	if B.Type == "tuple" and B:GetLength() == 1 then
 		B = B:Get(1)

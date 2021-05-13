@@ -86,6 +86,10 @@ return function(META--[[#: {
 		return self.Name
 	end
 
+	function META:CanBeNil()
+		return false
+	end
+
 	META.literal = false
 
 	do

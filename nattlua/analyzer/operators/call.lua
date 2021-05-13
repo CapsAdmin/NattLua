@@ -72,7 +72,7 @@ return function(META)
 				b = false
 			end
 
-			if arg.Type == "union" and contract.Type == "union" and contract:HasNil() then
+			if arg.Type == "union" and contract.Type == "union" and contract:CanBeNil() then
 				b = true
 			end
 

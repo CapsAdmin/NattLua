@@ -214,7 +214,7 @@ function META:ContainsAllKeysIn(contract)
 			if not ok then
 				if
 					(keyval.val.Type == "symbol" and keyval.val:GetData() == nil) or
-					(keyval.val.Type == "union" and keyval.val:HasNil())
+					(keyval.val.Type == "union" and keyval.val:CanBeNil())
 				then
 					return true
 				end
