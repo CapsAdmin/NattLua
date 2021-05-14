@@ -185,10 +185,6 @@ function META.IsSubsetOf(A, B)
 	if B.Type == "table" then
 		if B:GetMetaTable() and B:GetMetaTable() == A then return true end
 
-		if A:GetContract() then
-			return B:FollowsContract(A:GetContract())
-		end
-
 		local can_be_empty = true
 		A.suppress = true
 
