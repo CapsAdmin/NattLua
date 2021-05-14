@@ -212,8 +212,8 @@ function META.IsSubsetOf(A, B)
 
 		for _, akeyval in ipairs(A:GetData()) do
 			local bkeyval, reason = B:FindKeyValReverse(akeyval.key)
-			--print(akeyval.key, akeyval.val, A:GetContract(), B, A, debug.traceback())
-			if not types.Nil():IsSubsetOf(akeyval.val) then
+
+			if not akeyval.val:CanBeNil() then
 				if not bkeyval then return bkeyval, reason end
 				A.suppress = true
 				local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
