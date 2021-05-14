@@ -231,7 +231,7 @@ return function(META)
 					end
 				end
 
-				local trace = self:TypeTraceBack()
+				local trace = self:TypeTraceback()
 
 				if trace then
 					msg = msg .. "\ntraceback:\n" .. trace
@@ -247,7 +247,7 @@ return function(META)
 			return table.unpack(res)
 		end
 
-		function META:TypeTraceBack()
+		function META:TypeTraceback()
 			if not self.call_stack then return "" end
 			local str = ""
 
@@ -310,7 +310,7 @@ return function(META)
 			end
 
 			pcall(function()
-				s = s .. self:TypeTraceBack()
+				s = s .. self:TypeTraceback()
 			end)
 
 			return s
