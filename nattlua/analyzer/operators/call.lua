@@ -257,7 +257,9 @@ return function(META)
 			else
                 -- if it's a const argument we pass the incoming value
                 if not contract.literal_argument then
-					arguments:Set(i, contract:Copy())
+					local t = contract:Copy()
+					t:SetContract(contract)
+					arguments:Set(i, t)
 				end
 			end
 		end

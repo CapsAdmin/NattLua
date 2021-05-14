@@ -6,7 +6,7 @@ require("nattlua.types.base")(META)
 
 function META:SetSelf(tbl)
 	tbl:SetMetaTable(self)
-	--tbl.mutable = true
+	tbl.mutable = true
 	tbl:SetContractSelf()
 	self.Self = tbl
 end
@@ -523,6 +523,17 @@ function META:Copy(map)
 	copy.mutable = self.mutable
 	copy.literal = self.literal
 	copy.mutations = self.mutations
+	
+	--[[
+		
+		copy.suppress = self.suppress
+		copy.level = self.level
+		copy.upvalue = self.upvalue
+		copy.upvalue_keyref = self.upvalue_keyref
+		copy.argument_index = self.argument_index
+		copy.parent = self.parent
+		copy.reference_id = self.reference_id
+		]]
 
 	if self.Self then
 		copy:SetSelf(self.Self:Copy())
@@ -622,11 +633,9 @@ function META.Extend(A, B, dont_copy_self)
 	end
 
 	for _, keyval in ipairs(B:GetData()) do
-		if not A:Get(keyval.key) then
-			local ok, reason = A:Set(unpack_keyval(keyval))
-			if not ok then
-				return ok, reason
-			end
+		local ok, reason = A:SetExplicit(unpack_keyval(keyval))
+		if not ok then
+			return ok, reason
 		end
 	end
 

@@ -14,7 +14,9 @@ return function(META)
 			local index = obj:GetMetaTable():Get("__index")
 
 			if index then
-				if index.Type == "table" then return self:IndexOperator(node, index:GetContract() or index, key, env) end
+				if index.Type == "table" and ((index:GetContract() or index):Contains(key) or (index:GetMetaTable() and index:GetMetaTable():Contains("__index"))) then 
+					return self:IndexOperator(node, index:GetContract() or index, key, env) 
+				end
 
 				if index.Type == "function" then
 					local obj, err = self:Call(index, types.Tuple({obj, key}), key:GetNode())
@@ -26,16 +28,12 @@ return function(META)
 
 		if obj:GetContract() then
 			local val, err = obj:GetContract():Get(key)
-
+			
 			if val then
 				if not obj.argument_index or obj:GetContract().literal_argument then
 					local o = self:GetMutatedValue(obj, key, val, env)
 					if o then return o end
 				end
-
-				local o = self:GetMutatedValue(obj:GetContract(), key, val, env)
-				if o then return o end
-				return val
 			end
 
 			return val, err

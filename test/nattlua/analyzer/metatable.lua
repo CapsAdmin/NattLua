@@ -261,6 +261,34 @@ run[[
 ]]
 
 run[[
+    local META = {}
+    META.__index = META
+
+    type META.@Self = {
+        foo = {[number] = string},
+        i = number,
+    }
+
+    local type Foo = META.@Self
+
+    local function test2(x: Foo)
+        
+    end
+
+    local function test(x: Foo & {extra = boolean | nil})
+        type_assert(x.asdf, true)
+        x.extra = true
+        test2(x)
+    end
+
+    META.asdf = true
+
+    function META:Lol()
+        test(self)
+    end
+]]
+
+run[[
     local meta = {}
     meta.__index = meta
 
