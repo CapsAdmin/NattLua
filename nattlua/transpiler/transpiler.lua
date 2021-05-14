@@ -8,14 +8,29 @@ META.__index = META
 --[[#
 type META.@Self = {
     done = {[string] = true} | {},
-    out = {[number] = string},
-    i = number,
-    last_indent_index = number,
-    last_non_space_index = number,
-    last_newline_index = number,
-    level = number,
-    config = {
-        extra_indent = boolean | nil,
+    out = {[1 .. inf] = string} | {},
+    i = 1 .. inf,
+    last_indent_index = 1 .. inf,
+    last_non_space_index = 1 .. inf,
+    last_newline_index = 1 .. inf,
+    inside_call_expression = boolean,
+    pre_toggle_level = 0 .. inf,
+    toggled_indents = {
+        [string] = boolean,
+    },
+    tracking_indents = {
+        [string] = {
+            [1 .. inf] = {
+                info = any,
+                level = 1 .. inf
+            }
+        }
+    },
+    level = 0 .. inf,
+    config = {}|{
+        extra_indent = {
+			[string] = "toggle"|{to=string},
+		},
         preserve_whitespace = boolean | nil,
     }
 }
@@ -28,7 +43,7 @@ function META:Whitespace(str --[[#: string]], force --[[#: boolean | nil]])
             self:Emit(" ")
         else
             self:Emit(("\t"):rep(self.level))
-            self.last_indent_index = #self.out
+            self.last_indent_index = #self.out -- [[# as 1 .. inf]]
         end
     elseif str == "\t+" then
         self:Indent()
@@ -55,7 +70,7 @@ end
 
 function META:EmitNonSpace(str --[[#: string]])
     self:Emit(str)
-    self.last_non_space_index = #self.out
+    self.last_non_space_index = #self.out --[[# as 1 .. inf]]
 end
 
 function META:EmitSpace(str --[[#: string]])
@@ -71,6 +86,7 @@ function META:Outdent()
 end
 
 function META:GetPrevChar()
+    if self.i <= 1 then return 0 end
     local prev = self.out[self.i - 1]
     local char = prev and prev:sub(-1)
     return char and char:byte() or 0
@@ -233,6 +249,10 @@ end
 
 function META:EmitStatements(node--[[#: any]])
 
+end
+
+function META:TranslateToken(tk)
+    
 end
 
 function META.New()
