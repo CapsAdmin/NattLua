@@ -1368,3 +1368,23 @@ pending[[
 ]]
 
 
+pending[[
+    local type T = {
+        config = {
+            extra_indent = nil | {
+                [string] = "toggle"|{to=string},
+            },
+            preserve_whitespace = boolean | nil,
+        }
+    }
+
+    local x = _ as string
+    local t = {} as T
+
+
+    if t.config.extra_indent then
+        local lol = t.config.extra_indent
+        print(t.config.extra_indent[x])
+        print(lol[x])
+    end
+]]
