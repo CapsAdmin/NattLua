@@ -102,7 +102,7 @@ function META:EmitWhitespace(token --[[#: Token]])
     end
 end
 
-function META:EmitToken(node --[[#: Token]], translate --[[#: any]])
+function META:EmitToken(token --[[#: Token]], translate --[[#: any]])
     if
         self.config.extra_indent and
         self.config.preserve_whitespace == false and
@@ -110,9 +110,9 @@ function META:EmitToken(node --[[#: Token]], translate --[[#: any]])
     then
         self.tracking_indents = self.tracking_indents or {}
 
-        if type(self.config.extra_indent[node.value]) == "table" then
+        if type(self.config.extra_indent[token.value]) == "table" then
             self:Indent()
-            local info = self.config.extra_indent[node.value]
+            local info = self.config.extra_indent[token.value]
 
             if type(info.to) == "table" then
                 for to in pairs(info.to) do
@@ -123,11 +123,11 @@ function META:EmitToken(node --[[#: Token]], translate --[[#: any]])
                 self.tracking_indents[info.to] = self.tracking_indents[info.to] or {}
                 table.insert(self.tracking_indents[info.to], {info = info, level = self.level})
             end
-        elseif self.tracking_indents[node.value] then
-            for _, info in ipairs(self.tracking_indents[node.value]) do
+        elseif self.tracking_indents[token.value] then
+            for _, info in ipairs(self.tracking_indents[token.value]) do
                 if info.level == self.level or info.level == self.pre_toggle_level then
                     self:Outdent()
-                    local info = self.tracking_indents[node.value]
+                    local info = self.tracking_indents[token.value]
 
                     for key, val in pairs(self.tracking_indents) do
                         if info == val.info then
@@ -153,14 +153,14 @@ function META:EmitToken(node --[[#: Token]], translate --[[#: any]])
             end
         end
 
-        if self.config.extra_indent[node.value] == "toggle" then
+        if self.config.extra_indent[token.value] == "toggle" then
             self.toggled_indents = self.toggled_indents or {}
 
-            if not self.toggled_indents[node.value] then
-                self.toggled_indents[node.value] = true
+            if not self.toggled_indents[token.value] then
+                self.toggled_indents[token.value] = true
                 self.pre_toggle_level = self.level
                 self:Indent()
-            elseif self.toggled_indents[node.value] then
+            elseif self.toggled_indents[token.value] then
                 if self.out[self.last_indent_index] then
                     self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
                 end
@@ -168,11 +168,11 @@ function META:EmitToken(node --[[#: Token]], translate --[[#: any]])
         end
     end
 
-    if node.whitespace then
+    if token.whitespace then
         if self.config.preserve_whitespace == false then
             local emit_all_whitespace = false
 
-            for _, token in ipairs(node.whitespace) do
+            for _, token in ipairs(token.whitespace) do
                 if token.type == "line_comment" or token.type == "multiline_comment" then
                     emit_all_whitespace = true
 
@@ -188,37 +188,37 @@ function META:EmitToken(node --[[#: Token]], translate --[[#: any]])
                     end
                 end
 
-                for _, token in ipairs(node.whitespace) do
+                for _, token in ipairs(token.whitespace) do
                     self:EmitToken(token)
                 end
             end
         else
-            for _, token in ipairs(node.whitespace) do
+            for _, token in ipairs(token.whitespace) do
                 self:EmitWhitespace(token)
             end
         end 
     end
 
     if self.TranslateToken then
-        translate = self:TranslateToken(node) or translate
+        translate = self:TranslateToken(token) or translate
     end
 
     if translate then
         if type(translate) == "table" then
-            self:Emit(translate[node.value] or node.value)
+            self:Emit(translate[token.value] or token.value)
         elseif type(translate) == "function" then
-            self:Emit(translate(node.value))
+            self:Emit(translate(token.value))
         elseif translate ~= "" then
             self:Emit(translate)
         end
     else
-        self:Emit(node.value)
+        self:Emit(token.value)
     end
 
     if
-        node.type ~= "line_comment" and
-        node.type ~= "multiline_comment" and
-        node.type ~= "space"
+        token.type ~= "line_comment" and
+        token.type ~= "multiline_comment" and
+        token.type ~= "space"
     then
         self.last_non_space_index = #self.out
     end
