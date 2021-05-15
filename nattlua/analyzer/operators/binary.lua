@@ -468,6 +468,10 @@ return function(META)
                 -- if it's uncertain, remove uncertainty while analysing
                 if left.Type == "union" then
 					left:DisableFalsy()
+					if node.left.kind == "binary_operator" then
+						local obj = self:AnalyzeExpression(node.left.left, env)
+						self:MutateValue(obj, node.left.right, left, env)
+					end
 				end
 
 				right = self:AnalyzeExpression(node.right, env)
@@ -482,6 +486,10 @@ return function(META)
 
 				if left.Type == "union" then
 					left:EnableFalsy()
+					if node.left.kind == "binary_operator" then
+						local obj = self:AnalyzeExpression(node.left.left, env)
+						self:MutateValue(obj, node.left.right, left, env)
+					end
 				end
 			elseif left:IsFalsy() and not left:IsTruthy() then
                 -- if it's really false do nothing

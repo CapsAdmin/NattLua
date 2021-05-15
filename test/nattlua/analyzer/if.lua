@@ -1295,6 +1295,14 @@ run[[
     type_assert(bar(), 2)
 ]]
 
+run[[
+    local tbl = {} as {field = nil | {foo = true | false}}
+
+    if tbl.field and tbl.field.foo then
+        type_assert(tbl.field, _ as { foo = false | true })
+    end
+]]
+
 pending[[
     local a: nil | 1
 

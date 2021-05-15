@@ -23,6 +23,17 @@ run[[ -- A or B
     end
 ]]
 
+run[[ -- A and B
+    local A = _ as true | false
+    local B = _ as true | false
+    if A then
+        if B then
+            type_assert(A, true)
+            type_assert(B, true)
+        end
+    end
+]]
+
 run[[ -- A or B or C
 
     local A = _ as true | false
@@ -95,6 +106,60 @@ run[[ -- A or not B or not C
         type_assert(A, false)
         type_assert(B, true)
         type_assert(C, false)
+    end
+]]
+
+run[[ -- A and not B
+    local A = _ as true | false
+    local B = _ as true | false
+    if A then
+        if not B then
+            type_assert(A, true)
+            type_assert(B, false)
+        end
+    end
+]]
+
+run[[ -- not A and not B
+    local A = _ as true | false
+    local B = _ as true | false
+    if not A then
+        if not B then
+            type_assert(A, false)
+            type_assert(B, false)
+        end
+    end
+]]
+run[[ -- not A and B
+    local A = _ as true | false
+    local B = _ as true | false
+    if not A then
+        if B then
+            type_assert(A, false)
+            type_assert(B, true)
+        end
+    end
+]]
+
+run[[ -- (A and B) or (C and D)
+
+    local A = _ as true | false
+    local B = _ as true | false
+    local C = _ as true | false
+    local D = _ as true | false
+
+    if A then
+        if B then
+            
+            return
+        end 
+    end
+
+    if C then
+        if D then
+
+            return
+        end
     end
 ]]
 
