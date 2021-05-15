@@ -273,7 +273,7 @@ function META:FindScopeFromTestCondition(obj)
         -- inside of the returned scope, then we wouldn't need this code
         
         for _, child in ipairs(scope.children) do
-			if child ~= scope and child.uncertain_returned then
+			if child ~= scope and (child.uncertain_returned or (self.if_statement and self.if_statement == child.if_statement)) then
 				local found_type = types.FindInType(child.test_condition, obj)
 				if found_type then return child, found_type end
 			end
