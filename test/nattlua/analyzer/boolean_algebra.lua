@@ -23,7 +23,7 @@ run[[ -- A or B
     end
 ]]
 
-pending[[ -- A or B or C
+run[[ -- A or B or C
 
     local A = _ as true | false
     local B = _ as true | false
@@ -44,7 +44,7 @@ pending[[ -- A or B or C
     end
 ]]
 
-pending[[ -- A or not B
+run[[ -- A or not B
 
     local A = _ as true | false
     local B = _ as true | false
@@ -58,7 +58,7 @@ pending[[ -- A or not B
     end
 ]]
 
-pending[[ -- A or not B or C
+run[[ -- A or not B or C
     local A = _ as true | false
     local B = _ as true | false
     local C = _ as true | false
@@ -78,7 +78,7 @@ pending[[ -- A or not B or C
     end
 ]]
 
-pending[[ -- A or not B or not C
+run[[ -- A or not B or not C
     local A = _ as true | false
     local B = _ as true | false
     local C = _ as true | false
