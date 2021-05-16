@@ -2,6 +2,35 @@ local type_errors = require("nattlua.types.error_messages")
 local META = {}
 META.Type = "number"
 require("nattlua.types.base")(META)
+local bit = require("bit")
+
+local operators = {
+	["-"] = function(l)
+		return -l
+	end,
+	["~"] = function(l)
+		return bit.bnot(l)
+	end,
+	["#"] = function(l)
+		return #l
+	end,
+}
+
+function META:PrefixOperator(op)
+	if self:IsLiteral() then
+		local num = self:New(operators[op](self:GetData())):SetLiteral(true)
+
+		if self:GetMax() then
+			num:SetMax(self:GetMax():PrefixOperator(op))
+		end
+
+		return num
+	end
+
+	return self:New()
+end
+
+
 --[[#type META.max = META]]
 --[[#type META.data = number]]
 

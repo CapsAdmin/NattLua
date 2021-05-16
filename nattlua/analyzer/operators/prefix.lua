@@ -1,42 +1,11 @@
 local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
-local operators = {
-		["-"] = function(l)
-			return -l
-		end,
-		["~"] = function(l)
-			return bit.bnot(l)
-		end,
-		["#"] = function(l)
-			return #l
-		end,
-	}
 
 local function metatable_function(self, meta_method, l)
 	if l:GetMetaTable() then
 		local func = l:GetMetaTable():Get(meta_method)
 		if func then return self:Assert(l:GetNode(), self:Call(func, types.Tuple({l})):Get(1)) end
 	end
-end
-
-local function arithmetic(l, type, operator)
-	assert(operators[operator], "cannot map operator " .. tostring(operator))
-
-	if l.Type == type then
-		if l:IsLiteral() then
-			local obj = types.Number(operators[operator](l:GetData())):SetLiteral(true)
-
-			if l:GetMax() then
-				obj:SetMax(arithmetic(l:GetMax(), type, operator))
-			end
-
-			return obj
-		end
-
-		return types.Number()
-	end
-
-	return types.error.prefix(operator, r)
 end
 
 return function(META)
@@ -58,7 +27,7 @@ return function(META)
 				if not res then
 					self:ErrorAndCloneCurrentScope(node, err, l)
 					falsy_union:AddType(l)
-				else
+				else 
 					new_union:AddType(res)
 
 					if res:IsTruthy() then
@@ -139,16 +108,8 @@ return function(META)
 			if l:IsFalsy() then return self:NewType(node, "boolean", true, true, l):SetNode(node):SetSource(l) end
 		end
 
-		if op == "-" then
-			return arithmetic(l, "number", op)
-		elseif op == "~" then
-			return arithmetic(l, "number", op)
-		elseif op == "#" then
-			if l.Type == "table" then
-				return types.Number(l:GetLength()):SetLiteral(l:IsLiteral())
-			elseif l.Type == "string" then
-				return types.Number(l:GetData() and #l:GetData() or nil):SetLiteral(l:IsLiteral())
-			end
+		if op == "-" or op == "~" or op == "#" then
+			return l:PrefixOperator(op)
 		elseif op == "literal" then
 			l.literal_argument = true
 			return l

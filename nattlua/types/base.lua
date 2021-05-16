@@ -156,6 +156,10 @@ return function(META--[[#: {
 		return self.literal
 	end
 
+	function META:PrefixOperator(op)
+		return type_errors.other("no operator " .. op .. " on " .. tostring(self))
+	end
+
 	function META:Seal()
 		self:SetContract(self:GetContract() or self:Copy())
 	end

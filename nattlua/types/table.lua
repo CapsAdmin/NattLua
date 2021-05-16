@@ -673,4 +673,10 @@ function META:Call(analyzer, arguments, ...)
 	return type_errors.other("table has no __call metamethod")
 end
 
+function META:PrefixOperator(op)
+	if op == "#" then
+		return types.Number(self:GetLength()):SetLiteral(self:IsLiteral())
+	end
+end
+
 return META

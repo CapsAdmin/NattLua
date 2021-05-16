@@ -1,5 +1,6 @@
 local type_errors = require("nattlua.types.error_messages")
 local string_meta = require("nattlua.runtime.string_meta")
+local types = require("nattlua.types.types")
 local META = {}
 META.Type = "string"
 require("nattlua.types.base")(META)
@@ -104,6 +105,12 @@ end
 function META:Initialize()
 	self:SetMetaTable(string_meta)
 	return self
+end
+
+function META:PrefixOperator(op)
+	if op == "#" then
+		return types.Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral())
+	end
 end
 
 return META
