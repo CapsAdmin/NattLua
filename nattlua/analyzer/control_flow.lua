@@ -2,7 +2,7 @@
 -- naive approaches while writing tests
 
 local types = require("nattlua.types.types")
-local MutationTracker = require("nattlua.analyzer.mutation_tracker")
+local MutationTracker = require("nattlua.analyzer.base.mutation_tracker")
 return function(META)
 	function META:AnalyzeStatements(statements)
 		for _, statement in ipairs(statements) do

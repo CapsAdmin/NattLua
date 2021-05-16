@@ -1,4 +1,4 @@
-local LexicalScope = require("nattlua.other.lexical_scope")
+local LexicalScope = require("nattlua.analyzer.base.lexical_scope")
 local types = require("nattlua.types.types")
 return function(META)
 	table.insert(META.OnInitialize, function(self)
