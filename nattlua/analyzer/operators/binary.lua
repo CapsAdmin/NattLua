@@ -96,7 +96,7 @@ local function arithmetic(node, l, r, type, operator)
 	return type_errors.binary(operator, l, r)
 end
 
-local function logical_cmp_cast(val--[[#: boolean | nil ]])
+local function logical_cmp_cast(val--[[#: boolean | nil]])
 	if val == nil then
 		return types.Boolean()
 	elseif val == true then
@@ -144,7 +144,14 @@ local function binary_operator(analyzer, node, l, r, env, op)
 
 			for _, l in ipairs(l:GetData()) do
 				for _, r in ipairs(r:GetData()) do
-					local res, err = binary_operator(analyzer, node, l, r, env, op)
+					local res, err = binary_operator(
+						analyzer,
+						node,
+						l,
+						r,
+						env,
+						op
+					)
 
 					if not res then
 						analyzer:ErrorAndCloneCurrentScope(node, err, condition)
@@ -222,7 +229,6 @@ local function binary_operator(analyzer, node, l, r, env, op)
 				return l:Copy():SetMax(r)
 			end
 		elseif op == ">" then
-
 			return types.Symbol((r:IsSubsetOf(l)))
 		elseif op == "<" then
 			return types.Symbol((l:IsSubsetOf(r)))
@@ -353,7 +359,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			(l.Type == "string" and r.Type == "string") or
 			(l.Type == "number" and r.Type == "number")
 		then
-			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l,r, op)) end
+			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
 			return types.Boolean()
 		end
 
@@ -366,21 +372,20 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			(l.Type == "string" and r.Type == "string") or
 			(l.Type == "number" and r.Type == "number")
 		then
-			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l,r, op)) end
+			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
 			return types.Boolean()
 		end
 
 		return type_errors.binary(op, l, r)
 	elseif op == ">" then
-		
 		local res = metatable_function(analyzer, "__lt", l, r)
 		if res then return res end
-		
+
 		if
 			(l.Type == "string" and r.Type == "string") or
 			(l.Type == "number" and r.Type == "number")
 		then
-			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l,r, op)) end
+			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
 			return types.Boolean()
 		end
 
@@ -393,7 +398,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			(l.Type == "string" and r.Type == "string") or
 			(l.Type == "number" and r.Type == "number")
 		then
-			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l,r, op)) end
+			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
 			return types.Boolean()
 		end
 

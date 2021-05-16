@@ -3,7 +3,6 @@ types.Initialize()
 local META = {}
 META.__index = META
 META.OnInitialize = {}
-
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)
 require("nattlua.analyzer.operators.index")(META)
@@ -38,7 +37,7 @@ do
 	local _return = require("nattlua.analyzer.statements.return")
 	local type_code = require("nattlua.analyzer.statements.type_code")
 	local _while = require("nattlua.analyzer.statements.while")
-	
+
 	function META:AnalyzeStatement(statement)
 		self.current_statement = statement
 
@@ -81,7 +80,7 @@ do
 		elseif statement.kind == "type_code" then
 			type_code(self, statement)
 		elseif statement.kind == "import" then
-			
+
 		elseif
 			statement.kind ~= "end_of_file" and
 			statement.kind ~= "semicolon" and
@@ -104,7 +103,7 @@ do
 	local table = require("nattlua.analyzer.expressions.table")
 	local atomic_value = require("nattlua.analyzer.expressions.atomic_value")
 	local type_list = require("nattlua.analyzer.expressions.list")
-	local import = require("nattlua.analyzer.expressions.import")
+	local _import = require("nattlua.analyzer.expressions.import")
 
 	function META:AnalyzeExpression(node, env)
 		self.current_expression = node
@@ -150,7 +149,7 @@ do
 		elseif node.kind == "postfix_call" then
 			return postfix_call(self, node, env)
 		elseif node.kind == "import" then
-			return import(self, node, env)
+			return _import(self, node, env)
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end
@@ -199,7 +198,6 @@ function META:NewType(node, type, data, literal)
 	obj:GetNode().inferred_type = obj
 	return obj
 end
-
 
 return function(config)
 	config = config or {}

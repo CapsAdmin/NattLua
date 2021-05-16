@@ -479,7 +479,7 @@ return function(META)
 		node.tokens["("] = {self:ReadValue("(")}
 		local start = self:GetCurrentToken()
 		node.expressions = self:ReadExpressionList()
-		local root = self.config.path:match("(.+/)")
+		local root = self.config.path and self.config.path:match("(.+/)") or ""
 		node.path = root .. node.expressions[1].value.value:sub(2, -2)
 		local nl = require("nattlua")
 		local root, err = nl.ParseFile(self:ResolvePath(node.path), self.root)

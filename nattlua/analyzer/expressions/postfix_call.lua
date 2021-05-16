@@ -1,6 +1,5 @@
 local types = require("nattlua.types.types")
 local Tuple = types.Tuple
-
 return function(analyzer, node, env)
 	local env = node.type_call and "typesystem" or env
 	local callable = analyzer:AnalyzeExpression(node.left, env)

@@ -80,7 +80,6 @@ function META:__tostring()
 end
 
 function META.LogicalComparison(a, b, op)
-	
 	if op == ">" then
 		return a:GetData() > b:GetData()
 	elseif op == "<" then
@@ -108,9 +107,7 @@ function META:Initialize()
 end
 
 function META:PrefixOperator(op)
-	if op == "#" then
-		return types.Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral())
-	end
+	if op == "#" then return types.Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral()) end
 end
 
 return META

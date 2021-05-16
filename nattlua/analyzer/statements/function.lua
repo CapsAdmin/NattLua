@@ -1,5 +1,4 @@
 local _function = require("nattlua.analyzer.expressions.function")
-	
 return function(analyzer, statement)
 	if
 		statement.kind == "local_function" or

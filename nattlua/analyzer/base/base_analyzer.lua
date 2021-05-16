@@ -45,10 +45,9 @@ return function(META)
 			if self and self.Type == "union" then
 				self = self:GetType("table")
 			end
-			
+
 			if self and self.Self then
 				local self = self.Self
-
 				local new_tup = types.Tuple({})
 
 				for i, obj in ipairs(tup:GetData()) do

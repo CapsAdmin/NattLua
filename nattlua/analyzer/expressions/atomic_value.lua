@@ -76,7 +76,8 @@ return function(analyzer, node, env)
 	local standalone_letter = type == "letter" and node.standalone_letter
 
 	if env == "typesystem" and standalone_letter and not node.force_upvalue then
-		local current_table = analyzer.current_tables and analyzer.current_tables[#analyzer.current_tables]
+		local current_table = analyzer.current_tables and
+			analyzer.current_tables[#analyzer.current_tables]
 
 		if current_table then
 			if value == "self" then return current_table end

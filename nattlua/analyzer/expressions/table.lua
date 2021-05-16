@@ -1,5 +1,4 @@
 local types = require("nattlua.types.types")
-
 return function(analyzer, node, env)
 	local tbl = analyzer:NewType(node, "table", nil, env == "typesystem")
 

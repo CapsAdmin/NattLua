@@ -33,7 +33,14 @@ return function(analyzer, statement)
 
 	if literal_init and literal_max then
 		-- also check step
-		condition:AddType(binary_operator(analyzer, statement, init, max, "runtime", "<="))
+		condition:AddType(binary_operator(
+			analyzer,
+			statement,
+			init,
+			max,
+			"runtime",
+			"<="
+		))
 	else
 		condition:AddType(types.Symbol(true))
 		condition:AddType(types.Symbol(false))

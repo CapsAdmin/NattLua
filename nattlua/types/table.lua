@@ -27,7 +27,6 @@ function META:SetContractSelf()
 	return true
 end
 
-
 function META:GetSelf()
 	return self.Self
 end
@@ -165,6 +164,7 @@ function META:FollowsContract(contract)
 		if not res and self:GetMetaTable() then
 			res, err = self:GetMetaTable():FindKeyVal(keyval.key)
 		end
+
 		if not keyval.val:CanBeNil() then
 			if not res then return res, err end
 			local ok, err = res.val:IsSubsetOf(keyval.val)
@@ -184,7 +184,6 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type == "table" then
 		if B:GetMetaTable() and B:GetMetaTable() == A then return true end
-
 		local can_be_empty = true
 		A.suppress = true
 
@@ -630,9 +629,7 @@ function META.Extend(A, B, dont_copy_self)
 
 	for _, keyval in ipairs(B:GetData()) do
 		local ok, reason = A:SetExplicit(unpack_keyval(keyval))
-		if not ok then
-			return ok, reason
-		end
+		if not ok then return ok, reason end
 	end
 
 	return A
@@ -674,9 +671,7 @@ function META:Call(analyzer, arguments, ...)
 end
 
 function META:PrefixOperator(op)
-	if op == "#" then
-		return types.Number(self:GetLength()):SetLiteral(self:IsLiteral())
-	end
+	if op == "#" then return types.Number(self:GetLength()):SetLiteral(self:IsLiteral()) end
 end
 
 return META

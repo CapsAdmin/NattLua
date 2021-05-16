@@ -26,7 +26,7 @@ local function prefix_operator(analyzer, node, l, env)
 			if not res then
 				analyzer:ErrorAndCloneCurrentScope(node, err, l)
 				falsy_union:AddType(l)
-			else 
+			else
 				new_union:AddType(res)
 
 				if res:IsTruthy() then

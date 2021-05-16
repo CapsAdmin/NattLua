@@ -195,7 +195,10 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 
             -- the or part here refers to if *condition* then
             -- truthy/falsy _union is only created from binary operators and some others
-            if found_scope.test_condition_inverted or (found_scope ~= scope and same_if_statement(scope, found_scope)) then
+            if
+				found_scope.test_condition_inverted or
+				(found_scope ~= scope and same_if_statement(scope, found_scope))
+			then
 				t = union.falsy_union or value:GetFalsy()
 			else
 				t = union.truthy_union or value:GetTruthy()

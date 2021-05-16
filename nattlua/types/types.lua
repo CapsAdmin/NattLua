@@ -46,11 +46,10 @@ do
 			if a.upvalue_keyref or b.upvalue_keyref then return a.upvalue_keyref == b.upvalue_keyref and source or false end
 			if a.upvalue == b.upvalue then return source end
 		end
-		
 
-		if 
-			a.source_right and 
-			a.source_right.upvalue and 
+		if
+			a.source_right and
+			a.source_right.upvalue and
 			b.upvalue and
 			a.source_right.upvalue.node == b.upvalue.node
 		then

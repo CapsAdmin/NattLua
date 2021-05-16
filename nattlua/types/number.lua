@@ -3,18 +3,17 @@ local META = {}
 META.Type = "number"
 require("nattlua.types.base")(META)
 local bit = require("bit")
-
 local operators = {
-	["-"] = function(l)
-		return -l
-	end,
-	["~"] = function(l)
-		return bit.bnot(l)
-	end,
-	["#"] = function(l)
-		return #l
-	end,
-}
+		["-"] = function(l)
+			return -l
+		end,
+		["~"] = function(l)
+			return bit.bnot(l)
+		end,
+		["#"] = function(l)
+			return #l
+		end,
+	}
 
 function META:PrefixOperator(op)
 	if self:IsLiteral() then
@@ -29,7 +28,6 @@ function META:PrefixOperator(op)
 
 	return self:New()
 end
-
 
 --[[#type META.max = META]]
 --[[#type META.data = number]]
@@ -160,16 +158,23 @@ function META:SetMax(val)
 end
 
 local ops = {
-	[">"] = function(a, b) return a > b end,
-	["<"] = function(a, b) return a < b end,
-	["<="] = function(a, b) return a <= b end,
-	[">="] = function(a, b) return a >= b end,
-}
+		[">"] = function(a, b)
+			return a > b
+		end,
+		["<"] = function(a, b)
+			return a < b
+		end,
+		["<="] = function(a, b)
+			return a <= b
+		end,
+		[">="] = function(a, b)
+			return a >= b
+		end,
+	}
 
 local function compare(a, b, op)
 	local min = a:GetData()
 	local max = a.max:GetData()
-
 	local val = b:GetData()
 	local f = ops[op]
 
@@ -182,35 +187,21 @@ local function compare(a, b, op)
 	return nil
 end
 
-function META.LogicalComparison(a, b, op) --[[#: boolean | nil]]
-	
+function META.LogicalComparison(a, b, op)--[[#: boolean | nil]]
 	if a.max and b.max then
 		local res_a = compare(a, b, op)
 		local res_b = not compare(b, a, op)
-
-		print(res_a, res_b, "!?")
-
-		if res_a ~= nil and res_a == res_b then
-			return res_a
-		end
-
+		if res_a ~= nil and res_a == res_b then return res_a end
 		return nil
 	end
 
 	if a.max then
 		local res = compare(a, b, op)
-		
-		if res == nil then
-			return nil
-		end
-
+		if res == nil then return nil end
 		return res
 	end
 
-	if ops[op] then
-		return ops[op](a:GetData(), b:GetData())
-	end
-
+	if ops[op] then return ops[op](a:GetData(), b:GetData()) end
 	error("NYI " .. op)
 end
 
