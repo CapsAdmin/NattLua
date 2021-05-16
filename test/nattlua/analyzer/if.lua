@@ -1303,6 +1303,14 @@ run[[
     end
 ]]
 
+run[[
+    local tbl = {} as {foo = nil | {bar = 1337 | false}}
+
+    if tbl.foo and tbl.foo.bar then
+        type_assert(tbl.foo.bar, 1337)
+    end
+]]
+
 pending[[
     local a: nil | 1
 

@@ -32,6 +32,10 @@ do
 		return context[a][b]
 	end
 
+	-- this function is a sympton of me not knowing exactly how to find types in other types
+	-- ideally this should be much more general and less complex
+	-- i consider this a hack that should be refactored out
+
 	function types.FindInType(a, b, context, source)
 		source = source or b
 		context = context or {}
@@ -41,6 +45,16 @@ do
 		if a.upvalue and b.upvalue then
 			if a.upvalue_keyref or b.upvalue_keyref then return a.upvalue_keyref == b.upvalue_keyref and source or false end
 			if a.upvalue == b.upvalue then return source end
+		end
+		
+
+		if 
+			a.source_right and 
+			a.source_right.upvalue and 
+			b.upvalue and
+			a.source_right.upvalue.node == b.upvalue.node
+		then
+			return cmp(a.source_right, b, context, source)
 		end
 
 		if a.upvalue and a.upvalue.value then return cmp(a.upvalue.value, b, context, a) end
