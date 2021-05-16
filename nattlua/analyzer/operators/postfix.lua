@@ -1,10 +1,6 @@
-return function(META)
-	function META:PostfixOperator(node, r, env)
-		local op = node.value.value
-		if op == "++" then return self:BinaryOperator({value = {value = "+"}}, r, r, env) end
-	end
+local binary_operator = require("nattlua.analyzer.operators.binary")
 
-	function META:AnalyzePostfixOperatorExpression(node, env)
-		return self:Assert(node, self:PostfixOperator(node, self:AnalyzeExpression(node.left, env), env))
-	end
+return function(analyzer, node, r, env)
+	local op = node.value.value
+	if op == "++" then return binary_operator(analyzer, {value = {value = "+"}}, r, r, env) end
 end

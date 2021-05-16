@@ -1,6 +1,3 @@
-local types = require("nattlua.types.types")
-return function(META)
-	function META:AnalyzePostfixExpressionIndexExpression(node, env)
-		return self:Assert(node, self:IndexOperator(node, self:AnalyzeExpression(node.left, env), self:AnalyzeExpression(node.expression, env), env))
-	end
+return function(analyzer, node, env)
+	return analyzer:Assert(node, analyzer:IndexOperator(node, analyzer:AnalyzeExpression(node.left, env), analyzer:AnalyzeExpression(node.expression, env), env))
 end

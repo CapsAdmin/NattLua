@@ -1,6 +1,4 @@
-return function(META)
-	function META:AnalyzeTypeCodeStatement(statement)
-		local code = statement.lua_code.value.value:sub(3)
-		self:CallLuaTypeFunction(statement.lua_code, self:CompileLuaTypeCode(code, statement.lua_code), self:GetScope())
-	end
+return function(analyzer, statement)
+	local code = statement.lua_code.value.value:sub(3)
+	analyzer:CallLuaTypeFunction(statement.lua_code, analyzer:CompileLuaTypeCode(code, statement.lua_code), analyzer:GetScope())
 end

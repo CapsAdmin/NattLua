@@ -1,15 +1,13 @@
-return function(META)
-	function META:AnalyzeWhileStatement(statement)
-		local obj = self:AnalyzeExpression(statement.expression)
+return function(analyzer, statement)
+	local obj = analyzer:AnalyzeExpression(statement.expression)
 
-		if obj:IsTruthy() then
-			self:CreateAndPushScope()
-				self:FireEvent("while", obj)
-				self:OnEnterConditionalScope({type = "while", condition = obj,})
-				self:AnalyzeStatements(statement.statements)
-			self:PopScope()
-			self:OnExitConditionalScope({condition = obj})
-			self.break_out_scope = nil
-		end
+	if obj:IsTruthy() then
+		analyzer:CreateAndPushScope()
+			analyzer:FireEvent("while", obj)
+			analyzer:OnEnterConditionalScope({type = "while", condition = obj,})
+			analyzer:AnalyzeStatements(statement.statements)
+		analyzer:PopScope()
+		analyzer:OnExitConditionalScope({condition = obj})
+		analyzer.break_out_scope = nil
 	end
 end

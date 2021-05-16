@@ -1,10 +1,6 @@
 local load = loadstring or load
 local types = require("nattlua.types.types")
-local helpers = require("nattlua.other.helpers")
-local LexicalScope = require("nattlua.other.lexical_scope")
 return function(META)
-	local table_insert = table.insert
-
 	function META:StringToNumber(node, str)
 		if str:sub(1, 2) == "0b" then
 			return tonumber(str:sub(3))
@@ -314,6 +310,60 @@ return function(META)
 			end)
 
 			return s
+		end
+
+		function META:ResolvePath(path)
+			return path
+		end
+
+		function META:GetPreferTypesystem()
+			return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1]
+		end
+
+		function META:PushPreferTypesystem(b)
+			self.prefer_typesystem_stack = self.prefer_typesystem_stack or {}
+			table.insert(self.prefer_typesystem_stack, 1, b)
+		end
+
+		function META:PopPreferTypesystem()
+			table.remove(self.prefer_typesystem_stack, 1)
+		end
+
+		do
+			local guesses = {
+					{pattern = "count", type = "number"},
+				--{pattern = "tbl", type = "table", ctor = function(obj) obj:Set(types.Any(), types.Any()) end},
+				{
+						pattern = "str",
+						type = "string",
+					},
+				}
+
+			table.sort(guesses, function(a, b)
+				return #a.pattern > #b.pattern
+			end)
+
+			function META:GuessTypeFromIdentifier(node, env)
+				if node.value then
+					local str = node.value.value:lower()
+
+					for _, v in ipairs(guesses) do
+						if str:find(v.pattern, nil, true) then
+							local obj = self:NewType(node, v.type)
+
+							if v.ctor then
+								v.ctor(obj)
+							end
+
+							return obj
+						end
+					end
+				end
+
+				if env == "typesystem" then return self:NewType(node, "nil") -- TEST ME
+				end
+				return self:NewType(node, "any")
+			end
 		end
 	end
 end

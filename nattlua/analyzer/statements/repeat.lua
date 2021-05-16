@@ -1,12 +1,10 @@
-return function(META)
-	function META:AnalyzeRepeatStatement(statement)
-		self:CreateAndPushScope()
-			self:AnalyzeStatements(statement.statements)
+return function(analyzer, statement)
+	analyzer:CreateAndPushScope()
+		analyzer:AnalyzeStatements(statement.statements)
 
-			if self:AnalyzeExpression(statement.expression):IsTruthy() then
-				self:FireEvent("break")
-			end
+		if analyzer:AnalyzeExpression(statement.expression):IsTruthy() then
+			analyzer:FireEvent("break")
+		end
 
-		self:PopScope()
-	end
+	analyzer:PopScope()
 end

@@ -22,10 +22,6 @@ return function(META)
 		end
 	end
 
-	function META:AnalyzeContinueStatement(statement)
-		self._continue_ = true
-	end
-
 	function META:AnalyzeStatementsAndCollectReturnTypes(statement)
 		local scope = self:GetScope()
 		scope:MakeFunctionScope()

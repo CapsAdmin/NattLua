@@ -1,6 +1,4 @@
-return function(META)
-	function META:AnalyzeCallExpressionStatement(statement)
-		local foo = self:AnalyzeExpression(statement.value)
-		self:FireEvent("call", statement.value, {foo})
-	end
+return function(analyzer, statement)
+	local foo = analyzer:AnalyzeExpression(statement.value)
+	analyzer:FireEvent("call", statement.value, {foo})
 end

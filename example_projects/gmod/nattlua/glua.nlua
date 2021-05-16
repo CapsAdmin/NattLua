@@ -40,17 +40,20 @@ end
 
 type function isstring(obj: any)
     local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
-    return analyzer:BinaryOperator(analyzer.current_expression, typ, types.String("string"):SetLiteral(true), "runtime", "==")
+    local binary_operator = require("nattlua.analyzer.operators.binary")
+    return binary_operator(analyzer, analyzer.current_expression, typ, types.String("string"):SetLiteral(true), "runtime", "==")
 end
 
 type function istable(obj: any)
     local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
-    return analyzer:BinaryOperator(analyzer.current_expression, typ, types.String("table"):SetLiteral(true), "runtime", "==")
+    local binary_operator = require("nattlua.analyzer.operators.binary")
+    return binary_operator(analyzer, analyzer.current_expression, typ, types.String("table"):SetLiteral(true), "runtime", "==")
 end
 
 type function isentity(obj: any)
     local Entity = env.typesystem.Entity
-    return analyzer:BinaryOperator(analyzer.current_expression, obj:GetMetaTable() or obj, Entity, "typesystem", "==")
+    local binary_operator = require("nattlua.analyzer.operators.binary")
+    return binary_operator(analyzer, analyzer.current_expression, obj:GetMetaTable() or obj, Entity, "typesystem", "==")
 end
 
 function string.Implode( seperator: literal string, Table: literal {[1 .. inf] = string} )
