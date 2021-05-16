@@ -130,6 +130,61 @@ function META:SetMax(val)
 	return self
 end
 
+local ops = {
+	[">"] = function(a, b) return a > b end,
+	["<"] = function(a, b) return a < b end,
+	["<="] = function(a, b) return a <= b end,
+	[">="] = function(a, b) return a >= b end,
+}
+
+local function compare(a, b, op)
+	local min = a:GetData()
+	local max = a.max:GetData()
+
+	local val = b:GetData()
+	local f = ops[op]
+
+	if f(min, val) and f(max, val) then
+		return true
+	elseif not f(min, val) and not f(max, val) then
+		return false
+	end
+
+	return nil
+end
+
+function META.LogicalComparison(a, b, op) --[[#: boolean | nil]]
+	
+	if a.max and b.max then
+		local res_a = compare(a, b, op)
+		local res_b = not compare(b, a, op)
+
+		print(res_a, res_b, "!?")
+
+		if res_a ~= nil and res_a == res_b then
+			return res_a
+		end
+
+		return nil
+	end
+
+	if a.max then
+		local res = compare(a, b, op)
+		
+		if res == nil then
+			return nil
+		end
+
+		return res
+	end
+
+	if ops[op] then
+		return ops[op](a:GetData(), b:GetData())
+	end
+
+	error("NYI " .. op)
+end
+
 function META:GetMax()
 	return self.max
 end

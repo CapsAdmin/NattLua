@@ -78,6 +78,21 @@ function META:__tostring()
 	return "string(" .. tostring(self:GetData()) .. ")"
 end
 
+function META.LogicalComparison(a, b, op)
+	
+	if op == ">" then
+		return a:GetData() > b:GetData()
+	elseif op == "<" then
+		return a:GetData() < b:GetData()
+	elseif op == "<=" then
+		return a:GetData() <= b:GetData()
+	elseif op == ">=" then
+		return a:GetData() >= b:GetData()
+	end
+
+	error("NYI " .. op)
+end
+
 function META:IsFalsy()
 	return false
 end

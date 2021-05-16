@@ -80,11 +80,11 @@ local function arithmetic(node, l, r, type, operator)
 			local obj = types.Number(operators[operator](l:GetData(), r:GetData())):SetLiteral(true)
 
 			if r:GetMax() then
-				obj:SetMax(arithmetic(node, l, r:GetMax(), type, operator))
+				obj:SetMax(arithmetic(node, l:GetMax() or l, r:GetMax(), type, operator))
 			end
 
 			if l:GetMax() then
-				obj:SetMax(arithmetic(node, l:GetMax(), r, type, operator))
+				obj:SetMax(arithmetic(node, l:GetMax(), r:GetMax() or r, type, operator))
 			end
 
 			return obj:SetNode(node):SetBinarySource(l, r)
@@ -94,6 +94,16 @@ local function arithmetic(node, l, r, type, operator)
 	end
 
 	return type_errors.binary(operator, l, r)
+end
+
+local function logical_cmp_cast(val--[[#: boolean | nil ]])
+	if val == nil then
+		return types.Boolean()
+	elseif val == true then
+		return types.True()
+	elseif val == false then
+		return types.False()
+	end
 end
 
 return function(META)
@@ -213,6 +223,7 @@ return function(META)
 					return l:Copy():SetMax(r)
 				end
 			elseif op == ">" then
+	
 				return types.Symbol((r:IsSubsetOf(l)))
 			elseif op == "<" then
 				return types.Symbol((l:IsSubsetOf(r)))
@@ -343,7 +354,7 @@ return function(META)
 				(l.Type == "string" and r.Type == "string") or
 				(l.Type == "number" and r.Type == "number")
 			then
-				if l:IsLiteral() and r:IsLiteral() then return types.Symbol(l:GetData() < r:GetData()) end
+				if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l,r, op)) end
 				return types.Boolean()
 			end
 
@@ -356,20 +367,21 @@ return function(META)
 				(l.Type == "string" and r.Type == "string") or
 				(l.Type == "number" and r.Type == "number")
 			then
-				if l:IsLiteral() and r:IsLiteral() then return types.Symbol(l:GetData() <= r:GetData()) end
+				if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l,r, op)) end
 				return types.Boolean()
 			end
 
 			return type_errors.binary(op, l, r)
 		elseif op == ">" then
+			
 			local res = metatable_function(self, "__lt", l, r)
 			if res then return res end
-
+			
 			if
 				(l.Type == "string" and r.Type == "string") or
 				(l.Type == "number" and r.Type == "number")
 			then
-				if l:IsLiteral() and r:IsLiteral() then return types.Symbol(l:GetData() > r:GetData()) end
+				if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l,r, op)) end
 				return types.Boolean()
 			end
 
@@ -382,7 +394,7 @@ return function(META)
 				(l.Type == "string" and r.Type == "string") or
 				(l.Type == "number" and r.Type == "number")
 			then
-				if l:IsLiteral() and r:IsLiteral() then return types.Symbol(l:GetData() >= r:GetData()) end
+				if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l,r, op)) end
 				return types.Boolean()
 			end
 

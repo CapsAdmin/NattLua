@@ -64,3 +64,17 @@ test("integer division", function()
         type_assert(bar, 5)
     ]]
 end)
+
+run[[
+    local n = _ as 0 .. 1
+
+    type_assert(n > 1, false)
+    type_assert(n > 0.5, _ as boolean)
+    type_assert(n >= 1, _ as boolean)
+    type_assert(n <= 0, _ as boolean)
+    type_assert(n < 0, false)
+    
+    local n2 = _ as 0.5 .. 1.5
+    
+    type_assert(n2 + n, _ as 0.5 .. 2.5)
+]]
