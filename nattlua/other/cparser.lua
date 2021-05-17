@@ -4240,7 +4240,7 @@ end
 ---------------------------------------------------
 -- EXPORTS
 
-cparser = {}
+local cparser = {}
 cparser.cpp = cpp
 cparser.cppTokenIterator = cppTokenIterator
 cparser.macroToString = macroToString

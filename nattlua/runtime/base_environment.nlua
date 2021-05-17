@@ -515,7 +515,7 @@ do -- globals
 	end
 
 	type function pcall(callable: (function(...any): (...any)), ...)
-        local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...}), node))
+        local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
         local err = analyzer.lua_error_thrown
         if err then
             analyzer.lua_error_thrown = nil

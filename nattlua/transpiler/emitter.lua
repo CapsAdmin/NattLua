@@ -7,7 +7,7 @@ META.__index = META
 require("nattlua.transpiler.base_emitter")(META)
 
 function META:OptionalWhitespace()
-	if self.config.preserve_whitespace == nil and not force then return end
+	if self.config.preserve_whitespace == nil then return end
 
 	if syntax.IsLetter(self:GetPrevChar()) or syntax.IsNumber(self:GetPrevChar()) then
 		self:EmitSpace(" ")

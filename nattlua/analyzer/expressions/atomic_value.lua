@@ -1,5 +1,6 @@
 local syntax = require("nattlua.syntax.syntax")
 local types = require("nattlua.types.types")
+local table = require("table")
 
 local function lookup_value(self, node, env)
 	local obj

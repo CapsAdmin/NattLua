@@ -39,7 +39,7 @@ function _G.equal(a, b, level)
     end
 end
 
-function diff(input, expect)
+function _G.diff(input, expect)
     local a = os.tmpname()
     local b = os.tmpname()
 

@@ -496,4 +496,24 @@ function helpers.EnableJITDumper()
 	jit.attach(dump_trace, "trace")
 end
 
+function helpers.GlobalLookup()
+	local _G = _G
+	local tostring = tostring
+	local print = print
+	local rawset = rawset
+	local rawget = rawget
+	setmetatable(_G, {
+		__index = function(_, key)
+			print("_G." .. key)
+			print(debug.traceback():match(".-\n.-\n(.-)\n"))
+			return rawget(_G, key)
+		end,
+		__newindex = function(_, key, val)
+			print("_G." .. key .. " = " .. tostring(val))
+			print(debug.traceback():match(".-\n.-\n(.-)\n"))
+			rawset(_G, key, val)
+		end,
+	})
+end
+
 return helpers
