@@ -246,8 +246,8 @@ return function(META--[[#: {
 		return false
 	end
 
-	function META:New(data)
-		local self = setmetatable({data = data,}, getmetatable(self))
+	function META.New(data)
+		local self = setmetatable({data = data,}, META)
 
 		if self.Initialize then
 			local ok, err = self:Initialize(data)

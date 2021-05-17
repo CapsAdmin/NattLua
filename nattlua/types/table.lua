@@ -1,4 +1,7 @@
 local types = require("nattlua.types.types")
+local Union = require("nattlua.types.union").Union
+local Number = require("nattlua.types.number").Number
+local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local table = require("table")
 local ipairs = _G.ipairs
@@ -223,7 +226,7 @@ function META.IsSubsetOf(A, B)
 		return true
 	elseif B.Type == "union" then
 		A.suppress = true
-		local u = types.Union({A}):IsSubsetOf(B)
+		local u = Union({A}):IsSubsetOf(B)
 		A.suppress = false
 		return u
 	end
@@ -269,7 +272,7 @@ function META:Delete(key)
 end
 
 function META:GetKeyUnion() -- never called
-	local union = types.Union()
+	local union = Union()
 
 	for _, keyval in ipairs(self:GetData()) do
 		union:AddType(keyval.key:Copy())
@@ -389,7 +392,7 @@ function META:Set(key, val, no_delete)
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
 		else
-			keyval.val = types.Union({keyval.val, val})
+			keyval.val = Union({keyval.val, val})
 		end
 	end
 
@@ -418,7 +421,7 @@ function META:SetExplicit(key, val)
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
 		else
-			keyval.val = types.Union({keyval.val, val})
+			keyval.val = Union({keyval.val, val})
 		end
 	end
 
@@ -430,7 +433,7 @@ function META:Get(key)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then return self["Get" .. key:GetData():sub(2)](self) end
 
 	if key.Type == "union" then
-		local union = types.Union({})
+		local union = Union({})
 		local errors = {}
 
 		for _, k in ipairs(key:GetData()) do
@@ -448,7 +451,7 @@ function META:Get(key)
 	end
 
 	if (key.Type == "string" or key.Type == "number") and not key:IsLiteral() then
-		local union = types.Union({types.Nil()})
+		local union = Union({types.Nil()})
 
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == key.Type then
@@ -504,7 +507,7 @@ end
 
 function META:Copy(map)
 	map = map or {}
-	local copy = types.Table()
+	local copy = META.New()
 	map[self] = map[self] or copy
 
 	for i, keyval in ipairs(self:GetData()) do
@@ -639,7 +642,7 @@ function META.Extend(A, B, dont_copy_self)
 end
 
 function META.Union(A, B)
-	local copy = types.Table({})
+	local copy = META.New({})
 
 	for _, keyval in ipairs(A:GetData()) do
 		copy:Set(unpack_keyval(keyval))
@@ -667,14 +670,14 @@ function META:Call(analyzer, arguments, ...)
 			table.insert(new_arguments, v)
 		end
 
-		return analyzer:Call(__call, types.Tuple(new_arguments), ...)
+		return analyzer:Call(__call, Tuple(new_arguments), ...)
 	end
 
 	return type_errors.other("table has no __call metamethod")
 end
 
 function META:PrefixOperator(op)
-	if op == "#" then return types.Number(self:GetLength()):SetLiteral(self:IsLiteral()) end
+	if op == "#" then return Number(self:GetLength()):SetLiteral(self:IsLiteral()) end
 end
 
-return META
+return {Table = META.New}

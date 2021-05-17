@@ -69,59 +69,22 @@ do
 	end
 end
 
-function types.RegisterType(meta)
-	return function(data)
-		local self = setmetatable({data = data,}, meta)
-
-		if self.Initialize then
-			local ok, err = self:Initialize(data)
-			if not ok then return ok, err end
-		end
-
-		return self
-	end
-end
-
 function types.Initialize()
-	types.Union = types.RegisterType(require("nattlua.types.union"))
-	types.Table = types.RegisterType(require("nattlua.types.table"))
-	types.List = types.RegisterType(require("nattlua.types.list"))
-	types.Tuple = types.RegisterType(require("nattlua.types.tuple"))
-	types.Number = types.RegisterType(require("nattlua.types.number"))
-	types.Function = types.RegisterType(require("nattlua.types.function"))
-	types.String = types.RegisterType(require("nattlua.types.string"))
-	types.Any = types.RegisterType(require("nattlua.types.any"))
-	types.Symbol = types.RegisterType(require("nattlua.types.symbol"))
-end
-
-function types.Nil()
-	return types.Symbol(nil)
-end
-
-function types.True()
-	return types.Symbol(true)
-end
-
-function types.False()
-	return types.Symbol(false)
-end
-
-function types.Boolean()
-	return types.Union({types.True(), types.False()})
-end
-
-function types.LuaTypeFunction(lua_function, arg, ret)
-	return types.Function(
-		{
-			arg = types.Tuple(arg),
-			ret = types.Tuple(ret),
-			lua_function = lua_function,
-		}
-	)
-end
-
-function types.Nilable(typ)
-	return types.Union({typ, types.Nil()})
+	types.Table = require("nattlua.types.table").Table
+	types.Union = require("nattlua.types.union").Union
+	types.Nilable = require("nattlua.types.union").Nilable
+	types.List = require("nattlua.types.list").List
+	types.Tuple = require("nattlua.types.tuple").Tuple
+	types.Number = require("nattlua.types.number").Number
+	types.Function = require("nattlua.types.function").Function
+	types.LuaTypeFunction = require("nattlua.types.function").LuaTypeFunction
+	types.String = require("nattlua.types.string").String
+	types.Any = require("nattlua.types.any").Any
+	types.Symbol = require("nattlua.types.symbol").Symbol
+	types.Nil = require("nattlua.types.symbol").Nil
+	types.True = require("nattlua.types.symbol").True
+	types.False = require("nattlua.types.symbol").False
+	types.Boolean = require("nattlua.types.symbol").Boolean
 end
 
 return types

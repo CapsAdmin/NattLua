@@ -1,6 +1,7 @@
 local tostring = tostring
 local math = math
 local types = require("nattlua.types.types")
+local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 local table = require("table")
 local ipairs = _G.ipairs
@@ -152,23 +153,23 @@ function META:GetAtIndex(i)
 
 			if found then
 				if val then
-					val = types.Union({val, found})
+					val = self.New({val, found})
 					val:SetNode(found:GetNode()):SetSource(found):SetBinarySource(found.source_left, found.source_right)
 				else
 					val = found
 				end
 			else
 				if val then
-					val = types.Union({val, types.Nil()})
+					val = self.New({val, Nil()})
 				else
-					val = types.Nil()
+					val = Nil()
 				end
 
 				table.insert(errors, err)
 			end
 		else
 			if val then
-				val = types.Union({val, obj})
+				val = self.New({val, obj})
 				val:SetNode(self:GetNode()):SetSource(self):SetBinarySource(self.source_left, self.source_right)
 			else
 				val = obj
@@ -291,7 +292,7 @@ function META.IsSubsetOf(A, B)
         -- TODO: given error above, the unpack probably should probably be moved out
     end
 
-	if B.Type ~= "union" then return A:IsSubsetOf(types.Union({B})) end
+	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
 
 	for _, a in ipairs(A.data) do
 		if a.Type == "any" then return true end
@@ -318,7 +319,7 @@ function META:Union(union)
 end
 
 function META:Intersect(union)
-	local copy = types.Union()
+	local copy = META.New()
 
 	for _, e in ipairs(self.data) do
 		if union:Get(e) then
@@ -341,7 +342,7 @@ end
 
 function META:Copy(map)
 	map = map or {}
-	local copy = types.Union()
+	local copy = META.New()
 	map[self] = map[self] or copy
 
 	for _, e in ipairs(self.data) do
@@ -468,7 +469,7 @@ function META:Call(analyzer, arguments, call_node)
 		return type_errors.other(errors)
 	end
 
-	local new = types.Union({})
+	local new = META.New({})
 
 	for _, obj in ipairs(self.data) do
 		local val = analyzer:Assert(call_node, analyzer:Call(obj, arguments, call_node))
@@ -487,9 +488,9 @@ function META:Call(analyzer, arguments, call_node)
 end
 
 function META:MakeCallableUnion(analyzer, node)
-	local new_union = types.Union()
-	local truthy_union = types.Union()
-	local falsy_union = types.Union()
+	local new_union = self.New()
+	local truthy_union = self.New()
+	local falsy_union = self.New()
 
 	for _, v in ipairs(self.data) do
 		if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
@@ -533,4 +534,10 @@ function META:GetLargestNumber()
 	return max[1]
 end
 
-return META
+return
+	{
+		Union = META.New,
+		Nilable = function(typ)
+			return types.Union({typ, types.Nil()})
+		end,
+	}

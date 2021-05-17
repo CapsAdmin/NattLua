@@ -3,6 +3,7 @@ local tostring = _G.tostring
 local table = require("table")
 local type_errors = require("nattlua.types.error_messages")
 local types = require("nattlua.types.types")
+local Union = require("nattlua.types.union").Union
 local META = {}
 META.Type = "list"
 require("nattlua.types.base")(META)
@@ -119,7 +120,7 @@ function META.IsSubsetOf(A, B)
 
 		return true
 	elseif B.Type == "union" then
-		return types.Union({A}):IsSubsetOf(B)
+		return Union({A}):IsSubsetOf(B)
 	end
 
 	return type_errors.subset(A, B)
@@ -152,7 +153,7 @@ function META:Delete(key)
 end
 
 function META:GetKeyUnion()
-	local union = types.Union()
+	local union = Union()
 
 	for _, keyval in ipairs(self:GetData()) do
 		union:AddType(keyval.key:Copy())
@@ -221,7 +222,7 @@ function META:Set(key, val)
 		table.insert(self:GetData(), {key = key, val = val})
 	else
 		if keyval.val and not keyval.key:Equal(key) then
-			keyval.val = types.Union({keyval.val, val})
+			keyval.val = Union({keyval.val, val})
 		else
 			keyval.val = val
 		end
@@ -235,7 +236,7 @@ function META:Get(key)
 	if self.ElementType then return self.ElementType end
 
 	if key.Type == "string" and not key:IsLiteral() then
-		local union = types.Union({types.Nil()})
+		local union = Union({types.Nil()})
 
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == "string" then
@@ -247,7 +248,7 @@ function META:Get(key)
 	end
 
 	if key.Type == "number" and not key:IsLiteral() then
-		local union = types.Union({types.Nil()})
+		local union = Union({types.Nil()})
 
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == "number" then
@@ -301,7 +302,7 @@ end
 
 function META:Copy(map)
 	map = map or {}
-	local copy = types.List({})
+	local copy = self.New({})
 	map[self] = map[self] or copy
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -391,7 +392,7 @@ function META.Extend(A, B)
 end
 
 function META.Union(A, B)
-	local copy = types.List({})
+	local copy = self.New({})
 
 	for _, keyval in ipairs(A:GetData()) do
 		copy:Set(unpack_keyval(keyval, A, copy))
@@ -417,4 +418,4 @@ function META:Initialize(data)
 	return true
 end
 
-return META
+return {List = META.New}

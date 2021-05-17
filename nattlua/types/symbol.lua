@@ -3,6 +3,7 @@ local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
 local type_errors = require("nattlua.types.error_messages")
+local types = require("nattlua.types.types")
 local META = {}
 META.Type = "symbol"
 require("nattlua.types.base")(META)
@@ -24,7 +25,7 @@ function META:__tostring()
 end
 
 function META:Copy()
-	local copy = self:New(self:GetData())
+	local copy = self.New(self:GetData())
 	copy:CopyInternalsFrom(self)
 	return copy
 end
@@ -64,4 +65,19 @@ function META:Initialize(data)
 	return true
 end
 
-return META
+return
+	{
+		Symbol = META.New,
+		Nil = function()
+			return types.Symbol(nil)
+		end,
+		True = function()
+			return types.Symbol(true)
+		end,
+		False = function()
+			return types.Symbol(false)
+		end,
+		Boolean = function()
+			return types.Union({types.True(), types.False()})
+		end,
+	}

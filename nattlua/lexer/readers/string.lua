@@ -1,6 +1,6 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
-local read_space = require("nattlua.lexer.readers.space")
+local space = require("nattlua.lexer.readers.space").space
 local B = string.byte
 local escape_character = B([[\]])
 
@@ -17,7 +17,7 @@ local function build_string_reader(name--[[#: string]], quote--[[#: string]])
 				local char = lexer:ReadChar()
 
 				if char == B("z") and not lexer:IsCurrentValue(quote) then
-					read_space(lexer)
+					space(lexer)
 				end
 			elseif char == B("\n") then
 				lexer:Advance(-1)
@@ -39,6 +39,6 @@ end
 
 return
 	{
-		read_double_quote = build_string_reader("double", "\""),
-		read_single_quote = build_string_reader("single", "'"),
+		double_quote_string = build_string_reader("double", "\""),
+		single_quote_string = build_string_reader("single", "'"),
 	}

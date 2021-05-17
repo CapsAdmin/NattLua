@@ -4,7 +4,7 @@ local tostring = tostring
 local error = error
 local type_errors = require("nattlua.types.error_messages")
 local string_meta = require("nattlua.runtime.string_meta")
-local types = require("nattlua.types.types")
+local Number = require("nattlua.types.number").Number
 local META = {}
 META.Type = "string"
 require("nattlua.types.base")(META)
@@ -21,7 +21,7 @@ function META:GetLuaType()
 end
 
 function META:Copy()
-	local copy = self:New(self:GetData()):SetLiteral(self:IsLiteral())
+	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
 	copy.pattern_contract = self.pattern_contract
 	copy:CopyInternalsFrom(self)
 	return copy
@@ -111,7 +111,7 @@ function META:Initialize()
 end
 
 function META:PrefixOperator(op)
-	if op == "#" then return types.Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral()) end
+	if op == "#" then return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral()) end
 end
 
-return META
+return {String = META.New}

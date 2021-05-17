@@ -21,7 +21,7 @@ local operators = {
 
 function META:PrefixOperator(op)
 	if self:IsLiteral() then
-		local num = self:New(operators[op](self:GetData())):SetLiteral(true)
+		local num = self.New(operators[op](self:GetData())):SetLiteral(true)
 
 		if self:GetMax() then
 			num:SetMax(self:GetMax():PrefixOperator(op))
@@ -30,7 +30,7 @@ function META:PrefixOperator(op)
 		return num
 	end
 
-	return self:New()
+	return self.New()
 end
 
 --[[#type META.max = META]]
@@ -56,7 +56,7 @@ function META:GetLuaType()
 end
 
 function META:Copy()
-	local copy = self:New(self:GetData()):SetLiteral(self:IsLiteral())
+	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
 
 	if self.max then
 		copy.max = self.max:Copy()
@@ -221,4 +221,4 @@ function META:IsTruthy()
 	return true
 end
 
-return META
+return {Number = META.New}

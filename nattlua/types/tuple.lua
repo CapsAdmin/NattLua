@@ -6,6 +6,9 @@ local print = print
 local debug = debug
 local error = error
 local types = require("nattlua.types.types")
+local Union = require("nattlua.types.union").Union
+local Nil = require("nattlua.types.symbol").Nil
+local Any = require("nattlua.types.any").Any
 local type_errors = require("nattlua.types.error_messages")
 local ipairs = _G.ipairs
 local type = _G.type
@@ -67,7 +70,7 @@ function META:Merge(tup)
 		local b = tup:Get(i)
 
 		if a then
-			src[i] = types.Union({a, b})
+			src[i] = Union({a, b})
 		else
 			src[i] = b:Copy()
 		end
@@ -88,7 +91,7 @@ end
 
 function META:Copy(map)
 	map = map or {}
-	local copy = types.Tuple({})
+	local copy = self.New({})
 	map[self] = map[self] or copy
 
 	for i, v in ipairs(self:GetData()) do
@@ -190,7 +193,7 @@ function META.IsSubsetOfTuple(A, B)
 
 		if not a then
 			if b and b.Type == "any" then
-				a = types.Any()
+				a = Any()
 			else
 				return a, a_err, a, b, i
 			end
@@ -203,8 +206,8 @@ function META.IsSubsetOfTuple(A, B)
 			if not b then break end
 		end
 
-		a = a or types.Nil()
-		b = b or types.Nil()
+		a = a or Nil()
+		b = b or Nil()
 		local ok, reason = a:IsSubsetOf(b)
 		if not ok then return ok, reason, a, b, i end
 	end
@@ -378,4 +381,4 @@ function META:Initialize(data)
 	return true
 end
 
-return META
+return {Tuple = META.New}

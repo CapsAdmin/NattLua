@@ -134,21 +134,24 @@ local function read_decimal_number(lexer--[[#: Lexer]])
 	end
 end
 
-return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-	if
-		syntax.IsNumber(lexer:GetCurrentChar()) or
-		(lexer:IsCurrentValue(".") and syntax.IsNumber(lexer:GetChar(1)))
-	then
-		if lexer:IsValue("x", 1) or lexer:IsValue("X", 1) then
-			ReadHexNumber(lexer)
-		elseif lexer:IsValue("b", 1) or lexer:IsValue("B", 1) then
-			ReadBinaryNumber(lexer)
-		else
-			read_decimal_number(lexer)
-		end
+return
+	{
+		number = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+			if
+				syntax.IsNumber(lexer:GetCurrentChar()) or
+				(lexer:IsCurrentValue(".") and syntax.IsNumber(lexer:GetChar(1)))
+			then
+				if lexer:IsValue("x", 1) or lexer:IsValue("X", 1) then
+					ReadHexNumber(lexer)
+				elseif lexer:IsValue("b", 1) or lexer:IsValue("B", 1) then
+					ReadBinaryNumber(lexer)
+				else
+					read_decimal_number(lexer)
+				end
 
-		return "number"
-	end
+				return "number"
+			end
 
-	return false
-end
+			return false
+		end,
+	}

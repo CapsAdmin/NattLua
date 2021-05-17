@@ -2,20 +2,20 @@ local META = dofile("nattlua/lexer/lexer.lua")
 --[[#type Lexer = META.@Self]]
 
 do
-	local space = require("nattlua.lexer.readers.space")
-	local letter = require("nattlua.lexer.readers.letter")
-	local c_multiline_comment = require("nattlua.lexer.readers.c_multiline_comment")
-	local c_line_comment = require("nattlua.lexer.readers.c_line_comment")
-	local multiline_comment = require("nattlua.lexer.readers.multiline_comment")
-	local line_comment = require("nattlua.lexer.readers.line_comment")
-	local inline_type_code = require("nattlua.lexer.readers.inline_type_code")
-	local number = require("nattlua.lexer.readers.number")
-	local multiline_string = require("nattlua.lexer.readers.multiline_string")
-	local single_quote_string = require("nattlua.lexer.readers.string").read_single_quote
-	local double_quote_string = require("nattlua.lexer.readers.string").read_double_quote
-	local symbol = require("nattlua.lexer.readers.symbol")
-	local comment_escape = require("nattlua.lexer.readers.comment_escape").read
-	local remaining_comment_escape = require("nattlua.lexer.readers.comment_escape").read_remaining
+	local space = require("nattlua.lexer.readers.space").space
+	local letter = require("nattlua.lexer.readers.letter").letter
+	local c_multiline_comment = require("nattlua.lexer.readers.c_multiline_comment").c_multiline_comment
+	local c_line_comment = require("nattlua.lexer.readers.c_line_comment").c_line_comment
+	local multiline_comment = require("nattlua.lexer.readers.multiline_comment").multiline_comment
+	local line_comment = require("nattlua.lexer.readers.line_comment").line_comment
+	local inline_type_code = require("nattlua.lexer.readers.inline_type_code").inline_type_code
+	local number = require("nattlua.lexer.readers.number").number
+	local multiline_string = require("nattlua.lexer.readers.multiline_string").multiline_string
+	local single_quote_string = require("nattlua.lexer.readers.string").single_quote_string
+	local double_quote_string = require("nattlua.lexer.readers.string").double_quote_string
+	local symbol = require("nattlua.lexer.readers.symbol").symbol
+	local comment_escape = require("nattlua.lexer.readers.comment_escape").comment_escape
+	local remaining_comment_escape = require("nattlua.lexer.readers.comment_escape").remaining_comment_escape
 
 	function META:Read()
 		if remaining_comment_escape(self) then return "discard", false end

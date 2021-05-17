@@ -2,7 +2,8 @@ local tostring = _G.tostring
 local error = _G.error
 local table = require("table")
 local ipairs = _G.ipairs
-local types = require("nattlua.types.types")
+local Tuple = require("nattlua.types.tuple").Tuple
+local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
 local META = {}
 META.Type = "function"
@@ -28,11 +29,11 @@ function META:GetLuaType()
 end
 
 function META:GetArguments()
-	return self:GetData().arg or types.Tuple({})
+	return self:GetData().arg or Tuple({})
 end
 
 function META:GetReturnTypes()
-	return self:GetData().ret or types.Tuple({})
+	return self:GetData().ret or Tuple({})
 end
 
 function META:HasExplicitReturnTypes()
@@ -52,7 +53,7 @@ end
 
 function META:Copy(map)
 	map = map or {}
-	local copy = types.Function({arg = types.Tuple({}), ret = types.Tuple({})})
+	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
 	map[self] = map[self] or copy
 	copy:GetData().ret = self:GetReturnTypes():Copy(map)
 	copy:GetData().arg = self:GetArguments():Copy(map)
@@ -94,7 +95,7 @@ function META.IsSubsetOf(A, B)
 		if not ok then return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason) end
 		return true
 	elseif B.Type == "union" then
-		return types.Union({A}):IsSubsetOf(B)
+		return Union({A}):IsSubsetOf(B)
 	end
 
 	return type_errors.type_mismatch(A, B)
@@ -142,4 +143,14 @@ function META:IsPure()
 	return #self:GetSideEffects() == 0
 end
 
-return META
+return
+	{
+		Function = META.New,
+		LuaTypeFunction = function(lua_function, arg, ret)
+			return META.New({
+				arg = Tuple(arg),
+				ret = Tuple(ret),
+				lua_function = lua_function,
+			})
+		end,
+	}

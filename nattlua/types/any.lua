@@ -1,4 +1,3 @@
-local types = require("nattlua.types.types")
 local META = {}
 META.Type = "any"
 require("nattlua.types.base")(META)
@@ -32,11 +31,12 @@ function META:IsTruthy()
 end
 
 function META:Call()
-	return types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
+	local Tuple = require("nattlua.types.tuple").Tuple
+	return Tuple({}):AddRemainder(Tuple({META.New()}):SetRepeat(math.huge))
 end
 
 function META.Equal(a, b)
 	return a.Type == b.Type
 end
 
-return META
+return {Any = META.New}

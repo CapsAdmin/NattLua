@@ -2,9 +2,9 @@ local tostring = tostring
 local table = require("table")
 local types = require("nattlua.types.types")
 local ipairs = _G.ipairs
-
 local locals = ""
-for k,v in pairs(_G) do
+
+for k, v in pairs(_G) do
 	locals = locals .. "local " .. tostring(k) .. " = _G." .. k .. ";"
 end
 
