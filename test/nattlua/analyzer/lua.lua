@@ -1,3 +1,6 @@
+local ipairs = ipairs
+local pairs = pairs
+local tostring = _G.tostring
 local T = require("test.helpers")
 local run = T.RunCode
 

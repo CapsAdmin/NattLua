@@ -2,6 +2,12 @@ local tostring = tostring
 local table = require("table")
 local types = require("nattlua.types.types")
 local ipairs = _G.ipairs
+
+local locals = ""
+for k,v in pairs(_G) do
+	locals = locals .. "local " .. tostring(k) .. " = _G." .. k .. ";"
+end
+
 return function(analyzer, node, env)
 	if
 		node.type == "statement" and
@@ -131,7 +137,7 @@ return function(analyzer, node, env)
 			node.statements and
 			(node.kind == "type_function" or node.kind == "local_type_function")
 		then
-			func = analyzer:CompileLuaTypeCode("return " .. node:Render({uncomment_types = true}), node)()
+			func = analyzer:CompileLuaTypeCode(locals .. "\nreturn " .. node:Render({uncomment_types = true}), node)()
 		end
 	end
 

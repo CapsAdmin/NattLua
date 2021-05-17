@@ -528,7 +528,7 @@ function helpers.GlobalLookup()
 	end
 
 	copy._G = copy
-	local blacklist = {require = true,}
+	local blacklist = {require = true, _G = true}
 	setmetatable(
 		_G,
 		{
