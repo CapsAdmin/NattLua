@@ -1,5 +1,6 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
+local string = require("string")
 return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 	if
 		lexer:IsValue("-", 0) and

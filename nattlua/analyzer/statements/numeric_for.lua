@@ -1,3 +1,6 @@
+local ipairs = ipairs
+local math = math
+local assert = assert
 local types = require("nattlua.types.types")
 local binary_operator = require("nattlua.analyzer.operators.binary")
 

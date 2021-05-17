@@ -1,3 +1,19 @@
+local pcall = _G.pcall
+local type = _G.type
+local getmetatable = _G.getmetatable
+local tostring = _G.tostring
+local pairs = _G.pairs
+local assert = _G.assert
+local setmetatable = _G.setmetatable
+local ipairs = _G.ipairs
+local error = _G.error
+local print = _G.print
+local load = _G.load
+local math = _G.math
+local tonumber = _G.tonumber
+local rawget = _G.rawget
+local os = _G.os
+
 -- Copyright (c) Facebook, Inc. and its affiliates.
 -- This source code is licensed under the MIT license found in the
 -- LICENSE file in the root directory of this source tree.

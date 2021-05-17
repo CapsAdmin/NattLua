@@ -1,3 +1,4 @@
+local ipairs = ipairs
 return function(analyzer, statement)
 	local prev_expression
 

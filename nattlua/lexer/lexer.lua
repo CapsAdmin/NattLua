@@ -1,7 +1,8 @@
 --[[#local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")]]
 
 local table_pool = require("nattlua.other.table_pool")
-local ipairs = ipairs
+local setmetatable = _G.setmetatable
+local ipairs = _G.ipairs
 local META = {}
 META.__index = META
 --[[#type META.@Name = "Lexer"]]

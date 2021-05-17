@@ -1,3 +1,14 @@
+local pairs = _G.pairs
+local string = require("string")
+local error = _G.error
+local next = _G.next
+local type = _G.type
+local ipairs = _G.ipairs
+local table = require("table")
+local tostring = _G.tostring
+local select = _G.select
+local tonumber = _G.tonumber
+
 local json = {}
 
 -------------------------------------------------------------------------------

@@ -1,7 +1,12 @@
 local syntax = require("nattlua.syntax.syntax")
-local ipairs = ipairs
-local assert = assert
-local type = type
+local tostring = _G.tostring
+local error = _G.error
+local pairs = _G.pairs
+local print = _G.print
+local ipairs = _G.ipairs
+local assert = _G.assert
+local table = require("table")
+local setmetatable = _G.setmetatable
 local META = {}
 META.__index = META
 require("nattlua.transpiler.base_emitter")(META)

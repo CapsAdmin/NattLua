@@ -1,5 +1,9 @@
+local tostring = tostring
+local math = math
 local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
+local table = require("table")
+local ipairs = _G.ipairs
 local META = {}
 META.Type = "union"
 require("nattlua.types.base")(META)

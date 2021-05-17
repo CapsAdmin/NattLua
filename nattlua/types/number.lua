@@ -1,3 +1,7 @@
+local ipairs = _G.ipairs
+local table = require("table")
+local error = _G.error
+local tostring = _G.tostring
 local type_errors = require("nattlua.types.error_messages")
 local META = {}
 META.Type = "number"

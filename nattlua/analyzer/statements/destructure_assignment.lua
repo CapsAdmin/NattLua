@@ -1,3 +1,5 @@
+local tostring = tostring
+local ipairs = ipairs
 return function(analyzer, statement)
 	local env = statement.environment or "runtime"
 	local obj = analyzer:AnalyzeExpression(statement.right, env)

@@ -1,3 +1,8 @@
+local io = io
+local tostring = tostring
+local ipairs = ipairs
+local table = require("table")
+local select = _G.select
 return function(META)
 	function META:FireEvent(what, ...)
 		if self.suppress_events then return end

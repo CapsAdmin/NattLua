@@ -1,3 +1,4 @@
+local table = require("table")
 return function(META)
 	local setmetatable = setmetatable
 	local type = type

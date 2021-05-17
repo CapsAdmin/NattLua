@@ -1,3 +1,5 @@
+local pcall = _G.pcall
+local pairs = _G.pairs
 local ok, table_new = pcall(require, "table.new")
 
 if not ok then

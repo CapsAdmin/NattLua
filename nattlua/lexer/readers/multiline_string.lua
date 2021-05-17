@@ -1,5 +1,6 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
+local string = require("string")
 local helpers = require("nattlua.other.quote")
 return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 	if lexer:IsValue("[", 0) and (lexer:IsValue("[", 1) or lexer:IsValue("=", 1)) then

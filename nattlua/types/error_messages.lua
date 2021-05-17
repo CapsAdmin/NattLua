@@ -1,3 +1,6 @@
+local table = require("table")
+local type = _G.type
+local ipairs = _G.ipairs
 local errors = {
 		subset = function(a--[[#: any]], b--[[#: any]], reason--[[#: string | nil]])--[[#: false,string | {[number] = any | string}]]
 			local msg = {a, " is not a subset of ", b}

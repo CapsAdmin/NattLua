@@ -1,3 +1,6 @@
+local ipairs = ipairs
+local type = type
+
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
 

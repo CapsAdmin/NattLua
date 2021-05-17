@@ -1,4 +1,7 @@
+local tostring = tostring
+local table = require("table")
 local types = require("nattlua.types.types")
+local ipairs = _G.ipairs
 return function(analyzer, node, env)
 	if
 		node.type == "statement" and

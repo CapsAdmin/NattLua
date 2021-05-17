@@ -1,3 +1,8 @@
+local math = math
+local assert = assert
+local tostring = tostring
+local ipairs = ipairs
+local table = require("table")
 local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
 local bit = _G.bit or require("bit32")

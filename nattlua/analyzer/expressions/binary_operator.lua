@@ -1,4 +1,6 @@
+local table = require("table")
 local binary_operator = require("nattlua.analyzer.operators.binary")
+local assert = _G.assert
 return function(analyzer, node, env)
 	local left
 	local right

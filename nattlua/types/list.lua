@@ -1,3 +1,6 @@
+local ipairs = _G.ipairs
+local tostring = _G.tostring
+local table = require("table")
 local type_errors = require("nattlua.types.error_messages")
 local types = require("nattlua.types.types")
 local META = {}

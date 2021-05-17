@@ -1,5 +1,14 @@
+local tostring = tostring
+local table = require("table")
+local math = math
+local assert = assert
+local print = print
+local debug = debug
+local error = error
 local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
+local ipairs = _G.ipairs
+local type = _G.type
 local META = {}
 META.Type = "tuple"
 require("nattlua.types.base")(META)

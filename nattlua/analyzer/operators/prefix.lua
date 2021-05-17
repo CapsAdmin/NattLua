@@ -1,3 +1,6 @@
+local ipairs = ipairs
+local error = error
+local tostring = tostring
 local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
 

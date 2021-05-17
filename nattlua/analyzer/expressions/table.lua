@@ -1,4 +1,7 @@
+local tostring = tostring
+local ipairs = ipairs
 local types = require("nattlua.types.types")
+local table = require("table")
 return function(analyzer, node, env)
 	local tbl = analyzer:NewType(node, "table", nil, env == "typesystem")
 

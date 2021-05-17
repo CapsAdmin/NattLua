@@ -1,3 +1,6 @@
+local table = require("table")
+local tostring = tostring
+local ipairs = ipairs
 local types = require("nattlua.types.types")
 local Tuple = types.Tuple
 return function(analyzer, node, env)

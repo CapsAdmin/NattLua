@@ -1,7 +1,9 @@
+local ipairs = _G.ipairs
+local pairs = _G.pairs
+local setmetatable = _G.setmetatable
+local type = _G.type
+local table = require("table")
 return function(META)
-	local setmetatable = setmetatable
-	local type = type
-
 	local function expect(node, parser, func, what, start, stop, alias)
 		local tokens = node.tokens
 

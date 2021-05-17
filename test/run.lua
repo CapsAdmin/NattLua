@@ -1,3 +1,8 @@
+local io = require("io")
+local pcall = _G.pcall
+
+--require("nattlua.other.helpers").GlobalLookup()
+
 local map-- = {}
 
 if map then

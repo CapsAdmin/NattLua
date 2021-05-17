@@ -1,4 +1,9 @@
+local tostring = tostring
+local error = error
+local setmetatable = setmetatable
+local ipairs = ipairs
 local types = require("nattlua.types.types")
+local math = require("math")
 types.Initialize()
 local META = {}
 META.__index = META

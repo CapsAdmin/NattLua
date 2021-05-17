@@ -1,3 +1,8 @@
+local error = _G.error
+local assert = _G.assert
+local tostring = _G.tostring
+local setmetatable = _G.setmetatable
+local getmetatable = _G.getmetatable
 local type_errors = require("nattlua.types.error_messages")
 
 --[[#local function GetSet<|tbl: any, name: literalstring, default: any|>

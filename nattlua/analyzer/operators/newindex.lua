@@ -1,3 +1,5 @@
+local ipairs = ipairs
+local tostring = tostring
 local types = require("nattlua.types.types")
 return function(META)
 	function META:NewIndexOperator(node, obj, key, val, env)

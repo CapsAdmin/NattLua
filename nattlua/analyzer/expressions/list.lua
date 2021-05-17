@@ -1,3 +1,4 @@
+local ipairs = ipairs
 return function(analyzer, node, env)
 	local list = analyzer:NewType(node, "list", nil, env == "typesystem")
 

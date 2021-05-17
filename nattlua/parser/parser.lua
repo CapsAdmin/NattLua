@@ -1,4 +1,8 @@
 local syntax = require("nattlua.syntax.syntax")
+local math = require("math")
+local table = require("table")
+local setmetatable = _G.setmetatable
+local ipairs = _G.ipairs
 local META = {}
 META.__index = META
 META.Emitter = require("nattlua.transpiler.emitter")

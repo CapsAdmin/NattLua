@@ -1,4 +1,8 @@
+local error = error
+local tostring = tostring
+local setmetatable = _G.setmetatable
 local types = {}
+local type = _G.type
 
 function types.Cast(val)
 	if type(val) == "string" then

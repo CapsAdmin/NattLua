@@ -1,3 +1,6 @@
+local ipairs = ipairs
+local tostring = tostring
+local table = require("table")
 local types = require("nattlua.types.types")
 
 local function check_type_against_contract(val, contract)

@@ -1,3 +1,11 @@
+local ipairs = ipairs
+local type = type
+local math = math
+local table = require("table")
+local tostring = tostring
+local debug = debug
+local print = print
+local string = require("string")
 local types = require("nattlua.types.types")
 local type_errors = require("nattlua.types.error_messages")
 return function(META)

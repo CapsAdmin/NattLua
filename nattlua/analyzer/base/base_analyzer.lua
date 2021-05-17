@@ -1,5 +1,16 @@
+local tonumber = tonumber
+local ipairs = ipairs
+local os = os
+local print = print
+local pairs = pairs
+local setmetatable = setmetatable
+local pcall = pcall
+local tostring = tostring
+local debug = debug
+local io = io
 local load = loadstring or load
 local types = require("nattlua.types.types")
+local table = require("table")
 return function(META)
 	function META:StringToNumber(node, str)
 		if str:sub(1, 2) == "0b" then

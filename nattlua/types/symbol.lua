@@ -1,3 +1,7 @@
+local type = type
+local tostring = tostring
+local ipairs = ipairs
+local table = require("table")
 local type_errors = require("nattlua.types.error_messages")
 local META = {}
 META.Type = "symbol"

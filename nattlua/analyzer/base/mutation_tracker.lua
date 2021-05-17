@@ -1,3 +1,8 @@
+local print = print
+local tostring = tostring
+local ipairs = ipairs
+local table = require("table")
+local setmetatable = setmetatable
 local types = require("nattlua.types.types")
 local META = {}
 META.__index = META

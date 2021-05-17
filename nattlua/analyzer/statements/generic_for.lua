@@ -1,3 +1,5 @@
+local table = require("table")
+local ipairs = ipairs
 local types = require("nattlua.types.types")
 return function(analyzer, statement)
 	local args = analyzer:AnalyzeExpressions(statement.expressions)

@@ -1,3 +1,4 @@
+local table = require("table")
 return function(META)
 	local math_huge = math.huge
 	local syntax = require("nattlua.syntax.syntax")

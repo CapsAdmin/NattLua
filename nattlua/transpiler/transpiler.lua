@@ -1,8 +1,14 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
 
-local ipairs = ipairs
-local assert = assert
-local type = type
+local error = _G.error
+local debug = _G.debug
+local tostring = _G.tostring
+local pairs = _G.pairs
+local table = require("table")
+local setmetatable = _G.setmetatable
+local ipairs = _G.ipairs
+local assert = _G.assert
+local type = _G.type
 local META = {}
 META.__index = META
 --[[#type META.@Self = {
@@ -62,7 +68,7 @@ end
 
 function META:EmitNonSpace(str--[[#: string]])
 	self:Emit(str)
-	self.last_non_space_index = #self.out --[[# as 1 .. inf]]
+	self.last_non_space_index = #self.out
 end
 
 function META:EmitSpace(str--[[#: string]])

@@ -1,3 +1,10 @@
+local table = require("table")
+local type = type
+local ipairs = ipairs
+local tostring = tostring
+local io = io
+local debug = debug
+local error = error
 local helpers = require("nattlua.other.helpers")
 return function(META)
 --[[#	type META.diagnostics = {

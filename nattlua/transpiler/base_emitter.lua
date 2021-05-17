@@ -1,8 +1,12 @@
+local error = _G.error
+local debug = _G.debug
+local tostring = _G.tostring
+local pairs = _G.pairs
+local table = require("table")
+local ipairs = _G.ipairs
+local assert = _G.assert
+local type = _G.type
 return function(META)
-	local ipairs = ipairs
-	local assert = assert
-	local type = type
-
 	function META:Whitespace(str, force)
 		if self.config.preserve_whitespace == nil and not force then return end
 

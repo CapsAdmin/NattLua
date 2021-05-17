@@ -1,6 +1,19 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
 
+local math = require("math")
+local table = require("table")
 local quote = require("nattlua.other.quote")
+local type = _G.type
+local pairs = _G.pairs
+local assert = _G.assert
+local tonumber = _G.tonumber
+local tostring = _G.tostring
+local next = _G.next
+local error = _G.error
+local ipairs = _G.ipairs
+local jit = _G.jit
+local pcall = _G.pcall
+local unpack = _G.unpack
 local helpers = {}
 
 function helpers.LinePositionToSubPosition(code--[[#: string]], line--[[#: number]], character--[[#: number]])--[[#: number]]
@@ -499,21 +512,44 @@ end
 function helpers.GlobalLookup()
 	local _G = _G
 	local tostring = tostring
-	local print = print
+	local io = io
+	local print = function(str)
+		io.write(str, "\n")
+	end
 	local rawset = rawset
 	local rawget = rawget
-	setmetatable(_G, {
-		__index = function(_, key)
-			print("_G." .. key)
-			print(debug.traceback():match(".-\n.-\n(.-)\n"))
-			return rawget(_G, key)
-		end,
-		__newindex = function(_, key, val)
-			print("_G." .. key .. " = " .. tostring(val))
-			print(debug.traceback():match(".-\n.-\n(.-)\n"))
-			rawset(_G, key, val)
-		end,
-	})
+	local copy = {}
+	local setmetatable = setmetatable
+	local debug = debug
+
+	for k, v in pairs(_G) do
+		copy[k] = v
+		_G[k] = nil
+	end
+
+	copy._G = copy
+	local blacklist = {require = true,}
+	setmetatable(
+		_G,
+		{
+			__index = function(_, key)
+				if not blacklist[key] then
+					print("_G." .. tostring(key))
+					print(debug.traceback():match(".-\n.-\n(.-)\n"))
+				end
+
+				return rawget(copy, key)
+			end,
+			__newindex = function(_, key, val)
+				if not blacklist[key] then
+					print("_G." .. tostring(key) .. " = " .. tostring(val))
+					print(debug.traceback():match(".-\n.-\n(.-)\n"))
+				end
+
+				rawset(copy, key, val)
+			end,
+		}
+	)
 end
 
 return helpers

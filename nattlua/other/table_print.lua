@@ -1,3 +1,14 @@
+local pairs = _G.pairs
+local tostring = _G.tostring
+local type = _G.type
+local debug = _G.debug
+local table = require("table")
+local tonumber = _G.tonumber
+local pcall = _G.pcall
+local assert = _G.assert
+local load = _G.load
+local setfenv = _G.setfenv
+local io = _G.io
 local luadata = {}
 local encode_table
 

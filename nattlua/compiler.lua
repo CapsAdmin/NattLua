@@ -1,4 +1,12 @@
+local io = io
+local error = error
+local xpcall = xpcall
+local tostring = tostring
+local table = require("table")
+local assert = assert
 local helpers = require("nattlua.other.helpers")
+local debug = require("debug")
+local setmetatable = _G.setmetatable
 local META = {}
 META.__index = META
 

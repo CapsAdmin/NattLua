@@ -1,5 +1,14 @@
+local ipairs = ipairs
+local pairs = pairs
+local error = error
+local tostring = tostring
+local assert = assert
+local setmetatable = setmetatable
 local types = require("nattlua.types.types")
+local type = _G.type
 local table_insert = table.insert
+local table = require("table")
+local type = _G.type
 local META = {}
 META.__index = META
 local LexicalScope
