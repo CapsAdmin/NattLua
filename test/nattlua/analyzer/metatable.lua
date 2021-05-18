@@ -497,3 +497,30 @@ run([[
         self.foo[self.i] = {"bad type"}
     end
 ]], "bad type.-is not a subset of string")
+
+run[[
+    local function GetSet(tbl: literal any, name: literal string, default: literal any)
+        tbl[name] = default as NonLiteral<|default|>
+        type tbl.@Self[name] = tbl[name]
+        
+        tbl["Set" .. name] = function(self: tbl.@Self, val: typeof tbl[name])
+            self[name] = val
+        end
+        
+        tbl["Get" .. name] = function(self: tbl.@Self): typeof tbl[name]
+            return self[name]
+        end
+    end
+
+    local META = {}
+    META.__index = META
+    type META.@Self = {}
+
+    GetSet(META, "Foo", true)
+
+    local self = setmetatable({} as META.@Self, META)
+    self:SetFoo(true)
+    local b = self:GetFoo()
+    type_assert<|b, boolean|>
+    type_assert<|self.Foo, boolean|>
+]]

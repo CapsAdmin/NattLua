@@ -11,6 +11,10 @@ local type thread = Table
 local type empty_function = function(...): ...:any
 
 type function NonLiteral(obj: any)
+	if obj.Type == "symbol" and (obj:GetData() == true or obj:GetData() == false) then
+		return types.Boolean()
+	end
+
 	obj = obj:Copy()
 	obj:SetLiteral(false)
 	return obj
