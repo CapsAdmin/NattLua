@@ -3,7 +3,7 @@ local assert = _G.assert
 local load = _G.loadstring or load
 local table = require("table")
 local tostring = _G.tostring
-return function(tbl--[[#: {[number] = string}]], lower--[[#: boolean]])
+return {BuildReadFunction = function(tbl--[[#: {[number] = string}]], lower--[[#: boolean]])
 	local copy = {}
 	local done = {}
 
@@ -48,4 +48,4 @@ return function(tbl--[[#: {[number] = string}]], lower--[[#: boolean]])
 
 	kernel = kernel .. "\nend"
 	return assert(load(kernel))()
-end
+end}

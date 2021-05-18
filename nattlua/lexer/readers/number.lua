@@ -2,7 +2,7 @@
 
 local string = require("string")
 local syntax = require("nattlua.syntax.syntax")
-local BuildReadFunction = require("nattlua.lexer.build_read_function")
+local BuildReadFunction = require("nattlua.lexer.build_read_function").BuildReadFunction
 local IsInNumberAnnotation = BuildReadFunction(syntax.NumberAnnotations, true)
 
 local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])

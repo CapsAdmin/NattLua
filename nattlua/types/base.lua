@@ -5,16 +5,6 @@ local setmetatable = _G.setmetatable
 local getmetatable = _G.getmetatable
 local type_errors = require("nattlua.types.error_messages")
 
---[[#local function GetSet<|tbl: any, name: literalstring, default: any|>
-	T[name] = default
-	T["Set" .. name] = function(self, val: typeofdefault)
-		self[name] = val
-	end
-	T["Get" .. name] = function(self): typeofdefault
-		return self[name]
-	end
-end]]
-
 --[[#type BaseType = {}]]
 return function(META--[[#: {
 	@Name = "BaseType",
