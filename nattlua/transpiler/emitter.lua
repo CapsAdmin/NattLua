@@ -124,7 +124,7 @@ function META:EmitExpression(node, from_assignment)
 		end
 	end
 
-	if node.tokens["as"] then
+	if self.config.annotate and node.tokens["as"] then
 		self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 	end
 end
@@ -1062,7 +1062,7 @@ end
 function META:EmitAnnotation(node)
 	if not self.config.annotate then return end
 
-	if self:HasTypeNotation(node) and node.tokens[":"] then
+	if self:HasTypeNotation(node) and not node.tokens["as"] then
 		self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 	end
 end
