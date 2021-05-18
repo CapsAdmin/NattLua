@@ -93,4 +93,4 @@ do
     type_assert(self:Foo(), _ as number)
 end
 
-local Lexer = require("nattlua.lexer.lua")
+local Lexer = require("nattlua.lexer.lexer")
