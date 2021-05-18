@@ -147,10 +147,12 @@ return
 	{
 		Function = META.New,
 		LuaTypeFunction = function(lua_function, arg, ret)
-			return META.New({
-				arg = Tuple(arg),
-				ret = Tuple(ret),
-				lua_function = lua_function,
-			})
+			return META.New(
+				{
+					arg = Tuple(arg),
+					ret = Tuple(ret),
+					lua_function = lua_function,
+				}
+			)
 		end,
 	}

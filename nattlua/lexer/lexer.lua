@@ -96,7 +96,7 @@ do
 				whitespace = false,
 				start = 0,
 				stop = 0,
-			} --[[# as Token]]
+			}--[[# as Token]]
 	end, 3105585)
 
 	function META:NewToken(type--[[#: TokenType]], is_whitespace--[[#: boolean]], start--[[#: number]], stop--[[#: number]])--[[#: Token]]

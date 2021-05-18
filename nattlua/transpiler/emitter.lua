@@ -123,6 +123,10 @@ function META:EmitExpression(node, from_assignment)
 			self:EmitToken(node)
 		end
 	end
+
+	if node.tokens["as"] then
+		self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
+	end
 end
 
 function META:EmitVarargTuple(node)
@@ -1029,14 +1033,6 @@ function META:EmitFunctionReturnAnnotation(node, type_function)
 end
 
 function META:EmitAnnotationExpression(node)
-	if node.tokens[":"] then
-		self:EmitToken(node.tokens[":"])
-	else
-		self:EmitNonSpace(":")
-	end
-
-	self:Whitespace(" ")
-
 	if node.explicit_type then
 		self:EmitTypeExpression(node.explicit_type)
 	elseif node.inferred_type and self.config.annotate ~= "explicit" then
@@ -1044,11 +1040,30 @@ function META:EmitAnnotationExpression(node)
 	end
 end
 
+function META:EmitAsAnnotationExpression(node)
+	self:OptionalWhitespace()
+	self:Whitespace(" ")
+	self:EmitToken(node.tokens["as"])
+	self:Whitespace(" ")
+	self:EmitAnnotationExpression(node)
+end
+
+function META:EmitColonAnnotationExpression(node)
+	if node.tokens[":"] then
+		self:EmitToken(node.tokens[":"])
+	else
+		self:EmitNonSpace(":")
+	end
+
+	self:Whitespace(" ")
+	self:EmitAnnotationExpression(node)
+end
+
 function META:EmitAnnotation(node)
 	if not self.config.annotate then return end
 
-	if self:HasTypeNotation(node) then
-		self:EmitInvalidLuaCode("EmitAnnotationExpression", node)
+	if self:HasTypeNotation(node) and node.tokens[":"] then
+		self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 	end
 end
 

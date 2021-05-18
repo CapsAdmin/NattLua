@@ -16,7 +16,7 @@ return function(alloc--[[#: literal (function(): {[string] = any})]], size--[[#:
 	end
 
 	local i
-	local pool = table_new(size, records)
+	local pool = table_new(size, records)--[[# as {[number] = return_type<|alloc|>[1]}]]
 
 	local function refill()
 		i = 1
