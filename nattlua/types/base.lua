@@ -4,7 +4,6 @@ local tostring = _G.tostring
 local setmetatable = _G.setmetatable
 local getmetatable = _G.getmetatable
 local type_errors = require("nattlua.types.error_messages")
-
 --[[#type BaseType = {}]]
 return function(META--[[#: {
 	@Name = "BaseType",

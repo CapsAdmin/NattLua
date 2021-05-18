@@ -4,7 +4,7 @@ local setmetatable = _G.setmetatable
 local types = {}
 local type = _G.type
 
-function types.Cast(val)
+function types.Literal(val)
 	if type(val) == "string" then
 		return types.String(val):SetLiteral(true)
 	elseif type(val) == "boolean" then
@@ -24,49 +24,6 @@ end
 
 function types.IsTypeObject(obj)
 	return type(obj) == "table" and obj.Type ~= nil
-end
-
-do
-	local function cmp(a, b, context, source)
-		if not context[a] then
-			context[a] = {}
-			context[a][b] = types.FindInType(a, b, context, source)
-		end
-
-		return context[a][b]
-	end
-
-	-- this function is a sympton of me not knowing exactly how to find types in other types
-	-- ideally this should be much more general and less complex
-	-- i consider this a hack that should be refactored out
-
-	function types.FindInType(a, b, context, source)
-		source = source or b
-		context = context or {}
-		if not a then return false end
-		if a == b then return source end
-
-		if a.upvalue and b.upvalue then
-			if a.upvalue_keyref or b.upvalue_keyref then return a.upvalue_keyref == b.upvalue_keyref and source or false end
-			if a.upvalue == b.upvalue then return source end
-		end
-
-		if
-			a.source_right and
-			a.source_right.upvalue and
-			b.upvalue and
-			a.source_right.upvalue.node == b.upvalue.node
-		then
-			return cmp(a.source_right, b, context, source)
-		end
-
-		if a.upvalue and a.upvalue.value then return cmp(a.upvalue.value, b, context, a) end
-		if a.type_checked then return cmp(a.type_checked, b, context, a) end
-		if a.source_left then return cmp(a.source_left, b, context, a) end
-		if a.source_right then return cmp(a.source_right, b, context, a) end
-		if a.source then return cmp(a.source, b, context, a) end
-		return false
-	end
 end
 
 function types.Initialize()

@@ -223,28 +223,6 @@ function META:GetTestCondition()
 	return obj, scope and scope.test_condition_inverted or nil
 end
 
-function META:FindResponsibleType(obj)
-	local typ = self:GetTestCondition()
-
-	if typ then
-        
-        -- TODO: move this logic to types.FindInType
-        if typ.upvalue and typ.upvalue.value then
-			typ = typ.upvalue.value.source
-		end
-
-		local exp = types.FindInType(typ, obj)
-
-		if exp then
-			if self.test_condition_inverted then
-				return typ.source_left
-			else
-				return typ.source_right
-			end
-		end
-	end
-end
-
 function META:Contains(scope)
 	if scope == self then return true end
 	local parent = scope
@@ -267,35 +245,6 @@ function META:GetRoot()
 	end
 
 	return parent
-end
-
-function META:FindScopeFromTestCondition(obj)
-	local scope = self
-	local found_type
-
-	while true do
-		found_type = types.FindInType(scope.test_condition, obj)
-		if found_type then break end
-        
-        -- find in siblings too, if they have returned
-        -- ideally when cloning a scope, the new scope should be 
-        -- inside of the returned scope, then we wouldn't need this code
-        
-        for _, child in ipairs(scope.children) do
-			if
-				child ~= scope and
-				(child.uncertain_returned or (self.if_statement and self.if_statement == child.if_statement))
-			then
-				local found_type = types.FindInType(child.test_condition, obj)
-				if found_type then return child, found_type end
-			end
-		end
-
-		scope = scope.parent
-		if not scope then return end
-	end
-
-	return scope, found_type
 end
 
 do

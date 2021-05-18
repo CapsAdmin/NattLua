@@ -193,8 +193,8 @@ function META:Insert(val)
 end
 
 function META:Set(key, val)
-	key = types.Cast(key)
-	val = types.Cast(val)
+	key = types.Literal(key)
+	val = types.Literal(val)
 	if key.Type == "symbol" and key:GetData() == nil then return type_errors.other("key is nil") end
 
 	if key.Type == "union" then
@@ -232,7 +232,7 @@ function META:Set(key, val)
 end
 
 function META:Get(key)
-	key = types.Cast(key)
+	key = types.Literal(key)
 	if self.ElementType then return self.ElementType end
 
 	if key.Type == "string" and not key:IsLiteral() then

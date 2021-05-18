@@ -182,7 +182,7 @@ function META:GetAtIndex(i)
 end
 
 function META:Get(key, from_table)
-	key = types.Cast(key)
+	key = types.Literal(key)
 
 	if from_table then
 		for _, obj in ipairs(self.data) do

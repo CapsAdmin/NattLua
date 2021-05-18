@@ -2,8 +2,10 @@ local print = print
 local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
-local setmetatable = setmetatable
-local types = require("nattlua.types.types")
+local Union = require("nattlua.types.union").Union
+local error = error
+local setmetatable = _G.setmetatable
+local type = _G.type
 local META = {}
 META.__index = META
 local DEBUG = false
@@ -27,6 +29,83 @@ local function copy(tbl)
 	end
 
 	return copy
+end
+
+local FindInType
+
+do
+	local function cmp(a, b, context, source)
+		if not context[a] then
+			context[a] = {}
+			context[a][b] = FindInType(a, b, context, source)
+		end
+
+		return context[a][b]
+	end
+
+	-- this function is a sympton of me not knowing exactly how to find types in other types
+	-- ideally this should be much more general and less complex
+	-- i consider this a hack that should be refactored out
+
+	function FindInType(a, b, context, source)
+		source = source or b
+		context = context or {}
+		if not a then return false end
+		if a == b then return source end
+
+		if a.upvalue and b.upvalue then
+			if a.upvalue_keyref or b.upvalue_keyref then return a.upvalue_keyref == b.upvalue_keyref and source or false end
+			if a.upvalue == b.upvalue then return source end
+		end
+
+		if
+			a.source_right and
+			a.source_right.upvalue and
+			b.upvalue and
+			a.source_right.upvalue.node == b.upvalue.node
+		then
+			return cmp(a.source_right, b, context, source)
+		end
+
+		if a.upvalue and a.upvalue.value then return cmp(a.upvalue.value, b, context, a) end
+		if a.type_checked then return cmp(a.type_checked, b, context, a) end
+		if a.source_left then return cmp(a.source_left, b, context, a) end
+		if a.source_right then return cmp(a.source_right, b, context, a) end
+		if a.source then return cmp(a.source, b, context, a) end
+		return false
+	end
+end
+
+local function FindScopeFromTestCondition(root_scope, obj)
+	local scope = root_scope
+	local found_type
+
+	while true do
+		found_type = FindInType(scope.test_condition, obj)
+		if found_type then break end
+        
+        -- find in siblings too, if they have returned
+        -- ideally when cloning a scope, the new scope should be 
+        -- inside of the returned scope, then we wouldn't need this code
+        
+        for _, child in ipairs(scope.children) do
+			if
+				child ~= scope and
+				(
+					child.uncertain_returned or
+					(root_scope.if_statement and root_scope.if_statement == child.if_statement)
+				)
+			then
+				local found_type = FindInType(child.test_condition, obj)
+				if found_type then return child, found_type end
+			end
+		end
+
+		scope = scope.parent
+		if not scope then return end
+	end
+
+	return scope, found_type
 end
 
 function META:GetValueFromScope(scope, obj, key, analyzer)
@@ -107,7 +186,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 						local test_b = mut.scope:GetTestCondition()
 
 						if test_b then
-							if types.FindInType(test_a, test_b) then
+							if FindInType(test_a, test_b) then
 								mut.certain_override = true
 
 								if DEBUG then
@@ -124,14 +203,14 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 		end
 	end
 
-	local union = types.Union({})
+	local union = Union({})
 	union:SetUpvalue(obj, key)
 
 	for _, mut in ipairs(mutations) do
 		local value = mut.value
 
 		do
-			local scope, scope_union = mut.scope:FindScopeFromTestCondition(value)
+			local scope, scope_union = FindScopeFromTestCondition(mut.scope, value)
 
 			if scope and mut.scope == scope then
 				local test, inverted = scope:GetTestCondition()
@@ -181,7 +260,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 	end
 
 	if value.Type == "union" then
-		local found_scope, union = scope:FindScopeFromTestCondition(value)
+		local found_scope, union = FindScopeFromTestCondition(scope, value)
 
 		if found_scope then
 			local current_scope = found_scope
