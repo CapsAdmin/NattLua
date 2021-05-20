@@ -234,6 +234,9 @@ function META.New(code--[[#: string]])
 end
 
 do
+--[[#
+--[[#
+--[[#
 --[[# -- lua lexer
 --[[#type Lexer = META.@Self]]
 	local space = require("nattlua.lexer.readers.space").space

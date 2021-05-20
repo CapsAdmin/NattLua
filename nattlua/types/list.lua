@@ -405,12 +405,14 @@ function META.Union(A, B)
 end
 
 function META.New(data)
-	local self = setmetatable({Data ={}}, META)
+	local self = setmetatable({Data = {}}, META)
+
 	if data then
 		for _, val in ipairs(data) do
 			assert(self:Insert(val))
 		end
 	end
+
 	return self
 end
 

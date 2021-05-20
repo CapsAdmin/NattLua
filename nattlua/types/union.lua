@@ -5,7 +5,6 @@ local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 local table = require("table")
 local ipairs = _G.ipairs
-
 local META = dofile("nattlua/types/base.lua")
 META.Type = "union"
 
@@ -154,7 +153,8 @@ function META:GetAtIndex(i)
 			if found then
 				if val then
 					val = self.New({val, found})
-					val:SetNode(found:GetNode()):SetTypeSource(found):SetTypeSourceLeft(found:GetTypeSourceLeft()):SetTypeSourceRight(found:GetTypeSourceRight())
+					val:SetNode(found:GetNode()):SetTypeSource(found):SetTypeSourceLeft(found:GetTypeSourceLeft())
+					:SetTypeSourceRight(found:GetTypeSourceRight())
 				else
 					val = found
 				end
@@ -170,7 +170,8 @@ function META:GetAtIndex(i)
 		else
 			if val then
 				val = self.New({val, obj})
-				val:SetNode(self:GetNode()):SetTypeSource(self):SetTypeSourceLeft(self:GetTypeSourceLeft()):SetTypeSourceRight(self:GetTypeSourceRight())
+				val:SetNode(self:GetNode()):SetTypeSource(self):SetTypeSourceLeft(self:GetTypeSourceLeft())
+				:SetTypeSourceRight(self:GetTypeSourceRight())
 			else
 				val = obj
 			end
@@ -503,7 +504,7 @@ function META:GetLargestNumber()
 end
 
 function META.New(data)
-	local self = setmetatable({Data ={}}, META)
+	local self = setmetatable({Data = {}}, META)
 
 	if data then
 		for _, v in ipairs(data) do

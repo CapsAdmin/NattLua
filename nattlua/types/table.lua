@@ -25,7 +25,6 @@ function META:GetReferenceId()
 	return self.reference_id
 end
 
-
 function META:SetContractSelf()
 	self:SetContract(self)
 
@@ -685,7 +684,7 @@ function META:PrefixOperator(op)
 end
 
 function META.New(data)
-	return setmetatable({Data =data or {}}, META)
+	return setmetatable({Data = data or {}}, META)
 end
 
 return {Table = META.New}

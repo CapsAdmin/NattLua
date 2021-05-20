@@ -135,7 +135,7 @@ function META:IsPure()
 end
 
 function META.New(data)
-	return setmetatable({Data =data or {}}, META)
+	return setmetatable({Data = data or {}}, META)
 end
 
 return
@@ -143,11 +143,13 @@ return
 		Function = META.New,
 		LuaTypeFunction = function(lua_function, arg, ret)
 			local self = META.New()
-			self:SetData({
-				arg = Tuple(arg),
-				ret = Tuple(ret),
-				lua_function = lua_function,
-			})
+			self:SetData(
+				{
+					arg = Tuple(arg),
+					ret = Tuple(ret),
+					lua_function = lua_function,
+				}
+			)
 			return self
 		end,
 	}

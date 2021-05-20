@@ -6,7 +6,6 @@ local type_errors = require("nattlua.types.error_messages")
 local string_meta = require("nattlua.runtime.string_meta")
 local Number = require("nattlua.types.number").Number
 local META = dofile("nattlua/types/base.lua")
-
 META.Type = "string"
 
 function META.Equal(a, b)
@@ -110,7 +109,7 @@ function META:PrefixOperator(op)
 end
 
 function META.New(data)
-	local self = setmetatable({Data =data}, META)
+	local self = setmetatable({Data = data}, META)
 	self:SetMetaTable(string_meta)
 	return self
 end

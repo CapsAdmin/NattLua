@@ -85,7 +85,12 @@ for _, path in ipairs(lua_files) do
 		assert(compiler:Parse())
 
 		local new_lua_code = assert(compiler:Emit())
-		assert(loadstring(new_lua_code, "@" .. path))
+		local ok, err = loadstring(new_lua_code, "@" .. path)
+		if not ok then
+			print(path)
+			print(new_lua_code)
+			error(err)
+		end
 		if new_lua_code:sub(#new_lua_code, #new_lua_code) ~= "\n" then
 			new_lua_code = new_lua_code .. "\n"
 		end

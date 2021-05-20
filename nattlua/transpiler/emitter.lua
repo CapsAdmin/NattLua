@@ -7,6 +7,7 @@ local ipairs = _G.ipairs
 local assert = _G.assert
 local table = require("table")
 local setmetatable = _G.setmetatable
+local B = string.byte
 local META = {}
 META.__index = META
 require("nattlua.transpiler.base_emitter")(META)
@@ -1314,6 +1315,10 @@ do -- types
 		self[func](self, ...)
 
 		if emitted then
+			if self:GetPrevChar() == B("]") then
+				self:Whitespace(" ")
+			end
+
 			self:EmitNonSpace("]]")
 		end
 

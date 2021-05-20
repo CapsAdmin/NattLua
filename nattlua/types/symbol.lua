@@ -4,7 +4,6 @@ local ipairs = ipairs
 local table = require("table")
 local type_errors = require("nattlua.types.error_messages")
 local types = require("nattlua.types.types")
-
 local META = dofile("nattlua/types/base.lua")
 META.Type = "symbol"
 
@@ -55,12 +54,10 @@ function META.IsSubsetOf(A, B)
 end
 
 function META.New(data)
-	local self = setmetatable({Data =data}, META)
-
+	local self = setmetatable({Data = data}, META)
 	self:SetLiteral(true)
 	self:SetFalsy(not data)
 	self:SetTruthy(not not data)
-
 	return self
 end
 

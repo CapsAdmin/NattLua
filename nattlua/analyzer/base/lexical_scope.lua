@@ -199,7 +199,7 @@ function META:Merge(scope)
 		if a and b and a.key == b.key then
 			a:SetValue(types.Union({a:GetValue(), b:GetValue()}))
 			a:GetValue():SetNode(b:GetValue():GetNode())
-			a:GetValue():SetTokenLabelSource(b:GetValue():GetTokenLabelSource()) 
+			a:GetValue():SetTokenLabelSource(b:GetValue():GetTokenLabelSource())
 			self.upvalues.runtime.map[a.key]:GetValue(a:GetValue())
 		end
 	end

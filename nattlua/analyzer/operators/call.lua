@@ -482,13 +482,12 @@ return function(META)
 
 			if not return_contract then return return_result end
 			local contract = obj:GetReturnTypes():Copy()
-			
+
 			for _, v in ipairs(contract:GetData()) do
 				if v.Type == "table" then
 					v:SetReferenceId(nil)
 				end
 			end
-
 
 			for i, v in ipairs(return_contract:GetData()) do
 				if v.literal_argument then
@@ -500,11 +499,13 @@ return function(META)
 		end
 
 		local ret = obj:GetReturnTypes():Copy()
+
 		for _, v in ipairs(ret:GetData()) do
 			if v.Type == "table" then
 				v:SetReferenceId(nil)
 			end
 		end
+
 		return ret
 	end
 

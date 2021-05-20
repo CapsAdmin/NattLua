@@ -3,20 +3,16 @@ local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
-
-
 local META = {}
 META.__index = META
 
 function META.GetSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[# type tbl.@Self[name] = tbl[name] ]]
-	
+--[[#	type tbl.@Self[name] = tbl[name] ]]
 	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: typeof tbl[name] ]])
 		self[name] = val
 		return self
 	end
-	
 	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: typeof tbl[name] ]]
 		return self[name]
 	end
@@ -24,35 +20,27 @@ end
 
 function META.IsSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[# type tbl.@Self[name] = tbl[name] ]]
-	
+--[[#	type tbl.@Self[name] = tbl[name] ]]
 	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: typeof tbl[name] ]])
 		self[name] = val
 		return self
 	end
-	
 	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: typeof tbl[name] ]]
 		return self[name]
 	end
 end
 
---[[#
-	type META.Type = string
-
-	META.@Self = {}
-	type BaseType = META.@Self
-
-	type BaseType.Data = any | nil
-	type BaseType.Contract = BaseType | nil
-	type BaseType.MetaTable = BaseType | nil
-	type BaseType.Name = string | nil
-	type BaseType.literal = boolean | nil
-	type BaseType.upvalue = any | nil
-	type BaseType.upvalue_keyref = any | nil
-	type BaseType.parent = BaseType | nil
-]]
-
-META:GetSet("Environment", nil --[[# as nil | "runtime" | "typesystem" ]])
+--[[#type META.Type = string]]
+--[[#type META.@Self = {}]]
+--[[#type BaseType = META.@Self]]
+--[[#type BaseType.Data = any | nil]]
+--[[#type BaseType.Contract = BaseType | nil]]
+--[[#type BaseType.MetaTable = BaseType | nil]]
+--[[#type BaseType.Name = string | nil]]
+--[[#type BaseType.upvalue = any | nil]]
+--[[#type BaseType.upvalue_keyref = any | nil]]
+--[[#type BaseType.parent = BaseType | nil]]
+META:GetSet("Environment", nil--[[# as nil | "runtime" | "typesystem"]])
 
 function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
 	--error("nyi " .. a.Type .. " == " .. b.Type)
@@ -65,10 +53,9 @@ end
 META:GetSet("Data", nil)
 
 do
-	--[[#
-		type BaseType.falsy = boolean | nil
-		type BaseType.truthy = boolean | nil
-	]]
+--[[#	type BaseType.falsy = boolean | nil]]
+--[[#	type BaseType.truthy = boolean | nil]]
+
 	function META:IsUncertain()
 		return self:IsTruthy() and self:IsFalsy()
 	end
@@ -102,29 +89,29 @@ do
 	end
 end
 
-do -- token, expression and statement association
+do
+--[[#
+--[[#
+--[[# -- token, expression and statement association
 
 	--[[#
-		type BaseType.unique_id = number | nil
-		type BaseType.disabled_unique_id = number | nil
-	]]
+		type BaseType.unique_id = number | nil]]
+--[[#	type BaseType.disabled_unique_id = number | nil]]
 
 	function META:SetUpvalue(obj--[[#: any]], key--[[#: string | nil]])
 		self.upvalue = obj
-	
+
 		if key then
 			self.upvalue_keyref = key
 		end
 	end
-	
+
 	META:GetSet("TokenLabelSource", nil)
 	META:GetSet("TypeSource", nil)
 	META:GetSet("TypeSourceLeft", nil)
 	META:GetSet("TypeSourceRight", nil)
-	
 	META:GetSet("Node")
 end
-
 
 do -- comes from tbl.@Name = "my name"
 	function META:SetName(name--[[#: BaseType]])
@@ -235,9 +222,7 @@ do
 end
 
 do
-	function META:SetMetaTable(tbl--[[#: BaseType | nil]])
-		self.MetaTable = tbl
-	end
+	META:GetSet("MetaTable", nil--[[# as BaseType | nil]])
 
 	function META:GetMetaTable()
 		if self.Contract and self.Contract.MetaTable then return self.Contract.MetaTable end
@@ -250,15 +235,8 @@ do -- contract
 		self:SetContract(self:GetContract() or self:Copy())
 	end
 
-	function META:SetContract(val--[[#: BaseType | nil]])
-		self.Contract = val
-	end
-
-	function META:GetContract()
-		return self.Contract
-	end
+	META:GetSet("Contract", nil--[[# as BaseType | nil]])
 end
-
 
 function META.New()
 	return setmetatable({}, META)

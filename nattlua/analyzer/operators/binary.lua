@@ -56,14 +56,10 @@ local function metatable_function(self, meta_method, l, r, swap)
 	if r:GetMetaTable() or l:GetMetaTable() then
 		local func = (l:GetMetaTable() and l:GetMetaTable():Get(meta_method)) or
 			(r:GetMetaTable() and r:GetMetaTable():Get(meta_method))
-
 		if not func then return end
-
-		if func.Type ~= "function" then
-			return func
-		end
-
-		return self:Assert(self.current_expression, self:Call(func, types.Tuple({l, r}))):Get(1)
+		if func.Type ~= "function" then return func end
+		return
+			self:Assert(self.current_expression, self:Call(func, types.Tuple({l, r}))):Get(1)
 	end
 end
 
@@ -203,7 +199,8 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			falsy_union:SetUpvalue(condition.upvalue)
 			new_union.truthy_union = truthy_union
 			new_union.falsy_union = falsy_union
-			return new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+			return
+				new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end
 	end
 
@@ -402,26 +399,32 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		if l:IsUncertain() or r:IsUncertain() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 
 		-- when true, or returns its first argument
-		if l:IsTruthy() then return l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
-		if r:IsTruthy() then return r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+		if l:IsTruthy() then return
+			l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+		if r:IsTruthy() then return
+			r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 		return r:Copy():SetNode(node):SetTypeSource(r)
 	elseif op == "and" or op == "&&" then
 		if l:IsTruthy() and r:IsFalsy() then
 			if l:IsFalsy() or r:IsTruthy() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
-			return r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+			return
+				r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end
 
 		if l:IsFalsy() and r:IsTruthy() then
 			if l:IsTruthy() or r:IsFalsy() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
-			return l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+			return
+				l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end
 
 		if l:IsTruthy() and r:IsTruthy() then
 			if l:IsFalsy() and r:IsFalsy() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
-			return r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+			return
+				r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		else
 			if l:IsTruthy() and r:IsTruthy() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
-			return l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+			return
+				l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end
 	end
 

@@ -4,7 +4,6 @@ local error = _G.error
 local tostring = _G.tostring
 local type_errors = require("nattlua.types.error_messages")
 local bit = require("bit")
-
 local META = dofile("nattlua/types/base.lua")
 META.Type = "number"
 local operators = {
@@ -222,7 +221,7 @@ function META:IsTruthy()
 end
 
 function META.New(data)
-	return setmetatable({Data =data}, META)
+	return setmetatable({Data = data}, META)
 end
 
 return {Number = META.New}

@@ -358,7 +358,8 @@ function META:Slice(start, stop)
 end
 
 function META.New(data)
-	local self = setmetatable({Data ={}}, META)
+	local self = setmetatable({Data = {}}, META)
+
 	if data then
 		for i, v in ipairs(data) do
 			if i == #data and v.Type == "tuple" and not v.Remainder then
@@ -368,6 +369,7 @@ function META.New(data)
 			end
 		end
 	end
+
 	return self
 end
 
