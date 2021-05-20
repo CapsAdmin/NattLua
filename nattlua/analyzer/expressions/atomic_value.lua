@@ -48,9 +48,9 @@ local function lookup_value(self, node, env)
 
 			if val then
 				if val.inverted then
-					return val.falsy_union
+					return val:GetFalsyUnion()
 				else
-					return val.truthy_union
+					return val:GetTruthyUnion()
 				end
 			end
 		end

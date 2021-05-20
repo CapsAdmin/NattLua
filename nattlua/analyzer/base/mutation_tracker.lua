@@ -3,9 +3,8 @@ local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
 local Union = require("nattlua.types.union").Union
-local error = error
+local types = require("nattlua.types.types")
 local setmetatable = _G.setmetatable
-local type = _G.type
 local META = {}
 META.__index = META
 local DEBUG = false
@@ -218,11 +217,20 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 				if test.Type == "union" then
 					local t
 
-					if inverted then
-						t = scope_union.falsy_union or test:GetFalsy()
+					if scope_union.Type == "union" then
+						if inverted then
+							t = scope_union:GetFalsyUnion()
+						else
+							t = scope_union:GetTruthyUnion()
+						end
 					else
-						t = scope_union.truthy_union or test:GetTruthy()
+						if inverted then
+							t = types.Literal(test:GetFalsy())
+						else
+							t = types.Literal(test:GetTruthy())
+						end
 					end
+
 
 					if t then
 						union:RemoveType(t)
@@ -283,9 +291,9 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 				found_scope.test_condition_inverted or
 				(found_scope ~= scope and same_if_statement(scope, found_scope))
 			then
-				t = union.falsy_union or value:GetFalsy()
+				t = union:GetFalsyUnion() or value:GetFalsy()
 			else
-				t = union.truthy_union or value:GetTruthy()
+				t = union:GetTruthyUnion() or value:GetTruthy()
 			end
 
 			return t

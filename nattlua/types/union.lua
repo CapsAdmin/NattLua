@@ -321,6 +321,9 @@ function META:Subtract(union)
 	return copy
 end
 
+META:GetSet("TruthyUnion", nil)
+META:GetSet("FalsyUnion", nil)
+
 function META:Copy(map)
 	map = map or {}
 	local copy = META.New()
@@ -331,6 +334,9 @@ function META:Copy(map)
 		map[e] = map[e] or c
 		copy:AddType(c)
 	end
+
+	--copy:SetTruthyUnion(self:GetTruthyUnion())
+	--copy:SetFalsyUnion(self:GetFalseUnion())
 
 	copy:CopyInternalsFrom(self)
 	return copy
@@ -477,8 +483,8 @@ function META:MakeCallableUnion(analyzer, node)
 
 	truthy_union:SetUpvalue(self.upvalue)
 	falsy_union:SetUpvalue(self.upvalue)
-	new_union.truthy_union = truthy_union
-	new_union.falsy_union = falsy_union
+	new_union:SetTruthyUnion(truthy_union)
+	new_union:SetFalsyUnion(falsy_union)
 	return truthy_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(self)
 end
 

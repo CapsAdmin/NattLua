@@ -25,7 +25,7 @@ return function(analyzer, node, env)
 				local checks = analyzer.current_statement.checks[right.upvalue]
 
 				if checks then
-					right = checks[#checks].truthy_union
+					right = checks[#checks]:GetTruthyUnion()
 				end
 			end
 

@@ -44,8 +44,8 @@ local function prefix_operator(analyzer, node, l, env)
 
 		truthy_union:SetUpvalue(l.upvalue)
 		falsy_union:SetUpvalue(l.upvalue)
-		new_union.truthy_union = truthy_union
-		new_union.falsy_union = falsy_union
+		new_union:SetTruthyUnion(truthy_union)
+		new_union:SetFalsyUnion(falsy_union)
 
 		if op == "literal" then
 			new_union.literal_argument = true

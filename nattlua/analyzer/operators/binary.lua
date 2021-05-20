@@ -197,8 +197,8 @@ local function binary_operator(analyzer, node, l, r, env, op)
 
 			truthy_union:SetUpvalue(condition.upvalue)
 			falsy_union:SetUpvalue(condition.upvalue)
-			new_union.truthy_union = truthy_union
-			new_union.falsy_union = falsy_union
+			new_union:SetTruthyUnion(truthy_union)
+			new_union:SetFalsyUnion(falsy_union)
 			return
 				new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end

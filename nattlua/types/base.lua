@@ -34,8 +34,6 @@ end
 --[[#type META.@Self = {}]]
 --[[#type BaseType = META.@Self]]
 --[[#type BaseType.Data = any | nil]]
---[[#type BaseType.Contract = BaseType | nil]]
---[[#type BaseType.MetaTable = BaseType | nil]]
 --[[#type BaseType.Name = string | nil]]
 --[[#type BaseType.upvalue = any | nil]]
 --[[#type BaseType.upvalue_keyref = any | nil]]
@@ -82,8 +80,6 @@ do
 		self:SetEnvironment(obj:GetEnvironment())
 
 		-- what about these?
-		--self.truthy_union = obj.truthy_union
-		--self.falsy_union = obj.falsy_union
 		--self.upvalue_keyref = obj.upvalue_keyref
 		--self.upvalue = obj.upvalue
 	end
