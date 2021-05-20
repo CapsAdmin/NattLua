@@ -18,11 +18,11 @@ META.Type = "tuple"
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 	if a.suppress then return true end
-	if #a.data ~= #b.data then return false end
+	if #a.Data ~= #b.Data then return false end
 
-	for i = 1, #a.data do
+	for i = 1, #a.Data do
 		a.suppress = true
-		local ok = a.data[i]:Equal(b.data[i])
+		local ok = a.Data[i]:Equal(b.Data[i])
 		a.suppress = false
 		if not ok then return false end
 	end
@@ -235,7 +235,7 @@ function META:Set(i, val)
 		val = val:Get(1)
 	end
 
-	self.data[i] = val
+	self.Data[i] = val
 
 	if i > 32 then
 		print(debug.traceback())
@@ -358,7 +358,7 @@ function META:Slice(start, stop)
 end
 
 function META.New(data)
-	local self = setmetatable({data = {}}, META)
+	local self = setmetatable({Data ={}}, META)
 	if data then
 		for i, v in ipairs(data) do
 			if i == #data and v.Type == "tuple" and not v.Remainder then

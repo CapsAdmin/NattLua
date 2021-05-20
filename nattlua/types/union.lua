@@ -11,16 +11,16 @@ META.Type = "union"
 
 function META.Equal(a, b)
 	if a.suppress then return true end
-	if b.Type ~= "union" and #a.data == 1 then return a.data[1]:Equal(b) end
+	if b.Type ~= "union" and #a.Data == 1 then return a.Data[1]:Equal(b) end
 	if a.Type ~= b.Type then return false end
-	if #a.data ~= #b.data then return false end
+	if #a.Data ~= #b.Data then return false end
 
-	for i = 1, #a.data do
+	for i = 1, #a.Data do
 		local ok = false
-		local a = a.data[i]
+		local a = a.Data[i]
 
-		for i = 1, #b.data do
-			local b = b.data[i]
+		for i = 1, #b.Data do
+			local b = b.Data[i]
 			a.suppress = true
 			ok = a:Equal(b)
 			a.suppress = false
@@ -45,7 +45,7 @@ function META:__tostring()
 	local s = {}
 	self.suppress = true
 
-	for _, v in ipairs(self.data) do
+	for _, v in ipairs(self.Data) do
 		table.insert(s, tostring(v))
 	end
 
@@ -56,26 +56,26 @@ end
 
 function META:AddType(e)
 	if e.Type == "union" then
-		for _, v in ipairs(e.data) do
+		for _, v in ipairs(e.Data) do
 			self:AddType(v)
 		end
 
 		return self
 	end
 
-	for _, v in ipairs(self.data) do
+	for _, v in ipairs(self.Data) do
 		if v:Equal(e) then return self end
 	end
 
-	table.insert(self.data, e)
+	table.insert(self.Data, e)
 	return self
 end
 
 function META:RemoveDuplicates()
 	local indices = {}
 
-	for _, a in ipairs(self.data) do
-		for i, b in ipairs(self.data) do
+	for _, a in ipairs(self.Data) do
+		for i, b in ipairs(self.Data) do
 			if a ~= b and a:Equal(b) then
 				table.insert(indices, i)
 			end
@@ -86,37 +86,37 @@ function META:RemoveDuplicates()
 		local off = 0
 		local idx = 1
 
-		for i = 1, #self.data do
+		for i = 1, #self.Data do
 			while i + off == indices[idx] do
 				off = off + 1
 				idx = idx + 1
 			end
 
-			self.data[i] = self.data[i + off]
+			self.Data[i] = self.Data[i + off]
 		end
 	end
 end
 
 function META:GetData()
-	return self.data
+	return self.Data
 end
 
 function META:GetLength()
-	return #self.data
+	return #self.Data
 end
 
 function META:RemoveType(e)
 	if e.Type == "union" then
-		for i, v in ipairs(e.data) do
+		for i, v in ipairs(e.Data) do
 			self:RemoveType(v)
 		end
 
 		return self
 	end
 
-	for i, v in ipairs(self.data) do
+	for i, v in ipairs(self.Data) do
 		if v:Equal(e) then
-			table.remove(self.data, i)
+			table.remove(self.Data, i)
 
 			break
 		end
@@ -126,13 +126,13 @@ function META:RemoveType(e)
 end
 
 function META:Clear()
-	self.data = {}
+	self.Data = {}
 end
 
 function META:GetMinimumLength()
 	local min = 1000
 
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		if obj.Type == "tuple" then
 			min = math.min(min, obj:GetMinimumLength())
 		else
@@ -147,7 +147,7 @@ function META:GetAtIndex(i)
 	local val
 	local errors = {}
 
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		if obj.Type == "tuple" then
 			local found, err = obj:Get(i)
 
@@ -185,7 +185,7 @@ function META:Get(key, from_table)
 	key = types.Literal(key)
 
 	if from_table then
-		for _, obj in ipairs(self.data) do
+		for _, obj in ipairs(self.Data) do
 			if obj.Get then
 				local val = obj:Get(key)
 				if val then return val end
@@ -195,7 +195,7 @@ function META:Get(key, from_table)
 
 	local errors = {}
 
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
 		if ok then return obj end
 		table.insert(errors, reason)
@@ -205,13 +205,13 @@ function META:Get(key, from_table)
 end
 
 function META:IsEmpty()
-	return self.data[1] == nil
+	return self.Data[1] == nil
 end
 
 function META:GetTruthy()
 	local copy = self:Copy()
 
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		if not obj:IsTruthy() then
 			copy:RemoveType(obj)
 		end
@@ -223,7 +223,7 @@ end
 function META:GetFalsy()
 	local copy = self:Copy()
 
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		if not obj:IsFalsy() then
 			copy:RemoveType(obj)
 		end
@@ -235,7 +235,7 @@ end
 function META:IsType(typ)
 	if self:IsEmpty() then return false end
 
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		if obj.Type ~= typ then return false end
 	end
 
@@ -247,7 +247,7 @@ function META:HasType(typ)
 end
 
 function META:CanBeNil()
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		if obj.Type == "symbol" and obj:GetData() == nil then return true end
 	end
 
@@ -255,7 +255,7 @@ function META:CanBeNil()
 end
 
 function META:GetType(typ)
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		if obj.Type == typ then return obj end
 	end
 
@@ -274,11 +274,11 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
 
-	for _, a in ipairs(A.data) do
+	for _, a in ipairs(A.Data) do
 		if a.Type == "any" then return true end
 	end
 
-	for _, a in ipairs(A.data) do
+	for _, a in ipairs(A.Data) do
 		local b, reason = B:Get(a)
 		if not b then return type_errors.missing(B, a, reason) end
 		local ok, reason = a:IsSubsetOf(b)
@@ -291,7 +291,7 @@ end
 function META:Union(union)
 	local copy = self:Copy()
 
-	for _, e in ipairs(union.data) do
+	for _, e in ipairs(union.Data) do
 		copy:AddType(e)
 	end
 
@@ -301,7 +301,7 @@ end
 function META:Intersect(union)
 	local copy = META.New()
 
-	for _, e in ipairs(self.data) do
+	for _, e in ipairs(self.Data) do
 		if union:Get(e) then
 			copy:AddType(e)
 		end
@@ -313,7 +313,7 @@ end
 function META:Subtract(union)
 	local copy = self:Copy()
 
-	for _, e in ipairs(self.data) do
+	for _, e in ipairs(self.Data) do
 		copy:RemoveType(e)
 	end
 
@@ -325,7 +325,7 @@ function META:Copy(map)
 	local copy = META.New()
 	map[self] = map[self] or copy
 
-	for _, e in ipairs(self.data) do
+	for _, e in ipairs(self.Data) do
 		local c = map[e] or e:Copy(map)
 		map[e] = map[e] or c
 		copy:AddType(c)
@@ -336,7 +336,7 @@ function META:Copy(map)
 end
 
 function META:IsTruthy()
-	for _, v in ipairs(self.data) do
+	for _, v in ipairs(self.Data) do
 		if v:IsTruthy() then return true end
 	end
 
@@ -344,7 +344,7 @@ function META:IsTruthy()
 end
 
 function META:IsFalsy()
-	for _, v in ipairs(self.data) do
+	for _, v in ipairs(self.Data) do
 		if v:IsFalsy() then return true end
 	end
 
@@ -354,7 +354,7 @@ end
 function META:DisableTruthy()
 	local found = {}
 
-	for _, v in ipairs(self.data) do
+	for _, v in ipairs(self.Data) do
 		if v:IsTruthy() then
 			table.insert(found, v)
 			self:RemoveType(v)
@@ -375,7 +375,7 @@ end
 function META:DisableFalsy()
 	local found = {}
 
-	for _, v in ipairs(self.data) do
+	for _, v in ipairs(self.Data) do
 		if v:IsFalsy() then
 			table.insert(found, v)
 			self:RemoveType(v)
@@ -396,7 +396,7 @@ end
 function META:SetMax(val)
 	local copy = self:Copy()
 
-	for _, e in ipairs(copy.data) do
+	for _, e in ipairs(copy.Data) do
 		e:SetMax(val)
 	end
 
@@ -407,7 +407,7 @@ function META:Call(analyzer, arguments, call_node)
 	if self:IsEmpty() then return type_errors.operation("call", nil) end
 	local is_overload = true
 
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		if obj.Type ~= "function" or obj.function_body_node then
 			is_overload = false
 
@@ -418,7 +418,7 @@ function META:Call(analyzer, arguments, call_node)
 	if is_overload then
 		local errors = {}
 
-		for _, obj in ipairs(self.data) do
+		for _, obj in ipairs(self.Data) do
 			if
 				obj.Type == "function" and
 				arguments:GetLength() < obj:GetArguments():GetMinimumLength()
@@ -439,7 +439,7 @@ function META:Call(analyzer, arguments, call_node)
 
 	local new = META.New({})
 
-	for _, obj in ipairs(self.data) do
+	for _, obj in ipairs(self.Data) do
 		local val = analyzer:Assert(call_node, analyzer:Call(obj, arguments, call_node))
         
         -- TODO
@@ -460,7 +460,7 @@ function META:MakeCallableUnion(analyzer, node)
 	local truthy_union = self.New()
 	local falsy_union = self.New()
 
-	for _, v in ipairs(self.data) do
+	for _, v in ipairs(self.Data) do
 		if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
 			falsy_union:AddType(v)
 			analyzer:ErrorAndCloneCurrentScope(
@@ -503,7 +503,7 @@ function META:GetLargestNumber()
 end
 
 function META.New(data)
-	local self = setmetatable({data = {}}, META)
+	local self = setmetatable({Data ={}}, META)
 
 	if data then
 		for _, v in ipairs(data) do

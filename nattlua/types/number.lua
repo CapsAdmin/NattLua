@@ -34,7 +34,7 @@ function META:PrefixOperator(op)
 end
 
 --[[#type META.max = META]]
---[[#type META.data = number]]
+--[[#type META.Data = number]]
 
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
@@ -222,7 +222,7 @@ function META:IsTruthy()
 end
 
 function META.New(data)
-	return setmetatable({data = data}, META)
+	return setmetatable({Data =data}, META)
 end
 
 return {Number = META.New}

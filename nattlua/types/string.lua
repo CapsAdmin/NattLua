@@ -110,7 +110,7 @@ function META:PrefixOperator(op)
 end
 
 function META.New(data)
-	local self = setmetatable({data = data}, META)
+	local self = setmetatable({Data =data}, META)
 	self:SetMetaTable(string_meta)
 	return self
 end

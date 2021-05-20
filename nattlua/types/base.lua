@@ -42,7 +42,7 @@ end
 	META.@Self = {}
 	type BaseType = META.@Self
 
-	type BaseType.data = any | nil
+	type BaseType.Data = any | nil
 	type BaseType.Contract = BaseType | nil
 	type BaseType.MetaTable = BaseType | nil
 	type BaseType.Name = string | nil
@@ -62,13 +62,7 @@ function META:CanBeNil()
 	return false
 end
 
-function META:SetData(data--[[#: any]])
-	self.data = data
-end
-
-function META:GetData()
-	return self.data
-end
+META:GetSet("Data", nil)
 
 do
 	--[[#
@@ -79,21 +73,8 @@ do
 		return self:IsTruthy() and self:IsFalsy()
 	end
 
-	function META:IsFalsy()
-		return self.falsy
-	end
-
-	function META:IsTruthy()
-		return self.truthy
-	end
-
-	function META:SetTruthy(b--[[#: boolean]])
-		self.truthy = b
-	end
-
-	function META:SetFalsy(b--[[#: boolean]])
-		self.falsy = b
-	end
+	META:IsSet("Falsy", false)
+	META:IsSet("Truthy", false)
 end
 
 do

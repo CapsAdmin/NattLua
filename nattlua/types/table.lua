@@ -396,7 +396,7 @@ function META:Set(key, val, no_delete)
 	if not keyval then
 		val:SetParent(self)
 		key:SetParent(self)
-		table.insert(self.data, {key = key, val = val})
+		table.insert(self.Data, {key = key, val = val})
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
@@ -425,7 +425,7 @@ function META:SetExplicit(key, val)
 	if not keyval then
 		val:SetParent(self)
 		key:SetParent(self)
-		table.insert(self.data, {key = key, val = val})
+		table.insert(self.Data, {key = key, val = val})
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
@@ -685,7 +685,7 @@ function META:PrefixOperator(op)
 end
 
 function META.New(data)
-	return setmetatable({data = data or {}}, META)
+	return setmetatable({Data =data or {}}, META)
 end
 
 return {Table = META.New}

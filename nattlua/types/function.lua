@@ -135,7 +135,7 @@ function META:IsPure()
 end
 
 function META.New(data)
-	return setmetatable({data = data or {}}, META)
+	return setmetatable({Data =data or {}}, META)
 end
 
 return

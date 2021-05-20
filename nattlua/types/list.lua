@@ -14,9 +14,9 @@ end
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 
-	for i = 1, #lexer.data do
-		local a = a.data[i]
-		local b = a.data[i]
+	for i = 1, #a.Data do
+		local a = a.Data[i]
+		local b = a.Data[i]
 		if not a:Equal(b) then return false end
 	end
 
@@ -405,7 +405,7 @@ function META.Union(A, B)
 end
 
 function META.New(data)
-	local self = setmetatable({data = {}}, META)
+	local self = setmetatable({Data ={}}, META)
 	if data then
 		for _, val in ipairs(data) do
 			assert(self:Insert(val))
