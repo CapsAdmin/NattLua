@@ -6,9 +6,8 @@ local type_errors = require("nattlua.types.error_messages")
 local table = require("table")
 local ipairs = _G.ipairs
 local tostring = _G.tostring
-local META = {}
+local META = dofile("nattlua/types/base.lua")
 META.Type = "table"
-require("nattlua.types.base")(META)
 
 function META:SetSelf(tbl)
 	tbl:SetMetaTable(self)

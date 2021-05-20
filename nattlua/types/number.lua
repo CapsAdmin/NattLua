@@ -3,10 +3,10 @@ local table = require("table")
 local error = _G.error
 local tostring = _G.tostring
 local type_errors = require("nattlua.types.error_messages")
-local META = {}
-META.Type = "number"
-require("nattlua.types.base")(META)
 local bit = require("bit")
+
+local META = dofile("nattlua/types/base.lua")
+META.Type = "number"
 local operators = {
 		["-"] = function(l)
 			return -l

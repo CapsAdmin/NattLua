@@ -72,19 +72,6 @@ return function(META)
 			end
 		end
 
-		if val.Type == "function" and val:GetNode().kind == "local_function" then
-			local first_arg = val:GetArguments(1):Get(1)
-
-			if first_arg and not first_arg:GetContract() then
-				local node = first_arg:GetNode()
-
-				if node and node.kind == "value" and node.value.value == "self" then
-					val:GetArguments(1):Set(1, obj)
-					node.inferred_type = obj
-				end
-			end
-		end
-
 		local contract = obj:GetContract()
 
 		if contract then

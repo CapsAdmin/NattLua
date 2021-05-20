@@ -5,9 +5,9 @@ local error = error
 local type_errors = require("nattlua.types.error_messages")
 local string_meta = require("nattlua.runtime.string_meta")
 local Number = require("nattlua.types.number").Number
-local META = {}
+local META = dofile("nattlua/types/base.lua")
+
 META.Type = "string"
-require("nattlua.types.base")(META)
 
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end

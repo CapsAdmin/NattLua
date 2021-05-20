@@ -4,9 +4,8 @@ local table = require("table")
 local type_errors = require("nattlua.types.error_messages")
 local types = require("nattlua.types.types")
 local Union = require("nattlua.types.union").Union
-local META = {}
+local META = dofile("nattlua/types/base.lua")
 META.Type = "list"
-require("nattlua.types.base")(META)
 
 local function sort(a, b)
 	return a < b

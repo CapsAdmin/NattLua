@@ -4,9 +4,9 @@ local ipairs = ipairs
 local table = require("table")
 local type_errors = require("nattlua.types.error_messages")
 local types = require("nattlua.types.types")
-local META = {}
+
+local META = dofile("nattlua/types/base.lua")
 META.Type = "symbol"
-require("nattlua.types.base")(META)
 
 function META.Equal(a, b)
 	return a.Type == b.Type and a:GetData() == b:GetData()

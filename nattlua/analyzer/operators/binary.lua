@@ -46,15 +46,6 @@ local operators = {
 		[">>"] = function(l, r)
 			return bit.rshift(l, r)
 		end,
-		["=="] = function(l, r)
-			return l == r
-		end,
-		["<"] = function(l, r)
-			return l < r
-		end,
-		["<="] = function(l, r)
-			return l <= r
-		end,
 	}
 
 local function metatable_function(self, meta_method, l, r, swap)
@@ -66,14 +57,13 @@ local function metatable_function(self, meta_method, l, r, swap)
 		local func = (l:GetMetaTable() and l:GetMetaTable():Get(meta_method)) or
 			(r:GetMetaTable() and r:GetMetaTable():Get(meta_method))
 
-		if func then
-			if func.Type == "function" then
-				return
-					self:Assert(self.current_expression, self:Call(func, types.Tuple({l, r}))):Get(1)
-			else
-				return func
-			end
+		if not func then return end
+
+		if func.Type ~= "function" then
+			return func
 		end
+
+		return self:Assert(self.current_expression, self:Call(func, types.Tuple({l, r}))):Get(1)
 	end
 end
 

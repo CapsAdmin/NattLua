@@ -1,6 +1,5 @@
-local META = {}
+local META = dofile("nattlua/types/base.lua")
 META.Type = "any"
-require("nattlua.types.base")(META)
 
 function META:Get(key)
 	return self

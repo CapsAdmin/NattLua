@@ -71,11 +71,6 @@ local function prefix_operator(analyzer, node, l, env)
 				"cannot find '" .. node.right:Render() .. "' in the current typesystem scope"
 			) end
 			return obj:GetContract() or obj
-		elseif op == "supertype" then
-			l = l:Copy()
-			l:SetData()
-			l:SetLiteral(false)
-			return l
 		elseif op == "unique" then
 			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
 			obj:MakeUnique(true)

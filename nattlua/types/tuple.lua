@@ -12,9 +12,8 @@ local Any = require("nattlua.types.any").Any
 local type_errors = require("nattlua.types.error_messages")
 local ipairs = _G.ipairs
 local type = _G.type
-local META = {}
+local META = dofile("nattlua/types/base.lua")
 META.Type = "tuple"
-require("nattlua.types.base")(META)
 
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end

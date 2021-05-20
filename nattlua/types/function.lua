@@ -5,9 +5,8 @@ local ipairs = _G.ipairs
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
-local META = {}
+local META = dofile("nattlua/types/base.lua")
 META.Type = "function"
-require("nattlua.types.base")(META)
 
 function META:__call(...)
 	if self:GetData().lua_function then return self:GetData().lua_function(...) end

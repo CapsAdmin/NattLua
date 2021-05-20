@@ -5,9 +5,9 @@ local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 local table = require("table")
 local ipairs = _G.ipairs
-local META = {}
+
+local META = dofile("nattlua/types/base.lua")
 META.Type = "union"
-require("nattlua.types.base")(META)
 
 function META.Equal(a, b)
 	if a.suppress then return true end
@@ -206,26 +206,6 @@ end
 
 function META:IsEmpty()
 	return self.data[1] == nil
-end
-
-function META:IsTruthy()
-	if self:IsEmpty() then return false end
-
-	for _, obj in ipairs(self.data) do
-		if obj:IsTruthy() then return true end
-	end
-
-	return false
-end
-
-function META:IsFalsy()
-	if self:IsEmpty() then return false end
-
-	for _, obj in ipairs(self.data) do
-		if obj:IsFalsy() then return true end
-	end
-
-	return false
 end
 
 function META:GetTruthy()
