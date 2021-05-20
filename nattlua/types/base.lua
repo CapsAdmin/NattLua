@@ -4,8 +4,23 @@ local tostring = _G.tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 
+
 local META = {}
 META.__index = META
+
+function META.GetSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
+	tbl[name] = default--[[# as NonLiteral<|default|>]]
+	--[[# type tbl.@Self[name] = tbl[name] ]]
+	
+	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: typeof tbl[name] ]])
+		self[name] = val
+		return self
+	end
+	
+	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: typeof tbl[name] ]]
+		return self[name]
+	end
+end
 
 --[[#
 	type META.Type = string
@@ -24,17 +39,12 @@ META.__index = META
 	type BaseType.node = any | nil
 	type BaseType.name = any | nil
 	type BaseType.node_label = any | nil
-	type BaseType.created_env = any | nil
-	type BaseType.unique_id = number | nil
-	type BaseType.disabled_unique_id = number | nil
 	type BaseType.upvalue = any | nil
 	type BaseType.upvalue_keyref = any | nil
-	type BaseType.falsy = boolean | nil
-	type BaseType.reference_id = number | nil
-	type BaseType.truthy = boolean | nil
 	type BaseType.parent = BaseType | nil
 ]]
 
+META:GetSet("Environment", nil --[[# as nil | "runtime" | "typesystem" ]])
 
 function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
 	--error("nyi " .. a.Type .. " == " .. b.Type)
@@ -52,8 +62,11 @@ function META:GetData()
 	return self.data
 end
 
-
 do
+	--[[#
+		type BaseType.falsy = boolean | nil
+		type BaseType.truthy = boolean | nil
+	]]
 	function META:IsUncertain()
 		return self:IsTruthy() and self:IsFalsy()
 	end
@@ -91,7 +104,7 @@ do
 		self:SetContract(obj:GetContract())
 		self:SetName(obj:GetName())
 		self.MetaTable = obj.MetaTable
-		self.created_env = obj.created_env
+		self.Environment = obj.Environment
 
 		-- what about these?
 		--self.truthy_union = obj.truthy_union
@@ -102,6 +115,12 @@ do
 end
 
 do -- token, expression and statement association
+
+	--[[#
+		type BaseType.unique_id = number | nil
+		type BaseType.disabled_unique_id = number | nil
+	]]
+
 	function META:SetUpvalue(obj--[[#: any]], key--[[#: string | nil]])
 		self.upvalue = obj
 	
@@ -186,8 +205,6 @@ do
 end
 
 do
-	META.literal = false
-
 	function META:SetLiteral(b--[[#: boolean]])
 		self.literal = b
 		return self

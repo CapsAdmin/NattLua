@@ -141,7 +141,7 @@ return function(analyzer, statement)
 
 		exp_key.inferred_type = val
 		val.node_label = exp_key
-		val.created_env = env
+		val:SetEnvironment(env)
 
 		if statement.kind == "local_assignment" then
 			analyzer:CreateLocalValue(exp_key, val, env)

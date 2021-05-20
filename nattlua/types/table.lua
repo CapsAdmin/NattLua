@@ -531,7 +531,7 @@ function META:Copy(map)
 	copy:CopyInternalsFrom(self)
 	copy.potential_self = self.potential_self
 	copy.mutable = self.mutable
-	copy.literal = self.literal
+	copy:SetLiteral(self:IsLiteral())
 	copy.mutations = self.mutations
 	
 	--[[

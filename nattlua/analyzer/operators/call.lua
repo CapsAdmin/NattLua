@@ -347,7 +347,7 @@ return function(META)
                 -- any can do anything with mutable arguments
 
                 for _, arg in ipairs(arguments:GetData()) do
-					if arg.Type == "table" and arg.created_env == "runtime" then
+					if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
 						if arg:GetContract() then
 							self:Error(call_node, "cannot mutate argument with contract " .. tostring(arg:GetContract()))
 						else
@@ -386,7 +386,7 @@ return function(META)
 			)
 		elseif not function_node or function_node.kind == "type_function" then
 			for i, arg in ipairs(arguments:GetData()) do
-				if arg.Type == "table" and arg.created_env == "runtime" then
+				if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
 					for _, keyval in ipairs(arg:GetData()) do
 						keyval.key = types.Union({types.Any(), keyval.key})
 						keyval.val = types.Union({types.Any(), keyval.val})
