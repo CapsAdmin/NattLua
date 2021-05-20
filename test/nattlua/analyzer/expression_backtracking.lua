@@ -11,10 +11,10 @@ test("a and b", function()
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
     equal(obj:GetNode().kind, "binary_operator") 
-    equal(obj.source:GetData(), 2)
-    equal(obj.source_left:GetData(), 1)
-    equal(obj.source_right:GetData(), 2)
-    equal(obj.source_right, obj.source)
+    equal(obj:GetTypeSource():GetData(), 2)
+    equal(obj:GetTypeSourceLeft():GetData(), 1)
+    equal(obj:GetTypeSourceRight():GetData(), 2)
+    equal(obj:GetTypeSourceRight(), obj:GetTypeSource())
 end)
 
 test("a + b", function()
@@ -27,8 +27,8 @@ test("a + b", function()
 
     equal(obj:GetNode().kind, "binary_operator")
     equal(obj:GetData(), 3)
-    equal(obj.source_left:GetData(), 1)
-    equal(obj.source_right:GetData(), 2)
+    equal(obj:GetTypeSourceLeft():GetData(), 1)
+    equal(obj:GetTypeSourceRight():GetData(), 2)
 end)
 
 test("not a", function()
@@ -40,7 +40,7 @@ test("not a", function()
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
     equal(obj:GetNode().kind, "prefix_operator") 
-    equal(obj.source:GetData(), true)
+    equal(obj:GetTypeSource():GetData(), true)
 end)
 
 test("not not a", function()
@@ -52,8 +52,8 @@ test("not not a", function()
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
     equal(obj:GetNode().kind, "prefix_operator") 
-    equal(obj.source:GetData(), false)
-    equal(obj.source.source:GetData(), true)
+    equal(obj:GetTypeSource():GetData(), false)
+    equal(obj:GetTypeSource():GetTypeSource():GetData(), true)
 end)
 
 test("not a or 1", function()
@@ -65,9 +65,9 @@ test("not a or 1", function()
     ]]:GetLocalOrEnvironmentValue("result", "runtime")
 
     equal(obj:GetNode().kind, "binary_operator")
-    equal(obj.source_left:GetNode().kind, "prefix_operator")
-    equal(obj.source_left:GetData(), false)
-    equal(obj.source:GetData(), 1)
+    equal(obj:GetTypeSourceLeft():GetNode().kind, "prefix_operator")
+    equal(obj:GetTypeSourceLeft():GetData(), false)
+    equal(obj:GetTypeSource():GetData(), 1)
 end)
 
 
@@ -84,18 +84,18 @@ test("1 or 2 or 3 or 4", function()
         assert(a:Equal(types.Union(literal_union)))
     end
     -- (>1< or 2 or 3) or (>4<)
-    set_equal(obj.source_left, {1,2,3})
-    set_equal(obj.source_right, {4})
+    set_equal(obj:GetTypeSourceLeft(), {1,2,3})
+    set_equal(obj:GetTypeSourceRight(), {4})
 
-    local obj = obj.source_left
+    local obj = obj:GetTypeSourceLeft()
     -- (>1< or 2) or (>3<)
-    set_equal(obj.source_left, {1,2})
-    set_equal(obj.source_right, {3})
+    set_equal(obj:GetTypeSourceLeft(), {1,2})
+    set_equal(obj:GetTypeSourceRight(), {3})
 
-    local obj = obj.source_left
+    local obj = obj:GetTypeSourceLeft()
     -- (>1<) or (>2<)
-    set_equal(obj.source_left, {1})
-    set_equal(obj.source_right, {2})
+    set_equal(obj:GetTypeSourceLeft(), {1})
+    set_equal(obj:GetTypeSourceRight(), {2})
 end)
 
 

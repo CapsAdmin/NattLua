@@ -22,6 +22,20 @@ function META.GetSet(tbl--[[#: literal any]], name--[[#: literal string]], defau
 	end
 end
 
+function META.IsSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
+	tbl[name] = default--[[# as NonLiteral<|default|>]]
+	--[[# type tbl.@Self[name] = tbl[name] ]]
+	
+	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: typeof tbl[name] ]])
+		self[name] = val
+		return self
+	end
+	
+	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: typeof tbl[name] ]]
+		return self[name]
+	end
+end
+
 --[[#
 	type META.Type = string
 
@@ -33,12 +47,6 @@ end
 	type BaseType.MetaTable = BaseType | nil
 	type BaseType.Name = string | nil
 	type BaseType.literal = boolean | nil
-	type BaseType.source_left = any | nil
-	type BaseType.source = any | nil
-	type BaseType.source_right = any | nil
-	type BaseType.node = any | nil
-	type BaseType.name = any | nil
-	type BaseType.node_label = any | nil
 	type BaseType.upvalue = any | nil
 	type BaseType.upvalue_keyref = any | nil
 	type BaseType.parent = BaseType | nil
@@ -94,17 +102,16 @@ do
 	end
 
 	function META:CopyInternalsFrom(obj)
-		self.name = obj.name
-		self.node = obj.node
-		self.node_label = obj.node_label
-		self.source = obj.source
-		self.source_left = obj.source_left
-		self.source_right = obj.source_right
-		self.literal = obj.literal
+		self:SetNode(obj:GetNode())
+		self:SetTokenLabelSource(obj:GetTokenLabelSource())
+		self:SetTypeSource(obj:GetTypeSource())
+		self:SetTypeSourceLeft(obj:GetTypeSourceLeft())
+		self:SetTypeSourceRight(obj:GetTypeSourceRight())
+		self:SetLiteral(obj:IsLiteral())
 		self:SetContract(obj:GetContract())
 		self:SetName(obj:GetName())
-		self.MetaTable = obj.MetaTable
-		self.Environment = obj.Environment
+		self:SetMetaTable(obj:GetMetaTable())
+		self:SetEnvironment(obj:GetEnvironment())
 
 		-- what about these?
 		--self.truthy_union = obj.truthy_union
@@ -129,25 +136,12 @@ do -- token, expression and statement association
 		end
 	end
 	
-	function META:SetSource(source)
-		self.source = source
-		return self
-	end
+	META:GetSet("TokenLabelSource", nil)
+	META:GetSet("TypeSource", nil)
+	META:GetSet("TypeSourceLeft", nil)
+	META:GetSet("TypeSourceRight", nil)
 	
-	function META:SetBinarySource(l--[[#: BaseType]], r--[[#: BaseType]])
-		self.source_left = l
-		self.source_right = r
-		return self
-	end
-	
-	function META:SetNode(node)
-		self.node = node
-		return self
-	end
-	
-	function META:GetNode()
-		return self.node
-	end
+	META:GetSet("Node")
 end
 
 
@@ -205,14 +199,7 @@ do
 end
 
 do
-	function META:SetLiteral(b--[[#: boolean]])
-		self.literal = b
-		return self
-	end
-
-	function META:IsLiteral()
-		return self.literal or false
-	end
+	META:IsSet("Literal", false)
 
 	function META:CopyLiteralness(obj--[[#: BaseType]])
 		self:SetLiteral(obj:IsLiteral())

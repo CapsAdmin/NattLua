@@ -59,19 +59,19 @@ do
 		end
 
 		if
-			a.source_right and
-			a.source_right.upvalue and
+			a:GetTypeSourceRight() and
+			a:GetTypeSourceRight().upvalue and
 			b.upvalue and
-			a.source_right.upvalue.node == b.upvalue.node
+			a:GetTypeSourceRight().upvalue:GetNode() == b.upvalue:GetNode()
 		then
-			return cmp(a.source_right, b, context, source)
+			return cmp(a:GetTypeSourceRight(), b, context, source)
 		end
 
 		if a.upvalue and a.upvalue.value then return cmp(a.upvalue.value, b, context, a) end
 		if a.type_checked then return cmp(a.type_checked, b, context, a) end
-		if a.source_left then return cmp(a.source_left, b, context, a) end
-		if a.source_right then return cmp(a.source_right, b, context, a) end
-		if a.source then return cmp(a.source, b, context, a) end
+		if a:GetTypeSourceLeft() then return cmp(a:GetTypeSourceLeft(), b, context, a) end
+		if a:GetTypeSourceRight() then return cmp(a:GetTypeSourceRight(), b, context, a) end
+		if a:GetTypeSource() then return cmp(a:GetTypeSource(), b, context, a) end
 		return false
 	end
 end

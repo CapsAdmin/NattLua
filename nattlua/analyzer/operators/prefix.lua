@@ -51,7 +51,7 @@ local function prefix_operator(analyzer, node, l, env)
 			new_union.literal_argument = true
 		end
 
-		return new_union:SetNode(node):SetSource(l)
+		return new_union:SetNode(node):SetTypeSource(l)
 	end
 
 	if l.Type == "any" then
@@ -100,9 +100,9 @@ local function prefix_operator(analyzer, node, l, env)
 	end
 
 	if op == "not" or op == "!" then
-		if l:IsTruthy() and l:IsFalsy() then return analyzer:NewType(node, "boolean", nil, false, l):SetNode(node):SetSource(l) end
-		if l:IsTruthy() then return analyzer:NewType(node, "boolean", false, true, l):SetNode(node):SetSource(l) end
-		if l:IsFalsy() then return analyzer:NewType(node, "boolean", true, true, l):SetNode(node):SetSource(l) end
+		if l:IsTruthy() and l:IsFalsy() then return analyzer:NewType(node, "boolean", nil, false, l):SetNode(node):SetTypeSource(l) end
+		if l:IsTruthy() then return analyzer:NewType(node, "boolean", false, true, l):SetNode(node):SetTypeSource(l) end
+		if l:IsFalsy() then return analyzer:NewType(node, "boolean", true, true, l):SetNode(node):SetTypeSource(l) end
 	end
 
 	if op == "-" or op == "~" or op == "#" then

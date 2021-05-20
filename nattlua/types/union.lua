@@ -154,7 +154,7 @@ function META:GetAtIndex(i)
 			if found then
 				if val then
 					val = self.New({val, found})
-					val:SetNode(found:GetNode()):SetSource(found):SetBinarySource(found.source_left, found.source_right)
+					val:SetNode(found:GetNode()):SetTypeSource(found):SetTypeSourceLeft(found:GetTypeSourceLeft()):SetTypeSourceRight(found:GetTypeSourceRight())
 				else
 					val = found
 				end
@@ -170,7 +170,7 @@ function META:GetAtIndex(i)
 		else
 			if val then
 				val = self.New({val, obj})
-				val:SetNode(self:GetNode()):SetSource(self):SetBinarySource(self.source_left, self.source_right)
+				val:SetNode(self:GetNode()):SetTypeSource(self):SetTypeSourceLeft(self:GetTypeSourceLeft()):SetTypeSourceRight(self:GetTypeSourceRight())
 			else
 				val = obj
 			end
@@ -478,7 +478,7 @@ function META:MakeCallableUnion(analyzer, node)
 	falsy_union:SetUpvalue(self.upvalue)
 	new_union.truthy_union = truthy_union
 	new_union.falsy_union = falsy_union
-	return truthy_union:SetNode(node):SetSource(new_union):SetBinarySource(self)
+	return truthy_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(self)
 end
 
 function META:GetLargestNumber()
