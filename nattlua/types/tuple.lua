@@ -365,19 +365,18 @@ function META:Slice(start, stop)
 	return copy
 end
 
-function META:Initialize(data)
-	self:SetData({})
-	data = data or {}
-
-	for i, v in ipairs(data) do
-		if i == #data and v.Type == "tuple" and not v.Remainder then
-			self:AddRemainder(v)
-		else
-			self:Set(i, v)
+function META.New(data)
+	local self = setmetatable({data = {}}, META)
+	if data then
+		for i, v in ipairs(data) do
+			if i == #data and v.Type == "tuple" and not v.Remainder then
+				self:AddRemainder(v)
+			else
+				self:Set(i, v)
+			end
 		end
 	end
-
-	return true
+	return self
 end
 
 return {Tuple = META.New}

@@ -404,17 +404,14 @@ function META.Union(A, B)
 	return copy
 end
 
-function META:Initialize(data)
-	self:SetData({})
-
+function META.New(data)
+	local self = setmetatable({data = {}}, META)
 	if data then
 		for _, val in ipairs(data) do
-			local ok, err = self:Insert(val)
-			if not ok then return ok, err end
+			assert(self:Insert(val))
 		end
 	end
-
-	return true
+	return self
 end
 
 return {List = META.New}

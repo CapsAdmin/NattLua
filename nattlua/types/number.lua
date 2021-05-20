@@ -221,4 +221,8 @@ function META:IsTruthy()
 	return true
 end
 
+function META.New(data)
+	return setmetatable({data = data}, META)
+end
+
 return {Number = META.New}

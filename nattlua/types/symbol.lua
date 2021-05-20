@@ -58,11 +58,14 @@ function META.IsSubsetOf(A, B)
 	return true
 end
 
-function META:Initialize(data)
+function META.New(data)
+	local self = setmetatable({data = data}, META)
+
 	self:SetLiteral(true)
 	self:SetFalsy(not data)
 	self:SetTruthy(not not data)
-	return true
+
+	return self
 end
 
 return

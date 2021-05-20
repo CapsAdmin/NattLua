@@ -654,11 +654,6 @@ function META.Union(A, B)
 	return copy
 end
 
-function META:Initialize()
-	self:SetData({})
-	return true
-end
-
 function META:Call(analyzer, arguments, ...)
 	local __call = self:GetMetaTable() and self:GetMetaTable():Get("__call")
 
@@ -677,6 +672,10 @@ end
 
 function META:PrefixOperator(op)
 	if op == "#" then return Number(self:GetLength()):SetLiteral(self:IsLiteral()) end
+end
+
+function META.New(data)
+	return setmetatable({data = data or {}}, META)
 end
 
 return {Table = META.New}

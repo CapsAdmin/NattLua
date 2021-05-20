@@ -63,14 +63,6 @@ function META:Copy(map)
 	return copy
 end
 
-function META:Initialize(data)
-	if not data.ret or not data.arg then
-		error("function initialized without ret or arg", 2)
-	end
-
-	return self
-end
-
 function META.IsSubsetOf(A, B)
 	if A.Type == "any" then return true end
 	if B.Type == "any" then return true end
@@ -142,16 +134,20 @@ function META:IsPure()
 	return #self:GetSideEffects() == 0
 end
 
+function META.New(data)
+	return setmetatable({data = data or {}}, META)
+end
+
 return
 	{
 		Function = META.New,
 		LuaTypeFunction = function(lua_function, arg, ret)
-			return META.New(
-				{
-					arg = Tuple(arg),
-					ret = Tuple(ret),
-					lua_function = lua_function,
-				}
-			)
+			local self = META.New()
+			self:SetData({
+				arg = Tuple(arg),
+				ret = Tuple(ret),
+				lua_function = lua_function,
+			})
+			return self
 		end,
 	}

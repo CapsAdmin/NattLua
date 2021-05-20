@@ -7,6 +7,12 @@ local type_errors = require("nattlua.types.error_messages")
 local META = {}
 META.__index = META
 
+--[[
+	type META.@Self = {
+		data = any,
+	}
+]]
+
 function META:IsUncertain()
 	return self:IsTruthy() and self:IsFalsy()
 end
@@ -230,15 +236,8 @@ function META:HasNil()
 	return false
 end
 
-function META.New(data)
-	local self = setmetatable({data = data,}, META)
-
-	if self.Initialize then
-		local ok, err = self:Initialize(data)
-		if not ok then return ok, err end
-	end
-
-	return self
+function META.New()
+	return setmetatable({}, META)
 end
 
 return META

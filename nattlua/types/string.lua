@@ -105,13 +105,14 @@ function META:IsTruthy()
 	return true
 end
 
-function META:Initialize()
-	self:SetMetaTable(string_meta)
-	return self
-end
-
 function META:PrefixOperator(op)
 	if op == "#" then return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral()) end
+end
+
+function META.New(data)
+	local self = setmetatable({data = data}, META)
+	self:SetMetaTable(string_meta)
+	return self
 end
 
 return {String = META.New}

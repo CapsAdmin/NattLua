@@ -393,18 +393,6 @@ function META:EnableFalsy()
 	end
 end
 
-function META:Initialize(data)
-	self:Clear()
-
-	if data then
-		for _, v in ipairs(data) do
-			self:AddType(v)
-		end
-	end
-
-	return true
-end
-
 function META:SetMax(val)
 	local copy = self:Copy()
 
@@ -514,10 +502,22 @@ function META:GetLargestNumber()
 	return max[1]
 end
 
+function META.New(data)
+	local self = setmetatable({data = {}}, META)
+
+	if data then
+		for _, v in ipairs(data) do
+			self:AddType(v)
+		end
+	end
+
+	return self
+end
+
 return
 	{
 		Union = META.New,
 		Nilable = function(typ)
-			return types.Union({typ, types.Nil()})
+			return META.New({typ, Nil()})
 		end,
 	}
