@@ -202,15 +202,6 @@ do
 	end
 end
 
-function META:SetReferenceId(ref)
-	self.reference_id = ref
-	return self
-end
-
-function META:GetReferenceId()
-	return self.reference_id
-end
-
 do -- operators
 	function META:Call(...)
 		return type_errors.other("type " .. self.Type .. ": " .. tostring(self) .. " cannot be called")

@@ -481,7 +481,14 @@ return function(META)
 			end
 
 			if not return_contract then return return_result end
-			local contract = obj:GetReturnTypes():Copy():SetReferenceId(nil)
+			local contract = obj:GetReturnTypes():Copy()
+			
+			for _, v in ipairs(contract:GetData()) do
+				if v.Type == "table" then
+					v:SetReferenceId(nil)
+				end
+			end
+
 
 			for i, v in ipairs(return_contract:GetData()) do
 				if v.literal_argument then
@@ -492,7 +499,13 @@ return function(META)
 			return contract
 		end
 
-		return obj:GetReturnTypes():Copy():SetReferenceId(nil)
+		local ret = obj:GetReturnTypes():Copy()
+		for _, v in ipairs(ret:GetData()) do
+			if v.Type == "table" then
+				v:SetReferenceId(nil)
+			end
+		end
+		return ret
 	end
 
 	function META:Call(obj, arguments, call_node)

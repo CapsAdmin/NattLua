@@ -80,14 +80,6 @@ function META:Merge(tup)
 	return self
 end
 
-function META:SetReferenceId(id)
-	for i = 1, #self:GetData() do
-		self:Get(i):SetReferenceId(id)
-	end
-
-	return self
-end
-
 function META:Copy(map)
 	map = map or {}
 	local copy = self.New({})

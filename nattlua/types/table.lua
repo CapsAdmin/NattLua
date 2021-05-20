@@ -16,6 +16,16 @@ function META:SetSelf(tbl)
 	self.Self = tbl
 end
 
+function META:SetReferenceId(ref)
+	self.reference_id = ref
+	return self
+end
+
+function META:GetReferenceId()
+	return self.reference_id
+end
+
+
 function META:SetContractSelf()
 	self:SetContract(self)
 

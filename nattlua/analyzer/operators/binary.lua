@@ -302,7 +302,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		if res then return res end
 
 		if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
-			if l.Type == "table" then
+			if l.Type == "table" and r.Type == "table" then
 				if env == "runtime" then
 					if l:GetReferenceId() and r:GetReferenceId() then return l:GetReferenceId() == r:GetReferenceId() and types.True() or types.False() end
 				end
