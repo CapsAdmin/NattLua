@@ -304,7 +304,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
 			if l.Type == "table" then
 				if env == "runtime" then
-					if l.reference_id and r.reference_id then return l.reference_id == r.reference_id and types.True() or types.False() end
+					if l:GetReferenceId() and r:GetReferenceId() then return l:GetReferenceId() == r:GetReferenceId() and types.True() or types.False() end
 				end
 
 				if env == "typesystem" then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True() or types.False() end
