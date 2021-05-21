@@ -1404,3 +1404,16 @@ pending[[
         print(lol[x])
     end
 ]]
+run[[
+    local META = {}
+    META.__index = META
+    type META.@Self = {parent = number | nil}
+    function META:SetParent(parent : number | nil)
+        if parent then
+            self.parent = parent
+        else
+            -- test BaseType:UpvalueReference collision with object and upvalue
+            type_assert(self.parent, _ as nil | number)
+        end
+    end
+]]
