@@ -76,7 +76,17 @@ return function(META)
 
 		if contract then
 			if env == "runtime" then
-				local existing, err = contract:Get(key)
+				
+				local existing
+				local err
+				if obj == contract then
+					existing, err = contract:Get(key)
+					if existing then
+				 		existing = self:GetMutatedValue(obj, key, existing, env)
+					end
+				else
+					existing, err = contract:Get(key)
+				end
 
 				if existing then
 					if val.Type == "function" and existing.Type == "function" then
@@ -97,7 +107,12 @@ return function(META)
 
 					local ok, err = val:IsSubsetOf(existing)
 
-					if not ok then
+					if ok then
+						if obj == contract then
+							self:MutateValue(obj, key, val, env)
+							return true
+						end
+					else
 						self:Error(node, err)
 					end
 				else
@@ -116,9 +131,10 @@ return function(META)
 			end
 		end
 
-		if not self:MutateValue(obj, key, val, env) then -- always false?
-            if env == "typesystem" and obj:GetContract() then return obj:GetContract():Set(key, val) end
-			return obj:Set(key, val)
-		end
+		self:MutateValue(obj, key, val, env)
+		
+		if env == "typesystem" and obj:GetContract() then return obj:GetContract():Set(key, val) end
+
+		return obj:Set(key, val)
 	end
 end

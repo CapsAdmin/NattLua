@@ -484,6 +484,23 @@ run[[
     type_assert(s:GetFoo(), _ as number)
 ]]
 
+run[[
+    local META = {}
+    META.__index = META
+    type META.@Self = {parent = number | nil}
+    function META:SetParent(parent : number | nil)
+        if parent then
+            self.parent = parent
+            type_assert(self.parent, _ as number)
+        else
+            self.parent = nil
+            type_assert(self.parent, _ as nil)
+        end
+
+    type_assert(self.parent, _ as nil | number)
+    end
+]]
+
 run([[
     local META = {}
     META.__index = META
