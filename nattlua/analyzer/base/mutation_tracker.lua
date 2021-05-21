@@ -61,6 +61,7 @@ do
 			b:GetUpvalue() and
 			a:GetTypeSourceRight() and
 			a:GetTypeSourceRight():GetUpvalue() and
+			a:GetTypeSourceRight():GetUpvalue().GetNode and
 			a:GetTypeSourceRight():GetUpvalue():GetNode() == b:GetUpvalue():GetNode()
 		then
 			return cmp(a:GetTypeSourceRight(), b, context, source)
