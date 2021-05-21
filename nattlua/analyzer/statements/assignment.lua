@@ -18,7 +18,7 @@ local function check_type_against_contract(val, contract)
 
 	if skip_uniqueness then
 		contract:EnableUniqueness()
-		val.unique_id = contract.unique_id
+		val:SetUniqueID(contract:GetUniqueID())
 	end
 
 	if not ok and contract.Type == "union" and not val:IsLiteral() then

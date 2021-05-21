@@ -90,6 +90,8 @@ do -- token, expression and statement association
 end
 
 do -- comes from tbl.@Name = "my name"
+	META:GetSet("Name", nil)
+
 	function META:SetName(name--[[#: BaseType]])
 		if name then
 			assert(name:IsLiteral())
@@ -97,51 +99,45 @@ do -- comes from tbl.@Name = "my name"
 
 		self.Name = name
 	end
-
-	function META:GetName()
-		return self.Name
-	end
 end
 
 do
 	--[[#
-		type BaseType.unique_id = number | nil
 		type BaseType.disabled_unique_id = number | nil
 	]]
+
+	META:GetSet("UniqueID", nil)
+
 	local ref = 0
 
 	function META:MakeUnique(b--[[#: boolean]])
 		if b then
-			self.unique_id = ref
+			self.UniqueID = ref
 			ref = ref + 1
 		else
-			self.unique_id = nil
+			self.UniqueID = nil
 		end
 
 		return self
 	end
 
 	function META:IsUnique()
-		return self.unique_id ~= nil
-	end
-
-	function META:GetUniqueID()
-		return self.unique_id
+		return self.UniqueID ~= nil
 	end
 
 	function META:DisableUniqueness()
-		self.disabled_unique_id = self.unique_id
-		self.unique_id = nil
+		self.disabled_unique_id = self.UniqueID
+		self.UniqueID = nil
 	end
 
 	function META:EnableUniqueness()
-		self.unique_id = self.disabled_unique_id
+		self.UniqueID = self.disabled_unique_id
 	end
 
 	function META.IsSameUniqueType(a--[[#: BaseType]], b--[[#: BaseType]])
-		if a.unique_id and not b.unique_id then return type_errors.other(tostring(a) .. "is a unique type") end
-		if b.unique_id and not a.unique_id then return type_errors.other(tostring(b) .. "is a unique type") end
-		if a.unique_id ~= b.unique_id then return type_errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a)) end
+		if a.UniqueID and not b.UniqueID then return type_errors.other(tostring(a) .. "is a unique type") end
+		if b.UniqueID and not a.UniqueID then return type_errors.other(tostring(b) .. "is a unique type") end
+		if a.UniqueID ~= b.UniqueID then return type_errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a)) end
 		return true
 	end
 end
