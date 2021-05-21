@@ -42,8 +42,8 @@ local function prefix_operator(analyzer, node, l, env)
 			end
 		end
 
-		truthy_union:SetUpvalue(l.upvalue)
-		falsy_union:SetUpvalue(l.upvalue)
+		truthy_union:SetUpvalue(l:GetUpvalue())
+		falsy_union:SetUpvalue(l:GetUpvalue())
 		new_union:SetTruthyUnion(truthy_union)
 		new_union:SetFalsyUnion(falsy_union)
 

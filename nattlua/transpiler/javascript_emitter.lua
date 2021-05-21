@@ -31,7 +31,7 @@ function META:EmitExpression(node)
 	elseif node.kind == "postfix_expression_index" then
 		self:EmitExpressionIndex(node)
 	elseif node.kind == "value" then
-		if node.is_upvalue == false or not node.inferred_type.upvalue then
+		if node.is_upvalue == false or not node.inferred_type:GetUpvalue() then
 			self:EmitToken(node.value, "")
 			node.value.whitespace = nil
 			self:Emit("globalThis.")

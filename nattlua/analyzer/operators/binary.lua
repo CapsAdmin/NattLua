@@ -181,9 +181,9 @@ local function binary_operator(analyzer, node, l, r, env, op)
 				analyzer.type_checked = nil
 			end
 
-			local upvalue = condition.upvalue or
+			local upvalue = condition:GetUpvalue() or
 				new_union.type_checked and
-				new_union.type_checked.upvalue
+				new_union.type_checked:GetUpvalue()
 
 			if upvalue then
 				analyzer.current_statement.checks = analyzer.current_statement.checks or {}
@@ -195,8 +195,8 @@ local function binary_operator(analyzer, node, l, r, env, op)
 				new_union.inverted = true
 			end
 
-			truthy_union:SetUpvalue(condition.upvalue)
-			falsy_union:SetUpvalue(condition.upvalue)
+			truthy_union:SetUpvalue(condition:GetUpvalue())
+			falsy_union:SetUpvalue(condition:GetUpvalue())
 			new_union:SetTruthyUnion(truthy_union)
 			new_union:SetFalsyUnion(falsy_union)
 			return

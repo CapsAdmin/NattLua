@@ -52,21 +52,21 @@ do
 		if not a then return false end
 		if a == b then return source end
 
-		if a.upvalue and b.upvalue then
-			if a.upvalue_keyref or b.upvalue_keyref then return a.upvalue_keyref == b.upvalue_keyref and source or false end
-			if a.upvalue == b.upvalue then return source end
+		if a:GetUpvalue() and b:GetUpvalue() then
+			if a:GetUpvalueReference() or b:GetUpvalueReference() then return a:GetUpvalueReference() == b:GetUpvalueReference() and source or false end
+			if a:GetUpvalue() == b:GetUpvalue() then return source end
 		end
 
 		if
 			a:GetTypeSourceRight() and
-			a:GetTypeSourceRight().upvalue and
-			b.upvalue and
-			a:GetTypeSourceRight().upvalue:GetNode() == b.upvalue:GetNode()
+			a:GetTypeSourceRight():GetUpvalue() and
+			b:GetUpvalue() and
+			a:GetTypeSourceRight():GetUpvalue():GetNode() == b:GetUpvalue():GetNode()
 		then
 			return cmp(a:GetTypeSourceRight(), b, context, source)
 		end
 
-		if a.upvalue and a.upvalue.value then return cmp(a.upvalue.value, b, context, a) end
+		if a:GetUpvalue() and a:GetUpvalue().value then return cmp(a:GetUpvalue().value, b, context, a) end
 		if a.type_checked then return cmp(a.type_checked, b, context, a) end
 		if a:GetTypeSourceLeft() then return cmp(a:GetTypeSourceLeft(), b, context, a) end
 		if a:GetTypeSourceRight() then return cmp(a:GetTypeSourceRight(), b, context, a) end
@@ -203,7 +203,8 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 	end
 
 	local union = Union({})
-	union:SetUpvalue(obj, key)
+	union:SetUpvalue(obj)
+	union:SetUpvalueReference(key)
 
 	for _, mut in ipairs(mutations) do
 		local value = mut.value
@@ -231,7 +232,6 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 						end
 					end
 
-
 					if t then
 						union:RemoveType(t)
 					end
@@ -245,7 +245,8 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 
 		if _ == 1 and value.Type == "union" then
 			union = value:Copy()
-			union:SetUpvalue(obj, key)
+			union:SetUpvalue(obj)
+			union:SetUpvalueReference(key)
 		else
             -- check if we have to infer the function, otherwise adding it to the union can cause collisions
             if

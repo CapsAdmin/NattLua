@@ -21,8 +21,8 @@ return function(analyzer, node, env)
 
 			right = analyzer:AnalyzeExpression(node.right, env)
 
-			if analyzer.current_statement.checks and right.upvalue then
-				local checks = analyzer.current_statement.checks[right.upvalue]
+			if analyzer.current_statement.checks and right:GetUpvalue() then
+				local checks = analyzer.current_statement.checks[right:GetUpvalue()]
 
 				if checks then
 					right = checks[#checks]:GetTruthyUnion()

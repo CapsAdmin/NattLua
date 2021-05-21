@@ -212,7 +212,7 @@ return function(META)
 			local original = data.original
 			local modified = data.modified
 			modified:SetContract(original:GetContract())
-			self:MutateValue(original.upvalue, original.upvalue.key, modified, "runtime")
+			self:MutateValue(original:GetUpvalue(), original:GetUpvalue().key, modified, "runtime")
 		end
 	end
 
@@ -252,7 +252,12 @@ return function(META)
 				return type_errors.other({"argument #", i, " ", arg, ": ", reason})
 			end
 
-			if arg.Type == "table" and contract.Type == "table" and arg.upvalue and not contract.literal_argument then
+			if
+				arg.Type == "table" and
+				contract.Type == "table" and
+				arg:GetUpvalue() and
+				not contract.literal_argument
+			then
 				local original = arg
 				local modified = arg:Copy()
 				modified:SetContract(contract)

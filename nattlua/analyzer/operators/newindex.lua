@@ -24,8 +24,8 @@ return function(META)
 				end
 			end
 
-			truthy_union:SetUpvalue(obj.upvalue)
-			falsy_union:SetUpvalue(obj.upvalue)
+			truthy_union:SetUpvalue(obj:GetUpvalue())
+			falsy_union:SetUpvalue(obj:GetUpvalue())
 			new_union:SetTruthyUnion(truthy_union)
 			new_union:SetFalsyUnion(falsy_union)
 			return new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(obj)

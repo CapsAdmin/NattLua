@@ -35,8 +35,6 @@ end
 --[[#type BaseType = META.@Self]]
 --[[#type BaseType.Data = any | nil]]
 --[[#type BaseType.Name = string | nil]]
---[[#type BaseType.upvalue = any | nil]]
---[[#type BaseType.upvalue_keyref = any | nil]]
 --[[#type BaseType.parent = BaseType | nil]]
 META:GetSet("Environment", nil--[[# as nil | "runtime" | "typesystem"]])
 
@@ -78,30 +76,12 @@ do
 		self:SetName(obj:GetName())
 		self:SetMetaTable(obj:GetMetaTable())
 		self:SetEnvironment(obj:GetEnvironment())
-
-		-- what about these?
-		--self.upvalue_keyref = obj.upvalue_keyref
-		--self.upvalue = obj.upvalue
 	end
 end
 
-do
---[[#
---[[#
---[[# -- token, expression and statement association
-
-	--[[#
-		type BaseType.unique_id = number | nil]]
---[[#	type BaseType.disabled_unique_id = number | nil]]
-
-	function META:SetUpvalue(obj--[[#: any]], key--[[#: string | nil]])
-		self.upvalue = obj
-
-		if key then
-			self.upvalue_keyref = key
-		end
-	end
-
+do -- token, expression and statement association
+	META:GetSet("Upvalue", nil)
+	META:GetSet("UpvalueReference", nil)
 	META:GetSet("TokenLabelSource", nil)
 	META:GetSet("TypeSource", nil)
 	META:GetSet("TypeSourceLeft", nil)
@@ -124,6 +104,10 @@ do -- comes from tbl.@Name = "my name"
 end
 
 do
+	--[[#
+		type BaseType.unique_id = number | nil
+		type BaseType.disabled_unique_id = number | nil
+	]]
 	local ref = 0
 
 	function META:MakeUnique(b--[[#: boolean]])

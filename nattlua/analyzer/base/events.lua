@@ -51,8 +51,8 @@ return function(META)
 				local obj, key, val = ...
 				tab()
 
-				if obj.upvalue then
-					write(obj.upvalue.key)
+				if obj:GetUpvalue() then
+					write(obj:GetUpvalue().key)
 				else
 					write(obj)
 				end

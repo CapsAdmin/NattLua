@@ -38,7 +38,7 @@ local function lookup_value(self, node, env)
 	end
 
 	node.inferred_type = node.inferred_type or obj
-	local upvalue = obj.upvalue
+	local upvalue = obj:GetUpvalue()
 
 	if upvalue and self.current_statement.checks then
 		local checks = self.current_statement.checks[upvalue]
@@ -109,8 +109,8 @@ return function(analyzer, node, env)
 	if standalone_letter or value == "..." or node.force_upvalue then
 		local val = lookup_value(analyzer, node, env)
 
-		if val.upvalue then
-			analyzer:GetScope():AddDependency(val.upvalue)
+		if val:GetUpvalue() then
+			analyzer:GetScope():AddDependency(val:GetUpvalue())
 		end
 
 		return val

@@ -537,8 +537,7 @@ function META:Copy(map)
 		
 		copy.suppress = self.suppress
 		copy.level = self.level
-		copy.upvalue = self.upvalue
-		copy.upvalue_keyref = self.upvalue_keyref
+		copy:GetUpvalue() = self:GetUpvalue()
 		copy.argument_index = self.argument_index
 		copy.parent = self.parent
 		copy.reference_id = self.reference_id
