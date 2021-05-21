@@ -58,9 +58,9 @@ do
 		end
 
 		if
+			b:GetUpvalue() and
 			a:GetTypeSourceRight() and
 			a:GetTypeSourceRight():GetUpvalue() and
-			b:GetUpvalue() and
 			a:GetTypeSourceRight():GetUpvalue():GetNode() == b:GetUpvalue():GetNode()
 		then
 			return cmp(a:GetTypeSourceRight(), b, context, source)

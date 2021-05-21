@@ -6,19 +6,20 @@ local type_errors = require("nattlua.types.error_messages")
 local bit = require("bit")
 local META = dofile("nattlua/types/base.lua")
 META.Type = "number"
+--[[#type META.@Name = "TNumber"]]
+--[[#type META.@Self.Data = number]]
+--[[#type TNumber = META]]
+
 local operators = {
-		["-"] = function(l)
+		["-"] = function(l--[[#: number]])
 			return -l
 		end,
-		["~"] = function(l)
+		["~"] = function(l--[[#: number]])
 			return bit.bnot(l)
-		end,
-		["#"] = function(l)
-			return #l
 		end,
 	}
 
-function META:PrefixOperator(op)
+function META:PrefixOperator(op --[[#: string]])
 	if self:IsLiteral() then
 		local num = self.New(operators[op](self:GetData())):SetLiteral(true)
 
@@ -32,10 +33,7 @@ function META:PrefixOperator(op)
 	return self.New()
 end
 
---[[#type META.max = META]]
---[[#type META.Data = number]]
-
-function META.Equal(a, b)
+function META.Equal(a --[[#: TNumber]], b --[[#: TNumber]])
 	if a.Type ~= b.Type then return false end
 
 	if a:IsLiteral() and b:IsLiteral() then
@@ -44,8 +42,8 @@ function META.Equal(a, b)
 		return a:GetData() == b:GetData()
 	end
 
-	if a.max and b.max and a.max:Equal(b.max) then return true end
-	if a.max or b.max then return false end
+	if a.Max and b.Max and a.Max:Equal(b.Max) then return true end
+	if a.Max or b.Max then return false end
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 	return false
 end
@@ -57,8 +55,8 @@ end
 function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
 
-	if self.max then
-		copy.max = self.max:Copy()
+	if self.Max then
+		copy.Max = self.Max:Copy()
 	end
 
 	copy:CopyInternalsFrom(self)
@@ -96,8 +94,8 @@ function META.IsSubsetOf(A, B)
 
 			if A:GetData() == B:GetData() then return true end
 
-			if B.max then
-				if A:GetData() >= B:GetData() and A:GetData() <= B.max:GetData() then return true end
+			if B.Max then
+				if A:GetData() >= B:GetData() and A:GetData() <= B.Max:GetData() then return true end
 			end
 
 			return type_errors.subset(A, B)
@@ -131,14 +129,16 @@ function META:__tostring()
 
 	local s = tostring(n)
 
-	if self.max then
-		s = s .. ".." .. tostring(self.max)
+	if self.Max then
+		s = s .. ".." .. tostring(self.Max)
 	end
 
 	if self:IsLiteral() then return s end
 	if self:GetData() then return "number(" .. s .. ")" end
 	return "number"
 end
+
+META:GetSet("Max", nil)
 
 function META:SetMax(val)
 	local err
@@ -151,33 +151,34 @@ function META:SetMax(val)
 	if val.Type ~= "number" then return type_errors.other("max must be a number, got " .. tostring(val)) end
 
 	if val:IsLiteral() then
-		self.max = val
+		self.Max = val
 	else
 		self:SetLiteral(false)
 		self:SetData(nil)
+		self.Max = nil
 	end
 
 	return self
 end
 
 local ops = {
-		[">"] = function(a, b)
+		[">"] = function(a--[[#: number]], b--[[#: number]])
 			return a > b
 		end,
-		["<"] = function(a, b)
+		["<"] = function(a--[[#: number]], b--[[#: number]])
 			return a < b
 		end,
-		["<="] = function(a, b)
+		["<="] = function(a--[[#: number]], b--[[#: number]])
 			return a <= b
 		end,
-		[">="] = function(a, b)
+		[">="] = function(a--[[#: number]], b--[[#: number]])
 			return a >= b
 		end,
 	}
 
-local function compare(a, b, op)
+local function compare(a--[[#: TNumber]], b--[[#: TNumber]], op--[[#: keysof<|ops|>]])
 	local min = a:GetData()
-	local max = a.max:GetData()
+	local max = a.Max:GetData()
 	local val = b:GetData()
 	local f = ops[op]
 
@@ -190,15 +191,15 @@ local function compare(a, b, op)
 	return nil
 end
 
-function META.LogicalComparison(a, b, op)--[[#: boolean | nil]]
-	if a.max and b.max then
+function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], op--[[#: keysof<|ops|>]])--[[#: boolean | nil]]
+	if a.Max and b.Max then
 		local res_a = compare(a, b, op)
 		local res_b = not compare(b, a, op)
 		if res_a ~= nil and res_a == res_b then return res_a end
 		return nil
 	end
 
-	if a.max then
+	if a.Max then
 		local res = compare(a, b, op)
 		if res == nil then return nil end
 		return res
@@ -206,10 +207,6 @@ function META.LogicalComparison(a, b, op)--[[#: boolean | nil]]
 
 	if ops[op] then return ops[op](a:GetData(), b:GetData()) end
 	error("NYI " .. op)
-end
-
-function META:GetMax()
-	return self.max
 end
 
 function META:IsFalsy()
@@ -220,7 +217,7 @@ function META:IsTruthy()
 	return true
 end
 
-function META.New(data)
+function META.New(data--[[#: number]])
 	return setmetatable({Data = data}, META)
 end
 

@@ -6,6 +6,10 @@ local type_errors = require("nattlua.types.error_messages")
 local META = {}
 META.__index = META
 
+--[[#type META.Type = string]]
+--[[#type META.@Self = {}]]
+--[[#type BaseType = META.@Self]]
+
 function META.GetSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
 --[[#	type tbl.@Self[name] = tbl[name] ]]
@@ -30,9 +34,6 @@ function META.IsSet(tbl--[[#: literal any]], name--[[#: literal string]], defaul
 	end
 end
 
---[[#type META.Type = string]]
---[[#type META.@Self = {}]]
---[[#type BaseType = META.@Self]]
 --[[#type BaseType.Data = any | nil]]
 --[[#type BaseType.Name = string | nil]]
 --[[#type BaseType.parent = BaseType | nil]]
@@ -215,7 +216,7 @@ do -- contract
 end
 
 function META.New()
-	return setmetatable({}, META)
+	return setmetatable({} --[[# as META.@Self]], META)
 end
 
 return META
