@@ -9,7 +9,6 @@ META.Type = "number"
 --[[#type META.@Name = "TNumber"]]
 --[[#type META.@Self.Data = number]]
 --[[#type TNumber = META]]
-
 local operators = {
 		["-"] = function(l--[[#: number]])
 			return -l
@@ -19,7 +18,7 @@ local operators = {
 		end,
 	}
 
-function META:PrefixOperator(op --[[#: string]])
+function META:PrefixOperator(op--[[#: string]])
 	if self:IsLiteral() then
 		local num = self.New(operators[op](self:GetData())):SetLiteral(true)
 
@@ -33,7 +32,7 @@ function META:PrefixOperator(op --[[#: string]])
 	return self.New()
 end
 
-function META.Equal(a --[[#: TNumber]], b --[[#: TNumber]])
+function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	if a.Type ~= b.Type then return false end
 
 	if a:IsLiteral() and b:IsLiteral() then

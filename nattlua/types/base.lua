@@ -5,7 +5,6 @@ local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = {}
 META.__index = META
-
 --[[#type META.Type = string]]
 --[[#type META.@Self = {}]]
 --[[#type BaseType = META.@Self]]
@@ -103,12 +102,8 @@ do -- comes from tbl.@Name = "my name"
 end
 
 do
-	--[[#
-		type BaseType.disabled_unique_id = number | nil
-	]]
-
+--[[#	type BaseType.disabled_unique_id = number | nil]]
 	META:GetSet("UniqueID", nil)
-
 	local ref = 0
 
 	function META:MakeUnique(b--[[#: boolean]])
@@ -216,7 +211,7 @@ do -- contract
 end
 
 function META.New()
-	return setmetatable({} --[[# as META.@Self]], META)
+	return setmetatable({}--[[# as META.@Self]], META)
 end
 
 return META
