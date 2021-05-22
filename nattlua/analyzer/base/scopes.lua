@@ -27,8 +27,8 @@ return function(META)
 		return scope
 	end
 
-	function META:CreateAndPushFunctionScope(node)
-		return self:PushScope(LexicalScope(node and node.function_scope or self:GetScope()))
+	function META:CreateAndPushFunctionScope(scope)
+		return self:PushScope(LexicalScope(scope or self:GetScope()))
 		end
 
 		function META:CreateAndPushScope()

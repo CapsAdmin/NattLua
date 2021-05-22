@@ -208,7 +208,7 @@ return function(syntax--[[#: literal mutable (
 		end
 
 		do
-			local function build_lookup(tbl--[[#: {[number] = string}]], func_name--[[#: string]])
+			local function build_lookup(tbl--[[#: literal {[number] = string}]], func_name--[[#: string]])
 				local lookup = {}
 
 				for _, v in pairs(tbl or {}) do

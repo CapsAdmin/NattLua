@@ -94,7 +94,7 @@ return function(analyzer, node, env)
 
 	if node.return_types then
 		explicit_return = true
-		analyzer:CreateAndPushFunctionScope(node)
+		analyzer:CreateAndPushFunctionScope()
 		analyzer:PushPreferTypesystem(true)
 
 		for i, key in ipairs(node.identifiers) do
@@ -145,6 +145,7 @@ return function(analyzer, node, env)
 		arg = args,
 		ret = ret,
 		lua_function = func,
+		scope = analyzer:GetScope()
 	})
 	obj.explicit_arguments = explicit_arguments
 	obj.explicit_return = explicit_return
@@ -153,6 +154,5 @@ return function(analyzer, node, env)
 		analyzer:CallMeLater(obj, args, node, true)
 	end
 
-	node.function_scope = analyzer:GetScope()
 	return obj
 end

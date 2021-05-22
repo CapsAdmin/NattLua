@@ -57,6 +57,7 @@ function META:Copy(map)
 	copy:GetData().ret = self:GetReturnTypes():Copy(map)
 	copy:GetData().arg = self:GetArguments():Copy(map)
 	copy:GetData().lua_function = self:GetData().lua_function
+	copy:GetData().scope = self:GetData().scope
 	copy:SetLiteral(self:IsLiteral())
 	copy:CopyInternalsFrom(self)
 	copy.function_body_node = self.function_body_node

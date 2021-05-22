@@ -619,3 +619,21 @@ pending[[
     
     foo(true)
 ]]
+
+run[[
+    local tbl = {}
+
+    local function add(
+        name: literal string
+    )
+        tbl[name] = function(name2: literal string)
+            type_assert(name, name2)
+        end
+    end
+    
+    add("FooNumber")
+    add("BarString")
+    
+    tbl.FooNumber("FooNumber")
+    tbl.BarString("BarString")
+]]

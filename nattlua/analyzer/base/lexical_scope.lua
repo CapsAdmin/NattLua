@@ -189,6 +189,7 @@ function META:Copy(upvalues)
 	end
 
 	copy.returns = self.returns
+
 	return copy
 end
 

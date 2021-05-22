@@ -38,8 +38,9 @@ return function(META)
 		return types.Tuple(tbl)
 	end
 
-	function META:AnalyzeFunctionBody(function_node, arguments, env)
-		local scope = self:CreateAndPushFunctionScope(function_node)
+	function META:AnalyzeFunctionBody(obj, function_node, arguments, env)
+		local scope = self:CreateAndPushFunctionScope(obj:GetData().scope)
+
 		scope.scope_is_being_called = true
 		self:PushEnvironment(function_node, nil, env)
 
@@ -167,9 +168,7 @@ return function(META)
 					self:CallLuaTypeFunction(
 						call_node,
 						obj:GetData().lua_function,
-						function_node and
-						function_node.function_scope or
-						self:GetScope(),
+						obj:GetData().scope or self:GetScope(),
 						table.unpack(arg)
 					),
 				}
@@ -419,13 +418,13 @@ return function(META)
 				if not ok then return ok, err end
 			end
 
-			local return_result, scope = self:AnalyzeFunctionBody(function_node, arguments, env)
+			local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments, env)
 			obj:AddScope(arguments, return_result, scope)
 			restore_mutated_types(self)
 			local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
 			if not return_contract and function_node.return_types then
-				self:CreateAndPushFunctionScope(function_node)
+				self:CreateAndPushFunctionScope(obj:GetData().scope)
 				self:PushPreferTypesystem(true)
 				return_contract = types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
 				self:PopPreferTypesystem()
@@ -462,7 +461,7 @@ return function(META)
 			if return_contract then
                 -- this is so that the return type of a function can access its arguments, to generics
                 -- local function foo(a: number, b: number): Foo(a, b) return a + b end
-                self:CreateAndPushFunctionScope(function_node)
+                self:CreateAndPushFunctionScope(obj:GetData().scope)
 
 				for i, key in ipairs(function_node.identifiers) do
 					local arg = arguments:Get(i)
