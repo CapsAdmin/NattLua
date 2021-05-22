@@ -94,7 +94,7 @@ end
 function META:GetLuaType()
 	return self.Type
 end
-
+local level = 0
 function META:__tostring()
 	if self.suppress then return "*self-table*" end
 	self.suppress = true
@@ -110,8 +110,8 @@ function META:__tostring()
 	end
 
 	local s = {}
-	self.level = (self.level or 0) + 1
-	local indent = ("\t"):rep(self.level)
+	level = level + 1
+	local indent = ("\t"):rep(level)
 
 	if #self:GetData() <= 1 then
 		indent = " "
@@ -140,11 +140,10 @@ function META:__tostring()
 			s[i] = indent .. key .. " = " .. val
 		end
 	end
-
-	self.level = self.level - 1
+	level = level - 1
 	self.suppress = false
 	if #self:GetData() <= 1 then return "{" .. table.concat(s) .. " }" end
-	return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(self.level) .. "}"
+	return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
 function META:GetLength()
