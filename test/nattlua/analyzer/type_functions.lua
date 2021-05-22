@@ -445,14 +445,14 @@ do
     ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
-run[[
+run([[
     local tbl = {
         foo = true,
         bar = false,
         faz = 1
     }
     table.sort(tbl, function(a, b) end)
-]]
+]], "1%.%.inf.-has no field")
 
 run[[
     local META = {}

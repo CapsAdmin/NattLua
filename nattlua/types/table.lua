@@ -232,10 +232,9 @@ function META.IsSubsetOf(A, B)
 
 		return true
 	elseif B.Type == "union" then
-		A.suppress = true
-		local u = Union({A}):IsSubsetOf(B)
-		A.suppress = false
-		return u
+		local u = Union({A})
+		local ok, err = u:IsSubsetOf(B)
+		return ok, err
 	end
 
 	return type_errors.subset(A, B)

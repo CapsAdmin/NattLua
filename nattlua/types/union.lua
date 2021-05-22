@@ -330,14 +330,9 @@ function META:Copy(map)
 	map[self] = map[self] or copy
 
 	for _, e in ipairs(self.Data) do
-		local c = map[e] or e:Copy(map)
-		map[e] = map[e] or c
-		copy:AddType(c)
+		copy:AddType(e)
 	end
-
-	--copy:SetTruthyUnion(self:GetTruthyUnion())
-	--copy:SetFalsyUnion(self:GetFalseUnion())
-
+	
 	copy:CopyInternalsFrom(self)
 	return copy
 end
