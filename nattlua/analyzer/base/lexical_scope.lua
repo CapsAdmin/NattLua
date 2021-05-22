@@ -344,7 +344,7 @@ function META:DumpScope()
 	local s = {}
 
 	for i, v in ipairs(self.upvalues.runtime.list) do
-		table.insert(s, "local " .. tostring(v.key) .. " = " .. tostring(v:GetData()))
+		table.insert(s, "local " .. tostring(v.key) .. " = " .. tostring(v))
 	end
 
 	for i, v in ipairs(self.children) do
