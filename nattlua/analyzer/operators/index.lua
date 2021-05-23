@@ -35,6 +35,10 @@ return function(META)
 		if obj:GetContract() then
 			local val, err = obj:GetContract():Get(key)
 
+			if val and not val:GetContract() then
+				val:SetContract(val)
+			end
+
 			if val then
 				if not obj.argument_index or obj:GetContract().literal_argument then
 					local o = self:GetMutatedValue(obj, key, val, env)

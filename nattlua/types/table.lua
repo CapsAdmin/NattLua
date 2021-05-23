@@ -12,7 +12,7 @@ META.Type = "table"
 function META:SetSelf(tbl)
 	tbl:SetMetaTable(self)
 	tbl.mutable = true
-	tbl:SetContractSelf()
+	tbl:SetContract(tbl)
 	self.Self = tbl
 end
 
@@ -23,22 +23,6 @@ end
 
 function META:GetReferenceId()
 	return self.reference_id
-end
-
-function META:SetContractSelf()
-	self:SetContract(self)
-
-	for _, keyval in ipairs(self:GetData()) do
-		if keyval.key.Type == "table" and not keyval.key:GetContract() then
-			keyval.key:SetContractSelf()
-		end
-
-		if keyval.val.Type == "table" and not keyval.val:GetContract() then
-			keyval.val:SetContractSelf()
-		end
-	end
-
-	return true
 end
 
 function META:GetSelf()
@@ -197,6 +181,8 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type == "table" then
 		if B:GetMetaTable() and B:GetMetaTable() == A then return true end
+		--if B:GetSelf() and B:GetSelf():Equal(A) then return true end
+		
 		local can_be_empty = true
 		A.suppress = true
 

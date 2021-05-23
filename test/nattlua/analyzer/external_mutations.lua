@@ -161,7 +161,7 @@ run[[
     local tbl = {} as {foo = number | nil}
 
     if tbl.foo then
-        type_assert<|typeof tbl.foo, number|>
+        type_assert(tbl.foo, _ as number)
     end
 ]]
 
@@ -185,7 +185,7 @@ run[[
 run[[
     local function test(value: {foo = number | nil})
         if value.foo then
-            type_assert<|typeof value.foo, number|>
+            type_assert(value.foo, _ as number)
         end
     end
     
@@ -194,7 +194,7 @@ run[[
 run[[
     local function test(value: {foo = number | nil})
         if value.foo then
-            type_assert<|typeof value.foo, number|>
+            type_assert(value.foo, _ as number)
         end
     end
     
