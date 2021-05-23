@@ -7,8 +7,10 @@ local bit = require("bit")
 local META = dofile("nattlua/types/base.lua")
 META.Type = "number"
 --[[#type META.@Name = "TNumber"]]
---[[#type META.@Self.Data = number]]
---[[#type TNumber = META]]
+--[[#type TNumber = META.@Self]]
+
+META:GetSet("Data", nil --[[# as number]])
+
 local operators = {
 		["-"] = function(l--[[#: number]])
 			return -l
@@ -18,7 +20,7 @@ local operators = {
 		end,
 	}
 
-function META:PrefixOperator(op--[[#: string]])
+function META:PrefixOperator(op--[[#: keysof<| operators |>]])
 	if self:IsLiteral() then
 		local num = self.New(operators[op](self:GetData())):SetLiteral(true)
 
@@ -62,7 +64,7 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A, B)
+function META.IsSubsetOf(A --[[#: TNumber]], B --[[#: TNumber]])
 	if B.Type == "tuple" and B:GetLength() == 1 then
 		B = B:Get(1)
 	end
@@ -93,8 +95,8 @@ function META.IsSubsetOf(A, B)
 
 			if A:GetData() == B:GetData() then return true end
 
-			if B.Max then
-				if A:GetData() >= B:GetData() and A:GetData() <= B.Max:GetData() then return true end
+			if B:GetMax() then
+				if A:GetData() >= B:GetData() and A:GetData() <= B:GetMax():GetData() then return true end
 			end
 
 			return type_errors.subset(A, B)
@@ -128,8 +130,8 @@ function META:__tostring()
 
 	local s = tostring(n)
 
-	if self.Max then
-		s = s .. ".." .. tostring(self.Max)
+	if self:GetMax() then
+		s = s .. ".." .. tostring(self:GetMax())
 	end
 
 	if self:IsLiteral() then return s end
@@ -137,7 +139,7 @@ function META:__tostring()
 	return "number"
 end
 
-META:GetSet("Max", nil)
+META:GetSet("Max", nil --[[# as TNumber | nil]])
 
 function META:SetMax(val)
 	local err
@@ -177,7 +179,7 @@ local ops = {
 
 local function compare(a--[[#: TNumber]], b--[[#: TNumber]], op--[[#: keysof<|ops|>]])
 	local min = a:GetData()
-	local max = a.Max:GetData()
+	local max = a:GetMax():GetData()
 	local val = b:GetData()
 	local f = ops[op]
 
@@ -191,14 +193,14 @@ local function compare(a--[[#: TNumber]], b--[[#: TNumber]], op--[[#: keysof<|op
 end
 
 function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], op--[[#: keysof<|ops|>]])--[[#: boolean | nil]]
-	if a.Max and b.Max then
+	if a:GetMax() and b:GetMax() then
 		local res_a = compare(a, b, op)
 		local res_b = not compare(b, a, op)
 		if res_a ~= nil and res_a == res_b then return res_a end
 		return nil
 	end
 
-	if a.Max then
+	if a:GetMax() then
 		local res = compare(a, b, op)
 		if res == nil then return nil end
 		return res
