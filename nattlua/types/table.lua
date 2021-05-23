@@ -533,9 +533,6 @@ function META:Copy(map)
 	
 	--[[
 		
-		copy.suppress = self.suppress
-		copy.level = self.level
-		copy:GetUpvalue() = self:GetUpvalue()
 		copy.argument_index = self.argument_index
 		copy.parent = self.parent
 		copy.reference_id = self.reference_id
@@ -623,20 +620,19 @@ local function unpack_keyval(keyval)
 	return key, val
 end
 
-function META.Extend(A, B, dont_copy_self)
+function META.Extend(A, B)
 	if B.Type ~= "table" then return false, "cannot extend non table" end
 	local map = {}
 
-	if not dont_copy_self then
+
+	if A:GetContract() then
+		A = A:GetContract()
+	else
 		A = A:Copy(map)
 	end
 
 	map[B] = A
 	B = B:Copy(map)
-
-	if A:GetContract() then
-		A = A:GetContract()
-	end
 
 	for _, keyval in ipairs(B:GetData()) do
 		local ok, reason = A:SetExplicit(unpack_keyval(keyval))
