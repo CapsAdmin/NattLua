@@ -1209,6 +1209,19 @@ run[[
     end
 ]]
 
+run[[
+    local function test(x: literal any)
+        type_assert(x, true)
+        return true
+    end
+    
+    local function foo(x: {foo = boolean | nil}) 
+        if x.foo and test(x.foo) then
+            type_assert(x.foo, true)
+        end
+    end
+]]
+
 pending([[
     local a: nil | 1
 

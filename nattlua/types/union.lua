@@ -359,8 +359,11 @@ function META:DisableTruthy()
 	for _, v in ipairs(self.Data) do
 		if v:IsTruthy() then
 			table.insert(found, v)
-			self:RemoveType(v)
 		end
+	end
+
+	for _, v in ipairs(found) do
+		self:RemoveType(v)
 	end
 
 	self.truthy_disabled = found
@@ -380,8 +383,11 @@ function META:DisableFalsy()
 	for _, v in ipairs(self.Data) do
 		if v:IsFalsy() then
 			table.insert(found, v)
-			self:RemoveType(v)
 		end
+	end
+
+	for _, v in ipairs(found) do
+		self:RemoveType(v)
 	end
 
 	self.falsy_disabled = found
