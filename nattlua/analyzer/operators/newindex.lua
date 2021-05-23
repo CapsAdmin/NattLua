@@ -34,7 +34,7 @@ return function(META)
 		if val.Type == "function" and val:GetNode().self_call then
 			local arg = val:GetArguments():Get(1)
 
-			if not arg:GetContract() then
+			if arg and not arg:GetContract() and not arg.Self then
 				val.called = true
 				val = val:Copy()
 				val:GetArguments():Set(1, types.Union({types.Any(), obj}))

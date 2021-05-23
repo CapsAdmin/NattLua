@@ -7,7 +7,8 @@ local META = {}
 META.__index = META
 --[[#type META.Type = string]]
 --[[#type META.@Self = {}]]
---[[#type BaseType = META.@Self]]
+--[[#local type BaseType = META.@Self]]
+--[[#type BaseType.@Name = "BaseTypeInstance"]]
 
 function META.GetSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
@@ -190,21 +191,22 @@ do
 	end
 end
 
-do
-	META:GetSet("MetaTable", nil--[[# as BaseType | nil]])
-
-	function META:GetMetaTable()
-		if self.Contract and self.Contract.MetaTable then return self.Contract.MetaTable end
-		return self.MetaTable
-	end
-end
-
 do -- contract
 	function META:Seal()
 		self:SetContract(self:GetContract() or self:Copy())
 	end
 
 	META:GetSet("Contract", nil--[[# as BaseType | nil]])
+end
+
+do
+	META:GetSet("MetaTable", nil--[[# as BaseType | nil]])
+
+	function META:GetMetaTable()
+		if self.Contract then -- TODO
+			if self.Contract.MetaTable then return self.Contract.MetaTable end end
+		return self.MetaTable
+	end
 end
 
 function META.New()

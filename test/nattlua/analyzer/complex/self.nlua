@@ -94,3 +94,9 @@ do
 end
 
 local Lexer = require("nattlua.lexer.lexer")
+
+do
+    local base = require("nattlua.types.base")
+    §analyzer:AnalyzeUnreachableCode()
+    type_assert<|argument_type<|base.MakeUnique|>, Tuple<|base.@Self, true | false|>|>
+end

@@ -82,8 +82,8 @@ return function(analyzer, node, env)
 		local val = analyzer:AnalyzeExpression(node.expression.left, "runtime")
 
 		if val then
-			if val:GetContract() then
-				table.insert(args, 1, val)
+			if val:GetContract() or val.Self then
+				table.insert(args, 1, val.Self or val)
 			else
 				table.insert(args, 1, types.Union({types.Any(), val}))
 			end
