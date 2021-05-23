@@ -82,7 +82,7 @@ test("self referenced tables should be equal", function()
     end
     equal(true, ok)
 end)
-do return end
+
 test("indexing nil in a table should be allowed", function()
     local analyzer = run([[
         local tbl = {foo = true}
@@ -97,12 +97,12 @@ test("indexing nil in a table with a contract should error", function()
     run([[
         local tbl: {foo = true} = {foo = true}
         local a = tbl.bar
-    ]], "\"bar\" is not a subset of \"foo\"")
+    ]], "\"bar\" is not the same value as \"foo\"")
 end)
 
 test("string: any", function()
     run([[
-        local a: {[string] = any} = {} -- can assign a string to anything, (most common usage)
+        local a: {[string] = any | nil} = {} -- can assign a string to anything, (most common usage)
         a.lol = "aaa"
         a.lol2 = 2
         a.lol3 = {}
@@ -113,7 +113,7 @@ test("empty type table shouldn't be writable", function()
     run([[
         local a: {} = {}
         a.lol = true
-    ]], "table has no definitions")
+    ]], "has no field .-lol")
 end)
 
 test("wrong right hand type should error", function()
@@ -134,7 +134,7 @@ test("with typed numerically indexed table should error", function()
     run([[
         local tbl: {1,true,3} = {1, true, 3}
         tbl[2] = false
-    ]], "false is not the same as true")
+    ]], "false is not the same value as true")
 end)
 
 test("which has no data but contract says it does should return what the contract says", function()
@@ -146,7 +146,7 @@ test("which has no data but contract says it does should return what the contrac
     run([[
         local tbl = {} as {[string] = 1}
         type_assert(tbl[true], nil)
-    ]], "true is not the same as string")
+    ]], "has no field true")
 end)
 
 test("is literal", function()
@@ -252,7 +252,7 @@ test("index literal table with string", function()
 end)
 
 test("non literal keys should be treated as literals when used multiple times in the same scope", function() 
-    run[[
+    pending[[
         local foo: string
         local bar: string
 
@@ -331,10 +331,10 @@ run[[
     type_assert<|a.Foo, nil | "something"|>
 
     a.Foo = nil
-    type_assert<|a.Foo, nil|>
+    type_assert(a.Foo, nil)
 
     a.Foo = "something"
-    type_assert<|a.Foo, "something"|>
+    type_assert(a.Foo, "something")
 
 
     a.Foo = _ as "something" | nil
@@ -354,7 +354,7 @@ run[[
 ]]
 
 run[[
-    local function fill(t: {foo = boolean, bar = number})
+    local function fill(t: mutable {foo = boolean, bar = number})
         t.foo = true
     end
     
@@ -367,7 +367,7 @@ run[[
     local type ShapeA = {Foo = boolean | nil}
     local type ShapeB = {Bar = string | nil}
     
-    local function mutate(obj: ShapeA & ShapeB)
+    local function mutate(obj: mutable ShapeA & ShapeB)
         obj.Bar = "asdf"
     end
     
@@ -411,9 +411,8 @@ run([[
     end
 
     local obj = {}
-    -- should be okay, because all the values in the contract can be nil
     mutate(obj)
-]], "table is empty")
+]], "{ } is not a subset of")
 
 run([[
     local type ShapeA = {Foo = boolean}
@@ -424,9 +423,8 @@ run([[
     end
 
     local obj = {Foo = true}
-    -- should be okay, because all the values in the contract can be nil
     mutate(obj)
-]], "table is empty")
+]], "has no field \"Bar\"")
 
 
 run[[
@@ -495,14 +493,13 @@ run[[
 
 run[[
 
-    local function test(tbl: {
+    local function test(tbl: literal {
         Foo = boolean,
         Bar = number,
         [string] = any,
     })
-        type_assert(tbl.Foo, _ as boolean)
-        type_assert(tbl.Bar, _ as number)
-        type_assert(tbl.lol, _ as any)
+        type_assert(tbl.Foo, _ as true)
+        type_assert(tbl.Bar, _ as 1337)
     
         tbl.NewField = 8888
         tbl.NewField2 = 9999
@@ -515,8 +512,8 @@ run[[
     
     test(tbl)
     
-    type_assert(tbl.Foo, _ as boolean)
-    type_assert(tbl.Bar, _ as number)
+    type_assert(tbl.Foo, _ as true)
+    type_assert(tbl.Bar, _ as 1337)
     type_assert(tbl.NewField, 8888)
     type_assert(tbl.NewField2, 9999)
     
@@ -562,11 +559,9 @@ run([[
     if not META["Foo"] then
         
     end
+]], "has no field \"Foo\"")
 
-    §assert(#analyzer.diagnostics == 1)
-]])
-
-run[[
+pending[[
     local function tbl_get_foo(self)
         type_assert(self.foo, 1337)
         return tbl.foo
@@ -613,3 +608,10 @@ run[[
     
     test(_ as {foo = number}, _ as {foo = number, bar = nil | number})
 ]]
+
+run([[
+    local t = {} as {
+        foo = {number = string}    
+    }
+    t.foo["test"] = true
+]], "is not the same value as .-number")
