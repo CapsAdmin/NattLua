@@ -261,3 +261,44 @@ pending[[
     type_assert<|a.foo, string|>
     type_assert<|a.bar, string|>
 ]]
+
+run[[
+    local META = {}
+    META.__index = META
+    type META.Type = string
+    type META.@Self = {}
+    type BaseType = META.@Self
+    
+    function META.GetSet(tbl: literal any, name: literal string, default: literal any)
+        tbl[name] = default as NonLiteral<|default|>
+    	type tbl.@Self[name] = tbl[name] 
+        tbl["Set" .. name] = function(self: tbl.@Self, val: typeof tbl[name] )
+            self[name] = val
+            return self
+        end
+        tbl["Get" .. name] = function(self: tbl.@Self): typeof tbl[name] 
+            return self[name]
+        end
+    end
+    
+    do
+        META:GetSet("UniqueID", nil  as nil | number)
+        local ref = 0
+    
+        function META:MakeUnique(b: boolean)
+            if b then
+                §assert(env.runtime.self.mutations == nil)
+                self.UniqueID = ref
+                ref = ref + 1
+            else
+                self.UniqueID = nil
+            end
+    
+            return self
+        end
+    
+        function META:DisableUniqueness()
+            self.UniqueID = nil
+        end
+    end
+]]

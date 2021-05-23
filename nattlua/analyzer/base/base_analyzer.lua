@@ -102,6 +102,9 @@ return function(META)
             -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
             arguments = obj:GetArguments():Copy()
 			arguments = add_potential_self(arguments)
+			for _, obj in ipairs(arguments:GetData()) do
+				obj.mutations = nil
+			end
 			self:Assert(node, self:Call(obj, arguments, node))
 			self.lua_assert_error_thrown = nil
 			self.lua_error_thrown = nil
