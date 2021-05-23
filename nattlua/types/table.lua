@@ -48,11 +48,11 @@ function META.Equal(a, b)
 		if not b.Name then return false end
 		return a.Name:GetData() == b.Name:GetData()
 	end
-
 	if a.suppress then return true end
-	local adata = a:GetContract() or a:GetData()
-	local bdata = b:GetContract() or b:GetData()
-	if #adata ~= #bdata then return false end
+	local adata = a:GetData()
+	local bdata = b:GetData()
+
+	if #adata ~= #bdata then return false end	
 
 	for i = 1, #adata do
 		local akv = adata[i]
@@ -612,6 +612,11 @@ function META.Extend(A, B)
 
 
 	if A:GetContract() then
+		if A == A:GetContract() then
+			A:SetContract()
+			A = A:Copy()
+			A:SetContract(A)
+		end
 		A = A:GetContract()
 	else
 		A = A:Copy(map)

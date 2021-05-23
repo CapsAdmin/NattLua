@@ -276,9 +276,9 @@ run[[
     end
 
     local function test(x: Foo & {extra = boolean | nil})
-        type_assert(x.asdf, true)
+        type_assert(x.asdf, true) -- x.asdf will __index to META
         x.extra = true
-        test2(x)
+        test2(x as Foo) -- x.extra should not be a valid field in test2
     end
 
     META.asdf = true
@@ -540,4 +540,19 @@ run[[
     local b = self:GetFoo()
     type_assert<|b, boolean|>
     type_assert<|self.Foo, boolean|>
+]]
+
+run[[
+    local META =  {}
+    META.__index = META
+
+    type META.@Self = {
+        foo = true,
+    }
+
+    local function test(x: META.@Self & {bar = false})
+        type_assert_superset<|x, {foo = true, bar = false}|>
+        type_assert_superset<|META.@Self, {foo = true}|>
+    end
+
 ]]

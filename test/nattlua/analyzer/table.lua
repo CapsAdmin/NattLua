@@ -615,3 +615,16 @@ run([[
     }
     t.foo["test"] = true
 ]], "is not the same value as .-number")
+
+run[[
+    local META =  {}
+    META.__index = META
+
+    type META.@Self = {
+        foo = true,
+    }
+
+    local type x = META.@Self & {bar = false}
+    type_assert<|x, {foo = true, bar = false}|>
+    type_assert(META.@Self, _ as {foo = true})
+]]
