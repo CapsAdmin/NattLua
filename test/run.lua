@@ -27,7 +27,7 @@ function _G.test(name, cb)
     end
 end
 
-function pending()
+function _G.pending()
 
 end
 
