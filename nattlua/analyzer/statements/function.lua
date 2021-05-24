@@ -31,12 +31,6 @@ return function(analyzer, statement)
 			local obj = analyzer:AnalyzeExpression(key.left, env)
 			local key = analyzer:AnalyzeExpression(key.right, env)
 			local val = _function(analyzer, statement, env)
-
-			if existing_type and existing_type.Type == "function" then
-	--            val:SetArguments(existing_type:GetArguments())
-	--              val:GetData().ret = existing_type:GetReturnTypes() -- TODO
-			end
-
 			analyzer:NewIndexOperator(statement, obj, key, val, env)
 		else
 			local existing_type = env == "runtime" and analyzer:GetLocalOrEnvironmentValue(key, "typesystem")
