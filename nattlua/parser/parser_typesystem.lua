@@ -56,7 +56,7 @@ return function(META)
 
 		if self:IsCurrentValue("^") then
 			force_upvalue = true
-			self:Advance(1)
+			node.tokens["^"] = self:ReadTokenLoose()
 		end
 
 		node.expression = self:ReadIndexExpression()
@@ -186,6 +186,7 @@ return function(META)
 
 	function META:ReadTypeFunction(plain_args)
 		local node = self:Expression("type_function")
+		node.stmnt = false
 		node.tokens["function"] = self:ReadValue("function")
 		return self:ReadTypeFunctionBody(node, plain_args)
 	end

@@ -372,8 +372,17 @@ do
 			self:Whitespace(" ")
 		end
 
+		if node.tokens["type"] then
+			self:EmitToken(node.tokens["type"])
+			self:Whitespace(" ")
+		end
+
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
+
+		if node.tokens["^"] then
+			self:EmitToken(node.tokens["^"])
+		end
 
 		if node.expression or node.identifier then
 			self:EmitExpression(node.expression or node.identifier)
@@ -816,10 +825,8 @@ function META:EmitStatement(node)
 			self:EmitTranspiledDestructureAssignment(node)
 		end
 	elseif node.kind == "assignment" then
-		if node.environment == "typesystem" then
-			if self.config.use_comment_types then
-				self:EmitInvalidLuaCode("EmitAssignment", node)
-			end
+		if node.environment == "typesystem" and self.config.use_comment_types then
+			self:EmitInvalidLuaCode("EmitAssignment", node)
 		else
 			self:EmitAssignment(node)
 		end
@@ -1206,7 +1213,21 @@ do -- types
 	end
 
 	function META:EmitTypeFunction(node)
+		if not self.config.lua_type_function then
+			if node.tokens["type"] then
+				self:Whitespace(" ")
+				self:EmitToken(node.tokens["type"])
+			end
+		end
+
 		self:EmitToken(node.tokens["function"])
+
+		if not self.config.lua_type_function then
+			if node.tokens["^"] then
+				self:EmitToken(node.tokens["^"])
+			end
+		end
+
 		self:EmitToken(node.tokens["arguments("])
 
 		for i, exp in ipairs(node.identifiers) do
@@ -1249,11 +1270,13 @@ do -- types
 				end
 			end
 		else
-			self:Whitespace("\n")
-			self:EmitBlock(node.statements)
-			self:Whitespace("\n")
-			self:Whitespace("\t")
-			self:EmitToken(node.tokens["end"])
+			if node.statements then
+				self:Whitespace("\n")
+				self:EmitBlock(node.statements)
+				self:Whitespace("\n")
+				self:Whitespace("\t")
+				self:EmitToken(node.tokens["end"])
+			end
 		end
 	end
 
@@ -1294,6 +1317,12 @@ do -- types
 			self:EmitTableKeyValue(node)
 		else
 			error("unhandled token type " .. node.kind)
+		end
+
+		if not self.config.lua_type_function then
+			if node.explicit_type then
+				self:EmitTypeExpression(node.explicit_type)
+			end
 		end
 
 		if node.tokens[")"] then

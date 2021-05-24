@@ -3,15 +3,17 @@ local syntax = require("nattlua.syntax.syntax")
 local helpers = require("nattlua.other.helpers")
 
 local function GetFilesRecursively(dir, ext)
-    ext = ext or ".lua"
+    ext = ext or {".lua"}
 
     local f = assert(io.popen("find " .. dir))
     local lines = f:read("*all")
     local paths = {}
     for line in lines:gmatch("(.-)\n") do
-        if line:sub(-4) == ext then
-            table.insert(paths, line)
-        end
+		for _, ext in ipairs(ext) do
+			if line:sub(-#ext) == ext then
+				table.insert(paths, line)
+			end
+		end
     end
     return paths
 end
@@ -29,7 +31,7 @@ local function write_file(path, contents)
 	f:close()
 end
 
-local lua_files = GetFilesRecursively("./nattlua/", ".lua")
+local lua_files = GetFilesRecursively("./nattlua/", {".lua", ".nlua"})
 
 local config = {
 	preserve_whitespace = false,
@@ -64,6 +66,10 @@ local bad_names = {
 
 for _, path in ipairs(lua_files) do
     local lua_code = read_file(path)
+
+	config.use_comment_types = path:sub(-#".lua") == ".lua"
+	config.uncomment_types = not config.use_comment_types
+
 	local compiler = nl.Compiler(lua_code, "@" .. path, config)
 
 	if not blacklist[path] then
@@ -85,11 +91,14 @@ for _, path in ipairs(lua_files) do
 		assert(compiler:Parse())
 
 		local new_lua_code = assert(compiler:Emit())
-		local ok, err = loadstring(new_lua_code, "@" .. path)
-		if not ok then
-			print(path)
-			print(new_lua_code)
-			error(err)
+
+		if config.use_comment_types then
+			local ok, err = loadstring(new_lua_code, "@" .. path)
+			if not ok then
+				print(path)
+				print(new_lua_code)
+				error(err)
+			end
 		end
 		if new_lua_code:sub(#new_lua_code, #new_lua_code) ~= "\n" then
 			new_lua_code = new_lua_code .. "\n"

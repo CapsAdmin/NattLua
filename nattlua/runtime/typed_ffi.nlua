@@ -4,21 +4,22 @@ local type function cast(node, args)
 
 	if node.tag == "Struct" or node.tag == "Union" then
 		local tbl = types.Table()
+
 		for _, node in ipairs(node) do
 			if node.tag == "Pair" then
 				local key = types.String(node[2]):SetLiteral(true)
 				local val = cast(node[1], args)
-
 				tbl:Set(key, val)
 			else
 				table_print(node)
 				error("NYI: " .. node.tag)
 			end
 		end
+
 		return tbl
 	elseif node.tag == "Function" then
 		local arguments = {}
-	
+
 		for _, arg in ipairs(node) do
 			if arg.ellipsis then
 				table.insert(arguments, types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)))
@@ -29,7 +30,11 @@ local type function cast(node, args)
 
 		local return_type
 
-		if node.t.tag == "Pointer" and node.t.t.tag == "Qualified" and node.t.t.t.n == "char" then
+		if
+			node.t.tag == "Pointer" and
+			node.t.t.tag == "Qualified" and
+			node.t.t.t.n == "char"
+		then
 			local ptr = types.Table()
 			ptr:Set(types.Number(), types.Number())
 			return_type = types.Union({ptr, types.Nil()})
@@ -39,11 +44,9 @@ local type function cast(node, args)
 
 		local obj = types.Function({
 			ret = types.Tuple({return_type}),
-			arg = types.Tuple(arguments)
+			arg = types.Tuple(arguments),
 		})
-		
 		obj:SetNode(analyzer.current_expression)
-
 		return obj
 	elseif node.tag == "Array" then
 		local tbl = types.Table()
@@ -51,13 +54,15 @@ local type function cast(node, args)
 		tbl:Set(types.Number(), cast(node.t, args))
 		return tbl
 	elseif node.tag == "Type" then
-		if 
-			node.n == "double" or node.n == "float" or
-			node.n == "int8_t" or node.n == "uint8_t" or
-			node.n == "int16_t" or node.n == "uint16_t" or
-			node.n == "int32_t" or node.n == "uint32_t" or
-
-
+		if
+			node.n == "double" or
+			node.n == "float" or
+			node.n == "int8_t" or
+			node.n == "uint8_t" or
+			node.n == "int16_t" or
+			node.n == "uint16_t" or
+			node.n == "int32_t" or
+			node.n == "uint32_t" or
 			node.n == "char" or
 			node.n == "signed char" or
 			node.n == "unsigned char" or
@@ -81,19 +86,18 @@ local type function cast(node, args)
 			node.n == "float" or
 			node.n == "double" or
 			node.n == "long double" or
-			node.n == "size_t" 
-
+			node.n == "size_t"
 		then
 			return types.Number()
-		elseif 
-			node.n == "int64_t" or 
+		elseif
+			node.n == "int64_t" or
 			node.n == "uint64_t" or
 			node.n == "long long" or
 			node.n == "long long int" or
 			node.n == "signed long long" or
 			node.n == "signed long long int" or
 			node.n == "unsigned long long" or
-			node.n == "unsigned long long int" 
+			node.n == "unsigned long long int"
 		then
 			return types.Number()
 		elseif node.n == "bool" or node.n == "_Bool" then
@@ -102,52 +106,44 @@ local type function cast(node, args)
 			return types.Nil()
 		elseif node.n:find("%$%d+%$") then
 			local val = table.remove(args, 1)
+
 			if not val then
 				error("unable to lookup type $ #" .. (#args + 1), 2)
 			end
+
 			return val
 		else
-			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi:Get("C"), types.String(node.n):SetLiteral(true), "runtime")
+			local val = analyzer:IndexOperator(
+				analyzer.current_expression,
+				env.typesystem.ffi:Get("C"),
+				types.String(node.n):SetLiteral(true),
+				"runtime"
+			)
 
 			if not val or val.Type == "symbol" and val:GetData() == nil then
 				analyzer:Error(analyzer.current_expression, "cannot find value " .. node.n)
 				return types.Any()
 			end
+
 			return val
 		end
 	elseif node.tag == "Qualified" then
 		return cast(node.t, args)
 	elseif node.tag == "Pointer" then
-		if node.t.tag == "Qualified" and node.t.t.n == "char" then
-			return types.Union({types.String(), types.Nil()})
-		end
-		if node.t.tag == "Type" and node.t.n == "void" then
-			return types.Any()
-		end
-
+		if node.t.tag == "Qualified" and node.t.t.n == "char" then return types.Union({types.String(), types.Nil()}) end
+		if node.t.tag == "Type" and node.t.n == "void" then return types.Any() end
 		local ptr = types.Table()
 		local ctype = cast(node.t, args)
 		ptr:Set(types.Number(), ctype)
-
 		local meta = types.Table()
-
-		meta:Set("__index", types.LuaTypeFunction(
-			function(self, key)
-
-				if ctype:GetMetaTable() then
+		meta:Set("__index", types.LuaTypeFunction(function(self, key)
+			if ctype:GetMetaTable() then
 					-- i'm not really sure about this
 					-- boxed luajit ctypes seem to just get the metatable from the ctype
 
-					return ctype:GetMetaTable():Get(key)
-				end
-
-			end,
-			{types.Any(), types.Any()},
-			{}
-		))
-
+					return ctype:GetMetaTable():Get(key) end
+		end, {types.Any(), types.Any()}, {}))
 		ptr:SetMetaTable(meta)
-
 		return types.Union({ptr, types.Nil()})
 	else
 		table_print(node)
@@ -160,7 +156,7 @@ type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 
 	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
 		analyzer:NewIndexOperator(
-			cdecl:GetNode(), 
+			cdecl:GetNode(),
 			env.typesystem.ffi:Get("C"),
 			types.String(ctype.name):SetLiteral(true),
 			env.typesystem.cast(ctype.type, {...}),
@@ -168,71 +164,54 @@ type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 		)
 	end
 end
--- TODO
-§env.typesystem.ffi:Get("cdef").no_expansion = true
+
+--§env.typesystem.ffi:Get("cdef").no_expansion = true
 
 type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
-
-	local ctype = env.typesystem.cast(declarations[#declarations].type, {...}) 
+	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
 	ctype:SetNode(cdecl:GetNode())
-
 	local nilable_ctype = ctype:Copy()
 
 	for _, keyval in ipairs(nilable_ctype:GetData()) do
 		keyval.val = types.Nilable(keyval.val)
 	end
 
-	ctype:Set("__call", types.LuaTypeFunction(
-		function(self, init)
-			if init then
-				analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
-			end
+	ctype:Set("__call", types.LuaTypeFunction(function(self, init)
+		if init then
+			analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
+		end
 
-			return ctype:Copy()
-		end,
-		{ctype, types.Nilable(nilable_ctype)},
-		{ctype}
-	))
-
+		return ctype:Copy()
+	end, {ctype, types.Nilable(nilable_ctype)}, {ctype}))
 	ctype:SetMetaTable(ctype)
-
 	return ctype
 end
--- TODO
-§env.typesystem.ffi:Get("typeof").no_expansion = true
+
+--§env.typesystem.ffi:Get("typeof").no_expansion = true
 
 type function ffi.get_type(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
-
-	local ctype = env.typesystem.cast(declarations[#declarations].type, {...}) 
+	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
 	ctype:SetNode(cdecl:GetNode())
-
 	return ctype
 end
 
 type function ffi.new(cdecl, ...)
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {ffinew = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
-
 	return ctype
 end
 
 type function ffi.metatype(ctype, meta)
-	
 	local new = meta:Get("__new")
+
 	if new then
-		meta:Set("__call", types.LuaTypeFunction(
-			function(self, ...)
-				return analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...})))
-			end,
-			new:GetArguments():GetData(),
-			new:GetReturnTypes():GetData(),
-		))
+		meta:Set("__call", types.LuaTypeFunction(function(self, ...)
+			return analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...})))
+		end, new:GetArguments():GetData(), new:GetReturnTypes():GetData()))
 	end
 
 	ctype:SetMetaTable(meta)

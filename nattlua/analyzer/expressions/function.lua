@@ -137,7 +137,8 @@ return function(analyzer, node, env)
 			node.statements and
 			(node.kind == "type_function" or node.kind == "local_type_function")
 		then
-			func = analyzer:CompileLuaTypeCode(locals .. "\nreturn " .. node:Render({uncomment_types = true}), node)()
+			node.lua_type_function = true
+			func = analyzer:CompileLuaTypeCode(locals .. "\nreturn " .. node:Render({uncomment_types = true, lua_type_function = true}), node)()
 		end
 	end
 
