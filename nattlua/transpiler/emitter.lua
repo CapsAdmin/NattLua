@@ -736,11 +736,11 @@ function META:EmitSemicolonStatement(node)
 end
 
 function META:EmitLocalAssignment(node)
-	if node.environment == "typesystem" then return end
 	self:Whitespace("\t")
 	self:EmitToken(node.tokens["local"])
 
 	if node.environment == "typesystem" then
+		self:Whitespace(" ")
 		self:EmitToken(node.tokens["type"])
 	end
 
@@ -826,7 +826,11 @@ function META:EmitStatement(node)
 
 		self:Emit_ENVFromAssignment(node)
 	elseif node.kind == "local_assignment" then
-		self:EmitLocalAssignment(node)
+		if node.environment == "typesystem" then
+			self:EmitInvalidLuaCode("EmitLocalAssignment", node)
+		else
+			self:EmitLocalAssignment(node)
+		end
 	elseif node.kind == "import" then
 		self:EmitNonSpace("local")
 		self:EmitSpace(" ")
