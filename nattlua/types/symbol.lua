@@ -3,7 +3,6 @@ local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
 local type_errors = require("nattlua.types.error_messages")
-local types = require("nattlua.types.types")
 local META = dofile("nattlua/types/base.lua")
 META.Type = "symbol"
 
@@ -67,19 +66,23 @@ function META.New(data)
 	return self
 end
 
+local Symbol = META.New
+
 return
 	{
-		Symbol = META.New,
+		Symbol = Symbol,
 		Nil = function()
-			return types.Symbol(nil)
+			return Symbol(nil)
 		end,
 		True = function()
-			return types.Symbol(true)
+			return Symbol(true)
 		end,
 		False = function()
-			return types.Symbol(false)
+			return Symbol(false)
 		end,
 		Boolean = function()
-			return types.Union({types.True(), types.False()})
+			local Union = require("nattlua.types.union").Union
+
+			return Union({Symbol(true), Symbol(false)})
 		end,
 	}

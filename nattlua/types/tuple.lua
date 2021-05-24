@@ -5,7 +5,6 @@ local assert = assert
 local print = print
 local debug = debug
 local error = error
-local types = require("nattlua.types.types")
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any

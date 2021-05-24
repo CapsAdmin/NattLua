@@ -31,6 +31,7 @@ end
 
 function META:Call()
 	local Tuple = require("nattlua.types.tuple").Tuple
+
 	return Tuple({}):AddRemainder(Tuple({META.New()}):SetRepeat(math.huge))
 end
 
