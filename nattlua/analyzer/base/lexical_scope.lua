@@ -9,7 +9,6 @@ local type = _G.type
 local table_insert = table.insert
 local table = require("table")
 local type = _G.type
-
 local upvalue_meta
 
 do
@@ -35,7 +34,6 @@ end
 
 local META = {}
 META.__index = META
-
 local LexicalScope
 
 function META:SetParent(parent)
@@ -158,7 +156,6 @@ function META:Copy()
 	end
 
 	copy.returns = self.returns
-
 	return copy
 end
 
@@ -201,12 +198,16 @@ function META:IsPartOfElseStatement()
 end
 
 function META.IsPartOfTestStatementAs(a, b)
-	return a.test_data and b.test_data and a.test_data.type == "if" and b.test_data.type == "if" and a.test_data.statement == b.test_data.statement
+	return
+		a.test_data and
+		b.test_data and
+		a.test_data.type == "if" and
+		b.test_data.type == "if" and
+		a.test_data.statement == b.test_data.statement
 end
 
 function META:FindFirstTestScope()
 	local obj, scope = self:GetMemberInParents("test_condition")
-
 	return scope
 end
 
@@ -296,7 +297,6 @@ do
 
 	function META:IsUncertain(from)
 		if from == self then return false end
-
 		local scope = self
 
 		while true do

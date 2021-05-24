@@ -87,10 +87,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
         for _, child in ipairs(scope.children) do
 			if
 				child ~= scope and
-				(
-					child:HasUncertainReturn() or
-					root_scope:IsPartOfTestStatementAs(child)
-				)
+				(child:HasUncertainReturn() or root_scope:IsPartOfTestStatementAs(child))
 			then
 				local found_type = FindInType(child:GetTestCondition(), obj)
 				if found_type then return child, found_type end
@@ -178,6 +175,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 
 			if test_scope_a then
 				local test_a = test_scope_a:GetTestCondition()
+
 				for _, mut in ipairs(mutations) do
 					if mut.scope ~= scope then
 						local test_scope_b = mut.scope:FindFirstTestScope()
@@ -202,6 +200,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 
 	local union = Union({})
 	union:SetUpvalue(obj)
+
 	if obj.Type == "table" then
 		union:SetUpvalueReference("table-" .. key)
 	else
@@ -216,9 +215,10 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 
 			if scope and mut.scope == scope then
 				local test_scope = scope:FindFirstTestScope()
+
 				if test_scope then
 					local test = test_scope:GetTestCondition()
-					
+
 					if test.Type == "union" then
 						local t
 

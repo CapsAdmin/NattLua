@@ -48,11 +48,11 @@ function META.Equal(a, b)
 		if not b.Name then return false end
 		return a.Name:GetData() == b.Name:GetData()
 	end
+
 	if a.suppress then return true end
 	local adata = a:GetData()
 	local bdata = b:GetData()
-
-	if #adata ~= #bdata then return false end	
+	if #adata ~= #bdata then return false end
 
 	for i = 1, #adata do
 		local akv = adata[i]
@@ -78,7 +78,9 @@ end
 function META:GetLuaType()
 	return self.Type
 end
+
 local level = 0
+
 function META:__tostring()
 	if self.suppress then return "*self-table*" end
 	self.suppress = true
@@ -124,6 +126,7 @@ function META:__tostring()
 			s[i] = indent .. key .. " = " .. val
 		end
 	end
+
 	level = level - 1
 	self.suppress = false
 	if #self:GetData() <= 1 then return "{" .. table.concat(s) .. " }" end
@@ -610,13 +613,13 @@ function META.Extend(A, B)
 	if B.Type ~= "table" then return false, "cannot extend non table" end
 	local map = {}
 
-
 	if A:GetContract() then
 		if A == A:GetContract() then
 			A:SetContract()
 			A = A:Copy()
 			A:SetContract(A)
 		end
+
 		A = A:GetContract()
 	else
 		A = A:Copy(map)

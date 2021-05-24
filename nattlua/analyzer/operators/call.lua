@@ -40,7 +40,6 @@ return function(META)
 
 	function META:AnalyzeFunctionBody(obj, function_node, arguments, env)
 		local scope = self:CreateAndPushFunctionScope(obj:GetData().scope)
-
 		self:PushEnvironment(function_node, nil, env)
 
 		if function_node.self_call then

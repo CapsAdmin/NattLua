@@ -47,7 +47,7 @@ function META:CanBeNil()
 	return false
 end
 
-META:GetSet("Data", nil --[[# as nil | any]])
+META:GetSet("Data", nil--[[# as nil | any]])
 
 do
 	function META:IsUncertain()
@@ -78,17 +78,17 @@ do
 end
 
 do -- token, expression and statement association
-	META:GetSet("Upvalue", nil --[[# as nil | any]])
-	META:GetSet("UpvalueReference", nil --[[# as nil | string]])
-	META:GetSet("TokenLabelSource", nil --[[# as nil | string]])
-	META:GetSet("TypeSource", nil --[[# as nil | BaseType]])
-	META:GetSet("TypeSourceLeft", nil --[[# as nil | BaseType]])
+	META:GetSet("Upvalue", nil--[[# as nil | any]])
+	META:GetSet("UpvalueReference", nil--[[# as nil | string]])
+	META:GetSet("TokenLabelSource", nil--[[# as nil | string]])
+	META:GetSet("TypeSource", nil--[[# as nil | BaseType]])
+	META:GetSet("TypeSourceLeft", nil--[[# as nil | BaseType]])
 	META:GetSet("TypeSourceRight", nil--[[# as nil | BaseType]])
-	META:GetSet("Node", nil --[[# as nil | any]])
+	META:GetSet("Node", nil--[[# as nil | any]])
 end
 
 do -- comes from tbl.@Name = "my name"
-	META:GetSet("Name", nil --[[# as nil | BaseType]])
+	META:GetSet("Name", nil--[[# as nil | BaseType]])
 
 	function META:SetName(name--[[#: BaseType]])
 		if name then
@@ -101,7 +101,7 @@ end
 
 do
 --[[#	type BaseType.disabled_unique_id = number | nil]]
-	META:GetSet("UniqueID", nil --[[# as nil | number]])
+	META:GetSet("UniqueID", nil--[[# as nil | number]])
 	local ref = 0
 
 	function META:MakeUnique(b--[[#: boolean]])
@@ -204,7 +204,9 @@ do
 
 	function META:GetMetaTable()
 		if self.Contract then -- TODO
-			if self.Contract.MetaTable then return self.Contract.MetaTable end end
+			if self.Contract.MetaTable then return self.Contract.MetaTable end
+		end
+
 		return self.MetaTable
 	end
 end

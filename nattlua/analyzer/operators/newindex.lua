@@ -76,13 +76,14 @@ return function(META)
 
 		if contract then
 			if env == "runtime" then
-				
 				local existing
 				local err
+
 				if obj == contract then
 					existing, err = contract:Get(key)
+
 					if existing then
-				 		existing = self:GetMutatedValue(obj, key, existing, env)
+						existing = self:GetMutatedValue(obj, key, existing, env)
 					end
 				else
 					existing, err = contract:Get(key)
@@ -132,9 +133,7 @@ return function(META)
 		end
 
 		self:MutateValue(obj, key, val, env)
-		
 		if env == "typesystem" and obj:GetContract() then return obj:GetContract():Set(key, val) end
-
 		return obj:Set(key, val)
 	end
 end

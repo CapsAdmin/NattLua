@@ -8,9 +8,7 @@ local META = dofile("nattlua/types/base.lua")
 META.Type = "number"
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
-
-META:GetSet("Data", nil --[[# as number]])
-
+META:GetSet("Data", nil--[[# as number]])
 local operators = {
 		["-"] = function(l--[[#: number]])
 			return -l
@@ -20,7 +18,7 @@ local operators = {
 		end,
 	}
 
-function META:PrefixOperator(op--[[#: keysof<| operators |>]])
+function META:PrefixOperator(op--[[#: keysof<|operators|>]])
 	if self:IsLiteral() then
 		local num = self.New(operators[op](self:GetData())):SetLiteral(true)
 
@@ -53,9 +51,7 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	end
 
 	if a_max or b_max then return false end
-
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
-	
 	return false
 end
 
@@ -74,7 +70,7 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A --[[#: TNumber]], B --[[#: TNumber]])
+function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
 	if B.Type == "tuple" and B:GetLength() == 1 then
 		B = B:Get(1)
 	end
@@ -104,8 +100,8 @@ function META.IsSubsetOf(A --[[#: TNumber]], B --[[#: TNumber]])
 			end
 
 			if A:GetData() == B:GetData() then return true end
-
 			local max = B:GetMaxLiteral()
+
 			if max then
 				if A:GetData() >= B:GetData() and A:GetData() <= max then return true end
 			end
@@ -150,7 +146,7 @@ function META:__tostring()
 	return "number"
 end
 
-META:GetSet("Max", nil --[[# as TNumber | nil]])
+META:GetSet("Max", nil--[[# as TNumber | nil]])
 
 function META:SetMax(val)
 	local err
@@ -207,13 +203,11 @@ end
 function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: boolean | nil]]
 	local a_val = a:GetData()
 	local b_val = b:GetData()
-
 	if not a_val then return nil end
 	if not b_val then return nil end
-
 	local a_max = a:GetMaxLiteral()
 	local b_max = b:GetMaxLiteral()
-	
+
 	if a_max then
 		if b_max then
 			local res_a = compare(b_val, a_val, b_max, operator)

@@ -141,12 +141,16 @@ return function(analyzer, node, env)
 		end
 	end
 
-	local obj = analyzer:NewType(node, "function", {
-		arg = args,
-		ret = ret,
-		lua_function = func,
-		scope = analyzer:GetScope()
-	})
+	local obj = analyzer:NewType(
+		node,
+		"function",
+		{
+			arg = args,
+			ret = ret,
+			lua_function = func,
+			scope = analyzer:GetScope(),
+		}
+	)
 	obj.explicit_arguments = explicit_arguments
 	obj.explicit_return = explicit_return
 

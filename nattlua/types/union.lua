@@ -332,7 +332,7 @@ function META:Copy(map)
 	for _, e in ipairs(self.Data) do
 		copy:AddType(e)
 	end
-	
+
 	copy:CopyInternalsFrom(self)
 	return copy
 end
