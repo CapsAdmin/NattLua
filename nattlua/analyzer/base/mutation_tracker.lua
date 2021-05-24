@@ -84,7 +84,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
         -- ideally when cloning a scope, the new scope should be 
         -- inside of the returned scope, then we wouldn't need this code
         
-        for _, child in ipairs(scope.children) do
+        for _, child in ipairs(scope:GetChildren()) do
 			if
 				child ~= scope and
 				(child:HasUncertainReturn() or root_scope:IsPartOfTestStatementAs(child))

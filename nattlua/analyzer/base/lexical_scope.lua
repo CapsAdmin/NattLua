@@ -140,6 +140,10 @@ function META:CreateValue(key, obj, env)
 	return upvalue
 end
 
+function META:GetUpvalues(type--[[#: "runtime" | "typesystem"]])
+	return self.upvalues[type].list
+end
+
 function META:Copy()
 	local copy = LexicalScope()
 

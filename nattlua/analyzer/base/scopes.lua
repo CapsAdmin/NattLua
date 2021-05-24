@@ -73,7 +73,7 @@ return function(META)
 					self:MutateValue(env, keyval.key, keyval.val, "runtime")
 				end
 
-				for _, upvalue in ipairs(scope_copy.upvalues.runtime.list) do
+				for _, upvalue in ipairs(scope_copy:GetUpvalues("runtime")) do
 					self:FireEvent("upvalue", upvalue.key, upvalue:GetValue(), env)
 					self:MutateValue(upvalue, upvalue.key, upvalue:GetValue(), env)
 				end
