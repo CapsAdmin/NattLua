@@ -9,12 +9,34 @@ local type = _G.type
 local table_insert = table.insert
 local table = require("table")
 local type = _G.type
+
+local upvalue_meta
+
+do
+	local META = {}
+	META.__index = META
+	META.Type = "upvalue"
+
+	function META:__tostring()
+		return "[" .. self.key .. ":" .. tostring(self.value) .. "]"
+	end
+
+	function META:GetValue()
+		return self.value
+	end
+
+	function META:SetValue(value)
+		self.value = value
+		value:SetUpvalue(self)
+	end
+
+	upvalue_meta = META
+end
+
 local META = {}
 META.__index = META
-local LexicalScope
 
-function META:Initialize() 
-end
+local LexicalScope
 
 function META:SetParent(parent)
 	self.parent = parent
@@ -27,20 +49,6 @@ end
 function META:AddChild(scope)
 	scope.parent = self
 	table_insert(self.children, scope)
-end
-
-function META:Unparent()
-	if self.parent then
-		for i, v in ipairs(self.parent:GetChildren()) do
-			if v == self then
-				table.remove(i, self.parent:GetChildren())
-
-				break
-			end
-		end
-	end
-
-	self.parent = nil
 end
 
 function META:GetChildren()
@@ -57,34 +65,20 @@ function META:MakeReadOnly(b)
 	self.read_only = b
 end
 
-function META:GetParents()
-	local list = {}
+function META:GetMemberInParents(what)
 	local scope = self
 
 	while true do
-		table.insert(list, scope)
+		if scope[what] then return scope[what], scope end
 		scope = scope.parent
 		if not scope then break end
-	end
-
-	return list
-end
-
-function META:GetMemberInParents(what)
-	for _, scope in ipairs(self:GetParents()) do
-		if scope[what] then return scope[what], scope end
 	end
 
 	return nil
 end
 
 function META:IsReadOnly()
-	return self:GetMemberInParents("read_only")
-end
-
-function META:GetIterationScope()
-	local boolean, scope = self:GetMemberInParents("is_iteration_scope")
-	return scope
+	return self:GetMemberInParents("read_only") == true
 end
 
 function META:AddDependency(val)
@@ -133,29 +127,6 @@ function META:FindScopeFromObject(obj, env)
 	error("this should never happen")
 end
 
-local upvalue_meta
-
-do
-	local META = {}
-	META.__index = META
-	META.Type = "upvalue"
-
-	function META:__tostring()
-		return "[" .. self.key .. ":" .. tostring(self.value) .. "]"
-	end
-
-	function META:GetValue()
-		return self.value
-	end
-
-	function META:SetValue(value)
-		self.value = value
-		value:SetUpvalue(self)
-	end
-
-	upvalue_meta = META
-end
-
 function META:CreateValue(key, obj, env)
 	local key_hash = self:Hash(key)
 	assert(key_hash)
@@ -171,20 +142,18 @@ function META:CreateValue(key, obj, env)
 	return upvalue
 end
 
-function META:Copy(upvalues)
+function META:Copy()
 	local copy = LexicalScope()
 
-	if upvalues then
-		if self.upvalues.typesystem then
-			for _, upvalue in ipairs(self.upvalues.typesystem.list) do
-				copy:CreateValue(upvalue.key, upvalue:GetValue(), "typesystem")
-			end
+	if self.upvalues.typesystem then
+		for _, upvalue in ipairs(self.upvalues.typesystem.list) do
+			copy:CreateValue(upvalue.key, upvalue:GetValue(), "typesystem")
 		end
+	end
 
-		if self.upvalues.runtime then
-			for _, upvalue in ipairs(self.upvalues.runtime.list) do
-				copy:CreateValue(upvalue.key, upvalue:GetValue(), "runtime")
-			end
+	if self.upvalues.runtime then
+		for _, upvalue in ipairs(self.upvalues.runtime.list) do
+			copy:CreateValue(upvalue.key, upvalue:GetValue(), "runtime")
 		end
 	end
 
@@ -206,14 +175,6 @@ function META:Merge(scope)
 	end
 end
 
-function META:HasParent(scope)
-	for _, parent in ipairs(self:GetParents()) do
-		if parent == scope then return true end
-	end
-
-	return false
-end
-
 function META:GetParent()
 	return self.parent
 end
@@ -222,14 +183,13 @@ function META:SetTestCondition(obj, data)
 	self.test_condition = obj
 
 	if data then
-		self.if_statement = data.type == "if" and data.statement
-		self.is_else = data.is_else
-		self.test_condition_inverted = self.is_else
+		self.test_data = data
+		self.test_condition_inverted = self.test_data.is_else
 	end
 end
 
 function META:IsPartOfIfStatement()
-	return self.if_statement
+	return self.test_data and self.test_data.type == "if"
 end
 
 function META:IsTestConditionInverted()
@@ -237,11 +197,11 @@ function META:IsTestConditionInverted()
 end
 
 function META:IsPartOfElseStatement()
-	return self.is_else
+	return self.test_data and self.test_data.is_else == true
 end
 
 function META.IsPartOfTestStatementAs(a, b)
-	return a.if_statement and a.if_statement == b.if_statement
+	return a.test_data and b.test_data and a.test_data.type == "if" and b.test_data.type == "if" and a.test_data.statement == b.test_data.statement
 end
 
 function META:FindFirstTestScope()
@@ -337,9 +297,13 @@ do
 	function META:IsUncertain(from)
 		if from == self then return false end
 
-		for _, scope in ipairs(self:GetParents()) do
+		local scope = self
+
+		while true do
 			if scope == from then break end
 			if scope.uncertain then return true, scope end
+			scope = scope.parent
+			if not scope then break end
 		end
 
 		return false
@@ -350,10 +314,18 @@ do
 	end
 end
 
-local ref = 0
-
 function META:__tostring()
-	local x = #self:GetParents()
+	local x = 0
+
+	do
+		local scope = self
+
+		while true do
+			x = x + 1
+			if not scope then break end
+		end
+	end
+
 	local y = 1
 
 	if self.parent then
@@ -388,6 +360,8 @@ function META:DumpScope()
 
 	return table.concat(s, "\n")
 end
+
+local ref = 0
 
 function LexicalScope(parent)
 	ref = ref + 1
