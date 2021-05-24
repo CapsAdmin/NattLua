@@ -99,16 +99,17 @@ end
 function META:FindValue(key, env)
 	local key_hash = self:Hash(key)
 	local scope = self
-	
+	local prev_scope
 	for _ = 1, 1000 do
 		if not scope then return end
 		local upvalue = scope.upvalues[env].map[key_hash]
 		if upvalue then 
-			if self.upvalue_position then				
-				if upvalue.position >= self.upvalue_position then
+			local upvalue_position = prev_scope and prev_scope.upvalue_position
+			if upvalue_position then				
+				if upvalue.position >= upvalue_position then
 					local upvalue = upvalue.shadow
 					while upvalue do
-						if upvalue.position <= self.upvalue_position then
+						if upvalue.position <= upvalue_position then
 							return upvalue
 						end
 						upvalue = upvalue.shadow
@@ -116,6 +117,7 @@ function META:FindValue(key, env)
 				end
 			end
 			return upvalue end
+		prev_scope = scope
 		scope = scope.parent
 	end
 

@@ -22,3 +22,15 @@ run([[
     
     local foo = 666
 ]])
+
+run[[
+    local foo = 1337
+
+    local function test()
+        if math.random() > 0.5 then
+            type_assert(foo, 1337)
+        end
+    end
+
+    local foo = 666
+]]
