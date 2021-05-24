@@ -233,15 +233,9 @@ function META.New(code--[[#: string]])
 	return self
 end
 
+-- lua lexer
 do
---[[#
---[[#
---[[#
---[[#
---[[#
---[[#
---[[# -- lua lexer
---[[#type Lexer = META.@Self]]
+--[[#	type Lexer = META.@Self]]
 	local space = require("nattlua.lexer.readers.space").space
 	local letter = require("nattlua.lexer.readers.letter").letter
 	local c_multiline_comment = require("nattlua.lexer.readers.c_multiline_comment").c_multiline_comment
