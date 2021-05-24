@@ -92,7 +92,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
 			if
 				child ~= scope and
 				(
-					child.uncertain_returned or
+					child:HasUncertainReturn() or
 					(root_scope.if_statement and root_scope.if_statement == child.if_statement)
 				)
 			then
@@ -101,7 +101,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
 			end
 		end
 
-		scope = scope.parent
+		scope = scope:GetParent()
 		if not scope then return end
 	end
 

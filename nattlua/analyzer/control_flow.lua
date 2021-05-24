@@ -69,7 +69,7 @@ return function(META)
 		if not scope:IsReadOnly() then
 			local function_scope = scope:GetNearestFunctionScope()
 
-			if scope == function_scope and function_scope.scope_is_being_called then
+			if scope == function_scope then
                 -- the root scope of the function when being called is definetly certain
                 function_scope.uncertain_function_return = false
 			elseif scope:IsUncertain() then

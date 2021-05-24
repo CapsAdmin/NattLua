@@ -214,6 +214,10 @@ function META:HasParent(scope)
 	return false
 end
 
+function META:GetParent()
+	return self.parent
+end
+
 function META:SetTestCondition(obj, inverted)
 	self.test_condition = obj
 	self.test_condition_inverted = inverted
@@ -263,6 +267,10 @@ do
 
 	function META:ClearReturn()
 		self.returned = nil
+	end
+
+	function META:HasUncertainReturn()
+		return self.uncertain_returned
 	end
 
 	function META:Return(uncertain)

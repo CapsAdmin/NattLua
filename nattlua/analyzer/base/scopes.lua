@@ -64,7 +64,7 @@ return function(META)
 				local last_node = self.environment_nodes[#self.environment_nodes]
 			self:PopScope()
 			self:PopEnvironment("runtime")
-			scope_copy:SetParent(scope_copy.parent or self:GetScope())
+			scope_copy:SetParent(scope_copy:GetParent() or self:GetScope())
 			self:PushEnvironment(last_node, env, "runtime")
 			self:PushScope(scope_copy)
 

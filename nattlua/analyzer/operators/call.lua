@@ -41,7 +41,6 @@ return function(META)
 	function META:AnalyzeFunctionBody(obj, function_node, arguments, env)
 		local scope = self:CreateAndPushFunctionScope(obj:GetData().scope)
 
-		scope.scope_is_being_called = true
 		self:PushEnvironment(function_node, nil, env)
 
 		if function_node.self_call then
@@ -59,7 +58,6 @@ return function(META)
 		end
 
 		local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
-		scope.scope_is_being_called = false
 		self:PopEnvironment(env)
 		self:PopScope()
 		return analyzed_return, scope
