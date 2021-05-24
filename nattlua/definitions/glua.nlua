@@ -97,9 +97,7 @@ local type PhysicsObject = {
 	@Name = "PhysicsObject",
 	IsValid = (function(self): boolean),
 }
-local type EntityAttachments = {
-	[1 .. inf] = {id = number, name = string,},
-}
+local type EntityAttachments = {[1 .. inf] = {id = number, name = string,},}
 local type EntityAttachment = {Ang = Angle, Pos = Vector,}
 local type Entity = {
 		GetModel = (function(self): string),

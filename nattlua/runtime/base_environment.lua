@@ -1,6 +1,6 @@
 if _G.DISABLE_BASE_ENV then return require("nattlua.types.types").Table({}) end
 local nl = require("nattlua")
-local compiler = assert(nl.File("nattlua/runtime/base_environment.nlua"))
+local compiler = assert(nl.File("nattlua/definitions/index.nlua"))
 assert(compiler:Lex())
 assert(compiler:Parse())
 compiler:SetDefaultEnvironment(false)

@@ -1,0 +1,104 @@
+type boolean = true | false
+type Table = {[any] = any}
+type userdata = Table
+type cdata = {[number] = any}
+type ctype = any
+type thread = Table
+type empty_function = function(...): ...any
+
+type function NonLiteral(obj: any)
+	if obj.Type == "symbol" and (obj:GetData() == true or obj:GetData() == false) then return types.Boolean() end
+
+	if obj.Type == "number" or obj.Type == "string" then
+		obj = obj:Copy()
+		obj:SetLiteral(false)
+		return obj
+	end
+
+	return obj
+end
+
+function List<|typ: any|>
+	return {[number] = typ | nil}
+end
+
+function ErrorReturn<|...|>
+	return Tuple<|...|> | Tuple<|nil, string|>
+end
+
+function nilable<|tbl: {[string] = any}|>
+	tbl = copy(tbl)
+
+	for key, val in pairs(tbl) do
+		tbl[key] = val | nil
+	end
+
+	return tbl
+end
+
+type function copy(obj: any)
+	return obj:Copy()
+end
+
+type function return_type(func, i: number | nil)
+	local i = i and i:GetData() or 1
+	return func:GetReturnTypes():Slice(i, i)
+end
+
+type function set_return_type(func, tup)
+	func:SetReturnTypes(tup)
+end
+
+type function argument_type(func, i: number | nil)
+	local i = i and i:GetData() or 1
+	return func:GetArguments():Slice(i, i)
+end
+
+type function exclude(T, U)
+	T = T:Copy()
+	T:RemoveType(U)
+	return T
+end
+
+type function Tuple(...)
+	return types.Tuple({...})
+end
+
+type function enum(tbl)
+	assert(tbl:IsLiteral())
+	local union = types.Union()
+
+	for key, val in tbl:pairs() do
+		analyzer:SetLocalOrEnvironmentValue(key:GetData(), val, "typesystem")
+		union:AddType(val)
+	end
+
+	union:SetLiteral(true)
+	return union
+end
+
+type function keysof(tbl: Table)
+	local union = types.Union()
+
+	for _, keyval in ipairs(tbl:GetData()) do
+		union:AddType(keyval.key)
+	end
+
+	return union
+end
+
+type function seal(tbl)
+	if tbl:GetContract() then return end
+
+	for key, val in tbl:pairs() do
+		if val.Type == "function" and val:GetArguments():Get(1).Type == "union" then
+			local first_arg = val:GetArguments():Get(1)
+
+			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
+				val:GetArguments():Set(1, tbl)
+			end
+		end
+	end
+
+	tbl:SetContract(tbl)
+end

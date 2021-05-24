@@ -12,7 +12,7 @@ Parses the lua code into an AST (abstract syntax tree).
 ## Analyzer
 An optional step which traverses the AST and runs type checking on it.
 
-uses base_environment.nlua for its base types
+uses nattlua/definitions/index.nlua for its base types
 
 ## Transpiler
 Emits the lua code ready to be executed along with runtime.lua

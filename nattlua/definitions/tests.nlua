@@ -1,0 +1,51 @@
+type function error_inside_base_environment()	
+	-- a comment to match from test
+	local a = nil + true
+end
+
+type function type_assert(what: any, type: any)
+	what = what or types.Nil()
+	type = type or types.Nil()
+
+	if what.Type == "union" and #what:GetData() == 1 then
+		what = what:GetData()[1]
+	end
+
+	if type.Type == "union" and #type:GetData() == 1 then
+		type = type:GetData()[1]
+	end
+
+	if what:Equal(type) or (what:GetContract() or what):Equal(type) then return end
+	local a = tostring(type)
+	local b = tostring(what:GetContract() or what)
+	error("expected " .. a .. " got " .. b, 2)
+end
+
+type function subset_of(A, B)
+	local ok, err = A:IsSubsetOf(B)
+
+	if not ok then
+		error(err)
+	end
+
+	return ok
+end
+
+type function type_assert_literal(val)
+	assert(val:IsLiteral(), "not a literal")
+end
+
+type function type_assert_superset(what, type)
+	if not what:IsSubsetOf(type) or (what.type == "any" and type.type ~= "any") then
+		error("expected " .. tostring(type) .. " got " .. tostring(what), 2)
+	end
+end
+
+type function type_assert_subset(what, type)
+	local tassert = env.typesystem.type_assert_superset:GetData().lua_function
+	return tassert(type, what)
+end
+
+type function type_traceback()
+	print(analyzer:TypeTraceback())
+end

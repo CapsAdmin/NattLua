@@ -1,0 +1,82 @@
+type table = {
+		maxn = (function(table: Table): number),
+		move = (function(a1: Table, f: any, e: any, t: any, a2: Table): nil) | (function(a1: Table, f: any, e: any, t: any): nil),
+		remove = (function(list: Table, pos: number): any) | (function(list: Table): any),
+		sort = (function(list: Table, comp: empty_function): nil) | (function(list: Table): nil),
+		unpack = (function(list: Table, i: number, j: number): ...) | (function(list: Table, i: number): ...) | (function(list: Table): ...),
+		insert = (function(list: Table, pos: number, value: any): nil) | (function(list: Table, value: any): nil),
+		concat = (function(list: Table, sep: string, i: number, j: number): string) | (function(list: Table, sep: string, i: number): string) | (function(list: Table, sep: string): string) | (function(list: Table): string),
+		pack = (function(...): Table),
+		new = (function(number, number): {[number] = any}),
+	}
+local type List = {[1 .. inf] = any} | {}
+
+type function table.concat(tbl: List, separator: string | nil)
+	if not tbl:IsLiteral() then return types.String() end
+	if separator and (separator.Type ~= "string" or not separator:IsLiteral()) then return types.String() end
+	local out = {}
+
+	for i, keyval in ipairs(tbl:GetData()) do
+		if not keyval.val:IsLiteral() or keyval.val.Type == "union" then return types.String() end
+		out[i] = keyval.val:GetData()
+	end
+
+	return table.concat(out, separator and separator:GetData() or nil)
+end
+
+type function table.insert(tbl: List, ...)
+	if not tbl:IsLiteral() then return end
+	local pos, val = ...
+
+	if not val then
+		val = ...
+		pos = #tbl:GetData() + 1
+	else
+		pos = pos:GetData()
+	end
+
+	tbl:Set(pos, val)
+end
+
+type function table.remove(tbl: List, index: number | nil)
+	if not tbl:IsLiteral() then return end
+	if index and not index:IsLiteral() then return end
+	index = index or 1
+	table.remove(pos:GetData(), index:GetData())
+end
+
+type function table.sort(tbl: List, func)
+	local union = types.Union()
+
+	if tbl.Type == "tuple" then
+		for i, v in ipairs(tbl:GetData()) do
+			union:AddType(v)
+		end
+	elseif tbl.Type == "table" then
+		for i, v in ipairs(tbl:GetData()) do
+			union:AddType(v.val)
+		end
+	end
+
+	func:GetArguments():GetData()[1] = union
+	func:GetArguments():GetData()[2] = union
+	func.arguments_inferred = true
+end
+
+type function table.getn(tbl: List)
+	return tbl:GetLength()
+end
+
+type function table.unpack(tbl: List)
+	local t = {}
+
+	for i = 1, 32 do
+		local v = tbl:Get(i)
+		if not v then break end
+		t[i] = v
+	end
+
+	return table.unpack(t)
+end
+
+type unpack = table.unpack

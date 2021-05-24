@@ -1,0 +1,406 @@
+type @Name = "_G"
+type setmetatable = (function(table: Table, metatable: Table | nil): Table)
+type select = (function(index: number | string, ...): ...)
+type rawlen = (function(v: Table | string): number)
+type unpack = (function(list: Table, i: number, j: number): ...) | (function(list: Table, i: number): ...) | (function(list: Table): ...)
+type require = (function(modname: string): any)
+type rawset = (function(table: Table, index: any, value: any): Table)
+type getmetatable = (function(object: any): Table | nil)
+type load = (
+		function(ld: string | empty_function, source: string, mode: string, env: Table): empty_function | nil, string | nil
+	) | (
+		function(ld: string | empty_function, source: string, mode: string): empty_function | nil, string | nil
+	) | (function(ld: string | empty_function, source: string): empty_function | nil, string | nil) | (function(ld: string | empty_function): empty_function | nil, string | nil)
+type type = (function(v: any): string)
+type collectgarbage = (function(opt: string, arg: number): ...) | (function(opt: string): ...) | (function(): ...)
+type getfenv = (function(f: empty_function | number): Table) | (function(): Table)
+type pairs = (function(t: Table): empty_function, Table, nil)
+type rawequal = (function(v1: any, v2: any): boolean)
+type loadstring = (function(string: string, chunkname: string): empty_function | nil, string | nil) | (function(string: string): empty_function | nil, string | nil)
+type loadfile = (function(filename: string, mode: string, env: Table): empty_function | nil, string | nil) | (function(filename: string, mode: string): empty_function | nil, string | nil) | (function(filename: string): empty_function | nil, string | nil) | (function(): empty_function | nil, string | nil)
+type dofile = (function(filename: string): ...) | (function(): ...)
+type ipairs = (function(t: Table): empty_function, Table, number)
+type tonumber = (function(e: number | string, base: number | nil): number | nil)
+
+type function type_print(...)
+	print(...)
+end
+
+type function print(...)
+	print(...)
+end
+
+type tostring = (function(val: any): string)
+
+type function type_assert_truthy(obj, err)
+	if obj:IsTruthy() then return obj end
+	error(err and err:GetData() or "assertion failed")
+end
+
+type function next(t: {[any] = any}, k: any)
+	if t.Type == "any" then return types.Any(), types.Any() end
+
+	if t:IsLiteral() then
+		if k and not (k.Type == "symbol" and k:GetData() == nil) then
+			for i, kv in ipairs(t:GetData()) do
+				if kv.key:IsSubsetOf(k) then
+					local kv = t:GetData()[i + 1]
+
+					if kv then
+						if not k:IsLiteral() then return type.Union({types.Nil(), kv.key}), type.Union({types.Nil(), kv.val}) end
+						return kv.key, kv.val
+					end
+
+					return nil
+				end
+			end
+		else
+			local kv = t:GetData() and t:GetData()[1]
+			if kv then return kv.key, kv.val end
+		end
+	end
+
+	if t.Type == "union" then
+		t = t:GetData()
+	else
+		t = {t}
+	end
+
+	local k = types.Union()
+	local v = types.Union()
+
+	for _, t in ipairs(t) do
+		if not t:GetData() then return end
+
+		for i, kv in ipairs(t:GetContract() and t:GetContract():GetData() or t:GetData()) do
+			if kv.Type then
+				k:AddType(types.Number())
+				v:AddType(kv)
+			else
+				kv.key:SetNode(t:GetNode())
+				kv.val:SetNode(t:GetNode())
+				k:AddType(kv.key)
+				v:AddType(kv.val)
+			end
+		end
+	end
+
+	return k, v
+end
+
+type function pairs(tbl)
+	if tbl.Type == "table" and tbl:HasLiteralKeys() then
+		local i = 1
+		return function(key, val)
+			local kv = tbl:GetData()[i]
+			if not kv then return nil end
+			i = i + 1
+			local o = analyzer:GetMutatedValue(tbl, kv.key, kv.val, "runtime")
+			return kv.key, o or kv.val
+		end
+	end
+
+	local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
+	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local done = false
+
+	if v and v.Type == "union" then
+		v:RemoveType(types.Symbol(nil))
+	end
+
+	return function()
+		if done then return nil end
+		done = true
+		return k, v
+	end
+end
+
+type function ipairs(tbl: {[number] = any})
+	if tbl:IsLiteral() then
+		local i = 1
+		return function(key, val)
+			local kv = tbl:GetData()[i]
+			if not kv then return nil end
+			i = i + 1
+			return kv.key, kv.val
+		end
+	end
+
+	if tbl.Type == "table" and not tbl:IsNumericallyIndexed() then
+		analyzer:Warning(analyzer.current_expression, tostring(tbl) .. " is not numerically indexed")
+		local done = false
+		return function()
+			if done then return nil end
+			done = true
+			return types.Any(), types.Any()
+		end
+	end
+
+	local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
+	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local done = false
+	return function()
+		if done then return nil end
+		done = true
+		return k, v
+	end
+end
+
+type function require(name: string)
+	if not name:IsLiteral() then return types.Any end
+	local str = name:GetData()
+	local base_environment = require("nattlua.runtime.base_environment")
+	local val = base_environment:Get(str)
+	if val then return val end
+	if str == "table.new" then return base_environment:Get("table", "typesystem"):Get("new") end
+	if str == "jit.util" then return base_environment:Get("jit", "typesystem"):Get("util") end
+	if str == "jit.opt" then return base_environment:Get("jit", "typesystem"):Get("opt") end
+	if analyzer:GetLocalOrEnvironmentValue(str, "typesystem") then return analyzer:GetLocalOrEnvironmentValue(str, "typesystem") end
+
+	if package.loaders then
+		for _, searcher in ipairs(package.loaders) do
+			local loader = searcher(str)
+
+			if type(loader) == "function" then
+				local path = debug.getinfo(loader).source
+
+				if path:sub(1, 1) == "@" then
+					local path = path:sub(2)
+					if analyzer.loaded and analyzer.loaded[path] then return analyzer.loaded[path] end
+					local compiler = require("nattlua").File(analyzer:ResolvePath(path))
+					assert(compiler:Lex())
+					assert(compiler:Parse())
+					local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+					analyzer.loaded = analyzer.loaded or {}
+					analyzer.loaded[path] = res
+					return res
+				end
+			end
+		end
+	end
+
+	analyzer:Error(name:GetNode(), "unable to find module " .. str)
+	return types.Any
+end
+
+type function type_error(str: string, level: number | nil)
+	error(str:GetData(), level and level:GetData() or nil)
+end
+
+type function load(code: string | (function(): string | nil), chunk_name: string | nil)
+	if not code:IsLiteral() or code.Type == "union" then return types.Any end
+	local str
+
+	if code.Type == "string" and code:IsLiteral() then
+		str = code:GetData()
+		local ok, err = pcall(function()
+			str = str:gsub("\\(.)", function(char)
+				return assert((loadstring or load)("return '\\" .. char .. "'"))()
+			end)
+		end)
+		if not ok then return ok, err end
+	end
+
+	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
+	assert(compiler:Lex())
+	assert(compiler:Parse())
+	return analyzer:NewType(
+		compiler.SyntaxTree,
+		"function",
+		{
+			arg = types.Tuple({}),
+			ret = types.Tuple({}),
+			lua_function = function(...)
+				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+			end,
+		}
+	)
+end
+
+type function dofile(path: string)
+	if not path:IsLiteral() then return types.Any() end
+	local f = assert(io.open(path:GetData(), "rb"))
+	local code = f:read("*all")
+	f:close()
+	local compiler = nl.Compiler(code, "@" .. path:GetData())
+	assert(compiler:Lex())
+	assert(compiler:Parse())
+	return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+end
+
+type function loadfile(path: string)
+	if not path:IsLiteral() then return types.Any() end
+	local f = assert(io.open(path:GetData(), "rb"))
+	local code = f:read("*all")
+	f:close()
+	local compiler = nl.Compiler(code, "@" .. path:GetData())
+	assert(compiler:Lex())
+	assert(compiler:Parse())
+	return analyzer:NewType(
+		compiler.SyntaxTree,
+		"function",
+		{
+			arg = types.Tuple({}),
+			ret = types.Tuple({}),
+			lua_function = function(...)
+				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+			end,
+		}
+	)
+end
+
+type function rawset(tbl: {[any] = any} | {}, key: any, val: any)
+	tbl:Set(key, val, true)
+end
+
+type function rawget(tbl: {[any] = any} | {}, key: any)
+	local t, err = tbl:Get(key, true)
+	if t then return t end
+end
+
+type function assert(obj, msg)
+	if obj.Type == "union" then
+		for _, tup in ipairs(obj:GetData()) do
+			if tup.Type == "tuple" and tup:Get(1):IsTruthy() then return tup end
+		end
+	end
+
+	if obj:IsTruthy() and not obj:IsFalsy() then
+		if obj.Type == "union" then
+			obj = obj:Copy()
+			obj:DisableFalsy()
+		end
+
+		return obj
+	end
+
+	if obj:IsFalsy() then
+		analyzer:ThrowError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy())
+	end
+
+	return types.Any()
+end
+
+type function error(msg: string, level: number | nil)
+	if not analyzer:GetScope():IsCertain() then return end
+
+	if msg:IsLiteral() then
+		analyzer:ThrowError(msg:GetData())
+	else
+		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
+	end
+end
+
+type function pcall(callable: (function(...any): (...any)), ...)
+	local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
+	local err = analyzer.lua_error_thrown
+
+	if err then
+		analyzer.lua_error_thrown = nil
+		return types.False(), err
+	end
+
+	local err = analyzer.lua_assert_error_thrown
+
+	if err then
+		analyzer.lua_assert_error_thrown = nil
+		return types.False(), err.msg
+	end
+
+	return types.True(), res:Unpack()
+end
+
+type function type_pcall(func, ...)
+	local diagnostics_index = #analyzer.diagnostics
+	local ok, val = pcall(analyzer.Call, analyzer, func, types.Tuple({...}))
+	if not ok then return ok, val end
+	local errors = {}
+
+	for i = diagnostics_index + 1, #analyzer.diagnostics do
+		local d = analyzer.diagnostics[i]
+		table.insert(errors, require("nattlua.other.helpers").FormatError(analyzer.compiler.code, analyzer.compiler.name, d.msg, d.start, d.stop))
+	end
+
+	if errors[1] then return false, table.concat(errors, "\n") end
+	return ok, val:Unpack()
+end
+
+type function xpcall(callable: any, error_cb: any, ...)
+	return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
+end
+
+type function select(index: 1 .. inf | "#", ...)
+	return select(index:GetData(), ...)
+end
+
+type function type(obj: any)
+	if obj.Type == "union" then
+		analyzer.type_checked = obj
+		local copy = types.Union()
+
+		for _, v in ipairs(obj:GetData()) do
+			if v.GetLuaType then
+				copy:AddType(types.String(v:GetLuaType()):SetLiteral(true))
+			end
+		end
+
+		return copy
+	end
+
+	if obj.GetLuaType then return obj:GetLuaType() end
+	return types.String()
+end
+
+type function setmetatable(tbl, meta)
+	if meta.Type == "table" then
+		if meta.Self then
+			analyzer:Assert(tbl:GetNode(), tbl:IsSubsetOf(meta.Self))
+			tbl:CopyLiteralness(meta.Self)
+		else
+			meta.potential_self = meta.potential_self or types.Union({})
+			meta.potential_self:AddType(tbl)
+		end
+
+		tbl:SetMetaTable(meta)
+	end
+
+	return tbl
+end
+
+type function getmetatable(tbl)
+	if tbl.Type == "table" then return tbl:GetMetaTable() end
+end
+
+type function tostring(val: any)
+	if not val:IsLiteral() then return types.String() end
+	if val.Type == "string" then return val end
+
+	if val.Type == "table" then
+		if val:GetMetaTable() then
+			local func = val:GetMetaTable():Get("__tostring")
+
+			if func then
+				if func.Type == "function" then
+					return analyzer:Assert(analyzer.current_expression, analyzer:Call(func, types.Tuple({val})))
+				else
+					return func
+				end
+			end
+		end
+
+		return tostring(val:GetData())
+	end
+
+	return tostring(val:GetData())
+end
+
+type function tonumber(val: string | number, base: number | nil)
+	if not val:IsLiteral() or base and not base:IsLiteral() then return types.Union({types.Nil(), types.Number()}) end
+
+	if val:IsLiteral() then
+		base = base and base:IsLiteral() and base:GetData()
+		return tonumber(val:GetData(), base)
+	end
+
+	return val
+end

@@ -1,0 +1,37 @@
+type io = {
+		write = (function(...): nil),
+		flush = (function(): boolean | nil, string | nil),
+		read = (function(...): ...),
+		lines = (function(...): empty_function),
+		setvbuf = (function(mode: string, size: number): boolean | nil, string | nil) | (function(mode: string): boolean | nil, string | nil),
+		seek = (function(whence: string, offset: number): number | nil, string | nil) | (function(whence: string): number | nil, string | nil) | (function(): number | nil, string | nil),
+	}
+type File = {
+		close = (function(self): boolean | nil, string, number | nil),
+		write = (function(self, ...): self | nil, string | nil),
+		flush = (function(self): boolean | nil, string | nil),
+		read = (function(self, ...): ...),
+		lines = (function(self, ...): empty_function),
+		setvbuf = (function(self, string, number): boolean | nil, string | nil) | (function(file: self, mode: string): boolean | nil, string | nil),
+		seek = (function(self, string, number): number | nil, string | nil) | (function(file: self, whence: string): number | nil, string | nil) | (function(file: self): number | nil, string | nil),
+	}
+
+type function io.open(): File
+
+type function io.popen(): File
+
+type function io.output(): File
+
+type io.stdout = File
+type io.stdin = File
+type io.stderr = File
+
+type function io.type(obj)
+	local flags = types.Union()
+	flags:AddType(types.String("file"):SetLiteral(true))
+	flags:AddType(types.String("closed file"):SetLiteral(true))
+	print(("%p"):format(obj), ("%p"):format(env.typesystem.File))
+	if false and obj:IsSubsetOf(env.typesystem.File) then return flags end
+	flags:AddType(types.Nil())
+	return flags
+end

@@ -165,7 +165,7 @@ type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	end
 end
 
---§env.typesystem.ffi:Get("cdef").no_expansion = true
+§env.typesystem.ffi:Get("cdef").no_expansion = true
 
 type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")

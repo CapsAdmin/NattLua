@@ -102,8 +102,7 @@ run[=[
 run[=[
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
-	
-	type_assert<|(typeof ctype).foo, string | nil|>
+	type_assert(ctype.foo, _ as string | nil)
 ]=]
 
 

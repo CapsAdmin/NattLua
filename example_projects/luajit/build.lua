@@ -14,7 +14,7 @@ builder:Analyze()
 local code, err = builder:Emit()
 
 -- todo
-code = io.open("nattlua/runtime/base_runtime.lua"):read("*all") .. "\n" .. code
+code = io.open("nattlua/definitions/base_runtime.lua"):read("*all") .. "\n" .. code
 
 local file = io.open("example_projects/luajit/out.lua", "w")
 file:write(code)
