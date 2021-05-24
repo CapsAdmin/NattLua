@@ -142,6 +142,8 @@ end
 return
 	{
 		Function = META.New,
+		LuaRuntimeFunction = function() 
+		end,
 		LuaTypeFunction = function(lua_function, arg, ret)
 			local self = META.New()
 			self:SetData(

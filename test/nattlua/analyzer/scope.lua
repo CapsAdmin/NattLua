@@ -1,27 +1,24 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-pending([[
+run([[
+    -- test shadow upvalues
+    local foo = 1337
 
-    local operators = {
-        ["-"] = function(l: number)
-            return -l
-        end,
-        ["~"] = function(l: number)
-            return bit.bnot(l)
-        end,
-    }
-    local function PrefixOperator(op#: keysof<| operators |>)
-        print(operators)
-        if math.random() > 0.5 then
-            print(operators[op])
-        end
+    local function test()
+        type_assert(foo, 1337)
     end
     
+    local foo = 666
+]])
+
+run([[
+    -- test shadow upvalues
+    local foo = 1337
+
+    function test()
+        type_assert(foo, 1337)
+    end
     
-    local operators = {
-        1,2,3
-    }
-    
-    PrefixOperator("-")
+    local foo = 666
 ]])

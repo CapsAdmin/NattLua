@@ -217,7 +217,9 @@ run[[
 
     type_assert(ok, false)
     type_assert_superset(err, _ as string)
+]]
 
+run[[
     local ok, val = type_pcall(function() return 1 end)
     
     type_assert(ok, true)

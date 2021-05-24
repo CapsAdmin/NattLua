@@ -149,8 +149,10 @@ return function(analyzer, node, env)
 			ret = ret,
 			lua_function = func,
 			scope = analyzer:GetScope(),
+			upvalue_position = #analyzer:GetScope():GetUpvalues("runtime")
 		}
 	)
+
 	obj.explicit_arguments = explicit_arguments
 	obj.explicit_return = explicit_return
 

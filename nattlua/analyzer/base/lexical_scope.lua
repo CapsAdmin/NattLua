@@ -99,10 +99,23 @@ end
 function META:FindValue(key, env)
 	local key_hash = self:Hash(key)
 	local scope = self
-
+	
 	for _ = 1, 1000 do
 		if not scope then return end
-		if scope.upvalues[env].map[key_hash] then return scope.upvalues[env].map[key_hash] end
+		local upvalue = scope.upvalues[env].map[key_hash]
+		if upvalue then 
+			if self.upvalue_position then				
+				if upvalue.position >= self.upvalue_position then
+					local upvalue = upvalue.shadow
+					while upvalue do
+						if upvalue.position <= self.upvalue_position then
+							return upvalue
+						end
+						upvalue = upvalue.shadow
+					end
+				end
+			end
+			return upvalue end
 		scope = scope.parent
 	end
 
@@ -128,9 +141,17 @@ end
 function META:CreateValue(key, obj, env)
 	local key_hash = self:Hash(key)
 	assert(key_hash)
+
+	local shadow
+
+	if key_hash ~= "..." and env == "runtime" then
+		shadow = self.upvalues[env].map[key_hash]
+	end
+
 	local upvalue = {
 		key = key_hash,
-		shadow = self:FindValue(key, env),
+		shadow = shadow,
+		position = #self.upvalues[env].list,
 	}
 	setmetatable(upvalue, upvalue_meta)
 	table_insert(self.upvalues[env].list, upvalue)
@@ -367,11 +388,12 @@ end
 
 local ref = 0
 
-function LexicalScope(parent)
+function LexicalScope(parent, upvalue_position)
 	ref = ref + 1
 	local scope = {
 			ref = ref,
 			children = {},
+			upvalue_position = upvalue_position,
 			upvalues = {
 				runtime = {list = {}, map = {},},
 				typesystem = {list = {}, map = {},},
