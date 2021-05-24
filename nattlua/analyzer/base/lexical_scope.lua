@@ -221,7 +221,6 @@ end
 function META:SetTestCondition(obj, data)
 	self.test_condition = obj
 
-
 	if data then
 		self.if_statement = data.type == "if" and data.statement
 		self.is_else = data.is_else
@@ -245,9 +244,14 @@ function META.IsPartOfTestStatementAs(a, b)
 	return a.if_statement and a.if_statement == b.if_statement
 end
 
-function META:GetTestCondition()
+function META:FindFirstTestScope()
 	local obj, scope = self:GetMemberInParents("test_condition")
-	return obj, scope and scope.test_condition_inverted or nil
+
+	return scope
+end
+
+function META:GetTestCondition()
+	return self.test_condition
 end
 
 function META:Contains(scope)

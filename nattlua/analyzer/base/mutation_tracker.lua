@@ -77,7 +77,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
 	local found_type
 
 	while true do
-		found_type = FindInType(scope.test_condition, obj)
+		found_type = FindInType(scope:GetTestCondition(), obj)
 		if found_type then break end
         
         -- find in siblings too, if they have returned
@@ -92,7 +92,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
 					root_scope:IsPartOfTestStatementAs(child)
 				)
 			then
-				local found_type = FindInType(child.test_condition, obj)
+				local found_type = FindInType(child:GetTestCondition(), obj)
 				if found_type then return child, found_type end
 			end
 		end
@@ -174,15 +174,16 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 		end
 
 		do
-			local test_a = scope:GetTestCondition()
+			local test_scope_a = scope:FindFirstTestScope()
 
-			if test_a then
+			if test_scope_a then
+				local test_a = test_scope_a:GetTestCondition()
 				for _, mut in ipairs(mutations) do
 					if mut.scope ~= scope then
-						local test_b = mut.scope:GetTestCondition()
+						local test_scope_b = mut.scope:FindFirstTestScope()
 
-						if test_b then
-							if FindInType(test_a, test_b) then
+						if test_scope_b then
+							if FindInType(test_a, test_scope_b:GetTestCondition()) then
 								mut.certain_override = true
 
 								if DEBUG then
@@ -214,27 +215,30 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 			local scope, scope_union = FindScopeFromTestCondition(mut.scope, value)
 
 			if scope and mut.scope == scope then
-				local test, inverted = scope:GetTestCondition()
+				local test_scope = scope:FindFirstTestScope()
+				if test_scope then
+					local test = test_scope:GetTestCondition()
+					
+					if test.Type == "union" then
+						local t
 
-				if test.Type == "union" then
-					local t
-
-					if scope_union.Type == "union" then
-						if inverted then
-							t = scope_union:GetFalsyUnion()
+						if scope_union.Type == "union" then
+							if test_scope:IsPartOfElseStatement() then
+								t = scope_union:GetFalsyUnion()
+							else
+								t = scope_union:GetTruthyUnion()
+							end
 						else
-							t = scope_union:GetTruthyUnion()
+							if test_scope:IsPartOfElseStatement() then
+								t = types.Literal(test:GetFalsy())
+							else
+								t = types.Literal(test:GetTruthy())
+							end
 						end
-					else
-						if inverted then
-							t = types.Literal(test:GetFalsy())
-						else
-							t = types.Literal(test:GetTruthy())
-						end
-					end
 
-					if t then
-						union:RemoveType(t)
+						if t then
+							union:RemoveType(t)
+						end
 					end
 				end
 			end
