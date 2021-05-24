@@ -100,23 +100,28 @@ function META:FindValue(key, env)
 	local key_hash = self:Hash(key)
 	local scope = self
 	local prev_scope
+
 	for _ = 1, 1000 do
 		if not scope then return end
 		local upvalue = scope.upvalues[env].map[key_hash]
-		if upvalue then 
+
+		if upvalue then
 			local upvalue_position = prev_scope and prev_scope.upvalue_position
-			if upvalue_position then				
+
+			if upvalue_position then
 				if upvalue.position >= upvalue_position then
 					local upvalue = upvalue.shadow
+
 					while upvalue do
-						if upvalue.position <= upvalue_position then
-							return upvalue
-						end
+						if upvalue.position <= upvalue_position then return upvalue end
 						upvalue = upvalue.shadow
 					end
 				end
 			end
-			return upvalue end
+
+			return upvalue
+		end
+
 		prev_scope = scope
 		scope = scope.parent
 	end
@@ -143,7 +148,6 @@ end
 function META:CreateValue(key, obj, env)
 	local key_hash = self:Hash(key)
 	assert(key_hash)
-
 	local shadow
 
 	if key_hash ~= "..." and env == "runtime" then
@@ -151,10 +155,10 @@ function META:CreateValue(key, obj, env)
 	end
 
 	local upvalue = {
-		key = key_hash,
-		shadow = shadow,
-		position = #self.upvalues[env].list,
-	}
+			key = key_hash,
+			shadow = shadow,
+			position = #self.upvalues[env].list,
+		}
 	setmetatable(upvalue, upvalue_meta)
 	table_insert(self.upvalues[env].list, upvalue)
 	self.upvalues[env].map[key_hash] = upvalue

@@ -67,7 +67,6 @@ function META.New(data)
 end
 
 local Symbol = META.New
-
 return
 	{
 		Symbol = Symbol,
@@ -82,7 +81,6 @@ return
 		end,
 		Boolean = function()
 			local Union = require("nattlua.types.union").Union
-
 			return Union({Symbol(true), Symbol(false)})
 		end,
 	}

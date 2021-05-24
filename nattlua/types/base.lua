@@ -204,6 +204,7 @@ do
 
 	function META:GetMetaTable()
 		local contract = self.Contract
+
 		if contract then -- TODO
 			if contract.MetaTable then return contract.MetaTable end
 		end
