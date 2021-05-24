@@ -218,9 +218,31 @@ function META:GetParent()
 	return self.parent
 end
 
-function META:SetTestCondition(obj, inverted)
+function META:SetTestCondition(obj, data)
 	self.test_condition = obj
-	self.test_condition_inverted = inverted
+
+
+	if data then
+		self.if_statement = data.type == "if" and data.statement
+		self.is_else = data.is_else
+		self.test_condition_inverted = self.is_else
+	end
+end
+
+function META:IsPartOfIfStatement()
+	return self.if_statement
+end
+
+function META:IsTestConditionInverted()
+	return self.test_condition_inverted
+end
+
+function META:IsPartOfElseStatement()
+	return self.is_else
+end
+
+function META.IsPartOfTestStatementAs(a, b)
+	return a.if_statement and a.if_statement == b.if_statement
 end
 
 function META:GetTestCondition()

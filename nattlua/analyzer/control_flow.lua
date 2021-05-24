@@ -77,7 +77,7 @@ return function(META)
                 
                 -- else always hits, so even if the else part is uncertain
                 -- it does mean that this function at least returns something
-                if scope.is_else then
+                if scope:IsPartOfElseStatement() then
 					function_scope.uncertain_function_return = false
 				end
 			elseif function_scope.uncertain_function_return then
@@ -142,9 +142,7 @@ return function(META)
 
 	function META:OnEnterConditionalScope(data)
 		local scope = self:GetScope()
-		scope.if_statement = data.type == "if" and data.statement
-		scope.is_else = data.is_else
-		scope:SetTestCondition(data.condition, data.is_else)
+		scope:SetTestCondition(data.condition, data)
 		scope:MakeUncertain(data.condition:IsUncertain())
 	end
 

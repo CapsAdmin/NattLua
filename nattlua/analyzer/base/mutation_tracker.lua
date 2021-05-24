@@ -16,10 +16,6 @@ local function dprint(mut, reason)
 	)
 end
 
-local function same_if_statement(a, b)
-	return a.if_statement and a.if_statement == b.if_statement
-end
-
 local function copy(tbl)
 	local copy = {}
 
@@ -93,7 +89,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
 				child ~= scope and
 				(
 					child:HasUncertainReturn() or
-					(root_scope.if_statement and root_scope.if_statement == child.if_statement)
+					root_scope:IsPartOfTestStatementAs(child)
 				)
 			then
 				local found_type = FindInType(child.test_condition, obj)
@@ -137,7 +133,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 		for i = #mutations, 1, -1 do
 			local mut = mutations[i]
 
-			if same_if_statement(scope, mut.scope) and scope ~= mut.scope then
+			if scope:IsPartOfTestStatementAs(mut.scope) and scope ~= mut.scope then
 				if DEBUG then
 					dprint(mut, "not inside the same if statement")
 				end
@@ -150,12 +146,12 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 			for i = #mutations, 1, -1 do
 				local mut = mutations[i]
 
-				if mut.scope.if_statement and mut.scope.test_condition_inverted then
+				if mut.scope:IsPartOfIfStatement() and mut.scope:IsTestConditionInverted() then
 					while true do
 						local mut = mutations[i]
 						if not mut then break end
 
-						if not same_if_statement(mut.scope, scope) and not mut.scope:Contains(scope) then
+						if not mut.scope:IsPartOfTestStatementAs(scope) and not mut.scope:Contains(scope) then
 							for i = i, 1, -1 do
 								if mutations[i].scope:Contains(scope) then
 									if DEBUG then
@@ -299,8 +295,8 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
             -- the or part here refers to if *condition* then
             -- truthy/falsy _union is only created from binary operators and some others
             if
-				found_scope.test_condition_inverted or
-				(found_scope ~= scope and same_if_statement(scope, found_scope))
+				found_scope:IsTestConditionInverted() or
+				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
 			then
 				t = union:GetFalsyUnion() or value:GetFalsy()
 			else
