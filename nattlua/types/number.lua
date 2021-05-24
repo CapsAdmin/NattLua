@@ -21,15 +21,15 @@ local operators = {
 function META:PrefixOperator(op--[[#: keysof<|operators|>]])
 	if self:IsLiteral() then
 		local num = self.New(operators[op](self:GetData())):SetLiteral(true)
-
-		if self:GetMax() then
-			num:SetMax(self:GetMax():PrefixOperator(op))
+		local max = self:GetMax()
+		if max then
+			num:SetMax(max:PrefixOperator(op))
 		end
 
 		return num
 	end
 
-	return self.New()
+	return self.New(nil --[[# as number]]) -- hmm
 end
 
 function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
@@ -61,9 +61,9 @@ end
 
 function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
-
-	if self.Max then
-		copy.Max = self.Max:Copy()
+	local max = self.Max
+	if max then
+		copy.Max = max:Copy()
 	end
 
 	copy:CopyInternalsFrom(self)
@@ -162,7 +162,7 @@ function META:SetMax(val)
 		self.Max = val
 	else
 		self:SetLiteral(false)
-		self:SetData(nil)
+		self:SetData(nil --[[# as number]]) -- hmm
 		self.Max = nil
 	end
 

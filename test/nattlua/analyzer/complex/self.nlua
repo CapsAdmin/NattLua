@@ -100,3 +100,10 @@ do
     §analyzer:AnalyzeUnreachableCode()
     type_assert<|argument_type<|base.MakeUnique|>, Tuple<|base.@Self, true | false|>|>
 end
+
+do
+    local {Number} = require("nattlua.types.number")
+    §analyzer:AnalyzeUnreachableCode()
+    local num = Number(1337)
+    type_assert(num:GetData(), _ as number)
+end

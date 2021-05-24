@@ -90,7 +90,7 @@ end
 do -- comes from tbl.@Name = "my name"
 	META:GetSet("Name", nil--[[# as nil | BaseType]])
 
-	function META:SetName(name--[[#: BaseType]])
+	function META:SetName(name--[[#: BaseType | nil]])
 		if name then
 			assert(name:IsLiteral())
 		end
@@ -203,8 +203,9 @@ do
 	META:GetSet("MetaTable", nil--[[# as BaseType | nil]])
 
 	function META:GetMetaTable()
-		if self.Contract then -- TODO
-			if self.Contract.MetaTable then return self.Contract.MetaTable end
+		local contract = self.Contract
+		if contract then -- TODO
+			if contract.MetaTable then return contract.MetaTable end
 		end
 
 		return self.MetaTable
