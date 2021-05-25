@@ -9,9 +9,9 @@ local function cast(...)
         local v = select(i, ...)
         local t = type(v)
         if t == "number" then
-            ret[i] = types.Number(v):SetLiteral(true)
+            ret[i] = types.LNumber(v)
         elseif t == "string" then
-            ret[i] = types.String(v):SetLiteral(true)
+            ret[i] = types.LString(v)
         elseif t == "boolean" then
             ret[i] = types.Symbol(v)
         else

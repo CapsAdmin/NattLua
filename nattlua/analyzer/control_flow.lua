@@ -1,15 +1,16 @@
 local ipairs = ipairs
 local type = type
+local LString = require("nattlua.types.string").LString
+local LNumber = require("nattlua.types.number").LNumber
 
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
 
 local function cast(val)
 	if type(val) == "string" then
-		
-		return types.String(val):SetLiteral(true)
+		return LString(val)
 	elseif type(val) == "number" then
-		return types.Number(val):SetLiteral(true)
+		return LNumber(val)
 	end
 
 	return val

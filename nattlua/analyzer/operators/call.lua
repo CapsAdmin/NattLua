@@ -13,7 +13,7 @@ return function(META)
 		local tbl = {}
 
 		for i, v in ipairs(tps) do
-			if types.IsTypeObject(v) then
+			if type(v) == "table" and v.Type ~= nil then
 				tbl[i] = v
 				v:SetNode(node)
 			else

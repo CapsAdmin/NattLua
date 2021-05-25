@@ -1,6 +1,7 @@
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Number = require("nattlua.types.number").Number
+local LNumber = require("nattlua.types.number").LNumber
 local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local table = require("table")
@@ -337,7 +338,7 @@ function META:FindKeyValReverseEqual(key)
 end
 
 function META:Insert(val)
-	self.size = self.size or Number(1):SetLiteral(true)
+	self.size = self.size or LNumber(1)
 	self:Set(self.size:Copy(), val)
 	self.size:SetData(self.size:GetData() + 1)
 end
@@ -643,8 +644,8 @@ function META.Union(A, B)
 end
 
 function META:Call(analyzer, arguments, ...)
-	local String = require("nattlua.types.string").String
-	local __call = self:GetMetaTable() and self:GetMetaTable():Get(String("__call"):SetLiteral(true))
+	local LString = require("nattlua.types.string").LString
+	local __call = self:GetMetaTable() and self:GetMetaTable():Get(LString("__call"))
 
 	if __call then
 		local new_arguments = {self}

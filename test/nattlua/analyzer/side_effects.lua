@@ -27,7 +27,7 @@ do
         end
 
         foo()
-    ]]):GetLocalOrEnvironmentValue(types.Literal("foo"), "runtime")
+    ]]):GetLocalOrEnvironmentValue(types.LString("foo"), "runtime")
 
     equal(foo:GetCallCount(), 1)
     equal(#foo:GetSideEffects(), 5)
@@ -39,7 +39,7 @@ do
             return 1 + 2 + x
         end
         
-    ]]):GetLocalOrEnvironmentValue(types.Literal("foo"), "runtime")
+    ]]):GetLocalOrEnvironmentValue(types.LString("foo"), "runtime")
 
     equal(foo:IsPure(), true)
 end

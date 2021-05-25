@@ -1,6 +1,6 @@
 local tostring = tostring
 local ipairs = ipairs
-local Number = require("nattlua.types.number").Number
+local LNumber = require("nattlua.types.number").LNumber
 local table = require("table")
 return function(analyzer, node, env)
 	local tbl = analyzer:NewType(node, "table", nil, env == "typesystem")
@@ -32,18 +32,18 @@ return function(analyzer, node, env)
 					tbl:Insert(tup:Get(1))
 				else
 					for i = 1, tup:GetMinimumLength() do
-						tbl:Set(Number(tbl:GetLength() + 1):SetLiteral(true), tup:Get(i))
+						tbl:Set(LNumber(tbl:GetLength() + 1), tup:Get(i))
 					end
 
 					if tup.Remainder then
-						local current_index = Number(tbl:GetLength() + 1):SetLiteral(true)
-						local max = Number(tup.Remainder:GetLength()):SetLiteral(true)
+						local current_index = LNumber(tbl:GetLength() + 1)
+						local max = LNumber(tup.Remainder:GetLength())
 						tbl:Set(current_index:SetMax(max), tup.Remainder:Get(1))
 					end
 				end
 			else
 				if node.i then
-					tbl:Insert(Number(val[1]):SetLiteral(true))
+					tbl:Insert(LNumber(val[1]))
 				elseif val then
 					for _, val in ipairs(val) do
 						tbl:Insert(val)

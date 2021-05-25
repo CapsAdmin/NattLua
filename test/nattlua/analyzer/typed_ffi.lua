@@ -88,7 +88,7 @@ run[=[
 	local type function remove_call_function(union)
 		local new_union = types.Union({})
 		for _, obj in ipairs(union:GetData()) do
-			obj:Delete(types.String("__call"):SetLiteral(true))
+			obj:Delete(types.LString("__call"))
 			new_union:AddType(obj)
 		end
 		return new_union

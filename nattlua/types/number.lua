@@ -241,4 +241,9 @@ function META.New(data--[[#: number]])
 	return setmetatable({Data = data}, META)
 end
 
-return {Number = META.New}
+return {
+	Number = META.New, 
+	LNumber = function(num --[[#: number]]) 
+		return META.New(num):SetLiteral(true) 
+	end,
+}

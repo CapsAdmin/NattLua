@@ -8,7 +8,7 @@ local Tuple = T.Tuple
 test("union and get", function()
     local contract = Table()
     assert(contract:Set(String("foo"), Number()))
-    assert(assert(contract:Get(types.Literal("foo")).Type == "number"))
+    assert(assert(contract:Get(String("foo")).Type == "number"))
     equal(false, contract:Get(String("asdf")))
 
     local tbl = Table()
@@ -26,7 +26,7 @@ test("union string and get constant string", function()
 
     local tbl = Table()
     tbl:SetContract(contract)
-    tbl:Set(String(), Number(1337):SetLiteral(true))
+    tbl:Set(String(), Number(1337))
     local union = assert(tbl:Get(String()))
     equal("union", union.Type)
     equal(1337, union:GetType("number"):GetData())

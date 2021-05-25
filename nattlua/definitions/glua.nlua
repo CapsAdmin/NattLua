@@ -189,7 +189,7 @@ local type function isstring(obj: any)
 		analyzer,
 		analyzer.current_expression,
 		typ,
-		types.String("string"):SetLiteral(true),
+		types.LString("string"),
 		"runtime",
 		"=="
 	)
@@ -202,7 +202,7 @@ local type function istable(obj: any)
 		analyzer,
 		analyzer.current_expression,
 		typ,
-		types.String("table"):SetLiteral(true),
+		types.LString("table"),
 		"runtime",
 		"=="
 	)

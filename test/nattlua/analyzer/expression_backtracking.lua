@@ -8,7 +8,7 @@ test("a and b", function()
         local result = a and b
 
         type_assert(result, 2)
-    ]]:GetLocalOrEnvironmentValue(types.Literal("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(types.LString("result"), "runtime")
 
     equal(obj:GetNode().kind, "binary_operator") 
     equal(obj:GetTypeSource():GetData(), 2)
@@ -23,7 +23,7 @@ test("a + b", function()
         local result = a + b
         
         type_assert(result, 3)
-    ]]:GetLocalOrEnvironmentValue(types.Literal("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(types.LString("result"), "runtime")
 
     equal(obj:GetNode().kind, "binary_operator")
     equal(obj:GetData(), 3)
@@ -37,7 +37,7 @@ test("not a", function()
         local result = not a
         
         type_assert(result, false)
-    ]]:GetLocalOrEnvironmentValue(types.Literal("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(types.LString("result"), "runtime")
 
     equal(obj:GetNode().kind, "prefix_operator") 
     equal(obj:GetTypeSource():GetData(), true)
@@ -49,7 +49,7 @@ test("not not a", function()
         local result = not not a
         
         type_assert(result, true)
-    ]]:GetLocalOrEnvironmentValue(types.Literal("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(types.LString("result"), "runtime")
 
     equal(obj:GetNode().kind, "prefix_operator") 
     equal(obj:GetTypeSource():GetData(), false)
@@ -62,7 +62,7 @@ test("not a or 1", function()
         local result = not a or 1
         
         type_assert(result, 1)
-    ]]:GetLocalOrEnvironmentValue(types.Literal("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(types.LString("result"), "runtime")
 
     equal(obj:GetNode().kind, "binary_operator")
     equal(obj:GetTypeSourceLeft():GetNode().kind, "prefix_operator")
@@ -73,13 +73,13 @@ end)
 
 test("1 or 2 or 3 or 4", function()
     -- each value here has to be 1 | nil, otherwise it won't traverse the or chain
-    local obj = run[[local result = (_ as 1 | nil) or (_ as 2 | nil) or (_ as 3 | nil) or (_ as 4 | nil)]]:GetLocalOrEnvironmentValue(types.Literal("result"), "runtime")
+    local obj = run[[local result = (_ as 1 | nil) or (_ as 2 | nil) or (_ as 3 | nil) or (_ as 4 | nil)]]:GetLocalOrEnvironmentValue(types.LString("result"), "runtime")
     local function set_equal(a, b)
         if not a then error("a is nil", 2) end
         
         local literal_union = {types.Symbol(nil)}
         for _, num in ipairs(b) do
-            table.insert(literal_union, types.Number(num):SetLiteral(true))
+            table.insert(literal_union, types.LNumber(num))
         end
         assert(a:Equal(types.Union(literal_union)))
     end

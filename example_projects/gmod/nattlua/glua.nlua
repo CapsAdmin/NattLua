@@ -41,13 +41,13 @@ end
 type function isstring(obj: any)
     local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
     local binary_operator = require("nattlua.analyzer.operators.binary")
-    return binary_operator(analyzer, analyzer.current_expression, typ, types.String("string"):SetLiteral(true), "runtime", "==")
+    return binary_operator(analyzer, analyzer.current_expression, typ, types.LString("string"), "runtime", "==")
 end
 
 type function istable(obj: any)
     local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
     local binary_operator = require("nattlua.analyzer.operators.binary")
-    return binary_operator(analyzer, analyzer.current_expression, typ, types.String("table"):SetLiteral(true), "runtime", "==")
+    return binary_operator(analyzer, analyzer.current_expression, typ, types.LString("table"), "runtime", "==")
 end
 
 type function isentity(obj: any)

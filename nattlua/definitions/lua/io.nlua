@@ -28,8 +28,8 @@ type io.stderr = File
 
 type function io.type(obj)
 	local flags = types.Union()
-	flags:AddType(types.String("file"):SetLiteral(true))
-	flags:AddType(types.String("closed file"):SetLiteral(true))
+	flags:AddType(types.LString("file"))
+	flags:AddType(types.LString("closed file"))
 	print(("%p"):format(obj), ("%p"):format(env.typesystem.File))
 	if false and obj:IsSubsetOf(env.typesystem.File) then return flags end
 	flags:AddType(types.Nil())

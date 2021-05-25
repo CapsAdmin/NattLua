@@ -3,7 +3,17 @@ local assert = assert
 local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
-local types = require("nattlua.types.types")
+local LNumber = require("nattlua.types.number").LNumber
+local LString = require("nattlua.types.string").LString
+local Any = require("nattlua.types.any").Any
+local String = require("nattlua.types.string").String
+local Tuple = require("nattlua.types.tuple").Tuple
+local Union = require("nattlua.types.union").Union
+local True = require("nattlua.types.symbol").True
+local Boolean = require("nattlua.types.symbol").Boolean
+local Symbol = require("nattlua.types.symbol").Symbol
+local False = require("nattlua.types.symbol").False
+local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 local bit = _G.bit or require("bit32")
 local operators = {
@@ -52,14 +62,14 @@ local function metatable_function(self, meta_method, l, r, swap)
 	if swap then
 		l, r = r, l
 	end
-	meta_method = types.Literal(meta_method)
+	meta_method = LString(meta_method)
 	if r:GetMetaTable() or l:GetMetaTable() then
 		local func = (l:GetMetaTable() and l:GetMetaTable():Get(meta_method)) or
 			(r:GetMetaTable() and r:GetMetaTable():Get(meta_method))
 		if not func then return end
 		if func.Type ~= "function" then return func end
 		return
-			self:Assert(self.current_expression, self:Call(func, types.Tuple({l, r}))):Get(1)
+			self:Assert(self.current_expression, self:Call(func, Tuple({l, r}))):Get(1)
 	end
 end
 
@@ -68,7 +78,7 @@ local function arithmetic(node, l, r, type, operator)
 
 	if type and l.Type == type and r.Type == type then
 		if l:IsLiteral() and r:IsLiteral() then
-			local obj = types.Number(operators[operator](l:GetData(), r:GetData())):SetLiteral(true)
+			local obj = LNumber(operators[operator](l:GetData(), r:GetData()))
 
 			if r:GetMax() then
 				obj:SetMax(arithmetic(node, l:GetMax() or l, r:GetMax(), type, operator))
@@ -89,11 +99,11 @@ end
 
 local function logical_cmp_cast(val--[[#: boolean | nil]])
 	if val == nil then
-		return types.Boolean()
+		return Boolean()
 	elseif val == true then
-		return types.True()
+		return True()
 	elseif val == false then
-		return types.False()
+		return False()
 	end
 end
 
@@ -113,24 +123,24 @@ local function binary_operator(analyzer, node, l, r, env, op)
 
 	-- normalize l and r to be both sets to reduce complexity
 	if l.Type ~= "union" and r.Type == "union" then
-		l = types.Union({l})
+		l = Union({l})
 	end
 
 	if l.Type == "union" and r.Type ~= "union" then
-		r = types.Union({r})
+		r = Union({r})
 	end
 
 	if l.Type == "union" and r.Type == "union" then
 		if op == "|" and env == "typesystem" then
-			return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+			return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		elseif op == "==" and env == "typesystem" then
-			return l:Equal(r) and types.True() or types.False()
+			return l:Equal(r) and True() or False()
 		elseif op == "~" and env == "typesystem" then
 			return l:RemoveType(r):Copy()
 		else
-			local new_union = types.Union()
-			local truthy_union = types.Union()
-			local falsy_union = types.Union()
+			local new_union = Union()
+			local truthy_union = Union()
+			local falsy_union = Union()
 			local condition = l
 
 			for _, l in ipairs(l:GetData()) do
@@ -206,9 +216,9 @@ local function binary_operator(analyzer, node, l, r, env, op)
 
 	if env == "typesystem" then
 		if op == "|" then
-			return types.Union({l, r})
+			return Union({l, r})
 		elseif op == "==" then
-			return l:Equal(r) and types.True() or types.False()
+			return l:Equal(r) and True() or False()
 		elseif op == "~" then
 			return l:RemoveType(r)
 		elseif op == "&" or op == "extends" then
@@ -216,21 +226,21 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			return l:Extend(r)
 		elseif op == ".." then
 			if l.Type == "string" and r.Type == "string" then
-				return types.String(l:GetData() .. r:GetData()):SetLiteral(true)
+				return LString(l:GetData() .. r:GetData())
 			else
 				return l:Copy():SetMax(r)
 			end
 		elseif op == ">" then
-			return types.Symbol((r:IsSubsetOf(l)))
+			return Symbol((r:IsSubsetOf(l)))
 		elseif op == "<" then
-			return types.Symbol((l:IsSubsetOf(r)))
+			return Symbol((l:IsSubsetOf(r)))
 		elseif op == "+" then
 			if l.Type == "table" and r.Type == "table" then return l:Union(r) end
 		end
 	end
 
 	if op == "." or op == ":" then return analyzer:IndexOperator(node, l, r, env) end
-	if l.Type == "any" or r.Type == "any" then return types.Any() end
+	if l.Type == "any" or r.Type == "any" then return Any() end
 
 	if op == "+" then
 		local res = metatable_function(analyzer, "__add", l, r)
@@ -274,23 +284,23 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		if op == "~=" or op == "!=" then
 			if l:GetMax() and l:GetMax():GetData() then return
 				(not (r:GetData() >= l:GetData() and r:GetData() <= l:GetMax():GetData())) and
-				types.True() or
-				types.Boolean() end
+				True() or
+				Boolean() end
 			if r:GetMax() and r:GetMax():GetData() then return
 				(not (l:GetData() >= r:GetData() and l:GetData() <= r:GetMax():GetData())) and
-				types.True() or
-				types.Boolean() end
+				True() or
+				Boolean() end
 		elseif op == "==" then
 			if l:GetMax() and l:GetMax():GetData() then return
 				r:GetData() >= l:GetData() and
 				r:GetData() <= l:GetMax():GetData() and
-				types.Boolean() or
-				types.False() end
+				Boolean() or
+				False() end
 			if r:GetMax() and r:GetMax():GetData() then return
 				l:GetData() >= r:GetData() and
 				l:GetData() <= r:GetMax():GetData() and
-				types.Boolean() or
-				types.False() end
+				Boolean() or
+				False() end
 		end
 	end
 
@@ -301,18 +311,18 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
 			if l.Type == "table" and r.Type == "table" then
 				if env == "runtime" then
-					if l:GetReferenceId() and r:GetReferenceId() then return l:GetReferenceId() == r:GetReferenceId() and types.True() or types.False() end
+					if l:GetReferenceId() and r:GetReferenceId() then return l:GetReferenceId() == r:GetReferenceId() and True() or False() end
 				end
 
-				if env == "typesystem" then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True() or types.False() end
-				return types.Boolean()
+				if env == "typesystem" then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() end
+				return Boolean()
 			end
 
-			return l:GetData() == r:GetData() and types.True() or types.False()
+			return l:GetData() == r:GetData() and True() or False()
 		end
 
 		if l.Type == "table" and r.Type == "table" then
-			if env == "typesystem" then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and types.True() or types.False() end
+			if env == "typesystem" then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() end
 		end
 
 		if
@@ -321,12 +331,12 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			l:GetData() == nil and
 			r:GetData() == nil
 		then
-			return types.True()
+			return True()
 		end
 
-		if l.Type ~= r.Type then return types.False() end
-		if l == r then return types.True() end
-		return types.Boolean()
+		if l.Type ~= r.Type then return False() end
+		if l == r then return True() end
+		return Boolean()
 	elseif op == "~=" then
 		local res = metatable_function(analyzer, "__eq", l, r)
 
@@ -338,11 +348,11 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			return res
 		end
 
-		if l:IsLiteral() and r:IsLiteral() then return l:GetData() ~= r:GetData() and types.True() or types.False() end
-		if l == types.Nil() and r == types.Nil() then return types.True() end
-		if l.Type ~= r.Type then return types.True() end
-		if l == r then return types.False() end
-		return types.Boolean()
+		if l:IsLiteral() and r:IsLiteral() then return l:GetData() ~= r:GetData() and True() or False() end
+		if l == Nil() and r == Nil() then return True() end
+		if l.Type ~= r.Type then return True() end
+		if l == r then return False() end
+		return Boolean()
 	elseif op == "<" then
 		local res = metatable_function(analyzer, "__lt", l, r)
 		if res then return res end
@@ -352,7 +362,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			(l.Type == "number" and r.Type == "number")
 		then
 			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
-			return types.Boolean()
+			return Boolean()
 		end
 
 		return type_errors.binary(op, l, r)
@@ -365,7 +375,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			(l.Type == "number" and r.Type == "number")
 		then
 			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
-			return types.Boolean()
+			return Boolean()
 		end
 
 		return type_errors.binary(op, l, r)
@@ -378,7 +388,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			(l.Type == "number" and r.Type == "number")
 		then
 			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
-			return types.Boolean()
+			return Boolean()
 		end
 
 		return type_errors.binary(op, l, r)
@@ -391,12 +401,12 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			(l.Type == "number" and r.Type == "number")
 		then
 			if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
-			return types.Boolean()
+			return Boolean()
 		end
 
 		return type_errors.binary(op, l, r)
 	elseif op == "or" or op == "||" then
-		if l:IsUncertain() or r:IsUncertain() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+		if l:IsUncertain() or r:IsUncertain() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 
 		-- when true, or returns its first argument
 		if l:IsTruthy() then return
@@ -406,23 +416,23 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		return r:Copy():SetNode(node):SetTypeSource(r)
 	elseif op == "and" or op == "&&" then
 		if l:IsTruthy() and r:IsFalsy() then
-			if l:IsFalsy() or r:IsTruthy() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+			if l:IsFalsy() or r:IsTruthy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 			return
 				r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end
 
 		if l:IsFalsy() and r:IsTruthy() then
-			if l:IsTruthy() or r:IsFalsy() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+			if l:IsTruthy() or r:IsFalsy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 			return
 				l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end
 
 		if l:IsTruthy() and r:IsTruthy() then
-			if l:IsFalsy() and r:IsFalsy() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+			if l:IsFalsy() and r:IsFalsy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 			return
 				r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		else
-			if l:IsTruthy() and r:IsTruthy() then return types.Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+			if l:IsTruthy() and r:IsTruthy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 			return
 				l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end

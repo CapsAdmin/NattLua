@@ -7,7 +7,7 @@ local type function cast(node, args)
 
 		for _, node in ipairs(node) do
 			if node.tag == "Pair" then
-				local key = types.String(node[2]):SetLiteral(true)
+				local key = types.LString(node[2])
 				local val = cast(node[1], args)
 				tbl:Set(key, val)
 			else
@@ -115,8 +115,8 @@ local type function cast(node, args)
 		else
 			local val = analyzer:IndexOperator(
 				analyzer.current_expression,
-				env.typesystem.ffi:Get(types.Literal("C")),
-				types.String(node.n):SetLiteral(true),
+				env.typesystem.ffi:Get(types.LString("C")),
+				types.LString(node.n),
 				"runtime"
 			)
 
@@ -136,7 +136,7 @@ local type function cast(node, args)
 		local ctype = cast(node.t, args)
 		ptr:Set(types.Number(), ctype)
 		local meta = types.Table()
-		meta:Set(types.Literal("__index"), types.LuaTypeFunction(function(self, key)
+		meta:Set(types.LString("__index"), types.LuaTypeFunction(function(self, key)
 			if ctype:GetMetaTable() then
 					-- i'm not really sure about this
 					-- boxed luajit ctypes seem to just get the metatable from the ctype
@@ -157,15 +157,15 @@ type function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
 		analyzer:NewIndexOperator(
 			cdecl:GetNode(),
-			env.typesystem.ffi:Get(types.Literal("C")),
-			types.String(ctype.name):SetLiteral(true),
+			env.typesystem.ffi:Get(types.LString("C")),
+			types.LString(ctype.name),
 			env.typesystem.cast(ctype.type, {...}),
 			"runtime"
 		)
 	end
 end
 
-§env.typesystem.ffi:Get(types.Literal("cdef")).no_expansion = true
+§env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true
 
 type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
@@ -178,7 +178,7 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 		keyval.val = types.Nilable(keyval.val)
 	end
 
-	ctype:Set(types.Literal("__call"), types.LuaTypeFunction(function(self, init)
+	ctype:Set(types.LString("__call"), types.LuaTypeFunction(function(self, init)
 		if init then
 			analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
 		end
@@ -189,7 +189,7 @@ type function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 	return ctype
 end
 
---§env.typesystem.ffi:Get(types.Literal("typeof")).no_expansion = true
+--§env.typesystem.ffi:Get(types.LString("typeof")).no_expansion = true
 
 type function ffi.get_type(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
@@ -206,10 +206,10 @@ type function ffi.new(cdecl, ...)
 end
 
 type function ffi.metatype(ctype, meta)
-	local new = meta:Get(types.Literal("__new"))
+	local new = meta:Get(types.LString("__new"))
 
 	if new then
-		meta:Set(types.Literal("__call"), types.LuaTypeFunction(function(self, ...)
+		meta:Set(types.LString("__call"), types.LuaTypeFunction(function(self, ...)
 			return analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...})))
 		end, new:GetArguments():GetData(), new:GetReturnTypes():GetData()))
 	end
@@ -218,5 +218,5 @@ type function ffi.metatype(ctype, meta)
 end
 
 type function ffi.load(lib: string)
-	return env.typesystem.ffi:Get(types.Literal("C"))
+	return env.typesystem.ffi:Get(types.LString("C"))
 end

@@ -597,7 +597,7 @@ run[[
 
     local type b = function()
         _G.LOL = nil
-        local t = analyzer:GetLocalOrEnvironmentValue(types.Literal("a"), "typesystem")
+        local t = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "typesystem")
         local func = t:GetData().lua_function
         func()
         if not _G.LOL then

@@ -7,7 +7,7 @@ test("index function", function()
         local a = t.lol
     ]]
 
-    local a = analyzer:GetLocalOrEnvironmentValue(types.Literal("a"), "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
     equal(1, a:GetData())
 
     run[[
@@ -35,10 +35,10 @@ test("basic inheritance", function()
         local a, b = obj:Test(1)
     ]]
 
-    local obj = analyzer:GetLocalOrEnvironmentValue(types.Literal("obj"), "runtime")
+    local obj = analyzer:GetLocalOrEnvironmentValue(types.LString("obj"), "runtime")
 
-    local a = analyzer:GetLocalOrEnvironmentValue(types.Literal("a"), "runtime")
-    local b = analyzer:GetLocalOrEnvironmentValue(types.Literal("b"), "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
+    local b = analyzer:GetLocalOrEnvironmentValue(types.LString("b"), "runtime")
 
     equal(2, a:GetData())
     equal(3, b:GetData())
@@ -58,9 +58,9 @@ test("__call method", function()
         local lol = obj(100,2,3)
     ]]
 
-    local obj = analyzer:GetLocalOrEnvironmentValue(types.Literal("obj"), "runtime")
+    local obj = analyzer:GetLocalOrEnvironmentValue(types.LString("obj"), "runtime")
 
-    equal(105, analyzer:GetLocalOrEnvironmentValue(types.Literal("lol"), "runtime"):GetData())
+    equal(105, analyzer:GetLocalOrEnvironmentValue(types.LString("lol"), "runtime"):GetData())
 end)
 
 test("__call method should not mess with scopes", function()
@@ -75,7 +75,7 @@ test("__call method should not mess with scopes", function()
         local a = setmetatable({}, META)(100,2,3)
     ]]
 
-    local a = analyzer:GetLocalOrEnvironmentValue(types.Literal("a"), "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
 
     equal(105, a:GetData())
 end)
@@ -94,7 +94,7 @@ test("vector test", function()
         local v = Vector(123).lol
     ]]
 
-    local v = analyzer:GetLocalOrEnvironmentValue(types.Literal("v"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(types.LString("v"), "runtime")
     equal(123, v:GetData())
 end)
 
@@ -117,9 +117,9 @@ test("vector test2", function()
         local x, y, z = v.x, v.y, v.z
     ]]
 
-    local x = assert(analyzer:GetLocalOrEnvironmentValue(types.Literal("x"), "runtime"))
-    local y = assert(analyzer:GetLocalOrEnvironmentValue(types.Literal("y"), "runtime"))
-    local z = assert(analyzer:GetLocalOrEnvironmentValue(types.Literal("z"), "runtime"))
+    local x = assert(analyzer:GetLocalOrEnvironmentValue(types.LString("x"), "runtime"))
+    local y = assert(analyzer:GetLocalOrEnvironmentValue(types.LString("y"), "runtime"))
+    local z = assert(analyzer:GetLocalOrEnvironmentValue(types.LString("z"), "runtime"))
 
     equal(101, x:GetData())
     equal(102, y:GetData())
@@ -423,7 +423,7 @@ run[[
 run[[
     local type tbl = {}
     type tbl.@Name = "blackbox"
-    setmetatable<|tbl, {__call = function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.Literal("foo")) end}|>
+    setmetatable<|tbl, {__call = function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end}|>
 
     local lol = tbl({foo = 1337})
 
@@ -432,7 +432,7 @@ run[[
 
 run[[
     local type tbl = {}
-    type tbl.__call = function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.Literal("foo")) end
+    type tbl.__call = function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end
     setmetatable<|tbl, tbl|>
 
     local lol = tbl({foo = 1337})

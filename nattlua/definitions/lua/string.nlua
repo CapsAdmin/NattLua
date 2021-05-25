@@ -19,7 +19,7 @@ type string = {
 	}
 
 type function ^string.rep(self: string, n: number)
-	if self:IsLiteral() and n:IsLiteral() then return types.String(string.rep(self:GetData(), n:GetData())):SetLiteral(true) end
+	if self:IsLiteral() and n:IsLiteral() then return types.LString(string.rep(self:GetData(), n:GetData())) end
 	return types.String()
 end
 
@@ -59,7 +59,7 @@ type function ^string.gmatch(s: string, pattern: string)
 
 			if strings[1] then
 				for i, v in ipairs(strings) do
-					strings[i] = types.String(v):SetLiteral(true)
+					strings[i] = types.LString(v)
 				end
 
 				return types.Tuple(strings)
@@ -109,9 +109,9 @@ type function ^string.match(str: string, pattern: string, start_position: number
 
 	for i, v in ipairs(res) do
 		if type(v) == "string" then
-			res[i] = types.String(v):SetLiteral(true)
+			res[i] = types.LString(v)
 		else
-			res[i] = types.Number(v):SetLiteral(true)
+			res[i] = types.LNumber(v)
 		end
 	end
 
@@ -136,14 +136,14 @@ type function ^string.find(str: string, pattern: string, start_position: number 
 	local start, stop, found = str:find(pattern, start_position, no_pattern)
 
 	if found then
-		types.String(found):SetLiteral(true)
+		types.LString(found)
 	end
 
 	return start, stop, found
 end
 
 type function ^string.len(str: string)
-	if str:IsLiteral() then return types.Number(#str:GetData()):SetLiteral(true) end
+	if str:IsLiteral() then return types.LNumber(#str:GetData()) end
 	return types.Number()
 end
 

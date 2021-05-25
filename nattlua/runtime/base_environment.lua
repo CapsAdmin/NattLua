@@ -8,6 +8,6 @@ compiler:SetDefaultEnvironment(false)
 local base = compiler.Analyzer()
 assert(compiler:Analyze(base))
 local g = compiler.SyntaxTree.environments.typesystem
-require("nattlua.runtime.string_meta"):Set(types.Literal("__index"), g:Get(types.Literal("string")))
-g:Set(types.Literal("_G"), g)
+require("nattlua.runtime.string_meta"):Set(types.LString("__index"), g:Get(types.LString("string")))
+g:Set(types.LString("_G"), g)
 return g
