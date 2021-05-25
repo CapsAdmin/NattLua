@@ -230,9 +230,9 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 							end
 						else
 							if test_scope:IsPartOfElseStatement() then
-								t = types.Literal(test:GetFalsy())
+								t = test:GetFalsy()
 							else
-								t = types.Literal(test:GetTruthy())
+								t = test:GetTruthy()
 							end
 						end
 

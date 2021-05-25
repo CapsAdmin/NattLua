@@ -5,15 +5,7 @@ local types = {}
 local type = _G.type
 
 function types.Literal(val)
-	if type(val) == "string" then
-		return types.String(val):SetLiteral(true)
-	elseif type(val) == "boolean" then
-		return types.Symbol(val)
-	elseif type(val) == "number" then
-		return types.Number(val):SetLiteral(true)
-	end
-
-	return val
+	return types.String(val):SetLiteral(true)
 end
 
 function types.IsTypeObject(obj)

@@ -35,7 +35,7 @@ type function table.insert(tbl: List, ...)
 		pos = pos:GetData()
 	end
 
-	tbl:Set(types.Literal(pos), val)
+	tbl:Set(types.Number(pos):SetLiteral(true), val)
 end
 
 type function table.remove(tbl: List, index: number | nil)

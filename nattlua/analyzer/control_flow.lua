@@ -4,6 +4,17 @@ local type = type
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
 
+local function cast(val)
+	if type(val) == "string" then
+		
+		return types.String(val):SetLiteral(true)
+	elseif type(val) == "number" then
+		return types.Number(val):SetLiteral(true)
+	end
+
+	return val
+end
+
 local types = require("nattlua.types.types")
 local MutationTracker = require("nattlua.analyzer.base.mutation_tracker")
 return function(META)
@@ -121,7 +132,7 @@ return function(META)
 					creation_scope = scope:GetRoot()
 				end
 
-				local val = (obj:GetContract() or obj):Get(types.Literal(key)) or types.Nil()
+				local val = (obj:GetContract() or obj):Get(cast(key)) or types.Nil()
 				val:SetUpvalue(obj.mutations[key])
 				val:SetUpvalueReference(key)
 				obj.mutations[key]:Mutate(val, creation_scope)
