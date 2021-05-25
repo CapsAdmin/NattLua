@@ -54,6 +54,7 @@ function META:GetChildren()
 end
 
 function META:Hash(node)
+	if type(node) == "table" and node.Type == "string" and node:IsLiteral() then return node:GetData() end
 	if type(node) == "string" then return node end
 	if type(node.value) == "string" then return node.value end
 	return node.value.value

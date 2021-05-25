@@ -121,7 +121,7 @@ return function(META)
 					creation_scope = scope:GetRoot()
 				end
 
-				local val = (obj:GetContract() or obj):Get(key) or types.Nil()
+				local val = (obj:GetContract() or obj):Get(types.Literal(key)) or types.Nil()
 				val:SetUpvalue(obj.mutations[key])
 				val:SetUpvalueReference(key)
 				obj.mutations[key]:Mutate(val, creation_scope)

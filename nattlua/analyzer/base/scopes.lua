@@ -188,6 +188,10 @@ return function(META)
 			end
 
 			function META:SetLocalOrEnvironmentValue(key, val, env, scope)
+				if type(key) ~= "table" or not key.Type then
+					local info = debug.getinfo(2)
+					print(info.source:sub(4) .. ":" .. info.currentline)
+				end
 				local upvalue, found_scope = self:FindLocalUpvalue(key, env, scope)
 
 				if upvalue then
@@ -215,7 +219,7 @@ return function(META)
 				if self:GetScope():IsReadOnly() then return end
 
 				if env == "runtime" then
-					self:Warning(key, "_G[\"" .. key:Render() .. "\"] = " .. tostring(val))
+					self:Warning(key:GetNode(), "_G[\"" .. key:GetNode():Render() .. "\"] = " .. tostring(val))
 				end
 
 				if not self:MutateValue(g, key, val, env) then

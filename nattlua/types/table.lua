@@ -1,5 +1,5 @@
-local types = require("nattlua.types.types")
 local Union = require("nattlua.types.union").Union
+local Nil = require("nattlua.types.symbol").Nil
 local Number = require("nattlua.types.number").Number
 local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
@@ -277,7 +277,6 @@ function META:GetKeyUnion() -- never called
 end
 
 function META:Contains(key)
-	key = types.Literal(key)
 	return self:FindKeyValReverse(key)
 end
 
@@ -338,9 +337,9 @@ function META:FindKeyValReverseEqual(key)
 end
 
 function META:Insert(val)
-	self.size = self.size or 1
-	self:Set(self.size, val)
-	self.size = self.size + 1
+	self.size = self.size or Number(1):SetLiteral(true)
+	self:Set(self.size:Copy(), val)
+	self.size:SetData(self.size:GetData() + 1)
 end
 
 function META:GetEnvironmentValues()
@@ -354,9 +353,6 @@ function META:GetEnvironmentValues()
 end
 
 function META:Set(key, val, no_delete)
-	key = types.Literal(key)
-	val = types.Literal(val)
-
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		self["Set" .. key:GetData():sub(2)](self, val)
 		return true
@@ -395,9 +391,6 @@ function META:Set(key, val, no_delete)
 end
 
 function META:SetExplicit(key, val)
-	key = types.Literal(key)
-	val = types.Literal(val)
-
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		self["Set" .. key:GetData():sub(2)](self, val)
 		return true
@@ -424,7 +417,6 @@ function META:SetExplicit(key, val)
 end
 
 function META:Get(key)
-	key = types.Literal(key)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then return self["Get" .. key:GetData():sub(2)](self) end
 
 	if key.Type == "union" then
@@ -446,7 +438,7 @@ function META:Get(key)
 	end
 
 	if (key.Type == "string" or key.Type == "number") and not key:IsLiteral() then
-		local union = Union({types.Nil()})
+		local union = Union({Nil()})
 
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == key.Type then
@@ -651,7 +643,8 @@ function META.Union(A, B)
 end
 
 function META:Call(analyzer, arguments, ...)
-	local __call = self:GetMetaTable() and self:GetMetaTable():Get("__call")
+	local String = require("nattlua.types.string").String
+	local __call = self:GetMetaTable() and self:GetMetaTable():Get(String("__call"):SetLiteral(true))
 
 	if __call then
 		local new_arguments = {self}

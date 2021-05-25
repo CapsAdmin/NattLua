@@ -45,7 +45,7 @@ return function(META)
 		self:FireEvent("newindex", obj, key, val, env)
 
 		if obj:GetMetaTable() then
-			local func = obj:GetMetaTable():Get("__newindex")
+			local func = obj:GetMetaTable():Get(types.Literal("__newindex"))
 
 			if func then
 				if func.Type == "table" then return func:Set(key, val) end

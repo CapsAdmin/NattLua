@@ -6,6 +6,7 @@ local type_errors = require("nattlua.types.error_messages")
 
 local function metatable_function(self, meta_method, l)
 	if l:GetMetaTable() then
+		meta_method = types.Literal(meta_method)
 		local func = l:GetMetaTable():Get(meta_method)
 		if func then return self:Assert(l:GetNode(), self:Call(func, types.Tuple({l})):Get(1)) end
 	end

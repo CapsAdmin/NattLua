@@ -69,7 +69,7 @@ type function enum(tbl)
 	local union = types.Union()
 
 	for key, val in tbl:pairs() do
-		analyzer:SetLocalOrEnvironmentValue(key:GetData(), val, "typesystem")
+		analyzer:SetLocalOrEnvironmentValue(key, val, "typesystem")
 		union:AddType(val)
 	end
 

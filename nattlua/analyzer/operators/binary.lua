@@ -52,7 +52,7 @@ local function metatable_function(self, meta_method, l, r, swap)
 	if swap then
 		l, r = r, l
 	end
-
+	meta_method = types.Literal(meta_method)
 	if r:GetMetaTable() or l:GetMetaTable() then
 		local func = (l:GetMetaTable() and l:GetMetaTable():Get(meta_method)) or
 			(r:GetMetaTable() and r:GetMetaTable():Get(meta_method))

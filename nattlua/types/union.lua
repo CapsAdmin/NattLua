@@ -1,6 +1,5 @@
 local tostring = tostring
 local math = math
-local types = require("nattlua.types.types")
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 local table = require("table")
@@ -183,8 +182,6 @@ function META:GetAtIndex(i)
 end
 
 function META:Get(key, from_table)
-	key = types.Literal(key)
-
 	if from_table then
 		for _, obj in ipairs(self.Data) do
 			if obj.Get then

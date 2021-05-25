@@ -100,7 +100,7 @@ type function pairs(tbl)
 		end
 	end
 
-	local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
+	local next = analyzer:GetLocalOrEnvironmentValue(types.Literal("next"), "typesystem")
 	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 
@@ -136,7 +136,7 @@ type function ipairs(tbl: {[number] = any})
 		end
 	end
 
-	local next = analyzer:GetLocalOrEnvironmentValue("next", "typesystem")
+	local next = analyzer:GetLocalOrEnvironmentValue(types.Literal("next"), "typesystem")
 	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 	return function()
@@ -148,18 +148,18 @@ end
 
 type function require(name: string)
 	if not name:IsLiteral() then return types.Any end
-	local str = name:GetData()
+	local str = name
 	local base_environment = require("nattlua.runtime.base_environment")
 	local val = base_environment:Get(str)
 	if val then return val end
-	if str == "table.new" then return base_environment:Get("table", "typesystem"):Get("new") end
-	if str == "jit.util" then return base_environment:Get("jit", "typesystem"):Get("util") end
-	if str == "jit.opt" then return base_environment:Get("jit", "typesystem"):Get("opt") end
+	if str:GetData() == "table.new" then return base_environment:Get(types.Literal("table"), "typesystem"):Get(types.Literal("new"), "runtime") end
+	if str:GetData() == "jit.util" then return base_environment:Get(types.Literal("jit"), "typesystem"):Get(types.Literal("util"), "runtime") end
+	if str:GetData() == "jit.opt" then return base_environment:Get(types.Literal("jit"), "typesystem"):Get(types.Literal("opt"), "runtime") end
 	if analyzer:GetLocalOrEnvironmentValue(str, "typesystem") then return analyzer:GetLocalOrEnvironmentValue(str, "typesystem") end
 
 	if package.loaders then
 		for _, searcher in ipairs(package.loaders) do
-			local loader = searcher(str)
+			local loader = searcher(str:GetData())
 
 			if type(loader) == "function" then
 				local path = debug.getinfo(loader).source
@@ -377,7 +377,7 @@ type function tostring(val: any)
 
 	if val.Type == "table" then
 		if val:GetMetaTable() then
-			local func = val:GetMetaTable():Get("__tostring")
+			local func = val:GetMetaTable():Get(types.Literal("__tostring"))
 
 			if func then
 				if func.Type == "function" then

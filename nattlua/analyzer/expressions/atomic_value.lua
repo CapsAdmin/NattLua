@@ -6,13 +6,14 @@ local function lookup_value(self, node, env)
 	local obj
 	local err
 	local errors = {}
+	local key = types.Literal(node)
 
 	if env == "typesystem" then
-		obj, err = self:GetLocalOrEnvironmentValue(node, env)
+		obj, err = self:GetLocalOrEnvironmentValue(key, env)
 
 		if not obj then
 			table.insert(errors, err)
-			obj, err = self:GetLocalOrEnvironmentValue(node, "runtime")
+			obj, err = self:GetLocalOrEnvironmentValue(key, "runtime")
 		end
 
 		if not obj then
@@ -21,11 +22,11 @@ local function lookup_value(self, node, env)
 			return types.Nil()
 		end
 	else
-		obj, err = self:GetLocalOrEnvironmentValue(node, env)
+		obj, err = self:GetLocalOrEnvironmentValue(key, env)
 
 		if not obj then
 			table.insert(errors, err)
-			obj, err = self:GetLocalOrEnvironmentValue(node, "typesystem")
+			obj, err = self:GetLocalOrEnvironmentValue(key, "typesystem")
 		end
 
 		if not obj then

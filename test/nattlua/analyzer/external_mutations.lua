@@ -17,7 +17,7 @@ run([[
 
 run[[
     local type function unknown(tbl: {[any] = any} | {} )
-        tbl:Set("foo", "bar")
+        tbl:Set(types.Literal("foo"), types.Literal("bar"))
     end
     
     local x = {}

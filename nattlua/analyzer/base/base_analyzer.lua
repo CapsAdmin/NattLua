@@ -191,11 +191,11 @@ return function(META)
 			local scope_meta = {}
 
 			function scope_meta:__index(key)
-				return self.analyzer:GetLocalOrEnvironmentValue(key, self.env, self.scope)
+				return self.analyzer:GetLocalOrEnvironmentValue(types.Literal(key), self.env, self.scope)
 			end
 
 			function scope_meta:__newindex(key, val)
-				return self.analyzer:SetLocalOrEnvironmentValue(key, val, self.env, self.scope)
+				return self.analyzer:SetLocalOrEnvironmentValue(types.Literal(key), types.Literal(val), self.env, self.scope)
 			end
 
 			function META:GetScopeHelper(scope)

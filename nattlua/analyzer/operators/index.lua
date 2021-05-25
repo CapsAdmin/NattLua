@@ -4,14 +4,14 @@ return function(META)
 		if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then return obj:Get(key) end
 
 		if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then
-			local index = obj:GetMetaTable():Get("__index")
+			local index = obj:GetMetaTable():Get(types.Literal("__index"))
 
 			if index then
 				if
 					index.Type == "table" and
 					(
 						(index:GetContract() or index):Contains(key) or
-						(index:GetMetaTable() and index:GetMetaTable():Contains("__index"))
+						(index:GetMetaTable() and index:GetMetaTable():Contains(types.Literal("__index")))
 					)
 				then
 					return self:IndexOperator(node, index:GetContract() or index, key, env)

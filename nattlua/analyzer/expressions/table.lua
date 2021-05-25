@@ -32,7 +32,7 @@ return function(analyzer, node, env)
 					tbl:Insert(tup:Get(1))
 				else
 					for i = 1, tup:GetMinimumLength() do
-						tbl:Set(tbl:GetLength() + 1, tup:Get(i))
+						tbl:Set(types.Literal(tbl:GetLength() + 1), tup:Get(i))
 					end
 
 					if tup.Remainder then
@@ -43,10 +43,10 @@ return function(analyzer, node, env)
 				end
 			else
 				if node.i then
-					tbl:Insert(val[1])
+					tbl:Insert(types.Literal(val[1]))
 				elseif val then
 					for _, val in ipairs(val) do
-						tbl:Insert(val)
+						tbl:Insert(types.Literal(val))
 					end
 				end
 			end

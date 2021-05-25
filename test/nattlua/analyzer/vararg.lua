@@ -361,7 +361,7 @@ run[[
         foo = foo()
     }
     
-    §assert(analyzer:GetScope():FindValue("a", "runtime"):GetValue():Get("foo").Type ~= "tuple")
+    §assert(analyzer:GetScope():FindValue(types.Literal("a"), "runtime"):GetValue():Get(types.Literal("foo")).Type ~= "tuple")
 ]]
 
 run[[

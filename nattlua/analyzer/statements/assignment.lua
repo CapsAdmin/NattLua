@@ -142,7 +142,7 @@ return function(analyzer, statement)
 		if statement.kind == "local_assignment" then
 			analyzer:CreateLocalValue(exp_key, val, env)
 		elseif statement.kind == "assignment" then
-			local key = left[i]
+			local key = types.Literal(left[i])
 
 			if exp_key.kind == "value" then
 				do -- check for any previous upvalues
