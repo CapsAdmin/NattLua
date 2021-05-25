@@ -1,6 +1,14 @@
 local syntax = require("nattlua.syntax.syntax")
 local NodeToString = require("nattlua.types.string").NodeToString
+local LNumber = require("nattlua.types.number").LNumber
+local Any = require("nattlua.types.any").Any
+local True = require("nattlua.types.symbol").True
+local False = require("nattlua.types.symbol").False
 local Nil = require("nattlua.types.symbol").Nil
+local LString = require("nattlua.types.string").LString
+local String = require("nattlua.types.string").String
+local Number = require("nattlua.types.number").Number
+local Boolean = require("nattlua.types.symbol").Boolean
 local table = require("table")
 
 local function lookup_value(self, node, env)
@@ -95,15 +103,19 @@ return function(analyzer, node, env)
 		end
 
 		if value == "any" then
-			return analyzer:NewType(node, "any")
+			return Any():SetNode(node)
 		elseif value == "inf" then
-			return analyzer:NewType(node, "number", math.huge, true)
+			return LNumber(math.huge):SetNode(node)
 		elseif value == "nil" then
-			return analyzer:NewType(node, "nil")
+			return Nil():SetNode(node)
 		elseif value == "nan" then
-			return analyzer:NewType(node, "number", 0 / 0, true)
-		elseif is_primitive(value) then
-			return analyzer:NewType(node, value)
+			return LNumber(0 / 0):SetNode(node)
+		elseif value == "string" then
+			return String():SetNode(node)
+		elseif value == "number" then
+			return Number():SetNode(node)
+		elseif value == "boolean" then
+			return Boolean():SetNode(node)
 		end
 	end
 
@@ -119,25 +131,25 @@ return function(analyzer, node, env)
 
 	if type == "keyword" then
 		if value == "nil" then
-			return analyzer:NewType(node, "nil", nil, env == "typesystem")
+			return Nil():SetNode(node)
 		elseif value == "true" then
-			return analyzer:NewType(node, "boolean", true, true)
+			return True():SetNode(node)
 		elseif value == "false" then
-			return analyzer:NewType(node, "boolean", false, true)
+			return False():SetNode(node)
 		end
 	end
 
 	if type == "number" then
-		return analyzer:NewType(node, "number", analyzer:StringToNumber(node, value), true)
+		return LNumber(analyzer:StringToNumber(node, value)):SetNode(node)
 	elseif type == "string" then
 		if value:sub(1, 1) == "[" then
 			local start = value:match("(%[[%=]*%[)")
-			return analyzer:NewType(node, "string", value:sub(#start + 1, -#start - 1), true)
+			return LString(value:sub(#start + 1, -#start - 1)):SetNode(node)
 		else
-			return analyzer:NewType(node, "string", value:sub(2, -2), true)
+			return LString(value:sub(2, -2)):SetNode(node)
 		end
 	elseif type == "letter" then
-		return analyzer:NewType(node, "string", value, true)
+		return LString(value):SetNode(node)
 	end
 
 	analyzer:FatalError("unhandled value type " .. type .. " " .. node:Render())
