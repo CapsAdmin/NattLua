@@ -312,11 +312,6 @@ return function(META)
 			node = self:Expression("type_string")
 			node.tokens["$"] = self:ReadTokenLoose("...")
 			node.value = self:ReadType("string")
-		elseif self:IsCurrentValue("[") then
-			node = self:Expression("type_list")
-			node.tokens["["] = self:ReadValue("[")
-			node.expressions = self:ReadTypeExpressionList()
-			node.tokens["]"] = self:ReadValue("]")
 		end
 
 		local first = node
@@ -341,12 +336,6 @@ return function(META)
 					node = self:Expression("postfix_operator")
 					node.left = left
 					node.value = self:ReadTokenLoose()
-				elseif self:IsCurrentValue("[") and self:IsValue("]", 1) then
-					node = self:Expression("type_list")
-					node.tokens["["] = self:ReadValue("[")
-					node.expressions = self:ReadTypeExpressionList()
-					node.tokens["]"] = self:ReadValue("]")
-					node.left = left
 				elseif self:IsCurrentValue("<|") then
 					node = self:ReadTypeCall()
 					node.left = left

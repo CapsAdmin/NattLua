@@ -51,8 +51,6 @@ function META:EmitExpression(node)
 		self:EmitLSXExpression(node)
 	elseif node.kind == "type_table" then
 		self:EmitTableType(node)
-	elseif node.kind == "type_list" then
-		self:EmitTypeList(node)
 	elseif node.kind == "table_expression_value" then
 		self:EmitTableExpressionValue(node)
 	elseif node.kind == "table_key_value" then
@@ -992,8 +990,6 @@ do -- types
 			self:EmitToken(node.value)
 		elseif node.kind == "type_table" then
 			self:EmitTableType(node)
-		elseif node.kind == "type_list" then
-			self:EmitListType(node)
 		elseif node.kind == "table_expression_value" then
 			self:EmitTableExpressionValue(node)
 		elseif node.kind == "table_key_value" then

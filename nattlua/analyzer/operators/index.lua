@@ -1,14 +1,7 @@
 local types = require("nattlua.types.types")
 return function(META)
 	function META:IndexOperator(node, obj, key, env)
-		if
-			obj.Type ~= "table" and
-			obj.Type ~= "tuple" and
-			obj.Type ~= "list" and
-			(obj.Type ~= "string")
-		then
-			return obj:Get(key)
-		end
+		if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then return obj:Get(key) end
 
 		if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then
 			local index = obj:GetMetaTable():Get("__index")

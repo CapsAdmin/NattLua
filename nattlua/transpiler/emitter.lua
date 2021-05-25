@@ -101,8 +101,6 @@ function META:EmitExpression(node, from_assignment)
 		self:EmitLSXExpression(node)
 	elseif node.kind == "type_table" then
 		self:EmitTableType(node)
-	elseif node.kind == "type_list" then
-		self:EmitTypeList(node)
 	elseif node.kind == "table_expression_value" then
 		self:EmitTableExpressionValue(node)
 	elseif node.kind == "table_key_value" then
@@ -1119,25 +1117,6 @@ do -- types
 		self:EmitAnnotation(node)
 	end
 
-	function META:EmitTypeList(node)
-		self:EmitToken(node.tokens["["])
-
-		for i = 1, #node.types do
-			self:EmitTypeExpression(node.types[i])
-
-			if i ~= #node.types then
-				self:EmitToken(node.types[i].tokens[","])
-				self:Whitespace(" ")
-			end
-		end
-
-		self:EmitToken(node.tokens["]"])
-	end
-
-	function META:EmitListType(node)
---        self:EmitTypeList(node)
-    end
-
 	function META:EmitInterfaceType(node)
 		self:EmitToken(node.tokens["interface"])
 		self:EmitExpression(node.key)
@@ -1309,8 +1288,6 @@ do -- types
 			self:EmitToken(node.value)
 		elseif node.kind == "type_table" then
 			self:EmitTableType(node)
-		elseif node.kind == "type_list" then
-			self:EmitListType(node)
 		elseif node.kind == "table_expression_value" then
 			self:EmitTableExpressionValue(node)
 		elseif node.kind == "table_key_value" then

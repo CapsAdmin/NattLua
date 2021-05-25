@@ -4,10 +4,6 @@ local table = require("table")
 local types = require("nattlua.types.types")
 
 local function check_type_against_contract(val, contract)
-	if contract.Type == "list" and val.Type == "table" then
-		val = types.List(val:GetEnvironmentValues())
-	end
-
 	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
 
 	if skip_uniqueness then

@@ -131,7 +131,6 @@ return function(META)
 
 	function META:GetMutatedValue(obj, key, value, env)
 		if env == "typesystem" then return end
-		if obj.Type == "list" then return end
 		local scope = self:GetScope()
 		if scope:IsReadOnly() then return value end
 		key = cast_key(key)

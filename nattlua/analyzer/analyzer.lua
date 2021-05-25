@@ -107,7 +107,6 @@ do
 	local _function = require("nattlua.analyzer.expressions.function")
 	local table = require("nattlua.analyzer.expressions.table")
 	local atomic_value = require("nattlua.analyzer.expressions.atomic_value")
-	local type_list = require("nattlua.analyzer.expressions.list")
 	local _import = require("nattlua.analyzer.expressions.import")
 
 	function META:AnalyzeExpression(node, env)
@@ -141,8 +140,6 @@ do
 			return _function(self, node, env)
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return table(self, node, env)
-		elseif node.kind == "type_list" then
-			return type_list(self, node, env)
 		elseif node.kind == "binary_operator" then
 			return binary_operator(self, node, env)
 		elseif node.kind == "prefix_operator" then
@@ -167,8 +164,6 @@ function META:NewType(node, type, data, literal)
 	if type == "table" then
 		obj = self:Assert(node, types.Table(data))
 		obj.creation_scope = self:GetScope()
-	elseif type == "list" then
-		obj = self:Assert(node, types.List(data))
 	elseif type == "..." then
 		obj = self:Assert(node, types.Tuple(data or {types.Any()}))
 		obj:SetRepeat(math.huge)

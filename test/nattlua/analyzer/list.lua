@@ -104,11 +104,11 @@ test("traditional array", function()
 end)
 
 run[[
-    local a: [1,2,3] = {1,2,3}
+    local a: {1,2,3} = {1,2,3}
     type_assert(a[1], 1)
 ]]
 
 run[[
-    local a: string[]
+    local a: {[number]=string}
     type_assert(a[1], _ as string)
 ]]

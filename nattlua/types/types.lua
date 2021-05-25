@@ -30,7 +30,6 @@ function types.Initialize()
 	types.Table = require("nattlua.types.table").Table
 	types.Union = require("nattlua.types.union").Union
 	types.Nilable = require("nattlua.types.union").Nilable
-	types.List = require("nattlua.types.list").List
 	types.Tuple = require("nattlua.types.tuple").Tuple
 	types.Number = require("nattlua.types.number").Number
 	types.Function = require("nattlua.types.function").Function
