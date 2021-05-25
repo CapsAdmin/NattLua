@@ -1,6 +1,8 @@
 local tostring = tostring
 local table = require("table")
-local types = require("nattlua.types.types")
+local Union = require("nattlua.types.union").Union
+local Any = require("nattlua.types.any").Any
+local Tuple = require("nattlua.types.tuple").Tuple
 local ipairs = _G.ipairs
 local locals = ""
 
@@ -85,7 +87,7 @@ return function(analyzer, node, env)
 			if val:GetContract() or val.Self then
 				table.insert(args, 1, val.Self or val)
 			else
-				table.insert(args, 1, types.Union({types.Any(), val}))
+				table.insert(args, 1, Union({Any(), val}))
 			end
 		end
 	end
@@ -108,7 +110,7 @@ return function(analyzer, node, env)
 				local tup
 
 				if type_exp.explicit_type then
-					tup = types.Tuple(
+					tup = Tuple(
 							{
 								analyzer:AnalyzeExpression(type_exp.explicit_type, "typesystem"),
 							}
@@ -128,8 +130,8 @@ return function(analyzer, node, env)
 		analyzer:PopScope()
 	end
 
-	args = types.Tuple(args)
-	ret = types.Tuple(ret)
+	args = Tuple(args)
+	ret = Tuple(ret)
 	local func
 
 	if env == "typesystem" then

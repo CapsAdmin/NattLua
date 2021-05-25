@@ -1,6 +1,10 @@
 local ipairs = ipairs
 local tostring = tostring
-local types = require("nattlua.types.types")
+local LString = require("nattlua.types.string").LString
+local Any = require("nattlua.types.any").Any
+local Union = require("nattlua.types.union").Union
+local Tuple = require("nattlua.types.tuple").Tuple
+
 return function(META)
 	function META:NewIndexOperator(node, obj, key, val, env)
 		if obj.Type == "union" then
@@ -8,9 +12,9 @@ return function(META)
             -- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
             -- log(x.foo) << no error, because now x has no field nil
             
-            local new_union = types.Union()
-			local truthy_union = types.Union()
-			local falsy_union = types.Union()
+            local new_union = Union()
+			local truthy_union = Union()
+			local falsy_union = Union()
 
 			for _, v in ipairs(obj:GetData()) do
 				local ok, err = self:NewIndexOperator(node, v, key, val, env)
@@ -37,7 +41,7 @@ return function(META)
 			if arg and not arg:GetContract() and not arg.Self then
 				val.called = true
 				val = val:Copy()
-				val:GetArguments():Set(1, types.Union({types.Any(), obj}))
+				val:GetArguments():Set(1, Union({Any(), obj}))
 				self:CallMeLater(val, val:GetArguments(), val:GetNode(), true)
 			end
 		end
@@ -45,11 +49,11 @@ return function(META)
 		self:FireEvent("newindex", obj, key, val, env)
 
 		if obj:GetMetaTable() then
-			local func = obj:GetMetaTable():Get(types.LString("__newindex"))
+			local func = obj:GetMetaTable():Get(LString("__newindex"))
 
 			if func then
 				if func.Type == "table" then return func:Set(key, val) end
-				if func.Type == "function" then return self:Assert(node, self:Call(func, types.Tuple({obj, key, val}), key:GetNode())) end
+				if func.Type == "function" then return self:Assert(node, self:Call(func, Tuple({obj, key, val}), key:GetNode())) end
 			end
 		end
 

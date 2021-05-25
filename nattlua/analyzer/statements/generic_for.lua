@@ -1,6 +1,8 @@
 local table = require("table")
 local ipairs = ipairs
-local types = require("nattlua.types.types")
+local Tuple = require("nattlua.types.tuple").Tuple
+local Union = require("nattlua.types.union").Union
+local Nil = require("nattlua.types.symbol").Nil
 return function(analyzer, statement)
 	local args = analyzer:AnalyzeExpressions(statement.expressions)
 	local obj = table.remove(args, 1)
@@ -15,7 +17,7 @@ return function(analyzer, statement)
 	local uncertain_break = nil
 
 	for i = 1, 1000 do
-		local values = analyzer:Assert(statement.expressions[1], analyzer:Call(obj, types.Tuple(args), statement.expressions[1]))
+		local values = analyzer:Assert(statement.expressions[1], analyzer:Call(obj, Tuple(args), statement.expressions[1]))
 
 		if
 			not values:Get(1) or
@@ -29,7 +31,7 @@ return function(analyzer, statement)
 			returned_key = values:Get(1)
 
 			if not returned_key:IsLiteral() then
-				returned_key = types.Union({types.Symbol(nil), returned_key})
+				returned_key = Union({Nil(), returned_key})
 			end
 
 			analyzer:CreateAndPushScope()

@@ -3,7 +3,6 @@ local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
 local Union = require("nattlua.types.union").Union
-local types = require("nattlua.types.types")
 local setmetatable = _G.setmetatable
 local META = {}
 META.__index = META

@@ -2,6 +2,10 @@ local ipairs = ipairs
 local type = type
 local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
+local Nil = require("nattlua.types.symbol").Nil
+local Tuple = require("nattlua.types.tuple").Tuple
+local Union = require("nattlua.types.union").Union
+local MutationTracker = require("nattlua.analyzer.base.mutation_tracker")
 
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
@@ -16,8 +20,6 @@ local function cast(val)
 	return val
 end
 
-local types = require("nattlua.types.types")
-local MutationTracker = require("nattlua.analyzer.base.mutation_tracker")
 return function(META)
 	function META:AnalyzeStatements(statements)
 		for _, statement in ipairs(statements) do
@@ -41,16 +43,16 @@ return function(META)
 		local scope = self:GetScope()
 		scope:MakeFunctionScope()
 		self:AnalyzeStatements(statement.statements)
-		local union = types.Union({})
+		local union = Union({})
 
 		for _, ret in ipairs(scope:GetReturnTypes()) do
-			local tup = types.Tuple(ret.types)
+			local tup = Tuple(ret.types)
 			tup:SetNode(ret.node)
 			union:AddType(tup)
 		end
 
 		if scope.uncertain_function_return or #scope:GetReturnTypes() == 0 then
-			local tup = types.Tuple({types.Nil()})
+			local tup = Tuple({Nil()})
 			tup:SetNode(statement)
 			union:AddType(tup)
 		end
@@ -133,7 +135,7 @@ return function(META)
 					creation_scope = scope:GetRoot()
 				end
 
-				local val = (obj:GetContract() or obj):Get(cast(key)) or types.Nil()
+				local val = (obj:GetContract() or obj):Get(cast(key)) or Nil()
 				val:SetUpvalue(obj.mutations[key])
 				val:SetUpvalueReference(key)
 				obj.mutations[key]:Mutate(val, creation_scope)

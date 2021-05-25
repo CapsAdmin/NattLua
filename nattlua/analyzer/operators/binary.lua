@@ -6,7 +6,6 @@ local table = require("table")
 local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
 local Any = require("nattlua.types.any").Any
-local String = require("nattlua.types.string").String
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local True = require("nattlua.types.symbol").True

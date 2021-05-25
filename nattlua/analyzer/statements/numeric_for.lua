@@ -1,7 +1,9 @@
 local ipairs = ipairs
 local math = math
 local assert = assert
-local types = require("nattlua.types.types")
+local True = require("nattlua.types.symbol").True
+local False = require("nattlua.types.symbol").False
+local Union = require("nattlua.types.union").Union
 local binary_operator = require("nattlua.analyzer.operators.binary")
 
 local function get_largest_number(obj)
@@ -32,7 +34,7 @@ return function(analyzer, statement)
 	local literal_init = get_largest_number(init)
 	local literal_max = get_largest_number(max)
 	local literal_step = not step and 1 or get_largest_number(step)
-	local condition = types.Union()
+	local condition = Union()
 
 	if literal_init and literal_max then
 		-- also check step
@@ -45,8 +47,8 @@ return function(analyzer, statement)
 			"<="
 		))
 	else
-		condition:AddType(types.Symbol(true))
-		condition:AddType(types.Symbol(false))
+		condition:AddType(True())
+		condition:AddType(False())
 	end
 
 	statement.identifiers[1].inferred_type = init

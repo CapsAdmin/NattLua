@@ -1,6 +1,6 @@
-if _G.DISABLE_BASE_ENV then return require("nattlua.types.types").Table({}) end
+if _G.DISABLE_BASE_ENV then return require("nattlua.types.table").Table({}) end
 local nl = require("nattlua")
-local types = require("nattlua.types.types")
+local LString = require("nattlua.types.string").LString
 local compiler = assert(nl.File("nattlua/definitions/index.nlua"))
 assert(compiler:Lex())
 assert(compiler:Parse())

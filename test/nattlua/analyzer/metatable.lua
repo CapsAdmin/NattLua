@@ -1,5 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
+local String = T.String
 
 test("index function", function()
     local analyzer = run[[
@@ -7,7 +8,7 @@ test("index function", function()
         local a = t.lol
     ]]
 
-    local a = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime")
     equal(1, a:GetData())
 
     run[[
@@ -35,10 +36,10 @@ test("basic inheritance", function()
         local a, b = obj:Test(1)
     ]]
 
-    local obj = analyzer:GetLocalOrEnvironmentValue(types.LString("obj"), "runtime")
+    local obj = analyzer:GetLocalOrEnvironmentValue(String("obj"), "runtime")
 
-    local a = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
-    local b = analyzer:GetLocalOrEnvironmentValue(types.LString("b"), "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime")
+    local b = analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime")
 
     equal(2, a:GetData())
     equal(3, b:GetData())
@@ -58,9 +59,9 @@ test("__call method", function()
         local lol = obj(100,2,3)
     ]]
 
-    local obj = analyzer:GetLocalOrEnvironmentValue(types.LString("obj"), "runtime")
+    local obj = analyzer:GetLocalOrEnvironmentValue(String("obj"), "runtime")
 
-    equal(105, analyzer:GetLocalOrEnvironmentValue(types.LString("lol"), "runtime"):GetData())
+    equal(105, analyzer:GetLocalOrEnvironmentValue(String("lol"), "runtime"):GetData())
 end)
 
 test("__call method should not mess with scopes", function()
@@ -75,7 +76,7 @@ test("__call method should not mess with scopes", function()
         local a = setmetatable({}, META)(100,2,3)
     ]]
 
-    local a = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime")
 
     equal(105, a:GetData())
 end)
@@ -94,7 +95,7 @@ test("vector test", function()
         local v = Vector(123).lol
     ]]
 
-    local v = analyzer:GetLocalOrEnvironmentValue(types.LString("v"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(String("v"), "runtime")
     equal(123, v:GetData())
 end)
 
@@ -117,9 +118,9 @@ test("vector test2", function()
         local x, y, z = v.x, v.y, v.z
     ]]
 
-    local x = assert(analyzer:GetLocalOrEnvironmentValue(types.LString("x"), "runtime"))
-    local y = assert(analyzer:GetLocalOrEnvironmentValue(types.LString("y"), "runtime"))
-    local z = assert(analyzer:GetLocalOrEnvironmentValue(types.LString("z"), "runtime"))
+    local x = assert(analyzer:GetLocalOrEnvironmentValue(String("x"), "runtime"))
+    local y = assert(analyzer:GetLocalOrEnvironmentValue(String("y"), "runtime"))
+    local z = assert(analyzer:GetLocalOrEnvironmentValue(String("z"), "runtime"))
 
     equal(101, x:GetData())
     equal(102, y:GetData())

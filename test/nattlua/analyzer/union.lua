@@ -1,8 +1,8 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
+local String = T.String
 test("smoke", function()
-    local a = run[[local type a = 1337 | 8888]]:GetLocalOrEnvironmentValue(types.LString("a"), "typesystem")
+    local a = run[[local type a = 1337 | 8888]]:GetLocalOrEnvironmentValue(String("a"), "typesystem")
     equal(2, a:GetLength())
     equal(1337, a:GetData()[1]:GetData())
     equal(8888, a:GetData()[2]:GetData())
@@ -13,7 +13,7 @@ test("union operator", function()
         local type a = 1337 | 888
         local type b = 666 | 777
         local type c = a | b
-    ]]:GetLocalOrEnvironmentValue(types.LString("c"), "typesystem")
+    ]]:GetLocalOrEnvironmentValue(String("c"), "typesystem")
     equal(4, a:GetLength())
 end)
 
@@ -52,14 +52,14 @@ test("is literal", function()
     local a = run[[
         local type a = 1 | 2 | 3
     ]]
-    assert(a:GetLocalOrEnvironmentValue(types.LString("a"), "typesystem"):IsLiteral() == false)
+    assert(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral() == false)
 end)
 
 test("is not literal", function()
     local a = run[[
         local type a = 1 | 2 | 3 | string
     ]]
-    assert(a:GetLocalOrEnvironmentValue(types.LString("a"), "typesystem"):IsLiteral() == false)
+    assert(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral() == false)
 end)
 
 run[[

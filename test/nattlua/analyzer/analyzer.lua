@@ -1,6 +1,7 @@
 local T = require("test.helpers")
 local R = T.RunCode
 local E = T.RunCode
+local String = T.String
 
 -- check that type assert works
 E("type_assert(1, 2)", "expected.-2 got 1")
@@ -94,7 +95,7 @@ test("escape comments", function()
 end)
 
 test("runtime scopes", function()
-    local v = R("local a = 1"):GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
+    local v = R("local a = 1"):GetLocalOrEnvironmentValue(String("a"), "runtime")
     equal(true, v.Type == "number")
 end)
 
@@ -112,7 +113,7 @@ end)
 test("runtime block scopes", function()
 
     local analyzer, syntax_tree = R("do local a = 1 end")
-    equal(false, (syntax_tree.environments.runtime:Get(types.LString("a"))))
+    equal(false, (syntax_tree.environments.runtime:Get(String("a"))))
     equal(1, analyzer:GetScope():GetChildren()[1].upvalues.runtime.map.a:GetValue():GetData()) -- TODO: awkward access
 
     local v = R[[
@@ -120,7 +121,7 @@ test("runtime block scopes", function()
         do
             local a = 2
         end
-    ]]:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("a"), "runtime")
 
     equal(v:GetData(), 1)
 end)
@@ -131,8 +132,8 @@ test("typesystem differs from runtime", function()
         local type a = 2
     ]]
 
-    equal(analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime"):GetData(), 1)
-    equal(analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "typesystem"):GetData(), 2)
+    equal(analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData(), 1)
+    equal(analyzer:GetLocalOrEnvironmentValue(String("a"), "typesystem"):GetData(), 2)
 end)
 
 test("global types", function()
@@ -144,7 +145,7 @@ test("global types", function()
         type a = nil
     ]]
 
-    equal(2, analyzer:GetLocalOrEnvironmentValue(types.LString("b"), "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime"):GetData())
 end)
 
 test("constant types", function()
@@ -153,8 +154,8 @@ test("constant types", function()
         local b: number
     ]]
 
-    equal(true, analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime"):IsLiteral())
-    equal(false, analyzer:GetLocalOrEnvironmentValue(types.LString("b"), "runtime"):IsLiteral())
+    equal(true, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):IsLiteral())
+    equal(false, analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime"):IsLiteral())
 end)
 
 -- literal + vague = vague
@@ -165,7 +166,7 @@ test("1 + number = number", function()
         local c = a + b
     ]]
 
-    local v = analyzer:GetLocalOrEnvironmentValue(types.LString("c"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime")
     equal(true, v.Type == ("number"))
     equal(false, v:IsLiteral())
 end)
@@ -177,7 +178,7 @@ test("1 + 2 = 3", function()
         local c = a + b
     ]]
 
-    local v = analyzer:GetLocalOrEnvironmentValue(types.LString("c"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime")
     equal(true, v.Type == ("number"))
     equal(3, v:GetData())
 end)
@@ -190,7 +191,7 @@ test("function return value", function()
         local a = test()
     ]]
 
-    local v = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime")
     equal(6, v:GetData())
 end)
 
@@ -202,9 +203,9 @@ test("multiple function return values", function()
         local a,b,c = test()
     ]]
 
-    equal(1, analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime"):GetData())
-    equal(2, analyzer:GetLocalOrEnvironmentValue(types.LString("b"), "runtime"):GetData())
-    equal(3, analyzer:GetLocalOrEnvironmentValue(types.LString("c"), "runtime"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime"):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime"):GetData())
 end)
 
 
@@ -217,7 +218,7 @@ test("scopes shouldn't leak", function()
         local _, a = a:test(1, 2)
     ]]
 
-    equal(3, analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime"):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
 end)
 
 test("explicitly annotated variables need to be set properly", function()
@@ -236,8 +237,8 @@ test("functions can modify parent scope", function()
         test()
     ]]
 
-    equal(2, analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "runtime"):GetData())
-    equal(1, analyzer:GetLocalOrEnvironmentValue(types.LString("c"), "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime"):GetData())
 end)
 
 test("uncalled functions should be called", function()
@@ -256,15 +257,15 @@ test("uncalled functions should be called", function()
             return a + b
         end
     ]]
-    local lib = analyzer:GetLocalOrEnvironmentValue(types.LString("lib"), "runtime")
+    local lib = analyzer:GetLocalOrEnvironmentValue(String("lib"), "runtime")
 
-    equal("number", assert(lib:Get(types.LString("foo1")):GetArguments():Get(1):GetType("number")).Type)
-    equal("number", assert(lib:Get(types.LString("foo1")):GetArguments():Get(2):GetType("number")).Type)
-    equal("number", assert(lib:Get(types.LString("foo1")):GetReturnTypes():Get(1)).Type)
+    equal("number", assert(lib:Get(String("foo1")):GetArguments():Get(1):GetType("number")).Type)
+    equal("number", assert(lib:Get(String("foo1")):GetArguments():Get(2):GetType("number")).Type)
+    equal("number", assert(lib:Get(String("foo1")):GetReturnTypes():Get(1)).Type)
 
-    equal("number", lib:Get(types.LString("foo2")):GetArguments():Get(1):GetType("number").Type)
-    equal("number", lib:Get(types.LString("foo2")):GetArguments():Get(2):GetType("number").Type)
-    equal("number", lib:Get(types.LString("foo2")):GetReturnTypes():Get(1):GetType("number").Type)
+    equal("number", lib:Get(String("foo2")):GetArguments():Get(1):GetType("number").Type)
+    equal("number", lib:Get(String("foo2")):GetArguments():Get(2):GetType("number").Type)
+    equal("number", lib:Get(String("foo2")):GetReturnTypes():Get(1):GetType("number").Type)
 end)
 
 R[[

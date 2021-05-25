@@ -1,8 +1,8 @@
 local table = require("table")
 local tostring = tostring
 local ipairs = ipairs
-local types = require("nattlua.types.types")
-local Tuple = types.Tuple
+local Tuple = require("nattlua.types.tuple").Tuple
+local Any = require("nattlua.types.any").Any
 return function(analyzer, node, env)
 	local env = node.type_call and "typesystem" or env
 	local callable = analyzer:AnalyzeExpression(node.left, env)
@@ -22,7 +22,7 @@ return function(analyzer, node, env)
 
 	if callable.Type == "symbol" then
 		analyzer:Error(node, tostring(node.left:Render()) .. " is " .. tostring(callable:GetData()))
-		return types.Tuple({types.Any()})
+		return Tuple({Any()})
 	end
 
 	local types = analyzer:AnalyzeExpressions(node.expressions, env)

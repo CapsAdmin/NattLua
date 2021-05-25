@@ -2,9 +2,19 @@ local tostring = tostring
 local error = error
 local setmetatable = setmetatable
 local ipairs = ipairs
-local types = require("nattlua.types.types")
 local math = require("math")
-types.Initialize()
+local Tuple = require("nattlua.types.tuple").Tuple
+local Any = require("nattlua.types.any").Any
+local Table = require("nattlua.types.table").Table
+local Number = require("nattlua.types.number").Number
+local String = require("nattlua.types.string").String
+local Symbol = require("nattlua.types.symbol").Symbol
+local Boolean = require("nattlua.types.symbol").Boolean
+local Function = require("nattlua.types.function").Function
+local Nil = require("nattlua.types.symbol").Nil
+
+require("nattlua.types.types").Initialize()
+
 local META = {}
 META.__index = META
 META.OnInitialize = {}
@@ -15,7 +25,7 @@ require("nattlua.analyzer.operators.newindex")(META)
 require("nattlua.analyzer.operators.call")(META)
 
 function META:AnalyzeRootStatement(statement, ...)
-	local argument_tuple = ... and types.Tuple({...}) or types.Tuple({...}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
+	local argument_tuple = ... and Tuple({...}) or Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 	self:CreateAndPushFunctionScope()
 	self:PushEnvironment(statement, nil, "runtime")
 	self:PushEnvironment(statement, nil, "typesystem")
@@ -158,31 +168,32 @@ do
 	end
 end
 
+
 function META:NewType(node, type, data, literal)
 	local obj
 
 	if type == "table" then
-		obj = self:Assert(node, types.Table(data))
+		obj = self:Assert(node, Table(data))
 		obj.creation_scope = self:GetScope()
 	elseif type == "..." then
-		obj = self:Assert(node, types.Tuple(data or {types.Any()}))
+		obj = self:Assert(node, Tuple(data or {Any()}))
 		obj:SetRepeat(math.huge)
 	elseif type == "number" then
-		obj = self:Assert(node, types.Number(data):SetLiteral(literal))
+		obj = self:Assert(node, Number(data):SetLiteral(literal))
 	elseif type == "string" then
-		obj = self:Assert(node, types.String(data):SetLiteral(literal))
+		obj = self:Assert(node, String(data):SetLiteral(literal))
 	elseif type == "boolean" then
 		if literal then
-			obj = types.Symbol(data)
+			obj = Symbol(data)
 		else
-			obj = types.Boolean()
+			obj = Boolean()
 		end
 	elseif type == "nil" then
-		obj = self:Assert(node, types.Symbol(nil))
+		obj = self:Assert(node, Nil())
 	elseif type == "any" then
-		obj = self:Assert(node, types.Any())
+		obj = self:Assert(node, Any())
 	elseif type == "function" then
-		obj = self:Assert(node, types.Function(data))
+		obj = self:Assert(node, Function(data))
 		obj:SetNode(node)
 
 		if node.statements then

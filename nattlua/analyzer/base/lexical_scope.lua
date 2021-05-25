@@ -4,8 +4,7 @@ local error = error
 local tostring = tostring
 local assert = assert
 local setmetatable = setmetatable
-local types = require("nattlua.types.types")
-local type = _G.type
+local Union = require("nattlua.types.union").Union
 local table_insert = table.insert
 local table = require("table")
 local type = _G.type
@@ -196,7 +195,7 @@ function META:Merge(scope)
 		local b = scope.upvalues.runtime.list[i]
 
 		if a and b and a.key == b.key then
-			a:SetValue(types.Union({a:GetValue(), b:GetValue()}))
+			a:SetValue(Union({a:GetValue(), b:GetValue()}))
 			a:GetValue():SetNode(b:GetValue():GetNode())
 			a:GetValue():SetTokenLabelSource(b:GetValue():GetTokenLabelSource())
 			self.upvalues.runtime.map[a.key]:GetValue(a:GetValue())

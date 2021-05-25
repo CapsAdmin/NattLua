@@ -1,5 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
+local String = T.String
 
 test("should return a tuple with types", function()
     local analyzer = run([[
@@ -10,9 +11,9 @@ test("should return a tuple with types", function()
         local type a,b,c = test()
     ]])
 
-    equal(1, analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "typesystem"):GetData())
-    equal(2, analyzer:GetLocalOrEnvironmentValue(types.LString("b"), "typesystem"):GetData())
-    equal(3, analyzer:GetLocalOrEnvironmentValue(types.LString("c"), "typesystem"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a"), "typesystem"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "typesystem"):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c"), "typesystem"):GetData())
 end)
 
 test("should be able to error", function()
@@ -273,9 +274,9 @@ test("type functions should return a tuple with types", function()
         local type a,b,c = test()
     ]])
 
-    equal(1, analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "typesystem"):GetData())
-    equal(2, analyzer:GetLocalOrEnvironmentValue(types.LString("b"), "typesystem"):GetData())
-    equal(3, analyzer:GetLocalOrEnvironmentValue(types.LString("c"), "typesystem"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a"), "typesystem"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "typesystem"):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c"), "typesystem"):GetData())
 end)
 
 run[[

@@ -6,7 +6,10 @@ local tostring = tostring
 local debug = debug
 local print = print
 local string = require("string")
-local types = require("nattlua.types.types")
+local Tuple = require("nattlua.types.tuple").Tuple
+local Union = require("nattlua.types.union").Union
+local Nil = require("nattlua.types.symbol").Nil
+local Any = require("nattlua.types.any").Any
 local type_errors = require("nattlua.types.error_messages")
 return function(META)
 	function META:LuaTypesToTuple(node, tps)
@@ -23,8 +26,8 @@ return function(META)
 						"function",
 						{
 							lua_function = v,
-							arg = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
-							ret = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
+							arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+							ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
 						},
 						true
 					)
@@ -35,7 +38,7 @@ return function(META)
 		end
 
 		if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
-		return types.Tuple(tbl)
+		return Tuple(tbl)
 	end
 
 	function META:AnalyzeFunctionBody(obj, function_node, arguments, env)
@@ -172,7 +175,7 @@ return function(META)
 			)
 		end
 
-		local ret = types.Tuple({})
+		local ret = Tuple({})
 
 		for _, tuple in ipairs(tuples) do
 			local len = tuple:GetMinimumLength()
@@ -188,7 +191,7 @@ return function(META)
 						if existing.Type == "union" then
 							existing:AddType(v)
 						else
-							ret:Set(i, types.Union({v, existing}))
+							ret:Set(i, Union({v, existing}))
 						end
 					else
 						ret:Set(i, v)
@@ -224,7 +227,7 @@ return function(META)
 
 			if not arg then
 				if contract:IsFalsy() then
-					arg = types.Nil()
+					arg = Nil()
 					ok = true
 				else
 					ok, reason = type_errors.other(
@@ -353,8 +356,8 @@ return function(META)
 							self:Error(call_node, "cannot mutate argument with contract " .. tostring(arg:GetContract()))
 						else
 							for _, keyval in ipairs(arg:GetData()) do
-								keyval.key = types.Union({types.Any(), keyval.key})
-								keyval.val = types.Union({types.Any(), keyval.val})
+								keyval.key = Union({Any(), keyval.key})
+								keyval.val = Union({Any(), keyval.val})
 							end
 						end
 					end
@@ -389,8 +392,8 @@ return function(META)
 			for i, arg in ipairs(arguments:GetData()) do
 				if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
 					for _, keyval in ipairs(arg:GetData()) do
-						keyval.key = types.Union({types.Any(), keyval.key})
-						keyval.val = types.Union({types.Any(), keyval.val})
+						keyval.key = Union({Any(), keyval.key})
+						keyval.val = Union({Any(), keyval.val})
 					end
 
 					if self.config.external_mutation then
@@ -423,7 +426,7 @@ return function(META)
 			if not return_contract and function_node.return_types then
 				self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 				self:PushPreferTypesystem(true)
-				return_contract = types.Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
+				return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
 				self:PopPreferTypesystem()
 				self:PopScope()
 			end
@@ -518,7 +521,7 @@ return function(META)
 				if obj.explicit_return then
 					return obj:GetReturnTypes():Copy()
 				else
-					return types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
+					return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 				end
 			end
 		end

@@ -1,6 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
+local String = T.String
 
 
 run[[
@@ -86,7 +86,7 @@ test("runtime reassignment", function()
         do
             a = 2
         end
-    ]]:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("a"), "runtime")
 
     equal(v:GetData(), 2)
 
@@ -95,7 +95,7 @@ test("runtime reassignment", function()
         if true then
             a = 2
         end
-    ]]:GetLocalOrEnvironmentValue(types.LString("a"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("a"), "runtime")
 
     equal(v:GetData(), 2)
 end)

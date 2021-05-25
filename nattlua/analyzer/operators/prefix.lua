@@ -1,12 +1,14 @@
 local ipairs = ipairs
 local error = error
 local tostring = tostring
-local types = require("nattlua.types.types")
+local Union = require("nattlua.types.union").Union
+local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
+local LString = require("nattlua.types.string").LString
 
 local function metatable_function(self, meta_method, l)
 	if l:GetMetaTable() then
-		meta_method = types.LString(meta_method)
+		meta_method = LString(meta_method)
 		local func = l:GetMetaTable():Get(meta_method)
 		if func then return self:Assert(l:GetNode(), self:Call(func, types.Tuple({l})):Get(1)) end
 	end
@@ -16,13 +18,13 @@ local function prefix_operator(analyzer, node, l, env)
 	local op = node.value.value
 
 	if l.Type == "tuple" then
-		l = l:Get(1) or types.Nil()
+		l = l:Get(1) or Nil()
 	end
 
 	if l.Type == "union" then
-		local new_union = types.Union()
-		local truthy_union = types.Union()
-		local falsy_union = types.Union()
+		local new_union = Union()
+		local truthy_union = Union()
+		local falsy_union = Union()
 
 		for _, l in ipairs(l:GetData()) do
 			local res, err = prefix_operator(analyzer, node, l, env)

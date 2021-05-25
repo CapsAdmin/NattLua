@@ -9,7 +9,9 @@ local tostring = tostring
 local debug = debug
 local io = io
 local load = loadstring or load
-local types = require("nattlua.types.types")
+local LString = require("nattlua.types.string").LString
+local Tuple = require("nattlua.types.tuple").Tuple
+local Nil = require("nattlua.types.symbol").Nil
 local table = require("table")
 return function(META)
 	function META:StringToNumber(node, str)
@@ -59,7 +61,7 @@ return function(META)
 
 			if self and self.Self then
 				local self = self.Self
-				local new_tup = types.Tuple({})
+				local new_tup = Tuple({})
 
 				for i, obj in ipairs(tup:GetData()) do
 					if i == 1 then
@@ -82,7 +84,7 @@ return function(META)
 					self:SetMetaTable(meta)
 				end
 
-				local new_tup = types.Tuple({})
+				local new_tup = Tuple({})
 
 				for i, obj in ipairs(tup:GetData()) do
 					if i == 1 then
@@ -191,11 +193,11 @@ return function(META)
 			local scope_meta = {}
 
 			function scope_meta:__index(key)
-				return self.analyzer:GetLocalOrEnvironmentValue(types.LString(key), self.env, self.scope)
+				return self.analyzer:GetLocalOrEnvironmentValue(LString(key), self.env, self.scope)
 			end
 
 			function scope_meta:__newindex(key, val)
-				return self.analyzer:SetLocalOrEnvironmentValue(types.LString(key), types.LString(val), self.env, self.scope)
+				return self.analyzer:SetLocalOrEnvironmentValue(LString(key), LString(val), self.env, self.scope)
 			end
 
 			function META:GetScopeHelper(scope)
@@ -217,7 +219,7 @@ return function(META)
 
 		function META:CallLuaTypeFunction(node, func, scope, ...)
 			_G.nl = require("nattlua")
-			_G.types = types
+			_G.types = require("nattlua.types.types")
 			_G.analyzer = self
 			_G.env = self:GetScopeHelper(scope)
 			local res = {pcall(func, ...)}
@@ -252,7 +254,7 @@ return function(META)
 			end
 
 			if res[1] == nil then
-				res[1] = types.Nil()
+				res[1] = Nil()
 			end
 
 			return table.unpack(res)
@@ -346,8 +348,7 @@ return function(META)
 
 		do
 			local guesses = {
-					{pattern = "count", type = "number"},
-				--{pattern = "tbl", type = "table", ctor = function(obj) obj:Set(types.Any(), types.Any()) end},
+				{pattern = "count", type = "number"},
 				{
 						pattern = "str",
 						type = "string",

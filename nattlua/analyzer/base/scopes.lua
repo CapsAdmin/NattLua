@@ -2,13 +2,13 @@ local type = type
 local ipairs = ipairs
 local tostring = tostring
 local LexicalScope = require("nattlua.analyzer.base.lexical_scope")
-local types = require("nattlua.types.types")
+local Table = require("nattlua.types.table").Table
 local table = require("table")
 return function(META)
 	table.insert(META.OnInitialize, function(self)
 		self.default_environment = {
-			runtime = types.Table(),
-			typesystem = types.Table(),
+			runtime = Table(),
+			typesystem = Table(),
 		}
 		self.environments = {runtime = {}, typesystem = {}}
 		self.scope_stack = {}
