@@ -1,5 +1,5 @@
 local _function = require("nattlua.analyzer.expressions.function")
-local types = require("nattlua.types.types")
+local NodeToString = require("nattlua.types.string").NodeToString
 return function(analyzer, statement)
 	if
 		statement.kind == "local_function" or
@@ -34,7 +34,7 @@ return function(analyzer, statement)
 			local val = _function(analyzer, statement, env)
 			analyzer:NewIndexOperator(statement, obj, key, val, env)
 		else
-			local key = types.Literal(key)
+			local key = NodeToString(key)
 			local existing_type = env == "runtime" and analyzer:GetLocalOrEnvironmentValue(key, "typesystem")
 			local val = existing_type or _function(analyzer, statement, env)
 			analyzer:SetLocalOrEnvironmentValue(key, val, env)

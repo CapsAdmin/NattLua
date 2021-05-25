@@ -11,12 +11,6 @@ function types.Literal(val)
 		return types.Symbol(val)
 	elseif type(val) == "number" then
 		return types.Number(val):SetLiteral(true)
-	elseif type(val) == "table" then
-		if val.kind == "value" then return types.String(val.value.value):SetLiteral(true):SetNode(val) end
-
-		if not val.Type then
-			error("cannot cast" .. tostring(val), 2)
-		end
 	end
 
 	return val

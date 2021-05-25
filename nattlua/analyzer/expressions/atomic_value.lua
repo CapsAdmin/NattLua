@@ -1,12 +1,13 @@
 local syntax = require("nattlua.syntax.syntax")
-local types = require("nattlua.types.types")
+local NodeToString = require("nattlua.types.string").NodeToString
+local Nil = require("nattlua.types.symbol").Nil
 local table = require("table")
 
 local function lookup_value(self, node, env)
 	local obj
 	local err
 	local errors = {}
-	local key = types.Literal(node)
+	local key = NodeToString(node)
 
 	if env == "typesystem" then
 		obj, err = self:GetLocalOrEnvironmentValue(key, env)
@@ -19,7 +20,7 @@ local function lookup_value(self, node, env)
 		if not obj then
 			table.insert(errors, err)
 			self:Error(node, errors)
-			return types.Nil()
+			return Nil()
 		end
 	else
 		obj, err = self:GetLocalOrEnvironmentValue(key, env)
@@ -86,8 +87,7 @@ return function(analyzer, node, env)
 
 			if
 				analyzer.left_assigned and
-				analyzer.left_assigned.kind == "value" and
-				analyzer.left_assigned.value.value == value and
+				analyzer.left_assigned:GetData() == value and
 				not is_primitive(value)
 			then
 				return current_table

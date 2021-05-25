@@ -1,6 +1,6 @@
 local tostring = tostring
 local ipairs = ipairs
-local types = require("nattlua.types.types")
+local NodeToString = require("nattlua.types.string").NodeToString
 return function(analyzer, statement)
 	local env = statement.environment or "runtime"
 	local obj = analyzer:AnalyzeExpression(statement.right, env)
@@ -18,7 +18,7 @@ return function(analyzer, statement)
 	end
 
 	if statement.default then
-		local key = types.Literal(statement.default)
+		local key = NodeToString(statement.default)
 		
 		if statement.kind == "local_destructure_assignment" then
 			analyzer:CreateLocalValue(key, obj, env)
@@ -28,7 +28,7 @@ return function(analyzer, statement)
 	end
 
 	for _, node in ipairs(statement.left) do
-		local obj = node.value and obj:Get(types.Literal(node), env)
+		local obj = node.value and obj:Get(NodeToString(node), env)
 
 		if not obj then
 			if env == "runtime" then
@@ -39,9 +39,9 @@ return function(analyzer, statement)
 		end
 
 		if statement.kind == "local_destructure_assignment" then
-			analyzer:CreateLocalValue(types.Literal(node), obj, env)
+			analyzer:CreateLocalValue(NodeToString(node), obj, env)
 		elseif statement.kind == "destructure_assignment" then
-			analyzer:SetLocalOrEnvironmentValue(types.Literal(node), obj, env)
+			analyzer:SetLocalOrEnvironmentValue(NodeToString(node), obj, env)
 		end
 	end
 end

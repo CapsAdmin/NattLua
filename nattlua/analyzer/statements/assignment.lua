@@ -1,7 +1,8 @@
 local ipairs = ipairs
 local tostring = tostring
 local table = require("table")
-local types = require("nattlua.types.types")
+local NodeToString = require("nattlua.types.string").NodeToString
+local Union = require("nattlua.types.union").Union
 
 local function check_type_against_contract(val, contract)
 	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
@@ -38,7 +39,7 @@ return function(analyzer, statement)
 
 	for i, exp_key in ipairs(statement.left) do
 		if exp_key.kind == "value" then
-			left[i] = exp_key
+			left[i] = NodeToString(exp_key)
 
 			if exp_key.kind == "value" then
 				exp_key.is_upvalue = analyzer:LocalValueExists(exp_key, env)
@@ -73,7 +74,7 @@ return function(analyzer, statement)
 
 					if val then
 						if right[index] then
-							right[index] = types.Union({right[index], val})
+							right[index] = Union({right[index], val})
 						else
 							right[index] = val
 						end
@@ -142,7 +143,7 @@ return function(analyzer, statement)
 		if statement.kind == "local_assignment" then
 			analyzer:CreateLocalValue(exp_key, val, env)
 		elseif statement.kind == "assignment" then
-			local key = types.Literal(left[i])
+			local key = left[i]
 
 			if exp_key.kind == "value" then
 				do -- check for any previous upvalues
