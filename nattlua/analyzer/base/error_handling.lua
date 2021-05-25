@@ -6,6 +6,8 @@ local io = io
 local debug = debug
 local error = error
 local helpers = require("nattlua.other.helpers")
+local Any = require("nattlua.types.any").Any
+
 return function(META)
 --[[#	type META.diagnostics = {
 			[1 .. inf] = {
@@ -26,7 +28,7 @@ return function(META)
 		if ok == false then
 			err = err or "unknown error"
 			self:Error(node, err)
-			return self:NewType(node, "any")
+			return Any():SetNode(node)
 		end
 
 		return ok

@@ -129,16 +129,10 @@ return function(META)
 
 		if not obj.mutations[key]:HasMutations() then
 			if obj.Type == "table" then
-				local creation_scope = scope:FindScopeFromObject(obj:GetRoot(), env)
-
-				if not creation_scope then
-					creation_scope = scope:GetRoot()
-				end
-
 				local val = (obj:GetContract() or obj):Get(cast(key)) or Nil()
 				val:SetUpvalue(obj.mutations[key])
 				val:SetUpvalueReference(key)
-				obj.mutations[key]:Mutate(val, creation_scope)
+				obj.mutations[key]:Mutate(val, scope:GetRoot())
 			end
 		end
 	end

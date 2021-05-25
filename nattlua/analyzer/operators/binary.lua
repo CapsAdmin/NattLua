@@ -5,6 +5,7 @@ local ipairs = ipairs
 local table = require("table")
 local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
+local String = require("nattlua.types.string").String
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
@@ -444,8 +445,8 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			(l.Type == "number" and r.Type == "number") or
 			(l.Type == "string" and r.Type == "number")
 		then
-			if l:IsLiteral() and r:IsLiteral() then return analyzer:NewType(node, "string", l:GetData() .. r:GetData(), true) end
-			return analyzer:NewType(node, "string")
+			if l:IsLiteral() and r:IsLiteral() then return LString(l:GetData() .. r:GetData()):SetNode(node) end
+			return String():SetNode(node)
 		end
 
 		return type_errors.binary(op, l, r)

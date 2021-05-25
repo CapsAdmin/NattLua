@@ -43,7 +43,7 @@ local function lookup_value(self, node, env)
 				self:Warning(node, err)
 			end
 
-			obj = self:GuessTypeFromIdentifier(node, env)
+			obj = Any():SetNode(node)
 		end
 	end
 

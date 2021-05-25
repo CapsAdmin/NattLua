@@ -1,9 +1,11 @@
 local tostring = tostring
 local ipairs = ipairs
 local LNumber = require("nattlua.types.number").LNumber
+local LString = require("nattlua.types.string").LString
+local Table = require("nattlua.types.table").Table
 local table = require("table")
 return function(analyzer, node, env)
-	local tbl = analyzer:NewType(node, "table", nil, env == "typesystem")
+	local tbl = Table():SetNode(node):SetLiteral(env == "typesystem")
 
 	if env == "runtime" then
 		tbl:SetReferenceId(tostring(tbl:GetData()))
@@ -15,7 +17,7 @@ return function(analyzer, node, env)
 
 	for i, node in ipairs(node.children) do
 		if node.kind == "table_key_value" then
-			local key = analyzer:NewType(node.tokens["identifier"], "string", node.tokens["identifier"].value, true)
+			local key = LString(node.tokens["identifier"].value):SetNode(node.tokens["identifier"])
 			local val = analyzer:AnalyzeExpression(node.expression, env)
 			analyzer:NewIndexOperator(node, tbl, key, val, env)
 		elseif node.kind == "table_expression_value" then

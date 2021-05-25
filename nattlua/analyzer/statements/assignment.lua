@@ -3,6 +3,8 @@ local tostring = tostring
 local table = require("table")
 local NodeToString = require("nattlua.types.string").NodeToString
 local Union = require("nattlua.types.union").Union
+local Nil = require("nattlua.types.symbol").Nil
+
 
 local function check_type_against_contract(val, contract)
 	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
@@ -107,7 +109,7 @@ return function(analyzer, statement)
 	end
 
 	for i, exp_key in ipairs(statement.left) do
-		local val = right[i] or analyzer:NewType(exp_key, "nil")
+		local val = right[i] or Nil():SetNode(exp_key)
 
 		if exp_key.explicit_type then
 			local contract = analyzer:AnalyzeExpression(exp_key.explicit_type, "typesystem")

@@ -2,6 +2,7 @@ local ipairs = ipairs
 local math = math
 local assert = assert
 local True = require("nattlua.types.symbol").True
+local LNumber = require("nattlua.types.number").LNumber
 local False = require("nattlua.types.symbol").False
 local Union = require("nattlua.types.union").Union
 local binary_operator = require("nattlua.analyzer.operators.binary")
@@ -76,7 +77,7 @@ return function(analyzer, statement)
 							i = i,
 						}
 					)
-					local i = analyzer:NewType(statement.expressions[1], "number", i):SetLiteral(true)
+					local i = LNumber(i):SetNode(statement.expressions[1])
 					local brk = false
 
 					if uncertain_break then

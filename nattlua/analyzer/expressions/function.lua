@@ -3,6 +3,8 @@ local table = require("table")
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
+local Function = require("nattlua.types.function").Function
+local VarArg = require("nattlua.types.tuple").VarArg
 local ipairs = _G.ipairs
 local locals = ""
 
@@ -26,16 +28,16 @@ return function(analyzer, node, env)
 		for i, key in ipairs(node.identifiers) do
 			if key.value.value == "..." then
 				if key.explicit_type then
-					args[i] = analyzer:NewType(key, "...")
+					args[i] = VarArg():SetNode(key)
 					args[i]:Set(1, analyzer:AnalyzeExpression(key.explicit_type, "typesystem"))
 				else
-					args[i] = analyzer:NewType(key, "...")
+					args[i] = VarArg():SetNode(key)
 				end
 			elseif key.explicit_type then
 				args[i] = analyzer:AnalyzeExpression(key.explicit_type, "typesystem")
 				explicit_arguments = true
 			else
-				args[i] = analyzer:GuessTypeFromIdentifier(key)
+				args[i] = Any():SetNode(key)
 			end
 		end
 	elseif
@@ -52,7 +54,7 @@ return function(analyzer, node, env)
 				args[i] = analyzer:AnalyzeExpression(key.explicit_type, "typesystem")
 
 				if key.value.value == "..." then
-					local vararg = analyzer:NewType(key, "...")
+					local vararg = VarArg():SetNode(key)
 					vararg:Set(1, args[i])
 					args[i] = vararg
 				end
@@ -60,7 +62,7 @@ return function(analyzer, node, env)
 				explicit_arguments = true
 			elseif key.kind == "value" then
 				if key.value.value == "..." then
-					args[i] = analyzer:NewType(key, "...")
+					args[i] = VarArg():SetNode(key)
 				elseif key.value.value == "self" then
 					args[i] = analyzer.current_tables[#analyzer.current_tables]
 
@@ -70,7 +72,7 @@ return function(analyzer, node, env)
 				elseif not node.statements then
 					args[i] = analyzer:AnalyzeExpression(key, "typesystem")
 				else
-					args[i] = analyzer:NewType(key, "any")
+					args[i] = Any():SetNode(key)
 				end
 			else
 				args[i] = analyzer:AnalyzeExpression(key, "typesystem")
@@ -117,7 +119,7 @@ return function(analyzer, node, env)
 						)
 						:SetRepeat(math.huge)
 				else
-					tup = analyzer:NewType(type_exp, "...")
+					tup = VarArg():SetNode(type_exp)
 				end
 
 				ret[i] = tup
@@ -144,17 +146,17 @@ return function(analyzer, node, env)
 		end
 	end
 
-	local obj = analyzer:NewType(
-		node,
-		"function",
-		{
-			arg = args,
-			ret = ret,
-			lua_function = func,
-			scope = analyzer:GetScope(),
-			upvalue_position = #analyzer:GetScope():GetUpvalues("runtime"),
-		}
-	)
+	local obj = Function({
+		arg = args,
+		ret = ret,
+		lua_function = func,
+		scope = analyzer:GetScope(),
+		upvalue_position = #analyzer:GetScope():GetUpvalues("runtime"),
+	}):SetNode(node)
+
+	if node.statements then
+		obj.function_body_node = node
+	end
 	obj.explicit_arguments = explicit_arguments
 	obj.explicit_return = explicit_return
 

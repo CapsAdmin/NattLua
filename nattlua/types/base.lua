@@ -85,6 +85,16 @@ do -- token, expression and statement association
 	META:GetSet("TypeSourceLeft", nil--[[# as nil | BaseType]])
 	META:GetSet("TypeSourceRight", nil--[[# as nil | BaseType]])
 	META:GetSet("Node", nil--[[# as nil | any]])
+
+	function META:SetNode(node --[[#: nil | any]])
+		self.Node = node
+
+		if node then
+			node.inferred_type = self
+		end
+
+		return self
+	end
 end
 
 do -- comes from tbl.@Name = "my name"

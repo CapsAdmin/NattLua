@@ -168,48 +168,6 @@ do
 	end
 end
 
-
-function META:NewType(node, type, data, literal)
-	local obj
-
-	if type == "table" then
-		obj = self:Assert(node, Table(data))
-		obj.creation_scope = self:GetScope()
-	elseif type == "..." then
-		obj = self:Assert(node, Tuple(data or {Any()}))
-		obj:SetRepeat(math.huge)
-	elseif type == "number" then
-		obj = self:Assert(node, Number(data):SetLiteral(literal))
-	elseif type == "string" then
-		obj = self:Assert(node, String(data):SetLiteral(literal))
-	elseif type == "boolean" then
-		if literal then
-			obj = Symbol(data)
-		else
-			obj = Boolean()
-		end
-	elseif type == "nil" then
-		obj = self:Assert(node, Nil())
-	elseif type == "any" then
-		obj = self:Assert(node, Any())
-	elseif type == "function" then
-		obj = self:Assert(node, Function(data))
-		obj:SetNode(node)
-
-		if node.statements then
-			obj.function_body_node = node
-		end
-	end
-
-	if not obj then
-		error("NYI: " .. type)
-	end
-
-	obj:SetNode(obj:GetNode() or node)
-	obj:GetNode().inferred_type = obj
-	return obj
-end
-
 return function(config)
 	config = config or {}
 	local self = setmetatable({config = config}, META)

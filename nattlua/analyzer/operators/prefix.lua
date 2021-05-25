@@ -5,6 +5,9 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 local LString = require("nattlua.types.string").LString
+local Boolean = require("nattlua.types.symbol").Boolean
+local False = require("nattlua.types.symbol").False
+local True = require("nattlua.types.symbol").True
 
 local function metatable_function(self, meta_method, l)
 	if l:GetMetaTable() then
@@ -103,10 +106,10 @@ local function prefix_operator(analyzer, node, l, env)
 	end
 
 	if op == "not" or op == "!" then
-		if l:IsTruthy() and l:IsFalsy() then return analyzer:NewType(node, "boolean", nil, false, l):SetNode(node):SetTypeSource(l) end
+		if l:IsTruthy() and l:IsFalsy() then return Boolean():SetNode(node):SetTypeSource(l) end
 		if l:IsTruthy() then return
-			analyzer:NewType(node, "boolean", false, true, l):SetNode(node):SetTypeSource(l) end
-		if l:IsFalsy() then return analyzer:NewType(node, "boolean", true, true, l):SetNode(node):SetTypeSource(l) end
+			False():SetNode(node):SetTypeSource(l) end
+		if l:IsFalsy() then return True():SetNode(node):SetTypeSource(l) end
 	end
 
 	if op == "-" or op == "~" or op == "#" then

@@ -12,6 +12,7 @@ local load = loadstring or load
 local LString = require("nattlua.types.string").LString
 local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
+local Any = require("nattlua.types.any").Any
 local table = require("table")
 return function(META)
 	function META:StringToNumber(node, str)
@@ -344,42 +345,6 @@ return function(META)
 
 		function META:PopPreferTypesystem()
 			table.remove(self.prefer_typesystem_stack, 1)
-		end
-
-		do
-			local guesses = {
-				{pattern = "count", type = "number"},
-				{
-						pattern = "str",
-						type = "string",
-					},
-				}
-
-			table.sort(guesses, function(a, b)
-				return #a.pattern > #b.pattern
-			end)
-
-			function META:GuessTypeFromIdentifier(node, env)
-				if node.value then
-					local str = node.value.value:lower()
-
-					for _, v in ipairs(guesses) do
-						if str:find(v.pattern, nil, true) then
-							local obj = self:NewType(node, v.type)
-
-							if v.ctor then
-								v.ctor(obj)
-							end
-
-							return obj
-						end
-					end
-				end
-
-				if env == "typesystem" then return self:NewType(node, "nil") -- TEST ME
-				end
-				return self:NewType(node, "any")
-			end
 		end
 	end
 end

@@ -1,5 +1,6 @@
 local table = require("table")
 local binary_operator = require("nattlua.analyzer.operators.binary")
+local Nil = require("nattlua.types.symbol").Nil
 local assert = _G.assert
 return function(analyzer, node, env)
 	local left
@@ -39,7 +40,7 @@ return function(analyzer, node, env)
 			end
 		elseif left:IsFalsy() and not left:IsTruthy() then
             -- if it's really false do nothing
-            right = analyzer:NewType(node.right, "nil")
+            right = Nil():SetNode(node.right)
 		else
 			right = analyzer:AnalyzeExpression(node.right, env)
 		end
@@ -47,7 +48,7 @@ return function(analyzer, node, env)
 		left = analyzer:AnalyzeExpression(node.left, env)
 
 		if left:IsTruthy() and not left:IsFalsy() then
-			right = analyzer:NewType(node.right, "nil")
+			right = Nil():SetNode(node.right)
 		elseif left:IsFalsy() and not left:IsTruthy() then
 			right = analyzer:AnalyzeExpression(node.right, env)
 		else

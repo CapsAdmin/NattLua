@@ -10,6 +10,10 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
+local Function = require("nattlua.types.function").Function
+local LString = require("nattlua.types.string").LString
+local LNumber = require("nattlua.types.number").LNumber
+local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
 return function(META)
 	function META:LuaTypesToTuple(node, tps)
@@ -21,18 +25,27 @@ return function(META)
 				v:SetNode(node)
 			else
 				if type(v) == "function" then
-					tbl[i] = self:NewType(
-						node,
-						"function",
-						{
-							lua_function = v,
-							arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-							ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-						},
-						true
-					)
+
+					tbl[i] = Function({
+						lua_function = v,
+						arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+						ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+					}):SetNode(node):SetLiteral(true)
+
+					if node.statements then
+						tbl[i].function_body_node = node
+					end
 				else
-					tbl[i] = self:NewType(node, type(v), v, true)
+					local t = type(v)
+					if t == "number" then
+						tbl[i] = LNumber(v):SetNode(node)
+					elseif t == "string" then
+						tbl[i] = LString(v):SetNode(node)
+					elseif t == "boolean" then
+						tbl[i] = Symbol(v):SetNode(node)
+					else
+						error("NYI " .. t)
+					end
 				end
 			end
 		end
@@ -46,7 +59,7 @@ return function(META)
 		self:PushEnvironment(function_node, nil, env)
 
 		if function_node.self_call then
-			self:CreateLocalValue("self", arguments:Get(1) or self:NewType(function_node, "nil"), env, "self")
+			self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node), env, "self")
 		end
 
 		for i, identifier in ipairs(function_node.identifiers) do
@@ -55,7 +68,7 @@ return function(META)
 			if identifier.value.value == "..." then
 				self:CreateLocalValue(identifier, arguments:Slice(argi), env, argi)
 			else
-				self:CreateLocalValue(identifier, arguments:Get(argi) or self:NewType(identifier, "nil"), env, argi)
+				self:CreateLocalValue(identifier, arguments:Get(argi) or Nil():SetNode(identifier), env, argi)
 			end
 		end
 

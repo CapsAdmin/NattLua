@@ -1,6 +1,8 @@
 local tostring = tostring
 local ipairs = ipairs
 local NodeToString = require("nattlua.types.string").NodeToString
+local Nil = require("nattlua.types.symbol").Nil
+
 return function(analyzer, statement)
 	local env = statement.environment or "runtime"
 	local obj = analyzer:AnalyzeExpression(statement.right, env)
@@ -32,7 +34,7 @@ return function(analyzer, statement)
 
 		if not obj then
 			if env == "runtime" then
-				obj = analyzer:NewType(node, "nil")
+				obj = Nil():SetNode(node)
 			else
 				analyzer:Error(node, "field " .. tostring(node.value.value) .. " does not exist")
 			end
