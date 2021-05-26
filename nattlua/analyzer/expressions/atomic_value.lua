@@ -1,6 +1,7 @@
 local syntax = require("nattlua.syntax.syntax")
 local NodeToString = require("nattlua.types.string").NodeToString
 local LNumber = require("nattlua.types.number").LNumber
+local LNumberFromString = require("nattlua.types.number").LNumberFromString
 local Any = require("nattlua.types.any").Any
 local True = require("nattlua.types.symbol").True
 local False = require("nattlua.types.symbol").False
@@ -140,7 +141,13 @@ return function(analyzer, node, env)
 	end
 
 	if type == "number" then
-		return LNumber(analyzer:StringToNumber(node, value)):SetNode(node)
+		local num = LNumberFromString(value)
+		if not num then
+			analyzer:Error(node, "unable to convert " .. value .. " to number")
+			num = Number()
+		end
+		num:SetNode(node)
+		return num
 	elseif type == "string" then
 		if value:sub(1, 1) == "[" then
 			local start = value:match("(%[[%=]*%[)")

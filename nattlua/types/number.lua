@@ -247,4 +247,20 @@ return
 		LNumber = function(num--[[#: number]])
 			return META.New(num):SetLiteral(true)
 		end,
+		LNumberFromString = function(str)
+			local num = tonumber(str)
+			if not num then
+				if str:sub(1, 2) == "0b" then
+					num = tonumber(str:sub(3))
+				elseif str:lower():sub(-3) == "ull" then
+					num = tonumber(str:sub(1, -4))
+				elseif str:lower():sub(-2) == "ll" then
+					num = tonumber(str:sub(1, -3))
+				end
+			end
+	
+			if not num then return nil end
+
+			return META.New(num):SetLiteral(true)
+		end
 	}

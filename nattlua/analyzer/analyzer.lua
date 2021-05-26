@@ -2,38 +2,17 @@ local tostring = tostring
 local error = error
 local setmetatable = setmetatable
 local ipairs = ipairs
-local math = require("math")
-local Tuple = require("nattlua.types.tuple").Tuple
-local Any = require("nattlua.types.any").Any
-local Table = require("nattlua.types.table").Table
-local Number = require("nattlua.types.number").Number
-local String = require("nattlua.types.string").String
-local Symbol = require("nattlua.types.symbol").Symbol
-local Boolean = require("nattlua.types.symbol").Boolean
-local Function = require("nattlua.types.function").Function
-local Nil = require("nattlua.types.symbol").Nil
 require("nattlua.types.types").Initialize()
+
 local META = {}
 META.__index = META
 META.OnInitialize = {}
+
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)
 require("nattlua.analyzer.operators.index")(META)
 require("nattlua.analyzer.operators.newindex")(META)
 require("nattlua.analyzer.operators.call")(META)
-
-function META:AnalyzeRootStatement(statement, ...)
-	local argument_tuple = ... and Tuple({...}) or Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-	self:CreateAndPushFunctionScope()
-	self:PushEnvironment(statement, nil, "runtime")
-	self:PushEnvironment(statement, nil, "typesystem")
-	self:CreateLocalValue("...", argument_tuple, "runtime")
-	local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
-	self:PopEnvironment("runtime")
-	self:PopEnvironment("typesystem")
-	self:PopScope()
-	return analyzed_return
-end
 
 do
 	local assignment = require("nattlua.analyzer.statements.assignment")

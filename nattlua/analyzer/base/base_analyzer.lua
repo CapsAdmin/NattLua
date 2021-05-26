@@ -14,28 +14,24 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local table = require("table")
+local math = require("math")
 return function(META)
-	function META:StringToNumber(node, str)
-		if str:sub(1, 2) == "0b" then
-			return tonumber(str:sub(3))
-		elseif str:lower():sub(-3) == "ull" then
-			return tonumber(str:sub(1, -4))
-		elseif str:lower():sub(-2) == "ll" then
-			return tonumber(str:sub(1, -3))
-		end
-
-		local num = tonumber(str)
-
-		if not num then
-			self:Error(node, "unable to convert " .. str .. " to number")
-		end
-
-		return num
-	end
-
 	require("nattlua.analyzer.base.scopes")(META)
 	require("nattlua.analyzer.base.events")(META)
 	require("nattlua.analyzer.base.error_handling")(META)
+
+	function META:AnalyzeRootStatement(statement, ...)
+		local argument_tuple = ... and Tuple({...}) or Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+		self:CreateAndPushFunctionScope()
+		self:PushEnvironment(statement, nil, "runtime")
+		self:PushEnvironment(statement, nil, "typesystem")
+		self:CreateLocalValue("...", argument_tuple, "runtime")
+		local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
+		self:PopEnvironment("runtime")
+		self:PopEnvironment("typesystem")
+		self:PopScope()
+		return analyzed_return
+	end
 
 	function META:AnalyzeExpressions(expressions, env)
 		if not expressions then return end
