@@ -1,6 +1,7 @@
 local syntax = require("nattlua.syntax.syntax")
 local math = require("math")
-local table = require("table")
+local table_insert = require("table").insert
+local table_remove = require("table").remove
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
 local META = {}
@@ -9,113 +10,11 @@ META.Emitter = require("nattlua.transpiler.emitter")
 META.syntax = syntax
 require("nattlua.parser.base_parser")(META)
 require("nattlua.parser.parser_typesystem")(META)
-require("nattlua.parser.parser_extra")(META)
 
 function META:ResolvePath(path)
 	return path
 end
 
-function META:ReadBreakStatement()
-	return
-		self:IsCurrentValue("break") and
-		self:Statement("break"):ExpectKeyword("break"):End()
-end
-
-function META:ReadContinueStatement()
-	return
-		self:IsCurrentValue("continue") and
-		self:Statement("continue"):ExpectKeyword("continue"):End()
-end
-
-function META:ReadReturnStatement()
-	return
-		self:IsCurrentValue("return") and
-		self:Statement("return"):ExpectKeyword("return"):ExpectExpressionList():End()
-end
-
-function META:ReadDoStatement()
-	return
-		self:IsCurrentValue("do") and
-		self:Statement("do"):ExpectKeyword("do"):ExpectStatementsUntil("end"):ExpectKeyword("end", "do")
-		:End()
-end
-
-function META:ReadWhileStatement()
-	return
-		self:IsCurrentValue("while") and
-		self:Statement("while"):ExpectKeyword("while"):ExpectExpression():ExpectKeyword("do")
-		:ExpectStatementsUntil("end")
-		:ExpectKeyword("end", "do")
-		:End()
-end
-
-function META:ReadRepeatStatement()
-	return
-		self:IsCurrentValue("repeat") and
-		self:Statement("repeat"):ExpectKeyword("repeat"):ExpectStatementsUntil("until"):ExpectKeyword("until")
-		:ExpectExpression()
-		:End()
-end
-
-function META:ReadGotoLabelStatement()
-	return
-		self:IsCurrentValue("::") and
-		self:Statement("goto_label"):ExpectKeyword("::"):ExpectSimpleIdentifier():ExpectKeyword("::"):End()
-end
-
-function META:ReadGotoStatement()
-	return
-		self:IsCurrentValue("goto") and
-		self:IsType("letter", 1) and
-		self:Statement("goto"):ExpectKeyword("goto"):ExpectSimpleIdentifier():End()
-end
-
-function META:ReadLocalAssignmentStatement()
-	if not self:IsCurrentValue("local") then return end
-	local node = self:Statement("local_assignment")
-	node:ExpectKeyword("local")
-	node.left = self:ReadIdentifierList()
-
-	if self:IsCurrentValue("=") then
-		node:ExpectKeyword("=")
-		node.right = self:ReadExpressionList()
-	end
-
-	return node:End()
-end
-
-function META:ReadNumericForStatement()
-	return
-		self:IsCurrentValue("for") and
-		self:IsValue("=", 2) and
-		self:Statement("numeric_for"):ExpectKeyword("for"):ExpectIdentifierList(1):ExpectKeyword("=")
-		:ExpectExpressionList(3)
-		:ExpectKeyword("do")
-		:ExpectStatementsUntil("end")
-		:ExpectKeyword("end", "do")
-		:End()
-end
-
-function META:ReadGenericForStatement()
-	return
-		self:IsCurrentValue("for") and
-		self:Statement("generic_for"):ExpectKeyword("for"):ExpectIdentifierList():ExpectKeyword("in")
-		:ExpectExpressionList()
-		:ExpectKeyword("do")
-		:ExpectStatementsUntil("end")
-		:ExpectKeyword("end", "do")
-		:End()
-end
-
-function META:ReadFunctionBody(node)
-	node:ExpectAliasedKeyword("(", "arguments(")
-	node:ExpectIdentifierList()
-	node:ExpectAliasedKeyword(")", "arguments)", "arguments)")
-	self:ReadExplicitFunctionReturnType(node)
-	node:ExpectStatementsUntil("end")
-	node:ExpectKeyword("end", "function")
-	return node
-end
 
 do  -- function
     function META:ReadIndexExpression()
@@ -136,75 +35,6 @@ do  -- function
 		first.standalone_letter = node
 		return node
 	end
-
-	function META:ReadFunctionStatement()
-		if not self:IsCurrentValue("function") then return end
-		local node = self:Statement("function")
-		node.tokens["function"] = self:ReadValue("function")
-		node.expression = self:ReadIndexExpression()
-
-		if node.expression.kind == "binary_operator" then
-			node.self_call = node.expression.right.self_call
-		end
-
-		if self:IsCurrentValue("<|") then
-			node.kind = "generics_type_function"
-			self:ReadGenericsTypeFunctionBody(node)
-		else
-			self:ReadFunctionBody(node)
-		end
-
-		return node:End()
-	end
-end
-
-function META:ReadLocalFunctionStatement()
-	if not (self:IsCurrentValue("local") and self:IsValue("function", 1)) then return end
-	local node = self:Statement("local_function"):ExpectKeyword("local"):ExpectKeyword("function")
-		:ExpectSimpleIdentifier()
-	self:ReadFunctionBody(node)
-	return node:End()
-end
-
-function META:ReadIfStatement()
-	if not self:IsCurrentValue("if") then return end
-	local node = self:Statement("if")
-	node.expressions = {}
-	node.statements = {}
-	node.tokens["if/else/elseif"] = {}
-	node.tokens["then"] = {}
-
-	for i = 1, self:GetLength() do
-		local token
-
-		if i == 1 then
-			token = self:ReadValue("if")
-		else
-			token = self:ReadValues({
-				["else"] = true,
-				["elseif"] = true,
-				["end"] = true,
-			})
-		end
-
-		if not token then return end
-		node.tokens["if/else/elseif"][i] = token
-
-		if token.value ~= "else" then
-			node.expressions[i] = self:ReadExpectExpression()
-			node.tokens["then"][i] = self:ReadValue("then")
-		end
-
-		node.statements[i] = self:ReadStatements({
-			["end"] = true,
-			["else"] = true,
-			["elseif"] = true,
-		})
-		if self:IsCurrentValue("end") then break end
-	end
-
-	node:ExpectKeyword("end")
-	return node:End()
 end
 
 function META:HandleListSeparator(out, i, node)
@@ -249,93 +79,11 @@ do -- identifier
 end
 
 do -- expression
-
-    function META:ReadFunctionValue()
-		if not self:IsCurrentValue("function") then return end
-		local node = self:Expression("function"):ExpectKeyword("function")
-		self:ReadFunctionBody(node)
-		return node:End()
-	end
-
-	function META:ReadTableSpread()
-		if not (self:IsCurrentValue("...") and (self:IsType("letter", 1) or self:IsValue("{", 1) or self:IsValue("(", 1))) then return end
-		return self:Expression("table_spread"):ExpectKeyword("..."):ExpectExpression():End()
-	end
-
-	function META:ReadTableEntry(i)
-		local node
-
-		if self:IsCurrentValue("[") then
-			node = self:Expression("table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
-				:ExpectExpression()
-				:ExpectKeyword("]")
-				:ExpectKeyword("=")
-		elseif self:IsCurrentType("letter") and self:IsValue("=", 1) then
-			node = self:Expression("table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
-		else
-			node = self:Expression("table_index_value")
-			node.key = i
-		end
-
-		node.spread = self:ReadTableSpread()
-
-		if not node.spread then
-			node:ExpectExpression()
-		end
-
-		return node:End()
-	end
-
-	function META:ReadTable()
-		if not self:IsCurrentValue("{") then return end
-		local tree = self:Expression("table")
-		tree:ExpectKeyword("{")
-		tree.children = {}
-		tree.tokens["separators"] = {}
-
-		for i = 1, self:GetLength() do
-			if self:IsCurrentValue("}") then break end
-			local entry = self:ReadTableEntry(i)
-
-			if entry.kind == "table_index_value" then
-				tree.is_array = true
-			else
-				tree.is_dictionary = true
-			end
-
-			if entry.spread then
-				tree.spread = true
-			end
-
-			tree.children[i] = entry
-
-			if not self:IsCurrentValue(",") and not self:IsCurrentValue(";") and not self:IsCurrentValue("}") then
-				self:Error(
-					"expected $1 got $2",
-					nil,
-					nil,
-					{",", ";", "}"},
-					(self:GetCurrentToken() and self:GetCurrentToken().value) or
-					"no token"
-				)
-
-				break
-			end
-
-			if not self:IsCurrentValue("}") then
-				tree.tokens["separators"][i] = self:ReadTokenLoose()
-			end
-		end
-
-		tree:ExpectKeyword("}")
-		return tree:End()
-	end
-
 	function META:ReadExpressionValue()
 		if not syntax.IsValue(self:GetCurrentToken()) then return end
 		return self:Expression("value"):Store("value", self:ReadTokenLoose()):End()
 	end
-
+	local table = require("nattlua.parser.expressions.table")
 	do
 		function META:IsCallExpression(offset)
 			offset = offset or 0
@@ -350,7 +98,7 @@ do -- expression
 			local node = self:Expression("postfix_call")
 
 			if self:IsCurrentValue("{") then
-				node.expressions = {self:ReadTable()}
+				node.expressions = {table(self)}
 			elseif self:IsCurrentType("string") then
 				node.expressions = {
 						self:Expression("value"):Store("value", self:ReadTokenLoose()):End(),
@@ -381,7 +129,7 @@ do -- expression
 		if node and not node.idiv_resolved then
 			for i, token in ipairs(node.whitespace) do
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
-					table.remove(node.whitespace, i)
+					table_remove(node.whitespace, i)
 					local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
 
 					for _, token in ipairs(tokens) do
@@ -417,94 +165,31 @@ do -- expression
 		end
 
 		node.tokens["("] = node.tokens["("] or {}
-		table.insert(node.tokens["("], 1, pleft)
+		table_insert(node.tokens["("], 1, pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
-		table.insert(node.tokens[")"], self:ReadValue(")"))
+		table_insert(node.tokens[")"], self:ReadValue(")"))
 		return node
 	end
 
-	do
-		function META:ReadAndAddExplicitType(node)
-			if self:IsCurrentValue(":") and (not self:IsType("letter", 1) or not self:IsCallExpression(2)) then
-				node.tokens[":"] = self:ReadValue(":")
-				node.as_expression = self:ReadTypeExpression()
-			elseif self:IsCurrentValue("as") then
-				node.tokens["as"] = self:ReadValue("as")
-				node.as_expression = self:ReadTypeExpression()
-			elseif self:IsCurrentValue("is") then
-				node.tokens["is"] = self:ReadValue("is")
-				node.as_expression = self:ReadTypeExpression()
-			end
-		end
-
-		function META:ReadIndexSubExpression()
-			if not (self:IsCurrentValue(".") and self:IsType("letter", 1)) then return end
-			local node = self:Expression("binary_operator")
-			node.value = self:ReadTokenLoose()
-			node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
-			return node:End()
-		end
-
-		function META:ReadSelfCallSubExpression()
-			if not (self:IsCurrentValue(":") and self:IsType("letter", 1) and self:IsCallExpression(2)) then return end
-			local node = self:Expression("binary_operator")
-			node.value = self:ReadTokenLoose()
-			node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
-			return node:End()
-		end
-
-		function META:ReadPostfixOperatorSubExpression()
-			if not syntax.IsPostfixOperator(self:GetCurrentToken()) then return end
-			return
-				self:Expression("postfix_operator"):Store("value", self:ReadTokenLoose()):End()
-		end
-
-		function META:ReadCallSubExpression()
-			if not self:IsCallExpression() then return end
-			return self:ReadCallExpression()
-		end
-
-		function META:ReadPostfixExpressionIndexSubExpression()
-			if not self:IsCurrentValue("[") then return end
-			return self:ReadPostfixExpressionIndex()
-		end
-
-		function META:ReadSubExpression(node)
-			for _ = 1, self:GetLength() do
-				local left_node = node
-				self:ReadAndAddExplicitType(node)
-				local found = self:ReadIndexSubExpression() or
-					self:ReadSelfCallSubExpression() or
-					self:ReadPostfixOperatorSubExpression() or
-					self:ReadCallSubExpression() or
-					self:ReadPostfixExpressionIndexSubExpression()
-				if not found then break end
-				found.left = left_node
-
-				if left_node.value and left_node.value.value == ":" then
-					found.self_call = true
-				end
-
-				node = found
-			end
-
-			return node
-		end
-	end
+	local _function = require("nattlua.parser.expressions.function")
+	local sub_expression = require("nattlua.parser.expressions.sub_expression")
+	local table = require("nattlua.parser.expressions.table")
+	local _import = require("nattlua.parser.expressions.extra.import")
+	local lsx = require("nattlua.parser.expressions.extra.lsx")
 
 	function META:ReadExpression(priority)
 		priority = priority or 0
 		local node = self:ReadParenthesisExpression() or
 			self:ReadPrefixOperatorExpression() or
-			self:ReadFunctionValue() or
-			self:ReadImportExpression() or
-			self:ReadLSXExpression() or
+			_function(self) or
+			_import(self) or
+			lsx(self) or
 			self:ReadExpressionValue() or
-			self:ReadTable()
+			table(self)
 		local first = node
 
 		if node then
-			node = self:ReadSubExpression(node)
+			node = sub_expression(self, node)
 
 			if
 				first.kind == "value" and
@@ -603,34 +288,62 @@ do -- statements
 		)
 	end
 
+	local _break = require("nattlua.parser.statements.break")
+	local _do = require("nattlua.parser.statements.do")
+	local generic_for = require("nattlua.parser.statements.generic_for")
+	local goto_label = require("nattlua.parser.statements.goto_label")
+	local _goto = require("nattlua.parser.statements.goto")
+	local _if = require("nattlua.parser.statements.if")
+	local local_assignment = require("nattlua.parser.statements.local_assignment")
+	local numeric_for = require("nattlua.parser.statements.numeric_for")
+	local _repeat = require("nattlua.parser.statements.repeat")
+	local _return = require("nattlua.parser.statements.return")
+	local _while = require("nattlua.parser.statements.while")
+	local _function = require("nattlua.parser.statements.function")
+	local local_function = require("nattlua.parser.statements.local_function")
+
+	local _continue = require("nattlua.parser.statements.extra.continue")
+	local lsx = require("nattlua.parser.statements.extra.lsx")
+	local _import = require("nattlua.parser.statements.extra.import")
+	local destructure_assignment = require("nattlua.parser.statements.extra.destructure_assignment")
+	local local_destructure_assignment = require("nattlua.parser.statements.extra.local_destructure_assignment")
+
+	local type_function = require("nattlua.parser.statements.typesystem.function")
+	local local_type_function = require("nattlua.parser.statements.typesystem.local_function")
+	local local_type_generics_function = require("nattlua.parser.statements.typesystem.local_generics_function")
+	local debug_code = require("nattlua.parser.statements.typesystem.debug_code")
+	local local_type_assignment = require("nattlua.parser.statements.typesystem.local_assignment")
+	local type_assignment = require("nattlua.parser.statements.typesystem.assignment")
+	local interface = require("nattlua.parser.statements.typesystem.interface")
+
 	function META:ReadStatement()
 		return
-			self:ReadInlineTypeCode() or
-			self:ReadReturnStatement() or
-			self:ReadBreakStatement() or
-			self:ReadContinueStatement() or
+			debug_code(self) or
+			_return(self) or
+			_break(self) or
+			_continue(self) or
 			self:ReadSemicolonStatement() or
-			self:ReadGotoStatement() or
-			self:ReadImportStatement() or
-			self:ReadGotoLabelStatement() or
-			self:ReadLSXStatement() or
-			self:ReadRepeatStatement() or
-			self:ReadTypeFunctionStatement() or
-			self:ReadFunctionStatement() or
-			self:ReadLocalGenericsTypeFunctionStatement() or
-			self:ReadLocalFunctionStatement() or
-			self:ReadLocalTypeFunctionStatement() or
-			self:ReadLocalTypeDeclarationStatement() or
-			self:ReadLocalDestructureAssignmentStatement() or
-			self:ReadLocalAssignmentStatement() or
-			self:ReadTypeAssignment() or
-			self:ReadInterfaceStatement() or
-			self:ReadDoStatement() or
-			self:ReadIfStatement() or
-			self:ReadWhileStatement() or
-			self:ReadNumericForStatement() or
-			self:ReadGenericForStatement() or
-			self:ReadDestructureAssignmentStatement() or
+			_goto(self) or
+			_import(self) or
+			goto_label(self) or
+			lsx(self) or
+			_repeat(self) or
+			type_function(self) or
+			_function(self) or
+			local_type_generics_function(self) or
+			local_function(self) or
+			local_type_function(self) or
+			local_type_assignment(self) or
+			local_destructure_assignment(self) or
+			local_assignment(self) or
+			type_assignment(self) or
+			interface(self) or
+			_do(self) or
+			_if(self) or
+			_while(self) or
+			numeric_for(self) or
+			generic_for(self) or
+			destructure_assignment(self) or
 			self:ReadRemainingStatement()
 	end
 end

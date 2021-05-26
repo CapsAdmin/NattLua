@@ -6,7 +6,7 @@ local code = nl.Compiler(assert(util.FetchCode("examples/benchmarks/temp/10mb.lu
 
 local tokens = util.Measure("code:Lex()", function() return assert(code:Lex()).Tokens end)
 
-helpers.EnableJITDumper()
+--helpers.EnableJITDumper()
 local ast = util.Measure("code:Parse()", function() return assert(code:Parse()).SyntaxTree end)
 
 -- should take around 1.2 seconds
