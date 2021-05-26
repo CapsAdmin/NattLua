@@ -130,5 +130,5 @@ return
 			end
 
 			return META.New(value:sub(2, -2)):SetLiteral(true)
-		end
+		end,
 	}

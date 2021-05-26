@@ -15,7 +15,6 @@ function META:ResolvePath(path)
 	return path
 end
 
-
 do  -- function
     function META:ReadIndexExpression()
 		local node = self:ReadExpressionValue()
@@ -83,7 +82,9 @@ do -- expression
 		if not syntax.IsValue(self:GetCurrentToken()) then return end
 		return self:Expression("value"):Store("value", self:ReadTokenLoose()):End()
 	end
+
 	local table = require("nattlua.parser.expressions.table")
+
 	do
 		function META:IsCallExpression(offset)
 			offset = offset or 0
@@ -301,13 +302,11 @@ do -- statements
 	local _while = require("nattlua.parser.statements.while")
 	local _function = require("nattlua.parser.statements.function")
 	local local_function = require("nattlua.parser.statements.local_function")
-
 	local _continue = require("nattlua.parser.statements.extra.continue")
 	local lsx = require("nattlua.parser.statements.extra.lsx")
 	local _import = require("nattlua.parser.statements.extra.import")
 	local destructure_assignment = require("nattlua.parser.statements.extra.destructure_assignment")
 	local local_destructure_assignment = require("nattlua.parser.statements.extra.local_destructure_assignment")
-
 	local type_function = require("nattlua.parser.statements.typesystem.function")
 	local local_type_function = require("nattlua.parser.statements.typesystem.local_function")
 	local local_type_generics_function = require("nattlua.parser.statements.typesystem.local_generics_function")

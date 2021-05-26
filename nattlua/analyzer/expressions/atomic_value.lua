@@ -141,10 +141,12 @@ return function(analyzer, node, env)
 
 	if type == "number" then
 		local num = LNumberFromString(value)
+
 		if not num then
 			analyzer:Error(node, "unable to convert " .. value .. " to number")
 			num = Number()
 		end
+
 		num:SetNode(node)
 		return num
 	elseif type == "string" then

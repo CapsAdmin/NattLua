@@ -249,6 +249,7 @@ return
 		end,
 		LNumberFromString = function(str)
 			local num = tonumber(str)
+
 			if not num then
 				if str:sub(1, 2) == "0b" then
 					num = tonumber(str:sub(3))
@@ -258,9 +259,8 @@ return
 					num = tonumber(str:sub(1, -3))
 				end
 			end
-	
-			if not num then return nil end
 
+			if not num then return nil end
 			return META.New(num):SetLiteral(true)
-		end
+		end,
 	}

@@ -1,9 +1,7 @@
 local table_insert = require("table").insert
-
 return function(META)
 	local math_huge = math.huge
 	local syntax = require("nattlua.syntax.syntax")
-
 
 	function META:HandleTypeListSeparator(out, i, node)
 		if not node then return true end
@@ -185,5 +183,4 @@ return function(META)
 
 		return node
 	end
-
 end

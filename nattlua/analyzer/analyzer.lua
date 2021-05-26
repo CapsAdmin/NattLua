@@ -3,11 +3,9 @@ local error = error
 local setmetatable = setmetatable
 local ipairs = ipairs
 require("nattlua.types.types").Initialize()
-
 local META = {}
 META.__index = META
 META.OnInitialize = {}
-
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)
 require("nattlua.analyzer.operators.index")(META)
@@ -98,7 +96,6 @@ do
 
 	function META:AnalyzeExpression(node, env)
 		self.current_expression = node
-
 		env = env or "runtime"
 
 		if self:GetPreferTypesystem() then
@@ -111,6 +108,7 @@ do
 				obj:SetContract(self:AnalyzeExpression(node.as_expression, "typesystem"))
 				return obj
 			end
+
 			return self:AnalyzeExpression(node.as_expression, "typesystem")
 		elseif node.kind == "value" then
 			return atomic_value(self, node, env)
