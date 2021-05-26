@@ -2,6 +2,7 @@ local syntax = require("nattlua.syntax.syntax")
 local NodeToString = require("nattlua.types.string").NodeToString
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberFromString = require("nattlua.types.number").LNumberFromString
+local LStringFromString = require("nattlua.types.string").LStringFromString
 local Any = require("nattlua.types.any").Any
 local True = require("nattlua.types.symbol").True
 local False = require("nattlua.types.symbol").False
@@ -84,6 +85,16 @@ return function(analyzer, node, env)
 	local value = node.value.value
 	local type = syntax.GetTokenType(node.value)
 
+	if type == "keyword" then
+		if value == "nil" then
+			return Nil():SetNode(node)
+		elseif value == "true" then
+			return True():SetNode(node)
+		elseif value == "false" then
+			return False():SetNode(node)
+		end
+	end
+
 	-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
 	local standalone_letter = type == "letter" and node.standalone_letter
 
@@ -107,8 +118,6 @@ return function(analyzer, node, env)
 			return Any():SetNode(node)
 		elseif value == "inf" then
 			return LNumber(math.huge):SetNode(node)
-		elseif value == "nil" then
-			return Nil():SetNode(node)
 		elseif value == "nan" then
 			return LNumber(0 / 0):SetNode(node)
 		elseif value == "string" then
@@ -130,16 +139,6 @@ return function(analyzer, node, env)
 		return val
 	end
 
-	if type == "keyword" then
-		if value == "nil" then
-			return Nil():SetNode(node)
-		elseif value == "true" then
-			return True():SetNode(node)
-		elseif value == "false" then
-			return False():SetNode(node)
-		end
-	end
-
 	if type == "number" then
 		local num = LNumberFromString(value)
 		if not num then
@@ -149,12 +148,7 @@ return function(analyzer, node, env)
 		num:SetNode(node)
 		return num
 	elseif type == "string" then
-		if value:sub(1, 1) == "[" then
-			local start = value:match("(%[[%=]*%[)")
-			return LString(value:sub(#start + 1, -#start - 1)):SetNode(node)
-		else
-			return LString(value:sub(2, -2)):SetNode(node)
-		end
+		return LStringFromString(value):SetNode(node)
 	elseif type == "letter" then
 		return LString(value):SetNode(node)
 	end

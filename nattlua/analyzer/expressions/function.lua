@@ -27,14 +27,14 @@ return function(analyzer, node, env)
 	if node.kind == "function" or node.kind == "local_function" then
 		for i, key in ipairs(node.identifiers) do
 			if key.value.value == "..." then
-				if key.explicit_type then
+				if key.as_expression then
 					args[i] = VarArg():SetNode(key)
-					args[i]:Set(1, analyzer:AnalyzeExpression(key.explicit_type, "typesystem"))
+					args[i]:Set(1, analyzer:AnalyzeExpression(key.as_expression, "typesystem"))
 				else
 					args[i] = VarArg():SetNode(key)
 				end
-			elseif key.explicit_type then
-				args[i] = analyzer:AnalyzeExpression(key.explicit_type, "typesystem")
+			elseif key.as_expression then
+				args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem")
 				explicit_arguments = true
 			else
 				args[i] = Any():SetNode(key)
@@ -50,8 +50,8 @@ return function(analyzer, node, env)
 			if key.identifier then
 				args[i] = analyzer:AnalyzeExpression(key, "typesystem")
 				explicit_arguments = true
-			elseif key.explicit_type then
-				args[i] = analyzer:AnalyzeExpression(key.explicit_type, "typesystem")
+			elseif key.as_expression then
+				args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem")
 
 				if key.value.value == "..." then
 					local vararg = VarArg():SetNode(key)
@@ -111,10 +111,10 @@ return function(analyzer, node, env)
 			if type_exp.kind == "value" and type_exp.value.value == "..." then
 				local tup
 
-				if type_exp.explicit_type then
+				if type_exp.as_expression then
 					tup = Tuple(
 							{
-								analyzer:AnalyzeExpression(type_exp.explicit_type, "typesystem"),
+								analyzer:AnalyzeExpression(type_exp.as_expression, "typesystem"),
 							}
 						)
 						:SetRepeat(math.huge)

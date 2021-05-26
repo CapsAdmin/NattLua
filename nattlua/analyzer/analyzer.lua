@@ -99,28 +99,19 @@ do
 	function META:AnalyzeExpression(node, env)
 		self.current_expression = node
 
-		if not node then
-			error("node is nil", 2)
-		end
-
-		if node.type ~= "expression" then
-			error("node is not an expression", 2)
-		end
-
 		env = env or "runtime"
 
 		if self:GetPreferTypesystem() then
 			env = "typesystem"
 		end
 
-		if node.explicit_type then
+		if node.as_expression then
 			if node.kind == "table" then
 				local obj = table(self, node, env)
-				obj:SetContract(self:AnalyzeExpression(node.explicit_type, "typesystem"))
+				obj:SetContract(self:AnalyzeExpression(node.as_expression, "typesystem"))
 				return obj
 			end
-
-			return self:AnalyzeExpression(node.explicit_type, "typesystem")
+			return self:AnalyzeExpression(node.as_expression, "typesystem")
 		elseif node.kind == "value" then
 			return atomic_value(self, node, env)
 		elseif node.kind == "function" or node.kind == "type_function" then

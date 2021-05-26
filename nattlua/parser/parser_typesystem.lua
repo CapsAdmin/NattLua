@@ -140,7 +140,7 @@ return function(META)
 			vararg.value = self:ReadValue("...")
 
 			if self:IsCurrentType("letter") then
-				vararg.explicit_type = self:ReadValue()
+				vararg.as_expression = self:ReadValue()
 			end
 
 			table.insert(node.identifiers, vararg)
@@ -300,7 +300,7 @@ return function(META)
 		elseif self:IsCurrentValue("...") and self:IsType("letter", 1) then
 			node = self:Expression("value")
 			node.value = self:ReadValue("...")
-			node.explicit_type = self:ReadTypeExpression()
+			node.as_expression = self:ReadTypeExpression()
 		elseif self:IsCurrentValue("function") and self:IsValue("(", 1) then
 			node = self:ReadTypeFunction()
 		elseif syntax.typesystem.IsValue(self:GetCurrentToken()) then
@@ -330,7 +330,7 @@ return function(META)
 						node:End()
 					elseif self:IsCurrentValue(":") then
 						node.tokens[":"] = self:ReadValue(":")
-						node.explicit_type = self:ReadTypeExpression()
+						node.as_expression = self:ReadTypeExpression()
 					end
 				elseif syntax.typesystem.IsPostfixOperator(self:GetCurrentToken()) then
 					node = self:Expression("postfix_operator")
@@ -351,7 +351,7 @@ return function(META)
 					node.left = left
 				elseif self:IsCurrentValue("as") then
 					node.tokens["as"] = self:ReadValue("as")
-					node.explicit_type = self:ReadTypeExpression()
+					node.as_expression = self:ReadTypeExpression()
 				else
 					break
 				end

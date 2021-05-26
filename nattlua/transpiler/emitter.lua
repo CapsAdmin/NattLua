@@ -994,7 +994,7 @@ function META:EmitExpressionList(tbl, delimiter, from_assignment)
 end
 
 function META:HasTypeNotation(node)
-	return node.explicit_type or node.inferred_type or node.return_types
+	return node.as_expression or node.inferred_type or node.return_types
 end
 
 function META:EmitFunctionReturnAnnotationExpression(node, type_function)
@@ -1043,8 +1043,8 @@ function META:EmitFunctionReturnAnnotation(node, type_function)
 end
 
 function META:EmitAnnotationExpression(node)
-	if node.explicit_type then
-		self:EmitTypeExpression(node.explicit_type)
+	if node.as_expression then
+		self:EmitTypeExpression(node.as_expression)
 	elseif node.inferred_type and self.config.annotate ~= "explicit" then
 		self:Emit(tostring(node.inferred_type:GetContract() or node.inferred_type))
 	end
@@ -1297,8 +1297,8 @@ do -- types
 		end
 
 		if not self.config.lua_type_function then
-			if node.explicit_type then
-				self:EmitTypeExpression(node.explicit_type)
+			if node.as_expression then
+				self:EmitTypeExpression(node.as_expression)
 			end
 		end
 

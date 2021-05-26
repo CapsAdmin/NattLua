@@ -226,7 +226,7 @@ do -- identifier
 
 		if self.ReadTypeExpression and self:IsCurrentValue(":") then
 			node:ExpectKeyword(":")
-			node.explicit_type = self:ReadTypeExpression()
+			node.as_expression = self:ReadTypeExpression()
 		end
 
 		return node:End()
@@ -427,13 +427,13 @@ do -- expression
 		function META:ReadAndAddExplicitType(node)
 			if self:IsCurrentValue(":") and (not self:IsType("letter", 1) or not self:IsCallExpression(2)) then
 				node.tokens[":"] = self:ReadValue(":")
-				node.explicit_type = self:ReadTypeExpression()
+				node.as_expression = self:ReadTypeExpression()
 			elseif self:IsCurrentValue("as") then
 				node.tokens["as"] = self:ReadValue("as")
-				node.explicit_type = self:ReadTypeExpression()
+				node.as_expression = self:ReadTypeExpression()
 			elseif self:IsCurrentValue("is") then
 				node.tokens["is"] = self:ReadValue("is")
-				node.explicit_type = self:ReadTypeExpression()
+				node.as_expression = self:ReadTypeExpression()
 			end
 		end
 

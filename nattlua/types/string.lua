@@ -121,14 +121,14 @@ return
 			return META.New(num):SetLiteral(true)
 		end,
 		NodeToString = function(node)
-			if not node.value or not node.value.value then
-				for k, v in pairs(node) do
-					print(k, v)
-				end
-
-				print(debug.traceback(tostring(node)))
-			end
-
 			return META.New(node.value.value):SetLiteral(true):SetNode(node)
 		end,
+		LStringFromString = function(value)
+			if value:sub(1, 1) == "[" then
+				local start = value:match("(%[[%=]*%[)")
+				return META.New(value:sub(#start + 1, -#start - 1)):SetLiteral(true)
+			end
+
+			return META.New(value:sub(2, -2)):SetLiteral(true)
+		end
 	}

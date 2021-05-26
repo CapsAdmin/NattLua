@@ -459,10 +459,10 @@ return function(META)
                             -- we don't count the actual self argument
                             local node = function_node.identifiers[i + 1]
 
-							if node and not node.explicit_type then
+							if node and not node.as_expression then
 								self:Warning(node, "argument is untyped")
 							end
-						elseif function_node.identifiers[i] and not function_node.identifiers[i].explicit_type then
+						elseif function_node.identifiers[i] and not function_node.identifiers[i].as_expression then
 							self:Warning(function_node.identifiers[i], "argument is untyped")
 						end
 					end
