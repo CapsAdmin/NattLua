@@ -1,9 +1,10 @@
 local table_insert = require("table").insert
+
 return function(META)
 	local math_huge = math.huge
 	local syntax = require("nattlua.syntax.syntax")
 
-	function META:HandleTypeListSeparator(out, i, node)
+	local function HandleTypeListSeparator(self, out, i, node)
 		if not node then return true end
 		out[i] = node
 		if not self:IsCurrentValue(",") and not self:IsCurrentValue(";") then return true end
@@ -19,7 +20,7 @@ return function(META)
 		local out = {}
 
 		for i = 1, math_huge do
-			if self:HandleTypeListSeparator(out, i, self:ReadTypeExpression()) then break end
+			if HandleTypeListSeparator(self, out, i, self:ReadTypeExpression()) then break end
 
 			if max then
 				max = max - 1
@@ -57,11 +58,11 @@ return function(META)
 		return node
 	end
 
-	function META:ReadTypeCall()
-		local node = self:Expression("postfix_call")
-		node.tokens["call("] = self:ReadValue("<|")
-		node.expressions = self:ReadTypeExpressionList()
-		node.tokens["call)"] = self:ReadValue("|>")
+	local function ReadTypeCall(parser)
+		local node = parser:Expression("postfix_call")
+		node.tokens["call("] = parser:ReadValue("<|")
+		node.expressions = parser:ReadTypeExpressionList()
+		node.tokens["call)"] = parser:ReadValue("|>")
 		node.type_call = true
 		return node:End()
 	end
@@ -137,7 +138,7 @@ return function(META)
 					node.left = left
 					node.value = self:ReadTokenLoose()
 				elseif self:IsCurrentValue("<|") then
-					node = self:ReadTypeCall()
+					node = ReadTypeCall(self)
 					node.left = left
 				elseif self:IsCallExpression() then
 					node = self:ReadCallExpression()
@@ -183,4 +184,5 @@ return function(META)
 
 		return node
 	end
+
 end

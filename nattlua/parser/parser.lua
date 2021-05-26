@@ -15,9 +15,15 @@ function META:ResolvePath(path)
 	return path
 end
 
+local function ReadExpressionValue(parser)
+	if not syntax.IsValue(parser:GetCurrentToken()) then return end
+	return parser:Expression("value"):Store("value", parser:ReadTokenLoose()):End()
+end
+
+
 do  -- function
     function META:ReadIndexExpression()
-		local node = self:ReadExpressionValue()
+		local node = ReadExpressionValue(self)
 		local first = node
 
 		while self:IsCurrentValue(".") or self:IsCurrentValue(":") do
@@ -78,11 +84,6 @@ do -- identifier
 end
 
 do -- expression
-	function META:ReadExpressionValue()
-		if not syntax.IsValue(self:GetCurrentToken()) then return end
-		return self:Expression("value"):Store("value", self:ReadTokenLoose()):End()
-	end
-
 	local table = require("nattlua.parser.expressions.table")
 
 	do
@@ -126,7 +127,7 @@ do -- expression
 			:End()
 	end
 
-	function META:CheckForIntegerDivisionOperator(node)
+	local function CheckForIntegerDivisionOperator(parser, node)
 		if node and not node.idiv_resolved then
 			for i, token in ipairs(node.whitespace) do
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
@@ -134,10 +135,10 @@ do -- expression
 					local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
 
 					for _, token in ipairs(tokens) do
-						self:CheckForIntegerDivisionOperator(token)
+						CheckForIntegerDivisionOperator(parser, token)
 					end
 
-					self:AddTokens(tokens)
+					parser:AddTokens(tokens)
 					node.idiv_resolved = true
 
 					break
@@ -146,29 +147,29 @@ do -- expression
 		end
 	end
 
-	function META:ReadPrefixOperatorExpression()
-		if not syntax.IsPrefixOperator(self:GetCurrentToken()) then return end
-		local node = self:Expression("prefix_operator")
-		node.value = self:ReadTokenLoose()
+	local function ReadPrefixOperatorExpression(parser)
+		if not syntax.IsPrefixOperator(parser:GetCurrentToken()) then return end
+		local node = parser:Expression("prefix_operator")
+		node.value = parser:ReadTokenLoose()
 		node.tokens[1] = node.value
-		node.right = self:ReadExpectExpression(math.huge)
+		node.right = parser:ReadExpectExpression(math.huge)
 		return node:End()
 	end
 
-	function META:ReadParenthesisExpression()
-		if not self:IsCurrentValue("(") then return end
-		local pleft = self:ReadValue("(")
-		local node = self:ReadExpression(0)
+	local function ReadParenthesisExpression(parser)
+		if not parser:IsCurrentValue("(") then return end
+		local pleft = parser:ReadValue("(")
+		local node = parser:ReadExpression(0)
 
 		if not node then
-			self:Error("empty parentheses group", pleft)
+			parser:Error("empty parentheses group", pleft)
 			return
 		end
 
 		node.tokens["("] = node.tokens["("] or {}
 		table_insert(node.tokens["("], 1, pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
-		table_insert(node.tokens[")"], self:ReadValue(")"))
+		table_insert(node.tokens[")"], parser:ReadValue(")"))
 		return node
 	end
 
@@ -180,12 +181,12 @@ do -- expression
 
 	function META:ReadExpression(priority)
 		priority = priority or 0
-		local node = self:ReadParenthesisExpression() or
-			self:ReadPrefixOperatorExpression() or
+		local node = ReadParenthesisExpression(self) or
+			ReadPrefixOperatorExpression(self) or
 			_function(self) or
 			_import(self) or
 			lsx(self) or
-			self:ReadExpressionValue() or
+			ReadExpressionValue(self) or
 			table(self)
 		local first = node
 
@@ -200,7 +201,7 @@ do -- expression
 			end
 		end
 
-		self:CheckForIntegerDivisionOperator(self:GetCurrentToken())
+		CheckForIntegerDivisionOperator(self, self:GetCurrentToken())
 
 		while syntax.GetBinaryOperatorInfo(self:GetCurrentToken()) and
 		syntax.GetBinaryOperatorInfo(self:GetCurrentToken()).left_priority > priority do
@@ -260,7 +261,7 @@ do -- expression
 end
 
 do -- statements
-    function META:ReadRemainingStatement()
+    local function ReadRemainingStatement(self)
 		if self:IsCurrentType("end_of_file") then return end
 		local start = self:GetCurrentToken()
 		local left = self:ReadExpressionList(math.huge)
@@ -343,7 +344,7 @@ do -- statements
 			numeric_for(self) or
 			generic_for(self) or
 			destructure_assignment(self) or
-			self:ReadRemainingStatement()
+			ReadRemainingStatement(self)
 	end
 end
 
