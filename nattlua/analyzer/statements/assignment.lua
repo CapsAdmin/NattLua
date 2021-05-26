@@ -5,7 +5,6 @@ local NodeToString = require("nattlua.types.string").NodeToString
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 
-
 local function check_type_against_contract(val, contract)
 	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
 

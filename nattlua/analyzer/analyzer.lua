@@ -12,9 +12,7 @@ local Symbol = require("nattlua.types.symbol").Symbol
 local Boolean = require("nattlua.types.symbol").Boolean
 local Function = require("nattlua.types.function").Function
 local Nil = require("nattlua.types.symbol").Nil
-
 require("nattlua.types.types").Initialize()
-
 local META = {}
 META.__index = META
 META.OnInitialize = {}

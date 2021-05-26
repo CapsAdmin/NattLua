@@ -230,10 +230,11 @@ function META:Get(key)
 end
 
 function META:Set(i, val)
-	if type(i) == "table" then 
+	if type(i) == "table" then
 		i = i:GetData()
 		return false, "expected number"
 	end
+
 	if val.Type == "tuple" and val:GetLength() == 1 then
 		val = val:Get(1)
 	end
@@ -376,11 +377,12 @@ function META.New(data)
 	return self
 end
 
-return {
-	Tuple = META.New,
-	VarArg = function()
-		local self = META.New({Any()})
-		self:SetRepeat(math.huge)
-		return self
-	end
-}
+return
+	{
+		Tuple = META.New,
+		VarArg = function()
+			local self = META.New({Any()})
+			self:SetRepeat(math.huge)
+			return self
+		end,
+	}

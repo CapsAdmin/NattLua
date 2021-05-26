@@ -25,18 +25,22 @@ return function(META)
 				v:SetNode(node)
 			else
 				if type(v) == "function" then
-
-					tbl[i] = Function({
-						lua_function = v,
-						arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-						ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-					}):SetNode(node):SetLiteral(true)
+					tbl[i] = Function(
+							{
+								lua_function = v,
+								arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+							}
+						)
+						:SetNode(node)
+						:SetLiteral(true)
 
 					if node.statements then
 						tbl[i].function_body_node = node
 					end
 				else
 					local t = type(v)
+
 					if t == "number" then
 						tbl[i] = LNumber(v):SetNode(node)
 					elseif t == "string" then

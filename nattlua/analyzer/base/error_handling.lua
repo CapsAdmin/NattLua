@@ -7,7 +7,6 @@ local debug = debug
 local error = error
 local helpers = require("nattlua.other.helpers")
 local Any = require("nattlua.types.any").Any
-
 return function(META)
 --[[#	type META.diagnostics = {
 			[1 .. inf] = {

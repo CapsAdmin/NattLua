@@ -146,17 +146,21 @@ return function(analyzer, node, env)
 		end
 	end
 
-	local obj = Function({
-		arg = args,
-		ret = ret,
-		lua_function = func,
-		scope = analyzer:GetScope(),
-		upvalue_position = #analyzer:GetScope():GetUpvalues("runtime"),
-	}):SetNode(node)
+	local obj = Function(
+			{
+				arg = args,
+				ret = ret,
+				lua_function = func,
+				scope = analyzer:GetScope(),
+				upvalue_position = #analyzer:GetScope():GetUpvalues("runtime"),
+			}
+		)
+		:SetNode(node)
 
 	if node.statements then
 		obj.function_body_node = node
 	end
+
 	obj.explicit_arguments = explicit_arguments
 	obj.explicit_return = explicit_return
 

@@ -86,7 +86,7 @@ do -- token, expression and statement association
 	META:GetSet("TypeSourceRight", nil--[[# as nil | BaseType]])
 	META:GetSet("Node", nil--[[# as nil | any]])
 
-	function META:SetNode(node --[[#: nil | any]])
+	function META:SetNode(node--[[#: nil | any]])
 		self.Node = node
 
 		if node then

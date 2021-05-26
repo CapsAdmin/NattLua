@@ -192,6 +192,7 @@ return function(META)
 					local info = debug.getinfo(2)
 					print(info.source:sub(4) .. ":" .. info.currentline)
 				end
+
 				local upvalue, found_scope = self:FindLocalUpvalue(key, env, scope)
 
 				if upvalue then

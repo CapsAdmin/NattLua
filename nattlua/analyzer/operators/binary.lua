@@ -62,14 +62,15 @@ local function metatable_function(self, meta_method, l, r, swap)
 	if swap then
 		l, r = r, l
 	end
+
 	meta_method = LString(meta_method)
+
 	if r:GetMetaTable() or l:GetMetaTable() then
 		local func = (l:GetMetaTable() and l:GetMetaTable():Get(meta_method)) or
 			(r:GetMetaTable() and r:GetMetaTable():Get(meta_method))
 		if not func then return end
 		if func.Type ~= "function" then return func end
-		return
-			self:Assert(self.current_expression, self:Call(func, Tuple({l, r}))):Get(1)
+		return self:Assert(self.current_expression, self:Call(func, Tuple({l, r}))):Get(1)
 	end
 end
 

@@ -114,10 +114,21 @@ function META.New(data)
 	return self
 end
 
-return {
-	String = META.New,
-	LString = function(num --[[#: string]]) 
-		return META.New(num):SetLiteral(true) 
-	end,
-	NodeToString = function(node) if not node.value or not node.value.value then for k,v in pairs(node) do print(k,v) end print(debug.traceback(tostring(node))) end return META.New(node.value.value):SetLiteral(true):SetNode(node) end,
-}
+return
+	{
+		String = META.New,
+		LString = function(num--[[#: string]])
+			return META.New(num):SetLiteral(true)
+		end,
+		NodeToString = function(node)
+			if not node.value or not node.value.value then
+				for k, v in pairs(node) do
+					print(k, v)
+				end
+
+				print(debug.traceback(tostring(node)))
+			end
+
+			return META.New(node.value.value):SetLiteral(true):SetNode(node)
+		end,
+	}

@@ -107,8 +107,7 @@ local function prefix_operator(analyzer, node, l, env)
 
 	if op == "not" or op == "!" then
 		if l:IsTruthy() and l:IsFalsy() then return Boolean():SetNode(node):SetTypeSource(l) end
-		if l:IsTruthy() then return
-			False():SetNode(node):SetTypeSource(l) end
+		if l:IsTruthy() then return False():SetNode(node):SetTypeSource(l) end
 		if l:IsFalsy() then return True():SetNode(node):SetTypeSource(l) end
 	end
 

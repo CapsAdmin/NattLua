@@ -204,13 +204,17 @@ type function load(code: string | (function(): string | nil), chunk_name: string
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return types.Function({
-		arg = types.Tuple({}),
-		ret = types.Tuple({}),
-		lua_function = function(...)
-			return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-		end,
-	}):SetNode(compiler.SyntaxTree)
+	return
+		types.Function(
+			{
+				arg = types.Tuple({}),
+				ret = types.Tuple({}),
+				lua_function = function(...)
+					return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+				end,
+			}
+		)
+		:SetNode(compiler.SyntaxTree)
 end
 
 type function dofile(path: string)
@@ -232,13 +236,17 @@ type function loadfile(path: string)
 	local compiler = nl.Compiler(code, "@" .. path:GetData())
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return types.Function({
-			arg = types.Tuple({}),
-			ret = types.Tuple({}),
-			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
-			end,
-		}):SetNode(compiler.SyntaxTree)
+	return
+		types.Function(
+			{
+				arg = types.Tuple({}),
+				ret = types.Tuple({}),
+				lua_function = function(...)
+					return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+				end,
+			}
+		)
+		:SetNode(compiler.SyntaxTree)
 end
 
 type function rawset(tbl: {[any] = any} | {}, key: any, val: any)

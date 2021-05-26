@@ -4,7 +4,6 @@ local LString = require("nattlua.types.string").LString
 local Any = require("nattlua.types.any").Any
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
-
 return function(META)
 	function META:NewIndexOperator(node, obj, key, val, env)
 		if obj.Type == "union" then

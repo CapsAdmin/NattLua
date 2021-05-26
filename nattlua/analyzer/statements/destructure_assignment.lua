@@ -2,7 +2,6 @@ local tostring = tostring
 local ipairs = ipairs
 local NodeToString = require("nattlua.types.string").NodeToString
 local Nil = require("nattlua.types.symbol").Nil
-
 return function(analyzer, statement)
 	local env = statement.environment or "runtime"
 	local obj = analyzer:AnalyzeExpression(statement.right, env)
@@ -21,7 +20,7 @@ return function(analyzer, statement)
 
 	if statement.default then
 		local key = NodeToString(statement.default)
-		
+
 		if statement.kind == "local_destructure_assignment" then
 			analyzer:CreateLocalValue(key, obj, env)
 		elseif statement.kind == "destructure_assignment" then
