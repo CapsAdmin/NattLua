@@ -1,4 +1,5 @@
 local syntax = require("nattlua.syntax.syntax")
+local call_expression = require("nattlua.parser.expressions.call")
 
 local function ReadAndAddExplicitType(parser, node)
 	if parser:IsCurrentValue(":") and (not parser:IsType("letter", 1) or not parser:IsCallExpression(2)) then
@@ -37,7 +38,7 @@ end
 
 local function ReadCallSubExpression(parser)
 	if not parser:IsCallExpression() then return end
-	return parser:ReadCallExpression()
+	return call_expression(parser)
 end
 
 local function ReadPostfixExpressionIndexSubExpression(parser)

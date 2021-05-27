@@ -1,9 +1,10 @@
 local math_huge = math.huge
+local index_expression = require("nattlua.parser.expressions.index_expression")
 return function(parser)
 	if not (parser:IsCurrentValue("interface") and parser:IsType("letter", 1)) then return end
 	local node = parser:Statement("type_interface")
 	node.tokens["interface"] = parser:ReadValue("interface")
-	node.key = parser:ReadIndexExpression()
+	node.key = index_expression(parser)
 	node.tokens["{"] = parser:ReadValue("{")
 	local list = {}
 

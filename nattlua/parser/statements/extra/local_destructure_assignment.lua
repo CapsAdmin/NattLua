@@ -1,3 +1,5 @@
+local identifier_list = require("nattlua.parser.statements.identifier_list")
+
 local function IsDestructureStatement(parser, offset)
 	offset = offset or 0
 	return
@@ -14,7 +16,7 @@ local function read_remaining(parser, node)
 	end
 
 	node.tokens["{"] = parser:ReadValue("{")
-	node.left = parser:ReadIdentifierList()
+	node.left = identifier_list(parser)
 	node.tokens["}"] = parser:ReadValue("}")
 	node.tokens["="] = parser:ReadValue("=")
 	node.right = parser:ReadExpression()

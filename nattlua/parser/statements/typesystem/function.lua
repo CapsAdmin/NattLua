@@ -1,4 +1,5 @@
 local function_body = require("nattlua.parser.statements.typesystem.function_body")
+local index_expression = require("nattlua.parser.expressions.index_expression")
 return function(parser)
 	if not (parser:IsCurrentValue("type") and parser:IsValue("function", 1)) then return end
 	local node = parser:Statement("type_function")
@@ -11,7 +12,7 @@ return function(parser)
 		node.tokens["^"] = parser:ReadTokenLoose()
 	end
 
-	node.expression = parser:ReadIndexExpression()
+	node.expression = index_expression(parser)
 
 	do -- hacky
         if node.expression.left then

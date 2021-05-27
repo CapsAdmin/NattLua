@@ -120,13 +120,16 @@ return function(META)
 			return self
 		end
 
+		local identifier = require("nattlua.parser.expressions.identifier")
+		local identifier_list = require("nattlua.parser.statements.identifier_list")
+
 		function META:ExpectIdentifier()
-			self.identifier = self:ReadIdentifier()
+			self.identifier = identifier(self)
 			return self
 		end
 
 		function META:ExpectIdentifierList(length)
-			self.identifiers = self.parser:ReadIdentifierList(length)
+			self.identifiers = identifier_list(self.parser, length)
 			return self
 		end
 
@@ -255,8 +258,10 @@ return function(META)
 			return self
 		end
 
+		local identifier_list = require("nattlua.parser.statements.identifier_list")
+
 		function META:ExpectIdentifierList(length)
-			self.identifiers = self.parser:ReadIdentifierList(length)
+			self.identifiers = identifier_list(self.parser, length)
 			return self
 		end
 
@@ -519,12 +524,5 @@ return function(META)
 		end
 
 		return out
-	end
-
-	function META:ReadSemicolonStatement()
-		if not self:IsCurrentValue(";") then return end
-		local node = self:Statement("semicolon")
-		node.tokens[";"] = self:ReadValue(";")
-		return node
 	end
 end

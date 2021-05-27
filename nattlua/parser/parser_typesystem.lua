@@ -1,35 +1,7 @@
 local table_insert = require("table").insert
-
 return function(META)
 	local math_huge = math.huge
 	local syntax = require("nattlua.syntax.syntax")
-
-	local function HandleTypeListSeparator(self, out, i, node)
-		if not node then return true end
-		out[i] = node
-		if not self:IsCurrentValue(",") and not self:IsCurrentValue(";") then return true end
-
-		if self:IsCurrentValue(";") then
-			node.tokens[","] = self:ReadValue(";")
-		else
-			node.tokens[","] = self:ReadValue(",")
-		end
-	end
-
-	function META:ReadTypeExpressionList(max)
-		local out = {}
-
-		for i = 1, math_huge do
-			if HandleTypeListSeparator(self, out, i, self:ReadTypeExpression()) then break end
-
-			if max then
-				max = max - 1
-				if max == 0 then break end
-			end
-		end
-
-		return out
-	end
 
 	function META:ReadExplicitFunctionReturnType(node)
 		if not self:IsCurrentValue(":") then return end
@@ -58,10 +30,12 @@ return function(META)
 		return node
 	end
 
+	local expression_list = require("nattlua.parser.statements.typesystem.expression_list")
+
 	local function ReadTypeCall(parser)
 		local node = parser:Expression("postfix_call")
 		node.tokens["call("] = parser:ReadValue("<|")
-		node.expressions = parser:ReadTypeExpressionList()
+		node.expressions = expression_list(parser)
 		node.tokens["call)"] = parser:ReadValue("|>")
 		node.type_call = true
 		return node:End()
@@ -69,6 +43,7 @@ return function(META)
 
 	local table = require("nattlua.parser.expressions.typesystem.table")
 	local type_function = require("nattlua.parser.expressions.typesystem.function")
+	local call_expression = require("nattlua.parser.expressions.call")
 
 	function META:ReadTypeExpression(priority)
 		priority = priority or 0
@@ -141,7 +116,7 @@ return function(META)
 					node = ReadTypeCall(self)
 					node.left = left
 				elseif self:IsCallExpression() then
-					node = self:ReadCallExpression()
+					node = call_expression(self)
 					node.left = left
 
 					if left.value and left.value.value == ":" then
@@ -184,5 +159,4 @@ return function(META)
 
 		return node
 	end
-
 end

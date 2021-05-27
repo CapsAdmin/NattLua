@@ -13,13 +13,10 @@ return function(parser, as_statement)
 			table.insert(props, {key = key, val = val,})
 		elseif parser:IsCurrentValue("...") then
 			parser:ReadTokenLoose() -- !
-            table.insert(
-				props,
-				{
-					val = parser:ReadExpression(nil, true),
-					spread = true,
-				}
-			)
+            table.insert(props, {
+				val = parser:ReadExpression(nil, true),
+				spread = true,
+			})
 		else
 			break
 		end

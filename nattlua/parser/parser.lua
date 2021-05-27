@@ -20,28 +20,6 @@ local function ReadExpressionValue(parser)
 	return parser:Expression("value"):Store("value", parser:ReadTokenLoose()):End()
 end
 
-
-do  -- function
-    function META:ReadIndexExpression()
-		local node = ReadExpressionValue(self)
-		local first = node
-
-		while self:IsCurrentValue(".") or self:IsCurrentValue(":") do
-			local left = node
-			local self_call = self:IsCurrentValue(":")
-			node = self:Expression("binary_operator")
-			node.value = self:ReadTokenLoose()
-			node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
-			node.left = left
-			node:End()
-			node.right.self_call = self_call
-		end
-
-		first.standalone_letter = node
-		return node
-	end
-end
-
 function META:HandleListSeparator(out, i, node)
 	if not node then return true end
 	out[i] = node
@@ -49,43 +27,8 @@ function META:HandleListSeparator(out, i, node)
 	node.tokens[","] = self:ReadValue(",")
 end
 
-do -- identifier
-    function META:ReadIdentifier()
-		local node = self:Expression("value")
-
-		if self:IsCurrentValue("...") then
-			node.value = self:ReadValue("...")
-		else
-			node.value = self:ReadType("letter")
-		end
-
-		if self.ReadTypeExpression and self:IsCurrentValue(":") then
-			node:ExpectKeyword(":")
-			node.as_expression = self:ReadTypeExpression()
-		end
-
-		return node:End()
-	end
-
-	function META:ReadIdentifierList(max)
-		local out = {}
-
-		for i = 1, max or self:GetLength() do
-			if
-				(not self:IsCurrentType("letter") and not self:IsCurrentValue("...")) or
-				self:HandleListSeparator(out, i, self:ReadIdentifier())
-			then
-				break
-			end
-		end
-
-		return out
-	end
-end
-
 do -- expression
-	local table = require("nattlua.parser.expressions.table")
-
+	
 	do
 		function META:IsCallExpression(offset)
 			offset = offset or 0
@@ -94,29 +37,6 @@ do -- expression
 				self:IsCurrentValue("<|", offset) or
 				self:IsValue("{", offset) or
 				self:IsType("string", offset)
-		end
-
-		function META:ReadCallExpression()
-			local node = self:Expression("postfix_call")
-
-			if self:IsCurrentValue("{") then
-				node.expressions = {table(self)}
-			elseif self:IsCurrentType("string") then
-				node.expressions = {
-						self:Expression("value"):Store("value", self:ReadTokenLoose()):End(),
-					}
-			elseif self:IsCurrentValue("<|") then
-				node.tokens["call("] = self:ReadValue("<|")
-				node.expressions = self:ReadTypeExpressionList()
-				node.tokens["call)"] = self:ReadValue("|>")
-				node.type_call = true
-			else
-				node.tokens["call("] = self:ReadValue("(")
-				node.expressions = self:ReadExpressionList()
-				node.tokens["call)"] = self:ReadValue(")")
-			end
-
-			return node:End()
 		end
 	end
 
@@ -299,6 +219,7 @@ do -- statements
 	local local_assignment = require("nattlua.parser.statements.local_assignment")
 	local numeric_for = require("nattlua.parser.statements.numeric_for")
 	local _repeat = require("nattlua.parser.statements.repeat")
+	local semicolon = require("nattlua.parser.statements.semicolon")
 	local _return = require("nattlua.parser.statements.return")
 	local _while = require("nattlua.parser.statements.while")
 	local _function = require("nattlua.parser.statements.function")
@@ -322,7 +243,7 @@ do -- statements
 			_return(self) or
 			_break(self) or
 			_continue(self) or
-			self:ReadSemicolonStatement() or
+			semicolon(self) or
 			_goto(self) or
 			_import(self) or
 			goto_label(self) or

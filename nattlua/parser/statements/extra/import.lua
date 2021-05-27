@@ -1,8 +1,9 @@
+local identifier_list = require("nattlua.parser.statements.identifier_list")
 return function(parser)
 	if not (parser:IsCurrentValue("import") and not parser:IsValue("(", 1)) then return end
 	local node = parser:Statement("import")
 	node.tokens["import"] = parser:ReadValue("import")
-	node.left = parser:ReadIdentifierList()
+	node.left = identifier_list(parser)
 	node.tokens["from"] = parser:ReadValue("from")
 	local start = parser:GetCurrentToken()
 	node.expressions = parser:ReadExpressionList()
