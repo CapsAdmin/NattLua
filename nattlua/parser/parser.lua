@@ -37,7 +37,7 @@ do -- statements
 	local type_assignment = require("nattlua.parser.statements.typesystem.assignment")
 	local call_or_assignment = require("nattlua.parser.statements.call_or_assignment")
 
-	function META:ReadStatement()
+	function META:ReadNode()
 		if self:IsCurrentType("end_of_file") then return end
 		return
 			debug_code(self) or

@@ -18,7 +18,7 @@ return function(parser, node)
 		node.return_types = type_expression_list(parser)
 	else
 		local start = parser:GetCurrentToken()
-		node.statements = parser:ReadStatements({["end"] = true})
+		node.statements = parser:ReadNodes({["end"] = true})
 		node.tokens["end"] = parser:ReadValue("end", start, start)
 	end
 

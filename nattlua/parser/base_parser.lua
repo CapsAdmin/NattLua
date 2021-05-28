@@ -175,7 +175,7 @@ return function(META)
 		end
 
 		function META:ExpectStatementsUntil(what)
-			self.statements = self.parser:ReadStatements(type(what) == "table" and what or {[what] = true})
+			self.statements = self.parser:ReadNodes(type(what) == "table" and what or {[what] = true})
 			return self
 		end
 
@@ -374,7 +374,7 @@ return function(META)
 			shebang.tokens["shebang"] = self:ReadType("shebang")
 		end
 
-		node.statements = self:ReadStatements()
+		node.statements = self:ReadNodes()
 
 		if shebang then
 			table.insert(node.statements, 1, shebang)
@@ -389,7 +389,7 @@ return function(META)
 		return node:End()
 	end
 
-	function META:ReadStatements(stop_token)
+	function META:ReadNodes(stop_token)
 		local out = {}
 
 		for i = 1, self:GetLength() do
@@ -401,7 +401,7 @@ return function(META)
 				break
 			end
 
-			out[i] = self:ReadStatement()
+			out[i] = self:ReadNode()
 			if not out[i] then break end
 
 			if self.config and self.config.on_statement then

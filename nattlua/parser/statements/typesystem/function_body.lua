@@ -47,7 +47,7 @@ return function(parser, node, plain_args)
 		node.return_types = type_expression_list(parser)
 	elseif not parser:IsCurrentValue(",") then
 		local start = parser:GetCurrentToken()
-		node.statements = parser:ReadStatements({["end"] = true})
+		node.statements = parser:ReadNodes({["end"] = true})
 		node.tokens["end"] = parser:ReadValue("end", start, start)
 	end
 

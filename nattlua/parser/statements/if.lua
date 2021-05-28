@@ -29,7 +29,7 @@ return function(parser)
 			node.tokens["then"][i] = parser:ReadValue("then")
 		end
 
-		node.statements[i] = parser:ReadStatements({
+		node.statements[i] = parser:ReadNodes({
 			["end"] = true,
 			["else"] = true,
 			["elseif"] = true,
