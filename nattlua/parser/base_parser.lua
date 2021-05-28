@@ -4,37 +4,6 @@ local setmetatable = _G.setmetatable
 local type = _G.type
 local table = require("table")
 return function(META)
-	local function expect(node, parser, func, what, start, stop, alias)
-		local tokens = node.tokens
-
-		if start then
-			start = tokens[start]
-		end
-
-		if stop then
-			stop = tokens[stop]
-		end
-
-		if start and not stop then
-			stop = tokens[start]
-		end
-
-		local token = func(parser, what, start, stop)
-		local what = alias or what
-
-		if tokens[what] then
-			if not tokens[what][1] then
-				tokens[what] = {tokens[what]}
-			end
-
-			table.insert(tokens[what], token)
-		else
-			tokens[what] = token
-		end
-
-		token.parent = node
-	end
-
 	do
 		local PARSER = META
 		local META = {}
@@ -130,17 +99,62 @@ return function(META)
 			return self
 		end
 
-		function META:ExpectAliasedKeyword(what, alias, start, stop)
-			expect(
-				self,
-				self.parser,
-				self.parser.ReadValue,
-				what,
-				start,
-				stop,
-				alias
-			)
-			return self
+		do
+			local function expect(node, parser, func, what, start, stop, alias)
+				local tokens = node.tokens
+
+				if start then
+					start = tokens[start]
+				end
+
+				if stop then
+					stop = tokens[stop]
+				end
+
+				if start and not stop then
+					stop = tokens[start]
+				end
+
+				local token = func(parser, what, start, stop)
+				local what = alias or what
+
+				if tokens[what] then
+					if not tokens[what][1] then
+						tokens[what] = {tokens[what]}
+					end
+
+					table.insert(tokens[what], token)
+				else
+					tokens[what] = token
+				end
+
+				token.parent = node
+			end
+
+			function META:ExpectAliasedKeyword(what, alias, start, stop)
+				expect(
+					self,
+					self.parser,
+					self.parser.ReadValue,
+					what,
+					start,
+					stop,
+					alias
+				)
+				return self
+			end
+
+			function META:ExpectKeyword(what, start, stop)
+				expect(
+					self,
+					self.parser,
+					self.parser.ReadValue,
+					what,
+					start,
+					stop
+				)
+				return self
+			end
 		end
 
 		function META:ExpectExpression()
@@ -167,33 +181,8 @@ return function(META)
 			return self
 		end
 
-		function META:ExpectKeyword(what, start, stop)
-			expect(
-				self,
-				self.parser,
-				self.parser.ReadValue,
-				what,
-				start,
-				stop
-			)
-			return self
-		end
-
 		function META:Store(key, val)
 			self[key] = val
-			return self
-		end
-
-		local identifier = require("nattlua.parser.expressions.identifier")
-		local identifier_list = require("nattlua.parser.statements.identifier_list")
-
-		function META:ExpectIdentifier()
-			self.identifier = identifier(self)
-			return self
-		end
-
-		function META:ExpectIdentifierList(length)
-			self.identifiers = identifier_list(self.parser, length)
 			return self
 		end
 
