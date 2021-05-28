@@ -1,3 +1,6 @@
+
+local type_expression = require("nattlua.parser.expressions.typesystem.expression").expression
+
 return function(parser)
 	local node = parser:Node("expression", "value")
 
@@ -7,9 +10,9 @@ return function(parser)
 		node.value = parser:ReadType("letter")
 	end
 
-	if parser.ReadTypeExpression and parser:IsCurrentValue(":") then
+	if parser:IsCurrentValue(":") then
 		node:ExpectKeyword(":")
-		node.as_expression = parser:ReadTypeExpression()
+		node.as_expression = type_expression(parser)
 	end
 
 	return node:End()

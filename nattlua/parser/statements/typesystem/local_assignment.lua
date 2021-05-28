@@ -1,5 +1,5 @@
 local syntax = require("nattlua.syntax.syntax")
-local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
+local type_expression_list = require("nattlua.parser.expressions.typesystem.expression").expression_list
 local identifier_list = require("nattlua.parser.statements.identifier_list")
 return function(parser)
 	if not (

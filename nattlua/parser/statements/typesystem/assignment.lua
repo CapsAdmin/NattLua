@@ -1,4 +1,4 @@
-local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
+local type_expression_list = require("nattlua.parser.expressions.typesystem.expression").expression_list
 return function(parser)
 	if not (parser:IsCurrentValue("type") and (parser:IsType("letter", 1) or parser:IsValue("^", 1))) then return end
 	local node = parser:Node("statement", "assignment")

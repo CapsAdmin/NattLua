@@ -5,7 +5,6 @@ META.__index = META
 META.Emitter = require("nattlua.transpiler.emitter")
 META.syntax = syntax
 require("nattlua.parser.base_parser")(META)
-require("nattlua.parser.parser_typesystem")(META)
 
 function META:ResolvePath(path)
 	return path

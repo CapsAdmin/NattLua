@@ -3,10 +3,10 @@ local table_insert = require("table").insert
 local table_remove = require("table").remove
 local ipairs = _G.ipairs
 local _function = require("nattlua.parser.expressions.function")
-local table = require("nattlua.parser.expressions.table")
 local _import = require("nattlua.parser.expressions.extra.import")
 local syntax = require("nattlua.syntax.syntax")
-local call_expression = require("nattlua.parser.expressions.call")
+local table = require("nattlua.parser.expressions.table")
+local type_expression = require("nattlua.parser.expressions.typesystem.expression").expression
 
 local function IsCallExpression(parser, offset)
 	return
@@ -16,16 +16,41 @@ local function IsCallExpression(parser, offset)
 		parser:IsType("string", offset)
 end
 
+local function call_expression(parser)
+	local type_expression_list = require("nattlua.parser.expressions.typesystem.expression").expression_list
+	local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
+	local node = parser:Node("expression", "postfix_call")
+
+	if parser:IsCurrentValue("{") then
+		node.expressions = {table(parser)}
+	elseif parser:IsCurrentType("string") then
+		node.expressions = {
+				parser:Node("expression", "value"):Store("value", parser:ReadTokenLoose()):End(),
+			}
+	elseif parser:IsCurrentValue("<|") then
+		node.tokens["call("] = parser:ReadValue("<|")
+		node.expressions = type_expression_list(parser)
+		node.tokens["call)"] = parser:ReadValue("|>")
+		node.type_call = true
+	else
+		node.tokens["call("] = parser:ReadValue("(")
+		node.expressions = optional_expression_list(parser)
+		node.tokens["call)"] = parser:ReadValue(")")
+	end
+
+	return node:End()
+end
+
 local function ReadAndAddExplicitType(parser, node)
 	if parser:IsCurrentValue(":") and (not parser:IsType("letter", 1) or not IsCallExpression(parser, 2)) then
 		node.tokens[":"] = parser:ReadValue(":")
-		node.as_expression = parser:ReadTypeExpression()
+		node.as_expression = type_expression(parser)
 	elseif parser:IsCurrentValue("as") then
 		node.tokens["as"] = parser:ReadValue("as")
-		node.as_expression = parser:ReadTypeExpression()
+		node.as_expression = type_expression(parser)
 	elseif parser:IsCurrentValue("is") then
 		node.tokens["is"] = parser:ReadValue("is")
-		node.as_expression = parser:ReadTypeExpression()
+		node.as_expression = type_expression(parser)
 	end
 end
 
@@ -222,4 +247,5 @@ return
 		expect_expression = expect_expression,
 		expression_list = expression_list,
 		optional_expression_list = optional_expression_list,
+		call_expression = call_expression,
 	}
