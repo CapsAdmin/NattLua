@@ -97,8 +97,6 @@ function META:EmitExpression(node, from_assignment)
 		end
 	elseif node.kind == "import" then
 		self:EmitImportExpression(node)
-	elseif node.kind == "lsx" then
-		self:EmitLSXExpression(node)
 	elseif node.kind == "type_table" then
 		self:EmitTableType(node)
 	elseif node.kind == "table_expression_value" then
@@ -849,8 +847,6 @@ function META:EmitStatement(node)
 		self:EmitExpression(node.value)
 	elseif node.kind == "shebang" then
 		self:EmitToken(node.tokens["shebang"])
-	elseif node.kind == "lsx" then
-		self:EmitLSXStatement(node)
 	elseif node.kind == "continue" then
 		self:EmitContinueStatement(node)
 	elseif node.kind == "semicolon" then
@@ -1114,7 +1110,7 @@ do -- types
 		self:EmitToken(node.value)
 		self:EmitAnnotation(node)
 	end
-	
+
 	function META:EmitTableType(node)
 		local tree = node
 		self:EmitToken(tree.tokens["{"])
@@ -1408,74 +1404,6 @@ do -- extra
 		self:EmitNonSpace("IMPORTS['" .. node.path .. "'](")
 		self:EmitExpressionList(node.expressions)
 		self:EmitNonSpace(")")
-	end
-
-	function META:EmitLSXStatement(node, root)
-		if not root then
-			self:Whitespace("\n", true)
-			self:Whitespace("\t", true)
-			self:EmitNonSpace("local")
-			self:EmitSpace(" ")
-		else
-			self:Whitespace("\t", true)
-		end
-
-		self:EmitToken(node.tag)
-		self:EmitSpace(" ")
-		self:EmitNonSpace("=")
-		self:EmitSpace(" ")
-		self:EmitNonSpace("{type=\"" .. node.tag.value .. "\",")
-
-		for _, prop in ipairs(node.props) do
-			self:EmitToken(prop.key)
-			self:EmitNonSpace("=")
-			self:EmitExpression(prop.val)
-			self:EmitNonSpace(",")
-		end
-
-		self:EmitNonSpace("}\n")
-
-		if not root then
-			self:Whitespace("\t", true)
-			self:EmitNonSpace("table.insert(parent.children, ")
-			self:EmitToken(node.tag)
-			self:EmitNonSpace(")\n")
-		end
-
-		if node.statements then
-			self:Whitespace("\t", true)
-			self:EmitToken(node.tag)
-			self:EmitNonSpace(".children={}")
-			self:Whitespace("\n", true)
-			self:Whitespace("\t", true)
-			self:EmitNonSpace("do")
-			self:Indent()
-			self:Whitespace("\n", true)
-			self:Whitespace("\t", true)
-			self:EmitNonSpace("local parent = " .. node.tag.value .. "\n")
-			self:EmitStatements(node.statements)
-			self:Outdent()
-			self:Whitespace("\t", true)
-			self:EmitNonSpace("end")
-			self:Whitespace("\n", true)
-		end
-	end
-
-	function META:EmitLSXExpression(node)
-		self:EmitNonSpace("(function()\n\tlocal ")
-		self:EmitToken(node.tag)
-		self:EmitSpace(" ")
-		self:EmitNonSpace("do")
-		self:EmitSpace("\n")
-		self:Indent()
-		self:EmitLSXStatement(node, true)
-		self:Outdent()
-		self:EmitSpace(" ")
-		self:EmitNonSpace("end")
-		self:EmitSpace("\n\t")
-		self:EmitNonSpace("return")
-		self:EmitToken(node.tag)
-		self:EmitNonSpace("\nend)()")
 	end
 end
 

@@ -59,7 +59,6 @@ do -- expression
 		local sub_expression = require("nattlua.parser.expressions.sub_expression")
 		local table = require("nattlua.parser.expressions.table")
 		local _import = require("nattlua.parser.expressions.extra.import")
-		local lsx = require("nattlua.parser.expressions.extra.lsx")
 
 		local function CheckForIntegerDivisionOperator(parser, node)
 			if node and not node.idiv_resolved then
@@ -86,7 +85,6 @@ do -- expression
 				prefix_operator(self) or
 				_function(self) or
 				_import(self) or
-				lsx(self) or
 				value(self) or
 				table(self)
 			local first = node
@@ -179,7 +177,6 @@ do -- statements
 	local _function = require("nattlua.parser.statements.function")
 	local local_function = require("nattlua.parser.statements.local_function")
 	local _continue = require("nattlua.parser.statements.extra.continue")
-	local lsx = require("nattlua.parser.statements.extra.lsx")
 	local destructure_assignment = require("nattlua.parser.statements.extra.destructure_assignment")
 	local local_destructure_assignment = require("nattlua.parser.statements.extra.local_destructure_assignment")
 	local type_function = require("nattlua.parser.statements.typesystem.function")
@@ -201,7 +198,6 @@ do -- statements
 			semicolon(self) or
 			_goto(self) or
 			goto_label(self) or
-			lsx(self) or
 			_repeat(self) or
 			type_function(self) or
 			_function(self) or
