@@ -1,7 +1,7 @@
 local expression = require("nattlua.parser.expressions.expression").expression
 local identifier_list = require("nattlua.parser.statements.identifier_list")
 
-local function IsDestructureStatement(parser, offset)
+local function IsDestructureNode(parser, offset)
 	offset = offset or 0
 	return
 		(parser:IsValue("{", offset + 0) and parser:IsType("letter", offset + 1)) or
@@ -24,7 +24,7 @@ local function read_remaining(parser, node)
 end
 
 return function(self)
-	if not IsDestructureStatement(self) then return end
+	if not IsDestructureNode(self) then return end
 	local node = self:Node("statement", "destructure_assignment")
 	read_remaining(self, node)
 	return node

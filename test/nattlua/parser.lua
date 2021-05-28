@@ -194,7 +194,7 @@ test("operator precedence", function()
             val[1].code = "a = " .. val[1].code
             local ast = assert(val[1]:Parse()).SyntaxTree
 
-            local expr = ast:FindStatementsByType("assignment")[1].right[1]
+            local expr = ast:FindNodesByType("assignment")[1].right[1]
             local res = dump_precedence(expr)
             if val[2] and val[2].code ~= res then
                 io.write("EXPECT: " .. val[2].code, "\n")

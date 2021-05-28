@@ -4,7 +4,7 @@ return function(parser, node)
 	node.identifiers = identifier_list(parser)
 	node:ExpectAliasedKeyword(")", "arguments)", "arguments)")
 	parser:ReadExplicitFunctionReturnType(node)
-	node:ExpectStatementsUntil("end")
+	node:ExpectNodesUntil("end")
 	node:ExpectKeyword("end", "function")
 	return node
 end

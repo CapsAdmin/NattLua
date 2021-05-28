@@ -1,7 +1,7 @@
 local identifier_list = require("nattlua.parser.statements.identifier_list")
 local expression = require("nattlua.parser.expressions.expression").expression
 
-local function IsDestructureStatement(parser, offset)
+local function IsDestructureNode(parser, offset)
 	offset = offset or 0
 	return
 		(parser:IsValue("{", offset + 0) and parser:IsType("letter", offset + 1)) or
@@ -23,15 +23,15 @@ local function read_remaining(parser, node)
 	node.right = expression(parser, 0)
 end
 
-local function IsLocalDestructureAssignmentStatement(parser)
+local function IsLocalDestructureAssignmentNode(parser)
 	if parser:IsCurrentValue("local") then
-		if parser:IsValue("type", 1) then return IsDestructureStatement(parser, 2) end
-		return IsDestructureStatement(parser, 1)
+		if parser:IsValue("type", 1) then return IsDestructureNode(parser, 2) end
+		return IsDestructureNode(parser, 1)
 	end
 end
 
 return function(parser)
-	if not IsLocalDestructureAssignmentStatement(parser) then return end
+	if not IsLocalDestructureAssignmentNode(parser) then return end
 	local node = parser:Node("statement", "local_destructure_assignment")
 	node.tokens["local"] = parser:ReadValue("local")
 

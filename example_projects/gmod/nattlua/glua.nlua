@@ -119,7 +119,7 @@ type function include(path: string)
     assert(compiler:Lex())
     assert(compiler:Parse())
 
-    local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+    local res = analyzer:AnalyzeRootNode(compiler.SyntaxTree)
 
     analyzer.loaded = analyzer.loaded or {}
     analyzer.loaded[path] = res

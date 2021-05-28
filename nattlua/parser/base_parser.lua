@@ -66,7 +66,7 @@ return function(META)
 			return stop - start
 		end
 
-		function META:GetStatements()
+		function META:GetNodes()
 			if self.kind == "if" then
 				local flat = {}
 
@@ -82,18 +82,18 @@ return function(META)
 			return self.statements
 		end
 
-		function META:HasStatements()
+		function META:HasNodes()
 			return self.statements ~= nil
 		end
 
-		function META:FindStatementsByType(what, out)
+		function META:FindNodesByType(what, out)
 			out = out or {}
 
-			for _, child in ipairs(self:GetStatements()) do
+			for _, child in ipairs(self:GetNodes()) do
 				if child.kind == what then
 					table.insert(out, child)
-				elseif child:GetStatements() then
-					child:FindStatementsByType(what, out)
+				elseif child:GetNodes() then
+					child:FindNodesByType(what, out)
 				end
 			end
 
@@ -174,7 +174,7 @@ return function(META)
 			return self
 		end
 
-		function META:ExpectStatementsUntil(what)
+		function META:ExpectNodesUntil(what)
 			self.statements = self.parser:ReadNodes(type(what) == "table" and what or {[what] = true})
 			return self
 		end

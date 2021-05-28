@@ -9,7 +9,7 @@ return function(parser)
 	node:ExpectKeyword("=")
 	node.expressions = expression_list(parser, 3)
 	
-	return node:ExpectKeyword("do"):ExpectStatementsUntil("end")
+	return node:ExpectKeyword("do"):ExpectNodesUntil("end")
 		:ExpectKeyword("end", "do")
 		:End()
 end
