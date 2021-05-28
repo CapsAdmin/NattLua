@@ -3,7 +3,7 @@ local function_body = require("nattlua.parser.statements.function_body")
 local index_expression = require("nattlua.parser.expressions.index_expression")
 return function(self)
 	if not self:IsCurrentValue("function") then return end
-	local node = self:Statement("function")
+	local node = self:Node("statement", "function")
 	node.tokens["function"] = self:ReadValue("function")
 	node.expression = index_expression(self)
 

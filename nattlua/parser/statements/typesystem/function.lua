@@ -2,7 +2,7 @@ local function_body = require("nattlua.parser.statements.typesystem.function_bod
 local index_expression = require("nattlua.parser.expressions.index_expression")
 return function(parser)
 	if not (parser:IsCurrentValue("type") and parser:IsValue("function", 1)) then return end
-	local node = parser:Statement("type_function")
+	local node = parser:Node("statement", "type_function")
 	node.tokens["type"] = parser:ReadValue("type")
 	node.tokens["function"] = parser:ReadValue("function")
 	local force_upvalue

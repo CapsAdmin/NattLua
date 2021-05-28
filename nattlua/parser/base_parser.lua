@@ -39,16 +39,35 @@ return function(META)
 		local PARSER = META
 		local META = {}
 		META.__index = META
-		META.type = "expression"
+		META.Type = "node"
 
 		function META:__tostring()
-			local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
+			if self.type == "statement" then
+				local str = "[" .. self.type .. " - " .. self.kind .. "]"
 
-			if self.value and type(self.value.value) == "string" then
-				str = str .. ": " .. require("nattlua.other.quote").QuoteToken(self.value.value)
+				if self.code and self.name and self.name:sub(1, 1) == "@" then
+					local helpers = require("nattlua.other.helpers")
+					local data = helpers.SubPositionToLinePosition(self.code, helpers.LazyFindStartStop(self))
+
+					if data and data.line_start then
+						str = str .. " @ " .. self.name:sub(2) .. ":" .. data.line_start
+					else
+						str = str .. " @ " .. self.name:sub(2) .. ":" .. "?"
+					end
+				else
+					str = str .. " " .. ("%s"):format(self.id)
+				end
+
+				return str
+			elseif self.type == "expression" then
+				local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
+
+				if self.value and type(self.value.value) == "string" then
+					str = str .. ": " .. require("nattlua.other.quote").QuoteToken(self.value.value)
+				end
+
+				return str
 			end
-
-			return str
 		end
 
 		function META:Dump()
@@ -58,149 +77,18 @@ return function(META)
 
 		function META:Render(op)
 			local em = PARSER.Emitter(op or {preserve_whitespace = false, no_newlines = true})
-			em:EmitExpression(self)
+
+			if self.type == "expression" then
+				em:EmitExpression(self)
+			else
+				em:EmitStatement(self)
+			end
+
 			return em:Concat()
 		end
 
 		function META:IsWrappedInParenthesis()
 			return self.tokens["("] and self.tokens[")"]
-		end
-
-		function META:ExpectKeyword(what, start, stop)
-			expect(
-				self,
-				self.parser,
-				self.parser.ReadValue,
-				what,
-				start,
-				stop
-			)
-			return self
-		end
-
-		function META:ExpectAliasedKeyword(what, alias, start, stop)
-			expect(
-				self,
-				self.parser,
-				self.parser.ReadValue,
-				what,
-				start,
-				stop,
-				alias
-			)
-			return self
-		end
-
-		function META:ExpectExpression(what)
-			if self.expressions then
-				table.insert(self.expressions, self.parser:ReadExpectExpression(0))
-			elseif self.expression then
-				self.expressions = {self.expression}
-				self.expression = nil
-				table.insert(self.expressions, self.parser:ReadExpectExpression(0))
-			else
-				self.expression = self.parser:ReadExpectExpression(0)
-			end
-
-			return self
-		end
-
-		function META:ExpectStatementsUntil(what)
-			self.statements = self.parser:ReadStatements(type(what) == "table" and what or {[what] = true})
-			return self
-		end
-
-		function META:ExpectSimpleIdentifier()
-			self.tokens["identifier"] = self.parser:ReadType("letter")
-			return self
-		end
-
-		function META:Store(key, val)
-			self[key] = val
-			return self
-		end
-
-		local identifier = require("nattlua.parser.expressions.identifier")
-		local identifier_list = require("nattlua.parser.statements.identifier_list")
-
-		function META:ExpectIdentifier()
-			self.identifier = identifier(self)
-			return self
-		end
-
-		function META:ExpectIdentifierList(length)
-			self.identifiers = identifier_list(self.parser, length)
-			return self
-		end
-
-		function META:End()
-			table.remove(self.parser.nodes, 1)
-			return self
-		end
-
-		function META:GetLength()
-			local helpers = require("nattlua.other.helpers")
-			local start, stop = helpers.LazyFindStartStop(self, true)
-			return stop - start
-		end
-
-		PARSER.ExpressionMeta = META
-		local id = 0
-
-		function PARSER:Expression(kind)
-			local node = {}
-			node.tokens = {}
-			node.kind = kind
-			node.id = id
-			node.code = self.code
-			node.name = self.name
-			node.parser = self
-			id = id + 1
-			setmetatable(node, META)
-			self.current_expression = node
-
-			if self.OnNode then
-				self:OnNode(node)
-			end
-
-			return node
-		end
-	end
-
-	do
-		local PARSER = META
-		local META = {}
-		META.__index = META
-		META.type = "statement"
-
-		function META:__tostring()
-			local str = "[" .. self.type .. " - " .. self.kind .. "]"
-
-			if self.code and self.name and self.name:sub(1, 1) == "@" then
-				local helpers = require("nattlua.other.helpers")
-				local data = helpers.SubPositionToLinePosition(self.code, helpers.LazyFindStartStop(self))
-
-				if data and data.line_start then
-					str = str .. " @ " .. self.name:sub(2) .. ":" .. data.line_start
-				else
-					str = str .. " @ " .. self.name:sub(2) .. ":" .. "?"
-				end
-			else
-				str = str .. " " .. ("%s"):format(self.id)
-			end
-
-			return str
-		end
-
-		function META:Dump()
-			local table_print = require("nattlua.other.table_print")
-			table_print(self)
-		end
-
-		function META:Render(op)
-			local em = PARSER.Emitter(op or {preserve_whitespace = false, no_newlines = true})
-			em:EmitStatement(self)
-			return em:Concat()
 		end
 
 		function META:GetStatements()
@@ -237,31 +125,21 @@ return function(META)
 			return out
 		end
 
-		function META:ToExpression(kind)
-			setmetatable(self, PARSER.ExpressionMeta)
-			self.kind = kind
-			return self
-		end
-
-		function META:ExpectSimpleIdentifier()
-			self.tokens["identifier"] = self.parser:ReadType("letter")
-			return self
-		end
-
-		function META:Store(key, val)
-			self[key] = val
-			return self
-		end
-
 		function META:ExpectExpressionList(length)
 			self.expressions = self.parser:ReadExpressionList(length)
 			return self
 		end
 
-		local identifier_list = require("nattlua.parser.statements.identifier_list")
-
-		function META:ExpectIdentifierList(length)
-			self.identifiers = identifier_list(self.parser, length)
+		function META:ExpectAliasedKeyword(what, alias, start, stop)
+			expect(
+				self,
+				self.parser,
+				self.parser.ReadValue,
+				what,
+				start,
+				stop,
+				alias
+			)
 			return self
 		end
 
@@ -284,6 +162,11 @@ return function(META)
 			return self
 		end
 
+		function META:ExpectSimpleIdentifier()
+			self.tokens["identifier"] = self.parser:ReadType("letter")
+			return self
+		end
+
 		function META:ExpectKeyword(what, start, stop)
 			expect(
 				self,
@@ -296,16 +179,21 @@ return function(META)
 			return self
 		end
 
-		function META:ExpectAliasedKeyword(what, alias, start, stop)
-			expect(
-				self,
-				self.parser,
-				self.parser.ReadValue,
-				what,
-				start,
-				stop,
-				alias
-			)
+		function META:Store(key, val)
+			self[key] = val
+			return self
+		end
+
+		local identifier = require("nattlua.parser.expressions.identifier")
+		local identifier_list = require("nattlua.parser.statements.identifier_list")
+
+		function META:ExpectIdentifier()
+			self.identifier = identifier(self)
+			return self
+		end
+
+		function META:ExpectIdentifierList(length)
+			self.identifiers = identifier_list(self.parser, length)
 			return self
 		end
 
@@ -314,10 +202,17 @@ return function(META)
 			return self
 		end
 
+		function META:GetLength()
+			local helpers = require("nattlua.other.helpers")
+			local start, stop = helpers.LazyFindStartStop(self, true)
+			return stop - start
+		end
+
 		local id = 0
 
-		function PARSER:Statement(kind)
+		function PARSER:Node(type, kind)
 			local node = {}
+			node.type = type
 			node.tokens = {}
 			node.kind = kind
 			node.id = id
@@ -326,7 +221,12 @@ return function(META)
 			node.parser = self
 			id = id + 1
 			setmetatable(node, META)
-			self.current_statement = node
+
+			if type == "expression" then
+				self.current_expression = node
+			else
+				self.current_statement = node
+			end
 
 			if self.OnNode then
 				self:OnNode(node)
@@ -479,12 +379,12 @@ return function(META)
 	end
 
 	function META:Root(root)
-		local node = self:Statement("root")
+		local node = self:Node("statement", "root")
 		self.root = root or node
 		local shebang
 
 		if self:IsCurrentType("shebang") then
-			shebang = self:Statement("shebang")
+			shebang = self:Node("statement", "shebang")
 			shebang.tokens["shebang"] = self:ReadType("shebang")
 		end
 
@@ -495,7 +395,7 @@ return function(META)
 		end
 
 		if self:IsCurrentType("end_of_file") then
-			local eof = self:Statement("end_of_file")
+			local eof = self:Node("statement", "end_of_file")
 			eof.tokens["end_of_file"] = self.tokens[#self.tokens]
 			table.insert(node.statements, eof)
 		end

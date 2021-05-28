@@ -6,7 +6,7 @@ return function(parser, node)
 	node.identifiers = identifier_list(parser)
 
 	if parser:IsCurrentValue("...") then
-		local vararg = parser:Expression("value")
+		local vararg = parser:Node("expression", "value")
 		vararg.value = parser:ReadValue("...")
 		table_insert(node.identifiers, vararg)
 	end

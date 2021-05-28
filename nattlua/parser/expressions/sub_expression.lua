@@ -1,7 +1,6 @@
 local syntax = require("nattlua.syntax.syntax")
 local call_expression = require("nattlua.parser.expressions.call")
 
-
 local function IsCallExpression(parser, offset)
 	return
 		parser:IsValue("(", offset) or
@@ -25,24 +24,24 @@ end
 
 local function ReadIndexSubExpression(parser)
 	if not (parser:IsCurrentValue(".") and parser:IsType("letter", 1)) then return end
-	local node = parser:Expression("binary_operator")
+	local node = parser:Node("expression", "binary_operator")
 	node.value = parser:ReadTokenLoose()
-	node.right = parser:Expression("value"):Store("value", parser:ReadType("letter")):End()
+	node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
 	return node:End()
 end
 
 local function ReadparserCallSubExpression(parser)
 	if not (parser:IsCurrentValue(":") and parser:IsType("letter", 1) and IsCallExpression(parser, 2)) then return end
-	local node = parser:Expression("binary_operator")
+	local node = parser:Node("expression", "binary_operator")
 	node.value = parser:ReadTokenLoose()
-	node.right = parser:Expression("value"):Store("value", parser:ReadType("letter")):End()
+	node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
 	return node:End()
 end
 
 local function ReadPostfixOperatorSubExpression(parser)
 	if not syntax.IsPostfixOperator(parser:GetCurrentToken()) then return end
 	return
-		parser:Expression("postfix_operator"):Store("value", parser:ReadTokenLoose()):End()
+		parser:Node("expression", "postfix_operator"):Store("value", parser:ReadTokenLoose()):End()
 end
 
 local function ReadCallSubExpression(parser)
@@ -52,7 +51,10 @@ end
 
 local function ReadPostfixExpressionIndexSubExpression(parser)
 	if not parser:IsCurrentValue("[") then return end
-	return parser:Expression("postfix_expression_index"):ExpectKeyword("["):ExpectExpression():ExpectKeyword("]"):End()
+	return
+		parser:Node("expression", "postfix_expression_index"):ExpectKeyword("["):ExpectExpression()
+		:ExpectKeyword("]")
+		:End()
 end
 
 return function(parser, node)

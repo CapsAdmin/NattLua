@@ -4,13 +4,13 @@ local function ReadTypeTableEntry(self, i)
 	local node
 
 	if self:IsCurrentValue("[") then
-		node = self:Expression("table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
+		node = self:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
 		self:ExpectTypeExpression(node)
 		node:ExpectKeyword("]"):ExpectKeyword("=")
 	elseif self:IsCurrentType("letter") and self:IsValue("=", 1) then
-		node = self:Expression("table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
+		node = self:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
 	else
-		node = self:Expression("table_index_value"):Store("key", i)
+		node = self:Node("expression", "table_index_value"):Store("key", i)
 	end
 
 	self:ExpectTypeExpression(node)
@@ -18,7 +18,7 @@ local function ReadTypeTableEntry(self, i)
 end
 
 return function(parser)
-	local tree = parser:Expression("type_table")
+	local tree = parser:Node("expression", "type_table")
 	tree:ExpectKeyword("{")
 	tree.children = {}
 	tree.tokens["separators"] = {}

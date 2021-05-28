@@ -4,21 +4,21 @@ local function table_spread(parser)
 		(parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))
 	) then return end
 	return
-		parser:Expression("table_spread"):ExpectKeyword("..."):ExpectExpression():End()
+		parser:Node("expression", "table_spread"):ExpectKeyword("..."):ExpectExpression():End()
 end
 
 local function read_table_entry(parser, i)
 	local node
 
 	if parser:IsCurrentValue("[") then
-		node = parser:Expression("table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
+		node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
 			:ExpectExpression()
 			:ExpectKeyword("]")
 			:ExpectKeyword("=")
 	elseif parser:IsCurrentType("letter") and parser:IsValue("=", 1) then
-		node = parser:Expression("table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
+		node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
 	else
-		node = parser:Expression("table_index_value")
+		node = parser:Node("expression", "table_index_value")
 		node.key = i
 	end
 
@@ -33,7 +33,7 @@ end
 
 return function(parser)
 	if not parser:IsCurrentValue("{") then return end
-	local tree = parser:Expression("table")
+	local tree = parser:Node("expression", "table")
 	tree:ExpectKeyword("{")
 	tree.children = {}
 	tree.tokens["separators"] = {}

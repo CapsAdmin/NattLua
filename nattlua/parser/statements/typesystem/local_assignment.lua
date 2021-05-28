@@ -6,7 +6,7 @@ return function(parser)
 		parser:IsCurrentValue("local") and parser:IsValue("type", 1) and
 		syntax.GetTokenType(parser:GetToken(2)) == "letter"
 	) then return end
-	local node = parser:Statement("local_assignment")
+	local node = parser:Node("statement", "local_assignment")
 	node.tokens["local"] = parser:ReadValue("local")
 	node.tokens["type"] = parser:ReadValue("type")
 	node.left = identifier_list(parser)

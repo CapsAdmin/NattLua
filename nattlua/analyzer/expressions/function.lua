@@ -17,7 +17,8 @@ return function(analyzer, node, env)
 		node.type == "statement" and
 		(node.kind == "local_type_function" or node.kind == "type_function")
 	then
-		node = node:ToExpression("type_function")
+		node.type = "expression"
+		node.kind = "type_function"
 	end
 
 	local explicit_arguments = false

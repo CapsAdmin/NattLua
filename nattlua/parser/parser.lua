@@ -26,7 +26,7 @@ do -- expression
 	do
 		local function prefix_operator(parser)
 			if not syntax.IsPrefixOperator(parser:GetCurrentToken()) then return end
-			local node = parser:Expression("prefix_operator")
+			local node = parser:Node("expression", "prefix_operator")
 			node.value = parser:ReadTokenLoose()
 			node.tokens[1] = node.value
 			node.right = parser:ReadExpectExpression(math.huge)
@@ -52,7 +52,8 @@ do -- expression
 
 		local function value(parser)
 			if not syntax.IsValue(parser:GetCurrentToken()) then return end
-			return parser:Expression("value"):Store("value", parser:ReadTokenLoose()):End()
+			return
+				parser:Node("expression", "value"):Store("value", parser:ReadTokenLoose()):End()
 		end
 
 		local _function = require("nattlua.parser.expressions.function")
@@ -105,7 +106,7 @@ do -- expression
 			while syntax.GetBinaryOperatorInfo(self:GetCurrentToken()) and
 			syntax.GetBinaryOperatorInfo(self:GetCurrentToken()).left_priority > priority do
 				local left_node = node
-				node = self:Expression("binary_operator")
+				node = self:Node("expression", "binary_operator")
 				node.value = self:ReadTokenLoose()
 				node.left = left_node
 				node.right = self:ReadExpression(syntax.GetBinaryOperatorInfo(node.value).right_priority)
@@ -160,7 +161,6 @@ do -- expression
 	end
 end
 
-
 do -- statements
 	local _break = require("nattlua.parser.statements.break")
 	local _do = require("nattlua.parser.statements.do")
@@ -189,7 +189,6 @@ do -- statements
 
 	function META:ReadStatement()
 		if self:IsCurrentType("end_of_file") then return end
-
 		return
 			debug_code(self) or
 			_return(self) or

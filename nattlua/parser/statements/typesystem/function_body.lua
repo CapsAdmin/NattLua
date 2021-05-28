@@ -33,7 +33,7 @@ return function(parser, node, plain_args)
 	end
 
 	if parser:IsCurrentValue("...") then
-		local vararg = parser:Expression("value")
+		local vararg = parser:Node("expression", "value")
 		vararg.value = parser:ReadValue("...")
 
 		if parser:IsCurrentType("letter") then

@@ -1,5 +1,5 @@
 return function(parser)
-	local node = parser:Expression("value")
+	local node = parser:Node("expression", "value")
 
 	if parser:IsCurrentValue("...") then
 		node.value = parser:ReadValue("...")

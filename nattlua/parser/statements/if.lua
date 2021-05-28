@@ -1,7 +1,6 @@
 return function(parser)
 	if not parser:IsCurrentValue("if") then return nil end
-	
-	local node = parser:Statement("if")
+	local node = parser:Node("statement", "if")
 	node.expressions = {}
 	node.statements = {}
 	node.tokens["if/else/elseif"] = {}

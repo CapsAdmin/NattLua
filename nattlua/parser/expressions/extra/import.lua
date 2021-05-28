@@ -1,6 +1,6 @@
 return function(parser)
 	if not (parser:IsCurrentValue("import") and parser:IsValue("(", 1)) then return end
-	local node = parser:Expression("import")
+	local node = parser:Node("expression", "import")
 	node.tokens["import"] = parser:ReadValue("import")
 	node.tokens["("] = {parser:ReadValue("(")}
 	local start = parser:GetCurrentToken()
