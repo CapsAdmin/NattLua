@@ -14,7 +14,7 @@ return function(parser, as_statement)
 		elseif parser:IsCurrentValue("...") then
 			parser:ReadTokenLoose() -- !
             table.insert(props, {
-				val = parser:ReadExpression(nil, true),
+				val = parser:ReadExpression(0),
 				spread = true,
 			})
 		else

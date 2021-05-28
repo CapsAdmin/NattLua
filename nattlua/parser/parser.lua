@@ -15,11 +15,6 @@ function META:ResolvePath(path)
 	return path
 end
 
-local function ReadExpressionValue(parser)
-	if not syntax.IsValue(parser:GetCurrentToken()) then return end
-	return parser:Expression("value"):Store("value", parser:ReadTokenLoose()):End()
-end
-
 function META:HandleListSeparator(out, i, node)
 	if not node then return true end
 	out[i] = node
@@ -28,112 +23,99 @@ function META:HandleListSeparator(out, i, node)
 end
 
 do -- expression
-	
 	do
-		function META:IsCallExpression(offset)
-			offset = offset or 0
-			return
-				self:IsValue("(", offset) or
-				self:IsCurrentValue("<|", offset) or
-				self:IsValue("{", offset) or
-				self:IsType("string", offset)
+		local function prefix_operator(parser)
+			if not syntax.IsPrefixOperator(parser:GetCurrentToken()) then return end
+			local node = parser:Expression("prefix_operator")
+			node.value = parser:ReadTokenLoose()
+			node.tokens[1] = node.value
+			node.right = parser:ReadExpectExpression(math.huge)
+			return node:End()
 		end
-	end
 
-	function META:ReadPostfixExpressionIndex()
-		if not self:IsCurrentValue("[") then return end
-		return
-			self:Expression("postfix_expression_index"):ExpectKeyword("["):ExpectExpression():ExpectKeyword("]")
-			:End()
-	end
+		local function parenthesis(parser)
+			if not parser:IsCurrentValue("(") then return end
+			local pleft = parser:ReadValue("(")
+			local node = parser:ReadExpression(0)
 
-	local function CheckForIntegerDivisionOperator(parser, node)
-		if node and not node.idiv_resolved then
-			for i, token in ipairs(node.whitespace) do
-				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
-					table_remove(node.whitespace, i)
-					local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
+			if not node then
+				parser:Error("empty parentheses group", pleft)
+				return
+			end
 
-					for _, token in ipairs(tokens) do
-						CheckForIntegerDivisionOperator(parser, token)
+			node.tokens["("] = node.tokens["("] or {}
+			table_insert(node.tokens["("], 1, pleft)
+			node.tokens[")"] = node.tokens[")"] or {}
+			table_insert(node.tokens[")"], parser:ReadValue(")"))
+			return node
+		end
+
+		local function value(parser)
+			if not syntax.IsValue(parser:GetCurrentToken()) then return end
+			return parser:Expression("value"):Store("value", parser:ReadTokenLoose()):End()
+		end
+
+		local _function = require("nattlua.parser.expressions.function")
+		local sub_expression = require("nattlua.parser.expressions.sub_expression")
+		local table = require("nattlua.parser.expressions.table")
+		local _import = require("nattlua.parser.expressions.extra.import")
+		local lsx = require("nattlua.parser.expressions.extra.lsx")
+
+		local function CheckForIntegerDivisionOperator(parser, node)
+			if node and not node.idiv_resolved then
+				for i, token in ipairs(node.whitespace) do
+					if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
+						table_remove(node.whitespace, i)
+						local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
+
+						for _, token in ipairs(tokens) do
+							CheckForIntegerDivisionOperator(parser, token)
+						end
+
+						parser:AddTokens(tokens)
+						node.idiv_resolved = true
+
+						break
 					end
-
-					parser:AddTokens(tokens)
-					node.idiv_resolved = true
-
-					break
 				end
 			end
 		end
-	end
 
-	local function ReadPrefixOperatorExpression(parser)
-		if not syntax.IsPrefixOperator(parser:GetCurrentToken()) then return end
-		local node = parser:Expression("prefix_operator")
-		node.value = parser:ReadTokenLoose()
-		node.tokens[1] = node.value
-		node.right = parser:ReadExpectExpression(math.huge)
-		return node:End()
-	end
+		function META:ReadExpression(priority)
+			local node = parenthesis(self) or
+				prefix_operator(self) or
+				_function(self) or
+				_import(self) or
+				lsx(self) or
+				value(self) or
+				table(self)
+			local first = node
 
-	local function ReadParenthesisExpression(parser)
-		if not parser:IsCurrentValue("(") then return end
-		local pleft = parser:ReadValue("(")
-		local node = parser:ReadExpression(0)
+			if node then
+				node = sub_expression(self, node)
 
-		if not node then
-			parser:Error("empty parentheses group", pleft)
-			return
-		end
-
-		node.tokens["("] = node.tokens["("] or {}
-		table_insert(node.tokens["("], 1, pleft)
-		node.tokens[")"] = node.tokens[")"] or {}
-		table_insert(node.tokens[")"], parser:ReadValue(")"))
-		return node
-	end
-
-	local _function = require("nattlua.parser.expressions.function")
-	local sub_expression = require("nattlua.parser.expressions.sub_expression")
-	local table = require("nattlua.parser.expressions.table")
-	local _import = require("nattlua.parser.expressions.extra.import")
-	local lsx = require("nattlua.parser.expressions.extra.lsx")
-
-	function META:ReadExpression(priority)
-		priority = priority or 0
-		local node = ReadParenthesisExpression(self) or
-			ReadPrefixOperatorExpression(self) or
-			_function(self) or
-			_import(self) or
-			lsx(self) or
-			ReadExpressionValue(self) or
-			table(self)
-		local first = node
-
-		if node then
-			node = sub_expression(self, node)
-
-			if
-				first.kind == "value" and
-				(first.value.type == "letter" or first.value.value == "...")
-			then
-				first.standalone_letter = node
+				if
+					first.kind == "value" and
+					(first.value.type == "letter" or first.value.value == "...")
+				then
+					first.standalone_letter = node
+				end
 			end
+
+			CheckForIntegerDivisionOperator(self, self:GetCurrentToken())
+
+			while syntax.GetBinaryOperatorInfo(self:GetCurrentToken()) and
+			syntax.GetBinaryOperatorInfo(self:GetCurrentToken()).left_priority > priority do
+				local left_node = node
+				node = self:Expression("binary_operator")
+				node.value = self:ReadTokenLoose()
+				node.left = left_node
+				node.right = self:ReadExpression(syntax.GetBinaryOperatorInfo(node.value).right_priority)
+				node:End()
+			end
+
+			return node
 		end
-
-		CheckForIntegerDivisionOperator(self, self:GetCurrentToken())
-
-		while syntax.GetBinaryOperatorInfo(self:GetCurrentToken()) and
-		syntax.GetBinaryOperatorInfo(self:GetCurrentToken()).left_priority > priority do
-			local left_node = node
-			node = self:Expression("binary_operator")
-			node.value = self:ReadTokenLoose()
-			node.left = left_node
-			node.right = self:ReadExpression(syntax.GetBinaryOperatorInfo(node.value).right_priority)
-			node:End()
-		end
-
-		return node
 	end
 
 	local function IsDefinetlyNotStartOfExpression(token)
@@ -172,7 +154,7 @@ do -- expression
 		local out = {}
 
 		for i = 1, max or self:GetLength() do
-			local exp = max and self:ReadExpectExpression() or self:ReadExpression()
+			local exp = max and self:ReadExpectExpression(0) or self:ReadExpression(0)
 			if self:HandleListSeparator(out, i, exp) then break end
 		end
 
@@ -180,36 +162,8 @@ do -- expression
 	end
 end
 
+
 do -- statements
-    local function ReadRemainingStatement(self)
-		if self:IsCurrentType("end_of_file") then return end
-		local start = self:GetCurrentToken()
-		local left = self:ReadExpressionList(math.huge)
-
-		if self:IsCurrentValue("=") then
-			local node = self:Statement("assignment")
-			node:ExpectKeyword("=")
-			node.left = left
-			node.right = self:ReadExpressionList(math.huge)
-			return node:End()
-		end
-
-		if left[1] and (left[1].kind == "postfix_call" or left[1].kind == "import") and not left[2] then
-			local node = self:Statement("call_expression")
-			node.value = left[1]
-			node.tokens = left[1].tokens
-			return node:End()
-		end
-
-		self:Error(
-			"expected assignment or call expression got $1 ($2)",
-			start,
-			self:GetCurrentToken(),
-			self:GetCurrentToken().type,
-			self:GetCurrentToken().value
-		)
-	end
-
 	local _break = require("nattlua.parser.statements.break")
 	local _do = require("nattlua.parser.statements.do")
 	local generic_for = require("nattlua.parser.statements.generic_for")
@@ -236,8 +190,11 @@ do -- statements
 	local local_type_assignment = require("nattlua.parser.statements.typesystem.local_assignment")
 	local type_assignment = require("nattlua.parser.statements.typesystem.assignment")
 	local interface = require("nattlua.parser.statements.typesystem.interface")
+	local call_or_assignment = require("nattlua.parser.statements.call_or_assignment")
 
 	function META:ReadStatement()
+		if self:IsCurrentType("end_of_file") then return end
+
 		return
 			debug_code(self) or
 			_return(self) or
@@ -265,7 +222,7 @@ do -- statements
 			numeric_for(self) or
 			generic_for(self) or
 			destructure_assignment(self) or
-			ReadRemainingStatement(self)
+			call_or_assignment(self)
 	end
 end
 

@@ -41,6 +41,15 @@ return function(META)
 		return node:End()
 	end
 
+	local function IsCallExpression(parser, offset)
+		offset = offset or 0
+		return
+			parser:IsValue("(", offset) or
+			parser:IsCurrentValue("<|", offset) or
+			parser:IsValue("{", offset) or
+			parser:IsType("string", offset)
+	end
+
 	local table = require("nattlua.parser.expressions.typesystem.table")
 	local type_function = require("nattlua.parser.expressions.typesystem.function")
 	local call_expression = require("nattlua.parser.expressions.call")
@@ -98,7 +107,7 @@ return function(META)
 				if not self:GetCurrentToken() then break end
 
 				if self:IsCurrentValue(".") or self:IsCurrentValue(":") then
-					if self:IsCurrentValue(".") or self:IsCallExpression(2) then
+					if self:IsCurrentValue(".") or IsCallExpression(self, 2) then
 						node = self:Expression("binary_operator")
 						node.value = self:ReadTokenLoose()
 						node.right = self:Expression("value"):Store("value", self:ReadType("letter")):End()
@@ -115,7 +124,7 @@ return function(META)
 				elseif self:IsCurrentValue("<|") then
 					node = ReadTypeCall(self)
 					node.left = left
-				elseif self:IsCallExpression() then
+				elseif IsCallExpression(self) then
 					node = call_expression(self)
 					node.left = left
 
@@ -123,7 +132,7 @@ return function(META)
 						node.self_call = true
 					end
 				elseif self:IsCurrentValue("[") then
-					node = self:ReadPostfixExpressionIndex()
+					node = self:Expression("postfix_expression_index"):ExpectKeyword("["):ExpectExpression():ExpectKeyword("]"):End()
 					node.left = left
 				elseif self:IsCurrentValue("as") then
 					node.tokens["as"] = self:ReadValue("as")

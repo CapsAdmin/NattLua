@@ -19,7 +19,7 @@ local function read_remaining(parser, node)
 	node.left = identifier_list(parser)
 	node.tokens["}"] = parser:ReadValue("}")
 	node.tokens["="] = parser:ReadValue("=")
-	node.right = parser:ReadExpression()
+	node.right = parser:ReadExpression(0)
 end
 
 return function(self)

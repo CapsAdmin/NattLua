@@ -93,13 +93,13 @@ return function(META)
 
 		function META:ExpectExpression(what)
 			if self.expressions then
-				table.insert(self.expressions, self.parser:ReadExpectExpression())
+				table.insert(self.expressions, self.parser:ReadExpectExpression(0))
 			elseif self.expression then
 				self.expressions = {self.expression}
 				self.expression = nil
-				table.insert(self.expressions, self.parser:ReadExpectExpression())
+				table.insert(self.expressions, self.parser:ReadExpectExpression(0))
 			else
-				self.expression = self.parser:ReadExpectExpression()
+				self.expression = self.parser:ReadExpectExpression(0)
 			end
 
 			return self
@@ -267,13 +267,13 @@ return function(META)
 
 		function META:ExpectExpression()
 			if self.expressions then
-				table.insert(self.expressions, self.parser:ReadExpectExpression())
+				table.insert(self.expressions, self.parser:ReadExpectExpression(0))
 			elseif self.expression then
 				self.expressions = {self.expression}
 				self.expression = nil
-				table.insert(self.expressions, self.parser:ReadExpectExpression())
+				table.insert(self.expressions, self.parser:ReadExpectExpression(0))
 			else
-				self.expression = self.parser:ReadExpectExpression()
+				self.expression = self.parser:ReadExpectExpression(0)
 			end
 
 			return self

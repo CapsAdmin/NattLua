@@ -23,7 +23,7 @@ return function(parser)
 		node.tokens["if/else/elseif"][i] = token
 
 		if token.value ~= "else" then
-			node.expressions[i] = parser:ReadExpectExpression()
+			node.expressions[i] = parser:ReadExpectExpression(0)
 			node.tokens["then"][i] = parser:ReadValue("then")
 		end
 

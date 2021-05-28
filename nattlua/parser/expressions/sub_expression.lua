@@ -1,8 +1,17 @@
 local syntax = require("nattlua.syntax.syntax")
 local call_expression = require("nattlua.parser.expressions.call")
 
+
+local function IsCallExpression(parser, offset)
+	return
+		parser:IsValue("(", offset) or
+		parser:IsCurrentValue("<|", offset) or
+		parser:IsValue("{", offset) or
+		parser:IsType("string", offset)
+end
+
 local function ReadAndAddExplicitType(parser, node)
-	if parser:IsCurrentValue(":") and (not parser:IsType("letter", 1) or not parser:IsCallExpression(2)) then
+	if parser:IsCurrentValue(":") and (not parser:IsType("letter", 1) or not IsCallExpression(parser, 2)) then
 		node.tokens[":"] = parser:ReadValue(":")
 		node.as_expression = parser:ReadTypeExpression()
 	elseif parser:IsCurrentValue("as") then
@@ -23,7 +32,7 @@ local function ReadIndexSubExpression(parser)
 end
 
 local function ReadparserCallSubExpression(parser)
-	if not (parser:IsCurrentValue(":") and parser:IsType("letter", 1) and parser:IsCallExpression(2)) then return end
+	if not (parser:IsCurrentValue(":") and parser:IsType("letter", 1) and IsCallExpression(parser, 2)) then return end
 	local node = parser:Expression("binary_operator")
 	node.value = parser:ReadTokenLoose()
 	node.right = parser:Expression("value"):Store("value", parser:ReadType("letter")):End()
@@ -37,13 +46,13 @@ local function ReadPostfixOperatorSubExpression(parser)
 end
 
 local function ReadCallSubExpression(parser)
-	if not parser:IsCallExpression() then return end
+	if not IsCallExpression(parser, 0) then return end
 	return call_expression(parser)
 end
 
 local function ReadPostfixExpressionIndexSubExpression(parser)
 	if not parser:IsCurrentValue("[") then return end
-	return parser:ReadPostfixExpressionIndex()
+	return parser:Expression("postfix_expression_index"):ExpectKeyword("["):ExpectExpression():ExpectKeyword("]"):End()
 end
 
 return function(parser, node)
