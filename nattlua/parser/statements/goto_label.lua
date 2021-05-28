@@ -1,5 +1,5 @@
 return function(parser)
-	return
-		parser:IsCurrentValue("::") and
-		parser:Statement("goto_label"):ExpectKeyword("::"):ExpectSimpleIdentifier():ExpectKeyword("::"):End()
+	if not parser:IsCurrentValue("::") then return nil end
+
+	return parser:Statement("goto_label"):ExpectKeyword("::"):ExpectSimpleIdentifier():ExpectKeyword("::"):End()
 end

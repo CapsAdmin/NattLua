@@ -1,6 +1,7 @@
 return function(parser)
+	if not parser:IsCurrentValue("for") then return nil end
+
 	return
-		parser:IsCurrentValue("for") and
 		parser:Statement("generic_for"):ExpectKeyword("for"):ExpectIdentifierList():ExpectKeyword("in")
 		:ExpectExpressionList()
 		:ExpectKeyword("do")

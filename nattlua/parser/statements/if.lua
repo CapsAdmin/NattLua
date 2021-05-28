@@ -1,5 +1,6 @@
 return function(parser)
-	if not parser:IsCurrentValue("if") then return end
+	if not parser:IsCurrentValue("if") then return nil end
+	
 	local node = parser:Statement("if")
 	node.expressions = {}
 	node.statements = {}
