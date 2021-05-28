@@ -849,8 +849,6 @@ function META:EmitStatement(node)
 		self:EmitExpression(node.value)
 	elseif node.kind == "shebang" then
 		self:EmitToken(node.tokens["shebang"])
-	elseif node.kind == "type_interface" then
-		self:EmitInterfaceType(node)
 	elseif node.kind == "lsx" then
 		self:EmitLSXStatement(node)
 	elseif node.kind == "continue" then
@@ -1116,21 +1114,7 @@ do -- types
 		self:EmitToken(node.value)
 		self:EmitAnnotation(node)
 	end
-
-	function META:EmitInterfaceType(node)
-		self:EmitToken(node.tokens["interface"])
-		self:EmitExpression(node.key)
-		self:EmitToken(node.tokens["{"])
-
-		for _, node in ipairs(node.expressions) do
-			self:EmitToken(node.left)
-			self:EmitToken(node.tokens["="])
-			self:EmitTypeExpression(node.right)
-		end
-
-		self:EmitToken(node.tokens["}"])
-	end
-
+	
 	function META:EmitTableType(node)
 		local tree = node
 		self:EmitToken(tree.tokens["{"])

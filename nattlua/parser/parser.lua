@@ -189,7 +189,6 @@ do -- statements
 	local debug_code = require("nattlua.parser.statements.typesystem.debug_code")
 	local local_type_assignment = require("nattlua.parser.statements.typesystem.local_assignment")
 	local type_assignment = require("nattlua.parser.statements.typesystem.assignment")
-	local interface = require("nattlua.parser.statements.typesystem.interface")
 	local call_or_assignment = require("nattlua.parser.statements.call_or_assignment")
 
 	function META:ReadStatement()
@@ -215,7 +214,6 @@ do -- statements
 			local_destructure_assignment(self) or
 			local_assignment(self) or
 			type_assignment(self) or
-			interface(self) or
 			_do(self) or
 			_if(self) or
 			_while(self) or
