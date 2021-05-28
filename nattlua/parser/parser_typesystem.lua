@@ -30,12 +30,12 @@ return function(META)
 		return node
 	end
 
-	local expression_list = require("nattlua.parser.statements.typesystem.expression_list")
+	local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
 
 	local function ReadTypeCall(parser)
 		local node = parser:Node("expression", "postfix_call")
 		node.tokens["call("] = parser:ReadValue("<|")
-		node.expressions = expression_list(parser)
+		node.expressions = type_expression_list(parser)
 		node.tokens["call)"] = parser:ReadValue("|>")
 		node.type_call = true
 		return node:End()

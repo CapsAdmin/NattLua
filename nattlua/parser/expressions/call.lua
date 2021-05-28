@@ -1,8 +1,8 @@
 local table = require("nattlua.parser.expressions.table")
-local expression_list = require("nattlua.parser.statements.typesystem.expression_list")
+local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
 
 return function(parser)
-	local expect_expression_list = require("nattlua.parser.expressions.expression").expression_list
+	local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
 	local node = parser:Node("expression", "postfix_call")
 
 	if parser:IsCurrentValue("{") then
@@ -13,12 +13,12 @@ return function(parser)
 			}
 	elseif parser:IsCurrentValue("<|") then
 		node.tokens["call("] = parser:ReadValue("<|")
-		node.expressions = expression_list(parser)
+		node.expressions = type_expression_list(parser)
 		node.tokens["call)"] = parser:ReadValue("|>")
 		node.type_call = true
 	else
 		node.tokens["call("] = parser:ReadValue("(")
-		node.expressions = expect_expression_list(parser)
+		node.expressions = optional_expression_list(parser)
 		node.tokens["call)"] = parser:ReadValue(")")
 	end
 

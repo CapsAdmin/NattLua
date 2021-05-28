@@ -8,7 +8,7 @@ return function(parser)
 	node.identifiers = identifier_list(parser)
 	node:ExpectKeyword("in")
 	
-	node.expressions = expression_list(parser)
+	node.expressions = expression_list(parser, math.huge)
 	
 	return node:ExpectKeyword("do"):ExpectStatementsUntil("end")
 		:ExpectKeyword("end", "do")

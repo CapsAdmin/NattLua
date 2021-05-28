@@ -2,7 +2,7 @@ local expression_list = require("nattlua.parser.expressions.expression").express
 
 return function(parser)
 	local start = parser:GetCurrentToken()
-	local left = expression_list(parser,math.huge)
+	local left = expression_list(parser, math.huge)
 
 	if parser:IsCurrentValue("=") then
 		local node = parser:Node("statement", "assignment")

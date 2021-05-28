@@ -1,5 +1,5 @@
 local table_insert = table.insert
-local expression_list = require("nattlua.parser.statements.typesystem.expression_list")
+local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
 local identifier_list = require("nattlua.parser.statements.identifier_list")
 return function(parser, node)
 	node.tokens["arguments("] = parser:ReadValue("<|")
@@ -15,7 +15,7 @@ return function(parser, node)
 
 	if parser:IsCurrentValue(":") then
 		node.tokens[":"] = parser:ReadValue(":")
-		node.return_types = expression_list(parser)
+		node.return_types = type_expression_list(parser)
 	else
 		local start = parser:GetCurrentToken()
 		node.statements = parser:ReadStatements({["end"] = true})

@@ -87,6 +87,7 @@ local function sub_expression(parser, node)
 	return node
 end
 
+local optional_expression_list
 local expression_list
 local expression
 local expect_expression
@@ -210,11 +211,22 @@ expect_expression = function(parser, priority)
     return expression(parser, priority)
 end
 
+optional_expression_list = function(parser)
+    local out = {}
+
+    for i = 1, parser:GetLength() do
+        local exp = expression(parser, 0)
+        if parser:HandleListSeparator(out, i, exp) then break end
+    end
+
+    return out
+end
+
 expression_list = function(parser, max)
     local out = {}
 
-    for i = 1, max or parser:GetLength() do
-        local exp = max and expect_expression(parser, 0) or expression(parser, 0)
+    for i = 1, max do
+        local exp = expect_expression(parser, 0)
         if parser:HandleListSeparator(out, i, exp) then break end
     end
 
@@ -225,4 +237,5 @@ return {
     expression = expression,
     expect_expression = expect_expression,
     expression_list = expression_list,
+    optional_expression_list = optional_expression_list,
 }

@@ -1,5 +1,5 @@
 local syntax = require("nattlua.syntax.syntax")
-local expression_list = require("nattlua.parser.statements.typesystem.expression_list")
+local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
 local identifier_list = require("nattlua.parser.statements.identifier_list")
 return function(parser)
 	if not (
@@ -14,7 +14,7 @@ return function(parser)
 
 	if parser:IsCurrentValue("=") then
 		node.tokens["="] = parser:ReadValue("=")
-		node.right = expression_list(parser)
+		node.right = type_expression_list(parser)
 	end
 
 	return node

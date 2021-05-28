@@ -1,6 +1,6 @@
 local math_huge = math.huge
 local table_insert = require("table").insert
-local expression_list = require("nattlua.parser.statements.typesystem.expression_list")
+local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
 local identifier_list = require("nattlua.parser.statements.identifier_list")
 
 local function ReadTypeFunctionArgument(parser)
@@ -47,7 +47,7 @@ return function(parser, node, plain_args)
 
 	if parser:IsCurrentValue(":") then
 		node.tokens[":"] = parser:ReadValue(":")
-		node.return_types = expression_list(parser)
+		node.return_types = type_expression_list(parser)
 	elseif not parser:IsCurrentValue(",") then
 		local start = parser:GetCurrentToken()
 		node.statements = parser:ReadStatements({["end"] = true})
