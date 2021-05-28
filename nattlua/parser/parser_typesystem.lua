@@ -2,18 +2,12 @@ local table_insert = require("table").insert
 return function(META)
 	local math_huge = math.huge
 	local syntax = require("nattlua.syntax.syntax")
+	local multiple_values = require("nattlua.parser.statements.multiple_values")
 
 	function META:ReadExplicitFunctionReturnType(node)
 		if not self:IsCurrentValue(":") then return end
 		node.tokens[":"] = self:ReadValue(":")
-		local out = {}
-
-		for i = 1, self:GetLength() do
-			local typ = self:ReadTypeExpression()
-			if self:HandleListSeparator(out, i, typ) then break end
-		end
-
-		node.return_types = out
+		node.return_types = multiple_values(self, nil, self.ReadTypeExpression)
 	end
 
 	function META:ExpectTypeExpression(node)

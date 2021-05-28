@@ -2,6 +2,7 @@ local math_huge = math.huge
 local table_insert = require("table").insert
 local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
 local identifier_list = require("nattlua.parser.statements.identifier_list")
+local multiple_values = require("nattlua.parser.statements.multiple_values")
 
 local function ReadTypeFunctionArgument(parser)
 	if
@@ -25,11 +26,7 @@ return function(parser, node, plain_args)
 	if plain_args then
 		node.identifiers = identifier_list(parser)
 	else
-		node.identifiers = {}
-
-		for i = 1, math_huge do
-			if parser:HandleListSeparator(node.identifiers, i, ReadTypeFunctionArgument(parser)) then break end
-		end
+		node.identifiers = multiple_values(parser, math_huge, ReadTypeFunctionArgument)
 	end
 
 	if parser:IsCurrentValue("...") then

@@ -11,13 +11,6 @@ function META:ResolvePath(path)
 	return path
 end
 
-function META:HandleListSeparator(out, i, node)
-	if not node then return true end
-	out[i] = node
-	if not self:IsCurrentValue(",") then return true end
-	node.tokens[","] = self:ReadValue(",")
-end
-
 do -- statements
 	local _break = require("nattlua.parser.statements.break")
 	local _do = require("nattlua.parser.statements.do")

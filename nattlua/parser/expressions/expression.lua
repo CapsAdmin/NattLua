@@ -211,26 +211,14 @@ expect_expression = function(parser, priority)
     return expression(parser, priority)
 end
 
+local multiple_values = require("nattlua.parser.statements.multiple_values")
+
 optional_expression_list = function(parser)
-    local out = {}
-
-    for i = 1, parser:GetLength() do
-        local exp = expression(parser, 0)
-        if parser:HandleListSeparator(out, i, exp) then break end
-    end
-
-    return out
+    return multiple_values(parser, nil, expression, 0)
 end
 
 expression_list = function(parser, max)
-    local out = {}
-
-    for i = 1, max do
-        local exp = expect_expression(parser, 0)
-        if parser:HandleListSeparator(out, i, exp) then break end
-    end
-
-    return out
+    return multiple_values(parser, max, expect_expression, 0)
 end
 
 return { 
