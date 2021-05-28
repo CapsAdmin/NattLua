@@ -1,4 +1,3 @@
-
 return function(parser)
 	local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
 	if not (parser:IsCurrentValue("import") and parser:IsValue("(", 1)) then return end

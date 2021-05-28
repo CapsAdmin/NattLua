@@ -1,6 +1,5 @@
 local identifier_list = require("nattlua.parser.statements.identifier_list")
 local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
-
 return function(parser)
 	if not parser:IsCurrentValue("local") then return end
 	local node = parser:Node("statement", "local_assignment")

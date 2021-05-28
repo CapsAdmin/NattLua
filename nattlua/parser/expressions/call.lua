@@ -1,6 +1,5 @@
 local table = require("nattlua.parser.expressions.table")
 local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
-
 return function(parser)
 	local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
 	local node = parser:Node("expression", "postfix_call")

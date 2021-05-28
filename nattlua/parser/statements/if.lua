@@ -1,5 +1,4 @@
 local expect_expression = require("nattlua.parser.expressions.expression").expect_expression
-
 return function(parser)
 	if not parser:IsCurrentValue("if") then return nil end
 	local node = parser:Node("statement", "if")

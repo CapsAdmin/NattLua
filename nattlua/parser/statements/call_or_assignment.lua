@@ -1,5 +1,4 @@
 local expression_list = require("nattlua.parser.expressions.expression").expression_list
-
 return function(parser)
 	local start = parser:GetCurrentToken()
 	local left = expression_list(parser, math.huge)
