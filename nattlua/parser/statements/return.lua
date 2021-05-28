@@ -1,5 +1,8 @@
+local expression_list = require("nattlua.parser.expressions.expression").expression_list
+
 return function(parser)
-	return
-		parser:IsCurrentValue("return") and
-		parser:Node("statement", "return"):ExpectKeyword("return"):ExpectExpressionList():End()
+	if not parser:IsCurrentValue("return") then return nil end
+	local node = parser:Node("statement", "return"):ExpectKeyword("return")
+	node.expressions = expression_list(parser)
+	return node:End()
 end

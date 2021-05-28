@@ -1,3 +1,5 @@
+local expect_expression = require("nattlua.parser.expressions.expression").expect_expression
+
 return function(parser)
 	if not parser:IsCurrentValue("if") then return nil end
 	local node = parser:Node("statement", "if")
@@ -23,7 +25,7 @@ return function(parser)
 		node.tokens["if/else/elseif"][i] = token
 
 		if token.value ~= "else" then
-			node.expressions[i] = parser:ReadExpectExpression(0)
+			node.expressions[i] = expect_expression(parser, 0)
 			node.tokens["then"][i] = parser:ReadValue("then")
 		end
 

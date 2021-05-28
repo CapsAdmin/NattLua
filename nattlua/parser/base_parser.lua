@@ -60,6 +60,12 @@ return function(META)
 			return self.tokens["("] and self.tokens[")"]
 		end
 
+		function META:GetLength()
+			local helpers = require("nattlua.other.helpers")
+			local start, stop = helpers.LazyFindStartStop(self, true)
+			return stop - start
+		end
+
 		function META:GetStatements()
 			if self.kind == "if" then
 				local flat = {}
@@ -92,11 +98,6 @@ return function(META)
 			end
 
 			return out
-		end
-
-		function META:ExpectExpressionList(length)
-			self.expressions = self.parser:ReadExpressionList(length)
-			return self
 		end
 
 		do
@@ -157,15 +158,17 @@ return function(META)
 			end
 		end
 
+		local expect_expression = require("nattlua.parser.expressions.expression").expect_expression
+
 		function META:ExpectExpression()
 			if self.expressions then
-				table.insert(self.expressions, self.parser:ReadExpectExpression(0))
+				table.insert(self.expressions, expect_expression(self.parser, 0))
 			elseif self.expression then
 				self.expressions = {self.expression}
 				self.expression = nil
-				table.insert(self.expressions, self.parser:ReadExpectExpression(0))
+				table.insert(self.expressions, expect_expression(self.parser, 0))
 			else
-				self.expression = self.parser:ReadExpectExpression(0)
+				self.expression = expect_expression(self.parser, 0)
 			end
 
 			return self
@@ -189,12 +192,6 @@ return function(META)
 		function META:End()
 			table.remove(self.parser.nodes, 1)
 			return self
-		end
-
-		function META:GetLength()
-			local helpers = require("nattlua.other.helpers")
-			local start, stop = helpers.LazyFindStartStop(self, true)
-			return stop - start
 		end
 
 		local id = 0
