@@ -180,7 +180,6 @@ do -- statements
 	local local_function = require("nattlua.parser.statements.local_function")
 	local _continue = require("nattlua.parser.statements.extra.continue")
 	local lsx = require("nattlua.parser.statements.extra.lsx")
-	local _import = require("nattlua.parser.statements.extra.import")
 	local destructure_assignment = require("nattlua.parser.statements.extra.destructure_assignment")
 	local local_destructure_assignment = require("nattlua.parser.statements.extra.local_destructure_assignment")
 	local type_function = require("nattlua.parser.statements.typesystem.function")
@@ -201,7 +200,6 @@ do -- statements
 			_continue(self) or
 			semicolon(self) or
 			_goto(self) or
-			_import(self) or
 			goto_label(self) or
 			lsx(self) or
 			_repeat(self) or
