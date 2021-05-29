@@ -15,11 +15,13 @@ return
 				if i == 1 then
 					token = parser:ReadValue("if")
 				else
-					token = parser:ReadValues({
-						["else"] = true,
-						["elseif"] = true,
-						["end"] = true,
-					})
+					token = parser:ReadValues(
+						{
+							["else"] = true,
+							["elseif"] = true,
+							["end"] = true,
+						}
+					)
 				end
 
 				if not token then return end
