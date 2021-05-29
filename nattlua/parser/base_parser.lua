@@ -159,22 +159,6 @@ do
 		end
 	end
 
-	local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
-
-	function META:ExpectExpression()
-		if self.expressions then
-			table.insert(self.expressions, ExpectExpression(self.parser, 0))
-		elseif self.expression then
-			self.expressions = {self.expression}
-			self.expression = nil
-			table.insert(self.expressions, ExpectExpression(self.parser, 0))
-		else
-			self.expression = ExpectExpression(self.parser, 0)
-		end
-
-		return self
-	end
-
 	function META:ExpectNodesUntil(what)
 		self.statements = self.parser:ReadNodes(type(what) == "table" and what or {[what] = true})
 		return self

@@ -1,10 +1,12 @@
 local function read_table_spread(parser)
+	local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
 	if not (
 		parser:IsCurrentValue("...") and
 		(parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))
 	) then return end
-	return
-		parser:Node("expression", "table_spread"):ExpectKeyword("..."):ExpectExpression():End()
+	local node = parser:Node("expression", "table_spread"):ExpectKeyword("...")
+	node.expression = ExpectExpression(parser)
+	return node:End()
 end
 
 local function read_table_entry(parser, i)

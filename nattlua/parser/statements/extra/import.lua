@@ -1,5 +1,6 @@
-local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").ReadMultipleValues
 local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
+local ExpectExpression = require("nattlua.parser.expressions.typesystem.expression").ExpectExpression
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").ReadMultipleValues
 return
 	{
 		ReadImport = function(parser)
@@ -9,7 +10,7 @@ return
 			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
 			node.tokens["from"] = parser:ReadValue("from")
 			local start = parser:GetCurrentToken()
-			node.expressions = parser:ReadExpressionList()
+			node.expressions = ReadMultipleValues(parser, 1, ExpectExpression, 0)
 			local root = parser.config.path:match("(.+/)")
 			node.path = root .. node.expressions[1].value.value:sub(2, -2)
 			local nl = require("nattlua")

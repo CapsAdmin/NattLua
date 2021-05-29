@@ -74,10 +74,9 @@ do
 
 	local function read_postfix_index_expression(parser)
 		if not parser:IsCurrentValue("[") then return end
-		return
-			parser:Node("expression", "postfix_expression_index"):ExpectKeyword("["):ExpectExpression()
-			:ExpectKeyword("]")
-			:End()
+		local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
+		node.expression = ExpectExpression(parser)
+		return node:ExpectKeyword("]"):End()
 	end
 
 	local function read_and_add_explicit_type(parser, node)
