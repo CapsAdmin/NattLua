@@ -5,6 +5,7 @@ local assert = assert
 local print = print
 local debug = debug
 local error = error
+local setmetatable = _G.setmetatable
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any

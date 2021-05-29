@@ -1,12 +1,13 @@
+local setmetatable = _G.setmetatable
+local table = require("table")
+local ipairs = _G.ipairs
+local tostring = _G.tostring
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
 local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
-local table = require("table")
-local ipairs = _G.ipairs
-local tostring = _G.tostring
 local META = dofile("nattlua/types/base.lua")
 META.Type = "table"
 

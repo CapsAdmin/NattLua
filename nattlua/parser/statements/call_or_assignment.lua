@@ -1,3 +1,4 @@
+local math = require("math")
 local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
 local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").ReadMultipleValues
 return

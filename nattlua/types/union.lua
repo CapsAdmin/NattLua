@@ -1,9 +1,10 @@
 local tostring = tostring
 local math = math
-local Nil = require("nattlua.types.symbol").Nil
-local type_errors = require("nattlua.types.error_messages")
+local setmetatable = _G.setmetatable
 local table = require("table")
 local ipairs = _G.ipairs
+local Nil = require("nattlua.types.symbol").Nil
+local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 META.Type = "union"
 

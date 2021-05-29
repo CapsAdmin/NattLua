@@ -1,4 +1,6 @@
 local LString = require("nattlua.types.string").LString
+local Nil = require("nattlua.types.symbol").Nil
+local Tuple = require("nattlua.types.tuple").Tuple
 return function(META)
 	function META:IndexOperator(node, obj, key, env)
 		if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then return obj:Get(key) end
@@ -18,7 +20,7 @@ return function(META)
 				end
 
 				if index.Type == "function" then
-					local obj, err = self:Call(index, types.Tuple({obj, key}), key:GetNode())
+					local obj, err = self:Call(index, Tuple({obj, key}), key:GetNode())
 					if not obj then return obj, err end
 					return obj:Get(1)
 				end
@@ -50,6 +52,6 @@ return function(META)
 			return val
 		end
 
-		return types.Nil() -- no contract means nil value
+		return Nil() -- no contract means nil value
     end
 end

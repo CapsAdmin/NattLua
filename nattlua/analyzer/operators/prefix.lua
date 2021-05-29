@@ -8,6 +8,7 @@ local LString = require("nattlua.types.string").LString
 local Boolean = require("nattlua.types.symbol").Boolean
 local False = require("nattlua.types.symbol").False
 local True = require("nattlua.types.symbol").True
+local Any = require("nattlua.types.any").Any
 
 local function metatable_function(self, meta_method, l)
 	if l:GetMetaTable() then
@@ -61,7 +62,7 @@ local function prefix_operator(analyzer, node, l, env)
 	end
 
 	if l.Type == "any" then
-		local obj = types.Any()
+		local obj = Any()
 
 		if op == "literal" then
 			obj.literal_argument = true

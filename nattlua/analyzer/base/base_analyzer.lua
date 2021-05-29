@@ -152,8 +152,20 @@ return function(META)
 	do
 		local helpers = require("nattlua.other.helpers")
 
+
+		local locals = ""
+
+		locals = locals .. 'local nl=require("nattlua");'
+		locals = locals .. 'local types=require("nattlua.types.types");'
+		
+		for k, v in pairs(_G) do
+			locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
+		end
+
 		function META:CompileLuaTypeCode(code, node)
             
+			code = locals .. code
+
             -- append newlines so that potential line errors are correct
             if node.code then
 				local start, stop = helpers.LazyFindStartStop(node)
@@ -215,8 +227,6 @@ return function(META)
 		end
 
 		function META:CallLuaTypeFunction(node, func, scope, ...)
-			_G.nl = require("nattlua")
-			_G.types = require("nattlua.types.types")
 			_G.analyzer = self
 			_G.env = self:GetScopeHelper(scope)
 			local res = {pcall(func, ...)}

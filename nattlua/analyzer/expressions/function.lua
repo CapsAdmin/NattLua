@@ -6,10 +6,14 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local Function = require("nattlua.types.function").Function
 local VarArg = require("nattlua.types.tuple").VarArg
 local ipairs = _G.ipairs
+
 local locals = ""
 
+locals = locals .. 'local nl=require("nattlua");'
+locals = locals .. 'local types=require("nattlua.types.types");'
+
 for k, v in pairs(_G) do
-	locals = locals .. "local " .. tostring(k) .. " = _G." .. k .. ";"
+	locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
 end
 
 return function(analyzer, node, env)
@@ -143,7 +147,10 @@ return function(analyzer, node, env)
 			(node.kind == "type_function" or node.kind == "local_type_function")
 		then
 			node.lua_type_function = true
-			func = analyzer:CompileLuaTypeCode(locals .. "\nreturn " .. node:Render({uncomment_types = true, lua_type_function = true}), node)()
+
+			--'local analyzer = self;local env = self:GetScopeHelper(scope);'
+			
+			func = analyzer:CompileLuaTypeCode("return  " .. node:Render({uncomment_types = true, lua_type_function = true}), node)()
 		end
 	end
 

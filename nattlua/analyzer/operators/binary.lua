@@ -6,6 +6,7 @@ local table = require("table")
 local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
 local String = require("nattlua.types.string").String
+local Number = require("nattlua.types.number").Number
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
@@ -92,7 +93,7 @@ local function arithmetic(node, l, r, type, operator)
 			return obj:SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end
 
-		return types.Number():SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+		return Number():SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 	end
 
 	return type_errors.binary(operator, l, r)
