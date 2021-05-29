@@ -175,16 +175,6 @@ do
 		node.as_expression = read_expression(parser)
 	end
 
-	local function read_type_call(parser)
-		if not parser:IsCurrentValue("<|") then return nil end
-		local node = parser:Node("expression", "postfix_call")
-		node.tokens["call("] = parser:ReadValue("<|")
-		node.expressions = type_expression_list(parser)
-		node.tokens["call)"] = parser:ReadValue("|>")
-		node.type_call = true
-		return node:End()
-	end
-
 	local function read_call_expression(parser)
 		local type_expression_list = require("nattlua.parser.expressions.typesystem.expression").expression_list
 		local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
@@ -200,12 +190,12 @@ do
 			node.tokens["call("] = parser:ReadValue("<|")
 			node.expressions = type_expression_list(parser)
 			node.tokens["call)"] = parser:ReadValue("|>")
-			node.type_call = true
 		else
 			node.tokens["call("] = parser:ReadValue("(")
 			node.expressions = optional_expression_list(parser)
 			node.tokens["call)"] = parser:ReadValue(")")
 		end
+		node.type_call = true
 
 		return node:End()
 	end
@@ -253,7 +243,6 @@ do
 				read_postfix_operator(parser) or
 				read_call(parser) or
 				read_postfix_index_expression(parser) or
-				read_type_call(parser) or
 				read_as_expression(parser, left_node)
 			if not found then break end
 			found.left = left_node
