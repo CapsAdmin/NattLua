@@ -44,6 +44,7 @@ function META:EmitNumberToken(token)
 end
 
 function META:EmitExpression(node, from_assignment)
+	if not node then print(debug.traceback()) end
 	local pushed = false
 
 	if node.tokens["("] then
@@ -390,12 +391,12 @@ end
 
 function META:EmitTableExpressionValue(node)
 	self:EmitToken(node.tokens["["])
-	self:EmitExpression(node.expressions[1])
+	self:EmitExpression(node.key_expression)
 	self:EmitToken(node.tokens["]"])
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["="])
 	self:Whitespace(" ")
-	self:EmitExpression(node.expressions[2])
+	self:EmitExpression(node.value_expression)
 end
 
 function META:EmitTableKeyValue(node)
@@ -403,7 +404,7 @@ function META:EmitTableKeyValue(node)
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["="])
 	self:Whitespace(" ")
-	self:EmitExpression(node.expression)
+	self:EmitExpression(node.value_expression)
 end
 
 local function has_function_value(tree)
@@ -443,7 +444,7 @@ function META:EmitTable(tree)
 
 					self:EmitExpression(node.spread.expression)
 				else
-					self:EmitExpression(node.expression)
+					self:EmitExpression(node.value_expression)
 				end
 			elseif node.kind == "table_key_value" then
 				if tree.spread and not during_spread then
@@ -1128,21 +1129,21 @@ do -- types
 				end
 
 				if node.kind == "table_index_value" then
-					self:EmitTypeExpression(node.expression)
+					self:EmitTypeExpression(node.value_expression)
 				elseif node.kind == "table_key_value" then
 					self:EmitToken(node.tokens["identifier"])
 					self:Whitespace(" ")
 					self:EmitToken(node.tokens["="])
 					self:Whitespace(" ")
-					self:EmitTypeExpression(node.expression)
+					self:EmitTypeExpression(node.value_expression)
 				elseif node.kind == "table_expression_value" then
 					self:EmitToken(node.tokens["["])
-					self:EmitTypeExpression(node.expressions[1])
+					self:EmitTypeExpression(node.key_expression)
 					self:EmitToken(node.tokens["]"])
 					self:Whitespace(" ")
 					self:EmitToken(node.tokens["="])
 					self:Whitespace(" ")
-					self:EmitTypeExpression(node.expressions[2])
+					self:EmitTypeExpression(node.value_expression)
 				end
 
 				if tree.tokens["separators"][i] then

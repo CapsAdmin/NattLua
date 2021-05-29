@@ -3,26 +3,26 @@ local syntax = require("nattlua.syntax.syntax")
 local math_huge = math.huge
 local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
 local read_expression
-local expect_type_expression
 
 local function type_expression_list(parser, max)
 	return ReadMultipleValues(parser, max, read_expression)
 end
 
 local function type_table_entry(self, i)
-	local node
-
 	if self:IsCurrentValue("[") then
-		node = self:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
-		expect_type_expression(self, node)
+		local node = self:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
+		node.key_expression = read_expression(self, 0)
 		node:ExpectKeyword("]"):ExpectKeyword("=")
+		node.value_expression = read_expression(self, 0)
+		return node:End()
 	elseif self:IsCurrentType("letter") and self:IsValue("=", 1) then
-		node = self:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
-	else
-		node = self:Node("expression", "table_index_value"):Store("key", i)
+		local node = self:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
+		node.value_expression = read_expression(self, 0)
+		return node:End()
 	end
 
-	expect_type_expression(self, node)
+	local node = self:Node("expression", "table_index_value"):Store("key", i)
+	node.value_expression = read_expression(self, 0)
 	return node:End()
 end
 
@@ -64,20 +64,6 @@ local function type_table(parser)
 	return tree:End()
 end
 
-expect_type_expression = function(parser, node)
-	if node.expressions then
-		table_insert(node.expressions, read_expression(parser))
-	elseif node.expression then
-		node.expressions = {node.expression}
-		node.expression = nil
-		table_insert(node.expressions, read_expression(parser))
-	else
-		node.expression = read_expression(parser)
-	end
-
-	return node
-end
-
 local function read_parenthesis(parser)
 	if not parser:IsCurrentValue("(") then return end
 	local pleft = parser:ReadValue("(")
@@ -104,7 +90,7 @@ local function read_prefix_operator(parser)
 	return node
 end
 
-local function read_identifier(parser)
+local function read_value(parser)
 	if not (parser:IsCurrentValue("...") and parser:IsType("letter", 1)) then return end
 	local node = parser:Node("expression", "value")
 	node.value = parser:ReadValue("...")
@@ -264,7 +250,7 @@ read_expression = function(parser, priority)
 
 	node = read_parenthesis(parser) or
 		read_prefix_operator(parser) or
-		read_identifier(parser) or
+		read_value(parser) or
 		read_type_function(parser) or
 		read_keyword_value(parser) or
 		read_table(parser) or
@@ -298,6 +284,5 @@ end
 return
 	{
 		expression = read_expression,
-		expect_expression = expect_type_expression,
 		expression_list = type_expression_list,
 	}

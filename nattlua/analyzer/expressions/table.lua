@@ -18,14 +18,14 @@ return function(analyzer, node, env)
 	for i, node in ipairs(node.children) do
 		if node.kind == "table_key_value" then
 			local key = LString(node.tokens["identifier"].value):SetNode(node.tokens["identifier"])
-			local val = analyzer:AnalyzeExpression(node.expression, env)
+			local val = analyzer:AnalyzeExpression(node.value_expression, env)
 			analyzer:NewIndexOperator(node, tbl, key, val, env)
 		elseif node.kind == "table_expression_value" then
-			local key = analyzer:AnalyzeExpression(node.expressions[1], env)
-			local val = analyzer:AnalyzeExpression(node.expressions[2], env)
+			local key = analyzer:AnalyzeExpression(node.key_expression, env)
+			local val = analyzer:AnalyzeExpression(node.value_expression, env)
 			analyzer:NewIndexOperator(node, tbl, key, val, env)
 		elseif node.kind == "table_index_value" then
-			local val = {analyzer:AnalyzeExpression(node.expression, env)}
+			local val = {analyzer:AnalyzeExpression(node.value_expression, env)}
 
 			if val[1].Type == "tuple" then
 				local tup = val[1]
