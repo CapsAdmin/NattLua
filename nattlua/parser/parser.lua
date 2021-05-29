@@ -11,30 +11,31 @@ function META:ResolvePath(path)
 end
 
 do -- statements
-	local _break = require("nattlua.parser.statements.break")
-	local _do = require("nattlua.parser.statements.do")
-	local generic_for = require("nattlua.parser.statements.generic_for")
-	local goto_label = require("nattlua.parser.statements.goto_label")
-	local _goto = require("nattlua.parser.statements.goto")
-	local _if = require("nattlua.parser.statements.if")
-	local local_assignment = require("nattlua.parser.statements.local_assignment")
-	local numeric_for = require("nattlua.parser.statements.numeric_for")
-	local _repeat = require("nattlua.parser.statements.repeat")
-	local semicolon = require("nattlua.parser.statements.semicolon")
-	local _return = require("nattlua.parser.statements.return")
-	local _while = require("nattlua.parser.statements.while")
-	local _function = require("nattlua.parser.statements.function")
-	local local_function = require("nattlua.parser.statements.local_function")
-	local _continue = require("nattlua.parser.statements.extra.continue")
-	local destructure_assignment = require("nattlua.parser.statements.extra.destructure_assignment")
+	local _break = require("nattlua.parser.statements.break").ReadBreak
+	local _do = require("nattlua.parser.statements.do").ReadDo
+	local generic_for = require("nattlua.parser.statements.generic_for").ReadGenericFor
+	local goto_label = require("nattlua.parser.statements.goto_label").ReadGotoLabel
+	local _goto = require("nattlua.parser.statements.goto").ReadGoto
+	local _if = require("nattlua.parser.statements.if").ReadIf
+	local local_assignment = require("nattlua.parser.statements.local_assignment").ReadLocalAssignment
+	local numeric_for = require("nattlua.parser.statements.numeric_for").ReadNumericFor
+	local _repeat = require("nattlua.parser.statements.repeat").ReadRepeat
+	local semicolon = require("nattlua.parser.statements.semicolon").ReadSemicolon
+	local _return = require("nattlua.parser.statements.return").ReadReturn
+	local _while = require("nattlua.parser.statements.while").ReadWhile
+	local _function = require("nattlua.parser.statements.function").ReadFunction
+	local local_function = require("nattlua.parser.statements.local_function").ReadLocalFuncfunction
+	local _continue = require("nattlua.parser.statements.extra.continue").ReadContinue
+	local destructure_assignment = require("nattlua.parser.statements.extra.destructure_assignment").ReadDestructureAssignment
 	local local_destructure_assignment = require("nattlua.parser.statements.extra.local_destructure_assignment")
-	local type_function = require("nattlua.parser.statements.typesystem.function")
-	local local_type_function = require("nattlua.parser.statements.typesystem.local_function")
-	local local_type_generics_function = require("nattlua.parser.statements.typesystem.local_generics_function")
-	local debug_code = require("nattlua.parser.statements.typesystem.debug_code")
-	local local_type_assignment = require("nattlua.parser.statements.typesystem.local_assignment")
-	local type_assignment = require("nattlua.parser.statements.typesystem.assignment")
-	local call_or_assignment = require("nattlua.parser.statements.call_or_assignment")
+		.ReadLocalDestructureAssignment
+	local type_function = require("nattlua.parser.statements.typesystem.function").ReadFunction
+	local local_type_function = require("nattlua.parser.statements.typesystem.local_function").ReadLocalFunction
+	local local_type_generics_function = require("nattlua.parser.statements.typesystem.local_generics_function").ReadLocalGenericsFunction
+	local debug_code = require("nattlua.parser.statements.typesystem.debug_code").ReadDebugCode
+	local local_type_assignment = require("nattlua.parser.statements.typesystem.local_assignment").ReadLocalAssignment
+	local type_assignment = require("nattlua.parser.statements.typesystem.assignment").ReadAssignment
+	local call_or_assignment = require("nattlua.parser.statements.call_or_assignment").ReadCallOrAssignment
 
 	function META:ReadNode()
 		if self:IsCurrentType("end_of_file") then return end

@@ -1,6 +1,7 @@
-local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
-local expression = require("nattlua.parser.expressions.expression").expression
-local ReadIdentifier = require("nattlua.parser.expressions.identifier")
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").ReadMultipleValues
+local expression = require("nattlua.parser.expressions.expression").ReadExpression
+local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
+
 local function IsDestructureNode(parser, offset)
 	offset = offset or 0
 	return
@@ -30,16 +31,19 @@ local function IsLocalDestructureAssignmentNode(parser)
 	end
 end
 
-return function(parser)
-	if not IsLocalDestructureAssignmentNode(parser) then return end
-	local node = parser:Node("statement", "local_destructure_assignment")
-	node.tokens["local"] = parser:ReadValue("local")
+return
+	{
+		ReadLocalDestructureAssignment = function(parser)
+			if not IsLocalDestructureAssignmentNode(parser) then return end
+			local node = parser:Node("statement", "local_destructure_assignment")
+			node.tokens["local"] = parser:ReadValue("local")
 
-	if parser:IsCurrentValue("type") then
-		node.tokens["type"] = parser:ReadValue("type")
-		node.environment = "typesystem"
-	end
+			if parser:IsCurrentValue("type") then
+				node.tokens["type"] = parser:ReadValue("type")
+				node.environment = "typesystem"
+			end
 
-	read_remaining(parser, node)
-	return node
-end
+			read_remaining(parser, node)
+			return node
+		end,
+	}

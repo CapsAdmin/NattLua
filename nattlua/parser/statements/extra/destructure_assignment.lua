@@ -1,6 +1,6 @@
-local expression = require("nattlua.parser.expressions.expression").expression
-local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
-local ReadIdentifier = require("nattlua.parser.expressions.identifier")
+local expression = require("nattlua.parser.expressions.expression").ReadExpression
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").ReadMultipleValues
+local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
 
 local function IsDestructureNode(parser, offset)
 	offset = offset or 0
@@ -24,9 +24,12 @@ local function read_remaining(parser, node)
 	node.right = expression(parser, 0)
 end
 
-return function(self)
-	if not IsDestructureNode(self) then return end
-	local node = self:Node("statement", "destructure_assignment")
-	read_remaining(self, node)
-	return node
-end
+return
+	{
+		ReadDestructureAssignment = function(self)
+			if not IsDestructureNode(self) then return end
+			local node = self:Node("statement", "destructure_assignment")
+			read_remaining(self, node)
+			return node
+		end,
+	}

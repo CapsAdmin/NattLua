@@ -1,1 +1,0 @@
-local identifier = require("nattlua.parser.expressions.identifier")

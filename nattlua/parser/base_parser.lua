@@ -158,17 +158,17 @@ return function(META)
 			end
 		end
 
-		local expect_expression = require("nattlua.parser.expressions.expression").expect_expression
+		local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
 
 		function META:ExpectExpression()
 			if self.expressions then
-				table.insert(self.expressions, expect_expression(self.parser, 0))
+				table.insert(self.expressions, ExpectExpression(self.parser, 0))
 			elseif self.expression then
 				self.expressions = {self.expression}
 				self.expression = nil
-				table.insert(self.expressions, expect_expression(self.parser, 0))
+				table.insert(self.expressions, ExpectExpression(self.parser, 0))
 			else
-				self.expression = expect_expression(self.parser, 0)
+				self.expression = ExpectExpression(self.parser, 0)
 			end
 
 			return self

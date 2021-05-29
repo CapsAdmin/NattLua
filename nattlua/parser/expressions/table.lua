@@ -8,7 +8,7 @@ local function read_table_spread(parser)
 end
 
 local function read_table_entry(parser, i)
-	local ExpectExpression = require("nattlua.parser.expressions.expression").expect_expression
+	local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
 
 	if parser:IsCurrentValue("[") then
 		local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
@@ -23,7 +23,7 @@ local function read_table_entry(parser, i)
 		if spread then
 			node.spread = spread
 		else
-			node.value_expression = ExpectExpression(parser, 0)
+			node.value_expression = ExpectExpression(parser)
 		end
 
 		return node:End()
@@ -35,54 +35,57 @@ local function read_table_entry(parser, i)
 	if spread then
 		node.spread = spread
 	else
-		node.value_expression = ExpectExpression(parser, 0)
+		node.value_expression = ExpectExpression(parser)
 	end
 
 	node.key = i
 	return node:End()
 end
 
-return function(parser)
-	if not parser:IsCurrentValue("{") then return end
-	local tree = parser:Node("expression", "table")
-	tree:ExpectKeyword("{")
-	tree.children = {}
-	tree.tokens["separators"] = {}
+return
+	{
+		ReadTable = function(parser)
+			if not parser:IsCurrentValue("{") then return end
+			local tree = parser:Node("expression", "table")
+			tree:ExpectKeyword("{")
+			tree.children = {}
+			tree.tokens["separators"] = {}
 
-	for i = 1, parser:GetLength() do
-		if parser:IsCurrentValue("}") then break end
-		local entry = read_table_entry(parser, i)
+			for i = 1, parser:GetLength() do
+				if parser:IsCurrentValue("}") then break end
+				local entry = read_table_entry(parser, i)
 
-		if entry.kind == "table_index_value" then
-			tree.is_array = true
-		else
-			tree.is_dictionary = true
-		end
+				if entry.kind == "table_index_value" then
+					tree.is_array = true
+				else
+					tree.is_dictionary = true
+				end
 
-		if entry.spread then
-			tree.spread = true
-		end
+				if entry.spread then
+					tree.spread = true
+				end
 
-		tree.children[i] = entry
+				tree.children[i] = entry
 
-		if not parser:IsCurrentValue(",") and not parser:IsCurrentValue(";") and not parser:IsCurrentValue("}") then
-			parser:Error(
-				"expected $1 got $2",
-				nil,
-				nil,
-				{",", ";", "}"},
-				(parser:GetCurrentToken() and parser:GetCurrentToken().value) or
-				"no token"
-			)
+				if not parser:IsCurrentValue(",") and not parser:IsCurrentValue(";") and not parser:IsCurrentValue("}") then
+					parser:Error(
+						"expected $1 got $2",
+						nil,
+						nil,
+						{",", ";", "}"},
+						(parser:GetCurrentToken() and parser:GetCurrentToken().value) or
+						"no token"
+					)
 
-			break
-		end
+					break
+				end
 
-		if not parser:IsCurrentValue("}") then
-			tree.tokens["separators"][i] = parser:ReadTokenLoose()
-		end
-	end
+				if not parser:IsCurrentValue("}") then
+					tree.tokens["separators"][i] = parser:ReadTokenLoose()
+				end
+			end
 
-	tree:ExpectKeyword("}")
-	return tree:End()
-end
+			tree:ExpectKeyword("}")
+			return tree:End()
+		end,
+	}

@@ -3,16 +3,15 @@ local table_insert = require("table").insert
 local table_remove = require("table").remove
 local ipairs = _G.ipairs
 local syntax = require("nattlua.syntax.syntax")
-local ReadFunction = require("nattlua.parser.expressions.function")
-local ReadImport = require("nattlua.parser.expressions.extra.import")
-local ReadTable = require("nattlua.parser.expressions.table")
-local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expect_expression
-local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expression
-local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
-
+local ReadFunction = require("nattlua.parser.expressions.function").ReadFunction
+local ReadImport = require("nattlua.parser.expressions.extra.import").ReadImport
+local ReadTable = require("nattlua.parser.expressions.table").ReadTable
+local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expression").ExpectExpression
+local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expression").ReadExpression
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").ReadMultipleValues
 local read_sub_expression
-local read_expression
-local expect_expression
+local ReadExpression
+local ExpectExpression
 
 do
 	local function is_call_expression(parser, offset)
@@ -23,7 +22,6 @@ do
 			parser:IsType("string", offset)
 	end
 
-	
 	local function read_call_expression(parser)
 		local node = parser:Node("expression", "postfix_call")
 
@@ -40,7 +38,7 @@ do
 			node.type_call = true
 		else
 			node.tokens["call("] = parser:ReadValue("(")
-			node.expressions = ReadMultipleValues(parser, nil, read_expression, 0)
+			node.expressions = ReadMultipleValues(parser, nil, ReadExpression, 0)
 			node.tokens["call)"] = parser:ReadValue(")")
 		end
 
@@ -124,14 +122,14 @@ do
 		local node = parser:Node("expression", "prefix_operator")
 		node.value = parser:ReadTokenLoose()
 		node.tokens[1] = node.value
-		node.right = expect_expression(parser, math.huge)
+		node.right = ExpectExpression(parser, math.huge)
 		return node:End()
 	end
 
 	local function parenthesis(parser)
 		if not parser:IsCurrentValue("(") then return end
 		local pleft = parser:ReadValue("(")
-		local node = read_expression(parser, 0)
+		local node = ReadExpression(parser, 0)
 
 		if not node then
 			parser:Error("empty parentheses group", pleft)
@@ -171,7 +169,8 @@ do
 		end
 	end
 
-	function read_expression(parser, priority)
+	function ReadExpression(parser, priority)
+		priority = priority or 0
 		local node = parenthesis(parser) or
 			prefix_operator(parser) or
 			ReadFunction(parser) or
@@ -199,7 +198,7 @@ do
 			node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadTokenLoose()
 			node.left = left_node
-			node.right = read_expression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
+			node.right = ReadExpression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
 			node:End()
 		end
 
@@ -207,7 +206,7 @@ do
 	end
 end
 
-expect_expression = function(parser, priority)
+ExpectExpression = function(parser, priority)
 	local token = parser:GetCurrentToken()
 
 	if
@@ -235,11 +234,10 @@ expect_expression = function(parser, priority)
 		return
 	end
 
-	return read_expression(parser, priority)
+	return ReadExpression(parser, priority)
 end
-
 return
 	{
-		expression = read_expression,
-		expect_expression = expect_expression,
+		ReadExpression = ReadExpression,
+		ExpectExpression = ExpectExpression,
 	}
