@@ -1,6 +1,4 @@
-
 local type_expression = require("nattlua.parser.expressions.typesystem.expression").expression
-
 return function(parser)
 	local node = parser:Node("expression", "value")
 

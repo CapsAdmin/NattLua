@@ -2,16 +2,15 @@ local math = require("math")
 local table_insert = require("table").insert
 local table_remove = require("table").remove
 local ipairs = _G.ipairs
-local _function = require("nattlua.parser.expressions.function")
-local _import = require("nattlua.parser.expressions.extra.import")
 local syntax = require("nattlua.syntax.syntax")
-local table = require("nattlua.parser.expressions.table")
-local type_expression = require("nattlua.parser.expressions.typesystem.expression").expression
-
-local sub_expression
+local ReadFunction = require("nattlua.parser.expressions.function")
+local ReadImport = require("nattlua.parser.expressions.extra.import")
+local ReadTable = require("nattlua.parser.expressions.table")
+local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expression
+local read_sub_expression
 local optional_expression_list
 local expression_list
-local expression
+local read_expression
 local expect_expression
 
 do
@@ -29,7 +28,7 @@ do
 		local node = parser:Node("expression", "postfix_call")
 
 		if parser:IsCurrentValue("{") then
-			node.expressions = {table(parser)}
+			node.expressions = {ReadTable(parser)}
 		elseif parser:IsCurrentType("string") then
 			node.expressions = {
 					parser:Node("expression", "value"):Store("value", parser:ReadTokenLoose()):End(),
@@ -48,20 +47,7 @@ do
 		return node:End()
 	end
 
-	local function read_and_add_explicit_type(parser, node)
-		if parser:IsCurrentValue(":") and (not parser:IsType("letter", 1) or not is_call_expression(parser, 2)) then
-			node.tokens[":"] = parser:ReadValue(":")
-			node.as_expression = type_expression(parser)
-		elseif parser:IsCurrentValue("as") then
-			node.tokens["as"] = parser:ReadValue("as")
-			node.as_expression = type_expression(parser)
-		elseif parser:IsCurrentValue("is") then
-			node.tokens["is"] = parser:ReadValue("is")
-			node.as_expression = type_expression(parser)
-		end
-	end
-
-	local function read_index_sub_expression(parser)
+	local function read_index(parser)
 		if not (parser:IsCurrentValue(".") and parser:IsType("letter", 1)) then return end
 		local node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadTokenLoose()
@@ -69,7 +55,7 @@ do
 		return node:End()
 	end
 
-	local function read_self_call_sub_expression(parser)
+	local function read_self_call(parser)
 		if not (parser:IsCurrentValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
 		local node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadTokenLoose()
@@ -77,18 +63,18 @@ do
 		return node:End()
 	end
 
-	local function read_postfix_operator_sub_expression(parser)
+	local function read_postfix_operator(parser)
 		if not syntax.IsPostfixOperator(parser:GetCurrentToken()) then return end
 		return
 			parser:Node("expression", "postfix_operator"):Store("value", parser:ReadTokenLoose()):End()
 	end
 
-	local function read_call_sub_expression(parser)
+	local function read_call(parser)
 		if not is_call_expression(parser, 0) then return end
 		return read_call_expression(parser)
 	end
 
-	local function read_postfix_expression_index_sub_expression(parser)
+	local function read_postfix_index_expression(parser)
 		if not parser:IsCurrentValue("[") then return end
 		return
 			parser:Node("expression", "postfix_expression_index"):ExpectKeyword("["):ExpectExpression()
@@ -96,15 +82,28 @@ do
 			:End()
 	end
 
-	function sub_expression(parser, node)
+	local function read_and_add_explicit_type(parser, node)
+		if parser:IsCurrentValue(":") and (not parser:IsType("letter", 1) or not is_call_expression(parser, 2)) then
+			node.tokens[":"] = parser:ReadValue(":")
+			node.as_expression = ReadTypeExpression(parser)
+		elseif parser:IsCurrentValue("as") then
+			node.tokens["as"] = parser:ReadValue("as")
+			node.as_expression = ReadTypeExpression(parser)
+		elseif parser:IsCurrentValue("is") then
+			node.tokens["is"] = parser:ReadValue("is")
+			node.as_expression = ReadTypeExpression(parser)
+		end
+	end
+
+	function read_sub_expression(parser, node)
 		for _ = 1, parser:GetLength() do
 			local left_node = node
 			read_and_add_explicit_type(parser, node)
-			local found = read_index_sub_expression(parser) or
-				read_self_call_sub_expression(parser) or
-				read_postfix_operator_sub_expression(parser) or
-				read_call_sub_expression(parser) or
-				read_postfix_expression_index_sub_expression(parser)
+			local found = read_index(parser) or
+				read_self_call(parser) or
+				read_postfix_operator(parser) or
+				read_call(parser) or
+				read_postfix_index_expression(parser)
 			if not found then break end
 			found.left = left_node
 
@@ -132,7 +131,7 @@ do
 	local function parenthesis(parser)
 		if not parser:IsCurrentValue("(") then return end
 		local pleft = parser:ReadValue("(")
-		local node = expression(parser, 0)
+		local node = read_expression(parser, 0)
 
 		if not node then
 			parser:Error("empty parentheses group", pleft)
@@ -172,17 +171,17 @@ do
 		end
 	end
 
-	function expression(parser, priority)
+	function read_expression(parser, priority)
 		local node = parenthesis(parser) or
 			prefix_operator(parser) or
-			_function(parser) or
-			_import(parser) or
+			ReadFunction(parser) or
+			ReadImport(parser) or
 			value(parser) or
-			table(parser)
+			ReadTable(parser)
 		local first = node
 
 		if node then
-			node = sub_expression(parser, node)
+			node = read_sub_expression(parser, node)
 
 			if
 				first.kind == "value" and
@@ -200,7 +199,7 @@ do
 			node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadTokenLoose()
 			node.left = left_node
-			node.right = expression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
+			node.right = read_expression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
 			node:End()
 		end
 
@@ -210,17 +209,20 @@ end
 
 expect_expression = function(parser, priority)
 	local token = parser:GetCurrentToken()
-	if not token or
-	token.type == "end_of_file" or
-	token.value == "}" or
-	token.value == "," or
-	token.value == "]" or
-	(
-		syntax.IsKeyword(token) and
-		not syntax.IsPrefixOperator(token) and
-		not syntax.IsValue(token) and
-		token.value ~= "function"
-	) then 
+
+	if
+		not token or
+		token.type == "end_of_file" or
+		token.value == "}" or
+		token.value == "," or
+		token.value == "]" or
+		(
+			syntax.IsKeyword(token) and
+			not syntax.IsPrefixOperator(token) and
+			not syntax.IsValue(token) and
+			token.value ~= "function"
+		)
+	then
 		parser:Error(
 			"expected beginning of expression, got $1",
 			nil,
@@ -230,20 +232,21 @@ expect_expression = function(parser, priority)
 			token.value or
 			token.type
 		)
-		return end
+		return
+	end
 
-	return expression(parser, priority)
+	return read_expression(parser, priority)
 end
 local multiple_values = require("nattlua.parser.statements.multiple_values")
 optional_expression_list = function(parser)
-	return multiple_values(parser, nil, expression, 0)
+	return multiple_values(parser, nil, read_expression, 0)
 end
 expression_list = function(parser, max)
 	return multiple_values(parser, max, expect_expression, 0)
 end
 return
 	{
-		expression = expression,
+		expression = read_expression,
 		expect_expression = expect_expression,
 		expression_list = expression_list,
 		optional_expression_list = optional_expression_list,

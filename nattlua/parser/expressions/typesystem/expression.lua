@@ -1,13 +1,12 @@
 local table_insert = require("table").insert
 local syntax = require("nattlua.syntax.syntax")
-local multiple_values = require("nattlua.parser.statements.multiple_values")
 local math_huge = math.huge
-
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
 local read_expression
 local expect_type_expression
 
 local function type_expression_list(parser, max)
-	return multiple_values(parser, max, read_expression)
+	return ReadMultipleValues(parser, max, read_expression)
 end
 
 local function type_table_entry(self, i)
@@ -115,7 +114,6 @@ end
 
 local function read_type_function(parser)
 	if not (parser:IsCurrentValue("function") and parser:IsValue("(", 1)) then return end
-
 	local function_body = require("nattlua.parser.statements.typesystem.function_body")
 	local node = parser:Node("expression", "type_function")
 	node.stmnt = false
@@ -143,7 +141,7 @@ local function read_string(parser)
 	return node
 end
 
-local sub_expression
+local read_sub_expression
 
 do
 	local function is_call_expression(parser, offset)
@@ -195,7 +193,7 @@ do
 		return node:End()
 	end
 
-	local function read_index_sub_expression(parser)
+	local function read_index(parser)
 		if not (parser:IsCurrentValue(".") and parser:IsType("letter", 1)) then return end
 		local node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadTokenLoose()
@@ -203,7 +201,7 @@ do
 		return node:End()
 	end
 
-	local function read_self_call_sub_expression(parser)
+	local function read_self_call(parser)
 		if not (parser:IsCurrentValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
 		local node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadTokenLoose()
@@ -211,18 +209,18 @@ do
 		return node:End()
 	end
 
-	local function read_postfix_operator_sub_expression(parser)
+	local function read_postfix_operator(parser)
 		if not syntax.typesystem.IsPostfixOperator(parser:GetCurrentToken()) then return end
 		return
 			parser:Node("expression", "postfix_operator"):Store("value", parser:ReadTokenLoose()):End()
 	end
 
-	local function read_call_sub_expression(parser)
+	local function read_call(parser)
 		if not is_call_expression(parser, 0) then return end
 		return read_call_expression(parser)
 	end
 
-	local function read_postfix_expression_index_sub_expression(parser)
+	local function read_postfix_index_expression(parser)
 		if not parser:IsCurrentValue("[") then return end
 		return
 			parser:Node("expression", "postfix_expression_index"):ExpectKeyword("["):ExpectExpression()
@@ -230,17 +228,17 @@ do
 			:End()
 	end
 
-	function sub_expression(parser, node)
+	function read_sub_expression(parser, node)
 		for _ = 1, parser:GetLength() do
 			local left_node = node
-
-			local found = read_index_sub_expression(parser) or
-				read_self_call_sub_expression(parser) or
-				read_postfix_operator_sub_expression(parser) or
-				read_call_sub_expression(parser) or
-				read_postfix_expression_index_sub_expression(parser) or read_type_call(parser) or read_as_expression(parser, left_node)
- 
-				if not found then break end
+			local found = read_index(parser) or
+				read_self_call(parser) or
+				read_postfix_operator(parser) or
+				read_call(parser) or
+				read_postfix_index_expression(parser) or
+				read_type_call(parser) or
+				read_as_expression(parser, left_node)
+			if not found then break end
 			found.left = left_node
 
 			if left_node.value and left_node.value.value == ":" then
@@ -264,12 +262,17 @@ read_expression = function(parser, priority)
 		parser:Advance(1)
 	end
 
-	node = read_parenthesis(parser) or read_prefix_operator(parser) or read_identifier(parser) or read_type_function(parser) or read_keyword_value(parser) or read_table(parser) or read_string(parser)
-
+	node = read_parenthesis(parser) or
+		read_prefix_operator(parser) or
+		read_identifier(parser) or
+		read_type_function(parser) or
+		read_keyword_value(parser) or
+		read_table(parser) or
+		read_string(parser)
 	local first = node
 
 	if node then
-		node = sub_expression(parser, node)
+		node = read_sub_expression(parser, node)
 
 		if
 			first.kind == "value" and
@@ -292,7 +295,6 @@ read_expression = function(parser, priority)
 
 	return node
 end
-
 return
 	{
 		expression = read_expression,
