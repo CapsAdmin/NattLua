@@ -2,7 +2,7 @@ local math_huge = math.huge
 local table_insert = require("table").insert
 local identifier_list = require("nattlua.parser.statements.identifier_list")
 local multiple_values = require("nattlua.parser.statements.multiple_values")
-local type_expression = require("nattlua.parser.expressions.typesystem.expression").expression
+local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expect_expression
 local type_expression_list = require("nattlua.parser.expressions.typesystem.expression").expression_list
 
 local function ReadTypeFunctionArgument(parser)
@@ -12,13 +12,13 @@ local function ReadTypeFunctionArgument(parser)
 	then
 		local identifier = parser:ReadTokenLoose()
 		local token = parser:ReadValue(":")
-		local exp = type_expression(parser)
+		local exp = ExpectTypeExpression(parser)
 		exp.tokens[":"] = token
 		exp.identifier = identifier
 		return exp
 	end
 
-	return type_expression(parser)
+	return ExpectTypeExpression(parser)
 end
 
 return function(parser, node, plain_args)

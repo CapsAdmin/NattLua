@@ -6,7 +6,7 @@ local syntax = require("nattlua.syntax.syntax")
 local ReadFunction = require("nattlua.parser.expressions.function")
 local ReadImport = require("nattlua.parser.expressions.extra.import")
 local ReadTable = require("nattlua.parser.expressions.table")
-local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expression
+local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expect_expression
 local read_sub_expression
 local optional_expression_list
 local expression_list
@@ -85,13 +85,13 @@ do
 	local function read_and_add_explicit_type(parser, node)
 		if parser:IsCurrentValue(":") and (not parser:IsType("letter", 1) or not is_call_expression(parser, 2)) then
 			node.tokens[":"] = parser:ReadValue(":")
-			node.as_expression = ReadTypeExpression(parser)
+			node.as_expression = ExpectTypeExpression(parser, 0)
 		elseif parser:IsCurrentValue("as") then
 			node.tokens["as"] = parser:ReadValue("as")
-			node.as_expression = ReadTypeExpression(parser)
+			node.as_expression = ExpectTypeExpression(parser, 0)
 		elseif parser:IsCurrentValue("is") then
 			node.tokens["is"] = parser:ReadValue("is")
-			node.as_expression = ReadTypeExpression(parser)
+			node.as_expression = ExpectTypeExpression(parser, 0)
 		end
 	end
 

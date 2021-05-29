@@ -4,6 +4,37 @@ local math_huge = math.huge
 local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
 local read_expression
 
+local function expect_expression(parser, priority)
+	local token = parser:GetCurrentToken()
+
+	if
+		not token or
+		token.type == "end_of_file" or
+		token.value == "}" or
+		token.value == "," or
+		token.value == "]" or
+		(
+			syntax.typesystem.IsKeyword(token) and
+			not syntax.typesystem.IsPrefixOperator(token) and
+			not syntax.typesystem.IsValue(token) and
+			token.value ~= "function"
+		)
+	then
+		parser:Error(
+			"expected beginning of expression, got $1",
+			nil,
+			nil,
+			token and
+			token.value ~= "" and
+			token.value or
+			token.type
+		)
+		return
+	end
+
+	return read_expression(parser, priority)
+end
+
 local function type_expression_list(parser, max)
 	return ReadMultipleValues(parser, max, read_expression)
 end
@@ -11,13 +42,13 @@ end
 local function type_table_entry(self, i)
 	if self:IsCurrentValue("[") then
 		local node = self:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
-		node.key_expression = read_expression(self, 0)
+		node.key_expression = expect_expression(self, 0)
 		node:ExpectKeyword("]"):ExpectKeyword("=")
-		node.value_expression = read_expression(self, 0)
+		node.value_expression = expect_expression(self, 0)
 		return node:End()
 	elseif self:IsCurrentType("letter") and self:IsValue("=", 1) then
 		local node = self:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
-		node.value_expression = read_expression(self, 0)
+		node.value_expression = expect_expression(self, 0)
 		return node:End()
 	end
 
@@ -240,6 +271,7 @@ end
 
 read_expression = function(parser, priority)
 	priority = priority or 0
+
 	local node
 	local force_upvalue
 
@@ -284,5 +316,6 @@ end
 return
 	{
 		expression = read_expression,
+		expect_expression = expect_expression,
 		expression_list = type_expression_list,
 	}
