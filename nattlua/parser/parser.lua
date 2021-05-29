@@ -1,10 +1,9 @@
 local syntax = require("nattlua.syntax.syntax")
 local setmetatable = _G.setmetatable
-local META = {}
+local META = dofile("nattlua/parser/base_parser.lua")
 META.__index = META
 META.Emitter = require("nattlua.transpiler.emitter")
 META.syntax = syntax
-require("nattlua.parser.base_parser")(META)
 
 function META:ResolvePath(path)
 	return path
