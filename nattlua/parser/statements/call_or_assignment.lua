@@ -1,13 +1,14 @@
-local expression_list = require("nattlua.parser.expressions.expression").expression_list
+local ExpectExpression = require("nattlua.parser.expressions.expression").expect_expression
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
 return function(parser)
 	local start = parser:GetCurrentToken()
-	local left = expression_list(parser, math.huge)
+	local left = ReadMultipleValues(parser, math.huge, ExpectExpression, 0)
 
 	if parser:IsCurrentValue("=") then
 		local node = parser:Node("statement", "assignment")
 		node:ExpectKeyword("=")
 		node.left = left
-		node.right = expression_list(parser, math.huge)
+		node.right = ReadMultipleValues(parser, math.huge, ExpectExpression, 0)
 		return node:End()
 	end
 

@@ -7,9 +7,10 @@ local ReadFunction = require("nattlua.parser.expressions.function")
 local ReadImport = require("nattlua.parser.expressions.extra.import")
 local ReadTable = require("nattlua.parser.expressions.table")
 local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expect_expression
+local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expression
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
+
 local read_sub_expression
-local optional_expression_list
-local expression_list
 local read_expression
 local expect_expression
 
@@ -22,9 +23,8 @@ do
 			parser:IsType("string", offset)
 	end
 
+	
 	local function read_call_expression(parser)
-		local type_expression_list = require("nattlua.parser.expressions.typesystem.expression").expression_list
-		local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
 		local node = parser:Node("expression", "postfix_call")
 
 		if parser:IsCurrentValue("{") then
@@ -35,12 +35,12 @@ do
 				}
 		elseif parser:IsCurrentValue("<|") then
 			node.tokens["call("] = parser:ReadValue("<|")
-			node.expressions = type_expression_list(parser)
+			node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
 			node.tokens["call)"] = parser:ReadValue("|>")
 			node.type_call = true
 		else
 			node.tokens["call("] = parser:ReadValue("(")
-			node.expressions = optional_expression_list(parser)
+			node.expressions = ReadMultipleValues(parser, nil, read_expression, 0)
 			node.tokens["call)"] = parser:ReadValue(")")
 		end
 
@@ -237,17 +237,9 @@ expect_expression = function(parser, priority)
 
 	return read_expression(parser, priority)
 end
-local multiple_values = require("nattlua.parser.statements.multiple_values")
-optional_expression_list = function(parser)
-	return multiple_values(parser, nil, read_expression, 0)
-end
-expression_list = function(parser, max)
-	return multiple_values(parser, max, expect_expression, 0)
-end
+
 return
 	{
 		expression = read_expression,
 		expect_expression = expect_expression,
-		expression_list = expression_list,
-		optional_expression_list = optional_expression_list,
 	}

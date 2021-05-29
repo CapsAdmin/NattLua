@@ -1,5 +1,7 @@
 local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expression").expect_expression
 return function(parser)
+    if not parser:IsCurrentType("letter") and not parser:IsCurrentValue("...") then return end
+    
 	local node = parser:Node("expression", "value")
 
 	if parser:IsCurrentValue("...") then

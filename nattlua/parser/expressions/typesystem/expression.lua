@@ -4,7 +4,7 @@ local math_huge = math.huge
 local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
 local read_expression
 
-local function expect_expression(parser, priority)
+local function ExpectExpression(parser, priority)
 	local token = parser:GetCurrentToken()
 
 	if
@@ -36,63 +36,11 @@ local function expect_expression(parser, priority)
 end
 
 local function type_expression_list(parser, max)
-	return ReadMultipleValues(parser, max, read_expression)
+	return ReadMultipleValues(parser, max, read_expression, 0)
 end
 
-local function type_table_entry(self, i)
-	if self:IsCurrentValue("[") then
-		local node = self:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
-		node.key_expression = expect_expression(self, 0)
-		node:ExpectKeyword("]"):ExpectKeyword("=")
-		node.value_expression = expect_expression(self, 0)
-		return node:End()
-	elseif self:IsCurrentType("letter") and self:IsValue("=", 1) then
-		local node = self:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
-		node.value_expression = expect_expression(self, 0)
-		return node:End()
-	end
-
-	local node = self:Node("expression", "table_index_value"):Store("key", i)
-	node.value_expression = read_expression(self, 0)
-	return node:End()
-end
-
-local function type_table(parser)
-	local tree = parser:Node("expression", "type_table")
-	tree:ExpectKeyword("{")
-	tree.children = {}
-	tree.tokens["separators"] = {}
-
-	for i = 1, math_huge do
-		if parser:IsCurrentValue("}") then break end
-		local entry = type_table_entry(parser, i)
-
-		if entry.spread then
-			tree.spread = true
-		end
-
-		tree.children[i] = entry
-
-		if not parser:IsCurrentValue(",") and not parser:IsCurrentValue(";") and not parser:IsCurrentValue("}") then
-			parser:Error(
-				"expected $1 got $2",
-				nil,
-				nil,
-				{",", ";", "}"},
-				(parser:GetCurrentToken() and parser:GetCurrentToken().value) or
-				"no token"
-			)
-
-			break
-		end
-
-		if not parser:IsCurrentValue("}") then
-			tree.tokens["separators"][i] = parser:ReadTokenLoose()
-		end
-	end
-
-	tree:ExpectKeyword("}")
-	return tree:End()
+local function optional_expression_list(parser)
+	return ReadMultipleValues(parser, nil, read_expression, 0)
 end
 
 local function read_parenthesis(parser)
@@ -145,9 +93,62 @@ local function read_keyword_value(parser)
 	return node
 end
 
-local function read_table(parser)
+local function read_table_entry(parser, i)
+	if parser:IsCurrentValue("[") then
+		local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
+		node.key_expression = ExpectExpression(parser, 0)
+		node:ExpectKeyword("]"):ExpectKeyword("=")
+		node.value_expression = ExpectExpression(parser, 0)
+		return node:End()
+	elseif parser:IsCurrentType("letter") and parser:IsValue("=", 1) then
+		local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
+		node.value_expression = ExpectExpression(parser, 0)
+		return node:End()
+	end
+
+	local node = parser:Node("expression", "table_index_value"):Store("key", i)
+	node.value_expression = read_expression(parser, 0)
+	return node:End()
+end
+
+local function read_type_table(parser)
 	if not parser:IsCurrentValue("{") then return end
-	return type_table(parser)
+
+	local tree = parser:Node("expression", "type_table")
+	tree:ExpectKeyword("{")
+	tree.children = {}
+	tree.tokens["separators"] = {}
+
+	for i = 1, math_huge do
+		if parser:IsCurrentValue("}") then break end
+		local entry = read_table_entry(parser, i)
+
+		if entry.spread then
+			tree.spread = true
+		end
+
+		tree.children[i] = entry
+
+		if not parser:IsCurrentValue(",") and not parser:IsCurrentValue(";") and not parser:IsCurrentValue("}") then
+			parser:Error(
+				"expected $1 got $2",
+				nil,
+				nil,
+				{",", ";", "}"},
+				(parser:GetCurrentToken() and parser:GetCurrentToken().value) or
+				"no token"
+			)
+
+			break
+		end
+
+		if not parser:IsCurrentValue("}") then
+			tree.tokens["separators"][i] = parser:ReadTokenLoose()
+		end
+	end
+
+	tree:ExpectKeyword("}")
+	return tree:End()
 end
 
 local function read_string(parser)
@@ -176,12 +177,10 @@ do
 	end
 
 	local function read_call_expression(parser)
-		local type_expression_list = require("nattlua.parser.expressions.typesystem.expression").expression_list
-		local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
 		local node = parser:Node("expression", "postfix_call")
 
 		if parser:IsCurrentValue("{") then
-			node.expressions = {read_table(parser)}
+			node.expressions = {read_type_table(parser)}
 		elseif parser:IsCurrentType("string") then
 			node.expressions = {
 					parser:Node("expression", "value"):Store("value", parser:ReadTokenLoose()):End(),
@@ -273,7 +272,7 @@ read_expression = function(parser, priority)
 		read_value(parser) or
 		read_type_function(parser) or
 		read_keyword_value(parser) or
-		read_table(parser) or
+		read_type_table(parser) or
 		read_string(parser)
 	local first = node
 
@@ -304,6 +303,6 @@ end
 return
 	{
 		expression = read_expression,
-		expect_expression = expect_expression,
+		expect_expression = ExpectExpression,
 		expression_list = type_expression_list,
 	}

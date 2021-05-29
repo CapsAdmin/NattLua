@@ -1,9 +1,10 @@
 local table_insert = table.insert
 local type_expression_list = require("nattlua.parser.statements.typesystem.expression_list")
-local identifier_list = require("nattlua.parser.statements.identifier_list")
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
+local ReadIdentifier = require("nattlua.parser.expressions.identifier")
 return function(parser, node)
 	node.tokens["arguments("] = parser:ReadValue("<|")
-	node.identifiers = identifier_list(parser)
+	node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
 
 	if parser:IsCurrentValue("...") then
 		local vararg = parser:Node("expression", "value")

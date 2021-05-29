@@ -1,9 +1,10 @@
-local identifier_list = require("nattlua.parser.statements.identifier_list")
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
+local ReadIdentifier = require("nattlua.parser.expressions.identifier")
 local multiple_values = require("nattlua.parser.statements.multiple_values")
 local type_expression = require("nattlua.parser.expressions.typesystem.expression").expression
 return function(parser, node)
 	node:ExpectAliasedKeyword("(", "arguments(")
-	node.identifiers = identifier_list(parser)
+	node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
 	node:ExpectAliasedKeyword(")", "arguments)", "arguments)")
 
 	if parser:IsCurrentValue(":") then

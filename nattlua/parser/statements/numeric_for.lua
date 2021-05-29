@@ -1,12 +1,13 @@
-local identifier_list = require("nattlua.parser.statements.identifier_list")
-local expression_list = require("nattlua.parser.expressions.expression").expression_list
+local ReadIdentifier = require("nattlua.parser.expressions.identifier")
+local ExpectExpression = require("nattlua.parser.expressions.expression").expect_expression
+local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
 return function(parser)
 	if not (parser:IsCurrentValue("for") and parser:IsValue("=", 2)) then return nil end
 	local node = parser:Node("statement", "numeric_for")
 	node:ExpectKeyword("for")
-	node.identifiers = identifier_list(parser, 1)
+	node.identifiers = ReadMultipleValues(parser, 1, ReadIdentifier)
 	node:ExpectKeyword("=")
-	node.expressions = expression_list(parser, 3)
+	node.expressions = ReadMultipleValues(parser, 3, ExpectExpression, 0)
 	return
 		node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
 end

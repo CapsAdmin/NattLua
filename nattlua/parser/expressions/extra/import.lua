@@ -1,11 +1,13 @@
+
 return function(parser)
-	local optional_expression_list = require("nattlua.parser.expressions.expression").optional_expression_list
+	local ReadMultipleValues = require("nattlua.parser.statements.multiple_values")
+	local ReadExpression = require("nattlua.parser.expressions.expression").expression
 	if not (parser:IsCurrentValue("import") and parser:IsValue("(", 1)) then return end
 	local node = parser:Node("expression", "import")
 	node.tokens["import"] = parser:ReadValue("import")
 	node.tokens["("] = {parser:ReadValue("(")}
 	local start = parser:GetCurrentToken()
-	node.expressions = optional_expression_list(parser)
+	node.expressions = ReadMultipleValues(parser, nil, ReadExpression, 0)
 	local root = parser.config.path and parser.config.path:match("(.+/)") or ""
 	node.path = root .. node.expressions[1].value.value:sub(2, -2)
 	local nl = require("nattlua")
