@@ -25,7 +25,9 @@ return function(analyzer, node, env)
 			local val = analyzer:AnalyzeExpression(node.value_expression, env)
 			analyzer:NewIndexOperator(node, tbl, key, val, env)
 		elseif node.kind == "table_index_value" then
-			local val = {analyzer:AnalyzeExpression(node.value_expression, env)}
+			local val = {
+				analyzer:AnalyzeExpression(node.value_expression, env),
+			}
 
 			if val[1].Type == "tuple" then
 				local tup = val[1]

@@ -195,8 +195,8 @@ do
 			node.expressions = optional_expression_list(parser)
 			node.tokens["call)"] = parser:ReadValue(")")
 		end
-		node.type_call = true
 
+		node.type_call = true
 		return node:End()
 	end
 
@@ -260,7 +260,6 @@ end
 
 read_expression = function(parser, priority)
 	priority = priority or 0
-
 	local node
 	local force_upvalue
 

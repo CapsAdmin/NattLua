@@ -44,7 +44,10 @@ function META:EmitNumberToken(token)
 end
 
 function META:EmitExpression(node, from_assignment)
-	if not node then print(debug.traceback()) end
+	if not node then
+		print(debug.traceback())
+	end
+
 	local pushed = false
 
 	if node.tokens["("] then

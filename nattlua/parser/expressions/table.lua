@@ -1,4 +1,3 @@
-
 local function read_table_spread(parser)
 	if not (
 		parser:IsCurrentValue("...") and
@@ -16,23 +15,23 @@ local function read_table_entry(parser, i)
 		node.key_expression = ExpectExpression(parser, 0)
 		node:ExpectKeyword("]"):ExpectKeyword("=")
 		node.value_expression = ExpectExpression(parser, 0)
-		return  node:End()
+		return node:End()
 	elseif parser:IsCurrentType("letter") and parser:IsValue("=", 1) then
 		local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
 		local spread = read_table_spread(parser)
-		
+
 		if spread then
 			node.spread = spread
 		else
 			node.value_expression = ExpectExpression(parser, 0)
 		end
-	
+
 		return node:End()
 	end
-	
+
 	local node = parser:Node("expression", "table_index_value")
 	local spread = read_table_spread(parser)
-	
+
 	if spread then
 		node.spread = spread
 	else
@@ -40,7 +39,6 @@ local function read_table_entry(parser, i)
 	end
 
 	node.key = i
-
 	return node:End()
 end
 
