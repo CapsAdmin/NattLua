@@ -1,4 +1,7 @@
-local prefix_operator = require("nattlua.analyzer.operators.prefix")
-return function(analyzer, node, env)
-	return analyzer:Assert(node, prefix_operator(analyzer, node, analyzer:AnalyzeExpression(node.right, env), env))
-end
+local Prefix = require("nattlua.analyzer.operators.prefix").Prefix
+return
+	{
+		AnalyzePrefixOperator = function(analyzer, node, env)
+			return analyzer:Assert(node, Prefix(analyzer, node, analyzer:AnalyzeExpression(node.right, env), env))
+		end,
+	}

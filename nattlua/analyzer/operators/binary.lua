@@ -483,4 +483,4 @@ local function binary_operator(analyzer, node, l, r, env, op)
 	return type_errors.binary(op, l, r)
 end
 
-return binary_operator
+return {Binary = binary_operator}

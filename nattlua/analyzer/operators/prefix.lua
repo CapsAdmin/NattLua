@@ -122,4 +122,4 @@ local function prefix_operator(analyzer, node, l, env)
 	error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
 end
 
-return prefix_operator
+return {Prefix = prefix_operator}

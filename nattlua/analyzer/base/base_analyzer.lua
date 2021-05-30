@@ -151,19 +151,15 @@ return function(META)
 
 	do
 		local helpers = require("nattlua.other.helpers")
-
-
 		local locals = ""
+		locals = locals .. "local nl=require(\"nattlua\");"
+		locals = locals .. "local types=require(\"nattlua.types.types\");"
 
-		locals = locals .. 'local nl=require("nattlua");'
-		locals = locals .. 'local types=require("nattlua.types.types");'
-		
 		for k, v in pairs(_G) do
 			locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
 		end
 
 		function META:CompileLuaTypeCode(code, node)
-            
 			code = locals .. code
 
             -- append newlines so that potential line errors are correct

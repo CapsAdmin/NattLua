@@ -8,36 +8,36 @@ META.__index = META
 META.OnInitialize = {}
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)
-require("nattlua.analyzer.operators.index")(META)
-require("nattlua.analyzer.operators.newindex")(META)
-require("nattlua.analyzer.operators.call")(META)
+require("nattlua.analyzer.operators.index").Index(META)
+require("nattlua.analyzer.operators.newindex").NewIndex(META)
+require("nattlua.analyzer.operators.call").Call(META)
 
 do
-	local assignment = require("nattlua.analyzer.statements.assignment")
-	local destructure_assignment = require("nattlua.analyzer.statements.destructure_assignment")
-	local _function = require("nattlua.analyzer.statements.function")
-	local _if = require("nattlua.analyzer.statements.if")
-	local _do = require("nattlua.analyzer.statements.do")
-	local generic_for = require("nattlua.analyzer.statements.generic_for")
-	local call_expression = require("nattlua.analyzer.statements.call_expression")
-	local numeric_for = require("nattlua.analyzer.statements.numeric_for")
-	local _break = require("nattlua.analyzer.statements.break")
-	local _continue = require("nattlua.analyzer.statements.continue")
-	local _repeat = require("nattlua.analyzer.statements.repeat")
-	local _return = require("nattlua.analyzer.statements.return")
-	local type_code = require("nattlua.analyzer.statements.type_code")
-	local _while = require("nattlua.analyzer.statements.while")
+	local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
+	local AnalyzeDestructureAssignment = require("nattlua.analyzer.statements.destructure_assignment").AnalyzeDestructureAssignment
+	local AnalyzeFunction = require("nattlua.analyzer.statements.function").AnalyzeFunction
+	local AnalyzeIf = require("nattlua.analyzer.statements.if").AnalyzeIf
+	local AnalyzeDo = require("nattlua.analyzer.statements.do").AnalyzeDo
+	local AnalyzeGenericFor = require("nattlua.analyzer.statements.generic_for").AnalyzeGenericFor
+	local AnalyzeCall = require("nattlua.analyzer.statements.call_expression").AnalyzeCall
+	local AnalyzeNumericFor = require("nattlua.analyzer.statements.numeric_for").AnalyzeNumericFor
+	local AnalyzeBreak = require("nattlua.analyzer.statements.break").AnalyzeBreak
+	local AnalyzeContinue = require("nattlua.analyzer.statements.continue").AnalyzeContinue
+	local AnalyzeRepeat = require("nattlua.analyzer.statements.repeat").AnalyzeRepeat
+	local AnalyzeReturn = require("nattlua.analyzer.statements.return").AnalyzeReturn
+	local AnalyzeTypeCode = require("nattlua.analyzer.statements.type_code").AnalyzeTypeCode
+	local AnalyzeWhile = require("nattlua.analyzer.statements.while").AnalyzeWhile
 
 	function META:AnalyzeStatement(statement)
 		self.current_statement = statement
 
 		if statement.kind == "assignment" or statement.kind == "local_assignment" then
-			assignment(self, statement)
+			AnalyzeAssignment(self, statement)
 		elseif
 			statement.kind == "destructure_assignment" or
 			statement.kind == "local_destructure_assignment"
 		then
-			destructure_assignment(self, statement)
+			AnalyzeDestructureAssignment(self, statement)
 		elseif
 			statement.kind == "function" or
 			statement.kind == "generics_type_function" or
@@ -46,29 +46,29 @@ do
 			statement.kind == "local_type_function" or
 			statement.kind == "type_function"
 		then
-			_function(self, statement)
+			AnalyzeFunction(self, statement)
 		elseif statement.kind == "if" then
-			_if(self, statement)
+			AnalyzeIf(self, statement)
 		elseif statement.kind == "while" then
-			_while(self, statement)
+			AnalyzeWhile(self, statement)
 		elseif statement.kind == "do" then
-			_do(self, statement)
+			AnalyzeDo(self, statement)
 		elseif statement.kind == "repeat" then
-			_repeat(self, statement)
+			AnalyzeRepeat(self, statement)
 		elseif statement.kind == "return" then
-			_return(self, statement)
+			AnalyzeReturn(self, statement)
 		elseif statement.kind == "break" then
-			_break(self, statement)
+			AnalyzeBreak(self, statement)
 		elseif statement.kind == "continue" then
-			_continue(self, statement)
+			AnalyzeContinue(self, statement)
 		elseif statement.kind == "call_expression" then
-			call_expression(self, statement)
+			AnalyzeCall(self, statement)
 		elseif statement.kind == "generic_for" then
-			generic_for(self, statement)
+			AnalyzeGenericFor(self, statement)
 		elseif statement.kind == "numeric_for" then
-			numeric_for(self, statement)
+			AnalyzeNumericFor(self, statement)
 		elseif statement.kind == "type_code" then
-			type_code(self, statement)
+			AnalyzeTypeCode(self, statement)
 		elseif statement.kind == "import" then
 
 		elseif
@@ -84,15 +84,15 @@ do
 end
 
 do
-	local binary_operator = require("nattlua.analyzer.expressions.binary_operator")
-	local prefix_operator = require("nattlua.analyzer.expressions.prefix_operator")
-	local postfix_operator = require("nattlua.analyzer.expressions.postfix_operator")
-	local postfix_call = require("nattlua.analyzer.expressions.postfix_call")
-	local postfix_expression_index = require("nattlua.analyzer.expressions.postfix_index")
-	local _function = require("nattlua.analyzer.expressions.function")
-	local table = require("nattlua.analyzer.expressions.table")
-	local atomic_value = require("nattlua.analyzer.expressions.atomic_value")
-	local _import = require("nattlua.analyzer.expressions.import")
+	local AnalyzeBinaryOperator = require("nattlua.analyzer.expressions.binary_operator").AnalyzeBinaryOperator
+	local AnalyzePrefixOperator = require("nattlua.analyzer.expressions.prefix_operator").AnalyzePrefixOperator
+	local AnalyzePostfixOperator = require("nattlua.analyzer.expressions.postfix_operator").AnalyzePostfixOperator
+	local AnalyzePostfixCall = require("nattlua.analyzer.expressions.postfix_call").AnalyzePostfixCall
+	local AnalyzePostfixIndex = require("nattlua.analyzer.expressions.postfix_index").AnalyzePostfixIndex
+	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
+	local AnalyzeTable = require("nattlua.analyzer.expressions.table").AnalyzeTable
+	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
+	local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
 
 	function META:AnalyzeExpression(node, env)
 		self.current_expression = node
@@ -104,30 +104,30 @@ do
 
 		if node.as_expression then
 			if node.kind == "table" then
-				local obj = table(self, node, env)
+				local obj = AnalyzeTable(self, node, env)
 				obj:SetContract(self:AnalyzeExpression(node.as_expression, "typesystem"))
 				return obj
 			end
 
 			return self:AnalyzeExpression(node.as_expression, "typesystem")
 		elseif node.kind == "value" then
-			return atomic_value(self, node, env)
+			return AnalyzeAtomicValue(self, node, env)
 		elseif node.kind == "function" or node.kind == "type_function" then
-			return _function(self, node, env)
+			return AnalyzeFunction(self, node, env)
 		elseif node.kind == "table" or node.kind == "type_table" then
-			return table(self, node, env)
+			return AnalyzeTable(self, node, env)
 		elseif node.kind == "binary_operator" then
-			return binary_operator(self, node, env)
+			return AnalyzeBinaryOperator(self, node, env)
 		elseif node.kind == "prefix_operator" then
-			return prefix_operator(self, node, env)
+			return AnalyzePrefixOperator(self, node, env)
 		elseif node.kind == "postfix_operator" then
-			return postfix_operator(self, node, env)
+			return AnalyzePostfixOperator(self, node, env)
 		elseif node.kind == "postfix_expression_index" then
-			return postfix_expression_index(self, node, env)
+			return AnalyzePostfixIndex(self, node, env)
 		elseif node.kind == "postfix_call" then
-			return postfix_call(self, node, env)
+			return AnalyzePostfixCall(self, node, env)
 		elseif node.kind == "import" then
-			return _import(self, node, env)
+			return AnalyzeImport(self, node, env)
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end

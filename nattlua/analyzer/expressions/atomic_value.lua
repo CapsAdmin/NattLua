@@ -81,79 +81,82 @@ local function is_primitive(val)
 		val == "nil"
 end
 
-return function(analyzer, node, env)
-	local value = node.value.value
-	local type = syntax.GetTokenType(node.value)
+return
+	{
+		AnalyzeAtomicValue = function(analyzer, node, env)
+			local value = node.value.value
+			local type = syntax.GetTokenType(node.value)
 
-	if type == "keyword" then
-		if value == "nil" then
-			return Nil():SetNode(node)
-		elseif value == "true" then
-			return True():SetNode(node)
-		elseif value == "false" then
-			return False():SetNode(node)
-		end
-	end
+			if type == "keyword" then
+				if value == "nil" then
+					return Nil():SetNode(node)
+				elseif value == "true" then
+					return True():SetNode(node)
+				elseif value == "false" then
+					return False():SetNode(node)
+				end
+			end
 
 	-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
 	local standalone_letter = type == "letter" and node.standalone_letter
 
-	if env == "typesystem" and standalone_letter and not node.force_upvalue then
-		local current_table = analyzer.current_tables and
-			analyzer.current_tables[#analyzer.current_tables]
+			if env == "typesystem" and standalone_letter and not node.force_upvalue then
+				local current_table = analyzer.current_tables and
+					analyzer.current_tables[#analyzer.current_tables]
 
-		if current_table then
-			if value == "self" then return current_table end
+				if current_table then
+					if value == "self" then return current_table end
 
-			if
-				analyzer.left_assigned and
-				analyzer.left_assigned:GetData() == value and
-				not is_primitive(value)
-			then
-				return current_table
+					if
+						analyzer.left_assigned and
+						analyzer.left_assigned:GetData() == value and
+						not is_primitive(value)
+					then
+						return current_table
+					end
+				end
+
+				if value == "any" then
+					return Any():SetNode(node)
+				elseif value == "inf" then
+					return LNumber(math.huge):SetNode(node)
+				elseif value == "nan" then
+					return LNumber(0 / 0):SetNode(node)
+				elseif value == "string" then
+					return String():SetNode(node)
+				elseif value == "number" then
+					return Number():SetNode(node)
+				elseif value == "boolean" then
+					return Boolean():SetNode(node)
+				end
 			end
-		end
 
-		if value == "any" then
-			return Any():SetNode(node)
-		elseif value == "inf" then
-			return LNumber(math.huge):SetNode(node)
-		elseif value == "nan" then
-			return LNumber(0 / 0):SetNode(node)
-		elseif value == "string" then
-			return String():SetNode(node)
-		elseif value == "number" then
-			return Number():SetNode(node)
-		elseif value == "boolean" then
-			return Boolean():SetNode(node)
-		end
-	end
+			if standalone_letter or value == "..." or node.force_upvalue then
+				local val = lookup_value(analyzer, node, env)
 
-	if standalone_letter or value == "..." or node.force_upvalue then
-		local val = lookup_value(analyzer, node, env)
+				if val:GetUpvalue() then
+					analyzer:GetScope():AddDependency(val:GetUpvalue())
+				end
 
-		if val:GetUpvalue() then
-			analyzer:GetScope():AddDependency(val:GetUpvalue())
-		end
+				return val
+			end
 
-		return val
-	end
+			if type == "number" then
+				local num = LNumberFromString(value)
 
-	if type == "number" then
-		local num = LNumberFromString(value)
+				if not num then
+					analyzer:Error(node, "unable to convert " .. value .. " to number")
+					num = Number()
+				end
 
-		if not num then
-			analyzer:Error(node, "unable to convert " .. value .. " to number")
-			num = Number()
-		end
+				num:SetNode(node)
+				return num
+			elseif type == "string" then
+				return LStringFromString(value):SetNode(node)
+			elseif type == "letter" then
+				return LString(value):SetNode(node)
+			end
 
-		num:SetNode(node)
-		return num
-	elseif type == "string" then
-		return LStringFromString(value):SetNode(node)
-	elseif type == "letter" then
-		return LString(value):SetNode(node)
-	end
-
-	analyzer:FatalError("unhandled value type " .. type .. " " .. node:Render())
-end
+			analyzer:FatalError("unhandled value type " .. type .. " " .. node:Render())
+		end,
+	}
