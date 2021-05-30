@@ -9,12 +9,13 @@ local Boolean = require("nattlua.types.symbol").Boolean
 local False = require("nattlua.types.symbol").False
 local True = require("nattlua.types.symbol").True
 local Any = require("nattlua.types.any").Any
+local Tuple = require("nattlua.types.tuple").Tuple
 
 local function metatable_function(self, meta_method, l)
 	if l:GetMetaTable() then
 		meta_method = LString(meta_method)
 		local func = l:GetMetaTable():Get(meta_method)
-		if func then return self:Assert(l:GetNode(), self:Call(func, types.Tuple({l})):Get(1)) end
+		if func then return self:Assert(l:GetNode(), self:Call(func, Tuple({l})):Get(1)) end
 	end
 end
 
