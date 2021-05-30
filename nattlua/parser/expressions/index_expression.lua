@@ -11,7 +11,7 @@ return
 				local self_call = parser:IsValue(":")
 				node = parser:Node("expression", "binary_operator")
 				node.value = parser:ReadToken()
-				node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
+				node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
 				node.left = left
 				node:End()
 				node.right.self_call = self_call

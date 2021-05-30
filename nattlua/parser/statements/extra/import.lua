@@ -6,9 +6,9 @@ return
 		ReadImport = function(parser)
 			if not (parser:IsValue("import") and not parser:IsValue("(", 1)) then return end
 			local node = parser:Statement("import")
-			node.tokens["import"] = parser:ReadValue("import")
+			node.tokens["import"] = parser:ExpectValue("import")
 			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
-			node.tokens["from"] = parser:ReadValue("from")
+			node.tokens["from"] = parser:ExpectValue("from")
 			local start = parser:GetToken()
 			node.expressions = ReadMultipleValues(parser, 1, ExpectExpression, 0)
 			local root = parser.config.path:match("(.+/)")

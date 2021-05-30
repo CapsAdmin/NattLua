@@ -11,7 +11,7 @@ local function ReadTypeFunctionArgument(parser)
 		parser:IsValue(":", 1)
 	then
 		local identifier = parser:ReadToken()
-		local token = parser:ReadValue(":")
+		local token = parser:ExpectValue(":")
 		local exp = ExpectTypeExpression(parser)
 		exp.tokens[":"] = token
 		exp.identifier = identifier
@@ -24,7 +24,7 @@ end
 return
 	{
 		ReadFunctionBody = function(parser, node, plain_args)
-			node.tokens["arguments("] = parser:ReadValue("(")
+			node.tokens["arguments("] = parser:ExpectValue("(")
 
 			if plain_args then
 				node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
@@ -34,24 +34,24 @@ return
 
 			if parser:IsValue("...") then
 				local vararg = parser:Node("expression", "value")
-				vararg.value = parser:ReadValue("...")
+				vararg.value = parser:ExpectValue("...")
 
 				if parser:IsType("letter") then
-					vararg.as_expression = parser:ReadValue()
+					vararg.as_expression = parser:ExpectValue()
 				end
 
 				table_insert(node.identifiers, vararg)
 			end
 
-			node.tokens["arguments)"] = parser:ReadValue(")", node.tokens["arguments("])
+			node.tokens["arguments)"] = parser:ExpectValue(")", node.tokens["arguments("])
 
 			if parser:IsValue(":") then
-				node.tokens[":"] = parser:ReadValue(":")
+				node.tokens[":"] = parser:ExpectValue(":")
 				node.return_types = ReadMultipleValues(parser, math.huge, ReadTypeExpression)
 			elseif not parser:IsValue(",") then
 				local start = parser:GetToken()
 				node.statements = parser:ReadNodes({["end"] = true})
-				node.tokens["end"] = parser:ReadValue("end", start, start)
+				node.tokens["end"] = parser:ExpectValue("end", start, start)
 			end
 
 			return node

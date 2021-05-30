@@ -13,7 +13,7 @@ return
 				local token
 
 				if i == 1 then
-					token = parser:ReadValue("if")
+					token = parser:ExpectValue("if")
 				else
 					token = parser:ReadValues(
 						{
@@ -29,7 +29,7 @@ return
 
 				if token.value ~= "else" then
 					node.expressions[i] = ExpectExpression(parser, 0)
-					node.tokens["then"][i] = parser:ReadValue("then")
+					node.tokens["then"][i] = parser:ExpectValue("then")
 				end
 
 				node.statements[i] = parser:ReadNodes({

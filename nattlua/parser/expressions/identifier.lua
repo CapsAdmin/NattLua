@@ -6,9 +6,9 @@ return
 			local node = parser:Node("expression", "value")
 
 			if parser:IsValue("...") then
-				node.value = parser:ReadValue("...")
+				node.value = parser:ExpectValue("...")
 			else
-				node.value = parser:ReadType("letter")
+				node.value = parser:ExpectType("letter")
 			end
 
 			if parser:IsValue(":") then

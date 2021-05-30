@@ -122,14 +122,14 @@ do
 					parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
 				}
 		elseif parser:IsValue("<|") then
-			node.tokens["call("] = parser:ReadValue("<|")
+			node.tokens["call("] = parser:ExpectValue("<|")
 			node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
-			node.tokens["call)"] = parser:ReadValue("|>")
+			node.tokens["call)"] = parser:ExpectValue("|>")
 			node.type_call = true
 		else
-			node.tokens["call("] = parser:ReadValue("(")
+			node.tokens["call("] = parser:ExpectValue("(")
 			node.expressions = ReadMultipleValues(parser, nil, ReadExpression, 0)
-			node.tokens["call)"] = parser:ReadValue(")")
+			node.tokens["call)"] = parser:ExpectValue(")")
 		end
 
 		return node:End()
@@ -139,7 +139,7 @@ do
 		if not (parser:IsValue(".") and parser:IsType("letter", 1)) then return end
 		local node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadToken()
-		node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
+		node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
 		return node:End()
 	end
 
@@ -147,7 +147,7 @@ do
 		if not (parser:IsValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
 		local node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadToken()
-		node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
+		node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
 		return node:End()
 	end
 
@@ -171,13 +171,13 @@ do
 
 	local function read_and_add_explicit_type(parser, node)
 		if parser:IsValue(":") and (not parser:IsType("letter", 1) or not is_call_expression(parser, 2)) then
-			node.tokens[":"] = parser:ReadValue(":")
+			node.tokens[":"] = parser:ExpectValue(":")
 			node.as_expression = ExpectTypeExpression(parser, 0)
 		elseif parser:IsValue("as") then
-			node.tokens["as"] = parser:ReadValue("as")
+			node.tokens["as"] = parser:ExpectValue("as")
 			node.as_expression = ExpectTypeExpression(parser, 0)
 		elseif parser:IsValue("is") then
-			node.tokens["is"] = parser:ReadValue("is")
+			node.tokens["is"] = parser:ExpectValue("is")
 			node.as_expression = ExpectTypeExpression(parser, 0)
 		end
 	end
@@ -217,7 +217,7 @@ do
 
 	local function parenthesis(parser)
 		if not parser:IsValue("(") then return end
-		local pleft = parser:ReadValue("(")
+		local pleft = parser:ExpectValue("(")
 		local node = ReadExpression(parser, 0)
 
 		if not node then
@@ -228,7 +228,7 @@ do
 		node.tokens["("] = node.tokens["("] or {}
 		table_insert(node.tokens["("], 1, pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
-		table_insert(node.tokens[")"], parser:ReadValue(")"))
+		table_insert(node.tokens[")"], parser:ExpectValue(")"))
 		return node
 	end
 

@@ -5,24 +5,24 @@ local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIden
 return
 	{
 		ReadFunctionGenericsBody = function(parser, node)
-			node.tokens["arguments("] = parser:ReadValue("<|")
+			node.tokens["arguments("] = parser:ExpectValue("<|")
 			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
 
 			if parser:IsValue("...") then
 				local vararg = parser:Node("expression", "value")
-				vararg.value = parser:ReadValue("...")
+				vararg.value = parser:ExpectValue("...")
 				table_insert(node.identifiers, vararg)
 			end
 
-			node.tokens["arguments)"] = parser:ReadValue("|>", node.tokens["arguments("])
+			node.tokens["arguments)"] = parser:ExpectValue("|>", node.tokens["arguments("])
 
 			if parser:IsValue(":") then
-				node.tokens[":"] = parser:ReadValue(":")
+				node.tokens[":"] = parser:ExpectValue(":")
 				node.return_types = ReadMultipleValues(parser, math.huge, ExpectExpression)
 			else
 				local start = parser:GetToken()
 				node.statements = parser:ReadNodes({["end"] = true})
-				node.tokens["end"] = parser:ReadValue("end", start, start)
+				node.tokens["end"] = parser:ExpectValue("end", start, start)
 			end
 
 			return node

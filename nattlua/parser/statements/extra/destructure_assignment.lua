@@ -14,13 +14,13 @@ local function read_remaining(parser, node)
 		local val = parser:Node("expression", "value")
 		val.value = parser:ReadToken()
 		node.default = val
-		node.default_comma = parser:ReadValue(",")
+		node.default_comma = parser:ExpectValue(",")
 	end
 
-	node.tokens["{"] = parser:ReadValue("{")
+	node.tokens["{"] = parser:ExpectValue("{")
 	node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
-	node.tokens["}"] = parser:ReadValue("}")
-	node.tokens["="] = parser:ReadValue("=")
+	node.tokens["}"] = parser:ExpectValue("}")
+	node.tokens["="] = parser:ExpectValue("=")
 	node.right = expression(parser, 0)
 end
 

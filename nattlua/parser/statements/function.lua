@@ -6,7 +6,7 @@ return
 		ReadFunction = function(self)
 			if not self:IsValue("function") then return end
 			local node = self:Node("statement", "function")
-			node.tokens["function"] = self:ReadValue("function")
+			node.tokens["function"] = self:ExpectValue("function")
 			node.expression = index_expression(self)
 
 			if node.expression.kind == "binary_operator" then

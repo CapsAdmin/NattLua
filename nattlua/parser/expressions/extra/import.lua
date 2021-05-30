@@ -5,8 +5,8 @@ return
 			local ReadExpression = require("nattlua.parser.expressions.expression").ReadExpression
 			if not (parser:IsValue("import") and parser:IsValue("(", 1)) then return end
 			local node = parser:Node("expression", "import")
-			node.tokens["import"] = parser:ReadValue("import")
-			node.tokens["("] = {parser:ReadValue("(")}
+			node.tokens["import"] = parser:ExpectValue("import")
+			node.tokens["("] = {parser:ExpectValue("(")}
 			local start = parser:GetToken()
 			node.expressions = ReadMultipleValues(parser, nil, ReadExpression, 0)
 			local root = parser.config.path and parser.config.path:match("(.+/)") or ""
@@ -20,7 +20,7 @@ return
 
 			node.root = root.SyntaxTree
 			node.analyzer = root
-			node.tokens[")"] = {parser:ReadValue(")")}
+			node.tokens[")"] = {parser:ExpectValue(")")}
 			parser.root.imports = parser.root.imports or {}
 			table.insert(parser.root.imports, node)
 			return node

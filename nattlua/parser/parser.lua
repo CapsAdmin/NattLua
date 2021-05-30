@@ -1,4 +1,5 @@
- --[[# local type NodeType = "expression" | "statement"]]
+--[[#local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")]]
+--[[# local type NodeType = "expression" | "statement"]]
 
 local syntax = require("nattlua.syntax.syntax")
 local ipairs = _G.ipairs
@@ -10,6 +11,21 @@ local META = {}
 META.__index = META
 META.Emitter = require("nattlua.transpiler.emitter")
 META.syntax = syntax
+
+--[[#
+	type META.@Self = {
+			config = any,
+			nodes = {[1 .. inf] = any},
+			name = string,
+			code = string,
+			current_statement = false | any,
+			current_expression = false | any,
+			root = false | any,
+			i = number,
+			tokens = {[1 .. inf] = Token},
+			OnError = function() end,
+	}
+]]
 
 do
 	local PARSER = META
@@ -143,7 +159,7 @@ do
 			expect(
 				self,
 				self.parser,
-				self.parser.ReadValue,
+				self.parser.ExpectValue,
 				what,
 				start,
 				stop,
@@ -156,7 +172,7 @@ do
 			expect(
 				self,
 				self.parser,
-				self.parser.ReadValue,
+				self.parser.ExpectValue,
 				what,
 				start,
 				stop
@@ -171,7 +187,7 @@ do
 	end
 
 	function META:ExpectSimpleIdentifier()
-		self.tokens["identifier"] = self.parser:ReadType("letter")
+		self.tokens["identifier"] = self.parser:ExpectType("letter")
 		return self
 	end
 
@@ -215,32 +231,26 @@ do
 	end
 end
 
-function META:Error(msg, start, stop, ...)
-	if type(start) == "table" then
-		start = start.start
-	end
-
-	if type(stop) == "table" then
-		stop = stop.stop
-	end
-
+function META:Error(msg--[[#: string]], start_token--[[#: Token]], stop_token--[[#: Token]], ...)
 	local tk = self:GetToken()
-	start = start or tk and tk.start or 0
-	stop = stop or tk and tk.stop or 0
+
+	start_token = start_token and start_token.start or tk and tk.start or 0
+	stop_token = stop_token and stop_token.stop or tk and tk.stop or 0
+
 	self:OnError(
 		self.code,
 		self.name,
 		msg,
-		start,
-		stop,
+		start_token,
+		stop_token,
 		...
 	)
 end
 
-function META:OnError() 
+function META:OnError(code--[[#: string]], name--[[#: string]], message--[[#: string]], start--[[#: number]], stop--[[#: number]], ...--[[#: ...any]]) 
 end
 
-function META:GetToken(offset)
+function META:GetToken(offset--[[#: number | nil]])
 	return self.tokens[self.i + (offset or 0)]
 end
 
@@ -248,22 +258,21 @@ function META:GetLength()
 	return #self.tokens
 end
 
-function META:Advance(offset)
+function META:Advance(offset--[[#: number]])
 	self.i = self.i + offset
 end
 
-
-function META:IsValue(str, offset)
+function META:IsValue(str--[[#: string]], offset--[[#: number | nil]])
 	return self:GetToken(offset).value == str
 end
 
-function META:IsType(str, offset)
-	return self:GetToken(offset).type == str
+function META:IsType(token_type --[[#: TokenType ]], offset--[[#: number | nil]])
+	return self:GetToken(offset).type == token_type
 end
 
 function META:ReadToken()
+	local tk = self:GetToken()
 	self:Advance(1)
-	local tk = self:GetToken(-1)
 	tk.parent = self.nodes[#self.nodes]
 	return tk
 end
@@ -274,7 +283,7 @@ function META:RemoveToken(i)
 	return t
 end
 
-function META:AddTokens(tokens)
+function META:AddTokens(tokens--[[#: {[1 .. inf] = Token}]])
 	local eof = table.remove(self.tokens)
 
 	for i, token in ipairs(tokens) do
@@ -301,17 +310,17 @@ do
 		end
 	end
 
-	function META:ReadValue(str, start, stop)
+	function META:ExpectValue(str, error_start, error_stop)
 		if not self:IsValue(str) then
-			error_expect(self, str, "value", start, stop)
+			error_expect(self, str, "value", error_start, error_stop)
 		end
 
 		return self:ReadToken()
 	end
 
-	function META:ReadType(str, start, stop)
+	function META:ExpectType(str, error_start, error_stop)
 		if not self:IsType(str) then
-			error_expect(self, str, "type", start, stop)
+			error_expect(self, str, "type", error_start, error_stop)
 		end
 
 		return self:ReadToken()

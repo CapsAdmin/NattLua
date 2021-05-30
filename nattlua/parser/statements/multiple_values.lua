@@ -8,7 +8,7 @@ return
 				if not node then break end
 				out[i] = node
 				if not parser:IsValue(",") then break end
-				node.tokens[","] = parser:ReadValue(",")
+				node.tokens[","] = parser:ExpectValue(",")
 			end
 
 			return out

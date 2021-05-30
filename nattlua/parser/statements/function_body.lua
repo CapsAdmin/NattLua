@@ -10,7 +10,7 @@ return
 			node:ExpectAliasedKeyword(")", "arguments)", "arguments)")
 
 			if parser:IsValue(":") then
-				node.tokens[":"] = parser:ReadValue(":")
+				node.tokens[":"] = parser:ExpectValue(":")
 				node.return_types = multiple_values(parser, nil, type_expression)
 			end
 

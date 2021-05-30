@@ -37,7 +37,7 @@ end
 
 local function read_parenthesis(parser)
 	if not parser:IsValue("(") then return end
-	local pleft = parser:ReadValue("(")
+	local pleft = parser:ExpectValue("(")
 	local node = ReadExpression(parser, 0)
 
 	if not node then
@@ -48,7 +48,7 @@ local function read_parenthesis(parser)
 	node.tokens["("] = node.tokens["("] or {}
 	table_insert(node.tokens["("], 1, pleft)
 	node.tokens[")"] = node.tokens[")"] or {}
-	table_insert(node.tokens[")"], parser:ReadValue(")"))
+	table_insert(node.tokens[")"], parser:ExpectValue(")"))
 	return node
 end
 
@@ -64,7 +64,7 @@ end
 local function read_value(parser)
 	if not (parser:IsValue("...") and parser:IsType("letter", 1)) then return end
 	local node = parser:Node("expression", "value")
-	node.value = parser:ReadValue("...")
+	node.value = parser:ExpectValue("...")
 	node.as_expression = ReadExpression(parser)
 	return node
 end
@@ -74,7 +74,7 @@ local function read_type_function(parser)
 	local ReadFunctionBody = require("nattlua.parser.statements.typesystem.function_body").ReadFunctionBody
 	local node = parser:Node("expression", "type_function")
 	node.stmnt = false
-	node.tokens["function"] = parser:ReadValue("function")
+	node.tokens["function"] = parser:ExpectValue("function")
 	return ReadFunctionBody(parser, node)
 end
 
@@ -146,7 +146,7 @@ local function read_string(parser)
 	if not (parser:IsType("$") and parser:IsType("string", 1)) then return end
 	local node = parser:Node("expression", "type_string")
 	node.tokens["$"] = parser:ReadToken("...")
-	node.value = parser:ReadType("string")
+	node.value = parser:ExpectType("string")
 	return node
 end
 
@@ -163,7 +163,7 @@ do
 
 	local function read_as_expression(parser, node)
 		if not parser:IsValue("as") then return end
-		node.tokens["as"] = parser:ReadValue("as")
+		node.tokens["as"] = parser:ExpectValue("as")
 		node.as_expression = ReadExpression(parser)
 	end
 
@@ -171,7 +171,7 @@ do
 		if not (parser:IsValue(".") and parser:IsType("letter", 1)) then return end
 		local node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadToken()
-		node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
+		node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
 		return node:End()
 	end
 
@@ -179,7 +179,7 @@ do
 		if not (parser:IsValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
 		local node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadToken()
-		node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
+		node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
 		return node:End()
 	end
 
@@ -200,13 +200,13 @@ do
 					parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
 				}
 		elseif parser:IsValue("<|") then
-			node.tokens["call("] = parser:ReadValue("<|")
+			node.tokens["call("] = parser:ExpectValue("<|")
 			node.expressions = ReadMultipleValues(parser, nil, ReadExpression, 0)
-			node.tokens["call)"] = parser:ReadValue("|>")
+			node.tokens["call)"] = parser:ExpectValue("|>")
 		else
-			node.tokens["call("] = parser:ReadValue("(")
+			node.tokens["call("] = parser:ExpectValue("(")
 			node.expressions = ReadMultipleValues(parser, nil, ReadExpression, 0)
-			node.tokens["call)"] = parser:ReadValue(")")
+			node.tokens["call)"] = parser:ExpectValue(")")
 		end
 
 		node.type_call = true

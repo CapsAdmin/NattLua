@@ -10,13 +10,13 @@ return
 				syntax.GetTokenType(parser:GetToken(2)) == "letter"
 			) then return end
 			local node = parser:Node("statement", "local_assignment")
-			node.tokens["local"] = parser:ReadValue("local")
-			node.tokens["type"] = parser:ReadValue("type")
+			node.tokens["local"] = parser:ExpectValue("local")
+			node.tokens["type"] = parser:ExpectValue("type")
 			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
 			node.environment = "typesystem"
 
 			if parser:IsValue("=") then
-				node.tokens["="] = parser:ReadValue("=")
+				node.tokens["="] = parser:ExpectValue("=")
 				node.right = ReadMultipleValues(parser, nil, ReadExpression)
 			end
 

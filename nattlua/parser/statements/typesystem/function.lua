@@ -5,8 +5,8 @@ return
 		ReadFunction = function(parser)
 			if not (parser:IsValue("type") and parser:IsValue("function", 1)) then return end
 			local node = parser:Node("statement", "type_function")
-			node.tokens["type"] = parser:ReadValue("type")
-			node.tokens["function"] = parser:ReadValue("function")
+			node.tokens["type"] = parser:ExpectValue("type")
+			node.tokens["function"] = parser:ExpectValue("function")
 			local force_upvalue
 
 			if parser:IsValue("^") then

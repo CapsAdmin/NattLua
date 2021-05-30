@@ -7,7 +7,7 @@ return {ReadRoot = function(parser)
 
 	if parser:IsType("shebang") then
 		shebang = parser:Node("statement", "shebang")
-		shebang.tokens["shebang"] = parser:ReadType("shebang")
+		shebang.tokens["shebang"] = parser:ExpectType("shebang")
 	end
 
 	node.statements = parser:ReadNodes()
