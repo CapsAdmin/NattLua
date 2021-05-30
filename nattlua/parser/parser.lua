@@ -1,3 +1,5 @@
+ --[[# local type NodeType = "expression" | "statement"]]
+
 local syntax = require("nattlua.syntax.syntax")
 local ipairs = _G.ipairs
 local pairs = _G.pairs
@@ -49,8 +51,8 @@ do
 		table_print(self)
 	end
 
-	function META:Render(op)
-		local em = PARSER.Emitter(op or {preserve_whitespace = false, no_newlines = true})
+	function META:Render(config)
+		local em = PARSER.Emitter(config or {preserve_whitespace = false, no_newlines = true})
 
 		if self.type == "expression" then
 			em:EmitExpression(self)
@@ -61,7 +63,7 @@ do
 		return em:Concat()
 	end
 
-	function META:IsWrappedInParenthesis()
+	function META:IsWrappedInParenthesis() --[[#: boolean]]
 		return self.tokens["("] and self.tokens[")"]
 	end
 
@@ -185,7 +187,7 @@ do
 
 	local id = 0
 
-	function PARSER:Node(type, kind)
+	function PARSER:Node(type --[[#: NodeType]], kind)
 		local node = {}
 		node.type = type
 		node.tokens = {}
