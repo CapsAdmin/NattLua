@@ -10,9 +10,9 @@ local function IsDestructureNode(parser, offset)
 end
 
 local function read_remaining(parser, node)
-	if parser:IsCurrentType("letter") then
+	if parser:IsType("letter") then
 		local val = parser:Node("expression", "value")
-		val.value = parser:ReadTokenLoose()
+		val.value = parser:ReadToken()
 		node.default = val
 		node.default_comma = parser:ReadValue(",")
 	end

@@ -7,7 +7,7 @@ return
 				local node = reader(parser, a, b, c)
 				if not node then break end
 				out[i] = node
-				if not parser:IsCurrentValue(",") then break end
+				if not parser:IsValue(",") then break end
 				node.tokens[","] = parser:ReadValue(",")
 			end
 

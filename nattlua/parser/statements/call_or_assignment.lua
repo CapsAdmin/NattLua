@@ -4,10 +4,10 @@ local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").
 return
 	{
 		ReadCallOrAssignment = function(parser)
-			local start = parser:GetCurrentToken()
+			local start = parser:GetToken()
 			local left = ReadMultipleValues(parser, math.huge, ExpectExpression, 0)
 
-			if parser:IsCurrentValue("=") then
+			if parser:IsValue("=") then
 				local node = parser:Node("statement", "assignment")
 				node:ExpectKeyword("=")
 				node.left = left
@@ -25,9 +25,9 @@ return
 			parser:Error(
 				"expected assignment or call expression got $1 ($2)",
 				start,
-				parser:GetCurrentToken(),
-				parser:GetCurrentToken().type,
-				parser:GetCurrentToken().value
+				parser:GetToken(),
+				parser:GetToken().type,
+				parser:GetToken().value
 			)
 		end,
 	}

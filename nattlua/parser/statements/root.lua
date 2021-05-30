@@ -5,7 +5,7 @@ return {ReadRoot = function(parser)
 	parser.root = parser.config and parser.config.root or node
 	local shebang
 
-	if parser:IsCurrentType("shebang") then
+	if parser:IsType("shebang") then
 		shebang = parser:Node("statement", "shebang")
 		shebang.tokens["shebang"] = parser:ReadType("shebang")
 	end
@@ -16,7 +16,7 @@ return {ReadRoot = function(parser)
 		table.insert(node.statements, 1, shebang)
 	end
 
-	if parser:IsCurrentType("end_of_file") then
+	if parser:IsType("end_of_file") then
 		local eof = parser:Node("statement", "end_of_file")
 		eof.tokens["end_of_file"] = parser.tokens[#parser.tokens]
 		table.insert(node.statements, eof)

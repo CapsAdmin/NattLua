@@ -9,7 +9,7 @@ return
 			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
 			node:ExpectAliasedKeyword(")", "arguments)", "arguments)")
 
-			if parser:IsCurrentValue(":") then
+			if parser:IsValue(":") then
 				node.tokens[":"] = parser:ReadValue(":")
 				node.return_types = multiple_values(parser, nil, type_expression)
 			end

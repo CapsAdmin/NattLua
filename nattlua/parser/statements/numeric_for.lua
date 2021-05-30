@@ -4,7 +4,7 @@ local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").
 return
 	{
 		ReadNumericFor = function(parser)
-			if not (parser:IsCurrentValue("for") and parser:IsValue("=", 2)) then return nil end
+			if not (parser:IsValue("for") and parser:IsValue("=", 2)) then return nil end
 			local node = parser:Node("statement", "numeric_for")
 			node:ExpectKeyword("for")
 			node.identifiers = ReadMultipleValues(parser, 1, ReadIdentifier)

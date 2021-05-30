@@ -2,7 +2,7 @@ local ExpectExpression = require("nattlua.parser.expressions.expression").Expect
 return
 	{
 		ReadRepeat = function(parser)
-			if not parser:IsCurrentValue("repeat") then return nil end
+			if not parser:IsValue("repeat") then return nil end
 			local node = parser:Node("statement", "repeat"):ExpectKeyword("repeat"):ExpectNodesUntil("until"):ExpectKeyword("until")
 			node.expression = ExpectExpression(parser)
 			return node:End()

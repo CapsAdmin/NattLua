@@ -15,7 +15,7 @@ local ExpectExpression
 local function read_table_spread(parser)
 	local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
 	if not (
-		parser:IsCurrentValue("...") and
+		parser:IsValue("...") and
 		(parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))
 	) then return end
 	local node = parser:Node("expression", "table_spread"):ExpectKeyword("...")
@@ -26,13 +26,13 @@ end
 local function read_table_entry(parser, i)
 	local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
 
-	if parser:IsCurrentValue("[") then
+	if parser:IsValue("[") then
 		local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
 		node.key_expression = ExpectExpression(parser, 0)
 		node:ExpectKeyword("]"):ExpectKeyword("=")
 		node.value_expression = ExpectExpression(parser, 0)
 		return node:End()
-	elseif parser:IsCurrentType("letter") and parser:IsValue("=", 1) then
+	elseif parser:IsType("letter") and parser:IsValue("=", 1) then
 		local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
 		local spread = read_table_spread(parser)
 
@@ -59,14 +59,14 @@ local function read_table_entry(parser, i)
 end
 
 local function ReadTable(parser)
-	if not parser:IsCurrentValue("{") then return end
+	if not parser:IsValue("{") then return end
 	local tree = parser:Node("expression", "table")
 	tree:ExpectKeyword("{")
 	tree.children = {}
 	tree.tokens["separators"] = {}
 
 	for i = 1, parser:GetLength() do
-		if parser:IsCurrentValue("}") then break end
+		if parser:IsValue("}") then break end
 		local entry = read_table_entry(parser, i)
 
 		if entry.kind == "table_index_value" then
@@ -81,21 +81,21 @@ local function ReadTable(parser)
 
 		tree.children[i] = entry
 
-		if not parser:IsCurrentValue(",") and not parser:IsCurrentValue(";") and not parser:IsCurrentValue("}") then
+		if not parser:IsValue(",") and not parser:IsValue(";") and not parser:IsValue("}") then
 			parser:Error(
 				"expected $1 got $2",
 				nil,
 				nil,
 				{",", ";", "}"},
-				(parser:GetCurrentToken() and parser:GetCurrentToken().value) or
+				(parser:GetToken() and parser:GetToken().value) or
 				"no token"
 			)
 
 			break
 		end
 
-		if not parser:IsCurrentValue("}") then
-			tree.tokens["separators"][i] = parser:ReadTokenLoose()
+		if not parser:IsValue("}") then
+			tree.tokens["separators"][i] = parser:ReadToken()
 		end
 	end
 
@@ -107,7 +107,7 @@ do
 	local function is_call_expression(parser, offset)
 		return
 			parser:IsValue("(", offset) or
-			parser:IsCurrentValue("<|", offset) or
+			parser:IsValue("<|", offset) or
 			parser:IsValue("{", offset) or
 			parser:IsType("string", offset)
 	end
@@ -115,13 +115,13 @@ do
 	local function read_call_expression(parser)
 		local node = parser:Node("expression", "postfix_call")
 
-		if parser:IsCurrentValue("{") then
+		if parser:IsValue("{") then
 			node.expressions = {ReadTable(parser)}
-		elseif parser:IsCurrentType("string") then
+		elseif parser:IsType("string") then
 			node.expressions = {
-					parser:Node("expression", "value"):Store("value", parser:ReadTokenLoose()):End(),
+					parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
 				}
-		elseif parser:IsCurrentValue("<|") then
+		elseif parser:IsValue("<|") then
 			node.tokens["call("] = parser:ReadValue("<|")
 			node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
 			node.tokens["call)"] = parser:ReadValue("|>")
@@ -136,25 +136,25 @@ do
 	end
 
 	local function read_index(parser)
-		if not (parser:IsCurrentValue(".") and parser:IsType("letter", 1)) then return end
+		if not (parser:IsValue(".") and parser:IsType("letter", 1)) then return end
 		local node = parser:Node("expression", "binary_operator")
-		node.value = parser:ReadTokenLoose()
+		node.value = parser:ReadToken()
 		node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
 		return node:End()
 	end
 
 	local function read_self_call(parser)
-		if not (parser:IsCurrentValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
+		if not (parser:IsValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
 		local node = parser:Node("expression", "binary_operator")
-		node.value = parser:ReadTokenLoose()
+		node.value = parser:ReadToken()
 		node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
 		return node:End()
 	end
 
 	local function read_postfix_operator(parser)
-		if not syntax.IsPostfixOperator(parser:GetCurrentToken()) then return end
+		if not syntax.IsPostfixOperator(parser:GetToken()) then return end
 		return
-			parser:Node("expression", "postfix_operator"):Store("value", parser:ReadTokenLoose()):End()
+			parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
 	end
 
 	local function read_call(parser)
@@ -163,20 +163,20 @@ do
 	end
 
 	local function read_postfix_index_expression(parser)
-		if not parser:IsCurrentValue("[") then return end
+		if not parser:IsValue("[") then return end
 		local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
 		node.expression = ExpectExpression(parser)
 		return node:ExpectKeyword("]"):End()
 	end
 
 	local function read_and_add_explicit_type(parser, node)
-		if parser:IsCurrentValue(":") and (not parser:IsType("letter", 1) or not is_call_expression(parser, 2)) then
+		if parser:IsValue(":") and (not parser:IsType("letter", 1) or not is_call_expression(parser, 2)) then
 			node.tokens[":"] = parser:ReadValue(":")
 			node.as_expression = ExpectTypeExpression(parser, 0)
-		elseif parser:IsCurrentValue("as") then
+		elseif parser:IsValue("as") then
 			node.tokens["as"] = parser:ReadValue("as")
 			node.as_expression = ExpectTypeExpression(parser, 0)
-		elseif parser:IsCurrentValue("is") then
+		elseif parser:IsValue("is") then
 			node.tokens["is"] = parser:ReadValue("is")
 			node.as_expression = ExpectTypeExpression(parser, 0)
 		end
@@ -207,16 +207,16 @@ end
 
 do
 	local function prefix_operator(parser)
-		if not syntax.IsPrefixOperator(parser:GetCurrentToken()) then return end
+		if not syntax.IsPrefixOperator(parser:GetToken()) then return end
 		local node = parser:Node("expression", "prefix_operator")
-		node.value = parser:ReadTokenLoose()
+		node.value = parser:ReadToken()
 		node.tokens[1] = node.value
 		node.right = ExpectExpression(parser, math.huge)
 		return node:End()
 	end
 
 	local function parenthesis(parser)
-		if not parser:IsCurrentValue("(") then return end
+		if not parser:IsValue("(") then return end
 		local pleft = parser:ReadValue("(")
 		local node = ReadExpression(parser, 0)
 
@@ -233,9 +233,9 @@ do
 	end
 
 	local function value(parser)
-		if not syntax.IsValue(parser:GetCurrentToken()) then return end
+		if not syntax.IsValue(parser:GetToken()) then return end
 		return
-			parser:Node("expression", "value"):Store("value", parser:ReadTokenLoose()):End()
+			parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
 	end
 
 	local function check_integer_division_operator(parser, node)
@@ -279,13 +279,13 @@ do
 			end
 		end
 
-		check_integer_division_operator(parser, parser:GetCurrentToken())
+		check_integer_division_operator(parser, parser:GetToken())
 
-		while syntax.GetBinaryOperatorInfo(parser:GetCurrentToken()) and
-		syntax.GetBinaryOperatorInfo(parser:GetCurrentToken()).left_priority > priority do
+		while syntax.GetBinaryOperatorInfo(parser:GetToken()) and
+		syntax.GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
 			local left_node = node
 			node = parser:Node("expression", "binary_operator")
-			node.value = parser:ReadTokenLoose()
+			node.value = parser:ReadToken()
 			node.left = left_node
 			node.right = ReadExpression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
 			node:End()
@@ -296,7 +296,7 @@ do
 end
 
 ExpectExpression = function(parser, priority)
-	local token = parser:GetCurrentToken()
+	local token = parser:GetToken()
 
 	if
 		not token or

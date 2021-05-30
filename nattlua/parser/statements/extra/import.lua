@@ -4,12 +4,12 @@ local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").
 return
 	{
 		ReadImport = function(parser)
-			if not (parser:IsCurrentValue("import") and not parser:IsValue("(", 1)) then return end
+			if not (parser:IsValue("import") and not parser:IsValue("(", 1)) then return end
 			local node = parser:Statement("import")
 			node.tokens["import"] = parser:ReadValue("import")
 			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
 			node.tokens["from"] = parser:ReadValue("from")
-			local start = parser:GetCurrentToken()
+			local start = parser:GetToken()
 			node.expressions = ReadMultipleValues(parser, 1, ExpectExpression, 0)
 			local root = parser.config.path:match("(.+/)")
 			node.path = root .. node.expressions[1].value.value:sub(2, -2)

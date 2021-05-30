@@ -2,15 +2,15 @@ local syntax = require("nattlua.syntax.syntax")
 return
 	{
 		ReadIndexExpression = function(parser)
-			if not syntax.IsValue(parser:GetCurrentToken()) then return end
-			local node = parser:Node("expression", "value"):Store("value", parser:ReadTokenLoose()):End()
+			if not syntax.IsValue(parser:GetToken()) then return end
+			local node = parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
 			local first = node
 
-			while parser:IsCurrentValue(".") or parser:IsCurrentValue(":") do
+			while parser:IsValue(".") or parser:IsValue(":") do
 				local left = node
-				local self_call = parser:IsCurrentValue(":")
+				local self_call = parser:IsValue(":")
 				node = parser:Node("expression", "binary_operator")
-				node.value = parser:ReadTokenLoose()
+				node.value = parser:ReadToken()
 				node.right = parser:Node("expression", "value"):Store("value", parser:ReadType("letter")):End()
 				node.left = left
 				node:End()

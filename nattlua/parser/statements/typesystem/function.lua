@@ -3,15 +3,15 @@ local ReadIndexExpression = require("nattlua.parser.expressions.index_expression
 return
 	{
 		ReadFunction = function(parser)
-			if not (parser:IsCurrentValue("type") and parser:IsValue("function", 1)) then return end
+			if not (parser:IsValue("type") and parser:IsValue("function", 1)) then return end
 			local node = parser:Node("statement", "type_function")
 			node.tokens["type"] = parser:ReadValue("type")
 			node.tokens["function"] = parser:ReadValue("function")
 			local force_upvalue
 
-			if parser:IsCurrentValue("^") then
+			if parser:IsValue("^") then
 				force_upvalue = true
-				node.tokens["^"] = parser:ReadTokenLoose()
+				node.tokens["^"] = parser:ReadToken()
 			end
 
 			node.expression = ReadIndexExpression(parser)

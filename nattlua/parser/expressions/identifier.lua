@@ -2,16 +2,16 @@ local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expr
 return
 	{
 		ReadIdentifier = function(parser)
-			if not parser:IsCurrentType("letter") and not parser:IsCurrentValue("...") then return end
+			if not parser:IsType("letter") and not parser:IsValue("...") then return end
 			local node = parser:Node("expression", "value")
 
-			if parser:IsCurrentValue("...") then
+			if parser:IsValue("...") then
 				node.value = parser:ReadValue("...")
 			else
 				node.value = parser:ReadType("letter")
 			end
 
-			if parser:IsCurrentValue(":") then
+			if parser:IsValue(":") then
 				node:ExpectKeyword(":")
 				node.as_expression = ExpectTypeExpression(parser, 0)
 			end

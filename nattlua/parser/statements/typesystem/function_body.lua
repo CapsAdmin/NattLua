@@ -7,10 +7,10 @@ local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIden
 
 local function ReadTypeFunctionArgument(parser)
 	if
-		(parser:IsCurrentType("letter") or parser:IsCurrentValue("...")) and
+		(parser:IsType("letter") or parser:IsValue("...")) and
 		parser:IsValue(":", 1)
 	then
-		local identifier = parser:ReadTokenLoose()
+		local identifier = parser:ReadToken()
 		local token = parser:ReadValue(":")
 		local exp = ExpectTypeExpression(parser)
 		exp.tokens[":"] = token
@@ -32,11 +32,11 @@ return
 				node.identifiers = ReadMultipleValues(parser, math_huge, ReadTypeFunctionArgument)
 			end
 
-			if parser:IsCurrentValue("...") then
+			if parser:IsValue("...") then
 				local vararg = parser:Node("expression", "value")
 				vararg.value = parser:ReadValue("...")
 
-				if parser:IsCurrentType("letter") then
+				if parser:IsType("letter") then
 					vararg.as_expression = parser:ReadValue()
 				end
 
@@ -45,11 +45,11 @@ return
 
 			node.tokens["arguments)"] = parser:ReadValue(")", node.tokens["arguments("])
 
-			if parser:IsCurrentValue(":") then
+			if parser:IsValue(":") then
 				node.tokens[":"] = parser:ReadValue(":")
 				node.return_types = ReadMultipleValues(parser, math.huge, ReadTypeExpression)
-			elseif not parser:IsCurrentValue(",") then
-				local start = parser:GetCurrentToken()
+			elseif not parser:IsValue(",") then
+				local start = parser:GetToken()
 				node.statements = parser:ReadNodes({["end"] = true})
 				node.tokens["end"] = parser:ReadValue("end", start, start)
 			end

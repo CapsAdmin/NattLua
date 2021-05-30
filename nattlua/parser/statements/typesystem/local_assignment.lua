@@ -6,7 +6,7 @@ return
 	{
 		ReadLocalAssignment = function(parser)
 			if not (
-				parser:IsCurrentValue("local") and parser:IsValue("type", 1) and
+				parser:IsValue("local") and parser:IsValue("type", 1) and
 				syntax.GetTokenType(parser:GetToken(2)) == "letter"
 			) then return end
 			local node = parser:Node("statement", "local_assignment")
@@ -15,7 +15,7 @@ return
 			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
 			node.environment = "typesystem"
 
-			if parser:IsCurrentValue("=") then
+			if parser:IsValue("=") then
 				node.tokens["="] = parser:ReadValue("=")
 				node.right = ReadMultipleValues(parser, nil, ReadExpression)
 			end

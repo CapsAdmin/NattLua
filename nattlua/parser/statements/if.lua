@@ -2,7 +2,7 @@ local ExpectExpression = require("nattlua.parser.expressions.expression").Expect
 return
 	{
 		ReadIf = function(parser)
-			if not parser:IsCurrentValue("if") then return nil end
+			if not parser:IsValue("if") then return nil end
 			local node = parser:Node("statement", "if")
 			node.expressions = {}
 			node.statements = {}
@@ -37,7 +37,7 @@ return
 					["else"] = true,
 					["elseif"] = true,
 				})
-				if parser:IsCurrentValue("end") then break end
+				if parser:IsValue("end") then break end
 			end
 
 			node:ExpectKeyword("end")

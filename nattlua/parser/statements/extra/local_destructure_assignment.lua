@@ -10,9 +10,9 @@ local function IsDestructureNode(parser, offset)
 end
 
 local function read_remaining(parser, node)
-	if parser:IsCurrentType("letter") then
+	if parser:IsType("letter") then
 		local val = parser:Node("expression", "value")
-		val.value = parser:ReadTokenLoose()
+		val.value = parser:ReadToken()
 		node.default = val
 		node.default_comma = parser:ReadValue(",")
 	end
@@ -25,7 +25,7 @@ local function read_remaining(parser, node)
 end
 
 local function IsLocalDestructureAssignmentNode(parser)
-	if parser:IsCurrentValue("local") then
+	if parser:IsValue("local") then
 		if parser:IsValue("type", 1) then return IsDestructureNode(parser, 2) end
 		return IsDestructureNode(parser, 1)
 	end
@@ -38,7 +38,7 @@ return
 			local node = parser:Node("statement", "local_destructure_assignment")
 			node.tokens["local"] = parser:ReadValue("local")
 
-			if parser:IsCurrentValue("type") then
+			if parser:IsValue("type") then
 				node.tokens["type"] = parser:ReadValue("type")
 				node.environment = "typesystem"
 			end

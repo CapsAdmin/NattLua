@@ -224,7 +224,7 @@ function META:Error(msg, start, stop, ...)
 		stop = stop.stop
 	end
 
-	local tk = self:GetCurrentToken()
+	local tk = self:GetToken()
 	start = start or tk and tk.start or 0
 	stop = stop or tk and tk.stop or 0
 	self:OnError(
@@ -240,15 +240,28 @@ end
 function META:OnError() 
 end
 
-function META:GetCurrentToken()
-	return self.tokens[self.i]
-end
-
 function META:GetToken(offset)
-	return self.tokens[self.i + offset]
+	return self.tokens[self.i + (offset or 0)]
 end
 
-function META:ReadTokenLoose()
+function META:GetLength()
+	return #self.tokens
+end
+
+function META:Advance(offset)
+	self.i = self.i + offset
+end
+
+
+function META:IsValue(str, offset)
+	return self:GetToken(offset).value == str
+end
+
+function META:IsType(str, offset)
+	return self:GetToken(offset).type == str
+end
+
+function META:ReadToken()
 	self:Advance(1)
 	local tk = self:GetToken(-1)
 	tk.parent = self.nodes[#self.nodes]
@@ -272,25 +285,9 @@ function META:AddTokens(tokens)
 	table.insert(self.tokens, eof)
 end
 
-function META:IsValue(str, offset)
-	return self:GetToken(offset).value == str
-end
-
-function META:IsType(str, offset)
-	return self:GetToken(offset).type == str
-end
-
-function META:IsCurrentValue(str)
-	return self:GetCurrentToken().value == str
-end
-
-function META:IsCurrentType(str)
-	return self:GetCurrentToken().type == str
-end
-
 do
 	local function error_expect(self, str, what, start, stop)
-		if not self:GetCurrentToken() then
+		if not self:GetToken() then
 			self:Error("expected $1 $2: reached end of code", start, stop, what, str)
 		else
 			self:Error(
@@ -299,31 +296,31 @@ do
 				stop,
 				what,
 				str,
-				self:GetCurrentToken()[what]
+				self:GetToken()[what]
 			)
 		end
 	end
 
 	function META:ReadValue(str, start, stop)
-		if not self:IsCurrentValue(str) then
+		if not self:IsValue(str) then
 			error_expect(self, str, "value", start, stop)
 		end
 
-		return self:ReadTokenLoose()
+		return self:ReadToken()
 	end
 
 	function META:ReadType(str, start, stop)
-		if not self:IsCurrentType(str) then
+		if not self:IsType(str) then
 			error_expect(self, str, "type", start, stop)
 		end
 
-		return self:ReadTokenLoose()
+		return self:ReadToken()
 	end
 end
 
 function META:ReadValues(values, start, stop)
-	if not self:GetCurrentToken() or not values[self:GetCurrentToken().value] then
-		local tk = self:GetCurrentToken()
+	if not self:GetToken() or not values[self:GetToken().value] then
+		local tk = self:GetToken()
 
 		if not tk then
 			self:Error("expected $1: reached end of code", start, stop, values)
@@ -338,15 +335,7 @@ function META:ReadValues(values, start, stop)
 		self:Error("expected $1 got $2", start, stop, array, tk.type)
 	end
 
-	return self:ReadTokenLoose()
-end
-
-function META:GetLength()
-	return #self.tokens
-end
-
-function META:Advance(offset)
-	self.i = self.i + offset
+	return self:ReadToken()
 end
 
 function META:ReadNodes(stop_token)
@@ -354,9 +343,9 @@ function META:ReadNodes(stop_token)
 
 	for i = 1, self:GetLength() do
 		if
-			not self:GetCurrentToken() or
+			not self:GetToken() or
 			stop_token and
-			stop_token[self:GetCurrentToken().value]
+			stop_token[self:GetToken().value]
 		then
 			break
 		end
@@ -409,7 +398,7 @@ do -- statements
 	end
 
 	function META:ReadNode()
-		if self:IsCurrentType("end_of_file") then return end
+		if self:IsType("end_of_file") then return end
 		return
 			ReadDebugCode(self) or
 			ReadReturn(self) or

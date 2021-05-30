@@ -4,7 +4,7 @@ local index_expression = require("nattlua.parser.expressions.index_expression").
 return
 	{
 		ReadFunction = function(self)
-			if not self:IsCurrentValue("function") then return end
+			if not self:IsValue("function") then return end
 			local node = self:Node("statement", "function")
 			node.tokens["function"] = self:ReadValue("function")
 			node.expression = index_expression(self)
@@ -13,7 +13,7 @@ return
 				node.self_call = node.expression.right.self_call
 			end
 
-			if self:IsCurrentValue("<|") then
+			if self:IsValue("<|") then
 				node.kind = "generics_type_function"
 				generics_type_function_body(self, node)
 			else

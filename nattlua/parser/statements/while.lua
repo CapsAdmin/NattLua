@@ -2,7 +2,7 @@ local ExpectExpression = require("nattlua.parser.expressions.expression").Expect
 return
 	{
 		ReadWhile = function(parser)
-			if not parser:IsCurrentValue("while") then return nil end
+			if not parser:IsValue("while") then return nil end
 			local node = parser:Node("statement", "while"):ExpectKeyword("while")
 			node.expression = ExpectExpression(parser)
 			return

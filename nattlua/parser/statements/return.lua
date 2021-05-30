@@ -3,7 +3,7 @@ local ReadExpression = require("nattlua.parser.expressions.expression").ReadExpr
 return
 	{
 		ReadReturn = function(parser)
-			if not parser:IsCurrentValue("return") then return nil end
+			if not parser:IsValue("return") then return nil end
 			local node = parser:Node("statement", "return"):ExpectKeyword("return")
 			node.expressions = ReadMultipleValues(parser, nil, ReadExpression, 0)
 			return node:End()
