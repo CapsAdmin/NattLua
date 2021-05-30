@@ -163,7 +163,7 @@ function META:Parse()
 		if not ok then return ok, err end
 	end
 
-	local parser = self.Parser(self.config)
+	local parser = self.Parser(self.Tokens, self.config)
 	parser.code = self.code
 	parser.name = self.name
 	self.parser = parser
@@ -186,7 +186,7 @@ function META:Parse()
 	end
 
 	local ok, res = xpcall(function()
-		return parser:BuildAST(self.Tokens)
+		return parser:ReadRootNode()
 	end, function(msg)
 		return traceback(self, parser, msg)
 	end)

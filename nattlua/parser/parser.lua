@@ -347,37 +347,6 @@ function META:Advance(offset)
 	self.i = self.i + offset
 end
 
-function META:BuildAST(tokens)
-	self.tokens = tokens
-	self.i = 1
-	return self:Root(self.config and self.config.root)
-end
-
-function META:Root(root)
-	local node = self:Node("statement", "root")
-	self.root = root or node
-	local shebang
-
-	if self:IsCurrentType("shebang") then
-		shebang = self:Node("statement", "shebang")
-		shebang.tokens["shebang"] = self:ReadType("shebang")
-	end
-
-	node.statements = self:ReadNodes()
-
-	if shebang then
-		table.insert(node.statements, 1, shebang)
-	end
-
-	if self:IsCurrentType("end_of_file") then
-		local eof = self:Node("statement", "end_of_file")
-		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-		table.insert(node.statements, eof)
-	end
-
-	return node:End()
-end
-
 function META:ReadNodes(stop_token)
 	local out = {}
 
@@ -431,6 +400,11 @@ do -- statements
 	local ReadLocalTypeAssignment = require("nattlua.parser.statements.typesystem.local_assignment").ReadLocalAssignment
 	local ReadTypeAssignment = require("nattlua.parser.statements.typesystem.assignment").ReadAssignment
 	local ReadCallOrAssignment = require("nattlua.parser.statements.call_or_assignment").ReadCallOrAssignment
+	local ReadRoot = require("nattlua.parser.statements.root").ReadRoot
+
+	function META:ReadRootNode()
+		return ReadRoot(self)
+	end
 
 	function META:ReadNode()
 		if self:IsCurrentType("end_of_file") then return end
@@ -462,7 +436,7 @@ do -- statements
 	end
 end
 
-return function(config)
+return function(tokens, config)
 	return setmetatable(
 		{
 			config = config,
@@ -473,7 +447,7 @@ return function(config)
 			current_expression = false,
 			root = false,
 			i = 1,
-			tokens = {},
+			tokens = tokens,
 			OnError = function() 
 			end,
 		},
