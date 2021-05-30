@@ -662,7 +662,15 @@ function META:Call(analyzer, arguments, ...)
 end
 
 function META:PrefixOperator(op)
-	if op == "#" then return Number(self:GetLength()):SetLiteral(self:IsLiteral()) end
+	if op == "#" then
+		
+		local keys = (self:GetContract() or self):GetData()
+		if #keys == 1 and keys[1].key.Type == "number" then
+			return keys[1].key:Copy()
+		end
+
+		return Number(self:GetLength()):SetLiteral(self:IsLiteral()) 
+	end
 end
 
 function META.New(data)

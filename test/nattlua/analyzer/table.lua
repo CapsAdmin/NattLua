@@ -630,3 +630,8 @@ run[[
     type_assert<|x, {foo = true, bar = false}|>
     type_assert(META.@Self, _ as {foo = true})
 ]]
+
+run[[
+    local t = {} as {[1 .. inf] = number}
+    type_assert(#t, _ as 1 .. inf)
+]]
