@@ -1,5 +1,6 @@
 --[[#local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")]]
 --[[# local type NodeType = "expression" | "statement"]]
+--[[# local type Node = any]]
 
 local syntax = require("nattlua.syntax.syntax")
 local ipairs = _G.ipairs
@@ -15,7 +16,7 @@ META.syntax = syntax
 --[[#
 	type META.@Self = {
 			config = any,
-			nodes = {[1 .. inf] = any},
+			nodes = {[1 .. inf] = any} | {},
 			name = string,
 			code = string,
 			current_statement = false | any,
@@ -124,7 +125,7 @@ do
 	end
 
 	do
-		local function expect(node, parser, func, what, start, stop, alias)
+		local function expect(node--[[#: Node]], parser--[[#: META.@Self]], func--[[#: META.@Self.ExpectValue | META.@Self.ExpectType]], what--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]], alias--[[#: string | nil]])
 			local tokens = node.tokens
 
 			if start then
@@ -155,7 +156,7 @@ do
 			token.parent = node
 		end
 
-		function META:ExpectAliasedKeyword(what, alias, start, stop)
+		function META:ExpectAliasedKeyword(what--[[#: string]], alias--[[#: string | nil]], start--[[#: number | nil]], stop--[[#: number | nil]])
 			expect(
 				self,
 				self.parser,
@@ -168,7 +169,7 @@ do
 			return self
 		end
 
-		function META:ExpectKeyword(what, start, stop)
+		function META:ExpectKeyword(what--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
 			expect(
 				self,
 				self.parser,
@@ -181,8 +182,8 @@ do
 		end
 	end
 
-	function META:ExpectNodesUntil(what)
-		self.statements = self.parser:ReadNodes(type(what) == "table" and what or {[what] = true})
+	function META:ExpectNodesUntil(what--[[#: string]])
+		self.statements = self.parser:ReadNodes({[what] = true})
 		return self
 	end
 
@@ -191,7 +192,7 @@ do
 		return self
 	end
 
-	function META:Store(key, val)
+	function META:Store(key--[[#: string]], val--[[#: any]])
 		self[key] = val
 		return self
 	end
@@ -231,20 +232,24 @@ do
 	end
 end
 
-function META:Error(msg--[[#: string]], start_token--[[#: Token]], stop_token--[[#: Token]], ...)
+function META:Error(msg--[[#: string]], start_token--[[#: Token]], stop_token--[[#: Token]], ...--[[#: ...any]])
 	local tk = self:GetToken()
 
-	start_token = start_token and start_token.start or tk and tk.start or 0
-	stop_token = stop_token and stop_token.stop or tk and tk.stop or 0
+	local start = start_token and start_token.start or tk and tk.start or 0
+	local stop = stop_token and stop_token.stop or tk and tk.stop or 0
 
 	self:OnError(
 		self.code,
 		self.name,
 		msg,
-		start_token,
-		stop_token,
+		start,
+		stop,
 		...
 	)
+end
+
+function META:OnNode(node--[[#: any]])
+
 end
 
 function META:OnError(code--[[#: string]], name--[[#: string]], message--[[#: string]], start--[[#: number]], stop--[[#: number]], ...--[[#: ...any]]) 
@@ -263,11 +268,17 @@ function META:Advance(offset--[[#: number]])
 end
 
 function META:IsValue(str--[[#: string]], offset--[[#: number | nil]])
-	return self:GetToken(offset).value == str
+    local tk = self:GetToken(offset)
+    if tk then
+	    return tk.value == str
+    end
 end
 
 function META:IsType(token_type --[[#: TokenType ]], offset--[[#: number | nil]])
-	return self:GetToken(offset).type == token_type
+    local tk = self:GetToken(offset)
+    if tk then
+	    return tk.type == token_type
+    end
 end
 
 function META:ReadToken()
@@ -295,7 +306,7 @@ function META:AddTokens(tokens--[[#: {[1 .. inf] = Token}]])
 end
 
 do
-	local function error_expect(self, str, what, start, stop)
+	local function error_expect(self--[[#: META.@Self]], str--[[#: string]], what--[[#: string]], start--[[#: number |nil]], stop--[[#: number |nil]])
 		if not self:GetToken() then
 			self:Error("expected $1 $2: reached end of code", start, stop, what, str)
 		else
@@ -310,7 +321,7 @@ do
 		end
 	end
 
-	function META:ExpectValue(str, error_start, error_stop)
+	function META:ExpectValue(str--[[#: string]], error_start--[[#: number | nil]], error_stop--[[#: number | nil]])
 		if not self:IsValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
 		end
@@ -318,7 +329,7 @@ do
 		return self:ReadToken()
 	end
 
-	function META:ExpectType(str, error_start, error_stop)
+	function META:ExpectType(str--[[#: string]], error_start--[[#: number | nil]], error_stop--[[#: number | nil]])
 		if not self:IsType(str) then
 			error_expect(self, str, "type", error_start, error_stop)
 		end
@@ -327,7 +338,7 @@ do
 	end
 end
 
-function META:ReadValues(values, start, stop)
+function META:ReadValues(values --[[#: {[string] = true}]], start--[[#: number | nil]], stop--[[#: number | nil]])
 	if not self:GetToken() or not values[self:GetToken().value] then
 		local tk = self:GetToken()
 
@@ -347,7 +358,7 @@ function META:ReadValues(values, start, stop)
 	return self:ReadToken()
 end
 
-function META:ReadNodes(stop_token)
+function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 	local out = {}
 
 	for i = 1, self:GetLength() do
@@ -436,7 +447,7 @@ do -- statements
 	end
 end
 
-return function(tokens, config)
+return function(tokens--[[#: {[1 .. inf] = Token}]], config --[[#: any]])
 	return setmetatable(
 		{
 			config = config,
