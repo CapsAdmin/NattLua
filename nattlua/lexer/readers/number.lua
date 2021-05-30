@@ -136,7 +136,7 @@ end
 
 return
 	{
-		number = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		ReadNumber = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if
 				syntax.IsNumber(lexer:GetCurrentChar()) or
 				(lexer:IsCurrentValue(".") and syntax.IsNumber(lexer:GetChar(1)))

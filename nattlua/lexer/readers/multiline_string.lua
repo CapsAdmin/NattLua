@@ -4,7 +4,7 @@ local string = require("string")
 local helpers = require("nattlua.other.quote")
 return
 	{
-		multiline_string = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		ReadMultilineString = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if lexer:IsValue("[", 0) and (lexer:IsValue("[", 1) or lexer:IsValue("=", 1)) then
 				local start = lexer:GetPosition()
 				lexer:Advance(1)

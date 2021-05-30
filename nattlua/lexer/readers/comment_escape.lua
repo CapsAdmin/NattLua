@@ -2,7 +2,7 @@
 
 return
 	{
-		comment_escape = function(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
+		ReadCommentEscape = function(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
 			if
 				lexer:IsValue("-", 0) and
 				lexer:IsValue("-", 1) and
@@ -17,7 +17,7 @@ return
 
 			return false
 		end,
-		remaining_comment_escape = function(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
+		ReadRemainingCommentEscape = function(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
 			if lexer.comment_escape and lexer:IsValue("]", 0) and lexer:IsValue("]", 1) then
 				lexer:Advance(2)
 				return "comment_escape"

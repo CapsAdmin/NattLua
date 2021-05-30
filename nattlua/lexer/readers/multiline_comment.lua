@@ -3,7 +3,7 @@
 local string = require("string")
 return
 	{
-		multiline_comment = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		ReadMultilineComment = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if
 				lexer:IsValue("-", 0) and
 				lexer:IsValue("-", 1) and

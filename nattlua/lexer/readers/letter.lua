@@ -3,7 +3,7 @@
 local syntax = require("nattlua.syntax.syntax")
 return
 	{
-		letter = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		ReadLetter = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if syntax.IsLetter(lexer:GetCurrentChar()) then
 				while not lexer:TheEnd() do
 					lexer:Advance(1)

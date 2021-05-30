@@ -2,7 +2,7 @@
 
 return
 	{
-		line_comment = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		ReadLineComment = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if lexer:IsValue("-", 0) and lexer:IsValue("-", 1) then
 				lexer:Advance(#"--")
 

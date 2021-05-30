@@ -5,7 +5,7 @@ local syntax = require("nattlua.syntax.syntax")
 local read = BuildReadFunction(syntax.GetSymbols(), false)
 return
 	{
-		symbol = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		ReadSymbol = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if read(lexer) then return "symbol" end
 			return false
 		end,

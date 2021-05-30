@@ -2,7 +2,7 @@
 
 return
 	{
-		inline_type_code = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		ReadInlineTypeCode = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if lexer:IsCurrentValue("§") then
 				lexer:Advance(1)
 
