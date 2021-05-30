@@ -10,7 +10,7 @@ local type = _G.type
 local table = require("table")
 local META = {}
 META.__index = META
-META.Emitter = require("nattlua.transpiler.emitter")
+--[[# --]]META.Emitter = require("nattlua.transpiler.emitter")
 META.syntax = syntax
 
 --[[#
@@ -24,7 +24,6 @@ META.syntax = syntax
 			root = false | any,
 			i = number,
 			tokens = {[1 .. inf] = Token},
-			OnError = function() end,
 	}
 ]]
 
@@ -33,6 +32,19 @@ do
 	local META = {}
 	META.__index = META
 	META.Type = "node"
+	
+	--[[#
+	type META.@Self = {
+			type = TokenType,
+			kind = string,
+			id = number,
+			code = string,
+			name = string,
+			parser = PARSER.@Self,
+	}
+]]
+
+	--[[# type PARSER.@Self.nodes = {[1 .. inf] = META.@Self} | {}]]
 
 	function META:__tostring()
 		if self.type == "statement" then
@@ -110,22 +122,28 @@ do
 		return self.statements ~= nil
 	end
 
-	function META:FindNodesByType(what, out)
+	local function find_by_type(node--[[#: META.@Self]], what --[[#: TokenType]], out)
 		out = out or {}
 
-		for _, child in ipairs(self:GetNodes()) do
+		for _, child in ipairs(node:GetNodes()) do
 			if child.kind == what then
 				table.insert(out, child)
 			elseif child:GetNodes() then
-				child:FindNodesByType(what, out)
+				find_by_type(child, what, out)
 			end
 		end
 
 		return out
 	end
+	
+
+	function META:FindNodesByType(what --[[#: TokenType]])
+		return find_by_type(self, what, {})
+	end
 
 	do
-		local function expect(node--[[#: Node]], parser--[[#: META.@Self]], func--[[#: META.@Self.ExpectValue | META.@Self.ExpectType]], what--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]], alias--[[#: string | nil]])
+		-- META.@Self.ExpectValue | META.@Self.ExpectType
+		local function expect(node--[[#: Node]], parser--[[#: META.@Self]], func--[[#: any ]], what--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]], alias--[[#: string | nil]])
 			local tokens = node.tokens
 
 			if start then
@@ -204,17 +222,17 @@ do
 
 	local id = 0
 
-	function PARSER:Node(type --[[#: NodeType]], kind)
-		local node = {}
-		node.type = type
-		node.tokens = {}
-		node.kind = kind
-		node.id = id
-		node.code = self.code
-		node.name = self.name
-		node.parser = self
+	function PARSER:Node(type --[[#: NodeType]], kind--[[#: string]])
 		id = id + 1
-		setmetatable(node, META)
+		local node = setmetatable({
+			type = type,
+			kind = kind,
+			tokens = {},
+			id = id,
+			code = self.code,
+			name = self.name,
+			parser = self,
+		}, META)
 
 		if type == "expression" then
 			self.current_expression = node
@@ -232,11 +250,11 @@ do
 	end
 end
 
-function META:Error(msg--[[#: string]], start_token--[[#: Token]], stop_token--[[#: Token]], ...--[[#: ...any]])
+function META:Error(msg--[[#: string]], start_token--[[#: Token | nil]], stop_token--[[#: Token | nil]], ...--[[#: ...any]])
 	local tk = self:GetToken()
 
-	local start = start_token and start_token.start or tk and tk.start or 0
-	local stop = stop_token and stop_token.stop or tk and tk.stop or 0
+	local start = start_token and (start_token --[[# as Token]]).start or tk and (tk --[[# as Token]]).start or 0
+	local stop = stop_token and (stop_token --[[# as Token]]).stop or tk and (tk --[[# as Token]]).stop or 0
 
 	self:OnError(
 		self.code,
@@ -306,7 +324,7 @@ function META:AddTokens(tokens--[[#: {[1 .. inf] = Token}]])
 end
 
 do
-	local function error_expect(self--[[#: META.@Self]], str--[[#: string]], what--[[#: string]], start--[[#: number |nil]], stop--[[#: number |nil]])
+	local function error_expect(self--[[#: META.@Self]], str--[[#: string]], what--[[#: string]], start--[[#: Token |nil]], stop--[[#: Token |nil]])
 		if not self:GetToken() then
 			self:Error("expected $1 $2: reached end of code", start, stop, what, str)
 		else
@@ -321,7 +339,7 @@ do
 		end
 	end
 
-	function META:ExpectValue(str--[[#: string]], error_start--[[#: number | nil]], error_stop--[[#: number | nil]])
+	function META:ExpectValue(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])
 		if not self:IsValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
 		end
@@ -329,7 +347,7 @@ do
 		return self:ReadToken()
 	end
 
-	function META:ExpectType(str--[[#: string]], error_start--[[#: number | nil]], error_stop--[[#: number | nil]])
+	function META:ExpectType(str--[[#: TokenType]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])
 		if not self:IsType(str) then
 			error_expect(self, str, "type", error_start, error_stop)
 		end
@@ -338,14 +356,15 @@ do
 	end
 end
 
-function META:ReadValues(values --[[#: {[string] = true}]], start--[[#: number | nil]], stop--[[#: number | nil]])
-	if not self:GetToken() or not values[self:GetToken().value] then
-		local tk = self:GetToken()
+function META:ReadValues(values --[[#: {[string] = true}]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
+	local tk = self:GetToken()
+	
+	if not tk then
+		self:Error("expected $1: reached end of code", start, stop, values)
+		return
+	end
 
-		if not tk then
-			self:Error("expected $1: reached end of code", start, stop, values)
-		end
-
+	if not values[tk.value] then
 		local array = {}
 
 		for k in pairs(values) do
@@ -362,14 +381,10 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 	local out = {}
 
 	for i = 1, self:GetLength() do
-		if
-			not self:GetToken() or
-			stop_token and
-			stop_token[self:GetToken().value]
-		then
-			break
-		end
-
+		local tk = self:GetToken()
+		if not tk then break end
+		if stop_token and stop_token[tk.value] then break end
+		
 		out[i] = self:ReadNode()
 		if not out[i] then break end
 
@@ -385,7 +400,7 @@ function META:ResolvePath(path)
 	return path
 end
 
-do -- statements
+--[[# if false then --]]do -- statements
 	local ReadBreak = require("nattlua.parser.statements.break").ReadBreak
 	local ReadDo = require("nattlua.parser.statements.do").ReadDo
 	local ReadGenericFor = require("nattlua.parser.statements.generic_for").ReadGenericFor
@@ -459,8 +474,6 @@ return function(tokens--[[#: {[1 .. inf] = Token}]], config --[[#: any]])
 			root = false,
 			i = 1,
 			tokens = tokens,
-			OnError = function() 
-			end,
 		},
 		META
 	)

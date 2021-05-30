@@ -22,6 +22,10 @@ local operators = {
 
 function META:PrefixOperator(op--[[#: keysof<|operators|>]])
 	if self:IsLiteral() then
+		if not operators[op] then
+			return false, "no such operator " .. op
+		end
+
 		local num = self.New(operators[op](self:GetData())):SetLiteral(true)
 		local max = self:GetMax()
 
