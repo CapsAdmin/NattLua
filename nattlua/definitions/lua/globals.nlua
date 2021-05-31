@@ -179,7 +179,7 @@ type function require(name: string)
 		end
 	end
 
-	analyzer:Error(name:GetNode(), "unable to find module " .. str)
+	analyzer:Error(name:GetNode(), "unable to find module " .. str:GetData())
 	return types.Any
 end
 
