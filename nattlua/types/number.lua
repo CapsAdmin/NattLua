@@ -244,7 +244,7 @@ function META:IsTruthy()
 end
 
 function META.New(data--[[#: number]])
-	return setmetatable({Data = data}, META)
+	return setmetatable({Data = data, Falsy = false, Truthy = true, Literal = false}, META)
 end
 
 return
@@ -253,7 +253,7 @@ return
 		LNumber = function(num--[[#: number]])
 			return META.New(num):SetLiteral(true)
 		end,
-		LNumberFromString = function(str)
+		LNumberFromString = function(str--[[#: string]])
 			local num = tonumber(str)
 
 			if not num then
