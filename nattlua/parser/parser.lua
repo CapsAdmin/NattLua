@@ -16,14 +16,14 @@ META.syntax = syntax
 --[[#
 	type META.@Self = {
 			config = any,
-			nodes = {[1 .. inf] = any} | {},
+			nodes = {[number] = any} | {},
 			name = string,
 			code = string,
 			current_statement = false | any,
 			current_expression = false | any,
 			root = false | any,
 			i = number,
-			tokens = {[1 .. inf] = Token},
+			tokens = {[number] = Token},
 	}
 ]]
 
@@ -41,10 +41,13 @@ do
 			code = string,
 			name = string,
 			parser = PARSER.@Self,
+
+			statements = {[number] = self} | {},
+			tokens = {[string] = Token},
 	}
 ]]
 
-	--[[# type PARSER.@Self.nodes = {[1 .. inf] = META.@Self} | {}]]
+	--[[# type PARSER.@Self.nodes = {[number] = META.@Self} | {}]]
 
 	function META:__tostring()
 		if self.type == "statement" then
@@ -122,7 +125,7 @@ do
 		return self.statements ~= nil
 	end
 
-	local function find_by_type(node--[[#: META.@Self]], what --[[#: TokenType]], out)
+	local function find_by_type(node--[[#: META.@Self]], what --[[#: TokenType]], out--[[#: {[1 .. inf] = Node}]])
 		out = out or {}
 
 		for _, child in ipairs(node:GetNodes()) do
@@ -210,7 +213,7 @@ do
 		return self
 	end
 
-	function META:Store(key--[[#: string]], val--[[#: any]])
+	function META:Store(key--[[#: keysof<|META.@Self|>]], val--[[#: literal any]])
 		self[key] = val
 		return self
 	end
@@ -301,6 +304,7 @@ end
 
 function META:ReadToken()
 	local tk = self:GetToken()
+	if not tk then return end
 	self:Advance(1)
 	tk.parent = self.nodes[#self.nodes]
 	return tk

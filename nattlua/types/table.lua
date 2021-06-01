@@ -9,7 +9,13 @@ local LNumber = require("nattlua.types.number").LNumber
 local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
+--[[# local BaseType = import_type("nattlua/types/base.lua")]]
 META.Type = "table"
+--[[#type META.@Name = "TTable"]]
+--[[#type TTable = META.@Self]]
+META:GetSet("Data", nil--[[# as {[any] = any} | {}]])
+META:GetSet("ReferenceId", nil --[[# as string | nil]])
+META:GetSet("Self", nil --[[# as TTable]])
 
 function META:SetSelf(tbl)
 	tbl:SetMetaTable(self)
@@ -18,20 +24,7 @@ function META:SetSelf(tbl)
 	self.Self = tbl
 end
 
-function META:SetReferenceId(ref)
-	self.reference_id = ref
-	return self
-end
-
-function META:GetReferenceId()
-	return self.reference_id
-end
-
-function META:GetSelf()
-	return self.Self
-end
-
-function META.Equal(a, b)
+function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
 	if a.Type ~= b.Type then return false end
 	if a:IsUnique() then return a:GetUniqueID() == b:GetUniqueID() end
 
@@ -75,10 +68,6 @@ function META.Equal(a, b)
 	end
 
 	return true
-end
-
-function META:GetLuaType()
-	return self.Type
 end
 
 local level = 0
@@ -139,7 +128,7 @@ function META:GetLength()
 	return #self:GetData()
 end
 
-function META:FollowsContract(contract)
+function META:FollowsContract(contract--[[#: TTable]])
 	do -- todo
         -- i don't think this belongs here
 
@@ -177,15 +166,15 @@ function META:FollowsContract(contract)
 	return true
 end
 
-function META.IsSubsetOf(A, B)
-	if A.suppress then return true end
-	if B.Type == "any" then return true end
+function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
+	if A.suppress then return true, "suppressed" end
+	if B.Type == "any" then return true, "b is any " end
 	local ok, err = A:IsSameUniqueType(B)
 	if not ok then return ok, err end
-	if A == B then return true end
+	if A == B then return true, "same type" end
 
 	if B.Type == "table" then
-		if B:GetMetaTable() and B:GetMetaTable() == A then return true end
+		if B:GetMetaTable() and B:GetMetaTable() == A then return true, "same metatable" end
 		--if B:GetSelf() and B:GetSelf():Equal(A) then return true end
 		
 		local can_be_empty = true
@@ -203,7 +192,7 @@ function META.IsSubsetOf(A, B)
 
 		if not A:GetData()[1] and (not A:GetContract() or not A:GetContract():GetData()[1]) then
 			if can_be_empty then
-				return true
+				return true, "can be empty"
 			else
 				return type_errors.subset(A, B)
 			end
@@ -221,17 +210,17 @@ function META.IsSubsetOf(A, B)
 			end
 		end
 
-		return true
+		return true, "all is equal"
 	elseif B.Type == "union" then
 		local u = Union({A})
 		local ok, err = u:IsSubsetOf(B)
-		return ok, err
+		return ok, err or "is subset of b"
 	end
 
 	return type_errors.subset(A, B)
 end
 
-function META:ContainsAllKeysIn(contract)
+function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	for _, keyval in ipairs(contract:GetData()) do
 		if keyval.key:IsLiteral() then
 			local ok, err = self:FindKeyVal(keyval.key)
@@ -256,7 +245,7 @@ function META:IsDynamic()
 	return true
 end
 
-function META:Delete(key)
+function META:Delete(key--[[#: BaseType]])
 	for i, keyval in ipairs(self:GetData()) do
 		if key:IsSubsetOf(keyval.key) and keyval.key:IsLiteral() then
 			keyval.val:SetParent()
@@ -278,11 +267,11 @@ function META:GetKeyUnion() -- never called
 	return union
 end
 
-function META:Contains(key)
+function META:Contains(key--[[#: BaseType]])
 	return self:FindKeyValReverse(key)
 end
 
-function META:FindKeyVal(key)
+function META:FindKeyVal(key--[[#: BaseType]])
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -299,7 +288,7 @@ function META:FindKeyVal(key)
 	return type_errors.missing(self, key, reasons)
 end
 
-function META:FindKeyValReverse(key)
+function META:FindKeyValReverse(key--[[#: BaseType]])
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -321,7 +310,7 @@ function META:FindKeyValReverse(key)
 	return type_errors.missing(self, key, reasons)
 end
 
-function META:FindKeyValReverseEqual(key)
+function META:FindKeyValReverseEqual(key--[[#: BaseType]])
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -354,7 +343,7 @@ function META:GetEnvironmentValues()
 	return values
 end
 
-function META:Set(key, val, no_delete)
+function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[[#: boolean | nil]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		self["Set" .. key:GetData():sub(2)](self, val)
 		return true
@@ -392,7 +381,7 @@ function META:Set(key, val, no_delete)
 	return true
 end
 
-function META:SetExplicit(key, val)
+function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		self["Set" .. key:GetData():sub(2)](self, val)
 		return true
@@ -418,7 +407,7 @@ function META:SetExplicit(key, val)
 	return true
 end
 
-function META:Get(key)
+function META:Get(key--[[#: BaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then return self["Get" .. key:GetData():sub(2)](self) end
 
 	if key.Type == "union" then
@@ -471,7 +460,7 @@ function META:IsNumericallyIndexed()
 	return true
 end
 
-function META:CopyLiteralness(from)
+function META:CopyLiteralness(from--[[#: TTable]])
 	if not from:GetData() then return false end
 
 	for _, keyval_from in ipairs(from:GetData()) do
@@ -494,7 +483,7 @@ function META:CopyLiteralness(from)
 	return true
 end
 
-function META:Copy(map)
+function META:Copy(map--[[#: any]])
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
@@ -544,6 +533,8 @@ function META:pairs()
 		return keyval.key, keyval.val
 	end
 end
+
+--[[# type META.@Self.suppress = boolean]]
 
 function META:HasLiteralKeys()
 	if self.suppress then return true end
@@ -598,12 +589,12 @@ function META:IsTruthy()
 	return true
 end
 
-local function unpack_keyval(keyval)
+local function unpack_keyval(keyval--[[#: literal {key=any,val=any}]])
 	local key, val = keyval.key, keyval.val
 	return key, val
 end
 
-function META.Extend(A, B)
+function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
 	if B.Type ~= "table" then return false, "cannot extend non table" end
 	local map = {}
 
@@ -630,7 +621,7 @@ function META.Extend(A, B)
 	return A
 end
 
-function META.Union(A, B)
+function META.Union(A--[[#: TTable]], B--[[#: TTable]])
 	local copy = META.New({})
 
 	for _, keyval in ipairs(A:GetData()) do
@@ -661,7 +652,7 @@ function META:Call(analyzer, arguments, ...)
 	return type_errors.other("table has no __call metamethod")
 end
 
-function META:PrefixOperator(op)
+function META:PrefixOperator(op --[[#: "#"]])
 	if op == "#" then
 		
 		local keys = (self:GetContract() or self):GetData()
@@ -673,8 +664,8 @@ function META:PrefixOperator(op)
 	end
 end
 
-function META.New(data)
-	return setmetatable({Data = data or {}}, META)
+function META.New()
+	return setmetatable({Data = {}}, META)
 end
 
 return {Table = META.New}

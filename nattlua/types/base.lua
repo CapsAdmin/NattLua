@@ -48,13 +48,18 @@ end
 
 META:GetSet("Data", nil--[[# as nil | any]])
 
+
+function META:GetLuaType()
+	return self.Type
+end
+
 do
 	function META:IsUncertain()
 		return self:IsTruthy() and self:IsFalsy()
 	end
 
-	META:IsSet("Falsy", false)
-	META:IsSet("Truthy", false)
+	META:IsSet("Falsy", false--[[# as boolean]])
+	META:IsSet("Truthy", false--[[# as boolean]])
 end
 
 do

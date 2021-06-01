@@ -109,7 +109,7 @@ function META:PrefixOperator(op)
 	if op == "#" then return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral()) end
 end
 
-function META.New(data)
+function META.New(data--[[#: string]])
 	local self = setmetatable({Data = data}, META)
 	self:SetMetaTable(string_meta)
 	return self
