@@ -4,13 +4,33 @@ return
 			local obj = analyzer:AnalyzeExpression(statement.expression)
 
 			if obj:IsTruthy() then
-				analyzer:CreateAndPushScope()
-					analyzer:FireEvent("while", obj)
-					analyzer:OnEnterConditionalScope({type = "while", condition = obj,})
-					analyzer:AnalyzeStatements(statement.statements)
-				analyzer:PopScope()
-				analyzer:OnExitConditionalScope({condition = obj})
-				analyzer.break_out_scope = nil
+				for i = 1, 32 do
+
+					analyzer:CreateAndPushScope()
+						analyzer:FireEvent("while", obj)
+						analyzer:OnEnterConditionalScope({type = "while", condition = obj,})
+						analyzer:AnalyzeStatements(statement.statements)
+					analyzer:PopScope()
+					analyzer:OnExitConditionalScope({condition = obj})
+					
+					if analyzer.break_out_scope then
+						analyzer.break_out_scope = nil
+						break
+					end
+
+					if analyzer:GetScope():DidReturn() then
+						break
+					end
+
+					local obj = analyzer:AnalyzeExpression(statement.expression)
+					if obj:IsUncertain() or obj:IsFalsy() then
+						break
+					end
+
+					if i == 32 then
+						analyzer:Error(statement, "too many iterations")
+					end
+				end
 			end
 		end,
 	}

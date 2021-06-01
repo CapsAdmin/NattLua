@@ -252,12 +252,6 @@ run[[
     type_assert(test, nil as function():)
 ]]
 run[[
-    local a = 1
-    repeat
-        type_assert(a, 1)
-    until false
-]]
-run[[
     local c = 0
     for i = 1, 10, 2 do
         type_assert_superset(i, nil as number)
@@ -267,13 +261,6 @@ run[[
         end
     end
     type_assert(c, _ as 1)
-]]
-run[[
-    local a = 0
-    while false do
-        a = 1
-    end
-    type_assert(a, 0)
 ]]
 run[[
     local function lol(a,b,c)
@@ -684,19 +671,7 @@ run[[
         return a
     end
 ]]
-run[[
-    local a = 1
-    while true do
-        a = a + 1
-    end
-    local b = a
 
-    repeat
-        b = b + 1
-    until true
-
-    local c = b
-]]
 pending[[
     for k,v in next, {1,2,3} do
         type_assert(_ as 1 | 2 | 3, _ as 1 | 2 | 3)
