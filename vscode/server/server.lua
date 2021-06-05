@@ -130,29 +130,30 @@ server.methods["textDocument/hover"] = function(params, self, client)
 		error("cannot find anything at " .. params.textDocument.uri .. ":" .. pos.line .. ":" .. pos.character)
 	end
 
-	local found_nodes = {}
+	local found_parents = {}
 
 	do
 		local node = token
-		repeat
-			table.insert(found_nodes, node)
+		while node.parent do
+			table.insert(found_parents, node.parent)
 			node = node.parent
-		until not node
+		end
+	end
+	local markdown = ""
+
+	local function add_code(str)
+		markdown = markdown .. "```lua\n" .. tostring(str) .. "\n```\n\n"
 	end
 	
-	local str = ""
+	add_code("[token - " .. token.type .. " (" .. token.value .. ")]")
 
-	for _, node in ipairs(found_nodes) do
-		if node.type == "expression" or node.type == "statement" then
-			str = str .. tostring(node) .. "\n\n"
-		else
-			str = str .. tostring("[token - " .. node.type .. " (" .. node.value .. ")]") .. "\n\n"
-		end
+	markdown = markdown .. "parents:\n\n"
+
+	for _, node in ipairs(found_parents) do
+		add_code("\t" .. tostring(node))
 
 		if node.inferred_type then
-			str = str .. "\n```lua\n"
-			str = str .. tostring(node.inferred_type)
-			str = str .. "\n```\n"
+			add_code(node.inferred_type)
 			break
 		end
 	end
@@ -160,12 +161,12 @@ server.methods["textDocument/hover"] = function(params, self, client)
 	if token and token.parent then
 		local min, max = helpers.LazyFindStartStop(token.parent)
 		if min then
-			data = helpers.SubPositionToLinePosition(code, min, max)
+			data = helpers.SubPositionToLinePosition(add_code, min, max)
 		end
 	end
 
 	return {
-		contents = str,
+		contents = markdown,
 		range = {
 			start = {
 				line = data.line_start-1,
