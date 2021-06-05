@@ -648,3 +648,62 @@ run[[
 
 
 ]]
+
+run[[
+
+    local function class()
+        local meta = {}
+        meta.__index = meta
+        meta.Data = {}
+        
+        setmetatable(meta, meta)
+        
+        type meta.@Self = {}
+        meta.Data = meta.@Self
+    
+        function meta:__call(...)
+    
+            local type function setmetatable(tbl, meta, ...)
+    
+                local data = meta:Get(types.LString("Data"))
+                
+                local constructor = analyzer:Assert(tbl:GetNode(), meta:Get(types.LString("constructor")))
+    
+                local self_arg = types.Any()
+                self_arg.literal_argument = true
+                constructor:GetArguments():Set(1, self_arg)
+            
+                tbl:SetMetaTable(meta)
+                analyzer:Assert(tbl:GetNode(), analyzer:Call(constructor, types.Tuple({tbl, ...})))
+                analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(data))
+                tbl:CopyLiteralness(data)
+            
+                return tbl
+            end
+            
+    
+            return setmetatable({}, meta, ...)
+        end
+    
+        
+        return meta
+    end
+    
+    local Animal = class()
+    
+    Animal.Data.name = "lol" as string
+    type Animal.Data.age = number
+    --type Animal.Data.name = string
+    
+    function Animal:constructor(theName: string)
+        self.name = theName
+        self.age = 123
+    end
+    
+    function Animal:move(distanceInMeters: number | nil)
+        distanceInMeters = distanceInMeters or 0
+        type_assert(self.name .. " moved " .. distanceInMeters .. "m.", _ as string)
+    end
+    
+
+]]

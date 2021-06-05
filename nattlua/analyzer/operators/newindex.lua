@@ -85,10 +85,14 @@ return
 						local err
 
 						if obj == contract then
-							existing, err = contract:Get(key)
+							if obj.mutable and obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
+								return obj:SetExplicit(key, val)
+							else
+								existing, err = contract:Get(key)
 
-							if existing then
-								existing = self:GetMutatedValue(obj, key, existing, env)
+								if existing then
+									existing = self:GetMutatedValue(obj, key, existing, env)
+								end
 							end
 						else
 							existing, err = contract:Get(key)
