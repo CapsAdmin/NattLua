@@ -243,8 +243,8 @@ do
 			self:OnNode(node)
 		end
 
-		node.parent = self.nodes[#self.nodes]
-		table.insert(self.nodes, node)
+		node.parent = self.nodes[1]
+		table.insert(self.nodes, 1, node)
 
 		if TEST then		
 			node.traceback = debug.getinfo(2).source:sub(2) .. ":" .. debug.getinfo(2).currentline
@@ -264,7 +264,9 @@ do
 		if TEST then
 			self.end_called = true
 		end
+		
 		table.remove(self.parser.nodes, 1)
+
 		return self
 	end
 end

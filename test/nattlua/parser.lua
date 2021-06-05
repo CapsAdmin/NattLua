@@ -270,3 +270,27 @@ test("parser errors", function()
         {"\n\n\nif $test then end", "expected.-then.-got.-$"},
     })
 end)
+
+parse[[
+    local parser = require "nattlua.parser.parser"
+    £ assert(#parser.nodes == 1)
+    £ assert(parser.nodes[1].kind == "root")
+    
+    do
+        £ assert(parser.nodes[1].kind == "do")
+        £ assert(parser.nodes[2].kind == "root")
+        
+        local function test()
+            £ assert(parser.nodes[1].kind == "local_function")
+    
+            local x = 1337
+            £ parser.value = parser.current_expression
+            £ assert(parser.value.kind == "value")
+            £ assert(parser.value.parent.kind == "local_assignment")
+            £ assert(parser.value.parent.parent.kind == "local_function")
+        end
+    end
+
+    £ assert(#parser.nodes == 1)
+    £ assert(parser.nodes[1].kind == "root")
+]]
