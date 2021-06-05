@@ -232,12 +232,6 @@ do
 
 	local function value(parser)
 		if not syntax.IsValue(parser:GetToken()) then return end
-		if parser:GetToken().value == "6666" then
-			for _, v in ipairs(parser.nodes) do
-				print(_, v.kind)
-			end
-			print(#parser.nodes, parser:GetToken(), "!")
-		end
 		return
 			parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
 	end
