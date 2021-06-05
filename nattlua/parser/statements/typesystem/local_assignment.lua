@@ -20,6 +20,6 @@ return
 				node.right = ReadMultipleValues(parser, nil, ReadExpression)
 			end
 
-			return node
+			return node:End()
 		end,
 	}

@@ -23,6 +23,6 @@ return
 			node.root = root
 			parser.root.imports = parser.root.imports or {}
 			table.insert(parser.root.imports, node)
-			return node
+			return node:End()
 		end,
 	}

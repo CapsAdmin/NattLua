@@ -8,6 +8,7 @@ local pairs = _G.pairs
 local setmetatable = _G.setmetatable
 local type = _G.type
 local table = require("table")
+local TEST = false
 local META = {}
 META.__index = META
 --[[# --]]META.Emitter = require("nattlua.transpiler.emitter")
@@ -218,11 +219,6 @@ do
 		return self
 	end
 
-	function META:End()
-		table.remove(self.parser.nodes, 1)
-		return self
-	end
-
 	local id = 0
 
 	function PARSER:Node(type --[[#: NodeType]], kind--[[#: string]])
@@ -249,7 +245,27 @@ do
 
 		node.parent = self.nodes[#self.nodes]
 		table.insert(self.nodes, node)
+
+		if TEST then		
+			node.traceback = debug.getinfo(2).source:sub(2) .. ":" .. debug.getinfo(2).currentline
+
+			node.ref = newproxy(true)
+			getmetatable(node.ref).__gc = function()
+				if not node.end_called then
+					print("node:End() was never called before gc: ", node.traceback)
+				end
+			end
+		end
+
 		return node
+	end
+
+	function META:End()
+		if TEST then
+			self.end_called = true
+		end
+		table.remove(self.parser.nodes, 1)
+		return self
 	end
 end
 

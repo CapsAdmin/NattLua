@@ -13,7 +13,7 @@ local function read_remaining(parser, node)
 	if parser:IsType("letter") then
 		local val = parser:Node("expression", "value")
 		val.value = parser:ReadToken()
-		node.default = val
+		node.default = val:End()
 		node.default_comma = parser:ExpectValue(",")
 	end
 
@@ -44,6 +44,6 @@ return
 			end
 
 			read_remaining(parser, node)
-			return node
+			return node:End()
 		end,
 	}

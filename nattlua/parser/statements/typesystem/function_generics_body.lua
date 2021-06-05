@@ -11,6 +11,7 @@ return
 			if parser:IsValue("...") then
 				local vararg = parser:Node("expression", "value")
 				vararg.value = parser:ExpectValue("...")
+				vararg:End()
 				table_insert(node.identifiers, vararg)
 			end
 

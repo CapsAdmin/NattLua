@@ -13,8 +13,8 @@ return
 				node.value = parser:ReadToken()
 				node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
 				node.left = left
-				node:End()
 				node.right.self_call = self_call
+				node:End()
 			end
 
 			first.standalone_letter = node

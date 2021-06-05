@@ -39,7 +39,7 @@ return
 				if parser:IsType("letter") then
 					vararg.as_expression = parser:ExpectValue()
 				end
-
+				vararg:End()
 				table_insert(node.identifiers, vararg)
 			end
 

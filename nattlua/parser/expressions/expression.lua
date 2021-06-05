@@ -13,7 +13,6 @@ local ReadExpression
 local ExpectExpression
 
 local function read_table_spread(parser)
-	local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
 	if not (
 		parser:IsValue("...") and
 		(parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))
@@ -24,7 +23,6 @@ local function read_table_spread(parser)
 end
 
 local function read_table_entry(parser, i)
-	local ExpectExpression = require("nattlua.parser.expressions.expression").ExpectExpression
 
 	if parser:IsValue("[") then
 		local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
@@ -234,6 +232,12 @@ do
 
 	local function value(parser)
 		if not syntax.IsValue(parser:GetToken()) then return end
+		if parser:GetToken().value == "6666" then
+			for _, v in ipairs(parser.nodes) do
+				print(_, v.kind)
+			end
+			print(#parser.nodes, parser:GetToken(), "!")
+		end
 		return
 			parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
 	end

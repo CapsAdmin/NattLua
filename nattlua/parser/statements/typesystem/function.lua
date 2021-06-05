@@ -17,7 +17,7 @@ return
 			node.expression = ReadIndexExpression(parser)
 
 			do -- hacky
-        if node.expression.left then
+				if node.expression.left then
 					node.expression.left.standalone_letter = node
 					node.expression.left.force_upvalue = force_upvalue
 				else
@@ -31,6 +31,6 @@ return
 			end
 
 			ReadFunctionBody(parser, node, true)
-			return node
+			return node:End()
 		end,
 	}

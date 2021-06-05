@@ -14,6 +14,6 @@ return
 				node.right = ReadMultipleValues(parser, nil, ReadExpression, 0)
 			end
 
-			return node
+			return node:End()
 		end,
 	}

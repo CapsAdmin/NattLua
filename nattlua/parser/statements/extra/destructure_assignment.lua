@@ -13,7 +13,7 @@ local function read_remaining(parser, node)
 	if parser:IsType("letter") then
 		local val = parser:Node("expression", "value")
 		val.value = parser:ReadToken()
-		node.default = val
+		node.default = val:End()
 		node.default_comma = parser:ExpectValue(",")
 	end
 
@@ -30,6 +30,6 @@ return
 			if not IsDestructureNode(self) then return end
 			local node = self:Node("statement", "destructure_assignment")
 			read_remaining(self, node)
-			return node
+			return node:End()
 		end,
 	}

@@ -49,7 +49,7 @@ local function read_parenthesis(parser)
 	table_insert(node.tokens["("], 1, pleft)
 	node.tokens[")"] = node.tokens[")"] or {}
 	table_insert(node.tokens[")"], parser:ExpectValue(")"))
-	return node
+	return node:End()
 end
 
 local function read_prefix_operator(parser)
@@ -58,7 +58,7 @@ local function read_prefix_operator(parser)
 	node.value = parser:ReadToken()
 	node.tokens[1] = node.value
 	node.right = ReadExpression(parser, math_huge)
-	return node
+	return node:End()
 end
 
 local function read_value(parser)
@@ -66,7 +66,7 @@ local function read_value(parser)
 	local node = parser:Node("expression", "value")
 	node.value = parser:ExpectValue("...")
 	node.as_expression = ReadExpression(parser)
-	return node
+	return node:End()
 end
 
 local function read_type_function(parser)
@@ -75,14 +75,14 @@ local function read_type_function(parser)
 	local node = parser:Node("expression", "type_function")
 	node.stmnt = false
 	node.tokens["function"] = parser:ExpectValue("function")
-	return ReadFunctionBody(parser, node)
+	return ReadFunctionBody(parser, node):End()
 end
 
 local function read_keyword_value(parser)
 	if not syntax.typesystem.IsValue(parser:GetToken()) then return end
 	local node = parser:Node("expression", "value")
 	node.value = parser:ReadToken()
-	return node
+	return node:End()
 end
 
 local function read_table_entry(parser, i)
@@ -93,7 +93,7 @@ local function read_table_entry(parser, i)
 		node.value_expression = ExpectExpression(parser, 0)
 		return node:End()
 	elseif parser:IsType("letter") and parser:IsValue("=", 1) then
-		local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
+		local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("="):End()
 		node.value_expression = ExpectExpression(parser, 0)
 		return node:End()
 	end
