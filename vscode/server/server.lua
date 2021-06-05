@@ -130,21 +130,28 @@ server.methods["textDocument/hover"] = function(params, self, client)
 		error("cannot find anything at " .. params.textDocument.uri .. ":" .. pos.line .. ":" .. pos.character)
 	end
 
-	local found = {}
-	local node = token
-	repeat
-		table.insert(found, node)
-		node = node.parent
-	until not node
+	local found_nodes = {}
 
+	do
+		local node = token
+		repeat
+			table.insert(found_nodes, node)
+			node = node.parent
+		until not node
+	end
+	
 	local str = ""
 
-	str = str .. token.value
+	for _, node in ipairs(found_nodes) do
+		if node.type == "expression" or node.type == "statement" then
+			str = str .. tostring(node) .. "\n\n"
+		else
+			str = str .. tostring("[token - " .. node.type .. " (" .. node.value .. ")]") .. "\n\n"
+		end
 
-	for i,v in ipairs(found) do
-		if v.inferred_type then
+		if node.inferred_type then
 			str = str .. "\n```lua\n"
-			str = str .. tostring(v.inferred_type)
+			str = str .. tostring(node.inferred_type)
 			str = str .. "\n```\n"
 			break
 		end
