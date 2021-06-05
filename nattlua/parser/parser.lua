@@ -324,7 +324,7 @@ function META:ReadToken()
 	local tk = self:GetToken()
 	if not tk then return end
 	self:Advance(1)
-	tk.parent = self.nodes[#self.nodes]
+	tk.parent = self.nodes[1]
 	return tk
 end
 
