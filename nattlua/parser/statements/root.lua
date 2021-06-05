@@ -9,6 +9,8 @@ return {ReadRoot = function(parser)
 		shebang = parser:Node("statement", "shebang")
 		shebang.tokens["shebang"] = parser:ExpectType("shebang")
 		shebang:End()
+
+		node.tokens["shebang"] = shebang.tokens["shebang"]
 	end
 
 	node.statements = parser:ReadNodes()
@@ -22,6 +24,8 @@ return {ReadRoot = function(parser)
 		eof.tokens["end_of_file"] = parser.tokens[#parser.tokens]
 		eof:End()
 		table.insert(node.statements, eof)
+
+		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end
 
 	return node:End()

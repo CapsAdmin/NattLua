@@ -141,13 +141,17 @@ server.methods["textDocument/hover"] = function(params, self, client)
 	end
 	local markdown = ""
 
+	local function add_line(str)
+		markdown = markdown .. str .. "\n\n"
+	end
+
 	local function add_code(str)
-		markdown = markdown .. "```lua\n" .. tostring(str) .. "\n```\n\n"
+		add_line("```lua\n" .. tostring(str) .. "\n```")
 	end
 	
 	add_code("[token - " .. token.type .. " (" .. token.value .. ")]")
 
-	markdown = markdown .. "parents:\n\n"
+	add_line("nodes:\n\n")
 
 	for _, node in ipairs(found_parents) do
 		add_code("\t" .. tostring(node))
@@ -161,7 +165,10 @@ server.methods["textDocument/hover"] = function(params, self, client)
 	if token and token.parent then
 		local min, max = helpers.LazyFindStartStop(token.parent)
 		if min then
-			data = helpers.SubPositionToLinePosition(add_code, min, max)
+			local temp = helpers.SubPositionToLinePosition(code, min, max)
+			if temp then
+				data = temp
+			end
 		end
 	end
 
