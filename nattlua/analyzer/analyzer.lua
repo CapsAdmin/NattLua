@@ -76,6 +76,7 @@ do
 			statement.kind ~= "semicolon" and
 			statement.kind ~= "shebang" and
 			statement.kind ~= "goto_label" and
+			statement.kind ~= "parser_code" and
 			statement.kind ~= "goto"
 		then
 			self:FatalError("unhandled statement: " .. tostring(statement))

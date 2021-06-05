@@ -867,6 +867,8 @@ function META:EmitStatement(node)
 		self:EmitStatements(node.statements)
 	elseif node.kind == "type_code" then
 		self:EmitNonSpace("--" .. node.lua_code.value.value)
+	elseif node.kind == "parser_code" then
+		self:EmitNonSpace("--" .. node.lua_code.value.value)
 	elseif node.kind then
 		error("unhandled statement: " .. node.kind)
 	else

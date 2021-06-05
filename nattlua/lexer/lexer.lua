@@ -242,6 +242,7 @@ do
 	local ReadMultilineComment = require("nattlua.lexer.readers.multiline_comment").ReadMultilineComment
 	local ReadLineComment = require("nattlua.lexer.readers.line_comment").ReadLineComment
 	local ReadInlineTypeCode = require("nattlua.lexer.readers.inline_type_code").ReadInlineTypeCode
+	local ReadInlineParserCode = require("nattlua.lexer.readers.inline_parser_code").ReadInlineParserCode
 	local ReadNumber = require("nattlua.lexer.readers.number").ReadNumber
 	local ReadMultilineString = require("nattlua.lexer.readers.multiline_string").ReadMultilineString
 	local ReadSingleQuoteString = require("nattlua.lexer.readers.string").ReadSingleQuoteString
@@ -264,7 +265,8 @@ do
 		end
 
 		do
-			local name = ReadInlineTypeCode(self) or
+			local name = ReadInlineTypeCode(self) or 
+				ReadInlineParserCode(self) or
 				ReadNumber(self) or
 				ReadMultilineString(self) or
 				ReadSingleQuoteString(self) or
