@@ -13,19 +13,18 @@ return
 				local start = lexer:GetPosition()
 				lexer:Advance(3)
 
-				if lexer:IsCurrentValue("=") then
-					while not lexer:TheEnd() do
-						lexer:Advance(1)
-						if not lexer:IsCurrentValue("=") then break end
-					end
+				while lexer:IsCurrentValue("=") do
+					lexer:Advance(1)
 				end
 
 				if not lexer:IsCurrentValue("[") then
+					-- if it's an incomplete multiline comment, it's a valid single line comment
 					lexer:SetPosition(start)
 					return false
 				end
 
 				lexer:Advance(1)
+
 				local pos = lexer:FindNearest("]" .. string.rep("=", (lexer:GetPosition() - start) - 4) .. "]")
 
 				if pos then

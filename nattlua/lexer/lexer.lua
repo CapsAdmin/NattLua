@@ -34,10 +34,10 @@ function META:ResetState()
 	self.Position = 1
 end
 
-function META:FindNearest(str--[[#: string]])
+function META:FindNearest(str--[[#: string]]) --[[#: nil | number]]
 	local _, stop = self.Buffer:find(str, self.Position, true)
-	if stop then return stop + 1 end
-	return false
+	if not stop then return nil end
+	return stop + 1
 end
 
 function META:ReadChar()--[[#: number]]
@@ -46,9 +46,8 @@ function META:ReadChar()--[[#: number]]
 	return char
 end
 
-function META:Advance(len--[[#: number]])--[[#: boolean]]
+function META:Advance(len--[[#: number]])
 	self.Position = self.Position + len
-	return self.Position <= self:GetLength()
 end
 
 function META:SetPosition(i--[[#: number]])
