@@ -285,6 +285,7 @@ do
 			node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
 			node.left = left_node
+			node.left.parent = node
 			node.right = ReadExpression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
 			node:End()
 		end
