@@ -69,10 +69,16 @@ local function compile(uri, server, client)
 
 	end
 
-	--compiler:Analyze()
+	local tokens =  compiler:Lex().Tokens
+	local syntax_tree = compiler:Parse().SyntaxTree
+
+	if code:find("--A".."NALYZE", nil, true) then
+		compiler:Analyze()
+	end
+	
 	server:Respond(client, resp)
 
-	return code, compiler:Lex().Tokens, compiler:Parse().SyntaxTree
+	return code, tokens, syntax_tree
 end
 
 server.methods["initialize"] = function(params, self, client) 
@@ -126,7 +132,7 @@ server.methods["textDocument/hover"] = function(params, self, client)
 
 	local token, data = helpers.GetDataFromLineCharPosition(tokens, code, pos.line + 1, pos.character + 1)
 	
-	if not token then
+	if not token or not data then
 		error("cannot find anything at " .. params.textDocument.uri .. ":" .. pos.line .. ":" .. pos.character)
 	end
 
@@ -148,18 +154,19 @@ server.methods["textDocument/hover"] = function(params, self, client)
 	local function add_code(str)
 		add_line("```lua\n" .. tostring(str) .. "\n```")
 	end
-	
-	add_code("[token - " .. token.type .. " (" .. token.value .. ")]")
 
+	for _, node in ipairs(found_parents) do
+		if node.inferred_type then
+			add_code(node.inferred_type)
+		end
+	end
+		
 	add_line("nodes:\n\n")
+
+	add_code("\t[token - " .. token.type .. " (" .. token.value .. ")]")
 
 	for _, node in ipairs(found_parents) do
 		add_code("\t" .. tostring(node))
-
-		if node.inferred_type then
-			add_code(node.inferred_type)
-			break
-		end
 	end
 
 	if token and token.parent then
