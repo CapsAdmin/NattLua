@@ -282,7 +282,12 @@ type function assert(obj, msg)
 end
 
 type function error(msg: string, level: number | nil)
-	if not analyzer:GetScope():IsCertain() then return end
+	if not analyzer:GetScope():IsCertain() then
+	
+		analyzer:GetScope():Return(true)
+	
+		return 
+	end
 
 	if msg:IsLiteral() then
 		analyzer:ThrowError(msg:GetData())

@@ -1430,3 +1430,12 @@ run[[
         end
     end
 ]]
+
+run[[
+    local x = ("lol"):byte(1,1 as 1 | 0)
+    if not x then 
+        error("lol")
+    end
+
+    type_assert(x, 108)
+]]
