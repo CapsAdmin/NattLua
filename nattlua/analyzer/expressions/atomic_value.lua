@@ -97,8 +97,8 @@ return
 				end
 			end
 
-	-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
-	local standalone_letter = type == "letter" and node.standalone_letter
+			-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
+			local standalone_letter = type == "letter" and node.standalone_letter
 
 			if env == "typesystem" and standalone_letter and not node.force_upvalue then
 				local current_table = analyzer.current_tables and

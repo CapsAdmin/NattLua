@@ -12,8 +12,8 @@ return
 				left = analyzer:AnalyzeExpression(node.left, env)
 
 				if left:IsFalsy() and left:IsTruthy() then
-            -- if it's uncertain, remove uncertainty while analysing
-            if left.Type == "union" then
+					-- if it's uncertain, remove uncertainty while analysing
+					if left.Type == "union" then
 						left:DisableFalsy()
 
 						if node.left.kind == "binary_operator" then
@@ -41,8 +41,8 @@ return
 						end
 					end
 				elseif left:IsFalsy() and not left:IsTruthy() then
-            -- if it's really false do nothing
-            right = Nil():SetNode(node.right)
+					-- if it's really false do nothing
+					right = Nil():SetNode(node.right)
 				else
 					right = analyzer:AnalyzeExpression(node.right, env)
 				end
@@ -64,8 +64,8 @@ return
 			assert(left)
 			assert(right)
 
-    -- TODO: more elegant way of dealing with self?
-    if node.value.value == ":" then
+			-- TODO: more elegant way of dealing with self?
+			if node.value.value == ":" then
 				analyzer.self_arg_stack = analyzer.self_arg_stack or {}
 				table.insert(analyzer.self_arg_stack, left)
 			end
