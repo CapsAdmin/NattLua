@@ -18,7 +18,7 @@ return
 						break
 					end
 
-					if analyzer:GetScope():DidReturn() then
+					if analyzer:GetScope():DidCertainReturn() then
 						break
 					end
 

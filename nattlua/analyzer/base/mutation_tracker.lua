@@ -86,7 +86,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
         for _, child in ipairs(scope:GetChildren()) do
 			if
 				child ~= scope and
-				(child:HasUncertainReturn() or root_scope:IsPartOfTestStatementAs(child))
+				(child:DidUncertainReturn() or root_scope:IsPartOfTestStatementAs(child))
 			then
 				local found_type = FindInType(child:GetTestCondition(), obj)
 				if found_type then return child, found_type end

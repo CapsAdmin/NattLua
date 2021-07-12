@@ -283,10 +283,8 @@ end
 
 type function error(msg: string, level: number | nil)
 	if not analyzer:GetScope():IsCertain() then
-	
-		analyzer:GetScope():Return(true)
-	
-		return 
+		analyzer:GetScope():UncertainReturn()
+		return
 	end
 
 	if msg:IsLiteral() then

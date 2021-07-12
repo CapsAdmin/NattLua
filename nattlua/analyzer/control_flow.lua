@@ -31,8 +31,8 @@ return function(META)
 				break
 			end
 
-			if self:GetScope():DidReturn() then
-				self:GetScope():ClearReturn()
+			if self:GetScope():DidCertainReturn() then
+				self:GetScope():ClearCertainReturn()
 
 				break
 			end
@@ -57,7 +57,7 @@ return function(META)
 			union:AddType(tup)
 		end
 
-		scope:ClearReturnTypes()
+		scope:ClearCertainReturnTypes()
 		if #union:GetData() == 1 then return union:GetData()[1] end
 		return union
 	end
@@ -65,7 +65,11 @@ return function(META)
 	function META:ThrowError(msg, obj, no_report)
 		if obj then
 			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
-			self:GetScope():Return(obj:IsTruthy())
+			if obj:IsTruthy() then
+				self:GetScope():UncertainReturn()
+			else
+				self:GetScope():CertainReturn()
+			end
 			local copy = self:CloneCurrentScope()
 			copy:SetTestCondition(obj)
 		else
@@ -100,7 +104,12 @@ return function(META)
 		end
 
 		scope:CollectReturnTypes(node, types)
-		scope:Return(scope:IsUncertain())
+
+		if scope:IsUncertain() then
+			scope:UncertainReturn()
+		else
+			scope:CertainReturn()
+		end
 	end
 
 	function META:OnEnterNumericForLoop(scope, init, max)
@@ -180,7 +189,7 @@ return function(META)
 		local current_scope = self:GetScope()
 
 		if
-			current_scope:DidReturn() or
+			current_scope:DidCertainReturn() or
 			self.lua_error_thrown or
 			self.lua_assert_error_thrown
 		then

@@ -279,28 +279,36 @@ do
 		table.insert(self:GetNearestFunctionScope().returns, {node = node, types = types})
 	end
 
-	function META:DidReturn()
-		return self.returned ~= nil
+	function META:DidCertainReturn()
+		return self.certain_return ~= nil
 	end
 
-	function META:ClearReturn()
-		self.returned = nil
+	function META:ClearCertainReturn()
+		self.certain_return = nil
 	end
 
-	function META:HasUncertainReturn()
-		return self.uncertain_returned
+	function META:DidUncertainReturn()
+		return self.uncertain_return
 	end
 
-	function META:Return(uncertain)
+	function META:CertainReturn()
 		local scope = self
 
 		while true do
-			if uncertain then
-				scope.uncertain_returned = true
-				scope.test_condition_inverted = not scope.test_condition_inverted
-			else
-				scope.returned = true
-			end
+			scope.certain_return = true
+
+			if scope.returns then break end
+			scope = scope.parent
+			if not scope then break end
+		end
+	end
+
+	function META:UncertainReturn()
+		local scope = self
+
+		while true do
+			scope.uncertain_return = true
+			scope.test_condition_inverted = not scope.test_condition_inverted
 
 			if scope.returns then break end
 			scope = scope.parent
@@ -318,7 +326,7 @@ do
 		return self.returns
 	end
 
-	function META:ClearReturnTypes()
+	function META:ClearCertainReturnTypes()
 		self.returns = {}
 	end
 
@@ -354,6 +362,7 @@ function META:__tostring()
 		while true do
 			x = x + 1
 			if not scope then break end
+			scope = scope.parent
 		end
 	end
 
@@ -373,6 +382,10 @@ function META:__tostring()
 
 	if self.returns then
 		s = s .. "[function scope]"
+	end
+
+	if self.read_only then
+		s = s .. "[read only]"
 	end
 
 	return s
