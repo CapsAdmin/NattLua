@@ -190,19 +190,6 @@ function META:Copy()
 	return copy
 end
 
-function META:Merge(scope)
-	for i, a in ipairs(self.upvalues.runtime.list) do
-		local b = scope.upvalues.runtime.list[i]
-
-		if a and b and a.key == b.key then
-			a:SetValue(Union({a:GetValue(), b:GetValue()}))
-			a:GetValue():SetNode(b:GetValue():GetNode())
-			a:GetValue():SetTokenLabelSource(b:GetValue():GetTokenLabelSource())
-			self.upvalues.runtime.map[a.key]:GetValue(a:GetValue())
-		end
-	end
-end
-
 function META:GetParent()
 	return self.parent
 end

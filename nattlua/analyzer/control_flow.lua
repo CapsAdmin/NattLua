@@ -149,11 +149,27 @@ return function(META)
 	function META:GetMutatedValue(obj, key, value, env)
 		if env == "typesystem" then return end
 		local scope = self:GetScope()
-		if scope:IsReadOnly() then return value end
+		-- todo, merged scopes need this
 		key = cast_key(key)
 		if not key then return value end
+		if scope:IsReadOnly() and obj.Type == "upvalue" then 
+			initialize_mutation_tracker(obj, scope, "readonly-" .. key, env)
+			local val = obj.mutations["readonly-" .. key]:GetValueFromScope(scope, obj, "readonly-" .. key, self)
+
+			-- TODO: GetValueFromScope shouldn't return empty unions
+			if val and (val.Type == "union" and val:GetLength() ~= 0) then
+				return val
+			end
+		end
 		initialize_mutation_tracker(obj, scope, key, env)
-		return obj.mutations[key]:GetValueFromScope(scope, obj, key, self) or value
+		local val = obj.mutations[key]:GetValueFromScope(scope, obj, key, self)
+
+		-- TODO: GetValueFromScope shouldn't return empty unions
+		if val and (val.Type == "union" and val:GetLength() == 0) then
+			return value
+		end
+		
+		return val
 	end
 
 	function META:OnEnterConditionalScope(data)
@@ -171,9 +187,18 @@ return function(META)
 	function META:MutateValue(obj, key, val, env)
 		if env == "typesystem" then return end
 		local scope = self:GetScope()
-		if scope:IsReadOnly() then return end
 		key = cast_key(key)
 		if not key then return end -- no mutation?
+
+		if scope:IsReadOnly() and obj.Type == "upvalue" then 
+			initialize_mutation_tracker(obj, scope, "readonly-" .. key , env)
+			obj.mutations["readonly-" .. key]:Mutate(val, scope)
+			if obj.Type == "upvalue" then
+				val:SetUpvalue(obj)
+				val:SetUpvalueReference(key)
+			end
+			return
+		end
         
 		if obj.Type == "upvalue" then
 			val:SetUpvalue(obj)

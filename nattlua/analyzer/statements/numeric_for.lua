@@ -40,8 +40,8 @@ return
 			local condition = Union()
 
 			if literal_init and literal_max then
-		-- also check step
-		condition:AddType(Binary(
+				-- also check step
+				condition:AddType(Binary(
 					analyzer,
 					statement,
 					init,
@@ -118,7 +118,20 @@ return
 						local merged_scope = children[1]:Copy(true)
 
 						for i = 2, #children do
-							merged_scope:Merge(children[i])
+							local A = merged_scope
+							local B = children[i]
+
+							for i, a in ipairs(A.upvalues.runtime.list) do
+								local b = B.upvalues.runtime.list[i]
+						
+								if a and b and a.key == b.key then
+									local aval = analyzer:GetMutatedValue(a, "readonly-" .. a.key, a:GetValue(), "runtime")
+									local bval = analyzer:GetMutatedValue(b, "readonly-" .. b.key, b:GetValue(), "runtime")
+
+									analyzer:MutateValue(a, "readonly-" .. a.key, Union({aval, bval}), "runtime")
+								end
+							end
+
 						end
 
 						merged_scope:MakeReadOnly(true)

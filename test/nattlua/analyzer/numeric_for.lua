@@ -39,7 +39,7 @@ pending("uncertain numeric for loop arithmetic", function()
 end)
 
 
-do
+pending("annotation", function() 
     local code = transpile([[
         local x
         for i = 1, 2 do -- i should be 1 | 2
@@ -55,7 +55,7 @@ do
     -- if the union sorting algorithm changes, we probably need to change this
     assert(code:find("local a--[[#:false | true]] = x", nil, true) ~= nil)
     assert(code:find("local b--[[#:false]] = x", nil, true) ~= nil)
-end
+end)
 
 run[[
     local lol = 0
@@ -73,4 +73,42 @@ run[[
     end
 
     type_assert(lol, 2)
+]]
+
+
+run[[
+    for i = 1, 3 do
+        -- i is number if max is math.huge for example
+    
+        local x = ("lol"):byte(1,1 as 1 | 0) -- we do 1 | 0 because 0 will make :byte return nil and 108 (l)
+        -- becomes number | nil
+        --print(x, i)
+        if not x then
+            error("lol")
+        end
+        local y = x
+        -- when ran as merged scope error("lol") doesn't return properly
+    
+        type_assert(x, 108)
+        type_assert_superset(i, _ as 1 | 2 | 3)
+    end
+]]
+
+run[[
+    local string_byte = string.byte
+    local x = 0
+    local check = false
+    for i = 1, 10 do
+        x = x + i
+        type_assert(string_byte, string.byte)
+        
+        if check then
+            type_assert(i, _ as 1 | 10 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
+        end
+        
+        if i == 10 then
+            check = true
+        end
+    end
+    type_assert(x,55)
 ]]

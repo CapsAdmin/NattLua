@@ -89,6 +89,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
 				(child:DidUncertainReturn() or root_scope:IsPartOfTestStatementAs(child))
 			then
 				local found_type = FindInType(child:GetTestCondition(), obj)
+
 				if found_type then return child, found_type end
 			end
 		end
@@ -276,7 +277,7 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 	if #union:GetData() == 1 then
 		value = union:GetData()[1]
 	end
-
+	
 	if value.Type == "union" then
 		local found_scope, union = FindScopeFromTestCondition(scope, value)
 
