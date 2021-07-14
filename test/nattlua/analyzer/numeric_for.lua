@@ -17,27 +17,23 @@ test("for i = 1, number", function()
     ]]
 end)
 
-test("for i = 1, number is an uncertain scope", function()
-    run[[
-        local a = 0
-        for i = 1, _ as number do
-            type_assert(i, _ as number)
-            a = 1
-        end
-        type_assert(a, _ as 1 | 0)
-    ]]
-end)
+pending[[
+    --for i = 1, number is an uncertain scope
+    local a = 0
+    for i = 1, _ as number do
+        type_assert(i, _ as number)
+        a = 1
+    end
+    type_assert(a, _ as number)
+]]
 
-pending("uncertain numeric for loop arithmetic", function()
-    run[[
-        local a = 0
-        for i = 1, _ as number do
-            a = a + 1
-        end
-        type_assert(a, _ as number) -- we could say that a+=1 would make a 1 .. inf but not sure if it's worth it
-    ]]
-end)
-
+pending[[
+    local a = 0
+    for i = 1, _ as number do
+        a = a + 1
+    end
+    type_assert(a, _ as number) -- we could say that a+=1 would make a 1 .. inf but not sure if it's worth it
+]]
 
 pending("annotation", function() 
     local code = transpile([[

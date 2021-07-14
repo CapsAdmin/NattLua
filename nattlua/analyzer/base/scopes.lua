@@ -197,13 +197,6 @@ return function(META)
 
 				if upvalue then
 					if not self:MutateValue(upvalue, key, val, env) then
-						if self:GetScope():IsReadOnly() then
-							if self:GetScope() ~= found_scope then
-								local upvalue = self:CreateLocalValue(key, val, env)
-								return upvalue
-							end
-						end
-
 						upvalue:SetValue(val)
 						self:FireEvent("mutate_upvalue", key, val, env)
 					end
@@ -216,8 +209,6 @@ return function(META)
 				if not g then
 					self:FatalError("tried to set environment value outside of Push/Pop/Environment")
 				end
-
-				if self:GetScope():IsReadOnly() then return end
 
 				if env == "runtime" then
 					self:Warning(key:GetNode(), "_G[\"" .. key:GetNode():Render() .. "\"] = " .. tostring(val))

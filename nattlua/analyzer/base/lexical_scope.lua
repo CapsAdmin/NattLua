@@ -59,10 +59,6 @@ function META:Hash(node)
 	return node.value.value
 end
 
-function META:MakeReadOnly(b)
-	self.read_only = b
-end
-
 function META:GetMemberInParents(what)
 	local scope = self
 
@@ -73,10 +69,6 @@ function META:GetMemberInParents(what)
 	end
 
 	return nil
-end
-
-function META:IsReadOnly()
-	return self:GetMemberInParents("read_only") == true
 end
 
 function META:AddDependency(val)
@@ -374,10 +366,6 @@ function META:__tostring()
 
 	if self.returns then
 		s = s .. "[function scope]"
-	end
-
-	if self.read_only then
-		s = s .. "[read only]"
 	end
 
 	return s

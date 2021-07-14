@@ -111,37 +111,6 @@ return
 						})
 						if brk then break end
 					end
-
-					local children = analyzer:GetScope():GetChildren()
-
-					if children[1] then
-						local merged_scope = children[1]:Copy(true)
-
-						for i = 2, #children do
-							local A = merged_scope
-							local B = children[i]
-
-							for i, a in ipairs(A.upvalues.runtime.list) do
-								local b = B.upvalues.runtime.list[i]
-						
-								if a and b and a.key == b.key then
-									local aval = analyzer:GetMutatedValue(a, "readonly-" .. a.key, a:GetValue(), "runtime")
-									local bval = analyzer:GetMutatedValue(b, "readonly-" .. b.key, b:GetValue(), "runtime")
-
-									analyzer:MutateValue(a, "readonly-" .. a.key, Union({aval, bval}), "runtime")
-								end
-							end
-
-						end
-
-						merged_scope:MakeReadOnly(true)
-						analyzer:GetScope():AddChild(merged_scope)
-						analyzer:FireEvent("merge_iteration_scopes", merged_scope)
-						analyzer:PushScope(merged_scope)
-							analyzer:AnalyzeStatements(statement.statements)
-							statement.identifiers[1].inferred_type = analyzer:GetScope():FindValue(statement.identifiers[1].value.value, "runtime"):GetValue()
-						analyzer:PopScope()
-					end
 				else
 					if
 						init.Type == "number" and
@@ -154,9 +123,11 @@ return
 						init:SetLiteral(false)
 					end
 
+					analyzer:PushUncertainLoop(true)
 					local range = analyzer:Assert(statement.expressions[1], init)
 					analyzer:CreateLocalValue(statement.identifiers[1], range, "runtime")
 					analyzer:AnalyzeStatements(statement.statements)
+					analyzer:PushUncertainLoop(false)
 				end
 
 				analyzer:FireEvent("leave_scope")

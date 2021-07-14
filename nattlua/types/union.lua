@@ -66,6 +66,18 @@ function META:AddType(e)
 		if v:Equal(e) then return self end
 	end
 
+	if e.Type == "string" or e.Type == "number" then
+		local sup = e
+		for i = #self.Data, 1, -1 do
+			local sub = self.Data[i]
+			if sub.Type == sup.Type then
+				if sub:IsSubsetOf(sup) then
+					table.remove(self.Data, i)
+				end
+			end
+		end
+	end
+
 	table.insert(self.Data, e)
 	return self
 end

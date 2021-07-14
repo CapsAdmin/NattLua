@@ -332,7 +332,7 @@ run[[
         type_assert(a, 2)
     end
 ]]
-run[[
+pending[[
     local a = 1337
     for i = 1, a do
         type_assert(i, 1)

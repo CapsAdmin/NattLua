@@ -84,23 +84,21 @@ return function(META)
 	function META:Return(node, types)
 		local scope = self:GetScope()
 
-		if not scope:IsReadOnly() then
-			local function_scope = scope:GetNearestFunctionScope()
+		local function_scope = scope:GetNearestFunctionScope()
 
-			if scope == function_scope then
-                -- the root scope of the function when being called is definetly certain
-                function_scope.uncertain_function_return = false
-			elseif scope:IsUncertain() then
-				function_scope.uncertain_function_return = true
-                
-                -- else always hits, so even if the else part is uncertain
-                -- it does mean that this function at least returns something
-                if scope:IsPartOfElseStatement() then
-					function_scope.uncertain_function_return = false
-				end
-			elseif function_scope.uncertain_function_return then
+		if scope == function_scope then
+			-- the root scope of the function when being called is definetly certain
+			function_scope.uncertain_function_return = false
+		elseif scope:IsUncertain() then
+			function_scope.uncertain_function_return = true
+			
+			-- else always hits, so even if the else part is uncertain
+			-- it does mean that this function at least returns something
+			if scope:IsPartOfElseStatement() then
 				function_scope.uncertain_function_return = false
 			end
+		elseif function_scope.uncertain_function_return then
+			function_scope.uncertain_function_return = false
 		end
 
 		scope:CollectReturnTypes(node, types)
@@ -152,15 +150,6 @@ return function(META)
 		-- todo, merged scopes need this
 		key = cast_key(key)
 		if not key then return value end
-		if scope:IsReadOnly() and obj.Type == "upvalue" then 
-			initialize_mutation_tracker(obj, scope, "readonly-" .. key, env)
-			local val = obj.mutations["readonly-" .. key]:GetValueFromScope(scope, obj, "readonly-" .. key, self)
-
-			-- TODO: GetValueFromScope shouldn't return empty unions
-			if val and (val.Type == "union" and val:GetLength() ~= 0) then
-				return val
-			end
-		end
 		initialize_mutation_tracker(obj, scope, key, env)
 		local val = obj.mutations[key]:GetValueFromScope(scope, obj, key, self)
 
@@ -190,22 +179,17 @@ return function(META)
 		key = cast_key(key)
 		if not key then return end -- no mutation?
 
-		if scope:IsReadOnly() and obj.Type == "upvalue" then 
-			initialize_mutation_tracker(obj, scope, "readonly-" .. key , env)
-			obj.mutations["readonly-" .. key]:Mutate(val, scope)
-			if obj.Type == "upvalue" then
-				val:SetUpvalue(obj)
-				val:SetUpvalueReference(key)
-			end
-			return
-		end
-        
 		if obj.Type == "upvalue" then
 			val:SetUpvalue(obj)
 			val:SetUpvalueReference(key)
 		end
 
 		initialize_mutation_tracker(obj, scope, key, env)
+
+		if self:IsInUncertainLoop() then
+			val = val:Copy():Widen()
+		end	
+
 		obj.mutations[key]:Mutate(val, scope)
 	end
 

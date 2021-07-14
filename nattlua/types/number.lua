@@ -39,6 +39,11 @@ function META:PrefixOperator(op--[[#: keysof<|operators|>]])
 	return self.New(nil--[[# as number]]) -- hmm
 end
 
+function META:Widen()
+	self:SetLiteral(false)
+	return self
+end
+
 function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	if a.Type ~= b.Type then return false end
 

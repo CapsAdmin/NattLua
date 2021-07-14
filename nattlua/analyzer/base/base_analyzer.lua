@@ -336,17 +336,34 @@ return function(META)
 			return path
 		end
 
-		function META:GetPreferTypesystem()
-			return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1]
+		do
+			function META:GetPreferTypesystem()
+				return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1]
+			end
+
+			function META:PushPreferTypesystem(b)
+				self.prefer_typesystem_stack = self.prefer_typesystem_stack or {}
+				table.insert(self.prefer_typesystem_stack, 1, b)
+			end
+
+			function META:PopPreferTypesystem()
+				table.remove(self.prefer_typesystem_stack, 1)
+			end
 		end
 
-		function META:PushPreferTypesystem(b)
-			self.prefer_typesystem_stack = self.prefer_typesystem_stack or {}
-			table.insert(self.prefer_typesystem_stack, 1, b)
-		end
+		do
+			function META:IsInUncertainLoop()
+				return self.uncertain_loop_stack and self.uncertain_loop_stack[1]
+			end
 
-		function META:PopPreferTypesystem()
-			table.remove(self.prefer_typesystem_stack, 1)
+			function META:PushUncertainLoop(b)
+				self.uncertain_loop_stack = self.uncertain_loop_stack or {}
+				table.insert(self.uncertain_loop_stack, 1, b)
+			end
+			
+			function META:PopUncertainLoop()
+				table.remove(self.uncertain_loop_stack, 1)
+			end
 		end
 	end
 end

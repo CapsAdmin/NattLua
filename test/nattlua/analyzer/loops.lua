@@ -94,7 +94,7 @@ run[[
 
 run[[
     local a, b = 0, 0
-    for i = 1, 5000 do
+    for i = 1, 8000 do
         if 5 == i then
             a = 1
         end
@@ -102,8 +102,8 @@ run[[
             b = 1
         end
     end
-    type_assert(a, _ as 1 | 0)
-    type_assert(b, _ as 1 | 0)
+    type_assert(a, _ as number)
+    type_assert(b, _ as number)
 ]]
 
 run[[

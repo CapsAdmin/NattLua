@@ -227,6 +227,11 @@ do
 	end
 end
 
+function META:Widen()
+	self:SetLiteral(false)
+	return self
+end
+
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end
