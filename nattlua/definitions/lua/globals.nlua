@@ -283,7 +283,7 @@ end
 
 type function error(msg: string, level: number | nil)
 	if not analyzer:GetScope():IsCertain() then
-		analyzer:GetScope():UncertainReturn()
+		analyzer:GetScope():UncertainReturn(analyzer)
 		return
 	end
 

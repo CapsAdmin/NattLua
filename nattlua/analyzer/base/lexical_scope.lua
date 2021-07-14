@@ -274,10 +274,6 @@ do
 		self.certain_return = nil
 	end
 
-	function META:DidUncertainReturn()
-		return self.uncertain_return
-	end
-
 	function META:CertainReturn()
 		local scope = self
 
@@ -290,16 +286,25 @@ do
 		end
 	end
 
-	function META:UncertainReturn()
+	function META:UncertainReturn(analyzer)
 		local scope = self
 
-		while true do
-			scope.uncertain_return = true
-			scope.test_condition_inverted = not scope.test_condition_inverted
-
-			if scope.returns then break end
-			scope = scope.parent
-			if not scope then break end
+		-- upvalue responsible for test condition
+		local test_condition = self:GetTestCondition()
+		if test_condition then
+			local source = test_condition:GetTypeSourceLeft() or test_condition:GetTypeSource() or test_condition
+			
+			if source then
+				local upvalue = source:GetUpvalue()
+				if upvalue then
+					
+					if test_condition.inverted then
+						analyzer:MutateValue(upvalue, upvalue.key, test_condition:GetTruthyUnion() or test_condition:GetTruthy(), "runtime", self:GetParent())
+					else
+						analyzer:MutateValue(upvalue, upvalue.key, test_condition:GetFalsyUnion() or test_condition:GetFalsy(), "runtime", self:GetParent())
+					end
+				end
+			end
 		end
 	end
 

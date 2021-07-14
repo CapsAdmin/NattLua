@@ -1439,3 +1439,13 @@ run[[
 
     type_assert(x, 108)
 ]]
+
+run[[
+    local x = _ as 1 | 2 | 3
+    if x == 1 then return end
+    type_assert(x, _ as 2 | 3)
+    if x ~= 3 then return end
+    type_assert(x, _ as 2)
+    if x == 2 then return end
+    error("dead code")
+]]

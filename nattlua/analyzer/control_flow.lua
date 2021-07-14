@@ -66,9 +66,9 @@ return function(META)
 		if obj then
 			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
 			if obj:IsTruthy() then
-				self:GetScope():UncertainReturn()
+				self:GetScope():UncertainReturn(self)
 			else
-				self:GetScope():CertainReturn()
+				self:GetScope():CertainReturn(self)
 			end
 			local copy = self:CloneCurrentScope()
 			copy:SetTestCondition(obj)
@@ -106,9 +106,9 @@ return function(META)
 		scope:CollectReturnTypes(node, types)
 
 		if scope:IsUncertain() then
-			scope:UncertainReturn()
+			scope:UncertainReturn(self)
 		else
-			scope:CertainReturn()
+			scope:CertainReturn(self)
 		end
 	end
 
@@ -184,9 +184,9 @@ return function(META)
 		self:GetScope():SetTestCondition(condition)
 	end
 
-	function META:MutateValue(obj, key, val, env)
+	function META:MutateValue(obj, key, val, env, scope_override)
 		if env == "typesystem" then return end
-		local scope = self:GetScope()
+		local scope = scope_override or self:GetScope()
 		key = cast_key(key)
 		if not key then return end -- no mutation?
 
