@@ -5,14 +5,12 @@ local table = require("table")
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
---[[# local BaseType = import_type("nattlua/types/base.lua").@Self]]
---[[# local TTuple = import_type("nattlua/types/tuple.lua").@Self]]
-
+--[[#local type BaseType = import_type("nattlua/types/base.lua").@Self]]
+--[[#local type TTuple = import_type("nattlua/types/tuple.lua").@Self]]
 --[[#type META.@Name = "TSymbol"]]
 --[[#type TSymbol = META.@Self]]
 META.Type = "symbol"
-
-META:GetSet("Data", nil --[[# as any]])
+META:GetSet("Data", nil--[[# as any]])
 
 function META.Equal(a, b)
 	return a.Type == b.Type and a:GetData() == b:GetData()
@@ -37,8 +35,9 @@ function META:CanBeNil()
 end
 
 function META.IsSubsetOf(A--[[#: TSymbol]], B--[[#: BaseType]])
-	if B.Type == "tuple" then 
-		--[[#local B = B as TTuple]]
+	if B.Type == "tuple" then
+		local B = B--[[# as TTuple]]
+
 		if B:GetLength() == 1 then
 			B = B:Get(1)
 		end

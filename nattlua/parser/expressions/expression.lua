@@ -13,17 +13,13 @@ local ReadExpression
 local ExpectExpression
 
 local function read_table_spread(parser)
-	if not (
-		parser:IsValue("...") and
-		(parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))
-	) then return end
+	if not (parser:IsValue("...") and (parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))) then return end
 	local node = parser:Node("expression", "table_spread"):ExpectKeyword("...")
 	node.expression = ExpectExpression(parser)
 	return node:End()
 end
 
 local function read_table_entry(parser, i)
-
 	if parser:IsValue("[") then
 		local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
 		node.key_expression = ExpectExpression(parser, 0)
@@ -232,8 +228,7 @@ do
 
 	local function value(parser)
 		if not syntax.IsValue(parser:GetToken()) then return end
-		return
-			parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
+		return parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
 	end
 
 	local function check_integer_division_operator(parser, node)
@@ -285,9 +280,11 @@ do
 			node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
 			node.left = left_node
+
 			if node.left then
 				node.left.parent = node
 			end
+
 			node.right = ReadExpression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
 			node:End()
 		end

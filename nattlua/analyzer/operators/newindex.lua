@@ -9,11 +9,11 @@ return
 		NewIndex = function(META)
 			function META:NewIndexOperator(node, obj, key, val, env)
 				if obj.Type == "union" then
-            -- local x: nil | {foo = true}
-            -- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
-            -- log(x.foo) << no error, because now x has no field nil
-            
-            local new_union = Union()
+					-- local x: nil | {foo = true}
+					-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
+					-- log(x.foo) << no error, because now x has no field nil
+					
+					local new_union = Union()
 					local truthy_union = Union()
 					local falsy_union = Union()
 

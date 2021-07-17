@@ -360,7 +360,7 @@ return function(META)
 				self.uncertain_loop_stack = self.uncertain_loop_stack or {}
 				table.insert(self.uncertain_loop_stack, 1, b)
 			end
-			
+
 			function META:PopUncertainLoop()
 				table.remove(self.uncertain_loop_stack, 1)
 			end

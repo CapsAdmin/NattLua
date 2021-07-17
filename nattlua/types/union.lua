@@ -68,8 +68,10 @@ function META:AddType(e)
 
 	if e.Type == "string" or e.Type == "number" then
 		local sup = e
+
 		for i = #self.Data, 1, -1 do
 			local sub = self.Data[i]
+
 			if sub.Type == sup.Type then
 				if sub:IsSubsetOf(sup) then
 					table.remove(self.Data, i)

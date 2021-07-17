@@ -9,13 +9,13 @@ local LNumber = require("nattlua.types.number").LNumber
 local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
---[[# local BaseType = import_type("nattlua/types/base.lua")]]
+--[[#local type BaseType = import_type("nattlua/types/base.lua")]]
 META.Type = "table"
 --[[#type META.@Name = "TTable"]]
 --[[#type TTable = META.@Self]]
 META:GetSet("Data", nil--[[# as {[any] = any} | {}]])
-META:GetSet("ReferenceId", nil --[[# as string | nil]])
-META:GetSet("Self", nil --[[# as TTable]])
+META:GetSet("ReferenceId", nil--[[# as string | nil]])
+META:GetSet("Self", nil--[[# as TTable]])
 
 function META:SetSelf(tbl)
 	tbl:SetMetaTable(self)
@@ -534,7 +534,7 @@ function META:pairs()
 	end
 end
 
---[[# type META.@Self.suppress = boolean]]
+--[[#type META.@Self.suppress = boolean]]
 
 function META:HasLiteralKeys()
 	if self.suppress then return true end
@@ -589,7 +589,7 @@ function META:IsTruthy()
 	return true
 end
 
-local function unpack_keyval(keyval--[[#: literal {key=any,val=any}]])
+local function unpack_keyval(keyval--[[#: literal {key = any, val = any}]])
 	local key, val = keyval.key, keyval.val
 	return key, val
 end
@@ -652,15 +652,11 @@ function META:Call(analyzer, arguments, ...)
 	return type_errors.other("table has no __call metamethod")
 end
 
-function META:PrefixOperator(op --[[#: "#"]])
+function META:PrefixOperator(op--[[#: "#"]])
 	if op == "#" then
-		
 		local keys = (self:GetContract() or self):GetData()
-		if #keys == 1 and keys[1].key.Type == "number" then
-			return keys[1].key:Copy()
-		end
-
-		return Number(self:GetLength()):SetLiteral(self:IsLiteral()) 
+		if #keys == 1 and keys[1].key.Type == "number" then return keys[1].key:Copy() end
+		return Number(self:GetLength()):SetLiteral(self:IsLiteral())
 	end
 end
 

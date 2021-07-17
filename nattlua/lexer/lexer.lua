@@ -34,7 +34,7 @@ function META:ResetState()
 	self.Position = 1
 end
 
-function META:FindNearest(str--[[#: string]]) --[[#: nil | number]]
+function META:FindNearest(str--[[#: string]])--[[#: nil | number]]
 	local _, stop = self.Buffer:find(str, self.Position, true)
 	if not stop then return nil end
 	return stop + 1
@@ -265,7 +265,7 @@ do
 		end
 
 		do
-			local name = ReadInlineTypeCode(self) or 
+			local name = ReadInlineTypeCode(self) or
 				ReadInlineParserCode(self) or
 				ReadNumber(self) or
 				ReadMultilineString(self) or

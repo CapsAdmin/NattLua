@@ -48,7 +48,6 @@ end
 
 META:GetSet("Data", nil--[[# as nil | any]])
 
-
 function META:GetLuaType()
 	return self.Type
 end

@@ -24,7 +24,6 @@ return
 				end
 
 				lexer:Advance(1)
-
 				local pos = lexer:FindNearest("]" .. string.rep("=", (lexer:GetPosition() - start) - 4) .. "]")
 
 				if pos then

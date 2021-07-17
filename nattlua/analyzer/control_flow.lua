@@ -65,11 +65,13 @@ return function(META)
 	function META:ThrowError(msg, obj, no_report)
 		if obj then
 			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
+
 			if obj:IsTruthy() then
 				self:GetScope():UncertainReturn(self)
 			else
 				self:GetScope():CertainReturn(self)
 			end
+
 			local copy = self:CloneCurrentScope()
 			copy:SetTestCondition(obj)
 		else
@@ -83,7 +85,6 @@ return function(META)
 
 	function META:Return(node, types)
 		local scope = self:GetScope()
-
 		local function_scope = scope:GetNearestFunctionScope()
 
 		if scope == function_scope then
@@ -154,10 +155,7 @@ return function(META)
 		local val = obj.mutations[key]:GetValueFromScope(scope, obj, key, self)
 
 		-- TODO: GetValueFromScope shouldn't return empty unions
-		if val and (val.Type == "union" and val:GetLength() == 0) then
-			return value
-		end
-		
+		if val and (val.Type == "union" and val:GetLength() == 0) then return value end
 		return val
 	end
 
@@ -188,7 +186,7 @@ return function(META)
 
 		if self:IsInUncertainLoop() then
 			val = val:Copy():Widen()
-		end	
+		end
 
 		obj.mutations[key]:Mutate(val, scope)
 	end

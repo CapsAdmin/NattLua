@@ -6,10 +6,7 @@ local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expres
 local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
 
 local function ReadTypeFunctionArgument(parser)
-	if
-		(parser:IsType("letter") or parser:IsValue("...")) and
-		parser:IsValue(":", 1)
-	then
+	if (parser:IsType("letter") or parser:IsValue("...")) and parser:IsValue(":", 1) then
 		local identifier = parser:ReadToken()
 		local token = parser:ExpectValue(":")
 		local exp = ExpectTypeExpression(parser)
@@ -39,6 +36,7 @@ return
 				if parser:IsType("letter") then
 					vararg.as_expression = parser:ExpectValue()
 				end
+
 				vararg:End()
 				table_insert(node.identifiers, vararg)
 			end

@@ -9,11 +9,9 @@ return
 
 				if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then
 					local index = obj:GetMetaTable():Get(LString("__index"))
-					
+
 					if index then
-						if index == obj then
-							return obj:Get(key)
-						end
+						if index == obj then return obj:Get(key) end
 
 						if
 							index.Type == "table" and

@@ -10,6 +10,7 @@ return
 					if lexer:IsCurrentValue("\n") then break end
 					lexer:Advance(1)
 				end
+
 				return "parser_code"
 			end
 

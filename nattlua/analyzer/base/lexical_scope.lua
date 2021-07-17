@@ -271,7 +271,6 @@ do
 
 		while true do
 			scope.certain_return = true
-
 			if scope.returns then break end
 			scope = scope.parent
 			if not scope then break end
@@ -283,17 +282,34 @@ do
 
 		-- upvalue responsible for test condition
 		local test_condition = self:GetTestCondition()
+
 		if test_condition then
-			local source = test_condition:GetTypeSourceLeft() or test_condition:GetTypeSource() or test_condition
-			
+			local source = test_condition:GetTypeSourceLeft() or
+				test_condition:GetTypeSource() or
+				test_condition
+
 			if source then
 				local upvalue = source:GetUpvalue()
+
 				if upvalue then
-					
 					if test_condition.inverted then
-						analyzer:MutateValue(upvalue, upvalue.key, test_condition:GetTruthyUnion() or test_condition:GetTruthy(), "runtime", self:GetParent())
+						analyzer:MutateValue(
+							upvalue,
+							upvalue.key,
+							test_condition:GetTruthyUnion() or
+							test_condition:GetTruthy(),
+							"runtime",
+							self:GetParent()
+						)
 					else
-						analyzer:MutateValue(upvalue, upvalue.key, test_condition:GetFalsyUnion() or test_condition:GetFalsy(), "runtime", self:GetParent())
+						analyzer:MutateValue(
+							upvalue,
+							upvalue.key,
+							test_condition:GetFalsyUnion() or
+							test_condition:GetFalsy(),
+							"runtime",
+							self:GetParent()
+						)
 					end
 				end
 			end
