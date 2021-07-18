@@ -282,11 +282,11 @@ function META:GetValueFromScope(scope, obj, key, analyzer)
 
 			if #mutations > 1 then
 				for i = #mutations, 1, -1 do
-					if mutations[i].scope == current_scope then
-						return value
-					else
+					if mutations[i].scope ~= current_scope then
 						break
 					end
+					
+					return value
 				end
 			end
 
