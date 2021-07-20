@@ -115,50 +115,6 @@ return function(META)
 		scope:MakeUncertain(not init:IsLiteral() or not max:IsLiteral())
 	end
 
-	local function cast_key(key)
-		if type(key) == "string" then return key end
-
-		if type(key) == "table" then
-			if key.type == "expression" and key.kind == "value" then
-				return key.value.value
-			elseif key.type == "letter" then
-				return key.value
-			elseif key.Type == "string" and key:IsLiteral() then
-				return key:GetData()
-			elseif key.Type == "number" and key:IsLiteral() then
-				return key:GetData()
-			end
-		end
-	end
-
-	local function initialize_mutation_tracker(obj, scope, key, env)
-		obj.mutations = obj.mutations or {}
-		obj.mutations[key] = obj.mutations[key] or MutationTracker()
-
-		if not obj.mutations[key]:HasMutations() then
-			if obj.Type == "table" then
-				local val = (obj:GetContract() or obj):Get(cast(key)) or Nil()
-				val:SetUpvalue(obj.mutations[key])
-				val:SetUpvalueReference(key)
-				obj.mutations[key]:Mutate(val, scope:GetRoot())
-			end
-		end
-	end
-
-	function META:GetMutatedValue(obj, key, value, env)
-		if env == "typesystem" then return end
-		local scope = self:GetScope()
-		-- todo, merged scopes need this
-		key = cast_key(key)
-		if not key then return value end
-		initialize_mutation_tracker(obj, scope, key, env)
-		local val = obj.mutations[key]:GetValueFromScope(scope, obj, key, self)
-
-		-- TODO: GetValueFromScope shouldn't return empty unions
-		if val and (val.Type == "union" and val:GetLength() == 0) then return value end
-		return val
-	end
-
 	function META:OnEnterConditionalScope(data)
 		local scope = self:GetScope()
 		scope:SetTestCondition(data.condition, data)
@@ -169,26 +125,6 @@ return function(META)
 		self:Error(node, err)
 		self:CloneCurrentScope()
 		self:GetScope():SetTestCondition(condition)
-	end
-
-	function META:MutateValue(obj, key, val, env, scope_override)
-		if env == "typesystem" then return end
-		local scope = scope_override or self:GetScope()
-		key = cast_key(key)
-		if not key then return end -- no mutation?
-
-		if obj.Type == "upvalue" then
-			val:SetUpvalue(obj)
-			val:SetUpvalueReference(key)
-		end
-
-		initialize_mutation_tracker(obj, scope, key, env)
-
-		if self:IsInUncertainLoop() then
-			val = val:Copy():Widen()
-		end
-
-		obj.mutations[key]:Mutate(val, scope)
 	end
 
 	function META:OnExitConditionalScope()

@@ -8,6 +8,7 @@ META.__index = META
 META.OnInitialize = {}
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)
+require("nattlua.analyzer.mutations")(META)
 require("nattlua.analyzer.operators.index").Index(META)
 require("nattlua.analyzer.operators.newindex").NewIndex(META)
 require("nattlua.analyzer.operators.call").Call(META)
