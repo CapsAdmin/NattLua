@@ -358,7 +358,7 @@ end
 
 return function(META)
 	function META:GetMutatedValue(obj, key, value, env)
-		--if env == "typesystem" then  return end
+		if env == "typesystem" then  return end
 		local scope = self:GetScope()
 		-- todo, merged scopes need this
 		key = cast_key(key)
