@@ -85,10 +85,7 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
 		B = B:Get(1)
 	end
 
-	if B.Type == "union" then
-		return B:IsTargetSubsetOfChild(A)
-	end
-
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if A.Type == "any" then return true end
 	if B.Type == "any" then return true end
 

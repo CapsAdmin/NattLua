@@ -159,19 +159,41 @@ end
 
 do -- operators
 	function META:Call(...)
-		return type_errors.other({"type ", self.Type, ": " ,self, " cannot be called"})
+		return type_errors.other({
+			"type ",
+			self.Type,
+			": ",
+			self,
+			" cannot be called",
+		})
 	end
 
 	function META:Set(key--[[#: BaseType | nil]], val--[[#: BaseType | nil]])
-		return type_errors.other({
-			"undefined set: ", self, "[" ,key, "] = ", val, " on type ", self.Type
-		})
+		return type_errors.other(
+			{
+				"undefined set: ",
+				self,
+				"[",
+				key,
+				"] = ",
+				val,
+				" on type ",
+				self.Type,
+			}
+		)
 	end
 
 	function META:Get(key--[[#: boolean]])
-		return type_errors.other({
-			"undefined get: ", self, "[", key, "] on type ", self.Type
-		})
+		return type_errors.other(
+			{
+				"undefined get: ",
+				self,
+				"[",
+				key,
+				"] on type ",
+				self.Type,
+			}
+		)
 	end
 
 	function META:PrefixOperator(op--[[#: string]])

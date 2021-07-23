@@ -549,7 +549,14 @@ function META:HasLiteralKeys()
 			self.suppress = true
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
-			if not ok then return type_errors.other({"the key ", v.key, " is not a literal because ", reason}) end
+			if not ok then return type_errors.other(
+				{
+					"the key ",
+					v.key,
+					" is not a literal because ",
+					reason,
+				}
+			) end
 		end
 	end
 
@@ -570,11 +577,25 @@ function META:IsLiteral()
 			self.suppress = true
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
-			if not ok then return type_errors.other({"the key ", v.key, " is not a literal because ", reason}) end
+			if not ok then return type_errors.other(
+				{
+					"the key ",
+					v.key,
+					" is not a literal because ",
+					reason,
+				}
+			) end
 			self.suppress = true
 			local ok, reason = v.val:IsLiteral()
 			self.suppress = false
-			if not ok then return type_errors.other({"the value ", v.val, " is not a literal because ", reason}) end
+			if not ok then return type_errors.other(
+				{
+					"the value ",
+					v.val,
+					" is not a literal because ",
+					reason,
+				}
+			) end
 		end
 	end
 

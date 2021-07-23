@@ -35,21 +35,15 @@ function META.IsSubsetOf(A, B)
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if B.Type == "any" then return true end
 	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
-
 	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then
 		-- "A" subsetof "B"
-		return true
-	end
-
+		return true end
 	if A:IsLiteral() and not B:IsLiteral() then
 		-- "A" subsetof string
-		return true
-	end	
-
+		return true end
 	if not A:IsLiteral() and not B:IsLiteral() then
 		-- string subsetof string
-		return true
-	end
+		return true end
 
 	if B.pattern_contract then
 		if not A:GetData() then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
@@ -59,7 +53,6 @@ function META.IsSubsetOf(A, B)
 	end
 
 	if A:IsLiteral() and B:IsLiteral() then return type_errors.value_mismatch(A, B) end
-
 	return type_errors.subset(A, B)
 end
 

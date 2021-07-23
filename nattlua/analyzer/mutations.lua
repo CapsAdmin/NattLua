@@ -11,7 +11,6 @@ local ipairs = ipairs
 local table = require("table")
 local Union = require("nattlua.types.union").Union
 local setmetatable = _G.setmetatable
-
 local DEBUG = false
 
 local function dprint(mut, reason)
@@ -93,10 +92,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
 	return scope, found_type
 end
 
-
-
 local function get_value_from_scope(mutations, scope, obj, key, analyzer)
-
 	if DEBUG then
 		print("looking up mutations for " .. tostring(obj) .. "." .. tostring(key) .. ":")
 	end
@@ -279,10 +275,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 
 			if #mutations > 1 then
 				for i = #mutations, 1, -1 do
-					if mutations[i].scope ~= current_scope then
-						break
-					end
-					
+					if mutations[i].scope ~= current_scope then break end
 					return value
 				end
 			end
@@ -307,19 +300,19 @@ end
 -- naive approaches while writing tests
 
 local function cast_key(key)
-    if type(key) == "string" then return key end
+	if type(key) == "string" then return key end
 
-    if type(key) == "table" then
-        if key.type == "expression" and key.kind == "value" then
-            return key.value.value
-        elseif key.type == "letter" then
-            return key.value
-        elseif key.Type == "string" and key:IsLiteral() then
-            return key:GetData()
-        elseif key.Type == "number" and key:IsLiteral() then
-            return key:GetData()
-        end
-    end
+	if type(key) == "table" then
+		if key.type == "expression" and key.kind == "value" then
+			return key.value.value
+		elseif key.type == "letter" then
+			return key.value
+		elseif key.Type == "string" and key:IsLiteral() then
+			return key:GetData()
+		elseif key.Type == "number" and key:IsLiteral() then
+			return key:GetData()
+		end
+	end
 end
 
 local function cast(val)
@@ -333,17 +326,17 @@ local function cast(val)
 end
 
 local function initialize_mutation_tracker(obj, scope, key, env)
-    obj.mutations = obj.mutations or {}
-    obj.mutations[key] = obj.mutations[key] or {}
+	obj.mutations = obj.mutations or {}
+	obj.mutations[key] = obj.mutations[key] or {}
 
-    if obj.mutations[key][1] == nil then
-        if obj.Type == "table" then
-            local val = (obj:GetContract() or obj):Get(cast(key)) or Nil()
-            val:SetUpvalue(obj.mutations[key])
-            val:SetUpvalueReference(key)
-            table.insert(obj.mutations[key], {scope = scope:GetRoot(), value = val})
-        end
-    end
+	if obj.mutations[key][1] == nil then
+		if obj.Type == "table" then
+			local val = (obj:GetContract() or obj):Get(cast(key)) or Nil()
+			val:SetUpvalue(obj.mutations[key])
+			val:SetUpvalueReference(key)
+			table.insert(obj.mutations[key], {scope = scope:GetRoot(), value = val})
+		end
+	end
 end
 
 local function copy(tbl)
@@ -358,18 +351,16 @@ end
 
 return function(META)
 	function META:GetMutatedValue(obj, key, value, env)
-		if env == "typesystem" then  return end
+		if env == "typesystem" then return end
 		local scope = self:GetScope()
 		-- todo, merged scopes need this
 		key = cast_key(key)
 		if not key then return value end
-
 		initialize_mutation_tracker(obj, scope, key, env)
-
-        return get_value_from_scope(copy(obj.mutations[key]), scope, obj, key, self)
+		return get_value_from_scope(copy(obj.mutations[key]), scope, obj, key, self)
 	end
 
-    function META:MutateValue(obj, key, val, env, scope_override)
+	function META:MutateValue(obj, key, val, env, scope_override)
 		if env == "typesystem" then return end
 		local scope = scope_override or self:GetScope()
 		key = cast_key(key)
@@ -386,6 +377,6 @@ return function(META)
 			val = val:Copy():Widen()
 		end
 
-        table.insert(obj.mutations[key], {scope = scope, value = val})
+		table.insert(obj.mutations[key], {scope = scope, value = val})
 	end
 end
