@@ -12,9 +12,7 @@ jobs:
         with:
           luaVersion: "luajit-2.1.0-beta3"
 
-        run: |
-          sudo ln -sf luajit-2.1.0-beta3 /home/runner/work/NattLua/NattLua/.lua/bin/luajit
-
       - name: test
         run: |
+          sudo ln -sf luajit-2.1.0-beta3 /home/runner/work/NattLua/NattLua/.lua/bin/luajit
           luajit test/run.lua
