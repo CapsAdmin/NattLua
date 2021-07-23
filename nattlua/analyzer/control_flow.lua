@@ -5,7 +5,6 @@ local LNumber = require("nattlua.types.number").LNumber
 local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
-local MutationTracker = require("nattlua.analyzer.base.mutation_tracker")
 
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
