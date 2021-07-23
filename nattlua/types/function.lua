@@ -65,14 +65,9 @@ function META:Copy(map)
 end
 
 function META.IsSubsetOf(A, B)
-	if A.Type == "any" then return true end
 	if B.Type == "any" then return true end
+	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
 
-	if B.Type == "tuple" and B:GetLength() == 1 then
-		B = B:Get(1)
-	end
-
-	if B.Type == "function" then
 		local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
 		if not ok then return type_errors.subset(A:GetArguments(), B:GetArguments(), reason) end
 		local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
@@ -85,12 +80,8 @@ function META.IsSubsetOf(A, B)
 		end
 
 		if not ok then return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason) end
+	
 		return true
-	elseif B.Type == "union" then
-		return Union({A}):IsSubsetOf(B)
-	end
-
-	return type_errors.type_mismatch(A, B)
 end
 
 function META:IsFalsy()

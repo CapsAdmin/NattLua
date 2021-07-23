@@ -81,16 +81,12 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
-	if B.Type == "tuple" and B:GetLength() == 1 then
-		B = B:Get(1)
-	end
-
+	if B.Type == "tuple" then B = B:Get(1) end
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
-	if A.Type == "any" then return true end
 	if B.Type == "any" then return true end
+	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
-	if B.Type == "number" then
-		if A:IsLiteral() == true and B:IsLiteral() == true then
+	if A:IsLiteral() and B:IsLiteral() then
             -- compare against literals
 
             -- nan
@@ -119,12 +115,6 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
 
         -- number == number
         return true
-	else
-		return type_errors.type_mismatch(A, B)
-	end
-
-	error("this shouldn't be reached")
-	return false
 end
 
 function META:__tostring()
