@@ -287,20 +287,16 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 				end
 			end
 
-			local t
-
             -- the or part here refers to if *condition* then
             -- truthy/falsy _union is only created from binary operators and some others
             if
 				found_scope:IsTestConditionInverted() or
 				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
 			then
-				t = union:GetFalsyUnion() or value:GetFalsy()
+				return union:GetFalsyUnion() or value:GetFalsy()
 			else
-				t = union:GetTruthyUnion() or value:GetTruthy()
+				return union:GetTruthyUnion() or value:GetTruthy()
 			end
-
-			return t
 		end
 	end
 
@@ -362,17 +358,15 @@ end
 
 return function(META)
 	function META:GetMutatedValue(obj, key, value, env)
-		if env == "typesystem" then return end
+		if env == "typesystem" then  return end
 		local scope = self:GetScope()
 		-- todo, merged scopes need this
 		key = cast_key(key)
 		if not key then return value end
-		initialize_mutation_tracker(obj, scope, key, env)
-		local val = get_value_from_scope(copy(obj.mutations[key]), scope, obj, key, self)
 
-		-- TODO: GetValueFromScope shouldn't return empty unions
-		if val and (val.Type == "union" and val:GetLength() == 0) then return value end
-		return val
+		initialize_mutation_tracker(obj, scope, key, env)
+
+        return get_value_from_scope(copy(obj.mutations[key]), scope, obj, key, self)
 	end
 
     function META:MutateValue(obj, key, val, env, scope_override)
@@ -380,7 +374,7 @@ return function(META)
 		local scope = scope_override or self:GetScope()
 		key = cast_key(key)
 		if not key then return end -- no mutation?
-
+        
 		if obj.Type == "upvalue" then
 			val:SetUpvalue(obj)
 			val:SetUpvalueReference(key)

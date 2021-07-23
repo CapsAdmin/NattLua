@@ -57,6 +57,6 @@ return
 				end
 
 				return Nil() -- no contract means nil value
-    end
+			end
 		end,
 	}
