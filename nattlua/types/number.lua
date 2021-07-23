@@ -87,34 +87,34 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
 	if A:IsLiteral() and B:IsLiteral() then
-            -- compare against literals
+		-- compare against literals
 
-            -- nan
-            if A.Type == "number" and B.Type == "number" then
-				if A:GetData() ~= A:GetData() and B:GetData() ~= B:GetData() then return true end
-			end
-
-			if A:GetData() == B:GetData() then return true end
-			local max = B:GetMaxLiteral()
-
-			if max then
-				if A:GetData() >= B:GetData() and A:GetData() <= max then return true end
-			end
-
-			return type_errors.subset(A, B)
-		elseif A:GetData() == nil and B:GetData() == nil then
-            -- number contains number
-            return true
-		elseif A:IsLiteral() and not B:IsLiteral() then
-            -- 42 subset of number?
-            return true
-		elseif not A:IsLiteral() and B:IsLiteral() then
-            -- number subset of 42 ?
-            return type_errors.subset(A, B)
+		-- nan
+		if A.Type == "number" and B.Type == "number" then
+			if A:GetData() ~= A:GetData() and B:GetData() ~= B:GetData() then return true end
 		end
 
-        -- number == number
-        return true
+		if A:GetData() == B:GetData() then return true end
+		local max = B:GetMaxLiteral()
+
+		if max then
+			if A:GetData() >= B:GetData() and A:GetData() <= max then return true end
+		end
+
+		return type_errors.subset(A, B)
+	elseif A:GetData() == nil and B:GetData() == nil then
+		-- number contains number
+		return true
+	elseif A:IsLiteral() and not B:IsLiteral() then
+		-- 42 subset of number?
+		return true
+	elseif not A:IsLiteral() and B:IsLiteral() then
+		-- number subset of 42 ?
+		return type_errors.subset(A, B)
+	end
+
+	-- number == number
+	return true
 end
 
 function META:__tostring()

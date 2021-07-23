@@ -127,7 +127,7 @@ type function ipairs(tbl: {[number] = any})
 	end
 
 	if tbl.Type == "table" and not tbl:IsNumericallyIndexed() then
-		analyzer:Warning(analyzer.current_expression, tostring(tbl) .. " is not numerically indexed")
+		analyzer:Warning(analyzer.current_expression, {tbl, " is not numerically indexed"})
 		local done = false
 		return function()
 			if done then return nil end

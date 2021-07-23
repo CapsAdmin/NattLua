@@ -211,7 +211,7 @@ return function(META)
 				end
 
 				if env == "runtime" then
-					self:Warning(key:GetNode(), "_G[\"" .. key:GetNode():Render() .. "\"] = " .. tostring(val))
+					self:Warning(key:GetNode(), {"_G[\"", key:GetNode(), "\"] = ", val})
 				end
 
 				if not self:MutateValue(g, key, val, env) then

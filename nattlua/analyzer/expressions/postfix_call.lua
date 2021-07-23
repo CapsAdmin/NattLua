@@ -23,7 +23,7 @@ return
 			end
 
 			if callable.Type == "symbol" then
-				analyzer:Error(node, tostring(node.left:Render()) .. " is " .. tostring(callable:GetData()))
+				analyzer:Error(node, {node.left, " is ", callable:GetData()})
 				return Tuple({Any()})
 			end
 

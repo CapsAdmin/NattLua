@@ -67,12 +67,12 @@ return
 					if not obj:GetContract() then
 						self:Warning(
 							node,
-							"mutating function argument " .. tostring(obj) .. " #" .. obj.argument_index .. " without a contract"
+							{"mutating function argument ", obj, " #", obj.argument_index, " without a contract"}
 						)
 					else
 						self:Error(
 							node,
-							"mutating function argument " .. tostring(obj) .. " #" .. obj.argument_index .. " with an immutable contract"
+							{"mutating function argument ", obj, " #", obj.argument_index, " with an immutable contract"}
 						)
 					end
 				end

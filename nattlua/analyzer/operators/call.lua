@@ -372,7 +372,7 @@ return
                 for _, arg in ipairs(arguments:GetData()) do
 							if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
 								if arg:GetContract() then
-									self:Error(call_node, "cannot mutate argument with contract " .. tostring(arg:GetContract()))
+									self:Error(call_node, {"cannot mutate argument with contract ", arg:GetContract()})
 								else
 									for _, keyval in ipairs(arg:GetData()) do
 										keyval.key = Union({Any(), keyval.key})
@@ -418,7 +418,7 @@ return
 							if self.config.external_mutation then
 								self:Warning(
 									call_node,
-									"argument #" .. i .. " " .. tostring(arg) .. " can be mutated by external call"
+									{"argument #", i, " ", arg, " can be mutated by external call"}
 								)
 							end
 						end
