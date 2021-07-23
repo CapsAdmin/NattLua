@@ -73,8 +73,6 @@ else
     end
 end
 
-io.write("\n")
-
 if map then
     for k,v in pairs(map) do
         if k:find("nattlua/", 1, true) then

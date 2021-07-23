@@ -97,7 +97,6 @@ end)
 test("length subset", function()
     local A = Tuple(String(), String())
     local B = Tuple(String()):AddRemainder(Tuple(String()):SetRepeat(4))
-    print(B, A)
     assert(B:IsSubsetOf(A) == false)
 end)
 
