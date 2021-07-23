@@ -35,24 +35,8 @@ function META:CanBeNil()
 end
 
 function META.IsSubsetOf(A--[[#: TSymbol]], B--[[#: BaseType]])
-	if B.Type == "tuple" then
-		local B = B--[[# as TTuple]]
-
-		if B:GetLength() == 1 then
-			B = B:Get(1)
-		end
-	end
-
 	if B.Type == "union" then
-		local errors = {}
-
-		for _, b in ipairs(B:GetData()) do
-			local ok, reason = A:IsSubsetOf(b)
-			if ok then return true end
-			table.insert(errors, reason)
-		end
-
-		return type_errors.subset(A, B, errors)
+		return B:IsTargetSubsetOfChild(A)
 	end
 
 	if A.Type == "any" then return true end

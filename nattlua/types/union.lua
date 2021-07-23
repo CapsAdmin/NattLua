@@ -275,6 +275,18 @@ function META:GetType(typ)
 	return false
 end
 
+function META:IsTargetSubsetOfChild(target)
+	local errors = {}
+
+	for _, obj in ipairs(self:GetData()) do
+		local ok, reason = target:IsSubsetOf(obj)
+		if ok then return true end
+		table.insert(errors, reason)
+	end
+
+	return type_errors.subset(target, self, errors)
+end
+
 function META.IsSubsetOf(A, B)
 	if B.Type == "tuple" then
 		if B:GetLength() == 1 then

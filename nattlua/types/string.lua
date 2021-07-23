@@ -32,30 +32,22 @@ function META:SetPattern(str)
 end
 
 function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" and B:GetLength() == 1 then
-		B = B:Get(1)
-	end
-
-	if B.Type == "union" then
-		local errors = {}
-
-		for _, b in ipairs(B:GetData()) do
-			local ok, reason = A:IsSubsetOf(b)
-			if ok then return true end
-			table.insert(errors, reason)
-		end
-
-		return type_errors.other(errors)
-	end
-
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if B.Type == "any" then return true end
 	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
 
-	if
-		(A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData()) or -- "A" subsetof "B"
-        (A:IsLiteral() and not B:IsLiteral()) or -- "A" subsetof string
-        (not A:IsLiteral() and not B:IsLiteral()) -- string subsetof string
-    then
+	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then
+		-- "A" subsetof "B"
+		return true
+	end
+
+	if A:IsLiteral() and not B:IsLiteral() then
+		-- "A" subsetof string
+		return true
+	end	
+
+	if not A:IsLiteral() and not B:IsLiteral() then
+		-- string subsetof string
 		return true
 	end
 
@@ -67,6 +59,7 @@ function META.IsSubsetOf(A, B)
 	end
 
 	if A:IsLiteral() and B:IsLiteral() then return type_errors.value_mismatch(A, B) end
+
 	return type_errors.subset(A, B)
 end
 
