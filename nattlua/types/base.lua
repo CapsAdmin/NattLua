@@ -142,9 +142,9 @@ do
 	end
 
 	function META.IsSameUniqueType(a--[[#: BaseType]], b--[[#: BaseType]])
-		if a.UniqueID and not b.UniqueID then return type_errors.other(tostring(a) .. "is a unique type") end
-		if b.UniqueID and not a.UniqueID then return type_errors.other(tostring(b) .. "is a unique type") end
-		if a.UniqueID ~= b.UniqueID then return type_errors.other(tostring(a) .. "is not the same unique type as " .. tostring(a)) end
+		if a.UniqueID and not b.UniqueID then return type_errors.other({a, "is a unique type"}) end
+		if b.UniqueID and not a.UniqueID then return type_errors.other({b, "is a unique type"}) end
+		if a.UniqueID ~= b.UniqueID then return type_errors.other({a, "is not the same unique type as ", a}) end
 		return true
 	end
 end
@@ -159,23 +159,23 @@ end
 
 do -- operators
 	function META:Call(...)
-		return type_errors.other("type " .. self.Type .. ": " .. tostring(self) .. " cannot be called")
+		return type_errors.other({"type ", self.Type, ": " ,self, " cannot be called"})
 	end
 
 	function META:Set(key--[[#: BaseType | nil]], val--[[#: BaseType | nil]])
-		return type_errors.other(
-			"undefined set: " .. tostring(self) .. "[" .. tostring(key) .. "] = " .. tostring(val) .. " on type " .. self.Type
-		)
+		return type_errors.other({
+			"undefined set: ", self, "[" ,key, "] = ", val, " on type ", self.Type
+		})
 	end
 
 	function META:Get(key--[[#: boolean]])
-		return type_errors.other(
-			"undefined get: " .. tostring(self) .. "[" .. tostring(key) .. "]" .. " on type " .. self.Type
-		)
+		return type_errors.other({
+			"undefined get: ", self, "[", key, "] on type ", self.Type
+		})
 	end
 
 	function META:PrefixOperator(op--[[#: string]])
-		return type_errors.other("no operator " .. op .. " on " .. tostring(self))
+		return type_errors.other({"no operator ", op, " on ", self})
 	end
 end
 

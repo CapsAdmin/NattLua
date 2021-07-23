@@ -158,7 +158,7 @@ function META:SetMax(val)
 		if not val then return val, err end
 	end
 
-	if val.Type ~= "number" then return type_errors.other("max must be a number, got " .. tostring(val)) end
+	if val.Type ~= "number" then return type_errors.other({"max must be a number, got ", val}) end
 
 	if val:IsLiteral() then
 		self.Max = val
