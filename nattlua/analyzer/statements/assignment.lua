@@ -61,14 +61,14 @@ return
 					analyzer.left_assigned = left[right_pos]
 					local obj = analyzer:AnalyzeExpression(exp_val, env)
 
-					if obj.Type == "tuple" then
+					if obj.Type == "tuple" and not obj:GetUnpackable() then
 						for i = 1, #statement.left do
 							local index = right_pos + i - 1
 							right[index] = obj:Get(i)
 
 							if exp_val.as_expression then
 								right[index]:Seal() -- TEST ME
-					end
+							end
 						end
 					elseif obj.Type == "union" then
 						for i = 1, #statement.left do

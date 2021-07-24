@@ -199,7 +199,7 @@ return
 				for _, tuple in ipairs(tuples) do
 					local len = tuple:GetMinimumLength()
 
-					if len == 0 then
+					if len == 0 or tuple:GetUnpackable() then
 						return tuple
 					else
 						for i = 1, len do

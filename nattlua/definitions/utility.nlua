@@ -61,7 +61,7 @@ type function exclude(T, U)
 end
 
 type function Tuple(...)
-	return types.Tuple({...})
+	return types.Tuple({...}):SetUnpackable(true)
 end
 
 type function enum(tbl)

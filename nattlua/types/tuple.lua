@@ -15,6 +15,8 @@ local type = _G.type
 local META = dofile("nattlua/types/base.lua")
 META.Type = "tuple"
 
+META:GetSet("Unpackable", false--[[# as boolean]])
+
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 	if a.suppress then return true end
@@ -96,6 +98,7 @@ function META:Copy(map)
 	end
 
 	copy.Repeat = self.Repeat
+	copy.Unpackable = self.Unpackable
 	copy:CopyInternalsFrom(self)
 	return copy
 end
