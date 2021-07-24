@@ -96,11 +96,11 @@ return
 					end
 				end
 
-		-- complicated
-		-- cuts the last arguments
-		-- local a,b,c = (any...), 1
-		-- should be any, 1, nil
-		local last = statement.right[#statement.right]
+				-- complicated
+				-- cuts the last arguments
+				-- local a,b,c = (any...), 1
+				-- should be any, 1, nil
+				local last = statement.right[#statement.right]
 
 				if last.kind == "value" and last.value.value ~= "..." then
 					for _ = 1, #right - #statement.right do

@@ -457,7 +457,12 @@ function META:Call(analyzer, arguments, call_node)
 			then
 				table.insert(
 					errors,
-					{"invalid amount of arguments: ", arguments, " ~= ", obj:GetArguments()}
+					{
+						"invalid amount of arguments: ",
+						arguments,
+						" ~= ",
+						obj:GetArguments(),
+					}
 				)
 			else
 				local res, reason = analyzer:Call(obj, arguments, call_node)
@@ -495,11 +500,12 @@ function META:MakeCallableUnion(analyzer, node)
 	for _, v in ipairs(self.Data) do
 		if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
 			falsy_union:AddType(v)
-			analyzer:ErrorAndCloneCurrentScope(
-				node,
-				{"union ", self, " contains uncallable object ", v},
-				self
-			)
+			analyzer:ErrorAndCloneCurrentScope(node, {
+				"union ",
+				self,
+				" contains uncallable object ",
+				v,
+			}, self)
 		else
 			truthy_union:AddType(v)
 			new_union:AddType(v)

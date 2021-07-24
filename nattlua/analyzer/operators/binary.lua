@@ -123,12 +123,19 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		end
 	end
 
-	if env == "typesystem" and l.Type == "tuple" and r.Type == "tuple" and op == ".." then
+	if
+		env == "typesystem" and
+		l.Type == "tuple" and
+		r.Type == "tuple" and
+		op == ".."
+	then
 		local tuple = l:Copy()
 		local start = l:GetLength()
+
 		for i, v in ipairs(r:GetData()) do
 			tuple:Set(start + i, v)
 		end
+
 		return tuple
 	end
 

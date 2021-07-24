@@ -480,11 +480,11 @@ R[[
 ]]
 
 R[[
-    function test(callback: (function(...): ...)) 
+    function test2(callback: (function(...): ...)) 
 
     end
 
-    test(function(lol: boolean) 
+    test2(function(lol: boolean) 
     
     end)
 ]]

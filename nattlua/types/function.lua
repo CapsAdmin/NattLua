@@ -67,7 +67,6 @@ end
 function META.IsSubsetOf(A, B)
 	if B.Type == "any" then return true end
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
-
 	local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
 	if not ok then return type_errors.subset(A:GetArguments(), B:GetArguments(), reason) end
 	local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
@@ -80,7 +79,6 @@ function META.IsSubsetOf(A, B)
 	end
 
 	if not ok then return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason) end
-	
 	return true
 end
 

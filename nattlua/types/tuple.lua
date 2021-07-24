@@ -14,7 +14,6 @@ local ipairs = _G.ipairs
 local type = _G.type
 local META = dofile("nattlua/types/base.lua")
 META.Type = "tuple"
-
 META:GetSet("Unpackable", false--[[# as boolean]])
 
 function META.Equal(a, b)
