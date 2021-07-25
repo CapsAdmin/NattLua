@@ -1,5 +1,6 @@
 type boolean = true | false
 type Table = {[any] = any}
+type Function = function(...): ...any
 type userdata = Table
 type cdata = {[number] = any}
 type ctype = any
@@ -104,4 +105,131 @@ end
 
 type function copy(obj: any)
 	return obj:Copy()
+end
+
+type function UnionPairs(values: any)
+
+	if values.Type ~= "union" then
+		values = types.Union({values})
+	end
+
+	local i = 1
+	return function() 
+		local value = values:GetData()[i]
+		i = i + 1
+		return value
+	end
+end
+
+-- typescript utility functions
+
+function Partial<|tbl: Table|>
+	local copy = {}
+	for key, val in pairs(tbl) do
+		copy[key] = val | nil
+	end
+	return copy
+end
+
+function Required<|tbl: Table|>
+	local copy = {}
+	for key, val in pairs(tbl) do
+		copy[key] = val ~ nil
+	end
+	return copy
+end
+
+
+-- this is more like a seal function as it allows you to modify the table
+
+function Readonly<|tbl: Table|>
+	local copy = {}
+	for key, val in pairs(tbl) do
+		copy[key] = val
+	end
+	copy.@Contract = copy
+	return copy
+end
+
+function Record<|keys: string, tbl: Table|>
+	local out = {}
+	for value in UnionPairs(keys) do
+		out[value] = tbl
+	end
+	return out
+end
+
+function Pick<|tbl: Table, keys: string|>
+	local out = {}
+	for value in UnionPairs(keys) do
+		if tbl[value] == nil then
+			error("missing key '"..value.."' in table", 2)
+		end
+		out[value] = tbl[value]
+	end
+	return out
+end
+
+type function Delete(tbl: Table, key: string)
+	local out = tbl:Copy()
+	tbl:Delete(key)
+	return out
+end
+
+function Omit<|tbl: Table, keys: string|>
+	local out = copy<|tbl|>
+
+	for value in UnionPairs(keys) do
+		if tbl[value] == nil then
+			error("missing key '"..value.."' in table", 2)
+		end
+		Delete<|out, value|>
+	end
+	return out
+end
+
+function Exclude<|a: any, b: any|>
+	return a ~ b
+end
+
+type function Union(...)
+	return types.Union({...})
+end
+
+function Extract<|a: any, b: any|>
+	local out = Union<||>
+
+	for aval in UnionPairs(a) do
+		for bval in UnionPairs(b) do
+			if aval < bval then
+				out = out | aval
+			end
+		end
+	end
+
+	return out
+end
+
+type function Parameters(func: Function)
+	return func:GetArguments():Copy():SetUnpackable(true)
+end
+
+type function ReturnType(func: Function)
+	return func:GetReturnTypes():Copy():SetUnpackable(true)
+end
+
+function Uppercase<|val: literal string|>
+	return val:upper()
+end
+
+function Lowercase<|val: literal string|>
+	return val:lower()
+end
+
+function Capitalize<|val: literal string|>
+	return val:sub(1, 1):upper() .. val:sub(2)
+end
+
+function Uncapitalize<|val: literal string|>
+	return val:sub(1, 1):lower() .. val:sub(2)
 end

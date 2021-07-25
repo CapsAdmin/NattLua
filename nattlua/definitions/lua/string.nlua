@@ -80,6 +80,12 @@ type function ^string.lower(str: string)
 	return types.String()
 end
 
+
+type function ^string.upper(str: string)
+	if str:IsLiteral() then return str:GetData():upper() end
+	return types.String()
+end
+
 type function ^string.sub(str: string, a: number, b: number | nil)
 	if str:IsLiteral() and a:IsLiteral() then
 		if b and b:IsLiteral() then return str:GetData():sub(a:GetData(), b:GetData()) end

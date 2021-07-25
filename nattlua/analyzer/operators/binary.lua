@@ -238,7 +238,10 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		elseif op == "==" then
 			return l:Equal(r) and True() or False()
 		elseif op == "~" then
+			if l.Type == "union" then
 			return l:RemoveType(r)
+			end
+			return l
 		elseif op == "&" or op == "extends" then
 			if l.Type ~= "table" then return false, "type " .. tostring(l) .. " cannot be extended" end
 			return l:Extend(r)
@@ -257,7 +260,14 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		end
 	end
 
-	if op == "." or op == ":" then return analyzer:IndexOperator(node, l, r, env) end
+	if op == "." or op == ":" then 
+
+		if l.Type == "tuple" then
+			l = l:Get(1)
+		end
+
+		return analyzer:IndexOperator(node, l, r, env) 
+	end
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
 	if op == "+" then
