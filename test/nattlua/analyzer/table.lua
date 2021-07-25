@@ -141,12 +141,12 @@ end)
 test("which has no data but contract says it does should return what the contract says", function()
     run[[
         local tbl = {} as {[string] = 1}
-        type_assert(tbl.foo, 1)
+        types.assert(tbl.foo, 1)
     ]]
 
     run([[
         local tbl = {} as {[string] = 1}
-        type_assert(tbl[true], nil)
+        types.assert(tbl[true], nil)
     ]], "has no field true")
 end)
 
@@ -187,8 +187,8 @@ test("self reference", function()
         -- have to use as here because {} would not be a subset of Foo
         local x = _ as Foo
         
-        type_assert(x:Test(1), _ as number)
-        type_assert(x:GetPos(), _ as number)
+        types.assert(x:Test(1), _ as number)
+        types.assert(x:GetPos(), _ as number)
 
         local func = x.Test
     ]]
@@ -206,8 +206,8 @@ test("self reference", function()
             bar = true,
         } extends a
 
-        type_assert<|b.bar, true|>
-        type_assert<|b.foo, b|>
+        types.assert<|b.bar, true|>
+        types.assert<|b.foo, b|>
     ]]
 end)
 
@@ -221,7 +221,7 @@ test("table extending table", function()
             Bar = false,
         }
 
-        type_assert<|A extends B, {Foo = true, Bar = false}|>
+        types.assert<|A extends B, {Foo = true, Bar = false}|>
     ]]
 end)
 
@@ -236,7 +236,7 @@ test("table + table", function()
             Bar = false,
         }
 
-        type_assert<|A + B, {Foo = true, Bar = false}|>
+        types.assert<|A + B, {Foo = true, Bar = false}|>
     ]]
 end)
 
@@ -249,7 +249,7 @@ test("index literal table with string", function()
 
         local key: string
         local val = tbl[key]
-        type_assert(val, _ as 1 | 2 | nil)
+        types.assert(val, _ as 1 | 2 | nil)
     ]]
 end)
 
@@ -262,7 +262,7 @@ test("non literal keys should be treated as literals when used multiple times in
         a[foo] = a[foo] or {}
         a[foo][bar] = a[foo][bar] or 1
 
-        type_assert(a[foo][bar], 1)
+        types.assert(a[foo][bar], 1)
     ]]
 end)
 
@@ -279,23 +279,23 @@ end)
 test("var args with unknown length", function()
     run[[
         local tbl = {...}
-        type_assert(tbl[1], _ as any)
-        type_assert(tbl[2], _ as any)
-        type_assert(tbl[100], _ as any)
+        types.assert(tbl[1], _ as any)
+        types.assert(tbl[2], _ as any)
+        types.assert(tbl[100], _ as any)
     ]]
 end)
 
 run[[
     local list: {[number] = any} | {}
     list = {}
-    type_assert(list, _ as {[number] = any} | {})
+    types.assert(list, _ as {[number] = any} | {})
 ]]
 
 run[[
     local a = {foo = true, bar = false, 1,2,3}
-    type_assert(a[1], 1)
-    type_assert(a[2], 2)
-    type_assert(a[3], 3)
+    types.assert(a[1], 1)
+    types.assert(a[2], 2)
+    types.assert(a[3], 3)
 ]]
 
 test("deep nested copy", function() 
@@ -323,26 +323,26 @@ run[[
     end         
     
     local x = test(lol as string | string)
-    type_assert(x, _ as 1 | true | false | nil)    
+    types.assert(x, _ as 1 | true | false | nil)    
 ]]
 
 run[[
     local type T = {Foo = "something" | nil, Bar = "definetly"}
 
     local a = {} as T
-    type_assert<|a.Foo, nil | "something"|>
+    types.assert<|a.Foo, nil | "something"|>
 
     a.Foo = nil
-    type_assert(a.Foo, nil)
+    types.assert(a.Foo, nil)
 
     a.Foo = "something"
-    type_assert(a.Foo, "something")
+    types.assert(a.Foo, "something")
 
 
     a.Foo = _ as "something" | nil
-    type_assert<|a.Foo, "something" | nil|>
+    types.assert<|a.Foo, "something" | nil|>
 
-    type_assert<|a.Bar, "definetly"|>
+    types.assert<|a.Bar, "definetly"|>
 ]]
 
 run[[
@@ -352,7 +352,7 @@ run[[
     
     local tbl = {}
     fill(tbl)
-    type_assert(tbl.foo, true)
+    types.assert(tbl.foo, true)
 ]]
 
 run[[
@@ -362,7 +362,7 @@ run[[
     
     local tbl = {bar = 1, foo = false}
     fill(tbl)
-    type_assert(tbl.foo, true)
+    types.assert(tbl.foo, true)
 ]]
 
 run[[
@@ -375,7 +375,7 @@ run[[
     
     local obj = {}
     mutate(obj)
-    type_assert<|obj.Bar, "asdf"|>
+    types.assert<|obj.Bar, "asdf"|>
 ]]
 
 run([[
@@ -388,7 +388,7 @@ run([[
 
     local obj = {Foo = "hm"}
     mutate(obj)
-    type_assert<|obj.Bar, "asdf"|>
+    types.assert<|obj.Bar, "asdf"|>
 ]], "is not the same type as true")
 
 run[[
@@ -436,11 +436,11 @@ run[[
     }
 
     local function test(ent: Foo & Bar)
-        type_assert(ent.field, _ as nil | number)
+        types.assert(ent.field, _ as nil | number)
         ent.field = 1
-        type_assert(ent.field, _ as 1)
+        types.assert(ent.field, _ as 1)
         ent.field = nil
-        type_assert(ent.field, _ as nil)
+        types.assert(ent.field, _ as nil)
     end
 
     test(_ as Foo & Bar)
@@ -454,11 +454,11 @@ run[[
     }
 
     local function test(ent: Foo & Bar)
-        type_assert(ent.field, _ as nil | number)
+        types.assert(ent.field, _ as nil | number)
         ent.field = 1
-        type_assert(ent.field, _ as 1)
+        types.assert(ent.field, _ as 1)
         ent.field = nil
-        type_assert(ent.field, _ as nil)
+        types.assert(ent.field, _ as nil)
     end
 ]]
 
@@ -488,8 +488,8 @@ run[[
 ]]
 
 run[[
-    type_assert({Unknown()}, _ as {[1 .. inf] = any})
-    type_assert({Unknown(), 1}, _ as {any, 1})
+    types.assert({Unknown()}, _ as {[1 .. inf] = any})
+    types.assert({Unknown(), 1}, _ as {any, 1})
 ]]
 
 
@@ -500,24 +500,24 @@ run[[
         Bar = number,
         [string] = any,
     })
-        type_assert(tbl.Foo, _ as true)
-        type_assert(tbl.Bar, _ as 1337)
+        types.assert(tbl.Foo, _ as true)
+        types.assert(tbl.Bar, _ as 1337)
     
         tbl.NewField = 8888
         tbl.NewField2 = 9999
     
-        type_assert(tbl.NewField, 8888)
-        type_assert(tbl.NewField2, 9999)
+        types.assert(tbl.NewField, 8888)
+        types.assert(tbl.NewField2, 9999)
     end
     
     local tbl = {Foo = true, Bar = 1337}
     
     test(tbl)
     
-    type_assert(tbl.Foo, _ as true)
-    type_assert(tbl.Bar, _ as 1337)
-    type_assert(tbl.NewField, 8888)
-    type_assert(tbl.NewField2, 9999)
+    types.assert(tbl.Foo, _ as true)
+    types.assert(tbl.Bar, _ as 1337)
+    types.assert(tbl.NewField, 8888)
+    types.assert(tbl.NewField2, 9999)
     
 ]]
 
@@ -531,8 +531,8 @@ run[[
     end
     
     for k,v in pairs(e) do
-        type_assert(k, "FOO")
-        type_assert(v, _ as 666 | 1337)
+        types.assert(k, "FOO")
+        types.assert(v, _ as 666 | 1337)
     end
 ]]
 
@@ -565,7 +565,7 @@ run([[
 
 pending[[
     local function tbl_get_foo(self)
-        type_assert(self.foo, 1337)
+        types.assert(self.foo, 1337)
         return tbl.foo
     end
 
@@ -580,13 +580,13 @@ run[[
 
     t[lol] = 1
     t[lol] = 2
-    type_assert(t[lol], _  as 1 | 2 | nil)
+    types.assert(t[lol], _  as 1 | 2 | nil)
 ]]
 
 run[[
     local type Foo = { bar = 1337 }
     local type Bar = { foo = 8888 }
-    type_assert<|Foo + Bar, Foo & Bar|>
+    types.assert<|Foo + Bar, Foo & Bar|>
 ]]
 
 run[[
@@ -595,12 +595,12 @@ run[[
     tbl.bar = false
 
     local key = _ as "foo" | "bar"
-    type_assert<|tbl[key], true | false|>
+    types.assert<|tbl[key], true | false|>
 ]]
 
 run[[
     local tbl = _ as {foo = true} | {foo = false}
-    type_assert<|tbl.foo, true | false|>
+    types.assert<|tbl.foo, true | false|>
 ]]
 
 run[[
@@ -627,11 +627,11 @@ run[[
     }
 
     local type x = META.@Self & {bar = false}
-    type_assert<|x, {foo = true, bar = false}|>
-    type_assert(META.@Self, _ as {foo = true})
+    types.assert<|x, {foo = true, bar = false}|>
+    types.assert(META.@Self, _ as {foo = true})
 ]]
 
 run[[
     local t = {} as {[1 .. inf] = number}
-    type_assert(#t, _ as 1 .. inf)
+    types.assert(#t, _ as 1 .. inf)
 ]]

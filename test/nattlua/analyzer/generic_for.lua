@@ -5,14 +5,14 @@ local transpile = T.Transpile
 run([[
     local type i = 0
     for k,v in ipairs(_ as any) do 
-        type_assert(k, _ as any)
-        type_assert(v, _ as any)
-        type_assert<|i, 0|>
+        types.assert(k, _ as any)
+        types.assert(v, _ as any)
+        types.assert<|i, 0|>
     
         type i = i + 1
     end
     
-    type_assert<|i, 1|>
+    types.assert<|i, 1|>
 ]])
 
 run[[
@@ -22,7 +22,7 @@ run[[
     
     for k,v in ipairs(tbl) do
         if v.foo then
-            type_assert(v.foo,  _ as {[number] = boolean})
+            types.assert(v.foo,  _ as {[number] = boolean})
         end
     end
 ]]
@@ -47,7 +47,7 @@ run[[
         sum = sum + i + num
     end
     
-    type_assert(sum, 33)
+    types.assert(sum, 33)
 ]]
 
 run[[
@@ -60,5 +60,5 @@ run[[
         end
     end
 
-    type_assert(sum, _ as number)
+    types.assert(sum, _ as number)
 ]]

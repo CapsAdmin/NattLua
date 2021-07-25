@@ -8,7 +8,7 @@ run[[
     test(true, true)
     test(false, false)
 
-    type_assert(test, _ as (function(a: false|true|any, b: false|true|any): nil))
+    types.assert(test, _ as (function(a: false|true|any, b: false|true|any): nil))
 ]]
 run[[
     local function test(a: any,b: any): nil
@@ -18,32 +18,32 @@ run[[
     test(true, true)
     test(false, false)
 
-    type_assert(test, _ as (function(a: any, b: any): nil))
+    types.assert(test, _ as (function(a: any, b: any): nil))
 ]]
 
 
 do -- assignment
     run[[
         local a
-        type_assert(a, nil)
+        types.assert(a, nil)
     ]]
 
     run[[
         local a: boolean
-        type_assert(a, _ as boolean)
+        types.assert(a, _ as boolean)
     ]]
 
 
     run[[
         a = nil
         -- todo, if any calls don't happen here then it's probably nil?
-        type_assert(a, _ as nil)
+        types.assert(a, _ as nil)
     ]]
 
     run[[
         local a = {}
         a[5] = 5
-        type_assert(a[5], 5)
+        types.assert(a[5], 5)
     ]]
 
 
@@ -55,38 +55,38 @@ do -- assignment
 
         local a,b,c = test(3)
 
-        type_assert(a,1)
-        type_assert(b,2)
-        type_assert(c,3)
+        types.assert(a,1)
+        types.assert(b,2)
+        types.assert(c,3)
     ]]
 
     run[[
         local a, b, c
         a, b, c = 0, 1
-        type_assert(a, 0)
-        type_assert(b, 1)
-        type_assert(c, nil)
+        types.assert(a, 0)
+        types.assert(b, 1)
+        types.assert(c, nil)
         a, b = a+1, b+1, a+b
-        type_assert(a, 1)
-        type_assert(b, 2)
+        types.assert(a, 1)
+        types.assert(b, 2)
         a, b, c = 0
-        type_assert(a, 0)
-        type_assert(b, nil)
-        type_assert(c, nil)
+        types.assert(a, 0)
+        types.assert(b, nil)
+        types.assert(c, nil)
     ]]
 
     run[[
         a, b, c = 0, 1
-        type_assert(a, 0)
-        type_assert(b, 1)
-        type_assert(c, nil)
+        types.assert(a, 0)
+        types.assert(b, 1)
+        types.assert(c, nil)
         a, b = a+1, b+1, a+b
-        type_assert(a, 1)
-        type_assert(b, 2)
+        types.assert(a, 1)
+        types.assert(b, 2)
         a, b, c = 0
-        type_assert(a, 0)
-        type_assert(b, nil)
-        type_assert(c, nil)
+        types.assert(a, 0)
+        types.assert(b, nil)
+        types.assert(c, nil)
     ]]
     run[[
         local a = {}
@@ -94,15 +94,15 @@ do -- assignment
 
         i, a[i] = i+1, 20
 
-        type_assert(i, 4)
-        type_assert(a[3], 20)
+        types.assert(i, 4)
+        types.assert(a[3], 20)
     ]]
     run[[
         a = {}
         i = 3
         i, a[i] = i+1, 20
-        type_assert(i, 4)
-        type_assert(a[3], 20)
+        types.assert(i, 4)
+        types.assert(a[3], 20)
     ]]
 end
 run[[
@@ -116,65 +116,65 @@ run[[
     test(1)
     test(2)
 
-    --type_assert(z1(), 1)
-    type_assert(z2(), 2)
+    --types.assert(z1(), 1)
+    types.assert(z2(), 2)
 ]]
 
 --local numbers = {-1,-0.5,0,0.5,1,math.huge,0/0}
 
-run"type_assert(1, 1)"
-run"type_assert(-1, -1)"
-run"type_assert(-0.5, -0.5)"
-run"type_assert(0, 0)"
+run"types.assert(1, 1)"
+run"types.assert(-1, -1)"
+run"types.assert(-0.5, -0.5)"
+run"types.assert(0, 0)"
 
 --- exp
 run[[
-    type_assert(1e5, 100000)
-    type_assert(1e+5, 100000)
-    type_assert(1e-5, 0.00001)
+    types.assert(1e5, 100000)
+    types.assert(1e+5, 100000)
+    types.assert(1e-5, 0.00001)
 ]]
 
 --- hex exp +hexfloat !lex
 run[[
-    type_assert(0xe+9, 23)
-    type_assert(0xep9, 7168)
-    type_assert(0xep+9, 7168)
-    type_assert(0xep-9, 0.02734375)
+    types.assert(0xe+9, 23)
+    types.assert(0xep9, 7168)
+    types.assert(0xep+9, 7168)
+    types.assert(0xep-9, 0.02734375)
 ]]
 
-run"type_assert(1-1, 0)"
-run"type_assert(1+1, 2)"
-run"type_assert(2*3, 6)"
-run"type_assert(2^3, 8)"
-run"type_assert(3%3, 0)"
-run"type_assert(-1*2, -2)"
-run"type_assert(1/2, 0.5)"
-run"type_assert(1/2, 0.5)"
-run"type_assert(0b10 | 0b01, 0b11)"
-run"type_assert(0b10 & 0b10, 0b10)"
-run"type_assert(0b10 & 0b10, 0b10)"
+run"types.assert(1-1, 0)"
+run"types.assert(1+1, 2)"
+run"types.assert(2*3, 6)"
+run"types.assert(2^3, 8)"
+run"types.assert(3%3, 0)"
+run"types.assert(-1*2, -2)"
+run"types.assert(1/2, 0.5)"
+run"types.assert(1/2, 0.5)"
+run"types.assert(0b10 | 0b01, 0b11)"
+run"types.assert(0b10 & 0b10, 0b10)"
+run"types.assert(0b10 & 0b10, 0b10)"
 
---R"type_assert(0b10 >> 1, 0b01)"
---R"type_assert(0b01 << 1, 0b10)"
---R"type_assert(~0b01, -2)"
-run"type_assert('a'..'b', 'ab')"
-run"type_assert('a'..'b'..'c', 'abc')"
-run"type_assert(1 .. '', nil as '1')"
-run"type_assert('ab'..(1)..'cd'..(1.5), 'ab1cd1.5')"
+--R"types.assert(0b10 >> 1, 0b01)"
+--R"types.assert(0b01 << 1, 0b10)"
+--R"types.assert(~0b01, -2)"
+run"types.assert('a'..'b', 'ab')"
+run"types.assert('a'..'b'..'c', 'abc')"
+run"types.assert(1 .. '', nil as '1')"
+run"types.assert('ab'..(1)..'cd'..(1.5), 'ab1cd1.5')"
 
 
 run[[ --- tnew
     local a = nil
     local b = {}
     local t = {[true] = a, [false] = b or 1}
-    type_assert(t[true], nil)
-    type_assert(t[false], b)
+    types.assert(t[true], nil)
+    types.assert(t[false], b)
 ]]
 run[[ --- tdup
     local b = {}
     local t = {[true] = nil, [false] = b or 1}
-    type_assert(t[true], nil)
-    type_assert(t[false], b)
+    types.assert(t[true], nil)
+    types.assert(t[false], b)
 ]]
 
 run[[
@@ -183,51 +183,51 @@ run[[
         local b = {}
         local t = {[true] = a, [false] = b or 1}
         
-        type_assert(t[true], nil)
-        type_assert(t[false], b)
+        types.assert(t[true], nil)
+        types.assert(t[false], b)
     end
 
     do --- tdup
         local b = {}
         local t = {[true] = nil, [false] = b or 1}
-        type_assert(t[true], nil)
-        type_assert(t[false], b)
+        types.assert(t[true], nil)
+        types.assert(t[false], b)
     end
 ]]
 run[[
     local a = 1
-    type_assert(a, nil as 1)
+    types.assert(a, nil as 1)
 ]]
 run[[
     local a = {a = 1}
-    type_assert(a.a, nil as 1)
+    types.assert(a.a, nil as 1)
 ]]
 run[[
     local a = {a = {a = 1}}
-    type_assert(a.a.a, nil as 1)
+    types.assert(a.a.a, nil as 1)
 ]]
 run[[
     local a = {a = 1}
     a.a = nil
-    type_assert(a.a, nil)
+    types.assert(a.a, nil)
 ]]
 run[[
     local a = {}
     a.a = 1
-    type_assert(a.a, nil as 1)
+    types.assert(a.a, nil as 1)
 ]]
 run[[
     local a = ""
-    type_assert(a, nil as "")
+    types.assert(a, nil as "")
 ]]
 run[[
     local type a = number
-    type_assert(a, _ as number)
+    types.assert(a, _ as number)
 ]]
 run[[
     local a
     a = 1
-    type_assert(a, 1)
+    types.assert(a, 1)
 ]]
 run[[
     local a = {}
@@ -236,31 +236,31 @@ run[[
     local c = 0
 
     function a:bar()
-        type_assert(self, a)
+        types.assert(self, a)
         c = 1
     end
 
     a:bar()
 
-    type_assert(c, 1)
+    types.assert(c, 1)
 ]]
 run[[
     local function test()
 
     end
 
-    type_assert(test, nil as function():)
+    types.assert(test, nil as function():)
 ]]
 run[[
     local c = 0
     for i = 1, 10, 2 do
-        type_assert_superset(i, nil as number)
+        types.assert_superset(i, nil as number)
         if i == 1 then
             c = 1
             break
         end
     end
-    type_assert(c, _ as 1)
+    types.assert(c, _ as 1)
 ]]
 run[[
     local function lol(a,b,c)
@@ -274,7 +274,7 @@ run[[
     end
     local a = lol(1,2,3)
 
-    type_assert(a, 6)
+    types.assert(a, 6)
 ]]
 run[[
     local a = 1+2+3+4
@@ -288,8 +288,8 @@ run[[
         b = foo(a+10)
     end
 
-    type_assert(b, 20)
-    type_assert(a, 10)
+    types.assert(b, 20)
+    types.assert(a, 10)
 ]]
 run[[
     b = {}
@@ -303,7 +303,7 @@ run[[
 
     local c = foo(a)
 
-    type_assert(c, 2)
+    types.assert(c, 2)
 ]]
 run[[
     local META = {}
@@ -329,19 +329,19 @@ run[[
     if res then
         local a = 1 + res
 
-        type_assert(a, 2)
+        types.assert(a, 2)
     end
 ]]
 pending[[
     local a = 1337
     for i = 1, a do
-        type_assert(i, 1)
+        types.assert(i, 1)
         if i == 15 then
             a = 7777
             break
         end
     end
-    type_assert(a, _ as 1337 | 7777)
+    types.assert(a, _ as 1337 | 7777)
 ]]
 run[[
     local function lol(a, ...)
@@ -354,16 +354,16 @@ run[[
 
     local a,b,c = lol(3,1,2,3)
 
-    type_assert(a, "")
-    type_assert(b, 4)
-    type_assert(c, 3)
+    types.assert(a, "")
+    types.assert(b, 4)
+    types.assert(c, 3)
 ]]
 run[[
     function foo(a, b) return a+b end
 
     local a = foo(1,2)
 
-    type_assert(a, 3)
+    types.assert(a, 3)
 ]]
 run[[
 local a = {b = {c = {}}}
@@ -393,7 +393,7 @@ run[[
     aaa(true)
     local ag = aaa(false)
 
-    type_assert(ag, "hello")
+    types.assert(ag, "hello")
 
 ]]
 run[[
@@ -402,7 +402,7 @@ run[[
         return a+self.lol
     end
 
-    type_assert(foo:bar(20), 50)
+    types.assert(foo:bar(20), 50)
 
 ]]
 run[[
@@ -410,7 +410,7 @@ run[[
         return w1 .. ' ' .. w2
     end
 
-    type_assert(prefix("hello", "world"), "hello world")
+    types.assert(prefix("hello", "world"), "hello world")
 ]]
 run[[
     local func = function()
@@ -423,7 +423,7 @@ run[[
 
     local f = func()
 
-    type_assert(f(), 1)
+    types.assert(f(), 1)
 ]]
 run[[
     function prefix (w1, w2)
@@ -434,7 +434,7 @@ run[[
     local statetab = {["foo bar"] = 1337}
 
     local test = statetab[prefix(w1, w2)]
-    type_assert(test, 1337)
+    types.assert(test, 1337)
 ]]
 run[[
     local function test(a)
@@ -442,7 +442,7 @@ run[[
         return test(a+1)
     end
 
-    type_assert(test(1), nil as any)
+    types.assert(test(1), nil as any)
 ]]
 run[[
     local function test(a): number
@@ -450,7 +450,7 @@ run[[
         return test(a+1)
     end
 
-    type_assert(test(1), nil as number)
+    types.assert(test(1), nil as number)
 ]]
 run[[
     local a: string | number = 1
@@ -459,8 +459,8 @@ run[[
 
     local foo,bar = test(1, "")
 
-    type_assert(foo, nil as boolean)
-    type_assert(bar, nil as number)
+    types.assert(foo, nil as boolean)
+    types.assert(bar, nil as number)
 ]]
 run[[
     local type lol = number
@@ -476,8 +476,8 @@ run[[
     local a = math.sin(1, "")
     local b = math.lol() -- support overloads
 
-    type_assert(a, nil as number)
-    type_assert(b, nil as number)
+    types.assert(a, nil as number)
+    types.assert(b, nil as number)
 
     type math.lol = nil
 ]]
@@ -493,7 +493,7 @@ run[[
     local c = b.a
     local d = b.b.str
 
-    subset_of(b, _ as foo)
+    types.subset_of(b, _ as foo)
 ]]
 run[[
   --  local a: (string|number)[] = {"", ""}
@@ -508,8 +508,8 @@ run[[
     local a = foo.bar(true, 1)
     local b = foo.bar(1)
 
-    type_assert(a, nil as true)
-    type_assert(b, nil as false)
+    types.assert(a, nil as true)
+    types.assert(b, nil as false)
 ]]
 run[[
     local a: string = "1"
@@ -517,8 +517,8 @@ run[[
 
     local type type_func = function(a: any,b: any,c: any) return types.String(), types.Number() end
     local a, b = type_func(a,2,3)
-    type_assert(a, _ as string)
-    type_assert(b, _ as number)
+    types.assert(a, _ as string)
+    types.assert(b, _ as number)
 ]]
 
 --[[
@@ -526,8 +526,8 @@ run[[
     for i,v in ipairs({"LOL",2,3}) do
         if i == 1 then
             print(i,v)
-            type_assert(i, _ as 1)
-            type_assert(v, _ as "LOL")
+            types.assert(i, _ as 1)
+            types.assert(v, _ as "LOL")
         end
     end
 ]]
@@ -544,22 +544,22 @@ run[[
 run[[
     local a: _G.string
 
-    type_assert(a, _G.string)
+    types.assert(a, _G.string)
 ]]
 run[[
     local a = ""
 
     if a is string then
-        type_assert(a, _ as "")
+        types.assert(a, _ as "")
     end
 
 ]]
 run[[
     local a = math.cos(_ as number)
-    type_assert(a, nil as number)
+    types.assert(a, nil as number)
 
     if a is number then
-        type_assert(a, _ as number)
+        types.assert(a, _ as number)
     end
 ]]
 run[[
@@ -572,7 +572,7 @@ run[[
 
     local a = math.sin(1)
 
-    type_assert(a, _ as number)
+    types.assert(a, _ as number)
 
     type math.cos = old
 ]]
@@ -597,7 +597,7 @@ run[[
 run[[
     a: number = (lol as function(): number)()
 
-    type_assert(a, nil as number)
+    types.assert(a, nil as number)
 ]]
 run[[
     local a = {}
@@ -614,28 +614,28 @@ run[[
 run[[
     local type lol = function(a: string) return a end
     local a: lol<|string|>
-    type_assert(a, _ as string)
+    types.assert(a, _ as string)
 ]]
 run[[
     local a = {}
     function a:lol(a,b,c)
         return a+b+c
     end
-    type_assert(a:lol(1,2,3), 6)
+    types.assert(a:lol(1,2,3), 6)
 ]]
 run[[
     local a = {}
     function a.lol(_, a,b,c)
         return a+b+c
     end
-    type_assert(a:lol(1,2,3), 6)
+    types.assert(a:lol(1,2,3), 6)
 ]]
 run[[
     local a = {}
     function a.lol(a,b,c)
         return a+b+c
     end
-    type_assert(a.lol(1,2,3), 6)
+    types.assert(a.lol(1,2,3), 6)
 ]]
 run[[
     local a = {}
@@ -643,7 +643,7 @@ run[[
         local a,b,c = ...
         return a+b+c
     end
-    type_assert(a.lol(1,2,3), 6)
+    types.assert(a.lol(1,2,3), 6)
 ]]
 run[[
     local a = {}
@@ -651,20 +651,20 @@ run[[
         local a,b,c = ...
         return a+b+c+foo
     end
-    type_assert(a.lol(10,1,2,3), 16)
+    types.assert(a.lol(10,1,2,3), 16)
 ]]
 run[[
     local a = (function(...) return ...+... end)(10)
 ]]
 run[[
     -- this will error with not defined
-    --type_assert(TOTAL_STRANGER_COUNT, _ as number)
-    --type_assert(TOTAL_STRANGER_STRING, _ as string)
+    --types.assert(TOTAL_STRANGER_COUNT, _ as number)
+    --types.assert(TOTAL_STRANGER_STRING, _ as string)
 ]]
 run[[
     local a = b as any
     local b = 2
-    type_assert(a, _ as any)
+    types.assert(a, _ as any)
 ]]
 run[[
     local type function identity(a)
@@ -674,7 +674,7 @@ run[[
 
 pending[[
     for k,v in next, {1,2,3} do
-        type_assert(_ as 1 | 2 | 3, _ as 1 | 2 | 3)
+        types.assert(_ as 1 | 2 | 3, _ as 1 | 2 | 3)
     end
 ]]
 run[[
@@ -683,22 +683,22 @@ run[[
 run[[
     local a = setmetatable({} as {num = number}, meta)
 
-    type_assert(a.num, _ as number)
+    types.assert(a.num, _ as number)
 ]]
 run[[
 
     local a,b,c = string.match("1 2 3", "(%d) (%d) (%d)")
-    type_assert(a, nil as "1")
-    type_assert(b, nil as "2")
-    type_assert(c, nil as "3")
+    types.assert(a, nil as "1")
+    types.assert(b, nil as "2")
+    types.assert(c, nil as "3")
 
 ]]
 run[[
     local def,{a,b,c} = {a=1,b=2,c=3}
-    type_assert(a, 1)
-    type_assert(b, 2)
-    type_assert(c, 3)
-    type_assert(def, def)
+    types.assert(a, 1)
+    types.assert(b, 2)
+    types.assert(c, 3)
+    types.assert(def, def)
 ]]
 run[[
     -- local a = nil
@@ -707,7 +707,7 @@ run[[
 run[[
     local tbl = {} as {[true] = false}
     tbl[true] = false
-    type_assert(tbl[true], false)
+    types.assert(tbl[true], false)
  ]]
 run[[
     local tbl = {} as {1,true,3}
@@ -729,14 +729,14 @@ run[[
 run[[
     local pl = {IsValid = function(self) end}
     local a = pl:IsValid()
-    type_assert(a, nil)
+    types.assert(a, nil)
  ]]
 run[[
     local tbl = {}
     local test = "asdawd"
   --  tbl[test] = tbl[test] or {} TODO
     tbl[test] = "1"
-    type_assert(tbl[test], nil as "1")
+    types.assert(tbl[test], nil as "1")
 ]]
 run[[
     local function fill(t)
@@ -750,14 +750,14 @@ run[[
 run[[
     tbl, {a,b} = {a=1,b=2}
 
-    type_assert(tbl.a, nil as 1)
-    type_assert(tbl.b, nil as 2)
-    type_assert(a, nil as 1)
-    type_assert(b, nil as 2)
+    types.assert(tbl.a, nil as 1)
+    types.assert(tbl.b, nil as 2)
+    types.assert(a, nil as 1)
+    types.assert(b, nil as 2)
 ]]
 run[[
     local type a = 1
-    type_assert(a, 1)
+    types.assert(a, 1)
 ]]
 run[[
     local a = function(): number,string return 1,"" end
@@ -792,16 +792,16 @@ run([[
 
     if not a then
         -- shouldn't reach
-        type_assert(1, 2)
+        types.assert(1, 2)
     else
-        type_assert(1, 1)
+        types.assert(1, 1)
     end
 ]])
 run([[
     local type a = {}
     if not a then
         -- shouldn't reach
-        type_assert(1, 2)
+        types.assert(1, 2)
     end
 ]])
 

@@ -12,7 +12,7 @@ run([[
 
     unknown(x)
 
-    type_assert<|x.foo, any | true|>
+    types.assert<|x.foo, any | true|>
 ]])
 
 run[[
@@ -24,7 +24,7 @@ run[[
     
     unknown(x)
     
-    type_assert(x.foo, "bar")    
+    types.assert(x.foo, "bar")    
 ]]
 
 run([[
@@ -36,7 +36,7 @@ run([[
     
     mutate_table(tbl)
     
-    type_assert(tbl.lol, 1)
+    types.assert(tbl.lol, 1)
 ]], "immutable contract")
 
 
@@ -52,10 +52,10 @@ pending[[
     
     if math.random() > 0.5 then
         string_mutator(a)
-        type_assert<|a, {[string] = string}|>
+        types.assert<|a, {[string] = string}|>
     end
     
-    type_assert<|a, {foo = true} | {[string] = string}|>
+    types.assert<|a, {foo = true} | {[string] = string}|>
 ]]
 
 run[[
@@ -71,7 +71,7 @@ run[[
     
     mutate_table(tbl)
     
-    type_assert(tbl.foo, _ as 1 | 2)
+    types.assert(tbl.foo, _ as 1 | 2)
 ]]
 
 run[[
@@ -85,7 +85,7 @@ run[[
 
     mutate_table(tbl)
 
-    type_assert(tbl.foo, 2)
+    types.assert(tbl.foo, 2)
 ]]
 
 run([[
@@ -97,7 +97,7 @@ run([[
     
     mutate_table(tbl)
     
-    type_assert(tbl.lol, 1)
+    types.assert(tbl.lol, 1)
 ]], "immutable contract")
 
 run([[
@@ -109,7 +109,7 @@ run([[
     
     mutate_table(tbl)
     
-    type_assert(tbl.lol, 1)
+    types.assert(tbl.lol, 1)
 ]])
 
 run([[
@@ -123,7 +123,7 @@ run([[
 
     mutate_table(tbl)
     
-    type_assert(tbl.lol, 1)
+    types.assert(tbl.lol, 1)
 
     §assert(not analyzer:GetDiagnostics()[1])
 ]])
@@ -132,9 +132,9 @@ run[[
     local function mutate_table(tbl: literal mutable {foo = number})
         if math.random() > 0.5 then
             tbl.foo = 2
-            type_assert<|typeof tbl.foo, 2|>
+            types.assert<|typeof tbl.foo, 2|>
         end
-        type_assert<|typeof tbl.foo, 1 | 2|>
+        types.assert<|typeof tbl.foo, 1 | 2|>
     end
     
     local tbl = {}
@@ -143,7 +143,7 @@ run[[
     
     mutate_table(tbl)
     
-    type_assert<|typeof tbl.foo, 1 | 2|>
+    types.assert<|typeof tbl.foo, 1 | 2|>
 ]]
 
 run[[
@@ -161,13 +161,13 @@ run[[
     local tbl = {} as {foo = number | nil}
 
     if tbl.foo then
-        type_assert(tbl.foo, _ as number)
+        types.assert(tbl.foo, _ as number)
     end
 ]]
 
 run[[
     local function foo(arg: {value = string})
-        type_assert<|typeof arg.value, string|>
+        types.assert<|typeof arg.value, string|>
     end
 
     foo({value = "test"})
@@ -176,7 +176,7 @@ run[[
 
 run[[
     local function foo(arg: literal {value = string})
-        type_assert<|typeof arg.value, "test"|>
+        types.assert<|typeof arg.value, "test"|>
     end
 
     foo({value = "test"})
@@ -185,7 +185,7 @@ run[[
 run[[
     local function test(value: {foo = number | nil})
         if value.foo then
-            type_assert(value.foo, _ as number)
+            types.assert(value.foo, _ as number)
         end
     end
     
@@ -194,7 +194,7 @@ run[[
 run[[
     local function test(value: {foo = number | nil})
         if value.foo then
-            type_assert(value.foo, _ as number)
+            types.assert(value.foo, _ as number)
         end
     end
     
@@ -208,20 +208,20 @@ run[[
     
     local tbl = {foo = 1}
     
-    type_assert(tbl.foo, 1)
+    types.assert(tbl.foo, 1)
     
     tbl = {foo = 2}
     
-    type_assert(tbl.foo, 2)
+    types.assert(tbl.foo, 2)
     
     mutate(tbl)
     
-    type_assert(tbl.foo, 3)
-    type_assert(tbl.lol, true)
+    types.assert(tbl.foo, 3)
+    types.assert(tbl.lol, true)
     
     tbl = {foo = 4}
     
-    type_assert(tbl.foo, 4)
+    types.assert(tbl.foo, 4)
 ]]
 
 run[[
@@ -238,7 +238,7 @@ run[[
         end)(val)
     end)(t)
     
-    type_assert(t, {
+    types.assert(t, {
         foo = "foo",
         bar = "bar",
         faz = "faz",
@@ -258,8 +258,8 @@ pending[[
     
     string_mutator(a)
     
-    type_assert<|a.foo, string|>
-    type_assert<|a.bar, string|>
+    types.assert<|a.foo, string|>
+    types.assert<|a.bar, string|>
 ]]
 
 run[[

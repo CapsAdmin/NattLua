@@ -18,7 +18,7 @@ test("vararg", function()
             local a,b,c = ...
             return a+b+c
         end
-        type_assert(test(test(1,2,3), test(1,2,3), test(1,2,3)), 18)
+        types.assert(test(test(1,2,3), test(1,2,3), test(1,2,3)), 18)
     ]]
 end)
 
@@ -41,9 +41,9 @@ test("smoke", function()
 
         local a,b,c = test(3)
 
-        type_assert(a,1)
-        type_assert(b,2)
-        type_assert(c,3)
+        types.assert(a,1)
+        types.assert(b,2)
+        types.assert(c,3)
     ]]
 end)
 
@@ -51,9 +51,9 @@ test("vararg in table", function()
     run[[
         local function test(...)
             local a = {...}
-            type_assert(a[1], 1)
-            type_assert(a[2], 2)
-            type_assert(a[3], 3)
+            types.assert(a[1], 1)
+            types.assert(a[2], 2)
+            types.assert(a[3], 3)
         end
 
         test(1,2,3)
@@ -70,9 +70,9 @@ test("var arg in table and return", function()
         end
 
         local a,b,c = test(10,20,30)
-        type_assert(a, 10)
-        type_assert(b, 20)
-        type_assert(c, 30)
+        types.assert(a, 10)
+        types.assert(b, 20)
+        types.assert(c, 30)
     ]]
 end)
 
@@ -84,59 +84,59 @@ test("asadawd", function()
 
         local A, B, C, D = test(), 4
 
-        type_assert(A, 1)
-        type_assert(B, 4)
-        type_assert(C, nil)
-        type_assert(D, nil)
+        types.assert(A, 1)
+        types.assert(B, 4)
+        types.assert(C, nil)
+        types.assert(D, nil)
     ]]
 end)
 
 run[[
     local a,b,c = ...
-    type_assert(a, _ as any)
-    type_assert(b, _ as any)
-    type_assert(c, _ as any)
+    types.assert(a, _ as any)
+    types.assert(b, _ as any)
+    types.assert(c, _ as any)
 ]]
     
 run[[
     local tbl = {...}
-    type_assert(tbl[1], _ as any)
-    type_assert(tbl[2], _ as any)
-    type_assert(tbl[100], _ as any)
+    types.assert(tbl[1], _ as any)
+    types.assert(tbl[2], _ as any)
+    types.assert(tbl[100], _ as any)
 ]]
 
 run[[
     function foo(...)
         local tbl = {...}
-        type_assert(tbl[1], _ as any)
-        type_assert(tbl[2], _ as any)
-        type_assert(tbl[100], _ as any)
+        types.assert(tbl[1], _ as any)
+        types.assert(tbl[2], _ as any)
+        types.assert(tbl[100], _ as any)
     end
 ]]
 
 run[[
     ;(function(...)   
         local tbl = {...}
-        type_assert(tbl[1], 1)
-        type_assert(tbl[2], 2)
-        type_assert(tbl[100], _ as nil) -- or nil?
+        types.assert(tbl[1], 1)
+        types.assert(tbl[2], 2)
+        types.assert(tbl[100], _ as nil) -- or nil?
     end)(1,2)
 ]]
 
 run[[
     local a,b,c = unknown()
-    type_assert(a, _ as any)
-    type_assert(b, _ as any)
-    type_assert(c, _ as any)
+    types.assert(a, _ as any)
+    types.assert(b, _ as any)
+    types.assert(c, _ as any)
 ]]
 
 test("parenthesis around varargs should only return the first value in the tuple", function()
     run[[
         local function s(...) return ... end
         local a,b,c = (s(1, 2, 3))
-        type_assert(a, 1)
-        type_assert(b, nil)
-        type_assert(c, nil)
+        types.assert(a, 1)
+        types.assert(b, nil)
+        types.assert(c, nil)
     ]]
 end)
 
@@ -144,9 +144,9 @@ test("type function varargs", function()
     run[[
         local lol = function(...)
             local a,b,c = ...
-            type_assert(a, 1)
-            type_assert(b, 2)
-            type_assert(c, 3)
+            types.assert(a, 1)
+            types.assert(b, 2)
+            types.assert(c, 3)
         end
 
         local function lol2(...)
@@ -162,9 +162,9 @@ run[[
 
     local a,b,c = lol()
 
-    type_assert(a, _ as any)
-    type_assert(b, _ as any)
-    type_assert(c, _ as any)    
+    types.assert(a, _ as any)
+    types.assert(b, _ as any)
+    types.assert(c, _ as any)    
 
     local type test = function(a,b,c) 
         assert(a.Type == "any")
@@ -178,9 +178,9 @@ run[[
 run[[
     local function resume(a, ...)
         local a, b, c = a, ...
-        type_assert(a, _ as 1)
-        type_assert(b, _ as 2)
-        type_assert(c, _ as 3)
+        types.assert(a, _ as 1)
+        types.assert(b, _ as 2)
+        types.assert(c, _ as 3)
     end
     
     resume(1, 2, 3)
@@ -190,25 +190,25 @@ run[[
     local type lol = (function(): 1,...)
 
     local a,b,c,d = lol()
-    type_assert(a, 1)
-    type_assert(b, _ as any)
-    type_assert(c, _ as any)
-    type_assert(d, _ as any)
+    types.assert(a, 1)
+    types.assert(b, _ as any)
+    types.assert(c, _ as any)
+    types.assert(d, _ as any)
     
     
     local a,b,c,d = lol(), 2,3,4
     
-    type_assert(a,1)
-    type_assert(b,2)
-    type_assert(c,3)
-    type_assert(d,4)
+    types.assert(a,1)
+    types.assert(b,2)
+    types.assert(c,3)
+    types.assert(d,4)
     
     
     local function foo(a, ...)
         local a, b, c = a, ...
-        type_assert(a, 1)
-        type_assert(b, 2)
-        type_assert(c, 3)
+        types.assert(a, 1)
+        types.assert(b, 2)
+        types.assert(c, 3)
     end
     
     foo(1, 2, 3)
@@ -253,8 +253,8 @@ run[[
 run[[
     local t = {foo = true}
     for k,v in pairs(t) do
-        type_assert(k, _ as "foo")
-        type_assert(v, _ as true)
+        types.assert(k, _ as "foo")
+        types.assert(v, _ as true)
     end
 ]]
 
@@ -270,9 +270,9 @@ run[[
     end
     
     local co = create(function(a,b,c)
-        type_assert(a, 1)
-        type_assert(b, 2)
-        type_assert(c, 3)
+        types.assert(a, 1)
+        types.assert(b, 2)
+        types.assert(c, 3)
     end)
     
     call(co,1,2,3)
@@ -286,9 +286,9 @@ run[[
 
         local type lol = (function(): ...)
         local a,b,c = lol()
-        type_assert(a, _ as any)
-        type_assert(b, _ as any)
-        type_assert(c, _ as any)
+        types.assert(a, _ as any)
+        types.assert(b, _ as any)
+        types.assert(c, _ as any)
     end
     
     foo(1,2,3)
@@ -297,10 +297,10 @@ run[[
 run[[
     ;(function(...: number) 
         local a,b,c,d = ...
-        type_assert(a, 1)
-        type_assert(b, 2)
-        type_assert(c, 3)
-        type_assert(d, nil)
+        types.assert(a, 1)
+        types.assert(b, 2)
+        types.assert(c, 3)
+        types.assert(d, nil)
     end)(1,2,3)
 ]]
 
@@ -318,7 +318,7 @@ run[[
     foo()
 
     -- should not be a nested tuple
-    type_assert_superset(foo, nil as (function():any))
+    types.assert_superset(foo, nil as (function():any))
 ]]
 
 run[[
@@ -371,11 +371,11 @@ run[[
     end
     local z,x,y,æ,ø,å = test(4,5,6)
 
-    type_assert(z, 1)
-    type_assert(x, 2)
-    type_assert(y, 3)
-    type_assert(æ, 4)
-    type_assert(ø, 5)
-    type_assert(å, 6)
+    types.assert(z, 1)
+    types.assert(x, 2)
+    types.assert(y, 3)
+    types.assert(æ, 4)
+    types.assert(ø, 5)
+    types.assert(å, 6)
 
 ]]

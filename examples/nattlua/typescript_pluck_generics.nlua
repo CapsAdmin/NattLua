@@ -47,5 +47,5 @@ local makeAndModel = pluck(taxi, {"manufactuwrer", "model"})
 -- array of a union type: (string | number)[]
 local modelYear = pluck(taxi, {"model", "year"})
 
-type_assert(makeAndModel, {_ as string, _ as string})
-type_assert(modelYear, {_ as string, _ as number})
+types.assert(makeAndModel, {_ as string, _ as string})
+types.assert(modelYear, {_ as string, _ as number})

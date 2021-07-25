@@ -10,7 +10,7 @@ test("a and b", function()
         local a: 1, b: 2
         local result = a and b
 
-        type_assert(result, 2)
+        types.assert(result, 2)
     ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
 
     equal(obj:GetNode().kind, "binary_operator") 
@@ -25,7 +25,7 @@ test("a + b", function()
         local a: 1, b: 2
         local result = a + b
         
-        type_assert(result, 3)
+        types.assert(result, 3)
     ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
 
     equal(obj:GetNode().kind, "binary_operator")
@@ -39,7 +39,7 @@ test("not a", function()
         local a: true
         local result = not a
         
-        type_assert(result, false)
+        types.assert(result, false)
     ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
 
     equal(obj:GetNode().kind, "prefix_operator") 
@@ -51,7 +51,7 @@ test("not not a", function()
         local a: true
         local result = not not a
         
-        type_assert(result, true)
+        types.assert(result, true)
     ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
 
     equal(obj:GetNode().kind, "prefix_operator") 
@@ -64,7 +64,7 @@ test("not a or 1", function()
         local a = true
         local result = not a or 1
         
-        type_assert(result, 1)
+        types.assert(result, 1)
     ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
 
     equal(obj:GetNode().kind, "binary_operator")

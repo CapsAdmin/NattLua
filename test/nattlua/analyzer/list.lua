@@ -11,7 +11,7 @@ test("can be simple", function()
         local x = {1, 2, 3}
         x[2] = 10
 
-        type_assert(x[2], 10)
+        types.assert(x[2], 10)
     ]]
 end)
 
@@ -22,7 +22,7 @@ test("can be sparse", function()
             [10] = 3,
         }
 
-        type_assert(x[10], 3)
+        types.assert(x[10], 3)
     ]]
 end)
 
@@ -34,7 +34,7 @@ test("can be indirect", function()
             [RED] = 2,
             [BLUE] = 3,
         }
-        type_assert(x[RED], 2)
+        types.assert(x[RED], 2)
     ]]
 end)
 
@@ -48,7 +48,7 @@ test("indirect only works for numeric keys", function()
             [BLUE] = 3,
             [GREEN] = 4,
         }
-        type_assert(x[GREEN], _ as 4 | nil)
+        types.assert(x[GREEN], _ as 4 | nil)
     ]]
     run([[
         local RED = 1
@@ -69,7 +69,7 @@ run("indirect works array-records", function()
             tbl[i] = i*100
         end
         tbl[50] = true
-        type_assert(tbl[20], _ as number | true)
+        types.assert(tbl[20], _ as number | true)
     ]]
 end)
 
@@ -105,10 +105,10 @@ end)
 
 run[[
     local a: {1,2,3} = {1,2,3}
-    type_assert(a[1], 1)
+    types.assert(a[1], 1)
 ]]
 
 run[[
     local a: {[number]=string}
-    type_assert(a[1], _ as string)
+    types.assert(a[1], _ as string)
 ]]

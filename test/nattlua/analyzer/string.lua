@@ -4,8 +4,8 @@ local run = T.RunCode
 test("meta library", function()
     run[[
         local a = "1234"
-        type_assert(string.len(a), 4)
-        type_assert(a:len(), 4)
+        types.assert(string.len(a), 4)
+        types.assert(a:len(), 4)
     ]]
 end)
 
@@ -24,7 +24,7 @@ run[===[
     local bar = [=[foo]=]
     local faz = [==[foo]==]
     
-    type_assert(foo, "foo")
-    type_assert(bar, "foo")
-    type_assert(faz, "foo")
+    types.assert(foo, "foo")
+    types.assert(bar, "foo")
+    types.assert(faz, "foo")
 ]===]

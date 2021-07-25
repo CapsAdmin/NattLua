@@ -6,7 +6,7 @@ run([[
     local foo = 1337
 
     local function test()
-        type_assert(foo, 1337)
+        types.assert(foo, 1337)
     end
     
     local foo = 666
@@ -17,7 +17,7 @@ run([[
     local foo = 1337
 
     function test()
-        type_assert(foo, 1337)
+        types.assert(foo, 1337)
     end
     
     local foo = 666
@@ -28,7 +28,7 @@ run[[
 
     local function test()
         if math.random() > 0.5 then
-            type_assert(foo, 1337)
+            types.assert(foo, 1337)
         end
     end
 

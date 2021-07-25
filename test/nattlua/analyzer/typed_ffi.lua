@@ -12,7 +12,7 @@ run[=[
 
 	local struct = ctype()
 	
-	type_assert_subset<|typeof struct, {
+	types.assert_subset<|typeof struct, {
 		foo = number,
 		uhoh = number,
 		bar1 = number,
@@ -33,7 +33,7 @@ run[=[
 	
 	local struct = box()
 	
-	type_assert_subset<|typeof struct, {
+	types.assert_subset<|typeof struct, {
 		[number] = {
 			foo = number,
 			uhoh = number,
@@ -53,7 +53,7 @@ run[=[
 		int foo(int, bool, lol);
 	]])
 
-	type_assert<|typeof ffi.C.foo, (function(number, boolean, number): number) |>
+	types.assert<|typeof ffi.C.foo, (function(number, boolean, number): number) |>
 ]=]
 
 run[=[
@@ -96,13 +96,13 @@ run[=[
 
 	local union = remove_call_function(val)
 
-	type_assert<|typeof union, {foo = number, bar2 = number} | {foo = number, bar3 = number} | {foo = number, uhoh = number, bar1 = number}|>
+	types.assert<|typeof union, {foo = number, bar2 = number} | {foo = number, bar3 = number} | {foo = number, uhoh = number, bar1 = number}|>
 ]=]
 
 run[=[
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
-	type_assert(ctype.foo, _ as string | nil)
+	types.assert(ctype.foo, _ as string | nil)
 ]=]
 
 
@@ -114,18 +114,18 @@ run[=[
 
 	if LINUX then
 		ffi.cdef("void foo(int a);")
-		type_assert<|typeof ffi.C.foo, (function(number): (nil)) |>
+		types.assert<|typeof ffi.C.foo, (function(number): (nil)) |>
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			type_assert<|typeof ffi.C.foo, (function(string | nil): (nil)) |>
+			types.assert<|typeof ffi.C.foo, (function(string | nil): (nil)) |>
 		else
 			ffi.cdef("int foo(int a);")
-			type_assert<|typeof ffi.C.foo, (function(number): (number))|>
+			types.assert<|typeof ffi.C.foo, (function(number): (number))|>
 		end	
 	end
 
-	type_assert<|typeof ffi.C.foo, (function(number): (nil)) | (function(number): (number)) | (function(string | nil): (nil)) |>
+	types.assert<|typeof ffi.C.foo, (function(number): (nil)) | (function(number): (number)) | (function(string | nil): (nil)) |>
 ]=]
 
 run[=[
@@ -142,7 +142,7 @@ run[=[
 
 	local cdata = ctype({})
 
-	type_assert<|(typeof cdata).foo, number|>
+	types.assert<|(typeof cdata).foo, number|>
 ]=]
 
 run[=[
@@ -164,8 +164,8 @@ run[=[
 		function meta:__new(file_name: string, mode: "write" | "read" | "append")
 			mode = translate_mode[mode]
 
-			type_assert<|file_name, "YES"|>
-			type_assert<|mode, "w"|>
+			types.assert<|file_name, "YES"|>
+			types.assert<|mode, "w"|>
 
 			local f = ffi.C.fopen(file_name, mode)
 			
@@ -192,7 +192,7 @@ run[=[
 
 	if f then
 		local int = f:close()
-		type_assert<|int, number|>
+		types.assert<|int, number|>
 	end
 ]=]
 
@@ -210,7 +210,7 @@ run[=[
 
 	local lol = ffi.new("struct in6_addr")
 
-	type_assert(lol.u6_addr.u6_addr16, _ as {[number] = number})
+	types.assert(lol.u6_addr.u6_addr16, _ as {[number] = number})
 ]=]
 
 run[=[
@@ -219,13 +219,13 @@ run[=[
 	]]
 	
 	local num = ffi.new("SOCKET", -1)
-	type_assert<|num, number|>
+	types.assert<|num, number|>
 ]=]
 
 run[=[
 	local buffer = ffi.new("char[?]", 5)
-	type_assert<|buffer, {[number] = number}|>
+	types.assert<|buffer, {[number] = number}|>
 
 	local buffer = ffi.new("char[8]")
-	type_assert<|buffer, {[number] = number}|>
+	types.assert<|buffer, {[number] = number}|>
 ]=]

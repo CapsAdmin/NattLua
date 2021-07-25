@@ -20,7 +20,7 @@ end)
 test("union + object", function()
     run[[
         local a = _ as (1 | 2) + 3
-        type_assert(a, _ as 4 | 5)
+        types.assert(a, _ as 4 | 5)
     ]]
 end)
 
@@ -29,7 +29,7 @@ test("union + union", function()
         local a = _ as 1 | 2
         local b = _ as 10 | 20
 
-        type_assert(a + b, _ as 11 | 12 | 21 | 22)
+        types.assert(a + b, _ as 11 | 12 | 21 | 22)
     ]]
 end)
 
@@ -37,14 +37,14 @@ test("union.foo", function()
     run[[
         local a = _ as {foo = true} | {foo = false}
 
-        type_assert(a.foo, _ as true | false)
+        types.assert(a.foo, _ as true | false)
     ]]
 end)
 
 test("union.foo = bar", function()
     run[[
         local type a = { foo = 4 } | { foo = 1|2 } | { foo = 3 }
-        type_assert<|a.foo, 1 | 2 | 3 | 4|>
+        types.assert<|a.foo, 1 | 2 | 3 | 4|>
     ]]
 end)
 
@@ -70,13 +70,13 @@ run[[
 run([[
     local a: nil | {}
     a.foo = true
-    type_assert(a, {foo = true})
+    types.assert(a, {foo = true})
 ]], "undefined set.- = true")
 
 run([[
     local b: nil | {foo = true}
     local c = b.foo
-    type_assert(c, true)
+    types.assert(c, true)
 ]], "undefined get: nil.-foo")
 
 pending[[
@@ -93,5 +93,5 @@ pending[[
 run[[
     local type a = 1 | 5 | 2 | 3 | 4
     local type b = 5 | 3 | 4 | 2 | 1
-    type_assert<|a == b, true|>
+    types.assert<|a == b, true|>
 ]]

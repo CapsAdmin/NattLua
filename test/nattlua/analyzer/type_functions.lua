@@ -35,7 +35,7 @@ test("exclude type function", function()
 
         local a: Exclude<|1|2|3, 2|>
 
-        type_assert(a, _ as 1|3)
+        types.assert(a, _ as 1|3)
     ]])
 
     run([[
@@ -46,7 +46,7 @@ test("exclude type function", function()
 
         local a: Exclude<|1|2|3, 2|>
 
-        type_assert(a, _ as 11|31)
+        types.assert(a, _ as 11|31)
     ]], "expected 11 | 31 got 1 | 3")
 end)
 
@@ -55,7 +55,7 @@ test("self referenced type tables", function()
         local type a = {
             b = self,
         }
-        type_assert(a, a.b)
+        types.assert(a, a.b)
     ]]
 end)
 
@@ -64,19 +64,19 @@ test("next", function()
         local t = {k = 1}
         local a = 1
         local k,v = next({k = 1})
-        type_assert(k, nil as "k" | "k")
-        type_assert(v, nil as 1 | 1)
+        types.assert(k, nil as "k" | "k")
+        types.assert(v, nil as 1 | 1)
     ]]
     run[[
         local k,v = next({foo = 1})
-        type_assert(string.len(k), _ as 3 | 3)
-        type_assert(v, _ as 1 | 1)
+        types.assert(string.len(k), _ as 3 | 3)
+        types.assert(v, _ as 1 | 1)
     ]]
 end)
 
 test("math.floor", function()
     run[[
-        type_assert(math.floor(1.5), 1)
+        types.assert(math.floor(1.5), 1)
     ]]
 end)
 
@@ -107,22 +107,22 @@ test("rawset rawget", function()
 
         local self = setmetatable({}, meta)
         rawset(self, "lol", "LOL")
-        type_assert(rawget(self, "lol"), "LOL")
-        type_assert(called, false)
+        types.assert(rawget(self, "lol"), "LOL")
+        types.assert(called, false)
     ]]
 end)
 
 test("select", function()
     run[[
-        type_assert(select("#", 1,2,3), 3)
+        types.assert(select("#", 1,2,3), 3)
     ]]
 end)
 
 test("parenthesis around vararg", function()
     run[[
         local a = select(2, 1,2,3)
-        type_assert(a, 2)
-        type_assert((select(2, 1,2,3)), 2)
+        types.assert(a, 2)
+        types.assert((select(2, 1,2,3)), 2)
     ]]
 end)
 
@@ -145,7 +145,7 @@ test("exlcude", function()
         end
 
         local a: Exclude<|1|2|3, 2|>
-        type_assert(a, _ as 1|3)
+        types.assert(a, _ as 1|3)
     ]]
 end)
 
@@ -155,7 +155,7 @@ test("table.insert", function()
         a[1] = true
         a[2] = false
         table.insert(a, 1337)
-        type_assert(a[3], 1337)
+        types.assert(a[3], 1337)
     ]]
 end)
 
@@ -163,8 +163,8 @@ test("string sub on union", function()
     run[[
         local lol: "foo" | "bar"
 
-        type_assert(lol:sub(1,1), _ as "f" | "b")
-        type_assert(lol:sub(_ as 2 | 3), _ as "ar" | "o" | "oo" | "r")
+        types.assert(lol:sub(1,1), _ as "f" | "b")
+        types.assert(lol:sub(_ as 2 | 3), _ as "ar" | "o" | "oo" | "r")
     ]]
 end)
 
@@ -212,19 +212,19 @@ end
 
 run[[
     local ok, err = type_pcall(function()
-        type_assert(1, 2)
+        types.assert(1, 2)
         return 1
     end)
 
-    type_assert(ok, false)
-    type_assert_superset(err, _ as string)
+    types.assert(ok, false)
+    types.assert_superset(err, _ as string)
 ]]
 
 run[[
     local ok, val = type_pcall(function() return 1 end)
     
-    type_assert(ok, true)
-    type_assert(val, 1)
+    types.assert(ok, true)
+    types.assert(val, 1)
 ]]
 
 run([[
@@ -235,7 +235,7 @@ run([[
 
     local a: Exclude<|1|2|3, 2|>
 
-    type_assert(a, _ as 1|3)
+    types.assert(a, _ as 1|3)
 ]])
 
 run([[
@@ -246,7 +246,7 @@ run([[
 
     local a: Exclude<|1|2|3, 2|>
 
-    type_assert(a, _ as 11|31)
+    types.assert(a, _ as 11|31)
 ]], "expected 11 | 31 got 1 | 3")
 
 
@@ -260,8 +260,8 @@ test("pairs loop", function()
             v = v + val
         end
 
-        type_assert(k, 6)
-        type_assert(v, 15)
+        types.assert(k, 6)
+        types.assert(v, 15)
     ]]
 end)
 
@@ -297,7 +297,7 @@ run[[
         body = "sum = sum + i"
     })
     
-    type_assert(func(), 55)
+    types.assert(func(), 55)
 ]]
 
 run([[
@@ -321,12 +321,12 @@ run([[
 
 run[[
     local a = {"1", "2", "3"}
-    type_assert(table.concat(a), "123")
+    types.assert(table.concat(a), "123")
 ]]
 
 run[[
     local a = {"1", "2", "3", _ as string}
-    type_assert(table.concat(a), _ as string)
+    types.assert(table.concat(a), _ as string)
 ]]
 
 run[[
@@ -338,7 +338,7 @@ run[[
         }
     }
     
-    type_assert(_ as keysof<|typeof a.b|>, _ as "bar" | "faz" | "foo")
+    types.assert(_ as keysof<|typeof a.b|>, _ as "bar" | "faz" | "foo")
 ]]
 
 run[[
@@ -347,8 +347,8 @@ run[[
     end
 
     local x, y = foo<|1, 2|>
-    type_assert(x, 1)
-    type_assert(y, 2)
+    types.assert(x, 1)
+    types.assert(y, 2)
 ]]
 
 run[[
@@ -377,7 +377,7 @@ run[[
 
 run[[
     local function lol(x)
-        type_assert(x, 1)
+        types.assert(x, 1)
     end
     
     local x: 1 | "STRING"
@@ -386,7 +386,7 @@ run[[
 
 run[[
     local function lol(x)
-        type_assert(x, _ as 1 | "STRING")
+        types.assert(x, _ as 1 | "STRING")
     end
     
     local x: 1 | "STRING"
@@ -397,13 +397,13 @@ run[[
 run[[
     local x: 1.5 | "STRING"
     local y = type(x) == "number" and math.ceil(x)
-    type_assert(y, _ as 2 | false)
+    types.assert(y, _ as 2 | false)
 ]]
 
 run[[
     local str, count = string.gsub("hello there!", "hello", "hi")
-    type_assert<|str, "hi there!"|>
-    type_assert<|count, 1|>
+    types.assert<|str, "hi there!"|>
+    types.assert<|count, 1|>
 ]]
 
 do
@@ -414,16 +414,16 @@ do
             return "foo"
         end
         local ok, err = pcall(test, "foo")
-        type_assert<|ok, false|>
-        type_assert<|err, "LOL"|>
+        types.assert<|ok, false|>
+        types.assert<|err, "LOL"|>
 
 
         local function test(x)
             return "foo"
         end
         local ok, err = pcall(test, "foo")
-        type_assert<|ok, true|>
-        type_assert<|err, "foo"|>
+        types.assert<|ok, true|>
+        types.assert<|err, "foo"|>
     ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
@@ -437,14 +437,14 @@ do
             table_new = "ok"
         end
 
-        type_assert(ok, false)
-        type_assert(table_new, "ok")
+        types.assert(ok, false)
+        types.assert(table_new, "ok")
     ]]
     run[[
         local ok, err = pcall(function() assert(false, "LOL") end)
 
-        type_assert(ok, false)
-        type_assert(err, "LOL")
+        types.assert(ok, false)
+        types.assert(err, "LOL")
     ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
@@ -472,7 +472,7 @@ run[[
 
     extend(META)
 
-    type_assert(META.ExtraField, 1)
+    types.assert(META.ExtraField, 1)
 ]]
 
 run[[
@@ -482,7 +482,7 @@ run[[
     }
     
     local e = _ as Entity
-    type_assert(e:GetBoneCount(), _ as number)
+    types.assert(e:GetBoneCount(), _ as number)
 ]]
 
 run[[
@@ -491,8 +491,8 @@ run[[
     type lol.rofl = function(number, string): string
         
     function lol.rofl(a, b)
-        type_assert(a, _ as number)
-        type_assert(b, _ as string)
+        types.assert(a, _ as number)
+        types.assert(b, _ as string)
         return ""
     end
 ]]
@@ -503,16 +503,16 @@ run[[
     end
     
     local str = test("Foo")
-    type_assert(str, "foo")
+    types.assert(str, "foo")
 ]]
 
 run[[
     local i = 0
     local function test(arg: literal (string | nil))
         if i == 0 then
-            type_assert<|typeof arg, "foo"|>
+            types.assert<|typeof arg, "foo"|>
         elseif i == 1 then
-            type_assert<|typeof arg, nil|>
+            types.assert<|typeof arg, nil|>
         end
         i = i + 1
     end
@@ -524,23 +524,23 @@ run[[
 run[[
     local a,b,c,d =  string.byte(_ as string, _ as number, _ as number)
     
-    type_assert<|a, number|>
-    type_assert<|b, number|>
-    type_assert<|c, number|>
-    type_assert<|d, number|>
+    types.assert<|a, number|>
+    types.assert<|b, number|>
+    types.assert<|c, number|>
+    types.assert<|d, number|>
 ]]
 
 run[[
     local a,b,c,d =  string.byte("foo", 1, 2)
-    type_assert(a, 102)
-    type_assert(b, 111)
-    type_assert(c, nil)
+    types.assert(a, 102)
+    types.assert(b, 111)
+    types.assert(c, nil)
 ]]
 
 run[[
     local a,b,c,d =  string.byte(_ as string, 1, 2)
-    type_assert(a, _ as number)
-    type_assert(b, _ as number)
-    type_assert(c, nil)
-    type_assert(d, nil)
+    types.assert(a, _ as number)
+    types.assert(b, _ as number)
+    types.assert(c, nil)
+    types.assert(d, nil)
 ]]

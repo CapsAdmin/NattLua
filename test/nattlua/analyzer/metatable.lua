@@ -16,7 +16,7 @@ test("index function", function()
 
         local a = setmetatable({}, meta)
 
-        type_assert(a.num, _ as number)
+        types.assert(a.num, _ as number)
     ]]
 end)
 
@@ -148,10 +148,10 @@ test("interface extensions", function()
         local a = x:GetPos()
         local z = a.x + 1
 
-        type_assert(z, _ as number)
+        types.assert(z, _ as number)
 
         local test = x:Test()
-        type_assert(test, _ as number)
+        types.assert(test, _ as number)
     ]]
 end)
 
@@ -192,23 +192,23 @@ test("tutorialspoint", function()
             end
         })
 
-        type_assert(mytable.key1, "value1")
-        type_assert(mytable.key2, "metatablevalue")
+        types.assert(mytable.key1, "value1")
+        types.assert(mytable.key2, "metatablevalue")
     ]]
 
     run[[
         mymetatable = {}
         mytable = setmetatable({key1 = "value1"}, { __newindex = mymetatable })
 
-        type_assert(mytable.key1, "value1")
+        types.assert(mytable.key1, "value1")
 
         mytable.newkey = "new value 2"
-        type_assert(mytable.newkey, nil)
-        type_assert(mymetatable.newkey, "new value 2")
+        types.assert(mytable.newkey, nil)
+        types.assert(mymetatable.newkey, "new value 2")
 
         mytable.key1 = "new value 1"
-        type_assert(mytable.key1, "value1")
-        type_assert(mymetatable.newkey1, nil)
+        types.assert(mytable.key1, "value1")
+        types.assert(mymetatable.newkey1, nil)
     ]]
 end)
 
@@ -228,8 +228,8 @@ run[[
     end
 
     local a,b = META:Faz(META:Foo(), META:Bar())
-    type_assert(a, 1)
-    type_assert(b, 2)
+    types.assert(a, 1)
+    types.assert(b, 2)
 ]]
 
 run[[
@@ -240,12 +240,12 @@ run[[
         }
     })
     
-    type_assert(rawget(a, "bar"), nil)
-    type_assert(rawget(a, "foo"), nil)
-    type_assert(rawget(a, "c"), true)
+    types.assert(rawget(a, "bar"), nil)
+    types.assert(rawget(a, "foo"), nil)
+    types.assert(rawget(a, "c"), true)
     
     rawset(a, "foo", "hello")
-    type_assert(rawget(a, "foo"), "hello")
+    types.assert(rawget(a, "foo"), "hello")
 ]]
 
 run[[
@@ -257,8 +257,8 @@ run[[
         })
     })
     
-    type_assert(self.foo, true)
-    type_assert(self.bar, true)
+    types.assert(self.foo, true)
+    types.assert(self.bar, true)
 ]]
 
 run[[
@@ -277,7 +277,7 @@ run[[
     end
 
     local function test(x: Foo & {extra = boolean | nil})
-        type_assert(x.asdf, true) -- x.asdf will __index to META
+        types.assert(x.asdf, true) -- x.asdf will __index to META
         x.extra = true
         test2(x as Foo) -- x.extra should not be a valid field in test2
     end
@@ -301,7 +301,7 @@ run[[
         foo = 1
     }, meta)
 
-    type_assert(obj:Test(), 1)
+    types.assert(obj:Test(), 1)
 ]]
 
 run([[
@@ -338,7 +338,7 @@ run([[
         foo = 1
     }, meta)
 
-    type_assert(obj:Test(), _ as number)
+    types.assert(obj:Test(), _ as number)
 ]])
 
 run([[
@@ -355,9 +355,9 @@ run([[
     end
 
     local obj = foo()
-    type_assert(obj.data, 0)
-    type_assert(meta.data, nil)
-    type_assert(obj:foo(), 1)
+    types.assert(obj.data, 0)
+    types.assert(meta.data, nil)
+    types.assert(obj:foo(), 1)
 ]])
 
 run[[
@@ -379,7 +379,7 @@ run[[
     })
 
     local newvector = Vector(1,2,3) + Vector(100,100,100)
-    type_assert(newvector, _ as {x = number, y = number, z = number})
+    types.assert(newvector, _ as {x = number, y = number, z = number})
 ]]
 
 
@@ -403,7 +403,7 @@ run([[
 
     local new_vector = Vector(1,2,3) + 4
 
-    type_assert(new_vector, _ as {x = number, y = number, z = number})
+    types.assert(new_vector, _ as {x = number, y = number, z = number})
 ]], "4 is not the same type as")
 
 run[[
@@ -418,7 +418,7 @@ run[[
     local x: code_ptr
     local y = x + 50 - 1
     
-    type_assert(y, _ as code_ptr)
+    types.assert(y, _ as code_ptr)
 ]]
 
 run[[
@@ -428,7 +428,7 @@ run[[
 
     local lol = tbl({foo = 1337})
 
-    type_assert(lol, 1337)
+    types.assert(lol, 1337)
 ]]
 
 run[[
@@ -437,7 +437,7 @@ run[[
     setmetatable<|tbl, tbl|>
 
     local lol = tbl({foo = 1337})
-    type_assert(lol, 1337)
+    types.assert(lol, 1337)
 ]]
 
 run[[
@@ -462,7 +462,7 @@ run[[
     §analyzer:AnalyzeUnreachableCode()
 
     local type ret = return_type<|meta.Foo|>
-    type_assert<|ret, 2 | 3|>
+    types.assert<|ret, 2 | 3|>
 ]]
 
 run[[
@@ -482,7 +482,7 @@ run[[
     end
 
     local s = setmetatable({Foo = 1337}, META)
-    type_assert(s:GetFoo(), _ as number)
+    types.assert(s:GetFoo(), _ as number)
 ]]
 
 run[[
@@ -492,13 +492,13 @@ run[[
     function META:SetParent(parent : number | nil)
         if parent then
             self.parent = parent
-            type_assert(self.parent, _ as number)
+            types.assert(self.parent, _ as number)
         else
             self.parent = nil
-            type_assert(self.parent, _ as nil)
+            types.assert(self.parent, _ as nil)
         end
 
-    type_assert(self.parent, _ as nil | number)
+    types.assert(self.parent, _ as nil | number)
     end
 ]]
 
@@ -539,8 +539,8 @@ run[[
     local self = setmetatable({} as META.@Self, META)
     self:SetFoo(true)
     local b = self:GetFoo()
-    type_assert<|b, boolean|>
-    type_assert<|self.Foo, boolean|>
+    types.assert<|b, boolean|>
+    types.assert<|self.Foo, boolean|>
 ]]
 
 run[[
@@ -552,8 +552,8 @@ run[[
     }
 
     local function test(x: META.@Self & {bar = false})
-        type_assert_superset<|x, {foo = true, bar = false}|>
-        type_assert_superset<|META.@Self, {foo = true}|>
+        types.assert_superset<|x, {foo = true, bar = false}|>
+        types.assert_superset<|META.@Self, {foo = true}|>
     end
 
 ]]
@@ -640,11 +640,11 @@ run[[
     local felix = Cat('Felix','Tabby')
     local leo = Lion('Leo','African')
     
-    type_assert(leo:is_a(Animal), true)
-    type_assert(leo:is_a(Cat), true)
-    type_assert(leo:is_a(Dog), false)
-    type_assert(leo:__tostring(), "Leo: roar")
-    type_assert(leo:speak(), "roar")
+    types.assert(leo:is_a(Animal), true)
+    types.assert(leo:is_a(Cat), true)
+    types.assert(leo:is_a(Dog), false)
+    types.assert(leo:__tostring(), "Leo: roar")
+    types.assert(leo:speak(), "roar")
 
 
 ]]
@@ -702,7 +702,7 @@ run[[
     
     function Animal:move(distanceInMeters: number | nil)
         distanceInMeters = distanceInMeters or 0
-        type_assert(self.name .. " moved " .. distanceInMeters .. "m.", _ as string)
+        types.assert(self.name .. " moved " .. distanceInMeters .. "m.", _ as string)
     end
     
 

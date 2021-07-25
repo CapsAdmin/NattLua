@@ -5,6 +5,6 @@ run[[
     local type A = Tuple<|1,2|>
     local type B = Tuple<|3,4|>
     local type C = A .. B
-    type_assert<|C, Tuple<|1,2,3,4|>|>
+    types.assert<|C, Tuple<|1,2,3,4|>|>
 ]]
 

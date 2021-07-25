@@ -4,7 +4,7 @@ local transpile = T.Transpile
 test("for i = 1, 10000", function()
     run[[
         for i = 1, 10000 do
-            type_assert(i, _ as 1 .. 10000)
+            types.assert(i, _ as 1 .. 10000)
         end
     ]]
 end)
@@ -12,7 +12,7 @@ end)
 test("for i = 1, number", function()
     run[[
         for i = 1, _ as number do
-            type_assert(i, _ as number)
+            types.assert(i, _ as number)
         end
     ]]
 end)
@@ -21,10 +21,10 @@ pending[[
     --for i = 1, number is an uncertain scope
     local a = 0
     for i = 1, _ as number do
-        type_assert(i, _ as number)
+        types.assert(i, _ as number)
         a = 1
     end
-    type_assert(a, _ as number)
+    types.assert(a, _ as number)
 ]]
 
 pending[[
@@ -32,7 +32,7 @@ pending[[
     for i = 1, _ as number do
         a = a + 1
     end
-    type_assert(a, _ as number) -- we could say that a+=1 would make a 1 .. inf but not sure if it's worth it
+    types.assert(a, _ as number) -- we could say that a+=1 would make a 1 .. inf but not sure if it's worth it
 ]]
 
 pending("annotation", function() 
@@ -64,11 +64,11 @@ run[[
         lol = lol + 1
 
         if i == 3 then
-            type_assert("should never reach")
+            types.assert("should never reach")
         end
     end
 
-    type_assert(lol, 2)
+    types.assert(lol, 2)
 ]]
 
 
@@ -85,8 +85,8 @@ pending[[
         local y = x
         -- when ran as merged scope error("lol") doesn't return properly
     
-        type_assert(x, 108)
-        type_assert_superset(i, _ as 1 | 2 | 3)
+        types.assert(x, 108)
+        types.assert_superset(i, _ as 1 | 2 | 3)
     end
 ]]
 
@@ -96,15 +96,15 @@ run[[
     local check = false
     for i = 1, 10 do
         x = x + i
-        type_assert(string_byte, string.byte)
+        types.assert(string_byte, string.byte)
         
         if check then
-            type_assert(i, _ as 1 | 10 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
+            types.assert(i, _ as 1 | 10 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
         end
         
         if i == 10 then
             check = true
         end
     end
-    type_assert(x,55)
+    types.assert(x,55)
 ]]

@@ -4,13 +4,13 @@ local E = T.RunCode
 local String = T.String
 
 -- check that type assert works
-E("type_assert(1, 2)", "expected.-2 got 1")
-E("type_assert(nil as 1|2, 1)", "expected.-1")
-E("type_assert<|string, number|>", "expected number got string")
+E("types.assert(1, 2)", "expected.-2 got 1")
+E("types.assert(nil as 1|2, 1)", "expected.-1")
+E("types.assert<|string, number|>", "expected number got string")
 
-R"type_assert(not true, false)"
-R"type_assert(not 1, false)"
-R"type_assert(nil == nil, true)"
+R"types.assert(not true, false)"
+R"types.assert(not 1, false)"
+R"types.assert(nil == nil, true)"
 
 test("declaring base types", function()
     R[[
@@ -64,7 +64,7 @@ test("declaring base types", function()
         }
 
         local type Foo = Symbol("asdf")
-        type_assert<|Foo == "asdf", false|>
+        types.assert<|Foo == "asdf", false|>
     ]]
 end)
 
@@ -83,14 +83,14 @@ test("escape comments", function()
             c --[[#: string]]) 
         end
          
-        type_assert<|argument_type<|foo, 1|>, string|>
-        type_assert<|argument_type<|foo, 2|>, number|>
-        type_assert<|argument_type<|foo, 3|>, string|>
+        types.assert<|argument_type<|foo, 1|>, string|>
+        types.assert<|argument_type<|foo, 2|>, number|>
+        types.assert<|argument_type<|foo, 3|>, string|>
     ]=])
 
     R[=[
         --[[# local type a = 1 ]]
-        type_assert(a, 1)
+        types.assert(a, 1)
     ]=]
 end)
 
@@ -105,8 +105,8 @@ test("default declaration is literal", function()
         local t = {k = 1}
         local b = t.k
 
-        type_assert_literal<|a|>
-        type_assert_literal<|b|>
+        types.assert_literal<|a|>
+        types.assert_literal<|b|>
     ]])
 end)
 
@@ -270,7 +270,7 @@ end)
 
 R[[
     local num = 0b01 -- binary numbers
-    type_assert(num, 1)
+    types.assert(num, 1)
 ]]
 
 R([[
@@ -322,7 +322,7 @@ R[[
     a:add(1)
     a:add(2)
     a:add(3)
-    type_assert(a:get(), {1,2,3})
+    types.assert(a:get(), {1,2,3})
 ]]
 
 R[[
@@ -333,7 +333,7 @@ R[[
     }|>
     
     local x: FOO = 2
-    type_assert(x, 2)
+    types.assert(x, 2)
 
     -- make a way to undefine enums
     type A = nil
@@ -349,7 +349,7 @@ R[[
 
     local x = {} as Foo
 
-    type_assert(x.y.y.y.x, _ as number)
+    types.assert(x.y.y.y.x, _ as number)
 ]]
 
 R[[
@@ -360,7 +360,7 @@ R[[
 
     local x = {} as Foo
 
-    type_assert(x.y.y.y.x, _ as number)
+    types.assert(x.y.y.y.x, _ as number)
 ]]
 
 
@@ -372,7 +372,7 @@ R[[
 
     local x = {} as Foo
 
-    type_assert(x.y.y.y.x, _ as number)
+    types.assert(x.y.y.y.x, _ as number)
 ]]
 
 test("forward declare types", function()
@@ -385,8 +385,8 @@ test("forward declare types", function()
 
         local x: Pong
 
-        type_assert(x.ping.pong.ping, Ping)
-        type_assert(x.ping.pong.ping.pong, Pong)
+        types.assert(x.ping.pong.ping, Ping)
+        types.assert(x.ping.pong.ping.pong, Pong)
     ]]
 end)
 
@@ -459,9 +459,9 @@ R[[
 
     local x,y,z = t.foo(a, b)
     
-    type_assert(x, _ as Any)
-    type_assert(y, _ as Any)
-    type_assert(z, _ as Any)
+    types.assert(x, _ as Any)
+    types.assert(y, _ as Any)
+    types.assert(z, _ as Any)
 ]]
 
 R[[
@@ -504,13 +504,13 @@ R[[
     -- when using in a comparison, the empty tuple should become a nil value instead
     local a = nothing() == nil
     
-    type_assert(a, true)
+    types.assert(a, true)
 ]]
 
 R[[
     a = {b = {c = {d = {lol = true}}}}
     function a.b.c.d:e()
-        type_assert(self.lol, true)
+        types.assert(self.lol, true)
     end
     a.b.c.d:e()
     a = nil
@@ -521,7 +521,7 @@ R[[
     function a.b.c.d:e()
         return self.lol
     end
-    type_assert(a.b.c.d:e(), true)
+    types.assert(a.b.c.d:e(), true)
 ]]
 
 R[[
@@ -534,22 +534,22 @@ R[[
         return true
     end
 
-    type_assert(lib.myfunc, _ as function(number, string): boolean)
+    types.assert(lib.myfunc, _ as function(number, string): boolean)
 ]]
 
 R[[
     local val: nan
-    type_assert(val, 0/0)
+    types.assert(val, 0/0)
 ]]
 
 R[[
     local val: nil
-    type_assert(val, nil)
+    types.assert(val, nil)
 ]]
 
 R[[
     local {Foo} = {}
-    type_assert(Foo, nil)
+    types.assert(Foo, nil)
 ]]
 
 R([[
@@ -558,21 +558,21 @@ R([[
 
 R[[
     local function test(num: number)
-        type_assert<|num, number|>
+        types.assert<|num, number|>
         return num
     end
     
     local a = test(1)
-    type_assert<|a, number|>
+    types.assert<|a, number|>
     
     
     local function test(num)
-        type_assert<|num, 1|>
+        types.assert<|num, 1|>
         return num
     end
     
     local a = test(1)
-    type_assert<|a, 1|>
+    types.assert<|a, 1|>
 ]]
 
 R[[
@@ -586,7 +586,7 @@ R[[
     
     local tbl = {Foo = 1}
     mutate(tbl)
-    type_assert<|tbl.Foo, 5|>
+    types.assert<|tbl.Foo, 5|>
     
     local function mutate(a)
         a.Foo = 5
@@ -594,12 +594,12 @@ R[[
     
     local tbl: Shape = {Foo = 1}
     mutate(tbl)
-    type_assert_superset<|tbl.Foo, number|>
+    types.assert_superset<|tbl.Foo, number|>
 ]]
 
 R[[
     local T: Tuple<|boolean|> | Tuple<|1|2|>
-    type_assert<|T, Tuple<|boolean|> | Tuple<|1|2|>|>
+    types.assert<|T, Tuple<|boolean|> | Tuple<|1|2|>|>
 ]]
 
 R[[
@@ -618,7 +618,7 @@ R[[
     local function build(name: string)
         return function()
             while math.random() > 0.5 do end
-            type_assert(name, _ as string)
+            types.assert(name, _ as string)
         end
     end
     

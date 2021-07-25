@@ -3,7 +3,7 @@ local run = T.RunCode
 
 run[[
     local func = function() 
-        type_assert(foo, 1337)
+        types.assert(foo, 1337)
     end
 
     setfenv(func, {
@@ -12,5 +12,5 @@ run[[
 
     func()
 
-    type_assert(getfenv(func).foo, 1337)
+    types.assert(getfenv(func).foo, 1337)
 ]]

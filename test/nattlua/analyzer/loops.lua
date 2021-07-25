@@ -12,8 +12,8 @@ test("pairs on literal table", function()
             val_sum = val_sum + val
         end
         
-        type_assert(key_sum, 6)
-        type_assert(val_sum, 6)
+        types.assert(key_sum, 6)
+        types.assert(val_sum, 6)
     ]]
 end)
 
@@ -27,12 +27,12 @@ pending("pairs on non literal table", function()
             key_sum = key_sum + key
             val_sum = val_sum + val
 
-            type_assert(key, _ as number)
-            type_assert(val, _ as number)
+            types.assert(key, _ as number)
+            types.assert(val, _ as number)
         end
         
-        type_assert(key_sum, _ as number | 0)
-        type_assert(val_sum, _ as number | 0)
+        types.assert(key_sum, _ as number | 0)
+        types.assert(val_sum, _ as number | 0)
     ]]
 end)
 
@@ -42,8 +42,8 @@ pending("pairs on non literal table", function()
         local tbl:{[number] = number} = {1,2,3}
         
         for key, val in pairs(tbl) do
-            type_assert(key, _ as number)
-            type_assert(val, _ as number)
+            types.assert(key, _ as number)
+            types.assert(val, _ as number)
         end
     ]]
 end)
@@ -57,8 +57,8 @@ test("pairs on any should at least make k,v any", function()
             val = v
         end
 
-        type_assert(key, _ as any | nil)
-        type_assert(val, _ as any | nil)
+        types.assert(key, _ as any | nil)
+        types.assert(val, _ as any | nil)
     ]]
 end)
 
@@ -67,7 +67,7 @@ run[[
     for i = 1, 10 do
         x = x + i
     end
-    type_assert(x, 55)
+    types.assert(x, 55)
 ]]
 
 run[[
@@ -78,7 +78,7 @@ run[[
             break
         end
     end
-    type_assert(x, 10)
+    types.assert(x, 10)
 ]]
 
 run[[
@@ -89,7 +89,7 @@ run[[
             break
         end
     end
-    type_assert(x, _ as number)
+    types.assert(x, _ as number)
 ]]
 
 run[[
@@ -102,15 +102,15 @@ run[[
             b = 1
         end
     end
-    type_assert(a, _ as number)
-    type_assert(b, _ as number)
+    types.assert(a, _ as number)
+    types.assert(b, _ as number)
 ]]
 
 run[[
     local t = {foo = true}
     for k,v in pairs(t) do
-        type_assert(k, _ as "foo")
-        type_assert(v, _ as true)
+        types.assert(k, _ as "foo")
+        types.assert(v, _ as true)
     end
 ]]
 
@@ -121,7 +121,7 @@ pending[[
     }
 
     for k, v in pairs(tbl) do
-        type_assert(k, _ as "foo" | "bar")
-        type_assert(v, _ as number | string)
+        types.assert(k, _ as "foo" | "bar")
+        types.assert(v, _ as number | string)
     end
 ]]

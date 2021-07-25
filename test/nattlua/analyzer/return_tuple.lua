@@ -39,16 +39,16 @@ run[[
 run[[
     local foo: function(): true | false, string | nil
     local ok, err = foo()
-    type_assert(ok, _ as true | false)
-    type_assert(err, _ as nil | string)
+    types.assert(ok, _ as true | false)
+    types.assert(err, _ as nil | string)
 ]]
 
 run[[
     local foo: function(): Tuple<|true, 1|> | Tuple<|false, string, 2|>
     local x,y,z = foo() 
-    type_assert(x, _ as true | false)
-    type_assert(y, _ as 1 | string)
-    type_assert(z, _ as 2 | nil)
+    types.assert(x, _ as true | false)
+    types.assert(y, _ as 1 | string)
+    types.assert(z, _ as 2 | nil)
 ]]
 
 run([[

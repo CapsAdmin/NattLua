@@ -7,19 +7,19 @@ run[[
 local   a,b,c = 1,2,3
         d,e,f = 4,5,6
 
-type_assert(a, 1)
-type_assert(b, 2)
-type_assert(c, 3)
+types.assert(a, 1)
+types.assert(b, 2)
+types.assert(c, 3)
 
-type_assert(d, 4)
-type_assert(e, 5)
-type_assert(f, 6)
+types.assert(d, 4)
+types.assert(e, 5)
+types.assert(f, 6)
 
 local   vararg_1 = ... as any
         vararg_2 = ... as any
 
-type_assert(vararg_1, _ as any)
-type_assert(vararg_2, _ as any)
+types.assert(vararg_1, _ as any)
+types.assert(vararg_2, _ as any)
 
 local function test(...)
     return a,b,c, ...
@@ -27,20 +27,20 @@ end
 
 A, B, C, D = test(), 4
 
-type_assert(A, 1)
-type_assert(B, 4)
-type_assert(C, nil)
-type_assert(D, nil)
+types.assert(A, 1)
+types.assert(B, 4)
+types.assert(C, nil)
+types.assert(D, nil)
 
 local z,x,y,æ,ø,å = test(4,5,6)
 local novalue
 
-type_assert(z, 1)
-type_assert(x, 2)
-type_assert(y, 3)
-type_assert(æ, 4)
-type_assert(ø, 5)
-type_assert(å, 6)
+types.assert(z, 1)
+types.assert(x, 2)
+types.assert(y, 3)
+types.assert(æ, 4)
+types.assert(ø, 5)
+types.assert(å, 6)
 
 A, B, C, D = nil, nil, nil, nil
 

@@ -26,20 +26,6 @@ function ErrorReturn<|...|>
 	return Tuple<|...|> | Tuple<|nil, string|>
 end
 
-function nilable<|tbl: {[string] = any}|>
-	tbl = copy(tbl)
-
-	for key, val in pairs(tbl) do
-		tbl[key] = val | nil
-	end
-
-	return tbl
-end
-
-type function copy(obj: any)
-	return obj:Copy()
-end
-
 type function return_type(func, i: number | nil)
 	local i = i and i:GetData() or 1
 	return func:GetReturnTypes():Slice(i, i)
@@ -87,6 +73,9 @@ type function keysof(tbl: Table)
 	return union
 end
 
+
+--
+
 type function seal(tbl)
 	if tbl:GetContract() then return end
 
@@ -101,4 +90,18 @@ type function seal(tbl)
 	end
 
 	tbl:SetContract(tbl)
+end
+
+function nilable<|tbl: {[string] = any}|>
+	tbl = copy(tbl)
+
+	for key, val in pairs(tbl) do
+		tbl[key] = val | nil
+	end
+
+	return tbl
+end
+
+type function copy(obj: any)
+	return obj:Copy()
 end

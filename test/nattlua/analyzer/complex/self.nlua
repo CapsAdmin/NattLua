@@ -1,6 +1,6 @@
 do
     local syntax = require("nattlua.syntax.syntax")
-    type_assert(#syntax.GetSymbols(), 44)
+    types.assert(#syntax.GetSymbols(), 44)
 end
 
 do
@@ -19,7 +19,7 @@ do
 
     local token = new_token()
 
-    type_assert(token, _ as {
+    types.assert(token, _ as {
         type = string,
         value = string,
         whitespace = boolean,
@@ -55,8 +55,8 @@ do
 
     local tk = NewToken("symbol", 1, 2, false)
 
-    type_assert(tk.start, _ as number)
-    type_assert(tk.stop, _ as number)
+    types.assert(tk.start, _ as number)
+    types.assert(tk.stop, _ as number)
 end
 
 do
@@ -90,7 +90,7 @@ do
 
     local self = setmetatable({}, META)
 
-    type_assert(self:Foo(), _ as number)
+    types.assert(self:Foo(), _ as number)
 end
 
 local Lexer = require("nattlua.lexer.lexer")
@@ -98,12 +98,12 @@ local Lexer = require("nattlua.lexer.lexer")
 do
     local base = require("nattlua.types.base")
     §analyzer:AnalyzeUnreachableCode()
-    type_assert<|argument_type<|base.MakeUnique|>, Tuple<|base.@Self, true | false|>|>
+    types.assert<|argument_type<|base.MakeUnique|>, Tuple<|base.@Self, true | false|>|>
 end
 
 do
     local {Number} = require("nattlua.types.number")
     §analyzer:AnalyzeUnreachableCode()
     local num = Number(1337)
-    type_assert(num:GetData(), _ as number)
+    types.assert(num:GetData(), _ as number)
 end

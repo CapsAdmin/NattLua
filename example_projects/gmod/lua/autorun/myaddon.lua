@@ -1,2 +1,2 @@
-type_assert(CLIENT, true)
-type_assert(SERVER, true)
+types.assert(CLIENT, true)
+types.assert(SERVER, true)

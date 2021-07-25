@@ -8,9 +8,9 @@ run([[
         return lol + 4, true
     end
     local d = b(2)
-    type_assert(d, 6)
+    types.assert(d, 6)
     local d = b(a)
-    type_assert(d, "foo")
+    types.assert(d, "foo")
 ]])
 
 
@@ -31,9 +31,9 @@ run[[
     local b = test(5) -- true
     local c = test(1) -- "lol"
 
-    type_assert(a, false)
-    type_assert(b, true)
-    type_assert(c, "lol")
+    types.assert(a, false)
+    types.assert(b, true)
+    types.assert(c, "lol")
 ]]
 
 run[[
@@ -50,7 +50,7 @@ run[[
     end
 
     local a = test(20)
-    type_assert(a, _ as true | false)
+    types.assert(a, _ as true | false)
 ]]
 
 run[[
@@ -62,12 +62,12 @@ run[[
     end
 
     if MAYBE2 then
-        type_assert<|x, 0 | 1|>
+        types.assert<|x, 0 | 1|>
         x = 2
     end
 
     if MAYBE then
-        type_assert<|x, 1 | 2|>
+        types.assert<|x, 1 | 2|>
     end
 
 ]]
@@ -77,11 +77,11 @@ run([[
     local a = false
 
     if _ as any then
-        type_assert(a, false)
+        types.assert(a, false)
         a = true
-        type_assert(a, true)
+        types.assert(a, true)
     end
-    type_assert(a, _ as false | true)
+    types.assert(a, _ as false | true)
 ]])
 
 run([[
@@ -89,38 +89,38 @@ run([[
     local a = false
 
     if _ as any then
-        type_assert(a, false)
+        types.assert(a, false)
         a = true
-        type_assert(a, true)
+        types.assert(a, true)
     else
-        type_assert(a, false)
+        types.assert(a, false)
         a = 1
-        type_assert(a, 1)
+        types.assert(a, 1)
     end
 
-    type_assert(a, _ as true | 1)
+    types.assert(a, _ as true | 1)
 ]])
 
 run([[
     local a: nil | 1
 
     if a then
-        type_assert(a, _ as 1)
+        types.assert(a, _ as 1)
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]])
 
 run([[
     local a: nil | 1
 
     if a then
-        type_assert(a, _ as 1 | 1)
+        types.assert(a, _ as 1 | 1)
     else
-        type_assert(a, _ as nil | nil)
+        types.assert(a, _ as nil | nil)
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]])
 
 run([[
@@ -129,42 +129,42 @@ run([[
     if MAYBE then
         a = 1
     end
-    type_assert(a, _ as 0 | 1)
+    types.assert(a, _ as 0 | 1)
 ]])
 
 run[[
     local a: nil | 1
 
     if a then
-        type_assert(a, _ as 1 | 1)
+        types.assert(a, _ as 1 | 1)
         if a then
             if a then
-                type_assert(a, _ as 1 | 1)
+                types.assert(a, _ as 1 | 1)
             end
-            type_assert(a, _ as 1 | 1)
+            types.assert(a, _ as 1 | 1)
         end
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]]
 
 run([[
     local a: nil | 1
 
     if not a then
-        type_assert(a, _ as nil | nil)
+        types.assert(a, _ as nil | nil)
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]])
 
 run[[
     local a: true | false
 
     if not a then
-        type_assert(a, false)
+        types.assert(a, false)
     else
-        type_assert(a, true)
+        types.assert(a, true)
     end
 ]]
 
@@ -172,23 +172,23 @@ run([[
     local a: number | string
 
     if type(a) == "number" then
-        type_assert(a, _ as number)
+        types.assert(a, _ as number)
     end
 
-    type_assert(a, _ as number | string)
+    types.assert(a, _ as number | string)
 ]])
 
 run[[
     local a: 1 | false | true
 
     if type(a) == "boolean" then
-        type_assert(a, _ as boolean)
+        types.assert(a, _ as boolean)
     end
 
     if type(a) ~= "boolean" then
-        type_assert(a, 1)
+        types.assert(a, 1)
     else
-        type_assert(a, _ as boolean)
+        types.assert(a, _ as boolean)
     end
 ]]
 
@@ -226,7 +226,7 @@ run([[
         c = c - 1
     end
 
-    type_assert(c, 1)
+    types.assert(c, 1)
 ]])
 
 
@@ -242,47 +242,47 @@ run([[
         c = c - 1
     end
 
-    type_assert(c, _ as -1 | 1)
+    types.assert(c, _ as -1 | 1)
 ]])
 
 
 run[[
     local a = false
 
-    type_assert(a, false)
+    types.assert(a, false)
 
     if maybe then
         a = true
-        type_assert(a, true)
+        types.assert(a, true)
     end
 
-    type_assert(a, _ as true | false)
+    types.assert(a, _ as true | false)
 ]]
 
 run[[
     local a: true | false
 
     if a then
-        type_assert(a, true)
+        types.assert(a, true)
     else
-        type_assert(a, false)
+        types.assert(a, false)
     end
 
     if not a then
-        type_assert(a, false)
+        types.assert(a, false)
     else
-        type_assert(a, true)
+        types.assert(a, true)
     end
 
     if not a then
         if a then
-            type_assert("this should never be reached")
+            types.assert("this should never be reached")
         end
     else
         if a then
-            type_assert(a, true)
+            types.assert(a, true)
         else
-            type_assert("unreachable code!!")
+            types.assert("unreachable code!!")
         end
     end
 ]]
@@ -292,28 +292,28 @@ run[[
     local a: nil | 1
         
     if a then
-        type_assert(a, _ as 1 | 1)
+        types.assert(a, _ as 1 | 1)
         if a then
             if a then
-                type_assert(a, _ as 1 | 1)
+                types.assert(a, _ as 1 | 1)
             end
-            type_assert(a, _ as 1 | 1)
+            types.assert(a, _ as 1 | 1)
         end
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]]
 
 run[[
     local x: false | 1
     assert(not x)
-    type_assert(x, false)
+    types.assert(x, false)
 ]]
 
 run[[
     local x: false | 1
     assert(x)
-    type_assert(x, 1)
+    types.assert(x, 1)
 ]]
 
 run[[
@@ -321,7 +321,7 @@ run[[
     
     if x then return end
     
-    type_assert(x, false)
+    types.assert(x, false)
 ]]
 
 run[[
@@ -329,7 +329,7 @@ run[[
     
     if not x then return end
     
-    type_assert(x, true)
+    types.assert(x, true)
 ]]
 
 run[[
@@ -341,19 +341,19 @@ run[[
         c = c - 1
     end
 
-    type_assert(c, _ as -1 | 1)
+    types.assert(c, _ as -1 | 1)
 ]]
 
 run([[
     local a: nil | 1
     if not a then return end
-    type_assert(a, 1)
+    types.assert(a, 1)
 ]])
 
 run([[
     local a: nil | 1
     if a then return end
-    type_assert(a, nil)
+    types.assert(a, nil)
 ]])
 
 
@@ -366,7 +366,7 @@ do
             error("!")
         end
 
-        type_assert(a, true)
+        types.assert(a, true)
     ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
@@ -378,7 +378,7 @@ run[[
         a = false
     end
 
-    type_assert(a, _ as true | false)
+    types.assert(a, _ as true | false)
 ]]
 
 run[[
@@ -388,7 +388,7 @@ run[[
         a = false
     end
 
-    type_assert(a, _ as false)
+    types.assert(a, _ as false)
 ]]
 
 run[[
@@ -398,7 +398,7 @@ run[[
         a = false
     end
 
-    type_assert(a, _ as true | false)
+    types.assert(a, _ as true | false)
 ]]
 
 run[[
@@ -406,12 +406,12 @@ run[[
     local b = true
 
     for k,v in pairs(a) do
-        type_assert(k, _ as string)
-        type_assert(v, _ as number)
+        types.assert(k, _ as string)
+        types.assert(v, _ as number)
         b = false
     end
 
-    type_assert(b, _ as true | false)
+    types.assert(b, _ as true | false)
 ]]
 
 run[[
@@ -422,7 +422,7 @@ run[[
         b = false
     end
 
-    type_assert(b, _ as false)
+    types.assert(b, _ as false)
 ]]
 
 run([[
@@ -430,9 +430,9 @@ run([[
 
     if not a then
         -- shouldn't reach
-        type_assert(1, 2)
+        types.assert(1, 2)
     else
-        type_assert(1, 1)
+        types.assert(1, 1)
     end
 ]])
 
@@ -440,7 +440,7 @@ run([[
     local type a = {}
     if not a then
         -- shouldn't reach
-        type_assert(1, 2)
+        types.assert(1, 2)
     end
 ]])
 
@@ -448,17 +448,17 @@ run[[
     local a: true | false | number | "foo" | "bar" | nil | 1
 
     if a then
-        type_assert(a, _ as true | number | "foo" | "bar" | 1)
+        types.assert(a, _ as true | number | "foo" | "bar" | 1)
     else
-        type_assert(a, _ as false | nil)
+        types.assert(a, _ as false | nil)
     end
 
     if not a then
-        type_assert(a, _ as false | nil)
+        types.assert(a, _ as false | nil)
     end
 
     if a == "foo" then
-        type_assert(a, "foo")
+        types.assert(a, "foo")
     end
 ]]
 
@@ -471,7 +471,7 @@ run[[
 
     do
         do
-            type_assert(x, true)
+            types.assert(x, true)
         end
     end
 ]]
@@ -534,7 +534,7 @@ do
             error("!")
         end
 
-        type_assert(a, 1)
+        types.assert(a, 1)
     ]]
 end
 
@@ -545,12 +545,12 @@ run[[
         assert(false)
     end
 
-    type_assert(a, 1)
+    types.assert(a, 1)
 ]]
 
 run[[
     local a = assert(_ as 1 | nil)
-    --type_assert(a, 1)
+    --types.assert(a, 1)
 ]]
 
 
@@ -559,7 +559,7 @@ run[[
     local x = 0
     if MAYBE() then x = x + 1 end -- 1
     if MAYBE() then x = x - 1 end -- -1 | 0
-    type_assert(x, _ as -1 | 0 | 1)
+    types.assert(x, _ as -1 | 0 | 1)
 ]]
 
 run[[
@@ -569,7 +569,7 @@ run[[
     else
         x = -1
     end
-    type_assert(x, _ as -1 | 1)
+    types.assert(x, _ as -1 | 1)
 ]]
 
 run[[
@@ -577,7 +577,7 @@ run[[
     if MAYBE then
         x = 1
     end
-    type_assert(x, _ as 0 | 1)
+    types.assert(x, _ as 0 | 1)
 ]]
 
 run[[
@@ -591,7 +591,7 @@ run[[
         x = 3
     end
 
-    type_assert(x, _ as 1|2|3)
+    types.assert(x, _ as 1|2|3)
 
     x = nil
 ]]
@@ -607,7 +607,7 @@ run[[
         foo = true
     end
 
-    type_assert(foo, true)
+    types.assert(foo, true)
 ]]
 
 
@@ -615,11 +615,11 @@ run[[
     local x: true | false | 2
 
     if x then    
-        type_assert(x, _ as true | 2)
+        types.assert(x, _ as true | 2)
         x = 1
     end
 
-    type_assert<|x, true | false | 2 | 1|>
+    types.assert<|x, true | false | 2 | 1|>
 ]]
 
 run[[
@@ -631,7 +631,7 @@ run[[
         end
     end
 
-    type_assert(x, _ as 1 | 2)
+    types.assert(x, _ as 1 | 2)
 ]]
 
 run[[
@@ -643,7 +643,7 @@ run[[
         x = 2
     end
 
-    type_assert(x, _ as 2)
+    types.assert(x, _ as 2)
 ]]
 
 run[[
@@ -657,7 +657,7 @@ run[[
         x = 3
     end
 
-    type_assert(x, _ as 1 | 2 | 3)
+    types.assert(x, _ as 1 | 2 | 3)
 ]]
 
 
@@ -667,20 +667,20 @@ run[[
     local x = 1
 
     if MAYBE then
-        type_assert<|x, 1|>
+        types.assert<|x, 1|>
         x = 2
-        type_assert<|x, 2|>
+        types.assert<|x, 2|>
     elseif MAYBE then
-        type_assert<|x, 1|>
+        types.assert<|x, 1|>
         x = 3
-        type_assert<|x, 3|>
+        types.assert<|x, 3|>
     elseif MAYBE then
-        type_assert<|x, 1|>
+        types.assert<|x, 1|>
         x = 4
-        type_assert<|x, 4|>
+        types.assert<|x, 4|>
     end
 
-    type_assert<|x, 1 | 2 | 3 | 4|>
+    types.assert<|x, 1 | 2 | 3 | 4|>
 ]]
 
 run[[
@@ -693,27 +693,27 @@ run[[
         return
     end
 
-    type_assert(foo, true)
+    types.assert(foo, true)
 ]]
 
 run[=[
     
     do
         local x = 1
-        type_assert<|x, 1|>
+        types.assert<|x, 1|>
     end
     
     do
         local x = 1
         do
-            type_assert<|x, 1|>
+            types.assert<|x, 1|>
         end
     end
     
     do
         local x = 1
         x = 2
-        type_assert<|x, 2|>
+        types.assert<|x, 2|>
     end
     
     do
@@ -721,7 +721,7 @@ run[=[
         if true then
             x = 2
         end
-        type_assert<|x, 2|>
+        types.assert<|x, 2|>
     end
     
     do
@@ -729,40 +729,40 @@ run[=[
         if MAYBE then
             x = 2
         end
-        type_assert<|x, 1 | 2|>
+        types.assert<|x, 1 | 2|>
     end
     
     do
         local x = 1
         if MAYBE then
-            type_assert<|x, 1|>
+            types.assert<|x, 1|>
             x = 2
-            type_assert<|x, 2|>
+            types.assert<|x, 2|>
         end
-        type_assert<|x, 1|2|>
+        types.assert<|x, 1|2|>
     end
     
     do
         local x = 1
     
         if MAYBE then
-            type_assert<|x, 1|>
+            types.assert<|x, 1|>
             x = 1.5
-            type_assert<|x, 1.5|>
+            types.assert<|x, 1.5|>
             x = 1.75
-            type_assert<|x, 1.75|>
+            types.assert<|x, 1.75|>
             if MAYBE then
                 x = 2
                 if MAYBE then
                     x = 2.5
                 end
-                type_assert<|x, 2 | 2.5|>
+                types.assert<|x, 2 | 2.5|>
             end
             x = 3
-            type_assert<|x, 3|>
+            types.assert<|x, 3|>
         end
         
-        type_assert<|x, 1 | 3|>
+        types.assert<|x, 1 | 3|>
     end
     
     do return end
@@ -775,15 +775,15 @@ run[=[
                     x = 1337
                 end
             end
-            type_assert<|x, 1337|>
+            types.assert<|x, 1337|>
             x = 2
-            type_assert<|x, 2|>
+            types.assert<|x, 2|>
         else
-            type_assert<|x, 1|>
+            types.assert<|x, 1|>
             x = 66
         end
         
-        type_assert<|x, 1 | 2|>
+        types.assert<|x, 1 | 2|>
     end 
     
     do
@@ -791,12 +791,12 @@ run[=[
     
         if MAYBE then
             x = 2
-            type_assert<|x, 2|>
+            types.assert<|x, 2|>
         else
-            type_assert<|x, 1|>
+            types.assert<|x, 1|>
             x = 3
         end
-        type_assert<|x, 2 | 3|>
+        types.assert<|x, 2 | 3|>
     end
 
     do
@@ -810,7 +810,7 @@ run[=[
             x = 4
         end
     
-        type_assert<|x, 1|2|3|4|>
+        types.assert<|x, 1|2|3|4|>
     end
 
     do
@@ -826,7 +826,7 @@ run[=[
             x = 5
         end
     
-        type_assert<|x, 5|2|3|4|>
+        types.assert<|x, 5|2|3|4|>
     end
 
     do
@@ -848,28 +848,28 @@ run[=[
             x = 4
         end
     
-        type_assert<|x, 0 | 1 | 3 | 4|>
+        types.assert<|x, 0 | 1 | 3 | 4|>
     end
     
     do return end
     --[[
     elseif MAYBE then
-        type_assert<|x, 1|>
+        types.assert<|x, 1|>
         x = 3
-        type_assert<|x, 3|>
+        types.assert<|x, 3|>
     elseif MAYBE then
-        type_assert<|x, 1|>
+        types.assert<|x, 1|>
         x = 4
-        type_assert<|x, 4|>
+        types.assert<|x, 4|>
     else
-        type_assert<|x, 1|>
+        types.assert<|x, 1|>
         x = 5
-        type_assert<|x, 5|>
+        types.assert<|x, 5|>
     end
     
     print(x)
     
-    --type_assert<|x, 1 | 2 | 3 | 4|>
+    --types.assert<|x, 1 | 2 | 3 | 4|>
     ]]
 ]=]
 
@@ -884,22 +884,22 @@ run([[
         x = 3
     end
 
-    type_assert<|x, 3|>
+    types.assert<|x, 3|>
 ]])
 
 
 run[[
     local x: -1 | 0 | 1 | 2 | 3
     local y = x >= 0 and x or nil
-    type_assert<|y, 0 | 1 | 2 | 3 | nil|>
+    types.assert<|y, 0 | 1 | 2 | 3 | nil|>
 
     local y = x >= 0 and x >= 1 and x or nil
-    type_assert<|y, 1 | 2 | 3 | nil|>
+    types.assert<|y, 1 | 2 | 3 | nil|>
 ]]
 
 run[[
     local function test(LOL)
-        type_assert(LOL, 1)
+        types.assert(LOL, 1)
     end
     
     local x: 1 | "str"
@@ -910,7 +910,7 @@ run[[
 
 run[[
     local function test(LOL)
-        type_assert(LOL, 1)
+        types.assert(LOL, 1)
     end
     
     local x: 1 | "str"
@@ -927,7 +927,7 @@ run[[
     local x: 1 | "str"
     local y = x ~= 1 or test(x)
     
-    type_assert<|y, 1 | true|>
+    types.assert<|y, 1 | true|>
 ]]
 
 do
@@ -942,7 +942,7 @@ do
         end
         
         local y = foo(_ as string)
-        type_assert<|y, number|>
+        types.assert<|y, number|>
     ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
@@ -951,9 +951,9 @@ run[[
     local a = {}
     if MAYBE then
         a.lol = true
-        type_assert(a.lol, true)
+        types.assert(a.lol, true)
     end
-    type_assert(a.lol, _ as nil | true)
+    types.assert(a.lol, _ as nil | true)
 ]]
 
 run[[
@@ -961,10 +961,10 @@ run[[
 
     if MAYBE then
         tbl.foo = 2
-        type_assert(tbl.foo, 2)
+        types.assert(tbl.foo, 2)
     end
     
-    type_assert(tbl.foo, _ as 1 | 2)
+    types.assert(tbl.foo, _ as 1 | 2)
 ]]
 
 run[[
@@ -972,10 +972,10 @@ run[[
 
     if MAYBE then
         tbl.foo.bar = 2
-        type_assert(tbl.foo.bar, 2)
+        types.assert(tbl.foo.bar, 2)
     end
 
-    type_assert(tbl.foo.bar, _ as 1 | 2)
+    types.assert(tbl.foo.bar, _ as 1 | 2)
 ]]
 
 run[[
@@ -985,9 +985,9 @@ run[[
     
     if MAYBE then
         x.field = nil
-        type_assert(x.field, nil)
+        types.assert(x.field, nil)
     end
-    type_assert(x.field, _ as number | nil)
+    types.assert(x.field, _ as number | nil)
 ]]
 
 
@@ -996,7 +996,7 @@ run[[
     if not x.lol then
         x.lol = 1 
     end
-    type_assert<|x.lol, 1|>
+    types.assert<|x.lol, 1|>
 ]]
 
 run[[
@@ -1006,7 +1006,7 @@ run[[
             x.lol = 1 
         end
     end
-    type_assert(x.lol, _ as false | 1)
+    types.assert(x.lol, _ as false | 1)
 ]]
 
 run[[
@@ -1019,7 +1019,7 @@ run[[
         return 1
     end    
 
-    type_assert(foo(), 1)
+    types.assert(foo(), 1)
 ]]
 
 run[[
@@ -1031,7 +1031,7 @@ run[[
     
     local x = lol()
     
-    type_assert<|x, 1 | nil|>
+    types.assert<|x, 1 | nil|>
 ]]
 
 run[[
@@ -1057,7 +1057,7 @@ run[[
                 ent.findheadpos_head_attachment = _ as nil | number 
             end
 
-            type_assert<|ent.findheadpos_head_attachment, nil | number|>
+            types.assert<|ent.findheadpos_head_attachment, nil | number|>
         end
     end
 ]]
@@ -1073,14 +1073,14 @@ run[[
     
     local x = test()
     
-    type_assert(x, _ as "test" | "foo")
+    types.assert(x, _ as "test" | "foo")
 ]]
 
 run[[
     local x: {foo = nil | 1}
 
     if x.foo then
-        type_assert(x.foo, 1)
+        types.assert(x.foo, 1)
     end
 ]]
 
@@ -1100,7 +1100,7 @@ run[[
         end
     end
 
-    type_assert(x, _ as 2 | 3 | 4)
+    types.assert(x, _ as 2 | 3 | 4)
 ]]
 
 run[[
@@ -1121,7 +1121,7 @@ run[[
     
     -- none of the functions are called anywhere when looking x up, so x becomes just "function()" from the union's point of view
     -- this ensures that they are inferred before being added
-    type_assert(x(), _ as 1 | 2 | 3)
+    types.assert(x(), _ as 1 | 2 | 3)
 ]]
 
 run[[
@@ -1133,10 +1133,10 @@ run[[
         x = 2
     end
 
-    type_assert(x, _ as 1 | 2)
+    types.assert(x, _ as 1 | 2)
 
     local function lol()
-        type_assert(x, _ as 1 | 2)
+        types.assert(x, _ as 1 | 2)
     end
 
     lol()
@@ -1146,10 +1146,10 @@ run[[
     if math.random() > 0.5 then
         FOO = 1
     
-        type_assert(FOO, 1)
+        types.assert(FOO, 1)
         
         do
-            type_assert(FOO, 1)
+            types.assert(FOO, 1)
         end
     end
 ]]
@@ -1161,7 +1161,7 @@ run[[
 
     if math.random() > 0.5 then end
 
-    type_assert(LOL, true)
+    types.assert(LOL, true)
 ]]
 
 run[[
@@ -1172,7 +1172,7 @@ run[[
 
     if math.random() > 0.5 then end
 
-    type_assert<|typeof foo.bar, 1|>
+    types.assert<|typeof foo.bar, 1|>
 ]]
 
 run[[
@@ -1187,7 +1187,7 @@ run[[
             local a = 1
         end
 
-        type_assert(foo, 2)
+        types.assert(foo, 2)
     end
 ]]
 
@@ -1205,19 +1205,19 @@ run[[
 
         end
 
-        type_assert(foo, 2)
+        types.assert(foo, 2)
     end
 ]]
 
 run[[
     local function test(x: literal any)
-        type_assert(x, true)
+        types.assert(x, true)
         return true
     end
     
     local function foo(x: {foo = boolean | nil}) 
         if x.foo and test(x.foo) then
-            type_assert(x.foo, true)
+            types.assert(x.foo, true)
         end
     end
 ]]
@@ -1226,10 +1226,10 @@ pending([[
     local a: nil | 1
 
     if not a or true and a or false then
-        type_assert(a, _ as 1 | nil)
+        types.assert(a, _ as 1 | nil)
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]])
 
 pending[[
@@ -1237,7 +1237,7 @@ pending[[
     local x = 0
     if MAYBE then x = x + 1 end -- 1
     if MAYBE then x = x - 1 end -- 0
-    type_assert(x, 0)
+    types.assert(x, 0)
 ]]
 
 run[[
@@ -1253,7 +1253,7 @@ run[[
         x = 3
     end
 
-    type_assert(x, _ as 2|3)
+    types.assert(x, _ as 2|3)
 
     x = nil
 ]]
@@ -1263,10 +1263,10 @@ run[[
     local a: nil | 1
 
     if not not a then
-        type_assert(a, _ as nil)
+        types.assert(a, _ as nil)
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]]
 
 run[[
@@ -1278,7 +1278,7 @@ run[[
         x = 2
     end
 
-    type_assert(x, 2)
+    types.assert(x, 2)
 ]]
 
 run[[
@@ -1286,7 +1286,7 @@ run[[
     else
         local x = 1
         do
-            type_assert(x, 1)
+            types.assert(x, 1)
         end
     end
 ]]
@@ -1305,14 +1305,14 @@ run[[
         end
     end
 
-    type_assert(bar(), 2)
+    types.assert(bar(), 2)
 ]]
 
 run[[
     local tbl = {} as {field = nil | {foo = true | false}}
 
     if tbl.field and tbl.field.foo then
-        type_assert(tbl.field, _ as { foo = false | true })
+        types.assert(tbl.field, _ as { foo = false | true })
     end
 ]]
 
@@ -1320,7 +1320,7 @@ run[[
     local tbl = {} as {foo = nil | {bar = 1337 | false}}
 
     if tbl.foo and tbl.foo.bar then
-        type_assert(tbl.foo.bar, 1337)
+        types.assert(tbl.foo.bar, 1337)
     end
 ]]
 
@@ -1328,20 +1328,20 @@ pending[[
     local a: nil | 1
 
     if not not not a then
-        type_assert(a, _ as 1)
+        types.assert(a, _ as 1)
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]]
 
 pending[[
     local a: nil | 1
 
     if a or true and a or false then
-        type_assert(a, _ as 1 | 1)
+        types.assert(a, _ as 1 | 1)
     end
 
-    type_assert(a, _ as 1 | nil)
+    types.assert(a, _ as 1 | nil)
 ]]
 
 
@@ -1350,7 +1350,7 @@ pending[[
     local x: number
     
     if x >= 0 and x <= 10 then
-        type_assert<|x, 0 .. 10|>
+        types.assert<|x, 0 .. 10|>
     end
 ]]
 
@@ -1358,9 +1358,9 @@ pending[[
     local x: -3 | -2 | -1 | 0 | 1 | 2 | 3
 
     if x >= 0 then
-        type_assert<|x, 0|1|2|3|>
+        types.assert<|x, 0|1|2|3|>
         if x >= 1 then
-            type_assert<|x, 1|2|3|>
+            types.assert<|x, 1|2|3|>
         end
     end
 ]]
@@ -1369,9 +1369,9 @@ pending[[
     local x: 1 | "1"
     local y = type(x) == "number"
     if y then
-        type_assert(x, 1)
+        types.assert(x, 1)
     else
-        type_assert(x, "1")
+        types.assert(x, "1")
     end
 ]]
 
@@ -1379,9 +1379,9 @@ pending[[
     local x: 1 | "1"
     local y = type(x) ~= "number"
     if y then
-        type_assert(x, "1")
+        types.assert(x, "1")
     else
-        type_assert(x, 1)
+        types.assert(x, 1)
     end
 ]]
 
@@ -1390,9 +1390,9 @@ pending[[
     local t = "number"
     local y = type(x) ~= t
     if y then
-        type_assert(x, "1")
+        types.assert(x, "1")
     else
-        type_assert(x, 1)
+        types.assert(x, 1)
     end
 ]]
 
@@ -1426,7 +1426,7 @@ run[[
             self.parent = parent
         else
             -- test BaseType:UpvalueReference collision with object and upvalue
-            type_assert(self.parent, _ as nil | number)
+            types.assert(self.parent, _ as nil | number)
         end
     end
 ]]
@@ -1437,15 +1437,15 @@ run[[
         error("lol")
     end
 
-    type_assert(x, 108)
+    types.assert(x, 108)
 ]]
 
 run[[
     local x = _ as 1 | 2 | 3
     if x == 1 then return end
-    type_assert(x, _ as 2 | 3)
+    types.assert(x, _ as 2 | 3)
     if x ~= 3 then return end
-    type_assert(x, _ as 2)
+    types.assert(x, _ as 2)
     if x == 2 then return end
     error("dead code")
 ]]

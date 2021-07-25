@@ -9,7 +9,7 @@ run[[
         return 2, 1
     end
     
-    type_assert<|foo(), Tuple<|number, number|>|>
+    types.assert<|foo(), Tuple<|number, number|>|>
 ]]
 
 run([[

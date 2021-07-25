@@ -197,12 +197,10 @@ return
 				local ret = Tuple({})
 
 				for _, tuple in ipairs(tuples) do
-					local len = tuple:GetMinimumLength()
-
-					if len == 0 or tuple:GetUnpackable() then
+					if tuple:GetMinimumLength() == 0 or tuple:GetUnpackable() then
 						return tuple
 					else
-						for i = 1, len do
+						for i = 1, #tuple:GetData() do
 							local v = tuple:Get(i)
 							local existing = ret:Get(i)
 
