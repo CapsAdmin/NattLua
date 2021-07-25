@@ -9,5 +9,4 @@ local base = compiler.Analyzer()
 assert(compiler:Analyze(base))
 local g = compiler.SyntaxTree.environments.typesystem
 require("nattlua.runtime.string_meta"):Set(types.LString("__index"), g:Get(types.LString("string")))
-g:Set(types.LString("_G"), g)
 return g

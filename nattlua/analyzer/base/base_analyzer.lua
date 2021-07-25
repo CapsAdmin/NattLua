@@ -25,6 +25,10 @@ return function(META)
 		self:CreateAndPushFunctionScope()
 		self:PushEnvironment(statement, nil, "runtime")
 		self:PushEnvironment(statement, nil, "typesystem")
+
+		local g = self:GetEnvironment("typesystem")
+		g:Set(LString("_G"), g)
+
 		self:CreateLocalValue("...", argument_tuple, "runtime")
 		local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
 		self:PopEnvironment("runtime")
