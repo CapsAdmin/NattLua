@@ -91,7 +91,7 @@ end
 type function pairs(tbl)
 	if tbl.Type == "table" and tbl:HasLiteralKeys() then
 		local i = 1
-		return function(key, val)
+		return function()
 			local kv = tbl:GetData()[i]
 			if not kv then return nil end
 			i = i + 1
