@@ -7,19 +7,19 @@ return
 	{
 		AnalyzeGenericFor = function(analyzer, statement)
 			local args = analyzer:AnalyzeExpressions(statement.expressions)
-			local obj = table.remove(args, 1)
-			if not obj then return end
+			local callable_iterator = table.remove(args, 1)
+			if not callable_iterator then return end
 
-			if obj.Type == "tuple" then
-				obj = obj:Get(1)
+			if callable_iterator.Type == "tuple" then
+				callable_iterator = callable_iterator:Get(1)
 			end
 
 			local returned_key = nil
-			local one_loop = obj and obj.Type == "any"
+			local one_loop = callable_iterator and callable_iterator.Type == "any"
 			local uncertain_break = nil
 
 			for i = 1, 1000 do
-				local values = analyzer:Assert(statement.expressions[1], analyzer:Call(obj, Tuple(args), statement.expressions[1]))
+				local values = analyzer:Assert(statement.expressions[1], analyzer:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
 				if
 					not values:Get(1) or
@@ -47,7 +47,7 @@ return
 					local brk = false
 
 					for i, identifier in ipairs(statement.identifiers) do
-						local obj = values:Get(i)
+						local obj = analyzer:Assert(identifier, values:Get(i))
 
 						if uncertain_break then
 							obj:SetLiteral(false)
