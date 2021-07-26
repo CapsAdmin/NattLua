@@ -355,15 +355,14 @@ return
 			end
 
 			local function Call(self, obj, arguments)
-				local call_node = self:GetActiveNode()
-				local function_node = obj.function_body_node
-    
-				obj.called = true
 				local env = self:GetPreferTypesystem() and "typesystem" or "runtime"
 
 				if obj.Type == "union" then
 					obj = obj:MakeCallableUnion(self)
 				end
+				
+				obj.called = true				
+				local function_node = obj.function_body_node
 
 				if obj.Type ~= "function" then
 					if obj.Type == "any" then
