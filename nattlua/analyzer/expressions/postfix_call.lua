@@ -1,9 +1,5 @@
 local table = require("table")
-local tostring = tostring
-local ipairs = ipairs
-local Tuple = require("nattlua.types.tuple").Tuple
 local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
-local Any = require("nattlua.types.any").Any
 return
 	{
 		AnalyzePostfixCall = function(analyzer, node, env)
