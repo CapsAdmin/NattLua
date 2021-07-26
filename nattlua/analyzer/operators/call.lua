@@ -177,7 +177,7 @@ return
 				end
 			end
 
-			local function call_type_function(self, obj, function_node, function_arguments, arguments)
+			local function call_lua_type_function(self, obj, function_node, function_arguments, arguments)
 				local len = function_arguments:GetLength()
 
 				if len == math.huge and arguments:GetLength() == math.huge then
@@ -226,134 +226,268 @@ return
 				return ret
 			end
 
-			local function restore_mutated_types(self)
-				if not self.mutated_types or not self.mutated_types[1] then return end
-				local mutated_types = table.remove(self.mutated_types)
+			local function call_type_signature_without_body(self, obj, arguments)
+				for i, arg in ipairs(arguments:GetData()) do
+					if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
+						for _, keyval in ipairs(arg:GetData()) do
+							keyval.key = Union({Any(), keyval.key})
+							keyval.val = Union({Any(), keyval.val})
+						end
 
-				for _, data in ipairs(mutated_types) do
-					local original = data.original
-					local modified = data.modified
-					modified:SetContract(original:GetContract())
-					self:MutateValue(original:GetUpvalue(), original:GetUpvalue().key, modified, "runtime")
+						if self.config.external_mutation then
+							self:Warning(self:GetActiveNode(), {
+								"argument #",
+								i,
+								" ",
+								arg,
+								" can be mutated by external call",
+							})
+						end
+					end
 				end
+
+				self:FireEvent("external_call", self:GetActiveNode(), obj)
+
+				local ret = obj:GetReturnTypes():Copy()
+
+				for _, v in ipairs(ret:GetData()) do
+					if v.Type == "table" then
+						v:SetReferenceId(nil)
+					end
+				end
+
+				return ret
 			end
 
-			local function check_and_setup_arguments(self, arguments, contracts)
-				self.mutated_types = self.mutated_types or {}
-				table.insert(self.mutated_types, 1, {})
-				local len = contracts:GetSafeLength(arguments)
 
-				for i = 1, len do
-					local arg = arguments:Get(i)
-					local contract = contracts:Get(i)
-					local ok, reason
+			local call_lua_function_with_body
 
-					if not arg then
-						if contract:IsFalsy() then
-							arg = Nil()
-							ok = true
+			do
+				local function restore_mutated_types(self)
+					if not self.mutated_types or not self.mutated_types[1] then return end
+					local mutated_types = table.remove(self.mutated_types)
+
+					for _, data in ipairs(mutated_types) do
+						local original = data.original
+						local modified = data.modified
+						modified:SetContract(original:GetContract())
+						self:MutateValue(original:GetUpvalue(), original:GetUpvalue().key, modified, "runtime")
+					end
+				end
+
+				local function check_and_setup_arguments(self, arguments, contracts)
+					self.mutated_types = self.mutated_types or {}
+					table.insert(self.mutated_types, 1, {})
+					local len = contracts:GetSafeLength(arguments)
+
+					for i = 1, len do
+						local arg = arguments:Get(i)
+						local contract = contracts:Get(i)
+						local ok, reason
+
+						if not arg then
+							if contract:IsFalsy() then
+								arg = Nil()
+								ok = true
+							else
+								ok, reason = type_errors.other(
+									{
+										"argument #",
+										i,
+										" expected ",
+										contract,
+										" got nil",
+									}
+								)
+							end
+						elseif arg.Type == "table" and contract.Type == "table" then
+							ok, reason = arg:FollowsContract(contract)
 						else
-							ok, reason = type_errors.other(
-								{
-									"argument #",
-									i,
-									" expected ",
-									contract,
-									" got nil",
-								}
-							)
+							ok, reason = arg:IsSubsetOf(contract)
 						end
-					elseif arg.Type == "table" and contract.Type == "table" then
-						ok, reason = arg:FollowsContract(contract)
-					else
-						ok, reason = arg:IsSubsetOf(contract)
+
+						if not ok then
+							restore_mutated_types(self)
+							return type_errors.other({"argument #", i, " ", arg, ": ", reason})
+						end
+
+						if
+							arg.Type == "table" and
+							contract.Type == "table" and
+							arg:GetUpvalue() and
+							not contract.literal_argument
+						then
+							local original = arg
+							local modified = arg:Copy()
+							modified:SetContract(contract)
+							modified.argument_index = i
+							table.insert(self.mutated_types[1], {
+								original = original,
+								modified = modified,
+							})
+							arguments:Set(i, modified)
+						else
+					-- if it's a const argument we pass the incoming value
+					if not contract.literal_argument then
+								local t = contract:Copy()
+								t:SetContract(contract)
+								arguments:Set(i, t)
+							end
+						end
 					end
 
-					if not ok then
-						restore_mutated_types(self)
-						return type_errors.other({"argument #", i, " ", arg, ": ", reason})
+					return true
+				end
+
+				local function check_return_result(self, result, contract)
+					if
+						contract and
+						contract:GetLength() == 1 and
+						contract:Get(1).Type == "union" and
+						contract:Get(1):HasType("tuple")
+					then
+						contract = contract:Get(1)
 					end
 
 					if
-						arg.Type == "table" and
-						contract.Type == "table" and
-						arg:GetUpvalue() and
-						not contract.literal_argument
+						result and
+						result:GetLength() == 1 and
+						result:Get(1) and
+						result:Get(1).Type == "union" and
+						result:Get(1):HasType("tuple")
 					then
-						local original = arg
-						local modified = arg:Copy()
-						modified:SetContract(contract)
-						modified.argument_index = i
-						table.insert(self.mutated_types[1], {
-							original = original,
-							modified = modified,
-						})
-						arguments:Set(i, modified)
-					else
-                -- if it's a const argument we pass the incoming value
-                if not contract.literal_argument then
-							local t = contract:Copy()
-							t:SetContract(contract)
-							arguments:Set(i, t)
+						result = result:Get(1)
+					end
+
+					if result.Type == "union" then
+						for _, tuple in ipairs(result:GetData()) do
+							check_return_result(self, tuple, contract)
 						end
-					end
-				end
+					else
+						if contract.Type == "union" then
+							local errors = {}
 
-				return true
-			end
+							for _, contract in ipairs(contract:GetData()) do
+								local ok, reason = result:IsSubsetOfTuple(contract)
 
-			local function check_return_result(self, result, contract)
-				if
-					contract and
-					contract:GetLength() == 1 and
-					contract:Get(1).Type == "union" and
-					contract:Get(1):HasType("tuple")
-				then
-					contract = contract:Get(1)
-				end
-
-				if
-					result and
-					result:GetLength() == 1 and
-					result:Get(1) and
-					result:Get(1).Type == "union" and
-					result:Get(1):HasType("tuple")
-				then
-					result = result:Get(1)
-				end
-
-				if result.Type == "union" then
-					for _, tuple in ipairs(result:GetData()) do
-						check_return_result(self, tuple, contract)
-					end
-				else
-					if contract.Type == "union" then
-						local errors = {}
-
-						for _, contract in ipairs(contract:GetData()) do
-							local ok, reason = result:IsSubsetOfTuple(contract)
-
-							if ok then
-								return
-							else
-								table.insert(errors, {contract = contract, reason = reason})
+								if ok then
+									return
+								else
+									table.insert(errors, {contract = contract, reason = reason})
+								end
 							end
-						end
 
-						for _, error in ipairs(errors) do
-							self:Error(result:GetNode(), error.reason)
-						end
-					else
-						local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
+							for _, error in ipairs(errors) do
+								self:Error(result:GetNode(), error.reason)
+							end
+						else
+							local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
 
-						if not ok then
-							if result:Get(i) then
-								self:Error(result:Get(i):GetNode(), reason)
-							else
-								self:Error(result:GetNode(), reason)
+							if not ok then
+								if result:Get(i) then
+									self:Error(result:Get(i):GetNode(), reason)
+								else
+									self:Error(result:GetNode(), reason)
+								end
 							end
 						end
 					end
+				end
+
+				call_lua_function_with_body = function(self, obj, arguments, function_node, env)
+					local use_contract = obj.explicit_arguments and
+						env ~= "typesystem" and
+						function_node.kind ~= "local_generics_type_function" and
+						function_node.kind ~= "generics_type_function" and
+						not self:GetActiveNode().type_call
+
+					if use_contract then
+						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments())
+						if not ok then return ok, err end
+					end
+
+					local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments, env)
+					obj:AddScope(arguments, return_result, scope)
+					restore_mutated_types(self)
+					local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
+
+					if not return_contract and function_node.return_types then
+						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+						self:PushPreferTypesystem(true)
+						return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
+						self:PopPreferTypesystem()
+						self:PopScope()
+					end
+
+					if return_contract then
+						check_return_result(self, return_result, return_contract)
+					else
+						obj:GetReturnTypes():Merge(return_result)
+
+						if not obj.arguments_inferred and function_node.identifiers then
+							for i in ipairs(obj:GetArguments():GetData()) do
+								if function_node.self_call then
+							-- we don't count the actual self argument
+							local node = function_node.identifiers[i + 1]
+
+									if node and not node.as_expression then
+										self:Warning(node, "argument is untyped")
+									end
+								elseif function_node.identifiers[i] and not function_node.identifiers[i].as_expression then
+									self:Warning(function_node.identifiers[i], "argument is untyped")
+								end
+							end
+						end
+					end
+
+					if not use_contract then
+						obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
+					end
+
+					self:FireEvent("function_spec", obj)
+
+					if return_contract then
+						-- this is so that the return type of a function can access its arguments, to generics
+						-- local function foo(a: number, b: number): Foo(a, b) return a + b end
+						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+
+						for i, key in ipairs(function_node.identifiers) do
+							local arg = arguments:Get(i)
+
+							if arg then
+								self:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
+							end
+						end
+
+						self:PopScope()
+					end
+
+					do -- this is for the emitter
+						if function_node.identifiers then
+							for i, node in ipairs(function_node.identifiers) do
+								node.inferred_type = obj:GetArguments():Get(i)
+							end
+						end
+
+						function_node.inferred_type = obj
+					end
+
+					if not return_contract then return return_result end
+					local contract = obj:GetReturnTypes():Copy()
+
+					for _, v in ipairs(contract:GetData()) do
+						if v.Type == "table" then
+							v:SetReferenceId(nil)
+						end
+					end
+
+					for i, v in ipairs(return_contract:GetData()) do
+						if v.literal_argument then
+							contract:Set(i, return_result:Get(i))
+						end
+					end
+
+					return contract
 				end
 			end
 
@@ -405,139 +539,18 @@ return
 				end
 
 				if obj:GetData().lua_function then
-					return call_type_function(
+					return call_lua_type_function(
 						self,
 						obj,
 						function_node,
 						function_arguments,
 						arguments
 					)
-				elseif not function_node or function_node.kind == "type_function" then
-					for i, arg in ipairs(arguments:GetData()) do
-						if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
-							for _, keyval in ipairs(arg:GetData()) do
-								keyval.key = Union({Any(), keyval.key})
-								keyval.val = Union({Any(), keyval.val})
-							end
-
-							if self.config.external_mutation then
-								self:Warning(self:GetActiveNode(), {
-									"argument #",
-									i,
-									" ",
-									arg,
-									" can be mutated by external call",
-								})
-							end
-						end
-					end
-
-					self:FireEvent("external_call", self:GetActiveNode(), obj)
-				else
-					local use_contract = obj.explicit_arguments and
-						env ~= "typesystem" and
-						function_node.kind ~= "local_generics_type_function" and
-						function_node.kind ~= "generics_type_function" and
-						not self:GetActiveNode().type_call
-
-					if use_contract then
-						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments())
-						if not ok then return ok, err end
-					end
-
-					local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments, env)
-					obj:AddScope(arguments, return_result, scope)
-					restore_mutated_types(self)
-					local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
-
-					if not return_contract and function_node.return_types then
-						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						self:PushPreferTypesystem(true)
-						return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
-						self:PopPreferTypesystem()
-						self:PopScope()
-					end
-
-					if return_contract then
-						check_return_result(self, return_result, return_contract)
-					else
-						obj:GetReturnTypes():Merge(return_result)
-
-						if not obj.arguments_inferred and function_node.identifiers then
-							for i in ipairs(obj:GetArguments():GetData()) do
-								if function_node.self_call then
-                            -- we don't count the actual self argument
-                            local node = function_node.identifiers[i + 1]
-
-									if node and not node.as_expression then
-										self:Warning(node, "argument is untyped")
-									end
-								elseif function_node.identifiers[i] and not function_node.identifiers[i].as_expression then
-									self:Warning(function_node.identifiers[i], "argument is untyped")
-								end
-							end
-						end
-					end
-
-					if not use_contract then
-						obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
-					end
-
-					self:FireEvent("function_spec", obj)
-
-					if return_contract then
-                -- this is so that the return type of a function can access its arguments, to generics
-                -- local function foo(a: number, b: number): Foo(a, b) return a + b end
-                self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-
-						for i, key in ipairs(function_node.identifiers) do
-							local arg = arguments:Get(i)
-
-							if arg then
-								self:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
-							end
-						end
-
-						self:PopScope()
-					end
-
-					do -- this is for the emitter
-                if function_node.identifiers then
-							for i, node in ipairs(function_node.identifiers) do
-								node.inferred_type = obj:GetArguments():Get(i)
-							end
-						end
-
-						function_node.inferred_type = obj
-					end
-
-					if not return_contract then return return_result end
-					local contract = obj:GetReturnTypes():Copy()
-
-					for _, v in ipairs(contract:GetData()) do
-						if v.Type == "table" then
-							v:SetReferenceId(nil)
-						end
-					end
-
-					for i, v in ipairs(return_contract:GetData()) do
-						if v.literal_argument then
-							contract:Set(i, return_result:Get(i))
-						end
-					end
-
-					return contract
+				elseif function_node then
+					return call_lua_function_with_body(self, obj, arguments, function_node, env)
 				end
-
-				local ret = obj:GetReturnTypes():Copy()
-
-				for _, v in ipairs(ret:GetData()) do
-					if v.Type == "table" then
-						v:SetReferenceId(nil)
-					end
-				end
-
-				return ret
+				
+				return call_type_signature_without_body(self, obj, arguments)
 			end
 
 			function META:Call(obj, arguments, call_node)
