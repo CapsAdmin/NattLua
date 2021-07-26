@@ -388,4 +388,33 @@ return
 			self:SetRepeat(math.huge)
 			return self
 		end,
+		NormalizeTuples = function (types)
+			local arguments
+
+			if #types == 1 and types[1].Type == "tuple" then
+				arguments = types[1]
+			else
+				local temp = {}
+
+				for i, v in ipairs(types) do
+					if v.Type == "tuple" then
+						if i == #types then
+							table.insert(temp, v)
+						else
+							local obj = v:Get(1)
+
+							if obj then
+								table.insert(temp, obj)
+							end
+						end
+					else
+						table.insert(temp, v)
+					end
+				end
+
+				arguments = META.New(temp)
+			end
+
+			return arguments
+		end
 	}
