@@ -15,51 +15,124 @@ local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
 local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
+
+local function lua_types_to_tuple(node, tps)
+	local tbl = {}
+
+	for i, v in ipairs(tps) do
+		if type(v) == "table" and v.Type ~= nil then
+			tbl[i] = v
+			v:SetNode(node)
+		else
+			if type(v) == "function" then
+				tbl[i] = Function(
+						{
+							lua_function = v,
+							arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+							ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+						}
+					)
+					:SetNode(node)
+					:SetLiteral(true)
+
+				if node.statements then
+					tbl[i].function_body_node = node
+				end
+			else
+				local t = type(v)
+
+				if t == "number" then
+					tbl[i] = LNumber(v):SetNode(node)
+				elseif t == "string" then
+					tbl[i] = LString(v):SetNode(node)
+				elseif t == "boolean" then
+					tbl[i] = Symbol(v):SetNode(node)
+				else
+					error("NYI " .. t)
+				end
+			end
+		end
+	end
+
+	if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
+	return Tuple(tbl)
+end
+
+
+local unpack_union_tuples
+
+do
+	local ipairs = ipairs
+
+	local function should_expand(arg, contract)
+		local b = arg.Type == "union"
+
+		if contract.Type == "any" then
+			b = false
+		end
+
+		if contract.Type == "union" then
+			b = false
+		end
+
+		if arg.Type == "union" and contract.Type == "union" and contract:CanBeNil() then
+			b = true
+		end
+
+		return b
+	end
+
+	function unpack_union_tuples(func_obj, arguments, function_arguments)
+		local out = {}
+		local lengths = {}
+		local max = 1
+		local ys = {}
+		local arg_length = #arguments
+
+		for i, obj in ipairs(arguments) do
+			if not func_obj.no_expansion and should_expand(obj, function_arguments:Get(i)) then
+				lengths[i] = #obj:GetData()
+				max = max * lengths[i]
+			else
+				lengths[i] = 0
+			end
+
+			ys[i] = 1
+		end
+
+		for i = 1, max do
+			local args = {}
+
+			for i, obj in ipairs(arguments) do
+				if lengths[i] == 0 then
+					args[i] = obj
+				else
+					args[i] = obj:GetData()[ys[i]]
+				end
+			end
+
+			out[i] = args
+
+			for i = arg_length, 2, -1 do
+				if i == arg_length then
+					ys[i] = ys[i] + 1
+				end
+
+				if ys[i] > lengths[i] then
+					ys[i] = 1
+					ys[i - 1] = ys[i - 1] + 1
+				end
+			end
+		end
+
+		return out
+	end
+end
+
+
 return
 	{
 		Call = function(META)
-			function META:LuaTypesToTuple(node, tps)
-				local tbl = {}
-
-				for i, v in ipairs(tps) do
-					if type(v) == "table" and v.Type ~= nil then
-						tbl[i] = v
-						v:SetNode(node)
-					else
-						if type(v) == "function" then
-							tbl[i] = Function(
-									{
-										lua_function = v,
-										arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-										ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-									}
-								)
-								:SetNode(node)
-								:SetLiteral(true)
-
-							if node.statements then
-								tbl[i].function_body_node = node
-							end
-						else
-							local t = type(v)
-
-							if t == "number" then
-								tbl[i] = LNumber(v):SetNode(node)
-							elseif t == "string" then
-								tbl[i] = LString(v):SetNode(node)
-							elseif t == "boolean" then
-								tbl[i] = Symbol(v):SetNode(node)
-							else
-								error("NYI " .. t)
-							end
-						end
-					end
-				end
-
-				if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
-				return Tuple(tbl)
-			end
-
 			function META:AnalyzeFunctionBody(obj, function_node, arguments, env)
 				local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 				self:PushEnvironment(function_node, nil, env)
@@ -84,77 +157,7 @@ return
 				return analyzed_return, scope
 			end
 
-			local unpack_union_tuples
-
-			do
-				local ipairs = ipairs
-
-				local function should_expand(arg, contract)
-					local b = arg.Type == "union"
-
-					if contract.Type == "any" then
-						b = false
-					end
-
-					if contract.Type == "union" then
-						b = false
-					end
-
-					if arg.Type == "union" and contract.Type == "union" and contract:CanBeNil() then
-						b = true
-					end
-
-					return b
-				end
-
-				function unpack_union_tuples(func_obj, arguments, function_arguments)
-					local out = {}
-					local lengths = {}
-					local max = 1
-					local ys = {}
-					local arg_length = #arguments
-
-					for i, obj in ipairs(arguments) do
-						if not func_obj.no_expansion and should_expand(obj, function_arguments:Get(i)) then
-							lengths[i] = #obj:GetData()
-							max = max * lengths[i]
-						else
-							lengths[i] = 0
-						end
-
-						ys[i] = 1
-					end
-
-					for i = 1, max do
-						local args = {}
-
-						for i, obj in ipairs(arguments) do
-							if lengths[i] == 0 then
-								args[i] = obj
-							else
-								args[i] = obj:GetData()[ys[i]]
-							end
-						end
-
-						out[i] = args
-
-						for i = arg_length, 2, -1 do
-							if i == arg_length then
-								ys[i] = ys[i] + 1
-							end
-
-							if ys[i] > lengths[i] then
-								ys[i] = 1
-								ys[i - 1] = ys[i - 1] + 1
-							end
-						end
-					end
-
-					return out
-				end
-			end
-
-			local function infer_uncalled_functions(self, call_node, tuple, function_arguments)
+			local function infer_uncalled_functions(self, tuple, function_arguments)
 				for i, b in ipairs(tuple:GetData()) do
 					if b.Type == "function" and not b.called and not b.explicit_return then
 						local a = function_arguments:Get(i)
@@ -165,13 +168,13 @@ return
 							not a:IsSubsetOf(b)
 						then
 							b.arguments_inferred = true
-							self:Assert(call_node, self:Call(b, b:GetArguments():Copy()))
+							self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
 						end
 					end
 				end
 			end
 
-			local function call_type_function(self, obj, call_node, function_node, function_arguments, arguments)
+			local function call_type_function(self, obj, function_node, function_arguments, arguments)
 				local len = function_arguments:GetLength()
 
 				if len == math.huge and arguments:GetLength() == math.huge then
@@ -181,11 +184,11 @@ return
 				local tuples = {}
 
 				for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
-					tuples[i] = self:LuaTypesToTuple(
+					tuples[i] = lua_types_to_tuple(
 						obj:GetNode(),
 						{
 							self:CallLuaTypeFunction(
-								call_node,
+								self:GetActiveNode(),
 								obj:GetData().lua_function,
 								obj:GetData().scope or self:GetScope(),
 								table.unpack(arg)
@@ -351,26 +354,26 @@ return
 				end
 			end
 
-			local function Call(self, obj, arguments, call_node)
-				call_node = call_node or obj:GetNode()
-				local function_node = obj.function_body_node-- or obj:GetNode()
+			local function Call(self, obj, arguments)
+				local call_node = self:GetActiveNode()
+				local function_node = obj.function_body_node
     
-        obj.called = true
+				obj.called = true
 				local env = self:GetPreferTypesystem() and "typesystem" or "runtime"
 
 				if obj.Type == "union" then
-					obj = obj:MakeCallableUnion(self, call_node)
+					obj = obj:MakeCallableUnion(self)
 				end
 
 				if obj.Type ~= "function" then
 					if obj.Type == "any" then
 
-                -- any can do anything with mutable arguments
+						-- any can do anything with mutable arguments
 
-                for _, arg in ipairs(arguments:GetData()) do
+						for _, arg in ipairs(arguments:GetData()) do
 							if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
 								if arg:GetContract() then
-									self:Error(call_node, {
+									self:Error(self:GetActiveNode(), {
 										"cannot mutate argument with contract ",
 										arg:GetContract(),
 									})
@@ -384,11 +387,11 @@ return
 						end
 					end
 
-					return obj:Call(self, arguments, call_node)
+					return obj:Call(self, arguments)
 				end
 
 				local function_arguments = obj:GetArguments()
-				infer_uncalled_functions(self, call_node, arguments, function_arguments)
+				infer_uncalled_functions(self, arguments, function_arguments)
 
 				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
@@ -403,7 +406,6 @@ return
 					return call_type_function(
 						self,
 						obj,
-						call_node,
 						function_node,
 						function_arguments,
 						arguments
@@ -417,7 +419,7 @@ return
 							end
 
 							if self.config.external_mutation then
-								self:Warning(call_node, {
+								self:Warning(self:GetActiveNode(), {
 									"argument #",
 									i,
 									" ",
@@ -428,13 +430,13 @@ return
 						end
 					end
 
-					self:FireEvent("external_call", call_node, obj)
+					self:FireEvent("external_call", self:GetActiveNode(), obj)
 				else
 					local use_contract = obj.explicit_arguments and
 						env ~= "typesystem" and
 						function_node.kind ~= "local_generics_type_function" and
 						function_node.kind ~= "generics_type_function" and
-						not call_node.type_call
+						not self:GetActiveNode().type_call
 
 					if use_contract then
 						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments())
@@ -537,10 +539,12 @@ return
 			end
 
 			function META:Call(obj, arguments, call_node)
+				self:SetActiveNode(call_node or obj:GetNode())
+
 				self.call_stack = self.call_stack or {}
 
 				for _, v in ipairs(self.call_stack) do
-					if v.obj == obj and v.call_node == call_node then
+					if v.obj == obj and v.call_node == self:GetActiveNode() then
 						if obj.explicit_return then
 							return obj:GetReturnTypes():Copy()
 						else
@@ -583,7 +587,7 @@ return
 					{
 						obj = obj,
 						function_node = obj.function_body_node,
-						call_node = call_node,
+						call_node = self:GetActiveNode(),
 					}
 				)
 				local ok, err = Call(self, obj, arguments, call_node)

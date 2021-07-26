@@ -492,7 +492,7 @@ function META:Call(analyzer, arguments, call_node)
 	return new
 end
 
-function META:MakeCallableUnion(analyzer, node)
+function META:MakeCallableUnion(analyzer)
 	local new_union = self.New()
 	local truthy_union = self.New()
 	local falsy_union = self.New()
@@ -500,7 +500,7 @@ function META:MakeCallableUnion(analyzer, node)
 	for _, v in ipairs(self.Data) do
 		if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
 			falsy_union:AddType(v)
-			analyzer:ErrorAndCloneCurrentScope(node, {
+			analyzer:ErrorAndCloneCurrentScope(analyzer:GetActiveNode(), {
 				"union ",
 				self,
 				" contains uncallable object ",
@@ -516,7 +516,7 @@ function META:MakeCallableUnion(analyzer, node)
 	falsy_union:SetUpvalue(self:GetUpvalue())
 	new_union:SetTruthyUnion(truthy_union)
 	new_union:SetFalsyUnion(falsy_union)
-	return truthy_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(self)
+	return truthy_union:SetNode(analyzer:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(self)
 end
 
 function META:GetLargestNumber()

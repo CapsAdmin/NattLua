@@ -20,6 +20,14 @@ return function(META)
 	require("nattlua.analyzer.base.events")(META)
 	require("nattlua.analyzer.base.error_handling")(META)
 
+	function META:SetActiveNode(node)
+		self.ActiveNode = node
+	end
+
+	function META:GetActiveNode(node)
+		return self.ActiveNode
+	end
+
 	function META:AnalyzeRootStatement(statement, ...)
 		local argument_tuple = ... and Tuple({...}) or Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushFunctionScope()
