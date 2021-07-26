@@ -333,7 +333,8 @@ R[[
     }|>
     
     local x: FOO = 2
-    types.assert(x, 2)
+    
+    types.assert(x, _ as 1 | 2 | 3)
 
     -- make a way to undefine enums
     type A = nil
