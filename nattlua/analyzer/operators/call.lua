@@ -154,6 +154,9 @@ return
 				local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
 				self:PopEnvironment(env)
 				self:PopScope()
+				if analyzed_return.Type ~= "tuple" then
+					return Tuple({analyzed_return}), scope
+				end
 				return analyzed_return, scope
 			end
 

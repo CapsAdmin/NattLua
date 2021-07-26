@@ -488,8 +488,10 @@ function META:Call(analyzer, arguments, call_node)
 
 		new:AddType(val)
 	end
+	
+	local Tuple = require("nattlua.types.tuple").Tuple
 
-	return new
+	return Tuple({new})
 end
 
 function META:MakeCallableUnion(analyzer)
