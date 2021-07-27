@@ -11,10 +11,21 @@ assert(builder:Parse())
 
 builder:Analyze()
 
-local code, err = builder:Emit()
+local code, err = builder:Emit({
+    preserve_whitespace = true, 
+    string_quote = "\"",
+    no_semicolon = true,
+    use_comment_types = true,
+    annotate = true,
+    force_parenthesis = true,
+    extra_indent = {
+        Start = {to = "Stop"},
+        Toggle = "toggle",
+    }
+})
 
 -- todo
-code = io.open("nattlua/definitions/base_runtime.lua"):read("*all") .. "\n" .. code
+code = io.open("nattlua/runtime/base_runtime.lua"):read("*all") .. "\n" .. code
 
 local file = io.open("example_projects/luajit/out.lua", "w")
 file:write(code)

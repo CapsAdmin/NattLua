@@ -213,7 +213,7 @@ return function(META)
 			for i, node in ipairs(block.imports) do
 				if not self.done[node.path] then
 					self:Emit(
-						"IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render({}) .. " end\n"
+						"IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render(self.config or {}) .. " end\n"
 					)
 					self.done[node.path] = true
 				end

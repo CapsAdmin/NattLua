@@ -19,7 +19,7 @@ ffi.cdef([[
 	);
 ]])
 
-local function last_error()
+local function last_error(): string
     local error_str = ffi.new("uint8_t[?]", 1024)
     local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
     local FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
@@ -27,11 +27,15 @@ local function last_error()
 
     local code = ffi.C.GetLastError()
 	local numout = ffi.C.FormatMessageA(error_flags, nil, code, 0, error_str, 1023, nil)
-	local err = numout ~= 0 and ffi.string(error_str, numout)
-	if err and err:sub(-2) == "\r\n" then
-		return err:sub(0, -3)
-	end
-	return err
+	
+    if numout ~= 0 then
+        local err = ffi.string(error_str, numout)
+        if err:sub(-2) == "\r\n" then
+            return err:sub(0, -3)
+        end
+    end
+
+	return "no error"
 end
 
 do
@@ -152,18 +156,20 @@ do
 
         local out = {}
 
-        if handle ~= INVALID_FILE then
-            local i = 1
-            repeat
-                if not is_dots(data[0].cFileName) then
-                    out[i] = ffi.string(data[0].cFileName)
-                    i = i + 1
-                end
-            until ffi.C.FindNextFileA(handle, data) == 0
+        if handle == INVALID_FILE then
+            return out
+        end
 
-            if ffi.C.FindClose(handle) == 0 then
-                return nil, last_error()
+        local i = 1
+        repeat
+            if not is_dots(data[0].cFileName) then
+                out[i] = ffi.string(data[0].cFileName)
+                i = i + 1
             end
+        until ffi.C.FindNextFileA(handle, data) == 0
+
+        if ffi.C.FindClose(handle) == 0 then
+            return nil, last_error()
         end
 
         return out
