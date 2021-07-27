@@ -23,6 +23,7 @@ local type ToScreenData = {x = number, y = number, visible = boolean,}
 
 -- We can mutate the Vector type if we want
 type Vector.__index = Vector
+type Vector.@Name = "Vector"
 type Vector.__call = function(Vector, number, number, number): Vector
 type Vector.__add = function(Vector, Vector): Vector
 type Vector.__mul = function(number | Vector, number | Vector): Vector
