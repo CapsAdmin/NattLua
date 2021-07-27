@@ -50,11 +50,11 @@ return function(META)
 		local out = {}
 
 		for _, expression in ipairs(expressions) do
-			local ret = {self:AnalyzeExpression(expression, env)}
-
-			for _, v in ipairs(ret) do
-				table.insert(out, v)
+			local obj = self:AnalyzeExpression(expression, env)
+			if obj and obj.Type == "tuple" and obj:GetLength() == 1 then
+				obj = obj:Get(1)
 			end
+			table.insert(out, obj)
 		end
 
 		return out

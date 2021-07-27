@@ -26,9 +26,9 @@ end
 return
 	{
 		AnalyzeNumericFor = function(analyzer, statement)
-			local init = analyzer:AnalyzeExpression(statement.expressions[1])
-			local max = analyzer:AnalyzeExpression(statement.expressions[2])
-			local step = statement.expressions[3] and analyzer:AnalyzeExpression(statement.expressions[3]) or nil
+			local init = analyzer:AnalyzeExpression(statement.expressions[1]):GetFirstValue()
+			local max = analyzer:AnalyzeExpression(statement.expressions[2]):GetFirstValue()
+			local step = statement.expressions[3] and analyzer:AnalyzeExpression(statement.expressions[3]):GetFirstValue() or nil
 
 			if step then
 				assert(step.Type == "number")

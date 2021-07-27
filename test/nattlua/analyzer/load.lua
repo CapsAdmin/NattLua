@@ -16,7 +16,7 @@ run[[
 ]]
 
 test("file import", function()
-    equal(8, assert(require("nattlua").File("test/nattlua/analyzer/file_importing/test/main.nlua")):Analyze().AnalyzedResult:Get(1):GetData())
+    equal(8, assert(require("nattlua").File("test/nattlua/analyzer/file_importing/test/main.nlua")):Analyze().AnalyzedResult:GetData())
 end)
 
 pending([[

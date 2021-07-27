@@ -155,7 +155,7 @@ return
 				self:PopEnvironment(env)
 				self:PopScope()
 				if analyzed_return.Type ~= "tuple" then
-					return Tuple({analyzed_return}), scope
+					return Tuple({analyzed_return}):SetNode(analyzed_return:GetNode()), scope
 				end
 				return analyzed_return, scope
 			end
@@ -341,7 +341,6 @@ return
 
 				local function check_return_result(self, result, contract)
 					if
-						contract and
 						contract:GetLength() == 1 and
 						contract:Get(1).Type == "union" and
 						contract:Get(1):HasType("tuple")
@@ -350,7 +349,7 @@ return
 					end
 
 					if
-						result and
+						result.Type == "tuple" and
 						result:GetLength() == 1 and
 						result:Get(1) and
 						result:Get(1).Type == "union" and
@@ -381,6 +380,10 @@ return
 								self:Error(result:GetNode(), error.reason)
 							end
 						else
+							if result.Type ~= "tuple" then
+								result = Tuple({result}):SetNode(result:GetNode())
+							end
+
 							local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
 
 							if not ok then
@@ -406,6 +409,7 @@ return
 						if not ok then return ok, err end
 					end
 
+					-- return_result is either a union of tuples or a single tuple
 					local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments, env)
 					obj:AddScope(arguments, return_result, scope)
 					restore_mutated_types(self)
@@ -497,6 +501,8 @@ return
 				if obj.Type == "union" then
 					obj = obj:MakeCallableUnion(self)
 				end
+
+				obj = obj:GetFirstValue()
 				
 				obj.called = true				
 				local function_node = obj.function_body_node
@@ -605,7 +611,7 @@ return
 						call_node = self:GetActiveNode(),
 					}
 				)
-				local ok, err = Call(self, obj, arguments, call_node)
+				local ok, err = Call(self, obj, arguments)
 				table.remove(self.call_stack)
 				return ok, err
 			end

@@ -34,18 +34,11 @@ return
 			analyzer:PopPreferTypesystem()
 
 			-- TUPLE UNPACK MESS
-
+			
 			if node:IsWrappedInParenthesis() then
 				returned_tuple = returned_tuple:Get(1)
 			end
 
-			if
-				env == "runtime" and
-				returned_tuple.Type == "tuple" and
-				returned_tuple:GetLength() == 1
-			then
-				returned_tuple = returned_tuple:Get(1)
-			end
 
 			return returned_tuple
 		end,

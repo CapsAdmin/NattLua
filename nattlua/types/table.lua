@@ -353,7 +353,7 @@ function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[
 
     -- delete entry
     if not no_delete and not self:GetContract() then
-		if (val == nil or (val.Type == "symbol" and val:GetData() == nil)) then return self:Delete(key) end
+		if (not val or (val.Type == "symbol" and val:GetData() == nil)) then return self:Delete(key) end
 	end
 
 	if self:GetContract() and self:GetContract().Type == "table" then -- TODO

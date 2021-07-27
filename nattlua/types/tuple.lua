@@ -364,6 +364,13 @@ function META:Slice(start, stop)
 	return copy
 end
 
+function META:GetFirstValue()
+	if self.Remainder then
+		return self
+	end
+	return self:Get(1)
+end
+
 function META.New(data)
 	local self = setmetatable({Data = {}}, META)
 
@@ -398,23 +405,25 @@ return
 
 				for i, v in ipairs(types) do
 					if v.Type == "tuple" then
+
 						if i == #types then
 							table.insert(temp, v)
 						else
 							local obj = v:Get(1)
+
 
 							if obj then
 								table.insert(temp, obj)
 							end
 						end
 					else
+						
 						table.insert(temp, v)
 					end
 				end
 
 				arguments = META.New(temp)
 			end
-
 			return arguments
 		end
 	}

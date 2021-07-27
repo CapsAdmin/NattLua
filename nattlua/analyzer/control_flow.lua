@@ -9,16 +9,6 @@ local Union = require("nattlua.types.union").Union
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
 
-local function cast(val)
-	if type(val) == "string" then
-		return LString(val)
-	elseif type(val) == "number" then
-		return LNumber(val)
-	end
-
-	return val
-end
-
 return function(META)
 	function META:AnalyzeStatements(statements)
 		for _, statement in ipairs(statements) do
@@ -45,19 +35,23 @@ return function(META)
 		local union = Union({})
 
 		for _, ret in ipairs(scope:GetReturnTypes()) do
-			local tup = Tuple(ret.types)
-			tup:SetNode(ret.node)
-			union:AddType(tup)
+			if #ret.types == 1 then
+				union:AddType(ret.types[1])
+			else
+				local tup = Tuple(ret.types)
+				tup:SetNode(ret.node)
+				union:AddType(tup)
+			end
 		end
 
 		if scope.uncertain_function_return or #scope:GetReturnTypes() == 0 then
-			local tup = Tuple({Nil()})
-			tup:SetNode(statement)
-			union:AddType(tup)
+			union:AddType(Nil():SetNode(statement))
 		end
 
 		scope:ClearCertainReturnTypes()
+
 		if #union:GetData() == 1 then return union:GetData()[1] end
+		
 		return union
 	end
 

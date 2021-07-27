@@ -378,7 +378,7 @@ run[[
         return val
     end
 
-    types.assert(a(), _ as Tuple<|1|> | Tuple<|""|>)
+    types.assert(a(), _ as 1 | "")
 ]]
 
 run[[

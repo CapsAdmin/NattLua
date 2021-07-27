@@ -253,6 +253,11 @@ function META:Widen()
 	return self
 end
 
+function META:GetFirstValue()
+	-- for tuples, this would return the first value in the tuple
+	return self
+end
+
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end
