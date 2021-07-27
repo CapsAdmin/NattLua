@@ -1449,3 +1449,17 @@ run[[
     if x == 2 then return end
     error("dead code")
 ]]
+
+run[[
+    local x = _ as 1 | 2
+
+    if x == 1 then
+        types.assert(x, 1)
+        return
+    else
+        types.assert(x, 2)
+        return
+    end
+    
+    error("shouldn't happen")
+]]

@@ -90,6 +90,7 @@ return function(META)
 			-- it does mean that this function at least returns something
 			if scope:IsPartOfElseStatement() then
 				function_scope.uncertain_function_return = false
+				function_scope:CertainReturn()
 			end
 		elseif function_scope.uncertain_function_return then
 			function_scope.uncertain_function_return = false
@@ -98,8 +99,10 @@ return function(META)
 		scope:CollectReturnTypes(node, types)
 
 		if scope:IsUncertain() then
+			function_scope:UncertainReturn(self)
 			scope:UncertainReturn(self)
 		else
+			function_scope:CertainReturn(self)
 			scope:CertainReturn(self)
 		end
 	end
