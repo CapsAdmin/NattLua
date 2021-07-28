@@ -67,17 +67,6 @@ run[[
     x()
 ]]
 
-run([[
-    local a: nil | {}
-    a.foo = true
-    types.assert(a, {foo = true})
-]], "undefined set.- = true")
-
-run([[
-    local b: nil | {foo = true}
-    local c = b.foo
-    types.assert(c, true)
-]], "undefined get: nil.-foo")
 
 pending[[
     local function test(x: {}  | {foo = nil | 1})
@@ -95,3 +84,23 @@ run[[
     local type b = 5 | 3 | 4 | 2 | 1
     types.assert<|a == b, true|>
 ]]
+
+run[[
+    local shapes = _ as {[number] = 1} | {[number] = 2} | {[number] = 3}
+    types.assert(shapes[0], _ as 1|2|3)
+]]
+
+run([[
+    local shapes = _ as {[number] = 1} | {[number] = 2} | {[number] = 3}| false
+    local x = shapes[0]
+]], "false.-0.-on type symbol")
+
+run([[
+    local a: nil | {}
+    a.foo = true
+]], "undefined set.- = true")
+
+run([[
+    local b: nil | {foo = true}
+    local c = b.foo
+]], "undefined get: nil.-foo")

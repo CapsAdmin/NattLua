@@ -30,18 +30,18 @@ local function run(code, expect_error)
 
     if expect_error then
         if not err or err == "" then
-            error("expected error, got\n\n\n[" .. tostring(ok) .. ", " .. tostring(err) .. "]")
+            error("expected error, got\n\n\n[" .. tostring(ok) .. ", " .. tostring(err) .. "]", 3)
         elseif type(expect_error) == "string" then
             if not err:find(expect_error) then
-                error("expected error '" .. expect_error .. "' got\n\n\n" .. err)
+                error("expected error '" .. expect_error .. "' got:\n>>\n" .. err .. "\n<<", 3)
             end
         elseif type(expect_error) == "function" then
             local ok, msg = pcall(expect_error, err)
             if not ok then
-                error("error did not pass: " .. msg .. "\n\nthe error message was:\n" .. err)
+                error("error did not pass: " .. msg .. "\n\nthe error message was:\n" .. err, 3)
             end
         else
-            error("invalid expect_error argument", 2)
+            error("invalid expect_error argument", 3)
         end
     else
         if not ok then

@@ -53,7 +53,7 @@ do
         int GetFileAttributesExA(const char *lpFileName, int fInfoLevelId, $ *lpFileInformation);
     ]], struct)
 
-    local function POSIX_TIME(time)
+    local function POSIX_TIME(time: number)
         return tonumber(time / 10000000 - 11644473600)
     end
 
@@ -178,8 +178,8 @@ end
 
 do
 	ffi.cdef([[
-		const char *getcwd(const char *buf, size_t size);
-		int chdir(const char *filename);
+        unsigned long GetCurrentDirectoryA(unsigned long length, char *buffer);
+        int SetCurrentDirectoryA(const char *path);
 	]])
 
 	function fs.set_current_directory(path)
@@ -193,7 +193,9 @@ do
 	function fs.get_current_directory()
         local buffer = ffi.new("char[260]")
         local length = ffi.C.GetCurrentDirectoryA(260, buffer)
-        return ffi.string(buffer, length):gsub("\\", "/")
+        local str = ffi.string(buffer, length)
+        print(str)
+        return str:gsub("\\", "/")
 	end
 end
 

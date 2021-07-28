@@ -1,10 +1,25 @@
 local LString = require("nattlua.types.string").LString
 local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
+local Union = require("nattlua.types.union").Union
 return
 	{
 		Index = function(META)
 			function META:IndexOperator(node, obj, key, env)
+				if obj.Type == "union" then
+					local union = Union({})
+
+					for _, obj in ipairs(obj.Data) do
+						local val, err = obj:Get(key)
+						if not val then
+							return val, err
+						end
+						union:AddType(val)
+					end
+
+					return union
+				end
+
 				if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then return obj:Get(key) end
 
 				if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then

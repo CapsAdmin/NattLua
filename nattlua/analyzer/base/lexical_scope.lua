@@ -278,8 +278,6 @@ do
 	end
 
 	function META:UncertainReturn(analyzer)
-		local scope = self
-
 		-- upvalue responsible for test condition
 		local test_condition = self:GetTestCondition()
 
@@ -288,7 +286,7 @@ do
 				test_condition:GetTypeSource() or
 				test_condition
 
-			if source then
+			if source and test_condition.Type == "union" then
 				local upvalue = source:GetUpvalue()
 
 				if upvalue then

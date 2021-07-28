@@ -122,8 +122,8 @@ local  ffi--[[#: {
 				}⦘: ⦗*self-table*⦘
 			} }⦘: ⦗number⦘,
 		"FindClose" = function⦗any⦘: ⦗number⦘,
-		"getcwd" = function⦗nil | string, number⦘: ⦗nil | { number = number }⦘,
-		"chdir" = function⦗nil | string⦘: ⦗number⦘,
+		"GetCurrentDirectoryA" = function⦗number, nil | { number = number }⦘: ⦗number⦘,
+		"SetCurrentDirectoryA" = function⦗nil | string⦘: ⦗number⦘,
 		"strerror" = function⦗number⦘: ⦗nil | { number = number }⦘,
 		"syscall" = function⦗number, ⦗⦗any⦘×inf⦘⦘: ⦗number⦘,
 		"stat64" = function⦗nil | string, any⦘: ⦗number⦘,
@@ -143,7 +143,9 @@ local  ffi--[[#: {
 				"d_reclen" = number,
 				"d_type" = number,
 				"d_name" = { number = number }
-			} }⦘
+			} }⦘,
+		"getcwd" = function⦗nil | string, number⦘: ⦗nil | { number = number }⦘,
+		"chdir" = function⦗nil | string⦘: ⦗number⦘
 	},
 	"cdef" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘,
 	"abi" = function⦗string⦘: ⦗false | true⦘,
@@ -264,7 +266,7 @@ do
 
 	
 
-    local  function  POSIX_TIME(time--[[#: any]])--[[#: ]]
+    local  function  POSIX_TIME(time--[[#:  number]])--[[#: ]]
 		
         return  tonumber(time  /  10000000  -  11644473600)
 	
@@ -349,7 +351,20 @@ do
 
 	function  fs.get_attributes(path--[[#: string]],  follow_link--[[#: false | nil | true]])--[[#: ]]
 		
-        local  info  =  ffi.new("$[1]",  struct)
+        local  info--[[#: { any | number = any | {
+		"dwFileAttributes" = number,
+		"ftCreationTime" = number,
+		"ftLastAccessTime" = number,
+		"ftLastWriteTime" = number,
+		"nFileSize" = number,
+		"__call" = function⦗*self-table*, nil | {
+			"dwFileAttributes" = nil | number,
+			"ftCreationTime" = nil | number,
+			"ftLastAccessTime" = nil | number,
+			"ftLastWriteTime" = nil | number,
+			"nFileSize" = nil | number
+		}⦘: ⦗*self-table*⦘
+	} }]]  =  ffi.new("$[1]",  struct)
 		
 
         if  ffi.C.GetFileAttributesExA(path,  0,  info)  ~=  0  then 
@@ -547,8 +562,8 @@ end
 do
 	
 	ffi.cdef([[
-		const char *getcwd(const char *buf, size_t size);
-		int chdir(const char *filename);
+        unsigned long GetCurrentDirectoryA(unsigned long length, char *buffer);
+        int SetCurrentDirectoryA(const char *path);
 	]])
 
 	
@@ -568,11 +583,15 @@ do
 
 	function  fs.get_current_directory()--[[#: ]]
 		
-        local  buffer  =  ffi.new("char[260]")
+        local  buffer--[[#: { any | number = any | number }]]  =  ffi.new("char[260]")
 		
-        local  length  =  ffi.C.GetCurrentDirectoryA(260,  buffer)
+        local  length--[[#: number]]  =  ffi.C.GetCurrentDirectoryA(260,  buffer)
 		
-        return  ffi.string(buffer,  length):gsub("\\",  "/")
+        local  str--[[#: string]]  =  ffi.string(buffer,  length)
+		
+        print(str)
+		
+        return  str:gsub("\\",  "/")
 	
 	end
 
@@ -659,8 +678,8 @@ local  ffi--[[#: {
 				}⦘: ⦗*self-table*⦘
 			} }⦘: ⦗number⦘,
 		"FindClose" = function⦗any⦘: ⦗number⦘,
-		"getcwd" = function⦗nil | string, number⦘: ⦗nil | { number = number }⦘,
-		"chdir" = function⦗nil | string⦘: ⦗number⦘,
+		"GetCurrentDirectoryA" = function⦗number, nil | { number = number }⦘: ⦗number⦘,
+		"SetCurrentDirectoryA" = function⦗nil | string⦘: ⦗number⦘,
 		"strerror" = function⦗number⦘: ⦗nil | { number = number }⦘,
 		"syscall" = function⦗number, ⦗⦗any⦘×inf⦘⦘: ⦗number⦘,
 		"stat64" = function⦗nil | string, any⦘: ⦗number⦘,
@@ -680,7 +699,9 @@ local  ffi--[[#: {
 				"d_reclen" = number,
 				"d_type" = number,
 				"d_name" = { number = number }
-			} }⦘
+			} }⦘,
+		"getcwd" = function⦗nil | string, number⦘: ⦗nil | { number = number }⦘,
+		"chdir" = function⦗nil | string⦘: ⦗number⦘
 	},
 	"cdef" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘,
 	"abi" = function⦗string⦘: ⦗false | true⦘,
@@ -726,17 +747,17 @@ ffi.cdef([[
 
 
 
-local  function  last_error(num--[[#:  number  |  nil]])--[[#: ]]
+local  function  last_error(num--[[#:  number  |  nil]])--[[#: string]]
 	
 	num  =  num  or  ffi.errno()
 	
-	local  ptr  =  ffi.C.strerror(num)
+	local  ptr--[[#: nil | { number = number }]]  =  ffi.C.strerror(num)
 	
 	if  not  ptr  then 
 		return  "strerror returns null" 
 	end
 	
-	local  err  =  ffi.string(ptr)
+	local  err--[[#: string]]  =  ffi.string(ptr)
 	
 	return  err  ==  ""  and  tostring(num)  or  err
 
@@ -893,14 +914,14 @@ do
 
 		
 
-		stat  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])--[[#: ]]
+		stat  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])--[[#: number]]
 			
 			return  ffi.C.syscall(STAT_SYSCALL,  path,  buff)
 		
 		end
 		
 
-		stat_link  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])--[[#: ]]
+		stat_link  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])--[[#: number]]
 			
 			return  ffi.C.syscall(STAT_LINK_SYSCALL,  path,  buff)
 		
@@ -916,10 +937,19 @@ do
 
 	function  fs.get_attributes(path--[[#: string]],  follow_link--[[#: false | nil | true]])--[[#: ]]
 		
-		local  buff  =  statbox()
+		local  buff--[[#: {
+	number = OSXStat,
+	"__call" = function⦗*self-table*, nil | { number = OSXStat | nil }⦘: ⦗*self-table*⦘
+} | {
+	number = UnixX32Stat,
+	"__call" = function⦗*self-table*, nil | { number = UnixX32Stat | nil }⦘: ⦗*self-table*⦘
+} | {
+	number = UnixX64Stat,
+	"__call" = function⦗*self-table*, nil | { number = UnixX64Stat | nil }⦘: ⦗*self-table*⦘
+}]]  =  statbox()
 		
 
-		local  ret  =  follow_link  and  stat_link(path,  buff)  or  stat(path,  buff)
+		local  ret--[[#: number]]  =  follow_link  and  stat_link(path,  buff)  or  stat(path,  buff)
 		
 
 		if  ret  ==  0  then 
@@ -991,7 +1021,7 @@ do
 	local  dot--[[#: 46]]  =  string.byte(".")
 
 	
-	local  function  is_dots(ptr--[[#:  {[number]  =  number}]])--[[#: ]]
+	local  function  is_dots(ptr--[[#:  {[number]  =  number}]])--[[#: false | true]]
 		
 		if  ptr[0]  ==  dot  then
 			
@@ -1018,7 +1048,7 @@ do
 		local  out--[[#:  List<|string|>]]  =  {}
 		
 
-		local  ptr  =  ffi.C.opendir(path  or  "")
+		local  ptr--[[#: any]]  =  ffi.C.opendir(path  or  "")
 		
 
 		if  ptr  ==  nil  then 
@@ -1026,12 +1056,19 @@ do
 		end
 		
 
-		local  i  =  1
+		local  i--[[#: 1]]  =  1
 
 		
 		while  true  do
 			
-			local  dir_info  =  ffi.C.readdir(ptr)
+			local  dir_info--[[#: nil | { number = {
+		"d_ino" = number,
+		"d_seekoff" = number,
+		"d_reclen" = number,
+		"d_namlen" = number,
+		"d_type" = number,
+		"d_name" = { number = number }
+	} }]]  =  ffi.C.readdir(ptr)
 			
 
 			if  dir_info  ==  nil  then  break  end
@@ -1085,13 +1122,11 @@ do
 
 	function  fs.get_current_directory()--[[#: ]]
 		
-		-- TODO: this is never analyzed? 
+		local  temp--[[#: { any | number = any | number }]]  =  ffi.new("char[1024]")
 		
-		-- something about never being part of unreachable code
+		print(ffi.C.getcwd)
 		
-		local  temp  =  ffi.new("char[1024]")
-		
-		local  ret  =  ffi.C.getcwd(temp,  ffi.sizeof(temp))
+		local  ret--[[#: any]]  =  ffi.C.getcwd(temp,  ffi.sizeof(temp))
 		
 		
 		if  ret  then 

@@ -9,7 +9,7 @@ end
 assert(builder:Lex())
 assert(builder:Parse())
 
-builder:Analyze()
+assert(builder:Analyze())
 
 local code, err = builder:Emit({
     preserve_whitespace = true, 

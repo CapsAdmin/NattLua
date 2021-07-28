@@ -359,8 +359,11 @@ return
 					end
 
 					if result.Type == "union" then
-						for _, tuple in ipairs(result:GetData()) do
-							check_return_result(self, tuple, contract)
+						for _, obj in ipairs(result:GetData()) do
+							if obj.Type ~= "tuple" then
+								obj = Tuple({obj}):SetNode(obj:GetNode())
+							end
+							check_return_result(self, obj, contract)
 						end
 					else
 						if contract.Type == "union" then
