@@ -136,9 +136,9 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 						local mut = mutations[i]
 						if not mut then break end
 
-						if not mut.scope:IsPartOfTestStatementAs(scope) and not mut.scope:Contains(scope) then
+						if not mut.scope:IsPartOfTestStatementAs(scope) and not mut.scope:IsCertain(scope) then
 							for i = i, 1, -1 do
-								if mutations[i].scope:Contains(scope) then
+								if mutations[i].scope:IsCertain(scope) then
 									if DEBUG then
 										dprint(mut, "redudant mutation before else part of if statement")
 									end

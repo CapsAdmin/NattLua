@@ -1481,3 +1481,22 @@ run[[
     
     error("shouldn't happen")
 ]]
+
+run[[
+    local lol
+    if true then
+        lol = {}
+    end
+
+    do
+        if _ as boolean then
+            lol.x = 1
+        else
+            lol.x = 2
+        end
+
+        local function get_files()
+            types.assert(lol.x, _ as 1 | 2)
+        end
+    end
+]]
