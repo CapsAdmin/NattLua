@@ -961,10 +961,7 @@ do
 			return  ffi.string(ret,  ffi.sizeof(temp)) 
 		end
 		
-
-		print(fs.get_current_directory)
 		
-
 		return  nil,  last_error()
 	
 	end
