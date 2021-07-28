@@ -243,6 +243,8 @@ function META:Analyze(analyzer, ...)
 
 		return res
 	end, function(msg)
+		local start, stop = helpers.LazyFindStartStop(analyzer.current_expression, analyzer.current_statement)
+		self:OnDiagnostic(self.code, self.name, msg, "fatal", start, stop)
 		return traceback(self, analyzer, msg)
 	end)
 	self.AnalyzedResult = res
