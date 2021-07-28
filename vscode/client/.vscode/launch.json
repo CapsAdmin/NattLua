@@ -8,13 +8,13 @@
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"args": [
-				"${workspaceRoot}/../../.",
-				"--extensionDevelopmentPath=${workspaceRoot}"
+				"${workspaceFolder}/../../.",
+				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"stopOnEntry": false,
 			"sourceMaps": true,
 			"outFiles": [
-				"${workspaceRoot}/out/**/*.js"
+				"${workspaceFolder}/out/**/*.js"
 			],
 			"preLaunchTask": "npm"
 		},
