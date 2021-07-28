@@ -957,6 +957,24 @@ run[[
 ]]
 
 run[[
+    if _ as boolean then
+        local function foo() 
+            local c = {}
+            c.foo = true
+            
+            if _ as boolean then
+                local function test()
+                    local x = c.foo
+                    types.assert(x, true)
+                end
+                test()
+            end
+        end
+        foo()
+    end
+]]
+
+run[[
     local tbl = {foo = 1}
 
     if MAYBE then

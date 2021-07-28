@@ -338,7 +338,10 @@ do
 
 		while true do
 			if scope == from then break end
-			if scope.uncertain then return true, scope end
+			if scope.returns then break end -- from a function scope we're always certiain
+			if scope.uncertain then
+				return true, scope 
+			end
 			scope = scope.parent
 			if not scope then break end
 		end

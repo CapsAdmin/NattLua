@@ -14,7 +14,6 @@ local setmetatable = _G.setmetatable
 local DEBUG = false
 
 local function dprint(mut, reason)
-	if not DEBUG then return end
 	print(
 		"\t" .. tostring(mut.scope) .. " - " .. tostring(mut.value) .. ": " .. reason
 	)
@@ -233,6 +232,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 			end
 		end
 
+		-- IsCertain isn't really accurate and seems to be used as a last resort in case the above logic doesn't work
 		if mut.certain_override or mut.scope:IsCertain(scope) then
 			union:Clear()
 		end
@@ -331,10 +331,15 @@ local function initialize_mutation_tracker(obj, scope, key, env)
 
 	if obj.mutations[key][1] == nil then
 		if obj.Type == "table" then
+			-- initialize the table mutations with an existing value or nil
 			local val = (obj:GetContract() or obj):Get(cast(key)) or Nil()
 			val:SetUpvalue(obj.mutations[key])
 			val:SetUpvalueReference(key)
-			table.insert(obj.mutations[key], {scope = scope:GetRoot(), value = val})
+			-- for the iniital value, the scope should be the scope where the table was created
+
+			--if not obj.scope then print(obj.trace) end
+
+			table.insert(obj.mutations[key], {scope = obj.scope or scope:GetRoot(), value = val})
 		end
 	end
 end

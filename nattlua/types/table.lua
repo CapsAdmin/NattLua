@@ -502,6 +502,7 @@ function META:Copy(map--[[#: any]])
 	copy.mutable = self.mutable
 	copy:SetLiteral(self:IsLiteral())
 	copy.mutations = self.mutations
+	copy.scope = self.scope
 	
 	--[[
 		
@@ -682,7 +683,7 @@ function META:PrefixOperator(op--[[#: "#"]])
 end
 
 function META.New()
-	return setmetatable({Data = {}}, META)
+	return setmetatable({Data = {}, trace = debug.traceback()}, META)
 end
 
 return {Table = META.New}

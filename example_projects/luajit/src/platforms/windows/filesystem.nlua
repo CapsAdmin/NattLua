@@ -194,8 +194,7 @@ do
         local buffer = ffi.new("char[260]")
         local length = ffi.C.GetCurrentDirectoryA(260, buffer)
         local str = ffi.string(buffer, length)
-        print(str)
-        return str:gsub("\\", "/")
+        return (str:gsub("\\", "/"))
 	end
 end
 

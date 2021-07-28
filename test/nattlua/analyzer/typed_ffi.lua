@@ -102,7 +102,7 @@ run[=[
 run[=[
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
-	types.assert(ctype.foo, _ as string | nil)
+	types.assert(ctype.foo, _ as string | nil | {[number] = number})
 ]=]
 
 
@@ -118,14 +118,14 @@ run[=[
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			types.assert<|typeof ffi.C.foo, (function(string | nil): (nil)) |>
+			types.assert<|typeof ffi.C.foo, (function(string | nil | {[number] = number}): (nil)) |>
 		else
 			ffi.cdef("int foo(int a);")
 			types.assert<|typeof ffi.C.foo, (function(number): (number))|>
 		end	
 	end
 
-	types.assert<|typeof ffi.C.foo, (function(number): (nil)) | (function(number): (number)) | (function(string | nil): (nil)) |>
+	types.assert<|typeof ffi.C.foo, (function(number): (nil)) | (function(number): (number)) | (function(string | nil | {[number] = number}): (nil)) |>
 ]=]
 
 run[=[
@@ -229,3 +229,21 @@ run[=[
 	local buffer = ffi.new("char[8]")
 	types.assert<|buffer, {[number] = number}|>
 ]=]
+
+run[[
+
+	if _ as boolean then
+		local function foo()
+			ffi.cdef("void test()")
+			if _ as boolean then
+				local function test()
+					local x = ffi.C.test
+					types.assert(x, _ as function(): nil)
+				end
+				test()
+			end
+		end
+		foo()
+	end
+
+]]

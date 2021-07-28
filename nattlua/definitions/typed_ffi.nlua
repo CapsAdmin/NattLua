@@ -125,7 +125,6 @@ local type function cast(node, args)
 	elseif node.tag == "Qualified" then
 		return cast(node.t, args)
 	elseif node.tag == "Pointer" then
-		if node.t.tag == "Qualified" and node.t.t.n == "char" then return types.Union({types.String(), types.Nil()}) end
 		if node.t.tag == "Type" and node.t.n == "void" then return types.Any() end
 		local ptr = types.Table()
 		local ctype = cast(node.t, args)
@@ -139,6 +138,9 @@ local type function cast(node, args)
 					return ctype:GetMetaTable():Get(key) end
 		end, {types.Any(), types.Any()}, {}))
 		ptr:SetMetaTable(meta)
+
+		if node.t.tag == "Qualified" and node.t.t.n == "char" then return types.Union({types.String(), types.Nil(), ptr}) end
+
 		return types.Union({ptr, types.Nil()})
 	else
 		table_print(node)

@@ -62,91 +62,7 @@ local  ffi--[[#: {
 	"errno" = function⦗nil | number⦘: ⦗number⦘,
 	"os" = "BSD" | "Linux" | "OSX" | "Other" | "POSIX" | "Windows",
 	"arch" = "arm" | "mips" | "ppc" | "ppcspe" | "x64" | "x86",
-	"C" = {
-		"GetLastError" = function⦗⦘: ⦗number⦘,
-		"FormatMessageA" = function⦗number, nil | { }, number, number, nil | { number = number }, number, ⦗⦗any⦘×inf⦘⦘: ⦗number⦘,
-		"$1" = any,
-		"GetFileAttributesExA" = function⦗nil | string, number, nil | { number = {
-				"dwFileAttributes" = number,
-				"ftCreationTime" = number,
-				"ftLastAccessTime" = number,
-				"ftLastWriteTime" = number,
-				"nFileSize" = number,
-				"__call" = function⦗*self-table*, nil | {
-					"dwFileAttributes" = nil | number,
-					"ftCreationTime" = nil | number,
-					"ftLastAccessTime" = nil | number,
-					"ftLastWriteTime" = nil | number,
-					"nFileSize" = nil | number
-				}⦘: ⦗*self-table*⦘
-			} }⦘: ⦗number⦘,
-		"$2" = any,
-		"FindFirstFileA" = function⦗nil | string, nil | { number = {
-				"dwFileAttributes" = number,
-				"ftCreationTime" = number,
-				"ftLastAccessTime" = number,
-				"ftLastWriteTime" = number,
-				"nFileSize" = number,
-				"dwReserved" = number,
-				"cFileName" = { number = number },
-				"cAlternateFileName" = { number = number },
-				"__call" = function⦗*self-table*, nil | {
-					"dwFileAttributes" = nil | number,
-					"ftCreationTime" = nil | number,
-					"ftLastAccessTime" = nil | number,
-					"ftLastWriteTime" = nil | number,
-					"nFileSize" = nil | number,
-					"dwReserved" = nil | number,
-					"cFileName" = nil | { number = number },
-					"cAlternateFileName" = nil | { number = number }
-				}⦘: ⦗*self-table*⦘
-			} }⦘: ⦗any⦘,
-		"FindNextFileA" = function⦗any, nil | { number = {
-				"dwFileAttributes" = number,
-				"ftCreationTime" = number,
-				"ftLastAccessTime" = number,
-				"ftLastWriteTime" = number,
-				"nFileSize" = number,
-				"dwReserved" = number,
-				"cFileName" = { number = number },
-				"cAlternateFileName" = { number = number },
-				"__call" = function⦗*self-table*, nil | {
-					"dwFileAttributes" = nil | number,
-					"ftCreationTime" = nil | number,
-					"ftLastAccessTime" = nil | number,
-					"ftLastWriteTime" = nil | number,
-					"nFileSize" = nil | number,
-					"dwReserved" = nil | number,
-					"cFileName" = nil | { number = number },
-					"cAlternateFileName" = nil | { number = number }
-				}⦘: ⦗*self-table*⦘
-			} }⦘: ⦗number⦘,
-		"FindClose" = function⦗any⦘: ⦗number⦘,
-		"GetCurrentDirectoryA" = function⦗number, nil | { number = number }⦘: ⦗number⦘,
-		"SetCurrentDirectoryA" = function⦗nil | string⦘: ⦗number⦘,
-		"strerror" = function⦗number⦘: ⦗nil | { number = number }⦘,
-		"syscall" = function⦗number, ⦗⦗any⦘×inf⦘⦘: ⦗number⦘,
-		"stat64" = function⦗nil | string, any⦘: ⦗number⦘,
-		"lstat64" = function⦗nil | string, any⦘: ⦗number⦘,
-		"opendir" = function⦗nil | string⦘: ⦗any⦘,
-		"closedir" = function⦗any⦘: ⦗number⦘,
-		"struct dirent" = {
-			"d_ino" = number,
-			"d_off" = number,
-			"d_reclen" = number,
-			"d_type" = number,
-			"d_name" = { number = number }
-		},
-		"readdir" = function⦗any⦘: ⦗nil | { number = {
-				"d_ino" = number,
-				"d_off" = number,
-				"d_reclen" = number,
-				"d_type" = number,
-				"d_name" = { number = number }
-			} }⦘,
-		"getcwd" = function⦗nil | string, number⦘: ⦗nil | { number = number }⦘,
-		"chdir" = function⦗nil | string⦘: ⦗number⦘
-	},
+	"C" = FFI_C,
 	"cdef" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘,
 	"abi" = function⦗string⦘: ⦗false | true⦘,
 	"metatype" = function⦗any, any⦘: ⦗⦘,
@@ -589,9 +505,7 @@ do
 		
         local  str--[[#: string]]  =  ffi.string(buffer,  length)
 		
-        print(str)
-		
-        return  str:gsub("\\",  "/")
+        return  (str:gsub("\\",  "/"))
 	
 	end
 
@@ -618,91 +532,7 @@ local  ffi--[[#: {
 	"errno" = function⦗nil | number⦘: ⦗number⦘,
 	"os" = "BSD" | "Linux" | "OSX" | "Other" | "POSIX" | "Windows",
 	"arch" = "arm" | "mips" | "ppc" | "ppcspe" | "x64" | "x86",
-	"C" = {
-		"GetLastError" = function⦗⦘: ⦗number⦘,
-		"FormatMessageA" = function⦗number, nil | { }, number, number, nil | { number = number }, number, ⦗⦗any⦘×inf⦘⦘: ⦗number⦘,
-		"$1" = any,
-		"GetFileAttributesExA" = function⦗nil | string, number, nil | { number = {
-				"dwFileAttributes" = number,
-				"ftCreationTime" = number,
-				"ftLastAccessTime" = number,
-				"ftLastWriteTime" = number,
-				"nFileSize" = number,
-				"__call" = function⦗*self-table*, nil | {
-					"dwFileAttributes" = nil | number,
-					"ftCreationTime" = nil | number,
-					"ftLastAccessTime" = nil | number,
-					"ftLastWriteTime" = nil | number,
-					"nFileSize" = nil | number
-				}⦘: ⦗*self-table*⦘
-			} }⦘: ⦗number⦘,
-		"$2" = any,
-		"FindFirstFileA" = function⦗nil | string, nil | { number = {
-				"dwFileAttributes" = number,
-				"ftCreationTime" = number,
-				"ftLastAccessTime" = number,
-				"ftLastWriteTime" = number,
-				"nFileSize" = number,
-				"dwReserved" = number,
-				"cFileName" = { number = number },
-				"cAlternateFileName" = { number = number },
-				"__call" = function⦗*self-table*, nil | {
-					"dwFileAttributes" = nil | number,
-					"ftCreationTime" = nil | number,
-					"ftLastAccessTime" = nil | number,
-					"ftLastWriteTime" = nil | number,
-					"nFileSize" = nil | number,
-					"dwReserved" = nil | number,
-					"cFileName" = nil | { number = number },
-					"cAlternateFileName" = nil | { number = number }
-				}⦘: ⦗*self-table*⦘
-			} }⦘: ⦗any⦘,
-		"FindNextFileA" = function⦗any, nil | { number = {
-				"dwFileAttributes" = number,
-				"ftCreationTime" = number,
-				"ftLastAccessTime" = number,
-				"ftLastWriteTime" = number,
-				"nFileSize" = number,
-				"dwReserved" = number,
-				"cFileName" = { number = number },
-				"cAlternateFileName" = { number = number },
-				"__call" = function⦗*self-table*, nil | {
-					"dwFileAttributes" = nil | number,
-					"ftCreationTime" = nil | number,
-					"ftLastAccessTime" = nil | number,
-					"ftLastWriteTime" = nil | number,
-					"nFileSize" = nil | number,
-					"dwReserved" = nil | number,
-					"cFileName" = nil | { number = number },
-					"cAlternateFileName" = nil | { number = number }
-				}⦘: ⦗*self-table*⦘
-			} }⦘: ⦗number⦘,
-		"FindClose" = function⦗any⦘: ⦗number⦘,
-		"GetCurrentDirectoryA" = function⦗number, nil | { number = number }⦘: ⦗number⦘,
-		"SetCurrentDirectoryA" = function⦗nil | string⦘: ⦗number⦘,
-		"strerror" = function⦗number⦘: ⦗nil | { number = number }⦘,
-		"syscall" = function⦗number, ⦗⦗any⦘×inf⦘⦘: ⦗number⦘,
-		"stat64" = function⦗nil | string, any⦘: ⦗number⦘,
-		"lstat64" = function⦗nil | string, any⦘: ⦗number⦘,
-		"opendir" = function⦗nil | string⦘: ⦗any⦘,
-		"closedir" = function⦗any⦘: ⦗number⦘,
-		"struct dirent" = {
-			"d_ino" = number,
-			"d_off" = number,
-			"d_reclen" = number,
-			"d_type" = number,
-			"d_name" = { number = number }
-		},
-		"readdir" = function⦗any⦘: ⦗nil | { number = {
-				"d_ino" = number,
-				"d_off" = number,
-				"d_reclen" = number,
-				"d_type" = number,
-				"d_name" = { number = number }
-			} }⦘,
-		"getcwd" = function⦗nil | string, number⦘: ⦗nil | { number = number }⦘,
-		"chdir" = function⦗nil | string⦘: ⦗number⦘
-	},
+	"C" = FFI_C,
 	"cdef" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘,
 	"abi" = function⦗string⦘: ⦗false | true⦘,
 	"metatype" = function⦗any, any⦘: ⦗⦘,
@@ -1124,9 +954,7 @@ do
 		
 		local  temp--[[#: { any | number = any | number }]]  =  ffi.new("char[1024]")
 		
-		print(ffi.C.getcwd)
-		
-		local  ret--[[#: any]]  =  ffi.C.getcwd(temp,  ffi.sizeof(temp))
+		local  ret--[[#: nil | { number = number }]]  =  ffi.C.getcwd(temp,  ffi.sizeof(temp))
 		
 		
 		if  ret  then 

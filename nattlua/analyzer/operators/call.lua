@@ -388,13 +388,8 @@ return
 							end
 
 							local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
-
 							if not ok then
-								if result:Get(i) then
-									self:Error(result:Get(i):GetNode(), reason)
-								else
-									self:Error(result:GetNode(), reason)
-								end
+								self:Error(self.current_statement, reason)
 							end
 						end
 					end

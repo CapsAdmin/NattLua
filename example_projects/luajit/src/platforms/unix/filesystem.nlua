@@ -247,7 +247,6 @@ do
 
 	function fs.get_current_directory()
 		local temp = ffi.new("char[1024]")
-		print(ffi.C.getcwd)
 		local ret = ffi.C.getcwd(temp, ffi.sizeof(temp))
 		
 		if ret then

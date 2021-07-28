@@ -59,6 +59,9 @@ return
 			end
 
 			table.remove(analyzer.current_tables)
+
+			tbl.scope = analyzer:GetScope()
+
 			return tbl
 		end,
 	}
