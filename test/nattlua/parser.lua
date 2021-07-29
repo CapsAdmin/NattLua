@@ -115,6 +115,9 @@ end)
 
 test("// binary operator", function()
     check("// lol\nprint(3 // (5 // 2))", "// lol\nprint(3/idiv/ (5/idiv/ 2)) ")
+    check("local yes = 10\n// woo", "local yes = 10\n// woo")
+    check("local yes = 10 // woo", "local yes = 10/idiv/ woo ")
+
 end)
 
 test("types", function() 

@@ -234,6 +234,7 @@ do
 	local function check_integer_division_operator(parser, node)
 		if node and not node.idiv_resolved then
 			for i, token in ipairs(node.whitespace) do
+				if token.value:find("\n", nil, true) then break end
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
 					local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
