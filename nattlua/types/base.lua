@@ -66,7 +66,7 @@ do
 		return self
 	end
 
-	function META:CopyInternalsFrom(obj)
+	function META:CopyInternalsFrom(obj --[[#: mutable BaseType]])
 		self:SetNode(obj:GetNode())
 		self:SetTokenLabelSource(obj:GetTokenLabelSource())
 		self:SetTypeSource(obj:GetTypeSource())
