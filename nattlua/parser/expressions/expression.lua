@@ -285,7 +285,22 @@ do
 				node.left.parent = node
 			end
 
-			node.right = ReadExpression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
+			node.right = ExpectExpression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
+
+			if not node.right then
+				local token = parser:GetToken()
+				parser:Error(
+					"expected right side to be an expression, got $1",
+					nil,
+					nil,
+					token and
+					token.value ~= "" and
+					token.value or
+					token.type
+				)
+				return
+			end
+
 			node:End()
 		end
 

@@ -267,6 +267,7 @@ test("parser errors", function()
         {"::", "expected.-letter.-got.-end_of_file"},
         {"!!!!!!!!!!!", "expected.-got.-end_of_file"},
         {"do do end", "expected.-end.-got.-"},
+        {"local a = 1 === 1", "expected right side to be an expression.-got.-="},
         {"\n\n\nif $test then end", "expected.-then.-got.-$"},
     })
 end)
