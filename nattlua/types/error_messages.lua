@@ -76,7 +76,7 @@ local errors = {
 					"cannot find ",
 					a,
 					" in pattern \"",
-					b.pattern_contract,
+					b:GetPatternContract(),
 					"\"",
 				}
 		end,

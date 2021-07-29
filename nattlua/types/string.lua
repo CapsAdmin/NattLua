@@ -8,9 +8,14 @@ local string_meta = require("nattlua.runtime.string_meta")
 local Number = require("nattlua.types.number").Number
 local META = dofile("nattlua/types/base.lua")
 META.Type = "string"
+--[[#type META.@Name = "TString"]]
+--[[#type TString = META.@Self]]
+META:GetSet("Data", nil--[[# as string | nil]])
+META:GetSet("PatternContract", nil--[[# as nil | string]])
 
-function META.Equal(a, b)
+function META.Equal(a--[[#: TString]], b--[[#: TString]])
 	if a.Type ~= b.Type then return false end
+
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 	return false
@@ -22,13 +27,9 @@ end
 
 function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
-	copy.pattern_contract = self.pattern_contract
+	copy:SetPatternContract(self:GetPatternContract())
 	copy:CopyInternalsFrom(self)
 	return copy
-end
-
-function META:SetPattern(str)
-	self.pattern_contract = str
 end
 
 function META.IsSubsetOf(A, B)
@@ -45,10 +46,10 @@ function META.IsSubsetOf(A, B)
 		-- string subsetof string
 		return true end
 
-	if B.pattern_contract then
+	if B.PatternContract then
 		if not A:GetData() then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
             return type_errors.literal(A) end
-		if not A:GetData():find(B.pattern_contract) then return type_errors.string_pattern(A, B) end
+		if not A:GetData():find(B.PatternContract) then return type_errors.string_pattern(A, B) end
 		return true
 	end
 
@@ -57,7 +58,7 @@ function META.IsSubsetOf(A, B)
 end
 
 function META:__tostring()
-	if self.pattern_contract then return "$(" .. self.pattern_contract .. ")" end
+	if self.PatternContract then return "$(" .. self.PatternContract .. ")" end
 
 	if self:IsLiteral() then
 		if self:GetData() then return "\"" .. self:GetData() .. "\"" end
@@ -69,7 +70,7 @@ function META:__tostring()
 	return "string(" .. tostring(self:GetData()) .. ")"
 end
 
-function META.LogicalComparison(a, b, op)
+function META.LogicalComparison(a--[[#: TString]], b--[[#: TString]], op)
 	if op == ">" then
 		return a:GetData() > b:GetData()
 	elseif op == "<" then
@@ -91,11 +92,11 @@ function META:IsTruthy()
 	return true
 end
 
-function META:PrefixOperator(op)
+function META:PrefixOperator(op--[[#: string]])
 	if op == "#" then return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral()) end
 end
 
-function META.New(data--[[#: string]])
+function META.New(data--[[#: string | nil]])
 	local self = setmetatable({Data = data}, META)
 	self:SetMetaTable(string_meta)
 	return self
@@ -107,12 +108,13 @@ return
 		LString = function(num--[[#: string]])
 			return META.New(num):SetLiteral(true)
 		end,
-		NodeToString = function(node)
+		NodeToString = function(node--[[#: Token]])
 			return META.New(node.value.value):SetLiteral(true):SetNode(node)
 		end,
-		LStringFromString = function(value)
+		LStringFromString = function(value--[[#: string]])
 			if value:sub(1, 1) == "[" then
 				local start = value:match("(%[[%=]*%[)")
+                if not start then error("unable to match string") end
 				return META.New(value:sub(#start + 1, -#start - 1)):SetLiteral(true)
 			end
 

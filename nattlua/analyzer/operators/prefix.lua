@@ -91,7 +91,7 @@ local function prefix_operator(analyzer, node, l, env)
 			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
 			if obj.Type ~= "string" then return type_errors.other("must evaluate to a string") end
 			if not obj:IsLiteral() then return type_errors.other("must be a literal") end
-			obj:SetPattern(obj:GetData())
+			obj:SetPatternContract(obj:GetData())
 			return obj
 		end
 	end
