@@ -1343,6 +1343,18 @@ run[[
 ]]
 
 pending[[
+    local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }
+
+    local function area(shape: Shape): number
+        if shape.kind == "circle" then 
+            print(shape.radius)
+        else
+            print(shape.sideLength)
+        end 
+    end
+]]
+
+pending[[
     local a: nil | 1
 
     if not not not a then
