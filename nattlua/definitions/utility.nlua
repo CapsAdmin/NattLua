@@ -64,7 +64,7 @@ type function enum(tbl)
 	return union
 end
 
-type function keysof(tbl: Table)
+type function keysof(tbl: Table | {})
 	local union = types.Union()
 
 	for _, keyval in ipairs(tbl:GetData()) do
