@@ -109,6 +109,8 @@ function META:EmitExpression(node, from_assignment)
 		self:EmitTableKeyValue(node)
 	elseif node.kind == "empty_union" then
 		self:EmitEmptyUnion(node)
+	elseif node.kind == "tuple" then
+		self:EmitTuple(node)
 	else
 		error("unhandled token type " .. node.kind)
 	end
@@ -414,6 +416,12 @@ end
 
 function META:EmitEmptyUnion(node)
 	self:EmitToken(node.tokens["|"])
+end
+
+function META:EmitTuple(node)
+	self:EmitToken(node.tokens["("])
+	self:EmitExpressionList(node.expressions)
+	self:EmitToken(node.tokens[")"])
 end
 
 local function has_function_value(tree)

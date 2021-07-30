@@ -156,3 +156,14 @@ run([[
         return 1
     end
 ]], "index 2 does not exist")
+
+run[[
+    local type a = (3, 4, 5)
+    types.assert<|a, (3,4,5)|>
+
+    local type a = (5,)
+    types.assert<|a, (5,)|>
+
+    local type a = ()
+    types.assert<|a, ()|>
+]]

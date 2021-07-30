@@ -40,9 +40,23 @@ local function read_parenthesis(parser)
 	local pleft = parser:ExpectValue("(")
 	local node = ReadExpression(parser, 0)
 
-	if not node then
-		parser:Error("empty parentheses group", pleft)
-		return
+	if not node or parser:IsValue(",") then
+		local first_expression = node
+		local node = parser:Node("expression", "tuple")
+		
+		if parser:IsValue(",") then
+			first_expression.tokens[","] = parser:ExpectValue(",")
+			node.expressions = ReadMultipleValues(parser, nil, ReadExpression, 0)
+		else
+			node.expressions = {}
+		end
+
+		if first_expression then
+			table.insert(node.expressions, 1, first_expression)
+		end
+		node.tokens["("] = pleft
+		node:ExpectKeyword(")")
+		return node:End()
 	end
 
 	node.tokens["("] = node.tokens["("] or {}

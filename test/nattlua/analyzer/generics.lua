@@ -22,12 +22,12 @@ run[=[
         declared[event_name] = FunctionFromTuples<|arguments, return_types|>
     end
 
-    events.Declare<|"message", Tuple<|string|>, Tuple<|boolean, string|> | Tuple<|number|>|>
-    events.Declare<|"update", Tuple<|number|>, Tuple<|boolean|>|>
+    events.Declare<|"message", (string,), (boolean, string) | (number,)|>
+    events.Declare<|"update", (number,), (boolean,)|>
 
     function events.AddListener(event_name: keysof<|declared|>, listener: declared[event_name])
         types.assert(event_name, _ as "message" | "update")
-        types.assert(listener, _ as (function(number | string): Tuple<|Tuple<|false | true | Tuple<|false | true, string|> | Tuple<|number|>|>|>))
+        types.assert(listener, _ as (function(number | string): ((false | true | (false | true, string) | (number,)))))
     end
 
     events.AddListener("message", function(data) 
@@ -56,12 +56,12 @@ run[=[
         declared[event_name] = FunctionFromTuples<|arguments, return_types|>
     end
 
-    events.Declare<|"message", Tuple<|string|>, Tuple<|boolean, string|> | Tuple<|number|>|>
-    events.Declare<|"update", Tuple<|number|>, Tuple<|boolean|>|>
+    events.Declare<|"message", (string,), (boolean, string) | (number,)|>
+    events.Declare<|"update", (number,), (boolean,)|>
 
     function events.AddListener(event_name: literal keysof<|declared|>, listener: declared[event_name])
         types.assert(event_name, _ as "message")
-        types.assert(listener, _ as (function(string): Tuple<|boolean, string|> | Tuple<|nil|>))
+        types.assert(listener, _ as (function(string): (boolean, string) | (nil,)))
     end
 
     events.AddListener("message", function(data) types.assert(data, _ as string) return 1337 end)

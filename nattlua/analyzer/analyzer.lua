@@ -96,6 +96,7 @@ do
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
 	local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
 	local Union = require("nattlua.types.union").Union
+	local Tuple = require("nattlua.types.tuple").Tuple
 
 	function META:AnalyzeExpression(node, env)
 		self.current_expression = node
@@ -133,6 +134,8 @@ do
 			return AnalyzeImport(self, node, env)
 		elseif node.kind == "empty_union" then
 			return Union({}):SetNode(node)
+		elseif node.kind == "tuple" then
+			return Tuple(self:AnalyzeExpressions(node.expressions, env)):SetNode(node):SetUnpackable(true)
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end
