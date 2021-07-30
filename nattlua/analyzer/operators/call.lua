@@ -275,14 +275,53 @@ return
 					end
 				end
 
-				local function check_and_setup_arguments(self, arguments, contracts)
-					self.mutated_types = self.mutated_types or {}
-					table.insert(self.mutated_types, 1, {})
+				local function check_and_setup_arguments(analyzer, arguments, contracts, function_node, obj)
+					analyzer.mutated_types = analyzer.mutated_types or {}
+					table.insert(analyzer.mutated_types, 1, {})
 					local len = contracts:GetSafeLength(arguments)
+
+					local contract_override = {}
+
+					do -- analyze the type expressions
+						
+						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+						analyzer:PushPreferTypesystem(true)
+						local args = {}
+
+						for i, key in ipairs(function_node.identifiers) do
+							if function_node.self_call then
+								i = i + 1
+							end
+							if contracts:Get(i).literal_argument and arguments:Get(i) then
+								analyzer:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
+							end
+
+							if key.value.value == "..." then
+								if key.as_expression then
+									args[i] = VarArg():SetNode(key)
+									args[i]:Set(1, analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue())
+								end
+							elseif key.as_expression then
+								args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue()
+							end
+				
+							if contracts:Get(i).literal_argument and arguments:Get(i) then
+								args[i] = arguments:Get(i)
+								args[i].literal_argument = true
+							elseif args[i] then
+								analyzer:CreateLocalValue(key, args[i], "typesystem", i)
+							end
+						end
+						
+						analyzer:PopPreferTypesystem()
+						analyzer:PopScope()
+						contract_override = args
+					end
 
 					for i = 1, len do
 						local arg = arguments:Get(i)
-						local contract = contracts:Get(i)
+						local contract = contract_override[i] or contracts:Get(i)
+
 						local ok, reason
 
 						if not arg then
@@ -307,7 +346,7 @@ return
 						end
 
 						if not ok then
-							restore_mutated_types(self)
+							restore_mutated_types(analyzer)
 							return type_errors.other({"argument #", i, " ", arg, ": ", reason})
 						end
 
@@ -321,13 +360,13 @@ return
 							local modified = arg:Copy()
 							modified:SetContract(contract)
 							modified.argument_index = i
-							table.insert(self.mutated_types[1], {
+							table.insert(analyzer.mutated_types[1], {
 								original = original,
 								modified = modified,
 							})
 							arguments:Set(i, modified)
 						else
-					-- if it's a const argument we pass the incoming value
+							-- if it's a literal argument we pass the incoming value
 					if not contract.literal_argument then
 								local t = contract:Copy()
 								t:SetContract(contract)
@@ -403,7 +442,7 @@ return
 						not self:GetActiveNode().type_call
 
 					if use_contract then
-						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments())
+						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
 						if not ok then return ok, err end
 					end
 
@@ -558,7 +597,7 @@ return
 			end
 
 			function META:Call(obj, arguments, call_node)
-				self:SetActiveNode(call_node or obj:GetNode())
+				self:PushActiveNode(call_node or obj:GetNode())
 
 				self.call_stack = self.call_stack or {}
 
@@ -611,6 +650,8 @@ return
 				)
 				local ok, err = Call(self, obj, arguments)
 				table.remove(self.call_stack)
+
+				self:PopActiveNode()
 				return ok, err
 			end
 		end,

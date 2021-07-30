@@ -14,6 +14,131 @@ for k, v in pairs(_G) do
 	locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
 end
 
+local function analyze_function_signature(analyzer, node, scope, upvalue_position)
+	local explicit_arguments = false
+	local explicit_return = false
+	local args = {}
+
+	if node.kind == "function" or node.kind == "local_function" then
+		
+		analyzer:CreateAndPushFunctionScope(scope, upvalue_position)
+		analyzer:PushPreferTypesystem(true)
+		
+		for i, key in ipairs(node.identifiers) do
+			if key.value.value == "..." then
+				if key.as_expression then
+					args[i] = VarArg():SetNode(key)
+					args[i]:Set(1, analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue())
+				else
+					args[i] = VarArg():SetNode(key)
+				end
+			elseif key.as_expression then
+				args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue()
+				explicit_arguments = true
+			else
+				args[i] = Any():SetNode(key)
+			end
+
+			analyzer:CreateLocalValue(key, args[i], "typesystem", i)
+		end
+
+		analyzer:PopPreferTypesystem()
+		analyzer:PopScope()
+	elseif
+		node.kind == "type_function" or
+		node.kind == "local_type_function" or
+		node.kind == "local_generics_type_function" or
+		node.kind == "generics_type_function"
+	then
+		for i, key in ipairs(node.identifiers) do
+			if key.identifier then
+				args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
+				explicit_arguments = true
+			elseif key.as_expression then
+				args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue()
+
+				if key.value.value == "..." then
+					local vararg = VarArg():SetNode(key)
+					vararg:Set(1, args[i])
+					args[i] = vararg
+				end
+
+				explicit_arguments = true
+			elseif key.kind == "value" then
+				if key.value.value == "..." then
+					args[i] = VarArg():SetNode(key)
+				elseif key.value.value == "self" then
+					args[i] = analyzer.current_tables[#analyzer.current_tables]
+
+					if not args[i] then
+						analyzer:Error(key, "cannot find value self")
+					end
+				elseif not node.statements then
+					args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
+				else
+					args[i] = Any():SetNode(key)
+				end
+			else
+				args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
+			end
+		end
+	else
+		analyzer:FatalError("unhandled statement " .. tostring(node))
+	end
+
+	if node.self_call and node.expression then
+		local val = analyzer:AnalyzeExpression(node.expression.left, "runtime"):GetFirstValue()
+
+		if val then
+			if val:GetContract() or val.Self then
+				table.insert(args, 1, val.Self or val)
+			else
+				table.insert(args, 1, Union({Any(), val}))
+			end
+		end
+	end
+
+	local ret = {}
+
+	if node.return_types then
+		explicit_return = true
+		analyzer:CreateAndPushFunctionScope(scope, upvalue_position)
+		analyzer:PushPreferTypesystem(true)
+
+		for i, key in ipairs(node.identifiers) do
+			if key.kind == "value" and args[i] then
+				analyzer:CreateLocalValue(key, args[i], "typesystem", true)
+			end
+		end
+
+		for i, type_exp in ipairs(node.return_types) do
+			if type_exp.kind == "value" and type_exp.value.value == "..." then
+				local tup
+
+				if type_exp.as_expression then
+					tup = Tuple(
+							{
+								analyzer:AnalyzeExpression(type_exp.as_expression, "typesystem"):GetFirstValue(),
+							}
+						)
+						:SetRepeat(math.huge)
+				else
+					tup = VarArg():SetNode(type_exp)
+				end
+
+				ret[i] = tup
+			else
+				ret[i] = analyzer:AnalyzeExpression(type_exp, "typesystem"):GetFirstValue()
+			end
+		end
+
+		analyzer:PopPreferTypesystem()
+		analyzer:PopScope()
+	end
+
+	return Tuple(args), Tuple(ret), explicit_arguments, explicit_return
+end
+
 return
 	{
 		AnalyzeFunction = function(analyzer, node, env)
@@ -25,120 +150,8 @@ return
 				node.kind = "type_function"
 			end
 
-			local explicit_arguments = false
-			local explicit_return = false
-			local args = {}
+			local args, ret, explicit_arguments, explicit_return = analyze_function_signature(analyzer, node)
 
-			if node.kind == "function" or node.kind == "local_function" then
-				for i, key in ipairs(node.identifiers) do
-					if key.value.value == "..." then
-						if key.as_expression then
-							args[i] = VarArg():SetNode(key)
-							args[i]:Set(1, analyzer:AnalyzeExpression(key.as_expression, "typesystem"))
-						else
-							args[i] = VarArg():SetNode(key)
-						end
-					elseif key.as_expression then
-						args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem")
-						explicit_arguments = true
-					else
-						args[i] = Any():SetNode(key)
-					end
-				end
-			elseif
-				node.kind == "type_function" or
-				node.kind == "local_type_function" or
-				node.kind == "local_generics_type_function" or
-				node.kind == "generics_type_function"
-			then
-				for i, key in ipairs(node.identifiers) do
-					if key.identifier then
-						args[i] = analyzer:AnalyzeExpression(key, "typesystem")
-						explicit_arguments = true
-					elseif key.as_expression then
-						args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem")
-
-						if key.value.value == "..." then
-							local vararg = VarArg():SetNode(key)
-							vararg:Set(1, args[i])
-							args[i] = vararg
-						end
-
-						explicit_arguments = true
-					elseif key.kind == "value" then
-						if key.value.value == "..." then
-							args[i] = VarArg():SetNode(key)
-						elseif key.value.value == "self" then
-							args[i] = analyzer.current_tables[#analyzer.current_tables]
-
-							if not args[i] then
-								analyzer:Error(key, "cannot find value self")
-							end
-						elseif not node.statements then
-							args[i] = analyzer:AnalyzeExpression(key, "typesystem")
-						else
-							args[i] = Any():SetNode(key)
-						end
-					else
-						args[i] = analyzer:AnalyzeExpression(key, "typesystem")
-					end
-				end
-			else
-				analyzer:FatalError("unhandled statement " .. tostring(node))
-			end
-
-			if node.self_call and node.expression then
-				local val = analyzer:AnalyzeExpression(node.expression.left, "runtime")
-
-				if val then
-					if val:GetContract() or val.Self then
-						table.insert(args, 1, val.Self or val)
-					else
-						table.insert(args, 1, Union({Any(), val}))
-					end
-				end
-			end
-
-			local ret = {}
-
-			if node.return_types then
-				explicit_return = true
-				analyzer:CreateAndPushFunctionScope()
-				analyzer:PushPreferTypesystem(true)
-
-				for i, key in ipairs(node.identifiers) do
-					if key.kind == "value" and args[i] then
-						analyzer:CreateLocalValue(key, args[i], "typesystem", true)
-					end
-				end
-
-				for i, type_exp in ipairs(node.return_types) do
-					if type_exp.kind == "value" and type_exp.value.value == "..." then
-						local tup
-
-						if type_exp.as_expression then
-							tup = Tuple(
-									{
-										analyzer:AnalyzeExpression(type_exp.as_expression, "typesystem"),
-									}
-								)
-								:SetRepeat(math.huge)
-						else
-							tup = VarArg():SetNode(type_exp)
-						end
-
-						ret[i] = tup
-					else
-						ret[i] = analyzer:AnalyzeExpression(type_exp, "typesystem")
-					end
-				end
-
-				analyzer:PopPreferTypesystem()
-				analyzer:PopScope()
-			end
-
-			args = Tuple(args)
-			ret = Tuple(ret)
 			local func
 
 			if env == "typesystem" then
@@ -147,10 +160,10 @@ return
 					(node.kind == "type_function" or node.kind == "local_type_function")
 				then
 					node.lua_type_function = true
-
-			--'local analyzer = self;local env = self:GetScopeHelper(scope);'
+		
+					--'local analyzer = self;local env = self:GetScopeHelper(scope);'
 			
-			func = analyzer:CompileLuaTypeCode("return  " .. node:Render({uncomment_types = true, lua_type_function = true}), node)()
+					func = analyzer:CompileLuaTypeCode("return  " .. node:Render({uncomment_types = true, lua_type_function = true}), node)()
 				end
 			end
 

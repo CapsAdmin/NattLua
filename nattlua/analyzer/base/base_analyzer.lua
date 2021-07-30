@@ -20,14 +20,6 @@ return function(META)
 	require("nattlua.analyzer.base.events")(META)
 	require("nattlua.analyzer.base.error_handling")(META)
 
-	function META:SetActiveNode(node)
-		self.ActiveNode = node
-	end
-
-	function META:GetActiveNode(node)
-		return self.ActiveNode
-	end
-
 	function META:AnalyzeRootStatement(statement, ...)
 		local argument_tuple = ... and Tuple({...}) or Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushFunctionScope()
@@ -375,6 +367,21 @@ return function(META)
 
 			function META:PopUncertainLoop()
 				table.remove(self.uncertain_loop_stack, 1)
+			end
+		end
+
+		do
+			function META:GetActiveNode()
+				return self.active_node_stack and self.active_node_stack[1]
+			end
+
+			function META:PushActiveNode(node)
+				self.active_node_stack = self.active_node_stack or {}
+				table.insert(self.active_node_stack, 1, node)
+			end
+
+			function META:PopActiveNode()
+				table.remove(self.active_node_stack, 1)
 			end
 		end
 	end

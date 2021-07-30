@@ -11,31 +11,33 @@ META.Type = "number"
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
 META:GetSet("Data", nil--[[# as number]])
-local operators = {
-		["-"] = function(l--[[#: number]])
-			return -l
-		end,
-		["~"] = function(l--[[#: number]])
-			return bit.bnot(l)
-		end,
-	}
 
-function META:PrefixOperator(op--[[#: keysof<|operators|>]])
-	if self:IsLiteral() then
-		if not operators[op] then return false, "no such operator " .. op end
-		local num = self.New(operators[op](self:GetData())):SetLiteral(true)
-		local max = self:GetMax()
+do -- TODO, operators is mutated below, need to use upvalue position when analyzing typed arguments
+	local operators = {
+			["-"] = function(l--[[#: number]])
+				return -l
+			end,
+			["~"] = function(l--[[#: number]])
+				return bit.bnot(l)
+			end,
+		}
 
-		if max then
-			num:SetMax(max:PrefixOperator(op))
+	function META:PrefixOperator(op--[[#: keysof<|operators|>]])
+		if self:IsLiteral() then
+			if not operators[op] then return false, "no such operator " .. op end
+			local num = self.New(operators[op](self:GetData())):SetLiteral(true)
+			local max = self:GetMax()
+
+			if max then
+				num:SetMax(max:PrefixOperator(op))
+			end
+
+			return num
 		end
 
-		return num
+		return self.New(nil--[[# as number]]) -- hmm
 	end
-
-	return self.New(nil--[[# as number]]) -- hmm
 end
-
 function META:Widen()
 	self:SetLiteral(false)
 	return self

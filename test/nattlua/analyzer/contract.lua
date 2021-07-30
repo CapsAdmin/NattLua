@@ -21,7 +21,7 @@ run([[
     function lib.test(lol: string) 
         return 1,2,3
     end
-]], "1 is not the same type as string")
+]], "number is not the same type as string")
 
 run[[
     local type contract = {}
