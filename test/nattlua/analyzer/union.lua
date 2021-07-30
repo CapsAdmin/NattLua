@@ -115,3 +115,10 @@ run([[
     
     test<|A|B, C|>
 ]])
+
+run[[
+    local type a = |
+    type a = a | 1
+    type a = a | 2
+    types.assert<|a, 1|2|>
+]]

@@ -150,6 +150,13 @@ local function read_string(parser)
 	return node
 end
 
+local function read_empty_union(parser)
+	if not parser:IsValue("|") then return end
+	local node = parser:Node("expression", "empty_union")
+	node.tokens["|"] = parser:ReadToken("|")
+	return node
+end
+
 local read_sub_expression
 
 do
@@ -254,6 +261,7 @@ ReadExpression = function(parser, priority)
 	end
 
 	node = read_parenthesis(parser) or
+		read_empty_union(parser) or
 		read_prefix_operator(parser) or
 		read_value(parser) or
 		read_type_function(parser) or

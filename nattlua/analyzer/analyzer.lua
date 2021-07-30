@@ -95,6 +95,7 @@ do
 	local AnalyzeTable = require("nattlua.analyzer.expressions.table").AnalyzeTable
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
 	local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
+	local Union = require("nattlua.types.union").Union
 
 	function META:AnalyzeExpression(node, env)
 		self.current_expression = node
@@ -130,6 +131,8 @@ do
 			return AnalyzePostfixCall(self, node, env)
 		elseif node.kind == "import" then
 			return AnalyzeImport(self, node, env)
+		elseif node.kind == "empty_union" then
+			return Union({}):SetNode(node)
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end
