@@ -1,7 +1,10 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
-pending[=[
+run[=[
+    -- without literal event_name
+
+
     local type declared = {}
 
     local events = {}
@@ -19,21 +22,23 @@ pending[=[
         declared[event_name] = FunctionFromTuples<|arguments, return_types|>
     end
 
-    events.Declare<|"message", Tuple<|string|>, Tuple<|boolean, string|> | Tuple<|nil|>|>
+    events.Declare<|"message", Tuple<|string|>, Tuple<|boolean, string|> | Tuple<|number|>|>
     events.Declare<|"update", Tuple<|number|>, Tuple<|boolean|>|>
 
     function events.AddListener(event_name: keysof<|declared|>, listener: declared[event_name])
         types.assert(event_name, _ as "message" | "update")
-        types.assert(listener, _ as (function(number | string): (Tuple<|boolean|> | Tuple<|boolean, string|> | Tuple<|nil|> )))
+        types.assert(listener, _ as (function(number | string): Tuple<|Tuple<|false | true | Tuple<|false | true, string|> | Tuple<|number|>|>|>))
     end
 
     events.AddListener("message", function(data) 
-      types.assert(data, _ as string | number)
-      return true, "test"
+        types.assert(data, _ as number | string)
+        return 1337 
     end)
 ]=]
 
 run[=[
+    -- with literal event_name, causing it to choose the specific function
+
     local type declared = {}
 
     local events = {}

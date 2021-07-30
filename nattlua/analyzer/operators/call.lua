@@ -476,6 +476,9 @@ return
 							local errors = {}
 
 							for _, contract in ipairs(contract:GetData()) do
+								if contract.Type ~= "tuple" then
+									contract = Tuple({contract}):SetNode(contract:GetNode())
+								end
 								local ok, reason = result:IsSubsetOfTuple(contract)
 
 								if ok then
