@@ -395,6 +395,11 @@ function META:DumpScope()
 		table.insert(s, "local " .. tostring(v.key) .. " = " .. tostring(v))
 	end
 
+
+	for i, v in ipairs(self.upvalues.typesystem.list) do
+		table.insert(s, "local type " .. tostring(v.key) .. " = " .. tostring(v))
+	end
+
 	for i, v in ipairs(self.children) do
 		table.insert(s, "do\n" .. v:DumpScope() .. "\nend\n")
 	end
