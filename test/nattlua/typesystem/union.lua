@@ -68,3 +68,5 @@ test(tostring(B) .. " should equal the union of " .. tostring(A) .. " and " .. t
     equal(4, B:GetLength())
     assert(A:IsSubsetOf(B))
 end)
+
+assert(tostring(Union()) == "|")

@@ -68,6 +68,10 @@ function META:__tostring()
 		table.insert(s, tostring(v))
 	end
 
+	if not s[1] then
+		return "|"
+	end
+
 	self.suppress = false
 	table.sort(s, sort)
 	return table.concat(s, " | ")
