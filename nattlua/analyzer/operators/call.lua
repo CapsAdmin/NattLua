@@ -178,6 +178,15 @@ return
 			end
 
 			local function call_lua_type_function(self, obj, function_node, function_arguments, arguments)
+				do
+					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+
+					if not ok then
+						if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
+						return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+					end
+				end
+
 				local len = function_arguments:GetLength()
 
 				if len == math.huge and arguments:GetLength() == math.huge then
@@ -227,6 +236,15 @@ return
 			end
 
 			local function call_type_signature_without_body(self, obj, arguments)
+				do
+					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+
+					if not ok then
+						if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
+						return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+					end
+				end
+
 				for i, arg in ipairs(arguments:GetData()) do
 					if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
 						for _, keyval in ipairs(arg:GetData()) do
@@ -318,6 +336,48 @@ return
 						contract_override = args
 					end
 
+
+					do -- coerce untyped functions to constract callbacks
+						for i, arg in ipairs(arguments:GetData()) do
+							if arg.Type == "function" then
+								if contract_override[i] and contract_override[i].Type == "union" and not contract_override[i].literal_argument then
+									local merged = contract_override[i]:ShrinkToFunctionSignature()
+									arg:SetArguments(merged:GetArguments())
+									arg:SetReturnTypes(merged:GetReturnTypes())
+								else
+									if not arg.explicit_arguments then
+										local contract = contract_override[i] or obj:GetArguments():Get(i)
+										if contract and not contract.literal_argument then
+											if contract.Type == "union" then
+												local tup = Tuple({})
+												for _, func in ipairs(contract:GetData()) do
+													tup:Merge(func:GetArguments())
+													arg:SetArguments(tup)
+												end									
+											else
+												arg:SetArguments(contract:GetArguments())
+											end
+										end
+									end
+									if not arg.explicit_return then
+										local contract =  contract_override[i] or  obj:GetReturnTypes():Get(i)
+										if contract and not contract.literal_argument then
+											if contract.Type == "union" then
+												local tup = Tuple({})
+												for _, func in ipairs(contract:GetData()) do
+													tup:Merge(func:GetReturnTypes())
+												end
+												arg:SetReturnTypes(tup)
+											else
+												arg:SetReturnTypes(contract:GetReturnTypes())
+											end
+										end
+									end
+								end
+							end
+						end
+					end
+
 					for i = 1, len do
 						local arg = arguments:Get(i)
 						local contract = contract_override[i] or contracts:Get(i)
@@ -342,6 +402,13 @@ return
 						elseif arg.Type == "table" and contract.Type == "table" then
 							ok, reason = arg:FollowsContract(contract)
 						else
+							if contract.Type == "union" then
+								local shrunk = contract:ShrinkToFunctionSignature()
+								if shrunk then
+									contract = contract:ShrinkToFunctionSignature()
+								end
+							end
+
 							ok, reason = arg:IsSubsetOf(contract)
 						end
 
@@ -367,7 +434,7 @@ return
 							arguments:Set(i, modified)
 						else
 							-- if it's a literal argument we pass the incoming value
-					if not contract.literal_argument then
+							if not contract.literal_argument then
 								local t = contract:Copy()
 								t:SetContract(contract)
 								arguments:Set(i, t)
@@ -444,8 +511,18 @@ return
 					if use_contract then
 						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
 						if not ok then return ok, err end
-					end
+					else
 
+						do
+							local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+
+							if not ok then
+								if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
+								return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+							end
+						end
+					end
+	
 					-- return_result is either a union of tuples or a single tuple
 					local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments, env)
 					obj:AddScope(arguments, return_result, scope)
@@ -571,15 +648,6 @@ return
 
 				local function_arguments = obj:GetArguments()
 				infer_uncalled_functions(self, arguments, function_arguments)
-
-				do
-					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
-
-					if not ok then
-						if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
-						return type_errors.subset(a, b, {"argument #", i, " - ", reason})
-					end
-				end
 
 				if obj:GetData().lua_function then
 					return call_lua_type_function(

@@ -388,8 +388,7 @@ run([[
 
     local obj = {Foo = "hm"}
     mutate(obj)
-    types.assert<|obj.Bar, "asdf"|>
-]], "is not the same type as true")
+]], "mutating function argument")
 
 run[[
     local type ShapeA = {Foo = boolean | nil}
@@ -414,7 +413,7 @@ run([[
 
     local obj = {}
     mutate(obj)
-]], "{ } is not a subset of")
+]], "{ } has no field.-Foo")
 
 run([[
     local type ShapeA = {Foo = boolean}

@@ -35,6 +35,26 @@ function META.Equal(a, b)
 	return true
 end
 
+function META:ShrinkToFunctionSignature()
+	local Tuple = require("nattlua.types.tuple").Tuple
+
+	local arg = Tuple({})
+	local ret = Tuple({})
+
+	for _, func in ipairs(self.Data) do
+		if func.Type ~= "function" then return false end
+
+		arg:Merge(func:GetArguments())
+		ret:Merge(func:GetReturnTypes())
+	end
+	local Function = require("nattlua.types.function").Function
+
+	return Function({
+		arg = arg,
+		ret = ret,
+	})
+end
+
 local sort = function(a, b)
 	return a < b
 end

@@ -104,3 +104,14 @@ run([[
     local b: nil | {foo = true}
     local c = b.foo
 ]], "undefined get: nil.-foo")
+
+run([[
+    local type function test(a, b)
+        assert(a:ShrinkToFunctionSignature():Equal(b))
+    end
+    local type A = function(string): number
+    local type B = function(number): boolean
+    local type C = function(number | string): boolean | number
+    
+    test<|A|B, C|>
+]])
