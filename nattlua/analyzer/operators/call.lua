@@ -347,6 +347,10 @@ return
 							if contracts:Get(i).literal_argument and arguments:Get(i) then
 								args[i] = arguments:Get(i)
 								args[i].literal_argument = true
+								local ok, err = args[i]:IsSubsetOf(contracts:Get(i))
+								if not ok then
+									return type_errors.other({"argument #", i, " ", arg, ": ", err})
+								end
 							elseif args[i] then
 								analyzer:CreateLocalValue(key, args[i], "typesystem", i)
 							end

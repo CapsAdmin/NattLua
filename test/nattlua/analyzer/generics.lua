@@ -66,3 +66,22 @@ run[=[
 
     events.AddListener("message", function(data) types.assert(data, _ as string) return 1337 end)
 ]=]
+
+
+run[[
+    local type tbl = {}
+    tbl.foo = 1337
+    local function test(key: literal keysof<|tbl|>)
+        return tbl[key]
+    end
+    types.assert(test("foo"), 1337)
+]]
+
+run([[
+    local type tbl = {}
+    tbl.foo = 1337
+    local function test(key: literal keysof<|tbl|>)
+        return tbl[key]
+    end
+    types.assert(test("bar"), 1337)
+]], "bar.- is not a subset of.-foo")
