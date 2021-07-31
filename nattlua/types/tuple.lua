@@ -158,6 +158,17 @@ function META.IsSubsetOf(A, B)
 	return true
 end
 
+function META.IsSubsetOfTupleWithoutExpansion(A, B)
+	for i, a in ipairs(A:GetData()) do
+		local b = B:GetWithoutExpansion(i)
+		local ok, err = a:IsSubsetOf(b)
+		if ok then
+			return ok, err, a,b,i
+		end
+	end
+	return true
+end
+
 function META.IsSubsetOfTuple(A, B)
 	if A:Equal(B) then return true end
 
@@ -208,6 +219,18 @@ function META.IsSubsetOfTuple(A, B)
 	return true
 end
 
+function META:HasTuples()
+	for _, v in ipairs(self.Data) do
+		if v.Type == "tuple" then
+			return true
+		end
+	end
+	if self.Remainder and self.Remainder.Type == "tuple" then
+		return true
+	end
+	return false
+end
+
 function META:Get(key)
 	local real_key = key
 
@@ -215,7 +238,7 @@ function META:Get(key)
 		key = key:GetData()
 	end
 
-	assert(type(key) == "number", "key must be a number, got " .. tostring(key))
+	assert(type(key) == "number", "key must be a number, got " .. tostring(key) .. debug.traceback())
 	local val = self:GetData()[key]
 	if not val and self.Repeat and key <= (#self:GetData() * self.Repeat) then return self:GetData()[((key - 1) % #self:GetData()) + 1] end
 	if not val and self.Remainder then return self.Remainder:Get(key - #self:GetData()) end
@@ -229,6 +252,16 @@ function META:Get(key)
 	end
 
 	if not val then return type_errors.other({"index ", real_key, " does not exist"}) end
+	return val
+end
+
+function META:GetWithoutExpansion(key)
+	local val = self:GetData()[key]
+	if not val then
+		if self.Remainder then
+			return self.Remainder
+		end
+	end
 	return val
 end
 
@@ -346,6 +379,14 @@ function META:Unpack(length)
 	end
 
 	return table.unpack(out)
+end
+
+function META:UnpackWithoutExpansion()
+	local tbl = {table.unpack(self.Data)}
+	if self.Remainder then
+		table.insert(tbl, self.Remainder)		
+	end
+	return table.unpack(tbl)
 end
 
 function META:Slice(start, stop)

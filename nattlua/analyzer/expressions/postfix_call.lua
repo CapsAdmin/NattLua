@@ -1,5 +1,6 @@
 local table = require("table")
 local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
+local Tuple = require("nattlua.types.tuple").Tuple
 return
 	{
 		AnalyzePostfixCall = function(analyzer, node, env)
@@ -29,8 +30,16 @@ return
 			end
 
 			analyzer:PushPreferTypesystem(is_type_call)
-		
-			local returned_tuple = analyzer:Assert(node, analyzer:Call(callable, NormalizeTuples(types), node))
+
+			local arguments
+			
+			if env == "typesystem" then
+				arguments = Tuple(types)
+			else
+				arguments = NormalizeTuples(types)
+			end
+
+			local returned_tuple = analyzer:Assert(node, analyzer:Call(callable, arguments, node))
 			analyzer:PopPreferTypesystem()
 
 			-- TUPLE UNPACK MESS

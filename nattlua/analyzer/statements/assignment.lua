@@ -60,18 +60,33 @@ return
 				for right_pos, exp_val in ipairs(statement.right) do
 					analyzer.left_assigned = left[right_pos]
 					local obj = analyzer:AnalyzeExpression(exp_val, env)
-					
+
 					if obj.Type == "tuple" and obj:GetLength() == 1 then
 						obj = obj:Get(1)
 					end
 
-					if obj.Type == "tuple" and not obj:GetUnpackable() then
-						for i = 1, #statement.left do
-							local index = right_pos + i - 1
-							right[index] = obj:Get(i)
+					if obj.Type == "tuple" then
+						if env == "runtime" then
+							for i = 1, #statement.left do
+								local index = right_pos + i - 1
+								right[index] = obj:Get(i)
+	
+								if exp_val.as_expression then
+									right[index]:Seal() -- TEST ME
+								end
+							end
+						end
 
-							if exp_val.as_expression then
-								right[index]:Seal() -- TEST ME
+						if env == "typesystem" then
+							if obj:HasTuples() then
+								for _, v in ipairs(obj:GetData()) do
+									for i = 1, #statement.left do
+										local index = right_pos + i - 1
+										right[index] = obj:GetWithoutExpansion(i)
+									end
+								end
+							else
+								right[right_pos] = obj
 							end
 						end
 					elseif obj.Type == "union" then

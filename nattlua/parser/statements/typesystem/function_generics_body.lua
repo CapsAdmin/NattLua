@@ -20,11 +20,11 @@ return
 			if parser:IsValue(":") then
 				node.tokens[":"] = parser:ExpectValue(":")
 				node.return_types = ReadMultipleValues(parser, math.huge, ExpectExpression)
-			else
-				local start = parser:GetToken()
-				node.statements = parser:ReadNodes({["end"] = true})
-				node.tokens["end"] = parser:ExpectValue("end", start, start)
 			end
+
+			local start = parser:GetToken()
+			node.statements = parser:ReadNodes({["end"] = true})
+			node.tokens["end"] = parser:ExpectValue("end", start, start)
 
 			return node
 		end,

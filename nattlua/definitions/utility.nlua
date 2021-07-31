@@ -28,7 +28,7 @@ function ErrorReturn<|...|>
 end
 
 type function return_type(func, i: number | nil)
-	local i = i and i:GetData() or 1
+	local i = i and i:GetData() or nil
 	return func:GetReturnTypes():Slice(i, i)
 end
 
@@ -37,7 +37,7 @@ type function set_return_type(func, tup)
 end
 
 type function argument_type(func, i: number | nil)
-	local i = i and i:GetData() or 1
+	local i = i and i:GetData() or nil
 	return func:GetArguments():Slice(i, i)
 end
 

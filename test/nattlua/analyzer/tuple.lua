@@ -167,3 +167,49 @@ run[[
     local type a = ()
     types.assert<|a, ()|>
 ]]
+
+run[[
+    local type function test(a, b)
+        local tup = types.Tuple({types.LNumber(1),types.LNumber(2),types.LNumber(3)})
+        assert(a:Equal(tup))
+        assert(b:Equal(tup))
+    end
+
+    local type a = (1,2,3)
+
+    test<|a,a|>
+]]
+
+run[[
+    local function test2<|a: (number, number, number), b: (number, number, number)|>: (number, number, number)
+        types.assert<|a, (1,2,3)|>
+        types.assert<|b, (1,2,3)|>
+        return a, b
+    end
+
+    local type a = (1,2,3)
+
+    local type a, b = test2<|a,a|>
+    types.assert<|a, (1,2,3)|>
+    types.assert<|b, a|>
+]]
+
+run[[
+    local function aaa(foo: string, bar: number, faz: boolean): (1,2,3)
+        return 1,2,3
+    end
+    types.assert<|argument_type<|aaa|>, (string, number, boolean)|>
+    types.assert<|return_type<|aaa|>, ((1, 2, 3),)|>
+]]
+
+run[[
+    local type test = function()
+        return 11,22,33
+    end
+
+    local a,b,c = test()
+
+    types.assert(a, 11)
+    types.assert(b, 22)
+    types.assert(c, 33)
+]]

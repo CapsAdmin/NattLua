@@ -1292,6 +1292,10 @@ do -- types
 			self:EmitTableExpressionValue(node)
 		elseif node.kind == "table_key_value" then
 			self:EmitTableKeyValue(node)
+		elseif node.kind == "empty_union" then
+			self:EmitEmptyUnion(node)
+		elseif node.kind == "tuple" then
+			self:EmitTuple(node)
 		else
 			error("unhandled token type " .. node.kind)
 		end

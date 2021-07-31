@@ -144,10 +144,17 @@ return
 				for i, identifier in ipairs(function_node.identifiers) do
 					local argi = function_node.self_call and (i + 1) or i
 
-					if identifier.value.value == "..." then
-						self:CreateLocalValue(identifier, arguments:Slice(argi), env, argi)
-					else
-						self:CreateLocalValue(identifier, arguments:Get(argi) or Nil():SetNode(identifier), env, argi)
+					if env == "typesystem" then
+						self:CreateLocalValue(identifier, arguments:GetWithoutExpansion(argi), env, argi)
+					end
+
+					if env == "runtime" then
+
+						if identifier.value.value == "..." then
+							self:CreateLocalValue(identifier, arguments:Slice(argi), env, argi)
+						else
+							self:CreateLocalValue(identifier, arguments:Get(argi) or Nil():SetNode(identifier), env, argi)
+						end
 					end
 				end
 
@@ -177,10 +184,10 @@ return
 				end
 			end
 
-			local function call_lua_type_function(self, obj, function_node, function_arguments, arguments)
+			local function call_lua_type_function(self, obj, function_arguments, arguments, env)
 				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
-
+				
 					if not ok then
 						if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
 						return type_errors.subset(a, b, {"argument #", i, " - ", reason})
@@ -191,6 +198,20 @@ return
 
 				if len == math.huge and arguments:GetLength() == math.huge then
 					len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
+				end
+
+				if env == "typesystem" then
+					local ret = lua_types_to_tuple(
+						obj:GetNode(),
+						{
+							self:CallLuaTypeFunction(
+								self:GetActiveNode(),
+								obj:GetData().lua_function,
+								obj:GetData().scope or self:GetScope(),
+								arguments:UnpackWithoutExpansion()
+						)
+						})
+					return ret
 				end
 
 				local tuples = {}
@@ -336,7 +357,6 @@ return
 						contract_override = args
 					end
 
-
 					do -- coerce untyped functions to constract callbacks
 						for i, arg in ipairs(arguments:GetData()) do
 							if arg.Type == "function" then
@@ -445,7 +465,19 @@ return
 					return true
 				end
 
-				local function check_return_result(self, result, contract)
+				local function check_return_result(self, result, contract, env)
+
+					if env == "typesystem" then
+						local ok, reason, a, b, i = result:IsSubsetOfTupleWithoutExpansion(contract)
+
+						if not ok then
+							local _, err = type_errors.subset(a, b, {"return #", i, " '", b, "': ", reason})
+							self:Error(b and b:GetNode() or self.current_statement, err)
+						end
+
+						return
+					end
+					local original_contract = contract
 					if
 						contract:GetLength() == 1 and
 						contract:Get(1).Type == "union" and
@@ -469,7 +501,7 @@ return
 							if obj.Type ~= "tuple" then
 								obj = Tuple({obj}):SetNode(obj:GetNode())
 							end
-							check_return_result(self, obj, contract)
+							check_return_result(self, obj, original_contract)
 						end
 					else
 						if contract.Type == "union" then
@@ -509,15 +541,24 @@ return
 						env ~= "typesystem" and
 						function_node.kind ~= "local_generics_type_function" and
 						function_node.kind ~= "generics_type_function" and
-						not self:GetActiveNode().type_call
+						not self:GetActiveNode().type_call 
 
 					if use_contract then
 						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
 						if not ok then return ok, err end
 					else
 
-						do
+						if env == "runtime" then
 							local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+
+							if not ok then
+								if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
+								return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+							end
+						end
+
+						if env == "typesystem" then
+							local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
 
 							if not ok then
 								if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
@@ -541,7 +582,7 @@ return
 					end
 
 					if return_contract then
-						check_return_result(self, return_result, return_contract)
+						check_return_result(self, return_result, return_contract, env)
 					else
 						obj:GetReturnTypes():Merge(return_result)
 
@@ -591,6 +632,10 @@ return
 						end
 
 						function_node.inferred_type = obj
+					end
+
+					if env == "typesystem" then
+						return return_result
 					end
 
 					if not return_contract then return return_result end
@@ -656,9 +701,9 @@ return
 					return call_lua_type_function(
 						self,
 						obj,
-						function_node,
 						function_arguments,
-						arguments
+						arguments,
+						env
 					)
 				elseif function_node then
 					return call_lua_function_with_body(self, obj, arguments, function_node, env)

@@ -8,12 +8,12 @@ test("should return a tuple with types", function()
             return 1,2,3
         end
 
-        local type a,b,c = test()
+        local a,b,c = test()
     ]])
 
-    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a"), "typesystem"):GetData())
-    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "typesystem"):GetData())
-    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c"), "typesystem"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime"):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime"):GetData())
 end)
 
 test("should be able to error", function()
@@ -263,20 +263,6 @@ test("pairs loop", function()
         types.assert(k, 6)
         types.assert(v, 15)
     ]]
-end)
-
-test("type functions should return a tuple with types", function()
-    local analyzer = run([[
-        local type test = function()
-            return 1,2,3
-        end
-
-        local type a,b,c = test()
-    ]])
-
-    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a"), "typesystem"):GetData())
-    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "typesystem"):GetData())
-    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c"), "typesystem"):GetData())
 end)
 
 run[[
