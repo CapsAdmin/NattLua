@@ -55,3 +55,13 @@ run[[
 
     local c = b
 ]]
+
+run[[
+
+    local a = 0
+    while _ as boolean do
+        a = a + 1
+    end
+    types.assert(a, _ as number)
+
+]]

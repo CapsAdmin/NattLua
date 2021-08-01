@@ -114,6 +114,9 @@ local function read_decimal_number(lexer--[[#: Lexer]])
 		end
 
 		if lexer:IsCurrentValue(".") then
+			if lexer:IsValue(".", 1) then
+				return
+			end
 			if dot then
                 --self:Error("dot can only be placed once")
                 return end

@@ -8,7 +8,11 @@ return
 					analyzer:CreateAndPushScope()
 						analyzer:FireEvent("while", obj)
 						analyzer:OnEnterConditionalScope({type = "while", condition = obj,})
+						analyzer:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
+
 						analyzer:AnalyzeStatements(statement.statements)
+
+						analyzer:PopUncertainLoop()
 					analyzer:PopScope()
 					analyzer:OnExitConditionalScope({condition = obj})
 

@@ -46,6 +46,8 @@ end
 function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	if a.Type ~= b.Type then return false end
 
+	if not a:IsLiteral() and not b:IsLiteral() then return true end
+
 	if a:IsLiteral() and b:IsLiteral() then
         -- nan
         if a:GetData() ~= a:GetData() and b:GetData() ~= b:GetData() then return true end

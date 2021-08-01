@@ -310,14 +310,23 @@ local function binary_operator(analyzer, node, l, r, env, op)
 
 	if l.Type == "number" and r.Type == "number" then
 		if op == "~=" or op == "!=" then
-			if l:GetMax() and l:GetMax():GetData() then return
-				(not (r:GetData() >= l:GetData() and r:GetData() <= l:GetMax():GetData())) and
-				True() or
-				Boolean() end
-			if r:GetMax() and r:GetMax():GetData() then return
-				(not (l:GetData() >= r:GetData() and l:GetData() <= r:GetMax():GetData())) and
-				True() or
-				Boolean() end
+			if l:GetMax() and l:GetMax():IsLiteral() then
+				local l = l:GetMax():GetData()
+				local r = r:GetData()
+
+				if l and r then
+					return (not (r >= l and r <= l)) and True() or Boolean()
+				end
+			end
+
+			if r:GetMax() and r:GetMax():IsLiteral() then
+				local l = l:GetData()
+				local r = r:GetMax():GetData()
+
+				if l and r then
+					return (not (l >= r and l <= r)) and True() or Boolean()
+				end
+			end
 		elseif op == "==" then
 			if l:GetMax() and l:GetMax():GetData() then return
 				r:GetData() >= l:GetData() and

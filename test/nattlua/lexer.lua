@@ -39,6 +39,11 @@ test("z escaped string", function()
     equal(one_token(tokenize('"a\\z\na"')).type, "string")
 end)
 
+test("number..number", function ()
+    local tokens = tokenize('1..20')
+    equal(#tokens, 4)
+end)
+
 test("comment escape", function()
     local i
     local tokens

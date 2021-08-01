@@ -62,17 +62,6 @@ test("indirect only works for numeric keys", function()
     ]], "has no field string")
 end)
 
-run("indirect works array-records", function()
-    run[[
-        local tbl = {}
-        for i = 1, 10000 do
-            tbl[i] = i*100
-        end
-        tbl[50] = true
-        types.assert(tbl[20], _ as number | true)
-    ]]
-end)
-
 test("{[number]: any}", function()
     check(run[[local a: {[number] = any} = {[1] = 1}]], "{ number ⊃ number(1) = any ⊃ number(1) }")
     run([[local a: {[number] = any} = {foo = 1}]], [[has no field "foo"]])

@@ -112,15 +112,27 @@ return
 						if brk then break end
 					end
 				else
-					if
-						init.Type == "number" and
-						(max.Type == "number" or (max.Type == "union" and max:IsType("number")))
-					then
-						init = analyzer:Assert(statement.expressions[1], init:SetMax(max))
-					end
+					if literal_init then
+						init = LNumber(literal_init)
+						init.dont_widen = true
+						if max.Type == "number" or (max.Type == "union" and max:IsType("number")) then
+							if not max:IsLiteral() then
+								init:SetMax(LNumber(math.huge))
+							else
+								init:SetMax(max)
+							end
+						end
+					else
+						if
+							init.Type == "number" and
+							(max.Type == "number" or (max.Type == "union" and max:IsType("number")))
+						then
+							init = analyzer:Assert(statement.expressions[1], init:SetMax(max))
+						end						
 
-					if max.Type == "any" then
-						init:SetLiteral(false)
+						if max.Type == "any" then
+							init:SetLiteral(false)
+						end
 					end
 
 					analyzer:PushUncertainLoop(true)

@@ -1,21 +1,17 @@
 local T = require("test.helpers")
 local run = T.RunCode
 local transpile = T.Transpile
-test("for i = 1, 10000", function()
-    run[[
-        for i = 1, 10000 do
-            types.assert(i, _ as 1 .. 10000)
-        end
-    ]]
-end)
+run[[
+    for i = 1, 10000 do
+        types.assert(i, _ as 1 .. 10000)
+    end
+]]
 
-test("for i = 1, number", function()
-    run[[
-        for i = 1, _ as number do
-            types.assert(i, _ as number)
-        end
-    ]]
-end)
+run[[
+    for i = 1, _ as number do
+        types.assert(i, _ as 1..inf)
+    end
+]]
 
 pending[[
     --for i = 1, number is an uncertain scope
@@ -107,4 +103,13 @@ run[[
         end
     end
     types.assert(x,55)
+]]
+
+run[[
+    local tbl = {}
+    for i = 1, 10000 do
+        tbl[i] = i*100
+    end
+    tbl[50] = true
+    types.assert(tbl[20], _ as (100..1000000) | true)
 ]]

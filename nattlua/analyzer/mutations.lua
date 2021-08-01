@@ -379,7 +379,11 @@ return function(META)
 		initialize_mutation_tracker(obj, scope, key, env)
 
 		if self:IsInUncertainLoop() then
-			val = val:Copy():Widen()
+			if val.dont_widen then
+				val = val:Copy()
+			else
+				val = val:Copy():Widen()
+			end
 		end
 
 		table.insert(obj.mutations[key], {scope = scope, value = val})
