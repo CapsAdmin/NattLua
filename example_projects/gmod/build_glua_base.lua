@@ -1,8 +1,10 @@
 
 local base_env = require("nattlua.runtime.base_environment")
-local json = require("vscode.server.json")
+local json = require("nattlua.other.json")
 local tprint = require("nattlua.other.table_print")
 local util = require("examples.util")
+local LString = require("nattlua.types.string").LString
+local nl = require("nattlua")
 
 local blob = assert(util.FetchCode("example_projects/gmod/nattlua/gmod_wiki.json", "https://venner.io/gmod-wiki.json"))
 local wiki_json = json.decode(blob)
@@ -196,6 +198,7 @@ local function emit(key, val, self_argument)
         if val.RETURNS then
             local list = val.RETURNS
             for i, val in ipairs(list) do
+                val.NAME = nil
                 emit_atomic_type(val)
                 if i ~= #list then
                     e(", ")
@@ -376,7 +379,7 @@ for class_name, lib in spairs(wiki_json.CLASSES) do
             
             if val.DESCRIPTION then
                 emit_description(val.DESCRIPTION)
-            end       
+            end
 
             indent() e("type ") e(class_name) e(".") e(key) e(" = ") emit(key, val, not val.binary_operator and original_name) e("\n")
         end
@@ -399,7 +402,7 @@ for class_name, lib in spairs(wiki_json.CLASSES) do
 end
 
 for key, val in spairs(wiki_json.GLOBALS) do
-    if not base_env:Get(key) then
+    if not base_env:Get(LString(key)) then
         if key == "Matrix" then
             val.ARGUMENTS[1].TYPE = "table|nil"
         end
@@ -413,7 +416,7 @@ for key, val in spairs(wiki_json.GLOBALS) do
 end
 
 for lib_name, lib in spairs(wiki_json.LIBRARIES) do
-    if not base_env:Get(lib_name) then
+    if not base_env:Get(LString(lib_name)) then
 
         local guards, need_guard, consistent = emit_if_guard(lib.MEMBERS)
 
@@ -481,5 +484,7 @@ code = header .. code
 local f = io.open("example_projects/gmod/nattlua/glua_base.nlua", "w")
 f:write(code)
 f:close()
+
+code = "local SERVER = true\nlocal CLIENT = true\n"
 
 nl.Compiler(code):Analyze()
