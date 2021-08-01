@@ -85,3 +85,18 @@ run([[
     end
     types.assert(test("bar"), 1337)
 ]], "bar.- is not a subset of.-foo")
+
+run[[
+    local function TypeToString<|T: any|>
+        if T > number then
+            return "number"
+        end
+        return "other"
+    end
+    
+    local type a = TypeToString<|number|>
+    types.assert<|a, "number"|>
+    
+    local type b = TypeToString<|string|>
+    types.assert<|b, "other"|>
+]]
