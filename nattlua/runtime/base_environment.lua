@@ -1,12 +1,24 @@
-if _G.DISABLE_BASE_ENV then return require("nattlua.types.table").Table({}) end
-local nl = require("nattlua")
-local types = require("nattlua.types.types")
-local compiler = assert(nl.File("nattlua/definitions/index.nlua"))
-assert(compiler:Lex())
-assert(compiler:Parse())
-compiler:SetDefaultEnvironment(false)
-local base = compiler.Analyzer()
-assert(compiler:Analyze(base))
-local g = compiler.SyntaxTree.environments.typesystem
-require("nattlua.runtime.string_meta"):Set(types.LString("__index"), g:Get(types.LString("string")))
-return g
+local Table = require("nattlua.types.table").Table
+local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
+
+return {
+    BuildBaseEnvironment = function()
+        if _G.DISABLE_BASE_ENV then return require("nattlua.types.table").Table({}) end
+        local nl = require("nattlua")
+        local compiler = assert(nl.File("nattlua/definitions/index.nlua"))
+        assert(compiler:Lex())
+        assert(compiler:Parse())
+        
+        local g = Table()
+        g.string_metatable = Table()
+
+        compiler:SetDefaultEnvironment(g)
+        local base = compiler.Analyzer()
+        assert(compiler:Analyze(base))
+
+		g.string_metatable:Set(LStringNoMeta("__index"), g:Get(LStringNoMeta("string")))
+
+        return g
+    end
+}
+

@@ -3,6 +3,7 @@ local ipairs = ipairs
 local tostring = tostring
 local LexicalScope = require("nattlua.analyzer.base.lexical_scope")
 local Table = require("nattlua.types.table").Table
+local LString = require("nattlua.types.string").LString
 local table = require("table")
 return function(META)
 	table.insert(META.OnInitialize, function(self)
@@ -125,6 +126,10 @@ return function(META)
 
 			function META:SetDefaultEnvironment(obj, env)
 				self.default_environment[env] = obj
+			end
+
+			function META:GetDefaultEnvironment(env)
+				return self.default_environment[env]
 			end
 
 			function META:PushEnvironment(node, obj, env)

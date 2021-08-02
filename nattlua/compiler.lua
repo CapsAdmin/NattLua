@@ -6,6 +6,7 @@ local table = require("table")
 local assert = assert
 local helpers = require("nattlua.other.helpers")
 local debug = require("debug")
+local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
 local META = {}
 META.__index = META
@@ -223,8 +224,7 @@ function META:Analyze(analyzer, ...)
 	if self.default_environment then
 		analyzer:SetDefaultEnvironment(self.default_environment, "typesystem")
 	elseif self.default_environment ~= false then
-        -- this is stupid, trying to stop the base analyzer from causing a require() loop
-        analyzer:SetDefaultEnvironment(require("nattlua.runtime.base_environment"), "typesystem")
+        analyzer:SetDefaultEnvironment(BuildBaseEnvironment(), "typesystem")
 	end
 
 	if self.dump_events or self.config and self.config.dump_analyzer_events then

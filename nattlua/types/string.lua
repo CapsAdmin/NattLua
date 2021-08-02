@@ -1,11 +1,10 @@
-local ipairs = ipairs
-local table = require("table")
 local tostring = tostring
 local error = error
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
-local string_meta = require("nattlua.runtime.string_meta")
 local Number = require("nattlua.types.number").Number
+local Table = require("nattlua.types.table").Table
+local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
 META.Type = "string"
 --[[#type META.@Name = "TString"]]
@@ -98,7 +97,13 @@ end
 
 function META.New(data--[[#: string | nil]])
 	local self = setmetatable({Data = data}, META)
-	self:SetMetaTable(string_meta)
+
+	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
+	local analyzer = context:GetCurrentAnalyzer()
+	if analyzer then
+		self:SetMetaTable(analyzer:GetDefaultEnvironment("typesystem").string_metatable)
+	end
+
 	return self
 end
 
@@ -107,6 +112,9 @@ return
 		String = META.New,
 		LString = function(num--[[#: string]])
 			return META.New(num):SetLiteral(true)
+		end,
+		LStringNoMeta = function(str)
+			return setmetatable({Data = str}, META):SetLiteral(true)
 		end,
 		NodeToString = function(node--[[#: Token]])
 			return META.New(node.value.value):SetLiteral(true):SetNode(node)

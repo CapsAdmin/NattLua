@@ -1,5 +1,5 @@
 
-local base_env = require("nattlua.runtime.base_environment")
+local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local json = require("nattlua.other.json")
 local tprint = require("nattlua.other.table_print")
 local util = require("examples.util")
@@ -8,6 +8,9 @@ local nl = require("nattlua")
 
 local blob = assert(util.FetchCode("example_projects/gmod/nattlua/gmod_wiki.json", "https://venner.io/gmod-wiki.json"))
 local wiki_json = json.decode(blob)
+
+-- used for referencing existing types, like if we already have math.pi defined, don't add it
+local base_env = BuildBaseEnvironment()
 
 -- i prefix all types with I to avoid conflicts when defining functions like Entity(entindex) in the typesystem
 local TypeMap = {}

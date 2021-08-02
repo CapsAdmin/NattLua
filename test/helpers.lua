@@ -1,5 +1,6 @@
 local nl = require("nattlua")
 local types = require("nattlua.types.types")
+local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 types.Initialize()
 local C = nl.Compiler
 
@@ -22,9 +23,13 @@ local function cast(...)
     return ret
 end
 
+-- reuse an existing environment to speed up tests
+local base_environment = BuildBaseEnvironment()
+
 local function run(code, expect_error)
     _G.TEST = true
     local compiler = nl.Compiler(code, nil, nil, 3)
+    compiler:SetDefaultEnvironment(base_environment)
     local ok, err = compiler:Analyze()
     _G.TEST = false
 

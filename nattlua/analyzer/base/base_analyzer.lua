@@ -13,6 +13,7 @@ local LString = require("nattlua.types.string").LString
 local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
+local context = require("nattlua.analyzer.context")
 local table = require("table")
 local math = require("math")
 return function(META)
@@ -21,6 +22,7 @@ return function(META)
 	require("nattlua.analyzer.base.error_handling")(META)
 
 	function META:AnalyzeRootStatement(statement, ...)
+		context:PushCurrentAnalyzer(self)
 		local argument_tuple = ... and Tuple({...}) or Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushFunctionScope()
 		self:PushEnvironment(statement, nil, "runtime")
@@ -34,6 +36,7 @@ return function(META)
 		self:PopEnvironment("runtime")
 		self:PopEnvironment("typesystem")
 		self:PopScope()
+		context:PopCurrentAnalyzer()
 		return analyzed_return
 	end
 
@@ -122,6 +125,8 @@ return function(META)
 
 		function META:AnalyzeUnreachableCode()
 			if not self.deferred_calls then return end
+			context:PushCurrentAnalyzer(self)
+
 			local total = #self.deferred_calls
 			self:FireEvent("analyze_unreachable_code_start", total)
 			self.processing_deferred_calls = true
@@ -150,6 +155,7 @@ return function(META)
 			self.processing_deferred_calls = false
 			self.deferred_calls = nil
 			self:FireEvent("analyze_unreachable_code_stop", called_count, total)
+			context:PopCurrentAnalyzer()
 		end
 	end
 

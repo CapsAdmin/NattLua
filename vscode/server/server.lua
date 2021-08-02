@@ -7,7 +7,6 @@ local json = require("nattlua.other.json")
 local nl = require("nattlua")
 local helpers = require("nattlua.other.helpers")
 local table_print = require("examples.util").TablePrint
-local base_environment = require("nattlua.runtime.base_environment")
 local server = require("vscode.server.lsp")
 
 local TextDocumentSyncKind = {
@@ -44,7 +43,7 @@ local function compile(uri, server, client)
         local data = helpers.SubPositionToLinePosition(code, start, stop)
         
 		if not data then
-			local code = io.open(base_environment.path):read("*all")
+			local code = compiler.analyzer:GetDefaultEnvironment("typesystem").path:read("*all")
 			data = helpers.SubPositionToLinePosition(code, start, stop)
 			if not data then
 				print("INTERNAL ERROR: ", self, msg, start, stop, ...)

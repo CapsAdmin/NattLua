@@ -149,7 +149,7 @@ end
 type function require(name: string)
 	if not name:IsLiteral() then return types.Any end
 	local str = name
-	local base_environment = require("nattlua.runtime.base_environment")
+	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
 	if val then return val end
 	if str:GetData() == "table.new" then return base_environment:Get(types.LString("table"), "typesystem"):Get(types.LString("new"), "runtime") end
