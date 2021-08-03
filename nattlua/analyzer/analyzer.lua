@@ -116,7 +116,7 @@ do
 			return self:AnalyzeExpression(node.as_expression, "typesystem")
 		elseif node.kind == "value" then
 			return AnalyzeAtomicValue(self, node, env)
-		elseif node.kind == "function" or node.kind == "type_function" then
+		elseif node.kind == "function" or node.kind == "type_function" or node.kind == "generics_type_function" then
 			return AnalyzeFunction(self, node, env)
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node, env)

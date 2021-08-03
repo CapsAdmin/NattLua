@@ -707,3 +707,28 @@ run[[
     
 
 ]]
+
+run[[
+    do
+        type IPlayer = {}
+        type IPlayer.@MetaTable = IPlayer
+        type IPlayer.@Name = "IPlayer"
+        type IPlayer.__index = function<|self: IPlayer, key: string|>
+            if key == "IsVisible" then
+                return _ as (function(IPlayer, IPlayer): 1337)
+            end
+        end
+        
+        type IPlayer.GetName = (function(IPlayer): string)
+    
+        type IPlayer.@Contract = IPlayer
+    end
+    
+    type Player = (function(entityIndex: number): IPlayer)
+    
+    do
+        local ply = Player(1337)
+        ply:GetName()
+        types.assert(ply:IsVisible(ply), 1337)
+    end
+]]

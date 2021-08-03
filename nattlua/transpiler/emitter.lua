@@ -111,6 +111,8 @@ function META:EmitExpression(node, from_assignment)
 		self:EmitEmptyUnion(node)
 	elseif node.kind == "tuple" then
 		self:EmitTuple(node)
+	elseif node.kind == "generics_type_function" then
+		self:EmitInvalidLuaCode("EmitGenericsTypeFunction", node)
 	else
 		error("unhandled token type " .. node.kind)
 	end
@@ -350,7 +352,9 @@ do
 		self:Whitespace("\t")
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
-		self:EmitExpression(node.expression or node.identifier)
+		if node.expression or node.identifier then
+			self:EmitExpression(node.expression or node.identifier)
+		end
 		emit_function_body(self, node, true)
 	end
 

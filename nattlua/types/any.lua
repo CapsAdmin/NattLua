@@ -38,4 +38,4 @@ function META.Equal(a, b)
 	return a.Type == b.Type
 end
 
-return {Any = META.New}
+return {Any = function() local any =  META.New() any.trace = debug.traceback() return any end}

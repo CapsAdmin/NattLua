@@ -268,11 +268,6 @@ return
 
 				for i, arg in ipairs(arguments:GetData()) do
 					if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
-						for _, keyval in ipairs(arg:GetData()) do
-							keyval.key = Union({Any(), keyval.key})
-							keyval.val = Union({Any(), keyval.val})
-						end
-
 						if self.config.external_mutation then
 							self:Warning(self:GetActiveNode(), {
 								"argument #",
@@ -712,7 +707,7 @@ return
 				elseif function_node then
 					return call_lua_function_with_body(self, obj, arguments, function_node, env)
 				end
-				
+
 				return call_type_signature_without_body(self, obj, arguments)
 			end
 
