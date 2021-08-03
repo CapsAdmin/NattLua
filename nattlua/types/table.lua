@@ -14,6 +14,7 @@ META.Type = "table"
 --[[#type META.@Name = "TTable"]]
 --[[#type TTable = META.@Self]]
 META:GetSet("Data", nil--[[# as {[any] = any} | {}]])
+META:GetSet("BaseTable", nil--[[# as TTable|nil]])
 META:GetSet("ReferenceId", nil--[[# as string | nil]])
 META:GetSet("Self", nil--[[# as TTable]])
 
@@ -202,7 +203,13 @@ function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 			local bkeyval, reason = B:FindKeyValReverse(akeyval.key)
 
 			if not akeyval.val:CanBeNil() then
-				if not bkeyval then return bkeyval, reason end
+				if not bkeyval then 
+					if A.BaseTable and A.BaseTable == B then
+						bkeyval = akeyval
+					else
+						return bkeyval, reason 
+					end
+				end
 				A.suppress = true
 				local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
 				A.suppress = false
@@ -302,6 +309,12 @@ function META:FindKeyValReverse(key--[[#: BaseType]])
 		table.insert(reasons, reason)
 	end
 
+	if self.BaseTable then
+		local ok, reason = self.BaseTable:FindKeyValReverse(key)
+		if ok then return ok end
+		table.insert(reasons, reason)
+	end
+
 	if not reasons[1] then
 		local ok, reason = type_errors.missing(self, key, "table is empty")
 		reasons[1] = reason
@@ -383,7 +396,11 @@ end
 
 function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		self["Set" .. key:GetData():sub(2)](self, val)
+		local key = "Set" .. key:GetData():sub(2)
+		if not self[key] then
+			return type_errors.other("no such function on table: " .. key)
+		end
+		self[key](self, val)
 		return true
 	end
 
@@ -503,7 +520,7 @@ function META:Copy(map--[[#: any]])
 	copy:SetLiteral(self:IsLiteral())
 	copy.mutations = self.mutations
 	copy.scope = self.scope
-	
+	copy.BaseTable = self.BaseTable
 	--[[
 		
 		copy.argument_index = self.argument_index

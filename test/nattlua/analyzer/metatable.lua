@@ -709,8 +709,8 @@ run[[
 ]]
 
 run[[
+    local type IPlayer = {}
     do
-        type IPlayer = {}
         type IPlayer.@MetaTable = IPlayer
         type IPlayer.@Name = "IPlayer"
         type IPlayer.__index = function<|self: IPlayer, key: string|>
@@ -730,5 +730,40 @@ run[[
         local ply = Player(1337)
         ply:GetName()
         types.assert(ply:IsVisible(ply), 1337)
+    end
+]]
+
+run[[
+    local type IPlayer = {}
+    local type IEntity = {}
+
+    do
+        type IEntity.@Name = "IEntity"
+        type IEntity.@MetaTable = IEntity
+        type IEntity.__index = IEntity
+        
+        type IEntity.IsVisible = (function(IEntity, target: IEntity): boolean)
+
+        type IEntity.@Contract = IEntity
+    end
+
+    do
+        type IPlayer.@Name = "IPlayer"
+        type IPlayer.@MetaTable = IPlayer
+        type IPlayer.__index = IPlayer
+        type IPlayer.@BaseTable = IEntity
+        
+        type IPlayer.GetName = (function(IPlayer): string)
+
+        type IPlayer.@Contract = IPlayer
+    end
+
+    type Player = (function(entityIndex: number): IPlayer)
+
+
+    do
+        local ply = Player(1337)
+        ply:GetName()
+        types.assert(ply:IsVisible(ply), _ as boolean)
     end
 ]]
