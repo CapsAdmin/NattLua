@@ -13,7 +13,7 @@ return
 
 			if parser:IsValue(":") then
 				node:ExpectKeyword(":")
-				node.as_expression = ExpectTypeExpression(parser, 0)
+				node.type_expression = ExpectTypeExpression(parser, 0)
 			end
 
 			return node:End()

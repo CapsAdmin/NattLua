@@ -166,13 +166,13 @@ do
 	local function read_and_add_explicit_type(parser, node)
 		if parser:IsValue(":") and (not parser:IsType("letter", 1) or not is_call_expression(parser, 2)) then
 			node.tokens[":"] = parser:ExpectValue(":")
-			node.as_expression = ExpectTypeExpression(parser, 0)
+			node.type_expression = ExpectTypeExpression(parser, 0)
 		elseif parser:IsValue("as") then
 			node.tokens["as"] = parser:ExpectValue("as")
-			node.as_expression = ExpectTypeExpression(parser, 0)
+			node.type_expression = ExpectTypeExpression(parser, 0)
 		elseif parser:IsValue("is") then
 			node.tokens["is"] = parser:ExpectValue("is")
-			node.as_expression = ExpectTypeExpression(parser, 0)
+			node.type_expression = ExpectTypeExpression(parser, 0)
 		end
 	end
 

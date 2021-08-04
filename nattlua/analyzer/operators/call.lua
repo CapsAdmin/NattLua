@@ -331,12 +331,12 @@ return
 							end
 
 							if key.value.value == "..." then
-								if key.as_expression then
+								if key.type_expression then
 									args[i] = VarArg():SetNode(key)
-									args[i]:Set(1, analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue())
+									args[i]:Set(1, analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue())
 								end
-							elseif key.as_expression then
-								args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue()
+							elseif key.type_expression then
+								args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue()
 							end
 				
 							if contracts:Get(i).literal_argument and arguments:Get(i) then
@@ -591,10 +591,10 @@ return
 							-- we don't count the actual self argument
 							local node = function_node.identifiers[i + 1]
 
-									if node and not node.as_expression then
+									if node and not node.type_expression then
 										self:Warning(node, "argument is untyped")
 									end
-								elseif function_node.identifiers[i] and not function_node.identifiers[i].as_expression then
+								elseif function_node.identifiers[i] and not function_node.identifiers[i].type_expression then
 									self:Warning(function_node.identifiers[i], "argument is untyped")
 								end
 							end

@@ -34,7 +34,7 @@ return
 				vararg.value = parser:ExpectValue("...")
 
 				if parser:IsType("letter") then
-					vararg.as_expression = parser:ExpectValue()
+					vararg.type_expression = parser:ExpectValue()
 				end
 
 				vararg:End()

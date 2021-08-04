@@ -71,7 +71,7 @@ return
 								local index = right_pos + i - 1
 								right[index] = obj:Get(i)
 	
-								if exp_val.as_expression then
+								if exp_val.type_expression then
 									right[index]:Seal() -- TEST ME
 								end
 							end
@@ -105,7 +105,7 @@ return
 									right[index] = val
 								end
 
-								if exp_val.as_expression then
+								if exp_val.type_expression then
 									right[index]:Seal() -- TEST ME
 								end
 							end
@@ -113,7 +113,7 @@ return
 					else
 						right[right_pos] = obj
 
-						if exp_val.as_expression then
+						if exp_val.type_expression then
 							obj:Seal()
 						end
 					end
@@ -135,8 +135,8 @@ return
 			for i, exp_key in ipairs(statement.left) do
 				local val = right[i] or Nil():SetNode(exp_key)
 
-				if exp_key.as_expression then
-					local contract = analyzer:AnalyzeExpression(exp_key.as_expression, "typesystem")
+				if exp_key.type_expression then
+					local contract = analyzer:AnalyzeExpression(exp_key.type_expression, "typesystem")
 
 					if right[i] then
 						local contract = contract
@@ -149,7 +149,7 @@ return
 						analyzer:Assert(
 							statement or
 							val:GetNode() or
-							exp_key.as_expression,
+							exp_key.type_expression,
 							check_type_against_contract(val, contract)
 						)
 					end
@@ -189,7 +189,7 @@ return
 								analyzer:Assert(
 									statement or
 									val:GetNode() or
-									exp_key.as_expression,
+									exp_key.type_expression,
 									check_type_against_contract(val, upvalues_contract)
 								)
 								val:SetContract(upvalues_contract)

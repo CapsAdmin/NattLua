@@ -132,17 +132,17 @@ test("type comments", function()
     local tree = parse("function foo(str: string, idx: number, msg: string) end").SyntaxTree
     local func = tree.statements[1]
 
-    assert(func.identifiers[1].as_expression)
-    assert(func.identifiers[2].as_expression)
-    assert(func.identifiers[3].as_expression)
+    assert(func.identifiers[1].type_expression)
+    assert(func.identifiers[2].type_expression)
+    assert(func.identifiers[3].type_expression)
 
 
     local tree = parse("function foo(str--[[#: string]], idx--[[#: number]], msg--[[#: string]]) end").SyntaxTree
     local func = tree.statements[1]
 
-    assert(func.identifiers[1].as_expression)
-    assert(func.identifiers[2].as_expression)
-    assert(func.identifiers[3].as_expression)
+    assert(func.identifiers[1].type_expression)
+    assert(func.identifiers[2].type_expression)
+    assert(func.identifiers[3].type_expression)
 end)
 
 test("operator precedence", function()

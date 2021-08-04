@@ -26,14 +26,14 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 		
 		for i, key in ipairs(node.identifiers) do
 			if key.value.value == "..." then
-				if key.as_expression then
+				if key.type_expression then
 					args[i] = VarArg():SetNode(key)
-					args[i]:Set(1, analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue())
+					args[i]:Set(1, analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue())
 				else
 					args[i] = VarArg():SetNode(key)
 				end
-			elseif key.as_expression then
-				args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem"):GetFirstValue()
+			elseif key.type_expression then
+				args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue()
 				explicit_arguments = true
 			else
 				args[i] = Any():SetNode(key)
@@ -54,8 +54,8 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 			if key.identifier then
 				args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
 				explicit_arguments = true
-			elseif key.as_expression then
-				args[i] = analyzer:AnalyzeExpression(key.as_expression, "typesystem")
+			elseif key.type_expression then
+				args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem")
 
 				if key.value.value == "..." then
 					local vararg = VarArg():SetNode(key)
@@ -115,10 +115,10 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 			if type_exp.kind == "value" and type_exp.value.value == "..." then
 				local tup
 
-				if type_exp.as_expression then
+				if type_exp.type_expression then
 					tup = Tuple(
 							{
-								analyzer:AnalyzeExpression(type_exp.as_expression, "typesystem"),
+								analyzer:AnalyzeExpression(type_exp.type_expression, "typesystem"),
 							}
 						)
 						:SetRepeat(math.huge)

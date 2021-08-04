@@ -79,7 +79,7 @@ local function read_value(parser)
 	if not (parser:IsValue("...") and parser:IsType("letter", 1)) then return end
 	local node = parser:Node("expression", "value")
 	node.value = parser:ExpectValue("...")
-	node.as_expression = ReadExpression(parser)
+	node.type_expression = ReadExpression(parser)
 	return node:End()
 end
 
@@ -194,7 +194,7 @@ do
 	local function read_as_expression(parser, node)
 		if not parser:IsValue("as") then return end
 		node.tokens["as"] = parser:ExpectValue("as")
-		node.as_expression = ReadExpression(parser)
+		node.type_expression = ReadExpression(parser)
 	end
 
 	local function read_index(parser)

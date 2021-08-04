@@ -106,14 +106,14 @@ do
 			env = "typesystem"
 		end
 
-		if node.as_expression then
+		if node.type_expression then
 			if node.kind == "table" then
 				local obj = AnalyzeTable(self, node, env)
-				obj:SetContract(self:AnalyzeExpression(node.as_expression, "typesystem"))
+				obj:SetContract(self:AnalyzeExpression(node.type_expression, "typesystem"))
 				return obj
 			end
 
-			return self:AnalyzeExpression(node.as_expression, "typesystem")
+			return self:AnalyzeExpression(node.type_expression, "typesystem")
 		elseif node.kind == "value" then
 			return AnalyzeAtomicValue(self, node, env)
 		elseif node.kind == "function" or node.kind == "type_function" or node.kind == "generics_type_function" then
