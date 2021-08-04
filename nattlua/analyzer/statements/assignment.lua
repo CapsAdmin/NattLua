@@ -6,6 +6,12 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 
 local function check_type_against_contract(val, contract)
+	-- if the contract is unique / nominal, ie
+	-- local a: Person = {name = "harald"}
+	-- Person is not a subset of {name = "harald"} because
+	-- Person is only equal to Person
+	-- so we need to disable this check during assignment
+
 	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
 
 	if skip_uniqueness then
@@ -19,12 +25,6 @@ local function check_type_against_contract(val, contract)
 		val:SetUniqueID(contract:GetUniqueID())
 	end
 
-	if not ok and contract.Type == "union" and not val:IsLiteral() then
-		val:SetLiteral(true)
-		ok, reason = val:IsSubsetOf(contract)
-		val:SetLiteral(false)
-	end
-
 	if not ok then return ok, reason end
 	if contract.Type == "table" then return val:ContainsAllKeysIn(contract) end
 	return true
@@ -33,24 +33,29 @@ end
 return
 	{
 		AnalyzeAssignment = function(analyzer, statement)
+			-- typesystem preference can happen from generics usually and from type calls <||>
+			-- otherwise typesystem is prefered when handling function arguments
 			local env = analyzer:GetPreferTypesystem() and
 				"typesystem" or
-				statement.environment or
+				statement.environment or -- maybe we can pass statement.environment in beforehand?
 				"runtime"
+
 			local left = {}
 			local right = {}
 
-			for i, exp_key in ipairs(statement.left) do
+			for left_pos, exp_key in ipairs(statement.left) do
 				if exp_key.kind == "value" then
-					left[i] = NodeToString(exp_key)
+					-- local foo, bar = *
+					left[left_pos] = NodeToString(exp_key)
 
-					if exp_key.kind == "value" then
-						exp_key.is_upvalue = analyzer:LocalValueExists(exp_key, env)
-					end
+					-- this is used by the javascript emitter
+					exp_key.is_upvalue = analyzer:LocalValueExists(exp_key, env)
 				elseif exp_key.kind == "postfix_expression_index" then
-					left[i] = analyzer:AnalyzeExpression(exp_key.expression, env)
+					-- foo[bar] = *
+					left[left_pos] = analyzer:AnalyzeExpression(exp_key.expression, env)
 				elseif exp_key.kind == "binary_operator" then
-					left[i] = analyzer:AnalyzeExpression(exp_key.right, env)
+					-- foo.bar = *
+					left[left_pos] = analyzer:AnalyzeExpression(exp_key.right, env)
 				else
 					analyzer:FatalError("unhandled expression " .. tostring(exp_key))
 				end
@@ -58,7 +63,11 @@ return
 
 			if statement.right then
 				for right_pos, exp_val in ipairs(statement.right) do
+
+					-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
+					-- use context?
 					analyzer.left_assigned = left[right_pos]
+
 					local obj = analyzer:AnalyzeExpression(exp_val, env)
 
 					if obj.Type == "tuple" and obj:GetLength() == 1 then
@@ -67,62 +76,53 @@ return
 
 					if obj.Type == "tuple" then
 						if env == "runtime" then
+							-- at runtime unpack the tuple
 							for i = 1, #statement.left do
 								local index = right_pos + i - 1
 								right[index] = obj:Get(i)
-	
-								if exp_val.type_expression then
-									right[index]:Seal() -- TEST ME
-								end
 							end
 						end
 
 						if env == "typesystem" then
 							if obj:HasTuples() then
-								for _, v in ipairs(obj:GetData()) do
-									for i = 1, #statement.left do
-										local index = right_pos + i - 1
-										right[index] = obj:GetWithoutExpansion(i)
-									end
+								-- if we have a tuple with, plainly unpack the tuple while preserving the tuples inside
+								for i = 1, #statement.left do
+									local index = right_pos + i - 1
+									right[index] = obj:GetWithoutExpansion(i)
 								end
 							else
+								-- otherwise plainly assign it
 								right[right_pos] = obj
 							end
 						end
 					elseif obj.Type == "union" then
 						for i = 1, #statement.left do
-							local index = right_pos + i - 1
-							local val = obj:GetAtIndex(index)
-							
-							if #obj:GetData() == 0 then
-								val = obj
-							end
-
-							if val then
-								if right[index] then
-									right[index] = Union({right[index], val})
-								else
-									right[index] = val
-								end
-
-								if exp_val.type_expression then
-									right[index]:Seal() -- TEST ME
-								end
+							-- if the union is empty or has no tuples, just assign it
+							if obj:IsEmpty() or not obj:HasTuples() then
+								right[right_pos] = obj
+							else
+								-- unpack unions with tuples
+								-- ⦗false, string, 2⦘ | ⦗true, 1⦘ at first index would be true | false
+								local index = right_pos + i - 1
+								right[index] = obj:GetAtIndex(index)
 							end
 						end
 					else
 						right[right_pos] = obj
 
+						-- when the right side has a type expression, it's invoked using the as operator
 						if exp_val.type_expression then
 							obj:Seal()
 						end
 					end
 				end
 
-				-- complicated
 				-- cuts the last arguments
-				-- local a,b,c = (any...), 1
-				-- should be any, 1, nil
+				-- local funciton test() return 1,2,3 end
+				-- local a,b,c = test(), 1337
+				-- a should be 1
+				-- b should be 1337
+				-- c should be nil
 				local last = statement.right[#statement.right]
 
 				if last.kind == "value" and last.value.value ~= "..." then
@@ -132,20 +132,32 @@ return
 				end
 			end
 
-			for i, exp_key in ipairs(statement.left) do
-				local val = right[i] or Nil():SetNode(exp_key)
+			-- here we check the types
 
+			for left_pos, exp_key in ipairs(statement.left) do
+				local val = right[left_pos] or Nil():SetNode(exp_key)
+
+				-- do we have a type expression? 
+				-- local a: >>number<< = 1
 				if exp_key.type_expression then
 					local contract = analyzer:AnalyzeExpression(exp_key.type_expression, "typesystem")
 
-					if right[i] then
+					if right[left_pos] then
 						local contract = contract
 
 						if contract.Type == "tuple" and contract:GetLength() == 1 then
 							contract = contract:Get(1)
 						end
 
+						-- we copy the literalness of the contract so that
+						-- local a: number = 1
+						-- becomes
+						-- local a: number = number
+						
+						-- TODO: this would fail with 
+						-- local a: 1 | true | false = 1
 						val:CopyLiteralness(contract)
+
 						analyzer:Assert(
 							statement or
 							val:GetNode() or
@@ -154,45 +166,56 @@ return
 						)
 					end
 
+					-- we set a's contract to be number
 					val:SetContract(contract)
 
-					if not right[i] then
+					-- this is for "local a: number" without the right side being assigned
+					if not right[left_pos] then
+						-- make a copy of the contract and use it
+						-- so the value can change independently from the contract
 						val = contract:Copy()
 						val:SetContract(contract)
 					end
 				end
 
+				-- used by the emitter
 				exp_key.inferred_type = val
 				val:SetTokenLabelSource(exp_key)
 				val:SetEnvironment(env)
 
+				-- if all is well, create or mutate the value
+
 				if statement.kind == "local_assignment" then
+					-- local assignment: local a = 1
 					analyzer:CreateLocalValue(exp_key, val, env)
 				elseif statement.kind == "assignment" then
-					local key = left[i]
+					local key = left[left_pos]
 
+					-- plain assignment: a = 1
 					if exp_key.kind == "value" then
 						do -- check for any previous upvalues
-					local upvalue = analyzer:GetLocalOrEnvironmentValue(key, env)
-							local upvalues_contract = upvalue and upvalue:GetContract()
+							local existing_value = analyzer:GetLocalOrEnvironmentValue(key, env)
+							local contract = existing_value and existing_value:GetContract()
 
-							if not upvalue and not upvalues_contract and env == "runtime" then
-								upvalue = analyzer:GetLocalOrEnvironmentValue(key, "typesystem")
+							-- try typesystem if we can't find anything
+							if not existing_value and not contract and env == "runtime" then
+								existing_value = analyzer:GetLocalOrEnvironmentValue(key, "typesystem")
 
-								if upvalue then
-									upvalues_contract = upvalue
+								if existing_value then
+									contract = existing_value
 								end
 							end
 
-							if upvalues_contract and upvalues_contract.Type ~= "any" then
-								val:CopyLiteralness(upvalues_contract)
+							if contract then
+								val:CopyLiteralness(contract)
+
 								analyzer:Assert(
 									statement or
 									val:GetNode() or
 									exp_key.type_expression,
-									check_type_against_contract(val, upvalues_contract)
+									check_type_against_contract(val, contract)
 								)
-								val:SetContract(upvalues_contract)
+								val:SetContract(contract)
 							end
 						end
 
@@ -204,6 +227,7 @@ return
 							analyzer:GetScope():AddDependency({key = key, val = val})
 						end
 					else
+						-- index assignment: foo[a] = 1
 						local obj = analyzer:AnalyzeExpression(exp_key.left, env)
 						analyzer:Assert(exp_key, analyzer:NewIndexOperator(exp_key, obj, key, val, env))
 					end

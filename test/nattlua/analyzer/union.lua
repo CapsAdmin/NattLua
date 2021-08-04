@@ -52,7 +52,7 @@ test("is literal", function()
     local a = run[[
         local type a = 1 | 2 | 3
     ]]
-    assert(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral() == false)
+    assert(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral() == true)
 end)
 
 test("is not literal", function()

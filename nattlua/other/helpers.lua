@@ -552,4 +552,19 @@ function helpers.GlobalLookup()
 	)
 end
 
+do
+	function find_tests()
+		for i = 1, math.huge do
+			local info = debug.getinfo(i)
+			if not info then break end
+			local path = info.source
+			if path:sub(1,1) == "@" then
+				if path:sub(2):find("test/nattlua/analyzer") then
+					print(info.source:sub(2) .. ":" .. info.currentline)
+				end
+			end
+		end
+	end	
+end
+
 return helpers

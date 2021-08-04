@@ -593,6 +593,15 @@ function META:IsLiteral()
 			v.key.Type ~= "function"
 		then
 			self.suppress = true
+			if v.key.Type == "union" then
+				return false, type_errors.other(
+					{
+						"the value ",
+						v.val,
+						" is not a literal because it's a union"
+					}
+				)
+			end
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
 			if not ok then return type_errors.other(
@@ -604,6 +613,15 @@ function META:IsLiteral()
 				}
 			) end
 			self.suppress = true
+			if v.val.Type == "union" then
+				return false, type_errors.other(
+					{
+						"the value ",
+						v.val,
+						" is not a literal because it's a union"
+					}
+				)
+			end
 			local ok, reason = v.val:IsLiteral()
 			self.suppress = false
 			if not ok then return type_errors.other(

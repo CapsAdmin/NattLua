@@ -180,6 +180,15 @@ function META:GetMinimumLength()
 	return min
 end
 
+function META:HasTuples()
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "tuple" then
+			return true
+		end
+	end
+	return false
+end
+
 function META:GetAtIndex(i)
 	local val
 	local errors = {}
@@ -543,6 +552,13 @@ function META:MakeCallableUnion(analyzer)
 	new_union:SetTruthyUnion(truthy_union)
 	new_union:SetFalsyUnion(falsy_union)
 	return truthy_union:SetNode(analyzer:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(self)
+end
+
+function META:IsLiteral()
+	for _, obj in ipairs(self:GetData()) do
+		if not obj:IsLiteral() then return false end
+	end
+	return true
 end
 
 function META:GetLargestNumber()
