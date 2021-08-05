@@ -26,7 +26,7 @@ type io.stdout = File
 type io.stdin = File
 type io.stderr = File
 
-type function io.type(obj)
+type function io.type(obj: any)
 	local flags = types.Union()
 	flags:AddType(types.LString("file"))
 	flags:AddType(types.LString("closed file"))

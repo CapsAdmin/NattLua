@@ -28,7 +28,7 @@ end)
 
 test("exclude type function", function()
     run([[
-        local type function Exclude(T, U)
+        local type function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
         end
@@ -39,7 +39,7 @@ test("exclude type function", function()
     ]])
 
     run([[
-        local type function Exclude(T, U)
+        local type function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
         end
@@ -139,7 +139,7 @@ end)
 
 test("exlcude", function()
     run[[
-        local type function Exclude(T, U)
+        local type function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
         end
@@ -228,7 +228,7 @@ run[[
 ]]
 
 run([[
-    local type function Exclude(T, U)
+    local type function Exclude(T: any, U: any)
         T:RemoveType(U)
         return T:Copy()
     end
@@ -239,7 +239,7 @@ run([[
 ]])
 
 run([[
-    local type function Exclude(T, U)
+    local type function Exclude(T: any, U: any)
         T:RemoveType(U)
         return T:Copy()
     end

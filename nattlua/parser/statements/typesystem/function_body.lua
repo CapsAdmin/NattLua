@@ -5,8 +5,11 @@ local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expr
 local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expression").ReadExpression
 local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
 
-local function ReadTypeFunctionArgument(parser)
-	if (parser:IsType("letter") or parser:IsValue("...")) and parser:IsValue(":", 1) then
+local function ReadTypeFunctionArgument(parser, expect_type)
+	if parser:IsValue(")") then return end
+	if parser:IsValue("...") then return end
+
+	if expect_type or parser:IsType("letter") and parser:IsValue(":", 1) then
 		local identifier = parser:ReadToken()
 		local token = parser:ExpectValue(":")
 		local exp = ExpectTypeExpression(parser)
@@ -20,21 +23,22 @@ end
 
 return
 	{
-		ReadFunctionBody = function(parser, node, plain_args)
+		ReadFunctionBody = function(parser, node, type_args)
 			node.tokens["arguments("] = parser:ExpectValue("(")
 
-			if plain_args then
-				node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
-			else
-				node.identifiers = ReadMultipleValues(parser, math_huge, ReadTypeFunctionArgument)
-			end
+			node.identifiers = ReadMultipleValues(parser, math_huge, ReadTypeFunctionArgument, type_args)
 
 			if parser:IsValue("...") then
 				local vararg = parser:Node("expression", "value")
 				vararg.value = parser:ExpectValue("...")
 
-				if parser:IsType("letter") then
-					vararg.type_expression = parser:ExpectValue()
+				if parser:IsValue(":") or type_args then
+					vararg.tokens[":"] = parser:ExpectValue(":")
+					vararg.type_expression = ExpectTypeExpression(parser)
+				else
+					if parser:IsType("letter") then
+						vararg.type_expression = ExpectTypeExpression(parser)
+					end
 				end
 
 				vararg:End()

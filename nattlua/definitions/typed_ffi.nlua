@@ -1,4 +1,4 @@
-local type function cast(node, args)
+local type function cast(node: any, args: any)
 	local table_print = require("nattlua.other.table_print")
 	local cast = env.typesystem.cast
 
@@ -190,13 +190,13 @@ type function ffi.get_type(cdecl: string, ...: {[string] = any} | nil)
 	return ctype
 end
 
-type function ffi.new(cdecl, ...)
+type function ffi.new(cdecl: any, ...: ...any)
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {ffinew = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
 	return ctype
 end
 
-type function ffi.metatype(ctype, meta)
+type function ffi.metatype(ctype: any, meta: any)
 	local new = meta:Get(types.LString("__new"))
 
 	if new then

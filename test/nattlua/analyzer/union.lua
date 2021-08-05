@@ -106,7 +106,7 @@ run([[
 ]], "undefined get: nil.-foo")
 
 run([[
-    local type function test(a, b)
+    local type function test(a: any, b: any)
         assert(a:ShrinkToFunctionSignature():Equal(b))
     end
     local type A = function(string): number

@@ -22,17 +22,17 @@ type dofile = (function(filename: string): ...) | (function(): ...)
 type ipairs = (function(t: Table): empty_function, Table, number)
 type tonumber = (function(e: number | string, base: number | nil): number | nil)
 
-type function type_print(...)
+type function type_print(...: ...any)
 	print(...)
 end
 
-type function print(...)
+type function print(...: ...any)
 	print(...)
 end
 
 type tostring = (function(val: any): string)
 
-type function type_assert_truthy(obj, err)
+type function type_assert_truthy(obj: any, err: string | nil)
 	if obj:IsTruthy() then return obj end
 	error(err and err:GetData() or "assertion failed")
 end
@@ -88,7 +88,7 @@ type function next(t: {[any] = any}, k: any)
 	return k, v
 end
 
-type function pairs(tbl)
+type function pairs(tbl: Table)
 	if tbl.Type == "table" and tbl:HasLiteralKeys() then
 		local i = 1
 		return function()
@@ -258,7 +258,7 @@ type function rawget(tbl: {[any] = any} | {}, key: any)
 	if t then return t end
 end
 
-type function assert(obj, msg)
+type function assert(obj: any, msg: string | nil)
 	if obj.Type == "union" then
 		for _, tup in ipairs(obj:GetData()) do
 			if tup.Type == "tuple" and tup:Get(1):IsTruthy() then return tup end
@@ -294,7 +294,7 @@ type function error(msg: string, level: number | nil)
 	end
 end
 
-type function pcall(callable: (function(...any): (...any)), ...)
+type function pcall(callable: (function(...: ...any): (...any)), ...: ...any)
 	local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
 	local err = analyzer.lua_error_thrown
 
@@ -313,7 +313,7 @@ type function pcall(callable: (function(...any): (...any)), ...)
 	return types.True(), res:Unpack()
 end
 
-type function type_pcall(func, ...)
+type function type_pcall(func: Function, ...: ...any)
 	local diagnostics_index = #analyzer.diagnostics
 	local ok, val = pcall(analyzer.Call, analyzer, func, types.Tuple({...}))
 	if not ok then return ok, val end
@@ -328,11 +328,11 @@ type function type_pcall(func, ...)
 	return ok, val:Unpack()
 end
 
-type function xpcall(callable: any, error_cb: any, ...)
+type function xpcall(callable: any, error_cb: any, ...: ...any)
 	return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
 end
 
-type function select(index: 1 .. inf | "#", ...)
+type function select(index: 1 .. inf | "#", ...: ...any)
 	return select(index:GetData(), ...)
 end
 
@@ -354,7 +354,7 @@ type function type(obj: any)
 	return types.String()
 end
 
-type function setmetatable(tbl, meta)
+type function setmetatable(tbl: Table, meta: Table | nil)
 	if meta.Type == "table" then
 		if meta.Self then
 			analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(meta.Self))
@@ -370,7 +370,7 @@ type function setmetatable(tbl, meta)
 	return tbl
 end
 
-type function getmetatable(tbl)
+type function getmetatable(tbl: Table)
 	if tbl.Type == "table" then return tbl:GetMetaTable() end
 end
 

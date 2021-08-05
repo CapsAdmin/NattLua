@@ -6,7 +6,7 @@ return
 	{
 		ReadFunctionGenericsBody = function(parser, node)
 			node.tokens["arguments("] = parser:ExpectValue("<|")
-			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
+			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier, true)
 
 			if parser:IsValue("...") then
 				local vararg = parser:Node("expression", "value")

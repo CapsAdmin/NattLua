@@ -6,6 +6,7 @@ local tostring = tostring
 local debug = debug
 local print = print
 local string = require("string")
+local VarArg = require("nattlua.types.tuple").VarArg
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
@@ -172,7 +173,8 @@ return
 			end
 
 			local function call_lua_type_function(self, obj, function_arguments, arguments, env)
-				do
+				do				
+
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 				
 					if not ok then
@@ -527,23 +529,15 @@ return
 						env ~= "typesystem" and
 						function_node.kind ~= "local_generics_type_function" and
 						function_node.kind ~= "generics_type_function" and
-						not self:GetActiveNode().type_call 
+						not self:GetActiveNode().type_call
 
+					-- if we have explicit arguments, we need to check the contract
 					if use_contract then
 						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
 						if not ok then return ok, err end
 					else
-
-						if env == "runtime" then
-							local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
-
-							if not ok then
-								if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
-								return type_errors.subset(a, b, {"argument #", i, " - ", reason})
-							end
-						end
-
 						if env == "typesystem" then
+
 							local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
 
 							if not ok then
@@ -575,8 +569,8 @@ return
 						if not obj.arguments_inferred and function_node.identifiers then
 							for i in ipairs(obj:GetArguments():GetData()) do
 								if function_node.self_call then
-							-- we don't count the actual self argument
-							local node = function_node.identifiers[i + 1]
+									-- we don't count the actual self argument
+									local node = function_node.identifiers[i + 1]
 
 									if node and not node.type_expression then
 										self:Warning(node, "argument is untyped")

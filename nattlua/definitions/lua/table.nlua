@@ -24,7 +24,7 @@ type function table.concat(tbl: List, separator: string | nil)
 	return table.concat(out, separator and separator:GetData() or nil)
 end
 
-type function table.insert(tbl: List, ...)
+type function table.insert(tbl: List, ...: ...any)
 	if not tbl:IsLiteral() then return end
 	local pos, val = ...
 
@@ -45,7 +45,7 @@ type function table.remove(tbl: List, index: number | nil)
 	table.remove(pos:GetData(), index:GetData())
 end
 
-type function table.sort(tbl: List, func)
+type function table.sort(tbl: List, func: function(a: any, b: any): boolean)
 	local union = types.Union()
 
 	if tbl.Type == "tuple" then

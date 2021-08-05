@@ -34,7 +34,7 @@ type function ^string.char(...: ...number)
 	return string.char(table.unpack(out))
 end
 
-type function ^string.format(s: string, ...)
+type function ^string.format(s: string, ...: ...any)
 	if not s:IsLiteral() then return types.String() end
 	local ret = {...}
 

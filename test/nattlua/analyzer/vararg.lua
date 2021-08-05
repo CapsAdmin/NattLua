@@ -259,13 +259,13 @@ run[[
 ]]
 
 run[[
-    local type function create(func)
+    local type function create(func: Function)
         local t = types.Table()
         t.func = func
         return t
     end
     
-    local type function call(obj, ...)
+    local type function call(obj: any, ...: ...any)
         analyzer:Call(obj.func, types.Tuple({...}))
     end
     
@@ -297,9 +297,9 @@ run[[
 run[[
     ;(function(...: number) 
         local a,b,c,d = ...
-        types.assert(a, 1)
-        types.assert(b, 2)
-        types.assert(c, 3)
+        types.assert(a, _ as number)
+        types.assert(b, _ as number)
+        types.assert(c, _ as number)
         types.assert(d, nil)
     end)(1,2,3)
 ]]
@@ -322,7 +322,7 @@ run[[
 ]]
 
 run[[
-    local type function foo(a)
+    local type function foo(a: any)
         assert(a == nil)
     end
 
@@ -330,7 +330,7 @@ run[[
 ]]
 
 run[[
-    local type function foo(a)
+    local type function foo(a: any)
         assert(a.Type == "symbol")
         assert(a:GetData() == nil)
     end

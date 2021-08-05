@@ -1,6 +1,6 @@
 type boolean = true | false
-type Table = {[any] = any}
-type Function = function(...): ...any
+type Table = {[any] = any} | {}
+type Function = function(...: ...any): ...any
 type userdata = Table
 type cdata = {[number] = any}
 type ctype = any
@@ -23,35 +23,35 @@ function List<|typ: any|>
 	return {[number] = typ | nil}
 end
 
-function ErrorReturn<|...|>
+function ErrorReturn<|...: ...any|>
 	return Tuple<|...|> | Tuple<|nil, string|>
 end
 
-type function return_type(func, i: number | nil)
+type function return_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
 	return func:GetReturnTypes():Slice(i, i)
 end
 
-type function set_return_type(func, tup)
+type function set_return_type(func: Function, tup: any)
 	func:SetReturnTypes(tup)
 end
 
-type function argument_type(func, i: number | nil)
+type function argument_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
 	return func:GetArguments():Slice(i, i)
 end
 
-type function exclude(T, U)
+type function exclude(T: any, U: any)
 	T = T:Copy()
 	T:RemoveType(U)
 	return T
 end
 
-type function Tuple(...)
+type function Tuple(...: ...any)
 	return types.Tuple({...}):SetUnpackable(true)
 end
 
-type function enum(tbl)
+type function enum(tbl: Table)
 	assert(tbl:IsLiteral())
 	local union = types.Union()
 
@@ -77,7 +77,7 @@ end
 
 --
 
-type function seal(tbl)
+type function seal(tbl: Table)
 	if tbl:GetContract() then return end
 
 	for key, val in tbl:pairs() do
@@ -192,7 +192,7 @@ function Exclude<|a: any, b: any|>
 	return a ~ b
 end
 
-type function Union(...)
+type function Union(...: ...any)
 	return types.Union({...})
 end
 

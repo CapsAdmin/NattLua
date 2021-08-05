@@ -18,7 +18,7 @@ type function types.assert(what: any, type: any)
 	error("expected " .. a .. " got " .. b, 2)
 end
 
-type function types.subset_of(A, B)
+type function types.subset_of(A: any, B: any)
 	local ok, err = A:IsSubsetOf(B)
 
 	if not ok then
@@ -28,17 +28,17 @@ type function types.subset_of(A, B)
 	return ok
 end
 
-type function types.assert_literal(val)
+type function types.assert_literal(val: any)
 	assert(val:IsLiteral(), "not a literal")
 end
 
-type function types.assert_superset(what, type)
+type function types.assert_superset(what: any, type: any)
 	if not what:IsSubsetOf(type) or (what.type == "any" and type.type ~= "any") then
 		error("expected " .. tostring(type) .. " got " .. tostring(what), 2)
 	end
 end
 
-type function types.assert_subset(what, type)
+type function types.assert_subset(what: any, type: any)
 	local tassert = env.typesystem.types:Get(types.LString("assert_superset")):GetData().lua_function
 	return tassert(type, what)
 end

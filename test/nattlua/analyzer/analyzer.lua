@@ -442,7 +442,7 @@ R[[
         -- At this point, Any does not include the Function and Table type.
         -- We work around this by mutating the type after its declaration
 
-        local type function extend_any(obj, func, tbl)
+        local type function extend_any(obj: any, func: any, tbl: any)
             obj:AddType(tbl)
             obj:AddType(func)
         end

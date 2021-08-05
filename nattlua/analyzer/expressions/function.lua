@@ -27,6 +27,7 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 		for i, key in ipairs(node.identifiers) do
 			if key.value.value == "..." then
 				if key.type_expression then
+					explicit_arguments = true
 					args[i] = VarArg():SetNode(key)
 					args[i]:Set(1, analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue())
 				else
@@ -50,10 +51,10 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 		node.kind == "local_generics_type_function" or
 		node.kind == "generics_type_function"
 	then
+		explicit_arguments = true
 		for i, key in ipairs(node.identifiers) do
 			if key.identifier then
 				args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
-				explicit_arguments = true
 			elseif key.type_expression then
 				args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem")
 
@@ -63,7 +64,6 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 					args[i] = vararg
 				end
 
-				explicit_arguments = true
 			elseif key.kind == "value" then
 				if key.value.value == "..." then
 					args[i] = VarArg():SetNode(key)

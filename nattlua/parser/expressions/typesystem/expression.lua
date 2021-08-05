@@ -89,7 +89,8 @@ local function read_type_function(parser)
 	local node = parser:Node("expression", "type_function")
 	node.stmnt = false
 	node.tokens["function"] = parser:ExpectValue("function")
-	return ReadFunctionBody(parser, node):End()
+	local lol = ReadFunctionBody(parser, node):End()
+	return lol
 end
 
 local function read_generics_type_function(parser)

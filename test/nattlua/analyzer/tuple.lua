@@ -93,7 +93,7 @@ end
 
 types.assert(a(), _ as 1 | "")
 
-local type function Union(...)
+local type function Union(...: ...any)
     return types.Union({...})
 end
 
@@ -169,7 +169,7 @@ run[[
 ]]
 
 run[[
-    local type function test(a, b)
+    local type function test(a: any, b: any)
         local tup = types.Tuple({types.LNumber(1),types.LNumber(2),types.LNumber(3)})
         assert(a:Equal(tup))
         assert(b:Equal(tup))
