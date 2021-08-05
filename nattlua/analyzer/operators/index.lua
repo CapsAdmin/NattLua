@@ -17,6 +17,8 @@ return
 						union:AddType(val)
 					end
 
+					union:SetNode(node)
+
 					return union
 				end
 				if obj.Type ~= "table" and obj.Type ~= "tuple" and (obj.Type ~= "string") then return obj:Get(key) end

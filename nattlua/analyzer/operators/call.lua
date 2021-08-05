@@ -168,13 +168,8 @@ return
 				return analyzed_return, scope
 			end
 
-			local function infer_uncalled_functions(self, tuple, function_arguments)
-				
-			end
-
 			local function call_lua_type_function(self, obj, function_arguments, arguments, env)
-				do				
-
+				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 				
 					if not ok then
@@ -525,34 +520,39 @@ return
 				end
 
 				call_lua_function_with_body = function(self, obj, arguments, function_node, env)
-					local use_contract = obj.explicit_arguments and
-						env ~= "typesystem" and
-						function_node.kind ~= "local_generics_type_function" and
-						function_node.kind ~= "generics_type_function" and
-						not self:GetActiveNode().type_call
-
-					-- if we have explicit arguments, we need to check the contract
-					if use_contract then
-						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
-						if not ok then return ok, err end
-					else
-						if env == "typesystem" then
-
+					if obj.explicit_arguments then
+						if function_node.kind == "local_generics_type_function" or function_node.kind == "generics_type_function" then
+							-- otherwise if we're a type function we just do a simple check and arguments are passed as is
+							-- local type foo(T: any) return T end
+							-- T becomes the type that is passed in, and not "any"
+							-- it's the equivalent of function foo<T extends any>(val: T) { return val }
+							
 							local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
 
 							if not ok then
 								if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
 								return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 							end
+						elseif env == "runtime" then
+							-- if we have explicit arguments, we need to do a complex check against the contract
+							-- this might mutate the arguments
+							local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
+							if not ok then return ok, err end
 						end
 					end
 	
+					-- crawl the function with the new arguments
 					-- return_result is either a union of tuples or a single tuple
 					local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments, env)
-					obj:AddScope(arguments, return_result, scope)
+					
 					restore_mutated_types(self)
+
+					-- used for analyzing side effects
+					obj:AddScope(arguments, return_result, scope)
+
 					local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
+					-- if the function has return type annotations, analyze them and use it as contract
 					if not return_contract and function_node.return_types then
 						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 						self:PushPreferTypesystem(true)
@@ -562,8 +562,10 @@ return
 					end
 
 					if return_contract then
+						-- check against the function's return type
 						check_return_result(self, return_result, return_contract, env)
 					else
+						-- if there is no return type 
 						obj:GetReturnTypes():Merge(return_result)
 
 						if not obj.arguments_inferred and function_node.identifiers then
@@ -582,7 +584,7 @@ return
 						end
 					end
 
-					if not use_contract then
+					if not obj.explicit_arguments then
 						obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
 					end
 
