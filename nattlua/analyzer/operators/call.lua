@@ -268,6 +268,7 @@ return
 
 				local ret = obj:GetReturnTypes():Copy()
 
+				-- clear any reference id from the returned arguments
 				for _, v in ipairs(ret:GetData()) do
 					if v.Type == "table" then
 						v:SetReferenceId(nil)
@@ -520,7 +521,7 @@ return
 				end
 
 				call_lua_function_with_body = function(self, obj, arguments, function_node, env)
-					if obj.explicit_arguments then
+					if obj:HasExplicitArguments() then
 						if function_node.kind == "local_generics_type_function" or function_node.kind == "generics_type_function" then
 							-- otherwise if we're a type function we just do a simple check and arguments are passed as is
 							-- local type foo(T: any) return T end
@@ -550,30 +551,13 @@ return
 					-- used for analyzing side effects
 					obj:AddScope(arguments, return_result, scope)
 
-					local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
-
-					-- if the function has return type annotations, analyze them and use it as contract
-					if not return_contract and function_node.return_types then
-						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						self:PushPreferTypesystem(true)
-						return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
-						self:PopPreferTypesystem()
-						self:PopScope()
-					end
-
-					if return_contract then
-						-- check against the function's return type
-						check_return_result(self, return_result, return_contract, env)
-					else
-						-- if there is no return type 
-						obj:GetReturnTypes():Merge(return_result)
-
+					if not obj:HasExplicitArguments() then
 						if not obj.arguments_inferred and function_node.identifiers then
 							for i in ipairs(obj:GetArguments():GetData()) do
 								if function_node.self_call then
 									-- we don't count the actual self argument
 									local node = function_node.identifiers[i + 1]
-
+	
 									if node and not node.type_expression then
 										self:Warning(node, "argument is untyped")
 									end
@@ -582,28 +566,8 @@ return
 								end
 							end
 						end
-					end
 
-					if not obj.explicit_arguments then
 						obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
-					end
-
-					self:FireEvent("function_spec", obj)
-
-					if return_contract then
-						-- this is so that the return type of a function can access its arguments, to generics
-						-- local function foo(a: number, b: number): Foo(a, b) return a + b end
-						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-
-						for i, key in ipairs(function_node.identifiers) do
-							local arg = arguments:Get(i)
-
-							if arg then
-								self:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
-							end
-						end
-
-						self:PopScope()
 					end
 
 					do -- this is for the emitter
@@ -616,11 +580,33 @@ return
 						function_node.inferred_type = obj
 					end
 
+					self:FireEvent("function_spec", obj)
+
+					local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
+
+					-- if the function has return type annotations, analyze them and use it as contract
+					if not return_contract and function_node.return_types then
+						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+						self:PushPreferTypesystem(true)
+						return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
+						self:PopPreferTypesystem()
+						self:PopScope()
+					end
+
+					if not return_contract then
+						-- if there is no return type 
+						obj:GetReturnTypes():Merge(return_result)
+
+						return return_result
+					end		
+
+					-- check against the function's return type
+					check_return_result(self, return_result, return_contract, env)
+
 					if env == "typesystem" then
 						return return_result
 					end
 
-					if not return_contract then return return_result end
 					local contract = obj:GetReturnTypes():Copy()
 
 					for _, v in ipairs(contract:GetData()) do
@@ -629,6 +615,8 @@ return
 						end
 					end
 
+					-- if a return type is marked with literal, it will pass the literal value back to the caller
+					-- a bit like generics
 					for i, v in ipairs(return_contract:GetData()) do
 						if v.literal_argument then
 							contract:Set(i, return_result:Get(i))

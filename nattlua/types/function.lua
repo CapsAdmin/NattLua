@@ -43,6 +43,10 @@ function META:IsCalled()
 	return self.called
 end
 
+function META:HasExplicitArguments()
+	return self.explicit_arguments
+end
+
 function META:HasExplicitReturnTypes()
 	return self.explicit_return_set
 end
