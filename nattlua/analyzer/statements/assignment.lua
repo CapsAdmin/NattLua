@@ -26,7 +26,15 @@ local function check_type_against_contract(val, contract)
 	end
 
 	if not ok then return ok, reason end
-	if contract.Type == "table" then return val:ContainsAllKeysIn(contract) end
+
+	-- make sure the table contains all the keys in the contract as well
+	-- since {foo = true, bar = "harald"} 
+	-- is technically a subset of 
+	-- {foo = true, bar = "harald", baz = "jane"}
+	if contract.Type == "table" then
+		return val:ContainsAllKeysIn(contract) 
+	end
+
 	return true
 end
 
@@ -153,9 +161,6 @@ return
 						-- local a: number = 1
 						-- becomes
 						-- local a: number = number
-						
-						-- TODO: this would fail with 
-						-- local a: 1 | true | false = 1
 						val:CopyLiteralness(contract)
 
 						analyzer:Assert(
@@ -221,6 +226,7 @@ return
 
 						local val = analyzer:SetLocalOrEnvironmentValue(key, val, env)
 
+						-- this is used for tracking function dependencies
 						if val.Type == "upvalue" then
 							analyzer:GetScope():AddDependency(val)
 						else

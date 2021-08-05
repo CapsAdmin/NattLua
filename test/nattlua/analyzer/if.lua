@@ -612,7 +612,6 @@ run[[
 
 
 run[[
-    -- THIS SHOULD FAIL
     local x: true | false | 2
 
     if x then    

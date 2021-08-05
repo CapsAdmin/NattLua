@@ -551,6 +551,7 @@ function META:MakeCallableUnion(analyzer)
 	falsy_union:SetUpvalue(self:GetUpvalue())
 	new_union:SetTruthyUnion(truthy_union)
 	new_union:SetFalsyUnion(falsy_union)
+	
 	return truthy_union:SetNode(analyzer:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(self)
 end
 

@@ -168,20 +168,7 @@ return
 			end
 
 			local function infer_uncalled_functions(self, tuple, function_arguments)
-				for i, b in ipairs(tuple:GetData()) do
-					if b.Type == "function" and not b.called and not b.explicit_return then
-						local a = function_arguments:Get(i)
-
-						if
-							a and
-							(a.Type == "function" and not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())) or
-							not a:IsSubsetOf(b)
-						then
-							b.arguments_inferred = true
-							self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
-						end
-					end
-				end
+				
 			end
 
 			local function call_lua_type_function(self, obj, function_arguments, arguments, env)
@@ -656,31 +643,37 @@ return
 				end
 			end
 
-			local function Call(self, obj, arguments)
-				local env = self:GetPreferTypesystem() and "typesystem" or "runtime"
+			local function Call(analyzer, obj, arguments)
+				local env = analyzer:GetPreferTypesystem() and "typesystem" or "runtime"
 
 				if obj.Type == "union" then
-					obj = obj:MakeCallableUnion(self)
+					-- make sure the union is callable, we pass the analyzer and 
+					-- it will throw errors if the union contains something that is not callable
+					-- however it will continue and just remove those values from the union
+					obj = obj:MakeCallableUnion(analyzer)
 				end
 
+				-- if obj is a tuple it will return its first value 
 				obj = obj:GetFirstValue()
 				
-				obj.called = true				
 				local function_node = obj.function_body_node
 
 				if obj.Type ~= "function" then
 					if obj.Type == "any" then
-
-						-- any can do anything with mutable arguments
-
+						-- it's ok to call any types, it will just return any
+						
+						-- check arguments that can be mutated
 						for _, arg in ipairs(arguments:GetData()) do
 							if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
 								if arg:GetContract() then
-									self:Error(self:GetActiveNode(), {
+									-- error if we call any with tables that have contracts
+									-- since anything might happen to them in an any call
+									analyzer:Error(analyzer:GetActiveNode(), {
 										"cannot mutate argument with contract ",
 										arg:GetContract(),
 									})
 								else
+									-- if we pass a table without a contract to an any call, we add any to its key values
 									for _, keyval in ipairs(arg:GetData()) do
 										keyval.key = Union({Any(), keyval.key})
 										keyval.val = Union({Any(), keyval.val})
@@ -690,42 +683,51 @@ return
 						end
 					end
 
-					return obj:Call(self, arguments)
+					return obj:Call(analyzer, arguments)
 				end
+				
+				-- mark the object as called so the unreachable code step won't call it
+				-- TODO: obj:Set/GetCalled()?
+				obj:SetCalled(true)
 
 				local function_arguments = obj:GetArguments()
-				infer_uncalled_functions(self, arguments, function_arguments)
+
+				-- infer any uncalled functions in the arguments to get their return type
+				for i, b in ipairs(arguments:GetData()) do
+					if b.Type == "function" and not b:IsCalled() and not b:HasExplicitReturnTypes() then
+						local a = function_arguments:Get(i)
+						if
+							a and
+							(a.Type == "function" and not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())) or
+							not a:IsSubsetOf(b)
+						then
+							b.arguments_inferred = true
+							analyzer:Assert(analyzer:GetActiveNode(), analyzer:Call(b, b:GetArguments():Copy()))
+						end
+					end
+				end
 
 				if obj:GetData().lua_function then
 					return call_lua_type_function(
-						self,
+						analyzer,
 						obj,
 						function_arguments,
 						arguments,
 						env
 					)
 				elseif function_node then
-					return call_lua_function_with_body(self, obj, arguments, function_node, env)
+					return call_lua_function_with_body(analyzer, obj, arguments, function_node, env)
 				end
 
-				return call_type_signature_without_body(self, obj, arguments)
+				return call_type_signature_without_body(analyzer, obj, arguments)
 			end
 
 			function META:Call(obj, arguments, call_node)
+				-- not sure about this, it's used to access the call_node from deeper calls
+				-- without resorting to argument drilling
 				self:PushActiveNode(call_node or obj:GetNode())
 
-				self.call_stack = self.call_stack or {}
-
-				for _, v in ipairs(self.call_stack) do
-					if v.obj == obj and v.call_node == self:GetActiveNode() then
-						if obj.explicit_return then
-							return obj:GetReturnTypes():Copy()
-						else
-							return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-						end
-					end
-				end
-
+				-- extra protection, maybe only useful during development
 				if debug.getinfo(300) then
 					local level = 1
 					print("Trace:")
@@ -755,15 +757,37 @@ return
 					return false, "call stack is too deep"
 				end
 
-				table.insert(
-					self.call_stack,
-					{
-						obj = obj,
-						function_node = obj.function_body_node,
-						call_node = self:GetActiveNode(),
-					}
-				)
+				do
+					-- setup and track the callstack to avoid infinite loops or callstacks that are too big
+					self.call_stack = self.call_stack or {}
+
+					for _, v in ipairs(self.call_stack) do
+						-- if the callnode is the same, we're doing some infinite recursion
+						if v.obj == obj and v.call_node == self:GetActiveNode() then
+							if obj.explicit_return then
+								-- so if we have explicit return types, just return those
+								return obj:GetReturnTypes():Copy()
+							else
+								-- if not we sadly have to resort to any
+								-- TODO: error?
+								-- TODO: use VarArg() ?
+								return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+							end
+						end
+					end
+
+					table.insert(
+						self.call_stack,
+						{
+							obj = obj,
+							function_node = obj.function_body_node,
+							call_node = self:GetActiveNode(),
+						}
+					)
+				end
+
 				local ok, err = Call(self, obj, arguments)
+
 				table.remove(self.call_stack)
 
 				self:PopActiveNode()

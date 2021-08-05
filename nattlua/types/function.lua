@@ -35,6 +35,14 @@ function META:GetReturnTypes()
 	return self:GetData().ret or Tuple({})
 end
 
+function META:SetCalled(b)
+	self.called = b
+end
+
+function META:IsCalled()
+	return self.called
+end
+
 function META:HasExplicitReturnTypes()
 	return self.explicit_return_set
 end
