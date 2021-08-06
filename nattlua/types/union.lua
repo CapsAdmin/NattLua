@@ -527,34 +527,6 @@ function META:Call(analyzer, arguments, call_node)
 	return Tuple({new})
 end
 
-function META:MakeCallableUnion(analyzer)
-	local new_union = self.New()
-	local truthy_union = self.New()
-	local falsy_union = self.New()
-
-	for _, v in ipairs(self.Data) do
-		if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-			falsy_union:AddType(v)
-			analyzer:ErrorAndCloneCurrentScope(analyzer:GetActiveNode(), {
-				"union ",
-				self,
-				" contains uncallable object ",
-				v,
-			}, self)
-		else
-			truthy_union:AddType(v)
-			new_union:AddType(v)
-		end
-	end
-
-	truthy_union:SetUpvalue(self:GetUpvalue())
-	falsy_union:SetUpvalue(self:GetUpvalue())
-	new_union:SetTruthyUnion(truthy_union)
-	new_union:SetFalsyUnion(falsy_union)
-	
-	return truthy_union:SetNode(analyzer:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(self)
-end
-
 function META:IsLiteral()
 	for _, obj in ipairs(self:GetData()) do
 		if not obj:IsLiteral() then return false end

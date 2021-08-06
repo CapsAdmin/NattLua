@@ -452,6 +452,7 @@ return
 				local function check_return_result(self, result, contract, env)
 
 					if env == "typesystem" then
+						-- in the typesystem we must not unpack tuples when checking
 						local ok, reason, a, b, i = result:IsSubsetOfTupleWithoutExpansion(contract)
 
 						if not ok then
@@ -461,6 +462,7 @@ return
 
 						return
 					end
+
 					local original_contract = contract
 					if
 						contract:GetLength() == 1 and
@@ -481,10 +483,15 @@ return
 					end
 
 					if result.Type == "union" then
+						-- typically a function with mutliple uncertain returns
+
 						for _, obj in ipairs(result:GetData()) do
 							if obj.Type ~= "tuple" then
+								-- if the function returns one value it's not in a tuple
 								obj = Tuple({obj}):SetNode(obj:GetNode())
 							end
+
+							-- check each tuple in the union
 							check_return_result(self, obj, original_contract)
 						end
 					else
@@ -492,12 +499,10 @@ return
 							local errors = {}
 
 							for _, contract in ipairs(contract:GetData()) do
-								if contract.Type ~= "tuple" then
-									contract = Tuple({contract}):SetNode(contract:GetNode())
-								end
 								local ok, reason = result:IsSubsetOfTuple(contract)
 
 								if ok then
+									-- something is ok then just return and don't report any errors found
 									return
 								else
 									table.insert(errors, {contract = contract, reason = reason})
@@ -508,13 +513,9 @@ return
 								self:Error(result:GetNode(), error.reason)
 							end
 						else
-							if result.Type ~= "tuple" then
-								result = Tuple({result}):SetNode(result:GetNode())
-							end
-
 							local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
 							if not ok then
-								self:Error(self.current_statement, reason)
+								self:Error(result:GetNode(), reason)
 							end
 						end
 					end
@@ -627,6 +628,34 @@ return
 				end
 			end
 
+			local function make_callable_union(analyzer, obj)
+				local new_union = obj.New()
+				local truthy_union = obj.New()
+				local falsy_union = obj.New()
+			
+				for _, v in ipairs(obj.Data) do
+					if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
+						falsy_union:AddType(v)
+						analyzer:ErrorAndCloneCurrentScope(analyzer:GetActiveNode(), {
+							"union ",
+							obj,
+							" contains uncallable object ",
+							v,
+						}, obj)
+					else
+						truthy_union:AddType(v)
+						new_union:AddType(v)
+					end
+				end
+			
+				truthy_union:SetUpvalue(obj:GetUpvalue())
+				falsy_union:SetUpvalue(obj:GetUpvalue())
+				new_union:SetTruthyUnion(truthy_union)
+				new_union:SetFalsyUnion(falsy_union)
+				
+				return truthy_union:SetNode(analyzer:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(obj)
+			end
+
 			local function Call(analyzer, obj, arguments)
 				local env = analyzer:GetPreferTypesystem() and "typesystem" or "runtime"
 
@@ -634,7 +663,7 @@ return
 					-- make sure the union is callable, we pass the analyzer and 
 					-- it will throw errors if the union contains something that is not callable
 					-- however it will continue and just remove those values from the union
-					obj = obj:MakeCallableUnion(analyzer)
+					obj = make_callable_union(analyzer, obj)
 				end
 
 				-- if obj is a tuple it will return its first value 
