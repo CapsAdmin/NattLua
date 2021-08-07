@@ -262,6 +262,7 @@ function META:GetWithoutExpansion(key)
 			return self.Remainder
 		end
 	end
+	if not val then return type_errors.other({"index ", key, " does not exist"}) end
 	return val
 end
 
