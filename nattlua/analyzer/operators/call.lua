@@ -168,7 +168,7 @@ return
 				return analyzed_return, scope
 			end
 
-			local function call_lua_type_function(self, obj, function_arguments, arguments, env)
+			local function call_lua_type_function(analyzer, obj, function_arguments, arguments, env)
 				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 				
@@ -188,10 +188,10 @@ return
 					local ret = lua_types_to_tuple(
 						obj:GetNode(),
 						{
-							self:CallLuaTypeFunction(
-								self:GetActiveNode(),
+							analyzer:CallLuaTypeFunction(
+								analyzer:GetActiveNode(),
 								obj:GetData().lua_function,
-								obj:GetData().scope or self:GetScope(),
+								obj:GetData().scope or analyzer:GetScope(),
 								arguments:UnpackWithoutExpansion()
 						)
 						})
@@ -204,10 +204,10 @@ return
 					tuples[i] = lua_types_to_tuple(
 						obj:GetNode(),
 						{
-							self:CallLuaTypeFunction(
-								self:GetActiveNode(),
+							analyzer:CallLuaTypeFunction(
+								analyzer:GetActiveNode(),
 								obj:GetData().lua_function,
-								obj:GetData().scope or self:GetScope(),
+								obj:GetData().scope or analyzer:GetScope(),
 								table.unpack(arg)
 							),
 						}
@@ -240,7 +240,8 @@ return
 				return ret
 			end
 
-			local function call_type_signature_without_body(self, obj, arguments)
+			local function call_type_signature_without_body(analyzer, obj, arguments)
+
 				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
@@ -252,8 +253,8 @@ return
 
 				for i, arg in ipairs(arguments:GetData()) do
 					if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
-						if self.config.external_mutation then
-							self:Warning(self:GetActiveNode(), {
+						if analyzer.config.external_mutation then
+							analyzer:Warning(analyzer:GetActiveNode(), {
 								"argument #",
 								i,
 								" ",
@@ -264,7 +265,7 @@ return
 					end
 				end
 
-				self:FireEvent("external_call", self:GetActiveNode(), obj)
+				analyzer:FireEvent("external_call", analyzer:GetActiveNode(), obj)
 
 				local ret = obj:GetReturnTypes():Copy()
 
@@ -282,15 +283,15 @@ return
 			local call_lua_function_with_body
 
 			do
-				local function restore_mutated_types(self)
-					if not self.mutated_types or not self.mutated_types[1] then return end
-					local mutated_types = table.remove(self.mutated_types)
+				local function restore_mutated_types(analyzer)
+					if not analyzer.mutated_types or not analyzer.mutated_types[1] then return end
+					local mutated_types = table.remove(analyzer.mutated_types)
 
 					for _, data in ipairs(mutated_types) do
 						local original = data.original
 						local modified = data.modified
 						modified:SetContract(original:GetContract())
-						self:MutateValue(original:GetUpvalue(), original:GetUpvalue().key, modified, "runtime")
+						analyzer:MutateValue(original:GetUpvalue(), original:GetUpvalue().key, modified, "runtime")
 					end
 				end
 
@@ -527,7 +528,7 @@ return
 					end
 				end
 
-				call_lua_function_with_body = function(self, obj, arguments, function_node, env)
+				call_lua_function_with_body = function(analyzer, obj, arguments, function_node, env)
 					if obj:HasExplicitArguments() then
 						if function_node.kind == "local_generics_type_function" or function_node.kind == "generics_type_function" then
 							-- otherwise if we're a type function we just do a simple check and arguments are passed as is
@@ -541,19 +542,20 @@ return
 								if b and b:GetNode() then return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason}) end
 								return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 							end
+
 						elseif env == "runtime" then
 							-- if we have explicit arguments, we need to do a complex check against the contract
 							-- this might mutate the arguments
-							local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
+							local ok, err = check_and_setup_arguments(analyzer, arguments, obj:GetArguments(), function_node, obj)
 							if not ok then return ok, err end
 						end
 					end
 	
 					-- crawl the function with the new arguments
 					-- return_result is either a union of tuples or a single tuple
-					local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments, env)
+					local return_result, scope = analyzer:AnalyzeFunctionBody(obj, function_node, arguments, env)
 					
-					restore_mutated_types(self)
+					restore_mutated_types(analyzer)
 
 					-- used for analyzing side effects
 					obj:AddScope(arguments, return_result, scope)
@@ -566,10 +568,10 @@ return
 									local node = function_node.identifiers[i + 1]
 	
 									if node and not node.type_expression then
-										self:Warning(node, "argument is untyped")
+										analyzer:Warning(node, "argument is untyped")
 									end
 								elseif function_node.identifiers[i] and not function_node.identifiers[i].type_expression then
-									self:Warning(function_node.identifiers[i], "argument is untyped")
+									analyzer:Warning(function_node.identifiers[i], "argument is untyped")
 								end
 							end
 						end
@@ -587,17 +589,17 @@ return
 						function_node.inferred_type = obj
 					end
 
-					self:FireEvent("function_spec", obj)
+					analyzer:FireEvent("function_spec", obj)
 
 					local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
 					-- if the function has return type annotations, analyze them and use it as contract
 					if not return_contract and function_node.return_types then
-						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						self:PushPreferTypesystem(true)
-						return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types, "typesystem"))
-						self:PopPreferTypesystem()
-						self:PopScope()
+						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+						analyzer:PushPreferTypesystem(true)
+						return_contract = Tuple(analyzer:AnalyzeExpressions(function_node.return_types, "typesystem"))
+						analyzer:PopPreferTypesystem()
+						analyzer:PopScope()
 					end
 
 					if not return_contract then
@@ -608,7 +610,7 @@ return
 					end		
 
 					-- check against the function's return type
-					check_return_result(self, return_result, return_contract, env)
+					check_return_result(analyzer, return_result, return_contract, env)
 
 					if env == "typesystem" then
 						return return_result
