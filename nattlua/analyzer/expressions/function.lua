@@ -67,6 +67,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 				analyzer:CreateLocalValue(key.identifier, args[i], "typesystem", i)
 
 			elseif key.type_expression then
+				analyzer:CreateLocalValue(key, Any(), "typesystem", i)
 				args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem")
 
 				if key.value.value == "..." then
@@ -122,6 +123,11 @@ local function analyze_function_signature(analyzer, node, current_function)
 
 	if node.return_types then
 		explicit_return = true
+
+		-- TODO:
+		-- somethings up with function(): (a,b,c)
+		-- when doing this vesrus function(): a,b,c
+		-- the return tuple becomes a tuple inside a tuple
 		for i, type_exp in ipairs(node.return_types) do
 			if type_exp.kind == "value" and type_exp.value.value == "..." then
 				local tup

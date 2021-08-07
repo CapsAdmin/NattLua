@@ -634,3 +634,17 @@ run[[
     local t = {} as {[1 .. inf] = number}
     types.assert(#t, _ as 1 .. inf)
 ]]
+
+run[[
+
+    local function test<||>
+        -- make sure we are analyzing nodes in the typesystem
+        return {
+            a = 1 | 2,
+            b = function(string): number,
+        }
+    end
+
+    types.assert(test().a, _ as 1 | 2)
+    types.assert(test().b, _ as function(string): number)
+]]

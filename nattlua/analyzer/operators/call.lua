@@ -159,7 +159,15 @@ return
 					end
 				end
 
+				if function_node.kind == "local_generics_type_function" or function_node.kind == "generics_type_function" then
+					self:PushPreferTypesystem(true)
+				end
+				
 				local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
+
+				if function_node.kind == "local_generics_type_function" or function_node.kind == "generics_type_function" then
+					self:PopPreferTypesystem()
+				end
 				self:PopEnvironment(env)
 				self:PopScope()
 				if analyzed_return.Type ~= "tuple" then

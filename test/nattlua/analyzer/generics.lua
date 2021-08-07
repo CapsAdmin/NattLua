@@ -106,25 +106,11 @@ run[[
         return x | nil
     end
     
-    local function lol<||>
-        return function(x: literal Lol<|x|>)
-            return x 
+    local function lol<|T: any|>
+        return function<|x: any|>
+            return Lol<|T|> | x
         end
     end
     
-    types.assert(lol<||>(), nil)
-]]
-
-run[[
-    local function Lol<|x: any|>
-        return x | nil
-    end
-    
-    local function lol<||>
-        return function(x: Lol<|x|>)
-            return x 
-        end
-    end
-    
-    types.assert(lol<||>(), _ as any | nil)
+    types.assert(lol<|number|>(1), _ as 1 | (nil, number))
 ]]

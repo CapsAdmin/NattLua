@@ -253,6 +253,10 @@ do
 	end
 
 	function ReadExpression(parser, priority)
+		if parser:GetPreferTypesystem() then
+			return ReadTypeExpression(parser, priority)
+		end
+
 		priority = priority or 0
 		local node = parenthesis(parser) or
 			prefix_operator(parser) or

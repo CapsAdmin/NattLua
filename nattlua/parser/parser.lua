@@ -410,6 +410,22 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 	return out
 end
 
+
+do
+	function META:GetPreferTypesystem()
+		return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1]
+	end
+
+	function META:PushPreferTypesystem(b)
+		self.prefer_typesystem_stack = self.prefer_typesystem_stack or {}
+		table.insert(self.prefer_typesystem_stack, 1, b)
+	end
+
+	function META:PopPreferTypesystem()
+		table.remove(self.prefer_typesystem_stack, 1)
+	end
+end
+
 function META:ResolvePath(path)
 	return path
 end

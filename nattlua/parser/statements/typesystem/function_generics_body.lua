@@ -22,9 +22,13 @@ return
 				node.return_types = ReadMultipleValues(parser, math.huge, ExpectExpression)
 			end
 
+			parser:PushPreferTypesystem(true)
+
 			local start = parser:GetToken()
 			node.statements = parser:ReadNodes({["end"] = true})
 			node.tokens["end"] = parser:ExpectValue("end", start, start)
+
+			parser:PopPreferTypesystem()
 
 			return node
 		end,
