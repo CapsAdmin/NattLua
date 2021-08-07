@@ -1300,6 +1300,8 @@ do -- types
 			self:EmitEmptyUnion(node)
 		elseif node.kind == "tuple" then
 			self:EmitTuple(node)
+		elseif node.kind == "generics_type_function" then
+			self:EmitInvalidLuaCode("EmitGenericsTypeFunction", node)
 		else
 			error("unhandled token type " .. node.kind)
 		end
