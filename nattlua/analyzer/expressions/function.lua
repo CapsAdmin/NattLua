@@ -19,7 +19,8 @@ local function analyze_function_signature(analyzer, node, current_function)
 	local explicit_arguments = false
 	local explicit_return = false
 	local args = {}
-
+	local argument_tuple_override
+	local return_tuple_override
 	
 	analyzer:CreateAndPushFunctionScope(current_function:GetData().scope, current_function:GetData().upvalue_position)
 	analyzer:PushPreferTypesystem(true)
@@ -84,7 +85,15 @@ local function analyze_function_signature(analyzer, node, current_function)
 						analyzer:Error(key, "cannot find value self")
 					end
 				elseif not node.statements then
-					args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
+					local obj = analyzer:AnalyzeExpression(key, "typesystem")
+					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
+						-- if we pass in a tuple we override the argument type
+						-- function(mytuple): string
+						argument_tuple_override = obj
+						break
+					else
+						args[i] = obj:GetFirstValue()
+					end
 				else
 					args[i] = Any():SetNode(key)
 				end
@@ -130,7 +139,15 @@ local function analyze_function_signature(analyzer, node, current_function)
 
 				ret[i] = tup
 			else
-				ret[i] = analyzer:AnalyzeExpression(type_exp, "typesystem")
+				local obj = analyzer:AnalyzeExpression(type_exp, "typesystem")
+				if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
+					-- if we pass in a tuple, we want to override the return type
+					-- function(): mytuple
+					return_tuple_override = obj
+					break
+				else
+					ret[i] = obj
+				end
 			end
 		end
 	end
@@ -138,7 +155,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 	analyzer:PopPreferTypesystem()
 	analyzer:PopScope()
 
-	return Tuple(args), Tuple(ret), explicit_arguments, explicit_return
+	return argument_tuple_override or Tuple(args), return_tuple_override or Tuple(ret), explicit_arguments, explicit_return
 end
 
 return

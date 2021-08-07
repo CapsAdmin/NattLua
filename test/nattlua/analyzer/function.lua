@@ -637,3 +637,10 @@ run[[
     tbl.FooNumber("FooNumber")
     tbl.BarString("BarString")
 ]]
+
+run[[
+    local type mytuple = (string, number, boolean)
+    local type lol = function(mytuple): mytuple
+
+    types.assert(lol, _ as function(string, number, boolean): string, number, boolean)
+]]
