@@ -4,6 +4,7 @@ local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
 local Function = require("nattlua.types.function").Function
+local Any = require("nattlua.types.any").Any
 local VarArg = require("nattlua.types.tuple").VarArg
 local ipairs = _G.ipairs
 local locals = ""
@@ -14,17 +15,24 @@ for k, v in pairs(_G) do
 	locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
 end
 
-local function analyze_function_signature(analyzer, node, scope, upvalue_position)
+local function analyze_function_signature(analyzer, node, current_function)
 	local explicit_arguments = false
 	local explicit_return = false
 	local args = {}
 
+	
+	analyzer:CreateAndPushFunctionScope(current_function:GetData().scope, current_function:GetData().upvalue_position)
+	analyzer:PushPreferTypesystem(true)
+
 	if node.kind == "function" or node.kind == "local_function" then
 		
-		analyzer:CreateAndPushFunctionScope(scope, upvalue_position)
-		analyzer:PushPreferTypesystem(true)
-		
 		for i, key in ipairs(node.identifiers) do
+
+			-- stem type so that we can allow
+			-- function(x: foo<|x|>): nil
+			analyzer:CreateLocalValue(key, Any(), "typesystem", i)
+
+
 			if key.value.value == "..." then
 				if key.type_expression then
 					explicit_arguments = true
@@ -43,8 +51,7 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 			analyzer:CreateLocalValue(key, args[i], "typesystem", i)
 		end
 
-		analyzer:PopPreferTypesystem()
-		analyzer:PopScope()
+
 	elseif
 		node.kind == "type_function" or
 		node.kind == "local_type_function" or
@@ -53,8 +60,11 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 	then
 		explicit_arguments = true
 		for i, key in ipairs(node.identifiers) do
+			
 			if key.identifier then
 				args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
+				analyzer:CreateLocalValue(key.identifier, args[i], "typesystem", i)
+
 			elseif key.type_expression then
 				args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem")
 
@@ -82,6 +92,7 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 				args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
 			end
 		end
+	
 	else
 		analyzer:FatalError("unhandled statement " .. tostring(node))
 	end
@@ -102,15 +113,6 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 
 	if node.return_types then
 		explicit_return = true
-		analyzer:CreateAndPushFunctionScope(scope, upvalue_position)
-		analyzer:PushPreferTypesystem(true)
-
-		for i, key in ipairs(node.identifiers) do
-			if key.kind == "value" and args[i] then
-				analyzer:CreateLocalValue(key, args[i], "typesystem", true)
-			end
-		end
-
 		for i, type_exp in ipairs(node.return_types) do
 			if type_exp.kind == "value" and type_exp.value.value == "..." then
 				local tup
@@ -131,10 +133,10 @@ local function analyze_function_signature(analyzer, node, scope, upvalue_positio
 				ret[i] = analyzer:AnalyzeExpression(type_exp, "typesystem")
 			end
 		end
-
-		analyzer:PopPreferTypesystem()
-		analyzer:PopScope()
 	end
+
+	analyzer:PopPreferTypesystem()
+	analyzer:PopScope()
 
 	return Tuple(args), Tuple(ret), explicit_arguments, explicit_return
 end
@@ -150,7 +152,16 @@ return
 				node.kind = "type_function"
 			end
 
-			local args, ret, explicit_arguments, explicit_return = analyze_function_signature(analyzer, node)
+
+			local obj = Function(
+					{
+						scope = analyzer:GetScope(),
+						upvalue_position = #analyzer:GetScope():GetUpvalues("runtime"),
+					}
+				)
+				:SetNode(node)
+
+			local args, ret, explicit_arguments, explicit_return = analyze_function_signature(analyzer, node, obj)
 
 			local func
 
@@ -167,16 +178,9 @@ return
 				end
 			end
 
-			local obj = Function(
-					{
-						arg = args,
-						ret = ret,
-						lua_function = func,
-						scope = analyzer:GetScope(),
-						upvalue_position = #analyzer:GetScope():GetUpvalues("runtime"),
-					}
-				)
-				:SetNode(node)
+			obj.Data.arg = args
+			obj.Data.ret = ret
+			obj.Data.lua_function = func
 
 			if node.statements then
 				obj.function_body_node = node

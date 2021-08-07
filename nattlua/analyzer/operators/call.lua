@@ -311,6 +311,12 @@ return
 							if function_node.self_call then
 								i = i + 1
 							end
+
+							-- stem type so that we can allow
+							-- function(x: foo<|x|>): nil
+							
+							analyzer:CreateLocalValue(key, Any(), "typesystem", i)
+
 							if contracts:Get(i).literal_argument and arguments:Get(i) then
 								analyzer:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
 							end

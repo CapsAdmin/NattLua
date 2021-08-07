@@ -100,3 +100,31 @@ run[[
     local type b = TypeToString<|string|>
     types.assert<|b, "other"|>
 ]]
+
+run[[
+    local function Lol<|x: any|>
+        return x | nil
+    end
+    
+    local function lol<||>
+        return function(x: literal Lol<|x|>)
+            return x 
+        end
+    end
+    
+    types.assert(lol<||>(), nil)
+]]
+
+run[[
+    local function Lol<|x: any|>
+        return x | nil
+    end
+    
+    local function lol<||>
+        return function(x: Lol<|x|>)
+            return x 
+        end
+    end
+    
+    types.assert(lol<||>(), _ as any | nil)
+]]
