@@ -2,8 +2,8 @@ local ReadAnalyzerFunctionBody = require("nattlua.parser.statements.typesystem.a
 return
 	{
 		ReadLocalAnalyzerFunction = function(parser)
-			if not (parser:IsValue("local") and parser:IsValue("type", 1) and parser:IsValue("function", 2)) then return end
-			local node = parser:Node("statement", "local_analyzer_function"):ExpectKeyword("local"):ExpectKeyword("type")
+			if not (parser:IsValue("local") and parser:IsValue("analyzer", 1) and parser:IsValue("function", 2)) then return end
+			local node = parser:Node("statement", "local_analyzer_function"):ExpectKeyword("local"):ExpectKeyword("analyzer")
 				:ExpectKeyword("function")
 				:ExpectSimpleIdentifier()
 			ReadAnalyzerFunctionBody(parser, node, true)

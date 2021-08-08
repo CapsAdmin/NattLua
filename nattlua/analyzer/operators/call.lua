@@ -539,7 +539,7 @@ return
 				call_lua_function_with_body = function(analyzer, obj, arguments, function_node, env)
 					if obj:HasExplicitArguments() then
 						if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
-							-- otherwise if we're a type function we just do a simple check and arguments are passed as is
+							-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
 							-- local type foo(T: any) return T end
 							-- T becomes the type that is passed in, and not "any"
 							-- it's the equivalent of function foo<T extends any>(val: T) { return val }

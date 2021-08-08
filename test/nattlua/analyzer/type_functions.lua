@@ -26,9 +26,9 @@ test("should be able to error", function()
     ]], "test")
 end)
 
-test("exclude type function", function()
+test("exclude analyzer function", function()
     run([[
-        local type function Exclude(T: any, U: any)
+        local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
         end
@@ -39,7 +39,7 @@ test("exclude type function", function()
     ]])
 
     run([[
-        local type function Exclude(T: any, U: any)
+        local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
         end
@@ -139,7 +139,7 @@ end)
 
 test("exlcude", function()
     run[[
-        local type function Exclude(T: any, U: any)
+        local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
         end
@@ -172,7 +172,7 @@ do
     _G.test_var = 0
     run[[
         
-        local type function test(foo: number)
+        local analyzer function test(foo: number)
             -- when defined as number the function should be called twice for each number in the union
             
             _G.test_var = _G.test_var + 1
@@ -185,7 +185,7 @@ do
     _G.test_var = 0
     run[[
         
-        local type function test(foo: any)
+        local analyzer function test(foo: any)
             -- when defined as anything, or no type it should just pass the union directly
 
             _G.test_var = _G.test_var + 1
@@ -198,7 +198,7 @@ do
     _G.test_var = 0
     run[[
         
-        local type function test(foo: number | nil)
+        local analyzer function test(foo: number | nil)
             -- if the only type added to the union is nil it should still be called twice
             _G.test_var = _G.test_var + 1
         end
@@ -228,7 +228,7 @@ run[[
 ]]
 
 run([[
-    local type function Exclude(T: any, U: any)
+    local analyzer function Exclude(T: any, U: any)
         T:RemoveType(U)
         return T:Copy()
     end
@@ -239,7 +239,7 @@ run([[
 ]])
 
 run([[
-    local type function Exclude(T: any, U: any)
+    local analyzer function Exclude(T: any, U: any)
         T:RemoveType(U)
         return T:Copy()
     end
@@ -351,7 +351,7 @@ run[[
 
     local type lol = 2
 
-    local type function test()
+    local analyzer function test()
         assert(env.typesystem.lol:GetData() == 2)
     end
 

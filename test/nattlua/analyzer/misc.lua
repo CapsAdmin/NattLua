@@ -667,7 +667,7 @@ run[[
     types.assert(a, _ as any)
 ]]
 run[[
-    local type function identity(a: any)
+    local analyzer function identity(a: any)
         return a
     end
 ]]
@@ -774,7 +774,7 @@ run[[
     test(false, true)
     test(1, "")
 
-    local type function check(func: any, other: any)
+    local analyzer function check(func: any, other: any)
         local a = func:GetArguments():Get(1)     -- this is being crawled for some reason
         local b = types.Union({
             types.Number(1),

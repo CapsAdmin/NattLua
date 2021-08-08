@@ -31,7 +31,7 @@ test("declaring base types", function()
         local type Function = function(...Any): ...Any
         local type Table = {[Any] = Any}
         
-        local type function AddToUnion(union: any, what: any)
+        local analyzer function AddToUnion(union: any, what: any)
             -- this modifies the existing type rather than creating a new one
             union:AddType(what)
         end
@@ -39,7 +39,7 @@ test("declaring base types", function()
         AddToUnion<|Any, Function|>
         
         -- if the union sorting algorithm changes, we probably need to change this
-        local type function check()
+        local analyzer function check()
             local a = tostring(env.typesystem.Any)
             local b = "$(.-) | -inf..inf | false | function⦗⦗*self-union*⦘×inf⦘: ⦗⦗*self-union*⦘×inf⦘ | nan | nil | true | { *self-union* = *self-union* }"
             if a ~= b then
@@ -391,7 +391,7 @@ test("forward declare types", function()
     ]]
 end)
 
-R([[type_error("hey over here")]], "type function type_error")
+R([[type_error("hey over here")]], "analyzer function type_error")
 
 R([[
 local a    
@@ -442,7 +442,7 @@ R[[
         -- At this point, Any does not include the Function and Table type.
         -- We work around this by mutating the type after its declaration
 
-        local type function extend_any(obj: any, func: any, tbl: any)
+        local analyzer function extend_any(obj: any, func: any, tbl: any)
             obj:AddType(tbl)
             obj:AddType(func)
         end
@@ -498,7 +498,7 @@ R[[
 ]]
 
 R[[
-    local type function nothing()
+    local analyzer function nothing()
         return -- return nothing, not even nil
     end
 

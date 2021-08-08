@@ -16,7 +16,7 @@ run([[
 ]])
 
 run[[
-    local type function unknown(tbl: {[any] = any} | {} )
+    local analyzer function unknown(tbl: {[any] = any} | {} )
         tbl:Set(types.LString("foo"), types.LString("bar"))
     end
     

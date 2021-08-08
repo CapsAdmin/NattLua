@@ -140,7 +140,7 @@ test("parenthesis around varargs should only return the first value in the tuple
     ]]
 end)
 
-test("type function varargs", function()
+test("analyzer function varargs", function()
     run[[
         local lol = function(...)
             local a,b,c = ...
@@ -259,13 +259,13 @@ run[[
 ]]
 
 run[[
-    local type function create(func: Function)
+    local analyzer function create(func: Function)
         local t = types.Table()
         t.func = func
         return t
     end
     
-    local type function call(obj: any, ...: ...any)
+    local analyzer function call(obj: any, ...: ...any)
         analyzer:Call(obj.func, types.Tuple({...}))
     end
     
@@ -322,7 +322,7 @@ run[[
 ]]
 
 run[[
-    local type function foo(a: any)
+    local analyzer function foo(a: any)
         assert(a == nil)
     end
 
@@ -330,7 +330,7 @@ run[[
 ]]
 
 run[[
-    local type function foo(a: any)
+    local analyzer function foo(a: any)
         assert(a.Type == "symbol")
         assert(a:GetData() == nil)
     end
@@ -341,7 +341,7 @@ run[[
 do
     _G.LOL = nil
     run[[
-        local type function test()
+        local analyzer function test()
             return function() _G.LOL = true end
         end
         
@@ -353,7 +353,7 @@ do
 end
 
 run[[
-    local type function foo() 
+    local analyzer function foo() 
         return 1
     end
     

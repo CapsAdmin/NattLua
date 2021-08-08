@@ -93,7 +93,7 @@ end
 
 types.assert(a(), _ as 1 | "")
 
-local type function Union(...: ...any)
+local analyzer function Union(...: ...any)
     return types.Union({...})
 end
 
@@ -112,7 +112,7 @@ end
 
 types.assert<|Extract<|1337 | 231 | "deadbeef", number|>, 1337 | 231|>
 
-local type function foo() 
+local analyzer function foo() 
     return 1
 end
 
@@ -169,7 +169,7 @@ run[[
 ]]
 
 run[[
-    local type function test(a: any, b: any)
+    local analyzer function test(a: any, b: any)
         local tup = types.Tuple({types.LNumber(1),types.LNumber(2),types.LNumber(3)})
         assert(a:Equal(tup))
         assert(b:Equal(tup))

@@ -16,17 +16,17 @@ type File = {
 		seek = (function(self, string, number): number | nil, string | nil) | (function(file: self, whence: string): number | nil, string | nil) | (function(file: self): number | nil, string | nil),
 	}
 
-type function io.open(): File
+analyzer function io.open(): File
 
-type function io.popen(): File
+analyzer function io.popen(): File
 
-type function io.output(): File
+analyzer function io.output(): File
 
 type io.stdout = File
 type io.stdin = File
 type io.stderr = File
 
-type function io.type(obj: any)
+analyzer function io.type(obj: any)
 	local flags = types.Union()
 	flags:AddType(types.LString("file"))
 	flags:AddType(types.LString("closed file"))

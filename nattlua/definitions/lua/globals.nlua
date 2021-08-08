@@ -22,22 +22,22 @@ type dofile = (function(filename: string): ...) | (function(): ...)
 type ipairs = (function(t: Table): empty_function, Table, number)
 type tonumber = (function(e: number | string, base: number | nil): number | nil)
 
-type function type_print(...: ...any)
+analyzer function type_print(...: ...any)
 	print(...)
 end
 
-type function print(...: ...any)
+analyzer function print(...: ...any)
 	print(...)
 end
 
 type tostring = (function(val: any): string)
 
-type function type_assert_truthy(obj: any, err: string | nil)
+analyzer function type_assert_truthy(obj: any, err: string | nil)
 	if obj:IsTruthy() then return obj end
 	error(err and err:GetData() or "assertion failed")
 end
 
-type function next(t: {[any] = any}, k: any)
+analyzer function next(t: {[any] = any}, k: any)
 	if t.Type == "any" then return types.Any(), types.Any() end
 
 	if t:IsLiteral() then
@@ -88,7 +88,7 @@ type function next(t: {[any] = any}, k: any)
 	return k, v
 end
 
-type function pairs(tbl: Table)
+analyzer function pairs(tbl: Table)
 	if tbl.Type == "table" and tbl:HasLiteralKeys() then
 		local i = 1
 		return function()
@@ -115,7 +115,7 @@ type function pairs(tbl: Table)
 	end
 end
 
-type function ipairs(tbl: {[number] = any})
+analyzer function ipairs(tbl: {[number] = any})
 	if tbl:IsLiteral() then
 		local i = 1
 		return function(key, val)
@@ -146,7 +146,7 @@ type function ipairs(tbl: {[number] = any})
 	end
 end
 
-type function require(name: string)
+analyzer function require(name: string)
 	if not name:IsLiteral() then return types.Any end
 	local str = name
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
@@ -183,11 +183,11 @@ type function require(name: string)
 	return types.Any
 end
 
-type function type_error(str: string, level: number | nil)
+analyzer function type_error(str: string, level: number | nil)
 	error(str:GetData(), level and level:GetData() or nil)
 end
 
-type function load(code: string | (function(): string | nil), chunk_name: string | nil)
+analyzer function load(code: string | (function(): string | nil), chunk_name: string | nil)
 	if not code:IsLiteral() or code.Type == "union" then return types.Any end
 	local str
 
@@ -217,7 +217,7 @@ type function load(code: string | (function(): string | nil), chunk_name: string
 		:SetNode(compiler.SyntaxTree)
 end
 
-type function dofile(path: string)
+analyzer function dofile(path: string)
 	if not path:IsLiteral() then return types.Any() end
 	local f = assert(io.open(path:GetData(), "rb"))
 	local code = f:read("*all")
@@ -228,7 +228,7 @@ type function dofile(path: string)
 	return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 end
 
-type function loadfile(path: string)
+analyzer function loadfile(path: string)
 	if not path:IsLiteral() then return types.Any() end
 	local f = assert(io.open(path:GetData(), "rb"))
 	local code = f:read("*all")
@@ -249,16 +249,16 @@ type function loadfile(path: string)
 		:SetNode(compiler.SyntaxTree)
 end
 
-type function rawset(tbl: {[any] = any} | {}, key: any, val: any)
+analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
 	tbl:Set(key, val, true)
 end
 
-type function rawget(tbl: {[any] = any} | {}, key: any)
+analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 	local t, err = tbl:Get(key, true)
 	if t then return t end
 end
 
-type function assert(obj: any, msg: string | nil)
+analyzer function assert(obj: any, msg: string | nil)
 	if obj.Type == "union" then
 		for _, tup in ipairs(obj:GetData()) do
 			if tup.Type == "tuple" and tup:Get(1):IsTruthy() then return tup end
@@ -281,7 +281,7 @@ type function assert(obj: any, msg: string | nil)
 	return types.Any()
 end
 
-type function error(msg: string, level: number | nil)
+analyzer function error(msg: string, level: number | nil)
 	if not analyzer:GetScope():IsCertain() then
 		analyzer:GetScope():UncertainReturn(analyzer)
 		return
@@ -294,7 +294,7 @@ type function error(msg: string, level: number | nil)
 	end
 end
 
-type function pcall(callable: (function(...: ...any): (...any)), ...: ...any)
+analyzer function pcall(callable: (function(...: ...any): (...any)), ...: ...any)
 	local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
 	local err = analyzer.lua_error_thrown
 
@@ -313,7 +313,7 @@ type function pcall(callable: (function(...: ...any): (...any)), ...: ...any)
 	return types.True(), res:Unpack()
 end
 
-type function type_pcall(func: Function, ...: ...any)
+analyzer function type_pcall(func: Function, ...: ...any)
 	local diagnostics_index = #analyzer.diagnostics
 	local ok, val = pcall(analyzer.Call, analyzer, func, types.Tuple({...}))
 	if not ok then return ok, val end
@@ -328,15 +328,15 @@ type function type_pcall(func: Function, ...: ...any)
 	return ok, val:Unpack()
 end
 
-type function xpcall(callable: any, error_cb: any, ...: ...any)
+analyzer function xpcall(callable: any, error_cb: any, ...: ...any)
 	return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
 end
 
-type function select(index: 1 .. inf | "#", ...: ...any)
+analyzer function select(index: 1 .. inf | "#", ...: ...any)
 	return select(index:GetData(), ...)
 end
 
-type function type(obj: any)
+analyzer function type(obj: any)
 	if obj.Type == "union" then
 		analyzer.type_checked = obj
 		local copy = types.Union()
@@ -354,7 +354,7 @@ type function type(obj: any)
 	return types.String()
 end
 
-type function setmetatable(tbl: Table, meta: Table | nil)
+analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	if meta.Type == "table" then
 		if meta.Self then
 			analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(meta.Self))
@@ -370,11 +370,11 @@ type function setmetatable(tbl: Table, meta: Table | nil)
 	return tbl
 end
 
-type function getmetatable(tbl: Table)
+analyzer function getmetatable(tbl: Table)
 	if tbl.Type == "table" then return tbl:GetMetaTable() end
 end
 
-type function tostring(val: any)
+analyzer function tostring(val: any)
 	if not val:IsLiteral() then return types.String() end
 	if val.Type == "string" then return val end
 
@@ -397,7 +397,7 @@ type function tostring(val: any)
 	return tostring(val:GetData())
 end
 
-type function tonumber(val: string | number, base: number | nil)
+analyzer function tonumber(val: string | number, base: number | nil)
 	if not val:IsLiteral() or base and not base:IsLiteral() then return types.Union({types.Nil(), types.Number()}) end
 
 	if val:IsLiteral() then

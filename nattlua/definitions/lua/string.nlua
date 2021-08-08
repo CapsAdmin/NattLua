@@ -18,12 +18,12 @@ type string = {
 		pack = (function(fmt: string, ...): string),
 	}
 
-type function ^string.rep(self: string, n: number)
+analyzer function ^string.rep(self: string, n: number)
 	if self:IsLiteral() and n:IsLiteral() then return types.LString(string.rep(self:GetData(), n:GetData())) end
 	return types.String()
 end
 
-type function ^string.char(...: ...number)
+analyzer function ^string.char(...: ...number)
 	local out = {}
 
 	for i, num in ipairs({...}) do
@@ -34,7 +34,7 @@ type function ^string.char(...: ...number)
 	return string.char(table.unpack(out))
 end
 
-type function ^string.format(s: string, ...: ...any)
+analyzer function ^string.format(s: string, ...: ...any)
 	if not s:IsLiteral() then return types.String() end
 	local ret = {...}
 
@@ -50,7 +50,7 @@ type function ^string.format(s: string, ...: ...any)
 	return string.format(s:GetData(), table.unpack(ret))
 end
 
-type function ^string.gmatch(s: string, pattern: string)
+analyzer function ^string.gmatch(s: string, pattern: string)
 	if s:IsLiteral() and pattern:IsLiteral() then
 		local f = s:GetData():gmatch(pattern:GetData())
 		local i = 1
@@ -75,18 +75,18 @@ type function ^string.gmatch(s: string, pattern: string)
 	end
 end
 
-type function ^string.lower(str: string)
+analyzer function ^string.lower(str: string)
 	if str:IsLiteral() then return str:GetData():lower() end
 	return types.String()
 end
 
 
-type function ^string.upper(str: string)
+analyzer function ^string.upper(str: string)
 	if str:IsLiteral() then return str:GetData():upper() end
 	return types.String()
 end
 
-type function ^string.sub(str: string, a: number, b: number | nil)
+analyzer function ^string.sub(str: string, a: number, b: number | nil)
 	if str:IsLiteral() and a:IsLiteral() then
 		if b and b:IsLiteral() then return str:GetData():sub(a:GetData(), b:GetData()) end
 		return str:GetData():sub(a:GetData())
@@ -95,7 +95,7 @@ type function ^string.sub(str: string, a: number, b: number | nil)
 	return types.String()
 end
 
-type function ^string.byte(str: string, from: number | nil, to: number | nil)
+analyzer function ^string.byte(str: string, from: number | nil, to: number | nil)
 	if str:IsLiteral() and not from and not to then return string.byte(str:GetData()) end
 	if str:IsLiteral() and from and from:IsLiteral() and not to then return string.byte(str:GetData(), from:GetData()) end
 	if str:IsLiteral() and from and from:IsLiteral() and to and to:IsLiteral() then return string.byte(str:GetData(), from:GetData(), to:GetData()) end
@@ -103,7 +103,7 @@ type function ^string.byte(str: string, from: number | nil, to: number | nil)
 	return types.Tuple({}):AddRemainder(types.Tuple({types.Number()}):SetRepeat(math.huge))
 end
 
-type function ^string.match(str: string, pattern: string, start_position: number | nil)
+analyzer function ^string.match(str: string, pattern: string, start_position: number | nil)
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
 	start_position = start_position and
@@ -124,7 +124,7 @@ type function ^string.match(str: string, pattern: string, start_position: number
 	return table.unpack(res)
 end
 
-type function ^string.find(str: string, pattern: string, start_position: number | nil, no_pattern: boolean | nil)
+analyzer function ^string.find(str: string, pattern: string, start_position: number | nil, no_pattern: boolean | nil)
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
 	start_position = start_position and
@@ -148,12 +148,12 @@ type function ^string.find(str: string, pattern: string, start_position: number 
 	return start, stop, found
 end
 
-type function ^string.len(str: string)
+analyzer function ^string.len(str: string)
 	if str:IsLiteral() then return types.LNumber(#str:GetData()) end
 	return types.Number()
 end
 
-type function ^string.gsub(str: string, pattern: string, replacement: (function(...string): (...string)) | string, max_replacements: number | nil)
+analyzer function ^string.gsub(str: string, pattern: string, replacement: (function(...string): (...string)) | string, max_replacements: number | nil)
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
 	replacement = replacement.Type == "string" and

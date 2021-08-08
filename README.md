@@ -212,16 +212,16 @@ end
 
 This happens because there's no doubt that `true` is true and so there's no uncertainty of what x is inside the if block or after it.
 
-# Type functions
+# Analyzer functions
 
-Type functions are lua functions. We can for example define math.ceil and a print function like this:
+Analyzer functions are lua functions. We can for example define math.ceil and a print function like this:
 
 ```lua
-type function print(...)
+analyzer function print(...)
     print(...)
 end
 
-type function math.floor(T: number)
+analyzer function math.floor(T: number)
     if T:IsLiteral() then
         return LiteralNumber(math.floor(T:GetData()))
     end
@@ -244,7 +244,7 @@ print(x)
 We can also define an assertion like this:
 
 ```lua
-type function assert_whole_number(T: number)
+analyzer function assert_whole_number(T: number)
     assert(math.ceil(T:GetData()) == T:GetData())
 end
 
@@ -263,7 +263,7 @@ local x = 5.5
 Here's an Exclude function, similar to how you would find in typescript.
 
 ```lua
-type function Exclude(T, U)
+analyzer function Exclude(T, U)
     T:RemoveType(U)
     return T:Copy()
 end
@@ -311,7 +311,7 @@ names[-1] = "faz"
 ## ffi.cdef errors in the compiler
 
 ```lua
-type function ffi.cdef(c_declaration: string)
+analyzer function ffi.cdef(c_declaration: string)
     if c_declaration:IsLiteral() then
         local ffi = require("ffi")
         ffi.cdef(c_declaration:GetData())

@@ -269,7 +269,7 @@ end)
 test("table is not literal", function()
     run[[
         local tbl:{[number] = number} = {1,2,3}
-        local type function check_literal(tbl: any)
+        local analyzer function check_literal(tbl: any)
             assert(tbl:IsLiteral() == false)
         end
         check_literal(tbl)
@@ -603,7 +603,7 @@ run[[
 ]]
 
 run[[
-    local type function test(a: any, b: any)
+    local analyzer function test(a: any, b: any)
         analyzer:Assert(analyzer.current_expression, b:IsSubsetOf(a))
     end
     

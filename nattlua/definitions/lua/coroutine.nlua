@@ -9,11 +9,11 @@ type coroutine = {
 		yield = (function(...): ...),
 	}
 
-type function coroutine.yield(...: ...any)
+analyzer function coroutine.yield(...: ...any)
 	analyzer.yielded_results = {...}
 end
 
-type function coroutine.resume(thread: any, ...: ...any)
+analyzer function coroutine.resume(thread: any, ...: ...any)
 	if thread.Type == "any" then 
 			-- TODO: thread is untyped, when inferred
 			return types.Boolean() end
@@ -26,13 +26,13 @@ type function coroutine.resume(thread: any, ...: ...any)
 	return types.Boolean()
 end
 
-type function coroutine.create(func: Function, ...: ...any)
+analyzer function coroutine.create(func: Function, ...: ...any)
 	local t = types.Table()
 	t.co_func = func
 	return t
 end
 
-type function coroutine.wrap(cb: Function)
+analyzer function coroutine.wrap(cb: Function)
 	return function(...)
 		analyzer:Call(cb, types.Tuple({...}))
 		local res = analyzer.yielded_results

@@ -11,7 +11,7 @@ type table = {
 	}
 local type List = {[1 .. inf] = any} | {}
 
-type function table.concat(tbl: List, separator: string | nil)
+analyzer function table.concat(tbl: List, separator: string | nil)
 	if not tbl:IsLiteral() then return types.String() end
 	if separator and (separator.Type ~= "string" or not separator:IsLiteral()) then return types.String() end
 	local out = {}
@@ -24,7 +24,7 @@ type function table.concat(tbl: List, separator: string | nil)
 	return table.concat(out, separator and separator:GetData() or nil)
 end
 
-type function table.insert(tbl: List, ...: ...any)
+analyzer function table.insert(tbl: List, ...: ...any)
 	if not tbl:IsLiteral() then return end
 	local pos, val = ...
 
@@ -38,14 +38,14 @@ type function table.insert(tbl: List, ...: ...any)
 	tbl:Set(types.LNumber(pos), val)
 end
 
-type function table.remove(tbl: List, index: number | nil)
+analyzer function table.remove(tbl: List, index: number | nil)
 	if not tbl:IsLiteral() then return end
 	if index and not index:IsLiteral() then return end
 	index = index or 1
 	table.remove(pos:GetData(), index:GetData())
 end
 
-type function table.sort(tbl: List, func: function(a: any, b: any): boolean)
+analyzer function table.sort(tbl: List, func: function(a: any, b: any): boolean)
 	local union = types.Union()
 
 	if tbl.Type == "tuple" then
@@ -63,11 +63,11 @@ type function table.sort(tbl: List, func: function(a: any, b: any): boolean)
 	func.arguments_inferred = true
 end
 
-type function table.getn(tbl: List)
+analyzer function table.getn(tbl: List)
 	return tbl:GetLength()
 end
 
-type function table.unpack(tbl: List)
+analyzer function table.unpack(tbl: List)
 	local t = {}
 
 	for i = 1, 32 do

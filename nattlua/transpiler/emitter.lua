@@ -330,7 +330,7 @@ do
 		self:Whitespace("\t")
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
-		self:EmitToken(node.tokens["type"])
+		self:EmitToken(node.tokens["analyzer"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
@@ -380,8 +380,8 @@ do
 			self:Whitespace(" ")
 		end
 
-		if node.tokens["type"] then
-			self:EmitToken(node.tokens["type"])
+		if node.tokens["analyzer"] then
+			self:EmitToken(node.tokens["analyzer"])
 			self:Whitespace(" ")
 		end
 
@@ -1197,9 +1197,9 @@ do -- types
 
 	function META:EmitAnalyzerFunction(node)
 		if not self.config.lua_type_function then
-			if node.tokens["type"] then
+			if node.tokens["analyzer"] then
 				self:Whitespace(" ")
-				self:EmitToken(node.tokens["type"])
+				self:EmitToken(node.tokens["analyzer"])
 			end
 		end
 

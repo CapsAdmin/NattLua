@@ -3,9 +3,9 @@ local ReadIndexExpression = require("nattlua.parser.expressions.index_expression
 return
 	{
 		ReadAnalyzerFunction = function(parser)
-			if not (parser:IsValue("type") and parser:IsValue("function", 1)) then return end
+			if not (parser:IsValue("analyzer") and parser:IsValue("function", 1)) then return end
 			local node = parser:Node("statement", "analyzer_function")
-			node.tokens["type"] = parser:ExpectValue("type")
+			node.tokens["analyzer"] = parser:ExpectValue("analyzer")
 			node.tokens["function"] = parser:ExpectValue("function")
 			local force_upvalue
 

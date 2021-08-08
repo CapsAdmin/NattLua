@@ -85,7 +85,7 @@ run[=[
 
 	local val = struct()
 
-	local type function remove_call_function(union: any)
+	local analyzer function remove_call_function(union: any)
 		local new_union = types.Union({})
 		for _, obj in ipairs(union:GetData()) do
 			obj:Delete(types.LString("__call"))

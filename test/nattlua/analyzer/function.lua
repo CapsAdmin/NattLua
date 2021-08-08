@@ -436,7 +436,7 @@ run[[
 
 
 run[[
-    local type function test2(a: any, ...: ...any)
+    local analyzer function test2(a: any, ...: ...any)
         local b,c,d = ...
         assert(a:GetData() == "1")
         assert(b:GetData() == 2)

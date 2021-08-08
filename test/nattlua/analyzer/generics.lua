@@ -9,7 +9,7 @@ run[=[
 
     local events = {}
 
-    local type function FunctionFromTuples(arg: any, ret: any)
+    local analyzer function FunctionFromTuples(arg: any, ret: any)
         if arg.Type ~= "tuple" then arg = types.Tuple({arg})  end -- TODO
         if ret.Type ~= "tuple" then ret = types.Tuple({ret})  end -- TODO
         return types.Function({
@@ -43,7 +43,7 @@ run[=[
 
     local events = {}
 
-    local type function FunctionFromTuples(arg: any, ret: any)
+    local analyzer function FunctionFromTuples(arg: any, ret: any)
         if arg.Type ~= "tuple" then arg = types.Tuple({arg})  end -- TODO
         if ret.Type ~= "tuple" then ret = types.Tuple({ret})  end -- TODO
         return types.Function({

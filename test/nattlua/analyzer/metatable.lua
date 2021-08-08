@@ -663,7 +663,7 @@ run[[
     
         function meta:__call(...)
     
-            local type function setmetatable(tbl: Table, meta: Table, ...: ...any)
+            local analyzer function setmetatable(tbl: Table, meta: Table, ...: ...any)
     
                 local data = meta:Get(types.LString("Data"))
                 
