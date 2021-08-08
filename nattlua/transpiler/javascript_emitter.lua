@@ -18,7 +18,7 @@ function META:EmitExpression(node)
 		self:EmitBinaryOperator(node)
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
-	elseif node.kind == "type_function" then
+	elseif node.kind == "analyzer_function" then
 		self:EmitTypeFunction(node)
 	elseif node.kind == "table" then
 		self:EmitTable(node)
@@ -157,7 +157,7 @@ function META:EmitBinaryOperator(node)
 end
 
 do
-	local function emit_function_body(self, node, type_function)
+	local function emit_function_body(self, node, analyzer_function)
 		self:EmitToken(node.tokens["arguments("])
 
 		if node.self_call then
@@ -172,7 +172,7 @@ do
 		self:EmitToken(node.tokens["arguments)"])
 		self:Emit(" => {")
 
-		if self.config.annotate and node.inferred_type and not type_function then
+		if self.config.annotate and node.inferred_type and not analyzer_function then
             --self:Emit(" --[[ : ")
             local str = {}
             -- this iterates the first return tuple
@@ -708,13 +708,13 @@ function META:EmitStatement(node)
 		self:EmitGenericForStatement(node)
 	elseif node.kind == "do" then
 		self:EmitDoStatement(node)
-	elseif node.kind == "type_function" then
+	elseif node.kind == "analyzer_function" then
 		self:EmitTypeFunctionStatement(node)
 	elseif node.kind == "function" then
 		self:EmitFunction(node)
 	elseif node.kind == "local_function" then
 		self:EmitLocalFunction(node)
-	elseif node.kind == "local_type_function" then
+	elseif node.kind == "local_analyzer_function" then
 		self:EmitLocalTypeFunction(node)
 	elseif node.kind == "destructure_assignment" then
 		self:EmitDestructureAssignment(node)
@@ -954,7 +954,7 @@ do -- types
 
 		if node.kind == "binary_operator" then
 			self:EmitTypeBinaryOperator(node)
-		elseif node.kind == "type_function" then
+		elseif node.kind == "analyzer_function" then
 			self:EmitTypeFunction(node)
 		elseif node.kind == "table" then
 			self:EmitTable(node)

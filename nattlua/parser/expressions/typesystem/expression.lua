@@ -85,21 +85,21 @@ end
 
 local function read_type_function(parser)
 	if not (parser:IsValue("function") and parser:IsValue("(", 1)) then return end
-	local ReadFunctionBody = require("nattlua.parser.statements.typesystem.function_body").ReadFunctionBody
-	local node = parser:Node("expression", "type_function")
+	local ReadAnalyzerFunctionBody = require("nattlua.parser.statements.typesystem.analyzer_function_body").ReadAnalyzerFunctionBody
+	local node = parser:Node("expression", "analyzer_function")
 	node.stmnt = false
 	node.tokens["function"] = parser:ExpectValue("function")
-	local lol = ReadFunctionBody(parser, node):End()
+	local lol = ReadAnalyzerFunctionBody(parser, node):End()
 	return lol
 end
 
 local function read_generics_type_function(parser)
 	if not (parser:IsValue("function") and parser:IsValue("<|", 1)) then return end
-	local ReadFunctionGenericsBody = require("nattlua.parser.statements.typesystem.function_generics_body").ReadFunctionGenericsBody
-	local node = parser:Node("expression", "generics_type_function")
+	local ReadTypeFunctionBody = require("nattlua.parser.statements.typesystem.type_function_body").ReadTypeFunctionBody
+	local node = parser:Node("expression", "type_function")
 	node.stmnt = false
 	node.tokens["function"] = parser:ExpectValue("function")
-	return ReadFunctionGenericsBody(parser, node):End()
+	return ReadTypeFunctionBody(parser, node):End()
 end
 
 local function read_keyword_value(parser)

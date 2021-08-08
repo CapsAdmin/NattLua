@@ -41,11 +41,11 @@ do
 			AnalyzeDestructureAssignment(self, statement)
 		elseif
 			statement.kind == "function" or
-			statement.kind == "generics_type_function" or
+			statement.kind == "type_function" or
 			statement.kind == "local_function" or
-			statement.kind == "local_generics_type_function" or
 			statement.kind == "local_type_function" or
-			statement.kind == "type_function"
+			statement.kind == "local_analyzer_function" or
+			statement.kind == "analyzer_function"
 		then
 			AnalyzeFunction(self, statement)
 		elseif statement.kind == "if" then
@@ -116,7 +116,7 @@ do
 			return self:AnalyzeExpression(node.type_expression, "typesystem")
 		elseif node.kind == "value" then
 			return AnalyzeAtomicValue(self, node, env)
-		elseif node.kind == "function" or node.kind == "type_function" or node.kind == "generics_type_function" then
+		elseif node.kind == "function" or node.kind == "analyzer_function" or node.kind == "type_function" then
 			return AnalyzeFunction(self, node, env)
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node, env)

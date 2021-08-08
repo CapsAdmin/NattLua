@@ -449,9 +449,9 @@ end
 	local ReadDestructureAssignment = require("nattlua.parser.statements.extra.destructure_assignment").ReadDestructureAssignment
 	local ReadLocalDestructureAssignment = require("nattlua.parser.statements.extra.local_destructure_assignment")
 		.ReadLocalDestructureAssignment
-	local ReadTypeFunction = require("nattlua.parser.statements.typesystem.function").ReadFunction
-	local ReadLocalTypeFunction = require("nattlua.parser.statements.typesystem.local_function").ReadLocalFunction
-	local ReadLocalGenericsFunction = require("nattlua.parser.statements.typesystem.local_generics_function").ReadLocalGenericsFunction
+	local ReadAnalyzerFunction = require("nattlua.parser.statements.typesystem.analyzer_function").ReadAnalyzerFunction
+	local ReadLocalAnalyzerFunction = require("nattlua.parser.statements.typesystem.local_analyzer_function").ReadLocalAnalyzerFunction
+	local ReadLocalTypeFunction = require("nattlua.parser.statements.typesystem.local_type_function").ReadLocalTypeFunction
 	local ReadDebugCode = require("nattlua.parser.statements.typesystem.debug_code").ReadDebugCode
 	local ReadLocalTypeAssignment = require("nattlua.parser.statements.typesystem.local_assignment").ReadLocalAssignment
 	local ReadTypeAssignment = require("nattlua.parser.statements.typesystem.assignment").ReadAssignment
@@ -473,11 +473,11 @@ end
 			ReadGoto(self) or
 			ReadGotoLabel(self) or
 			ReadRepeat(self) or
-			ReadTypeFunction(self) or
+			ReadAnalyzerFunction(self) or
 			ReadFunction(self) or
-			ReadLocalGenericsFunction(self) or
-			ReadLocalFunction(self) or
 			ReadLocalTypeFunction(self) or
+			ReadLocalFunction(self) or
+			ReadLocalAnalyzerFunction(self) or
 			ReadLocalTypeAssignment(self) or
 			ReadLocalDestructureAssignment(self) or
 			ReadLocalAssignment(self) or

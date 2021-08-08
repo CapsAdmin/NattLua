@@ -71,8 +71,8 @@ function META:EmitExpression(node, from_assignment)
 		self:EmitBinaryOperator(node)
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
-	elseif node.kind == "type_function" then
-		self:EmitInvalidLuaCode("EmitTypeFunction", node)
+	elseif node.kind == "analyzer_function" then
+		self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
 	elseif node.kind == "table" then
 		self:EmitTable(node)
 	elseif node.kind == "prefix_operator" then
@@ -111,8 +111,8 @@ function META:EmitExpression(node, from_assignment)
 		self:EmitEmptyUnion(node)
 	elseif node.kind == "tuple" then
 		self:EmitTuple(node)
-	elseif node.kind == "generics_type_function" then
-		self:EmitInvalidLuaCode("EmitGenericsTypeFunction", node)
+	elseif node.kind == "type_function" then
+		self:EmitInvalidLuaCode("EmitTypeFunction", node)
 	else
 		error("unhandled token type " .. node.kind)
 	end
@@ -286,7 +286,7 @@ function META:EmitBinaryOperator(node)
 end
 
 do
-	local function emit_function_body(self, node, type_function)
+	local function emit_function_body(self, node, analyzer_function)
 		self:EmitToken(node.tokens["arguments("])
 		self:EmitIdentifierList(node.identifiers)
 		self:EmitToken(node.tokens["arguments)"])
@@ -326,7 +326,7 @@ do
 		emit_function_body(self, node)
 	end
 
-	function META:EmitLocalTypeFunction(node)
+	function META:EmitLocalAnalyzerFunction(node)
 		self:Whitespace("\t")
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
@@ -338,7 +338,7 @@ do
 		emit_function_body(self, node)
 	end
 
-	function META:EmitLocalGenericsTypeFunction(node)
+	function META:EmitLocalTypeFunction(node)
 		self:Whitespace("\t")
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
@@ -348,7 +348,7 @@ do
 		emit_function_body(self, node, true)
 	end
 
-	function META:EmitGenericsTypeFunction(node)
+	function META:EmitTypeFunction(node)
 		self:Whitespace("\t")
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
@@ -372,7 +372,7 @@ do
 		emit_function_body(self, node)
 	end
 
-	function META:EmitTypeFunctionStatement(node)
+	function META:EmitAnalyzerFunctionStatement(node)
 		self:Whitespace("\t")
 
 		if node.tokens["local"] then
@@ -821,18 +821,18 @@ function META:EmitStatement(node)
 		self:EmitGenericForStatement(node)
 	elseif node.kind == "do" then
 		self:EmitDoStatement(node)
-	elseif node.kind == "type_function" then
-		self:EmitInvalidLuaCode("EmitTypeFunctionStatement", node)
+	elseif node.kind == "analyzer_function" then
+		self:EmitInvalidLuaCode("EmitAnalyzerFunctionStatement", node)
 	elseif node.kind == "function" then
 		self:EmitFunction(node)
 	elseif node.kind == "local_function" then
 		self:EmitLocalFunction(node)
+	elseif node.kind == "local_analyzer_function" then
+		self:EmitLocalAnalyzerFunction(node)
 	elseif node.kind == "local_type_function" then
-		self:EmitLocalTypeFunction(node)
-	elseif node.kind == "local_generics_type_function" then
-		self:EmitInvalidLuaCode("EmitLocalGenericsTypeFunction", node)
-	elseif node.kind == "generics_type_function" then
-		self:EmitInvalidLuaCode("EmitGenericsTypeFunction", node)
+		self:EmitInvalidLuaCode("EmitLocalTypeFunction", node)
+	elseif node.kind == "type_function" then
+		self:EmitInvalidLuaCode("EmitTypeFunction", node)
 	elseif
 		node.kind == "destructure_assignment" or
 		node.kind == "local_destructure_assignment"
@@ -1015,7 +1015,7 @@ function META:HasTypeNotation(node)
 	return node.type_expression or node.inferred_type or node.return_types
 end
 
-function META:EmitFunctionReturnAnnotationExpression(node, type_function)
+function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 	if node.tokens[":"] then
 		self:EmitToken(node.tokens[":"])
 	else
@@ -1052,11 +1052,11 @@ function META:EmitFunctionReturnAnnotationExpression(node, type_function)
 	end
 end
 
-function META:EmitFunctionReturnAnnotation(node, type_function)
+function META:EmitFunctionReturnAnnotation(node, analyzer_function)
 	if not self.config.annotate then return end
 
 	if self:HasTypeNotation(node) then
-		self:EmitInvalidLuaCode("EmitFunctionReturnAnnotationExpression", node, type_function)
+		self:EmitInvalidLuaCode("EmitFunctionReturnAnnotationExpression", node, analyzer_function)
 	end
 end
 
@@ -1195,7 +1195,7 @@ do -- types
 		self:EmitToken(tree.tokens["}"])
 	end
 
-	function META:EmitTypeFunction(node)
+	function META:EmitAnalyzerFunction(node)
 		if not self.config.lua_type_function then
 			if node.tokens["type"] then
 				self:Whitespace(" ")
@@ -1272,8 +1272,8 @@ do -- types
 
 		if node.kind == "binary_operator" then
 			self:EmitTypeBinaryOperator(node)
-		elseif node.kind == "type_function" then
-			self:EmitInvalidLuaCode("EmitTypeFunction", node)
+		elseif node.kind == "analyzer_function" then
+			self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
 		elseif node.kind == "table" then
 			self:EmitTable(node)
 		elseif node.kind == "prefix_operator" then
@@ -1300,8 +1300,8 @@ do -- types
 			self:EmitEmptyUnion(node)
 		elseif node.kind == "tuple" then
 			self:EmitTuple(node)
-		elseif node.kind == "generics_type_function" then
-			self:EmitInvalidLuaCode("EmitGenericsTypeFunction", node)
+		elseif node.kind == "type_function" then
+			self:EmitInvalidLuaCode("EmitTypeFunction", node)
 		else
 			error("unhandled token type " .. node.kind)
 		end

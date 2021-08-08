@@ -1,10 +1,10 @@
-local ReadFunctionBody = require("nattlua.parser.statements.typesystem.function_body").ReadFunctionBody
+local ReadAnalyzerFunctionBody = require("nattlua.parser.statements.typesystem.analyzer_function_body").ReadAnalyzerFunctionBody
 local ReadIndexExpression = require("nattlua.parser.expressions.index_expression").ReadIndexExpression
 return
 	{
-		ReadFunction = function(parser)
+		ReadAnalyzerFunction = function(parser)
 			if not (parser:IsValue("type") and parser:IsValue("function", 1)) then return end
-			local node = parser:Node("statement", "type_function")
+			local node = parser:Node("statement", "analyzer_function")
 			node.tokens["type"] = parser:ExpectValue("type")
 			node.tokens["function"] = parser:ExpectValue("function")
 			local force_upvalue
@@ -30,7 +30,7 @@ return
 				end
 			end
 
-			ReadFunctionBody(parser, node, true)
+			ReadAnalyzerFunctionBody(parser, node, true)
 			return node:End()
 		end,
 	}

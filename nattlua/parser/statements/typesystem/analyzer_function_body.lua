@@ -3,7 +3,6 @@ local table_insert = require("table").insert
 local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").ReadMultipleValues
 local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expression").ExpectExpression
 local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expression").ReadExpression
-local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
 
 local function ReadTypeFunctionArgument(parser, expect_type)
 	if parser:IsValue(")") then return end
@@ -23,7 +22,7 @@ end
 
 return
 	{
-		ReadFunctionBody = function(parser, node, type_args)
+		ReadAnalyzerFunctionBody = function(parser, node, type_args)
 			node.tokens["arguments("] = parser:ExpectValue("(")
 
 			node.identifiers = ReadMultipleValues(parser, math_huge, ReadTypeFunctionArgument, type_args)

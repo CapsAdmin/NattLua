@@ -54,10 +54,10 @@ local function analyze_function_signature(analyzer, node, current_function)
 
 
 	elseif
-		node.kind == "type_function" or
+		node.kind == "analyzer_function" or
+		node.kind == "local_analyzer_function" or
 		node.kind == "local_type_function" or
-		node.kind == "local_generics_type_function" or
-		node.kind == "generics_type_function"
+		node.kind == "type_function"
 	then
 		explicit_arguments = true
 		for i, key in ipairs(node.identifiers) do
@@ -169,10 +169,10 @@ return
 		AnalyzeFunction = function(analyzer, node, env)
 			if
 				node.type == "statement" and
-				(node.kind == "local_type_function" or node.kind == "type_function")
+				(node.kind == "local_analyzer_function" or node.kind == "analyzer_function")
 			then
 				node.type = "expression"
-				node.kind = "type_function"
+				node.kind = "analyzer_function"
 			end
 
 
@@ -191,7 +191,7 @@ return
 			if env == "typesystem" then
 				if
 					node.statements and
-					(node.kind == "type_function" or node.kind == "local_type_function")
+					(node.kind == "analyzer_function" or node.kind == "local_analyzer_function")
 				then
 					node.lua_type_function = true
 		

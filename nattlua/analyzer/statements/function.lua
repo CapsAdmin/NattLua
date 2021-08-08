@@ -5,15 +5,15 @@ return
 		AnalyzeFunction = function(analyzer, statement)
 			if
 				statement.kind == "local_function" or
-				statement.kind == "local_type_function" or
-				statement.kind == "local_generics_type_function"
+				statement.kind == "local_analyzer_function" or
+				statement.kind == "local_type_function"
 			then
 				local env = statement.kind == "local_function" and "runtime" or "typesystem"
 				analyzer:CreateLocalValue(statement.tokens["identifier"], AnalyzeFunction(analyzer, statement, env), env)
 			elseif
 				statement.kind == "function" or
-				statement.kind == "type_function" or
-				statement.kind == "generics_type_function"
+				statement.kind == "analyzer_function" or
+				statement.kind == "type_function"
 			then
 				local env = statement.kind == "function" and "runtime" or "typesystem"
 				local key = statement.expression

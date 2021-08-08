@@ -4,7 +4,7 @@ local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").
 local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
 return
 	{
-		ReadFunctionGenericsBody = function(parser, node)
+		ReadTypeFunctionBody = function(parser, node)
 			node.tokens["arguments("] = parser:ExpectValue("<|")
 			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier, true)
 
