@@ -9,7 +9,7 @@ return
 			node.tokens["function"] = self:ExpectValue("function")
 			node.expression = index_expression(self)
 
-			if node.expression.kind == "binary_operator" then
+			if node.expression and node.expression.kind == "binary_operator" then
 				node.self_call = node.expression.right.self_call
 			end
 
