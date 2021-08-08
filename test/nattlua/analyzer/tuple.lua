@@ -2,10 +2,10 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 run[[
-    local type A = Tuple<|1,2|>
-    local type B = Tuple<|3,4|>
+    local type A = (1,2)
+    local type B = (3,4)
     local type C = A .. B
-    types.assert<|C, Tuple<|1,2,3,4|>|>
+    types.assert<|C, (1,2,3,4)|>
 ]]
 
 -- test for most edge cases regarding the tuple unpack mess
@@ -50,7 +50,7 @@ local function func(): number, number
 end
 
 
-local foo: function=()>(Tuple<|true, 1|> | Tuple<|false, string, 2|>)
+local foo: function=()>((true, 1) | (false, string, 2))
 local x,y,z = foo() 
 types.assert(x, _ as boolean)
 types.assert(y, _ as 1 | string)
@@ -63,7 +63,7 @@ end
 
 foo()
 
-types.assert<|ReturnType<|foo|>, Tuple<|2,true,1|>|>
+types.assert<|ReturnType<|foo|>, (2,true,1)|>
 
 local function test()
     if math.random() > 0.5 then
@@ -74,7 +74,7 @@ end
 
 test()
 
-types.assert<|ReturnType<|test|>, Tuple<|1, 2|>|>
+types.assert<|ReturnType<|test|>, (1, 2)|>
 
 
 local a = function()

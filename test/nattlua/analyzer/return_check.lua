@@ -42,7 +42,7 @@ run([[
 run[[
     local MAYBE: boolean
 
-    local function ReadLiteralString(multiline_comment : boolean): Tuple<|true|> | Tuple<|false, string|>
+    local function ReadLiteralString(multiline_comment : boolean): (true,) | (false, string)
         if MAYBE then
             if multiline_comment then return false, "multiline comment not allowed" end
             return false, "a string"

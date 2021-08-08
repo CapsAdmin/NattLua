@@ -72,4 +72,4 @@ end
 
 FindHeadPosition(_ as Entity & HeadPos)
 
-types.assert<|return_type<|FindHeadPosition|>, Tuple<|Vector, Angle|>|>
+types.assert<|return_type<|FindHeadPosition|>, (Vector, Angle)|>

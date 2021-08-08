@@ -24,7 +24,7 @@ function List<|typ: any|>
 end
 
 function ErrorReturn<|...: ...any|>
-	return Tuple<|...|> | Tuple<|nil, string|>
+	return (...,) | (nil, string)
 end
 
 analyzer function return_type(func: Function, i: number | nil)
@@ -45,10 +45,6 @@ analyzer function exclude(T: any, U: any)
 	T = T:Copy()
 	T:RemoveType(U)
 	return T
-end
-
-analyzer function Tuple(...: ...any)
-	return types.Tuple({...}):SetUnpackable(true)
 end
 
 analyzer function enum(tbl: Table)

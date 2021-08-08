@@ -599,8 +599,8 @@ R[[
 ]]
 
 R[[
-    local T: Tuple<|boolean|> | Tuple<|1|2|>
-    types.assert<|T, Tuple<|boolean|> | Tuple<|1|2|>|>
+    local T: (boolean,) | (1|2,)
+    types.assert<|T, (boolean,) | (1|2,)|>
 ]]
 
 R[[

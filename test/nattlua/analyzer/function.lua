@@ -647,3 +647,9 @@ run[[
 
     types.assert(lol, _ as function=(string, number, boolean)>(string, number, boolean))
 ]]
+
+run[[
+    type lol = function =(foo: string, number)>(bar: string, string)
+
+    types.assert(lol, _ as function =(string, number)>(string, string))
+]]

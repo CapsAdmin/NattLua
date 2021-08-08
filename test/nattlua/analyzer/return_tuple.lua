@@ -31,7 +31,7 @@ pending[[
 
 ]]
 run[[
-    local function test(): Tuple<|1,"lol1"|> | Tuple<|2,"lol2"|>
+    local function test(): (1,"lol1") | (2,"lol2")
         return 2, "lol2"
     end    
 ]]
@@ -44,7 +44,7 @@ run[[
 ]]
 
 run[[
-    local foo: function=()>(Tuple<|true, 1|> | Tuple<|false, string, 2|>)
+    local foo: function=()>((true, 1) | (false, string, 2))
     local x,y,z = foo() 
     types.assert(x, _ as true | false)
     types.assert(y, _ as 1 | string)
@@ -52,7 +52,7 @@ run[[
 ]]
 
 run([[
-    local function test(): Tuple<|1,"lol1"|> | Tuple<|2,"lol2"|>
+    local function test(): (1,"lol1") | (2,"lol2")
         return "", "lol2"
     end
 ]], '"" is not the same type as 1')
