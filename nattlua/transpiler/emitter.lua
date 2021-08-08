@@ -113,6 +113,8 @@ function META:EmitExpression(node, from_assignment)
 		self:EmitTuple(node)
 	elseif node.kind == "type_function" then
 		self:EmitInvalidLuaCode("EmitTypeFunction", node)
+	elseif node.kind == "function_signature" then
+		self:EmitInvalidLuaCode("EmitFunctionSignature", node)
 	else
 		error("unhandled token type " .. node.kind)
 	end
@@ -356,6 +358,20 @@ do
 			self:EmitExpression(node.expression or node.identifier)
 		end
 		emit_function_body(self, node, true)
+	end
+
+	function META:EmitFunctionSignature(node)
+		self:Whitespace("\t")
+		self:EmitToken(node.tokens["function"])
+		self:EmitToken(node.tokens["="])
+		self:Whitespace(" ")
+		self:EmitToken(node.tokens["arguments("])
+		self:EmitIdentifierList(node.identifiers)
+		self:EmitToken(node.tokens["arguments)"])
+		self:EmitToken(node.tokens[">"])
+		self:EmitToken(node.tokens["return("])
+		self:EmitIdentifierList(node.return_types)
+		self:EmitToken(node.tokens["return)"])		
 	end
 
 	function META:EmitFunction(node)
@@ -1196,7 +1212,7 @@ do -- types
 	end
 
 	function META:EmitAnalyzerFunction(node)
-		if not self.config.lua_type_function then
+		if not self.config.analyzer_function then
 			if node.tokens["analyzer"] then
 				self:Whitespace(" ")
 				self:EmitToken(node.tokens["analyzer"])
@@ -1205,7 +1221,7 @@ do -- types
 
 		self:EmitToken(node.tokens["function"])
 
-		if not self.config.lua_type_function then
+		if not self.config.analyzer_function then
 			if node.tokens["^"] then
 				self:EmitToken(node.tokens["^"])
 			end
@@ -1302,11 +1318,13 @@ do -- types
 			self:EmitTuple(node)
 		elseif node.kind == "type_function" then
 			self:EmitInvalidLuaCode("EmitTypeFunction", node)
+		elseif node.kind == "function_signature" then
+			self:EmitInvalidLuaCode("EmitFunctionSignature", node)
 		else
 			error("unhandled token type " .. node.kind)
 		end
 
-		if not self.config.lua_type_function then
+		if not self.config.analyzer_function then
 			if node.type_expression then
 				self:EmitTypeExpression(node.type_expression)
 			end

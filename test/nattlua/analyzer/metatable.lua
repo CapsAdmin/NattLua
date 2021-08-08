@@ -133,12 +133,12 @@ test("interface extensions", function()
         local type Vec3 = {z = number} extends Vec2
 
         local type Base = {
-            Test = function(self): number,
+            Test = function=(self)>(number),
         }
 
         local type Foo = Base extends {
-            SetPos = (function(self, pos: Vec3): nil),
-            GetPos = (function(self): Vec3),
+            SetPos = function=(self, pos: Vec3)>(nil),
+            GetPos = function=(self)>(Vec3),
         }
 
         -- have to use the as operator here because {} would not be a subset of Foo
@@ -157,7 +157,7 @@ end)
 
 test("error on newindex", function()
     run([[
-        local type error = function(msg: string)
+        local type error = analyzer function(msg: string)
             assert(type(msg:GetData()) == "string", "msg has no field a string?")
             error(msg:GetData())
         end
@@ -307,7 +307,7 @@ run[[
 run([[
     local meta = {} as {
         __index = self,
-        Test = function(self): string
+        Test = function=(self)>(string)
     }
     meta.__index = meta
     
@@ -325,7 +325,7 @@ run([[
 run([[
     local meta = {} as {
         __index = self, 
-        Test = (function(self): number),
+        Test = function=(self)>(number),
         foo = number,
     }
     meta.__index = meta
@@ -411,8 +411,8 @@ run[[
         @Name = "codeptr",
         @MetaTable = self,
         [number] = number,
-        __add = (function(self | number, number | self): self),
-        __sub = (function(self | number, number | self): self)
+        __add = function=(self | number, number | self)>(self),
+        __sub = function=(self | number, number | self)>(self)
     }
     
     local x: code_ptr
@@ -424,7 +424,7 @@ run[[
 run[[
     local type tbl = {}
     type tbl.@Name = "blackbox"
-    setmetatable<|tbl, {__call = function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end}|>
+    setmetatable<|tbl, {__call = analyzer function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end}|>
 
     local lol = tbl({foo = 1337})
 
@@ -433,7 +433,7 @@ run[[
 
 run[[
     local type tbl = {}
-    type tbl.__call = function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end
+    type tbl.__call = analyzer function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end
     setmetatable<|tbl, tbl|>
 
     local lol = tbl({foo = 1337})
@@ -715,16 +715,16 @@ run[[
         type IPlayer.@Name = "IPlayer"
         type IPlayer.__index = function<|self: IPlayer, key: string|>
             if key == "IsVisible" then
-                return _ as (function(IPlayer, IPlayer): 1337)
+                return _ as function=(IPlayer, IPlayer)>(1337)
             end
         end
         
-        type IPlayer.GetName = (function(IPlayer): string)
+        type IPlayer.GetName = function=(IPlayer)>(string)
     
         type IPlayer.@Contract = IPlayer
     end
     
-    type Player = (function(entityIndex: number): IPlayer)
+    type Player = function=(entityIndex: number)>(IPlayer)
     
     do
         local ply = Player(1337)
@@ -742,7 +742,7 @@ run[[
         type IEntity.@MetaTable = IEntity
         type IEntity.__index = IEntity
         
-        type IEntity.IsVisible = (function(IEntity, target: IEntity): boolean)
+        type IEntity.IsVisible = function=(IEntity, target: IEntity)>(boolean)
 
         type IEntity.@Contract = IEntity
     end
@@ -753,12 +753,12 @@ run[[
         type IPlayer.__index = IPlayer
         type IPlayer.@BaseTable = IEntity
         
-        type IPlayer.GetName = (function(IPlayer): string)
+        type IPlayer.GetName = function=(IPlayer)>(string)
 
         type IPlayer.@Contract = IPlayer
     end
 
-    type Player = (function(entityIndex: number): IPlayer)
+    type Player = function=(entityIndex: number)>(IPlayer)
 
 
     do

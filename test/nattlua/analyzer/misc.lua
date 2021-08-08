@@ -8,7 +8,7 @@ run[[
     test(true, true)
     test(false, false)
 
-    types.assert(test, _ as (function(a: false|true|any, b: false|true|any): nil))
+    types.assert(test, _ as function=(a: false|true|any, b: false|true|any)>(nil))
 ]]
 run[[
     local function test(a: any,b: any): nil
@@ -18,7 +18,7 @@ run[[
     test(true, true)
     test(false, false)
 
-    types.assert(test, _ as (function(a: any, b: any): nil))
+    types.assert(test, _ as function=(a: any, b: any)>(nil))
 ]]
 
 
@@ -249,7 +249,7 @@ run[[
 
     end
 
-    types.assert(test, nil as function():)
+    types.assert(test, nil as function=()>())
 ]]
 run[[
     local c = 0
@@ -455,7 +455,7 @@ run[[
 run[[
     local a: string | number = 1
 
-    local type test = function(a: number, b: string): boolean, number
+    local type test = function=(a: number, b: string)>(boolean, number)
 
     local foo,bar = test(1, "")
 
@@ -466,12 +466,12 @@ run[[
     local type lol = number
 
     local type math = {
-        sin = (function(a: lol, b: string): lol),
-        cos = (function(a: string): lol),
-        cos = (function(a: number): lol),
+        sin = function=(a: lol, b: string)>(lol),
+        cos = function=(a: string)>(lol),
+        cos = function=(a: number)>(lol),
     }
 
-    type math.lol = (function(): lol)
+    type math.lol = function=()>(lol)
 
     local a = math.sin(1, "")
     local b = math.lol() -- support overloads
@@ -502,7 +502,7 @@ run[[
 ]]
 run[[
     local type foo = {
-        bar = (function(a: boolean, b: number): true) | (function(a: number): false),
+        bar = function=(a: boolean, b: number)>(true) | function=(a: number)>(false),
     }
 
     local a = foo.bar(true, 1)
@@ -515,7 +515,7 @@ run[[
     local a: string = "1"
     local type a = string | number | (boolean | string)
 
-    local type type_func = function(a: any,b: any,c: any) return types.String(), types.Number() end
+    local type type_func = analyzer function(a: any,b: any,c: any) return types.String(), types.Number() end
     local a, b = type_func(a,2,3)
     types.assert(a, _ as string)
     types.assert(b, _ as number)
@@ -564,11 +564,11 @@ run[[
 ]]
 run[[
     local type math = {
-        sin = function(number): number
+        sin = function=(number)>(number)
     }
 
     local type old = math.cos
-    type math.cos = function(number): number
+    type math.cos = function=(number)>(number)
 
     local a = math.sin(1)
 
@@ -578,11 +578,11 @@ run[[
 ]]
 
 run[[
-    local type a = function()
+    local type a = analyzer function()
         _G.LOL = true
     end
 
-    local type b = function()
+    local type b = analyzer function()
         _G.LOL = nil
         local t = analyzer:GetLocalOrEnvironmentValue(types.LString("a"), "typesystem")
         local func = t:GetData().lua_function
@@ -595,7 +595,7 @@ run[[
     local a = b()
 ]]
 run[[
-    a: number = (lol as function(): number)()
+    a: number = (lol as function=()>(number))()
 
     types.assert(a, nil as number)
 ]]
@@ -605,14 +605,14 @@ run[[
 ]]
 run[[
     local type test = {
-        sin = (function(number): number),
-        cos = (function(number): number),
+        sin = function=(number)>(number),
+        cos = function=(number)>(number),
     }
 
     local a = test.sin(1)
 ]]
 run[[
-    local type lol = function(a: string) return a end
+    local type lol = analyzer function(a: string) return a end
     local a: lol<|string|>
     types.assert(a, _ as string)
 ]]

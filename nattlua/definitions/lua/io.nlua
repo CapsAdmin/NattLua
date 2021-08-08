@@ -1,19 +1,19 @@
 type io = {
-		write = (function(...): nil),
-		flush = (function(): boolean | nil, string | nil),
-		read = (function(...): ...),
-		lines = (function(...): empty_function),
-		setvbuf = (function(mode: string, size: number): boolean | nil, string | nil) | (function(mode: string): boolean | nil, string | nil),
-		seek = (function(whence: string, offset: number): number | nil, string | nil) | (function(whence: string): number | nil, string | nil) | (function(): number | nil, string | nil),
+		write = function=(...)>(nil),
+		flush = function=()>(boolean | nil, string | nil),
+		read = function=(...)>(...),
+		lines = function=(...)>(empty_function),
+		setvbuf = function=(mode: string, size: number)>(boolean | nil, string | nil) | function=(mode: string)>(boolean | nil, string | nil),
+		seek = function=(whence: string, offset: number)>(number | nil, string | nil) | function=(whence: string)>(number | nil, string | nil) | function=()>(number | nil, string | nil),
 	}
 type File = {
-		close = (function(self): boolean | nil, string, number | nil),
-		write = (function(self, ...): self | nil, string | nil),
-		flush = (function(self): boolean | nil, string | nil),
-		read = (function(self, ...): ...),
-		lines = (function(self, ...): empty_function),
-		setvbuf = (function(self, string, number): boolean | nil, string | nil) | (function(file: self, mode: string): boolean | nil, string | nil),
-		seek = (function(self, string, number): number | nil, string | nil) | (function(file: self, whence: string): number | nil, string | nil) | (function(file: self): number | nil, string | nil),
+		close = function=(self)>(boolean | nil, string, number | nil),
+		write = function=(self, ...)>(self | nil, string | nil),
+		flush = function=(self)>(boolean | nil, string | nil),
+		read = function=(self, ...)>(...),
+		lines = function=(self, ...)>(empty_function),
+		setvbuf = function=(self, string, number)>(boolean | nil, string | nil) | function=(file: self, mode: string)>(boolean | nil, string | nil),
+		seek = function=(self, string, number)>(number | nil, string | nil) | function=(file: self, whence: string)>(number | nil, string | nil) | function=(file: self)>(number | nil, string | nil),
 	}
 
 analyzer function io.open(): File

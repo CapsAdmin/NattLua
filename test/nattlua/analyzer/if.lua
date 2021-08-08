@@ -196,7 +196,7 @@ do
     _G.lol = nil
 
     run([[
-        local type hit = function()
+        local type hit = analyzer function()
             _G.lol = (_G.lol or 0) + 1
         end
 
@@ -555,7 +555,7 @@ run[[
 
 
 run[[
-    local MAYBE: function(): boolean
+    local MAYBE: function=()>(boolean)
     local x = 0
     if MAYBE() then x = x + 1 end -- 1
     if MAYBE() then x = x - 1 end -- -1 | 0

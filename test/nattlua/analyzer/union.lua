@@ -63,7 +63,7 @@ test("is not literal", function()
 end)
 
 run[[
-    local x: any | function(): boolean
+    local x: any | function=()>(boolean)
     x()
 ]]
 
@@ -109,9 +109,9 @@ run([[
     local analyzer function test(a: any, b: any)
         assert(a:ShrinkToFunctionSignature():Equal(b))
     end
-    local type A = function(string): number
-    local type B = function(number): boolean
-    local type C = function(number | string): boolean | number
+    local type A = function=(string)>(number)
+    local type B = function=(number)>(boolean)
+    local type C = function=(number | string)>(boolean | number)
     
     test<|A|B, C|>
 ]])

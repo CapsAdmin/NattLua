@@ -158,7 +158,7 @@ test("analyzer function varargs", function()
 end)
 
 run[[
-    local type lol = (function(): ...)
+    local type lol = function=()>(...any)
 
     local a,b,c = lol()
 
@@ -166,7 +166,7 @@ run[[
     types.assert(b, _ as any)
     types.assert(c, _ as any)    
 
-    local type test = function(a,b,c) 
+    local type test = analyzer function(a,b,c) 
         assert(a.Type == "any")
         assert(b.Type == "any")
         assert(c.Type == "any")
@@ -187,7 +187,7 @@ run[[
 ]]
 
 run[[
-    local type lol = (function(): 1,...)
+    local type lol = function=()>(1,...any)
 
     local a,b,c,d = lol()
     types.assert(a, 1)
@@ -213,7 +213,7 @@ run[[
     
     foo(1, 2, 3)
     
-    local type test = function(a,b,c,...) 
+    local type test = analyzer function(a,b,c,...) 
         assert(a:GetData() == 1)
         assert(b.Type == "any")
         assert(c.Type == "any")
@@ -221,7 +221,7 @@ run[[
     
     test(lol())
     
-    local type test = function(a,b,c,...)
+    local type test = analyzer function(a,b,c,...)
         assert(a:GetData() == 1)
         assert(b:GetData() == 2)
         assert(c:GetData() == 3)
@@ -284,7 +284,7 @@ run[[
 
         -- make sure var args don't leak onto return type var args
 
-        local type lol = (function(): ...)
+        local type lol = function=()>(...any)
         local a,b,c = lol()
         types.assert(a, _ as any)
         types.assert(b, _ as any)
@@ -318,7 +318,7 @@ run[[
     foo()
 
     -- should not be a nested tuple
-    types.assert_superset(foo, nil as (function():any))
+    types.assert_superset(foo, nil as function=()>(any))
 ]]
 
 run[[

@@ -3,7 +3,7 @@ local run = T.RunCode
 
 run([[
     local type contract = {}
-    type contract.test = function(number): string
+    type contract.test = function=(number)>(string)
 
     local lib = {} as contract
 
@@ -14,7 +14,7 @@ run([[
 
 run([[
     local type contract = {}
-    type contract.test = function(number): string
+    type contract.test = function=(number)>(string)
 
     local lib = {} as contract
 
@@ -25,7 +25,7 @@ run([[
 
 run[[
     local type contract = {}
-    type contract.test = function(number): string
+    type contract.test = function=(number)>(string)
 
     local lib = {} as contract
 

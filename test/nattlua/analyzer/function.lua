@@ -256,7 +256,7 @@ end)
 
 test("defining a type for a function should type the arguments", function()
     run[[
-        local type test = function(number, string): 1
+        local type test = function=(number, string)>(1)
 
         function test(a, b)
             return 1
@@ -266,7 +266,7 @@ test("defining a type for a function should type the arguments", function()
     ]]
 
     run([[
-        local type test = function(a: number, b: string): 1
+        local type test = function=(a: number, b: string)>(1)
 
         function test(a, b)
             return 1
@@ -278,7 +278,7 @@ end)
 
 test("calling a union", function()
     run[[
-        local type test = (function(boolean, boolean): number) | (function(boolean): string)
+        local type test = function=(boolean, boolean)>(number) | function=(boolean)>(string)
 
         local a = test(true, true)
         local b = test(true)
@@ -290,7 +290,7 @@ end)
 
 test("calling a union that has no field a function should error", function()
     run([[
-        local type test = (function(boolean, boolean): number) | (function(boolean): string) | number
+        local type test = function=(boolean, boolean)>(number) | function=(boolean)>(string) | number
 
         test(true, true)
     ]], "union .- contains uncallable object number")
@@ -315,7 +315,7 @@ test("complex", function()
         
         foo()
 
-        types.assert_superset(foo, nil as (function():any))
+        types.assert_superset(foo, nil as function=()>(any))
     ]]
 end)
 test("lol", function()
@@ -327,9 +327,12 @@ test("lol", function()
         local type c = x
         local a: c
         local type b = {foo = a as any}
-        local c: function(a: number, b:number): b, b
+        local c: function=(a: number, b:number)>(b, b)
 
-        types.assert_superset(c, nil as function(_:number, _:number): {foo = any}, {foo = any})
+        types.assert_superset(
+            c, 
+            nil as function=(_:number, _:number)>({foo = any}, {foo = any})
+        )
 
         type x = nil
     ]]
@@ -343,7 +346,7 @@ test("lol2", function()
 
         test(1,1)
 
-        types.assert_superset(test, nil as function(_:number, _:number): number)
+        types.assert_superset(test, nil as function=(_:number, _:number)>(number))
     ]]
 end)
 
@@ -425,7 +428,7 @@ run[[
 
     function Foo.Bar.foo.bar.test:init() end
 
-    types.assert_superset(Foo.Bar.foo.bar.test.init, _ as (function(...any): ...any))
+    types.assert_superset(Foo.Bar.foo.bar.test.init, _ as function=(...any)>(...any))
 ]]
 
 run[[
@@ -502,7 +505,7 @@ run[[
 ]]
 
 run[[
-    local function test(cb: function(string): string)
+    local function test(cb: function=(string)>(string))
 
     end
     
@@ -640,7 +643,7 @@ run[[
 
 run[[
     local type mytuple = (string, number, boolean)
-    local type lol = function(mytuple): mytuple
+    local type lol = function=(mytuple)>(mytuple)
 
-    types.assert(lol, _ as function(string, number, boolean): string, number, boolean)
+    types.assert(lol, _ as function=(string, number, boolean)>(string, number, boolean))
 ]]

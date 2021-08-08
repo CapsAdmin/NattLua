@@ -8,7 +8,7 @@ if not ok then
 	end
 end
 
-return function(alloc--[[#: literal (function(): {[string] = any})]], size--[[#: number]])
+return function(alloc--[[#: literal (function=()>({[string] = any}))]], size--[[#: number]])
 	local records = 0
 
 	for _, _ in pairs(alloc()) do

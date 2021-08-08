@@ -1,21 +1,21 @@
 type string = {
-		find = (function(s: string, pattern: string, init: number, plain: boolean): number | nil, number, ... | nil | nil) | (function(s: string, pattern: string, init: number): number | nil, number, ... | nil | nil) | (function(s: string, pattern: string): number | nil, number, ... | nil | nil),
-		len = (function(s: string): number),
-		packsize = (function(fmt: string): number),
-		match = (function(s: string, pattern: string, init: number): string | nil, ... | nil) | (function(s: string, pattern: string): string | nil, ... | nil),
-		upper = (function(s: string): string),
-		sub = (function(s: string, i: number, j: number): string) | (function(s: string, i: number): string),
-		char = (function(...): string),
-		rep = (function(s: string, n: number, sep: string): string) | (function(s: string, n: number): string),
-		lower = (function(s: string): string),
-		dump = (function(empty_function: empty_function): string),
-		gmatch = (function(s: string, pattern: string): empty_function),
-		reverse = (function(s: string): string),
-		byte = (function(s: string, i: number, j: number): ...) | (function(s: string, i: number): number | nil) | (function(s: string): number),
-		unpack = (function(fmt: string, s: string, pos: number): ...) | (function(fmt: string, s: string): ...),
-		gsub = (function(s: string, pattern: string, repl: string | Table | empty_function, n: number): string, number) | (function(s: string, pattern: string, repl: string | Table | empty_function): string, number),
-		format = (function(string, ...): string),
-		pack = (function(fmt: string, ...): string),
+		find = function=(s: string, pattern: string, init: number, plain: boolean)>(number | nil, number, ... | nil | nil) | function=(s: string, pattern: string, init: number)>(number | nil, number, ... | nil | nil) | function=(s: string, pattern: string)>(number | nil, number, ... | nil | nil),
+		len = function=(s: string)>(number),
+		packsize = function=(fmt: string)>(number),
+		match = function=(s: string, pattern: string, init: number)>(string | nil, ... | nil) | function=(s: string, pattern: string)>(string | nil, ... | nil),
+		upper = function=(s: string)>(string),
+		sub = function=(s: string, i: number, j: number)>(string) | function=(s: string, i: number)>(string),
+		char = function=(...)>(string),
+		rep = function=(s: string, n: number, sep: string)>(string) | function=(s: string, n: number)>(string),
+		lower = function=(s: string)>(string),
+		dump = function=(empty_function: empty_function)>(string),
+		gmatch = function=(s: string, pattern: string)>(empty_function),
+		reverse = function=(s: string)>(string),
+		byte = function=(s: string, i: number, j: number)>(...) | function=(s: string, i: number)>(number | nil) | function=(s: string)>(number),
+		unpack = function=(fmt: string, s: string, pos: number)>(...) | function=(fmt: string, s: string)>(...),
+		gsub = function=(s: string, pattern: string, repl: string | Table | empty_function, n: number)>(string, number) | function=(s: string, pattern: string, repl: string | Table | empty_function)>(string, number),
+		format = function=(string, ...)>(string),
+		pack = function=(fmt: string, ...)>(string),
 	}
 
 analyzer function ^string.rep(self: string, n: number)
@@ -153,7 +153,7 @@ analyzer function ^string.len(str: string)
 	return types.Number()
 end
 
-analyzer function ^string.gsub(str: string, pattern: string, replacement: (function(...string): (...string)) | string, max_replacements: number | nil)
+analyzer function ^string.gsub(str: string, pattern: string, replacement: function=(...string)>((...string)) | string, max_replacements: number | nil)
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
 	replacement = replacement.Type == "string" and

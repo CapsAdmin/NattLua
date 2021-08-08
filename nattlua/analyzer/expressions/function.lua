@@ -57,7 +57,8 @@ local function analyze_function_signature(analyzer, node, current_function)
 		node.kind == "analyzer_function" or
 		node.kind == "local_analyzer_function" or
 		node.kind == "local_type_function" or
-		node.kind == "type_function"
+		node.kind == "type_function" or
+		node.kind == "function_signature"
 	then
 		explicit_arguments = true
 		for i, key in ipairs(node.identifiers) do
@@ -188,17 +189,15 @@ return
 
 			local func
 
-			if env == "typesystem" then
-				if
-					node.statements and
-					(node.kind == "analyzer_function" or node.kind == "local_analyzer_function")
-				then
-					node.lua_type_function = true
+			if
+				node.statements and
+				(node.kind == "analyzer_function" or node.kind == "local_analyzer_function")
+			then
+				node.analyzer_function = true
+	
+				--'local analyzer = self;local env = self:GetScopeHelper(scope);'
 		
-					--'local analyzer = self;local env = self:GetScopeHelper(scope);'
-			
-					func = analyzer:CompileLuaTypeCode("return  " .. node:Render({uncomment_types = true, lua_type_function = true}), node)()
-				end
+				func = analyzer:CompileLuaTypeCode("return  " .. node:Render({uncomment_types = true, analyzer_function = true}), node)()
 			end
 
 			obj.Data.arg = args

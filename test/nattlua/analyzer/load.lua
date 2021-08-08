@@ -46,7 +46,7 @@ run[[
 ]]
 
 run[[
-    local type test = function(name: string)
+    local type test = analyzer function(name: string)
          return analyzer:GetLocalOrEnvironmentValue(name:GetData(), "typesystem")
     end
     local type lol = {}

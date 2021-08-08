@@ -177,11 +177,11 @@ end)
 test("self reference", function()
     local a = run[[
         local type Base = {
-            Test = function(self, number): number,
+            Test = function=(self, number)>(number),
         }
 
         local type Foo = Base extends {
-            GetPos = (function(self): number),
+            GetPos = function=(self)>(number),
         }
 
         -- have to use as here because {} would not be a subset of Foo
@@ -463,8 +463,8 @@ run[[
 
 run[[
     local type Entity = {
-        GetModel = (function(self): string),
-        GetBodygroup = (function(self, number): number),
+        GetModel = function=(self)>(string),
+        GetBodygroup = function=(self, number)>(number),
     }
 
     type Entity.@Name = "Entity"
@@ -551,7 +551,7 @@ run[[
 
 
 run([[
-    local META = {} as {Test = function(self): nil}
+    local META = {} as {Test = function=(self)>(nil)}
 
     function META:Test()
     
@@ -641,10 +641,10 @@ run[[
         -- make sure we are analyzing nodes in the typesystem
         return {
             a = 1 | 2,
-            b = function(string): number,
+            b = function=(string)>(number),
         }
     end
 
     types.assert(test().a, _ as 1 | 2)
-    types.assert(test().b, _ as function(string): number)
+    types.assert(test().b, _ as function=(string)>(number))
 ]]

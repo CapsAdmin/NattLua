@@ -4,6 +4,7 @@ local table_remove = require("table").remove
 local ipairs = _G.ipairs
 local syntax = require("nattlua.syntax.syntax")
 local ReadFunction = require("nattlua.parser.expressions.function").ReadFunction
+local ReadAnalyzerFunction = require("nattlua.parser.expressions.typesystem.analyzer_function").ReadAnalyzerFunction
 local ReadImport = require("nattlua.parser.expressions.extra.import").ReadImport
 local ExpectTypeExpression = require("nattlua.parser.expressions.typesystem.expression").ExpectExpression
 local ReadTypeExpression = require("nattlua.parser.expressions.typesystem.expression").ReadExpression
@@ -260,6 +261,7 @@ do
 		priority = priority or 0
 		local node = parenthesis(parser) or
 			prefix_operator(parser) or
+			ReadAnalyzerFunction(parser) or
 			ReadFunction(parser) or
 			ReadImport(parser) or
 			value(parser) or

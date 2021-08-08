@@ -13,10 +13,10 @@ local type Angle = {
 		y = number,
 		r = number,
 		__index = Angle,
-		__call = (function(self, number, number, number): Angle),
+		__call = function=(self, number, number, number)>(Angle),
 		@MetaTable = self,
 		@Name = "Angle",
-		Right = (function(self): Vector), -- TODO: Vector():Angle():Right() seems to cause infinte loop if Right is not defined
+		Right = function=(self)>(Vector), -- TODO: Vector():Angle():Right() seems to cause infinte loop if Right is not defined
 }
 local type ToScreenData = {x = number, y = number, visible = boolean,}
 
@@ -24,47 +24,47 @@ local type ToScreenData = {x = number, y = number, visible = boolean,}
 -- We can mutate the Vector type if we want
 type Vector.__index = Vector
 type Vector.@Name = "Vector"
-type Vector.__call = function(Vector, number, number, number): Vector
-type Vector.__add = function(Vector, Vector): Vector
-type Vector.__mul = function(number | Vector, number | Vector): Vector
-type Vector.__unm = function(Vector): Vector
+type Vector.__call = function=(Vector, number, number, number)>(Vector)
+type Vector.__add = function=(Vector, Vector)>(Vector)
+type Vector.__mul = function=(number | Vector, number | Vector)>(Vector)
+type Vector.__unm = function=(Vector)>(Vector)
 
 --type Vector.@Name = "Vector"
 
 -- Or we can add a table:
 type Vector = Vector & {
-		Zero = (function(self): nil),
-		WithinAABox = (function(self, boxStart: Vector, boxEnd: Vector): boolean),
-		ToScreen = (function(self): ToScreenData),
-		ToColor = (function(self): Color),
-		Sub = (function(self, vector: Vector): nil),
-		Set = (function(self, vector: Vector): nil),
-		Rotate = (function(self, rotation: Angle): nil),
-		Normalize = (function(self): nil),
-		Mul = (function(self, multiplier: number): nil),
-		LengthSqr = (function(self): number),
-		Length2DSqr = (function(self): number),
-		Length2D = (function(self): number),
-		Length = (function(self): number),
-		IsZero = (function(self): boolean),
-		IsEqualTol = (function(self, compare: Vector, tolerance: number): boolean),
-		GetNormalized = (function(self): Vector),
-		GetNormal = (function(self): Vector),
-		DotProduct = (function(self, Vector: Vector): number),
-		Dot = (function(self, otherVector: Vector): number),
-		Div = (function(self, divisor: number): nil),
-		DistToSqr = (function(self, otherVec: Vector): number),
-		Distance = (function(self, otherVector: Vector): number),
-		Cross = (function(self, otherVector: Vector): Vector),
-		AngleEx = (function(self, up: Vector): Angle),
-		Angle = (function(self): Angle),
-		Add = (function(self, vector: Vector): nil),
+		Zero = function=(self)>(nil),
+		WithinAABox = function=(self, boxStart: Vector, boxEnd: Vector)>(boolean),
+		ToScreen = function=(self)>(ToScreenData),
+		ToColor = function=(self)>(Color),
+		Sub = function=(self, vector: Vector)>(nil),
+		Set = function=(self, vector: Vector)>(nil),
+		Rotate = function=(self, rotation: Angle)>(nil),
+		Normalize = function=(self)>(nil),
+		Mul = function=(self, multiplier: number)>(nil),
+		LengthSqr = function=(self)>(number),
+		Length2DSqr = function=(self)>(number),
+		Length2D = function=(self)>(number),
+		Length = function=(self)>(number),
+		IsZero = function=(self)>(boolean),
+		IsEqualTol = function=(self, compare: Vector, tolerance: number)>(boolean),
+		GetNormalized = function=(self)>(Vector),
+		GetNormal = function=(self)>(Vector),
+		DotProduct = function=(self, Vector: Vector)>(number),
+		Dot = function=(self, otherVector: Vector)>(number),
+		Div = function=(self, divisor: number)>(nil),
+		DistToSqr = function=(self, otherVec: Vector)>(number),
+		Distance = function=(self, otherVector: Vector)>(number),
+		Cross = function=(self, otherVector: Vector)>(Vector),
+		AngleEx = function=(self, up: Vector)>(Angle),
+		Angle = function=(self)>(Angle),
+		Add = function=(self, vector: Vector)>(nil),
 	}
 setmetatable<|Vector, Vector|>
 
 -- because we can't easily forward declare types
 -- we add a ToVector function here
-type Color.ToVector = (function(Color): Vector)
+type Color.ToVector = function=(Color)>(Vector)
 local type BodyGroup = {
 		id = number,
 		name = string,
@@ -72,8 +72,8 @@ local type BodyGroup = {
 		submodels = {[number] = any}, -- not sure what's in here
 }
 local type Matrix = {
-		GetTranslation = (function(self): Vector),
-		GetAngles = (function(self): Angle),
+		GetTranslation = function=(self)>(Vector),
+		GetAngles = function=(self)>(Angle),
 	}
 local type Triangle = {
 		color = Color,
@@ -88,53 +88,53 @@ local type Triangle = {
 		},
 	}
 local type Mesh = {
-		Draw = (function(self): nil),
-		BuildFromTriangles = (function(self, {[number] = Triangle}): self),
+		Draw = function=(self)>(nil),
+		BuildFromTriangles = function=(self, {[number] = Triangle})>(self),
 		@MetaTable = self,
 		__index = self,
-		__call = function(self, number, number, number): self,
+		__call = function=(self, number, number, number)>(self),
 	}
 local type PhysicsObject = {
 	@Name = "PhysicsObject",
-	IsValid = (function(self): boolean),
+	IsValid = function=(self)>(boolean),
 }
 local type EntityAttachments = {[1 .. inf] = {id = number, name = string,},}
 local type EntityAttachment = {Ang = Angle, Pos = Vector,}
 local type Entity = {
-		GetModel = (function(self): string),
-		SetAngles = (function(self, Angle): nil),
-		GetBodyGroups = (function(self, number): {[number] = BodyGroup}),
-		GetBodygroup = (function(self, number): number),
-		LookupSequence = (function(self, string): number),
-		ResetSequence = (function(self, number): nil),
-		SetCycle = (function(self, number): nil),
-		SetupBones = (function(self): nil),
-		TranslatePhysBoneToBone = (function(self, number): number),
-		TranslateBoneToPhysBone = (function(self, number): number),
-		GetBoneMatrix = (function(self, number): Matrix | nil),
-		GetChildBones = (function(self, number): {[number] = number}),
-		BoneLength = (function(self, number): number),
-		Remove = (function(self): nil),
-		GetBoneParent = (function(self): number),
-		GetBoneName = (function(self, number): string),
-		EyePos = (function(self): Vector),
-		EyeAngles = (function(self): Angle),
-		GetBoneCount = (function(self): number),
-		GetPos = (function(self): Vector),
-		IsStuck = (function(self): boolean),
-		GetAimVector = (function(self): Vector),
-		SetPos = (function(self, Vector): nil),
-		IsValid = (function(self): boolean),
-		GetPhysicsObject = (function(self): PhysicsObject),
-		GetVelocity = (function(self): Vector),
-		SetVelocity = (function(self, Vector): Vector),
-		GetAttachment = (function(self, number): EntityAttachment),
-		GetAttachments = (function(self): EntityAttachments),
+		GetModel = function=(self)>(string),
+		SetAngles = function=(self, Angle)>(nil),
+		GetBodyGroups = function=(self, number)>({[number] = BodyGroup}),
+		GetBodygroup = function=(self, number)>(number),
+		LookupSequence = function=(self, string)>(number),
+		ResetSequence = function=(self, number)>(nil),
+		SetCycle = function=(self, number)>(nil),
+		SetupBones = function=(self)>(nil),
+		TranslatePhysBoneToBone = function=(self, number)>(number),
+		TranslateBoneToPhysBone = function=(self, number)>(number),
+		GetBoneMatrix = function=(self, number)>(Matrix | nil),
+		GetChildBones = function=(self, number)>({[number] = number}),
+		BoneLength = function=(self, number)>(number),
+		Remove = function=(self)>(nil),
+		GetBoneParent = function=(self)>(number),
+		GetBoneName = function=(self, number)>(string),
+		EyePos = function=(self)>(Vector),
+		EyeAngles = function=(self)>(Angle),
+		GetBoneCount = function=(self)>(number),
+		GetPos = function=(self)>(Vector),
+		IsStuck = function=(self)>(boolean),
+		GetAimVector = function=(self)>(Vector),
+		SetPos = function=(self, Vector)>(nil),
+		IsValid = function=(self)>(boolean),
+		GetPhysicsObject = function=(self)>(PhysicsObject),
+		GetVelocity = function=(self)>(Vector),
+		SetVelocity = function=(self, Vector)>(Vector),
+		GetAttachment = function=(self, number)>(EntityAttachment),
+		GetAttachments = function=(self)>(EntityAttachments),
 	}
 type Entity.@Name = "Entity"
 local type Player = Entity & {}
 type Player.@Name = "Player"
-local type ClientsideModel = function(string): Entity
+local type ClientsideModel = function=(string)>(Entity)
 local type ModelMeshes = {
 		[number] = {
 			material = string,
@@ -143,15 +143,15 @@ local type ModelMeshes = {
 		},
 	}
 local type util = {}
-type util.GetModelMeshes = (function(string, number, number): ModelMeshes)
-local type WorldToLocal = (function(Vector, Angle, Vector, Angle): Vector, Angle)
+type util.GetModelMeshes = function=(string, number, number)>(ModelMeshes)
+local type WorldToLocal = function=(Vector, Angle, Vector, Angle)>(Vector, Angle)
 local type hook = {}
 local type Events = {
-		OnStart = (function(string, boolean): nil),
-		OnStop = (function(string, string, string): number),
+		OnStart = function=(string, boolean)>(nil),
+		OnStop = function=(string, string, string)>(number),
 	}
 
-analyzer function hook.Add(eventName: string, obj: any, callback: (function(...): ...))
+analyzer function hook.Add(eventName: string, obj: any, callback: function=(...)>(...))
 	local event_callback = env.typesystem.Events:Get(eventName)
 	callback:SetReturnTypes(event_callback:GetReturnTypes())
 	callback:SetArguments(event_callback:GetArguments())

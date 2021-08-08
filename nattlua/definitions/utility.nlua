@@ -1,11 +1,11 @@
 type boolean = true | false
 type Table = {[any] = any} | {}
-type Function = function(...: ...any): ...any
+type Function = function=(...any)>(...any)
 type userdata = Table
 type cdata = {[number] = any}
 type ctype = any
 type thread = Table
-type empty_function = function(...): ...any
+type empty_function = function=(...)>(...any)
 
 analyzer function NonLiteral(obj: any)
 	if obj.Type == "symbol" and (obj:GetData() == true or obj:GetData() == false) then return types.Boolean() end

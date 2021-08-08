@@ -53,7 +53,7 @@ run[=[
 		int foo(int, bool, lol);
 	]])
 
-	types.assert<|typeof ffi.C.foo, (function(number, boolean, number): number) |>
+	types.assert<|typeof ffi.C.foo, function=(number, boolean, number)>(number) |>
 ]=]
 
 run[=[
@@ -114,18 +114,18 @@ run[=[
 
 	if LINUX then
 		ffi.cdef("void foo(int a);")
-		types.assert<|typeof ffi.C.foo, (function(number): (nil)) |>
+		types.assert<|typeof ffi.C.foo, function=(number)>((nil)) |>
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			types.assert<|typeof ffi.C.foo, (function(string | nil | {[number] = number}): (nil)) |>
+			types.assert<|typeof ffi.C.foo, function=(string | nil | {[number] = number})>((nil)) |>
 		else
 			ffi.cdef("int foo(int a);")
-			types.assert<|typeof ffi.C.foo, (function(number): (number))|>
+			types.assert<|typeof ffi.C.foo, function=(number)>((number))|>
 		end	
 	end
 
-	types.assert<|typeof ffi.C.foo, (function(number): (nil)) | (function(number): (number)) | (function(string | nil | {[number] = number}): (nil)) |>
+	types.assert<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(string | nil | {[number] = number})>((nil)) |>
 ]=]
 
 run[=[
@@ -238,7 +238,7 @@ run[[
 			if _ as boolean then
 				local function test()
 					local x = ffi.C.test
-					types.assert(x, _ as function(): nil)
+					types.assert(x, _ as function=()>(nil))
 				end
 				test()
 			end

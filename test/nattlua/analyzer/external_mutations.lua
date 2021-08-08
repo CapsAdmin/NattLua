@@ -149,7 +149,7 @@ run[[
 run[[
     §analyzer.config.external_mutation = true
     
-    local type func = function(number, {[string] = boolean}, number): nil 
+    local type func = function=(number, {[string] = boolean}, number)>(nil)
 
     local test = {foo = true}
     

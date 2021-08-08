@@ -50,7 +50,7 @@ local function func(): number, number
 end
 
 
-local foo: function(): Tuple<|true, 1|> | Tuple<|false, string, 2|>
+local foo: function=()>(Tuple<|true, 1|> | Tuple<|false, string, 2|>)
 local x,y,z = foo() 
 types.assert(x, _ as boolean)
 types.assert(y, _ as 1 | string)
@@ -203,7 +203,7 @@ run[[
 ]]
 
 run[[
-    local type test = function()
+    local type test = analyzer function()
         return 11,22,33
     end
 

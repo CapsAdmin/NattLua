@@ -37,14 +37,14 @@ run[[
 ]]
 
 run[[
-    local foo: function(): true | false, string | nil
+    local foo: function=()>(true | false, string | nil)
     local ok, err = foo()
     types.assert(ok, _ as true | false)
     types.assert(err, _ as nil | string)
 ]]
 
 run[[
-    local foo: function(): Tuple<|true, 1|> | Tuple<|false, string, 2|>
+    local foo: function=()>(Tuple<|true, 1|> | Tuple<|false, string, 2|>)
     local x,y,z = foo() 
     types.assert(x, _ as true | false)
     types.assert(y, _ as 1 | string)

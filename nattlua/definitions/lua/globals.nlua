@@ -1,26 +1,26 @@
 type @Name = "_G"
-type setmetatable = (function(table: Table, metatable: Table | nil): Table)
-type select = (function(index: number | string, ...): ...)
-type rawlen = (function(v: Table | string): number)
-type unpack = (function(list: Table, i: number, j: number): ...) | (function(list: Table, i: number): ...) | (function(list: Table): ...)
-type require = (function(modname: string): any)
-type rawset = (function(table: Table, index: any, value: any): Table)
-type getmetatable = (function(object: any): Table | nil)
+type setmetatable = function=(table: Table, metatable: Table | nil)>(Table)
+type select = function=(index: number | string, ...)>(...)
+type rawlen = function=(v: Table | string)>(number)
+type unpack = function=(list: Table, i: number, j: number)>(...) | function=(list: Table, i: number)>(...) | function=(list: Table)>(...)
+type require = function=(modname: string)>(any)
+type rawset = function=(table: Table, index: any, value: any)>(Table)
+type getmetatable = function=(object: any)>(Table | nil)
 type load = (
-		function(ld: string | empty_function, source: string, mode: string, env: Table): empty_function | nil, string | nil
+		function=(ld: string | empty_function, source: string, mode: string, env: Table)>(empty_function | nil, string | nil)
 	) | (
-		function(ld: string | empty_function, source: string, mode: string): empty_function | nil, string | nil
-	) | (function(ld: string | empty_function, source: string): empty_function | nil, string | nil) | (function(ld: string | empty_function): empty_function | nil, string | nil)
-type type = (function(v: any): string)
-type collectgarbage = (function(opt: string, arg: number): ...) | (function(opt: string): ...) | (function(): ...)
-type getfenv = (function(f: empty_function | number): Table) | (function(): Table)
-type pairs = (function(t: Table): empty_function, Table, nil)
-type rawequal = (function(v1: any, v2: any): boolean)
-type loadstring = (function(string: string, chunkname: string): empty_function | nil, string | nil) | (function(string: string): empty_function | nil, string | nil)
-type loadfile = (function(filename: string, mode: string, env: Table): empty_function | nil, string | nil) | (function(filename: string, mode: string): empty_function | nil, string | nil) | (function(filename: string): empty_function | nil, string | nil) | (function(): empty_function | nil, string | nil)
-type dofile = (function(filename: string): ...) | (function(): ...)
-type ipairs = (function(t: Table): empty_function, Table, number)
-type tonumber = (function(e: number | string, base: number | nil): number | nil)
+		function=(ld: string | empty_function, source: string, mode: string)>(empty_function | nil, string | nil)
+	) | function=(ld: string | empty_function, source: string)>(empty_function | nil, string | nil) | function=(ld: string | empty_function)>(empty_function | nil, string | nil)
+type type = function=(v: any)>(string)
+type collectgarbage = function=(opt: string, arg: number)>(...) | function=(opt: string)>(...) | function=()>(...)
+type getfenv = function=(f: empty_function | number)>(Table) | function=()>(Table)
+type pairs = function=(t: Table)>(empty_function, Table, nil)
+type rawequal = function=(v1: any, v2: any)>(boolean)
+type loadstring = function=(string: string, chunkname: string)>(empty_function | nil, string | nil) | function=(string: string)>(empty_function | nil, string | nil)
+type loadfile = function=(filename: string, mode: string, env: Table)>(empty_function | nil, string | nil) | function=(filename: string, mode: string)>(empty_function | nil, string | nil) | function=(filename: string)>(empty_function | nil, string | nil) | function=()>(empty_function | nil, string | nil)
+type dofile = function=(filename: string)>(...) | function=()>(...)
+type ipairs = function=(t: Table)>(empty_function, Table, number)
+type tonumber = function=(e: number | string, base: number | nil)>(number | nil)
 
 analyzer function type_print(...: ...any)
 	print(...)
@@ -30,7 +30,7 @@ analyzer function print(...: ...any)
 	print(...)
 end
 
-type tostring = (function(val: any): string)
+type tostring = function=(val: any)>(string)
 
 analyzer function type_assert_truthy(obj: any, err: string | nil)
 	if obj:IsTruthy() then return obj end
@@ -187,7 +187,7 @@ analyzer function type_error(str: string, level: number | nil)
 	error(str:GetData(), level and level:GetData() or nil)
 end
 
-analyzer function load(code: string | (function(): string | nil), chunk_name: string | nil)
+analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil)
 	if not code:IsLiteral() or code.Type == "union" then return types.Any end
 	local str
 
@@ -294,7 +294,7 @@ analyzer function error(msg: string, level: number | nil)
 	end
 end
 
-analyzer function pcall(callable: (function(...: ...any): (...any)), ...: ...any)
+analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 	local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
 	local err = analyzer.lua_error_thrown
 

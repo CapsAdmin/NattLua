@@ -463,8 +463,8 @@ run[[
 
 run[[
     local type Entity = {
-        GetChildBones = (function(string, number): {[number] = number}),
-        GetBoneCount = (function(self): number),
+        GetChildBones = function=(string, number)>({[number] = number}),
+        GetBoneCount = function=(self)>(number),
     }
     
     local e = _ as Entity
@@ -474,7 +474,7 @@ run[[
 run[[
     -- we need to say that lol has a contract so that we can mutate it
     local lol: {} = {}
-    type lol.rofl = function(number, string): string
+    type lol.rofl = function=(number, string)>(string)
         
     function lol.rofl(a, b)
         types.assert(a, _ as number)

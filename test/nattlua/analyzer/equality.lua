@@ -3,7 +3,7 @@ local run = T.RunCode
 
 run[[
     -- this should be true | false because it might actually also be the same table
-    local type get_a_table = function(): {}
+    local type get_a_table = function=()>({})
 
     types.assert(get_a_table() == get_a_table(), _ as true | false)
 ]]

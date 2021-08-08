@@ -83,23 +83,62 @@ local function read_value(parser)
 	return node:End()
 end
 
-local function read_type_function(parser)
-	if not (parser:IsValue("function") and parser:IsValue("(", 1)) then return end
-	local ReadAnalyzerFunctionBody = require("nattlua.parser.statements.typesystem.analyzer_function_body").ReadAnalyzerFunctionBody
-	local node = parser:Node("expression", "analyzer_function")
-	node.stmnt = false
-	node.tokens["function"] = parser:ExpectValue("function")
-	local lol = ReadAnalyzerFunctionBody(parser, node):End()
-	return lol
+
+local function ReadTypeFunctionArgument(parser, expect_type)
+	if parser:IsValue(")") then return end
+
+	if expect_type or parser:IsType("letter") and parser:IsValue(":", 1) then
+		local identifier = parser:ReadToken()
+		local token = parser:ExpectValue(":")
+		local exp = ExpectExpression(parser)
+		exp.tokens[":"] = token
+		exp.identifier = identifier
+		return exp
+	end
+
+	return ExpectExpression(parser)
 end
 
-local function read_generics_type_function(parser)
+local function read_function_signature(parser)
+	if not (parser:IsValue("function") and parser:IsValue("=", 1)) then return end
+	local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
+
+	local node = parser:Node("expression", "function_signature")
+	node.stmnt = false
+	node.tokens["function"] = parser:ExpectValue("function")
+	node.tokens["="] = parser:ExpectValue("=")
+
+	node.tokens["arguments("] = parser:ExpectValue("(")
+	node.identifiers = ReadMultipleValues(parser, nil, ReadTypeFunctionArgument)
+	node.tokens["arguments)"] = parser:ExpectValue(")")
+
+	node.tokens[">"] = parser:ExpectValue(">")
+
+	node.tokens["return("] = parser:ExpectValue("(")
+	node.return_types = ReadMultipleValues(parser, nil, ReadTypeFunctionArgument)
+	node.tokens["return)"] = parser:ExpectValue(")")
+	
+	return node
+end
+
+local function read_type_function(parser)
 	if not (parser:IsValue("function") and parser:IsValue("<|", 1)) then return end
 	local ReadTypeFunctionBody = require("nattlua.parser.statements.typesystem.type_function_body").ReadTypeFunctionBody
 	local node = parser:Node("expression", "type_function")
 	node.stmnt = false
 	node.tokens["function"] = parser:ExpectValue("function")
 	return ReadTypeFunctionBody(parser, node):End()
+end
+
+
+local function read_analyzer_function(parser)
+	if not (parser:IsValue("analyzer") and parser:IsValue("function", 1)) then return end
+	local ReadAnalyzerFunctionBody = require("nattlua.parser.statements.typesystem.analyzer_function_body").ReadAnalyzerFunctionBody
+	local node = parser:Node("expression", "analyzer_function")
+	node.stmnt = false
+	node.tokens["analyzer"] = parser:ExpectValue("analyzer")
+	node.tokens["function"] = parser:ExpectValue("function")
+	return ReadAnalyzerFunctionBody(parser, node):End()
 end
 
 local function read_keyword_value(parser)
@@ -283,12 +322,15 @@ ReadExpression = function(parser, priority)
 		force_upvalue = true
 		parser:Advance(1)
 	end
+	local ReadFunction = require("nattlua.parser.expressions.function").ReadFunction
 
 	node = read_parenthesis(parser) or
 		read_empty_union(parser) or
 		read_prefix_operator(parser) or
+		read_analyzer_function(parser) or
+		read_function_signature(parser) or
 		read_type_function(parser) or
-		read_generics_type_function(parser) or
+		ReadFunction(parser) or
 		read_value(parser) or
 		read_keyword_value(parser) or
 		read_type_table(parser) or

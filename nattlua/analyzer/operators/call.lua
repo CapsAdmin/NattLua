@@ -176,7 +176,7 @@ return
 				return analyzed_return, scope
 			end
 
-			local function call_lua_type_function(analyzer, obj, function_arguments, arguments, env)
+			local function call_analyzer_function(analyzer, obj, function_arguments, arguments, env)
 				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 				
@@ -737,7 +737,7 @@ return
 				end
 
 				if obj:GetData().lua_function then
-					return call_lua_type_function(
+					return call_analyzer_function(
 						analyzer,
 						obj,
 						function_arguments,

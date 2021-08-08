@@ -52,8 +52,8 @@ IMPORTS['example_projects/luajit/src/platforms/windows/filesystem.nlua'] = funct
 		"size" = number,
 		"type" = "directory" | "file"
 	}⦘⦘⦘,
-	"get_files" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘⦘,
-	"set_current_directory" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗true⦘⦘⦘,
+	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
+	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
 	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
 }  =  import_type<|"platforms/filesystem.nlua"|>]]
 
@@ -94,8 +94,8 @@ local  fs--[[#: {
 		"size" = number,
 		"type" = "directory" | "file"
 	}⦘⦘⦘,
-	"get_files" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘⦘,
-	"set_current_directory" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗true⦘⦘⦘,
+	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
+	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
 	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
 }]]  =  {}--[[#  as  contract]]
 
@@ -117,7 +117,7 @@ ffi.cdef([[
 
 local  function  last_error()--[[#:  string]]
 	
-    local  error_str--[[#: { any | number = any | number }]]  =  ffi.new("uint8_t[?]",  1024)
+    local  error_str--[[#: { number = number }]]  =  ffi.new("uint8_t[?]",  1024)
 	
     local  FORMAT_MESSAGE_FROM_SYSTEM--[[#: 4096]]  =  0x00001000
 	
@@ -267,7 +267,7 @@ do
 
 	function  fs.get_attributes(path--[[#: string]],  follow_link--[[#: false | nil | true]])--[[#: ]]
 		
-        local  info--[[#: { any | number = any | {
+        local  info--[[#: { number = {
 		"dwFileAttributes" = number,
 		"ftCreationTime" = number,
 		"ftLastAccessTime" = number,
@@ -391,7 +391,7 @@ do
 
 	
 
-	function  fs.get_files(path--[[#: string]])--[[#: ]]
+	function  fs.get_files(path--[[#: string]])--[[#: ⦗nil, string⦘ | ⦗{ number = nil | string }⦘]]
 		
 		if  path  ==  ""  then
 			
@@ -409,7 +409,7 @@ do
 
 		
 
-        local  data--[[#: { any | number = any | {
+        local  data--[[#: { number = {
 		"dwFileAttributes" = number,
 		"ftCreationTime" = number,
 		"ftLastAccessTime" = number,
@@ -484,7 +484,7 @@ do
 
 	
 
-	function  fs.set_current_directory(path--[[#: string]])--[[#: ]]
+	function  fs.set_current_directory(path--[[#: string]])--[[#: ⦗nil, string⦘ | ⦗true⦘]]
 		
 		if  ffi.C.chdir(path)  ==  0  then 
 			return  true 
@@ -499,7 +499,7 @@ do
 
 	function  fs.get_current_directory()--[[#: ]]
 		
-        local  buffer--[[#: { any | number = any | number }]]  =  ffi.new("char[260]")
+        local  buffer--[[#: { number = number }]]  =  ffi.new("char[260]")
 		
         local  length--[[#: number]]  =  ffi.C.GetCurrentDirectoryA(260,  buffer)
 		
@@ -522,8 +522,8 @@ IMPORTS['example_projects/luajit/src/platforms/unix/filesystem.nlua'] = function
 		"size" = number,
 		"type" = "directory" | "file"
 	}⦘⦘⦘,
-	"get_files" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘⦘,
-	"set_current_directory" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗true⦘⦘⦘,
+	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
+	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
 	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
 }  =  import_type<|"platforms/filesystem.nlua"|>]]
 
@@ -564,8 +564,8 @@ local  fs--[[#: {
 		"size" = number,
 		"type" = "directory" | "file"
 	}⦘⦘⦘,
-	"get_files" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘⦘,
-	"set_current_directory" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗true⦘⦘⦘,
+	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
+	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
 	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
 }]]  =  {}--[[#  as  contract]]
 
@@ -873,7 +873,7 @@ do
 
 	
 
-	function  fs.get_files(path--[[#: string]])--[[#: ]]
+	function  fs.get_files(path--[[#: string]])--[[#: ⦗nil, string⦘ | ⦗{ number = nil | string }⦘]]
 		
 		local  out--[[#:  List<|string|>]]  =  {}
 		
@@ -937,7 +937,7 @@ do
 
 	
 
-	function  fs.set_current_directory(path--[[#: string]])--[[#: ]]
+	function  fs.set_current_directory(path--[[#: string]])--[[#: ⦗nil, string⦘ | ⦗true⦘]]
 		
 		if  ffi.C.chdir(path)  ==  0  then 
 			return  true 
@@ -952,7 +952,7 @@ do
 
 	function  fs.get_current_directory()--[[#: ]]
 		
-		local  temp--[[#: { any | number = any | number }]]  =  ffi.new("char[1024]")
+		local  temp--[[#: { number = number }]]  =  ffi.new("char[1024]")
 		
 		local  ret--[[#: nil | { number = number }]]  =  ffi.C.getcwd(temp,  ffi.sizeof(temp))
 		
@@ -992,8 +992,8 @@ local  fs--[[#: {
 		"size" = number,
 		"type" = "directory" | "file"
 	}⦘⦘⦘,
-	"get_files" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘⦘,
-	"set_current_directory" = function⦗string⦘: ⦗⦗⦗nil, string⦘ | ⦗true⦘⦘⦘,
+	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
+	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
 	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
 }]]  = ( IMPORTS['example_projects/luajit/src/filesystem.nlua']("filesystem.nlua"))
 

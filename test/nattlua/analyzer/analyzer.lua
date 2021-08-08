@@ -14,7 +14,7 @@ R"types.assert(nil == nil, true)"
 
 test("declaring base types", function()
     R[[
-        local type Symbol = function(T: any)
+        local type Symbol = analyzer function(T: any)
             return types.Symbol((loadstring or load)("return " .. T:GetNode().value.value)(), true)
         end
         
@@ -28,7 +28,7 @@ test("declaring base types", function()
         
         -- the any type is all types, but we need to add function and table later
         local type Any = Number | Boolean | String | Nil
-        local type Function = function(...Any): ...Any
+        local type Function = function=(...Any)>(...Any)
         local type Table = {[Any] = Any}
         
         local analyzer function AddToUnion(union: any, what: any)
@@ -404,7 +404,7 @@ local c
 R([[
     local foo = function() return "hello" end
 
-    local function test(cb: function(): number)
+    local function test(cb: function=()>(number))
 
     end
 
@@ -436,7 +436,7 @@ R[[
     local type String = $".*"
     local type Any = Number | Boolean | String | nil
     local type Table = {[exclude<|Any, nil|> | self] = Any | self}
-    local type Function = (function(...Any): ...Any)
+    local type Function = function=(...Any)>(...Any)
 
     do
         -- At this point, Any does not include the Function and Table type.
@@ -481,7 +481,7 @@ R[[
 ]]
 
 R[[
-    function test2(callback: (function(...): ...)) 
+    function test2(callback: function=(...any)>(...any)) 
 
     end
 
@@ -527,7 +527,7 @@ R[[
 
 R[[
     type lib = {}
-    type lib.myfunc = function(number, string): boolean
+    type lib.myfunc = function=(number, string)>(boolean)
 
     local lib = {} as lib
 
@@ -535,7 +535,7 @@ R[[
         return true
     end
 
-    types.assert(lib.myfunc, _ as function(number, string): boolean)
+    types.assert(lib.myfunc, _ as function=(number, string)>(boolean))
 ]]
 
 R[[
@@ -606,8 +606,8 @@ R[[
 R[[
     local x = {foo = 1, bar = 2}
     x.__index = x
-    x.func = _ as (function(lol: x | nil): x)
-    x.bar = _ as (function(lol: x): {lol = x})
+    x.func = _ as function=(lol: x | nil)>(x)
+    x.bar = _ as function=(lol: x)>({lol = x})
 
     §assert(env.runtime.x:Equal(env.runtime.x:Copy()))
 ]]
