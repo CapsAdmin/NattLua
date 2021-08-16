@@ -255,6 +255,10 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			return Symbol((r:IsSubsetOf(l)))
 		elseif op == "<" then
 			return Symbol((l:IsSubsetOf(r)))
+		elseif op == "supersetof" then
+			return Symbol((r:IsSubsetOf(l)))
+		elseif op == "subsetof" then
+			return Symbol((l:IsSubsetOf(r)))
 		elseif op == "+" then
 			if l.Type == "table" and r.Type == "table" then return l:Union(r) end
 		end
