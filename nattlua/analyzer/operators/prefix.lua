@@ -87,6 +87,10 @@ local function prefix_operator(analyzer, node, l, env)
 			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
 			obj.mutable = true
 			return obj
+		elseif op == "expand" then
+			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
+			obj.expand = true
+			return obj
 		elseif op == "$" then
 			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
 			if obj.Type ~= "string" then return type_errors.other("must evaluate to a string") end

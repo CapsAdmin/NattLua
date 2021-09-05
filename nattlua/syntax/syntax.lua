@@ -100,6 +100,7 @@ do
 			"mutable",
 			"literal",
 			"supertype",
+			"expand",
 		}
 	syntax.typesystem.PrimaryBinaryOperators = {".",}
 	syntax.typesystem.BinaryOperators = {

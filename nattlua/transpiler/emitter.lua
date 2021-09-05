@@ -188,15 +188,37 @@ function META:EmitBreakableExpressionList(list, first_newline)
 end
 
 function META:EmitCall(node)
-    -- this will not work for calls with functions that contain statements
-    self.inside_call_expression = true
-	self:EmitExpression(node.left)
 
-	if node.tokens["call("] then
-		self:EmitToken(node.tokens["call("])
+	if node.expand then
+		if not node.expand.expanded then
+			self:Emit("local ")
+			self:EmitExpression(node.left.left)
+			self:Emit("=")
+			self:EmitExpression(node.expand:GetNode())
+			node.expand.expanded = true
+		end
+		
+		self.inside_call_expression = true
+		self:EmitExpression(node.left.left)
+
+		if node.tokens["call("] then
+			self:EmitToken(node.tokens["call("])
+		else
+			if self.config.force_parenthesis then
+				self:EmitNonSpace("(")
+			end
+		end
 	else
-		if self.config.force_parenthesis then
-			self:EmitNonSpace("(")
+		-- this will not work for calls with functions that contain statements
+		self.inside_call_expression = true
+		self:EmitExpression(node.left)
+
+		if node.tokens["call("] then
+			self:EmitToken(node.tokens["call("])
+		else
+			if self.config.force_parenthesis then
+				self:EmitNonSpace("(")
+			end
 		end
 	end
 
@@ -1318,6 +1340,8 @@ do -- types
 			self:EmitTuple(node)
 		elseif node.kind == "type_function" then
 			self:EmitInvalidLuaCode("EmitTypeFunction", node)
+		elseif node.kind == "function" then
+			self:EmitAnonymousFunction(node)
 		elseif node.kind == "function_signature" then
 			self:EmitInvalidLuaCode("EmitFunctionSignature", node)
 		else

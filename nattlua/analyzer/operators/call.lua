@@ -736,6 +736,10 @@ return
 					end
 				end
 
+				if obj.expand then
+					analyzer:GetActiveNode().expand = obj
+				end
+
 				if obj:GetData().lua_function then
 					return call_analyzer_function(
 						analyzer,

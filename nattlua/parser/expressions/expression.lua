@@ -104,7 +104,8 @@ do
 			parser:IsValue("(", offset) or
 			parser:IsValue("<|", offset) or
 			parser:IsValue("{", offset) or
-			parser:IsType("string", offset)
+			parser:IsType("string", offset) or
+			(parser:IsValue("!", offset) and parser:IsValue("(", offset + 1))
 	end
 
 	local function read_call_expression(parser)
@@ -120,6 +121,12 @@ do
 			node.tokens["call("] = parser:ExpectValue("<|")
 			node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
 			node.tokens["call)"] = parser:ExpectValue("|>")
+			node.type_call = true
+		elseif parser:IsValue("!") then
+			node.tokens["!"] = parser:ExpectValue("!")
+			node.tokens["call("] = parser:ExpectValue("(")
+			node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+			node.tokens["call)"] = parser:ExpectValue(")")
 			node.type_call = true
 		else
 			node.tokens["call("] = parser:ExpectValue("(")
@@ -178,14 +185,17 @@ do
 	end
 
 	function read_sub_expression(parser, node)
+		
 		for _ = 1, parser:GetLength() do
 			local left_node = node
 			read_and_add_explicit_type(parser, node)
+			
 			local found = read_index(parser) or
 				read_self_call(parser) or
-				read_postfix_operator(parser) or
 				read_call(parser) or
+				read_postfix_operator(parser) or
 				read_postfix_index_expression(parser)
+				
 			if not found then break end
 			found.left = left_node
 
@@ -317,7 +327,6 @@ end
 
 ExpectExpression = function(parser, priority)
 	local token = parser:GetToken()
-
 	if
 		not token or
 		token.type == "end_of_file" or

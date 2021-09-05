@@ -653,3 +653,19 @@ run[[
 
     types.assert(lol, _ as function =(string, number)>(string, string))
 ]]
+
+run[[
+    local function test!(T: any)
+        if T == string then
+            return expand setmetatable({}, {__call = function(_, a: literal T, b: literal T) return a .. b end})
+        else
+            return expand setmetatable({}, {__call = function(_, a: literal T, b: literal T) return a + b end})
+        end
+    end
+    
+    local a = test!(number)(1,2)
+    local b = test!(string)("1","2")
+    
+    types.assert(a, 3)
+    types.assert(b, "12")    
+]]

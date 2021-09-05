@@ -5,17 +5,31 @@ local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIden
 return
 	{
 		ReadTypeFunctionBody = function(parser, node)
-			node.tokens["arguments("] = parser:ExpectValue("<|")
-			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier, true)
+			if parser:IsValue("!") then
+				node.tokens["!"] = parser:ExpectValue("!")	
+				node.tokens["arguments("] = parser:ExpectValue("(")				
+				node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier, true)
 
-			if parser:IsValue("...") then
-				local vararg = parser:Node("expression", "value")
-				vararg.value = parser:ExpectValue("...")
-				vararg:End()
-				table_insert(node.identifiers, vararg)
+				if parser:IsValue("...") then
+					local vararg = parser:Node("expression", "value")
+					vararg.value = parser:ExpectValue("...")
+					vararg:End()
+					table_insert(node.identifiers, vararg)
+				end
+				node.tokens["arguments)"] = parser:ExpectValue(")")
+			else
+				node.tokens["arguments("] = parser:ExpectValue("<|")
+				node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier, true)
+
+				if parser:IsValue("...") then
+					local vararg = parser:Node("expression", "value")
+					vararg.value = parser:ExpectValue("...")
+					vararg:End()
+					table_insert(node.identifiers, vararg)
+				end
+
+				node.tokens["arguments)"] = parser:ExpectValue("|>", node.tokens["arguments("])
 			end
-
-			node.tokens["arguments)"] = parser:ExpectValue("|>", node.tokens["arguments("])
 
 			if parser:IsValue(":") then
 				node.tokens[":"] = parser:ExpectValue(":")

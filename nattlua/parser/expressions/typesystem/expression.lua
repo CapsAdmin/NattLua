@@ -101,7 +101,6 @@ end
 
 local function read_function_signature(parser)
 	if not (parser:IsValue("function") and parser:IsValue("=", 1)) then return end
-	local ReadIdentifier = require("nattlua.parser.expressions.identifier").ReadIdentifier
 
 	local node = parser:Node("expression", "function_signature")
 	node.stmnt = false
@@ -228,7 +227,8 @@ do
 			parser:IsValue("(", offset) or
 			parser:IsValue("<|", offset) or
 			parser:IsValue("{", offset) or
-			parser:IsType("string", offset)
+			parser:IsType("string", offset) or
+			(parser:IsValue("!", offset) and parser:IsValue("(", offset + 1))
 	end
 
 	local function read_as_expression(parser, node)
