@@ -26,7 +26,7 @@ function META:GetChar(offset--[[#: number]])--[[#: number]]
 	return (self.Buffer:byte(self.Position + offset))
 end
 
-function META:GetCurrentChar()--[[#: number]]
+function META:GetCurrentByteChar()--[[#: number]]
 	return (self.Buffer:byte(self.Position))
 end
 
@@ -41,7 +41,7 @@ function META:FindNearest(str--[[#: string]])--[[#: nil | number]]
 end
 
 function META:ReadChar()--[[#: number]]
-	local char = self:GetCurrentChar()
+	local char = self:GetCurrentByteChar()
 	self.Position = self.Position + 1
 	return char
 end
@@ -71,7 +71,7 @@ function META:IsCurrentValue(what--[[#: string]])--[[#: boolean]]
 end
 
 function META:IsCurrentByte(what--[[#: number]])--[[#: boolean]]
-	return self:GetCurrentChar() == what
+	return self:GetCurrentByteChar() == what
 end
 
 function META:IsByte(what--[[#: number]], offset--[[#: number]])--[[#: boolean]]

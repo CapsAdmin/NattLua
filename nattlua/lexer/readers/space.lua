@@ -4,10 +4,10 @@ local syntax = require("nattlua.syntax.syntax")
 return
 	{
 		ReadSpace = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-			if syntax.IsSpace(lexer:GetCurrentChar()) then
+			if syntax.IsSpace(lexer:GetCurrentByteChar()) then
 				while not lexer:TheEnd() do
 					lexer:Advance(1)
-					if not syntax.IsSpace(lexer:GetCurrentChar()) then break end
+					if not syntax.IsSpace(lexer:GetCurrentByteChar()) then break end
 				end
 
 				return "space"

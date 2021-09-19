@@ -70,7 +70,7 @@ do
         [string] = any,
     })
         -- mutates META by adding a function
-        function META:GetCurrentChar()--[[#: number]]
+        function META:GetCurrentByteChar()--[[#: number]]
             local b = self.code:byte(self.i)
             return b
         end
@@ -85,7 +85,7 @@ do
     AddFunction(META)
 
     function META:Foo()
-        return self:GetCurrentChar() + 21
+        return self:GetCurrentByteChar() + 21
     end
 
     local self = setmetatable({}, META)

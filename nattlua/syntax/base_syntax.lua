@@ -250,5 +250,10 @@ return function(syntax--[[#: literal mutable (
 				build_lookup(keywords, "IsNonStandardKeyword")
 			end
 		end
+
+		do
+			local BuildReadFunction = require("nattlua.lexer.build_read_function").BuildReadFunction
+			syntax.IsInNumberAnnotation = BuildReadFunction(syntax.NumberAnnotations, true)
+		end
 	end
 end

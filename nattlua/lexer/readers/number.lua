@@ -2,8 +2,6 @@
 
 local string = require("string")
 local syntax = require("nattlua.syntax.syntax")
-local BuildReadFunction = require("nattlua.lexer.build_read_function").BuildReadFunction
-local IsInNumberAnnotation = BuildReadFunction(syntax.NumberAnnotations, true)
 
 local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	lexer:Advance(1)
@@ -11,9 +9,9 @@ local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	if lexer:IsCurrentValue("+") or lexer:IsCurrentValue("-") then
 		lexer:Advance(1)
 
-		if not syntax.IsNumber(lexer:GetCurrentChar()) then
+		if not syntax.IsNumber(lexer:GetCurrentByteChar()) then
 			lexer:Error(
-				"malformed " .. what .. " expected number, got " .. string.char(lexer:GetCurrentChar()),
+				"malformed " .. what .. " expected number, got " .. string.char(lexer:GetCurrentByteChar()),
 				lexer:GetPosition() - 2
 			)
 			return false
@@ -21,7 +19,7 @@ local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	end
 
 	while not lexer:TheEnd() do
-		if not syntax.IsNumber(lexer:GetCurrentChar()) then break end
+		if not syntax.IsNumber(lexer:GetCurrentByteChar()) then break end
 		lexer:Advance(1)
 	end
 
@@ -35,7 +33,7 @@ local function ReadNumberAnnotations(lexer--[[#: Lexer]], what--[[#: "hex" | "de
 		if lexer:IsCurrentValue("e") or lexer:IsCurrentValue("E") then return ReadNumberPowExponent(lexer, "exponent") end
 	end
 
-	return IsInNumberAnnotation(lexer)
+	return syntax.IsInNumberAnnotation(lexer)
 end
 
 local function generate_map(str--[[#: string]])
@@ -69,13 +67,13 @@ local function ReadHexNumber(lexer--[[#: Lexer]])
 
 		if ReadNumberAnnotations(lexer, "hex") then break end
 
-		if allowed_hex[lexer:GetCurrentChar()] then
+		if allowed_hex[lexer:GetCurrentByteChar()] then
 			lexer:Advance(1)
-		elseif syntax.IsSpace(lexer:GetCurrentChar()) or syntax.IsSymbol(lexer:GetCurrentChar()) then
+		elseif syntax.IsSpace(lexer:GetCurrentByteChar()) or syntax.IsSymbol(lexer:GetCurrentByteChar()) then
 			break
-		elseif lexer:GetCurrentChar() ~= 0 then
+		elseif lexer:GetCurrentByteChar() ~= 0 then
 			lexer:Error(
-				"malformed number " .. string.char(lexer:GetCurrentChar()) .. " in hex notation"
+				"malformed number " .. string.char(lexer:GetCurrentByteChar()) .. " in hex notation"
 			)
 			return
 		end
@@ -92,11 +90,11 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 
 		if lexer:IsCurrentValue("1") or lexer:IsCurrentValue("0") then
 			lexer:Advance(1)
-		elseif syntax.IsSpace(lexer:GetCurrentChar()) or syntax.IsSymbol(lexer:GetCurrentChar()) then
+		elseif syntax.IsSpace(lexer:GetCurrentByteChar()) or syntax.IsSymbol(lexer:GetCurrentByteChar()) then
 			break
-		elseif lexer:GetCurrentChar() ~= 0 then
+		elseif lexer:GetCurrentByteChar() ~= 0 then
 			lexer:Error(
-				"malformed number " .. string.char(lexer:GetCurrentChar()) .. " in binary notation"
+				"malformed number " .. string.char(lexer:GetCurrentByteChar()) .. " in binary notation"
 			)
 			return
 		end
@@ -126,12 +124,12 @@ local function read_decimal_number(lexer--[[#: Lexer]])
 
 		if ReadNumberAnnotations(lexer, "decimal") then break end
 
-		if syntax.IsNumber(lexer:GetCurrentChar()) then
+		if syntax.IsNumber(lexer:GetCurrentByteChar()) then
 			lexer:Advance(1)
         --elseif self:IsSymbol() or self:IsSpace() then
             --break
-        else--if self:GetCurrentChar() ~= 0 then
-            --self:Error("malformed number "..self:GetCurrentChar().." in hex notation")
+        else--if self:GetCurrentByteChar() ~= 0 then
+            --self:Error("malformed number "..self:GetCurrentByteChar().." in hex notation")
             break
 		end
 	end
@@ -141,7 +139,7 @@ return
 	{
 		ReadNumber = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if
-				syntax.IsNumber(lexer:GetCurrentChar()) or
+				syntax.IsNumber(lexer:GetCurrentByteChar()) or
 				(lexer:IsCurrentValue(".") and syntax.IsNumber(lexer:GetChar(1)))
 			then
 				if lexer:IsValue("x", 1) or lexer:IsValue("X", 1) then
