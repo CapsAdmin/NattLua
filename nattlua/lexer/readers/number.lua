@@ -33,7 +33,7 @@ local function ReadNumberAnnotations(lexer--[[#: Lexer]], what--[[#: "hex" | "de
 		if lexer:IsCurrentValue("e") or lexer:IsCurrentValue("E") then return ReadNumberPowExponent(lexer, "exponent") end
 	end
 
-	return syntax.IsInNumberAnnotation(lexer)
+	return syntax.ReadNumberAnnotation(lexer)
 end
 
 local function generate_map(str--[[#: string]])
@@ -99,7 +99,8 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 			return
 		end
 
-		if ReadNumberAnnotations(lexer, "binary") then break end
+		-- TODO: in the analyzer we are somehow allowed to pass "binary" even though that's not the signature
+		if ReadNumberAnnotations(lexer, "binary") then break end 
 	end
 end
 

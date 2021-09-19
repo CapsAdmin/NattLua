@@ -253,7 +253,12 @@ return function(syntax--[[#: literal mutable (
 
 		do
 			local BuildReadFunction = require("nattlua.lexer.build_read_function").BuildReadFunction
-			syntax.IsInNumberAnnotation = BuildReadFunction(syntax.NumberAnnotations, true)
+			syntax.ReadNumberAnnotation = BuildReadFunction(syntax.NumberAnnotations, true)
+		end
+
+		do
+			local BuildReadFunction = require("nattlua.lexer.build_read_function").BuildReadFunction
+			syntax.ReadSymbol = BuildReadFunction(syntax.GetSymbols(), false)
 		end
 	end
 end
