@@ -1,6 +1,5 @@
 local nl = require("nattlua")
-local syntax = require("nattlua.syntax.syntax")
-local table_print = require("nattlua.other.table_print")
+local runtime_syntax = require("nattlua.syntax.runtime")
 
 local function tokenize(code)
     return assert(nl.Compiler(code):Lex()).Tokens
@@ -100,11 +99,11 @@ test("glua", function()
     equal(one_token(tokenize("/*-----*/foo")).type, "letter")
     equal(one_token(tokenize("--asdafsadw\nfoo--awsad asd")).type, "letter")
 
-    equal(syntax.IsPrefixOperator(tokenize("!a")[1]), true)
+    equal(runtime_syntax:IsPrefixOperator(tokenize("!a")[1]), true)
 
-    equal(syntax.GetBinaryOperatorInfo(tokenize("a != 1")[2]) ~= nil, true)
-    equal(syntax.GetBinaryOperatorInfo(tokenize("a && b")[2]) ~= nil, true)
-    equal(syntax.GetBinaryOperatorInfo(tokenize("a || b")[2]) ~= nil, true)
+    equal(runtime_syntax:GetBinaryOperatorInfo(tokenize("a != 1")[2]) ~= nil, true)
+    equal(runtime_syntax:GetBinaryOperatorInfo(tokenize("a && b")[2]) ~= nil, true)
+    equal(runtime_syntax:GetBinaryOperatorInfo(tokenize("a || b")[2]) ~= nil, true)
 end)
 
 do

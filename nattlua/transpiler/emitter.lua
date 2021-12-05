@@ -1,4 +1,4 @@
-local syntax = require("nattlua.syntax.syntax")
+local runtime_syntax = require("nattlua.syntax.runtime")
 local characters = require("nattlua.syntax.characters")
 local tostring = _G.tostring
 local error = _G.error
@@ -257,7 +257,7 @@ function META:EmitCall(node)
 end
 
 function META:EmitBinaryOperator(node)
-	local func_chunks = node.environment == "runtime" and syntax.GetFunctionForBinaryOperator(node.value)
+	local func_chunks = node.environment == "runtime" and runtime_syntax:GetFunctionForBinaryOperator(node.value)
 
 	if func_chunks then
 		self:Emit(func_chunks[1])
@@ -548,7 +548,7 @@ function META:EmitTable(tree)
 end
 
 function META:EmitPrefixOperator(node)
-	local func_chunks = node.environment == "runtime" and syntax.GetFunctionForPrefixOperator(node.value)
+	local func_chunks = node.environment == "runtime" and runtime_syntax:GetFunctionForPrefixOperator(node.value)
 
 	if self.TranslatePrefixOperator then
 		func_chunks = self:TranslatePrefixOperator(node) or func_chunks
@@ -560,7 +560,7 @@ function META:EmitPrefixOperator(node)
 		self:Emit(func_chunks[2])
 		self.operator_transformed = true
 	else
-		if syntax.IsKeyword(node.value) or syntax.IsNonStandardKeyword(node.value) then
+		if runtime_syntax:IsKeyword(node.value) or runtime_syntax:IsNonStandardKeyword(node.value) then
 			self:OptionalWhitespace()
 			self:EmitToken(node.value)
 			self:OptionalWhitespace()
@@ -574,7 +574,7 @@ function META:EmitPrefixOperator(node)
 end
 
 function META:EmitPostfixOperator(node)
-	local func_chunks = node.environment == "runtime" and syntax.GetFunctionForPostfixOperator(node.value)
+	local func_chunks = node.environment == "runtime" and runtime_syntax:GetFunctionForPostfixOperator(node.value)
 
     -- no such thing as postfix operator in lua,
     -- so we have to assume that there's a translation

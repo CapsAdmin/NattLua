@@ -2,7 +2,7 @@ local math = require("math")
 local table_insert = require("table").insert
 local table_remove = require("table").remove
 local ipairs = _G.ipairs
-local syntax = require("nattlua.syntax.syntax")
+local runtime_syntax = require("nattlua.syntax.runtime")
 local ReadFunction = require("nattlua.parser.expressions.function").ReadFunction
 local ReadAnalyzerFunction = require("nattlua.parser.expressions.typesystem.analyzer_function").ReadAnalyzerFunction
 local ReadImport = require("nattlua.parser.expressions.extra.import").ReadImport
@@ -154,7 +154,7 @@ do
 	end
 
 	local function read_postfix_operator(parser)
-		if not syntax.IsPostfixOperator(parser:GetToken()) then return end
+		if not runtime_syntax:IsPostfixOperator(parser:GetToken()) then return end
 		return
 			parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
 	end
@@ -212,7 +212,7 @@ end
 
 do
 	local function prefix_operator(parser)
-		if not syntax.IsPrefixOperator(parser:GetToken()) then return end
+		if not runtime_syntax:IsPrefixOperator(parser:GetToken()) then return end
 		local node = parser:Node("expression", "prefix_operator")
 		node.value = parser:ReadToken()
 		node.tokens[1] = node.value
@@ -238,7 +238,7 @@ do
 	end
 
 	local function value(parser)
-		if not syntax.IsValue(parser:GetToken()) then return end
+		if not runtime_syntax:IsValue(parser:GetToken()) then return end
 		return parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
 	end
 
@@ -292,8 +292,8 @@ do
 
 		check_integer_division_operator(parser, parser:GetToken())
 
-		while syntax.GetBinaryOperatorInfo(parser:GetToken()) and
-		syntax.GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
+		while runtime_syntax:GetBinaryOperatorInfo(parser:GetToken()) and
+		runtime_syntax:GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
 			local left_node = node
 			node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
@@ -303,7 +303,7 @@ do
 				node.left.parent = node
 			end
 
-			node.right = ExpectExpression(parser, syntax.GetBinaryOperatorInfo(node.value).right_priority)
+			node.right = ExpectExpression(parser, runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
 
 			if not node.right then
 				local token = parser:GetToken()
@@ -335,9 +335,9 @@ ExpectExpression = function(parser, priority)
 		token.value == "," or
 		token.value == "]" or
 		(
-			syntax.IsKeyword(token) and
-			not syntax.IsPrefixOperator(token) and
-			not syntax.IsValue(token) and
+			runtime_syntax:IsKeyword(token) and
+			not runtime_syntax:IsPrefixOperator(token) and
+			not runtime_syntax:IsValue(token) and
 			token.value ~= "function"
 		)
 	then

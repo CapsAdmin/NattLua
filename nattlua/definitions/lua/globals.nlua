@@ -115,7 +115,7 @@ analyzer function pairs(tbl: Table)
 	end
 end
 
-analyzer function ipairs(tbl: {[number] = any})
+analyzer function ipairs(tbl: {[number] = any} | {})
 	if tbl:IsLiteral() then
 		local i = 1
 		return function(key, val)
@@ -142,6 +142,12 @@ analyzer function ipairs(tbl: {[number] = any})
 	return function()
 		if done then return nil end
 		done = true
+
+		-- v must never be nil here
+		if v.Type == "union" then
+			v = v:Copy():RemoveType(types.Symbol(nil))
+		end
+
 		return k, v
 	end
 end

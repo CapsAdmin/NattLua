@@ -1,10 +1,10 @@
-local syntax = require("nattlua.syntax.syntax")
+local runtime_syntax = require("nattlua.syntax.runtime")
 local ipairs = ipairs
 local assert = assert
 local type = type
 local META = {}
 META.__index = META
-META.syntax = syntax
+
 require("nattlua.transpiler.base_emitter")(META)
 
 function META:EmitExpression(node)
@@ -107,7 +107,7 @@ local translate = {
 }
 
 function META:EmitBinaryOperator(node)
-	local func_chunks = syntax.GetFunctionForBinaryOperator(node.value)
+	local func_chunks = runtime_syntax:GetFunctionForBinaryOperator(node.value)
 
 	if func_chunks then
 		self:Emit(func_chunks[1])
@@ -360,7 +360,7 @@ end
 local translate = {["not"] = "!",}
 
 function META:EmitPrefixOperator(node)
-	local func_chunks = syntax.GetFunctionForPrefixOperator(node.value)
+	local func_chunks = runtime_syntax:GetFunctionForPrefixOperator(node.value)
 
 	if self.TranslatePrefixOperator then
 		func_chunks = self:TranslatePrefixOperator(node) or func_chunks
@@ -372,7 +372,7 @@ function META:EmitPrefixOperator(node)
 		self:Emit(func_chunks[2])
 		self.operator_transformed = true
 	else
-		if syntax.IsKeyword(node.value) then
+		if runtime_syntax:IsKeyword(node.value) then
 			self:Whitespace("?")
 
 			if translate[node.value.value] then
@@ -404,7 +404,7 @@ function META:EmitPrefixOperator(node)
 end
 
 function META:EmitPostfixOperator(node)
-	local func_chunks = syntax.GetFunctionForPostfixOperator(node.value)
+	local func_chunks = runtime_syntax:GetFunctionForPostfixOperator(node.value)
 
     -- no such thing as postfix operator in lua,
     -- so we have to assume that there's a translation

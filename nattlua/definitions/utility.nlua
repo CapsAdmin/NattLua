@@ -19,8 +19,12 @@ analyzer function NonLiteral(obj: any)
 	return obj
 end
 
-function List<|typ: any|>
-	return {[number] = typ | nil}
+function List<|val: any|>
+	return {[number] = val | nil}
+end
+
+function Map<|key: any, val: any|>
+	return {[key] = val | nil} 
 end
 
 function ErrorReturn<|...: ...any|>

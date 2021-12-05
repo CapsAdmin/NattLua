@@ -2,7 +2,7 @@
 
 local string = require("string")
 local characters = require("nattlua.syntax.characters")
-local syntax = require("nattlua.syntax.syntax")
+local runtime_syntax = require("nattlua.syntax.runtime")
 
 local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	lexer:Advance(1)
@@ -77,7 +77,7 @@ local function ReadHexNumber(lexer--[[#: Lexer]])
 				end
 			end
 
-			if lexer:ReadFirstFromArray(syntax.NumberAnnotations) then break end
+			if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 
 			lexer:Error(
 				"malformed hex number, got " .. string.char(lexer:GetByte()),
@@ -118,7 +118,7 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 				end
 			end
 
-			if lexer:ReadFirstFromArray(syntax.NumberAnnotations) then break end
+			if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 			
 			lexer:Error(
 				"malformed binary number, got " .. string.char(lexer:GetByte()),
@@ -174,7 +174,7 @@ local function ReadDecimalNumber(lexer--[[#: Lexer]])
 				end
 			end
 			
-			if lexer:ReadFirstFromArray(syntax.NumberAnnotations) then break end
+			if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 
 			lexer:Error(
 				"malformed number, got " .. string.char(lexer:GetByte()) .. " in decimal notation",

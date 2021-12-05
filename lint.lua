@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local syntax = require("nattlua.syntax.syntax")
+local runtime_syntax = require("nattlua.syntax.runtime")
 local helpers = require("nattlua.other.helpers")
 
 local function GetFilesRecursively(dir, ext)
@@ -74,7 +74,7 @@ for _, path in ipairs(lua_files) do
 
 	if not blacklist[path] then
 		for _, token in ipairs(assert(compiler:Lex()).Tokens) do
-			if token.type == "letter" and not syntax.IsKeyword(token) then
+			if token.type == "letter" and not runtime_syntax:IsKeyword(token) then
 				if dictionary then
 					dictionary[token.value] = (dictionary[token.value] or 0) + 1
 				end

@@ -1,9 +1,4 @@
 do
-    local syntax = require("nattlua.syntax.syntax")
-    types.assert(#syntax.GetSymbols(), 42)
-end
-
-do
     local table_pool = require("nattlua.other.table_pool")
 
     local new_token = table_pool(function()

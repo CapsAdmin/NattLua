@@ -1,7 +1,7 @@
 -- split by casing as well? SetCleint GetClient TransferCleint
 
 local nl = require("nattlua")
-local syntax = require("nattlua.syntax.syntax")
+local runtime_syntax = require("nattlua.syntax.runtime")
 local util = require("examples.util")
 
 local function levenshtein(s, t, lim)
@@ -85,7 +85,7 @@ local function check_tokens(tokens)
     local score = {}
 
     for i, tk in ipairs(tokens) do
-        if tk.type == "letter" and not syntax.IsKeyword(tk) then
+        if tk.type == "letter" and not runtime_syntax:IsKeyword(tk) then
             score[tk.value] = score[tk.value] or {}
 
             if tk.value:sub(1,1) == tk.value:sub(1,1):upper() then

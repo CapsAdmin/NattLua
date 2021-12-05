@@ -1,126 +1,276 @@
-local syntax = {}
---[[#type syntax.@Name = "Syntax"]]
-syntax.SymbolCharacters = {
-		",",
-		";",
-		"(",
-		")",
-		"{",
-		"}",
-		"[",
-		"]",
-		"=",
-		"::",
-		"\"",
-		"'",
-		"<|",
-		"|>",
-	}
-syntax.NumberAnnotations = {"ull", "ll", "ul", "i",}
-syntax.Keywords = {
-		"do",
-		"end",
-		"if",
-		"then",
-		"else",
-		"elseif",
-		"for",
-		"in",
-		"while",
-		"repeat",
-		"until",
-		"break",
-		"return",
-		"local",
-		"function",
-		"and",
-		"not",
-		"or",
+--[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
 
-		-- these are just to make sure all code is covered by tests
-		"ÆØÅ",
-		"ÆØÅÆ",
-	}
+local META = {}
+META.__index = META
+--[[#type META.@Name = "Syntax"]]
+--[[#type META.@Self = {
+	BinaryOperatorInfo = Map<|string, {
+		left_priority = number,
+		right_priority = number
+	}|>,
+	NumberAnnotations = List<|string|>,
+	Symbols = List<|string|>,
+	BinaryOperators = List<|List<|string|>|>,
+	PrefixOperators = Map<|string, true|>,
+	PostfixOperators = Map<|string, true|>,
+	PrimaryBinaryOperators = Map<|string, true|>,
+	SymbolCharacters = List<|string|>,
+	KeywordValues = Map<|string, true|>,
+	Keywords = Map<|string, true|>,
+	NonStandardKeywords = Map<|string, true|>,
+	BinaryOperatorFunctionTranslate = Map<|string, {string, string, string}|>,
+	PostfixOperatorFunctionTranslate = Map<|string, {string, string}|>,
+	PrefixOperatorFunctionTranslate = Map<|string, {string, string}|>,
+}]]
 
--- these are keywords, but can be used as names
-syntax.NonStandardKeywords = {"continue", "import", "literal", "mutable",}
-syntax.KeywordValues = {"...", "nil", "true", "false",}
-syntax.PrefixOperators = {"-", "#", "not", "!", "~", "supertype"}
-syntax.PostfixOperators = {
-		-- these are just to make sure all code is covered by tests
-		"++",
-		"ÆØÅ",
-		"ÆØÅÆ",
-	}
-syntax.BinaryOperators = {
-		{"or", "||"},
-		{"and", "&&"},
-		{"<", ">", "<=", ">=", "~=", "==", "!="},
-		{"|"},
-		{"~"},
-		{"&"},
-		{"<<", ">>"},
-		{"R.."}, -- right associative
-		{"+", "-"},
-		{"*", "/", "/idiv/", "%"},
-		{"R^"}, -- right associative
-}
-syntax.PrimaryBinaryOperators = {".", ":",}
-syntax.BinaryOperatorFunctionTranslate = {
-		[">>"] = "bit.rshift(A, B)",
-		["<<"] = "bit.lshift(A, B)",
-		["|"] = "bit.bor(A, B)",
-		["&"] = "bit.band(A, B)",
-		["//"] = "math.floor(A / B)",
-		["~"] = "bit.bxor(A, B)",
-	}
-syntax.PrefixOperatorFunctionTranslate = {["~"] = "bit.bnot(A)",}
-syntax.PostfixOperatorFunctionTranslate = {
-	["++"] = "(A+1)",
-	["ÆØÅ"] = "(A)",
-	["ÆØÅÆ"] = "(A)",
-}
+function META.New() 
+	local self = setmetatable({
+		NumberAnnotations = {},
+		BinaryOperatorInfo = {},
+		Symbols = {},
+		BinaryOperators = {},
+		PrefixOperators = {},
+		PostfixOperators = {},
+		PrimaryBinaryOperators = {},
+		SymbolCharacters = {},
+		KeywordValues = {},
+		Keywords = {},
+		NonStandardKeywords = {},
+		BinaryOperatorFunctionTranslate = {},
+		PostfixOperatorFunctionTranslate = {},
+		PrefixOperatorFunctionTranslate = {},
+	}, META)
 
-do
-	syntax.typesystem = {}
-
-	for k, v in pairs(syntax) do
-		syntax.typesystem[k] = v
-	end
-
---[[#	type syntax.typesystem.@Name = "SyntaxTypesystem"]]
-	syntax.typesystem.PrefixOperators = {
-			"-",
-			"#",
-			"not",
-			"~",
-			"typeof",
-			"$",
-			"unique",
-			"mutable",
-			"literal",
-			"supertype",
-			"expand",
-		}
-	syntax.typesystem.PrimaryBinaryOperators = {".",}
-	syntax.typesystem.BinaryOperators = {
-			{"or"},
-			{"and"},
-			{"extends"},
-			{"subsetof"},
-			{"supersetof"},
-			{"<", ">", "<=", ">=", "~=", "=="},
-			{"|"},
-			{"~"},
-			{"&"},
-			{"<<", ">>"},
-			{"R.."}, -- right associative
-			{"+", "-"},
-			{"*", "/", "/idiv/", "%"},
-			{"R^"}, -- right associative
-    }
-	require("nattlua.syntax.base_syntax")(syntax.typesystem)
+	return self
 end
 
-require("nattlua.syntax.base_syntax")(syntax)
-return syntax
+local function has_value(tbl --[[#: {[1 .. inf] = string} | {} ]], value --[[#: string]])
+	for k, v in ipairs(tbl) do
+		if v == value then
+			return true
+		end
+	end
+
+	return false
+end
+
+function META:AddSymbols(tbl--[[#: List<|string|>]])
+	if not tbl then return end
+
+	for _, symbol in pairs(tbl) do
+		if symbol:find("%p") and not has_value(self.Symbols, symbol) then
+			table.insert(self.Symbols, symbol)
+		end
+	end
+
+	table.sort(self.Symbols, function(a, b)
+		return #a > #b
+	end)
+end
+
+function META:AddNumberAnnotations(tbl--[[#: List<|string|>]])
+	for i, v in ipairs(tbl) do
+		if not has_value(self.NumberAnnotations, v) then
+			table.insert(self.NumberAnnotations, v)
+		end
+	end
+	table.sort(self.NumberAnnotations, function(a, b)
+		return #a > #b
+	end)
+end
+
+function META:GetNumberAnnotations()
+	return self.NumberAnnotations
+end
+
+function META:AddBinaryOperators(tbl --[[#: List<|List<|string|>|> ]])
+	if not tbl then return end
+
+	for priority, group in ipairs(tbl) do
+		for _, token in ipairs(group) do
+			local right = token:sub(1, 1) == "R"
+			if right then
+				token = token:sub(2)
+			end
+
+			if right then
+				self.BinaryOperatorInfo[token] = {
+					left_priority = priority + 1,
+					right_priority = priority,
+				}
+			else
+				self.BinaryOperatorInfo[token] = {
+					left_priority = priority,
+					right_priority = priority,
+				}
+			end
+
+			self:AddSymbols({token})
+		end
+	end
+end
+
+function META:GetBinaryOperatorInfo(tk--[[#: Token]])
+	return self.BinaryOperatorInfo[tk.value]
+end
+
+function META:AddPrefixOperators(tbl --[[#: List<|string|> ]])
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.PrefixOperators[str] = true
+	end
+end
+function META:IsPrefixOperator(token --[[#: Token]])
+	return self.PrefixOperators[token.value]
+end
+
+function META:AddPostfixOperators(tbl --[[#: List<|string|> ]])
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.PostfixOperators[str] = true
+	end
+end
+
+function META:IsPostfixOperator(token --[[#: Token]])
+	return self.PostfixOperators[token.value]
+end
+
+function META:AddPrimaryBinaryOperators(tbl --[[#: List<|string|> ]])
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.PrimaryBinaryOperators[str] = true
+	end
+end
+
+function META:IsPrimaryBinaryOperator(token --[[#: Token]])
+	return self.PrimaryBinaryOperators[token.value]
+end
+
+
+	
+
+
+function META:AddSymbolCharacters( tbl --[[#: List<|string|> ]])
+	self.SymbolCharacters = tbl
+	self:AddSymbols(tbl)
+end
+
+function META:AddKeywords(tbl --[[#: List<|string|> ]])
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.Keywords[str] = true
+	end
+end
+
+function  META:IsKeyword(token --[[#: Token]])
+	return self.Keywords[token.value]
+end
+
+function META:AddKeywordValues(tbl --[[#: List<|string|> ]])
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.Keywords[str] = true
+		self.KeywordValues[str] = true
+	end
+end
+
+function  META:IsKeywordValue(token --[[#: Token]])
+	return self.KeywordValues[token.value]
+end
+
+function META:AddNonStandardKeywords(tbl --[[#: List<|string|> ]])
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.NonStandardKeywords[str] = true
+	end
+end
+
+function META:IsNonStandardKeyword(token --[[#: Token]])
+	return self.NonStandardKeywords[token.value]
+end
+
+function META:GetSymbols()
+	return self.Symbols
+end
+
+function META:AddBinaryOperatorFunctionTranslate(tbl --[[#: Map<|string, string|> ]])
+	for k, v in pairs(tbl) do
+		local a, b, c = v:match("(.-)A(.-)B(.*)")
+
+		if a then
+			if b then
+				if c then
+					self.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
+				end
+			end
+		end
+	end
+end
+
+function META:GetFunctionForBinaryOperator(token--[[#: Token]])
+	return self.BinaryOperatorFunctionTranslate[token.value]
+end	
+
+function META:AddPrefixOperatorFunctionTranslate(tbl --[[#: Map<|string, string|> ]])
+	for k, v in pairs(tbl) do
+		local a, b = v:match("^(.-)A(.-)$")
+
+		if a then -- TODO
+			if b then -- TODO
+				self.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+			end
+		end
+	end
+end
+
+function META:GetFunctionForPrefixOperator(token--[[#: Token]])
+	return self.PrefixOperatorFunctionTranslate[token.value]
+end
+
+function META:AddPostfixOperatorFunctionTranslate(tbl --[[#: Map<|string, string|> ]])
+	for k, v in pairs(tbl) do
+		local a, b = v:match("^(.-)A(.-)$")
+
+		if a then
+			if b then
+				self.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+			end
+		end
+	end
+end
+
+function META:GetFunctionForPostfixOperator(token--[[#: Token]])
+	return self.PostfixOperatorFunctionTranslate[token.value]
+end
+
+function META:IsValue(token--[[#: Token]])
+	if token.type == "number" or token.type == "string" then return true end
+	if self:IsKeywordValue(token) then return true end
+	if self:IsKeyword(token) then return false end
+	if token.type == "letter" then return true end
+	return false
+end
+
+function META:GetTokenType(tk--[[#: Token]])
+	if tk.type == "letter" and self:IsKeyword(tk) then
+		return "keyword"
+	elseif tk.type == "symbol" then
+		if self:IsPrefixOperator(tk) then
+			return "operator_prefix"
+		elseif self:IsPostfixOperator(tk) then
+			return "operator_postfix"
+		elseif self:GetBinaryOperatorInfo(tk) then
+			return "operator_binary"
+		end
+	end
+
+	return tk.type
+end
+
+return META.New

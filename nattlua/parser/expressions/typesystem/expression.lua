@@ -1,5 +1,5 @@
 local table_insert = require("table").insert
-local syntax = require("nattlua.syntax.syntax")
+local typesystem_syntax = require("nattlua.syntax.typesystem")
 local math_huge = math.huge
 local ReadMultipleValues = require("nattlua.parser.statements.multiple_values").ReadMultipleValues
 local ReadExpression
@@ -14,9 +14,9 @@ local function ExpectExpression(parser, priority)
 		token.value == "," or
 		token.value == "]" or
 		(
-			syntax.typesystem.IsKeyword(token) and
-			not syntax.typesystem.IsPrefixOperator(token) and
-			not syntax.typesystem.IsValue(token) and
+			typesystem_syntax:IsKeyword(token) and
+			not typesystem_syntax:IsPrefixOperator(token) and
+			not typesystem_syntax:IsValue(token) and
 			token.value ~= "function"
 		)
 	then
@@ -67,7 +67,7 @@ local function read_parenthesis(parser)
 end
 
 local function read_prefix_operator(parser)
-	if not syntax.typesystem.IsPrefixOperator(parser:GetToken()) then return end
+	if not typesystem_syntax:IsPrefixOperator(parser:GetToken()) then return end
 	local node = parser:Node("expression", "prefix_operator")
 	node.value = parser:ReadToken()
 	node.tokens[1] = node.value
@@ -141,7 +141,7 @@ local function read_analyzer_function(parser)
 end
 
 local function read_keyword_value(parser)
-	if not syntax.typesystem.IsValue(parser:GetToken()) then return end
+	if not typesystem_syntax:IsValue(parser:GetToken()) then return end
 	local node = parser:Node("expression", "value")
 	node.value = parser:ReadToken()
 	return node:End()
@@ -254,7 +254,7 @@ do
 	end
 
 	local function read_postfix_operator(parser)
-		if not syntax.typesystem.IsPostfixOperator(parser:GetToken()) then return end
+		if not typesystem_syntax:IsPostfixOperator(parser:GetToken()) then return end
 		return
 			parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
 	end
@@ -349,13 +349,13 @@ ReadExpression = function(parser, priority)
 		end
 	end
 
-	while syntax.typesystem.GetBinaryOperatorInfo(parser:GetToken()) and
-	syntax.typesystem.GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
+	while typesystem_syntax:GetBinaryOperatorInfo(parser:GetToken()) and
+	typesystem_syntax:GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
 		local left_node = node
 		node = parser:Node("expression", "binary_operator")
 		node.value = parser:ReadToken()
 		node.left = left_node
-		node.right = ReadExpression(parser, syntax.typesystem.GetBinaryOperatorInfo(node.value).right_priority)
+		node.right = ReadExpression(parser, typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
 		node:End()
 	end
 

@@ -440,7 +440,7 @@ return
 							arg.Type == "table" and
 							contract.Type == "table" and
 							arg:GetUpvalue() and
-							not contract.literal_argument
+							not contract.literal_argument and analyzer.mutated_types[1]
 						then
 							local original = arg
 							local modified = arg:Copy()

@@ -1,8 +1,8 @@
-local syntax = require("nattlua.syntax.syntax")
+local runtime_syntax = require("nattlua.syntax.runtime")
 return
 	{
 		ReadIndexExpression = function(parser)
-			if not syntax.IsValue(parser:GetToken()) then return end
+			if not runtime_syntax:IsValue(parser:GetToken()) then return end
 			local node = parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
 			local first = node
 

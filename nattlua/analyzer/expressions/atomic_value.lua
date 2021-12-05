@@ -1,4 +1,4 @@
-local syntax = require("nattlua.syntax.syntax")
+local runtime_syntax = require("nattlua.syntax.runtime")
 local NodeToString = require("nattlua.types.string").NodeToString
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberFromString = require("nattlua.types.number").LNumberFromString
@@ -85,7 +85,7 @@ return
 	{
 		AnalyzeAtomicValue = function(analyzer, node, env)
 			local value = node.value.value
-			local type = syntax.GetTokenType(node.value)
+			local type = runtime_syntax:GetTokenType(node.value)
 
 			if type == "keyword" then
 				if value == "nil" then

@@ -175,7 +175,7 @@ function META:ReadToken()
 	return self:NewToken(a, b, c, d)
 end
 
-function META:ReadFirstFromArray(strings--[[#: {[number] = string}]]) --[[#: boolean]]
+function META:ReadFirstFromArray(strings--[[#: List<|string|>]]) --[[#: boolean]]
 	for _, str in ipairs(strings) do
 		if self:IsStringLower(str) then
 			self:Advance(#str)

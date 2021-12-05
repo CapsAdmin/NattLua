@@ -3,7 +3,6 @@
 
 --[[#local type NodeType = "expression" | "statement"]]
 --[[#local type Node = any]]
-local syntax = require("nattlua.syntax.syntax")
 local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
@@ -13,7 +12,6 @@ local TEST = false
 local META = {}
 META.__index = META
 --[[# --]]META.Emitter = require("nattlua.transpiler.emitter")
-META.syntax = syntax
 --[[#type META.@Self = {
 		config = any,
 		nodes = {[number] = any} | {},
