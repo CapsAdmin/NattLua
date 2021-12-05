@@ -321,7 +321,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 
 	for i = diagnostics_index + 1, #analyzer.diagnostics do
 		local d = analyzer.diagnostics[i]
-		table.insert(errors, require("nattlua.other.helpers").FormatError(analyzer.compiler.code, analyzer.compiler.name, d.msg, d.start, d.stop))
+		table.insert(errors, require("nattlua.other.helpers").FormatError(analyzer.compiler:GetCode(), d.msg, d.start, d.stop))
 	end
 
 	if errors[1] then return false, table.concat(errors, "\n") end

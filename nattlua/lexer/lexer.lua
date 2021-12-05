@@ -1,5 +1,6 @@
 --[[#local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")]]
 
+local Code = require("nattlua.code.code")
 local table_pool = require("nattlua.other.table_pool")
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
@@ -7,27 +8,25 @@ local META = {}
 META.__index = META
 --[[#type META.@Name = "Lexer"]]
 --[[#type META.@Self = {
-		Buffer = string,
+		Code = Code,
 		Position = number,
-		name = string,
-		BufferLength = number,
 	}]]
 local B = string.byte
 
 function META:GetLength()--[[#: number]]
-	return self.BufferLength
+	return self.Code:GetByteSize()
 end
 
 function META:GetChars(start--[[#: number]], stop--[[#: number]])--[[#: string]]
-	return self.Buffer:sub(start, stop)
+	return self.Code:GetStringSlice(start, stop)
 end
 
 function META:GetChar(offset--[[#: number]])--[[#: number]]
-	return (self.Buffer:byte(self.Position + offset))
+	return self.Code:GetByte(self.Position + offset)
 end
 
 function META:GetCurrentByteChar()--[[#: number]]
-	return (self.Buffer:byte(self.Position))
+	return self.Code:GetByte(self.Position)
 end
 
 function META:ResetState()
@@ -35,9 +34,7 @@ function META:ResetState()
 end
 
 function META:FindNearest(str--[[#: string]])--[[#: nil | number]]
-	local _, stop = self.Buffer:find(str, self.Position, true)
-	if not stop then return nil end
-	return stop + 1
+	return self.Code:FindNearest(str, self.Position)
 end
 
 function META:ReadChar()--[[#: number]]
@@ -78,12 +75,12 @@ function META:IsByte(what--[[#: number]], offset--[[#: number]])--[[#: boolean]]
 	return self:GetChar(offset) == what
 end
 
-function META:OnError(code--[[#: string]], name--[[#: string]], msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]]) 
+function META:OnError(code--[[#: Code]], msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]]) 
 end
 
 function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
 	if not self.OnError then return end
-	self:OnError(self.Buffer, self.name, msg, start or self.Position, stop or self.Position)
+	self:OnError(self.Code, msg, start or self.Position, stop or self.Position)
 end
 
 do
@@ -209,25 +206,11 @@ function META:GetTokens()
 	return tokens
 end
 
-local function remove_bom_header(str--[[#: string]])--[[#: string]]
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
-end
-
-function META.New(code--[[#: string]])
+function META.New(code--[[#: Code]])
 	local self = setmetatable({
-		Buffer = "",
-		name = "",
-		BufferLength = 0,
+		Code = code,
 		Position = 0,
 	}, META)
-	self.Buffer = remove_bom_header(code)
-	self.BufferLength = #self.Buffer
 	self:ResetState()
 	return self
 end

@@ -79,7 +79,7 @@ for _, path in ipairs(lua_files) do
 					dictionary[token.value] = (dictionary[token.value] or 0) + 1
 				end
 				if bad_names[token.value] then
-					print(helpers.FormatError(compiler.code, path, "non descriptive variable name", token.start, token.stop))
+					print(helpers.FormatError(compiler:GetCode(), "non descriptive variable name", token.start, token.stop))
 
 					if AUTOFIX and type(bad_names[token.value]) == "string" then
 						token.value = bad_names[token.value]

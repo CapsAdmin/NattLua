@@ -8,8 +8,13 @@ local helpers = require("nattlua.other.helpers")
 local debug = require("debug")
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
+local Code = require("nattlua.code.code")
 local META = {}
 META.__index = META
+
+function META:GetCode()
+	return self.Code
+end
 
 function META:__tostring()
 	local str = ""
@@ -18,12 +23,14 @@ function META:__tostring()
 		str = str .. "[" .. self.parent_name .. ":" .. self.parent_line .. "] "
 	end
 
-	local line = self.code:match("(.-)\n")
+	local lua_code = self.Code:GetString()
+
+	local line = lua_code:match("(.-)\n")
 
 	if line then
 		str = str .. line .. "..."
 	else
-		str = str .. self.code
+		str = str .. lua_code
 	end
 
 	return str
@@ -33,7 +40,7 @@ local repl = function()
 	return "\nbecause "
 end
 
-function META:OnDiagnostic(code, name, msg, severity, start, stop, ...)
+function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 	local level = 0
 	local t = 0
 	msg = msg:gsub(" because ", repl)
@@ -48,7 +55,6 @@ function META:OnDiagnostic(code, name, msg, severity, start, stop, ...)
 
 	local msg = helpers.FormatError(
 		code,
-		name,
 		msg,
 		start,
 		stop,
@@ -134,13 +140,12 @@ local traceback = function(self, obj, msg)
 end
 
 function META:Lex()
-	local lexer = self.Lexer(self.code)
+	local lexer = self.Lexer(self:GetCode())
 	lexer.name = self.name
 	self.lexer = lexer
-	lexer.OnError = function(lexer, code, name, msg, start, stop, ...)
+	lexer.OnError = function(lexer, code, msg, start, stop, ...)
 		self:OnDiagnostic(
 			code,
-			name,
 			msg,
 			"fatal",
 			start,
@@ -164,14 +169,11 @@ function META:Parse()
 		if not ok then return ok, err end
 	end
 
-	local parser = self.Parser(self.Tokens, self.config)
-	parser.code = self.code
-	parser.name = self.name
+	local parser = self.Parser(self.Tokens, self.Code, self.config)
 	self.parser = parser
-	parser.OnError = function(parser, code, name, msg, start, stop, ...)
+	parser.OnError = function(parser, code, msg, start, stop, ...)
 		self:OnDiagnostic(
 			code,
-			name,
 			msg,
 			"fatal",
 			start,
@@ -261,17 +263,16 @@ function META:Emit(cfg)
 	return emitter:BuildCode(self.SyntaxTree)
 end
 
-return function(code--[[#: string]], name--[[#: string]], config--[[#: {[any] = any}]], level--[[#: number | nil]])
+return function(lua_code--[[#: string]], name--[[#: string]], config--[[#: {[any] = any}]], level--[[#: number | nil]])
 	local info = debug.getinfo(level or 2)
 	local parent_line = info and info.currentline or "unknown line"
 	local parent_name = info and info.source:sub(2) or "unknown name"
 	name = name or (parent_name .. ":" .. parent_line)
 	return setmetatable(
 		{
-			code = code,
+			Code = Code(lua_code, name),
 			parent_line = parent_line,
 			parent_name = parent_name,
-			name = name,
 			config = config,
 			Lexer = require("nattlua.lexer.lexer"),
 			Parser = require("nattlua.parser.parser"),

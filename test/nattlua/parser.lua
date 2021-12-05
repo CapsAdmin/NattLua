@@ -192,34 +192,28 @@ test("operator precedence", function()
         return a
     end
 
-    local function check(tbl)
-        for i, val in ipairs(tbl) do
-            val[1].code = "a = " .. val[1].code
-            local ast = assert(val[1]:Parse()).SyntaxTree
+    local function check(compiler, expect)
+        -- turn the expression into a statement to make the code valid
+        compiler.Code.Buffer = "a = " .. compiler.Code.Buffer
 
-            local expr = ast:FindNodesByType("assignment")[1].right[1]
-            local res = dump_precedence(expr)
-            if val[2] and val[2].code ~= res then
-                io.write("EXPECT: " .. val[2].code, "\n")
-                io.write("GOT   : " .. res, "\n")
-            end
+        local ast = assert(compiler:Parse()).SyntaxTree
+        local expr = ast:FindNodesByType("assignment")[1].right[1]
+        local res = dump_precedence(expr)
+        if expect ~= res then
+            io.write("EXPECT: " .. expect, "\n")
+            io.write("GOT   : " .. res, "\n")
         end
     end
 
-
-    local C = nl.Compiler
-
-    check {
-        {C'-2 ^ 2', C'^(-(2), 2)'},
-        {C'pcall(require, "ffi")', C'call(pcall, require, "ffi")'},
-        {C"1 / #a", C"/(1, #(a))"},
-        {C"jit.status and jit.status()", C"and(.(jit, status), call(.(jit, status)))"},
-        {C"a.b.c.d.e.f()", C"call(.(.(.(.(.(a, b), c), d), e), f))"},
-        {C"(foo.bar())", C"call(.(foo, bar))"},
-        {C[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], C[[+(+(^(-(1), 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), ""))))]]},
-        {C[[#{} - 2]], C[[-(#({}), 2)]]},
-        {C[[a or true and false or 4 or 5 and 5]], C[[or(or(or(a, and(true, false)), 4), and(5, 5))]]},
-    }
+    check(nl.Compiler'-2 ^ 2', '^(-(2), 2)')
+    check(nl.Compiler'pcall(require, "ffi")', 'call(pcall, require, "ffi")')
+    check(nl.Compiler"1 / #a", "/(1, #(a))")
+    check(nl.Compiler"jit.status and jit.status()", "and(.(jit, status), call(.(jit, status)))")
+    check(nl.Compiler"a.b.c.d.e.f()", "call(.(.(.(.(.(a, b), c), d), e), f))")
+    check(nl.Compiler"(foo.bar())", "call(.(foo, bar))")
+    check(nl.Compiler[[-1^21+2+a(1,2,3)()[1]""++ ÆØÅ]], [[+(+(^(-(1), 21), 2), ÆØÅ(++(call(expression_index(call(call(a, 1, 2, 3)), 1), ""))))]])
+    check(nl.Compiler[[#{} - 2]], [[-(#({}), 2)]])
+    check(nl.Compiler[[a or true and false or 4 or 5 and 5]], [[or(or(or(a, and(true, false)), 4), and(5, 5))]])
 end)
 
 test("parser errors", function()

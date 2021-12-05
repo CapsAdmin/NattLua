@@ -16,40 +16,41 @@ local function run_nattlua(path)
 
    
     local c = assert(nl.File(path, {annotate = true}))
+    local lua_code = c:GetCode():GetString()
     
     local preserve_whitespace = nil
-    if c.code:find("%-%-%s-PRETTY_PRINT") then
+    if lua_code:find("%-%-%s-PRETTY_PRINT") then
         preserve_whitespace = false
     end
 
-    if c.code:find("%-%-%s-EVENT_DUMP") then
+    if lua_code:find("%-%-%s-EVENT_DUMP") then
         c:EnableEventDump(true)
     end
 
-    if c.code:find("%-%-%s-VERBOSE_STACKTRACE") then
+    if lua_code:find("%-%-%s-VERBOSE_STACKTRACE") then
         c.debug = true
     end
 
-    if c.code:find("%-%-%s-DISABLE_BASE_ENV") then
+    if lua_code:find("%-%-%s-DISABLE_BASE_ENV") then
         _G.DISABLE_BASE_ENV = true
     end
 
-    if c.code:find("%-%-%s-PROFILE") then
+    if lua_code:find("%-%-%s-PROFILE") then
         require("jit.p").start("Flp")
     end
 
     local ok, err
     
-    if not c.code:find("%-%-%s-DISABLE_ANALYSIS") then
+    if not lua_code:find("%-%-%s-DISABLE_ANALYSIS") then
         ok, err = c:Analyze()
     end
 
 
-    if c.code:find("--DISABLE_BASE_ENV", nil, true) then
+    if lua_code:find("--DISABLE_BASE_ENV", nil, true) then
         _G.DISABLE_BASE_ENV = nil
     end
 
-    if c.code:find("%-%-%s-PROFILE") then
+    if lua_code:find("%-%-%s-PROFILE") then
         require("jit.p").stop()
     end
 
@@ -71,9 +72,9 @@ local function run_nattlua(path)
         }
     }))
     require("nattlua.runtime.base_runtime")
-    if c.code:find("%-%-%s-ENABLE_CODE_RESULT") then
+    if lua_code:find("%-%-%s-ENABLE_CODE_RESULT") then
         io.write("== code result ==\n")
-        if c.code:find("%-%-%s-SHOW_NEWLINES") then
+        if lua_code:find("%-%-%s-SHOW_NEWLINES") then
             res = res:gsub("\n", "⏎\n")
         end
         io.write(res, "\n")

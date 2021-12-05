@@ -1,4 +1,5 @@
 --[[#local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")]]
+--[[#import_type("nattlua/code/code.lua")]]
 
 --[[#local type NodeType = "expression" | "statement"]]
 --[[#local type Node = any]]
@@ -16,8 +17,7 @@ META.syntax = syntax
 --[[#type META.@Self = {
 		config = any,
 		nodes = {[number] = any} | {},
-		name = string,
-		code = string,
+		Code = Code,
 		current_statement = false | any,
 		current_expression = false | any,
 		root = false | any,
@@ -34,8 +34,7 @@ do
 			type = TokenType,
 			kind = string,
 			id = number,
-			code = string,
-			name = string,
+			Code = Code,
 			parser = PARSER.@Self,
 			statements = {[number] = self} | {},
 			tokens = {[string] = Token},
@@ -46,16 +45,25 @@ do
 		if self.type == "statement" then
 			local str = "[" .. self.type .. " - " .. self.kind .. "]"
 
-			if self.code and self.name and self.name:sub(1, 1) == "@" then
-				local helpers = require("nattlua.other.helpers")
-				local data = helpers.SubPositionToLinePosition(self.code, helpers.LazyFindStartStop(self))
 
-				if data and data.line_start then
-					str = str .. " @ " .. self.name:sub(2) .. ":" .. data.line_start
-				else
-					str = str .. " @ " .. self.name:sub(2) .. ":" .. "?"
+			local ok = false
+			if self.Code then
+				local lua_code = self.Code:GetString()
+				local name = self.Code:GetName()
+				if name:sub(1, 1) == "@" then
+					ok = true
+					local helpers = require("nattlua.other.helpers")
+					local data = helpers.SubPositionToLinePosition(lua_code, helpers.LazyFindStartStop(self))
+
+					if data and data.line_start then
+						str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
+					else
+						str = str .. " @ " .. name:sub(2) .. ":" .. "?"
+					end
 				end
-			else
+			end
+
+			if not ok then
 				str = str .. " " .. ("%s"):format(self.id)
 			end
 
@@ -220,8 +228,7 @@ do
 				kind = kind,
 				tokens = {},
 				id = id,
-				code = self.code,
-				name = self.name,
+				Code = self.Code,
 				parser = self,
 			},
 			META
@@ -276,8 +283,7 @@ function META:Error(msg--[[#: string]], start_token--[[#: Token | nil]], stop_to
 		(tk)--[[# as Token]].stop or
 		0
 	self:OnError(
-		self.code,
-		self.name,
+		self.Code,
 		msg,
 		start,
 		stop,
@@ -492,13 +498,12 @@ end
 	end
 end
 
-return function(tokens--[[#: {[1 .. inf] = Token}]], config--[[#: any]])
+return function(tokens--[[#: {[1 .. inf] = Token}]], code --[[#: Code]], config--[[#: any]])
 	return setmetatable(
 		{
 			config = config,
+			Code = code,
 			nodes = {},
-			name = "",
-			code = "",
 			current_statement = false,
 			current_expression = false,
 			root = false,

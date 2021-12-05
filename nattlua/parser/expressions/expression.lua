@@ -248,7 +248,8 @@ do
 				if token.value:find("\n", nil, true) then break end
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
-					local tokens = require("nattlua.lexer.lexer")("/idiv" .. token.value:sub(2)):GetTokens()
+					local Code = require("nattlua.code.code")
+					local tokens = require("nattlua.lexer.lexer")(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
 
 					for _, token in ipairs(tokens) do
 						check_integer_division_operator(parser, token)

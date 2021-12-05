@@ -2,7 +2,6 @@ local nl = require("nattlua")
 local types = require("nattlua.types.types")
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 types.Initialize()
-local C = nl.Compiler
 
 local function cast(...)
     local ret = {}
@@ -51,11 +50,11 @@ local function run(code, expect_error)
     else
         if not ok then
             _G.TEST = true
-            compiler = C(compiler.code)
+            compiler = nl.Compiler(compiler:GetCode():GetString())
             compiler:EnableEventDump(true)
             local ok, err2 = compiler:Analyze()
             _G.TEST = false
-            io.write(compiler.code, "\n")
+            io.write(compiler:GetCode():GetString(), "\n")
             error(err, 3)
         end
     end

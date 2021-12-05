@@ -391,7 +391,7 @@ test("forward declare types", function()
     ]]
 end)
 
-R([[type_error("hey over here")]], "analyzer function type_error")
+R([[type_error("hey over here")]], "hey over here")
 
 R([[
 local a    

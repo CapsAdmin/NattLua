@@ -133,7 +133,7 @@ for _, info in ipairs(files) do
 		return path
 	end
 
-	compiler.code = [[
+	compiler.Code.Buffer = [[
 		]]..(function() 
 			local s = ""
 
@@ -146,7 +146,7 @@ for _, info in ipairs(files) do
 
 		import_type("nattlua/glua.nlua")
 
-	]] .. compiler.code
+	]] .. compiler.Code.Buffer
 
 	assert(compiler:Analyze())
 end

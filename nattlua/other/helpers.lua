@@ -166,12 +166,14 @@ do
 		return math.min(math.max(num, min), max)
 	end
 
-	function helpers.FormatError(code--[[#: string]], path--[[#: string]], msg--[[#: string]], start--[[#: number]], stop--[[#: number]], size--[[#: number]], ...)
+	function helpers.FormatError(code--[[#: Code]], msg--[[#: string]], start--[[#: number]], stop--[[#: number]], size--[[#: number]], ...)
+		local lua_code = code:GetString()
+		local path = code:GetName()
 		size = size or 2
 		msg = helpers.FormatMessage(msg, ...)
-		start = clamp(start, 1, #code)
-		stop = clamp(stop, 1, #code)
-		local data = helpers.SubPositionToLinePosition(code, start, stop)
+		start = clamp(start, 1, #lua_code)
+		stop = clamp(stop, 1, #lua_code)
+		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
 
 		if not data then
 			local str = ""
@@ -188,8 +190,8 @@ do
 		end
 
 		local line_start, line_stop = data.line_start, data.line_stop
-		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(code, start, size)
-		local post_start_pos, post_stop_pos, lines_after = get_lines_after(code, stop, size)
+		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(lua_code, start, size)
+		local post_start_pos, post_stop_pos, lines_after = get_lines_after(lua_code, stop, size)
 		local spacing = #tostring(data.line_stop + lines_after)
 		local lines = {}
 
@@ -197,7 +199,7 @@ do
 			if lines_before >= 0 then
 				local line = math.max(line_start - lines_before - 1, 1)
 
-				for str in (code:sub(pre_start_pos, pre_stop_pos)):gmatch("(.-)\n") do
+				for str in (lua_code:sub(pre_start_pos, pre_stop_pos)):gmatch("(.-)\n") do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 					table.insert(lines, prefix .. str)
 					line = line + 1
@@ -207,17 +209,17 @@ do
 			do
 				local line = line_start
 
-				for str in (code:sub(start, stop) .. "\n"):gmatch("(.-)\n") do
+				for str in (lua_code:sub(start, stop) .. "\n"):gmatch("(.-)\n") do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 
 					if line == line_start then
-						prefix = prefix .. code:sub(table.unpack(data.sub_line_before))
+						prefix = prefix .. lua_code:sub(table.unpack(data.sub_line_before))
 					end
 
 					local test = str
 
 					if line == line_stop then
-						str = str .. code:sub(table.unpack(data.sub_line_after))
+						str = str .. lua_code:sub(table.unpack(data.sub_line_after))
 					end
 
 					str = str .. "\n" .. (" "):rep(#prefix) .. ("^"):rep(math.max(#test, 1))
@@ -229,7 +231,7 @@ do
 			if lines_after > 0 then
 				local line = line_stop + 1
 
-				for str in (code:sub(post_start_pos, post_stop_pos) .. "\n"):gmatch("(.-)\n") do
+				for str in (lua_code:sub(post_start_pos, post_stop_pos) .. "\n"):gmatch("(.-)\n") do
 					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
 					table.insert(lines, prefix .. str)
 					line = line + 1

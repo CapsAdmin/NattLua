@@ -80,8 +80,7 @@ return function(META)
 
 		if self.OnDiagnostic then
 			self:OnDiagnostic(
-				node.code,
-				node.name,
+				node.Code,
 				msg_str,
 				severity,
 				start,

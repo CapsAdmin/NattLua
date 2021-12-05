@@ -173,9 +173,10 @@ return function(META)
 			code = locals .. code
 
             -- append newlines so that potential line errors are correct
-            if node.code then
+			local lua_code = node.Code:GetString()
+            if lua_code then
 				local start, stop = helpers.LazyFindStartStop(node)
-				local line = helpers.SubPositionToLinePosition(node.code, start, stop).line_start
+				local line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
 				code = ("\n"):rep(line - 1) .. code
 			end
 
@@ -283,14 +284,13 @@ return function(META)
 
 					if start and stop then
 						local part = helpers.FormatError(
-							self.compiler.code,
-							self.compiler.name,
+							self.compiler:GetCode(),
 							"",
 							start,
 							stop,
 							1
 						)
-						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler.name
+						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler:GetCode():GetName()
 					end
 				end
 			end
