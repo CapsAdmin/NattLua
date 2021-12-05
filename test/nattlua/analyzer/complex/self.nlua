@@ -1,6 +1,6 @@
 do
     local syntax = require("nattlua.syntax.syntax")
-    types.assert(#syntax.GetSymbols(), 44)
+    types.assert(#syntax.GetSymbols(), 42)
 end
 
 do

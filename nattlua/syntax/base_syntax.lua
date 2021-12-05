@@ -54,8 +54,10 @@ return function(syntax--[[#: literal mutable (
 			table.insert(symbols, str)
 		end
 
+		syntax.Symbols = symbols
+
 		function syntax.GetSymbols()
-			return symbols
+			return syntax.Symbols
 		end
 	end
 
@@ -208,14 +210,32 @@ return function(syntax--[[#: literal mutable (
 			end
 		end
 
-		do
-			local BuildReadFunction = require("nattlua.lexer.build_read_function").BuildReadFunction
-			syntax.ReadNumberAnnotation = BuildReadFunction(syntax.NumberAnnotations, true)
+		local function remove_duplicates_from_array(tbl--[[#: literal {[number] = string}]])
+			local lookup = {}
+
+			for _, v in ipairs(tbl) do
+				lookup[v] = true
+			end
+
+			local result = {}
+
+			for k, _ in pairs(lookup) do
+				table.insert(result, k)
+			end
+
+			return result
 		end
 
-		do
-			local BuildReadFunction = require("nattlua.lexer.build_read_function").BuildReadFunction
-			syntax.ReadSymbol = BuildReadFunction(syntax.GetSymbols(), false)
-		end
+		syntax.NumberAnnotations = remove_duplicates_from_array(syntax.NumberAnnotations)
+		syntax.Symbols = remove_duplicates_from_array(syntax.Symbols)
+
+		table.sort(syntax.NumberAnnotations, function(a, b)
+			return #a > #b
+		end)
+
+		table.sort(syntax.Symbols, function(a, b)
+			return #a > #b
+		end)
+
 	end
 end

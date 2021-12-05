@@ -40,7 +40,7 @@ end
 local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
 local function ReadHexNumber(lexer--[[#: Lexer]])
-	if not lexer:IsString("0") or (not lexer:IsString("x", 1) and not lexer:IsString("X", 1)) then
+	if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then
 		return false
 	end
 
@@ -71,13 +71,13 @@ local function ReadHexNumber(lexer--[[#: Lexer]])
 				break
 			end
 
-			if lexer:IsString("p") or lexer:IsString("P") then
+			if lexer:IsStringLower("p") then
 				if ReadNumberPowExponent(lexer, "pow") then
 					break
 				end
 			end
 
-			if  syntax.ReadNumberAnnotation(lexer) then break end
+			if lexer:ReadFirstFromArray(syntax.NumberAnnotations) then break end
 
 			lexer:Error(
 				"malformed hex number, got " .. string.char(lexer:GetByte()),
@@ -93,7 +93,7 @@ local function ReadHexNumber(lexer--[[#: Lexer]])
 end
 
 local function ReadBinaryNumber(lexer--[[#: Lexer]])
-	if not lexer:IsString("0") or (not lexer:IsString("b", 1) and not lexer:IsString("B", 1)) then
+	if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then
 		return false
 	end
 
@@ -112,13 +112,13 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 				break
 			end
 
-			if lexer:IsString("e") or lexer:IsString("E") then
+			if lexer:IsStringLower("e") then
 				if ReadNumberPowExponent(lexer, "exponent") then
 					break
 				end
 			end
 
-			if  syntax.ReadNumberAnnotation(lexer) then break end
+			if lexer:ReadFirstFromArray(syntax.NumberAnnotations) then break end
 			
 			lexer:Error(
 				"malformed binary number, got " .. string.char(lexer:GetByte()),
@@ -174,7 +174,7 @@ local function ReadDecimalNumber(lexer--[[#: Lexer]])
 				end
 			end
 			
-			if  syntax.ReadNumberAnnotation(lexer) then break end
+			if lexer:ReadFirstFromArray(syntax.NumberAnnotations) then break end
 
 			lexer:Error(
 				"malformed number, got " .. string.char(lexer:GetByte()) .. " in decimal notation",

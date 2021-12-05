@@ -72,6 +72,11 @@ function META:IsString(str--[[#: string]], offset--[[#: number | nil]])--[[#: bo
 	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1) == str
 end
 
+function META:IsStringLower(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
+	offset = offset or 0
+	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1):lower() == str
+end
+
 function META:IsCurrentValue(what--[[#: string]])--[[#: boolean]]
 	return self:IsCurrentByte((B(what)))
 end
@@ -168,6 +173,17 @@ end
 function META:ReadToken()
 	local a, b, c, d = self:ReadSimple() -- TODO: unpack not working
 	return self:NewToken(a, b, c, d)
+end
+
+function META:ReadFirstFromArray(strings--[[#: {[number] = string}]]) --[[#: boolean]]
+	for _, str in ipairs(strings) do
+		if self:IsStringLower(str) then
+			self:Advance(#str)
+			return true
+		end
+	end
+
+	return false
 end
 
 function META:GetTokens()
