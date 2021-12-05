@@ -666,7 +666,7 @@ end
 			return ReadTypeExpression(parser, priority)
 		end
 		
-		local function read_parenthesis(parser)
+		local function ReadParenthesisExpression(parser)
 			if not parser:IsValue("(") then return end
 			local pleft = parser:ExpectValue("(")
 			local node = ReadTypeExpression(parser, 0)
@@ -697,7 +697,7 @@ end
 			return node:End()
 		end
 		
-		local function read_prefix_operator(parser)
+		local function ReadPrefixOperatorExpression(parser)
 			if not typesystem_syntax:IsPrefixOperator(parser:GetToken()) then return end
 			local node = parser:Node("expression", "prefix_operator")
 			node.value = parser:ReadToken()
@@ -706,7 +706,7 @@ end
 			return node:End()
 		end
 		
-		local function read_value(parser)
+		local function ReadValueExpression(parser)
 			if not (parser:IsValue("...") and parser:IsType("letter", 1)) then return end
 			local node = parser:Node("expression", "value")
 			node.value = parser:ExpectValue("...")
@@ -729,7 +729,7 @@ end
 			return ExpectTypeExpression(parser)
 		end
 		
-		local function read_function_signature(parser)
+		local function ReadFunctionSignatureExpression(parser)
 			if not (parser:IsValue("function") and parser:IsValue("=", 1)) then return end
 		
 			local node = parser:Node("expression", "function_signature")
@@ -750,7 +750,7 @@ end
 			return node
 		end
 		
-		local function read_type_function(parser)
+		local function ReadTypeFunctionExpression(parser)
 			if not (parser:IsValue("function") and parser:IsValue("<|", 1)) then return end
 			local node = parser:Node("expression", "type_function")
 			node.stmnt = false
@@ -759,7 +759,7 @@ end
 		end
 		
 		
-		local function read_analyzer_function(parser)
+		local function ReadAnalyzerFunctionExpression(parser)
 			if not (parser:IsValue("analyzer") and parser:IsValue("function", 1)) then return end
 			local node = parser:Node("expression", "analyzer_function")
 			node.stmnt = false
@@ -768,7 +768,7 @@ end
 			return ReadAnalyzerFunctionBody(parser, node):End()
 		end
 		
-		local function read_keyword_value(parser)
+		local function ReadKeywordValueExpression(parser)
 			if not typesystem_syntax:IsValue(parser:GetToken()) then return end
 			local node = parser:Node("expression", "value")
 			node.value = parser:ReadToken()
@@ -793,7 +793,7 @@ end
 			return node:End()
 		end
 		
-		local function read_type_table(parser)
+		local function ReadTypeTableExpression(parser)
 			if not parser:IsValue("{") then return end
 			local tree = parser:Node("expression", "type_table")
 			tree:ExpectKeyword("{")
@@ -832,7 +832,7 @@ end
 			return tree:End()
 		end
 		
-		local function read_string(parser)
+		local function ReadStringExpression(parser)
 			if not (parser:IsType("$") and parser:IsType("string", 1)) then return end
 			local node = parser:Node("expression", "type_string")
 			node.tokens["$"] = parser:ReadToken("...")
@@ -840,7 +840,7 @@ end
 			return node
 		end
 		
-		local function read_empty_union(parser)
+		local function ReadEmptyUnionExpression(parser)
 			if not parser:IsValue("|") then return end
 			local node = parser:Node("expression", "empty_union")
 			node.tokens["|"] = parser:ReadToken("|")
@@ -857,13 +857,13 @@ end
 				(parser:IsValue("!", offset) and parser:IsValue("(", offset + 1))
 		end
 	
-		local function read_as_expression(parser, node)
+		local function ReadAsSubExpression(parser, node)
 			if not parser:IsValue("as") then return end
 			node.tokens["as"] = parser:ExpectValue("as")
 			node.type_expression = ReadTypeExpression(parser)
 		end
 	
-		local function read_index(parser)
+		local function ReadIndexSubExpression(parser)
 			if not (parser:IsValue(".") and parser:IsType("letter", 1)) then return end
 			local node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
@@ -871,7 +871,7 @@ end
 			return node:End()
 		end
 	
-		local function read_self_call(parser)
+		local function ReadSelfCallSubExpression(parser)
 			if not (parser:IsValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
 			local node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
@@ -879,18 +879,18 @@ end
 			return node:End()
 		end
 	
-		local function read_postfix_operator(parser)
+		local function ReadPostfixOperatorSubExpression(parser)
 			if not typesystem_syntax:IsPostfixOperator(parser:GetToken()) then return end
 			return
 				parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
 		end
 	
-		local function read_call(parser)
+		local function ReadCallSubExpression(parser)
 			if not is_call_expression(parser, 0) then return end
 			local node = parser:Node("expression", "postfix_call")
 	
 			if parser:IsValue("{") then
-				node.expressions = {read_type_table(parser)}
+				node.expressions = {ReadTypeTableExpression(parser)}
 			elseif parser:IsType("string") then
 				node.expressions = {
 						parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
@@ -909,22 +909,22 @@ end
 			return node:End()
 		end
 	
-		local function read_postfix_index_expression(parser)
+		local function ReadPostfixIndexExpressionSubExpression(parser)
 			if not parser:IsValue("[") then return end
 			local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
 			node.expression = ExpectTypeExpression(parser)
 			return node:ExpectKeyword("]"):End()
 		end
 	
-		local function read_sub_expression(parser, node)
+		local function ReadSubExpression(parser, node)
 			for _ = 1, parser:GetLength() do
 				local left_node = node
-				local found = read_index(parser) or
-					read_self_call(parser) or
-					read_postfix_operator(parser) or
-					read_call(parser) or
-					read_postfix_index_expression(parser) or
-					read_as_expression(parser, left_node)
+				local found = ReadIndexSubExpression(parser) or
+					ReadSelfCallSubExpression(parser) or
+					ReadPostfixOperatorSubExpression(parser) or
+					ReadCallSubExpression(parser) or
+					ReadPostfixIndexExpressionSubExpression(parser) or
+					ReadAsSubExpression(parser, left_node)
 				if not found then break end
 				found.left = left_node
 	
@@ -948,21 +948,21 @@ end
 				parser:Advance(1)
 			end
 		
-			node = read_parenthesis(parser) or
-				read_empty_union(parser) or
-				read_prefix_operator(parser) or
-				read_analyzer_function(parser) or
-				read_function_signature(parser) or
-				read_type_function(parser) or
+			node = ReadParenthesisExpression(parser) or
+				ReadEmptyUnionExpression(parser) or
+				ReadPrefixOperatorExpression(parser) or
+				ReadAnalyzerFunctionExpression(parser) or
+				ReadFunctionSignatureExpression(parser) or
+				ReadTypeFunctionExpression(parser) or
 				ReadFunctionExpression(parser) or
-				read_value(parser) or
-				read_keyword_value(parser) or
-				read_type_table(parser) or
-				read_string(parser)
+				ReadValueExpression(parser) or
+				ReadKeywordValueExpression(parser) or
+				ReadTypeTableExpression(parser) or
+				ReadStringExpression(parser)
 			local first = node
 		
 			if node then
-				node = read_sub_expression(parser, node)
+				node = ReadSubExpression(parser, node)
 		
 				if
 					first.kind == "value" and
@@ -1028,7 +1028,7 @@ end
 			return node:End()
 		end
 		
-		local function ReadTable(parser)
+		local function ReadTableExpression(parser)
 			if not parser:IsValue("{") then return end
 			local tree = parser:Node("expression", "table")
 			tree:ExpectKeyword("{")
@@ -1087,7 +1087,7 @@ end
 			local node = parser:Node("expression", "postfix_call")
 
 			if parser:IsValue("{") then
-				node.expressions = {ReadTable(parser)}
+				node.expressions = {ReadTableExpression(parser)}
 			elseif parser:IsType("string") then
 				node.expressions = {
 						parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
@@ -1112,7 +1112,7 @@ end
 			return node:End()
 		end
 
-		local function read_index(parser)
+		local function ReadIndexSubExpression(parser)
 			if not (parser:IsValue(".") and parser:IsType("letter", 1)) then return end
 			local node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
@@ -1120,7 +1120,7 @@ end
 			return node:End()
 		end
 
-		local function read_self_call(parser)
+		local function ReadSelfCallSubExpression(parser)
 			if not (parser:IsValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
 			local node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
@@ -1128,18 +1128,18 @@ end
 			return node:End()
 		end
 
-		local function read_postfix_operator(parser)
+		local function ReadPostfixOperatorSubExpression(parser)
 			if not runtime_syntax:IsPostfixOperator(parser:GetToken()) then return end
 			return
 				parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
 		end
 
-		local function read_call(parser)
+		local function ReadCallSubExpression(parser)
 			if not is_call_expression(parser, 0) then return end
 			return read_call_expression(parser)
 		end
 
-		local function read_postfix_index_expression(parser)
+		local function ReadPostfixIndexExpressionSubExpression(parser)
 			if not parser:IsValue("[") then return end
 			local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
 			node.expression = ExpectRuntimeExpression(parser)
@@ -1159,16 +1159,16 @@ end
 			end
 		end
 
-		local function read_sub_expression(parser, node)
+		local function ReadSubExpression(parser, node)
 			for _ = 1, parser:GetLength() do
 				local left_node = node
 				read_and_add_explicit_type(parser, node)
 				
-				local found = read_index(parser) or
-					read_self_call(parser) or
-					read_call(parser) or
-					read_postfix_operator(parser) or
-					read_postfix_index_expression(parser)
+				local found = ReadIndexSubExpression(parser) or
+					ReadSelfCallSubExpression(parser) or
+					ReadCallSubExpression(parser) or
+					ReadPostfixOperatorSubExpression(parser) or
+					ReadPostfixIndexExpressionSubExpression(parser)
 					
 				if not found then break end
 				found.left = left_node
@@ -1183,7 +1183,7 @@ end
 			return node
 		end
 
-		local function prefix_operator(parser)
+		local function ReadPrefixOperatorExpression(parser)
 			if not runtime_syntax:IsPrefixOperator(parser:GetToken()) then return end
 			local node = parser:Node("expression", "prefix_operator")
 			node.value = parser:ReadToken()
@@ -1192,7 +1192,7 @@ end
 			return node:End()
 		end
 
-		local function parenthesis(parser)
+		local function ReadParenthesisExpression(parser)
 			if not parser:IsValue("(") then return end
 			local pleft = parser:ExpectValue("(")
 			local node = ReadRuntimeExpression(parser, 0)
@@ -1209,7 +1209,7 @@ end
 			return node
 		end
 
-		local function value(parser)
+		local function ReadValueExpression(parser)
 			if not runtime_syntax:IsValue(parser:GetToken()) then return end
 			return parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
 		end
@@ -1305,17 +1305,17 @@ end
 			end
 
 			priority = priority or 0
-			local node = parenthesis(parser) or
-				prefix_operator(parser) or
+			local node = ReadParenthesisExpression(parser) or
+				ReadPrefixOperatorExpression(parser) or
 				ReadAnalyzerFunctionExpression(parser) or
 				ReadFunctionExpression(parser) or
 				ReadImportExpression(parser) or
-				value(parser) or
-				ReadTable(parser)
+				ReadValueExpression(parser) or
+				ReadTableExpression(parser)
 			local first = node
 
 			if node then
-				node = read_sub_expression(parser, node)
+				node = ReadSubExpression(parser, node)
 
 				if
 					first.kind == "value" and
