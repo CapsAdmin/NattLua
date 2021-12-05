@@ -1,16 +1,16 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
-local syntax = require("nattlua.syntax.syntax")
+local characters = require("nattlua.syntax.characters")
 return
 	{
 		ReadLetter = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-			if not syntax.IsLetter(lexer:GetCurrentByteChar()) then
+			if not characters.IsLetter(lexer:GetCurrentByteChar()) then
 				return false
 			end
 			
 			while not lexer:TheEnd() do
 				lexer:Advance(1)
-				if not syntax.IsDuringLetter(lexer:GetCurrentByteChar()) then break end
+				if not characters.IsDuringLetter(lexer:GetCurrentByteChar()) then break end
 			end
 
 			return "letter"

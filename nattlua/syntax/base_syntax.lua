@@ -16,49 +16,6 @@ return function(syntax--[[#: literal mutable (
 		[string] = any,
 	}
 )]])
-	do
-		local B = string.byte
-
-		function syntax.IsLetter(c--[[#: number]])--[[#: boolean]]
-			if not c then return false end
-			return
-				(c >= B("a") and c <= B("z")) or
-				(c >= B("A") and c <= B("Z")) or
-				(c == B("_") or c == B("@") or c >= 127)
-		end
-
-		function syntax.IsDuringLetter(c--[[#: number]])--[[#: boolean]]
-			if not c then return false end
-			return
-				(c >= B("a") and c <= B("z")) or
-				(c >= B("0") and c <= B("9")) or
-				(c >= B("A") and c <= B("Z")) or
-				(c == B("_") or c == B("@") or c >= 127)
-		end
-
-		function syntax.IsNumber(c--[[#: number]])--[[#: boolean]]
-			if not c then return false end
-			return (c >= B("0") and c <= B("9"))
-		end
-
-		function syntax.IsSpace(c--[[#: number]])--[[#: boolean]]
-			if not c then return false end
-			return c > 0 and c <= 32
-		end
-
-		function syntax.IsSymbol(c--[[#: number]])--[[#: boolean]]
-			if not c then return false end
-			return
-				c ~= B("_") and
-				(
-					(c >= B("!") and c <= B("/")) or
-					(c >= B(":") and c <= B("?")) or
-					(c >= B("[") and c <= B("`")) or
-					(c >= B("{") and c <= B("~"))
-				)
-		end
-	end
-
 	local symbols = {}
 
 	local function add_symbols(tbl--[[#: literal {[number] = string}]])

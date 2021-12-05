@@ -1,6 +1,7 @@
 --[[#local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
 
 local string = require("string")
+local characters = require("nattlua.syntax.characters")
 local syntax = require("nattlua.syntax.syntax")
 
 local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
@@ -9,7 +10,7 @@ local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	if lexer:IsCurrentValue("+") or lexer:IsCurrentValue("-") then
 		lexer:Advance(1)
 
-		if not syntax.IsNumber(lexer:GetCurrentByteChar()) then
+		if not characters.IsNumber(lexer:GetCurrentByteChar()) then
 			lexer:Error(
 				"malformed " .. what .. " expected number, got " .. string.char(lexer:GetCurrentByteChar()),
 				lexer:GetPosition() - 2
@@ -19,7 +20,7 @@ local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	end
 
 	while not lexer:TheEnd() do
-		if not syntax.IsNumber(lexer:GetCurrentByteChar()) then break end
+		if not characters.IsNumber(lexer:GetCurrentByteChar()) then break end
 		lexer:Advance(1)
 	end
 
@@ -66,7 +67,7 @@ local function ReadHexNumber(lexer--[[#: Lexer]])
 		if allowed_hex[lexer:GetByte()] then
 			lexer:Advance(1)
 		else
-			if syntax.IsSpace(lexer:GetByte()) or syntax.IsSymbol(lexer:GetByte()) then
+			if characters.IsSpace(lexer:GetByte()) or characters.IsSymbol(lexer:GetByte()) then
 				break
 			end
 
@@ -107,7 +108,7 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 		if lexer:IsString("1") or lexer:IsString("0") then
 			lexer:Advance(1)
 		else
-			if syntax.IsSpace(lexer:GetCurrentByteChar()) or syntax.IsSymbol(lexer:GetCurrentByteChar()) then
+			if characters.IsSpace(lexer:GetCurrentByteChar()) or characters.IsSymbol(lexer:GetCurrentByteChar()) then
 				break
 			end
 
@@ -132,7 +133,7 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 end
 
 local function ReadDecimalNumber(lexer--[[#: Lexer]])
-	if not syntax.IsNumber(lexer:GetCurrentByteChar()) and (not lexer:IsCurrentValue(".") or not syntax.IsNumber(lexer:GetChar(1))) then 
+	if not characters.IsNumber(lexer:GetCurrentByteChar()) and (not lexer:IsCurrentValue(".") or not characters.IsNumber(lexer:GetChar(1))) then 
 		return false
 	end
 
@@ -160,10 +161,10 @@ local function ReadDecimalNumber(lexer--[[#: Lexer]])
 			lexer:Advance(1)
 		end
 
-		if syntax.IsNumber(lexer:GetByte()) then
+		if characters.IsNumber(lexer:GetByte()) then
 			lexer:Advance(1)
         else
-			if syntax.IsSpace(lexer:GetByte()) or syntax.IsSymbol(lexer:GetByte()) then
+			if characters.IsSpace(lexer:GetByte()) or characters.IsSymbol(lexer:GetByte()) then
 				break
 			end
 

@@ -1,4 +1,5 @@
 local syntax = require("nattlua.syntax.syntax")
+local characters = require("nattlua.syntax.characters")
 local tostring = _G.tostring
 local error = _G.error
 local pairs = _G.pairs
@@ -15,7 +16,7 @@ require("nattlua.transpiler.base_emitter")(META)
 function META:OptionalWhitespace()
 	if self.config.preserve_whitespace == nil then return end
 
-	if syntax.IsLetter(self:GetPrevChar()) or syntax.IsNumber(self:GetPrevChar()) then
+	if characters.IsLetter(self:GetPrevChar()) or characters.IsNumber(self:GetPrevChar()) then
 		self:EmitSpace(" ")
 	end
 end
