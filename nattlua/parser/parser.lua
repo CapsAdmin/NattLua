@@ -435,20 +435,20 @@ function META:ResolvePath(path)
 end
 
 --[[# if false then --]]do -- statements
-	local ExpectTypeExpression
-	local ReadTypeExpression
-
-	local ReadRuntimeExpression
-	local ExpectRuntimeExpression
-
+local runtime_syntax = require("nattlua.syntax.runtime")
 	local typesystem_syntax = require("nattlua.syntax.typesystem")
-	local runtime_syntax = require("nattlua.syntax.runtime")
-	local math_huge = math.huge
 
 	local math = require("math")
+	local math_huge = math.huge
 	local table_insert = require("table").insert
 	local table_remove = require("table").remove
 	local ipairs = _G.ipairs
+
+	local ExpectTypeExpression
+	local ReadTypeExpression
+	
+	local ReadRuntimeExpression
+	local ExpectRuntimeExpression
 
 	local function ReadMultipleValues(parser, max, reader, a, b, c)
 		if not reader then print(debug.traceback()) end
@@ -483,20 +483,6 @@ end
 		return node:End()
 	end
 
-	local function IsDestructureStatement(parser, offset)
-		offset = offset or 0
-		return
-			(parser:IsValue("{", offset + 0) and parser:IsType("letter", offset + 1)) or
-			(parser:IsType("letter", offset + 0) and parser:IsValue(",", offset + 1) and parser:IsValue("{", offset + 2))
-	end
-
-	local function IsLocalDestructureAssignmentStatement(parser)
-		if parser:IsValue("local") then
-			if parser:IsValue("type", 1) then return IsDestructureStatement(parser, 2) end
-			return IsDestructureStatement(parser, 1)
-		end
-	end
-
 	local function ReadFunctionBody(parser, node)
 		node:ExpectAliasedKeyword("(", "arguments(")
 		node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
@@ -509,26 +495,6 @@ end
 
 		node:ExpectNodesUntil("end")
 		node:ExpectKeyword("end", "function")
-		return node
-	end
-
-	local function ReadIndexExpression(parser)
-		if not runtime_syntax:IsValue(parser:GetToken()) then return end
-		local node = parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
-		local first = node
-
-		while parser:IsValue(".") or parser:IsValue(":") do
-			local left = node
-			local self_call = parser:IsValue(":")
-			node = parser:Node("expression", "binary_operator")
-			node.value = parser:ReadToken()
-			node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
-			node.left = left
-			node.right.self_call = self_call
-			node:End()
-		end
-
-		first.standalone_letter = node
 		return node
 	end
 
@@ -626,241 +592,22 @@ end
 
 		return node
 	end
-
-	local function ReadFunctionExpression(parser)
-		if not parser:IsValue("function") then return end
-		local node = parser:Node("expression", "function"):ExpectKeyword("function")
-		ReadFunctionBody(parser, node)
-		return node:End()
-	end
 	
-	do
-		function ExpectTypeExpression(parser, priority)
-			local token = parser:GetToken()
-		
-			if
-				not token or
-				token.type == "end_of_file" or
-				token.value == "}" or
-				token.value == "," or
-				token.value == "]" or
-				(
-					typesystem_syntax:IsKeyword(token) and
-					not typesystem_syntax:IsPrefixOperator(token) and
-					not typesystem_syntax:IsValue(token) and
-					token.value ~= "function"
-				)
-			then
-				parser:Error(
-					"expected beginning of expression, got $1",
-					nil,
-					nil,
-					token and
-					token.value ~= "" and
-					token.value or
-					token.type
-				)
-				return
-			end
-		
-			return ReadTypeExpression(parser, priority)
-		end
-		
-		local function ReadParenthesisExpression(parser)
-			if not parser:IsValue("(") then return end
-			local pleft = parser:ExpectValue("(")
-			local node = ReadTypeExpression(parser, 0)
-		
-			if not node or parser:IsValue(",") then
-				local first_expression = node
-				local node = parser:Node("expression", "tuple")
-				
-				if parser:IsValue(",") then
-					first_expression.tokens[","] = parser:ExpectValue(",")
-					node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
-				else
-					node.expressions = {}
-				end
-		
-				if first_expression then
-					table.insert(node.expressions, 1, first_expression)
-				end
-				node.tokens["("] = pleft
-				node:ExpectKeyword(")")
-				return node:End()
-			end
-		
-			node.tokens["("] = node.tokens["("] or {}
-			table_insert(node.tokens["("], 1, pleft)
-			node.tokens[")"] = node.tokens[")"] or {}
-			table_insert(node.tokens[")"], parser:ExpectValue(")"))
-			return node:End()
-		end
-		
-		local function ReadPrefixOperatorExpression(parser)
-			if not typesystem_syntax:IsPrefixOperator(parser:GetToken()) then return end
-			local node = parser:Node("expression", "prefix_operator")
-			node.value = parser:ReadToken()
-			node.tokens[1] = node.value
-			node.right = ReadTypeExpression(parser, math_huge)
-			return node:End()
-		end
-		
-		local function ReadValueExpression(parser)
-			if not (parser:IsValue("...") and parser:IsType("letter", 1)) then return end
-			local node = parser:Node("expression", "value")
-			node.value = parser:ExpectValue("...")
-			node.type_expression = ReadTypeExpression(parser)
-			return node:End()
-		end
 
-		local function ReadTypeFunctionArgument(parser, expect_type)
-			if parser:IsValue(")") then return end
-		
-			if expect_type or parser:IsType("letter") and parser:IsValue(":", 1) then
-				local identifier = parser:ReadToken()
-				local token = parser:ExpectValue(":")
-				local exp = ExpectTypeExpression(parser)
-				exp.tokens[":"] = token
-				exp.identifier = identifier
-				return exp
-			end
-		
-			return ExpectTypeExpression(parser)
-		end
-		
-		local function ReadFunctionSignatureExpression(parser)
-			if not (parser:IsValue("function") and parser:IsValue("=", 1)) then return end
-		
-			local node = parser:Node("expression", "function_signature")
-			node.stmnt = false
-			node.tokens["function"] = parser:ExpectValue("function")
-			node.tokens["="] = parser:ExpectValue("=")
-		
-			node.tokens["arguments("] = parser:ExpectValue("(")
-			node.identifiers = ReadMultipleValues(parser, nil, ReadTypeFunctionArgument)
-			node.tokens["arguments)"] = parser:ExpectValue(")")
-		
-			node.tokens[">"] = parser:ExpectValue(">")
-		
-			node.tokens["return("] = parser:ExpectValue("(")
-			node.return_types = ReadMultipleValues(parser, nil, ReadTypeFunctionArgument)
-			node.tokens["return)"] = parser:ExpectValue(")")
-			
-			return node
-		end
-		
-		local function ReadTypeFunctionExpression(parser)
-			if not (parser:IsValue("function") and parser:IsValue("<|", 1)) then return end
-			local node = parser:Node("expression", "type_function")
-			node.stmnt = false
-			node.tokens["function"] = parser:ExpectValue("function")
-			return ReadTypeFunctionBody(parser, node):End()
-		end
-		
-		
+	do -- expression
 		local function ReadAnalyzerFunctionExpression(parser)
 			if not (parser:IsValue("analyzer") and parser:IsValue("function", 1)) then return end
 			local node = parser:Node("expression", "analyzer_function")
-			node.stmnt = false
 			node.tokens["analyzer"] = parser:ExpectValue("analyzer")
 			node.tokens["function"] = parser:ExpectValue("function")
 			return ReadAnalyzerFunctionBody(parser, node):End()
 		end
-		
-		local function ReadKeywordValueExpression(parser)
-			if not typesystem_syntax:IsValue(parser:GetToken()) then return end
-			local node = parser:Node("expression", "value")
-			node.value = parser:ReadToken()
-			return node:End()
-		end
-		
-		local function read_table_entry(parser, i)
-			if parser:IsValue("[") then
-				local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
-				node.key_expression = ReadTypeExpression(parser, 0)
-				node:ExpectKeyword("]"):ExpectKeyword("=")
-				node.value_expression = ReadTypeExpression(parser, 0)
-				return node:End()
-			elseif parser:IsType("letter") and parser:IsValue("=", 1) then
-				local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("="):End()
-				node.value_expression = ReadTypeExpression(parser, 0)
-				return node:End()
-			end
-		
-			local node = parser:Node("expression", "table_index_value"):Store("key", i)
-			node.value_expression = ReadTypeExpression(parser, 0)
-			return node:End()
-		end
-		
-		local function ReadTypeTableExpression(parser)
-			if not parser:IsValue("{") then return end
-			local tree = parser:Node("expression", "type_table")
-			tree:ExpectKeyword("{")
-			tree.children = {}
-			tree.tokens["separators"] = {}
-		
-			for i = 1, math_huge do
-				if parser:IsValue("}") then break end
-				local entry = read_table_entry(parser, i)
-		
-				if entry.spread then
-					tree.spread = true
-				end
-		
-				tree.children[i] = entry
-		
-				if not parser:IsValue(",") and not parser:IsValue(";") and not parser:IsValue("}") then
-					parser:Error(
-						"expected $1 got $2",
-						nil,
-						nil,
-						{",", ";", "}"},
-						(parser:GetToken() and parser:GetToken().value) or
-						"no token"
-					)
-		
-					break
-				end
-		
-				if not parser:IsValue("}") then
-					tree.tokens["separators"][i] = parser:ReadToken()
-				end
-			end
-		
-			tree:ExpectKeyword("}")
-			return tree:End()
-		end
-		
-		local function ReadStringExpression(parser)
-			if not (parser:IsType("$") and parser:IsType("string", 1)) then return end
-			local node = parser:Node("expression", "type_string")
-			node.tokens["$"] = parser:ReadToken("...")
-			node.value = parser:ExpectType("string")
-			return node
-		end
-		
-		local function ReadEmptyUnionExpression(parser)
-			if not parser:IsValue("|") then return end
-			local node = parser:Node("expression", "empty_union")
-			node.tokens["|"] = parser:ReadToken("|")
-			return node
-		end
-		
-
-		local function is_call_expression(parser, offset)
-			return
-				parser:IsValue("(", offset) or
-				parser:IsValue("<|", offset) or
-				parser:IsValue("{", offset) or
-				parser:IsType("string", offset) or
-				(parser:IsValue("!", offset) and parser:IsValue("(", offset + 1))
-		end
 	
-		local function ReadAsSubExpression(parser, node)
-			if not parser:IsValue("as") then return end
-			node.tokens["as"] = parser:ExpectValue("as")
-			node.type_expression = ReadTypeExpression(parser)
+		local function ReadFunctionExpression(parser)
+			if not parser:IsValue("function") then return end
+			local node = parser:Node("expression", "function"):ExpectKeyword("function")
+			ReadFunctionBody(parser, node)
+			return node:End()
 		end
 	
 		local function ReadIndexSubExpression(parser)
@@ -871,210 +618,7 @@ end
 			return node:End()
 		end
 	
-		local function ReadSelfCallSubExpression(parser)
-			if not (parser:IsValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
-			local node = parser:Node("expression", "binary_operator")
-			node.value = parser:ReadToken()
-			node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
-			return node:End()
-		end
-	
-		local function ReadPostfixOperatorSubExpression(parser)
-			if not typesystem_syntax:IsPostfixOperator(parser:GetToken()) then return end
-			return
-				parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
-		end
-	
-		local function ReadCallSubExpression(parser)
-			if not is_call_expression(parser, 0) then return end
-			local node = parser:Node("expression", "postfix_call")
-	
-			if parser:IsValue("{") then
-				node.expressions = {ReadTypeTableExpression(parser)}
-			elseif parser:IsType("string") then
-				node.expressions = {
-						parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
-					}
-			elseif parser:IsValue("<|") then
-				node.tokens["call("] = parser:ExpectValue("<|")
-				node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
-				node.tokens["call)"] = parser:ExpectValue("|>")
-			else
-				node.tokens["call("] = parser:ExpectValue("(")
-				node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
-				node.tokens["call)"] = parser:ExpectValue(")")
-			end
-	
-			node.type_call = true
-			return node:End()
-		end
-	
-		local function ReadPostfixIndexExpressionSubExpression(parser)
-			if not parser:IsValue("[") then return end
-			local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
-			node.expression = ExpectTypeExpression(parser)
-			return node:ExpectKeyword("]"):End()
-		end
-	
-		local function ReadSubExpression(parser, node)
-			for _ = 1, parser:GetLength() do
-				local left_node = node
-				local found = ReadIndexSubExpression(parser) or
-					ReadSelfCallSubExpression(parser) or
-					ReadPostfixOperatorSubExpression(parser) or
-					ReadCallSubExpression(parser) or
-					ReadPostfixIndexExpressionSubExpression(parser) or
-					ReadAsSubExpression(parser, left_node)
-				if not found then break end
-				found.left = left_node
-	
-				if left_node.value and left_node.value.value == ":" then
-					found.parser_call = true
-				end
-	
-				node = found
-			end
-	
-			return node
-		end
-	
-		function ReadTypeExpression(parser, priority)
-			priority = priority or 0
-			local node
-			local force_upvalue
-		
-			if parser:IsValue("^") then
-				force_upvalue = true
-				parser:Advance(1)
-			end
-		
-			node = ReadParenthesisExpression(parser) or
-				ReadEmptyUnionExpression(parser) or
-				ReadPrefixOperatorExpression(parser) or
-				ReadAnalyzerFunctionExpression(parser) or
-				ReadFunctionSignatureExpression(parser) or
-				ReadTypeFunctionExpression(parser) or
-				ReadFunctionExpression(parser) or
-				ReadValueExpression(parser) or
-				ReadKeywordValueExpression(parser) or
-				ReadTypeTableExpression(parser) or
-				ReadStringExpression(parser)
-			local first = node
-		
-			if node then
-				node = ReadSubExpression(parser, node)
-		
-				if
-					first.kind == "value" and
-					(first.value.type == "letter" or first.value.value == "...")
-				then
-					first.standalone_letter = node
-					first.force_upvalue = force_upvalue
-				end
-			end
-		
-			while typesystem_syntax:GetBinaryOperatorInfo(parser:GetToken()) and
-			typesystem_syntax:GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
-				local left_node = node
-				node = parser:Node("expression", "binary_operator")
-				node.value = parser:ReadToken()
-				node.left = left_node
-				node.right = ReadTypeExpression(parser, typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-				node:End()
-			end
-		
-			return node
-		end
-	end
-	do
-
-		local function read_table_spread(parser)
-			if not (parser:IsValue("...") and (parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))) then return end
-			local node = parser:Node("expression", "table_spread"):ExpectKeyword("...")
-			node.expression = ExpectRuntimeExpression(parser)
-			return node:End()
-		end
-		
-		local function read_table_entry(parser, i)
-			if parser:IsValue("[") then
-				local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
-				node.key_expression = ExpectRuntimeExpression(parser, 0)
-				node:ExpectKeyword("]"):ExpectKeyword("=")
-				node.value_expression = ExpectRuntimeExpression(parser, 0)
-				return node:End()
-			elseif parser:IsType("letter") and parser:IsValue("=", 1) then
-				local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
-				local spread = read_table_spread(parser)
-		
-				if spread then
-					node.spread = spread
-				else
-					node.value_expression = ExpectRuntimeExpression(parser)
-				end
-		
-				return node:End()
-			end
-		
-			local node = parser:Node("expression", "table_index_value")
-			local spread = read_table_spread(parser)
-		
-			if spread then
-				node.spread = spread
-			else
-				node.value_expression = ExpectRuntimeExpression(parser)
-			end
-		
-			node.key = i
-			return node:End()
-		end
-		
-		local function ReadTableExpression(parser)
-			if not parser:IsValue("{") then return end
-			local tree = parser:Node("expression", "table")
-			tree:ExpectKeyword("{")
-			tree.children = {}
-			tree.tokens["separators"] = {}
-		
-			for i = 1, parser:GetLength() do
-				if parser:IsValue("}") then break end
-				local entry = read_table_entry(parser, i)
-		
-				if entry.kind == "table_index_value" then
-					tree.is_array = true
-				else
-					tree.is_dictionary = true
-				end
-		
-				if entry.spread then
-					tree.spread = true
-				end
-		
-				tree.children[i] = entry
-		
-				if not parser:IsValue(",") and not parser:IsValue(";") and not parser:IsValue("}") then
-					parser:Error(
-						"expected $1 got $2",
-						nil,
-						nil,
-						{",", ";", "}"},
-						(parser:GetToken() and parser:GetToken().value) or
-						"no token"
-					)
-		
-					break
-				end
-		
-				if not parser:IsValue("}") then
-					tree.tokens["separators"][i] = parser:ReadToken()
-				end
-			end
-		
-			tree:ExpectKeyword("}")
-			return tree:End()
-		end
-		
-
-		local function is_call_expression(parser, offset)
+		local function IsCallExpression(parser, offset)
 			return
 				parser:IsValue("(", offset) or
 				parser:IsValue("<|", offset) or
@@ -1082,268 +626,655 @@ end
 				parser:IsType("string", offset) or
 				(parser:IsValue("!", offset) and parser:IsValue("(", offset + 1))
 		end
-
-		local function read_call_expression(parser)
-			local node = parser:Node("expression", "postfix_call")
-
-			if parser:IsValue("{") then
-				node.expressions = {ReadTableExpression(parser)}
-			elseif parser:IsType("string") then
-				node.expressions = {
-						parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
-					}
-			elseif parser:IsValue("<|") then
-				node.tokens["call("] = parser:ExpectValue("<|")
-				node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
-				node.tokens["call)"] = parser:ExpectValue("|>")
-				node.type_call = true
-			elseif parser:IsValue("!") then
-				node.tokens["!"] = parser:ExpectValue("!")
-				node.tokens["call("] = parser:ExpectValue("(")
-				node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
-				node.tokens["call)"] = parser:ExpectValue(")")
-				node.type_call = true
-			else
-				node.tokens["call("] = parser:ExpectValue("(")
-				node.expressions = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
-				node.tokens["call)"] = parser:ExpectValue(")")
-			end
-
-			return node:End()
-		end
-
-		local function ReadIndexSubExpression(parser)
-			if not (parser:IsValue(".") and parser:IsType("letter", 1)) then return end
-			local node = parser:Node("expression", "binary_operator")
-			node.value = parser:ReadToken()
-			node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
-			return node:End()
-		end
-
+	
 		local function ReadSelfCallSubExpression(parser)
-			if not (parser:IsValue(":") and parser:IsType("letter", 1) and is_call_expression(parser, 2)) then return end
+			if not (parser:IsValue(":") and parser:IsType("letter", 1) and IsCallExpression(parser, 2)) then return end
 			local node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
 			node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
 			return node:End()
 		end
 
-		local function ReadPostfixOperatorSubExpression(parser)
-			if not runtime_syntax:IsPostfixOperator(parser:GetToken()) then return end
-			return
-				parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
-		end
-
-		local function ReadCallSubExpression(parser)
-			if not is_call_expression(parser, 0) then return end
-			return read_call_expression(parser)
-		end
-
-		local function ReadPostfixIndexExpressionSubExpression(parser)
-			if not parser:IsValue("[") then return end
-			local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
-			node.expression = ExpectRuntimeExpression(parser)
-			return node:ExpectKeyword("]"):End()
-		end
-
-		local function read_and_add_explicit_type(parser, node)
-			if parser:IsValue(":") and (not parser:IsType("letter", 1) or not is_call_expression(parser, 2)) then
-				node.tokens[":"] = parser:ExpectValue(":")
-				node.type_expression = ExpectTypeExpression(parser, 0)
-			elseif parser:IsValue("as") then
-				node.tokens["as"] = parser:ExpectValue("as")
-				node.type_expression = ExpectTypeExpression(parser, 0)
-			elseif parser:IsValue("is") then
-				node.tokens["is"] = parser:ExpectValue("is")
-				node.type_expression = ExpectTypeExpression(parser, 0)
-			end
-		end
-
-		local function ReadSubExpression(parser, node)
-			for _ = 1, parser:GetLength() do
-				local left_node = node
-				read_and_add_explicit_type(parser, node)
-				
-				local found = ReadIndexSubExpression(parser) or
-					ReadSelfCallSubExpression(parser) or
-					ReadCallSubExpression(parser) or
-					ReadPostfixOperatorSubExpression(parser) or
-					ReadPostfixIndexExpressionSubExpression(parser)
+		do -- typesystem
+			local function ReadParenthesisOrTupleTypeExpression(parser)
+				if not parser:IsValue("(") then return end
+				local pleft = parser:ExpectValue("(")
+				local node = ReadTypeExpression(parser, 0)
+			
+				if not node or parser:IsValue(",") then
+					local first_expression = node
+					local node = parser:Node("expression", "tuple")
 					
-				if not found then break end
-				found.left = left_node
-
-				if left_node.value and left_node.value.value == ":" then
-					found.parser_call = true
+					if parser:IsValue(",") then
+						first_expression.tokens[","] = parser:ExpectValue(",")
+						node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+					else
+						node.expressions = {}
+					end
+			
+					if first_expression then
+						table.insert(node.expressions, 1, first_expression)
+					end
+					node.tokens["("] = pleft
+					node:ExpectKeyword(")")
+					return node:End()
 				end
-
-				node = found
+			
+				node.tokens["("] = node.tokens["("] or {}
+				table_insert(node.tokens["("], 1, pleft)
+				node.tokens[")"] = node.tokens[")"] or {}
+				table_insert(node.tokens[")"], parser:ExpectValue(")"))
+				return node:End()
+			end
+			
+			local function ReadPrefixOperatorTypeExpression(parser)
+				if not typesystem_syntax:IsPrefixOperator(parser:GetToken()) then return end
+				local node = parser:Node("expression", "prefix_operator")
+				node.value = parser:ReadToken()
+				node.tokens[1] = node.value
+				node.right = ReadTypeExpression(parser, math_huge)
+				return node:End()
+			end
+			
+			local function ReadValueTypeExpression(parser)
+				if not (parser:IsValue("...") and parser:IsType("letter", 1)) then return end
+				local node = parser:Node("expression", "value")
+				node.value = parser:ExpectValue("...")
+				node.type_expression = ReadTypeExpression(parser)
+				return node:End()
 			end
 
-			return node
-		end
-
-		local function ReadPrefixOperatorExpression(parser)
-			if not runtime_syntax:IsPrefixOperator(parser:GetToken()) then return end
-			local node = parser:Node("expression", "prefix_operator")
-			node.value = parser:ReadToken()
-			node.tokens[1] = node.value
-			node.right = ExpectRuntimeExpression(parser, math.huge)
-			return node:End()
-		end
-
-		local function ReadParenthesisExpression(parser)
-			if not parser:IsValue("(") then return end
-			local pleft = parser:ExpectValue("(")
-			local node = ReadRuntimeExpression(parser, 0)
-
-			if not node then
-				parser:Error("empty parentheses group", pleft)
-				return
+			local function ReadTypeFunctionArgument(parser, expect_type)
+				if parser:IsValue(")") then return end
+			
+				if expect_type or parser:IsType("letter") and parser:IsValue(":", 1) then
+					local identifier = parser:ReadToken()
+					local token = parser:ExpectValue(":")
+					local exp = ExpectTypeExpression(parser)
+					exp.tokens[":"] = token
+					exp.identifier = identifier
+					return exp
+				end
+			
+				return ExpectTypeExpression(parser)
 			end
+			
+			local function ReadFunctionSignatureExpression(parser)
+				if not (parser:IsValue("function") and parser:IsValue("=", 1)) then return end
+			
+				local node = parser:Node("expression", "function_signature")
+				node.tokens["function"] = parser:ExpectValue("function")
+				node.tokens["="] = parser:ExpectValue("=")
+			
+				node.tokens["arguments("] = parser:ExpectValue("(")
+				node.identifiers = ReadMultipleValues(parser, nil, ReadTypeFunctionArgument)
+				node.tokens["arguments)"] = parser:ExpectValue(")")
+			
+				node.tokens[">"] = parser:ExpectValue(">")
+			
+				node.tokens["return("] = parser:ExpectValue("(")
+				node.return_types = ReadMultipleValues(parser, nil, ReadTypeFunctionArgument)
+				node.tokens["return)"] = parser:ExpectValue(")")
+				
+				return node
+			end
+			
+			local function ReadTypeFunctionExpression(parser)
+				if not (parser:IsValue("function") and parser:IsValue("<|", 1)) then return end
+				local node = parser:Node("expression", "type_function")
+				node.tokens["function"] = parser:ExpectValue("function")
+				return ReadTypeFunctionBody(parser, node):End()
+			end
+					
+			local function ReadKeywordValueTypeExpression(parser)
+				if not typesystem_syntax:IsValue(parser:GetToken()) then return end
+				local node = parser:Node("expression", "value")
+				node.value = parser:ReadToken()
+				return node:End()
+			end
+			
 
-			node.tokens["("] = node.tokens["("] or {}
-			table_insert(node.tokens["("], 1, pleft)
-			node.tokens[")"] = node.tokens[")"] or {}
-			table_insert(node.tokens[")"], parser:ExpectValue(")"))
-			return node
-		end
-
-		local function ReadValueExpression(parser)
-			if not runtime_syntax:IsValue(parser:GetToken()) then return end
-			return parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
-		end
-
-		local function check_integer_division_operator(parser, node)
-			if node and not node.idiv_resolved then
-				for i, token in ipairs(node.whitespace) do
-					if token.value:find("\n", nil, true) then break end
-					if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
-						table_remove(node.whitespace, i)
-						local Code = require("nattlua.code.code")
-						local tokens = require("nattlua.lexer.lexer")(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
-
-						for _, token in ipairs(tokens) do
-							check_integer_division_operator(parser, token)
+			local ReadTableTypeExpression
+			do
+				local function read_type_table_entry(parser, i)
+					if parser:IsValue("[") then
+						local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
+						node.key_expression = ReadTypeExpression(parser, 0)
+						node:ExpectKeyword("]"):ExpectKeyword("=")
+						node.value_expression = ReadTypeExpression(parser, 0)
+						return node:End()
+					elseif parser:IsType("letter") and parser:IsValue("=", 1) then
+						local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("="):End()
+						node.value_expression = ReadTypeExpression(parser, 0)
+						return node:End()
+					end
+				
+					local node = parser:Node("expression", "table_index_value"):Store("key", i)
+					node.value_expression = ReadTypeExpression(parser, 0)
+					return node:End()
+				end
+				
+				function ReadTableTypeExpression(parser)
+					if not parser:IsValue("{") then return end
+					local tree = parser:Node("expression", "type_table")
+					tree:ExpectKeyword("{")
+					tree.children = {}
+					tree.tokens["separators"] = {}
+				
+					for i = 1, math_huge do
+						if parser:IsValue("}") then break end
+						local entry = read_type_table_entry(parser, i)
+				
+						if entry.spread then
+							tree.spread = true
 						end
-
-						parser:AddTokens(tokens)
-						node.idiv_resolved = true
-
-						break
+				
+						tree.children[i] = entry
+				
+						if not parser:IsValue(",") and not parser:IsValue(";") and not parser:IsValue("}") then
+							parser:Error(
+								"expected $1 got $2",
+								nil,
+								nil,
+								{",", ";", "}"},
+								(parser:GetToken() and parser:GetToken().value) or
+								"no token"
+							)
+				
+							break
+						end
+				
+						if not parser:IsValue("}") then
+							tree.tokens["separators"][i] = parser:ReadToken()
+						end
+					end
+				
+					tree:ExpectKeyword("}")
+					return tree:End()
+				end
+			end
+			
+			local function ReadStringTypeExpression(parser)
+				if not (parser:IsType("$") and parser:IsType("string", 1)) then return end
+				local node = parser:Node("expression", "type_string")
+				node.tokens["$"] = parser:ReadToken("...")
+				node.value = parser:ExpectType("string")
+				return node
+			end
+			
+			local function ReadEmptyUnionTypeExpression(parser)
+				if not parser:IsValue("|") then return end
+				local node = parser:Node("expression", "empty_union")
+				node.tokens["|"] = parser:ReadToken("|")
+				return node
+			end
+				
+			local function ReadAsSubExpression(parser, node)
+				if not parser:IsValue("as") then return end
+				node.tokens["as"] = parser:ExpectValue("as")
+				node.type_expression = ReadTypeExpression(parser)
+			end
+		
+			local function ReadPostfixOperatorSubExpression(parser)
+				if not typesystem_syntax:IsPostfixOperator(parser:GetToken()) then return end
+				return
+					parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
+			end
+		
+			local function ReadCallSubExpression(parser)
+				if not IsCallExpression(parser, 0) then return end
+				local node = parser:Node("expression", "postfix_call")
+		
+				if parser:IsValue("{") then
+					node.expressions = {ReadTableTypeExpression(parser)}
+				elseif parser:IsType("string") then
+					node.expressions = {
+							parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
+						}
+				elseif parser:IsValue("<|") then
+					node.tokens["call("] = parser:ExpectValue("<|")
+					node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+					node.tokens["call)"] = parser:ExpectValue("|>")
+				else
+					node.tokens["call("] = parser:ExpectValue("(")
+					node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+					node.tokens["call)"] = parser:ExpectValue(")")
+				end
+		
+				node.type_call = true
+				return node:End()
+			end
+		
+			local function ReadPostfixIndexExpressionSubExpression(parser)
+				if not parser:IsValue("[") then return end
+				local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
+				node.expression = ExpectTypeExpression(parser)
+				return node:ExpectKeyword("]"):End()
+			end
+		
+			local function ReadSubExpression(parser, node)
+				for _ = 1, parser:GetLength() do
+					local left_node = node
+					local found = ReadIndexSubExpression(parser) or
+						ReadSelfCallSubExpression(parser) or
+						ReadPostfixOperatorSubExpression(parser) or
+						ReadCallSubExpression(parser) or
+						ReadPostfixIndexExpressionSubExpression(parser) or
+						ReadAsSubExpression(parser, left_node)
+					if not found then break end
+					found.left = left_node
+		
+					if left_node.value and left_node.value.value == ":" then
+						found.parser_call = true
+					end
+		
+					node = found
+				end
+		
+				return node
+			end
+		
+			function ReadTypeExpression(parser, priority)
+				priority = priority or 0
+				local node
+				local force_upvalue
+			
+				if parser:IsValue("^") then
+					force_upvalue = true
+					parser:Advance(1)
+				end
+			
+				node = ReadParenthesisOrTupleTypeExpression(parser) or
+					ReadEmptyUnionTypeExpression(parser) or
+					ReadPrefixOperatorTypeExpression(parser) or
+					ReadAnalyzerFunctionExpression(parser) or -- shared
+					ReadFunctionSignatureExpression(parser) or
+					ReadTypeFunctionExpression(parser) or -- shared
+					ReadFunctionExpression(parser) or -- shared
+					ReadValueTypeExpression(parser) or
+					ReadKeywordValueTypeExpression(parser) or
+					ReadTableTypeExpression(parser) or
+					ReadStringTypeExpression(parser)
+				local first = node
+			
+				if node then
+					node = ReadSubExpression(parser, node)
+			
+					if
+						first.kind == "value" and
+						(first.value.type == "letter" or first.value.value == "...")
+					then
+						first.standalone_letter = node
+						first.force_upvalue = force_upvalue
 					end
 				end
-			end
-		end
-
-		local function ReadAnalyzerFunctionExpression(parser)
-			if not parser:IsValue("analyzer") or not parser:IsValue("function", 1) then return end
-			local node = parser:Node("expression", "analyzer_function"):ExpectKeyword("analyzer"):ExpectKeyword("function")
-			ReadAnalyzerFunctionBody(parser, node)
-			return node:End()
-		end
-
-
-		function ExpectRuntimeExpression(parser, priority)
-			local token = parser:GetToken()
-			if
-				not token or
-				token.type == "end_of_file" or
-				token.value == "}" or
-				token.value == "," or
-				token.value == "]" or
-				(
-					runtime_syntax:IsKeyword(token) and
-					not runtime_syntax:IsPrefixOperator(token) and
-					not runtime_syntax:IsValue(token) and
-					token.value ~= "function"
-				)
-			then
-				parser:Error(
-					"expected beginning of expression, got $1",
-					nil,
-					nil,
-					token and
-					token.value ~= "" and
-					token.value or
-					token.type
-				)
-				return
+			
+				while typesystem_syntax:GetBinaryOperatorInfo(parser:GetToken()) and
+				typesystem_syntax:GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
+					local left_node = node
+					node = parser:Node("expression", "binary_operator")
+					node.value = parser:ReadToken()
+					node.left = left_node
+					node.right = ReadTypeExpression(parser, typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
+					node:End()
+				end
+			
+				return node
 			end
 
-			return ReadRuntimeExpression(parser, priority)
-		end
-		
-		local function ReadImportExpression(parser)
-			if not (parser:IsValue("import") and parser:IsValue("(", 1)) then return end
-			local node = parser:Node("expression", "import")
-			node.tokens["import"] = parser:ExpectValue("import")
-			node.tokens["("] = {parser:ExpectValue("(")}
-			local start = parser:GetToken()
-			node.expressions = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
-			local root = parser.config.path and parser.config.path:match("(.+/)") or ""
-			node.path = root .. node.expressions[1].value.value:sub(2, -2)
-			local nl = require("nattlua")
-			local root, err = nl.ParseFile(parser:ResolvePath(node.path), parser.root)
-
-			if not root then
-				parser:Error("error importing file: $1", start, start, err)
-			end
-
-			node.root = root.SyntaxTree
-			node.analyzer = root
-			node.tokens[")"] = {parser:ExpectValue(")")}
-			parser.root.imports = parser.root.imports or {}
-			table.insert(parser.root.imports, node)
-			return node
-		end
-	
-
-		function ReadRuntimeExpression(parser, priority)
-			if parser:GetPreferTypesystem() then
+			function ExpectTypeExpression(parser, priority)
+				local token = parser:GetToken()
+			
+				if
+					not token or
+					token.type == "end_of_file" or
+					token.value == "}" or
+					token.value == "," or
+					token.value == "]" or
+					(
+						typesystem_syntax:IsKeyword(token) and
+						not typesystem_syntax:IsPrefixOperator(token) and
+						not typesystem_syntax:IsValue(token) and
+						token.value ~= "function"
+					)
+				then
+					parser:Error(
+						"expected beginning of expression, got $1",
+						nil,
+						nil,
+						token and
+						token.value ~= "" and
+						token.value or
+						token.type
+					)
+					return
+				end
+			
 				return ReadTypeExpression(parser, priority)
 			end
+		end
 
-			priority = priority or 0
-			local node = ReadParenthesisExpression(parser) or
-				ReadPrefixOperatorExpression(parser) or
-				ReadAnalyzerFunctionExpression(parser) or
-				ReadFunctionExpression(parser) or
-				ReadImportExpression(parser) or
-				ReadValueExpression(parser) or
-				ReadTableExpression(parser)
-			local first = node
-
-			if node then
-				node = ReadSubExpression(parser, node)
-
-				if
-					first.kind == "value" and
-					(first.value.type == "letter" or first.value.value == "...")
-				then
-					first.standalone_letter = node
+		do -- runtime
+			local ReadTableExpression
+			do
+				local function read_table_spread(parser)
+					if not (parser:IsValue("...") and (parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))) then return end
+					local node = parser:Node("expression", "table_spread"):ExpectKeyword("...")
+					node.expression = ExpectRuntimeExpression(parser)
+					return node:End()
+				end
+				
+				local function read_table_entry(parser, i)
+					if parser:IsValue("[") then
+						local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
+						node.key_expression = ExpectRuntimeExpression(parser, 0)
+						node:ExpectKeyword("]"):ExpectKeyword("=")
+						node.value_expression = ExpectRuntimeExpression(parser, 0)
+						return node:End()
+					elseif parser:IsType("letter") and parser:IsValue("=", 1) then
+						local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
+						local spread = read_table_spread(parser)
+				
+						if spread then
+							node.spread = spread
+						else
+							node.value_expression = ExpectRuntimeExpression(parser)
+						end
+				
+						return node:End()
+					end
+				
+					local node = parser:Node("expression", "table_index_value")
+					local spread = read_table_spread(parser)
+				
+					if spread then
+						node.spread = spread
+					else
+						node.value_expression = ExpectRuntimeExpression(parser)
+					end
+				
+					node.key = i
+					return node:End()
+				end
+				
+				function ReadTableExpression(parser)
+					if not parser:IsValue("{") then return end
+					local tree = parser:Node("expression", "table")
+					tree:ExpectKeyword("{")
+					tree.children = {}
+					tree.tokens["separators"] = {}
+				
+					for i = 1, parser:GetLength() do
+						if parser:IsValue("}") then break end
+						local entry = read_table_entry(parser, i)
+				
+						if entry.kind == "table_index_value" then
+							tree.is_array = true
+						else
+							tree.is_dictionary = true
+						end
+				
+						if entry.spread then
+							tree.spread = true
+						end
+				
+						tree.children[i] = entry
+				
+						if not parser:IsValue(",") and not parser:IsValue(";") and not parser:IsValue("}") then
+							parser:Error(
+								"expected $1 got $2",
+								nil,
+								nil,
+								{",", ";", "}"},
+								(parser:GetToken() and parser:GetToken().value) or
+								"no token"
+							)
+				
+							break
+						end
+				
+						if not parser:IsValue("}") then
+							tree.tokens["separators"][i] = parser:ReadToken()
+						end
+					end
+				
+					tree:ExpectKeyword("}")
+					return tree:End()
 				end
 			end
 
-			check_integer_division_operator(parser, parser:GetToken())
+			local function ReadPostfixOperatorSubExpression(parser)
+				if not runtime_syntax:IsPostfixOperator(parser:GetToken()) then return end
+				return
+					parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
+			end
 
-			while runtime_syntax:GetBinaryOperatorInfo(parser:GetToken()) and
-			runtime_syntax:GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
-				local left_node = node
-				node = parser:Node("expression", "binary_operator")
-				node.value = parser:ReadToken()
-				node.left = left_node
+			local function ReadCallSubExpression(parser)
+				if not IsCallExpression(parser, 0) then return end
+				local node = parser:Node("expression", "postfix_call")
 
-				if node.left then
-					node.left.parent = node
+				if parser:IsValue("{") then
+					node.expressions = {ReadTableExpression(parser)}
+				elseif parser:IsType("string") then
+					node.expressions = {
+							parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
+						}
+				elseif parser:IsValue("<|") then
+					node.tokens["call("] = parser:ExpectValue("<|")
+					node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+					node.tokens["call)"] = parser:ExpectValue("|>")
+					node.type_call = true
+				elseif parser:IsValue("!") then
+					node.tokens["!"] = parser:ExpectValue("!")
+					node.tokens["call("] = parser:ExpectValue("(")
+					node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+					node.tokens["call)"] = parser:ExpectValue(")")
+					node.type_call = true
+				else
+					node.tokens["call("] = parser:ExpectValue("(")
+					node.expressions = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
+					node.tokens["call)"] = parser:ExpectValue(")")
 				end
 
-				node.right = ExpectRuntimeExpression(parser, runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
+				return node:End()
+			end
 
-				if not node.right then
-					local token = parser:GetToken()
+			local function ReadPostfixIndexExpressionSubExpression(parser)
+				if not parser:IsValue("[") then return end
+				local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
+				node.expression = ExpectRuntimeExpression(parser)
+				return node:ExpectKeyword("]"):End()
+			end
+
+			local function ReadSubExpression(parser, node)
+				for _ = 1, parser:GetLength() do
+					local left_node = node
+					
+					if parser:IsValue(":") and (not parser:IsType("letter", 1) or not IsCallExpression(parser, 2)) then
+						node.tokens[":"] = parser:ExpectValue(":")
+						node.type_expression = ExpectTypeExpression(parser, 0)
+					elseif parser:IsValue("as") then
+						node.tokens["as"] = parser:ExpectValue("as")
+						node.type_expression = ExpectTypeExpression(parser, 0)
+					elseif parser:IsValue("is") then
+						node.tokens["is"] = parser:ExpectValue("is")
+						node.type_expression = ExpectTypeExpression(parser, 0)
+					end
+					
+					local found = ReadIndexSubExpression(parser) or
+						ReadSelfCallSubExpression(parser) or
+						ReadCallSubExpression(parser) or
+						ReadPostfixOperatorSubExpression(parser) or
+						ReadPostfixIndexExpressionSubExpression(parser)
+						
+					if not found then break end
+					found.left = left_node
+
+					if left_node.value and left_node.value.value == ":" then
+						found.parser_call = true
+					end
+
+					node = found
+				end
+
+				return node
+			end
+
+			local function ReadPrefixOperatorExpression(parser)
+				if not runtime_syntax:IsPrefixOperator(parser:GetToken()) then return end
+				local node = parser:Node("expression", "prefix_operator")
+				node.value = parser:ReadToken()
+				node.tokens[1] = node.value
+				node.right = ExpectRuntimeExpression(parser, math.huge)
+				return node:End()
+			end
+
+			local function ReadParenthesisExpression(parser)
+				if not parser:IsValue("(") then return end
+				local pleft = parser:ExpectValue("(")
+				local node = ReadRuntimeExpression(parser, 0)
+
+				if not node then
+					parser:Error("empty parentheses group", pleft)
+					return
+				end
+
+				node.tokens["("] = node.tokens["("] or {}
+				table_insert(node.tokens["("], 1, pleft)
+				node.tokens[")"] = node.tokens[")"] or {}
+				table_insert(node.tokens[")"], parser:ExpectValue(")"))
+				return node
+			end
+
+			local function ReadValueExpression(parser)
+				if not runtime_syntax:IsValue(parser:GetToken()) then return end
+				return parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
+			end
+
+			local function ReadImportExpression(parser)
+				if not (parser:IsValue("import") and parser:IsValue("(", 1)) then return end
+				local node = parser:Node("expression", "import")
+				node.tokens["import"] = parser:ExpectValue("import")
+				node.tokens["("] = {parser:ExpectValue("(")}
+				local start = parser:GetToken()
+				node.expressions = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
+				local root = parser.config.path and parser.config.path:match("(.+/)") or ""
+				node.path = root .. node.expressions[1].value.value:sub(2, -2)
+				local nl = require("nattlua")
+				local root, err = nl.ParseFile(parser:ResolvePath(node.path), parser.root)
+
+				if not root then
+					parser:Error("error importing file: $1", start, start, err)
+				end
+
+				node.root = root.SyntaxTree
+				node.analyzer = root
+				node.tokens[")"] = {parser:ExpectValue(")")}
+				parser.root.imports = parser.root.imports or {}
+				table.insert(parser.root.imports, node)
+				return node
+			end
+		
+			local function check_integer_division_operator(parser, node)
+				if node and not node.idiv_resolved then
+					for i, token in ipairs(node.whitespace) do
+						if token.value:find("\n", nil, true) then break end
+						if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
+							table_remove(node.whitespace, i)
+							local Code = require("nattlua.code.code")
+							local tokens = require("nattlua.lexer.lexer")(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
+
+							for _, token in ipairs(tokens) do
+								check_integer_division_operator(parser, token)
+							end
+
+							parser:AddTokens(tokens)
+							node.idiv_resolved = true
+
+							break
+						end
+					end
+				end
+			end	
+			
+			function ReadRuntimeExpression(parser, priority)
+				if parser:GetPreferTypesystem() then
+					return ReadTypeExpression(parser, priority)
+				end
+
+				priority = priority or 0
+				local node = ReadParenthesisExpression(parser) or
+					ReadPrefixOperatorExpression(parser) or
+					ReadAnalyzerFunctionExpression(parser) or
+					ReadFunctionExpression(parser) or
+					ReadImportExpression(parser) or
+					ReadValueExpression(parser) or
+					ReadTableExpression(parser)
+				local first = node
+
+				if node then
+					node = ReadSubExpression(parser, node)
+
+					if
+						first.kind == "value" and
+						(first.value.type == "letter" or first.value.value == "...")
+					then
+						first.standalone_letter = node
+					end
+				end
+
+				check_integer_division_operator(parser, parser:GetToken())
+
+				while runtime_syntax:GetBinaryOperatorInfo(parser:GetToken()) and
+				runtime_syntax:GetBinaryOperatorInfo(parser:GetToken()).left_priority > priority do
+					local left_node = node
+					node = parser:Node("expression", "binary_operator")
+					node.value = parser:ReadToken()
+					node.left = left_node
+
+					if node.left then
+						node.left.parent = node
+					end
+
+					node.right = ExpectRuntimeExpression(parser, runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
+
+					if not node.right then
+						local token = parser:GetToken()
+						parser:Error(
+							"expected right side to be an expression, got $1",
+							nil,
+							nil,
+							token and
+							token.value ~= "" and
+							token.value or
+							token.type
+						)
+						return
+					end
+
+					node:End()
+				end
+
+				return node
+			end
+
+			function ExpectRuntimeExpression(parser, priority)
+				local token = parser:GetToken()
+				if
+					not token or
+					token.type == "end_of_file" or
+					token.value == "}" or
+					token.value == "," or
+					token.value == "]" or
+					(
+						runtime_syntax:IsKeyword(token) and
+						not runtime_syntax:IsPrefixOperator(token) and
+						not runtime_syntax:IsValue(token) and
+						token.value ~= "function"
+					)
+				then
 					parser:Error(
-						"expected right side to be an expression, got $1",
+						"expected beginning of expression, got $1",
 						nil,
 						nil,
 						token and
@@ -1354,397 +1285,439 @@ end
 					return
 				end
 
-				node:End()
+				return ReadRuntimeExpression(parser, priority)
 			end
-
-			return node
 		end
 	end
 
+	do -- statement
+		local ReadDestructureAssignmentStatement
+		local ReadLocalDestructureAssignmentStatement
+		do -- destructure statement
+			local function IsDestructureStatement(parser, offset)
+				offset = offset or 0
+				return
+					(parser:IsValue("{", offset + 0) and parser:IsType("letter", offset + 1)) or
+					(parser:IsType("letter", offset + 0) and parser:IsValue(",", offset + 1) and parser:IsValue("{", offset + 2))
+			end
 
+			local function IsLocalDestructureAssignmentStatement(parser)
+				if parser:IsValue("local") then
+					if parser:IsValue("type", 1) then return IsDestructureStatement(parser, 2) end
+					return IsDestructureStatement(parser, 1)
+				end
+			end
 
-	
+			function ReadDestructureAssignmentStatement(parser)
+				if not IsDestructureStatement(parser) then return end
+				local node = parser:Node("statement", "destructure_assignment")
+				do
+					if parser:IsType("letter") then
+						local val = parser:Node("expression", "value")
+						val.value = parser:ReadToken()
+						node.default = val:End()
+						node.default_comma = parser:ExpectValue(",")
+					end
+				
+					node.tokens["{"] = parser:ExpectValue("{")
+					node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
+					node.tokens["}"] = parser:ExpectValue("}")
+					node.tokens["="] = parser:ExpectValue("=")
+					node.right = ReadRuntimeExpression(parser, 0)
+				end
+				return node:End()
+			end
+
+			function ReadLocalDestructureAssignmentStatement(parser)
+				if not IsLocalDestructureAssignmentStatement(parser) then return end
+				local node = parser:Node("statement", "local_destructure_assignment")
+				node.tokens["local"] = parser:ExpectValue("local")
 			
-	local function ReadDestructureAssignmentStatement(parser)
-		if not IsDestructureStatement(parser) then return end
-		local node = parser:Node("statement", "destructure_assignment")
+				if parser:IsValue("type") then
+					node.tokens["type"] = parser:ExpectValue("type")
+					node.environment = "typesystem"
+				end
+			
+				do -- remaining
+					if parser:IsType("letter") then
+						local val = parser:Node("expression", "value")
+						val.value = parser:ReadToken()
+						node.default = val:End()
+						node.default_comma = parser:ExpectValue(",")
+					end
+				
+					node.tokens["{"] = parser:ExpectValue("{")
+					node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
+					node.tokens["}"] = parser:ExpectValue("}")
+					node.tokens["="] = parser:ExpectValue("=")
+					node.right = ReadRuntimeExpression(parser, 0)
+				end
+
+				return node:End()
+			end
+		end
+
+		local ReadFunctionStatement
+		local ReadAnalyzerFunctionStatement
 		do
-			if parser:IsType("letter") then
-				local val = parser:Node("expression", "value")
-				val.value = parser:ReadToken()
-				node.default = val:End()
-				node.default_comma = parser:ExpectValue(",")
+			local function ReadFunctionNameIndex(parser)
+				if not runtime_syntax:IsValue(parser:GetToken()) then return end
+				local node = parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
+				local first = node
+
+				while parser:IsValue(".") or parser:IsValue(":") do
+					local left = node
+					local self_call = parser:IsValue(":")
+					node = parser:Node("expression", "binary_operator")
+					node.value = parser:ReadToken()
+					node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
+					node.left = left
+					node.right.self_call = self_call
+					node:End()
+				end
+
+				first.standalone_letter = node
+				return node
 			end
-		
-			node.tokens["{"] = parser:ExpectValue("{")
-			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
-			node.tokens["}"] = parser:ExpectValue("}")
-			node.tokens["="] = parser:ExpectValue("=")
-			node.right = ReadRuntimeExpression(parser, 0)
+
+			function ReadFunctionStatement(self)
+				if not self:IsValue("function") then return end
+				local node = self:Node("statement", "function")
+				node.tokens["function"] = self:ExpectValue("function")
+				node.expression = ReadFunctionNameIndex(self)
+
+				if node.expression and node.expression.kind == "binary_operator" then
+					node.self_call = node.expression.right.self_call
+				end
+
+				if self:IsValue("<|") then
+					node.kind = "type_function"
+					ReadTypeFunctionBody(self, node)
+				else
+					ReadFunctionBody(self, node)
+				end
+
+				return node:End()
+			end
+
+			function ReadAnalyzerFunctionStatement(parser)
+				if not (parser:IsValue("analyzer") and parser:IsValue("function", 1)) then return end
+				local node = parser:Node("statement", "analyzer_function")
+				node.tokens["analyzer"] = parser:ExpectValue("analyzer")
+				node.tokens["function"] = parser:ExpectValue("function")
+				local force_upvalue
+
+				if parser:IsValue("^") then
+					force_upvalue = true
+					node.tokens["^"] = parser:ReadToken()
+				end
+
+				node.expression = ReadFunctionNameIndex(parser)
+
+				do -- hacky
+					if node.expression.left then
+						node.expression.left.standalone_letter = node
+						node.expression.left.force_upvalue = force_upvalue
+					else
+						node.expression.standalone_letter = node
+						node.expression.force_upvalue = force_upvalue
+					end
+
+					if node.expression.value.value == ":" then
+						node.self_call = true
+					end
+				end
+
+				ReadAnalyzerFunctionBody(parser, node, true)
+				return node:End()
+			end
 		end
-		return node:End()
-	end
-	local function ReadLocalDestructureAssignmentStatement(parser)
-		if not IsLocalDestructureAssignmentStatement(parser) then return end
-		local node = parser:Node("statement", "local_destructure_assignment")
-		node.tokens["local"] = parser:ExpectValue("local")
-	
-		if parser:IsValue("type") then
+		local function ReadLocalFunctionStatement(parser)
+			if not (parser:IsValue("local") and parser:IsValue("function", 1)) then return end
+			local node = parser:Node("statement", "local_function"):ExpectKeyword("local"):ExpectKeyword("function")
+				:ExpectSimpleIdentifier()
+				ReadFunctionBody(parser, node)
+			return node:End()
+		end
+		local function ReadLocalAnalyzerFunctionStatement(parser)
+			if not (parser:IsValue("local") and parser:IsValue("analyzer", 1) and parser:IsValue("function", 2)) then return end
+			local node = parser:Node("statement", "local_analyzer_function"):ExpectKeyword("local"):ExpectKeyword("analyzer")
+				:ExpectKeyword("function")
+				:ExpectSimpleIdentifier()
+			ReadAnalyzerFunctionBody(parser, node, true)
+			return node:End()
+		end
+		local function ReadLocalTypeFunctionStatement(parser)
+			if not (parser:IsValue("local") and parser:IsValue("function", 1) and (parser:IsValue("<|", 3) or parser:IsValue("!", 3))) then return end
+			local node = parser:Node("statement", "local_type_function"):ExpectKeyword("local"):ExpectKeyword("function")
+				:ExpectSimpleIdentifier()
+			ReadTypeFunctionBody(parser, node)
+			return node:End()
+		end
+		local function ReadBreakStatement(parser)
+			if not parser:IsValue("break") then return nil end
+			return parser:Node("statement", "break"):ExpectKeyword("break"):End()
+		end
+		local function ReadDoStatement(parser)
+			if not parser:IsValue("do") then return nil end
+			return
+				parser:Node("statement", "do"):ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do")
+				:End()
+		end
+		local function ReadGenericForStatement(parser)
+			if not parser:IsValue("for") then return nil end
+			local node = parser:Node("statement", "generic_for")
+			node:ExpectKeyword("for")
+			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
+			node:ExpectKeyword("in")
+			node.expressions = ReadMultipleValues(parser, math.huge, ExpectRuntimeExpression, 0)
+			return
+				node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
+		end
+		local function ReadGotoLabelStatement(parser)
+			if not parser:IsValue("::") then return nil end
+			return
+				parser:Node("statement", "goto_label"):ExpectKeyword("::"):ExpectSimpleIdentifier():ExpectKeyword("::")
+				:End()
+		end
+		local function ReadGotoStatement(parser)
+			if not parser:IsValue("goto") then return nil end
+			return
+				parser:IsType("letter", 1) and
+				parser:Node("statement", "goto"):ExpectKeyword("goto"):ExpectSimpleIdentifier():End()
+		end
+		local function ReadIfStatement(parser)
+			if not parser:IsValue("if") then return nil end
+			local node = parser:Node("statement", "if")
+			node.expressions = {}
+			node.statements = {}
+			node.tokens["if/else/elseif"] = {}
+			node.tokens["then"] = {}
+
+			for i = 1, parser:GetLength() do
+				local token
+
+				if i == 1 then
+					token = parser:ExpectValue("if")
+				else
+					token = parser:ReadValues(
+						{
+							["else"] = true,
+							["elseif"] = true,
+							["end"] = true,
+						}
+					)
+				end
+
+				if not token then return end -- TODO: what happens here? :End is never called
+				node.tokens["if/else/elseif"][i] = token
+
+				if token.value ~= "else" then
+					node.expressions[i] = ExpectRuntimeExpression(parser, 0)
+					node.tokens["then"][i] = parser:ExpectValue("then")
+				end
+
+				node.statements[i] = parser:ReadNodes({
+					["end"] = true,
+					["else"] = true,
+					["elseif"] = true,
+				})
+				if parser:IsValue("end") then break end
+			end
+
+			node:ExpectKeyword("end")
+			return node:End()
+		end
+		local function ReadLocalAssignmentStatement(parser)
+			if not parser:IsValue("local") then return end
+			local node = parser:Node("statement", "local_assignment")
+			node:ExpectKeyword("local")
+			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
+
+			if parser:IsValue("=") then
+				node:ExpectKeyword("=")
+				node.right = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
+			end
+
+			return node:End()
+		end
+		local function ReadNumericForStatement(parser)
+			if not (parser:IsValue("for") and parser:IsValue("=", 2)) then return nil end
+			local node = parser:Node("statement", "numeric_for")
+			node:ExpectKeyword("for")
+			node.identifiers = ReadMultipleValues(parser, 1, ReadIdentifier)
+			node:ExpectKeyword("=")
+			node.expressions = ReadMultipleValues(parser, 3, ExpectRuntimeExpression, 0)
+			return
+				node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
+		end
+		local function ReadRepeatStatement(parser)
+			if not parser:IsValue("repeat") then return nil end
+			local node = parser:Node("statement", "repeat"):ExpectKeyword("repeat"):ExpectNodesUntil("until"):ExpectKeyword("until")
+			node.expression = ExpectRuntimeExpression(parser)
+			return node:End()
+		end
+		local function ReadSemicolonStatement(parser)
+			if not parser:IsValue(";") then return nil end
+			local node = parser:Node("statement", "semicolon")
+			node.tokens[";"] = parser:ExpectValue(";")
+			return node:End()
+		end
+		local function ReadReturnStatement(parser)
+			if not parser:IsValue("return") then return nil end
+			local node = parser:Node("statement", "return"):ExpectKeyword("return")
+			node.expressions = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
+			return node:End()
+		end
+		local function ReadWhileStatement(parser)
+			if not parser:IsValue("while") then return nil end
+			local node = parser:Node("statement", "while"):ExpectKeyword("while")
+			node.expression = ExpectRuntimeExpression(parser)
+			return
+				node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
+		end
+		local function ReadContinueStatement(parser)
+			return
+				parser:IsValue("continue") and
+				parser:Node("statement", "continue"):ExpectKeyword("continue"):End()
+		end
+		local function ReadDebugCodeStatement(parser)
+			if parser:IsType("type_code") then
+				local node = parser:Node("statement", "type_code")
+				local code = parser:Node("expression", "value")
+				code.value = parser:ExpectType("type_code")
+				code:End()
+				node.lua_code = code
+				return node:End()
+			elseif parser:IsType("parser_code") then
+				local token = parser:ExpectType("parser_code")
+				assert(loadstring("local parser = ...;" .. token.value:sub(3)))(parser)
+				local node = parser:Node("statement", "parser_code")
+				local code = parser:Node("expression", "value")
+				code.value = token
+				node.lua_code = code:End()
+				return node:End()
+			end
+		end
+		local function ReadLocalTypeAssignmentStatement(parser)
+			if not (
+				parser:IsValue("local") and parser:IsValue("type", 1) and
+				runtime_syntax:GetTokenType(parser:GetToken(2)) == "letter"
+			) then return end
+			local node = parser:Node("statement", "local_assignment")
+			node.tokens["local"] = parser:ExpectValue("local")
 			node.tokens["type"] = parser:ExpectValue("type")
-			node.environment = "typesystem"
-		end
-	
-		do -- remaining
-			if parser:IsType("letter") then
-				local val = parser:Node("expression", "value")
-				val.value = parser:ReadToken()
-				node.default = val:End()
-				node.default_comma = parser:ExpectValue(",")
-			end
-		
-			node.tokens["{"] = parser:ExpectValue("{")
 			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
-			node.tokens["}"] = parser:ExpectValue("}")
-			node.tokens["="] = parser:ExpectValue("=")
-			node.right = ReadRuntimeExpression(parser, 0)
-		end
+			node.environment = "typesystem"
 
-		return node:End()
-	end
-	local function ReadFunctionStatement(self)
-		if not self:IsValue("function") then return end
-		local node = self:Node("statement", "function")
-		node.tokens["function"] = self:ExpectValue("function")
-		node.expression = ReadIndexExpression(self)
-
-		if node.expression and node.expression.kind == "binary_operator" then
-			node.self_call = node.expression.right.self_call
-		end
-
-		if self:IsValue("<|") then
-			node.kind = "type_function"
-			ReadTypeFunctionBody(self, node)
-		else
-			ReadFunctionBody(self, node)
-		end
-
-		return node:End()
-	end
-	local function ReadLocalFunctionStatement(parser)
-		if not (parser:IsValue("local") and parser:IsValue("function", 1)) then return end
-		local node = parser:Node("statement", "local_function"):ExpectKeyword("local"):ExpectKeyword("function")
-			:ExpectSimpleIdentifier()
-			ReadFunctionBody(parser, node)
-		return node:End()
-	end
-	local function ReadAnalyzerFunctionStatement(parser)
-		if not (parser:IsValue("analyzer") and parser:IsValue("function", 1)) then return end
-		local node = parser:Node("statement", "analyzer_function")
-		node.tokens["analyzer"] = parser:ExpectValue("analyzer")
-		node.tokens["function"] = parser:ExpectValue("function")
-		local force_upvalue
-
-		if parser:IsValue("^") then
-			force_upvalue = true
-			node.tokens["^"] = parser:ReadToken()
-		end
-
-		node.expression = ReadIndexExpression(parser)
-
-		do -- hacky
-			if node.expression.left then
-				node.expression.left.standalone_letter = node
-				node.expression.left.force_upvalue = force_upvalue
-			else
-				node.expression.standalone_letter = node
-				node.expression.force_upvalue = force_upvalue
+			if parser:IsValue("=") then
+				node.tokens["="] = parser:ExpectValue("=")
+				node.right = ReadMultipleValues(parser, nil, ReadTypeExpression)
 			end
 
-			if node.expression.value.value == ":" then
-				node.self_call = true
-			end
-		end
-
-		ReadAnalyzerFunctionBody(parser, node, true)
-		return node:End()
-	end
-	local function ReadLocalAnalyzerFunctionStatement(parser)
-		if not (parser:IsValue("local") and parser:IsValue("analyzer", 1) and parser:IsValue("function", 2)) then return end
-		local node = parser:Node("statement", "local_analyzer_function"):ExpectKeyword("local"):ExpectKeyword("analyzer")
-			:ExpectKeyword("function")
-			:ExpectSimpleIdentifier()
-		ReadAnalyzerFunctionBody(parser, node, true)
-		return node:End()
-	end
-	local function ReadLocalTypeFunctionStatement(parser)
-		if not (parser:IsValue("local") and parser:IsValue("function", 1) and (parser:IsValue("<|", 3) or parser:IsValue("!", 3))) then return end
-		local node = parser:Node("statement", "local_type_function"):ExpectKeyword("local"):ExpectKeyword("function")
-			:ExpectSimpleIdentifier()
-		ReadTypeFunctionBody(parser, node)
-		return node:End()
-	end
-	local function ReadBreakStatement(parser)
-		if not parser:IsValue("break") then return nil end
-		return parser:Node("statement", "break"):ExpectKeyword("break"):End()
-	end
-	local function ReadDoStatement(parser)
-		if not parser:IsValue("do") then return nil end
-		return
-			parser:Node("statement", "do"):ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do")
-			:End()
-	end
-	local function ReadGenericForStatement(parser)
-		if not parser:IsValue("for") then return nil end
-		local node = parser:Node("statement", "generic_for")
-		node:ExpectKeyword("for")
-		node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
-		node:ExpectKeyword("in")
-		node.expressions = ReadMultipleValues(parser, math.huge, ExpectRuntimeExpression, 0)
-		return
-			node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
-	end
-	local function ReadGotoLabelStatement(parser)
-		if not parser:IsValue("::") then return nil end
-		return
-			parser:Node("statement", "goto_label"):ExpectKeyword("::"):ExpectSimpleIdentifier():ExpectKeyword("::")
-			:End()
-	end
-	local function ReadGotoStatement(parser)
-		if not parser:IsValue("goto") then return nil end
-		return
-			parser:IsType("letter", 1) and
-			parser:Node("statement", "goto"):ExpectKeyword("goto"):ExpectSimpleIdentifier():End()
-	end
-	local function ReadIfStatement(parser)
-		if not parser:IsValue("if") then return nil end
-		local node = parser:Node("statement", "if")
-		node.expressions = {}
-		node.statements = {}
-		node.tokens["if/else/elseif"] = {}
-		node.tokens["then"] = {}
-
-		for i = 1, parser:GetLength() do
-			local token
-
-			if i == 1 then
-				token = parser:ExpectValue("if")
-			else
-				token = parser:ReadValues(
-					{
-						["else"] = true,
-						["elseif"] = true,
-						["end"] = true,
-					}
-				)
-			end
-
-			if not token then return end -- TODO: what happens here? :End is never called
-			node.tokens["if/else/elseif"][i] = token
-
-			if token.value ~= "else" then
-				node.expressions[i] = ExpectRuntimeExpression(parser, 0)
-				node.tokens["then"][i] = parser:ExpectValue("then")
-			end
-
-			node.statements[i] = parser:ReadNodes({
-				["end"] = true,
-				["else"] = true,
-				["elseif"] = true,
-			})
-			if parser:IsValue("end") then break end
-		end
-
-		node:ExpectKeyword("end")
-		return node:End()
-	end
-	local function ReadLocalAssignmentStatement(parser)
-		if not parser:IsValue("local") then return end
-		local node = parser:Node("statement", "local_assignment")
-		node:ExpectKeyword("local")
-		node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
-
-		if parser:IsValue("=") then
-			node:ExpectKeyword("=")
-			node.right = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
-		end
-
-		return node:End()
-	end
-	local function ReadNumericForStatement(parser)
-		if not (parser:IsValue("for") and parser:IsValue("=", 2)) then return nil end
-		local node = parser:Node("statement", "numeric_for")
-		node:ExpectKeyword("for")
-		node.identifiers = ReadMultipleValues(parser, 1, ReadIdentifier)
-		node:ExpectKeyword("=")
-		node.expressions = ReadMultipleValues(parser, 3, ExpectRuntimeExpression, 0)
-		return
-			node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
-	end
-	local function ReadRepeatStatement(parser)
-		if not parser:IsValue("repeat") then return nil end
-		local node = parser:Node("statement", "repeat"):ExpectKeyword("repeat"):ExpectNodesUntil("until"):ExpectKeyword("until")
-		node.expression = ExpectRuntimeExpression(parser)
-		return node:End()
-	end
-	local function ReadSemicolonStatement(parser)
-		if not parser:IsValue(";") then return nil end
-		local node = parser:Node("statement", "semicolon")
-		node.tokens[";"] = parser:ExpectValue(";")
-		return node:End()
-	end
-	local function ReadReturnStatement(parser)
-		if not parser:IsValue("return") then return nil end
-		local node = parser:Node("statement", "return"):ExpectKeyword("return")
-		node.expressions = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
-		return node:End()
-	end
-	local function ReadWhileStatement(parser)
-		if not parser:IsValue("while") then return nil end
-		local node = parser:Node("statement", "while"):ExpectKeyword("while")
-		node.expression = ExpectRuntimeExpression(parser)
-		return
-			node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
-	end
-	local function ReadContinueStatement(parser)
-		return
-			parser:IsValue("continue") and
-			parser:Node("statement", "continue"):ExpectKeyword("continue"):End()
-	end
-	local function ReadDebugCodeStatement(parser)
-		if parser:IsType("type_code") then
-			local node = parser:Node("statement", "type_code")
-			local code = parser:Node("expression", "value")
-			code.value = parser:ExpectType("type_code")
-			code:End()
-			node.lua_code = code
-			return node:End()
-		elseif parser:IsType("parser_code") then
-			local token = parser:ExpectType("parser_code")
-			assert(loadstring("local parser = ...;" .. token.value:sub(3)))(parser)
-			local node = parser:Node("statement", "parser_code")
-			local code = parser:Node("expression", "value")
-			code.value = token
-			node.lua_code = code:End()
 			return node:End()
 		end
-	end
-	local function ReadLocalTypeAssignmentStatement(parser)
-		if not (
-			parser:IsValue("local") and parser:IsValue("type", 1) and
-			runtime_syntax:GetTokenType(parser:GetToken(2)) == "letter"
-		) then return end
-		local node = parser:Node("statement", "local_assignment")
-		node.tokens["local"] = parser:ExpectValue("local")
-		node.tokens["type"] = parser:ExpectValue("type")
-		node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
-		node.environment = "typesystem"
-
-		if parser:IsValue("=") then
-			node.tokens["="] = parser:ExpectValue("=")
-			node.right = ReadMultipleValues(parser, nil, ReadTypeExpression)
-		end
-
-		return node:End()
-	end
-	local function ReadTypeAssignmentStatement(parser)
-		if not (parser:IsValue("type") and (parser:IsType("letter", 1) or parser:IsValue("^", 1))) then return end
-		local node = parser:Node("statement", "assignment")
-		node.tokens["type"] = parser:ExpectValue("type")
-		node.left = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
-		node.environment = "typesystem"
-
-		if parser:IsValue("=") then
-			node.tokens["="] = parser:ExpectValue("=")
-			node.right = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
-		end
-
-		return node:End()
-	end
-
-	local function ReadCallOrAssignmentStatement(parser)
-		local start = parser:GetToken()
-		local left = ReadMultipleValues(parser, math.huge, ExpectRuntimeExpression, 0)
-
-		if parser:IsValue("=") then
+		local function ReadTypeAssignmentStatement(parser)
+			if not (parser:IsValue("type") and (parser:IsType("letter", 1) or parser:IsValue("^", 1))) then return end
 			local node = parser:Node("statement", "assignment")
-			node:ExpectKeyword("=")
-			node.left = left
-			node.right = ReadMultipleValues(parser, math.huge, ExpectRuntimeExpression, 0)
+			node.tokens["type"] = parser:ExpectValue("type")
+			node.left = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+			node.environment = "typesystem"
+
+			if parser:IsValue("=") then
+				node.tokens["="] = parser:ExpectValue("=")
+				node.right = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+			end
+
 			return node:End()
 		end
 
-		if left[1] and (left[1].kind == "postfix_call" or left[1].kind == "import") and not left[2] then
-			local node = parser:Node("statement", "call_expression")
-			node.value = left[1]
-			node.tokens = left[1].tokens
+		local function ReadCallOrAssignmentStatement(parser)
+			local start = parser:GetToken()
+			local left = ReadMultipleValues(parser, math.huge, ExpectRuntimeExpression, 0)
+
+			if parser:IsValue("=") then
+				local node = parser:Node("statement", "assignment")
+				node:ExpectKeyword("=")
+				node.left = left
+				node.right = ReadMultipleValues(parser, math.huge, ExpectRuntimeExpression, 0)
+				return node:End()
+			end
+
+			if left[1] and (left[1].kind == "postfix_call" or left[1].kind == "import") and not left[2] then
+				local node = parser:Node("statement", "call_expression")
+				node.value = left[1]
+				node.tokens = left[1].tokens
+				return node:End()
+			end
+
+			parser:Error(
+				"expected assignment or call expression got $1 ($2)",
+				start,
+				parser:GetToken(),
+				parser:GetToken().type,
+				parser:GetToken().value
+			)
+		end
+
+		function META:ReadRootNode()
+			local node = self:Node("statement", "root")
+			self.root = self.config and self.config.root or node
+			local shebang
+
+			if self:IsType("shebang") then
+				shebang = self:Node("statement", "shebang")
+				shebang.tokens["shebang"] = self:ExpectType("shebang")
+				shebang:End()
+				node.tokens["shebang"] = shebang.tokens["shebang"]
+			end
+
+			node.statements = self:ReadNodes()
+
+			if shebang then
+				table.insert(node.statements, 1, shebang)
+			end
+
+			if self:IsType("end_of_file") then
+				local eof = self:Node("statement", "end_of_file")
+				eof.tokens["end_of_file"] = self.tokens[#self.tokens]
+				eof:End()
+				table.insert(node.statements, eof)
+				node.tokens["eof"] = eof.tokens["end_of_file"]
+			end
+
 			return node:End()
 		end
 
-		parser:Error(
-			"expected assignment or call expression got $1 ($2)",
-			start,
-			parser:GetToken(),
-			parser:GetToken().type,
-			parser:GetToken().value
-		)
-	end
-
-	function META:ReadRootNode()
-		local node = self:Node("statement", "root")
-		self.root = self.config and self.config.root or node
-		local shebang
-
-		if self:IsType("shebang") then
-			shebang = self:Node("statement", "shebang")
-			shebang.tokens["shebang"] = self:ExpectType("shebang")
-			shebang:End()
-			node.tokens["shebang"] = shebang.tokens["shebang"]
+		function META:ReadNode()
+			if self:IsType("end_of_file") then return end
+			return
+				ReadDebugCodeStatement(self) or
+				ReadReturnStatement(self) or
+				ReadBreakStatement(self) or
+				ReadContinueStatement(self) or
+				ReadSemicolonStatement(self) or
+				ReadGotoStatement(self) or
+				ReadGotoLabelStatement(self) or
+				ReadRepeatStatement(self) or
+				ReadAnalyzerFunctionStatement(self) or
+				ReadFunctionStatement(self) or
+				ReadLocalTypeFunctionStatement(self) or
+				ReadLocalFunctionStatement(self) or
+				ReadLocalAnalyzerFunctionStatement(self) or
+				ReadLocalTypeAssignmentStatement(self) or
+				ReadLocalDestructureAssignmentStatement(self) or
+				ReadLocalAssignmentStatement(self) or
+				ReadTypeAssignmentStatement(self) or
+				ReadDoStatement(self) or
+				ReadIfStatement(self) or
+				ReadWhileStatement(self) or
+				ReadNumericForStatement(self) or
+				ReadGenericForStatement(self) or
+				ReadDestructureAssignmentStatement(self) or
+				ReadCallOrAssignmentStatement(self)
 		end
 
-		node.statements = self:ReadNodes()
-
-		if shebang then
-			table.insert(node.statements, 1, shebang)
-		end
-
-		if self:IsType("end_of_file") then
-			local eof = self:Node("statement", "end_of_file")
-			eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-			eof:End()
-			table.insert(node.statements, eof)
-			node.tokens["eof"] = eof.tokens["end_of_file"]
-		end
-
-		return node:End()
-	end
-
-	function META:ReadNode()
-		if self:IsType("end_of_file") then return end
-		return
-			ReadDebugCodeStatement(self) or
-			ReadReturnStatement(self) or
-			ReadBreakStatement(self) or
-			ReadContinueStatement(self) or
-			ReadSemicolonStatement(self) or
-			ReadGotoStatement(self) or
-			ReadGotoLabelStatement(self) or
-			ReadRepeatStatement(self) or
-			ReadAnalyzerFunctionStatement(self) or
-			ReadFunctionStatement(self) or
-			ReadLocalTypeFunctionStatement(self) or
-			ReadLocalFunctionStatement(self) or
-			ReadLocalAnalyzerFunctionStatement(self) or
-			ReadLocalTypeAssignmentStatement(self) or
-			ReadLocalDestructureAssignmentStatement(self) or
-			ReadLocalAssignmentStatement(self) or
-			ReadTypeAssignmentStatement(self) or
-			ReadDoStatement(self) or
-			ReadIfStatement(self) or
-			ReadWhileStatement(self) or
-			ReadNumericForStatement(self) or
-			ReadGenericForStatement(self) or
-			ReadDestructureAssignmentStatement(self) or
-			ReadCallOrAssignmentStatement(self)
 	end
 end
 
