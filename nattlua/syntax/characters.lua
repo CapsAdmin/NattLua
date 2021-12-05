@@ -40,4 +40,22 @@ function characters.IsSymbol(c--[[#: number]])--[[#: boolean]]
         )
 end
 
+local function generate_map(str--[[#: string]])
+    local out = {}
+
+    for i = 1, #str do
+        out[str:byte(i)] = true
+    end
+
+    return out
+end
+
+local allowed_hex = generate_map("1234567890abcdefABCDEF")
+
+function characters.IsHex(c--[[#: number]])--[[#: boolean]]
+    if not c then return false end
+    return allowed_hex[c] ~= nil
+end
+
+
 return characters

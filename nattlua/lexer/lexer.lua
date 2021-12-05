@@ -219,24 +219,451 @@ end
 
 -- lua lexer
 do
---[[#	type Lexer = META.@Self]]
-	local ReadSpace = require("nattlua.lexer.readers.space").ReadSpace
-	local ReadLetter = require("nattlua.lexer.readers.letter").ReadLetter
-	local ReadMultilineCComment = require("nattlua.lexer.readers.c_multiline_comment").ReadMultilineCComment
-	local ReadLineCComment = require("nattlua.lexer.readers.c_line_comment").ReadLineCComment
-	local ReadMultilineComment = require("nattlua.lexer.readers.multiline_comment").ReadMultilineComment
-	local ReadLineComment = require("nattlua.lexer.readers.line_comment").ReadLineComment
-	local ReadInlineTypeCode = require("nattlua.lexer.readers.inline_type_code").ReadInlineTypeCode
-	local ReadInlineParserCode = require("nattlua.lexer.readers.inline_parser_code").ReadInlineParserCode
-	local ReadHexNumber = require("nattlua.lexer.readers.number").ReadHexNumber
-	local ReadBinaryNumber = require("nattlua.lexer.readers.number").ReadBinaryNumber
-	local ReadDecimalNumber = require("nattlua.lexer.readers.number").ReadDecimalNumber
-	local ReadMultilineString = require("nattlua.lexer.readers.multiline_string").ReadMultilineString
-	local ReadSingleQuoteString = require("nattlua.lexer.readers.string").ReadSingleQuoteString
-	local ReadDoubleQuoteString = require("nattlua.lexer.readers.string").ReadDoubleQuoteString
-	local ReadSymbol = require("nattlua.lexer.readers.symbol").ReadSymbol
-	local ReadCommentEscape = require("nattlua.lexer.readers.comment_escape").ReadCommentEscape
-	local ReadRemainingCommentEscape = require("nattlua.lexer.readers.comment_escape").ReadRemainingCommentEscape
+	--[[# local type Lexer = META.@Self]]
+	--[[# local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
+
+	local characters = require("nattlua.syntax.characters")
+	local runtime_syntax = require("nattlua.syntax.runtime")
+	local helpers = require("nattlua.other.quote")
+
+	local function ReadSpace(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if characters.IsSpace(lexer:PeekByte()) then
+			while not lexer:TheEnd() do
+				lexer:Advance(1)
+				if not characters.IsSpace(lexer:PeekByte()) then break end
+			end
+
+			return "space"
+		end
+
+		return false
+	end
+
+	local function ReadLetter(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if not characters.IsLetter(lexer:PeekByte()) then
+			return false
+		end
+		
+		while not lexer:TheEnd() do
+			lexer:Advance(1)
+			if not characters.IsDuringLetter(lexer:PeekByte()) then break end
+		end
+
+		return "letter"
+	end
+
+	local function ReadMultilineCComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if not lexer:IsString("/*") then
+			return false
+		end
+
+		local start = lexer:GetPosition()
+		lexer:Advance(2)
+
+		while not lexer:TheEnd() do
+			if lexer:IsString("*/") then
+				lexer:Advance(2)
+				return "multiline_comment"
+			end
+
+			lexer:Advance(1)
+		end
+
+		lexer:Error(
+			"expected multiline c comment to end, reached end of code",
+			start,
+			start + 1
+		)
+
+		return false
+	end
+
+	local function ReadLineCComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if not lexer:IsString("//") then
+			return false
+		end
+
+		lexer:Advance(2)
+
+		while not lexer:TheEnd() do
+			if lexer:IsString("\n") then
+				 break 
+			end
+			
+			lexer:Advance(1)
+		end
+
+		return "line_comment"
+	end
+
+	local function ReadLineComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if not lexer:IsString("--") then
+			return false
+		end
+
+		lexer:Advance(2)
+
+		while not lexer:TheEnd() do
+			if lexer:IsString("\n") then
+				break 
+			end
+			
+			lexer:Advance(1)
+		end
+
+		return "line_comment"
+	end
+
+	local function ReadMultilineComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if not lexer:IsString("--[") or (not lexer:IsString("[", 3) and not lexer:IsString("=", 3)) then
+			return false
+		end
+
+		local start = lexer:GetPosition()
+
+		-- skip past the --[
+		lexer:Advance(3)
+
+		while lexer:IsString("=") do
+			lexer:Advance(1)
+		end
+
+		if not lexer:IsString("[") then
+			-- if we have an incomplete multiline comment, it's just a single line comment
+			lexer:SetPosition(start)
+			return ReadLineComment(lexer);
+		end
+
+		-- skip the last [
+		lexer:Advance(1)
+		local pos = lexer:FindNearest("]" .. string.rep("=", (lexer:GetPosition() - start) - 4) .. "]")
+
+		if pos then
+			lexer:SetPosition(pos)
+			return "multiline_comment"
+		end
+
+		lexer:Error("expected multiline comment to end, reached end of code", start, start + 1)
+		lexer:SetPosition(start + 2)
+
+		return false
+	end
+
+	local function ReadInlineTypeCode(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+			if not lexer:IsString("§") then
+				return false
+			end
+
+			lexer:Advance(#"§")
+
+			while not lexer:TheEnd() do
+				if lexer:IsString("\n") then
+					break
+				end
+				lexer:Advance(1)
+			end
+
+			return "type_code"
+		end
+	local function ReadInlineParserCode(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if not lexer:IsString("£") then
+			return false
+		end
+
+		lexer:Advance(#"£")
+
+		while not lexer:TheEnd() do
+			if lexer:IsString("\n") then
+				break
+			end
+			lexer:Advance(1)
+		end
+
+		return "parser_code"
+	end
+	
+	local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
+		lexer:Advance(1)
+
+		if lexer:IsString("+") or lexer:IsString("-") then
+			lexer:Advance(1)
+
+			if not characters.IsNumber(lexer:PeekByte()) then
+				lexer:Error(
+					"malformed " .. what .. " expected number, got " .. string.char(lexer:PeekByte()),
+					lexer:GetPosition() - 2
+				)
+				return false
+			end
+		end
+
+		while not lexer:TheEnd() do
+			if not characters.IsNumber(lexer:PeekByte()) then break end
+			lexer:Advance(1)
+		end
+
+		return true
+	end
+
+	local function ReadHexNumber(lexer--[[#: Lexer]])
+		if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then
+			return false
+		end
+
+		lexer:Advance(2)
+		local has_dot = false
+
+		while not lexer:TheEnd() do
+			if lexer:IsString("_") then
+				lexer:Advance(1)
+			end
+
+			if not has_dot and lexer:IsString(".") then
+				-- 22..66 would be a number range
+				-- so we have to return 22 only
+				if lexer:IsString(".", 1) then
+					break
+				end
+				
+				has_dot = true
+				lexer:Advance(1)
+			end
+
+
+			if characters.IsHex(lexer:PeekByte()) then
+				lexer:Advance(1)
+			else
+				if characters.IsSpace(lexer:PeekByte()) or characters.IsSymbol(lexer:PeekByte()) then
+					break
+				end
+
+				if lexer:IsStringLower("p") then
+					if ReadNumberPowExponent(lexer, "pow") then
+						break
+					end
+				end
+
+				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+
+				lexer:Error(
+					"malformed hex number, got " .. string.char(lexer:PeekByte()),
+					lexer:GetPosition() - 1,
+					lexer:GetPosition()
+				)
+
+				return false
+			end
+		end
+
+		return "number"
+	end
+
+	local function ReadBinaryNumber(lexer--[[#: Lexer]])
+		if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then
+			return false
+		end
+
+		-- skip past 0b
+		lexer:Advance(2)
+
+		while not lexer:TheEnd() do
+			if lexer:IsString("_") then
+				lexer:Advance(1)
+			end
+
+			if lexer:IsString("1") or lexer:IsString("0") then
+				lexer:Advance(1)
+			else
+				if characters.IsSpace(lexer:PeekByte()) or characters.IsSymbol(lexer:PeekByte()) then
+					break
+				end
+
+				if lexer:IsStringLower("e") then
+					if ReadNumberPowExponent(lexer, "exponent") then
+						break
+					end
+				end
+
+				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				
+				lexer:Error(
+					"malformed binary number, got " .. string.char(lexer:PeekByte()),
+					lexer:GetPosition() - 1,
+					lexer:GetPosition()
+				)
+				return false
+			end
+		end
+
+		return "number"
+	end
+
+	local function ReadDecimalNumber(lexer--[[#: Lexer]])
+		if not characters.IsNumber(lexer:PeekByte()) and (not lexer:IsString(".") or not characters.IsNumber(lexer:PeekByte(1))) then 
+			return false
+		end
+
+		-- if we start with a dot
+		-- .0
+		local has_dot = false
+		if lexer:IsString(".") then
+			has_dot = true
+			lexer:Advance(1)
+		end
+
+		while not lexer:TheEnd() do
+			if lexer:IsString("_") then
+				lexer:Advance(1)
+			end
+
+			if not has_dot and lexer:IsString(".") then
+				-- 22..66 would be a number range
+				-- so we have to return 22 only
+				if lexer:IsString(".", 1) then
+					break
+				end
+				
+				has_dot = true
+				lexer:Advance(1)
+			end
+
+			if characters.IsNumber(lexer:PeekByte()) then
+				lexer:Advance(1)
+			else
+				if characters.IsSpace(lexer:PeekByte()) or characters.IsSymbol(lexer:PeekByte()) then
+					break
+				end
+
+				if lexer:IsString("e") or lexer:IsString("E") then
+					if ReadNumberPowExponent(lexer, "exponent") then
+						break
+					end
+				end
+				
+				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+
+				lexer:Error(
+					"malformed number, got " .. string.char(lexer:PeekByte()) .. " in decimal notation",
+					lexer:GetPosition() - 1,
+					lexer:GetPosition()
+				)
+				return false
+			end
+		end
+
+		return "number"
+	end
+
+	local function ReadMultilineString(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if not lexer:IsString("[", 0) or (not lexer:IsString("[", 1) and not lexer:IsString("=", 1)) then
+			return false
+		end
+
+		local start = lexer:GetPosition()
+		lexer:Advance(1)
+
+		if lexer:IsString("=") then
+			while not lexer:TheEnd() do
+				lexer:Advance(1)
+				if not lexer:IsString("=") then break end
+			end
+		end
+
+		if not lexer:IsString("[") then
+			lexer:Error(
+				"expected multiline string " .. helpers.QuoteToken(lexer:GetStringSlice(start, lexer:GetPosition() - 1) .. "[") .. " got " .. helpers.QuoteToken(lexer:GetStringSlice(start, lexer:GetPosition())),
+				start,
+				start + 1
+			)
+			return false
+		end
+
+		lexer:Advance(1)
+		local closing = "]" .. string.rep("=", (lexer:GetPosition() - start) - 2) .. "]"
+		local pos = lexer:FindNearest(closing)
+
+		if pos then
+			lexer:SetPosition(pos)
+			return "string"
+		end
+
+		lexer:Error(
+			"expected multiline string " .. helpers.QuoteToken(closing) .. " reached end of code",
+			start,
+			start + 1
+		)
+
+		return false
+	end
+
+	local ReadSingleQuoteString
+	local ReadDoubleQuoteString
+
+	do
+		local B = string.byte
+		local escape_character = B([[\]])
+
+		local function build_string_reader(name--[[#: string]], quote--[[#: string]])
+			return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+				if not lexer:IsString(quote) then return false end
+				
+				local start = lexer:GetPosition()
+				lexer:Advance(1)
+		
+				while not lexer:TheEnd() do
+					local char = lexer:ReadByte()
+		
+					if char == escape_character then
+						local char = lexer:ReadByte()
+		
+						if char == B("z") and not lexer:IsString(quote) then
+							ReadSpace(lexer)
+						end
+					elseif char == B("\n") then
+						lexer:Advance(-1)
+						lexer:Error("expected " .. name:lower() .. " quote to end", start, lexer:GetPosition() - 1)
+						return "string"
+					elseif char == B(quote) then
+						return "string"
+					end
+				end
+		
+				lexer:Error(
+					"expected " .. name:lower() .. " quote to end: reached end of file",
+					start,
+					lexer:GetPosition() - 1
+				)
+				return "string"
+			end
+		end
+		
+		ReadDoubleQuoteString = build_string_reader("double", "\"")
+		ReadSingleQuoteString = build_string_reader("single", "'")
+	end
+
+	local function ReadSymbol(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		if lexer:ReadFirstFromArray(runtime_syntax:GetSymbols()) then return "symbol" end
+		return false
+	end
+
+	local function ReadCommentEscape(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
+		if lexer:IsString("--[[#") then
+			lexer:Advance(5)
+			lexer.comment_escape = true
+			return "comment_escape"
+		end
+
+		return false
+	end
+	
+	local function ReadRemainingCommentEscape(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
+		if lexer.comment_escape and lexer:IsString("]]") then
+			lexer:Advance(2)
+			return "comment_escape"
+		end
+
+		return false
+	end
 
 	function META:Read()
 		if ReadRemainingCommentEscape(self) then return "discard", false end
