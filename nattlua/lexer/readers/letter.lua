@@ -4,13 +4,13 @@ local characters = require("nattlua.syntax.characters")
 return
 	{
 		ReadLetter = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-			if not characters.IsLetter(lexer:GetCurrentByteChar()) then
+			if not characters.IsLetter(lexer:PeekByte()) then
 				return false
 			end
 			
 			while not lexer:TheEnd() do
 				lexer:Advance(1)
-				if not characters.IsDuringLetter(lexer:GetCurrentByteChar()) then break end
+				if not characters.IsDuringLetter(lexer:PeekByte()) then break end
 			end
 
 			return "letter"

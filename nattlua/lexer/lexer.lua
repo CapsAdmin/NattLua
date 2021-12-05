@@ -17,34 +17,27 @@ function META:GetLength()--[[#: number]]
 	return self.Code:GetByteSize()
 end
 
-function META:GetChars(start--[[#: number]], stop--[[#: number]])--[[#: string]]
+function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])--[[#: string]]
 	return self.Code:GetStringSlice(start, stop)
 end
 
-function META:GetChar(offset--[[#: number]])--[[#: number]]
+function META:PeekByte(offset--[[#: number | nil]])--[[#: number]]
+	offset = offset or 0
 	return self.Code:GetByte(self.Position + offset)
-end
-
-function META:GetCurrentByteChar()--[[#: number]]
-	return self.Code:GetByte(self.Position)
-end
-
-function META:GetByte()
-	return self.Code:GetByte(self.Position)
-end
-
-function META:ResetState()
-	self.Position = 1
 end
 
 function META:FindNearest(str--[[#: string]])--[[#: nil | number]]
 	return self.Code:FindNearest(str, self.Position)
 end
 
-function META:ReadChar()--[[#: number]]
-	local char = self:GetCurrentByteChar()
+function META:ReadByte()--[[#: number]]
+	local char = self:PeekByte()
 	self.Position = self.Position + 1
 	return char
+end
+
+function META:ResetState()
+	self.Position = 1
 end
 
 function META:Advance(len--[[#: number]])
@@ -63,10 +56,6 @@ function META:TheEnd()--[[#: boolean]]
 	return self.Position > self:GetLength()
 end
 
-function META:IsValue(what--[[#: string]], offset--[[#: number]])--[[#: boolean]]
-	return self:IsByte((B(what)), offset)
-end
-
 function META:IsString(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
 	offset = offset or 0
 	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1) == str
@@ -75,18 +64,6 @@ end
 function META:IsStringLower(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
 	offset = offset or 0
 	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1):lower() == str
-end
-
-function META:IsCurrentValue(what--[[#: string]])--[[#: boolean]]
-	return self:IsCurrentByte((B(what)))
-end
-
-function META:IsCurrentByte(what--[[#: number]])--[[#: boolean]]
-	return self:GetCurrentByteChar() == what
-end
-
-function META:IsByte(what--[[#: number]], offset--[[#: number]])--[[#: boolean]]
-	return self:GetChar(offset) == what
 end
 
 function META:OnError(code--[[#: Code]], msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]]) 
@@ -120,10 +97,10 @@ do
 end
 
 function META:ReadShebang()
-	if self.Position == 1 and self:IsCurrentValue("#") then
+	if self.Position == 1 and self:IsString("#") then
 		for _ = self.Position, self:GetLength() do
 			self:Advance(1)
-			if self:IsCurrentValue("\n") then break end
+			if self:IsString("\n") then break end
 		end
 
 		return true
@@ -198,7 +175,7 @@ function META:GetTokens()
 	end
 
 	for _, token in ipairs(tokens) do
-		token.value = self:GetChars(token.start, token.stop)
+		token.value = self:GetStringSlice(token.start, token.stop)
 	end
 
 	local whitespace_buffer = {}
@@ -234,7 +211,7 @@ end
 function META.New(code--[[#: Code]])
 	local self = setmetatable({
 		Code = code,
-		Position = 0,
+		Position = 1,
 	}, META)
 	self:ResetState()
 	return self

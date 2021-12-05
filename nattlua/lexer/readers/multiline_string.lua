@@ -21,7 +21,7 @@ return
 
 			if not lexer:IsString("[") then
 				lexer:Error(
-					"expected multiline string " .. helpers.QuoteToken(lexer:GetChars(start, lexer:GetPosition() - 1) .. "[") .. " got " .. helpers.QuoteToken(lexer:GetChars(start, lexer:GetPosition())),
+					"expected multiline string " .. helpers.QuoteToken(lexer:GetStringSlice(start, lexer:GetPosition() - 1) .. "[") .. " got " .. helpers.QuoteToken(lexer:GetStringSlice(start, lexer:GetPosition())),
 					start,
 					start + 1
 				)

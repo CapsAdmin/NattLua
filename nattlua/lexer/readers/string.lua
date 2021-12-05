@@ -6,18 +6,18 @@ local escape_character = B([[\]])
 
 local function build_string_reader(name--[[#: string]], quote--[[#: string]])
 	return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-		if not lexer:IsCurrentValue(quote) then return false end
+		if not lexer:IsString(quote) then return false end
 		
 		local start = lexer:GetPosition()
 		lexer:Advance(1)
 
 		while not lexer:TheEnd() do
-			local char = lexer:ReadChar()
+			local char = lexer:ReadByte()
 
 			if char == escape_character then
-				local char = lexer:ReadChar()
+				local char = lexer:ReadByte()
 
-				if char == B("z") and not lexer:IsCurrentValue(quote) then
+				if char == B("z") and not lexer:IsString(quote) then
 					ReadSpace(lexer)
 				end
 			elseif char == B("\n") then

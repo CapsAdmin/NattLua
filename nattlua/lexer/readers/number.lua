@@ -7,12 +7,12 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	lexer:Advance(1)
 
-	if lexer:IsCurrentValue("+") or lexer:IsCurrentValue("-") then
+	if lexer:IsString("+") or lexer:IsString("-") then
 		lexer:Advance(1)
 
-		if not characters.IsNumber(lexer:GetCurrentByteChar()) then
+		if not characters.IsNumber(lexer:PeekByte()) then
 			lexer:Error(
-				"malformed " .. what .. " expected number, got " .. string.char(lexer:GetCurrentByteChar()),
+				"malformed " .. what .. " expected number, got " .. string.char(lexer:PeekByte()),
 				lexer:GetPosition() - 2
 			)
 			return false
@@ -20,7 +20,7 @@ local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	end
 
 	while not lexer:TheEnd() do
-		if not characters.IsNumber(lexer:GetCurrentByteChar()) then break end
+		if not characters.IsNumber(lexer:PeekByte()) then break end
 		lexer:Advance(1)
 	end
 
@@ -48,14 +48,14 @@ local function ReadHexNumber(lexer--[[#: Lexer]])
 	local has_dot = false
 
 	while not lexer:TheEnd() do
-		if lexer:IsCurrentValue("_") then
+		if lexer:IsString("_") then
 			lexer:Advance(1)
 		end
 
 		if not has_dot and lexer:IsString(".") then
 			-- 22..66 would be a number range
             -- so we have to return 22 only
-			if lexer:IsValue(".", 1) then
+			if lexer:IsString(".", 1) then
 				break
 			end
 			
@@ -64,10 +64,10 @@ local function ReadHexNumber(lexer--[[#: Lexer]])
 		end
 
 
-		if allowed_hex[lexer:GetByte()] then
+		if allowed_hex[lexer:PeekByte()] then
 			lexer:Advance(1)
 		else
-			if characters.IsSpace(lexer:GetByte()) or characters.IsSymbol(lexer:GetByte()) then
+			if characters.IsSpace(lexer:PeekByte()) or characters.IsSymbol(lexer:PeekByte()) then
 				break
 			end
 
@@ -80,7 +80,7 @@ local function ReadHexNumber(lexer--[[#: Lexer]])
 			if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 
 			lexer:Error(
-				"malformed hex number, got " .. string.char(lexer:GetByte()),
+				"malformed hex number, got " .. string.char(lexer:PeekByte()),
 				lexer:GetPosition() - 1,
 				lexer:GetPosition()
 			)
@@ -108,7 +108,7 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 		if lexer:IsString("1") or lexer:IsString("0") then
 			lexer:Advance(1)
 		else
-			if characters.IsSpace(lexer:GetCurrentByteChar()) or characters.IsSymbol(lexer:GetCurrentByteChar()) then
+			if characters.IsSpace(lexer:PeekByte()) or characters.IsSymbol(lexer:PeekByte()) then
 				break
 			end
 
@@ -121,7 +121,7 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 			if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 			
 			lexer:Error(
-				"malformed binary number, got " .. string.char(lexer:GetByte()),
+				"malformed binary number, got " .. string.char(lexer:PeekByte()),
 				lexer:GetPosition() - 1,
 				lexer:GetPosition()
 			)
@@ -133,7 +133,7 @@ local function ReadBinaryNumber(lexer--[[#: Lexer]])
 end
 
 local function ReadDecimalNumber(lexer--[[#: Lexer]])
-	if not characters.IsNumber(lexer:GetCurrentByteChar()) and (not lexer:IsCurrentValue(".") or not characters.IsNumber(lexer:GetChar(1))) then 
+	if not characters.IsNumber(lexer:PeekByte()) and (not lexer:IsString(".") or not characters.IsNumber(lexer:PeekByte(1))) then 
 		return false
 	end
 
@@ -153,7 +153,7 @@ local function ReadDecimalNumber(lexer--[[#: Lexer]])
 		if not has_dot and lexer:IsString(".") then
 			-- 22..66 would be a number range
             -- so we have to return 22 only
-			if lexer:IsValue(".", 1) then
+			if lexer:IsString(".", 1) then
 				break
 			end
 			
@@ -161,10 +161,10 @@ local function ReadDecimalNumber(lexer--[[#: Lexer]])
 			lexer:Advance(1)
 		end
 
-		if characters.IsNumber(lexer:GetByte()) then
+		if characters.IsNumber(lexer:PeekByte()) then
 			lexer:Advance(1)
         else
-			if characters.IsSpace(lexer:GetByte()) or characters.IsSymbol(lexer:GetByte()) then
+			if characters.IsSpace(lexer:PeekByte()) or characters.IsSymbol(lexer:PeekByte()) then
 				break
 			end
 
@@ -177,7 +177,7 @@ local function ReadDecimalNumber(lexer--[[#: Lexer]])
 			if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 
 			lexer:Error(
-				"malformed number, got " .. string.char(lexer:GetByte()) .. " in decimal notation",
+				"malformed number, got " .. string.char(lexer:PeekByte()) .. " in decimal notation",
 				lexer:GetPosition() - 1,
 				lexer:GetPosition()
 			)
