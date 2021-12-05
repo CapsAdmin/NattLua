@@ -3,17 +3,20 @@
 return
 	{
 		ReadLineCComment = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-			if lexer:IsValue("/", 0) and lexer:IsValue("/", 1) then
-				lexer:Advance(2)
-
-				while not lexer:TheEnd() do
-					if lexer:IsCurrentValue("\n") then break end
-					lexer:Advance(1)
-				end
-
-				return "line_comment"
+			if not lexer:IsString("//") then
+				return false
 			end
 
-			return false
+			lexer:Advance(2)
+
+			while not lexer:TheEnd() do
+				if lexer:IsString("\n") then
+					 break 
+				end
+				
+				lexer:Advance(1)
+			end
+
+			return "line_comment"
 		end,
 	}

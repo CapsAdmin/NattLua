@@ -29,6 +29,10 @@ function META:GetCurrentByteChar()--[[#: number]]
 	return self.Code:GetByte(self.Position)
 end
 
+function META:GetByte()
+	return self.Code:GetByte(self.Position)
+end
+
 function META:ResetState()
 	self.Position = 1
 end
@@ -61,6 +65,11 @@ end
 
 function META:IsValue(what--[[#: string]], offset--[[#: number]])--[[#: boolean]]
 	return self:IsByte((B(what)), offset)
+end
+
+function META:IsString(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
+	offset = offset or 0
+	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1) == str
 end
 
 function META:IsCurrentValue(what--[[#: string]])--[[#: boolean]]
@@ -226,7 +235,9 @@ do
 	local ReadLineComment = require("nattlua.lexer.readers.line_comment").ReadLineComment
 	local ReadInlineTypeCode = require("nattlua.lexer.readers.inline_type_code").ReadInlineTypeCode
 	local ReadInlineParserCode = require("nattlua.lexer.readers.inline_parser_code").ReadInlineParserCode
-	local ReadNumber = require("nattlua.lexer.readers.number").ReadNumber
+	local ReadHexNumber = require("nattlua.lexer.readers.number").ReadHexNumber
+	local ReadBinaryNumber = require("nattlua.lexer.readers.number").ReadBinaryNumber
+	local ReadDecimalNumber = require("nattlua.lexer.readers.number").ReadDecimalNumber
 	local ReadMultilineString = require("nattlua.lexer.readers.multiline_string").ReadMultilineString
 	local ReadSingleQuoteString = require("nattlua.lexer.readers.string").ReadSingleQuoteString
 	local ReadDoubleQuoteString = require("nattlua.lexer.readers.string").ReadDoubleQuoteString
@@ -250,7 +261,9 @@ do
 		do
 			local name = ReadInlineTypeCode(self) or
 				ReadInlineParserCode(self) or
-				ReadNumber(self) or
+				ReadHexNumber(self) or
+				ReadBinaryNumber(self) or
+				ReadDecimalNumber(self) or
 				ReadMultilineString(self) or
 				ReadSingleQuoteString(self) or
 				ReadDoubleQuoteString(self) or

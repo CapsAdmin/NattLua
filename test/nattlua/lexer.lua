@@ -48,7 +48,6 @@ test("comment escape", function()
     local i
     local tokens
     local function check(what) equal(tokens[i].value, what) i = i + 1 end
-    
     tokens = tokenize("a--[[#1]]--[[#1]]a--[[#1]]")
     i = 1
 

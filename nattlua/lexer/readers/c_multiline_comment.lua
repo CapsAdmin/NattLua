@@ -3,21 +3,27 @@
 return
 	{
 		ReadMultilineCComment = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-			if lexer:IsValue("/", 0) and lexer:IsValue("*", 1) then
-				lexer:Advance(2)
+			if not lexer:IsString("/*") then
+				return false
+			end
 
-				while not lexer:TheEnd() do
-					if lexer:IsValue("*", 0) and lexer:IsValue("/", 1) then
-						lexer:Advance(2)
+			local start = lexer:GetPosition()
+			lexer:Advance(2)
 
-						break
-					end
-
-					lexer:Advance(1)
+			while not lexer:TheEnd() do
+				if lexer:IsString("*/") then
+					lexer:Advance(2)
+					return "multiline_comment"
 				end
 
-				return "multiline_comment"
+				lexer:Advance(1)
 			end
+
+			lexer:Error(
+				"expected multiline c comment to end, reached end of code",
+				start,
+				start + 1
+			)
 
 			return false
 		end,

@@ -26,16 +26,6 @@ local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 	return true
 end
 
-local function ReadNumberAnnotations(lexer--[[#: Lexer]], what--[[#: "hex" | "decimal"]])
-	if what == "hex" then
-		if lexer:IsCurrentValue("p") or lexer:IsCurrentValue("P") then return ReadNumberPowExponent(lexer, "pow") end
-	elseif what == "decimal" then
-		if lexer:IsCurrentValue("e") or lexer:IsCurrentValue("E") then return ReadNumberPowExponent(lexer, "exponent") end
-	end
-
-	return syntax.ReadNumberAnnotation(lexer)
-end
-
 local function generate_map(str--[[#: string]])
 	local out = {}
 
@@ -49,111 +39,157 @@ end
 local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
 local function ReadHexNumber(lexer--[[#: Lexer]])
+	if not lexer:IsString("0") or (not lexer:IsString("x", 1) and not lexer:IsString("X", 1)) then
+		return false
+	end
+
 	lexer:Advance(2)
-	local dot = false
+	local has_dot = false
 
 	while not lexer:TheEnd() do
 		if lexer:IsCurrentValue("_") then
 			lexer:Advance(1)
 		end
 
-		if lexer:IsCurrentValue(".") then
-			if dot then
-                --self:Error("dot can only be placed once")
-                return end
-			dot = true
+		if not has_dot and lexer:IsString(".") then
+			-- 22..66 would be a number range
+            -- so we have to return 22 only
+			if lexer:IsValue(".", 1) then
+				break
+			end
+			
+			has_dot = true
 			lexer:Advance(1)
 		end
 
-		if ReadNumberAnnotations(lexer, "hex") then break end
 
-		if allowed_hex[lexer:GetCurrentByteChar()] then
+		if allowed_hex[lexer:GetByte()] then
 			lexer:Advance(1)
-		elseif syntax.IsSpace(lexer:GetCurrentByteChar()) or syntax.IsSymbol(lexer:GetCurrentByteChar()) then
-			break
-		elseif lexer:GetCurrentByteChar() ~= 0 then
+		else
+			if syntax.IsSpace(lexer:GetByte()) or syntax.IsSymbol(lexer:GetByte()) then
+				break
+			end
+
+			if lexer:IsString("p") or lexer:IsString("P") then
+				if ReadNumberPowExponent(lexer, "pow") then
+					break
+				end
+			end
+
+			if  syntax.ReadNumberAnnotation(lexer) then break end
+
 			lexer:Error(
-				"malformed number " .. string.char(lexer:GetCurrentByteChar()) .. " in hex notation"
+				"malformed hex number, got " .. string.char(lexer:GetByte()),
+				lexer:GetPosition() - 1,
+				lexer:GetPosition()
 			)
-			return
+
+			return false
 		end
 	end
+
+	return "number"
 end
 
 local function ReadBinaryNumber(lexer--[[#: Lexer]])
+	if not lexer:IsString("0") or (not lexer:IsString("b", 1) and not lexer:IsString("B", 1)) then
+		return false
+	end
+
+	-- skip past 0b
 	lexer:Advance(2)
 
 	while not lexer:TheEnd() do
-		if lexer:IsCurrentValue("_") then
+		if lexer:IsString("_") then
 			lexer:Advance(1)
 		end
 
-		if lexer:IsCurrentValue("1") or lexer:IsCurrentValue("0") then
+		if lexer:IsString("1") or lexer:IsString("0") then
 			lexer:Advance(1)
-		elseif syntax.IsSpace(lexer:GetCurrentByteChar()) or syntax.IsSymbol(lexer:GetCurrentByteChar()) then
-			break
-		elseif lexer:GetCurrentByteChar() ~= 0 then
+		else
+			if syntax.IsSpace(lexer:GetCurrentByteChar()) or syntax.IsSymbol(lexer:GetCurrentByteChar()) then
+				break
+			end
+
+			if lexer:IsString("e") or lexer:IsString("E") then
+				if ReadNumberPowExponent(lexer, "exponent") then
+					break
+				end
+			end
+
+			if  syntax.ReadNumberAnnotation(lexer) then break end
+			
 			lexer:Error(
-				"malformed number " .. string.char(lexer:GetCurrentByteChar()) .. " in binary notation"
+				"malformed binary number, got " .. string.char(lexer:GetByte()),
+				lexer:GetPosition() - 1,
+				lexer:GetPosition()
 			)
-			return
+			return false
 		end
-
-		-- TODO: in the analyzer we are somehow allowed to pass "binary" even though that's not the signature
-		if ReadNumberAnnotations(lexer, "binary") then break end 
 	end
+
+	return "number"
 end
 
-local function read_decimal_number(lexer--[[#: Lexer]])
-	local dot = false
+local function ReadDecimalNumber(lexer--[[#: Lexer]])
+	if not syntax.IsNumber(lexer:GetCurrentByteChar()) and (not lexer:IsCurrentValue(".") or not syntax.IsNumber(lexer:GetChar(1))) then 
+		return false
+	end
+
+	-- if we start with a dot
+    -- .0
+	local has_dot = false
+	if lexer:IsString(".") then
+		has_dot = true
+		lexer:Advance(1)
+	end
 
 	while not lexer:TheEnd() do
-		if lexer:IsCurrentValue("_") then
+		if lexer:IsString("_") then
 			lexer:Advance(1)
 		end
 
-		if lexer:IsCurrentValue(".") then
+		if not has_dot and lexer:IsString(".") then
+			-- 22..66 would be a number range
+            -- so we have to return 22 only
 			if lexer:IsValue(".", 1) then
-				return
+				break
 			end
-			if dot then
-                --self:Error("dot can only be placed once")
-                return end
-			dot = true
+			
+			has_dot = true
 			lexer:Advance(1)
 		end
 
-		if ReadNumberAnnotations(lexer, "decimal") then break end
-
-		if syntax.IsNumber(lexer:GetCurrentByteChar()) then
+		if syntax.IsNumber(lexer:GetByte()) then
 			lexer:Advance(1)
-        --elseif self:IsSymbol() or self:IsSpace() then
-            --break
-        else--if self:GetCurrentByteChar() ~= 0 then
-            --self:Error("malformed number "..self:GetCurrentByteChar().." in hex notation")
-            break
+        else
+			if syntax.IsSpace(lexer:GetByte()) or syntax.IsSymbol(lexer:GetByte()) then
+				break
+			end
+
+			if lexer:IsString("e") or lexer:IsString("E") then
+				if ReadNumberPowExponent(lexer, "exponent") then
+					break
+				end
+			end
+			
+			if  syntax.ReadNumberAnnotation(lexer) then break end
+
+			lexer:Error(
+				"malformed number, got " .. string.char(lexer:GetByte()) .. " in decimal notation",
+				lexer:GetPosition() - 1,
+				lexer:GetPosition()
+			)
+			return false
 		end
 	end
+
+	return "number"
 end
 
 return
 	{
-		ReadNumber = function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-			if
-				syntax.IsNumber(lexer:GetCurrentByteChar()) or
-				(lexer:IsCurrentValue(".") and syntax.IsNumber(lexer:GetChar(1)))
-			then
-				if lexer:IsValue("x", 1) or lexer:IsValue("X", 1) then
-					ReadHexNumber(lexer)
-				elseif lexer:IsValue("b", 1) or lexer:IsValue("B", 1) then
-					ReadBinaryNumber(lexer)
-				else
-					read_decimal_number(lexer)
-				end
-
-				return "number"
-			end
-
-			return false
-		end,
+		ReadHexNumber = ReadHexNumber,
+		ReadBinaryNumber = ReadBinaryNumber,
+		ReadDecimalNumber = ReadDecimalNumber,
 	}

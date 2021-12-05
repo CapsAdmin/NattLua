@@ -7,6 +7,7 @@ local escape_character = B([[\]])
 local function build_string_reader(name--[[#: string]], quote--[[#: string]])
 	return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if not lexer:IsCurrentValue(quote) then return false end
+		
 		local start = lexer:GetPosition()
 		lexer:Advance(1)
 
