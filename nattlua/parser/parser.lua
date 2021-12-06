@@ -184,9 +184,9 @@ do
 		return node
 	end
 
-	function PARSER:EndNode()
+	function PARSER:EndNode(node)
 		if TEST then
-			self.end_called = true
+			node.end_called = true
 		end
 
 		table.remove(self.nodes, 1)
