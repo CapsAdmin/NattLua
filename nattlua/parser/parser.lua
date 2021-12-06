@@ -142,80 +142,6 @@ do
 		return find_by_type(self, what, {})
 	end
 
-	do
-		-- META.@Self.ExpectValue | META.@Self.ExpectType
-		local function expect(node--[[#: Node]], parser--[[#: META.@Self]], func--[[#: any]], what--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]], alias--[[#: string | nil]])
-			local tokens = node.tokens
-
-			if start then
-				start = tokens[start]
-			end
-
-			if stop then
-				stop = tokens[stop]
-			end
-
-			if start and not stop then
-				stop = tokens[start]
-			end
-
-			local token = func(parser, what, start, stop)
-			local what = alias or what
-
-			if tokens[what] then
-				if not tokens[what][1] then
-					tokens[what] = {tokens[what]}
-				end
-
-				table.insert(tokens[what], token)
-			else
-				tokens[what] = token
-			end
-
-			token.parent = node
-		end
-
-		function META:ExpectAliasedKeyword(what--[[#: string]], alias--[[#: string | nil]], start--[[#: number | nil]], stop--[[#: number | nil]])
-			expect(
-				self,
-				self.parser,
-				self.parser.ExpectValue,
-				what,
-				start,
-				stop,
-				alias
-			)
-			return self
-		end
-
-		function META:ExpectKeyword(what--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
-			expect(
-				self,
-				self.parser,
-				self.parser.ExpectValue,
-				what,
-				start,
-				stop
-			)
-			return self
-		end
-	end
-
-	function META:ExpectNodesUntil(what--[[#: string]])
-		self.statements = self.parser:ReadNodes({[what] = true})
-		return self
-	end
-
-	function META:ExpectSimpleIdentifier()
-		self.tokens["identifier"] = self.parser:ExpectType("letter")
-		return self
-	end
-
-	function META:Store(key--[[#: keysof<|META.@Self|>]], val--[[#: literal any]])
-		self[key] = val
-		return self
-	end
-
 	local id = 0
 
 	function PARSER:Node(type--[[#: NodeType]], kind--[[#: string]])
@@ -258,12 +184,12 @@ do
 		return node
 	end
 
-	function META:End()
+	function PARSER:End()
 		if TEST then
 			self.end_called = true
 		end
 
-		table.remove(self.parser.nodes, 1)
+		table.remove(self.nodes, 1)
 		return self
 	end
 end
@@ -451,7 +377,6 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 	local ExpectRuntimeExpression
 
 	local function ReadMultipleValues(parser, max, reader, a, b, c)
-		if not reader then print(debug.traceback()) end
 		local out = {}
 
 		for i = 1, max or parser:GetLength() do
@@ -476,25 +401,43 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 		end
 
 		if parser:IsValue(":") or expect_type then
-			node:ExpectKeyword(":")
+			node.tokens[":"] = parser:ExpectValue(":")
 			node.type_expression = ExpectTypeExpression(parser, 0)
 		end
 
-		return node:End()
+		parser:End(node)
+
+		return node
+	end
+
+	local function ReadValueExpressionToken(parser, expect_value) 
+		local node = parser:Node("expression", "value")
+		node.value = expect_value and parser:ExpectValue(expect_value) or parser:ReadToken()
+		parser:End(node)
+		return node
+	end
+
+
+	local function ReadValueExpressionType(parser, expect_value) 
+		local node = parser:Node("expression", "value")
+		node.value = parser:ExpectType(expect_value)
+		parser:End(node)
+		return node
 	end
 
 	local function ReadFunctionBody(parser, node)
-		node:ExpectAliasedKeyword("(", "arguments(")
+		node.tokens["arguments("] = parser:ExpectValue("(")
 		node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
-		node:ExpectAliasedKeyword(")", "arguments)", "arguments)")
+		node.tokens["arguments)"] = parser:ExpectValue(")", node.tokens["arguments("])
 
 		if parser:IsValue(":") then
 			node.tokens[":"] = parser:ExpectValue(":")
 			node.return_types = ReadMultipleValues(parser, nil, ReadTypeExpression)
 		end
 
-		node:ExpectNodesUntil("end")
-		node:ExpectKeyword("end", "function")
+		node.statements = parser:ReadNodes({["end"] = true})
+		node.tokens["end"] = parser:ExpectValue("end", node.tokens["function"])
+		
 		return node
 	end
 
@@ -505,10 +448,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier, true)
 
 			if parser:IsValue("...") then
-				local vararg = parser:Node("expression", "value")
-				vararg.value = parser:ExpectValue("...")
-				vararg:End()
-				table_insert(node.identifiers, vararg)
+				table_insert(node.identifiers, ReadValueExpressionToken(parser, "..."))
 			end
 			node.tokens["arguments)"] = parser:ExpectValue(")")
 		else
@@ -516,10 +456,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier, true)
 
 			if parser:IsValue("...") then
-				local vararg = parser:Node("expression", "value")
-				vararg.value = parser:ExpectValue("...")
-				vararg:End()
-				table_insert(node.identifiers, vararg)
+				table_insert(node.identifiers, ReadValueExpressionToken(parser, "..."))
 			end
 
 			node.tokens["arguments)"] = parser:ExpectValue("|>", node.tokens["arguments("])
@@ -575,7 +512,8 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				end
 			end
 
-			vararg:End()
+			parser:End(vararg)
+
 			table_insert(node.identifiers, vararg)
 		end
 
@@ -600,22 +538,27 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			local node = parser:Node("expression", "analyzer_function")
 			node.tokens["analyzer"] = parser:ExpectValue("analyzer")
 			node.tokens["function"] = parser:ExpectValue("function")
-			return ReadAnalyzerFunctionBody(parser, node):End()
+			ReadAnalyzerFunctionBody(parser, node)
+			parser:End(node)
+			return node
 		end
 	
 		local function ReadFunctionExpression(parser)
 			if not parser:IsValue("function") then return end
-			local node = parser:Node("expression", "function"):ExpectKeyword("function")
+			local node = parser:Node("expression", "function")
+			node.tokens["function"] = parser:ExpectValue("function")
 			ReadFunctionBody(parser, node)
-			return node:End()
+			parser:End(node)
+			return node
 		end
 	
 		local function ReadIndexSubExpression(parser)
 			if not (parser:IsValue(".") and parser:IsType("letter", 1)) then return end
 			local node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
-			node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
-			return node:End()
+			node.right = ReadValueExpressionType(parser, "letter")
+			parser:End(node)
+			return node
 		end
 	
 		local function IsCallExpression(parser, offset)
@@ -631,8 +574,9 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			if not (parser:IsValue(":") and parser:IsType("letter", 1) and IsCallExpression(parser, 2)) then return end
 			local node = parser:Node("expression", "binary_operator")
 			node.value = parser:ReadToken()
-			node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
-			return node:End()
+			node.right = ReadValueExpressionType(parser, "letter")
+			parser:End(node)
+			return node
 		end
 
 		do -- typesystem
@@ -656,15 +600,17 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 						table.insert(node.expressions, 1, first_expression)
 					end
 					node.tokens["("] = pleft
-					node:ExpectKeyword(")")
-					return node:End()
+					node.tokens[")"] = parser:ExpectValue(")", pleft)
+					parser:End(node)
+					return node
 				end
 			
 				node.tokens["("] = node.tokens["("] or {}
 				table_insert(node.tokens["("], 1, pleft)
 				node.tokens[")"] = node.tokens[")"] or {}
 				table_insert(node.tokens[")"], parser:ExpectValue(")"))
-				return node:End()
+				parser:End(node)
+				return node
 			end
 			
 			local function ReadPrefixOperatorTypeExpression(parser)
@@ -673,7 +619,8 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				node.value = parser:ReadToken()
 				node.tokens[1] = node.value
 				node.right = ReadTypeExpression(parser, math_huge)
-				return node:End()
+				parser:End(node)
+				return node
 			end
 			
 			local function ReadValueTypeExpression(parser)
@@ -681,7 +628,8 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				local node = parser:Node("expression", "value")
 				node.value = parser:ExpectValue("...")
 				node.type_expression = ReadTypeExpression(parser)
-				return node:End()
+				parser:End(node)
+				return node
 			end
 
 			local function ReadTypeFunctionArgument(parser, expect_type)
@@ -715,6 +663,8 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				node.tokens["return("] = parser:ExpectValue("(")
 				node.return_types = ReadMultipleValues(parser, nil, ReadTypeFunctionArgument)
 				node.tokens["return)"] = parser:ExpectValue(")")
+
+				parser:End(node)
 				
 				return node
 			end
@@ -723,14 +673,17 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				if not (parser:IsValue("function") and parser:IsValue("<|", 1)) then return end
 				local node = parser:Node("expression", "type_function")
 				node.tokens["function"] = parser:ExpectValue("function")
-				return ReadTypeFunctionBody(parser, node):End()
+				ReadTypeFunctionBody(parser, node)
+				parser:End(node)
+				return node
 			end
 					
 			local function ReadKeywordValueTypeExpression(parser)
 				if not typesystem_syntax:IsValue(parser:GetToken()) then return end
 				local node = parser:Node("expression", "value")
 				node.value = parser:ReadToken()
-				return node:End()
+				parser:End(node)
+				return node
 			end
 			
 
@@ -738,26 +691,34 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			do
 				local function read_type_table_entry(parser, i)
 					if parser:IsValue("[") then
-						local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
+						local node = parser:Node("expression", "table_expression_value")
+						node.expression_key = true
+						node.tokens["["] = parser:ExpectValue("[")
 						node.key_expression = ReadTypeExpression(parser, 0)
-						node:ExpectKeyword("]"):ExpectKeyword("=")
+						node.tokens["]"] = parser:ExpectValue("]")
+						node.tokens["="] = parser:ExpectValue("=")
 						node.value_expression = ReadTypeExpression(parser, 0)
-						return node:End()
+						parser:End(node)
+						return node
 					elseif parser:IsType("letter") and parser:IsValue("=", 1) then
-						local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("="):End()
+						local node = parser:Node("expression", "table_key_value")
+						node.tokens["identifier"] = parser:ExpectType("letter")
+						node.tokens["="] = parser:ExpectValue("=")
 						node.value_expression = ReadTypeExpression(parser, 0)
-						return node:End()
+						return node
 					end
 				
-					local node = parser:Node("expression", "table_index_value"):Store("key", i)
+					local node = parser:Node("expression", "table_index_value")
+					node.key = i
 					node.value_expression = ReadTypeExpression(parser, 0)
-					return node:End()
+					parser:End(node)
+					return node
 				end
 				
 				function ReadTableTypeExpression(parser)
 					if not parser:IsValue("{") then return end
 					local tree = parser:Node("expression", "type_table")
-					tree:ExpectKeyword("{")
+					tree.tokens["{"] = parser:ExpectValue("{")
 					tree.children = {}
 					tree.tokens["separators"] = {}
 				
@@ -789,8 +750,9 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 						end
 					end
 				
-					tree:ExpectKeyword("}")
-					return tree:End()
+					tree.tokens["}"] = parser:ExpectValue("}")
+					parser:End(tree)
+					return tree
 				end
 			end
 			
@@ -817,8 +779,12 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 		
 			local function ReadPostfixOperatorSubExpression(parser)
 				if not typesystem_syntax:IsPostfixOperator(parser:GetToken()) then return end
-				return
-					parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
+
+				local node = parser:Node("expression", "postfix_operator")
+				node.value = parser:ReadToken()
+				parser:End(node)
+
+				return node
 			end
 		
 			local function ReadCallSubExpression(parser)
@@ -829,7 +795,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 					node.expressions = {ReadTableTypeExpression(parser)}
 				elseif parser:IsType("string") then
 					node.expressions = {
-							parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
+							ReadValueExpressionToken(parser)
 						}
 				elseif parser:IsValue("<|") then
 					node.tokens["call("] = parser:ExpectValue("<|")
@@ -842,14 +808,18 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				end
 		
 				node.type_call = true
-				return node:End()
+				parser:End(node)
+				return node
 			end
 		
 			local function ReadPostfixIndexExpressionSubExpression(parser)
 				if not parser:IsValue("[") then return end
-				local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
+				local node = parser:Node("expression", "postfix_expression_index")
+				node.tokens["["] = parser:ExpectValue("[")
 				node.expression = ExpectTypeExpression(parser)
-				return node:ExpectKeyword("]"):End()
+				node.tokens["]"] = parser:ExpectValue("]")
+				parser:End(node)
+				return node
 			end
 		
 			local function ReadSubExpression(parser, node)
@@ -916,7 +886,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 					node.value = parser:ReadToken()
 					node.left = left_node
 					node.right = ReadTypeExpression(parser, typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-					node:End()
+					parser:End(node)
 				end
 			
 				return node
@@ -959,20 +929,29 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			do
 				local function read_table_spread(parser)
 					if not (parser:IsValue("...") and (parser:IsType("letter", 1) or parser:IsValue("{", 1) or parser:IsValue("(", 1))) then return end
-					local node = parser:Node("expression", "table_spread"):ExpectKeyword("...")
+					local node = parser:Node("expression", "table_spread")
+					node.tokens["..."] = parser:ExpectValue("...")
 					node.expression = ExpectRuntimeExpression(parser)
-					return node:End()
+					parser:End(node)
+					return node
 				end
 				
 				local function read_table_entry(parser, i)
 					if parser:IsValue("[") then
-						local node = parser:Node("expression", "table_expression_value"):Store("expression_key", true):ExpectKeyword("[")
+						local node = parser:Node("expression", "table_expression_value")
+						node.expression_key = true
+						node.tokens["["] = parser:ExpectValue("[")
 						node.key_expression = ExpectRuntimeExpression(parser, 0)
-						node:ExpectKeyword("]"):ExpectKeyword("=")
+						node.tokens["]"] = parser:ExpectValue("]")
+						node.tokens["="] = parser:ExpectValue("=")
 						node.value_expression = ExpectRuntimeExpression(parser, 0)
-						return node:End()
+						parser:End(node)
+						return node
 					elseif parser:IsType("letter") and parser:IsValue("=", 1) then
-						local node = parser:Node("expression", "table_key_value"):ExpectSimpleIdentifier():ExpectKeyword("=")
+						local node = parser:Node("expression", "table_key_value")
+						node.tokens["identifier"] = parser:ExpectType("letter")
+						node.tokens["="] = parser:ExpectValue("=")
+
 						local spread = read_table_spread(parser)
 				
 						if spread then
@@ -980,8 +959,10 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 						else
 							node.value_expression = ExpectRuntimeExpression(parser)
 						end
+
+						parser:End(node)
 				
-						return node:End()
+						return node
 					end
 				
 					local node = parser:Node("expression", "table_index_value")
@@ -994,13 +975,16 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 					end
 				
 					node.key = i
-					return node:End()
+
+					parser:End(node)
+
+					return node
 				end
 				
 				function ReadTableExpression(parser)
 					if not parser:IsValue("{") then return end
 					local tree = parser:Node("expression", "table")
-					tree:ExpectKeyword("{")
+					tree.tokens["{"] = parser:ExpectValue("{")
 					tree.children = {}
 					tree.tokens["separators"] = {}
 				
@@ -1038,15 +1022,18 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 						end
 					end
 				
-					tree:ExpectKeyword("}")
-					return tree:End()
+					tree.tokens["}"] = parser:ExpectValue("}")
+					parser:End(tree)
+					return tree
 				end
 			end
 
 			local function ReadPostfixOperatorSubExpression(parser)
 				if not runtime_syntax:IsPostfixOperator(parser:GetToken()) then return end
-				return
-					parser:Node("expression", "postfix_operator"):Store("value", parser:ReadToken()):End()
+				local node = parser:Node("expression", "postfix_operator")
+				node.value = parser:ReadToken()
+				parser:End(node)
+				return node
 			end
 
 			local function ReadCallSubExpression(parser)
@@ -1056,9 +1043,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				if parser:IsValue("{") then
 					node.expressions = {ReadTableExpression(parser)}
 				elseif parser:IsType("string") then
-					node.expressions = {
-							parser:Node("expression", "value"):Store("value", parser:ReadToken()):End(),
-						}
+					node.expressions = {ReadValueExpressionToken(parser)}
 				elseif parser:IsValue("<|") then
 					node.tokens["call("] = parser:ExpectValue("<|")
 					node.expressions = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
@@ -1076,14 +1061,20 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 					node.tokens["call)"] = parser:ExpectValue(")")
 				end
 
-				return node:End()
+				parser:End(node)
+
+				return node
 			end
 
 			local function ReadPostfixIndexExpressionSubExpression(parser)
 				if not parser:IsValue("[") then return end
-				local node = parser:Node("expression", "postfix_expression_index"):ExpectKeyword("[")
+				local node = parser:Node("expression", "postfix_expression_index")
+				node.tokens["["] = parser:ExpectValue("[")
 				node.expression = ExpectRuntimeExpression(parser)
-				return node:ExpectKeyword("]"):End()
+				node.tokens["]"] = parser:ExpectValue("]")
+				parser:End(node)
+
+				return node
 			end
 
 			local function ReadSubExpression(parser, node)
@@ -1126,7 +1117,8 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				node.value = parser:ReadToken()
 				node.tokens[1] = node.value
 				node.right = ExpectRuntimeExpression(parser, math.huge)
-				return node:End()
+				parser:End(node)
+				return node
 			end
 
 			local function ReadParenthesisExpression(parser)
@@ -1148,7 +1140,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 
 			local function ReadValueExpression(parser)
 				if not runtime_syntax:IsValue(parser:GetToken()) then return end
-				return parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
+				return ReadValueExpressionToken(parser)
 			end
 
 			local function ReadImportExpression(parser)
@@ -1252,7 +1244,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 						return
 					end
 
-					node:End()
+					parser:End(node)
 				end
 
 				return node
@@ -1313,9 +1305,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				local node = parser:Node("statement", "destructure_assignment")
 				do
 					if parser:IsType("letter") then
-						local val = parser:Node("expression", "value")
-						val.value = parser:ReadToken()
-						node.default = val:End()
+						node.default = ReadValueExpressionToken(parser)
 						node.default_comma = parser:ExpectValue(",")
 					end
 				
@@ -1325,7 +1315,8 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 					node.tokens["="] = parser:ExpectValue("=")
 					node.right = ReadRuntimeExpression(parser, 0)
 				end
-				return node:End()
+				parser:End(node)
+				return node
 			end
 
 			function ReadLocalDestructureAssignmentStatement(parser)
@@ -1340,9 +1331,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			
 				do -- remaining
 					if parser:IsType("letter") then
-						local val = parser:Node("expression", "value")
-						val.value = parser:ReadToken()
-						node.default = val:End()
+						node.default = ReadValueExpressionToken(parser)
 						node.default_comma = parser:ExpectValue(",")
 					end
 				
@@ -1353,7 +1342,9 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 					node.right = ReadRuntimeExpression(parser, 0)
 				end
 
-				return node:End()
+				parser:End(node)
+
+				return node
 			end
 		end
 
@@ -1362,7 +1353,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 		do
 			local function ReadFunctionNameIndex(parser)
 				if not runtime_syntax:IsValue(parser:GetToken()) then return end
-				local node = parser:Node("expression", "value"):Store("value", parser:ReadToken()):End()
+				local node = ReadValueExpressionToken(parser)
 				local first = node
 
 				while parser:IsValue(".") or parser:IsValue(":") do
@@ -1370,34 +1361,36 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 					local self_call = parser:IsValue(":")
 					node = parser:Node("expression", "binary_operator")
 					node.value = parser:ReadToken()
-					node.right = parser:Node("expression", "value"):Store("value", parser:ExpectType("letter")):End()
+					node.right = ReadValueExpressionType(parser, "letter")
 					node.left = left
 					node.right.self_call = self_call
-					node:End()
+					parser:End(node)
 				end
 
 				first.standalone_letter = node
 				return node
 			end
 
-			function ReadFunctionStatement(self)
-				if not self:IsValue("function") then return end
-				local node = self:Node("statement", "function")
-				node.tokens["function"] = self:ExpectValue("function")
-				node.expression = ReadFunctionNameIndex(self)
+			function ReadFunctionStatement(parser)
+				if not parser:IsValue("function") then return end
+				local node = parser:Node("statement", "function")
+				node.tokens["function"] = parser:ExpectValue("function")
+				node.expression = ReadFunctionNameIndex(parser)
 
 				if node.expression and node.expression.kind == "binary_operator" then
 					node.self_call = node.expression.right.self_call
 				end
 
-				if self:IsValue("<|") then
+				if parser:IsValue("<|") then
 					node.kind = "type_function"
-					ReadTypeFunctionBody(self, node)
+					ReadTypeFunctionBody(parser, node)
 				else
-					ReadFunctionBody(self, node)
+					ReadFunctionBody(parser, node)
 				end
 
-				return node:End()
+				parser:End(node)
+
+				return node
 			end
 
 			function ReadAnalyzerFunctionStatement(parser)
@@ -1429,62 +1422,104 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				end
 
 				ReadAnalyzerFunctionBody(parser, node, true)
-				return node:End()
+
+				parser:End(node)
+
+				return node
 			end
 		end
 		local function ReadLocalFunctionStatement(parser)
 			if not (parser:IsValue("local") and parser:IsValue("function", 1)) then return end
-			local node = parser:Node("statement", "local_function"):ExpectKeyword("local"):ExpectKeyword("function")
-				:ExpectSimpleIdentifier()
-				ReadFunctionBody(parser, node)
-			return node:End()
+			local node = parser:Node("statement", "local_function")
+			
+			node.tokens["local"] = parser:ExpectValue("local")
+			node.tokens["function"] = parser:ExpectValue("function")
+			node.tokens["identifier"] = parser:ExpectType("letter")
+			ReadFunctionBody(parser, node)
+			parser:End(node)
+
+			return node
 		end
 		local function ReadLocalAnalyzerFunctionStatement(parser)
 			if not (parser:IsValue("local") and parser:IsValue("analyzer", 1) and parser:IsValue("function", 2)) then return end
-			local node = parser:Node("statement", "local_analyzer_function"):ExpectKeyword("local"):ExpectKeyword("analyzer")
-				:ExpectKeyword("function")
-				:ExpectSimpleIdentifier()
+
+			local node = parser:Node("statement", "local_analyzer_function")
+			node.tokens["local"] = parser:ExpectValue("local")
+			node.tokens["analyzer"] = parser:ExpectValue("analyzer")
+			node.tokens["function"] = parser:ExpectValue("function")
+			node.tokens["identifier"] = parser:ExpectType("letter")
 			ReadAnalyzerFunctionBody(parser, node, true)
-			return node:End()
+			parser:End(node)
+
+			return node
 		end
 		local function ReadLocalTypeFunctionStatement(parser)
 			if not (parser:IsValue("local") and parser:IsValue("function", 1) and (parser:IsValue("<|", 3) or parser:IsValue("!", 3))) then return end
-			local node = parser:Node("statement", "local_type_function"):ExpectKeyword("local"):ExpectKeyword("function")
-				:ExpectSimpleIdentifier()
+
+			local node = parser:Node("statement", "local_type_function")
+			node.tokens["local"] = parser:ExpectValue("local")
+			node.tokens["function"] = parser:ExpectValue("function")
+			node.tokens["identifier"] = parser:ExpectType("letter")
 			ReadTypeFunctionBody(parser, node)
-			return node:End()
+			parser:End(node)
+
+			return node
 		end
 		local function ReadBreakStatement(parser)
 			if not parser:IsValue("break") then return nil end
-			return parser:Node("statement", "break"):ExpectKeyword("break"):End()
+
+			local node = parser:Node("statement", "break")
+			node.tokens["break"] = parser:ExpectValue("break")
+			parser:End(node)
+
+			return node
 		end
 		local function ReadDoStatement(parser)
 			if not parser:IsValue("do") then return nil end
-			return
-				parser:Node("statement", "do"):ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do")
-				:End()
+
+			local node = parser:Node("statement", "do")
+			node.tokens["do"] = parser:ExpectValue("do")
+			node.statements = parser:ReadNodes({["end"] = true})
+			node.tokens["end"] = parser:ExpectValue("end", node.tokens["do"])
+
+			parser:End(node)
+
+			return node
 		end
 		local function ReadGenericForStatement(parser)
 			if not parser:IsValue("for") then return nil end
 			local node = parser:Node("statement", "generic_for")
-			node:ExpectKeyword("for")
+			node.tokens["for"] = parser:ExpectValue("for")
 			node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
-			node:ExpectKeyword("in")
+			node.tokens["in"] = parser:ExpectValue("in")
 			node.expressions = ReadMultipleValues(parser, math.huge, ExpectRuntimeExpression, 0)
-			return
-				node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
+
+			node.tokens["do"] = parser:ExpectValue("do")
+			node.statements = parser:ReadNodes({["end"] = true})
+			node.tokens["end"] = parser:ExpectValue("end", node.tokens["do"])
+
+			parser:End(node)
+
+			return node
 		end
 		local function ReadGotoLabelStatement(parser)
 			if not parser:IsValue("::") then return nil end
-			return
-				parser:Node("statement", "goto_label"):ExpectKeyword("::"):ExpectSimpleIdentifier():ExpectKeyword("::")
-				:End()
+			local node = parser:Node("statement", "goto_label")
+			node.tokens["::"] = parser:ExpectValue("::")
+			node.tokens["identifier"] = parser:ExpectType("letter")
+			node.tokens["::"] = parser:ExpectValue("::")
+			parser:End(node)
+
+			return node
 		end
 		local function ReadGotoStatement(parser)
-			if not parser:IsValue("goto") then return nil end
-			return
-				parser:IsType("letter", 1) and
-				parser:Node("statement", "goto"):ExpectKeyword("goto"):ExpectSimpleIdentifier():End()
+			if not parser:IsValue("goto") or not parser:IsType("letter", 1) then return nil end
+
+			local node = parser:Node("statement", "goto")
+			node.tokens["goto"] = parser:ExpectValue("goto")
+			node.tokens["identifier"] = parser:ExpectType("letter")
+
+			parser:End(node)
 		end
 		local function ReadIfStatement(parser)
 			if not parser:IsValue("if") then return nil end
@@ -1525,78 +1560,110 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				if parser:IsValue("end") then break end
 			end
 
-			node:ExpectKeyword("end")
-			return node:End()
+			node.tokens["end"] = parser:ExpectValue("end")
+			parser:End(node)
+
+			return node
 		end
 		local function ReadLocalAssignmentStatement(parser)
 			if not parser:IsValue("local") then return end
 			local node = parser:Node("statement", "local_assignment")
-			node:ExpectKeyword("local")
+			node.tokens["local"] = parser:ExpectValue("local")
 			node.left = ReadMultipleValues(parser, nil, ReadIdentifier)
 
 			if parser:IsValue("=") then
-				node:ExpectKeyword("=")
+				node.tokens["="] = parser:ExpectValue("=")
 				node.right = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
 			end
 
-			return node:End()
+			parser:End(node)
+
+			return node
 		end
 		local function ReadNumericForStatement(parser)
 			if not (parser:IsValue("for") and parser:IsValue("=", 2)) then return nil end
 			local node = parser:Node("statement", "numeric_for")
-			node:ExpectKeyword("for")
+			node.tokens["for"] = parser:ExpectValue("for")
 			node.identifiers = ReadMultipleValues(parser, 1, ReadIdentifier)
-			node:ExpectKeyword("=")
+			node.tokens["="] = parser:ExpectValue("=")
 			node.expressions = ReadMultipleValues(parser, 3, ExpectRuntimeExpression, 0)
-			return
-				node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
+
+			node.tokens["do"] = parser:ExpectValue("do")
+			node.statements = parser:ReadNodes({["end"] = true})
+			node.tokens["end"] = parser:ExpectValue("end", node.tokens["do"])
+
+			parser:End(node)
+
+			return node
 		end
 		local function ReadRepeatStatement(parser)
 			if not parser:IsValue("repeat") then return nil end
-			local node = parser:Node("statement", "repeat"):ExpectKeyword("repeat"):ExpectNodesUntil("until"):ExpectKeyword("until")
+			local node = parser:Node("statement", "repeat")
+			node.tokens["repeat"] = parser:ExpectValue("repeat")
+			node.statements = parser:ReadNodes({["until"] = true})
+			node.tokens["until"] = parser:ExpectValue("until")
 			node.expression = ExpectRuntimeExpression(parser)
-			return node:End()
+			parser:End(node)
+			return node
 		end
 		local function ReadSemicolonStatement(parser)
 			if not parser:IsValue(";") then return nil end
 			local node = parser:Node("statement", "semicolon")
 			node.tokens[";"] = parser:ExpectValue(";")
-			return node:End()
+			parser:End(node)
+			return node
 		end
 		local function ReadReturnStatement(parser)
 			if not parser:IsValue("return") then return nil end
-			local node = parser:Node("statement", "return"):ExpectKeyword("return")
+			local node = parser:Node("statement", "return")
+			node.tokens["return"] = parser:ExpectValue("return")
 			node.expressions = ReadMultipleValues(parser, nil, ReadRuntimeExpression, 0)
-			return node:End()
+			parser:End(node)
+
+			return node
 		end
 		local function ReadWhileStatement(parser)
 			if not parser:IsValue("while") then return nil end
-			local node = parser:Node("statement", "while"):ExpectKeyword("while")
+			local node = parser:Node("statement", "while")
+			node.tokens["while"] = parser:ExpectValue("while")
 			node.expression = ExpectRuntimeExpression(parser)
-			return
-				node:ExpectKeyword("do"):ExpectNodesUntil("end"):ExpectKeyword("end", "do"):End()
+			node.tokens["do"] = parser:ExpectValue("do")
+			node.statements = parser:ReadNodes({["end"] = true})
+			node.tokens["end"] = parser:ExpectValue("end", node.tokens["do"])
+
+			parser:End(node)
+
+			return node
 		end
 		local function ReadContinueStatement(parser)
-			return
-				parser:IsValue("continue") and
-				parser:Node("statement", "continue"):ExpectKeyword("continue"):End()
+			if not parser:IsValue("continue") then return nil end
+
+			local node = parser:Node("statement", "continue")
+			node.tokens["continue"] = parser:ExpectValue("continue")
+			parser:End(node)
+
+			return node
 		end
 		local function ReadDebugCodeStatement(parser)
 			if parser:IsType("type_code") then
 				local node = parser:Node("statement", "type_code")
-				local code = parser:Node("expression", "value")
-				code.value = parser:ExpectType("type_code")
-				code:End()
-				node.lua_code = code
-				return node:End()
+				node.lua_code = ReadValueExpressionType(parser, "type_code")
+				parser:End(node)
+
+				return node
 			elseif parser:IsType("parser_code") then
 				local token = parser:ExpectType("parser_code")
 				assert(loadstring("local parser = ...;" .. token.value:sub(3)))(parser)
 				local node = parser:Node("statement", "parser_code")
+				
 				local code = parser:Node("expression", "value")
 				code.value = token
-				node.lua_code = code:End()
-				return node:End()
+				parser:End(code)
+
+				node.lua_code = code
+				
+				parser:End(node)
+				return node
 			end
 		end
 		local function ReadLocalTypeAssignmentStatement(parser)
@@ -1615,7 +1682,9 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				node.right = ReadMultipleValues(parser, nil, ReadTypeExpression)
 			end
 
-			return node:End()
+			parser:End(node)
+
+			return node
 		end
 		local function ReadTypeAssignmentStatement(parser)
 			if not (parser:IsValue("type") and (parser:IsType("letter", 1) or parser:IsValue("^", 1))) then return end
@@ -1629,7 +1698,9 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 				node.right = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
 			end
 
-			return node:End()
+			parser:End(node)
+
+			return node
 		end
 
 		local function ReadCallOrAssignmentStatement(parser)
@@ -1638,17 +1709,22 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 
 			if parser:IsValue("=") then
 				local node = parser:Node("statement", "assignment")
-				node:ExpectKeyword("=")
+				node.tokens["="] = parser:ExpectValue("=")
+
 				node.left = left
 				node.right = ReadMultipleValues(parser, math.huge, ExpectRuntimeExpression, 0)
-				return node:End()
+				parser:End(node)
+
+				return node
 			end
 
 			if left[1] and (left[1].kind == "postfix_call" or left[1].kind == "import") and not left[2] then
 				local node = parser:Node("statement", "call_expression")
 				node.value = left[1]
 				node.tokens = left[1].tokens
-				return node:End()
+				parser:End(node)
+
+				return node
 			end
 
 			parser:Error(
@@ -1666,9 +1742,11 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			local shebang
 
 			if self:IsType("shebang") then
+
 				shebang = self:Node("statement", "shebang")
 				shebang.tokens["shebang"] = self:ExpectType("shebang")
-				shebang:End()
+				self:End(shebang)
+
 				node.tokens["shebang"] = shebang.tokens["shebang"]
 			end
 
@@ -1679,14 +1757,18 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 			end
 
 			if self:IsType("end_of_file") then
+				
 				local eof = self:Node("statement", "end_of_file")
 				eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-				eof:End()
+				self:End(node)
+
 				table.insert(node.statements, eof)
 				node.tokens["eof"] = eof.tokens["end_of_file"]
 			end
 
-			return node:End()
+			self:End(node)
+
+			return node
 		end
 
 		function META:ReadNode()
