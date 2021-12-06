@@ -44,7 +44,7 @@ return
 
 			-- TUPLE UNPACK MESS
 			
-			if node:IsWrappedInParenthesis() then
+			if node.tokens["("] and node.tokens[")"] then
 				returned_tuple = returned_tuple:Get(1)
 			end
 

@@ -1,4 +1,5 @@
 --[[#local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")]]
+--[[#local type { ExpressionKind, StatementKind } = import_type("nattlua/parser/nodes.nlua")]]
 --[[#import_type("nattlua/code/code.lua")]]
 
 --[[#local type NodeType = "expression" | "statement"]]
@@ -8,20 +9,42 @@ local pairs = _G.pairs
 local setmetatable = _G.setmetatable
 local type = _G.type
 local table = require("table")
+local helpers = require("nattlua.other.helpers")
+local quote_helper = require("nattlua.other.quote")
+local table_print = require("nattlua.other.table_print")
+
 local TEST = false
 local META = {}
 META.__index = META
 --[[# --]]META.Emitter = require("nattlua.transpiler.emitter")
 --[[#type META.@Self = {
 		config = any,
-		nodes = {[number] = any} | {},
+		nodes = List<|any|>,
 		Code = Code,
 		current_statement = false | any,
 		current_expression = false | any,
 		root = false | any,
 		i = number,
-		tokens = {[number] = Token},
+		tokens = List<|Token|>,
+		prefer_typesystem_stack = List<|boolean|>,
 	}]]
+
+function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#: any]])
+	return setmetatable(
+		{
+			config = config,
+			Code = code,
+			nodes = {},
+			current_statement = false,
+			current_expression = false,
+			prefer_typesystem_stack = {},
+			root = false,
+			i = 1,
+			tokens = tokens,
+		},
+		META
+	)
+end
 
 do
 	local PARSER = META
@@ -29,15 +52,18 @@ do
 	META.__index = META
 	META.Type = "node"
 --[[#	type META.@Self = {
-			type = TokenType,
-			kind = string,
+			type = "expression" | "statement",
+			kind = ExpressionKind | StatementKind,
 			id = number,
 			Code = Code,
 			parser = PARSER.@Self,
-			statements = {[number] = self} | {},
-			tokens = {[string] = Token},
+			tokens = Map<|string, Token|>,
+			statements = List<|any|>,
+			value = Token | nil,
 		}]]
---[[#	type PARSER.@Self.nodes = {[number] = META.@Self} | {}]]
+		--[[#type META.@Name = "Node"]]
+
+--[[#	type PARSER.@Self.nodes = List<|META.@Self|>]]
 
 	function META:__tostring()
 		if self.type == "statement" then
@@ -50,7 +76,6 @@ do
 				local name = self.Code:GetName()
 				if name:sub(1, 1) == "@" then
 					ok = true
-					local helpers = require("nattlua.other.helpers")
 					local data = helpers.SubPositionToLinePosition(lua_code, helpers.LazyFindStartStop(self))
 
 					if data and data.line_start then
@@ -70,7 +95,7 @@ do
 			local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
 
 			if self.value and type(self.value.value) == "string" then
-				str = str .. ": " .. require("nattlua.other.quote").QuoteToken(self.value.value)
+				str = str .. ": " .. quote_helper.QuoteToken(self.value.value)
 			end
 
 			return str
@@ -78,7 +103,6 @@ do
 	end
 
 	function META:Dump()
-		local table_print = require("nattlua.other.table_print")
 		table_print(self)
 	end
 
@@ -94,12 +118,7 @@ do
 		return em:Concat()
 	end
 
-	function META:IsWrappedInParenthesis()--[[#: boolean]]
-		return self.tokens["("] and self.tokens[")"]
-	end
-
 	function META:GetLength()
-		local helpers = require("nattlua.other.helpers")
 		local start, stop = helpers.LazyFindStartStop(self, true)
 		return stop - start
 	end
@@ -124,7 +143,7 @@ do
 		return self.statements ~= nil
 	end
 
-	local function find_by_type(node--[[#: META.@Self]], what--[[#: TokenType]], out--[[#: {[1 .. inf] = Node}]])
+	local function find_by_type(node--[[#: META.@Self]], what--[[#: StatementKind | ExpressionKind]], out--[[#: List<|META.@Name|>]])
 		out = out or {}
 
 		for _, child in ipairs(node:GetNodes()) do
@@ -138,13 +157,13 @@ do
 		return out
 	end
 
-	function META:FindNodesByType(what--[[#: TokenType]])
+	function META:FindNodesByType(what--[[#: StatementKind | ExpressionKind]])
 		return find_by_type(self, what, {})
 	end
 
 	local id = 0
 
-	function PARSER:StartNode(type--[[#: NodeType]], kind--[[#: string]])
+	function PARSER:StartNode(type--[[#: "statement" | "expression"]], kind--[[#: StatementKind | ExpressionKind]])
 		id = id + 1
 		local node = setmetatable(
 			{
@@ -154,6 +173,7 @@ do
 				id = id,
 				Code = self.Code,
 				parser = self,
+				
 			},
 			META
 		)
@@ -196,29 +216,29 @@ end
 
 function META:Error(msg--[[#: string]], start_token--[[#: Token | nil]], stop_token--[[#: Token | nil]], ...--[[#: ...any]])
 	local tk = self:GetToken()
-	local start = start_token and
-		(start_token)--[[# as Token]].start or
-		tk and
-		(tk)--[[# as Token]].start or
-		0
-	local stop = stop_token and
-		(stop_token)--[[# as Token]].stop or
-		tk and
-		(tk)--[[# as Token]].stop or
-		0
-	self:OnError(
-		self.Code,
-		msg,
-		start,
-		stop,
-		...
-	)
+
+	local start = 0
+	local stop = 0
+	
+	if start_token then
+		start = start_token.start
+	elseif tk then
+		start = tk.start
+	end
+
+	if stop_token then
+		stop = stop_token.stop
+	elseif tk then
+		stop = tk.stop
+	end
+
+	self:OnError(self.Code,msg,start,stop,...)
 end
 
 function META:OnNode(node--[[#: any]]) 
 end
 
-function META:OnError(code--[[#: string]], name--[[#: string]], message--[[#: string]], start--[[#: number]], stop--[[#: number]], ...--[[#: ...any]]) 
+function META:OnError(code--[[#: Code]], message--[[#: string]], start--[[#: number]], stop--[[#: number]], ...--[[#: ...any]]) 
 end
 
 function META:GetToken(offset--[[#: number | nil]])
@@ -343,11 +363,10 @@ end
 
 do
 	function META:GetPreferTypesystem()
-		return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1]
+		return self.prefer_typesystem_stack[1]
 	end
 
-	function META:PushPreferTypesystem(b)
-		self.prefer_typesystem_stack = self.prefer_typesystem_stack or {}
+	function META:PushPreferTypesystem(b--[[#: boolean ]])
 		table.insert(self.prefer_typesystem_stack, 1, b)
 	end
 
@@ -361,7 +380,7 @@ function META:ResolvePath(path)
 end
 
 --[[# if false then --]]do -- statements
-local runtime_syntax = require("nattlua.syntax.runtime")
+	local runtime_syntax = require("nattlua.syntax.runtime")
 	local typesystem_syntax = require("nattlua.syntax.typesystem")
 
 	local math = require("math")
@@ -1803,18 +1822,4 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 	end
 end
 
-return function(tokens--[[#: {[1 .. inf] = Token}]], code --[[#: Code]], config--[[#: any]])
-	return setmetatable(
-		{
-			config = config,
-			Code = code,
-			nodes = {},
-			current_statement = false,
-			current_expression = false,
-			root = false,
-			i = 1,
-			tokens = tokens,
-		},
-		META
-	)
-end
+return META.New

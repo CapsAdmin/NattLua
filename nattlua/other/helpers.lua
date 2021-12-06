@@ -1,4 +1,5 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
+--[[ import_type("nattlua/code/code.lua")]]
 
 local math = require("math")
 local table = require("table")
@@ -555,7 +556,7 @@ function helpers.GlobalLookup()
 end
 
 do
-	function find_tests()
+	function _G.find_tests()
 		for i = 1, math.huge do
 			local info = debug.getinfo(i)
 			if not info then break end
