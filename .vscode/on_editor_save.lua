@@ -4,6 +4,7 @@ local did_something = false
 
 local function run_lua(path, ...)
     did_something = true
+    print("running ", path)
     assert(loadfile(path))(...)
 end
 
@@ -129,12 +130,13 @@ if path:lower():find("/nattlua/", nil, true) then
     elseif path:find("examples/", nil, true) then
         run_lua(path)
     elseif has_test_focus() then
+        print("running test focus")
         run_nattlua("./test_focus.lua")
     elseif (path:find("/nattlua/nattlua/", nil, true) or path:find("/nattlua/nattlua.lua", nil, true)) and not path:find("nattlua/other") then
         if path:find("lexer.lua", nil, true) then
             run_lua("test/run.lua", "test/nattlua/lexer.lua")
             run_lua("test/run.lua", "test/performance/lexer.lua")
-        elseif path:find("parser.lua", nil, true) then
+        elseif path:find("parser.lua", nil, true) and false then
             run_lua("test/run.lua", "test/nattlua/parser.lua")
             run_lua("test/run.lua", "test/performance/parser.lua")
         else
