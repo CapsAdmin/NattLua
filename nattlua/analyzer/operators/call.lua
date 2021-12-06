@@ -759,7 +759,15 @@ return
 			function META:Call(obj, arguments, call_node)
 				-- not sure about this, it's used to access the call_node from deeper calls
 				-- without resorting to argument drilling
-				self:PushActiveNode(call_node or obj:GetNode())
+				local node = call_node or obj:GetNode() or obj
+
+				-- call_node or obj:GetNode() might be nil when called from tests and other places
+
+				if node.recursively_called then
+					return node.recursively_called:Copy()
+				end
+
+				self:PushActiveNode(node)
 
 				-- extra protection, maybe only useful during development
 				if debug.getinfo(300) then
@@ -794,18 +802,21 @@ return
 				do
 					-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 					self.call_stack = self.call_stack or {}
-
 					for _, v in ipairs(self.call_stack) do
 						-- if the callnode is the same, we're doing some infinite recursion
 						if v.obj == obj and v.call_node == self:GetActiveNode() then
 							if obj.explicit_return then
 								-- so if we have explicit return types, just return those
-								return obj:GetReturnTypes():Copy()
+								node.recursively_called = obj:GetReturnTypes():Copy()
+
+								return node.recursively_called
 							else
 								-- if not we sadly have to resort to any
 								-- TODO: error?
 								-- TODO: use VarArg() ?
-								return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+								node.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+
+								return node.recursively_called
 							end
 						end
 					end
