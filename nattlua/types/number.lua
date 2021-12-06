@@ -86,6 +86,7 @@ end
 
 function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
 	if B.Type == "tuple" then
+		-- test against the first index of the tuple
 		B = B:Get(1)
 	end
 

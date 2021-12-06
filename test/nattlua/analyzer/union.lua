@@ -122,3 +122,8 @@ run[[
     type a = a | 2
     types.assert<|a, 1|2|>
 ]]
+
+run[[
+    local type tbl = {[number] = string} | {}
+    types.assert<|tbl[1], string|>
+]]

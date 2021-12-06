@@ -10,16 +10,23 @@ return
 					local union = Union({})
 
 					for _, obj in ipairs(obj.Data) do
-
-						if obj.Type == "tuple" and obj:GetLength()  == 1 then
+						if obj.Type == "tuple" and obj:GetLength() == 1 then
 							obj = obj:Get(1)
 						end
-						
-						local val, err = obj:Get(key)
-						if not val then
-							return val, err
+												
+						-- if we have a union with an empty table, don't do anything
+						-- ie {[number] = string} | {}
+						if obj.Type == "table" and obj:IsEmpty() then
+							
+						else
+							local val, err = obj:Get(key)
+
+							if not val then
+								return val, err
+							end
+
+							union:AddType(val)
 						end
-						union:AddType(val)
 					end
 
 					union:SetNode(node)

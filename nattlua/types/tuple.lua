@@ -241,9 +241,9 @@ function META:Get(key)
 	if type(key) ~= "number" then
 		print(real_key, "REAL_KEY")
 		print(analyzer:DebugStateToString())
+		error("key must be a number, got " .. tostring(key) .. debug.traceback())
 	end
 
-	assert(type(key) == "number", "key must be a number, got " .. tostring(key) .. debug.traceback())
 	local val = self:GetData()[key]
 	if not val and self.Repeat and key <= (#self:GetData() * self.Repeat) then return self:GetData()[((key - 1) % #self:GetData()) + 1] end
 	if not val and self.Remainder then return self.Remainder:Get(key - #self:GetData()) end

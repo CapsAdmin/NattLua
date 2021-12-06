@@ -32,6 +32,10 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(A, B)
+	if B.Type == "tuple" then
+		-- test against the first index of the tuple
+		B = B:Get(1)
+	end
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if B.Type == "any" then return true end
 	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end

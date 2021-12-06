@@ -379,3 +379,18 @@ run[[
     types.assert(å, 6)
 
 ]]
+
+run[[
+    local function bar(a: string, b: number)
+    
+    end
+    
+    local function foo(a: string, ...: ...any)
+        bar(a, ...)
+    end
+    
+    foo("hello", {1,2,3})
+    foo("hello", "foo")
+    foo("hello", 1)
+    foo("hello", function() end)
+]]

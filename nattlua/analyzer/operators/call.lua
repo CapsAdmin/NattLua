@@ -308,6 +308,7 @@ return
 					table.insert(analyzer.mutated_types, 1, {})
 					local len = contracts:GetSafeLength(arguments)
 
+
 					local contract_override = {}
 
 					do -- analyze the type expressions
@@ -373,7 +374,7 @@ return
 													tup:Merge(func:GetArguments())
 													arg:SetArguments(tup)
 												end									
-											else
+											elseif contract.Type == "function" then
 												arg:SetArguments(contract:GetArguments())
 											end
 										end
@@ -387,7 +388,7 @@ return
 													tup:Merge(func:GetReturnTypes())
 												end
 												arg:SetReturnTypes(tup)
-											else
+											elseif contract.Type == "function" then
 												arg:SetReturnTypes(contract:GetReturnTypes())
 											end
 										end
