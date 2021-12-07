@@ -1,5 +1,5 @@
 --[[#local type { Token } = import_type("nattlua/lexer/token.nlua")]]
---[[ import_type("nattlua/code/code.lua")]]
+--[[# import_type("nattlua/code/code.lua")]]
 
 local math = require("math")
 local table = require("table")
@@ -423,7 +423,7 @@ function helpers.EnableJITDumper()
 	local jutil = require("jit.util")
 	local vmdef = require("jit.vmdef")
 	local funcinfo, traceinfo = jutil.funcinfo, jutil.traceinfo
-	local type, format = type, string.format
+	local type, format = _G.type, string.format
 	local stdout, stderr = io.stdout, io.stderr
 	local out = stdout
 

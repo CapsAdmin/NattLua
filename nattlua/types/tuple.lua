@@ -106,25 +106,7 @@ function META.IsSubsetOf(A, B)
 	if A == B then return true end
 	if A.suppress then return true end
 	if A.Remainder and A:Get(1).Type == "any" and #A:GetData() == 0 then return true end
-
-	if B.Type == "union" then
-		local errors = {}
-
-		for _, tup in ipairs(B:GetData()) do
-			A.suppress = true
-			local ok, reason = A:IsSubsetOf(tup)
-			A.suppress = false
-
-			if ok then
-				return true
-			else
-				table.insert(errors, reason)
-			end
-		end
-
-		return type_errors.subset(A, B, errors)
-	end
-
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if
 		A:Get(1) and
 		A:Get(1).Type == "any" and
@@ -154,7 +136,10 @@ function META.IsSubsetOf(A, B)
 		if not ok then return type_errors.subset(a, b, reason) end
 	end
 
-	if A:GetMinimumLength() < B:GetMinimumLength() then return false, "length differs" end
+	if A:GetMinimumLength() < B:GetMinimumLength() and A:GetLength() < B:GetLength() then 
+		return false, "length differs" 
+	end
+
 	return true
 end
 

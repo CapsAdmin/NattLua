@@ -169,10 +169,7 @@ end
 
 function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 	if A.suppress then return true, "suppressed" end
-	if B.Type == "tuple" then
-		-- test against the first index of the tuple
-		B = B:Get(1)
-	end
+	if B.Type == "tuple" then B = B:Get(1) end
 	
 	if B.Type == "any" then return true, "b is any " end
 

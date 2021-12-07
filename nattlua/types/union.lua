@@ -190,6 +190,10 @@ function META:HasTuples()
 end
 
 function META:GetAtIndex(i)
+	if not self:HasTuples() then
+		return self
+	end
+	
 	local val
 	local errors = {}
 
@@ -216,11 +220,10 @@ function META:GetAtIndex(i)
 			end
 		else
 			if val then
+				-- a non tuple in the union would be treated as a tuple with the value repeated
 				val = self.New({val, obj})
 				val:SetNode(self:GetNode()):SetTypeSource(self):SetTypeSourceLeft(self:GetTypeSourceLeft())
 				:SetTypeSourceRight(self:GetTypeSourceRight())
-			else
-				val = obj
 			end
 		end
 	end
@@ -321,16 +324,9 @@ function META:IsTargetSubsetOfChild(target)
 end
 
 function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then
-		if B:GetLength() == 1 then
-			B = B:Get(1)
-		else
-            --return type_errors.subset(A, B, "a tuple cannot be a subset of another tuple")
-        end
-        -- TODO: given error above, the unpack probably should probably be moved out
-    end
-
 	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
+	
+	if B.Type == "tuple" then B = B:Get(1) end	
 
 	for _, a in ipairs(A.Data) do
 		if a.Type == "any" then return true end
