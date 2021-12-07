@@ -149,9 +149,10 @@ do
 
 	do
 		-- TODO: wtf am i doing here?
-		local args
-		local fmt = function(num--[[#: string]])
-			num = tonumber(num)
+		local args --[[#: List<|string|> ]]
+		local fmt = function(str--[[#: string]])
+			local num = tonumber(str)
+			if not num then error("invalid format argument " .. str) end
 			if type(args[num]) == "table" then return quote.QuoteTokens(args[num]) end
 			return quote.QuoteToken(args[num] or "?")
 		end
@@ -516,7 +517,7 @@ function helpers.GlobalLookup()
 	local _G = _G
 	local tostring = tostring
 	local io = io
-	local print = function(str)
+	local print = function(str--[[#: string]])
 		io.write(str, "\n")
 	end
 	local rawset = rawset

@@ -169,6 +169,10 @@ return
 							exp_key.type_expression,
 							check_type_against_contract(val, contract)
 						)
+					else
+						if contract.Type == "tuple" and contract:GetLength() == 1 then
+							contract = contract:Get(1)
+						end
 					end
 
 					-- we set a's contract to be number
