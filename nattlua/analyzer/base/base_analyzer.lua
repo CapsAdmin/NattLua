@@ -105,7 +105,7 @@ return function(META)
 		end
 
 		local function call(self, obj, arguments, node)
-            -- diregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+            -- disregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
             arguments = obj:GetArguments():Copy()
 			arguments = add_potential_self(arguments)
 
