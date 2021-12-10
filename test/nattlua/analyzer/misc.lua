@@ -565,12 +565,12 @@ run[[
 run[[
     local type math = {
         sin = function=(number)>(number)
-    }
+    } & math
 
     local type old = math.cos
     type math.cos = function=(number)>(number)
 
-    local a = math.sin(1)
+    local a = math.sin(1 as number)
 
     types.assert(a, _ as number)
 

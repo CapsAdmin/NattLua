@@ -36,12 +36,12 @@ do
     local new_token = table_pool(function()
         return
             {
-                type = "something",
-                value = "something",
+                type = "unknown",
+                value = "",
                 whitespace = false,
                 start = 0,
                 stop = 0,
-            } --[[# as Token]]
+            } as Token
     end, 3105585)
 
     local function NewToken(type--[[#: TokenType]], start--[[#: number]], stop--[[#: number]], is_whitespace--[[#: boolean]])--[[#: Token]]

@@ -375,7 +375,6 @@ run[[
     
     local obj = {}
     mutate(obj)
-    types.assert<|obj.Bar, "asdf"|>
 ]]
 
 run([[

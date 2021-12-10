@@ -1008,13 +1008,12 @@ run[[
     types.assert(x.field, _ as number | nil)
 ]]
 
-
-run[[
+pending[[
     local x = { lol = _ as false | 1 }
     if not x.lol then
         x.lol = 1 
     end
-    types.assert<|x.lol, 1|>
+    types.assert(x.lol, 1)
 ]]
 
 run[[
@@ -1190,7 +1189,7 @@ run[[
 
     if math.random() > 0.5 then end
 
-    types.assert<|typeof foo.bar, 1|>
+    types.assert(foo.bar, 1)
 ]]
 
 run[[

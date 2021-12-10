@@ -76,14 +76,15 @@ end
 
 do
 	local new_token = table_pool(function()
-		return
+		local x = 
 			{
-				type = "something",
-				value = "something",
+				type = "unknown",
+				value = "",
 				whitespace = false,
 				start = 0,
 				stop = 0,
 			}--[[# as Token]]
+			return x
 	end, 3105585)
 
 	function META:NewToken(type--[[#: TokenType]], is_whitespace--[[#: boolean]], start--[[#: number]], stop--[[#: number]])--[[#: Token]]

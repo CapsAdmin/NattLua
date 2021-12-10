@@ -227,11 +227,11 @@ run[[
 run[[
     local t = {lol = "lol"}
 
-    ;(function(val: mutable {[string] = string})
+    ;(function(val: literal {[string] = string})
         val.foo = "foo"
-        ;(function(val: mutable {[string] = string})
+        ;(function(val: literal {[string] = string})
             val.bar = "bar"
-            ;(function(val: mutable {[string] = string})
+            ;(function(val: literal {[string] = string})
                 val.faz = "faz"
                 val.lol = "ROFL"
             end)(val)

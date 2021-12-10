@@ -30,9 +30,9 @@ analyzer function table.insert(tbl: List, ...: ...any)
 
 	if not val then
 		val = ...
-		pos = #tbl:GetData() + 1
+		pos = tbl:GetLength() + 1
 	else
-		pos = pos:GetData()
+		pos = tbl:GetLength()
 	end
 
 	tbl:Set(types.LNumber(pos), val)

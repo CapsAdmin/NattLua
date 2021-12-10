@@ -154,8 +154,12 @@ return
 				end
 
 				self:MutateValue(obj, key, val, env)
-				if env == "typesystem" and obj:GetContract() then return obj:GetContract():Set(key, val) end
-				return obj:Set(key, val)
+
+				if not obj:GetContract() then
+					return obj:Set(key, val)
+				end
+
+				return true
 			end
 		end,
 	}

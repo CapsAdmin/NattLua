@@ -76,15 +76,11 @@ return
 					return val, err
 				end
 
-				local val, err = obj:Get(key)
-
-				if val then
-					local o = self:GetMutatedValue(obj, key, val, env)
-					if o then return o end
-					return val
+				if env == "typesystem" then
+					return obj:Get(key)
 				end
 
-				return Nil() -- no contract means nil value
+				return self:GetMutatedValue(obj, key, obj:Get(key), env) or Nil()
 			end
 		end,
 	}
