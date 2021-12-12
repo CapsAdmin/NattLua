@@ -361,6 +361,11 @@ analyzer function type(obj: any)
 end
 
 analyzer function setmetatable(tbl: Table, meta: Table | nil)
+	if not meta then
+		tbl:SetMetaTable()
+		return
+	end
+
 	if meta.Type == "table" then
 		if meta.Self then
 			analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(meta.Self))

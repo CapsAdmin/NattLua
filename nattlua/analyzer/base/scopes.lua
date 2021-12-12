@@ -176,10 +176,10 @@ return function(META)
 					if not val then 
 						return self:GetLocalOrEnvironmentValue(key, "typesystem")
 					end
-					return self:GetMutatedValue(g, key, val, env) or val
+					return self:IndexOperator(key:GetNode(), g, key, env)
 				end
 
-				return self:GetEnvironment(env):Get(key)
+				return self:IndexOperator(key:GetNode(), self:GetEnvironment(env), key, env)
 			end
 
 			function META:GetLocalOrEnvironmentValue(key, env, scope)

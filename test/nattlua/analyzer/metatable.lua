@@ -767,3 +767,18 @@ run[[
         types.assert(ply:IsVisible(ply), _ as boolean)
     end
 ]]
+
+run[[
+local FALLBACK = "lol"
+
+setmetatable(_G, {
+    __index = function(t: literal any, n: literal any)
+        return FALLBACK
+    end
+})
+
+local x = NON_EXISTING_VARIABLE
+types.assert(x, FALLBACK)
+
+setmetatable(_G)
+]]
