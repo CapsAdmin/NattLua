@@ -206,14 +206,6 @@ return
 							local existing_value = analyzer:GetLocalOrEnvironmentValue(key, env)
 							local contract = existing_value and existing_value:GetContract()
 
-							-- try typesystem if we can't find anything
-							if not existing_value and not contract and env == "runtime" then
-								existing_value = analyzer:GetLocalOrEnvironmentValue(key, "typesystem")
-
-								if existing_value then
-									contract = existing_value
-								end
-							end
 
 							if contract then
 								val:CopyLiteralness(contract)

@@ -173,7 +173,9 @@ return function(META)
 				if env == "runtime" then
 					local g = self:GetEnvironment(env)
 					local val, err = g:Get(key)
-					if not val then return val, err end
+					if not val then 
+						return self:GetLocalOrEnvironmentValue(key, "typesystem")
+					end
 					return self:GetMutatedValue(g, key, val, env) or val
 				end
 
