@@ -1,8 +1,8 @@
 type string = {
-		find = function=(s: string, pattern: string, init: number, plain: boolean)>(number | nil, number, ... | nil | nil) | function=(s: string, pattern: string, init: number)>(number | nil, number, ... | nil | nil) | function=(s: string, pattern: string)>(number | nil, number, ... | nil | nil),
+		find = function=(s: string, pattern: string, init: number | nil, plain: boolean | nil)>(number | nil, number | nil, ...string),
 		len = function=(s: string)>(number),
 		packsize = function=(fmt: string)>(number),
-		match = function=(s: string, pattern: string, init: number)>(string | nil, ... | nil) | function=(s: string, pattern: string)>(string | nil, ... | nil),
+		match = function=(s: string, pattern: string, init: number| nil)>(...string),
 		upper = function=(s: string)>(string),
 		sub = function=(s: string, i: number, j: number)>(string) | function=(s: string, i: number)>(string),
 		char = function=(...)>(string),
@@ -11,11 +11,11 @@ type string = {
 		dump = function=(empty_function: empty_function)>(string),
 		gmatch = function=(s: string, pattern: string)>(empty_function),
 		reverse = function=(s: string)>(string),
-		byte = function=(s: string, i: number, j: number)>(...) | function=(s: string, i: number)>(number | nil) | function=(s: string)>(number),
-		unpack = function=(fmt: string, s: string, pos: number)>(...) | function=(fmt: string, s: string)>(...),
-		gsub = function=(s: string, pattern: string, repl: string | Table | empty_function, n: number)>(string, number) | function=(s: string, pattern: string, repl: string | Table | empty_function)>(string, number),
-		format = function=(string, ...)>(string),
-		pack = function=(fmt: string, ...)>(string),
+		byte = function=(s: string, i: number | nil, j: number | nil)>(...number),
+		unpack = function=(fmt: string, s: string, pos: number | nil)>(...any),
+		gsub = function=(s: string, pattern: string, repl: string | Table | empty_function, n: number | nil)>(string, number),
+		format = function=(string, ...any)>(string),
+		pack = function=(fmt: string, ...any)>(string),
 	}
 
 analyzer function ^string.rep(self: string, n: number)
