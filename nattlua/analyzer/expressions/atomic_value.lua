@@ -22,6 +22,7 @@ local function lookup_value(self, node, env)
 	if env == "typesystem" then
 		obj, err = self:GetLocalOrEnvironmentValue(key, env)
 
+		-- we fallback to runtime if we can't find the value in the typesystem
 		if not obj then
 			table.insert(errors, err)
 			obj, err = self:GetLocalOrEnvironmentValue(key, "runtime")
@@ -34,11 +35,6 @@ local function lookup_value(self, node, env)
 		end
 	else
 		obj, err = self:GetLocalOrEnvironmentValue(key, env)
-
-		if not obj then
-			table.insert(errors, err)
-			obj, err = self:GetLocalOrEnvironmentValue(key, "typesystem")
-		end
 
 		if not obj then
 			if not obj then
