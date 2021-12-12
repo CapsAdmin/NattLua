@@ -170,19 +170,14 @@ return function(META)
 
 			function META:FindEnvironmentValue(key, env)
 				-- look up in parent if not found
-				local g = self:GetEnvironment(env)
-				local val, err = g:Get(key)
-
-				if not val and env == "runtime" then
-					for i = 2, #self.environments[env] do
-						g = self.environments[env][i]
-						if not g then break end
-						val, err = g:Get(key)
-					end
+				if env == "runtime" then
+					local g = self:GetEnvironment(env)
+					local val, err = g:Get(key)
+					if not val then return val, err end
+					return self:GetMutatedValue(g, key, val, env) or val
 				end
 
-				if val and env == "runtime" then return self:GetMutatedValue(g, key, val, env) or val end
-				return val, err
+				return self:GetEnvironment(env):Get(key)
 			end
 
 			function META:GetLocalOrEnvironmentValue(key, env, scope)
