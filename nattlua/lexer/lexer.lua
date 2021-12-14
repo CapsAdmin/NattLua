@@ -350,7 +350,7 @@ do
 		return false
 	end
 
-	local function ReadInlineTypeCode(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadInlineAnalyzerDebugCode(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 			if not lexer:IsString("§") then
 				return false
 			end
@@ -364,9 +364,9 @@ do
 				lexer:Advance(1)
 			end
 
-			return "type_code"
+			return "analyzer_debug_code"
 		end
-	local function ReadInlineParserCode(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadInlineParserDebugCode(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if not lexer:IsString("£") then
 			return false
 		end
@@ -380,7 +380,7 @@ do
 			lexer:Advance(1)
 		end
 
-		return "parser_code"
+		return "parser_debug_code"
 	end
 	
 	local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
@@ -680,8 +680,8 @@ do
 		end
 
 		do
-			local name = ReadInlineTypeCode(self) or
-				ReadInlineParserCode(self) or
+			local name = ReadInlineAnalyzerDebugCode(self) or
+				ReadInlineParserDebugCode(self) or
 				ReadHexNumber(self) or
 				ReadBinaryNumber(self) or
 				ReadDecimalNumber(self) or

@@ -171,7 +171,7 @@ local type EndOfFileStatement = Node &  {
   },
 }
 
-local type DebugParserCodeStatement = Node &  {
+local type DebugParserDebugCodeStatement = Node &  {
   Type = "statement",
   Kind = "parser_debug_code",
   lua_code = ValueExpression,
@@ -634,7 +634,7 @@ local type Nodes = {
   PostfixCallSubExpression,
   PostfixIndexSubExpression,
   EndOfFileStatement,
-  DebugParserCodeStatement,
+  DebugParserDebugCodeStatement,
   DebugAnalyzerCodeStatement,
   ReturnStatement,
   BreakStatement,

@@ -197,7 +197,7 @@ return
 	
 				--'local analyzer = self;local env = self:GetScopeHelper(scope);'
 		
-				func = analyzer:CompileLuaTypeCode("return  " .. node:Render({uncomment_types = true, analyzer_function = true}), node)()
+				func = analyzer:CompileLuaAnalyzerDebugCode("return  " .. node:Render({uncomment_types = true, analyzer_function = true}), node)()
 			end
 
 			obj.Data.arg = args

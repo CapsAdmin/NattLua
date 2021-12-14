@@ -1664,16 +1664,16 @@ end
 			return node
 		end
 		local function ReadDebugCodeStatement(parser)
-			if parser:IsType("type_code") then
-				local node = parser:StartNode("statement", "type_code")
-				node.lua_code = ReadValueExpressionType(parser, "type_code")
+			if parser:IsType("analyzer_debug_code") then
+				local node = parser:StartNode("statement", "analyzer_debug_code")
+				node.lua_code = ReadValueExpressionType(parser, "analyzer_debug_code")
 				parser:EndNode(node)
 
 				return node
-			elseif parser:IsType("parser_code") then
-				local token = parser:ExpectType("parser_code")
+			elseif parser:IsType("parser_debug_code") then
+				local token = parser:ExpectType("parser_debug_code")
 				assert(loadstring("local parser = ...;" .. token.value:sub(3)))(parser)
-				local node = parser:StartNode("statement", "parser_code")
+				local node = parser:StartNode("statement", "parser_debug_code")
 				
 				local code = parser:StartNode("expression", "value")
 				code.value = token

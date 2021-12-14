@@ -169,7 +169,7 @@ return function(META)
 			locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
 		end
 
-		function META:CompileLuaTypeCode(code, node)
+		function META:CompileLuaAnalyzerDebugCode(code, node)
 			code = locals .. code
 
             -- append newlines so that potential line errors are correct

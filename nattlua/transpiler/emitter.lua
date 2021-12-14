@@ -922,9 +922,9 @@ function META:EmitStatement(node)
 		self:EmitToken(node.tokens["end_of_file"])
 	elseif node.kind == "root" then
 		self:EmitStatements(node.statements)
-	elseif node.kind == "type_code" then
+	elseif node.kind == "analyzer_debug_code" then
 		self:EmitNonSpace("--" .. node.lua_code.value.value)
-	elseif node.kind == "parser_code" then
+	elseif node.kind == "parser_debug_code" then
 		self:EmitNonSpace("--" .. node.lua_code.value.value)
 	elseif node.kind then
 		error("unhandled statement: " .. node.kind)

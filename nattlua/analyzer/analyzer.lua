@@ -26,7 +26,7 @@ do
 	local AnalyzeContinue = require("nattlua.analyzer.statements.continue").AnalyzeContinue
 	local AnalyzeRepeat = require("nattlua.analyzer.statements.repeat").AnalyzeRepeat
 	local AnalyzeReturn = require("nattlua.analyzer.statements.return").AnalyzeReturn
-	local AnalyzeTypeCode = require("nattlua.analyzer.statements.type_code").AnalyzeTypeCode
+	local AnalyzeAnalyzerDebugCode = require("nattlua.analyzer.statements.analyzer_debug_code").AnalyzeAnalyzerDebugCode
 	local AnalyzeWhile = require("nattlua.analyzer.statements.while").AnalyzeWhile
 
 	function META:AnalyzeStatement(statement)
@@ -68,8 +68,8 @@ do
 			AnalyzeGenericFor(self, statement)
 		elseif statement.kind == "numeric_for" then
 			AnalyzeNumericFor(self, statement)
-		elseif statement.kind == "type_code" then
-			AnalyzeTypeCode(self, statement)
+		elseif statement.kind == "analyzer_debug_code" then
+			AnalyzeAnalyzerDebugCode(self, statement)
 		elseif statement.kind == "import" then
 
 		elseif
@@ -77,7 +77,7 @@ do
 			statement.kind ~= "semicolon" and
 			statement.kind ~= "shebang" and
 			statement.kind ~= "goto_label" and
-			statement.kind ~= "parser_code" and
+			statement.kind ~= "parser_debug_code" and
 			statement.kind ~= "goto"
 		then
 			self:FatalError("unhandled statement: " .. tostring(statement))
