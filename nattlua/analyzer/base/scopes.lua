@@ -135,13 +135,6 @@ return function(META)
 			function META:PushEnvironment(node, obj, env)
 				obj = obj or self.default_environment[env]
 
-				if #self.environments[env] == 0 then
-					-- this is needed for when calling GetLocalOrEnvironmentValue when analysis is done
-					-- it's mostly useful for tests, but maybe a better solution can be done here
-					self.first_environment = self.first_environment or {}
-					self.first_environment[env] = obj
-				end
-
 				table.insert(self.environments[env], 1, obj)
 				node.environments = node.environments or {}
 				node.environments[env] = obj
@@ -155,7 +148,7 @@ return function(META)
 			end
 
 			function META:GetEnvironment(env)
-				local g = self.environments[env][1] or self.first_environment[env]
+				local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
 
 				if
 					self.environment_nodes[1] and
