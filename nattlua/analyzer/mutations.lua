@@ -131,7 +131,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 			for i = #mutations, 1, -1 do
 				local mut = mutations[i]
 
-				if mut.scope:IsPartOfIfStatement() and mut.scope:IsTestConditionInverted() then
+				if mut.scope:GetStatementType() == "if" and mut.scope:IsPartOfElseStatement() then
 					while true do
 						local mut = mutations[i]
 						if not mut then break end
@@ -283,7 +283,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
             -- the or part here refers to if *condition* then
             -- truthy/falsy _union is only created from binary operators and some others
             if
-				found_scope:IsTestConditionInverted() or
+				found_scope:IsPartOfElseStatement() or
 				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
 			then
 				return union:GetFalsyUnion() or value:GetFalsy()

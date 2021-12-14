@@ -37,10 +37,7 @@ return
 					end
 
 					analyzer:CreateAndPushScope()
-						analyzer:OnEnterConditionalScope({
-							type = "generic_for",
-							condition = returned_key,
-						})
+						analyzer:EnterConditionalScope(statement, returned_key)
 						analyzer:FireEvent("generic_for", statement.identifiers, values)
 					end
 
@@ -85,7 +82,7 @@ return
 
 				if returned_key then
 					analyzer:PopScope()
-					analyzer:OnExitConditionalScope({condition = returned_key})
+					analyzer:ExitConditionalScope()
 				end
 			end,
 		}

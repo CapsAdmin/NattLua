@@ -12,23 +12,9 @@ return
 					if obj:IsTruthy() then
 						analyzer:FireEvent("if", i == 1 and "if" or "elseif", true)
 						analyzer:CreateAndPushScope()
-							analyzer:OnEnterConditionalScope(
-								{
-									type = "if",
-									if_position = i,
-									condition = obj,
-									statement = statement,
-								}
-							)
+							analyzer:EnterConditionalScope(statement, obj)
 							analyzer:AnalyzeStatements(statements)
-							analyzer:OnExitConditionalScope(
-								{
-									type = "if",
-									if_position = i,
-									condition = obj,
-									statement = statement,
-								}
-							)
+							analyzer:ExitConditionalScope()
 						analyzer:PopScope()
 						analyzer:FireEvent("if", i == 1 and "if" or "elseif", false)
 						if not obj:IsFalsy() then break end
@@ -37,25 +23,10 @@ return
 					if prev_expression:IsFalsy() then
 						analyzer:FireEvent("if", "else", true)
 						analyzer:CreateAndPushScope()
-							analyzer:OnEnterConditionalScope(
-								{
-									type = "if",
-									if_position = i,
-									is_else = true,
-									condition = prev_expression,
-									statement = statement,
-								}
-							)
+							analyzer:EnterConditionalScope(statement, prev_expression)
+							analyzer:GetScope():InvertIfStatement(true)
 							analyzer:AnalyzeStatements(statements)
-							analyzer:OnExitConditionalScope(
-								{
-									type = "if",
-									if_position = i,
-									is_else = true,
-									condition = prev_expression,
-									statement = statement,
-								}
-							)
+							analyzer:ExitConditionalScope()
 						analyzer:PopScope()
 						analyzer:FireEvent("if", "else", false)
 					end

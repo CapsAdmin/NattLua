@@ -107,14 +107,11 @@ return function(META)
 		end
 	end
 
-	function META:OnEnterNumericForLoop(scope, init, max)
-		scope:MakeUncertain(not init:IsLiteral() or not max:IsLiteral())
-	end
-
-	function META:OnEnterConditionalScope(data)
+	function META:EnterConditionalScope(statement, condition)
 		local scope = self:GetScope()
-		scope:SetTestCondition(data.condition, data)
-		scope:MakeUncertain(data.condition:IsUncertain())
+		scope:SetTestCondition(condition)
+		scope:SetStatement(statement)
+		scope:MakeUncertain(condition:IsUncertain())
 	end
 
 	function META:ErrorAndCloneCurrentScope(node, err, condition)
@@ -123,7 +120,7 @@ return function(META)
 		self:GetScope():SetTestCondition(condition)
 	end
 
-	function META:OnExitConditionalScope()
+	function META:ExitConditionalScope()
 		local exited_scope = self:GetLastScope()
 		local current_scope = self:GetScope()
 

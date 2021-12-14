@@ -186,34 +186,31 @@ function META:GetParent()
 	return self.parent
 end
 
-function META:SetTestCondition(obj, data)
+function META:SetTestCondition(obj)
 	self.test_condition = obj
-
-	if data then
-		self.test_data = data
-		self.test_condition_inverted = self.test_data.is_else
-	end
 end
 
-function META:IsPartOfIfStatement()
-	return self.test_data and self.test_data.type == "if"
+function META:SetStatement(statement)
+	self.statement = statement
 end
 
-function META:IsTestConditionInverted()
-	return self.test_condition_inverted
+function META:GetStatementType()
+	return self.statement and self.statement.kind
+end
+
+function META:InvertIfStatement(b)
+	self.is_else = b
 end
 
 function META:IsPartOfElseStatement()
-	return self.test_data and self.test_data.is_else == true
+	return self.is_else == true
 end
 
 function META.IsPartOfTestStatementAs(a, b)
 	return
-		a.test_data and
-		b.test_data and
-		a.test_data.type == "if" and
-		b.test_data.type == "if" and
-		a.test_data.statement == b.test_data.statement
+		a:GetStatementType() == "if" and
+		b:GetStatementType() == "if" and
+		a.statement == b.statement
 end
 
 function META:FindFirstTestScope()

@@ -7,14 +7,14 @@ return
 				for i = 1, 32 do
 					analyzer:CreateAndPushScope()
 						analyzer:FireEvent("while", obj)
-						analyzer:OnEnterConditionalScope({type = "while", condition = obj,})
+						analyzer:EnterConditionalScope(statement, obj)
 						analyzer:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
 
 						analyzer:AnalyzeStatements(statement.statements)
 
 						analyzer:PopUncertainLoop()
 					analyzer:PopScope()
-					analyzer:OnExitConditionalScope({condition = obj})
+					analyzer:ExitConditionalScope()
 
 					if analyzer.break_out_scope then
 						analyzer.break_out_scope = nil
