@@ -150,7 +150,7 @@ do
 end
 
 do
-	META:IsSet("Literal", false)
+	META:IsSet("Literal", false--[[# as boolean]])
 
 	function META:CopyLiteralness(obj--[[#: BaseType]])
 		self:SetLiteral(obj:IsLiteral())
