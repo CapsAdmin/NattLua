@@ -225,22 +225,24 @@ return
 				local ret = Tuple({})
 
 				for _, tuple in ipairs(tuples) do
-					if tuple:GetMinimumLength() == 0 or tuple:GetUnpackable() then
+					if tuple:GetUnpackable() or tuple:GetLength() == math.huge then
 						return tuple
-					else
-						for i = 1, #tuple:GetData() do
-							local v = tuple:Get(i)
-							local existing = ret:Get(i)
-
-							if existing then
-								if existing.Type == "union" then
-									existing:AddType(v)
-								else
-									ret:Set(i, Union({v, existing}))
-								end
+					end
+				end
+				
+				for _, tuple in ipairs(tuples) do
+					for i = 1, tuple:GetLength() do
+						local v = tuple:Get(i)
+						local existing = ret:Get(i)
+						
+						if existing then
+							if existing.Type == "union" then
+								existing:AddType(v)
 							else
-								ret:Set(i, v)
+								ret:Set(i, Union({v, existing}))
 							end
+						else
+							ret:Set(i, v)
 						end
 					end
 				end
