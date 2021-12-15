@@ -231,6 +231,17 @@ return function(META)
 				self.scope_helper.scope = scope
 				return self.scope_helper
 			end
+
+			function META:CallTypesystemUpvalue(name, ...)
+				-- this is very internal-ish code
+				-- not sure what a nice interface for this really should be yet
+				local generics_func = analyzer:GetLocalOrEnvironmentValue(name, "typesystem")
+				local argument_tuple = Tuple({...})
+				analyzer:PushPreferTypesystem(true)
+				local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
+				analyzer:PopPreferTypesystem()
+				return returned_tuple:Unpack()
+			end
 		end
 
 		function META:CallLuaTypeFunction(node, func, scope, ...)

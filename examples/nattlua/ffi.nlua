@@ -21,17 +21,6 @@ type ffi.C = {
 		local ffi = require("ffi")
 		local reflect = require("examples.nattlua.ffi_reflect")
 
-		local function call_typesystem_upvalue(name, ...)
-			-- this is very internal-ish code
-			-- not sure what a nice interface for this really should be yet
-			local generics_func = analyzer:GetLocalOrEnvironmentValue(name, "typesystem")
-			local argument_tuple = types.Tuple({...})
-			analyzer:PushPreferTypesystem(true)
-			local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
-			analyzer:PopPreferTypesystem()
-			return returned_tuple:Unpack()
-		end
-
 		local function ctype_to_nl_type(type_info)
 			if type_info.what == "ptr" then
 				return analyzer:GetLocalOrEnvironmentValue(types.LString("VoidPointer"), "typesystem")
@@ -57,7 +46,7 @@ type ffi.C = {
 			if info.return_type.what == "ptr" then
 				type = ctype_to_nl_type(info.return_type)
 			else
-				type = call_typesystem_upvalue("CDataPointer", ctype_to_nl_type(info.return_type))
+				type = analyzer:CallTypesystemUpvalue("CDataPointer", ctype_to_nl_type(info.return_type))
 			end
 
 			return types.Function({
