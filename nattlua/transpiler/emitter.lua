@@ -313,7 +313,7 @@ end
 do
 	local function emit_function_body(self, node, analyzer_function)
 		self:EmitToken(node.tokens["arguments("])
-		self:EmitIdentifierList(node.identifiers)
+		self:EmitExpressionList(node.identifiers)
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
 
@@ -389,11 +389,11 @@ do
 		self:EmitToken(node.tokens["="])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["arguments("])
-		self:EmitIdentifierList(node.identifiers)
+		self:EmitExpressionList(node.identifiers)
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitToken(node.tokens[">"])
 		self:EmitToken(node.tokens["return("])
-		self:EmitIdentifierList(node.return_types)
+		self:EmitExpressionList(node.return_types)
 		self:EmitToken(node.tokens["return)"])		
 	end
 
