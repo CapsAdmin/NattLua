@@ -160,7 +160,17 @@ function META:FollowsContract(contract--[[#: TTable]])
 		if not keyval.val:CanBeNil() then
 			if not res then return res, err end
 			local ok, err = res.val:IsSubsetOf(keyval.val)
-			if not ok then return ok, err end
+			if not ok then 
+				return type_errors.other(
+					{
+						"the key ",
+						res.key,
+						" is not a subset of",
+						keyval.key,
+						" because ",
+						err,
+					})
+			end
 		end
 	end
 
@@ -216,7 +226,7 @@ function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 				A.suppress = true
 				local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
 				A.suppress = false
-				if not ok then return type_errors.subset(akeyval.val, bkeyval.val, err) end
+				if not ok then return type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val, err) end
 			end
 		end
 

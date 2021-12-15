@@ -54,7 +54,7 @@ test("typed table invalid reassignment should error", function()
             tbl.foo = {66,66}
             tbl.foo = {1,true}
         ]]
-        ,"true is not a subset of number"
+        ,".-true is not a subset of.-number"
     )
 end)
 

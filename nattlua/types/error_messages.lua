@@ -19,6 +19,23 @@ local errors = {
 
 			return false, msg
 		end,
+		table_subset = function(a_key--[[#: any]], b_key--[[#: any]], a--[[#: any]], b--[[#: any]], reason--[[#: string | nil]])--[[#: false,string | {[number] = any | string}]]
+			local msg = {"[", a_key, "]", a, " is not a subset of ", "[", b_key, "]", b}
+
+			if reason then
+				table.insert(msg, " because ")
+
+				if type(reason) == "table" then
+					for i, v in ipairs(reason) do
+						table.insert(msg, v)
+					end
+				else
+					table.insert(msg, reason)
+				end
+			end
+
+			return false, msg
+		end,
 		missing = function(a--[[#: any]], b--[[#: any]], reason--[[#: string | nil]])--[[#: false,string | {[number] = any | string}]]
 			local msg = {a, " has no field ", b, " because ", reason}
 			return false, msg
