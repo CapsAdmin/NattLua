@@ -611,7 +611,7 @@ run[[
         a.name = name
     end)
     
-    function Animal:__tostring()
+    function Animal:__tostring(): literal string -- we have to say that it's a literal string, otherwise the test won't work
         return self.name..': '..self:speak()
     end
     

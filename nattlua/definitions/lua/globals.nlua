@@ -360,6 +360,40 @@ analyzer function type(obj: any)
 	return types.String()
 end
 
+function MetaTableFunctions<|T: any|>
+	return {
+		__gc = function=(T)>(),
+		__pairs = function=(T)>(function=(T)>(any, any)),
+		__tostring = function=(T)>(string),
+
+		__call = function=(T, ...any)>(...any),
+
+		__index = function=(T, key: any)>(),
+		__newindex = function=(T, key: any, value: any)>(),
+		
+		__len = function=(a: T)>(number),
+		__unm = function=(a: T)>(any),
+		__bnot = function=(a: T)>(any), 
+
+		__add = function=(a: T, b:any)>(any),
+		__sub = function=(a: T, b:any)>(any),
+		__mul = function=(a: T, b:any)>(any),
+		__div = function=(a: T, b:any)>(any),
+		__idiv = function=(a: T, b:any)>(any),
+		__mod = function=(a: T, b:any)>(any),
+		__pow = function=(a: T, b:any)>(any),
+		__band = function=(a: T, b:any)>(any),
+		__bor = function=(a: T, b:any)>(any),
+		__bxor = function=(a: T, b:any)>(any),
+		__shl = function=(a: T, b:any)>(any),
+		__shr = function=(a: T, b:any)>(any), 
+		__concat = function=(a: T, b:any)>(any),
+		__eq = function=(a: T, b:any)>(boolean),
+		__lt = function=(a: T, b:any)>(boolean), 
+		__le = function=(a: T, b:any)>(boolean), 
+	}
+end
+
 analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	if not meta then
 		tbl:SetMetaTable()
@@ -373,6 +407,23 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 		else
 			meta.potential_self = meta.potential_self or types.Union({})
 			meta.potential_self:AddType(tbl)
+		end
+
+		tbl:SetMetaTable(meta)
+		
+		local metatable_functions = analyzer:CallTypesystemUpvalue(types.LString("MetaTableFunctions"), tbl)
+		for _, kv in ipairs(metatable_functions:GetData()) do
+			local a = kv.val
+			local b = meta:Get(kv.key)
+			if b and b.Type == "function" then
+				local ok = analyzer:Assert(b:GetNode(), a:IsSubsetOf(b))
+				if ok then
+					--TODO: enrich callback types
+					--b:SetReturnTypes(a:GetReturnTypes())
+					--b:SetArguments(a:GetArguments())
+					--b.arguments_inferred = true
+				end
+			end
 		end
 
 		tbl:SetMetaTable(meta)
