@@ -426,7 +426,6 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			end
 		end
 
-		tbl:SetMetaTable(meta)
 	end
 
 	return tbl
