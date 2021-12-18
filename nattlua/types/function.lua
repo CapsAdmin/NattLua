@@ -73,6 +73,8 @@ function META:Copy(map)
 	copy:SetLiteral(self:IsLiteral())
 	copy:CopyInternalsFrom(self)
 	copy.function_body_node = self.function_body_node
+	copy.called = self.called
+	
 	return copy
 end
 

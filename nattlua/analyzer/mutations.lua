@@ -325,19 +325,23 @@ local function cast(val)
 	return val
 end
 
-local function initialize_mutation_tracker(obj, scope, key, env)
+local function initialize_mutation_tracker(obj, scope, key, node)
 	obj.mutations = obj.mutations or {}
 	obj.mutations[key] = obj.mutations[key] or {}
 
 	if obj.mutations[key][1] == nil then
 		if obj.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
-			local val = (obj:GetContract() or obj):Get(cast(key)) or Nil()
+			local val = (obj:GetContract() or obj):Get(cast(key)) or Nil():SetNode(node)
 			val:SetUpvalue(obj.mutations[key])
 			val:SetUpvalueReference(key)
 			-- for the iniital value, the scope should be the scope where the table was created
 
 			--if not obj.scope then print(obj.trace) end
+
+			if ROFL then
+				print(obj, key, val, obj.scope, scope)
+			end
 
 			table.insert(obj.mutations[key], {scope = obj.scope or scope:GetRoot(), value = val})
 		end
@@ -359,15 +363,17 @@ return function(META)
 		if env == "typesystem" then return end
 		local scope = self:GetScope()
 		-- todo, merged scopes need this
+		local node = type(key) == "table" and key.Type == "string" and key:GetNode()
 		key = cast_key(key)
 		if not key then return value end
-		initialize_mutation_tracker(obj, scope, key, env)
+		initialize_mutation_tracker(obj, scope, key, node)
 		return get_value_from_scope(copy(obj.mutations[key]), scope, obj, key, self)
 	end
 
 	function META:MutateValue(obj, key, val, env, scope_override)
 		if env == "typesystem" then return end
 		local scope = scope_override or self:GetScope()
+		local node = type(key) == "table" and key.Type == "string" and key:GetNode()
 		key = cast_key(key)
 		if not key then return end -- no mutation?
         
@@ -376,7 +382,7 @@ return function(META)
 			val:SetUpvalueReference(key)
 		end
 
-		initialize_mutation_tracker(obj, scope, key, env)
+		initialize_mutation_tracker(obj, scope, key, node)
 
 		if self:IsInUncertainLoop() then
 			if val.dont_widen then

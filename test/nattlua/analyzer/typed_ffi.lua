@@ -231,6 +231,7 @@ run[=[
 ]=]
 
 run[[
+	ffi.C = {}
 
 	if _ as boolean then
 		local function foo()
@@ -247,3 +248,20 @@ run[[
 	end
 
 ]]
+
+run[=[
+	ffi.C = {}
+
+	if math.random() > 0.5 then
+		ffi.cdef([[
+			void readdir();
+		]])
+	else
+		ffi.cdef([[
+			void readdir();
+		]])
+	end
+	
+	ffi.C.readdir()
+	
+]=]

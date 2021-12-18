@@ -17,6 +17,8 @@ return
 			table.insert(analyzer.current_tables, tbl)
 			local tree = node
 
+			tbl.scope = analyzer:GetScope()
+
 			for i, node in ipairs(node.children) do
 				if node.kind == "table_key_value" then
 					local key = LString(node.tokens["identifier"].value):SetNode(node.tokens["identifier"])
@@ -59,8 +61,6 @@ return
 			end
 
 			table.remove(analyzer.current_tables)
-
-			tbl.scope = analyzer:GetScope()
 
 			return tbl
 		end,

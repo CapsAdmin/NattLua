@@ -247,8 +247,13 @@ function META:GetRoot()
 end
 
 do
-	function META:MakeFunctionScope()
+	function META:MakeFunctionScope(node)
 		self.returns = {}
+		self.node = node
+	end
+
+	function META:IsFunctionScope()
+		return self.returns ~= nil
 	end
 
 	function META:CollectReturnTypes(node, types)
@@ -332,10 +337,30 @@ do
 	function META:IsUncertain(from)
 		if from == self then return false end
 		local scope = self
+		
+		if not from then
+			return self.uncertain
+		end
 
 		while true do
 			if scope == from then break end
-			if scope.returns then break end -- from a function scope we're always certiain
+			if scope:IsFunctionScope() then 
+				if 
+					scope.node and 
+					scope.node.inferred_type and 
+					scope.node.inferred_type.Type == "function" 
+				then
+					return not scope.node.inferred_type:IsCalled() 
+				end
+
+				if scope.uncertain_function_return == false then
+					return false
+				end
+
+				if not scope:Contains(from) then
+					return true
+				end
+			end 
 			if scope.uncertain then
 				return true, scope 
 			end
@@ -352,14 +377,13 @@ do
 end
 
 function META:__tostring()
-	local x = 0
+	local x = 1
 
 	do
 		local scope = self
 
-		while true do
+		while scope.parent do
 			x = x + 1
-			if not scope then break end
 			scope = scope.parent
 		end
 	end

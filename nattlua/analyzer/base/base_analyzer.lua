@@ -118,9 +118,9 @@ return function(META)
 			self.lua_error_thrown = nil
 		end
 
-		function META:CallMeLater(...)
+		function META:CallMeLater(obj, arguments, node)
 			self.deferred_calls = self.deferred_calls or {}
-			table.insert(self.deferred_calls, 1, {...})
+			table.insert(self.deferred_calls, 1, {obj, arguments, node})
 		end
 
 		function META:AnalyzeUnreachableCode()
@@ -133,22 +133,26 @@ return function(META)
 			local called_count = 0
 
 			for _, v in ipairs(self.deferred_calls) do
-				if not v[1].called and v[1].explicit_arguments then
+				if not v[1].called and not v[1].done and v[1].explicit_arguments then
 					local time = os.clock()
 					self:FireEvent("analyze_unreachable_function_start", v[1], called_count, total)
 					call(self, table.unpack(v))
 					called_count = called_count + 1
 					self:FireEvent("analyze_unreachable_function_stop", v[1], called_count, total, os.clock() - time)
+					v[1].done = true
+					v[1].called = nil
 				end
 			end
 
 			for _, v in ipairs(self.deferred_calls) do
-				if not v[1].called and not v[1].explicit_arguments then
+				if not v[1].called and not v[1].done and not v[1].explicit_arguments then
 					local time = os.clock()
 					self:FireEvent("analyze_unreachable_function_start", v[1], called_count, total)
 					call(self, table.unpack(v))
 					called_count = called_count + 1
 					self:FireEvent("analyze_unreachable_function_stop", v[1], called_count, total, os.clock() - time)
+					v[1].done = true
+					v[1].called = nil
 				end
 			end
 

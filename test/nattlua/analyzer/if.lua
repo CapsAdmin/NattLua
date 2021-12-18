@@ -3,7 +3,7 @@ local run = T.RunCode
 
 run([[
     local a = 1
-    function b(lol)
+    local function b(lol)
         if lol == 1 then return "foo" end
         return lol + 4, true
     end

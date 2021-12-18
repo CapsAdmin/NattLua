@@ -16,21 +16,23 @@ return function(META)
 
 			if self.break_out_scope or self._continue_ then
 				self:FireEvent(self.break_out_scope and "break" or "continue")
-
-				break
+				return
 			end
 
 			if self:GetScope():DidCertainReturn() then
 				self:GetScope():ClearCertainReturn()
-
-				break
+				return
 			end
+		end
+
+		if self:GetScope().uncertain_function_return == nil then
+			self:GetScope().uncertain_function_return = false
 		end
 	end
 
 	function META:AnalyzeStatementsAndCollectReturnTypes(statement)
 		local scope = self:GetScope()
-		scope:MakeFunctionScope()
+		scope:MakeFunctionScope(statement)
 		self:AnalyzeStatements(statement.statements)
 		local union = Union({})
 

@@ -1,6 +1,17 @@
 local T = require("test.helpers")
 local run = T.RunCode
 
+run[[
+    local lol
+    do
+        lol = 1
+    end
+
+    do
+        types.assert(lol, 1)
+    end
+]]
+
 run([[
     -- test shadow upvalues
     local foo = 1337
@@ -33,4 +44,20 @@ run[[
     end
 
     local foo = 666
+]]
+
+run[[
+    local x = 0
+
+    local function lol()
+        types.assert(x, _ as 0 | 1 | 2)
+    end
+    
+    local function foo()
+        x = x + 1
+    end
+    
+    local function bar()
+        x = x + 1
+    end
 ]]
