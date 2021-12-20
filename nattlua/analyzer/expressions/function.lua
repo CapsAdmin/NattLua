@@ -109,7 +109,9 @@ local function analyze_function_signature(analyzer, node, current_function)
 	end
 
 	if node.self_call and node.expression then
+		analyzer:PushPreferTypesystem(false)
 		local val = analyzer:AnalyzeExpression(node.expression.left, "runtime"):GetFirstValue()
+		analyzer:PopPreferTypesystem()
 
 		if val then
 			if val:GetContract() or val.Self then

@@ -269,6 +269,13 @@ test("uncalled functions should be called", function()
 end)
 
 R[[
+    -- when setting a to nil in the typesystem we want to delete it
+    type a = nil
+    local a = 1
+    types.assert<|a, 1|>
+]]
+
+R[[
     local num = 0b01 -- binary numbers
     types.assert(num, 1)
 ]]
@@ -564,7 +571,7 @@ R[[
     end
     
     local a = test(1)
-    types.assert<|a, number|>
+    types.assert<|typeof a, number|>
     
     
     local function test(num)
@@ -573,7 +580,7 @@ R[[
     end
     
     local a = test(1)
-    types.assert<|a, 1|>
+    types.assert<|typeof a, 1|> -- TODO: we have to use typeof here because earlier we do type a = nil
 ]]
 
 R[[

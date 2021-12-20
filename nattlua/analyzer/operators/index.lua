@@ -81,6 +81,8 @@ return
 					return obj:Get(key)
 				end
 
+			--	print(key, self:GetMutatedValue(obj, key, obj:Get(key), env) or Nil(), "!")
+
 				return self:GetMutatedValue(obj, key, obj:Get(key), env) or Nil()
 			end
 		end,

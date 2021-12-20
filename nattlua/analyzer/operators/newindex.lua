@@ -147,7 +147,7 @@ return
 				end
 
 				if env == "typesystem" then
-					if obj.Type == "table" then
+					if obj.Type == "table" and (val.Type ~= "symbol" or val.Data ~= nil) then
 						return obj:SetExplicit(key, val)
 					else
 						return obj:Set(key, val)
@@ -157,7 +157,7 @@ return
 				self:MutateValue(obj, key, val, env)
 
 				if not obj:GetContract() then
-					return obj:Set(key, val)
+					return obj:Set(key, val, env == "runtime")
 				end
 
 				return true

@@ -203,10 +203,8 @@ return function(META)
 				if env == "runtime" then
 					self:Warning(key:GetNode(), {"_G[\"", key:GetNode(), "\"] = ", val})
 				end
-
-				if not self:MutateValue(g, key, val, env) then
-					self:Assert(key, g:Set(key, val, env == "runtime"))
-				end
+				
+				self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val, env))
 
 				self:FireEvent("set_environment_value", key, val, env)
 				return val

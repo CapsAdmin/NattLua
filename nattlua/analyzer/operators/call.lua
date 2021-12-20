@@ -329,7 +329,7 @@ return
 							
 							analyzer:CreateLocalValue(key, Any(), "typesystem", i)
 
-							if contracts:Get(i).literal_argument and arguments:Get(i) then
+							if contracts:Get(i) and  contracts:Get(i).literal_argument and arguments:Get(i) then
 								analyzer:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
 							end
 
@@ -342,7 +342,7 @@ return
 								args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue()
 							end
 				
-							if contracts:Get(i).literal_argument and arguments:Get(i) then
+							if contracts:Get(i) and  contracts:Get(i).literal_argument and arguments:Get(i) then
 								args[i] = arguments:Get(i)
 								args[i].literal_argument = true
 								local ok, err = args[i]:IsSubsetOf(contracts:Get(i))
