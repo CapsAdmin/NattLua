@@ -19,18 +19,6 @@ return
 				local key = statement.expression
 
 				if key.kind == "binary_operator" then
-					local existing_type
-
-					if env == "runtime" then
-						analyzer.SuppressDiagnostics = true
-						existing_type = analyzer:AnalyzeExpression(key, "typesystem")
-						analyzer.SuppressDiagnostics = false
-
-						if existing_type.Type == "symbol" and existing_type:GetData() == nil then
-							existing_type = nil
-						end
-					end
-
 					local obj = analyzer:AnalyzeExpression(key.left, env)
 					local key = analyzer:AnalyzeExpression(key.right, env)
 					local val = AnalyzeFunction(analyzer, statement, env)
