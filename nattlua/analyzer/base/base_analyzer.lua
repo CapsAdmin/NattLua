@@ -240,6 +240,7 @@ return function(META)
 				-- this is very internal-ish code
 				-- not sure what a nice interface for this really should be yet
 				local generics_func = analyzer:GetLocalOrEnvironmentValue(name, "typesystem")
+				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
 				local argument_tuple = Tuple({...})
 				analyzer:PushPreferTypesystem(true)
 				local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
