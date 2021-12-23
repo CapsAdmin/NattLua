@@ -1,6 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
 local String = T.String
+
 test("arguments", function()
     local analyzer = run[[
         local function test(a,b,c)
@@ -258,7 +259,7 @@ test("defining a type for a function should type the arguments", function()
     run[[
         local type test = function=(number, string)>(1)
 
-        function test(a, b)
+        local function test(a, b)
             return 1
         end
 
@@ -273,6 +274,8 @@ test("defining a type for a function should type the arguments", function()
         end
 
         test(true, 2)
+
+        test = nil
     ]], "true is not a subset of number")
 end)
 

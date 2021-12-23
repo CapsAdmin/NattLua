@@ -202,8 +202,10 @@ function META:EnableEventDump(b)
 	self.dump_events = b
 end
 
-function META:SetDefaultEnvironment(obj)
-	self.default_environment = obj
+function META:SetEnvironments(runtime, typesystem)
+	self.default_environment = {}
+	self.default_environment.runtime = runtime
+	self.default_environment.typesystem = typesystem
 end
 
 function META:Analyze(analyzer, ...)
@@ -224,9 +226,12 @@ function META:Analyze(analyzer, ...)
 	end
 
 	if self.default_environment then
-		analyzer:SetDefaultEnvironment(self.default_environment, "typesystem")
+		analyzer:SetDefaultEnvironment(self.default_environment["runtime"], "runtime")
+		analyzer:SetDefaultEnvironment(self.default_environment["typesystem"], "typesystem")
 	elseif self.default_environment ~= false then
-        analyzer:SetDefaultEnvironment(BuildBaseEnvironment(), "typesystem")
+		local runtime_env, typesystem_env = BuildBaseEnvironment()
+        analyzer:SetDefaultEnvironment(runtime_env, "runtime")
+        analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
 	end
 
 	if self.dump_events or self.config and self.config.dump_analyzer_events then

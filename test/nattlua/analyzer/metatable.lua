@@ -782,3 +782,10 @@ types.assert(x, FALLBACK)
 
 setmetatable(_G)
 ]]
+
+
+run[[
+    setmetatable(_G, {__index = function(self: literal any, key: literal any) return "LOL" end})
+    types.assert(DUNNO, "LOL")
+    setmetatable(_G)
+]]

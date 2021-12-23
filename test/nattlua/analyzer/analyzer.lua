@@ -640,3 +640,19 @@ R[[
         foo()
     end
 ]]
+
+R[[
+    local type test = function=(a: number, b: string)>(1)
+
+    function test(a, b)
+        return 1
+    end
+    
+    test(1, "")
+    
+    test = nil
+    
+    local type test = function=(boolean, boolean)>(number)
+    
+    local a = test(true, true)
+]]

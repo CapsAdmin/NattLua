@@ -23,12 +23,12 @@ local function cast(...)
 end
 
 -- reuse an existing environment to speed up tests
-local base_environment = BuildBaseEnvironment()
+local runtime_env, typesystem_env = BuildBaseEnvironment()
 
 local function run(code, expect_error)
     _G.TEST = true
     local compiler = nl.Compiler(code, nil, nil, 3)
-    compiler:SetDefaultEnvironment(base_environment)
+    compiler:SetEnvironments(types.Table(), typesystem_env)
     local ok, err = compiler:Analyze()
     _G.TEST = false
 

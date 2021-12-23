@@ -34,7 +34,14 @@ local function lookup_value(self, node, env)
 			return Nil()
 		end
 	else
-		obj, err = self:GetLocalOrEnvironmentValue(key, env)
+		obj, err = self:GetLocalOrEnvironmentValue(key, "runtime")
+
+		if obj and obj.Type == "symbol" and obj:GetData() == nil then
+			local objt, errt = self:GetLocalOrEnvironmentValue(key, "typesystem")
+			if objt then
+				obj, err = objt, errt
+			end
+		end
 
 		if not obj then
 			if not obj then

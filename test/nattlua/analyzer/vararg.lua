@@ -106,7 +106,7 @@ run[[
 ]]
 
 run[[
-    function foo(...)
+    local function foo(...)
         local tbl = {...}
         types.assert(tbl[1], _ as any)
         types.assert(tbl[2], _ as any)
