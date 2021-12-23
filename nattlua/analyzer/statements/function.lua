@@ -25,8 +25,7 @@ return
 					analyzer:NewIndexOperator(statement, obj, key, val, env)
 				else
 					local key = NodeToString(key)
-					local existing_type = env == "runtime" and analyzer:GetLocalOrEnvironmentValue(key, "typesystem")
-					local val = existing_type or AnalyzeFunction(analyzer, statement, env)
+					local val = AnalyzeFunction(analyzer, statement, env)
 					analyzer:SetLocalOrEnvironmentValue(key, val, env)
 				end
 			else

@@ -255,30 +255,6 @@ test("return type", function()
     ]]
 end)
 
-test("defining a type for a function should type the arguments", function()
-    run[[
-        local type test = function=(number, string)>(1)
-
-        local function test(a, b)
-            return 1
-        end
-
-        test(14, "asd")
-    ]]
-
-    run([[
-        local type test = function=(a: number, b: string)>(1)
-
-        function test(a, b)
-            return 1
-        end
-
-        test(true, 2)
-
-        test = nil
-    ]], "true is not a subset of number")
-end)
-
 test("calling a union", function()
     run[[
         local type test = function=(boolean, boolean)>(number) | function=(boolean)>(string)
