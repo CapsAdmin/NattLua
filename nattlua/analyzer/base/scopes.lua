@@ -135,10 +135,6 @@ return function(META)
 			end
 
 			function META:PushEnvironment(node, obj, env)
-				obj = obj or self.default_environment[env]
-
-				assert(not self.environments["env"], "bad environment " .. env)
-
 				table.insert(self.environments[env], 1, obj)
 				node.environments = node.environments or {}
 				node.environments[env] = obj

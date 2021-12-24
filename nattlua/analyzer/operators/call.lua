@@ -137,7 +137,7 @@ return
 		Call = function(META)
 			function META:AnalyzeFunctionBody(obj, function_node, arguments)
 				local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-				self:PushEnvironment(function_node, nil, self:GetPreferredEnvironment())
+				self:PushEnvironment(function_node, self:GetDefaultEnvironment(self:GetPreferredEnvironment()), self:GetPreferredEnvironment())
 
 				if function_node.self_call then
 					self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node), "self")
