@@ -23,7 +23,7 @@ type ffi.C = {
 
 		local function ctype_to_nl_type(type_info)
 			if type_info.what == "ptr" then
-				return analyzer:GetLocalOrEnvironmentValue(types.LString("VoidPointer"), "typesystem")
+				return analyzer:GetLocalOrEnvironmentValue(types.LString("VoidPointer"))
 			elseif type_info.what == "int" then
 				return types.Number()
 			else

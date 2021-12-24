@@ -31,8 +31,10 @@ return function(META)
 		local g = self:GetEnvironment("typesystem")
 		g:Set(LString("_G"), g)
 
-		self:CreateLocalValue("...", argument_tuple, "runtime")
+		self:PushPreferEnvironment("runtime")
+		self:CreateLocalValue("...", argument_tuple)
 		local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
+		self:PopPreferEnvironment()
 		self:PopEnvironment("runtime")
 		self:PopEnvironment("typesystem")
 		self:PopScope()
@@ -40,12 +42,12 @@ return function(META)
 		return analyzed_return
 	end
 
-	function META:AnalyzeExpressions(expressions, env)
+	function META:AnalyzeExpressions(expressions)
 		if not expressions then return end
 		local out = {}
 
 		for _, expression in ipairs(expressions) do
-			local obj = self:AnalyzeExpression(expression, env)
+			local obj = self:AnalyzeExpression(expression)
 			if obj and obj.Type == "tuple" and obj:GetLength() == 1 then
 				obj = obj:Get(1)
 			end
@@ -174,6 +176,7 @@ return function(META)
 		end
 
 		function META:CompileLuaAnalyzerDebugCode(code, node)
+			local original_code = code
 			code = locals .. code
 
             -- append newlines so that potential line errors are correct
@@ -213,11 +216,16 @@ return function(META)
 			local scope_meta = {}
 
 			function scope_meta:__index(key)
-				return self.analyzer:GetLocalOrEnvironmentValue(LString(key), self.env, self.scope)
+				self.analyzer:PushPreferEnvironment(self.env)
+				local val = self.analyzer:GetLocalOrEnvironmentValue(LString(key), self.scope)
+				self.analyzer:PopPreferEnvironment()
+				return val
 			end
-
+			
 			function scope_meta:__newindex(key, val)
-				return self.analyzer:SetLocalOrEnvironmentValue(LString(key), LString(val), self.env, self.scope)
+				self.analyzer:PushPreferEnvironment(self.env)
+				self.analyzer:SetLocalOrEnvironmentValue(LString(key), LString(val), self.scope)
+				self.analyzer:PopPreferEnvironment()
 			end
 
 			function META:GetScopeHelper(scope)
@@ -239,10 +247,10 @@ return function(META)
 			function META:CallTypesystemUpvalue(name, ...)
 				-- this is very internal-ish code
 				-- not sure what a nice interface for this really should be yet
-				local generics_func = analyzer:GetLocalOrEnvironmentValue(name, "typesystem")
+				self:PushPreferEnvironment("typesystem")
+				local generics_func = analyzer:GetLocalOrEnvironmentValue(name)
 				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
 				local argument_tuple = Tuple({...})
-				analyzer:PushPreferEnvironment("typesystem")
 				local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
 				analyzer:PopPreferEnvironment()
 				return returned_tuple:Unpack()
@@ -252,6 +260,7 @@ return function(META)
 		function META:CallLuaTypeFunction(node, func, scope, ...)
 			_G.analyzer = self
 			_G.env = self:GetScopeHelper(scope)
+
 			local res = {pcall(func, ...)}
 			local ok = table.remove(res, 1)
 
@@ -364,7 +373,7 @@ return function(META)
 
 		do
 			function META:GetPreferredEnvironment()
-				return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1]
+				return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1] or "runtime"
 			end
 
 			function META:PushPreferEnvironment(env--[[#: "typesystem" | "runtime"]])
@@ -374,6 +383,14 @@ return function(META)
 
 			function META:PopPreferEnvironment()
 				table.remove(self.prefer_typesystem_stack, 1)
+			end
+
+			function META:IsTypesystem()
+				return self:GetPreferredEnvironment() == "typesystem"
+			end
+
+			function META:IsRuntime()
+				return self:GetPreferredEnvironment() == "runtime"
 			end
 		end
 

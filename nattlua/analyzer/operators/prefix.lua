@@ -19,7 +19,7 @@ local function metatable_function(self, meta_method, l)
 	end
 end
 
-local function prefix_operator(analyzer, node, l, env)
+local function prefix_operator(analyzer, node, l)
 	local op = node.value.value
 
 	if l.Type == "tuple" then
@@ -32,7 +32,7 @@ local function prefix_operator(analyzer, node, l, env)
 		local falsy_union = Union()
 
 		for _, l in ipairs(l:GetData()) do
-			local res, err = prefix_operator(analyzer, node, l, env)
+			local res, err = prefix_operator(analyzer, node, l)
 
 			if not res then
 				analyzer:ErrorAndCloneCurrentScope(node, err, l)
@@ -72,27 +72,29 @@ local function prefix_operator(analyzer, node, l, env)
 		return obj
 	end
 
-	if env == "typesystem" then
+	if analyzer:IsTypesystem() then
 		if op == "typeof" then
-			local obj = analyzer:AnalyzeExpression(node.right, "runtime")
+			analyzer:PushPreferEnvironment("runtime")
+			local obj = analyzer:AnalyzeExpression(node.right)
+			analyzer:PopPreferEnvironment()
 			if not obj then return type_errors.other(
 				"cannot find '" .. node.right:Render() .. "' in the current typesystem scope"
 			) end
 			return obj:GetContract() or obj
 		elseif op == "unique" then
-			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
+			local obj = analyzer:AnalyzeExpression(node.right)
 			obj:MakeUnique(true)
 			return obj
 		elseif op == "mutable" then
-			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
+			local obj = analyzer:AnalyzeExpression(node.right)
 			obj.mutable = true
 			return obj
 		elseif op == "expand" then
-			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
+			local obj = analyzer:AnalyzeExpression(node.right)
 			obj.expand = true
 			return obj
 		elseif op == "$" then
-			local obj = analyzer:AnalyzeExpression(node.right, "typesystem")
+			local obj = analyzer:AnalyzeExpression(node.right)
 			if obj.Type ~= "string" then return type_errors.other("must evaluate to a string") end
 			if not obj:IsLiteral() then return type_errors.other("must be a literal") end
 			obj:SetPatternContract(obj:GetData())
@@ -124,7 +126,7 @@ local function prefix_operator(analyzer, node, l, env)
 		return l
 	end
 
-	error("unhandled prefix operator in " .. env .. ": " .. op .. tostring(l))
+	error("unhandled prefix operator in " .. analyzer:GetPreferredEnvironment() .. ": " .. op .. tostring(l))
 end
 
 return {Prefix = prefix_operator}

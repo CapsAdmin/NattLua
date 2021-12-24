@@ -188,6 +188,8 @@ do
 			self:OnNode(node)
 		end
 
+		node.environment = self:GetPreferredEnvironment()
+
 		node.parent = self.nodes[1]
 		table.insert(self.nodes, 1, node)
 
@@ -363,7 +365,7 @@ end
 
 do
 	function META:GetPreferredEnvironment()
-		return self.prefer_typesystem_stack[1]
+		return self.prefer_typesystem_stack[1] or "runtime"
 	end
 
 	function META:PushPreferEnvironment(env--[[#: "runtime" | "typesystem" ]])
@@ -485,6 +487,8 @@ end
 			node.tokens[":"] = parser:ExpectValue(":")
 			node.return_types = ReadMultipleValues(parser, math.huge, ExpectTypeExpression)
 		end
+
+		node.environment = "typesystem"
 
 		parser:PushPreferEnvironment("typesystem")
 

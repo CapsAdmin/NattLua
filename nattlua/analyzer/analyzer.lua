@@ -32,6 +32,9 @@ do
 	function META:AnalyzeStatement(node)
 		self.current_statement = node
 
+
+		self:PushPreferEnvironment(node.environment or "runtime")
+
 		if node.kind == "assignment" or node.kind == "local_assignment" then
 			AnalyzeAssignment(self, node)
 		elseif
@@ -82,6 +85,9 @@ do
 		then
 			self:FatalError("unhandled statement: " .. tostring(node))
 		end
+
+
+		self:PopPreferEnvironment()
 	end
 end
 
@@ -99,43 +105,48 @@ do
 	local AnalyzeFunctionSignature = require("nattlua.analyzer.expressions.function_signature").AnalyzeFunctionSignature
 	local Union = require("nattlua.types.union").Union
 
-	function META:AnalyzeExpression(node, env)
+	function META:AnalyzeExpression(node)
 		self.current_expression = node
-		
-		env = self:GetPreferredEnvironment() or env or "runtime"
 
 		if node.type_expression then
+
 			if node.kind == "table" then
-				local obj = AnalyzeTable(self, node, env)
-				obj:SetContract(self:AnalyzeExpression(node.type_expression, "typesystem"))
+				local obj = AnalyzeTable(self, node)
+				self:PushPreferEnvironment("typesystem")
+				obj:SetContract(self:AnalyzeExpression(node.type_expression))
+				self:PopPreferEnvironment()
 				return obj
 			end
 
-			return self:AnalyzeExpression(node.type_expression, "typesystem")
+			self:PushPreferEnvironment("typesystem")
+			local obj = self:AnalyzeExpression(node.type_expression)
+			self:PopPreferEnvironment()
+
+			return obj
 		elseif node.kind == "value" then
-			return AnalyzeAtomicValue(self, node, env)
+			return AnalyzeAtomicValue(self, node)
 		elseif node.kind == "function" or node.kind == "analyzer_function" or node.kind == "type_function" then
-			return AnalyzeFunction(self, node, env)
+			return AnalyzeFunction(self, node)
 		elseif node.kind == "table" or node.kind == "type_table" then
-			return AnalyzeTable(self, node, env)
+			return AnalyzeTable(self, node)
 		elseif node.kind == "binary_operator" then
-			return AnalyzeBinaryOperator(self, node, env)
+			return AnalyzeBinaryOperator(self, node)
 		elseif node.kind == "prefix_operator" then
-			return AnalyzePrefixOperator(self, node, env)
+			return AnalyzePrefixOperator(self, node)
 		elseif node.kind == "postfix_operator" then
-			return AnalyzePostfixOperator(self, node, env)
+			return AnalyzePostfixOperator(self, node)
 		elseif node.kind == "postfix_expression_index" then
-			return AnalyzePostfixIndex(self, node, env)
+			return AnalyzePostfixIndex(self, node)
 		elseif node.kind == "postfix_call" then
-			return AnalyzePostfixCall(self, node, env)
+			return AnalyzePostfixCall(self, node)
 		elseif node.kind == "import" then
-			return AnalyzeImport(self, node, env)
+			return AnalyzeImport(self, node)
 		elseif node.kind == "empty_union" then
 			return Union({}):SetNode(node)
 		elseif node.kind == "tuple" then
-			return AnalyzeTuple(self, node, env)
+			return AnalyzeTuple(self, node)
 		elseif node.kind == "function_signature" then
-			return AnalyzeFunctionSignature(self, node, env)
+			return AnalyzeFunctionSignature(self, node)
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end

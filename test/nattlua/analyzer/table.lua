@@ -9,7 +9,7 @@ test("reassignment", function()
         tbl.foo = false
     ]]
 
-    local tbl = analyzer:GetLocalOrEnvironmentValue(String("tbl"), "runtime")
+    local tbl = analyzer:GetLocalOrEnvironmentValue(String("tbl"))
 
     equal(false, tbl:Get(String("foo")):GetData())
 
@@ -18,7 +18,7 @@ test("reassignment", function()
         tbl.foo = false
     ]]
 
-    local tbl = analyzer:GetLocalOrEnvironmentValue(String("tbl"), "runtime")
+    local tbl = analyzer:GetLocalOrEnvironmentValue(String("tbl"))
     equal(false, tbl:Get(String("foo")):GetData())
 end)
 
@@ -26,7 +26,7 @@ test("typed field", function()
     local analyzer = run[[
         local tbl: {foo = boolean} = {foo = true}
     ]]
-    equal(true, analyzer:GetLocalOrEnvironmentValue(String("tbl"), "runtime"):Get(String("foo")):GetData())
+    equal(true, analyzer:GetLocalOrEnvironmentValue(String("tbl")):Get(String("foo")):GetData())
 end)
 
 test("typed table invalid reassignment should error", function()
@@ -46,7 +46,7 @@ test("typed table invalid reassignment should error", function()
         ]]
         ,"2 is not a subset of 1"
     )
-    local v = analyzer:GetLocalOrEnvironmentValue(String("tbl"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(String("tbl"))
 
     run(
         [[
@@ -74,8 +74,8 @@ test("self referenced tables should be equal", function()
         b.foo = {lol = b}
     ]])
 
-    local a = analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime")
-    local b = analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime")
+    local a = analyzer:GetLocalOrEnvironmentValue(String("a"))
+    local b = analyzer:GetLocalOrEnvironmentValue(String("b"))
 
     local ok, err = a:IsSubsetOf(b)
     if not ok then
@@ -90,8 +90,8 @@ test("indexing nil in a table should be allowed", function()
         local a = tbl.bar
     ]])
 
-    equal("symbol", analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime").Type)
-    equal(nil, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
+    equal("symbol", analyzer:GetLocalOrEnvironmentValue(String("a")).Type)
+    equal(nil, analyzer:GetLocalOrEnvironmentValue(String("a")):GetData())
 end)
 
 test("indexing nil in a table with a contract should error", function()
@@ -154,24 +154,34 @@ test("is literal", function()
     local a = run[[
         local type a = {a = 1, b = 2}
     ]]
-    equal(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral(), true)
 
+    a:PushPreferEnvironment("typesystem")
+    equal(a:GetLocalOrEnvironmentValue(String("a")):IsLiteral(), true)
+    a:PopPreferEnvironment()
+    
     local a = run[[
         local type a = {a = 1, b = 2, c = {c = true}}
-    ]]
-    equal(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral(), true)
+        ]]
+        
+    a:PushPreferEnvironment("typesystem")
+        equal(a:GetLocalOrEnvironmentValue(String("a")):IsLiteral(), true)
+    a:PopPreferEnvironment()
 end)
 
 test("is not literal", function()
     local a = run[[
         local type a = {a = number, [string] = boolean}
     ]]
-    equal(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral(), false)
+    a:PushPreferEnvironment("typesystem")
+    equal(a:GetLocalOrEnvironmentValue(String("a")):IsLiteral(), false)
+    a:PopPreferEnvironment()
 
     local a = run[[
         local type a = {a = 1, b = 2, c = {c = boolean}}
     ]]
-    equal(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral(), false)
+    a:PushPreferEnvironment("typesystem")
+    equal(a:GetLocalOrEnvironmentValue(String("a")):IsLiteral(), false)
+    a:PopPreferEnvironment()
 end)
 
 test("self reference", function()
@@ -193,8 +203,8 @@ test("self reference", function()
         local func = x.Test
     ]]
 
-    equal(a:GetLocalOrEnvironmentValue(String("func"), "runtime"):GetArguments():Get(1):Get(String("GetPos")).Type, "function")
-    equal(a:GetLocalOrEnvironmentValue(String("func"), "runtime"):GetArguments():Get(1):Get(String("Test")).Type, "function")
+    equal(a:GetLocalOrEnvironmentValue(String("func")):GetArguments():Get(1):Get(String("GetPos")).Type, "function")
+    equal(a:GetLocalOrEnvironmentValue(String("func")):GetArguments():Get(1):Get(String("Test")).Type, "function")
     
 
     run[[
@@ -303,7 +313,7 @@ test("deep nested copy", function()
         local a = {nested = {}}
         a.a = a
         a.nested.a = a
-    ]]):GetLocalOrEnvironmentValue(String("a"), "runtime")
+    ]]):GetLocalOrEnvironmentValue(String("a"))
 
     equal(a:Get(String("nested")):Get(String("a")), a)
     equal(a:Get(String("a")), a)

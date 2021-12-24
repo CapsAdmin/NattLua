@@ -5,7 +5,7 @@ local Union = require("nattlua.types.union").Union
 return
 	{
 		Index = function(META)
-			function META:IndexOperator(node, obj, key, env)
+			function META:IndexOperator(node, obj, key)
 				if obj.Type == "union" then
 					local union = Union({})
 
@@ -49,7 +49,7 @@ return
 								(index:GetMetaTable() and index:GetMetaTable():Contains(LString("__index")))
 							)
 						then
-							return self:IndexOperator(node, index:GetContract() or index, key, env)
+							return self:IndexOperator(node, index:GetContract() or index, key)
 						end
 
 						if index.Type == "function" then
@@ -69,7 +69,7 @@ return
 
 					if val then
 						if not obj.argument_index or obj:GetContract().literal_argument then
-							local o = self:GetMutatedValue(obj, key, val, env)
+							local o = self:GetMutatedValue(obj, key, val)
 							if o then return o end
 						end
 					end
@@ -77,13 +77,11 @@ return
 					return val, err
 				end
 
-				if env == "typesystem" then
+				if self:IsTypesystem() then
 					return obj:Get(key)
 				end
 
-			--	print(key, self:GetMutatedValue(obj, key, obj:Get(key), env) or Nil(), "!")
-
-				return self:GetMutatedValue(obj, key, obj:Get(key), env) or Nil()
+				return self:GetMutatedValue(obj, key, obj:Get(key)) or Nil()
 			end
 		end,
 	}

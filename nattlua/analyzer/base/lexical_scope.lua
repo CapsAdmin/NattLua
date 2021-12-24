@@ -140,6 +140,8 @@ end
 function META:CreateValue(key, obj, env)
 	local key_hash = self:Hash(key)
 	assert(key_hash)
+	assert(obj)
+	assert(type(env) == "string")
 	local shadow
 
 	if key_hash ~= "..." and env == "runtime" then
@@ -298,7 +300,6 @@ do
 							upvalue.key,
 							test_condition:GetTruthyUnion() or
 							test_condition:GetTruthy(),
-							"runtime",
 							self:GetParent()
 						)
 					else
@@ -307,7 +308,6 @@ do
 							upvalue.key,
 							test_condition:GetFalsyUnion() or
 							test_condition:GetFalsy(),
-							"runtime",
 							self:GetParent()
 						)
 					end

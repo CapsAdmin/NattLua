@@ -95,12 +95,14 @@ analyzer function pairs(tbl: Table)
 			local kv = tbl:GetData()[i]
 			if not kv then return nil end
 			i = i + 1
-			local o = analyzer:GetMutatedValue(tbl, kv.key, kv.val, "runtime")
+			local o = analyzer:GetMutatedValue(tbl, kv.key, kv.val)
 			return kv.key, o or kv.val
 		end
 	end
 
-	local next = analyzer:GetLocalOrEnvironmentValue(types.LString("next"), "typesystem")
+	analyzer:PushPreferEnvironment("typesystem")
+	local next = analyzer:GetLocalOrEnvironmentValue(types.LString("next"))
+	analyzer:PopPreferEnvironment()
 	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 
@@ -136,7 +138,9 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 		end
 	end
 
-	local next = analyzer:GetLocalOrEnvironmentValue(types.LString("next"), "typesystem")
+	analyzer:PushPreferEnvironment("typesystem")
+	local next = analyzer:GetLocalOrEnvironmentValue(types.LString("next"))
+	analyzer:PopPreferEnvironment()
 	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 	return function()
@@ -158,10 +162,10 @@ analyzer function require(name: string)
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
 	if val then return val end
-	if str:GetData() == "table.new" then return base_environment:Get(types.LString("table"), "typesystem"):Get(types.LString("new"), "runtime") end
-	if str:GetData() == "jit.util" then return base_environment:Get(types.LString("jit"), "typesystem"):Get(types.LString("util"), "runtime") end
-	if str:GetData() == "jit.opt" then return base_environment:Get(types.LString("jit"), "typesystem"):Get(types.LString("opt"), "runtime") end
-	if analyzer:GetLocalOrEnvironmentValue(str, "typesystem") then return analyzer:GetLocalOrEnvironmentValue(str, "typesystem") end
+	if str:GetData() == "table.new" then return base_environment:Get(types.LString("table")):Get(types.LString("new")) end
+	if str:GetData() == "jit.util" then return base_environment:Get(types.LString("jit")):Get(types.LString("util")) end
+	if str:GetData() == "jit.opt" then return base_environment:Get(types.LString("jit")):Get(types.LString("opt")) end
+	if analyzer:GetLocalOrEnvironmentValue(str) then return analyzer:GetLocalOrEnvironmentValue(str) end
 
 	if package.loaders then
 		for _, searcher in ipairs(package.loaders) do

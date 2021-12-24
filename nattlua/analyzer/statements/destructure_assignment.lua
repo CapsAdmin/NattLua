@@ -5,8 +5,7 @@ local Nil = require("nattlua.types.symbol").Nil
 return
 	{
 		AnalyzeDestructureAssignment = function(analyzer, statement)
-			local env = statement.environment or "runtime"
-			local obj = analyzer:AnalyzeExpression(statement.right, env)
+			local obj = analyzer:AnalyzeExpression(statement.right)
 
 			if obj.Type == "union" then
 				obj = obj:GetData()[1]
@@ -24,17 +23,17 @@ return
 				local key = NodeToString(statement.default)
 
 				if statement.kind == "local_destructure_assignment" then
-					analyzer:CreateLocalValue(key, obj, env)
+					analyzer:CreateLocalValue(key, obj)
 				elseif statement.kind == "destructure_assignment" then
-					analyzer:SetLocalOrEnvironmentValue(key, obj, env)
+					analyzer:SetLocalOrEnvironmentValue(key, obj)
 				end
 			end
 
 			for _, node in ipairs(statement.left) do
-				local obj = node.value and obj:Get(NodeToString(node), env)
+				local obj = node.value and obj:Get(NodeToString(node))
 
 				if not obj then
-					if env == "runtime" then
+					if analyzer:IsRuntime() then
 						obj = Nil():SetNode(node)
 					else
 						analyzer:Error(node, "field " .. tostring(node.value.value) .. " does not exist")
@@ -42,9 +41,9 @@ return
 				end
 
 				if statement.kind == "local_destructure_assignment" then
-					analyzer:CreateLocalValue(NodeToString(node), obj, env)
+					analyzer:CreateLocalValue(NodeToString(node), obj)
 				elseif statement.kind == "destructure_assignment" then
-					analyzer:SetLocalOrEnvironmentValue(NodeToString(node), obj, env)
+					analyzer:SetLocalOrEnvironmentValue(NodeToString(node), obj)
 				end
 			end
 		end,

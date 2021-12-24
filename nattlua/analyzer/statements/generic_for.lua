@@ -51,7 +51,7 @@ return
 							brk = true
 						end
 
-						analyzer:CreateLocalValue(identifier, obj, "runtime")
+						analyzer:CreateLocalValue(identifier, obj)
 					end
 
 					analyzer:AnalyzeStatements(statement.statements)

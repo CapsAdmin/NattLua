@@ -337,10 +337,8 @@ local function initialize_mutation_tracker(obj, scope, key, node)
 			val:SetUpvalueReference(key)
 			-- for the iniital value, the scope should be the scope where the table was created
 
-			--if not obj.scope then print(obj.trace) end
-
-			if ROFL then
-				print(obj, key, val, obj.scope, scope)
+			if (obj.scope or scope:GetRoot()).Type == "table" then
+				error"NO"
 			end
 
 			table.insert(obj.mutations[key], {scope = obj.scope or scope:GetRoot(), value = val})
@@ -359,8 +357,8 @@ local function copy(tbl)
 end
 
 return function(META)
-	function META:GetMutatedValue(obj, key, value, env)
-		if env == "typesystem" then return end
+	function META:GetMutatedValue(obj, key, value)
+		if self:IsTypesystem() then return end
 		local scope = self:GetScope()
 		-- todo, merged scopes need this
 		local node = type(key) == "table" and key.Type == "string" and key:GetNode()
@@ -370,8 +368,8 @@ return function(META)
 		return get_value_from_scope(copy(obj.mutations[key]), scope, obj, key, self)
 	end
 
-	function META:MutateValue(obj, key, val, env, scope_override)
-		if env == "typesystem" then return end
+	function META:MutateValue(obj, key, val, scope_override)
+		if self:IsTypesystem() then return end
 		local scope = scope_override or self:GetScope()
 		local node = type(key) == "table" and key.Type == "string" and key:GetNode()
 		key = cast_key(key)
@@ -391,6 +389,8 @@ return function(META)
 				val = val:Copy():Widen()
 			end
 		end
+
+		if scope.Type then error(debug.traceback("NO")) end
 
 		table.insert(obj.mutations[key], {scope = scope, value = val})
 	end

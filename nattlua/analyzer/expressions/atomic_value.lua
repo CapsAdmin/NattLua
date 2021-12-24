@@ -13,19 +13,21 @@ local Number = require("nattlua.types.number").Number
 local Boolean = require("nattlua.types.symbol").Boolean
 local table = require("table")
 
-local function lookup_value(self, node, env)
+local function lookup_value(self, node)
 	local obj
 	local err
 	local errors = {}
 	local key = NodeToString(node)
 
-	if env == "typesystem" then
-		obj, err = self:GetLocalOrEnvironmentValue(key, env)
+	obj, err = self:GetLocalOrEnvironmentValue(key)
 
+	if self:IsTypesystem() then
 		-- we fallback to runtime if we can't find the value in the typesystem
 		if not obj then
 			table.insert(errors, err)
-			obj, err = self:GetLocalOrEnvironmentValue(key, "runtime")
+			self:PushPreferEnvironment("runtime")
+			obj, err = self:GetLocalOrEnvironmentValue(key)
+			self:PopPreferEnvironment("runtime")
 		end
 
 		if not obj then
@@ -34,20 +36,17 @@ local function lookup_value(self, node, env)
 			return Nil()
 		end
 	else
-		obj, err = self:GetLocalOrEnvironmentValue(key, "runtime")
-
-		if obj and obj.Type == "symbol" and obj:GetData() == nil then
-			local objt, errt = self:GetLocalOrEnvironmentValue(key, "typesystem")
+		if not obj or (obj.Type == "symbol" and obj:GetData() == nil) then
+			self:PushPreferEnvironment("typesystem")
+			local objt, errt = self:GetLocalOrEnvironmentValue(key)
+			self:PopPreferEnvironment()
 			if objt then
 				obj, err = objt, errt
 			end
 		end
 
 		if not obj then
-			if not obj then
-				self:Warning(node, err)
-			end
-
+			self:Warning(node, err)
 			obj = Any():SetNode(node)
 		end
 	end
@@ -86,7 +85,7 @@ end
 
 return
 	{
-		AnalyzeAtomicValue = function(analyzer, node, env)
+		AnalyzeAtomicValue = function(analyzer, node)
 			local value = node.value.value
 			local type = runtime_syntax:GetTokenType(node.value)
 
@@ -103,7 +102,7 @@ return
 			-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
 			local standalone_letter = type == "letter" and node.standalone_letter
 
-			if env == "typesystem" and standalone_letter and not node.force_upvalue then
+			if analyzer:IsTypesystem() and standalone_letter and not node.force_upvalue then
 				local current_table = analyzer.current_tables and
 					analyzer.current_tables[#analyzer.current_tables]
 
@@ -135,7 +134,7 @@ return
 			end
 
 			if standalone_letter or value == "..." or node.force_upvalue then
-				local val = lookup_value(analyzer, node, env)
+				local val = lookup_value(analyzer, node)
 
 				if val:GetUpvalue() then
 					analyzer:GetScope():AddDependency(val:GetUpvalue())

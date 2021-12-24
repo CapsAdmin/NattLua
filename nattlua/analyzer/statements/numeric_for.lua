@@ -46,7 +46,6 @@ return
 					statement,
 					init,
 					max,
-					"runtime",
 					"<="
 				))
 			else
@@ -73,7 +72,7 @@ return
 								brk = true
 							end
 
-							analyzer:CreateLocalValue(statement.identifiers[1], i, "runtime")
+							analyzer:CreateLocalValue(statement.identifiers[1], i)
 							analyzer:AnalyzeStatements(statement.statements)
 
 							if analyzer._continue_ then
@@ -120,7 +119,7 @@ return
 
 					analyzer:PushUncertainLoop(true)
 					local range = analyzer:Assert(statement.expressions[1], init)
-					analyzer:CreateLocalValue(statement.identifiers[1], range, "runtime")
+					analyzer:CreateLocalValue(statement.identifiers[1], range)
 					analyzer:AnalyzeStatements(statement.statements)
 					analyzer:PushUncertainLoop(false)
 				end

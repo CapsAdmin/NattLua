@@ -135,27 +135,27 @@ end
 return
 	{
 		Call = function(META)
-			function META:AnalyzeFunctionBody(obj, function_node, arguments, env)
+			function META:AnalyzeFunctionBody(obj, function_node, arguments)
 				local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-				self:PushEnvironment(function_node, nil, env)
+				self:PushEnvironment(function_node, nil, self:GetPreferredEnvironment())
 
 				if function_node.self_call then
-					self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node), env, "self")
+					self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node), "self")
 				end
 
 				for i, identifier in ipairs(function_node.identifiers) do
 					local argi = function_node.self_call and (i + 1) or i
 
-					if env == "typesystem" then
-						self:CreateLocalValue(identifier, arguments:GetWithoutExpansion(argi), env, argi)
+					if self:IsTypesystem() then
+						self:CreateLocalValue(identifier, arguments:GetWithoutExpansion(argi), argi)
 					end
 
-					if env == "runtime" then
+					if self:IsRuntime() then
 
 						if identifier.value.value == "..." then
-							self:CreateLocalValue(identifier, arguments:Slice(argi), env, argi)
+							self:CreateLocalValue(identifier, arguments:Slice(argi), argi)
 						else
-							self:CreateLocalValue(identifier, arguments:Get(argi) or Nil():SetNode(identifier), env, argi)
+							self:CreateLocalValue(identifier, arguments:Get(argi) or Nil():SetNode(identifier), argi)
 						end
 					end
 				end
@@ -169,7 +169,7 @@ return
 				if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
 					self:PopPreferEnvironment()
 				end
-				self:PopEnvironment(env)
+				self:PopEnvironment(self:GetPreferredEnvironment())
 				self:PopScope()
 				if analyzed_return.Type ~= "tuple" then
 					return Tuple({analyzed_return}):SetNode(analyzed_return:GetNode()), scope
@@ -177,7 +177,7 @@ return
 				return analyzed_return, scope
 			end
 
-			local function call_analyzer_function(analyzer, obj, function_arguments, arguments, env)
+			local function call_analyzer_function(analyzer, obj, function_arguments, arguments)
 				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 				
@@ -193,7 +193,7 @@ return
 					len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
 				end
 
-				if env == "typesystem" then
+				if analyzer:IsTypesystem() then
 					local ret = lua_types_to_tuple(
 						obj:GetNode(),
 						{
@@ -302,7 +302,7 @@ return
 						local original = data.original
 						local modified = data.modified
 						modified:SetContract(original:GetContract())
-						analyzer:MutateValue(original:GetUpvalue(), original:GetUpvalue().key, modified, "runtime")
+						analyzer:MutateValue(original:GetUpvalue(), original:GetUpvalue().key, modified)
 					end
 				end
 
@@ -328,19 +328,19 @@ return
 							-- stem type so that we can allow
 							-- function(x: foo<|x|>): nil
 							
-							analyzer:CreateLocalValue(key, Any(), "typesystem", i)
+							analyzer:CreateLocalValue(key, Any(), i)
 
 							if contracts:Get(i) and  contracts:Get(i).literal_argument and arguments:Get(i) then
-								analyzer:CreateLocalValue(key, arguments:Get(i), "typesystem", i)
+								analyzer:CreateLocalValue(key, arguments:Get(i), i)
 							end
 
 							if key.value.value == "..." then
 								if key.type_expression then
 									args[i] = VarArg():SetNode(key)
-									args[i]:Set(1, analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue())
+									args[i]:Set(1, analyzer:AnalyzeExpression(key.type_expression):GetFirstValue())
 								end
 							elseif key.type_expression then
-								args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue()
+								args[i] = analyzer:AnalyzeExpression(key.type_expression):GetFirstValue()
 							end
 				
 							if contracts:Get(i) and  contracts:Get(i).literal_argument and arguments:Get(i) then
@@ -351,7 +351,7 @@ return
 									return type_errors.other({"argument #", i, " ", arg, ": ", err})
 								end
 							elseif args[i] then
-								analyzer:CreateLocalValue(key, args[i], "typesystem", i)
+								analyzer:CreateLocalValue(key, args[i], i)
 							end
 						end
 						
@@ -468,9 +468,9 @@ return
 					return true
 				end
 
-				local function check_return_result(self, result, contract, env)
+				local function check_return_result(self, result, contract)
 
-					if env == "typesystem" then
+					if self:IsTypesystem() then
 						-- in the typesystem we must not unpack tuples when checking
 						local ok, reason, a, b, i = result:IsSubsetOfTupleWithoutExpansion(contract)
 
@@ -540,7 +540,7 @@ return
 					end
 				end
 
-				call_lua_function_with_body = function(analyzer, obj, arguments, function_node, env)
+				call_lua_function_with_body = function(analyzer, obj, arguments, function_node)
 					if obj:HasExplicitArguments() then
 						if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
 							-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
@@ -555,7 +555,7 @@ return
 								return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 							end
 
-						elseif env == "runtime" then
+						elseif analyzer:IsRuntime() then
 							-- if we have explicit arguments, we need to do a complex check against the contract
 							-- this might mutate the arguments
 							local ok, err = check_and_setup_arguments(analyzer, arguments, obj:GetArguments(), function_node, obj)
@@ -565,7 +565,7 @@ return
 	
 					-- crawl the function with the new arguments
 					-- return_result is either a union of tuples or a single tuple
-					local return_result, scope = analyzer:AnalyzeFunctionBody(obj, function_node, arguments, env)
+					local return_result, scope = analyzer:AnalyzeFunctionBody(obj, function_node, arguments)
 					
 					restore_mutated_types(analyzer)
 
@@ -609,7 +609,7 @@ return
 					if not return_contract and function_node.return_types then
 						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 						analyzer:PushPreferEnvironment("typesystem")
-						return_contract = Tuple(analyzer:AnalyzeExpressions(function_node.return_types, "typesystem"))
+						return_contract = Tuple(analyzer:AnalyzeExpressions(function_node.return_types))
 						analyzer:PopPreferEnvironment()
 						analyzer:PopScope()
 					end
@@ -622,9 +622,9 @@ return
 					end		
 
 					-- check against the function's return type
-					check_return_result(analyzer, return_result, return_contract, env)
+					check_return_result(analyzer, return_result, return_contract)
 
-					if env == "typesystem" then
+					if analyzer:IsTypesystem() then
 						return return_result
 					end
 
@@ -677,8 +677,6 @@ return
 			end
 
 			local function Call(analyzer, obj, arguments)
-				local env = analyzer:GetPreferredEnvironment() and "typesystem" or "runtime"
-
 				if obj.Type == "union" then
 					-- make sure the union is callable, we pass the analyzer and 
 					-- it will throw errors if the union contains something that is not callable
@@ -749,11 +747,10 @@ return
 						analyzer,
 						obj,
 						function_arguments,
-						arguments,
-						env
+						arguments
 					)
 				elseif function_node then
-					return call_lua_function_with_body(analyzer, obj, arguments, function_node, env)
+					return call_lua_function_with_body(analyzer, obj, arguments, function_node)
 				end
 
 				return call_type_signature_without_body(analyzer, obj, arguments)

@@ -109,11 +109,11 @@ local function logical_cmp_cast(val--[[#: boolean | nil]])
 	end
 end
 
-local function binary_operator(analyzer, node, l, r, env, op)
+local function binary_operator(analyzer, node, l, r, op)
 	op = op or node.value.value
 
 	-- adding two tuples at runtime in lua will practically do this
-	if env == "runtime" then
+	if analyzer:IsRuntime() then
 		if l.Type == "tuple" then
 			l = analyzer:Assert(node, l:Get(1))
 		end
@@ -124,7 +124,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 	end
 
 	if
-		env == "typesystem" and
+		analyzer:IsTypesystem() and
 		l.Type == "tuple" and
 		r.Type == "tuple" and
 		op == ".."
@@ -149,11 +149,11 @@ local function binary_operator(analyzer, node, l, r, env, op)
 	end
 
 	if l.Type == "union" and r.Type == "union" then
-		if op == "|" and env == "typesystem" then
+		if op == "|" and analyzer:IsTypesystem() then
 			return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
-		elseif op == "==" and env == "typesystem" then
+		elseif op == "==" and analyzer:IsTypesystem() then
 			return l:Equal(r) and True() or False()
-		elseif op == "~" and env == "typesystem" then
+		elseif op == "~" and analyzer:IsTypesystem() then
 			return l:RemoveType(r):Copy()
 		else
 			local new_union = Union()
@@ -168,7 +168,6 @@ local function binary_operator(analyzer, node, l, r, env, op)
 						node,
 						l,
 						r,
-						env,
 						op
 					)
 
@@ -232,7 +231,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		end
 	end
 
-	if env == "typesystem" then
+	if analyzer:IsTypesystem() then
 		if op == "|" then
 			return Union({l, r})
 		elseif op == "==" then
@@ -270,7 +269,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 			l = l:Get(1)
 		end
 
-		return analyzer:IndexOperator(node, l, r, env) 
+		return analyzer:IndexOperator(node, l, r) 
 	end
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
@@ -353,11 +352,11 @@ local function binary_operator(analyzer, node, l, r, env, op)
 
 		if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
 			if l.Type == "table" and r.Type == "table" then
-				if env == "runtime" then
+				if analyzer:IsRuntime() then
 					if l:GetReferenceId() and r:GetReferenceId() then return l:GetReferenceId() == r:GetReferenceId() and True() or False() end
 				end
 
-				if env == "typesystem" then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() end
+				if analyzer:IsTypesystem() then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() end
 				return Boolean()
 			end
 
@@ -365,7 +364,7 @@ local function binary_operator(analyzer, node, l, r, env, op)
 		end
 
 		if l.Type == "table" and r.Type == "table" then
-			if env == "typesystem" then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() end
+			if analyzer:IsTypesystem() then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() end
 		end
 
 		if

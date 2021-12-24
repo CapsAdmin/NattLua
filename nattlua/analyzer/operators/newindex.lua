@@ -7,7 +7,7 @@ local Tuple = require("nattlua.types.tuple").Tuple
 return
 	{
 		NewIndex = function(META)
-			function META:NewIndexOperator(node, obj, key, val, env)
+			function META:NewIndexOperator(node, obj, key, val)
 				if obj.Type == "union" then
 					-- local x: nil | {foo = true}
 					-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
@@ -18,7 +18,7 @@ return
 					local falsy_union = Union()
 
 					for _, v in ipairs(obj:GetData()) do
-						local ok, err = self:NewIndexOperator(node, v, key, val, env)
+						local ok, err = self:NewIndexOperator(node, v, key, val)
 
 						if not ok then
 							self:ErrorAndCloneCurrentScope(node, err or "invalid set error", obj)
@@ -48,7 +48,7 @@ return
 					end
 				end
 
-				self:FireEvent("newindex", obj, key, val, env)
+				self:FireEvent("newindex", obj, key, val)
 
 				if obj:GetMetaTable() then
 					local func = obj:GetMetaTable():Get(LString("__newindex"))
@@ -93,7 +93,7 @@ return
 				local contract = obj:GetContract()
 
 				if contract then
-					if env == "runtime" then
+					if self:IsRuntime() then
 						local existing
 						local err
 
@@ -104,7 +104,7 @@ return
 								existing, err = contract:Get(key)
 
 								if existing then
-									existing = self:GetMutatedValue(obj, key, existing, env)
+									existing = self:GetMutatedValue(obj, key, existing)
 								end
 							end
 						else
@@ -132,7 +132,7 @@ return
 
 							if ok then
 								if obj == contract then
-									self:MutateValue(obj, key, val, env)
+									self:MutateValue(obj, key, val)
 									return true
 								end
 							else
@@ -141,12 +141,12 @@ return
 						else
 							self:Error(node, err)
 						end
-					elseif env == "typesystem" then
+					elseif self:IsTypesystem() then
 						return obj:GetContract():SetExplicit(key, val)
 					end
 				end
 
-				if env == "typesystem" then
+				if self:IsTypesystem() then
 					if obj.Type == "table" and (val.Type ~= "symbol" or val.Data ~= nil) then
 						return obj:SetExplicit(key, val)
 					else
@@ -154,10 +154,10 @@ return
 					end
 				end
 
-				self:MutateValue(obj, key, val, env)
+				self:MutateValue(obj, key, val)
 
 				if not obj:GetContract() then
-					return obj:Set(key, val, env == "runtime")
+					return obj:Set(key, val, self:IsRuntime())
 				end
 
 				return true

@@ -11,7 +11,7 @@ test("a and b", function()
         local result = a and b
 
         types.assert(result, 2)
-    ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("result"))
 
     equal(obj:GetNode().kind, "binary_operator") 
     equal(obj:GetTypeSource():GetData(), 2)
@@ -26,7 +26,7 @@ test("a + b", function()
         local result = a + b
         
         types.assert(result, 3)
-    ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("result"))
 
     equal(obj:GetNode().kind, "binary_operator")
     equal(obj:GetData(), 3)
@@ -40,7 +40,7 @@ test("not a", function()
         local result = not a
         
         types.assert(result, false)
-    ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("result"))
 
     equal(obj:GetNode().kind, "prefix_operator") 
     equal(obj:GetTypeSource():GetData(), true)
@@ -52,7 +52,7 @@ test("not not a", function()
         local result = not not a
         
         types.assert(result, true)
-    ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("result"))
 
     equal(obj:GetNode().kind, "prefix_operator") 
     equal(obj:GetTypeSource():GetData(), false)
@@ -65,7 +65,7 @@ test("not a or 1", function()
         local result = not a or 1
         
         types.assert(result, 1)
-    ]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("result"))
 
     equal(obj:GetNode().kind, "binary_operator")
     equal(obj:GetTypeSourceLeft():GetNode().kind, "prefix_operator")
@@ -76,7 +76,7 @@ end)
 
 test("1 or 2 or 3 or 4", function()
     -- each value here has to be 1 | nil, otherwise it won't traverse the or chain
-    local obj = run[[local result = (_ as 1 | nil) or (_ as 2 | nil) or (_ as 3 | nil) or (_ as 4 | nil)]]:GetLocalOrEnvironmentValue(String("result"), "runtime")
+    local obj = run[[local result = (_ as 1 | nil) or (_ as 2 | nil) or (_ as 3 | nil) or (_ as 4 | nil)]]:GetLocalOrEnvironmentValue(String("result"))
     local function set_equal(a, b)
         if not a then error("a is nil", 2) end
         

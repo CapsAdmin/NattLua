@@ -2,10 +2,13 @@ local T = require("test.helpers")
 local run = T.RunCode
 local String = T.String
 test("smoke", function()
-    local a = run[[local type a = 1337 | 8888]]:GetLocalOrEnvironmentValue(String("a"), "typesystem")
-    equal(2, a:GetLength())
-    equal(1337, a:GetData()[1]:GetData())
-    equal(8888, a:GetData()[2]:GetData())
+    local a = run[[local type a = 1337 | 8888]]
+    a:PushPreferEnvironment("typesystem")
+    local union = a:GetLocalOrEnvironmentValue(String("a"))
+    a:PopPreferEnvironment()
+    equal(2, union:GetLength())
+    equal(1337, union:GetData()[1]:GetData())
+    equal(8888, union:GetData()[2]:GetData())
 end)
 
 test("union operator", function()
@@ -13,8 +16,12 @@ test("union operator", function()
         local type a = 1337 | 888
         local type b = 666 | 777
         local type c = a | b
-    ]]:GetLocalOrEnvironmentValue(String("c"), "typesystem")
-    equal(4, a:GetLength())
+    ]]
+    
+    a:PushPreferEnvironment("typesystem")
+    local union = a:GetLocalOrEnvironmentValue(String("c"))
+    a:PopPreferEnvironment()
+    equal(4, union:GetLength())
 end)
 
 test("union + object", function()
@@ -52,14 +59,18 @@ test("is literal", function()
     local a = run[[
         local type a = 1 | 2 | 3
     ]]
-    assert(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral() == true)
+    a:PushPreferEnvironment("typesystem")
+    assert(a:GetLocalOrEnvironmentValue(String("a")):IsLiteral() == true)
+    a:PopPreferEnvironment()
 end)
 
 test("is not literal", function()
     local a = run[[
         local type a = 1 | 2 | 3 | string
     ]]
-    assert(a:GetLocalOrEnvironmentValue(String("a"), "typesystem"):IsLiteral() == false)
+    a:PushPreferEnvironment("typesystem")
+    assert(a:GetLocalOrEnvironmentValue(String("a")):IsLiteral() == false)
+    a:PopPreferEnvironment()
 end)
 
 run[[

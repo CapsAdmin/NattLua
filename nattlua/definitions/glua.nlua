@@ -191,7 +191,6 @@ local analyzer function isstring(obj: any)
 		analyzer.current_expression,
 		typ,
 		types.LString("string"),
-		"runtime",
 		"=="
 	)
 end
@@ -204,7 +203,6 @@ local analyzer function istable(obj: any)
 		analyzer.current_expression,
 		typ,
 		types.LString("table"),
-		"runtime",
 		"=="
 	)
 end
@@ -217,7 +215,6 @@ local analyzer function isentity(obj: any)
 		analyzer.current_expression,
 		obj:GetMetaTable() or obj,
 		Entity,
-		"typesystem",
 		"=="
 	)
 end

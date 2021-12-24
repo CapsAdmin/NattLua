@@ -41,10 +41,6 @@ end
 return
 	{
 		AnalyzeAssignment = function(analyzer, statement)
-			-- typesystem preference can happen from generics usually and from type calls <||>
-			-- otherwise typesystem is prefered when handling function arguments
-			local env = analyzer:GetPreferredEnvironment() or statement.environment or "runtime"
-
 			local left = {}
 			local right = {}
 
@@ -54,13 +50,13 @@ return
 					left[left_pos] = NodeToString(exp_key)
 
 					-- this is used by the javascript emitter
-					exp_key.is_upvalue = analyzer:LocalValueExists(exp_key, env)
+					exp_key.is_upvalue = analyzer:LocalValueExists(exp_key)
 				elseif exp_key.kind == "postfix_expression_index" then
 					-- foo[bar] = *
-					left[left_pos] = analyzer:AnalyzeExpression(exp_key.expression, env)
+					left[left_pos] = analyzer:AnalyzeExpression(exp_key.expression)
 				elseif exp_key.kind == "binary_operator" then
 					-- foo.bar = *
-					left[left_pos] = analyzer:AnalyzeExpression(exp_key.right, env)
+					left[left_pos] = analyzer:AnalyzeExpression(exp_key.right)
 				else
 					analyzer:FatalError("unhandled expression " .. tostring(exp_key))
 				end
@@ -73,14 +69,14 @@ return
 					-- use context?
 					analyzer.left_assigned = left[right_pos]
 
-					local obj = analyzer:AnalyzeExpression(exp_val, env)
+					local obj = analyzer:AnalyzeExpression(exp_val)
 
 					if obj.Type == "tuple" and obj:GetLength() == 1 then
 						obj = obj:Get(1)
 					end
 
 					if obj.Type == "tuple" then
-						if env == "runtime" then
+						if analyzer:IsRuntime() then
 							-- at runtime unpack the tuple
 							for i = 1, #statement.left do
 								local index = right_pos + i - 1
@@ -88,7 +84,7 @@ return
 							end
 						end
 
-						if env == "typesystem" then
+						if analyzer:IsTypesystem() then
 							if obj:HasTuples() then
 								-- if we have a tuple with, plainly unpack the tuple while preserving the tuples inside
 								for i = 1, #statement.left do
@@ -145,7 +141,9 @@ return
 				-- do we have a type expression? 
 				-- local a: >>number<< = 1
 				if exp_key.type_expression then
-					local contract = analyzer:AnalyzeExpression(exp_key.type_expression, "typesystem")
+					analyzer:PushPreferEnvironment("typesystem")
+					local contract = analyzer:AnalyzeExpression(exp_key.type_expression)
+					analyzer:PopPreferEnvironment()
 
 					if right[left_pos] then
 						local contract = contract
@@ -187,20 +185,20 @@ return
 				-- used by the emitter
 				exp_key.inferred_type = val
 				val:SetTokenLabelSource(exp_key)
-				val:SetEnvironment(env)
+				val:SetEnvironment(analyzer:GetPreferredEnvironment())
 
 				-- if all is well, create or mutate the value
 
 				if statement.kind == "local_assignment" then
 					-- local assignment: local a = 1
-					analyzer:CreateLocalValue(exp_key, val, env)
+					analyzer:CreateLocalValue(exp_key, val)
 				elseif statement.kind == "assignment" then
 					local key = left[left_pos]
 
 					-- plain assignment: a = 1
 					if exp_key.kind == "value" then
 						do -- check for any previous upvalues
-							local existing_value = analyzer:GetLocalOrEnvironmentValue(key, env)
+							local existing_value = analyzer:GetLocalOrEnvironmentValue(key)
 							local contract = existing_value and existing_value:GetContract()
 
 
@@ -217,7 +215,7 @@ return
 							end
 						end
 
-						local val = analyzer:SetLocalOrEnvironmentValue(key, val, env)
+						local val = analyzer:SetLocalOrEnvironmentValue(key, val)
 
 						-- this is used for tracking function dependencies
 						if val.Type == "upvalue" then
@@ -228,8 +226,8 @@ return
 					else
 						-- TODO: refactor out to mutation assignment?
 						-- index assignment: foo[a] = 1
-						local obj = analyzer:AnalyzeExpression(exp_key.left, env)
-						analyzer:Assert(exp_key, analyzer:NewIndexOperator(exp_key, obj, key, val, env))
+						local obj = analyzer:AnalyzeExpression(exp_key.left)
+						analyzer:Assert(exp_key, analyzer:NewIndexOperator(exp_key, obj, key, val))
 					end
 				end
 			end

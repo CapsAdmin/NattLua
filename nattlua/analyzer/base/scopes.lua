@@ -61,57 +61,59 @@ return function(META)
 			function META:CloneCurrentScope()
 				self:FireEvent("clone_current_scope")
 				local scope_copy = self:GetScope():Copy(true)
-				local env = self:GetEnvironment("runtime"):Copy()
+				local g = self:GetEnvironment("runtime"):Copy()
 				local last_node = self.environment_nodes[#self.environment_nodes]
 			self:PopScope()
 			self:PopEnvironment("runtime")
 			scope_copy:SetParent(scope_copy:GetParent() or self:GetScope())
-			self:PushEnvironment(last_node, env, "runtime")
+			self:PushEnvironment(last_node, g, "runtime")
 			self:PushScope(scope_copy)
 
-				for _, keyval in ipairs(env:GetData()) do
-					self:FireEvent("set_environment_value", keyval.key, keyval.val, "runtime")
-					self:MutateValue(env, keyval.key, keyval.val, "runtime")
+				for _, keyval in ipairs(g:GetData()) do
+					self:FireEvent("set_environment_value", keyval.key, keyval.val)
+					self:MutateValue(g, keyval.key, keyval.val)
 				end
 
 				for _, upvalue in ipairs(scope_copy:GetUpvalues("runtime")) do
-					self:FireEvent("upvalue", upvalue.key, upvalue:GetValue(), env)
-					self:MutateValue(upvalue, upvalue.key, upvalue:GetValue(), env)
+					self:FireEvent("upvalue", upvalue.key, upvalue:GetValue())
+					self:MutateValue(upvalue, upvalue.key, upvalue:GetValue())
 				end
 
 				return scope_copy
 			end
 
-			function META:CreateLocalValue(key, obj, env, function_argument)
-				local upvalue = self:GetScope():CreateValue(key, obj, env)
-				self:FireEvent("upvalue", key, obj, env, function_argument)
-				self:MutateValue(upvalue, key, obj, env)
+			function META:CreateLocalValue(key, obj, function_argument)
+				local upvalue = self:GetScope():CreateValue(key, obj, self:GetPreferredEnvironment())
+				self:FireEvent("upvalue", key, obj, function_argument)
+				self:MutateValue(upvalue, key, obj)
 				return upvalue
 			end
 
-			function META:OnCreateLocalValue(upvalue, key, val, env) 
+			function META:OnCreateLocalValue(upvalue, key, val) 
 			end
 
-			function META:FindLocalUpvalue(key, env, scope)
+			function META:FindLocalUpvalue(key, scope)
 				if not self:GetScope() then return end
-				local found, scope = (scope or self:GetScope()):FindValue(key, env)
+
+				if type(scope) == "string" then print(debug.traceback()) end
+				local found, scope = (scope or self:GetScope()):FindValue(key, self:GetPreferredEnvironment())
 				if found then return found, scope end
 			end
 
-			function META:FindLocalValue(key, env, scope)
-				local upvalue = self:FindLocalUpvalue(key, env, scope)
+			function META:FindLocalValue(key, scope)
+				local upvalue = self:FindLocalUpvalue(key, scope)
 
 				if upvalue then
-					if env == "runtime" then return
-						self:GetMutatedValue(upvalue, key, upvalue:GetValue(), env) or
+					if self:IsRuntime() then return
+						self:GetMutatedValue(upvalue, key, upvalue:GetValue()) or
 						upvalue:GetValue() end
 					return upvalue:GetValue()
 				end
 			end
 
-			function META:LocalValueExists(key, env, scope)
+			function META:LocalValueExists(key, scope)
 				if not self:GetScope() then return end
-				local found, scope = (scope or self:GetScope()):FindValue(key, env)
+				local found, scope = (scope or self:GetScope()):FindValue(key, self:GetPreferredEnvironment())
 				return found ~= nil
 			end
 
@@ -134,6 +136,8 @@ return function(META)
 
 			function META:PushEnvironment(node, obj, env)
 				obj = obj or self.default_environment[env]
+
+				assert(not self.environments["env"], "bad environment " .. env)
 
 				table.insert(self.environments[env], 1, obj)
 				node.environments = node.environments or {}
@@ -161,52 +165,54 @@ return function(META)
 				return g
 			end
 
-			function META:FindEnvironmentValue(key, env)
+			function META:FindEnvironmentValue(key)
 				-- look up in parent if not found
-				if env == "runtime" then
-					local g = self:GetEnvironment(env)
+				if self:IsRuntime() then
+					local g = self:GetEnvironment(self:GetPreferredEnvironment())
 					local val, err = g:Get(key)
 					if not val then 
-						return self:GetLocalOrEnvironmentValue(key, "typesystem")
+						self:PushPreferEnvironment("typesystem")
+						local val, err = self:GetLocalOrEnvironmentValue(key)
+						self:PopPreferEnvironment()
+						return val, err
 					end
-					return self:IndexOperator(key:GetNode(), g, key, env)
+					return self:IndexOperator(key:GetNode(), g, key)
 				end
 
-				return self:IndexOperator(key:GetNode(), self:GetEnvironment(env), key, env)
+				return self:IndexOperator(key:GetNode(), self:GetEnvironment(self:GetPreferredEnvironment()), key)
 			end
 
-			function META:GetLocalOrEnvironmentValue(key, env, scope)
-				env = env or "runtime"
-				local val = self:FindLocalValue(key, env, scope)
+			function META:GetLocalOrEnvironmentValue(key, scope)
+				local val = self:FindLocalValue(key, scope)
 				if val then return val end
-				return self:FindEnvironmentValue(key, env)
+				return self:FindEnvironmentValue(key)
 			end
 
-			function META:SetLocalOrEnvironmentValue(key, val, env, scope)
-				local upvalue, found_scope = self:FindLocalUpvalue(key, env, scope)
+			function META:SetLocalOrEnvironmentValue(key, val, scope)
+				local upvalue, found_scope = self:FindLocalUpvalue(key, scope)
 
 				if upvalue then
-					if not self:MutateValue(upvalue, key, val, env) then
+					if not self:MutateValue(upvalue, key, val) then
 						upvalue:SetValue(val)
-						self:FireEvent("mutate_upvalue", key, val, env)
+						self:FireEvent("mutate_upvalue", key, val)
 					end
 
 					return upvalue
 				end
 
-				local g = self.environments[env][1]
+				local g = self.environments[self:GetPreferredEnvironment()][1]
 
 				if not g then
 					self:FatalError("tried to set environment value outside of Push/Pop/Environment")
 				end
 
-				if env == "runtime" then
+				if self:IsRuntime() then
 					self:Warning(key:GetNode(), {"_G[\"", key:GetNode(), "\"] = ", val})
 				end
 				
-				self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val, env))
+				self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
 
-				self:FireEvent("set_environment_value", key, val, env)
+				self:FireEvent("set_environment_value", key, val)
 				return val
 			end
 		end

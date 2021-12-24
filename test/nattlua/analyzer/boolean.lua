@@ -3,7 +3,7 @@ local run = T.RunCode
 local String = T.String
 
 test("boolean is a union", function()
-    assert(T.Union(true, false):Equal(run("local a: boolean"):GetLocalOrEnvironmentValue(String("a"), "runtime")))
+    assert(T.Union(true, false):Equal(run("local a: boolean"):GetLocalOrEnvironmentValue(String("a"))))
 end)
 
 test("boolean is truthy and falsy", function()

@@ -113,7 +113,7 @@ local analyzer function cast(node: any, args: any)
 
 			return val
 		else
-			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi:Get(types.LString("C")), types.LString(node.n), "runtime")
+			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi:Get(types.LString("C")), types.LString(node.n))
 
 			if not val or val.Type == "symbol" and val:GetData() == nil then
 				analyzer:Error(analyzer.current_expression, "cannot find value " .. node.n)
@@ -152,7 +152,7 @@ analyzer function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 
 	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
-		analyzer:NewIndexOperator(cdecl:GetNode(), env.typesystem.ffi:Get(types.LString("C")), types.LString(ctype.name), env.typesystem.cast(ctype.type, {...}), "runtime")
+		analyzer:NewIndexOperator(cdecl:GetNode(), env.typesystem.ffi:Get(types.LString("C")), types.LString(ctype.name), env.typesystem.cast(ctype.type, {...}))
 	end
 end
 

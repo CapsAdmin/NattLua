@@ -31,25 +31,25 @@ local function analyze_function_signature(analyzer, node, current_function)
 
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
-			analyzer:CreateLocalValue(key, Any(), "typesystem", i)
+			analyzer:CreateLocalValue(key, Any(), i)
 
 
 			if key.value.value == "..." then
 				if key.type_expression then
 					explicit_arguments = true
 					args[i] = VarArg():SetNode(key)
-					args[i]:Set(1, analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue())
+					args[i]:Set(1, analyzer:AnalyzeExpression(key.type_expression):GetFirstValue())
 				else
 					args[i] = VarArg():SetNode(key)
 				end
 			elseif key.type_expression then
-				args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem"):GetFirstValue()
+				args[i] = analyzer:AnalyzeExpression(key.type_expression):GetFirstValue()
 				explicit_arguments = true
 			else
 				args[i] = Any():SetNode(key)
 			end
 
-			analyzer:CreateLocalValue(key, args[i], "typesystem", i)
+			analyzer:CreateLocalValue(key, args[i], i)
 		end
 
 
@@ -64,12 +64,12 @@ local function analyze_function_signature(analyzer, node, current_function)
 		for i, key in ipairs(node.identifiers) do
 			
 			if key.identifier then
-				args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
-				analyzer:CreateLocalValue(key.identifier, args[i], "typesystem", i)
+				args[i] = analyzer:AnalyzeExpression(key):GetFirstValue()
+				analyzer:CreateLocalValue(key.identifier, args[i], i)
 
 			elseif key.type_expression then
-				analyzer:CreateLocalValue(key, Any(), "typesystem", i)
-				args[i] = analyzer:AnalyzeExpression(key.type_expression, "typesystem")
+				analyzer:CreateLocalValue(key, Any(), i)
+				args[i] = analyzer:AnalyzeExpression(key.type_expression)
 
 				if key.value.value == "..." then
 					local vararg = VarArg():SetNode(key)
@@ -87,7 +87,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 						analyzer:Error(key, "cannot find value self")
 					end
 				elseif not node.statements then
-					local obj = analyzer:AnalyzeExpression(key, "typesystem")
+					local obj = analyzer:AnalyzeExpression(key)
 					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
 						-- if we pass in a tuple we override the argument type
 						-- function(mytuple): string
@@ -100,7 +100,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 					args[i] = Any():SetNode(key)
 				end
 			else
-				args[i] = analyzer:AnalyzeExpression(key, "typesystem"):GetFirstValue()
+				args[i] = analyzer:AnalyzeExpression(key):GetFirstValue()
 			end
 		end
 	
@@ -110,7 +110,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 
 	if node.self_call and node.expression then
 		analyzer:PushPreferEnvironment("runtime")
-		local val = analyzer:AnalyzeExpression(node.expression.left, "runtime"):GetFirstValue()
+		local val = analyzer:AnalyzeExpression(node.expression.left):GetFirstValue()
 		analyzer:PopPreferEnvironment()
 
 		if val then
@@ -138,7 +138,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 				if type_exp.type_expression then
 					tup = Tuple(
 							{
-								analyzer:AnalyzeExpression(type_exp.type_expression, "typesystem"),
+								analyzer:AnalyzeExpression(type_exp.type_expression),
 							}
 						)
 						:SetRepeat(math.huge)
@@ -148,7 +148,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 
 				ret[i] = tup
 			else
-				local obj = analyzer:AnalyzeExpression(type_exp, "typesystem")
+				local obj = analyzer:AnalyzeExpression(type_exp)
 				if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
 					-- if we pass in a tuple, we want to override the return type
 					-- function(): mytuple
@@ -169,7 +169,7 @@ end
 
 return
 	{
-		AnalyzeFunction = function(analyzer, node, env)
+		AnalyzeFunction = function(analyzer, node)
 			if
 				node.type == "statement" and
 				(node.kind == "local_analyzer_function" or node.kind == "analyzer_function")
@@ -213,7 +213,7 @@ return
 			obj.explicit_arguments = explicit_arguments
 			obj.explicit_return = explicit_return
 
-			if env == "runtime" then
+			if analyzer:IsRuntime() then
 				analyzer:CallMeLater(obj, args, node, true)
 			end
 

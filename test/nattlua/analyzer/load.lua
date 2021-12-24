@@ -47,7 +47,7 @@ run[[
 
 run[[
     local type test = analyzer function(name: string)
-         return analyzer:GetLocalOrEnvironmentValue(name:GetData(), "typesystem")
+         return analyzer:GetLocalOrEnvironmentValue(name:GetData())
     end
     local type lol = {}
     types.assert(test("lol"), lol)

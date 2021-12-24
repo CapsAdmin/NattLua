@@ -55,10 +55,14 @@ analyzer function enum(tbl: Table)
 	assert(tbl:IsLiteral())
 	local union = types.Union()
 
+	analyzer:PushPreferEnvironment("typesystem")
+
 	for key, val in tbl:pairs() do
-		analyzer:SetLocalOrEnvironmentValue(key, val, "typesystem")
+		analyzer:SetLocalOrEnvironmentValue(key, val)
 		union:AddType(val)
 	end
+
+	analyzer:PopPreferEnvironment()
 
 	union:SetLiteral(true)
 	return union

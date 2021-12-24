@@ -11,9 +11,9 @@ test("should return a tuple with types", function()
         local a,b,c = test()
     ]])
 
-    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
-    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime"):GetData())
-    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a")):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b")):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c")):GetData())
 end)
 
 test("should be able to error", function()

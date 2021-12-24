@@ -28,7 +28,7 @@ do
         end
 
         foo()
-    ]]):GetLocalOrEnvironmentValue(String("foo"), "runtime")
+    ]]):GetLocalOrEnvironmentValue(String("foo"))
 
     equal(foo:GetCallCount(), 1)
     equal(#foo:GetSideEffects(), 5)
@@ -40,7 +40,7 @@ do
             return 1 + 2 + x
         end
         
-    ]]):GetLocalOrEnvironmentValue(String("foo"), "runtime")
+    ]]):GetLocalOrEnvironmentValue(String("foo"))
 
     equal(foo:IsPure(), true)
 end

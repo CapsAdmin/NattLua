@@ -95,7 +95,7 @@ test("escape comments", function()
 end)
 
 test("runtime scopes", function()
-    local v = R("local a = 1"):GetLocalOrEnvironmentValue(String("a"), "runtime")
+    local v = R("local a = 1"):GetLocalOrEnvironmentValue(String("a"))
     equal(true, v.Type == "number")
 end)
 
@@ -121,7 +121,7 @@ test("runtime block scopes", function()
         do
             local a = 2
         end
-    ]]:GetLocalOrEnvironmentValue(String("a"), "runtime")
+    ]]:GetLocalOrEnvironmentValue(String("a"))
 
     equal(v:GetData(), 1)
 end)
@@ -132,8 +132,13 @@ test("typesystem differs from runtime", function()
         local type a = 2
     ]]
 
-    equal(analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData(), 1)
-    equal(analyzer:GetLocalOrEnvironmentValue(String("a"), "typesystem"):GetData(), 2)
+    analyzer:PushPreferEnvironment("runtime")
+    equal(analyzer:GetLocalOrEnvironmentValue(String("a")):GetData(), 1)
+    analyzer:PopPreferEnvironment()
+
+    analyzer:PushPreferEnvironment("typesystem")
+    equal(analyzer:GetLocalOrEnvironmentValue(String("a")):GetData(), 2)
+    analyzer:PopPreferEnvironment()
 end)
 
 test("global types", function()
@@ -145,7 +150,7 @@ test("global types", function()
         type a = nil
     ]]
 
-    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b")):GetData())
 end)
 
 test("constant types", function()
@@ -154,8 +159,8 @@ test("constant types", function()
         local b: number
     ]]
 
-    equal(true, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):IsLiteral())
-    equal(false, analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime"):IsLiteral())
+    equal(true, analyzer:GetLocalOrEnvironmentValue(String("a")):IsLiteral())
+    equal(false, analyzer:GetLocalOrEnvironmentValue(String("b")):IsLiteral())
 end)
 
 -- literal + vague = vague
@@ -166,7 +171,7 @@ test("1 + number = number", function()
         local c = a + b
     ]]
 
-    local v = analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(String("c"))
     equal(true, v.Type == ("number"))
     equal(false, v:IsLiteral())
 end)
@@ -178,7 +183,7 @@ test("1 + 2 = 3", function()
         local c = a + b
     ]]
 
-    local v = analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(String("c"))
     equal(true, v.Type == ("number"))
     equal(3, v:GetData())
 end)
@@ -191,7 +196,7 @@ test("function return value", function()
         local a = test()
     ]]
 
-    local v = analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime")
+    local v = analyzer:GetLocalOrEnvironmentValue(String("a"))
     equal(6, v:GetData())
 end)
 
@@ -203,9 +208,9 @@ test("multiple function return values", function()
         local a,b,c = test()
     ]]
 
-    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
-    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b"), "runtime"):GetData())
-    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime"):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue(String("a")):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("b")):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue(String("c")):GetData())
 end)
 
 
@@ -218,7 +223,7 @@ test("scopes shouldn't leak", function()
         local _, a = a:test(1, 2)
     ]]
 
-    equal(3, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
+    equal(3, analyzer:GetLocalOrEnvironmentValue(String("a")):GetData())
 end)
 
 test("explicitly annotated variables need to be set properly", function()
@@ -237,8 +242,8 @@ test("functions can modify parent scope", function()
         test()
     ]]
 
-    equal(2, analyzer:GetLocalOrEnvironmentValue(String("a"), "runtime"):GetData())
-    equal(1, analyzer:GetLocalOrEnvironmentValue(String("c"), "runtime"):GetData())
+    equal(2, analyzer:GetLocalOrEnvironmentValue(String("a")):GetData())
+    equal(1, analyzer:GetLocalOrEnvironmentValue(String("c")):GetData())
 end)
 
 test("uncalled functions should be called", function()
@@ -257,7 +262,7 @@ test("uncalled functions should be called", function()
             return a + b
         end
     ]]
-    local lib = analyzer:GetLocalOrEnvironmentValue(String("lib"), "runtime")
+    local lib = analyzer:GetLocalOrEnvironmentValue(String("lib"))
 
     equal("number", assert(lib:Get(String("foo1")):GetArguments():Get(1):GetType("number")).Type)
     equal("number", assert(lib:Get(String("foo1")):GetArguments():Get(2):GetType("number")).Type)
