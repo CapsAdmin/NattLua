@@ -29,58 +29,58 @@ do
 	local AnalyzeAnalyzerDebugCode = require("nattlua.analyzer.statements.analyzer_debug_code").AnalyzeAnalyzerDebugCode
 	local AnalyzeWhile = require("nattlua.analyzer.statements.while").AnalyzeWhile
 
-	function META:AnalyzeStatement(statement)
-		self.current_statement = statement
+	function META:AnalyzeStatement(node)
+		self.current_statement = node
 
-		if statement.kind == "assignment" or statement.kind == "local_assignment" then
-			AnalyzeAssignment(self, statement)
+		if node.kind == "assignment" or node.kind == "local_assignment" then
+			AnalyzeAssignment(self, node)
 		elseif
-			statement.kind == "destructure_assignment" or
-			statement.kind == "local_destructure_assignment"
+			node.kind == "destructure_assignment" or
+			node.kind == "local_destructure_assignment"
 		then
-			AnalyzeDestructureAssignment(self, statement)
+			AnalyzeDestructureAssignment(self, node)
 		elseif
-			statement.kind == "function" or
-			statement.kind == "type_function" or
-			statement.kind == "local_function" or
-			statement.kind == "local_type_function" or
-			statement.kind == "local_analyzer_function" or
-			statement.kind == "analyzer_function"
+			node.kind == "function" or
+			node.kind == "type_function" or
+			node.kind == "local_function" or
+			node.kind == "local_type_function" or
+			node.kind == "local_analyzer_function" or
+			node.kind == "analyzer_function"
 		then
-			AnalyzeFunction(self, statement)
-		elseif statement.kind == "if" then
-			AnalyzeIf(self, statement)
-		elseif statement.kind == "while" then
-			AnalyzeWhile(self, statement)
-		elseif statement.kind == "do" then
-			AnalyzeDo(self, statement)
-		elseif statement.kind == "repeat" then
-			AnalyzeRepeat(self, statement)
-		elseif statement.kind == "return" then
-			AnalyzeReturn(self, statement)
-		elseif statement.kind == "break" then
-			AnalyzeBreak(self, statement)
-		elseif statement.kind == "continue" then
-			AnalyzeContinue(self, statement)
-		elseif statement.kind == "call_expression" then
-			AnalyzeCall(self, statement)
-		elseif statement.kind == "generic_for" then
-			AnalyzeGenericFor(self, statement)
-		elseif statement.kind == "numeric_for" then
-			AnalyzeNumericFor(self, statement)
-		elseif statement.kind == "analyzer_debug_code" then
-			AnalyzeAnalyzerDebugCode(self, statement)
-		elseif statement.kind == "import" then
+			AnalyzeFunction(self, node)
+		elseif node.kind == "if" then
+			AnalyzeIf(self, node)
+		elseif node.kind == "while" then
+			AnalyzeWhile(self, node)
+		elseif node.kind == "do" then
+			AnalyzeDo(self, node)
+		elseif node.kind == "repeat" then
+			AnalyzeRepeat(self, node)
+		elseif node.kind == "return" then
+			AnalyzeReturn(self, node)
+		elseif node.kind == "break" then
+			AnalyzeBreak(self, node)
+		elseif node.kind == "continue" then
+			AnalyzeContinue(self, node)
+		elseif node.kind == "call_expression" then
+			AnalyzeCall(self, node)
+		elseif node.kind == "generic_for" then
+			AnalyzeGenericFor(self, node)
+		elseif node.kind == "numeric_for" then
+			AnalyzeNumericFor(self, node)
+		elseif node.kind == "analyzer_debug_code" then
+			AnalyzeAnalyzerDebugCode(self, node)
+		elseif node.kind == "import" then
 
 		elseif
-			statement.kind ~= "end_of_file" and
-			statement.kind ~= "semicolon" and
-			statement.kind ~= "shebang" and
-			statement.kind ~= "goto_label" and
-			statement.kind ~= "parser_debug_code" and
-			statement.kind ~= "goto"
+			node.kind ~= "end_of_file" and
+			node.kind ~= "semicolon" and
+			node.kind ~= "shebang" and
+			node.kind ~= "goto_label" and
+			node.kind ~= "parser_debug_code" and
+			node.kind ~= "goto"
 		then
-			self:FatalError("unhandled statement: " .. tostring(statement))
+			self:FatalError("unhandled statement: " .. tostring(node))
 		end
 	end
 end
@@ -101,6 +101,7 @@ do
 
 	function META:AnalyzeExpression(node, env)
 		self.current_expression = node
+		
 		env = self:GetPreferredEnvironment() or env or "runtime"
 
 		if node.type_expression then
