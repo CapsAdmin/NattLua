@@ -3,9 +3,9 @@ local run = T.RunCode
 local String = T.String
 test("smoke", function()
     local a = run[[local type a = 1337 | 8888]]
-    a:PushPreferEnvironment("typesystem")
-    local union = a:GetLocalOrEnvironmentValue(String("a"))
-    a:PopPreferEnvironment()
+    a:PushAnalyzerEnvironment("typesystem")
+    local union = a:GetLocalOrGlobalValue(String("a"))
+    a:PopAnalyzerEnvironment()
     equal(2, union:GetLength())
     equal(1337, union:GetData()[1]:GetData())
     equal(8888, union:GetData()[2]:GetData())
@@ -18,9 +18,9 @@ test("union operator", function()
         local type c = a | b
     ]]
     
-    a:PushPreferEnvironment("typesystem")
-    local union = a:GetLocalOrEnvironmentValue(String("c"))
-    a:PopPreferEnvironment()
+    a:PushAnalyzerEnvironment("typesystem")
+    local union = a:GetLocalOrGlobalValue(String("c"))
+    a:PopAnalyzerEnvironment()
     equal(4, union:GetLength())
 end)
 
@@ -59,18 +59,18 @@ test("is literal", function()
     local a = run[[
         local type a = 1 | 2 | 3
     ]]
-    a:PushPreferEnvironment("typesystem")
-    assert(a:GetLocalOrEnvironmentValue(String("a")):IsLiteral() == true)
-    a:PopPreferEnvironment()
+    a:PushAnalyzerEnvironment("typesystem")
+    assert(a:GetLocalOrGlobalValue(String("a")):IsLiteral() == true)
+    a:PopAnalyzerEnvironment()
 end)
 
 test("is not literal", function()
     local a = run[[
         local type a = 1 | 2 | 3 | string
     ]]
-    a:PushPreferEnvironment("typesystem")
-    assert(a:GetLocalOrEnvironmentValue(String("a")):IsLiteral() == false)
-    a:PopPreferEnvironment()
+    a:PushAnalyzerEnvironment("typesystem")
+    assert(a:GetLocalOrGlobalValue(String("a")):IsLiteral() == false)
+    a:PopAnalyzerEnvironment()
 end)
 
 run[[

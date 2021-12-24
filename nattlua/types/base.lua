@@ -36,7 +36,7 @@ end
 --[[#type BaseType.Data = any | nil]]
 --[[#type BaseType.Name = string | nil]]
 --[[#type BaseType.parent = BaseType | nil]]
-META:GetSet("Environment", nil--[[# as nil | "runtime" | "typesystem"]])
+META:GetSet("AnalyzerEnvironment", nil--[[# as nil | "runtime" | "typesystem"]])
 
 function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
 	--error("nyi " .. a.Type .. " == " .. b.Type)
@@ -76,7 +76,7 @@ do
 		self:SetContract(obj:GetContract())
 		self:SetName(obj:GetName())
 		self:SetMetaTable(obj:GetMetaTable())
-		self:SetEnvironment(obj:GetEnvironment())
+		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
 	end
 end
 

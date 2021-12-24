@@ -33,7 +33,7 @@ do
 		self.current_statement = node
 
 
-		self:PushPreferEnvironment(node.environment or "runtime")
+		self:PushAnalyzerEnvironment(node.environment or "runtime")
 
 		if node.kind == "assignment" or node.kind == "local_assignment" then
 			AnalyzeAssignment(self, node)
@@ -87,7 +87,7 @@ do
 		end
 
 
-		self:PopPreferEnvironment()
+		self:PopAnalyzerEnvironment()
 	end
 end
 
@@ -112,15 +112,15 @@ do
 
 			if node.kind == "table" then
 				local obj = AnalyzeTable(self, node)
-				self:PushPreferEnvironment("typesystem")
+				self:PushAnalyzerEnvironment("typesystem")
 				obj:SetContract(self:AnalyzeExpression(node.type_expression))
-				self:PopPreferEnvironment()
+				self:PopAnalyzerEnvironment()
 				return obj
 			end
 
-			self:PushPreferEnvironment("typesystem")
+			self:PushAnalyzerEnvironment("typesystem")
 			local obj = self:AnalyzeExpression(node.type_expression)
-			self:PopPreferEnvironment()
+			self:PopAnalyzerEnvironment()
 
 			return obj
 		elseif node.kind == "value" then

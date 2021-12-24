@@ -61,12 +61,12 @@ return function(META)
 			function META:CloneCurrentScope()
 				self:FireEvent("clone_current_scope")
 				local scope_copy = self:GetScope():Copy(true)
-				local g = self:GetEnvironment("runtime"):Copy()
+				local g = self:GetGlobalEnvironment("runtime"):Copy()
 				local last_node = self.environment_nodes[#self.environment_nodes]
 			self:PopScope()
-			self:PopEnvironment("runtime")
+			self:PopGlobalEnvironment("runtime")
 			scope_copy:SetParent(scope_copy:GetParent() or self:GetScope())
-			self:PushEnvironment(last_node, g, "runtime")
+			self:PushGlobalEnvironment(last_node, g, "runtime")
 			self:PushScope(scope_copy)
 
 				for _, keyval in ipairs(g:GetData()) do
@@ -83,7 +83,7 @@ return function(META)
 			end
 
 			function META:CreateLocalValue(key, obj, function_argument)
-				local upvalue = self:GetScope():CreateValue(key, obj, self:GetPreferredEnvironment())
+				local upvalue = self:GetScope():CreateValue(key, obj, self:GetCurrentAnalyzerEnvironment())
 				self:FireEvent("upvalue", key, obj, function_argument)
 				self:MutateValue(upvalue, key, obj)
 				return upvalue
@@ -96,7 +96,7 @@ return function(META)
 				if not self:GetScope() then return end
 
 				if type(scope) == "string" then print(debug.traceback()) end
-				local found, scope = (scope or self:GetScope()):FindValue(key, self:GetPreferredEnvironment())
+				local found, scope = (scope or self:GetScope()):FindValue(key, self:GetCurrentAnalyzerEnvironment())
 				if found then return found, scope end
 			end
 
@@ -113,7 +113,7 @@ return function(META)
 
 			function META:LocalValueExists(key, scope)
 				if not self:GetScope() then return end
-				local found, scope = (scope or self:GetScope()):FindValue(key, self:GetPreferredEnvironment())
+				local found, scope = (scope or self:GetScope()):FindValue(key, self:GetCurrentAnalyzerEnvironment())
 				return found ~= nil
 			end
 
@@ -122,7 +122,7 @@ return function(META)
 				node.environments_override[env] = obj
 			end
 
-			function META:GetEnvironmentOverride(node, env)
+			function META:GetGlobalEnvironmentOverride(node, env)
 				if node.environments_override then return node.environments_override[env] end
 			end
 
@@ -134,7 +134,7 @@ return function(META)
 				return self.default_environment[env]
 			end
 
-			function META:PushEnvironment(node, obj, env)
+			function META:PushGlobalEnvironment(node, obj, env)
 				table.insert(self.environments[env], 1, obj)
 				node.environments = node.environments or {}
 				node.environments[env] = obj
@@ -142,12 +142,12 @@ return function(META)
 				table.insert(self.environment_nodes, 1, node)
 			end
 
-			function META:PopEnvironment(env)
+			function META:PopGlobalEnvironment(env)
 				table.remove(self.environment_nodes)
 				table.remove(self.environments[env])
 			end
 
-			function META:GetEnvironment(env)
+			function META:GetGlobalEnvironment(env)
 				local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
 
 				if
@@ -164,27 +164,27 @@ return function(META)
 			function META:FindEnvironmentValue(key)
 				-- look up in parent if not found
 				if self:IsRuntime() then
-					local g = self:GetEnvironment(self:GetPreferredEnvironment())
+					local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 					local val, err = g:Get(key)
 					if not val then 
-						self:PushPreferEnvironment("typesystem")
-						local val, err = self:GetLocalOrEnvironmentValue(key)
-						self:PopPreferEnvironment()
+						self:PushAnalyzerEnvironment("typesystem")
+						local val, err = self:GetLocalOrGlobalValue(key)
+						self:PopAnalyzerEnvironment()
 						return val, err
 					end
 					return self:IndexOperator(key:GetNode(), g, key)
 				end
 
-				return self:IndexOperator(key:GetNode(), self:GetEnvironment(self:GetPreferredEnvironment()), key)
+				return self:IndexOperator(key:GetNode(), self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
 			end
 
-			function META:GetLocalOrEnvironmentValue(key, scope)
+			function META:GetLocalOrGlobalValue(key, scope)
 				local val = self:FindLocalValue(key, scope)
 				if val then return val end
 				return self:FindEnvironmentValue(key)
 			end
 
-			function META:SetLocalOrEnvironmentValue(key, val, scope)
+			function META:SetLocalOrGlobalValue(key, val, scope)
 				local upvalue, found_scope = self:FindLocalUpvalue(key, scope)
 
 				if upvalue then
@@ -196,7 +196,7 @@ return function(META)
 					return upvalue
 				end
 
-				local g = self.environments[self:GetPreferredEnvironment()][1]
+				local g = self.environments[self:GetCurrentAnalyzerEnvironment()][1]
 
 				if not g then
 					self:FatalError("tried to set environment value outside of Push/Pop/Environment")

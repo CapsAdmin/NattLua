@@ -25,18 +25,18 @@ return function(META)
 		context:PushCurrentAnalyzer(self)
 		local argument_tuple = ... and Tuple({...}) or Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushFunctionScope()
-		self:PushEnvironment(statement, self:GetDefaultEnvironment("runtime"), "runtime")
-		self:PushEnvironment(statement, self:GetDefaultEnvironment("typesystem"), "typesystem")
+		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("runtime"), "runtime")
+		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("typesystem"), "typesystem")
 
-		local g = self:GetEnvironment("typesystem")
+		local g = self:GetGlobalEnvironment("typesystem")
 		g:Set(LString("_G"), g)
 
-		self:PushPreferEnvironment("runtime")
+		self:PushAnalyzerEnvironment("runtime")
 		self:CreateLocalValue("...", argument_tuple)
 		local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
-		self:PopPreferEnvironment()
-		self:PopEnvironment("runtime")
-		self:PopEnvironment("typesystem")
+		self:PopAnalyzerEnvironment()
+		self:PopGlobalEnvironment("runtime")
+		self:PopGlobalEnvironment("typesystem")
 		self:PopScope()
 		context:PopCurrentAnalyzer()
 		return analyzed_return
@@ -216,16 +216,16 @@ return function(META)
 			local scope_meta = {}
 
 			function scope_meta:__index(key)
-				self.analyzer:PushPreferEnvironment(self.env)
-				local val = self.analyzer:GetLocalOrEnvironmentValue(LString(key), self.scope)
-				self.analyzer:PopPreferEnvironment()
+				self.analyzer:PushAnalyzerEnvironment(self.env)
+				local val = self.analyzer:GetLocalOrGlobalValue(LString(key), self.scope)
+				self.analyzer:PopAnalyzerEnvironment()
 				return val
 			end
 			
 			function scope_meta:__newindex(key, val)
-				self.analyzer:PushPreferEnvironment(self.env)
-				self.analyzer:SetLocalOrEnvironmentValue(LString(key), LString(val), self.scope)
-				self.analyzer:PopPreferEnvironment()
+				self.analyzer:PushAnalyzerEnvironment(self.env)
+				self.analyzer:SetLocalOrGlobalValue(LString(key), LString(val), self.scope)
+				self.analyzer:PopAnalyzerEnvironment()
 			end
 
 			function META:GetScopeHelper(scope)
@@ -247,12 +247,12 @@ return function(META)
 			function META:CallTypesystemUpvalue(name, ...)
 				-- this is very internal-ish code
 				-- not sure what a nice interface for this really should be yet
-				self:PushPreferEnvironment("typesystem")
-				local generics_func = analyzer:GetLocalOrEnvironmentValue(name)
+				self:PushAnalyzerEnvironment("typesystem")
+				local generics_func = analyzer:GetLocalOrGlobalValue(name)
 				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
 				local argument_tuple = Tuple({...})
 				local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
-				analyzer:PopPreferEnvironment()
+				analyzer:PopAnalyzerEnvironment()
 				return returned_tuple:Unpack()
 			end
 		end
@@ -372,25 +372,25 @@ return function(META)
 		end
 
 		do
-			function META:GetPreferredEnvironment()
-				return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1] or "runtime"
+			function META:GetCurrentAnalyzerEnvironment()
+				return self.environment_stack and self.environment_stack[1] or "runtime"
 			end
 
-			function META:PushPreferEnvironment(env--[[#: "typesystem" | "runtime"]])
-				self.prefer_typesystem_stack = self.prefer_typesystem_stack or {}
-				table.insert(self.prefer_typesystem_stack, 1, env)
+			function META:PushAnalyzerEnvironment(env--[[#: "typesystem" | "runtime"]])
+				self.environment_stack = self.environment_stack or {}
+				table.insert(self.environment_stack, 1, env)
 			end
 
-			function META:PopPreferEnvironment()
-				table.remove(self.prefer_typesystem_stack, 1)
+			function META:PopAnalyzerEnvironment()
+				table.remove(self.environment_stack, 1)
 			end
 
 			function META:IsTypesystem()
-				return self:GetPreferredEnvironment() == "typesystem"
+				return self:GetCurrentAnalyzerEnvironment() == "typesystem"
 			end
 
 			function META:IsRuntime()
-				return self:GetPreferredEnvironment() == "runtime"
+				return self:GetCurrentAnalyzerEnvironment() == "runtime"
 			end
 		end
 

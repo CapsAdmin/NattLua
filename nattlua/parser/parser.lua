@@ -26,7 +26,7 @@ META.__index = META
 		root = false | any,
 		i = number,
 		tokens = List<|Token|>,
-		prefer_typesystem_stack = List<|boolean|>,
+		environment_stack = List<|"typesystem" | "runtime"|>,
 	}]]
 
 function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#: any]])
@@ -37,7 +37,7 @@ function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#:
 			nodes = {},
 			current_statement = false,
 			current_expression = false,
-			prefer_typesystem_stack = {},
+			environment_stack = {},
 			root = false,
 			i = 1,
 			tokens = tokens,
@@ -188,7 +188,7 @@ do
 			self:OnNode(node)
 		end
 
-		node.environment = self:GetPreferredEnvironment()
+		node.environment = self:GetCurrentParserEnvironment()
 
 		node.parent = self.nodes[1]
 		table.insert(self.nodes, 1, node)
@@ -364,16 +364,16 @@ end
 
 
 do
-	function META:GetPreferredEnvironment()
-		return self.prefer_typesystem_stack[1] or "runtime"
+	function META:GetCurrentParserEnvironment()
+		return self.environment_stack[1] or "runtime"
 	end
 
-	function META:PushPreferEnvironment(env--[[#: "runtime" | "typesystem" ]])
-		table.insert(self.prefer_typesystem_stack, 1, env)
+	function META:PushParserEnvironment(env--[[#: "runtime" | "typesystem" ]])
+		table.insert(self.environment_stack, 1, env)
 	end
 
-	function META:PopPreferEnvironment()
-		table.remove(self.prefer_typesystem_stack, 1)
+	function META:PopParserEnvironment()
+		table.remove(self.environment_stack, 1)
 	end
 end
 
@@ -490,13 +490,13 @@ end
 
 		node.environment = "typesystem"
 
-		parser:PushPreferEnvironment("typesystem")
+		parser:PushParserEnvironment("typesystem")
 
 		local start = parser:GetToken()
 		node.statements = parser:ReadNodes({["end"] = true})
 		node.tokens["end"] = parser:ExpectValue("end", start, start)
 
-		parser:PopPreferEnvironment()
+		parser:PopParserEnvironment()
 
 		return node
 	end
@@ -1213,7 +1213,7 @@ end
 			end	
 			
 			function ReadRuntimeExpression(parser, priority)
-				if parser:GetPreferredEnvironment() == "typesystem" then
+				if parser:GetCurrentParserEnvironment() == "typesystem" then
 					return ReadTypeExpression(parser, priority)
 				end
 

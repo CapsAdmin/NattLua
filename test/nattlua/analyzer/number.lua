@@ -2,27 +2,27 @@ local T = require("test.helpers")
 local run = T.RunCode
 local String = T.String
 test("number range", function()
-    assert(run("local a: 1 .. 10 = 5"):GetLocalOrEnvironmentValue(String("a")):GetContract():GetMax())
+    assert(run("local a: 1 .. 10 = 5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax())
     run("local a: 1 .. 10 = 15", "15 is not a subset of 1..10")
 end)
 
 test("number range 0 .. inf", function()
-    assert(run("local a: 1 .. inf = 5"):GetLocalOrEnvironmentValue(String("a")):GetContract():GetMax())
+    assert(run("local a: 1 .. inf = 5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax())
     run("local a: 1 .. inf = -15", "-15 is not a subset of 1..inf")
 end)
 
 test("number range -inf .. 0", function()
-    assert(run("local a: -inf .. 0 = -5"):GetLocalOrEnvironmentValue(String("a")):GetContract():GetMax())
+    assert(run("local a: -inf .. 0 = -5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax())
     run("local a: -inf .. 0 = 15", "15 is not a subset of %-inf..0")
 end)
 
 test("number range -inf .. inf", function()
-    assert(run("local a: -inf .. inf = -5"):GetLocalOrEnvironmentValue(String("a")):GetContract():GetMax())
+    assert(run("local a: -inf .. inf = -5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax())
     run("local a: -inf .. inf = 0/0", "nan is not a subset of %-inf..inf")
 end)
 
 test("number range -inf .. inf | nan", function()
-    assert(run("local a: -inf .. inf | nan = 0/0"):GetLocalOrEnvironmentValue(String("a")):GetContract().Type == "union")
+    assert(run("local a: -inf .. inf | nan = 0/0"):GetLocalOrGlobalValue(String("a")):GetContract().Type == "union")
 end)
 
 test("cannot not be called", function()

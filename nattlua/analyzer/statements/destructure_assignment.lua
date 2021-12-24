@@ -25,7 +25,7 @@ return
 				if statement.kind == "local_destructure_assignment" then
 					analyzer:CreateLocalValue(key, obj)
 				elseif statement.kind == "destructure_assignment" then
-					analyzer:SetLocalOrEnvironmentValue(key, obj)
+					analyzer:SetLocalOrGlobalValue(key, obj)
 				end
 			end
 
@@ -43,7 +43,7 @@ return
 				if statement.kind == "local_destructure_assignment" then
 					analyzer:CreateLocalValue(NodeToString(node), obj)
 				elseif statement.kind == "destructure_assignment" then
-					analyzer:SetLocalOrEnvironmentValue(NodeToString(node), obj)
+					analyzer:SetLocalOrGlobalValue(NodeToString(node), obj)
 				end
 			end
 		end,

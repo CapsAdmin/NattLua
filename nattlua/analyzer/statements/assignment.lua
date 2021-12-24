@@ -141,9 +141,9 @@ return
 				-- do we have a type expression? 
 				-- local a: >>number<< = 1
 				if exp_key.type_expression then
-					analyzer:PushPreferEnvironment("typesystem")
+					analyzer:PushAnalyzerEnvironment("typesystem")
 					local contract = analyzer:AnalyzeExpression(exp_key.type_expression)
-					analyzer:PopPreferEnvironment()
+					analyzer:PopAnalyzerEnvironment()
 
 					if right[left_pos] then
 						local contract = contract
@@ -185,7 +185,7 @@ return
 				-- used by the emitter
 				exp_key.inferred_type = val
 				val:SetTokenLabelSource(exp_key)
-				val:SetEnvironment(analyzer:GetPreferredEnvironment())
+				val:SetAnalyzerEnvironment(analyzer:GetCurrentAnalyzerEnvironment())
 
 				-- if all is well, create or mutate the value
 
@@ -198,7 +198,7 @@ return
 					-- plain assignment: a = 1
 					if exp_key.kind == "value" then
 						do -- check for any previous upvalues
-							local existing_value = analyzer:GetLocalOrEnvironmentValue(key)
+							local existing_value = analyzer:GetLocalOrGlobalValue(key)
 							local contract = existing_value and existing_value:GetContract()
 
 
@@ -215,7 +215,7 @@ return
 							end
 						end
 
-						local val = analyzer:SetLocalOrEnvironmentValue(key, val)
+						local val = analyzer:SetLocalOrGlobalValue(key, val)
 
 						-- this is used for tracking function dependencies
 						if val.Type == "upvalue" then

@@ -19,15 +19,15 @@ local function lookup_value(self, node)
 	local errors = {}
 	local key = NodeToString(node)
 
-	obj, err = self:GetLocalOrEnvironmentValue(key)
+	obj, err = self:GetLocalOrGlobalValue(key)
 
 	if self:IsTypesystem() then
 		-- we fallback to runtime if we can't find the value in the typesystem
 		if not obj then
 			table.insert(errors, err)
-			self:PushPreferEnvironment("runtime")
-			obj, err = self:GetLocalOrEnvironmentValue(key)
-			self:PopPreferEnvironment("runtime")
+			self:PushAnalyzerEnvironment("runtime")
+			obj, err = self:GetLocalOrGlobalValue(key)
+			self:PopAnalyzerEnvironment("runtime")
 		end
 
 		if not obj then
@@ -37,9 +37,9 @@ local function lookup_value(self, node)
 		end
 	else
 		if not obj or (obj.Type == "symbol" and obj:GetData() == nil) then
-			self:PushPreferEnvironment("typesystem")
-			local objt, errt = self:GetLocalOrEnvironmentValue(key)
-			self:PopPreferEnvironment()
+			self:PushAnalyzerEnvironment("typesystem")
+			local objt, errt = self:GetLocalOrGlobalValue(key)
+			self:PopAnalyzerEnvironment()
 			if objt then
 				obj, err = objt, errt
 			end

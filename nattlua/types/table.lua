@@ -367,7 +367,7 @@ function META:Insert(val)
 	self.size:SetData(self.size:GetData() + 1)
 end
 
-function META:GetEnvironmentValues()
+function META:GetGlobalEnvironmentValues()
 	local values = {}
 
 	for i, keyval in ipairs(self:GetData()) do

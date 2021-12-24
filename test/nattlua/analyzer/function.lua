@@ -10,7 +10,7 @@ test("arguments", function()
         local a = test(1,2,3)
     ]]
 
-    equal(6, analyzer:GetLocalOrEnvironmentValue(String("a")):GetData())
+    equal(6, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
 end)
 
 test("arguments should get annotated", function()
@@ -22,13 +22,13 @@ test("arguments should get annotated", function()
         test(1,"",3)
     ]]
 
-    local args = analyzer:GetLocalOrEnvironmentValue(String("test")):GetArguments()
+    local args = analyzer:GetLocalOrGlobalValue(String("test")):GetArguments()
 
     equal("number", args:Get(1):GetType("number").Type)
     equal("string", args:Get(2):GetType("string").Type)
     equal("number", args:Get(3):GetType("number").Type)
 
-    local rets = analyzer:GetLocalOrEnvironmentValue(String("test")):GetReturnTypes()
+    local rets = analyzer:GetLocalOrGlobalValue(String("test")):GetReturnTypes()
     equal("number", rets:Get(1).Type)
 end)
 
@@ -42,7 +42,7 @@ test("arguments and return types are volatile", function()
         test("")
     ]]
 
-    local func = analyzer:GetLocalOrEnvironmentValue(String("test"))
+    local func = analyzer:GetLocalOrGlobalValue(String("test"))
 
     local args = func:GetArguments()
     equal(true, args:Get(1):HasType("number"))
@@ -64,7 +64,7 @@ test("which is not explicitly annotated should not dictate return values", funct
         local a = test(true)
     ]]
 
-    local val = analyzer:GetLocalOrEnvironmentValue(String("a"))
+    local val = analyzer:GetLocalOrGlobalValue(String("a"))
     equal(true, val.Type == "symbol")
     equal(true, val:GetData())
 end)
@@ -96,7 +96,7 @@ test("call within a function shouldn't mess up collected return types", function
 
         local c = b()
     ]]
-    local c = analyzer:GetLocalOrEnvironmentValue(String("c"))
+    local c = analyzer:GetLocalOrGlobalValue(String("c"))
     equal(1337, c:GetData())
 end)
 
@@ -119,7 +119,7 @@ test("self argument should be volatile", function()
         local a = meta.Foo
     ]])
 
-    local self = analyzer:GetLocalOrEnvironmentValue(String("a")):GetArguments():Get(1):GetType("table")
+    local self = analyzer:GetLocalOrGlobalValue(String("a")):GetArguments():Get(1):GetType("table")
     equal("table", self.Type)
 end)
 
@@ -167,7 +167,7 @@ test("arguments that are not explicitly typed should be volatile", function()
             test(1,"a")
         ]]
 
-        local args = analyzer:GetLocalOrEnvironmentValue(String("test")):GetArguments()
+        local args = analyzer:GetLocalOrGlobalValue(String("test")):GetArguments()
         local a = args:Get(1)
         local b = args:Get(2)
 
@@ -188,7 +188,7 @@ test("arguments that are not explicitly typed should be volatile", function()
             test("a",1)
         ]]
 
-        local args = analyzer:GetLocalOrEnvironmentValue(String("test")):GetArguments()
+        local args = analyzer:GetLocalOrGlobalValue(String("test")):GetArguments()
         local a = args:Get(1)
         local b = args:Get(2)
 
@@ -206,7 +206,7 @@ test("arguments that are not explicitly typed should be volatile", function()
             test(4,4)
         ]]
 
-        local args = analyzer:GetLocalOrEnvironmentValue(String("test")):GetArguments()
+        local args = analyzer:GetLocalOrGlobalValue(String("test")):GetArguments()
         local a = args:Get(1)
         local b = args:Get(2)
 
@@ -222,7 +222,7 @@ test("arguments that are not explicitly typed should be volatile", function()
         test(1,2)
         test("awddwa",{})
     ]]
-    local b = analyzer:GetLocalOrEnvironmentValue(String("b"))
+    local b = analyzer:GetLocalOrGlobalValue(String("b"))
 end)
 
 test("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", function()
@@ -240,9 +240,9 @@ test("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", fu
 
         local a,b,c = f2()
     ]]
-    local a = analyzer:GetLocalOrEnvironmentValue(String("a"))
-    local b = analyzer:GetLocalOrEnvironmentValue(String("b"))
-    local c = analyzer:GetLocalOrEnvironmentValue(String("c"))
+    local a = analyzer:GetLocalOrGlobalValue(String("a"))
+    local b = analyzer:GetLocalOrGlobalValue(String("b"))
+    local c = analyzer:GetLocalOrGlobalValue(String("c"))
 
     equal(1, a:GetData())
     equal(2, b:GetData())
@@ -340,7 +340,7 @@ test("make sure analyzer return flags dont leak over to deferred calls", functio
         end
         
         return nil
-    ]]):GetLocalOrEnvironmentValue(String("foo"))
+    ]]):GetLocalOrGlobalValue(String("foo"))
     
     equal(foo:GetReturnTypes():Get(1):GetData(), true)
 end)

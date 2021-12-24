@@ -74,9 +74,9 @@ local function prefix_operator(analyzer, node, l)
 
 	if analyzer:IsTypesystem() then
 		if op == "typeof" then
-			analyzer:PushPreferEnvironment("runtime")
+			analyzer:PushAnalyzerEnvironment("runtime")
 			local obj = analyzer:AnalyzeExpression(node.right)
-			analyzer:PopPreferEnvironment()
+			analyzer:PopAnalyzerEnvironment()
 			if not obj then return type_errors.other(
 				"cannot find '" .. node.right:Render() .. "' in the current typesystem scope"
 			) end
@@ -126,7 +126,7 @@ local function prefix_operator(analyzer, node, l)
 		return l
 	end
 
-	error("unhandled prefix operator in " .. analyzer:GetPreferredEnvironment() .. ": " .. op .. tostring(l))
+	error("unhandled prefix operator in " .. analyzer:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(l))
 end
 
 return {Prefix = prefix_operator}

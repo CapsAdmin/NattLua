@@ -100,9 +100,9 @@ analyzer function pairs(tbl: Table)
 		end
 	end
 
-	analyzer:PushPreferEnvironment("typesystem")
-	local next = analyzer:GetLocalOrEnvironmentValue(types.LString("next"))
-	analyzer:PopPreferEnvironment()
+	analyzer:PushAnalyzerEnvironment("typesystem")
+	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
+	analyzer:PopAnalyzerEnvironment()
 	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 
@@ -138,9 +138,9 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 		end
 	end
 
-	analyzer:PushPreferEnvironment("typesystem")
-	local next = analyzer:GetLocalOrEnvironmentValue(types.LString("next"))
-	analyzer:PopPreferEnvironment()
+	analyzer:PushAnalyzerEnvironment("typesystem")
+	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
+	analyzer:PopAnalyzerEnvironment()
 	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 	return function()
@@ -165,7 +165,7 @@ analyzer function require(name: string)
 	if str:GetData() == "table.new" then return base_environment:Get(types.LString("table")):Get(types.LString("new")) end
 	if str:GetData() == "jit.util" then return base_environment:Get(types.LString("jit")):Get(types.LString("util")) end
 	if str:GetData() == "jit.opt" then return base_environment:Get(types.LString("jit")):Get(types.LString("opt")) end
-	if analyzer:GetLocalOrEnvironmentValue(str) then return analyzer:GetLocalOrEnvironmentValue(str) end
+	if analyzer:GetLocalOrGlobalValue(str) then return analyzer:GetLocalOrGlobalValue(str) end
 
 	if package.loaders then
 		for _, searcher in ipairs(package.loaders) do

@@ -137,7 +137,7 @@ return
 		Call = function(META)
 			function META:AnalyzeFunctionBody(obj, function_node, arguments)
 				local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-				self:PushEnvironment(function_node, self:GetDefaultEnvironment(self:GetPreferredEnvironment()), self:GetPreferredEnvironment())
+				self:PushGlobalEnvironment(function_node, self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()), self:GetCurrentAnalyzerEnvironment())
 
 				if function_node.self_call then
 					self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node), "self")
@@ -161,15 +161,15 @@ return
 				end
 
 				if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
-					self:PushPreferEnvironment("typesystem")
+					self:PushAnalyzerEnvironment("typesystem")
 				end
 				
 				local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
 
 				if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
-					self:PopPreferEnvironment()
+					self:PopAnalyzerEnvironment()
 				end
-				self:PopEnvironment(self:GetPreferredEnvironment())
+				self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 				self:PopScope()
 				if analyzed_return.Type ~= "tuple" then
 					return Tuple({analyzed_return}):SetNode(analyzed_return:GetNode()), scope
@@ -263,7 +263,7 @@ return
 				end
 
 				for i, arg in ipairs(arguments:GetData()) do
-					if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
+					if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
 						if analyzer.config.external_mutation then
 							analyzer:Warning(analyzer:GetActiveNode(), {
 								"argument #",
@@ -317,7 +317,7 @@ return
 					do -- analyze the type expressions
 						
 						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						analyzer:PushPreferEnvironment("typesystem")
+						analyzer:PushAnalyzerEnvironment("typesystem")
 						local args = {}
 
 						for i, key in ipairs(function_node.identifiers) do
@@ -355,7 +355,7 @@ return
 							end
 						end
 						
-						analyzer:PopPreferEnvironment()
+						analyzer:PopAnalyzerEnvironment()
 						analyzer:PopScope()
 						contract_override = args
 					end
@@ -608,9 +608,9 @@ return
 					-- if the function has return type annotations, analyze them and use it as contract
 					if not return_contract and function_node.return_types then
 						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						analyzer:PushPreferEnvironment("typesystem")
+						analyzer:PushAnalyzerEnvironment("typesystem")
 						return_contract = Tuple(analyzer:AnalyzeExpressions(function_node.return_types))
-						analyzer:PopPreferEnvironment()
+						analyzer:PopAnalyzerEnvironment()
 						analyzer:PopScope()
 					end
 
@@ -695,7 +695,7 @@ return
 						
 						-- check arguments that can be mutated
 						for _, arg in ipairs(arguments:GetData()) do
-							if arg.Type == "table" and arg:GetEnvironment() == "runtime" then
+							if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
 								if arg:GetContract() then
 									-- error if we call any with tables that have contracts
 									-- since anything might happen to them in an any call

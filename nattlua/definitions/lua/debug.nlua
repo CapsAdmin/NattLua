@@ -46,7 +46,7 @@ analyzer function debug.setfenv(val: Function, table: Table)
 end
 
 analyzer function debug.getfenv(func: Function)
-	return analyzer:GetEnvironmentOverride(func.function_body_node or func, "runtime")
+	return analyzer:GetGlobalEnvironmentOverride(func.function_body_node or func, "runtime")
 end
 
 type getfenv = debug.getfenv

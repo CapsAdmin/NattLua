@@ -23,7 +23,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 	local return_tuple_override
 	
 	analyzer:CreateAndPushFunctionScope(current_function:GetData().scope, current_function:GetData().upvalue_position)
-	analyzer:PushPreferEnvironment("typesystem")
+	analyzer:PushAnalyzerEnvironment("typesystem")
 
 	if node.kind == "function" or node.kind == "local_function" then
 		
@@ -109,9 +109,9 @@ local function analyze_function_signature(analyzer, node, current_function)
 	end
 
 	if node.self_call and node.expression then
-		analyzer:PushPreferEnvironment("runtime")
+		analyzer:PushAnalyzerEnvironment("runtime")
 		local val = analyzer:AnalyzeExpression(node.expression.left):GetFirstValue()
-		analyzer:PopPreferEnvironment()
+		analyzer:PopAnalyzerEnvironment()
 
 		if val then
 			if val:GetContract() or val.Self then
@@ -161,7 +161,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 		end
 	end
 
-	analyzer:PopPreferEnvironment()
+	analyzer:PopAnalyzerEnvironment()
 	analyzer:PopScope()
 
 	return argument_tuple_override or Tuple(args), return_tuple_override or Tuple(ret), explicit_arguments, explicit_return

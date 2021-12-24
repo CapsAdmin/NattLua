@@ -8,9 +8,9 @@ return
 				statement.kind == "local_analyzer_function" or
 				statement.kind == "local_type_function"
 			then
-				analyzer:PushPreferEnvironment(statement.kind == "local_function" and "runtime" or "typesystem")
+				analyzer:PushAnalyzerEnvironment(statement.kind == "local_function" and "runtime" or "typesystem")
 				analyzer:CreateLocalValue(statement.tokens["identifier"], AnalyzeFunction(analyzer, statement))
-				analyzer:PopPreferEnvironment()
+				analyzer:PopAnalyzerEnvironment()
 			elseif
 				statement.kind == "function" or
 				statement.kind == "analyzer_function" or
@@ -18,7 +18,7 @@ return
 			then
 				local key = statement.expression
 
-				analyzer:PushPreferEnvironment(statement.kind == "function" and "runtime" or "typesystem")
+				analyzer:PushAnalyzerEnvironment(statement.kind == "function" and "runtime" or "typesystem")
 
 				if key.kind == "binary_operator" then
 					local obj = analyzer:AnalyzeExpression(key.left)
@@ -28,10 +28,10 @@ return
 				else
 					local key = NodeToString(key)
 					local val = AnalyzeFunction(analyzer, statement)
-					analyzer:SetLocalOrEnvironmentValue(key, val)
+					analyzer:SetLocalOrGlobalValue(key, val)
 				end
 
-				analyzer:PopPreferEnvironment()
+				analyzer:PopAnalyzerEnvironment()
 			else
 				analyzer:FatalError("unhandled statement: " .. statement.kind)
 			end

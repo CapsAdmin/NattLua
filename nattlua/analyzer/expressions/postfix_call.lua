@@ -11,7 +11,7 @@ return
 					node.left.kind == "generics_type_function"
 				)
 			
-			analyzer:PushPreferEnvironment(is_type_call and "typesystem" or "runtime")
+			analyzer:PushAnalyzerEnvironment(is_type_call and "typesystem" or "runtime")
 			
 			local callable = analyzer:AnalyzeExpression(node.left)
 			local self_arg
@@ -46,7 +46,7 @@ return
 				returned_tuple = returned_tuple:Get(1)
 			end
 
-			analyzer:PopPreferEnvironment()
+			analyzer:PopAnalyzerEnvironment()
 
 			return returned_tuple
 		end,
