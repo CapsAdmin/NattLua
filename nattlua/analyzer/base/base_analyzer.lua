@@ -242,9 +242,9 @@ return function(META)
 				local generics_func = analyzer:GetLocalOrEnvironmentValue(name, "typesystem")
 				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
 				local argument_tuple = Tuple({...})
-				analyzer:PushPreferTypesystem(true)
+				analyzer:PushPreferEnvironment("typesystem")
 				local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
-				analyzer:PopPreferTypesystem()
+				analyzer:PopPreferEnvironment()
 				return returned_tuple:Unpack()
 			end
 		end
@@ -363,16 +363,16 @@ return function(META)
 		end
 
 		do
-			function META:GetPreferTypesystem()
+			function META:GetPreferredEnvironment()
 				return self.prefer_typesystem_stack and self.prefer_typesystem_stack[1]
 			end
 
-			function META:PushPreferTypesystem(b)
+			function META:PushPreferEnvironment(env--[[#: "typesystem" | "runtime"]])
 				self.prefer_typesystem_stack = self.prefer_typesystem_stack or {}
-				table.insert(self.prefer_typesystem_stack, 1, b)
+				table.insert(self.prefer_typesystem_stack, 1, env)
 			end
 
-			function META:PopPreferTypesystem()
+			function META:PopPreferEnvironment()
 				table.remove(self.prefer_typesystem_stack, 1)
 			end
 		end

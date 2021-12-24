@@ -43,10 +43,7 @@ return
 		AnalyzeAssignment = function(analyzer, statement)
 			-- typesystem preference can happen from generics usually and from type calls <||>
 			-- otherwise typesystem is prefered when handling function arguments
-			local env = analyzer:GetPreferTypesystem() and
-				"typesystem" or
-				statement.environment or -- maybe we can pass statement.environment in beforehand?
-				"runtime"
+			local env = analyzer:GetPreferredEnvironment() or statement.environment or "runtime"
 
 			local left = {}
 			local right = {}

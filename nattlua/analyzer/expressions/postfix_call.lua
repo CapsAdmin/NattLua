@@ -29,7 +29,7 @@ return
 				table.insert(types, 1, self_arg)
 			end
 
-			analyzer:PushPreferTypesystem(is_type_call)
+			analyzer:PushPreferEnvironment(is_type_call and "typesystem" or nil)
 
 			local arguments
 			
@@ -40,7 +40,7 @@ return
 			end
 
 			local returned_tuple = analyzer:Assert(node, analyzer:Call(callable, arguments, node))
-			analyzer:PopPreferTypesystem()
+			analyzer:PopPreferEnvironment()
 
 			-- TUPLE UNPACK MESS
 			

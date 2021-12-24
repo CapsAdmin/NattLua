@@ -101,11 +101,7 @@ do
 
 	function META:AnalyzeExpression(node, env)
 		self.current_expression = node
-		env = env or "runtime"
-
-		if self:GetPreferTypesystem() then
-			env = "typesystem"
-		end
+		env = self:GetPreferredEnvironment() or env or "runtime"
 
 		if node.type_expression then
 			if node.kind == "table" then

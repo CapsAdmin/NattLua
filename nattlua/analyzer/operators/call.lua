@@ -161,13 +161,13 @@ return
 				end
 
 				if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
-					self:PushPreferTypesystem(true)
+					self:PushPreferEnvironment("typesystem")
 				end
 				
 				local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
 
 				if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
-					self:PopPreferTypesystem()
+					self:PopPreferEnvironment()
 				end
 				self:PopEnvironment(env)
 				self:PopScope()
@@ -317,7 +317,7 @@ return
 					do -- analyze the type expressions
 						
 						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						analyzer:PushPreferTypesystem(true)
+						analyzer:PushPreferEnvironment("typesystem")
 						local args = {}
 
 						for i, key in ipairs(function_node.identifiers) do
@@ -355,7 +355,7 @@ return
 							end
 						end
 						
-						analyzer:PopPreferTypesystem()
+						analyzer:PopPreferEnvironment()
 						analyzer:PopScope()
 						contract_override = args
 					end
@@ -608,9 +608,9 @@ return
 					-- if the function has return type annotations, analyze them and use it as contract
 					if not return_contract and function_node.return_types then
 						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						analyzer:PushPreferTypesystem(true)
+						analyzer:PushPreferEnvironment("typesystem")
 						return_contract = Tuple(analyzer:AnalyzeExpressions(function_node.return_types, "typesystem"))
-						analyzer:PopPreferTypesystem()
+						analyzer:PopPreferEnvironment()
 						analyzer:PopScope()
 					end
 
@@ -677,7 +677,7 @@ return
 			end
 
 			local function Call(analyzer, obj, arguments)
-				local env = analyzer:GetPreferTypesystem() and "typesystem" or "runtime"
+				local env = analyzer:GetPreferredEnvironment() and "typesystem" or "runtime"
 
 				if obj.Type == "union" then
 					-- make sure the union is callable, we pass the analyzer and 

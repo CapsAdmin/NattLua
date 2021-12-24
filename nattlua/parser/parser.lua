@@ -362,15 +362,15 @@ end
 
 
 do
-	function META:GetPreferTypesystem()
+	function META:GetPreferredEnvironment()
 		return self.prefer_typesystem_stack[1]
 	end
 
-	function META:PushPreferTypesystem(b--[[#: boolean ]])
-		table.insert(self.prefer_typesystem_stack, 1, b)
+	function META:PushPreferEnvironment(env--[[#: "runtime" | "typesystem" ]])
+		table.insert(self.prefer_typesystem_stack, 1, env)
 	end
 
-	function META:PopPreferTypesystem()
+	function META:PopPreferEnvironment()
 		table.remove(self.prefer_typesystem_stack, 1)
 	end
 end
@@ -486,13 +486,13 @@ end
 			node.return_types = ReadMultipleValues(parser, math.huge, ExpectTypeExpression)
 		end
 
-		parser:PushPreferTypesystem(true)
+		parser:PushPreferEnvironment("typesystem")
 
 		local start = parser:GetToken()
 		node.statements = parser:ReadNodes({["end"] = true})
 		node.tokens["end"] = parser:ExpectValue("end", start, start)
 
-		parser:PopPreferTypesystem()
+		parser:PopPreferEnvironment()
 
 		return node
 	end
@@ -1209,7 +1209,7 @@ end
 			end	
 			
 			function ReadRuntimeExpression(parser, priority)
-				if parser:GetPreferTypesystem() then
+				if parser:GetPreferredEnvironment() == "typesystem" then
 					return ReadTypeExpression(parser, priority)
 				end
 
