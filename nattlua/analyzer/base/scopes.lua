@@ -93,15 +93,15 @@ return function(META)
 			end
 
 			function META:FindLocalUpvalue(key, scope)
-				if not self:GetScope() then return end
+				scope = scope or self:GetScope()
+				if not scope then return end
 
-				if type(scope) == "string" then print(debug.traceback()) end
-				local found, scope = (scope or self:GetScope()):FindValue(key, self:GetCurrentAnalyzerEnvironment())
+				local found, scope = scope:FindValue(key, self:GetCurrentAnalyzerEnvironment())
 				if found then return found, scope end
 			end
 
 			function META:FindLocalValue(key, scope)
-				local upvalue = self:FindLocalUpvalue(key, scope)
+				local upvalue, scope = self:FindLocalUpvalue(key, scope)
 
 				if upvalue then
 					if self:IsRuntime() then return
@@ -112,8 +112,9 @@ return function(META)
 			end
 
 			function META:LocalValueExists(key, scope)
-				if not self:GetScope() then return end
-				local found, scope = (scope or self:GetScope()):FindValue(key, self:GetCurrentAnalyzerEnvironment())
+				scope = scope or self:GetScope()
+				if not scope then return end
+				local found = scope:FindValue(key, self:GetCurrentAnalyzerEnvironment())
 				return found ~= nil
 			end
 
