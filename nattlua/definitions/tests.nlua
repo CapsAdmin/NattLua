@@ -1,4 +1,4 @@
-local types = {}
+local type types = {}
 
 analyzer function types.assert(what: any, type: any)
 	what = what or types.Nil()

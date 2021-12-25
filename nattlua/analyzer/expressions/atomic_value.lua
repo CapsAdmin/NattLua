@@ -14,12 +14,10 @@ local Boolean = require("nattlua.types.symbol").Boolean
 local table = require("table")
 
 local function lookup_value(self, node)
-	local obj
-	local err
 	local errors = {}
 	local key = NodeToString(node)
 
-	obj, err = self:GetLocalOrGlobalValue(key)
+	local obj, err = self:GetLocalOrGlobalValue(key)
 
 	if self:IsTypesystem() then
 		-- we fallback to runtime if we can't find the value in the typesystem
