@@ -32,6 +32,10 @@ return function(META)
 		return self:PushScope(LexicalScope(scope or self:GetScope(), upvalue_position))
 		end
 
+	function META:CreateAndPushModuleScope()
+		return self:PushScope(LexicalScope())
+		end
+
 		function META:CreateAndPushScope()
 			return self:PushScope(LexicalScope(self:GetScope()))
 			end

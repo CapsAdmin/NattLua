@@ -58,3 +58,7 @@ run[[
     types.assert(require("lol"), lol)
     type lol = nil
 ]]
+
+run[[
+    require("test.nattlua.analyzer.file_importing.env_leak.main")
+]]
