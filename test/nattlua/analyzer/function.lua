@@ -637,7 +637,9 @@ run[[
 run[[
     local function test!(T: any)
         if T == string then
-            return expand setmetatable({}, {__call = function(_, a: literal T, b: literal T) return a .. b end})
+            return expand setmetatable({}, {__call = function(_, a: literal T, b: literal T)
+            §assert(analyzer:GetCurrentAnalyzerEnvironment() == "runtime", "analyzer environment is not runtime")
+            return a .. b end})
         else
             return expand setmetatable({}, {__call = function(_, a: literal T, b: literal T) return a + b end})
         end

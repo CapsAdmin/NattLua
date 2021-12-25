@@ -641,7 +641,17 @@ end
 				local node = parser:StartNode("expression", "prefix_operator")
 				node.value = parser:ReadToken()
 				node.tokens[1] = node.value
+
+				if node.value.value == "expand" then
+					parser:PushParserEnvironment("runtime")
+				end
+
 				node.right = ReadTypeExpression(parser, math_huge)
+
+				if node.value.value == "expand" then
+					parser:PopParserEnvironment()
+				end
+
 				parser:EndNode(node)
 				return node
 			end
