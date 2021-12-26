@@ -621,10 +621,10 @@ run[[
 
 run([[
     local t = {} as {
-        foo = {number = string}    
+        foo = {foo = string}    
     }
     t.foo["test"] = true
-]], "is not the same value as .-number")
+]], "is not the same value as .-foo")
 
 run[[
     local META =  {}
