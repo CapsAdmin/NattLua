@@ -625,7 +625,6 @@ function META:IsLiteral()
 			v.val.Type ~= "function" and
 			v.key.Type ~= "function"
 		then
-			self.suppress = true
 			if v.key.Type == "union" then
 				return false, type_errors.other(
 					{
@@ -635,8 +634,11 @@ function META:IsLiteral()
 					}
 				)
 			end
+
+			self.suppress = true
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
+
 			if not ok then return type_errors.other(
 				{
 					"the key ",
@@ -645,7 +647,6 @@ function META:IsLiteral()
 					reason,
 				}
 			) end
-			self.suppress = true
 			if v.val.Type == "union" then
 				return false, type_errors.other(
 					{
@@ -655,8 +656,11 @@ function META:IsLiteral()
 					}
 				)
 			end
+
+			self.suppress = true
 			local ok, reason = v.val:IsLiteral()
 			self.suppress = false
+
 			if not ok then return type_errors.other(
 				{
 					"the value ",
