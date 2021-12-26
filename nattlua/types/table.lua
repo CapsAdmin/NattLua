@@ -739,7 +739,7 @@ function META:PrefixOperator(op--[[#: "#"]])
 end
 
 function META.New()
-	return setmetatable({Data = {}, trace = debug.traceback()}, META)
+	return setmetatable({Data = {}}, META)
 end
 
 return {Table = META.New}
