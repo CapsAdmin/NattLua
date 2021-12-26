@@ -121,7 +121,7 @@ function META:__tostring()
 
 	level = level - 1
 	self.suppress = false
-	if #self:GetData() <= 1 then return "{" .. table.concat(s) .. " }" end
+	if #self:GetData() <= 1 then return "{" .. table.concat(s, ",") .. " }" end
 	return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
