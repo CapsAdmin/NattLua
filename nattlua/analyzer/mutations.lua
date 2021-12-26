@@ -337,10 +337,6 @@ local function initialize_mutation_tracker(obj, scope, key, node)
 			val:SetUpvalueReference(key)
 			-- for the iniital value, the scope should be the scope where the table was created
 
-			if (obj.scope or scope:GetRoot()).Type == "table" then
-				error"NO"
-			end
-
 			table.insert(obj.mutations[key], {scope = obj.scope or scope:GetRoot(), value = val})
 		end
 	end
