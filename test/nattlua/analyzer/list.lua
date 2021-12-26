@@ -63,13 +63,13 @@ test("indirect only works for numeric keys", function()
 end)
 
 test("{[number]: any}", function()
-    check(run[[local a: {[number] = any} = {[1] = 1}]], "{ number ⊃ number(1) = any ⊃ number(1) }")
+    check(run[[local a: {[number] = any} = {[1] = 1}]], "{ [number(1) as number] = number(1) as any }")
     run([[local a: {[number] = any} = {foo = 1}]], [[has no field "foo"]])
 end)
 
 
 test("{[1 .. inf]: any}", function()
-    check(run[[local a: {[1 .. inf] = any} = {[1234] = 1}]], "{ 1..inf ⊃ 1234 = any ⊃ number(1) }")
+    check(run[[local a: {[1 .. inf] = any} = {[1234] = 1}]], "{ [1234 as 1..inf] = number(1) as any }")
 
     run([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[has no field %-1234]])
 end)
