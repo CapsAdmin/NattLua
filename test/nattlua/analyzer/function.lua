@@ -651,3 +651,38 @@ run[[
     types.assert(a, 3)
     types.assert(b, "12")    
 ]]
+
+run[[
+    local type Type = "foo" | "bar" 
+    local type Object = {
+        foo = Type,
+        --[1337] = 1, TODO, this should error
+    }
+
+    local table_pool = function(alloc: literal (function=()>({[string] = any})))
+        local pool = {} as {[number] = return_type<|alloc|>[1]}
+        return function()
+            return pool[1]
+        end
+    end
+
+    local tk = table_pool(function() return { foo = "foo" } as Object end)()
+    tk.foo = "bar"
+    types.assert<|tk.foo, Type|>
+]]
+
+run([[
+    local type Type = "foo" | "bar" 
+    local type Object = {
+        [1337] = 1,
+    }
+
+    local table_pool = function(alloc: literal (function=()>({[string] = any})))
+        local pool = {} as {[number] = return_type<|alloc|>[1]}
+        return function()
+            return pool[1]
+        end
+    end
+
+    table_pool(function() return { [777] = 777 } as Object end)()
+]], "777 is not the same type as string")

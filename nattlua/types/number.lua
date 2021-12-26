@@ -81,7 +81,7 @@ function META:Copy()
 	end
 
 	copy:CopyInternalsFrom(self)
-	return copy
+	return copy --[[# as any]] -- TODO: figure out inheritance
 end
 
 function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])

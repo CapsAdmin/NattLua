@@ -39,6 +39,7 @@ do
                 type = "unknown",
                 value = "",
                 whitespace = false,
+                is_whitespace = false,
                 start = 0,
                 stop = 0,
             } as Token

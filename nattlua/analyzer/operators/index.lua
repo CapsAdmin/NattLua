@@ -60,9 +60,14 @@ return
 					end
 				end
 
+				
 				if obj:GetContract() then
 					local val, err = obj:GetContract():Get(key)
 
+					if val then
+						val = val:Copy()
+					end
+					
 					if val and not val:GetContract() then
 						val:SetContract(val)
 					end
@@ -70,7 +75,12 @@ return
 					if val then
 						if not obj.argument_index or obj:GetContract().literal_argument then
 							local o = self:GetMutatedValue(obj, key, val)
-							if o then return o end
+							if o then
+								if not o:GetContract() then
+									o:SetContract(o)
+								end
+								return o 
+							end
 						end
 					end
 

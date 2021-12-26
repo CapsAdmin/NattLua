@@ -383,7 +383,7 @@ function META:Copy(map)
 	map[self] = map[self] or copy
 
 	for _, e in ipairs(self.Data) do
-		copy:AddType(e)
+		copy:AddType(e:Copy(map))
 	end
 
 	copy:CopyInternalsFrom(self)
