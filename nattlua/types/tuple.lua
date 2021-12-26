@@ -398,9 +398,9 @@ end
 
 function META:GetFirstValue()
 	if self.Remainder then
-		return self
+		return self.Remainder:GetFirstValue()
 	end
-	return self:Get(1)
+	return self:Get(1):GetFirstValue()
 end
 
 function META.New(data)

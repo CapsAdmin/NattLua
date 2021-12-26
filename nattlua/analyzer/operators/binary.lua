@@ -115,11 +115,11 @@ local function binary_operator(analyzer, node, l, r, op)
 	-- adding two tuples at runtime in lua will practically do this
 	if analyzer:IsRuntime() then
 		if l.Type == "tuple" then
-			l = analyzer:Assert(node, l:Get(1))
+			l = analyzer:Assert(node, l:GetFirstValue())
 		end
 
 		if r.Type == "tuple" then
-			r = analyzer:Assert(node, r:Get(1))
+			r = analyzer:Assert(node, r:GetFirstValue())
 		end
 	end
 

@@ -58,7 +58,7 @@ return
 					-- foo.bar = *
 					left[left_pos] = analyzer:AnalyzeExpression(exp_key.right)
 				else
-					analyzer:FatalError("unhandled expression " .. tostring(exp_key))
+					analyzer:FatalError("unhandled assignment expression " .. tostring(exp_key:Render()))
 				end
 			end
 

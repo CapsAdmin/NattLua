@@ -365,8 +365,10 @@ return
 							if arg.Type == "function" then
 								if contract_override[i] and contract_override[i].Type == "union" and not contract_override[i].literal_argument then
 									local merged = contract_override[i]:ShrinkToFunctionSignature()
-									arg:SetArguments(merged:GetArguments())
-									arg:SetReturnTypes(merged:GetReturnTypes())
+									if merged then
+										arg:SetArguments(merged:GetArguments())
+										arg:SetReturnTypes(merged:GetReturnTypes())
+									end
 								else
 									if not arg.explicit_arguments then
 										local contract = contract_override[i] or obj:GetArguments():Get(i)
