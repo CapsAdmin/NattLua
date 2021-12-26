@@ -12,7 +12,7 @@ local io = _G.io
 local luadata = {}
 local encode_table
 
-local function count(tbl)
+local function count(tbl--[[#: Table]])
 	local i = 0
 
 	for _ in pairs(tbl) do
@@ -26,7 +26,7 @@ local tostringx
 
 do
 	local pretty_prints = {}
-	pretty_prints.table = function(t)
+	pretty_prints.table = function(t--[[#: Table]])
 		local str = tostring(t)
 		str = str .. " [" .. count(t) .. " subtables]"
 
@@ -56,25 +56,27 @@ do
 
 		return str
 	end
-	pretty_prints["function"] = function(self)
+	pretty_prints["function"] = function(self--[[#: Function]])
 		if debug.getprettysource then return ("function[%p][%s](%s)"):format(self, debug.getprettysource(self, true), table.concat(debug.getparams(self), ", ")) end
 		return tostring(self)
 	end
 
-	function tostringx(val)
+	function tostringx(val--[[#: any]])
 		local t = type(val)
 		if pretty_prints[t] then return pretty_prints[t](val) end
 		return tostring(val)
 	end
 end
 
-local function getprettysource(level, append_line, full_folder)
+local function getprettysource(level--[[#: number | Function]], append_line--[[#: boolean | nil]])
 	local info = debug.getinfo(type(level) == "number" and (level + 1) or level)
 
-	if info.source == "=[C]" and type(level) == "number" then
-		info = debug.getinfo(type(level) == "number" and (level + 2) or level)
+	if info then
+		if info.source == "=[C]" and type(level) == "number" then
+			info = debug.getinfo(type(level) == "number" and (level + 2) or level)
+		end
 	end
-
+	
 	local pretty_source = "debug.getinfo = nil"
 
 	if info then
@@ -110,7 +112,7 @@ local function getprettysource(level, append_line, full_folder)
 	return pretty_source
 end
 
-local function getparams(func)
+local function getparams(func--[[#: Function]])
 	local params = {}
 
 	for i = 1, math.huge do
@@ -126,7 +128,7 @@ local function getparams(func)
 	return params
 end
 
-local function isarray(t)
+local function isarray(t--[[#: Table]])
 	local i = 0
 
 	for _ in pairs(t) do
@@ -139,8 +141,9 @@ end
 
 local env = {}
 luadata.Types = {}
+--[[#type luadata.Types Map<|string, function=(any)>(string)|> ]]
 
-function luadata.SetModifier(type, callback, func, func_name)
+function luadata.SetModifier(type--[[#: string]], callback--[[#: function=(any)>(string)]], func--[[#: nil]], func_name--[[#: nil]])
 	luadata.Types[type] = callback
 
 	if func_name then
@@ -148,35 +151,31 @@ function luadata.SetModifier(type, callback, func, func_name)
 	end
 end
 
-luadata.SetModifier("cdata", function(var)
+luadata.SetModifier("cdata", function(var--[[#: any]])
 	return tostring(var)
 end)
 
-luadata.SetModifier("cdata", function(var)
-	return tostring(var)
-end)
-
-luadata.SetModifier("number", function(var)
+luadata.SetModifier("number", function(var--[[#: number]])
 	return ("%s"):format(var)
 end)
 
-luadata.SetModifier("string", function(var)
+luadata.SetModifier("string", function(var--[[#: string]])
 	return ("%q"):format(var)
 end)
 
-luadata.SetModifier("boolean", function(var)
+luadata.SetModifier("boolean", function(var--[[#: boolean]])
 	return var and "true" or "false"
 end)
 
-luadata.SetModifier("function", function(var)
+luadata.SetModifier("function", function(var--[[#: Function]])
 	return ("function(%s) --[==[ptr: %p    src: %s]==] end"):format(table.concat(getparams(var), ", "), var, getprettysource(var, true))
 end)
 
-luadata.SetModifier("fallback", function(var)
+luadata.SetModifier("fallback", function(var--[[#: any]])
 	return "--[==[  " .. tostringx(var) .. "  ]==]"
 end)
 
-luadata.SetModifier("table", function(tbl, context)
+luadata.SetModifier("table", function(tbl, context--[[#: {tab = number, tab_limit = number, done = Table, [string] = any}]])
 	local str
 	if context.tab_limit and context.tab >= context.tab_limit then return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}" end
 
@@ -252,26 +251,25 @@ function luadata.Type(var)
 	return t
 end
 
-function luadata.ToString(var, context)
+function luadata.ToString(var, context--[[#: {tab = number, [string] = any}]])
 	context = context or {}
 	context.tab = context.tab or -1
-	context.out = context.out or {}
 	local func = luadata.Types[luadata.Type(var)]
 	if not func and luadata.Types.fallback then return luadata.Types.fallback(var, context) end
 	return func and func(var, context)
 end
 
-function luadata.FromString(str)
+function luadata.FromString(str--[[#: string]])
 	local func = assert(load("return " .. str), "luadata")
 	setfenv(func, env)
 	return func()
 end
 
-function luadata.Encode(tbl)
+function luadata.Encode(tbl--[[#: Table]])
 	return luadata.ToString(tbl)
 end
 
-function luadata.Decode(str)
+function luadata.Decode(str--[[#: string]])
 	if not str then return {} end
 	local func, err = load("return {\n" .. str .. "\n}", "luadata")
 	if not func then return func, err end
@@ -294,5 +292,5 @@ return function(...)
 		tbl[2] = nil
 	end
 
-	io.write(luadata.ToString(tbl, {tab_limit = max_level, done = {}}):sub(0, -2))
+	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
 end
