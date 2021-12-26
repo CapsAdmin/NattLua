@@ -296,19 +296,19 @@ return
 			do
 				local function restore_mutated_types(analyzer)
 					if not analyzer.mutated_types or not analyzer.mutated_types[1] then return end
-					local mutated_types = table.remove(analyzer.mutated_types)
 
-					for _, data in ipairs(mutated_types) do
-						local original = data.original
-						local modified = data.modified
-						modified:SetContract(original:GetContract())
-						analyzer:MutateValue(original:GetUpvalue(), original:GetUpvalue().key, modified)
+					for _, arg in ipairs(analyzer.mutated_types) do
+						arg:PopContract()
+						arg.argument_index = nil
+						analyzer:MutateValue(arg:GetUpvalue(), arg:GetUpvalue().key, arg)
 					end
+
+					analyzer.mutated_types = {}
 				end
 
 				local function check_and_setup_arguments(analyzer, arguments, contracts, function_node, obj)
 					analyzer.mutated_types = analyzer.mutated_types or {}
-					table.insert(analyzer.mutated_types, 1, {})
+					
 					local len = contracts:GetSafeLength(arguments)
 
 
@@ -446,17 +446,12 @@ return
 							arg.Type == "table" and
 							contract.Type == "table" and
 							arg:GetUpvalue() and
-							not contract.literal_argument and analyzer.mutated_types[1]
+							not contract.literal_argument
 						then
-							local original = arg
-							local modified = arg:Copy()
-							modified:SetContract(contract)
-							modified.argument_index = i
-							table.insert(analyzer.mutated_types[1], {
-								original = original,
-								modified = modified,
-							})
-							arguments:Set(i, modified)
+							arg:PushContract(contract)
+							arg.argument_index = i
+							table.insert(analyzer.mutated_types, arg)
+							arguments:Set(i, arg)
 						else
 							-- if it's a literal argument we pass the incoming value
 							if not contract.literal_argument then

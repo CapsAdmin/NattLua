@@ -302,3 +302,25 @@ run[[
         end
     end
 ]]
+
+run[[
+    local META = {}
+    META.__index = META
+    type META.@Self = {
+        Position = number,
+    }
+    local type Lexer = META.@Self
+
+    function META:IsString()
+        return true
+    end
+
+    local function ReadCommentEscape(lexer: Lexer & {comment_escape = boolean | nil})
+        lexer:IsString()
+        lexer.comment_escape = true
+    end
+
+    function META:Read()
+        ReadCommentEscape(self)
+    end
+]]

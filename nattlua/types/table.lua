@@ -560,6 +560,18 @@ function META:Copy(map--[[#: any]])
 	return copy
 end
 
+function META:GetContract()
+	return self.contracts[#self.contracts] or self.Contract
+end
+
+function META:PushContract(contract)
+	table.insert(self.contracts, contract)
+end
+
+function META:PopContract()
+	table.remove(self.contracts)
+end
+
 function META:pairs()
 	local i = 1
 	return function()
@@ -739,7 +751,7 @@ function META:PrefixOperator(op--[[#: "#"]])
 end
 
 function META.New()
-	return setmetatable({Data = {}}, META)
+	return setmetatable({Data = {}, contracts = {}}, META)
 end
 
 return {Table = META.New}
