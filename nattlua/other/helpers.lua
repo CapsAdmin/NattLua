@@ -514,6 +514,8 @@ function helpers.EnableJITDumper()
 end
 
 function helpers.GlobalLookup()
+	--[[#do return end]]
+
 	local _G = _G
 	local tostring = tostring
 	local io = io
