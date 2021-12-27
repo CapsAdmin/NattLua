@@ -102,7 +102,7 @@ function META:Copy(map)
 	return copy
 end
 
-function META.IsSubsetOf(A, B)
+function META.IsSubsetOf(A, B, max_length)
 	if A == B then return true end
 	if A.suppress then return true end
 	if A.Remainder and A:Get(1).Type == "any" and #A:GetData() == 0 then return true end
@@ -124,7 +124,9 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
 
-	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
+	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
+
+	for i = 1, max_length do
 		local a, err = A:Get(i)
 		if not a then return type_errors.subset(A, B, err) end
 		local b, err = B:Get(i)
@@ -134,10 +136,6 @@ function META.IsSubsetOf(A, B)
 		local ok, reason = a:IsSubsetOf(b)
 		A.suppress = false
 		if not ok then return type_errors.subset(a, b, reason) end
-	end
-
-	if A:GetMinimumLength() < B:GetMinimumLength() and A:GetLength() < B:GetLength() then 
-		return false, "length differs" 
 	end
 
 	return true

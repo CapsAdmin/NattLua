@@ -686,3 +686,25 @@ run([[
 
     table_pool(function() return { [777] = 777 } as Object end)()
 ]], "777 is not the same type as string")
+
+
+run[[
+    local function foo(x: function=(number, string)>())
+
+    end
+    
+    foo(function(x, y)
+        types.assert(x, _ as number)
+        types.assert(y, _ as string)
+    end)
+]]
+
+run[[
+    local function foo(x: function=(number, string)>())
+
+    end
+    
+    foo(function(x: number)
+        types.assert(x, _ as number)
+    end)
+]]

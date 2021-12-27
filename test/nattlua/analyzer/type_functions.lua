@@ -441,7 +441,7 @@ run([[
         faz = 1
     }
     table.sort(tbl, function(a, b) end)
-]], "1%.%.inf.-has no field")
+]], "foo.-is not the same type as number")
 
 run[[
     local META = {}

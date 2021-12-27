@@ -143,7 +143,60 @@ local env = {}
 luadata.Types = {}
 --[[#type luadata.Types Map<|string, function=(any)>(string)|> ]]
 
-function luadata.SetModifier(type--[[#: string]], callback--[[#: function=(any)>(string)]], func--[[#: nil]], func_name--[[#: nil]])
+local idx = function(var--[[#: any]])
+	return var.LuaDataType
+end
+
+function luadata.Type(var--[[#: any]])
+	local t = type(var)
+
+	if t == "table" then
+		local ok, res = pcall(idx, var)
+		if ok and res then return res end
+	end
+
+	return t
+end
+
+--[[#local type Context = {
+	tab = number, 
+	tab_limit = number, 
+	done = Table
+}]]
+
+function luadata.ToString(var, context--[[#: nil | Context]])
+	context = context or {tab = -1}
+	local func = luadata.Types[luadata.Type(var)]
+	if func then
+		return func(var, context)
+	end
+
+	if luadata.Types.fallback then 
+		return luadata.Types.fallback(var, context)
+	end
+end
+
+function luadata.FromString(str--[[#: string]])
+	local func = assert(load("return " .. str), "luadata")
+	setfenv(func, env)
+	return func()
+end
+
+function luadata.Encode(tbl--[[#: Table]])
+	return luadata.ToString(tbl)
+end
+
+function luadata.Decode(str--[[#: string]])
+	if not str then return {} end
+	local func, err = load("return {\n" .. str .. "\n}", "luadata")
+	if not func then return func, err end
+	setfenv(func, env)
+	local ok, err = pcall(func)
+	if not ok then return func, err end
+	return err
+end
+
+function luadata.SetModifier(type--[[#: string]], callback--[[#: function=(any, Context)>(string)]], func--[[#: nil]], func_name--[[#: nil]])
 	luadata.Types[type] = callback
 
 	if func_name then
@@ -175,8 +228,8 @@ luadata.SetModifier("fallback", function(var--[[#: any]])
 	return "--[==[  " .. tostringx(var) .. "  ]==]"
 end)
 
-luadata.SetModifier("table", function(tbl, context--[[#: {tab = number, tab_limit = number, done = Table, [string] = any}]])
-	local str
+luadata.SetModifier("table", function(tbl, context)
+	local str--[[#: List<|string|> ]] = {}
 	if context.tab_limit and context.tab >= context.tab_limit then return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}" end
 
 	if context.done then
@@ -235,49 +288,6 @@ luadata.SetModifier("table", function(tbl, context--[[#: {tab = number, tab_limi
 	context.tab = context.tab - 1
 	return table.concat(str, "")
 end)
-
-local idx = function(var)
-	return var.LuaDataType
-end
-
-function luadata.Type(var)
-	local t = type(var)
-
-	if t == "table" then
-		local ok, res = pcall(idx, var)
-		if ok and res then return res end
-	end
-
-	return t
-end
-
-function luadata.ToString(var, context--[[#: {tab = number, [string] = any}]])
-	context = context or {}
-	context.tab = context.tab or -1
-	local func = luadata.Types[luadata.Type(var)]
-	if not func and luadata.Types.fallback then return luadata.Types.fallback(var, context) end
-	return func and func(var, context)
-end
-
-function luadata.FromString(str--[[#: string]])
-	local func = assert(load("return " .. str), "luadata")
-	setfenv(func, env)
-	return func()
-end
-
-function luadata.Encode(tbl--[[#: Table]])
-	return luadata.ToString(tbl)
-end
-
-function luadata.Decode(str--[[#: string]])
-	if not str then return {} end
-	local func, err = load("return {\n" .. str .. "\n}", "luadata")
-	if not func then return func, err end
-	setfenv(func, env)
-	local ok, err = pcall(func)
-	if not ok then return func, err end
-	return err
-end
 
 return function(...)
 	local tbl = {...}

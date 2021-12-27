@@ -9,9 +9,8 @@ type table = {
 		pack = function=(...)>(Table),
 		new = function=(number, number)>({[number] = any}),
 	}
-local type List = {[1 .. inf] = any} | {}
 
-analyzer function table.concat(tbl: List, separator: string | nil)
+analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 	if not tbl:IsLiteral() then return types.String() end
 	if separator and (separator.Type ~= "string" or not separator:IsLiteral()) then return types.String() end
 	local out = {}
@@ -24,7 +23,7 @@ analyzer function table.concat(tbl: List, separator: string | nil)
 	return table.concat(out, separator and separator:GetData() or nil)
 end
 
-analyzer function table.insert(tbl: List, ...: ...any)
+analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 	if not tbl:IsLiteral() then return end
 	local pos, val = ...
 
@@ -38,14 +37,14 @@ analyzer function table.insert(tbl: List, ...: ...any)
 	tbl:Set(types.LNumber(pos), val)
 end
 
-analyzer function table.remove(tbl: List, index: number | nil)
+analyzer function table.remove(tbl: List<|any|>, index: number | nil)
 	if not tbl:IsLiteral() then return end
 	if index and not index:IsLiteral() then return end
 	index = index or 1
 	table.remove(pos:GetData(), index:GetData())
 end
 
-analyzer function table.sort(tbl: List, func: function=(a: any, b: any)>(boolean))
+analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(boolean))
 	local union = types.Union()
 
 	if tbl.Type == "tuple" then
@@ -63,11 +62,11 @@ analyzer function table.sort(tbl: List, func: function=(a: any, b: any)>(boolean
 	func.arguments_inferred = true
 end
 
-analyzer function table.getn(tbl: List)
+analyzer function table.getn(tbl: List<|any|>)
 	return tbl:GetLength()
 end
 
-analyzer function table.unpack(tbl: List)
+analyzer function table.unpack(tbl: List<|any|>)
 	local t = {}
 
 	for i = 1, 32 do

@@ -201,8 +201,12 @@ return
 							local existing_value = analyzer:GetLocalOrGlobalValue(key)
 							local contract = existing_value and existing_value:GetContract()
 
-
 							if contract then
+
+								if contract.Type == "tuple" then
+									contract = contract:GetFirstValue()
+								end
+
 								val:CopyLiteralness(contract)
 
 								analyzer:Assert(

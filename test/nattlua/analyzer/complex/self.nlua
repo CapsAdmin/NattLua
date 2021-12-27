@@ -108,3 +108,7 @@ do
     local num = Number(1337)
     types.assert(num:GetData(), _ as number)
 end
+
+do
+    require("nattlua.other.table_print")
+end

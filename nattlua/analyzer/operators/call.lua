@@ -433,8 +433,12 @@ return
 									contract = contract:ShrinkToFunctionSignature()
 								end
 							end
-
-							ok, reason = arg:IsSubsetOf(contract)
+							
+							if arg.Type == "function" and contract.Type == "function" then
+								ok, reason = arg:IsCallbackSubsetOf(contract)
+							else
+								ok, reason = arg:IsSubsetOf(contract)
+							end
 						end
 
 						if not ok then

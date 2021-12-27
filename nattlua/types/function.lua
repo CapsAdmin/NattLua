@@ -98,6 +98,26 @@ function META.IsSubsetOf(A, B)
 	return true
 end
 
+function META.IsCallbackSubsetOf(A, B) 
+	if B.Type == "tuple" then B = B:Get(1) end	
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if B.Type == "any" then return true end
+	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+	local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments(), A:GetArguments():GetMinimumLength())
+	if not ok then return type_errors.subset(A:GetArguments(), B:GetArguments(), reason) end
+	local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
+
+	if
+		not ok and
+		((not B.called and not B.explicit_return) or (not A.called and not A.explicit_return))
+	then
+		return true
+	end
+
+	if not ok then return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason) end
+	return true
+end
+
 function META:IsFalsy()
 	return false
 end

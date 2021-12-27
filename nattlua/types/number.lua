@@ -85,6 +85,7 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
+	if not B then print(debug.traceback()) end
 	if B.Type == "tuple" then B = B:Get(1) end
 	if B.Type == "any" then return true end
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
