@@ -657,3 +657,21 @@ run[[
     types.assert(test().a, _ as 1 | 2)
     types.assert(test().b, _ as function=(string)>(number))
 ]]
+
+run[[
+    local function create_set(...)
+        local res = {}
+        for i = 1, select("#", ...) do
+            res[ select(i, ...) ] = true
+        end
+        return res
+    end
+    
+    local space_chars   = create_set(" ", "\t", "\r", "\n")
+    types.assert(space_chars, {
+        [" "] = true,
+        ["\t"] = true,
+        ["\r"] = true,
+        ["\n"] = true,
+    })
+]]

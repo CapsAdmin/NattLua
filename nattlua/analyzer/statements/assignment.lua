@@ -231,6 +231,9 @@ return
 						-- TODO: refactor out to mutation assignment?
 						-- index assignment: foo[a] = 1
 						local obj = analyzer:AnalyzeExpression(exp_key.left)
+						if analyzer:IsRuntime() then
+							key = key:GetFirstValue()
+						end
 						analyzer:Assert(exp_key, analyzer:NewIndexOperator(exp_key, obj, key, val))
 					end
 				end
