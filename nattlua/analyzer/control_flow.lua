@@ -110,8 +110,7 @@ return function(META)
 	end
 
 	function META:PushConditionalScope(statement, condition)
-		self:CreateAndPushScope()
-		local scope = self:GetScope()
+		local scope = self:CreateAndPushScope()
 		scope:SetTestCondition(condition)
 		scope:SetStatement(statement)
 		scope:MakeUncertain(condition:IsUncertain())
@@ -124,9 +123,7 @@ return function(META)
 	end
 
 	function META:PopConditionalScope()
-		self:PopScope()
-
-		local exited_scope = self:GetLastScope()
+		local exited_scope = self:PopScope()
 		local current_scope = self:GetScope()
 
 		if

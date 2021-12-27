@@ -45,13 +45,10 @@ return function(META)
 				local old = table.remove(self.scope_stack)
 
 				if old then
-					self.last_scope = self:GetScope()
 					self.scope = old
 				end
-			end
-
-			function META:GetLastScope()
-				return self.last_scope or self.scope
+				
+				return old
 			end
 
 			function META:GetScope()
