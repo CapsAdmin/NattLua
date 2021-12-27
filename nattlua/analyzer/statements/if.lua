@@ -11,23 +11,19 @@ return
 
 					if obj:IsTruthy() then
 						analyzer:FireEvent("if", i == 1 and "if" or "elseif", true)
-						analyzer:CreateAndPushScope()
-							analyzer:EnterConditionalScope(statement, obj)
+							analyzer:PushConditionalScope(statement, obj)
 							analyzer:AnalyzeStatements(statements)
-							analyzer:PopScope()
-							analyzer:ExitConditionalScope()
+							analyzer:PopConditionalScope()
 						analyzer:FireEvent("if", i == 1 and "if" or "elseif", false)
 						if not obj:IsFalsy() then break end
 					end
 				else
 					if prev_expression:IsFalsy() then
 						analyzer:FireEvent("if", "else", true)
-						analyzer:CreateAndPushScope()
-							analyzer:EnterConditionalScope(statement, prev_expression)
+							analyzer:PushConditionalScope(statement, prev_expression)
 							analyzer:GetScope():InvertIfStatement(true)
 							analyzer:AnalyzeStatements(statements)
-							analyzer:PopScope()
-							analyzer:ExitConditionalScope()
+							analyzer:PopConditionalScope()
 						analyzer:FireEvent("if", "else", false)
 					end
 				end

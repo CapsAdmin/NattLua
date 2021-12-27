@@ -54,16 +54,14 @@ return
 			end
 
 			statement.identifiers[1].inferred_type = init
-			analyzer:CreateAndPushScope()
-				analyzer:EnterConditionalScope(statement, condition)
+				analyzer:PushConditionalScope(statement, condition)
 				analyzer:FireEvent("numeric_for", init, max, step)
 
 				if literal_init and literal_max and literal_step and literal_max < 1000 then
 					local uncertain_break = false
 
 					for i = literal_init, literal_max, literal_step do
-						analyzer:CreateAndPushScope()
-							analyzer:EnterConditionalScope(statement, condition)
+							analyzer:PushConditionalScope(statement, condition)
 							local i = LNumber(i):SetNode(statement.expressions[1])
 							local brk = false
 
@@ -89,8 +87,7 @@ return
 								analyzer.break_out_scope = nil
 							end
 
-						analyzer:PopScope()
-						analyzer:ExitConditionalScope()
+						analyzer:PopConditionalScope()
 						if brk then break end
 					end
 				else
@@ -126,7 +123,6 @@ return
 
 				analyzer:FireEvent("leave_scope")
 				analyzer.break_out_scope = nil
-			analyzer:PopScope()
-			analyzer:ExitConditionalScope()
+			analyzer:PopConditionalScope()
 		end,
 	}

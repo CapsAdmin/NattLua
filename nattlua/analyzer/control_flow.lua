@@ -109,7 +109,8 @@ return function(META)
 		end
 	end
 
-	function META:EnterConditionalScope(statement, condition)
+	function META:PushConditionalScope(statement, condition)
+		self:CreateAndPushScope()
 		local scope = self:GetScope()
 		scope:SetTestCondition(condition)
 		scope:SetStatement(statement)
@@ -122,7 +123,9 @@ return function(META)
 		self:GetScope():SetTestCondition(condition)
 	end
 
-	function META:ExitConditionalScope()
+	function META:PopConditionalScope()
+		self:PopScope()
+
 		local exited_scope = self:GetLastScope()
 		local current_scope = self:GetScope()
 

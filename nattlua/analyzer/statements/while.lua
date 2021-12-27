@@ -5,16 +5,14 @@ return
 
 			if obj:IsTruthy() then
 				for i = 1, 32 do
-					analyzer:CreateAndPushScope()
-						analyzer:FireEvent("while", obj)
-						analyzer:EnterConditionalScope(statement, obj)
+					analyzer:PushConditionalScope(statement, obj)
+					analyzer:FireEvent("while", obj)
 						analyzer:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
 
 						analyzer:AnalyzeStatements(statement.statements)
 
 						analyzer:PopUncertainLoop()
-					analyzer:PopScope()
-					analyzer:ExitConditionalScope()
+					analyzer:PopConditionalScope()
 
 					if analyzer.break_out_scope then
 						analyzer.break_out_scope = nil

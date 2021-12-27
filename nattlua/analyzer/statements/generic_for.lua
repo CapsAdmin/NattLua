@@ -36,8 +36,7 @@ return
 						returned_key = Union({Nil(), returned_key})
 					end
 
-					analyzer:CreateAndPushScope()
-						analyzer:EnterConditionalScope(statement, returned_key)
+						analyzer:PushConditionalScope(statement, returned_key)
 						analyzer:FireEvent("generic_for", statement.identifiers, values)
 					end
 
@@ -81,8 +80,7 @@ return
 				end
 
 				if returned_key then
-					analyzer:PopScope()
-					analyzer:ExitConditionalScope()
+					analyzer:PopConditionalScope()
 				end
 			end,
 		}
