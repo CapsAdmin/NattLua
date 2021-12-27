@@ -127,15 +127,15 @@ return function(META)
 		local current_scope = self:GetScope()
 
 		if
-			current_scope:DidCertainReturn() or
+			exited_scope:DidCertainReturn() or
 			self.lua_error_thrown or
 			self.lua_assert_error_thrown
 		then
-			current_scope:MakeUncertain(exited_scope:IsUncertain())
+			exited_scope:MakeUncertain(current_scope:IsUncertain())
 
-			if exited_scope:IsUncertain() then
+			if current_scope:IsUncertain() then
 				local copy = self:CloneCurrentScope()
-				copy:SetTestCondition(exited_scope:GetTestCondition())
+				copy:SetTestCondition(current_scope:GetTestCondition())
 			end
 
 			self.lua_assert_error_thrown = nil
