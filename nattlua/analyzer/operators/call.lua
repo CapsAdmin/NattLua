@@ -828,6 +828,7 @@ return
 							obj = obj,
 							function_node = obj.function_body_node,
 							call_node = self:GetActiveNode(),
+							scope = self:GetScope(),
 						}
 					)
 				end
@@ -838,6 +839,22 @@ return
 
 				self:PopActiveNode()
 				return ok, err
+			end
+
+			function META:IsCertainCall()
+				for i = #self.call_stack, 1, -1 do
+					if not self.call_stack[i].scope:IsCertain() then
+						return false
+					end
+				end
+
+				return true
+			end
+
+			function META:UncertainReturn()
+				for i = #self.call_stack, 1, -1 do
+					self.call_stack[i].scope:UncertainReturn(self)
+				end
 			end
 		end,
 	}

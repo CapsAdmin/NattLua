@@ -1511,3 +1511,16 @@ run[[
         end
     end
 ]]
+
+run[[
+    local function throw()
+        error("lol")
+    end
+    
+    local x = tonumber(_ as string)
+    types.assert(x, _ as nil | number)
+    if not x then
+        throw()
+    end
+    types.assert(x, _ as number)
+]]

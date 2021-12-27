@@ -37,11 +37,11 @@ local function escape_char(c--[[#: string]])
 	return escape_char_map[c] or string.format("\\u%04x", c:byte())
 end
 
-local function encode_nil(val)
+local function encode_nil()--[[#: string]]
 	return "null"
 end
 
-local function encode_table(val--[[#: {[any] = any}]], stack--[[#: {[any] = true | nil}]])
+local function encode_table(val--[[#: Map<|any, any|>]], stack--[[#: Map<|any, true | nil|>]])--[[#: string]]
 	local res = {}
 	stack = stack or {}
 
@@ -83,12 +83,12 @@ local function encode_table(val--[[#: {[any] = any}]], stack--[[#: {[any] = true
 end
 
 
-local function encode_string(val--[[#: string]])
+local function encode_string(val--[[#: string]])--[[#: string]]
 	return '"' .. val:gsub('[%z\1-\31\\"]', escape_char) .. '"'
 end
 
 
-local function encode_number(val--[[#: number]])
+local function encode_number(val--[[#: number]])--[[#: string]]
 	-- Check for NaN, -inf and inf
 	if val ~= val or val <= -math.huge or val >= math.huge then
 		error("unexpected number value '" .. tostring(val) .. "'")
@@ -98,7 +98,7 @@ end
 
 json.null = {}
 
-local function encode_null(val)
+local function encode_null()
 	return "null"
 end
 
@@ -112,7 +112,7 @@ local type_func_map = {
 
 encode = function(val--[[#: any]], stack--[[#: {[any] = true | nil}]])
 	if val == json.null then
-		return encode_null(val, stack)
+		return encode_null()
 	end
 
 	local t = type(val)
@@ -125,7 +125,7 @@ encode = function(val--[[#: any]], stack--[[#: {[any] = true | nil}]])
 	error("unexpected type '" .. t .. "'")
 end
 
-function json.encode(val)
+function json.encode(val--[[#: any]])
 	return ( encode(val) )
 end
 
@@ -155,7 +155,7 @@ local literal_map = {
 }
 
 
-local function next_char(str--[[#: string]], idx--[[#: number]], set--[[#: {[string] = true}]], negate--[[#: boolean]])
+local function next_char(str--[[#: string]], idx--[[#: number]], set--[[#: Map<|string, true|>]], negate--[[#: boolean]])
 	for i = idx, #str do
 		if set[str:sub(i, i)] ~= negate then
 			return i
@@ -198,6 +198,7 @@ end
 
 local function parse_unicode_escape(s--[[#: string]])
 	local n1 = tonumber( s:sub(3, 6),  16 )
+	if not n1 then error("failed to parse unicode escape") end
 	local n2 = tonumber( s:sub(9, 12), 16 )
 	-- Surrogate pair?
 	if n2 then

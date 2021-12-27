@@ -35,8 +35,11 @@ do
 
 		for _, v in pairs(t) do
 			if type(v) == "function" then
-				local src = debug.getinfo(v).source
-				sources[src] = (sources[src] or 0) + 1
+				local info = debug.getinfo(v)
+				if info then
+					local src = info.source
+					sources[src] = (sources[src] or 0) + 1
+				end
 			end
 		end
 
@@ -63,7 +66,8 @@ do
 
 	function tostringx(val--[[#: any]])
 		local t = type(val)
-		if pretty_prints[t] then return pretty_prints[t](val) end
+		local f = pretty_prints[t]
+		if f then return f(val) end
 		return tostring(val)
 	end
 end

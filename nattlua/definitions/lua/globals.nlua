@@ -292,8 +292,8 @@ analyzer function assert(obj: any, msg: string | nil)
 end
 
 analyzer function error(msg: string, level: number | nil)
-	if not analyzer:GetScope():IsCertain() then
-		analyzer:GetScope():UncertainReturn(analyzer)
+	if not analyzer:IsCertainCall() then
+		analyzer:UncertainReturn()
 		return
 	end
 
@@ -360,7 +360,12 @@ analyzer function type(obj: any)
 		return copy
 	end
 
+	if obj.Type == "any" then
+		return types.String()
+	end
+
 	if obj.GetLuaType then return obj:GetLuaType() end
+
 	return types.String()
 end
 
