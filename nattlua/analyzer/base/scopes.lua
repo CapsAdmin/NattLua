@@ -42,10 +42,11 @@ return function(META)
 
 			function META:PopScope()
 				self:FireEvent("leave_scope")
-				local old = table.remove(self.scope_stack)
+				local new = table.remove(self.scope_stack)
+				local old = self.scope
 
-				if old then
-					self.scope = old
+				if new then
+					self.scope = new
 				end
 				
 				return old

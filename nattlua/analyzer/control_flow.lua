@@ -132,16 +132,6 @@ return function(META)
 	end
 
 	function META:PopConditionalScope()
-		local exited_scope = self:PopScope()
-		local current_scope = self:GetScope()
-
-		if exited_scope:DidCertainReturn() then
-			exited_scope:MakeUncertain(current_scope:IsUncertain())
-
-			if current_scope:IsUncertain() then
-				local copy = self:CloneCurrentScope()
-				copy:SetTestCondition(current_scope:GetTestCondition())
-			end
-		end
+		self:PopScope()
 	end
 end
