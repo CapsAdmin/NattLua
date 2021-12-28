@@ -306,18 +306,11 @@ end
 
 analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 	local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
-	local err = analyzer.lua_error_thrown
+	local err = analyzer:GetThrownErrorMessage()
 
 	if err then
-		analyzer.lua_error_thrown = nil
+		analyzer:ClearError()
 		return types.False(), err
-	end
-
-	local err = analyzer.lua_assert_error_thrown
-
-	if err then
-		analyzer.lua_assert_error_thrown = nil
-		return types.False(), err.msg
 	end
 
 	return types.True(), res:Unpack()

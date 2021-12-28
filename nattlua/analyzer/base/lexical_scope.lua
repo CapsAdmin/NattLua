@@ -270,6 +270,7 @@ do
 		self.certain_return = nil
 	end
 
+
 	function META:CertainReturn()
 		local scope = self
 

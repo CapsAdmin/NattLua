@@ -116,8 +116,6 @@ return function(META)
 			end
 
 			self:Assert(node, self:Call(obj, arguments, node))
-			self.lua_assert_error_thrown = nil
-			self.lua_error_thrown = nil
 		end
 
 		function META:CallMeLater(obj, arguments, node)

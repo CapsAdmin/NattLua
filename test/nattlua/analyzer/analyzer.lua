@@ -626,7 +626,7 @@ R[[
 
 R[[
     -- this has to do with the analyzer 
-    -- not clearing self.lua_error_thrown when analyzing unreachable code
+    -- not calling analyzer:ClearError() when analyzing unreachable code
 
     local function build(name: string)
         return function()

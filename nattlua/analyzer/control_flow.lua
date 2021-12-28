@@ -78,6 +78,15 @@ return function(META)
 		end
 	end
 
+	function META:GetThrownErrorMessage()
+		return self.lua_error_thrown or self.lua_assert_error_thrown and self.lua_assert_error_thrown.msg
+	end
+
+	function META:ClearError()
+		self.lua_error_thrown = nil
+		self.lua_assert_error_thrown = nil
+	end
+
 	function META:Return(node, types)
 		local scope = self:GetScope()
 		local function_scope = scope:GetNearestFunctionScope()
@@ -126,20 +135,13 @@ return function(META)
 		local exited_scope = self:PopScope()
 		local current_scope = self:GetScope()
 
-		if
-			exited_scope:DidCertainReturn() or
-			self.lua_error_thrown or
-			self.lua_assert_error_thrown
-		then
+		if exited_scope:DidCertainReturn() then
 			exited_scope:MakeUncertain(current_scope:IsUncertain())
 
 			if current_scope:IsUncertain() then
 				local copy = self:CloneCurrentScope()
 				copy:SetTestCondition(current_scope:GetTestCondition())
 			end
-
-			self.lua_assert_error_thrown = nil
-			self.lua_error_thrown = nil
 		end
 	end
 end
