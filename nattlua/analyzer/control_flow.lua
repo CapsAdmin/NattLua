@@ -34,6 +34,11 @@ return function(META)
 		local scope = self:GetScope()
 		scope:MakeFunctionScope(statement)
 		self:AnalyzeStatements(statement.statements)
+
+		if scope.uncertain_function_return or #scope:GetReturnTypes() == 0 then
+			self:Return(statement, {Nil():SetNode(statement)})
+		end
+
 		local union = Union({})
 
 		for _, ret in ipairs(scope:GetReturnTypes()) do
@@ -46,9 +51,6 @@ return function(META)
 			end
 		end
 
-		if scope.uncertain_function_return or #scope:GetReturnTypes() == 0 then
-			union:AddType(Nil():SetNode(statement))
-		end
 
 		scope:ClearCertainReturnTypes()
 
@@ -106,7 +108,7 @@ return function(META)
 		elseif function_scope.uncertain_function_return then
 			function_scope.uncertain_function_return = false
 		end
-
+--print(self:GetThrownErrorMessage())
 		scope:CollectReturnTypes(node, types)
 
 		if scope:IsUncertain() then
