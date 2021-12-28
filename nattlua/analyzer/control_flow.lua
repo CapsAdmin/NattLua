@@ -35,7 +35,7 @@ return function(META)
 		scope:MakeFunctionScope(statement)
 		self:AnalyzeStatements(statement.statements)
 
-		if scope.uncertain_function_return or #scope:GetReturnTypes() == 0 then
+		if (scope.uncertain_function_return and not scope:CanThrow()) or #scope:GetReturnTypes() == 0 then
 			self:Return(statement, {Nil():SetNode(statement)})
 		end
 
@@ -51,7 +51,6 @@ return function(META)
 			end
 		end
 
-
 		scope:ClearCertainReturnTypes()
 
 		if #union:GetData() == 1 then return union:GetData()[1] end
@@ -60,8 +59,10 @@ return function(META)
 	end
 	
 	function META:ThrowSilentError()
+		local function_scope = self:GetScope():GetNearestFunctionScope()
+		function_scope.lua_silent_error = function_scope.lua_silent_error or {}
+		table.insert(function_scope.lua_silent_error, self:GetScope())
 		self:UncertainReturn()
-		self.lua_silent_error = self:GetScope()
 	end
 
 	function META:ThrowError(msg, obj, no_report)
@@ -114,8 +115,16 @@ return function(META)
 			function_scope.uncertain_function_return = false
 		end
 
-		local thrown = self.lua_silent_error == self:GetScope()
-		self.lua_silent_error = nil
+		local thrown = false
+		
+		if function_scope.lua_silent_error then 
+			local errored_scope = table.remove(function_scope.lua_silent_error, 1)
+			if errored_scope == self:GetScope() then
+				thrown = true
+			end
+		end 
+
+		function_scope:SetCanThrow(thrown)
 
 		if not thrown then
 			scope:CollectReturnTypes(node, types)

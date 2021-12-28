@@ -170,7 +170,12 @@ return
 					self:PopAnalyzerEnvironment()
 				end
 				self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
-				self:PopScope()
+				local function_scope = self:PopScope()
+
+				if function_scope:CanThrow() then
+					self:ThrowSilentError()
+				end
+
 				if analyzed_return.Type ~= "tuple" then
 					return Tuple({analyzed_return}):SetNode(analyzed_return:GetNode()), scope
 				end
@@ -842,9 +847,22 @@ return
 			end
 
 			function META:IsCertainCall()
+				local scope = self:GetScope()
+				local function_scope = scope:GetNearestFunctionScope()
+				if function_scope.lua_silent_error then
+					for _, scope in ipairs(function_scope.lua_silent_error) do
+						if not scope:IsCertain() then
+							return false
+						end
+					end
+				end
+
+				if not scope:IsCertain() or scope.uncertain_function_return == true then
+					return false
+				end
+
 				for i = #self.call_stack, 1, -1 do
-					local scope =self.call_stack[i].scope
-					
+					local scope = self.call_stack[i].scope
 					if not scope:IsCertain() or scope.uncertain_function_return == true then
 						return false
 					end

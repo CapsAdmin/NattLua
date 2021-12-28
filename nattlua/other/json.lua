@@ -262,7 +262,6 @@ local function parse_string(str--[[#: string]], i--[[#: number]])--[[#: string, 
 		end
 	end
 	decode_error(str, i, "expected closing quote for string")
-	return "",  -1 -- TODO
 end
 
 

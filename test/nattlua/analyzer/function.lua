@@ -736,6 +736,21 @@ run[[
 ]]
 
 run[[
+    local function throw()
+        error("nope")
+    end
+    
+    local function foo(): number
+        local x = math.random() > 0.5
+        if x then
+            return 1
+        end
+        
+        throw()
+    end
+]]
+
+run[[
     local function foo(): number
         local x = math.random() > 0.5
         if x then
@@ -776,4 +791,35 @@ run[[
     end
     
     types.assert(foo(), _ as number)
+]]
+
+run[[
+    local function codepoint_to_utf8(n: number): literal string
+        §assert(analyzer:IsCertainCall())
+    
+        if math.random() > 0.5 then
+            §assert(not analyzer:IsCertainCall())
+            return "foo"
+        end
+        §assert(not analyzer:IsCertainCall())
+        error("no!")
+    end
+    
+    
+    local function parse_unicode_escape(s: string): literal string
+        §assert(analyzer:IsCertainCall())
+        local n1 = 1 as nil | number
+        §assert(analyzer:IsCertainCall())
+        if not n1 then 
+            error("failed to parse unicode escape")
+        end
+        §assert(not analyzer:IsCertainCall())
+        local x = codepoint_to_utf8(n1)
+        §assert(not analyzer:IsCertainCall())
+        types.assert(x, "foo")
+        return x
+    end
+    
+    local x = parse_unicode_escape("lol")
+    types.assert(x, "foo")
 ]]

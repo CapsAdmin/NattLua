@@ -375,6 +375,14 @@ do
 	function META:MakeUncertain(b)
 		self.uncertain = b
 	end
+
+	function META:SetCanThrow(b)
+		self.can_throw = b
+	end
+
+	function META:CanThrow()
+		return self.can_throw == true
+	end
 end
 
 function META:__tostring()
