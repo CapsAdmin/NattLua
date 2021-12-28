@@ -749,3 +749,14 @@ run[[
 
     types.assert(x, _ as number)
 ]]
+
+run[[
+    local function foo(): number
+        local x = math.random() > 0.5
+        if x then
+            error("nope")
+        end
+        
+        return 1
+    end
+]]

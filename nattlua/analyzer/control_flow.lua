@@ -61,7 +61,7 @@ return function(META)
 	
 	function META:ThrowSilentError()
 		self:UncertainReturn()
-		self.lua_silent_error = true
+		self.lua_silent_error = self:GetScope()
 	end
 
 	function META:ThrowError(msg, obj, no_report)
@@ -114,7 +114,7 @@ return function(META)
 			function_scope.uncertain_function_return = false
 		end
 
-		local thrown = self.lua_silent_error
+		local thrown = self.lua_silent_error == self:GetScope()
 		self.lua_silent_error = nil
 
 		if not thrown then
