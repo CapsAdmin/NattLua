@@ -115,7 +115,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 				last_scope = mut.scope
 			end
 		end
-
+		
 		for i = #mutations, 1, -1 do
 			local mut = mutations[i]
 
@@ -386,8 +386,6 @@ return function(META)
 				val = val:Copy():Widen()
 			end
 		end
-
-		if scope.Type then error(debug.traceback("NO")) end
 
 		table.insert(obj.mutations[key], {scope = scope, value = val})
 	end
