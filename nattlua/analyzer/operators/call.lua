@@ -843,7 +843,9 @@ return
 
 			function META:IsCertainCall()
 				for i = #self.call_stack, 1, -1 do
-					if not self.call_stack[i].scope:IsCertain() then
+					local scope =self.call_stack[i].scope
+					
+					if not scope:IsCertain() or scope.uncertain_function_return == true then
 						return false
 					end
 				end
