@@ -293,7 +293,7 @@ end
 
 analyzer function error(msg: string, level: number | nil)
 	if not analyzer:IsCertainCall() then
-		analyzer:UncertainReturn()
+		analyzer:ThrowSilentError()
 		return
 	end
 

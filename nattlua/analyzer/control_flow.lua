@@ -58,6 +58,11 @@ return function(META)
 		
 		return union
 	end
+	
+	function META:ThrowSilentError()
+		self:UncertainReturn()
+		self.lua_silent_error = true
+	end
 
 	function META:ThrowError(msg, obj, no_report)
 		if obj then
@@ -108,8 +113,13 @@ return function(META)
 		elseif function_scope.uncertain_function_return then
 			function_scope.uncertain_function_return = false
 		end
---print(self:GetThrownErrorMessage())
-		scope:CollectReturnTypes(node, types)
+
+		local thrown = self.lua_silent_error
+		self.lua_silent_error = nil
+
+		if not thrown then
+			scope:CollectReturnTypes(node, types)
+		end
 
 		if scope:IsUncertain() then
 			function_scope:UncertainReturn(self)
