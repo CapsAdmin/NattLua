@@ -872,9 +872,7 @@ return
 			end
 
 			function META:UncertainReturn()
-				for i = #self.call_stack, 1, -1 do
-					self.call_stack[i].scope:UncertainReturn(self)
-				end
+				self.call_stack[#self.call_stack].scope:UncertainReturn(self)
 			end
 		end,
 	}

@@ -823,3 +823,26 @@ run[[
     local x = parse_unicode_escape("lol")
     types.assert(x, "foo")
 ]]
+run[[
+    local map = {
+        --foo = function(x: nil | number) if math.random() > 0.5 then throw() end return 1 end,
+        bar = function() 
+            if math.random() > 0.5 then
+                error("!")
+            end
+            return 2 
+        end,
+    }
+    
+    local function main()
+        local x = map[_ as string]
+        if x then
+            local val = x()
+            types.assert(x, _ as function=()>())
+            return val
+        end
+        error("nope")
+    end
+    
+    types.assert(main(), 2)
+]]
