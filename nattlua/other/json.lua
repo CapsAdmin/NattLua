@@ -37,11 +37,11 @@ local function escape_char(c--[[#: string]])
 	return escape_char_map[c] or string.format("\\u%04x", c:byte())
 end
 
-local function encode_nil()--[[#: string]]
+local function encode_nil(val--[[#: nil]], stack--[[#: Map<|any, true|>]])--[[#: string]]
 	return "null"
 end
 
-local function encode_table(val--[[#: Map<|any, any|>]], stack--[[#: Map<|any, true | nil|>]])--[[#: string]]
+local function encode_table(val--[[#: Table]], stack--[[#: Map<|any, true|>]])--[[#: string]]
 	local res = {}
 	stack = stack or {}
 
@@ -83,12 +83,12 @@ local function encode_table(val--[[#: Map<|any, any|>]], stack--[[#: Map<|any, t
 end
 
 
-local function encode_string(val--[[#: string]])--[[#: string]]
+local function encode_string(val--[[#: string]], stack--[[#: Map<|any, true|>]])--[[#: string]]
 	return '"' .. val:gsub('[%z\1-\31\\"]', escape_char) .. '"'
 end
 
 
-local function encode_number(val--[[#: number]])--[[#: string]]
+local function encode_number(val--[[#: number]], stack--[[#: Map<|any, true|>]])--[[#: string]]
 	-- Check for NaN, -inf and inf
 	if val ~= val or val <= -math.huge or val >= math.huge then
 		error("unexpected number value '" .. tostring(val) .. "'")
@@ -98,8 +98,12 @@ end
 
 json.null = {}
 
-local function encode_null()
+local function encode_null(val--[[#: nil]], stack--[[#: Map<|any, true|>]])--[[#: string]]
 	return "null"
+end
+
+local function encode_boolean(val--[[#: boolean]], stack--[[#: Map<|any, true|>]])--[[#: string]]
+	return val and "true" or "false"
 end
 
 local type_func_map = {
@@ -107,12 +111,12 @@ local type_func_map = {
 	[ "table"   ] = encode_table,
 	[ "string"  ] = encode_string,
 	[ "number"  ] = encode_number,
-	[ "boolean" ] = tostring,
+	[ "boolean" ] = encode_boolean,
 }
 
-encode = function(val--[[#: any]], stack--[[#: {[any] = true | nil}]])
+encode = function(val--[[#: any]], stack--[[#: Map<|any, true|>]])--[[#: string]]
 	if val == json.null then
-		return encode_null()
+		return encode_null(val, stack)
 	end
 
 	local t = type(val)
@@ -126,7 +130,7 @@ encode = function(val--[[#: any]], stack--[[#: {[any] = true | nil}]])
 end
 
 function json.encode(val--[[#: any]])
-	return ( encode(val) )
+	return ( encode(val, {}) )
 end
 
 -------------------------------------------------------------------------------
@@ -155,7 +159,7 @@ local literal_map = {
 }
 
 
-local function next_char(str--[[#: string]], idx--[[#: number]], set--[[#: Map<|string, true|>]], negate--[[#: boolean]])
+local function next_char(str--[[#: string]], idx--[[#: number]], set--[[#: Map<|string, true|>]], negate--[[#: boolean]])--[[#: number]]
 	for i = idx, #str do
 		if set[str:sub(i, i)] ~= negate then
 			return i
@@ -179,7 +183,7 @@ local function decode_error(str--[[#: string]], idx--[[#: number]], msg--[[#: st
 end
 
 
-local function codepoint_to_utf8(n--[[#: number]])
+local function codepoint_to_utf8(n--[[#: number]])--[[#: string]]
 	-- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
 	local f = math.floor
 	if n <= 0x7f then
@@ -189,14 +193,13 @@ local function codepoint_to_utf8(n--[[#: number]])
 	elseif n <= 0xffff then
 		return string.char(f(n / 4096) + 224, f(n % 4096 / 64) + 128, n % 64 + 128)
 	elseif n <= 0x10ffff then
-		return string.char(f(n / 262144) + 240, f(n % 262144 / 4096) + 128,
-											 f(n % 4096 / 64) + 128, n % 64 + 128)
+		return string.char(f(n / 262144) + 240, f(n % 262144 / 4096) + 128, f(n % 4096 / 64) + 128, n % 64 + 128)
 	end
 	error( string.format("invalid unicode codepoint '%x'", n) )
 end
 
 
-local function parse_unicode_escape(s--[[#: string]])
+local function parse_unicode_escape(s--[[#: string]])--[[#: string]]
 	local n1 = tonumber( s:sub(3, 6),  16 )
 	if not n1 then error("failed to parse unicode escape") end
 	local n2 = tonumber( s:sub(9, 12), 16 )
@@ -209,7 +212,7 @@ local function parse_unicode_escape(s--[[#: string]])
 end
 
 
-local function parse_string(str--[[#: string]], i--[[#: number]])
+local function parse_string(str--[[#: string]], i--[[#: number]])--[[#: string, number]]
 	local has_unicode_escape = false
 	local has_surrogate_escape = false
 	local has_escape = false
@@ -259,10 +262,11 @@ local function parse_string(str--[[#: string]], i--[[#: number]])
 		end
 	end
 	decode_error(str, i, "expected closing quote for string")
+	return "",  -1 -- TODO
 end
 
 
-local function parse_number(str--[[#: string]], i--[[#: number]])
+local function parse_number(str--[[#: string]], i--[[#: number]])--[[#: number, number]]
 	local x = next_char(str, i, delim_chars)
 	local s = str:sub(i, x - 1)
 	local n = tonumber(s)
@@ -273,7 +277,7 @@ local function parse_number(str--[[#: string]], i--[[#: number]])
 end
 
 
-local function parse_literal(str--[[#: string]], i--[[#: number]])
+local function parse_literal(str--[[#: string]], i--[[#: number]])--[[#: boolean | nil, number]]
 	local x = next_char(str, i, delim_chars)
 	local word = str:sub(i, x - 1)
 	if not literals[word] then
@@ -283,7 +287,7 @@ local function parse_literal(str--[[#: string]], i--[[#: number]])
 end
 
 
-local function parse_array(str--[[#: string]], i--[[#: number]])
+local function parse_array(str--[[#: string]], i--[[#: number]])--[[#: List<|any|>[1], number]] -- TODO: fix List<|any|>[1]
 	local res = {}
 	local n = 1
 	i = i + 1
@@ -310,7 +314,7 @@ local function parse_array(str--[[#: string]], i--[[#: number]])
 end
 
 
-local function parse_object(str--[[#: string]], i--[[#: number]])
+local function parse_object(str--[[#: string]], i--[[#: number]])--[[#: Map<|string, any|>[1], number]]
 	local res = {}
 	i = i + 1
 	while 1 do
@@ -367,14 +371,14 @@ local char_func_map = {
 	[ "{" ] = parse_object,
 }
 
-
-parse = function(str--[[#: string]], idx--[[#: number]])
+parse = function(str--[[#: string]], idx--[[#: number]])--[[#: any, number]]
 	local chr = str:sub(idx, idx)
 	local f = char_func_map[chr]
 	if f then
 		return f(str, idx)
 	end
 	decode_error(str, idx, "unexpected character '" .. chr .. "'")
+	return nil, -1
 end
 
 

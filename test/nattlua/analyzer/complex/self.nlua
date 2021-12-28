@@ -112,3 +112,7 @@ end
 do
     require("nattlua.other.table_print")
 end
+
+do
+    require("nattlua.other.json")
+end

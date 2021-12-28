@@ -760,3 +760,20 @@ run[[
         return 1
     end
 ]]
+
+run[[
+    local function throw()
+        error("nope")
+    end
+    
+    local function foo(): number
+        local x = math.random() > 0.5
+        if x then
+            throw()
+        end
+        
+        return 1
+    end
+    
+    types.assert(foo(), _ as number)
+]]
