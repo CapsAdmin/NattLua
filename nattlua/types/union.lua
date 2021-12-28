@@ -87,7 +87,11 @@ function META:AddType(e)
 	end
 
 	for _, v in ipairs(self.Data) do
-		if v:Equal(e) then return self end
+		if v:Equal(e) then 
+			if e.Type ~= "function" or e:GetContract() or (e:GetNode() and (e:GetNode() == v:GetNode())) then
+				return self 
+			end
+		end
 	end
 
 	if e.Type == "string" or e.Type == "number" then

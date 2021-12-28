@@ -675,3 +675,23 @@ run[[
         ["\n"] = true,
     })
 ]]
+
+run[[
+    local throw = function() error("!") end
+
+    local map = {
+        foo = function() if math.random() > 0.5 then throw() end return 1 end,
+        bar = function() if math.random() > 0.5 then throw() end return 2 end,
+    }
+
+    local function main()
+        local x = map[_ as string]
+        if x then
+            local val = x()
+            return val
+        end
+        error("nope")
+    end
+
+    types.assert(main(), _ as 1 | 2)
+]]
