@@ -269,6 +269,11 @@ analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 end
 
 analyzer function assert(obj: any, msg: string | nil)
+	if not analyzer:IsCertainCall() then
+		analyzer:ThrowSilentError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy())
+		return
+	end
+
 	if obj.Type == "union" then
 		for _, tup in ipairs(obj:GetData()) do
 			if tup.Type == "tuple" and tup:Get(1):IsTruthy() then return tup end

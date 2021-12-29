@@ -356,21 +356,6 @@ run([[
     types.assert(a, nil)
 ]])
 
-
-do
-    _G.TEST_DISABLE_ERROR_PRINT = true
-    run[[
-        local a = true
-
-        if maybe then
-            error("!")
-        end
-
-        types.assert(a, true)
-    ]]
-    _G.TEST_DISABLE_ERROR_PRINT = false
-end
-
 run[[
     local a = true
 
@@ -525,35 +510,6 @@ run[[
     end
 ]]
 
-do
-    _G.TEST_DISABLE_ERROR_PRINT = true
-    run[[
-        local a: 1 | nil
-
-        if not a then
-            error("!")
-        end
-
-        types.assert(a, 1)
-    ]]
-end
-
-run[[
-    local a: 1 | nil
-
-    if not a then
-        assert(false)
-    end
-
-    types.assert(a, 1)
-]]
-
-run[[
-    local a = assert(_ as 1 | nil)
-    --types.assert(a, 1)
-]]
-
-
 run[[
     local MAYBE: function=()>(boolean)
     local x = 0
@@ -611,7 +567,7 @@ run[[
 ]]
 
 
-run[[
+pending[[
     local x: true | false | 2
 
     if x then    
@@ -696,75 +652,76 @@ run[[
     types.assert(foo, true)
 ]]
 
-run[=[
-    
+
+run[[
+    local x = 1
+    types.assert<|x, 1|>
+]]
+
+run[[
+    local x = 1
     do
-        local x = 1
         types.assert<|x, 1|>
     end
-    
-    do
-        local x = 1
-        do
-            types.assert<|x, 1|>
-        end
+]]
+
+run[[
+    local x = 1
+    x = 2
+    types.assert<|x, 2|>
+]]
+
+run[[
+    local x = 1
+    if true then
+        x = 2
     end
-    
-    do
-        local x = 1
+    types.assert<|x, 2|>
+]]
+
+run[[
+    local x = 1
+    if MAYBE then
+        x = 2
+    end
+    types.assert<|x, 1 | 2|>
+]]
+
+run[[
+    local x = 1
+    if MAYBE then
+        types.assert<|x, 1|>
         x = 2
         types.assert<|x, 2|>
     end
-    
-    do
-        local x = 1
-        if true then
-            x = 2
-        end
-        types.assert<|x, 2|>
-    end
-    
-    do
-        local x = 1
+    types.assert<|x, 1|2|>
+]]
+
+pending[[
+    local x = 1
+
+    if MAYBE then
+        types.assert<|x, 1|>
+        x = 1.5
+        types.assert<|x, 1.5|>
+        x = 1.75
+        types.assert<|x, 1.75|>
         if MAYBE then
             x = 2
-        end
-        types.assert<|x, 1 | 2|>
-    end
-    
-    do
-        local x = 1
-        if MAYBE then
-            types.assert<|x, 1|>
-            x = 2
-            types.assert<|x, 2|>
-        end
-        types.assert<|x, 1|2|>
-    end
-    
-    do
-        local x = 1
-    
-        if MAYBE then
-            types.assert<|x, 1|>
-            x = 1.5
-            types.assert<|x, 1.5|>
-            x = 1.75
-            types.assert<|x, 1.75|>
             if MAYBE then
-                x = 2
-                if MAYBE then
-                    x = 2.5
-                end
-                types.assert<|x, 2 | 2.5|>
+                x = 2.5
             end
-            x = 3
-            types.assert<|x, 3|>
+            types.assert<|x, 2 | 2.5|>
         end
-        
-        types.assert<|x, 1 | 3|>
+        x = 3
+        types.assert<|x, 3|>
     end
     
+    types.assert<|x, 1 | 3|>
+]]
+
+pending[=[
+
     do return end
     do
         local x = 1
@@ -929,23 +886,6 @@ run[[
     
     types.assert<|y, 1 | true|>
 ]]
-
-do
-    _G.TEST_DISABLE_ERROR_PRINT = true
-    run[[
-        local function foo(input)
-            local x = tonumber(input)
-            if not x then
-                error("!")
-            end
-            return x
-        end
-        
-        local y = foo(_ as string)
-        types.assert<|y, number|>
-    ]]
-    _G.TEST_DISABLE_ERROR_PRINT = false
-end
 
 run[[
     local a = {}
@@ -1460,14 +1400,6 @@ run[[
     end
 ]]
 
-run[[
-    local x = ("lol"):byte(1,1 as 1 | 0)
-    if not x then 
-        error("lol")
-    end
-
-    types.assert(x, 108)
-]]
 
 run[[
     local x = _ as 1 | 2 | 3
@@ -1510,17 +1442,4 @@ run[[
             types.assert(lol.x, _ as 1 | 2)
         end
     end
-]]
-
-run[[
-    local function throw()
-        error("lol")
-    end
-    
-    local x = tonumber(_ as string)
-    types.assert(x, _ as nil | number)
-    if not x then
-        throw()
-    end
-    types.assert(x, _ as number)
 ]]
