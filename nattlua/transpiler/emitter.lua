@@ -134,9 +134,14 @@ function META:EmitExpression(node, from_assignment)
 		end
 	end
 
+	if self.config.annotate and node.tokens[":"] then
+		self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
+	end
+
 	if self.config.annotate and node.tokens["as"] then
 		self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 	end
+	
 end
 
 function META:EmitVarargTuple(node)
@@ -1094,7 +1099,7 @@ end
 function META:EmitFunctionReturnAnnotation(node, analyzer_function)
 	if not self.config.annotate then return end
 
-	if self:HasTypeNotation(node) then
+	if self:HasTypeNotation(node) and node.tokens[":"] then
 		self:EmitInvalidLuaCode("EmitFunctionReturnAnnotationExpression", node, analyzer_function)
 	end
 end

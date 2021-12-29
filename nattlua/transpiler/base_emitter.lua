@@ -165,7 +165,9 @@ return function(META)
 				end
 			else
 				for _, token in ipairs(node.whitespace) do
-					self:EmitWhitespace(token)
+					if token.type ~= "comment_escape" then
+						self:EmitWhitespace(token)
+					end
 				end
 			end
 		end
