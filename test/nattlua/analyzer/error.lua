@@ -282,3 +282,19 @@ run[[
     
     parse()    
 ]]
+
+run[[
+    local function foo()
+        local x = _ as 1 | 2 | 3
+    
+        if x == 1 then
+            error("nope")
+        end
+    
+        if x == 2 then
+            error("nope")
+        end
+    
+        types.assert(x, 3)
+    end
+]]
