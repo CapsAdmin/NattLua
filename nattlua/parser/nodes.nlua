@@ -675,7 +675,7 @@ local type ExpressionKind = (function()
   local type union = |
   for _, node in pairs(Nodes) do
     if node.Type == "expression" then
-      union = union | node.Kind
+      type union = union | node.Kind
     end
   end
   return union
@@ -685,7 +685,7 @@ local type StatementKind = (function()
   local type union = |
   for _, node in pairs(Nodes) do
     if node.Type == "statement" then
-      union = union | node.Kind
+      type union = union | node.Kind
     end
   end
   return union

@@ -91,6 +91,12 @@ return
 					return obj:Get(key)
 				end
 
+				if self:IsRuntime() then
+					if obj.Type == "tuple" and obj:GetLength() == 1 then
+						obj = obj:Get(1)
+					end
+				end
+
 				return self:GetMutatedValue(obj, key, obj:Get(key)) or Nil()
 			end
 		end,
