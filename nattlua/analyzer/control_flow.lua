@@ -28,6 +28,12 @@ return function(META)
 		if self:GetScope().uncertain_function_return == nil then
 			self:GetScope().uncertain_function_return = false
 		end
+
+		if statements[1] then
+			self:GetScope().missing_return = statements[#statements].kind ~= "return"
+		else
+			self:GetScope().missing_return = true
+		end
 	end
 
 	function META:AnalyzeStatementsAndCollectReturnTypes(statement)
@@ -35,7 +41,7 @@ return function(META)
 		scope:MakeFunctionScope(statement)
 		self:AnalyzeStatements(statement.statements)
 
-		if (scope.uncertain_function_return and not scope:CanThrow()) or #scope:GetReturnTypes() == 0 then
+		if scope.missing_return and self:IsMaybeReachable() then
 			self:Return(statement, {Nil():SetNode(statement)})
 		end
 
@@ -59,10 +65,13 @@ return function(META)
 	end
 	
 	function META:ThrowSilentError()
-		local function_scope = self:GetScope():GetNearestFunctionScope()
-		function_scope.lua_silent_error = function_scope.lua_silent_error or {}
-		table.insert(function_scope.lua_silent_error, self:GetScope())
-		self:UncertainReturn()
+		for i = #self.call_stack, 1, -1 do
+			local frame = self.call_stack[i]
+			local function_scope = frame.scope:GetNearestFunctionScope()
+			function_scope.lua_silent_error = function_scope.lua_silent_error or {}
+			table.insert(function_scope.lua_silent_error, 1, self:GetScope())
+			frame.scope:UncertainReturn(self)
+		end
 	end
 
 	function META:ThrowError(msg, obj, no_report)
@@ -119,7 +128,7 @@ return function(META)
 		
 		if function_scope.lua_silent_error then 
 			local errored_scope = table.remove(function_scope.lua_silent_error, 1)
-			if errored_scope == self:GetScope() then
+			if errored_scope and self:GetScope():IsCertain(errored_scope) and errored_scope:IsCertain() then
 				thrown = true
 			end
 		end 
@@ -138,6 +147,17 @@ return function(META)
 			scope:CertainReturn(self)
 		end
 	end
+
+	function META:Print(...)
+		local helpers = require("nattlua.other.helpers")
+		local node = self.current_expression
+		local start, stop = helpers.LazyFindStartStop(node)
+		local str = {}
+		for i = 1, select("#", ...) do
+			str[i] = tostring(select(i, ...))
+		end
+		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
+	end	
 
 	function META:PushConditionalScope(statement, condition)
 		local scope = self:CreateAndPushScope()

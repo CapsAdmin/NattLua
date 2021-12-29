@@ -749,7 +749,7 @@ end
 function META:PrefixOperator(op--[[#: "#"]])
 	if op == "#" then
 		local keys = (self:GetContract() or self):GetData()
-		if #keys == 1 and keys[1].key.Type == "number" then return keys[1].key:Copy() end
+		if #keys == 1 and keys[1].key and keys[1].key.Type == "number" then return keys[1].key:Copy() end
 		return Number(self:GetLength()):SetLiteral(self:IsLiteral())
 	end
 end

@@ -269,9 +269,9 @@ analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 end
 
 analyzer function assert(obj: any, msg: string | nil)
-	if not analyzer:IsCertainCall() then
+	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy())
-		return
+		return obj
 	end
 
 	if obj.Type == "union" then
@@ -297,7 +297,7 @@ analyzer function assert(obj: any, msg: string | nil)
 end
 
 analyzer function error(msg: string, level: number | nil)
-	if not analyzer:IsCertainCall() then
+	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError()
 		return
 	end

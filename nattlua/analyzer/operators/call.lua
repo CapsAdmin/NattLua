@@ -172,9 +172,6 @@ return
 				self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 				local function_scope = self:PopScope()
 
-				if function_scope:CanThrow() then
-					self:ThrowSilentError()
-				end
 
 				if analyzed_return.Type ~= "tuple" then
 					return Tuple({analyzed_return}):SetNode(analyzed_return:GetNode()), scope
@@ -846,9 +843,14 @@ return
 				return ok, err
 			end
 
-			function META:IsCertainCall()
+			function META:IsDefinetlyReachable()
 				local scope = self:GetScope()
 				local function_scope = scope:GetNearestFunctionScope()
+
+				if not scope:IsCertain() or function_scope.uncertain_function_return == true then
+					return false
+				end
+
 				if function_scope.lua_silent_error then
 					for _, scope in ipairs(function_scope.lua_silent_error) do
 						if not scope:IsCertain() then
@@ -857,14 +859,38 @@ return
 					end
 				end
 
-				if not scope:IsCertain() or scope.uncertain_function_return == true then
-					return false
+				if self.call_stack then
+					for i = #self.call_stack, 1, -1 do
+						local scope = self.call_stack[i].scope
+						if not scope:IsCertain() or scope.uncertain_function_return == true then
+							return false
+						end
+					end
 				end
 
-				for i = #self.call_stack, 1, -1 do
-					local scope = self.call_stack[i].scope
-					if not scope:IsCertain() or scope.uncertain_function_return == true then
-						return false
+				return true
+			end
+
+			function META:IsMaybeReachable(b)
+				local scope = self:GetScope()
+				local function_scope = scope:GetNearestFunctionScope()
+
+				if function_scope.lua_silent_error then
+					for _, scope in ipairs(function_scope.lua_silent_error) do
+						if not scope:IsCertain() then
+							return false
+						end
+					end
+				end
+
+				if self.call_stack then
+					for i = #self.call_stack, 1, -1 do
+						local parent_scope = self.call_stack[i].scope
+						if not parent_scope:IsCertain() or parent_scope.uncertain_function_return == true then
+							if parent_scope:IsCertain(scope) then
+								return false
+							end
+						end
 					end
 				end
 

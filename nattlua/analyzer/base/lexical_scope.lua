@@ -283,6 +283,8 @@ do
 	end
 
 	function META:UncertainReturn(analyzer)
+
+		self:GetNearestFunctionScope().uncertain_function_return = true
 		-- upvalue responsible for test condition
 		local test_condition = self:GetTestCondition()
 
@@ -342,10 +344,13 @@ do
 		if not from then
 			return self.uncertain
 		end
-
 		while true do
 			if scope == from then break end
 			if scope:IsFunctionScope() then 
+				if scope.uncertain_function_return == true then
+					return true
+				end
+
 				if 
 					scope.node and 
 					scope.node.inferred_type and 

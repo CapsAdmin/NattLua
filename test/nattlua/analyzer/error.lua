@@ -2,6 +2,19 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 run[[
+    local function foo()
+        local x = _ as boolean
+        if not x then
+            error("!")
+        end
+        return x
+    end
+    
+    local y = foo()
+    types.assert(y, true)
+]]
+
+run[[
     local function throw()
         error("lol")
     end
@@ -188,7 +201,9 @@ run[[
         types.assert(test(), 1)
     end
 ]]
-run[[
+
+
+pending[[
     local map = {
         --foo = function(x: nil | number) if math.random() > 0.5 then throw() end return 1 end,
         bar = function() 
@@ -212,29 +227,29 @@ run[[
     types.assert(main(), 2)
 ]]
 
-run[[
+pending[[
     local function codepoint_to_utf8(n: number): literal string
-        §assert(analyzer:IsCertainCall())
+        §assert(analyzer:IsDefinetlyReachable())
     
         if math.random() > 0.5 then
-            §assert(not analyzer:IsCertainCall())
+            §assert(not analyzer:IsDefinetlyReachable())
             return "foo"
         end
-        §assert(not analyzer:IsCertainCall())
+        §assert(not analyzer:IsDefinetlyReachable())
         error("no!")
     end
     
     
     local function parse_unicode_escape(s: string): literal string
-        §assert(analyzer:IsCertainCall())
+        §assert(analyzer:IsDefinetlyReachable())
         local n1 = 1 as nil | number
-        §assert(analyzer:IsCertainCall())
+        §assert(analyzer:IsDefinetlyReachable())
         if not n1 then 
             error("failed to parse unicode escape")
         end
-        §assert(not analyzer:IsCertainCall())
+        §assert(not analyzer:IsDefinetlyReachable())
         local x = codepoint_to_utf8(n1)
-        §assert(not analyzer:IsCertainCall())
+        §assert(not analyzer:IsDefinetlyReachable())
         types.assert(x, "foo")
         return x
     end

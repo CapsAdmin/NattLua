@@ -233,7 +233,7 @@ luadata.SetModifier("fallback", function(var--[[#: any]])
 end)
 
 luadata.SetModifier("table", function(tbl, context)
-	local str--[[#: List<|string|> ]] = {}
+	local str--[[#: List<|string|>[1] ]] = {}
 	if context.tab_limit and context.tab >= context.tab_limit then return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}" end
 
 	if context.done then
