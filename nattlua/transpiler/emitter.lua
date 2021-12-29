@@ -805,7 +805,7 @@ function META:EmitLocalAssignment(node)
 	self:Whitespace("\t")
 	self:EmitToken(node.tokens["local"])
 
-	if node.environment == "typesystem" then
+	if node.tokens["type"] then
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["type"])
 	end
@@ -824,7 +824,7 @@ end
 function META:EmitAssignment(node)
 	self:Whitespace("\t")
 
-	if node.environment == "typesystem" then
+	if node.tokens["type"] then
 		self:EmitToken(node.tokens["type"])
 		self:Whitespace(" ")
 	end
