@@ -847,14 +847,18 @@ return
 				local scope = self:GetScope()
 				local function_scope = scope:GetNearestFunctionScope()
 
-				if not scope:IsCertain() or function_scope.uncertain_function_return == true then
-					return false
+				if not scope:IsCertain() then
+					return false, "scope is uncertain"
+				end
+
+				if function_scope.uncertain_function_return == true then
+					return false, "uncertain function return"
 				end
 
 				if function_scope.lua_silent_error then
 					for _, scope in ipairs(function_scope.lua_silent_error) do
 						if not scope:IsCertain() then
-							return false
+							return false, "parent function scope can throw an error"
 						end
 					end
 				end
@@ -862,8 +866,11 @@ return
 				if self.call_stack then
 					for i = #self.call_stack, 1, -1 do
 						local scope = self.call_stack[i].scope
-						if not scope:IsCertain() or scope.uncertain_function_return == true then
-							return false
+						if not scope:IsCertain() then
+							return false, "call stack scope is uncertain"
+						end
+						if scope.uncertain_function_return == true then
+							return false, "call stack scope has uncertain function return"
 						end
 					end
 				end

@@ -127,7 +127,7 @@ return function(META)
 		local thrown = false
 		
 		if function_scope.lua_silent_error then 
-			local errored_scope = table.remove(function_scope.lua_silent_error, 1)
+			local errored_scope = table.remove(function_scope.lua_silent_error)
 			if errored_scope and self:GetScope():IsCertain(errored_scope) and errored_scope:IsCertain() then
 				thrown = true
 			end
