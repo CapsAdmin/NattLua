@@ -1712,7 +1712,9 @@ end
 
 			if parser:IsValue("=") then
 				node.tokens["="] = parser:ExpectValue("=")
+				parser:PushParserEnvironment("typesystem")
 				node.right = ReadMultipleValues(parser, nil, ReadTypeExpression)
+				parser:PopParserEnvironment()
 			end
 
 			parser:EndNode(node)
@@ -1728,7 +1730,9 @@ end
 
 			if parser:IsValue("=") then
 				node.tokens["="] = parser:ExpectValue("=")
+				parser:PushParserEnvironment("typesystem")
 				node.right = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
+				parser:PopParserEnvironment()
 			end
 
 			parser:EndNode(node)
