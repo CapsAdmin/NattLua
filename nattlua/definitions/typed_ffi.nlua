@@ -2,6 +2,33 @@ local analyzer function cast(node: any, args: any)
 	local table_print = require("nattlua.other.table_print")
 	local cast = env.typesystem.cast
 
+
+	local function cdata_metatable(from, const)
+		local meta = types.Table()
+		meta:Set(types.LString("__index"), types.LuaTypeFunction(function(self, key)
+					-- i'm not really sure about this
+					-- boxed luajit ctypes seem to just get the metatable from the ctype
+
+					return from:Get(key) 
+		end, {types.Any(), types.Any()}, {}))
+
+		if const then
+			meta:Set(types.LString("__newindex"), types.LuaTypeFunction(function(self, key, value)
+				error("attempt to write to constant location")
+			end, {types.Any(), types.Any(), types.Any()}, {}))
+		end
+
+		meta:Set(types.LString("__add"), types.LuaTypeFunction(function(self, key)
+			return self
+		end, {types.Any(), types.Any()}, {}))
+
+		meta:Set(types.LString("__sub"), types.LuaTypeFunction(function(self, key)
+			return self
+		end, {types.Any(), types.Any()}, {}))
+
+		return meta
+	end
+
 	if node.tag == "Struct" or node.tag == "Union" then
 		local tbl = types.Table()
 
@@ -24,7 +51,14 @@ local analyzer function cast(node: any, args: any)
 			if arg.ellipsis then
 				table.insert(arguments, types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)))
 			else
-				table.insert(arguments, (cast(arg[1], args)))
+				local a = arg[1]
+				local arg = cast(arg[1], args)
+				if arg:GetName() and arg:GetName():GetData() == "const char*" then
+					arg = types.Union({types.Nil(), types.String(), arg})
+				elseif a.tag == "Pointer" then
+					arg = types.Union({types.Nil(), arg})
+				end
+				table.insert(arguments, arg)
 			end
 		end
 
@@ -52,6 +86,10 @@ local analyzer function cast(node: any, args: any)
 		local tbl = types.Table()
 		-- todo node.size: array length
 		tbl:Set(types.Number(), cast(node.t, args))
+
+		local meta = cdata_metatable(tbl)
+		tbl:SetMetaTable(meta)
+		
 		return tbl
 	elseif node.tag == "Type" then
 		if
@@ -112,6 +150,13 @@ local analyzer function cast(node: any, args: any)
 			end
 
 			return val
+		elseif node.parent_tag == "TypeDef" then
+			if node.n:sub(1, 6) == "struct" then
+				local name = node.n:sub(7)
+				local tbl = types.Table()
+				tbl:SetName(types.LString(name))
+				return tbl
+			end
 		else
 			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi:Get(types.LString("C")), types.LString(node.n))
 
@@ -126,39 +171,46 @@ local analyzer function cast(node: any, args: any)
 		return cast(node.t, args)
 	elseif node.tag == "Pointer" then
 		if node.t.tag == "Type" and node.t.n == "void" then return types.Any() end
+		
 		local ptr = types.Table()
 		local ctype = cast(node.t, args)
 		ptr:Set(types.Number(), ctype)
-		local meta = types.Table()
-		meta:Set(types.LString("__index"), types.LuaTypeFunction(function(self, key)
-			if ctype:GetMetaTable() then
-					-- i'm not really sure about this
-					-- boxed luajit ctypes seem to just get the metatable from the ctype
 
-					return ctype:GetMetaTable():Get(key) end
-		end, {types.Any(), types.Any()}, {}))
+		local meta = cdata_metatable(ctype, node.t.const)
 		ptr:SetMetaTable(meta)
 
-		if node.t.tag == "Qualified" and node.t.t.n == "char" then return types.Union({types.String(), types.Nil(), ptr}) end
+		
+		if node.t.tag == "Qualified" and node.t.t.n == "char" then 
+			ptr:Set(types.Number(), ctype)
+			ptr:SetName(types.LString("const char*"))
 
-		return types.Union({ptr, types.Nil()})
+			return ptr
+		end
+
+		if node.t.tag == "Type" and node.t.n:sub(1,1) ~= "$" then
+			ptr:SetName(types.LString(node.t.n .. "*"))
+		end
+
+		return ptr
 	else
 		table_print(node)
 		error("NYI: " .. node.tag)
 	end
 end
 
-analyzer function ffi.cdef(cdecl: string, ...: {[string] = any} | nil)
+analyzer function ffi.cdef(cdecl: string, ...: any)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
+	local table_print = require("nattlua.other.table_print")
 
 	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
+		ctype.type.parent_tag = ctype.tag
 		analyzer:NewIndexOperator(cdecl:GetNode(), env.typesystem.ffi:Get(types.LString("C")), types.LString(ctype.name), env.typesystem.cast(ctype.type, {...}))
 	end
 end
 
 §env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true
 
-analyzer function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
+analyzer function ffi.typeof(cdecl: string, ...: any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
@@ -173,8 +225,7 @@ analyzer function ffi.typeof(cdecl: string, ...: {[string] = any} | nil)
 		if init then
 			analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
 		end
-
-		return ctype:Copy()
+		return self:Copy()
 	end, {ctype, types.Nilable(nilable_ctype)}, {ctype}))
 	ctype:SetMetaTable(ctype)
 	return ctype
@@ -201,7 +252,9 @@ analyzer function ffi.metatype(ctype: any, meta: any)
 
 	if new then
 		meta:Set(types.LString("__call"), types.LuaTypeFunction(function(self, ...)
-			return analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...})))
+			local val = analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...}))):Unpack()
+			val:SetMetaTable(meta)
+			return val
 		end, new:GetArguments():GetData(), new:GetReturnTypes():GetData()))
 	end
 
@@ -210,4 +263,8 @@ end
 
 analyzer function ffi.load(lib: string)
 	return env.typesystem.ffi:Get(types.LString("C"))
+end
+
+analyzer function ffi.gc(ctype: any, callback: Function)
+	return ctype
 end

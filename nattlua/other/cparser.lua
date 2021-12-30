@@ -4296,7 +4296,7 @@ cparser.parseString = function(cdecl, options, args)
 				return " out" .. x .. ";"
 			end)
 			str = str:gsub("%[%?+%]", function(x)
-				return "[" .. args[1]:GetData() .. "]"
+				return "[" .. (args[1]:GetData() or 1) .. "]"
 			end)
 		else
 			str = str .. temp

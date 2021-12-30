@@ -205,7 +205,7 @@ do
 	end
 
 	function fs.get_files(path)
-		local out: List<|string|> = {}
+		local out: List<|string|>[1] = {} -- [1] TODO
 
 		local ptr = ffi.C.opendir(path or "")
 
@@ -216,6 +216,8 @@ do
 		local i = 1
 		while true do
 			local dir_info = ffi.C.readdir(ptr)
+
+			dir_info = dir_info as dir_info | nil -- TODO
 
 			if dir_info == nil then break end
 

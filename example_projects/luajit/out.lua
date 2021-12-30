@@ -63,25 +63,25 @@ local  ffi--[[#: {
 	"os" = "BSD" | "Linux" | "OSX" | "Other" | "POSIX" | "Windows",
 	"arch" = "arm" | "mips" | "ppc" | "ppcspe" | "x64" | "x86",
 	"C" = FFI_C,
-	"cdef" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘,
+	"cdef" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
 	"abi" = function⦗string⦘: ⦗false | true⦘,
 	"metatype" = function⦗any, any⦘: ⦗⦘,
 	"new" = function⦗any, ⦗any⦘×inf⦘: ⦗⦘,
 	"copy" = function⦗{ number = any }, nil | { number = any }, nil | number | string⦘: ⦗nil⦘,
 	"alignof" = function⦗any⦘: ⦗number⦘,
 	"cast" = function⦗any | string, number | string | { number = any }⦘: ⦗{ number = any }⦘,
-	"typeof" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘,
+	"typeof" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
 	"load" = function⦗string⦘: ⦗⦘,
 	"sizeof" = function⦗any, number⦘: ⦗number⦘ | function⦗any⦘: ⦗number⦘,
 	"string" = function⦗{ number = any }, nil | number⦘: ⦗string⦘,
-	"gc" = function⦗any, function⦗⦗any⦘×inf⦘: ⦗⦗any⦘×inf⦘⦘: ⦗{ number = any }⦘,
+	"gc" = function⦗any, function⦗⦗any⦘×inf⦘: ⦗⦗any⦘×inf⦘⦘: ⦗⦘,
 	"istype" = function⦗any, any⦘: ⦗false | true⦘,
 	"fill" = function⦗{ number = any }, number, any⦘: ⦗nil⦘ | function⦗{ number = any }, number⦘: ⦗nil⦘,
 	"offsetof" = function⦗{ number = any }, number⦘: ⦗number⦘,
 	"get_type" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘
 }]]  =  require("ffi")
 
-local  OSX--[[#: false]]  =  ffi.os  ==  "OSX"
+local  OSX--[[#: false | true]]  =  ffi.os  ==  "OSX"
 
 local  X64--[[#: false | true]]  =  ffi.arch  ==  "x64"
 
@@ -182,7 +182,7 @@ do
 
 	
 
-    local  function  POSIX_TIME(time--[[#:  number]])--[[#: ]]
+    local  function  POSIX_TIME(time--[[#:  number]])
 		
         return  tonumber(time  /  10000000  -  11644473600)
 	
@@ -265,7 +265,7 @@ do
 
 	
 
-	function  fs.get_attributes(path--[[#: string]],  follow_link--[[#: false | nil | true]])--[[#: ]]
+	function  fs.get_attributes(path,  follow_link)
 		
         local  info--[[#: { number = {
 		"dwFileAttributes" = number,
@@ -365,7 +365,7 @@ do
 	local  dot--[[#: 46]]  =  string.byte(".")
 
 	
-	local  function  is_dots(ptr--[[#:  {[number]  =  number}]])--[[#: false | true]]
+	local  function  is_dots(ptr--[[#:  {[number]  =  number}]])
 		
 		if  ptr[0]  ==  dot  then
 			
@@ -391,7 +391,7 @@ do
 
 	
 
-	function  fs.get_files(path--[[#: string]])--[[#: ⦗nil, string⦘ | ⦗{ number = nil | string }⦘]]
+	function  fs.get_files(path)
 		
 		if  path  ==  ""  then
 			
@@ -484,7 +484,7 @@ do
 
 	
 
-	function  fs.set_current_directory(path--[[#: string]])--[[#: ⦗nil, string⦘ | ⦗true⦘]]
+	function  fs.set_current_directory(path)
 		
 		if  ffi.C.chdir(path)  ==  0  then 
 			return  true 
@@ -497,7 +497,7 @@ do
 
 	
 
-	function  fs.get_current_directory()--[[#: ]]
+	function  fs.get_current_directory()
 		
         local  buffer--[[#: { number = number }]]  =  ffi.new("char[260]")
 		
@@ -533,18 +533,18 @@ local  ffi--[[#: {
 	"os" = "BSD" | "Linux" | "OSX" | "Other" | "POSIX" | "Windows",
 	"arch" = "arm" | "mips" | "ppc" | "ppcspe" | "x64" | "x86",
 	"C" = FFI_C,
-	"cdef" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘,
+	"cdef" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
 	"abi" = function⦗string⦘: ⦗false | true⦘,
 	"metatype" = function⦗any, any⦘: ⦗⦘,
 	"new" = function⦗any, ⦗any⦘×inf⦘: ⦗⦘,
 	"copy" = function⦗{ number = any }, nil | { number = any }, nil | number | string⦘: ⦗nil⦘,
 	"alignof" = function⦗any⦘: ⦗number⦘,
 	"cast" = function⦗any | string, number | string | { number = any }⦘: ⦗{ number = any }⦘,
-	"typeof" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘,
+	"typeof" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
 	"load" = function⦗string⦘: ⦗⦘,
 	"sizeof" = function⦗any, number⦘: ⦗number⦘ | function⦗any⦘: ⦗number⦘,
 	"string" = function⦗{ number = any }, nil | number⦘: ⦗string⦘,
-	"gc" = function⦗any, function⦗⦗any⦘×inf⦘: ⦗⦗any⦘×inf⦘⦘: ⦗{ number = any }⦘,
+	"gc" = function⦗any, function⦗⦗any⦘×inf⦘: ⦗⦗any⦘×inf⦘⦘: ⦗⦘,
 	"istype" = function⦗any, any⦘: ⦗false | true⦘,
 	"fill" = function⦗{ number = any }, number, any⦘: ⦗nil⦘ | function⦗{ number = any }, number⦘: ⦗nil⦘,
 	"offsetof" = function⦗{ number = any }, number⦘: ⦗number⦘,
@@ -577,7 +577,7 @@ ffi.cdef([[
 
 
 
-local  function  last_error(num--[[#:  number  |  nil]])--[[#: string]]
+local  function  last_error(num--[[#:  number  |  nil]])
 	
 	num  =  num  or  ffi.errno()
 	
@@ -699,14 +699,8 @@ do
 	
 
 	local  statbox--[[#: {
-	number = OSXStat,
-	"__call" = function⦗*self-table*, nil | { number = OSXStat | nil }⦘: ⦗*self-table*⦘
-} | {
-	number = UnixX32Stat,
-	"__call" = function⦗*self-table*, nil | { number = UnixX32Stat | nil }⦘: ⦗*self-table*⦘
-} | {
-	number = UnixX64Stat,
-	"__call" = function⦗*self-table*, nil | { number = UnixX64Stat | nil }⦘: ⦗*self-table*⦘
+	number = OSXStat | UnixX32Stat | UnixX64Stat,
+	"__call" = function⦗*self-table*, nil | { number = OSXStat | UnixX32Stat | UnixX64Stat | nil }⦘: ⦗*self-table*⦘
 }]]  =  ffi.typeof("$[1]",  stat_struct)
 	
 	local  stat--[[#: nil]]
@@ -744,14 +738,14 @@ do
 
 		
 
-		stat  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])--[[#: number]]
+		stat  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])
 			
 			return  ffi.C.syscall(STAT_SYSCALL,  path,  buff)
 		
 		end
 		
 
-		stat_link  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])--[[#: number]]
+		stat_link  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])
 			
 			return  ffi.C.syscall(STAT_LINK_SYSCALL,  path,  buff)
 		
@@ -765,17 +759,11 @@ do
 
 	
 
-	function  fs.get_attributes(path--[[#: string]],  follow_link--[[#: false | nil | true]])--[[#: ]]
+	function  fs.get_attributes(path,  follow_link)
 		
 		local  buff--[[#: {
-	number = OSXStat,
-	"__call" = function⦗*self-table*, nil | { number = OSXStat | nil }⦘: ⦗*self-table*⦘
-} | {
-	number = UnixX32Stat,
-	"__call" = function⦗*self-table*, nil | { number = UnixX32Stat | nil }⦘: ⦗*self-table*⦘
-} | {
-	number = UnixX64Stat,
-	"__call" = function⦗*self-table*, nil | { number = UnixX64Stat | nil }⦘: ⦗*self-table*⦘
+	number = OSXStat | UnixX32Stat | UnixX64Stat,
+	"__call" = function⦗*self-table*, nil | { number = OSXStat | UnixX32Stat | UnixX64Stat | nil }⦘: ⦗*self-table*⦘
 }]]  =  statbox()
 		
 
@@ -851,7 +839,7 @@ do
 	local  dot--[[#: 46]]  =  string.byte(".")
 
 	
-	local  function  is_dots(ptr--[[#:  {[number]  =  number}]])--[[#: false | true]]
+	local  function  is_dots(ptr--[[#:  {[number]  =  number}]])
 		
 		if  ptr[0]  ==  dot  then
 			
@@ -873,9 +861,10 @@ do
 
 	
 
-	function  fs.get_files(path--[[#: string]])--[[#: ⦗nil, string⦘ | ⦗{ number = nil | string }⦘]]
+	function  fs.get_files(path)
 		
-		local  out--[[#:  List<|string|>]]  =  {}
+		local  out--[[#:  List<|string|>[1] ]]  =  {}
+		 -- [1] TODO
 		
 
 		local  ptr--[[#: any]]  =  ffi.C.opendir(path  or  "")
@@ -891,14 +880,11 @@ do
 		
 		while  true  do
 			
-			local  dir_info--[[#: nil | { number = {
-		"d_ino" = number,
-		"d_seekoff" = number,
-		"d_reclen" = number,
-		"d_namlen" = number,
-		"d_type" = number,
-		"d_name" = { number = number }
-	} }]]  =  ffi.C.readdir(ptr)
+			local  dir_info--[[#: struct dirent*]]  =  ffi.C.readdir(ptr)
+			
+
+			dir_info  =  dir_info--[[#  as  dir_info  |  nil]]
+			 -- TODO
 			
 
 			if  dir_info  ==  nil  then  break  end
@@ -937,7 +923,7 @@ do
 
 	
 
-	function  fs.set_current_directory(path--[[#: string]])--[[#: ⦗nil, string⦘ | ⦗true⦘]]
+	function  fs.set_current_directory(path)
 		
 		if  ffi.C.chdir(path)  ==  0  then 
 			return  true 
@@ -950,7 +936,7 @@ do
 
 	
 
-	function  fs.get_current_directory()--[[#: ]]
+	function  fs.get_current_directory()
 		
 		local  temp--[[#: { number = number }]]  =  ffi.new("char[1024]")
 		

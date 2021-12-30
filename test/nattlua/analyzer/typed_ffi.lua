@@ -102,7 +102,7 @@ run[=[
 run[=[
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
-	types.assert(ctype.foo, _ as string | nil | {[number] = number})
+	types.assert(ctype.foo, _ as ffi.typeof<|"const char*"|>[1])
 ]=]
 
 
@@ -118,14 +118,14 @@ run[=[
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			types.assert<|typeof ffi.C.foo, function=(string | nil | {[number] = number})>((nil)) |>
+			types.assert<|typeof ffi.C.foo, function=(string | nil | ffi.typeof<|"const char*"|>[1])>((nil)) |>
 		else
 			ffi.cdef("int foo(int a);")
 			types.assert<|typeof ffi.C.foo, function=(number)>((number))|>
 		end	
 	end
 
-	types.assert<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(string | nil | {[number] = number})>((nil)) |>
+	types.assert<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>[1])>((nil)) |>
 ]=]
 
 run[=[
@@ -189,7 +189,6 @@ run[=[
 	ffi.metatype(handle, meta)
 
 	local f = handle("YES", "write")
-
 	if f then
 		local int = f:close()
 		types.assert<|int, number|>
@@ -265,3 +264,28 @@ run[=[
 	ffi.C.readdir()
 	
 ]=]
+
+run[[
+
+	local ffi = require "ffi"
+	ffi.cdef("typedef struct ac_t ac_t;")
+	types.assert(ffi.C.ac_t, ffi.C.ac_t)
+
+	local ptr = ffi.new("ac_t*")
+	if ptr then
+		ptr = ptr + 1
+		ptr = ptr - 1
+	end
+]]
+
+run[[
+	local newbuf = ffi.new("char [?]", _ as number)
+	types.assert(newbuf, _ as {[number] = number})
+]]
+
+run[[
+	local gbuf_n = 1024
+	local gbuf = ffi.new("char [?]", gbuf_n)
+	gbuf = gbuf + 1
+	types.assert(gbuf, gbuf)
+]]
