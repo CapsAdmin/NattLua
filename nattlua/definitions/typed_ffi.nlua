@@ -51,13 +51,9 @@ local analyzer function cast(node: any, args: any)
 			if arg.ellipsis then
 				table.insert(arguments, types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)))
 			else
-				local a = arg[1]
+				_G.FUNCTION_ARGUMENT = true
 				local arg = cast(arg[1], args)
-				if arg:GetName() and arg:GetName():GetData() == "const char*" then
-					arg = types.Union({types.Nil(), types.String(), arg})
-				elseif a.tag == "Pointer" then
-					arg = types.Union({types.Nil(), arg})
-				end
+				_G.FUNCTION_ARGUMENT = nil
 				table.insert(arguments, arg)
 			end
 		end
@@ -184,11 +180,19 @@ local analyzer function cast(node: any, args: any)
 			ptr:Set(types.Number(), ctype)
 			ptr:SetName(types.LString("const char*"))
 
+			if _G.FUNCTION_ARGUMENT then
+				return types.Union({ptr, types.String(), types.Nil()})
+			end
+
 			return ptr
 		end
 
 		if node.t.tag == "Type" and node.t.n:sub(1,1) ~= "$" then
 			ptr:SetName(types.LString(node.t.n .. "*"))
+		end
+
+		if _G.FUNCTION_ARGUMENT then
+			return types.Union({ptr, types.Nil()})
 		end
 
 		return ptr
