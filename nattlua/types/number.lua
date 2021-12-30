@@ -221,6 +221,49 @@ function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--
 	error("NYI " .. operator)
 end
 
+function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber, TNumber]]
+	local cmp = operators[operator]
+	
+	if not cmp then
+		error("NYI " .. operator)
+	end
+	
+	local a_min = a:GetData()
+	local b_min = b:GetData()
+	if not a_min then return nil end
+	if not b_min then return nil end
+
+	local a_max = a:GetMaxLiteral() or a_min
+	local b_max = b:GetMaxLiteral() or b_min
+	
+	local a_min_res = nil--[[# as number]]
+	local b_min_res = nil--[[# as number]]
+
+	local a_max_res = nil--[[# as number]]
+	local b_max_res = nil--[[# as number]]
+
+	if operator == "<" then
+		a_min_res = math.min(a_min, b_max)
+		a_max_res = math.min(a_max, b_max-1)
+
+		b_min_res = math.max(a_min, b_max)
+		b_max_res = math.max(a_max, b_max)
+	end
+
+	if operator == ">" then
+		a_min_res = math.max(a_min, b_max+1)
+		a_max_res = math.max(a_max, b_max)
+
+		b_min_res = math.min(a_min, b_max)
+		b_max_res = math.min(a_max, b_max)
+	end
+
+	local a = META.New(a_min_res):SetLiteral(true):SetMax(META.New(a_max_res):SetLiteral(true))
+	local b = META.New(b_min_res):SetLiteral(true):SetMax(META.New(b_max_res):SetLiteral(true))
+	
+	return a, b
+end
+
 function META:IsFalsy()
 	return false
 end
