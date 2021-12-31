@@ -166,8 +166,8 @@ run[[
 ]]
 
 run[[
-    local function foo(arg: {value = string})
-        types.assert<|typeof arg.value, string|>
+    local function foo(x: {value = string})
+        types.assert<|typeof x.value, string|>
     end
 
     foo({value = "test"})
@@ -175,8 +175,8 @@ run[[
 
 
 run[[
-    local function foo(arg: literal {value = string})
-        types.assert<|typeof arg.value, "test"|>
+    local function foo(x: literal {value = string})
+        types.assert<|typeof x.value, "test"|>
     end
 
     foo({value = "test"})
