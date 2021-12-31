@@ -744,9 +744,9 @@ end
 
 function META:EmitLabelStatement(node)
 	self:Whitespace("\t")
-	self:EmitToken(node.tokens["::"][1])
+	self:EmitToken(node.tokens["::"])
 	self:EmitToken(node.tokens["identifier"])
-	self:EmitToken(node.tokens["::"][2])
+	self:EmitToken(node.tokens["::"])
 end
 
 function META:EmitGotoStatement(node)
