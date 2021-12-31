@@ -494,11 +494,11 @@ run[[
 
 run[[
     local i = 0
-    local function test(arg: literal (string | nil))
+    local function test(x: literal (string | nil))
         if i == 0 then
-            types.assert<|typeof arg, "foo"|>
+            types.assert<|typeof x, "foo"|>
         elseif i == 1 then
-            types.assert<|typeof arg, nil|>
+            types.assert<|typeof x, nil|>
         end
         i = i + 1
     end
