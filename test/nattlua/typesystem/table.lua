@@ -2,8 +2,6 @@ local T = require("test.helpers")
 local Number = T.Number
 local String = T.String
 local Table = T.Table
-local Union = T.Union
-local Tuple = T.Tuple
 
 test("union and get", function()
     local contract = Table()
@@ -18,22 +16,6 @@ test("union and get", function()
 
     assert(tbl:IsSubsetOf(contract))
     assert(not contract:IsSubsetOf(tbl))
-end)
-
-test("union string and get constant string", function()
-    local contract = Table()
-    assert(contract:Set(String(), Number()))
-
-    local tbl = Table()
-    tbl:SetContract(contract)
-    tbl:Set(String(), Number(1337))
-    local union = assert(tbl:Get(String()))
-    equal("union", union.Type)
-    equal(1337, union:GetType("number"):GetData())
-    equal(nil, union:GetType("symbol"):GetData())
-
-    assert(tbl:IsSubsetOf(contract))
-    assert(not contract:IsSubsetOf(tbl))    
 end)
 
 test("errors when trying to modify a table without a defined structure", function()

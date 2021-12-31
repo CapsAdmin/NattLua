@@ -583,13 +583,38 @@ pending[[
 ]]
 
 run[[
-    local lol = 1 as number
+    local function foo(tbl: {
+        [number] = true,
+        foo = true,
+        bar = false,
+    }) 
+        local x = tbl[_ as number]
+        local y = tbl[1]
+        local z = tbl[_ as string]
+        types.assert(x,y)
+        types.assert(z, _ as nil | boolean)
+    end
+]]
+
+run[[
+    local lol: number
     local t = {}
 
     t[lol] = 1
     t[lol] = 2
-    types.assert(t[lol], _  as 1 | 2 | nil)
+    types.assert(t[lol], _  as 1 | 2)
 ]]
+
+run([[
+    local RED = 1
+    local BLUE = 2
+    local GREEN: string
+    local x: {[1 .. inf] = number} = {
+        [RED] = 2,
+        [BLUE] = 3,
+        [GREEN] = 4,
+    }
+]], "has no field string")
 
 run[[
     local type Foo = { bar = 1337 }

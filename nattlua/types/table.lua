@@ -468,14 +468,21 @@ function META:Get(key--[[#: BaseType]])
 
 	if (key.Type == "string" or key.Type == "number") and not key:IsLiteral() then
 		local union = Union({Nil()})
-
+		local found_non_literal = false
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == key.Type then
-				union:AddType(keyval.val)
+				if keyval.key:IsLiteral() then
+					union:AddType(keyval.val)
+				else
+					found_non_literal = true
+					break
+				end
 			end
 		end
 
-		return union
+		if not found_non_literal then
+			return union
+		end
 	end
 
 	local keyval, reason = self:FindKeyValReverse(key)

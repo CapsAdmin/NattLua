@@ -38,29 +38,6 @@ test("can be indirect", function()
     ]]
 end)
 
-test("indirect only works for numeric keys", function()
-    run[[
-        local RED = 1
-        local BLUE = 2
-        local GREEN: string
-        local x = {
-            [RED] = 2,
-            [BLUE] = 3,
-            [GREEN] = 4,
-        }
-        types.assert(x[GREEN], _ as 4 | nil)
-    ]]
-    run([[
-        local RED = 1
-        local BLUE = 2
-        local GREEN: string
-        local x: {[1 .. inf] = number} = {
-            [RED] = 2,
-            [BLUE] = 3,
-            [GREEN] = 4,
-        }
-    ]], "has no field string")
-end)
 
 test("{[number]: any}", function()
     check(run[[local a: {[number] = any} = {[1] = 1}]], "{ [number(1) as number] = number(1) as any }")
