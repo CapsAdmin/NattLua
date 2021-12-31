@@ -1286,13 +1286,12 @@ end
 			function ExpectRuntimeExpression(parser, priority)
 				local token = parser:GetToken()
 				if
-					not token or
 					token.type == "end_of_file" or
 					token.value == "}" or
 					token.value == "," or
 					token.value == "]" or
 					(
-						runtime_syntax:IsKeyword(token) and
+						(runtime_syntax:IsKeyword(token) or runtime_syntax:IsNonStandardKeyword(token)) and
 						not runtime_syntax:IsPrefixOperator(token) and
 						not runtime_syntax:IsValue(token) and
 						token.value ~= "function"
@@ -1551,8 +1550,9 @@ end
 			local node = parser:StartNode("statement", "goto")
 			node.tokens["goto"] = parser:ExpectValue("goto")
 			node.tokens["identifier"] = parser:ExpectType("letter")
-
 			parser:EndNode(node)
+
+			return node
 		end
 		local function ReadIfStatement(parser)
 			if not parser:IsValue("if") then return nil end

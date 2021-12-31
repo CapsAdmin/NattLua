@@ -805,3 +805,9 @@ run([[
     end
 ]])
 
+run[[
+    local x = 1
+    goto foo
+    x = 2
+    ::foo::
+]]
