@@ -20,6 +20,13 @@ function META.Equal(a--[[#: TString]], b--[[#: TString]])
 	return false
 end
 
+function META:GetHash()
+	if self:IsLiteral() then
+		return self.Data
+	end
+	return nil
+end
+
 function META:GetLuaType()
 	return self.Type
 end

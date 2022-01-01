@@ -18,7 +18,8 @@ return
 
 						if node.left.kind == "binary_operator" then
 							local obj = analyzer:AnalyzeExpression(node.left.left)
-							analyzer:MutateValue(obj, node.left.right, left)
+							local key = analyzer:AnalyzeExpression(node.left.right)
+							analyzer:MutateValue(obj, key, left)
 						end
 					end
 
@@ -37,7 +38,8 @@ return
 
 						if node.left.kind == "binary_operator" then
 							local obj = analyzer:AnalyzeExpression(node.left.left)
-							analyzer:MutateValue(obj, node.left.right, left)
+							local key = analyzer:AnalyzeExpression(node.left.right)
+							analyzer:MutateValue(obj, key, left)
 						end
 					end
 				elseif left:IsFalsy() and not left:IsTruthy() then

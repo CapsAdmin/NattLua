@@ -141,6 +141,10 @@ do
 		self.UniqueID = self.disabled_unique_id
 	end
 
+	function META:GetHash()
+		return self.UniqueID
+	end
+
 	function META.IsSameUniqueType(a--[[#: BaseType]], b--[[#: BaseType]])
 		if a.UniqueID and not b.UniqueID then return type_errors.other({a, "is a unique type"}) end
 		if b.UniqueID and not a.UniqueID then return type_errors.other({b, "is a unique type"}) end

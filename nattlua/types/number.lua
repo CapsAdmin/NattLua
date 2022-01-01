@@ -43,6 +43,13 @@ function META:Widen()
 	return self
 end
 
+function META:GetHash()
+	if self:IsLiteral() then
+		return self.Data
+	end
+	return nil
+end
+
 function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	if a.Type ~= b.Type then return false end
 
