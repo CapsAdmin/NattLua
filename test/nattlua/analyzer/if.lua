@@ -311,6 +311,12 @@ run[[
 ]]
 
 run[[
+    local x: true | nil 
+    types.assert(assert(x), true)
+    types.assert(x, true)
+]]
+
+run[[
     local x: false | 1
     assert(x)
     types.assert(x, 1)

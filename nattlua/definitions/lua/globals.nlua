@@ -275,7 +275,7 @@ analyzer function assert(obj: any, msg: string | nil)
 		analyzer:ThrowSilentError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy())
 		return obj
 	end
-
+	
 	if obj.Type == "union" then
 		for _, tup in ipairs(obj:GetData()) do
 			if tup.Type == "tuple" and tup:Get(1):IsTruthy() then return tup end
@@ -286,16 +286,20 @@ analyzer function assert(obj: any, msg: string | nil)
 		if obj.Type == "union" then
 			obj = obj:Copy()
 			obj:DisableFalsy()
+			return obj
 		end
-
-		return obj
 	end
 
 	if obj:IsFalsy() then
 		analyzer:ThrowError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy())
+		if obj.Type == "union" then
+			obj = obj:Copy()
+			obj:DisableFalsy()
+			return obj
+		end
 	end
 
-	return types.Any()
+	return obj
 end
 
 analyzer function error(msg: string, level: number | nil)
