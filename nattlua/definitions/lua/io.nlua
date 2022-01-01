@@ -16,8 +16,8 @@ type File = {
 		seek = function=(self, string, number)>(number | nil, string | nil) | function=(file: self, whence: string)>(number | nil, string | nil) | function=(file: self)>(number | nil, string | nil),
 	}
 
-type io.open = function=()>(File)
-type io.popen = function=()>(File)
+type io.open = function=(string, string | nil)>(File)
+type io.popen = function=(string, string | nil)>(File)
 type io.output = function=()>(File)
 
 type io.stdout = File

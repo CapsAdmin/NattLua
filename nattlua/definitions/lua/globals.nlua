@@ -21,7 +21,8 @@ type loadfile = function=(filename: string, mode: string, env: Table)>(empty_fun
 type dofile = function=(filename: string)>(...) | function=()>(...)
 type ipairs = function=(t: Table)>(empty_function, Table, number)
 type tonumber = function=(e: number | string, base: number | nil)>(number | nil)
-type arg = List<|any|>[1]
+
+_G.arg = _ as List<|any|>[1]
 
 analyzer function type_print(...: ...any)
 	print(...)
