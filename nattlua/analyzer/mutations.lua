@@ -356,11 +356,10 @@ return function(META)
 		table.insert(obj.mutations[hash], {scope = scope, value = val})
 	end
 
-	function META:GetMutatedUpvalue(upvalue, value)
+	function META:GetMutatedUpvalue(upvalue)
 		if self:IsTypesystem() then return end
 		local scope = self:GetScope()
 
-		local node = upvalue:GetNode()
 		local hash = upvalue:GetKey()
 
 		upvalue.mutations = upvalue.mutations or {}
@@ -373,7 +372,6 @@ return function(META)
 		if self:IsTypesystem() then return end
 		local scope = scope_override or self:GetScope()
 
-		local node = upvalue:GetNode()
 		local hash = upvalue:GetKey()
         
 		val:SetUpvalue(upvalue)

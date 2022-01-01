@@ -107,7 +107,7 @@ return function(META)
 
 				if upvalue then
 					if self:IsRuntime() then return
-						self:GetMutatedUpvalue(upvalue, upvalue:GetValue()) or
+						self:GetMutatedUpvalue(upvalue) or
 						upvalue:GetValue() end
 					return upvalue:GetValue()
 				end
