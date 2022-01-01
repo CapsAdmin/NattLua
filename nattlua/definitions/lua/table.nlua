@@ -33,8 +33,14 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 	else
 		pos = tbl:GetLength()
 	end
+		
+	if analyzer:IsInUncertainLoop() then
+		pos = types.Number(pos)
+	else
+		pos = types.LNumber(pos)
+	end
 
-	tbl:Set(types.LNumber(pos), val)
+	tbl:Set(pos, val)
 end
 
 analyzer function table.remove(tbl: List<|any|>, index: number | nil)
