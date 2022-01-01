@@ -297,7 +297,7 @@ return
 
 			do
 				local function mutate_type(analyzer, i, arg, contract, arguments)
-					local env = analyzer--:GetScope():GetNearestFunctionScope()
+					local env = analyzer:GetScope():GetNearestFunctionScope()
 					env.mutated_types = env.mutated_types or {}
 					--analyzer:Print("pushing contract", arg, contract)
 					arg:PushContract(contract)
@@ -307,7 +307,7 @@ return
 				end
 
 				local function restore_mutated_types(analyzer)
-					local env = analyzer--:GetScope():GetNearestFunctionScope()
+					local env = analyzer:GetScope():GetNearestFunctionScope()
 					if not env.mutated_types or not env.mutated_types[1] then return end
 
 					for _, arg in ipairs(env.mutated_types) do

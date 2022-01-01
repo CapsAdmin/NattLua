@@ -789,3 +789,43 @@ run[[
     types.assert(DUNNO, "LOL")
     setmetatable(_G)
 ]]
+
+run[[
+    local META = {}
+    META.__index = META
+    type META.@Name = "Syntax"
+    type META.@Self = {
+        Keywords = Map<|string, true|>,
+    }
+    
+    function META.New() 
+        local self = setmetatable({
+            Keywords = {},
+        }, META)
+        return self
+    end
+    
+    
+    function META:AddSymbols(tbl: List<|string|>)
+        
+    end
+    
+    function META:AddKeywords(tbl: List<|string|>)
+        self:AddSymbols(tbl)
+        for _, str in ipairs(tbl) do
+            self.Keywords[str] = true
+        end
+    end
+    
+    local Syntax = META.New
+    local function lol()
+        local runtime = Syntax()
+    
+        local s = {}
+        runtime:AddKeywords(s)
+    
+        return runtime
+    end
+    lol()
+
+]]

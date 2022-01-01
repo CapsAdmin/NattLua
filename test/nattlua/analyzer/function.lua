@@ -719,3 +719,23 @@ run[[
         types.assert(code, _ as string)
     end)(arg)
 ]]
+
+run[[
+    local function IREqual(IR1: {number, number})
+        return true
+    end
+    
+    local function replaceIRs(haystack: {[number] = {number, number}})
+        § assert(#env.runtime.haystack.contracts == 1)
+        local i: number
+        IREqual(haystack[i])
+        § assert(#env.runtime.haystack.contracts == 1)
+        IREqual(haystack[i])
+        § assert(#env.runtime.haystack.contracts == 1)
+    end
+    
+    local instList = {{1, 0}}
+    § assert(#env.runtime.instList.contracts == 0)
+    replaceIRs(instList)
+    § assert(#env.runtime.instList.contracts == 0)    
+]]

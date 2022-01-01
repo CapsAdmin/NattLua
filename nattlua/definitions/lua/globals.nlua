@@ -422,6 +422,10 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 		if meta.Self then
 			analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(meta.Self))
 			tbl:CopyLiteralness(meta.Self)
+			tbl:SetContract(meta.Self)
+			
+			-- clear mutations so that when looking up values in the table they won't return their initial value
+			tbl.mutations = nil
 		else
 			meta.potential_self = meta.potential_self or types.Union({})
 			meta.potential_self:AddType(tbl)

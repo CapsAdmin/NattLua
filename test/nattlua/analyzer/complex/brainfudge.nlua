@@ -238,11 +238,9 @@ local function replaceIRs(haystack: InstructionList, needle: InstructionList, re
 
     while (i <= max) do
         local needleI = 0
-
-        if false then
-            while (needleI < needlesize and (i + needleI) <= max and IREqual(haystack[i + needleI], needle[needleI + 1])) do
-                needleI = needleI + 1
-            end
+        
+        while (needleI < needlesize and (i + needleI) <= max and IREqual(haystack[i + needleI], needle[needleI + 1])) do
+            needleI = needleI + 1
         end
 
         if needleI == needlesize then
