@@ -602,7 +602,7 @@ run[[
 
     t[lol] = 1
     t[lol] = 2
-    types.assert(t[lol], _  as 1 | 2)
+    types.assert(t[lol], 2)
 ]]
 
 run([[

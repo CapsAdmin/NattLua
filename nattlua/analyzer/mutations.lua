@@ -191,7 +191,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 	union:SetUpvalue(obj)
 
 	if obj.Type == "table" then
-		union:SetUpvalueReference("table-" .. key)
+		union:SetUpvalueReference("table-" .. tostring(key))
 	else
 		union:SetUpvalueReference(key)
 	end
@@ -243,7 +243,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 			union:SetUpvalue(obj)
 
 			if obj.Type == "table" then
-				union:SetUpvalueReference("table-" .. key)
+				union:SetUpvalueReference("table-" .. tostring(key))
 			else
 				union:SetUpvalueReference(key)
 			end
@@ -328,6 +328,13 @@ return function(META)
 		local scope = self:GetScope()
 		local node = key:GetNode()
 		local hash = key:GetHash()
+		
+		if not hash then
+			if key:GetUpvalue() then
+				hash = key:GetUpvalue()
+			end
+		end
+
 		if not hash then return value end
 
 		initialize_mutation_tracker(obj, scope, key, hash, node)
@@ -341,6 +348,13 @@ return function(META)
 		local scope = scope_override or self:GetScope()
 		local node = key:GetNode()
 		local hash = key:GetHash()
+
+		if not hash then
+			if key:GetUpvalue() then
+				hash = key:GetUpvalue()
+			end
+		end
+
 		if not hash then return end -- no mutation?
 
 		initialize_mutation_tracker(obj, scope, key, hash, node)

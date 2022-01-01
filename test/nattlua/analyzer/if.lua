@@ -1444,7 +1444,7 @@ run[[
     end
 ]]
 
-pending[[
+run[[
     -- mutation tracking for wide key
     local operators = {
         ["+"] = 1,
@@ -1456,6 +1456,9 @@ pending[[
     local op = "" as string
 
     if operators[op] then
+        types.assert(operators[op], _ as -1 | 1)
         i = operators[op]
     end
+
+    types.assert(i, _ as -1 | 0 | 1)
 ]]
