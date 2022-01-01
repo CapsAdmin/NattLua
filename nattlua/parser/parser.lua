@@ -1069,8 +1069,16 @@ end
 				return node
 			end
 
-			local function ReadCallSubExpression(parser)
+			local function ReadCallSubExpression(parser, primary_node)
 				if not IsCallExpression(parser, 0) then return end
+
+				if primary_node and primary_node.kind == "function" then
+					if not primary_node.tokens[")"] then
+						return
+					end
+				end
+
+
 				local node = parser:StartNode("expression", "postfix_call")
 
 				if parser:IsValue("{") then
@@ -1127,7 +1135,7 @@ end
 					
 					local found = ReadIndexSubExpression(parser) or
 						ReadSelfCallSubExpression(parser) or
-						ReadCallSubExpression(parser) or
+						ReadCallSubExpression(parser, node) or
 						ReadPostfixOperatorSubExpression(parser) or
 						ReadPostfixIndexExpressionSubExpression(parser)
 						

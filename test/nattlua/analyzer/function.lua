@@ -708,3 +708,14 @@ run[[
         types.assert(x, _ as number)
     end)
 ]]
+
+run[[
+    local foo = function(s: string)
+        return "code" as string
+    end
+    
+    (function(arg: {[number] = string})
+        local code = foo(arg[1])
+        types.assert(code, _ as string)
+    end)(arg)
+]]
