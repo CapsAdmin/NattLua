@@ -2,6 +2,11 @@ if not table.unpack and _G.unpack then
 	table.unpack = _G.unpack
 end
 
+do -- these are just helpers for print debugging
+	table.print = require("nattlua.other.table_print")
+	debug.trace = function(...) print(debug.traceback(...)) end
+end
+
 local helpers = require("nattlua.other.helpers")
 helpers.JITOptimize()
 --helpers.EnableJITDumper()
