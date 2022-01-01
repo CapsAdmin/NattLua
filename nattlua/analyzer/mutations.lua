@@ -301,17 +301,17 @@ end
 -- naive approaches while writing tests
 
 local function cast_key(key)
-	if type(key) == "string" then return key end
-
 	if type(key) == "table" then
 		if key.type == "expression" and key.kind == "value" then
 			return key.value.value
 		elseif key.type == "letter" then
 			return key.value
-		elseif key.Type == "string" and key:IsLiteral() then
+		elseif key.Type == "string" or key.Type == "number" then
+			if key:IsLiteral() then
 			return key:GetData()
-		elseif key.Type == "number" and key:IsLiteral() then
-			return key:GetData()
+			elseif key:GetUpvalue() then
+				--return key:GetUpvalue()
+			end
 		end
 	end
 end
@@ -334,8 +334,11 @@ local function initialize_mutation_tracker(obj, scope, key, node)
 		if obj.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
 			local val = (obj:GetContract() or obj):Get(cast(key)) or Nil():SetNode(node)
-			val:SetUpvalue(obj.mutations[key])
-			val:SetUpvalueReference(key)
+			
+			if obj.Type == "upvalue" then
+				val:SetUpvalue(obj.mutations[key])
+				val:SetUpvalueReference(key)
+			end
 			-- for the iniital value, the scope should be the scope where the table was created
 
 			table.insert(obj.mutations[key], {scope = obj.scope or scope:GetRoot(), value = val})
@@ -388,5 +391,42 @@ return function(META)
 		end
 
 		table.insert(obj.mutations[key], {scope = scope, value = val})
+	end
+
+	function META:GetMutatedUpvalue(upvalue, value)
+		if self:IsTypesystem() then return end
+		local scope = self:GetScope()
+		-- todo, merged scopes need this
+		local node = upvalue:GetValue():GetNode()
+		local key = upvalue:GetKey()
+
+		initialize_mutation_tracker(upvalue, scope, key, node)
+
+		return get_value_from_scope(copy(upvalue.mutations[key]), scope, upvalue, key, self)
+	end
+
+	function META:MutateUpvalue(upvalue, val, scope_override)
+		if self:IsTypesystem() then return end
+		local scope = scope_override or self:GetScope()
+
+		if upvalue.Type ~= "upvalue" then print(upvalue, val, scope_override) print(debug.traceback()) end
+
+		local node = upvalue:GetNode()
+		local key = upvalue:GetKey()
+        
+		val:SetUpvalue(upvalue)
+		val:SetUpvalueReference(key)
+
+		initialize_mutation_tracker(upvalue, scope, key, node)
+
+		if self:IsInUncertainLoop() then
+			if val.dont_widen then
+				val = val:Copy()
+			else
+				val = val:Copy():Widen()
+			end
+		end
+
+		table.insert(upvalue.mutations[key], {scope = scope, value = val})
 	end
 end

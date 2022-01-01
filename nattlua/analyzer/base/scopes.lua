@@ -78,7 +78,7 @@ return function(META)
 
 				for _, upvalue in ipairs(scope_copy:GetUpvalues("runtime")) do
 					self:FireEvent("upvalue", upvalue.key, upvalue:GetValue())
-					self:MutateValue(upvalue, upvalue.key, upvalue:GetValue())
+					self:MutateUpvalue(upvalue, upvalue:GetValue())
 				end
 
 				return scope_copy
@@ -87,7 +87,7 @@ return function(META)
 			function META:CreateLocalValue(key, obj, function_argument)
 				local upvalue = self:GetScope():CreateValue(key, obj, self:GetCurrentAnalyzerEnvironment())
 				self:FireEvent("upvalue", key, obj, function_argument)
-				self:MutateValue(upvalue, key, obj)
+				self:MutateUpvalue(upvalue, obj)
 				return upvalue
 			end
 
@@ -107,7 +107,7 @@ return function(META)
 
 				if upvalue then
 					if self:IsRuntime() then return
-						self:GetMutatedValue(upvalue, key, upvalue:GetValue()) or
+						self:GetMutatedUpvalue(upvalue, upvalue:GetValue()) or
 						upvalue:GetValue() end
 					return upvalue:GetValue()
 				end
@@ -191,7 +191,7 @@ return function(META)
 				local upvalue, found_scope = self:FindLocalUpvalue(key, scope)
 
 				if upvalue then
-					if not self:MutateValue(upvalue, key, val) then
+					if not self:MutateUpvalue(upvalue, val) then
 						upvalue:SetValue(val)
 						self:FireEvent("mutate_upvalue", key, val)
 					end

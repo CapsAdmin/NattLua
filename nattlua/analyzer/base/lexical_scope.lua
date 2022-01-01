@@ -23,6 +23,14 @@ do
 		return self.value
 	end
 
+	function META:GetNode()
+		return self.node
+	end
+
+	function META:GetKey()
+		return self.key
+	end
+
 	function META:SetValue(value)
 		self.value = value
 		value:SetUpvalue(self)
@@ -150,6 +158,7 @@ function META:CreateValue(key, obj, env)
 
 	local upvalue = {
 			key = key_hash,
+			node = key,
 			shadow = shadow,
 			position = #self.upvalues[env].list,
 		}
@@ -296,19 +305,17 @@ do
 			if source and test_condition.Type == "union" then
 				local upvalue = source:GetUpvalue()
 
-				if upvalue then
+				if upvalue and upvalue.Type == "upvalue" then
 					if test_condition.inverted then
-						analyzer:MutateValue(
+						analyzer:MutateUpvalue(
 							upvalue,
-							upvalue.key,
 							test_condition:GetTruthyUnion() or
 							test_condition:GetTruthy(),
 							self:GetParent()
 						)
 					else
-						analyzer:MutateValue(
+						analyzer:MutateUpvalue(
 							upvalue,
-							upvalue.key,
 							test_condition:GetFalsyUnion() or
 							test_condition:GetFalsy(),
 							self:GetParent()

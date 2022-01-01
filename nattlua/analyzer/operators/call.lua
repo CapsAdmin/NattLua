@@ -302,7 +302,7 @@ return
 					for _, arg in ipairs(analyzer.mutated_types) do
 						arg:PopContract()
 						arg.argument_index = nil
-						analyzer:MutateValue(arg:GetUpvalue(), arg:GetUpvalue().key, arg)
+						analyzer:MutateUpvalue(arg:GetUpvalue(), arg)
 					end
 
 					analyzer.mutated_types = {}

@@ -1443,3 +1443,19 @@ run[[
         end
     end
 ]]
+
+pending[[
+    -- mutation tracking for wide key
+    local operators = {
+        ["+"] = 1,
+        ["-"] = -1,
+        [">"] = 1,
+        ["<"] = -1
+    }
+    local i = 0
+    local op = "" as string
+
+    if operators[op] then
+        i = operators[op]
+    end
+]]
