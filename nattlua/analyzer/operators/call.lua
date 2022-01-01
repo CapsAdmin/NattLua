@@ -296,21 +296,31 @@ return
 			local call_lua_function_with_body
 
 			do
-				local function restore_mutated_types(analyzer)
-					if not analyzer.mutated_types or not analyzer.mutated_types[1] then return end
+				local function mutate_type(analyzer, i, arg, contract, arguments)
+					local env = analyzer--:GetScope():GetNearestFunctionScope()
+					env.mutated_types = env.mutated_types or {}
+					--analyzer:Print("pushing contract", arg, contract)
+					arg:PushContract(contract)
+					arg.argument_index = i
+					table.insert(env.mutated_types, arg)
+					arguments:Set(i, arg)
+				end
 
-					for _, arg in ipairs(analyzer.mutated_types) do
+				local function restore_mutated_types(analyzer)
+					local env = analyzer--:GetScope():GetNearestFunctionScope()
+					if not env.mutated_types or not env.mutated_types[1] then return end
+
+					for _, arg in ipairs(env.mutated_types) do
 						arg:PopContract()
+						--analyzer:Print("popping contract", arg)
 						arg.argument_index = nil
 						analyzer:MutateUpvalue(arg:GetUpvalue(), arg)
 					end
 
-					analyzer.mutated_types = {}
+					env.mutated_types = {}
 				end
 
 				local function check_and_setup_arguments(analyzer, arguments, contracts, function_node, obj)
-					analyzer.mutated_types = analyzer.mutated_types or {}
-					
 					local len = contracts:GetSafeLength(arguments)
 
 
@@ -454,10 +464,7 @@ return
 							arg:GetUpvalue() and
 							not contract.literal_argument
 						then
-							arg:PushContract(contract)
-							arg.argument_index = i
-							table.insert(analyzer.mutated_types, arg)
-							arguments:Set(i, arg)
+							mutate_type(analyzer, i, arg, contract, arguments)
 						else
 							-- if it's a literal argument we pass the incoming value
 							if not contract.literal_argument then
