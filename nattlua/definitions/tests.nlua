@@ -1,6 +1,8 @@
 local type types = {}
 
 analyzer function types.assert(what: any, type: any)
+	local val = what
+
 	what = what or types.Nil()
 	type = type or types.Nil()
 
@@ -12,7 +14,7 @@ analyzer function types.assert(what: any, type: any)
 		type = type:GetData()[1]
 	end
 
-	if what:Equal(type) or (what:GetContract() or what):Equal(type) then return end
+	if what:Equal(type) or (what:GetContract() or what):Equal(type) then return val end
 	local a = tostring(type)
 	local b = tostring(what:GetContract() or what)
 	error("expected " .. a .. " got " .. b, 2)
@@ -30,12 +32,14 @@ end
 
 analyzer function types.assert_literal(val: any)
 	assert(val:IsLiteral(), "not a literal")
+	return val
 end
 
 analyzer function types.assert_superset(what: any, type: any)
 	if not what:IsSubsetOf(type) or (what.type == "any" and type.type ~= "any") then
 		error("expected " .. tostring(type) .. " got " .. tostring(what), 2)
 	end
+	return what
 end
 
 analyzer function types.assert_subset(what: any, type: any)

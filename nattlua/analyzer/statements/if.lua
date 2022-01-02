@@ -7,6 +7,7 @@ return
 			for i, statements in ipairs(statement.statements) do
 				if statement.expressions[i] then
 					local obj = analyzer:AnalyzeExpression(statement.expressions[i])
+					analyzer:ClearAffectedUpvalues()
 					prev_expression = obj
 
 					if obj:IsTruthy() then

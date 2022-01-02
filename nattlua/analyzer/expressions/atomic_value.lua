@@ -52,19 +52,12 @@ local function lookup_value(self, node)
 	node.inferred_type = node.inferred_type or obj
 	local upvalue = obj:GetUpvalue()
 
-	if upvalue and self.current_statement.checks then
-		local checks = self.current_statement.checks[upvalue]
-
-		if checks then
-			local val = checks[#checks]
-
-			if val then
-				if val.inverted then
-					return val:GetFalsyUnion()
-				else
-					return val:GetTruthyUnion()
-				end
-			end
+	if upvalue and upvalue.exp_stack then
+		if self:IsTruthyExpressionContext() then
+			return upvalue.exp_stack[#upvalue.exp_stack].truthy:SetUpvalue(upvalue)
+		end
+		if self:IsFalsyExpressionContext() then
+			return upvalue.exp_stack[#upvalue.exp_stack].falsy:SetUpvalue(upvalue)
 		end
 	end
 

@@ -50,6 +50,17 @@ local function prefix_operator(analyzer, node, l)
 			end
 		end
 
+
+		local l_upvalue = l:GetUpvalue()
+
+		if l_upvalue then
+			l_upvalue.exp_stack = l_upvalue.exp_stack or {}
+			table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+
+			analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+			table.insert(analyzer.affected_upvalues, l_upvalue)
+		end
+
 		truthy_union:SetUpvalue(l:GetUpvalue())
 		falsy_union:SetUpvalue(l:GetUpvalue())
 		new_union:SetTruthyUnion(truthy_union)
@@ -114,9 +125,29 @@ local function prefix_operator(analyzer, node, l)
 	end
 
 	if op == "not" or op == "!" then
-		if l:IsTruthy() and l:IsFalsy() then return Boolean():SetNode(node):SetTypeSource(l) end
-		if l:IsTruthy() then return False():SetNode(node):SetTypeSource(l) end
-		if l:IsFalsy() then return True():SetNode(node):SetTypeSource(l) end
+		local truthy
+		local falsy
+		local union
+
+		if l:IsTruthy() and l:IsFalsy() then 
+			union = Boolean():SetNode(node):SetTypeSource(l) 
+		elseif l:IsTruthy() then 
+			truthy = False():SetNode(node):SetTypeSource(l) 
+		elseif l:IsFalsy() then 
+			falsy = True():SetNode(node):SetTypeSource(l) 
+		end
+
+		local l_upvalue = l:GetUpvalue()
+
+		if l_upvalue then
+			l_upvalue.exp_stack = l_upvalue.exp_stack or {}
+			table.insert(l_upvalue.exp_stack, {truthy = truthy or union, falsy = falsy or union})
+
+			analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+			table.insert(analyzer.affected_upvalues, l_upvalue)
+		end
+
+		return union or truthy or falsy
 	end
 
 	if op == "-" or op == "~" or op == "#" then

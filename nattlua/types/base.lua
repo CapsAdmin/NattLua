@@ -57,6 +57,14 @@ do
 		return self:IsTruthy() and self:IsFalsy()
 	end
 
+	function META:IsCertainlyFalse()
+		return self:IsFalsy() and not self:IsTruthy()
+	end
+
+	function META:IsCertainlyTrue()
+		return self:IsTruthy() and not self:IsFalsy()
+	end
+
 	META:IsSet("Falsy", false--[[# as boolean]])
 	META:IsSet("Truthy", false--[[# as boolean]])
 end

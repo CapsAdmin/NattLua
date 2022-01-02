@@ -23,7 +23,9 @@ local function lua_types_to_tuple(node, tps)
 	for i, v in ipairs(tps) do
 		if type(v) == "table" and v.Type ~= nil then
 			tbl[i] = v
-			v:SetNode(node)
+			if not v:GetNode() then
+				v:SetNode(node)
+			end
 		else
 			if type(v) == "function" then
 				tbl[i] = Function(

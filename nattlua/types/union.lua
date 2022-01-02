@@ -257,6 +257,28 @@ function META:Get(key, from_table)
 	return type_errors.other(errors)
 end
 
+function META:Contains(key)
+	for _, obj in ipairs(self.Data) do
+		local ok, reason = key:IsSubsetOf(obj)
+		if ok then return true end
+	end
+
+	return false
+end
+
+function META:ContainsOtherThan(key)
+	local found = false
+	for _, obj in ipairs(self.Data) do
+		if key:IsSubsetOf(obj) then 
+			found = true
+		elseif found then 
+			return true
+		end
+	end
+
+	return false
+end
+
 function META:IsEmpty()
 	return self.Data[1] == nil
 end
@@ -427,11 +449,12 @@ function META:DisableTruthy()
 end
 
 function META:EnableTruthy()
-	if not self.truthy_disabled then return end
+	if not self.truthy_disabled then return self end
 
 	for _, v in ipairs(self.truthy_disabled) do
 		self:AddType(v)
 	end
+	return self
 end
 
 function META:DisableFalsy()
@@ -448,6 +471,7 @@ function META:DisableFalsy()
 	end
 
 	self.falsy_disabled = found
+	return self
 end
 
 function META:EnableFalsy()

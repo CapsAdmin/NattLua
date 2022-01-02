@@ -862,7 +862,7 @@ run[[
 
 run[[
     local function test(LOL)
-        types.assert(LOL, 1)
+        types.assert(LOL, "str")
     end
     
     local x: 1 | "str"

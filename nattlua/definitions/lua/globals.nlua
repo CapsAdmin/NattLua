@@ -359,6 +359,7 @@ analyzer function type(obj: any)
 	if obj.Type == "union" then
 		analyzer.type_checked = obj
 		local copy = types.Union()
+		copy:SetUpvalue(obj:GetUpvalue())
 
 		for _, v in ipairs(obj:GetData()) do
 			if v.GetLuaType then

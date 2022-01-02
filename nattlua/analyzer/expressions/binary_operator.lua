@@ -10,53 +10,43 @@ return
 
 			if node.value.value == "and" then
 				left = analyzer:AnalyzeExpression(node.left)
-
-				if left:IsFalsy() and left:IsTruthy() then
-					-- if it's uncertain, remove uncertainty while analysing
-					if left.Type == "union" then
-						left:DisableFalsy()
-
-						if node.left.kind == "binary_operator" then
-							local obj = analyzer:AnalyzeExpression(node.left.left)
-							local key = analyzer:AnalyzeExpression(node.left.right)
-							analyzer:MutateValue(obj, key, left)
-						end
-					end
-
-					right = analyzer:AnalyzeExpression(node.right)
-
-					if analyzer.current_statement.checks and right:GetUpvalue() then
-						local checks = analyzer.current_statement.checks[right:GetUpvalue()]
-
-						if checks then
-							right = checks[#checks]:GetTruthyUnion()
-						end
-					end
-
-					if left.Type == "union" then
-						left:EnableFalsy()
-
-						if node.left.kind == "binary_operator" then
-							local obj = analyzer:AnalyzeExpression(node.left.left)
-							local key = analyzer:AnalyzeExpression(node.left.right)
-							analyzer:MutateValue(obj, key, left)
-						end
-					end
-				elseif left:IsFalsy() and not left:IsTruthy() then
-					-- if it's really false do nothing
+		
+				if left:IsCertainlyFalse() then
 					right = Nil():SetNode(node.right)
 				else
+					local obj, key
+					-- if index is uncertain, we need to temporary mutate the value
+					if left.Type == "union" and node.left.kind == "binary_operator" and node.left.value.value == "." then
+						obj = analyzer:AnalyzeExpression(node.left.left)
+						key = analyzer:AnalyzeExpression(node.left.right)
+						analyzer:MutateValue(obj, key, left:Copy():DisableFalsy())
+					end
+
+					-- right hand side of and is the "true" part
+					analyzer:PushTruthyExpressionContext()
 					right = analyzer:AnalyzeExpression(node.right)
+					analyzer:PopTruthyExpressionContext()
+
+					if obj and key then
+						analyzer:MutateValue(obj, key, left:Copy())
+					end
 				end
 			elseif node.value.value == "or" then
+				analyzer:PushFalsyExpressionContext()
 				left = analyzer:AnalyzeExpression(node.left)
-
-				if left:IsTruthy() and not left:IsFalsy() then
+				analyzer:PopFalsyExpressionContext()
+				
+				if left:IsCertainlyFalse() then
+					analyzer:PushFalsyExpressionContext()
+					right = analyzer:AnalyzeExpression(node.right)
+					analyzer:PopFalsyExpressionContext()
+				elseif left:IsCertainlyTrue() then
 					right = Nil():SetNode(node.right)
-				elseif left:IsFalsy() and not left:IsTruthy() then
-					right = analyzer:AnalyzeExpression(node.right)
 				else
+					-- right hand side of or is the "false" part
+					analyzer:PushFalsyExpressionContext()
 					right = analyzer:AnalyzeExpression(node.right)
+					analyzer:PopFalsyExpressionContext()
 				end
 			else
 				left = analyzer:AnalyzeExpression(node.left)

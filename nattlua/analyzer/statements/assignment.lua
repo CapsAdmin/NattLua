@@ -70,6 +70,7 @@ return
 					analyzer.left_assigned = left[right_pos]
 
 					local obj = analyzer:AnalyzeExpression(exp_val)
+					analyzer:ClearAffectedUpvalues()
 
 					if obj.Type == "tuple" and obj:GetLength() == 1 then
 						obj = obj:Get(1)
@@ -231,6 +232,7 @@ return
 						-- TODO: refactor out to mutation assignment?
 						-- index assignment: foo[a] = 1
 						local obj = analyzer:AnalyzeExpression(exp_key.left)
+						analyzer:ClearAffectedUpvalues()
 						if analyzer:IsRuntime() then
 							key = key:GetFirstValue()
 						end

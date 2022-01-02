@@ -203,21 +203,34 @@ local function binary_operator(analyzer, node, l, r, op)
 				end
 			end
 
+			-- the return value from type(x)
 			if analyzer.type_checked then
 				new_union.type_checked = analyzer.type_checked
 				analyzer.type_checked = nil
 			end
 
-			local upvalue = condition:GetUpvalue() or
-				new_union.type_checked and
-				new_union.type_checked:GetUpvalue()
+			if op ~= "or" and op ~= "and" then
+				local l_upvalue = l:GetUpvalue()
+				
+				if l_upvalue then
+					l_upvalue.exp_stack = l_upvalue.exp_stack or {}
+					table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
 
-			if upvalue then
-				analyzer.current_statement.checks = analyzer.current_statement.checks or {}
-				analyzer.current_statement.checks[upvalue] = analyzer.current_statement.checks[upvalue] or {}
-				table.insert(analyzer.current_statement.checks[upvalue], new_union)
+					analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+					table.insert(analyzer.affected_upvalues, l_upvalue)
+				end
+
+				local r_upvalue = r:GetUpvalue()
+
+				if r_upvalue then
+					r_upvalue.exp_stack = r_upvalue.exp_stack or {}
+					table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+					
+					analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+					table.insert(analyzer.affected_upvalues, r_upvalue)
+				end
 			end
-
+			
 			if op == "~=" then
 				new_union.inverted = true
 			end
