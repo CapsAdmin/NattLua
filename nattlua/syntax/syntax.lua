@@ -203,12 +203,8 @@ function META:AddBinaryOperatorFunctionTranslate(tbl --[[#: Map<|string, string|
 	for k, v in pairs(tbl) do
 		local a, b, c = v:match("(.-)A(.-)B(.*)")
 
-		if a then
-			if b then
-				if c then
-					self.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
-				end
-			end
+		if a and b and c then
+			self.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
 		end
 	end
 end
@@ -221,10 +217,8 @@ function META:AddPrefixOperatorFunctionTranslate(tbl --[[#: Map<|string, string|
 	for k, v in pairs(tbl) do
 		local a, b = v:match("^(.-)A(.-)$")
 
-		if a then -- TODO
-			if b then -- TODO
-				self.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
-			end
+		if a and b then
+			self.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
 		end
 	end
 end
@@ -237,10 +231,8 @@ function META:AddPostfixOperatorFunctionTranslate(tbl --[[#: Map<|string, string
 	for k, v in pairs(tbl) do
 		local a, b = v:match("^(.-)A(.-)$")
 
-		if a then
-			if b then
-				self.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
-			end
+		if a and b then
+			self.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
 		end
 	end
 end
