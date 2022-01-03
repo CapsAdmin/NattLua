@@ -177,8 +177,9 @@ local function Binary(analyzer, node, l, r, op)
 			r = analyzer:AnalyzeExpression(node.right)
 		end
 
+
 		-- TODO: more elegant way of dealing with self?
-		if node.kind == "binary_operator" and node.value.value == ":" then
+		if op == ":" then
 			analyzer.self_arg_stack = analyzer.self_arg_stack or {}
 			table.insert(analyzer.self_arg_stack, l)
 		end
