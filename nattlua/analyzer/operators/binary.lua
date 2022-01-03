@@ -112,7 +112,7 @@ end
 local function binary_operator(analyzer, node, l, r, op)
 	op = op or node.value.value
 
-	-- adding two tuples at runtime in lua will practically do this
+	-- adding two tuples at runtime in lua will basically do this
 	if analyzer:IsRuntime() then
 		if l.Type == "tuple" then
 			l = analyzer:Assert(node, l:GetFirstValue())
@@ -123,23 +123,7 @@ local function binary_operator(analyzer, node, l, r, op)
 		end
 	end
 
-	if
-		analyzer:IsTypesystem() and
-		l.Type == "tuple" and
-		r.Type == "tuple" and
-		op == ".."
-	then
-		local tuple = l:Copy()
-		local start = l:GetLength()
-
-		for i, v in ipairs(r:GetData()) do
-			tuple:Set(start + i, v)
-		end
-
-		return tuple
-	end
-
-	-- normalize l and r to be both sets to reduce complexity
+	-- normalize l and r to be both unions to reduce complexity
 	if l.Type ~= "union" and r.Type == "union" then
 		l = Union({l})
 	end
@@ -149,99 +133,101 @@ local function binary_operator(analyzer, node, l, r, op)
 	end
 
 	if l.Type == "union" and r.Type == "union" then
-		if op == "|" and analyzer:IsTypesystem() then
-			return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
-		elseif op == "==" and analyzer:IsTypesystem() then
-			return l:Equal(r) and True() or False()
-		elseif op == "~" and analyzer:IsTypesystem() then
-			return l:RemoveType(r):Copy()
-		else
-			local new_union = Union()
-			local truthy_union = Union()
-			local falsy_union = Union()
-			local condition = l
-
-			for _, l in ipairs(l:GetData()) do
-				for _, r in ipairs(r:GetData()) do
-					local res, err = binary_operator(
-						analyzer,
-						node,
-						l,
-						r,
-						op
-					)
-
-					if not res then
-						analyzer:ErrorAndCloneCurrentScope(node, err, condition)
-					else
-						if res:IsTruthy() then
-							if analyzer.type_checked then
-								for _, t in ipairs(analyzer.type_checked:GetData()) do
-									if t.GetLuaType and t:GetLuaType() == l:GetData() then
-										truthy_union:AddType(t)
-									end
-								end
-							else
-								truthy_union:AddType(l)
-							end
-						end
-
-						if res:IsFalsy() then
-							if analyzer.type_checked then
-								for _, t in ipairs(analyzer.type_checked:GetData()) do
-									if t.GetLuaType and t:GetLuaType() == l:GetData() then
-										falsy_union:AddType(t)
-									end
-								end
-							else
-								falsy_union:AddType(l)
-							end
-						end
-
-						new_union:AddType(res)
-					end
-				end
+		if analyzer:IsTypesystem() then
+			if op == "|" then
+				return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+			elseif op == "==" then
+				return l:Equal(r) and True() or False()
+			elseif op == "~" then
+				return l:RemoveType(r):Copy()
 			end
-
-			-- the return value from type(x)
-			if analyzer.type_checked then
-				new_union.type_checked = analyzer.type_checked
-				analyzer.type_checked = nil
-			end
-
-			if op ~= "or" and op ~= "and" then
-				local l_upvalue = l:GetUpvalue()
-				
-				if l_upvalue then
-					l_upvalue.exp_stack = l_upvalue.exp_stack or {}
-					table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
-
-					analyzer.affected_upvalues = analyzer.affected_upvalues or {}
-					table.insert(analyzer.affected_upvalues, l_upvalue)
-				end
-
-				local r_upvalue = r:GetUpvalue()
-
-				if r_upvalue then
-					r_upvalue.exp_stack = r_upvalue.exp_stack or {}
-					table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
-					
-					analyzer.affected_upvalues = analyzer.affected_upvalues or {}
-					table.insert(analyzer.affected_upvalues, r_upvalue)
-				end
-			end
-			
-			if op == "~=" then
-				new_union.inverted = true
-			end
-
-			truthy_union:SetUpvalue(condition:GetUpvalue())
-			falsy_union:SetUpvalue(condition:GetUpvalue())
-			new_union:SetTruthyUnion(truthy_union)
-			new_union:SetFalsyUnion(falsy_union)
-			return
-				new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end
+
+		local new_union = Union()
+		local truthy_union = Union()
+		local falsy_union = Union()
+		local condition = l
+
+		for _, l in ipairs(l:GetData()) do
+			for _, r in ipairs(r:GetData()) do
+				local res, err = binary_operator(
+					analyzer,
+					node,
+					l,
+					r,
+					op
+				)
+
+				if not res then
+					analyzer:ErrorAndCloneCurrentScope(node, err, condition)
+				else
+					if res:IsTruthy() then
+						if analyzer.type_checked then
+							for _, t in ipairs(analyzer.type_checked:GetData()) do
+								if t.GetLuaType and t:GetLuaType() == l:GetData() then
+									truthy_union:AddType(t)
+								end
+							end
+						else
+							truthy_union:AddType(l)
+						end
+					end
+
+					if res:IsFalsy() then
+						if analyzer.type_checked then
+							for _, t in ipairs(analyzer.type_checked:GetData()) do
+								if t.GetLuaType and t:GetLuaType() == l:GetData() then
+									falsy_union:AddType(t)
+								end
+							end
+						else
+							falsy_union:AddType(l)
+						end
+					end
+
+					new_union:AddType(res)
+				end
+			end
+		end
+
+		-- the return value from type(x)
+		if analyzer.type_checked then
+			new_union.type_checked = analyzer.type_checked
+			analyzer.type_checked = nil
+		end
+
+		if op ~= "or" and op ~= "and" then
+			local l_upvalue = l:GetUpvalue()
+			
+			if l_upvalue then
+				l_upvalue.exp_stack = l_upvalue.exp_stack or {}
+				table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+
+				analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+				table.insert(analyzer.affected_upvalues, l_upvalue)
+			end
+
+			local r_upvalue = r:GetUpvalue()
+
+			if r_upvalue then
+				r_upvalue.exp_stack = r_upvalue.exp_stack or {}
+				table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+				
+				analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+				table.insert(analyzer.affected_upvalues, r_upvalue)
+			end
+		end
+		
+		if op == "~=" then
+			new_union.inverted = true
+		end
+
+		truthy_union:SetUpvalue(condition:GetUpvalue())
+		falsy_union:SetUpvalue(condition:GetUpvalue())
+		new_union:SetTruthyUnion(truthy_union)
+		new_union:SetFalsyUnion(falsy_union)
+		return
+			new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 	end
 
 	if analyzer:IsTypesystem() then
@@ -258,7 +244,9 @@ local function binary_operator(analyzer, node, l, r, op)
 			if l.Type ~= "table" then return false, "type " .. tostring(l) .. " cannot be extended" end
 			return l:Extend(r)
 		elseif op == ".." then
-			if l.Type == "string" and r.Type == "string" then
+			if l.Type == "tuple" and r.Type == "tuple" then
+				return l:Copy():Concat(r)
+			elseif l.Type == "string" and r.Type == "string" then
 				return LString(l:GetData() .. r:GetData())
 			else
 				return l:Copy():SetMax(r)
@@ -284,6 +272,7 @@ local function binary_operator(analyzer, node, l, r, op)
 
 		return analyzer:IndexOperator(node, l, r) 
 	end
+	
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
 	if op == "+" then

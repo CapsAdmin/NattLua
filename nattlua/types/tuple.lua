@@ -401,6 +401,16 @@ function META:GetFirstValue()
 	return self:Get(1):GetFirstValue()
 end
 
+function META:Concat(tup)
+	local start = self:GetLength()
+
+	for i, v in ipairs(tup:GetData()) do
+		self:Set(start + i, v)
+	end
+
+	return self
+end
+
 function META.New(data)
 	local self = setmetatable({Data = {}}, META)
 
