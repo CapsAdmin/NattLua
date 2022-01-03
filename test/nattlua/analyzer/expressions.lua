@@ -99,3 +99,11 @@ run[[
         types.assert(b, true)
     end
 ]]
+
+run[[
+    local c: {foo = true } | nil
+
+    if c and c.foo then
+        types.assert(c.foo, true)
+    end
+]]

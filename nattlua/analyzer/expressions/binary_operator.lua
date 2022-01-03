@@ -14,21 +14,40 @@ return
 				if left:IsCertainlyFalse() then
 					right = Nil():SetNode(node.right)
 				else
-					local obj, key
+					-- if a and a.foo then
+					--    ^ no binary operator means that it was just checked simply if it was truthy
+					if left.Type == "union" and node.left.kind == "value" then
+						local upvalue = left:GetUpvalue()
+				
+						if upvalue then
+							local truthy_union = left:GetTruthy()
+							local falsy_union = left:GetFalsy()
+
+							upvalue.exp_stack = upvalue.exp_stack or {}
+							table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+		
+							analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+							table.insert(analyzer.affected_upvalues, upvalue)
+						end		
+					end
+
 					-- if index is uncertain, we need to temporary mutate the value
+					analyzer:PushTruthyExpressionContext()
+
+					local obj_left, key_left
 					if left.Type == "union" and node.left.kind == "binary_operator" and node.left.value.value == "." then
-						obj = analyzer:AnalyzeExpression(node.left.left)
-						key = analyzer:AnalyzeExpression(node.left.right)
-						analyzer:MutateValue(obj, key, left:Copy():DisableFalsy())
+						obj_left = analyzer:AnalyzeExpression(node.left.left)
+						key_left = analyzer:AnalyzeExpression(node.left.right)
+						analyzer:MutateValue(obj_left, key_left, left:Copy():DisableFalsy())
 					end
 
 					-- right hand side of and is the "true" part
-					analyzer:PushTruthyExpressionContext()
 					right = analyzer:AnalyzeExpression(node.right)
+					
 					analyzer:PopTruthyExpressionContext()
 
-					if obj and key then
-						analyzer:MutateValue(obj, key, left:Copy())
+					if obj_left and key_left then
+						analyzer:MutateValue(obj_left, key_left, left:Copy())
 					end
 				end
 			elseif node.value.value == "or" then
