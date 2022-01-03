@@ -7,12 +7,18 @@ return
 			for i, statements in ipairs(statement.statements) do
 				if statement.expressions[i] then
 					local obj = analyzer:AnalyzeExpression(statement.expressions[i])
+					local upvalues = {}
+					if analyzer.affected_upvalues then
+						for _, upvalue in ipairs(analyzer.affected_upvalues) do
+							upvalues[upvalue] = upvalue.exp_stack
+						end
+					end
 					analyzer:ClearAffectedUpvalues()
 					prev_expression = obj
 
 					if obj:IsTruthy() then
 						analyzer:FireEvent("if", i == 1 and "if" or "elseif", true)
-							analyzer:PushConditionalScope(statement, obj)
+							analyzer:PushConditionalScope(statement, obj, upvalues)
 							analyzer:AnalyzeStatements(statements)
 							analyzer:PopConditionalScope()
 						analyzer:FireEvent("if", i == 1 and "if" or "elseif", false)
@@ -21,7 +27,7 @@ return
 				else
 					if prev_expression:IsFalsy() then
 						analyzer:FireEvent("if", "else", true)
-							analyzer:PushConditionalScope(statement, prev_expression)
+							analyzer:PushConditionalScope(statement, prev_expression, upvalues)
 							analyzer:GetScope():InvertIfStatement(true)
 							analyzer:AnalyzeStatements(statements)
 							analyzer:PopConditionalScope()

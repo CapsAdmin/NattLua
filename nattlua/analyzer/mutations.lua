@@ -280,6 +280,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 					return value
 				end
 			end
+			local upvalue_map = found_scope:GetAffectedUpvaluesMap()
 
             -- the or part here refers to if *condition* then
             -- truthy/falsy _union is only created from binary operators and some others
@@ -287,8 +288,28 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 				found_scope:IsPartOfElseStatement() or
 				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
 			then
+				if upvalue_map and upvalue_map[obj] then
+					local union = Union()
+
+					for _, val in ipairs(upvalue_map[obj]) do						
+						union:AddType(val.falsy)
+					end
+
+					return union
+				end
+
 				return union:GetFalsyUnion() or value:GetFalsy()
 			else
+				if upvalue_map and upvalue_map[obj] then
+					local union = Union()
+
+					for _, val in ipairs(upvalue_map[obj]) do						
+						union:AddType(val.truthy)
+					end
+
+					return union
+				end
+
 				return union:GetTruthyUnion() or value:GetTruthy()
 			end
 		end

@@ -83,3 +83,19 @@ run[[
     if not x then return false end
     local x = true and types.assert(x, _ as number)
 ]]
+
+run[[
+    local a: 1 | 2 | 3
+    if a == 1 or a == 3 then
+        types.assert(a, _ as 1 | 3)
+    end
+]]
+
+run[[
+    local a: 1 | 2 | 3 | nil
+    local b: true | nil
+    if (a == 1 or a == 3) and b then
+        types.assert(a, _ as 1 | 3)
+        types.assert(b, true)
+    end
+]]

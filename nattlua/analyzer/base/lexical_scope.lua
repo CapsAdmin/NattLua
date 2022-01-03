@@ -201,6 +201,15 @@ function META:SetTestCondition(obj)
 	self.test_condition = obj
 end
 
+function META:SetAffectedUpvaluesMap(upvalues)
+	self.affected_upvalues = upvalues
+end
+
+
+function META:GetAffectedUpvaluesMap()
+	return self.affected_upvalues
+end
+
 function META:SetStatement(statement)
 	self.statement = statement
 end

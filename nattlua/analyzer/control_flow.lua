@@ -159,9 +159,10 @@ return function(META)
 		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
 	end	
 
-	function META:PushConditionalScope(statement, condition)
+	function META:PushConditionalScope(statement, condition, affected_upvalues)
 		local scope = self:CreateAndPushScope()
 		scope:SetTestCondition(condition)
+		scope:SetAffectedUpvaluesMap(affected_upvalues)
 		scope:SetStatement(statement)
 		scope:MakeUncertain(condition:IsUncertain())
 	end
