@@ -109,8 +109,80 @@ local function logical_cmp_cast(val--[[#: boolean | nil]])
 	end
 end
 
-local function binary_operator(analyzer, node, l, r, op)
+local function Binary(analyzer, node, l, r, op)
 	op = op or node.value.value
+
+	if not l and not r then
+		if node.value.value == "and" then
+			l = analyzer:AnalyzeExpression(node.left)
+	
+			if l:IsCertainlyFalse() then
+				r = Nil():SetNode(node.right)
+			else
+				-- if a and a.foo then
+				--    ^ no binary operator means that it was just checked simply if it was truthy
+				if l.Type == "union" and node.left.kind == "value" then
+					local upvalue = l:GetUpvalue()
+			
+					if upvalue then
+						local truthy_union = l:GetTruthy()
+						local falsy_union = l:GetFalsy()
+
+						upvalue.exp_stack = upvalue.exp_stack or {}
+						table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+	
+						analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+						table.insert(analyzer.affected_upvalues, upvalue)
+					end		
+				end
+
+				-- if index is uncertain, we need to temporary mutate the value
+				analyzer:PushTruthyExpressionContext()
+
+				local obj_left, key_left
+				if l.Type == "union" and node.left.kind == "binary_operator" and node.left.value.value == "." then
+					obj_left = analyzer:AnalyzeExpression(node.left.left)
+					key_left = analyzer:AnalyzeExpression(node.left.right)
+					analyzer:MutateValue(obj_left, key_left, l:Copy():DisableFalsy())
+				end
+
+				-- right hand side of and is the "true" part
+				r = analyzer:AnalyzeExpression(node.right)
+				
+				analyzer:PopTruthyExpressionContext()
+
+				if obj_left and key_left then
+					analyzer:MutateValue(obj_left, key_left, l:Copy())
+				end
+			end
+		elseif node.value.value == "or" then
+			analyzer:PushFalsyExpressionContext()
+			l = analyzer:AnalyzeExpression(node.left)
+			analyzer:PopFalsyExpressionContext()
+			
+			if l:IsCertainlyFalse() then
+				analyzer:PushFalsyExpressionContext()
+				r = analyzer:AnalyzeExpression(node.right)
+				analyzer:PopFalsyExpressionContext()
+			elseif l:IsCertainlyTrue() then
+				r = Nil():SetNode(node.right)
+			else
+				-- right hand side of or is the "false" part
+				analyzer:PushFalsyExpressionContext()
+				r = analyzer:AnalyzeExpression(node.right)
+				analyzer:PopFalsyExpressionContext()
+			end
+		else
+			l = analyzer:AnalyzeExpression(node.left)
+			r = analyzer:AnalyzeExpression(node.right)
+		end
+
+		-- TODO: more elegant way of dealing with self?
+		if node.kind == "binary_operator" and node.value.value == ":" then
+			analyzer.self_arg_stack = analyzer.self_arg_stack or {}
+			table.insert(analyzer.self_arg_stack, l)
+		end
+	end
 
 	-- adding two tuples at runtime in lua will basically do this
 	if analyzer:IsRuntime() then
@@ -150,7 +222,7 @@ local function binary_operator(analyzer, node, l, r, op)
 
 		for _, l in ipairs(l:GetData()) do
 			for _, r in ipairs(r:GetData()) do
-				local res, err = binary_operator(
+				local res, err = Binary(
 					analyzer,
 					node,
 					l,
@@ -525,4 +597,4 @@ local function binary_operator(analyzer, node, l, r, op)
 	return type_errors.binary(op, l, r)
 end
 
-return {Binary = binary_operator}
+return {Binary = Binary}
