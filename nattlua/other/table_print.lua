@@ -104,7 +104,7 @@ local function getprettysource(level--[[#: number | Function]], append_line--[[#
 			end
 
 			if pretty_source == "=[C]" and jit.vmdef then
-				local num = tonumber(tostring(info.func):match("#(%d+)"))
+				local num = tonumber(tostring(info.func):match("#(%d+)") or "")
 
 				if num then
 					pretty_source = jit.vmdef.ffnames[num]
