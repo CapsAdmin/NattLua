@@ -129,7 +129,6 @@ local function Binary(analyzer, node, l, r, op)
 			r = analyzer:AnalyzeExpression(node.right)
 		end
 
-
 		-- TODO: more elegant way of dealing with self?
 		if op == ":" then
 			analyzer.self_arg_stack = analyzer.self_arg_stack or {}
@@ -283,17 +282,10 @@ local function Binary(analyzer, node, l, r, op)
 
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
-	if op == "." or op == ":" then 
-
-		if l.Type == "tuple" then
-			l = l:Get(1)
-		end
-
-		return analyzer:IndexOperator(node, l, r) 
-	end
-
 	do -- arithmetic operators
-		if op == "+" then
+		if op == "." or op == ":" then 
+			return analyzer:IndexOperator(node, l, r) 
+		elseif op == "+" then
 			local val = operator(analyzer, node, l, r, op, "__add")
 			if val then return val end
 		elseif op == "-" then
@@ -341,7 +333,6 @@ local function Binary(analyzer, node, l, r, op)
 			if res then return res end
 			
 			if l == r then return True() end
-			
 			if l.Type ~= r.Type then return False() end
 
 			return logical_cmp_cast(l.LogicalComparison(l, r, op, analyzer:GetCurrentAnalyzerEnvironment()))
@@ -375,32 +366,38 @@ local function Binary(analyzer, node, l, r, op)
 			if res then return res end
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "or" or op == "||" then
+			-- boolean or boolean
 			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 
-			-- when true, or returns its first argument
-			if l:IsTruthy() then return
-				l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
-			if r:IsTruthy() then return
-				r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+			-- true or boolean
+			if l:IsTruthy() then return l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+			
+			-- false or true
+			if r:IsTruthy() then return r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 			return r:Copy():SetNode(node):SetTypeSource(r)
 		elseif op == "and" or op == "&&" then
+
+			-- true and false
 			if l:IsTruthy() and r:IsFalsy() then
 				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 				return
 					r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 			end
 
+			-- false and true
 			if l:IsFalsy() and r:IsTruthy() then
 				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 				return
 					l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 			end
 
+			-- true and true
 			if l:IsTruthy() and r:IsTruthy() then
 				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 				return
 					r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 			else
+				-- false and false
 				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 				return
 					l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
