@@ -206,6 +206,52 @@ function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--
 	local b_val = b:GetData()
 	if not a_val then return nil end
 	if not b_val then return nil end
+
+	if operator == "==" then		
+		if a:GetMax() and a:GetMax():GetData() then 
+			if b_val >= a:GetData() and b_val <= a:GetMax():GetData() then 
+				return nil
+			end
+			return false
+		end
+
+		if b:GetMax() and b:GetMax():GetData() then 
+			if a_val >= b:GetData() and a_val <= b:GetMax():GetData() then
+				return nil
+			end
+
+			return false
+		end
+
+		--if a:IsLiteral() and b:IsLiteral() then 
+			return a:GetData() == b:GetData()
+		--end
+	elseif operator == "~=" then
+		local l = a
+		local r = b
+		if l:GetMax() and l:GetMax():IsLiteral() then
+			local l = l:GetMax():GetData()
+			local r = r:GetData()
+
+			if l and r then
+				return (not (r >= l and r <= l)) and true or nil
+			end
+		end
+
+		if r:GetMax() and r:GetMax():IsLiteral() then
+			local l = l:GetData()
+			local r = r:GetMax():GetData()
+
+			if l and r then
+				return (not (l >= r and l <= r)) and true or nil
+			end
+		end
+
+		--if l:IsLiteral() and r:IsLiteral() then 
+			return l:GetData() ~= r:GetData()
+		--end
+	end
+
 	local a_max = a:GetMaxLiteral()
 	local b_max = b:GetMaxLiteral()
 

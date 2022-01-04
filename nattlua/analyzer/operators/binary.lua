@@ -397,50 +397,32 @@ local function Binary(analyzer, node, l, r, op)
 		if op == "==" then
 			local res = metatable_function(analyzer, node, "__eq", l, r)
 			if res then return res end
+			
+			if l == r then return True() end
+			if l.Type ~= r.Type then return False() end
 
 			if l.Type == "number" and r.Type == "number" then
-				if l:GetData() and r:GetData() then
-					if l:GetMax() and l:GetMax():GetData() then return
-						r:GetData() >= l:GetData() and
-						r:GetData() <= l:GetMax():GetData() and
-						Boolean() or
-						False() end
-					if r:GetMax() and r:GetMax():GetData() then return
-						l:GetData() >= r:GetData() and
-						l:GetData() <= r:GetMax():GetData() and
-						Boolean() or
-						False() end
-				end
-			end
-
-			if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
-				if l.Type == "table" and r.Type == "table" then
-					if analyzer:IsRuntime() then
-						if l:GetReferenceId() and r:GetReferenceId() then return l:GetReferenceId() == r:GetReferenceId() and True() or False() end
-					end
-
-					if analyzer:IsTypesystem() then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() end
-					return Boolean()
-				end
-
-				return l:GetData() == r:GetData() and True() or False()
+				return logical_cmp_cast(l.LogicalComparison(l, r, op))
 			end
 
 			if l.Type == "table" and r.Type == "table" then
-				if analyzer:IsTypesystem() then return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() end
+				if analyzer:IsRuntime() then
+					if l:GetReferenceId() and r:GetReferenceId() then 
+						return l:GetReferenceId() == r:GetReferenceId() and True() or False() 
+					end
+				end
+
+				if analyzer:IsTypesystem() then 
+					return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() 
+				end
+
+				return Boolean()
 			end
 
-			if
-				l.Type == "symbol" and
-				r.Type == "symbol" and
-				l:GetData() == nil and
-				r:GetData() == nil
-			then
-				return True()
+			if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
+				return l:GetData() == r:GetData() and True() or False()
 			end
 
-			if l.Type ~= r.Type then return False() end
-			if l == r then return True() end
 			return Boolean()
 		elseif op == "~=" or op == "!=" then
 			local res = metatable_function(analyzer, node, "__eq", l, r)
@@ -453,30 +435,19 @@ local function Binary(analyzer, node, l, r, op)
 				return res
 			end
 
+			if l.Type ~= r.Type then return True() end
+
 			if l.Type == "number" and r.Type == "number" then
-				if l:GetMax() and l:GetMax():IsLiteral() then
-					local l = l:GetMax():GetData()
-					local r = r:GetData()
-
-					if l and r then
-						return (not (r >= l and r <= l)) and True() or Boolean()
-					end
-				end
-
-				if r:GetMax() and r:GetMax():IsLiteral() then
-					local l = l:GetData()
-					local r = r:GetMax():GetData()
-
-					if l and r then
-						return (not (l >= r and l <= r)) and True() or Boolean()
-					end
-				end
+				-- comparing nan with nan is always false so we need to this first
+				return logical_cmp_cast(l.LogicalComparison(l, r, op))
 			end
 
-			if l:IsLiteral() and r:IsLiteral() then return l:GetData() ~= r:GetData() and True() or False() end
-			if l == Nil() and r == Nil() then return True() end
-			if l.Type ~= r.Type then return True() end
 			if l == r then return False() end
+
+			if l:IsLiteral() and r:IsLiteral() then 
+				return l:GetData() ~= r:GetData() and True() or False() 
+			end
+
 			return Boolean()
 		elseif op == "<" then
 			local res = metatable_function(analyzer, node, "__lt", l, r)
