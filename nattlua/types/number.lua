@@ -1,5 +1,5 @@
-local ipairs = _G.ipairs
-local table = require("table")
+local math = math
+local assert = assert
 local error = _G.error
 local tostring = _G.tostring
 local tonumber = _G.tonumber
@@ -174,7 +174,8 @@ function META:GetMaxLiteral()
 	return self.Max and self.Max:GetData()
 end
 
-local operators = {
+do
+	local operators = {
 		[">"] = function(a--[[#: number]], b--[[#: number]])
 			return a > b
 		end,
@@ -189,124 +190,188 @@ local operators = {
 		end,
 	}
 
-local function compare(val--[[#: number]], min--[[#: number]], max--[[#: number]], operator--[[#: keysof<|operators|>]])
-	local func = operators[operator]
+	local function compare(val--[[#: number]], min--[[#: number]], max--[[#: number]], operator--[[#: keysof<|operators|>]])
+		local func = operators[operator]
 
-	if func(min, val) and func(max, val) then
-		return true
-	elseif not func(min, val) and not func(max, val) then
-		return false
+		if func(min, val) and func(max, val) then
+			return true
+		elseif not func(min, val) and not func(max, val) then
+			return false
+		end
+
+		return nil
 	end
 
-	return nil
-end
+	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: boolean | nil]]
+		if operator == "==" then		
+			local a_val = a:GetData()
+			local b_val = b:GetData()
 
-function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: boolean | nil]]
-	if operator == "==" then		
+			if b_val then
+				if a:GetMax() and a:GetMax():GetData() then 
+					if b_val >= a:GetData() and b_val <= a:GetMax():GetData() then 
+						return nil
+					end
+					return false
+				end
+			end
+
+			if a_val then
+				if b:GetMax() and b:GetMax():GetData() then 
+					if a_val >= b:GetData() and a_val <= b:GetMax():GetData() then
+						return nil
+					end
+
+					return false
+				end
+			end
+
+			if a_val and b_val then
+				return a_val == b_val
+			end
+
+			return nil
+		end
+
 		local a_val = a:GetData()
 		local b_val = b:GetData()
 
-		if b_val then
-			if a:GetMax() and a:GetMax():GetData() then 
-				if b_val >= a:GetData() and b_val <= a:GetMax():GetData() then 
-					return nil
-				end
-				return false
-			end
-		end
-
-		if a_val then
-			if b:GetMax() and b:GetMax():GetData() then 
-				if a_val >= b:GetData() and a_val <= b:GetMax():GetData() then
-					return nil
-				end
-
-				return false
-			end
-		end
-
 		if a_val and b_val then
-			return a_val == b_val
-		end
+			local a_max = a:GetMaxLiteral()
+			local b_max = b:GetMaxLiteral()
 
-		return nil
-	end
-
-	local a_val = a:GetData()
-	local b_val = b:GetData()
-
-	if a_val and b_val then
-		local a_max = a:GetMaxLiteral()
-		local b_max = b:GetMaxLiteral()
-
-		if a_max then
-			if b_max then
-				local res_a = compare(b_val, a_val, b_max, operator)
-				local res_b = not compare(a_val, b_val, a_max, operator)
-				if res_a ~= nil and res_a == res_b then return res_a end
-				return nil
+			if a_max then
+				if b_max then
+					local res_a = compare(b_val, a_val, b_max, operator)
+					local res_b = not compare(a_val, b_val, a_max, operator)
+					if res_a ~= nil and res_a == res_b then return res_a end
+					return nil
+				end
 			end
+
+			if a_max then
+				local res = compare(b_val, a_val, a_max, operator)
+				if res == nil then return nil end
+				return res
+			end
+
+			if operators[operator] then return operators[operator](a_val, b_val) end
+		else
+			return nil
 		end
 
-		if a_max then
-			local res = compare(b_val, a_val, a_max, operator)
-			if res == nil then return nil end
-			return res
+		if operators[operator] then 
+			return nil
 		end
 
-		if operators[operator] then return operators[operator](a_val, b_val) end
-	else
-		return nil
+		return type_errors.binary(operator, a, b)
 	end
 
-	if operators[operator] then 
-		return nil
-	end
+	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber, TNumber]]
+		local cmp = operators[operator]
+		
+		if not cmp then
+			error("NYI " .. operator)
+		end
+		
+		local a_min = a:GetData()
+		local b_min = b:GetData()
+		if not a_min then return nil end
+		if not b_min then return nil end
 
-	return type_errors.binary(operator, a, b)
+		local a_max = a:GetMaxLiteral() or a_min
+		local b_max = b:GetMaxLiteral() or b_min
+		
+		local a_min_res = nil--[[# as number]]
+		local b_min_res = nil--[[# as number]]
+
+		local a_max_res = nil--[[# as number]]
+		local b_max_res = nil--[[# as number]]
+
+		if operator == "<" then
+			a_min_res = math.min(a_min, b_max)
+			a_max_res = math.min(a_max, b_max-1)
+
+			b_min_res = math.max(a_min, b_max)
+			b_max_res = math.max(a_max, b_max)
+		end
+
+		if operator == ">" then
+			a_min_res = math.max(a_min, b_max+1)
+			a_max_res = math.max(a_max, b_max)
+
+			b_min_res = math.min(a_min, b_max)
+			b_max_res = math.min(a_max, b_max)
+		end
+
+		local a = META.New(a_min_res):SetLiteral(true):SetMax(META.New(a_max_res):SetLiteral(true))
+		local b = META.New(b_min_res):SetLiteral(true):SetMax(META.New(b_max_res):SetLiteral(true))
+		
+		return a, b
+	end
 end
 
-function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber, TNumber]]
-	local cmp = operators[operator]
-	
-	if not cmp then
-		error("NYI " .. operator)
+do
+	local operators = {
+		["+"] = function(l, r)
+			return l + r
+		end,
+		["-"] = function(l, r)
+			return l - r
+		end,
+		["*"] = function(l, r)
+			return l * r
+		end,
+		["/"] = function(l, r)
+			return l / r
+		end,
+		["/idiv/"] = function(l, r)
+			return (math.modf(l / r))
+		end,
+		["%"] = function(l, r)
+			return l % r
+		end,
+		["^"] = function(l, r)
+			return l ^ r
+		end,
+		[".."] = function(l, r)
+			return l .. r
+		end,
+		["&"] = function(l, r)
+			return bit.band(l, r)
+		end,
+		["|"] = function(l, r)
+			return bit.bor(l, r)
+		end,
+		["~"] = function(l, r)
+			return bit.bxor(l, r)
+		end,
+		["<<"] = function(l, r)
+			return bit.lshift(l, r)
+		end,
+		[">>"] = function(l, r)
+			return bit.rshift(l, r)
+		end,
+	}
+
+	function META.ArithmeticOperator(l, r, op)
+		local func = assert(operators[op], "cannot find operator " .. op)
+		if l:IsLiteral() and r:IsLiteral() then
+			local obj = META.New(func(l:GetData(), r:GetData())):SetLiteral(true)
+
+			if r:GetMax() then
+				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax(), op))
+			end
+
+			if l:GetMax() then
+				obj:SetMax(l.ArithmeticOperator(l:GetMax(), r:GetMax() or r, op))
+			end
+
+			return obj:SetTypeSourceLeft(l):SetTypeSourceRight(r)
+		end
+
+		return META.New():SetTypeSourceLeft(l):SetTypeSourceRight(r)
 	end
-	
-	local a_min = a:GetData()
-	local b_min = b:GetData()
-	if not a_min then return nil end
-	if not b_min then return nil end
-
-	local a_max = a:GetMaxLiteral() or a_min
-	local b_max = b:GetMaxLiteral() or b_min
-	
-	local a_min_res = nil--[[# as number]]
-	local b_min_res = nil--[[# as number]]
-
-	local a_max_res = nil--[[# as number]]
-	local b_max_res = nil--[[# as number]]
-
-	if operator == "<" then
-		a_min_res = math.min(a_min, b_max)
-		a_max_res = math.min(a_max, b_max-1)
-
-		b_min_res = math.max(a_min, b_max)
-		b_max_res = math.max(a_max, b_max)
-	end
-
-	if operator == ">" then
-		a_min_res = math.max(a_min, b_max+1)
-		a_max_res = math.max(a_max, b_max)
-
-		b_min_res = math.min(a_min, b_max)
-		b_max_res = math.min(a_max, b_max)
-	end
-
-	local a = META.New(a_min_res):SetLiteral(true):SetMax(META.New(a_max_res):SetLiteral(true))
-	local b = META.New(b_min_res):SetLiteral(true):SetMax(META.New(b_max_res):SetLiteral(true))
-	
-	return a, b
 end
 
 function META:IsFalsy()
@@ -317,9 +382,9 @@ function META:IsTruthy()
 	return true
 end
 
-function META.New(data--[[#: number]])
+function META.New(data--[[#: number | nil]])
 	return setmetatable({
-		Data = data,
+		Data = data--[[#as number]],
 		Falsy = false,
 		Truthy = true,
 		Literal = false,
@@ -329,7 +394,7 @@ end
 return
 	{
 		Number = META.New,
-		LNumber = function(num--[[#: number]])
+		LNumber = function(num--[[#: number | nil]])
 			return META.New(num):SetLiteral(true)
 		end,
 		LNumberFromString = function(str--[[#: string]])

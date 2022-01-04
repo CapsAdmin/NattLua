@@ -270,7 +270,6 @@ function META:GetFirstValue()
 	return self
 end
 
-
 function META.LogicalComparison(l, r, op)
 	if op == "==" then
 		if l:IsLiteral() and r:IsLiteral() then

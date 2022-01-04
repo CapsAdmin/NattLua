@@ -1,12 +1,8 @@
-local math = math
-local assert = assert
 local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
-local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
 local String = require("nattlua.types.string").String
-local Number = require("nattlua.types.number").Number
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
@@ -16,48 +12,6 @@ local Symbol = require("nattlua.types.symbol").Symbol
 local False = require("nattlua.types.symbol").False
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
-local bit = _G.bit or require("bit32")
-local operators = {
-		["+"] = function(l, r)
-			return l + r
-		end,
-		["-"] = function(l, r)
-			return l - r
-		end,
-		["*"] = function(l, r)
-			return l * r
-		end,
-		["/"] = function(l, r)
-			return l / r
-		end,
-		["/idiv/"] = function(l, r)
-			return (math.modf(l / r))
-		end,
-		["%"] = function(l, r)
-			return l % r
-		end,
-		["^"] = function(l, r)
-			return l ^ r
-		end,
-		[".."] = function(l, r)
-			return l .. r
-		end,
-		["&"] = function(l, r)
-			return bit.band(l, r)
-		end,
-		["|"] = function(l, r)
-			return bit.bor(l, r)
-		end,
-		["~"] = function(l, r)
-			return bit.bxor(l, r)
-		end,
-		["<<"] = function(l, r)
-			return bit.lshift(l, r)
-		end,
-		[">>"] = function(l, r)
-			return bit.rshift(l, r)
-		end,
-	}
 
 local function metatable_function(analyzer, node, meta_method, l, r)
 	meta_method = LString(meta_method)
@@ -71,10 +25,8 @@ local function metatable_function(analyzer, node, meta_method, l, r)
 	end
 end
 
-local function arithmetic(analyzer, node, l, r, operator, meta_method)
-	assert(operators[operator], "cannot map operator " .. tostring(operator))
-
-	if operator == ".." then
+local function operator(analyzer, node, l, r, op, meta_method)
+	if op == ".." then
 		if
 			(l.Type == "string" and r.Type == "string") or
 			(l.Type == "number" and r.Type == "string") or
@@ -87,26 +39,12 @@ local function arithmetic(analyzer, node, l, r, operator, meta_method)
 	end
 
 	if l.Type == "number" and r.Type == "number" then
-		if l:IsLiteral() and r:IsLiteral() then
-			local obj = LNumber(operators[operator](l:GetData(), r:GetData()))
-
-			if r:GetMax() then
-				obj:SetMax(arithmetic(analyzer, node, l:GetMax() or l, r:GetMax(), operator, meta_method))
-			end
-
-			if l:GetMax() then
-				obj:SetMax(arithmetic(analyzer, node, l:GetMax(), r:GetMax() or r, operator, meta_method))
-			end
-
-			return obj:SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
-		end
-
-		return Number():SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+		return l:ArithmeticOperator(r,op):SetNode(node)
 	else
 		return metatable_function(analyzer, node, meta_method, l, r)
 	end
 
-	return type_errors.binary(operator, l, r)
+	return type_errors.binary(op, l, r)
 end
 
 local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
@@ -356,43 +294,43 @@ local function Binary(analyzer, node, l, r, op)
 
 	do -- arithmetic operators
 		if op == "+" then
-			local val = arithmetic(analyzer, node, l, r, op, "__add")
+			local val = operator(analyzer, node, l, r, op, "__add")
 			if val then return val end
 		elseif op == "-" then
-			local val = arithmetic(analyzer, node, l, r, op, "__sub")
+			local val = operator(analyzer, node, l, r, op, "__sub")
 			if val then return val end
 		elseif op == "*" then
-			local val = arithmetic(analyzer, node, l, r, op, "__mul")
+			local val = operator(analyzer, node, l, r, op, "__mul")
 			if val then return val end
 		elseif op == "/" then
-			local val = arithmetic(analyzer, node, l, r, op, "__div")
+			local val = operator(analyzer, node, l, r, op, "__div")
 			if val then return val end
 		elseif op == "/idiv/" then
-			local val = arithmetic(analyzer, node, l, r, op, "__idiv")
+			local val = operator(analyzer, node, l, r, op, "__idiv")
 			if val then return val end
 		elseif op == "%" then
-			local val = arithmetic(analyzer, node, l, r, op, "__mod")
+			local val = operator(analyzer, node, l, r, op, "__mod")
 			if val then return val end
 		elseif op == "^" then
-			local val = arithmetic(analyzer, node, l, r, op, "__pow")
+			local val = operator(analyzer, node, l, r, op, "__pow")
 			if val then return val end
 		elseif op == "&" then
-			local val = arithmetic(analyzer, node, l, r, op, "__band")
+			local val = operator(analyzer, node, l, r, op, "__band")
 			if val then return val end
 		elseif op == "|" then
-			local val = arithmetic(analyzer, node, l, r, op, "__bor")
+			local val = operator(analyzer, node, l, r, op, "__bor")
 			if val then return val end
 		elseif op == "~" then
-			local val = arithmetic(analyzer, node, l, r, op, "__bxor")
+			local val = operator(analyzer, node, l, r, op, "__bxor")
 			if val then return val end
 		elseif op == "<<" then
-			local val = arithmetic(analyzer, node, l, r, op, "__lshift")
+			local val = operator(analyzer, node, l, r, op, "__lshift")
 			if val then return val end
 		elseif op == ">>" then
-			local val = arithmetic(analyzer, node, l, r, op, "__rshift")
+			local val = operator(analyzer, node, l, r, op, "__rshift")
 			if val then return val end
 		elseif op == ".." then
-			local val = arithmetic(analyzer, node, l, r, op, "__concat")
+			local val = operator(analyzer, node, l, r, op, "__concat")
 			if val then return val end
 		end
 	end
@@ -403,6 +341,7 @@ local function Binary(analyzer, node, l, r, op)
 			if res then return res end
 			
 			if l == r then return True() end
+			
 			if l.Type ~= r.Type then return False() end
 
 			return logical_cmp_cast(l.LogicalComparison(l, r, op, analyzer:GetCurrentAnalyzerEnvironment()))
@@ -410,10 +349,7 @@ local function Binary(analyzer, node, l, r, op)
 			local res = metatable_function(analyzer, node, "__eq", l, r)
 
 			if res then
-				if res:IsLiteral() then
-					res:SetData(not res:GetData())
-				end
-
+				if res:IsLiteral() then res:SetData(not res:GetData()) end
 				return res
 			end
 
@@ -421,19 +357,11 @@ local function Binary(analyzer, node, l, r, op)
 
 			local val, err = l.LogicalComparison(l, r, "==", analyzer:GetCurrentAnalyzerEnvironment())
 			if val ~= nil then val = not val end
-			return logical_cmp_cast(val)
+			return logical_cmp_cast(val, err)
 		elseif op == "<" then
 			local res = metatable_function(analyzer, node, "__lt", l, r)
 			if res then return res end
-
-			if
-				(l.Type == "string" and r.Type == "string") or
-				(l.Type == "number" and r.Type == "number")
-			then
-				return logical_cmp_cast(l.LogicalComparison(l, r, op))
-			end
-
-			return type_errors.binary(op, l, r)
+			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "<=" then
 			local res = metatable_function(analyzer, node, "__le", l, r)
 			if res then return res end
@@ -441,29 +369,11 @@ local function Binary(analyzer, node, l, r, op)
 		elseif op == ">" then
 			local res = metatable_function(analyzer, node, "__lt", l, r)
 			if res then return res end
-
-			if
-				(l.Type == "string" and r.Type == "string") or
-				(l.Type == "number" and r.Type == "number")
-			then
-				if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
-				return Boolean()
-			end
-
-			return type_errors.binary(op, l, r)
+			 return logical_cmp_cast(l.LogicalComparison(l, r, op)) 
 		elseif op == ">=" then
 			local res = metatable_function(analyzer, node, "__le", l, r)
 			if res then return res end
-
-			if
-				(l.Type == "string" and r.Type == "string") or
-				(l.Type == "number" and r.Type == "number")
-			then
-				if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
-				return Boolean()
-			end
-
-			return type_errors.binary(op, l, r)
+			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "or" or op == "||" then
 			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
 
