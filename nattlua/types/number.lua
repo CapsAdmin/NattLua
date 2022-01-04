@@ -202,76 +202,68 @@ local function compare(val--[[#: number]], min--[[#: number]], max--[[#: number]
 end
 
 function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: boolean | nil]]
+	if operator == "==" then		
+		local a_val = a:GetData()
+		local b_val = b:GetData()
+
+		if b_val then
+			if a:GetMax() and a:GetMax():GetData() then 
+				if b_val >= a:GetData() and b_val <= a:GetMax():GetData() then 
+					return nil
+				end
+				return false
+			end
+		end
+
+		if a_val then
+			if b:GetMax() and b:GetMax():GetData() then 
+				if a_val >= b:GetData() and a_val <= b:GetMax():GetData() then
+					return nil
+				end
+
+				return false
+			end
+		end
+
+		if a_val and b_val then
+			return a_val == b_val
+		end
+
+		return nil
+	end
+
 	local a_val = a:GetData()
 	local b_val = b:GetData()
-	if not a_val then return nil end
-	if not b_val then return nil end
 
-	if operator == "==" then		
-		if a:GetMax() and a:GetMax():GetData() then 
-			if b_val >= a:GetData() and b_val <= a:GetMax():GetData() then 
+	if a_val and b_val then
+		local a_max = a:GetMaxLiteral()
+		local b_max = b:GetMaxLiteral()
+
+		if a_max then
+			if b_max then
+				local res_a = compare(b_val, a_val, b_max, operator)
+				local res_b = not compare(a_val, b_val, a_max, operator)
+				if res_a ~= nil and res_a == res_b then return res_a end
 				return nil
 			end
-			return false
 		end
 
-		if b:GetMax() and b:GetMax():GetData() then 
-			if a_val >= b:GetData() and a_val <= b:GetMax():GetData() then
-				return nil
-			end
-
-			return false
+		if a_max then
+			local res = compare(b_val, a_val, a_max, operator)
+			if res == nil then return nil end
+			return res
 		end
 
-		--if a:IsLiteral() and b:IsLiteral() then 
-			return a:GetData() == b:GetData()
-		--end
-	elseif operator == "~=" then
-		local l = a
-		local r = b
-		if l:GetMax() and l:GetMax():IsLiteral() then
-			local l = l:GetMax():GetData()
-			local r = r:GetData()
-
-			if l and r then
-				return (not (r >= l and r <= l)) and true or nil
-			end
-		end
-
-		if r:GetMax() and r:GetMax():IsLiteral() then
-			local l = l:GetData()
-			local r = r:GetMax():GetData()
-
-			if l and r then
-				return (not (l >= r and l <= r)) and true or nil
-			end
-		end
-
-		--if l:IsLiteral() and r:IsLiteral() then 
-			return l:GetData() ~= r:GetData()
-		--end
+		if operators[operator] then return operators[operator](a_val, b_val) end
+	else
+		return nil
 	end
 
-	local a_max = a:GetMaxLiteral()
-	local b_max = b:GetMaxLiteral()
-
-	if a_max then
-		if b_max then
-			local res_a = compare(b_val, a_val, b_max, operator)
-			local res_b = not compare(a_val, b_val, a_max, operator)
-			if res_a ~= nil and res_a == res_b then return res_a end
-			return nil
-		end
+	if operators[operator] then 
+		return nil
 	end
 
-	if a_max then
-		local res = compare(b_val, a_val, a_max, operator)
-		if res == nil then return nil end
-		return res
-	end
-
-	if operators[operator] then return operators[operator](a_val, b_val) end
-	error("NYI " .. operator)
+	return type_errors.binary(operator, a, b)
 end
 
 function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber, TNumber]]

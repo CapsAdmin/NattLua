@@ -270,6 +270,19 @@ function META:GetFirstValue()
 	return self
 end
 
+
+function META.LogicalComparison(l, r, op)
+	if op == "==" then
+		if l:IsLiteral() and r:IsLiteral() then
+			return l:GetData() == r:GetData()
+		end
+
+		return nil
+	end
+
+	return type_errors.binary(op, l, r)
+end
+
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end

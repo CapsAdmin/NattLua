@@ -109,7 +109,11 @@ local function arithmetic(analyzer, node, l, r, operator, meta_method)
 	return type_errors.binary(operator, l, r)
 end
 
-local function logical_cmp_cast(val--[[#: boolean | nil]])
+local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
+	if err then
+		return val, err
+	end
+
 	if val == nil then
 		return Boolean()
 	elseif val == true then
@@ -401,29 +405,7 @@ local function Binary(analyzer, node, l, r, op)
 			if l == r then return True() end
 			if l.Type ~= r.Type then return False() end
 
-			if l.Type == "number" and r.Type == "number" then
-				return logical_cmp_cast(l.LogicalComparison(l, r, op))
-			end
-
-			if l.Type == "table" and r.Type == "table" then
-				if analyzer:IsRuntime() then
-					if l:GetReferenceId() and r:GetReferenceId() then 
-						return l:GetReferenceId() == r:GetReferenceId() and True() or False() 
-					end
-				end
-
-				if analyzer:IsTypesystem() then 
-					return l:IsSubsetOf(r) and r:IsSubsetOf(l) and True() or False() 
-				end
-
-				return Boolean()
-			end
-
-			if l:IsLiteral() and r:IsLiteral() and l.Type == r.Type then
-				return l:GetData() == r:GetData() and True() or False()
-			end
-
-			return Boolean()
+			return logical_cmp_cast(l.LogicalComparison(l, r, op, analyzer:GetCurrentAnalyzerEnvironment()))
 		elseif op == "~=" or op == "!=" then
 			local res = metatable_function(analyzer, node, "__eq", l, r)
 
@@ -437,18 +419,9 @@ local function Binary(analyzer, node, l, r, op)
 
 			if l.Type ~= r.Type then return True() end
 
-			if l.Type == "number" and r.Type == "number" then
-				-- comparing nan with nan is always false so we need to this first
-				return logical_cmp_cast(l.LogicalComparison(l, r, op))
-			end
-
-			if l == r then return False() end
-
-			if l:IsLiteral() and r:IsLiteral() then 
-				return l:GetData() ~= r:GetData() and True() or False() 
-			end
-
-			return Boolean()
+			local val, err = l.LogicalComparison(l, r, "==", analyzer:GetCurrentAnalyzerEnvironment())
+			if val ~= nil then val = not val end
+			return logical_cmp_cast(val)
 		elseif op == "<" then
 			local res = metatable_function(analyzer, node, "__lt", l, r)
 			if res then return res end
@@ -457,24 +430,14 @@ local function Binary(analyzer, node, l, r, op)
 				(l.Type == "string" and r.Type == "string") or
 				(l.Type == "number" and r.Type == "number")
 			then
-				if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
-				return Boolean()
+				return logical_cmp_cast(l.LogicalComparison(l, r, op))
 			end
 
 			return type_errors.binary(op, l, r)
 		elseif op == "<=" then
 			local res = metatable_function(analyzer, node, "__le", l, r)
 			if res then return res end
-
-			if
-				(l.Type == "string" and r.Type == "string") or
-				(l.Type == "number" and r.Type == "number")
-			then
-				if l:IsLiteral() and r:IsLiteral() then return logical_cmp_cast(l.LogicalComparison(l, r, op)) end
-				return Boolean()
-			end
-
-			return type_errors.binary(op, l, r)
+			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == ">" then
 			local res = metatable_function(analyzer, node, "__lt", l, r)
 			if res then return res end

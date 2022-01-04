@@ -761,6 +761,21 @@ function META:PrefixOperator(op--[[#: "#"]])
 	end
 end
 
+function META.LogicalComparison(l, r, op, env)
+	if op == "==" then 
+		if env == "runtime" then
+			if l:GetReferenceId() and r:GetReferenceId() then 
+				return l:GetReferenceId() == r:GetReferenceId()
+			end
+			return nil
+		elseif env == "typesystem" then
+			return l:IsSubsetOf(r) and r:IsSubsetOf(l)
+		end
+	end
+
+	return type_errors.binary(op, l, r)
+end
+
 function META.New()
 	return setmetatable({Data = {}, contracts = {}}, META)
 end

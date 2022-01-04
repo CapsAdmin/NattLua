@@ -6,6 +6,7 @@ local Number = require("nattlua.types.number").Number
 local Table = require("nattlua.types.table").Table
 local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
+
 META.Type = "string"
 --[[#type META.@Name = "TString"]]
 --[[#type TString = META.@Self]]
@@ -79,16 +80,33 @@ end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TString]], op)
 	if op == ">" then
-		return a:GetData() > b:GetData()
+		if a:IsLiteral() and b:IsLiteral() then
+			return a:GetData() > b:GetData()
+		end
+		return nil
 	elseif op == "<" then
-		return a:GetData() < b:GetData()
+		if a:IsLiteral() and b:IsLiteral() then
+			return a:GetData() < b:GetData()
+		end
+		return nil
 	elseif op == "<=" then
-		return a:GetData() <= b:GetData()
+		if a:IsLiteral() and b:IsLiteral() then
+			return a:GetData() <= b:GetData()
+		end
+		return nil
 	elseif op == ">=" then
-		return a:GetData() >= b:GetData()
+		if a:IsLiteral() and b:IsLiteral() then
+			return a:GetData() >= b:GetData()
+		end
+		return nil
+	elseif op == "==" then
+		if a:IsLiteral() and b:IsLiteral() then
+			return a:GetData() == b:GetData()
+		end
+		return nil
 	end
 
-	error("NYI " .. op)
+	return type_errors.binary(op, a, b)
 end
 
 function META:IsFalsy()
