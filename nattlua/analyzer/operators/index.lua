@@ -60,10 +60,17 @@ return
 					end
 				end
 
-				
 				if obj:GetContract() then
 					local val, err = obj:GetContract():Get(key)
 					if not val then return val, err end
+					
+					if obj.exp_stack then
+						if self:IsTruthyExpressionContext() then
+							return obj.exp_stack[#obj.exp_stack].truthy
+						elseif self:IsFalsyExpressionContext() then
+							return obj.exp_stack[#obj.exp_stack].falsy
+						end
+					end
 
 					val = val:Copy()
 					
@@ -94,7 +101,49 @@ return
 					end
 				end
 
-				return self:GetMutatedValue(obj, key, obj:Get(key)) or Nil()
+				local val = self:GetMutatedValue(obj, key, obj:Get(key))
+
+				if obj.exp_stack then
+					if self:IsTruthyExpressionContext() then
+						return obj.exp_stack[#obj.exp_stack].truthy
+					elseif self:IsFalsyExpressionContext() then
+						return obj.exp_stack[#obj.exp_stack].falsy
+					end
+				end
+				
+				if self:IsTruthyExpressionContext() then
+					local hash = key:GetHash() or tostring(key)
+					if obj.exp_stack_map and obj.exp_stack_map[hash] then
+						local last = obj.exp_stack_map[hash][#obj.exp_stack_map[hash]]
+						return last.truthy
+					end
+				end
+
+				if self:IsFalsyExpressionContext() then
+					local hash = key:GetHash() or tostring(key)
+					if obj.exp_stack_map and obj.exp_stack_map[hash] then
+						local last = obj.exp_stack_map[hash][#obj.exp_stack_map[hash]]
+						return last.falsy
+					end
+				end
+
+				if val and val.Type == "union" then
+					if self:IsTruthyExpressionContext() or self:IsFalsyExpressionContext() then
+						local hash = key:GetHash() or tostring(key)
+						if hash then
+							obj.exp_stack_map = obj.exp_stack_map or {}
+							obj.exp_stack_map[hash] = obj.exp_stack_map[hash] or {}
+							table.insert(obj.exp_stack_map[hash], {key = key, truthy = val:GetTruthy(), falsy = val:GetFalsy()})
+		
+							self.affected_upvalues = self.affected_upvalues or {}
+							table.insert(self.affected_upvalues, obj)
+						else
+							print(key, "!?")
+						end
+					end
+				end
+
+				return val or Nil()
 			end
 		end,
 	}

@@ -954,14 +954,6 @@ run[[
     types.assert(x.field, _ as number | nil)
 ]]
 
-pending[[
-    local x = { lol = _ as false | 1 }
-    if not x.lol then
-        x.lol = 1 
-    end
-    types.assert(x.lol, 1)
-]]
-
 run[[
     local x = { lol = _ as false | 1 }
     if not x.lol then
@@ -1279,13 +1271,6 @@ run[[
     end
 ]]
 
-run[[
-    local tbl = {} as {foo = nil | {bar = 1337 | false}}
-
-    if tbl.foo and tbl.foo.bar then
-        types.assert(tbl.foo.bar, 1337)
-    end
-]]
 
 pending[[
     local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }

@@ -8,9 +8,16 @@ return
 				if statement.expressions[i] then
 					local obj = analyzer:AnalyzeExpression(statement.expressions[i])
 					local upvalues = {}
+					local objects = {}
 					if analyzer.affected_upvalues then
 						for _, upvalue in ipairs(analyzer.affected_upvalues) do
-							upvalues[upvalue] = upvalue.exp_stack
+							if upvalue.exp_stack_map then
+								for k,v in pairs(upvalue.exp_stack_map) do
+									table.insert(objects, {obj = upvalue, key = v[#v].key, val = v[#v].truthy})
+								end
+							else
+								upvalues[upvalue] = upvalue.exp_stack
+							end
 						end
 					end
 					analyzer:ClearAffectedUpvalues()
@@ -19,6 +26,11 @@ return
 					if obj:IsTruthy() then
 						analyzer:FireEvent("if", i == 1 and "if" or "elseif", true)
 							analyzer:PushConditionalScope(statement, obj, upvalues)
+
+							for _, v in ipairs(objects) do
+								analyzer:MutateValue(v.obj, v.key, v.val)
+							end
+
 							analyzer:AnalyzeStatements(statements)
 							analyzer:PopConditionalScope()
 						analyzer:FireEvent("if", i == 1 and "if" or "elseif", false)

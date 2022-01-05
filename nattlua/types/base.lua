@@ -12,11 +12,11 @@ META.__index = META
 function META.GetSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
 --[[#	type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: typeof tbl[name] ]])
+	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
 		self[name] = val
 		return self
 	end
-	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: typeof tbl[name] ]]
+	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
 		return self[name]
 	end
 end
@@ -24,11 +24,11 @@ end
 function META.IsSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
 --[[#	type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: typeof tbl[name] ]])
+	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
 		self[name] = val
 		return self
 	end
-	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: typeof tbl[name] ]]
+	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
 		return self[name]
 	end
 end

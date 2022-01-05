@@ -131,12 +131,13 @@ end
 
 function META:__tostring()
 	local n = self:GetData()
+	local s--[[#: string]]
 
 	if n ~= n then
-		n = "nan"
+		s = "nan"
 	end
 
-	local s = tostring(n)
+	s = tostring(n)
 
 	if self:GetMax() then
 		s = s .. ".." .. tostring(self:GetMax())

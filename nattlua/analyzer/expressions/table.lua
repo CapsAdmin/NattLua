@@ -58,6 +58,7 @@ return
 						end
 					end
 				end
+				analyzer:ClearAffectedUpvalues()
 			end
 
 			table.remove(analyzer.current_tables)

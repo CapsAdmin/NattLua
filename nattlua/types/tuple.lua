@@ -398,7 +398,10 @@ function META:GetFirstValue()
 	if self.Remainder then
 		return self.Remainder:GetFirstValue()
 	end
-	return self:Get(1):GetFirstValue()
+	local first, err = self:Get(1)
+	if not first then return first, err end 
+	
+	return first:GetFirstValue()
 end
 
 function META:Concat(tup)

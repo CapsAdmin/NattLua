@@ -280,6 +280,8 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 					return value
 				end
 			end
+
+
 			local upvalue_map = found_scope:GetAffectedUpvaluesMap()
 
             -- the or part here refers to if *condition* then

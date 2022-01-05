@@ -73,7 +73,7 @@ local function Binary(analyzer, node, l, r, op)
 			else
 				-- if a and a.foo then
 				--    ^ no binary operator means that it was just checked simply if it was truthy
-				if l.Type == "union" and node.left.kind == "value" then
+				if l.Type == "union" then
 					local upvalue = l:GetUpvalue()
 			
 					if upvalue then
@@ -88,24 +88,11 @@ local function Binary(analyzer, node, l, r, op)
 					end		
 				end
 
-				-- if index is uncertain, we need to temporary mutate the value
-				analyzer:PushTruthyExpressionContext()
-
-				local obj_left, key_left
-				if l.Type == "union" and node.left.kind == "binary_operator" and node.left.value.value == "." then
-					obj_left = analyzer:AnalyzeExpression(node.left.left)
-					key_left = analyzer:AnalyzeExpression(node.left.right)
-					analyzer:MutateValue(obj_left, key_left, l:Copy():DisableFalsy())
-				end
-
-				-- right hand side of and is the "true" part
-				r = analyzer:AnalyzeExpression(node.right)
 				
+				-- right hand side of and is the "true" part
+				analyzer:PushTruthyExpressionContext()
+				r = analyzer:AnalyzeExpression(node.right)				
 				analyzer:PopTruthyExpressionContext()
-
-				if obj_left and key_left then
-					analyzer:MutateValue(obj_left, key_left, l:Copy())
-				end
 			end
 		elseif node.value.value == "or" then
 			analyzer:PushFalsyExpressionContext()
@@ -247,7 +234,7 @@ local function Binary(analyzer, node, l, r, op)
 
 			if op ~= "or" and op ~= "and" then
 				local l_upvalue = l:GetUpvalue()
-				
+
 				if l_upvalue then
 					l_upvalue.exp_stack = l_upvalue.exp_stack or {}
 					table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})

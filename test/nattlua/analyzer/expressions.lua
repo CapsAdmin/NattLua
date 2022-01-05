@@ -107,3 +107,40 @@ run[[
         types.assert(c.foo, true)
     end
 ]]
+
+run[[
+    local tbl = {} as {foo = nil | {bar = 1337 | false}}
+
+    if tbl.foo and tbl.foo.bar then
+        types.assert(tbl.foo.bar, 1337)
+    end
+]]
+
+run[[
+    -- make sure table key values clear affected upvalues
+
+    local buff: {x = number, y = number} | {x = number, y = string}
+    
+    local x = {
+        bar = buff.y,
+        foo = bit.band(buff.x, 1) ~= 0 and "directory" or "file" 
+    }
+]]
+
+run[[
+    local tbl = {} as {foo = nil | {bar = 1337 | false}}
+
+    if tbl.foo and types.assert(tbl.foo.bar, _ as 1337 | false) then
+        types.assert(tbl.foo.bar, 1337)
+    end
+]]
+
+run[[
+    local a: nil | 1
+
+    if a or true and a or false then
+        types.assert(a, _ as 1 | nil)
+    end
+
+    types.assert(a, _ as 1 | nil)
+]]
