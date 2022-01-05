@@ -437,6 +437,22 @@ local func = build_summary_function({
 
 This works because there is no uncertainty about the code generated passed to the load function. If we did `body = "sum = sum + 1" .. (unknown_global as string)`, that would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
 
+## anagram proof
+```lua
+local bytes = {}
+for i,v in ipairs({
+    "P", "S", "E", "L", "E",
+}) do
+    bytes[i] = string.byte(v)
+end
+local all_letters = _ as bytes[number] ~ nil -- remove nil from the union
+local anagram = string.char(all_letters, all_letters, all_letters, all_letters, all_letters)
+
+assert(anagram == "SLEEP")
+```
+
+This is true because `anagram` becomes a union of all possible letter combinations which does contain the string SLEEP.
+
 # Parsing and transpiling
 
 I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it different in some ways. The syntax errors it can report are not standard and are bit more detailed. It's also written in a way to be easily extendable for new syntax.
