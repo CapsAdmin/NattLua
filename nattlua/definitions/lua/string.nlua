@@ -52,8 +52,7 @@ end
 
 analyzer function ^string.gmatch(s: string, pattern: string)
 	if s:IsLiteral() and pattern:IsLiteral() then
-		local escaped = pattern:GetData():gsub("\\n", "\n")
-		local f = s:GetData():gmatch(escaped)
+		local f = s:GetData():gmatch(pattern:GetData())
 		local i = 1
 		return function()
 			local strings = {f()}
@@ -64,6 +63,16 @@ analyzer function ^string.gmatch(s: string, pattern: string)
 
 				return types.Tuple(strings)
 			end
+		end
+	end
+
+	if pattern:IsLiteral() then
+		local _,count = pattern:GetData():gsub("%b()", "")
+		local done = false
+		return function()
+			if done then return end
+			done = true
+			return types.Tuple({types.String()}):SetRepeat(count)
 		end
 	end
 
