@@ -1,36 +1,49 @@
 # About
 
-NattLua is a superset of LuaJIT that introduces a structural type system and type inference that aims to be accurate. It's built to be an analyzer first with a typesystem to guide or override it on top.
+NattLua is a superset of LuaJIT that adds a structural typesystem. It's built to do accurate analysis with a way to optionally constrain variables.
 
-Complex type structures, involving array-like tables, map-like tables, metatables, and more are supported:
+The entire typesystem itself follows the same philosophy as Lua. You have the freedom to choose how much you want to constrain your program. (🦶🔫!) 
+
+So the typesystem is very flexible (just like Lua) and the analysis is very accurate.
+
+Complex type structures, such as array-like tables, map-like tables, metatables, and more are supported:
 
 ```lua
-local list: {[number] = string} = {}
-local list: {[1 .. inf] = string} = {}
+local list: {[number] = string | nil} = {} -- -1 index is alllowed
+local list: {[1..inf] = string | nil} = {} -- only 1..inf index is allowed
 
-local map: {[string] = string} = {}
+local map: {[string] = string | nil} = {} -- any string is allowed
+local map: {foo = string, bar = string} = {foo = "hello", bar = "world"} -- only foo and bar is allowed as keys, but they can be any string type
 
-local map: {foo = string, bar = string} = {}
+-- note that we add | nil so we can start with an empty table
+
 local a = "fo"
 local b = string.char(string.byte("o"))
-map[a..b] = "hello" --"fo" and "o" are literals and will be treated as such by the type inference
+map[a..b] = "hello" 
+--"fo" and "o" are literals and will be treated as such by the type inference
 ```
 
 ```lua
-local Vector = {}
-Vector.__index = Vector
+local Vec3 = {}
+Vec3.__index = Vec3
 
-type Vector.x = number
-type Vector.y = number
-type Vector.z = number
+-- give the type a friendly name for errors and such
+type Vec3.@Name = "Vector"
 
-function Vector.__add(a: Vector, b: Vector)
-    return Vector(a.x + b.x, a.y + b.y, a.z + b.z)
+-- define the type of the first argument in setmetatable
+type Vec3.@Self = {
+    x = number,
+    y = number,
+    z = number,
+}
+
+function Vec3.__add(a: Vec3, b: Vec3)
+    return Vec3(a.x + b.x, a.y + b.y, a.z + b.z)
 end
 
-setmetatable(Vector, {
+setmetatable(Vec3, {
     __call = function(_, x: number, y: number, z: number)
-        return setmetatable({x=x,y=y,z=z}, Vector)
+        return setmetatable({x=x,y=y,z=z}, Vec3)
     end
 })
 
@@ -39,13 +52,42 @@ local new_vector = Vector(1,2,3) + Vector(100,100,100)
 
 It aims to be compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1).
 
-See more examples further down this readme.
-
 # Code analysis and typesystem
 
-The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program you may get its actual output at type-check time.
+The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program and you did not add any types to generalize you may get its actual output at type-check time.
 
-When the inferencer detects an error, it will try to recover from the error and continue. For example:
+```lua
+local cfg = [[
+    name=Lua
+    cycle=123
+    debug=yes
+]]
+
+local function parse(str: literal string)
+    local tbl = {}
+    for key, val in str:gmatch("(%S-)=(.-)\n") do
+        tbl[key] = val
+    end
+    return tbl
+end
+
+local tbl = parse(cfg)
+print<|tbl|>
+>>
+--[[
+{
+    "name" = "Lua",
+    "cycle" = "123",
+    "debug" = "yes"
+}
+]]
+```
+
+The literal keyword here means that the `cfg` variable would be passed in as is. It's a bit similar to a generics function. If we instead wrote `: string` the output would be `{ string = string }`
+
+We can also enforce the output type by writing `parse(str: literal string): {[string] = string}`, but if you don't it will be inferred.
+
+When the analyzer detects an error, it will try to recover from the error and continue. For example:
 
 ```lua
 local obj: nil | (function(): number)
@@ -57,16 +99,17 @@ This code will report an error about potentially calling a nil value. Internally
 
 # Current status and goals
 
-My goal is to develop a capable language to use for my other projects (such as [goluwa](https://github.com/CapsAdmin/goluwa)).
+My long term goal is to develop a capable language to use for my other projects (such as [goluwa](https://github.com/CapsAdmin/goluwa)).
 
-At the moment I focus strongly on type inferrence and adding tests while trying to keep the code maintainable.
+At the moment I focus strongly on type inference correctness, adding tests and keeping the codebase maintainable.
 
-The parsing part of the project is mostly done except I have some ideas to make it cleaner and more extendable.
+I'm also in the middle of bootstrapping the project with comment types. So far the lexer part of the project and some other parts are typed and is part of the test suite.
 
 # Types
 
-Fundementally the typesystem consists of number, string, table, function, symbol, union, tuple and any.
-As an example, types can be described by the language like this:
+Fundamentally the typesystem consists of number, string, table, function, symbol, union, tuple and any. Tuples and unions exist only in the typesystem. Symbols are things like true, false, nil, etc.
+
+These types can also be literals, so as a showcase example we can describe the fundamental types like this:
 
 ```lua
 local type Boolean = true | false
@@ -74,7 +117,10 @@ local type Number = -inf .. inf | nan
 local type String = $".*"
 local type Any = Number | Boolean | String | nil
 
+-- nil cannot be a key in tables
 local type Table = { [exclude<|Any, nil|> | self] = Any | self }
+
+-- extend the Any type to also include Any
 type Any = Any | Table
 
 local type Function = ( function(...Any): ...Any )
@@ -82,11 +128,11 @@ local type Function = ( function(...Any): ...Any )
 -- note that Function's Any does not include itself. This can be done but it's too complicated as an example
 ```
 
-It's not entirely accurate but those types should behave the same way as number, string, boolean, etc.
+So here, `Number` should be semantically mean the same thing as `number`
 
 # Numbers
 
-From literal to loose
+From narrow to wide
 
 ```lua
 type N = 1
@@ -124,33 +170,33 @@ local qux: N = 0/0
       ^^^: nan is not a subset of -inf .. inf
 ```
 
-The logical progression here is to define N as `-inf .. inf | nan` but that has semantically the same meaning as `number`
+The logical progression is to define N as `-inf .. inf | nan` but that has semantically the same meaning as `number`
 
 # Strings
 
 Strings can be defined as lua string patterns to constrain them:
 
 ```lua
-local type mystring = $"FOO_.-"
+local type MyString = $"FOO_.-"
 
-local a: mystring = "FOO_BAR"
-local b: mystring = "lol"
+local a: MyString = "FOO_BAR"
+local b: MyString = "lol"
                     ^^^^^ : the pattern failed to match
 ```
 
-A literal value:
+A narrow value:
 
 ```lua
 type foo = "foo"
 ```
 
-Or loose:
+Or wide:
 
 ```lua
-type one = string
+type foo = string
 ```
 
-`$".-"` is semantically the same as `string` but internally using `string` would be faster as it avoids string matching all the time
+`$".-"` is semantically the same as `string` but of course internally using `string` would be faster as it avoids string matching all the time
 
 # Tables
 
@@ -161,17 +207,17 @@ the only special syntax is `self` which is used for self referencing types
 here are some natural ways to define a table:
 
 ```lua
-local type mytable = {
+local type MyTable = {
     foo = boolean,
     bar = string,
 }
 
-local type mytable = {
+local type MyTable = {
     ["foo"] = boolean,
     [number] = string,
 }
 
-local type mytable = {
+local type MyTable = {
     ["foo"] = boolean,
     [number] = string,
     faz = {
@@ -182,7 +228,7 @@ local type mytable = {
 
 # Unions
 
-A Union is a type separated by the bor operator `|` these are often used in uncertain conditions.
+A Union is a type separated by `|` these are often used in uncertain conditions.
 
 For example this case:
 
@@ -207,10 +253,10 @@ if true then
     x = 1
     -- x is 1 here
 end
--- x is still 1 here
+-- x is still 1 here because the mutation = 1 occured in a certain branch
 ```
 
-This happens because there's no doubt that `true` is true and so there's no uncertainty of what x is inside the if block or after it.
+This happens because `true` is true as opposed to `true | false` and so there's no uncertainty of what x is inside the if block or after it.
 
 # Analyzer functions
 
@@ -223,42 +269,56 @@ end
 
 analyzer function math.floor(T: number)
     if T:IsLiteral() then
-        return LiteralNumber(math.floor(T:GetData()))
+        return types.Number(math.floor(T:GetData())):SetLiteral(true)
     end
 
     return types.Number()
 end
 
 local x = math.floor(5.5)
-print(x)
+print<|x|>
+-->> 5
+```
+When transpiled to lua, the result is just:
+
+The `analyzer` keyword will make the function a lua function. So the code inside that function is actually lua code that is pcall'ed. This is used to define core lua functions like `print` and `math.floor`.
+
+```lua
+analyzer function print(...: ...any)
+    print(...)
+end
+
+print(1,2,3)
+-->> 1 2 3
 ```
 
-When this code is analyzed, it will print 5 in its output.
-When transpiled to lua, the result is:
+This would make it so when you call print at compile time, it actually prints the arguments where the analyzer is currently analyzing.
 
 ```lua
 local x = math.floor(5.5)
 print(x)
 ```
 
-We can also define an assertion like this:
+We can for example define an assertion function like this:
 
 ```lua
-analyzer function assert_whole_number(T: number)
-    assert(math.ceil(T:GetData()) == T:GetData())
+local function assert_whole_number<|T: number|>
+    assert(math.ceil(T) == T, "Expected whole number")
 end
 
 local x = assert_whole_number<|5.5|>
           ^^^^^^^^^^^^^^^^^^^: assertion failed!
 ```
 
-But when this code is transpiled to lua, the result is:
+`<|` `|>` here means that we are writing a type function that only exist in the type system. This is different from using `analyzer` keyword because its content is actually analyzed rather than pcall'ed.
+
+When the code above is transpiled to lua, the result is:
 
 ```lua
 local x = 5.5
 ```
 
-`<|a,b,c|>` is the way to call type functions. In other languages it tends to be `<a,b,c>` but I chose this syntax to avoid conflicts with the `<` and `>` comparison operators
+`<|a,b,c|>` is the way to call type functions. In other languages it tends to be `<a,b,c>` but I chose this syntax to avoid conflicts with the `<` and `>` comparison operators. This may change in the future.
 
 Here's an Exclude function, similar to how you would find in typescript.
 
@@ -273,11 +333,11 @@ local a: Exclude<|1|2|3, 2|>
 types.assert(a, _ as 1|3)
 ```
 
-It's also possible to use a more familiar "generics" syntax
+It's also possible to the more familiar "generics" syntax
 
 ```lua
 local function Array<|T: any, L: number|>
-    return {[1 .. L] = T}
+    return {[1..L] = T}
 end
 
 local list: Array<|number, 3|> = {1, 2, 3, 4}
@@ -287,21 +347,21 @@ local list: Array<|number, 3|> = {1, 2, 3, 4}
 Note that even though T type annotated with any, it does not mean that T becomes any inside the function. The type annotation here acts more of a constraint. In Typescript it would be something like
 
 ```ts
-type Array<T extends any, length extends number> = {[key: 1 .. length]: T}
+type Array<T extends any, length extends number> = {[key: 1..length]: T} // assuming typescript supports number ranges
 ```
 
-(assuming typescript supports number ranges)
+Type function arguments always need to be explicitly typed.
 
-Type function arguments needs to be explicitly typed.
-
-# Examples
+# More examples
 
 ## List type
 
 ```lua
-type StringList = { [1 .. inf] = string}
+function List<|T: any|>
+	return {[1..inf] = T | nil}
+end
 
-local names: StringList = {}
+local names: List<|string|> = {} -- the | nil above is required to allow nil values, or an empty table in this case
 names[1] = "foo"
 names[2] = "bar"
 names[-1] = "faz"
@@ -312,9 +372,11 @@ names[-1] = "faz"
 
 ```lua
 analyzer function ffi.cdef(c_declaration: string)
+    -- this requires using analyzer functions
+
     if c_declaration:IsLiteral() then
         local ffi = require("ffi")
-        ffi.cdef(c_declaration:GetData())
+        ffi.cdef(c_declaration:GetData()) -- if this function throws it's propagated up to the compiler as an error
     end
 end
 
@@ -380,10 +442,10 @@ This works because there is no uncertainty about the code generated passed to th
 I wrote the lexer and parser trying not to look at existing Lua parsers (as a learning experience), but this makes it different in some ways. The syntax errors it can report are not standard and are bit more detailed. It's also written in a way to be easily extendable for new syntax.
 
 - Syntax errors are nicer than standard Lua parsers. Errors are reported with character ranges.
-- Additionally, the lexer and parser continue after encountering an error, which is useful for editor integration.
-- Whitespace can be preserved
+- The lexer and parser can continue after encountering an error, which is useful for editor integration.
+- Whitespace can be preserved if needed
 - Both single-line C comments (from GLua) and the Lua 5.4 division operator can be used in the same source file.
-- Transpiles bitwise operators, integer division, \_ENV, etc down to luajit.
+- Transpiles bitwise operators, integer division, \_ENV, etc down to valid LuaJIT code.
 
 I have not fully decided the syntax for the language and runtime semantics for lua 5.3/4 features. But I feel this is more of a detail that can easily be changed later.
 
@@ -395,9 +457,17 @@ I've setup vscode to run the task `onsave` when a file is saved with the plugin 
 
 I also have a file called `test_focus.lua` in root which will override the test suite when the file is not empty. This makes it easier for me to debug specific cases.
 
+Some debug features are using the `§` prefix before a statement. This invokes the analyzer so you can inspect the state.
+```lua
+local x = 1337
+§print(env.runtime.x:GetUpvalue())
+```
+
 # Similar projects
 
-[Teal](https://github.com/teal-language/tl) is a language similar to this, with a much higher likelyhood of succeeding as it does not intend to be as verbose as this project. I'm thinking a nice goal is that I can contribute what I've learned here, be it through tests or other things.
+[Teal](https://github.com/teal-language/tl) is a language similar to this which has a more pragmatic approach. I'm thinking a nice goal is that I can contribute what I've learned here, be it through tests or other things.
+
+[Luau](https://github.com/Roblox/luau) is another project similar to this, but I have not looked so much into it yet.
 
 # Dictionary
 
@@ -441,11 +511,11 @@ local is_superset = function(a, b) return is_subset(b, a) end
 
 ## Literal
 
-Something of which nothing can be a subset of, except itself. It is similar to an atom or unit.
+Something of which nothing can be a subset of, except itself. It is similar to an atom or unit. This is also called a narrow type.
 
 ## `"runtime"` / `"typesystem"`
 
-The analyzer will analyze code in these two different contexts. Locals and environment variables are stored in separate scopes and code behaves a little bit different in each environment. They are like 2 different worlds where the typesystem watches and tells you about how the runtime beahves.
+The analyzer will analyze code in these two different contexts. Locals and environment variables are stored in separate scopes and code behaves a little bit different in each environment. They are like 2 different worlds where the typesystem watches and tells you about how the runtime behaves.
 
 ```lua
 local a: *type expression analyzed in "typesystem"* = *runtime expression anlyzed in "runtime"*
@@ -458,5 +528,5 @@ If a runtime object has a contract, it cannot be anything that breaks this contr
 ```lua
 local a: 1 .. 5 = 3 -- 3 is within 1 .. 5 so the contract is not broken
 a = 1 -- 1 is still within the contract
-a = 6 -- the contract was broken, so log an error.
+a = 6 -- the contract was broken, so throw an error.
 ```
