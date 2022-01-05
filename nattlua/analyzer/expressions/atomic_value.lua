@@ -2,7 +2,6 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local NodeToString = require("nattlua.types.string").NodeToString
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberFromString = require("nattlua.types.number").LNumberFromString
-local LStringFromString = require("nattlua.types.string").LStringFromString
 local Any = require("nattlua.types.any").Any
 local True = require("nattlua.types.symbol").True
 local False = require("nattlua.types.symbol").False
@@ -145,7 +144,7 @@ return
 				num:SetNode(node)
 				return num
 			elseif type == "string" then
-				return LStringFromString(value):SetNode(node)
+				return LString(node.value.string_value):SetNode(node)
 			elseif type == "letter" then
 				return LString(value):SetNode(node)
 			end

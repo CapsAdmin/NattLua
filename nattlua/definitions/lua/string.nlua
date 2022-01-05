@@ -52,11 +52,11 @@ end
 
 analyzer function ^string.gmatch(s: string, pattern: string)
 	if s:IsLiteral() and pattern:IsLiteral() then
-		local f = s:GetData():gmatch(pattern:GetData())
+		local escaped = pattern:GetData():gsub("\\n", "\n")
+		local f = s:GetData():gmatch(escaped)
 		local i = 1
 		return function()
 			local strings = {f()}
-
 			if strings[1] then
 				for i, v in ipairs(strings) do
 					strings[i] = types.LString(v)
@@ -153,19 +153,30 @@ analyzer function ^string.len(str: string)
 	return types.Number()
 end
 
-analyzer function ^string.gsub(str: string, pattern: string, replacement: function=(...string)>((...string)) | string, max_replacements: number | nil)
+analyzer function ^string.gsub(str: string, pattern: string, replacement: function=(...string)>((...string)) | string | {[string] = string}, max_replacements: number | nil)
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
-	replacement = replacement.Type == "string" and
-		replacement:IsLiteral() and
-		replacement:GetData() or
-		replacement
+
+	if replacement.Type == "string" then
+		if replacement:IsLiteral() then
+			replacement = replacement:GetData()
+		end
+	elseif replacement.Type == "table" then
+		local out = {}
+		for _, kv in ipairs(replacement:GetData()) do
+			if kv.key:IsLiteral() and kv.val:IsLiteral() then
+				out[kv.key:GetData()] = kv.val:GetData()
+			end
+		end
+		replacement = out
+	end
+	
 	max_replacements = max_replacements and max_replacements:GetData()
 
 	if str and pattern and replacement then
         --replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
 
-        if type(replacement) == "string" then
+        if type(replacement) == "string" or type(replacement) == "table" then
 			return string.gsub(str, pattern, replacement, max_replacements)
 		else
 			return string.gsub(str, pattern, function(...)

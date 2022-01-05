@@ -164,6 +164,28 @@ function META:ReadFirstFromArray(strings--[[#: List<|string|>]]) --[[#: boolean]
 	return false
 end
 
+local fixed = {
+	"a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",
+}
+local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
+
+local map_double_quote = {[ [[\"]] ] = [["]]}
+local map_single_quote = {[ [[\']] ] = [[']]}
+
+for _, v in ipairs(fixed) do
+	map_double_quote["\\" .. v] = load("return \"\\" .. v .. "\"")()
+	map_single_quote["\\" .. v] = load("return \"\\" .. v .. "\"")()
+end
+
+local function reverse_escape_string(str, quote)
+	if quote == "\"" then
+		str = str:gsub(pattern, map_double_quote)
+	elseif quote == "'" then
+		str = str:gsub(pattern, map_single_quote)
+	end
+	return str
+end
+
 function META:GetTokens()
 	self:ResetState()
 	local tokens = {}
@@ -177,6 +199,18 @@ function META:GetTokens()
 
 	for _, token in ipairs(tokens) do
 		token.value = self:GetStringSlice(token.start, token.stop)
+
+		if token.type == "string" then
+			if token.value:sub(1,1) == [["]] then
+				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), '"')
+			elseif token.value:sub(1,1) == [[']] then
+				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), "'")
+			elseif token.value:sub(1,1) == "[" then
+				local start = token.value:match("(%[[%=]*%[)")
+				if not start then error("unable to match string") end
+				token.string_value = token.value:sub(#start + 1, -#start - 1)
+			end
+		end
 	end
 
 	local whitespace_buffer = {}

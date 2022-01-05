@@ -201,17 +201,7 @@ end
 
 analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil)
 	if not code:IsLiteral() or code.Type == "union" then return types.Any end
-	local str
-
-	if code.Type == "string" and code:IsLiteral() then
-		str = code:GetData()
-		local ok, err = pcall(function()
-			str = str:gsub("\\(.)", function(char)
-				return assert((loadstring or load)("return '\\" .. char .. "'"))()
-			end)
-		end)
-		if not ok then return ok, err end
-	end
+	local str = code:GetData()
 
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())

@@ -144,14 +144,5 @@ return
 		end,
 		NodeToString = function(node--[[#: Token]])
 			return META.New(node.value.value):SetLiteral(true):SetNode(node)
-		end,
-		LStringFromString = function(value--[[#: string]])
-			if value:sub(1, 1) == "[" then
-				local start = value:match("(%[[%=]*%[)")
-                if not start then error("unable to match string") end
-				return META.New(value:sub(#start + 1, -#start - 1)):SetLiteral(true)
-			end
-
-			return META.New(value:sub(2, -2)):SetLiteral(true)
-		end,
+		end
 	}
