@@ -637,7 +637,7 @@ function luadev.AddCommands()
 		luadev.RunOnClient(content,cl,chunkname,luadev.MakeExtras(ply))
 	end)
 
-	local function handle(ply, c, func: function(script: string, chunkname: string, extra: any): boolean, nil | string)
+	local function handle(ply, c, func: function=(script: string, chunkname: string, extra: any)>(boolean, nil | string))
 		local Path,searchpath=luadev.RealFilePath(c[2] and luadev.TableToString(c) or c[1])
 		if not Path then luadev.Print("Could not find the file\n") return end
 

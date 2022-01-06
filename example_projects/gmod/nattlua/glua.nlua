@@ -2,14 +2,15 @@ type INULL = {}
 type INULL.@MetaTable = INULL
 type INULL.@Name = "NULL"
 type INULL.__index = INULL
-type INULL.IsValid = function(INULL): false
+type INULL.IsValid = function=(INULL)>(false)
 type INULL.@Contract = INULL
 
+§ if not io.open("example_projects/gmod/nattlua/glua_base.nlua") then io.write("Cannot find example_projects/gmod/nattlua/glua_base.nlua\nYou must run example_projects/gmod/nattlua/build_glua_base.lua first\n") os.exit(1) end
 import_type("nattlua/glua_base.nlua")
 
 type NULL = INULL
 
-analyzer function hook.Add(eventName: string, obj: any, callback: (function(...): ...))
+analyzer function hook.Add(eventName: string, obj: any, callback: literal function=(...any)>(...any))
 	local event_callback = env.typesystem.EventCallbacks:Get(eventName)
 
 	callback:SetReturnTypes(event_callback:GetReturnTypes())
@@ -40,19 +41,19 @@ end
 
 analyzer function isstring(obj: any)
     local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
-    local binary_operator = require("nattlua.analyzer.operators.binary")
+    local binary_operator = require("nattlua.analyzer.operators.binary").Binary
     return binary_operator(analyzer, analyzer.current_expression, typ, types.LString("string"), "runtime", "==")
 end
 
 analyzer function istable(obj: any)
     local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
-    local binary_operator = require("nattlua.analyzer.operators.binary")
+    local binary_operator = require("nattlua.analyzer.operators.binary").Binary
     return binary_operator(analyzer, analyzer.current_expression, typ, types.LString("table"), "runtime", "==")
 end
 
 analyzer function isentity(obj: any)
     local Entity = env.typesystem.Entity
-    local binary_operator = require("nattlua.analyzer.operators.binary")
+    local binary_operator = require("nattlua.analyzer.operators.binary").Binary
     return binary_operator(analyzer, analyzer.current_expression, obj:GetMetaTable() or obj, Entity, "typesystem", "==")
 end
 
@@ -79,7 +80,7 @@ function string.ToTable( str: literal string )
 	return tbl
 end
 
-function math.Clamp(low: literal number, n: literal number, high: literal number) return math.min(math.max(n, low), high) end
+function math.Clamp(n: literal number, low: literal number, high: literal number) return math.min(math.max(n, low), high) end
 
 do
     local totable = string.ToTable

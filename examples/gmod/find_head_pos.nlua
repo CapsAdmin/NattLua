@@ -7,7 +7,7 @@ local type HeadPos = {
     findheadpos_last_mdl = string | nil,
 }
 
-local function get_first_attachment_by_name(ent, name)
+local function get_first_attachment_by_name(ent: Entity, name: string)
 	local attachments = ent:GetAttachments()
 	for i,v in ipairs(attachments) do
 		if v.name == name then

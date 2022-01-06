@@ -530,3 +530,13 @@ run[[
     types.assert(c, nil)
     types.assert(d, nil)
 ]]
+
+
+run[[
+    local function clamp(n: literal number, low: literal number, high: literal number) 
+        return math.min(math.max(n, low), high) 
+    end
+
+    types.assert(clamp(5, 7, 10), 7)
+    types.assert(clamp(15, 7, 10), 10)
+]]

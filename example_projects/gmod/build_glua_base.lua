@@ -10,7 +10,7 @@ local blob = assert(util.FetchCode("example_projects/gmod/nattlua/gmod_wiki.json
 local wiki_json = json.decode(blob)
 
 -- used for referencing existing types, like if we already have math.pi defined, don't add it
-local base_env = BuildBaseEnvironment()
+local _, base_env = BuildBaseEnvironment()
 
 -- i prefix all types with I to avoid conflicts when defining functions like Entity(entindex) in the typesystem
 local TypeMap = {}
@@ -136,9 +136,10 @@ local function emit_atomic_type(val)
     end
 
     if false then 
-    elseif val.TYPE == "function" then e("(function(...any): any)")
+    elseif val.TYPE == "function" then e("function=(...any)>(...any)")
     elseif val.TYPE == "table" then e("{[any] = any}")
     elseif val.TYPE == "userdata" then e("{[any] = any}")
+    elseif val.TYPE == "thread" then e("{[any] = any}")
     elseif val.TYPE == "vararg" then e("...any")        
     elseif val.TYPE == "bool" then e("boolean") -- ?
 
@@ -168,8 +169,7 @@ local function emit(key, val, self_argument)
         e("}\n")
     elseif val.FUNCTION then
         --e("function(...any): any")
-        e("(")
-        e("function(")
+        e("function=(")
 
         if not val.ARGUMENTS and self_argument then
             val.ARGUMENTS = {}
@@ -197,7 +197,7 @@ local function emit(key, val, self_argument)
                 end
             end
         end
-        e("): ")
+        e(")>(")
         if val.RETURNS then
             local list = val.RETURNS
             for i, val in ipairs(list) do
@@ -215,8 +215,22 @@ local function emit(key, val, self_argument)
         e('"[%z\x01-\x7F\xC2-\xF4][\x80-\xBF]*"')
     elseif val.LINK == "derma.Controls" then
         e('{ClassName = string, Description = string, BaseClass = string}')
+    elseif val.LINK == "math.pi" then
+        e(tostring(math.pi))
+    elseif val.LINK == "math.huge" then
+        e("inf")
+    elseif val.LINK == "jit.version_num" then
+        e("number")
+    elseif val.LINK == "jit.version" then
+        e("string")
+    elseif val.LINK == "jit.os" then
+        e('"Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other"')
+    elseif val.LINK == "jit.arch" then
+        e('"x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips"')
     elseif val.LINK == "derma.SkinList" then
         e('{[number] = any}') -- numeric list?
+    elseif val.LINK == "Panel.PaintingDragging" then
+        e('boolean') -- numeric list?
     elseif val.VALUE then
         e(val.VALUE)
     else
@@ -419,42 +433,55 @@ for key, val in spairs(wiki_json.GLOBALS) do
 end
 
 for lib_name, lib in spairs(wiki_json.LIBRARIES) do
-    if not base_env:Get(LString(lib_name)) then
+    local guards, need_guard, consistent = emit_if_guard(lib.MEMBERS)
 
-        local guards, need_guard, consistent = emit_if_guard(lib.MEMBERS)
+    if lib_name == "string" then lib_name = "^string" end
 
+    local existing_lib = base_env:Get(LString(lib_name))
+
+    if not existing_lib then
         indent() e("type ") e(lib_name) e(" = {}\n")
+    end
 
-        for guard, members in spairs(guards) do
-            if need_guard and guard ~= "" then
-                indent() e("if ")
-                e(guard)
-                e(" then") e("\n")
-                t = t + 1
+    for guard, members in spairs(guards) do
+        if need_guard and guard ~= "" then
+            indent() e("if ")
+            e(guard)
+            e(" then") e("\n")
+            t = t + 1
+        end
+
+        for key, val in spairs(members) do
+
+            if val.DESCRIPTION then
+                emit_description(val.DESCRIPTION)
             end
-    
-            for key, val in spairs(members) do
 
-                if val.DESCRIPTION then
-                    emit_description(val.DESCRIPTION)
-                end       
-
-                indent() e("type ") e(lib_name) e(".") e(key, val) e(" = ") emit(key, val) e("\n")
+            indent() 
+            local comment_out = existing_lib and existing_lib:Get(LString(key))
+            if comment_out then
+                e("--[==[ ")
             end
-    
-            if need_guard and guard ~= "" then
-                t = t - 1
-                indent() e("end\n")
+            e("type ") e(lib_name) e(".") e(key, val) e(" = ") emit(key, val) e("\n")
+
+            if comment_out then
+                e("\n")
+                e("]==] ")
             end
         end
-            
-        if consistent then
+
+        if need_guard and guard ~= "" then
             t = t - 1
             indent() e("end\n")
-        else
-            t = t - 1
-            e("end\n")
         end
+    end
+        
+    if consistent then
+        t = t - 1
+        indent() e("end\n")
+    else
+        t = t - 1
+        e("end\n")
     end
 end
 
