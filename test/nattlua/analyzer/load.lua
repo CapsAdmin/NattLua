@@ -62,3 +62,7 @@ run[[
 run[[
     require("test.nattlua.analyzer.file_importing.env_leak.main")
 ]]
+
+run[[
+    loadfile("test/nattlua/analyzer/file_importing/require_cache/main.nlua")()
+]]

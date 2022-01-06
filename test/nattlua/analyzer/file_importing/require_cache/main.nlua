@@ -1,5 +1,4 @@
--- EVENT_DUMP
 local lib1 = require("test/nattlua/analyzer/file_importing/require_cache/lib")
 local lib2 = require("test/nattlua/analyzer/file_importing/require_cache/lib")
 
-print(lib1, lib2)
+§ assert(env.runtime.lib1 == env.runtime.lib2)
