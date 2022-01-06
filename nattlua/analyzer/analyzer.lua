@@ -105,38 +105,6 @@ do
 	local AnalyzeFunctionSignature = require("nattlua.analyzer.expressions.function_signature").AnalyzeFunctionSignature
 	local Union = require("nattlua.types.union").Union
 
-	function META:ClearAffectedUpvalues()
-		if self.affected_upvalues then
-			for _, upvalue in ipairs(self.affected_upvalues) do
-				upvalue.exp_stack = nil
-			end
-		end
-	end
-
-	function META:PushTruthyExpressionContext()
-		self.truthy_expression_context = (self.truthy_expression_context or 0) + 1
-	end
-
-	function META:PopTruthyExpressionContext()
-		self.truthy_expression_context = self.truthy_expression_context - 1
-	end
-
-	function META:IsTruthyExpressionContext()
-		return self.truthy_expression_context and self.truthy_expression_context > 0 and true or false
-	end
-
-	function META:PushFalsyExpressionContext()
-		self.falsy_expression_context = (self.falsy_expression_context or 0) + 1
-	end
-
-	function META:PopFalsyExpressionContext()
-		self.falsy_expression_context = self.falsy_expression_context - 1
-	end
-
-	function META:IsFalsyExpressionContext()
-		return self.falsy_expression_context and self.falsy_expression_context > 0 and true or false
-	end
-
 	function META:AnalyzeExpression(node)
 		self.current_expression = node
 

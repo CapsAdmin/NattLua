@@ -24,10 +24,6 @@ local function run_nattlua(path)
         preserve_whitespace = false
     end
 
-    if lua_code:find("%-%-%s-EVENT_DUMP") then
-        c:EnableEventDump(true)
-    end
-
     if lua_code:find("%-%-%s-VERBOSE_STACKTRACE") then
         c.debug = true
     end

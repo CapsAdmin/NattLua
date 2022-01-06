@@ -60,6 +60,8 @@ do
 			tokens = Map<|string, Token|>,
 			statements = List<|any|>,
 			value = Token | nil,
+			environment = "typesystem"|"runtime",
+			parent = nil | any,
 		}]]
 		--[[#type META.@Name = "Node"]]
 
@@ -172,8 +174,7 @@ do
 				tokens = {},
 				id = id,
 				Code = self.Code,
-				parser = self,
-				
+				parser = self,		
 			},
 			META
 		)

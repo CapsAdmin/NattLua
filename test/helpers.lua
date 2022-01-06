@@ -49,11 +49,6 @@ local function run(code, expect_error)
         end
     else
         if not ok then
-            _G.TEST = true
-            compiler = nl.Compiler(compiler:GetCode():GetString())
-            compiler:EnableEventDump(true)
-            local ok, err2 = compiler:Analyze()
-            _G.TEST = false
             io.write(compiler:GetCode():GetString(), "\n")
             error(err, 3)
         end

@@ -198,10 +198,6 @@ function META:Parse()
 	return self
 end
 
-function META:EnableEventDump(b)
-	self.dump_events = b
-end
-
 function META:SetEnvironments(runtime, typesystem)
 	self.default_environment = {}
 	self.default_environment.runtime = runtime
@@ -232,10 +228,6 @@ function META:Analyze(analyzer, ...)
 		local runtime_env, typesystem_env = BuildBaseEnvironment()
         analyzer:SetDefaultEnvironment(runtime_env, "runtime")
         analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
-	end
-
-	if self.dump_events or self.config and self.config.dump_analyzer_events then
-		analyzer.OnEvent = analyzer.DumpEvent
 	end
 
 	analyzer.ResolvePath = self.OnResolvePath

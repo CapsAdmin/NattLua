@@ -16,6 +16,7 @@ return function(META)
 	end)
 
 	function META:Hash(node)
+		if node.Type == "string" then return node:GetHash() end
 		if type(node) == "string" then return node end
 		if type(node.value) == "string" then return node.value end
 		return node.value.value

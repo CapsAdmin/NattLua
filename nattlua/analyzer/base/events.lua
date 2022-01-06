@@ -4,12 +4,21 @@ local ipairs = ipairs
 local table = require("table")
 local select = _G.select
 return function(META)
-	function META:FireEvent(what, ...)
-		if self.suppress_events then return end
 
-		if self.OnEvent then
-			self:OnEvent(what, ...)
+	function META:SetDumpEvents(b)
+		self.dump_events = b
+	end
+
+	function META:FireEvent(...)
+		self:OnEvent(...)
+
+		if self.dump_events then
+			self:DumpEvent(...)
 		end
+	end
+
+	function META:OnEvent(what, ...)
+
 	end
 
 	do
