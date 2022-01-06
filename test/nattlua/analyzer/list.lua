@@ -11,7 +11,7 @@ test("can be simple", function()
         local x = {1, 2, 3}
         x[2] = 10
 
-        types.assert(x[2], 10)
+        attest.equal(x[2], 10)
     ]]
 end)
 
@@ -22,7 +22,7 @@ test("can be sparse", function()
             [10] = 3,
         }
 
-        types.assert(x[10], 3)
+        attest.equal(x[10], 3)
     ]]
 end)
 
@@ -34,7 +34,7 @@ test("can be indirect", function()
             [RED] = 2,
             [BLUE] = 3,
         }
-        types.assert(x[RED], 2)
+        attest.equal(x[RED], 2)
     ]]
 end)
 
@@ -71,10 +71,10 @@ end)
 
 run[[
     local a: {1,2,3} = {1,2,3}
-    types.assert(a[1], 1)
+    attest.equal(a[1], 1)
 ]]
 
 run[[
     local a: {[number]=string}
-    types.assert(a[1], _ as string)
+    attest.equal(a[1], _ as string)
 ]]

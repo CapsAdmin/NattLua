@@ -15,7 +15,7 @@ analyzer function import_type(name: string)
 end
 
 import_type<|"nattlua/definitions/utility.nlua"|>
-import_type<|"nattlua/definitions/tests.nlua"|>
+import_type<|"nattlua/definitions/attest.nlua"|>
 import_type<|"nattlua/definitions/lua/globals.nlua"|>
 import_type<|"nattlua/definitions/lua/io.nlua"|>
 import_type<|"nattlua/definitions/lua/luajit.nlua"|>

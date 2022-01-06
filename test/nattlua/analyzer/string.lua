@@ -4,8 +4,8 @@ local run = T.RunCode
 test("meta library", function()
     run[[
         local a = "1234"
-        types.assert(string.len(a), 4)
-        types.assert(a:len(), 4)
+        attest.equal(string.len(a), 4)
+        attest.equal(a:len(), 4)
     ]]
 end)
 
@@ -24,9 +24,9 @@ run[===[
     local bar = [=[foo]=]
     local faz = [==[foo]==]
     
-    types.assert(foo, "foo")
-    types.assert(bar, "foo")
-    types.assert(faz, "foo")
+    attest.equal(foo, "foo")
+    attest.equal(bar, "foo")
+    attest.equal(faz, "foo")
 ]===]
 
 
@@ -53,5 +53,5 @@ run[=[
         return str
     end
 
-    types.assert(reverse_escape_string("hello\\nworld", "\""), "hello\nworld")
+    attest.equal(reverse_escape_string("hello\\nworld", "\""), "hello\nworld")
 ]=]

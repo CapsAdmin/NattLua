@@ -1,2 +1,2 @@
-types.assert(CLIENT, true)
-types.assert(SERVER, false)
+attest.equal(CLIENT, true)
+attest.equal(SERVER, false)

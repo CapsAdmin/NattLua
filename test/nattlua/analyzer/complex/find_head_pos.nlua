@@ -36,32 +36,32 @@ local function FindHeadPosition(ent: Entity & HeadPos)
     end
     
 	if ent.findheadpos_head_bone then
-        types.assert(ent.findheadpos_head_bone, _ as number)
+        attest.equal(ent.findheadpos_head_bone, _ as number)
 
 		local m = ent:GetBoneMatrix(ent.findheadpos_head_bone)
         
 		if m then
-            types.assert(m, _ as Matrix)
+            attest.equal(m, _ as Matrix)
 			local pos = m:GetTranslation()
 			if pos ~= ent:GetPos() then
 				return pos, m:GetAngles()
 			end
 		end
 	else
-        types.assert(ent.findheadpos_head_bone, nil)
+        attest.equal(ent.findheadpos_head_bone, nil)
 
 		if not ent.findheadpos_head_attachment then
 			ent.findheadpos_head_attachment = 
 				get_first_attachment_by_name(ent, "eyes") or 
 				get_first_attachment_by_name(ent, "forward")
 
-            types.assert(ent.findheadpos_head_attachment, _ as nil | number)
+            attest.equal(ent.findheadpos_head_attachment, _ as nil | number)
 		end
 
-        types.assert(ent.findheadpos_head_attachment, _ as nil | number)
+        attest.equal(ent.findheadpos_head_attachment, _ as nil | number)
 
 		if ent.findheadpos_head_attachment then
-            types.assert(ent.findheadpos_head_attachment, _ as number)
+            attest.equal(ent.findheadpos_head_attachment, _ as number)
 			local angpos = ent:GetAttachment(ent.findheadpos_head_attachment)
 			return angpos.Pos, angpos.Ang
 		end
@@ -72,4 +72,4 @@ end
 
 FindHeadPosition(_ as Entity & HeadPos)
 
-types.assert<|return_type<|FindHeadPosition|>, (Vector, Angle)|>
+attest.equal<|return_type<|FindHeadPosition|>, (Vector, Angle)|>

@@ -33,7 +33,13 @@ return function(META)
 		return ok
 	end
 
-	local function expand(tbl)
+	function META:ErrorAssert(ok, err)
+		if not ok then
+			error(self:ErrorMessageToString(err))
+		end
+	end
+
+	function META:ErrorMessageToString(tbl)
 		if type(tbl) == "string" then return tbl end
 		local out = {}
 
@@ -42,7 +48,7 @@ return function(META)
 				if v.Type then
 					table.insert(out, tostring(v))
 				else
-					table.insert(out, expand(v))
+					table.insert(out, self:ErrorMessageToString(v))
 				end
 			else
 				table.insert(out, tostring(v))
@@ -70,7 +76,7 @@ return function(META)
 			error("bad call to ReportDiagnostic")
 		end
 
-		local msg_str = expand(msg)
+		local msg_str = self:ErrorMessageToString(msg)
 		local key = msg_str .. "-" .. tostring(node) .. "-" .. "severity"
 		self.diagnostics_map = self.diagnostics_map or {}
 		if self.diagnostics_map[key] then return end
@@ -109,8 +115,11 @@ return function(META)
 		return self:ReportDiagnostic(node, msg, "warning")
 	end
 
-	function META:FatalError(msg)
-		if self.current_expression or self.current_statement then return self:ReportDiagnostic(self.current_expression or self.current_statement, msg, "fatal") end
+	function META:FatalError(msg, node)
+		node = node or self.current_expression or self.current_statement
+		if node then
+			self:ReportDiagnostic(node, msg, "fatal")
+		end
 		error(msg, 2)
 	end
 

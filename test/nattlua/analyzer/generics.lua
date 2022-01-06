@@ -26,12 +26,12 @@ run[=[
     events.Declare<|"update", (number,), (boolean,)|>
 
     function events.AddListener(event_name: keysof<|declared|>, listener: declared[event_name])
-        types.assert(event_name, _ as "message" | "update")
-        types.assert(listener, _ as (function=(number | string)>((false | true | (false | true, string) | (number,)))))
+        attest.equal(event_name, _ as "message" | "update")
+        attest.equal(listener, _ as (function=(number | string)>((false | true | (false | true, string) | (number,)))))
     end
 
     events.AddListener("message", function(data) 
-        types.assert(data, _ as number | string)
+        attest.equal(data, _ as number | string)
         return 1337 
     end)
 ]=]
@@ -60,11 +60,11 @@ run[=[
     events.Declare<|"update", (number,), (boolean,)|>
 
     function events.AddListener(event_name: literal keysof<|declared|>, listener: declared[event_name])
-        types.assert(event_name, _ as "message")
-        types.assert(listener, _ as (function=(string)>((boolean, string) | (nil,))))
+        attest.equal(event_name, _ as "message")
+        attest.equal(listener, _ as (function=(string)>((boolean, string) | (nil,))))
     end
 
-    events.AddListener("message", function(data) types.assert(data, _ as string) return 1337 end)
+    events.AddListener("message", function(data) attest.equal(data, _ as string) return 1337 end)
 ]=]
 
 
@@ -74,7 +74,7 @@ run[[
     local function test(key: literal keysof<|tbl|>)
         return tbl[key]
     end
-    types.assert(test("foo"), 1337)
+    attest.equal(test("foo"), 1337)
 ]]
 
 run([[
@@ -83,7 +83,7 @@ run([[
     local function test(key: literal keysof<|tbl|>)
         return tbl[key]
     end
-    types.assert(test("bar"), 1337)
+    attest.equal(test("bar"), 1337)
 ]], "bar.- is not a subset of.-foo")
 
 run[[
@@ -95,10 +95,10 @@ run[[
     end
     
     local type a = TypeToString<|number|>
-    types.assert<|a, "number"|>
+    attest.equal<|a, "number"|>
     
     local type b = TypeToString<|string|>
-    types.assert<|b, "other"|>
+    attest.equal<|b, "other"|>
 ]]
 
 run[[
@@ -112,5 +112,5 @@ run[[
         end
     end
     
-    types.assert(lol<|number|>(1), _ as 1 | (nil, number))
+    attest.equal(lol<|number|>(1), _ as 1 | (nil, number))
 ]]

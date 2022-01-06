@@ -10,7 +10,7 @@ test("a and b", function()
         local a: 1, b: 2
         local result = a and b
 
-        types.assert(result, 2)
+        attest.equal(result, 2)
     ]]:GetLocalOrGlobalValue(String("result"))
 
     equal(obj:GetNode().kind, "binary_operator") 
@@ -25,7 +25,7 @@ test("a + b", function()
         local a: 1, b: 2
         local result = a + b
         
-        types.assert(result, 3)
+        attest.equal(result, 3)
     ]]:GetLocalOrGlobalValue(String("result"))
 
     equal(obj:GetNode().kind, "binary_operator")
@@ -39,7 +39,7 @@ test("not a", function()
         local a: true
         local result = not a
         
-        types.assert(result, false)
+        attest.equal(result, false)
     ]]:GetLocalOrGlobalValue(String("result"))
 
     equal(obj:GetNode().kind, "prefix_operator") 
@@ -51,7 +51,7 @@ test("not not a", function()
         local a: true
         local result = not not a
         
-        types.assert(result, true)
+        attest.equal(result, true)
     ]]:GetLocalOrGlobalValue(String("result"))
 
     equal(obj:GetNode().kind, "prefix_operator") 
@@ -64,7 +64,7 @@ test("not a or 1", function()
         local a = true
         local result = not a or 1
         
-        types.assert(result, 1)
+        attest.equal(result, 1)
     ]]:GetLocalOrGlobalValue(String("result"))
 
     equal(obj:GetNode().kind, "binary_operator")

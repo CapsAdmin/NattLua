@@ -11,7 +11,7 @@ run[[
     end
     
     local y = foo()
-    types.assert(y, true)
+    attest.equal(y, true)
 ]]
 
 run[[
@@ -20,19 +20,19 @@ run[[
     end
     
     local x = tonumber(_ as string)
-    types.assert(x, _ as nil | number)
+    attest.equal(x, _ as nil | number)
     if not x then
         throw()
     end
-    types.assert(x, _ as number)
+    attest.equal(x, _ as number)
 ]]
 
 run[[
     local x = _ as 1 | 2 | 3
     if x == 1 then return end
-    types.assert(x, _ as 2 | 3)
+    attest.equal(x, _ as 2 | 3)
     if x ~= 3 then return end
-    types.assert(x, _ as 2)
+    attest.equal(x, _ as 2)
     if x == 2 then return end
     error("dead code")
 ]]
@@ -43,7 +43,7 @@ run[[
         error("lol")
     end
 
-    types.assert(x, 108)
+    attest.equal(x, 108)
 ]]
 
 run[[
@@ -53,12 +53,12 @@ run[[
         assert(false)
     end
 
-    types.assert(a, 1)
+    attest.equal(a, 1)
 ]]
 
 run[[
     local a = assert(_ as 1 | nil)
-    --types.assert(a, 1)
+    --attest.equal(a, 1)
 ]]
 
 run[[
@@ -71,7 +71,7 @@ run[[
     end
     
     local y = foo(_ as string)
-    types.assert<|y, number|>
+    attest.equal<|y, number|>
 ]]
 
 run[[
@@ -81,7 +81,7 @@ run[[
         error("!")
     end
 
-    types.assert(a, 1)
+    attest.equal(a, 1)
 ]]
 
 run[[
@@ -91,7 +91,7 @@ run[[
         error("!")
     end
 
-    types.assert(a, true)
+    attest.equal(a, true)
 ]]
 
 run[[
@@ -147,7 +147,7 @@ run[[
 
     local x = foo()
 
-    types.assert(x, _ as number)
+    attest.equal(x, _ as number)
 ]]
 
 run[[
@@ -175,7 +175,7 @@ run[[
         return 1
     end
     
-    types.assert(foo(), _ as number)
+    attest.equal(foo(), _ as number)
 ]]
 
 run[[
@@ -198,7 +198,7 @@ run[[
             return 2
         end
 
-        types.assert(test(), 1)
+        attest.equal(test(), 1)
     end
 ]]
 
@@ -218,13 +218,13 @@ run[[
         local x = map[_ as string]
         if x then
             local val = x()
-            --types.assert(x, _ as function=()>())
+            --attest.equal(x, _ as function=()>())
             return val
         end
         error("nope")
     end
     
-    types.assert(main(), 2)
+    attest.equal(main(), 2)
 ]]
 
 run[[
@@ -251,12 +251,12 @@ run[[
         §assert(not analyzer:IsDefinetlyReachable())
         local x = codepoint_to_utf8(n1)
         §assert(not analyzer:IsDefinetlyReachable())
-        types.assert(x, "foo")
+        attest.equal(x, "foo")
         return x
     end
     
     local x = parse_unicode_escape("lol")
-    types.assert(x, "foo")
+    attest.equal(x, "foo")
 ]]
 
 run[[
@@ -295,6 +295,6 @@ run[[
             error("nope")
         end
     
-        types.assert(x, 3)
+        attest.equal(x, 3)
     end
 ]]

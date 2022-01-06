@@ -262,8 +262,8 @@ test("calling a union", function()
         local a = test(true, true)
         local b = test(true)
 
-        types.assert(a, _ as number)
-        types.assert(b, _ as string)
+        attest.equal(a, _ as number)
+        attest.equal(b, _ as string)
     ]]
 end)
 
@@ -282,8 +282,8 @@ test("pcall", function()
             return a < b
         end)
 
-        types.assert(ok, _ as false)
-        types.assert(err, _ as "not a valid binary operation")
+        attest.equal(ok, _ as false)
+        attest.equal(err, _ as "not a valid binary operation")
     ]]
 end)
 test("complex", function()
@@ -294,7 +294,7 @@ test("complex", function()
         
         foo()
 
-        types.assert_superset(foo, nil as function=()>(any))
+        attest.superset_of(foo, nil as function=()>(any))
     ]]
 end)
 test("lol", function()
@@ -308,7 +308,7 @@ test("lol", function()
         local type b = {foo = a as any}
         local c: function=(a: number, b:number)>(b, b)
 
-        types.assert_superset(
+        attest.superset_of(
             c, 
             nil as function=(_:number, _:number)>({foo = any}, {foo = any})
         )
@@ -325,7 +325,7 @@ test("lol2", function()
 
         test(1,1)
 
-        types.assert_superset(test, nil as function=(_:number, _:number)>(number))
+        attest.superset_of(test, nil as function=(_:number, _:number)>(number))
     ]]
 end)
 
@@ -355,17 +355,17 @@ run[[
         -- val is "" | 1
         local val = (function() return 1 end)()
         
-        types.assert(val, 1)
+        attest.equal(val, 1)
 
         return val
     end
 
-    types.assert(a(), _ as 1 | "")
+    attest.equal(a(), _ as 1 | "")
 ]]
 
 run[[
     local x = (" "):rep(#tostring(_ as string))
-    types.assert(x, _ as string)
+    attest.equal(x, _ as string)
 ]]
 
 run[[
@@ -383,7 +383,7 @@ run[[
     end
     
     local f = genfunc("foo")
-    types.assert(f(), "foo")
+    attest.equal(f(), "foo")
 ]]
 
 run[[
@@ -399,7 +399,7 @@ run[[
         return bar(a + 1)
     end
     
-    types.assert(foo(1), _ as any)
+    attest.equal(foo(1), _ as any)
 ]]
 
 run[[
@@ -407,7 +407,7 @@ run[[
 
     function Foo.Bar.foo.bar.test:init() end
 
-    types.assert_superset(Foo.Bar.foo.bar.test.init, _ as function=(...any)>(...any))
+    attest.superset_of(Foo.Bar.foo.bar.test.init, _ as function=(...any)>(...any))
 ]]
 
 run[[
@@ -436,10 +436,10 @@ run[[
 
 run[[
     local function foo(a,b,c,d)
-        types.assert(a, 1)
-        types.assert(b, 2)
-        types.assert(c, _ as any)
-        types.assert(d, _ as any)
+        attest.equal(a, 1)
+        attest.equal(b, 2)
+        attest.equal(c, _ as any)
+        attest.equal(d, _ as any)
     end
     
     something(function(...)
@@ -469,8 +469,8 @@ run[[
         return tbl[arg.value]
     end
     
-    types.assert(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
-    types.assert(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
+    attest.equal(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
+    attest.equal(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
 ]]
 
 run[[
@@ -481,7 +481,7 @@ run[[
     end
     
     local x = test()
-    types.assert(x, _ as nil | true)
+    attest.equal(x, _ as nil | true)
 ]]
 
 run[[
@@ -502,7 +502,7 @@ run[[
     end 
     
     local x = test()
-    types.assert(x, 1)
+    attest.equal(x, 1)
 ]]
 run[[
     local function test(): number 
@@ -510,7 +510,7 @@ run[[
     end 
     
     local x = test()
-    types.assert(x, _ as number)
+    attest.equal(x, _ as number)
 ]]
 
 run[[
@@ -528,11 +528,11 @@ run[[
     C.Foo = A.Foo
     C.Bar = B.Bar
     
-    types.assert(C:Foo(), "c")
-    types.assert(C:Bar(), "c")
+    attest.equal(C:Foo(), "c")
+    attest.equal(C:Bar(), "c")
     
-    types.assert(A:Foo(), "a")
-    types.assert(B:Bar(), "b")
+    attest.equal(A:Foo(), "a")
+    attest.equal(B:Bar(), "b")
 ]]
 
 run[[
@@ -555,8 +555,8 @@ run[[
     local type MyTable = {foo = number}
 
     local function foo(tbl: MyTable & {bar = boolean | nil})
-        types.assert<|tbl.foo, number|>
-        types.assert<|tbl.bar, boolean | nil|>
+        attest.equal<|tbl.foo, number|>
+        attest.equal<|tbl.bar, boolean | nil|>
         return tbl
     end
 
@@ -564,8 +564,8 @@ run[[
         foo = 1337
     })
 
-    types.assert<|tbl.foo, number|>
-    types.assert<|tbl.bar, boolean | nil|>
+    attest.equal<|tbl.foo, number|>
+    attest.equal<|tbl.bar, boolean | nil|>
 ]]
 
 run[[
@@ -574,12 +574,12 @@ run[[
     type meta.@Self = {foo = number}
     
     local function test(tbl: meta.@Self & {bar = string | nil})
-        types.assert(tbl.bar, _ as nil | string)
+        attest.equal(tbl.bar, _ as nil | string)
         return tbl:Foo() + 1
     end
     
     function meta:Foo()
-        types.assert<|self.foo, number|>
+        attest.equal<|self.foo, number|>
         return 1336
     end
     
@@ -587,8 +587,8 @@ run[[
         foo = 1
     }, meta)
     
-    types.assert(obj:Foo(), 1336)
-    types.assert(test(obj), 1337)
+    attest.equal(obj:Foo(), 1336)
+    attest.equal(test(obj), 1337)
 ]]
 
 pending[[
@@ -610,7 +610,7 @@ run[[
         name: literal string
     )
         tbl[name] = function(name2: literal string)
-            types.assert(name, name2)
+            attest.equal(name, name2)
         end
     end
     
@@ -625,13 +625,13 @@ run[[
     local type mytuple = (string, number, boolean)
     local type lol = function=(mytuple)>(mytuple)
 
-    types.assert(lol, _ as function=(string, number, boolean)>(string, number, boolean))
+    attest.equal(lol, _ as function=(string, number, boolean)>(string, number, boolean))
 ]]
 
 run[[
     type lol = function =(foo: string, number)>(bar: string, string)
 
-    types.assert(lol, _ as function =(string, number)>(string, string))
+    attest.equal(lol, _ as function =(string, number)>(string, string))
 ]]
 
 run[[
@@ -648,8 +648,8 @@ run[[
     local a = test!(number)(1,2)
     local b = test!(string)("1","2")
     
-    types.assert(a, 3)
-    types.assert(b, "12")    
+    attest.equal(a, 3)
+    attest.equal(b, "12")    
 ]]
 
 run[[
@@ -668,7 +668,7 @@ run[[
 
     local tk = table_pool(function() return { foo = "foo" } as Object end)()
     tk.foo = "bar"
-    types.assert<|tk.foo, Type|>
+    attest.equal<|tk.foo, Type|>
 ]]
 
 run([[
@@ -694,8 +694,8 @@ run[[
     end
     
     foo(function(x, y)
-        types.assert(x, _ as number)
-        types.assert(y, _ as string)
+        attest.equal(x, _ as number)
+        attest.equal(y, _ as string)
     end)
 ]]
 
@@ -705,7 +705,7 @@ run[[
     end
     
     foo(function(x: number)
-        types.assert(x, _ as number)
+        attest.equal(x, _ as number)
     end)
 ]]
 
@@ -716,7 +716,7 @@ run[[
     
     (function(arg: {[number] = string})
         local code = foo(arg[1])
-        types.assert(code, _ as string)
+        attest.equal(code, _ as string)
     end)(arg)
 ]]
 

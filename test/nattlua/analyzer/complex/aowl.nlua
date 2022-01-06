@@ -40,7 +40,7 @@ function aowl.StringToType(type, ...)
 end
 
 function aowl.AddCommand(command)
-    types.assert(command, "help|usage=string")
+    attest.equal(command, "help|usage=string")
     -- AOWL LEGACY
     if type(command) == "table" then
         command = table.concat(command, "|")
@@ -57,31 +57,31 @@ function aowl.AddCommand(command)
         end
     end
 
-    types.assert(aliases, "help|usage")
-    types.assert(argtypes, "string")
+    attest.equal(aliases, "help|usage")
+    attest.equal(argtypes, "string")
 
     aliases = aliases:Split("|")
-    types.assert(aliases, {"help", "usage"})
+    attest.equal(aliases, {"help", "usage"})
 
     if argtypes then
         argtypes = argtypes:Split(",")
-        types.assert(argtypes, {"string"})
+        attest.equal(argtypes, {"string"})
 
         for i, v in ipairs(argtypes) do
-            types.assert(i, 1)
-            types.assert(v, "string")
+            attest.equal(i, 1)
+            attest.equal(v, "string")
 
             if v:find("|", nil, true) then
             
-                types.assert(nil, "should not hit")
+                attest.equal(nil, "should not hit")
                 argtypes[i] = v:Split("|")
             else
                 argtypes[i] = {v}
-                types.assert(argtypes, {{"string"}})
+                attest.equal(argtypes, {{"string"}})
             end
         end
 
-        types.assert(argtypes, {{"string"}})
+        attest.equal(argtypes, {{"string"}})
 
         for i, types in ipairs(argtypes) do
             for i2, arg in ipairs(types) do
@@ -116,5 +116,5 @@ end
 
 aowl.AddCommand("help|usage=string")
 
-types.assert(aowl.commands.help.aliases, {"help", "usage"})
-types.assert(aowl.commands.help.argtypes, {{"string"}})
+attest.equal(aowl.commands.help.aliases, {"help", "usage"})
+attest.equal(aowl.commands.help.argtypes, {{"string"}})

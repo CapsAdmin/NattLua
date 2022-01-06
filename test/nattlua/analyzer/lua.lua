@@ -83,171 +83,171 @@ test("logic operators", function()
         do --- 1,2
             local x,y = 1,2
 
-            types.assert(x<y,	true)
-            types.assert(x<=y,	true)
-            types.assert(x>y,	false)
-            types.assert(x>=y,	false)
-            types.assert(x==y,	false)
-            types.assert(x~=y,	true)
+            attest.equal(x<y,	true)
+            attest.equal(x<=y,	true)
+            attest.equal(x>y,	false)
+            attest.equal(x>=y,	false)
+            attest.equal(x==y,	false)
+            attest.equal(x~=y,	true)
 
-            types.assert(1<y,	true)
-            types.assert(1<=y,	true)
-            types.assert(1>y,	false)
-            types.assert(1>=y,	false)
-            types.assert(1==y,	false)
-            types.assert(1~=y,	true)
+            attest.equal(1<y,	true)
+            attest.equal(1<=y,	true)
+            attest.equal(1>y,	false)
+            attest.equal(1>=y,	false)
+            attest.equal(1==y,	false)
+            attest.equal(1~=y,	true)
 
-            types.assert(x<2,	true)
-            types.assert(x<=2,	true)
-            types.assert(x>2,	false)
-            types.assert(x>=2,	false)
-            types.assert(x==2,	false)
-            types.assert(x~=2,	true)
+            attest.equal(x<2,	true)
+            attest.equal(x<=2,	true)
+            attest.equal(x>2,	false)
+            attest.equal(x>=2,	false)
+            attest.equal(x==2,	false)
+            attest.equal(x~=2,	true)
 
-            types.assert(lt(x,y),	true)
-            types.assert(le(x,y),	true)
-            types.assert(gt(x,y),	false)
-            types.assert(ge(x,y),	false)
-            types.assert(eq(y,x),	false)
-            types.assert(ne(y,x),	true)
+            attest.equal(lt(x,y),	true)
+            attest.equal(le(x,y),	true)
+            attest.equal(gt(x,y),	false)
+            attest.equal(ge(x,y),	false)
+            attest.equal(eq(y,x),	false)
+            attest.equal(ne(y,x),	true)
         end
 
         do --- 2,1
             local x,y = 2,1
 
-            types.assert(x<y,	false)
-            types.assert(x<=y,	false)
-            types.assert(x>y,	true)
-            types.assert(x>=y,	true)
-            types.assert(x==y,	false)
-            types.assert(x~=y,	true)
+            attest.equal(x<y,	false)
+            attest.equal(x<=y,	false)
+            attest.equal(x>y,	true)
+            attest.equal(x>=y,	true)
+            attest.equal(x==y,	false)
+            attest.equal(x~=y,	true)
 
-            types.assert(2<y,	false)
-            types.assert(2<=y,	false)
-            types.assert(2>y,	true)
-            types.assert(2>=y,	true)
-            types.assert(2==y,	false)
-            types.assert(2~=y,	true)
+            attest.equal(2<y,	false)
+            attest.equal(2<=y,	false)
+            attest.equal(2>y,	true)
+            attest.equal(2>=y,	true)
+            attest.equal(2==y,	false)
+            attest.equal(2~=y,	true)
 
-            types.assert(x<1,	false)
-            types.assert(x<=1,	false)
-            types.assert(x>1,	true)
-            types.assert(x>=1,	true)
-            types.assert(x==1,	false)
-            types.assert(x~=1,	true)
+            attest.equal(x<1,	false)
+            attest.equal(x<=1,	false)
+            attest.equal(x>1,	true)
+            attest.equal(x>=1,	true)
+            attest.equal(x==1,	false)
+            attest.equal(x~=1,	true)
 
-            types.assert(lt(x,y),	false)
-            types.assert(le(x,y),	false)
-            types.assert(gt(x,y),	true)
-            types.assert(ge(x,y),	true)
-            types.assert(eq(y,x),	false)
-            types.assert(ne(y,x),	true)
+            attest.equal(lt(x,y),	false)
+            attest.equal(le(x,y),	false)
+            attest.equal(gt(x,y),	true)
+            attest.equal(ge(x,y),	true)
+            attest.equal(eq(y,x),	false)
+            attest.equal(ne(y,x),	true)
         end
 
         do --- 1,1
             local x,y = 1,1
 
-            types.assert(x<y,	false)
-            types.assert(x<=y,	true)
-            types.assert(x>y,	false)
-            types.assert(x>=y,	true)
-            types.assert(x==y,	true)
-            types.assert(x~=y,	false)
+            attest.equal(x<y,	false)
+            attest.equal(x<=y,	true)
+            attest.equal(x>y,	false)
+            attest.equal(x>=y,	true)
+            attest.equal(x==y,	true)
+            attest.equal(x~=y,	false)
 
-            types.assert(1<y,	false)
-            types.assert(1<=y,	true)
-            types.assert(1>y,	false)
-            types.assert(1>=y,	true)
-            types.assert(1==y,	true)
-            types.assert(1~=y,	false)
+            attest.equal(1<y,	false)
+            attest.equal(1<=y,	true)
+            attest.equal(1>y,	false)
+            attest.equal(1>=y,	true)
+            attest.equal(1==y,	true)
+            attest.equal(1~=y,	false)
 
-            types.assert(x<1,	false)
-            types.assert(x<=1,	true)
-            types.assert(x>1,	false)
-            types.assert(x>=1,	true)
-            types.assert(x==1,	true)
-            types.assert(x~=1,	false)
+            attest.equal(x<1,	false)
+            attest.equal(x<=1,	true)
+            attest.equal(x>1,	false)
+            attest.equal(x>=1,	true)
+            attest.equal(x==1,	true)
+            attest.equal(x~=1,	false)
 
-            types.assert(lt(x,y),	false)
-            types.assert(le(x,y),	true)
-            types.assert(gt(x,y),	false)
-            types.assert(ge(x,y),	true)
-            types.assert(eq(y,x),	true)
-            types.assert(ne(y,x),	false)
+            attest.equal(lt(x,y),	false)
+            attest.equal(le(x,y),	true)
+            attest.equal(gt(x,y),	false)
+            attest.equal(ge(x,y),	true)
+            attest.equal(eq(y,x),	true)
+            attest.equal(ne(y,x),	false)
         end
 
         do --- 2
-            types.assert(lt1x(2),	true)
-            types.assert(le1x(2),	true)
-            types.assert(gt1x(2),	false)
-            types.assert(ge1x(2),	false)
-            types.assert(eq1x(2),	false)
-            types.assert(ne1x(2),	true)
+            attest.equal(lt1x(2),	true)
+            attest.equal(le1x(2),	true)
+            attest.equal(gt1x(2),	false)
+            attest.equal(ge1x(2),	false)
+            attest.equal(eq1x(2),	false)
+            attest.equal(ne1x(2),	true)
 
-            types.assert(ltx1(2),	false)
-            types.assert(lex1(2),	false)
-            types.assert(gtx1(2),	true)
-            types.assert(gex1(2),	true)
-            types.assert(eqx1(2),	false)
-            types.assert(nex1(2),	true)
+            attest.equal(ltx1(2),	false)
+            attest.equal(lex1(2),	false)
+            attest.equal(gtx1(2),	true)
+            attest.equal(gex1(2),	true)
+            attest.equal(eqx1(2),	false)
+            attest.equal(nex1(2),	true)
         end
 
         do --- 1
-            types.assert(lt1x(1),	false)
-            types.assert(le1x(1),	true)
-            types.assert(gt1x(1),	false)
-            types.assert(ge1x(1),	true)
-            types.assert(eq1x(1),	true)
-            types.assert(ne1x(1),	false)
+            attest.equal(lt1x(1),	false)
+            attest.equal(le1x(1),	true)
+            attest.equal(gt1x(1),	false)
+            attest.equal(ge1x(1),	true)
+            attest.equal(eq1x(1),	true)
+            attest.equal(ne1x(1),	false)
 
-            types.assert(ltx1(1),	false)
-            types.assert(lex1(1),	true)
-            types.assert(gtx1(1),	false)
-            types.assert(gex1(1),	true)
-            types.assert(eqx1(1),	true)
-            types.assert(nex1(1),	false)
+            attest.equal(ltx1(1),	false)
+            attest.equal(lex1(1),	true)
+            attest.equal(gtx1(1),	false)
+            attest.equal(gex1(1),	true)
+            attest.equal(eqx1(1),	true)
+            attest.equal(nex1(1),	false)
         end
 
         do --- 0
-            types.assert(lt1x(0),	false)
-            types.assert(le1x(0),	false)
-            types.assert(gt1x(0),	true)
-            types.assert(ge1x(0),	true)
-            types.assert(eq1x(0),	false)
-            types.assert(ne1x(0),	true)
+            attest.equal(lt1x(0),	false)
+            attest.equal(le1x(0),	false)
+            attest.equal(gt1x(0),	true)
+            attest.equal(ge1x(0),	true)
+            attest.equal(eq1x(0),	false)
+            attest.equal(ne1x(0),	true)
 
-            types.assert(ltx1(0),	true)
-            types.assert(lex1(0),	true)
-            types.assert(gtx1(0),	false)
-            types.assert(gex1(0),	false)
-            types.assert(eqx1(0),	false)
-            types.assert(nex1(0),	true)
+            attest.equal(ltx1(0),	true)
+            attest.equal(lex1(0),	true)
+            attest.equal(gtx1(0),	false)
+            attest.equal(gex1(0),	false)
+            attest.equal(eqx1(0),	false)
+            attest.equal(nex1(0),	true)
         end
     ]]
 end)
 
 test("boolean and or logic", function() -- and or
     -- when false, or returns its second argument
-    run"types.assert(nil or false, false)"
-    run"types.assert(false or nil, nil)"
+    run"attest.equal(nil or false, false)"
+    run"attest.equal(false or nil, nil)"
 
     -- when true, or returns its first argument
-    run"types.assert(1 or false, 1)"
-    run"types.assert(true or nil, true)"
+    run"attest.equal(1 or false, 1)"
+    run"attest.equal(true or nil, true)"
 
-    run"types.assert(nil or {}, {})"
+    run"attest.equal(nil or {}, {})"
 
     -- boolean without any data can be true and false at the same time
-    run"types.assert((_ as boolean) or (1), _ as true | 1)"
+    run"attest.equal((_ as boolean) or (1), _ as true | 1)"
 
     -- when false and returns its first argument
-    run"types.assert(false and true, false)"
-    run"types.assert(true and nil, nil)"
+    run"attest.equal(false and true, false)"
+    run"attest.equal(true and nil, nil)"
     -- when true and returns its second argument
     -- ????
 
     -- smoke test
-    run"types.assert(((1 or false) and true) or false, true)"
+    run"attest.equal(((1 or false) and true) or false, true)"
 
     do --- allcases
         local basiccases = {
@@ -285,7 +285,7 @@ test("boolean and or logic", function() -- and or
         end
 
         for _, v in pairs(allcases(4)) do
-            run("types.assert("..tostring(v[1])..", "..tostring(v[2])..")")
+            run("attest.equal("..tostring(v[1])..", "..tostring(v[2])..")")
         end
     end
 end)
@@ -353,13 +353,13 @@ end)
 test("object equality", function()
     run[[
         local function obj_eq(a, b)
-            types.assert(a==b, true)
-            types.assert(a~=b, false)
+            attest.equal(a==b, true)
+            attest.equal(a~=b, false)
         end
 
         local function obj_ne(a, b)
-            types.assert(a==b, false)
-            types.assert(a~=b, true)
+            attest.equal(a==b, false)
+            attest.equal(a~=b, true)
         end
 
         obj_eq(nil, nil)
@@ -385,8 +385,8 @@ test("object equality", function()
 
         local t, t2 = {}, {}
         obj_eq(t, t)
-        types.assert(t==t2, _ as false)
-        types.assert(t~=t2, _ as true)
+        attest.equal(t==t2, _ as false)
+        attest.equal(t~=t2, _ as true)
         obj_ne(t, 1)
         obj_ne(t, "")
     ]]

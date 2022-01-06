@@ -27,7 +27,7 @@ end)
 test("union + object", function()
     run[[
         local a = _ as (1 | 2) + 3
-        types.assert(a, _ as 4 | 5)
+        attest.equal(a, _ as 4 | 5)
     ]]
 end)
 
@@ -36,7 +36,7 @@ test("union + union", function()
         local a = _ as 1 | 2
         local b = _ as 10 | 20
 
-        types.assert(a + b, _ as 11 | 12 | 21 | 22)
+        attest.equal(a + b, _ as 11 | 12 | 21 | 22)
     ]]
 end)
 
@@ -44,14 +44,14 @@ test("union.foo", function()
     run[[
         local a = _ as {foo = true} | {foo = false}
 
-        types.assert(a.foo, _ as true | false)
+        attest.equal(a.foo, _ as true | false)
     ]]
 end)
 
 test("union.foo = bar", function()
     run[[
         local type a = { foo = 4 } | { foo = 1|2 } | { foo = 3 }
-        types.assert<|a.foo, 1 | 2 | 3 | 4|>
+        attest.equal<|a.foo, 1 | 2 | 3 | 4|>
     ]]
 end)
 
@@ -93,12 +93,12 @@ pending[[
 run[[
     local type a = 1 | 5 | 2 | 3 | 4
     local type b = 5 | 3 | 4 | 2 | 1
-    types.assert<|a == b, true|>
+    attest.equal<|a == b, true|>
 ]]
 
 run[[
     local shapes = _ as {[number] = 1} | {[number] = 2} | {[number] = 3}
-    types.assert(shapes[0], _ as 1|2|3)
+    attest.equal(shapes[0], _ as 1|2|3)
 ]]
 
 run([[
@@ -131,10 +131,10 @@ run[[
     local type a = |
     type a = a | 1
     type a = a | 2
-    types.assert<|a, 1|2|>
+    attest.equal<|a, 1|2|>
 ]]
 
 run[[
     local type tbl = {[number] = string} | {}
-    types.assert<|tbl[1], string|>
+    attest.equal<|tbl[1], string|>
 ]]

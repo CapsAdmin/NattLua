@@ -35,7 +35,7 @@ test("exclude analyzer function", function()
 
         local a: Exclude<|1|2|3, 2|>
 
-        types.assert(a, _ as 1|3)
+        attest.equal(a, _ as 1|3)
     ]])
 
     run([[
@@ -46,7 +46,7 @@ test("exclude analyzer function", function()
 
         local a: Exclude<|1|2|3, 2|>
 
-        types.assert(a, _ as 11|31)
+        attest.equal(a, _ as 11|31)
     ]], "expected 11 | 31 got 1 | 3")
 end)
 
@@ -55,7 +55,7 @@ test("self referenced type tables", function()
         local type a = {
             b = self,
         }
-        types.assert(a, a.b)
+        attest.equal(a, a.b)
     ]]
 end)
 
@@ -64,19 +64,19 @@ test("next", function()
         local t = {k = 1}
         local a = 1
         local k,v = next({k = 1})
-        types.assert(k, nil as "k" | "k")
-        types.assert(v, nil as 1 | 1)
+        attest.equal(k, nil as "k" | "k")
+        attest.equal(v, nil as 1 | 1)
     ]]
     run[[
         local k,v = next({foo = 1})
-        types.assert(string.len(k), _ as 3 | 3)
-        types.assert(v, _ as 1 | 1)
+        attest.equal(string.len(k), _ as 3 | 3)
+        attest.equal(v, _ as 1 | 1)
     ]]
 end)
 
 test("math.floor", function()
     run[[
-        types.assert(math.floor(1.5), 1)
+        attest.equal(math.floor(1.5), 1)
     ]]
 end)
 
@@ -107,22 +107,22 @@ test("rawset rawget", function()
 
         local self = setmetatable({}, meta)
         rawset(self, "lol", "LOL")
-        types.assert(rawget(self, "lol"), "LOL")
-        types.assert(called, false)
+        attest.equal(rawget(self, "lol"), "LOL")
+        attest.equal(called, false)
     ]]
 end)
 
 test("select", function()
     run[[
-        types.assert(select("#", 1,2,3), 3)
+        attest.equal(select("#", 1,2,3), 3)
     ]]
 end)
 
 test("parenthesis around vararg", function()
     run[[
         local a = select(2, 1,2,3)
-        types.assert(a, 2)
-        types.assert((select(2, 1,2,3)), 2)
+        attest.equal(a, 2)
+        attest.equal((select(2, 1,2,3)), 2)
     ]]
 end)
 
@@ -145,7 +145,7 @@ test("exlcude", function()
         end
 
         local a: Exclude<|1|2|3, 2|>
-        types.assert(a, _ as 1|3)
+        attest.equal(a, _ as 1|3)
     ]]
 end)
 
@@ -155,7 +155,7 @@ test("table.insert", function()
         a[1] = true
         a[2] = false
         table.insert(a, 1337)
-        types.assert(a[3], 1337)
+        attest.equal(a[3], 1337)
     ]]
 end)
 
@@ -163,8 +163,8 @@ test("string sub on union", function()
     run[[
         local lol: "foo" | "bar"
 
-        types.assert(lol:sub(1,1), _ as "f" | "b")
-        types.assert(lol:sub(_ as 2 | 3), _ as "ar" | "o" | "oo" | "r")
+        attest.equal(lol:sub(1,1), _ as "f" | "b")
+        attest.equal(lol:sub(_ as 2 | 3), _ as "ar" | "o" | "oo" | "r")
     ]]
 end)
 
@@ -212,19 +212,19 @@ end
 
 run[[
     local ok, err = type_pcall(function()
-        types.assert(1, 2)
+        attest.equal(1, 2)
         return 1
     end)
 
-    types.assert(ok, false)
-    types.assert_superset(err, _ as string)
+    attest.equal(ok, false)
+    attest.superset_of(_ as string, err)
 ]]
 
 run[[
     local ok, val = type_pcall(function() return 1 end)
     
-    types.assert(ok, true)
-    types.assert(val, 1)
+    attest.equal(ok, true)
+    attest.equal(val, 1)
 ]]
 
 run([[
@@ -235,7 +235,7 @@ run([[
 
     local a: Exclude<|1|2|3, 2|>
 
-    types.assert(a, _ as 1|3)
+    attest.equal(a, _ as 1|3)
 ]])
 
 run([[
@@ -246,7 +246,7 @@ run([[
 
     local a: Exclude<|1|2|3, 2|>
 
-    types.assert(a, _ as 11|31)
+    attest.equal(a, _ as 11|31)
 ]], "expected 11 | 31 got 1 | 3")
 
 
@@ -260,8 +260,8 @@ test("pairs loop", function()
             v = v + val
         end
 
-        types.assert(k, 6)
-        types.assert(v, 15)
+        attest.equal(k, 6)
+        attest.equal(v, 15)
     ]]
 end)
 
@@ -283,7 +283,7 @@ run[[
         body = "sum = sum + i"
     })
     
-    types.assert(func(), 55)
+    attest.equal(func(), 55)
 ]]
 
 run([[
@@ -307,12 +307,12 @@ run([[
 
 run[[
     local a = {"1", "2", "3"}
-    types.assert(table.concat(a), "123")
+    attest.equal(table.concat(a), "123")
 ]]
 
 run[[
     local a = {"1", "2", "3", _ as string}
-    types.assert(table.concat(a), _ as string)
+    attest.equal(table.concat(a), _ as string)
 ]]
 
 run[[
@@ -324,7 +324,7 @@ run[[
         }
     }
     
-    types.assert(_ as keysof<|typeof a.b|>, _ as "bar" | "faz" | "foo")
+    attest.equal(_ as keysof<|typeof a.b|>, _ as "bar" | "faz" | "foo")
 ]]
 
 run[[
@@ -333,8 +333,8 @@ run[[
     end
 
     local x, y = foo<|1, 2|>
-    types.assert(x, 1)
-    types.assert(y, 2)
+    attest.equal(x, 1)
+    attest.equal(y, 2)
 ]]
 
 run[[
@@ -363,7 +363,7 @@ run[[
 
 run[[
     local function lol(x)
-        types.assert(x, 1)
+        attest.equal(x, 1)
     end
     
     local x: 1 | "STRING"
@@ -372,7 +372,7 @@ run[[
 
 run[[
     local function lol(x)
-        types.assert(x, _ as 1 | "STRING")
+        attest.equal(x, _ as 1 | "STRING")
     end
     
     local x: 1 | "STRING"
@@ -383,13 +383,13 @@ run[[
 run[[
     local x: 1.5 | "STRING"
     local y = type(x) == "number" and math.ceil(x)
-    types.assert(y, _ as 2 | false)
+    attest.equal(y, _ as 2 | false)
 ]]
 
 run[[
     local str, count = string.gsub("hello there!", "hello", "hi")
-    types.assert<|str, "hi there!"|>
-    types.assert<|count, 1|>
+    attest.equal<|str, "hi there!"|>
+    attest.equal<|count, 1|>
 ]]
 
 do
@@ -400,16 +400,16 @@ do
             return "foo"
         end
         local ok, err = pcall(test, "foo")
-        types.assert<|ok, false|>
-        types.assert<|err, "LOL"|>
+        attest.equal<|ok, false|>
+        attest.equal<|err, "LOL"|>
 
 
         local function test(x)
             return "foo"
         end
         local ok, err = pcall(test, "foo")
-        types.assert<|ok, true|>
-        types.assert<|err, "foo"|>
+        attest.equal<|ok, true|>
+        attest.equal<|err, "foo"|>
     ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
@@ -423,14 +423,14 @@ do
             table_new = "ok"
         end
 
-        types.assert(ok, false)
-        types.assert(table_new, "ok")
+        attest.equal(ok, false)
+        attest.equal(table_new, "ok")
     ]]
     run[[
         local ok, err = pcall(function() assert(false, "LOL") end)
 
-        types.assert(ok, false)
-        types.assert(err, "LOL")
+        attest.equal(ok, false)
+        attest.equal(err, "LOL")
     ]]
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
@@ -458,7 +458,7 @@ run[[
 
     extend(META)
 
-    types.assert(META.ExtraField, 1)
+    attest.equal(META.ExtraField, 1)
 ]]
 
 run[[
@@ -468,7 +468,7 @@ run[[
     }
     
     local e = _ as Entity
-    types.assert(e:GetBoneCount(), _ as number)
+    attest.equal(e:GetBoneCount(), _ as number)
 ]]
 
 run[[
@@ -477,8 +477,8 @@ run[[
     type lol.rofl = function=(number, string)>(string)
         
     function lol.rofl(a, b)
-        types.assert(a, _ as number)
-        types.assert(b, _ as string)
+        attest.equal(a, _ as number)
+        attest.equal(b, _ as string)
         return ""
     end
 ]]
@@ -489,16 +489,16 @@ run[[
     end
     
     local str = test("Foo")
-    types.assert(str, "foo")
+    attest.equal(str, "foo")
 ]]
 
 run[[
     local i = 0
     local function test(x: literal (string | nil))
         if i == 0 then
-            types.assert<|typeof x, "foo"|>
+            attest.equal<|typeof x, "foo"|>
         elseif i == 1 then
-            types.assert<|typeof x, nil|>
+            attest.equal<|typeof x, nil|>
         end
         i = i + 1
     end
@@ -510,25 +510,25 @@ run[[
 run[[
     local a,b,c,d =  string.byte(_ as string, _ as number, _ as number)
     
-    types.assert<|a, number|>
-    types.assert<|b, number|>
-    types.assert<|c, number|>
-    types.assert<|d, number|>
+    attest.equal<|a, number|>
+    attest.equal<|b, number|>
+    attest.equal<|c, number|>
+    attest.equal<|d, number|>
 ]]
 
 run[[
     local a,b,c,d =  string.byte("foo", 1, 2)
-    types.assert(a, 102)
-    types.assert(b, 111)
-    types.assert(c, nil)
+    attest.equal(a, 102)
+    attest.equal(b, 111)
+    attest.equal(c, nil)
 ]]
 
 run[[
     local a,b,c,d =  string.byte(_ as string, 1, 2)
-    types.assert(a, _ as number)
-    types.assert(b, _ as number)
-    types.assert(c, nil)
-    types.assert(d, nil)
+    attest.equal(a, _ as number)
+    attest.equal(b, _ as number)
+    attest.equal(c, nil)
+    attest.equal(d, nil)
 ]]
 
 
@@ -537,6 +537,6 @@ run[[
         return math.min(math.max(n, low), high) 
     end
 
-    types.assert(clamp(5, 7, 10), 7)
-    types.assert(clamp(15, 7, 10), 10)
+    attest.equal(clamp(5, 7, 10), 7)
+    attest.equal(clamp(15, 7, 10), 10)
 ]]

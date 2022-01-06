@@ -9,7 +9,7 @@ run[[
         return 2, 1
     end
     
-    types.assert(foo(), _ as (number, number))
+    attest.equal(foo(), _ as (number, number))
 ]]
 
 run([[

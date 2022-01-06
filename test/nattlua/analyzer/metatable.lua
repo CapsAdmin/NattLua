@@ -16,7 +16,7 @@ test("index function", function()
 
         local a = setmetatable({}, meta)
 
-        types.assert(a.num, _ as number)
+        attest.equal(a.num, _ as number)
     ]]
 end)
 
@@ -148,10 +148,10 @@ test("interface extensions", function()
         local a = x:GetPos()
         local z = a.x + 1
 
-        types.assert(z, _ as number)
+        attest.equal(z, _ as number)
 
         local test = x:Test()
-        types.assert(test, _ as number)
+        attest.equal(test, _ as number)
     ]]
 end)
 
@@ -192,23 +192,23 @@ test("tutorialspoint", function()
             end
         })
 
-        types.assert(mytable.key1, "value1")
-        types.assert(mytable.key2, "metatablevalue")
+        attest.equal(mytable.key1, "value1")
+        attest.equal(mytable.key2, "metatablevalue")
     ]]
 
     run[[
         mymetatable = {}
         mytable = setmetatable({key1 = "value1"}, { __newindex = mymetatable })
 
-        types.assert(mytable.key1, "value1")
+        attest.equal(mytable.key1, "value1")
 
         mytable.newkey = "new value 2"
-        types.assert(mytable.newkey, nil)
-        types.assert(mymetatable.newkey, "new value 2")
+        attest.equal(mytable.newkey, nil)
+        attest.equal(mymetatable.newkey, "new value 2")
 
         mytable.key1 = "new value 1"
-        types.assert(mytable.key1, "value1")
-        types.assert(mymetatable.newkey1, nil)
+        attest.equal(mytable.key1, "value1")
+        attest.equal(mymetatable.newkey1, nil)
     ]]
 end)
 
@@ -228,8 +228,8 @@ run[[
     end
 
     local a,b = META:Faz(META:Foo(), META:Bar())
-    types.assert(a, 1)
-    types.assert(b, 2)
+    attest.equal(a, 1)
+    attest.equal(b, 2)
 ]]
 
 run[[
@@ -240,12 +240,12 @@ run[[
         }
     })
     
-    types.assert(rawget(a, "bar"), nil)
-    types.assert(rawget(a, "foo"), nil)
-    types.assert(rawget(a, "c"), true)
+    attest.equal(rawget(a, "bar"), nil)
+    attest.equal(rawget(a, "foo"), nil)
+    attest.equal(rawget(a, "c"), true)
     
     rawset(a, "foo", "hello")
-    types.assert(rawget(a, "foo"), "hello")
+    attest.equal(rawget(a, "foo"), "hello")
 ]]
 
 run[[
@@ -257,8 +257,8 @@ run[[
         })
     })
     
-    types.assert(self.foo, true)
-    types.assert(self.bar, true)
+    attest.equal(self.foo, true)
+    attest.equal(self.bar, true)
 ]]
 
 run[[
@@ -277,7 +277,7 @@ run[[
     end
 
     local function test(x: Foo & {extra = boolean | nil})
-        types.assert(x.asdf, true) -- x.asdf will __index to META
+        attest.equal(x.asdf, true) -- x.asdf will __index to META
         x.extra = true
         test2(x as Foo) -- x.extra should not be a valid field in test2
     end
@@ -301,7 +301,7 @@ run[[
         foo = 1
     }, meta)
 
-    types.assert(obj:Test(), 1)
+    attest.equal(obj:Test(), 1)
 ]]
 
 run([[
@@ -338,7 +338,7 @@ run([[
         foo = 1
     }, meta)
 
-    types.assert(obj:Test(), _ as number)
+    attest.equal(obj:Test(), _ as number)
 ]])
 
 run([[
@@ -355,9 +355,9 @@ run([[
     end
 
     local obj = foo()
-    types.assert(obj.data, 0)
-    types.assert(meta.data, nil)
-    types.assert(obj:foo(), 1)
+    attest.equal(obj.data, 0)
+    attest.equal(meta.data, nil)
+    attest.equal(obj:foo(), 1)
 ]])
 
 run[[
@@ -379,7 +379,7 @@ run[[
     })
 
     local newvector = Vector(1,2,3) + Vector(100,100,100)
-    types.assert(newvector, _ as {x = number, y = number, z = number})
+    attest.equal(newvector, _ as {x = number, y = number, z = number})
 ]]
 
 
@@ -403,7 +403,7 @@ run([[
 
     local new_vector = Vector(1,2,3) + 4
 
-    types.assert(new_vector, _ as {x = number, y = number, z = number})
+    attest.equal(new_vector, _ as {x = number, y = number, z = number})
 ]], "4 is not the same type as")
 
 run[[
@@ -418,7 +418,7 @@ run[[
     local x: code_ptr
     local y = x + 50 - 1
     
-    types.assert(y, _ as code_ptr)
+    attest.equal(y, _ as code_ptr)
 ]]
 
 run[[
@@ -428,7 +428,7 @@ run[[
 
     local lol = tbl({foo = 1337})
 
-    types.assert(lol, 1337)
+    attest.equal(lol, 1337)
 ]]
 
 run[[
@@ -437,7 +437,7 @@ run[[
     setmetatable<|tbl, tbl|>
 
     local lol = tbl({foo = 1337})
-    types.assert(lol, 1337)
+    attest.equal(lol, 1337)
 ]]
 
 run[[
@@ -462,7 +462,7 @@ run[[
     §analyzer:AnalyzeUnreachableCode()
 
     local type ret = return_type<|meta.Foo|>
-    types.assert<|ret, 2 | 3|>
+    attest.equal<|ret, 2 | 3|>
 ]]
 
 run[[
@@ -482,7 +482,7 @@ run[[
     end
 
     local s = setmetatable({Foo = 1337}, META)
-    types.assert(s:GetFoo(), _ as number)
+    attest.equal(s:GetFoo(), _ as number)
 ]]
 
 run[[
@@ -492,13 +492,13 @@ run[[
     function META:SetParent(parent : number | nil)
         if parent then
             self.parent = parent
-            types.assert(self.parent, _ as number)
+            attest.equal(self.parent, _ as number)
         else
             self.parent = nil
-            types.assert(self.parent, _ as nil)
+            attest.equal(self.parent, _ as nil)
         end
 
-    types.assert(self.parent, _ as nil | number)
+    attest.equal(self.parent, _ as nil | number)
     end
 ]]
 
@@ -539,8 +539,8 @@ run[[
     local self = setmetatable({} as META.@Self, META)
     self:SetFoo(true)
     local b = self:GetFoo()
-    types.assert<|b, boolean|>
-    types.assert<|self.Foo, boolean|>
+    attest.equal<|b, boolean|>
+    attest.equal<|self.Foo, boolean|>
 ]]
 
 run[[
@@ -552,8 +552,8 @@ run[[
     }
 
     local function test(x: META.@Self & {bar = false})
-        types.assert_superset<|x, {foo = true, bar = false}|>
-        types.assert_superset<|META.@Self, {foo = true}|>
+        attest.superset_of<|x, {foo = true, bar = false}|>
+        attest.superset_of<|META.@Self, {foo = true}|>
     end
 
 ]]
@@ -640,11 +640,11 @@ run[[
     local felix = Cat('Felix','Tabby')
     local leo = Lion('Leo','African')
     
-    types.assert(leo:is_a(Animal), true)
-    types.assert(leo:is_a(Cat), true)
-    types.assert(leo:is_a(Dog), false)
-    types.assert(leo:__tostring(), "Leo: roar")
-    types.assert(leo:speak(), "roar")
+    attest.equal(leo:is_a(Animal), true)
+    attest.equal(leo:is_a(Cat), true)
+    attest.equal(leo:is_a(Dog), false)
+    attest.equal(leo:__tostring(), "Leo: roar")
+    attest.equal(leo:speak(), "roar")
 
 
 ]]
@@ -702,7 +702,7 @@ run[[
     
     function Animal:move(distanceInMeters: number | nil)
         distanceInMeters = distanceInMeters or 0
-        types.assert(self.name .. " moved " .. distanceInMeters .. "m.", _ as string)
+        attest.equal(self.name .. " moved " .. distanceInMeters .. "m.", _ as string)
     end
     
 
@@ -729,7 +729,7 @@ run[[
     do
         local ply = Player(1337)
         ply:GetName()
-        types.assert(ply:IsVisible(ply), 1337)
+        attest.equal(ply:IsVisible(ply), 1337)
     end
 ]]
 
@@ -764,7 +764,7 @@ run[[
     do
         local ply = Player(1337)
         ply:GetName()
-        types.assert(ply:IsVisible(ply), _ as boolean)
+        attest.equal(ply:IsVisible(ply), _ as boolean)
     end
 ]]
 
@@ -778,7 +778,7 @@ setmetatable(_G, {
 })
 
 local x = NON_EXISTING_VARIABLE
-types.assert(x, FALLBACK)
+attest.equal(x, FALLBACK)
 
 setmetatable(_G)
 ]]
@@ -786,7 +786,7 @@ setmetatable(_G)
 
 run[[
     setmetatable(_G, {__index = function(self: literal any, key: literal any) return "LOL" end})
-    types.assert(DUNNO, "LOL")
+    attest.equal(DUNNO, "LOL")
     setmetatable(_G)
 ]]
 

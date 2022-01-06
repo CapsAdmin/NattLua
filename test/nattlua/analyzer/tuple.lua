@@ -5,7 +5,7 @@ run[[
     local type A = (1,2)
     local type B = (3,4)
     local type C = A .. B
-    types.assert<|C, (1,2,3,4)|>
+    attest.equal<|C, (1,2,3,4)|>
 ]]
 
 -- test for most edge cases regarding the tuple unpack mess
@@ -13,23 +13,23 @@ run[[
 
 local function test() return function(num: literal number) return 1336 + num end end
 
-types.assert(test()(1), 1337)
+attest.equal(test()(1), 1337)
 local a = test()(1)
-types.assert(a, 1337)
+attest.equal(a, 1337)
 
 for i = 1, test()(1) - 1336 do
-    types.assert(i, 1)
+    attest.equal(i, 1)
 end
 
 local a,b,c = (function() return 1,2,3 end)()
 
-types.assert(a, 1)
-types.assert(b, 2)
-types.assert(c, 3)
+attest.equal(a, 1)
+attest.equal(b, 2)
+attest.equal(c, 3)
 
 local x = (function() if math.random() > 0.5 then return 1 end return 2 end)()
 
-types.assert(x, _ as 1 | 2)
+attest.equal(x, _ as 1 | 2)
 
 local function lol()
     if math.random() > 0.5 then
@@ -39,7 +39,7 @@ end
 
 local x = lol()
 
-types.assert<|x, 1 | nil|>
+attest.equal<|x, 1 | nil|>
 
 local function func(): number, number
     if math.random() > 0.5 then
@@ -52,9 +52,9 @@ end
 
 local foo: function=()>((true, 1) | (false, string, 2))
 local x,y,z = foo() 
-types.assert(x, _ as boolean)
-types.assert(y, _ as 1 | string)
-types.assert(z, _ as 2 | nil)
+attest.equal(x, _ as boolean)
+attest.equal(y, _ as 1 | string)
+attest.equal(z, _ as 2 | nil)
 
 
 local function foo()
@@ -63,7 +63,7 @@ end
 
 foo()
 
-types.assert<|ReturnType<|foo|>, (2,true,1)|>
+attest.equal<|ReturnType<|foo|>, (2,true,1)|>
 
 local function test()
     if math.random() > 0.5 then
@@ -74,7 +74,7 @@ end
 
 test()
 
-types.assert<|ReturnType<|test|>, (1, 2)|>
+attest.equal<|ReturnType<|test|>, (1, 2)|>
 
 
 local a = function()
@@ -86,12 +86,12 @@ local a = function()
     -- val is "" | 1
     local val = (function() return 1 end)()
     
-    types.assert(val, 1)
+    attest.equal(val, 1)
 
     return val
 end
 
-types.assert(a(), _ as 1 | "")
+attest.equal(a(), _ as 1 | "")
 
 local analyzer function Union(...: ...any)
     return types.Union({...})
@@ -110,7 +110,7 @@ local function Extract<|a: any, b: any|>
 	return out
 end
 
-types.assert<|Extract<|1337 | 231 | "deadbeef", number|>, 1337 | 231|>
+attest.equal<|Extract<|1337 | 231 | "deadbeef", number|>, 1337 | 231|>
 
 local analyzer function foo() 
     return 1
@@ -131,22 +131,22 @@ local w1,w2 = "foo", "bar"
 local statetab = {["foo bar"] = 1337}
 
 local test = statetab[prefix(w1, w2)]
-types.assert(test, 1337)
+attest.equal(test, 1337)
 
 
-types.assert({(_ as any)()}, _ as {[1 .. inf] = any})
-types.assert({(_ as any)(), 1}, _ as {any, 1})
+attest.equal({(_ as any)()}, _ as {[1 .. inf] = any})
+attest.equal({(_ as any)(), 1}, _ as {any, 1})
 
 local tbl = {...}
-types.assert(tbl[1], _ as any)
-types.assert(tbl[2], _ as any)
-types.assert(tbl[100], _ as any)
+attest.equal(tbl[1], _ as any)
+attest.equal(tbl[2], _ as any)
+attest.equal(tbl[100], _ as any)
 
 ;(function(...)   
     local tbl = {...}
-    types.assert(tbl[1], 1)
-    types.assert(tbl[2], 2)
-    types.assert(tbl[100], _ as nil) -- or nil?
+    attest.equal(tbl[1], 1)
+    attest.equal(tbl[2], 2)
+    attest.equal(tbl[100], _ as nil) -- or nil?
 end)(1,2)
 
 ]]
@@ -159,13 +159,13 @@ run([[
 
 run[[
     local type a = (3, 4, 5)
-    types.assert<|a, (3,4,5)|>
+    attest.equal<|a, (3,4,5)|>
 
     local type a = (5,)
-    types.assert<|a, (5,)|>
+    attest.equal<|a, (5,)|>
 
     local type a = ()
-    types.assert<|a, ()|>
+    attest.equal<|a, ()|>
 ]]
 
 run[[
@@ -182,24 +182,24 @@ run[[
 
 run[[
     local function test2<|a: (number, number, number), b: (number, number, number)|>: (number, number, number)
-        types.assert<|a, (1,2,3)|>
-        types.assert<|b, (1,2,3)|>
+        attest.equal<|a, (1,2,3)|>
+        attest.equal<|b, (1,2,3)|>
         return a, b
     end
 
     local type a = (1,2,3)
 
     local type a, b = test2<|a,a|>
-    types.assert<|a, (1,2,3)|>
-    types.assert<|b, a|>
+    attest.equal<|a, (1,2,3)|>
+    attest.equal<|b, a|>
 ]]
 
 run[[
     local function aaa(foo: string, bar: number, faz: boolean): (1,2,3)
         return 1,2,3
     end
-    types.assert<|argument_type<|aaa|>, (string, number, boolean)|>
-    types.assert<|return_type<|aaa|>, ((1, 2, 3),)|>
+    attest.equal<|argument_type<|aaa|>, (string, number, boolean)|>
+    attest.equal<|return_type<|aaa|>, ((1, 2, 3),)|>
 ]]
 
 run[[
@@ -209,7 +209,7 @@ run[[
 
     local a,b,c = test()
 
-    types.assert(a, 11)
-    types.assert(b, 22)
-    types.assert(c, 33)
+    attest.equal(a, 11)
+    attest.equal(b, 22)
+    attest.equal(c, 33)
 ]]

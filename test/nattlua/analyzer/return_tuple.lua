@@ -39,16 +39,16 @@ run[[
 run[[
     local foo: function=()>(true | false, string | nil)
     local ok, err = foo()
-    types.assert(ok, _ as true | false)
-    types.assert(err, _ as nil | string)
+    attest.equal(ok, _ as true | false)
+    attest.equal(err, _ as nil | string)
 ]]
 
 run[[
     local foo: function=()>((true, 1) | (false, string, 2))
     local x,y,z = foo() 
-    types.assert(x, _ as true | false)
-    types.assert(y, _ as 1 | string)
-    types.assert(z, _ as 2 | nil)
+    attest.equal(x, _ as true | false)
+    attest.equal(y, _ as 1 | string)
+    attest.equal(z, _ as 2 | nil)
 ]]
 
 run([[

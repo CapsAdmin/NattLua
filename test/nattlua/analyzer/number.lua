@@ -41,7 +41,7 @@ test("literal number + number = number", function()
     local a = run([[
         local a = 1 + (_ as number)
 
-        types.assert(a, _ as number)
+        attest.equal(a, _ as number)
     ]])
 end)
 
@@ -60,23 +60,23 @@ test("integer division", function()
     run[[
         local foo = ((500 // 2) + 3) // 2 // 3 // 3
         local bar = 5
-        types.assert(foo, 14)
-        types.assert(bar, 5)
+        attest.equal(foo, 14)
+        attest.equal(bar, 5)
     ]]
 end)
 
 run[[
     local n = _ as 0 .. 1
 
-    types.assert(n > 1, false)
-    types.assert(n > 0.5, _ as boolean)
-    types.assert(n >= 1, _ as boolean)
-    types.assert(n <= 0, _ as boolean)
-    types.assert(n < 0, false)
+    attest.equal(n > 1, false)
+    attest.equal(n > 0.5, _ as boolean)
+    attest.equal(n >= 1, _ as boolean)
+    attest.equal(n <= 0, _ as boolean)
+    attest.equal(n < 0, false)
     
     local n2 = _ as 0.5 .. 1.5
     
-    types.assert(n2 + n, _ as 0.5 .. 2.5)
+    attest.equal(n2 + n, _ as 0.5 .. 2.5)
 ]]
 
 run[=[

@@ -141,12 +141,12 @@ end)
 test("which has no data but contract says it does should return what the contract says", function()
     run[[
         local tbl = {} as {[string] = 1}
-        types.assert(tbl.foo, 1)
+        attest.equal(tbl.foo, 1)
     ]]
 
     run([[
         local tbl = {} as {[string] = 1}
-        types.assert(tbl[true], nil)
+        attest.equal(tbl[true], nil)
     ]], "has no field true")
 end)
 
@@ -197,8 +197,8 @@ test("self reference", function()
         -- have to use as here because {} would not be a subset of Foo
         local x = _ as Foo
         
-        types.assert(x:Test(1), _ as number)
-        types.assert(x:GetPos(), _ as number)
+        attest.equal(x:Test(1), _ as number)
+        attest.equal(x:GetPos(), _ as number)
 
         local func = x.Test
     ]]
@@ -216,8 +216,8 @@ test("self reference", function()
             bar = true,
         } extends a
 
-        types.assert<|b.bar, true|>
-        types.assert<|b.foo, b|>
+        attest.equal<|b.bar, true|>
+        attest.equal<|b.foo, b|>
     ]]
 end)
 
@@ -231,7 +231,7 @@ test("table extending table", function()
             Bar = false,
         }
 
-        types.assert<|A extends B, {Foo = true, Bar = false}|>
+        attest.equal<|A extends B, {Foo = true, Bar = false}|>
     ]]
 end)
 
@@ -246,7 +246,7 @@ test("table + table", function()
             Bar = false,
         }
 
-        types.assert<|A + B, {Foo = true, Bar = false}|>
+        attest.equal<|A + B, {Foo = true, Bar = false}|>
     ]]
 end)
 
@@ -259,7 +259,7 @@ test("index literal table with string", function()
 
         local key: string
         local val = tbl[key]
-        types.assert(val, _ as 1 | 2 | nil)
+        attest.equal(val, _ as 1 | 2 | nil)
     ]]
 end)
 
@@ -272,7 +272,7 @@ test("non literal keys should be treated as literals when used multiple times in
         a[foo] = a[foo] or {}
         a[foo][bar] = a[foo][bar] or 1
 
-        types.assert(a[foo][bar], 1)
+        attest.equal(a[foo][bar], 1)
     ]]
 end)
 
@@ -289,23 +289,23 @@ end)
 test("var args with unknown length", function()
     run[[
         local tbl = {...}
-        types.assert(tbl[1], _ as any)
-        types.assert(tbl[2], _ as any)
-        types.assert(tbl[100], _ as any)
+        attest.equal(tbl[1], _ as any)
+        attest.equal(tbl[2], _ as any)
+        attest.equal(tbl[100], _ as any)
     ]]
 end)
 
 run[[
     local list: {[number] = any} | {}
     list = {}
-    types.assert(list, _ as {[number] = any} | {})
+    attest.equal(list, _ as {[number] = any} | {})
 ]]
 
 run[[
     local a = {foo = true, bar = false, 1,2,3}
-    types.assert(a[1], 1)
-    types.assert(a[2], 2)
-    types.assert(a[3], 3)
+    attest.equal(a[1], 1)
+    attest.equal(a[2], 2)
+    attest.equal(a[3], 3)
 ]]
 
 test("deep nested copy", function() 
@@ -333,26 +333,26 @@ run[[
     end         
     
     local x = test(lol as string | string)
-    types.assert(x, _ as 1 | true | false | nil)    
+    attest.equal(x, _ as 1 | true | false | nil)    
 ]]
 
 run[[
     local type T = {Foo = "something" | nil, Bar = "definetly"}
 
     local a = {} as T
-    types.assert<|a.Foo, nil | "something"|>
+    attest.equal<|a.Foo, nil | "something"|>
 
     a.Foo = nil
-    types.assert(a.Foo, nil)
+    attest.equal(a.Foo, nil)
 
     a.Foo = "something"
-    types.assert(a.Foo, "something")
+    attest.equal(a.Foo, "something")
 
 
     a.Foo = _ as "something" | nil
-    types.assert<|a.Foo, "something" | nil|>
+    attest.equal<|a.Foo, "something" | nil|>
 
-    types.assert<|a.Bar, "definetly"|>
+    attest.equal<|a.Bar, "definetly"|>
 ]]
 
 run[[
@@ -362,7 +362,7 @@ run[[
     
     local tbl = {}
     fill(tbl)
-    types.assert(tbl.foo, true)
+    attest.equal(tbl.foo, true)
 ]]
 
 run[[
@@ -372,7 +372,7 @@ run[[
     
     local tbl = {bar = 1, foo = false}
     fill(tbl)
-    types.assert(tbl.foo, true)
+    attest.equal(tbl.foo, true)
 ]]
 
 run[[
@@ -444,11 +444,11 @@ run[[
     }
 
     local function test(ent: Foo & Bar)
-        types.assert(ent.field, _ as nil | number)
+        attest.equal(ent.field, _ as nil | number)
         ent.field = 1
-        types.assert(ent.field, _ as 1)
+        attest.equal(ent.field, _ as 1)
         ent.field = nil
-        types.assert(ent.field, _ as nil)
+        attest.equal(ent.field, _ as nil)
     end
 
     test(_ as Foo & Bar)
@@ -462,11 +462,11 @@ run[[
     }
 
     local function test(ent: Foo & Bar)
-        types.assert(ent.field, _ as nil | number)
+        attest.equal(ent.field, _ as nil | number)
         ent.field = 1
-        types.assert(ent.field, _ as 1)
+        attest.equal(ent.field, _ as 1)
         ent.field = nil
-        types.assert(ent.field, _ as nil)
+        attest.equal(ent.field, _ as nil)
     end
 ]]
 
@@ -496,8 +496,8 @@ run[[
 ]]
 
 run[[
-    types.assert({Unknown()}, _ as {[1 .. inf] = any})
-    types.assert({Unknown(), 1}, _ as {any, 1})
+    attest.equal({Unknown()}, _ as {[1 .. inf] = any})
+    attest.equal({Unknown(), 1}, _ as {any, 1})
 ]]
 
 
@@ -508,24 +508,24 @@ run[[
         Bar = number,
         [string] = any,
     })
-        types.assert(tbl.Foo, _ as true)
-        types.assert(tbl.Bar, _ as 1337)
+        attest.equal(tbl.Foo, _ as true)
+        attest.equal(tbl.Bar, _ as 1337)
     
         tbl.NewField = 8888
         tbl.NewField2 = 9999
     
-        types.assert(tbl.NewField, 8888)
-        types.assert(tbl.NewField2, 9999)
+        attest.equal(tbl.NewField, 8888)
+        attest.equal(tbl.NewField2, 9999)
     end
     
     local tbl = {Foo = true, Bar = 1337}
     
     test(tbl)
     
-    types.assert(tbl.Foo, _ as true)
-    types.assert(tbl.Bar, _ as 1337)
-    types.assert(tbl.NewField, 8888)
-    types.assert(tbl.NewField2, 9999)
+    attest.equal(tbl.Foo, _ as true)
+    attest.equal(tbl.Bar, _ as 1337)
+    attest.equal(tbl.NewField, 8888)
+    attest.equal(tbl.NewField2, 9999)
     
 ]]
 
@@ -539,8 +539,8 @@ run[[
     end
     
     for k,v in pairs(e) do
-        types.assert(k, "FOO")
-        types.assert(v, _ as 666 | 1337)
+        attest.equal(k, "FOO")
+        attest.equal(v, _ as 666 | 1337)
     end
 ]]
 
@@ -573,7 +573,7 @@ run([[
 
 pending[[
     local function tbl_get_foo(self)
-        types.assert(self.foo, 1337)
+        attest.equal(self.foo, 1337)
         return tbl.foo
     end
 
@@ -591,8 +591,8 @@ run[[
         local x = tbl[_ as number]
         local y = tbl[1]
         local z = tbl[_ as string]
-        types.assert(x,y)
-        types.assert(z, _ as nil | boolean)
+        attest.equal(x,y)
+        attest.equal(z, _ as nil | boolean)
     end
 ]]
 
@@ -602,7 +602,7 @@ run[[
 
     t[lol] = 1
     t[lol] = 2
-    types.assert(t[lol], 2)
+    attest.equal(t[lol], 2)
 ]]
 
 run([[
@@ -619,7 +619,7 @@ run([[
 run[[
     local type Foo = { bar = 1337 }
     local type Bar = { foo = 8888 }
-    types.assert<|Foo + Bar, Foo & Bar|>
+    attest.equal<|Foo + Bar, Foo & Bar|>
 ]]
 
 run[[
@@ -628,12 +628,12 @@ run[[
     tbl.bar = false
 
     local key = _ as "foo" | "bar"
-    types.assert<|tbl[key], true | false|>
+    attest.equal<|tbl[key], true | false|>
 ]]
 
 run[[
     local tbl = _ as {foo = true} | {foo = false}
-    types.assert<|tbl.foo, true | false|>
+    attest.equal<|tbl.foo, true | false|>
 ]]
 
 run[[
@@ -660,13 +660,13 @@ run[[
     }
 
     local type x = META.@Self & {bar = false}
-    types.assert<|x, {foo = true, bar = false}|>
-    types.assert(META.@Self, _ as {foo = true})
+    attest.equal<|x, {foo = true, bar = false}|>
+    attest.equal(META.@Self, _ as {foo = true})
 ]]
 
 run[[
     local t = {} as {[1 .. inf] = number}
-    types.assert(#t, _ as 1 .. inf)
+    attest.equal(#t, _ as 1 .. inf)
 ]]
 
 run[[
@@ -679,8 +679,8 @@ run[[
         }
     end
 
-    types.assert(test().a, _ as 1 | 2)
-    types.assert(test().b, _ as function=(string)>(number))
+    attest.equal(test().a, _ as 1 | 2)
+    attest.equal(test().b, _ as function=(string)>(number))
 ]]
 
 run[[
@@ -693,7 +693,7 @@ run[[
     end
     
     local space_chars   = create_set(" ", "\t", "\r", "\n")
-    types.assert(space_chars, {
+    attest.equal(space_chars, {
         [" "] = true,
         ["\t"] = true,
         ["\r"] = true,
@@ -718,12 +718,12 @@ run[[
         error("nope")
     end
 
-    types.assert(main(), _ as 1 | 2)
+    attest.equal(main(), _ as 1 | 2)
 ]]
 
 run[[
     local tbl = {}
     table.insert(tbl, _ as number)
     table.insert(tbl, _ as string)
-    types.assert(tbl, {_ as number, _ as string})
+    attest.equal(tbl, {_ as number, _ as string})
 ]]

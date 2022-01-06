@@ -30,7 +30,7 @@ run[[
     local lib = {} as contract
 
     function lib.test(lol) 
-        types.assert<|lol, number|>
+        attest.equal<|lol, number|>
         return "test"
     end
 ]]
@@ -42,16 +42,16 @@ run[[
     type META.i = number
     type META.code = string
     
-    types.assert(META.i, _ as number)
-    types.assert(META.code, _ as string)
-    types.assert(META.codeawdawd, _ as any) 
+    attest.equal(META.i, _ as number)
+    attest.equal(META.code, _ as string)
+    attest.equal(META.codeawdawd, _ as any) 
 ]]
 
 run[[
     local META = {} as {[string] = any, i = number, code = string}
     META.__index = META
 
-    types.assert(META.i, _ as number)
-    types.assert(META.code, _ as string)
-    types.assert(META.codeawdawd, _ as any)
+    attest.equal(META.i, _ as number)
+    attest.equal(META.code, _ as string)
+    attest.equal(META.codeawdawd, _ as any)
 ]]

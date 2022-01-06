@@ -5,7 +5,7 @@ run[[ -- A
     local A = _ as true | false
 
     if A then 
-        types.assert(A, true)
+        attest.equal(A, true)
     end
 ]]
 
@@ -15,11 +15,11 @@ run[[ -- A or B
     local B = _ as true | false
 
     if A then 
-        types.assert(A, true)
-        types.assert(B, _ as true | false)
+        attest.equal(A, true)
+        attest.equal(B, _ as true | false)
     elseif B then 
-        types.assert(B, true)
-        types.assert(A, false)
+        attest.equal(B, true)
+        attest.equal(A, false)
     end
 ]]
 
@@ -28,8 +28,8 @@ run[[ -- A and B
     local B = _ as true | false
     if A then
         if B then
-            types.assert(A, true)
-            types.assert(B, true)
+            attest.equal(A, true)
+            attest.equal(B, true)
         end
     end
 ]]
@@ -41,17 +41,17 @@ run[[ -- A or B or C
     local C = _ as true | false
 
     if A then 
-        types.assert(A, true)
-        types.assert(B, _ as true | false)
-        types.assert(C, _ as true | false)
+        attest.equal(A, true)
+        attest.equal(B, _ as true | false)
+        attest.equal(C, _ as true | false)
     elseif B then 
-        types.assert(A, false)
-        types.assert(B, true)
-        types.assert(C, _ as true | false)
+        attest.equal(A, false)
+        attest.equal(B, true)
+        attest.equal(C, _ as true | false)
     elseif C then 
-        types.assert(A, false)
-        types.assert(B, false)
-        types.assert(C, true)
+        attest.equal(A, false)
+        attest.equal(B, false)
+        attest.equal(C, true)
     end
 ]]
 
@@ -61,11 +61,11 @@ run[[ -- A or not B
     local B = _ as true | false
 
     if A then 
-        types.assert(A, true)
-        types.assert(B, _ as true | false)
+        attest.equal(A, true)
+        attest.equal(B, _ as true | false)
     elseif not B then 
-        types.assert(A, false)
-        types.assert(B, false)
+        attest.equal(A, false)
+        attest.equal(B, false)
     end
 ]]
 
@@ -75,17 +75,17 @@ run[[ -- A or not B or C
     local C = _ as true | false
 
     if A then 
-        types.assert(A, true)
-        types.assert(B, _ as true | false)
-        types.assert(C, _ as true | false)
+        attest.equal(A, true)
+        attest.equal(B, _ as true | false)
+        attest.equal(C, _ as true | false)
     elseif not B then 
-        types.assert(A, false)
-        types.assert(B, false)
-        types.assert(C, _ as true | false)
+        attest.equal(A, false)
+        attest.equal(B, false)
+        attest.equal(C, _ as true | false)
     elseif C then 
-        types.assert(A, false)
-        types.assert(B, true)
-        types.assert(C, true)
+        attest.equal(A, false)
+        attest.equal(B, true)
+        attest.equal(C, true)
     end
 ]]
 
@@ -95,17 +95,17 @@ run[[ -- A or not B or not C
     local C = _ as true | false
 
     if A then 
-        types.assert(A, true)
-        types.assert(B, _ as true | false)
-        types.assert(C, _ as true | false)
+        attest.equal(A, true)
+        attest.equal(B, _ as true | false)
+        attest.equal(C, _ as true | false)
     elseif not B then 
-        types.assert(A, false)
-        types.assert(B, false)
-        types.assert(C, _ as true | false)
+        attest.equal(A, false)
+        attest.equal(B, false)
+        attest.equal(C, _ as true | false)
     elseif not C then 
-        types.assert(A, false)
-        types.assert(B, true)
-        types.assert(C, false)
+        attest.equal(A, false)
+        attest.equal(B, true)
+        attest.equal(C, false)
     end
 ]]
 
@@ -114,8 +114,8 @@ run[[ -- A and not B
     local B = _ as true | false
     if A then
         if not B then
-            types.assert(A, true)
-            types.assert(B, false)
+            attest.equal(A, true)
+            attest.equal(B, false)
         end
     end
 ]]
@@ -125,8 +125,8 @@ run[[ -- not A and not B
     local B = _ as true | false
     if not A then
         if not B then
-            types.assert(A, false)
-            types.assert(B, false)
+            attest.equal(A, false)
+            attest.equal(B, false)
         end
     end
 ]]
@@ -135,8 +135,8 @@ run[[ -- not A and B
     local B = _ as true | false
     if not A then
         if B then
-            types.assert(A, false)
-            types.assert(B, true)
+            attest.equal(A, false)
+            attest.equal(B, true)
         end
     end
 ]]

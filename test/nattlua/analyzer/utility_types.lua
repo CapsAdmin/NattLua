@@ -3,7 +3,7 @@ local run = T.RunCode
 
 run[[
 
-    types.assert<|
+    attest.equal<|
         Partial<|{
             foo = 1337 | nil,
             bar = 666,
@@ -18,7 +18,7 @@ run[[
 
 run[[
 
-    types.assert<|
+    attest.equal<|
         Required<|{
             foo = 1337 | nil,
             bar = 666,
@@ -59,7 +59,7 @@ run[[
         mordred = { age = 30, breed = "sphynx" },
     }
 
-    types.assert(cats.boris.age, _ as number)
+    attest.equal(cats.boris.age, _ as number)
 ]]
 
 run[[
@@ -100,14 +100,14 @@ run([[
 ]], "done")
 
 run[[
-    types.assert<|
+    attest.equal<|
         Exclude<|1 | 2 | 3, 2|>, 
         1 | 3
     |>
 ]]
 
 run[[
-    types.assert<|
+    attest.equal<|
         Extract<|1337 | "deadbeef", number|>, 
         1337
     |>
@@ -115,7 +115,7 @@ run[[
 
 
 run[[
-    types.assert<|
+    attest.equal<|
         Extract<|1337 | 231 | "deadbeef", number|>, 
         1337 | 231
     |>  
@@ -126,18 +126,18 @@ run[[
         return true
     end
 
-    types.assert<|Parameters<|foo|>[1], number|>
-    types.assert<|Parameters<|foo|>[2], string|>
-    types.assert<|Parameters<|foo|>[3], Table|>    
+    attest.equal<|Parameters<|foo|>[1], number|>
+    attest.equal<|Parameters<|foo|>[2], string|>
+    attest.equal<|Parameters<|foo|>[3], Table|>    
 
-    types.assert<|ReturnType<|foo|>[1], boolean|>
+    attest.equal<|ReturnType<|foo|>[1], boolean|>
 ]]
 
 run[[
-    types.assert<|Uppercase<|"foo"|>, "FOO"|>
-    types.assert<|Lowercase<|"FOO"|>, "foo"|>
+    attest.equal<|Uppercase<|"foo"|>, "FOO"|>
+    attest.equal<|Lowercase<|"FOO"|>, "foo"|>
 
     -- something is up with chained calls in the typesystem
-    --types.assert<|Capitalize<|"foo"|>, "Foo"|>
-    --types.assert<|Uncapitalize<|"FOO"|>, "fOO"|>
+    --attest.equal<|Capitalize<|"foo"|>, "Foo"|>
+    --attest.equal<|Uncapitalize<|"FOO"|>, "fOO"|>
 ]]

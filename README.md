@@ -330,7 +330,7 @@ end
 
 local a: Exclude<|1|2|3, 2|>
 
-types.assert(a, _ as 1|3)
+attest.equal(a, _ as 1|3)
 ```
 
 It's also possible to the more familiar "generics" syntax

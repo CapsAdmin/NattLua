@@ -10,7 +10,7 @@ run[[
         if i >= 10 then break end
     end
 
-    types.assert(i, 10)
+    attest.equal(i, 10)
 ]]
 
 run[[
@@ -23,13 +23,13 @@ run[[
         if i >= 10 then break end
     end
 
-    types.assert(o, 2) -- this should probably be number too as it's incremented in an uncertain loop
+    attest.equal(o, 2) -- this should probably be number too as it's incremented in an uncertain loop
 ]]
 
 run[[
     local a = 1
     repeat
-        types.assert(a, 1)
+        attest.equal(a, 1)
     until false
 ]]
 
@@ -38,7 +38,7 @@ run[[
     while false do
         a = 1
     end
-    types.assert(a, 0)
+    attest.equal(a, 0)
 ]]
 
 run[[
@@ -62,6 +62,6 @@ run[[
     while _ as boolean do
         a = a + 1
     end
-    types.assert(a, _ as number)
+    attest.equal(a, _ as number)
 
 ]]

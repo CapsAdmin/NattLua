@@ -12,11 +12,11 @@ run[=[
 
 	local struct = ctype()
 	
-	types.assert_subset<|typeof struct, {
+	attest.subset_of<|{
 		foo = number,
 		uhoh = number,
 		bar1 = number,
-	}|>
+	}, typeof struct|>
 ]=]
 
 run[=[
@@ -33,13 +33,13 @@ run[=[
 	
 	local struct = box()
 	
-	types.assert_subset<|typeof struct, {
+	attest.subset_of<|{
 		[number] = {
 			foo = number,
 			uhoh = number,
 			bar1 = number,
 		}
-	}|>
+	}, typeof struct|>
 ]=]
 
 run[=[
@@ -53,7 +53,7 @@ run[=[
 		int foo(int, bool, lol);
 	]])
 
-	types.assert<|typeof ffi.C.foo, function=(number, boolean, number)>(number) |>
+	attest.equal<|typeof ffi.C.foo, function=(number, boolean, number)>(number) |>
 ]=]
 
 run[=[
@@ -96,13 +96,13 @@ run[=[
 
 	local union = remove_call_function(val)
 
-	types.assert<|typeof union, {foo = number, bar2 = number} | {foo = number, bar3 = number} | {foo = number, uhoh = number, bar1 = number}|>
+	attest.equal<|typeof union, {foo = number, bar2 = number} | {foo = number, bar3 = number} | {foo = number, uhoh = number, bar1 = number}|>
 ]=]
 
 run[=[
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
-	types.assert(ctype.foo, _ as ffi.typeof<|"const char*"|>[1])
+	attest.equal(ctype.foo, _ as ffi.typeof<|"const char*"|>[1])
 ]=]
 
 
@@ -114,18 +114,18 @@ run[=[
 
 	if LINUX then
 		ffi.cdef("void foo(int a);")
-		types.assert<|typeof ffi.C.foo, function=(number)>((nil)) |>
+		attest.equal<|typeof ffi.C.foo, function=(number)>((nil)) |>
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			types.assert<|typeof ffi.C.foo, function=(string | nil | ffi.typeof<|"const char*"|>[1])>((nil)) |>
+			attest.equal<|typeof ffi.C.foo, function=(string | nil | ffi.typeof<|"const char*"|>[1])>((nil)) |>
 		else
 			ffi.cdef("int foo(int a);")
-			types.assert<|typeof ffi.C.foo, function=(number)>((number))|>
+			attest.equal<|typeof ffi.C.foo, function=(number)>((number))|>
 		end	
 	end
 
-	types.assert<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>[1])>((nil)) |>
+	attest.equal<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>[1])>((nil)) |>
 ]=]
 
 run[=[
@@ -142,7 +142,7 @@ run[=[
 
 	local cdata = ctype({})
 
-	types.assert<|(typeof cdata).foo, number|>
+	attest.equal<|(typeof cdata).foo, number|>
 ]=]
 
 run[=[
@@ -164,8 +164,8 @@ run[=[
 		function meta:__new(file_name: string, mode: "write" | "read" | "append")
 			mode = translate_mode[mode]
 
-			types.assert<|file_name, "YES"|>
-			types.assert<|mode, "w"|>
+			attest.equal<|file_name, "YES"|>
+			attest.equal<|mode, "w"|>
 
 			local f = ffi.C.fopen(file_name, mode)
 			
@@ -191,7 +191,7 @@ run[=[
 	local f = handle("YES", "write")
 	if f then
 		local int = f:close()
-		types.assert<|int, number|>
+		attest.equal<|int, number|>
 	end
 ]=]
 
@@ -209,7 +209,7 @@ run[=[
 
 	local lol = ffi.new("struct in6_addr")
 
-	types.assert(lol.u6_addr.u6_addr16, _ as {[number] = number})
+	attest.equal(lol.u6_addr.u6_addr16, _ as {[number] = number})
 ]=]
 
 run[=[
@@ -218,15 +218,15 @@ run[=[
 	]]
 	
 	local num = ffi.new("SOCKET", -1)
-	types.assert<|num, number|>
+	attest.equal<|num, number|>
 ]=]
 
 run[=[
 	local buffer = ffi.new("char[?]", 5)
-	types.assert<|buffer, {[number] = number}|>
+	attest.equal<|buffer, {[number] = number}|>
 
 	local buffer = ffi.new("char[8]")
-	types.assert<|buffer, {[number] = number}|>
+	attest.equal<|buffer, {[number] = number}|>
 ]=]
 
 run[[
@@ -238,7 +238,7 @@ run[[
 			if _ as boolean then
 				local function test()
 					local x = ffi.C.test
-					types.assert(x, _ as function=()>(nil))
+					attest.equal(x, _ as function=()>(nil))
 				end
 				test()
 			end
@@ -269,7 +269,7 @@ run[[
 
 	local ffi = require "ffi"
 	ffi.cdef("typedef struct ac_t ac_t;")
-	types.assert(ffi.C.ac_t, ffi.C.ac_t)
+	attest.equal(ffi.C.ac_t, ffi.C.ac_t)
 
 	local ptr = ffi.new("ac_t*")
 	if ptr then
@@ -280,12 +280,12 @@ run[[
 
 run[[
 	local newbuf = ffi.new("char [?]", _ as number)
-	types.assert(newbuf, _ as {[number] = number})
+	attest.equal(newbuf, _ as {[number] = number})
 ]]
 
 run[[
 	local gbuf_n = 1024
 	local gbuf = ffi.new("char [?]", gbuf_n)
 	gbuf = gbuf + 1
-	types.assert(gbuf, gbuf)
+	attest.equal(gbuf, gbuf)
 ]]

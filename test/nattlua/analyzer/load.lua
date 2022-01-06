@@ -3,16 +3,16 @@ local run = T.RunCode
 
 test("load", function()
     run[[
-        types.assert(assert(load("types.assert(1, 1) return 2"))(), 2)
+        attest.equal(assert(load("attest.equal(1, 1) return 2"))(), 2)
     ]]
 
     run[[
-        types.assert(assert(load("return " .. 2))(), 2)
+        attest.equal(assert(load("return " .. 2))(), 2)
     ]]
 end)
 
 run[[
-    types.assert(require("test.nattlua.analyzer.file_importing.expect_5")(5), 1337)
+    attest.equal(require("test.nattlua.analyzer.file_importing.expect_5")(5), 1337)
 ]]
 
 test("file import", function()
@@ -29,20 +29,20 @@ pending([[
 end)
 
 run([[
-    types.assert(loadfile("test/nattlua/analyzer/file_importing/complex/main.nlua")(), 14)
+    attest.equal(loadfile("test/nattlua/analyzer/file_importing/complex/main.nlua")(), 14)
 ]])
 
 run[[
-    types.assert(require("test.nattlua.analyzer.file_importing.complex.adapter"), 14)
+    attest.equal(require("test.nattlua.analyzer.file_importing.complex.adapter"), 14)
 ]]
 
 run[[
-    types.assert(require("table.new"), table.new)
+    attest.equal(require("table.new"), table.new)
 ]]
 
 run[[
-    types.assert(require("string"), string)
-    types.assert(require("io"), io)
+    attest.equal(require("string"), string)
+    attest.equal(require("io"), io)
 ]]
 
 run[[
@@ -50,12 +50,12 @@ run[[
          return analyzer:GetLocalOrGlobalValue(name:GetData())
     end
     local type lol = {}
-    types.assert(test("lol"), lol)
+    attest.equal(test("lol"), lol)
 ]]
 
 run[[
     type lol = {}
-    types.assert(require("lol"), lol)
+    attest.equal(require("lol"), lol)
     type lol = nil
 ]]
 

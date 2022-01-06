@@ -3,13 +3,13 @@ local run = T.RunCode
 local transpile = T.Transpile
 run[[
     for i = 1, 10000 do
-        types.assert(i, _ as 1 .. 10000)
+        attest.equal(i, _ as 1 .. 10000)
     end
 ]]
 
 run[[
     for i = 1, _ as number do
-        types.assert(i, _ as 1..inf)
+        attest.equal(i, _ as 1..inf)
     end
 ]]
 
@@ -17,10 +17,10 @@ pending[[
     --for i = 1, number is an uncertain scope
     local a = 0
     for i = 1, _ as number do
-        types.assert(i, _ as number)
+        attest.equal(i, _ as number)
         a = 1
     end
-    types.assert(a, _ as number)
+    attest.equal(a, _ as number)
 ]]
 
 pending[[
@@ -28,7 +28,7 @@ pending[[
     for i = 1, _ as number do
         a = a + 1
     end
-    types.assert(a, _ as number) -- we could say that a+=1 would make a 1 .. inf but not sure if it's worth it
+    attest.equal(a, _ as number) -- we could say that a+=1 would make a 1 .. inf but not sure if it's worth it
 ]]
 
 pending("annotation", function() 
@@ -60,11 +60,11 @@ run[[
         lol = lol + 1
 
         if i == 3 then
-            types.assert("should never reach")
+            attest.equal("should never reach")
         end
     end
 
-    types.assert(lol, 2)
+    attest.equal(lol, 2)
 ]]
 
 
@@ -81,8 +81,8 @@ pending[[
         local y = x
         -- when ran as merged scope error("lol") doesn't return properly
     
-        types.assert(x, 108)
-        types.assert_superset(i, _ as 1 | 2 | 3)
+        attest.equal(x, 108)
+        attest.superset_of(i, _ as 1 | 2 | 3)
     end
 ]]
 
@@ -92,17 +92,17 @@ run[[
     local check = false
     for i = 1, 10 do
         x = x + i
-        types.assert(string_byte, string.byte)
+        attest.equal(string_byte, string.byte)
         
         if check then
-            types.assert(i, _ as 1 | 10 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
+            attest.equal(i, _ as 1 | 10 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
         end
         
         if i == 10 then
             check = true
         end
     end
-    types.assert(x,55)
+    attest.equal(x,55)
 ]]
 
 run[[
@@ -111,5 +111,5 @@ run[[
         tbl[i] = i*100
     end
     tbl[50] = true
-    types.assert(tbl[20], _ as (100..1000000) | true)
+    attest.equal(tbl[20], _ as (100..1000000) | true)
 ]]
