@@ -41,7 +41,7 @@ local taxi: Car = {
 
 -- Manufacturer and model are both of type string,
 -- so we can pluck them both into a typed string array
-local makeAndModel = pluck(taxi, {"manufactuwrer", "model"})
+local makeAndModel = pluck(taxi, {"manufacturerLOL", "model"})
 
 -- If we try to pluck model and year, we get an
 -- array of a union type: (string | number)[]

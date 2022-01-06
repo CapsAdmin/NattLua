@@ -1,5 +1,6 @@
 local helpers = require("nattlua.other.helpers")
-local code = [==[
+local Code = require("nattlua.code.code")
+local str = [==[
 for i = 1, #code do
     local char = code:sub(i, i)
 
@@ -30,6 +31,8 @@ for i = 1, #code do
 end
 ]==]
 
+local code = Code(str, "test")
+
 local function example(code)
     local start
     for i = 1, #code do
@@ -37,6 +40,6 @@ local function example(code)
         if code:sub(i, i) == "<" then return start, i-1 end
     end
 end
-local start, stop = example(code)
+local start, stop = example(code:GetString())
 
-print(helpers.FormatError(code, "format_error.lua", "pointing at this multiline string", start, stop))
+print(helpers.FormatError(code, "pointing at this multiline string", start, stop))

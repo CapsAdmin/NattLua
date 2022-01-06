@@ -39,11 +39,11 @@ print(a)
 ]==]
 
 code = [[
-sun = {}
-jupiter = {}
-saturn = {}
-uranus = {}
-neptune = {}
+local sun = {}
+local jupiter = {}
+local saturn = {}
+local uranus = {}
+local neptune = {}
 
 local sqrt = math.sqrt
 

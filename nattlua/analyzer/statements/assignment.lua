@@ -48,9 +48,6 @@ return
 				if exp_key.kind == "value" then
 					-- local foo, bar = *
 					left[left_pos] = NodeToString(exp_key)
-
-					-- this is used by the javascript emitter
-					exp_key.is_upvalue = analyzer:LocalValueExists(exp_key)
 				elseif exp_key.kind == "postfix_expression_index" then
 					-- foo[bar] = *
 					left[left_pos] = analyzer:AnalyzeExpression(exp_key.expression)

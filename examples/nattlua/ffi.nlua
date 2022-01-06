@@ -13,7 +13,7 @@ type VoidPointer = {
 
 type ffi.C = {
 	@MetaTable = self,
-	__index = function(self, field: string)
+	__index = analyzer function(self, field: string)
 		-- this is a analyzer function, but the code here is executed by the checker
 
 		if not field:IsLiteral() then error("field must be a literal") end
@@ -58,7 +58,7 @@ type ffi.C = {
 	end
 }
 
-analyzer function ffi.cdef(c_declaration: string, ...)
+analyzer function ffi.cdef(c_declaration: string, ...: any)
 	assert(c_declaration:IsLiteral(), "c_declaration must be a literal")
 
 	local ffi = require("ffi")

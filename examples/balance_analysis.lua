@@ -1,5 +1,6 @@
 local nl = require("nattlua")
 local helpers = require("nattlua.other.helpers")
+local Code = require("nattlua.code.code")
 
 local check_tokens
 
@@ -38,7 +39,7 @@ do
     local table_insert = table.insert
     local table_remove = table.remove
 
-    function check_tokens(tokens, name, code)
+    function check_tokens(tokens, code)
         local env = {}
 
         for _, b in ipairs(rules) do
@@ -52,7 +53,7 @@ do
                         table_insert(env[b.name], tk)
                     elseif b.r[tk.value] then
                         if not env[b.name][1] then
-                            io.write(helpers.FormatError(code, name, "could not find the opening " .. b.name, tk.start, tk.stop))
+                            io.write(helpers.FormatError(code, "could not find the opening " .. b.name, tk.start, tk.stop))
                         else
                             table_remove(env[b.name])
                         end
@@ -63,7 +64,7 @@ do
 
         for name, tokens in pairs(env) do
             for _, tk in ipairs(tokens) do
-                io.write(helpers.FormatError(code, name, "could not the closing " .. name, tk.start, tk.stop))
+                io.write(helpers.FormatError(code, "could not the closing " .. name, tk.start, tk.stop))
             end
         end
     end
@@ -192,9 +193,8 @@ local code = [[
     end
     end))
 ]]
-local name = "https://scriptinghelpers.org/questions/10176/expected-near-end-whats-that-mean"
-local tokens = assert(nl.Compiler(code):Lex()).Tokens
+local compiler = assert(nl.Compiler(code):Lex())
 
 local time = os.clock()
-check_tokens(tokens, name, code)
+check_tokens(compiler.Tokens, compiler.Code)
 print(os.clock() - time)

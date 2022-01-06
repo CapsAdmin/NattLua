@@ -118,6 +118,7 @@ return function(META)
 				scope = scope or self:GetScope()
 				if not scope then return end
 				local found = scope:FindValue(key, self:GetCurrentAnalyzerEnvironment())
+				print(found)
 				return found ~= nil
 			end
 

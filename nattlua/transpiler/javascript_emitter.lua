@@ -31,10 +31,12 @@ function META:EmitExpression(node)
 	elseif node.kind == "postfix_expression_index" then
 		self:EmitExpressionIndex(node)
 	elseif node.kind == "value" then
-		if node.is_upvalue == false or not node.inferred_type:GetUpvalue() then
+		if node.value.type == "letter" then
 			self:EmitToken(node.value, "")
 			node.value.whitespace = nil
-			self:Emit("globalThis.")
+			if not node.inferred_type or not node.inferred_type:GetUpvalue() then
+				self:Emit("globalThis.")
+			end
 			self:EmitToken(node.value)
 		elseif node.value.value == "..." then
 			self:EmitToken(node.value, "__args")
@@ -305,8 +307,13 @@ function META:EmitTable(tree)
 		self:Emit("table.mergetables")
 	end
 
+	local is_array = tree.inferred_type and tree.inferred_type:IsNumericallyIndexed()
 	local during_spread = false
-	self:EmitToken(tree.tokens["{"])
+	if is_array then
+		self:EmitToken(tree.tokens["{"], "[")
+	else
+		self:EmitToken(tree.tokens["{"])
+	end
 
 	if tree.children[1] then
 		self:Whitespace("\n")
@@ -324,7 +331,7 @@ function META:EmitTable(tree)
 
 					self:EmitExpression(node.spread.expression)
 				else
-					self:EmitExpression(node.expression)
+					self:EmitExpression(node.value_expression)
 				end
 			elseif node.kind == "table_key_value" then
 				if tree.spread and not during_spread then
@@ -354,7 +361,11 @@ function META:EmitTable(tree)
 		self:Emit("}")
 	end
 
-	self:EmitToken(tree.tokens["}"])
+	if is_array then
+		self:EmitToken(tree.tokens["}"], "]")
+	else
+		self:EmitToken(tree.tokens["}"])
+	end
 end
 
 local translate = {["not"] = "!",}

@@ -3,13 +3,13 @@ local ast = assert(nl.Compiler(assert(io.open("nattlua/parser/parser.lua")):read
 
 print("==================================================")
 print("all while statements:")
-for i,v in ipairs(ast:FindStatementsByType("while")) do
+for i,v in ipairs(ast:FindNodesByType("while")) do
     print(i, v:Render())
 end
 
 print("==================================================")
 print("find ^node%.tokens%b[]")
-for _, v in ipairs(ast:FindStatementsByType("assignment")) do
+for _, v in ipairs(ast:FindNodesByType("assignment")) do
     if v.left then
         for _, expression in ipairs(v.left) do
             if expression:Render():find("^node%.tokens%b[]") then
