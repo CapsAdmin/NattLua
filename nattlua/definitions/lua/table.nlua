@@ -24,11 +24,11 @@ analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 end
 
 analyzer function table.insert(tbl: List<|any|>, ...: ...any)
-	if not tbl:IsLiteral() then return end
+	if not tbl:HasLiteralKeys() then return end
 	local pos, val = ...
 
 	if not val then
-		val = ...
+		val = pos
 		pos = tbl:GetLength() + 1
 	else
 		pos = tbl:GetLength()

@@ -720,3 +720,10 @@ run[[
 
     types.assert(main(), _ as 1 | 2)
 ]]
+
+run[[
+    local tbl = {}
+    table.insert(tbl, _ as number)
+    table.insert(tbl, _ as string)
+    types.assert(tbl, {_ as number, _ as string})
+]]
