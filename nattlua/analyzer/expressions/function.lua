@@ -63,7 +63,7 @@ local function analyze_function_signature(analyzer, node, current_function)
 		explicit_arguments = true
 		for i, key in ipairs(node.identifiers) do
 			
-			if key.identifier then
+			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = analyzer:AnalyzeExpression(key):GetFirstValue()
 				analyzer:CreateLocalValue(key.identifier, args[i], i)
 

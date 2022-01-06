@@ -669,7 +669,7 @@ end
 			local function ReadTypeFunctionArgument(parser, expect_type)
 				if parser:IsValue(")") then return end
 			
-				if expect_type or parser:IsType("letter") and parser:IsValue(":", 1) then
+				if expect_type or ((parser:IsType("letter") or parser:IsValue("...")) and parser:IsValue(":", 1)) then
 					local identifier = parser:ReadToken()
 					local token = parser:ExpectValue(":")
 					local exp = ExpectTypeExpression(parser)

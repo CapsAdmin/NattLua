@@ -118,7 +118,9 @@ end
 local function emit_atomic_type(val)
 
     if val.NAME then
-        e(val.NAME:gsub("[%p%s]", "_") .. ": ") 
+        if val.TYPE ~= "vararg" then
+            e(val.NAME:gsub("[%p%s]", "_") .. ": ") 
+        end
     end
 
     if val.TYPE:find("|", nil, true) then
