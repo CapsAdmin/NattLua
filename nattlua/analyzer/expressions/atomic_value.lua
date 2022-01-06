@@ -25,6 +25,11 @@ local function lookup_value(self, node)
 			self:PushAnalyzerEnvironment("runtime")
 			obj, err = self:GetLocalOrGlobalValue(key)
 			self:PopAnalyzerEnvironment("runtime")
+			
+			-- when in the typesystem we want to see the objects contract, not its runtime value
+			if obj and obj:GetContract() then 
+				obj = obj:GetContract() 
+			end
 		end
 
 		if not obj then

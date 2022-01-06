@@ -345,8 +345,9 @@ R[[
     }|>
     
     local x: FOO = 2
-    
-    attest.equal(x, _ as 1 | 2 | 3)
+
+    attest.equal(x, _ as 2)
+    attest.equal<|x, 1 | 2 | 3|>
 
     -- make a way to undefine enums
     type A = nil

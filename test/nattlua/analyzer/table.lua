@@ -298,7 +298,8 @@ end)
 run[[
     local list: {[number] = any} | {}
     list = {}
-    attest.equal(list, _ as {[number] = any} | {})
+    attest.equal(list, _ as {})
+    attest.equal<|list, {[number] = any} | {}|>
 ]]
 
 run[[

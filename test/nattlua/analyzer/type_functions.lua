@@ -64,13 +64,13 @@ test("next", function()
         local t = {k = 1}
         local a = 1
         local k,v = next({k = 1})
-        attest.equal(k, nil as "k" | "k")
-        attest.equal(v, nil as 1 | 1)
+        attest.equal(k, nil as "k")
+        attest.equal(v, nil as 1)
     ]]
     run[[
         local k,v = next({foo = 1})
-        attest.equal(string.len(k), _ as 3 | 3)
-        attest.equal(v, _ as 1 | 1)
+        attest.equal(string.len(k), _ as 3)
+        attest.equal(v, _ as 1)
     ]]
 end)
 

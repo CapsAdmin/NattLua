@@ -398,7 +398,7 @@ return function(META)
 		local scope = self:GetScope()
 
 		local hash = upvalue:GetKey()
-
+		
 		upvalue.mutations = upvalue.mutations or {}
 		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
 
