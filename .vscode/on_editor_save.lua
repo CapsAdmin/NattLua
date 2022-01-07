@@ -109,6 +109,9 @@ if path:lower():find("/nattlua/", nil, true) then
     if path:find("vscode/server", nil, true) then
         io.open("vscode/server/restart_me", "w"):close()
         return
+    elseif path:find("typed_ffi.nlua", nil, true) and has_test_focus() then
+        print("running test focus")
+        run_nattlua("./test_focus.lua")
     elseif path:find("lint.lua", nil, true) then
         run_lua(path)
     elseif path:find("build_glua_base.lua", nil, true) then
