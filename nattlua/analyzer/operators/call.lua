@@ -816,7 +816,7 @@ return
 					self.call_stack = self.call_stack or {}
 					for _, v in ipairs(self.call_stack) do
 						-- if the callnode is the same, we're doing some infinite recursion
-						if v.obj == obj and v.call_node == self:GetActiveNode() then
+						if v.call_node == self:GetActiveNode() then
 							if obj.explicit_return then
 								-- so if we have explicit return types, just return those
 								node.recursively_called = obj:GetReturnTypes():Copy()
