@@ -739,3 +739,30 @@ run[[
     replaceIRs(instList)
     § assert(#env.runtime.instList.contracts == 0)    
 ]]
+
+run[[
+    local z = 2
+    do
+        local function WORD(low: number, high: number)
+        end
+    
+        do
+            local function WSAStartup(a: any,b: any) end
+            local x = 1
+    
+            local wsa_data = _ as function=()>() | nil
+    
+            local function initialize()
+                -- make sure  parent scope of initialize is preserved when scope is cloned
+                § analyzer.SuppressDiagnostics = true
+                local data = wsa_data() -- scope clone occurs here because wsdata can be nil
+                § analyzer.SuppressDiagnostics = nil
+    
+                attest.equal(x, 1)
+                attest.equal(z, 2)
+    
+                WSAStartup(WORD(2, 2), data)
+            end
+        end
+    end
+]]

@@ -190,6 +190,8 @@ function META:Copy()
 	end
 
 	copy.returns = self.returns
+	copy.parent = self.parent
+	
 	return copy
 end
 
