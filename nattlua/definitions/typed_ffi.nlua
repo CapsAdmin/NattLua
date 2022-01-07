@@ -148,6 +148,8 @@ local analyzer function cast(node: any, args: any)
 			return types.Boolean()
 		elseif node.n == "void" then
 			return types.Nil()
+		elseif node.n == "va_list" then
+			return types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
 		elseif node.n:find("%$%d+%$") then
 			local val = table.remove(args, 1)
 
@@ -168,11 +170,13 @@ local analyzer function cast(node: any, args: any)
 			
 			if not val or val.Type == "symbol" and val:GetData() == nil then
 
-				local current_tbl = analyzer.current_tables[#analyzer.current_tables]
-				
-				if current_tbl and current_tbl.ffi_name == node.n then
-					return current_tbl
-				end	
+				if analyzer.current_tables then
+					local current_tbl = analyzer.current_tables[#analyzer.current_tables]
+					
+					if current_tbl and current_tbl.ffi_name == node.n then
+						return current_tbl
+					end	
+				end
 
 				analyzer:Error(analyzer.current_expression, "cannot find value " .. node.n)
 				return types.Any()

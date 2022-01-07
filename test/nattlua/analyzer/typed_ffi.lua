@@ -307,3 +307,17 @@ run[==[
 	attest.equal(addrinfo.ai_next.ai_next.foo, _ as number)
 
 ]==]
+
+run[==[
+
+	local ffi = require("ffi")
+	ffi.cdef([[
+		uint32_t FormatMessageA(
+			uint32_t dwFlags,
+			va_list *Arguments
+		);
+	]])
+	
+	attest.equal(ffi.C.FormatMessageA(0, nil, true, true, false, {}, "LOL"), _ as number)
+
+]==]
