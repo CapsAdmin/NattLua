@@ -49,7 +49,6 @@ local function run(code, expect_error)
         end
     else
         if not ok then
-            io.write(compiler:GetCode():GetString(), "\n")
             error(err, 3)
         end
     end
