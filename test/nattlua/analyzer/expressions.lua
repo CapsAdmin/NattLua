@@ -13,9 +13,7 @@ run[[
     local a: number | string
     
     if type(a) == "number" then
-        §LOL = true
         attest.equal(a, _ as number)
-        §LOL = false
     end
 
     attest.equal(a, _ as number | string)
