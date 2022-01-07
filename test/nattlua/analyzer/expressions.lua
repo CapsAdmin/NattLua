@@ -27,7 +27,7 @@ run[[
     attest.equal(x, _ as 1 | 2)
 ]]
 
-pending[[
+run[[
     local x = _ as 1|2|3
     local y = x == 1 and attest.equal(x, 1) or x == 2 and attest.equal(x, 2) or false
     attest.equal(y, _ as 1|2|false)
