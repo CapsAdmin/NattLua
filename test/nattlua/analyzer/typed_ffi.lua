@@ -289,3 +289,21 @@ run[[
 	gbuf = gbuf + 1
 	attest.equal(gbuf, gbuf)
 ]]
+
+run[==[
+	
+	local ffi = require("ffi")
+	ffi.cdef([[
+		struct addrinfo {
+			int foo;
+			struct addrinfo *ai_next;
+		};
+	]])
+	
+	local addrinfo = ffi.new("struct addrinfo")
+	
+	attest.equal(addrinfo.foo, _ as number)
+	attest.equal(addrinfo.ai_next.foo, _ as number)
+	attest.equal(addrinfo.ai_next.ai_next.foo, _ as number)
+
+]==]

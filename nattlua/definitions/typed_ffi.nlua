@@ -32,6 +32,12 @@ local analyzer function cast(node: any, args: any)
 	if node.tag == "Struct" or node.tag == "Union" then
 		local tbl = types.Table()
 
+		if node.n then
+			tbl.ffi_name = "struct " .. node.n 
+			analyzer.current_tables = analyzer.current_tables or {}
+			table.insert(analyzer.current_tables, tbl)
+		end
+
 		for _, node in ipairs(node) do
 			if node.tag == "Pair" then
 				local key = types.LString(node[2])
@@ -41,6 +47,10 @@ local analyzer function cast(node: any, args: any)
 				table_print(node)
 				error("NYI: " .. node.tag)
 			end
+		end
+		
+		if node.n then
+			table.remove(analyzer.current_tables)
 		end
 
 		return tbl
@@ -146,7 +156,7 @@ local analyzer function cast(node: any, args: any)
 			end
 
 			return val
-		elseif node.parent_tag == "TypeDef" then
+		elseif node.parent and node.parent.tag == "TypeDef" then
 			if node.n:sub(1, 6) == "struct" then
 				local name = node.n:sub(7)
 				local tbl = types.Table()
@@ -155,8 +165,15 @@ local analyzer function cast(node: any, args: any)
 			end
 		else
 			local val = analyzer:IndexOperator(analyzer.current_expression, env.typesystem.ffi:Get(types.LString("C")), types.LString(node.n))
-
+			
 			if not val or val.Type == "symbol" and val:GetData() == nil then
+
+				local current_tbl = analyzer.current_tables[#analyzer.current_tables]
+				
+				if current_tbl and current_tbl.ffi_name == node.n then
+					return current_tbl
+				end	
+
 				analyzer:Error(analyzer.current_expression, "cannot find value " .. node.n)
 				return types.Any()
 			end
@@ -204,10 +221,8 @@ end
 
 analyzer function ffi.cdef(cdecl: string, ...: any)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	local table_print = require("nattlua.other.table_print")
-
 	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
-		ctype.type.parent_tag = ctype.tag
+		ctype.type.parent = ctype
 		analyzer:NewIndexOperator(cdecl:GetNode(), env.typesystem.ffi:Get(types.LString("C")), types.LString(ctype.name), env.typesystem.cast(ctype.type, {...}))
 	end
 end
