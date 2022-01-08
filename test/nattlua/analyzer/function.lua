@@ -766,3 +766,9 @@ run[[
         end
     end
 ]]
+
+run[[
+    local func: function=(number, string)>(nil)
+    local x: function=(Parameters<|func|>)>(nil)
+    attest.equal(x, func)
+]]

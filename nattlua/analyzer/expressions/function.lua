@@ -94,13 +94,29 @@ local function analyze_function_signature(analyzer, node, current_function)
 						argument_tuple_override = obj
 						break
 					else
-						args[i] = obj:GetFirstValue()
+						local val = analyzer:Assert(node, obj:GetFirstValue())
+						-- in case the tuple is empty
+						if val then
+							args[i] = val
+						end
 					end
 				else
 					args[i] = Any():SetNode(key)
 				end
 			else
-				args[i] = analyzer:AnalyzeExpression(key):GetFirstValue()
+				local obj = analyzer:AnalyzeExpression(key)
+				if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
+					-- if we pass in a tuple we override the argument type
+					-- function(mytuple): string
+					argument_tuple_override = obj
+					break
+				else
+					local val = analyzer:Assert(node, obj:GetFirstValue())
+					-- in case the tuple is empty
+					if val then
+						args[i] = val
+					end
+				end
 			end
 		end
 	
