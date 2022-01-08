@@ -59,7 +59,7 @@ run[=[
     events.Declare<|"message", (string,), (boolean, string) | (number,)|>
     events.Declare<|"update", (number,), (boolean,)|>
 
-    function events.AddListener(event_name: ref keysof<|declared|>, listener: declared[event_name])
+    function events.AddListener(event_name: ref (keysof<|declared|>), listener: declared[event_name])
         attest.equal(event_name, _ as "message")
         attest.equal(listener, _ as (function=(string)>((boolean, string) | (nil,))))
     end

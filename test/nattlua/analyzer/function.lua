@@ -792,3 +792,10 @@ run([[
     
     foo(_ as string)    
 ]], "not literal")
+
+run[[
+    local function foo(str: literal ref (nil | string))
+        return str
+    end
+    attest.equal(foo("hello"), "hello")
+]]

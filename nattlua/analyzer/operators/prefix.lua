@@ -22,6 +22,18 @@ end
 local function prefix_operator(analyzer, node, l)
 	local op = node.value.value
 
+	if op == "literal" then
+		l = analyzer:AnalyzeExpression(node.right)
+		l.literal_argument = true
+		return l
+	end
+
+	if op == "ref" then
+		l = analyzer:AnalyzeExpression(node.right)
+		l.ref_argument = true
+		return l
+	end
+
 	if l.Type == "tuple" then
 		l = l:Get(1) or Nil()
 	end
@@ -66,21 +78,11 @@ local function prefix_operator(analyzer, node, l)
 		new_union:SetTruthyUnion(truthy_union)
 		new_union:SetFalsyUnion(falsy_union)
 
-		if op == "ref" then
-			new_union.ref_argument = true
-		end
-
 		return new_union:SetNode(node):SetTypeSource(l)
 	end
 
 	if l.Type == "any" then
-		local obj = Any()
-
-		if op == "ref" then
-			obj.ref_argument = true
-		end
-
-		return obj
+		return Any():SetNode(node)
 	end
 
 	if analyzer:IsTypesystem() then
@@ -152,12 +154,6 @@ local function prefix_operator(analyzer, node, l)
 
 	if op == "-" or op == "~" or op == "#" then
 		return l:PrefixOperator(op)
-	elseif op == "ref" then
-		l.ref_argument = true
-		return l
-	elseif op == "literal" then
-		l.literal_argument = true
-		return l
 	end
 
 	error("unhandled prefix operator in " .. analyzer:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(l))
