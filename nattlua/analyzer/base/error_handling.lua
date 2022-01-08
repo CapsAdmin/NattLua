@@ -23,19 +23,19 @@ return function(META)
 		self.diagnostics = {}
 	end)
 
-	function META:Assert(node, ok, err)
+	function META:Assert(node, ok, err, ...)
 		if ok == false then
 			err = err or "unknown error"
 			self:Error(node, err)
 			return Any():SetNode(node)
 		end
 
-		return ok
+		return ok, err, ...
 	end
 
 	function META:ErrorAssert(ok, err)
 		if not ok then
-			error(self:ErrorMessageToString(err))
+			error(self:ErrorMessageToString(err or "unknown error"))
 		end
 	end
 
@@ -65,7 +65,7 @@ return function(META)
 			io.write(
 				"reporting diagnostic without node, defaulting to current expression or statement\n"
 			)
-			io.write(debug.traceback(), "\n")
+--			io.write(debug.traceback(), "\n")
 			node = self.current_expression or self.current_statement
 		end
 
@@ -84,7 +84,7 @@ return function(META)
 		severity = severity or "warning"
 		local start, stop = helpers.LazyFindStartStop(node)
 
-		if self.OnDiagnostic then
+		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
 			self:OnDiagnostic(
 				node.Code,
 				msg_str,
@@ -103,8 +103,22 @@ return function(META)
 				msg = msg_str,
 				severity = severity,
 				traceback = debug.traceback(),
+				protected_call = self:IsTypeProtectedCall()
 			}
 		)
+	end
+
+	function META:PushProtectedCall()
+		self.type_protected_call_stack = self.type_protected_call_stack or 0
+		self.type_protected_call_stack = self.type_protected_call_stack + 1
+	end
+
+	function META:PopProtectedCall()
+		self.type_protected_call_stack = self.type_protected_call_stack - 1
+	end
+
+	function META:IsTypeProtectedCall()
+		return self.type_protected_call_stack and self.type_protected_call_stack > 0
 	end
 
 	function META:Error(node, msg)

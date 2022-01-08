@@ -324,17 +324,26 @@ end
 
 analyzer function type_pcall(func: Function, ...: ...any)
 	local diagnostics_index = #analyzer.diagnostics
-	local ok, val = pcall(analyzer.Call, analyzer, func, types.Tuple({...}))
-	if not ok then return ok, val end
-	local errors = {}
 
-	for i = diagnostics_index + 1, #analyzer.diagnostics do
-		local d = analyzer.diagnostics[i]
-		table.insert(errors, require("nattlua.other.helpers").FormatError(analyzer.compiler:GetCode(), d.msg, d.start, d.stop))
+	analyzer:PushProtectedCall()
+	local tuple = analyzer:Assert(analyzer.current_statement, analyzer:Call(func, types.Tuple({...})))
+	analyzer:PopProtectedCall()
+	
+	do
+		local errors = {}
+
+		for i = diagnostics_index + 1, #analyzer.diagnostics do
+			local d = analyzer.diagnostics[i]
+			local msg = require("nattlua.other.helpers").FormatError(analyzer.compiler:GetCode(), d.msg, d.start, d.stop)
+			table.insert(errors, msg)
+		end
+
+		if errors[1] then 
+			return false, table.concat(errors, "\n") 
+		end
 	end
-
-	if errors[1] then return false, table.concat(errors, "\n") end
-	return ok, val:Unpack()
+	
+	return true, tuple:Unpack()
 end
 
 analyzer function xpcall(callable: any, error_cb: any, ...: ...any)

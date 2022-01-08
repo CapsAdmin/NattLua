@@ -51,7 +51,9 @@ local function lua_types_to_tuple(node, tps)
 				elseif t == "boolean" then
 					tbl[i] = Symbol(v):SetNode(node)
 				else
-					print(node:Render(), "!")
+					if node then
+						print(node:Render(), "!")
+					end
 					error(debug.traceback("NYI " .. t))
 				end
 			end

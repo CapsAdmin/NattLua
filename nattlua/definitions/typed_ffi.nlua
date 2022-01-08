@@ -237,7 +237,15 @@ analyzer function ffi.cast(cdecl: string, src: any)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type)
+	ctype:SetNode(cdecl:GetNode())
+	if ctype.Type == "any" then return ctype end
+	local nilable_ctype = ctype:Copy()
 
+	for _, keyval in ipairs(nilable_ctype:GetData()) do
+		keyval.val = types.Nilable(keyval.val)
+	end
+
+	ctype:SetMetaTable(ctype)
 	return ctype
 end
 
@@ -246,6 +254,7 @@ analyzer function ffi.typeof(cdecl: string, ...: any)
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
 	ctype:SetNode(cdecl:GetNode())
+	if ctype.Type == "any" then return ctype end
 	local nilable_ctype = ctype:Copy()
 
 	for _, keyval in ipairs(nilable_ctype:GetData()) do
