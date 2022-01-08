@@ -210,6 +210,48 @@ return function(META)
 			return func
 		end
 
+		function META:CallLuaTypeFunction(node, func, scope, ...)
+			_G.analyzer = self
+			_G.env = self:GetScopeHelper(scope)
+			local res = {pcall(func, ...)}
+			local ok = table.remove(res, 1)
+
+			if not ok then
+				local msg = tostring(res[1])
+				local name = debug.getinfo(func).source
+
+				if name:sub(1, 1) == "@" then -- is this a name that is a location?
+                    local line, rest = msg:sub(#name):match("^:(%d+):(.+)") -- remove the file name and grab the line number
+                    if line then
+						local f, err = io.open(name:sub(2), "r")
+
+						if f then
+							local code = f:read("*all")
+							f:close()
+							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
+							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
+							msg = helpers.FormatError(code, name, rest, start, stop)
+						end
+					end
+				end
+
+				local trace = self:TypeTraceback()
+
+				if trace then
+					msg = msg .. "\ntraceback:\n" .. trace
+				end
+
+				self:Error(node, msg)
+			end
+
+			if res[1] == nil then
+				res[1] = Nil()
+			end
+
+			return table.unpack(res)
+		end
+
+
 		do
 			local scope_meta = {}
 
@@ -255,47 +297,6 @@ return function(META)
 			end
 		end
 
-		function META:CallLuaTypeFunction(node, func, scope, ...)
-			_G.analyzer = self
-			_G.env = self:GetScopeHelper(scope)
-
-			local res = {pcall(func, ...)}
-			local ok = table.remove(res, 1)
-
-			if not ok then
-				local msg = tostring(res[1])
-				local name = debug.getinfo(func).source
-
-				if name:sub(1, 1) == "@" then -- is this a name that is a location?
-                    local line, rest = msg:sub(#name):match("^:(%d+):(.+)") -- remove the file name and grab the line number
-                    if line then
-						local f, err = io.open(name:sub(2), "r")
-
-						if f then
-							local code = f:read("*all")
-							f:close()
-							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
-							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-							msg = helpers.FormatError(code, name, rest, start, stop)
-						end
-					end
-				end
-
-				local trace = self:TypeTraceback()
-
-				if trace then
-					msg = msg .. "\ntraceback:\n" .. trace
-				end
-
-				self:Error(node, msg)
-			end
-
-			if res[1] == nil then
-				res[1] = Nil()
-			end
-
-			return table.unpack(res)
-		end
 
 		function META:TypeTraceback()
 			if not self.call_stack then return "" end
