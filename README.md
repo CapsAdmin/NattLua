@@ -83,7 +83,7 @@ print<|tbl|>
 ]]
 ```
 
-The ref keyword here means that the `cfg` variable would be passed in as is. In this context it's a bit similar to a generics function in other languages. If we instead wrote `: string` the output would be `{ string = string }`
+The ref keyword here means that the `cfg` variable would be passed in as a type reference. In this context it's similar to how type arguments in a generic function is passed to teh function itself. If we removed the ref keyword, the output of the function would be inferred to `{ string = string }`
 
 We can also enforce the output type by writing `parse(str: ref string): {[string] = string}`, but if you don't it will be inferred.
 
@@ -260,7 +260,7 @@ This happens because `true` is true as opposed to `true | false` and so there's 
 
 # Analyzer functions
 
-Analyzer functions are lua functions. We can for example define math.ceil and a print function like this:
+Analyzer functions are lua functions bounded to the analyzer. We can for example define math.ceil and a print function like this:
 
 ```lua
 analyzer function print(...)
@@ -281,25 +281,17 @@ print<|x|>
 ```
 When transpiled to lua, the result is just:
 
-The `analyzer` keyword will make the function a lua function. So the code inside that function is actually lua code that is pcall'ed. This is used to define core lua functions like `print` and `math.floor`.
-
-```lua
-analyzer function print(...: ...any)
-    print(...)
-end
-
-print(1,2,3)
--->> 1 2 3
-```
-
-This would make it so when you call print at compile time, it actually prints the arguments where the analyzer is currently analyzing.
-
 ```lua
 local x = math.floor(5.5)
-print(x)
-```
+````
 
-We can for example define an assertion function like this:
+So analyzer functions only exist when analyzing. Again, the body of these functions are not analyzed like the rest of the code. For example, if this project was written in Python the contents of the analyzer functions would be written in Python as well.
+
+They exist to provide a way to define advanced custom types and functions that cannot easily be made into a normal type function.
+
+# Type functions
+
+Type functions is the recommended way to write type functions. We can define an assertion function like this:
 
 ```lua
 local function assert_whole_number<|T: number|>
@@ -310,30 +302,15 @@ local x = assert_whole_number<|5.5|>
           ^^^^^^^^^^^^^^^^^^^: assertion failed!
 ```
 
-`<|` `|>` here means that we are writing a type function that only exist in the type system. This is different from using `analyzer` keyword because its content is actually analyzed rather than pcall'ed.
+`<|` `|>` here means that we are writing a type function that only exist in the type system. Unlike `analyzer` functions, its content is actually analyzed.
 
-When the code above is transpiled to lua, the result is:
+When the code above is transpiled to lua, the result is still just:
 
 ```lua
 local x = 5.5
 ```
 
 `<|a,b,c|>` is the way to call type functions. In other languages it tends to be `<a,b,c>` but I chose this syntax to avoid conflicts with the `<` and `>` comparison operators. This may change in the future.
-
-Here's an Exclude function, similar to how you would find in typescript.
-
-```lua
-analyzer function Exclude(T, U)
-    T:RemoveType(U)
-    return T:Copy()
-end
-
-local a: Exclude<|1|2|3, 2|>
-
-attest.equal(a, _ as 1|3)
-```
-
-It's also possible to the more familiar "generics" syntax
 
 ```lua
 local function Array<|T: any, L: number|>
@@ -344,7 +321,9 @@ local list: Array<|number, 3|> = {1, 2, 3, 4}
                                  ^^^^^^^^^^^^: 4 is not a subset of 1..3
 ```
 
-Note that even though T type annotated with any, it does not mean that T becomes any inside the function. The type annotation here acts more of a constraint. In Typescript it would be something like
+In type functions, the type is by default passed by reference. So `T: any` does not meant that T will be any. Any just means that it's allowed to be anything. 
+
+In Typescript it would be something like
 
 ```ts
 type Array<T extends any, length extends number> = {[key: 1..length]: T} // assuming typescript supports number ranges
@@ -451,7 +430,7 @@ local anagram = string.char(all_letters, all_letters, all_letters, all_letters, 
 assert(anagram == "SLEEP")
 ```
 
-This is true because `anagram` becomes a union of all possible letter combinations which does contain the string SLEEP.
+This is true because `anagram` becomes a union of all possible letter combinations which contains the string "SLEEP".
 
 # Parsing and transpiling
 
