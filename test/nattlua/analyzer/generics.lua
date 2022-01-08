@@ -59,7 +59,7 @@ run[=[
     events.Declare<|"message", (string,), (boolean, string) | (number,)|>
     events.Declare<|"update", (number,), (boolean,)|>
 
-    function events.AddListener(event_name: literal keysof<|declared|>, listener: declared[event_name])
+    function events.AddListener(event_name: ref keysof<|declared|>, listener: declared[event_name])
         attest.equal(event_name, _ as "message")
         attest.equal(listener, _ as (function=(string)>((boolean, string) | (nil,))))
     end
@@ -71,7 +71,7 @@ run[=[
 run[[
     local type tbl = {}
     tbl.foo = 1337
-    local function test(key: literal keysof<|tbl|>)
+    local function test(key: ref keysof<|tbl|>)
         return tbl[key]
     end
     attest.equal(test("foo"), 1337)
@@ -80,7 +80,7 @@ run[[
 run([[
     local type tbl = {}
     tbl.foo = 1337
-    local function test(key: literal keysof<|tbl|>)
+    local function test(key: ref keysof<|tbl|>)
         return tbl[key]
     end
     attest.equal(test("bar"), 1337)

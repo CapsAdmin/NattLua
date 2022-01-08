@@ -9,7 +9,7 @@ META.__index = META
 --[[#local type BaseType = META.@Self]]
 --[[#type BaseType.@Name = "BaseTypeInstance"]]
 
-function META.GetSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
+function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
 --[[#	type tbl.@Self[name] = tbl[name] ]]
 	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
@@ -21,7 +21,7 @@ function META.GetSet(tbl--[[#: literal any]], name--[[#: literal string]], defau
 	end
 end
 
-function META.IsSet(tbl--[[#: literal any]], name--[[#: literal string]], default--[[#: literal any]])
+function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
 --[[#	type tbl.@Self[name] = tbl[name] ]]
 	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])

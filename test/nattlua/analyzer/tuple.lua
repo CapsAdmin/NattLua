@@ -11,7 +11,7 @@ run[[
 -- test for most edge cases regarding the tuple unpack mess
 run[[
 
-local function test() return function(num: literal number) return 1336 + num end end
+local function test() return function(num: ref number) return 1336 + num end end
 
 attest.equal(test()(1), 1337)
 local a = test()(1)
@@ -123,7 +123,7 @@ local a = {
 §assert(env.runtime.a:Get(types.LString("foo")).Type ~= "tuple")
 
 
-local function prefix (w1: literal string, w2: literal string)
+local function prefix (w1: ref string, w2: ref string)
     return w1 .. ' ' .. w2
 end
 

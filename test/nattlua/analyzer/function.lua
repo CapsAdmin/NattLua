@@ -497,7 +497,7 @@ run[[
 ]]
 
 run[[
-    local function test(): literal number 
+    local function test(): ref number 
         return 1
     end 
     
@@ -607,9 +607,9 @@ run[[
     local tbl = {}
 
     local function add(
-        name: literal string
+        name: ref string
     )
-        tbl[name] = function(name2: literal string)
+        tbl[name] = function(name2: ref string)
             attest.equal(name, name2)
         end
     end
@@ -637,11 +637,11 @@ run[[
 run[[
     local function test!(T: any)
         if T == string then
-            return expand setmetatable({}, {__call = function(_, a: literal T, b: literal T)
+            return expand setmetatable({}, {__call = function(_, a: ref T, b: ref T)
             §assert(analyzer:GetCurrentAnalyzerEnvironment() == "runtime", "analyzer environment is not runtime")
             return a .. b end})
         else
-            return expand setmetatable({}, {__call = function(_, a: literal T, b: literal T) return a + b end})
+            return expand setmetatable({}, {__call = function(_, a: ref T, b: ref T) return a + b end})
         end
     end
     
@@ -659,7 +659,7 @@ run[[
         --[1337] = 1, TODO, this should error
     }
 
-    local table_pool = function(alloc: literal (function=()>({[string] = any})))
+    local table_pool = function(alloc: ref (function=()>({[string] = any})))
         local pool = {} as {[number] = return_type<|alloc|>[1]}
         return function()
             return pool[1]
@@ -677,7 +677,7 @@ run([[
         [1337] = 1,
     }
 
-    local table_pool = function(alloc: literal (function=()>({[string] = any})))
+    local table_pool = function(alloc: ref (function=()>({[string] = any})))
         local pool = {} as {[number] = return_type<|alloc|>[1]}
         return function()
             return pool[1]

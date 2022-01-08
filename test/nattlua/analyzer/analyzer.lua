@@ -594,7 +594,7 @@ R[[
         Foo = number,
     }
     
-    local function mutate(a: literal Shape)
+    local function mutate(a: ref Shape)
         a.Foo = 5
     end
     

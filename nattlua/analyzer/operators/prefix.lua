@@ -66,8 +66,8 @@ local function prefix_operator(analyzer, node, l)
 		new_union:SetTruthyUnion(truthy_union)
 		new_union:SetFalsyUnion(falsy_union)
 
-		if op == "literal" then
-			new_union.literal_argument = true
+		if op == "ref" then
+			new_union.ref_argument = true
 		end
 
 		return new_union:SetNode(node):SetTypeSource(l)
@@ -76,8 +76,8 @@ local function prefix_operator(analyzer, node, l)
 	if l.Type == "any" then
 		local obj = Any()
 
-		if op == "literal" then
-			obj.literal_argument = true
+		if op == "ref" then
+			obj.ref_argument = true
 		end
 
 		return obj
@@ -152,8 +152,8 @@ local function prefix_operator(analyzer, node, l)
 
 	if op == "-" or op == "~" or op == "#" then
 		return l:PrefixOperator(op)
-	elseif op == "literal" then
-		l.literal_argument = true
+	elseif op == "ref" then
+		l.ref_argument = true
 		return l
 	end
 

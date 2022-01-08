@@ -63,7 +63,7 @@ local cfg = [[
     debug=yes
 ]]
 
-local function parse(str: literal string)
+local function parse(str: ref string)
     local tbl = {}
     for key, val in str:gmatch("(%S-)=(.-)\n") do
         tbl[key] = val
@@ -83,9 +83,9 @@ print<|tbl|>
 ]]
 ```
 
-The literal keyword here means that the `cfg` variable would be passed in as is. It's a bit similar to a generics function. If we instead wrote `: string` the output would be `{ string = string }`
+The ref keyword here means that the `cfg` variable would be passed in as is. In this context it's a bit similar to a generics function in other languages. If we instead wrote `: string` the output would be `{ string = string }`
 
-We can also enforce the output type by writing `parse(str: literal string): {[string] = string}`, but if you don't it will be inferred.
+We can also enforce the output type by writing `parse(str: ref string): {[string] = string}`, but if you don't it will be inferred.
 
 When the analyzer detects an error, it will try to recover from the error and continue. For example:
 

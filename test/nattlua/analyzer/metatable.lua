@@ -517,7 +517,7 @@ run([[
 ]], "bad type.-is not a subset of string")
 
 run[[
-    local function GetSet(tbl: literal any, name: literal string, default: literal any)
+    local function GetSet(tbl: ref any, name: ref string, default: ref any)
         tbl[name] = default as NonLiteral<|default|>
         type tbl.@Self[name] = tbl[name]
         
@@ -562,7 +562,7 @@ run[[
 
     -- class.lua
     -- Compatible with Lua 5.1 (not 5.0).
-    local function class(base: literal any, init: literal any)
+    local function class(base: ref any, init: ref any)
         local c = {}    -- a new class instance
         if not init and type(base) == 'function' then
            init = base
@@ -594,7 +594,7 @@ run[[
             return obj
         end
         c.init = init
-        c.is_a = function(self: literal any, klass: literal any)
+        c.is_a = function(self: ref any, klass: ref any)
            local m = getmetatable(self)
            while m do 
               if m == klass then return true end
@@ -607,11 +607,11 @@ run[[
      end
     
      
-    local Animal = class(function(a: literal any,name: literal any)
+    local Animal = class(function(a: ref any,name: ref any)
         a.name = name
     end)
     
-    function Animal:__tostring(): literal string -- we have to say that it's a literal string, otherwise the test won't work
+    function Animal:__tostring(): ref string -- we have to say that it's a literal string, otherwise the test won't work
         return self.name..': '..self:speak()
     end
     
@@ -621,7 +621,7 @@ run[[
         return 'bark'
     end
     
-    local Cat = class(Animal, function(c: literal any,name: literal any,breed: literal any)
+    local Cat = class(Animal, function(c: ref any,name: ref any,breed: ref any)
         Animal.init(c,name)  -- must init base!
         c.breed = breed
     end)
@@ -670,7 +670,7 @@ run[[
                 local constructor = analyzer:Assert(tbl:GetNode(), meta:Get(types.LString("constructor")))
     
                 local self_arg = types.Any()
-                self_arg.literal_argument = true
+                self_arg.ref_argument = true
                 constructor:GetArguments():Set(1, self_arg)
             
                 tbl:SetMetaTable(meta)
@@ -772,7 +772,7 @@ run[[
 local FALLBACK = "lol"
 
 setmetatable(_G, {
-    __index = function(t: literal any, n: literal any)
+    __index = function(t: ref any, n: ref any)
         return FALLBACK
     end
 })
@@ -785,7 +785,7 @@ setmetatable(_G)
 
 
 run[[
-    setmetatable(_G, {__index = function(self: literal any, key: literal any) return "LOL" end})
+    setmetatable(_G, {__index = function(self: ref any, key: ref any) return "LOL" end})
     attest.equal(DUNNO, "LOL")
     setmetatable(_G)
 ]]

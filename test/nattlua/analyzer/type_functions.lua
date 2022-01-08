@@ -484,7 +484,7 @@ run[[
 ]]
 
 run[[
-    local function test(a: literal string)
+    local function test(a: ref string)
         return a:lower()
     end
     
@@ -494,7 +494,7 @@ run[[
 
 run[[
     local i = 0
-    local function test(x: literal (string | nil))
+    local function test(x: ref (string | nil))
         if i == 0 then
             attest.equal<|typeof x, "foo"|>
         elseif i == 1 then
@@ -533,7 +533,7 @@ run[[
 
 
 run[[
-    local function clamp(n: literal number, low: literal number, high: literal number) 
+    local function clamp(n: ref number, low: ref number, high: ref number) 
         return math.min(math.max(n, low), high) 
     end
 

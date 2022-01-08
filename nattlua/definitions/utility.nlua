@@ -222,18 +222,18 @@ analyzer function ReturnType(func: Function)
 	return func:GetReturnTypes():Copy():SetUnpackable(true)
 end
 
-function Uppercase<|val: literal string|>
+function Uppercase<|val: ref string|>
 	return val:upper()
 end
 
-function Lowercase<|val: literal string|>
+function Lowercase<|val: ref string|>
 	return val:lower()
 end
 
-function Capitalize<|val: literal string|>
+function Capitalize<|val: ref string|>
 	return val:sub(1, 1):upper() .. val:sub(2)
 end
 
-function Uncapitalize<|val: literal string|>
+function Uncapitalize<|val: ref string|>
 	return val:sub(1, 1):lower() .. val:sub(2)
 end

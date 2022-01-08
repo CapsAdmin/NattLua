@@ -129,7 +129,7 @@ run([[
 ]])
 
 run[[
-    local function mutate_table(tbl: literal mutable {foo = number})
+    local function mutate_table(tbl: ref mutable {foo = number})
         if math.random() > 0.5 then
             tbl.foo = 2
             attest.equal<|typeof tbl.foo, 2|>
@@ -175,7 +175,7 @@ run[[
 
 
 run[[
-    local function foo(x: literal {value = string})
+    local function foo(x: ref {value = string})
         attest.equal<|typeof x.value, "test"|>
     end
 
@@ -227,11 +227,11 @@ run[[
 run[[
     local t = {lol = "lol"}
 
-    ;(function(val: literal {[string] = string})
+    ;(function(val: ref {[string] = string})
         val.foo = "foo"
-        ;(function(val: literal {[string] = string})
+        ;(function(val: ref {[string] = string})
             val.bar = "bar"
-            ;(function(val: literal {[string] = string})
+            ;(function(val: ref {[string] = string})
                 val.faz = "faz"
                 val.lol = "ROFL"
             end)(val)
@@ -269,7 +269,7 @@ run[[
     type META.@Self = {}
     type BaseType = META.@Self
     
-    function META.GetSet(tbl: literal any, name: literal string, default: literal any)
+    function META.GetSet(tbl: ref any, name: ref string, default: ref any)
         tbl[name] = default as NonLiteral<|default|>
     	type tbl.@Self[name] = tbl[name] 
         tbl["Set" .. name] = function(self: tbl.@Self, val: typeof tbl[name] )

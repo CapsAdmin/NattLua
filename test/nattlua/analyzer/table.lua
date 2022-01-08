@@ -504,7 +504,7 @@ run[[
 
 run[[
 
-    local function test(tbl: literal {
+    local function test(tbl: ref {
         Foo = boolean,
         Bar = number,
         [string] = any,

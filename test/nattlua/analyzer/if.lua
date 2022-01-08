@@ -1165,7 +1165,7 @@ run[[
 ]]
 
 run[[
-    local function test(x: literal any)
+    local function test(x: ref any)
         attest.equal(x, true)
         return true
     end

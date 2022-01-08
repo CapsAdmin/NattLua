@@ -228,7 +228,7 @@ run[[
 ]]
 
 run[[
-    local function codepoint_to_utf8(n: number): literal string
+    local function codepoint_to_utf8(n: number): ref string
         --§assert(analyzer:IsDefinetlyReachable())
         -- if called from parse_unicode_escape then it's not nessecearily reachable here
 
@@ -241,7 +241,7 @@ run[[
     end
     
     
-    local function parse_unicode_escape(s: string): literal string
+    local function parse_unicode_escape(s: string): ref string
         §assert(analyzer:IsDefinetlyReachable())
         local n1 = 1 as nil | number
         §assert(analyzer:IsDefinetlyReachable())

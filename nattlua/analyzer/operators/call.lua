@@ -346,7 +346,7 @@ return
 							
 							analyzer:CreateLocalValue(key, Any(), i)
 
-							if contracts:Get(i) and  contracts:Get(i).literal_argument and arguments:Get(i) then
+							if contracts:Get(i) and  contracts:Get(i).ref_argument and arguments:Get(i) then
 								analyzer:CreateLocalValue(key, arguments:Get(i), i)
 							end
 
@@ -359,9 +359,9 @@ return
 								args[i] = analyzer:AnalyzeExpression(key.type_expression):GetFirstValue()
 							end
 				
-							if contracts:Get(i) and  contracts:Get(i).literal_argument and arguments:Get(i) then
+							if contracts:Get(i) and  contracts:Get(i).ref_argument and arguments:Get(i) then
 								args[i] = arguments:Get(i)
-								args[i].literal_argument = true
+								args[i].ref_argument = true
 								local ok, err = args[i]:IsSubsetOf(contracts:Get(i))
 								if not ok then
 									return type_errors.other({"argument #", i, " ", arg, ": ", err})
@@ -379,7 +379,7 @@ return
 					do -- coerce untyped functions to constract callbacks
 						for i, arg in ipairs(arguments:GetData()) do
 							if arg.Type == "function" then
-								if contract_override[i] and contract_override[i].Type == "union" and not contract_override[i].literal_argument then
+								if contract_override[i] and contract_override[i].Type == "union" and not contract_override[i].ref_argument then
 									local merged = contract_override[i]:ShrinkToFunctionSignature()
 									if merged then
 										arg:SetArguments(merged:GetArguments())
@@ -388,7 +388,7 @@ return
 								else
 									if not arg.explicit_arguments then
 										local contract = contract_override[i] or obj:GetArguments():Get(i)
-										if contract and not contract.literal_argument then
+										if contract and not contract.ref_argument then
 											if contract.Type == "union" then
 												local tup = Tuple({})
 												for _, func in ipairs(contract:GetData()) do
@@ -402,7 +402,7 @@ return
 									end
 									if not arg.explicit_return then
 										local contract =  contract_override[i] or  obj:GetReturnTypes():Get(i)
-										if contract and not contract.literal_argument then
+										if contract and not contract.ref_argument then
 											if contract.Type == "union" then
 												local tup = Tuple({})
 												for _, func in ipairs(contract:GetData()) do
@@ -466,12 +466,12 @@ return
 							arg.Type == "table" and
 							contract.Type == "table" and
 							arg:GetUpvalue() and
-							not contract.literal_argument
+							not contract.ref_argument
 						then
 							mutate_type(analyzer, i, arg, contract, arguments)
 						else
 							-- if it's a literal argument we pass the incoming value
-							if not contract.literal_argument then
+							if not contract.ref_argument then
 								local t = contract:Copy()
 								t:SetContract(contract)
 								arguments:Set(i, t)
@@ -653,7 +653,7 @@ return
 					-- if a return type is marked with literal, it will pass the literal value back to the caller
 					-- a bit like generics
 					for i, v in ipairs(return_contract:GetData()) do
-						if v.literal_argument then
+						if v.ref_argument then
 							contract:Set(i, return_result:Get(i))
 						end
 					end

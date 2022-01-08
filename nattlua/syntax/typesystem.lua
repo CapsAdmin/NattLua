@@ -45,7 +45,7 @@ typesystem:AddKeywords{
 }
 
 -- these are keywords, but can be used as names
-typesystem:AddNonStandardKeywords{"continue", "import", "literal", "mutable",}
+typesystem:AddNonStandardKeywords{"continue", "import", "literal", "ref", "mutable",}
 typesystem:AddKeywordValues{"...", "nil", "true", "false",}
 typesystem:AddPrefixOperators{"-", "#", "not", "!", "~", "supertype"}
 typesystem:AddPostfixOperators{
@@ -92,6 +92,7 @@ typesystem:AddPrefixOperators{
 	"$",
 	"unique",
 	"mutable",
+	"ref",
 	"literal",
 	"supertype",
 	"expand",

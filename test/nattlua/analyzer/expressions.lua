@@ -59,7 +59,7 @@ run[[
 ]]
 
 run[[
-    local a = function(arg: literal any) 
+    local a = function(arg: ref any) 
         attest.equal(arg, 1)
         return 1337
     end

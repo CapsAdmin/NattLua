@@ -78,7 +78,7 @@ return
 						val:SetContract(val)
 					end
 
-					if not obj.argument_index or obj:GetContract().literal_argument then
+					if not obj.argument_index or obj:GetContract().ref_argument then
 						local o = self:GetMutatedValue(obj, key, val)
 						if o then
 							if not o:GetContract() then

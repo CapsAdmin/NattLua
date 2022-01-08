@@ -62,9 +62,9 @@ end
 
 do
     -- mutable: suppress warnings about mutating the argument within this function
-    -- literal: passes the literal type from caller to this function instead of making a copy
+    -- ref: passes the reference of the type from caller to this function instead of making a copy
 
-    local function AddFunction(META: mutable literal {
+    local function AddFunction(META: mutable ref {
         i = number,
         code = string,
         -- I want to express the ability to mutate this type within some constraint

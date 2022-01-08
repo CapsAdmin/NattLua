@@ -221,20 +221,20 @@ end
 
 type table.Count = function=(tbl: any)>(number)
 
-function string.Implode(seperator: literal string, Table: literal {[1 .. inf] = string})
+function string.Implode(seperator: ref string, Table: ref {[1 .. inf] = string})
 	return table.concat(Table, seperator)
 end
 
-function string.GetFileFromFilename(path: literal string)
+function string.GetFileFromFilename(path: ref string)
 	if (!path:find("\\") && !path:find("/")) then return path end
 	return path:match("[\\/]([^/\\]+)$") or ""
 end
 
-function string.GetPathFromFilename(path: literal string)
+function string.GetPathFromFilename(path: ref string)
 	return path:match("^(.*[/\\])[^/\\]-$") or ""
 end
 
-function string.ToTable(str: literal string)
+function string.ToTable(str: ref string)
 	local tbl = {}
 
 	for i = 1, string.len(str) do
@@ -244,7 +244,7 @@ function string.ToTable(str: literal string)
 	return tbl
 end
 
-function math.Clamp(low: literal number, n: literal number, high: literal number)
+function math.Clamp(low: ref number, n: ref number, high: ref number)
 	return math.min(math.max(n, low), high)
 end
 
@@ -254,7 +254,7 @@ do
 	local string_find = string.find
 	local string_len = string.len
 
-	function string.Explode(separator: literal string, str: literal string, withpattern: literal boolean | nil)
+	function string.Explode(separator: ref string, str: ref string, withpattern: ref boolean | nil)
 		if (separator == "") then return totable(str) end
 
 		if (withpattern == nil) then
@@ -275,7 +275,7 @@ do
 		return ret
 	end
 
-	function string.Split(str: literal string, delimiter: literal string)
+	function string.Split(str: ref string, delimiter: ref string)
 		return string.Explode(delimiter, str)
 	end
 end

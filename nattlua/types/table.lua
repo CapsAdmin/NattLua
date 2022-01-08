@@ -690,7 +690,7 @@ function META:IsTruthy()
 	return true
 end
 
-local function unpack_keyval(keyval--[[#: literal {key = any, val = any}]])
+local function unpack_keyval(keyval--[[#: ref {key = any, val = any}]])
 	local key, val = keyval.key, keyval.val
 	return key, val
 end
