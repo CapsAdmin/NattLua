@@ -3,7 +3,7 @@ return
 	{
 		AnalyzeIf = function(analyzer, statement)
 			local prev_expression
-
+			local last_upvalues
 			for i, statements in ipairs(statement.statements) do
 				if statement.expressions[i] then
 					local obj = analyzer:AnalyzeExpression(statement.expressions[i])
@@ -21,6 +21,8 @@ return
 						end
 					end
 					analyzer:ClearAffectedUpvalues()
+
+					last_upvalues = upvalues
 					prev_expression = obj
 
 					if obj:IsTruthy() then
@@ -39,7 +41,7 @@ return
 				else
 					if prev_expression:IsFalsy() then
 						analyzer:FireEvent("if", "else", true)
-							analyzer:PushConditionalScope(statement, prev_expression, upvalues)
+							analyzer:PushConditionalScope(statement, prev_expression, last_upvalues)
 							analyzer:GetScope():InvertIfStatement(true)
 							analyzer:AnalyzeStatements(statements)
 							analyzer:PopConditionalScope()
