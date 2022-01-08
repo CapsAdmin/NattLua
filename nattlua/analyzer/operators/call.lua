@@ -346,8 +346,11 @@ return
 							
 							analyzer:CreateLocalValue(key, Any(), i)
 
-							if contracts:Get(i) and  contracts:Get(i).ref_argument and arguments:Get(i) then
-								analyzer:CreateLocalValue(key, arguments:Get(i), i)
+							local arg =arguments:Get(i)
+							local contract = contracts:Get(i)
+
+							if contract and contract.ref_argument and arg then
+								analyzer:CreateLocalValue(key, arg, i)
 							end
 
 							if key.value.value == "..." then
@@ -359,15 +362,19 @@ return
 								args[i] = analyzer:AnalyzeExpression(key.type_expression):GetFirstValue()
 							end
 				
-							if contracts:Get(i) and  contracts:Get(i).ref_argument and arguments:Get(i) then
-								args[i] = arguments:Get(i)
+							if contract and contract.ref_argument and arg then
+								args[i] = arg
 								args[i].ref_argument = true
-								local ok, err = args[i]:IsSubsetOf(contracts:Get(i))
+								local ok, err = args[i]:IsSubsetOf(contract)
 								if not ok then
 									return type_errors.other({"argument #", i, " ", arg, ": ", err})
 								end
 							elseif args[i] then
 								analyzer:CreateLocalValue(key, args[i], i)
+							end
+
+							if contract and contract.literal_argument and arg and not arg:IsLiteral() then
+								return type_errors.other({"argument #", i, " ", arg, ": not literal"})
 							end
 						end
 						

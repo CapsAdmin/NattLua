@@ -784,3 +784,11 @@ run[[
     
     attest.equal<|foo, function=(number)>(number, string)|>
 ]]
+
+run([[
+    local function foo(s: ref literal string)
+        return s
+    end
+    
+    foo(_ as string)    
+]], "not literal")

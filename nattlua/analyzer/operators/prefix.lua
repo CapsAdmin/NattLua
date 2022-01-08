@@ -155,6 +155,9 @@ local function prefix_operator(analyzer, node, l)
 	elseif op == "ref" then
 		l.ref_argument = true
 		return l
+	elseif op == "literal" then
+		l.literal_argument = true
+		return l
 	end
 
 	error("unhandled prefix operator in " .. analyzer:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(l))
