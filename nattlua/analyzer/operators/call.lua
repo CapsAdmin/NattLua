@@ -373,8 +373,10 @@ return
 								analyzer:CreateLocalValue(key, args[i], i)
 							end
 
-							if contract and contract.literal_argument and arg and not arg:IsLiteral() then
-								return type_errors.other({"argument #", i, " ", arg, ": not literal"})
+							if not analyzer.processing_deferred_calls then
+								if contract and contract.literal_argument and arg and not arg:IsLiteral() then
+									return type_errors.other({"argument #", i, " ", arg, ": not literal"})
+								end
 							end
 						end
 						
