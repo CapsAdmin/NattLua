@@ -392,9 +392,13 @@ end
 	local table_remove = require("table").remove
 	local ipairs = _G.ipairs
 
+
+	
+	local IsTypeExpression
 	local ExpectTypeExpression
 	local ReadTypeExpression
 	
+	local IsRuntimeExpression
 	local ReadRuntimeExpression
 	local ExpectRuntimeExpression
 
@@ -454,7 +458,9 @@ end
 
 		if parser:IsValue(":") then
 			node.tokens[":"] = parser:ExpectValue(":")
+			parser:PushParserEnvironment("typesystem")
 			node.return_types = ReadMultipleValues(parser, nil, ReadTypeExpression)
+			parser:PopParserEnvironment("typesystem")
 		end
 
 		node.statements = parser:ReadNodes({["end"] = true})
@@ -486,7 +492,9 @@ end
 
 		if parser:IsValue(":") then
 			node.tokens[":"] = parser:ExpectValue(":")
+			parser:PushParserEnvironment("typesystem")
 			node.return_types = ReadMultipleValues(parser, math.huge, ExpectTypeExpression)
+			parser:PopParserEnvironment("typesystem")
 		end
 
 		node.environment = "typesystem"
@@ -545,7 +553,13 @@ end
 
 		if parser:IsValue(":") then
 			node.tokens[":"] = parser:ExpectValue(":")
+			parser:PushParserEnvironment("typesystem")
 			node.return_types = ReadMultipleValues(parser, math.huge, ReadTypeExpression)
+			parser:PopParserEnvironment("typesystem")
+
+			local start = parser:GetToken()
+			node.statements = parser:ReadNodes({["end"] = true})
+			node.tokens["end"] = parser:ExpectValue("end", start, start)
 		elseif not parser:IsValue(",") then
 			local start = parser:GetToken()
 			node.statements = parser:ReadNodes({["end"] = true})
@@ -922,14 +936,14 @@ end
 					node.right = ReadTypeExpression(parser, typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
 					parser:EndNode(node)
 				end
-			
+
 				return node
 			end
 
-			function ExpectTypeExpression(parser, priority)
+			function IsTypeExpression(parser)
 				local token = parser:GetToken()
 			
-				if
+				return not(
 					not token or
 					token.type == "end_of_file" or
 					token.value == "}" or
@@ -941,7 +955,13 @@ end
 						not typesystem_syntax:IsValue(token) and
 						token.value ~= "function"
 					)
-				then
+				)
+			end
+
+			function ExpectTypeExpression(parser, priority)
+				if not IsTypeExpression(parser) then
+					local token = parser:GetToken()
+
 					parser:Error(
 						"expected beginning of expression, got $1",
 						nil,
@@ -1292,9 +1312,10 @@ end
 				return node
 			end
 
-			function ExpectRuntimeExpression(parser, priority)
+			function IsRuntimeExpression(parser)
 				local token = parser:GetToken()
-				if
+
+				return not (
 					token.type == "end_of_file" or
 					token.value == "}" or
 					token.value == "," or
@@ -1305,7 +1326,13 @@ end
 						not runtime_syntax:IsValue(token) and
 						token.value ~= "function"
 					)
-				then
+				)
+			end
+
+			function ExpectRuntimeExpression(parser, priority)
+				if not IsRuntimeExpression(parser) then
+					local token = parser:GetToken()
+
 					parser:Error(
 						"expected beginning of expression, got $1",
 						nil,

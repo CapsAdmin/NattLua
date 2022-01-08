@@ -772,3 +772,15 @@ run[[
     local x: function=(Parameters<|func|>)>(nil)
     attest.equal(x, func)
 ]]
+
+run[[
+    local analyzer function foo(n: number): number, string
+        return types.LNumber(1337), types.LString("foo")
+    end
+    
+    local x,y = foo(1)
+    attest.equal(x, 1337)
+    attest.equal(y, "foo")
+    
+    attest.equal<|foo, function=(number)>(number, string)|>
+]]

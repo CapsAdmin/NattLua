@@ -1284,7 +1284,7 @@ do -- types
 
 		self:EmitToken(node.tokens["arguments)"])
 
-		if node.tokens[":"] then
+		if node.tokens[":"] and not self.config.analyzer_function then
 			self:EmitToken(node.tokens[":"])
 			self:Whitespace(" ")
 
@@ -1296,16 +1296,16 @@ do -- types
 					self:Whitespace(" ")
 				end
 			end
-		else
-			if node.statements then
-				self:Whitespace("\n")
-				self:EmitBlock(node.statements)
-				self:Whitespace("\n")
-				self:Whitespace("\t")
-				self:EmitToken(node.tokens["end"])
-			end
 		end
-	end
+
+		if node.statements then
+			self:Whitespace("\n")
+			self:EmitBlock(node.statements)
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+			self:EmitToken(node.tokens["end"])
+		end
+end
 
 	function META:EmitTypeExpression(node)
 		if node.tokens["("] then
