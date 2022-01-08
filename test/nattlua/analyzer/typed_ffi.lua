@@ -321,3 +321,29 @@ run[==[
 	attest.equal(ffi.C.FormatMessageA(0, nil, true, true, false, {}, "LOL"), _ as number)
 
 ]==]
+
+run[=[
+	local ffi = require("ffi")
+
+	ffi.cdef[[
+		struct sockaddr {
+			uint8_t sa_len;
+			uint8_t sa_family;
+			char sa_data[14];
+		};
+	
+		struct sockaddr_in {
+			uint8_t sin_len;
+			uint8_t sin_family;
+			uint16_t sin_port;
+			char sin_zero[8];
+		};
+	]]
+	
+	
+	local a = ffi.new("struct sockaddr_in")
+	local b = ffi.cast("struct sockaddr *", a)
+	attest.equal(b, ffi.typeof("struct sockaddr *"))
+	
+
+]=]
