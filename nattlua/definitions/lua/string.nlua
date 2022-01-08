@@ -46,7 +46,6 @@ analyzer function ^string.format(s: string, ...: ...any)
 		end
 	end
 
-	print(#ret, table.unpack(ret))
 	return string.format(s:GetData(), table.unpack(ret))
 end
 
