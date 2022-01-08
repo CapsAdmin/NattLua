@@ -175,7 +175,6 @@ return function(META)
 		end
 
 		function META:CompileLuaAnalyzerDebugCode(code, node)
-			local original_code = code
 			code = locals .. code
 
             -- append newlines so that potential line errors are correct
