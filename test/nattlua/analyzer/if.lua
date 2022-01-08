@@ -1453,3 +1453,23 @@ run[[
 
     attest.equal(i, _ as -1 | 0 | 1)
 ]]
+
+run[[
+    local ffi = require("ffi")
+
+    do
+        local C
+
+        -- make sure C is not C | nil because it's assigned to the same value in both branches
+
+        if ffi.os == "Windows" then
+            C = assert(ffi.load("ws2_32"))
+        else
+            C = ffi.C
+        end
+        
+        do 
+            attest.equal(C, _ as ffi.C)
+        end
+    end
+]]

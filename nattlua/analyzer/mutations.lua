@@ -238,6 +238,10 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 			union:Clear()
 		end
 
+		if union:Get(value) and mutations[1].value.Type ~= "union" and mutations[1].value.Type ~= "function" and value.Type ~= "any" then
+			union:RemoveType(mutations[1].value)
+		end
+
 		if _ == 1 and value.Type == "union" then
 			union = value:Copy()
 			union:SetUpvalue(obj)
@@ -270,7 +274,6 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 
 	if value.Type == "union" then
 		local found_scope, union = FindScopeFromTestCondition(scope, value)
-
 		if found_scope then
 			local current_scope = found_scope
 
@@ -280,7 +283,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 					return value
 				end
 			end
-
+			
 
 			local upvalue_map = found_scope:GetAffectedUpvaluesMap()
 
@@ -391,6 +394,14 @@ return function(META)
 		end
 
 		table.insert(obj.mutations[hash], {scope = scope, value = val})
+	end
+
+	function META:DumpUpvalueMutations(upvalue)
+		print(upvalue)
+		local hash = upvalue:GetKey()
+		for i,v in ipairs(upvalue.mutations[hash]) do
+			print(i, v.scope, v.value)
+		end
 	end
 
 	function META:GetMutatedUpvalue(upvalue)
