@@ -1493,3 +1493,25 @@ run[=[
         attest.equal(x, _ as function=(number)>(nil))
     end
 ]=]
+
+run[=[
+    local ffi = require("ffi")
+
+    if math.random() > 0.5 then
+        ffi.cdef[[
+            uint32_t FormatMessageA(
+                uint32_t dwFlags,
+            );
+        ]]
+        
+        do
+            if math.random() > 0.5 then
+                ffi.C.FormatMessageA(1)
+            end
+        end
+    
+        if math.random() > 0.5 then
+            ffi.C.FormatMessageA(1)
+        end
+    end
+]=]

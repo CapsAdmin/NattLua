@@ -382,6 +382,9 @@ do
 				end
 			end 
 			if scope.uncertain then
+				if scope:Contains(from) then
+					return false
+				end
 				return true, scope 
 			end
 			scope = scope.parent
