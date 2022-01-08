@@ -365,10 +365,6 @@ do
 		while true do
 			if scope == from then break end
 			if scope:IsFunctionScope() then 
-				if scope.uncertain_function_return == true then
-					return true
-				end
-
 				if 
 					scope.node and 
 					scope.node.inferred_type and 

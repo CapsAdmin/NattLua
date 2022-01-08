@@ -1473,3 +1473,23 @@ run[[
         end
     end
 ]]
+
+run[=[
+    local ffi = require("ffi")
+
+    local x: boolean
+    if x == true then
+        error("LOL")
+    end
+    
+    attest.equal(x, false)
+    
+    ffi.cdef[[
+        void strerror(int errnum);
+    ]]
+    
+    if ffi.os == "Windows" then
+        local x = ffi.C.strerror
+        attest.equal(x, _ as function=(number)>(nil))
+    end
+]=]
