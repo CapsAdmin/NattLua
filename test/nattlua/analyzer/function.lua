@@ -799,3 +799,23 @@ run[[
     end
     attest.equal(foo("hello"), "hello")
 ]]
+
+run[[
+    local function foo(x: any)
+        local y = {foo = 0}
+    
+        if type(x) == "string" then
+            y.foo = 1
+        elseif type(x) == "number" then
+            y.foo = 2
+        elseif type(x) ~= "table" then
+            y.foo = 3
+        end
+    
+        return y
+    end
+    
+    § analyzer:AnalyzeUnreachableCode()
+    
+    attest.equal(return_type<|foo|>, {foo = _ as 0 | 1 | 2 | 3})
+]]

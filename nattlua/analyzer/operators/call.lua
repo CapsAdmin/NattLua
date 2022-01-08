@@ -8,6 +8,7 @@ local print = print
 local string = require("string")
 local VarArg = require("nattlua.types.tuple").VarArg
 local Tuple = require("nattlua.types.tuple").Tuple
+local Table = require("nattlua.types.table").Table
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
@@ -639,7 +640,22 @@ return
 
 					if not return_contract then
 						-- if there is no return type 
-						obj:GetReturnTypes():Merge(return_result)
+						do
+							local copy
+							for i,v in ipairs(return_result:GetData()) do
+								if v.Type == "table" and not v:GetContract() then
+									copy = copy or return_result:Copy()
+									local tbl = Table()
+									for _, kv in ipairs(v:GetData()) do
+										tbl:Set(kv.key, analyzer:GetMutatedValue(v, kv.key, kv.val))
+									end
+									copy:Set(i, tbl)
+								end
+							end
+
+							obj:GetReturnTypes():Merge(copy or return_result)
+						end
+
 
 						return return_result
 					end		
