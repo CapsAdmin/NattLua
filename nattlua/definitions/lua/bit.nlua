@@ -16,7 +16,7 @@ type bit32 = {
 type bit = bit32
 
 do
-	analyzer function bit.bor(...: ...number)
+	analyzer function bit.bor(...: ...number): number
 		local out = {}
 
 		for i, num in ipairs({...}) do
@@ -27,7 +27,7 @@ do
 		return bit.bor(table.unpack(out))
 	end
 
-	analyzer function bit.band(...: ...number)
+	analyzer function bit.band(...: ...number): number
 		local out = {}
 
 		for i, num in ipairs({...}) do
@@ -38,7 +38,7 @@ do
 		return bit.band(table.unpack(out))
 	end
 
-	analyzer function bit.bxor(...: ...number)
+	analyzer function bit.bxor(...: ...number): number
 		local out = {}
 
 		for i, num in ipairs({...}) do
@@ -49,47 +49,47 @@ do
 		return bit.bxor(table.unpack(out))
 	end
 
-	analyzer function bit.tobit(n: number)
+	analyzer function bit.tobit(n: number): number
 		if n:IsLiteral() then return bit.tobit(n:GetData()) end
 		return types.Number()
 	end
 
-	analyzer function bit.bnot(n: number)
+	analyzer function bit.bnot(n: number): number
 		if n:IsLiteral() then return bit.bnot(n:GetData()) end
 		return types.Number()
 	end
 
-	analyzer function bit.bswap(n: number)
+	analyzer function bit.bswap(n: number): number
 		if n:IsLiteral() then return bit.bswap(n:GetData()) end
 		return types.Number()
 	end
 
-	analyzer function bit.tohex(x: number, n: number)
+	analyzer function bit.tohex(x: number, n: number): number
 		if x:IsLiteral() and n:IsLiteral() then return bit.tohex(x:GetData(), n:GetData()) end
 		return types.String()
 	end
 
-	analyzer function bit.lshift(x: number, n: number)
+	analyzer function bit.lshift(x: number, n: number): number
 		if x:IsLiteral() and n:IsLiteral() then return bit.lshift(x:GetData(), n:GetData()) end
 		return types.Number()
 	end
 
-	analyzer function bit.rshift(x: number, n: number)
+	analyzer function bit.rshift(x: number, n: number): number
 		if x:IsLiteral() and n:IsLiteral() then return bit.rshift(x:GetData(), n:GetData()) end
 		return types.Number()
 	end
 
-	analyzer function bit.arshift(x: number, n: number)
+	analyzer function bit.arshift(x: number, n: number): number
 		if x:IsLiteral() and n:IsLiteral() then return bit.arshift(x:GetData(), n:GetData()) end
 		return types.Number()
 	end
 
-	analyzer function bit.rol(x: number, n: number)
+	analyzer function bit.rol(x: number, n: number): number
 		if x:IsLiteral() and n:IsLiteral() then return bit.rol(x:GetData(), n:GetData()) end
 		return types.Number()
 	end
 
-	analyzer function bit.ror(x: number, n: number)
+	analyzer function bit.ror(x: number, n: number): number
 		if x:IsLiteral() and n:IsLiteral() then return bit.ror(x:GetData(), n:GetData()) end
 		return types.Number()
 	end

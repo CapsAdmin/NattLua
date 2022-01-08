@@ -7,7 +7,7 @@ type ffi = {
 		abi = function=(string)>(boolean),
 		metatype = function=(ctype, Table)>(cdata),
 		new = function=(string | ctype, number | nil, ...any)>(cdata),
-		copy = function=(cdata, cdata | nil, number | string | nil)>(nil),
+		copy = function=(any, any, number | nil)>(nil),
 		alignof = function=(ctype)>(number),
 		cast = function=(ctype | string, cdata | string | number)>(cdata),
 		typeof = function=(ctype, ...any)>(ctype),
