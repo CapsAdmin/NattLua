@@ -69,6 +69,7 @@ function META:__tostring()
 	end
 
 	if not s[1] then
+		self.suppress = false
 		return "|"
 	end
 
