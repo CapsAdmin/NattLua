@@ -1515,3 +1515,20 @@ run[=[
         end
     end
 ]=]
+
+run[[
+    local function foo(x: any)
+        if type(x) == "string" then
+            § SCOPE1 = analyzer:GetScope()
+            x = 1
+        elseif type(x) == "number" then
+            § assert(not analyzer:GetScope():IsCertain(SCOPE1))
+            x = 2
+        elseif type(x) == "table" then
+            § assert(not analyzer:GetScope():IsCertain(SCOPE1))
+            x = 3
+        end
+    
+        § SCOPE1 = nil
+    end
+]]

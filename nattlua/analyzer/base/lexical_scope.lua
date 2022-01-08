@@ -362,6 +362,9 @@ do
 		if not from then
 			return self.uncertain
 		end
+
+		if self:IsPartOfTestStatementAs(from) then return true end
+
 		while true do
 			if scope == from then break end
 			if scope:IsFunctionScope() then 
