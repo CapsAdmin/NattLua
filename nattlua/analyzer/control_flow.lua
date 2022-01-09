@@ -150,8 +150,19 @@ return function(META)
 
 	function META:Print(...)
 		local helpers = require("nattlua.other.helpers")
+		
 		local node = self.current_expression
 		local start, stop = helpers.LazyFindStartStop(node)
+
+		do
+			local node = self.current_statement
+			local start2, stop2 = helpers.LazyFindStartStop(node)
+			if start2 > start then
+				start = start2
+				stop = stop2
+			end
+		end
+
 		local str = {}
 		for i = 1, select("#", ...) do
 			str[i] = tostring(select(i, ...))
