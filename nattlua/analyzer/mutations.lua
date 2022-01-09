@@ -118,8 +118,8 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 		
 		for i = #mutations, 1, -1 do
 			local mut = mutations[i]
-
-			if scope:IsPartOfTestStatementAs(mut.scope) and scope ~= mut.scope then
+			
+			if (scope:IsPartOfTestStatementAs(mut.scope) or (analyzer.current_if_statement and mut.scope.statement == analyzer.current_if_statement)) and scope ~= mut.scope then
 				if DEBUG then
 					dprint(mut, "not inside the same if statement")
 				end
@@ -232,16 +232,16 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 				end
 			end
 		end
-
+	
 		-- IsCertain isn't really accurate and seems to be used as a last resort in case the above logic doesn't work
 		if mut.certain_override or mut.scope:IsCertain(scope) then
 			union:Clear()
 		end
 
-		if union:Get(value) and mutations[1].value.Type ~= "union" and mutations[1].value.Type ~= "function" and value.Type ~= "any" then
+		if union:Get(value) and value.Type ~= "any" and mutations[1].value.Type ~= "union" and mutations[1].value.Type ~= "function" and mutations[1].value.Type ~= "any" then
 			union:RemoveType(mutations[1].value)
 		end
-
+		
 		if _ == 1 and value.Type == "union" then
 			union = value:Copy()
 			union:SetUpvalue(obj)

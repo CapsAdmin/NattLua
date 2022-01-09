@@ -6,7 +6,10 @@ return
 			local last_upvalues
 			for i, statements in ipairs(statement.statements) do
 				if statement.expressions[i] then
+					analyzer.current_if_statement = statement
 					local obj = analyzer:AnalyzeExpression(statement.expressions[i])
+					analyzer.current_if_statement = nil
+
 					local upvalues = {}
 					local objects = {}
 					if analyzer.affected_upvalues then

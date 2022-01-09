@@ -1532,3 +1532,17 @@ run[[
         § SCOPE1 = nil
     end
 ]]
+
+run[[
+    local val: any
+
+    if type(val) == "boolean" then
+        val = ffi.new("int[1]", val and 1 or 0)
+    elseif type(val) == "number" then
+        val = ffi.new("int[1]", val)
+    elseif type(val) ~= "cdata" then
+        error("uh oh")
+    end
+    
+    attest.equal(val, _ as any | {[number] = number})
+]]
