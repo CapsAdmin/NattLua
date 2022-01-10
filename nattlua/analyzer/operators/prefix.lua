@@ -19,69 +19,71 @@ local function metatable_function(self, meta_method, l)
 	end
 end
 
-local function prefix_operator(analyzer, node, l)
+local function Prefix(analyzer, node, r)
 	local op = node.value.value
 
+	if not r then
+		r = analyzer:AnalyzeExpression(node.right)	
+	end
+
 	if op == "literal" then
-		l = analyzer:AnalyzeExpression(node.right)
-		l.literal_argument = true
-		return l
+		r.literal_argument = true
+		return r
 	end
 
 	if op == "ref" then
-		l = analyzer:AnalyzeExpression(node.right)
-		l.ref_argument = true
-		return l
+		r.ref_argument = true
+		return r
 	end
 
-	if l.Type == "tuple" then
-		l = l:Get(1) or Nil()
+	if r.Type == "tuple" then
+		r = r:Get(1) or Nil()
 	end
 
-	if l.Type == "union" then
+	if r.Type == "union" then
 		local new_union = Union()
 		local truthy_union = Union()
 		local falsy_union = Union()
 
-		for _, l in ipairs(l:GetData()) do
-			local res, err = prefix_operator(analyzer, node, l)
+		for _, r in ipairs(r:GetData()) do
+			local res, err = Prefix(analyzer, node, r)
 
 			if not res then
-				analyzer:ErrorAndCloneCurrentScope(node, err, l)
-				falsy_union:AddType(l)
+				analyzer:ErrorAndCloneCurrentScope(node, err, r)
+				falsy_union:AddType(r)
 			else
 				new_union:AddType(res)
 
 				if res:IsTruthy() then
-					truthy_union:AddType(l)
+					truthy_union:AddType(r)
 				end
 
 				if res:IsFalsy() then
-					falsy_union:AddType(l)
+					falsy_union:AddType(r)
 				end
 			end
 		end
 
 
-		local l_upvalue = l:GetUpvalue()
+		local r_upvalue = r:GetUpvalue()
 
-		if l_upvalue then
-			l_upvalue.exp_stack = l_upvalue.exp_stack or {}
-			table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+		if r_upvalue then
+			r_upvalue.exp_stack = r_upvalue.exp_stack or {}
+			table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
 
 			analyzer.affected_upvalues = analyzer.affected_upvalues or {}
-			table.insert(analyzer.affected_upvalues, l_upvalue)
+			table.insert(analyzer.affected_upvalues, r_upvalue)
 		end
 
-		truthy_union:SetUpvalue(l:GetUpvalue())
-		falsy_union:SetUpvalue(l:GetUpvalue())
+		truthy_union:SetUpvalue(r:GetUpvalue())
+		falsy_union:SetUpvalue(r:GetUpvalue())
 		new_union:SetTruthyUnion(truthy_union)
 		new_union:SetFalsyUnion(falsy_union)
 
-		return new_union:SetNode(node):SetTypeSource(l)
+		return new_union:SetNode(node):SetTypeSource(r)
 	end
 
-	if l.Type == "any" then
+	if r.Type == "any" then
 		return Any():SetNode(node)
 	end
 
@@ -95,34 +97,30 @@ local function prefix_operator(analyzer, node, l)
 			) end
 			return obj:GetContract() or obj
 		elseif op == "unique" then
-			local obj = analyzer:AnalyzeExpression(node.right)
-			obj:MakeUnique(true)
-			return obj
+			r:MakeUnique(true)
+			return r
 		elseif op == "mutable" then
-			local obj = analyzer:AnalyzeExpression(node.right)
-			obj.mutable = true
-			return obj
+			r.mutable = true
+			return r
 		elseif op == "expand" then
-			local obj = analyzer:AnalyzeExpression(node.right)
-			obj.expand = true
-			return obj
+			r.expand = true
+			return r
 		elseif op == "$" then
-			local obj = analyzer:AnalyzeExpression(node.right)
-			if obj.Type ~= "string" then return type_errors.other("must evaluate to a string") end
-			if not obj:IsLiteral() then return type_errors.other("must be a literal") end
-			obj:SetPatternContract(obj:GetData())
-			return obj
+			if r.Type ~= "string" then return type_errors.other("must evaluate to a string") end
+			if not r:IsLiteral() then return type_errors.other("must be a literal") end
+			r:SetPatternContract(r:GetData())
+			return r
 		end
 	end
 
 	if op == "-" then
-		local res = metatable_function(analyzer, "__unm", l)
+		local res = metatable_function(analyzer, "__unm", r)
 		if res then return res end
 	elseif op == "~" then
-		local res = metatable_function(analyzer, "__bxor", l)
+		local res = metatable_function(analyzer, "__bxor", r)
 		if res then return res end
 	elseif op == "#" then
-		local res = metatable_function(analyzer, "__len", l)
+		local res = metatable_function(analyzer, "__len", r)
 		if res then return res end
 	end
 
@@ -131,32 +129,32 @@ local function prefix_operator(analyzer, node, l)
 		local falsy
 		local union
 
-		if l:IsTruthy() and l:IsFalsy() then 
-			union = Boolean():SetNode(node):SetTypeSource(l) 
-		elseif l:IsTruthy() then 
-			truthy = False():SetNode(node):SetTypeSource(l) 
-		elseif l:IsFalsy() then 
-			falsy = True():SetNode(node):SetTypeSource(l) 
+		if r:IsTruthy() and r:IsFalsy() then 
+			union = Boolean():SetNode(node):SetTypeSource(r) 
+		elseif r:IsTruthy() then 
+			truthy = False():SetNode(node):SetTypeSource(r) 
+		elseif r:IsFalsy() then 
+			falsy = True():SetNode(node):SetTypeSource(r) 
 		end
 
-		local l_upvalue = l:GetUpvalue()
+		local r_upvalue = r:GetUpvalue()
 
-		if l_upvalue then
-			l_upvalue.exp_stack = l_upvalue.exp_stack or {}
-			table.insert(l_upvalue.exp_stack, {truthy = truthy or union, falsy = falsy or union})
+		if r_upvalue then
+			r_upvalue.exp_stack = r_upvalue.exp_stack or {}
+			table.insert(r_upvalue.exp_stack, {truthy = truthy or union, falsy = falsy or union})
 
 			analyzer.affected_upvalues = analyzer.affected_upvalues or {}
-			table.insert(analyzer.affected_upvalues, l_upvalue)
+			table.insert(analyzer.affected_upvalues, r_upvalue)
 		end
 
 		return union or truthy or falsy
 	end
 
 	if op == "-" or op == "~" or op == "#" then
-		return l:PrefixOperator(op)
+		return r:PrefixOperator(op)
 	end
 
-	error("unhandled prefix operator in " .. analyzer:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(l))
+	error("unhandled prefix operator in " .. analyzer:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(r))
 end
 
-return {Prefix = prefix_operator}
+return {Prefix = Prefix}
