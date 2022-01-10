@@ -47,7 +47,7 @@ function META:GetHash()
 	if self:IsLiteral() then
 		return self.Data
 	end
-	return nil
+	return self.Type
 end
 
 function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])

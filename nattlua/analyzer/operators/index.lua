@@ -60,25 +60,31 @@ return
 					end
 				end
 
-				if obj:GetContract() then
-					local val, err = obj:GetContract():Get(key)
+
+				if self:IsRuntime() then
+					if obj.Type == "tuple" and obj:GetLength() == 1 then
+						obj = obj:Get(1)
+					end
+				end
+
+				if self:IsTypesystem() then
+					return obj:Get(key)
+				end
+
+				if obj.exp_stack then
+					if self:IsTruthyExpressionContext() then
+						return obj.exp_stack[#obj.exp_stack].truthy
+					elseif self:IsFalsyExpressionContext() then
+						return obj.exp_stack[#obj.exp_stack].falsy
+					end
+				end
+
+				local contract = obj:GetContract()
+				if contract then
+					local val, err = contract:Get(key)
 					if not val then return val, err end
-					
-					if obj.exp_stack then
-						if self:IsTruthyExpressionContext() then
-							return obj.exp_stack[#obj.exp_stack].truthy
-						elseif self:IsFalsyExpressionContext() then
-							return obj.exp_stack[#obj.exp_stack].falsy
-						end
-					end
 
-					val = val:Copy()
-					
-					if not val:GetContract() then
-						val:SetContract(val)
-					end
-
-					if not obj.argument_index or obj:GetContract().ref_argument then
+					if not obj.argument_index or contract.ref_argument then
 						local o = self:GetMutatedValue(obj, key, val)
 						if o then
 							if not o:GetContract() then
@@ -92,21 +98,12 @@ return
 					return val, err
 				end
 
-				if self:IsTypesystem() then
-					return obj:Get(key)
-				end
-
-				if self:IsRuntime() then
-					if obj.Type == "tuple" and obj:GetLength() == 1 then
-						obj = obj:Get(1)
-					end
-				end
-
 				local val = self:GetMutatedValue(obj, key, obj:Get(key))
 
 				if val and val.Type == "union" then
 					if self:IsTruthyExpressionContext() or self:IsFalsyExpressionContext() then
-						local hash = key:GetHash() or tostring(key)
+						local hash = key:GetHash()
+						
 						if hash then
 							obj.exp_stack_map = obj.exp_stack_map or {}
 							obj.exp_stack_map[hash] = obj.exp_stack_map[hash] or {}
