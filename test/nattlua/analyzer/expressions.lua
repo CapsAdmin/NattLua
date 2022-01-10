@@ -143,3 +143,12 @@ run[[
 
     attest.equal(a, _ as 1 | nil)
 ]]
+
+run[[
+    local x: 1 | 2 | 3
+    if x == 1 or x == 2 then
+        attest.equal(x, _ as 1 | 2)
+    else
+        attest.equal(x, _ as 3)
+    end
+]]

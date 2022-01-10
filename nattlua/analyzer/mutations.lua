@@ -294,13 +294,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
 			then
 				if upvalue_map and upvalue_map[obj] then
-					local union = Union()
-
-					for _, val in ipairs(upvalue_map[obj]) do						
-						union:AddType(val.falsy)
-					end
-
-					return union
+					return upvalue_map[obj][#upvalue_map[obj]].falsy
 				end
 
 				return union:GetFalsyUnion() or value:GetFalsy()
