@@ -180,8 +180,8 @@ local function Binary(analyzer, node, l, r, op)
 
 		if l.Type == "union" and r.Type == "union" then
 			local new_union = Union()
-			local truthy_union = Union()
-			local falsy_union = Union()
+			local truthy_union = Union():SetUpvalue(l:GetUpvalue())
+			local falsy_union = Union():SetUpvalue(l:GetUpvalue())
 			local condition = l
 			
 			for _, l in ipairs(l:GetData()) do
@@ -259,10 +259,9 @@ local function Binary(analyzer, node, l, r, op)
 				new_union.inverted = true
 			end
 
-			truthy_union:SetUpvalue(condition:GetUpvalue())
-			falsy_union:SetUpvalue(condition:GetUpvalue())
 			new_union:SetTruthyUnion(truthy_union)
 			new_union:SetFalsyUnion(falsy_union)
+			
 			return
 				new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end

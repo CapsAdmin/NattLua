@@ -42,8 +42,8 @@ local function Prefix(analyzer, node, r)
 
 	if r.Type == "union" then
 		local new_union = Union()
-		local truthy_union = Union()
-		local falsy_union = Union()
+		local truthy_union = Union():SetUpvalue(r:GetUpvalue())
+		local falsy_union = Union():SetUpvalue(r:GetUpvalue())
 
 		for _, r in ipairs(r:GetData()) do
 			local res, err = Prefix(analyzer, node, r)
@@ -74,8 +74,6 @@ local function Prefix(analyzer, node, r)
 			table.insert(analyzer.affected_upvalues, r_upvalue)
 		end
 
-		truthy_union:SetUpvalue(r:GetUpvalue())
-		falsy_union:SetUpvalue(r:GetUpvalue())
 		new_union:SetTruthyUnion(truthy_union)
 		new_union:SetFalsyUnion(falsy_union)
 
@@ -124,19 +122,13 @@ local function Prefix(analyzer, node, r)
 	end
 
 	if op == "not" or op == "!" then
-		local truthy
-		local falsy
-		local union
-
 		if r:IsTruthy() and r:IsFalsy() then 
-			union = Boolean():SetNode(node):SetTypeSource(r) 
+			return Boolean():SetNode(node):SetTypeSource(r) 
 		elseif r:IsTruthy() then 
-			truthy = False():SetNode(node):SetTypeSource(r) 
+			return False():SetNode(node):SetTypeSource(r) 
 		elseif r:IsFalsy() then 
-			falsy = True():SetNode(node):SetTypeSource(r) 
+			return True():SetNode(node):SetTypeSource(r) 
 		end
-
-		return union or truthy or falsy
 	end
 
 	if op == "-" or op == "~" or op == "#" then

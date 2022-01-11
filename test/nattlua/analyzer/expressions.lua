@@ -20,6 +20,11 @@ run[[
 ]]
 
 run[[
+    local x = _ as false | 1
+    local y = not x and attest.equal(x, false) or attest.equal(x, 1)
+]]
+
+run[[
     local x = _ as 1 | 2
     local y = x == 1 and attest.equal(x, 1) or attest.equal(x, 2)
     attest.equal(x, _ as 1 | 2)

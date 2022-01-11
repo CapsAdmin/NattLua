@@ -11,6 +11,7 @@ return
 					local obj = analyzer:AnalyzeExpression(exp)
 
 					if exp.kind ~= "binary_operator" and exp.kind ~= "prefix_operator" then
+						-- track "if x then" which has no binary or prefix operators
 						local l = obj
 						if l.Type == "union" then
 							local upvalue = l:GetUpvalue()
@@ -26,8 +27,6 @@ return
 								table.insert(analyzer.affected_upvalues, upvalue)
 							end		
 						end
-		
-						
 					end
 
 					analyzer.current_if_statement = nil
