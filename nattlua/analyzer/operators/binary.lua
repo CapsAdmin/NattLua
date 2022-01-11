@@ -183,7 +183,7 @@ local function Binary(analyzer, node, l, r, op)
 			local truthy_union = Union()
 			local falsy_union = Union()
 			local condition = l
-
+			
 			for _, l in ipairs(l:GetData()) do
 				for _, r in ipairs(r:GetData()) do
 					local res, err = Binary(
@@ -237,7 +237,7 @@ local function Binary(analyzer, node, l, r, op)
 
 				if l_upvalue then
 					l_upvalue.exp_stack = l_upvalue.exp_stack or {}
-					table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+					table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union, inverted = op == "~="})
 
 					analyzer.affected_upvalues = analyzer.affected_upvalues or {}
 					table.insert(analyzer.affected_upvalues, l_upvalue)
@@ -247,7 +247,8 @@ local function Binary(analyzer, node, l, r, op)
 
 				if r_upvalue then
 					r_upvalue.exp_stack = r_upvalue.exp_stack or {}
-					table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+					
+					table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union, inverted = op == "~="})
 					
 					analyzer.affected_upvalues = analyzer.affected_upvalues or {}
 					table.insert(analyzer.affected_upvalues, r_upvalue)

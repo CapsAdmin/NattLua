@@ -64,7 +64,6 @@ local function Prefix(analyzer, node, r)
 			end
 		end
 
-
 		local r_upvalue = r:GetUpvalue()
 
 		if r_upvalue then
@@ -135,16 +134,6 @@ local function Prefix(analyzer, node, r)
 			truthy = False():SetNode(node):SetTypeSource(r) 
 		elseif r:IsFalsy() then 
 			falsy = True():SetNode(node):SetTypeSource(r) 
-		end
-
-		local r_upvalue = r:GetUpvalue()
-
-		if r_upvalue then
-			r_upvalue.exp_stack = r_upvalue.exp_stack or {}
-			table.insert(r_upvalue.exp_stack, {truthy = truthy or union, falsy = falsy or union})
-
-			analyzer.affected_upvalues = analyzer.affected_upvalues or {}
-			table.insert(analyzer.affected_upvalues, r_upvalue)
 		end
 
 		return union or truthy or falsy

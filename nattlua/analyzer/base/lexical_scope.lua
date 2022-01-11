@@ -305,33 +305,27 @@ do
 	function META:UncertainReturn(analyzer)
 
 		self:GetNearestFunctionScope().uncertain_function_return = true
-		-- upvalue responsible for test condition
-		local test_condition = self:GetTestCondition()
 
-		if test_condition then
-			local source = test_condition:GetTypeSourceLeft() or
-				test_condition:GetTypeSource() or
-				test_condition
+		local upvalue_map = self:GetAffectedUpvaluesMap()
 
-			if source and test_condition.Type == "union" then
-				local upvalue = source:GetUpvalue()
+		-- the or part here refers to if *condition* then
+		-- truthy/falsy _union is only created from binary operators and some others
+		if not upvalue_map then return end
+		for upvalue, stack in pairs(upvalue_map) do
+			if upvalue.Type == "upvalue" then
+				local val
+				if self:IsPartOfElseStatement() or stack[#stack].inverted then
+					val = stack[#stack].truthy
+				else	
+					val = stack[#stack].falsy
+				end
 
-				if upvalue and upvalue.Type == "upvalue" then
-					if test_condition.inverted then
-						analyzer:MutateUpvalue(
-							upvalue,
-							test_condition:GetTruthyUnion() or
-							test_condition:GetTruthy(),
-							self:GetParent()
-						)
-					else
-						analyzer:MutateUpvalue(
-							upvalue,
-							test_condition:GetFalsyUnion() or
-							test_condition:GetFalsy(),
-							self:GetParent()
-						)
-					end
+				if val and (val.Type ~= "union" or not val:IsEmpty()) then
+					analyzer:MutateUpvalue(
+						upvalue,
+						val,
+						self:GetParent()
+					)
 				end
 			end
 		end

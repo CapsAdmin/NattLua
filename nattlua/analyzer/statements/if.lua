@@ -7,7 +7,29 @@ return
 			for i, statements in ipairs(statement.statements) do
 				if statement.expressions[i] then
 					analyzer.current_if_statement = statement
-					local obj = analyzer:AnalyzeExpression(statement.expressions[i])
+					local exp = statement.expressions[i]				
+					local obj = analyzer:AnalyzeExpression(exp)
+
+					if exp.kind ~= "binary_operator" and exp.kind ~= "prefix_operator" then
+						local l = obj
+						if l.Type == "union" then
+							local upvalue = l:GetUpvalue()
+					
+							if upvalue then
+								local truthy_union = l:GetTruthy()
+								local falsy_union = l:GetFalsy()
+		
+								upvalue.exp_stack = upvalue.exp_stack or {}
+								table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+			
+								analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+								table.insert(analyzer.affected_upvalues, upvalue)
+							end		
+						end
+		
+						
+					end
+
 					analyzer.current_if_statement = nil
 
 					local upvalues = {}

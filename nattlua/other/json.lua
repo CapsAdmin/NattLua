@@ -265,7 +265,7 @@ local function parse_string(str--[[#: string]], i--[[#: number]])--[[#: string, 
 end
 
 
-local function parse_number(str--[[#: string]], i--[[#: number]])--[[#: number, number]]
+local function parse_number(str--[[#: string]], i--[[#: number]])--[[#: (number, number)]]
 	local x = next_char(str, i, delim_chars)
 	local s = str:sub(i, x - 1)
 	local n = tonumber(s)
@@ -276,7 +276,7 @@ local function parse_number(str--[[#: string]], i--[[#: number]])--[[#: number, 
 end
 
 
-local function parse_literal(str--[[#: string]], i--[[#: number]])--[[#: boolean | nil, number]]
+local function parse_literal(str--[[#: string]], i--[[#: number]])--[[#: (boolean | nil, number)]]
 	local x = next_char(str, i, delim_chars)
 	local word = str:sub(i, x - 1)
 	if not literals[word] then
