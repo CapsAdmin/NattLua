@@ -187,6 +187,8 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 		end
 	end
 
+
+
 	local union = Union({})
 	union:SetUpvalue(obj)
 
@@ -200,33 +202,21 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 		local value = mut.value
 
 		do
-			local scope, scope_union = FindScopeFromTestCondition(mut.scope, value)
+			local upvalue_map = mut.scope:GetAffectedUpvaluesMap()
 
-			if scope and mut.scope == scope then
-				local test_scope = scope:FindFirstTestScope()
-
-				if test_scope then
-					local test = test_scope:GetTestCondition()
-
-					if test.Type == "union" then
-						local t
-
-						if scope_union.Type == "union" then
-							if test_scope:IsPartOfElseStatement() then
-								t = scope_union:GetFalsyUnion()
-							else
-								t = scope_union:GetTruthyUnion()
-							end
-						else
-							if test_scope:IsPartOfElseStatement() then
-								t = test:GetFalsy()
-							else
-								t = test:GetTruthy()
-							end
+			if upvalue_map then
+				for upvalue, stack in pairs(upvalue_map) do
+					if upvalue.Type == "upvalue" then
+						local val
+						
+						if mut.scope:IsPartOfElseStatement() or stack[#stack].inverted then
+							val = stack[#stack].falsy
+						else	
+							val = stack[#stack].truthy
 						end
-
-						if t then
-							union:RemoveType(t)
+		
+						if val and (val.Type ~= "union" or not val:IsEmpty()) then
+							union:RemoveType(val)
 						end
 					end
 				end

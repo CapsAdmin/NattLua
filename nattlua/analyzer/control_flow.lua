@@ -86,6 +86,14 @@ return function(META)
 
 			local copy = self:CloneCurrentScope()
 			copy:SetTestCondition(obj)
+
+			local upvalues = {}
+			if analyzer.affected_upvalues then
+				for _, upvalue in ipairs(analyzer.affected_upvalues) do
+					upvalues[upvalue] = upvalue.exp_stack
+				end
+			end
+			copy:SetAffectedUpvaluesMap(upvalues)
 		else
 			self.lua_error_thrown = msg
 		end
