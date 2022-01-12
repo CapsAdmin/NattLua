@@ -480,6 +480,7 @@ return function(META)
 			end
 
 			function META:TrackObjectWithKey(obj, key, val)
+				if self:IsTypesystem() then return end
 				if not val or val.Type ~= "union" then return end
 				if not self:IsTruthyExpressionContext() and not self:IsFalsyExpressionContext() then return end
 				local hash = key:GetHash()
@@ -494,6 +495,7 @@ return function(META)
 			end
 
 			function META:TrackObject(obj, truthy_union, falsy_union, inverted)
+				if self:IsTypesystem() then return end
 				if obj.Type ~= "union" then return end
 				local upvalue = obj:GetUpvalue()
 
@@ -544,6 +546,7 @@ return function(META)
 			end
 
 			function META:GetTrackedUpvalue(obj)
+				if self:IsTypesystem() then return end
 				local upvalue = obj:GetUpvalue()
 
 				if upvalue and upvalue.exp_stack then
@@ -557,6 +560,8 @@ return function(META)
 			end
 
 			function META:GetTrackedObject(obj)
+				if self:IsTypesystem() then return end
+
 				if not obj.exp_stack then return end
 				if self:IsTruthyExpressionContext() then
 					return obj.exp_stack[#obj.exp_stack].truthy
