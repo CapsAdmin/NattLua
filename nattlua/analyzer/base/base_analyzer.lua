@@ -480,66 +480,63 @@ return function(META)
 			end
 
 			function META:TrackObjectWithKey(obj, key, val)
-				if val and val.Type == "union" then
-					if self:IsTruthyExpressionContext() or self:IsFalsyExpressionContext() then
-						local hash = key:GetHash()
-						if hash then
-							obj.exp_stack_map = obj.exp_stack_map or {}
-							obj.exp_stack_map[hash] = obj.exp_stack_map[hash] or {}
-							table.insert(obj.exp_stack_map[hash], {key = key, truthy = val:GetTruthy(), falsy = val:GetFalsy()})
-		
-							self.affected_upvalues = self.affected_upvalues or {}
-							table.insert(self.affected_upvalues, obj)
-						end
-					end
-				end
+				if not val or val.Type ~= "union" then return end
+				if not self:IsTruthyExpressionContext() and not self:IsFalsyExpressionContext() then return end
+				local hash = key:GetHash()
+				if not hash then return end
+
+				obj.exp_stack_map = obj.exp_stack_map or {}
+				obj.exp_stack_map[hash] = obj.exp_stack_map[hash] or {}
+				table.insert(obj.exp_stack_map[hash], {key = key, truthy = val:GetTruthy(), falsy = val:GetFalsy()})
+
+				self.affected_upvalues = self.affected_upvalues or {}
+				table.insert(self.affected_upvalues, obj)
 			end
 
 			function META:TrackObject(obj, truthy_union, falsy_union, inverted)
-				if obj.Type == "union" then
-					local upvalue = obj:GetUpvalue()
+				if obj.Type ~= "union" then return end
+				local upvalue = obj:GetUpvalue()
 
-					if upvalue then
-						truthy_union = truthy_union or obj:GetTruthy()
-						falsy_union = falsy_union or obj:GetFalsy()
+				if not upvalue then return end
+				
+				truthy_union = truthy_union or obj:GetTruthy()
+				falsy_union = falsy_union or obj:GetFalsy()
 
-						upvalue.exp_stack = upvalue.exp_stack or {}
-						table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union, inverted = inverted})
-	
-						self.affected_upvalues = self.affected_upvalues or {}
-						table.insert(self.affected_upvalues, upvalue)
-					end
-				end
+				upvalue.exp_stack = upvalue.exp_stack or {}
+				table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union, inverted = inverted})
+
+				self.affected_upvalues = self.affected_upvalues or {}
+				table.insert(self.affected_upvalues, upvalue)
 			end
 
 			function META:GetTrackedObjectMap(old_upvalues)
 				local upvalues = {}
 				local objects = {}
-				if self.affected_upvalues then
+				if not self.affected_upvalues then return end
 
-					local translate = {}
+				local translate = {}
+				if old_upvalues then
+					for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
+						local old = old_upvalues[i]
+						translate[old] = upvalue
+						upvalue.exp_stack = old.exp_stack
+						upvalue.exp_stack_map = old.exp_stack_map
+					end
+				end
+	
+
+				for _, upvalue in ipairs(self.affected_upvalues) do
+
 					if old_upvalues then
-						for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
-							local old = old_upvalues[i]
-							translate[old] = upvalue
-							upvalue.exp_stack = old.exp_stack
-							upvalue.exp_stack_map = old.exp_stack_map
-						end
+						upvalue = translate[upvalue]
 					end
 
-					for _, upvalue in ipairs(self.affected_upvalues) do
-
-						if old_upvalues then
-							upvalue = translate[upvalue]
+					if upvalue.exp_stack_map then
+						for k,v in pairs(upvalue.exp_stack_map) do
+							table.insert(objects, {obj = upvalue, key = v[#v].key, val = v[#v].truthy})
 						end
-
-						if upvalue.exp_stack_map then
-							for k,v in pairs(upvalue.exp_stack_map) do
-								table.insert(objects, {obj = upvalue, key = v[#v].key, val = v[#v].truthy})
-							end
-						else
-							upvalues[upvalue] = upvalue.exp_stack
-						end
+					else
+						upvalues[upvalue] = upvalue.exp_stack
 					end
 				end
 

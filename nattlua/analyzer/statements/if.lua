@@ -38,8 +38,10 @@ return
 						self:FireEvent("if", i == 1 and "if" or "elseif", true)
 							self:PushConditionalScope(statement, obj, upvalues)
 
-							for _, v in ipairs(objects) do
-								self:MutateValue(v.obj, v.key, v.val)
+							if objects then
+								for _, v in ipairs(objects) do
+									self:MutateValue(v.obj, v.key, v.val)
+								end
 							end
 
 							self:AnalyzeStatements(statements)

@@ -97,12 +97,13 @@ return function(META)
 			copy:SetTestCondition(obj)
 			local upvalues, objects = self:GetTrackedObjectMap(old)
 			
-			copy:SetAffectedUpvaluesMap(upvalues)
+			if upvalues and objects then
+				copy:SetAffectedUpvaluesMap(upvalues)
 
-			for _, v in ipairs(objects) do
-				self:MutateValue(v.obj, v.key, v.val)
+				for _, v in ipairs(objects) do
+					self:MutateValue(v.obj, v.key, v.val)
+				end
 			end
-
 		else
 			self.lua_error_thrown = msg
 		end
