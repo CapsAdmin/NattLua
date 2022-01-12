@@ -18,8 +18,8 @@ type string = {
 		pack = function=(fmt: string, ...any)>(string),
 	}
 
-analyzer function ^string.rep(self: string, n: number)
-	if self:IsLiteral() and n:IsLiteral() then return types.LString(string.rep(self:GetData(), n:GetData())) end
+analyzer function ^string.rep(str: string, n: number)
+	if str:IsLiteral() and n:IsLiteral() then return types.LString(string.rep(str:GetData(), n:GetData())) end
 	return types.String()
 end
 

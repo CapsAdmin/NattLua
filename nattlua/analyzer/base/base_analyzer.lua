@@ -178,7 +178,6 @@ return function(META)
 		local runtime_injection = [[
 			local analyzer = context:GetCurrentAnalyzer()
 			local env = analyzer:GetScopeHelper(analyzer.function_scope)
-			local self = self or analyzer
 		]]
 
 		runtime_injection = runtime_injection:gsub("\n", ";")
