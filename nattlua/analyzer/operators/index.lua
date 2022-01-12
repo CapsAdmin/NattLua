@@ -88,7 +88,7 @@ return
 								o:SetContract(o)
 							end
 
-							self:TrackObjectWithKey(obj, key, o)
+							self:TrackTableIndex(obj, key, o)
 
 							return o
 						end
@@ -99,7 +99,7 @@ return
 
 				local val = self:GetMutatedValue(obj, key, obj:Get(key))
 
-				self:TrackObjectWithKey(obj, key, val)
+				self:TrackTableIndex(obj, key, val)
 
 				return val or Nil()
 			end

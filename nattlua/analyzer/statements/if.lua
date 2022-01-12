@@ -23,7 +23,7 @@ return
 
 					if no_operator_expression then
 						-- track "if x then" which has no binary or prefix operators
-						self:TrackObject(obj)
+						self:TrackUpvalue(obj)
 					end
 
 					self.current_if_statement = nil

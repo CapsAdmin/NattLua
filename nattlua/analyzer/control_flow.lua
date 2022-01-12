@@ -78,7 +78,7 @@ return function(META)
 		if obj then
 
 			-- track "if x then" which has no binary or prefix operators
-			self:TrackObject(obj)
+			self:TrackUpvalue(obj)
 
 			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
 

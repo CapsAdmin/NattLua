@@ -73,7 +73,7 @@ local function Binary(self, node, l, r, op)
 			else
 				-- if a and a.foo then
 				--    ^ no binary operator means that it was just checked simply if it was truthy
-				self:TrackObject(l)
+				self:TrackUpvalue(l)
 
 				
 				-- right hand side of and is the "true" part
@@ -83,7 +83,7 @@ local function Binary(self, node, l, r, op)
 
 
 				if node.right.kind ~= "binary_operator" then
-					self:TrackObject(r)
+					self:TrackUpvalue(r)
 				end
 			end
 		elseif node.value.value == "or" then
@@ -225,8 +225,8 @@ local function Binary(self, node, l, r, op)
 			end
 
 			if op ~= "or" and op ~= "and" then
-				self:TrackObject(l, truthy_union, falsy_union, op == "~=")
-				self:TrackObject(r, truthy_union, falsy_union, op == "~=")
+				self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
+				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
 			end
 			
 			if op == "~=" then
