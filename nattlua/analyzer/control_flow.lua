@@ -76,6 +76,24 @@ return function(META)
 
 	function META:ThrowError(msg, obj, no_report)
 		if obj then
+
+			-- track "if x then" which has no binary or prefix operators
+			local l = obj
+			if l.Type == "union" then
+				local upvalue = l:GetUpvalue()
+		
+				if upvalue then
+					local truthy_union = l:GetTruthy()
+					local falsy_union = l:GetFalsy()
+
+					upvalue.exp_stack = upvalue.exp_stack or {}
+					table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+
+					self.affected_upvalues = self.affected_upvalues or {}
+					table.insert(self.affected_upvalues, upvalue)
+				end		
+			end
+
 			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
 
 			if obj:IsTruthy() then
@@ -84,16 +102,47 @@ return function(META)
 				self:GetScope():CertainReturn(self)
 			end
 
+			local old = {}
+			for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
+				old[i] = upvalue
+			end
+
 			local copy = self:CloneCurrentScope()
 			copy:SetTestCondition(obj)
 
 			local upvalues = {}
-			if analyzer.affected_upvalues then
-				for _, upvalue in ipairs(analyzer.affected_upvalues) do
-					upvalues[upvalue] = upvalue.exp_stack
+			local objects = {}
+			if self.affected_upvalues then
+
+				local translate = {}
+				for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
+					local old = old[i]
+					translate[old] = upvalue
+					upvalue.exp_stack = old.exp_stack
+					upvalue.exp_stack_map = old.exp_stack_map
+				end
+	
+
+				for _, upvalue in ipairs(self.affected_upvalues) do
+
+					upvalue = translate[upvalue]
+
+					if upvalue.exp_stack_map then
+						for k,v in pairs(upvalue.exp_stack_map) do
+							table.insert(objects, {obj = upvalue, key = v[#v].key, val = v[#v].truthy})
+						end
+					else
+						upvalues[upvalue] = upvalue.exp_stack
+					end
 				end
 			end
+
 			copy:SetAffectedUpvaluesMap(upvalues)
+
+			for _, v in ipairs(objects) do
+				self:MutateValue(v.obj, v.key, v.val)
+			end
+
 		else
 			self.lua_error_thrown = msg
 		end

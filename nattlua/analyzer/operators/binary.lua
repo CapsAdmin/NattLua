@@ -93,6 +93,22 @@ local function Binary(analyzer, node, l, r, op)
 				analyzer:PushTruthyExpressionContext()
 				r = analyzer:AnalyzeExpression(node.right)				
 				analyzer:PopTruthyExpressionContext()
+
+
+				if r.Type == "union" and node.right.kind ~= "binary_operator" then
+					local upvalue = r:GetUpvalue()
+			
+					if upvalue then
+						local truthy_union = r:GetTruthy()
+						local falsy_union = r:GetFalsy()
+
+						upvalue.exp_stack = upvalue.exp_stack or {}
+						table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
+	
+						analyzer.affected_upvalues = analyzer.affected_upvalues or {}
+						table.insert(analyzer.affected_upvalues, upvalue)
+					end		
+				end
 			end
 		elseif node.value.value == "or" then
 			analyzer:PushFalsyExpressionContext()

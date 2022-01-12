@@ -999,7 +999,7 @@ run[[
         @Name = "BlackBox",
     }
 
-    local function FindHeadPosition(ent: HeadPos)
+    local function FindHeadPosition(ent: mutable HeadPos)
         
         if MAYBE then
             ent.findheadpos_head_bone = false

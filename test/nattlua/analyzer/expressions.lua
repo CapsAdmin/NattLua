@@ -143,7 +143,7 @@ run[[
     local a: nil | 1
 
     if a or true and a or false then
-        attest.equal(a, _ as 1 | nil)
+        attest.equal(a, _ as 1)
     end
 
     attest.equal(a, _ as 1 | nil)

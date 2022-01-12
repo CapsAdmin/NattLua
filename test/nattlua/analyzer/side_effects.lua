@@ -31,7 +31,7 @@ do
     ]]):GetLocalOrGlobalValue(String("foo"))
 
     equal(foo:GetCallCount(), 1)
-    equal(#foo:GetSideEffects(), 5)
+    equal(#foo:GetSideEffects(), 6)
 end
 
 do

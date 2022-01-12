@@ -8,14 +8,25 @@ return
 				if statement.expressions[i] then
 					analyzer.current_if_statement = statement
 					local exp = statement.expressions[i]				
+					local no_operator_expression = exp.kind ~= "binary_operator" and exp.kind ~= "prefix_operator" or (exp.kind == "binary_operator" and exp.value.value == ".")
+
+					if no_operator_expression then
+						analyzer:PushTruthyExpressionContext()
+					end
+
 					local obj = analyzer:AnalyzeExpression(exp)
 
-					if exp.kind ~= "binary_operator" and exp.kind ~= "prefix_operator" then
+					if no_operator_expression then
+						analyzer:PopTruthyExpressionContext()
+					end
+
+
+					if no_operator_expression then
 						-- track "if x then" which has no binary or prefix operators
 						local l = obj
 						if l.Type == "union" then
 							local upvalue = l:GetUpvalue()
-					
+
 							if upvalue then
 								local truthy_union = l:GetTruthy()
 								local falsy_union = l:GetFalsy()

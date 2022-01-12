@@ -91,6 +91,24 @@ return
 								o:SetContract(o)
 							end
 
+							do
+								local val = o
+
+								if val and val.Type == "union" then
+									if self:IsTruthyExpressionContext() or self:IsFalsyExpressionContext() then
+										local hash = key:GetHash()
+										if hash then
+											obj.exp_stack_map = obj.exp_stack_map or {}
+											obj.exp_stack_map[hash] = obj.exp_stack_map[hash] or {}
+											table.insert(obj.exp_stack_map[hash], {key = key, truthy = val:GetTruthy(), falsy = val:GetFalsy()})
+						
+											self.affected_upvalues = self.affected_upvalues or {}
+											table.insert(self.affected_upvalues, obj)
+										end
+									end
+								end
+							end
+
 							return o
 						end
 					end
@@ -103,7 +121,6 @@ return
 				if val and val.Type == "union" then
 					if self:IsTruthyExpressionContext() or self:IsFalsyExpressionContext() then
 						local hash = key:GetHash()
-						
 						if hash then
 							obj.exp_stack_map = obj.exp_stack_map or {}
 							obj.exp_stack_map[hash] = obj.exp_stack_map[hash] or {}

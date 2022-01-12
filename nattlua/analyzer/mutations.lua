@@ -260,6 +260,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 
 	if #union:GetData() == 1 then
 		value = union:GetData()[1]
+		value:SetUpvalue(obj)
 	end
 
 	if value.Type == "union" then
