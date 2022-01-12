@@ -73,20 +73,7 @@ local function Binary(self, node, l, r, op)
 			else
 				-- if a and a.foo then
 				--    ^ no binary operator means that it was just checked simply if it was truthy
-				if l.Type == "union" then
-					local upvalue = l:GetUpvalue()
-			
-					if upvalue then
-						local truthy_union = l:GetTruthy()
-						local falsy_union = l:GetFalsy()
-
-						upvalue.exp_stack = upvalue.exp_stack or {}
-						table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
-	
-						self.affected_upvalues = self.affected_upvalues or {}
-						table.insert(self.affected_upvalues, upvalue)
-					end		
-				end
+				self:TrackObject(l)
 
 				
 				-- right hand side of and is the "true" part
@@ -95,19 +82,8 @@ local function Binary(self, node, l, r, op)
 				self:PopTruthyExpressionContext()
 
 
-				if r.Type == "union" and node.right.kind ~= "binary_operator" then
-					local upvalue = r:GetUpvalue()
-			
-					if upvalue then
-						local truthy_union = r:GetTruthy()
-						local falsy_union = r:GetFalsy()
-
-						upvalue.exp_stack = upvalue.exp_stack or {}
-						table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
-	
-						self.affected_upvalues = self.affected_upvalues or {}
-						table.insert(self.affected_upvalues, upvalue)
-					end		
+				if node.right.kind ~= "binary_operator" then
+					self:TrackObject(r)
 				end
 			end
 		elseif node.value.value == "or" then
@@ -249,26 +225,8 @@ local function Binary(self, node, l, r, op)
 			end
 
 			if op ~= "or" and op ~= "and" then
-				local l_upvalue = l:GetUpvalue()
-
-				if l_upvalue then
-					l_upvalue.exp_stack = l_upvalue.exp_stack or {}
-					table.insert(l_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union, inverted = op == "~="})
-
-					self.affected_upvalues = self.affected_upvalues or {}
-					table.insert(self.affected_upvalues, l_upvalue)
-				end
-
-				local r_upvalue = r:GetUpvalue()
-
-				if r_upvalue then
-					r_upvalue.exp_stack = r_upvalue.exp_stack or {}
-					
-					table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union, inverted = op == "~="})
-					
-					self.affected_upvalues = self.affected_upvalues or {}
-					table.insert(self.affected_upvalues, r_upvalue)
-				end
+				self:TrackObject(l, truthy_union, falsy_union, op == "~=")
+				self:TrackObject(r, truthy_union, falsy_union, op == "~=")
 			end
 			
 			if op == "~=" then

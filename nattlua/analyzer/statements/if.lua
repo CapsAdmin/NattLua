@@ -23,38 +23,12 @@ return
 
 					if no_operator_expression then
 						-- track "if x then" which has no binary or prefix operators
-						local l = obj
-						if l.Type == "union" then
-							local upvalue = l:GetUpvalue()
-
-							if upvalue then
-								local truthy_union = l:GetTruthy()
-								local falsy_union = l:GetFalsy()
-		
-								upvalue.exp_stack = upvalue.exp_stack or {}
-								table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
-			
-								self.affected_upvalues = self.affected_upvalues or {}
-								table.insert(self.affected_upvalues, upvalue)
-							end		
-						end
+						self:TrackObject(obj)
 					end
 
 					self.current_if_statement = nil
 
-					local upvalues = {}
-					local objects = {}
-					if self.affected_upvalues then
-						for _, upvalue in ipairs(self.affected_upvalues) do
-							if upvalue.exp_stack_map then
-								for k,v in pairs(upvalue.exp_stack_map) do
-									table.insert(objects, {obj = upvalue, key = v[#v].key, val = v[#v].truthy})
-								end
-							else
-								upvalues[upvalue] = upvalue.exp_stack
-							end
-						end
-					end
+					local upvalues, objects = self:GetTrackedObjectMap()
 					self:ClearAffectedUpvalues()
 
 					last_upvalues = upvalues

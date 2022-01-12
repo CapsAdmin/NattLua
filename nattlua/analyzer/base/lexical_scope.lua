@@ -204,12 +204,12 @@ function META:SetTestCondition(obj)
 end
 
 function META:SetAffectedUpvaluesMap(upvalues)
-	self.affected_upvalues = upvalues
+	self.upvalue_map = upvalues
 end
 
 
 function META:GetAffectedUpvaluesMap()
-	return self.affected_upvalues
+	return self.upvalue_map
 end
 
 function META:SetStatement(statement)

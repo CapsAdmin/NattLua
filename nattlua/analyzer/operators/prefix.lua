@@ -64,15 +64,7 @@ local function Prefix(self, node, r)
 			end
 		end
 
-		local r_upvalue = r:GetUpvalue()
-
-		if r_upvalue then
-			r_upvalue.exp_stack = r_upvalue.exp_stack or {}
-			table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
-
-			self.affected_upvalues = self.affected_upvalues or {}
-			table.insert(self.affected_upvalues, r_upvalue)
-		end
+		self:TrackObject(r, truthy_union, falsy_union)
 
 		new_union:SetTruthyUnion(truthy_union)
 		new_union:SetFalsyUnion(falsy_union)
