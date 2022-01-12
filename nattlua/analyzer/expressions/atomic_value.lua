@@ -54,18 +54,8 @@ local function lookup_value(self, node)
 	end
 
 	node.inferred_type = node.inferred_type or obj
-	local upvalue = obj:GetUpvalue()
 
-	if upvalue and upvalue.exp_stack then
-		if self:IsTruthyExpressionContext() then
-			return upvalue.exp_stack[#upvalue.exp_stack].truthy:SetUpvalue(upvalue)
-		end
-		if self:IsFalsyExpressionContext() then
-			return upvalue.exp_stack[#upvalue.exp_stack].falsy:SetUpvalue(upvalue)
-		end
-	end
-
-	return obj
+	return self:GetTrackedUpvalue(obj) or obj
 end
 
 local function is_primitive(val)

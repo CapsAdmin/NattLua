@@ -543,6 +543,27 @@ return function(META)
 				return upvalues, objects
 			end
 
+			function META:GetTrackedUpvalue(obj)
+				local upvalue = obj:GetUpvalue()
+
+				if upvalue and upvalue.exp_stack then
+					if self:IsTruthyExpressionContext() then
+						return upvalue.exp_stack[#upvalue.exp_stack].truthy:SetUpvalue(upvalue)
+					end
+					if self:IsFalsyExpressionContext() then
+						return upvalue.exp_stack[#upvalue.exp_stack].falsy:SetUpvalue(upvalue)
+					end
+				end
+			end
+
+			function META:GetTrackedObject(obj)
+				if not obj.exp_stack then return end
+				if self:IsTruthyExpressionContext() then
+					return obj.exp_stack[#obj.exp_stack].truthy
+				elseif self:IsFalsyExpressionContext() then
+					return obj.exp_stack[#obj.exp_stack].falsy
+				end
+			end
 		end
 	end
 end

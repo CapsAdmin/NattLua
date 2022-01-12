@@ -71,12 +71,9 @@ return
 					return obj:Get(key)
 				end
 
-				if obj.exp_stack then
-					if self:IsTruthyExpressionContext() then
-						return obj.exp_stack[#obj.exp_stack].truthy
-					elseif self:IsFalsyExpressionContext() then
-						return obj.exp_stack[#obj.exp_stack].falsy
-					end
+				local tracked = self:GetTrackedObject(obj)
+				if tracked then
+					return tracked
 				end
 
 				local contract = obj:GetContract()
