@@ -25,10 +25,10 @@ end
 
 return
 	{
-		AnalyzeNumericFor = function(analyzer, statement)
-			local init = analyzer:AnalyzeExpression(statement.expressions[1]):GetFirstValue()
-			local max = analyzer:AnalyzeExpression(statement.expressions[2]):GetFirstValue()
-			local step = statement.expressions[3] and analyzer:AnalyzeExpression(statement.expressions[3]):GetFirstValue() or nil
+		AnalyzeNumericFor = function(self, statement)
+			local init = self:AnalyzeExpression(statement.expressions[1]):GetFirstValue()
+			local max = self:AnalyzeExpression(statement.expressions[2]):GetFirstValue()
+			local step = statement.expressions[3] and self:AnalyzeExpression(statement.expressions[3]):GetFirstValue() or nil
 
 			if step then
 				assert(step.Type == "number")
@@ -42,7 +42,7 @@ return
 			if literal_init and literal_max then
 				-- also check step
 				condition:AddType(Binary(
-					analyzer,
+					self,
 					statement,
 					init,
 					max,
@@ -54,14 +54,14 @@ return
 			end
 
 			statement.identifiers[1].inferred_type = init
-				analyzer:PushConditionalScope(statement, condition)
-				analyzer:FireEvent("numeric_for", init, max, step)
+				self:PushConditionalScope(statement, condition)
+				self:FireEvent("numeric_for", init, max, step)
 
 				if literal_init and literal_max and literal_step and literal_max < 1000 then
 					local uncertain_break = false
 
 					for i = literal_init, literal_max, literal_step do
-							analyzer:PushConditionalScope(statement, condition)
+							self:PushConditionalScope(statement, condition)
 							local i = LNumber(i):SetNode(statement.expressions[1])
 							local brk = false
 
@@ -70,24 +70,24 @@ return
 								brk = true
 							end
 
-							analyzer:CreateLocalValue(statement.identifiers[1], i)
-							analyzer:AnalyzeStatements(statement.statements)
+							self:CreateLocalValue(statement.identifiers[1], i)
+							self:AnalyzeStatements(statement.statements)
 
-							if analyzer._continue_ then
-								analyzer._continue_ = nil
+							if self._continue_ then
+								self._continue_ = nil
 							end
 
-							if analyzer.break_out_scope then
-								if analyzer.break_out_scope:IsUncertain() then
+							if self.break_out_scope then
+								if self.break_out_scope:IsUncertain() then
 									uncertain_break = true
 								else
 									brk = true
 								end
 
-								analyzer.break_out_scope = nil
+								self.break_out_scope = nil
 							end
 
-						analyzer:PopConditionalScope()
+						self:PopConditionalScope()
 						if brk then break end
 					end
 				else
@@ -106,7 +106,7 @@ return
 							init.Type == "number" and
 							(max.Type == "number" or (max.Type == "union" and max:IsType("number")))
 						then
-							init = analyzer:Assert(statement.expressions[1], init:SetMax(max))
+							init = self:Assert(statement.expressions[1], init:SetMax(max))
 						end						
 
 						if max.Type == "any" then
@@ -114,15 +114,15 @@ return
 						end
 					end
 
-					analyzer:PushUncertainLoop(true)
-					local range = analyzer:Assert(statement.expressions[1], init)
-					analyzer:CreateLocalValue(statement.identifiers[1], range)
-					analyzer:AnalyzeStatements(statement.statements)
-					analyzer:PushUncertainLoop(false)
+					self:PushUncertainLoop(true)
+					local range = self:Assert(statement.expressions[1], init)
+					self:CreateLocalValue(statement.identifiers[1], range)
+					self:AnalyzeStatements(statement.statements)
+					self:PushUncertainLoop(false)
 				end
 
-				analyzer:FireEvent("leave_scope")
-				analyzer.break_out_scope = nil
-			analyzer:PopConditionalScope()
+				self:FireEvent("leave_scope")
+				self.break_out_scope = nil
+			self:PopConditionalScope()
 		end,
 	}

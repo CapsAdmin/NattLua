@@ -4,8 +4,8 @@ local NodeToString = require("nattlua.types.string").NodeToString
 local Nil = require("nattlua.types.symbol").Nil
 return
 	{
-		AnalyzeDestructureAssignment = function(analyzer, statement)
-			local obj = analyzer:AnalyzeExpression(statement.right)
+		AnalyzeDestructureAssignment = function(self, statement)
+			local obj = self:AnalyzeExpression(statement.right)
 
 			if obj.Type == "union" then
 				obj = obj:GetData()[1]
@@ -16,16 +16,16 @@ return
 			end
 
 			if obj.Type ~= "table" then
-				analyzer:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))
+				self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))
 			end
 
 			if statement.default then
 				local key = NodeToString(statement.default)
 
 				if statement.kind == "local_destructure_assignment" then
-					analyzer:CreateLocalValue(key, obj)
+					self:CreateLocalValue(key, obj)
 				elseif statement.kind == "destructure_assignment" then
-					analyzer:SetLocalOrGlobalValue(key, obj)
+					self:SetLocalOrGlobalValue(key, obj)
 				end
 			end
 
@@ -33,17 +33,17 @@ return
 				local obj = node.value and obj:Get(NodeToString(node))
 
 				if not obj then
-					if analyzer:IsRuntime() then
+					if self:IsRuntime() then
 						obj = Nil():SetNode(node)
 					else
-						analyzer:Error(node, "field " .. tostring(node.value.value) .. " does not exist")
+						self:Error(node, "field " .. tostring(node.value.value) .. " does not exist")
 					end
 				end
 
 				if statement.kind == "local_destructure_assignment" then
-					analyzer:CreateLocalValue(NodeToString(node), obj)
+					self:CreateLocalValue(NodeToString(node), obj)
 				elseif statement.kind == "destructure_assignment" then
-					analyzer:SetLocalOrGlobalValue(NodeToString(node), obj)
+					self:SetLocalOrGlobalValue(NodeToString(node), obj)
 				end
 			end
 		end,

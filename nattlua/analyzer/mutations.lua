@@ -92,7 +92,7 @@ local function FindScopeFromTestCondition(root_scope, obj)
 	return scope, found_type
 end
 
-local function get_value_from_scope(mutations, scope, obj, key, analyzer)
+local function get_value_from_scope(self, mutations, scope, obj, key)
 	if DEBUG then
 		print("looking up mutations for " .. tostring(obj) .. "." .. tostring(key) .. ":")
 	end
@@ -119,7 +119,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 		for i = #mutations, 1, -1 do
 			local mut = mutations[i]
 			
-			if (scope:IsPartOfTestStatementAs(mut.scope) or (analyzer.current_if_statement and mut.scope.statement == analyzer.current_if_statement)) and scope ~= mut.scope then
+			if (scope:IsPartOfTestStatementAs(mut.scope) or (self.current_if_statement and mut.scope.statement == self.current_if_statement)) and scope ~= mut.scope then
 				if DEBUG then
 					dprint(mut, "not inside the same if statement")
 				end
@@ -249,7 +249,7 @@ local function get_value_from_scope(mutations, scope, obj, key, analyzer)
 				not value.explicit_return and
 				union:HasType("function")
 			then
-				analyzer:Assert(value:GetNode() or analyzer.current_expression, analyzer:Call(value, value:GetArguments():Copy()))
+				self:Assert(value:GetNode() or self.current_expression, self:Call(value, value:GetArguments():Copy()))
 			end
 
 			union:AddType(value)
@@ -350,7 +350,7 @@ return function(META)
 
 		initialize_mutation_tracker(obj, scope, key, hash, node)
 
-		return get_value_from_scope(copy(obj.mutations[hash]), scope, obj, hash, self)
+		return get_value_from_scope(self, copy(obj.mutations[hash]), scope, obj, hash)
 	end
 
 	function META:MutateValue(obj, key, val, scope_override)
@@ -398,7 +398,7 @@ return function(META)
 		upvalue.mutations = upvalue.mutations or {}
 		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
 
-		return get_value_from_scope(copy(upvalue.mutations[hash]), scope, upvalue, hash, self)
+		return get_value_from_scope(self, copy(upvalue.mutations[hash]), scope, upvalue, hash)
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override)

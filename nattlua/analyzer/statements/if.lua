@@ -1,23 +1,23 @@
 local ipairs = ipairs
 return
 	{
-		AnalyzeIf = function(analyzer, statement)
+		AnalyzeIf = function(self, statement)
 			local prev_expression
 			local last_upvalues
 			for i, statements in ipairs(statement.statements) do
 				if statement.expressions[i] then
-					analyzer.current_if_statement = statement
+					self.current_if_statement = statement
 					local exp = statement.expressions[i]				
 					local no_operator_expression = exp.kind ~= "binary_operator" and exp.kind ~= "prefix_operator" or (exp.kind == "binary_operator" and exp.value.value == ".")
 
 					if no_operator_expression then
-						analyzer:PushTruthyExpressionContext()
+						self:PushTruthyExpressionContext()
 					end
 
-					local obj = analyzer:AnalyzeExpression(exp)
+					local obj = self:AnalyzeExpression(exp)
 
 					if no_operator_expression then
-						analyzer:PopTruthyExpressionContext()
+						self:PopTruthyExpressionContext()
 					end
 
 
@@ -34,18 +34,18 @@ return
 								upvalue.exp_stack = upvalue.exp_stack or {}
 								table.insert(upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
 			
-								analyzer.affected_upvalues = analyzer.affected_upvalues or {}
-								table.insert(analyzer.affected_upvalues, upvalue)
+								self.affected_upvalues = self.affected_upvalues or {}
+								table.insert(self.affected_upvalues, upvalue)
 							end		
 						end
 					end
 
-					analyzer.current_if_statement = nil
+					self.current_if_statement = nil
 
 					local upvalues = {}
 					local objects = {}
-					if analyzer.affected_upvalues then
-						for _, upvalue in ipairs(analyzer.affected_upvalues) do
+					if self.affected_upvalues then
+						for _, upvalue in ipairs(self.affected_upvalues) do
 							if upvalue.exp_stack_map then
 								for k,v in pairs(upvalue.exp_stack_map) do
 									table.insert(objects, {obj = upvalue, key = v[#v].key, val = v[#v].truthy})
@@ -55,32 +55,32 @@ return
 							end
 						end
 					end
-					analyzer:ClearAffectedUpvalues()
+					self:ClearAffectedUpvalues()
 
 					last_upvalues = upvalues
 					prev_expression = obj
 
 					if obj:IsTruthy() then
-						analyzer:FireEvent("if", i == 1 and "if" or "elseif", true)
-							analyzer:PushConditionalScope(statement, obj, upvalues)
+						self:FireEvent("if", i == 1 and "if" or "elseif", true)
+							self:PushConditionalScope(statement, obj, upvalues)
 
 							for _, v in ipairs(objects) do
-								analyzer:MutateValue(v.obj, v.key, v.val)
+								self:MutateValue(v.obj, v.key, v.val)
 							end
 
-							analyzer:AnalyzeStatements(statements)
-							analyzer:PopConditionalScope()
-						analyzer:FireEvent("if", i == 1 and "if" or "elseif", false)
+							self:AnalyzeStatements(statements)
+							self:PopConditionalScope()
+						self:FireEvent("if", i == 1 and "if" or "elseif", false)
 						if not obj:IsFalsy() then break end
 					end
 				else
 					if prev_expression:IsFalsy() then
-						analyzer:FireEvent("if", "else", true)
-							analyzer:PushConditionalScope(statement, prev_expression, last_upvalues)
-							analyzer:GetScope():InvertIfStatement(true)
-							analyzer:AnalyzeStatements(statements)
-							analyzer:PopConditionalScope()
-						analyzer:FireEvent("if", "else", false)
+						self:FireEvent("if", "else", true)
+							self:PushConditionalScope(statement, prev_expression, last_upvalues)
+							self:GetScope():InvertIfStatement(true)
+							self:AnalyzeStatements(statements)
+							self:PopConditionalScope()
+						self:FireEvent("if", "else", false)
 					end
 				end
 			end

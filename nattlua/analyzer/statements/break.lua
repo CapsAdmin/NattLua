@@ -1,8 +1,8 @@
 return
 	{
-		AnalyzeBreak = function(analyzer, statement)
-			analyzer.break_out_scope = analyzer:GetScope()
-			analyzer.break_loop = true
-			analyzer:FireEvent("break")
+		AnalyzeBreak = function(self, statement)
+			self.break_out_scope = self:GetScope()
+			self.break_loop = true
+			self:FireEvent("break")
 		end,
 	}

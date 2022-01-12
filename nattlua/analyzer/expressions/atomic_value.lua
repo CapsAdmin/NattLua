@@ -80,7 +80,7 @@ end
 
 return
 	{
-		AnalyzeAtomicValue = function(analyzer, node)
+		AnalyzeAtomicValue = function(self, node)
 			local value = node.value.value
 			local type = runtime_syntax:GetTokenType(node.value)
 
@@ -97,16 +97,16 @@ return
 			-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
 			local standalone_letter = type == "letter" and node.standalone_letter
 
-			if analyzer:IsTypesystem() and standalone_letter and not node.force_upvalue then
-				local current_table = analyzer.current_tables and
-					analyzer.current_tables[#analyzer.current_tables]
+			if self:IsTypesystem() and standalone_letter and not node.force_upvalue then
+				local current_table = self.current_tables and
+					self.current_tables[#self.current_tables]
 
 				if current_table then
 					if value == "self" then return current_table end
 
 					if
-						analyzer.left_assigned and
-						analyzer.left_assigned:GetData() == value and
+						self.left_assigned and
+						self.left_assigned:GetData() == value and
 						not is_primitive(value)
 					then
 						return current_table
@@ -129,10 +129,10 @@ return
 			end
 
 			if standalone_letter or value == "..." or node.force_upvalue then
-				local val = lookup_value(analyzer, node)
+				local val = lookup_value(self, node)
 
 				if val:GetUpvalue() then
-					analyzer:GetScope():AddDependency(val:GetUpvalue())
+					self:GetScope():AddDependency(val:GetUpvalue())
 				end
 
 				return val
@@ -142,7 +142,7 @@ return
 				local num = LNumberFromString(value)
 
 				if not num then
-					analyzer:Error(node, "unable to convert " .. value .. " to number")
+					self:Error(node, "unable to convert " .. value .. " to number")
 					num = Number()
 				end
 
@@ -154,6 +154,6 @@ return
 				return LString(value):SetNode(node)
 			end
 
-			analyzer:FatalError("unhandled value type " .. type .. " " .. node:Render())
+			self:FatalError("unhandled value type " .. type .. " " .. node:Render())
 		end,
 	}

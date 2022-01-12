@@ -1,7 +1,7 @@
 return
 	{
-		AnalyzeCall = function(analyzer, statement)
-			local foo = analyzer:AnalyzeExpression(statement.value)
-			analyzer:FireEvent("call", statement.value, {foo})
+		AnalyzeCall = function(self, statement)
+			local foo = self:AnalyzeExpression(statement.value)
+			self:FireEvent("call", statement.value, {foo})
 		end,
 	}

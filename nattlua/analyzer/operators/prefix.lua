@@ -19,11 +19,11 @@ local function metatable_function(self, meta_method, l)
 	end
 end
 
-local function Prefix(analyzer, node, r)
+local function Prefix(self, node, r)
 	local op = node.value.value
 
 	if not r then
-		r = analyzer:AnalyzeExpression(node.right)	
+		r = self:AnalyzeExpression(node.right)	
 	end
 
 	if op == "literal" then
@@ -46,10 +46,10 @@ local function Prefix(analyzer, node, r)
 		local falsy_union = Union():SetUpvalue(r:GetUpvalue())
 
 		for _, r in ipairs(r:GetData()) do
-			local res, err = Prefix(analyzer, node, r)
+			local res, err = Prefix(self, node, r)
 
 			if not res then
-				analyzer:ErrorAndCloneCurrentScope(node, err, r)
+				self:ErrorAndCloneCurrentScope(node, err, r)
 				falsy_union:AddType(r)
 			else
 				new_union:AddType(res)
@@ -70,8 +70,8 @@ local function Prefix(analyzer, node, r)
 			r_upvalue.exp_stack = r_upvalue.exp_stack or {}
 			table.insert(r_upvalue.exp_stack, {truthy = truthy_union, falsy = falsy_union})
 
-			analyzer.affected_upvalues = analyzer.affected_upvalues or {}
-			table.insert(analyzer.affected_upvalues, r_upvalue)
+			self.affected_upvalues = self.affected_upvalues or {}
+			table.insert(self.affected_upvalues, r_upvalue)
 		end
 
 		new_union:SetTruthyUnion(truthy_union)
@@ -84,11 +84,11 @@ local function Prefix(analyzer, node, r)
 		return Any():SetNode(node)
 	end
 
-	if analyzer:IsTypesystem() then
+	if self:IsTypesystem() then
 		if op == "typeof" then
-			analyzer:PushAnalyzerEnvironment("runtime")
-			local obj = analyzer:AnalyzeExpression(node.right)
-			analyzer:PopAnalyzerEnvironment()
+			self:PushAnalyzerEnvironment("runtime")
+			local obj = self:AnalyzeExpression(node.right)
+			self:PopAnalyzerEnvironment()
 			if not obj then return type_errors.other(
 				"cannot find '" .. node.right:Render() .. "' in the current typesystem scope"
 			) end
@@ -111,13 +111,13 @@ local function Prefix(analyzer, node, r)
 	end
 
 	if op == "-" then
-		local res = metatable_function(analyzer, "__unm", r)
+		local res = metatable_function(self, "__unm", r)
 		if res then return res end
 	elseif op == "~" then
-		local res = metatable_function(analyzer, "__bxor", r)
+		local res = metatable_function(self, "__bxor", r)
 		if res then return res end
 	elseif op == "#" then
-		local res = metatable_function(analyzer, "__len", r)
+		local res = metatable_function(self, "__len", r)
 		if res then return res end
 	end
 
@@ -135,7 +135,7 @@ local function Prefix(analyzer, node, r)
 		return r:PrefixOperator(op)
 	end
 
-	error("unhandled prefix operator in " .. analyzer:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(r))
+	error("unhandled prefix operator in " .. self:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(r))
 end
 
 return {Prefix = Prefix}

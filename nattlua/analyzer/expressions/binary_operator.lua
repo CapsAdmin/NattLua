@@ -4,7 +4,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local assert = _G.assert
 return
 	{
-		AnalyzeBinaryOperator = function(analyzer, node)
-			return analyzer:Assert(node, Binary(analyzer, node))
+		AnalyzeBinaryOperator = function(self, node)
+			return self:Assert(node, Binary(self, node))
 		end,
 	}

@@ -1,8 +1,8 @@
 local Binary = require("nattlua.analyzer.operators.binary").Binary
 return
 	{
-		Postfix = function(analyzer, node, r)
+		Postfix = function(self, node, r)
 			local op = node.value.value
-			if op == "++" then return Binary(analyzer, {value = {value = "+"}}, r, r) end
+			if op == "++" then return Binary(self, {value = {value = "+"}}, r, r) end
 		end,
 	}

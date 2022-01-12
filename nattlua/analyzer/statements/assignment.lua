@@ -40,7 +40,7 @@ end
 
 return
 	{
-		AnalyzeAssignment = function(analyzer, statement)
+		AnalyzeAssignment = function(self, statement)
 			local left = {}
 			local right = {}
 
@@ -50,12 +50,12 @@ return
 					left[left_pos] = NodeToString(exp_key)
 				elseif exp_key.kind == "postfix_expression_index" then
 					-- foo[bar] = *
-					left[left_pos] = analyzer:AnalyzeExpression(exp_key.expression)
+					left[left_pos] = self:AnalyzeExpression(exp_key.expression)
 				elseif exp_key.kind == "binary_operator" then
 					-- foo.bar = *
-					left[left_pos] = analyzer:AnalyzeExpression(exp_key.right)
+					left[left_pos] = self:AnalyzeExpression(exp_key.right)
 				else
-					analyzer:FatalError("unhandled assignment expression " .. tostring(exp_key:Render()))
+					self:FatalError("unhandled assignment expression " .. tostring(exp_key:Render()))
 				end
 			end
 
@@ -64,17 +64,17 @@ return
 
 					-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
 					-- use context?
-					analyzer.left_assigned = left[right_pos]
+					self.left_assigned = left[right_pos]
 
-					local obj = analyzer:AnalyzeExpression(exp_val)
-					analyzer:ClearAffectedUpvalues()
+					local obj = self:AnalyzeExpression(exp_val)
+					self:ClearAffectedUpvalues()
 
 					if obj.Type == "tuple" and obj:GetLength() == 1 then
 						obj = obj:Get(1)
 					end
 
 					if obj.Type == "tuple" then
-						if analyzer:IsRuntime() then
+						if self:IsRuntime() then
 							-- at runtime unpack the tuple
 							for i = 1, #statement.left do
 								local index = right_pos + i - 1
@@ -82,7 +82,7 @@ return
 							end
 						end
 
-						if analyzer:IsTypesystem() then
+						if self:IsTypesystem() then
 							if obj:HasTuples() then
 								-- if we have a tuple with, plainly unpack the tuple while preserving the tuples inside
 								for i = 1, #statement.left do
@@ -139,9 +139,9 @@ return
 				-- do we have a type expression? 
 				-- local a: >>number<< = 1
 				if exp_key.type_expression then
-					analyzer:PushAnalyzerEnvironment("typesystem")
-					local contract = analyzer:AnalyzeExpression(exp_key.type_expression)
-					analyzer:PopAnalyzerEnvironment()
+					self:PushAnalyzerEnvironment("typesystem")
+					local contract = self:AnalyzeExpression(exp_key.type_expression)
+					self:PopAnalyzerEnvironment()
 
 					if right[left_pos] then
 						local contract = contract
@@ -156,7 +156,7 @@ return
 						-- local a: number = number
 						val:CopyLiteralness(contract)
 
-						analyzer:Assert(
+						self:Assert(
 							statement or
 							val:GetNode() or
 							exp_key.type_expression,
@@ -183,20 +183,20 @@ return
 				-- used by the emitter
 				exp_key.inferred_type = val
 				val:SetTokenLabelSource(exp_key)
-				val:SetAnalyzerEnvironment(analyzer:GetCurrentAnalyzerEnvironment())
+				val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
 
 				-- if all is well, create or mutate the value
 
 				if statement.kind == "local_assignment" then
 					-- local assignment: local a = 1
-					analyzer:CreateLocalValue(exp_key, val)
+					self:CreateLocalValue(exp_key, val)
 				elseif statement.kind == "assignment" then
 					local key = left[left_pos]
 
 					-- plain assignment: a = 1
 					if exp_key.kind == "value" then
 						do -- check for any previous upvalues
-							local existing_value = analyzer:GetLocalOrGlobalValue(key)
+							local existing_value = self:GetLocalOrGlobalValue(key)
 							local contract = existing_value and existing_value:GetContract()
 
 							if contract then
@@ -207,7 +207,7 @@ return
 
 								val:CopyLiteralness(contract)
 
-								analyzer:Assert(
+								self:Assert(
 									statement or
 									val:GetNode() or
 									exp_key.type_expression,
@@ -217,23 +217,23 @@ return
 							end
 						end
 
-						local val = analyzer:SetLocalOrGlobalValue(key, val)
+						local val = self:SetLocalOrGlobalValue(key, val)
 
 						-- this is used for tracking function dependencies
 						if val.Type == "upvalue" then
-							analyzer:GetScope():AddDependency(val)
+							self:GetScope():AddDependency(val)
 						else
-							analyzer:GetScope():AddDependency({key = key, val = val})
+							self:GetScope():AddDependency({key = key, val = val})
 						end
 					else
 						-- TODO: refactor out to mutation assignment?
 						-- index assignment: foo[a] = 1
-						local obj = analyzer:AnalyzeExpression(exp_key.left)
-						analyzer:ClearAffectedUpvalues()
-						if analyzer:IsRuntime() then
+						local obj = self:AnalyzeExpression(exp_key.left)
+						self:ClearAffectedUpvalues()
+						if self:IsRuntime() then
 							key = key:GetFirstValue()
 						end
-						analyzer:Assert(exp_key, analyzer:NewIndexOperator(exp_key, obj, key, val))
+						self:Assert(exp_key, self:NewIndexOperator(exp_key, obj, key, val))
 					end
 				end
 			end

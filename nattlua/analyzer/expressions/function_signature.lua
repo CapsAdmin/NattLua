@@ -3,8 +3,8 @@ local AnalyzeFunction = require("nattlua.analyzer.expressions.function").Analyze
 
 return
 	{
-		AnalyzeFunctionSignature = function(analyzer, node)
-			return AnalyzeFunction(analyzer, node)
+		AnalyzeFunctionSignature = function(self, node)
+			return AnalyzeFunction(self, node)
 		end,
 	}
 

@@ -5,8 +5,8 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 return
 	{
-		AnalyzeGenericFor = function(analyzer, statement)
-			local args = analyzer:AnalyzeExpressions(statement.expressions)
+		AnalyzeGenericFor = function(self, statement)
+			local args = self:AnalyzeExpressions(statement.expressions)
 			local callable_iterator = table.remove(args, 1)
 			if not callable_iterator then return end
 
@@ -19,7 +19,7 @@ return
 			local uncertain_break = nil
 
 			for i = 1, 1000 do
-				local values = analyzer:Assert(statement.expressions[1], analyzer:Call(callable_iterator, Tuple(args), statement.expressions[1]))
+				local values = self:Assert(statement.expressions[1], self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
 				if
 					not values:Get(1) or
@@ -36,41 +36,41 @@ return
 						returned_key = Union({Nil(), returned_key})
 					end
 
-						analyzer:PushConditionalScope(statement, returned_key)
-						analyzer:FireEvent("generic_for", statement.identifiers, values)
+						self:PushConditionalScope(statement, returned_key)
+						self:FireEvent("generic_for", statement.identifiers, values)
 					end
 
 					local brk = false
 
 					for i, identifier in ipairs(statement.identifiers) do
-						local obj = analyzer:Assert(identifier, values:Get(i))
+						local obj = self:Assert(identifier, values:Get(i))
 
 						if uncertain_break then
 							obj:SetLiteral(false)
 							brk = true
 						end
 
-						analyzer:CreateLocalValue(identifier, obj)
+						self:CreateLocalValue(identifier, obj)
 					end
 
-					analyzer:AnalyzeStatements(statement.statements)
+					self:AnalyzeStatements(statement.statements)
 
-					if analyzer._continue_ then
-						analyzer._continue_ = nil
+					if self._continue_ then
+						self._continue_ = nil
 					end
 
-					if analyzer.break_out_scope then
-						if analyzer.break_out_scope:IsUncertain() then
+					if self.break_out_scope then
+						if self.break_out_scope:IsUncertain() then
 							uncertain_break = true
 						else
 							brk = true
 						end
 
-						analyzer.break_out_scope = nil
+						self.break_out_scope = nil
 					end
 
 					if i == 1000 then
-						analyzer:Error(statement, "too many iterations")
+						self:Error(statement, "too many iterations")
 					end
 
 					table.insert(values:GetData(), 1, args[1])
@@ -80,7 +80,7 @@ return
 				end
 
 				if returned_key then
-					analyzer:PopConditionalScope()
+					self:PopConditionalScope()
 				end
 			end,
 		}

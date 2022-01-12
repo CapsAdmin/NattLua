@@ -1,9 +1,9 @@
 return
 	{
-		AnalyzeDo = function(analyzer, statement)
-			analyzer:CreateAndPushScope()
-				analyzer:FireEvent("do")
-				analyzer:AnalyzeStatements(statement.statements)
-			analyzer:PopScope()
+		AnalyzeDo = function(self, statement)
+			self:CreateAndPushScope()
+				self:FireEvent("do")
+				self:AnalyzeStatements(statement.statements)
+			self:PopScope()
 		end,
 	}

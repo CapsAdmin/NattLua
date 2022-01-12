@@ -1,13 +1,13 @@
 return
 	{
-		AnalyzeRepeat = function(analyzer, statement)
-			analyzer:CreateAndPushScope()
-				analyzer:AnalyzeStatements(statement.statements)
+		AnalyzeRepeat = function(self, statement)
+			self:CreateAndPushScope()
+				self:AnalyzeStatements(statement.statements)
 
-				if analyzer:AnalyzeExpression(statement.expression):IsTruthy() then
-					analyzer:FireEvent("break")
+				if self:AnalyzeExpression(statement.expression):IsTruthy() then
+					self:FireEvent("break")
 				end
 
-			analyzer:PopScope()
+			self:PopScope()
 		end,
 	}

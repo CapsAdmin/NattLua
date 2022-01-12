@@ -184,7 +184,7 @@ return
 				return analyzed_return, scope
 			end
 
-			local function call_analyzer_function(analyzer, obj, function_arguments, arguments)
+			local function call_analyzer_function(self, obj, function_arguments, arguments)
 				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 				
@@ -200,14 +200,14 @@ return
 					len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
 				end
 
-				if analyzer:IsTypesystem() then
+				if self:IsTypesystem() then
 					local ret = lua_types_to_tuple(
 						obj:GetNode(),
 						{
-							analyzer:CallLuaTypeFunction(
-								analyzer:GetActiveNode(),
+							self:CallLuaTypeFunction(
+								self:GetActiveNode(),
 								obj:GetData().lua_function,
-								obj:GetData().scope or analyzer:GetScope(),
+								obj:GetData().scope or self:GetScope(),
 								arguments:UnpackWithoutExpansion()
 						)
 						})
@@ -220,10 +220,10 @@ return
 					tuples[i] = lua_types_to_tuple(
 						obj:GetNode(),
 						{
-							analyzer:CallLuaTypeFunction(
-								analyzer:GetActiveNode(),
+							self:CallLuaTypeFunction(
+								self:GetActiveNode(),
 								obj:GetData().lua_function,
-								obj:GetData().scope or analyzer:GetScope(),
+								obj:GetData().scope or self:GetScope(),
 								table.unpack(arg)
 							),
 						}
@@ -258,7 +258,7 @@ return
 				return ret
 			end
 
-			local function call_type_signature_without_body(analyzer, obj, arguments)
+			local function call_type_signature_without_body(self, obj, arguments)
 
 				do
 					local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
@@ -271,8 +271,8 @@ return
 
 				for i, arg in ipairs(arguments:GetData()) do
 					if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
-						if analyzer.config.external_mutation then
-							analyzer:Warning(analyzer:GetActiveNode(), {
+						if self.config.external_mutation then
+							self:Warning(self:GetActiveNode(), {
 								"argument #",
 								i,
 								" ",
@@ -283,7 +283,7 @@ return
 					end
 				end
 
-				analyzer:FireEvent("external_call", analyzer:GetActiveNode(), obj)
+				self:FireEvent("external_call", self:GetActiveNode(), obj)
 
 				local ret = obj:GetReturnTypes():Copy()
 
@@ -301,31 +301,29 @@ return
 			local call_lua_function_with_body
 
 			do
-				local function mutate_type(analyzer, i, arg, contract, arguments)
-					local env = analyzer:GetScope():GetNearestFunctionScope()
+				local function mutate_type(self, i, arg, contract, arguments)
+					local env = self:GetScope():GetNearestFunctionScope()
 					env.mutated_types = env.mutated_types or {}
-					--analyzer:Print("pushing contract", arg, contract)
 					arg:PushContract(contract)
 					arg.argument_index = i
 					table.insert(env.mutated_types, arg)
 					arguments:Set(i, arg)
 				end
 
-				local function restore_mutated_types(analyzer)
-					local env = analyzer:GetScope():GetNearestFunctionScope()
+				local function restore_mutated_types(self)
+					local env = self:GetScope():GetNearestFunctionScope()
 					if not env.mutated_types or not env.mutated_types[1] then return end
 
 					for _, arg in ipairs(env.mutated_types) do
 						arg:PopContract()
-						--analyzer:Print("popping contract", arg)
 						arg.argument_index = nil
-						analyzer:MutateUpvalue(arg:GetUpvalue(), arg)
+						self:MutateUpvalue(arg:GetUpvalue(), arg)
 					end
 
 					env.mutated_types = {}
 				end
 
-				local function check_and_setup_arguments(analyzer, arguments, contracts, function_node, obj)
+				local function check_and_setup_arguments(self, arguments, contracts, function_node, obj)
 					local len = contracts:GetSafeLength(arguments)
 
 
@@ -333,8 +331,8 @@ return
 
 					do -- analyze the type expressions
 						
-						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						analyzer:PushAnalyzerEnvironment("typesystem")
+						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+						self:PushAnalyzerEnvironment("typesystem")
 						local args = {}
 
 						for i, key in ipairs(function_node.identifiers) do
@@ -345,22 +343,22 @@ return
 							-- stem type so that we can allow
 							-- function(x: foo<|x|>): nil
 							
-							analyzer:CreateLocalValue(key, Any(), i)
+							self:CreateLocalValue(key, Any(), i)
 
 							local arg =arguments:Get(i)
 							local contract = contracts:Get(i)
 
 							if contract and contract.ref_argument and arg then
-								analyzer:CreateLocalValue(key, arg, i)
+								self:CreateLocalValue(key, arg, i)
 							end
 
 							if key.value.value == "..." then
 								if key.type_expression then
 									args[i] = VarArg():SetNode(key)
-									args[i]:Set(1, analyzer:AnalyzeExpression(key.type_expression):GetFirstValue())
+									args[i]:Set(1, self:AnalyzeExpression(key.type_expression):GetFirstValue())
 								end
 							elseif key.type_expression then
-								args[i] = analyzer:AnalyzeExpression(key.type_expression):GetFirstValue()
+								args[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
 							end
 				
 							if contract and contract.ref_argument and arg then
@@ -371,18 +369,18 @@ return
 									return type_errors.other({"argument #", i, " ", arg, ": ", err})
 								end
 							elseif args[i] then
-								analyzer:CreateLocalValue(key, args[i], i)
+								self:CreateLocalValue(key, args[i], i)
 							end
 
-							if not analyzer.processing_deferred_calls then
+							if not self.processing_deferred_calls then
 								if contract and contract.literal_argument and arg and not arg:IsLiteral() then
 									return type_errors.other({"argument #", i, " ", arg, ": not literal"})
 								end
 							end
 						end
 						
-						analyzer:PopAnalyzerEnvironment()
-						analyzer:PopScope()
+						self:PopAnalyzerEnvironment()
+						self:PopScope()
 						contract_override = args
 					end
 
@@ -468,7 +466,7 @@ return
 						end
 
 						if not ok then
-							restore_mutated_types(analyzer)
+							restore_mutated_types(self)
 							return type_errors.other({"argument #", i, " ", arg, ": ", reason})
 						end
 
@@ -478,7 +476,7 @@ return
 							arg:GetUpvalue() and
 							not contract.ref_argument
 						then
-							mutate_type(analyzer, i, arg, contract, arguments)
+							mutate_type(self, i, arg, contract, arguments)
 						else
 							-- if it's a literal argument we pass the incoming value
 							if not contract.ref_argument then
@@ -564,7 +562,7 @@ return
 					end
 				end
 
-				call_lua_function_with_body = function(analyzer, obj, arguments, function_node)
+				call_lua_function_with_body = function(self, obj, arguments, function_node)
 					if obj:HasExplicitArguments() then
 						if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
 							-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
@@ -579,19 +577,19 @@ return
 								return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 							end
 
-						elseif analyzer:IsRuntime() then
+						elseif self:IsRuntime() then
 							-- if we have explicit arguments, we need to do a complex check against the contract
 							-- this might mutate the arguments
-							local ok, err = check_and_setup_arguments(analyzer, arguments, obj:GetArguments(), function_node, obj)
+							local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
 							if not ok then return ok, err end
 						end
 					end
 	
 					-- crawl the function with the new arguments
 					-- return_result is either a union of tuples or a single tuple
-					local return_result, scope = analyzer:AnalyzeFunctionBody(obj, function_node, arguments)
+					local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments)
 					
-					restore_mutated_types(analyzer)
+					restore_mutated_types(self)
 
 					-- used for analyzing side effects
 					obj:AddScope(arguments, return_result, scope)
@@ -604,10 +602,10 @@ return
 									local node = function_node.identifiers[i + 1]
 	
 									if node and not node.type_expression then
-										analyzer:Warning(node, "argument is untyped")
+										self:Warning(node, "argument is untyped")
 									end
 								elseif function_node.identifiers[i] and not function_node.identifiers[i].type_expression then
-									analyzer:Warning(function_node.identifiers[i], "argument is untyped")
+									self:Warning(function_node.identifiers[i], "argument is untyped")
 								end
 							end
 						end
@@ -625,17 +623,17 @@ return
 						function_node.inferred_type = obj
 					end
 
-					analyzer:FireEvent("function_spec", obj)
+					self:FireEvent("function_spec", obj)
 
 					local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
 					-- if the function has return type annotations, analyze them and use it as contract
 					if not return_contract and function_node.return_types then
-						analyzer:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-						analyzer:PushAnalyzerEnvironment("typesystem")
-						return_contract = Tuple(analyzer:AnalyzeExpressions(function_node.return_types))
-						analyzer:PopAnalyzerEnvironment()
-						analyzer:PopScope()
+						self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+						self:PushAnalyzerEnvironment("typesystem")
+						return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types))
+						self:PopAnalyzerEnvironment()
+						self:PopScope()
 					end
 
 					if not return_contract then
@@ -647,7 +645,7 @@ return
 									copy = copy or return_result:Copy()
 									local tbl = Table()
 									for _, kv in ipairs(v:GetData()) do
-										tbl:Set(kv.key, analyzer:GetMutatedValue(v, kv.key, kv.val))
+										tbl:Set(kv.key, self:GetMutatedValue(v, kv.key, kv.val))
 									end
 									copy:Set(i, tbl)
 								end
@@ -661,9 +659,9 @@ return
 					end		
 
 					-- check against the function's return type
-					check_return_result(analyzer, return_result, return_contract)
+					check_return_result(self, return_result, return_contract)
 
-					if analyzer:IsTypesystem() then
+					if self:IsTypesystem() then
 						return return_result
 					end
 
@@ -687,7 +685,7 @@ return
 				end
 			end
 
-			local function make_callable_union(analyzer, obj)
+			local function make_callable_union(self, obj)
 				local new_union = obj.New()
 				local truthy_union = obj.New()
 				local falsy_union = obj.New()
@@ -695,7 +693,7 @@ return
 				for _, v in ipairs(obj.Data) do
 					if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
 						falsy_union:AddType(v)
-						analyzer:ErrorAndCloneCurrentScope(analyzer:GetActiveNode(), {
+						self:ErrorAndCloneCurrentScope(self:GetActiveNode(), {
 							"union ",
 							obj,
 							" contains uncallable object ",
@@ -712,15 +710,15 @@ return
 				new_union:SetTruthyUnion(truthy_union)
 				new_union:SetFalsyUnion(falsy_union)
 				
-				return truthy_union:SetNode(analyzer:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(obj)
+				return truthy_union:SetNode(self:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(obj)
 			end
 
-			local function Call(analyzer, obj, arguments)
+			local function Call(self, obj, arguments)
 				if obj.Type == "union" then
 					-- make sure the union is callable, we pass the analyzer and 
 					-- it will throw errors if the union contains something that is not callable
 					-- however it will continue and just remove those values from the union
-					obj = make_callable_union(analyzer, obj)
+					obj = make_callable_union(self, obj)
 				end
 
 				-- if obj is a tuple it will return its first value 
@@ -738,7 +736,7 @@ return
 								if arg:GetContract() then
 									-- error if we call any with tables that have contracts
 									-- since anything might happen to them in an any call
-									analyzer:Error(analyzer:GetActiveNode(), {
+									self:Error(self:GetActiveNode(), {
 										"cannot mutate argument with contract ",
 										arg:GetContract(),
 									})
@@ -753,7 +751,7 @@ return
 						end
 					end
 
-					return obj:Call(analyzer, arguments)
+					return obj:Call(self, arguments)
 				end
 				
 				-- mark the object as called so the unreachable code step won't call it
@@ -772,27 +770,27 @@ return
 							not a:IsSubsetOf(b)
 						then
 							b.arguments_inferred = true
-							analyzer:Assert(analyzer:GetActiveNode(), analyzer:Call(b, b:GetArguments():Copy()))
+							self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
 						end
 					end
 				end
 
 				if obj.expand then
-					analyzer:GetActiveNode().expand = obj
+					self:GetActiveNode().expand = obj
 				end
 
 				if obj:GetData().lua_function then
 					return call_analyzer_function(
-						analyzer,
+						self,
 						obj,
 						function_arguments,
 						arguments
 					)
 				elseif function_node then
-					return call_lua_function_with_body(analyzer, obj, arguments, function_node)
+					return call_lua_function_with_body(self, obj, arguments, function_node)
 				end
 
-				return call_type_signature_without_body(analyzer, obj, arguments)
+				return call_type_signature_without_body(self, obj, arguments)
 			end
 
 			function META:Call(obj, arguments, call_node)

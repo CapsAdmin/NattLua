@@ -6,30 +6,30 @@ local Table = require("nattlua.types.table").Table
 local table = require("table")
 return
 	{
-		AnalyzeTable = function(analyzer, node)
-			local tbl = Table():SetNode(node):SetLiteral(analyzer:IsTypesystem())
+		AnalyzeTable = function(self, node)
+			local tbl = Table():SetNode(node):SetLiteral(self:IsTypesystem())
 
-			if analyzer:IsRuntime() then
+			if self:IsRuntime() then
 				tbl:SetReferenceId(tostring(tbl:GetData()))
 			end
 
-			analyzer.current_tables = analyzer.current_tables or {}
-			table.insert(analyzer.current_tables, tbl)
+			self.current_tables = self.current_tables or {}
+			table.insert(self.current_tables, tbl)
 			local tree = node
 
-			tbl.scope = analyzer:GetScope()
+			tbl.scope = self:GetScope()
 
 			for i, node in ipairs(node.children) do
 				if node.kind == "table_key_value" then
 					local key = LString(node.tokens["identifier"].value):SetNode(node.tokens["identifier"])
-					local val = analyzer:AnalyzeExpression(node.value_expression):GetFirstValue()
-					analyzer:NewIndexOperator(node, tbl, key, val)
+					local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
+					self:NewIndexOperator(node, tbl, key, val)
 				elseif node.kind == "table_expression_value" then
-					local key = analyzer:AnalyzeExpression(node.key_expression):GetFirstValue()
-					local val = analyzer:AnalyzeExpression(node.value_expression):GetFirstValue()
-					analyzer:NewIndexOperator(node, tbl, key, val)
+					local key = self:AnalyzeExpression(node.key_expression):GetFirstValue()
+					local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
+					self:NewIndexOperator(node, tbl, key, val)
 				elseif node.kind == "table_index_value" then
-					local obj = analyzer:AnalyzeExpression(node.value_expression)
+					local obj = self:AnalyzeExpression(node.value_expression)
 					
 					if node.value_expression.kind ~= "value" or node.value_expression.value.value ~= "..." then
 						obj = obj:GetFirstValue()
@@ -58,10 +58,10 @@ return
 						end
 					end
 				end
-				analyzer:ClearAffectedUpvalues()
+				self:ClearAffectedUpvalues()
 			end
 
-			table.remove(analyzer.current_tables)
+			table.remove(self.current_tables)
 
 			return tbl
 		end,

@@ -3,7 +3,7 @@ local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Tuple = require("nattlua.types.tuple").Tuple
 return
 	{
-		AnalyzePostfixCall = function(analyzer, node)
+		AnalyzePostfixCall = function(self, node)
 			local is_type_call = node.type_call or
 				node.left and
 				(
@@ -11,20 +11,20 @@ return
 					node.left.kind == "generics_type_function"
 				)
 			
-			analyzer:PushAnalyzerEnvironment(is_type_call and "typesystem" or "runtime")
+			self:PushAnalyzerEnvironment(is_type_call and "typesystem" or "runtime")
 			
-			local callable = analyzer:AnalyzeExpression(node.left)
+			local callable = self:AnalyzeExpression(node.left)
 			local self_arg
 
 			if
-				analyzer.self_arg_stack and
+				self.self_arg_stack and
 				node.left.kind == "binary_operator" and
 				node.left.value.value == ":"
 			then
-				self_arg = table.remove(analyzer.self_arg_stack)
+				self_arg = table.remove(self.self_arg_stack)
 			end
 
-			local types = analyzer:AnalyzeExpressions(node.expressions)
+			local types = self:AnalyzeExpressions(node.expressions)
 
 			if self_arg then
 				table.insert(types, 1, self_arg)
@@ -32,13 +32,13 @@ return
 
 			local arguments
 			
-			if analyzer:IsTypesystem() then
+			if self:IsTypesystem() then
 				arguments = Tuple(types)
 			else
 				arguments = NormalizeTuples(types)
 			end
 
-			local returned_tuple = analyzer:Assert(node, analyzer:Call(callable, arguments, node))
+			local returned_tuple = self:Assert(node, self:Call(callable, arguments, node))
 
 			-- TUPLE UNPACK MESS
 			
@@ -46,7 +46,7 @@ return
 				returned_tuple = returned_tuple:Get(1)
 			end
 
-			analyzer:PopAnalyzerEnvironment()
+			self:PopAnalyzerEnvironment()
 
 			return returned_tuple
 		end,
