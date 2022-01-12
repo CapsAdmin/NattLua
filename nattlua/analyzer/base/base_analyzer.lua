@@ -169,12 +169,32 @@ return function(META)
 		local locals = ""
 		locals = locals .. "local nl=require(\"nattlua\");"
 		locals = locals .. "local types=require(\"nattlua.types.types\");"
+		locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
 
 		for k, v in pairs(_G) do
 			locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
 		end
 
+		local runtime_injection = [[
+			local analyzer = context:GetCurrentAnalyzer()
+			local env = analyzer:GetScopeHelper(analyzer.function_scope)
+			local self = self or analyzer
+		]]
+
+		runtime_injection = runtime_injection:gsub("\n", ";")
+
 		function META:CompileLuaAnalyzerDebugCode(code, node)
+			local start, stop = code:find("^.-function%b()")
+			
+			if start and stop then
+				local before_function = code:sub(1, stop)
+				local after_function = code:sub(stop+1, #code)
+
+				code = before_function .. runtime_injection .. after_function
+			else
+				code = runtime_injection .. code
+			end
+
 			code = locals .. code
 
             -- append newlines so that potential line errors are correct
@@ -211,9 +231,9 @@ return function(META)
 		end
 
 		function META:CallLuaTypeFunction(node, func, scope, ...)
-			_G.analyzer = self
-			_G.env = self:GetScopeHelper(scope)
+			self.function_scope = scope
 			local res = {pcall(func, ...)}
+
 			local ok = table.remove(res, 1)
 
 			if not ok then
@@ -288,11 +308,11 @@ return function(META)
 				-- this is very internal-ish code
 				-- not sure what a nice interface for this really should be yet
 				self:PushAnalyzerEnvironment("typesystem")
-				local generics_func = analyzer:GetLocalOrGlobalValue(name)
+				local generics_func = self:GetLocalOrGlobalValue(name)
 				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
 				local argument_tuple = Tuple({...})
-				local returned_tuple = assert(analyzer:Call(generics_func, argument_tuple))
-				analyzer:PopAnalyzerEnvironment()
+				local returned_tuple = assert(self:Call(generics_func, argument_tuple))
+				self:PopAnalyzerEnvironment()
 				return returned_tuple:Unpack()
 			end
 		end
