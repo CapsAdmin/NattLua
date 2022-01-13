@@ -190,7 +190,9 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 
 	local union = Union({})
-	union:SetUpvalue(obj)
+	if obj.Type == "upvalue" then
+		union:SetUpvalue(obj)
+	end
 
 	if obj.Type == "table" then
 		union:SetUpvalueReference("table-" .. tostring(key))
@@ -200,6 +202,10 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 	for _, mut in ipairs(mutations) do
 		local value = mut.value
+
+		if value.Type == "union" and #value:GetData() == 1 then
+			value = value:GetData()[1]
+		end
 
 		do
 			local upvalue_map = mut.scope:GetAffectedUpvaluesMap()
@@ -234,7 +240,9 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		
 		if _ == 1 and value.Type == "union" then
 			union = value:Copy()
-			union:SetUpvalue(obj)
+			if obj.Type == "upvalue" then
+				union:SetUpvalue(obj)
+			end
 
 			if obj.Type == "table" then
 				union:SetUpvalueReference("table-" .. tostring(key))
@@ -260,7 +268,9 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 	if #union:GetData() == 1 then
 		value = union:GetData()[1]
-		value:SetUpvalue(obj)
+		if obj.Type == "upvalue" then
+			value:SetUpvalue(obj)
+		end
 	end
 
 	if value.Type == "union" then

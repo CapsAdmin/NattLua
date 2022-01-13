@@ -101,7 +101,7 @@ return function(META)
 				copy:SetAffectedUpvaluesMap(upvalues)
 
 				for _, v in ipairs(objects) do
-					self:MutateValue(v.obj, v.key, v.val)
+					self:MutateValue(v.obj, v.key, v.truthy)
 				end
 			end
 		else

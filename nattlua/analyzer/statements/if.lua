@@ -4,6 +4,7 @@ return
 		AnalyzeIf = function(self, statement)
 			local prev_expression
 			local last_upvalues
+			local last_objects
 			for i, statements in ipairs(statement.statements) do
 				if statement.expressions[i] then
 					self.current_if_statement = statement
@@ -32,6 +33,7 @@ return
 					self:ClearAffectedUpvalues()
 
 					last_upvalues = upvalues
+					last_objects = objects
 					prev_expression = obj
 
 					if obj:IsTruthy() then
@@ -40,7 +42,7 @@ return
 
 							if objects then
 								for _, v in ipairs(objects) do
-									self:MutateValue(v.obj, v.key, v.val)
+									self:MutateValue(v.obj, v.key, v.truthy)
 								end
 							end
 
@@ -53,6 +55,13 @@ return
 					if prev_expression:IsFalsy() then
 						self:FireEvent("if", "else", true)
 							self:PushConditionalScope(statement, prev_expression, last_upvalues)
+
+							if last_objects then
+								for _, v in ipairs(last_objects) do
+									self:MutateValue(v.obj, v.key, v.falsy)
+								end
+							end
+
 							self:GetScope():InvertIfStatement(true)
 							self:AnalyzeStatements(statements)
 							self:PopConditionalScope()

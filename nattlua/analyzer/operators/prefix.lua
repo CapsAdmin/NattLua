@@ -23,7 +23,13 @@ local function Prefix(self, node, r)
 	local op = node.value.value
 
 	if not r then
+		if op == "not" then
+			self.notlol = true
+		end
 		r = self:AnalyzeExpression(node.right)	
+		if op == "not" then
+			self.notlol = nil
+		end
 	end
 
 	if op == "literal" then

@@ -71,8 +71,11 @@ return
 					return obj:Get(key)
 				end
 
-				local tracked = self:GetTrackedObject(obj)
+		
+				local tracked = self:GetTrackedObjectWithKey(obj, key)
+
 				if tracked then
+					
 					return tracked
 				end
 
@@ -82,15 +85,15 @@ return
 					if not val then return val, err end
 
 					if not obj.argument_index or contract.ref_argument then
-						local o = self:GetMutatedValue(obj, key, val)
-						if o then
-							if not o:GetContract() then
-								o:SetContract(o)
+						local val = self:GetMutatedValue(obj, key, val)
+						if val then
+							if not val:GetContract() then
+								val:SetContract(val)
 							end
 
-							self:TrackTableIndex(obj, key, o)
+							self:TrackTableIndex(obj, key, val)
 
-							return o
+							return val
 						end
 					end
 
@@ -98,7 +101,6 @@ return
 				end
 
 				local val = self:GetMutatedValue(obj, key, obj:Get(key))
-
 				self:TrackTableIndex(obj, key, val)
 
 				return val or Nil()

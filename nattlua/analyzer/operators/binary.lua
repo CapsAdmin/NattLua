@@ -72,17 +72,17 @@ local function Binary(self, node, l, r, op)
 				r = Nil():SetNode(node.right)
 			else
 				-- if a and a.foo then
-				--    ^ no binary operator means that it was just checked simply if it was truthy
-				self:TrackUpvalue(l)
+				-- ^ no binary operator means that it was just checked simply if it was truthy
+				if node.left.kind ~= "binary_operator" or node.left.value.value ~= "." then
+					self:TrackUpvalue(l)
+				end
 
-				
 				-- right hand side of and is the "true" part
 				self:PushTruthyExpressionContext()
 				r = self:AnalyzeExpression(node.right)				
 				self:PopTruthyExpressionContext()
 
-
-				if node.right.kind ~= "binary_operator" then
+				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
 					self:TrackUpvalue(r)
 				end
 			end
@@ -174,7 +174,6 @@ local function Binary(self, node, l, r, op)
 			local new_union = Union()
 			local truthy_union = Union():SetUpvalue(l:GetUpvalue())
 			local falsy_union = Union():SetUpvalue(l:GetUpvalue())
-			local condition = l
 			
 			for _, l in ipairs(l:GetData()) do
 				for _, r in ipairs(r:GetData()) do
@@ -187,7 +186,7 @@ local function Binary(self, node, l, r, op)
 					)
 
 					if not res then
-						self:ErrorAndCloneCurrentScope(node, err, condition)
+						self:ErrorAndCloneCurrentScope(node, err, l) -- TODO, only left side?
 					else
 						if res:IsTruthy() then
 							if self.type_checked then
@@ -244,7 +243,7 @@ local function Binary(self, node, l, r, op)
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
 	do -- arithmetic operators
-		if op == "." or op == ":" then 
+		if op == "." or op == ":" then
 			return self:IndexOperator(node, l, r) 
 		elseif op == "+" then
 			local val = operator(self, node, l, r, op, "__add")

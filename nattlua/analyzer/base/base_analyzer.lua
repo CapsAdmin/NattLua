@@ -485,21 +485,6 @@ return function(META)
 				end
 			end
 
-			function META:TrackTableIndex(obj, key, val)
-				if self:IsTypesystem() then return end
-				if not val or val.Type ~= "union" then return end
-				if not self:IsTruthyExpressionContext() and not self:IsFalsyExpressionContext() then return end
-				local hash = key:GetHash()
-				if not hash then return end
-
-				obj.tracked_stack = obj.tracked_stack or {}
-				obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
-				table.insert(obj.tracked_stack[hash], {key = key, truthy = val:GetTruthy(), falsy = val:GetFalsy()})
-
-				self.tracked_tables = self.tracked_tables or {}
-				table.insert(self.tracked_tables, obj)
-			end
-
 			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
 				if self:IsTypesystem() then return end
 				if obj.Type ~= "union" then return end
@@ -512,10 +497,61 @@ return function(META)
 
 				upvalue.tracked_stack = upvalue.tracked_stack or {}
 				table.insert(upvalue.tracked_stack, {truthy = truthy_union, falsy = falsy_union, inverted = inverted})
-
 				self.tracked_upvalues = self.tracked_upvalues or {}
 				table.insert(self.tracked_upvalues, upvalue)
 			end
+
+			function META:GetTrackedUpvalue(obj)
+				if self:IsTypesystem() then return end
+				local upvalue = obj:GetUpvalue()
+				local stack = upvalue and upvalue.tracked_stack
+
+				if not stack then return end
+				
+				if self:IsTruthyExpressionContext() then
+					return stack[#stack].truthy:SetUpvalue(upvalue)
+				elseif self:IsFalsyExpressionContext() then
+					return stack[#stack].falsy:SetUpvalue(upvalue)
+				end
+			end
+
+			function META:TrackTableIndex(obj, key, val)
+				if self:IsTypesystem() then return end
+				if not val or val.Type ~= "union" then return end
+				local hash = key:GetHash()
+				if not hash then return end
+
+				local truthy_union = val:GetTruthy()
+				local falsy_union = val:GetFalsy()
+				local inverted = self.notlol
+				
+				if inverted then
+					truthy_union, falsy_union = falsy_union, truthy_union
+				end
+
+				obj.tracked_stack = obj.tracked_stack or {}
+				obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
+				table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = inverted})
+
+				self.tracked_tables = self.tracked_tables or {}
+				table.insert(self.tracked_tables, obj)
+			end
+
+			function META:GetTrackedObjectWithKey(obj, key)
+				if not obj.tracked_stack or obj.tracked_stack[1] then return end
+				local hash = key:GetHash()
+				if not hash then return end
+				local stack = obj.tracked_stack[hash]
+
+				if not stack then return end
+
+				if self:IsTruthyExpressionContext() then
+					return stack[#stack].truthy
+				elseif self:IsFalsyExpressionContext() then
+					return stack[#stack].falsy
+				end
+			end
+
 
 			function META:GetTrackedObjectMap(old_upvalues)
 				local upvalues = {}
@@ -545,40 +581,13 @@ return function(META)
 					for _, tbl in ipairs(self.tracked_tables) do
 						if tbl.tracked_stack and not tbl.tracked_stack[1] then
 							for _, stack in pairs(tbl.tracked_stack) do
-								table.insert(tables, {obj = tbl, key = stack[#stack].key, val = stack[#stack].truthy})
+								table.insert(tables, {obj = tbl, key = stack[#stack].key, truthy = stack[#stack].truthy, falsy = stack[#stack].falsy})
 							end
 						end
 					end
 				end
 
 				return upvalues, tables
-			end
-
-			function META:GetTrackedUpvalue(obj)
-				if self:IsTypesystem() then return end
-				local upvalue = obj:GetUpvalue()
-				local stack = upvalue and upvalue.tracked_stack
-
-				if not stack then return end
-				
-				if self:IsTruthyExpressionContext() then
-					return stack[#stack].truthy:SetUpvalue(upvalue)
-				elseif self:IsFalsyExpressionContext() then
-					return stack[#stack].falsy:SetUpvalue(upvalue)
-				end
-			end
-
-			function META:GetTrackedObject(obj)
-				if self:IsTypesystem() then return end
-				local stack = obj.tracked_stack
-
-				if not stack then return end
-				
-				if self:IsTruthyExpressionContext() then
-					return stack[#stack].truthy
-				elseif self:IsFalsyExpressionContext() then
-					return stack[#stack].falsy
-				end
 			end
 		end
 	end
