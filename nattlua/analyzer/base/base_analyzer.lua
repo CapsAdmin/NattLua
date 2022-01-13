@@ -471,7 +471,7 @@ return function(META)
 
 		do
 
-			function META:ClearAffectedUpvalues()
+			function META:ClearTrackedObjects()
 				if self.tracked_upvalues then
 					for _, upvalue in ipairs(self.tracked_upvalues) do
 						upvalue.tracked_stack = nil

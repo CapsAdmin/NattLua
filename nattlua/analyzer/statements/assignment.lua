@@ -67,7 +67,7 @@ return
 					self.left_assigned = left[right_pos]
 
 					local obj = self:AnalyzeExpression(exp_val)
-					self:ClearAffectedUpvalues()
+					self:ClearTrackedObjects()
 
 					if obj.Type == "tuple" and obj:GetLength() == 1 then
 						obj = obj:Get(1)
@@ -229,7 +229,7 @@ return
 						-- TODO: refactor out to mutation assignment?
 						-- index assignment: foo[a] = 1
 						local obj = self:AnalyzeExpression(exp_key.left)
-						self:ClearAffectedUpvalues()
+						self:ClearTrackedObjects()
 						if self:IsRuntime() then
 							key = key:GetFirstValue()
 						end

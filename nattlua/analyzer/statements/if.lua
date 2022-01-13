@@ -30,7 +30,7 @@ return
 					self.current_if_statement = nil
 
 					local upvalues, objects = self:GetTrackedObjectMap()
-					self:ClearAffectedUpvalues()
+					self:ClearTrackedObjects()
 
 					last_upvalues = upvalues
 					last_objects = objects

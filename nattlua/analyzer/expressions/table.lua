@@ -58,7 +58,7 @@ return
 						end
 					end
 				end
-				self:ClearAffectedUpvalues()
+				self:ClearTrackedObjects()
 			end
 
 			table.remove(self.current_tables)
