@@ -232,9 +232,6 @@ local function Binary(self, node, l, r, op)
 				new_union.inverted = true
 			end
 
-			new_union:SetTruthyUnion(truthy_union)
-			new_union:SetFalsyUnion(falsy_union)
-			
 			return
 				new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(l):SetTypeSourceRight(r)
 		end

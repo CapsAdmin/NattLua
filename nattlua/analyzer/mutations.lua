@@ -187,8 +187,6 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		end
 	end
 
-
-
 	local union = Union({})
 	if obj.Type == "upvalue" then
 		union:SetUpvalue(obj)
@@ -274,43 +272,25 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 	end
 
 	if value.Type == "union" then
-		local found_scope, union = FindScopeFromTestCondition(scope, value)
+		local found_scope = FindScopeFromTestCondition(scope, value)
 		if found_scope then
-			local current_scope = found_scope
-
-			if #mutations > 1 then
-				for i = #mutations, 1, -1 do
-					if mutations[i].scope ~= current_scope then break end
-					return value
-				end
-			end
-			
-
 			local upvalue_map = found_scope:GetAffectedUpvaluesMap()
-
-            -- the or part here refers to if *condition* then
-            -- truthy/falsy _union is only created from binary operators and some others
-            if
-				found_scope:IsPartOfElseStatement() or
-				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
-			then
-				if upvalue_map and upvalue_map[obj] then
-					return upvalue_map[obj][#upvalue_map[obj]].falsy
-				end
-
-				return union:GetFalsyUnion() or value:GetFalsy()
-			else
-				if upvalue_map and upvalue_map[obj] then
+			local stack = upvalue_map and upvalue_map[obj]
+			if stack then
+				if
+					found_scope:IsPartOfElseStatement() or
+					(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
+				then
+					return stack[#stack].falsy
+				else
 					local union = Union()
 
-					for _, val in ipairs(upvalue_map[obj]) do						
+					for _, val in ipairs(stack) do
 						union:AddType(val.truthy)
 					end
 
 					return union
 				end
-
-				return union:GetTruthyUnion() or value:GetTruthy()
 			end
 		end
 	end

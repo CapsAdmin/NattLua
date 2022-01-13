@@ -401,9 +401,6 @@ function META:Subtract(union)
 	return copy
 end
 
-META:GetSet("TruthyUnion", nil)
-META:GetSet("FalsyUnion", nil)
-
 function META:Copy(map)
 	map = map or {}
 	local copy = META.New()

@@ -707,8 +707,6 @@ return
 			
 				truthy_union:SetUpvalue(obj:GetUpvalue())
 				falsy_union:SetUpvalue(obj:GetUpvalue())
-				new_union:SetTruthyUnion(truthy_union)
-				new_union:SetFalsyUnion(falsy_union)
 				
 				return truthy_union:SetNode(self:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(obj)
 			end

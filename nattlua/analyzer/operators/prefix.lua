@@ -72,9 +72,6 @@ local function Prefix(self, node, r)
 
 		self:TrackUpvalue(r, truthy_union, falsy_union)
 
-		new_union:SetTruthyUnion(truthy_union)
-		new_union:SetFalsyUnion(falsy_union)
-
 		return new_union:SetNode(node):SetTypeSource(r)
 	end
 
