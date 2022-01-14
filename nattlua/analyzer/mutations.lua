@@ -589,7 +589,7 @@ return function(META)
 					end
 
 					if stack then
-						table.insert(upvalues, {upvalue = upvalue, stack = stack})
+						table.insert(upvalues, {upvalue = upvalue, stack = copy(stack)})
 					end
 				end
 			end
@@ -601,7 +601,7 @@ return function(META)
 							table.insert(tables, {
 								obj = tbl, 
 								key = stack[#stack].key, 
-								stack = stack,
+								stack = copy(stack),
 							})
 						end
 					end
@@ -611,32 +611,14 @@ return function(META)
 			return upvalues, tables
 		end
 
-		function META:MutateTrackedFromIf(upvalues, tables, negate)
+		function META:MutateTrackedFromIf(upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
-					if negate then
-						local union = self:GetMutatedUpvalue(data.upvalue)
-						
-						if union.Type ~= "union" then
-							return self:MutateUpvalue(data.upvalue, data.stack[#data.stack].falsy)
-						end
-
-						for _, v in ipairs(data.stack) do
-							union:RemoveType(v.truthy)
-						end
-
-						self:MutateUpvalue(data.upvalue, union)
-					else
-						local union = Union()
-						for _, v in ipairs(data.stack) do
-							if negate then
-								union:AddType(v.falsy)
-							else
-								union:AddType(v.truthy)
-							end
-						end
-						self:MutateUpvalue(data.upvalue, union)
+					local union = Union()
+					for _, v in ipairs(data.stack) do
+						union:AddType(v.truthy)
 					end
+					self:MutateUpvalue(data.upvalue, union)
 				end
 			end
 
@@ -644,15 +626,38 @@ return function(META)
 				for _, data in ipairs(tables) do
 					local union = Union()
 					for _, v in ipairs(data.stack) do
-						if negate then
-							union:AddType(v.falsy)
-						else
-							union:AddType(v.truthy)
-						end
+						union:AddType(v.truthy)
 					end
 					self:MutateValue(data.obj, data.key, union)
 				end
 			end
+		end
+
+		function META:MutateTrackedFromIfElse(blocks)
+			for i, block in ipairs(blocks) do
+				if block.upvalues then
+					for _, data in ipairs(block.upvalues) do
+						local union = self:GetMutatedUpvalue(data.upvalue)
+						if union.Type == "union" then
+							for _, v in ipairs(data.stack) do
+								union:RemoveType(v.truthy)
+							end
+						end
+						self:MutateUpvalue(data.upvalue, union)
+					end
+				end
+
+				if block.tables then
+					for _, data in ipairs(block.tables) do
+						local union = Union()
+						for _, v in ipairs(data.stack) do
+							union:AddType(v.falsy)
+						end
+						self:MutateValue(data.obj, data.key, union)
+					end
+				end
+			end
+			
 		end
 
 		function META:MutateTrackedFromReturn(scope, scope_override, negate, upvalues, tables)
