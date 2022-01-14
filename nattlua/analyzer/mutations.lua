@@ -206,14 +206,14 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		end
 
 		do
-			local upvalue_map = mut.scope:GetAffectedUpvaluesMap()
+			local upvalue_map = mut.scope:GetTrackedObjects()
 
 			if upvalue_map then
 				for upvalue, stack in pairs(upvalue_map) do
 					if upvalue.Type == "upvalue" then
 						local val
 						
-						if mut.scope:IsPartOfElseStatement() or stack[#stack].inverted then
+						if mut.scope:IsPartOfElseStatement() then
 							val = stack[#stack].falsy
 						else	
 							val = stack[#stack].truthy
@@ -270,11 +270,10 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			value:SetUpvalue(obj)
 		end
 	end
-
 	if value.Type == "union" then
 		local found_scope = FindScopeFromTestCondition(scope, value)
 		if found_scope then
-			local upvalue_map = found_scope:GetAffectedUpvaluesMap()
+			local upvalue_map = found_scope:GetTrackedObjects()
 			local stack = upvalue_map and upvalue_map[obj]
 			if stack then
 				if
@@ -294,7 +293,6 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			end
 		end
 	end
-
 	return value
 end
 

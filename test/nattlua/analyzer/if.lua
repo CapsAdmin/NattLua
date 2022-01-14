@@ -115,9 +115,9 @@ run([[
     local a: nil | 1
 
     if a then
-        attest.equal(a, _ as 1 | 1)
+        attest.equal(a, _ as 1)
     else
-        attest.equal(a, _ as nil | nil)
+        attest.equal(a, _ as nil)
     end
 
     attest.equal(a, _ as 1 | nil)
@@ -136,12 +136,12 @@ run[[
     local a: nil | 1
 
     if a then
-        attest.equal(a, _ as 1 | 1)
+        attest.equal(a, _ as 1)
         if a then
             if a then
-                attest.equal(a, _ as 1 | 1)
+                attest.equal(a, _ as 1)
             end
-            attest.equal(a, _ as 1 | 1)
+            attest.equal(a, _ as 1)
         end
     end
 
@@ -152,7 +152,7 @@ run([[
     local a: nil | 1
 
     if not a then
-        attest.equal(a, _ as nil | nil)
+        attest.equal(a, _ as nil)
     end
 
     attest.equal(a, _ as 1 | nil)
@@ -292,12 +292,12 @@ run[[
     local a: nil | 1
         
     if a then
-        attest.equal(a, _ as 1 | 1)
+        attest.equal(a, _ as 1)
         if a then
             if a then
-                attest.equal(a, _ as 1 | 1)
+                attest.equal(a, _ as 1)
             end
-            attest.equal(a, _ as 1 | 1)
+            attest.equal(a, _ as 1)
         end
     end
 

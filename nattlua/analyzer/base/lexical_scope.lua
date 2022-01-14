@@ -203,13 +203,14 @@ function META:SetTestCondition(obj)
 	self.test_condition = obj
 end
 
-function META:SetAffectedUpvaluesMap(upvalues)
-	self.upvalue_map = upvalues
+function META:SetTrackedObjects(upvalues, objects)
+	self.tracked_upvalues = upvalues
+	self.tracked_objects = objects
 end
 
 
-function META:GetAffectedUpvaluesMap()
-	return self.upvalue_map
+function META:GetTrackedObjects()
+	return self.tracked_upvalues, self.tracked_objects
 end
 
 function META:SetStatement(statement)
@@ -302,33 +303,8 @@ do
 		end
 	end
 
-	function META:UncertainReturn(analyzer)
-
+	function META:UncertainReturn()
 		self:GetNearestFunctionScope().uncertain_function_return = true
-
-		local upvalue_map = self:GetAffectedUpvaluesMap()
-
-		-- the or part here refers to if *condition* then
-		-- truthy/falsy _union is only created from binary operators and some others
-		if not upvalue_map then return end
-		for upvalue, stack in pairs(upvalue_map) do
-			if upvalue.Type == "upvalue" then
-				local val
-				if self:IsPartOfElseStatement() or stack[#stack].inverted then
-					val = stack[#stack].truthy
-				else	
-					val = stack[#stack].falsy
-				end
-
-				if val and (val.Type ~= "union" or not val:IsEmpty()) then
-					analyzer:MutateUpvalue(
-						upvalue,
-						val,
-						self:GetParent()
-					)
-				end
-			end
-		end
 	end
 
 	function META:GetNearestFunctionScope()

@@ -63,6 +63,46 @@ return function(META)
 		
 		return union
 	end
+
+	function META:MutateTracked(scope, scope_override, negate, upvalues, objects)
+		if objects then
+			for _, v in ipairs(objects) do
+				local val
+				if scope:IsPartOfElseStatement() or v.inverted then
+					val = negate and v.falsy or v.truthy
+				else
+					val = negate and v.truthy or v.falsy
+				end
+
+				if val and (val.Type ~= "union" or not val:IsEmpty()) then
+					if #val:GetData() == 1 then
+						val = val:GetData()[1]
+					end	 
+	
+					self:MutateValue(v.obj, v.key, val, scope_override)
+				end
+			end
+		end
+
+		if upvalues then
+			for u, v in pairs(upvalues) do
+				local val
+				if scope:IsPartOfElseStatement() or v[#v].inverted then
+					val = negate and v[#v].falsy or v[#v].truthy
+				else
+					val = negate and v[#v].truthy or v[#v].falsy
+				end
+
+				if val and (val.Type ~= "union" or not val:IsEmpty()) then
+					if #val:GetData() == 1 then
+						val = val:GetData()[1]
+					end
+
+					self:MutateUpvalue(u, val, scope_override)
+				end
+			end
+		end
+	end
 	
 	function META:ThrowSilentError()
 		for i = #self.call_stack, 1, -1 do
@@ -70,7 +110,9 @@ return function(META)
 			local function_scope = frame.scope:GetNearestFunctionScope()
 			function_scope.lua_silent_error = function_scope.lua_silent_error or {}
 			table.insert(function_scope.lua_silent_error, 1, self:GetScope())
-			frame.scope:UncertainReturn(self)
+			frame.scope:UncertainReturn()
+			
+			self:MutateTracked(frame.scope, frame.scope, false, frame.scope:GetTrackedObjects())
 		end
 	end
 
@@ -83,9 +125,9 @@ return function(META)
 			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
 
 			if obj:IsTruthy() then
-				self:GetScope():UncertainReturn(self)
+				self:GetScope():UncertainReturn()
 			else
-				self:GetScope():CertainReturn(self)
+				self:GetScope():CertainReturn()
 			end
 
 			local old = {}
@@ -95,15 +137,8 @@ return function(META)
 
 			local copy = self:CloneCurrentScope()
 			copy:SetTestCondition(obj)
-			local upvalues, objects = self:GetTrackedObjectMap(old)
-			
-			if upvalues and objects then
-				copy:SetAffectedUpvaluesMap(upvalues)
 
-				for _, v in ipairs(objects) do
-					self:MutateValue(v.obj, v.key, v.truthy)
-				end
-			end
+			self:MutateTracked(copy, nil, true, self:GetTrackedObjectMap(old))
 		else
 			self.lua_error_thrown = msg
 		end
@@ -158,12 +193,14 @@ return function(META)
 		end
 
 		if scope:IsUncertain() then
-			function_scope:UncertainReturn(self)
-			scope:UncertainReturn(self)
+			function_scope:UncertainReturn()
+			scope:UncertainReturn()
 		else
 			function_scope:CertainReturn(self)
 			scope:CertainReturn(self)
 		end
+
+		self:MutateTracked(scope, function_scope, false, scope:GetTrackedObjects())
 	end
 
 	function META:Print(...)
@@ -188,10 +225,9 @@ return function(META)
 		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
 	end	
 
-	function META:PushConditionalScope(statement, condition, upvalue_map)
+	function META:PushConditionalScope(statement, condition)
 		local scope = self:CreateAndPushScope()
 		scope:SetTestCondition(condition)
-		scope:SetAffectedUpvaluesMap(upvalue_map)
 		scope:SetStatement(statement)
 		scope:MakeUncertain(condition:IsUncertain())
 	end

@@ -41,7 +41,7 @@ local function FindHeadPosition(ent: Entity & HeadPos)
 		local m = ent:GetBoneMatrix(ent.findheadpos_head_bone)
         
 		if m then
-            attest.equal(m, _ as Matrix)
+            attest.equal(m as m |m, _ as Matrix)
 			local pos = m:GetTranslation()
 			if pos ~= ent:GetPos() then
 				return pos, m:GetAngles()

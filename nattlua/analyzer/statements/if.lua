@@ -1,4 +1,6 @@
 local ipairs = ipairs
+local Union = require("nattlua.types.union").Union
+
 return
 	{
 		AnalyzeIf = function(self, statement)
@@ -35,10 +37,22 @@ return
 					last_upvalues = upvalues
 					last_objects = objects
 					prev_expression = obj
-
+					
 					if obj:IsTruthy() then
 						self:FireEvent("if", i == 1 and "if" or "elseif", true)
-							self:PushConditionalScope(statement, obj, upvalues)
+						self:PushConditionalScope(statement, obj)
+						
+							self:GetScope():SetTrackedObjects(upvalues, objects)
+
+							if upvalues then
+								for u, v in pairs(upvalues) do
+									local union = Union()
+									for _, v in ipairs(v) do
+										union:AddType(v.truthy)
+									end
+									self:MutateUpvalue(u, union)
+								end
+							end
 
 							if objects then
 								for _, v in ipairs(objects) do
@@ -54,7 +68,15 @@ return
 				else
 					if prev_expression:IsFalsy() then
 						self:FireEvent("if", "else", true)
-							self:PushConditionalScope(statement, prev_expression, last_upvalues)
+							self:PushConditionalScope(statement, prev_expression)
+
+							self:GetScope():SetTrackedObjects(last_upvalues, last_objects)
+
+							if last_upvalues then
+								for u, v in pairs(last_upvalues) do
+									self:MutateUpvalue(u, v[#v].falsy)
+								end
+							end
 
 							if last_objects then
 								for _, v in ipairs(last_objects) do
