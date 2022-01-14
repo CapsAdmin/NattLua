@@ -203,14 +203,14 @@ function META:SetTestCondition(obj)
 	self.test_condition = obj
 end
 
-function META:SetTrackedObjects(upvalues, objects)
+function META:SetTrackedObjects(upvalues, tables)
 	self.tracked_upvalues = upvalues
-	self.tracked_objects = objects
+	self.tracked_tables = tables
 end
 
 
 function META:GetTrackedObjects()
-	return self.tracked_upvalues, self.tracked_objects
+	return self.tracked_upvalues, self.tracked_tables
 end
 
 function META:SetStatement(statement)

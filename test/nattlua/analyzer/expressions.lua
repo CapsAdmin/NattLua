@@ -186,3 +186,27 @@ run[[
         attest.equal(x.foo, _ as 1 | 2)
     end
 ]]
+
+run[[
+    local x: 1 | 2 | 3 | 4 | 5 | 6 | 7
+
+    if x == 1 or x == 2 then
+        attest.equal(x, _ as 1 | 2)
+    elseif x == 3 or x == 4 then
+        attest.equal(x, _ as 3 | 4)
+    else
+        attest.equal(x, _ as 5 | 6 | 7)
+    end
+]]
+
+run[[
+    local x: {y = 1 | 2 | 3 | 4 | 5 | 6 | 7}
+
+    if x.y == 1 or x.y == 2 then
+        attest.equal(x.y, _ as 1 | 2)
+    elseif x.y == 3 or x.y == 4 then
+        attest.equal(x.y, _ as 3 | 4)
+    else
+        attest.equal(x.y, _ as 5 | 6 | 7)
+    end
+]]
