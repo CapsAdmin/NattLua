@@ -454,6 +454,9 @@ return function(META)
 					tbl.tracked_stack = nil
 				end
 			end
+
+			self.tracking_object = nil
+			self.tracking_key = nil
 		end
 
 		function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
@@ -498,7 +501,33 @@ return function(META)
 			obj.tracked_stack = obj.tracked_stack or {}
 			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
 
+			val.parent_table = obj
+			val.parent_key = key
+			falsy_union.parent_table = obj
+			falsy_union.parent_key = key
+			truthy_union.parent_table = obj
+			truthy_union.parent_key = key
+
 			table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = self.inverted_index_tracking})
+
+			self.tracked_tables = self.tracked_tables or {}
+			table.insert(self.tracked_tables, obj)
+		end
+
+		function META:TrackTableIndexUnion(obj, key, truthy_union, falsy_union, inverted)
+			if self:IsTypesystem() then return end
+			local hash = key:GetHash()
+			if not hash then return end
+			
+			obj.tracked_stack = obj.tracked_stack or {}
+			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
+
+			falsy_union.parent_table = obj
+			falsy_union.parent_key = key
+			truthy_union.parent_table = obj
+			truthy_union.parent_key = key
+
+			table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = inverted})
 
 			self.tracked_tables = self.tracked_tables or {}
 			table.insert(self.tracked_tables, obj)
@@ -548,7 +577,13 @@ return function(META)
 				for _, tbl in ipairs(self.tracked_tables) do
 					if tbl.tracked_stack and not tbl.tracked_stack[1] then
 						for _, stack in pairs(tbl.tracked_stack) do
-							table.insert(tables, {obj = tbl, key = stack[#stack].key, truthy = stack[#stack].truthy, falsy = stack[#stack].falsy, inverted = stack[#stack].inverted})
+							table.insert(tables, {
+								obj = tbl, 
+								key = stack[#stack].key, 
+								truthy = stack[#stack].truthy, 
+								falsy = stack[#stack].falsy, 
+								inverted = stack[#stack].inverted
+							})
 						end
 					end
 				end

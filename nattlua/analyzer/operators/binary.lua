@@ -231,7 +231,11 @@ local function Binary(self, node, l, r, op)
 				self.type_checked = nil
 			end
 
+			
 			if op ~= "or" and op ~= "and" then
+				if l.parent_table then
+					self:TrackTableIndexUnion(l.parent_table, l.parent_key, truthy_union, falsy_union)
+				end
 				self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
 				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
 			end
@@ -245,7 +249,7 @@ local function Binary(self, node, l, r, op)
 
 	do -- arithmetic operators
 		if op == "." or op == ":" then
-			return self:IndexOperator(node, l, r) 
+			return self:IndexOperator(node, l, r)
 		elseif op == "+" then
 			local val = operator(self, node, l, r, op, "__add")
 			if val then return val end

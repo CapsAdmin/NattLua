@@ -92,7 +92,7 @@ return
 							end
 
 							self:TrackTableIndex(obj, key, val)
-
+			
 							return val
 						end
 					end
