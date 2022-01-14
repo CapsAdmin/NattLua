@@ -494,21 +494,22 @@ return function(META)
 			if not val or val.Type ~= "union" then return end
 			local hash = key:GetHash()
 			if not hash then return end
-
-			local truthy_union = val:GetTruthy()
-			local falsy_union = val:GetFalsy()
 			
-			obj.tracked_stack = obj.tracked_stack or {}
-			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
-
 			val.parent_table = obj
 			val.parent_key = key
+			
+			local truthy_union = val:GetTruthy()
+			local falsy_union = val:GetFalsy()
+
 			falsy_union.parent_table = obj
 			falsy_union.parent_key = key
 			truthy_union.parent_table = obj
 			truthy_union.parent_key = key
 
-			table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = self.inverted_index_tracking})
+			obj.tracked_stack = obj.tracked_stack or {}
+			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
+
+			table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = self.inverted_index_tracking, truthy_falsy = true})
 
 			self.tracked_tables = self.tracked_tables or {}
 			table.insert(self.tracked_tables, obj)
@@ -526,6 +527,13 @@ return function(META)
 			falsy_union.parent_key = key
 			truthy_union.parent_table = obj
 			truthy_union.parent_key = key
+
+			for i = #obj.tracked_stack[hash], 1 do
+				local tracked = obj.tracked_stack[hash][i]
+				if tracked.truthy_falsy then
+					table.remove(obj.tracked_stack[hash], i)
+				end
+			end
 
 			table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = inverted})
 
@@ -580,9 +588,7 @@ return function(META)
 							table.insert(tables, {
 								obj = tbl, 
 								key = stack[#stack].key, 
-								truthy = stack[#stack].truthy, 
-								falsy = stack[#stack].falsy, 
-								inverted = stack[#stack].inverted
+								stack = stack,
 							})
 						end
 					end
@@ -592,34 +598,44 @@ return function(META)
 			return upvalues, tables
 		end
 
-
-		function META:MutateTrackedFromReturn(scope, scope_override, negate, upvalues, objects)
-			if objects then
-				for _, v in ipairs(objects) do
-					local val
-					if scope:IsPartOfElseStatement() or v.inverted then
-						val = negate and v.truthy or v.falsy
-					else
-						val = negate and v.falsy or v.truthy
+		function META:MutateTrackedFromIf(upvalues, tables, negate)
+			if upvalues then
+				for upvalue, stack in pairs(upvalues) do
+					local union = Union()
+					for _, v in ipairs(stack) do
+						if negate then
+							union:AddType(v.falsy)
+						else
+							union:AddType(v.truthy)
+						end
 					end
-
-					if val and (val.Type ~= "union" or not val:IsEmpty()) then
-						if #val:GetData() == 1 then
-							val = val:GetData()[1]
-						end	 
-		
-						self:MutateValue(v.obj, v.key, val, scope_override)
-					end
+					self:MutateUpvalue(upvalue, union)
 				end
 			end
 
+			if tables then
+				for _, data in ipairs(tables) do
+					local union = Union()
+					for _, v in ipairs(data.stack) do
+						if negate then
+							union:AddType(v.falsy)
+						else
+							union:AddType(v.truthy)
+						end
+					end
+					self:MutateValue(data.obj, data.key, union)
+				end
+			end
+		end
+
+		function META:MutateTrackedFromReturn(scope, scope_override, negate, upvalues, tables)
 			if upvalues then
-				for u, v in pairs(upvalues) do
+				for upvalue, stack in pairs(upvalues) do
 					local val
-					if scope:IsPartOfElseStatement() or v[#v].inverted then
-						val = negate and v[#v].truthy or v[#v].falsy
+					if scope:IsPartOfElseStatement() or stack[#stack].inverted then
+						val = negate and stack[#stack].truthy or stack[#stack].falsy
 					else
-						val = negate and v[#v].falsy or v[#v].truthy
+						val = negate and stack[#stack].falsy or stack[#stack].truthy
 					end
 
 					if val and (val.Type ~= "union" or not val:IsEmpty()) then
@@ -627,7 +643,27 @@ return function(META)
 							val = val:GetData()[1]
 						end
 
-						self:MutateUpvalue(u, val, scope_override)
+						self:MutateUpvalue(upvalue, val, scope_override)
+					end
+				end
+			end
+
+			if tables then
+				for _, data in ipairs(tables) do
+					local stack = data.stack
+					local val
+					if scope:IsPartOfElseStatement() or stack[#stack].inverted then
+						val = negate and stack[#stack].truthy or stack[#stack].falsy
+					else
+						val = negate and stack[#stack].falsy or stack[#stack].truthy
+					end
+
+					if val and (val.Type ~= "union" or not val:IsEmpty()) then
+						if #val:GetData() == 1 then
+							val = val:GetData()[1]
+						end	 
+		
+						self:MutateValue(data.obj, data.key, val, scope_override)
 					end
 				end
 			end

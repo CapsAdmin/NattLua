@@ -67,7 +67,7 @@ local function Binary(self, node, l, r, op)
 	if not l and not r then
 		if node.value.value == "and" then
 			l = self:AnalyzeExpression(node.left)
-	
+
 			if l:IsCertainlyFalse() then
 				r = Nil():SetNode(node.right)
 			else

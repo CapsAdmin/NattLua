@@ -178,3 +178,11 @@ run[[
     if x.foo ~= nil then return end
     attest.equal(x.foo, nil)
 ]]
+
+run[[
+    local x: {foo = 1 | 2 | 3}
+
+    if x.foo == 1 or x.foo == 2 then
+        attest.equal(x.foo, _ as 1 | 2)
+    end
+]]

@@ -44,21 +44,7 @@ return
 						
 							self:GetScope():SetTrackedObjects(upvalues, objects)
 
-							if upvalues then
-								for u, v in pairs(upvalues) do
-									local union = Union()
-									for _, v in ipairs(v) do
-										union:AddType(v.truthy)
-									end
-									self:MutateUpvalue(u, union)
-								end
-							end
-
-							if objects then
-								for _, v in ipairs(objects) do
-									self:MutateValue(v.obj, v.key, v.truthy)
-								end
-							end
+							self:MutateTrackedFromIf(upvalues, objects)
 
 							self:AnalyzeStatements(statements)
 							self:PopConditionalScope()
@@ -72,17 +58,7 @@ return
 
 							self:GetScope():SetTrackedObjects(last_upvalues, last_objects)
 
-							if last_upvalues then
-								for u, v in pairs(last_upvalues) do
-									self:MutateUpvalue(u, v[#v].falsy)
-								end
-							end
-
-							if last_objects then
-								for _, v in ipairs(last_objects) do
-									self:MutateValue(v.obj, v.key, v.falsy)
-								end
-							end
+							self:MutateTrackedFromIf(last_upvalues, last_objects, true)
 
 							self:GetScope():InvertIfStatement(true)
 							self:AnalyzeStatements(statements)
