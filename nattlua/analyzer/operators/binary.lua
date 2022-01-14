@@ -223,17 +223,9 @@ local function Binary(self, node, l, r, op)
 				self.type_checked = nil
 			end
 
-			if op == "~=" then
-				self.notlol = true
-			end
-
 			if op ~= "or" and op ~= "and" then
-				self:TrackUpvalue(l, truthy_union, falsy_union)
-				self:TrackUpvalue(r, truthy_union, falsy_union)
-			end
-
-			if op == "~=" then
-				self.notlol = nil
+				self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
+				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
 			end
 
 			return

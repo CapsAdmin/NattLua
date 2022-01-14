@@ -456,7 +456,7 @@ return function(META)
 			end
 		end
 
-		function META:TrackUpvalue(obj, truthy_union, falsy_union)
+		function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
 			if self:IsTypesystem() then return end
 			if obj.Type ~= "union" then return end
 			local upvalue = obj:GetUpvalue()
@@ -465,11 +465,6 @@ return function(META)
 
 			truthy_union = truthy_union or obj:GetTruthy()
 			falsy_union = falsy_union or obj:GetFalsy()
-			local inverted = self.notlol
-			
-			if inverted then
-			--	truthy_union, falsy_union = falsy_union, truthy_union
-			end
 
 			upvalue.tracked_stack = upvalue.tracked_stack or {}
 			table.insert(upvalue.tracked_stack, {truthy = truthy_union, falsy = falsy_union, inverted = inverted})
@@ -491,7 +486,7 @@ return function(META)
 			end
 		end
 
-		function META:TrackTableIndex(obj, key, val)
+		function META:TrackTableIndex(obj, key, val, inverted)
 			if self:IsTypesystem() then return end
 			if not val or val.Type ~= "union" then return end
 			local hash = key:GetHash()
@@ -499,12 +494,7 @@ return function(META)
 
 			local truthy_union = val:GetTruthy()
 			local falsy_union = val:GetFalsy()
-			local inverted = self.notlol
 			
-			if inverted then
-				truthy_union, falsy_union = falsy_union, truthy_union
-			end
-
 			obj.tracked_stack = obj.tracked_stack or {}
 			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
 			table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = inverted})
