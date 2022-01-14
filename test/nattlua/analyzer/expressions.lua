@@ -157,3 +157,10 @@ run[[
         attest.equal(x, _ as 3)
     end
 ]]
+
+run[[
+    local x: {foo = nil | 1}
+
+    if not x.foo then return end
+    attest.equal(x.foo, _ as 1)
+]]

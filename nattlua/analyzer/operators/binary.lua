@@ -174,6 +174,10 @@ local function Binary(self, node, l, r, op)
 			local new_union = Union()
 			local truthy_union = Union():SetUpvalue(l:GetUpvalue())
 			local falsy_union = Union():SetUpvalue(l:GetUpvalue())
+
+			if op == "~=" then
+				self.inverted_index_tracking = true
+			end
 			
 			for _, l in ipairs(l:GetData()) do
 				for _, r in ipairs(r:GetData()) do
@@ -215,6 +219,10 @@ local function Binary(self, node, l, r, op)
 						new_union:AddType(res)
 					end
 				end
+			end
+			
+			if op == "~=" then
+				self.inverted_index_tracking = nil
 			end
 
 			-- the return value from type(x)

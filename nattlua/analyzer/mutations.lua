@@ -486,7 +486,7 @@ return function(META)
 			end
 		end
 
-		function META:TrackTableIndex(obj, key, val, inverted)
+		function META:TrackTableIndex(obj, key, val)
 			if self:IsTypesystem() then return end
 			if not val or val.Type ~= "union" then return end
 			local hash = key:GetHash()
@@ -497,7 +497,8 @@ return function(META)
 			
 			obj.tracked_stack = obj.tracked_stack or {}
 			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
-			table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = inverted})
+
+			table.insert(obj.tracked_stack[hash], {key = key, truthy = truthy_union, falsy = falsy_union, inverted = self.inverted_index_tracking})
 
 			self.tracked_tables = self.tracked_tables or {}
 			table.insert(self.tracked_tables, obj)
@@ -547,13 +548,54 @@ return function(META)
 				for _, tbl in ipairs(self.tracked_tables) do
 					if tbl.tracked_stack and not tbl.tracked_stack[1] then
 						for _, stack in pairs(tbl.tracked_stack) do
-							table.insert(tables, {obj = tbl, key = stack[#stack].key, truthy = stack[#stack].truthy, falsy = stack[#stack].falsy})
+							table.insert(tables, {obj = tbl, key = stack[#stack].key, truthy = stack[#stack].truthy, falsy = stack[#stack].falsy, inverted = stack[#stack].inverted})
 						end
 					end
 				end
 			end
 
 			return upvalues, tables
+		end
+
+
+		function META:MutateTrackedFromReturn(scope, scope_override, negate, upvalues, objects)
+			if objects then
+				for _, v in ipairs(objects) do
+					local val
+					if scope:IsPartOfElseStatement() or v.inverted then
+						val = negate and v.truthy or v.falsy
+					else
+						val = negate and v.falsy or v.truthy
+					end
+
+					if val and (val.Type ~= "union" or not val:IsEmpty()) then
+						if #val:GetData() == 1 then
+							val = val:GetData()[1]
+						end	 
+		
+						self:MutateValue(v.obj, v.key, val, scope_override)
+					end
+				end
+			end
+
+			if upvalues then
+				for u, v in pairs(upvalues) do
+					local val
+					if scope:IsPartOfElseStatement() or v[#v].inverted then
+						val = negate and v[#v].truthy or v[#v].falsy
+					else
+						val = negate and v[#v].falsy or v[#v].truthy
+					end
+
+					if val and (val.Type ~= "union" or not val:IsEmpty()) then
+						if #val:GetData() == 1 then
+							val = val:GetData()[1]
+						end
+
+						self:MutateUpvalue(u, val, scope_override)
+					end
+				end
+			end
 		end
 	end
 end

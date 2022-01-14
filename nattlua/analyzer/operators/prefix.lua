@@ -22,6 +22,10 @@ end
 local function Prefix(self, node, r)
 	local op = node.value.value
 
+	if op == "not" then
+		self.inverted_index_tracking = not self.inverted_index_tracking
+	end
+
 	if not r then
 		r = self:AnalyzeExpression(node.right)	
 		if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
@@ -29,6 +33,10 @@ local function Prefix(self, node, r)
 				self:TrackUpvalue(r, nil, nil, op == "not")
 			end
 		end
+	end
+
+	if op == "not" then
+		self.inverted_index_tracking = nil
 	end
 
 	if op == "literal" then

@@ -63,46 +63,6 @@ return function(META)
 		
 		return union
 	end
-
-	function META:MutateTracked(scope, scope_override, negate, upvalues, objects)
-		if objects then
-			for _, v in ipairs(objects) do
-				local val
-				if scope:IsPartOfElseStatement() or v.inverted then
-					val = negate and v.falsy or v.truthy
-				else
-					val = negate and v.truthy or v.falsy
-				end
-
-				if val and (val.Type ~= "union" or not val:IsEmpty()) then
-					if #val:GetData() == 1 then
-						val = val:GetData()[1]
-					end	 
-	
-					self:MutateValue(v.obj, v.key, val, scope_override)
-				end
-			end
-		end
-
-		if upvalues then
-			for u, v in pairs(upvalues) do
-				local val
-				if scope:IsPartOfElseStatement() or v[#v].inverted then
-					val = negate and v[#v].falsy or v[#v].truthy
-				else
-					val = negate and v[#v].truthy or v[#v].falsy
-				end
-
-				if val and (val.Type ~= "union" or not val:IsEmpty()) then
-					if #val:GetData() == 1 then
-						val = val:GetData()[1]
-					end
-
-					self:MutateUpvalue(u, val, scope_override)
-				end
-			end
-		end
-	end
 	
 	function META:ThrowSilentError()
 		for i = #self.call_stack, 1, -1 do
@@ -112,7 +72,7 @@ return function(META)
 			table.insert(function_scope.lua_silent_error, 1, self:GetScope())
 			frame.scope:UncertainReturn()
 			
-			self:MutateTracked(frame.scope, frame.scope, false, frame.scope:GetTrackedObjects())
+			self:MutateTrackedFromReturn(frame.scope, frame.scope, true, frame.scope:GetTrackedObjects())
 		end
 	end
 
@@ -138,7 +98,7 @@ return function(META)
 			local copy = self:CloneCurrentScope()
 			copy:SetTestCondition(obj)
 
-			self:MutateTracked(copy, nil, true, self:GetTrackedObjectMap(old))
+			self:MutateTrackedFromReturn(copy, nil, false, self:GetTrackedObjectMap(old))
 		else
 			self.lua_error_thrown = msg
 		end
@@ -200,7 +160,7 @@ return function(META)
 			scope:CertainReturn(self)
 		end
 
-		self:MutateTracked(scope, function_scope, false, scope:GetTrackedObjects())
+		self:MutateTrackedFromReturn(scope, function_scope, true, scope:GetTrackedObjects())
 	end
 
 	function META:Print(...)
