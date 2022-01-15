@@ -58,7 +58,7 @@ return
 						end
 					end
 				end
-				self:ClearTrackedObjects()
+				self:ClearTracked()
 			end
 
 			table.remove(self.current_tables)

@@ -220,15 +220,12 @@ function META:Copy()
 	return copy
 end
 
-function META:SetTrackedObjects(upvalues, tables)
-	self.tracked_upvalues = upvalues
-	self.tracked_tables = tables
-end
-
+META:GetSet("TrackedUpvalues")
+META:GetSet("TrackedTables")
 
 function META:TracksSameAs(scope)
-	local upvalues_a, tables_a = self:GetTrackedObjects()
-	local upvalues_b, tables_b = scope:GetTrackedObjects()
+	local upvalues_a, tables_a = self:GetTrackedUpvalues(), self:GetTrackedTables()
+	local upvalues_b, tables_b = scope:GetTrackedUpvalues(), scope:GetTrackedTables()
 
 	if not upvalues_a or not upvalues_b then return false end
 	if not tables_a or not tables_b then return false end
@@ -256,7 +253,7 @@ function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
 	local scope = self
 
 	while true do
-		local upvalues = scope:GetTrackedObjects()
+		local upvalues = scope:GetTrackedUpvalues()
 		if upvalues then
 			for i, data in ipairs(upvalues) do
 				if data.upvalue == upvalue then
@@ -271,7 +268,7 @@ function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
         
         for _, child in ipairs(scope:GetChildren()) do
 			if child ~= scope and self:IsPartOfTestStatementAs(child) then
-				local upvalues = child:GetTrackedObjects()
+				local upvalues = child:GetTrackedUpvalues()
 				if upvalues then
 					for i, data in ipairs(upvalues) do
 						if data.upvalue == upvalue then
@@ -287,10 +284,6 @@ function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
 	end
 
 	return nil
-end
-
-function META:GetTrackedObjects()
-	return self.tracked_upvalues, self.tracked_tables
 end
 
 function META:SetStatement(statement)

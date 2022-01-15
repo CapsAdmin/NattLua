@@ -33,9 +33,10 @@ return
 					prev_expression = obj
 					
 					if obj:IsTruthy() then
-						local upvalues, tables = self:GetTrackedObjectMap()
+						local upvalues = self:GetTrackedUpvalues()
+						local tables = self:GetTrackedTables()
 						
-						self:ClearTrackedObjects()
+						self:ClearTracked()
 
 						table.insert(blocks, {
 							statements = statements,
@@ -67,7 +68,8 @@ return
 					self:FireEvent("if", i == 1 and "if" or "elseif", true)
 				end
 					self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
-					self:GetScope():SetTrackedObjects(block.upvalues, block.tables)
+					self:GetScope():SetTrackedUpvalues(block.upvalues)
+					self:GetScope():SetTrackedTables(block.tables)
 					if block.is_else then
 						self:GetScope():InvertIfStatement(true)
 						self:MutateTrackedFromIfElse(blocks)
@@ -84,6 +86,6 @@ return
 				end
 			end
 
-			self:ClearTrackedObjects()
+			self:ClearTracked()
 		end,
 	}

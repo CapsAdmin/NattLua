@@ -72,7 +72,7 @@ return function(META)
 			table.insert(function_scope.lua_silent_error, 1, self:GetScope())
 			frame.scope:UncertainReturn()
 			
-			self:MutateTrackedFromReturn(frame.scope, frame.scope, true, frame.scope:GetTrackedObjects())
+			self:MutateTrackedFromReturn(frame.scope, frame.scope, true, frame.scope:GetTrackedUpvalues(), frame.scope:GetTrackedTables())
 		end
 	end
 
@@ -98,7 +98,7 @@ return function(META)
 			local copy = self:CloneCurrentScope()
 			copy:SetConditionalScope(true)
 
-			self:MutateTrackedFromReturn(copy, nil, false, self:GetTrackedObjectMap(old))
+			self:MutateTrackedFromReturn(copy, nil, false, self:GetTrackedUpvalues(old), self:GetTrackedTables())
 		else
 			self.lua_error_thrown = msg
 		end
@@ -158,7 +158,7 @@ return function(META)
 			scope:CertainReturn(self)
 		end
 
-		self:MutateTrackedFromReturn(scope, function_scope, true, scope:GetTrackedObjects())
+		self:MutateTrackedFromReturn(scope, function_scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
 	end
 
 	function META:Print(...)

@@ -132,7 +132,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		end
 
 		do
-			local upvalues = mut.scope:GetTrackedObjects()
+			local upvalues = mut.scope:GetTrackedUpvalues()
 
 			if upvalues then
 				for _, data in ipairs(upvalues) do
@@ -358,7 +358,7 @@ return function(META)
 
 	do
 
-		function META:ClearTrackedObjects()
+		function META:ClearTracked()
 			if self.tracked_upvalues then
 				for _, upvalue in ipairs(self.tracked_upvalues) do
 					upvalue.tracked_stack = nil
@@ -493,10 +493,28 @@ return function(META)
 			end
 		end
 
-
-		function META:GetTrackedObjectMap(old_upvalues)
-			local upvalues = {}
+		function META:GetTrackedTables()
 			local tables = {}
+
+			if self.tracked_tables then
+				for _, tbl in ipairs(self.tracked_tables) do
+					if tbl.tracked_stack then
+						for _, stack in pairs(tbl.tracked_stack) do
+							table.insert(tables, {
+								obj = tbl, 
+								key = stack[#stack].key, 
+								stack = copy(stack),
+							})
+						end
+					end
+				end
+			end
+
+			return tables
+		end
+
+		function META:GetTrackedUpvalues(old_upvalues)
+			local upvalues = {}
 
 			local translate = {}
 			if old_upvalues then
@@ -524,21 +542,7 @@ return function(META)
 				end
 			end
 
-			if self.tracked_tables then
-				for _, tbl in ipairs(self.tracked_tables) do
-					if tbl.tracked_stack then
-						for _, stack in pairs(tbl.tracked_stack) do
-							table.insert(tables, {
-								obj = tbl, 
-								key = stack[#stack].key, 
-								stack = copy(stack),
-							})
-						end
-					end
-				end
-			end
-
-			return upvalues, tables
+			return upvalues
 		end
 
 		function META:MutateTrackedFromIf(upvalues, tables)
