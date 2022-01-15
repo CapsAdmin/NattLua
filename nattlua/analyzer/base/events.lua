@@ -166,7 +166,7 @@ return function(META)
 			elseif what == "enter_scope" then
 				local scope = ...
 				tab()
-				write(": ", (scope:GetTestCondition()))
+				write(": ")
 				t = t + 1
 				write("\n")
 			elseif what == "leave_scope" then

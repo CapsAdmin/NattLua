@@ -1522,10 +1522,10 @@ run[[
             § SCOPE1 = analyzer:GetScope()
             x = 1
         elseif type(x) == "number" then
-            § assert(not analyzer:GetScope():IsCertain(SCOPE1))
+            § assert(not analyzer:GetScope():IsCertainFromScope(SCOPE1))
             x = 2
         elseif type(x) == "table" then
-            § assert(not analyzer:GetScope():IsCertain(SCOPE1))
+            § assert(not analyzer:GetScope():IsCertainFromScope(SCOPE1))
             x = 3
         end
     

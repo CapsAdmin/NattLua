@@ -51,7 +51,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				(
 					scope:IsPartOfTestStatementAs(mut.scope) or 
 					(self.current_if_statement and mut.scope.statement == self.current_if_statement) or
-					(mut.from_tracking and not mut.scope:IsCertain(scope))
+					(mut.from_tracking and not mut.scope:IsCertainFromScope(scope))
 				)
 				and scope ~= mut.scope 
 			then
@@ -72,9 +72,9 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 						local mut = mutations[i]
 						if not mut then break end
 
-						if not mut.scope:IsPartOfTestStatementAs(scope) and not mut.scope:IsCertain(scope) then
+						if not mut.scope:IsPartOfTestStatementAs(scope) and not mut.scope:IsCertainFromScope(scope) then
 							for i = i, 1, -1 do
-								if mutations[i].scope:IsCertain(scope) then
+								if mutations[i].scope:IsCertainFromScope(scope) then
 									if DEBUG then
 										dprint(mut, "redudant mutation before else part of if statement")
 									end
@@ -153,7 +153,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		end
 	
 		-- IsCertain isn't really accurate and seems to be used as a last resort in case the above logic doesn't work
-		if mut.certain_override or mut.scope:IsCertain(scope) then
+		if mut.certain_override or mut.scope:IsCertainFromScope(scope) then
 			union:Clear()
 		end
 

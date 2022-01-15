@@ -96,7 +96,7 @@ return function(META)
 			end
 
 			local copy = self:CloneCurrentScope()
-			copy:SetTestCondition(obj)
+			copy:SetTestScope(true)
 
 			self:MutateTrackedFromReturn(copy, nil, false, self:GetTrackedObjectMap(old))
 		else
@@ -124,7 +124,7 @@ return function(META)
 		if scope == function_scope then
 			-- the root scope of the function when being called is definetly certain
 			function_scope.uncertain_function_return = false
-		elseif scope:IsUncertain() then
+		elseif scope:IsUncertainFromScope() then
 			function_scope.uncertain_function_return = true
 			
 			-- else always hits, so even if the else part is uncertain
@@ -141,7 +141,7 @@ return function(META)
 		
 		if function_scope.lua_silent_error then 
 			local errored_scope = table.remove(function_scope.lua_silent_error)
-			if errored_scope and self:GetScope():IsCertain(errored_scope) and errored_scope:IsCertain() then
+			if errored_scope and self:GetScope():IsCertainFromScope(errored_scope) and errored_scope:IsCertainFromScope() then
 				thrown = true
 			end
 		end 
@@ -152,7 +152,7 @@ return function(META)
 			scope:CollectReturnTypes(node, types)
 		end
 
-		if scope:IsUncertain() then
+		if scope:IsUncertainFromScope() then
 			function_scope:UncertainReturn()
 			scope:UncertainReturn()
 		else
@@ -187,15 +187,16 @@ return function(META)
 
 	function META:PushConditionalScope(statement, condition)
 		local scope = self:CreateAndPushScope()
-		scope:SetTestCondition(condition)
+		scope:SetTestScope(true)
+		scope:SetTruthy(condition:IsTruthy())
+		scope:SetFalsy(condition:IsFalsy())
 		scope:SetStatement(statement)
-		scope:MakeUncertain(condition:IsUncertain())
 	end
 
-	function META:ErrorAndCloneCurrentScope(node, err, condition)
+	function META:ErrorAndCloneCurrentScope(node, err)
 		self:Error(node, err)
 		self:CloneCurrentScope()
-		self:GetScope():SetTestCondition(condition)
+		self:GetScope():SetTestScope(true)
 	end
 
 	function META:PopConditionalScope()

@@ -43,6 +43,50 @@ local META = {}
 META.__index = META
 local LexicalScope
 
+function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
+	tbl[name] = default--[[# as NonLiteral<|default|>]]
+--[[#	type tbl.@Self[name] = tbl[name] ]]
+	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+		self[name] = val
+		return self
+	end
+	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+		return self[name]
+	end
+end
+
+function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
+	tbl[name] = default--[[# as NonLiteral<|default|>]]
+--[[#	type tbl.@Self[name] = tbl[name] ]]
+	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+		self[name] = val
+		return self
+	end
+	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+		return self[name]
+	end
+end
+
+do
+	function META:IsUncertain()
+		return self:IsTruthy() and self:IsFalsy()
+	end
+
+	function META:IsCertainlyFalse()
+		return self:IsFalsy() and not self:IsTruthy()
+	end
+
+	function META:IsCertainlyTrue()
+		return self:IsTruthy() and not self:IsFalsy()
+	end
+
+	META:IsSet("Falsy", false--[[# as boolean]])
+	META:IsSet("Truthy", false--[[# as boolean]])
+end
+
+META:IsSet("TestScope", false--[[# as boolean]])
+
+
 function META:SetParent(parent)
 	self.parent = parent
 
@@ -191,16 +235,13 @@ function META:Copy()
 
 	copy.returns = self.returns
 	copy.parent = self.parent
+	copy:SetTestScope(self:IsTestScope())
 	
 	return copy
 end
 
 function META:GetParent()
 	return self.parent
-end
-
-function META:SetTestCondition(obj)
-	self.test_condition = obj
 end
 
 function META:SetTrackedObjects(upvalues, tables)
@@ -300,12 +341,8 @@ function META.IsPartOfTestStatementAs(a, b)
 end
 
 function META:FindFirstTestScope()
-	local obj, scope = self:GetMemberInParents("test_condition")
+	local obj, scope = self:GetMemberInParents("TestScope")
 	return scope
-end
-
-function META:GetTestCondition()
-	return self.test_condition
 end
 
 function META:Contains(scope)
@@ -384,16 +421,16 @@ do
 		self.returns = {}
 	end
 
-	function META:IsCertain(from)
-		return not self:IsUncertain(from)
+	function META:IsCertainFromScope(from)
+		return not self:IsUncertainFromScope(from)
 	end
 
-	function META:IsUncertain(from)
+	function META:IsUncertainFromScope(from)
 		if from == self then return false end
 		local scope = self
 		
 		if not from then
-			return self.uncertain
+			return self:IsTruthy() and self:IsFalsy()
 		end
 
 		if self:IsPartOfTestStatementAs(from) then return true end
@@ -418,7 +455,7 @@ do
 					return true
 				end
 			end 
-			if scope.uncertain then
+			if scope:IsTruthy() and scope:IsFalsy() then
 				if scope:Contains(from) then
 					return false
 				end
@@ -468,7 +505,7 @@ function META:__tostring()
 		end
 	end
 
-	local s = "scope[" .. x .. "," .. y .. "]" .. "[" .. (self:IsUncertain() and "uncertain" or "certain") .. "]" .. "[" .. tostring(self:GetTestCondition() or nil) .. "]"
+	local s = "scope[" .. x .. "," .. y .. "]" .. "[" .. (self:IsUncertain() and "uncertain" or "certain") .. "]" 
 
 	if self.returns then
 		s = s .. "[function scope]"
