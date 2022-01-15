@@ -19,79 +19,6 @@ local function dprint(mut, reason)
 	)
 end
 
-local FindInType
-
-do
-	local function cmp(a, b, context, source)
-		if not context[a] then
-			context[a] = {}
-			context[a][b] = FindInType(a, b, context, source)
-		end
-
-		return context[a][b]
-	end
-
-	-- this function is a sympton of me not knowing exactly how to find types in other types
-	-- ideally this should be much more general and less complex
-	-- i consider this a hack that should be refactored out
-
-	function FindInType(a, b, context, source)
-		source = source or b
-		context = context or {}
-		if not a then return false end
-		if a == b then return source end
-
-		if a:GetUpvalue() and b:GetUpvalue() then
-			if a:GetUpvalueReference() or b:GetUpvalueReference() then return a:GetUpvalueReference() == b:GetUpvalueReference() and source or false end
-			if a:GetUpvalue() == b:GetUpvalue() then return source end
-		end
-
-		if
-			b:GetUpvalue() and
-			a:GetTypeSourceRight() and
-			a:GetTypeSourceRight():GetUpvalue() and
-			a:GetTypeSourceRight():GetUpvalue().GetNode and
-			b:GetUpvalue().GetNode and
-			a:GetTypeSourceRight():GetUpvalue():GetNode() == b:GetUpvalue():GetNode()
-		then
-			return cmp(a:GetTypeSourceRight(), b, context, source)
-		end
-
-		if a:GetUpvalue() and a:GetUpvalue().value then return cmp(a:GetUpvalue().value, b, context, a) end
-		if a.type_checked then return cmp(a.type_checked, b, context, a) end
-		if a:GetTypeSourceLeft() then return cmp(a:GetTypeSourceLeft(), b, context, a) end
-		if a:GetTypeSourceRight() then return cmp(a:GetTypeSourceRight(), b, context, a) end
-		if a:GetTypeSource() then return cmp(a:GetTypeSource(), b, context, a) end
-		return false
-	end
-end
-
-local function FindScopeFromTestCondition(root_scope, obj)
-	local scope = root_scope
-	local found_type
-
-	while true do
-		found_type = FindInType(scope:GetTestCondition(), obj)
-		if found_type then break end
-        
-        -- find in siblings too, if they have returned
-        -- ideally when cloning a scope, the new scope should be 
-        -- inside of the returned scope, then we wouldn't need this code
-        
-        for _, child in ipairs(scope:GetChildren()) do
-			if child ~= scope and root_scope:IsPartOfTestStatementAs(child) then
-				local found_type = FindInType(child:GetTestCondition(), obj)
-				if found_type then return child, found_type end
-			end
-		end
-
-		scope = scope:GetParent()
-		if not scope then return end
-	end
-
-	return scope, found_type
-end
-
 local function get_value_from_scope(self, mutations, scope, obj, key)
 	if DEBUG then
 		print("looking up mutations for " .. tostring(obj) .. "." .. tostring(key) .. ":")
@@ -275,30 +202,23 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		end
 	end
 	if value.Type == "union" then
-		local found_scope = FindScopeFromTestCondition(scope, value)
+		local found_scope, data = scope:FindResponsibleTestScopeFromUpvalue(obj)
+
 		if found_scope then
-			local upvalues = found_scope:GetTrackedObjects()
-			if upvalues then
-				for _, data in ipairs(upvalues) do
-					if data.upvalue == obj then
-						local stack = data.stack
-						if
-							found_scope:IsPartOfElseStatement() or
-							(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
-						then
-							return stack[#stack].falsy
-						else
-							local union = Union()
+			local stack = data.stack
+			if
+				found_scope:IsPartOfElseStatement() or
+				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
+			then
+				return stack[#stack].falsy
+			else
+				local union = Union()
 
-							for _, val in ipairs(stack) do
-								union:AddType(val.truthy)
-							end
-
-							return union
-						end
-						break
-					end
+				for _, val in ipairs(stack) do
+					union:AddType(val.truthy)
 				end
+
+				return union
 			end
 		end
 	end

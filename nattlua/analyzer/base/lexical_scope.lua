@@ -235,6 +235,43 @@ function META:TracksSameAs(scope)
 	return false
 end
 
+function META:FindResponsibleTestScopeFromUpvalue(upvalue)
+	local scope = self
+
+	while true do
+		local upvalues = scope:GetTrackedObjects()
+		if upvalues then
+			for i, data in ipairs(upvalues) do
+				if data.upvalue == upvalue then
+					return scope, data
+				end
+			end
+		end
+        
+        -- find in siblings too, if they have returned
+        -- ideally when cloning a scope, the new scope should be 
+        -- inside of the returned scope, then we wouldn't need this code
+        
+        for _, child in ipairs(scope:GetChildren()) do
+			if child ~= scope and self:IsPartOfTestStatementAs(child) then
+				local upvalues = child:GetTrackedObjects()
+				if upvalues then
+					for i, data in ipairs(upvalues) do
+						if data.upvalue == upvalue then
+							return child, data
+						end
+					end
+				end
+			end
+		end
+
+		scope = scope:GetParent()
+		if not scope then return end
+	end
+
+	return nil
+end
+
 function META:GetTrackedObjects()
 	return self.tracked_upvalues, self.tracked_tables
 end
