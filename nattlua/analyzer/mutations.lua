@@ -1,16 +1,10 @@
 local ipairs = ipairs
-local type = type
-local LString = require("nattlua.types.string").LString
-local LNumber = require("nattlua.types.number").LNumber
 local Nil = require("nattlua.types.symbol").Nil
-local Tuple = require("nattlua.types.tuple").Tuple
-local Union = require("nattlua.types.union").Union
 local print = print
 local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
 local Union = require("nattlua.types.union").Union
-local setmetatable = _G.setmetatable
 local DEBUG = false
 
 local function dprint(mut, reason)
