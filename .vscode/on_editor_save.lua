@@ -91,10 +91,11 @@ local function has_test_focus()
 end
 
 local path = ...
+local normalized = path:lower():gsub("\\", "/")
 
-if path:find("on_editor_save.lua", nil, true) then return end
+if normalized:find("on_editor_save.lua", nil, true) then return end
 
-if path:lower():find("/nattlua/", nil, true) then
+if normalized:find("/nattlua/", nil, true) then
     if not path then
         error("no path")
     end
@@ -106,36 +107,36 @@ if path:lower():find("/nattlua/", nil, true) then
         return
     end
 
-    if path:find("vscode/server", nil, true) then
+    if normalized:find("vscode/server", nil, true) then
         io.open("vscode/server/restart_me", "w"):close()
         return
-    elseif path:find("typed_ffi.nlua", nil, true) and has_test_focus() then
+    elseif normalized:find("typed_ffi.nlua", nil, true) and has_test_focus() then
         print("running test focus")
         run_nattlua("./test_focus.lua")
-    elseif path:find("lint.lua", nil, true) then
+    elseif normalized:find("lint.lua", nil, true) then
         run_lua(path)
-    elseif path:find("build_glua_base.lua", nil, true) then
+    elseif normalized:find("build_glua_base.lua", nil, true) then
         run_lua(path)
-    elseif path:find("example_projects/luajit/", nil, true) or path:find("cparser.lua", nil, true) then
+    elseif normalized:find("example_projects/luajit/", nil, true) or normalized:find("cparser.lua", nil, true) then
         run_lua("example_projects/luajit/build.lua", path)
-    elseif path:find("example_projects/gmod/", nil, true) then
+    elseif normalized:find("example_projects/gmod/", nil, true) then
         run_lua("example_projects/gmod/nattlua.lua", path)
     elseif is_nattlua then
         run_nattlua(path)
-    elseif path:find("test/", nil, true) then
+    elseif normalized:find("test/", nil, true) then
         run_lua("test/run.lua", path)  
-    elseif path:find("javascript_emitter") then
+    elseif normalized:find("javascript_emitter") then
         run_lua("./examples/lua_to_js.lua")
-    elseif path:find("examples/", nil, true) then
+    elseif normalized:find("examples/", nil, true) then
         run_lua(path)
     elseif has_test_focus() then
         print("running test focus")
         run_nattlua("./test_focus.lua")
-    elseif (path:find("/nattlua/nattlua/", nil, true) or path:find("/nattlua/nattlua.lua", nil, true)) and not path:find("nattlua/other") then
-        if path:find("lexer.lua", nil, true) then
+    elseif (normalized:find("/nattlua/nattlua/", nil, true) or normalized:find("/nattlua/nattlua.lua", nil, true)) and not normalized:find("nattlua/other") then
+        if normalized:find("lexer.lua", nil, true) then
             run_lua("test/run.lua", "test/nattlua/lexer.lua")
             run_lua("test/run.lua", "test/performance/lexer.lua")
-        elseif path:find("parser.lua", nil, true) and false then
+        elseif normalized:find("parser.lua", nil, true) and false then
             run_lua("test/run.lua", "test/nattlua/parser.lua")
             run_lua("test/run.lua", "test/performance/parser.lua")
         else
