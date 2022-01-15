@@ -632,6 +632,8 @@ run[[
     type lol = function =(foo: string, number)>(bar: string, string)
 
     attest.equal(lol, _ as function =(string, number)>(string, string))
+    
+    type lol = nil
 ]]
 
 run[[
