@@ -114,7 +114,7 @@ test("runtime block scopes", function()
 
     local analyzer, syntax_tree = R("do local a = 1 end")
     equal(false, (syntax_tree.environments.runtime:Get(String("a"))))
-    equal(1, analyzer:GetScope():GetChildren()[1].upvalues.runtime.map.a:GetValue():GetData()) -- TODO: awkward access
+    equal(1, analyzer:GetScope():GetChildren()[1]:GetUpvalues("runtime")[1]:GetValue():GetData())
 
     local v = R[[
         local a = 1

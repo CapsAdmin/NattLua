@@ -169,22 +169,6 @@ function META:FindValue(key, env)
 	error("this should never happen")
 end
 
-function META:FindScopeFromObject(obj, env)
-	local scope = self
-
-	for i = 1, 1000 do
-		if not scope then return end
-
-		for i, v in ipairs(scope.upvalues[env].list) do
-			if obj == v:GetValue() then return scope end
-		end
-
-		scope = scope:GetParent()
-	end
-
-	error("this should never happen")
-end
-
 function META:CreateValue(key, obj, env)
 	local key_hash = self:Hash(key)
 	assert(key_hash)
