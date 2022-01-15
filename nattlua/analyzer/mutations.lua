@@ -169,18 +169,15 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 		do
 			local test_scope_a = scope:FindFirstTestScope()
-
 			if test_scope_a then
-				local test_a = test_scope_a:GetTestCondition()
-
 				for _, mut in ipairs(mutations) do
 					if mut.scope ~= scope then
 						local test_scope_b = mut.scope:FindFirstTestScope()
 
 						if test_scope_b then
-							if FindInType(test_a, test_scope_b:GetTestCondition()) then
+							if test_scope_a:TracksSameAs(test_scope_b) then
 								mut.certain_override = true
-
+							
 								if DEBUG then
 									dprint(
 										mut,

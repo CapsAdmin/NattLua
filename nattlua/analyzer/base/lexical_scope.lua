@@ -209,6 +209,32 @@ function META:SetTrackedObjects(upvalues, tables)
 end
 
 
+function META:TracksSameAs(scope)
+	local upvalues_a, tables_a = self:GetTrackedObjects()
+	local upvalues_b, tables_b = scope:GetTrackedObjects()
+
+	if not upvalues_a or not upvalues_b then return false end
+	if not tables_a or not tables_b then return false end
+
+	for i, data_a in ipairs(upvalues_a) do
+		for i, data_b in ipairs(upvalues_b) do
+			if data_a.upvalue == data_b.upvalue then
+				return true
+			end
+		end
+	end
+
+	for i, data_a in ipairs(tables_a) do
+		for i, data_b in ipairs(tables_b) do
+			if data_a.obj == data_b.obj then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
 function META:GetTrackedObjects()
 	return self.tracked_upvalues, self.tracked_tables
 end
@@ -341,7 +367,8 @@ do
 				if 
 					scope.node and 
 					scope.node.inferred_type and 
-					scope.node.inferred_type.Type == "function" 
+					scope.node.inferred_type.Type == "function" and 
+					not scope:Contains(from)
 				then
 					return not scope.node.inferred_type:IsCalled() 
 				end

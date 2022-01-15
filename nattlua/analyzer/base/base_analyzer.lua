@@ -254,9 +254,9 @@ return function(META)
 					end
 				end
 
-				local trace = self:TypeTraceback()
+				local trace = self:TypeTraceback(1)
 
-				if trace then
+				if trace and trace ~= "" then
 					msg = msg .. "\ntraceback:\n" .. trace
 				end
 
@@ -317,12 +317,12 @@ return function(META)
 		end
 
 
-		function META:TypeTraceback()
+		function META:TypeTraceback(from)
 			if not self.call_stack then return "" end
 			local str = ""
 
 			for i, v in ipairs(self.call_stack) do
-				if v.call_node then
+				if v.call_node and (not from or i > from) then
 					local start, stop = helpers.LazyFindStartStop(v.call_node)
 
 					if start and stop then
