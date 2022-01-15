@@ -36,7 +36,7 @@ return
 						returned_key = Union({Nil(), returned_key})
 					end
 
-						self:PushConditionalScope(statement, returned_key)
+						self:PushConditionalScope(statement, returned_key:IsTruthy(), returned_key:IsFalsy())
 						self:FireEvent("generic_for", statement.identifiers, values)
 					end
 

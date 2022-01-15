@@ -95,11 +95,11 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		end
 
 		do
-			local test_scope_a = scope:FindFirstTestScope()
+			local test_scope_a = scope:FindFirstConditionalScope()
 			if test_scope_a then
 				for _, mut in ipairs(mutations) do
 					if mut.scope ~= scope then
-						local test_scope_b = mut.scope:FindFirstTestScope()
+						local test_scope_b = mut.scope:FindFirstConditionalScope()
 
 						if test_scope_b then
 							if test_scope_a:TracksSameAs(test_scope_b) then
@@ -190,7 +190,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		end
 	end
 	if value.Type == "union" then
-		local found_scope, data = scope:FindResponsibleTestScopeFromUpvalue(obj)
+		local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
 
 		if found_scope then
 			local stack = data.stack

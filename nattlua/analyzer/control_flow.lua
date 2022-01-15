@@ -96,7 +96,7 @@ return function(META)
 			end
 
 			local copy = self:CloneCurrentScope()
-			copy:SetTestScope(true)
+			copy:SetConditionalScope(true)
 
 			self:MutateTrackedFromReturn(copy, nil, false, self:GetTrackedObjectMap(old))
 		else
@@ -146,8 +146,6 @@ return function(META)
 			end
 		end 
 
-		function_scope:SetCanThrow(thrown)
-
 		if not thrown then
 			scope:CollectReturnTypes(node, types)
 		end
@@ -185,18 +183,18 @@ return function(META)
 		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
 	end	
 
-	function META:PushConditionalScope(statement, condition)
+	function META:PushConditionalScope(statement, truthy, falsy)
 		local scope = self:CreateAndPushScope()
-		scope:SetTestScope(true)
-		scope:SetTruthy(condition:IsTruthy())
-		scope:SetFalsy(condition:IsFalsy())
+		scope:SetConditionalScope(true)
+		scope:SetTruthy(truthy)
+		scope:SetFalsy(falsy)
 		scope:SetStatement(statement)
 	end
 
 	function META:ErrorAndCloneCurrentScope(node, err)
 		self:Error(node, err)
 		self:CloneCurrentScope()
-		self:GetScope():SetTestScope(true)
+		self:GetScope():SetConditionalScope(true)
 	end
 
 	function META:PopConditionalScope()

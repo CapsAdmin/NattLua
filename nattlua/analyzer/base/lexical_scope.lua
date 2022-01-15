@@ -88,7 +88,7 @@ do
 	META:IsSet("Truthy", false--[[# as boolean]])
 end
 
-META:IsSet("TestScope", false--[[# as boolean]])
+META:IsSet("ConditionalScope", false--[[# as boolean]])
 
 
 function META:SetParent(parent)
@@ -239,7 +239,7 @@ function META:Copy()
 
 	copy.returns = self.returns
 	copy.parent = self.parent
-	copy:SetTestScope(self:IsTestScope())
+	copy:SetConditionalScope(self:IsConditionalScope())
 	
 	return copy
 end
@@ -280,7 +280,7 @@ function META:TracksSameAs(scope)
 	return false
 end
 
-function META:FindResponsibleTestScopeFromUpvalue(upvalue)
+function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
 	local scope = self
 
 	while true do
@@ -344,8 +344,8 @@ function META.IsPartOfTestStatementAs(a, b)
 		a.statement == b.statement
 end
 
-function META:FindFirstTestScope()
-	local obj, scope = self:GetMemberInParents("TestScope")
+function META:FindFirstConditionalScope()
+	local obj, scope = self:GetMemberInParents("ConditionalScope")
 	return scope
 end
 
@@ -466,18 +466,6 @@ do
 		end
 
 		return false
-	end
-
-	function META:MakeUncertain(b)
-		self.uncertain = b
-	end
-
-	function META:SetCanThrow(b)
-		self.can_throw = b
-	end
-
-	function META:CanThrow()
-		return self.can_throw == true
 	end
 end
 

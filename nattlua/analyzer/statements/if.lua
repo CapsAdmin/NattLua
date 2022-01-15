@@ -66,7 +66,7 @@ return
 				else
 					self:FireEvent("if", i == 1 and "if" or "elseif", true)
 				end
-					self:PushConditionalScope(statement, block.expression)
+					self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
 					self:GetScope():SetTrackedObjects(block.upvalues, block.tables)
 					if block.is_else then
 						self:GetScope():InvertIfStatement(true)

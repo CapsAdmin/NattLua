@@ -54,14 +54,14 @@ return
 			end
 
 			statement.identifiers[1].inferred_type = init
-				self:PushConditionalScope(statement, condition)
+				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
 				self:FireEvent("numeric_for", init, max, step)
 
 				if literal_init and literal_max and literal_step and literal_max < 1000 then
 					local uncertain_break = false
 
 					for i = literal_init, literal_max, literal_step do
-							self:PushConditionalScope(statement, condition)
+							self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
 							local i = LNumber(i):SetNode(statement.expressions[1])
 							local brk = false
 
