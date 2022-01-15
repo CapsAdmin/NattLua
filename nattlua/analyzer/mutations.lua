@@ -67,7 +67,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			for i = #mutations, 1, -1 do
 				local mut = mutations[i]
 
-				if mut.scope:GetStatementType() == "if" and mut.scope:IsPartOfElseStatement() then
+				if mut.scope:IsElseConditionalScope() then
 					while true do
 						local mut = mutations[i]
 						if not mut then break end
@@ -139,7 +139,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 					local stack = data.stack
 					local val
 					
-					if mut.scope:IsPartOfElseStatement() then
+					if mut.scope:IsElseConditionalScope() then
 						val = stack[#stack].falsy
 					else	
 						val = stack[#stack].truthy
@@ -195,7 +195,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		if found_scope then
 			local stack = data.stack
 			if
-				found_scope:IsPartOfElseStatement() or
+				found_scope:IsElseConditionalScope() or
 				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
 			then
 				return stack[#stack].falsy
@@ -601,7 +601,7 @@ return function(META)
 				for _, data in ipairs(upvalues) do
 					local stack = data.stack
 					local val
-					if scope:IsPartOfElseStatement() or stack[#stack].inverted then
+					if scope:IsElseConditionalScope() or stack[#stack].inverted then
 						val = negate and stack[#stack].truthy or stack[#stack].falsy
 					else
 						val = negate and stack[#stack].falsy or stack[#stack].truthy
@@ -621,7 +621,7 @@ return function(META)
 				for _, data in ipairs(tables) do
 					local stack = data.stack
 					local val
-					if scope:IsPartOfElseStatement() or stack[#stack].inverted then
+					if scope:IsElseConditionalScope() or stack[#stack].inverted then
 						val = negate and stack[#stack].truthy or stack[#stack].falsy
 					else
 						val = negate and stack[#stack].falsy or stack[#stack].truthy

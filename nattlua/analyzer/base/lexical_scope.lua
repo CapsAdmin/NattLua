@@ -286,20 +286,16 @@ function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
 	return nil
 end
 
+META:GetSet("PreviousConditionalSibling")
+META:GetSet("NextConditionalSibling")
+META:IsSet("ElseConditionalScope")
+
 function META:SetStatement(statement)
 	self.statement = statement
 end
 
 function META:GetStatementType()
 	return self.statement and self.statement.kind
-end
-
-function META:InvertIfStatement(b)
-	self.is_else = b
-end
-
-function META:IsPartOfElseStatement()
-	return self.is_else == true
 end
 
 function META.IsPartOfTestStatementAs(a, b)

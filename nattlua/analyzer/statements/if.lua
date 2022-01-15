@@ -61,21 +61,33 @@ return
 				end
 			end
 
+			local last_scope
+
 			for i, block in ipairs(blocks) do
 				if block.is_else then
 					self:FireEvent("if", "else", true)
 				else
 					self:FireEvent("if", i == 1 and "if" or "elseif", true)
 				end
-					self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
-					self:GetScope():SetTrackedUpvalues(block.upvalues)
-					self:GetScope():SetTrackedTables(block.tables)
+					local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
+					
+					if last_scope then
+						last_scope:SetNextConditionalSibling(scope)
+						scope:SetPreviousConditionalSibling(last_scope)
+					end
+
+					last_scope = scope
+
+					scope:SetTrackedUpvalues(block.upvalues)
+					scope:SetTrackedTables(block.tables)
 					if block.is_else then
-						self:GetScope():InvertIfStatement(true)
+						scope:SetElseConditionalScope(true)
 						self:MutateTrackedFromIfElse(blocks)
 					else
 						self:MutateTrackedFromIf(block.upvalues, block.tables)
 					end
+
+
 					self:AnalyzeStatements(block.statements)
 					self:PopConditionalScope()
 

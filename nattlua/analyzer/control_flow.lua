@@ -129,7 +129,7 @@ return function(META)
 			
 			-- else always hits, so even if the else part is uncertain
 			-- it does mean that this function at least returns something
-			if scope:IsPartOfElseStatement() then
+			if scope:IsElseConditionalScope() then
 				function_scope.uncertain_function_return = false
 				function_scope:CertainReturn()
 			end
@@ -186,9 +186,10 @@ return function(META)
 	function META:PushConditionalScope(statement, truthy, falsy)
 		local scope = self:CreateAndPushScope()
 		scope:SetConditionalScope(true)
+		scope:SetStatement(statement)
 		scope:SetTruthy(truthy)
 		scope:SetFalsy(falsy)
-		scope:SetStatement(statement)
+		return scope
 	end
 
 	function META:ErrorAndCloneCurrentScope(node, err)
