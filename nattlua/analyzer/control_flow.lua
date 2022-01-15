@@ -124,7 +124,7 @@ return function(META)
 		if scope == function_scope then
 			-- the root scope of the function when being called is definetly certain
 			function_scope.uncertain_function_return = false
-		elseif scope:IsUncertainFromScope() then
+		elseif scope:IsUncertain() then
 			function_scope.uncertain_function_return = true
 			
 			-- else always hits, so even if the else part is uncertain
@@ -141,7 +141,7 @@ return function(META)
 		
 		if function_scope.lua_silent_error then 
 			local errored_scope = table.remove(function_scope.lua_silent_error)
-			if errored_scope and self:GetScope():IsCertainFromScope(errored_scope) and errored_scope:IsCertainFromScope() then
+			if errored_scope and self:GetScope():IsCertainFromScope(errored_scope) and errored_scope:IsCertain() then
 				thrown = true
 			end
 		end 
@@ -152,7 +152,7 @@ return function(META)
 			scope:CollectReturnTypes(node, types)
 		end
 
-		if scope:IsUncertainFromScope() then
+		if scope:IsUncertain() then
 			function_scope:UncertainReturn()
 			scope:UncertainReturn()
 		else

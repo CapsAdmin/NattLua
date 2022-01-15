@@ -78,7 +78,7 @@ return
 							end
 
 							if self.break_out_scope then
-								if self.break_out_scope:IsUncertainFromScope() then
+								if self.break_out_scope:IsUncertain() then
 									uncertain_break = true
 								else
 									brk = true

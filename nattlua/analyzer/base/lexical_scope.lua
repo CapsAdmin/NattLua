@@ -72,6 +72,10 @@ do
 		return self:IsTruthy() and self:IsFalsy()
 	end
 
+	function META:IsCertain()
+		return not self:IsUncertain()
+	end
+	
 	function META:IsCertainlyFalse()
 		return self:IsFalsy() and not self:IsTruthy()
 	end
@@ -428,10 +432,6 @@ do
 	function META:IsUncertainFromScope(from)
 		if from == self then return false end
 		local scope = self
-		
-		if not from then
-			return self:IsTruthy() and self:IsFalsy()
-		end
 
 		if self:IsPartOfTestStatementAs(from) then return true end
 
