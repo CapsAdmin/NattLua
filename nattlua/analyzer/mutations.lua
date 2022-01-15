@@ -135,7 +135,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			local upvalues = mut.scope:GetTrackedObjects()
 
 			if upvalues then
-				for _, data in pairs(upvalues) do
+				for _, data in ipairs(upvalues) do
 					local stack = data.stack
 					local val
 					
@@ -526,7 +526,7 @@ return function(META)
 
 			if self.tracked_tables then
 				for _, tbl in ipairs(self.tracked_tables) do
-					if tbl.tracked_stack and not tbl.tracked_stack[1] then
+					if tbl.tracked_stack then
 						for _, stack in pairs(tbl.tracked_stack) do
 							table.insert(tables, {
 								obj = tbl, 
