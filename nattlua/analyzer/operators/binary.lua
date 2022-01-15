@@ -241,7 +241,7 @@ local function Binary(self, node, l, r, op)
 			end
 
 			return
-				new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+				new_union:SetNode(node)
 		end
 	end
 
@@ -332,40 +332,40 @@ local function Binary(self, node, l, r, op)
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "or" or op == "||" then
 			-- boolean or boolean
-			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
 
 			-- true or boolean
-			if l:IsTruthy() then return l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+			if l:IsTruthy() then return l:Copy():SetNode(node) end
 			
 			-- false or true
-			if r:IsTruthy() then return r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
-			return r:Copy():SetNode(node):SetTypeSource(r)
+			if r:IsTruthy() then return r:Copy():SetNode(node) end
+			return r:Copy():SetNode(node)
 		elseif op == "and" or op == "&&" then
 
 			-- true and false
 			if l:IsTruthy() and r:IsFalsy() then
-				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}) end
 				return
-					r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+					r:Copy():SetNode(node)
 			end
 
 			-- false and true
 			if l:IsFalsy() and r:IsTruthy() then
-				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}) end
 				return
-					l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+					l:Copy():SetNode(node)
 			end
 
 			-- true and true
 			if l:IsTruthy() and r:IsTruthy() then
-				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}) end
 				return
-					r:Copy():SetNode(node):SetTypeSource(r):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+					r:Copy():SetNode(node)
 			else
 				-- false and false
-				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}):SetNode(node):SetTypeSourceLeft(l):SetTypeSourceRight(r) end
+				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}) end
 				return
-					l:Copy():SetNode(node):SetTypeSource(l):SetTypeSourceLeft(l):SetTypeSourceRight(r)
+					l:Copy():SetNode(node)
 			end
 		end
 	end

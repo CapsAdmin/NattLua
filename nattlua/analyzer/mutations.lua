@@ -124,12 +124,6 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		union:SetUpvalue(obj)
 	end
 
-	if obj.Type == "table" then
-		union:SetUpvalueReference("table-" .. tostring(key))
-	else
-		union:SetUpvalueReference(key)
-	end
-
 	for _, mut in ipairs(mutations) do
 		local value = mut.value
 
@@ -171,12 +165,6 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			union = value:Copy()
 			if obj.Type == "upvalue" then
 				union:SetUpvalue(obj)
-			end
-
-			if obj.Type == "table" then
-				union:SetUpvalueReference("table-" .. tostring(key))
-			else
-				union:SetUpvalueReference(key)
 			end
 		else
             -- check if we have to infer the function, otherwise adding it to the union can cause collisions
@@ -325,7 +313,6 @@ return function(META)
 		local hash = upvalue:GetKey()
         
 		val:SetUpvalue(upvalue)
-		val:SetUpvalueReference(hash)
 
 		upvalue.mutations = upvalue.mutations or {}
 		upvalue.mutations[hash] = upvalue.mutations[hash] or {}

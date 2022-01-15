@@ -209,8 +209,7 @@ function META:GetAtIndex(i)
 			if found then
 				if val then
 					val = self.New({val, found})
-					val:SetNode(found:GetNode()):SetTypeSource(found):SetTypeSourceLeft(found:GetTypeSourceLeft())
-					:SetTypeSourceRight(found:GetTypeSourceRight())
+					val:SetNode(found:GetNode())
 				else
 					val = found
 				end
@@ -227,8 +226,7 @@ function META:GetAtIndex(i)
 			if val then
 				-- a non tuple in the union would be treated as a tuple with the value repeated
 				val = self.New({val, obj})
-				val:SetNode(self:GetNode()):SetTypeSource(self):SetTypeSourceLeft(self:GetTypeSourceLeft())
-				:SetTypeSourceRight(self:GetTypeSourceRight())
+				val:SetNode(self:GetNode())
 			end
 		end
 	end

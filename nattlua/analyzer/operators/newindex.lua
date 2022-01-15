@@ -31,7 +31,7 @@ return
 
 					truthy_union:SetUpvalue(obj:GetUpvalue())
 					falsy_union:SetUpvalue(obj:GetUpvalue())
-					return new_union:SetNode(node):SetTypeSource(new_union):SetTypeSourceLeft(obj)
+					return new_union:SetNode(node)
 				end
 
 				if val.Type == "function" and val:GetNode().self_call then

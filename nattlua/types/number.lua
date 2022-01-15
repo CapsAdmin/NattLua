@@ -368,10 +368,10 @@ do
 				obj:SetMax(l.ArithmeticOperator(l:GetMax(), r:GetMax() or r, op))
 			end
 
-			return obj:SetTypeSourceLeft(l):SetTypeSourceRight(r)
+			return obj
 		end
 
-		return META.New():SetTypeSourceLeft(l):SetTypeSourceRight(r)
+		return META.New()
 	end
 end
 

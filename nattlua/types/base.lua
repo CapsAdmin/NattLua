@@ -77,9 +77,6 @@ do
 	function META:CopyInternalsFrom(obj --[[#: mutable BaseType]])
 		self:SetNode(obj:GetNode())
 		self:SetTokenLabelSource(obj:GetTokenLabelSource())
-		self:SetTypeSource(obj:GetTypeSource())
-		self:SetTypeSourceLeft(obj:GetTypeSourceLeft())
-		self:SetTypeSourceRight(obj:GetTypeSourceRight())
 		self:SetLiteral(obj:IsLiteral())
 		self:SetContract(obj:GetContract())
 		self:SetName(obj:GetName())
@@ -90,11 +87,7 @@ end
 
 do -- token, expression and statement association
 	META:GetSet("Upvalue", nil--[[# as nil | any]])
-	META:GetSet("UpvalueReference", nil--[[# as nil | string]])
 	META:GetSet("TokenLabelSource", nil--[[# as nil | string]])
-	META:GetSet("TypeSource", nil--[[# as nil | BaseType]])
-	META:GetSet("TypeSourceLeft", nil--[[# as nil | BaseType]])
-	META:GetSet("TypeSourceRight", nil--[[# as nil | BaseType]])
 	META:GetSet("Node", nil--[[# as nil | any]])
 
 	function META:SetNode(node--[[#: nil | any]])

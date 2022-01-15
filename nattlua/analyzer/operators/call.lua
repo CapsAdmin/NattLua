@@ -708,7 +708,7 @@ return
 				truthy_union:SetUpvalue(obj:GetUpvalue())
 				falsy_union:SetUpvalue(obj:GetUpvalue())
 				
-				return truthy_union:SetNode(self:GetActiveNode()):SetTypeSource(new_union):SetTypeSourceLeft(obj)
+				return truthy_union:SetNode(self:GetActiveNode())
 			end
 
 			local function Call(self, obj, arguments)

@@ -79,7 +79,7 @@ local function Prefix(self, node, r)
 
 		self:TrackUpvalue(r, truthy_union, falsy_union)
 
-		return new_union:SetNode(node):SetTypeSource(r)
+		return new_union:SetNode(node)
 	end
 
 	if r.Type == "any" then
@@ -125,11 +125,11 @@ local function Prefix(self, node, r)
 
 	if op == "not" or op == "!" then
 		if r:IsTruthy() and r:IsFalsy() then 
-			return Boolean():SetNode(node):SetTypeSource(r) 
+			return Boolean():SetNode(node)
 		elseif r:IsTruthy() then 
-			return False():SetNode(node):SetTypeSource(r) 
+			return False():SetNode(node)
 		elseif r:IsFalsy() then 
-			return True():SetNode(node):SetTypeSource(r) 
+			return True():SetNode(node)
 		end
 	end
 
