@@ -89,23 +89,15 @@ do
 end
 
 META:IsSet("ConditionalScope", false--[[# as boolean]])
-
+META:GetSet("Parent", nil--[[# as boolean]])
+META:GetSet("Children", nil--[[# as boolean]])
 
 function META:SetParent(parent)
-	self.parent = parent
+	self.Parent = parent
 
 	if parent then
-		parent:AddChild(self)
+		table_insert(parent:GetChildren(), self)
 	end
-end
-
-function META:AddChild(scope)
-	scope.parent = self
-	table_insert(self.children, scope)
-end
-
-function META:GetChildren()
-	return self.children
 end
 
 function META:Hash(node)
@@ -120,7 +112,7 @@ function META:GetMemberInParents(what)
 
 	while true do
 		if scope[what] then return scope[what], scope end
-		scope = scope.parent
+		scope = scope:GetParent()
 		if not scope then break end
 	end
 
@@ -171,7 +163,7 @@ function META:FindValue(key, env)
 		end
 
 		prev_scope = scope
-		scope = scope.parent
+		scope = scope:GetParent()
 	end
 
 	error("this should never happen")
@@ -187,7 +179,7 @@ function META:FindScopeFromObject(obj, env)
 			if obj == v:GetValue() then return scope end
 		end
 
-		scope = scope.parent
+		scope = scope:GetParent()
 	end
 
 	error("this should never happen")
@@ -238,14 +230,10 @@ function META:Copy()
 	end
 
 	copy.returns = self.returns
-	copy.parent = self.parent
+	copy:SetParent(self:GetParent())
 	copy:SetConditionalScope(self:IsConditionalScope())
 	
 	return copy
-end
-
-function META:GetParent()
-	return self.parent
 end
 
 function META:SetTrackedObjects(upvalues, tables)
@@ -356,7 +344,7 @@ function META:Contains(scope)
 	for i = 1, 1000 do
 		if not parent then break end
 		if parent == self then return true end
-		parent = parent.parent
+		parent = parent:GetParent()
 	end
 
 	return false
@@ -366,8 +354,8 @@ function META:GetRoot()
 	local parent = self
 
 	for i = 1, 1000 do
-		if not parent.parent then break end
-		parent = parent.parent
+		if not parent:GetParent() then break end
+		parent = parent:GetParent()
 	end
 
 	return parent
@@ -402,7 +390,7 @@ do
 		while true do
 			scope.certain_return = true
 			if scope.returns then break end
-			scope = scope.parent
+			scope = scope:GetParent()
 			if not scope then break end
 		end
 	end
@@ -461,7 +449,7 @@ do
 				end
 				return true, scope 
 			end
-			scope = scope.parent
+			scope = scope:GetParent()
 			if not scope then break end
 		end
 
@@ -475,16 +463,16 @@ function META:__tostring()
 	do
 		local scope = self
 
-		while scope.parent do
+		while scope:GetParent() do
 			x = x + 1
-			scope = scope.parent
+			scope = scope:GetParent()
 		end
 	end
 
 	local y = 1
 
-	if self.parent then
-		for i, v in ipairs(self.parent:GetChildren()) do
+	if self:GetParent() then
+		for i, v in ipairs(self:GetParent():GetChildren()) do
 			if v == self then
 				y = i
 
@@ -514,7 +502,7 @@ function META:DumpScope()
 		table.insert(s, "local type " .. tostring(v.key) .. " = " .. tostring(v))
 	end
 
-	for i, v in ipairs(self.children) do
+	for i, v in ipairs(self:GetChildren()) do
 		table.insert(s, "do\n" .. v:DumpScope() .. "\nend\n")
 	end
 
@@ -527,7 +515,7 @@ function LexicalScope(parent, upvalue_position)
 	ref = ref + 1
 	local scope = {
 			ref = ref,
-			children = {},
+			Children = {},
 			upvalue_position = upvalue_position,
 			upvalues = {
 				runtime = {list = {}, map = {},},
