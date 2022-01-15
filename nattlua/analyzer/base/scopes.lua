@@ -86,7 +86,7 @@ return function(META)
 			end
 
 			function META:CreateLocalValue(key, obj, function_argument)
-				local upvalue = self:GetScope():CreateValue(key, obj, self:GetCurrentAnalyzerEnvironment())
+				local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
 				self:FireEvent("upvalue", key, obj, function_argument)
 				self:MutateUpvalue(upvalue, obj)
 				return upvalue
@@ -99,7 +99,7 @@ return function(META)
 				scope = scope or self:GetScope()
 				if not scope then return end
 
-				local found, scope = scope:FindValue(key, self:GetCurrentAnalyzerEnvironment())
+				local found, scope = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
 				if found then return found, scope end
 			end
 
@@ -117,7 +117,7 @@ return function(META)
 			function META:LocalValueExists(key, scope)
 				scope = scope or self:GetScope()
 				if not scope then return end
-				local found = scope:FindValue(key, self:GetCurrentAnalyzerEnvironment())
+				local found = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
 				print(found)
 				return found ~= nil
 			end

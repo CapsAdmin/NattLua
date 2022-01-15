@@ -50,7 +50,7 @@ return
 							brk = true
 						end
 
-						self:CreateLocalValue(identifier, obj)
+						self:CreateLocalValue(identifier.value.value, obj)
 					end
 
 					self:AnalyzeStatements(statement.statements)

@@ -23,10 +23,6 @@ do
 		return self.value
 	end
 
-	function META:GetNode()
-		return self.node
-	end
-
 	function META:GetKey()
 		return self.key
 	end
@@ -37,6 +33,12 @@ do
 	end
 
 	upvalue_meta = META
+end
+
+local function Upvalue(obj)
+	local self = setmetatable({}, upvalue_meta)
+	self:SetValue(obj)
+	return self
 end
 
 local META = {}
@@ -100,13 +102,6 @@ function META:SetParent(parent)
 	end
 end
 
-function META:Hash(node)
-	if type(node) == "table" and node.Type == "string" and node:IsLiteral() then return node:GetData() end
-	if type(node) == "string" then return node end
-	if type(node.value) == "string" then return node.value end
-	return node.value.value
-end
-
 function META:GetMemberInParents(what)
 	local scope = self
 
@@ -136,14 +131,17 @@ function META:GetDependencies()
 	return out
 end
 
-function META:FindValue(key, env)
-	local key_hash = self:Hash(key)
+function META:FindUpvalue(key, env)
+	if type(key) == "table" and key.Type == "string" and key:IsLiteral() then 
+		key = key:GetData() 
+	end
+
 	local scope = self
 	local prev_scope
 
 	for _ = 1, 1000 do
 		if not scope then return end
-		local upvalue = scope.upvalues[env].map[key_hash]
+		local upvalue = scope.upvalues[env].map[key]
 
 		if upvalue then
 			local upvalue_position = prev_scope and prev_scope.upvalue_position
@@ -169,28 +167,23 @@ function META:FindValue(key, env)
 	error("this should never happen")
 end
 
-function META:CreateValue(key, obj, env)
-	local key_hash = self:Hash(key)
-	assert(key_hash)
-	assert(obj)
-	assert(type(env) == "string")
+function META:CreateUpvalue(key, obj, env)
 	local shadow
 
-	if key_hash ~= "..." and env == "runtime" then
-		shadow = self.upvalues[env].map[key_hash]
+	if key ~= "..." and env == "runtime" then
+		shadow = self.upvalues[env].map[key]
 	end
 
-	local upvalue = {
-			key = key_hash,
-			node = key,
-			shadow = shadow,
-			position = #self.upvalues[env].list,
-		}
-	setmetatable(upvalue, upvalue_meta)
-	table_insert(self.upvalues[env].list, upvalue)
-	self.upvalues[env].map[key_hash] = upvalue
-	upvalue:SetValue(obj)
+	local upvalue = Upvalue(obj)
+	
+	upvalue.key = key
+	upvalue.shadow = shadow
+	upvalue.position = #self.upvalues[env].list
 	upvalue.scope = self
+
+	table_insert(self.upvalues[env].list, upvalue)
+	self.upvalues[env].map[key] = upvalue
+
 	return upvalue
 end
 
@@ -203,13 +196,13 @@ function META:Copy()
 
 	if self.upvalues.typesystem then
 		for _, upvalue in ipairs(self.upvalues.typesystem.list) do
-			copy:CreateValue(upvalue.key, upvalue:GetValue(), "typesystem")
+			copy:CreateUpvalue(upvalue.key, upvalue:GetValue(), "typesystem")
 		end
 	end
 
 	if self.upvalues.runtime then
 		for _, upvalue in ipairs(self.upvalues.runtime.list) do
-			copy:CreateValue(upvalue.key, upvalue:GetValue(), "runtime")
+			copy:CreateUpvalue(upvalue.key, upvalue:GetValue(), "runtime")
 		end
 	end
 

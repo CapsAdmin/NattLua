@@ -70,7 +70,7 @@ return
 								brk = true
 							end
 
-							self:CreateLocalValue(statement.identifiers[1], i)
+							self:CreateLocalValue(statement.identifiers[1].value.value, i)
 							self:AnalyzeStatements(statement.statements)
 
 							if self._continue_ then
@@ -116,7 +116,7 @@ return
 
 					self:PushUncertainLoop(true)
 					local range = self:Assert(statement.expressions[1], init)
-					self:CreateLocalValue(statement.identifiers[1], range)
+					self:CreateLocalValue(statement.identifiers[1].value.value, range)
 					self:AnalyzeStatements(statement.statements)
 					self:PushUncertainLoop(false)
 				end

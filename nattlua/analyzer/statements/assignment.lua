@@ -189,7 +189,7 @@ return
 
 				if statement.kind == "local_assignment" then
 					-- local assignment: local a = 1
-					self:CreateLocalValue(exp_key, val)
+					self:CreateLocalValue(exp_key.value.value, val)
 				elseif statement.kind == "assignment" then
 					local key = left[left_pos]
 

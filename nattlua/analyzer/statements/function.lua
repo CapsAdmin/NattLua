@@ -9,7 +9,7 @@ return
 				statement.kind == "local_type_function"
 			then
 				self:PushAnalyzerEnvironment(statement.kind == "local_function" and "runtime" or "typesystem")
-				self:CreateLocalValue(statement.tokens["identifier"], AnalyzeFunction(self, statement))
+				self:CreateLocalValue(statement.tokens["identifier"].value, AnalyzeFunction(self, statement))
 				self:PopAnalyzerEnvironment()
 			elseif
 				statement.kind == "function" or

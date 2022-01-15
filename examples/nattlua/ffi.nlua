@@ -46,7 +46,7 @@ type ffi.C = {
 			if info.return_type.what == "ptr" then
 				type = ctype_to_nl_type(info.return_type)
 			else
-				type = analyzer:CallTypesystemUpvalue("CDataPointer", ctype_to_nl_type(info.return_type))
+				type = analyzer:CallTypesystemUpvalue(types.LString("CDataPointer"), ctype_to_nl_type(info.return_type))
 			end
 
 			return types.Function({

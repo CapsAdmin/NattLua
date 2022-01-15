@@ -152,15 +152,15 @@ return
 					local argi = function_node.self_call and (i + 1) or i
 
 					if self:IsTypesystem() then
-						self:CreateLocalValue(identifier, arguments:GetWithoutExpansion(argi), argi)
+						self:CreateLocalValue(identifier.value.value, arguments:GetWithoutExpansion(argi), argi)
 					end
 
 					if self:IsRuntime() then
 
 						if identifier.value.value == "..." then
-							self:CreateLocalValue(identifier, arguments:Slice(argi), argi)
+							self:CreateLocalValue(identifier.value.value, arguments:Slice(argi), argi)
 						else
-							self:CreateLocalValue(identifier, arguments:Get(argi) or Nil():SetNode(identifier), argi)
+							self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil():SetNode(identifier), argi)
 						end
 					end
 				end
@@ -343,13 +343,13 @@ return
 							-- stem type so that we can allow
 							-- function(x: foo<|x|>): nil
 							
-							self:CreateLocalValue(key, Any(), i)
+							self:CreateLocalValue(key.value.value, Any(), i)
 
 							local arg =arguments:Get(i)
 							local contract = contracts:Get(i)
 
 							if contract and contract.ref_argument and arg then
-								self:CreateLocalValue(key, arg, i)
+								self:CreateLocalValue(key.value.value, arg, i)
 							end
 
 							if key.value.value == "..." then
@@ -369,7 +369,7 @@ return
 									return type_errors.other({"argument #", i, " ", arg, ": ", err})
 								end
 							elseif args[i] then
-								self:CreateLocalValue(key, args[i], i)
+								self:CreateLocalValue(key.value.value, args[i], i)
 							end
 
 							if not self.processing_deferred_calls then
