@@ -728,3 +728,8 @@ run[[
     table.insert(tbl, _ as string)
     attest.equal(tbl, {_ as number, _ as string})
 ]]
+
+run[[
+    local type t = {[any] = any}
+    attest.equal(t["foo" as string], _ as any)
+]]

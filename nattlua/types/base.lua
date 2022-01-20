@@ -49,7 +49,12 @@ end
 META:GetSet("Data", nil--[[# as nil | any]])
 
 function META:GetLuaType()
-	return self.Type
+
+	if self.Contract and self.Contract.TypeOverride then
+		return self.Contract.TypeOverride
+	end
+
+	return self.TypeOverride or self.Type
 end
 
 do
@@ -82,6 +87,7 @@ do
 		self:SetName(obj:GetName())
 		self:SetMetaTable(obj:GetMetaTable())
 		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
+		self:SetTypeOverride(obj:GetTypeOverride())
 	end
 end
 
@@ -110,6 +116,18 @@ do -- comes from tbl.@Name = "my name"
 		end
 
 		self.Name = name
+	end
+end
+
+do -- comes from tbl.@TypeOverride = "my name"
+	META:GetSet("TypeOverride", nil--[[# as nil | BaseType]])
+
+	function META:SetTypeOverride(name--[[#: any]])
+		if type(name) == "table" and name:IsLiteral() then
+			name = name:GetData()
+		end
+
+		self.TypeOverride = name
 	end
 end
 

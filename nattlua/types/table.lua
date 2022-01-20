@@ -470,7 +470,7 @@ function META:Get(key--[[#: BaseType]])
 		local union = Union({Nil()})
 		local found_non_literal = false
 		for _, keyval in ipairs(self:GetData()) do
-			if keyval.key.Type == key.Type then
+			if keyval.key.Type == key.Type or keyval.key.Type == "any" then
 				if keyval.key:IsLiteral() then
 					union:AddType(keyval.val)
 				else
