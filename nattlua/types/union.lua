@@ -227,6 +227,10 @@ function META:GetAtIndex(i)
 				-- a non tuple in the union would be treated as a tuple with the value repeated
 				val = self.New({val, obj})
 				val:SetNode(self:GetNode())
+			elseif i == 1 then
+				val = obj
+			else
+				val = Nil()
 			end
 		end
 	end
