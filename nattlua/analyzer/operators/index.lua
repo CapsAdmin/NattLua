@@ -75,7 +75,6 @@ return
 				local tracked = self:GetTrackedObjectWithKey(obj, key)
 
 				if tracked then
-					
 					return tracked
 				end
 
@@ -97,7 +96,14 @@ return
 						end
 					end
 
-					return val, err
+					local tracked = self:GetMutatedValue(obj, key, val)
+					if tracked then
+						return tracked
+					end
+					
+					self:TrackTableIndex(obj, key, val)
+
+					return val
 				end
 
 				local val = self:GetMutatedValue(obj, key, obj:Get(key))

@@ -31,7 +31,7 @@ local function check_type_against_contract(val, contract)
 	-- since {foo = true, bar = "harald"} 
 	-- is technically a subset of 
 	-- {foo = true, bar = "harald", baz = "jane"}
-	if contract.Type == "table" then
+	if contract.Type == "table" and val.Type == "table" then
 		return val:ContainsAllKeysIn(contract) 
 	end
 

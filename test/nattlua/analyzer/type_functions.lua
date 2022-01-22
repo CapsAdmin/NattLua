@@ -540,3 +540,9 @@ run[[
     attest.equal(clamp(5, 7, 10), 7)
     attest.equal(clamp(15, 7, 10), 10)
 ]]
+
+run[[
+    local x: cdata
+
+    attest.equal(type(x), "cdata")
+]]

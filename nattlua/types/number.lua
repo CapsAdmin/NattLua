@@ -75,9 +75,6 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	return false
 end
 
-function META:GetLuaType()
-	return self.Type
-end
 
 function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())

@@ -232,7 +232,9 @@ local function emit(key, val, self_argument)
     elseif val.LINK == "derma.SkinList" then
         e('{[number] = any}') -- numeric list?
     elseif val.LINK == "Panel.PaintingDragging" then
-        e('boolean') -- numeric list?
+        e('boolean')
+    elseif val.LINK == "net.Receivers" then
+        e('{[string] = string}')
     elseif val.VALUE then
         e(val.VALUE)
     else

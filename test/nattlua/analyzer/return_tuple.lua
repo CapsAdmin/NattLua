@@ -57,3 +57,33 @@ run([[
     end
 ]], '"" is not the same type as 1')
 
+
+run[[
+    local function foo()
+        return _ as true | (nil, string, number)
+    end
+    local x,y,z = foo()
+    attest.equal(x, _ as true | nil)
+    attest.equal(y, _ as string | nil)
+    attest.equal(z, _ as number | nil)
+]]
+
+run[[
+    local function foo()
+        return _ as true | (nil, (string, number))
+    end
+    local x,y,z = foo()
+    attest.equal(x, _ as true | nil)
+    attest.equal(y, _ as string | nil)
+    attest.equal(z, _ as number | nil)
+]]
+
+run[[
+    local function foo()
+        return _ as (true | (nil, string, number))
+    end
+    local x,y,z = foo()
+    attest.equal(x, _ as true | nil)
+    attest.equal(y, _ as string | nil)
+    attest.equal(z, _ as number | nil)
+]]

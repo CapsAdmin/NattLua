@@ -28,10 +28,6 @@ function META:GetHash()
 	return self.Type
 end
 
-function META:GetLuaType()
-	return self.Type
-end
-
 function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
 	copy:SetPatternContract(self:GetPatternContract())

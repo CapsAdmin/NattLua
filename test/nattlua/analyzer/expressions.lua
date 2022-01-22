@@ -210,3 +210,28 @@ run[[
         attest.equal(x.y, _ as 5 | 6 | 7)
     end
 ]]
+
+run[[
+    local function foo(s: ref any)
+        attest.equal(s, _ as string)
+        return s
+    end
+
+    local function get_address_info(data: {socket_type = string | nil})
+        attest.equal(data.socket_type, _ as string | nil)
+
+        if data.socket_type then
+            attest.equal(data.socket_type, _ as string)
+        end
+
+        local hints = {
+            ai_socktype = data.socket_type and foo(data.socket_type) or nil,
+        }
+
+        attest.equal(hints.ai_socktype, _ as string | nil)
+    end
+
+    local info = {socket_type = "stream"}
+
+    get_address_info(info)
+]]

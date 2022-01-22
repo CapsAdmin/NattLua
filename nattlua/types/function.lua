@@ -23,10 +23,6 @@ function META:__tostring()
 	return "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
 end
 
-function META:GetLuaType()
-	return "function"
-end
-
 function META:GetArguments()
 	return self:GetData().arg or Tuple({})
 end

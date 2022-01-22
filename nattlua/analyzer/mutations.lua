@@ -45,7 +45,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				(
 					scope:IsPartOfTestStatementAs(mut.scope) or 
 					(self.current_if_statement and mut.scope.statement == self.current_if_statement) or
-					(mut.from_tracking and not mut.scope:IsCertainFromScope(scope))
+					(mut.from_tracking and not mut.scope:IsCertainFromScope(scope)) or
+					(obj.Type == "table" and obj:GetContract() ~= mut.contract)
 				)
 				and scope ~= mut.scope 
 			then
@@ -112,6 +113,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			end
 		end
 	end
+
+	if not mutations[1] then return end
 
 	local union = Union({})
 	if obj.Type == "upvalue" then
@@ -216,7 +219,7 @@ local function initialize_mutation_tracker(obj, scope, key, hash, node)
 			-- initialize the table mutations with an existing value or nil
 			local val = (obj:GetContract() or obj):Get(key) or Nil():SetNode(node)
 			
-			table.insert(obj.mutations[hash], {scope = obj.scope or scope:GetRoot(), value = val})
+			table.insert(obj.mutations[hash], {scope = obj.scope or scope:GetRoot(), value = val, contract = obj:GetContract()})
 		end
 	end
 end
@@ -381,7 +384,11 @@ return function(META)
 			falsy_union = falsy_union or obj:GetFalsy()
 
 			upvalue.tracked_stack = upvalue.tracked_stack or {}
-			table.insert(upvalue.tracked_stack, {truthy = truthy_union, falsy = falsy_union, inverted = inverted})
+			table.insert(upvalue.tracked_stack, {
+				truthy = truthy_union, 
+				falsy = falsy_union, 
+				inverted = inverted
+			})
 			
 			self.tracked_upvalues = self.tracked_upvalues or {}
 			self.tracked_upvalues_done = self.tracked_upvalues_done or {}
@@ -426,6 +433,7 @@ return function(META)
 			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
 
 			table.insert(obj.tracked_stack[hash], {
+				contract = obj:GetContract(),
 				key = key, 
 				truthy = truthy_union, 
 				falsy = falsy_union, 
@@ -462,6 +470,7 @@ return function(META)
 			end
 
 			table.insert(obj.tracked_stack[hash], {
+				contract = obj:GetContract(),
 				key = key, 
 				truthy = truthy_union, 
 				falsy = falsy_union, 
@@ -578,12 +587,14 @@ return function(META)
 				if block.tables then
 					for _, data in ipairs(block.tables) do
 						local union = self:GetMutatedValue(data.obj, data.key)
-						if union.Type == "union" then
-							for _, v in ipairs(data.stack) do
-								union:RemoveType(v.truthy)
+						if union then
+							if union.Type == "union" then
+								for _, v in ipairs(data.stack) do
+									union:RemoveType(v.truthy)
+								end
 							end
+							self:MutateValue(data.obj, data.key, union, nil, true)
 						end
-						self:MutateValue(data.obj, data.key, union, nil, true)
 					end
 				end
 			end
