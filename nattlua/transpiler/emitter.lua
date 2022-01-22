@@ -385,14 +385,17 @@ function META:PopForceNewlines()
 end
 
 function META:IsForcingNewlines()
-	return self.force_newlines and self.force_newlines[#self.force_newlines]
+    if self.force_newlines then
+	    return self.force_newlines[#self.force_newlines]
+    end
+
+    return nil
 end
 
 function META:EmitBreakableExpressionList(list, first_newline)
 	local newlines = self:ShouldBreakExpressionList(list)
 
 	if newlines then
-		self:Indent()
 		self:PushForceNewlines(true)
 
 		if first_newline then
@@ -404,9 +407,6 @@ function META:EmitBreakableExpressionList(list, first_newline)
 	self:EmitExpressionList(list)
 
 	if newlines then
-		self:Outdent()
-        --self:Whitespace("\n")
---        self:Whitespace("\t")
         self:PopForceNewlines()
 	end
 
@@ -454,7 +454,15 @@ function META:EmitCall(node)
 		self:PushForceNewlines(false)
 	end
 
+    if newlines and node.tokens["call("] then
+        self:Indent()
+    end
+
 	self:EmitBreakableExpressionList(node.expressions, true)
+    
+    if newlines and node.tokens["call)"] then
+        self:Outdent()
+    end
 
 	if not newlines then
 		self:PopForceNewlines()
@@ -542,23 +550,32 @@ do
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
 
-		if node.statements then
-			self:PushForceNewlines(false)
+        local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
+        --self:Emit("--[["..new_lines.."]]")
+        self:PushForceNewlines(self:IsForcingNewlines() or distance > 30)
+        
+        if self:IsForcingNewlines() then
+            self:Whitespace("\n")
+        else 
+            self:Whitespace(" ")
+        end
+        
+        if self:IsForcingNewlines() then
+            self:EmitBlock(node.statements)
+        else
+            self:EmitStatements(node.statements)
+        end
+        
+        if self:IsForcingNewlines() then
+            self:Whitespace("\n")
+            self:Whitespace("\t")
+        else
+            self:OptionalWhitespace()
+        end
 
-			if #node.statements > 0 then
-				self:Whitespace("\n")
-			end
+        self:EmitToken(node.tokens["end"])
 
-			if #node.statements == 0 then
-				self:Whitespace(" ")
-			end
-
-			self:EmitBlock(node.statements)
-			self:PopForceNewlines()
-			self:Whitespace("\n")
-			self:Whitespace("\t")
-			self:EmitToken(node.tokens["end"])
-		end
+        self:PopForceNewlines()
 	end
 
 	function META:EmitAnonymousFunction(node)
@@ -921,6 +938,7 @@ end
 
 function META:EmitNumericForStatement(node)
 	self:Whitespace("\t")
+    self:PushForceNewlines((node.tokens["for"].start - node.tokens["do"].start) > 50)
 	self:EmitToken(node.tokens["for"])
 	self:Whitespace(" ")
 	self:EmitIdentifierList(node.identifiers)
@@ -930,6 +948,7 @@ function META:EmitNumericForStatement(node)
 	self:EmitExpressionList(node.expressions)
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["do"])
+    self:PopForceNewlines()
 	self:Whitespace("\n")
 	self:EmitBlock(node.statements)
 	self:Whitespace("\n")
@@ -1027,7 +1046,9 @@ function META:EmitSemicolonStatement(node)
 end
 
 function META:EmitAssignment(node)
-	self:Whitespace("\t")
+    if self:IsForcingNewlines() == nil then
+	    self:Whitespace("\t")
+    end
 
     if node.tokens["local"] then
         self:EmitToken(node.tokens["local"])
@@ -1145,6 +1166,10 @@ function META:EmitStatement(node)
 
 		error("invalid statement: " .. tostring(node))
 	end
+
+    if self:IsForcingNewlines() == false and node.kind ~= "return" then
+        self:Emit(";")
+    end
 
 	if self.OnEmitStatement then
 		if node.kind ~= "end_of_file" then
@@ -1346,7 +1371,9 @@ end
 
 function META:EmitIdentifier(node)
 	self:EmitToken(node.value)
-	self:EmitAnnotation(node)
+    if node.parent.environment ~= "typesystem" then
+	    self:EmitAnnotation(node)
+    end
 end
 
 function META:EmitIdentifierList(tbl)
