@@ -6,7 +6,7 @@ type INULL.IsValid = function=(INULL)>(false)
 type INULL.@Contract = INULL
 
 § if not io.open("example_projects/gmod/nattlua/glua_base.nlua") then io.write("Cannot find example_projects/gmod/nattlua/glua_base.nlua\nYou must run example_projects/gmod/nattlua/build_glua_base.lua first\n") os.exit(1) end
-import_type("nattlua/glua_base.nlua")
+import_type<|"nattlua/glua_base.nlua"|>
 
 type NULL = INULL
 

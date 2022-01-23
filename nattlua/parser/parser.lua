@@ -1,6 +1,6 @@
---[[#local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")]]
---[[#local type { ExpressionKind, StatementKind } = import_type("nattlua/parser/nodes.nlua")]]
---[[#import_type("nattlua/code/code.lua")]]
+--[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+--[[#local type { ExpressionKind, StatementKind } = import_type<|"nattlua/parser/nodes.nlua"|>]]
+--[[#import_type<|"nattlua/code/code.lua"|>]]
 
 --[[#local type NodeType = "expression" | "statement"]]
 --[[#local type Node = any]]

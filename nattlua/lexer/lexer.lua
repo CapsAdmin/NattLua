@@ -1,4 +1,4 @@
---[[#local type { Token, TokenType } = import_type("nattlua/lexer/token.nlua")]]
+--[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
 
 local Code = require("nattlua.code.code")
 local table_pool = require("nattlua.other.table_pool")
@@ -255,7 +255,7 @@ end
 -- lua lexer
 do
 	--[[# local type Lexer = META.@Self]]
-	--[[# local type { TokenReturnType } = import_type("nattlua/lexer/token.nlua")]]
+	--[[# local type { TokenReturnType } = import_type<|"nattlua/lexer/token.nlua"|>]]
 
 	local characters = require("nattlua.syntax.characters")
 	local runtime_syntax = require("nattlua.syntax.runtime")

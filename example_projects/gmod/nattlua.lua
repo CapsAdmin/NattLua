@@ -144,7 +144,7 @@ for _, info in ipairs(files) do
 			return s
 		end)()..[[
 
-		import_type("nattlua/glua.nlua")
+		import_type<|"nattlua/glua.nlua"|>
 
 	]] .. compiler.Code.Buffer
 

@@ -1,4 +1,4 @@
-local { Vector, Angle, Player } = import_type("nattlua/definitions/glua.nlua")
+local { Vector, Angle, Player } = import_type<|"nattlua/definitions/glua.nlua"|>
 
 local ply = nil
 
