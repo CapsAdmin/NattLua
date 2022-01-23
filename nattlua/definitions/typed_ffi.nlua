@@ -6,10 +6,9 @@ local analyzer function cast(node: any, args: any)
 	local function cdata_metatable(from, const)
 		local meta = types.Table()
 		meta:Set(types.LString("__index"), types.LuaTypeFunction(function(self, key)
-					-- i'm not really sure about this
-					-- boxed luajit ctypes seem to just get the metatable from the ctype
-
-					return from:Get(key) 
+            -- i'm not really sure about this
+            -- boxed luajit ctypes seem to just get the metatable from the ctype
+            return analyzer:Assert(key:GetNode(), from:Get(key, from.Type == "union"))
 		end, {types.Any(), types.Any()}, {}))
 
 		if const then

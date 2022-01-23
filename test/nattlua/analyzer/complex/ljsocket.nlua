@@ -1,4 +1,4 @@
-do return end -- wip
+local type print = any
 local ffi = require("ffi")
 local socket = {}
 local e = {}
@@ -445,7 +445,6 @@ do
         ffi.cdef[[SOCKET socket(int af, int type, int protocol);]]
 
         function socket.create(af: number, type: number, protocol: number)
-            print(C.socket)
             local fd = C.socket(af, type, protocol)
 
             if fd <= 0 then
@@ -755,8 +754,8 @@ do
 end
 
 local function capture_flags(what: ref string)
-    local flags = {}
-    local reverse = {}
+    local flags = {unknown = -1}
+    local reverse = {[-1] = "unknown"}
     for k, v in pairs(e) do
         if k:sub(0, #what) == what then
             k = k:sub(#what + 1):lower()
@@ -855,7 +854,7 @@ function M.poll(socket: any, flags: List<|string|>, timeout: nil | number)
     return flags_to_table(pfd[0].revents, POLL.lookup, bit.bor), ok
 end
 
-local type AdressInfo = {
+local type AddressInfo = {
     canonical_name = string,
     host = string,
     service = string,
@@ -866,7 +865,7 @@ local type AdressInfo = {
     addrinfo = ffi.typeof<|"struct addrinfo"|>,
 }
 
-local function addrinfo_get_ip(self: AdressInfo)
+local function addrinfo_get_ip(self: AddressInfo)
     if self.addrinfo.ai_addr == nil then
         return nil
     end
@@ -875,7 +874,7 @@ local function addrinfo_get_ip(self: AdressInfo)
     return ffi.string(addr)
 end
 
-local function addrinfo_get_port(self: AdressInfo)
+local function addrinfo_get_port(self: AddressInfo)
     if self.addrinfo.ai_addr == nil then
         return nil
     end
@@ -888,10 +887,10 @@ local function addrinfo_get_port(self: AdressInfo)
     return nil, "unknown family " .. tostring(self.family)
 end
 
-type AdressInfo.get_port = addrinfo_get_port
-type AdressInfo.get_ip = addrinfo_get_ip
+type AddressInfo.get_port = addrinfo_get_port
+type AddressInfo.get_ip = addrinfo_get_ip
 
-local function addrinfo_to_table(res: AdressInfo.addrinfo, host: string, service: string): AdressInfo
+local function addrinfo_to_table(res: ffi.typeof<|"struct addrinfo"|>, host: nil | string, service: nil | string): AddressInfo
     local info = {}
 
     if res.ai_canonname ~= nil then
@@ -912,8 +911,8 @@ local function addrinfo_to_table(res: AdressInfo.addrinfo, host: string, service
 end
 
 function M.get_address_info(data: {
-    host = string,
-    service = string,
+    host = nil | string,
+    service = nil | string,
     socket_type = keysof<|SOCK.lookup|>[1] | nil,
     family = keysof<|AF.lookup|>[1] | nil,
     flags = {[keysof<|AI.lookup|>[1]] = nil | true} | nil,
@@ -946,18 +945,17 @@ function M.get_address_info(data: {
     local res = out[0]
 
     while res ~= nil do
-        table.insert(tbl, addrinfo_to_table(res, data.host, data.service))
+        table.insert(tbl, addrinfo_to_table(res as any, data.host, data.service))
 
-        res = res.ai_next
+        res = res.ai_next as nil | res.ai_next -- TODO: pointers should return nilable? (strictly speaking 0)
     end
 
     --ffi.C.freeaddrinfo(out[0])
 
     return tbl
 end
-do return end
 
-function M.find_first_address(host: string, service: string, options: {
+function M.find_first_address(host: nil | string, service: nil | string, options: {
     socket_type = keysof<|SOCK.lookup|>,
     family = keysof<|AF.lookup|>,
     flags = {[keysof<|AI.lookup|>] = nil | true} | nil,
@@ -1010,7 +1008,13 @@ do
         timeout_connected = nil | {string, string},
         on_close = nil | function=(self)>(),
         on_connect = nil | function=(self, string, string)>(),
+        on_send = nil | function=(self, string, number)>(),
+        on_receive = nil | function=(self, string, number, number)>(),
+        on_close = nil | function=(self)>(),
+        debug = true | nil,
     }
+    type meta.@Self.@Name = "TSocket"
+
     function meta:__tostring()
         return string.format("socket[%s-%s-%s][%s]", self.family, self.socket_type, self.protocol, self.fd)
     end
@@ -1029,10 +1033,10 @@ do
         }, meta)
     end
 
-    
     function meta:close()
         if self.on_close then
-            self:on_close()
+            --TODO
+            (self.on_close as any)()
         end
         return socket.close(self.fd)
     end
@@ -1045,7 +1049,7 @@ do
         return ok, err, num
     end
     
-    function meta:set_option(key: keysof<|SO.lookup|> | keysof<|TCP.lookup|>, val: boolean | number | cdata, level: "tcp" | "socket")
+    function meta:set_option(key: keysof<|SO.lookup|> | keysof<|TCP.lookup|>, val: boolean | number | cdata, level: "tcp" | "socket" | nil)
         level = level or "socket"
 
         if type(val) == "boolean" then
@@ -1101,16 +1105,17 @@ do
     end
     
     function meta:poll_connect()
+        -- TODO: this expression does not elliminate falsy values
         if self.on_connect and self.timeout_connected and self:is_connected() then
-            local ok, err, num = self:on_connect(unpack(self.timeout_connected))
-            self.timeout_connected = nil
-            return ok, err, num
+            if self.on_connect then 
+                local ok, err, num = self:on_connect(unpack(self.timeout_connected as {string, string})) -- TODO
+                self.timeout_connected = nil
+                return ok, err, num
+            end
         end
 
         return nil, "timeout"
     end
-
-
 
     function meta:get_peer_name()
         local data = ffi.new("struct sockaddr_in")
@@ -1147,9 +1152,8 @@ do
             return ip and ip2 and service ~= 0 and service2 ~= 0
         end
     end
-    do return end
-
-    function meta:bind(host: string, service: string)
+    
+    function meta:bind(host: nil | string, service: string | nil)
         if host == "*" then
             host = nil
         end
@@ -1178,12 +1182,12 @@ do
 
         return socket.bind(self.fd, res.addrinfo.ai_addr, res.addrinfo.ai_addrlen)
     end
-
+    
     function meta:listen(max_connections: number)
         max_connections = max_connections or e.SOMAXCONN
         return socket.listen(self.fd, max_connections)
     end
-
+    
     function meta:accept()
         local address = ffi.new("struct sockaddr_in[1]")
         local fd, err = socket.accept(self.fd, ffi.cast("struct sockaddr *", address), ffi.new("unsigned int[1]", ffi.sizeof(address)))
@@ -1217,22 +1221,24 @@ do
         return nil, err, num
     end
 
-
     local default_flags = 0
 
     if ffi.os ~= "Windows" then
         default_flags = e.MSG_NOSIGNAL
     end
 
-    function meta:send_to(addr, data, flags)
+    function meta:send_to(addr: AddressInfo, data: string, flags: number)
         return self:send(data, flags, addr)
     end
 
-    function meta:send(data, flags, addr)
+    function meta:send(data: string, flags: number, addr: AddressInfo)
         flags = flags or default_flags
 
         if self.on_send then
-            return self:on_send(data, flags)
+            -- TODO: deferred call makes this not work
+            -- this also mutates self ?
+            --local on_send = self.on_send as self.on_send ~ nil
+            return (self.on_send as any)(self, data, flags)
         end
 
         local len, err, num
@@ -1252,7 +1258,7 @@ do
         end
     end
 
-    function meta:receive_from(address, size, flags)
+    function meta:receive_from(address: AddressInfo, size: number, flags: number)
         local src_addr
         local src_addr_size
 
@@ -1264,15 +1270,16 @@ do
             src_addr_size = address.addrinfo.ai_addrlen
         end
 
-        return self:receive(size, flags, src_addr, src_addr_size)
+        return self:receive(size, flags, src_addr as any --[[TODO]], src_addr_size)
     end
-
-    function meta:receive(size, flags, src_address, address_len)
+    
+    function meta:receive(size: number, flags: number, src_address: ffi.typeof<|"struct sockaddr *"|>, address_len: number)
         size = size or 64000
         local buff = ffi.new("char[?]", size)
 
         if self.on_receive then
-            return self:on_receive(buff, size, flags)
+            -- TODO
+            return (self.on_receive as any)(buff, size, flags)
         end
 
         local len, err, num
@@ -1330,7 +1337,7 @@ do
     end
 end
 
-function M.bind(host, service)
+function M.bind(host: string, service: string)
     local info, err = M.find_first_address(host, service, {
         family = "inet",
         socket_type = "stream",
@@ -1350,7 +1357,7 @@ function M.bind(host, service)
 
     server:set_option("reuseaddr", 1)
 
-    local ok, err, num = server:bind(info)
+    local ok, err, num = server:bind(info as any)
 
     if not ok then
         return ok, err, num

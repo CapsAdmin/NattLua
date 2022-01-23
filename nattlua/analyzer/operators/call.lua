@@ -18,7 +18,7 @@ local LNumber = require("nattlua.types.number").LNumber
 local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
 
-local function lua_types_to_tuple(node, tps)
+local function lua_types_to_tuple(self, node, tps)
 	local tbl = {}
 
 	for i, v in ipairs(tps) do
@@ -55,6 +55,7 @@ local function lua_types_to_tuple(node, tps)
 					if node then
 						print(node:Render(), "!")
 					end
+                    self:Print(t)
 					error(debug.traceback("NYI " .. t))
 				end
 			end
@@ -201,7 +202,7 @@ return
 				end
 
 				if self:IsTypesystem() then
-					local ret = lua_types_to_tuple(
+					local ret = lua_types_to_tuple(self,
 						obj:GetNode(),
 						{
 							self:CallLuaTypeFunction(
@@ -217,7 +218,7 @@ return
 				local tuples = {}
 
 				for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
-					tuples[i] = lua_types_to_tuple(
+					tuples[i] = lua_types_to_tuple(self,
 						obj:GetNode(),
 						{
 							self:CallLuaTypeFunction(
