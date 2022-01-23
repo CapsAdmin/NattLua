@@ -122,29 +122,29 @@ check({preserve_whitespace = false}, [[if not ply.pac_cameras then return end]])
 
 check({preserve_whitespace = false}, 
 [[local x = lexer.OnDraw and
-(
-    draw_type == "viewmodel" or
-    draw_type == "hands" or
-    ((lexer.Translucent == true or lexer.force_translucent == true) and draw_type == "translucent") or
-    ((lexer.Translucent == false or lexer.force_translucent == false) and draw_type == "opaque")
-)]])
+    (
+        draw_type == "viewmodel" or
+        draw_type == "hands" or
+        ((lexer.Translucent == true or lexer.force_translucent == true) and draw_type == "translucent") or
+        ((lexer.Translucent == false or lexer.force_translucent == false) and draw_type == "opaque")
+    )]])
 
 check({preserve_whitespace = false}, 
 [[local cond = key ~= "ParentUID" and
-key ~= "ParentName" and
-key ~= "UniqueID" and
-(
-    key ~= "AimPartName" and
-    not (pac.PartNameKeysToIgnore and pac.PartNameKeysToIgnore[key]) or
-    key == "AimPartName" and
-    table.HasValue(pac.AimPartNames, value)
-)]])
+    key ~= "ParentName" and
+    key ~= "UniqueID" and
+    (
+        key ~= "AimPartName" and
+        not (pac.PartNameKeysToIgnore and pac.PartNameKeysToIgnore[key]) or
+        key == "AimPartName" and
+        table.HasValue(pac.AimPartNames, value)
+    )]])
 
 check({preserve_whitespace = false}, 
 [[ent = pac.HandleOwnerName(lexer:GetPlayerOwner(), lexer.OwnerName, ent, lexer, function(e)
-    return e.pac_duplicate_attach_uid ~= lexer.UniqueID
-end) or
-NULL]])
+        return e.pac_duplicate_attach_uid ~= lexer.UniqueID
+    end) or
+    NULL]])
 
 check({preserve_whitespace = false},
 [[render.OverrideBlendFunc(true, lexer.blend_override[1], lexer.blend_override[2], lexer.blend_override[3], lexer.blend_override[4])

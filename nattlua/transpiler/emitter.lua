@@ -445,13 +445,13 @@ function META:EmitCall(node)
 	end
 
     if newlines and node.tokens["call("] then
-        self:Indent()
+        --self:Indent()
     end
 
 	self:EmitBreakableExpressionList(node.expressions, true)
     
     if newlines and node.tokens["call)"] then
-        self:Outdent()
+       -- self:Outdent()
     end
 
 	if not newlines then
@@ -461,7 +461,6 @@ function META:EmitCall(node)
 	if node.tokens["call)"] then
 		if newlines then
 			self:Whitespace("\n")
-			self:Whitespace("\t")
 		end
 
 		self:EmitToken(node.tokens["call)"])
@@ -536,7 +535,9 @@ end
 do
 	local function emit_function_body(self, node, analyzer_function)
 		self:EmitToken(node.tokens["arguments("])
+        self:PushForceNewlines(false)
 		self:EmitExpressionList(node.identifiers)
+        self:PopForceNewlines()
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
         
@@ -707,7 +708,6 @@ function META:EmitTable(tree)
 	local newline = tree:GetLength() > 50 or has_function_value(tree)
 
 	if newline then
-		self:Indent()
 		self:Whitespace("\n")
 	end
 
@@ -759,11 +759,6 @@ function META:EmitTable(tree)
 
 	if during_spread then
 		self:EmitNonSpace("}")
-	end
-
-	if newline then
-		self:Outdent()
-		self:Whitespace("\t")
 	end
 
 	self:EmitToken(tree.tokens["}"])
@@ -1050,7 +1045,10 @@ function META:EmitAssignment(node)
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["="])
 		self:Whitespace(" ")
+        -- we ident here in case the expression list is broken up
+        self:Indent()
 		self:EmitBreakableExpressionList(node.right)
+        self:Outdent()
 	end
 end
 
