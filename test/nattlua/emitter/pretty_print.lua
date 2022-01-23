@@ -162,11 +162,11 @@ pac.AimPartNames = {
 
 check({preserve_whitespace = false}, 
 [[return function(config)
-	local self = setmetatable({}, META)
-	self.config = config or {}
-	self:Initialize()
-	return self
-end]])
+        local self = setmetatable({}, META)
+        self.config = config or {}
+        self:Initialize()
+        return self
+    end]])
 
 check({preserve_whitespace = false}, 
 [[for i, node in ipairs(block.imports) do
@@ -176,4 +176,13 @@ check({preserve_whitespace = false},
         )
         self.done[node.path] = true
     end
+end]])
+
+check({preserve_whitespace = false}, 
+[[function META:IsShortIfStatement(node)
+	return
+        #node.statements == 1 and
+        node.statements[1][1] and
+        is_short_statement(node.statements[1][1].kind) and
+        not self:ShouldBreakExpressionList({node.expressions[1]})
 end]])

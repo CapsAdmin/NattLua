@@ -1009,7 +1009,9 @@ function META:EmitReturnStatement(node, no_tab)
 			self:Whitespace(" ")
 		end
 
+        self:Indent()
 		self:EmitBreakableExpressionList(node.expressions, true)
+        self:Outdent()
 	end
 end
 
