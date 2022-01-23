@@ -148,26 +148,16 @@ function META:EmitToken(node, translate)
 
     if node.whitespace then
         if self.config.preserve_whitespace == false then
-            local emit_all_whitespace = false
-
             for _, token in ipairs(node.whitespace) do
-                if token.type == "line_comment" or token.type == "multiline_comment" then
-                    emit_all_whitespace = true
-
-                    break
-                end
-            end
-
-            if emit_all_whitespace then
-                -- wipe out all space emitted before this
-                if self.last_non_space_index then
-                    for i = self.last_non_space_index + 1, #self.out do
-                        self.out[i] = ""
-                    end
-                end
-
-                for _, token in ipairs(node.whitespace) do
+                if token.type == "line_comment" then
                     self:EmitToken(token)
+                    if node.whitespace[_ + 1] then
+                        self:Whitespace("\n")
+                        self:Whitespace("\t")
+                    end
+                elseif token.type == "multiline_comment" then
+                    self:EmitToken(token)
+                    self:Whitespace(" ")
                 end
             end
         else
@@ -549,38 +539,28 @@ do
 		self:EmitExpressionList(node.identifiers)
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
-
-        local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
-        --self:Emit("--[["..new_lines.."]]")
-        self:PushForceNewlines(self:IsForcingNewlines() or distance > 30)
         
-        if self:IsForcingNewlines() then
-            self:Whitespace("\n")
-        else 
+        if #node.statements == 0 then
             self:Whitespace(" ")
-        end
-        
-        if self:IsForcingNewlines() then
-            self:EmitBlock(node.statements)
         else
-            self:EmitStatements(node.statements)
-        end
-        
-        if self:IsForcingNewlines() then
+            self:Whitespace("\n")
+            
+            self:EmitBlock(node.statements)
+            
             self:Whitespace("\n")
             self:Whitespace("\t")
-        else
-            self:OptionalWhitespace()
         end
 
         self:EmitToken(node.tokens["end"])
-
-        self:PopForceNewlines()
 	end
 
 	function META:EmitAnonymousFunction(node)
 		self:EmitToken(node.tokens["function"])
+    
+        local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
+        self:PushForceNewlines(self:IsForcingNewlines() or distance > 30)
 		emit_function_body(self, node)
+        self:PopForceNewlines()
 	end
 
 	function META:EmitLocalFunction(node)

@@ -20,7 +20,7 @@ local x = 1]]
 )
 
 check({ preserve_whitespace = false },
-    [[x = "" -- foo]], [[x = "" -- foo]]
+    [[x = ""-- foo]]
 )
 check({ preserve_whitespace = false, use_comment_types = true },
     [[local type x = ""]], [=[--[[#local type x = ""]]]=]
