@@ -189,3 +189,14 @@ end]])
 
 check({preserve_whitespace = false}, 
 [==[local x = {[ [[foo]] ] = "bar"}]==])
+
+check({preserve_whitespace = false}, 
+[[local escape_char_map = {
+	["\\"] = "\\\\",
+	["\""] = "\\\"",
+	["\b"] = "\\b",
+	["\f"] = "\\f",
+	["\n"] = "\\n",
+	["\r"] = "\\r",
+	["\t"] = "\\t",
+}]])

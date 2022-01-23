@@ -231,28 +231,54 @@ function META:OptionalWhitespace()
 	end
 end
 
-function META:EmitStringToken(token)
-	if self.config.string_quote then
-		local current = token.value:sub(1, 1)
-		local target = self.config.string_quote
+do
+    local fixed = {
+        "a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",
+    }
 
-		if current == "\"" or current == "\'" then
-			local contents = token.value:sub(2, -2)
-			contents = contents:gsub("([\\])" .. current, current)
-			contents = contents:gsub("([\\])" .. target, target)
-			contents = contents:gsub(target, "\\" .. target)
-			self:EmitToken(token, target .. contents .. target)
-            return
-		end
+    local pattern = "["    
+    for _, v in ipairs(fixed) do
+        pattern = pattern .. load("return \"\\" .. v .. "\"")()
     end
+    pattern = pattern .. "]"
+    
+    local map_double_quote = {[ [["]] ] = [[\"]]}
+    local map_single_quote = {[ [[']] ] = [[\']]}
+    
+    for _, v in ipairs(fixed) do
+        map_double_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
+        map_single_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
+    end
+    
+    local function escape_string(str, quote)
+        if quote == "\"" then
+            str = str:gsub(pattern, map_double_quote)
+        elseif quote == "'" then
+            str = str:gsub(pattern, map_single_quote)
+        end
+        return str
+    end
+        
 
-    local needs_space =  token.value:sub(1, 1) == "[" and self:GetPrevChar() == B("[")
+    function META:EmitStringToken(token)
+        if self.config.string_quote then
+            local current = token.value:sub(1, 1)
+            local target = self.config.string_quote
 
-    if needs_space then self:Whitespace(" ") end
-    self:EmitToken(token)
-    if needs_space then self:Whitespace(" ") end
+            if current == "\"" or current == "\'" then
+                local contents = escape_string(token.string_value, target)
+                self:EmitToken(token, target .. contents .. target)
+                return
+            end
+        end
+
+        local needs_space =  token.value:sub(1, 1) == "[" and self:GetPrevChar() == B("[")
+
+        if needs_space then self:Whitespace(" ") end
+        self:EmitToken(token)
+        if needs_space then self:Whitespace(" ") end
+    end
 end
-
 function META:EmitNumberToken(token)
 	self:EmitToken(token)
 end
