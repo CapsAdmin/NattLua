@@ -242,12 +242,15 @@ function META:EmitStringToken(token)
 			contents = contents:gsub("([\\])" .. target, target)
 			contents = contents:gsub(target, "\\" .. target)
 			self:EmitToken(token, target .. contents .. target)
-		else
-			self:EmitToken(token)
+            return
 		end
-	else
-		self:EmitToken(token)
-	end
+    end
+
+    local needs_space =  token.value:sub(1, 1) == "[" and self:GetPrevChar() == B("[")
+
+    if needs_space then self:Whitespace(" ") end
+    self:EmitToken(token)
+    if needs_space then self:Whitespace(" ") end
 end
 
 function META:EmitNumberToken(token)

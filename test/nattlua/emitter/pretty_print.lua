@@ -186,3 +186,6 @@ check({preserve_whitespace = false},
         is_short_statement(node.statements[1][1].kind) and
         not self:ShouldBreakExpressionList({node.expressions[1]})
 end]])
+
+check({preserve_whitespace = false}, 
+[==[local x = {[ [[foo]] ] = "bar"}]==])
