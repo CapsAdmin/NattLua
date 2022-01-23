@@ -444,16 +444,8 @@ function META:EmitCall(node)
 		self:PushForceNewlines(false)
 	end
 
-    if newlines and node.tokens["call("] then
-        --self:Indent()
-    end
-
 	self:EmitBreakableExpressionList(node.expressions, true)
     
-    if newlines and node.tokens["call)"] then
-       -- self:Outdent()
-    end
-
 	if not newlines then
 		self:PopForceNewlines()
 	end
@@ -1021,7 +1013,7 @@ function META:EmitSemicolonStatement(node)
 end
 
 function META:EmitAssignment(node)
-    if self:IsForcingNewlines() == nil then
+    if self:IsForcingNewlines() ~= false then
 	    self:Whitespace("\t")
     end
 

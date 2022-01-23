@@ -159,3 +159,11 @@ pac.AimPartNames = {
     ["local eyes yaw"] = "LOCALEYES_YAW",
     ["local eyes pitch"] = "LOCALEYES_PITCH",
 }]])
+
+check({preserve_whitespace = false}, 
+[[return function(config)
+	local self = setmetatable({}, META)
+	self.config = config or {}
+	self:Initialize()
+	return self
+end]])
