@@ -112,11 +112,11 @@ check({preserve_whitespace = false}, [[local tbl = {foo = true,foo = true,foo = 
 
 check({preserve_whitespace = false}, 
 [[pos, ang = LocalToWorld(
-	lexer.Position or Vector(),
-	lexer.Angles or Angle(),
-	pos or owner:GetPos(),
-	ang or owner:GetAngles()
-)]])
+        lexer.Position or Vector(),
+        lexer.Angles or Angle(),
+        pos or owner:GetPos(),
+        ang or owner:GetAngles()
+    )]])
 
 check({preserve_whitespace = false}, [[if not ply.pac_cameras then return end]])
 
@@ -166,4 +166,14 @@ check({preserve_whitespace = false},
 	self.config = config or {}
 	self:Initialize()
 	return self
+end]])
+
+check({preserve_whitespace = false}, 
+[[for i, node in ipairs(block.imports) do
+    if not self.done[node.path] then
+        self:Emit(
+            "IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render(self.config or {}) .. " end\n"
+        )
+        self.done[node.path] = true
+    end
 end]])

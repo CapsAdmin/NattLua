@@ -443,9 +443,17 @@ function META:EmitCall(node)
 	if not newlines then
 		self:PushForceNewlines(false)
 	end
+    
+    if newlines then
+        self:Indent()
+    end
 
 	self:EmitBreakableExpressionList(node.expressions, true)
     
+    if newlines then
+        self:Outdent()
+    end
+
 	if not newlines then
 		self:PopForceNewlines()
 	end
@@ -453,6 +461,7 @@ function META:EmitCall(node)
 	if node.tokens["call)"] then
 		if newlines then
 			self:Whitespace("\n")
+            self:Whitespace("\t")
 		end
 
 		self:EmitToken(node.tokens["call)"])
