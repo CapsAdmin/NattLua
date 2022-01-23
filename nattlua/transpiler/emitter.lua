@@ -1611,11 +1611,11 @@ end
 
 	function META:EmitInvalidLuaCode(func, ...)
 		local emitted = false
-
+        
 		if not self.config.uncomment_types then
 			if not self.during_comment_type or self.during_comment_type == 0 then
 				self:EmitNonSpace("--[[#")
-				emitted = true
+				emitted = #self.out
 			end
 
 			self.during_comment_type = self.during_comment_type or 0
@@ -1629,7 +1629,21 @@ end
 				self:Whitespace(" ")
 			end
 
-			self:EmitNonSpace("]]")
+            local needs_escape = false
+            for i = emitted, #self.out do
+                local str = self.out[i]
+                if str:find("]]", nil, true) then
+                    self.out[emitted] = "--[=[#"
+                    needs_escape = true
+                    break
+                end
+            end
+
+            if needs_escape then
+			    self:EmitNonSpace("]=]")
+            else
+			    self:EmitNonSpace("]]")
+            end
 		end
 
 		if not self.config.uncomment_types then

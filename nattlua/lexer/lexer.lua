@@ -681,19 +681,23 @@ do
 		return false
 	end
 
-	local function ReadCommentEscape(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
+	local function ReadCommentEscape(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 		if lexer:IsString("--[[#") then
 			lexer:Advance(5)
-			lexer.comment_escape = true
+			lexer.comment_escape = "]]"
 			return "comment_escape"
-		end
+        elseif lexer:IsString("--[=[#") then
+            lexer:Advance(6)
+            lexer.comment_escape = "]=]"
+            return "comment_escape"
+        end
 
 		return false
 	end
 	
-	local function ReadRemainingCommentEscape(lexer--[[#: Lexer & {comment_escape = boolean | nil}]])--[[#: TokenReturnType]]
-		if lexer.comment_escape and lexer:IsString("]]") then
-			lexer:Advance(2)
+	local function ReadRemainingCommentEscape(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+		if lexer.comment_escape and lexer:IsString(lexer.comment_escape --[[#as string]]) then
+			lexer:Advance(#lexer.comment_escape --[[#as string]])
 			return "comment_escape"
 		end
 
