@@ -556,7 +556,7 @@ run[[
         
     end
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer.diagnostics == 1)
 ]]
 
 

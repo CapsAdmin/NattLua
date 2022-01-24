@@ -45,9 +45,21 @@ return
 							expression = obj,
 						})
 
+						if obj:IsCertainlyTrue() then
+							self:Warning(exp, "if expression is always true")
+						end
+
 						if not obj:IsFalsy() then break end
 					end
+
+					if obj:IsCertainlyFalse() then
+						self:Warning(exp, "if expression is always false")
+					end
 				else
+					if prev_expression:IsCertainlyFalse() then
+						self:Warning(statement.expressions[i-1], "else part of expression is always true")
+					end
+
 					if prev_expression:IsFalsy() then
 						table.insert(blocks, {
 							statements = statements,

@@ -25,12 +25,26 @@ end
 -- reuse an existing environment to speed up tests
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 
-local function run(code, expect_error)
+local function run(code, expect_error, expect_warning)
     _G.TEST = true
     local compiler = nl.Compiler(code, nil, nil, 3)
     compiler:SetEnvironments(types.Table(), typesystem_env)
     local ok, err = compiler:Analyze()
     _G.TEST = false
+
+    if expect_warning then
+        local str = ""
+        for _, diagnostic in ipairs(compiler.analyzer.diagnostics) do
+            if diagnostic.msg:find(expect_warning) then
+                return compiler
+            end
+            str = str .. diagnostic.msg .. "\n"
+        end
+        if str == "" then
+            error("expected warning, got\n\n\n" .. str, 3)
+        end
+        error("expected warning '" .. expect_warning .. "' got:\n>>\n" .. str .. "\n<<", 3)
+    end
 
     if expect_error then
         if not err or err == "" then
@@ -115,8 +129,8 @@ return {
     Table = function(data) return types.Table(data or {}) end,
     Symbol = function(data) return types.Symbol(data) end,
     Any = function() return types.Any() end,
-    RunCode = function(code, expect_error)
-        local compiler = run(code, expect_error)
+    RunCode = function(code, expect_error, expect_warning)
+        local compiler = run(code, expect_error, expect_warning)
         return compiler.analyzer, compiler.SyntaxTree
     end,
     Transpile = function(code)

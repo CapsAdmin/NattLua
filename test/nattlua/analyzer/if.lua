@@ -1546,3 +1546,28 @@ run[[
     
     attest.equal(val, _ as any | {[number] = number})
 ]]
+
+run([[
+    local function foo(b: true)
+        if b then
+    
+        end
+    end
+]], nil, "if expression is always true")
+run([[
+    local function foo(b: false)
+        if false then
+    
+        end
+    end
+]], nil, "if expression is always false")
+
+run([[
+    local function foo(b: false)
+        if b then
+    
+        else
+    
+        end
+    end
+]], nil, "else part of expression is always true")
