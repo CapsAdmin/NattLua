@@ -1,4 +1,4 @@
---local type print = any
+local type print = any
 local ffi = require("ffi")
 local socket = {}
 local e = {}
@@ -1230,7 +1230,7 @@ do
         return self:send(data, flags, addr)
     end
 
-    function meta:send(data: string, flags: number, addr: AddressInfo)
+    function meta:send(data: string, flags: number, addr: nil | AddressInfo)
         flags = flags or default_flags
 
         if self.on_send then
@@ -1272,7 +1272,7 @@ do
         return self:receive(size, flags, src_addr as any --[[TODO]], src_addr_size)
     end
     
-    function meta:receive(size: number, flags: number, src_address: ffi.typeof<|"struct sockaddr *"|>, address_len: number)
+    function meta:receive(size: number, flags: number, src_address: nil | ffi.typeof<|"struct sockaddr *"|>, address_len: number)
         size = size or 64000
         local buff = ffi.new("char[?]", size)
 
