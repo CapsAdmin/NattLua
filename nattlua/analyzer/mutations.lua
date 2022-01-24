@@ -548,7 +548,7 @@ return function(META)
 			return upvalues
 		end
 
-		function META:MutateTrackedFromIf(upvalues, tables)
+		function META:ApplyMutationsInIf(upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					local union = Union()
@@ -570,7 +570,7 @@ return function(META)
 			end
 		end
 
-		function META:MutateTrackedFromIfElse(blocks)
+		function META:ApplyMutationsInIfElse(blocks)
 			for i, block in ipairs(blocks) do
 				if block.upvalues then
 					for _, data in ipairs(block.upvalues) do
@@ -601,7 +601,7 @@ return function(META)
 			
 		end
 
-		function META:MutateTrackedFromReturn(scope, scope_override, negate, upvalues, tables)
+		function META:ApplyMutationsAfterReturn(scope, scope_override, negate, upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					local stack = data.stack

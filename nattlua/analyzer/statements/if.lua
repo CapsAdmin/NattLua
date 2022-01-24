@@ -82,9 +82,9 @@ return
 					scope:SetTrackedTables(block.tables)
 					if block.is_else then
 						scope:SetElseConditionalScope(true)
-						self:MutateTrackedFromIfElse(blocks)
+						self:ApplyMutationsInIfElse(blocks)
 					else
-						self:MutateTrackedFromIf(block.upvalues, block.tables)
+						self:ApplyMutationsInIf(block.upvalues, block.tables)
 					end
 
 
