@@ -1,4 +1,4 @@
-local type print = any
+--local type print = any
 local ffi = require("ffi")
 local socket = {}
 local e = {}
@@ -1009,7 +1009,7 @@ do
         on_close = nil | function=(self)>(),
         on_connect = nil | function=(self, string, string)>(),
         on_send = nil | function=(self, string, number)>(),
-        on_receive = nil | function=(self, string, number, number)>(),
+        on_receive = nil | function=(self, cdata, number, number)>(),
         on_close = nil | function=(self)>(),
         debug = true | nil,
     }
@@ -1035,8 +1035,7 @@ do
 
     function meta:close()
         if self.on_close then
-            --TODO
-            (self.on_close as any)()
+            --self:on_close() TODO: any 
         end
         return socket.close(self.fd)
     end
@@ -1238,7 +1237,7 @@ do
             -- TODO: deferred call makes this not work
             -- this also mutates self ?
             --local on_send = self.on_send as self.on_send ~ nil
-            return (self.on_send as any)(self, data, flags)
+            return self:on_send(data, flags)
         end
 
         local len, err, num
@@ -1278,8 +1277,7 @@ do
         local buff = ffi.new("char[?]", size)
 
         if self.on_receive then
-            -- TODO
-            return (self.on_receive as any)(buff, size, flags)
+            return self:on_receive(buff, size, flags)
         end
 
         local len, err, num

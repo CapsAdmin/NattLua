@@ -73,7 +73,7 @@ return
 
 		
 				local tracked = self:GetTrackedObjectWithKey(obj, key)
-
+				
 				if tracked then
 					return tracked
 				end
@@ -96,11 +96,16 @@ return
 						end
 					end
 
-					local tracked = self:GetMutatedValue(obj, key, val)
-					if tracked then
-						return tracked
+					--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
+					if obj.mutations then
+						local tracked = self:GetMutatedValue(obj, key, val)
+
+						
+						if tracked then
+							return tracked
+						end
 					end
-					
+
 					self:TrackTableIndex(obj, key, val)
 
 					return val
