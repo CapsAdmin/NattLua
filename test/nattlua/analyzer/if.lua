@@ -1553,14 +1553,14 @@ run([[
     
         end
     end
-]], nil, "if expression is always true")
+]], nil, "if condition is always true")
 run([[
     local function foo(b: false)
         if false then
     
         end
     end
-]], nil, "if expression is always false")
+]], nil, "if condition is always false")
 
 run([[
     local function foo(b: false)
@@ -1570,4 +1570,17 @@ run([[
     
         end
     end
-]], nil, "else part of expression is always true")
+]], nil, "else part of if condition is always true")
+
+run[[
+    local function foo(b: literal ref boolean)
+        if b then
+
+        end
+    end
+
+    foo(true)
+    foo(false)
+    
+    §assert(#analyzer.diagnostics == 0)
+]]

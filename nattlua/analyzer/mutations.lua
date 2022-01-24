@@ -134,16 +134,18 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					local stack = data.stack
-					local val
-					
-					if mut.scope:IsElseConditionalScope() then
-						val = stack[#stack].falsy
-					else	
-						val = stack[#stack].truthy
-					end
-	
-					if val and (val.Type ~= "union" or not val:IsEmpty()) then
-						union:RemoveType(val)
+					if stack then
+						local val
+						
+						if mut.scope:IsElseConditionalScope() then
+							val = stack[#stack].falsy
+						else	
+							val = stack[#stack].truthy
+						end
+		
+						if val and (val.Type ~= "union" or not val:IsEmpty()) then
+							union:RemoveType(val)
+						end
 					end
 				end
 			end
@@ -375,20 +377,26 @@ return function(META)
 
 		function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
 			if self:IsTypesystem() then return end
-			if obj.Type ~= "union" then return end
 			local upvalue = obj:GetUpvalue()
 			
 			if not upvalue then return end
 
-			truthy_union = truthy_union or obj:GetTruthy()
-			falsy_union = falsy_union or obj:GetFalsy()
+			if obj.Type == "union" then
+				if not truthy_union then
+					truthy_union = obj:GetTruthy()
+				end	
+				if not falsy_union then
+					falsy_union = obj:GetFalsy()
+				end
 
-			upvalue.tracked_stack = upvalue.tracked_stack or {}
-			table.insert(upvalue.tracked_stack, {
-				truthy = truthy_union, 
-				falsy = falsy_union, 
-				inverted = inverted
-			})
+				upvalue.tracked_stack = upvalue.tracked_stack or {}
+				table.insert(upvalue.tracked_stack, {
+					truthy = truthy_union, 
+					falsy = falsy_union, 
+					inverted = inverted
+				})
+			end
+
 			
 			self.tracked_upvalues = self.tracked_upvalues or {}
 			self.tracked_upvalues_done = self.tracked_upvalues_done or {}
@@ -536,12 +544,10 @@ return function(META)
 						upvalue = translate[upvalue]
 					end
 
-					if stack then
-						table.insert(upvalues, {
-							upvalue = upvalue, 
-							stack = copy(stack)
-						})
-					end
+					table.insert(upvalues, {
+						upvalue = upvalue, 
+						stack = stack and copy(stack)
+					})
 				end
 			end
 
@@ -551,11 +557,13 @@ return function(META)
 		function META:ApplyMutationsInIf(upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
-					local union = Union()
-					for _, v in ipairs(data.stack) do
-						union:AddType(v.truthy)
+					if data.stack then
+						local union = Union()
+						for _, v in ipairs(data.stack) do
+							union:AddType(v.truthy)
+						end
+						self:MutateUpvalue(data.upvalue, union, nil, true)
 					end
-					self:MutateUpvalue(data.upvalue, union, nil, true)
 				end
 			end
 
@@ -574,13 +582,15 @@ return function(META)
 			for i, block in ipairs(blocks) do
 				if block.upvalues then
 					for _, data in ipairs(block.upvalues) do
-						local union = self:GetMutatedUpvalue(data.upvalue)
-						if union.Type == "union" then
-							for _, v in ipairs(data.stack) do
-								union:RemoveType(v.truthy)
+						if data.stack then
+							local union = self:GetMutatedUpvalue(data.upvalue)
+							if union.Type == "union" then
+								for _, v in ipairs(data.stack) do
+									union:RemoveType(v.truthy)
+								end
 							end
+							self:MutateUpvalue(data.upvalue, union, nil, true)
 						end
-						self:MutateUpvalue(data.upvalue, union, nil, true)
 					end
 				end
 
@@ -605,19 +615,21 @@ return function(META)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					local stack = data.stack
-					local val
-					if scope:IsElseConditionalScope() or stack[#stack].inverted then
-						val = negate and stack[#stack].truthy or stack[#stack].falsy
-					else
-						val = negate and stack[#stack].falsy or stack[#stack].truthy
-					end
-
-					if val and (val.Type ~= "union" or not val:IsEmpty()) then
-						if #val:GetData() == 1 then
-							val = val:GetData()[1]
+					if stack then
+						local val
+						if scope:IsElseConditionalScope() or stack[#stack].inverted then
+							val = negate and stack[#stack].truthy or stack[#stack].falsy
+						else
+							val = negate and stack[#stack].falsy or stack[#stack].truthy
 						end
 
-						self:MutateUpvalue(data.upvalue, val, scope_override)
+						if val and (val.Type ~= "union" or not val:IsEmpty()) then
+							if #val:GetData() == 1 then
+								val = val:GetData()[1]
+							end
+
+							self:MutateUpvalue(data.upvalue, val, scope_override)
+						end
 					end
 				end
 			end

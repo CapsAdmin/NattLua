@@ -1,6 +1,15 @@
 local ipairs = ipairs
 local Union = require("nattlua.types.union").Union
 
+local function contains_ref_argument(upvalues)
+	for k,v in pairs(upvalues) do
+		if v.upvalue:GetValue().ref_argument then
+			return true
+		end
+	end
+	return false
+end
+
 return
 	{
 		AnalyzeIf = function(self, statement)
@@ -35,6 +44,7 @@ return
 					if obj:IsTruthy() then
 						local upvalues = self:GetTrackedUpvalues()
 						local tables = self:GetTrackedTables()
+
 						
 						self:ClearTracked()
 
@@ -46,18 +56,22 @@ return
 						})
 
 						if obj:IsCertainlyTrue() then
-							self:Warning(exp, "if expression is always true")
+							if not contains_ref_argument(upvalues) then
+								self:Warning(exp, "if condition is always true")
+							end
 						end
 
 						if not obj:IsFalsy() then break end
 					end
 
 					if obj:IsCertainlyFalse() then
-						self:Warning(exp, "if expression is always false")
+						if not contains_ref_argument(self:GetTrackedUpvalues()) then
+							self:Warning(exp, "if condition is always false")
+						end
 					end
 				else
 					if prev_expression:IsCertainlyFalse() then
-						self:Warning(statement.expressions[i-1], "else part of expression is always true")
+						self:Warning(statement.expressions[i-1], "else part of if condition is always true")
 					end
 
 					if prev_expression:IsFalsy() then
