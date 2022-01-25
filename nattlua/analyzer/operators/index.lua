@@ -77,15 +77,21 @@ return
 				if tracked then
 					return tracked
 				end
-
 				local contract = obj:GetContract()
+
 				if contract then
 					local val, err = contract:Get(key)
 					if not val then return val, err end
-
+					
+					
 					if not obj.argument_index or contract.ref_argument then
 						local val = self:GetMutatedValue(obj, key, val)
+
 						if val then
+							if val.Type == "union" then
+								val = val:Copy(nil, true)
+							end
+
 							if not val:GetContract() then
 								val:SetContract(val)
 							end
@@ -94,6 +100,10 @@ return
 			
 							return val
 						end
+					end
+
+					if val.Type == "union" then
+						val = val:Copy(nil, true)
 					end
 
 					--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
@@ -108,6 +118,7 @@ return
 
 					self:TrackTableIndex(obj, key, val)
 
+			
 					return val
 				end
 

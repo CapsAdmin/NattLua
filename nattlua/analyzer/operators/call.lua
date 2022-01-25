@@ -405,7 +405,7 @@ return
 													arg:SetArguments(tup)
 												end									
 											elseif contract.Type == "function" then
-												arg:SetArguments(contract:GetArguments())
+												arg:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract
 											end
 										end
 									end

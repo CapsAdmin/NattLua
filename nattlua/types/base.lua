@@ -107,14 +107,6 @@ do -- token, expression and statement association
 	end
 end
 
-do
-	META:IsSet("Literal", false--[[# as boolean]])
-
-	function META:CopyLiteralness(obj--[[#: BaseType]])
-		self:SetLiteral(obj:IsLiteral())
-	end
-end
-
 do -- comes from tbl.@Name = "my name"
 	META:GetSet("Name", nil--[[# as nil | BaseType]])
 
@@ -122,7 +114,7 @@ do -- comes from tbl.@Name = "my name"
 		if name then
 			assert(name:IsLiteral())
 		end
-
+		
 		self.Name = name
 	end
 end
@@ -180,6 +172,13 @@ do
 	end
 end
 
+do
+	META:IsSet("Literal", false--[[# as boolean]])
+
+	function META:CopyLiteralness(obj--[[#: BaseType]])
+		self:SetLiteral(obj:IsLiteral())
+	end
+end
 
 do -- operators
 	function META:Call(...)

@@ -58,12 +58,12 @@ function META:SetArguments(tup)
 	self.called = nil
 end
 
-function META:Copy(map)
+function META:Copy(map, ...)
 	map = map or {}
 	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
 	map[self] = map[self] or copy
-	copy:GetData().ret = self:GetReturnTypes():Copy(map)
-	copy:GetData().arg = self:GetArguments():Copy(map)
+	copy:GetData().ret = self:GetReturnTypes():Copy(map, ...)
+	copy:GetData().arg = self:GetArguments():Copy(map, ...)
 	copy:GetData().lua_function = self:GetData().lua_function
 	copy:GetData().scope = self:GetData().scope
 	copy:SetLiteral(self:IsLiteral())

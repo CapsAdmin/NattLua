@@ -528,16 +528,16 @@ function META:CopyLiteralness(from--[[#: TTable]])
 	return true
 end
 
-function META:Copy(map--[[#: any]])
+function META:Copy(map--[[#: any]], ...)
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
 
 	for i, keyval in ipairs(self:GetData()) do
 		local k, v = keyval.key, keyval.val
-		k = map[keyval.key] or k:Copy(map)
+		k = map[keyval.key] or k:Copy(map, ...)
 		map[keyval.key] = map[keyval.key] or k
-		v = map[keyval.val] or v:Copy(map)
+		v = map[keyval.val] or v:Copy(map, ...)
 		map[keyval.val] = map[keyval.val] or v
 		copy:GetData()[i] = {key = k, val = v}
 	end

@@ -733,3 +733,51 @@ run[[
     local type t = {[any] = any}
     attest.equal(t["foo" as string], _ as any)
 ]]
+
+run[[
+    local META = {}
+    META.__index = META
+    type META.@Self = {}
+
+    function META.GetSet(name: ref string, default: ref any)
+        META[name] = default
+        type META.@Self[name] = META[name]
+    end
+
+    META.GetSet("Name", nil as nil | META.@Self)
+    META.GetSet("Literal", false)
+
+    function META:SetName(name: META.@Self)
+        self.Name = name
+    end
+]]
+
+run[[
+    local type T = {
+        foo = Table,
+    }
+    
+    local x = {} as T
+    
+    x.foo.lol = true
+    
+    attest.equal(Table, _ as {[any] = any} | {})
+]]
+
+run[[
+    
+    local luadata = {}
+
+    local type Context = {
+        done = Table
+    }
+    function luadata.SetModifier(type: string, callback: function=(any, Context)>(nil), func: nil, func_name: nil)
+    
+    end
+    
+    luadata.SetModifier("table", function(tbl, context)
+        context.done[tbl] = true
+    
+        attest.equal(Table, _ as {[any] = any} | {})
+    end)
+]]

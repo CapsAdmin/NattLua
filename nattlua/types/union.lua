@@ -403,13 +403,17 @@ function META:Subtract(union)
 	return copy
 end
 
-function META:Copy(map)
+function META:Copy(map, copy_tables)
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
 
 	for _, e in ipairs(self.Data) do
-		copy:AddType(e:Copy(map))
+		if e.Type == "table" and not copy_tables then
+			copy:AddType(e)
+		else
+			copy:AddType(e:Copy(map, copy_tables))
+		end
 	end
 
 	copy:CopyInternalsFrom(self)

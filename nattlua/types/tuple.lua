@@ -81,19 +81,19 @@ function META:Merge(tup)
 	return self
 end
 
-function META:Copy(map)
+function META:Copy(map, ...)
 	map = map or {}
 	local copy = self.New({})
 	map[self] = map[self] or copy
 
 	for i, v in ipairs(self:GetData()) do
-		v = map[v] or v:Copy(map)
+		v = map[v] or v:Copy(map, ...)
 		map[v] = map[v] or v
 		copy:Set(i, v)
 	end
 
 	if self.Remainder then
-		copy.Remainder = self.Remainder:Copy()
+		copy.Remainder = self.Remainder:Copy(nil, ...)
 	end
 
 	copy.Repeat = self.Repeat
