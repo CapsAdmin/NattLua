@@ -210,7 +210,7 @@ do
             );
         ]]
 
-        local function WORD(low, high)
+        local function WORD(low: number, high: number)
             return bit.bor(low , bit.lshift(high , 8))
         end
 
@@ -221,7 +221,7 @@ do
             local FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
             local flags = bit.bor(FORMAT_MESSAGE_IGNORE_INSERTS, FORMAT_MESSAGE_FROM_SYSTEM)
 
-            local cache = {}
+            local cache: Map<|number, string|>[1] = {} --TODO
 
             function socket.lasterror(num)
                 num = num or ffi.C.GetLastError()
@@ -289,7 +289,7 @@ do
         if jit.arch ~= "x64" then -- xp or something
             ffi.cdef[[int WSAAddressToStringA(struct sockaddr *, unsigned long, void *, char *, unsigned long *);]]
 
-            function socket.inet_ntop(family, pAddr, strptr, strlen)
+            function socket.inet_ntop(family: number, pAddr: ffi.typeof<|"struct sockaddr *"|>, strptr: string, strlen: number)
                 -- win XP: http://memset.wordpress.com/2010/10/09/inet_ntop-for-win32/
                 local srcaddr = ffi.new("struct sockaddr_in")
                 ffi.copy(srcaddr.sin_addr, pAddr, ffi.sizeof(srcaddr.sin_addr))
@@ -307,13 +307,13 @@ do
 
             local IOCPARM_MASK    = 0x7
             local IOC_IN          = 0x80000000
-            local function _IOW(x,y,t)
+            local function _IOW(x: ref number,y: ref number,t: ref string)
                 return bit.bor(IOC_IN, bit.lshift(bit.band(ffi.sizeof(t),IOCPARM_MASK),16), bit.lshift(x,8), y)
             end
 
             local FIONBIO = _IOW(string.byte'f', 126, "uint32_t") -- -2147195266 -- 2147772030ULL
 
-            function socket.blocking(fd, b)
+            function socket.blocking(fd: Socket, b: boolean)
                 local ret = C.ioctlsocket(fd, FIONBIO, ffi.new("int[1]", b and 0 or 1))
                 if ret == 0 then
                     return true
@@ -323,7 +323,7 @@ do
             end
         end
 
-        function socket.poll(fds, ndfs, timeout)
+        function socket.poll(fds: List<|Socket|>, ndfs: number, timeout: number)
             local ret = C.WSAPoll(fds, ndfs, timeout)
             if ret < 0 then
                 return nil, socket.lasterror()
@@ -1152,7 +1152,7 @@ do
         end
     end
     
-    function meta:bind(host: nil | string, service: string | nil)
+    function meta:bind(host: nil | string | AddressInfo, service: string | number | nil)
         if host == "*" then
             host = nil
         end
@@ -1257,7 +1257,7 @@ do
         end
     end
 
-    function meta:receive_from(address: AddressInfo, size: number, flags: number)
+    function meta:receive_from(address: nil | AddressInfo, size: number, flags: number)
         local src_addr
         local src_addr_size
 
