@@ -1584,3 +1584,25 @@ run[[
     
     §assert(#analyzer.diagnostics == 0)
 ]]
+
+run[[
+    --local type print = any
+    local ffi = require("ffi")
+
+    do
+        local C
+
+        if ffi.os == "Windows" then
+            C = assert(ffi.load("ws2_32"))
+        else
+            C = ffi.C
+        end
+
+        if ffi.os == "OSX" then
+        elseif ffi.os == "Windows" then
+        else -- posix
+        end
+
+        attest.equal(ffi.os == "Windows", _ as true | false)
+    end
+]]

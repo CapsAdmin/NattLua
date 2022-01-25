@@ -64,14 +64,45 @@ return function(META)
 		return union
 	end
 	
-	function META:ThrowSilentError()
+	function META:ThrowSilentError(assert_expression)
 		for i = #self.call_stack, 1, -1 do
 			local frame = self.call_stack[i]
 			local function_scope = frame.scope:GetNearestFunctionScope()
 			function_scope.lua_silent_error = function_scope.lua_silent_error or {}
 			table.insert(function_scope.lua_silent_error, 1, self:GetScope())
 			frame.scope:UncertainReturn()
-			
+
+			if assert_expression and assert_expression:IsTruthy() then
+				-- track the assertion expression
+
+				local upvalues
+				if frame.scope:GetTrackedUpvalues() then
+					upvalues = {}
+					for _, a in ipairs(frame.scope:GetTrackedUpvalues()) do
+						for _, b in ipairs(self:GetTrackedUpvalues()) do
+							if a.upvalue == b.upvalue then
+								table.insert(upvalues, a)
+							end
+						end
+					end
+				end
+
+				local tables
+				if frame.scope:GetTrackedTables() then
+					tables = {}
+					for _, a in ipairs(frame.scope:GetTrackedTables()) do
+						for _, b in ipairs(self:GetTrackedTables()) do
+							if a.obj == b.obj then
+								table.insert(tables, a)
+							end
+						end
+					end
+				end
+				
+				self:ApplyMutationsAfterReturn(frame.scope, frame.scope, true, upvalues, tables)
+				return
+			end
+
 			self:ApplyMutationsAfterReturn(frame.scope, frame.scope, true, frame.scope:GetTrackedUpvalues(), frame.scope:GetTrackedTables())
 		end
 	end

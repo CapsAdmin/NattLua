@@ -262,7 +262,7 @@ end
 
 analyzer function assert(obj: any, msg: string | nil)
 	if not analyzer:IsDefinetlyReachable() then
-		analyzer:ThrowSilentError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy())
+		analyzer:ThrowSilentError(obj)
 		if obj.Type == "union" then
 			obj = obj:Copy()
 			obj:DisableFalsy()
