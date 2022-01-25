@@ -781,3 +781,12 @@ run[[
         attest.equal(Table, _ as {[any] = any} | {})
     end)
 ]]
+
+run[[
+    local lookup = {
+        [_ as 1 | 2] = "foo",
+        [_ as 1337 | 155] = "bar",
+    }
+    
+    attest.equal(lookup[_ as number], _ as "foo" | "bar" | nil)
+]]
