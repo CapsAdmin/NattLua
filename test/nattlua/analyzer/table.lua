@@ -790,3 +790,19 @@ run[[
     
     attest.equal(lookup[_ as number], _ as "foo" | "bar" | nil)
 ]]
+
+run[[
+    local x = {666, foo = true}
+    attest.equal(#x, 1)
+]]
+
+run[[
+    local x = {[1] = 1, [2] = 1, [5] = 2}
+    attest.equal(#x, 2)
+]]
+
+
+run[[
+    local x = {[1 as number] = 1, [2] = 1}
+    attest.equal(#x, _ as number)
+]]

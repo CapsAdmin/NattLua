@@ -126,7 +126,17 @@ function META:__tostring()
 end
 
 function META:GetLength()
-	return #self:GetData()
+	local len = 0
+	for _, kv in ipairs(self:GetData()) do
+		if kv.key.Type == "number" and kv.key:IsLiteral() then
+			if len+1 == kv.key:GetData() then
+				len = kv.key:GetData()
+			else
+				break
+			end
+		end
+	end
+	return len
 end
 
 function META:FollowsContract(contract--[[#: TTable]])
