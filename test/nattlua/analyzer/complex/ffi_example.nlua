@@ -88,6 +88,9 @@ function _M.replace(automate: ac_t, str: string, replacement: string, ignore_cas
         compare_str_p = ffi.new("const char *", compare_str)
     end
 
+    if not compare_str_p then error("uh oh") end
+    if not str_p then error("uh oh") end
+
     buf_grow(#str, true)
 
     -- BUG HERE!
@@ -98,7 +101,8 @@ function _M.replace(automate: ac_t, str: string, replacement: string, ignore_cas
     -- guess the bug is related to pointer to ffi.new allocated memory with offset?
 
     -- you can change this to gbuf_p = gbuf to observe another kind of bug behaviour
-    local gbuf_p = ffi.new("char *", gbuf) 
+    local gbuf_p = ffi.new("char *", gbuf)
+    if not gbuf_p then error"uh oh" end
     while true do
         local r = ac.ac_match(automate, compare_str_p, str_n);
         if r.match_begin >= 0 then
@@ -169,6 +173,9 @@ function _M.mask(automate: ac_t, str: string, p: string, ignore_case: boolean)
         compare_str = string.lower(str)
         compare_str_p = ffi.new("const char *", compare_str)
     end
+
+    if not compare_str_p then error("uh oh") end
+    if not str_p then error("uh oh") end
 
     buf_grow(#str, true)
 

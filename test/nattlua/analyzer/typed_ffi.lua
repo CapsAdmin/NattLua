@@ -303,9 +303,14 @@ run[==[
 	local addrinfo = ffi.new("struct addrinfo")
 	
 	attest.equal(addrinfo.foo, _ as number)
-	attest.equal(addrinfo.ai_next.foo, _ as number)
-	attest.equal(addrinfo.ai_next.ai_next.foo, _ as number)
 
+	assert(addrinfo.ai_next)
+	attest.equal(addrinfo.ai_next.foo, _ as number)
+	do return end
+	local nxt = addrinfo.ai_next
+	if nxt.ai_next then
+		attest.equal(nxt.ai_next.foo, _ as nil | number)
+	end
 ]==]
 
 run[==[
