@@ -1606,3 +1606,17 @@ run[[
         attest.equal(ffi.os == "Windows", _ as true | false)
     end
 ]]
+
+run([[
+    local function foo(x: literal ref (nil | boolean))
+        if x then
+    
+        end
+    end
+    
+    foo()
+    foo(true)
+    foo(false)
+
+    §assert(#analyzer.diagnostics == 0)
+]])

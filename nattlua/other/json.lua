@@ -159,7 +159,7 @@ local literal_map = {
 }
 
 
-local function next_char(str--[[#: string]], idx--[[#: number]], set--[[#: Map<|string, true|>]], negate--[[#: boolean]])--[[#: number]]
+local function next_char(str--[[#: string]], idx--[[#: number]], set--[[#: Map<|string, true|>]], negate--[[#: nil | boolean]])--[[#: number]]
 	for i = idx, #str do
 		if set[str:sub(i, i)] ~= negate then
 			return i

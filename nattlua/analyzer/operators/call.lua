@@ -346,8 +346,13 @@ return
 							
 							self:CreateLocalValue(key.value.value, Any(), i)
 
-							local arg =arguments:Get(i)
+							local arg = arguments:Get(i)
 							local contract = contracts:Get(i)
+
+							if not arg then
+								arg = Nil()
+								arguments:Set(i, arg)
+							end
 
 							if contract and contract.ref_argument and arg then
 								self:CreateLocalValue(key.value.value, arg, i)
