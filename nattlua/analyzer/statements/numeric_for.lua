@@ -118,7 +118,7 @@ return
 					local range = self:Assert(statement.expressions[1], init)
 					self:CreateLocalValue(statement.identifiers[1].value.value, range)
 					self:AnalyzeStatements(statement.statements)
-					self:PushUncertainLoop(false)
+					self:PopUncertainLoop()
 				end
 
 				self:FireEvent("leave_scope")

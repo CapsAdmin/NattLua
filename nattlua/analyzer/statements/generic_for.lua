@@ -29,22 +29,22 @@ return
 					break
 				end
 
-				if i == 1 then
-					returned_key = values:Get(1)
+					if i == 1 then
+						returned_key = values:Get(1)
 
-					if not returned_key:IsLiteral() then
-						returned_key = Union({Nil(), returned_key})
-					end
+						if not returned_key:IsLiteral() then
+							returned_key = Union({Nil(), returned_key})
+						end
 
 						self:PushConditionalScope(statement, returned_key:IsTruthy(), returned_key:IsFalsy())
 						self:FireEvent("generic_for", statement.identifiers, values)
+						self:PushUncertainLoop(false)
 					end
 
 					local brk = false
 
 					for i, identifier in ipairs(statement.identifiers) do
 						local obj = self:Assert(identifier, values:Get(i))
-
 						if uncertain_break then
 							obj:SetLiteral(false)
 							brk = true
@@ -81,6 +81,7 @@ return
 
 				if returned_key then
 					self:PopConditionalScope()
+					self:PopUncertainLoop()
 				end
 			end,
 		}
