@@ -348,7 +348,15 @@ do
                 num = num or ffi.errno()
 
                 if not cache[num] then
-                    local err = ffi.string(ffi.C.strerror(num))
+                    local cstr = ffi.C.strerror(num)
+                    local err
+                    
+                    if not cstr then
+                        err = "invalid error"
+                    else
+                        err = ffi.string(cstr)
+                    end
+
                     cache[num] = err == "" and tostring(num) or err
                 end
 
@@ -821,7 +829,7 @@ local function table_to_flags(flags: ref (Map<|string, number|>[1] | string), va
 	return out
 end
 
-local function flags_to_table(flags: ref number, valid_flags: ref Map<|string, number|>, operation: ref function=(number, number)>(number))
+local function flags_to_table(flags: ref number, valid_flags: ref literal Map<|string, number|>[1], operation: ref function=(number, number)>(number))
     if not flags then return valid_flags.default_valid_flag end
     operation = operation or bit.band
 
@@ -947,7 +955,7 @@ function M.get_address_info(data: {
     while res ~= nil do
         table.insert(tbl, addrinfo_to_table(res as any, data.host, data.service))
 
-        res = res.ai_next as nil | res.ai_next -- TODO: pointers should return nilable? (strictly speaking 0)
+        res = res.ai_next
     end
 
     --ffi.C.freeaddrinfo(out[0])
@@ -1123,7 +1131,12 @@ do
         local ok, err, num = socket.getpeername(self.fd, ffi.cast("struct sockaddr *", data), len)
         if not ok then return ok, err, num end
 
-        return ffi.string(socket.inet_ntoa(data.sin_addr)), socket.ntohs(data.sin_port)
+        local cstr = socket.inet_ntoa(data.sin_addr)
+        if not cstr then
+            return false, socket.lasterror()
+        end
+
+        return ffi.string(cstr), socket.ntohs(data.sin_port)
     end
 
     function meta:get_name()
@@ -1133,7 +1146,12 @@ do
         local ok, err, num = socket.getsockname(self.fd, ffi.cast("struct sockaddr *", data), len)
         if not ok then return ok, err, num end
 
-        return ffi.string(socket.inet_ntoa(data.sin_addr)), socket.ntohs(data.sin_port)
+        local cstr = socket.inet_ntoa(data.sin_addr)
+        if not cstr then
+            return false, socket.lasterror()
+        end
+
+        return ffi.string(cstr), socket.ntohs(data.sin_port)
     end
 
 
