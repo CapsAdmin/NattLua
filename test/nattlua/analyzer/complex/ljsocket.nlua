@@ -223,7 +223,7 @@ do
 
             local cache: Map<|number, string|>[1] = {} --TODO
 
-            function socket.lasterror(num)
+            function socket.lasterror(num: number)
                 num = num or ffi.C.GetLastError()
 
                 if not cache[num] then
@@ -1005,9 +1005,9 @@ do
         socket_type = keysof<|SOCK.lookup|>,
         protocol = keysof<|IPPROTO.lookup|>,
         blocking = boolean,
-        timeout_connected = nil | {string, string},
+        timeout_connected = nil | {string | AddressInfo, string},
         on_close = nil | function=(self)>(),
-        on_connect = nil | function=(self, string, string)>(),
+        on_connect = nil | function=(self, string | AddressInfo, string)>(),
         on_send = nil | function=(self, string, number)>(),
         on_receive = nil | function=(self, cdata, number, number)>(),
         on_close = nil | function=(self)>(),
@@ -1066,7 +1066,7 @@ do
         return socket.setsockopt(self.fd, SOL.strict_lookup(level), SO.strict_lookup(key as keysof<|SO.lookup|>), ffi.cast("void *", val), ffi.sizeof(val))
     end
     
-    function meta:connect(host: string, service: string)
+    function meta:connect(host: string | AddressInfo, service: string)
         local res
 
         if type(host) == "table" and host.addrinfo then
@@ -1144,7 +1144,7 @@ do
         if not ip and (num == errno.ECONNRESET or num == errno.ENOTSOCK) then
             return false, service, num
         end
-
+        
         if ffi.os == "Windows" then
             return ip ~= "0.0.0.0" and ip2 ~= "0.0.0.0" and service ~= 0 and service2 ~= 0
         else
