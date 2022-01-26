@@ -71,7 +71,9 @@ return
 					end
 				else
 					if prev_expression:IsCertainlyFalse() then
-						self:Warning(statement.expressions[i-1], "else part of if condition is always true")
+						if not contains_ref_argument(self:GetTrackedUpvalues()) then
+							self:Warning(statement.expressions[i-1], "else part of if condition is always true")
+						end
 					end
 
 					if prev_expression:IsFalsy() then

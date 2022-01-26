@@ -108,6 +108,9 @@ local function Binary(self, node, l, r, op)
 			r = self:AnalyzeExpression(node.right)
 		end
 
+		self:TrackUpvalueNonUnion(l)
+		self:TrackUpvalueNonUnion(r)
+
 		-- TODO: more elegant way of dealing with self?
 		if op == ":" then
 			self.self_arg_stack = self.self_arg_stack or {}

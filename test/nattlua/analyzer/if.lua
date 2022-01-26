@@ -1620,3 +1620,35 @@ run([[
 
     §assert(#analyzer.diagnostics == 0)
 ]])
+
+run[[
+    local function foo(x: literal ref (nil | boolean))
+        if x == false then
+    
+        end
+    end
+    
+    foo()
+    foo(true)
+    foo(false)
+
+    §assert(#analyzer.diagnostics == 0)
+]]
+
+run[[
+    local function foo(x: literal ref (nil | boolean))
+        if x == false then
+    
+        elseif x then
+    
+        else
+    
+        end
+    end
+    
+    foo()
+    foo(true)
+    foo(false)
+
+    §assert(#analyzer.diagnostics == 0)
+]]

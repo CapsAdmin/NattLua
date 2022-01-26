@@ -396,7 +396,20 @@ return function(META)
 					inverted = inverted
 				})
 			end
+			
+			self.tracked_upvalues = self.tracked_upvalues or {}
+			self.tracked_upvalues_done = self.tracked_upvalues_done or {}
+			if not self.tracked_upvalues_done[upvalue] then
+				table.insert(self.tracked_upvalues, upvalue)
+				self.tracked_upvalues_done[upvalue] = true
+			end
+		end
 
+		function META:TrackUpvalueNonUnion(obj)
+			if self:IsTypesystem() then return end
+			local upvalue = obj:GetUpvalue()
+			
+			if not upvalue then return end
 			
 			self.tracked_upvalues = self.tracked_upvalues or {}
 			self.tracked_upvalues_done = self.tracked_upvalues_done or {}
