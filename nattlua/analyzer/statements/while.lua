@@ -3,7 +3,18 @@ return
 		AnalyzeWhile = function(self, statement)
 			local obj = self:AnalyzeExpression(statement.expression)
 
+			local upvalues = self:GetTrackedUpvalues()
+			local tables = self:GetTrackedTables()
+			self:ClearTracked()
+
+			if obj:IsCertainlyFalse() then
+				self:Warning(statement.expression, "loop expression is always false")
+			end
+
 			if obj:IsTruthy() then
+
+				self:ApplyMutationsInIf(upvalues, tables)
+
 				for i = 1, 32 do
 					self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
 					self:FireEvent("while", obj)
