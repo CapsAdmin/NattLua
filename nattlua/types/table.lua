@@ -468,7 +468,6 @@ function META:Get(key--[[#: BaseType]])
 
 	if (key.Type == "string" or key.Type == "number") and not key:IsLiteral() then
 		local union = Union({Nil()})
-
 		local found_non_literal = false
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == "union" then
@@ -477,8 +476,7 @@ function META:Get(key--[[#: BaseType]])
 						union:AddType(keyval.val)
 					end
 				end
-			end
-			if keyval.key.Type == key.Type or keyval.key.Type == "any" then
+			elseif keyval.key.Type == key.Type or keyval.key.Type == "any" then
 				if keyval.key:IsLiteral() then
 					union:AddType(keyval.val)
 				else
