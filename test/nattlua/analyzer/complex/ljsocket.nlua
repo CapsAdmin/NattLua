@@ -775,21 +775,9 @@ local function capture_flags(what: ref string)
         lookup = flags,
         reverse = reverse,
         strict_reverse = function(key: ref keysof<|reverse|>)
-            if not key then
-                error("invalid " .. what:sub(0, -2) .. " flag: nil")
-            end
-            if not reverse[key] then
-                error("invalid "..what:sub(0, -2).." flag: " .. key, 2)
-            end
             return reverse[key]
         end,
         strict_lookup = function(key: ref keysof<|flags|>)
-            if not key then
-                error("invalid " .. what:sub(0, -2) .. " flag: nil")
-            end
-            if not flags[key] then
-                error("invalid "..what:sub(0, -2).." flag: " .. key, 2)
-            end
             return flags[key]
         end
     }
@@ -804,7 +792,7 @@ local SO = capture_flags("SO_")
 local TCP = capture_flags("TCP_")
 local POLL = capture_flags("POLL")
 
-local function table_to_flags(flags: ref (Map<|string, number|>[1] | string), valid_flags: ref Map<|any, any|>, operation: ref function=(number, number)>(number))
+local function table_to_flags(flags: Map<|string, number|>[1] | string, valid_flags: ref Map<|any, any|>, operation: ref function=(number, number)>(number))
 	if type(flags) == "string" then
 		flags = {flags}
     end
