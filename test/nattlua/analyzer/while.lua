@@ -65,3 +65,15 @@ run[[
     attest.equal(a, _ as number)
 
 ]]
+
+run[[
+    local x: nil | 1
+
+    while x ~= nil do
+        attest.equal(x, 1)
+        x = x + 1
+        attest.equal(x, _ as number)
+        attest.equal(x>10, _ as true | false)
+        if x > 10 then break end
+    end
+]]

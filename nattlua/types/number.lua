@@ -201,6 +201,10 @@ do
 	end
 
 	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: boolean | nil]]
+		if not a:IsLiteral() or not b:IsLiteral() then
+			return nil
+		end
+
 		if operator == "==" then		
 			local a_val = a:GetData()
 			local b_val = b:GetData()
