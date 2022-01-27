@@ -125,18 +125,43 @@ function META:__tostring()
 	return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
-function META:GetLength()
+function META:GetLength(analyzer)
+
+	if self:GetContract() then
+		return self:GetContract():GetLength(analyzer)
+	end
+
 	local len = 0
 	for _, kv in ipairs(self:GetData()) do
-		if kv.key.Type == "number" and kv.key:IsLiteral() then
-			if len+1 == kv.key:GetData() then
-				len = kv.key:GetData()
+		
+		if analyzer and self.mutations then
+			local val = analyzer:GetMutatedValue(self, kv.key)
+			if val.Type == "union" and val:CanBeNil() then
+				return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true))
+			end
+			if val.Type == "symbol" and val:GetData() == nil then
+				return Number(len):SetLiteral(true)
+			end
+		end
+
+		if kv.key.Type == "number" then
+			if kv.key:IsLiteral() then
+				-- TODO: not very accurate
+				if kv.key:GetMax() then
+					return kv.key
+				end
+
+				if len+1 == kv.key:GetData() then
+					len = kv.key:GetData()
+				else
+					break
+				end
 			else
-				break
+				return kv.key
 			end
 		end
 	end
-	return len
+	return Number(len):SetLiteral(true)
 end
 
 function META:FollowsContract(contract--[[#: TTable]])

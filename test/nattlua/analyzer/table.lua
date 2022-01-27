@@ -806,3 +806,17 @@ run[[
     local x = {[1 as number] = 1, [2] = 1}
     attest.equal(#x, _ as number)
 ]]
+
+run[[
+    local x = {666}
+
+    if math.random() > 0.5 then
+        table.insert(x, 1337)
+    elseif math.random() > 0.5 then
+        table.insert(x, 7777)
+    elseif math.random() > 0.5 then
+        table.insert(x, 555)
+    end
+
+    attest.equal(x[2], _ as 1337 | 7777 | 555 | nil)
+]]

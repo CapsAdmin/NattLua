@@ -53,7 +53,7 @@ do
 			return a.v > b.v
 		end)
 
-		if #tmp > 0 then
+		if #tmp > 0 and tmp[1] then
 			str = str .. "[" .. tmp[1].k:gsub("!/%.%./", "") .. "]"
 		end
 

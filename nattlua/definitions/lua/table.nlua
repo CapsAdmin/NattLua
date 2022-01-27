@@ -29,18 +29,26 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 
 	if not val then
 		val = pos
-		pos = tbl:GetLength() + 1
+		pos = tbl:GetLength(analyzer)
+		if pos:IsLiteral() then
+			pos:SetData(pos:GetData() + 1)
+
+			local max = pos:GetMax()
+			if max then
+				max:SetData(max:GetData() + 1)
+			end
+		end
 	else
-		pos = tbl:GetLength()
+		pos = tbl:GetLength(analyzer)
 	end
 		
 	if analyzer:IsInUncertainLoop() then
-		pos = types.Number(pos)
-	else
-		pos = types.LNumber(pos)
+		pos:Widen()
 	end
 
-	tbl:Set(pos, val)
+	assert(type(pos) ~= "number")
+
+	analyzer:NewIndexOperator(analyzer.current_expression, tbl, pos, val)
 end
 
 analyzer function table.remove(tbl: List<|any|>, index: number | nil)

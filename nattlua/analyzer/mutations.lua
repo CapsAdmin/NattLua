@@ -1,5 +1,6 @@
 local ipairs = ipairs
 local Nil = require("nattlua.types.symbol").Nil
+local Table = require("nattlua.types.table").Table
 local print = print
 local tostring = tostring
 local ipairs = ipairs
@@ -237,6 +238,29 @@ local function copy(tbl)
 end
 
 return function(META)
+	function META:GetMutatedTableLength(obj)
+		local mutations = obj.mutations
+		if not mutations then return obj:GetLength() end
+
+		local temp = Table()
+
+		for key in pairs(mutations) do
+			local realkey
+			for _, kv in ipairs(obj:GetData()) do
+				if kv.key:GetHash() == key then
+					realkey = kv.key
+					break
+				end
+			end
+
+			local val = self:GetMutatedValue(obj, realkey, obj:Get(realkey))
+
+			temp:Set(realkey, val)
+		end
+
+		return temp:GetLength()
+	end
+
 	function META:GetMutatedValue(obj, key, value)
 		if self:IsTypesystem() then return end
 

@@ -885,6 +885,7 @@ end
 
 type AddressInfo.get_port = addrinfo_get_port
 type AddressInfo.get_ip = addrinfo_get_ip
+type AddressInfo.@Name = "AddressInfo"
 
 local function addrinfo_to_table(res: ffi.typeof<|"struct addrinfo"|>, host: nil | string, service: nil | string): AddressInfo
     local info = {}
@@ -936,7 +937,7 @@ function M.get_address_info(data: {
 
     if not ok then return ok, err end
 
-    local tbl = {}
+    local tbl: List<|AddressInfo|>[1] = {}
 
     local res = out[0]
 

@@ -41,11 +41,11 @@ return
 							tbl:Insert(obj:Get(1))
 						else
 							for i = 1, obj:GetMinimumLength() do
-								tbl:Set(LNumber(tbl:GetLength() + 1), obj:Get(i))
+								tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
 							end
 
 							if obj.Remainder then
-								local current_index = LNumber(tbl:GetLength() + 1)
+								local current_index = LNumber(#tbl:GetData() + 1)
 								local max = LNumber(obj.Remainder:GetLength())
 								tbl:Set(current_index:SetMax(max), obj.Remainder:Get(1))
 							end
