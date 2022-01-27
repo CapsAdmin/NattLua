@@ -821,3 +821,16 @@ run[[
     
     attest.equal(return_type<|foo|>, {foo = _ as 0 | 1 | 2 | 3})
 ]]
+
+run[[
+    local type Instruction = {number, number}
+    local type InstructionList = {[number] = Instruction}
+
+    local tbl = {} as InstructionList
+
+    local function foo(x: InstructionList)
+
+    end
+
+    foo(tbl)
+]]

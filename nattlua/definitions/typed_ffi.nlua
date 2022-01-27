@@ -90,9 +90,14 @@ local analyzer function cast(node: any, args: any)
 	elseif node.tag == "Array" then
 		local tbl = types.Table()
 		-- todo node.size: array length
-		tbl:Set(types.Number(), cast(node.t, args))
+
+		_G.FUNCTION_ARGUMENT = true
+		local t = cast(node.t, args)
+		_G.FUNCTION_ARGUMENT = nil
+		tbl:Set(types.Number(), t)
 
 		local meta = cdata_metatable(tbl)
+		tbl:SetContract(tbl)
 		tbl:SetMetaTable(meta)
 		
 		return tbl
@@ -278,6 +283,8 @@ analyzer function ffi.typeof(cdecl: string, ...: any)
 		keyval.val = types.Nilable(keyval.val)
 	end
 
+	local old = ctype:GetContract()
+	ctype:SetContract()
 	ctype:Set(types.LString("__call"), types.LuaTypeFunction(function(self, init)
 		if init then
 			analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
@@ -285,6 +292,8 @@ analyzer function ffi.typeof(cdecl: string, ...: any)
 		return self:Copy()
 	end, {ctype, types.Nilable(nilable_ctype)}, {ctype}))
 	ctype:SetMetaTable(ctype)
+	ctype:SetContract(old)
+
 	return ctype
 end
 

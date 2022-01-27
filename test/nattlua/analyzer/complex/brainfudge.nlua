@@ -1,5 +1,5 @@
-local print = function() end
-local type Instruction = {number, number}
+local type print = any
+local type Instruction = {[number] = number}
 local type InstructionList = {[number] = Instruction}
 --usage : luajit fast_brainfudge.lua mandelbrot.bf
 if jit then
@@ -257,7 +257,7 @@ local function replaceIRs(haystack: InstructionList, needle: InstructionList, re
 
             while (replaceByI < replacmentSize) do
                 -- here we can do a ref copy, not a real copy as we don't plan to edit the instructions/IR content later
-                table.insert(haystack, i + replaceByI, replaceBy[replaceByI + 1])
+                table.insert(haystack, i + replaceByI, replaceBy[replaceByI + 1] as {[number] = number})
                 replaceByI = replaceByI + 1
             end
 
@@ -361,7 +361,7 @@ local function secondPassMemset(instList: InstructionList)
 
     while (i <= max - 2) do
         if instList[i][1] == MOVE and math.abs(instList[i][2]) == 1 and instList[i + 1][1] == ASSIGNATION then
-            local movingDirection = instList[i][2]
+            local movingDirection = assert(instList[i][2])
             currentFindSize = 1
             currentAssignation = instList[i + 1][2]
             local i2 = i + 2
@@ -412,7 +412,7 @@ local function secondPassMemset(instList: InstructionList)
 
                     -- folding with next possible ptr ins
                     if nextIns[1] == MOVE then
-                        if nextIns[2] + currentFindSize == 0 then
+                        if assert(nextIns[2]) + currentFindSize == 0 then
                             table.remove(instList, i + 1)
                             i = i - 1
                         else
@@ -511,7 +511,7 @@ local function thirdPassUnRolledAssignation(instList: InstructionList)
             while (instList[loopEnd][1] ~= LOOPEND) do
                 if loopEnd == max then return end
                 local curIns = instList[loopEnd][1]
-                local curOperand = instList[loopEnd][2]
+                local curOperand = assert(instList[loopEnd][2])
 
                 if curIns == MOVE then
                     relativePosition = relativePosition + curOperand
@@ -574,7 +574,7 @@ end
 local brainfudge = function(s: string)
     local compilationT = os.clock()
     s = s:gsub("[^%+%-<>%.,%[%]]+", "") -- remove new lines
-    local instList = {}
+    local instList = {} as InstructionList
     local slen = #s
     local i = 2 -- 2 because 1st may be checked before loop
     local lastInst = s:sub(1, 1)
@@ -784,7 +784,7 @@ end
             local max = #IRtbl
 
             while (i2 <= max) do
-                local IR = IRtbl[i2]
+                local IR = assert(IRtbl[i2])
                 subFIR[i2] = string.format(IRToCode[IR[1]], select(2, unpack(IR))):gsub("%+%-", "-")
                 i2 = i2 + 1
             end
@@ -799,8 +799,9 @@ end
     local max = #instList
 
     while (i <= max) do
-        local IR = instList[i]
-        insTableStr[i] = string.format(IRToCode[IR[1]], select(2, unpack(IR))):gsub("%+%-", "-")
+        local IR = assert(instList[i])
+        local ir = assert(IR[1])
+        insTableStr[i] = string.format(IRToCode[ir], select(2, unpack(IR))):gsub("%+%-", "-")
         i = i + 1
     end
 

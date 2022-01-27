@@ -165,6 +165,8 @@ function META:GetLength(analyzer)
 end
 
 function META:FollowsContract(contract--[[#: TTable]])
+	if self:GetContract() == contract then return true end
+
 	do -- todo
         -- i don't think this belongs here
 
@@ -480,7 +482,7 @@ function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
 	return true
 end
 
-function META:Get(key--[[#: BaseType]])
+function META:Get(key--[[#: BaseType]], from_contract)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then return self["Get" .. key:GetData():sub(2)](self) end
 
 	if key.Type == "union" then
@@ -527,7 +529,9 @@ function META:Get(key--[[#: BaseType]])
 	end
 
 	local keyval, reason = self:FindKeyValReverse(key)
-	if keyval then return keyval.val end
+	if keyval then
+		return keyval.val 
+	end
 
 	if not keyval and self:GetContract() then
 		local keyval, reason = self:GetContract():FindKeyValReverse(key)

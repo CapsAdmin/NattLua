@@ -323,7 +323,7 @@ do
             end
         end
 
-        function socket.poll(fds: List<|Socket|>, ndfs: number, timeout: number)
+        function socket.poll(fds: mutable List<|Socket|>, ndfs: number, timeout: number)
             local ret = C.WSAPoll(fds, ndfs, timeout)
             if ret < 0 then
                 return nil, socket.lasterror()
@@ -342,7 +342,7 @@ do
         ]]
 
         do
-            local cache = {}
+            local cache: Map<|number, string|>[1] = {}
 
             function socket.lasterror(num: nil | number)
                 num = num or ffi.errno()
@@ -400,7 +400,7 @@ do
             end
         end
 
-        function socket.poll(fds: List<|Socket|>, ndfs: number, timeout: number)
+        function socket.poll(fds: mutable List<|Socket|>, ndfs: number, timeout: number)
             local ret = C.poll(fds, ndfs, timeout)
             if ret < 0 then
                 return nil, socket.lasterror()
@@ -485,7 +485,7 @@ do
     socket.inet_ntoa = C.inet_ntoa
     socket.ntohs = C.ntohs
 
-    function socket.poll(fd: Socket, events: any, revents: number)
+    function socket.poll(fd: mutable List<|Socket|>, events: any, revents: number)
 
     end
     
@@ -839,9 +839,9 @@ timeout_messages[errno.EINPROGRESS] = true
 timeout_messages[errno.EAGAIN] = true
 timeout_messages[errno.EWOULDBLOCK] = true
 
-function M.poll(socket: any, flags: List<|string|>, timeout: nil | number)
+function M.poll(s: any, flags: List<|string|>, timeout: nil | number)
     local pfd = ffi.new("struct pollfd[1]", {{
-        fd = socket.fd,
+        fd = s.fd,
         events = table_to_flags(flags, POLL.lookup, bit.bor),
         revents = 0,
     }})

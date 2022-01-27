@@ -820,3 +820,14 @@ run[[
 
     attest.equal(x[2], _ as 1337 | 7777 | 555 | nil)
 ]]
+
+run[[
+    local x: {[number] = 1337} = {1337}
+    attest.equal(x[5], _ as 1337)
+]]
+
+run[[
+    local x = {}
+    x[_ as number] = 1337
+    attest.equal(x[5], _ as nil | 1337)
+]]

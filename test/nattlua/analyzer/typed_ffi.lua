@@ -30,7 +30,7 @@ run[=[
 
 
 	local box = ffi.typeof("$[1]", ctype)
-	
+
 	local struct = box()
 	
 	attest.subset_of<|{
@@ -213,6 +213,8 @@ run[=[
 ]=]
 
 run[=[
+	ffi.C = {}
+
 	ffi.cdef[[
 		typedef size_t SOCKET;
 	]]
@@ -266,6 +268,7 @@ run[=[
 ]=]
 
 run[[
+	ffi.C = {}
 
 	local ffi = require "ffi"
 	ffi.cdef("typedef struct ac_t ac_t;")
@@ -291,7 +294,8 @@ run[[
 ]]
 
 run[==[
-	
+	ffi.C = {}
+
 	local ffi = require("ffi")
 	ffi.cdef([[
 		struct addrinfo {
@@ -314,6 +318,7 @@ run[==[
 ]==]
 
 run[==[
+	ffi.C = {}
 
 	local ffi = require("ffi")
 	ffi.cdef([[
@@ -328,6 +333,8 @@ run[==[
 ]==]
 
 run[=[
+	ffi.C = {}
+
 	local ffi = require("ffi")
 
 	ffi.cdef[[
@@ -352,3 +359,26 @@ run[=[
 	
 
 ]=]
+
+run[=[
+	local ffi = require("ffi")
+	ffi.C = {}
+
+	ffi.cdef[[
+		struct foo {
+			int a;
+			int b;
+		};
+	]]
+	
+	local box = ffi.new("struct foo[1]")
+	attest.equal(box[0], _ as {a = number, b = number})
+]=]
+
+run[[
+	local str_v = ffi.new("const char *[?]", 1)
+
+	attest.equal(str_v, _ as {
+		[number] = (ffi.typeof<|"const char*"|>[1]) | nil | string
+	})
+]]

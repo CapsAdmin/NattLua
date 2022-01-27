@@ -121,8 +121,16 @@ return
 			
 					return val
 				end
-
+			
 				local val = self:GetMutatedValue(obj, key, obj:Get(key))
+
+				if key:IsLiteral() then
+					local found_key = obj:FindKeyValReverse(key)
+					if found_key and not found_key.key:IsLiteral() then
+						val = Union({Nil(), val})
+					end
+				end
+
 				self:TrackTableIndex(obj, key, val)
 
 				return val or Nil()
