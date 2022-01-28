@@ -164,9 +164,29 @@ analyzer function require(name: string)
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
 	if val then return val end
-	if str:GetData() == "table.new" then return base_environment:Get(types.LString("table")):Get(types.LString("new")) end
-	if str:GetData() == "jit.util" then return base_environment:Get(types.LString("jit")):Get(types.LString("util")) end
-	if str:GetData() == "jit.opt" then return base_environment:Get(types.LString("jit")):Get(types.LString("opt")) end
+
+	local modules = {
+		"table.new",
+		"jit.util",
+		"jit.opt",
+	}
+
+	for _, mod in ipairs(modules) do
+		if str:GetData() == mod then
+			local tbl
+			for key in mod:gmatch("[^%.]+") do
+				tbl = tbl or base_environment
+				tbl = tbl:Get(types.LString(key))
+			end
+
+			-- in case it's not found
+			-- TODO, add ability to configure the analyzer
+			analyzer:Warning(analyzer.current_expression, "module '" .. mod .. "' might not exist") 	
+
+			return tbl
+		end		
+	end
+
 	if analyzer:GetLocalOrGlobalValue(str) then return analyzer:GetLocalOrGlobalValue(str) end
 
 	if package.loaders then
@@ -191,7 +211,8 @@ analyzer function require(name: string)
 		end
 	end
 
-	analyzer:Error(name:GetNode(), "unable to find module " .. str:GetData())
+	analyzer:Error(name:GetNode(), "module '" .. str:GetData() .. "' not found")
+
 	return types.Any
 end
 
@@ -321,7 +342,7 @@ analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 	for i = count, #diagnostics do
 		local diagnostic = diagnostics[i]
 		if diagnostic and diagnostic.severity == "error" then
-			return types.Boolean(), diagnostic.msg
+			return types.Boolean(), types.Union({types.LString(diagnostic.msg), types.Any()})
 		end
 	end
 

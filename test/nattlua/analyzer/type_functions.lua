@@ -90,7 +90,7 @@ do
     _G.TEST_DISABLE_ERROR_PRINT = true
     test("require should error when not finding a module", function()
         local a = run([[require("adawdawddwaldwadwadawol")]])
-        assert(a:GetDiagnostics()[1].msg:find("unable to find module"))
+        assert(a:GetDiagnostics()[1].msg:find("not found"))
     end)
     _G.TEST_DISABLE_ERROR_PRINT = false
 end
@@ -550,5 +550,12 @@ run[[
 run[[
     local ok, table_new = pcall(require, "foo")
     attest.equal(ok, _ as true | false)
-    attest.equal(table_new, "unable to find module foo")
+    attest.equal(table_new, _ as "module 'foo' not found" | any)
+]]
+
+
+run[[
+    local table_new = require("table.new")
+    attest.equal(table_new, table.new)
+    §assert(#analyzer.diagnostics == 1)
 ]]
