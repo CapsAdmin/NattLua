@@ -546,3 +546,9 @@ run[[
 
     attest.equal(type(x), "cdata")
 ]]
+
+run[[
+    local ok, table_new = pcall(require, "foo")
+    attest.equal(ok, _ as true | false)
+    attest.equal(table_new, "unable to find module foo")
+]]
