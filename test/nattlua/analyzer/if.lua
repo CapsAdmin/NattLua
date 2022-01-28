@@ -1652,3 +1652,16 @@ run[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
+
+run[[
+    local test
+    local function foo()
+        test()
+    end
+
+    test = function()
+        if jit.os == "Linux" then
+            return true
+        end
+    end
+]]

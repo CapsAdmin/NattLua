@@ -178,6 +178,27 @@ return
 				self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 				local function_scope = self:PopScope()
 
+				if scope.TrackedObjects then
+					for _, obj in ipairs(scope.TrackedObjects) do
+						if obj.Type == "upvalue" then
+							for i = #obj.mutations, 1, -1 do
+								local mut = obj.mutations[i]
+								if mut.from_tracking then
+									table.remove(obj.mutations, i)
+								end
+							end
+						else
+							for _, mutations in pairs(obj.mutations) do
+								for i = #mutations, 1, -1 do
+									local mut = mutations[i]
+									if mut.from_tracking then
+										table.remove(mutations, i)
+									end
+								end
+							end
+						end
+					end
+				end
 
 				if analyzed_return.Type ~= "tuple" then
 					return Tuple({analyzed_return}):SetNode(analyzed_return:GetNode()), scope

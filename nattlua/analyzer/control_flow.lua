@@ -103,7 +103,7 @@ return function(META)
 				return
 			end
 
-			self:ApplyMutationsAfterReturn(frame.scope, frame.scope, true, frame.scope:GetTrackedUpvalues(), frame.scope:GetTrackedTables())
+			self:ApplyMutationsAfterReturn(frame.scope, function_scope, true, frame.scope:GetTrackedUpvalues(), frame.scope:GetTrackedTables())
 		end
 	end
 
@@ -188,7 +188,7 @@ return function(META)
 			function_scope:CertainReturn(self)
 			scope:CertainReturn(self)
 		end
-
+		
 		self:ApplyMutationsAfterReturn(scope, function_scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
 	end
 

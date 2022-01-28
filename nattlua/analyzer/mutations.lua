@@ -307,6 +307,10 @@ return function(META)
 		end
 
 		table.insert(obj.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking})
+
+		if from_tracking then
+			scope:AddTrackedObject(obj)
+		end
 	end
 
 	function META:DumpUpvalueMutations(upvalue)
@@ -349,6 +353,10 @@ return function(META)
 		end
 
 		table.insert(upvalue.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking})
+
+		if from_tracking then
+			scope:AddTrackedObject(upvalue)
+		end
 	end
 
 
@@ -665,7 +673,7 @@ return function(META)
 								val = val:GetData()[1]
 							end
 
-							self:MutateUpvalue(data.upvalue, val, scope_override)
+							self:MutateUpvalue(data.upvalue, val, scope_override, true)
 						end
 					end
 				end
@@ -686,7 +694,7 @@ return function(META)
 							val = val:GetData()[1]
 						end	 
 		
-						self:MutateValue(data.obj, data.key, val, scope_override)
+						self:MutateValue(data.obj, data.key, val, scope_override, true)
 					end
 				end
 			end
