@@ -114,6 +114,12 @@ function META:GetMemberInParents(what)
 	return nil
 end
 
+function META:AddTrackedObject(val)
+	local scope = self:GetNearestFunctionScope()
+	scope.TrackedObjects = scope.TrackedObjects or {}
+	table.insert(scope.TrackedObjects, val)
+end
+
 function META:AddDependency(val)
 	self.dependencies = self.dependencies or {}
 	self.dependencies[val] = val
@@ -449,8 +455,8 @@ function META:__tostring()
 
 	local s = "scope[" .. x .. "," .. y .. "]" .. "[" .. (self:IsUncertain() and "uncertain" or "certain") .. "]" 
 
-	if self.returns then
-		s = s .. "[function scope]"
+	if self.node then
+		s = s .. tostring(self.node)
 	end
 
 	return s
