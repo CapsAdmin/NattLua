@@ -831,3 +831,15 @@ run[[
     x[_ as number] = 1337
     attest.equal(x[5], _ as nil | 1337)
 ]]
+
+run[[
+    local type_func_map = {
+        [ "nil"     ] = true,
+        [ "table"   ] = "lol",
+        [ "string"  ] = 1337,
+        [ "number"  ] = false,
+        [ "boolean" ] = true,
+    }
+    
+    attest.equal(type_func_map[_ as string], _ as true | "lol" | 1337 | false | nil)
+]]
