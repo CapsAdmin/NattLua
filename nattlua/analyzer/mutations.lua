@@ -194,19 +194,21 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 		if found_scope then
 			local stack = data.stack
-			if
-				found_scope:IsElseConditionalScope() or
-				(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
-			then
-				return stack[#stack].falsy
-			else
-				local union = Union()
+			if stack then
+				if
+					found_scope:IsElseConditionalScope() or
+					(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
+				then
+					return stack[#stack].falsy
+				else
+					local union = Union()
 
-				for _, val in ipairs(stack) do
-					union:AddType(val.truthy)
+					for _, val in ipairs(stack) do
+						union:AddType(val.truthy)
+					end
+
+					return union
 				end
-
-				return union
 			end
 		end
 	end
@@ -298,7 +300,7 @@ return function(META)
 
 		initialize_mutation_tracker(obj, scope, key, hash, node)
 
-		if self:IsInUncertainLoop() then
+		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then
 				val = val:Copy()
 			else
@@ -344,7 +346,7 @@ return function(META)
 		upvalue.mutations = upvalue.mutations or {}
 		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
 
-		if self:IsInUncertainLoop() then
+		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then
 				val = val:Copy()
 			else

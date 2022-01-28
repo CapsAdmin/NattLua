@@ -374,7 +374,7 @@ do
 	function META:GetNearestFunctionScope()
 		local ok, scope = self:GetMemberInParents("returns")
 		if ok then return scope end
-		error("cannot find a scope to return to", 2)
+		return self
 	end
 
 	function META:GetReturnTypes()

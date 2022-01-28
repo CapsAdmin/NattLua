@@ -413,13 +413,14 @@ return function(META)
 		end
 
 		do
-			function META:IsInUncertainLoop()
-				return self.uncertain_loop_stack and self.uncertain_loop_stack[1]
+			function META:IsInUncertainLoop(scope)
+				scope = scope or self:GetScope():GetNearestFunctionScope()
+				return self.uncertain_loop_stack and self.uncertain_loop_stack[1] == scope:GetNearestFunctionScope()
 			end
 
 			function META:PushUncertainLoop(b)
 				self.uncertain_loop_stack = self.uncertain_loop_stack or {}
-				table.insert(self.uncertain_loop_stack, 1, b)
+				table.insert(self.uncertain_loop_stack, 1, b and self:GetScope():GetNearestFunctionScope())
 			end
 
 			function META:PopUncertainLoop()
