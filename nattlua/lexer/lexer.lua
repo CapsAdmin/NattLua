@@ -70,7 +70,6 @@ function META:OnError(code--[[#: Code]], msg--[[#: string]], start--[[#: number 
 end
 
 function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
-	if not self.OnError then return end
 	self:OnError(self.Code, msg, start or self.Position, stop or self.Position)
 end
 
@@ -125,18 +124,19 @@ function META:ReadUnknown()
 	return "unknown", false
 end
 
-function META:Read()
-	return self:ReadUnknown()
+
+function META:Read() --[[#: (TokenType, boolean) | (nil, nil) ]]
+	return nil, nil
 end
 
 function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
 	local start = self.Position
 	local type, is_whitespace = self:Read()
-
 	if not type then
 		if self:ReadEndOfFile() then
-			type, is_whitespace = "end_of_file", false
+			type = "end_of_file"
+			is_whitespace = false
 		end
 	end
 
@@ -177,7 +177,7 @@ for _, v in ipairs(fixed) do
 	map_single_quote["\\" .. v] = load("return \"\\" .. v .. "\"")()
 end
 
-local function reverse_escape_string(str, quote)
+local function reverse_escape_string(str, quote --[[#: '"' | "'"]])
 	if quote == "\"" then
 		str = str:gsub(pattern, map_double_quote)
 	elseif quote == "'" then
@@ -192,8 +192,6 @@ function META:GetTokens()
 
 	for i = self.Position, self:GetLength() + 1 do
 		tokens[i] = self:ReadToken()
-		if not tokens[i] then break end -- TODO
-
 		if tokens[i].type == "end_of_file" then break end
 	end
 
@@ -234,11 +232,7 @@ function META:GetTokens()
 	end
 
 	local tokens = non_whitespace
-	local last = tokens[#tokens]
-
-	if last then
-		last.value = ""
-	end
+	tokens[#tokens].value = ""
 
 	return tokens
 end
@@ -704,7 +698,7 @@ do
 		return false
 	end
 
-	function META:Read()
+	function META:Read() --[[#: (TokenType, boolean) | (nil, nil) ]]
 		if ReadRemainingCommentEscape(self) then return "discard", false end
 
 		do

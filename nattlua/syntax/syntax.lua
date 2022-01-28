@@ -4,7 +4,7 @@ local META = {}
 META.__index = META
 --[[#type META.@Name = "Syntax"]]
 --[[#type META.@Self = {
-	BinaryOperatorInfo = Map<|string, {
+	BinaryOperatorInfo = Map<|string, nil | {
 		left_priority = number,
 		right_priority = number
 	}|>,
@@ -55,8 +55,6 @@ local function has_value(tbl --[[#: {[1 .. inf] = string} | {} ]], value --[[#: 
 end
 
 function META:AddSymbols(tbl--[[#: List<|string|>]])
-	if not tbl then return end
-
 	for _, symbol in pairs(tbl) do
 		if symbol:find("%p") and not has_value(self.Symbols, symbol) then
 			table.insert(self.Symbols, symbol)
@@ -84,8 +82,6 @@ function META:GetNumberAnnotations()
 end
 
 function META:AddBinaryOperators(tbl --[[#: List<|List<|string|>|> ]])
-	if not tbl then return end
-
 	for priority, group in ipairs(tbl) do
 		for _, token in ipairs(group) do
 			local right = token:sub(1, 1) == "R"

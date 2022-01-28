@@ -24,7 +24,7 @@ function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
 end
 
 function META:GetByte(pos--[[#: number]])
-    return (self.Buffer:byte(pos))
+    return self.Buffer:byte(pos) or 0
 end
 
 function META:FindNearest(str--[[#: string]], start--[[#: number]])
