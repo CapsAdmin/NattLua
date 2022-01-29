@@ -191,7 +191,6 @@ function luadata.Encode(tbl--[[#: Table]])
 end
 
 function luadata.Decode(str--[[#: string]])
-	if not str then return {} end
 	local func, err = load("return {\n" .. str .. "\n}", "luadata")
 	if not func then return func, err end
 	setfenv(func, env)
@@ -200,7 +199,7 @@ function luadata.Decode(str--[[#: string]])
 	return err
 end
 
-function luadata.SetModifier(type--[[#: string]], callback--[[#: function=(any, Context)>(string)]], func--[[#: nil]], func_name--[[#: nil]])
+function luadata.SetModifier(type--[[#: string]], callback--[[#: function=(any, Context)>(string)]], func--[[#: nil]], func_name--[[#: nil | string]])
 	luadata.Types[type] = callback
 
 	if func_name then

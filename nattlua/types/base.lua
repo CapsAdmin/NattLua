@@ -8,6 +8,7 @@ META.__index = META
 --[[#type META.@Self = {}]]
 --[[#local type BaseType = META.@Self]]
 --[[#type BaseType.@Name = "BaseTypeInstance"]]
+--[[#type META.Type = string]]
 
 function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
@@ -295,5 +296,7 @@ end
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end
+
+--[[# type META.BaseType = copy<|BaseType|> ]]
 
 return META

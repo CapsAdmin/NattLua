@@ -10,7 +10,8 @@ local META = dofile("nattlua/types/base.lua")
 META.Type = "number"
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
-META:GetSet("Data", nil--[[# as number]])
+--[[#local type BaseType = META.BaseType]]
+META:GetSet("Data", nil--[[# as number | nil]])
 
 do -- TODO, operators is mutated below, need to use upvalue position when analyzing typed arguments
 	local operators = {
@@ -25,7 +26,7 @@ do -- TODO, operators is mutated below, need to use upvalue position when analyz
 	function META:PrefixOperator(op--[[#: keysof<|operators|>]])
 		if self:IsLiteral() then
 			if not operators[op] then return false, "no such operator " .. op end
-			local num = self.New(operators[op](self:GetData())):SetLiteral(true)
+			local num = self.New(operators[op](self:GetData() --[[#as number]])):SetLiteral(true)
 			local max = self:GetMax()
 
 			if max then
@@ -89,25 +90,27 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
-	if not B then print(debug.traceback()) end
 	if B.Type == "tuple" then B = B:Get(1) end
 	if B.Type == "any" then return true end
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
 	if A:IsLiteral() and B:IsLiteral() then
+        local a = A:GetData() --[[# as number ]]
+        local b = B:GetData() --[[# as number ]]
+
 		-- compare against literals
 
 		-- nan
 		if A.Type == "number" and B.Type == "number" then
-			if A:GetData() ~= A:GetData() and B:GetData() ~= B:GetData() then return true end
+			if a ~= a and b ~= b then return true end
 		end
 
-		if A:GetData() == B:GetData() then return true end
+		if a == b then return true end
 		local max = B:GetMaxLiteral()
 
 		if max then
-			if A:GetData() >= B:GetData() and A:GetData() <= max then return true end
+			if a >= b and a <= max then return true end
 		end
 
 		return type_errors.subset(A, B)
@@ -147,7 +150,7 @@ end
 
 META:GetSet("Max", nil--[[# as TNumber | nil]])
 
-function META:SetMax(val)
+function META:SetMax(val --[[#: BaseType]])
 	local err
 
 	if val.Type == "union" then
@@ -161,7 +164,7 @@ function META:SetMax(val)
 		self.Max = val
 	else
 		self:SetLiteral(false)
-		self:SetData(nil--[[# as number]]) -- hmm
+		self:SetData(nil)
 		self.Max = nil
 	end
 
@@ -269,13 +272,7 @@ do
 		return type_errors.binary(operator, a, b)
 	end
 
-	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber, TNumber]]
-		local cmp = operators[operator]
-		
-		if not cmp then
-			error("NYI " .. operator)
-		end
-		
+	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil, TNumber | nil]]
 		local a_min = a:GetData()
 		local b_min = b:GetData()
 		if not a_min then return nil end
@@ -314,7 +311,7 @@ do
 end
 
 do
-	local operators = {
+	local operators --[[#: {[string] = function=(number, number)>(number)}]] = {
 		["+"] = function(l, r)
 			return l + r
 		end,
