@@ -559,3 +559,9 @@ run[[
     attest.equal(table_new, table.new)
     §assert(#analyzer.diagnostics == 1)
 ]]
+
+run[[
+    local a, b = load("" as string)
+    attest.equal(a, _ as nil | Function)
+    attest.equal(b, _ as nil | string)
+]]

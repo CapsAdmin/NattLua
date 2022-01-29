@@ -6,17 +6,11 @@ type unpack = function=(list: Table, i: number, j: number)>(...) | function=(lis
 type require = function=(modname: string)>(any)
 type rawset = function=(table: Table, index: any, value: any)>(Table)
 type getmetatable = function=(object: any)>(Table | nil)
-type load = (
-		function=(ld: string | empty_function, source: string, mode: string, env: Table)>(empty_function | nil, string | nil)
-	) | (
-		function=(ld: string | empty_function, source: string, mode: string)>(empty_function | nil, string | nil)
-	) | function=(ld: string | empty_function, source: string)>(empty_function | nil, string | nil) | function=(ld: string | empty_function)>(empty_function | nil, string | nil)
 type type = function=(v: any)>(string)
 type collectgarbage = function=(opt: string, arg: number)>(...) | function=(opt: string)>(...) | function=()>(...)
 type getfenv = function=(f: empty_function | number)>(Table) | function=()>(Table)
 type pairs = function=(t: Table)>(empty_function, Table, nil)
 type rawequal = function=(v1: any, v2: any)>(boolean)
-type loadstring = function=(string: string, chunkname: string)>(empty_function | nil, string | nil) | function=(string: string)>(empty_function | nil, string | nil)
 type loadfile = function=(filename: string, mode: string, env: Table)>(empty_function | nil, string | nil) | function=(filename: string, mode: string)>(empty_function | nil, string | nil) | function=(filename: string)>(empty_function | nil, string | nil) | function=()>(empty_function | nil, string | nil)
 type dofile = function=(filename: string)>(...) | function=()>(...)
 type ipairs = function=(t: Table)>(empty_function, Table, number)
@@ -221,12 +215,14 @@ analyzer function type_error(str: string, level: number | nil)
 end
 
 analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil)
-	if not code:IsLiteral() or code.Type == "union" then return types.Any end
+	if not code:IsLiteral() or code.Type == "union" then return types.Tuple({types.Union({types.Nil(), types.Function({arg = types.Tuple({}), ret = types.Tuple({}) })}), types.Union({types.Nil(), types.String()})}) end
 	local str = code:GetData()
+
 
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
+
 	return
 		types.Function(
 			{
@@ -239,6 +235,8 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 		)
 		:SetNode(compiler.SyntaxTree)
 end
+
+type loadstring = load
 
 analyzer function dofile(path: string)
 	if not path:IsLiteral() then return types.Any() end

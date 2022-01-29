@@ -636,10 +636,6 @@ R[[
         end
     end
     
-    local function lol(tbl: {[number] = string})
-        return assert(loadstring("kernel"))
-    end
-    
     local foo = build("double")
     
     local function Read()    
