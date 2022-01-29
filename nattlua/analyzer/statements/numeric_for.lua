@@ -70,6 +70,8 @@ return
 								brk = true
 							end
 
+                            i.from_for_loop = true
+
 							self:CreateLocalValue(statement.identifiers[1].value.value, i)
 							self:AnalyzeStatements(statement.statements)
 

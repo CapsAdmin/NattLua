@@ -1483,6 +1483,27 @@ run[[
     end
 ]]
 
+run[[
+    for i = 1, 10 do
+        if i == 1 then
+            
+        end
+    end
+
+    §assert(#analyzer.diagnostics == 0)
+]]
+
+run[[
+    local tbl = {foo = true, bar = false}
+
+    for k,v in pairs(tbl) do
+        if k == "foo" then
+        end
+    end
+
+    §assert(#analyzer.diagnostics == 0)
+]]
+
 pending[[
     local x: true | false | 2
 

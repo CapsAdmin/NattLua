@@ -50,6 +50,8 @@ return
 							brk = true
 						end
 
+                        obj.from_for_loop = true
+
 						self:CreateLocalValue(identifier.value.value, obj)
 					end
 
