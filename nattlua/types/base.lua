@@ -166,7 +166,6 @@ do
 
 	function META.IsSameUniqueType(a--[[#: BaseType]], b--[[#: BaseType]])
 		if a.UniqueID and not b.UniqueID then return type_errors.other({a, "is a unique type"}) end
-		if b.UniqueID and not a.UniqueID then return type_errors.other({b, "is a unique type"}) end
 		if a.UniqueID ~= b.UniqueID then return type_errors.other({a, "is not the same unique type as ", a}) end
 		return true
 	end
@@ -281,7 +280,7 @@ function META:GetFirstValue()
 	return self
 end
 
-function META.LogicalComparison(l, r, op)
+function META.LogicalComparison(l--[[#: BaseType]], r--[[#: BaseType]], op--[[#: string]])
 	if op == "==" then
 		if l:IsLiteral() and r:IsLiteral() then
 			return l:GetData() == r:GetData()
