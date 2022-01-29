@@ -1665,3 +1665,13 @@ run[[
         end
     end
 ]]
+
+run[[
+    local x: string | {} | nil
+
+    if x then
+        if type(x) == "table" then
+            attest.equal(x, {})
+        end
+    end
+]]

@@ -199,19 +199,28 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 					found_scope:IsElseConditionalScope() or
 					(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
 				then
-					return stack[#stack].falsy
+					local union = stack[#stack].falsy--:Copy()
+					if obj.Type == "upvalue" then
+						union:SetUpvalue(obj)
+					end
+
+					return union
 				else
 					local union = Union()
 
 					for _, val in ipairs(stack) do
 						union:AddType(val.truthy)
 					end
-
+					if obj.Type == "upvalue" then
+						union:SetUpvalue(obj)
+					end
 					return union
 				end
 			end
 		end
 	end
+
+
 	return value
 end
 
@@ -609,6 +618,7 @@ return function(META)
 						for _, v in ipairs(data.stack) do
 							union:AddType(v.truthy)
 						end
+						union:SetUpvalue(data.upvalue)
 						self:MutateUpvalue(data.upvalue, union, nil, true)
 					end
 				end
@@ -635,6 +645,7 @@ return function(META)
 								for _, v in ipairs(data.stack) do
 									union:RemoveType(v.truthy)
 								end
+								union:SetUpvalue(data.upvalue)
 							end
 							self:MutateUpvalue(data.upvalue, union, nil, true)
 						end
@@ -674,7 +685,8 @@ return function(META)
 							if #val:GetData() == 1 then
 								val = val:GetData()[1]
 							end
-
+							
+							val:SetUpvalue(data.upvalue)
 							self:MutateUpvalue(data.upvalue, val, scope_override, true)
 						end
 					end
