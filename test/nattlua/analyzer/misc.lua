@@ -332,7 +332,8 @@ run[[
         attest.equal(a, 2)
     end
 ]]
-pending[[
+
+run[[
     local a = 1337
     for i = 1, a do
         attest.equal(i, 1)
@@ -341,7 +342,7 @@ pending[[
             break
         end
     end
-    attest.equal(a, _ as 1337 | 7777)
+    attest.equal(a, _ as number)
 ]]
 run[[
     local function lol(a, ...)
@@ -673,8 +674,9 @@ run[[
 ]]
 
 pending[[
-    for k,v in next, {1,2,3} do
-        attest.equal(_ as 1 | 2 | 3, _ as 1 | 2 | 3)
+    for k,v in next, {1} do
+        attest.equal(k, 1)
+        attest.equal(v, 1)
     end
 ]]
 run[[

@@ -264,7 +264,7 @@ test("index literal table with string", function()
 end)
 
 test("non literal keys should be treated as literals when used multiple times in the same scope", function() 
-    pending[[
+    run[[
         local foo: string
         local bar: string
 

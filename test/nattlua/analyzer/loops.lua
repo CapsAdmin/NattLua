@@ -17,36 +17,34 @@ test("pairs on literal table", function()
     ]]
 end)
 
-pending("pairs on non literal table", function()
-    run[[
-        local tbl = {1,2,3} as {[number] = number}
-        local key_sum = 0
-        local val_sum = 0
+pending[[
+    -- ipairs on non literal table
+    local tbl = {1,2,3} as {[number] = number}
+    local key_sum = 0
+    local val_sum = 0
 
-        for key, val in pairs(tbl) do
-            key_sum = key_sum + key
-            val_sum = val_sum + val
+    for key, val in ipairs(tbl) do
+        key_sum = key_sum + key
+        val_sum = val_sum + val
 
-            attest.equal(key, _ as number)
-            attest.equal(val, _ as number)
-        end
-        
-        attest.equal(key_sum, _ as number | 0)
-        attest.equal(val_sum, _ as number | 0)
-    ]]
-end)
+        attest.equal(key, _ as number)
+        attest.equal(val, _ as number)
+    end
+    
+    attest.equal(key_sum, _ as number | 0)
+    attest.equal(val_sum, _ as number | 0)
+]]
 
+run[[
+    -- pairs on non literal table
 
-pending("pairs on non literal table", function()
-    run[[
-        local tbl:{[number] = number} = {1,2,3}
-        
-        for key, val in pairs(tbl) do
-            attest.equal(key, _ as number)
-            attest.equal(val, _ as number)
-        end
-    ]]
-end)
+    local tbl:{[number] = number} = {1,2,3}
+    
+    for key, val in pairs(tbl) do
+        attest.equal(key, _ as number)
+        attest.equal(val, _ as number)
+    end
+]]
 
 test("pairs on any should at least make k,v any", function()
     run[[
@@ -111,17 +109,5 @@ run[[
     for k,v in pairs(t) do
         attest.equal(k, _ as "foo")
         attest.equal(v, _ as true)
-    end
-]]
-
-pending[[
-    local tbl: {
-        foo = nil | string,
-        bar = nil | number,
-    }
-
-    for k, v in pairs(tbl) do
-        attest.equal(k, _ as "foo" | "bar")
-        attest.equal(v, _ as number | string)
     end
 ]]

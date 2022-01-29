@@ -246,7 +246,7 @@ run[[
     })
 ]]
 
-pending[[
+run[[
     local function string_mutator<|tbl: mutable {[any] = any}|>
         for key, val in pairs(tbl) do
             tbl[key] = nil

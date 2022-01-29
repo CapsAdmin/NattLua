@@ -11,7 +11,7 @@
 
 -- !!
 
-analyzer function error_(msg)
+analyzer function error_(msg: string)
     error(msg:GetData())
 end
 

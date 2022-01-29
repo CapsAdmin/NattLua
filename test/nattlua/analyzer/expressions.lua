@@ -235,3 +235,16 @@ run[[
 
     get_address_info(info)
 ]]
+
+pending[[
+    local a: nil | number
+    local b: nil | number
+
+    if a ~= nil and b == nil then 
+        attest.equal(a, _ as number)
+        attest.equal(b, _ as nil)
+    else 
+        attest.equal(a, _ as number | nil)
+        attest.equal(b, _ as number | nil)
+    end
+]]

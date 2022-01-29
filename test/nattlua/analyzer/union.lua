@@ -79,11 +79,11 @@ run[[
 ]]
 
 
-pending[[
+run[[
     local function test(x: {}  | {foo = nil | 1})
-        print(x.foo)
+        attest.equal(x.foo, _ as nil | 1)
         if x.foo then
-            print(x.foo)
+            attest.equal(x.foo, 1)
         end
     end
 

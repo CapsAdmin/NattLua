@@ -13,22 +13,22 @@ run[[
     end
 ]]
 
-pending[[
+run[[
     --for i = 1, number is an uncertain scope
     local a = 0
     for i = 1, _ as number do
-        attest.equal(i, _ as number)
+        attest.equal(i, _ as 1..inf)
         a = 1
     end
     attest.equal(a, _ as number)
 ]]
 
-pending[[
+run[[
     local a = 0
     for i = 1, _ as number do
         a = a + 1
     end
-    attest.equal(a, _ as number) -- we could say that a+=1 would make a 1 .. inf but not sure if it's worth it
+    attest.equal(a, _ as number)
 ]]
 
 pending("annotation", function() 
@@ -42,7 +42,6 @@ pending("annotation", function()
         -- x should be false, because i == 2 is the last statement
         local b = x
     ]])
-        
     assert(code:find("i--[[#:1 | 2]] = 1", nil, true) ~= nil)
     -- if the union sorting algorithm changes, we probably need to change this
     assert(code:find("local a--[[#:false | true]] = x", nil, true) ~= nil)
@@ -68,7 +67,7 @@ run[[
 ]]
 
 
-pending[[
+run[[
     for i = 1, 3 do
         -- i is number if max is math.huge for example
     
@@ -82,7 +81,6 @@ pending[[
         -- when ran as merged scope error("lol") doesn't return properly
     
         attest.equal(x, 108)
-        attest.superset_of(i, _ as 1 | 2 | 3)
     end
 ]]
 

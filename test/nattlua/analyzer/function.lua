@@ -275,8 +275,8 @@ test("calling a union that has no field a function should error", function()
     ]], "union .- contains uncallable object number")
 end)
 
-test("pcall", function()
-    pending[[
+pending("pcall", function()
+    run[[
         local ok, err = pcall(function()
             local a, b = 10.5, nil
             return a < b
@@ -591,16 +591,15 @@ run[[
     attest.equal(test(obj), 1337)
 ]]
 
-pending[[
-    -- strange error
-    type foo = (function(
+run[[
+    local type foo = (function=(
         boolean | nil, 
         boolean | nil, 
         string, 
         number | nil
-    ): nil)
+    )>(nil))
     
-    foo(true)
+    foo(true, nil, "")
 ]]
 
 run[[

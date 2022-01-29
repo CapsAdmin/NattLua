@@ -572,18 +572,6 @@ run[[
     attest.equal(foo, true)
 ]]
 
-
-pending[[
-    local x: true | false | 2
-
-    if x then    
-        attest.equal(x, _ as true | 2)
-        x = 1
-    end
-
-    attest.equal<|x, true | false | 2 | 1|>
-]]
-
 run[[
     local x = 1
 
@@ -703,138 +691,49 @@ run[[
     attest.equal<|x, 1|2|>
 ]]
 
-pending[[
+run[[
+    local x = 1
+
+    if math.random() > 0.5 then
+        x = 2
+        attest.equal<|x, 2|>
+    else
+        attest.equal<|x, 1|>
+        x = 3
+    end
+    attest.equal<|x, 2 | 3|>
+]]
+
+run[[
+    local x = 1
+
+    if math.random() > 0.5 then
+        x = 2
+    elseif math.random() > 0.5 then
+        x = 3
+    elseif math.random() > 0.5 then
+        x = 4
+    end
+
+    attest.equal<|x, 1|2|3|4|>
+]]
+
+run[[
     local x = 1
 
     if MAYBE then
-        attest.equal<|x, 1|>
-        x = 1.5
-        attest.equal<|x, 1.5|>
-        x = 1.75
-        attest.equal<|x, 1.75|>
-        if MAYBE then
-            x = 2
-            if MAYBE then
-                x = 2.5
-            end
-            attest.equal<|x, 2 | 2.5|>
-        end
+        x = 2
+    elseif MAYBE then
         x = 3
-        attest.equal<|x, 3|>
+    elseif MAYBE then
+        x = 4
+    else
+        x = 5
     end
-    
-    attest.equal<|x, 1 | 3|>
+
+    attest.equal<|x, 5|2|3|4|>
 ]]
 
-pending[=[
-
-    do return end
-    do
-        local x = 1
-    
-        if MAYBE then
-            if true then
-                do
-                    x = 1337
-                end
-            end
-            attest.equal<|x, 1337|>
-            x = 2
-            attest.equal<|x, 2|>
-        else
-            attest.equal<|x, 1|>
-            x = 66
-        end
-        
-        attest.equal<|x, 1 | 2|>
-    end 
-    
-    do
-        local x = 1
-    
-        if MAYBE then
-            x = 2
-            attest.equal<|x, 2|>
-        else
-            attest.equal<|x, 1|>
-            x = 3
-        end
-        attest.equal<|x, 2 | 3|>
-    end
-
-    do
-        local x = 1
-    
-        if MAYBE then
-            x = 2
-        elseif MAYBE then
-            x = 3
-        elseif MAYBE then
-            x = 4
-        end
-    
-        attest.equal<|x, 1|2|3|4|>
-    end
-
-    do
-        local x = 1
-    
-        if MAYBE then
-            x = 2
-        elseif MAYBE then
-            x = 3
-        elseif MAYBE then
-            x = 4
-        else
-            x = 5
-        end
-    
-        attest.equal<|x, 5|2|3|4|>
-    end
-
-    do
-        local x = 1
-    
-        
-        if MAYBE then
-            x = 2
-    
-            if MAYBE then
-                x = 1337
-            end
-    
-            x = 0 -- the last one counts
-    
-        elseif MAYBE then
-            x = 3
-        elseif MAYBE then
-            x = 4
-        end
-    
-        attest.equal<|x, 0 | 1 | 3 | 4|>
-    end
-    
-    do return end
-    --[[
-    elseif MAYBE then
-        attest.equal<|x, 1|>
-        x = 3
-        attest.equal<|x, 3|>
-    elseif MAYBE then
-        attest.equal<|x, 1|>
-        x = 4
-        attest.equal<|x, 4|>
-    else
-        attest.equal<|x, 1|>
-        x = 5
-        attest.equal<|x, 5|>
-    end
-    
-    print(x)
-    
-    --attest.equal<|x, 1 | 2 | 3 | 4|>
-    ]]
-]=]
 
 run([[
     local x = 1
@@ -1177,24 +1076,6 @@ run[[
     end
 ]]
 
-pending([[
-    local a: nil | 1
-
-    if not a or true and a or false then
-        attest.equal(a, _ as 1 | nil)
-    end
-
-    attest.equal(a, _ as 1 | nil)
-]])
-
-pending[[
-    local MAYBE: boolean
-    local x = 0
-    if MAYBE then x = x + 1 end -- 1
-    if MAYBE then x = x - 1 end -- 0
-    attest.equal(x, 0)
-]]
-
 run[[
     local MAYBE: boolean
 
@@ -1272,92 +1153,7 @@ run[[
 ]]
 
 
-pending[[
-    local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }
-
-    local function area(shape: Shape): number
-        if shape.kind == "circle" then 
-            print(shape.radius)
-        else
-            print(shape.sideLength)
-        end 
-    end
-]]
-
-pending[[
-    local a: nil | 1
-
-    if not not not a then
-        attest.equal(a, _ as 1)
-    end
-
-    attest.equal(a, _ as 1 | nil)
-]]
-
-pending[[
-    local a: nil | 1
-
-    if a or true and a or false then
-        attest.equal(a, _ as 1 | 1)
-    end
-
-    attest.equal(a, _ as 1 | nil)
-]]
-
-
-pending[[
-
-    local x: number
-    
-    if x >= 0 and x <= 10 then
-        attest.equal<|x, 0 .. 10|>
-    end
-]]
-
-pending[[
-    local x: -3 | -2 | -1 | 0 | 1 | 2 | 3
-
-    if x >= 0 then
-        attest.equal<|x, 0|1|2|3|>
-        if x >= 1 then
-            attest.equal<|x, 1|2|3|>
-        end
-    end
-]]
-
-pending[[
-    local x: 1 | "1"
-    local y = type(x) == "number"
-    if y then
-        attest.equal(x, 1)
-    else
-        attest.equal(x, "1")
-    end
-]]
-
-pending[[
-    local x: 1 | "1"
-    local y = type(x) ~= "number"
-    if y then
-        attest.equal(x, "1")
-    else
-        attest.equal(x, 1)
-    end
-]]
-
-pending[[
-    local x: 1 | "1"
-    local t = "number"
-    local y = type(x) ~= t
-    if y then
-        attest.equal(x, "1")
-    else
-        attest.equal(x, 1)
-    end
-]]
-
-
-pending[[
+run[[
     local type T = {
         config = {
             extra_indent = nil | {
@@ -1373,8 +1169,7 @@ pending[[
 
     if t.config.extra_indent then
         local lol = t.config.extra_indent
-        print(t.config.extra_indent[x])
-        print(lol[x])
+        attest.equal(t.config.extra_indent[x], lol[x])
     end
 ]]
 run[[
@@ -1673,5 +1468,204 @@ run[[
         if type(x) == "table" then
             attest.equal(x, {})
         end
+    end
+]]
+
+
+run[[
+    local x: -3 | -2 | -1 | 0 | 1 | 2 | 3
+
+    if x >= 0 then
+        attest.equal<|x, 0|1|2|3|>
+        if x >= 1 then
+            attest.equal<|x, 1|2|3|>
+        end
+    end
+]]
+
+pending[[
+    local x: true | false | 2
+
+    if x then    
+        attest.equal(x, _ as true | 2)
+        x = 1
+    end
+
+    attest.equal<|x, true | false | 2 | 1|>
+]]
+pending[[
+    local x = 1
+
+    if MAYBE then
+        attest.equal<|x, 1|>
+        x = 1.5
+        attest.equal<|x, 1.5|>
+        x = 1.75
+        attest.equal<|x, 1.75|>
+        if MAYBE then
+            x = 2
+            if MAYBE then
+                x = 2.5
+            end
+            attest.equal<|x, 2 | 2.5|>
+        end
+        x = 3
+        attest.equal<|x, 3|>
+    end
+    
+    attest.equal<|x, 1 | 3|>
+]]
+
+
+pending[[
+    local x = 1
+
+    if math.random() > 0.5 then
+        if true then
+            do
+                x = 1337
+            end
+        end
+        attest.equal<|x, 1337|>
+        x = 2
+        attest.equal<|x, 2|>
+    else
+        attest.equal<|x, 1|>
+        x = 66
+    end
+    
+    attest.equal<|x, 1 | 2|>
+]]
+
+pending[[
+    local x = 1
+
+    
+    if MAYBE then
+        x = 2
+
+        if MAYBE then
+            x = 1337
+        end
+
+        x = 0 -- the last one counts
+
+    elseif MAYBE then
+        x = 3
+    elseif MAYBE then
+        x = 4
+    end
+
+    attest.equal<|x, 1337 | 0 | 1 | 3 | 4|>
+]]
+
+pending[[
+    elseif MAYBE then
+        attest.equal<|x, 1|>
+        x = 3
+        attest.equal<|x, 3|>
+    elseif MAYBE then
+        attest.equal<|x, 1|>
+        x = 4
+        attest.equal<|x, 4|>
+    else
+        attest.equal<|x, 1|>
+        x = 5
+        attest.equal<|x, 5|>
+    end
+
+    print(x)
+
+    --attest.equal<|x, 1 | 2 | 3 | 4|>
+]]
+pending([[
+    local a: nil | 1
+
+    if not a or true and a or false then
+        attest.equal(a, _ as 1 | nil)
+    end
+
+    attest.equal(a, _ as 1 | nil)
+]])
+
+pending[[
+    local MAYBE: boolean
+    local x = 0
+    if MAYBE then x = x + 1 end -- 1
+    if MAYBE then x = x - 1 end -- 0
+    attest.equal(x, 0)
+]]
+
+pending[[
+    local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }
+
+    local function area(shape: Shape): number
+        if shape.kind == "circle" then 
+            print(shape.radius)
+        else
+            print(shape.sideLength)
+        end 
+    end
+]]
+
+pending[[
+    local a: nil | 1
+
+    if not not a then
+        attest.equal(a, _ as 1)
+    end
+
+    attest.equal(a, _ as 1 | nil)
+]]
+
+pending[[
+    local a: nil | 1
+
+    if a or true and a or false then
+        attest.equal(a, _ as 1 | 1)
+    end
+
+    attest.equal(a, _ as 1 | nil)
+]]
+
+
+pending[[
+
+    local x: number
+    
+    if x >= 0 and x <= 10 then
+        attest.equal<|x, 0 .. 10|>
+    end
+]]
+
+
+pending[[
+    local x: 1 | "1"
+    local y = type(x) == "number"
+    if y then
+        attest.equal(x, 1)
+    else
+        attest.equal(x, "1")
+    end
+]]
+
+pending[[
+    local x: 1 | "1"
+    local y = type(x) ~= "number"
+    if y then
+        attest.equal(x, "1")
+    else
+        attest.equal(x, 1)
+    end
+]]
+
+pending[[
+    local x: 1 | "1"
+    local t = "number"
+    local y = type(x) ~= t
+    if y then
+        attest.equal(x, "1")
+    else
+        attest.equal(x, 1)
     end
 ]]
