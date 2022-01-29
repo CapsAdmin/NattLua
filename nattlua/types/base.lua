@@ -263,8 +263,8 @@ do
 	function META:GetMetaTable()
 		local contract = self.Contract
 
-		if contract then -- TODO
-			if contract.MetaTable then return contract.MetaTable end
+		if contract and contract.MetaTable then
+			return contract.MetaTable
 		end
 
 		return self.MetaTable
@@ -296,7 +296,5 @@ end
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end
-
---[[# type META.BaseType = copy<|BaseType|> ]]
 
 return META

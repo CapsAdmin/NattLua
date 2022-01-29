@@ -223,7 +223,6 @@ function META:Get(key)
 
 	if type(key) ~= "number" then
 		print(real_key, "REAL_KEY")
-		print(analyzer:DebugStateToString())
 		error("key must be a number, got " .. tostring(key) .. debug.traceback())
 	end
 

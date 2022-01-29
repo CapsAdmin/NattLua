@@ -7,10 +7,11 @@ local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local bit = require("bit")
 local META = dofile("nattlua/types/base.lua")
+--[[#local type BaseType = copy<|META|>]]
+
 META.Type = "number"
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
---[[#local type BaseType = META.BaseType]]
 META:GetSet("Data", nil--[[# as number | nil]])
 
 do -- TODO, operators is mutated below, need to use upvalue position when analyzing typed arguments
@@ -25,7 +26,6 @@ do -- TODO, operators is mutated below, need to use upvalue position when analyz
 
 	function META:PrefixOperator(op--[[#: keysof<|operators|>]])
 		if self:IsLiteral() then
-			if not operators[op] then return false, "no such operator " .. op end
 			local num = self.New(operators[op](self:GetData() --[[#as number]])):SetLiteral(true)
 			local max = self:GetMax()
 
@@ -89,10 +89,10 @@ function META:Copy()
 	return copy --[[# as any]] -- TODO: figure out inheritance
 end
 
-function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
-	if B.Type == "tuple" then B = B:Get(1) end
+function META.IsSubsetOf(A--[[#: TNumber & {Type = string}]], B--[[#: TNumber & {Type = string}]])
+	if B.Type == "tuple" then B = (B --[[# as any]]):Get(1) end
 	if B.Type == "any" then return true end
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if B.Type == "union" then return (B --[[# as any]]):IsTargetSubsetOfChild(A) end
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
 	if A:IsLiteral() and B:IsLiteral() then
@@ -150,7 +150,7 @@ end
 
 META:GetSet("Max", nil--[[# as TNumber | nil]])
 
-function META:SetMax(val --[[#: BaseType]])
+function META:SetMax(val --[[#: TNumber & {Type = string}]])
 	local err
 
 	if val.Type == "union" then
@@ -333,9 +333,6 @@ do
 		["^"] = function(l, r)
 			return l ^ r
 		end,
-		[".."] = function(l, r)
-			return l .. r
-		end,
 		["&"] = function(l, r)
 			return bit.band(l, r)
 		end,
@@ -353,17 +350,17 @@ do
 		end,
 	}
 
-	function META.ArithmeticOperator(l, r, op)
-		local func = assert(operators[op], "cannot find operator " .. op)
+	function META.ArithmeticOperator(l --[[#: TNumber ]], r --[[#: TNumber ]], op --[[#: keysof<|operators|> ]])--[[#: TNumber]]
+		local func = operators[op]
 		if l:IsLiteral() and r:IsLiteral() then
-			local obj = META.New(func(l:GetData(), r:GetData())):SetLiteral(true)
+			local obj = META.New(func(l:GetData() --[[#as number]], r:GetData() --[[#as number]])):SetLiteral(true)
 
 			if r:GetMax() then
-				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax(), op))
+				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax() --[[#as TNumber]], op))
 			end
 
 			if l:GetMax() then
-				obj:SetMax(l.ArithmeticOperator(l:GetMax(), r:GetMax() or r, op))
+				obj:SetMax(l.ArithmeticOperator(l:GetMax() --[[#as TNumber]], r:GetMax() or r, op))
 			end
 
 			return obj
