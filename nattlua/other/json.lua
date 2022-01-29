@@ -216,7 +216,7 @@ local function parse_string(str--[[#: string]], i--[[#: number]])--[[#: string, 
 	local has_unicode_escape = false
 	local has_surrogate_escape = false
 	local has_escape = false
-	local last
+	local last --[[#: number | nil ]]
 	for j = i + 1, #str do
 		local x = str:byte(j)
 
@@ -382,10 +382,6 @@ end
 
 
 function json.decode(str--[[#: string]])
-	if type(str) ~= "string" then
-		error("expected argument of type string, got " .. type(str))
-	end
-
 	local res, idx = parse(str, next_char(str, 1, space_chars, true))
 	idx = next_char(str, idx, space_chars, true)
 	if idx <= #str then
