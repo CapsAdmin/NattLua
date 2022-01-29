@@ -178,17 +178,7 @@ do
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
 
 		if not data then
-			local str = ""
-
-			if path then
-				str = str .. path .. ":INVALID: "
-			end
-
-			if msg then
-				str = str .. msg
-			end
-
-			return str
+			return path .. ":INVALID: " .. msg
 		end
 
 		local line_start, line_stop = data.line_start, data.line_stop
@@ -353,7 +343,7 @@ end
 
 function helpers.JITOptimize()
 	if not _G.jit then return end
-	require("jit.opt")
+	pcall(require, "jit.opt")
 	jit.opt.start(
 		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
         "maxrecord=8000", -- 4000: maximum number of recorded IR instructions
