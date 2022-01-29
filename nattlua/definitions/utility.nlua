@@ -109,7 +109,11 @@ function nilable<|tbl: {[string] = any}|>
 end
 
 analyzer function copy(obj: any)
-	return obj:Copy()
+	local copy = obj:Copy()
+	copy.mutations = nil
+	copy.scope = nil
+	copy.potential_self = nil
+	return copy
 end
 
 analyzer function UnionPairs(values: any)
