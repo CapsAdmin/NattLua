@@ -568,9 +568,20 @@ function META:CopyLiteralness(from--[[#: TTable]])
 		else
 			keyval.val:SetLiteral(keyval_from.val:IsLiteral())
 		end
-	end
+	end	
 
 	return true
+end
+
+function META:CoerceUntypedFunctions(from--[[#: TTable]])
+	for _, kv in ipairs(self:GetData()) do
+		local kv_from, reason = from:FindKeyValReverse(kv.key)
+		if kv.val.Type == "function" and kv_from.val.Type == "function" then
+			kv.val:SetArguments(kv_from.val:GetArguments())
+			kv.val:SetReturnTypes(kv_from.val:GetReturnTypes())
+			kv.val.explicit_arguments = true
+		end
+	end
 end
 
 function META:Copy(map--[[#: any]], ...)

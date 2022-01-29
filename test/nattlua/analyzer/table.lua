@@ -843,3 +843,18 @@ run[[
     
     attest.equal(type_func_map[_ as string], _ as true | "lol" | 1337 | false | nil)
 ]]
+
+run[[
+    local operators: {[string] = function=(number, number)>(number)} = {
+        ["+"] = function(l, r)
+            return l + r
+        end,
+        ["-"] = function(l, r)
+            return l - r
+        end,
+    }
+
+    attest.equal(operators["-"], _ as function=(number, number)>(number))
+
+    §assert(#analyzer.diagnostics == 0)
+]]

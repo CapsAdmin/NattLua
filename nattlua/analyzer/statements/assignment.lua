@@ -156,6 +156,11 @@ return
 						-- local a: number = number
 						val:CopyLiteralness(contract)
 
+						if val.Type == "table" then
+							-- coerce any untyped functions based on contract
+							val:CoerceUntypedFunctions(contract)
+						end
+
 						self:Assert(
 							statement or
 							val:GetNode() or
