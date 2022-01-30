@@ -236,6 +236,46 @@ run[[
     get_address_info(info)
 ]]
 
+run[[
+    local x: {foo = nil | true}
+
+    if x.foo == nil then
+    return
+    end
+
+    attest.equal(x.foo, true)
+]]
+
+run[[
+    local x: {foo = nil | true}
+
+    if x.foo ~= nil then
+        return
+    end
+
+    attest.equal(x.foo, nil)
+]]
+
+run[[
+    local x: {foo = nil | true}
+
+    if not x.foo then
+    return
+    end
+
+    attest.equal(x.foo, true)
+]]
+
+run[[
+    local x: {foo = nil | true}
+
+    if x.foo then
+        return
+    end
+
+    attest.equal(x.foo, nil)
+]]
+
 pending[[
     local a: nil | number
     local b: nil | number
