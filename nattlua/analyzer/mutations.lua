@@ -593,6 +593,14 @@ return function(META)
 			return upvalues
 		end
 
+		--[[
+			local x: 1 | 2 | 3
+
+			if x == 1 then
+				assert(x == 1)
+			end
+		]]
+
 		function META:ApplyMutationsInIf(upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
@@ -617,6 +625,16 @@ return function(META)
 				end
 			end
 		end
+
+		--[[
+			local x: 1 | 2 | 3
+
+			if x == 1 then
+			else
+				-- we get the original value and remove the truthy values (x == 1) and end up with 2 | 3
+				assert(x == 2 | 3)
+			end
+		]]
 
 		function META:ApplyMutationsInIfElse(blocks)
 			for i, block in ipairs(blocks) do
@@ -651,22 +669,38 @@ return function(META)
 			end
 		end
 
+		--[[
+			local x: 1 | 2 | 3
+
+			if x == 1 then return end
+
+			assert(x == 2 | 3)
+		]]
+
+		--[[
+			local x: 1 | 2 | 3
+
+			if x == 1 then else return end
+
+			assert(x == 1)
+		]]
+
+		--[[
+			local x: 1 | 2 | 3
+
+			if x == 1 then error("!") end
+
+			assert(x == 2 | 3)
+		]]
+
 		local function solve(data, scope, negate)
 			local stack = data.stack
 			if stack then
 				local val
-				if scope:IsElseConditionalScope() or stack[#stack].inverted then
-					if negate then
-						val = stack[#stack].truthy
-					else
-						val = stack[#stack].falsy
-					end
+				if negate and not (scope:IsElseConditionalScope() or stack[#stack].inverted) then
+					val = stack[#stack].falsy
 				else
-					if negate then
-						val = stack[#stack].falsy
-					else
-						val = stack[#stack].truthy
-					end
+					val = stack[#stack].truthy
 				end
 
 				if val and (val.Type ~= "union" or not val:IsEmpty()) then
