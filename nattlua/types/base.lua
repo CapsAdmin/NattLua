@@ -6,8 +6,8 @@ local META = {}
 META.__index = META
 --[[#type META.Type = string]]
 --[[#type META.@Self = {}]]
---[[#local type BaseType = META.@Self]]
---[[#type BaseType.@Name = "BaseTypeInstance"]]
+--[[#local type TBaseType = META.@Self]]
+--[[#type TBaseType.@Name = "TBaseType"]]
 --[[#type META.Type = string]]
 
 function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
@@ -35,12 +35,12 @@ function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: 
 end
 
 --[[#type META.Type = string]]
---[[#type BaseType.Data = any | nil]]
---[[#type BaseType.Name = string | nil]]
---[[#type BaseType.parent = BaseType | nil]]
+--[[#type TBaseType.Data = any | nil]]
+--[[#type TBaseType.Name = string | nil]]
+--[[#type TBaseType.parent = TBaseType | nil]]
 META:GetSet("AnalyzerEnvironment", nil--[[# as nil | "runtime" | "typesystem"]])
 
-function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
+function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]])
 	--error("nyi " .. a.Type .. " == " .. b.Type)
 end
 
@@ -81,7 +81,7 @@ do
 		return self
 	end
 
-	function META:CopyInternalsFrom(obj --[[#: mutable BaseType]])
+	function META:CopyInternalsFrom(obj --[[#: mutable TBaseType]])
 		self:SetNode(obj:GetNode())
 		self:SetTokenLabelSource(obj:GetTokenLabelSource())
 		self:SetLiteral(obj:IsLiteral())
@@ -110,9 +110,9 @@ do -- token, expression and statement association
 end
 
 do -- comes from tbl.@Name = "my name"
-	META:GetSet("Name", nil--[[# as nil | BaseType]])
+	META:GetSet("Name", nil--[[# as nil | TBaseType]])
 
-	function META:SetName(name--[[#: BaseType | nil]])
+	function META:SetName(name--[[#: TBaseType | nil]])
 		if name then
 			assert(name:IsLiteral())
 		end
@@ -122,7 +122,7 @@ do -- comes from tbl.@Name = "my name"
 end
 
 do -- comes from tbl.@TypeOverride = "my name"
-	META:GetSet("TypeOverride", nil--[[# as nil | BaseType]])
+	META:GetSet("TypeOverride", nil--[[# as nil | TBaseType]])
 
 	function META:SetTypeOverride(name--[[#: any]])
 		if type(name) == "table" and name:IsLiteral() then
@@ -134,7 +134,7 @@ do -- comes from tbl.@TypeOverride = "my name"
 end
 
 do
---[[#	type BaseType.disabled_unique_id = number | nil]]
+--[[#	type TBaseType.disabled_unique_id = number | nil]]
 	META:GetSet("UniqueID", nil--[[# as nil | number]])
 	local ref = 0
 
@@ -166,7 +166,7 @@ do
 		return self.UniqueID
 	end
 
-	function META.IsSameUniqueType(a--[[#: BaseType]], b--[[#: BaseType]])
+	function META.IsSameUniqueType(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		if a.UniqueID and not b.UniqueID then return type_errors.other({a, "is a unique type"}) end
 		if a.UniqueID ~= b.UniqueID then return type_errors.other({a, "is not the same unique type as ", a}) end
 		return true
@@ -176,7 +176,7 @@ end
 do
 	META:IsSet("Literal", false--[[# as boolean]])
 
-	function META:CopyLiteralness(obj--[[#: BaseType]])
+	function META:CopyLiteralness(obj--[[#: TBaseType]])
 		self:SetLiteral(obj:IsLiteral())
 	end
 end
@@ -192,7 +192,7 @@ do -- operators
 		})
 	end
 
-	function META:Set(key--[[#: BaseType | nil]], val--[[#: BaseType | nil]])
+	function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
 		return type_errors.other(
 			{
 				"undefined set: ",
@@ -226,7 +226,7 @@ do -- operators
 end
 
 do
-	function META:SetParent(parent--[[#: BaseType | nil]])
+	function META:SetParent(parent--[[#: TBaseType | nil]])
 		if parent then
 			if parent ~= self then
 				self.parent = parent
@@ -255,11 +255,11 @@ do -- contract
 		self:SetContract(self:GetContract() or self:Copy())
 	end
 
-	META:GetSet("Contract", nil--[[# as BaseType | nil]])
+	META:GetSet("Contract", nil--[[# as TBaseType | nil]])
 end
 
 do
-	META:GetSet("MetaTable", nil--[[# as BaseType | nil]])
+	META:GetSet("MetaTable", nil--[[# as TBaseType | nil]])
 
 	function META:GetMetaTable()
 		local contract = self.Contract
@@ -282,7 +282,7 @@ function META:GetFirstValue()
 	return self
 end
 
-function META.LogicalComparison(l--[[#: BaseType]], r--[[#: BaseType]], op--[[#: string]])
+function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
 	if op == "==" then
 		if l:IsLiteral() and r:IsLiteral() then
 			return l:GetData() == r:GetData()
@@ -297,5 +297,7 @@ end
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end
+
+--[[# type META.TBaseType = copy<|META|>.@Self ]]
 
 return META

@@ -7,12 +7,19 @@ local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local bit = require("bit")
 local META = dofile("nattlua/types/base.lua")
---[[#local type BaseType = copy<|META|>]]
-
-META.Type = "number"
+--[[#local TBaseType = META.TBaseType ]]
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
+META.Type = "number"
 META:GetSet("Data", nil--[[# as number | nil]])
+
+--[[#
+	local type TUnion = {
+		@Name = "TUnion",
+		Type = "union",
+		GetLargestNumber = function=(self)>(TNumber | nil, nil | any)
+	}
+]]
 
 do -- TODO, operators is mutated below, need to use upvalue position when analyzing typed arguments
 	local operators = {
@@ -89,7 +96,7 @@ function META:Copy()
 	return copy --[[# as any]] -- TODO: figure out inheritance
 end
 
-function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
+function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
 	if B.Type == "tuple" then B = (B --[[# as any]]):Get(1) end
 	if B.Type == "any" then return true end
 	if B.Type == "union" then return (B --[[# as any]]):IsTargetSubsetOfChild(A) end
@@ -150,11 +157,11 @@ end
 
 META:GetSet("Max", nil--[[# as TNumber | nil]])
 
-function META:SetMax(val --[[#: TNumber & {Type = string}]])
+function META:SetMax(val --[[#: TBaseType | TUnion ]])
 	local err
 
 	if val.Type == "union" then
-		val, err = val:GetLargestNumber()
+		val, err = (val --[[#as any]]):GetLargestNumber()
 		if not val then return val, err end
 	end
 

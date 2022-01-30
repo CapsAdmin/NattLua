@@ -1,25 +1,26 @@
 local tostring = tostring
-local error = error
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local Number = require("nattlua.types.number").Number
-local Table = require("nattlua.types.table").Table
 local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
-
+--[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+--[[#local TBaseType = META.TBaseType ]]
 META.Type = "string"
 --[[#type META.@Name = "TString"]]
 --[[#type TString = META.@Self]]
 META:GetSet("Data", nil--[[# as string | nil]])
 META:GetSet("PatternContract", nil--[[# as nil | string]])
 
-function META.Equal(a--[[#: TString]], b--[[#: TString]])
+function META.Equal(a--[[#: TString]], b--[[#: BaseType]])
 	if a.Type ~= b.Type then return false end
 
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 	return false
 end
+
+--[[# do return end]]
 
 function META:GetHash()
 	if self:IsLiteral() then
@@ -35,7 +36,7 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A, B)
+function META.IsSubsetOf(A --[[#: TString ]], B --[[#: ]])
 	if B.Type == "tuple" then B = B:Get(1) end
 	if B.Type == "any" then return true end
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
