@@ -478,13 +478,12 @@ return function(META)
 
 		function META:TrackTableIndex(obj, key, val)
 			if self:IsTypesystem() then return end
-			if val.Type ~= "union" then return end
 			local hash = key:GetHash()
 			if not hash then return end
 			
 			val.parent_table = obj
 			val.parent_key = key
-			
+
 			local truthy_union = val:GetTruthy()
 			local falsy_union = val:GetFalsy()
 
@@ -499,10 +498,15 @@ return function(META)
 			obj.tracked_stack = obj.tracked_stack or {}
 			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
 
-			falsy_union.parent_table = obj
-			falsy_union.parent_key = key
-			truthy_union.parent_table = obj
-			truthy_union.parent_key = key
+			if falsy_union then
+				falsy_union.parent_table = obj
+				falsy_union.parent_key = key
+			end
+
+			if truthy_union then
+				truthy_union.parent_table = obj
+				truthy_union.parent_key = key
+			end
 
 			for i = #obj.tracked_stack[hash], 1, -1 do
 				local tracked = obj.tracked_stack[hash][i]
@@ -607,10 +611,15 @@ return function(META)
 					if data.stack then
 						local union = Union()
 						for _, v in ipairs(data.stack) do
-							union:AddType(v.truthy)
+							if v.truthy then
+								union:AddType(v.truthy)
+							end
 						end
-						union:SetUpvalue(data.upvalue)
-						self:MutateUpvalue(data.upvalue, union, nil, true)
+
+						if not union:IsEmpty() then
+							union:SetUpvalue(data.upvalue)
+							self:MutateUpvalue(data.upvalue, union, nil, true)
+						end
 					end
 				end
 			end
@@ -619,9 +628,14 @@ return function(META)
 				for _, data in ipairs(tables) do
 					local union = Union()
 					for _, v in ipairs(data.stack) do
-						union:AddType(v.truthy)
+						if v.truthy then
+							union:AddType(v.truthy)
+						end
 					end
-					self:MutateValue(data.obj, data.key, union, nil, true)
+
+					if not union:IsEmpty() then
+						self:MutateValue(data.obj, data.key, union, nil, true)
+					end
 				end
 			end
 		end
@@ -704,7 +718,7 @@ return function(META)
 				end
 
 				if val and (val.Type ~= "union" or not val:IsEmpty()) then
-					if #val:GetData() == 1 then
+					if val.Type == "union" and #val:GetData() == 1 then
 						val = val:GetData()[1]
 					end
 					

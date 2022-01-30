@@ -72,6 +72,20 @@ do
 		return self:IsTruthy() and not self:IsFalsy()
 	end
 
+	function META:GetTruthy()
+		if self:IsTruthy() then
+			return self
+		end
+		return nil
+	end
+
+	function META:GetFalsy()
+		if self:IsFalsy() then
+			return self
+		end
+		return nil
+	end
+
 	META:IsSet("Falsy", false--[[# as boolean]])
 	META:IsSet("Truthy", false--[[# as boolean]])
 end

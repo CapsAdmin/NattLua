@@ -236,8 +236,15 @@ local function Binary(self, node, l, r, op)
 
 			
 			if op ~= "or" and op ~= "and" then
+				
 				if l.parent_table then
 					self:TrackTableIndexUnion(l.parent_table, l.parent_key, truthy_union, falsy_union)
+				elseif l.Type == "union" then
+					for _, l in ipairs(l:GetData()) do
+						if l.parent_table then
+							self:TrackTableIndexUnion(l.parent_table, l.parent_key, truthy_union, falsy_union)
+						end
+					end
 				end
 				self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
 				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
