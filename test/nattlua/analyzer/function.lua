@@ -770,7 +770,7 @@ run[[
 
 run[[
     local func: function=(number, string)>(nil)
-    local x: function=(Parameters<|func|>)>(nil)
+    local x: function=(unpack<|Parameters<|func|>|>)>(nil)
     attest.equal(x, func)
 ]]
 
@@ -818,7 +818,7 @@ run[[
     
     § analyzer:AnalyzeUnreachableCode()
     
-    attest.equal(return_type<|foo|>, {foo = _ as 0 | 1 | 2 | 3})
+    attest.equal(return_type<|foo|>[1], {foo = _ as 0 | 1 | 2 | 3})
 ]]
 
 run[[

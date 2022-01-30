@@ -63,7 +63,7 @@ end
 
 foo()
 
-attest.equal<|ReturnType<|foo|>, (2,true,1)|>
+attest.equal<|unpack<|ReturnType<|foo|>|>, (2,true,1)|>
 
 local function test()
     if math.random() > 0.5 then
@@ -74,7 +74,7 @@ end
 
 test()
 
-attest.equal<|ReturnType<|test|>, (1, 2)|>
+attest.equal<|unpack<|ReturnType<|test|>|>, (1, 2)|>
 
 
 local a = function()
@@ -198,8 +198,8 @@ run[[
     local function aaa(foo: string, bar: number, faz: boolean): (1,2,3)
         return 1,2,3
     end
-    attest.equal<|argument_type<|aaa|>, (string, number, boolean)|>
-    attest.equal<|return_type<|aaa|>, ((1, 2, 3),)|>
+    attest.equal<|unpack<|argument_type<|aaa|>|>, (string, number, boolean)|>
+    attest.equal<|unpack<|return_type<|aaa|>|>, ((1, 2, 3),)|>
 ]]
 
 run[[

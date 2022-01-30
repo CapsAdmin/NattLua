@@ -2,7 +2,7 @@ local table = require("table")
 local type = _G.type
 local ipairs = _G.ipairs
 local errors = {
-		subset = function(a--[[#: any]], b--[[#: any]], reason--[[#: string | List<|string|>[1] | nil]])--[[#: false,string | {[number] = any | string}]]
+		subset = function(a--[[#: any]], b--[[#: any]], reason--[[#: string | List<|string|> | nil]])--[[#: false,string | {[number] = any | string}]]
 			local msg = {a, " is not a subset of ", b}
 
 			if reason then
@@ -19,7 +19,7 @@ local errors = {
 
 			return false, msg
 		end,
-		table_subset = function(a_key--[[#: any]], b_key--[[#: any]], a--[[#: any]], b--[[#: any]], reason--[[#: string | List<|string|>[1] | nil]])--[[#: false,string | {[number] = any | string}]]
+		table_subset = function(a_key--[[#: any]], b_key--[[#: any]], a--[[#: any]], b--[[#: any]], reason--[[#: string | List<|string|> | nil]])--[[#: false,string | {[number] = any | string}]]
 			local msg = {"[", a_key, "]", a, " is not a subset of ", "[", b_key, "]", b}
 
 			if reason then

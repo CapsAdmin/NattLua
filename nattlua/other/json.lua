@@ -286,7 +286,7 @@ local function parse_literal(str--[[#: string]], i--[[#: number]])--[[#: (boolea
 end
 
 
-local function parse_array(str--[[#: string]], i--[[#: number]])--[[#: List<|any|>[1], number]] -- TODO: fix List<|any|>[1]
+local function parse_array(str--[[#: string]], i--[[#: number]])--[[#: List<|any|>, number]] -- TODO: fix List<|any|>
 	local res = {}
 	local n = 1
 	i = i + 1
@@ -313,7 +313,7 @@ local function parse_array(str--[[#: string]], i--[[#: number]])--[[#: List<|any
 end
 
 
-local function parse_object(str--[[#: string]], i--[[#: number]])--[[#: Map<|string, any|>[1], number]]
+local function parse_object(str--[[#: string]], i--[[#: number]])--[[#: Map<|string, any|>, number]]
 	local res = {}
 	i = i + 1
 	while 1 do

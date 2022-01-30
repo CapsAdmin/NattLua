@@ -205,7 +205,7 @@ do
 	end
 
 	function fs.get_files(path)
-		local out: List<|string|>[1] = {} -- [1] TODO
+		local out: List<|string|> = {} -- [1] TODO
 
 		local ptr = ffi.C.opendir(path or "")
 

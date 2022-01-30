@@ -22,7 +22,7 @@ local C = ffi.C
 
 local ac = ffi.load('ac')
 
-local function create(dict: List<|string|>[1])
+local function create(dict: List<|string|>)
     local nentries = #dict
 
     local str_v = ffi.new("const char *[?]", nentries)

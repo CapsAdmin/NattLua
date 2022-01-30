@@ -44,18 +44,7 @@ function table.print(...)
 end
 
 IMPORTS = IMPORTS or {}
-IMPORTS['example_projects/luajit/src/platforms/windows/filesystem.nlua'] = function(...) --[[#local  type  contract: {
-	"get_attributes" = function⦗string, false | nil | true⦘: ⦗⦗⦗nil, string⦘ | ⦗{
-		"last_accessed" = number,
-		"last_changed" = number,
-		"last_modified" = number,
-		"size" = number,
-		"type" = "directory" | "file"
-	}⦘⦘⦘,
-	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
-	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
-	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
-}  =  import_type<|"platforms/filesystem.nlua"|>]]
+IMPORTS['example_projects/luajit/src/platforms/windows/filesystem.nlua'] = function(...) --[[#local  type  contract  =  import_type<|"platforms/filesystem.nlua"|>]]
 
 
 local  ffi--[[#: {
@@ -67,9 +56,9 @@ local  ffi--[[#: {
 	"abi" = function⦗string⦘: ⦗false | true⦘,
 	"metatype" = function⦗any, any⦘: ⦗⦘,
 	"new" = function⦗any, ⦗any⦘×inf⦘: ⦗⦘,
-	"copy" = function⦗{ number = any }, nil | { number = any }, nil | number | string⦘: ⦗nil⦘,
+	"copy" = function⦗any, any, nil | number⦘: ⦗nil⦘,
 	"alignof" = function⦗any⦘: ⦗number⦘,
-	"cast" = function⦗any | string, number | string | { number = any }⦘: ⦗{ number = any }⦘,
+	"cast" = function⦗string, any⦘: ⦗⦘,
 	"typeof" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
 	"load" = function⦗string⦘: ⦗⦘,
 	"sizeof" = function⦗any, number⦘: ⦗number⦘ | function⦗any⦘: ⦗number⦘,
@@ -87,16 +76,16 @@ local  X64--[[#: false | true]]  =  ffi.arch  ==  "x64"
 
 
 local  fs--[[#: {
-	"get_attributes" = function⦗string, false | nil | true⦘: ⦗⦗⦗nil, string⦘ | ⦗{
+	"get_attributes" = function⦗string, false | nil | true⦘: ⦗⦗nil, string⦘ | ⦗{
 		"last_accessed" = number,
 		"last_changed" = number,
 		"last_modified" = number,
 		"size" = number,
 		"type" = "directory" | "file"
-	}⦘⦘⦘,
+	}⦘⦘,
 	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
 	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
-	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
+	"get_current_directory" = function⦗⦘: ⦗⦗nil, string⦘ | ⦗string⦘⦘
 }]]  =  {}--[[#  as  contract]]
 
 
@@ -117,7 +106,7 @@ ffi.cdef([[
 
 local  function  last_error()--[[#:  string]]
 	
-    local  error_str--[[#: { number = number }]]  =  ffi.new("uint8_t[?]",  1024)
+    local  error_str--[[#: { [number] = number }]]  =  ffi.new("uint8_t[?]",  1024)
 	
     local  FORMAT_MESSAGE_FROM_SYSTEM--[[#: 4096]]  =  0x00001000
 	
@@ -153,12 +142,12 @@ end
 do
 	
     local  struct--[[#: {
-	"dwFileAttributes" = number,
-	"ftCreationTime" = number,
-	"ftLastAccessTime" = number,
-	"ftLastWriteTime" = number,
-	"nFileSize" = number,
-	"__call" = function⦗*self-table*, nil | {
+	["dwFileAttributes"] = number,
+	["ftCreationTime"] = number,
+	["ftLastAccessTime"] = number,
+	["ftLastWriteTime"] = number,
+	["nFileSize"] = number,
+	["__call"] = function⦗*self-table*, nil | {
 		"dwFileAttributes" = nil | number,
 		"ftCreationTime" = nil | number,
 		"ftLastAccessTime" = nil | number,
@@ -259,21 +248,21 @@ do
 		 -- A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed.
 		
         virtual  =  0x10000,
-	 -- This value is reserved for system use.
-	
+ -- This value is reserved for system use.
+		
     }
 
 	
 
 	function  fs.get_attributes(path,  follow_link)
 		
-        local  info--[[#: { number = {
-		"dwFileAttributes" = number,
-		"ftCreationTime" = number,
-		"ftLastAccessTime" = number,
-		"ftLastWriteTime" = number,
-		"nFileSize" = number,
-		"__call" = function⦗*self-table*, nil | {
+        local  info--[[#: { [number] = {
+		["dwFileAttributes"] = number,
+		["ftCreationTime"] = number,
+		["ftLastAccessTime"] = number,
+		["ftLastWriteTime"] = number,
+		["nFileSize"] = number,
+		["__call"] = function⦗*self-table*, nil | {
 			"dwFileAttributes" = nil | number,
 			"ftCreationTime" = nil | number,
 			"ftLastAccessTime" = nil | number,
@@ -302,7 +291,7 @@ do
                 )  ==  flags.directory  and
 			 "directory"  or
 			 "file",
-		
+
             } 
         end
 		
@@ -318,23 +307,23 @@ end
 do
 	
     local  struct--[[#: {
-	"dwFileAttributes" = number,
-	"ftCreationTime" = number,
-	"ftLastAccessTime" = number,
-	"ftLastWriteTime" = number,
-	"nFileSize" = number,
-	"dwReserved" = number,
-	"cFileName" = { number = number },
-	"cAlternateFileName" = { number = number },
-	"__call" = function⦗*self-table*, nil | {
+	["dwFileAttributes"] = number,
+	["ftCreationTime"] = number,
+	["ftLastAccessTime"] = number,
+	["ftLastWriteTime"] = number,
+	["nFileSize"] = number,
+	["dwReserved"] = number,
+	["cFileName"] = { [number] = number },
+	["cAlternateFileName"] = { [number] = number },
+	["__call"] = function⦗*self-table*, nil | {
 		"dwFileAttributes" = nil | number,
 		"ftCreationTime" = nil | number,
 		"ftLastAccessTime" = nil | number,
 		"ftLastWriteTime" = nil | number,
 		"nFileSize" = nil | number,
 		"dwReserved" = nil | number,
-		"cFileName" = nil | { number = number },
-		"cAlternateFileName" = nil | { number = number }
+		"cFileName" = nil | { [number] = number },
+		"cAlternateFileName" = nil | { [number] = number }
 	}⦘: ⦗*self-table*⦘
 }]]  =  ffi.typeof([[
         struct {
@@ -387,7 +376,7 @@ do
 
 	
     
-    local  INVALID_FILE--[[#: { number = any }]]  =  ffi.cast("void *",  0xFFFFFFFFFFFFFFFFULL)
+    local  INVALID_FILE--[[#: any]]  =  ffi.cast("void *",  0xFFFFFFFFFFFFFFFFULL)
 
 	
 
@@ -409,24 +398,24 @@ do
 
 		
 
-        local  data--[[#: { number = {
-		"dwFileAttributes" = number,
-		"ftCreationTime" = number,
-		"ftLastAccessTime" = number,
-		"ftLastWriteTime" = number,
-		"nFileSize" = number,
-		"dwReserved" = number,
-		"cFileName" = { number = number },
-		"cAlternateFileName" = { number = number },
-		"__call" = function⦗*self-table*, nil | {
+        local  data--[[#: { [number] = {
+		["dwFileAttributes"] = number,
+		["ftCreationTime"] = number,
+		["ftLastAccessTime"] = number,
+		["ftLastWriteTime"] = number,
+		["nFileSize"] = number,
+		["dwReserved"] = number,
+		["cFileName"] = { [number] = number },
+		["cAlternateFileName"] = { [number] = number },
+		["__call"] = function⦗*self-table*, nil | {
 			"dwFileAttributes" = nil | number,
 			"ftCreationTime" = nil | number,
 			"ftLastAccessTime" = nil | number,
 			"ftLastWriteTime" = nil | number,
 			"nFileSize" = nil | number,
 			"dwReserved" = nil | number,
-			"cFileName" = nil | { number = number },
-			"cAlternateFileName" = nil | { number = number }
+			"cFileName" = nil | { [number] = number },
+			"cAlternateFileName" = nil | { [number] = number }
 		}⦘: ⦗*self-table*⦘
 	} }]]  =  ffi.new("$[1]",  struct)
 		
@@ -499,7 +488,7 @@ do
 
 	function  fs.get_current_directory()
 		
-        local  buffer--[[#: { number = number }]]  =  ffi.new("char[260]")
+        local  buffer--[[#: { [number] = number }]]  =  ffi.new("char[260]")
 		
         local  length--[[#: number]]  =  ffi.C.GetCurrentDirectoryA(260,  buffer)
 		
@@ -514,18 +503,7 @@ end
 
 
 return  fs end
-IMPORTS['example_projects/luajit/src/platforms/unix/filesystem.nlua'] = function(...) --[[#local  type  contract: {
-	"get_attributes" = function⦗string, false | nil | true⦘: ⦗⦗⦗nil, string⦘ | ⦗{
-		"last_accessed" = number,
-		"last_changed" = number,
-		"last_modified" = number,
-		"size" = number,
-		"type" = "directory" | "file"
-	}⦘⦘⦘,
-	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
-	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
-	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
-}  =  import_type<|"platforms/filesystem.nlua"|>]]
+IMPORTS['example_projects/luajit/src/platforms/unix/filesystem.nlua'] = function(...) --[[#local  type  contract  =  import_type<|"platforms/filesystem.nlua"|>]]
 
 
 local  ffi--[[#: {
@@ -537,9 +515,9 @@ local  ffi--[[#: {
 	"abi" = function⦗string⦘: ⦗false | true⦘,
 	"metatype" = function⦗any, any⦘: ⦗⦘,
 	"new" = function⦗any, ⦗any⦘×inf⦘: ⦗⦘,
-	"copy" = function⦗{ number = any }, nil | { number = any }, nil | number | string⦘: ⦗nil⦘,
+	"copy" = function⦗any, any, nil | number⦘: ⦗nil⦘,
 	"alignof" = function⦗any⦘: ⦗number⦘,
-	"cast" = function⦗any | string, number | string | { number = any }⦘: ⦗{ number = any }⦘,
+	"cast" = function⦗string, any⦘: ⦗⦘,
 	"typeof" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
 	"load" = function⦗string⦘: ⦗⦘,
 	"sizeof" = function⦗any, number⦘: ⦗number⦘ | function⦗any⦘: ⦗number⦘,
@@ -557,16 +535,16 @@ local  X64--[[#: false | true]]  =  ffi.arch  ==  "x64"
 
 
 local  fs--[[#: {
-	"get_attributes" = function⦗string, false | nil | true⦘: ⦗⦗⦗nil, string⦘ | ⦗{
+	"get_attributes" = function⦗string, false | nil | true⦘: ⦗⦗nil, string⦘ | ⦗{
 		"last_accessed" = number,
 		"last_changed" = number,
 		"last_modified" = number,
 		"size" = number,
 		"type" = "directory" | "file"
-	}⦘⦘⦘,
+	}⦘⦘,
 	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
 	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
-	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
+	"get_current_directory" = function⦗⦘: ⦗⦗nil, string⦘ | ⦗string⦘⦘
 }]]  =  {}--[[#  as  contract]]
 
 
@@ -699,8 +677,8 @@ do
 	
 
 	local  statbox--[[#: {
-	number = OSXStat | UnixX32Stat | UnixX64Stat,
-	"__call" = function⦗*self-table*, nil | { number = OSXStat | UnixX32Stat | UnixX64Stat | nil }⦘: ⦗*self-table*⦘
+	[number] = OSXStat | UnixX32Stat | UnixX64Stat,
+	["__call"] = function⦗*self-table*, nil | { [number] = OSXStat | UnixX32Stat | UnixX64Stat | nil as OSXStat | UnixX32Stat | UnixX64Stat, [nil as "__call"] = nil as function*self-tuple*: ⦗*self-table*⦘ }⦘: ⦗*self-table*⦘
 }]]  =  ffi.typeof("$[1]",  stat_struct)
 	
 	local  stat--[[#: nil]]
@@ -739,16 +717,16 @@ do
 		
 
 		stat  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])
-			
+				
 			return  ffi.C.syscall(STAT_SYSCALL,  path,  buff)
-		
+			
 		end
 		
 
 		stat_link  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])
-			
+				
 			return  ffi.C.syscall(STAT_LINK_SYSCALL,  path,  buff)
-		
+			
 		end
 	
 	end
@@ -762,8 +740,8 @@ do
 	function  fs.get_attributes(path,  follow_link)
 		
 		local  buff--[[#: {
-	number = OSXStat | UnixX32Stat | UnixX64Stat,
-	"__call" = function⦗*self-table*, nil | { number = OSXStat | UnixX32Stat | UnixX64Stat | nil }⦘: ⦗*self-table*⦘
+	[number] = OSXStat | UnixX32Stat | UnixX64Stat,
+	["__call"] = function⦗*self-table*, nil | { [number] = OSXStat | UnixX32Stat | UnixX64Stat | nil as OSXStat | UnixX32Stat | UnixX64Stat, [nil as "__call"] = nil as function*self-tuple*: ⦗*self-table*⦘ }⦘: ⦗*self-table*⦘
 }]]  =  statbox()
 		
 
@@ -783,7 +761,7 @@ do
 			
 
 				type  =  bit.band(buff[0].st_mode,  DIRECTORY)  ~=  0  and  "directory"  or  "file",
-		
+
 			} 
 		end
 		
@@ -863,7 +841,7 @@ do
 
 	function  fs.get_files(path)
 		
-		local  out--[[#:  List<|string|>[1] ]]  =  {}
+		local  out--[[#:  List<|string|>]]  =  {}
 		 -- [1] TODO
 		
 
@@ -880,7 +858,7 @@ do
 		
 		while  true  do
 			
-			local  dir_info--[[#: struct dirent*]]  =  ffi.C.readdir(ptr)
+			local  dir_info--[[#: nil | struct dirent*]]  =  ffi.C.readdir(ptr)
 			
 
 			dir_info  =  dir_info--[[#  as  dir_info  |  nil]]
@@ -938,7 +916,7 @@ do
 
 	function  fs.get_current_directory()
 		
-		local  temp--[[#: { number = number }]]  =  ffi.new("char[1024]")
+		local  temp--[[#: { [number] = number }]]  =  ffi.new("char[1024]")
 		
 		local  ret--[[#: nil | { number = number }]]  =  ffi.C.getcwd(temp,  ffi.sizeof(temp))
 		
@@ -971,16 +949,16 @@ end
 
 error("unknown platform") end
 local  fs--[[#: {
-	"get_attributes" = function⦗string, false | nil | true⦘: ⦗⦗⦗nil, string⦘ | ⦗{
+	"get_attributes" = function⦗string, false | nil | true⦘: ⦗⦗nil, string⦘ | ⦗{
 		"last_accessed" = number,
 		"last_changed" = number,
 		"last_modified" = number,
 		"size" = number,
 		"type" = "directory" | "file"
-	}⦘⦘⦘,
+	}⦘⦘,
 	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
 	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
-	"get_current_directory" = function⦗⦘: ⦗⦗⦗nil, string⦘ | ⦗string⦘⦘⦘
+	"get_current_directory" = function⦗⦘: ⦗⦗nil, string⦘ | ⦗string⦘⦘
 }]]  = ( IMPORTS['example_projects/luajit/src/filesystem.nlua']("filesystem.nlua"))
 
 

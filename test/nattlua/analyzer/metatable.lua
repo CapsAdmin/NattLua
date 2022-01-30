@@ -461,7 +461,7 @@ run[[
 
     §analyzer:AnalyzeUnreachableCode()
 
-    local type ret = return_type<|meta.Foo|>
+    local type ret = return_type<|meta.Foo|>[1]
     attest.equal<|ret, 2 | 3|>
 ]]
 

@@ -51,6 +51,13 @@ local function lua_types_to_tuple(self, node, tps)
 					tbl[i] = LString(v):SetNode(node)
 				elseif t == "boolean" then
 					tbl[i] = Symbol(v):SetNode(node)
+				elseif t == "table" then
+					local tbl = Table()
+					for _, val in ipairs(v) do
+						tbl:Insert(val)
+					end
+					tbl:SetContract(tbl)
+					return tbl
 				else
 					if node then
 						print(node:Render(), "!")

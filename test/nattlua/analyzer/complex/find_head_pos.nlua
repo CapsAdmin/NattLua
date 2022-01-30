@@ -1,6 +1,6 @@
 local type { Entity, Vector, Angle } = import_type<|"nattlua/definitions/glua.nlua"|>
 
-local type Matrix = exclude<|return_type<|Entity.GetBoneMatrix|>, nil|>
+local type Matrix = exclude<|return_type<|Entity.GetBoneMatrix|>[1], nil|>
 
 local type HeadPos = {
     findheadpos_head_bone = number | nil,
@@ -72,4 +72,4 @@ end
 
 FindHeadPosition(_ as Entity & HeadPos)
 
-attest.equal<|return_type<|FindHeadPosition|>, (Vector, Angle)|>
+attest.equal<|return_type<|FindHeadPosition|>[1], (Vector, Angle)|>

@@ -42,8 +42,14 @@ return
 
 			-- TUPLE UNPACK MESS
 			
-			if node.tokens["("] and node.tokens[")"] then
+			if node.tokens["("] and node.tokens[")"] and returned_tuple.Type == "tuple" then
 				returned_tuple = returned_tuple:Get(1)
+			end
+
+			if self:IsTypesystem() then
+				if returned_tuple.Type == "tuple" and returned_tuple:GetLength() == 1 then
+					returned_tuple = returned_tuple:Get(1)
+				end
 			end
 
 			self:PopAnalyzerEnvironment()

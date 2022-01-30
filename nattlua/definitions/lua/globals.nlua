@@ -16,7 +16,7 @@ type dofile = function=(filename: string)>(...) | function=()>(...)
 type ipairs = function=(t: Table)>(empty_function, Table, number)
 type tonumber = function=(e: number | string, base: number | nil)>(number | nil)
 
-_G.arg = _ as List<|any|>[1]
+_G.arg = _ as List<|any|>
 
 analyzer function type_print(...: ...any)
 	print(...)

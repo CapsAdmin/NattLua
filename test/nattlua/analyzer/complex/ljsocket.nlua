@@ -221,7 +221,7 @@ do
             local FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
             local flags = bit.bor(FORMAT_MESSAGE_IGNORE_INSERTS, FORMAT_MESSAGE_FROM_SYSTEM)
 
-            local cache: Map<|number, string|>[1] = {} --TODO
+            local cache: Map<|number, string|> = {}
 
             function socket.lasterror(num: number)
                 num = num or ffi.C.GetLastError()
@@ -342,7 +342,7 @@ do
         ]]
 
         do
-            local cache: Map<|number, string|>[1] = {}
+            local cache: Map<|number, string|> = {}
 
             function socket.lasterror(num: nil | number)
                 num = num or ffi.errno()
@@ -792,7 +792,7 @@ local SO = capture_flags("SO_")
 local TCP = capture_flags("TCP_")
 local POLL = capture_flags("POLL")
 
-local function table_to_flags(flags: Map<|string, number|>[1] | string, valid_flags: ref Map<|any, any|>, operation: ref function=(number, number)>(number))
+local function table_to_flags(flags: Map<|string, number|> | string, valid_flags: ref Map<|any, any|>, operation: ref function=(number, number)>(number))
 	if type(flags) == "string" then
 		flags = {flags}
     end
@@ -817,7 +817,7 @@ local function table_to_flags(flags: Map<|string, number|>[1] | string, valid_fl
 	return out
 end
 
-local function flags_to_table(flags: ref number, valid_flags: ref literal Map<|string, number|>[1], operation: ref function=(number, number)>(number))
+local function flags_to_table(flags: ref number, valid_flags: ref literal Map<|string, number|>, operation: ref function=(number, number)>(number))
     if not flags then return valid_flags.default_valid_flag end
     operation = operation or bit.band
 
@@ -910,10 +910,10 @@ end
 function M.get_address_info(data: {
     host = nil | string,
     service = nil | string,
-    socket_type = keysof<|SOCK.lookup|>[1] | nil,
-    family = keysof<|AF.lookup|>[1] | nil,
-    flags = {[keysof<|AI.lookup|>[1]] = nil | true} | nil,
-    protocol = keysof<|IPPROTO.lookup|>[1] | nil,
+    socket_type = keysof<|SOCK.lookup|> | nil,
+    family = keysof<|AF.lookup|> | nil,
+    flags = {[keysof<|AI.lookup|>] = nil | true} | nil,
+    protocol = keysof<|IPPROTO.lookup|> | nil,
 })
     local hints
 
@@ -937,7 +937,7 @@ function M.get_address_info(data: {
 
     if not ok then return ok, err end
 
-    local tbl: List<|AddressInfo|>[1] = {}
+    local tbl: List<|AddressInfo|> = {}
 
     local res = out[0]
 

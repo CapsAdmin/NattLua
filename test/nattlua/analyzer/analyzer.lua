@@ -83,9 +83,9 @@ test("escape comments", function()
             c --[[#: string]]) 
         end
          
-        attest.equal<|argument_type<|foo, 1|>, string|>
-        attest.equal<|argument_type<|foo, 2|>, number|>
-        attest.equal<|argument_type<|foo, 3|>, string|>
+        attest.equal<|argument_type<|foo, 1|>[1], string|>
+        attest.equal<|argument_type<|foo, 2|>[1], number|>
+        attest.equal<|argument_type<|foo, 3|>[1], string|>
     ]=])
 
     R[=[

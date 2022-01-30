@@ -102,7 +102,7 @@ run[=[
 run[=[
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
-	attest.equal(ctype.foo, _ as ffi.typeof<|"const char*"|>[1])
+	attest.equal(ctype.foo, _ as ffi.typeof<|"const char*"|>)
 ]=]
 
 
@@ -118,14 +118,14 @@ run[=[
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			attest.equal<|typeof ffi.C.foo, function=(string | nil | ffi.typeof<|"const char*"|>[1])>((nil)) |>
+			attest.equal<|typeof ffi.C.foo, function=(string | nil | ffi.typeof<|"const char*"|>)>((nil)) |>
 		else
 			ffi.cdef("int foo(int a);")
 			attest.equal<|typeof ffi.C.foo, function=(number)>((number))|>
 		end	
 	end
 
-	attest.equal<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>[1])>((nil)) |>
+	attest.equal<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>)>((nil)) |>
 ]=]
 
 run[=[
@@ -379,6 +379,6 @@ run[[
 	local str_v = ffi.new("const char *[?]", 1)
 
 	attest.equal(str_v, _ as {
-		[number] = (ffi.typeof<|"const char*"|>[1]) | nil | string
+		[number] = ffi.typeof<|"const char*"|> | nil | string
 	})
 ]]

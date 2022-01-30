@@ -34,7 +34,7 @@ end
 
 analyzer function return_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
-	return func:GetReturnTypes():Slice(i, i)
+	return {func:GetReturnTypes():Slice(i, i)}
 end
 
 analyzer function set_return_type(func: Function, tup: any)
@@ -43,7 +43,7 @@ end
 
 analyzer function argument_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
-	return func:GetArguments():Slice(i, i)
+	return {func:GetArguments():Slice(i, i)}
 end
 
 analyzer function exclude(T: any, U: any)
@@ -220,11 +220,11 @@ function Extract<|a: any, b: any|>
 end
 
 analyzer function Parameters(func: Function)
-	return func:GetArguments():Copy():SetUnpackable(true)
+	return {func:GetArguments():Copy():Unpack()}
 end
 
 analyzer function ReturnType(func: Function)
-	return func:GetReturnTypes():Copy():SetUnpackable(true)
+	return {func:GetReturnTypes():Copy():Unpack()}
 end
 
 function Uppercase<|val: ref string|>

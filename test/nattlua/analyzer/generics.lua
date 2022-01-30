@@ -112,5 +112,5 @@ run[[
         end
     end
     
-    attest.equal(lol<|number|>(1), _ as 1 | (nil, number))
+    attest.equal(lol<|number|>("foo"), _ as "foo" | nil | number)
 ]]
