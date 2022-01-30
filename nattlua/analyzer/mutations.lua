@@ -478,7 +478,7 @@ return function(META)
 
 		function META:TrackTableIndex(obj, key, val)
 			if self:IsTypesystem() then return end
-			if not val or val.Type ~= "union" then return end
+			if val.Type ~= "union" then return end
 			local hash = key:GetHash()
 			if not hash then return end
 			
@@ -488,32 +488,10 @@ return function(META)
 			local truthy_union = val:GetTruthy()
 			local falsy_union = val:GetFalsy()
 
-			falsy_union.parent_table = obj
-			falsy_union.parent_key = key
-			truthy_union.parent_table = obj
-			truthy_union.parent_key = key
-
-			obj.tracked_stack = obj.tracked_stack or {}
-			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
-
-			table.insert(obj.tracked_stack[hash], {
-				contract = obj:GetContract(),
-				key = key, 
-				truthy = truthy_union, 
-				falsy = falsy_union, 
-				inverted = self.inverted_index_tracking, 
-				truthy_falsy = true
-			})
-
-			self.tracked_tables = self.tracked_tables or {}
-			self.tracked_tables_done = self.tracked_tables_done or {}
-			if not self.tracked_tables_done[obj] then
-				table.insert(self.tracked_tables, obj)
-				self.tracked_tables_done[obj] = true
-			end
+			self:TrackTableIndexUnion(obj, key, truthy_union, falsy_union, self.inverted_index_tracking, true)
 		end
 
-		function META:TrackTableIndexUnion(obj, key, truthy_union, falsy_union, inverted)
+		function META:TrackTableIndexUnion(obj, key, truthy_union, falsy_union, inverted, truthy_falsy)
 			if self:IsTypesystem() then return end
 			local hash = key:GetHash()
 			if not hash then return end
@@ -538,11 +516,16 @@ return function(META)
 				key = key, 
 				truthy = truthy_union, 
 				falsy = falsy_union, 
-				inverted = inverted
+				inverted = inverted,
+				truthy_falsy = truthy_falsy,
 			})
-
+			
 			self.tracked_tables = self.tracked_tables or {}
-			table.insert(self.tracked_tables, obj)
+			self.tracked_tables_done = self.tracked_tables_done or {}
+			if not self.tracked_tables_done[obj] then
+				table.insert(self.tracked_tables, obj)
+				self.tracked_tables_done[obj] = true
+			end
 		end
 
 		function META:GetTrackedObjectWithKey(obj, key)
