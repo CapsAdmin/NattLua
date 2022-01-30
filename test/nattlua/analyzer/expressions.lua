@@ -248,3 +248,18 @@ pending[[
         attest.equal(b, _ as number | nil)
     end
 ]]
+
+pending[[
+    local type A = {Type = "human"}
+    local type B = {Type = "cat"}
+
+    local x: A | B
+
+    -- x.Type becomes a union of A.Type and B.Type
+    -- 
+
+    if x.Type == "human" then
+    print("x.Type:" , x.Type)
+    print(x)
+    end
+]]

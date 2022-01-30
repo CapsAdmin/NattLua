@@ -1505,6 +1505,19 @@ run[[
 ]]
 
 pending[[
+    do
+        local x: {foo = nil | true}
+     
+        if x.foo == nil then
+           return
+        end
+     
+        attest.equal(x.foo, true)
+     end
+     
+]]
+
+pending[[
     local x: true | false | 2
 
     if x then    
