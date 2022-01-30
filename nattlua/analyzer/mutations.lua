@@ -659,9 +659,17 @@ return function(META)
 					if stack then
 						local val
 						if scope:IsElseConditionalScope() or stack[#stack].inverted then
-							val = negate and stack[#stack].truthy or stack[#stack].falsy
+							if negate then
+								val = stack[#stack].truthy
+							else
+								val = stack[#stack].falsy
+							end
 						else
-							val = negate and stack[#stack].falsy or stack[#stack].truthy
+							if negate then
+								val = stack[#stack].falsy
+							else
+								val = stack[#stack].truthy
+							end
 						end
 
 						if val and (val.Type ~= "union" or not val:IsEmpty()) then
@@ -681,9 +689,17 @@ return function(META)
 					local stack = data.stack
 					local val
 					if scope:IsElseConditionalScope() or stack[#stack].inverted then
-						val = negate and stack[#stack].truthy or stack[#stack].falsy
+						if negate then
+							val = stack[#stack].truthy
+						else
+							val = stack[#stack].falsy
+						end
 					else
-						val = negate and stack[#stack].falsy or stack[#stack].truthy
+						if negate then
+							val = stack[#stack].falsy
+						else
+							val = stack[#stack].truthy
+						end
 					end
 
 					if val and (val.Type ~= "union" or not val:IsEmpty()) then
