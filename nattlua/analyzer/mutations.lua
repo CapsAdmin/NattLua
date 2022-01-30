@@ -649,64 +649,53 @@ return function(META)
 					end
 				end
 			end
-			
+		end
+
+		local function solve(data, scope, negate)
+			local stack = data.stack
+			if stack then
+				local val
+				if scope:IsElseConditionalScope() or stack[#stack].inverted then
+					if negate then
+						val = stack[#stack].truthy
+					else
+						val = stack[#stack].falsy
+					end
+				else
+					if negate then
+						val = stack[#stack].falsy
+					else
+						val = stack[#stack].truthy
+					end
+				end
+
+				if val and (val.Type ~= "union" or not val:IsEmpty()) then
+					if #val:GetData() == 1 then
+						val = val:GetData()[1]
+					end
+					
+					return val
+				end
+			end
 		end
 
 		function META:ApplyMutationsAfterReturn(scope, scope_override, negate, upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
-					local stack = data.stack
-					if stack then
-						local val
-						if scope:IsElseConditionalScope() or stack[#stack].inverted then
-							if negate then
-								val = stack[#stack].truthy
-							else
-								val = stack[#stack].falsy
-							end
-						else
-							if negate then
-								val = stack[#stack].falsy
-							else
-								val = stack[#stack].truthy
-							end
-						end
+					local val = solve(data, scope, negate)
 
-						if val and (val.Type ~= "union" or not val:IsEmpty()) then
-							if #val:GetData() == 1 then
-								val = val:GetData()[1]
-							end
-							
-							val:SetUpvalue(data.upvalue)
-							self:MutateUpvalue(data.upvalue, val, scope_override, true)
-						end
+					if val then
+						val:SetUpvalue(data.upvalue)
+						self:MutateUpvalue(data.upvalue, val, scope_override, true)
 					end
 				end
 			end
 
 			if tables then
 				for _, data in ipairs(tables) do
-					local stack = data.stack
-					local val
-					if scope:IsElseConditionalScope() or stack[#stack].inverted then
-						if negate then
-							val = stack[#stack].truthy
-						else
-							val = stack[#stack].falsy
-						end
-					else
-						if negate then
-							val = stack[#stack].falsy
-						else
-							val = stack[#stack].truthy
-						end
-					end
+					local val = solve(data, scope, negate)
 
-					if val and (val.Type ~= "union" or not val:IsEmpty()) then
-						if #val:GetData() == 1 then
-							val = val:GetData()[1]
-						end	 
-		
+					if val then
 						self:MutateValue(data.obj, data.key, val, scope_override, true)
 					end
 				end
