@@ -34,6 +34,7 @@ function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: 
 	end
 end
 
+--[[#type META.Type = string]]
 --[[#type BaseType.Data = any | nil]]
 --[[#type BaseType.Name = string | nil]]
 --[[#type BaseType.parent = BaseType | nil]]

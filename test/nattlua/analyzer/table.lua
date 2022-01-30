@@ -396,7 +396,7 @@ run([[
         obj.Bar = "asdf"
     end
 
-    local obj = {Foo = "hm"}
+    local obj = {Foo = nil}
     mutate(obj)
 ]], "mutating function argument")
 

@@ -202,8 +202,28 @@ function META:FollowsContract(contract--[[#: TTable]])
 					{
 						"the key ",
 						res.key,
-						" is not a subset of",
+						" is not a subset of ",
 						keyval.key,
+						" because ",
+						err,
+					})
+			end
+		end
+	end
+
+	for _, keyval in ipairs(self:GetData()) do
+		local res, err = contract:FindKeyValReverse(keyval.key)
+		
+		if not keyval.val:CanBeNil() then
+			if not res then return res, err end
+			local ok, err = keyval.val:IsSubsetOf(res.val)
+			if not ok then 
+				return type_errors.other(
+					{
+						"the key ",
+						keyval.key,
+						" is not a subset of ",
+						res.val,
 						" because ",
 						err,
 					})

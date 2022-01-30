@@ -289,7 +289,7 @@ do
         if jit.arch ~= "x64" then -- xp or something
             ffi.cdef[[int WSAAddressToStringA(struct sockaddr *, unsigned long, void *, char *, unsigned long *);]]
 
-            function socket.inet_ntop(family: number, pAddr: ffi.typeof<|"struct sockaddr *"|>, strptr: string, strlen: number)
+            function socket.inet_ntop(family: number, pAddr: ffi.get_type<|"struct sockaddr *"|>, strptr: string, strlen: number)
                 -- win XP: http://memset.wordpress.com/2010/10/09/inet_ntop-for-win32/
                 local srcaddr = ffi.new("struct sockaddr_in")
                 ffi.copy(srcaddr.sin_addr, pAddr, ffi.sizeof(srcaddr.sin_addr))
@@ -323,7 +323,7 @@ do
             end
         end
 
-        function socket.poll(fds: mutable List<|Socket|>, ndfs: number, timeout: number)
+        function socket.poll(fds: ffi.get_type<|"struct pollfd*"|>, ndfs: number, timeout: number)
             local ret = C.WSAPoll(fds, ndfs, timeout)
             if ret < 0 then
                 return nil, socket.lasterror()
@@ -400,7 +400,7 @@ do
             end
         end
 
-        function socket.poll(fds: mutable List<|Socket|>, ndfs: number, timeout: number)
+        function socket.poll(fds: ffi.get_type<|"struct pollfd*"|>, ndfs: number, timeout: number)
             local ret = C.poll(fds, ndfs, timeout)
             if ret < 0 then
                 return nil, socket.lasterror()
@@ -485,7 +485,7 @@ do
     socket.inet_ntoa = C.inet_ntoa
     socket.ntohs = C.ntohs
 
-    function socket.poll(fd: mutable List<|Socket|>, events: any, revents: number)
+    function socket.poll(fd: ffi.get_type<|"struct pollfd*"|>, events: any, revents: number)
 
     end
     
@@ -792,7 +792,7 @@ local SO = capture_flags("SO_")
 local TCP = capture_flags("TCP_")
 local POLL = capture_flags("POLL")
 
-local function table_to_flags(flags: Map<|string, number|> | string, valid_flags: ref Map<|any, any|>, operation: ref function=(number, number)>(number))
+local function table_to_flags(flags: List<|string|> | string, valid_flags: ref Map<|any, any|>, operation: ref function=(number, number)>(number))
 	if type(flags) == "string" then
 		flags = {flags}
     end
@@ -800,13 +800,9 @@ local function table_to_flags(flags: Map<|string, number|> | string, valid_flags
 
 	local out = 0
 
-	for k, v in pairs(flags) do
-		local flag = valid_flags[v] or valid_flags[k]
-        
-		if not flag then
-            error("invalid flag " .. tostring(v), 2)
-		end
-        flag = tonumber(flag)
+	for _, v in ipairs(flags) do
+		local flag = tonumber(valid_flags[v] as string)
+
         if not flag then
             error("invalid flag " .. tostring(flag), 2)
         end
@@ -818,7 +814,6 @@ local function table_to_flags(flags: Map<|string, number|> | string, valid_flags
 end
 
 local function flags_to_table(flags: ref number, valid_flags: ref literal Map<|string, number|>, operation: ref function=(number, number)>(number))
-    if not flags then return valid_flags.default_valid_flag end
     operation = operation or bit.band
 
 	local out = {}
@@ -830,6 +825,20 @@ local function flags_to_table(flags: ref number, valid_flags: ref literal Map<|s
 	end
 
 	return out
+end
+
+local function flags_to_list(flags: ref number, valid_flags: ref literal Map<|string, number|>, operation: ref function=(number, number)>(number))
+    operation = operation or bit.band
+
+    local list = {}
+
+	for k, v in pairs(valid_flags) do
+		if operation(flags, v) > 0 then
+            table.insert(list, k)
+		end
+	end
+
+	return list
 end
 
 local M = {}
@@ -844,7 +853,7 @@ function M.poll(s: any, flags: List<|string|>, timeout: nil | number)
         fd = s.fd,
         events = table_to_flags(flags, POLL.lookup, bit.bor),
         revents = 0,
-    }})
+    }}) as any
     local ok, err = socket.poll(pfd, 1, timeout or 0)
     if not ok then return ok, err end
     return flags_to_table(pfd[0].revents, POLL.lookup, bit.bor), ok
@@ -857,8 +866,8 @@ local type AddressInfo = {
     family = keysof<|AF.lookup|>,
     socket_type = keysof<|SOCK.lookup|>,
     protocol = keysof<|IPPROTO.lookup|>,
-    flags = {[keysof<|AI.lookup|>] = nil | true},
-    addrinfo = ffi.typeof<|"struct addrinfo"|>,
+    flags = List<|keysof<|AI.lookup|>|>,
+    addrinfo = ffi.get_type<|"struct addrinfo"|>,
 }
 
 local function addrinfo_get_ip(self: AddressInfo)
@@ -887,7 +896,7 @@ type AddressInfo.get_port = addrinfo_get_port
 type AddressInfo.get_ip = addrinfo_get_ip
 type AddressInfo.@Name = "AddressInfo"
 
-local function addrinfo_to_table(res: ffi.typeof<|"struct addrinfo"|>, host: nil | string, service: nil | string): AddressInfo
+local function addrinfo_to_table(res: ffi.get_type<|"struct addrinfo"|>, host: nil | string, service: nil | string): AddressInfo
     local info = {}
 
     if res.ai_canonname ~= nil then
@@ -899,7 +908,7 @@ local function addrinfo_to_table(res: ffi.typeof<|"struct addrinfo"|>, host: nil
     info.family = AF.reverse[res.ai_family]
     info.socket_type = SOCK.reverse[res.ai_socktype]
     info.protocol = IPPROTO.reverse[res.ai_protocol]
-    info.flags = flags_to_table(res.ai_flags, AI.lookup, bit.band)
+    info.flags = flags_to_list(res.ai_flags, AI.lookup, bit.band)
     info.addrinfo = res
     info.get_ip = addrinfo_get_ip
     info.get_port = addrinfo_get_port
@@ -912,7 +921,7 @@ function M.get_address_info(data: {
     service = nil | string,
     socket_type = keysof<|SOCK.lookup|> | nil,
     family = keysof<|AF.lookup|> | nil,
-    flags = {[keysof<|AI.lookup|>] = nil | true} | nil,
+    flags = List<|keysof<|AI.lookup|>|> | nil,
     protocol = keysof<|IPPROTO.lookup|> | nil,
 })
     local hints
@@ -955,7 +964,7 @@ end
 function M.find_first_address(host: nil | string, service: nil | string, options: {
     socket_type = keysof<|SOCK.lookup|>,
     family = keysof<|AF.lookup|>,
-    flags = {[keysof<|AI.lookup|>] = nil | true} | nil,
+    flags = List<|keysof<|AI.lookup|>|> | nil,
     protocol = keysof<|IPPROTO.lookup|>,
 })
     options = options or {}
@@ -1279,7 +1288,7 @@ do
         return self:receive(size, flags, src_addr as any --[[TODO]], src_addr_size)
     end
     
-    function meta:receive(size: number, flags: number, src_address: nil | ffi.typeof<|"struct sockaddr *"|>, address_len: number)
+    function meta:receive(size: number, flags: number, src_address: nil | ffi.get_type<|"struct sockaddr *"|>, address_len: number)
         size = size or 64000
         local buff = ffi.new("char[?]", size)
 

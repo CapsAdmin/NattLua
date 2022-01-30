@@ -833,3 +833,11 @@ run[[
 
     foo(tbl)
 ]]
+
+run([[
+    local function foo(out: List<|string|>)
+    end
+    
+    local x = {"", "b", 1}
+    foo(x)
+]], "key 3 is not a subset of nil | string")

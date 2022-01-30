@@ -89,7 +89,7 @@ function META:Copy()
 	return copy --[[# as any]] -- TODO: figure out inheritance
 end
 
-function META.IsSubsetOf(A--[[#: TNumber & {Type = string}]], B--[[#: TNumber & {Type = string}]])
+function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TNumber]])
 	if B.Type == "tuple" then B = (B --[[# as any]]):Get(1) end
 	if B.Type == "any" then return true end
 	if B.Type == "union" then return (B --[[# as any]]):IsTargetSubsetOfChild(A) end
