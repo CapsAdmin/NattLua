@@ -126,10 +126,7 @@ return function(META)
 				old[i] = upvalue
 			end
 
-			local copy = self:CloneCurrentScope()
-			copy:SetConditionalScope(true)
-
-			self:ApplyMutationsAfterReturn(copy, nil, false, self:GetTrackedUpvalues(old), self:GetTrackedTables())
+			self:ApplyMutationsAfterReturn(self:GetScope(), nil, false, self:GetTrackedUpvalues(old), self:GetTrackedTables())
 		else
 			self.lua_error_thrown = msg
 		end
