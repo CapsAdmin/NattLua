@@ -74,7 +74,7 @@ return function(META)
 
 				for _, keyval in ipairs(g:GetData()) do
 					self:FireEvent("set_environment_value", keyval.key, keyval.val)
-					self:MutateValue(g, keyval.key, keyval.val)
+					self:MutateTable(g, keyval.key, keyval.val)
 				end
 
 				for _, upvalue in ipairs(scope_copy:GetUpvalues("runtime")) do

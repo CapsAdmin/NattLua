@@ -135,7 +135,7 @@ function META:GetLength(analyzer)
 	for _, kv in ipairs(self:GetData()) do
 		
 		if analyzer and self.mutations then
-			local val = analyzer:GetMutatedValue(self, kv.key)
+			local val = analyzer:GetMutatedTableValue(self, kv.key)
 			if val.Type == "union" and val:CanBeNil() then
 				return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true))
 			end

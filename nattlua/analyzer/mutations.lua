@@ -264,7 +264,7 @@ return function(META)
 				end
 			end
 
-			local val = self:GetMutatedValue(obj, realkey, obj:Get(realkey))
+			local val = self:GetMutatedTableValue(obj, realkey, obj:Get(realkey))
 
 			temp:Set(realkey, val)
 		end
@@ -272,42 +272,31 @@ return function(META)
 		return temp:GetLength()
 	end
 
-	function META:GetMutatedValue(obj, key, value)
-		if self:IsTypesystem() then return end
+	function META:GetMutatedTableValue(tbl, key, value)
+		if self:IsTypesystem() then return value end
+
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue()
+		if not hash then return end
 
 		local scope = self:GetScope()
 		local node = key:GetNode()
-		local hash = key:GetHash()
+
 		
-		if not hash then
-			if key:GetUpvalue() then
-				hash = key:GetUpvalue()
-			end
-		end
+		initialize_mutation_tracker(tbl, scope, key, hash, node)
 
-		if not hash then return value end
-
-		initialize_mutation_tracker(obj, scope, key, hash, node)
-
-		return get_value_from_scope(self, copy(obj.mutations[hash]), scope, obj, hash)
+		return get_value_from_scope(self, copy(tbl.mutations[hash]), scope, tbl, hash)
 	end
 
-	function META:MutateValue(obj, key, val, scope_override, from_tracking)
+	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
 		if self:IsTypesystem() then return end
+
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue()
+		if not hash then return end
 
 		local scope = scope_override or self:GetScope()
 		local node = key:GetNode()
-		local hash = key:GetHash()
 
-		if not hash then
-			if key:GetUpvalue() then
-				hash = key:GetUpvalue()
-			end
-		end
-
-		if not hash then return end -- no mutation?
-
-		initialize_mutation_tracker(obj, scope, key, hash, node)
+		initialize_mutation_tracker(tbl, scope, key, hash, node)
 
 		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then
@@ -317,18 +306,10 @@ return function(META)
 			end
 		end
 
-		table.insert(obj.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking})
+		table.insert(tbl.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking})
 
 		if from_tracking then
-			scope:AddTrackedObject(obj)
-		end
-	end
-
-	function META:DumpUpvalueMutations(upvalue)
-		print(upvalue)
-		local hash = upvalue:GetKey()
-		for i,v in ipairs(upvalue.mutations[hash]) do
-			print(i, v.scope, v.value)
+			scope:AddTrackedObject(tbl)
 		end
 	end
 
@@ -634,7 +615,7 @@ return function(META)
 					end
 
 					if not union:IsEmpty() then
-						self:MutateValue(data.obj, data.key, union, nil, true)
+						self:MutateTable(data.obj, data.key, union, nil, true)
 					end
 				end
 			end
@@ -669,14 +650,14 @@ return function(META)
 
 				if block.tables then
 					for _, data in ipairs(block.tables) do
-						local union = self:GetMutatedValue(data.obj, data.key)
+						local union = self:GetMutatedTableValue(data.obj, data.key)
 						if union then
 							if union.Type == "union" then
 								for _, v in ipairs(data.stack) do
 									union:RemoveType(v.truthy)
 								end
 							end
-							self:MutateValue(data.obj, data.key, union, nil, true)
+							self:MutateTable(data.obj, data.key, union, nil, true)
 						end
 					end
 				end
@@ -744,7 +725,7 @@ return function(META)
 					local val = solve(data, scope, negate)
 
 					if val then
-						self:MutateValue(data.obj, data.key, val, scope_override, true)
+						self:MutateTable(data.obj, data.key, val, scope_override, true)
 					end
 				end
 			end

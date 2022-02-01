@@ -679,7 +679,7 @@ return
 									copy = copy or return_result:Copy()
 									local tbl = Table()
 									for _, kv in ipairs(v:GetData()) do
-										tbl:Set(kv.key, self:GetMutatedValue(v, kv.key, kv.val))
+										tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key, kv.val))
 									end
 									copy:Set(i, tbl)
 								end

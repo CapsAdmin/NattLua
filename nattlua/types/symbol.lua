@@ -24,6 +24,10 @@ function META:__tostring()
 	return tostring(self:GetData())
 end
 
+function META:GetHash()
+	return tostring(self.Data)
+end
+
 function META:Copy()
 	local copy = self.New(self:GetData())
 	copy:CopyInternalsFrom(self)

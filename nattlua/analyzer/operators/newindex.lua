@@ -102,7 +102,7 @@ return
 								existing, err = contract:Get(key)
 
 								if existing then
-									existing = self:GetMutatedValue(obj, key, existing)
+									existing = self:GetMutatedTableValue(obj, key, existing)
 								end
 							end
 						else
@@ -130,7 +130,7 @@ return
 
 							if ok then
 								if obj == contract then
-									self:MutateValue(obj, key, val)
+									self:MutateTable(obj, key, val)
 									return true
 								end
 							else
@@ -152,7 +152,7 @@ return
 					end
 				end
 
-				self:MutateValue(obj, key, val)
+				self:MutateTable(obj, key, val)
 
 				if not obj:GetContract() then
 					return obj:Set(key, val, self:IsRuntime())

@@ -8,6 +8,10 @@ local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 META.Type = "union"
 
+function META:GetHash()
+	return tostring(self)
+end
+
 function META.Equal(a, b)
 	if a.suppress then return true end
 	if b.Type ~= "union" and #a.Data == 1 then return a.Data[1]:Equal(b) end

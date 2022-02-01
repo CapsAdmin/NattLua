@@ -85,7 +85,7 @@ return
 					
 					
 					if not obj.argument_index or contract.ref_argument then
-						local val = self:GetMutatedValue(obj, key, val)
+						local val = self:GetMutatedTableValue(obj, key, val)
 
 						if val then
 							if val.Type == "union" then
@@ -108,7 +108,7 @@ return
 
 					--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
 					if obj.mutations then
-						local tracked = self:GetMutatedValue(obj, key, val)
+						local tracked = self:GetMutatedTableValue(obj, key, val)
 
 						
 						if tracked then
@@ -122,7 +122,7 @@ return
 					return val
 				end
 			
-				local val = self:GetMutatedValue(obj, key, obj:Get(key))
+				local val = self:GetMutatedTableValue(obj, key, obj:Get(key))
 
 				if key:IsLiteral() then
 					local found_key = obj:FindKeyValReverse(key)
