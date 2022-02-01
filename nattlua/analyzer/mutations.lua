@@ -6,19 +6,8 @@ local tostring = tostring
 local ipairs = ipairs
 local table = require("table")
 local Union = require("nattlua.types.union").Union
-local DEBUG = false
-
-local function dprint(mut, reason)
-	print(
-		"\t" .. tostring(mut.scope) .. " - " .. tostring(mut.value) .. ": " .. reason
-	)
-end
 
 local function get_value_from_scope(self, mutations, scope, obj, key)
-	if DEBUG then
-		print("looking up mutations for " .. tostring(obj) .. "." .. tostring(key) .. ":")
-	end
-
 	do
 		do
 			local last_scope
@@ -27,10 +16,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				local mut = mutations[i]
 
 				if last_scope and mut.scope == last_scope then
-					if DEBUG then
-						dprint(mut, "redudant mutation")
-					end
-
+					-- "redudant mutation"
 					table.remove(mutations, i)
 				end
 
@@ -50,11 +36,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 					(obj.Type == "table" and obj:GetContract() ~= mut.contract)
 				)
 				and scope ~= mut.scope 
-			then
-				if DEBUG then
-					dprint(mut, "not inside the same if statement")
-				end
-
+			then				
+				-- not inside the same if statement"
 				table.remove(mutations, i)
 			end
 		end
@@ -71,10 +54,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 						if not mut.scope:IsPartOfTestStatementAs(scope) and not mut.scope:IsCertainFromScope(scope) then
 							for i = i, 1, -1 do
 								if mutations[i].scope:IsCertainFromScope(scope) then
-									if DEBUG then
-										dprint(mut, "redudant mutation before else part of if statement")
-									end
-
+									-- redudant mutation before else part of if statement
 									table.remove(mutations, i)
 								end
 							end
@@ -99,14 +79,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 						if test_scope_b then
 							if test_scope_a:TracksSameAs(test_scope_b) then
+								-- forcing scope certainty because this scope is using the same test condition
 								mut.certain_override = true
-							
-								if DEBUG then
-									dprint(
-										mut,
-										"forcing scope certainty because this scope is using the same test condition"
-									)
-								end
 							end
 						end
 					end
