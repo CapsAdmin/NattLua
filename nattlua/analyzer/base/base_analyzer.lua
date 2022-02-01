@@ -18,7 +18,6 @@ local table = require("table")
 local math = require("math")
 return function(META)
 	require("nattlua.analyzer.base.scopes")(META)
-	require("nattlua.analyzer.base.events")(META)
 	require("nattlua.analyzer.base.error_handling")(META)
 
 	function META:AnalyzeRootStatement(statement, ...)
@@ -129,17 +128,14 @@ return function(META)
 			context:PushCurrentAnalyzer(self)
 
 			local total = #self.deferred_calls
-			self:FireEvent("analyze_unreachable_code_start", total)
 			self.processing_deferred_calls = true
 			local called_count = 0
 
 			for _, v in ipairs(self.deferred_calls) do
 				if not v[1].called and not v[1].done and v[1].explicit_arguments then
 					local time = os.clock()
-					self:FireEvent("analyze_unreachable_function_start", v[1], called_count, total)
 					call(self, table.unpack(v))
 					called_count = called_count + 1
-					self:FireEvent("analyze_unreachable_function_stop", v[1], called_count, total, os.clock() - time)
 					v[1].done = true
 					v[1].called = nil
 				end
@@ -148,10 +144,8 @@ return function(META)
 			for _, v in ipairs(self.deferred_calls) do
 				if not v[1].called and not v[1].done and not v[1].explicit_arguments then
 					local time = os.clock()
-					self:FireEvent("analyze_unreachable_function_start", v[1], called_count, total)
 					call(self, table.unpack(v))
 					called_count = called_count + 1
-					self:FireEvent("analyze_unreachable_function_stop", v[1], called_count, total, os.clock() - time)
 					v[1].done = true
 					v[1].called = nil
 				end
@@ -159,7 +153,6 @@ return function(META)
 
 			self.processing_deferred_calls = false
 			self.deferred_calls = nil
-			self:FireEvent("analyze_unreachable_code_stop", called_count, total)
 			context:PopCurrentAnalyzer()
 		end
 	end

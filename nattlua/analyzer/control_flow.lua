@@ -15,7 +15,6 @@ return function(META)
 			self:AnalyzeStatement(statement)
 
 			if self.break_out_scope or self._continue_ then
-				self:FireEvent(self.break_out_scope and "break" or "continue")
 				return
 			end
 

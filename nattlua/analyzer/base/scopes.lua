@@ -23,7 +23,6 @@ return function(META)
 	end
 
 	function META:PushScope(scope)
-		self:FireEvent("enter_scope", scope)
 		table.insert(self.scope_stack, self.scope)
 		self.scope = scope
 		return scope
@@ -42,7 +41,6 @@ return function(META)
 			end
 
 			function META:PopScope()
-				self:FireEvent("leave_scope")
 				local new = table.remove(self.scope_stack)
 				local old = self.scope
 
@@ -62,7 +60,6 @@ return function(META)
 			end
 
 			function META:CloneCurrentScope()
-				self:FireEvent("clone_current_scope")
 				local scope_copy = self:GetScope():Copy(true)
 				local g = self:GetGlobalEnvironment("runtime"):Copy()
 				local last_node = self.environment_nodes[#self.environment_nodes]
@@ -73,12 +70,10 @@ return function(META)
 			self:PushScope(scope_copy)
 
 				for _, keyval in ipairs(g:GetData()) do
-					self:FireEvent("set_environment_value", keyval.key, keyval.val)
 					self:MutateTable(g, keyval.key, keyval.val)
 				end
 
 				for _, upvalue in ipairs(scope_copy:GetUpvalues("runtime")) do
-					self:FireEvent("upvalue", upvalue.key, upvalue:GetValue())
 					self:MutateUpvalue(upvalue, upvalue:GetValue())
 				end
 
@@ -87,7 +82,6 @@ return function(META)
 
 			function META:CreateLocalValue(key, obj, function_argument)
 				local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
-				self:FireEvent("upvalue", key, obj, function_argument)
 				self:MutateUpvalue(upvalue, obj)
 				return upvalue
 			end
@@ -195,7 +189,6 @@ return function(META)
 				if upvalue then
 					if not self:MutateUpvalue(upvalue, val) then
 						upvalue:SetValue(val)
-						self:FireEvent("mutate_upvalue", key, val)
 					end
 
 					return upvalue
@@ -213,7 +206,6 @@ return function(META)
 				
 				self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
 
-				self:FireEvent("set_environment_value", key, val)
 				return val
 			end
 		end

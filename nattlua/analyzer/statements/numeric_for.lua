@@ -55,7 +55,6 @@ return
 
 			statement.identifiers[1].inferred_type = init
 				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
-				self:FireEvent("numeric_for", init, max, step)
 
 				if literal_init and literal_max and literal_step and literal_max < 1000 then
 					local uncertain_break = false
@@ -123,7 +122,6 @@ return
 					self:PopUncertainLoop()
 				end
 
-				self:FireEvent("leave_scope")
 				self.break_out_scope = nil
 			self:PopConditionalScope()
 		end,

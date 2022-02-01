@@ -4,6 +4,5 @@ return
 		AnalyzeReturn = function(self, statement)
 			local ret = self:AnalyzeExpressions(statement.expressions)
 			self:Return(statement, ret)
-			self:FireEvent("return", ret)
 		end,
 	}

@@ -92,38 +92,27 @@ return
 			local last_scope
 
 			for i, block in ipairs(blocks) do
-				if block.is_else then
-					self:FireEvent("if", "else", true)
-				else
-					self:FireEvent("if", i == 1 and "if" or "elseif", true)
+				local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
+				
+				if last_scope then
+					last_scope:SetNextConditionalSibling(scope)
+					scope:SetPreviousConditionalSibling(last_scope)
 				end
-					local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
-					
-					if last_scope then
-						last_scope:SetNextConditionalSibling(scope)
-						scope:SetPreviousConditionalSibling(last_scope)
-					end
 
-					last_scope = scope
+				last_scope = scope
 
-					scope:SetTrackedUpvalues(block.upvalues)
-					scope:SetTrackedTables(block.tables)
-					if block.is_else then
-						scope:SetElseConditionalScope(true)
-						self:ApplyMutationsInIfElse(blocks)
-					else
-						self:ApplyMutationsInIf(block.upvalues, block.tables)
-					end
-
-
-					self:AnalyzeStatements(block.statements)
-					self:PopConditionalScope()
-
+				scope:SetTrackedUpvalues(block.upvalues)
+				scope:SetTrackedTables(block.tables)
 				if block.is_else then
-					self:FireEvent("if", "else", false)
+					scope:SetElseConditionalScope(true)
+					self:ApplyMutationsInIfElse(blocks)
 				else
-					self:FireEvent("if", i == 1 and "if" or "elseif", false)
+					self:ApplyMutationsInIf(block.upvalues, block.tables)
 				end
+
+
+				self:AnalyzeStatements(block.statements)
+				self:PopConditionalScope()
 			end
 
 			self:ClearTracked()

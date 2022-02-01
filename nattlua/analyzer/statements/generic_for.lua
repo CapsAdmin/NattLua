@@ -37,7 +37,6 @@ return
 						end
 
 						self:PushConditionalScope(statement, returned_key:IsTruthy(), returned_key:IsFalsy())
-						self:FireEvent("generic_for", statement.identifiers, values)
 						self:PushUncertainLoop(false)
 					end
 

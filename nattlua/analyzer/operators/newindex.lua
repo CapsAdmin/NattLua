@@ -46,8 +46,6 @@ return
 					end
 				end
 
-				self:FireEvent("newindex", obj, key, val)
-
 				if obj:GetMetaTable() then
 					local func = obj:GetMetaTable():Get(LString("__newindex"))
 

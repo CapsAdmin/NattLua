@@ -312,8 +312,6 @@ return
 					end
 				end
 
-				self:FireEvent("external_call", self:GetActiveNode(), obj)
-
 				local ret = obj:GetReturnTypes():Copy()
 
 				-- clear any reference id from the returned arguments
@@ -656,8 +654,6 @@ return
 
 						function_node.inferred_type = obj
 					end
-
-					self:FireEvent("function_spec", obj)
 
 					local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 

@@ -17,7 +17,6 @@ return
 
 				for i = 1, 32 do
 					self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
-					self:FireEvent("while", obj)
 						self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
 
 						self:AnalyzeStatements(statement.statements)
