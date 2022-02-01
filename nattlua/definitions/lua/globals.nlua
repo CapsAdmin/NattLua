@@ -66,7 +66,7 @@ analyzer function next(t: Map<|any, any|>, k: any)
 	local v = types.Union()
 
 	for _, t in ipairs(t) do
-		if not t:GetData() then return end
+		if not t:GetData() then return types.Any(), types.Any() end
 
 		for i, kv in ipairs(t:GetContract() and t:GetContract():GetData() or t:GetData()) do
 			if kv.Type then

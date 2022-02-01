@@ -1,11 +1,14 @@
 local META = dofile("nattlua/types/base.lua")
+--[[#local TBaseType = META.TBaseType ]]
+--[[#type META.@Name = "TAny"]]
+--[[#type TAny = META.@Self]]
 META.Type = "any"
 
 function META:Get(key)
 	return self
 end
 
-function META:Set(key, val)
+function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	return true
 end
 
@@ -13,7 +16,7 @@ function META:Copy()
 	return self
 end
 
-function META.IsSubsetOf(A, B)
+function META.IsSubsetOf(A--[[#: TAny]], B--[[#: TBaseType]])
 	return true
 end
 
@@ -34,7 +37,7 @@ function META:Call()
 	return Tuple({Tuple({}):AddRemainder(Tuple({META.New()}):SetRepeat(math.huge))})
 end
 
-function META.Equal(a, b)
+function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
 	return a.Type == b.Type
 end
 

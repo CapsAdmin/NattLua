@@ -210,7 +210,7 @@ do
 		return nil
 	end
 
-	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: boolean | nil]]
+	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: "=="]])--[[#: boolean | nil]]
 		if not a:IsLiteral() or not b:IsLiteral() then
 			return nil
 		end
@@ -220,8 +220,10 @@ do
 			local b_val = b:GetData()
 
 			if b_val then
-				if a:GetMax() and a:GetMax():GetData() then 
-					if b_val >= a:GetData() and b_val <= a:GetMax():GetData() then 
+				local max = a:GetMax()
+				local max = max and max:GetData()
+				if max and a_val then 
+					if b_val >= a_val and b_val <= max then 
 						return nil
 					end
 					return false
@@ -229,8 +231,10 @@ do
 			end
 
 			if a_val then
-				if b:GetMax() and b:GetMax():GetData() then 
-					if a_val >= b:GetData() and a_val <= b:GetMax():GetData() then
+				local max = b:GetMax()
+				local max = max and max:GetData()
+				if max and b_val then 
+					if a_val >= b_val and a_val <= max then
 						return nil
 					end
 
@@ -377,14 +381,6 @@ do
 	end
 end
 
-function META:IsFalsy()
-	return false
-end
-
-function META:IsTruthy()
-	return true
-end
-
 function META.New(data--[[#: number | nil]])
 	return setmetatable({
 		Data = data--[[#as number]],
@@ -416,4 +412,5 @@ return
 			if not num then return nil end
 			return META.New(num):SetLiteral(true)
 		end,
+		--[[# TNumber = TNumber, ]]
 	}

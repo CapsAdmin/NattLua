@@ -5,14 +5,24 @@ local table = require("table")
 local ipairs = _G.ipairs
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
+--[[# local { TNumber } = require("nattlua.types.number") ]]
 local META = dofile("nattlua/types/base.lua")
+--[[#local type TBaseType = META.TBaseType ]]
+--[[#type META.@Name = "TUnion"]]
+--[[#type TUnion = META.@Self]]
+--[[#type TUnion.Data = List<|TBaseType|>]]
+--[[#type TUnion.suppress = boolean]]
+
 META.Type = "union"
 
 function META:GetHash()
 	return tostring(self)
 end
 
-function META.Equal(a, b)
+function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
+
+	--[[# do return end]]
+
 	if a.suppress then return true end
 	if b.Type ~= "union" and #a.Data == 1 then return a.Data[1]:Equal(b) end
 	if a.Type ~= b.Type then return false end
@@ -59,6 +69,8 @@ function META:ShrinkToFunctionSignature()
 	})
 end
 
+	--[[# do return end]]
+
 local sort = function(a, b)
 	return a < b
 end
@@ -82,7 +94,7 @@ function META:__tostring()
 	return table.concat(s, " | ")
 end
 
-function META:AddType(e)
+function META:AddType(e--[[#: TBaseType]])
 	if e.Type == "union" then
 		for _, v in ipairs(e.Data) do
 			self:AddType(v)
@@ -103,7 +115,7 @@ function META:AddType(e)
 		local sup = e
 
 		for i = #self.Data, 1, -1 do
-			local sub = self.Data[i]
+			local sub = self.Data[i] --[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
 
 			if sub.Type == sup.Type then
 				if sub:IsSubsetOf(sup) then
@@ -151,7 +163,7 @@ function META:GetLength()
 	return #self.Data
 end
 
-function META:RemoveType(e)
+function META:RemoveType(e--[[#: TBaseType]])
 	if e.Type == "union" then
 		for i, v in ipairs(e.Data) do
 			self:RemoveType(v)
@@ -198,7 +210,7 @@ function META:HasTuples()
 	return false
 end
 
-function META:GetAtIndex(i)
+function META:GetAtIndex(i--[[#: number]])
 	if not self:HasTuples() then
 		return self
 	end
@@ -243,7 +255,7 @@ function META:GetAtIndex(i)
 	return val
 end
 
-function META:Get(key, from_table)
+function META:Get(key--[[#: TBaseType]], from_table--[[#: nil | boolean]])
 	if from_table then
 		for _, obj in ipairs(self.Data) do
 			if obj.Get then
@@ -264,7 +276,7 @@ function META:Get(key, from_table)
 	return type_errors.other(errors)
 end
 
-function META:Contains(key)
+function META:Contains(key--[[#: TBaseType]])
 	for _, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
 		if ok then return true end
@@ -273,7 +285,7 @@ function META:Contains(key)
 	return false
 end
 
-function META:ContainsOtherThan(key)
+function META:ContainsOtherThan(key--[[#: TBaseType]])
 	local found = false
 	for _, obj in ipairs(self.Data) do
 		if key:IsSubsetOf(obj) then 
@@ -314,7 +326,7 @@ function META:GetFalsy()
 	return copy
 end
 
-function META:IsType(typ)
+function META:IsType(typ--[[#: string]])
 	if self:IsEmpty() then return false end
 
 	for _, obj in ipairs(self.Data) do
@@ -324,7 +336,7 @@ function META:IsType(typ)
 	return true
 end
 
-function META:HasType(typ)
+function META:HasType(typ--[[#: string]])
 	return self:GetType(typ) ~= false
 end
 
@@ -336,7 +348,7 @@ function META:CanBeNil()
 	return false
 end
 
-function META:GetType(typ)
+function META:GetType(typ--[[#: string]])
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == typ then return obj end
 	end
@@ -344,7 +356,7 @@ function META:GetType(typ)
 	return false
 end
 
-function META:IsTargetSubsetOfChild(target)
+function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 	local errors = {}
 
 	for _, obj in ipairs(self:GetData()) do
@@ -356,7 +368,7 @@ function META:IsTargetSubsetOfChild(target)
 	return type_errors.subset(target, self, errors)
 end
 
-function META.IsSubsetOf(A, B)
+function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
 	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
 	
 	if B.Type == "tuple" then B = B:Get(1) end	
@@ -375,7 +387,7 @@ function META.IsSubsetOf(A, B)
 	return true
 end
 
-function META:Union(union)
+function META:Union(union--[[#: TUnion]])
 	local copy = self:Copy()
 
 	for _, e in ipairs(union.Data) do
@@ -385,7 +397,7 @@ function META:Union(union)
 	return copy
 end
 
-function META:Intersect(union)
+function META:Intersect(union--[[#: TUnion]])
 	local copy = META.New()
 
 	for _, e in ipairs(self.Data) do
@@ -397,7 +409,7 @@ function META:Intersect(union)
 	return copy
 end
 
-function META:Subtract(union)
+function META:Subtract(union--[[#: TUnion]])
 	local copy = self:Copy()
 
 	for _, e in ipairs(self.Data) do
@@ -407,7 +419,7 @@ function META:Subtract(union)
 	return copy
 end
 
-function META:Copy(map, copy_tables)
+function META:Copy(map--[[#: Map<|any, any|>]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
@@ -490,7 +502,7 @@ function META:EnableFalsy()
 	end
 end
 
-function META:SetMax(val)
+function META:SetMax(val--[[#: TNumber]])
 	local copy = self:Copy()
 
 	for _, e in ipairs(copy.Data) do
@@ -500,7 +512,7 @@ function META:SetMax(val)
 	return copy
 end
 
-function META:Call(analyzer, arguments, call_node)
+function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node--[[#: any]])
 	if self:IsEmpty() then return type_errors.operation("call", nil) end
 	local is_overload = true
 
@@ -587,8 +599,13 @@ function META:GetLargestNumber()
 	return max[1]
 end
 
-function META.New(data)
-	local self = setmetatable({Data = {}}, META)
+function META.New(data--[[#: nil | List<|TBaseType|>]])
+	local self = setmetatable({
+		Data = {},
+		Falsy = false,
+		Truthy = false,
+		Literal = false,
+	}, META)
 
 	if data then
 		for _, v in ipairs(data) do
