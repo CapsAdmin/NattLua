@@ -296,14 +296,9 @@ function META:EmitExpression(node, from_assignment)
 		end
 
 		if node.tokens["("] then
-			if node:GetLength() < 100 then
-				self:PushForceNewlines(false)
-				pushed = true
-			else
-				self:Indent()
-				self:Whitespace("\n")
-				self:Whitespace("\t")
-			end
+			self:Indent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
 		end
 	end
 
@@ -532,7 +527,7 @@ function META:EmitBinaryOperator(node)
 		end
 
 		if node.value.value == "." or node.value.value == ":" then
-			if node:GetLength() > 100 then
+			if node:GetLength() > self.config.max_line_length then
 				self:Whitespace("\n")
 				self:Whitespace("\t")
 			end
@@ -543,7 +538,7 @@ function META:EmitBinaryOperator(node)
 			self:EmitToken(node.value)
 
 			if node.right then
-				if self:IsForcingNewlines() or node:GetLength() > 100 then
+				if self:IsForcingNewlines() or node:GetLength() > self.config.max_line_length then
 					self:Whitespace("\n")
 					self:Whitespace("\t")
 				else
@@ -589,7 +584,7 @@ do
 		self:EmitToken(node.tokens["function"])
     
         local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
-        self:PushForceNewlines(self:IsForcingNewlines() or distance > 30)
+        self:PushForceNewlines(self:IsForcingNewlines() or distance > self.config.max_line_length)
 		emit_function_body(self, node)
         self:PopForceNewlines()
 	end
@@ -735,7 +730,7 @@ function META:EmitTable(tree)
 
 	local during_spread = false
 	self:EmitToken(tree.tokens["{"])
-	local newline = tree:GetLength() > 50 or has_function_value(tree)
+	local newline = tree:GetLength() > self.config.max_line_length or has_function_value(tree)
 
 	if newline then
 		self:Whitespace("\n")
@@ -943,7 +938,7 @@ end
 
 function META:EmitNumericForStatement(node)
 	self:Whitespace("\t")
-    self:PushForceNewlines((node.tokens["for"].start - node.tokens["do"].start) > 50)
+    self:PushForceNewlines((node.tokens["for"].start - node.tokens["do"].start) > self.config.max_line_length)
 	self:EmitToken(node.tokens["for"])
 	self:Whitespace(" ")
 	self:EmitIdentifierList(node.identifiers)
@@ -1246,18 +1241,19 @@ end
 
 function META:ShouldBreakExpressionList(tbl)
 	if self.config.preserve_whitespace == false then
-        -- more than 5 arguments, always break everything into newline call
-        if #tbl > 5 then
-			return true
-		else
-			local total_length = 0
-
-			for _, exp in ipairs(tbl) do
-				local length = exp:GetLength()
-				total_length = total_length + length
-				if total_length > 75 then return true end
-			end
+        if #tbl == 0 then
+			return false
 		end
+
+		-- more than 5 arguments, always break everything into newline call
+        if #tbl > self.config.max_argument_length then
+			return true
+		end
+
+		
+		local start = tbl[1].code_start
+		local stop = tbl[#tbl].code_stop
+		return (stop - start) > self.config.max_line_length
 	end
 
 	return false
@@ -1273,7 +1269,7 @@ function META:EmitExpressionList(tbl, delimiter, from_assignment)
 		local pushed = false
 
 		if self:IsForcingNewlines() then
-			if tbl[i]:GetLength() < 50 then
+			if tbl[i]:GetLength() < self.config.max_line_length then
 				self:PushForceNewlines(false)
 				pushed = true
 			end
@@ -1424,7 +1420,7 @@ do -- types
 	function META:EmitTableType(node)
 		local tree = node
 		self:EmitToken(tree.tokens["{"])
-		local newline = tree:GetLength() > 50 or has_function_value(tree)
+		local newline = tree:GetLength() > self.config.max_line_length or has_function_value(tree)
 
 		if newline then
 			self:Indent()
@@ -1744,6 +1740,8 @@ end
 return function(config)
 	local self = setmetatable({}, META)
 	self.config = config or {}
+	self.config.max_argument_length = self.config.max_argument_length or 5
+	self.config.max_line_length = self.config.max_line_length or 50
 	self:Initialize()
 	return self
 end

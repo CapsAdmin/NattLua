@@ -78,7 +78,7 @@ do
 				local name = self.Code:GetName()
 				if name:sub(1, 1) == "@" then
 					ok = true
-					local data = helpers.SubPositionToLinePosition(lua_code, helpers.LazyFindStartStop(self))
+					local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
 
 					if data and data.line_start then
 						str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
@@ -120,8 +120,12 @@ do
 		return em:Concat()
 	end
 
+	function META:GetStartStop()
+		return self.code_start, self.code_stop
+	end
+
 	function META:GetLength()
-		local start, stop = helpers.LazyFindStartStop(self, true)
+		local start, stop = self:GetStartStop()
 		return stop - start
 	end
 
@@ -174,7 +178,8 @@ do
 				tokens = {},
 				id = id,
 				Code = self.Code,
-				parser = self,		
+				parser = self,
+				code_start = self:GetToken().start,
 			},
 			META
 		)
@@ -211,6 +216,9 @@ do
 		if TEST then
 			node.end_called = true
 		end
+
+		local prev = self:GetToken(-1)
+		node.code_stop = prev and prev.stop or self:GetToken().stop
 
 		table.remove(self.nodes, 1)
 		return self
@@ -1292,6 +1300,8 @@ end
 
 					node.right = ExpectRuntimeExpression(parser, runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
 
+					parser:EndNode(node)
+
 					if not node.right then
 						local token = parser:GetToken()
 						parser:Error(
@@ -1305,8 +1315,6 @@ end
 						)
 						return
 					end
-
-					parser:EndNode(node)
 				end
 
 				return node

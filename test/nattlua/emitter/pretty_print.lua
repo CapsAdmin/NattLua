@@ -110,6 +110,8 @@ check({preserve_whitespace = false}, [[local tbl = {foo = true,foo = true,foo = 
     foo = true,
 }]])
 
+
+-- TODO, double indent because of assignment and call
 check({preserve_whitespace = false}, 
 [[pos, ang = LocalToWorld(
         lexer.Position or Vector(),
@@ -125,8 +127,20 @@ check({preserve_whitespace = false},
     (
         draw_type == "viewmodel" or
         draw_type == "hands" or
-        ((lexer.Translucent == true or lexer.force_translucent == true) and draw_type == "translucent") or
-        ((lexer.Translucent == false or lexer.force_translucent == false) and draw_type == "opaque")
+        (
+            (
+                lexer.Translucent == true or
+                lexer.force_translucent == true
+            ) and
+            draw_type == "translucent"
+        ) or
+        (
+            (
+                lexer.Translucent == false or
+                lexer.force_translucent == false
+            ) and
+            draw_type == "opaque"
+        )
     )]])
 
 check({preserve_whitespace = false}, 
@@ -135,19 +149,33 @@ check({preserve_whitespace = false},
     key ~= "UniqueID" and
     (
         key ~= "AimPartName" and
-        not (pac.PartNameKeysToIgnore and pac.PartNameKeysToIgnore[key]) or
+        not (
+            pac.PartNameKeysToIgnore and
+            pac.PartNameKeysToIgnore[key]
+        ) or
         key == "AimPartName" and
         table.HasValue(pac.AimPartNames, value)
     )]])
 
 check({preserve_whitespace = false}, 
-[[ent = pac.HandleOwnerName(lexer:GetPlayerOwner(), lexer.OwnerName, ent, lexer, function(e)
-        return e.pac_duplicate_attach_uid ~= lexer.UniqueID
-    end) or
-    NULL]])
+[[ent = pac.HandleOwnerName(
+        lexer:GetPlayerOwner(),
+        lexer.OwnerName,
+        ent,
+        lexer,
+        function(e)
+            return e.pac_duplicate_attach_uid ~= lexer.UniqueID
+        end
+    ) or NULL]])
 
 check({preserve_whitespace = false},
-[[render.OverrideBlendFunc(true, lexer.blend_override[1], lexer.blend_override[2], lexer.blend_override[3], lexer.blend_override[4])
+[[render.OverrideBlendFunc(
+	true,
+	lexer.blend_override[1],
+	lexer.blend_override[2],
+	lexer.blend_override[3],
+	lexer.blend_override[4]
+)
 
 foo(function() end)
 
@@ -161,7 +189,8 @@ pac.AimPartNames = {
 }]])
 
 check({preserve_whitespace = false}, 
-[[return function(config)
+[[return
+    function(config)
         local self = setmetatable({}, META)
         self.config = config or {}
         self:Initialize()

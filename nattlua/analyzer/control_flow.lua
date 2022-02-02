@@ -192,11 +192,11 @@ return function(META)
 		local helpers = require("nattlua.other.helpers")
 		
 		local node = self.current_expression
-		local start, stop = helpers.LazyFindStartStop(node)
+		local start, stop = node:GetStartStop()
 
 		do
 			local node = self.current_statement
-			local start2, stop2 = helpers.LazyFindStartStop(node)
+			local start2, stop2 = node:GetStartStop()
 			if start2 > start then
 				start = start2
 				stop = stop2

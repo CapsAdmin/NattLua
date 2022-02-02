@@ -169,7 +169,7 @@ server.methods["textDocument/hover"] = function(params, self, client)
 	end
 
 	if token and token.parent then
-		local min, max = helpers.LazyFindStartStop(token.parent)
+		local min, max = token.parent:GetStartStop()
 		if min then
 			local temp = helpers.SubPositionToLinePosition(code, min, max)
 			if temp then

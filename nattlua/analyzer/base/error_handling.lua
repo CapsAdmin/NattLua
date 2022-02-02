@@ -82,8 +82,8 @@ return function(META)
 		if self.diagnostics_map[key] then return end
 		self.diagnostics_map[key] = true
 		severity = severity or "warning"
-		local start, stop = helpers.LazyFindStartStop(node)
-
+		local start, stop = node:GetStartStop()
+		
 		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
 			self:OnDiagnostic(
 				node.Code,

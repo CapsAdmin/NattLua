@@ -192,7 +192,7 @@ return function(META)
             -- append newlines so that potential line errors are correct
 			local lua_code = node.Code:GetString()
             if lua_code then
-				local start, stop = helpers.LazyFindStartStop(node)
+				local start, stop = node:GetStartStop()
 				local line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
 				code = ("\n"):rep(line - 1) .. code
 			end
@@ -316,7 +316,7 @@ return function(META)
 
 			for i, v in ipairs(self.call_stack) do
 				if v.call_node and (not from or i > from) then
-					local start, stop = helpers.LazyFindStartStop(v.call_node)
+					local start, stop = v.call_node:GetStartStop()
 
 					if start and stop then
 						local part = helpers.FormatError(
