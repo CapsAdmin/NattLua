@@ -16,7 +16,7 @@ local table_print = require("nattlua.other.table_print")
 local TEST = false
 local META = {}
 META.__index = META
---[[# --]]META.Emitter = require("nattlua.transpiler.emitter")
+META.Emitter = require("nattlua.transpiler.emitter")
 --[[#type META.@Self = {
 		config = any,
 		nodes = List<|any|>,
@@ -390,7 +390,7 @@ function META:ResolvePath(path)
 	return path
 end
 
---[[# if false then --]]do -- statements
+do -- statements
 	local runtime_syntax = require("nattlua.syntax.runtime")
 	local typesystem_syntax = require("nattlua.syntax.typesystem")
 

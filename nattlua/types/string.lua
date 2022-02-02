@@ -20,8 +20,6 @@ function META.Equal(a--[[#: TString]], b--[[#: BaseType]])
 	return false
 end
 
---[[# do return end]]
-
 function META:GetHash()
 	if self:IsLiteral() then
 		return self.Data

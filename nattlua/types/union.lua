@@ -20,9 +20,6 @@ function META:GetHash()
 end
 
 function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
-
-	--[[# do return end]]
-
 	if a.suppress then return true end
 	if b.Type ~= "union" and #a.Data == 1 then return a.Data[1]:Equal(b) end
 	if a.Type ~= b.Type then return false end
@@ -68,8 +65,6 @@ function META:ShrinkToFunctionSignature()
 		ret = ret,
 	})
 end
-
-	--[[# do return end]]
 
 local sort = function(a, b)
 	return a < b
