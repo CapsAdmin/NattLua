@@ -824,6 +824,7 @@ end
 				if not parser:IsValue("|") then return end
 				local node = parser:StartNode("expression", "empty_union")
 				node.tokens["|"] = parser:ReadToken("|")
+				parser:EndNode(node)
 				return node
 			end
 				
