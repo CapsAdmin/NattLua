@@ -310,7 +310,7 @@ local function Binary(self, node, l, r, op)
 			local res = metatable_function(self, node, "__eq", l, r)
 			if res then return res end
 			
-			if l == r then return True() end
+			if l:IsLiteral() and l == r then return True() end
 			if l.Type ~= r.Type then return False() end
 
 			return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
