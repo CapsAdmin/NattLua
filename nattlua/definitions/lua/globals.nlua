@@ -153,7 +153,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 end
 
 analyzer function require(name: string)
-	if not name:IsLiteral() then return types.Any end
+	if not name:IsLiteral() then return types.Any() end
 	local str = name
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
