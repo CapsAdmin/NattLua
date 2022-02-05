@@ -181,6 +181,14 @@ local function Binary(self, node, l, r, op)
 			if op == "~=" then
 				self.inverted_index_tracking = true
 			end
+
+			local type_checked = self.type_checked
+			
+			-- the return value from type(x)
+			if type_checked then
+				self.type_checked = nil
+			end
+
 			
 			for _, l in ipairs(l:GetData()) do
 				for _, r in ipairs(r:GetData()) do
@@ -196,8 +204,8 @@ local function Binary(self, node, l, r, op)
 						self:ErrorAndCloneCurrentScope(node, err, l) -- TODO, only left side?
 					else
 						if res:IsTruthy() then
-							if self.type_checked then
-								for _, t in ipairs(self.type_checked:GetData()) do
+							if type_checked then
+								for _, t in ipairs(type_checked:GetData()) do
 									if t.GetLuaType and t:GetLuaType() == l:GetData() then
 										truthy_union:AddType(t)
 									end
@@ -208,8 +216,8 @@ local function Binary(self, node, l, r, op)
 						end
 
 						if res:IsFalsy() then
-							if self.type_checked then
-								for _, t in ipairs(self.type_checked:GetData()) do
+							if type_checked then
+								for _, t in ipairs(type_checked:GetData()) do
 									if t.GetLuaType and t:GetLuaType() == l:GetData() then
 										falsy_union:AddType(t)
 									end
@@ -223,22 +231,17 @@ local function Binary(self, node, l, r, op)
 					end
 				end
 			end
-			
+
 			if op == "~=" then
 				self.inverted_index_tracking = nil
 			end
-
-			-- the return value from type(x)
-			if self.type_checked then
-				new_union.type_checked = self.type_checked
-				self.type_checked = nil
-			end
-
 			
 			if op ~= "or" and op ~= "and" then
-				
-				if l.parent_table then
-					self:TrackTableIndexUnion(l.parent_table, l.parent_key, truthy_union, falsy_union)
+				local parent_table = l.parent_table or type_checked and type_checked.parent_table
+				local parent_key = l.parent_key or type_checked and type_checked.parent_key
+
+				if parent_table then
+					self:TrackTableIndexUnion(parent_table, parent_key, truthy_union, falsy_union)
 				elseif l.Type == "union" then
 					for _, l in ipairs(l:GetData()) do
 						if l.parent_table then

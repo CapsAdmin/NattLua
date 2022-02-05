@@ -276,6 +276,16 @@ run[[
     attest.equal(x.foo, nil)
 ]]
 
+run[[
+    local args: List<|string | List<|string|>|>
+
+    if type(args[_ as number]) == "string" then
+        attest.equal(args[_ as number], _ as string)
+    else
+        attest.equal(args[_ as number], _ as nil | {[number | nil] = string})
+    end
+]]
+
 pending[[
     local a: nil | number
     local b: nil | number
