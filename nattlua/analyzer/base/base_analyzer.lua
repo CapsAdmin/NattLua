@@ -115,7 +115,9 @@ return function(META)
 				obj.mutations = nil
 			end
 
-			self:Assert(node, self:Call(obj, arguments, node))
+			self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+				self:Assert(node, self:Call(obj, arguments, node))
+			self:PopScope()
 		end
 
 		function META:CallMeLater(obj, arguments, node)
