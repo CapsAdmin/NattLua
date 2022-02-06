@@ -116,3 +116,7 @@ end
 do
     require("nattlua.other.json")
 end
+
+do
+    require("nattlua.parser.parser")
+end

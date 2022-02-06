@@ -12,7 +12,7 @@ local tostring = _G.tostring
 local next = _G.next
 local error = _G.error
 local ipairs = _G.ipairs
-local jit = _G.jit
+local jit = _G.jit --[[# as jit | nil]]
 local pcall = _G.pcall
 local unpack = _G.unpack
 local helpers = {}
@@ -44,9 +44,6 @@ function helpers.LinePositionToSubPosition(code--[[#: string]], line--[[#: numbe
 end
 
 function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
-	assert(type(code) == "string")
-	assert(type(start) == "number")
-	assert(type(stop) == "number")
 	local line = 1
 	local line_start
 	local line_stop
@@ -108,7 +105,7 @@ end
 
 do
 	local function get_lines_before(code--[[#: string]], pos--[[#: number]], lines--[[#: number]])--[[#: number,number,number]]
-		local line = 1
+		local line--[[#: number]] = 1
 		local first_line_pos = 1
 
 		for i = pos, 1, -1 do
@@ -128,7 +125,7 @@ do
 	end
 
 	local function get_lines_after(code--[[#: string]], pos--[[#: number]], lines--[[#: number]])--[[#: number,number,number]]
-		local line = 1
+		local line--[[#: number]] = 1 -- to prevent warning about it always being true when comparing against 1
 		local first_line_pos = 1
 
 		for i = pos, #code do
@@ -149,7 +146,7 @@ do
 
 	do
 		-- TODO: wtf am i doing here?
-		local args --[[#: List<|string|> ]]
+		local args --[[#: List<|string | List<|string|>|> ]]
 		local fmt = function(str--[[#: string]])
 			local num = tonumber(str)
 			if not num then error("invalid format argument " .. str) end
@@ -177,9 +174,7 @@ do
 		stop = clamp(stop, 1, #lua_code)
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
 
-		if not data then
-			return path .. ":INVALID: " .. msg
-		end
+		if not data then return end
 
 		local line_start, line_stop = data.line_start, data.line_stop
 		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(lua_code, start, size)
@@ -267,7 +262,7 @@ function helpers.GetDataFromLineCharPosition(tokens--[[#: {[number] = Token}]], 
 end
 
 function helpers.JITOptimize()
-	if not _G.jit then return end
+	if not jit then return end
 	pcall(require, "jit.opt")
 	jit.opt.start(
 		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
@@ -302,42 +297,37 @@ function helpers.JITOptimize()
 end
 
 local function inject_full_path()
-	local ok, lib = pcall(require, "jit.util")
+	local ok, lib = pcall(require, "jit.util" --[[# as string]]) -- to avoid warning
 
-	if ok then
-		if lib then
-			if lib.funcinfo then
-				lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
+	if ok and lib and lib.funcinfo then
+		lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
 
-				function lib.funcinfo(...)
-					local ret = {lib._old_funcinfo(...)}
-					local info = ret[1]
+		function lib.funcinfo(...)
+			local ret = {lib._old_funcinfo(...)}
+			local info = ret[1]
 
-					if
-						info and
-						type(info) == "table" and
-						type(info.loc) == "string" and
-						type(info.source) == "string" and
-						type(info.currentline) == "number" and
-						info.source:sub(1, 1) == "@"
-					then
-						info.loc = info.source:sub(2) .. ":" .. info.currentline
-					end
-
-					return unpack(ret)
-				end
+			if
+				info and
+				type(info) == "table" and
+				type(info.loc) == "string" and
+				type(info.source) == "string" and
+				type(info.currentline) == "number" and
+				info.source:sub(1, 1) == "@"
+			then
+				info.loc = info.source:sub(2) .. ":" .. info.currentline
 			end
+
+			return unpack(ret)
 		end
 	end
 end
 
 function helpers.EnableJITDumper()
-	if not _G.jit then return end
+	if not jit then return end
 	if jit.version_num ~= 20100 then return end
 	inject_full_path()
-	local jit = require("jit")
-	local jutil = require("jit.util")
-	local vmdef = require("jit.vmdef")
+	local jutil = require("jit.util" --[[#as string]])
+	local vmdef = require("jit.vmdef" --[[#as string]])
 	local funcinfo, traceinfo = jutil.funcinfo, jutil.traceinfo
 	local type, format = _G.type, string.format
 	local stdout, stderr = io.stdout, io.stderr

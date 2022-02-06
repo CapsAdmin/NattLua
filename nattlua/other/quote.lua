@@ -4,7 +4,7 @@ function helpers.QuoteToken(str--[[#: string]])--[[#: string]]
 	return "❲" .. str .. "❳"
 end
 
-function helpers.QuoteTokens(var--[[#: {[number] = string}]])--[[#: string]]
+function helpers.QuoteTokens(var--[[#: List<|string|> ]])--[[#: string]]
 	local str = ""
 
 	for i, v in ipairs(var) do

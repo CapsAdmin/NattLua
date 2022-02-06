@@ -127,8 +127,9 @@ end
 
 function META:GetLength(analyzer)
 
-	if self:GetContract() then
-		return self:GetContract():GetLength(analyzer)
+	local contract = self:GetContract()
+	if contract and contract ~= self then
+		return contract:GetLength(analyzer)
 	end
 
 	local len = 0

@@ -11,12 +11,11 @@ local type = _G.type
 local table = require("table")
 local helpers = require("nattlua.other.helpers")
 local quote_helper = require("nattlua.other.quote")
-local table_print = require("nattlua.other.table_print")
 
 local TEST = false
 local META = {}
 META.__index = META
-META.Emitter = require("nattlua.transpiler.emitter")
+
 --[[#type META.@Self = {
 		config = any,
 		nodes = List<|any|>,
@@ -27,7 +26,10 @@ META.Emitter = require("nattlua.transpiler.emitter")
 		i = number,
 		tokens = List<|Token|>,
 		environment_stack = List<|"typesystem" | "runtime"|>,
-	}]]
+		OnNode = nil | function=(self, any)>(nil)
+	}
+	type META.@Name = "Parser"
+	]]
 
 function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#: any]])
 	return setmetatable(
@@ -47,6 +49,20 @@ function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#:
 end
 
 do
+	function META:GetCurrentParserEnvironment()
+		return self.environment_stack[1] or "runtime"
+	end
+
+	function META:PushParserEnvironment(env--[[#: "runtime" | "typesystem" ]])
+		table.insert(self.environment_stack, 1, env)
+	end
+
+	function META:PopParserEnvironment()
+		table.remove(self.environment_stack, 1)
+	end
+end
+
+do
 	local PARSER = META
 	local META = {}
 	META.__index = META
@@ -58,37 +74,33 @@ do
 			Code = Code,
 			parser = PARSER.@Self,
 			tokens = Map<|string, Token|>,
-			statements = List<|any|>,
+			statements = nil | List<|any|>,
 			value = Token | nil,
 			environment = "typesystem"|"runtime",
 			parent = nil | any,
+			code_start = number,
+			code_stop = number,
 		}]]
 		--[[#type META.@Name = "Node"]]
 
 --[[#	type PARSER.@Self.nodes = List<|META.@Self|>]]
+--[[#	type META.@Name = "Node" ]]
 
 	function META:__tostring()
 		if self.type == "statement" then
 			local str = "[" .. self.type .. " - " .. self.kind .. "]"
+			local lua_code = self.Code:GetString()
+			local name = self.Code:GetName()
 
+			if name:sub(1, 1) == "@" then
+				local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
 
-			local ok = false
-			if self.Code then
-				local lua_code = self.Code:GetString()
-				local name = self.Code:GetName()
-				if name:sub(1, 1) == "@" then
-					ok = true
-					local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
-
-					if data and data.line_start then
-						str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
-					else
-						str = str .. " @ " .. name:sub(2) .. ":" .. "?"
-					end
+				if data and data.line_start then
+					str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
+				else
+					str = str .. " @ " .. name:sub(2) .. ":" .. "?"
 				end
-			end
-
-			if not ok then
+			else
 				str = str .. " " .. ("%s"):format(self.id)
 			end
 
@@ -104,12 +116,9 @@ do
 		end
 	end
 
-	function META:Dump()
-		table_print(self)
-	end
-
 	function META:Render(config)
-		local em = PARSER.Emitter(config or {preserve_whitespace = false, no_newlines = true})
+		--[[# do return end ]]
+		local em = require("nattlua.transpiler.emitter")(config or {preserve_whitespace = false, no_newlines = true})
 
 		if self.type == "expression" then
 			em:EmitExpression(self)
@@ -129,11 +138,11 @@ do
 		return stop - start
 	end
 
-	function META:GetNodes()
+	function META:GetNodes()--[[#: List<|any|>]]
 		if self.kind == "if" then
-			local flat = {}
+			local flat--[[#: List<|any|>]] = {}
 
-			for _, statements in ipairs(self.statements) do
+			for _, statements in ipairs(assert(self.statements)) do
 				for _, v in ipairs(statements) do
 					table.insert(flat, v)
 				end
@@ -142,7 +151,7 @@ do
 			return flat
 		end
 
-		return self.statements
+		return self.statements or {}
 	end
 
 	function META:HasNodes()
@@ -171,6 +180,7 @@ do
 
 	function PARSER:StartNode(type--[[#: "statement" | "expression"]], kind--[[#: StatementKind | ExpressionKind]])
 		id = id + 1
+		local code_start = assert(self:GetToken()).start
 		local node = setmetatable(
 			{
 				type = type,
@@ -179,7 +189,9 @@ do
 				id = id,
 				Code = self.Code,
 				parser = self,
-				code_start = self:GetToken().start,
+				code_start = code_start,
+				code_stop = code_start,
+				environment = self:GetCurrentParserEnvironment(),
 			},
 			META
 		)
@@ -194,31 +206,22 @@ do
 			self:OnNode(node)
 		end
 
-		node.environment = self:GetCurrentParserEnvironment()
-
 		node.parent = self.nodes[1]
 		table.insert(self.nodes, 1, node)
 
-		if TEST then
-			node.traceback = debug.getinfo(2).source:sub(2) .. ":" .. debug.getinfo(2).currentline
-			node.ref = newproxy(true)
-			getmetatable(node.ref).__gc = function()
-				if not node.end_called then
-					print("node:EndNode() was never called before gc: ", node.traceback)
-				end
-			end
-		end
-
 		return node
 	end
-
+	
 	function PARSER:EndNode(node)
-		if TEST then
-			node.end_called = true
-		end
-
 		local prev = self:GetToken(-1)
-		node.code_stop = prev and prev.stop or self:GetToken().stop
+		if prev then
+			node.code_stop = prev.stop
+		else
+			local cur = self:GetToken()
+			if cur then
+				node.code_stop = cur.stop
+			end
+		end
 
 		table.remove(self.nodes, 1)
 		return self
@@ -244,9 +247,6 @@ function META:Error(msg--[[#: string]], start_token--[[#: Token | nil]], stop_to
 	end
 
 	self:OnError(self.Code,msg,start,stop,...)
-end
-
-function META:OnNode(node--[[#: any]]) 
 end
 
 function META:OnError(code--[[#: Code]], message--[[#: string]], start--[[#: number]], stop--[[#: number]], ...--[[#: ...any]]) 
@@ -301,7 +301,8 @@ end
 
 do
 	local function error_expect(self--[[#: META.@Self]], str--[[#: string]], what--[[#: string]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
-		if not self:GetToken() then
+		local tk = self:GetToken()
+		if not tk then
 			self:Error("expected $1 $2: reached end of code", start, stop, what, str)
 		else
 			self:Error(
@@ -310,7 +311,7 @@ do
 				stop,
 				what,
 				str,
-				self:GetToken()[what]
+				tk[what]
 			)
 		end
 	end
@@ -332,7 +333,8 @@ do
 	end
 end
 
-function META:ReadValues(values--[[#: {[string] = true}]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
+function META:ReadValues(values--[[#: Map<|string, true|> ]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
+	
 	local tk = self:GetToken()
 
 	if not tk then
@@ -371,24 +373,11 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 	return out
 end
 
-
-do
-	function META:GetCurrentParserEnvironment()
-		return self.environment_stack[1] or "runtime"
-	end
-
-	function META:PushParserEnvironment(env--[[#: "runtime" | "typesystem" ]])
-		table.insert(self.environment_stack, 1, env)
-	end
-
-	function META:PopParserEnvironment()
-		table.remove(self.environment_stack, 1)
-	end
-end
-
-function META:ResolvePath(path)
+function META:ResolvePath(path--[[#: string]])
 	return path
 end
+
+--[[# do return end ]]
 
 do -- statements
 	local runtime_syntax = require("nattlua.syntax.runtime")
