@@ -23,7 +23,8 @@ local quote_helper = require("nattlua.other.quote")
 local META = {}
 META.__index = META
 
---[[#type META.@Self = {
+--[[#
+type META.@Self = {
 		config = any,
 		nodes = List<|any|>,
 		Code = Code,
@@ -35,14 +36,18 @@ META.__index = META
 		environment_stack = List<|"typesystem" | "runtime"|>,
 		OnNode = nil | function=(self, any)>(nil)
 	}
-	type META.@Name = "Parser"
-	local type Parser = META.@Self
-	]]
+]]
+--[[#type META.@Name = "Parser"]]
+--[[#local type Parser = META.@Self]]
 
-function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#: any]])
+function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#: nil | {
+	root = nil | Node,
+	on_statement = nil | function=(Parser, Node)>(Node),
+	path = nil | string,
+}]])
 	return setmetatable(
 		{
-			config = config,
+			config = config or {},
 			Code = code,
 			nodes = {},
 			current_statement = false,
@@ -262,7 +267,6 @@ function META:ResolvePath(path--[[#: string]])
 	return path
 end
 
---[[#do return end]]
 
 do -- statements
 	local runtime_syntax = require("nattlua.syntax.runtime")
@@ -286,7 +290,7 @@ do -- statements
 		local out = {}
 
 		for i = 1, max or parser:GetLength() do
-			local node = reader(parser, ...)
+			local node = reader(parser, ...) --[[# as Node | nil]]
 			if not node then break end
 			out[i] = node
 			if not parser:IsValue(",") then break end
@@ -317,6 +321,7 @@ do -- statements
 		return node
 	end
 
+	--[[#do return end]]
 	local function ReadValueExpressionToken(parser--[[#: Parser]], expect_value--[[#: nil | string]]) 
 		local node = parser:StartNode("expression", "value")
 		node.value = expect_value and parser:ExpectValue(expect_value) or parser:ReadToken()
