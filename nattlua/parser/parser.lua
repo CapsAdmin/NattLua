@@ -1,9 +1,18 @@
 --[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
---[[#local type { ExpressionKind, StatementKind } = import_type<|"nattlua/parser/nodes.nlua"|>]]
+--[[#local type { ExpressionKind, StatementKind, FunctionAnalyzerStatement,
+FunctionTypeStatement,
+FunctionAnalyzerExpression,
+FunctionTypeExpression,
+FunctionExpression,
+FunctionLocalStatement,
+FunctionLocalTypeStatement,
+FunctionStatement,
+FunctionLocalAnalyzerStatement  } = import_type<|"nattlua/parser/nodes.nlua"|>]]
 --[[#import_type<|"nattlua/code/code.lua"|>]]
 
 --[[#local type NodeType = "expression" | "statement"]]
 --[[#local type Node = any]]
+local Node = require("nattlua.parser.node")
 local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
@@ -11,8 +20,6 @@ local type = _G.type
 local table = require("table")
 local helpers = require("nattlua.other.helpers")
 local quote_helper = require("nattlua.other.quote")
-
-local TEST = false
 local META = {}
 META.__index = META
 
@@ -29,6 +36,7 @@ META.__index = META
 		OnNode = nil | function=(self, any)>(nil)
 	}
 	type META.@Name = "Parser"
+	local type Parser = META.@Self
 	]]
 
 function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#: any]])
@@ -62,170 +70,47 @@ do
 	end
 end
 
-do
-	local PARSER = META
-	local META = {}
-	META.__index = META
-	META.Type = "node"
---[[#	type META.@Self = {
-			type = "expression" | "statement",
-			kind = ExpressionKind | StatementKind,
-			id = number,
-			Code = Code,
-			parser = PARSER.@Self,
-			tokens = Map<|string, Token|>,
-			statements = nil | List<|any|>,
-			value = Token | nil,
-			environment = "typesystem"|"runtime",
-			parent = nil | any,
-			code_start = number,
-			code_stop = number,
-		}]]
-		--[[#type META.@Name = "Node"]]
+function META:StartNode(type--[[#: "statement" | "expression"]], kind--[[#: StatementKind | ExpressionKind]])
+	local code_start = assert(self:GetToken()).start
 
---[[#	type PARSER.@Self.nodes = List<|META.@Self|>]]
---[[#	type META.@Name = "Node" ]]
+	local node = Node.New({
+		type = type, 
+		kind = kind, 
+		Code = self.Code,
+		code_start = code_start,
+		code_stop = code_start,
+		environment = self:GetCurrentParserEnvironment(),
+		parent = self.nodes[1],
+	})
 
-	function META:__tostring()
-		if self.type == "statement" then
-			local str = "[" .. self.type .. " - " .. self.kind .. "]"
-			local lua_code = self.Code:GetString()
-			local name = self.Code:GetName()
+	if type == "expression" then
+		self.current_expression = node
+	else
+		self.current_statement = node
+	end
 
-			if name:sub(1, 1) == "@" then
-				local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
+	if self.OnNode then
+		self:OnNode(node)
+	end
 
-				if data and data.line_start then
-					str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
-				else
-					str = str .. " @ " .. name:sub(2) .. ":" .. "?"
-				end
-			else
-				str = str .. " " .. ("%s"):format(self.id)
-			end
+	table.insert(self.nodes, 1, node)
 
-			return str
-		elseif self.type == "expression" then
-			local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
+	return node
+end
 
-			if self.value and type(self.value.value) == "string" then
-				str = str .. ": " .. quote_helper.QuoteToken(self.value.value)
-			end
-
-			return str
+function META:EndNode(node)
+	local prev = self:GetToken(-1)
+	if prev then
+		node.code_stop = prev.stop
+	else
+		local cur = self:GetToken()
+		if cur then
+			node.code_stop = cur.stop
 		end
 	end
 
-	function META:Render(config)
-		--[[# do return end ]]
-		local em = require("nattlua.transpiler.emitter")(config or {preserve_whitespace = false, no_newlines = true})
-
-		if self.type == "expression" then
-			em:EmitExpression(self)
-		else
-			em:EmitStatement(self)
-		end
-
-		return em:Concat()
-	end
-
-	function META:GetStartStop()
-		return self.code_start, self.code_stop
-	end
-
-	function META:GetLength()
-		local start, stop = self:GetStartStop()
-		return stop - start
-	end
-
-	function META:GetNodes()--[[#: List<|any|>]]
-		if self.kind == "if" then
-			local flat--[[#: List<|any|>]] = {}
-
-			for _, statements in ipairs(assert(self.statements)) do
-				for _, v in ipairs(statements) do
-					table.insert(flat, v)
-				end
-			end
-
-			return flat
-		end
-
-		return self.statements or {}
-	end
-
-	function META:HasNodes()
-		return self.statements ~= nil
-	end
-
-	local function find_by_type(node--[[#: META.@Self]], what--[[#: StatementKind | ExpressionKind]], out--[[#: List<|META.@Name|>]])
-		out = out or {}
-
-		for _, child in ipairs(node:GetNodes()) do
-			if child.kind == what then
-				table.insert(out, child)
-			elseif child:GetNodes() then
-				find_by_type(child, what, out)
-			end
-		end
-
-		return out
-	end
-
-	function META:FindNodesByType(what--[[#: StatementKind | ExpressionKind]])
-		return find_by_type(self, what, {})
-	end
-
-	local id = 0
-
-	function PARSER:StartNode(type--[[#: "statement" | "expression"]], kind--[[#: StatementKind | ExpressionKind]])
-		id = id + 1
-		local code_start = assert(self:GetToken()).start
-		local node = setmetatable(
-			{
-				type = type,
-				kind = kind,
-				tokens = {},
-				id = id,
-				Code = self.Code,
-				parser = self,
-				code_start = code_start,
-				code_stop = code_start,
-				environment = self:GetCurrentParserEnvironment(),
-			},
-			META
-		)
-
-		if type == "expression" then
-			self.current_expression = node
-		else
-			self.current_statement = node
-		end
-
-		if self.OnNode then
-			self:OnNode(node)
-		end
-
-		node.parent = self.nodes[1]
-		table.insert(self.nodes, 1, node)
-
-		return node
-	end
-	
-	function PARSER:EndNode(node)
-		local prev = self:GetToken(-1)
-		if prev then
-			node.code_stop = prev.stop
-		else
-			local cur = self:GetToken()
-			if cur then
-				node.code_stop = cur.stop
-			end
-		end
-
-		table.remove(self.nodes, 1)
-		return self
-	end
+	table.remove(self.nodes, 1)
+	return self
 end
 
 function META:Error(msg--[[#: string]], start_token--[[#: Token | nil]], stop_token--[[#: Token | nil]], ...--[[#: ...any]])
@@ -276,7 +161,7 @@ end
 
 function META:ReadToken()
 	local tk = self:GetToken()
-	if not tk then return end
+	if not tk then return nil end
 	self:Advance(1)
 	tk.parent = self.nodes[1]
 	return tk
@@ -316,20 +201,20 @@ do
 		end
 	end
 
-	function META:ExpectValue(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])
+	function META:ExpectValue(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
 		if not self:IsValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
 		end
 
-		return self:ReadToken()
+		return self:ReadToken()--[[# as Token]]
 	end
 
-	function META:ExpectType(str--[[#: TokenType]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])
+	function META:ExpectType(str--[[#: TokenType]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
 		if not self:IsType(str) then
 			error_expect(self, str, "type", error_start, error_stop)
 		end
 
-		return self:ReadToken()
+		return self:ReadToken()--[[# as Token]]
 	end
 end
 
@@ -377,7 +262,7 @@ function META:ResolvePath(path--[[#: string]])
 	return path
 end
 
---[[# do return end ]]
+--[[#do return end]]
 
 do -- statements
 	local runtime_syntax = require("nattlua.syntax.runtime")
@@ -388,22 +273,20 @@ do -- statements
 	local table_insert = require("table").insert
 	local table_remove = require("table").remove
 	local ipairs = _G.ipairs
-
-
 	
 	local IsTypeExpression
-	local ExpectTypeExpression
-	local ReadTypeExpression
+	local ExpectTypeExpression = nil --[[# as function=(Parser, number)>(Node)]]
+	local ReadTypeExpression = nil --[[# as function=(Parser, number)>(Node)]]
 	
 	local IsRuntimeExpression
 	local ReadRuntimeExpression
 	local ExpectRuntimeExpression
 
-	local function ReadMultipleValues(parser, max, reader, a, b, c)
+	local function ReadMultipleValues(parser--[[#: Parser ]], max--[[#: nil | number ]], reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]], ...--[[#: ref ...any]])
 		local out = {}
 
 		for i = 1, max or parser:GetLength() do
-			local node = reader(parser, a, b, c)
+			local node = reader(parser, ...)
 			if not node then break end
 			out[i] = node
 			if not parser:IsValue(",") then break end
@@ -413,7 +296,8 @@ do -- statements
 		return out
 	end
 
-	local function ReadIdentifier(parser, expect_type)
+
+	local function ReadIdentifier(parser--[[#: Parser]], expect_type--[[#: nil | boolean]])
 		if not parser:IsType("letter") and not parser:IsValue("...") then return end
 		local node = parser:StartNode("expression", "value")
 
@@ -433,22 +317,22 @@ do -- statements
 		return node
 	end
 
-	local function ReadValueExpressionToken(parser, expect_value) 
+	local function ReadValueExpressionToken(parser--[[#: Parser]], expect_value--[[#: nil | string]]) 
 		local node = parser:StartNode("expression", "value")
 		node.value = expect_value and parser:ExpectValue(expect_value) or parser:ReadToken()
 		parser:EndNode(node)
 		return node
 	end
 
-
-	local function ReadValueExpressionType(parser, expect_value) 
+	local function ReadValueExpressionType(parser--[[#: Parser]], expect_value--[[#: TokenType]]) 
 		local node = parser:StartNode("expression", "value")
 		node.value = parser:ExpectType(expect_value)
 		parser:EndNode(node)
 		return node
 	end
 
-	local function ReadFunctionBody(parser, node)
+
+	local function ReadFunctionBody(parser--[[#: Parser]], node--[[#: FunctionAnalyzerExpression | FunctionExpression | FunctionLocalStatement | FunctionStatement ]])
 		node.tokens["arguments("] = parser:ExpectValue("(")
 		node.identifiers = ReadMultipleValues(parser, nil, ReadIdentifier)
 		node.tokens["arguments)"] = parser:ExpectValue(")", node.tokens["arguments("])
@@ -456,7 +340,7 @@ do -- statements
 		if parser:IsValue(":") then
 			node.tokens[":"] = parser:ExpectValue(":")
 			parser:PushParserEnvironment("typesystem")
-			node.return_types = ReadMultipleValues(parser, nil, ReadTypeExpression)
+			node.return_types = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
 			parser:PopParserEnvironment("typesystem")
 		end
 
@@ -466,7 +350,7 @@ do -- statements
 		return node
 	end
 
-	local function ReadTypeFunctionBody(parser, node)
+	local function ReadTypeFunctionBody(parser--[[#: Parser]], node--[[#: FunctionTypeStatement | FunctionTypeExpression | FunctionLocalTypeStatement]])
 		if parser:IsValue("!") then
 			node.tokens["!"] = parser:ExpectValue("!")	
 			node.tokens["arguments("] = parser:ExpectValue("(")				
@@ -490,7 +374,7 @@ do -- statements
 		if parser:IsValue(":") then
 			node.tokens[":"] = parser:ExpectValue(":")
 			parser:PushParserEnvironment("typesystem")
-			node.return_types = ReadMultipleValues(parser, math.huge, ExpectTypeExpression)
+			node.return_types = ReadMultipleValues(parser, math.huge, ExpectTypeExpression, 0)
 			parser:PopParserEnvironment("typesystem")
 		end
 
@@ -507,23 +391,23 @@ do -- statements
 		return node
 	end
 
-	local function ReadTypeFunctionArgument(parser, expect_type)
+	local function ReadTypeFunctionArgument(parser--[[#: Parser]], expect_type--[[#: nil | boolean]])
 		if parser:IsValue(")") then return end
 		if parser:IsValue("...") then return end
 
 		if expect_type or parser:IsType("letter") and parser:IsValue(":", 1) then
 			local identifier = parser:ReadToken()
 			local token = parser:ExpectValue(":")
-			local exp = ExpectTypeExpression(parser)
+			local exp = ExpectTypeExpression(parser, 0)
 			exp.tokens[":"] = token
 			exp.identifier = identifier
 			return exp
 		end
 
-		return ExpectTypeExpression(parser)
+		return ExpectTypeExpression(parser, 0)
 	end
 
-	local function ReadAnalyzerFunctionBody(parser, node, type_args)
+	local function ReadAnalyzerFunctionBody(parser--[[#: Parser]], node--[[#: FunctionAnalyzerStatement | FunctionAnalyzerExpression |FunctionLocalAnalyzerStatement]], type_args--[[#: boolean]])
 		node.tokens["arguments("] = parser:ExpectValue("(")
 
 		node.identifiers = ReadMultipleValues(parser, math_huge, ReadTypeFunctionArgument, type_args)
@@ -534,10 +418,10 @@ do -- statements
 
 			if parser:IsValue(":") or type_args then
 				vararg.tokens[":"] = parser:ExpectValue(":")
-				vararg.type_expression = ExpectTypeExpression(parser)
+				vararg.type_expression = ExpectTypeExpression(parser, 0)
 			else
 				if parser:IsType("letter") then
-					vararg.type_expression = ExpectTypeExpression(parser)
+					vararg.type_expression = ExpectTypeExpression(parser, 0)
 				end
 			end
 
@@ -551,7 +435,7 @@ do -- statements
 		if parser:IsValue(":") then
 			node.tokens[":"] = parser:ExpectValue(":")
 			parser:PushParserEnvironment("typesystem")
-			node.return_types = ReadMultipleValues(parser, math.huge, ReadTypeExpression)
+			node.return_types = ReadMultipleValues(parser, math.huge, ReadTypeExpression, 0)
 			parser:PopParserEnvironment("typesystem")
 
 			local start = parser:GetToken()
@@ -565,7 +449,8 @@ do -- statements
 
 		return node
 	end
-	
+		--[[# do return end ]]
+
 
 	do -- expression
 		local function ReadAnalyzerFunctionExpression(parser)
@@ -672,7 +557,7 @@ do -- statements
 				if not (parser:IsValue("...") and parser:IsType("letter", 1)) then return end
 				local node = parser:StartNode("expression", "value")
 				node.value = parser:ExpectValue("...")
-				node.type_expression = ReadTypeExpression(parser)
+				node.type_expression = ReadTypeExpression(parser, 0)
 				parser:EndNode(node)
 				return node
 			end
@@ -683,13 +568,13 @@ do -- statements
 				if expect_type or ((parser:IsType("letter") or parser:IsValue("...")) and parser:IsValue(":", 1)) then
 					local identifier = parser:ReadToken()
 					local token = parser:ExpectValue(":")
-					local exp = ExpectTypeExpression(parser)
+					local exp = ExpectTypeExpression(parser, 0)
 					exp.tokens[":"] = token
 					exp.identifier = identifier
 					return exp
 				end
 			
-				return ExpectTypeExpression(parser)
+				return ExpectTypeExpression(parser, 0)
 			end
 			
 			local function ReadFunctionSignatureExpression(parser)
@@ -820,7 +705,7 @@ do -- statements
 			local function ReadAsSubExpression(parser, node)
 				if not parser:IsValue("as") then return end
 				node.tokens["as"] = parser:ExpectValue("as")
-				node.type_expression = ReadTypeExpression(parser)
+				node.type_expression = ReadTypeExpression(parser, 0)
 			end
 		
 			local function ReadPostfixOperatorSubExpression(parser)
@@ -862,7 +747,7 @@ do -- statements
 				if not parser:IsValue("[") then return end
 				local node = parser:StartNode("expression", "postfix_expression_index")
 				node.tokens["["] = parser:ExpectValue("[")
-				node.expression = ExpectTypeExpression(parser)
+				node.expression = ExpectTypeExpression(parser, 0)
 				node.tokens["]"] = parser:ExpectValue("]")
 				parser:EndNode(node)
 				return node
@@ -891,7 +776,6 @@ do -- statements
 			end
 		
 			function ReadTypeExpression(parser, priority)
-				priority = priority or 0
 				local node
 				local force_upvalue
 			
@@ -1747,7 +1631,7 @@ do -- statements
 			if parser:IsValue("=") then
 				node.tokens["="] = parser:ExpectValue("=")
 				parser:PushParserEnvironment("typesystem")
-				node.right = ReadMultipleValues(parser, nil, ReadTypeExpression)
+				node.right = ReadMultipleValues(parser, nil, ReadTypeExpression, 0)
 				parser:PopParserEnvironment()
 			end
 

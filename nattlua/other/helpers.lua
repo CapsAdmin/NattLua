@@ -299,7 +299,7 @@ end
 local function inject_full_path()
 	local ok, lib = pcall(require, "jit.util" --[[# as string]]) -- to avoid warning
 
-	if ok and lib and lib.funcinfo then
+	if ok and type(lib) == "table" and lib.funcinfo then
 		lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
 
 		function lib.funcinfo(...)

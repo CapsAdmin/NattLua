@@ -2,6 +2,8 @@ local LString = require("nattlua.types.string").LString
 local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
+local type_errors = require("nattlua.types.error_messages")
+
 return
 	{
 		Index = function(META)
@@ -60,7 +62,6 @@ return
 					end
 				end
 
-
 				if self:IsRuntime() then
 					if obj.Type == "tuple" and obj:GetLength() == 1 then
 						return self:IndexOperator(node, obj:Get(1), key)
@@ -69,6 +70,11 @@ return
 
 				if self:IsTypesystem() then
 					return obj:Get(key)
+				end
+
+
+				if obj.Type == "string" then
+					return type_errors.other("attempt to index a string value")
 				end
 
 		

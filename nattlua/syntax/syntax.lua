@@ -4,7 +4,7 @@ local META = {}
 META.__index = META
 --[[#type META.@Name = "Syntax"]]
 --[[#type META.@Self = {
-	BinaryOperatorInfo = Map<|string, nil | {
+	BinaryOperatorInfo = Map<|string, {
 		left_priority = number,
 		right_priority = number
 	}|>,
