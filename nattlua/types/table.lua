@@ -18,6 +18,17 @@ META:GetSet("BaseTable", nil--[[# as TTable|nil]])
 META:GetSet("ReferenceId", nil--[[# as string | nil]])
 META:GetSet("Self", nil--[[# as TTable]])
 
+function META:GetName()
+	if not self.Name then
+		local meta = self:GetMetaTable()
+		if meta and meta ~= self then
+			return meta:GetName()
+		end
+	end
+
+	return self.Name
+end
+
 function META:SetSelf(tbl)
 	tbl:SetMetaTable(self)
 	tbl.mutable = true
