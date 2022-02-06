@@ -860,3 +860,32 @@ run[[
         attest.equal(node, 1337)
     end
 ]]
+
+run[[
+    local function foo()
+        assert(math.random() > 0.5)
+        return 1337
+    end
+    
+    local function ReadIdentifier()
+        if math.random() > 0.5 then return nil end
+        local node = foo()
+    
+        attest.equal(node, 1337)
+    end
+]]
+
+run[[
+
+    local function foo()
+        assert(true)
+        return 1337
+    end
+
+    local function ReadIdentifier()
+        if math.random() > 0.5 then return nil end
+        local node = foo()
+
+        attest.equal(node, 1337)
+    end
+]]

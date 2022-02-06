@@ -64,12 +64,19 @@ return function(META)
 	end
 	
 	function META:ThrowSilentError(assert_expression)
+		if assert_expression and assert_expression:IsCertainlyTrue() then
+			return
+		end
+
 		for i = #self.call_stack, 1, -1 do
 			local frame = self.call_stack[i]
 			local function_scope = frame.scope:GetNearestFunctionScope()
-			function_scope.lua_silent_error = function_scope.lua_silent_error or {}
-			table.insert(function_scope.lua_silent_error, 1, self:GetScope())
-			frame.scope:UncertainReturn()
+
+			if not assert_expression or assert_expression:IsCertainlyTrue() then
+				function_scope.lua_silent_error = function_scope.lua_silent_error or {}
+				table.insert(function_scope.lua_silent_error, 1, self:GetScope())
+				frame.scope:UncertainReturn()
+			end
 
 			if assert_expression and assert_expression:IsTruthy() then
 				-- track the assertion expression

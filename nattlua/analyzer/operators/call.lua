@@ -940,7 +940,7 @@ return
 				return true
 			end
 
-			function META:IsMaybeReachable(b)
+			function META:IsMaybeReachable()
 				local scope = self:GetScope()
 				local function_scope = scope:GetNearestFunctionScope()
 
