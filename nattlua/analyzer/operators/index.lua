@@ -63,7 +63,7 @@ return
 
 				if self:IsRuntime() then
 					if obj.Type == "tuple" and obj:GetLength() == 1 then
-						obj = obj:Get(1)
+						return self:IndexOperator(node, obj:Get(1), key)
 					end
 				end
 
