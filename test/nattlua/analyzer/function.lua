@@ -841,3 +841,22 @@ run([[
     local x = {"", "b", 1}
     foo(x)
 ]], "key 3 is not a subset of nil | string")
+
+
+run[[
+    local function fmt(str: string)
+        if math.random() > 0.5 then 
+            error("!") 
+        end
+    end
+    
+    local function StartNode()
+        assert(true)
+        return 1337
+    end
+    
+    local function ResolvePath()
+        local node = StartNode()
+        attest.equal(node, 1337)
+    end
+]]
