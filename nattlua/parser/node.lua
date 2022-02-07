@@ -30,14 +30,18 @@ type META.@Self = {
     parent = nil | self,
     code_start = number,
     code_stop = number,
-
+    
     statements = nil | List<|any|>,
     value = nil | Token,
 }
+
+local type Node = META.@Self
+
 ]]
 
+
 local id = 0
-function META.New(init--[[#: Omit<|META.@Self, "id" | "tokens"|> ]])
+function META.New(init--[[#: Omit<|META.@Self, "id" | "tokens" |> ]])--[[#: Node]]
     id = id + 1
     init.tokens = {}
     init.id = id
@@ -133,7 +137,6 @@ end
 function META:FindNodesByType(what--[[#: StatementKind | ExpressionKind]])
     return find_by_type(self, what, {})
 end
-
 
 
 return META

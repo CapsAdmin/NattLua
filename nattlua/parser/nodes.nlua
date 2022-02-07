@@ -45,7 +45,7 @@ local type VarargTypeExpression = Node &  {
   },
 }
 
-local type ValueExpression = Node &  {
+local type ValueExpression = Expression &  {
   type = "expression",
   kind = "value",
   value = Token,

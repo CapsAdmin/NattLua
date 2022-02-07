@@ -7,11 +7,13 @@ FunctionExpression,
 FunctionLocalStatement,
 FunctionLocalTypeStatement,
 FunctionStatement,
-FunctionLocalAnalyzerStatement  } = import_type<|"nattlua/parser/nodes.nlua"|>]]
+FunctionLocalAnalyzerStatement,
+ValueExpression
+  } = import_type<|"nattlua/parser/nodes.nlua"|>]]
 --[[#import_type<|"nattlua/code/code.lua"|>]]
 
 --[[#local type NodeType = "expression" | "statement"]]
---[[#local type Node = any]]
+
 local Node = require("nattlua.parser.node")
 local ipairs = _G.ipairs
 local pairs = _G.pairs
@@ -22,6 +24,8 @@ local helpers = require("nattlua.other.helpers")
 local quote_helper = require("nattlua.other.quote")
 local META = {}
 META.__index = META
+
+--[[#local type Node = Node.@Self]]
 
 --[[#
 type META.@Self = {
@@ -103,7 +107,7 @@ function META:StartNode(type--[[#: "statement" | "expression"]], kind--[[#: Stat
 	return node
 end
 
-function META:EndNode(node)
+function META:EndNode(node--[[#: Node]])
 	local prev = self:GetToken(-1)
 	if prev then
 		node.code_stop = prev.stop
@@ -300,10 +304,11 @@ do -- statements
 		return out
 	end
 
+	--[[#do return end]]
 
 	local function ReadIdentifier(parser--[[#: Parser]], expect_type--[[#: nil | boolean]])
 		if not parser:IsType("letter") and not parser:IsValue("...") then return end
-		local node = parser:StartNode("expression", "value")
+		local node = parser:StartNode("expression", "value") --[[#-- as ValueExpression ]]
 
 		if parser:IsValue("...") then
 			node.value = parser:ExpectValue("...")
@@ -321,7 +326,6 @@ do -- statements
 		return node
 	end
 
-	--[[#do return end]]
 	local function ReadValueExpressionToken(parser--[[#: Parser]], expect_value--[[#: nil | string]]) 
 		local node = parser:StartNode("expression", "value")
 		node.value = expect_value and parser:ExpectValue(expect_value) or parser:ReadToken()
