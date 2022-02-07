@@ -335,8 +335,11 @@ function META:IsDynamic()
 end
 
 function META:Delete(key--[[#: BaseType]])
-	for i, keyval in ipairs(self:GetData()) do
-		if key:IsSubsetOf(keyval.key) and keyval.key:IsLiteral() then
+	local data = self:GetData()
+	for i = #data, 1, -1 do
+		local keyval = data[i]
+
+		if key:Equal(keyval.key) then
 			keyval.val:SetParent()
 			keyval.key:SetParent()
 			table.remove(self:GetData(), i)

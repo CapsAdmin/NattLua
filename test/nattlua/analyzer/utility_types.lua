@@ -141,3 +141,15 @@ run[[
     --attest.equal<|Capitalize<|"foo"|>, "Foo"|>
     --attest.equal<|Uncapitalize<|"FOO"|>, "fOO"|>
 ]]
+
+run[[
+    local x: {
+        [string] = true,
+        foo = 1337,
+    }
+    
+    local y: Omit<|x, string|>
+    attest.equal(y, {
+        foo = 1337,
+    })
+]]
