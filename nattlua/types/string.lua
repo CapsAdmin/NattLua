@@ -34,7 +34,7 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A --[[#: TString ]], B --[[#: ]])
+function META.IsSubsetOf(A --[[#: TString ]], B --[[#: BaseType ]])
 	if B.Type == "tuple" then B = B:Get(1) end
 	if B.Type == "any" then return true end
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
