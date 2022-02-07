@@ -106,13 +106,15 @@ function META:__tostring()
 		indent = " "
 	end
 
-	if self:GetContract() and self:GetContract().Type == "table" then
-		for i, keyval in ipairs(self:GetContract():GetData()) do
+	local contract = self:GetContract() 
+
+	if contract and contract.Type == "table" and contract ~= self then
+		for i, keyval in ipairs(contract:GetData()) do
 			local key, val = tostring(self:GetData()[i] and self:GetData()[i].key or "nil"), tostring(self:GetData()[i] and self:GetData()[i].val or "nil")
 			local tkey, tval = tostring(keyval.key), tostring(keyval.val)
 
 			if key == tkey then
-				s[i] = indent .. "[" .. key .. "]"
+				s[i] = indent .. key
 			else
 				s[i] = indent .. "[" .. key .. " as " .. tkey .. "]"
 			end
@@ -587,6 +589,8 @@ end
 
 function META:CopyLiteralness(from--[[#: TTable]])
 	if not from:GetData() then return false end
+
+	if self:Equal(from) then return true end
 
 	for _, keyval_from in ipairs(from:GetData()) do
 		local keyval, reason = self:FindKeyVal(keyval_from.key)
