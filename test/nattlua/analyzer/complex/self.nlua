@@ -118,5 +118,5 @@ do
 end
 
 do
-    require("nattlua.parser.parser")
+    require("nattlua.parser.base")
 end
