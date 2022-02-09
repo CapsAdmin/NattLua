@@ -271,4 +271,18 @@ function META:ResolvePath(path--[[#: string]])
 	return path
 end
 
+function META:ReadMultipleValues(max--[[#: nil | number ]], reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]], ...--[[#: ref ...any]])
+    local out = {}
+
+    for i = 1, max or self:GetLength() do
+        local node = reader(self, ...) --[[# as Node | nil]]
+        if not node then break end
+        out[i] = node
+        if not self:IsValue(",") then break end
+        node.tokens[","] = self:ExpectValue(",")
+    end
+
+    return out
+end
+
 return META
