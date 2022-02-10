@@ -259,7 +259,7 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 		if stop_token and stop_token[tk.value] then break end
 		local node = self:ReadNode()
 		if not node then break end
-
+		
 		if node[1] then
 			for _, v in ipairs(node) do
 				out[i] = v
@@ -267,13 +267,12 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 			end
 		else
 			out[i] = node
+			i = i + 1
 		end
 
 		if self.config and self.config.on_statement then
 			out[i] = self.config.on_statement(self, out[i]) or out[i]
 		end
-		
-		i = i + 1
 	end
 
 	return out
