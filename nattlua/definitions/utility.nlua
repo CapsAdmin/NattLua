@@ -242,3 +242,31 @@ end
 function Uncapitalize<|val: ref string|>
 	return val:sub(1, 1):lower() .. val:sub(2)
 end
+
+analyzer function PushTypeEnvironment(obj: any)
+   local tbl = types.Table()
+   local g = analyzer:GetGlobalEnvironment("typesystem")
+
+   tbl:Set(types.LString("__index"), types.LuaTypeFunction(function(self, key)
+      local ok, err = obj:Get(key)
+      if ok then return ok end
+      local val, err = g:Get(key)
+      if val then return val end
+
+      return types.Nil()
+   end, {types.Any(), types.Any()}, {}))
+
+   tbl:Set(types.LString("__newindex"), types.LuaTypeFunction(function(self, key, val)
+      return analyzer:Assert(analyzer.curent_expression, obj:Set(key, val))
+   end, {types.Any(), types.Any(), types.Any()}, {}))
+   
+   tbl:SetMetaTable(tbl)
+
+   analyzer:PushGlobalEnvironment(analyzer.current_statement, tbl, "typesystem")
+   analyzer:PushAnalyzerEnvironment("typesystem")
+end
+
+analyzer function PopTypeEnvironment()
+   analyzer:PopAnalyzerEnvironment("typesystem")
+   analyzer:PopGlobalEnvironment("typesystem")
+end

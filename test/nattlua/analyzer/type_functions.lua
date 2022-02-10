@@ -565,3 +565,17 @@ run[[
     attest.equal(a, _ as nil | Function)
     attest.equal(b, _ as nil | string)
 ]]
+
+run[[
+    local type tl = {x=1337}
+
+    do
+        PushTypeEnvironment<|tl|>
+        type foo = 1
+        PopTypeEnvironment<||>
+        type bar = 2
+    end
+
+    attest.equal(tl, {x=1337, foo=1})
+    attest.equal(bar, 2)
+]]
