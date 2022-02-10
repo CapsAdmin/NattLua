@@ -252,16 +252,28 @@ end
 function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 	local out = {}
 
-	for i = 1, self:GetLength() do
+	local i = 1
+	for _ = 1, self:GetLength() do
 		local tk = self:GetToken()
 		if not tk then break end
 		if stop_token and stop_token[tk.value] then break end
-		out[i] = self:ReadNode()
-		if not out[i] then break end
+		local node = self:ReadNode()
+		if not node then break end
+
+		if node[1] then
+			for _, v in ipairs(node) do
+				out[i] = v
+				i = i + 1
+			end
+		else
+			out[i] = node
+		end
 
 		if self.config and self.config.on_statement then
 			out[i] = self.config.on_statement(self, out[i]) or out[i]
 		end
+		
+		i = i + 1
 	end
 
 	return out
