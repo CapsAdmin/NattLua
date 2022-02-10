@@ -47,7 +47,7 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 	local line = 1
 	local line_start
 	local line_stop
-	local within_start
+	local within_start = 1
 	local within_stop
 	local character_start
 	local character_stop
@@ -87,7 +87,6 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 		within_stop = #code + 1
 	end
 
-	if not within_start then return end
 	return
 		{
 			character_start = character_start or
