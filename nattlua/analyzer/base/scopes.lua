@@ -141,8 +141,8 @@ return function(META)
 			end
 
 			function META:PopGlobalEnvironment(env)
-				table.remove(self.environment_nodes)
-				table.remove(self.environments[env])
+				table.remove(self.environment_nodes, 1)
+				table.remove(self.environments[env], 1)
 			end
 
 			function META:GetGlobalEnvironment(env)
@@ -193,7 +193,7 @@ return function(META)
 					return upvalue
 				end
 
-				local g = self.environments[self:GetCurrentAnalyzerEnvironment()][1]
+				local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 
 				if not g then
 					self:FatalError("tried to set environment value outside of Push/Pop/Environment")
