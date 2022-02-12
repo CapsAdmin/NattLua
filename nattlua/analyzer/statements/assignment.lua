@@ -193,8 +193,15 @@ return
 				-- if all is well, create or mutate the value
 
 				if statement.kind == "local_assignment" then
+					local immutable = false
+					if exp_key.attribute then
+						if exp_key.attribute.value == "const" then
+							immutable = true
+						end
+					end
+
 					-- local assignment: local a = 1
-					self:CreateLocalValue(exp_key.value.value, val)
+					self:CreateLocalValue(exp_key.value.value, val, immutable)
 				elseif statement.kind == "assignment" then
 					local key = left[left_pos]
 
@@ -224,11 +231,13 @@ return
 
 						local val = self:SetLocalOrGlobalValue(key, val)
 
+						if val then
 						-- this is used for tracking function dependencies
 						if val.Type == "upvalue" then
 							self:GetScope():AddDependency(val)
 						else
 							self:GetScope():AddDependency({key = key, val = val})
+							end
 						end
 					else
 						-- TODO: refactor out to mutation assignment?

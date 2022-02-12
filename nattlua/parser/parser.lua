@@ -20,6 +20,11 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
         node.value = self:ExpectValue("...")
     else
         node.value = self:ExpectType("letter")
+        if self:IsValue("<") then
+            node.tokens["<"] = self:ExpectValue("<")
+            node.attribute = self:ExpectType("letter")
+            node.tokens[">"] = self:ExpectValue(">")
+        end
     end
 
     if self:IsValue(":") or expect_type then

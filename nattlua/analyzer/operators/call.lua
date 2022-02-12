@@ -153,22 +153,22 @@ return
 				self:PushGlobalEnvironment(function_node, self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()), self:GetCurrentAnalyzerEnvironment())
 
 				if function_node.self_call then
-					self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node), "self")
+					self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node))
 				end
 
 				for i, identifier in ipairs(function_node.identifiers) do
 					local argi = function_node.self_call and (i + 1) or i
 
 					if self:IsTypesystem() then
-						self:CreateLocalValue(identifier.value.value, arguments:GetWithoutExpansion(argi), argi)
+						self:CreateLocalValue(identifier.value.value, arguments:GetWithoutExpansion(argi))
 					end
 
 					if self:IsRuntime() then
 
 						if identifier.value.value == "..." then
-							self:CreateLocalValue(identifier.value.value, arguments:Slice(argi), argi)
+							self:CreateLocalValue(identifier.value.value, arguments:Slice(argi))
 						else
-							self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil():SetNode(identifier), argi)
+							self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil():SetNode(identifier))
 						end
 					end
 				end
@@ -370,7 +370,7 @@ return
 							-- stem type so that we can allow
 							-- function(x: foo<|x|>): nil
 							
-							self:CreateLocalValue(key.value.value, Any(), i)
+							self:CreateLocalValue(key.value.value, Any())
 
 							local arg = arguments:Get(i)
 							local contract = contracts:Get(i)
@@ -381,7 +381,7 @@ return
 							end
 
 							if contract and contract.ref_argument and arg then
-								self:CreateLocalValue(key.value.value, arg, i)
+								self:CreateLocalValue(key.value.value, arg)
 							end
 
 							if key.value.value == "..." then
@@ -401,7 +401,7 @@ return
 									return type_errors.other({"argument #", i, " ", arg, ": ", err})
 								end
 							elseif args[i] then
-								self:CreateLocalValue(key.value.value, args[i], i)
+								self:CreateLocalValue(key.value.value, args[i])
 							end
 
 							if not self.processing_deferred_calls then

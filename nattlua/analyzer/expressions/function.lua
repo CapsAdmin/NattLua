@@ -31,7 +31,7 @@ local function analyze_function_signature(self, node, current_function)
 
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
-			self:CreateLocalValue(key.value.value, Any(), i)
+			self:CreateLocalValue(key.value.value, Any())
 
 
 			if key.value.value == "..." then
@@ -49,7 +49,7 @@ local function analyze_function_signature(self, node, current_function)
 				args[i] = Any():SetNode(key)
 			end
 
-			self:CreateLocalValue(key.value.value, args[i], i)
+			self:CreateLocalValue(key.value.value, args[i])
 		end
 
 
@@ -65,7 +65,7 @@ local function analyze_function_signature(self, node, current_function)
 			
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()
-				self:CreateLocalValue(key.identifier.value, args[i], i)
+				self:CreateLocalValue(key.identifier.value, args[i])
 
 			elseif key.type_expression then
 				self:CreateLocalValue(key.value.value, Any(), i)

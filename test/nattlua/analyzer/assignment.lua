@@ -100,3 +100,7 @@ test("runtime reassignment", function()
     equal(v:GetData(), 2)
 end)
 
+run([[
+    local x <const> = 1
+    x = 2
+]], "cannot assign to const variable")

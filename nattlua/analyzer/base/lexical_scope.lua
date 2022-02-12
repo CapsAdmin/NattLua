@@ -32,6 +32,14 @@ do
 		value:SetUpvalue(self)
 	end
 
+	function META:SetImmutable(b)
+		self.immutable = b
+	end
+
+	function META:IsImmutable()
+		return self.immutable
+	end
+
 	upvalue_meta = META
 end
 

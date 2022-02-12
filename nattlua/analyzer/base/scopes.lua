@@ -80,9 +80,10 @@ return function(META)
 				return scope_copy
 			end
 
-			function META:CreateLocalValue(key, obj, function_argument)
+			function META:CreateLocalValue(key, obj, const)
 				local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
 				self:MutateUpvalue(upvalue, obj)
+				upvalue:SetImmutable(const)
 				return upvalue
 			end
 
@@ -186,6 +187,11 @@ return function(META)
 				local upvalue, found_scope = self:FindLocalUpvalue(key, scope)
 
 				if upvalue then
+
+					if upvalue:IsImmutable() then
+						return self:Error(key:GetNode(), {"cannot assign to const variable ", key})
+					end
+
 					if not self:MutateUpvalue(upvalue, val) then
 						upvalue:SetValue(val)
 					end
