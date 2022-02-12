@@ -207,7 +207,7 @@ return
 
 					-- plain assignment: a = 1
 					if exp_key.kind == "value" then
-						do -- check for any previous upvalues
+						if self:IsRuntime() then -- check for any previous upvalues
 							local existing_value = self:GetLocalOrGlobalValue(key)
 							local contract = existing_value and existing_value:GetContract()
 
@@ -232,11 +232,11 @@ return
 						local val = self:SetLocalOrGlobalValue(key, val)
 
 						if val then
-						-- this is used for tracking function dependencies
-						if val.Type == "upvalue" then
-							self:GetScope():AddDependency(val)
-						else
-							self:GetScope():AddDependency({key = key, val = val})
+							-- this is used for tracking function dependencies
+							if val.Type == "upvalue" then
+								self:GetScope():AddDependency(val)
+							else
+								self:GetScope():AddDependency({key = key, val = val})
 							end
 						end
 					else
