@@ -1,4 +1,5 @@
 type boolean = true | false
+type integer = number
 type Table = {[any] = any} | {}
 type Function = function=(...any)>(...any)
 type userdata = Table
@@ -252,7 +253,9 @@ analyzer function PushTypeEnvironment(obj: any)
 		if ok then return ok end
 		local val, err = analyzer:IndexOperator(key:GetNode(), g, key)
 		if val then return val end
-	
+		
+		analyzer:Error(key:GetNode(), err)
+
 		return types.Nil()
 	end, {types.Any(), types.Any()}, {}))
 
