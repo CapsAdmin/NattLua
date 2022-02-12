@@ -579,3 +579,26 @@ run[[
     attest.equal(tl, {x=1337, foo=1})
     attest.equal(bar, 2)
 ]]
+
+run[[
+    local type tl = {x=1337}
+
+    do
+        PushTypeEnvironment<|tl|>
+        type foo = 1
+        local type lol = {}
+        do
+            PushTypeEnvironment<|lol|>
+            type bar = 2
+            PopTypeEnvironment<||> 
+        end
+        type x = lol
+        PopTypeEnvironment<||>
+    end
+
+    attest.equal<|tl, {
+        x=1337,
+        foo = 1,
+        x={bar=2}
+    }|>
+]]

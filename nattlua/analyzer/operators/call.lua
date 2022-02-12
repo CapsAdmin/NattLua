@@ -864,7 +864,8 @@ return
 					return false, "call stack is too deep"
 				end
 
-				do
+				local is_runtime = self:IsRuntime()
+				if is_runtime then
 					-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 					self.call_stack = self.call_stack or {}
 					for _, v in ipairs(self.call_stack) do
@@ -899,7 +900,9 @@ return
 
 				local ok, err = Call(self, obj, arguments)
 
-				table.remove(self.call_stack)
+				if is_runtime then
+					table.remove(self.call_stack)
+				end
 
 				self:PopActiveNode()
 				return ok, err

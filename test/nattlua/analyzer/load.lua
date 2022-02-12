@@ -59,7 +59,7 @@ run[[
     type lol = nil
 ]]
 
-run[[
+pending[[
     require("test.nattlua.analyzer.file_importing.env_leak.main")
 ]]
 
