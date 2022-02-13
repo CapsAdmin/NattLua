@@ -229,3 +229,6 @@ check({preserve_whitespace = false},
 	["\r"] = "\\r",
 	["\t"] = "\\t",
 }]])
+
+check({preserve_whitespace = false}, 
+[==[--[#[analyzer function coroutine.wrap(cb: Function) end]]]==])

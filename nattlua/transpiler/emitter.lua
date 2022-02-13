@@ -582,7 +582,7 @@ do
 
 		self:EmitToken(node.tokens["arguments("])
         self:PushForceNewlines(false)
-		self:EmitExpressionList(node.identifiers)
+		self:EmitIdentifierList(node.identifiers)
         self:PopForceNewlines()
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
@@ -1401,6 +1401,13 @@ function META:EmitAnnotation(node)
 end
 
 function META:EmitIdentifier(node)
+	if node.identifier then
+		self:EmitToken(node.identifier)
+		self:EmitToken(node.tokens[":"])
+		self:Whitespace(" ")
+		self:EmitTypeExpression(node)
+		return
+	end
 	self:EmitToken(node.value)
     if node.parent.environment ~= "typesystem" then
 	    self:EmitAnnotation(node)
