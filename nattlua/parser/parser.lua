@@ -10,8 +10,6 @@ local table_remove = require("table").remove
 local ipairs = _G.ipairs
 
 
---[[#do return end]]
-
 function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
     if not self:IsType("letter") and not self:IsValue("...") then return end
     local node = self:StartNode("expression", "value") --[[#-- as ValueExpression ]]

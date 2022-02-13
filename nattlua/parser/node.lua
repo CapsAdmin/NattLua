@@ -79,8 +79,7 @@ function META:__tostring()
 end
 
 function META:Render(config)
-    --[[# do return end ]]
-    local em = require("nattlua.transpiler.emitter")(config or {preserve_whitespace = false, no_newlines = true})
+    local em = require("nattlua.transpiler.emitter"--[[#as string]])(config or {preserve_whitespace = false, no_newlines = true})
 
     if self.type == "expression" then
         em:EmitExpression(self)
