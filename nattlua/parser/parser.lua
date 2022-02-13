@@ -52,6 +52,15 @@ function META:ReadValueExpressionType(expect_value--[[#: TokenType]])
 end
 
 function META:ReadFunctionBody(node--[[#: FunctionAnalyzerExpression | FunctionExpression | FunctionLocalStatement | FunctionStatement ]])
+
+    if self.TealCompat then
+        if self:IsValue("<") then
+            node.tokens["arguments_typesystem("] = self:ExpectValue("<")
+            node.identifiers_typesystem = self:ReadMultipleValues(nil, self.ReadIdentifier, false)
+            node.tokens["arguments_typesystem)"] = self:ExpectValue(">")
+        end
+    end
+
     node.tokens["arguments("] = self:ExpectValue("(")
     node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier)
     node.tokens["arguments)"] = self:ExpectValue(")", node.tokens["arguments("])

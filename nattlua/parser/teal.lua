@@ -95,7 +95,7 @@ function META:ReadTealTable()
         local kv = self:StartNode("expression", "table_expression_value")
         kv.expression_key = true
         kv.tokens["["] = self:NewToken("symbol", "[")
-        kv.key_expression = self:ReadTealTypeExpression(0)
+        kv.key_expression = self:ReadValueExpressionType("letter")
         kv.tokens["]"] = self:NewToken("symbol", "]")
         kv.tokens["="] = fix(self:ExpectValue(":"), "=")
         kv.value_expression = self:ReadTealTypeExpression(0)
@@ -147,6 +147,42 @@ function META:ReadTealTuple()
     return node
 end
 
+function META:ReadTealTypeCallSubExpression()
+    if not self:IsValue("<") then return end
+    local node = self:StartNode("expression", "postfix_call")
+
+    node.tokens["call("] = fix(self:ExpectValue("<"), "<|")
+    node.expressions = self:ReadMultipleValues(nil, self.ReadTealTypeExpression, 0)
+    node.tokens["call)"] = fix(self:ExpectValue(">"), "|>")
+
+    node.type_call = true
+    self:EndNode(node)
+    return node
+end
+
+function META:ReadTealTypeSubExpression(node)
+    for _ = 1, self:GetLength() do
+        local left_node = node
+        local found = 
+            --self:ReadIndexSubExpression() or
+            --self:ReadSelfCallSubExpression() or
+            --self:ReadPostfixTypeOperatorSubExpression() or
+            self:ReadTealTypeCallSubExpression() --or
+            --self:ReadPostfixTypeIndexExpressionSubExpression() or
+            --self:ReadAsSubExpression(left_node)
+        if not found then break end
+        found.left = left_node
+
+        if left_node.value and left_node.value.value == ":" then
+            found.parser_call = true
+        end
+
+        node = found
+    end
+
+    return node
+end
+
 function META:ReadTealTypeExpression(priority)
     local node = self:ReadTealFunctionSignature() or 
         self:ReadTealValueTypeExpression() or 
@@ -157,7 +193,7 @@ function META:ReadTealTypeExpression(priority)
     local first = node
 
     if node then
-        node = self:ReadSubExpression(node)
+        node = self:ReadTealTypeSubExpression(node)
 
         if
             first.kind == "value" and
@@ -234,6 +270,7 @@ function META:ReadTealKeyVal()
     
     return kv
 end
+
 function META:ReadTealArrayRecord()
     if not self:IsValue("{") then return nil end
     
@@ -242,11 +279,12 @@ function META:ReadTealArrayRecord()
     kv.left = {Parse("_G[number] = 1").statements[1].left[1]}
     kv.tokens["="] = self:NewToken("symbol", "=")
     kv.right = {self:ReadTealTypeExpression(0)}
-    print(kv.right[1])
     self:Advance(1) -- }
     
     return kv
 end
+
+
 
 function META:ReadTealKeyValMetaMethod()
     if not self:IsValue("metamethod") or not self:IsType("letter", 1) or not self:IsValue(":", 2) then return nil end

@@ -14,6 +14,8 @@ run[[
 
     attest.equal(tl.LoadMode, _ as "b" | "bt" | "t")
     attest.equal(tl.lol, _ as "b" | "bt" | "t")
+
+    £parser.TealCompat = false
 ]]
 
 run[[
@@ -25,4 +27,6 @@ run[[
     end
 
     local x: VisitorCallbacks<string, number> = {foo = "hello", bar = 42}
+
+    £parser.TealCompat = false
 ]]
