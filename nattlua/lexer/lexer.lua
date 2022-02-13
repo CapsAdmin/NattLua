@@ -378,7 +378,7 @@ do
 		return false
 	end
 
-	local function ReadInlineAnalyzerDebugCode(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadInlineAnalyzerDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 			if not lexer:IsString("§") then
 				return false
 			end
@@ -386,7 +386,7 @@ do
 			lexer:Advance(#"§")
 
 			while not lexer:TheEnd() do
-				if lexer:IsString("\n") then
+				if lexer:IsString("\n") or (lexer.comment_escape and lexer:IsString(lexer.comment_escape)) then
 					break
 				end
 				lexer:Advance(1)
@@ -394,7 +394,7 @@ do
 
 			return "analyzer_debug_code"
 		end
-	local function ReadInlineParserDebugCode(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadInlineParserDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 		if not lexer:IsString("£") then
 			return false
 		end
@@ -402,7 +402,7 @@ do
 		lexer:Advance(#"£")
 
 		while not lexer:TheEnd() do
-			if lexer:IsString("\n") then
+			if lexer:IsString("\n") or (lexer.comment_escape and lexer:IsString(lexer.comment_escape)) then
 				break
 			end
 			lexer:Advance(1)

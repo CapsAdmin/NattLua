@@ -292,3 +292,12 @@ parse[[
     £ assert(#parser.nodes == 1)
     £ assert(parser.nodes[1].kind == "root")
 ]]
+
+do
+    parse[==[
+        --[[#£ _G.LOL=true]]
+        £assert(_G.LOL)
+        --[=[#£ _G.LOL=nil]=]
+    ]==]
+    assert(_G.LOL == nil)
+end
