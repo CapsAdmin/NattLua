@@ -156,8 +156,6 @@ return
 					self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node))
 				end
 
-				local call_expression = self:GetActiveNode()
-
 				for i, identifier in ipairs(function_node.identifiers) do
 					local argi = function_node.self_call and (i + 1) or i
 
