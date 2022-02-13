@@ -243,8 +243,8 @@ function META:ReadNode()
         self:ReadLocalTypeAssignmentStatement() or
         self:ReadLocalDestructureAssignmentStatement() or
 
-        self:ReadLocalTealRecord() or
-        self:ReadLocalTealEnumStatement() or
+        self.TealCompat and self:ReadLocalTealRecord() or
+        self.TealCompat and self:ReadLocalTealEnumStatement() or
 
         self:ReadLocalAssignmentStatement() or
         self:ReadTypeAssignmentStatement() or

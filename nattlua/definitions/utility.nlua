@@ -246,6 +246,7 @@ end
 
 analyzer function PushTypeEnvironment(obj: any)
 	local tbl = types.Table()
+	tbl:Set(types.LString("_G"), tbl)
 	local g = analyzer:GetGlobalEnvironment("typesystem")
 
 	tbl:Set(types.LString("__index"), types.LuaTypeFunction(function(self, key)

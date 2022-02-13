@@ -6,7 +6,8 @@ local typesystem_syntax = require("nattlua.syntax.typesystem")
 local function Value(self, symbol, value)
     local node = self:StartNode("expression", "value")
     node.value = self:NewToken(symbol, value)
-    return self:EndNode(node)
+    self:EndNode(node)
+    return node
 end
 
 local function Parse(code)
@@ -51,14 +52,14 @@ function META:ReadTealFunctionSignature()
     node.tokens["="] = self:NewToken("symbol", "=")
 
     node.tokens["arguments("] = self:ExpectValue("(")
-    node.identifiers = ReadMultipleValues(self, nil, self.ReadTealTypeFunctionArgument)
+    node.identifiers = self:ReadMultipleValues(nil, self.ReadTealTypeFunctionArgument)
     node.tokens["arguments)"] = self:ExpectValue(")")
 
     node.tokens[">"] = self:NewToken("symbol", ">")
     self:Advance(1)
 
     node.tokens["return("] = self:NewToken("symbol", "(")
-    node.return_types = ReadMultipleValues(self, nil, self.ReadTealTypeFunctionArgument)
+    node.return_types = self:ReadMultipleValues(nil, self.ReadTealTypeFunctionArgument)
     node.tokens["return)"] = self:NewToken("symbol", ")")
 
     self:EndNode(node)
@@ -156,7 +157,7 @@ function META:ReadTealTypeExpression(priority)
     local first = node
 
     if node then
-        --node = ReadSubExpression(self, node)
+        node = self:ReadSubExpression(node)
 
         if
             first.kind == "value" and
@@ -166,6 +167,8 @@ function META:ReadTealTypeExpression(priority)
             first.force_upvalue = force_upvalue
         end
     end
+
+    if self.TealCompat and self:IsValue(">") then return node end
 
     while typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
     typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
@@ -186,7 +189,7 @@ function META:ReadTealEnum()
     local assignment = self:StartNode("statement", "assignment")
     assignment.tokens["type"] = fix(self:ExpectValue("enum"), "type")
 
-    assignment.left = {self:ReadIdentifier()}
+    assignment.left = {self:ReadValueExpressionToken()}
     assignment.tokens["="] = self:NewToken("symbol", "=")
 
     local node = self:ReadValueExpressionType("string")
@@ -213,9 +216,9 @@ function META:ReadTealTypeAssignment()
     
     local kv = self:StartNode("statement", "assignment")
     kv.tokens["type"] = self:ExpectValue("type")
-    kv.left = {self:ExpectType("letter")}
+    kv.left = {self:ReadValueExpressionToken()}
     kv.tokens["="] = self:ExpectValue("=")
-    kv.right = {self:ReadTealTypeExpression()}
+    kv.right = {self:ReadTealTypeExpression(0)}
 
     return kv
 end
@@ -227,54 +230,53 @@ function META:ReadTealKeyVal()
     kv.tokens["type"] = self:NewToken("letter", "type")
     kv.left = {self:ReadValueExpressionToken()}
     kv.tokens["="] = fix(self:ExpectValue(":"), "=")
-    kv.right = {self:ReadTealTypeExpression()}
+    kv.right = {self:ReadTealTypeExpression(0)}
     
     return kv
 end
-
-function META:ReadTealRecord()
-    if not self:IsValue("record") or not self:IsType("letter", 1) then return nil end
+function META:ReadTealArrayRecord()
+    if not self:IsValue("{") then return nil end
     
     local kv = self:StartNode("statement", "assignment")
-    kv.tokens["type"] = fix(self:ExpectValue("record"), "type")
-    kv.left = {self:ExpectType("letter")}
-    kv.tokens["="] = self:ExpectValue("=")
-
-    do
-        local tbl = self:StartNode("expression", "type_table")
-        tbl.tokens["{"] = self:NewToken("symbol", "{")
-        tbl.children = {}
-
-        tbl.tokens["separators"] = {}
-        while true do
-            local node = self:ReadTealKeyVal()
-            if not node then break end
-            table.insert(tbl.children, node)
-            table.insert(tbl.tokens["separators"], self:NewToken("symbol", ","))
-        end
-
-        tbl.tokens["}"] = self:NewToken("symbol", "}")
-        self:EndNode(tbl)
-
-        kv.value_expression = tbl			
-    end
-
-    self:ExpectValue("end")
-
+    kv.tokens["type"] = fix(self:ExpectValue("{"), "type")
+    kv.left = {Parse("_G[number] = 1").statements[1].left[1]}
+    kv.tokens["="] = self:NewToken("symbol", "=")
+    kv.right = {self:ReadTealTypeExpression(0)}
+    print(kv.right[1])
+    self:Advance(1) -- }
+    
     return kv
-
 end
 
-function META:ReadLocalTealRecord()
-    if not self:IsValue("local") or not self:IsValue("record", 1) or not self:IsType("letter", 2) then return nil end
+function META:ReadTealKeyValMetaMethod()
+    if not self:IsValue("metamethod") or not self:IsType("letter", 1) or not self:IsValue(":", 2) then return nil end
+    
+    local kv = self:StartNode("statement", "assignment")
+    kv.tokens["type"] = fix(self:ExpectValue("metamethod"), "type")
+    kv.left = {self:ReadValueExpressionToken()}
+    kv.tokens["="] = fix(self:ExpectValue(":"), "=")
+    kv.right = {self:ReadTealTypeExpression(0)}
+    
+    return kv
+end
 
-    self:PushParserEnvironment("typesystem")
+local function ReadRecordBody(self, assignment)
+    local func
 
-    local assignment = self:StartNode("statement", "local_assignment")
-    assignment.tokens["local"] = self:ExpectValue("local")
-    assignment.tokens["type"] = fix(self:ExpectValue("record"), "type")
-    assignment.tokens["="] = self:NewToken("symbol", "=")
-    assignment.left = {self:ReadValueExpressionToken()}
+    if self:IsValue("<") then
+        func = self:StartNode("statement", "local_type_function")
+        func.tokens["local"] = self:NewToken("letter", "local")
+        func.tokens["identifier"] = assignment.left[1].value
+        func.tokens["function"] = self:NewToken("letter", "function")
+        func.tokens["arguments("] = fix(self:ExpectValue("<"), "<|")
+        func.identifiers = self:ReadMultipleValues(nil, self.ReadValueExpressionToken)
+        func.tokens["arguments)"] = fix(self:ExpectValue(">"), "|>")
+        func.statements = {}
+    end
+
+    local name = func and "__env" or assignment.left[1].value.value
+
+    assignment.left[1].value = self:NewToken("letter", name)
 
     local tbl = self:StartNode("expression", "type_table")
     tbl.tokens["{"] = self:NewToken("symbol", "{")
@@ -290,17 +292,25 @@ function META:ReadLocalTealRecord()
     block.tokens["do"] = self:NewToken("letter", "do")
     block.statements = {}
 
-    table.insert(block.statements, Parse("PushTypeEnvironment<|"..assignment.left[1].value.value.."|>").statements[1])
+    table.insert(block.statements, Parse("PushTypeEnvironment<|"..name.."|>").statements[1])
 
     while true do
         local node = self:ReadTealEnum() or 
             self:ReadTealTypeAssignment() or 
             self:ReadTealRecord() or 
-            self:ReadTealKeyVal()
+            self:ReadTealKeyValMetaMethod() or 
+            self:ReadTealKeyVal() or
+            self:ReadTealArrayRecord()
 
         if not node then break end
-        
-        table.insert(block.statements, node)
+
+        if node[1] then
+            for _, node in ipairs(node) do
+                table.insert(block.statements, node)
+            end
+        else
+            table.insert(block.statements, node)
+        end
     end
     
     table.insert(block.statements, Parse("PopTypeEnvironment<||>").statements[1])
@@ -309,8 +319,44 @@ function META:ReadLocalTealRecord()
     self:EndNode(block)
 
     self:PopParserEnvironment("typesystem")
+    
+    if func then
+        table.insert(func.statements, assignment)
+        table.insert(func.statements, block)
+        table.insert(func.statements, Parse("return " .. name).statements[1])        
+        func.tokens["end"] = self:NewToken("letter", "end")
+        self:EndNode(func)
+        return func
+    end
 
     return {assignment, block}
+end
+
+function META:ReadTealRecord()
+    if not self:IsValue("record") or not self:IsType("letter", 1) then return nil end
+
+    self:PushParserEnvironment("typesystem")
+
+    local assignment = self:StartNode("statement", "assignment")
+    assignment.tokens["type"] = fix(self:ExpectValue("record"), "type")
+    assignment.tokens["="] = self:NewToken("symbol", "=")
+    assignment.left = {self:ReadValueExpressionToken()}
+
+    return ReadRecordBody(self, assignment)
+end
+
+function META:ReadLocalTealRecord()
+    if not self:IsValue("local") or not self:IsValue("record", 1) or not self:IsType("letter", 2) then return nil end
+
+    self:PushParserEnvironment("typesystem")
+
+    local assignment = self:StartNode("statement", "local_assignment")
+    assignment.tokens["local"] = self:ExpectValue("local")
+    assignment.tokens["type"] = fix(self:ExpectValue("record"), "type")
+    assignment.tokens["="] = self:NewToken("symbol", "=")
+    assignment.left = {self:ReadValueExpressionToken()}
+
+    return ReadRecordBody(self, assignment)
 end
 
 function META:ReadLocalTealEnumStatement()

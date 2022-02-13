@@ -39,6 +39,7 @@ function META:IsCallExpression(offset)
     return
         self:IsValue("(", offset) or
         self:IsValue("<|", offset) or
+        (self.TealCompat and self:IsValue("<", offset)) or
         self:IsValue("{", offset) or
         self:IsType("string", offset) or
         (self:IsValue("!", offset) and self:IsValue("(", offset + 1))
@@ -178,14 +179,36 @@ do -- typesystem
                 node.tokens["["] = self:ExpectValue("[")
                 node.key_expression = self:ReadTypeExpression(0)
                 node.tokens["]"] = self:ExpectValue("]")
+
+                if self.TealCompat then
+                    if self:IsValue(":") then
+                        node.tokens["="] = self:ExpectValue(":")
+                        node.tokens["="].value = "="
+                    else
                 node.tokens["="] = self:ExpectValue("=")
+                    end
+                else
+                    node.tokens["="] = self:ExpectValue("=")
+                end
+
                 node.value_expression = self:ReadTypeExpression(0)
                 self:EndNode(node)
                 return node
-            elseif self:IsType("letter") and self:IsValue("=", 1) then
+            elseif self:IsType("letter") and (self:IsValue("=", 1) or self.TealCompat and self:IsValue(":", 1)) then
                 local node = self:StartNode("expression", "table_key_value")
                 node.tokens["identifier"] = self:ExpectType("letter")
+                
+                if self.TealCompat then
+                    if self:IsValue(":") then
+                        node.tokens["="] = self:ExpectValue(":")
+                        node.tokens["="].value = "="
+                    else
                 node.tokens["="] = self:ExpectValue("=")
+                    end
+                else
+                    node.tokens["="] = self:ExpectValue("=")
+                end
+
                 node.value_expression = self:ReadTypeExpression(0)
                 return node
             end
@@ -280,6 +303,12 @@ do -- typesystem
             node.expressions = {
                     self:ReadValueExpressionToken()
                 }
+        elseif self.TealCompat and self:IsValue("<") then
+            node.tokens["call("] = self:ExpectValue("<")
+            node.tokens["call("].value = "<|"
+            node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+            node.tokens["call)"] = self:ExpectValue(">")
+            node.tokens["call)"].value = "|>"
         elseif self:IsValue("<|") then
             node.tokens["call("] = self:ExpectValue("<|")
             node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
@@ -360,6 +389,8 @@ do -- typesystem
                 first.force_upvalue = force_upvalue
             end
         end
+
+        if self.TealCompat and self:IsValue(">") then return node end
     
         while typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
         typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
@@ -526,20 +557,25 @@ do -- runtime
 
     function META:ReadCallSubExpression(primary_node)
         if not self:IsCallExpression(0) then return end
-
         if primary_node and primary_node.kind == "function" then
             if not primary_node.tokens[")"] then
                 return
             end
         end
-
-
         local node = self:StartNode("expression", "postfix_call")
 
         if self:IsValue("{") then
             node.expressions = {self:ReadTableExpression()}
         elseif self:IsType("string") then
             node.expressions = {self:ReadValueExpressionToken()}
+        elseif self.TealCompat and self:IsValue("<") then
+            
+            node.tokens["call("] = self:ExpectValue("<")
+            node.tokens["call("].value = "<|"
+            node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+            node.tokens["call)"] = self:ExpectValue(">")
+            node.tokens["call)"].value = "|>"
+            node.type_call = true
         elseif self:IsValue("<|") then
             node.tokens["call("] = self:ExpectValue("<|")
             node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
