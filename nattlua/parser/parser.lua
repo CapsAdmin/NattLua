@@ -27,9 +27,11 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
         end
     end
 
-    if self:IsValue(":") or expect_type then
-        node.tokens[":"] = self:ExpectValue(":")
-        node.type_expression = self:ExpectTypeExpression(0)
+    if expect_type ~= false then
+        if self:IsValue(":") or expect_type then
+            node.tokens[":"] = self:ExpectValue(":")
+            node.type_expression = self:ExpectTypeExpression(0)
+        end
     end
 
     self:EndNode(node)
@@ -56,7 +58,7 @@ function META:ReadFunctionBody(node--[[#: FunctionAnalyzerExpression | FunctionE
     if self.TealCompat then
         if self:IsValue("<") then
             node.tokens["arguments_typesystem("] = self:ExpectValue("<")
-            node.identifiers_typesystem = self:ReadMultipleValues(nil, self.ReadIdentifier, false)
+            node.identifiers_typesystem = self:ReadMultipleValues(nil, self.ReadIdentifier)
             node.tokens["arguments_typesystem)"] = self:ExpectValue(">")
         end
     end

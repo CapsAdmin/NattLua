@@ -287,7 +287,21 @@ function META:ReadLocalAssignmentStatement()
     if not self:IsValue("local") then return end
     local node = self:StartNode("statement", "local_assignment")
     node.tokens["local"] = self:ExpectValue("local")
-    node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+
+    if self.TealCompat and self:IsValue(",", 1) then
+        node.left = self:ReadMultipleValues(nil, self.ReadIdentifier, false)
+        if self:IsValue(":") then
+            self:Advance(1)
+            
+            local expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
+            for i, v in ipairs(node.left) do
+                v.type_expression = expressions[i]
+                v.tokens[":"] = self:NewToken("symbol", ":")
+            end
+        end
+    else
+        node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+    end
 
     if self:IsValue("=") then
         node.tokens["="] = self:ExpectValue("=")

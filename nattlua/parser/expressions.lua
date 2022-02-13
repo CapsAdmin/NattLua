@@ -332,7 +332,7 @@ do -- typesystem
     function META:ReadTypeExpression(priority)
 
         if self.TealCompat then
-            return self:ReadTealTypeExpression(priority)
+            return self:ReadTealExpression(priority)
         end
 
         local node
