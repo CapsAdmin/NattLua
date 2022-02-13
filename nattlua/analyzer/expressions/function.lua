@@ -26,7 +26,6 @@ local function analyze_function_signature(self, node, current_function)
 	self:PushAnalyzerEnvironment("typesystem")
 
 	if node.kind == "function" or node.kind == "local_function" then
-		
 		for i, key in ipairs(node.identifiers) do
 
 			-- stem type so that we can allow
@@ -62,6 +61,15 @@ local function analyze_function_signature(self, node, current_function)
 	then
 		explicit_arguments = true
 		for i, key in ipairs(node.identifiers) do
+
+			local generic_type = node.identifiers_typesystem and node.identifiers_typesystem[i]
+			if generic_type then
+				if generic_type.identifier and generic_type.identifier.value ~= "..." then
+					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(key):GetFirstValue())
+				elseif generic_type.type_expression then
+					self:CreateLocalValue(generic_type.value.value, Any(), i)
+				end
+			end
 			
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()

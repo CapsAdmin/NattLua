@@ -88,6 +88,21 @@ function META:ReadTypeFunctionBody(node--[[#: FunctionTypeStatement | FunctionTy
         end
 
         node.tokens["arguments)"] = self:ExpectValue("|>", node.tokens["arguments("])
+
+        if self:IsValue("(") then
+            local lparen = self:ExpectValue("(")
+            local identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier, true)
+            local rparen = self:ExpectValue(")")
+
+            node.identifiers_typesystem = node.identifiers
+            node.identifiers = identifiers
+
+            node.tokens["arguments_typesystem("] = node.tokens["arguments("]
+            node.tokens["arguments_typesystem)"] = node.tokens["arguments)"]
+
+            node.tokens["arguments("] = lparen
+            node.tokens["arguments)"] = rparen
+        end
     end
 
     if self:IsValue(":") then

@@ -545,6 +545,22 @@ do -- runtime
             node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
             node.tokens["call)"] = self:ExpectValue("|>")
             node.type_call = true
+
+            if self:IsValue("(") then
+                local lparen = self:ExpectValue("(")
+                local expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+                local rparen = self:ExpectValue(")")
+                
+                node.expressions_typesystem = node.expressions
+                node.expressions = expressions
+
+                node.tokens["call_typesystem("] = node.tokens["call("]
+                node.tokens["call_typesystem)"] = node.tokens["call)"]
+
+                node.tokens["call("] = lparen
+                node.tokens["call)"] = rparen
+            end
+
         elseif self:IsValue("!") then
             node.tokens["!"] = self:ExpectValue("!")
             node.tokens["call("] = self:ExpectValue("(")

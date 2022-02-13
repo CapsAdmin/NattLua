@@ -156,6 +156,8 @@ return
 					self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node))
 				end
 
+				local call_expression = self:GetActiveNode()
+
 				for i, identifier in ipairs(function_node.identifiers) do
 					local argi = function_node.self_call and (i + 1) or i
 
@@ -366,7 +368,7 @@ return
 							if function_node.self_call then
 								i = i + 1
 							end
-
+			
 							-- stem type so that we can allow
 							-- function(x: foo<|x|>): nil
 							
@@ -595,8 +597,33 @@ return
 				end
 
 				call_lua_function_with_body = function(self, obj, arguments, function_node)
-					if obj:HasExplicitArguments() then
+					if obj:HasExplicitArguments() or function_node.identifiers_typesystem then
 						if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
+							
+							if function_node.identifiers_typesystem then
+								local call_expression = self:GetActiveNode()
+								
+								for i, key in ipairs(function_node.identifiers) do
+									if function_node.self_call then
+										i = i + 1
+									end
+									
+									local arg = arguments:Get(i)
+									
+									local generic_upvalue = function_node.identifiers_typesystem and function_node.identifiers_typesystem[i] or nil
+									local generic_type = call_expression.expressions_typesystem and call_expression.expressions_typesystem[i] or nil
+
+									if generic_upvalue then
+										local T = self:AnalyzeExpression(generic_type)
+										
+										self:CreateLocalValue(generic_upvalue.value.value, T)
+									end
+								end
+								local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
+								if not ok then return ok, err end
+							end
+
+
 							-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
 							-- local type foo(T: any) return T end
 							-- T becomes the type that is passed in, and not "any"

@@ -315,7 +315,9 @@ function META:EmitExpression(node, from_assignment)
 	elseif node.kind == "postfix_operator" then
 		self:EmitPostfixOperator(node)
 	elseif node.kind == "postfix_call" then
-		if node.type_call then
+		if node.expressions_typesystem then
+			self:EmitCall(node)
+		elseif node.type_call then
 			self:EmitInvalidLuaCode("EmitCall", node)
 		else
 			self:EmitCall(node)
@@ -453,6 +455,14 @@ function META:EmitCall(node)
 		self.inside_call_expression = true
 		self:EmitExpression(node.left)
 
+		if node.expressions_typesystem then
+			local emitted = self:StartEmittingInvalidLuaCode()
+			self:EmitToken(node.tokens["call_typesystem("])
+			self:EmitExpressionList(node.expressions_typesystem)	
+			self:EmitToken(node.tokens["call_typesystem)"])
+			self:StopEmittingInvalidLuaCode(emitted)
+		end
+
 		if node.tokens["call("] then
 			self:EmitToken(node.tokens["call("])
 		else
@@ -471,6 +481,7 @@ function META:EmitCall(node)
     if newlines then
         self:Indent()
     end
+
 
 	self:EmitBreakableExpressionList(node.expressions, true)
     
@@ -559,6 +570,16 @@ end
 
 do
 	local function emit_function_body(self, node, analyzer_function)
+
+		if node.identifiers_typesystem then
+			local emitted = self:StartEmittingInvalidLuaCode()
+			self:EmitToken(node.tokens["arguments_typesystem("])
+			self:EmitExpressionList(node.identifiers_typesystem)	
+			self:EmitToken(node.tokens["arguments_typesystem)"])
+			self:StopEmittingInvalidLuaCode(emitted)
+		end
+
+
 		self:EmitToken(node.tokens["arguments("])
         self:PushForceNewlines(false)
 		self:EmitExpressionList(node.identifiers)
@@ -1109,7 +1130,11 @@ function META:EmitStatement(node)
 	elseif node.kind == "local_analyzer_function" then
 		self:EmitLocalAnalyzerFunction(node)
 	elseif node.kind == "local_type_function" then
-		self:EmitInvalidLuaCode("EmitLocalTypeFunction", node)
+		if node.identifiers_typesystem then
+			self:EmitLocalTypeFunction(node)
+		else
+			self:EmitInvalidLuaCode("EmitLocalTypeFunction", node)
+		end
 	elseif node.kind == "type_function" then
 		self:EmitInvalidLuaCode("EmitTypeFunction", node)
 	elseif
@@ -1605,7 +1630,7 @@ end
 		end
 	end
 
-	function META:EmitInvalidLuaCode(func, ...)
+	function META:StartEmittingInvalidLuaCode()
 		local emitted = false
         
 		if not self.config.uncomment_types then
@@ -1618,8 +1643,10 @@ end
 			self.during_comment_type = self.during_comment_type + 1
 		end
 
-		self[func](self, ...)
+		return emitted
+	end
 
+	function META:StopEmittingInvalidLuaCode(emitted)
 		if emitted then
 			if self:GetPrevChar() == B("]") then
 				self:Whitespace(" ")
@@ -1645,6 +1672,14 @@ end
 		if not self.config.uncomment_types then
 			self.during_comment_type = self.during_comment_type - 1
 		end
+	end
+
+	function META:EmitInvalidLuaCode(func, ...)
+		local emitted = self:StartEmittingInvalidLuaCode()
+
+		self[func](self, ...)
+
+		self:StopEmittingInvalidLuaCode(emitted)
 	end
 end
 

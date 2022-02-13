@@ -102,15 +102,13 @@ run[[
 ]]
 
 run[[
-    local function Lol<|x: any|>
-        return x | nil
-    end
-    
-    local function lol<|T: any|>
-        return function<|x: any|>
-            return Lol<|T|> | x
-        end
-    end
-    
-    attest.equal(lol<|number|>("foo"), _ as "foo" | nil | number)
+    local function foo<|A: any, B: any|>(a: A, b: B)
+        attest.equal(a, _ as number)
+        attest.equal(b, _ as number)
+        return a, b
+     end
+     
+     local x,y = foo<|number, number|>(1, 2)
+     attest.equal(x, _ as number)
+     attest.equal(y, _ as number)
 ]]
