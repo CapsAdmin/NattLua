@@ -102,6 +102,7 @@ do
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
 	local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
 	local AnalyzeTuple = require("nattlua.analyzer.expressions.tuple").AnalyzeTuple
+	local AnalyzeVararg = require("nattlua.analyzer.expressions.vararg").AnalyzeVararg
 	local AnalyzeFunctionSignature = require("nattlua.analyzer.expressions.function_signature").AnalyzeFunctionSignature
 	local Union = require("nattlua.types.union").Union
 
@@ -125,6 +126,8 @@ do
 			return obj
 		elseif node.kind == "value" then
 			return AnalyzeAtomicValue(self, node)
+		elseif node.kind == "vararg" then
+			return AnalyzeVararg(self, node)
 		elseif node.kind == "function" or node.kind == "analyzer_function" or node.kind == "type_function" then
 			return AnalyzeFunction(self, node)
 		elseif node.kind == "table" or node.kind == "type_table" then

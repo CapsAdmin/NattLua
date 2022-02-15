@@ -5,9 +5,11 @@ function types.Initialize()
 	types.Union = require("nattlua.types.union").Union
 	types.Nilable = require("nattlua.types.union").Nilable
 	types.Tuple = require("nattlua.types.tuple").Tuple
+	types.VarArg = require("nattlua.types.tuple").VarArg
 	types.Number = require("nattlua.types.number").Number
 	types.LNumber = require("nattlua.types.number").LNumber
 	types.Function = require("nattlua.types.function").Function
+	types.AnyFunction = require("nattlua.types.function").AnyFunction
 	types.LuaTypeFunction = require("nattlua.types.function").LuaTypeFunction
 	types.String = require("nattlua.types.string").String
 	types.LString = require("nattlua.types.string").LString

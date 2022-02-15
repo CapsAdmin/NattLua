@@ -27,7 +27,7 @@ do
         if size_error_handling == false then
             socket[func_name] = func
         elseif size_error_handling then
-            socket[func_name] = function(...)
+            socket[func_name] = function(...: ...any)
                 local len = func(...)
                 if len < 0 then
                     return nil, socket.lasterror()
@@ -36,7 +36,7 @@ do
                 return len
             end
         else
-            socket[func_name] = function(...)
+            socket[func_name] = function(...: ...any)
                 local ret = func(...)
 
                 if ret == 0 then
@@ -485,10 +485,6 @@ do
     socket.inet_ntoa = C.inet_ntoa
     socket.ntohs = C.ntohs
 
-    function socket.poll(fd: ffi.get_type<|"struct pollfd*"|>, events: any, revents: number)
-
-    end
-    
     e = {
         TCP_NODELAY = 1,
         TCP_MAXSEG = 2,

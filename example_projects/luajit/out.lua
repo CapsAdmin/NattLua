@@ -52,14 +52,14 @@ local  ffi--[[#: {
 	"os" = "BSD" | "Linux" | "OSX" | "Other" | "POSIX" | "Windows",
 	"arch" = "arm" | "mips" | "ppc" | "ppcspe" | "x64" | "x86",
 	"C" = FFI_C,
-	"cdef" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
+	"cdef" = function⦗string, any⦘: ⦗⦘,
 	"abi" = function⦗string⦘: ⦗false | true⦘,
 	"metatype" = function⦗any, any⦘: ⦗⦘,
 	"new" = function⦗any, ⦗any⦘×inf⦘: ⦗⦘,
 	"copy" = function⦗any, any, nil | number⦘: ⦗nil⦘,
 	"alignof" = function⦗any⦘: ⦗number⦘,
 	"cast" = function⦗string, any⦘: ⦗⦘,
-	"typeof" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
+	"typeof" = function⦗string, any⦘: ⦗⦘,
 	"load" = function⦗string⦘: ⦗⦘,
 	"sizeof" = function⦗any, number⦘: ⦗number⦘ | function⦗any⦘: ⦗number⦘,
 	"string" = function⦗{ number = any }, nil | number⦘: ⦗string⦘,
@@ -67,7 +67,7 @@ local  ffi--[[#: {
 	"istype" = function⦗any, any⦘: ⦗false | true⦘,
 	"fill" = function⦗{ number = any }, number, any⦘: ⦗nil⦘ | function⦗{ number = any }, number⦘: ⦗nil⦘,
 	"offsetof" = function⦗{ number = any }, number⦘: ⦗number⦘,
-	"get_type" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘
+	"get_type" = function⦗string, nil | { string = any }⦘: ⦗⦘
 }]]  =  require("ffi")
 
 local  OSX--[[#: false | true]]  =  ffi.os  ==  "OSX"
@@ -89,7 +89,8 @@ local  fs--[[#: {
 }]]  =  {}--[[#  as  contract]]
 
 
-ffi.cdef([[
+ffi.cdef(
+	[[
 	uint32_t GetLastError();
     uint32_t FormatMessageA(
 		uint32_t dwFlags,
@@ -100,13 +101,14 @@ ffi.cdef([[
 		uint32_t nSize,
 		...
 	);
-]])
+]]
+)
 
 
 
 local  function  last_error()--[[#:  string]]
 	
-    local  error_str--[[#: { [number] = number }]]  =  ffi.new("uint8_t[?]",  1024)
+    local  error_str--[[#: { number = number }]]  =  ffi.new("uint8_t[?]",  1024)
 	
     local  FORMAT_MESSAGE_FROM_SYSTEM--[[#: 4096]]  =  0x00001000
 	
@@ -142,19 +144,20 @@ end
 do
 	
     local  struct--[[#: {
-	["dwFileAttributes"] = number,
-	["ftCreationTime"] = number,
-	["ftLastAccessTime"] = number,
-	["ftLastWriteTime"] = number,
-	["nFileSize"] = number,
-	["__call"] = function⦗*self-table*, nil | {
+	"dwFileAttributes" = number,
+	"ftCreationTime" = number,
+	"ftLastAccessTime" = number,
+	"ftLastWriteTime" = number,
+	"nFileSize" = number,
+	"__call" = function⦗*self-table*, nil | {
 		"dwFileAttributes" = nil | number,
 		"ftCreationTime" = nil | number,
 		"ftLastAccessTime" = nil | number,
 		"ftLastWriteTime" = nil | number,
 		"nFileSize" = nil | number
 	}⦘: ⦗*self-table*⦘
-}]]  =  ffi.typeof([[
+}]]  =  ffi.typeof(
+			[[
         struct {
             unsigned long dwFileAttributes;
             uint64_t ftCreationTime;
@@ -162,16 +165,19 @@ do
             uint64_t ftLastWriteTime;
             uint64_t nFileSize;
         }
-    ]])
+    ]]
+		)
 	
 
-	ffi.cdef([[
+	ffi.cdef(
+		[[
         int GetFileAttributesExA(const char *lpFileName, int fInfoLevelId, $ *lpFileInformation);
-    ]],  struct)
+    ]],  struct
+	)
 
 	
 
-    local  function  POSIX_TIME(time--[[#:  number]])
+    local  function  POSIX_TIME(time--[[#:  number]]--[[#:  number]])
 		
         return  tonumber(time  /  10000000  -  11644473600)
 	
@@ -254,15 +260,15 @@ do
 
 	
 
-	function  fs.get_attributes(path,  follow_link)
+	function  fs.get_attributes(path--[[#: string]],  follow_link--[[#: false | nil | true]])
 		
-        local  info--[[#: { [number] = {
-		["dwFileAttributes"] = number,
-		["ftCreationTime"] = number,
-		["ftLastAccessTime"] = number,
-		["ftLastWriteTime"] = number,
-		["nFileSize"] = number,
-		["__call"] = function⦗*self-table*, nil | {
+        local  info--[[#: { number = {
+		"dwFileAttributes" = number,
+		"ftCreationTime" = number,
+		"ftLastAccessTime" = number,
+		"ftLastWriteTime" = number,
+		"nFileSize" = number,
+		"__call" = function⦗*self-table*, nil | {
 			"dwFileAttributes" = nil | number,
 			"ftCreationTime" = nil | number,
 			"ftLastAccessTime" = nil | number,
@@ -288,9 +294,7 @@ do
 			
                 type  =  bit.band(
                     info[0].dwFileAttributes,  flags.directory
-                )  ==  flags.directory  and
-			 "directory"  or
-			 "file",
+                )  ==  flags.directory  and  "directory"  or  "file",
 
             } 
         end
@@ -307,25 +311,26 @@ end
 do
 	
     local  struct--[[#: {
-	["dwFileAttributes"] = number,
-	["ftCreationTime"] = number,
-	["ftLastAccessTime"] = number,
-	["ftLastWriteTime"] = number,
-	["nFileSize"] = number,
-	["dwReserved"] = number,
-	["cFileName"] = { [number] = number },
-	["cAlternateFileName"] = { [number] = number },
-	["__call"] = function⦗*self-table*, nil | {
+	"dwFileAttributes" = number,
+	"ftCreationTime" = number,
+	"ftLastAccessTime" = number,
+	"ftLastWriteTime" = number,
+	"nFileSize" = number,
+	"dwReserved" = number,
+	"cFileName" = { number = number },
+	"cAlternateFileName" = { number = number },
+	"__call" = function⦗*self-table*, nil | {
 		"dwFileAttributes" = nil | number,
 		"ftCreationTime" = nil | number,
 		"ftLastAccessTime" = nil | number,
 		"ftLastWriteTime" = nil | number,
 		"nFileSize" = nil | number,
 		"dwReserved" = nil | number,
-		"cFileName" = nil | { [number] = number },
-		"cAlternateFileName" = nil | { [number] = number }
+		"cFileName" = nil | { number = number },
+		"cAlternateFileName" = nil | { number = number }
 	}⦘: ⦗*self-table*⦘
-}]]  =  ffi.typeof([[
+}]]  =  ffi.typeof(
+			[[
         struct {
             uint32_t dwFileAttributes;
 
@@ -340,21 +345,23 @@ do
             char cFileName[260];
             char cAlternateFileName[14];
         }
-    ]])
+    ]]
+		)
 	
 
-	ffi.cdef([[
+	ffi.cdef(
+		[[
         void *FindFirstFileA(const char *lpFileName, $ *find_data);
         int FindNextFileA(void *handle, $ *find_data);
         int FindClose(void *);
-	]],  struct,  struct)
+	]],  struct,  struct
+	)
 	
-
 
 	local  dot--[[#: 46]]  =  string.byte(".")
 
 	
-	local  function  is_dots(ptr--[[#:  {[number]  =  number}]])
+	local  function  is_dots(ptr--[[#:  {[number]  =  number}]]--[[#:  {[number]  =  number}]])
 		
 		if  ptr[0]  ==  dot  then
 			
@@ -380,7 +387,7 @@ do
 
 	
 
-	function  fs.get_files(path)
+	function  fs.get_files(path--[[#: string]])
 		
 		if  path  ==  ""  then
 			
@@ -398,24 +405,24 @@ do
 
 		
 
-        local  data--[[#: { [number] = {
-		["dwFileAttributes"] = number,
-		["ftCreationTime"] = number,
-		["ftLastAccessTime"] = number,
-		["ftLastWriteTime"] = number,
-		["nFileSize"] = number,
-		["dwReserved"] = number,
-		["cFileName"] = { [number] = number },
-		["cAlternateFileName"] = { [number] = number },
-		["__call"] = function⦗*self-table*, nil | {
+        local  data--[[#: { number = {
+		"dwFileAttributes" = number,
+		"ftCreationTime" = number,
+		"ftLastAccessTime" = number,
+		"ftLastWriteTime" = number,
+		"nFileSize" = number,
+		"dwReserved" = number,
+		"cFileName" = { number = number },
+		"cAlternateFileName" = { number = number },
+		"__call" = function⦗*self-table*, nil | {
 			"dwFileAttributes" = nil | number,
 			"ftCreationTime" = nil | number,
 			"ftLastAccessTime" = nil | number,
 			"ftLastWriteTime" = nil | number,
 			"nFileSize" = nil | number,
 			"dwReserved" = nil | number,
-			"cFileName" = nil | { [number] = number },
-			"cAlternateFileName" = nil | { [number] = number }
+			"cFileName" = nil | { number = number },
+			"cAlternateFileName" = nil | { number = number }
 		}⦘: ⦗*self-table*⦘
 	} }]]  =  ffi.new("$[1]",  struct)
 		
@@ -466,14 +473,16 @@ end
 
 do
 	
-	ffi.cdef([[
+	ffi.cdef(
+		[[
         unsigned long GetCurrentDirectoryA(unsigned long length, char *buffer);
         int SetCurrentDirectoryA(const char *path);
-	]])
+	]]
+	)
 
 	
 
-	function  fs.set_current_directory(path)
+	function  fs.set_current_directory(path--[[#: string]])
 		
 		if  ffi.C.chdir(path)  ==  0  then 
 			return  true 
@@ -488,13 +497,15 @@ do
 
 	function  fs.get_current_directory()
 		
-        local  buffer--[[#: { [number] = number }]]  =  ffi.new("char[260]")
+        local  buffer--[[#: { number = number }]]  =  ffi.new("char[260]")
 		
         local  length--[[#: number]]  =  ffi.C.GetCurrentDirectoryA(260,  buffer)
 		
         local  str--[[#: string]]  =  ffi.string(buffer,  length)
 		
-        return  (str:gsub("\\",  "/"))
+        return  (
+				str:gsub("\\",  "/")
+			)
 	
 	end
 
@@ -511,14 +522,14 @@ local  ffi--[[#: {
 	"os" = "BSD" | "Linux" | "OSX" | "Other" | "POSIX" | "Windows",
 	"arch" = "arm" | "mips" | "ppc" | "ppcspe" | "x64" | "x86",
 	"C" = FFI_C,
-	"cdef" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
+	"cdef" = function⦗string, any⦘: ⦗⦘,
 	"abi" = function⦗string⦘: ⦗false | true⦘,
 	"metatype" = function⦗any, any⦘: ⦗⦘,
 	"new" = function⦗any, ⦗any⦘×inf⦘: ⦗⦘,
 	"copy" = function⦗any, any, nil | number⦘: ⦗nil⦘,
 	"alignof" = function⦗any⦘: ⦗number⦘,
 	"cast" = function⦗string, any⦘: ⦗⦘,
-	"typeof" = function⦗string, ⦗any⦘×inf⦘: ⦗⦘,
+	"typeof" = function⦗string, any⦘: ⦗⦘,
 	"load" = function⦗string⦘: ⦗⦘,
 	"sizeof" = function⦗any, number⦘: ⦗number⦘ | function⦗any⦘: ⦗number⦘,
 	"string" = function⦗{ number = any }, nil | number⦘: ⦗string⦘,
@@ -526,7 +537,7 @@ local  ffi--[[#: {
 	"istype" = function⦗any, any⦘: ⦗false | true⦘,
 	"fill" = function⦗{ number = any }, number, any⦘: ⦗nil⦘ | function⦗{ number = any }, number⦘: ⦗nil⦘,
 	"offsetof" = function⦗{ number = any }, number⦘: ⦗number⦘,
-	"get_type" = function⦗string, ⦗nil | { string = any }⦘×inf⦘: ⦗⦘
+	"get_type" = function⦗string, nil | { string = any }⦘: ⦗⦘
 }]]  =  require("ffi")
 
 local  OSX--[[#: false | true]]  =  ffi.os  ==  "OSX"
@@ -555,7 +566,7 @@ ffi.cdef([[
 
 
 
-local  function  last_error(num--[[#:  number  |  nil]])
+local  function  last_error(num--[[#:  number  |  nil]]--[[#:  number  |  nil]])
 	
 	num  =  num  or  ffi.errno()
 	
@@ -581,7 +592,8 @@ do
 
 	if  OSX  then
 		
-		stat_struct  =  ffi.typeof([[
+		stat_struct  =  ffi.typeof(
+				[[
 			struct {
 				uint32_t st_dev;
 				uint16_t st_mode;
@@ -606,7 +618,8 @@ do
 				int32_t  st_lspare;
 				int64_t  st_qspare[2];
 			}
-		]])
+		]]
+			)
 --[[#		
 
 		type  stat_struct.@Name  =  "OSXStat"]]
@@ -615,7 +628,8 @@ do
 		
 		if  X64  then
 			
-			stat_struct  =  ffi.typeof([[
+			stat_struct  =  ffi.typeof(
+					[[
 				struct {
 					uint64_t st_dev;
 					uint64_t st_ino;
@@ -636,14 +650,16 @@ do
 					uint64_t st_ctime_nsec;
 					int64_t  __unused[3];
 				}
-			]])
+			]]
+				)
 --[[#			
 
 			type  stat_struct.@Name  =  "UnixX64Stat"]]
 		
 		else
 			
-			stat_struct  =  ffi.typeof([[
+			stat_struct  =  ffi.typeof(
+					[[
 				struct {
 					uint64_t st_dev;
 					uint8_t  __pad0[4];
@@ -665,7 +681,8 @@ do
 					uint32_t st_ctime_nsec;
 					uint64_t st_ino;
 				}
-			]])
+			]]
+				)
 --[[#			
 
 			type  stat_struct.@Name  =  "UnixX32Stat"]]
@@ -677,8 +694,8 @@ do
 	
 
 	local  statbox--[[#: {
-	[number] = OSXStat | UnixX32Stat | UnixX64Stat,
-	["__call"] = function⦗*self-table*, nil | { [number] = OSXStat | UnixX32Stat | UnixX64Stat | nil as OSXStat | UnixX32Stat | UnixX64Stat, [nil as "__call"] = nil as function*self-tuple*: ⦗*self-table*⦘ }⦘: ⦗*self-table*⦘
+	number = OSXStat | UnixX32Stat | UnixX64Stat,
+	"__call" = function⦗*self-table*, nil | { number = OSXStat | UnixX32Stat | UnixX64Stat | nil as OSXStat | UnixX32Stat | UnixX64Stat, [nil as "__call"] = nil as function*self-tuple*: ⦗*self-table*⦘ }⦘: ⦗*self-table*⦘
 }]]  =  ffi.typeof("$[1]",  stat_struct)
 	
 	local  stat--[[#: nil]]
@@ -689,10 +706,12 @@ do
 
 	if  OSX  then
 		
-		ffi.cdef([[
+		ffi.cdef(
+			[[
 			int stat64(const char *path, void *buf);
 			int lstat64(const char *path, void *buf);
-		]])
+		]]
+		)
 		
 		stat  =  ffi.C.stat64
 		
@@ -716,14 +735,14 @@ do
 
 		
 
-		stat  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])
+		stat  =  function(path--[[#:  string]]--[[#:  string]],  buff--[[#:  typeof  statbox]]--[[#:  typeof  statbox]])
 				
 			return  ffi.C.syscall(STAT_SYSCALL,  path,  buff)
 			
 		end
 		
 
-		stat_link  =  function(path--[[#:  string]],  buff--[[#:  typeof  statbox]])
+		stat_link  =  function(path--[[#:  string]]--[[#:  string]],  buff--[[#:  typeof  statbox]]--[[#:  typeof  statbox]])
 				
 			return  ffi.C.syscall(STAT_LINK_SYSCALL,  path,  buff)
 			
@@ -737,11 +756,11 @@ do
 
 	
 
-	function  fs.get_attributes(path,  follow_link)
+	function  fs.get_attributes(path--[[#: string]],  follow_link--[[#: false | nil | true]])
 		
 		local  buff--[[#: {
-	[number] = OSXStat | UnixX32Stat | UnixX64Stat,
-	["__call"] = function⦗*self-table*, nil | { [number] = OSXStat | UnixX32Stat | UnixX64Stat | nil as OSXStat | UnixX32Stat | UnixX64Stat, [nil as "__call"] = nil as function*self-tuple*: ⦗*self-table*⦘ }⦘: ⦗*self-table*⦘
+	number = OSXStat | UnixX32Stat | UnixX64Stat,
+	"__call" = function⦗*self-table*, nil | { number = OSXStat | UnixX32Stat | UnixX64Stat | nil as OSXStat | UnixX32Stat | UnixX64Stat, [nil as "__call"] = nil as function*self-tuple*: ⦗*self-table*⦘ }⦘: ⦗*self-table*⦘
 }]]  =  statbox()
 		
 
@@ -785,7 +804,8 @@ do
 
 	if  OSX  then
 		
-		ffi.cdef([[
+		ffi.cdef(
+			[[
 			struct dirent {
 				uint64_t d_ino;
 				uint64_t d_seekoff;
@@ -795,11 +815,13 @@ do
 				char d_name[1024];
 			};
 			struct dirent *readdir(void *dirp) asm("readdir$INODE64");
-		]])
+		]]
+		)
 	
 	else
 		
-		ffi.cdef([[
+		ffi.cdef(
+			[[
 			struct dirent {
 				uint64_t        d_ino;
 				int64_t         d_off;
@@ -808,7 +830,8 @@ do
 				char            d_name[256];
 			};
 			struct dirent *readdir(void *dirp) asm("readdir64");
-		]])
+		]]
+		)
 	
 	end
 
@@ -817,7 +840,7 @@ do
 	local  dot--[[#: 46]]  =  string.byte(".")
 
 	
-	local  function  is_dots(ptr--[[#:  {[number]  =  number}]])
+	local  function  is_dots(ptr--[[#:  {[number]  =  number}]]--[[#:  {[number]  =  number}]])
 		
 		if  ptr[0]  ==  dot  then
 			
@@ -839,9 +862,9 @@ do
 
 	
 
-	function  fs.get_files(path)
+	function  fs.get_files(path--[[#: string]])
 		
-		local  out--[[#:  List<|string|>]]  =  {}
+		local  out--[[#:  List<|string|>]]--[[#:  List<|string|>]]  =  {}
 		 -- [1] TODO
 		
 
@@ -894,14 +917,16 @@ end
 
 do
 	
-	ffi.cdef([[
+	ffi.cdef(
+		[[
 		const char *getcwd(const char *buf, size_t size);
 		int chdir(const char *filename);
-	]])
+	]]
+	)
 
 	
 
-	function  fs.set_current_directory(path)
+	function  fs.set_current_directory(path--[[#: string]])
 		
 		if  ffi.C.chdir(path)  ==  0  then 
 			return  true 
@@ -916,7 +941,7 @@ do
 
 	function  fs.get_current_directory()
 		
-		local  temp--[[#: { [number] = number }]]  =  ffi.new("char[1024]")
+		local  temp--[[#: { number = number }]]  =  ffi.new("char[1024]")
 		
 		local  ret--[[#: nil | { number = number }]]  =  ffi.C.getcwd(temp,  ffi.sizeof(temp))
 		
@@ -937,11 +962,15 @@ end
 return  fs end
 IMPORTS['example_projects/luajit/src/filesystem.nlua'] = function(...) if  jit.os  ==  "Windows"  then
 	
-  return ( IMPORTS['example_projects/luajit/src/platforms/windows/filesystem.nlua']("platforms/windows/filesystem.nlua"))
+  return (
+			 IMPORTS['example_projects/luajit/src/platforms/windows/filesystem.nlua']("platforms/windows/filesystem.nlua")
+		)
 
 else
 	
-  return ( IMPORTS['example_projects/luajit/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua"))
+  return (
+			 IMPORTS['example_projects/luajit/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua")
+		)
 
 end
 
@@ -959,7 +988,9 @@ local  fs--[[#: {
 	"get_files" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗{ number = nil | string }⦘⦘,
 	"set_current_directory" = function⦗string⦘: ⦗⦗nil, string⦘ | ⦗true⦘⦘,
 	"get_current_directory" = function⦗⦘: ⦗⦗nil, string⦘ | ⦗string⦘⦘
-}]]  = ( IMPORTS['example_projects/luajit/src/filesystem.nlua']("filesystem.nlua"))
+}]]  = (
+		 IMPORTS['example_projects/luajit/src/filesystem.nlua']("filesystem.nlua")
+	)
 
 
 print("get files: ",  assert(fs.get_files(".")))

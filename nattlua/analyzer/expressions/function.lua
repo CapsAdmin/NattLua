@@ -32,18 +32,11 @@ local function analyze_function_signature(self, node, current_function)
 			-- function(x: foo<|x|>): nil
 			self:CreateLocalValue(key.value.value, Any())
 
-
-			if key.value.value == "..." then
-				if key.type_expression then
-					explicit_arguments = true
-					args[i] = VarArg():SetNode(key)
-					args[i]:Set(1, self:AnalyzeExpression(key.type_expression):GetFirstValue())
-				else
-					args[i] = VarArg():SetNode(key)
-				end
-			elseif key.type_expression then
-				args[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
+			if key.type_expression then
+				args[i] = self:AnalyzeExpression(key.type_expression)
 				explicit_arguments = true
+			elseif key.value.value == "..." then
+				args[i] = VarArg(Any())
 			else
 				args[i] = Any():SetNode(key)
 			end
@@ -74,21 +67,13 @@ local function analyze_function_signature(self, node, current_function)
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()
 				self:CreateLocalValue(key.identifier.value, args[i])
-
+			elseif key.kind == "vararg" then
+				args[i] = self:AnalyzeExpression(key)
 			elseif key.type_expression then
 				self:CreateLocalValue(key.value.value, Any(), i)
 				args[i] = self:AnalyzeExpression(key.type_expression)
-
-				if key.value.value == "..." then
-					local vararg = VarArg():SetNode(key)
-					vararg:Set(1, args[i])
-					args[i] = vararg
-				end
-
 			elseif key.kind == "value" then
-				if key.value.value == "..." then
-					args[i] = VarArg():SetNode(key)
-				elseif key.value.value == "self" then
+				if key.value.value == "self" then
 					args[i] = self.current_tables[#self.current_tables]
 
 					if not args[i] then
@@ -156,31 +141,14 @@ local function analyze_function_signature(self, node, current_function)
 		-- when doing this vesrus function(): a,b,c
 		-- the return tuple becomes a tuple inside a tuple
 		for i, type_exp in ipairs(node.return_types) do
-			if type_exp.kind == "value" and type_exp.value.value == "..." then
-				local tup
-
-				if type_exp.type_expression then
-					tup = Tuple(
-							{
-								self:AnalyzeExpression(type_exp.type_expression),
-							}
-						)
-						:SetRepeat(math.huge)
-				else
-					tup = VarArg():SetNode(type_exp)
-				end
-
-				ret[i] = tup
+			local obj = self:AnalyzeExpression(type_exp)
+			if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 and not obj.Repeat then
+				-- if we pass in a tuple, we want to override the return type
+				-- function(): mytuple
+				return_tuple_override = obj
+				break
 			else
-				local obj = self:AnalyzeExpression(type_exp)
-				if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
-					-- if we pass in a tuple, we want to override the return type
-					-- function(): mytuple
-					return_tuple_override = obj
-					break
-				else
-					ret[i] = obj
-				end
+				ret[i] = obj
 			end
 		end
 	end

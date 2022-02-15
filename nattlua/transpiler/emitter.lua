@@ -363,6 +363,8 @@ function META:EmitExpression(node, from_assignment)
 		self:EmitInvalidLuaCode("EmitTypeFunction", node)
 	elseif node.kind == "function_signature" then
 		self:EmitInvalidLuaCode("EmitFunctionSignature", node)
+	elseif node.kind == "vararg" then
+		self:EmitVararg(node)
 	else
 		error("unhandled token type " .. node.kind)
 	end
@@ -707,6 +709,14 @@ function META:EmitTuple(node)
 	self:EmitToken(node.tokens["("])
 	self:EmitExpressionList(node.expressions)
 	self:EmitToken(node.tokens[")"])
+end
+
+
+function META:EmitVararg(node)
+	self:EmitToken(node.tokens["..."])
+	if not self.config.analyzer_function then
+		self:EmitExpression(node.value)
+	end
 end
 
 local function has_function_value(tree)
@@ -1564,6 +1574,8 @@ end
 			self:EmitAnonymousFunction(node)
 		elseif node.kind == "function_signature" then
 			self:EmitInvalidLuaCode("EmitFunctionSignature", node)
+		elseif node.kind == "vararg" then
+			self:EmitVararg(node)
 		else
 			error("unhandled token type " .. node.kind)
 		end

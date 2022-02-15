@@ -223,7 +223,7 @@ local analyzer function cast(node: any, args: any)
 	end
 end
 
-analyzer function ffi.cdef(cdecl: string, ...: any)
+analyzer function ffi.cdef(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	for _, ctype in ipairs(assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
 		ctype.type.parent = ctype
@@ -260,7 +260,7 @@ analyzer function ffi.cast(cdecl: string, src: any)
 	return ctype
 end
 
-analyzer function ffi.typeof(cdecl: string, ...: any)
+analyzer function ffi.typeof(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
@@ -299,7 +299,7 @@ end
 
 --§env.typesystem.ffi:Get(types.LString("typeof")).no_expansion = true
 
-analyzer function ffi.get_type(cdecl: string, ...: {[string] = any} | nil)
+analyzer function ffi.get_type(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})

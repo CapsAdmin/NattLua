@@ -29,8 +29,6 @@ type Vector.__add = function=(Vector, Vector)>(Vector)
 type Vector.__mul = function=(Vector, number | Vector)>(Vector)
 type Vector.__unm = function=(Vector)>(Vector)
 
---type Vector.@Name = "Vector"
-
 -- Or we can add a table:
 type Vector = Vector & {
 		Zero = function=(self)>(nil),

@@ -295,17 +295,17 @@ run[[
 ]]
 
 run[[
-    ;(function(...: number) 
+    ;(function(...) 
         local a,b,c,d = ...
-        attest.equal(a, _ as number)
-        attest.equal(b, _ as number)
-        attest.equal(c, _ as number)
+        attest.equal(a, _ as 1)
+        attest.equal(b, _ as 2)
+        attest.equal(c, _ as 3)
         attest.equal(d, nil)
     end)(1,2,3)
 ]]
 
 run([[
-    ;(function(...: number) 
+    ;(function(...: ...number) 
         print("!", ...)
     end)(1,2,"foo",4,5)
 ]], "foo.-is not the same type as number")

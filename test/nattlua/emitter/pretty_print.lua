@@ -145,6 +145,7 @@ check({preserve_whitespace = false},
 
 check({preserve_whitespace = false}, [[if not ply.pac_cameras then return end]])
 check({preserve_whitespace = false, use_comment_types = true}, [=[--[[#type Vector.__mul = function=(Vector, number | Vector)>(Vector)]]]=])
+check({preserve_whitespace = false, use_comment_types = true}, [=[--[[#type start = function=(...string)>(nil)]]]=])
 
 check({preserve_whitespace = false}, 
 [[local x = lexer.OnDraw and

@@ -3,6 +3,8 @@ local ipairs = _G.ipairs
 local setmetatable = _G.setmetatable
 local table = require("table")
 local Tuple = require("nattlua.types.tuple").Tuple
+local VarArg = require("nattlua.types.tuple").VarArg
+local Any = require("nattlua.types.any").Any
 local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
@@ -163,7 +165,11 @@ end
 return
 	{
 		Function = META.New,
-		LuaRuntimeFunction = function() 
+		AnyFunction = function() 
+			return META.New({
+				arg = Tuple({VarArg(Any())}),
+				ret = Tuple({VarArg(Any())}),
+			})
 		end,
 		LuaTypeFunction = function(lua_function, arg, ret)
 			local self = META.New()

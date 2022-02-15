@@ -316,6 +316,10 @@ function META:GetLength()
 end
 
 function META:GetMinimumLength()
+	if self.Repeat == math.huge or self.Repeat == 0 then
+		return 0
+	end
+
 	local len = #self:GetData()
 	local found_nil = false
 
@@ -409,7 +413,11 @@ function META:GetFirstValue()
 	local first, err = self:Get(1)
 	if not first then return first, err end 
 	
+	if first.Type == "tuple" then
 	return first:GetFirstValue()
+	end
+
+	return first
 end
 
 function META:Concat(tup--[[#: TTuple]])
@@ -441,8 +449,8 @@ end
 return
 	{
 		Tuple = META.New,
-		VarArg = function()
-			local self = META.New({Any()})
+		VarArg = function(t)
+			local self = META.New({t})
 			self:SetRepeat(math.huge)
 			return self
 		end,

@@ -50,7 +50,7 @@ analyzer function math.floor(n: number)
 	return n:IsLiteral() and math.floor(n:GetData()) or types.Number()
 end
 
-analyzer function math.min(...: number)
+analyzer function math.min(...: ...number)
 	local numbers = {}
 
 	for i = 1, select("#", ...) do
@@ -66,7 +66,7 @@ analyzer function math.min(...: number)
 	return math.min(table.unpack(numbers))
 end
 
-analyzer function math.max(...: number)
+analyzer function math.max(...: ...number)
 	local numbers = {}
 
 	for i = 1, select("#", ...) do

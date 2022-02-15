@@ -412,7 +412,7 @@ run[[
 
 run[[
     local aaa = function(...) end
-    function foo(...: number)
+    function foo(...: ...number)
         aaa(...)
     end
 ]]

@@ -384,12 +384,7 @@ return
 								self:CreateLocalValue(key.value.value, arg)
 							end
 
-							if key.value.value == "..." then
-								if key.type_expression then
-									args[i] = VarArg():SetNode(key)
-									args[i]:Set(1, self:AnalyzeExpression(key.type_expression):GetFirstValue())
-								end
-							elseif key.type_expression then
+							if key.type_expression then
 								args[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
 							end
 				

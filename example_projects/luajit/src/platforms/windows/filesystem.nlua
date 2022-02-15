@@ -121,7 +121,6 @@ do
         int FindClose(void *);
 	]], struct, struct)
 
-
 	local dot = string.byte(".")
 	local function is_dots(ptr: {[number] = number})
 		if ptr[0] == dot then

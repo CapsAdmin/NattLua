@@ -58,7 +58,7 @@ type ffi.C = {
 	end
 }
 
-analyzer function ffi.cdef(c_declaration: string, ...: any)
+analyzer function ffi.cdef(c_declaration: string, ...: ...any)
 	assert(c_declaration:IsLiteral(), "c_declaration must be a literal")
 
 	local ffi = require("ffi")

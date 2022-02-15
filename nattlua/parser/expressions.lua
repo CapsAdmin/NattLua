@@ -109,9 +109,9 @@ do -- typesystem
     
     function META:ReadValueTypeExpression()
         if not (self:IsValue("...") and self:IsType("letter", 1)) then return end
-        local node = self:StartNode("expression", "value")
-        node.value = self:ExpectValue("...")
-        node.type_expression = self:ReadTypeExpression(0)
+        local node = self:StartNode("expression", "vararg")
+        node.tokens["..."] = self:ExpectValue("...")
+        node.value = self:ReadTypeExpression(0)
         self:EndNode(node)
         return node
     end

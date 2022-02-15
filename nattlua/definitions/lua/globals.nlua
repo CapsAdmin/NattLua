@@ -215,7 +215,12 @@ analyzer function type_error(str: string, level: number | nil)
 end
 
 analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil)
-	if not code:IsLiteral() or code.Type == "union" then return types.Tuple({types.Union({types.Nil(), types.Function({arg = types.Tuple({}), ret = types.Tuple({}) })}), types.Union({types.Nil(), types.String()})}) end
+	if not code:IsLiteral() or code.Type == "union" then 
+		return types.Tuple({
+			types.Union({types.Nil(), types.AnyFunction()}),
+			types.Union({types.Nil(), types.String()})
+		})
+	end
 	local str = code:GetData()
 
 
@@ -344,7 +349,7 @@ analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 		end
 	end
 
-	return types.True(), res:Unpack()
+	return types.True(), res
 end
 
 analyzer function type_pcall(func: Function, ...: ...any)
