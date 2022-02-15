@@ -1355,7 +1355,9 @@ function META:EmitIdentifier(node)
 		self:EmitTypeExpression(node)
 		return
 	end
-	self:EmitToken(node.value)
+	if node.value then
+		self:EmitToken(node.value)
+	end
     if node.parent.environment ~= "typesystem" then
 	    self:EmitAnnotation(node)
     end
