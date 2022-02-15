@@ -1019,10 +1019,7 @@ function META:EmitReturnStatement(node, no_tab)
 	self:EmitToken(node.tokens["return"])
 
 	if node.expressions[1] then
-		if not self:ShouldBreakExpressionList(node.expressions) then
-			self:Whitespace(" ")
-		end
-
+		self:Whitespace(" ")
         self:Indent()
 		self:EmitBreakableExpressionList(node.expressions)
         self:Outdent()
