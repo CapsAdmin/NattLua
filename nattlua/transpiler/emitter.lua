@@ -1037,6 +1037,11 @@ end
 function META:EmitAssignment(node)
 	self:Whitespace("\t")
 
+	local invalid_code
+	if node.tokens["type"] then
+		invalid_code = self:StartEmittingInvalidLuaCode()
+	end
+
     if node.tokens["local"] then
         self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
@@ -1061,6 +1066,10 @@ function META:EmitAssignment(node)
         self:Indent()
 		self:EmitBreakableExpressionList(node.right)
         self:Outdent()
+	end
+
+	if invalid_code then
+		self:StopEmittingInvalidLuaCode(invalid_code)
 	end
 end
 
@@ -1352,9 +1361,7 @@ function META:EmitIdentifier(node)
 		self:EmitTypeExpression(node)
 		return
 	end
-	if node.value then
-		self:EmitToken(node.value)
-	end
+	self:EmitExpression(node)
     if node.parent.environment ~= "typesystem" then
 	    self:EmitAnnotation(node)
     end
