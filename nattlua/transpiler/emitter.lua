@@ -256,8 +256,13 @@ do
     local map_single_quote = {[ [[']] ] = [[\']]}
     
     for _, v in ipairs(fixed) do
-        map_double_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
-        map_single_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
+		if v ~= "'" then
+        	map_double_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
+		end
+
+		if v ~= '"' then
+        	map_single_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
+		end
     end
     
     local function escape_string(str, quote)

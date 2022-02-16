@@ -21,6 +21,9 @@ local x = 1]],
 local x = 1]]
 )
 
+check({preserve_whitespace = false, string_quote = '"'}, [[local x = "'"]])
+check({preserve_whitespace = false, string_quote = "'"}, [[local x = '"']])
+
 check({ preserve_whitespace = false },
 	[[x = ""-- foo]]
 )
