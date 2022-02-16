@@ -431,10 +431,26 @@ function META:ShouldBreakNewline()
     if self.force_newlines then
 	    return self.force_newlines[#self.force_newlines]
     end
-
-    return nil
 end
 
+do
+	function META:PushLoop(node)
+		self.loop_nodes = self.loop_nodes or {}
+		table.insert(self.loop_nodes, node)
+	end
+
+	function META:PopLoop()
+		local node = table.remove(self.loop_nodes)
+		if node.on_pop then
+			node:on_pop()
+		end
+	end
+
+	function META:GetLoopNode()
+		if self.loop_nodes then return self.loop_nodes[#self.loop_nodes] end
+    return nil
+end
+end
 
 function META:EmitBreakableExpressionList(list)
 	self:EmitExpressionList(list)
@@ -951,16 +967,19 @@ function META:EmitGenericForStatement(node)
 	self:EmitExpressionList(node.expressions)
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["do"])
+	self:PushLoop(node)
 	self:Whitespace("\n")
 	self:EmitBlock(node.statements)
 	self:Whitespace("\n")
 	self:Whitespace("\t")
+	self:PopLoop()
 	self:EmitToken(node.tokens["end"])
 end
 
 function META:EmitNumericForStatement(node)
 	self:Whitespace("\t")
 	self:EmitToken(node.tokens["for"])
+	self:PushLoop(node)
 	self:Whitespace(" ")
 	self:EmitIdentifierList(node.identifiers)
 	self:Whitespace(" ")
@@ -973,6 +992,7 @@ function META:EmitNumericForStatement(node)
 	self:EmitBlock(node.statements)
 	self:Whitespace("\n")
 	self:Whitespace("\t")
+	self:PopLoop()
 	self:EmitToken(node.tokens["end"])
 end
 
@@ -983,19 +1003,23 @@ function META:EmitWhileStatement(node)
 	self:EmitExpression(node.expression)
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["do"])
+	self:PushLoop(node)
 	self:Whitespace("\n")
 	self:EmitBlock(node.statements)
 	self:Whitespace("\n")
 	self:Whitespace("\t")
+	self:PopLoop()
 	self:EmitToken(node.tokens["end"])
 end
 
 function META:EmitRepeatStatement(node)
 	self:Whitespace("\t")
 	self:EmitToken(node.tokens["repeat"])
+	self:PushLoop(node)
 	self:Whitespace("\n")
 	self:EmitBlock(node.statements)
 	self:Whitespace("\t")
+	self:PopLoop()
 	self:EmitToken(node.tokens["until"])
 	self:Whitespace(" ")
 	self:EmitExpression(node.expression)
@@ -1027,8 +1051,15 @@ function META:EmitContinueStatement(node, no_tab)
 	if not no_tab then
 		self:Whitespace("\t")
 	end
-
+	local loop_node = self:GetLoopNode()
+	if loop_node then
+		self:EmitToken(node.tokens["continue"], "goto __CONTINUE__")
+		loop_node.on_pop = function()
+			self:Emit("::__CONTINUE__::;")
+		end
+	else
 	self:EmitToken(node.tokens["continue"])
+end
 end
 
 function META:EmitDoStatement(node)
