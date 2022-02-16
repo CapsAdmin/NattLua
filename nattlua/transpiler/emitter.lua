@@ -1290,8 +1290,8 @@ function META:HasTypeNotation(node)
 end
 
 function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
-	if node.tokens[":"] then
-		self:EmitToken(node.tokens[":"])
+	if node.tokens["return:"] then
+		self:EmitToken(node.tokens["return:"])
 	else
 		self:EmitNonSpace(":")
 	end
@@ -1329,7 +1329,7 @@ end
 function META:EmitFunctionReturnAnnotation(node, analyzer_function)
 	if not self.config.annotate then return end
 
-	if self:HasTypeNotation(node) and node.tokens[":"] then
+	if self:HasTypeNotation(node) and node.tokens["return:"] then
 		self:EmitInvalidLuaCode("EmitFunctionReturnAnnotationExpression", node, analyzer_function)
 	end
 end

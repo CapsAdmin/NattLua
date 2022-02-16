@@ -66,7 +66,7 @@ function META:ReadFunctionBody(node--[[#: FunctionAnalyzerExpression | FunctionE
     node.tokens["arguments)"] = self:ExpectValue(")", node.tokens["arguments("])
 
     if self:IsValue(":") then
-        node.tokens[":"] = self:ExpectValue(":")
+        node.tokens["return:"] = self:ExpectValue(":")
         self:PushParserEnvironment("typesystem")
         node.return_types = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
         self:PopParserEnvironment("typesystem")
@@ -115,7 +115,7 @@ function META:ReadTypeFunctionBody(node--[[#: FunctionTypeStatement | FunctionTy
     end
 
     if self:IsValue(":") then
-        node.tokens[":"] = self:ExpectValue(":")
+        node.tokens["return:"] = self:ExpectValue(":")
         self:PushParserEnvironment("typesystem")
         node.return_types = self:ReadMultipleValues(math.huge, self.ExpectTypeExpression, 0)
         self:PopParserEnvironment("typesystem")
@@ -176,7 +176,7 @@ function META:ReadAnalyzerFunctionBody(node--[[#: FunctionAnalyzerStatement | Fu
     node.tokens["arguments)"] = self:ExpectValue(")", node.tokens["arguments("])
 
     if self:IsValue(":") then
-        node.tokens[":"] = self:ExpectValue(":")
+        node.tokens["return:"] = self:ExpectValue(":")
         self:PushParserEnvironment("typesystem")
         node.return_types = self:ReadMultipleValues(math.huge, self.ReadTypeExpression, 0)
         self:PopParserEnvironment("typesystem")
