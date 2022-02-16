@@ -723,6 +723,11 @@ end
 function META:EmitTuple(node)
 	self:EmitToken(node.tokens["("])
 	self:EmitExpressionList(node.expressions)
+	if #node.expressions == 1 then
+		if node.expressions[1].tokens[","] then
+			self:EmitToken(node.expressions[1].tokens[","])
+		end
+	end
 	self:EmitToken(node.tokens[")"])
 end
 
