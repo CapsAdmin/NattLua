@@ -1130,7 +1130,7 @@ function META:EmitStatement(node)
 		node.kind == "destructure_assignment" or
 		node.kind == "local_destructure_assignment"
 	then
-		if self.config.use_comment_types then
+		if self.config.use_comment_types or node.environment == "typesystem" then
 			self:EmitInvalidLuaCode("EmitDestructureAssignment", node)
 		else
 			self:EmitTranspiledDestructureAssignment(node)
