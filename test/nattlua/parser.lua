@@ -77,6 +77,7 @@ test("local declarations", function()
     check"local a = 1,2,3"
     check"local a,b,c = 1,2,3"
     check"local a,c = 1,2,3"
+    check"local <const> c = 1"
 end)
 
 test("global declarations", function()
@@ -123,7 +124,20 @@ end)
 test("types", function() 
     check("syntax.SymbolCharacters --[[#: {[number] = string} ]]= {}", "syntax.SymbolCharacters = {}")
     check("a: number = (lol as function=()>(number))()", "a = (lol)()")
-    check("local a = {} a.b: boolean, a.c: number = LOL as any, LOL2 as any", "local a = {} a.b, a.c = LOL, LOL2")
+
+    check("function foo(a: number): number end", "function foo(a) end")
+    check("function foo:bar(a: number): number end", "function foo:bar(a) end")
+    check("function foo.bar(a: number): number end", "function foo.bar(a) end")
+
+    check("function foo<||> end", "--[[#function foo<||> end]]")
+    check("local function foo<||> end", "--[[#local function foo<||> end]]")
+    check("local analyzer function foo() end", "--[[#local analyzer function foo() end]]")
+end)
+
+test("teal", function()
+    local check = function(code, eq) return check("£parser.TealCompat=true\n"..code, eq) end
+
+   -- check("local function foo<T>(a: Foo<T>) end", "syntax.SymbolCharacters = {}")
 end)
 
 test("type comments", function()

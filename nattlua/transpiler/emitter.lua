@@ -1102,7 +1102,7 @@ function META:EmitStatement(node)
 	elseif node.kind == "local_function" then
 		self:EmitLocalFunction(node)
 	elseif node.kind == "local_analyzer_function" then
-		self:EmitLocalAnalyzerFunction(node)
+		self:EmitInvalidLuaCode("EmitLocalAnalyzerFunction", node)
 	elseif node.kind == "local_type_function" then
 		if node.identifiers_typesystem then
 			self:EmitLocalTypeFunction(node)
@@ -1362,10 +1362,8 @@ function META:EmitIdentifier(node)
 		self:EmitTypeExpression(node)
 		return
 	end
+	
 	self:EmitExpression(node)
-    if node.parent.environment ~= "typesystem" then
-	    self:EmitAnnotation(node)
-    end
 end
 
 function META:EmitIdentifierList(tbl)
