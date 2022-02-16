@@ -310,11 +310,8 @@ function META:EmitFunctionSignature(node)
 	self:EmitToken(node.tokens["return)"])		
 end
 
-function META:EmitExpression(node, from_assignment)
-	
-	local newlines = node:GetLength() > self.config.max_line_length
-
-	self:PushBreakNewline(newlines)
+function META:EmitExpression(node)
+	local newlines = self:ShouldBreakNewline()
 
 	if node.tokens["("] then
 		for _, node in ipairs(node.tokens["("]) do
@@ -403,8 +400,6 @@ function META:EmitExpression(node, from_assignment)
 	if self.config.annotate and node.tokens["as"] then
 		self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 	end
-
-	self:PopBreakNewline()	
 end
 
 function META:EmitVarargTuple(node)
@@ -448,12 +443,8 @@ do
 
 	function META:GetLoopNode()
 		if self.loop_nodes then return self.loop_nodes[#self.loop_nodes] end
-    return nil
-end
-end
-
-function META:EmitBreakableExpressionList(list)
-	self:EmitExpressionList(list)
+		return nil
+	end
 end
 
 function META:EmitCall(node)
@@ -507,7 +498,7 @@ function META:EmitCall(node)
 		self:Whitespace("\t")
     end
 
-	self:EmitBreakableExpressionList(node.expressions)
+	self:EmitExpressionList(node.expressions, newlines)
     
     if newlines then
         self:Outdent()
@@ -930,7 +921,11 @@ function META:EmitIfStatement(node)
 				self:Whitespace(" ")
 			end
 
+			self:PushBreakNewline(newlines) 
+
 			self:EmitExpression(node.expressions[i], true)
+
+			self:PopBreakNewline()
 
 			if newlines then
 				self:Outdent()
@@ -1082,7 +1077,10 @@ function META:EmitReturnStatement(node, no_tab)
 	if node.expressions[1] then
 		self:Whitespace(" ")
         self:Indent()
-		self:EmitBreakableExpressionList(node.expressions)
+
+		self:PushBreakNewline(self:ShouldBreakExpressionList(node.expressions))
+		self:EmitExpressionList(node.expressions, true)
+		self:PopBreakNewline()
         self:Outdent()
 	end
 end
@@ -1120,7 +1118,9 @@ function META:EmitAssignment(node)
 		self:Whitespace(" ")
         -- we ident here in case the expression list is broken up
         self:Indent()
-		self:EmitBreakableExpressionList(node.right)
+		self:PushBreakNewline(self:ShouldBreakExpressionList(node.right))
+		self:EmitExpressionList(node.right)
+		self:PopBreakNewline()
         self:Outdent()
 	end
 end
@@ -1291,32 +1291,50 @@ function META:ShouldBreakExpressionList(tbl)
 			return false
 		end
 	
-		local start = tbl[1].code_start
-		local stop = tbl[#tbl].code_stop
+		local first_node = tbl[1]
+		local last_node = tbl[#tbl]
+
+		first_node = first_node:GetStatement()
+		last_node = last_node:GetStatement()
+
+		
+		local start = first_node.code_start
+		local stop = last_node.code_stop
+				
 		return (stop - start) > self.config.max_line_length
 	end
 
 	return false
 end
 
-function META:EmitExpressionList(tbl)
-	local newlines = self:ShouldBreakExpressionList(tbl)
+function META:EmitExpressionList(tbl, break_each_expression)
+	local newlines = break_each_expression and self:ShouldBreakExpressionList(tbl)
 
 	for i = 1, #tbl do
-		if newlines and i > 1 then
-			self:Whitespace("\t")
+		local start = 0
+		local stop = 0
+		
+		if tbl[i].tokens[","] and tbl[i-1] and tbl[i-1].tokens[","] then
+			stop = tbl[i].tokens[","].start
+			start = tbl[i-1].tokens[","].start
+		elseif #tbl == 1 then
+			start = tbl[i]:GetStatement().code_start
+			stop = tbl[i]:GetStatement().code_stop
 		end
-		self:EmitExpression(tbl[i])
 
+		local newline_individual = (stop-start) > self.config.max_line_length
+		self:PushBreakNewline(newline_individual)
+		self:EmitExpression(tbl[i])
+		self:PopBreakNewline()
 		if i ~= #tbl then
-			self:EmitToken(tbl[i].tokens[","], delimiter)
-			if not newlines then
+			self:EmitToken(tbl[i].tokens[","])
+
+			if newlines then
+				self:Whitespace("\n")
+				self:Whitespace("\t")
+			else
 				self:Whitespace(" ")
 			end
-		end
-
-		if newlines and i ~= #tbl then
-			self:Whitespace("\n")
 		end
 	end
 end

@@ -159,13 +159,27 @@ check({preserve_whitespace = false, use_comment_types = true, annotate = true}, 
 check({preserve_whitespace = false}, 
 [[local x = lexer.OnDraw and
 	(
-		draw_type == "viewmodel" or draw_type == "hands" or
-		((lexer.Translucent == true or lexer.force_translucent == true) and draw_type == "translucent")
+		draw_type == "viewmodel" or
+		draw_type == "hands" or
+		(
+			(
+				lexer.Translucent == true or
+				lexer.force_translucent == true
+			)
+			and
+			draw_type == "translucent"
+		)
 		or
-		((lexer.Translucent == false or lexer.force_translucent == false) and draw_type == "opaque")
+		(
+			(
+				lexer.Translucent == false or
+				lexer.force_translucent == false
+			)
+			and
+			draw_type == "opaque"
+		)
 	)]])
 
-do return end -- not sure about these yet
 
 check({preserve_whitespace = false}, 
 [[local cond = key ~= "ParentUID" and
@@ -176,7 +190,8 @@ check({preserve_whitespace = false},
 		not (
 			pac.PartNameKeysToIgnore and
 			pac.PartNameKeysToIgnore[key]
-		) or
+		)
+		or
 		key == "AimPartName" and
 		table.HasValue(pac.AimPartNames, value)
 	)]])
@@ -190,7 +205,9 @@ check({preserve_whitespace = false},
 		function(e)
 			return e.pac_duplicate_attach_uid ~= lexer.UniqueID
 		end
-	) or NULL]])
+	)
+	or
+	NULL]])
 
 check({preserve_whitespace = false},
 [[render.OverrideBlendFunc(
@@ -213,29 +230,54 @@ pac.AimPartNames = {
 }]])
 
 check({preserve_whitespace = false}, 
-[[return
-	function(config)
+[[return function(config)
 		local self = setmetatable({}, META)
 		self.config = config or {}
 		self:Initialize()
 		return self
 	end]])
 
+
 check({preserve_whitespace = false}, 
-[[for i, node in ipairs(block.imports) do
-	if not self.done[node.path] then
-		self:Emit(
-			"IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render(self.config or {}) .. " end\n"
-		)
-		self.done[node.path] = true
-	end
+[[if
+	val == "string" or
+	val == "number" or
+	val == "boolean" or
+	val == "true" or
+	val == "false" or
+	val == "nil"
+then
+
 end]])
+
+
+check({preserve_whitespace = false}, 
+[[if
+	val == "string" or
+	val == "number" or
+	val == "boolean" or
+	val == "true" or
+	val == "false" or
+	val == "nil"
+then
+
+end]])
+
 
 check({preserve_whitespace = false}, 
 [[function META:IsShortIfStatement(node)
-	return
-		#node.statements == 1 and
+	return #node.statements == 1 and
 		node.statements[1][1] and
-		is_short_statement(node.statements[1][1].kind) and
+		is_short_statement(node.statements[1][1].kind)
+		and
 		not self:ShouldBreakExpressionList({node.expressions[1]})
 end]])
+
+check({preserve_whitespace = false}, 
+[[local x = val == "string" or
+	val == "number" or
+	val == "boolean" or
+	val == "true" or
+	val == "false" or
+	val == "nil"]])
+

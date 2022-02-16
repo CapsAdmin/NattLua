@@ -94,6 +94,20 @@ function META:GetStartStop()
     return self.code_start, self.code_stop
 end
 
+function META:GetStatement()
+    if self.type == "statement" then
+        return self
+    end
+    return self.parent:GetStatement()
+end
+
+function META:GetRootExpression()
+    if self.parent and self.parent.type == "expression" then
+        return self.parent:GetRootExpression()
+    end
+    return self
+end
+
 function META:GetLength()
     local start, stop = self:GetStartStop()
     return stop - start
