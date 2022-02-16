@@ -97,7 +97,7 @@ do -- typesystem
             self:PushParserEnvironment("runtime")
         end
 
-        node.right = self:ReadTypeExpression(math_huge)
+        node.right = self:ReadRuntimeExpression(math_huge)
 
         if node.value.value == "expand" then
             self:PopParserEnvironment()
@@ -335,6 +335,8 @@ do -- typesystem
             return self:ReadTealExpression(priority)
         end
 
+        self:PushParserEnvironment("typesystem")
+
         local node
         local force_upvalue
     
@@ -377,6 +379,8 @@ do -- typesystem
             node.right = self:ReadTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
             self:EndNode(node)
         end
+
+        self:PopParserEnvironment()
 
         return node
     end

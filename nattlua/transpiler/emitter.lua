@@ -1366,10 +1366,12 @@ end
 
 function META:EmitIdentifier(node)
 	if node.identifier then
+		local ok = self:StartEmittingInvalidLuaCode()
 		self:EmitToken(node.identifier)
 		self:EmitToken(node.tokens[":"])
 		self:Whitespace(" ")
 		self:EmitTypeExpression(node)
+		self:StopEmittingInvalidLuaCode(ok)
 		return
 	end
 	
