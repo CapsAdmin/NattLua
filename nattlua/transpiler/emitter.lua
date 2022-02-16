@@ -321,7 +321,7 @@ function META:EmitExpression(node, from_assignment)
 			self:EmitToken(node)
 		end
 
-		if node.tokens["("] then
+		if node.tokens["("] and newlines then
 			self:Indent()
 			self:Whitespace("\n")
 			self:Whitespace("\t")
@@ -384,7 +384,7 @@ function META:EmitExpression(node, from_assignment)
 		error("unhandled token type " .. node.kind)
 	end
 
-	if node.tokens[")"] then
+	if node.tokens[")"] and newlines then
 		self:Outdent()
 		self:Whitespace("\n")
 		self:Whitespace("\t")

@@ -159,17 +159,9 @@ check({preserve_whitespace = false},
 [[local x = lexer.OnDraw and
 	(
 		draw_type == "viewmodel" or draw_type == "hands" or
-		(
-			(
-				lexer.Translucent == true or lexer.force_translucent == true
-			) and draw_type == "translucent"
-		)
+		((lexer.Translucent == true or lexer.force_translucent == true) and draw_type == "translucent")
 		or
-		(
-			(
-				lexer.Translucent == false or lexer.force_translucent == false
-			) and draw_type == "opaque"
-		)
+		((lexer.Translucent == false or lexer.force_translucent == false) and draw_type == "opaque")
 	)]])
 
 do return end -- not sure about these yet
