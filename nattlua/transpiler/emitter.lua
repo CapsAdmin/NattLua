@@ -14,6 +14,16 @@ local B = string.byte
 local META = {}
 META.__index = META
 
+local translate_binary = {
+    ["&&"] = "and",
+    ["||"] = "or",
+	["!="] = "~=",
+}
+
+local translate_prefix = {
+	["!"] = "not ",
+}
+
 function META:Whitespace(str, force)
     if self.config.preserve_whitespace == nil and not force then return end
 
@@ -528,7 +538,7 @@ function META:EmitBinaryOperator(node)
 
 		if node.value.value == "." or node.value.value == ":" then
 			self:EmitToken(node.value)
-		elseif node.value.value == "and" or node.value.value == "or" then
+		elseif node.value.value == "and" or node.value.value == "or" or node.value.value == "||" or node.value.value == "&&" then
 
 			if self:ShouldBreakNewline() then
 				if self:GetPrevChar() == B")" then
@@ -538,7 +548,7 @@ function META:EmitBinaryOperator(node)
 					self:Whitespace(" ")
 				end
 
-				self:EmitToken(node.value)
+				self:EmitToken(node.value, translate_binary[node.value.value])
 
 				if node.right then
 					self:Whitespace("\n")
@@ -546,12 +556,12 @@ function META:EmitBinaryOperator(node)
 				end
 			else
 				self:Whitespace(" ")
-				self:EmitToken(node.value)
+				self:EmitToken(node.value, translate_binary[node.value.value])
 				self:Whitespace(" ")
 			end
 		else
 			self:Whitespace(" ")
-			self:EmitToken(node.value)
+			self:EmitToken(node.value, translate_binary[node.value.value])
 			self:Whitespace(" ")
 		end
 
@@ -808,11 +818,11 @@ function META:EmitPrefixOperator(node)
 	else
 		if runtime_syntax:IsKeyword(node.value) or runtime_syntax:IsNonStandardKeyword(node.value) then
 			self:OptionalWhitespace()
-			self:EmitToken(node.value)
+			self:EmitToken(node.value, translate_prefix[node.value.value])
 			self:OptionalWhitespace()
 			self:EmitExpression(node.right)
 		else
-			self:EmitToken(node.value)
+			self:EmitToken(node.value, translate_prefix[node.value.value])
 			self:OptionalWhitespace()
 			self:EmitExpression(node.right)
 		end

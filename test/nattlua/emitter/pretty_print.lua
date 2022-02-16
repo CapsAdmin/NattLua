@@ -103,8 +103,8 @@ pac.EndSomething()
 x = 4]]
 )
 
-check({preserve_whitespace = false}, 
-[==[local x = {[ [[foo]] ] = "bar"}]==])
+check({preserve_whitespace = false}, [==[local x = {[ [[foo]] ] = "bar"}]==])
+check({preserve_whitespace = false}, [==[local x = a && b || c && a != c || !c]==], [==[local x = a and b or c and a ~= c or not c]==])
 
 check({preserve_whitespace = false}, 
 [[local escape_char_map = {
