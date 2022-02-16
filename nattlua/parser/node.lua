@@ -98,7 +98,10 @@ function META:GetStatement()
     if self.type == "statement" then
         return self
     end
-    return self.parent:GetStatement()
+    if self.parent then
+        return self.parent:GetStatement()
+    end
+    return self
 end
 
 function META:GetRootExpression()
