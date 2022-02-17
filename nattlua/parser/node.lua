@@ -30,6 +30,7 @@ type META.@Self = {
     parent = nil | self,
     code_start = number,
     code_stop = number,
+    first_node = nil | self,
     
     statements = nil | List<|any|>,
     value = nil | Token,
