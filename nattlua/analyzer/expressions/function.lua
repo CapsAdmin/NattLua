@@ -21,13 +21,11 @@ local function analyze_function_signature(self, node, current_function)
 	local args = {}
 	local argument_tuple_override
 	local return_tuple_override
-	
 	self:CreateAndPushFunctionScope(current_function:GetData().scope, current_function:GetData().upvalue_position)
 	self:PushAnalyzerEnvironment("typesystem")
 
 	if node.kind == "function" or node.kind == "local_function" then
 		for i, key in ipairs(node.identifiers) do
-
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
 			self:CreateLocalValue(key.value.value, Any())
@@ -43,8 +41,6 @@ local function analyze_function_signature(self, node, current_function)
 
 			self:CreateLocalValue(key.value.value, args[i])
 		end
-
-
 	elseif
 		node.kind == "analyzer_function" or
 		node.kind == "local_analyzer_function" or
@@ -53,9 +49,10 @@ local function analyze_function_signature(self, node, current_function)
 		node.kind == "function_signature"
 	then
 		explicit_arguments = true
-		for i, key in ipairs(node.identifiers) do
 
+		for i, key in ipairs(node.identifiers) do
 			local generic_type = node.identifiers_typesystem and node.identifiers_typesystem[i]
+
 			if generic_type then
 				if generic_type.identifier and generic_type.identifier.value ~= "..." then
 					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(key):GetFirstValue())
@@ -63,7 +60,7 @@ local function analyze_function_signature(self, node, current_function)
 					self:CreateLocalValue(generic_type.value.value, Any(), i)
 				end
 			end
-			
+
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()
 				self:CreateLocalValue(key.identifier.value, args[i])
@@ -81,13 +78,16 @@ local function analyze_function_signature(self, node, current_function)
 					end
 				elseif not node.statements then
 					local obj = self:AnalyzeExpression(key)
+
 					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
 						-- if we pass in a tuple we override the argument type
 						-- function(mytuple): string
 						argument_tuple_override = obj
+
 						break
 					else
 						local val = self:Assert(node, obj:GetFirstValue())
+
 						-- in case the tuple is empty
 						if val then
 							args[i] = val
@@ -98,13 +98,16 @@ local function analyze_function_signature(self, node, current_function)
 				end
 			else
 				local obj = self:AnalyzeExpression(key)
+
 				if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
 					-- if we pass in a tuple we override the argument type
 					-- function(mytuple): string
 					argument_tuple_override = obj
+
 					break
 				else
 					local val = self:Assert(node, obj:GetFirstValue())
+
 					-- in case the tuple is empty
 					if val then
 						args[i] = val
@@ -112,7 +115,6 @@ local function analyze_function_signature(self, node, current_function)
 				end
 			end
 		end
-	
 	else
 		self:FatalError("unhandled statement " .. tostring(node))
 	end
@@ -142,10 +144,12 @@ local function analyze_function_signature(self, node, current_function)
 		-- the return tuple becomes a tuple inside a tuple
 		for i, type_exp in ipairs(node.return_types) do
 			local obj = self:AnalyzeExpression(type_exp)
+
 			if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 and not obj.Repeat then
 				-- if we pass in a tuple, we want to override the return type
 				-- function(): mytuple
 				return_tuple_override = obj
+
 				break
 			else
 				ret[i] = obj
@@ -155,60 +159,61 @@ local function analyze_function_signature(self, node, current_function)
 
 	self:PopAnalyzerEnvironment()
 	self:PopScope()
-
-	return argument_tuple_override or Tuple(args), return_tuple_override or Tuple(ret), explicit_arguments, explicit_return
+	return argument_tuple_override or Tuple(args),
+		return_tuple_override or Tuple(ret),
+		explicit_arguments,
+		explicit_return
 end
 
-return
-	{
-		AnalyzeFunction = function(self, node)
-			if
-				node.type == "statement" and
-				(node.kind == "local_analyzer_function" or node.kind == "analyzer_function")
-			then
-				node.type = "expression"
-				node.kind = "analyzer_function"
-			end
+return {
+	AnalyzeFunction = function(self, node)
+		if
+			node.type == "statement" and
+			(
+				node.kind == "local_analyzer_function" or
+				node.kind == "analyzer_function"
+			)
+		then
+			node.type = "expression"
+			node.kind = "analyzer_function"
+		end
 
+		local obj = Function(
+				{
+				scope = self:GetScope(),
+				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
+}
+			):SetNode(node)
+		local args, ret, explicit_arguments, explicit_return = analyze_function_signature(self, node, obj)
+		local func
 
-			local obj = Function(
-					{
-						scope = self:GetScope(),
-						upvalue_position = #self:GetScope():GetUpvalues("runtime"),
-					}
-				)
-				:SetNode(node)
+		if
+			node.statements and
+			(
+				node.kind == "analyzer_function" or
+				node.kind == "local_analyzer_function"
+			)
+		then
+			node.analyzer_function = true
+			--'local analyzer = self;local env = self:GetScopeHelper(scope);'
+			func = self:CompileLuaAnalyzerDebugCode("return  " .. node:Render({uncomment_types = true, analyzer_function = true}), node)()
+		end
 
-			local args, ret, explicit_arguments, explicit_return = analyze_function_signature(self, node, obj)
+		obj.Data.arg = args
+		obj.Data.ret = ret
+		obj.Data.lua_function = func
 
-			local func
+		if node.statements then
+			obj.function_body_node = node
+		end
 
-			if
-				node.statements and
-				(node.kind == "analyzer_function" or node.kind == "local_analyzer_function")
-			then
-				node.analyzer_function = true
-	
-				--'local analyzer = self;local env = self:GetScopeHelper(scope);'
-		
-				func = self:CompileLuaAnalyzerDebugCode("return  " .. node:Render({uncomment_types = true, analyzer_function = true}), node)()
-			end
+		obj.explicit_arguments = explicit_arguments
+		obj.explicit_return = explicit_return
 
-			obj.Data.arg = args
-			obj.Data.ret = ret
-			obj.Data.lua_function = func
+		if self:IsRuntime() then
+			self:CallMeLater(obj, args, node, true)
+		end
 
-			if node.statements then
-				obj.function_body_node = node
-			end
-
-			obj.explicit_arguments = explicit_arguments
-			obj.explicit_return = explicit_return
-
-			if self:IsRuntime() then
-				self:CallMeLater(obj, args, node, true)
-			end
-
-			return obj
-		end,
-	}
+		return obj
+	end,
+}

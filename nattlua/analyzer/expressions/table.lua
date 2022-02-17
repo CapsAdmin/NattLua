@@ -4,8 +4,7 @@ local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
 local Table = require("nattlua.types.table").Table
 local table = require("table")
-return
-	{
+return {
 		AnalyzeTable = function(self, node)
 			local tbl = Table():SetNode(node):SetLiteral(self:IsTypesystem())
 
@@ -16,7 +15,6 @@ return
 			self.current_tables = self.current_tables or {}
 			table.insert(self.current_tables, tbl)
 			local tree = node
-
 			tbl.scope = self:GetScope()
 
 			for i, node in ipairs(node.children) do
@@ -31,12 +29,14 @@ return
 				elseif node.kind == "table_index_value" then
 					local obj = self:AnalyzeExpression(node.value_expression)
 					
-					if node.value_expression.kind ~= "value" or node.value_expression.value.value ~= "..." then
+				if
+					node.value_expression.kind ~= "value" or
+					node.value_expression.value.value ~= "..."
+				then
 						obj = obj:GetFirstValue()
 					end
 
 					if obj.Type == "tuple" then
-
 						if tree.children[i + 1] then
 							tbl:Insert(obj:Get(1))
 						else
@@ -58,11 +58,11 @@ return
 						end
 					end
 				end
+
 				self:ClearTracked()
 			end
 
 			table.remove(self.current_tables)
-
 			return tbl
 		end,
 	}

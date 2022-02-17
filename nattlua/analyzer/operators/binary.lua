@@ -17,8 +17,17 @@ local function metatable_function(self, node, meta_method, l, r)
 	meta_method = LString(meta_method)
 
 	if r:GetMetaTable() or l:GetMetaTable() then
-		local func = (l:GetMetaTable() and l:GetMetaTable():Get(meta_method)) or
-			(r:GetMetaTable() and r:GetMetaTable():Get(meta_method))
+		local func = (
+				l:GetMetaTable()
+				and
+				l:GetMetaTable():Get(meta_method)
+			)
+			or
+			(
+				r:GetMetaTable()
+				and
+				r:GetMetaTable():Get(meta_method)
+			)
 		if not func then return end
 		if func.Type ~= "function" then return func end
 		return self:Assert(node, self:Call(func, Tuple({l, r}))):Get(1)
@@ -28,10 +37,25 @@ end
 local function operator(self, node, l, r, op, meta_method)
 	if op == ".." then
 		if
-			(l.Type == "string" and r.Type == "string") or
-			(l.Type == "number" and r.Type == "string") or
-			(l.Type == "number" and r.Type == "number") or
-			(l.Type == "string" and r.Type == "number")
+			(
+				l.Type == "string" and
+				r.Type == "string"
+			)
+			or
+			(
+				l.Type == "number" and
+				r.Type == "string"
+			)
+			or
+			(
+				l.Type == "number" and
+				r.Type == "number"
+			)
+			or
+			(
+				l.Type == "string" and
+				r.Type == "number"
+			)
 		then
 			if l:IsLiteral() and r:IsLiteral() then return LString(l:GetData() .. r:GetData()):SetNode(node) end
 			return String():SetNode(node)
@@ -39,7 +63,7 @@ local function operator(self, node, l, r, op, meta_method)
 	end
 
 	if l.Type == "number" and r.Type == "number" then
-		return l:ArithmeticOperator(r,op):SetNode(node)
+		return l:ArithmeticOperator(r, op):SetNode(node)
 	else
 		return metatable_function(self, node, meta_method, l, r)
 	end
@@ -48,9 +72,7 @@ local function operator(self, node, l, r, op, meta_method)
 end
 
 local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
-	if err then
-		return val, err
-	end
+	if err then return val, err end
 
 	if val == nil then
 		return Boolean()
@@ -124,9 +146,7 @@ local function Binary(self, node, l, r, op)
 		elseif op == "==" then
 			return l:Equal(r) and True() or False()
 		elseif op == "~" then
-			if l.Type == "union" then
-				return l:RemoveType(r)
-			end
+			if l.Type == "union" then return l:RemoveType(r) end
 			return l
 		elseif op == "&" or op == "extends" then
 			if l.Type ~= "table" then return false, "type " .. tostring(l) .. " cannot be extended" end
@@ -189,16 +209,9 @@ local function Binary(self, node, l, r, op)
 				self.type_checked = nil
 			end
 
-			
 			for _, l in ipairs(l:GetData()) do
 				for _, r in ipairs(r:GetData()) do
-					local res, err = Binary(
-						self,
-						node,
-						l,
-						r,
-						op
-					)
+					local res, err = Binary(self, node, l, r, op)
 
 					if not res then
 						self:ErrorAndCloneCurrentScope(node, err, l) -- TODO, only left side?
@@ -249,12 +262,12 @@ local function Binary(self, node, l, r, op)
 						end
 					end
 				end
+
 				self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
 				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
 			end
 
-			return
-				new_union:SetNode(node)
+			return new_union:SetNode(node)
 		end
 	end
 
@@ -309,23 +322,27 @@ local function Binary(self, node, l, r, op)
 		if op == "==" then
 			local res = metatable_function(self, node, "__eq", l, r)
 			if res then return res end
-			
 			if l:IsLiteral() and l == r then return True() end
 			if l.Type ~= r.Type then return False() end
-
 			return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
 		elseif op == "~=" or op == "!=" then
 			local res = metatable_function(self, node, "__eq", l, r)
 
 			if res then
-				if res:IsLiteral() then res:SetData(not res:GetData()) end
+				if res:IsLiteral() then
+					res:SetData(not res:GetData())
+				end
+
 				return res
 			end
 
 			if l.Type ~= r.Type then return True() end
-
 			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
-			if val ~= nil then val = not val end
+
+			if val ~= nil then
+				val = not val
+			end
+
 			return logical_cmp_cast(val, err)
 		elseif op == "<" then
 			local res = metatable_function(self, node, "__lt", l, r)
@@ -346,39 +363,32 @@ local function Binary(self, node, l, r, op)
 		elseif op == "or" or op == "||" then
 			-- boolean or boolean
 			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
-
 			-- true or boolean
 			if l:IsTruthy() then return l:Copy():SetNode(node) end
-			
 			-- false or true
 			if r:IsTruthy() then return r:Copy():SetNode(node) end
 			return r:Copy():SetNode(node)
 		elseif op == "and" or op == "&&" then
-
 			-- true and false
 			if l:IsTruthy() and r:IsFalsy() then
 				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}) end
-				return
-					r:Copy():SetNode(node)
+				return r:Copy():SetNode(node)
 			end
 
 			-- false and true
 			if l:IsFalsy() and r:IsTruthy() then
 				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}) end
-				return
-					l:Copy():SetNode(node)
+				return l:Copy():SetNode(node)
 			end
 
 			-- true and true
 			if l:IsTruthy() and r:IsTruthy() then
 				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}) end
-				return
-					r:Copy():SetNode(node)
+				return r:Copy():SetNode(node)
 			else
 				-- false and false
 				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}) end
-				return
-					l:Copy():SetNode(node)
+				return l:Copy():SetNode(node)
 			end
 		end
 	end

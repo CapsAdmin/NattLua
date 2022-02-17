@@ -3,8 +3,7 @@ local ipairs = ipairs
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
-return
-	{
+return {
 		AnalyzeGenericFor = function(self, statement)
 			local args = self:AnalyzeExpressions(statement.expressions)
 			local callable_iterator = table.remove(args, 1)
@@ -44,13 +43,13 @@ return
 
 					for i, identifier in ipairs(statement.identifiers) do
 						local obj = self:Assert(identifier, values:Get(i))
+
 						if uncertain_break then
 							obj:SetLiteral(false)
 							brk = true
 						end
 
                         obj.from_for_loop = true
-
 						self:CreateLocalValue(identifier.value.value, obj)
 					end
 

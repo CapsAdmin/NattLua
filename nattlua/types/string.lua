@@ -4,6 +4,7 @@ local type_errors = require("nattlua.types.error_messages")
 local Number = require("nattlua.types.number").Number
 local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
+
 --[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
 --[[#local TBaseType = META.TBaseType ]]
 META.Type = "string"
@@ -14,16 +15,13 @@ META:GetSet("PatternContract", nil--[[# as nil | string]])
 
 function META.Equal(a--[[#: TString]], b--[[#: BaseType]])
 	if a.Type ~= b.Type then return false end
-
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 	return false
 end
 
 function META:GetHash()
-	if self:IsLiteral() then
-		return self.Data
-	end
+	if self:IsLiteral() then return self.Data end
 	return "__@type@__" .. self.Type
 end
 
@@ -34,19 +32,19 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A --[[#: TString ]], B --[[#: BaseType ]])
-	if B.Type == "tuple" then B = B:Get(1) end
+function META.IsSubsetOf(A--[[#: TString]], B--[[#: BaseType]])
+	if B.Type == "tuple" then
+		B = B:Get(1)
+	end
+
 	if B.Type == "any" then return true end
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
-	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then
-		-- "A" subsetof "B"
+	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
 		return true end
-	if A:IsLiteral() and not B:IsLiteral() then
-		-- "A" subsetof string
+	if A:IsLiteral() and not B:IsLiteral() then -- "A" subsetof string
 		return true end
-	if not A:IsLiteral() and not B:IsLiteral() then
-		-- string subsetof string
+	if not A:IsLiteral() and not B:IsLiteral() then -- string subsetof string
 		return true end
 
 	if B.PatternContract then
@@ -75,29 +73,19 @@ end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TString]], op)
 	if op == ">" then
-		if a:IsLiteral() and b:IsLiteral() then
-			return a:GetData() > b:GetData()
-		end
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
 		return nil
 	elseif op == "<" then
-		if a:IsLiteral() and b:IsLiteral() then
-			return a:GetData() < b:GetData()
-		end
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() < b:GetData() end
 		return nil
 	elseif op == "<=" then
-		if a:IsLiteral() and b:IsLiteral() then
-			return a:GetData() <= b:GetData()
-		end
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() <= b:GetData() end
 		return nil
 	elseif op == ">=" then
-		if a:IsLiteral() and b:IsLiteral() then
-			return a:GetData() >= b:GetData()
-		end
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() >= b:GetData() end
 		return nil
 	elseif op == "==" then
-		if a:IsLiteral() and b:IsLiteral() then
-			return a:GetData() == b:GetData()
-		end
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
 		return nil
 	end
 
@@ -118,9 +106,9 @@ end
 
 function META.New(data--[[#: string | nil]])
 	local self = setmetatable({Data = data}, META)
-
 	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
 	local analyzer = context:GetCurrentAnalyzer()
+
 	if analyzer then
 		self:SetMetaTable(analyzer:GetDefaultEnvironment("typesystem").string_metatable)
 	end
@@ -128,8 +116,7 @@ function META.New(data--[[#: string | nil]])
 	return self
 end
 
-return
-	{
+return {
 		String = META.New,
 		LString = function(num--[[#: string]])
 			return META.New(num):SetLiteral(true)
@@ -139,5 +126,5 @@ return
 		end,
 		NodeToString = function(node--[[#: Token]])
 			return META.New(node.value.value):SetLiteral(true):SetNode(node)
-		end
+	end,
 	}

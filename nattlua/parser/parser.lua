@@ -1,14 +1,11 @@
 local META = require("nattlua.parser.base")
-
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
-
 local math = require("math")
 local math_huge = math.huge
 local table_insert = require("table").insert
 local table_remove = require("table").remove
 local ipairs = _G.ipairs
-
 
 function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
     if not self:IsType("letter") and not self:IsValue("...") then return end
@@ -18,6 +15,7 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
         node.value = self:ExpectValue("...")
     else
         node.value = self:ExpectType("letter")
+
         if self:IsValue("<") then
             node.tokens["<"] = self:ExpectValue("<")
             node.attribute = self:ExpectType("letter")
@@ -33,7 +31,6 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
     end
 
     self:EndNode(node)
-
     return node
 end
 
@@ -51,8 +48,7 @@ function META:ReadValueExpressionType(expect_value--[[#: TokenType]])
     return node
 end
 
-function META:ReadFunctionBody(node--[[#: FunctionAnalyzerExpression | FunctionExpression | FunctionLocalStatement | FunctionStatement ]])
-
+function META:ReadFunctionBody(node--[[#: FunctionAnalyzerExpression | FunctionExpression | FunctionLocalStatement | FunctionStatement]])
     if self.TealCompat then
         if self:IsValue("<") then
             node.tokens["arguments_typesystem("] = self:ExpectValue("<")
@@ -74,7 +70,6 @@ function META:ReadFunctionBody(node--[[#: FunctionAnalyzerExpression | FunctionE
 
     node.statements = self:ReadNodes({["end"] = true})
     node.tokens["end"] = self:ExpectValue("end", node.tokens["function"])
-    
     return node
 end
 
@@ -87,6 +82,7 @@ function META:ReadTypeFunctionBody(node--[[#: FunctionTypeStatement | FunctionTy
         if self:IsValue("...") then
             table_insert(node.identifiers, self:ReadValueExpressionToken("..."))
         end
+
         node.tokens["arguments)"] = self:ExpectValue(")")
     else
         node.tokens["arguments("] = self:ExpectValue("<|")
@@ -102,13 +98,10 @@ function META:ReadTypeFunctionBody(node--[[#: FunctionTypeStatement | FunctionTy
             local lparen = self:ExpectValue("(")
             local identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier, true)
             local rparen = self:ExpectValue(")")
-
             node.identifiers_typesystem = node.identifiers
             node.identifiers = identifiers
-
             node.tokens["arguments_typesystem("] = node.tokens["arguments("]
             node.tokens["arguments_typesystem)"] = node.tokens["arguments)"]
-
             node.tokens["arguments("] = lparen
             node.tokens["arguments)"] = rparen
         end
@@ -122,15 +115,11 @@ function META:ReadTypeFunctionBody(node--[[#: FunctionTypeStatement | FunctionTy
     end
 
     node.environment = "typesystem"
-
     self:PushParserEnvironment("typesystem")
-
     local start = self:GetToken()
     node.statements = self:ReadNodes({["end"] = true})
     node.tokens["end"] = self:ExpectValue("end", start, start)
-
     self:PopParserEnvironment()
-
     return node
 end
 
@@ -150,9 +139,8 @@ function META:ReadTypeFunctionArgument(expect_type--[[#: nil | boolean]])
     return self:ExpectTypeExpression(0)
 end
 
-function META:ReadAnalyzerFunctionBody(node--[[#: FunctionAnalyzerStatement | FunctionAnalyzerExpression |FunctionLocalAnalyzerStatement]], type_args--[[#: boolean]])
+function META:ReadAnalyzerFunctionBody(node--[[#: FunctionAnalyzerStatement | FunctionAnalyzerExpression | FunctionLocalAnalyzerStatement]], type_args--[[#: boolean]])
     node.tokens["arguments("] = self:ExpectValue("(")
-
     node.identifiers = self:ReadMultipleValues(math_huge, self.ReadTypeFunctionArgument, type_args)
 
     if self:IsValue("...") then
@@ -169,7 +157,6 @@ function META:ReadAnalyzerFunctionBody(node--[[#: FunctionAnalyzerStatement | Fu
         end
 
         self:EndNode(vararg)
-
         table_insert(node.identifiers, vararg)
     end
 
@@ -180,7 +167,6 @@ function META:ReadAnalyzerFunctionBody(node--[[#: FunctionAnalyzerStatement | Fu
         self:PushParserEnvironment("typesystem")
         node.return_types = self:ReadMultipleValues(math.huge, self.ReadTypeExpression, 0)
         self:PopParserEnvironment("typesystem")
-
         local start = self:GetToken()
         node.statements = self:ReadNodes({["end"] = true})
         node.tokens["end"] = self:ExpectValue("end", start, start)
@@ -195,7 +181,6 @@ end
 
 assert(loadfile("nattlua/parser/expressions.lua"))(META)
 assert(loadfile("nattlua/parser/statements.lua"))(META)
-
 assert(loadfile("nattlua/parser/teal.lua"))(META)
 
 function META:ReadRootNode()
@@ -204,11 +189,9 @@ function META:ReadRootNode()
     local shebang
 
     if self:IsType("shebang") then
-
         shebang = self:StartNode("statement", "shebang")
         shebang.tokens["shebang"] = self:ExpectType("shebang")
         self:EndNode(shebang)
-
         node.tokens["shebang"] = shebang.tokens["shebang"]
     end
 
@@ -219,17 +202,14 @@ function META:ReadRootNode()
     end
 
     if self:IsType("end_of_file") then
-        
         local eof = self:StartNode("statement", "end_of_file")
         eof.tokens["end_of_file"] = self.tokens[#self.tokens]
         self:EndNode(node)
-
         table.insert(node.statements, eof)
         node.tokens["eof"] = eof.tokens["end_of_file"]
     end
 
     self:EndNode(node)
-
     return node
 end
 

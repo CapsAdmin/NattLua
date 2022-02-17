@@ -44,11 +44,9 @@ function META.New()
 	return self
 end
 
-local function has_value(tbl --[[#: {[1 .. inf] = string} | {} ]], value --[[#: string]])
+local function has_value(tbl--[[#: {[1 .. inf] = string} | {}]], value--[[#: string]])
 	for k, v in ipairs(tbl) do
-		if v == value then
-			return true
-		end
+		if v == value then return true end
 	end
 
 	return false
@@ -72,6 +70,7 @@ function META:AddNumberAnnotations(tbl--[[#: List<|string|>]])
 			table.insert(self.NumberAnnotations, v)
 		end
 	end
+
 	table.sort(self.NumberAnnotations, function(a, b)
 		return #a > #b
 	end)
@@ -81,10 +80,11 @@ function META:GetNumberAnnotations()
 	return self.NumberAnnotations
 end
 
-function META:AddBinaryOperators(tbl --[[#: List<|List<|string|>|> ]])
+function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 	for priority, group in ipairs(tbl) do
 		for _, token in ipairs(group) do
 			local right = token:sub(1, 1) == "R"
+
 			if right then
 				token = token:sub(2)
 			end
@@ -110,18 +110,19 @@ function META:GetBinaryOperatorInfo(tk--[[#: Token]])
 	return self.BinaryOperatorInfo[tk.value]
 end
 
-function META:AddPrefixOperators(tbl --[[#: List<|string|> ]])
+function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
 		self.PrefixOperators[str] = true
 	end
 end
-function META:IsPrefixOperator(token --[[#: Token]])
+
+function META:IsPrefixOperator(token--[[#: Token]])
 	return self.PrefixOperators[token.value]
 end
 
-function META:AddPostfixOperators(tbl --[[#: List<|string|> ]])
+function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -129,11 +130,11 @@ function META:AddPostfixOperators(tbl --[[#: List<|string|> ]])
 	end
 end
 
-function META:IsPostfixOperator(token --[[#: Token]])
+function META:IsPostfixOperator(token--[[#: Token]])
 	return self.PostfixOperators[token.value]
 end
 
-function META:AddPrimaryBinaryOperators(tbl --[[#: List<|string|> ]])
+function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -141,20 +142,16 @@ function META:AddPrimaryBinaryOperators(tbl --[[#: List<|string|> ]])
 	end
 end
 
-function META:IsPrimaryBinaryOperator(token --[[#: Token]])
+function META:IsPrimaryBinaryOperator(token--[[#: Token]])
 	return self.PrimaryBinaryOperators[token.value]
 end
 
-
-	
-
-
-function META:AddSymbolCharacters( tbl --[[#: List<|string|> ]])
+function META:AddSymbolCharacters(tbl--[[#: List<|string|>]])
 	self.SymbolCharacters = tbl
 	self:AddSymbols(tbl)
 end
 
-function META:AddKeywords(tbl --[[#: List<|string|> ]])
+function META:AddKeywords(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -162,11 +159,11 @@ function META:AddKeywords(tbl --[[#: List<|string|> ]])
 	end
 end
 
-function  META:IsKeyword(token --[[#: Token]])
+function META:IsKeyword(token--[[#: Token]])
 	return self.Keywords[token.value]
 end
 
-function META:AddKeywordValues(tbl --[[#: List<|string|> ]])
+function META:AddKeywordValues(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -175,11 +172,11 @@ function META:AddKeywordValues(tbl --[[#: List<|string|> ]])
 	end
 end
 
-function  META:IsKeywordValue(token --[[#: Token]])
+function META:IsKeywordValue(token--[[#: Token]])
 	return self.KeywordValues[token.value]
 end
 
-function META:AddNonStandardKeywords(tbl --[[#: List<|string|> ]])
+function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -187,7 +184,7 @@ function META:AddNonStandardKeywords(tbl --[[#: List<|string|> ]])
 	end
 end
 
-function META:IsNonStandardKeyword(token --[[#: Token]])
+function META:IsNonStandardKeyword(token--[[#: Token]])
 	return self.NonStandardKeywords[token.value]
 end
 
@@ -195,7 +192,7 @@ function META:GetSymbols()
 	return self.Symbols
 end
 
-function META:AddBinaryOperatorFunctionTranslate(tbl --[[#: Map<|string, string|> ]])
+function META:AddBinaryOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
 	for k, v in pairs(tbl) do
 		local a, b, c = v:match("(.-)A(.-)B(.*)")
 
@@ -209,7 +206,7 @@ function META:GetFunctionForBinaryOperator(token--[[#: Token]])
 	return self.BinaryOperatorFunctionTranslate[token.value]
 end	
 
-function META:AddPrefixOperatorFunctionTranslate(tbl --[[#: Map<|string, string|> ]])
+function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
 	for k, v in pairs(tbl) do
 		local a, b = v:match("^(.-)A(.-)$")
 
@@ -223,7 +220,7 @@ function META:GetFunctionForPrefixOperator(token--[[#: Token]])
 	return self.PrefixOperatorFunctionTranslate[token.value]
 end
 
-function META:AddPostfixOperatorFunctionTranslate(tbl --[[#: Map<|string, string|> ]])
+function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
 	for k, v in pairs(tbl) do
 		local a, b = v:match("^(.-)A(.-)$")
 

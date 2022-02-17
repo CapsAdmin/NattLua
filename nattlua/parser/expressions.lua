@@ -1,9 +1,7 @@
 local META = ...
-
 local table_insert = require("table").insert
 local table_remove = require("table").remove
 local math_huge = math.huge
-
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 
@@ -73,6 +71,7 @@ do -- typesystem
             if first_expression then
                 table.insert(node.expressions, 1, first_expression)
             end
+
             node.tokens["("] = pleft
             node.tokens[")"] = self:ExpectValue(")", pleft)
             self:EndNode(node)
@@ -119,7 +118,18 @@ do -- typesystem
     function META:ReadTypeSignatureFunctionArgument(expect_type)
         if self:IsValue(")") then return end
     
-        if expect_type or ((self:IsType("letter") or self:IsValue("...")) and self:IsValue(":", 1)) then
+		if
+			expect_type or
+			(
+				(
+					self:IsType("letter")
+					or
+					self:IsValue("...")
+				)
+				and
+				self:IsValue(":", 1)
+			)
+		then
             local identifier = self:ReadToken()
             local token = self:ExpectValue(":")
             local exp = self:ExpectTypeExpression(0)
@@ -133,23 +143,17 @@ do -- typesystem
     
     function META:ReadFunctionSignatureExpression()
         if not (self:IsValue("function") and self:IsValue("=", 1)) then return end
-    
         local node = self:StartNode("expression", "function_signature")
         node.tokens["function"] = self:ExpectValue("function")
         node.tokens["="] = self:ExpectValue("=")
-    
         node.tokens["arguments("] = self:ExpectValue("(")
         node.identifiers = self:ReadMultipleValues(nil, self.ReadTypeSignatureFunctionArgument)
         node.tokens["arguments)"] = self:ExpectValue(")")
-    
         node.tokens[">"] = self:ExpectValue(">")
-    
         node.tokens["return("] = self:ExpectValue("(")
         node.return_types = self:ReadMultipleValues(nil, self.ReadTypeSignatureFunctionArgument)
         node.tokens["return)"] = self:ExpectValue(")")
-
         self:EndNode(node)
-        
         return node
     end
     
@@ -178,9 +182,7 @@ do -- typesystem
                 node.tokens["["] = self:ExpectValue("[")
                 node.key_expression = self:ReadTypeExpression(0)
                 node.tokens["]"] = self:ExpectValue("]")
-
                 node.tokens["="] = self:ExpectValue("=")
-
                 node.value_expression = self:ReadTypeExpression(0)
                 self:EndNode(node)
                 return node
@@ -222,8 +224,7 @@ do -- typesystem
                         nil,
                         nil,
                         {",", ";", "}"},
-                        (self:GetToken() and self:GetToken().value) or
-                        "no token"
+						(self:GetToken() and self:GetToken().value) or "no token"
                     )
         
                     break
@@ -264,11 +265,9 @@ do -- typesystem
 
     function META:ReadPostfixTypeOperatorSubExpression()
         if not typesystem_syntax:IsPostfixOperator(self:GetToken()) then return end
-
         local node = self:StartNode("expression", "postfix_operator")
         node.value = self:ReadToken()
         self:EndNode(node)
-
         return node
     end
 
@@ -279,9 +278,7 @@ do -- typesystem
         if self:IsValue("{") then
             node.expressions = {self:ReadTableTypeExpression()}
         elseif self:IsType("string") then
-            node.expressions = {
-                    self:ReadValueExpressionToken()
-                }
+			node.expressions = {self:ReadValueExpressionToken()}
         elseif self:IsValue("<|") then
             node.tokens["call("] = self:ExpectValue("<|")
             node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
@@ -330,13 +327,8 @@ do -- typesystem
     end
 
     function META:ReadTypeExpression(priority)
-
-        if self.TealCompat then
-            return self:ReadTealExpression(priority)
-        end
-
+		if self.TealCompat then return self:ReadTealExpression(priority) end
         self:PushParserEnvironment("typesystem")
-
         local node
         local force_upvalue
     
@@ -363,15 +355,17 @@ do -- typesystem
     
             if
                 first.kind == "value" and
-                (first.value.type == "letter" or first.value.value == "...")
+				(
+					first.value.type == "letter" or
+					first.value.value == "..."
+				)
             then
                 first.standalone_letter = node
                 first.force_upvalue = force_upvalue
             end
         end
     
-        while typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-        typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
+		while typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority do
             local left_node = node
             node = self:StartNode("expression", "binary_operator")
             node.value = self:ReadToken()
@@ -381,14 +375,12 @@ do -- typesystem
         end
 
         self:PopParserEnvironment()
-
         return node
     end
 
     function META:IsTypeExpression()
         local token = self:GetToken()
-    
-        return not(
+		return not (
             not token or
             token.type == "end_of_file" or
             token.value == "}" or
@@ -406,7 +398,6 @@ do -- typesystem
     function META:ExpectTypeExpression(priority)
         if not self:IsTypeExpression() then
             local token = self:GetToken()
-
             self:Error(
                 "expected beginning of expression, got $1",
                 nil,
@@ -427,7 +418,22 @@ do -- runtime
     local ReadTableExpression
     do
         function META:read_table_spread()
-            if not (self:IsValue("...") and (self:IsType("letter", 1) or self:IsValue("{", 1) or self:IsValue("(", 1))) then return end
+			if
+				not (
+					self:IsValue("...")
+					and
+					(
+						self:IsType("letter", 1)
+						or
+						self:IsValue("{", 1)
+						or
+						self:IsValue("(", 1)
+					)
+				)
+			then
+				return
+			end
+
             local node = self:StartNode("expression", "table_spread")
             node.tokens["..."] = self:ExpectValue("...")
             node.expression = self:ExpectRuntimeExpression()
@@ -450,7 +456,6 @@ do -- runtime
                 local node = self:StartNode("expression", "table_key_value")
                 node.tokens["identifier"] = self:ExpectType("letter")
                 node.tokens["="] = self:ExpectValue("=")
-
                 local spread = self:read_table_spread()
         
                 if spread then
@@ -460,7 +465,6 @@ do -- runtime
                 end
 
                 self:EndNode(node)
-        
                 return node
             end
         
@@ -474,9 +478,7 @@ do -- runtime
             end
         
             node.key = i
-
             self:EndNode(node)
-
             return node
         end
         
@@ -509,8 +511,7 @@ do -- runtime
                         nil,
                         nil,
                         {",", ";", "}"},
-                        (self:GetToken() and self:GetToken().value) or
-                        "no token"
+						(self:GetToken() and self:GetToken().value) or "no token"
                     )
         
                     break
@@ -537,11 +538,11 @@ do -- runtime
 
     function META:ReadCallSubExpression(primary_node)
         if not self:IsCallExpression(0) then return end
+
         if primary_node and primary_node.kind == "function" then
-            if not primary_node.tokens[")"] then
-                return
+			if not primary_node.tokens[")"] then return end
             end
-        end
+
         local node = self:StartNode("expression", "postfix_call")
 
         if self:IsValue("{") then
@@ -558,17 +559,13 @@ do -- runtime
                 local lparen = self:ExpectValue("(")
                 local expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
                 local rparen = self:ExpectValue(")")
-                
                 node.expressions_typesystem = node.expressions
                 node.expressions = expressions
-
                 node.tokens["call_typesystem("] = node.tokens["call("]
                 node.tokens["call_typesystem)"] = node.tokens["call)"]
-
                 node.tokens["call("] = lparen
                 node.tokens["call)"] = rparen
             end
-
         elseif self:IsValue("!") then
             node.tokens["!"] = self:ExpectValue("!")
             node.tokens["call("] = self:ExpectValue("(")
@@ -582,7 +579,6 @@ do -- runtime
         end
 
         self:EndNode(node)
-
         return node
     end
 
@@ -593,7 +589,6 @@ do -- runtime
         node.expression = self:ExpectRuntimeExpression()
         node.tokens["]"] = self:ExpectValue("]")
         self:EndNode(node)
-
         return node
     end
 
@@ -601,7 +596,15 @@ do -- runtime
         for _ = 1, self:GetLength() do
             local left_node = node
             
-            if self:IsValue(":") and (not self:IsType("letter", 1) or not self:IsCallExpression(2)) then
+			if
+				self:IsValue(":")
+				and
+				(
+					not self:IsType("letter", 1)
+					or
+					not self:IsCallExpression(2)
+				)
+			then
                 node.tokens[":"] = self:ExpectValue(":")
                 node.type_expression = self:ExpectTypeExpression(0)
             elseif self:IsValue("as") then
@@ -691,6 +694,7 @@ do -- runtime
         if node and not node.idiv_resolved then
             for i, token in ipairs(node.whitespace) do
                 if token.value:find("\n", nil, true) then break end
+
                 if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
                     table_remove(node.whitespace, i)
                     local Code = require("nattlua.code.code")
@@ -729,7 +733,10 @@ do -- runtime
 
             if
                 first.kind == "value" and
-                (first.value.type == "letter" or first.value.value == "...")
+				(
+					first.value.type == "letter" or
+					first.value.value == "..."
+				)
             then
                 first.standalone_letter = node
             end
@@ -749,7 +756,6 @@ do -- runtime
             end
 
             node.right = self:ExpectRuntimeExpression(runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-
             self:EndNode(node)
 
             if not node.right then
@@ -776,7 +782,6 @@ do -- runtime
 
     function META:IsRuntimeExpression()
         local token = self:GetToken()
-
         return not (
             token.type == "end_of_file" or
             token.value == "}" or
@@ -794,7 +799,6 @@ do -- runtime
     function META:ExpectRuntimeExpression(priority)
         if not self:IsRuntimeExpression() then
             local token = self:GetToken()
-
             self:Error(
                 "expected beginning of expression, got $1",
                 nil,

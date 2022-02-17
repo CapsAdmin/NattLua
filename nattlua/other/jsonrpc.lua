@@ -18,8 +18,7 @@ local JSONRPC_ERRORS = {
 }
 
 local function error_response(id, code, message)
-	return
-		{
+	return {
 			jsonrpc = VERSION,
 			id = id,
 			error = {code = code, message = message,},
@@ -64,21 +63,20 @@ local function handle_rpc(rpc, is_array, methods, ...)
 	local err = check_request(rpc)
 	if err then return err end
 	if not methods[rpc.method] then return error_response(rpc.id, JSONRPC_ERRORS.METHOD_NOT_FOUND, "Method " .. rpc.method .. " not found.") end
-	local ok, res, err = xpcall(function(...)
+	local ok, res, err = xpcall(
+			function(...)
 		return methods[rpc.method](rpc.params, ...)
-	end, function(err)
+			end,
+			function(err)
 		return debug.traceback(err)
-	end, ...)
+			end,
+			...
+		)
 	if not ok then return error_response(rpc.id, JSONRPC_ERRORS.INTERNAL_ERROR, res) end
-
     -- notification has no response
     if not rpc.id then return end
 	if not res then return error_response(rpc.id, err.code, err.message) end
-	return {
-		jsonrpc = rpc.jsonrpc,
-		id = rpc.id,
-		result = res,
-	}
+	return {jsonrpc = rpc.jsonrpc, id = rpc.id, result = res,}
 end
 
 function rpc_util.ReceiveJSON(data, methods, ...)

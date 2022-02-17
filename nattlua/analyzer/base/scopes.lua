@@ -6,14 +6,14 @@ local Table = require("nattlua.types.table").Table
 local LString = require("nattlua.types.string").LString
 local table = require("table")
 return function(META)
-	table.insert(META.OnInitialize, function(self)
-		self.default_environment = {
-			runtime = Table(),
-			typesystem = Table(),
-		}
+		table.insert(
+			META.OnInitialize,
+			function(self)
+				self.default_environment = {runtime = Table(), typesystem = Table(),}
 		self.environments = {runtime = {}, typesystem = {}}
 		self.scope_stack = {}
-	end)
+			end
+		)
 
 	function META:Hash(node)
 		if node.Type == "string" then return node:GetHash() end
@@ -93,7 +93,6 @@ return function(META)
 			function META:FindLocalUpvalue(key, scope)
 				scope = scope or self:GetScope()
 				if not scope then return end
-
 				local found, scope = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
 				if found then return found, scope end
 			end
@@ -165,12 +164,14 @@ return function(META)
 				if self:IsRuntime() then
 					local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 					local val, err = g:Get(key)
+
 					if not val then 
 						self:PushAnalyzerEnvironment("typesystem")
 						local val, err = self:GetLocalOrGlobalValue(key)
 						self:PopAnalyzerEnvironment()
 						return val, err
 					end
+
 					return self:IndexOperator(key:GetNode(), g, key)
 				end
 
@@ -210,7 +211,6 @@ return function(META)
 				end
 				
 				self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
-
 				return val
 			end
 		end

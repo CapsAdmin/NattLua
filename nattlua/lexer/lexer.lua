@@ -74,9 +74,9 @@ function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: n
 end
 
 do
-	local new_token = table_pool(function()
-		local x = 
-			{
+	local new_token = table_pool(
+			function()
+				local x = {
 				type = "unknown",
 				value = "",
 				whitespace = false,
@@ -84,7 +84,9 @@ do
 				stop = 0,
 			}--[[# as Token]]
 			return x
-	end, 3105585)
+			end,
+			3105585
+		)
 
 	function META:NewToken(type--[[#: TokenType]], is_whitespace--[[#: boolean]], start--[[#: number]], stop--[[#: number]])--[[#: Token]]
 		local tk = new_token()
@@ -124,8 +126,7 @@ function META:ReadUnknown()
 	return "unknown", false
 end
 
-
-function META:Read() --[[#: (TokenType, boolean) | (nil, nil) ]]
+function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 	return nil, nil
 end
 
@@ -133,6 +134,7 @@ function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
 	local start = self.Position
 	local type, is_whitespace = self:Read()
+
 	if not type then
 		if self:ReadEndOfFile() then
 			type = "end_of_file"
@@ -153,7 +155,7 @@ function META:ReadToken()
 	return self:NewToken(a, b, c, d)
 end
 
-function META:ReadFirstFromArray(strings--[[#: List<|string|>]]) --[[#: boolean]]
+function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
 	for _, str in ipairs(strings) do
 		if self:IsStringLower(str) then
 			self:Advance(#str)
@@ -164,11 +166,8 @@ function META:ReadFirstFromArray(strings--[[#: List<|string|>]]) --[[#: boolean]
 	return false
 end
 
-local fixed = {
-	"a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",
-}
+local fixed = {"a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",}
 local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
-
 local map_double_quote = {[ [[\"]] ] = [["]]}
 local map_single_quote = {[ [[\']] ] = [[']]}
 
@@ -177,12 +176,13 @@ for _, v in ipairs(fixed) do
 	map_single_quote["\\" .. v] = load("return \"\\" .. v .. "\"")()
 end
 
-local function reverse_escape_string(str, quote --[[#: '"' | "'"]])
+local function reverse_escape_string(str, quote--[[#: '"' | "'"]])
 	if quote == "\"" then
 		str = str:gsub(pattern, map_double_quote)
 	elseif quote == "'" then
 		str = str:gsub(pattern, map_single_quote)
 	end
+
 	return str
 end
 
@@ -199,13 +199,17 @@ function META:GetTokens()
 		token.value = self:GetStringSlice(token.start, token.stop)
 
 		if token.type == "string" then
-			if token.value:sub(1,1) == [["]] then
-				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), '"')
-			elseif token.value:sub(1,1) == [[']] then
+			if token.value:sub(1, 1) == [["]] then
+				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), "\"")
+			elseif token.value:sub(1, 1) == [[']] then
 				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), "'")
-			elseif token.value:sub(1,1) == "[" then
+			elseif token.value:sub(1, 1) == "[" then
 				local start = token.value:match("(%[[%=]*%[)")
-				if not start then error("unable to match string") end
+
+				if not start then
+					error("unable to match string")
+				end
+
 				token.string_value = token.value:sub(#start + 1, -#start - 1)
 			end
 		end
@@ -233,15 +237,11 @@ function META:GetTokens()
 
 	local tokens = non_whitespace
 	tokens[#tokens].value = ""
-
 	return tokens
 end
 
 function META.New(code--[[#: Code]])
-	local self = setmetatable({
-		Code = code,
-		Position = 1,
-	}, META)
+	local self = setmetatable({Code = code, Position = 1,}, META)
 	self:ResetState()
 	return self
 end
@@ -269,9 +269,7 @@ do
 	end
 
 	local function ReadLetter(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-		if not characters.IsLetter(lexer:PeekByte()) then
-			return false
-		end
+		if not characters.IsLetter(lexer:PeekByte()) then return false end
 		
 		while not lexer:TheEnd() do
 			lexer:Advance(1)
@@ -282,10 +280,7 @@ do
 	end
 
 	local function ReadMultilineCComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-		if not lexer:IsString("/*") then
-			return false
-		end
-
+		if not lexer:IsString("/*") then return false end
 		local start = lexer:GetPosition()
 		lexer:Advance(2)
 
@@ -303,22 +298,15 @@ do
 			start,
 			start + 1
 		)
-
 		return false
 	end
 
 	local function ReadLineCComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-		if not lexer:IsString("//") then
-			return false
-		end
-
+		if not lexer:IsString("//") then return false end
 		lexer:Advance(2)
 
 		while not lexer:TheEnd() do
-			if lexer:IsString("\n") then
-				 break 
-			end
-			
+			if lexer:IsString("\n") then break end
 			lexer:Advance(1)
 		end
 
@@ -326,17 +314,11 @@ do
 	end
 
 	local function ReadLineComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-		if not lexer:IsString("--") then
-			return false
-		end
-
+		if not lexer:IsString("--") then return false end
 		lexer:Advance(2)
 
 		while not lexer:TheEnd() do
-			if lexer:IsString("\n") then
-				break 
-			end
-			
+			if lexer:IsString("\n") then break end
 			lexer:Advance(1)
 		end
 
@@ -349,7 +331,6 @@ do
 		end
 
 		local start = lexer:GetPosition()
-
 		-- skip past the --[
 		lexer:Advance(3)
 
@@ -360,7 +341,7 @@ do
 		if not lexer:IsString("[") then
 			-- if we have an incomplete multiline comment, it's just a single line comment
 			lexer:SetPosition(start)
-			return ReadLineComment(lexer);
+			return ReadLineComment(lexer)
 		end
 
 		-- skip the last [
@@ -374,15 +355,11 @@ do
 
 		lexer:Error("expected multiline comment to end, reached end of code", start, start + 1)
 		lexer:SetPosition(start + 2)
-
 		return false
 	end
 
 	local function ReadInlineAnalyzerDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
-			if not lexer:IsString("§") then
-				return false
-			end
-
+		if not lexer:IsString("§") then return false end
 			lexer:Advance(#"§")
 
 			while not lexer:TheEnd() do
@@ -394,11 +371,9 @@ do
 
 			return "analyzer_debug_code"
 		end
-	local function ReadInlineParserDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
-		if not lexer:IsString("£") then
-			return false
-		end
 
+	local function ReadInlineParserDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+		if not lexer:IsString("£") then return false end
 		lexer:Advance(#"£")
 
 		while not lexer:TheEnd() do
@@ -435,10 +410,7 @@ do
 	end
 
 	local function ReadHexNumber(lexer--[[#: Lexer]])
-		if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then
-			return false
-		end
-
+		if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then return false end
 		lexer:Advance(2)
 		local has_dot = false
 
@@ -450,14 +422,10 @@ do
 			if not has_dot and lexer:IsString(".") then
 				-- 22..66 would be a number range
 				-- so we have to return 22 only
-				if lexer:IsString(".", 1) then
-					break
-				end
-				
+				if lexer:IsString(".", 1) then break end
 				has_dot = true
 				lexer:Advance(1)
 			end
-
 
 			if characters.IsHex(lexer:PeekByte()) then
 				lexer:Advance(1)
@@ -467,19 +435,15 @@ do
 				end
 
 				if lexer:IsStringLower("p") then
-					if ReadNumberPowExponent(lexer, "pow") then
-						break
-					end
+					if ReadNumberPowExponent(lexer, "pow") then break end
 				end
 
 				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
-
 				lexer:Error(
 					"malformed hex number, got " .. string.char(lexer:PeekByte()),
 					lexer:GetPosition() - 1,
 					lexer:GetPosition()
 				)
-
 				return false
 			end
 		end
@@ -488,10 +452,7 @@ do
 	end
 
 	local function ReadBinaryNumber(lexer--[[#: Lexer]])
-		if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then
-			return false
-		end
-
+		if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then return false end
 		-- skip past 0b
 		lexer:Advance(2)
 
@@ -508,13 +469,10 @@ do
 				end
 
 				if lexer:IsStringLower("e") then
-					if ReadNumberPowExponent(lexer, "exponent") then
-						break
-					end
+					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
 
 				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
-				
 				lexer:Error(
 					"malformed binary number, got " .. string.char(lexer:PeekByte()),
 					lexer:GetPosition() - 1,
@@ -535,6 +493,7 @@ do
 		-- if we start with a dot
 		-- .0
 		local has_dot = false
+
 		if lexer:IsString(".") then
 			has_dot = true
 			lexer:Advance(1)
@@ -548,10 +507,7 @@ do
 			if not has_dot and lexer:IsString(".") then
 				-- 22..66 would be a number range
 				-- so we have to return 22 only
-				if lexer:IsString(".", 1) then
-					break
-				end
-				
+				if lexer:IsString(".", 1) then break end
 				has_dot = true
 				lexer:Advance(1)
 			end
@@ -564,13 +520,10 @@ do
 				end
 
 				if lexer:IsString("e") or lexer:IsString("E") then
-					if ReadNumberPowExponent(lexer, "exponent") then
-						break
-					end
+					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
 				
 				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
-
 				lexer:Error(
 					"malformed number, got " .. string.char(lexer:PeekByte()) .. " in decimal notation",
 					lexer:GetPosition() - 1,
@@ -635,7 +588,6 @@ do
 		local function build_string_reader(name--[[#: string]], quote--[[#: string]])
 			return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 				if not lexer:IsString(quote) then return false end
-				
 				local start = lexer:GetPosition()
 				lexer:Advance(1)
 		
@@ -690,15 +642,18 @@ do
 	end
 	
 	local function ReadRemainingCommentEscape(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
-		if lexer.comment_escape and lexer:IsString(lexer.comment_escape --[[#as string]]) then
-			lexer:Advance(#lexer.comment_escape --[[#as string]])
+		if
+			lexer.comment_escape and
+			lexer:IsString(lexer.comment_escape--[[# as string]])
+		then
+			lexer:Advance(#lexer.comment_escape--[[# as string]])
 			return "comment_escape"
 		end
 
 		return false
 	end
 
-	function META:Read() --[[#: (TokenType, boolean) | (nil, nil) ]]
+	function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 		if ReadRemainingCommentEscape(self) then return "discard", false end
 
 		do

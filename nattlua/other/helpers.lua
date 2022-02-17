@@ -1,6 +1,6 @@
 --[[#local type { Token } = import_type<|"nattlua/lexer/token.nlua"|>]]
---[[# import_type<|"nattlua/code/code.lua"|>]]
 
+--[[#import_type<|"nattlua/code/code.lua"|>]]
 local math = require("math")
 local table = require("table")
 local quote = require("nattlua.other.quote")
@@ -12,7 +12,7 @@ local tostring = _G.tostring
 local next = _G.next
 local error = _G.error
 local ipairs = _G.ipairs
-local jit = _G.jit --[[# as jit | nil]]
+local jit = _G.jit--[[# as jit | nil]]
 local pcall = _G.pcall
 local unpack = _G.unpack
 local helpers = {}
@@ -87,8 +87,7 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 		within_stop = #code + 1
 	end
 
-	return
-		{
+	return {
 			character_start = character_start or
 			0,
 			character_stop = character_stop or
@@ -145,10 +144,14 @@ do
 
 	do
 		-- TODO: wtf am i doing here?
-		local args --[[#: List<|string | List<|string|>|> ]]
+		local args--[[#: List<|string | List<|string|>|>]]
 		local fmt = function(str--[[#: string]])
 			local num = tonumber(str)
-			if not num then error("invalid format argument " .. str) end
+
+				if not num then
+					error("invalid format argument " .. str)
+				end
+
 			if type(args[num]) == "table" then return quote.QuoteTokens(args[num]) end
 			return quote.QuoteToken(args[num] or "?")
 		end
@@ -172,9 +175,7 @@ do
 		start = clamp(start, 1, #lua_code)
 		stop = clamp(stop, 1, #lua_code)
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
-
 		if not data then return end
-
 		local line_start, line_stop = data.line_start, data.line_stop
 		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(lua_code, start, size)
 		local post_start_pos, post_stop_pos, lines_after = get_lines_after(lua_code, stop, size)
@@ -227,7 +228,10 @@ do
 
 		local str = table.concat(lines, "\n")
 		local path = path and
-			(path:gsub("@", "") .. ":" .. line_start .. ":" .. data.character_start) or
+			(
+				path:gsub("@", "") .. ":" .. line_start .. ":" .. data.character_start
+			)
+			or
 			""
 		local msg = path .. (msg and ": " .. msg or "")
 		local post = (" "):rep(spacing - 2) .. "-> | " .. msg

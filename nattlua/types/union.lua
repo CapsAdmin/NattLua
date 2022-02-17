@@ -5,14 +5,15 @@ local table = require("table")
 local ipairs = _G.ipairs
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
---[[# local { TNumber } = require("nattlua.types.number") ]]
+
+--[[#local { TNumber } = require("nattlua.types.number")]]
+
 local META = dofile("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType ]]
+--[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TUnion"]]
 --[[#type TUnion = META.@Self]]
 --[[#type TUnion.Data = List<|TBaseType|>]]
 --[[#type TUnion.suppress = boolean]]
-
 META.Type = "union"
 
 function META:GetHash()
@@ -48,22 +49,17 @@ end
 
 function META:ShrinkToFunctionSignature()
 	local Tuple = require("nattlua.types.tuple").Tuple
-
 	local arg = Tuple({})
 	local ret = Tuple({})
 
 	for _, func in ipairs(self.Data) do
 		if func.Type ~= "function" then return false end
-
 		arg:Merge(func:GetArguments())
 		ret:Merge(func:GetReturnTypes())
 	end
-	local Function = require("nattlua.types.function").Function
 
-	return Function({
-		arg = arg,
-		ret = ret,
-	})
+	local Function = require("nattlua.types.function").Function
+	return Function({arg = arg, ret = ret,})
 end
 
 local sort = function(a, b)
@@ -198,18 +194,14 @@ end
 
 function META:HasTuples()
 	for _, obj in ipairs(self.Data) do
-		if obj.Type == "tuple" then
-			return true
+		if obj.Type == "tuple" then return true end
 		end
-	end
+
 	return false
 end
 
 function META:GetAtIndex(i--[[#: number]])
-	if not self:HasTuples() then
-		return self
-	end
-	
+	if not self:HasTuples() then return self end
 	local val
 	local errors = {}
 
@@ -282,6 +274,7 @@ end
 
 function META:ContainsOtherThan(key--[[#: TBaseType]])
 	local found = false
+
 	for _, obj in ipairs(self.Data) do
 		if key:IsSubsetOf(obj) then 
 			found = true
@@ -366,7 +359,9 @@ end
 function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
 	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
 	
-	if B.Type == "tuple" then B = B:Get(1) end	
+	if B.Type == "tuple" then
+		B = B:Get(1)
+	end
 
 	for _, a in ipairs(A.Data) do
 		if a.Type == "any" then return true end
@@ -469,6 +464,7 @@ function META:EnableTruthy()
 	for _, v in ipairs(self.truthy_disabled) do
 		self:AddType(v)
 	end
+
 	return self
 end
 
@@ -562,7 +558,6 @@ function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node-
 	end
 	
 	local Tuple = require("nattlua.types.tuple").Tuple
-
 	return Tuple({new})
 end
 
@@ -570,6 +565,7 @@ function META:IsLiteral()
 	for _, obj in ipairs(self:GetData()) do
 		if not obj:IsLiteral() then return false end
 	end
+
 	return true
 end
 
@@ -611,8 +607,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 	return self
 end
 
-return
-	{
+return {
 		Union = META.New,
 		Nilable = function(typ)
 			return META.New({typ, Nil()})

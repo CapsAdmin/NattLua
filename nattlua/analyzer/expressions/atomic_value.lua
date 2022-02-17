@@ -15,7 +15,6 @@ local table = require("table")
 local function lookup_value(self, node)
 	local errors = {}
 	local key = NodeToString(node)
-
 	local obj, err = self:GetLocalOrGlobalValue(key)
 
 	if self:IsTypesystem() then
@@ -42,6 +41,7 @@ local function lookup_value(self, node)
 			self:PushAnalyzerEnvironment("typesystem")
 			local objt, errt = self:GetLocalOrGlobalValue(key)
 			self:PopAnalyzerEnvironment()
+
 			if objt then
 				obj, err = objt, errt
 			end
@@ -54,13 +54,11 @@ local function lookup_value(self, node)
 	end
 
 	node.inferred_type = node.inferred_type or obj
-
 	return self:GetTrackedUpvalue(obj) or obj
 end
 
 local function is_primitive(val)
-	return
-		val == "string" or
+	return val == "string" or
 		val == "number" or
 		val == "boolean" or
 		val == "true" or
@@ -68,8 +66,7 @@ local function is_primitive(val)
 		val == "nil"
 end
 
-return
-	{
+return {
 		AnalyzeAtomicValue = function(self, node)
 			local value = node.value.value
 			local type = runtime_syntax:GetTokenType(node.value)

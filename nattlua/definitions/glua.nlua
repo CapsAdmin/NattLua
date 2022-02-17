@@ -19,8 +19,6 @@ local type Angle = {
 		Right = function=(self)>(Vector), -- TODO: Vector():Angle():Right() seems to cause infinte loop if Right is not defined
 }
 local type ToScreenData = {x = number, y = number, visible = boolean,}
-
-
 -- We can mutate the Vector type if we want
 type Vector.__index = Vector
 type Vector.@Name = "Vector"
@@ -28,7 +26,6 @@ type Vector.__call = function=(Vector, number, number, number)>(Vector)
 type Vector.__add = function=(Vector, Vector)>(Vector)
 type Vector.__mul = function=(Vector, number | Vector)>(Vector)
 type Vector.__unm = function=(Vector)>(Vector)
-
 -- Or we can add a table:
 type Vector = Vector & {
 		Zero = function=(self)>(nil),
@@ -81,9 +78,7 @@ local type Triangle = {
 		u = number,
 		v = number,
 		userdata = {number, number, number, number},
-		weights = {
-			[number] = {bone = number, weight = number},
-		},
+		weights = {[number] = {bone = number, weight = number},},
 	}
 local type Mesh = {
 		Draw = function=(self)>(nil),
@@ -184,25 +179,13 @@ end
 local analyzer function isstring(obj: any)
 	local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
 	local binary_operator = require("nattlua.analyzer.operators.binary")
-	return binary_operator(
-		analyzer,
-		analyzer.current_expression,
-		typ,
-		types.LString("string"),
-		"=="
-	)
+	return binary_operator(analyzer, analyzer.current_expression, typ, types.LString("string"), "==")
 end
 
 local analyzer function istable(obj: any)
 	local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
 	local binary_operator = require("nattlua.analyzer.operators.binary")
-	return binary_operator(
-		analyzer,
-		analyzer.current_expression,
-		typ,
-		types.LString("table"),
-		"=="
-	)
+	return binary_operator(analyzer, analyzer.current_expression, typ, types.LString("table"), "==")
 end
 
 local analyzer function isentity(obj: any)
@@ -224,7 +207,7 @@ function string.Implode(seperator: ref string, Table: ref {[1 .. inf] = string})
 end
 
 function string.GetFileFromFilename(path: ref string)
-	if (!path:find("\\") && !path:find("/")) then return path end
+	if (not path:find("\\") and not path:find("/")) then return path end
 	return path:match("[\\/]([^/\\]+)$") or ""
 end
 
@@ -278,8 +261,7 @@ do
 	end
 end
 
-return
-	{
+return {
 		hook = hook,
 		WorldToLocal = WorldToLocal,
 		Vector = Vector,

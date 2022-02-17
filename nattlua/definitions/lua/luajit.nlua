@@ -19,7 +19,6 @@ type ffi = {
 		fill = function=(cdata, number, any)>(nil) | function=(cdata, len: number)>(nil),
 		offsetof = function=(cdata, number)>(number),
 	}
-
 	type ffi.C.@Name = "FFI_C"
 type jit = {
 		os = ffi.os,

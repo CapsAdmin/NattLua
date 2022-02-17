@@ -171,13 +171,8 @@ end
 function luadata.ToString(var, context--[[#: nil | Context]])
 	context = context or {tab = -1}
 	local func = luadata.Types[luadata.Type(var)]
-	if func then
-		return func(var, context)
-	end
-
-	if luadata.Types.fallback then 
-		return luadata.Types.fallback(var, context)
-	end
+	if func then return func(var, context) end
+	if luadata.Types.fallback then return luadata.Types.fallback(var, context) end
 end
 
 function luadata.FromString(str--[[#: string]])
@@ -290,7 +285,8 @@ luadata.SetModifier("table", function(tbl, context)
 
 	context.tab = context.tab - 1
 	return table.concat(str, "")
-end)
+	end
+)
 
 return function(...)
 	local tbl = {...}

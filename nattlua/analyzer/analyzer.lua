@@ -31,8 +31,6 @@ do
 
 	function META:AnalyzeStatement(node)
 		self.current_statement = node
-
-
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
 
 		if node.kind == "assignment" or node.kind == "local_assignment" then
@@ -86,7 +84,6 @@ do
 			self:FatalError("unhandled statement: " .. tostring(node))
 		end
 
-
 		self:PopAnalyzerEnvironment()
 	end
 end
@@ -110,7 +107,6 @@ do
 		self.current_expression = node
 
 		if node.type_expression then
-
 			if node.kind == "table" then
 				local obj = AnalyzeTable(self, node)
 				self:PushAnalyzerEnvironment("typesystem")
@@ -122,13 +118,16 @@ do
 			self:PushAnalyzerEnvironment("typesystem")
 			local obj = self:AnalyzeExpression(node.type_expression)
 			self:PopAnalyzerEnvironment()
-
 			return obj
 		elseif node.kind == "value" then
 			return AnalyzeAtomicValue(self, node)
 		elseif node.kind == "vararg" then
 			return AnalyzeVararg(self, node)
-		elseif node.kind == "function" or node.kind == "analyzer_function" or node.kind == "type_function" then
+		elseif
+			node.kind == "function" or
+			node.kind == "analyzer_function" or
+			node.kind == "type_function"
+		then
 			return AnalyzeFunction(self, node)
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node)
@@ -157,12 +156,12 @@ do
 end
 
 return function(config)
-	config = config or {}
-	local self = setmetatable({config = config}, META)
+		config = config or {}
+		local self = setmetatable({config = config}, META)
 
-	for _, func in ipairs(META.OnInitialize) do
-		func(self)
+		for _, func in ipairs(META.OnInitialize) do
+			func(self)
+		end
+
+		return self
 	end
-
-	return self
-end

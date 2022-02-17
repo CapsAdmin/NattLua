@@ -24,7 +24,6 @@ function META:__tostring()
 	end
 
 	local lua_code = self.Code:GetString()
-
 	local line = lua_code:match("(.-)\n")
 
 	if line then
@@ -53,14 +52,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 		msg = "DEFERRED CALL: " .. msg
 	end
 
-	local msg = helpers.FormatError(
-		code,
-		msg,
-		start,
-		stop,
-		nil,
-		...
-	)
+	local msg = helpers.FormatError(code, msg, start, stop, nil, ...)
 	local msg2 = ""
 
 	for line in (msg .. "\n"):gmatch("(.-)\n") do
@@ -75,7 +67,12 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 
 	if
 		severity == "fatal" or
-		(_G.TEST and severity == "error" and not _G.TEST_DISABLE_ERROR_PRINT) or
+		(
+			_G.TEST and
+			severity == "error" and
+			not _G.TEST_DISABLE_ERROR_PRINT
+		)
+		or
 		self.debug
 	then
 		local level = 2
@@ -119,7 +116,8 @@ end
 local traceback = function(self, obj, msg)
 	if self.debug or _G.TEST then
 		local ret = {
-				xpcall(function()
+				xpcall(
+					function()
 					msg = msg or "no error"
 					local s = msg .. "\n" .. stack_trace()
 
@@ -128,9 +126,11 @@ local traceback = function(self, obj, msg)
 					end
 
 					return s
-				end, function(msg)
+					end,
+					function(msg)
 					return debug.traceback(tostring(msg))
-				end),
+					end
+				),
 			}
 		if not ret[1] then return "error in error handling: " .. tostring(ret[2]) end
 		return table.unpack(ret, 2)
@@ -144,20 +144,16 @@ function META:Lex()
 	lexer.name = self.name
 	self.lexer = lexer
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
-		self:OnDiagnostic(
-			code,
-			msg,
-			"fatal",
-			start,
-			stop,
-			...
-		)
+			self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
 	end
-	local ok, tokens = xpcall(function()
+	local ok, tokens = xpcall(
+			function()
 		return lexer:GetTokens()
-	end, function(msg)
+			end,
+			function(msg)
 		return traceback(self, lexer, msg)
-	end)
+			end
+		)
 	if not ok then return nil, tokens end
 	self.Tokens = tokens
 	return self
@@ -172,14 +168,7 @@ function META:Parse()
 	local parser = self.Parser(self.Tokens, self.Code, self.config)
 	self.parser = parser
 	parser.OnError = function(parser, code, msg, start, stop, ...)
-		self:OnDiagnostic(
-			code,
-			msg,
-			"fatal",
-			start,
-			stop,
-			...
-		)
+			self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
 	end
 
 	if self.OnNode then
@@ -188,11 +177,14 @@ function META:Parse()
 		end
 	end
 
-	local ok, res = xpcall(function()
+	local ok, res = xpcall(
+			function()
 		return parser:ReadRootNode()
-	end, function(msg)
+			end,
+			function(msg)
 		return traceback(self, parser, msg)
-	end)
+			end
+		)
 	if not ok then return nil, res end
 	self.SyntaxTree = res
 	return self
@@ -232,7 +224,8 @@ function META:Analyze(analyzer, ...)
 
 	analyzer.ResolvePath = self.OnResolvePath
 	local args = {...}
-	local ok, res = xpcall(function()
+	local ok, res = xpcall(
+			function()
 		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
 		analyzer:AnalyzeUnreachableCode()
 
@@ -241,9 +234,11 @@ function META:Analyze(analyzer, ...)
 		end
 
 		return res
-	end, function(msg)
+			end,
+			function(msg)
 		return traceback(self, analyzer, msg)
-	end)
+			end
+		)
 	self.AnalyzedResult = res
 	if not ok then return nil, res end
 	return self

@@ -1,8 +1,6 @@
-return
-	{
+return {
 		AnalyzeWhile = function(self, statement)
 			local obj = self:AnalyzeExpression(statement.expression)
-
 			local upvalues = self:GetTrackedUpvalues()
 			local tables = self:GetTrackedTables()
 			self:ClearTracked()
@@ -12,15 +10,12 @@ return
 			end
 
 			if obj:IsTruthy() then
-
 				self:ApplyMutationsInIf(upvalues, tables)
 
 				for i = 1, 32 do
 					self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
 						self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
-
 						self:AnalyzeStatements(statement.statements)
-
 						self:PopUncertainLoop()
 					self:PopConditionalScope()
 

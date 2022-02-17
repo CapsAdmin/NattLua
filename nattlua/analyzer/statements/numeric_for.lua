@@ -23,12 +23,14 @@ local function get_largest_number(obj)
 	end
 end
 
-return
-	{
+return {
 		AnalyzeNumericFor = function(self, statement)
 			local init = self:AnalyzeExpression(statement.expressions[1]):GetFirstValue()
 			local max = self:AnalyzeExpression(statement.expressions[2]):GetFirstValue()
-			local step = statement.expressions[3] and self:AnalyzeExpression(statement.expressions[3]):GetFirstValue() or nil
+		local step = statement.expressions[3] and
+			self:AnalyzeExpression(statement.expressions[3]):GetFirstValue()
+			or
+			nil
 
 			if step then
 				assert(step.Type == "number")
@@ -41,13 +43,7 @@ return
 
 			if literal_init and literal_max then
 				-- also check step
-				condition:AddType(Binary(
-					self,
-					statement,
-					init,
-					max,
-					"<="
-				))
+			condition:AddType(Binary(self, statement, init, max, "<="))
 			else
 				condition:AddType(True())
 				condition:AddType(False())
@@ -70,7 +66,6 @@ return
 							end
 
                             i.from_for_loop = true
-
 							self:CreateLocalValue(statement.identifiers[1].value.value, i)
 							self:AnalyzeStatements(statement.statements)
 
@@ -95,6 +90,7 @@ return
 					if literal_init then
 						init = LNumber(literal_init)
 						init.dont_widen = true
+
 						if max.Type == "number" or (max.Type == "union" and max:IsType("number")) then
 							if not max:IsLiteral() then
 								init:SetMax(LNumber(math.huge))
@@ -105,7 +101,13 @@ return
 					else
 						if
 							init.Type == "number" and
-							(max.Type == "number" or (max.Type == "union" and max:IsType("number")))
+					(
+						max.Type == "number" or
+						(
+							max.Type == "union" and
+							max:IsType("number")
+						)
+					)
 						then
 							init = self:Assert(statement.expressions[1], init:SetMax(max))
 						end						

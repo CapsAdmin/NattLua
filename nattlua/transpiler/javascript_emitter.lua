@@ -4,7 +4,6 @@ local assert = assert
 local type = type
 local META = {}
 META.__index = META
-
 require("nattlua.transpiler.base_emitter")(META)
 
 function META:EmitExpression(node)
@@ -34,9 +33,11 @@ function META:EmitExpression(node)
 		if node.value.type == "letter" then
 			self:EmitToken(node.value, "")
 			node.value.whitespace = nil
+
 			if not node.inferred_type or not node.inferred_type:GetUpvalue() then
 				self:Emit("globalThis.")
 			end
+
 			self:EmitToken(node.value)
 		elseif node.value.value == "..." then
 			self:EmitToken(node.value, "__args")
@@ -309,6 +310,7 @@ function META:EmitTable(tree)
 
 	local is_array = tree.inferred_type and tree.inferred_type:IsNumericallyIndexed()
 	local during_spread = false
+
 	if is_array then
 		self:EmitToken(tree.tokens["{"], "[")
 	else
@@ -416,7 +418,6 @@ end
 
 function META:EmitPostfixOperator(node)
 	local func_chunks = runtime_syntax:GetFunctionForPostfixOperator(node.value)
-
     -- no such thing as postfix operator in lua,
     -- so we have to assume that there's a translation
     assert(func_chunks)
@@ -661,7 +662,10 @@ function META:EmitAssignment(node)
 
 			if
 				left.kind == "binary_operator" and
-				(left.value.value == "." or left.value.value == ":")
+				(
+					left.value.value == "." or
+					left.value.value == ":"
+				)
 			then
 				self:EmitExpression(left.left)
 				self:Emit(",")

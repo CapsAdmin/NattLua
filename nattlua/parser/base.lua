@@ -11,9 +11,7 @@ FunctionLocalAnalyzerStatement,
 ValueExpression
   } = import_type<|"nattlua/parser/nodes.nlua"|>]]
 --[[#import_type<|"nattlua/code/code.lua"|>]]
-
 --[[#local type NodeType = "expression" | "statement"]]
-
 local Node = require("nattlua.parser.node")
 local ipairs = _G.ipairs
 local pairs = _G.pairs
@@ -24,11 +22,8 @@ local helpers = require("nattlua.other.helpers")
 local quote_helper = require("nattlua.other.quote")
 local META = {}
 META.__index = META
-
 --[[#local type Node = Node.@Self]]
-
---[[#
-type META.@Self = {
+--[[#type META.@Self = {
 		config = any,
 		nodes = List<|any|>,
 		Code = Code,
@@ -38,13 +33,12 @@ type META.@Self = {
 		i = number,
 		tokens = List<|Token|>,
 		environment_stack = List<|"typesystem" | "runtime"|>,
-		OnNode = nil | function=(self, any)>(nil)
-	}
-]]
+		OnNode = nil | function=(self, any)>(nil),
+	}]]
 --[[#type META.@Name = "Parser"]]
 --[[#local type Parser = META.@Self]]
 
-function META.New(tokens--[[#: List<|Token|>]], code --[[#: Code]], config--[[#: nil | {
+function META.New(tokens--[[#: List<|Token|>]], code--[[#: Code]], config--[[#: nil | {
 	root = nil | Node,
 	on_statement = nil | function=(Parser, Node)>(Node),
 	path = nil | string,
@@ -70,7 +64,7 @@ do
 		return self.environment_stack[1] or "runtime"
 	end
 
-	function META:PushParserEnvironment(env--[[#: "runtime" | "typesystem" ]])
+	function META:PushParserEnvironment(env--[[#: "runtime" | "typesystem"]])
 		table.insert(self.environment_stack, 1, env)
 	end
 
@@ -109,10 +103,12 @@ end
 
 function META:EndNode(node--[[#: Node]])
 	local prev = self:GetToken(-1)
+
 	if prev then
 		node.code_stop = prev.stop
 	else
 		local cur = self:GetToken()
+
 		if cur then
 			node.code_stop = cur.stop
 		end
@@ -124,7 +120,6 @@ end
 
 function META:Error(msg--[[#: string]], start_token--[[#: Token | nil]], stop_token--[[#: Token | nil]], ...--[[#: ...any]])
 	local tk = self:GetToken()
-
 	local start = 0
 	local stop = 0
 	
@@ -140,7 +135,7 @@ function META:Error(msg--[[#: string]], start_token--[[#: Token | nil]], stop_to
 		stop = tk.stop
 	end
 
-	self:OnError(self.Code,msg,start,stop,...)
+	self:OnError(self.Code, msg, start, stop, ...)
 end
 
 function META:OnError(code--[[#: Code]], message--[[#: string]], start--[[#: number]], stop--[[#: number]], ...--[[#: ...any]]) 
@@ -196,17 +191,11 @@ end
 do
 	local function error_expect(self--[[#: META.@Self]], str--[[#: string]], what--[[#: string]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
 		local tk = self:GetToken()
+
 		if not tk then
 			self:Error("expected $1 $2: reached end of code", start, stop, what, str)
 		else
-			self:Error(
-				"expected $1 $2: got $3",
-				start,
-				stop,
-				what,
-				str,
-				tk[what]
-			)
+			self:Error("expected $1 $2: got $3", start, stop, what, str, tk[what])
 		end
 	end
 
@@ -227,8 +216,7 @@ do
 	end
 end
 
-function META:ReadValues(values--[[#: Map<|string, true|> ]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
-	
+function META:ReadValues(values--[[#: Map<|string, true|>]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
 	local tk = self:GetToken()
 
 	if not tk then
@@ -251,8 +239,8 @@ end
 
 function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 	local out = {}
-
 	local i = 1
+
 	for _ = 1, self:GetLength() do
 		local tk = self:GetToken()
 		if not tk then break end
@@ -282,11 +270,11 @@ function META:ResolvePath(path--[[#: string]])
 	return path
 end
 
-function META:ReadMultipleValues(max--[[#: nil | number ]], reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]], ...--[[#: ref ...any]])
+function META:ReadMultipleValues(max--[[#: nil | number]], reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]], ...--[[#: ref ...any]])
     local out = {}
 
     for i = 1, max or self:GetLength() do
-        local node = reader(self, ...) --[[# as Node | nil]]
+		local node = reader(self, ...)--[[# as Node | nil]]
         if not node then break end
         out[i] = node
         if not self:IsValue(",") then break end

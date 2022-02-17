@@ -6,20 +6,25 @@ local function contains_ref_argument(upvalues)
 		if v.upvalue:GetValue().ref_argument or v.upvalue:GetValue().from_for_loop then
 			return true
 		end
-	end
+
 	return false
 end
 
-return
-	{
+return {
 		AnalyzeIf = function(self, statement)
 			local prev_expression
 			local blocks = {}
+
 			for i, statements in ipairs(statement.statements) do
 				if statement.expressions[i] then
 					self.current_if_statement = statement
 					local exp = statement.expressions[i]	
-					local no_operator_expression = exp.kind ~= "binary_operator" and exp.kind ~= "prefix_operator" or (exp.kind == "binary_operator" and exp.value.value == ".")
+				local no_operator_expression = exp.kind ~= "binary_operator" and
+					exp.kind ~= "prefix_operator" or
+					(
+						exp.kind == "binary_operator" and
+						exp.value.value == "."
+					)
 
 					if no_operator_expression then
 						self:PushTruthyExpressionContext()
@@ -31,21 +36,17 @@ return
 						self:PopTruthyExpressionContext()
 					end
 
-
 					if no_operator_expression then
 						-- track "if x then" which has no binary or prefix operators
 						self:TrackUpvalue(obj)
 					end
 
 					self.current_if_statement = nil
-
 					prev_expression = obj
 					
 					if obj:IsTruthy() then
 						local upvalues = self:GetTrackedUpvalues()
 						local tables = self:GetTrackedTables()
-
-						
 						self:ClearTracked()
 
 						table.insert(blocks, {
@@ -72,7 +73,7 @@ return
 				else
 					if prev_expression:IsCertainlyFalse() and self:IsRuntime() then
 						if not contains_ref_argument(self:GetTrackedUpvalues()) then
-							self:Warning(statement.expressions[i-1], "else part of if condition is always true")
+						self:Warning(statement.expressions[i - 1], "else part of if condition is always true")
 						end
 					end
 
@@ -100,16 +101,15 @@ return
 				end
 
 				last_scope = scope
-
 				scope:SetTrackedUpvalues(block.upvalues)
 				scope:SetTrackedTables(block.tables)
+
 				if block.is_else then
 					scope:SetElseConditionalScope(true)
 					self:ApplyMutationsInIfElse(blocks)
 				else
 					self:ApplyMutationsInIf(block.upvalues, block.tables)
 				end
-
 
 				self:AnalyzeStatements(block.statements)
 				self:PopConditionalScope()

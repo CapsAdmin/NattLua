@@ -22,14 +22,15 @@ return function(META)
 
 	function META:AnalyzeRootStatement(statement, ...)
 		context:PushCurrentAnalyzer(self)
-		local argument_tuple = ... and Tuple({...}) or Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+			local argument_tuple = ... and
+				Tuple({...})
+				or
+				Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushModuleScope()
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("runtime"), "runtime")
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("typesystem"), "typesystem")
-
 		local g = self:GetGlobalEnvironment("typesystem")
 		g:Set(LString("_G"), g)
-
 		self:PushAnalyzerEnvironment("runtime")
 		self:CreateLocalValue("...", argument_tuple)
 		local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
@@ -47,15 +48,16 @@ return function(META)
 
 		for _, expression in ipairs(expressions) do
 			local obj = self:AnalyzeExpression(expression)
+
 			if obj and obj.Type == "tuple" and obj:GetLength() == 1 then
 				obj = obj:Get(1)
 			end
+
 			table.insert(out, obj)
 		end
 
 		return out
 	end
-
 
 	do
 		local function add_potential_self(tup)
@@ -128,7 +130,6 @@ return function(META)
 		function META:AnalyzeUnreachableCode()
 			if not self.deferred_calls then return end
 			context:PushCurrentAnalyzer(self)
-
 			local total = #self.deferred_calls
 			self.processing_deferred_calls = true
 			local called_count = 0
@@ -174,7 +175,6 @@ return function(META)
 			local analyzer = context:GetCurrentAnalyzer()
 			local env = analyzer:GetScopeHelper(analyzer.function_scope)
 		]]
-
 		runtime_injection = runtime_injection:gsub("\n", ";")
 
 		function META:CompileLuaAnalyzerDebugCode(code, node)
@@ -182,17 +182,16 @@ return function(META)
 			
 			if start and stop then
 				local before_function = code:sub(1, stop)
-				local after_function = code:sub(stop+1, #code)
-
+					local after_function = code:sub(stop + 1, #code)
 				code = before_function .. runtime_injection .. after_function
 			else
 				code = runtime_injection .. code
 			end
 
 			code = locals .. code
-
             -- append newlines so that potential line errors are correct
 			local lua_code = node.Code:GetString()
+
             if lua_code then
 				local start, stop = node:GetStartStop()
 				local line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
@@ -227,7 +226,6 @@ return function(META)
 		function META:CallLuaTypeFunction(node, func, scope, ...)
 			self.function_scope = scope
 			local res = {pcall(func, ...)}
-
 			local ok = table.remove(res, 1)
 
 			if not ok then
@@ -264,7 +262,6 @@ return function(META)
 
 			return table.unpack(res)
 		end
-
 
 		do
 			local scope_meta = {}
@@ -311,7 +308,6 @@ return function(META)
 			end
 		end
 
-
 		function META:TypeTraceback(from)
 			if not self.call_stack then return "" end
 			local str = ""
@@ -321,13 +317,7 @@ return function(META)
 					local start, stop = v.call_node:GetStartStop()
 
 					if start and stop then
-						local part = helpers.FormatError(
-							self.compiler:GetCode(),
-							"",
-							start,
-							stop,
-							1
-						)
+							local part = helpers.FormatError(self.compiler:GetCode(), "", start, stop, 1)
 						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler:GetCode():GetName()
 					end
 				end
@@ -410,7 +400,8 @@ return function(META)
 		do
 			function META:IsInUncertainLoop(scope)
 				scope = scope or self:GetScope():GetNearestFunctionScope()
-				return self.uncertain_loop_stack and self.uncertain_loop_stack[1] == scope:GetNearestFunctionScope()
+					return self.uncertain_loop_stack and
+						self.uncertain_loop_stack[1] == scope:GetNearestFunctionScope()
 			end
 
 			function META:PushUncertainLoop(b)
@@ -437,6 +428,5 @@ return function(META)
 				table.remove(self.active_node_stack, 1)
 			end
 		end
-
 	end
 end

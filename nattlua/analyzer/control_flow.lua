@@ -5,10 +5,8 @@ local LNumber = require("nattlua.types.number").LNumber
 local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
-
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
-
 return function(META)
 	function META:AnalyzeStatements(statements)
 		for _, statement in ipairs(statements) do
@@ -57,9 +55,7 @@ return function(META)
 		end
 
 		scope:ClearCertainReturnTypes()
-
 		if #union:GetData() == 1 then return union:GetData()[1] end
-		
 		return union
 	end
 	
@@ -80,10 +76,11 @@ return function(META)
 
 			if assert_expression and assert_expression:IsTruthy() then
 				-- track the assertion expression
-
 				local upvalues
+
 				if frame.scope:GetTrackedUpvalues() then
 					upvalues = {}
+
 					for _, a in ipairs(frame.scope:GetTrackedUpvalues()) do
 						for _, b in ipairs(self:GetTrackedUpvalues()) do
 							if a.upvalue == b.upvalue then
@@ -94,8 +91,10 @@ return function(META)
 				end
 
 				local tables
+
 				if frame.scope:GetTrackedTables() then
 					tables = {}
+
 					for _, a in ipairs(frame.scope:GetTrackedTables()) do
 						for _, b in ipairs(self:GetTrackedTables()) do
 							if a.obj == b.obj then
@@ -109,16 +108,20 @@ return function(META)
 				return
 			end
 
-			self:ApplyMutationsAfterReturn(frame.scope, function_scope, true, frame.scope:GetTrackedUpvalues(), frame.scope:GetTrackedTables())
+				self:ApplyMutationsAfterReturn(
+					frame.scope,
+					function_scope,
+					true,
+					frame.scope:GetTrackedUpvalues(),
+					frame.scope:GetTrackedTables()
+				)
 		end
 	end
 
 	function META:ThrowError(msg, obj, no_report)
 		if obj then
-
 			-- track "if x then" which has no binary or prefix operators
 			self:TrackUpvalue(obj)
-
 			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
 
 			if obj:IsTruthy() then
@@ -128,6 +131,7 @@ return function(META)
 			end
 
 			local old = {}
+
 			for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
 				old[i] = upvalue
 			end
@@ -143,7 +147,9 @@ return function(META)
 	end
 
 	function META:GetThrownErrorMessage()
-		return self.lua_error_thrown or self.lua_assert_error_thrown and self.lua_assert_error_thrown.msg
+			return self.lua_error_thrown or
+				self.lua_assert_error_thrown and
+				self.lua_assert_error_thrown.msg
 	end
 
 	function META:ClearError()
@@ -175,7 +181,13 @@ return function(META)
 		
 		if function_scope.lua_silent_error then 
 			local errored_scope = table.remove(function_scope.lua_silent_error)
-			if errored_scope and self:GetScope():IsCertainFromScope(errored_scope) and errored_scope:IsCertain() then
+
+				if
+					errored_scope and
+					self:GetScope():IsCertainFromScope(errored_scope)
+					and
+					errored_scope:IsCertain()
+				then
 				thrown = true
 			end
 		end 
@@ -197,13 +209,13 @@ return function(META)
 
 	function META:Print(...)
 		local helpers = require("nattlua.other.helpers")
-		
 		local node = self.current_expression
 		local start, stop = node:GetStartStop()
 
 		do
 			local node = self.current_statement
 			local start2, stop2 = node:GetStartStop()
+
 			if start2 > start then
 				start = start2
 				stop = stop2

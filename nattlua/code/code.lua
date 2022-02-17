@@ -1,11 +1,7 @@
 local META = {}
 META.__index = META
 --[[#type META.@Name = "Code"]]
-
---[[#type META.@Self = {
-    Buffer = string,
-    Name = string,
-}]]
+--[[#type META.@Self = {Buffer = string, Name = string,}]]
 
 function META:GetString()
     return self.Buffer
@@ -29,10 +25,7 @@ end
 
 function META:FindNearest(str--[[#: string]], start--[[#: number]])
     local _, pos = self.Buffer:find(str, start, true)
-    if not pos then
-        return nil
-    end
-
+	if not pos then return nil end
     return pos + 1
 end
 
@@ -52,7 +45,6 @@ local function get_default_name()
     if info then
         local parent_line = info.currentline
         local parent_name = info.source:sub(2)
-
         return parent_name .. ":" .. parent_line
     end
 
@@ -67,6 +59,5 @@ function META.New(lua_code --[[#: string]], name --[[#: string | nil]])
     return self
 end
 
---[[#	type Code = META.@Self]]
-
+--[[#type Code = META.@Self]]
 return META.New

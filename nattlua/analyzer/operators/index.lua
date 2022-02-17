@@ -3,9 +3,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
-
-return
-	{
+return {
 		Index = function(META)
 			function META:IndexOperator(node, obj, key)
 				if obj.Type == "union" then
@@ -22,17 +20,12 @@ return
 							
 						else
 							local val, err = obj:Get(key)
-
-							if not val then
-								return val, err
-							end
-
+						if not val then return val, err end
 							union:AddType(val)
 						end
 					end
 
 					union:SetNode(node)
-
 					return union
 				end
 
@@ -47,8 +40,17 @@ return
 						if
 							index.Type == "table" and
 							(
-								(index:GetContract() or index):Contains(key) or
-								(index:GetMetaTable() and index:GetMetaTable():Contains(LString("__index")))
+							(
+								index:GetContract()
+								or
+								index
+							):Contains(key)
+							or
+							(
+								index:GetMetaTable()
+								and
+								index:GetMetaTable():Contains(LString("__index"))
+							)
 							)
 						then
 							return self:IndexOperator(node, index:GetContract() or index, key)
@@ -89,7 +91,6 @@ return
 					local val, err = contract:Get(key)
 					if not val then return val, err end
 					
-					
 					if not obj.argument_index or contract.ref_argument then
 						local val = self:GetMutatedTableValue(obj, key, val)
 
@@ -103,7 +104,6 @@ return
 							end
 
 							self:TrackTableIndex(obj, key, val)
-			
 							return val
 						end
 					end
@@ -115,16 +115,10 @@ return
 					--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
 					if obj.mutations then
 						local tracked = self:GetMutatedTableValue(obj, key, val)
-
-						
-						if tracked then
-							return tracked
-						end
+					if tracked then return tracked end
 					end
 
 					self:TrackTableIndex(obj, key, val)
-
-			
 					return val
 				end
 			
@@ -132,13 +126,13 @@ return
 
 				if key:IsLiteral() then
 					local found_key = obj:FindKeyValReverse(key)
+
 					if found_key and not found_key.key:IsLiteral() then
 						val = Union({Nil(), val})
 					end
 				end
 
 				self:TrackTableIndex(obj, key, val)
-
 				return val or Nil()
 			end
 		end,

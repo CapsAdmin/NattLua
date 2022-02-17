@@ -17,9 +17,8 @@ local type Token = {
 		},
 	}
 local type TokenReturnType = TokenType | false
-return
-	{
-		Token = Token,
-		TokenType = TokenType,
-		TokenReturnType = TokenReturnType,
-	}
+return {
+	Token = Token,
+	TokenType = TokenType,
+	TokenReturnType = TokenReturnType,
+}

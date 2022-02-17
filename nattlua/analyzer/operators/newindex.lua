@@ -4,15 +4,13 @@ local LString = require("nattlua.types.string").LString
 local Any = require("nattlua.types.any").Any
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
-return
-	{
+return {
 		NewIndex = function(META)
 			function META:NewIndexOperator(node, obj, key, val)
 				if obj.Type == "union" then
 					-- local x: nil | {foo = true}
 					-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
 					-- log(x.foo) << no error, because now x has no field nil
-					
 					local new_union = Union()
 					local truthy_union = Union()
 					local falsy_union = Union()
@@ -58,7 +56,12 @@ return
 				if
 					obj.Type == "table" and
 					obj.argument_index and
-					(not obj:GetContract() or not obj:GetContract().mutable) and
+				(
+					not obj:GetContract()
+					or
+					not obj:GetContract().mutable
+				)
+				and
 					not obj.mutable
 				then
 					if not obj:GetContract() then
@@ -151,11 +154,7 @@ return
 				end
 
 				self:MutateTable(obj, key, val)
-
-				if not obj:GetContract() then
-					return obj:Set(key, val, self:IsRuntime())
-				end
-
+			if not obj:GetContract() then return obj:Set(key, val, self:IsRuntime()) end
 				return true
 			end
 		end,

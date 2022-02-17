@@ -1,4 +1,5 @@
 local lib = {}
+
 local function inject_full_path()
 	local ok, lib = pcall(require, "jit.util" --[[# as string]]) -- to avoid warning
 
@@ -29,15 +30,13 @@ function lib.EnableJITDumper()
 	if not jit then return end
 	if jit.version_num ~= 20100 then return end
 	inject_full_path()
-	local jutil = require("jit.util" --[[#as string]])
-	local vmdef = require("jit.vmdef" --[[#as string]])
+	local jutil = require("jit.util"--[[# as string]])
+	local vmdef = require("jit.vmdef"--[[# as string]])
 	local funcinfo, traceinfo = jutil.funcinfo, jutil.traceinfo
 	local type, format = _G.type, string.format
 	local stdout, stderr = io.stdout, io.stderr
 	local out = stdout
-
     ------------------------------------------------------------------------------
-
     local startloc, startex
 
 	local function fmtfunc(func--[[#: any]], pc--[[#: any]])
@@ -88,27 +87,31 @@ function lib.EnableJITDumper()
 				if ltype == "interpreter" then
 					out:write(format("[TRACE %3s %s%s -- fallback to interpreter]\n", tr, startex, startloc))
 				elseif ltype == "stitch" then
-					out:write(format(
+					out:write(
+						format(
 						"[TRACE %3s %s%s %s %s]\n",
 						tr,
 						startex,
 						startloc,
 						ltype,
 						fmtfunc(func, pc)
-					))
+						)
+					)
 				elseif link == tr or link == 0 then
 					out:write(format("[TRACE %3s %s%s %s]\n", tr, startex, startloc, ltype))
 				elseif ltype == "root" then
 					out:write(format("[TRACE %3s %s%s -> %d]\n", tr, startex, startloc, link))
 				else
-					out:write(format(
+					out:write(
+						format(
 						"[TRACE %3s %s%s -> %d %s]\n",
 						tr,
 						startex,
 						startloc,
 						link,
 						ltype
-					))
+						)
+					)
 				end
 			else
 				out:write(format("[TRACE %s]\n", what))
@@ -170,7 +173,8 @@ do
 			local info = debug.getinfo(i)
 			if not info then break end
 			local path = info.source
-			if path:sub(1,1) == "@" then
+
+			if path:sub(1, 1) == "@" then
 				if path:sub(2):find("test/nattlua/analyzer") then
 					print(info.source:sub(2) .. ":" .. info.currentline)
 				end

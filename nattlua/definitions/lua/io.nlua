@@ -15,11 +15,9 @@ type File = {
 		setvbuf = function=(self, string, number)>(boolean | nil, string | nil) | function=(file: self, mode: string)>(boolean | nil, string | nil),
 		seek = function=(self, string, number)>(number | nil, string | nil) | function=(file: self, whence: string)>(number | nil, string | nil) | function=(file: self)>(number | nil, string | nil),
 	}
-
 type io.open = function=(string, string | nil)>(File)
 type io.popen = function=(string, string | nil)>(File)
 type io.output = function=()>(File)
-
 type io.stdout = File
 type io.stdin = File
 type io.stderr = File

@@ -51,11 +51,7 @@ end
 META:GetSet("Data", nil--[[# as nil | any]])
 
 function META:GetLuaType()
-
-	if self.Contract and self.Contract.TypeOverride then
-		return self.Contract.TypeOverride
-	end
-
+	if self.Contract and self.Contract.TypeOverride then return self.Contract.TypeOverride end
 	return self.TypeOverride or self.Type
 end
 
@@ -73,16 +69,12 @@ do
 	end
 
 	function META:GetTruthy()
-		if self:IsTruthy() then
-			return self
-		end
+		if self:IsTruthy() then return self end
 		return nil
 	end
 
 	function META:GetFalsy()
-		if self:IsFalsy() then
-			return self
-		end
+		if self:IsFalsy() then return self end
 		return nil
 	end
 
@@ -95,7 +87,7 @@ do
 		return self
 	end
 
-	function META:CopyInternalsFrom(obj --[[#: mutable TBaseType]])
+	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
 		self:SetNode(obj:GetNode())
 		self:SetTokenLabelSource(obj:GetTokenLabelSource())
 		self:SetLiteral(obj:IsLiteral())
@@ -277,11 +269,7 @@ do
 
 	function META:GetMetaTable()
 		local contract = self.Contract
-
-		if contract and contract.MetaTable then
-			return contract.MetaTable
-		end
-
+		if contract and contract.MetaTable then return contract.MetaTable end
 		return self.MetaTable
 	end
 end
@@ -298,10 +286,7 @@ end
 
 function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
 	if op == "==" then
-		if l:IsLiteral() and r:IsLiteral() then
-			return l:GetData() == r:GetData()
-		end
-
+		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
 		return nil
 	end
 
@@ -312,6 +297,5 @@ function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end
 
---[[# type META.TBaseType = copy<|META|>.@Self ]]
-
+--[[#type META.TBaseType = copy<|META|>.@Self]]
 return META

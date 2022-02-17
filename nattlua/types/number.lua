@@ -33,7 +33,7 @@ do -- TODO, operators is mutated below, need to use upvalue position when analyz
 
 	function META:PrefixOperator(op--[[#: keysof<|operators|>]])
 		if self:IsLiteral() then
-			local num = self.New(operators[op](self:GetData() --[[#as number]])):SetLiteral(true)
+			local num = self.New(operators[op](self:GetData()--[[# as number]])):SetLiteral(true)
 			local max = self:GetMax()
 
 			if max then
@@ -46,21 +46,19 @@ do -- TODO, operators is mutated below, need to use upvalue position when analyz
 		return self.New(nil--[[# as number]]) -- hmm
 	end
 end
+
 function META:Widen()
 	self:SetLiteral(false)
 	return self
 end
 
 function META:GetHash()
-	if self:IsLiteral() then
-		return self.Data
-	end
+	if self:IsLiteral() then return self.Data end
 	return "__@type@__" .. self.Type
 end
 
 function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	if a.Type ~= b.Type then return false end
-
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 
 	if a:IsLiteral() and b:IsLiteral() then
@@ -83,7 +81,6 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	return false
 end
 
-
 function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
 	local max = self.Max
@@ -97,17 +94,19 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
-	if B.Type == "tuple" then B = (B --[[# as any]]):Get(1) end
+	if B.Type == "tuple" then
+		B = (B)--[[# as any]]:Get(1)
+	end
+
 	if B.Type == "any" then return true end
-	if B.Type == "union" then return (B --[[# as any]]):IsTargetSubsetOfChild(A) end
+	if B.Type == "union" then return (B)--[[# as any]]:IsTargetSubsetOfChild(A) end
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
 	if A:IsLiteral() and B:IsLiteral() then
-        local a = A:GetData() --[[# as number ]]
-        local b = B:GetData() --[[# as number ]]
+		local a = A:GetData()--[[# as number]]
+		local b = B:GetData()--[[# as number]]
 
 		-- compare against literals
-
 		-- nan
 		if A.Type == "number" and B.Type == "number" then
 			if a ~= a and b ~= b then return true end
@@ -157,11 +156,11 @@ end
 
 META:GetSet("Max", nil--[[# as TNumber | nil]])
 
-function META:SetMax(val --[[#: TBaseType | TUnion ]])
+function META:SetMax(val--[[#: TBaseType | TUnion]])
 	local err
 
 	if val.Type == "union" then
-		val, err = (val --[[#as any]]):GetLargestNumber()
+		val, err = (val)--[[# as any]]:GetLargestNumber()
 		if not val then return val, err end
 	end
 
@@ -211,9 +210,7 @@ do
 	end
 
 	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: "=="]])--[[#: boolean | nil]]
-		if not a:IsLiteral() or not b:IsLiteral() then
-			return nil
-		end
+		if not a:IsLiteral() or not b:IsLiteral() then return nil end
 
 		if operator == "==" then		
 			local a_val = a:GetData()
@@ -222,10 +219,9 @@ do
 			if b_val then
 				local max = a:GetMax()
 				local max = max and max:GetData()
+
 				if max and a_val then 
-					if b_val >= a_val and b_val <= max then 
-						return nil
-					end
+					if b_val >= a_val and b_val <= max then return nil end
 					return false
 				end
 			end
@@ -233,19 +229,14 @@ do
 			if a_val then
 				local max = b:GetMax()
 				local max = max and max:GetData()
-				if max and b_val then 
-					if a_val >= b_val and a_val <= max then
-						return nil
-					end
 
+				if max and b_val then 
+					if a_val >= b_val and a_val <= max then return nil end
 					return false
 				end
 			end
 
-			if a_val and b_val then
-				return a_val == b_val
-			end
-
+			if a_val and b_val then return a_val == b_val end
 			return nil
 		end
 
@@ -276,53 +267,44 @@ do
 			return nil
 		end
 
-		if operators[operator] then 
-			return nil
-		end
-
+		if operators[operator] then return nil end
 		return type_errors.binary(operator, a, b)
 	end
 
-	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil, TNumber | nil]]
+	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]
 		local a_min = a:GetData()
 		local b_min = b:GetData()
 		if not a_min then return nil end
 		if not b_min then return nil end
-
 		local a_max = a:GetMaxLiteral() or a_min
 		local b_max = b:GetMaxLiteral() or b_min
-		
 		local a_min_res = nil--[[# as number]]
 		local b_min_res = nil--[[# as number]]
-
 		local a_max_res = nil--[[# as number]]
 		local b_max_res = nil--[[# as number]]
 
 		if operator == "<" then
 			a_min_res = math.min(a_min, b_max)
-			a_max_res = math.min(a_max, b_max-1)
-
+			a_max_res = math.min(a_max, b_max - 1)
 			b_min_res = math.max(a_min, b_max)
 			b_max_res = math.max(a_max, b_max)
 		end
 
 		if operator == ">" then
-			a_min_res = math.max(a_min, b_max+1)
+			a_min_res = math.max(a_min, b_max + 1)
 			a_max_res = math.max(a_max, b_max)
-
 			b_min_res = math.min(a_min, b_max)
 			b_max_res = math.min(a_max, b_max)
 		end
 
 		local a = META.New(a_min_res):SetLiteral(true):SetMax(META.New(a_max_res):SetLiteral(true))
 		local b = META.New(b_min_res):SetLiteral(true):SetMax(META.New(b_max_res):SetLiteral(true))
-		
 		return a, b
 	end
 end
 
 do
-	local operators --[[#: {[string] = function=(number, number)>(number)}]] = {
+	local operators--[[#: {[string] = function=(number, number)>(number)}]] = {
 		["+"] = function(l, r)
 			return l + r
 		end,
@@ -361,17 +343,18 @@ do
 		end,
 	}
 
-	function META.ArithmeticOperator(l --[[#: TNumber ]], r --[[#: TNumber ]], op --[[#: keysof<|operators|> ]])--[[#: TNumber]]
+	function META.ArithmeticOperator(l--[[#: TNumber]], r--[[#: TNumber]], op--[[#: keysof<|operators|>]])--[[#: TNumber]]
 		local func = operators[op]
+
 		if l:IsLiteral() and r:IsLiteral() then
-			local obj = META.New(func(l:GetData() --[[#as number]], r:GetData() --[[#as number]])):SetLiteral(true)
+			local obj = META.New(func(l:GetData()--[[# as number]], r:GetData()--[[# as number]])):SetLiteral(true)
 
 			if r:GetMax() then
-				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax() --[[#as TNumber]], op))
+				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax()--[[# as TNumber]], op))
 			end
 
 			if l:GetMax() then
-				obj:SetMax(l.ArithmeticOperator(l:GetMax() --[[#as TNumber]], r:GetMax() or r, op))
+				obj:SetMax(l.ArithmeticOperator(l:GetMax()--[[# as TNumber]], r:GetMax() or r, op))
 			end
 
 			return obj
@@ -390,8 +373,7 @@ function META.New(data--[[#: number | nil]])
 	}, META)
 end
 
-return
-	{
+return {
 		Number = META.New,
 		LNumber = function(num--[[#: number | nil]])
 			return META.New(num):SetLiteral(true)

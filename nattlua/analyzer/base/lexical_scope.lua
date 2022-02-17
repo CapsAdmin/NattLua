@@ -415,18 +415,8 @@ do
 					return not scope.node.inferred_type:IsCalled() 
 				end
 
-				if scope.uncertain_function_return == false then
-					return false
-				end
-
-				if not scope:Contains(from) then
-					return true
-				end
-			end 
 			if scope:IsTruthy() and scope:IsFalsy() then
-				if scope:Contains(from) then
-					return false
-				end
+				if scope:Contains(from) then return false end
 				return true, scope 
 			end
 			scope = scope:GetParent()

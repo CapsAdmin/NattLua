@@ -31,7 +31,8 @@ end
 
 function LSX(tag, constructor, props, children)
 	local e = constructor and
-		constructor(props, children) or
+		constructor(props, children)
+		or
 		{props = props, children = children,}
 	e.tag = tag
 	return e

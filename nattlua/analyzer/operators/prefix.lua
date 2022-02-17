@@ -28,6 +28,7 @@ local function Prefix(self, node, r)
 
 	if not r then
 		r = self:AnalyzeExpression(node.right)	
+
 		if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
 			if r.Type ~= "union" then
 				self:TrackUpvalue(r, nil, nil, op == "not")
@@ -78,13 +79,10 @@ local function Prefix(self, node, r)
 		end
 
 		self:TrackUpvalue(r, truthy_union, falsy_union)
-
 		return new_union:SetNode(node)
 	end
 
-	if r.Type == "any" then
-		return Any():SetNode(node)
-	end
+	if r.Type == "any" then return Any():SetNode(node) end
 
 	if self:IsTypesystem() then
 		if op == "typeof" then
@@ -134,9 +132,7 @@ local function Prefix(self, node, r)
 	end
 
 	if op == "-" or op == "~" or op == "#" then
-		if r.Type == "table" then
-			return r:GetLength()
-		end
+		if r.Type == "table" then return r:GetLength() end
 		return r:PrefixOperator(op)
 	end
 

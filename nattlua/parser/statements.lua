@@ -1,14 +1,23 @@
 local META = ...
-
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 
 do -- destructure statement
     function META:IsDestructureStatement(offset)
         offset = offset or 0
-        return
-            (self:IsValue("{", offset + 0) and self:IsType("letter", offset + 1)) or
-            (self:IsType("letter", offset + 0) and self:IsValue(",", offset + 1) and self:IsValue("{", offset + 2))
+		return (
+				self:IsValue("{", offset + 0)
+				and
+				self:IsType("letter", offset + 1)
+			)
+			or
+			(
+				self:IsType("letter", offset + 0)
+				and
+				self:IsValue(",", offset + 1)
+				and
+				self:IsValue("{", offset + 2)
+			)
     end
 
     function META:IsLocalDestructureAssignmentStatement()
@@ -21,6 +30,7 @@ do -- destructure statement
     function META:ReadDestructureAssignmentStatement()
         if not self:IsDestructureStatement() then return end
         local node = self:StartNode("statement", "destructure_assignment")
+
         do
             if self:IsType("letter") then
                 node.default = self:ReadValueExpressionToken()
@@ -33,6 +43,7 @@ do -- destructure statement
             node.tokens["="] = self:ExpectValue("=")
             node.right = self:ReadRuntimeExpression(0)
         end
+
         self:EndNode(node)
         return node
     end
@@ -61,7 +72,6 @@ do -- destructure statement
         end
 
         self:EndNode(node)
-
         return node
     end
 end
@@ -105,7 +115,6 @@ do
         end
 
         self:EndNode(node)
-
         return node
     end
 
@@ -138,9 +147,7 @@ do
         end
 
         self:ReadAnalyzerFunctionBody(node, true)
-
         self:EndNode(node)
-
         return node
     end
 end
@@ -148,17 +155,26 @@ end
 function META:ReadLocalFunctionStatement()
     if not (self:IsValue("local") and self:IsValue("function", 1)) then return end
     local node = self:StartNode("statement", "local_function")
-    
     node.tokens["local"] = self:ExpectValue("local")
     node.tokens["function"] = self:ExpectValue("function")
     node.tokens["identifier"] = self:ExpectType("letter")
     self:ReadFunctionBody(node)
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadLocalAnalyzerFunctionStatement()
-    if not (self:IsValue("local") and self:IsValue("analyzer", 1) and self:IsValue("function", 2)) then return end
+	if
+		not (
+			self:IsValue("local")
+			and
+			self:IsValue("analyzer", 1)
+			and
+			self:IsValue("function", 2)
+		)
+	then
+		return
+	end
 
     local node = self:StartNode("statement", "local_analyzer_function")
     node.tokens["local"] = self:ExpectValue("local")
@@ -167,11 +183,25 @@ function META:ReadLocalAnalyzerFunctionStatement()
     node.tokens["identifier"] = self:ExpectType("letter")
     self:ReadAnalyzerFunctionBody(node, true)
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadLocalTypeFunctionStatement()
-    if not (self:IsValue("local") and self:IsValue("function", 1) and (self:IsValue("<|", 3) or self:IsValue("!", 3))) then return end
+	if
+		not (
+			self:IsValue("local")
+			and
+			self:IsValue("function", 1)
+			and
+			(
+				self:IsValue("<|", 3)
+				or
+				self:IsValue("!", 3)
+			)
+		)
+	then
+		return
+	end
 
     local node = self:StartNode("statement", "local_type_function")
     node.tokens["local"] = self:ExpectValue("local")
@@ -179,30 +209,27 @@ function META:ReadLocalTypeFunctionStatement()
     node.tokens["identifier"] = self:ExpectType("letter")
     self:ReadTypeFunctionBody(node)
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadBreakStatement()
     if not self:IsValue("break") then return nil end
-
     local node = self:StartNode("statement", "break")
     node.tokens["break"] = self:ExpectValue("break")
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadDoStatement()
     if not self:IsValue("do") then return nil end
-
     local node = self:StartNode("statement", "do")
     node.tokens["do"] = self:ExpectValue("do")
     node.statements = self:ReadNodes({["end"] = true})
     node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadGenericForStatement()
     if not self:IsValue("for") then return nil end
     local node = self:StartNode("statement", "generic_for")
@@ -210,15 +237,13 @@ function META:ReadGenericForStatement()
     node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier)
     node.tokens["in"] = self:ExpectValue("in")
     node.expressions = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
-
     node.tokens["do"] = self:ExpectValue("do")
     node.statements = self:ReadNodes({["end"] = true})
     node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadGotoLabelStatement()
     if not self:IsValue("::") then return nil end
     local node = self:StartNode("statement", "goto_label")
@@ -226,19 +251,18 @@ function META:ReadGotoLabelStatement()
     node.tokens["identifier"] = self:ExpectType("letter")
     node.tokens["::"] = self:ExpectValue("::")
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadGotoStatement()
     if not self:IsValue("goto") or not self:IsType("letter", 1) then return nil end
-
     local node = self:StartNode("statement", "goto")
     node.tokens["goto"] = self:ExpectValue("goto")
     node.tokens["identifier"] = self:ExpectType("letter")
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadIfStatement()
     if not self:IsValue("if") then return nil end
     local node = self:StartNode("statement", "if")
@@ -280,9 +304,9 @@ function META:ReadIfStatement()
 
     node.tokens["end"] = self:ExpectValue("end")
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadLocalAssignmentStatement()
     if not self:IsValue("local") then return end
     local node = self:StartNode("statement", "local_assignment")
@@ -290,10 +314,11 @@ function META:ReadLocalAssignmentStatement()
 
     if self.TealCompat and self:IsValue(",", 1) then
         node.left = self:ReadMultipleValues(nil, self.ReadIdentifier, false)
+
         if self:IsValue(":") then
             self:Advance(1)
-            
             local expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
+
             for i, v in ipairs(node.left) do
                 v.type_expression = expressions[i]
                 v.tokens[":"] = self:NewToken("symbol", ":")
@@ -309,9 +334,9 @@ function META:ReadLocalAssignmentStatement()
     end
 
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadNumericForStatement()
     if not (self:IsValue("for") and self:IsValue("=", 2)) then return nil end
     local node = self:StartNode("statement", "numeric_for")
@@ -319,15 +344,13 @@ function META:ReadNumericForStatement()
     node.identifiers = self:ReadMultipleValues(1, self.ReadIdentifier)
     node.tokens["="] = self:ExpectValue("=")
     node.expressions = self:ReadMultipleValues(3, self.ExpectRuntimeExpression, 0)
-
     node.tokens["do"] = self:ExpectValue("do")
     node.statements = self:ReadNodes({["end"] = true})
     node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadRepeatStatement()
     if not self:IsValue("repeat") then return nil end
     local node = self:StartNode("statement", "repeat")
@@ -338,6 +361,7 @@ function META:ReadRepeatStatement()
     self:EndNode(node)
     return node
 end
+
 function META:ReadSemicolonStatement()
     if not self:IsValue(";") then return nil end
     local node = self:StartNode("statement", "semicolon")
@@ -345,15 +369,16 @@ function META:ReadSemicolonStatement()
     self:EndNode(node)
     return node
 end
+
 function META:ReadReturnStatement()
     if not self:IsValue("return") then return nil end
     local node = self:StartNode("statement", "return")
     node.tokens["return"] = self:ExpectValue("return")
     node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadWhileStatement()
     if not self:IsValue("while") then return nil end
     local node = self:StartNode("statement", "while")
@@ -362,47 +387,50 @@ function META:ReadWhileStatement()
     node.tokens["do"] = self:ExpectValue("do")
     node.statements = self:ReadNodes({["end"] = true})
     node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadContinueStatement()
     if not self:IsValue("continue") then return nil end
-
     local node = self:StartNode("statement", "continue")
     node.tokens["continue"] = self:ExpectValue("continue")
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadDebugCodeStatement()
     if self:IsType("analyzer_debug_code") then
         local node = self:StartNode("statement", "analyzer_debug_code")
         node.lua_code = self:ReadValueExpressionType("analyzer_debug_code")
         self:EndNode(node)
-
         return node
     elseif self:IsType("parser_debug_code") then
         local token = self:ExpectType("parser_debug_code")
         assert(loadstring("local parser = ...;" .. token.value:sub(3)))(self)
         local node = self:StartNode("statement", "parser_debug_code")
-        
         local code = self:StartNode("expression", "value")
         code.value = token
         self:EndNode(code)
-
         node.lua_code = code
-        
         self:EndNode(node)
         return node
     end
 end
+
 function META:ReadLocalTypeAssignmentStatement()
-    if not (
-        self:IsValue("local") and self:IsValue("type", 1) and
+	if
+		not (
+			self:IsValue("local")
+			and
+			self:IsValue("type", 1)
+			and
         runtime_syntax:GetTokenType(self:GetToken(2)) == "letter"
-    ) then return end
+		)
+	then
+		return
+	end
+
     local node = self:StartNode("statement", "local_assignment")
     node.tokens["local"] = self:ExpectValue("local")
     node.tokens["type"] = self:ExpectValue("type")
@@ -417,9 +445,9 @@ function META:ReadLocalTypeAssignmentStatement()
     end
 
     self:EndNode(node)
-
     return node
 end
+
 function META:ReadTypeAssignmentStatement()
     if not (self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))) then return end
     local node = self:StartNode("statement", "assignment")
@@ -435,7 +463,6 @@ function META:ReadTypeAssignmentStatement()
     end
 
     self:EndNode(node)
-
     return node
 end
 
@@ -446,20 +473,25 @@ function META:ReadCallOrAssignmentStatement()
     if self:IsValue("=") then
         local node = self:StartNode("statement", "assignment")
         node.tokens["="] = self:ExpectValue("=")
-
         node.left = left
         node.right = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
         self:EndNode(node)
-
         return node
     end
 
-    if left[1] and (left[1].kind == "postfix_call" or left[1].kind == "import") and not left[2] then
+	if
+		left[1] and
+		(
+			left[1].kind == "postfix_call" or
+			left[1].kind == "import"
+		)
+		and
+		not left[2]
+	then
         local node = self:StartNode("statement", "call_expression")
         node.value = left[1]
         node.tokens = left[1].tokens
         self:EndNode(node)
-
         return node
     end
 

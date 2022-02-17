@@ -161,6 +161,7 @@ function META:EmitToken(node, translate)
             for _, token in ipairs(node.whitespace) do
                 if token.type == "line_comment" then
                     self:EmitToken(token)
+
                     if node.whitespace[_ + 1] then
                         self:Whitespace("\n")
                         self:Whitespace("\t")
@@ -236,22 +237,24 @@ end
 function META:OptionalWhitespace()
 	if self.config.preserve_whitespace == nil then return end
 
-	if characters.IsLetter(self:GetPrevChar()) or characters.IsNumber(self:GetPrevChar()) then
+	if
+		characters.IsLetter(self:GetPrevChar())
+		or
+		characters.IsNumber(self:GetPrevChar())
+	then
 		self:EmitSpace(" ")
 	end
 end
 
 do
-    local fixed = {
-        "a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",
-    }
-
+	local fixed = {"a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",}
     local pattern = "["    
+
     for _, v in ipairs(fixed) do
         pattern = pattern .. load("return \"\\" .. v .. "\"")()
     end
+
     pattern = pattern .. "]"
-    
     local map_double_quote = {[ [["]] ] = [[\"]]}
     local map_single_quote = {[ [[']] ] = [[\']]}
     
@@ -260,7 +263,7 @@ do
         	map_double_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
 		end
 
-		if v ~= '"' then
+		if v ~= "\"" then
         	map_single_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
 		end
     end
@@ -271,10 +274,10 @@ do
         elseif quote == "'" then
             str = str:gsub(pattern, map_single_quote)
         end
+
         return str
     end
         
-
     function META:EmitStringToken(token)
         if self.config.string_quote then
             local current = token.value:sub(1, 1)
@@ -287,13 +290,20 @@ do
             end
         end
 
-        local needs_space =  token.value:sub(1, 1) == "[" and self:GetPrevChar() == B("[")
+		local needs_space = token.value:sub(1, 1) == "[" and self:GetPrevChar() == B("[")
 
-        if needs_space then self:Whitespace(" ") end
+		if needs_space then
+			self:Whitespace(" ")
+		end
+
         self:EmitToken(token)
-        if needs_space then self:Whitespace(" ") end
+
+		if needs_space then
+			self:Whitespace(" ")
     end
 end
+end
+
 function META:EmitNumberToken(token)
 	self:EmitToken(token)
 end
@@ -423,9 +433,7 @@ function META:PopBreakNewline()
 end
 
 function META:ShouldBreakNewline()
-    if self.force_newlines then
-	    return self.force_newlines[#self.force_newlines]
-    end
+	if self.force_newlines then return self.force_newlines[#self.force_newlines] end
 end
 
 do
@@ -436,6 +444,7 @@ do
 
 	function META:PopLoop()
 		local node = table.remove(self.loop_nodes)
+
 		if node.on_pop then
 			node:on_pop()
 		end
@@ -448,7 +457,6 @@ do
 end
 
 function META:EmitCall(node)
-
 	if node.expand then
 		if not node.expand.expanded then
 			self:Emit("local ")
@@ -499,9 +507,7 @@ function META:EmitCall(node)
     end
 
 	self:PushBreakNewline(newlines)
-
 	self:EmitExpressionList(node.expressions)
-
 	self:PopBreakNewline()
     
     if newlines then
@@ -554,10 +560,14 @@ function META:EmitBinaryOperator(node)
 
 		if node.value.value == "." or node.value.value == ":" then
 			self:EmitToken(node.value)
-		elseif node.value.value == "and" or node.value.value == "or" or node.value.value == "||" or node.value.value == "&&" then
-
+		elseif
+			node.value.value == "and" or
+			node.value.value == "or" or
+			node.value.value == "||" or
+			node.value.value == "&&"
+		then
 			if self:ShouldBreakNewline() then
-				if self:GetPrevChar() == B")" then
+				if self:GetPrevChar() == B(")") then
 					self:Whitespace("\n")
 					self:Whitespace("\t")
 				else
@@ -589,7 +599,6 @@ end
 
 do
 	local function emit_function_body(self, node, analyzer_function)
-
 		if node.identifiers_typesystem then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["arguments_typesystem("])
@@ -597,7 +606,6 @@ do
 			self:EmitToken(node.tokens["arguments_typesystem)"])
 			self:StopEmittingInvalidLuaCode(emitted)
 		end
-
 
 		self:EmitToken(node.tokens["arguments("])
 		self:EmitIdentifierList(node.identifiers)
@@ -608,9 +616,7 @@ do
             self:Whitespace(" ")
         else
             self:Whitespace("\n")
-            
             self:EmitBlock(node.statements)
-            
             self:Whitespace("\n")
             self:Whitespace("\t")
         end
@@ -620,7 +626,6 @@ do
 
 	function META:EmitAnonymousFunction(node)
 		self:EmitToken(node.tokens["function"])
-    
         local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
 		emit_function_body(self, node)
 	end
@@ -661,9 +666,11 @@ do
 		self:Whitespace("\t")
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
+
 		if node.expression or node.identifier then
 			self:EmitExpression(node.expression or node.identifier)
 		end
+
 		emit_function_body(self, node, true)
 	end
 
@@ -734,17 +741,19 @@ end
 function META:EmitTuple(node)
 	self:EmitToken(node.tokens["("])
 	self:EmitExpressionList(node.expressions)
+
 	if #node.expressions == 1 then
 		if node.expressions[1].tokens[","] then
 			self:EmitToken(node.expressions[1].tokens[","])
 		end
 	end
+
 	self:EmitToken(node.tokens[")"])
 end
 
-
 function META:EmitVararg(node)
 	self:EmitToken(node.tokens["..."])
+
 	if not self.config.analyzer_function then
 		self:EmitExpression(node.value)
 	end
@@ -837,7 +846,11 @@ function META:EmitPrefixOperator(node)
 		self:Emit(func_chunks[2])
 		self.operator_transformed = true
 	else
-		if runtime_syntax:IsKeyword(node.value) or runtime_syntax:IsNonStandardKeyword(node.value) then
+		if
+			runtime_syntax:IsKeyword(node.value)
+			or
+			runtime_syntax:IsNonStandardKeyword(node.value)
+		then
 			self:OptionalWhitespace()
 			self:EmitToken(node.value, translate_prefix[node.value.value])
 			self:OptionalWhitespace()
@@ -873,10 +886,10 @@ local function is_short_statement(kind)
 end
 
 function META:IsShortIfStatement(node)
-	return
-		#node.statements == 1 and
+	return #node.statements == 1 and
 		node.statements[1][1] and
-		is_short_statement(node.statements[1][1].kind) and
+		is_short_statement(node.statements[1][1].kind)
+		and
 		not self:ShouldBreakExpressionList({node.expressions[1]})
 end
 
@@ -926,9 +939,7 @@ function META:EmitIfStatement(node)
 			end
 
 			self:PushBreakNewline(newlines) 
-
 			self:EmitExpression(node.expressions[i])
-
 			self:PopBreakNewline()
 
 			if newlines then
@@ -1050,7 +1061,9 @@ function META:EmitContinueStatement(node, no_tab)
 	if not no_tab then
 		self:Whitespace("\t")
 	end
+
 	local loop_node = self:GetLoopNode()
+
 	if loop_node then
 		self:EmitToken(node.tokens["continue"], "goto __CONTINUE__")
 		loop_node.on_pop = function()
@@ -1081,7 +1094,6 @@ function META:EmitReturnStatement(node, no_tab)
 	if node.expressions[1] then
 		self:Whitespace(" ")
         self:Indent()
-
 		self:PushBreakNewline(node:GetLength() > self.config.max_line_length)
 		self:EmitExpressionList(node.expressions)
 		self:PopBreakNewline()
@@ -1291,19 +1303,13 @@ end
 
 function META:ShouldBreakExpressionList(tbl)
 	if self.config.preserve_whitespace == false then
-        if #tbl == 0 then
-			return false
-		end
-	
+		if #tbl == 0 then return false end
 		local first_node = tbl[1]
 		local last_node = tbl[#tbl]
-
 		--first_node = first_node:GetStatement()
 		--last_node = last_node:GetStatement()
-		
 		local start = first_node.code_start
 		local stop = last_node.code_stop
-				
 		return (stop - start) > self.config.max_line_length
 	end
 
@@ -1312,7 +1318,6 @@ end
 
 function META:EmitExpressionList(tbl)
 	for i = 1, #tbl do
-
 		self:PushBreakNewline(tbl[i]:GetLength() > self.config.max_line_length)
 		self:EmitExpression(tbl[i])
 		self:PopBreakNewline()
@@ -1676,11 +1681,14 @@ end
 			end
 
             local needs_escape = false
+
             for i = emitted, #self.out do
                 local str = self.out[i]
+
                 if str:find("]]", nil, true) then
                     self.out[emitted] = "--[=[#"
                     needs_escape = true
+
                     break
                 end
             end
@@ -1699,9 +1707,7 @@ end
 
 	function META:EmitInvalidLuaCode(func, ...)
 		local emitted = self:StartEmittingInvalidLuaCode()
-
 		self[func](self, ...)
-
 		self:StopEmittingInvalidLuaCode(emitted)
 	end
 end

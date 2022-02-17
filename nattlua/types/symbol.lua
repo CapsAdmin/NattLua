@@ -38,7 +38,10 @@ function META:CanBeNil()
 end
 
 function META.IsSubsetOf(A--[[#: TSymbol]], B--[[#: TBaseType]])
-	if B.Type == "tuple" then B = B:Get(1) end
+	if B.Type == "tuple" then
+		B = B:Get(1)
+	end
+
 	if B.Type == "any" then return true end
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if B.Type ~= "symbol" then return type_errors.type_mismatch(A, B) end
@@ -61,8 +64,7 @@ function META.New(data--[[#: any]])
 end
 
 local Symbol = META.New
-return
-	{
+return {
 		Symbol = Symbol,
 		Nil = function()
 			return Symbol(nil)

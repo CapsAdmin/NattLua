@@ -21,7 +21,6 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TTuple.Repeat = nil | number]]
 --[[#type TTuple.suppress = nil | boolean]]
 --[[#type TTuple.Data = List<|TBaseType|>]]
-
 META.Type = "tuple"
 META:GetSet("Unpackable", false--[[# as boolean]])
 
@@ -132,7 +131,6 @@ function META.IsSubsetOf(A--[[#: TTuple]], B--[[#: TBaseType]], max_length--[[#:
 	end
 
 	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
-
 	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
 
 	for i = 1, max_length do
@@ -154,10 +152,9 @@ function META.IsSubsetOfTupleWithoutExpansion(A--[[#: TTuple]], B--[[#: TBaseTyp
 	for i, a in ipairs(A:GetData()) do
 		local b = B:GetWithoutExpansion(i)
 		local ok, err = a:IsSubsetOf(b)
-		if ok then
-			return ok, err, a,b,i
+		if ok then return ok, err, a, b, i end
 		end
-	end
+
 	return true
 end
 
@@ -213,13 +210,10 @@ end
 
 function META:HasTuples()
 	for _, v in ipairs(self.Data) do
-		if v.Type == "tuple" then
-			return true
+		if v.Type == "tuple" then return true end
 		end
-	end
-	if self.Remainder and self.Remainder.Type == "tuple" then
-		return true
-	end
+
+	if self.Remainder and self.Remainder.Type == "tuple" then return true end
 	return false
 end
 
@@ -242,7 +236,10 @@ function META:Get(key--[[#: number | TBaseType]])
 	if
 		not val and
 		self:GetData()[#self:GetData()] and
-		(self:GetData()[#self:GetData()].Repeat or self:GetData()[#self:GetData()].Remainder)
+		(
+			self:GetData()[#self:GetData()].Repeat or
+			self:GetData()[#self:GetData()].Remainder
+		)
 	then
 		return self:GetData()[#self:GetData()]:Get(key)
 	end
@@ -253,11 +250,11 @@ end
 
 function META:GetWithoutExpansion(key--[[#: string]])
 	local val = self:GetData()[key]
+
 	if not val then
-		if self.Remainder then
-			return self.Remainder
+		if self.Remainder then return self.Remainder end
 		end
-	end
+
 	if not val then return type_errors.other({"index ", key, " does not exist"}) end
 	return val
 end
@@ -324,9 +321,19 @@ function META:GetMinimumLength()
 	local found_nil = false
 
 	for i = #self:GetData(), 1, -1 do
-		local obj = self:GetData()[i] --[[# as TBaseType]]
+		local obj = self:GetData()[i]--[[# as TBaseType]]
 
-		if (obj.Type == "union" and obj:CanBeNil()) or (obj.Type == "symbol" and obj:GetData() == nil) then
+		if
+			(
+				obj.Type == "union" and
+				obj:CanBeNil()
+			)
+			or
+			(
+				obj.Type == "symbol" and
+				obj:GetData() == nil
+			)
+		then
 			found_nil = true
 			len = i - 1
 		elseif found_nil then
@@ -384,15 +391,16 @@ end
 
 function META:UnpackWithoutExpansion()
 	local tbl = {table.unpack(self.Data)}
+
 	if self.Remainder then
 		table.insert(tbl, self.Remainder)		
 	end
+
 	return table.unpack(tbl)
 end
 
 function META:Slice(start--[[#: number]], stop--[[#: number]])
     -- TODO: not accurate yet
-
     start = start or 1
 	stop = stop or #self:GetData()
 	local copy = self:Copy()
@@ -407,16 +415,10 @@ function META:Slice(start--[[#: number]], stop--[[#: number]])
 end
 
 function META:GetFirstValue()
-	if self.Remainder then
-		return self.Remainder:GetFirstValue()
-	end
+	if self.Remainder then return self.Remainder:GetFirstValue() end
 	local first, err = self:Get(1)
 	if not first then return first, err end 
-	
-	if first.Type == "tuple" then
-	return first:GetFirstValue()
-	end
-
+	if first.Type == "tuple" then return first:GetFirstValue() end
 	return first
 end
 
@@ -435,7 +437,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 
 	if data then
 		for i, v in ipairs(data) do
-			if i == #data and v.Type == "tuple" and not (v--[[# as TTuple]]).Remainder then
+			if i == #data and v.Type == "tuple" and not (v)--[[# as TTuple]].Remainder then
 				self:AddRemainder(v)
 			else
 				self.Data[i] = v
@@ -446,15 +448,14 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 	return self
 end
 
-return
-	{
+return {
 		Tuple = META.New,
 		VarArg = function(t)
 			local self = META.New({t})
 			self:SetRepeat(math.huge)
 			return self
 		end,
-		NormalizeTuples = function (types--[[#: List<|TBaseType|>]])
+	NormalizeTuples = function(types--[[#: List<|TBaseType|>]])
 			local arguments
 
 			if #types == 1 and types[1].Type == "tuple" then
@@ -464,25 +465,23 @@ return
 
 				for i, v in ipairs(types) do
 					if v.Type == "tuple" then
-
 						if i == #types then
 							table.insert(temp, v)
 						else
 							local obj = v:Get(1)
-
 
 							if obj then
 								table.insert(temp, obj)
 							end
 						end
 					else
-						
 						table.insert(temp, v)
 					end
 				end
 
 				arguments = META.New(temp)
 			end
+
 			return arguments
-		end
+	end,
 	}

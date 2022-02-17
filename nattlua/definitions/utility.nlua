@@ -56,7 +56,6 @@ end
 analyzer function enum(tbl: Table)
 	assert(tbl:IsLiteral())
 	local union = types.Union()
-
 	analyzer:PushAnalyzerEnvironment("typesystem")
 
 	for key, val in tbl:pairs() do
@@ -65,7 +64,6 @@ analyzer function enum(tbl: Table)
 	end
 
 	analyzer:PopAnalyzerEnvironment()
-
 	union:SetLiteral(true)
 	return union
 end
@@ -80,9 +78,7 @@ analyzer function keysof(tbl: Table | {})
 	return union
 end
 
-
 --
-
 analyzer function seal(tbl: Table)
 	if tbl:GetContract() then return end
 
@@ -118,7 +114,6 @@ analyzer function copy(obj: any)
 end
 
 analyzer function UnionPairs(values: any)
-
 	if values.Type ~= "union" then
 		values = types.Union({values})
 	end
@@ -132,51 +127,59 @@ analyzer function UnionPairs(values: any)
 end
 
 -- typescript utility functions
-
 function Partial<|tbl: Table|>
 	local copy = {}
+
 	for key, val in pairs(tbl) do
 		copy[key] = val | nil
 	end
+
 	return copy
 end
 
 function Required<|tbl: Table|>
 	local copy = {}
+
 	for key, val in pairs(tbl) do
 		copy[key] = val ~ nil
 	end
+
 	return copy
 end
 
-
 -- this is more like a seal function as it allows you to modify the table
-
 function Readonly<|tbl: Table|>
 	local copy = {}
+
 	for key, val in pairs(tbl) do
 		copy[key] = val
 	end
+
 	copy.@Contract = copy
 	return copy
 end
 
 function Record<|keys: string, tbl: Table|>
 	local out = {}
+
 	for value in UnionPairs(keys) do
 		out[value] = tbl
 	end
+
 	return out
 end
 
 function Pick<|tbl: Table, keys: string|>
 	local out = {}
+
 	for value in UnionPairs(keys) do
 		if tbl[value] == nil then
-			error("missing key '"..value.."' in table", 2)
+			error("missing key '" .. value .. "' in table", 2)
 		end
+
 		out[value] = tbl[value]
 	end
+
 	return out
 end
 
@@ -191,10 +194,12 @@ function Omit<|tbl: Table, keys: string|>
 
 	for value in UnionPairs(keys) do
 		if tbl[value] == nil then
-			error("missing key '"..value.."' in table", 2)
+			error("missing key '" .. value .. "' in table", 2)
 		end
+
 		Delete<|out, value|>
 	end
+
 	return out
 end
 
@@ -248,24 +253,32 @@ analyzer function PushTypeEnvironment(obj: any)
 	local tbl = types.Table()
 	tbl:Set(types.LString("_G"), tbl)
 	local g = analyzer:GetGlobalEnvironment("typesystem")
-
-	tbl:Set(types.LString("__index"), types.LuaTypeFunction(function(self, key)
+	tbl:Set(
+		types.LString("__index"),
+		types.LuaTypeFunction(
+			function(self, key)
 		local ok, err = obj:Get(key)
 		if ok then return ok end
 		local val, err = analyzer:IndexOperator(key:GetNode(), g, key)
 		if val then return val end
-		
 		analyzer:Error(key:GetNode(), err)
-
 		return types.Nil()
-	end, {types.Any(), types.Any()}, {}))
-
-	tbl:Set(types.LString("__newindex"), types.LuaTypeFunction(function(self, key, val)
+			end,
+			{types.Any(), types.Any()},
+			{}
+		)
+	)
+	tbl:Set(
+		types.LString("__newindex"),
+		types.LuaTypeFunction(
+			function(self, key, val)
 		return analyzer:Assert(analyzer.curent_expression, obj:Set(key, val))
-	end, {types.Any(), types.Any(), types.Any()}, {}))
-
+			end,
+			{types.Any(), types.Any(), types.Any()},
+			{}
+		)
+	)
 	tbl:SetMetaTable(tbl)
-
 	analyzer:PushGlobalEnvironment(analyzer.current_statement, tbl, "typesystem")
 	analyzer:PushAnalyzerEnvironment("typesystem")
 end

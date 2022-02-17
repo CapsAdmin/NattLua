@@ -15,9 +15,9 @@ function META:__call(...)
 end
 
 function META.Equal(a, b)
-	return
-		a.Type == b.Type and
-		a:GetArguments():Equal(b:GetArguments()) and
+	return a.Type == b.Type and
+		a:GetArguments():Equal(b:GetArguments())
+		and
 		a:GetReturnTypes():Equal(b:GetReturnTypes())
 end
 
@@ -72,12 +72,14 @@ function META:Copy(map, ...)
 	copy:CopyInternalsFrom(self)
 	copy.function_body_node = self.function_body_node
 	copy.called = self.called
-	
 	return copy
 end
 
 function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then B = B:Get(1) end	
+	if B.Type == "tuple" then
+		B = B:Get(1)
+	end
+
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if B.Type == "any" then return true end
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
@@ -87,7 +89,17 @@ function META.IsSubsetOf(A, B)
 
 	if
 		not ok and
-		((not B.called and not B.explicit_return) or (not A.called and not A.explicit_return))
+		(
+			(
+				not B.called and
+				not B.explicit_return
+			)
+			or
+			(
+				not A.called and
+				not A.explicit_return
+			)
+		)
 	then
 		return true
 	end
@@ -97,7 +109,10 @@ function META.IsSubsetOf(A, B)
 end
 
 function META.IsCallbackSubsetOf(A, B) 
-	if B.Type == "tuple" then B = B:Get(1) end	
+	if B.Type == "tuple" then
+		B = B:Get(1)
+	end
+
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 	if B.Type == "any" then return true end
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
@@ -107,7 +122,17 @@ function META.IsCallbackSubsetOf(A, B)
 
 	if
 		not ok and
-		((not B.called and not B.explicit_return) or (not A.called and not A.explicit_return))
+		(
+			(
+				not B.called and
+				not B.explicit_return
+			)
+			or
+			(
+				not A.called and
+				not A.explicit_return
+			)
+		)
 	then
 		return true
 	end
@@ -162,8 +187,7 @@ function META.New(data)
 	return setmetatable({Data = data or {}}, META)
 end
 
-return
-	{
+return {
 		Function = META.New,
 		AnyFunction = function() 
 			return META.New({

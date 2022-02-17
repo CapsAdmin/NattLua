@@ -15,8 +15,7 @@ type loadfile = function=(filename: string, mode: string, env: Table)>(empty_fun
 type dofile = function=(filename: string)>(...) | function=()>(...)
 type ipairs = function=(t: Table)>(empty_function, Table, number)
 type tonumber = function=(e: number | string, base: number | nil)>(number | nil)
-
-_G.arg = _ as List<|any|>
+_G.arg = _  as List<|any|>
 
 analyzer function type_print(...: ...any)
 	print(...)
@@ -158,16 +157,12 @@ analyzer function require(name: string)
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
 	if val then return val end
-
-	local modules = {
-		"table.new",
-		"jit.util",
-		"jit.opt",
-	}
+	local modules = {"table.new", "jit.util", "jit.opt",}
 
 	for _, mod in ipairs(modules) do
 		if str:GetData() == mod then
 			local tbl
+
 			for key in mod:gmatch("[^%.]+") do
 				tbl = tbl or base_environment
 				tbl = tbl:Get(types.LString(key))
@@ -176,7 +171,6 @@ analyzer function require(name: string)
 			-- in case it's not found
 			-- TODO, add ability to configure the analyzer
 			analyzer:Warning(analyzer.current_expression, "module '" .. mod .. "' might not exist") 	
-
 			return tbl
 		end		
 	end
@@ -206,7 +200,6 @@ analyzer function require(name: string)
 	end
 
 	analyzer:Error(name:GetNode(), "module '" .. str:GetData() .. "' not found")
-
 	return types.Any
 end
 
@@ -227,9 +220,7 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-
-	return
-		types.Function(
+	return types.Function(
 			{
 				arg = types.Tuple({}),
 				ret = types.Tuple({}),
@@ -237,8 +228,7 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 					return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 				end,
 			}
-		)
-		:SetNode(compiler.SyntaxTree)
+		):SetNode(compiler.SyntaxTree)
 end
 
 type loadstring = load
@@ -262,8 +252,7 @@ analyzer function loadfile(path: string)
 	local compiler = nl.Compiler(code, "@" .. path:GetData())
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return
-		types.Function(
+	return types.Function(
 			{
 				arg = types.Tuple({}),
 				ret = types.Tuple({}),
@@ -271,8 +260,7 @@ analyzer function loadfile(path: string)
 					return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
 				end,
 			}
-		)
-		:SetNode(compiler.SyntaxTree)
+		):SetNode(compiler.SyntaxTree)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
@@ -287,11 +275,13 @@ end
 analyzer function assert(obj: any, msg: string | nil)
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError(obj)
+
 		if obj.Type == "union" then
 			obj = obj:Copy()
 			obj:DisableFalsy()
 			return obj
 		end
+
 		return obj
 	end
 	
@@ -311,6 +301,7 @@ analyzer function assert(obj: any, msg: string | nil)
 
 	if obj:IsFalsy() then
 		analyzer:ThrowError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy())
+
 		if obj.Type == "union" then
 			obj = obj:Copy()
 			obj:DisableFalsy()
@@ -354,7 +345,6 @@ end
 
 analyzer function type_pcall(func: Function, ...: ...any)
 	local diagnostics_index = #analyzer.diagnostics
-
 	analyzer:PushProtectedCall()
 	local tuple = analyzer:Assert(analyzer.current_statement, analyzer:Call(func, types.Tuple({...})))
 	analyzer:PopProtectedCall()
@@ -368,9 +358,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 			table.insert(errors, msg)
 		end
 
-		if errors[1] then 
-			return false, table.concat(errors, "\n") 
-		end
+		if errors[1] then return false, table.concat(errors, "\n") end
 	end
 	
 	return true, tuple:Unpack()
@@ -399,12 +387,8 @@ analyzer function type(obj: any)
 		return copy
 	end
 
-	if obj.Type == "any" then
-		return types.String()
-	end
-
+	if obj.Type == "any" then return types.String() end
 	if obj.GetLuaType then return obj:GetLuaType() end
-
 	return types.String()
 end
 
@@ -413,32 +397,28 @@ function MetaTableFunctions<|T: any|>
 		__gc = function=(T)>(),
 		__pairs = function=(T)>(function=(T)>(any, any)),
 		__tostring = function=(T)>(string),
-
 		__call = function=(T, ...any)>(...any),
-
 		__index = function=(T, key: any)>(),
 		__newindex = function=(T, key: any, value: any)>(),
-		
 		__len = function=(a: T)>(number),
 		__unm = function=(a: T)>(any),
 		__bnot = function=(a: T)>(any), 
-
-		__add = function=(a: T, b:any)>(any),
-		__sub = function=(a: T, b:any)>(any),
-		__mul = function=(a: T, b:any)>(any),
-		__div = function=(a: T, b:any)>(any),
-		__idiv = function=(a: T, b:any)>(any),
-		__mod = function=(a: T, b:any)>(any),
-		__pow = function=(a: T, b:any)>(any),
-		__band = function=(a: T, b:any)>(any),
-		__bor = function=(a: T, b:any)>(any),
-		__bxor = function=(a: T, b:any)>(any),
-		__shl = function=(a: T, b:any)>(any),
-		__shr = function=(a: T, b:any)>(any), 
-		__concat = function=(a: T, b:any)>(any),
-		__eq = function=(a: T, b:any)>(boolean),
-		__lt = function=(a: T, b:any)>(boolean), 
-		__le = function=(a: T, b:any)>(boolean), 
+			__add = function=(a: T, b: any)>(any),
+			__sub = function=(a: T, b: any)>(any),
+			__mul = function=(a: T, b: any)>(any),
+			__div = function=(a: T, b: any)>(any),
+			__idiv = function=(a: T, b: any)>(any),
+			__mod = function=(a: T, b: any)>(any),
+			__pow = function=(a: T, b: any)>(any),
+			__band = function=(a: T, b: any)>(any),
+			__bor = function=(a: T, b: any)>(any),
+			__bxor = function=(a: T, b: any)>(any),
+			__shl = function=(a: T, b: any)>(any),
+			__shr = function=(a: T, b: any)>(any),
+			__concat = function=(a: T, b: any)>(any),
+			__eq = function=(a: T, b: any)>(boolean),
+			__lt = function=(a: T, b: any)>(boolean),
+			__le = function=(a: T, b: any)>(boolean),
 	}
 end
 
@@ -453,7 +433,6 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(meta.Self))
 			tbl:CopyLiteralness(meta.Self)
 			tbl:SetContract(meta.Self)
-			
 			-- clear mutations so that when looking up values in the table they won't return their initial value
 			tbl.mutations = nil
 		else
@@ -462,14 +441,17 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 		end
 
 		tbl:SetMetaTable(meta)
-		
 		local metatable_functions = analyzer:CallTypesystemUpvalue(types.LString("MetaTableFunctions"), tbl)
+
 		for _, kv in ipairs(metatable_functions:GetData()) do
 			local a = kv.val
 			local b = meta:Get(kv.key)
+
 			if b and b.Type == "function" then
 				local ok = analyzer:Assert(b:GetNode(), a:IsSubsetOf(b))
+
 				if ok then
+
 					--TODO: enrich callback types
 					--b:SetReturnTypes(a:GetReturnTypes())
 					--b:SetArguments(a:GetArguments())
@@ -477,7 +459,6 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 				end
 			end
 		end
-
 	end
 
 	return tbl

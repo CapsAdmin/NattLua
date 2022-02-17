@@ -11,7 +11,6 @@ local function check_type_against_contract(val, contract)
 	-- Person is not a subset of {name = "harald"} because
 	-- Person is only equal to Person
 	-- so we need to disable this check during assignment
-
 	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
 
 	if skip_uniqueness then
@@ -26,7 +25,6 @@ local function check_type_against_contract(val, contract)
 	end
 
 	if not ok then return ok, reason end
-
 	-- make sure the table contains all the keys in the contract as well
 	-- since {foo = true, bar = "harald"} 
 	-- is technically a subset of 
@@ -38,8 +36,7 @@ local function check_type_against_contract(val, contract)
 	return true
 end
 
-return
-	{
+return {
 		AnalyzeAssignment = function(self, statement)
 			local left = {}
 			local right = {}
@@ -61,11 +58,9 @@ return
 
 			if statement.right then
 				for right_pos, exp_val in ipairs(statement.right) do
-
 					-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
 					-- use context?
 					self.left_assigned = left[right_pos]
-
 					local obj = self:AnalyzeExpression(exp_val)
 					self:ClearTracked()
 
@@ -132,7 +127,6 @@ return
 			end
 
 			-- here we check the types
-
 			for left_pos, exp_key in ipairs(statement.left) do
 				local val = right[left_pos] or Nil():SetNode(exp_key)
 
@@ -162,9 +156,7 @@ return
 						end
 
 						self:Assert(
-							statement or
-							val:GetNode() or
-							exp_key.type_expression,
+						statement or val:GetNode() or exp_key.type_expression,
 							check_type_against_contract(val, contract)
 						)
 					else
@@ -191,9 +183,9 @@ return
 				val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
 
 				-- if all is well, create or mutate the value
-
 				if statement.kind == "local_assignment" then
 					local immutable = false
+
 					if exp_key.attribute then
 						if exp_key.attribute.value == "const" then
 							immutable = true
@@ -212,17 +204,13 @@ return
 							local contract = existing_value and existing_value:GetContract()
 
 							if contract then
-
 								if contract.Type == "tuple" then
 									contract = contract:GetFirstValue()
 								end
 
 								val:CopyLiteralness(contract)
-
 								self:Assert(
-									statement or
-									val:GetNode() or
-									exp_key.type_expression,
+								statement or val:GetNode() or exp_key.type_expression,
 									check_type_against_contract(val, contract)
 								)
 								val:SetContract(contract)
@@ -244,9 +232,11 @@ return
 						-- index assignment: foo[a] = 1
 						local obj = self:AnalyzeExpression(exp_key.left)
 						self:ClearTracked()
+
 						if self:IsRuntime() then
 							key = key:GetFirstValue()
 						end
+
 						self:Assert(exp_key, self:NewIndexOperator(exp_key, obj, key, val))
 					end
 				end

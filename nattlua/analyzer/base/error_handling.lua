@@ -85,13 +85,7 @@ return function(META)
 		local start, stop = node:GetStartStop()
 		
 		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
-			self:OnDiagnostic(
-				node.Code,
-				msg_str,
-				severity,
-				start,
-				stop
-			)
+				self:OnDiagnostic(node.Code, msg_str, severity, start, stop)
 		end
 
 		table.insert(
@@ -103,7 +97,7 @@ return function(META)
 				msg = msg_str,
 				severity = severity,
 				traceback = debug.traceback(),
-				protected_call = self:IsTypeProtectedCall()
+				protected_call = self:IsTypeProtectedCall(),
 			}
 		)
 	end
@@ -131,9 +125,11 @@ return function(META)
 
 	function META:FatalError(msg, node)
 		node = node or self.current_expression or self.current_statement
+
 		if node then
 			self:ReportDiagnostic(node, msg, "fatal")
 		end
+
 		error(msg, 2)
 	end
 

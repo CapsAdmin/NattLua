@@ -1,9 +1,10 @@
 local type attest = {}
 
 analyzer function attest.equal(A: any, B: any)
-	if not A:Equal(B) then 
+	if not A:Equal(B) then
 		error("expected " .. tostring(B) .. " got " .. tostring(A), 2)
 	end
+
 	return A
 end
 

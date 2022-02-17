@@ -55,6 +55,7 @@ analyzer function ^string.gmatch(s: string, pattern: string)
 		local i = 1
 		return function()
 			local strings = {f()}
+
 			if strings[1] then
 				for i, v in ipairs(strings) do
 					strings[i] = types.LString(v)
@@ -66,7 +67,7 @@ analyzer function ^string.gmatch(s: string, pattern: string)
 	end
 
 	if pattern:IsLiteral() then
-		local _,count = pattern:GetData():gsub("%b()", "")
+		local _, count = pattern:GetData():gsub("%b()", "")
 		local done = false
 		return function()
 			if done then return end
@@ -87,7 +88,6 @@ analyzer function ^string.lower(str: string)
 	if str:IsLiteral() then return str:GetData():lower() end
 	return types.String()
 end
-
 
 analyzer function ^string.upper(str: string)
 	if str:IsLiteral() then return str:GetData():upper() end
@@ -115,8 +115,10 @@ analyzer function ^string.match(str: string, pattern: string, start_position: nu
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
 	start_position = start_position and
-		start_position:IsLiteral() and
-		start_position:GetData() or
+		start_position:IsLiteral()
+		and
+		start_position:GetData()
+		or
 		1
 	if not str or not pattern then return types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(math.huge) end
 	local res = {str:match(pattern, start_position)}
@@ -136,8 +138,10 @@ analyzer function ^string.find(str: string, pattern: string, start_position: num
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
 	start_position = start_position and
-		start_position:IsLiteral() and
-		start_position:GetData() or
+		start_position:IsLiteral()
+		and
+		start_position:GetData()
+		or
 		1
 	no_pattern = no_pattern and no_pattern:IsLiteral() and no_pattern:GetData() or false
 	if not str or not pattern then return types.Tuple(
@@ -171,11 +175,13 @@ analyzer function ^string.gsub(str: string, pattern: string, replacement: functi
 		end
 	elseif replacement.Type == "table" then
 		local out = {}
+
 		for _, kv in ipairs(replacement:GetData()) do
 			if kv.key:IsLiteral() and kv.val:IsLiteral() then
 				out[kv.key:GetData()] = kv.val:GetData()
 			end
 		end
+
 		replacement = out
 	end
 	
@@ -183,13 +189,20 @@ analyzer function ^string.gsub(str: string, pattern: string, replacement: functi
 
 	if str and pattern and replacement then
         --replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
-
         if type(replacement) == "string" or type(replacement) == "table" then
 			return string.gsub(str, pattern, replacement, max_replacements)
 		else
-			return string.gsub(str, pattern, function(...)
-				analyzer:Assert(replacement:GetNode(), analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...})))
-			end, max_replacements)
+			return string.gsub(
+					str,
+					pattern,
+					function(...)
+						analyzer:Assert(
+							replacement:GetNode(),
+							analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}))
+						)
+					end,
+					max_replacements
+				)
 		end
 	end
 

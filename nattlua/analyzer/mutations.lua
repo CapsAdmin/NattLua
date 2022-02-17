@@ -27,15 +27,27 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		for i = #mutations, 1, -1 do
 			local mut = mutations[i]
 
-		
 			if 
 				(
-					scope:IsPartOfTestStatementAs(mut.scope) or 
-					(self.current_if_statement and mut.scope.statement == self.current_if_statement) or
-					(mut.from_tracking and not mut.scope:IsCertainFromScope(scope)) or
-					(obj.Type == "table" and obj:GetContract() ~= mut.contract)
+					scope:IsPartOfTestStatementAs(mut.scope)
+					or
+					(
+						self.current_if_statement and
+						mut.scope.statement == self.current_if_statement
 				)
-				and scope ~= mut.scope 
+					or
+					(
+						mut.from_tracking and
+						not mut.scope:IsCertainFromScope(scope)
+					)
+					or
+					(
+						obj.Type == "table" and
+						obj:GetContract() ~= mut.contract
+					)
+				)
+				and
+				scope ~= mut.scope
 			then				
 				-- not inside the same if statement"
 				table.remove(mutations, i)
@@ -51,7 +63,11 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 						local mut = mutations[i]
 						if not mut then break end
 
-						if not mut.scope:IsPartOfTestStatementAs(scope) and not mut.scope:IsCertainFromScope(scope) then
+						if
+							not mut.scope:IsPartOfTestStatementAs(scope)
+							and
+							not mut.scope:IsCertainFromScope(scope)
+						then
 							for i = i, 1, -1 do
 								if mutations[i].scope:IsCertainFromScope(scope) then
 									-- redudant mutation before else part of if statement
@@ -72,6 +88,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 		do
 			local test_scope_a = scope:FindFirstConditionalScope()
+
 			if test_scope_a then
 				for _, mut in ipairs(mutations) do
 					if mut.scope ~= scope then
@@ -90,8 +107,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 	end
 
 	if not mutations[1] then return end
-
 	local union = Union({})
+
 	if obj.Type == "upvalue" then
 		union:SetUpvalue(obj)
 	end
@@ -109,6 +126,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					local stack = data.stack
+
 					if stack then
 						local val
 						
@@ -131,12 +149,20 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			union:Clear()
 		end
 
-		if union:Get(value) and value.Type ~= "any" and mutations[1].value.Type ~= "union" and mutations[1].value.Type ~= "function" and mutations[1].value.Type ~= "any" then
+		if
+			union:Get(value)
+			and
+			value.Type ~= "any" and
+			mutations[1].value.Type ~= "union" and
+			mutations[1].value.Type ~= "function" and
+			mutations[1].value.Type ~= "any"
+		then
 			union:RemoveType(mutations[1].value)
 		end
 		
 		if _ == 1 and value.Type == "union" then
 			union = value:Copy()
+
 			if obj.Type == "upvalue" then
 				union:SetUpvalue(obj)
 			end
@@ -159,19 +185,26 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 	if #union:GetData() == 1 then
 		value = union:GetData()[1]
+
 		if obj.Type == "upvalue" then
 			value:SetUpvalue(obj)
 		end
 	end
+
 	if value.Type == "union" then
 		local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
 
 		if found_scope then
 			local stack = data.stack
+
 			if stack then
 				if
-					found_scope:IsElseConditionalScope() or
-					(found_scope ~= scope and scope:IsPartOfTestStatementAs(found_scope))
+					found_scope:IsElseConditionalScope()
+					or
+					(
+						found_scope ~= scope and
+						scope:IsPartOfTestStatementAs(found_scope)
+					)
 				then
 					local union = stack[#stack].falsy--:Copy()
 					if obj.Type == "upvalue" then
@@ -185,15 +218,16 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 					for _, val in ipairs(stack) do
 						union:AddType(val.truthy)
 					end
+
 					if obj.Type == "upvalue" then
 						union:SetUpvalue(obj)
 					end
+
 					return union
 				end
 			end
 		end
 	end
-
 
 	return value
 end
@@ -206,8 +240,10 @@ local function initialize_mutation_tracker(obj, scope, key, hash, node)
 		if obj.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
 			local val = (obj:GetContract() or obj):Get(key) or Nil():SetNode(node)
-			
-			table.insert(obj.mutations[hash], {scope = obj.scope or scope:GetRoot(), value = val, contract = obj:GetContract()})
+			table.insert(
+				obj.mutations[hash],
+				{scope = obj.scope or scope:GetRoot(), value = val, contract = obj:GetContract()}
+			)
 		end
 	end
 end
@@ -226,20 +262,20 @@ return function(META)
 	function META:GetMutatedTableLength(obj)
 		local mutations = obj.mutations
 		if not mutations then return obj:GetLength() end
-
 		local temp = Table()
 
 		for key in pairs(mutations) do
 			local realkey
+
 			for _, kv in ipairs(obj:GetData()) do
 				if kv.key:GetHash() == key then
 					realkey = kv.key
+
 					break
 				end
 			end
 
 			local val = self:GetMutatedTableValue(obj, realkey, obj:Get(realkey))
-
 			temp:Set(realkey, val)
 		end
 
@@ -248,28 +284,20 @@ return function(META)
 
 	function META:GetMutatedTableValue(tbl, key, value)
 		if self:IsTypesystem() then return value end
-
 		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue()
 		if not hash then return end
-
 		local scope = self:GetScope()
 		local node = key:GetNode()
-
-		
 		initialize_mutation_tracker(tbl, scope, key, hash, node)
-
 		return get_value_from_scope(self, copy(tbl.mutations[hash]), scope, tbl, hash)
 	end
 
 	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
 		if self:IsTypesystem() then return end
-
 		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue()
 		if not hash then return end
-
 		local scope = scope_override or self:GetScope()
 		local node = key:GetNode()
-
 		initialize_mutation_tracker(tbl, scope, key, hash, node)
 
 		if self:IsInUncertainLoop(scope) then
@@ -290,23 +318,17 @@ return function(META)
 	function META:GetMutatedUpvalue(upvalue)
 		if self:IsTypesystem() then return end
 		local scope = self:GetScope()
-
 		local hash = upvalue:GetKey()
-		
 		upvalue.mutations = upvalue.mutations or {}
 		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
-
 		return get_value_from_scope(self, copy(upvalue.mutations[hash]), scope, upvalue, hash)
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
 		if self:IsTypesystem() then return end
 		local scope = scope_override or self:GetScope()
-
 		local hash = upvalue:GetKey()
-        
 		val:SetUpvalue(upvalue)
-
 		upvalue.mutations = upvalue.mutations or {}
 		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
 
@@ -325,9 +347,7 @@ return function(META)
 		end
 	end
 
-
 	do
-
 		function META:PushTruthyExpressionContext()
 			self.truthy_expression_context = (self.truthy_expression_context or 0) + 1
 		end
@@ -337,7 +357,10 @@ return function(META)
 		end
 
 		function META:IsTruthyExpressionContext()
-			return self.truthy_expression_context and self.truthy_expression_context > 0 and true or false
+				return self.truthy_expression_context and
+					self.truthy_expression_context > 0 and
+					true or
+					false
 		end
 
 		function META:PushFalsyExpressionContext()
@@ -349,17 +372,20 @@ return function(META)
 		end
 
 		function META:IsFalsyExpressionContext()
-			return self.falsy_expression_context and self.falsy_expression_context > 0 and true or false
+				return self.falsy_expression_context and
+					self.falsy_expression_context > 0 and
+					true or
+					false
 		end
 	end
 
 	do
-
 		function META:ClearTracked()
 			if self.tracked_upvalues then
 				for _, upvalue in ipairs(self.tracked_upvalues) do
 					upvalue.tracked_stack = nil
 				end
+
 				self.tracked_upvalues_done = nil
 				self.tracked_upvalues = nil
 			end
@@ -368,6 +394,7 @@ return function(META)
 				for _, tbl in ipairs(self.tracked_tables) do
 					tbl.tracked_stack = nil
 				end
+
 				self.tracked_tables_done = nil
 				self.tracked_tables = nil
 			end
@@ -376,13 +403,13 @@ return function(META)
 		function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
 			if self:IsTypesystem() then return end
 			local upvalue = obj:GetUpvalue()
-			
 			if not upvalue then return end
 
 			if obj.Type == "union" then
 				if not truthy_union then
 					truthy_union = obj:GetTruthy()
 				end	
+
 				if not falsy_union then
 					falsy_union = obj:GetFalsy()
 				end
@@ -397,6 +424,7 @@ return function(META)
 			
 			self.tracked_upvalues = self.tracked_upvalues or {}
 			self.tracked_upvalues_done = self.tracked_upvalues_done or {}
+
 			if not self.tracked_upvalues_done[upvalue] then
 				table.insert(self.tracked_upvalues, upvalue)
 				self.tracked_upvalues_done[upvalue] = true
@@ -406,11 +434,10 @@ return function(META)
 		function META:TrackUpvalueNonUnion(obj)
 			if self:IsTypesystem() then return end
 			local upvalue = obj:GetUpvalue()
-			
 			if not upvalue then return end
-			
 			self.tracked_upvalues = self.tracked_upvalues or {}
 			self.tracked_upvalues_done = self.tracked_upvalues_done or {}
+
 			if not self.tracked_upvalues_done[upvalue] then
 				table.insert(self.tracked_upvalues, upvalue)
 				self.tracked_upvalues_done[upvalue] = true
@@ -421,7 +448,6 @@ return function(META)
 			if self:IsTypesystem() then return end
 			local upvalue = obj:GetUpvalue()
 			local stack = upvalue and upvalue.tracked_stack
-
 			if not stack then return end
 			
 			if self:IsTruthyExpressionContext() then
@@ -435,13 +461,10 @@ return function(META)
 			if self:IsTypesystem() then return end
 			local hash = key:GetHash()
 			if not hash then return end
-			
 			val.parent_table = obj
 			val.parent_key = key
-
 			local truthy_union = val:GetTruthy()
 			local falsy_union = val:GetFalsy()
-
 			self:TrackTableIndexUnion(obj, key, truthy_union, falsy_union, self.inverted_index_tracking, true)
 		end
 
@@ -449,7 +472,6 @@ return function(META)
 			if self:IsTypesystem() then return end
 			local hash = key:GetHash()
 			if not hash then return end
-			
 			obj.tracked_stack = obj.tracked_stack or {}
 			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
 
@@ -481,6 +503,7 @@ return function(META)
 			
 			self.tracked_tables = self.tracked_tables or {}
 			self.tracked_tables_done = self.tracked_tables_done or {}
+
 			if not self.tracked_tables_done[obj] then
 				table.insert(self.tracked_tables, obj)
 				self.tracked_tables_done[obj] = true
@@ -492,7 +515,6 @@ return function(META)
 			local hash = key:GetHash()
 			if not hash then return end
 			local stack = obj.tracked_stack[hash]
-
 			if not stack then return end
 
 			if self:IsTruthyExpressionContext() then
@@ -524,8 +546,8 @@ return function(META)
 
 		function META:GetTrackedUpvalues(old_upvalues)
 			local upvalues = {}
-
 			local translate = {}
+
 			if old_upvalues then
 				for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
 					local old = old_upvalues[i]
@@ -542,10 +564,7 @@ return function(META)
 						upvalue = translate[upvalue]
 					end
 
-					table.insert(upvalues, {
-						upvalue = upvalue, 
-						stack = stack and copy(stack)
-					})
+						table.insert(upvalues, {upvalue = upvalue, stack = stack and copy(stack)})
 				end
 			end
 
@@ -565,6 +584,7 @@ return function(META)
 				for _, data in ipairs(upvalues) do
 					if data.stack then
 						local union = Union()
+
 						for _, v in ipairs(data.stack) do
 							if v.truthy then
 								union:AddType(v.truthy)
@@ -582,6 +602,7 @@ return function(META)
 			if tables then
 				for _, data in ipairs(tables) do
 					local union = Union()
+
 					for _, v in ipairs(data.stack) do
 						if v.truthy then
 							union:AddType(v.truthy)
@@ -611,12 +632,15 @@ return function(META)
 					for _, data in ipairs(block.upvalues) do
 						if data.stack then
 							local union = self:GetMutatedUpvalue(data.upvalue)
+
 							if union.Type == "union" then
 								for _, v in ipairs(data.stack) do
 									union:RemoveType(v.truthy)
 								end
+
 								union:SetUpvalue(data.upvalue)
 							end
+
 							self:MutateUpvalue(data.upvalue, union, nil, true)
 						end
 					end
@@ -625,12 +649,14 @@ return function(META)
 				if block.tables then
 					for _, data in ipairs(block.tables) do
 						local union = self:GetMutatedTableValue(data.obj, data.key)
+
 						if union then
 							if union.Type == "union" then
 								for _, v in ipairs(data.stack) do
 									union:RemoveType(v.truthy)
 								end
 							end
+
 							self:MutateTable(data.obj, data.key, union, nil, true)
 						end
 					end
@@ -664,8 +690,10 @@ return function(META)
 
 		local function solve(data, scope, negate)
 			local stack = data.stack
+
 			if stack then
 				local val
+
 				if negate and not (scope:IsElseConditionalScope() or stack[#stack].inverted) then
 					val = stack[#stack].falsy
 				else
