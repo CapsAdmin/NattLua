@@ -6,6 +6,7 @@ local function contains_ref_argument(upvalues)
 		if v.upvalue:GetValue().ref_argument or v.upvalue:GetValue().from_for_loop then
 			return true
 		end
+	end
 
 	return false
 end
