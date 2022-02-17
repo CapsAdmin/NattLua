@@ -490,7 +490,7 @@ function META:EmitCall(node)
 		end
 	end
 
-	local newlines = node:GetLength() > self.config.max_line_length
+	local newlines = self:ShouldBreakExpressionList(node.expressions)
     
     if newlines then
         self:Indent()
@@ -498,7 +498,11 @@ function META:EmitCall(node)
 		self:Whitespace("\t")
     end
 
-	self:EmitExpressionList(node.expressions, newlines)
+	self:PushBreakNewline(newlines)
+
+	self:EmitExpressionList(node.expressions)
+
+	self:PopBreakNewline()
     
     if newlines then
         self:Outdent()
@@ -911,7 +915,7 @@ function META:EmitIfStatement(node)
 			end
 
 			self:EmitToken(node.tokens["if/else/elseif"][i])
-			local newlines = self:ShouldBreakExpressionList({node.expressions[i]})
+			local newlines = node.tokens["then"][i].start - node.tokens["if/else/elseif"][i].stop > self.config.max_line_length
 
 			if newlines then
 				self:Indent()
@@ -923,7 +927,7 @@ function META:EmitIfStatement(node)
 
 			self:PushBreakNewline(newlines) 
 
-			self:EmitExpression(node.expressions[i], true)
+			self:EmitExpression(node.expressions[i])
 
 			self:PopBreakNewline()
 
@@ -1078,8 +1082,8 @@ function META:EmitReturnStatement(node, no_tab)
 		self:Whitespace(" ")
         self:Indent()
 
-		self:PushBreakNewline(self:ShouldBreakExpressionList(node.expressions))
-		self:EmitExpressionList(node.expressions, true)
+		self:PushBreakNewline(node:GetLength() > self.config.max_line_length)
+		self:EmitExpressionList(node.expressions)
 		self:PopBreakNewline()
         self:Outdent()
 	end
@@ -1294,9 +1298,8 @@ function META:ShouldBreakExpressionList(tbl)
 		local first_node = tbl[1]
 		local last_node = tbl[#tbl]
 
-		first_node = first_node:GetStatement()
-		last_node = last_node:GetStatement()
-
+		--first_node = first_node:GetStatement()
+		--last_node = last_node:GetStatement()
 		
 		local start = first_node.code_start
 		local stop = last_node.code_stop
@@ -1307,29 +1310,17 @@ function META:ShouldBreakExpressionList(tbl)
 	return false
 end
 
-function META:EmitExpressionList(tbl, break_each_expression)
-	local newlines = break_each_expression and self:ShouldBreakExpressionList(tbl)
-
+function META:EmitExpressionList(tbl)
 	for i = 1, #tbl do
-		local start = 0
-		local stop = 0
-		
-		if tbl[i].tokens[","] and tbl[i-1] and tbl[i-1].tokens[","] then
-			stop = tbl[i].tokens[","].start
-			start = tbl[i-1].tokens[","].start
-		elseif #tbl == 1 then
-			start = tbl[i]:GetStatement().code_start
-			stop = tbl[i]:GetStatement().code_stop
-		end
 
-		local newline_individual = (stop-start) > self.config.max_line_length
-		self:PushBreakNewline(newline_individual)
+		self:PushBreakNewline(tbl[i]:GetLength() > self.config.max_line_length)
 		self:EmitExpression(tbl[i])
 		self:PopBreakNewline()
+		
 		if i ~= #tbl then
 			self:EmitToken(tbl[i].tokens[","])
 
-			if newlines then
+			if self:ShouldBreakNewline() then
 				self:Whitespace("\n")
 				self:Whitespace("\t")
 			else

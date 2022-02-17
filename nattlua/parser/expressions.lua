@@ -767,6 +767,10 @@ do -- runtime
             end
         end
 
+        if node then
+            node.first_node = first
+        end
+
         return node
     end
 

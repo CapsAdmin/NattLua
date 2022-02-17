@@ -113,6 +113,19 @@ end
 
 function META:GetLength()
     local start, stop = self:GetStartStop()
+    
+    if self.first_node then
+        local start2, stop2 = self.first_node:GetStartStop()
+
+        if start2 < start then
+            start = start2
+        end
+
+        if stop2 > stop then
+            stop = stop2
+        end
+    end
+
     return stop - start
 end
 
