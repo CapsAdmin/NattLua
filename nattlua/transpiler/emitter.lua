@@ -53,6 +53,8 @@ function META:Emit(str)
         error(debug.traceback("attempted to emit a non string " .. tostring(str)))
     end
 
+	if str == "" then return end
+
     self.out[self.i] = str or ""
     self.i = self.i + 1
 end
@@ -160,8 +162,26 @@ function META:EmitToken(node, translate)
         if self.config.preserve_whitespace == false then
             for i, token in ipairs(node.whitespace) do
                 if token.type == "line_comment" then
-					if not token.value:find("^%s+") and i == 1 then
-						self.i = self.last_non_space_index and self.last_non_space_index + 1 or self.i
+
+
+					local start = i
+					for i = self.i - 1, 1, -1 do
+						if not self.out[i]:find("^%s+") then
+							local found_newline = false							
+							for i = start, 1, -1 do
+								local token = node.whitespace[i]
+								if token.value:find("\n") then 
+									found_newline = true
+									break 
+								end
+							end
+
+							if not found_newline then
+								self.i = i + 1
+								self:Emit(" ")
+							end
+							break
+						end
 					end
 					
 					self:EmitToken(token)

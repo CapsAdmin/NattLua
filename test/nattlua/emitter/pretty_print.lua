@@ -19,14 +19,14 @@ end
 check({ preserve_whitespace = false, force_parenthesis = true, string_quote = '"' }, 
 [[local foo = aaa 'aaa'-- dawdwa
 local x = 1]],
-[[local foo = aaa("aaa")-- dawdwa
+[[local foo = aaa("aaa") -- dawdwa
 local x = 1]]
 )
 
 check({preserve_whitespace = false, string_quote = '"'}, [[local x = "'"]])
 check({preserve_whitespace = false, string_quote = "'"}, [[local x = '"']])
 
-identical([[x = ""-- foo]] )
+identical([[x = "" -- foo]] )
 check({ preserve_whitespace = false, use_comment_types = true },
 	[[local type x = ""]], [=[--[[#local type x = ""]]]=]
 )
@@ -343,7 +343,7 @@ local foo = x(
 )]])
 
 identical(
-[[local union = stack[#stack].falsy--:Copy()
+[[local union = stack[#stack].falsy --:Copy()
 if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
 if not ok then
@@ -391,7 +391,7 @@ identical([[return {
 identical([[local foo = 1
 -- hello
 -- world
-local union = stack[#stack].falsy--:Copy()
+local union = stack[#stack].falsy --:Copy()
 local x = 1]])
 
 identical([[return {
@@ -399,3 +399,12 @@ identical([[return {
 		self._continue_ = true
 	end,
 }]])
+
+identical([[if name:sub(1, 1) == "@" then -- is this a name that is a location?
+	local line, rest = msg:sub(#name):match("^:(%d+):(.+)") -- remove the file name and grab the line number
+end
+
+-- foo
+-- bar
+local foo = aaa'aaa' -- dawdwa
+local x = 1]])
