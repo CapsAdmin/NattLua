@@ -111,30 +111,30 @@ check({preserve_whitespace = false}, [==[local x = a && b || c && a != c || !c]=
 
 check({preserve_whitespace = false}, 
 [[local escape_char_map = {
-	["\\"] = "\\\\",
-	["\""] = "\\\"",
-	["\b"] = "\\b",
-	["\f"] = "\\f",
-	["\n"] = "\\n",
-	["\r"] = "\\r",
-	["\t"] = "\\t",
-}]])
+		["\\"] = "\\\\",
+		["\""] = "\\\"",
+		["\b"] = "\\b",
+		["\f"] = "\\f",
+		["\n"] = "\\n",
+		["\r"] = "\\r",
+		["\t"] = "\\t",
+	}]])
 
 check({preserve_whitespace = false}, 
 [==[--[#[analyzer function coroutine.wrap(cb: Function) end]]]==])
 
 check({preserve_whitespace = false}, [[local tbl = {foo = true,foo = true,foo = true,foo = true,foo = true,foo = true,foo = true,foo = true,foo = true}]], 
 [[local tbl = {
-	foo = true,
-	foo = true,
-	foo = true,
-	foo = true,
-	foo = true,
-	foo = true,
-	foo = true,
-	foo = true,
-	foo = true,
-}]])
+		foo = true,
+		foo = true,
+		foo = true,
+		foo = true,
+		foo = true,
+		foo = true,
+		foo = true,
+		foo = true,
+		foo = true,
+	}]])
 
 
 -- TODO, double indent because of assignment and call
@@ -223,11 +223,11 @@ foo(function() end)
 foo(function() end)
 
 pac.AimPartNames = {
-	["local eyes"] = "LOCALEYES",
-	["player eyes"] = "PLAYEREYES",
-	["local eyes yaw"] = "LOCALEYES_YAW",
-	["local eyes pitch"] = "LOCALEYES_PITCH",
-}]])
+		["local eyes"] = "LOCALEYES",
+		["player eyes"] = "PLAYEREYES",
+		["local eyes yaw"] = "LOCALEYES_YAW",
+		["local eyes pitch"] = "LOCALEYES_PITCH",
+	}]])
 
 check({preserve_whitespace = false}, 
 [[return function(config)
@@ -281,3 +281,33 @@ check({preserve_whitespace = false},
 	val == "false" or
 	val == "nil"]])
 
+check({preserve_whitespace = false}, [[if true then return end]])
+check({preserve_whitespace = false}, 
+[[ok, err = pcall(function()
+		s = s .. tostring(node)
+	end)]])
+check({preserve_whitespace = false}, 
+[[local str = {}
+
+for i = 1, select("#", ...) do
+	str[i] = tostring(select(i, ...))
+end]])
+check({preserve_whitespace = false}, 
+[[if
+	scope.node and
+	scope.node.inferred_type and
+	scope.node.inferred_type.Type == "function" and
+	not scope:Contains(from)
+then
+	return not scope.node.inferred_type:IsCalled()
+end]])
+
+check({preserve_whitespace = false}, 
+[[if upvalue:IsImmutable() then
+	return self:Error(key:GetNode(), {"cannot assign to const variable ", key})
+end]])
+
+check({preserve_whitespace = false}, 
+[[if self:IsRuntime() then
+	return self:GetMutatedUpvalue(upvalue) or upvalue:GetValue()
+end]])

@@ -631,7 +631,6 @@ do
 	end
 
 	function META:EmitLocalFunction(node)
-		self:Whitespace("\t")
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["function"])
@@ -641,7 +640,6 @@ do
 	end
 
 	function META:EmitLocalAnalyzerFunction(node)
-		self:Whitespace("\t")
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["analyzer"])
@@ -653,7 +651,6 @@ do
 	end
 
 	function META:EmitLocalTypeFunction(node)
-		self:Whitespace("\t")
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["function"])
@@ -663,7 +660,6 @@ do
 	end
 
 	function META:EmitTypeFunction(node)
-		self:Whitespace("\t")
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
 
@@ -675,8 +671,6 @@ do
 	end
 
 	function META:EmitFunction(node)
-		self:Whitespace("\t")
-
 		if node.tokens["local"] then
 			self:EmitToken(node.tokens["local"])
 			self:Whitespace(" ")
@@ -689,8 +683,6 @@ do
 	end
 
 	function META:EmitAnalyzerFunctionStatement(node)
-		self:Whitespace("\t")
-
 		if node.tokens["local"] then
 			self:EmitToken(node.tokens["local"])
 			self:Whitespace(" ")
@@ -778,6 +770,7 @@ function META:EmitTable(tree)
 
 	if newline then
 		self:Whitespace("\n")
+		self:Indent()
 	end
 
 	if tree.children[1] then
@@ -830,6 +823,10 @@ function META:EmitTable(tree)
 		self:EmitNonSpace("}")
 	end
 
+	if newline then
+		self:Outdent()
+		self:Whitespace("\t")
+	end
 	self:EmitToken(tree.tokens["}"])
 end
 
@@ -881,46 +878,10 @@ function META:EmitBlock(statements)
 	self:Whitespace("\t-")
 end
 
-local function is_short_statement(kind)
-	return kind == "return" or kind == "break" or kind == "continue"
-end
-
-function META:IsShortIfStatement(node)
-	return #node.statements == 1 and
-		node.statements[1][1] and
-		is_short_statement(node.statements[1][1].kind)
-		and
-		not self:ShouldBreakExpressionList({node.expressions[1]})
-end
-
 function META:EmitIfStatement(node)
-	if self:IsShortIfStatement(node) then
-		self:Whitespace("\t")
-		self:EmitToken(node.tokens["if/else/elseif"][1])
-		self:Whitespace(" ")
-		self:EmitExpression(node.expressions[1], true)
-		self:Whitespace(" ")
-		self:EmitToken(node.tokens["then"][1])
-		self:Whitespace(" ")
-
-		if node.statements[1][1].kind == "return" then
-			self:EmitReturnStatement(node.statements[1][1], true)
-		elseif node.statements[1][1].kind == "break" then
-			self:EmitBreakStatement(node.statements[1][1], true)
-		elseif node.statements[1][1].kind == "continue" then
-			self:EmitContinueStatement(node.statements[1][1], true)
-		end
-
-		self:Whitespace(" ")
-		self:EmitToken(node.tokens["end"])
-		return
-	end
+	local short = node:GetLength() < self.config.max_line_length
 
 	for i = 1, #node.statements do
-		if i == 1 then
-			self:Whitespace("\t")
-		end
-
 		if node.expressions[i] then
 			if i > 1 then
 				self:Whitespace("\n")
@@ -957,17 +918,32 @@ function META:EmitIfStatement(node)
 			self:EmitToken(node.tokens["if/else/elseif"][i])
 		end
 
-		self:Whitespace("\n")
-		self:EmitBlock(node.statements[i])
+		if short then
+			self:Whitespace(" ")
+		else
+			self:Whitespace("\n")
+		end
+
+		if #node.statements[i] == 1 and short then
+			self:Whitespace("\t")
+			self:EmitStatement(node.statements[i][1])
+		else
+			self:EmitBlock(node.statements[i])
+		end
+
+		if short then
+			self:Whitespace(" ")
+		end
 	end
 
-	self:Whitespace("\n")
+	if not short then
+		self:Whitespace("\n")
+	end
 	self:Whitespace("\t")
 	self:EmitToken(node.tokens["end"])
 end
 
 function META:EmitGenericForStatement(node)
-	self:Whitespace("\t")
 	self:EmitToken(node.tokens["for"])
 	self:Whitespace(" ")
 	self:EmitIdentifierList(node.identifiers)
@@ -987,7 +963,6 @@ function META:EmitGenericForStatement(node)
 end
 
 function META:EmitNumericForStatement(node)
-	self:Whitespace("\t")
 	self:EmitToken(node.tokens["for"])
 	self:PushLoop(node)
 	self:Whitespace(" ")
@@ -1007,7 +982,6 @@ function META:EmitNumericForStatement(node)
 end
 
 function META:EmitWhileStatement(node)
-	self:Whitespace("\t")
 	self:EmitToken(node.tokens["while"])
 	self:Whitespace(" ")
 	self:EmitExpression(node.expression)
@@ -1023,7 +997,6 @@ function META:EmitWhileStatement(node)
 end
 
 function META:EmitRepeatStatement(node)
-	self:Whitespace("\t")
 	self:EmitToken(node.tokens["repeat"])
 	self:PushLoop(node)
 	self:Whitespace("\n")
@@ -1036,32 +1009,22 @@ function META:EmitRepeatStatement(node)
 end
 
 function META:EmitLabelStatement(node)
-	self:Whitespace("\t")
 	self:EmitToken(node.tokens["::"])
 	self:EmitToken(node.tokens["identifier"])
 	self:EmitToken(node.tokens["::"])
 end
 
 function META:EmitGotoStatement(node)
-	self:Whitespace("\t")
 	self:EmitToken(node.tokens["goto"])
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["identifier"])
 end
 
-function META:EmitBreakStatement(node, no_tab)
-	if not no_tab then
-		self:Whitespace("\t")
-	end
-
+function META:EmitBreakStatement(node)
 	self:EmitToken(node.tokens["break"])
 end
 
-function META:EmitContinueStatement(node, no_tab)
-	if not no_tab then
-		self:Whitespace("\t")
-	end
-
+function META:EmitContinueStatement(node)
 	local loop_node = self:GetLoopNode()
 
 	if loop_node then
@@ -1075,7 +1038,6 @@ end
 end
 
 function META:EmitDoStatement(node)
-	self:Whitespace("\t")
 	self:EmitToken(node.tokens["do"])
 	self:Whitespace("\n")
 	self:EmitBlock(node.statements)
@@ -1084,13 +1046,9 @@ function META:EmitDoStatement(node)
 	self:EmitToken(node.tokens["end"])
 end
 
-function META:EmitReturnStatement(node, no_tab)
-	if not no_tab then
-		self:Whitespace("\t")
-	end
-
+function META:EmitReturnStatement(node)
 	self:EmitToken(node.tokens["return"])
-
+	
 	if node.expressions[1] then
 		self:Whitespace(" ")
         self:Indent()
@@ -1110,8 +1068,6 @@ function META:EmitSemicolonStatement(node)
 end
 
 function META:EmitAssignment(node)
-	self:Whitespace("\t")
-
     if node.tokens["local"] then
         self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
@@ -1133,11 +1089,11 @@ function META:EmitAssignment(node)
 		self:EmitToken(node.tokens["="])
 		self:Whitespace(" ")
         -- we ident here in case the expression list is broken up
-        self:Indent()
+		self:Indent()
 		self:PushBreakNewline(self:ShouldBreakExpressionList(node.right))
 		self:EmitExpressionList(node.right)
 		self:PopBreakNewline()
-        self:Outdent()
+		self:Outdent()
 	end
 end
 
@@ -1206,7 +1162,6 @@ function META:EmitStatement(node)
 		self:EmitSpace(" ")
 		self:EmitImportExpression(node)
 	elseif node.kind == "call_expression" then
-		self:Whitespace("\t")
 		self:EmitExpression(node.value)
 	elseif node.kind == "shebang" then
 		self:EmitToken(node.tokens["shebang"])
@@ -1252,10 +1207,6 @@ local function general_kind(self, node)
 		end
 	end
 
-	if node.kind == "if" then
-		if self:IsShortIfStatement(node) then return "expression_statement" end
-	end
-
 	if
 		node.kind == "call_expression" or
 		node.kind == "local_assignment" or
@@ -1268,19 +1219,13 @@ local function general_kind(self, node)
 	return "other"
 end
 
-local function find_previous(statements, i)
-	while true do
-		if not statements[i] then return end
-		if statements[i].kind ~= "semicolon" then return statements[i] end
-		i = i - 1
-	end
-end
-
 function META:EmitStatements(tbl)
 	for i, node in ipairs(tbl) do
 		if i > 1 and general_kind(self, node) == "other" and node.kind ~= "end_of_file" then
 			self:Whitespace("\n")
 		end
+
+		self:Whitespace("\t")
 
 		self:EmitStatement(node)
 
@@ -1714,7 +1659,6 @@ end
 
 do -- extra
     function META:EmitTranspiledDestructureAssignment(node)
-		self:Whitespace("\t")
 		self:EmitToken(node.tokens["{"], "")
 
 		if node.default then
@@ -1758,8 +1702,6 @@ do -- extra
 	end
 
 	function META:EmitDestructureAssignment(node)
-		self:Whitespace("\t")
-
 		if node.tokens["local"] then
 			self:EmitToken(node.tokens["local"])
 		end
