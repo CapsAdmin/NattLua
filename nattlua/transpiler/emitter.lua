@@ -768,7 +768,7 @@ end
 
 local function has_function_value(tree)
 	for _, exp in ipairs(tree.children) do
-		if exp.expression and exp.expression.kind == "function" then return true end
+		if exp.value_expression and exp.value_expression.kind == "function" then return true end
 	end
 
 	return false

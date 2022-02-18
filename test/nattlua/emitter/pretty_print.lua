@@ -393,3 +393,9 @@ identical([[local foo = 1
 -- world
 local union = stack[#stack].falsy--:Copy()
 local x = 1]])
+
+identical([[return {
+	AnalyzeContinue = function(self, statement)
+		self._continue_ = true
+	end,
+}]])
