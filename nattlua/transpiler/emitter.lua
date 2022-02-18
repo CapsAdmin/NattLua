@@ -728,11 +728,15 @@ function META:EmitTableKeyValue(node)
 	self:EmitToken(node.tokens["="])
 	self:Whitespace(" ")
 
-	if self:IsNodeTooLong(node.value_expression) then
+	local break_binary = self:ShouldBreakNewline() and node.value_expression.kind == "binary_operator"
+
+	if break_binary then
 		self:Indent()
 	end
+	
 	self:EmitExpression(node.value_expression)
-	if self:IsNodeTooLong(node.value_expression) then
+
+	if break_binary then
 		self:Outdent()
 	end
 end
