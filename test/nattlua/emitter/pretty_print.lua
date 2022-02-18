@@ -387,3 +387,9 @@ identical([[return {
 		return self:AnalyzeRootStatement(node.root, table.unpack(args))
 	end,
 }]])
+
+identical([[local foo = 1
+-- hello
+-- world
+local union = stack[#stack].falsy--:Copy()
+local x = 1]])

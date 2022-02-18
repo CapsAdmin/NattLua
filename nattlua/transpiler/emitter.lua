@@ -158,15 +158,15 @@ function META:EmitToken(node, translate)
 
     if node.whitespace then
         if self.config.preserve_whitespace == false then
-            for _, token in ipairs(node.whitespace) do
+            for i, token in ipairs(node.whitespace) do
                 if token.type == "line_comment" then
-					if not token.value:find("^%s+") then
+					if not token.value:find("^%s+") and i == 1 then
 						self.i = self.last_non_space_index and self.last_non_space_index + 1 or self.i
 					end
 					
 					self:EmitToken(token)
 
-                    if node.whitespace[_ + 1] then
+                    if node.whitespace[i + 1] then
                         self:Whitespace("\n")
                         self:Whitespace("\t")
                     end
@@ -222,7 +222,7 @@ end
 function META:BuildCode(block)
     if block.imports then
         self.done = {}
-        self:Emit("IMPORTS = IMPORTS or {}\n")
+        self:EmitNonSpace("IMPORTS = IMPORTS or {}\n")
 
         for i, node in ipairs(block.imports) do
             if not self.done[node.path] then
@@ -463,9 +463,9 @@ end
 function META:EmitCall(node)
 	if node.expand then
 		if not node.expand.expanded then
-			self:Emit("local ")
+			self:EmitNonSpace("local ")
 			self:EmitExpression(node.left.left)
-			self:Emit("=")
+			self:EmitNonSpace("=")
 			self:EmitExpression(node.expand:GetNode())
 			node.expand.expanded = true
 		end
@@ -1066,7 +1066,7 @@ function META:EmitContinueStatement(node)
 	if loop_node then
 		self:EmitToken(node.tokens["continue"], "goto __CONTINUE__")
 		loop_node.on_pop = function()
-			self:Emit("::__CONTINUE__::;")
+			self:EmitNonSpace("::__CONTINUE__::;")
 		end
 	else
 	self:EmitToken(node.tokens["continue"])
