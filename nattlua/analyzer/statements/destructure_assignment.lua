@@ -6,13 +6,9 @@ return {
 	AnalyzeDestructureAssignment = function(self, statement)
 		local obj = self:AnalyzeExpression(statement.right)
 
-		if obj.Type == "union" then
-			obj = obj:GetData()[1]
-		end
+		if obj.Type == "union" then obj = obj:GetData()[1] end
 
-		if obj.Type == "tuple" then
-			obj = obj:Get(1)
-		end
+		if obj.Type == "tuple" then obj = obj:Get(1) end
 
 		if obj.Type ~= "table" then
 			self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))

@@ -23,9 +23,7 @@ return {
 
 		local types = self:AnalyzeExpressions(node.expressions)
 
-		if self_arg then
-			table.insert(types, 1, self_arg)
-		end
+		if self_arg then table.insert(types, 1, self_arg) end
 
 		local arguments
 

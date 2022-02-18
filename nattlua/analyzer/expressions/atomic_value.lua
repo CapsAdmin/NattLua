@@ -24,11 +24,9 @@ local function lookup_value(self, node)
 			self:PushAnalyzerEnvironment("runtime")
 			obj, err = self:GetLocalOrGlobalValue(key)
 			self:PopAnalyzerEnvironment("runtime")
-			
+
 			-- when in the typesystem we want to see the objects contract, not its runtime value
-			if obj and obj:GetContract() then 
-				obj = obj:GetContract() 
-			end
+			if obj and obj:GetContract() then obj = obj:GetContract() end
 		end
 
 		if not obj then
@@ -42,9 +40,7 @@ local function lookup_value(self, node)
 			local objt, errt = self:GetLocalOrGlobalValue(key)
 			self:PopAnalyzerEnvironment()
 
-			if objt then
-				obj, err = objt, errt
-			end
+			if objt then obj, err = objt, errt end
 		end
 
 		if not obj then
@@ -67,80 +63,79 @@ local function is_primitive(val)
 end
 
 return {
-		AnalyzeAtomicValue = function(self, node)
-			local value = node.value.value
-			local type = runtime_syntax:GetTokenType(node.value)
+	AnalyzeAtomicValue = function(self, node)
+		local value = node.value.value
+		local type = runtime_syntax:GetTokenType(node.value)
 
-			if type == "keyword" then
-				if value == "nil" then
-					return Nil():SetNode(node)
-				elseif value == "true" then
-					return True():SetNode(node)
-				elseif value == "false" then
-					return False():SetNode(node)
+		if type == "keyword" then
+			if value == "nil" then
+				return Nil():SetNode(node)
+			elseif value == "true" then
+				return True():SetNode(node)
+			elseif value == "false" then
+				return False():SetNode(node)
+			end
+		end
+
+		-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
+		local standalone_letter = type == "letter" and node.standalone_letter
+
+		if self:IsTypesystem() and standalone_letter and not node.force_upvalue then
+			local current_table = self.current_tables and self.current_tables[#self.current_tables]
+
+			if current_table then
+				if value == "self" then return current_table end
+
+				if
+					self.left_assigned and
+					self.left_assigned:GetData() == value and
+					not is_primitive(value)
+				then
+					return current_table
 				end
 			end
 
-			-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
-			local standalone_letter = type == "letter" and node.standalone_letter
+			if value == "any" then
+				return Any():SetNode(node)
+			elseif value == "inf" then
+				return LNumber(math.huge):SetNode(node)
+			elseif value == "nan" then
+				return LNumber(0 / 0):SetNode(node)
+			elseif value == "string" then
+				return String():SetNode(node)
+			elseif value == "number" then
+				return Number():SetNode(node)
+			elseif value == "boolean" then
+				return Boolean():SetNode(node)
+			end
+		end
 
-			if self:IsTypesystem() and standalone_letter and not node.force_upvalue then
-				local current_table = self.current_tables and
-					self.current_tables[#self.current_tables]
+		if standalone_letter or value == "..." or node.force_upvalue then
+			local val = lookup_value(self, node)
 
-				if current_table then
-					if value == "self" then return current_table end
-
-					if
-						self.left_assigned and
-						self.left_assigned:GetData() == value and
-						not is_primitive(value)
-					then
-						return current_table
-					end
-				end
-
-				if value == "any" then
-					return Any():SetNode(node)
-				elseif value == "inf" then
-					return LNumber(math.huge):SetNode(node)
-				elseif value == "nan" then
-					return LNumber(0 / 0):SetNode(node)
-				elseif value == "string" then
-					return String():SetNode(node)
-				elseif value == "number" then
-					return Number():SetNode(node)
-				elseif value == "boolean" then
-					return Boolean():SetNode(node)
-				end
+			if val:GetUpvalue() then
+				self:GetScope():AddDependency(val:GetUpvalue())
 			end
 
-			if standalone_letter or value == "..." or node.force_upvalue then
-				local val = lookup_value(self, node)
+			return val
+		end
 
-				if val:GetUpvalue() then
-					self:GetScope():AddDependency(val:GetUpvalue())
-				end
+		if type == "number" then
+			local num = LNumberFromString(value)
 
-				return val
+			if not num then
+				self:Error(node, "unable to convert " .. value .. " to number")
+				num = Number()
 			end
 
-			if type == "number" then
-				local num = LNumberFromString(value)
+			num:SetNode(node)
+			return num
+		elseif type == "string" then
+			return LString(node.value.string_value):SetNode(node)
+		elseif type == "letter" then
+			return LString(value):SetNode(node)
+		end
 
-				if not num then
-					self:Error(node, "unable to convert " .. value .. " to number")
-					num = Number()
-				end
-
-				num:SetNode(node)
-				return num
-			elseif type == "string" then
-				return LString(node.value.string_value):SetNode(node)
-			elseif type == "letter" then
-				return LString(value):SetNode(node)
-			end
-
-			self:FatalError("unhandled value type " .. type .. " " .. node:Render())
-		end,
-	}
+		self:FatalError("unhandled value type " .. type .. " " .. node:Render())
+	end,
+}

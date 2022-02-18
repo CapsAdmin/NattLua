@@ -1,24 +1,32 @@
 local type Color = {
-		r = number,
-		g = number,
-		b = number,
-		a = number,
-		__index = self, -- __index = self is shortcut for type Color.__index = Color,
+	r = number,
+	g = number,
+	b = number,
+	a = number,
+	__index = self, -- __index = self is shortcut for type Color.__index = Color,
 	@MetaTable = self, -- shortcut for setmetatable<|Color, Color|>,
 	@Name = "Color",
-	}
-local type Vector = {x = number, y = number, z = number,}
-local type Angle = {
-		p = number,
-		y = number,
-		r = number,
-		__index = Angle,
-		__call = function=(self, number, number, number)>(Angle),
-		@MetaTable = self,
-		@Name = "Angle",
-		Right = function=(self)>(Vector), -- TODO: Vector():Angle():Right() seems to cause infinte loop if Right is not defined
 }
-local type ToScreenData = {x = number, y = number, visible = boolean,}
+local type Vector = {
+	x = number,
+	y = number,
+	z = number,
+}
+local type Angle = {
+	p = number,
+	y = number,
+	r = number,
+	__index = Angle,
+	__call = function=(self, number, number, number)>(Angle),
+	@MetaTable = self,
+	@Name = "Angle",
+	Right = function=(self)>(Vector), -- TODO: Vector():Angle():Right() seems to cause infinte loop if Right is not defined
+}
+local type ToScreenData = {
+	x = number,
+	y = number,
+	visible = boolean,
+}
 -- We can mutate the Vector type if we want
 type Vector.__index = Vector
 type Vector.@Name = "Vector"
@@ -56,93 +64,102 @@ type Vector = Vector & {
 		Add = function=(self, vector: Vector)>(nil),
 	}
 setmetatable<|Vector, Vector|>
-
 -- because we can't easily forward declare types
 -- we add a ToVector function here
 type Color.ToVector = function=(Color)>(Vector)
 local type BodyGroup = {
-		id = number,
-		name = string,
-		num = number,
-		submodels = {[number] = any}, -- not sure what's in here
+	id = number,
+	name = string,
+	num = number,
+	submodels = {[number] = any}, -- not sure what's in here
 }
 local type Matrix = {
-		GetTranslation = function=(self)>(Vector),
-		GetAngles = function=(self)>(Angle),
-	}
+	GetTranslation = function=(self)>(Vector),
+	GetAngles = function=(self)>(Angle),
+}
 local type Triangle = {
-		color = Color,
-		normal = Vector,
-		binormal = Vector,
-		pos = Vector,
-		u = number,
-		v = number,
-		userdata = {number, number, number, number},
-		weights = {[number] = {bone = number, weight = number},},
-	}
+	color = Color,
+	normal = Vector,
+	binormal = Vector,
+	pos = Vector,
+	u = number,
+	v = number,
+	userdata = {number, number, number, number},
+	weights = {
+		[number] = {bone = number, weight = number},
+	},
+}
 local type Mesh = {
-		Draw = function=(self)>(nil),
-		BuildFromTriangles = function=(self, {[number] = Triangle})>(self),
-		@MetaTable = self,
-		__index = self,
-		__call = function=(self, number, number, number)>(self),
-	}
+	Draw = function=(self)>(nil),
+	BuildFromTriangles = function=(self, {[number] = Triangle})>(self),
+	@MetaTable = self,
+	__index = self,
+	__call = function=(self, number, number, number)>(self),
+}
 local type PhysicsObject = {
 	@Name = "PhysicsObject",
 	IsValid = function=(self)>(boolean),
 }
-local type EntityAttachments = {[1 .. inf] = {id = number, name = string,},}
-local type EntityAttachment = {Ang = Angle, Pos = Vector,}
+local type EntityAttachments = {
+	[1 .. inf] = {
+		id = number,
+		name = string,
+	},
+}
+local type EntityAttachment = {
+	Ang = Angle,
+	Pos = Vector,
+}
 local type Entity = {
-		GetModel = function=(self)>(string),
-		SetAngles = function=(self, Angle)>(nil),
-		GetBodyGroups = function=(self, number)>({[number] = BodyGroup}),
-		GetBodygroup = function=(self, number)>(number),
-		LookupSequence = function=(self, string)>(number),
-		ResetSequence = function=(self, number)>(nil),
-		SetCycle = function=(self, number)>(nil),
-		SetupBones = function=(self)>(nil),
-		TranslatePhysBoneToBone = function=(self, number)>(number),
-		TranslateBoneToPhysBone = function=(self, number)>(number),
-		GetBoneMatrix = function=(self, number)>(Matrix | nil),
-		GetChildBones = function=(self, number)>({[number] = number}),
-		BoneLength = function=(self, number)>(number),
-		Remove = function=(self)>(nil),
-		GetBoneParent = function=(self)>(number),
-		GetBoneName = function=(self, number)>(string),
-		EyePos = function=(self)>(Vector),
-		EyeAngles = function=(self)>(Angle),
-		GetBoneCount = function=(self)>(number),
-		GetPos = function=(self)>(Vector),
-		IsStuck = function=(self)>(boolean),
-		GetAimVector = function=(self)>(Vector),
-		SetPos = function=(self, Vector)>(nil),
-		IsValid = function=(self)>(boolean),
-		GetPhysicsObject = function=(self)>(PhysicsObject),
-		GetVelocity = function=(self)>(Vector),
-		SetVelocity = function=(self, Vector)>(Vector),
-		GetAttachment = function=(self, number)>(EntityAttachment),
-		GetAttachments = function=(self)>(EntityAttachments),
-	}
+	GetModel = function=(self)>(string),
+	SetAngles = function=(self, Angle)>(nil),
+	GetBodyGroups = function=(self, number)>({[number] = BodyGroup}),
+	GetBodygroup = function=(self, number)>(number),
+	LookupSequence = function=(self, string)>(number),
+	ResetSequence = function=(self, number)>(nil),
+	SetCycle = function=(self, number)>(nil),
+	SetupBones = function=(self)>(nil),
+	TranslatePhysBoneToBone = function=(self, number)>(number),
+	TranslateBoneToPhysBone = function=(self, number)>(number),
+	GetBoneMatrix = function=(self, number)>(Matrix | nil),
+	GetChildBones = function=(self, number)>({[number] = number}),
+	BoneLength = function=(self, number)>(number),
+	Remove = function=(self)>(nil),
+	GetBoneParent = function=(self)>(number),
+	GetBoneName = function=(self, number)>(string),
+	EyePos = function=(self)>(Vector),
+	EyeAngles = function=(self)>(Angle),
+	GetBoneCount = function=(self)>(number),
+	GetPos = function=(self)>(Vector),
+	IsStuck = function=(self)>(boolean),
+	GetAimVector = function=(self)>(Vector),
+	SetPos = function=(self, Vector)>(nil),
+	IsValid = function=(self)>(boolean),
+	GetPhysicsObject = function=(self)>(PhysicsObject),
+	GetVelocity = function=(self)>(Vector),
+	SetVelocity = function=(self, Vector)>(Vector),
+	GetAttachment = function=(self, number)>(EntityAttachment),
+	GetAttachments = function=(self)>(EntityAttachments),
+}
 type Entity.@Name = "Entity"
 local type Player = Entity & {}
 type Player.@Name = "Player"
 local type ClientsideModel = function=(string)>(Entity)
 local type ModelMeshes = {
-		[number] = {
-			material = string,
-			triangles = {[number] = Triangle},
-			verticies = {[number] = Triangle},
-		},
-	}
+	[number] = {
+		material = string,
+		triangles = {[number] = Triangle},
+		verticies = {[number] = Triangle},
+	},
+}
 local type util = {}
 type util.GetModelMeshes = function=(string, number, number)>(ModelMeshes)
 local type WorldToLocal = function=(Vector, Angle, Vector, Angle)>(Vector, Angle)
 local type hook = {}
 local type Events = {
-		OnStart = function=(string, boolean)>(nil),
-		OnStop = function=(string, string, string)>(number),
-	}
+	OnStart = function=(string, boolean)>(nil),
+	OnStop = function=(string, string, string)>(number),
+}
 
 analyzer function hook.Add(eventName: string, obj: any, callback: function=(...)>(...))
 	local event_callback = env.typesystem.Events:Get(eventName)
@@ -157,20 +174,17 @@ end
 local analyzer function CompileString(code: string, name: string, should_throw: boolean | nil)
 	should_throw = should_throw and should_throw:IsLiteral() and should_throw:GetData()
 
-	if should_throw == nil then
-		should_throw = true
-	end
+	if should_throw == nil then should_throw = true end
 
 	code = code:IsLiteral() and code:GetData() or nil
 	name = name and name:IsLiteral() and name:GetData() or nil
 
 	if code then
 		local func, err = nl.load(code, name)
+
 		if func then return func end
 
-		if should_throw then
-			error(err)
-		end
+		if should_throw then error(err) end
 
 		return err
 	end
@@ -208,6 +222,7 @@ end
 
 function string.GetFileFromFilename(path: ref string)
 	if (not path:find("\\") and not path:find("/")) then return path end
+
 	return path:match("[\\/]([^/\\]+)$") or ""
 end
 
@@ -238,16 +253,16 @@ do
 	function string.Explode(separator: ref string, str: ref string, withpattern: ref boolean | nil)
 		if (separator == "") then return totable(str) end
 
-		if (withpattern == nil) then
-			withpattern = false
-		end
+		if (withpattern == nil) then withpattern = false end
 
 		local ret = {}
 		local current_pos = 1
 
 		for i = 1, string_len(str) do
-			local start_pos, end_pos = string_find(str, separator, current_pos, !withpattern)
-			if (!start_pos) then break end
+			local start_pos, end_pos = string_find(str, separator, current_pos, not withpattern)
+
+			if (not start_pos) then break end
+
 			ret[i] = string_sub(str, current_pos, start_pos - 1)
 			current_pos = end_pos + 1
 		end
@@ -262,20 +277,20 @@ do
 end
 
 return {
-		hook = hook,
-		WorldToLocal = WorldToLocal,
-		Vector = Vector,
-		Angle = Angle,
-		Matrix = Matrix,
-		Player = Player,
-		util = util,
-		Mesh = Mesh,
-		ClientsideModel = ClientsideModel,
-		EntityAttachment = EntityAttachment,
-		EntityAttachments = EntityAttachments,
-		Entity = Entity,
-		istable = istable,
-		isentity = isentity,
-		isstring = isstring,
-		CompileString = CompileString,
-	}
+	hook = hook,
+	WorldToLocal = WorldToLocal,
+	Vector = Vector,
+	Angle = Angle,
+	Matrix = Matrix,
+	Player = Player,
+	util = util,
+	Mesh = Mesh,
+	ClientsideModel = ClientsideModel,
+	EntityAttachment = EntityAttachment,
+	EntityAttachments = EntityAttachments,
+	Entity = Entity,
+	istable = istable,
+	isentity = isentity,
+	isstring = isstring,
+	CompileString = CompileString,
+}

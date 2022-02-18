@@ -156,12 +156,12 @@ do
 end
 
 return function(config)
-		config = config or {}
-		local self = setmetatable({config = config}, META)
+	config = config or {}
+	local self = setmetatable({config = config}, META)
 
-		for _, func in ipairs(META.OnInitialize) do
-			func(self)
-		end
-
-		return self
+	for _, func in ipairs(META.OnInitialize) do
+		func(self)
 	end
+
+	return self
+end

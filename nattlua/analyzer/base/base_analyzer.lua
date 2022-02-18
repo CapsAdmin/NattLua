@@ -22,10 +22,10 @@ return function(META)
 
 	function META:AnalyzeRootStatement(statement, ...)
 		context:PushCurrentAnalyzer(self)
-			local argument_tuple = ... and
-				Tuple({...})
-				or
-				Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+		local argument_tuple = ... and
+			Tuple({...})
+			or
+			Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushModuleScope()
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("runtime"), "runtime")
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("typesystem"), "typesystem")
@@ -44,6 +44,7 @@ return function(META)
 
 	function META:AnalyzeExpressions(expressions)
 		if not expressions then return end
+
 		local out = {}
 
 		for _, expression in ipairs(expressions) do
@@ -63,9 +64,7 @@ return function(META)
 		local function add_potential_self(tup)
 			local self = tup:Get(1)
 
-			if self and self.Type == "union" then
-				self = self:GetType("table")
-			end
+			if self and self.Type == "union" then self = self:GetType("table") end
 
 			if self and self.Self then
 				local self = self.Self
@@ -109,8 +108,8 @@ return function(META)
 		end
 
 		local function call(self, obj, arguments, node)
-            -- disregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-            arguments = obj:GetArguments():Copy()
+			-- disregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
+			arguments = obj:GetArguments():Copy()
 			arguments = add_potential_self(arguments)
 
 			for _, obj in ipairs(arguments:GetData()) do
@@ -118,7 +117,7 @@ return function(META)
 			end
 
 			self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
-				self:Assert(node, self:Call(obj, arguments, node))
+			self:Assert(node, self:Call(obj, arguments, node))
 			self:PopScope()
 		end
 
@@ -129,6 +128,7 @@ return function(META)
 
 		function META:AnalyzeUnreachableCode()
 			if not self.deferred_calls then return end
+
 			context:PushCurrentAnalyzer(self)
 			local total = #self.deferred_calls
 			self.processing_deferred_calls = true
@@ -179,20 +179,20 @@ return function(META)
 
 		function META:CompileLuaAnalyzerDebugCode(code, node)
 			local start, stop = code:find("^.-function%b()")
-			
+
 			if start and stop then
 				local before_function = code:sub(1, stop)
-					local after_function = code:sub(stop + 1, #code)
+				local after_function = code:sub(stop + 1, #code)
 				code = before_function .. runtime_injection .. after_function
 			else
 				code = runtime_injection .. code
 			end
 
 			code = locals .. code
-            -- append newlines so that potential line errors are correct
+			-- append newlines so that potential line errors are correct
 			local lua_code = node.Code:GetString()
 
-            if lua_code then
+			if lua_code then
 				local start, stop = node:GetStartStop()
 				local line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
 				code = ("\n"):rep(line - 1) .. code
@@ -233,8 +233,8 @@ return function(META)
 				local name = debug.getinfo(func).source
 
 				if name:sub(1, 1) == "@" then -- is this a name that is a location?
-                    local line, rest = msg:sub(#name):match("^:(%d+):(.+)") -- remove the file name and grab the line number
-                    if line then
+					local line, rest = msg:sub(#name):match("^:(%d+):(.+)") -- remove the file name and grab the line number
+					if line then
 						local f, err = io.open(name:sub(2), "r")
 
 						if f then
@@ -249,16 +249,12 @@ return function(META)
 
 				local trace = self:TypeTraceback(1)
 
-				if trace and trace ~= "" then
-					msg = msg .. "\ntraceback:\n" .. trace
-				end
+				if trace and trace ~= "" then msg = msg .. "\ntraceback:\n" .. trace end
 
 				self:Error(node, msg)
 			end
 
-			if res[1] == nil then
-				res[1] = Nil()
-			end
+			if res[1] == nil then res[1] = Nil() end
 
 			return table.unpack(res)
 		end
@@ -272,7 +268,7 @@ return function(META)
 				self.analyzer:PopAnalyzerEnvironment()
 				return val
 			end
-			
+
 			function scope_meta:__newindex(key, val)
 				self.analyzer:PushAnalyzerEnvironment(self.env)
 				self.analyzer:SetLocalOrGlobalValue(LString(key), LString(val), self.scope)
@@ -281,16 +277,16 @@ return function(META)
 
 			function META:GetScopeHelper(scope)
 				self.scope_helper = {
-						typesystem = setmetatable(
-							{
-								analyzer = self,
-								scope = scope,
-								env = "typesystem",
-							},
-							scope_meta
-						),
-						runtime = setmetatable({analyzer = self, scope = scope, env = "runtime"}, scope_meta),
-					}
+					typesystem = setmetatable(
+						{
+							analyzer = self,
+							scope = scope,
+							env = "typesystem",
+						},
+						scope_meta
+					),
+					runtime = setmetatable({analyzer = self, scope = scope, env = "runtime"}, scope_meta),
+				}
 				self.scope_helper.scope = scope
 				return self.scope_helper
 			end
@@ -310,6 +306,7 @@ return function(META)
 
 		function META:TypeTraceback(from)
 			if not self.call_stack then return "" end
+
 			local str = ""
 
 			for i, v in ipairs(self.call_stack) do
@@ -317,7 +314,7 @@ return function(META)
 					local start, stop = v.call_node:GetStartStop()
 
 					if start and stop then
-							local part = helpers.FormatError(self.compiler:GetCode(), "", start, stop, 1)
+						local part = helpers.FormatError(self.compiler:GetCode(), "", start, stop, 1)
 						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler:GetCode():GetName()
 					end
 				end
@@ -400,8 +397,8 @@ return function(META)
 		do
 			function META:IsInUncertainLoop(scope)
 				scope = scope or self:GetScope():GetNearestFunctionScope()
-					return self.uncertain_loop_stack and
-						self.uncertain_loop_stack[1] == scope:GetNearestFunctionScope()
+				return self.uncertain_loop_stack and
+					self.uncertain_loop_stack[1] == scope:GetNearestFunctionScope()
 			end
 
 			function META:PushUncertainLoop(b)

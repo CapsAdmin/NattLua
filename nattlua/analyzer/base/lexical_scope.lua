@@ -55,7 +55,7 @@ local LexicalScope
 
 function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
---[[#	type tbl.@Self[name] = tbl[name] ]]
+	--[[#type tbl.@Self[name] = tbl[name] ]]
 	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
 		self[name] = val
 		return self
@@ -67,7 +67,7 @@ end
 
 function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
---[[#	type tbl.@Self[name] = tbl[name] ]]
+	--[[#type tbl.@Self[name] = tbl[name] ]]
 	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
 		self[name] = val
 		return self
@@ -85,7 +85,7 @@ do
 	function META:IsCertain()
 		return not self:IsUncertain()
 	end
-	
+
 	function META:IsCertainlyFalse()
 		return self:IsFalsy() and not self:IsTruthy()
 	end
@@ -105,9 +105,7 @@ META:GetSet("Children", nil--[[# as boolean]])
 function META:SetParent(parent)
 	self.Parent = parent
 
-	if parent then
-		table_insert(parent:GetChildren(), self)
-	end
+	if parent then table_insert(parent:GetChildren(), self) end
 end
 
 function META:GetMemberInParents(what)
@@ -115,7 +113,9 @@ function META:GetMemberInParents(what)
 
 	while true do
 		if scope[what] then return scope[what], scope end
+
 		scope = scope:GetParent()
+
 		if not scope then break end
 	end
 
@@ -146,8 +146,8 @@ function META:GetDependencies()
 end
 
 function META:FindUpvalue(key, env)
-	if type(key) == "table" and key.Type == "string" and key:IsLiteral() then 
-		key = key:GetData() 
+	if type(key) == "table" and key.Type == "string" and key:IsLiteral() then
+		key = key:GetData()
 	end
 
 	local scope = self
@@ -155,6 +155,7 @@ function META:FindUpvalue(key, env)
 
 	for _ = 1, 1000 do
 		if not scope then return end
+
 		local upvalue = scope.upvalues[env].map[key]
 
 		if upvalue then
@@ -166,6 +167,7 @@ function META:FindUpvalue(key, env)
 
 					while upvalue do
 						if upvalue.position <= upvalue_position then return upvalue end
+
 						upvalue = upvalue.shadow
 					end
 				end
@@ -189,15 +191,12 @@ function META:CreateUpvalue(key, obj, env)
 	end
 
 	local upvalue = Upvalue(obj)
-	
 	upvalue.key = key
 	upvalue.shadow = shadow
 	upvalue.position = #self.upvalues[env].list
 	upvalue.scope = self
-
 	table_insert(self.upvalues[env].list, upvalue)
 	self.upvalues[env].map[key] = upvalue
-
 	return upvalue
 end
 
@@ -223,7 +222,6 @@ function META:Copy()
 	copy.returns = self.returns
 	copy:SetParent(self:GetParent())
 	copy:SetConditionalScope(self:IsConditionalScope())
-	
 	return copy
 end
 
@@ -235,21 +233,18 @@ function META:TracksSameAs(scope)
 	local upvalues_b, tables_b = scope:GetTrackedUpvalues(), scope:GetTrackedTables()
 
 	if not upvalues_a or not upvalues_b then return false end
+
 	if not tables_a or not tables_b then return false end
 
 	for i, data_a in ipairs(upvalues_a) do
 		for i, data_b in ipairs(upvalues_b) do
-			if data_a.upvalue == data_b.upvalue then
-				return true
-			end
+			if data_a.upvalue == data_b.upvalue then return true end
 		end
 	end
 
 	for i, data_a in ipairs(tables_a) do
 		for i, data_b in ipairs(tables_b) do
-			if data_a.obj == data_b.obj then
-				return true
-			end
+			if data_a.obj == data_b.obj then return true end
 		end
 	end
 
@@ -261,32 +256,30 @@ function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
 
 	while true do
 		local upvalues = scope:GetTrackedUpvalues()
+
 		if upvalues then
 			for i, data in ipairs(upvalues) do
-				if data.upvalue == upvalue then
-					return scope, data
-				end
+				if data.upvalue == upvalue then return scope, data end
 			end
 		end
-        
-        -- find in siblings too, if they have returned
-        -- ideally when cloning a scope, the new scope should be 
-        -- inside of the returned scope, then we wouldn't need this code
-        
-        for _, child in ipairs(scope:GetChildren()) do
+
+		-- find in siblings too, if they have returned
+		-- ideally when cloning a scope, the new scope should be 
+		-- inside of the returned scope, then we wouldn't need this code
+		for _, child in ipairs(scope:GetChildren()) do
 			if child ~= scope and self:IsPartOfTestStatementAs(child) then
 				local upvalues = child:GetTrackedUpvalues()
+
 				if upvalues then
 					for i, data in ipairs(upvalues) do
-						if data.upvalue == upvalue then
-							return child, data
-						end
+						if data.upvalue == upvalue then return child, data end
 					end
 				end
 			end
 		end
 
 		scope = scope:GetParent()
+
 		if not scope then return end
 	end
 
@@ -306,8 +299,7 @@ function META:GetStatementType()
 end
 
 function META.IsPartOfTestStatementAs(a, b)
-	return
-		a:GetStatementType() == "if" and
+	return a:GetStatementType() == "if" and
 		b:GetStatementType() == "if" and
 		a.statement == b.statement
 end
@@ -319,11 +311,14 @@ end
 
 function META:Contains(scope)
 	if scope == self then return true end
+
 	local parent = scope
 
 	for i = 1, 1000 do
 		if not parent then break end
+
 		if parent == self then return true end
+
 		parent = parent:GetParent()
 	end
 
@@ -335,6 +330,7 @@ function META:GetRoot()
 
 	for i = 1, 1000 do
 		if not parent:GetParent() then break end
+
 		parent = parent:GetParent()
 	end
 
@@ -363,14 +359,16 @@ do
 		self.certain_return = nil
 	end
 
-
 	function META:CertainReturn()
 		local scope = self
 
 		while true do
 			scope.certain_return = true
+
 			if scope.returns then break end
+
 			scope = scope:GetParent()
+
 			if not scope then break end
 		end
 	end
@@ -381,7 +379,9 @@ do
 
 	function META:GetNearestFunctionScope()
 		local ok, scope = self:GetMemberInParents("returns")
+
 		if ok then return scope end
+
 		return self
 	end
 
@@ -399,28 +399,33 @@ do
 
 	function META:IsUncertainFromScope(from)
 		if from == self then return false end
+
 		local scope = self
 
 		if self:IsPartOfTestStatementAs(from) then return true end
 
 		while true do
 			if scope == from then break end
-			if scope:IsFunctionScope() then 
-				if 
-					scope.node and 
-					scope.node.inferred_type and 
-					scope.node.inferred_type.Type == "function" and 
+
+			if scope:IsFunctionScope() then
+				if
+					scope.node and
+					scope.node.inferred_type and
+					scope.node.inferred_type.Type == "function" and
 					not scope:Contains(from)
 				then
-					return not scope.node.inferred_type:IsCalled() 
+					return not scope.node.inferred_type:IsCalled()
 				end
 			end
 
 			if scope:IsTruthy() and scope:IsFalsy() then
 				if scope:Contains(from) then return false end
+
 				return true, scope
 			end
+
 			scope = scope:GetParent()
+
 			if not scope then break end
 		end
 
@@ -452,11 +457,14 @@ function META:__tostring()
 		end
 	end
 
-	local s = "scope[" .. x .. "," .. y .. "]" .. "[" .. (self:IsUncertain() and "uncertain" or "certain") .. "]" 
+	local s = "scope[" .. x .. "," .. y .. "]" .. "[" .. (
+			self:IsUncertain()
+			and
+			"uncertain" or
+			"certain"
+		) .. "]"
 
-	if self.node then
-		s = s .. tostring(self.node)
-	end
+	if self.node then s = s .. tostring(self.node) end
 
 	return s
 end
@@ -467,7 +475,6 @@ function META:DumpScope()
 	for i, v in ipairs(self.upvalues.runtime.list) do
 		table.insert(s, "local " .. tostring(v.key) .. " = " .. tostring(v))
 	end
-
 
 	for i, v in ipairs(self.upvalues.typesystem.list) do
 		table.insert(s, "local type " .. tostring(v.key) .. " = " .. tostring(v))
@@ -485,14 +492,20 @@ local ref = 0
 function LexicalScope(parent, upvalue_position)
 	ref = ref + 1
 	local scope = {
-			ref = ref,
-			Children = {},
-			upvalue_position = upvalue_position,
-			upvalues = {
-				runtime = {list = {}, map = {},},
-				typesystem = {list = {}, map = {},},
+		ref = ref,
+		Children = {},
+		upvalue_position = upvalue_position,
+		upvalues = {
+			runtime = {
+				list = {},
+				map = {},
 			},
-		}
+			typesystem = {
+				list = {},
+				map = {},
+			},
+		},
+	}
 	setmetatable(scope, META)
 	scope:SetParent(parent)
 	return scope

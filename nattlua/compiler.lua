@@ -26,11 +26,7 @@ function META:__tostring()
 	local lua_code = self.Code:GetString()
 	local line = lua_code:match("(.-)\n")
 
-	if line then
-		str = str .. line .. "..."
-	else
-		str = str .. lua_code
-	end
+	if line then str = str .. line .. "..." else str = str .. lua_code end
 
 	return str
 end
@@ -44,9 +40,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 	local t = 0
 	msg = msg:gsub(" because ", repl)
 
-	if t > 0 then
-		msg = "\n" .. msg
-	end
+	if t > 0 then msg = "\n" .. msg end
 
 	if self.analyzer and self.analyzer.processing_deferred_calls then
 		msg = "DEFERRED CALL: " .. msg
@@ -61,9 +55,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 
 	msg = msg2
 
-	if not _G.TEST then
-		io.write(msg)
-	end
+	if not _G.TEST then io.write(msg) end
 
 	if
 		severity == "fatal" or
@@ -80,6 +72,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 		if _G.TEST then
 			for i = 1, math.huge do
 				local info = debug.getinfo(i)
+
 				if not info then break end
 
 				if info.source:find("@test/nattlua", nil, true) then
@@ -99,13 +92,17 @@ local function stack_trace()
 
 	for i = 2, 50 do
 		local info = debug.getinfo(i)
+
 		if not info then break end
 
 		if info.source:sub(1, 1) == "@" then
 			if info.name == "Error" or info.name == "OnDiagnostic" then
 
 			else
-				s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (info.name or "?") .. "\n"
+				s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (
+						info.name or
+						"?"
+					) .. "\n"
 			end
 		end
 	end
@@ -116,23 +113,23 @@ end
 local traceback = function(self, obj, msg)
 	if self.debug or _G.TEST then
 		local ret = {
-				xpcall(
-					function()
+			xpcall(
+				function()
 					msg = msg or "no error"
 					local s = msg .. "\n" .. stack_trace()
 
-					if self.analyzer then
-						s = s .. self.analyzer:DebugStateToString()
-					end
+					if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
 
 					return s
-					end,
-					function(msg)
+				end,
+				function(msg)
 					return debug.traceback(tostring(msg))
-					end
-				),
-			}
+				end
+			),
+		}
+
 		if not ret[1] then return "error in error handling: " .. tostring(ret[2]) end
+
 		return table.unpack(ret, 2)
 	end
 
@@ -144,17 +141,19 @@ function META:Lex()
 	lexer.name = self.name
 	self.lexer = lexer
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
-			self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
 	end
-	local ok, tokens = xpcall(
-			function()
-		return lexer:GetTokens()
-			end,
-			function(msg)
-		return traceback(self, lexer, msg)
-			end
-		)
+	local ok,
+	tokens = xpcall(
+		function()
+			return lexer:GetTokens()
+		end, function(msg)
+			return traceback(self, lexer, msg)
+		end
+	)
+
 	if not ok then return nil, tokens end
+
 	self.Tokens = tokens
 	return self
 end
@@ -162,13 +161,14 @@ end
 function META:Parse()
 	if not self.Tokens then
 		local ok, err = self:Lex()
+
 		if not ok then return ok, err end
 	end
 
 	local parser = self.Parser(self.Tokens, self.Code, self.config)
 	self.parser = parser
 	parser.OnError = function(parser, code, msg, start, stop, ...)
-			self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
 	end
 
 	if self.OnNode then
@@ -178,14 +178,15 @@ function META:Parse()
 	end
 
 	local ok, res = xpcall(
-			function()
-		return parser:ReadRootNode()
-			end,
-			function(msg)
-		return traceback(self, parser, msg)
-			end
-		)
+		function()
+			return parser:ReadRootNode()
+		end, function(msg)
+			return traceback(self, parser, msg)
+		end
+	)
+
 	if not ok then return nil, res end
+
 	self.SyntaxTree = res
 	return self
 end
@@ -218,35 +219,36 @@ function META:Analyze(analyzer, ...)
 		analyzer:SetDefaultEnvironment(self.default_environment["typesystem"], "typesystem")
 	elseif self.default_environment ~= false then
 		local runtime_env, typesystem_env = BuildBaseEnvironment()
-        analyzer:SetDefaultEnvironment(runtime_env, "runtime")
-        analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
+		analyzer:SetDefaultEnvironment(runtime_env, "runtime")
+		analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
 	end
 
 	analyzer.ResolvePath = self.OnResolvePath
 	local args = {...}
 	local ok, res = xpcall(
-			function()
-		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
-		analyzer:AnalyzeUnreachableCode()
+		function()
+			local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
+			analyzer:AnalyzeUnreachableCode()
 
-		if analyzer.OnFinish then
-			analyzer:OnFinish()
+			if analyzer.OnFinish then analyzer:OnFinish() end
+
+			return res
+		end,
+		function(msg)
+			return traceback(self, analyzer, msg)
 		end
-
-		return res
-			end,
-			function(msg)
-		return traceback(self, analyzer, msg)
-			end
-		)
+	)
 	self.AnalyzedResult = res
+
 	if not ok then return nil, res end
+
 	return self
 end
 
 function META:Emit(cfg)
 	if not self.SyntaxTree then
 		local ok, err = self:Parse()
+
 		if not ok then return ok, err end
 	end
 
@@ -255,7 +257,12 @@ function META:Emit(cfg)
 	return emitter:BuildCode(self.SyntaxTree)
 end
 
-return function(lua_code--[[#: string]], name--[[#: string]], config--[[#: {[any] = any}]], level--[[#: number | nil]])
+return function(
+	lua_code--[[#: string]],
+	name--[[#: string]],
+	config--[[#: {[any] = any}]],
+	level--[[#: number | nil]]
+)
 	local info = debug.getinfo(level or 2)
 	local parent_line = info and info.currentline or "unknown line"
 	local parent_name = info and info.source:sub(2) or "unknown name"
@@ -270,9 +277,10 @@ return function(lua_code--[[#: string]], name--[[#: string]], config--[[#: {[any
 			Parser = require("nattlua.parser.parser"),
 			Analyzer = require("nattlua.analyzer.analyzer"),
 			Emitter = config and
-			config.js and
-			require("nattlua.transpiler.javascript_emitter") or
-			require("nattlua.transpiler.emitter"),
+				config.js and
+				require("nattlua.transpiler.javascript_emitter")
+				or
+				require("nattlua.transpiler.emitter"),
 		},
 		META
 	)

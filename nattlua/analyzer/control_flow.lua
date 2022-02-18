@@ -12,9 +12,7 @@ return function(META)
 		for _, statement in ipairs(statements) do
 			self:AnalyzeStatement(statement)
 
-			if self.break_out_scope or self._continue_ then
-				return
-			end
+			if self.break_out_scope or self._continue_ then return end
 
 			if self:GetScope():DidCertainReturn() then
 				self:GetScope():ClearCertainReturn()
@@ -55,14 +53,14 @@ return function(META)
 		end
 
 		scope:ClearCertainReturnTypes()
+
 		if #union:GetData() == 1 then return union:GetData()[1] end
+
 		return union
 	end
-	
+
 	function META:ThrowSilentError(assert_expression)
-		if assert_expression and assert_expression:IsCertainlyTrue() then
-			return
-		end
+		if assert_expression and assert_expression:IsCertainlyTrue() then return end
 
 		for i = #self.call_stack, 1, -1 do
 			local frame = self.call_stack[i]
@@ -83,9 +81,7 @@ return function(META)
 
 					for _, a in ipairs(frame.scope:GetTrackedUpvalues()) do
 						for _, b in ipairs(self:GetTrackedUpvalues()) do
-							if a.upvalue == b.upvalue then
-								table.insert(upvalues, a)
-							end
+							if a.upvalue == b.upvalue then table.insert(upvalues, a) end
 						end
 					end
 				end
@@ -97,24 +93,22 @@ return function(META)
 
 					for _, a in ipairs(frame.scope:GetTrackedTables()) do
 						for _, b in ipairs(self:GetTrackedTables()) do
-							if a.obj == b.obj then
-								table.insert(tables, a)
-							end
+							if a.obj == b.obj then table.insert(tables, a) end
 						end
 					end
 				end
-				
+
 				self:ApplyMutationsAfterReturn(frame.scope, frame.scope, true, upvalues, tables)
 				return
 			end
 
-				self:ApplyMutationsAfterReturn(
-					frame.scope,
-					function_scope,
-					true,
-					frame.scope:GetTrackedUpvalues(),
-					frame.scope:GetTrackedTables()
-				)
+			self:ApplyMutationsAfterReturn(
+				frame.scope,
+				function_scope,
+				true,
+				frame.scope:GetTrackedUpvalues(),
+				frame.scope:GetTrackedTables()
+			)
 		end
 	end
 
@@ -122,7 +116,10 @@ return function(META)
 		if obj then
 			-- track "if x then" which has no binary or prefix operators
 			self:TrackUpvalue(obj)
-			self.lua_assert_error_thrown = {msg = msg, obj = obj,}
+			self.lua_assert_error_thrown = {
+				msg = msg,
+				obj = obj,
+			}
 
 			if obj:IsTruthy() then
 				self:GetScope():UncertainReturn()
@@ -141,15 +138,13 @@ return function(META)
 			self.lua_error_thrown = msg
 		end
 
-		if not no_report then
-			self:Error(self.current_statement, msg)
-		end
+		if not no_report then self:Error(self.current_statement, msg) end
 	end
 
 	function META:GetThrownErrorMessage()
-			return self.lua_error_thrown or
-				self.lua_assert_error_thrown and
-				self.lua_assert_error_thrown.msg
+		return self.lua_error_thrown or
+			self.lua_assert_error_thrown and
+			self.lua_assert_error_thrown.msg
 	end
 
 	function META:ClearError()
@@ -166,7 +161,7 @@ return function(META)
 			function_scope.uncertain_function_return = false
 		elseif scope:IsUncertain() then
 			function_scope.uncertain_function_return = true
-			
+
 			-- else always hits, so even if the else part is uncertain
 			-- it does mean that this function at least returns something
 			if scope:IsElseConditionalScope() then
@@ -178,23 +173,21 @@ return function(META)
 		end
 
 		local thrown = false
-		
-		if function_scope.lua_silent_error then 
+
+		if function_scope.lua_silent_error then
 			local errored_scope = table.remove(function_scope.lua_silent_error)
 
-				if
-					errored_scope and
-					self:GetScope():IsCertainFromScope(errored_scope)
-					and
-					errored_scope:IsCertain()
-				then
+			if
+				errored_scope and
+				self:GetScope():IsCertainFromScope(errored_scope)
+				and
+				errored_scope:IsCertain()
+			then
 				thrown = true
 			end
-		end 
-
-		if not thrown then
-			scope:CollectReturnTypes(node, types)
 		end
+
+		if not thrown then scope:CollectReturnTypes(node, types) end
 
 		if scope:IsUncertain() then
 			function_scope:UncertainReturn()
@@ -203,7 +196,7 @@ return function(META)
 			function_scope:CertainReturn(self)
 			scope:CertainReturn(self)
 		end
-		
+
 		self:ApplyMutationsAfterReturn(scope, function_scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
 	end
 
@@ -223,28 +216,30 @@ return function(META)
 		end
 
 		local str = {}
+
 		for i = 1, select("#", ...) do
 			str[i] = tostring(select(i, ...))
 		end
+
 		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
-	end	
+	end
 
 	function META:PushConditionalScope(statement, truthy, falsy)
 		local scope = self:CreateAndPushScope()
-		scope:SetConditionalScope(true)
-		scope:SetStatement(statement)
-		scope:SetTruthy(truthy)
-		scope:SetFalsy(falsy)
-		return scope
-	end
+			scope:SetConditionalScope(true)
+			scope:SetStatement(statement)
+			scope:SetTruthy(truthy)
+			scope:SetFalsy(falsy)
+			return scope
+		end
 
-	function META:ErrorAndCloneCurrentScope(node, err)
-		self:Error(node, err)
-		self:CloneCurrentScope()
-		self:GetScope():SetConditionalScope(true)
-	end
+		function META:ErrorAndCloneCurrentScope(node, err)
+			self:Error(node, err)
+			self:CloneCurrentScope()
+			self:GetScope():SetConditionalScope(true)
+		end
 
-	function META:PopConditionalScope()
+		function META:PopConditionalScope()
 		self:PopScope()
 	end
 end

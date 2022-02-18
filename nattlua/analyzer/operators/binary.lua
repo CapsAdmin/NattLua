@@ -28,8 +28,11 @@ local function metatable_function(self, node, meta_method, l, r)
 				and
 				r:GetMetaTable():Get(meta_method)
 			)
+
 		if not func then return end
+
 		if func.Type ~= "function" then return func end
+
 		return self:Assert(node, self:Call(func, Tuple({l, r}))):Get(1)
 	end
 end
@@ -57,7 +60,10 @@ local function operator(self, node, l, r, op, meta_method)
 				r.Type == "number"
 			)
 		then
-			if l:IsLiteral() and r:IsLiteral() then return LString(l:GetData() .. r:GetData()):SetNode(node) end
+			if l:IsLiteral() and r:IsLiteral() then
+				return LString(l:GetData() .. r:GetData()):SetNode(node)
+			end
+
 			return String():SetNode(node)
 		end
 	end
@@ -101,7 +107,7 @@ local function Binary(self, node, l, r, op)
 
 				-- right hand side of and is the "true" part
 				self:PushTruthyExpressionContext()
-				r = self:AnalyzeExpression(node.right)				
+				r = self:AnalyzeExpression(node.right)
 				self:PopTruthyExpressionContext()
 
 				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
@@ -112,7 +118,7 @@ local function Binary(self, node, l, r, op)
 			self:PushFalsyExpressionContext()
 			l = self:AnalyzeExpression(node.left)
 			self:PopFalsyExpressionContext()
-			
+
 			if l:IsCertainlyFalse() then
 				self:PushFalsyExpressionContext()
 				r = self:AnalyzeExpression(node.right)
@@ -147,9 +153,13 @@ local function Binary(self, node, l, r, op)
 			return l:Equal(r) and True() or False()
 		elseif op == "~" then
 			if l.Type == "union" then return l:RemoveType(r) end
+
 			return l
 		elseif op == "&" or op == "extends" then
-			if l.Type ~= "table" then return false, "type " .. tostring(l) .. " cannot be extended" end
+			if l.Type ~= "table" then
+				return false, "type " .. tostring(l) .. " cannot be extended"
+			end
+
 			return l:Extend(r)
 		elseif op == ".." then
 			if l.Type == "tuple" and r.Type == "tuple" then
@@ -174,40 +184,28 @@ local function Binary(self, node, l, r, op)
 
 	-- adding two tuples at runtime in lua will basically do this
 	if self:IsRuntime() then
-		if l.Type == "tuple" then
-			l = self:Assert(node, l:GetFirstValue())
-		end
+		if l.Type == "tuple" then l = self:Assert(node, l:GetFirstValue()) end
 
-		if r.Type == "tuple" then
-			r = self:Assert(node, r:GetFirstValue())
-		end
+		if r.Type == "tuple" then r = self:Assert(node, r:GetFirstValue()) end
 	end
 
 	do -- union unpacking
 		-- normalize l and r to be both unions to reduce complexity
-		if l.Type ~= "union" and r.Type == "union" then
-			l = Union({l})
-		end
+		if l.Type ~= "union" and r.Type == "union" then l = Union({l}) end
 
-		if l.Type == "union" and r.Type ~= "union" then
-			r = Union({r})
-		end
+		if l.Type == "union" and r.Type ~= "union" then r = Union({r}) end
 
 		if l.Type == "union" and r.Type == "union" then
 			local new_union = Union()
 			local truthy_union = Union():SetUpvalue(l:GetUpvalue())
 			local falsy_union = Union():SetUpvalue(l:GetUpvalue())
 
-			if op == "~=" then
-				self.inverted_index_tracking = true
-			end
+			if op == "~=" then self.inverted_index_tracking = true end
 
 			local type_checked = self.type_checked
-			
+
 			-- the return value from type(x)
-			if type_checked then
-				self.type_checked = nil
-			end
+			if type_checked then self.type_checked = nil end
 
 			for _, l in ipairs(l:GetData()) do
 				for _, r in ipairs(r:GetData()) do
@@ -245,10 +243,8 @@ local function Binary(self, node, l, r, op)
 				end
 			end
 
-			if op == "~=" then
-				self.inverted_index_tracking = nil
-			end
-			
+			if op == "~=" then self.inverted_index_tracking = nil end
+
 			if op ~= "or" and op ~= "and" then
 				local parent_table = l.parent_table or type_checked and type_checked.parent_table
 				local parent_key = l.parent_key or type_checked and type_checked.parent_key
@@ -278,42 +274,55 @@ local function Binary(self, node, l, r, op)
 			return self:IndexOperator(node, l, r)
 		elseif op == "+" then
 			local val = operator(self, node, l, r, op, "__add")
+
 			if val then return val end
 		elseif op == "-" then
 			local val = operator(self, node, l, r, op, "__sub")
+
 			if val then return val end
 		elseif op == "*" then
 			local val = operator(self, node, l, r, op, "__mul")
+
 			if val then return val end
 		elseif op == "/" then
 			local val = operator(self, node, l, r, op, "__div")
+
 			if val then return val end
 		elseif op == "/idiv/" then
 			local val = operator(self, node, l, r, op, "__idiv")
+
 			if val then return val end
 		elseif op == "%" then
 			local val = operator(self, node, l, r, op, "__mod")
+
 			if val then return val end
 		elseif op == "^" then
 			local val = operator(self, node, l, r, op, "__pow")
+
 			if val then return val end
 		elseif op == "&" then
 			local val = operator(self, node, l, r, op, "__band")
+
 			if val then return val end
 		elseif op == "|" then
 			local val = operator(self, node, l, r, op, "__bor")
+
 			if val then return val end
 		elseif op == "~" then
 			local val = operator(self, node, l, r, op, "__bxor")
+
 			if val then return val end
 		elseif op == "<<" then
 			local val = operator(self, node, l, r, op, "__lshift")
+
 			if val then return val end
 		elseif op == ">>" then
 			local val = operator(self, node, l, r, op, "__rshift")
+
 			if val then return val end
 		elseif op == ".." then
 			local val = operator(self, node, l, r, op, "__concat")
+
 			if val then return val end
 		end
 	end
@@ -321,73 +330,89 @@ local function Binary(self, node, l, r, op)
 	do -- logical operators
 		if op == "==" then
 			local res = metatable_function(self, node, "__eq", l, r)
+
 			if res then return res end
+
 			if l:IsLiteral() and l == r then return True() end
+
 			if l.Type ~= r.Type then return False() end
+
 			return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
 		elseif op == "~=" or op == "!=" then
 			local res = metatable_function(self, node, "__eq", l, r)
 
 			if res then
-				if res:IsLiteral() then
-					res:SetData(not res:GetData())
-				end
+				if res:IsLiteral() then res:SetData(not res:GetData()) end
 
 				return res
 			end
 
 			if l.Type ~= r.Type then return True() end
+
 			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
 
-			if val ~= nil then
-				val = not val
-			end
+			if val ~= nil then val = not val end
 
 			return logical_cmp_cast(val, err)
 		elseif op == "<" then
 			local res = metatable_function(self, node, "__lt", l, r)
+
 			if res then return res end
+
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "<=" then
 			local res = metatable_function(self, node, "__le", l, r)
+
 			if res then return res end
+
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == ">" then
 			local res = metatable_function(self, node, "__lt", l, r)
+
 			if res then return res end
-			 return logical_cmp_cast(l.LogicalComparison(l, r, op)) 
+
+			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == ">=" then
 			local res = metatable_function(self, node, "__le", l, r)
+
 			if res then return res end
+
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "or" or op == "||" then
 			-- boolean or boolean
 			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
+
 			-- true or boolean
 			if l:IsTruthy() then return l:Copy():SetNode(node) end
+
 			-- false or true
 			if r:IsTruthy() then return r:Copy():SetNode(node) end
+
 			return r:Copy():SetNode(node)
 		elseif op == "and" or op == "&&" then
 			-- true and false
 			if l:IsTruthy() and r:IsFalsy() then
 				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}) end
+
 				return r:Copy():SetNode(node)
 			end
 
 			-- false and true
 			if l:IsFalsy() and r:IsTruthy() then
 				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}) end
+
 				return l:Copy():SetNode(node)
 			end
 
 			-- true and true
 			if l:IsTruthy() and r:IsTruthy() then
 				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}) end
+
 				return r:Copy():SetNode(node)
 			else
 				-- false and false
 				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}) end
+
 				return l:Copy():SetNode(node)
 			end
 		end

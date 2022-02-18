@@ -8,16 +8,16 @@ local error = error
 local helpers = require("nattlua.other.helpers")
 local Any = require("nattlua.types.any").Any
 return function(META)
---[[#	type META.diagnostics = {
-			[1 .. inf] = {
-				node = any,
-				start = number,
-				stop = number,
-				msg = string,
-				severity = "warning" | "error",
-				traceback = string,
-			},
-		}]]
+	--[[#type META.diagnostics = {
+		[1 .. inf] = {
+			node = any,
+			start = number,
+			stop = number,
+			msg = string,
+			severity = "warning" | "error",
+			traceback = string,
+		},
+	}]]
 
 	table.insert(META.OnInitialize, function(self)
 		self.diagnostics = {}
@@ -34,13 +34,12 @@ return function(META)
 	end
 
 	function META:ErrorAssert(ok, err)
-		if not ok then
-			error(self:ErrorMessageToString(err or "unknown error"))
-		end
+		if not ok then error(self:ErrorMessageToString(err or "unknown error")) end
 	end
 
 	function META:ErrorMessageToString(tbl)
 		if type(tbl) == "string" then return tbl end
+
 		local out = {}
 
 		for i, v in ipairs(tbl) do
@@ -58,14 +57,18 @@ return function(META)
 		return table.concat(out)
 	end
 
-	function META:ReportDiagnostic(node, msg--[[#: {reasons = {[number] = string}} | {[number] = string}]], severity--[[#: "warning" | "error"]])
+	function META:ReportDiagnostic(
+		node,
+		msg--[[#: {reasons = {[number] = string}} | {[number] = string}]],
+		severity--[[#: "warning" | "error"]]
+	)
 		if self.SuppressDiagnostics then return end
 
 		if not node then
 			io.write(
 				"reporting diagnostic without node, defaulting to current expression or statement\n"
 			)
---			io.write(debug.traceback(), "\n")
+			--			io.write(debug.traceback(), "\n")
 			node = self.current_expression or self.current_statement
 		end
 
@@ -79,13 +82,16 @@ return function(META)
 		local msg_str = self:ErrorMessageToString(msg)
 		local key = msg_str .. "-" .. tostring(node) .. "-" .. "severity"
 		self.diagnostics_map = self.diagnostics_map or {}
+
 		if self.diagnostics_map[key] then return end
+
 		self.diagnostics_map[key] = true
 		severity = severity or "warning"
-		local start, stop = node:GetStartStop()
-		
+		local start,
+		stop = node:GetStartStop()
+
 		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
-				self:OnDiagnostic(node.Code, msg_str, severity, start, stop)
+			self:OnDiagnostic(node.Code, msg_str, severity, start, stop)
 		end
 
 		table.insert(
@@ -126,9 +132,7 @@ return function(META)
 	function META:FatalError(msg, node)
 		node = node or self.current_expression or self.current_statement
 
-		if node then
-			self:ReportDiagnostic(node, msg, "fatal")
-		end
+		if node then self:ReportDiagnostic(node, msg, "fatal") end
 
 		error(msg, 2)
 	end

@@ -15,7 +15,10 @@ local function metatable_function(self, meta_method, l)
 	if l:GetMetaTable() then
 		meta_method = LString(meta_method)
 		local func = l:GetMetaTable():Get(meta_method)
-		if func then return self:Assert(l:GetNode(), self:Call(func, Tuple({l})):Get(1)) end
+
+		if func then
+			return self:Assert(l:GetNode(), self:Call(func, Tuple({l})):Get(1))
+		end
 	end
 end
 
@@ -27,18 +30,14 @@ local function Prefix(self, node, r)
 	end
 
 	if not r then
-		r = self:AnalyzeExpression(node.right)	
+		r = self:AnalyzeExpression(node.right)
 
 		if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-			if r.Type ~= "union" then
-				self:TrackUpvalue(r, nil, nil, op == "not")
-			end
+			if r.Type ~= "union" then self:TrackUpvalue(r, nil, nil, op == "not") end
 		end
 	end
 
-	if op == "not" then
-		self.inverted_index_tracking = nil
-	end
+	if op == "not" then self.inverted_index_tracking = nil end
 
 	if op == "literal" then
 		r.literal_argument = true
@@ -50,9 +49,7 @@ local function Prefix(self, node, r)
 		return r
 	end
 
-	if r.Type == "tuple" then
-		r = r:Get(1) or Nil()
-	end
+	if r.Type == "tuple" then r = r:Get(1) or Nil() end
 
 	if r.Type == "union" then
 		local new_union = Union()
@@ -68,13 +65,9 @@ local function Prefix(self, node, r)
 			else
 				new_union:AddType(res)
 
-				if res:IsTruthy() then
-					truthy_union:AddType(r)
-				end
+				if res:IsTruthy() then truthy_union:AddType(r) end
 
-				if res:IsFalsy() then
-					falsy_union:AddType(r)
-				end
+				if res:IsFalsy() then falsy_union:AddType(r) end
 			end
 		end
 
@@ -89,9 +82,11 @@ local function Prefix(self, node, r)
 			self:PushAnalyzerEnvironment("runtime")
 			local obj = self:AnalyzeExpression(node.right)
 			self:PopAnalyzerEnvironment()
-			if not obj then return type_errors.other(
-				"cannot find '" .. node.right:Render() .. "' in the current typesystem scope"
-			) end
+
+			if not obj then
+				return type_errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
+			end
+
 			return obj:GetContract() or obj
 		elseif op == "unique" then
 			r:MakeUnique(true)
@@ -103,8 +98,12 @@ local function Prefix(self, node, r)
 			r.expand = true
 			return r
 		elseif op == "$" then
-			if r.Type ~= "string" then return type_errors.other("must evaluate to a string") end
+			if r.Type ~= "string" then
+				return type_errors.other("must evaluate to a string")
+			end
+
 			if not r:IsLiteral() then return type_errors.other("must be a literal") end
+
 			r:SetPatternContract(r:GetData())
 			return r
 		end
@@ -112,27 +111,31 @@ local function Prefix(self, node, r)
 
 	if op == "-" then
 		local res = metatable_function(self, "__unm", r)
+
 		if res then return res end
 	elseif op == "~" then
 		local res = metatable_function(self, "__bxor", r)
+
 		if res then return res end
 	elseif op == "#" then
 		local res = metatable_function(self, "__len", r)
+
 		if res then return res end
 	end
 
 	if op == "not" or op == "!" then
-		if r:IsTruthy() and r:IsFalsy() then 
+		if r:IsTruthy() and r:IsFalsy() then
 			return Boolean():SetNode(node)
-		elseif r:IsTruthy() then 
+		elseif r:IsTruthy() then
 			return False():SetNode(node)
-		elseif r:IsFalsy() then 
+		elseif r:IsFalsy() then
 			return True():SetNode(node)
 		end
 	end
 
 	if op == "-" or op == "~" or op == "#" then
 		if r.Type == "table" then return r:GetLength() end
+
 		return r:PrefixOperator(op)
 	end
 

@@ -6,19 +6,25 @@ local Table = require("nattlua.types.table").Table
 local LString = require("nattlua.types.string").LString
 local table = require("table")
 return function(META)
-		table.insert(
-			META.OnInitialize,
-			function(self)
-				self.default_environment = {runtime = Table(), typesystem = Table(),}
-		self.environments = {runtime = {}, typesystem = {}}
-		self.scope_stack = {}
-			end
-		)
+	table.insert(
+		META.OnInitialize,
+		function(self)
+			self.default_environment = {
+				runtime = Table(),
+				typesystem = Table(),
+			}
+			self.environments = {runtime = {}, typesystem = {}}
+			self.scope_stack = {}
+		end
+	)
 
 	function META:Hash(node)
 		if node.Type == "string" then return node:GetHash() end
+
 		if type(node) == "string" then return node end
+
 		if type(node.value) == "string" then return node.value end
+
 		return node.value.value
 	end
 
@@ -32,185 +38,187 @@ return function(META)
 		return self:PushScope(LexicalScope(scope or self:GetScope(), upvalue_position))
 		end
 
-	function META:CreateAndPushModuleScope()
-		return self:PushScope(LexicalScope())
-		end
-
-		function META:CreateAndPushScope()
-			return self:PushScope(LexicalScope(self:GetScope()))
+		function META:CreateAndPushModuleScope()
+			return self:PushScope(LexicalScope())
 			end
 
-			function META:PopScope()
-				local new = table.remove(self.scope_stack)
-				local old = self.scope
-
-				if new then
-					self.scope = new
-				end
-				
-				return old
-			end
-
-			function META:GetScope()
-				return self.scope
-			end
-
-			function META:GetScopeStack()
-				return self.scope_stack
-			end
-
-			function META:CloneCurrentScope()
-				local scope_copy = self:GetScope():Copy(true)
-				local g = self:GetGlobalEnvironment("runtime"):Copy()
-				local last_node = self.environment_nodes[#self.environment_nodes]
-			self:PopScope()
-			self:PopGlobalEnvironment("runtime")
-			scope_copy:SetParent(scope_copy:GetParent() or self:GetScope())
-			self:PushGlobalEnvironment(last_node, g, "runtime")
-			self:PushScope(scope_copy)
-
-				for _, keyval in ipairs(g:GetData()) do
-					self:MutateTable(g, keyval.key, keyval.val)
+			function META:CreateAndPushScope()
+				return self:PushScope(LexicalScope(self:GetScope()))
 				end
 
-				for _, upvalue in ipairs(scope_copy:GetUpvalues("runtime")) do
-					self:MutateUpvalue(upvalue, upvalue:GetValue())
+				function META:PopScope()
+					local new = table.remove(self.scope_stack)
+					local old = self.scope
+
+					if new then self.scope = new end
+
+					return old
 				end
 
-				return scope_copy
-			end
-
-			function META:CreateLocalValue(key, obj, const)
-				local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
-				self:MutateUpvalue(upvalue, obj)
-				upvalue:SetImmutable(const)
-				return upvalue
-			end
-
-			function META:OnCreateLocalValue(upvalue, key, val) 
-			end
-
-			function META:FindLocalUpvalue(key, scope)
-				scope = scope or self:GetScope()
-				if not scope then return end
-				local found, scope = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
-				if found then return found, scope end
-			end
-
-			function META:FindLocalValue(key, scope)
-				local upvalue, scope = self:FindLocalUpvalue(key, scope)
-
-				if upvalue then
-					if self:IsRuntime() then return
-						self:GetMutatedUpvalue(upvalue) or
-						upvalue:GetValue() end
-					return upvalue:GetValue()
-				end
-			end
-
-			function META:LocalValueExists(key, scope)
-				scope = scope or self:GetScope()
-				if not scope then return end
-				local found = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
-				return found ~= nil
-			end
-
-			function META:SetEnvironmentOverride(node, obj, env)
-				node.environments_override = node.environments_override or {}
-				node.environments_override[env] = obj
-			end
-
-			function META:GetGlobalEnvironmentOverride(node, env)
-				if node.environments_override then return node.environments_override[env] end
-			end
-
-			function META:SetDefaultEnvironment(obj, env)
-				self.default_environment[env] = obj
-			end
-
-			function META:GetDefaultEnvironment(env)
-				return self.default_environment[env]
-			end
-
-			function META:PushGlobalEnvironment(node, obj, env)
-				table.insert(self.environments[env], 1, obj)
-				node.environments = node.environments or {}
-				node.environments[env] = obj
-				self.environment_nodes = self.environment_nodes or {}
-				table.insert(self.environment_nodes, 1, node)
-			end
-
-			function META:PopGlobalEnvironment(env)
-				table.remove(self.environment_nodes, 1)
-				table.remove(self.environments[env], 1)
-			end
-
-			function META:GetGlobalEnvironment(env)
-				local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
-
-				if
-					self.environment_nodes[1] and
-					self.environment_nodes[1].environments_override and
-					self.environment_nodes[1].environments_override[env]
-				then
-					g = self.environment_nodes[1].environments_override[env]
+				function META:GetScope()
+					return self.scope
 				end
 
-				return g
-			end
+				function META:GetScopeStack()
+					return self.scope_stack
+				end
 
-			function META:FindEnvironmentValue(key)
-				-- look up in parent if not found
-				if self:IsRuntime() then
-					local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
-					local val, err = g:Get(key)
+				function META:CloneCurrentScope()
+					local scope_copy = self:GetScope():Copy(true)
+					local g = self:GetGlobalEnvironment("runtime"):Copy()
+					local last_node = self.environment_nodes[#self.environment_nodes]
+				self:PopScope()
+				self:PopGlobalEnvironment("runtime")
+				scope_copy:SetParent(scope_copy:GetParent() or self:GetScope())
+				self:PushGlobalEnvironment(last_node, g, "runtime")
+				self:PushScope(scope_copy)
 
-					if not val then 
-						self:PushAnalyzerEnvironment("typesystem")
-						local val, err = self:GetLocalOrGlobalValue(key)
-						self:PopAnalyzerEnvironment()
-						return val, err
+					for _, keyval in ipairs(g:GetData()) do
+						self:MutateTable(g, keyval.key, keyval.val)
 					end
 
-					return self:IndexOperator(key:GetNode(), g, key)
+					for _, upvalue in ipairs(scope_copy:GetUpvalues("runtime")) do
+						self:MutateUpvalue(upvalue, upvalue:GetValue())
+					end
+
+					return scope_copy
 				end
 
-				return self:IndexOperator(key:GetNode(), self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
-			end
-
-			function META:GetLocalOrGlobalValue(key, scope)
-				local val = self:FindLocalValue(key, scope)
-				if val then return val end
-				return self:FindEnvironmentValue(key)
-			end
-
-			function META:SetLocalOrGlobalValue(key, val, scope)
-				local upvalue, found_scope = self:FindLocalUpvalue(key, scope)
-
-				if upvalue then
-
-					if upvalue:IsImmutable() then
-						return self:Error(key:GetNode(), {"cannot assign to const variable ", key})
-					end
-
-					if not self:MutateUpvalue(upvalue, val) then
-						upvalue:SetValue(val)
-					end
-
+				function META:CreateLocalValue(key, obj, const)
+					local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
+					self:MutateUpvalue(upvalue, obj)
+					upvalue:SetImmutable(const)
 					return upvalue
 				end
 
-				local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
+				function META:OnCreateLocalValue(upvalue, key, val) end
 
-				if not g then
-					self:FatalError("tried to set environment value outside of Push/Pop/Environment")
+				function META:FindLocalUpvalue(key, scope)
+					scope = scope or self:GetScope()
+
+					if not scope then return end
+
+					local found, scope = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
+
+					if found then return found, scope end
 				end
 
-				if self:IsRuntime() then
-					self:Warning(key:GetNode(), {"_G[\"", key:GetNode(), "\"] = ", val})
+				function META:FindLocalValue(key, scope)
+					local upvalue, scope = self:FindLocalUpvalue(key, scope)
+
+					if upvalue then
+						if self:IsRuntime() then
+							return self:GetMutatedUpvalue(upvalue) or upvalue:GetValue()
+						end
+
+						return upvalue:GetValue()
+					end
 				end
-				
-				self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
-				return val
-			end
-		end
+
+				function META:LocalValueExists(key, scope)
+					scope = scope or self:GetScope()
+
+					if not scope then return end
+
+					local found = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
+					return found ~= nil
+				end
+
+				function META:SetEnvironmentOverride(node, obj, env)
+					node.environments_override = node.environments_override or {}
+					node.environments_override[env] = obj
+				end
+
+				function META:GetGlobalEnvironmentOverride(node, env)
+					if node.environments_override then return node.environments_override[env] end
+				end
+
+				function META:SetDefaultEnvironment(obj, env)
+					self.default_environment[env] = obj
+				end
+
+				function META:GetDefaultEnvironment(env)
+					return self.default_environment[env]
+				end
+
+				function META:PushGlobalEnvironment(node, obj, env)
+					table.insert(self.environments[env], 1, obj)
+					node.environments = node.environments or {}
+					node.environments[env] = obj
+					self.environment_nodes = self.environment_nodes or {}
+					table.insert(self.environment_nodes, 1, node)
+				end
+
+				function META:PopGlobalEnvironment(env)
+					table.remove(self.environment_nodes, 1)
+					table.remove(self.environments[env], 1)
+				end
+
+				function META:GetGlobalEnvironment(env)
+					local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
+
+					if
+						self.environment_nodes[1] and
+						self.environment_nodes[1].environments_override and
+						self.environment_nodes[1].environments_override[env]
+					then
+						g = self.environment_nodes[1].environments_override[env]
+					end
+
+					return g
+				end
+
+				function META:FindEnvironmentValue(key)
+					-- look up in parent if not found
+					if self:IsRuntime() then
+						local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
+						local val, err = g:Get(key)
+
+						if not val then
+							self:PushAnalyzerEnvironment("typesystem")
+							local val, err = self:GetLocalOrGlobalValue(key)
+							self:PopAnalyzerEnvironment()
+							return val, err
+						end
+
+						return self:IndexOperator(key:GetNode(), g, key)
+					end
+
+					return self:IndexOperator(key:GetNode(), self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
+				end
+
+				function META:GetLocalOrGlobalValue(key, scope)
+					local val = self:FindLocalValue(key, scope)
+
+					if val then return val end
+
+					return self:FindEnvironmentValue(key)
+				end
+
+				function META:SetLocalOrGlobalValue(key, val, scope)
+					local upvalue, found_scope = self:FindLocalUpvalue(key, scope)
+
+					if upvalue then
+						if upvalue:IsImmutable() then
+							return self:Error(key:GetNode(), {"cannot assign to const variable ", key})
+						end
+
+						if not self:MutateUpvalue(upvalue, val) then upvalue:SetValue(val) end
+
+						return upvalue
+					end
+
+					local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
+
+					if not g then
+						self:FatalError("tried to set environment value outside of Push/Pop/Environment")
+					end
+
+					if self:IsRuntime() then
+						self:Warning(key:GetNode(), {"_G[\"", key:GetNode(), "\"] = ", val})
+					end
+
+					self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
+					return val
+				end
+			end			

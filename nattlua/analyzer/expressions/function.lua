@@ -73,9 +73,7 @@ local function analyze_function_signature(self, node, current_function)
 				if key.value.value == "self" then
 					args[i] = self.current_tables[#self.current_tables]
 
-					if not args[i] then
-						self:Error(key, "cannot find value self")
-					end
+					if not args[i] then self:Error(key, "cannot find value self") end
 				elseif not node.statements then
 					local obj = self:AnalyzeExpression(key)
 
@@ -89,9 +87,7 @@ local function analyze_function_signature(self, node, current_function)
 						local val = self:Assert(node, obj:GetFirstValue())
 
 						-- in case the tuple is empty
-						if val then
-							args[i] = val
-						end
+						if val then args[i] = val end
 					end
 				else
 					args[i] = Any():SetNode(key)
@@ -109,9 +105,7 @@ local function analyze_function_signature(self, node, current_function)
 					local val = self:Assert(node, obj:GetFirstValue())
 
 					-- in case the tuple is empty
-					if val then
-						args[i] = val
-					end
+					if val then args[i] = val end
 				end
 			end
 		end
@@ -160,9 +154,9 @@ local function analyze_function_signature(self, node, current_function)
 	self:PopAnalyzerEnvironment()
 	self:PopScope()
 	return argument_tuple_override or Tuple(args),
-		return_tuple_override or Tuple(ret),
-		explicit_arguments,
-		explicit_return
+	return_tuple_override or Tuple(ret),
+	explicit_arguments,
+	explicit_return
 end
 
 return {
@@ -179,11 +173,11 @@ return {
 		end
 
 		local obj = Function(
-				{
+			{
 				scope = self:GetScope(),
 				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
-}
-			):SetNode(node)
+			}
+		):SetNode(node)
 		local args, ret, explicit_arguments, explicit_return = analyze_function_signature(self, node, obj)
 		local func
 
@@ -203,16 +197,12 @@ return {
 		obj.Data.ret = ret
 		obj.Data.lua_function = func
 
-		if node.statements then
-			obj.function_body_node = node
-		end
+		if node.statements then obj.function_body_node = node end
 
 		obj.explicit_arguments = explicit_arguments
 		obj.explicit_return = explicit_return
 
-		if self:IsRuntime() then
-			self:CallMeLater(obj, args, node, true)
-		end
+		if self:IsRuntime() then self:CallMeLater(obj, args, node, true) end
 
 		return obj
 	end,
