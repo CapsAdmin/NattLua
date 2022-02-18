@@ -10,6 +10,10 @@ local function check(config, input, expect)
 	equal(new_lua_code, expect, 2)
 end
 
+local function identical(str)
+	check({preserve_whitespace = false}, str)
+end
+
 
 
 check({ preserve_whitespace = false, force_parenthesis = true, string_quote = '"' }, 
@@ -24,9 +28,7 @@ local x = 1]]
 check({preserve_whitespace = false, string_quote = '"'}, [[local x = "'"]])
 check({preserve_whitespace = false, string_quote = "'"}, [[local x = '"']])
 
-check({ preserve_whitespace = false },
-	[[x = ""-- foo]]
-)
+identical([[x = ""-- foo]] )
 check({ preserve_whitespace = false, use_comment_types = true },
 	[[local type x = ""]], [=[--[[#local type x = ""]]]=]
 )
@@ -106,10 +108,10 @@ pac.EndSomething()
 x = 4]]
 )
 
-check({preserve_whitespace = false}, [==[local x = {[ [[foo]] ] = "bar"}]==])
+identical([==[local x = {[ [[foo]] ] = "bar"}]==])
 check({preserve_whitespace = false}, [==[local x = a && b || c && a != c || !c]==], [==[local x = a and b or c and a ~= c or not c]==])
 
-check({preserve_whitespace = false}, 
+identical(
 [[local escape_char_map = {
 		["\\"] = "\\\\",
 		["\""] = "\\\"",
@@ -120,10 +122,10 @@ check({preserve_whitespace = false},
 		["\t"] = "\\t",
 	}]])
 
-check({preserve_whitespace = false}, 
+identical(
 [==[--[#[analyzer function coroutine.wrap(cb: Function) end]]]==])
 
-check({preserve_whitespace = false}, [[local tbl = {foo = true,foo = true,foo = true,foo = true,foo = true,foo = true,foo = true,foo = true,foo = true}]], 
+identical( 
 [[local tbl = {
 		foo = true,
 		foo = true,
@@ -138,7 +140,7 @@ check({preserve_whitespace = false}, [[local tbl = {foo = true,foo = true,foo = 
 
 
 -- TODO, double indent because of assignment and call
-check({preserve_whitespace = false}, 
+identical(
 [[pos, ang = LocalToWorld(
 		lexer.Position or Vector(),
 		lexer.Angles or Angle(),
@@ -146,7 +148,7 @@ check({preserve_whitespace = false},
 		ang or owner:GetAngles()
 	)]])
 
-check({preserve_whitespace = false}, [[if not ply.pac_cameras then return end]])
+identical([[if not ply.pac_cameras then return end]])
 check({preserve_whitespace = false, use_comment_types = true}, [=[--[[#type Vector.__mul = function=(Vector, number | Vector)>(Vector)]]]=])
 check({preserve_whitespace = false, use_comment_types = true}, [=[--[[#type start = function=(...string)>(nil)]]]=])
 check({preserve_whitespace = false, annotate = true}, [=[local type x = (...,)]=])
@@ -156,7 +158,7 @@ check({preserve_whitespace = false, use_comment_types = true, annotate = true}, 
 
 
 
-check({preserve_whitespace = false}, 
+identical(
 [[local x = lexer.OnDraw and
 	(
 		draw_type == "viewmodel" or
@@ -181,7 +183,7 @@ check({preserve_whitespace = false},
 	)]])
 
 
-check({preserve_whitespace = false}, 
+identical(
 [[local cond = key ~= "ParentUID" and
 	key ~= "ParentName" and
 	key ~= "UniqueID" and
@@ -196,7 +198,7 @@ check({preserve_whitespace = false},
 		table.HasValue(pac.AimPartNames, value)
 	)]])
 
-check({preserve_whitespace = false}, 
+identical(
 [[ent = pac.HandleOwnerName(
 		lexer:GetPlayerOwner(),
 		lexer.OwnerName,
@@ -209,7 +211,7 @@ check({preserve_whitespace = false},
 	or
 	NULL]])
 
-check({preserve_whitespace = false},
+identical(
 [[render.OverrideBlendFunc(
 	true,
 	lexer.blend_override[1],
@@ -229,7 +231,7 @@ pac.AimPartNames = {
 		["local eyes pitch"] = "LOCALEYES_PITCH",
 	}]])
 
-check({preserve_whitespace = false}, 
+identical(
 [[return function(config)
 		local self = setmetatable({}, META)
 		self.config = config or {}
@@ -238,7 +240,7 @@ check({preserve_whitespace = false},
 	end]])
 
 
-check({preserve_whitespace = false}, 
+identical(
 [[if
 	val == "string" or
 	val == "number" or
@@ -250,21 +252,7 @@ then
 
 end]])
 
-
-check({preserve_whitespace = false}, 
-[[if
-	val == "string" or
-	val == "number" or
-	val == "boolean" or
-	val == "true" or
-	val == "false" or
-	val == "nil"
-then
-
-end]])
-
-
-check({preserve_whitespace = false}, 
+identical(
 [[function META:IsShortIfStatement(node)
 	return #node.statements == 1 and
 		node.statements[1][1] and
@@ -273,7 +261,7 @@ check({preserve_whitespace = false},
 		not self:ShouldBreakExpressionList({node.expressions[1]})
 end]])
 
-check({preserve_whitespace = false}, 
+identical(
 [[local x = val == "string" or
 	val == "number" or
 	val == "boolean" or
@@ -281,18 +269,21 @@ check({preserve_whitespace = false},
 	val == "false" or
 	val == "nil"]])
 
-check({preserve_whitespace = false}, [[if true then return end]])
-check({preserve_whitespace = false}, 
+identical([[if true then return end]])
+
+identical(
 [[ok, err = pcall(function()
 		s = s .. tostring(node)
 	end)]])
-check({preserve_whitespace = false}, 
+
+identical(
 [[local str = {}
 
 for i = 1, select("#", ...) do
 	str[i] = tostring(select(i, ...))
 end]])
-check({preserve_whitespace = false}, 
+
+identical(
 [[if
 	scope.node and
 	scope.node.inferred_type and
@@ -302,12 +293,19 @@ then
 	return not scope.node.inferred_type:IsCalled()
 end]])
 
-check({preserve_whitespace = false}, 
+identical(
 [[if upvalue:IsImmutable() then
 	return self:Error(key:GetNode(), {"cannot assign to const variable ", key})
 end]])
 
-check({preserve_whitespace = false}, 
+identical( 
 [[if self:IsRuntime() then
 	return self:GetMutatedUpvalue(upvalue) or upvalue:GetValue()
 end]])
+
+identical([[if line then str = 1 else str = 2 end]])
+identical([[if t > 0 then msg = "\n" .. msg end]])
+
+identical([[return function()
+		if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+	end]])

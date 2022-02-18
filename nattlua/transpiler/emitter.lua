@@ -883,7 +883,7 @@ function META:EmitIfStatement(node)
 
 	for i = 1, #node.statements do
 		if node.expressions[i] then
-			if i > 1 then
+			if not short and i > 1 then
 				self:Whitespace("\n")
 				self:Whitespace("\t")
 			end
@@ -913,8 +913,10 @@ function META:EmitIfStatement(node)
 
 			self:EmitToken(node.tokens["then"][i])
 		elseif node.tokens["if/else/elseif"][i] then
-			self:Whitespace("\n")
-			self:Whitespace("\t")
+			if not short then
+				self:Whitespace("\n")
+				self:Whitespace("\t")
+			end
 			self:EmitToken(node.tokens["if/else/elseif"][i])
 		end
 
@@ -925,7 +927,6 @@ function META:EmitIfStatement(node)
 		end
 
 		if #node.statements[i] == 1 and short then
-			self:Whitespace("\t")
 			self:EmitStatement(node.statements[i][1])
 		else
 			self:EmitBlock(node.statements[i])
@@ -938,8 +939,8 @@ function META:EmitIfStatement(node)
 
 	if not short then
 		self:Whitespace("\n")
+		self:Whitespace("\t")
 	end
-	self:Whitespace("\t")
 	self:EmitToken(node.tokens["end"])
 end
 
