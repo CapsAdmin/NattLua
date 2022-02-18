@@ -448,3 +448,12 @@ check({preserve_whitespace = false, use_comment_types = false, annotate = true},
 	wrap = --[[#function=(empty_function)>(empty_function)]],
 	yield = --[[#function=(...)>(...)]],
 }]=])
+
+identical([[return {
+	character_start = character_start or 0,
+	character_stop = character_stop or 0,
+	sub_line_before = {within_start + 1, start - 1},
+	sub_line_after = {stop + 1, within_stop - 1},
+	line_start = line_start or 0,
+	line_stop = line_stop or 0,
+}]])
