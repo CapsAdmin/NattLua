@@ -145,7 +145,7 @@ end
 
 local env = {}
 luadata.Types = {}
---[[#type luadata.Types Map<|string, function=(any)>(string) | nil|> ]]
+--[[#type luadata.Types = Map<|string, function=(any)>(string) | nil|> ]]
 
 local idx = function(var--[[#: any]])
 	return var.LuaDataType
