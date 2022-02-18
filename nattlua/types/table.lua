@@ -21,6 +21,7 @@ META:GetSet("Self", nil--[[# as TTable]])
 function META:GetName()
 	if not self.Name then
 		local meta = self:GetMetaTable()
+
 		if meta and meta ~= self then return meta:GetName() end
 	end
 
@@ -36,6 +37,7 @@ end
 
 function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
 	if a.Type ~= b.Type then return false end
+
 	if a:IsUnique() then return a:GetUniqueID() == b:GetUniqueID() end
 
 	if a:GetContract() and a:GetContract().Name then
@@ -51,13 +53,17 @@ function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
 
 	if a.Name then
 		a.suppress = false
+
 		if not b.Name then return false end
+
 		return a.Name:GetData() == b.Name:GetData()
 	end
 
 	if a.suppress then return true end
+
 	local adata = a:GetData()
 	local bdata = b:GetData()
+
 	if #adata ~= #bdata then return false end
 
 	for i = 1, #adata do
@@ -69,6 +75,7 @@ function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
 			a.suppress = true
 			ok = akv.key:Equal(bkv.key) and akv.val:Equal(bkv.val)
 			a.suppress = false
+
 			if ok then break end
 		end
 
@@ -85,6 +92,7 @@ local level = 0
 
 function META:__tostring()
 	if self.suppress then return "*self-table*" end
+
 	self.suppress = true
 
 	if self:GetContract() and self:GetContract().Name then -- never called
@@ -101,16 +109,14 @@ function META:__tostring()
 	level = level + 1
 	local indent = ("\t"):rep(level)
 
-	if #self:GetData() <= 1 then
-		indent = " "
-	end
+	if #self:GetData() <= 1 then indent = " " end
 
-	local contract = self:GetContract() 
+	local contract = self:GetContract()
 
 	if contract and contract.Type == "table" and contract ~= self then
 		for i, keyval in ipairs(contract:GetData()) do
 			local key, val = tostring(self:GetData()[i] and self:GetData()[i].key or "nil"),
-				tostring(self:GetData()[i] and self:GetData()[i].val or "nil")
+			tostring(self:GetData()[i] and self:GetData()[i].val or "nil")
 			local tkey, tval = tostring(keyval.key), tostring(keyval.val)
 
 			if key == tkey then
@@ -134,20 +140,30 @@ function META:__tostring()
 
 	level = level - 1
 	self.suppress = false
+
 	if #self:GetData() <= 1 then return "{" .. table.concat(s, ",") .. " }" end
+
 	return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
 function META:GetLength(analyzer)
 	local contract = self:GetContract()
+
 	if contract and contract ~= self then return contract:GetLength(analyzer) end
+
 	local len = 0
 
 	for _, kv in ipairs(self:GetData()) do
 		if analyzer and self.mutations then
 			local val = analyzer:GetMutatedTableValue(self, kv.key)
-			if val.Type == "union" and val:CanBeNil() then return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true)) end
-			if val.Type == "symbol" and val:GetData() == nil then return Number(len):SetLiteral(true) end
+
+			if val.Type == "union" and val:CanBeNil() then
+				return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true))
+			end
+
+			if val.Type == "symbol" and val:GetData() == nil then
+				return Number(len):SetLiteral(true)
+			end
 		end
 
 		if kv.key.Type == "number" then
@@ -173,9 +189,8 @@ function META:FollowsContract(contract--[[#: TTable]])
 	if self:GetContract() == contract then return true end
 
 	do -- todo
-        -- i don't think this belongs here
-
-        if not self:GetData()[1] then
+		-- i don't think this belongs here
+		if not self:GetData()[1] then
 			local can_be_empty = true
 			contract.suppress = true
 
@@ -188,6 +203,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 			end
 
 			contract.suppress = false
+
 			if can_be_empty then return true end
 		end
 	end
@@ -201,8 +217,10 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 		if not keyval.val:CanBeNil() then
 			if not res then return res, err end
+
 			local ok, err = res.val:IsSubsetOf(keyval.val)
-			if not ok then 
+
+			if not ok then
 				return type_errors.other(
 					{
 						"the key ",
@@ -211,18 +229,21 @@ function META:FollowsContract(contract--[[#: TTable]])
 						keyval.key,
 						" because ",
 						err,
-					})
+					}
+				)
 			end
 		end
 	end
 
 	for _, keyval in ipairs(self:GetData()) do
 		local res, err = contract:FindKeyValReverse(keyval.key)
-		
+
 		if not keyval.val:CanBeNil() then
 			if not res then return res, err end
+
 			local ok, err = keyval.val:IsSubsetOf(res.val)
-			if not ok then 
+
+			if not ok then
 				return type_errors.other(
 					{
 						"the key ",
@@ -231,7 +252,8 @@ function META:FollowsContract(contract--[[#: TTable]])
 						res.val,
 						" because ",
 						err,
-					})
+					}
+				)
 			end
 		end
 	end
@@ -241,18 +263,22 @@ end
 
 function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 	if A.suppress then return true, "suppressed" end
-	
-	if B.Type == "tuple" then
-		B = B:Get(1)
-	end
+
+	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "any" then return true, "b is any " end
+
 	local ok, err = A:IsSameUniqueType(B)
+
 	if not ok then return ok, err end
+
 	if A == B then return true, "same type" end
 
 	if B.Type == "table" then
-		if B:GetMetaTable() and B:GetMetaTable() == A then return true, "same metatable" end
+		if B:GetMetaTable() and B:GetMetaTable() == A then
+			return true, "same metatable"
+		end
+
 		--if B:GetSelf() and B:GetSelf():Equal(A) then return true end
 		local can_be_empty = true
 		A.suppress = true
@@ -286,18 +312,21 @@ function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 			local bkeyval, reason = B:FindKeyValReverse(akeyval.key)
 
 			if not akeyval.val:CanBeNil() then
-				if not bkeyval then 
+				if not bkeyval then
 					if A.BaseTable and A.BaseTable == B then
 						bkeyval = akeyval
 					else
-						return bkeyval, reason 
+						return bkeyval, reason
 					end
 				end
 
 				A.suppress = true
 				local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
 				A.suppress = false
-				if not ok then return type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val, err) end
+
+				if not ok then
+					return type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val, err)
+				end
 			end
 		end
 
@@ -318,8 +347,15 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 
 			if not ok then
 				if
-					(keyval.val.Type == "symbol" and keyval.val:GetData() == nil) or
-					(keyval.val.Type == "union" and keyval.val:CanBeNil())
+					(
+						keyval.val.Type == "symbol" and
+						keyval.val:GetData() == nil
+					)
+					or
+					(
+						keyval.val.Type == "union" and
+						keyval.val:CanBeNil()
+					)
 				then
 					return true
 				end
@@ -369,6 +405,7 @@ end
 
 function META:IsEmpty()
 	if self:GetContract() then return false end
+
 	return self:GetData()[1] == nil
 end
 
@@ -377,7 +414,9 @@ function META:FindKeyVal(key--[[#: BaseType]])
 
 	for _, keyval in ipairs(self:GetData()) do
 		local ok, reason = keyval.key:IsSubsetOf(key)
+
 		if ok then return keyval end
+
 		table.insert(reasons, reason)
 	end
 
@@ -394,18 +433,23 @@ function META:FindKeyValReverse(key--[[#: BaseType]])
 
 	for _, keyval in ipairs(self:GetData()) do
 		local ok, reason = key:Equal(keyval.key)
+
 		if ok then return keyval end
 	end
 
 	for _, keyval in ipairs(self:GetData()) do
 		local ok, reason = key:IsSubsetOf(keyval.key)
+
 		if ok then return keyval end
+
 		table.insert(reasons, reason)
 	end
 
 	if self.BaseTable then
 		local ok, reason = self.BaseTable:FindKeyValReverse(key)
+
 		if ok then return ok end
+
 		table.insert(reasons, reason)
 	end
 
@@ -422,7 +466,9 @@ function META:FindKeyValReverseEqual(key--[[#: BaseType]])
 
 	for _, keyval in ipairs(self:GetData()) do
 		local ok, reason = key:Equal(keyval.key)
+
 		if ok then return keyval end
+
 		table.insert(reasons, reason)
 	end
 
@@ -456,22 +502,29 @@ function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[
 		return true
 	end
 
-	if key.Type == "symbol" and key:GetData() == nil then return type_errors.other("key is nil") end
+	if key.Type == "symbol" and key:GetData() == nil then
+		return type_errors.other("key is nil")
+	end
 
-    -- delete entry
-    if not no_delete and not self:GetContract() then
-		if (not val or (val.Type == "symbol" and val:GetData() == nil)) then return self:Delete(key) end
+	-- delete entry
+	if not no_delete and not self:GetContract() then
+		if (not val or (val.Type == "symbol" and val:GetData() == nil)) then
+			return self:Delete(key)
+		end
 	end
 
 	if self:GetContract() and self:GetContract().Type == "table" then -- TODO
-        local keyval, reason = self:GetContract():FindKeyValReverse(key)
+		local keyval, reason = self:GetContract():FindKeyValReverse(key)
+
 		if not keyval then return keyval, reason end
+
 		local keyval, reason = val:IsSubsetOf(keyval.val)
+
 		if not keyval then return keyval, reason end
 	end
 
-    -- if the key exists, check if we can replace it and maybe the value
-    local keyval, reason = self:FindKeyValReverse(key)
+	-- if the key exists, check if we can replace it and maybe the value
+	local keyval, reason = self:FindKeyValReverse(key)
 
 	if not keyval then
 		val:SetParent(self)
@@ -491,14 +544,21 @@ end
 function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		local key = "Set" .. key:GetData():sub(2)
-		if not self[key] then return type_errors.other("no such function on table: " .. key) end
+
+		if not self[key] then
+			return type_errors.other("no such function on table: " .. key)
+		end
+
 		self[key](self, val)
 		return true
 	end
 
-	if key.Type == "symbol" and key:GetData() == nil then return type_errors.other("key is nil") end
-    -- if the key exists, check if we can replace it and maybe the value
-    local keyval, reason = self:FindKeyValReverseEqual(key)
+	if key.Type == "symbol" and key:GetData() == nil then
+		return type_errors.other("key is nil")
+	end
+
+	-- if the key exists, check if we can replace it and maybe the value
+	local keyval, reason = self:FindKeyValReverseEqual(key)
 
 	if not keyval then
 		val:SetParent(self)
@@ -516,7 +576,9 @@ function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
 end
 
 function META:Get(key--[[#: BaseType]], from_contract)
-	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then return self["Get" .. key:GetData():sub(2)](self) end
+	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
+		return self["Get" .. key:GetData():sub(2)](self)
+	end
 
 	if key.Type == "union" then
 		local union = Union({})
@@ -533,6 +595,7 @@ function META:Get(key--[[#: BaseType]], from_contract)
 		end
 
 		if union:GetLength() == 0 then return type_errors.other(errors) end
+
 		return union
 	end
 
@@ -543,9 +606,7 @@ function META:Get(key--[[#: BaseType]], from_contract)
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == "union" then
 				for _, ukey in ipairs(keyval.key:GetData()) do
-					if ukey:IsSubsetOf(key) then
-						union:AddType(keyval.val)
-					end
+					if ukey:IsSubsetOf(key) then union:AddType(keyval.val) end
 				end
 			elseif keyval.key.Type == key.Type or keyval.key.Type == "any" then
 				if keyval.key:IsLiteral() then
@@ -562,11 +623,14 @@ function META:Get(key--[[#: BaseType]], from_contract)
 	end
 
 	local keyval, reason = self:FindKeyValReverse(key)
+
 	if keyval then return keyval.val end
 
 	if not keyval and self:GetContract() then
 		local keyval, reason = self:GetContract():FindKeyValReverse(key)
+
 		if keyval then return keyval.val end
+
 		return type_errors.other(reason)
 	end
 
@@ -583,10 +647,12 @@ end
 
 function META:CopyLiteralness(from--[[#: TTable]])
 	if not from:GetData() then return false end
+
 	if self:Equal(from) then return true end
 
 	for _, keyval_from in ipairs(from:GetData()) do
 		local keyval, reason = self:FindKeyVal(keyval_from.key)
+
 		if not keyval then return type_errors.other(reason) end
 
 		if keyval_from.key.Type == "table" then
@@ -600,7 +666,7 @@ function META:CopyLiteralness(from--[[#: TTable]])
 		else
 			keyval.val:SetLiteral(keyval_from.val:IsLiteral())
 		end
-	end	
+	end
 
 	return true
 end
@@ -644,15 +710,9 @@ function META:Copy(map--[[#: any]], ...)
 		copy.argument_index = self.argument_index
 		copy.parent = self.parent
 		copy.reference_id = self.reference_id
-		]]
+		]] if self.Self then copy:SetSelf(self.Self:Copy()) end
 
-	if self.Self then
-		copy:SetSelf(self.Self:Copy())
-	end
-
-	if self.MetaTable then
-		copy:SetMetaTable(self.MetaTable)
-	end
+	if self.MetaTable then copy:SetMetaTable(self.MetaTable) end
 
 	return copy
 end
@@ -672,11 +732,15 @@ end
 function META:pairs()
 	local i = 1
 	return function()
-		local keyval = self:GetData() and
+		local keyval = self:GetData()
+			and
 			self:GetData()[i] or
-			self:GetContract() and
+			self:GetContract()
+			and
 			self:GetContract()[i]
+
 		if not keyval then return nil end
+
 		i = i + 1
 		return keyval.key, keyval.val
 	end
@@ -697,14 +761,17 @@ function META:HasLiteralKeys()
 			self.suppress = true
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
-			if not ok then return type_errors.other(
-				{
-					"the key ",
-					v.key,
-					" is not a literal because ",
-					reason,
-				}
-			) end
+
+			if not ok then
+				return type_errors.other(
+					{
+						"the key ",
+						v.key,
+						" is not a literal because ",
+						reason,
+					}
+				)
+			end
 		end
 	end
 
@@ -713,6 +780,7 @@ end
 
 function META:IsLiteral()
 	if self.suppress then return true end
+
 	if self:GetContract() then return false end
 
 	for _, v in ipairs(self:GetData()) do
@@ -723,11 +791,12 @@ function META:IsLiteral()
 			v.key.Type ~= "function"
 		then
 			if v.key.Type == "union" then
-				return false, type_errors.other(
+				return false,
+				type_errors.other(
 					{
 						"the value ",
 						v.val,
-						" is not a literal because it's a union"
+						" is not a literal because it's a union",
 					}
 				)
 			end
@@ -736,20 +805,24 @@ function META:IsLiteral()
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
 
-			if not ok then return type_errors.other(
-				{
-					"the key ",
-					v.key,
-					" is not a literal because ",
-					reason,
-				}
-			) end
+			if not ok then
+				return type_errors.other(
+					{
+						"the key ",
+						v.key,
+						" is not a literal because ",
+						reason,
+					}
+				)
+			end
+
 			if v.val.Type == "union" then
-				return false, type_errors.other(
+				return false,
+				type_errors.other(
 					{
 						"the value ",
 						v.val,
-						" is not a literal because it's a union"
+						" is not a literal because it's a union",
 					}
 				)
 			end
@@ -758,14 +831,16 @@ function META:IsLiteral()
 			local ok, reason = v.val:IsLiteral()
 			self.suppress = false
 
-			if not ok then return type_errors.other(
-				{
-					"the value ",
-					v.val,
-					" is not a literal because ",
-					reason,
-				}
-			) end
+			if not ok then
+				return type_errors.other(
+					{
+						"the value ",
+						v.val,
+						" is not a literal because ",
+						reason,
+					}
+				)
+			end
 		end
 	end
 
@@ -787,6 +862,7 @@ end
 
 function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
 	if B.Type ~= "table" then return false, "cannot extend non table" end
+
 	local map = {}
 
 	if A:GetContract() then
@@ -806,6 +882,7 @@ function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
 
 	for _, keyval in ipairs(B:GetData()) do
 		local ok, reason = A:SetExplicit(unpack_keyval(keyval))
+
 		if not ok then return ok, reason end
 	end
 
@@ -846,17 +923,22 @@ end
 function META:PrefixOperator(op--[[#: "#"]])
 	if op == "#" then
 		local keys = (self:GetContract() or self):GetData()
-		if #keys == 1 and keys[1].key and keys[1].key.Type == "number" then return keys[1].key:Copy() end
+
+		if #keys == 1 and keys[1].key and keys[1].key.Type == "number" then
+			return keys[1].key:Copy()
+		end
+
 		return Number(self:GetLength()):SetLiteral(self:IsLiteral())
 	end
 end
 
 function META.LogicalComparison(l, r, op, env)
-	if op == "==" then 
+	if op == "==" then
 		if env == "runtime" then
-			if l:GetReferenceId() and r:GetReferenceId() then 
+			if l:GetReferenceId() and r:GetReferenceId() then
 				return l:GetReferenceId() == r:GetReferenceId()
 			end
+
 			return nil
 		elseif env == "typesystem" then
 			return l:IsSubsetOf(r) and r:IsSubsetOf(l)

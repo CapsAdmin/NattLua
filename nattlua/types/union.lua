@@ -22,8 +22,11 @@ end
 
 function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 	if a.suppress then return true end
+
 	if b.Type ~= "union" and #a.Data == 1 then return a.Data[1]:Equal(b) end
+
 	if a.Type ~= b.Type then return false end
+
 	if #a.Data ~= #b.Data then return false end
 
 	for i = 1, #a.Data do
@@ -35,6 +38,7 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 			a.suppress = true
 			ok = a:Equal(b)
 			a.suppress = false
+
 			if ok then break end
 		end
 
@@ -54,12 +58,16 @@ function META:ShrinkToFunctionSignature()
 
 	for _, func in ipairs(self.Data) do
 		if func.Type ~= "function" then return false end
+
 		arg:Merge(func:GetArguments())
 		ret:Merge(func:GetReturnTypes())
 	end
 
 	local Function = require("nattlua.types.function").Function
-	return Function({arg = arg, ret = ret,})
+	return Function({
+		arg = arg,
+		ret = ret,
+	})
 end
 
 local sort = function(a, b)
@@ -68,6 +76,7 @@ end
 
 function META:__tostring()
 	if self.suppress then return "*self-union*" end
+
 	local s = {}
 	self.suppress = true
 
@@ -95,9 +104,20 @@ function META:AddType(e--[[#: TBaseType]])
 	end
 
 	for _, v in ipairs(self.Data) do
-		if v:Equal(e) then 
-			if e.Type ~= "function" or e:GetContract() or (e:GetNode() and (e:GetNode() == v:GetNode())) then
-				return self 
+		if v:Equal(e) then
+			if
+				e.Type ~= "function" or
+				e:GetContract()
+				or
+				(
+					e:GetNode()
+					and
+					(
+						e:GetNode() == v:GetNode()
+					)
+				)
+			then
+				return self
 			end
 		end
 	end
@@ -106,12 +126,9 @@ function META:AddType(e--[[#: TBaseType]])
 		local sup = e
 
 		for i = #self.Data, 1, -1 do
-			local sub = self.Data[i] --[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
-
+			local sub = self.Data[i]--[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
 			if sub.Type == sup.Type then
-				if sub:IsSubsetOf(sup) then
-					table.remove(self.Data, i)
-				end
+				if sub:IsSubsetOf(sup) then table.remove(self.Data, i) end
 			end
 		end
 	end
@@ -125,9 +142,7 @@ function META:RemoveDuplicates()
 
 	for _, a in ipairs(self.Data) do
 		for i, b in ipairs(self.Data) do
-			if a ~= b and a:Equal(b) then
-				table.insert(indices, i)
-			end
+			if a ~= b and a:Equal(b) then table.insert(indices, i) end
 		end
 	end
 
@@ -195,13 +210,14 @@ end
 function META:HasTuples()
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == "tuple" then return true end
-		end
+	end
 
 	return false
 end
 
 function META:GetAtIndex(i--[[#: number]])
 	if not self:HasTuples() then return self end
+
 	local val
 	local errors = {}
 
@@ -217,11 +233,7 @@ function META:GetAtIndex(i--[[#: number]])
 					val = found
 				end
 			else
-				if val then
-					val = self.New({val, Nil()})
-				else
-					val = Nil()
-				end
+				if val then val = self.New({val, Nil()}) else val = Nil() end
 
 				table.insert(errors, err)
 			end
@@ -239,6 +251,7 @@ function META:GetAtIndex(i--[[#: number]])
 	end
 
 	if not val then return false, errors end
+
 	return val
 end
 
@@ -247,6 +260,7 @@ function META:Get(key--[[#: TBaseType]], from_table--[[#: nil | boolean]])
 		for _, obj in ipairs(self.Data) do
 			if obj.Get then
 				local val = obj:Get(key)
+
 				if val then return val end
 			end
 		end
@@ -256,7 +270,9 @@ function META:Get(key--[[#: TBaseType]], from_table--[[#: nil | boolean]])
 
 	for _, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
+
 		if ok then return obj end
+
 		table.insert(errors, reason)
 	end
 
@@ -266,6 +282,7 @@ end
 function META:Contains(key--[[#: TBaseType]])
 	for _, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
+
 		if ok then return true end
 	end
 
@@ -276,9 +293,9 @@ function META:ContainsOtherThan(key--[[#: TBaseType]])
 	local found = false
 
 	for _, obj in ipairs(self.Data) do
-		if key:IsSubsetOf(obj) then 
+		if key:IsSubsetOf(obj) then
 			found = true
-		elseif found then 
+		elseif found then
 			return true
 		end
 	end
@@ -294,9 +311,7 @@ function META:GetTruthy()
 	local copy = self:Copy()
 
 	for _, obj in ipairs(self.Data) do
-		if not obj:IsTruthy() then
-			copy:RemoveType(obj)
-		end
+		if not obj:IsTruthy() then copy:RemoveType(obj) end
 	end
 
 	return copy
@@ -306,9 +321,7 @@ function META:GetFalsy()
 	local copy = self:Copy()
 
 	for _, obj in ipairs(self.Data) do
-		if not obj:IsFalsy() then
-			copy:RemoveType(obj)
-		end
+		if not obj:IsFalsy() then copy:RemoveType(obj) end
 	end
 
 	return copy
@@ -349,7 +362,9 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 
 	for _, obj in ipairs(self:GetData()) do
 		local ok, reason = target:IsSubsetOf(obj)
+
 		if ok then return true end
+
 		table.insert(errors, reason)
 	end
 
@@ -358,10 +373,8 @@ end
 
 function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
 	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
-	
-	if B.Type == "tuple" then
-		B = B:Get(1)
-	end
+
+	if B.Type == "tuple" then B = B:Get(1) end
 
 	for _, a in ipairs(A.Data) do
 		if a.Type == "any" then return true end
@@ -369,8 +382,11 @@ function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
 
 	for _, a in ipairs(A.Data) do
 		local b, reason = B:Get(a)
+
 		if not b then return type_errors.missing(B, a, reason) end
+
 		local ok, reason = a:IsSubsetOf(b)
+
 		if not ok then return type_errors.subset(a, b, reason) end
 	end
 
@@ -391,9 +407,7 @@ function META:Intersect(union--[[#: TUnion]])
 	local copy = META.New()
 
 	for _, e in ipairs(self.Data) do
-		if union:Get(e) then
-			copy:AddType(e)
-		end
+		if union:Get(e) then copy:AddType(e) end
 	end
 
 	return copy
@@ -446,9 +460,7 @@ function META:DisableTruthy()
 	local found = {}
 
 	for _, v in ipairs(self.Data) do
-		if v:IsTruthy() then
-			table.insert(found, v)
-		end
+		if v:IsTruthy() then table.insert(found, v) end
 	end
 
 	for _, v in ipairs(found) do
@@ -472,9 +484,7 @@ function META:DisableFalsy()
 	local found = {}
 
 	for _, v in ipairs(self.Data) do
-		if v:IsFalsy() then
-			table.insert(found, v)
-		end
+		if v:IsFalsy() then table.insert(found, v) end
 	end
 
 	for _, v in ipairs(found) do
@@ -505,6 +515,7 @@ end
 
 function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node--[[#: any]])
 	if self:IsEmpty() then return type_errors.operation("call", nil) end
+
 	local is_overload = true
 
 	for _, obj in ipairs(self.Data) do
@@ -534,7 +545,9 @@ function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node-
 				)
 			else
 				local res, reason = analyzer:Call(obj, arguments, call_node)
+
 				if res then return res end
+
 				table.insert(errors, reason)
 			end
 		end
@@ -546,9 +559,9 @@ function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node-
 
 	for _, obj in ipairs(self.Data) do
 		local val = analyzer:Assert(call_node, analyzer:Call(obj, arguments, call_node))
-        
-        -- TODO
-        if val.Type == "tuple" and val:GetLength() == 1 then
+
+		-- TODO
+		if val.Type == "tuple" and val:GetLength() == 1 then
 			val = val:Unpack(1)
 		elseif val.Type == "union" and val:GetMinimumLength() == 1 then
 			val = val:GetAtIndex(1)
@@ -556,7 +569,7 @@ function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node-
 
 		new:AddType(val)
 	end
-	
+
 	local Tuple = require("nattlua.types.tuple").Tuple
 	return Tuple({new})
 end
@@ -571,16 +584,15 @@ end
 
 function META:GetLargestNumber()
 	if #self:GetData() == 0 then return type_errors.other({"union is empty"}) end
+
 	local max = {}
 
 	for _, obj in ipairs(self:GetData()) do
-		if obj.Type ~= "number" then return type_errors.other({"union must contain numbers only", self}) end
-
-		if obj:IsLiteral() then
-			table.insert(max, obj)
-		else
-			return obj
+		if obj.Type ~= "number" then
+			return type_errors.other({"union must contain numbers only", self})
 		end
+
+		if obj:IsLiteral() then table.insert(max, obj) else return obj end
 	end
 
 	table.sort(max, function(a, b)
@@ -598,18 +610,16 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 		Literal = false,
 	}, META)
 
-	if data then
-		for _, v in ipairs(data) do
-			self:AddType(v)
-		end
-	end
+	if data then for _, v in ipairs(data) do
+		self:AddType(v)
+	end end
 
 	return self
 end
 
 return {
-		Union = META.New,
-		Nilable = function(typ)
-			return META.New({typ, Nil()})
-		end,
-	}
+	Union = META.New,
+	Nilable = function(typ)
+		return META.New({typ, Nil()})
+	end,
+}
