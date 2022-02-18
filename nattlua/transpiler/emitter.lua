@@ -336,11 +336,11 @@ function META:EmitFunctionSignature(node)
 	self:EmitToken(node.tokens["function"])
 	self:EmitToken(node.tokens["="])
 	self:EmitToken(node.tokens["arguments("])
-	self:EmitIdentifierList(node.identifiers)
+	self:EmitBreakableList(node.identifiers, self.EmitIdentifierList)
 	self:EmitToken(node.tokens["arguments)"])
 	self:EmitToken(node.tokens[">"])
 	self:EmitToken(node.tokens["return("])
-	self:EmitExpressionList(node.return_types)
+	self:EmitBreakableList(node.return_types, self.EmitExpressionList)
 	self:EmitToken(node.tokens["return)"])		
 end
 
@@ -632,7 +632,7 @@ do
 		end
 
 		self:EmitToken(node.tokens["arguments("])
-		self:EmitIdentifierList(node.identifiers)
+		self:EmitBreakableList(node.identifiers, self.EmitIdentifierList)
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
         
@@ -1313,7 +1313,7 @@ function META:ShouldBreakExpressionList(tbl)
 	return false
 end
 
-function META:EmitExpressionList(tbl)
+function META:EmitNodeList(tbl, func)
 	for i = 1, #tbl do
 		self:PushBreakNewline(self:IsNodeTooLong(tbl[i]))
 
@@ -1323,7 +1323,7 @@ function META:EmitExpressionList(tbl)
 			self:Indent()
 		end
 
-		self:EmitExpression(tbl[i])
+		func(self, tbl[i])
 
 		if break_binary then
 			self:Outdent()
@@ -1344,6 +1344,9 @@ function META:EmitExpressionList(tbl)
 	end
 end
 
+function META:EmitExpressionList(tbl)
+	self:EmitNodeList(tbl, self.EmitExpression)
+end
 function META:HasTypeNotation(node)
 	return node.type_expression or node.inferred_type or node.return_types
 end
@@ -1443,14 +1446,7 @@ function META:EmitIdentifier(node)
 end
 
 function META:EmitIdentifierList(tbl)
-	for i = 1, #tbl do
-		self:EmitIdentifier(tbl[i])
-
-		if i ~= #tbl then
-			self:EmitToken(tbl[i].tokens[","])
-			self:Whitespace(" ")
-		end
-	end
+	self:EmitNodeList(tbl, self.EmitIdentifier)
 end
 
 do -- types
@@ -1765,6 +1761,22 @@ do -- extra
 		self:EmitNonSpace(")")
 	end
 
+	function META:EmitBreakableList(tbl, func)
+		local newline = self:ShouldBreakExpressionList(tbl)
+		self:PushBreakNewline(newline)
+		if newline then
+			self:Indent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		end
+		func(self, tbl)
+		if newline then
+			self:Outdent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		end
+	end
+
 	function META:EmitDestructureAssignment(node)
 		if node.tokens["local"] then
 			self:EmitToken(node.tokens["local"])
@@ -1778,7 +1790,8 @@ do -- extra
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["{"])
 		self:Whitespace(" ")
-		self:EmitIdentifierList(node.left)
+		self:EmitBreakableList(node.left, self.EmitIdentifierList)
+		self:PopBreakNewline()
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["}"])
 		self:Whitespace(" ")

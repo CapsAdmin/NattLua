@@ -408,3 +408,26 @@ end
 -- bar
 local foo = aaa'aaa' -- dawdwa
 local x = 1]])
+
+identical([=[--[[#local type { 
+	ExpressionKind,
+	StatementKind,
+	FunctionAnalyzerStatement,
+	FunctionTypeStatement,
+	FunctionAnalyzerExpression,
+	FunctionTypeExpression,
+	FunctionExpression,
+	FunctionLocalStatement,
+	FunctionLocalTypeStatement,
+	FunctionStatement,
+	FunctionLocalAnalyzerStatement,
+	ValueExpression
+ } = import_type<|"nattlua/parser/nodes.nlua"|>]]]=])
+
+ check({preserve_whitespace = false, use_comment_types = true, annotate = true}, [=[function META:OnError(
+	code--[[#: Code]],
+	message--[[#: string]],
+	start--[[#: number]],
+	stop--[[#: number]],
+	...--[[#: ...any]]
+) end]=])
