@@ -17,11 +17,9 @@ end
 
 
 check({ preserve_whitespace = false, force_parenthesis = true, string_quote = '"' }, 
-[[local foo = aaa 'aaa'
--- dawdwa
+[[local foo = aaa 'aaa'-- dawdwa
 local x = 1]],
-[[local foo = aaa("aaa")
--- dawdwa
+[[local foo = aaa("aaa")-- dawdwa
 local x = 1]]
 )
 
@@ -343,3 +341,42 @@ local foo = x(
 		z = 3,
 	}
 )]])
+
+identical(
+[[local union = stack[#stack].falsy--:Copy()
+if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+
+if not ok then
+	print("DebugStateString: failed to render node: " .. tostring(err))
+	ok, err = pcall(function()
+		s = s .. tostring(node)
+	end)
+
+	if not ok then
+		print("DebugStateString: failed to tostring node: " .. tostring(err))
+		s = s .. "* error in rendering statement * "
+	end
+end]])
+
+identical([[setmetatable(
+	{
+		Code = Code(lua_code, name),
+		parent_line = parent_line,
+		parent_name = parent_name,
+		config = config,
+		Lexer = require("nattlua.lexer.lexer"),
+		Parser = require("nattlua.parser.parser"),
+		Analyzer = require("nattlua.analyzer.analyzer"),
+		Emitter = config and
+			config.js and
+			require("nattlua.transpiler.javascript_emitter")
+			or
+			require("nattlua.transpiler.emitter"),
+	},
+	META
+)]])
+
+identical([[if not ok then
+	assert(err)
+	return ok, err
+end]])

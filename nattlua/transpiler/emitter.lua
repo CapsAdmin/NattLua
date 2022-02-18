@@ -160,7 +160,11 @@ function META:EmitToken(node, translate)
         if self.config.preserve_whitespace == false then
             for _, token in ipairs(node.whitespace) do
                 if token.type == "line_comment" then
-                    self:EmitToken(token)
+					if not token.value:find("^%s+") then
+						self.i = self.last_non_space_index and self.last_non_space_index + 1 or self.i
+					end
+					
+					self:EmitToken(token)
 
                     if node.whitespace[_ + 1] then
                         self:Whitespace("\n")
@@ -723,7 +727,14 @@ function META:EmitTableKeyValue(node)
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["="])
 	self:Whitespace(" ")
+
+	if self:IsNodeTooLong(node.value_expression) then
+		self:Indent()
+	end
 	self:EmitExpression(node.value_expression)
+	if self:IsNodeTooLong(node.value_expression) then
+		self:Outdent()
+	end
 end
 
 function META:EmitEmptyUnion(node)
@@ -764,8 +775,16 @@ function META:IsNodeTooLong(node)
 		return node:GetLength() > self.config.max_line_length or has_function_value(node)
 	end
 
-	if node.kind == "function" then
-		return #node.statements > 1
+	if node.kind == "function" then 
+		return #node.statements > 1 
+	end
+
+	if node.kind == "if" then
+		for i = 1, #node.statements do
+			if #node.statements[i] > 1 then
+				return true
+			end
+		end
 	end
 
 	return node:GetLength() > self.config.max_line_length
