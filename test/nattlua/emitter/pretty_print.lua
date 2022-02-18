@@ -113,40 +113,40 @@ check({preserve_whitespace = false}, [==[local x = a && b || c && a != c || !c]=
 
 identical(
 [[local escape_char_map = {
-		["\\"] = "\\\\",
-		["\""] = "\\\"",
-		["\b"] = "\\b",
-		["\f"] = "\\f",
-		["\n"] = "\\n",
-		["\r"] = "\\r",
-		["\t"] = "\\t",
-	}]])
+	["\\"] = "\\\\",
+	["\""] = "\\\"",
+	["\b"] = "\\b",
+	["\f"] = "\\f",
+	["\n"] = "\\n",
+	["\r"] = "\\r",
+	["\t"] = "\\t",
+}]])
 
 identical(
 [==[--[#[analyzer function coroutine.wrap(cb: Function) end]]]==])
 
 identical( 
 [[local tbl = {
-		foo = true,
-		foo = true,
-		foo = true,
-		foo = true,
-		foo = true,
-		foo = true,
-		foo = true,
-		foo = true,
-		foo = true,
-	}]])
+	foo = true,
+	foo = true,
+	foo = true,
+	foo = true,
+	foo = true,
+	foo = true,
+	foo = true,
+	foo = true,
+	foo = true,
+}]])
 
 
 -- TODO, double indent because of assignment and call
 identical(
 [[pos, ang = LocalToWorld(
-		lexer.Position or Vector(),
-		lexer.Angles or Angle(),
-		pos or owner:GetPos(),
-		ang or owner:GetAngles()
-	)]])
+	lexer.Position or Vector(),
+	lexer.Angles or Angle(),
+	pos or owner:GetPos(),
+	ang or owner:GetAngles()
+)]])
 
 identical([[if not ply.pac_cameras then return end]])
 check({preserve_whitespace = false, use_comment_types = true}, [=[--[[#type Vector.__mul = function=(Vector, number | Vector)>(Vector)]]]=])
@@ -225,19 +225,19 @@ foo(function() end)
 foo(function() end)
 
 pac.AimPartNames = {
-		["local eyes"] = "LOCALEYES",
-		["player eyes"] = "PLAYEREYES",
-		["local eyes yaw"] = "LOCALEYES_YAW",
-		["local eyes pitch"] = "LOCALEYES_PITCH",
-	}]])
+	["local eyes"] = "LOCALEYES",
+	["player eyes"] = "PLAYEREYES",
+	["local eyes yaw"] = "LOCALEYES_YAW",
+	["local eyes pitch"] = "LOCALEYES_PITCH",
+}]])
 
 identical(
 [[return function(config)
-		local self = setmetatable({}, META)
-		self.config = config or {}
-		self:Initialize()
-		return self
-	end]])
+	local self = setmetatable({}, META)
+	self.config = config or {}
+	self:Initialize()
+	return self
+end]])
 
 
 identical(
@@ -273,8 +273,8 @@ identical([[if true then return end]])
 
 identical(
 [[ok, err = pcall(function()
-		s = s .. tostring(node)
-	end)]])
+	s = s .. tostring(node)
+end)]])
 
 identical(
 [[local str = {}
@@ -307,5 +307,39 @@ identical([[if line then str = 1 else str = 2 end]])
 identical([[if t > 0 then msg = "\n" .. msg end]])
 
 identical([[return function()
-		if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-	end]])
+	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+end]])
+
+identical([[local foo = {
+	x = 1,
+	y = 2,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+}
+local foo = function()
+	for i = 1, 100 do
+
+	end
+end
+local foo = x(
+	{
+		x = 1,
+		y = 2,
+		z = 3,
+		z = 3,
+		z = 3,
+		z = 3,
+		z = 3,
+		z = 3,
+		z = 3,
+		z = 3,
+		z = 3,
+	}
+)]])

@@ -759,6 +759,18 @@ local function has_function_value(tree)
 	return false
 end
 
+function META:IsNodeTooLong(node)
+	if node.kind == "table" then
+		return node:GetLength() > self.config.max_line_length or has_function_value(node)
+	end
+
+	if node.kind == "function" then
+		return #node.statements > 1
+	end
+
+	return node:GetLength() > self.config.max_line_length
+end
+
 function META:EmitTable(tree)
 	if tree.spread then
 		self:EmitNonSpace("table.mergetables")
@@ -766,7 +778,7 @@ function META:EmitTable(tree)
 
 	local during_spread = false
 	self:EmitToken(tree.tokens["{"])
-	local newline = tree:GetLength() > self.config.max_line_length or has_function_value(tree)
+	local newline = self:IsNodeTooLong(tree)
 
 	if newline then
 		self:Whitespace("\n")
@@ -879,7 +891,7 @@ function META:EmitBlock(statements)
 end
 
 function META:EmitIfStatement(node)
-	local short = node:GetLength() < self.config.max_line_length
+	local short = not self:IsNodeTooLong(node)
 
 	for i = 1, #node.statements do
 		if node.expressions[i] then
@@ -1052,11 +1064,9 @@ function META:EmitReturnStatement(node)
 	
 	if node.expressions[1] then
 		self:Whitespace(" ")
-        self:Indent()
-		self:PushBreakNewline(node:GetLength() > self.config.max_line_length)
+		self:PushBreakNewline(self:IsNodeTooLong(node))
 		self:EmitExpressionList(node.expressions)
 		self:PopBreakNewline()
-        self:Outdent()
 	end
 end
 
@@ -1090,11 +1100,9 @@ function META:EmitAssignment(node)
 		self:EmitToken(node.tokens["="])
 		self:Whitespace(" ")
         -- we ident here in case the expression list is broken up
-		self:Indent()
 		self:PushBreakNewline(self:ShouldBreakExpressionList(node.right))
 		self:EmitExpressionList(node.right)
 		self:PopBreakNewline()
-		self:Outdent()
 	end
 end
 
@@ -1264,8 +1272,20 @@ end
 
 function META:EmitExpressionList(tbl)
 	for i = 1, #tbl do
-		self:PushBreakNewline(tbl[i]:GetLength() > self.config.max_line_length)
+		self:PushBreakNewline(self:IsNodeTooLong(tbl[i]))
+
+		local break_binary = self:ShouldBreakNewline() and tbl[i].kind == "binary_operator"
+		
+		if break_binary then
+			self:Indent()
+		end
+
 		self:EmitExpression(tbl[i])
+
+		if break_binary then
+			self:Outdent()
+		end
+
 		self:PopBreakNewline()
 		
 		if i ~= #tbl then
@@ -1417,7 +1437,7 @@ do -- types
 	function META:EmitTableType(node)
 		local tree = node
 		self:EmitToken(tree.tokens["{"])
-		local newline = tree:GetLength() > self.config.max_line_length or has_function_value(tree)
+		local newline = self:IsNodeTooLong(tree)
 
 		if newline then
 			self:Indent()
