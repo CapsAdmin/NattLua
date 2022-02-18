@@ -66,8 +66,12 @@ function META:IsStringLower(str--[[#: string]], offset--[[#: number | nil]])--[[
 	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1):lower() == str
 end
 
-function META:OnError(code--[[#: Code]], msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]]) 
-end
+function META:OnError(
+	code--[[#: Code]],
+	msg--[[#: string]],
+	start--[[#: number | nil]],
+	stop--[[#: number | nil]]
+) end
 
 function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
 	self:OnError(self.Code, msg, start or self.Position, stop or self.Position)
@@ -88,7 +92,12 @@ do
 			3105585
 		)
 
-	function META:NewToken(type--[[#: TokenType]], is_whitespace--[[#: boolean]], start--[[#: number]], stop--[[#: number]])--[[#: Token]]
+	function META:NewToken(
+		type--[[#: TokenType]],
+		is_whitespace--[[#: boolean]],
+		start--[[#: number]],
+		stop--[[#: number]]
+	)--[[#: Token]]
 		local tk = new_token()
 		tk.type = type
 		tk.is_whitespace = is_whitespace
@@ -102,6 +111,7 @@ function META:ReadShebang()
 	if self.Position == 1 and self:IsString("#") then
 		for _ = self.Position, self:GetLength() do
 			self:Advance(1)
+
 			if self:IsString("\n") then break end
 		end
 
@@ -132,6 +142,7 @@ end
 
 function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
+
 	local start = self.Position
 	local type, is_whitespace = self:Read()
 
@@ -142,9 +153,7 @@ function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
 		end
 	end
 
-	if not type then
-		type, is_whitespace = self:ReadUnknown()
-	end
+	if not type then type, is_whitespace = self:ReadUnknown() end
 
 	is_whitespace = is_whitespace or false
 	return type, is_whitespace, start, self.Position - 1
@@ -166,7 +175,18 @@ function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
 	return false
 end
 
-local fixed = {"a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",}
+local fixed = {
+	"a",
+	"b",
+	"f",
+	"n",
+	"r",
+	"t",
+	"v",
+	"\\",
+	"\"",
+	"'",
+}
 local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
 local map_double_quote = {[ [[\"]] ] = [["]]}
 local map_single_quote = {[ [[\']] ] = [[']]}
@@ -192,6 +212,7 @@ function META:GetTokens()
 
 	for i = self.Position, self:GetLength() + 1 do
 		tokens[i] = self:ReadToken()
+
 		if tokens[i].type == "end_of_file" then break end
 	end
 
@@ -206,9 +227,7 @@ function META:GetTokens()
 			elseif token.value:sub(1, 1) == "[" then
 				local start = token.value:match("(%[[%=]*%[)")
 
-				if not start then
-					error("unable to match string")
-				end
+				if not start then error("unable to match string") end
 
 				token.string_value = token.value:sub(#start + 1, -#start - 1)
 			end
@@ -241,15 +260,19 @@ function META:GetTokens()
 end
 
 function META.New(code--[[#: Code]])
-	local self = setmetatable({Code = code, Position = 1,}, META)
+	local self = setmetatable({
+		Code = code,
+		Position = 1,
+	}, META)
 	self:ResetState()
 	return self
 end
 
 -- lua lexer
 do
-	--[[# local type Lexer = META.@Self]]
-	--[[# local type { TokenReturnType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+	--[[#local type Lexer = META.@Self]]
+
+	--[[#local type { TokenReturnType } = import_type<|"nattlua/lexer/token.nlua"|>]]
 
 	local characters = require("nattlua.syntax.characters")
 	local runtime_syntax = require("nattlua.syntax.runtime")
@@ -259,6 +282,7 @@ do
 		if characters.IsSpace(lexer:PeekByte()) then
 			while not lexer:TheEnd() do
 				lexer:Advance(1)
+
 				if not characters.IsSpace(lexer:PeekByte()) then break end
 			end
 
@@ -273,6 +297,7 @@ do
 		
 		while not lexer:TheEnd() do
 			lexer:Advance(1)
+
 			if not characters.IsDuringLetter(lexer:PeekByte()) then break end
 		end
 
@@ -281,6 +306,7 @@ do
 
 	local function ReadMultilineCComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if not lexer:IsString("/*") then return false end
+
 		local start = lexer:GetPosition()
 		lexer:Advance(2)
 
@@ -303,10 +329,12 @@ do
 
 	local function ReadLineCComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if not lexer:IsString("//") then return false end
+
 		lexer:Advance(2)
 
 		while not lexer:TheEnd() do
 			if lexer:IsString("\n") then break end
+
 			lexer:Advance(1)
 		end
 
@@ -315,10 +343,12 @@ do
 
 	local function ReadLineComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if not lexer:IsString("--") then return false end
+
 		lexer:Advance(2)
 
 		while not lexer:TheEnd() do
 			if lexer:IsString("\n") then break end
+
 			lexer:Advance(1)
 		end
 
@@ -326,7 +356,15 @@ do
 	end
 
 	local function ReadMultilineComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-		if not lexer:IsString("--[") or (not lexer:IsString("[", 3) and not lexer:IsString("=", 3)) then
+		if
+			not lexer:IsString("--[")
+			or
+			(
+				not lexer:IsString("[", 3)
+				and
+				not lexer:IsString("=", 3)
+			)
+		then
 			return false
 		end
 
@@ -360,12 +398,21 @@ do
 
 	local function ReadInlineAnalyzerDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 		if not lexer:IsString("§") then return false end
+
 			lexer:Advance(#"§")
 
 			while not lexer:TheEnd() do
-				if lexer:IsString("\n") or (lexer.comment_escape and lexer:IsString(lexer.comment_escape)) then
+			if
+				lexer:IsString("\n")
+				or
+				(
+					lexer.comment_escape and
+					lexer:IsString(lexer.comment_escape)
+				)
+			then
 					break
 				end
+
 				lexer:Advance(1)
 			end
 
@@ -374,12 +421,21 @@ do
 
 	local function ReadInlineParserDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 		if not lexer:IsString("£") then return false end
+
 		lexer:Advance(#"£")
 
 		while not lexer:TheEnd() do
-			if lexer:IsString("\n") or (lexer.comment_escape and lexer:IsString(lexer.comment_escape)) then
+			if
+				lexer:IsString("\n")
+				or
+				(
+					lexer.comment_escape and
+					lexer:IsString(lexer.comment_escape)
+				)
+			then
 				break
 			end
+
 			lexer:Advance(1)
 		end
 
@@ -403,6 +459,7 @@ do
 
 		while not lexer:TheEnd() do
 			if not characters.IsNumber(lexer:PeekByte()) then break end
+
 			lexer:Advance(1)
 		end
 
@@ -410,19 +467,21 @@ do
 	end
 
 	local function ReadHexNumber(lexer--[[#: Lexer]])
-		if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then return false end
+		if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then
+			return false
+		end
+
 		lexer:Advance(2)
 		local has_dot = false
 
 		while not lexer:TheEnd() do
-			if lexer:IsString("_") then
-				lexer:Advance(1)
-			end
+			if lexer:IsString("_") then lexer:Advance(1) end
 
 			if not has_dot and lexer:IsString(".") then
 				-- 22..66 would be a number range
 				-- so we have to return 22 only
 				if lexer:IsString(".", 1) then break end
+
 				has_dot = true
 				lexer:Advance(1)
 			end
@@ -439,6 +498,7 @@ do
 				end
 
 				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+
 				lexer:Error(
 					"malformed hex number, got " .. string.char(lexer:PeekByte()),
 					lexer:GetPosition() - 1,
@@ -452,14 +512,15 @@ do
 	end
 
 	local function ReadBinaryNumber(lexer--[[#: Lexer]])
-		if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then return false end
+		if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then
+			return false
+		end
+
 		-- skip past 0b
 		lexer:Advance(2)
 
 		while not lexer:TheEnd() do
-			if lexer:IsString("_") then
-				lexer:Advance(1)
-			end
+			if lexer:IsString("_") then lexer:Advance(1) end
 
 			if lexer:IsString("1") or lexer:IsString("0") then
 				lexer:Advance(1)
@@ -473,6 +534,7 @@ do
 				end
 
 				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+
 				lexer:Error(
 					"malformed binary number, got " .. string.char(lexer:PeekByte()),
 					lexer:GetPosition() - 1,
@@ -486,7 +548,15 @@ do
 	end
 
 	local function ReadDecimalNumber(lexer--[[#: Lexer]])
-		if not characters.IsNumber(lexer:PeekByte()) and (not lexer:IsString(".") or not characters.IsNumber(lexer:PeekByte(1))) then 
+		if
+			not characters.IsNumber(lexer:PeekByte())
+			and
+			(
+				not lexer:IsString(".")
+				or
+				not characters.IsNumber(lexer:PeekByte(1))
+			)
+		then
 			return false
 		end
 
@@ -500,14 +570,13 @@ do
 		end
 
 		while not lexer:TheEnd() do
-			if lexer:IsString("_") then
-				lexer:Advance(1)
-			end
+			if lexer:IsString("_") then lexer:Advance(1) end
 
 			if not has_dot and lexer:IsString(".") then
 				-- 22..66 would be a number range
 				-- so we have to return 22 only
 				if lexer:IsString(".", 1) then break end
+
 				has_dot = true
 				lexer:Advance(1)
 			end
@@ -524,6 +593,7 @@ do
 				end
 				
 				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+
 				lexer:Error(
 					"malformed number, got " .. string.char(lexer:PeekByte()) .. " in decimal notation",
 					lexer:GetPosition() - 1,
@@ -537,7 +607,15 @@ do
 	end
 
 	local function ReadMultilineString(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
-		if not lexer:IsString("[", 0) or (not lexer:IsString("[", 1) and not lexer:IsString("=", 1)) then
+		if
+			not lexer:IsString("[", 0)
+			or
+			(
+				not lexer:IsString("[", 1)
+				and
+				not lexer:IsString("=", 1)
+			)
+		then
 			return false
 		end
 
@@ -547,6 +625,7 @@ do
 		if lexer:IsString("=") then
 			while not lexer:TheEnd() do
 				lexer:Advance(1)
+
 				if not lexer:IsString("=") then break end
 			end
 		end
@@ -569,12 +648,7 @@ do
 			return "string"
 		end
 
-		lexer:Error(
-			"expected multiline string " .. helpers.QuoteToken(closing) .. " reached end of code",
-			start,
-			start + 1
-		)
-
+		lexer:Error("expected multiline string " .. helpers.QuoteToken(closing) .. " reached end of code", start, start + 1)
 		return false
 	end
 
@@ -588,6 +662,7 @@ do
 		local function build_string_reader(name--[[#: string]], quote--[[#: string]])
 			return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 				if not lexer:IsString(quote) then return false end
+
 				local start = lexer:GetPosition()
 				lexer:Advance(1)
 		
@@ -624,6 +699,7 @@ do
 
 	local function ReadSymbol(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if lexer:ReadFirstFromArray(runtime_syntax:GetSymbols()) then return "symbol" end
+
 		return false
 	end
 

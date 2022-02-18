@@ -491,9 +491,7 @@ return {
 						if contract.Type == "union" then
 							local shrunk = contract:ShrinkToFunctionSignature()
 
-							if shrunk then
-								contract = contract:ShrinkToFunctionSignature()
-							end
+							if shrunk then contract = contract:ShrinkToFunctionSignature() end
 						end
 
 						if arg.Type == "function" and contract.Type == "function" then

@@ -10,7 +10,9 @@ type thread = Table
 type empty_function = function=(...)>(...any)
 
 analyzer function NonLiteral(obj: any)
-	if obj.Type == "symbol" and (obj:GetData() == true or obj:GetData() == false) then return types.Boolean() end
+	if obj.Type == "symbol" and (obj:GetData() == true or obj:GetData() == false) then
+		return types.Boolean()
+	end
 
 	if obj.Type == "number" or obj.Type == "string" then
 		obj = obj:Copy()
@@ -26,7 +28,7 @@ function List<|val: any|>
 end
 
 function Map<|key: any, val: any|>
-	return {[key] = val | nil} 
+	return {[key] = val | nil}
 end
 
 function ErrorReturn<|...: ...any|>
@@ -114,12 +116,10 @@ analyzer function copy(obj: any)
 end
 
 analyzer function UnionPairs(values: any)
-	if values.Type ~= "union" then
-		values = types.Union({values})
-	end
+	if values.Type ~= "union" then values = types.Union({values}) end
 
 	local i = 1
-	return function() 
+	return function()
 		local value = values:GetData()[i]
 		i = i + 1
 		return value
@@ -216,9 +216,7 @@ function Extract<|a: any, b: any|>
 
 	for aval in UnionPairs(a) do
 		for bval in UnionPairs(b) do
-			if aval < bval then
-				out = out | aval
-			end
+			if aval < bval then out = out | aval end
 		end
 	end
 
@@ -257,12 +255,16 @@ analyzer function PushTypeEnvironment(obj: any)
 		types.LString("__index"),
 		types.LuaTypeFunction(
 			function(self, key)
-		local ok, err = obj:Get(key)
-		if ok then return ok end
-		local val, err = analyzer:IndexOperator(key:GetNode(), g, key)
-		if val then return val end
-		analyzer:Error(key:GetNode(), err)
-		return types.Nil()
+				local ok, err = obj:Get(key)
+
+				if ok then return ok end
+
+				local val, err = analyzer:IndexOperator(key:GetNode(), g, key)
+
+				if val then return val end
+
+				analyzer:Error(key:GetNode(), err)
+				return types.Nil()
 			end,
 			{types.Any(), types.Any()},
 			{}
@@ -272,10 +274,8 @@ analyzer function PushTypeEnvironment(obj: any)
 		types.LString("__newindex"),
 		types.LuaTypeFunction(
 			function(self, key, val)
-		return analyzer:Assert(analyzer.curent_expression, obj:Set(key, val))
-			end,
-			{types.Any(), types.Any(), types.Any()},
-			{}
+				return analyzer:Assert(analyzer.curent_expression, obj:Set(key, val))
+			end, {types.Any(), types.Any(), types.Any()}, {}
 		)
 	)
 	tbl:SetMetaTable(tbl)
@@ -284,6 +284,6 @@ analyzer function PushTypeEnvironment(obj: any)
 end
 
 analyzer function PopTypeEnvironment()
-   analyzer:PopAnalyzerEnvironment("typesystem")
-   analyzer:PopGlobalEnvironment("typesystem")
+	analyzer:PopAnalyzerEnvironment("typesystem")
+	analyzer:PopGlobalEnvironment("typesystem")
 end

@@ -11,9 +11,7 @@ local analyzer function cast(node: any, args: any)
             -- i'm not really sure about this
             -- boxed luajit ctypes seem to just get the metatable from the ctype
             return analyzer:Assert(key:GetNode(), from:Get(key, from.Type == "union"))
-				end,
-				{types.Any(), types.Any()},
-				{}
+				end, {types.Any(), types.Any()}, {}
 			)
 		)
 
@@ -23,9 +21,7 @@ local analyzer function cast(node: any, args: any)
 				types.LuaTypeFunction(
 					function(self, key, value)
 				error("attempt to write to constant location")
-					end,
-					{types.Any(), types.Any(), types.Any()},
-					{}
+					end, {types.Any(), types.Any(), types.Any()}, {}
 				)
 			)
 		end
@@ -54,7 +50,8 @@ local analyzer function cast(node: any, args: any)
 			table.insert(analyzer.current_tables, tbl)
 		end
 
-		for _, node in ipairs(node) do
+		for _,
+		node in ipairs(node) do
 			if node.tag == "Pair" then
 				local key = types.LString(node[2])
 				local val = cast(node[1], args)
@@ -65,15 +62,14 @@ local analyzer function cast(node: any, args: any)
 			end
 		end
 		
-		if node.n then
-			table.remove(analyzer.current_tables)
-		end
+		if node.n then table.remove(analyzer.current_tables) end
 
 		return tbl
 	elseif node.tag == "Function" then
 		local arguments = {}
 
-		for _, arg in ipairs(node) do
+		for _,
+		arg in ipairs(node) do
 			if arg.ellipsis then
 				table.insert(
 					arguments,
@@ -101,7 +97,10 @@ local analyzer function cast(node: any, args: any)
 			return_type = cast(node.t, args)
 		end
 
-		local obj = types.Function({ret = types.Tuple({return_type}), arg = types.Tuple(arguments),})
+		local obj = types.Function({
+			ret = types.Tuple({return_type}),
+			arg = types.Tuple(arguments),
+		})
 		obj:SetNode(analyzer.current_expression)
 		return obj
 	elseif node.tag == "Array" then
@@ -171,9 +170,7 @@ local analyzer function cast(node: any, args: any)
 		elseif node.n:find("%$%d+%$") then
 			local val = table.remove(args, 1)
 
-			if not val then
-				error("unable to lookup type $ #" .. (#args + 1), 2)
-			end
+			if not val then error("unable to lookup type $ #" .. (#args + 1), 2) end
 
 			return val
 		elseif node.parent and node.parent.tag == "TypeDef" then
@@ -193,6 +190,7 @@ local analyzer function cast(node: any, args: any)
 			if not val or val.Type == "symbol" and val:GetData() == nil then
 				if analyzer.current_tables then
 					local current_tbl = analyzer.current_tables[#analyzer.current_tables]
+
 					if current_tbl and current_tbl.ffi_name == node.n then return current_tbl end
 				end
 
@@ -206,6 +204,7 @@ local analyzer function cast(node: any, args: any)
 		return cast(node.t, args)
 	elseif node.tag == "Pointer" then
 		if node.t.tag == "Type" and node.t.n == "void" then return types.Any() end
+
 		local ptr = types.Table()
 		local ctype = cast(node.t, args)
 		ptr:Set(types.Number(), ctype)
@@ -215,7 +214,11 @@ local analyzer function cast(node: any, args: any)
 		if node.t.tag == "Qualified" and node.t.t.n == "char" then 
 			ptr:Set(types.Number(), ctype)
 			ptr:SetName(types.LString("const char*"))
-			if _G.FUNCTION_ARGUMENT then return types.Union({ptr, types.String(), types.Nil()}) end
+
+			if _G.FUNCTION_ARGUMENT then
+				return types.Union({ptr, types.String(), types.Nil()})
+			end
+
 			return ptr
 		end
 
@@ -263,7 +266,9 @@ analyzer function ffi.cast(cdecl: string, src: any)
 	end
 
 	ctype:SetNode(cdecl:GetNode())
+
 	if ctype.Type == "any" then return ctype end
+
 	local nilable_ctype = ctype:Copy()
 
 	for _, keyval in ipairs(nilable_ctype:GetData()) do
@@ -291,7 +296,9 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 	end
 
 	ctype:SetNode(cdecl:GetNode())
+
 	if ctype.Type == "any" then return ctype end
+
 	local nilable_ctype = ctype:Copy()
 
 	for _, keyval in ipairs(nilable_ctype:GetData()) do
@@ -346,9 +353,7 @@ analyzer function ffi.metatype(ctype: any, meta: any)
 
 			if val.Type == "union" then
 						for i, v in ipairs(val:GetData()) do
-					if v.Type == "table" then
-						v:SetMetaTable(meta)
-					end
+							if v.Type == "table" then v:SetMetaTable(meta) end
 				end
 			else
 				val:SetMetaTable(meta)

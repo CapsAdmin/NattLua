@@ -1,10 +1,12 @@
 analyzer function import_type(name: string)
-	if not name:IsLiteral() then
-		error("path must be a literal string")
-	end
+	if not name:IsLiteral() then error("path must be a literal string") end
 
 	local path = name:GetData()
-	if analyzer.loaded and analyzer.loaded[path] then return analyzer.loaded[path] end
+
+	if analyzer.loaded and analyzer.loaded[path] then
+		return analyzer.loaded[path]
+	end
+
 	local compiler = assert(require("nattlua").File(analyzer:ResolvePath(path)))
 	assert(compiler:Lex())
 	assert(compiler:Parse())

@@ -29,6 +29,7 @@ type tostring = function=(val: any)>(string)
 
 analyzer function type_assert_truthy(obj: any, err: string | nil)
 	if obj:IsTruthy() then return obj end
+
 	error(err and err:GetData() or "assertion failed")
 end
 
@@ -42,7 +43,10 @@ analyzer function next(t: Map<|any, any|>, k: any)
 					local kv = t:GetData()[i + 1]
 
 					if kv then
-						if not k:IsLiteral() then return type.Union({types.Nil(), kv.key}), type.Union({types.Nil(), kv.val}) end
+						if not k:IsLiteral() then
+							return type.Union({types.Nil(), kv.key}), type.Union({types.Nil(), kv.val})
+						end
+
 						return kv.key, kv.val
 					end
 
@@ -51,15 +55,12 @@ analyzer function next(t: Map<|any, any|>, k: any)
 			end
 		else
 			local kv = t:GetData() and t:GetData()[1]
+
 			if kv then return kv.key, kv.val end
 		end
 	end
 
-	if t.Type == "union" then
-		t = t:GetData()
-	else
-		t = {t}
-	end
+	if t.Type == "union" then t = t:GetData() else t = {t} end
 
 	local k = types.Union()
 	local v = types.Union()
@@ -88,7 +89,9 @@ analyzer function pairs(tbl: Table)
 		local i = 1
 		return function()
 			local kv = tbl:GetData()[i]
+
 			if not kv then return nil end
+
 			i = i + 1
 			local o = analyzer:GetMutatedTableValue(tbl, kv.key, kv.val)
 			return kv.key, o or kv.val
@@ -98,15 +101,15 @@ analyzer function pairs(tbl: Table)
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k,
+	v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 
-	if v and v.Type == "union" then
-		v:RemoveType(types.Symbol(nil))
-	end
+	if v and v.Type == "union" then v:RemoveType(types.Symbol(nil)) end
 
 	return function()
 		if done then return nil end
+
 		done = true
 		return k, v
 	end
@@ -117,7 +120,9 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 		local i = 1
 		return function(key, val)
 			local kv = tbl:GetData()[i]
+
 			if not kv then return nil end
+
 			i = i + 1
 			return kv.key, kv.val
 		end
@@ -128,6 +133,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 		local done = false
 		return function()
 			if done then return nil end
+
 			done = true
 			return types.Any(), types.Any()
 		end
@@ -136,16 +142,16 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k,
+	v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 	return function()
 		if done then return nil end
+
 		done = true
 
 		-- v must never be nil here
-		if v.Type == "union" then
-			v = v:Copy():RemoveType(types.Symbol(nil))
-		end
+		if v.Type == "union" then v = v:Copy():RemoveType(types.Symbol(nil)) end
 
 		return k, v
 	end
@@ -153,11 +159,18 @@ end
 
 analyzer function require(name: string)
 	if not name:IsLiteral() then return types.Any() end
+
 	local str = name
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
+
 	if val then return val end
-	local modules = {"table.new", "jit.util", "jit.opt",}
+
+	local modules = {
+		"table.new",
+		"jit.util",
+		"jit.opt",
+	}
 
 	for _, mod in ipairs(modules) do
 		if str:GetData() == mod then
@@ -170,12 +183,14 @@ analyzer function require(name: string)
 
 			-- in case it's not found
 			-- TODO, add ability to configure the analyzer
-			analyzer:Warning(analyzer.current_expression, "module '" .. mod .. "' might not exist") 	
+			analyzer:Warning(analyzer.current_expression, "module '" .. mod .. "' might not exist")
 			return tbl
-		end		
+		end
 	end
 
-	if analyzer:GetLocalOrGlobalValue(str) then return analyzer:GetLocalOrGlobalValue(str) end
+	if analyzer:GetLocalOrGlobalValue(str) then
+		return analyzer:GetLocalOrGlobalValue(str)
+	end
 
 	if package.loaders then
 		for _, searcher in ipairs(package.loaders) do
@@ -186,7 +201,11 @@ analyzer function require(name: string)
 
 				if path:sub(1, 1) == "@" then
 					local path = path:sub(2)
-					if analyzer.loaded and analyzer.loaded[path] then return analyzer.loaded[path] end
+
+					if analyzer.loaded and analyzer.loaded[path] then
+						return analyzer.loaded[path]
+					end
+
 					local compiler = require("nattlua").File(analyzer:ResolvePath(path))
 					assert(compiler:Lex())
 					assert(compiler:Parse())
@@ -208,33 +227,35 @@ analyzer function type_error(str: string, level: number | nil)
 end
 
 analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil)
-	if not code:IsLiteral() or code.Type == "union" then 
-		return types.Tuple({
-			types.Union({types.Nil(), types.AnyFunction()}),
-			types.Union({types.Nil(), types.String()})
-		})
+	if not code:IsLiteral() or code.Type == "union" then
+		return types.Tuple(
+			{
+				types.Union({types.Nil(), types.AnyFunction()}),
+				types.Union({types.Nil(), types.String()}),
+			}
+		)
 	end
+
 	local str = code:GetData()
-
-
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
 	return types.Function(
-			{
-				arg = types.Tuple({}),
-				ret = types.Tuple({}),
-				lua_function = function(...)
-					return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-				end,
-			}
-		):SetNode(compiler.SyntaxTree)
+		{
+			arg = types.Tuple({}),
+			ret = types.Tuple({}),
+			lua_function = function(...)
+				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+			end,
+		}
+	):SetNode(compiler.SyntaxTree)
 end
 
 type loadstring = load
 
 analyzer function dofile(path: string)
 	if not path:IsLiteral() then return types.Any() end
+
 	local f = assert(io.open(path:GetData(), "rb"))
 	local code = f:read("*all")
 	f:close()
@@ -246,6 +267,7 @@ end
 
 analyzer function loadfile(path: string)
 	if not path:IsLiteral() then return types.Any() end
+
 	local f = assert(io.open(path:GetData(), "rb"))
 	local code = f:read("*all")
 	f:close()
@@ -253,14 +275,14 @@ analyzer function loadfile(path: string)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
 	return types.Function(
-			{
-				arg = types.Tuple({}),
-				ret = types.Tuple({}),
-				lua_function = function(...)
-					return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
-				end,
-			}
-		):SetNode(compiler.SyntaxTree)
+		{
+			arg = types.Tuple({}),
+			ret = types.Tuple({}),
+			lua_function = function(...)
+				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+			end,
+		}
+	):SetNode(compiler.SyntaxTree)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
@@ -269,6 +291,7 @@ end
 
 analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 	local t, err = tbl:Get(key, true)
+
 	if t then return t end
 end
 
@@ -284,7 +307,7 @@ analyzer function assert(obj: any, msg: string | nil)
 
 		return obj
 	end
-	
+
 	if obj.Type == "union" then
 		for _, tup in ipairs(obj:GetData()) do
 			if tup.Type == "tuple" and tup:Get(1):IsTruthy() then return tup end
@@ -335,6 +358,7 @@ analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 
 	for i = count, #diagnostics do
 		local diagnostic = diagnostics[i]
+
 		if diagnostic and diagnostic.severity == "error" then
 			return types.Boolean(), types.Union({types.LString(diagnostic.msg), types.Any()})
 		end
@@ -348,7 +372,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 	analyzer:PushProtectedCall()
 	local tuple = analyzer:Assert(analyzer.current_statement, analyzer:Call(func, types.Tuple({...})))
 	analyzer:PopProtectedCall()
-	
+
 	do
 		local errors = {}
 
@@ -360,7 +384,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 
 		if errors[1] then return false, table.concat(errors, "\n") end
 	end
-	
+
 	return true, tuple:Unpack()
 end
 
@@ -379,16 +403,16 @@ analyzer function type(obj: any)
 		copy:SetUpvalue(obj:GetUpvalue())
 
 		for _, v in ipairs(obj:GetData()) do
-			if v.GetLuaType then
-				copy:AddType(types.LString(v:GetLuaType()))
-			end
+			if v.GetLuaType then copy:AddType(types.LString(v:GetLuaType())) end
 		end
 
 		return copy
 	end
 
 	if obj.Type == "any" then return types.String() end
+
 	if obj.GetLuaType then return obj:GetLuaType() end
+
 	return types.String()
 end
 
@@ -402,23 +426,23 @@ function MetaTableFunctions<|T: any|>
 		__newindex = function=(T, key: any, value: any)>(),
 		__len = function=(a: T)>(number),
 		__unm = function=(a: T)>(any),
-		__bnot = function=(a: T)>(any), 
-			__add = function=(a: T, b: any)>(any),
-			__sub = function=(a: T, b: any)>(any),
-			__mul = function=(a: T, b: any)>(any),
-			__div = function=(a: T, b: any)>(any),
-			__idiv = function=(a: T, b: any)>(any),
-			__mod = function=(a: T, b: any)>(any),
-			__pow = function=(a: T, b: any)>(any),
-			__band = function=(a: T, b: any)>(any),
-			__bor = function=(a: T, b: any)>(any),
-			__bxor = function=(a: T, b: any)>(any),
-			__shl = function=(a: T, b: any)>(any),
-			__shr = function=(a: T, b: any)>(any),
-			__concat = function=(a: T, b: any)>(any),
-			__eq = function=(a: T, b: any)>(boolean),
-			__lt = function=(a: T, b: any)>(boolean),
-			__le = function=(a: T, b: any)>(boolean),
+		__bnot = function=(a: T)>(any),
+		__add = function=(a: T, b: any)>(any),
+		__sub = function=(a: T, b: any)>(any),
+		__mul = function=(a: T, b: any)>(any),
+		__div = function=(a: T, b: any)>(any),
+		__idiv = function=(a: T, b: any)>(any),
+		__mod = function=(a: T, b: any)>(any),
+		__pow = function=(a: T, b: any)>(any),
+		__band = function=(a: T, b: any)>(any),
+		__bor = function=(a: T, b: any)>(any),
+		__bxor = function=(a: T, b: any)>(any),
+		__shl = function=(a: T, b: any)>(any),
+		__shr = function=(a: T, b: any)>(any),
+		__concat = function=(a: T, b: any)>(any),
+		__eq = function=(a: T, b: any)>(boolean),
+		__lt = function=(a: T, b: any)>(boolean),
+		__le = function=(a: T, b: any)>(boolean),
 	}
 end
 
@@ -452,10 +476,10 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 
 				if ok then
 
-					--TODO: enrich callback types
-					--b:SetReturnTypes(a:GetReturnTypes())
-					--b:SetArguments(a:GetArguments())
-					--b.arguments_inferred = true
+				--TODO: enrich callback types
+				--b:SetReturnTypes(a:GetReturnTypes())
+				--b:SetArguments(a:GetArguments())
+				--b.arguments_inferred = true
 				end
 			end
 		end
@@ -470,6 +494,7 @@ end
 
 analyzer function tostring(val: any)
 	if not val:IsLiteral() then return types.String() end
+
 	if val.Type == "string" then return val end
 
 	if val.Type == "table" then
@@ -492,7 +517,9 @@ analyzer function tostring(val: any)
 end
 
 analyzer function tonumber(val: string | number, base: number | nil)
-	if not val:IsLiteral() or base and not base:IsLiteral() then return types.Union({types.Nil(), types.Number()}) end
+	if not val:IsLiteral() or base and not base:IsLiteral() then
+		return types.Union({types.Nil(), types.Number()})
+	end
 
 	if val:IsLiteral() then
 		base = base and base:IsLiteral() and base:GetData()

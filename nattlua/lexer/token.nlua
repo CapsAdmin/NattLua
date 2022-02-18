@@ -1,21 +1,21 @@
 local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"
 local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType
 local type Token = {
-		@Name = "Token",
-		type = TokenType,
-		value = string,
-		start = number,
-		stop = number,
-		is_whitespace = boolean | nil,
-		whitespace = false | nil | {
-			[1 .. inf] = {
-				type = TokenWhitespaceType,
-				value = string,
-				start = number,
-				stop = number,
-			},
+	@Name = "Token",
+	type = TokenType,
+	value = string,
+	start = number,
+	stop = number,
+	is_whitespace = boolean | nil,
+	whitespace = false | nil | {
+		[1 .. inf] = {
+			type = TokenWhitespaceType,
+			value = string,
+			start = number,
+			stop = number,
 		},
-	}
+	},
+}
 local type TokenReturnType = TokenType | false
 return {
 	Token = Token,
