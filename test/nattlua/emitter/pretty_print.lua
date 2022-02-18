@@ -437,3 +437,14 @@ identical([[local type Context = {
 	tab_limit = number,
 	done = Table,
 }]])
+
+check({preserve_whitespace = false, use_comment_types = false, annotate = true}, [=[type coroutine = {
+	create = --[[#function=(empty_function)>(thread)]],
+	close = --[[#function=(thread)>(boolean, string)]],
+	isyieldable = --[[#function=()>(boolean)]],
+	resume = --[[#function=(thread, ...)>(boolean, ...)]],
+	running = --[[#function=()>(thread, boolean)]],
+	status = --[[#function=(thread)>(string)]],
+	wrap = --[[#function=(empty_function)>(empty_function)]],
+	yield = --[[#function=(...)>(...)]],
+}]=])
