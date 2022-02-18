@@ -795,8 +795,14 @@ local function has_function_value(tree)
 end
 
 function META:IsNodeTooLong(node)
-	if node.kind == "table" then
-		return node:GetLength() > self.config.max_line_length or has_function_value(node)
+	if node.kind == "table" or node.kind == "type_table" then
+		if node:GetLength() > self.config.max_line_length or has_function_value(node) then
+			return true
+		end
+
+		if #node.children > 0 and #node.children == #node.tokens["separators"] then
+			return true
+		end
 	end
 
 	if node.kind == "function" then 

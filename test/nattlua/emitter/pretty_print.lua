@@ -431,3 +431,9 @@ identical([=[--[[#local type {
 	stop--[[#: number]],
 	...--[[#: ...any]]
 ) end]=])
+
+identical([[local type Context = {
+	tab = number,
+	tab_limit = number,
+	done = Table,
+}]])
