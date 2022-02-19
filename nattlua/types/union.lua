@@ -6,7 +6,7 @@ local ipairs = _G.ipairs
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 
---[[#local { TNumber } = require("nattlua.types.number")]]
+--[[#local type { TNumber } = require("nattlua.types.number")]]
 
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
