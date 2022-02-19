@@ -35,9 +35,9 @@ function META:FindNearest(str--[[#: string]], start--[[#: number]])
 end
 
 local function remove_bom_header(str--[[#: string]])--[[#: string]]
-	if str:sub(1, 2) == "\\xFE\\xFF" then
+	if str:sub(1, 2) == "\xFE\xFF" then
 		return str:sub(3)
-	elseif str:sub(1, 3) == "\\xEF\\xBB\\xBF" then
+	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
 		return str:sub(4)
 	end
 

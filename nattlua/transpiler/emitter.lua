@@ -391,6 +391,13 @@ do
 		["\v"] = [[\v]],
 	}
 
+	local skip_escape = {
+		["x"] = true,
+		["X"] = true,
+		["u"] = true,
+		["U"] = true,
+	}
+
 	local function escape_string(str, quote)
 		local new_str = {}
 
@@ -401,7 +408,7 @@ do
 				new_str[i] = "\\" .. c
 			elseif escape[c] then
 				new_str[i] = escape[c]
-			elseif c == "\\" then
+			elseif c == "\\" and not skip_escape[str:sub(i+1, i+1)] then
 				new_str[i] = "\\\\"
 			else
 				new_str[i] = c
