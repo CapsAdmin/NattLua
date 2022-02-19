@@ -249,7 +249,8 @@ analyzer function ffi.cdef(cdecl: string, ...: ...any)
 	end
 end
 
---§env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true
+§env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true
+
 analyzer function ffi.cast(cdecl: string, src: any)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}))
@@ -327,7 +328,7 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 	return ctype
 end
 
---§env.typesystem.ffi:Get(types.LString("typeof")).no_expansion = true
+§env.typesystem.ffi:Get(types.LString("typeof")).no_expansion = true
 analyzer function ffi.get_type(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))

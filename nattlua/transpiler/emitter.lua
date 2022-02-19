@@ -1227,9 +1227,9 @@ function META:EmitStatement(node)
 	elseif node.kind == "root" then
 		self:EmitStatements(node.statements)
 	elseif node.kind == "analyzer_debug_code" then
-		self:EmitNonSpace("--" .. node.lua_code.value.value)
+		self:EmitInvalidLuaCode("EmitExpression", node.lua_code)
 	elseif node.kind == "parser_debug_code" then
-		self:EmitNonSpace("--" .. node.lua_code.value.value)
+		self:EmitInvalidLuaCode("EmitExpression", node.lua_code)
 	elseif node.kind then
 		error("unhandled statement: " .. node.kind)
 	else
