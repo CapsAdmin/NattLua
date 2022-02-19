@@ -475,3 +475,12 @@ local name = ReadSpace(self) or
 	ReadLineCComment(self) or
 	ReadMultilineComment(self) or
 	ReadLineComment(self)]])
+
+identical([[do
+	while
+		runtime_syntax:GetBinaryOperatorInfo(self:GetToken()) and
+		runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
+	do
+
+	end
+end]])

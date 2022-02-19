@@ -301,6 +301,30 @@ do -- newline breaking
 		return node:GetLength() > self.config.max_line_length
 	end
 
+	function META:EmitLineBreakableExpression(node)
+		local newlines = self:ShouldLineBreakNode(node)
+
+		if newlines then
+			self:Indent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		else
+			self:Whitespace(" ")
+		end
+
+		self:PushForcedLineBreaking(newlines)
+		self:EmitExpression(node)
+		self:PopForcedLineBreaking()
+
+		if newlines then
+			self:Outdent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		else
+			self:Whitespace(" ")
+		end
+	end
+
 	function META:EmitLineBreakableList(tbl, func)
 		local newline = self:ShouldBreakExpressionList(tbl)
 
@@ -978,28 +1002,7 @@ function META:EmitIfStatement(node)
 			end
 
 			self:EmitToken(node.tokens["if/else/elseif"][i])
-			local newlines = node.tokens["then"][i].start - node.tokens["if/else/elseif"][i].stop > self.config.max_line_length
-
-			if newlines then
-				self:Indent()
-				self:Whitespace("\n")
-				self:Whitespace("\t")
-			else
-				self:Whitespace(" ")
-			end
-
-			self:PushForcedLineBreaking(newlines) 
-			self:EmitExpression(node.expressions[i])
-			self:PopForcedLineBreaking()
-
-			if newlines then
-				self:Outdent()
-				self:Whitespace("\n")
-				self:Whitespace("\t")
-			else
-				self:Whitespace(" ")
-			end
-
+			self:EmitLineBreakableExpression(node.expressions[i])
 			self:EmitToken(node.tokens["then"][i])
 		elseif node.tokens["if/else/elseif"][i] then
 			if not short then
@@ -1073,9 +1076,7 @@ end
 
 function META:EmitWhileStatement(node)
 	self:EmitToken(node.tokens["while"])
-	self:Whitespace(" ")
-	self:EmitExpression(node.expression)
-	self:Whitespace(" ")
+	self:EmitLineBreakableExpression(node.expression)
 	self:EmitToken(node.tokens["do"])
 	self:PushLoop(node)
 	self:Whitespace("\n")
