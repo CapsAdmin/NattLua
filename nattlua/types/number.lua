@@ -68,9 +68,7 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	local a_max = a.Max
 	local b_max = b.Max
 
-	if a_max then
-		if b_max then if a_max:Equal(b_max) then return true end end
-	end
+	if a_max then if b_max then if a_max:Equal(b_max) then return true end end end
 
 	if a_max or b_max then return false end
 

@@ -1198,9 +1198,7 @@ function META:EmitStatement(node)
 		else
 			self:EmitAssignment(node)
 
-			if node.kind == "assignment" then
-				self:Emit_ENVFromAssignment(node)
-			end
+			if node.kind == "assignment" then self:Emit_ENVFromAssignment(node) end
 		end
 	elseif node.kind == "import" then
 		self:EmitNonSpace("local")

@@ -108,9 +108,7 @@ do -- typesystem
 
 		node.right = self:ReadRuntimeExpression(math_huge)
 
-		if node.value.value == "expand" then
-			self:PopParserEnvironment()
-		end
+		if node.value.value == "expand" then self:PopParserEnvironment() end
 
 		self:EndNode(node)
 		return node
@@ -428,10 +426,7 @@ do -- typesystem
 				"expected beginning of expression, got $1",
 				nil,
 				nil,
-				token and
-					token.value ~= "" and
-					token.value or
-					token.type
+				token and token.value ~= "" and token.value or token.type
 			)
 			return
 		end
@@ -793,10 +788,7 @@ do -- runtime
 					"expected right side to be an expression, got $1",
 					nil,
 					nil,
-					token and
-						token.value ~= "" and
-						token.value or
-						token.type
+					token and token.value ~= "" and token.value or token.type
 				)
 				return
 			end
@@ -835,10 +827,7 @@ do -- runtime
 				"expected beginning of expression, got $1",
 				nil,
 				nil,
-				token and
-					token.value ~= "" and
-					token.value or
-					token.type
+				token and token.value ~= "" and token.value or token.type
 			)
 			return
 		end

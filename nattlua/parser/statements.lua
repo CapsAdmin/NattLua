@@ -143,9 +143,7 @@ do
 				node.expression.force_upvalue = force_upvalue
 			end
 
-			if node.expression.value.value == ":" then
-				node.self_call = true
-			end
+			if node.expression.value.value == ":" then node.self_call = true end
 		end
 
 		self:ReadAnalyzerFunctionBody(node, true)
@@ -281,13 +279,11 @@ function META:ReadIfStatement()
 		if i == 1 then
 			token = self:ExpectValue("if")
 		else
-			token = self:ReadValues(
-				{
-					["else"] = true,
-					["elseif"] = true,
-					["end"] = true,
-				}
-			)
+			token = self:ReadValues({
+				["else"] = true,
+				["elseif"] = true,
+				["end"] = true,
+			})
 		end
 
 		if not token then return end -- TODO: what happens here? :End is never called
@@ -298,13 +294,11 @@ function META:ReadIfStatement()
 			node.tokens["then"][i] = self:ExpectValue("then")
 		end
 
-		node.statements[i] = self:ReadNodes(
-			{
-				["end"] = true,
-				["else"] = true,
-				["elseif"] = true,
-			}
-		)
+		node.statements[i] = self:ReadNodes({
+			["end"] = true,
+			["else"] = true,
+			["elseif"] = true,
+		})
 
 		if self:IsValue("end") then break end
 	end

@@ -144,9 +144,7 @@ function META:ReadTealTable()
 			table.insert(node.children, kv)
 
 			if not self:IsValue(",") then
-				if i > 1 then
-					key.value = self:NewToken("number", tostring(i))
-				end
+				if i > 1 then key.value = self:NewToken("number", tostring(i)) end
 
 				break
 			end

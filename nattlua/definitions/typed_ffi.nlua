@@ -250,7 +250,6 @@ analyzer function ffi.cdef(cdecl: string, ...: ...any)
 end
 
 --§env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true
-
 analyzer function ffi.cast(cdecl: string, src: any)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}))
