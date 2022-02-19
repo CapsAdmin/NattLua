@@ -734,12 +734,7 @@ do
     end
 end
 
-local function capture_flags(what --[[#: ref string]]) --[[#: ref {
-    lookup = {[string] = number},
-    reverse = {[number] = string},
-    strict_reverse = (function(number): string),
-    strict_lookup = (function(string): number),
-} ]]
+local function capture_flags(what)
     local flags = {}
     local reverse = {}
     for k, v in pairs(e) do
@@ -880,20 +875,6 @@ local function addrinfo_to_table(res, host, service)
 
     return info
 end
-
---[[#
-    local type AddressInfo = {
-        host = string,
-        service = number | string,
-        family = keysof(AF.lookup),
-        socket_type = keysof(SOCK.lookup),
-        protocol = keysof(IPPROTO.lookup),
-        flags = keysof(AI.lookup),
-    }
-
-    print<|"!!!!", AddressInfo|>
-]]
-
 
 function M.get_address_info(data --[[#: AddressInfo ]])
     local hints
