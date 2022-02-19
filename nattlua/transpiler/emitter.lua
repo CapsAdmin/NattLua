@@ -1790,7 +1790,7 @@ do -- extra
 	end
 
 	function META:EmitImportExpression(node)
-		if not node.path then 
+		if not node.path then
 			self:EmitToken(node.tokens["import"])
 			self:EmitToken(node.tokens["arguments("])
 			self:EmitExpressionList(node.expressions)
