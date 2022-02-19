@@ -625,6 +625,12 @@ function META:EmitCall(node)
 
 	local newlines = self:ShouldBreakExpressionList(node.expressions)
 
+	local last = node.expressions[#node.expressions]
+	
+	if last and last.kind == "function" and #node.expressions < 4 then
+		newlines = false
+	end
+
 	if newlines then
 		self:Indent()
 		self:Whitespace("\n")

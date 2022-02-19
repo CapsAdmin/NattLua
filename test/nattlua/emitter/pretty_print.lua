@@ -494,3 +494,9 @@ identical(
 	[=[--[[#£parser.config.skip_import = true]]
 
 local x = import("platforms/windows/filesystem.nlua")]=])
+
+identical([[hook.Add("Foo", "bar_foo", function(ply, pos)
+    for i = 1, 10 do
+        ply:SetPos(pos + VectorRand())
+    end
+end)]])
