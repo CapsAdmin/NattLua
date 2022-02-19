@@ -5,9 +5,7 @@ function table.destructure(tbl, fields, with_default)
 		out[i] = tbl[key]
 	end
 
-	if with_default then
-		table.insert(out, 1, tbl)
-	end
+	if with_default then table.insert(out, 1, tbl) end
 
 	return table.unpack(out)
 end
@@ -26,14 +24,17 @@ end
 
 function table.spread(tbl)
 	if not tbl then return nil end
+
 	return table.unpack(tbl)
 end
 
 function LSX(tag, constructor, props, children)
 	local e = constructor and
-		constructor(props, children)
-		or
-		{props = props, children = children,}
+		constructor(props, children) or
+		{
+			props = props,
+			children = children,
+		}
 	e.tag = tag
 	return e
 end

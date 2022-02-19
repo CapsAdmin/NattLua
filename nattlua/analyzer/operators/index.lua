@@ -45,14 +45,11 @@ return {
 						index.Type == "table" and
 						(
 							(
-								index:GetContract()
-								or
+								index:GetContract() or
 								index
-							):Contains(key)
-							or
+							):Contains(key) or
 							(
-								index:GetMetaTable()
-								and
+								index:GetMetaTable() and
 								index:GetMetaTable():Contains(LString("__index"))
 							)
 						)

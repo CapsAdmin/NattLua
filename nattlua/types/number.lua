@@ -7,38 +7,33 @@ local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local bit = require("bit")
 local META = dofile("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType ]]
+--[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
 META.Type = "number"
 META:GetSet("Data", nil--[[# as number | nil]])
-
---[[#
-	local type TUnion = {
-		@Name = "TUnion",
-		Type = "union",
-		GetLargestNumber = function=(self)>(TNumber | nil, nil | any)
-	}
-]]
+--[[#local type TUnion = {
+	@Name = "TUnion",
+	Type = "union",
+	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
+}]]
 
 do -- TODO, operators is mutated below, need to use upvalue position when analyzing typed arguments
 	local operators = {
-			["-"] = function(l--[[#: number]])
-				return -l
-			end,
-			["~"] = function(l--[[#: number]])
-				return bit.bnot(l)
-			end,
-		}
+		["-"] = function(l--[[#: number]])
+			return -l
+		end,
+		["~"] = function(l--[[#: number]])
+			return bit.bnot(l)
+		end,
+	}
 
 	function META:PrefixOperator(op--[[#: keysof<|operators|>]])
 		if self:IsLiteral() then
 			local num = self.New(operators[op](self:GetData()--[[# as number]])):SetLiteral(true)
 			local max = self:GetMax()
 
-			if max then
-				num:SetMax(max:PrefixOperator(op))
-			end
+			if max then num:SetMax(max:PrefixOperator(op)) end
 
 			return num
 		end
@@ -54,16 +49,19 @@ end
 
 function META:GetHash()
 	if self:IsLiteral() then return self.Data end
+
 	return "__@type@__" .. self.Type
 end
 
 function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	if a.Type ~= b.Type then return false end
+
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 
 	if a:IsLiteral() and b:IsLiteral() then
-        -- nan
-        if a:GetData() ~= a:GetData() and b:GetData() ~= b:GetData() then return true end
+		-- nan
+		if a:GetData() ~= a:GetData() and b:GetData() ~= b:GetData() then return true end
+
 		return a:GetData() == b:GetData()
 	end
 
@@ -71,13 +69,13 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
 	local b_max = b.Max
 
 	if a_max then
-		if b_max then
-			if a_max:Equal(b_max) then return true end
-		end
+		if b_max then if a_max:Equal(b_max) then return true end end
 	end
 
 	if a_max or b_max then return false end
+
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
+
 	return false
 end
 
@@ -85,21 +83,19 @@ function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
 	local max = self.Max
 
-	if max then
-		copy.Max = max:Copy()
-	end
+	if max then copy.Max = max:Copy() end
 
 	copy:CopyInternalsFrom(self)
-	return copy --[[# as any]] -- TODO: figure out inheritance
+	return copy--[[# as any]] -- TODO: figure out inheritance
 end
 
 function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
-	if B.Type == "tuple" then
-		B = (B--[[# as any]]):Get(1)
-	end
+	if B.Type == "tuple" then B = (B)--[[# as any]]:Get(1) end
 
 	if B.Type == "any" then return true end
-	if B.Type == "union" then return (B--[[# as any]]):IsTargetSubsetOfChild(A) end
+
+	if B.Type == "union" then return (B)--[[# as any]]:IsTargetSubsetOfChild(A) end
+
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
 	if A:IsLiteral() and B:IsLiteral() then
@@ -113,11 +109,10 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
 		end
 
 		if a == b then return true end
+
 		local max = B:GetMaxLiteral()
 
-		if max then
-			if a >= b and a <= max then return true end
-		end
+		if max then if a >= b and a <= max then return true end end
 
 		return type_errors.subset(A, B)
 	elseif A:GetData() == nil and B:GetData() == nil then
@@ -139,18 +134,16 @@ function META:__tostring()
 	local n = self:GetData()
 	local s--[[#: string]]
 
-	if n ~= n then
-		s = "nan"
-	end
+	if n ~= n then s = "nan" end
 
 	s = tostring(n)
 
-	if self:GetMax() then
-		s = s .. ".." .. tostring(self:GetMax())
-	end
+	if self:GetMax() then s = s .. ".." .. tostring(self:GetMax()) end
 
 	if self:IsLiteral() then return s end
+
 	if self:GetData() then return "number(" .. s .. ")" end
+
 	return "number"
 end
 
@@ -160,11 +153,14 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 	local err
 
 	if val.Type == "union" then
-		val, err = (val--[[# as any]]):GetLargestNumber()
+		val, err = (val)--[[# as any]]:GetLargestNumber()
+
 		if not val then return val, err end
 	end
 
-	if val.Type ~= "number" then return type_errors.other({"max must be a number, got ", val}) end
+	if val.Type ~= "number" then
+		return type_errors.other({"max must be a number, got ", val})
+	end
 
 	if val:IsLiteral() then
 		self.Max = val
@@ -197,7 +193,12 @@ do
 		end,
 	}
 
-	local function compare(val--[[#: number]], min--[[#: number]], max--[[#: number]], operator--[[#: keysof<|operators|>]])
+	local function compare(
+		val--[[#: number]],
+		min--[[#: number]],
+		max--[[#: number]],
+		operator--[[#: keysof<|operators|>]]
+	)
 		local func = operators[operator]
 
 		if func(min, val) and func(max, val) then
@@ -212,7 +213,7 @@ do
 	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: "=="]])--[[#: boolean | nil]]
 		if not a:IsLiteral() or not b:IsLiteral() then return nil end
 
-		if operator == "==" then		
+		if operator == "==" then
 			local a_val = a:GetData()
 			local b_val = b:GetData()
 
@@ -220,8 +221,9 @@ do
 				local max = a:GetMax()
 				local max = max and max:GetData()
 
-				if max and a_val then 
+				if max and a_val then
 					if b_val >= a_val and b_val <= max then return nil end
+
 					return false
 				end
 			end
@@ -230,13 +232,15 @@ do
 				local max = b:GetMax()
 				local max = max and max:GetData()
 
-				if max and b_val then 
+				if max and b_val then
 					if a_val >= b_val and a_val <= max then return nil end
+
 					return false
 				end
 			end
 
 			if a_val and b_val then return a_val == b_val end
+
 			return nil
 		end
 
@@ -251,14 +255,18 @@ do
 				if b_max then
 					local res_a = compare(b_val, a_val, b_max, operator)
 					local res_b = not compare(a_val, b_val, a_max, operator)
+
 					if res_a ~= nil and res_a == res_b then return res_a end
+
 					return nil
 				end
 			end
 
 			if a_max then
 				local res = compare(b_val, a_val, a_max, operator)
+
 				if res == nil then return nil end
+
 				return res
 			end
 
@@ -268,14 +276,18 @@ do
 		end
 
 		if operators[operator] then return nil end
+
 		return type_errors.binary(operator, a, b)
 	end
 
 	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]
 		local a_min = a:GetData()
 		local b_min = b:GetData()
+
 		if not a_min then return nil end
+
 		if not b_min then return nil end
+
 		local a_max = a:GetMaxLiteral() or a_min
 		local b_max = b:GetMaxLiteral() or b_min
 		local a_min_res = nil--[[# as number]]
@@ -365,34 +377,38 @@ do
 end
 
 function META.New(data--[[#: number | nil]])
-	return setmetatable({
-		Data = data--[[#as number]],
-		Falsy = false,
-		Truthy = true,
-		Literal = false,
-	}, META)
+	return setmetatable(
+		{
+			Data = data--[[# as number]],
+			Falsy = false,
+			Truthy = true,
+			Literal = false,
+		},
+		META
+	)
 end
 
 return {
-		Number = META.New,
-		LNumber = function(num--[[#: number | nil]])
-			return META.New(num):SetLiteral(true)
-		end,
-		LNumberFromString = function(str--[[#: string]])
-			local num = tonumber(str)
+	Number = META.New,
+	LNumber = function(num--[[#: number | nil]])
+		return META.New(num):SetLiteral(true)
+	end,
+	LNumberFromString = function(str--[[#: string]])
+		local num = tonumber(str)
 
-			if not num then
-				if str:sub(1, 2) == "0b" then
-					num = tonumber(str:sub(3))
-				elseif str:lower():sub(-3) == "ull" then
-					num = tonumber(str:sub(1, -4))
-				elseif str:lower():sub(-2) == "ll" then
-					num = tonumber(str:sub(1, -3))
-				end
+		if not num then
+			if str:sub(1, 2) == "0b" then
+				num = tonumber(str:sub(3))
+			elseif str:lower():sub(-3) == "ull" then
+				num = tonumber(str:sub(1, -4))
+			elseif str:lower():sub(-2) == "ll" then
+				num = tonumber(str:sub(1, -3))
 			end
+		end
 
-			if not num then return nil end
-			return META.New(num):SetLiteral(true)
-		end,
-		--[[# TNumber = TNumber, ]]
-	}
+		if not num then return nil end
+
+		return META.New(num):SetLiteral(true)
+	end,
+	TNumber = TNumber,
+}

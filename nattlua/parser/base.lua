@@ -1,15 +1,20 @@
 --[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
---[[#local type { ExpressionKind, StatementKind, FunctionAnalyzerStatement,
-FunctionTypeStatement,
-FunctionAnalyzerExpression,
-FunctionTypeExpression,
-FunctionExpression,
-FunctionLocalStatement,
-FunctionLocalTypeStatement,
-FunctionStatement,
-FunctionLocalAnalyzerStatement,
-ValueExpression
-  } = import_type<|"nattlua/parser/nodes.nlua"|>]]
+
+--[[#local type { 
+	ExpressionKind,
+	StatementKind,
+	FunctionAnalyzerStatement,
+	FunctionTypeStatement,
+	FunctionAnalyzerExpression,
+	FunctionTypeExpression,
+	FunctionExpression,
+	FunctionLocalStatement,
+	FunctionLocalTypeStatement,
+	FunctionStatement,
+	FunctionLocalAnalyzerStatement,
+	ValueExpression
+ } = import_type<|"nattlua/parser/nodes.nlua"|>]]
+
 --[[#import_type<|"nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
 local Node = require("nattlua.parser.node")
@@ -24,25 +29,29 @@ local META = {}
 META.__index = META
 --[[#local type Node = Node.@Self]]
 --[[#type META.@Self = {
-		config = any,
-		nodes = List<|any|>,
-		Code = Code,
-		current_statement = false | any,
-		current_expression = false | any,
-		root = false | any,
-		i = number,
-		tokens = List<|Token|>,
-		environment_stack = List<|"typesystem" | "runtime"|>,
-		OnNode = nil | function=(self, any)>(nil),
-	}]]
+	config = any,
+	nodes = List<|any|>,
+	Code = Code,
+	current_statement = false | any,
+	current_expression = false | any,
+	root = false | any,
+	i = number,
+	tokens = List<|Token|>,
+	environment_stack = List<|"typesystem" | "runtime"|>,
+	OnNode = nil | function=(self, any)>(nil),
+}]]
 --[[#type META.@Name = "Parser"]]
 --[[#local type Parser = META.@Self]]
 
-function META.New(tokens--[[#: List<|Token|>]], code--[[#: Code]], config--[[#: nil | {
-	root = nil | Node,
-	on_statement = nil | function=(Parser, Node)>(Node),
-	path = nil | string,
-}]])
+function META.New(
+	tokens--[[#: List<|Token|>]],
+	code--[[#: Code]],
+	config--[[#: nil | {
+		root = nil | Node,
+		on_statement = nil | function=(Parser, Node)>(Node),
+		path = nil | string,
+	}]]
+)
 	return setmetatable(
 		{
 			config = config or {},
@@ -73,18 +82,22 @@ do
 	end
 end
 
-function META:StartNode(type--[[#: "statement" | "expression"]], kind--[[#: StatementKind | ExpressionKind]])
+function META:StartNode(
+	type--[[#: "statement" | "expression"]],
+	kind--[[#: StatementKind | ExpressionKind]]
+)
 	local code_start = assert(self:GetToken()).start
-
-	local node = Node.New({
-		type = type, 
-		kind = kind, 
-		Code = self.Code,
-		code_start = code_start,
-		code_stop = code_start,
-		environment = self:GetCurrentParserEnvironment(),
-		parent = self.nodes[1],
-	})
+	local node = Node.New(
+		{
+			type = type,
+			kind = kind,
+			Code = self.Code,
+			code_start = code_start,
+			code_stop = code_start,
+			environment = self:GetCurrentParserEnvironment(),
+			parent = self.nodes[1],
+		}
+	)
 
 	if type == "expression" then
 		self.current_expression = node
@@ -92,12 +105,9 @@ function META:StartNode(type--[[#: "statement" | "expression"]], kind--[[#: Stat
 		self.current_statement = node
 	end
 
-	if self.OnNode then
-		self:OnNode(node)
-	end
+	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
-
 	return node
 end
 
@@ -109,37 +119,41 @@ function META:EndNode(node--[[#: Node]])
 	else
 		local cur = self:GetToken()
 
-		if cur then
-			node.code_stop = cur.stop
-		end
+		if cur then node.code_stop = cur.stop end
 	end
 
 	table.remove(self.nodes, 1)
 	return self
 end
 
-function META:Error(msg--[[#: string]], start_token--[[#: Token | nil]], stop_token--[[#: Token | nil]], ...--[[#: ...any]])
+function META:Error(
+	msg--[[#: string]],
+	start_token--[[#: Token | nil]],
+	stop_token--[[#: Token | nil]],
+	...--[[#: ...any]]
+)
 	local tk = self:GetToken()
 	local start = 0
 	local stop = 0
-	
+
 	if start_token then
 		start = start_token.start
 	elseif tk then
 		start = tk.start
 	end
 
-	if stop_token then
-		stop = stop_token.stop
-	elseif tk then
-		stop = tk.stop
-	end
+	if stop_token then stop = stop_token.stop elseif tk then stop = tk.stop end
 
 	self:OnError(self.Code, msg, start, stop, ...)
 end
 
-function META:OnError(code--[[#: Code]], message--[[#: string]], start--[[#: number]], stop--[[#: number]], ...--[[#: ...any]]) 
-end
+function META:OnError(
+	code--[[#: Code]],
+	message--[[#: string]],
+	start--[[#: number]],
+	stop--[[#: number]],
+	...--[[#: ...any]]
+) end
 
 function META:GetToken(offset--[[#: number | nil]])
 	return self.tokens[self.i + (offset or 0)]
@@ -155,17 +169,21 @@ end
 
 function META:IsValue(str--[[#: string]], offset--[[#: number | nil]])
 	local tk = self:GetToken(offset)
+
 	if tk then return tk.value == str end
 end
 
 function META:IsType(token_type--[[#: TokenType]], offset--[[#: number | nil]])
 	local tk = self:GetToken(offset)
+
 	if tk then return tk.type == token_type end
 end
 
 function META:ReadToken()
 	local tk = self:GetToken()
+
 	if not tk then return nil end
+
 	self:Advance(1)
 	tk.parent = self.nodes[1]
 	return tk
@@ -182,6 +200,7 @@ function META:AddTokens(tokens--[[#: {[1 .. inf] = Token}]])
 
 	for i, token in ipairs(tokens) do
 		if token.type == "end_of_file" then break end
+
 		table.insert(self.tokens, self.i + i - 1, token)
 	end
 
@@ -189,7 +208,13 @@ function META:AddTokens(tokens--[[#: {[1 .. inf] = Token}]])
 end
 
 do
-	local function error_expect(self--[[#: META.@Self]], str--[[#: string]], what--[[#: string]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
+	local function error_expect(
+		self--[[#: META.@Self]],
+		str--[[#: string]],
+		what--[[#: string]],
+		start--[[#: Token | nil]],
+		stop--[[#: Token | nil]]
+	)
 		local tk = self:GetToken()
 
 		if not tk then
@@ -207,7 +232,11 @@ do
 		return self:ReadToken()--[[# as Token]]
 	end
 
-	function META:ExpectType(str--[[#: TokenType]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
+	function META:ExpectType(
+		str--[[#: TokenType]],
+		error_start--[[#: Token | nil]],
+		error_stop--[[#: Token | nil]]
+	)--[[#: Token]]
 		if not self:IsType(str) then
 			error_expect(self, str, "type", error_start, error_stop)
 		end
@@ -216,7 +245,11 @@ do
 	end
 end
 
-function META:ReadValues(values--[[#: Map<|string, true|>]], start--[[#: Token | nil]], stop--[[#: Token | nil]])
+function META:ReadValues(
+	values--[[#: Map<|string, true|>]],
+	start--[[#: Token | nil]],
+	stop--[[#: Token | nil]]
+)
 	local tk = self:GetToken()
 
 	if not tk then
@@ -243,11 +276,15 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 
 	for _ = 1, self:GetLength() do
 		local tk = self:GetToken()
+
 		if not tk then break end
+
 		if stop_token and stop_token[tk.value] then break end
+
 		local node = self:ReadNode()
+
 		if not node then break end
-		
+
 		if node[1] then
 			for _, v in ipairs(node) do
 				out[i] = v
@@ -270,18 +307,26 @@ function META:ResolvePath(path--[[#: string]])
 	return path
 end
 
-function META:ReadMultipleValues(max--[[#: nil | number]], reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]], ...--[[#: ref ...any]])
-    local out = {}
+function META:ReadMultipleValues(
+	max--[[#: nil | number]],
+	reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]],
+	...--[[#: ref ...any]]
+)
+	local out = {}
 
-    for i = 1, max or self:GetLength() do
+	for i = 1, max or self:GetLength() do
 		local node = reader(self, ...)--[[# as Node | nil]]
-        if not node then break end
-        out[i] = node
-        if not self:IsValue(",") then break end
-        node.tokens[","] = self:ExpectValue(",")
-    end
 
-    return out
+		if not node then break end
+
+		out[i] = node
+
+		if not self:IsValue(",") then break end
+
+		node.tokens[","] = self:ExpectValue(",")
+	end
+
+	return out
 end
 
 return META

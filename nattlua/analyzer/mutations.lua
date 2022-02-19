@@ -29,8 +29,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 			if
 				(
-					scope:IsPartOfTestStatementAs(mut.scope)
-					or
+					scope:IsPartOfTestStatementAs(mut.scope) or
 					(
 						self.current_if_statement and
 						mut.scope.statement == self.current_if_statement
@@ -65,8 +64,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 						if not mut then break end
 
 						if
-							not mut.scope:IsPartOfTestStatementAs(scope)
-							and
+							not mut.scope:IsPartOfTestStatementAs(scope) and
 							not mut.scope:IsCertainFromScope(scope)
 						then
 							for i = i, 1, -1 do
@@ -150,8 +148,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 		end
 
 		if
-			union:Get(value)
-			and
+			union:Get(value) and
 			value.Type ~= "any" and
 			mutations[1].value.Type ~= "union" and
 			mutations[1].value.Type ~= "function" and
@@ -195,8 +192,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 			if stack then
 				if
-					found_scope:IsElseConditionalScope()
-					or
+					found_scope:IsElseConditionalScope() or
 					(
 						found_scope ~= scope and
 						scope:IsPartOfTestStatementAs(found_scope)

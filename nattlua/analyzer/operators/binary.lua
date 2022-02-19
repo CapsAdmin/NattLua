@@ -18,14 +18,11 @@ local function metatable_function(self, node, meta_method, l, r)
 
 	if r:GetMetaTable() or l:GetMetaTable() then
 		local func = (
-				l:GetMetaTable()
-				and
+				l:GetMetaTable() and
 				l:GetMetaTable():Get(meta_method)
-			)
-			or
+			) or
 			(
-				r:GetMetaTable()
-				and
+				r:GetMetaTable() and
 				r:GetMetaTable():Get(meta_method)
 			)
 

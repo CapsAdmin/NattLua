@@ -6,7 +6,8 @@ local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
 
 --[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
---[[#local type TBaseType = META.TBaseType ]]
+
+--[[#local type TBaseType = META.TBaseType]]
 META.Type = "string"
 --[[#type META.@Name = "TString"]]
 --[[#type TString = META.@Self]]
@@ -145,14 +146,14 @@ function META.New(data--[[#: string | nil]])
 end
 
 return {
-		String = META.New,
-		LString = function(num--[[#: string]])
-			return META.New(num):SetLiteral(true)
-		end,
-		LStringNoMeta = function(str)
-			return setmetatable({Data = str}, META):SetLiteral(true)
-		end,
-		NodeToString = function(node--[[#: Token]])
-			return META.New(node.value.value):SetLiteral(true):SetNode(node)
+	String = META.New,
+	LString = function(num--[[#: string]])
+		return META.New(num):SetLiteral(true)
 	end,
-	}
+	LStringNoMeta = function(str)
+		return setmetatable({Data = str}, META):SetLiteral(true)
+	end,
+	NodeToString = function(node--[[#: Token]])
+		return META.New(node.value.value):SetLiteral(true):SetNode(node)
+	end,
+}

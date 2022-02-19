@@ -143,11 +143,11 @@ function META:Lex()
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
 		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
 	end
-	local ok,
-	tokens = xpcall(
+	local ok, tokens = xpcall(
 		function()
 			return lexer:GetTokens()
-		end, function(msg)
+		end,
+		function(msg)
 			return traceback(self, lexer, msg)
 		end
 	)
@@ -180,7 +180,8 @@ function META:Parse()
 	local ok, res = xpcall(
 		function()
 			return parser:ReadRootNode()
-		end, function(msg)
+		end,
+		function(msg)
 			return traceback(self, parser, msg)
 		end
 	)
@@ -278,8 +279,7 @@ return function(
 			Analyzer = require("nattlua.analyzer.analyzer"),
 			Emitter = config and
 				config.js and
-				require("nattlua.transpiler.javascript_emitter")
-				or
+				require("nattlua.transpiler.javascript_emitter") or
 				require("nattlua.transpiler.emitter"),
 		},
 		META

@@ -509,8 +509,7 @@ return {
 					if
 						arg.Type == "table" and
 						contract.Type == "table" and
-						arg:GetUpvalue()
-						and
+						arg:GetUpvalue() and
 						not contract.ref_argument
 					then
 						mutate_type(self, i, arg, contract, arguments)
@@ -553,8 +552,7 @@ return {
 				if
 					result.Type == "tuple" and
 					result:GetLength() == 1 and
-					result:Get(1)
-					and
+					result:Get(1) and
 					result:Get(1).Type == "union" and
 					result:Get(1):HasType("tuple")
 				then
@@ -986,8 +984,7 @@ return {
 					local parent_scope = self.call_stack[i].scope
 
 					if
-						not parent_scope:IsCertain()
-						or
+						not parent_scope:IsCertain() or
 						parent_scope.uncertain_function_return == true
 					then
 						if parent_scope:IsCertainFromScope(scope) then return false end

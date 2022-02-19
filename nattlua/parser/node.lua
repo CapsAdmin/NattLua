@@ -17,19 +17,19 @@ META.__index = META
 META.Type = "node"
 --[[#type META.@Name = "Node"]]
 --[[#type META.@Self = {
-		type = "expression" | "statement",
-		kind = ExpressionKind | StatementKind,
-		id = number,
-		Code = Code,
-		tokens = Map<|string, Token|>,
-		environment = "typesystem" | "runtime",
-		parent = nil | self,
-		code_start = number,
-		code_stop = number,
-		first_node = nil | self,
-		statements = nil | List<|any|>,
-		value = nil | Token,
-	}]]
+	type = "expression" | "statement",
+	kind = ExpressionKind | StatementKind,
+	id = number,
+	Code = Code,
+	tokens = Map<|string, Token|>,
+	environment = "typesystem" | "runtime",
+	parent = nil | self,
+	code_start = number,
+	code_stop = number,
+	first_node = nil | self,
+	statements = nil | List<|any|>,
+	value = nil | Token,
+}]]
 --[[#local type Node = META.@Self]]
 local id = 0
 
@@ -88,12 +88,17 @@ end
 
 function META:GetStatement()
 	if self.type == "statement" then return self end
+
 	if self.parent then return self.parent:GetStatement() end
+
 	return self
 end
 
 function META:GetRootExpression()
-	if self.parent and self.parent.type == "expression" then return self.parent:GetRootExpression() end
+	if self.parent and self.parent.type == "expression" then
+		return self.parent:GetRootExpression()
+	end
+
 	return self
 end
 
@@ -103,13 +108,9 @@ function META:GetLength()
 	if self.first_node then
 		local start2, stop2 = self.first_node:GetStartStop()
 
-		if start2 < start then
-			start = start2
-		end
+		if start2 < start then start = start2 end
 
-		if stop2 > stop then
-			stop = stop2
-		end
+		if stop2 > stop then stop = stop2 end
 	end
 
 	return stop - start
@@ -135,7 +136,11 @@ function META:HasNodes()
 	return self.statements ~= nil
 end
 
-local function find_by_type(node--[[#: META.@Self]], what--[[#: StatementKind | ExpressionKind]], out--[[#: List<|META.@Name|>]])
+local function find_by_type(
+	node--[[#: META.@Self]],
+	what--[[#: StatementKind | ExpressionKind]],
+	out--[[#: List<|META.@Name|>]]
+)
 	out = out or {}
 
 	for _, child in ipairs(node:GetNodes()) do

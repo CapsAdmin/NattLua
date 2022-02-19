@@ -179,8 +179,7 @@ return function(META)
 
 			if
 				errored_scope and
-				self:GetScope():IsCertainFromScope(errored_scope)
-				and
+				self:GetScope():IsCertainFromScope(errored_scope) and
 				errored_scope:IsCertain()
 			then
 				thrown = true

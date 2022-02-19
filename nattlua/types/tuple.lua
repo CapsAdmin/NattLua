@@ -13,10 +13,9 @@ local type_errors = require("nattlua.types.error_messages")
 local ipairs = _G.ipairs
 local type = _G.type
 local META = dofile("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType ]]
+--[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TTuple"]]
 --[[#type TTuple = META.@Self]]
-
 --[[#type TTuple.Remainder = nil | TTuple]]
 --[[#type TTuple.Repeat = nil | number]]
 --[[#type TTuple.suppress = nil | boolean]]
@@ -26,13 +25,16 @@ META:GetSet("Unpackable", false--[[# as boolean]])
 
 function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
+
 	if a.suppress then return true end
+
 	if #a.Data ~= #b.Data then return false end
 
 	for i = 1, #a.Data do
 		a.suppress = true
 		local ok = a.Data[i]:Equal(b.Data[i])
 		a.suppress = false
+
 		if not ok then return false end
 	end
 
@@ -41,6 +43,7 @@ end
 
 function META:__tostring()
 	if self.suppress then return "*self-tuple*" end
+
 	self.suppress = true
 	local s = {}
 
@@ -48,15 +51,11 @@ function META:__tostring()
 		s[i] = tostring(v)
 	end
 
-	if self.Remainder then
-		table.insert(s, tostring(self.Remainder))
-	end
+	if self.Remainder then table.insert(s, tostring(self.Remainder)) end
 
 	local s = "⦗" .. table.concat(s, ", ") .. "⦘"
 
-	if self.Repeat then
-		s = s .. "×" .. tostring(self.Repeat)
-	end
+	if self.Repeat then s = s .. "×" .. tostring(self.Repeat) end
 
 	self.suppress = false
 	return s
@@ -77,11 +76,7 @@ function META:Merge(tup--[[#: TTuple]])
 		local a = self:Get(i)
 		local b = tup:Get(i)
 
-		if a then
-			src[i] = Union({a, b})
-		else
-			src[i] = b:Copy()
-		end
+		if a then src[i] = Union({a, b}) else src[i] = b:Copy() end
 	end
 
 	self.Remainder = tup.Remainder or self.Remainder
@@ -100,9 +95,7 @@ function META:Copy(map--[[#: Map<|any, any|>]], ...--[[#: ...any]])
 		copy:Set(i, v)
 	end
 
-	if self.Remainder then
-		copy.Remainder = self.Remainder:Copy(nil, ...)
-	end
+	if self.Remainder then copy.Remainder = self.Remainder:Copy(nil, ...) end
 
 	copy.Repeat = self.Repeat
 	copy.Unpackable = self.Unpackable
@@ -112,9 +105,15 @@ end
 
 function META.IsSubsetOf(A--[[#: TTuple]], B--[[#: TBaseType]], max_length--[[#: nil | number]])
 	if A == B then return true end
+
 	if A.suppress then return true end
-	if A.Remainder and A:Get(1).Type == "any" and #A:GetData() == 0 then return true end
+
+	if A.Remainder and A:Get(1).Type == "any" and #A:GetData() == 0 then
+		return true
+	end
+
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
 	if
 		A:Get(1) and
 		A:Get(1).Type == "any" and
@@ -127,21 +126,30 @@ function META.IsSubsetOf(A--[[#: TTuple]], B--[[#: TBaseType]], max_length--[[#:
 	if B.Type == "any" then return true end
 
 	if B.Type == "table" then
-		if not B:IsNumericallyIndexed() then return type_errors.numerically_indexed(B) end
+		if not B:IsNumericallyIndexed() then
+			return type_errors.numerically_indexed(B)
+		end
 	end
 
 	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
+
 	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
 
 	for i = 1, max_length do
 		local a, err = A:Get(i)
+
 		if not a then return type_errors.subset(A, B, err) end
+
 		local b, err = B:Get(i)
+
 		if not b and a.Type == "any" then break end
+
 		if not b then return type_errors.missing(B, i, err) end
+
 		A.suppress = true
 		local ok, reason = a:IsSubsetOf(b)
 		A.suppress = false
+
 		if not ok then return type_errors.subset(a, b, reason) end
 	end
 
@@ -152,8 +160,9 @@ function META.IsSubsetOfTupleWithoutExpansion(A--[[#: TTuple]], B--[[#: TBaseTyp
 	for i, a in ipairs(A:GetData()) do
 		local b = B:GetWithoutExpansion(i)
 		local ok, err = a:IsSubsetOf(b)
+
 		if ok then return ok, err, a, b, i end
-		end
+	end
 
 	return true
 end
@@ -180,9 +189,7 @@ function META.IsSubsetOfTuple(A--[[#: TTuple]], B--[[#: TBaseType]])
 		local a, a_err = A:Get(i)
 		local b, b_err = B:Get(i)
 
-		if b and b.Type == "union" then
-			b, b_err = b:GetAtIndex(i)
-		end
+		if b and b.Type == "union" then b, b_err = b:GetAtIndex(i) end
 
 		if not a then
 			if b and b.Type == "any" then
@@ -196,12 +203,14 @@ function META.IsSubsetOfTuple(A--[[#: TTuple]], B--[[#: TBaseType]])
 
 		if b.Type == "tuple" then
 			b = b:Get(1)
+
 			if not b then break end
 		end
 
 		a = a or Nil()
 		b = b or Nil()
 		local ok, reason = a:IsSubsetOf(b)
+
 		if not ok then return ok, reason, a, b, i end
 	end
 
@@ -211,9 +220,10 @@ end
 function META:HasTuples()
 	for _, v in ipairs(self.Data) do
 		if v.Type == "tuple" then return true end
-		end
+	end
 
 	if self.Remainder and self.Remainder.Type == "tuple" then return true end
+
 	return false
 end
 
@@ -230,8 +240,14 @@ function META:Get(key--[[#: number | TBaseType]])
 	end
 
 	local val = self:GetData()[key]
-	if not val and self.Repeat and key <= (#self:GetData() * self.Repeat) then return self:GetData()[((key - 1) % #self:GetData()) + 1] end
-	if not val and self.Remainder then return self.Remainder:Get(key - #self:GetData()) end
+
+	if not val and self.Repeat and key <= (#self:GetData() * self.Repeat) then
+		return self:GetData()[((key - 1) % #self:GetData()) + 1]
+	end
+
+	if not val and self.Remainder then
+		return self.Remainder:Get(key - #self:GetData())
+	end
 
 	if
 		not val and
@@ -244,18 +260,20 @@ function META:Get(key--[[#: number | TBaseType]])
 		return self:GetData()[#self:GetData()]:Get(key)
 	end
 
-	if not val then return type_errors.other({"index ", real_key, " does not exist"}) end
+	if not val then
+		return type_errors.other({"index ", real_key, " does not exist"})
+	end
+
 	return val
 end
 
 function META:GetWithoutExpansion(key--[[#: string]])
 	local val = self:GetData()[key]
 
-	if not val then
-		if self.Remainder then return self.Remainder end
-		end
+	if not val then if self.Remainder then return self.Remainder end end
 
 	if not val then return type_errors.other({"index ", key, " does not exist"}) end
+
 	return val
 end
 
@@ -265,9 +283,7 @@ function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 		return false, "expected number"
 	end
 
-	if val.Type == "tuple" and val:GetLength() == 1 then
-		val = val:Get(1)
-	end
+	if val.Type == "tuple" and val:GetLength() == 1 then val = val:Get(1) end
 
 	self.Data[i] = val
 
@@ -291,31 +307,34 @@ function META:IsEmpty()
 	return self:GetLength() == 0
 end
 
-function META:SetLength() 
-end
+function META:SetLength() end
 
 function META:IsTruthy()
 	local obj = self:Get(1)
+
 	if obj then return obj:IsTruthy() end
+
 	return false
 end
 
 function META:IsFalsy()
 	local obj = self:Get(1)
+
 	if obj then return obj:IsFalsy() end
+
 	return false
 end
 
 function META:GetLength()
 	if self.Remainder then return #self:GetData() + self.Remainder:GetLength() end
+
 	if self.Repeat then return #self:GetData() * self.Repeat end
+
 	return #self:GetData()
 end
 
 function META:GetMinimumLength()
-	if self.Repeat == math.huge or self.Repeat == 0 then
-		return 0
-	end
+	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
 
 	local len = #self:GetData()
 	local found_nil = false
@@ -327,8 +346,7 @@ function META:GetMinimumLength()
 			(
 				obj.Type == "union" and
 				obj:CanBeNil()
-			)
-			or
+			) or
 			(
 				obj.Type == "symbol" and
 				obj:GetData() == nil
@@ -348,7 +366,11 @@ end
 
 function META:GetSafeLength(arguments--[[#: TTuple]])
 	local len = self:GetLength()
-	if len == math.huge or arguments:GetLength() == math.huge then return math.max(self:GetMinimumLength(), arguments:GetMinimumLength()) end
+
+	if len == math.huge or arguments:GetLength() == math.huge then
+		return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
+	end
+
 	return len
 end
 
@@ -392,16 +414,14 @@ end
 function META:UnpackWithoutExpansion()
 	local tbl = {table.unpack(self.Data)}
 
-	if self.Remainder then
-		table.insert(tbl, self.Remainder)		
-	end
+	if self.Remainder then table.insert(tbl, self.Remainder) end
 
 	return table.unpack(tbl)
 end
 
 function META:Slice(start--[[#: number]], stop--[[#: number]])
-    -- TODO: not accurate yet
-    start = start or 1
+	-- TODO: not accurate yet
+	start = start or 1
 	stop = stop or #self:GetData()
 	local copy = self:Copy()
 	local data = {}
@@ -416,9 +436,13 @@ end
 
 function META:GetFirstValue()
 	if self.Remainder then return self.Remainder:GetFirstValue() end
+
 	local first, err = self:Get(1)
-	if not first then return first, err end 
+
+	if not first then return first, err end
+
 	if first.Type == "tuple" then return first:GetFirstValue() end
+
 	return first
 end
 
@@ -437,7 +461,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 
 	if data then
 		for i, v in ipairs(data) do
-			if i == #data and v.Type == "tuple" and not (v--[[# as TTuple]]).Remainder then
+			if i == #data and v.Type == "tuple" and not (v)--[[# as TTuple]].Remainder then
 				self:AddRemainder(v)
 			else
 				self.Data[i] = v
@@ -449,39 +473,37 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 end
 
 return {
-		Tuple = META.New,
-		VarArg = function(t)
-			local self = META.New({t})
-			self:SetRepeat(math.huge)
-			return self
-		end,
+	Tuple = META.New,
+	VarArg = function(t)
+		local self = META.New({t})
+		self:SetRepeat(math.huge)
+		return self
+	end,
 	NormalizeTuples = function(types--[[#: List<|TBaseType|>]])
-			local arguments
+		local arguments
 
-			if #types == 1 and types[1].Type == "tuple" then
-				arguments = types[1]
-			else
-				local temp = {}
+		if #types == 1 and types[1].Type == "tuple" then
+			arguments = types[1]
+		else
+			local temp = {}
 
-				for i, v in ipairs(types) do
-					if v.Type == "tuple" then
-						if i == #types then
-							table.insert(temp, v)
-						else
-							local obj = v:Get(1)
-
-							if obj then
-								table.insert(temp, obj)
-							end
-						end
-					else
+			for i, v in ipairs(types) do
+				if v.Type == "tuple" then
+					if i == #types then
 						table.insert(temp, v)
-					end
-				end
+					else
+						local obj = v:Get(1)
 
-				arguments = META.New(temp)
+						if obj then table.insert(temp, obj) end
+					end
+				else
+					table.insert(temp, v)
+				end
 			end
 
-			return arguments
+			arguments = META.New(temp)
+		end
+
+		return arguments
 	end,
-	}
+}

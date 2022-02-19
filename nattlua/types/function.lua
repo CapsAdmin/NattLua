@@ -16,8 +16,7 @@ end
 
 function META.Equal(a, b)
 	return a.Type == b.Type and
-		a:GetArguments():Equal(b:GetArguments())
-		and
+		a:GetArguments():Equal(b:GetArguments()) and
 		a:GetReturnTypes():Equal(b:GetReturnTypes())
 end
 
@@ -76,15 +75,20 @@ function META:Copy(map, ...)
 end
 
 function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then
-		B = B:Get(1)
-	end
+	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
 	if B.Type == "any" then return true end
+
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+
 	local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
-	if not ok then return type_errors.subset(A:GetArguments(), B:GetArguments(), reason) end
+
+	if not ok then
+		return type_errors.subset(A:GetArguments(), B:GetArguments(), reason)
+	end
+
 	local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
 
 	if
@@ -104,20 +108,28 @@ function META.IsSubsetOf(A, B)
 		return true
 	end
 
-	if not ok then return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason) end
+	if not ok then
+		return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
+	end
+
 	return true
 end
 
-function META.IsCallbackSubsetOf(A, B) 
-	if B.Type == "tuple" then
-		B = B:Get(1)
-	end
+function META.IsCallbackSubsetOf(A, B)
+	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
 	if B.Type == "any" then return true end
+
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+
 	local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments(), A:GetArguments():GetMinimumLength())
-	if not ok then return type_errors.subset(A:GetArguments(), B:GetArguments(), reason) end
+
+	if not ok then
+		return type_errors.subset(A:GetArguments(), B:GetArguments(), reason)
+	end
+
 	local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
 
 	if
@@ -137,7 +149,10 @@ function META.IsCallbackSubsetOf(A, B)
 		return true
 	end
 
-	if not ok then return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason) end
+	if not ok then
+		return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
+	end
+
 	return true
 end
 
@@ -166,9 +181,7 @@ function META:GetSideEffects()
 
 	for _, call_info in ipairs(self.scopes) do
 		for _, val in ipairs(call_info.scope:GetDependencies()) do
-			if val.scope ~= call_info.scope then
-				table.insert(out, val)
-			end
+			if val.scope ~= call_info.scope then table.insert(out, val) end
 		end
 	end
 
@@ -188,22 +201,22 @@ function META.New(data)
 end
 
 return {
-		Function = META.New,
-		AnyFunction = function() 
-			return META.New({
-				arg = Tuple({VarArg(Any())}),
-				ret = Tuple({VarArg(Any())}),
-			})
-		end,
-		LuaTypeFunction = function(lua_function, arg, ret)
-			local self = META.New()
-			self:SetData(
-				{
-					arg = Tuple(arg),
-					ret = Tuple(ret),
-					lua_function = lua_function,
-				}
-			)
-			return self
-		end,
-	}
+	Function = META.New,
+	AnyFunction = function()
+		return META.New({
+			arg = Tuple({VarArg(Any())}),
+			ret = Tuple({VarArg(Any())}),
+		})
+	end,
+	LuaTypeFunction = function(lua_function, arg, ret)
+		local self = META.New()
+		self:SetData(
+			{
+				arg = Tuple(arg),
+				ret = Tuple(ret),
+				lua_function = lua_function,
+			}
+		)
+		return self
+	end,
+}

@@ -275,7 +275,9 @@ analyzer function PushTypeEnvironment(obj: any)
 		types.LuaTypeFunction(
 			function(self, key, val)
 				return analyzer:Assert(analyzer.curent_expression, obj:Set(key, val))
-			end, {types.Any(), types.Any(), types.Any()}, {}
+			end,
+			{types.Any(), types.Any(), types.Any()},
+			{}
 		)
 	)
 	tbl:SetMetaTable(tbl)

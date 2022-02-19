@@ -13,13 +13,11 @@ local setmetatable = _G.setmetatable
 local B = string.byte
 local META = {}
 META.__index = META
-
 local translate_binary = {
-    ["&&"] = "and",
-    ["||"] = "or",
+	["&&"] = "and",
+	["||"] = "or",
 	["!="] = "~=",
 }
-
 local translate_prefix = {
 	["!"] = "not ",
 }
@@ -80,7 +78,10 @@ do -- internal
 	end
 
 	function META:EmitWhitespace(token)
-		if self.config.preserve_whitespace == false and token.type == "space" then return end
+		if self.config.preserve_whitespace == false and token.type == "space" then
+			return
+		end
+
 		self:EmitToken(token)
 
 		if token.type ~= "space" then
@@ -117,9 +118,7 @@ do -- internal
 						local info = self.tracking_indents[node.value]
 
 						for key, val in pairs(self.tracking_indents) do
-							if info == val.info then
-								self.tracking_indents[key] = nil
-							end
+							if info == val.info then self.tracking_indents[key] = nil end
 						end
 
 						if self.out[self.last_indent_index] then
@@ -159,17 +158,19 @@ do -- internal
 			if self.config.preserve_whitespace == false then
 				for i, token in ipairs(node.whitespace) do
 					if token.type == "line_comment" then
-
-
 						local start = i
+
 						for i = self.i - 1, 1, -1 do
 							if not self.out[i]:find("^%s+") then
-								local found_newline = false							
+								local found_newline = false
+
 								for i = start, 1, -1 do
 									local token = node.whitespace[i]
-									if token.value:find("\n") then 
+
+									if token.value:find("\n") then
 										found_newline = true
-										break 
+
+										break
 									end
 								end
 
@@ -177,10 +178,11 @@ do -- internal
 									self.i = i + 1
 									self:Emit(" ")
 								end
+
 								break
 							end
 						end
-						
+
 						self:EmitToken(token)
 
 						if node.whitespace[i + 1] then
@@ -194,9 +196,7 @@ do -- internal
 				end
 			else
 				for _, token in ipairs(node.whitespace) do
-					if token.type ~= "comment_escape" then
-						self:EmitWhitespace(token)
-					end
+					if token.type ~= "comment_escape" then self:EmitWhitespace(token) end
 				end
 			end
 		end
@@ -245,13 +245,12 @@ do -- internal
 		function META:PopLoop()
 			local node = table.remove(self.loop_nodes)
 
-			if node.on_pop then
-				node:on_pop()
-			end
+			if node.on_pop then node:on_pop() end
 		end
 
 		function META:GetLoopNode()
 			if self.loop_nodes then return self.loop_nodes[#self.loop_nodes] end
+
 			return nil
 		end
 	end
@@ -276,8 +275,8 @@ do -- newline breaking
 	function META:ShouldLineBreakNode(node)
 		if node.kind == "table" or node.kind == "type_table" then
 			for _, exp in ipairs(node.children) do
-				if exp.value_expression and exp.value_expression.kind == "function" then 
-					return true 
+				if exp.value_expression and exp.value_expression.kind == "function" then
+					return true
 				end
 			end
 
@@ -286,15 +285,11 @@ do -- newline breaking
 			end
 		end
 
-		if node.kind == "function" then 
-			return #node.statements > 1 
-		end
+		if node.kind == "function" then return #node.statements > 1 end
 
 		if node.kind == "if" then
 			for i = 1, #node.statements do
-				if #node.statements[i] > 1 then
-					return true
-				end
+				if #node.statements[i] > 1 then return true end
 			end
 		end
 
@@ -327,19 +322,22 @@ do -- newline breaking
 
 	function META:EmitLineBreakableList(tbl, func)
 		local newline = self:ShouldBreakExpressionList(tbl)
-
 		self:PushForcedLineBreaking(newline)
+
 		if newline then
 			self:Indent()
 			self:Whitespace("\n")
 			self:Whitespace("\t")
 		end
+
 		func(self, tbl)
+
 		if newline then
 			self:Outdent()
 			self:Whitespace("\n")
 			self:Whitespace("\t")
 		end
+
 		self:PopForcedLineBreaking()
 	end
 
@@ -353,30 +351,29 @@ do -- newline breaking
 end
 
 function META:BuildCode(block)
-    if block.imports then
-        self.done = {}
-        self:EmitNonSpace("IMPORTS = IMPORTS or {}\n")
+	if block.imports then
+		self.done = {}
+		self:EmitNonSpace("IMPORTS = IMPORTS or {}\n")
 
-        for i, node in ipairs(block.imports) do
-            if not self.done[node.path] then
-                self:Emit(
-                    "IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render(self.config or {}) .. " end\n"
-                )
-                self.done[node.path] = true
-            end
-        end
-    end
+		for i, node in ipairs(block.imports) do
+			if not self.done[node.path] then
+				self:Emit(
+					"IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render(self.config or {}) .. " end\n"
+				)
+				self.done[node.path] = true
+			end
+		end
+	end
 
-    self:EmitStatements(block.statements)
-    return self:Concat()
+	self:EmitStatements(block.statements)
+	return self:Concat()
 end
 
 function META:OptionalWhitespace()
 	if self.config.preserve_whitespace == nil then return end
 
 	if
-		characters.IsLetter(self:GetPrevChar())
-		or
+		characters.IsLetter(self:GetPrevChar()) or
 		characters.IsNumber(self:GetPrevChar())
 	then
 		self:EmitSpace(" ")
@@ -393,9 +390,10 @@ do
 		["\t"] = [[\t]],
 		["\v"] = [[\v]],
 	}
-    
-    local function escape_string(str, quote)
+
+	local function escape_string(str, quote)
 		local new_str = {}
+
 		for i = 1, #str do
 			local c = str:sub(i, i)
 
@@ -409,33 +407,30 @@ do
 				new_str[i] = c
 			end
 		end
-		return table.concat(new_str)
-    end
-        
-    function META:EmitStringToken(token)
-        if self.config.string_quote then
-            local current = token.value:sub(1, 1)
-            local target = self.config.string_quote
 
-            if current == "\"" or current == "\'" then
-                local contents = escape_string(token.string_value, target)
-                self:EmitToken(token, target .. contents .. target)
-                return
-            end
-        end
+		return table.concat(new_str)
+	end
+
+	function META:EmitStringToken(token)
+		if self.config.string_quote then
+			local current = token.value:sub(1, 1)
+			local target = self.config.string_quote
+
+			if current == "\"" or current == "'" then
+				local contents = escape_string(token.string_value, target)
+				self:EmitToken(token, target .. contents .. target)
+				return
+			end
+		end
 
 		local needs_space = token.value:sub(1, 1) == "[" and self:GetPrevChar() == B("[")
 
-		if needs_space then
-			self:Whitespace(" ")
-		end
+		if needs_space then self:Whitespace(" ") end
 
-        self:EmitToken(token)
+		self:EmitToken(token)
 
-		if needs_space then
-			self:Whitespace(" ")
-    end
-end
+		if needs_space then self:Whitespace(" ") end
+	end
 end
 
 function META:EmitNumberToken(token)
@@ -451,7 +446,7 @@ function META:EmitFunctionSignature(node)
 	self:EmitToken(node.tokens[">"])
 	self:EmitToken(node.tokens["return("])
 	self:EmitLineBreakableList(node.return_types, self.EmitExpressionList)
-	self:EmitToken(node.tokens["return)"])		
+	self:EmitToken(node.tokens["return)"])
 end
 
 function META:EmitExpression(node)
@@ -557,7 +552,6 @@ function META:EmitExpressionIndex(node)
 	self:EmitToken(node.tokens["]"])
 end
 
-
 function META:EmitCall(node)
 	if node.expand then
 		if not node.expand.expanded then
@@ -567,16 +561,14 @@ function META:EmitCall(node)
 			self:EmitExpression(node.expand:GetNode())
 			node.expand.expanded = true
 		end
-		
+
 		self.inside_call_expression = true
 		self:EmitExpression(node.left.left)
 
 		if node.tokens["call("] then
 			self:EmitToken(node.tokens["call("])
 		else
-			if self.config.force_parenthesis then
-				self:EmitNonSpace("(")
-			end
+			if self.config.force_parenthesis then self:EmitNonSpace("(") end
 		end
 	else
 		-- this will not work for calls with functions that contain statements
@@ -586,7 +578,7 @@ function META:EmitCall(node)
 		if node.expressions_typesystem then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["call_typesystem("])
-			self:EmitExpressionList(node.expressions_typesystem)	
+			self:EmitExpressionList(node.expressions_typesystem)
 			self:EmitToken(node.tokens["call_typesystem)"])
 			self:StopEmittingInvalidLuaCode(emitted)
 		end
@@ -594,32 +586,28 @@ function META:EmitCall(node)
 		if node.tokens["call("] then
 			self:EmitToken(node.tokens["call("])
 		else
-			if self.config.force_parenthesis then
-				self:EmitNonSpace("(")
-			end
+			if self.config.force_parenthesis then self:EmitNonSpace("(") end
 		end
 	end
 
 	local newlines = self:ShouldBreakExpressionList(node.expressions)
-    
-    if newlines then
-        self:Indent()
+
+	if newlines then
+		self:Indent()
 		self:Whitespace("\n")
 		self:Whitespace("\t")
-    end
+	end
 
 	self:PushForcedLineBreaking(newlines)
 	self:EmitExpressionList(node.expressions)
 	self:PopForcedLineBreaking()
-    
-    if newlines then
-        self:Outdent()
-    end
+
+	if newlines then self:Outdent() end
 
 	if node.tokens["call)"] then
 		if newlines then
 			self:Whitespace("\n")
-            self:Whitespace("\t")
+			self:Whitespace("\t")
 		end
 
 		self:EmitToken(node.tokens["call)"])
@@ -638,27 +626,22 @@ function META:EmitCall(node)
 end
 
 function META:EmitBinaryOperator(node)
-	local func_chunks = node.environment == "runtime" and runtime_syntax:GetFunctionForBinaryOperator(node.value)
+	local func_chunks = node.environment == "runtime" and
+		runtime_syntax:GetFunctionForBinaryOperator(node.value)
 
 	if func_chunks then
 		self:Emit(func_chunks[1])
 
-		if node.left then
-			self:EmitExpression(node.left)
-		end
+		if node.left then self:EmitExpression(node.left) end
 
 		self:Emit(func_chunks[2])
 
-		if node.right then
-			self:EmitExpression(node.right)
-		end
+		if node.right then self:EmitExpression(node.right) end
 
 		self:Emit(func_chunks[3])
 		self.operator_transformed = true
 	else
-		if node.left then
-			self:EmitExpression(node.left)
-		end
+		if node.left then self:EmitExpression(node.left) end
 
 		if node.value.value == "." or node.value.value == ":" then
 			self:EmitToken(node.value)
@@ -669,7 +652,14 @@ function META:EmitBinaryOperator(node)
 			node.value.value == "&&"
 		then
 			if self:IsLineBreaking() then
-				if self:GetPrevChar() == B(")") and node.left.kind ~= "postfix_call" and (node.left.kind == "binary_operator" and node.left.right.kind ~= "postfix_call") then
+				if
+					self:GetPrevChar() == B(")") and
+					node.left.kind ~= "postfix_call" and
+					(
+						node.left.kind == "binary_operator" and
+						node.left.right.kind ~= "postfix_call"
+					)
+				then
 					self:Whitespace("\n")
 					self:Whitespace("\t")
 				else
@@ -693,9 +683,7 @@ function META:EmitBinaryOperator(node)
 			self:Whitespace(" ")
 		end
 
-		if node.right then
-			self:EmitExpression(node.right)
-		end
+		if node.right then self:EmitExpression(node.right) end
 	end
 end
 
@@ -704,7 +692,7 @@ do
 		if node.identifiers_typesystem then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["arguments_typesystem("])
-			self:EmitExpressionList(node.identifiers_typesystem)	
+			self:EmitExpressionList(node.identifiers_typesystem)
 			self:EmitToken(node.tokens["arguments_typesystem)"])
 			self:StopEmittingInvalidLuaCode(emitted)
 		end
@@ -713,23 +701,22 @@ do
 		self:EmitLineBreakableList(node.identifiers, self.EmitIdentifierList)
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
-        
-        
-        if #node.statements == 0 then
-            self:Whitespace(" ")
-        else
-            self:Whitespace("\n")
-            self:EmitBlock(node.statements)
-            self:Whitespace("\n")
-            self:Whitespace("\t")
-        end
 
-        self:EmitToken(node.tokens["end"])
+		if #node.statements == 0 then
+			self:Whitespace(" ")
+		else
+			self:Whitespace("\n")
+			self:EmitBlock(node.statements)
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		end
+
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitAnonymousFunction(node)
 		self:EmitToken(node.tokens["function"])
-        local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
+		local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
 		self:EmitFunctionBody(node)
 	end
 
@@ -799,9 +786,7 @@ do
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
 
-		if node.tokens["^"] then
-			self:EmitToken(node.tokens["^"])
-		end
+		if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
 
 		if node.expression or node.identifier then
 			self:EmitExpression(node.expression or node.identifier)
@@ -826,22 +811,16 @@ function META:EmitTableKeyValue(node)
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["="])
 	self:Whitespace(" ")
+	local break_binary = node.value_expression.kind == "binary_operator" and
+		self:ShouldLineBreakNode(node.value_expression)
 
-	local break_binary = node.value_expression.kind == "binary_operator" and self:ShouldLineBreakNode(node.value_expression)
-
-	if break_binary then
-		self:Indent()
-	end
+	if break_binary then self:Indent() end
 
 	self:PushForcedLineBreaking(break_binary)
-	
 	self:EmitExpression(node.value_expression)
-
 	self:PopForcedLineBreaking()
 
-	if break_binary then
-		self:Outdent()
-	end
+	if break_binary then self:Outdent() end
 end
 
 function META:EmitEmptyUnion(node)
@@ -864,16 +843,11 @@ end
 function META:EmitVararg(node)
 	self:EmitToken(node.tokens["..."])
 
-	if not self.config.analyzer_function then
-		self:EmitExpression(node.value)
-	end
+	if not self.config.analyzer_function then self:EmitExpression(node.value) end
 end
 
-
 function META:EmitTable(tree)
-	if tree.spread then
-		self:EmitNonSpace("table.mergetables")
-	end
+	if tree.spread then self:EmitNonSpace("table.mergetables") end
 
 	local during_spread = false
 	self:EmitToken(tree.tokens["{"])
@@ -886,9 +860,7 @@ function META:EmitTable(tree)
 
 	if tree.children[1] then
 		for i, node in ipairs(tree.children) do
-			if newline then
-				self:Whitespace("\t")
-			end
+			if newline then self:Whitespace("\t") end
 
 			if node.kind == "table_index_value" then
 				if node.spread then
@@ -915,34 +887,30 @@ function META:EmitTable(tree)
 			if tree.tokens["separators"][i] then
 				self:EmitToken(tree.tokens["separators"][i])
 			else
-				if newline then
-					self:EmitNonSpace(",")
-				end
+				if newline then self:EmitNonSpace(",") end
 			end
 
 			if newline then
 				self:Whitespace("\n")
 			else
-				if i ~= #tree.children then
-					self:Whitespace(" ")
-				end
+				if i ~= #tree.children then self:Whitespace(" ") end
 			end
 		end
 	end
 
-	if during_spread then
-		self:EmitNonSpace("}")
-	end
+	if during_spread then self:EmitNonSpace("}") end
 
 	if newline then
 		self:Outdent()
 		self:Whitespace("\t")
 	end
+
 	self:EmitToken(tree.tokens["}"])
 end
 
 function META:EmitPrefixOperator(node)
-	local func_chunks = node.environment == "runtime" and runtime_syntax:GetFunctionForPrefixOperator(node.value)
+	local func_chunks = node.environment == "runtime" and
+		runtime_syntax:GetFunctionForPrefixOperator(node.value)
 
 	if self.TranslatePrefixOperator then
 		func_chunks = self:TranslatePrefixOperator(node) or func_chunks
@@ -955,8 +923,7 @@ function META:EmitPrefixOperator(node)
 		self.operator_transformed = true
 	else
 		if
-			runtime_syntax:IsKeyword(node.value)
-			or
+			runtime_syntax:IsKeyword(node.value) or
 			runtime_syntax:IsNonStandardKeyword(node.value)
 		then
 			self:OptionalWhitespace()
@@ -972,11 +939,11 @@ function META:EmitPrefixOperator(node)
 end
 
 function META:EmitPostfixOperator(node)
-	local func_chunks = node.environment == "runtime" and runtime_syntax:GetFunctionForPostfixOperator(node.value)
-
-    -- no such thing as postfix operator in lua,
-    -- so we have to assume that there's a translation
-    assert(func_chunks)
+	local func_chunks = node.environment == "runtime" and
+		runtime_syntax:GetFunctionForPostfixOperator(node.value)
+	-- no such thing as postfix operator in lua,
+	-- so we have to assume that there's a translation
+	assert(func_chunks)
 	self:Emit(func_chunks[1])
 	self:EmitExpression(node.left)
 	self:Emit(func_chunks[2])
@@ -1009,14 +976,11 @@ function META:EmitIfStatement(node)
 				self:Whitespace("\n")
 				self:Whitespace("\t")
 			end
+
 			self:EmitToken(node.tokens["if/else/elseif"][i])
 		end
 
-		if short then
-			self:Whitespace(" ")
-		else
-			self:Whitespace("\n")
-		end
+		if short then self:Whitespace(" ") else self:Whitespace("\n") end
 
 		if #node.statements[i] == 1 and short then
 			self:EmitStatement(node.statements[i][1])
@@ -1024,15 +988,14 @@ function META:EmitIfStatement(node)
 			self:EmitBlock(node.statements[i])
 		end
 
-		if short then
-			self:Whitespace(" ")
-		end
+		if short then self:Whitespace(" ") end
 	end
 
 	if not short then
 		self:Whitespace("\n")
 		self:Whitespace("\t")
 	end
+
 	self:EmitToken(node.tokens["end"])
 end
 
@@ -1124,8 +1087,8 @@ function META:EmitContinueStatement(node)
 			self:EmitNonSpace("::__CONTINUE__::;")
 		end
 	else
-	self:EmitToken(node.tokens["continue"])
-end
+		self:EmitToken(node.tokens["continue"])
+	end
 end
 
 function META:EmitDoStatement(node)
@@ -1139,7 +1102,7 @@ end
 
 function META:EmitReturnStatement(node)
 	self:EmitToken(node.tokens["return"])
-	
+
 	if node.expressions[1] then
 		self:Whitespace(" ")
 		self:PushForcedLineBreaking(self:ShouldLineBreakNode(node))
@@ -1157,21 +1120,21 @@ function META:EmitSemicolonStatement(node)
 end
 
 function META:EmitAssignment(node)
-    if node.tokens["local"] then
-        self:EmitToken(node.tokens["local"])
+	if node.tokens["local"] then
+		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
-    end
+	end
 
 	if node.tokens["type"] then
 		self:EmitToken(node.tokens["type"])
 		self:Whitespace(" ")
 	end
 
-    if node.tokens["local"] then
-        self:EmitIdentifierList(node.left)
-    else
-	    self:EmitExpressionList(node.left)
-    end
+	if node.tokens["local"] then
+		self:EmitIdentifierList(node.left)
+	else
+		self:EmitExpressionList(node.left)
+	end
 
 	if node.tokens["="] then
 		self:Whitespace(" ")
@@ -1235,9 +1198,9 @@ function META:EmitStatement(node)
 		else
 			self:EmitAssignment(node)
 
-            if node.kind == "assignment" then
-                self:Emit_ENVFromAssignment(node)
-            end
+			if node.kind == "assignment" then
+				self:Emit_ENVFromAssignment(node)
+			end
 		end
 	elseif node.kind == "import" then
 		self:EmitNonSpace("local")
@@ -1280,9 +1243,7 @@ function META:EmitStatement(node)
 	end
 
 	if self.OnEmitStatement then
-		if node.kind ~= "end_of_file" then
-			self:OnEmitStatement()
-		end
+		if node.kind ~= "end_of_file" then self:OnEmitStatement() end
 	end
 end
 
@@ -1312,7 +1273,6 @@ function META:EmitStatements(tbl)
 		end
 
 		self:Whitespace("\t")
-
 		self:EmitStatement(node)
 
 		if
@@ -1335,6 +1295,7 @@ end
 function META:ShouldBreakExpressionList(tbl)
 	if self.config.preserve_whitespace == false then
 		if #tbl == 0 then return false end
+
 		local first_node = tbl[1]
 		local last_node = tbl[#tbl]
 		--first_node = first_node:GetStatement()
@@ -1350,21 +1311,16 @@ end
 function META:EmitNodeList(tbl, func)
 	for i = 1, #tbl do
 		self:PushForcedLineBreaking(self:ShouldLineBreakNode(tbl[i]))
-
 		local break_binary = self:IsLineBreaking() and tbl[i].kind == "binary_operator"
-		
-		if break_binary then
-			self:Indent()
-		end
+
+		if break_binary then self:Indent() end
 
 		func(self, tbl[i])
 
-		if break_binary then
-			self:Outdent()
-		end
+		if break_binary then self:Outdent() end
 
 		self:PopForcedLineBreaking()
-		
+
 		if i ~= #tbl then
 			self:EmitToken(tbl[i].tokens[","])
 
@@ -1395,15 +1351,12 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 		for i, exp in ipairs(node.return_types) do
 			self:EmitTypeExpression(exp)
 
-			if i ~= #node.return_types then
-				self:EmitToken(exp.tokens[","])
-			end
+			if i ~= #node.return_types then self:EmitToken(exp.tokens[","]) end
 		end
 	elseif node.inferred_type and self.config.annotate ~= "explicit" then
 		local str = {}
-
-        -- this iterates the first return tuple
-        local obj = node.inferred_type:GetContract() or node.inferred_type
+		-- this iterates the first return tuple
+		local obj = node.inferred_type:GetContract() or node.inferred_type
 
 		if obj.Type == "function" then
 			for i, v in ipairs(obj:GetReturnTypes():GetData()) do
@@ -1413,9 +1366,7 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 			str[1] = tostring(obj)
 		end
 
-		if str[1] then
-			self:EmitNonSpace(table.concat(str, ", "))
-		end
+		if str[1] then self:EmitNonSpace(table.concat(str, ", ")) end
 	end
 end
 
@@ -1472,15 +1423,13 @@ function META:EmitIdentifier(node)
 		self:StopEmittingInvalidLuaCode(ok)
 		return
 	end
-	
+
 	self:EmitExpression(node)
 end
 
 do -- types
-    function META:EmitTypeBinaryOperator(node)
-		if node.left then
-			self:EmitTypeExpression(node.left)
-		end
+	function META:EmitTypeBinaryOperator(node)
+		if node.left then self:EmitTypeExpression(node.left) end
 
 		if node.value.value == "." or node.value.value == ":" then
 			self:EmitToken(node.value)
@@ -1490,9 +1439,7 @@ do -- types
 			self:Whitespace(" ")
 		end
 
-		if node.right then
-			self:EmitTypeExpression(node.right)
-		end
+		if node.right then self:EmitTypeExpression(node.right) end
 	end
 
 	function META:EmitType(node)
@@ -1512,9 +1459,7 @@ do -- types
 
 		if tree.children[1] then
 			for i, node in ipairs(tree.children) do
-				if newline then
-					self:Whitespace("\t")
-				end
+				if newline then self:Whitespace("\t") end
 
 				if node.kind == "table_index_value" then
 					self:EmitTypeExpression(node.value_expression)
@@ -1537,17 +1482,13 @@ do -- types
 				if tree.tokens["separators"][i] then
 					self:EmitToken(tree.tokens["separators"][i])
 				else
-					if newline then
-						self:EmitNonSpace(",")
-					end
+					if newline then self:EmitNonSpace(",") end
 				end
 
 				if newline then
 					self:Whitespace("\n")
 				else
-					if i ~= #tree.children then
-						self:Whitespace(" ")
-					end
+					if i ~= #tree.children then self:Whitespace(" ") end
 				end
 			end
 		end
@@ -1571,9 +1512,7 @@ do -- types
 		self:EmitToken(node.tokens["function"])
 
 		if not self.config.analyzer_function then
-			if node.tokens["^"] then
-				self:EmitToken(node.tokens["^"])
-			end
+			if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
 		end
 
 		self:EmitToken(node.tokens["arguments("])
@@ -1626,7 +1565,7 @@ do -- types
 			self:Whitespace("\t")
 			self:EmitToken(node.tokens["end"])
 		end
-end
+	end
 
 	function META:EmitTypeExpression(node)
 		if node.tokens["("] then
@@ -1692,7 +1631,7 @@ end
 
 	function META:StartEmittingInvalidLuaCode()
 		local emitted = false
-        
+
 		if not self.config.uncomment_types then
 			if not self.during_comment_type or self.during_comment_type == 0 then
 				self:EmitNonSpace("--[[#")
@@ -1708,28 +1647,26 @@ end
 
 	function META:StopEmittingInvalidLuaCode(emitted)
 		if emitted then
-			if self:GetPrevChar() == B("]") then
-				self:Whitespace(" ")
+			if self:GetPrevChar() == B("]") then self:Whitespace(" ") end
+
+			local needs_escape = false
+
+			for i = emitted, #self.out do
+				local str = self.out[i]
+
+				if str:find("]]", nil, true) then
+					self.out[emitted] = "--[=[#"
+					needs_escape = true
+
+					break
+				end
 			end
 
-            local needs_escape = false
-
-            for i = emitted, #self.out do
-                local str = self.out[i]
-
-                if str:find("]]", nil, true) then
-                    self.out[emitted] = "--[=[#"
-                    needs_escape = true
-
-                    break
-                end
-            end
-
-            if needs_escape then
-			    self:EmitNonSpace("]=]")
-            else
-			    self:EmitNonSpace("]]")
-            end
+			if needs_escape then
+				self:EmitNonSpace("]=]")
+			else
+				self:EmitNonSpace("]]")
+			end
 		end
 
 		if not self.config.uncomment_types then
@@ -1745,7 +1682,7 @@ end
 end
 
 do -- extra
-    function META:EmitTranspiledDestructureAssignment(node)
+	function META:EmitTranspiledDestructureAssignment(node)
 		self:EmitToken(node.tokens["{"], "")
 
 		if node.default then
@@ -1789,9 +1726,7 @@ do -- extra
 	end
 
 	function META:EmitDestructureAssignment(node)
-		if node.tokens["local"] then
-			self:EmitToken(node.tokens["local"])
-		end
+		if node.tokens["local"] then self:EmitToken(node.tokens["local"]) end
 
 		if node.tokens["type"] then
 			self:Whitespace(" ")

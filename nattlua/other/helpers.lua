@@ -28,16 +28,16 @@ function helpers.LinePositionToSubPosition(code--[[#: string]], line--[[#: numbe
 
 			for i = i, i + character do
 				local c = code:sub(i, i)
+
 				if char_pos == character then return i end
+
 				char_pos = char_pos + 1
 			end
 
 			return i
 		end
 
-		if c == "\n" then
-			line_pos = line_pos + 1
-		end
+		if c == "\n" then line_pos = line_pos + 1 end
 	end
 
 	return #code
@@ -83,22 +83,16 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 		end
 	end
 
-	if not within_stop then
-		within_stop = #code + 1
-	end
+	if not within_stop then within_stop = #code + 1 end
 
 	return {
-			character_start = character_start or
-			0,
-			character_stop = character_stop or
-			0,
-			sub_line_before = {within_start + 1, start - 1},
-			sub_line_after = {stop + 1, within_stop - 1},
-			line_start = line_start or
-			0,
-			line_stop = line_stop or
-			0,
-		}
+		character_start = character_start or 0,
+		character_stop = character_stop or 0,
+		sub_line_before = {within_start + 1, start - 1},
+		sub_line_after = {stop + 1, within_stop - 1},
+		line_start = line_start or 0,
+		line_stop = line_stop or 0,
+	}
 end
 
 do
@@ -110,11 +104,10 @@ do
 			local char = code:sub(i, i)
 
 			if char == "\n" then
-				if line == 1 then
-					first_line_pos = i + 1
-				end
+				if line == 1 then first_line_pos = i + 1 end
 
 				if line == lines + 1 then return i - 1, first_line_pos - 1, line end
+
 				line = line + 1
 			end
 		end
@@ -130,11 +123,10 @@ do
 			local char = code:sub(i, i)
 
 			if char == "\n" then
-				if line == 1 then
-					first_line_pos = i
-				end
+				if line == 1 then first_line_pos = i end
 
 				if line == lines + 1 then return first_line_pos + 1, i - 1, line end
+
 				line = line + 1
 			end
 		end
@@ -148,11 +140,10 @@ do
 		local fmt = function(str--[[#: string]])
 			local num = tonumber(str)
 
-				if not num then
-					error("invalid format argument " .. str)
-				end
+			if not num then error("invalid format argument " .. str) end
 
 			if type(args[num]) == "table" then return quote.QuoteTokens(args[num]) end
+
 			return quote.QuoteToken(args[num] or "?")
 		end
 
@@ -167,7 +158,14 @@ do
 		return math.min(math.max(num, min), max)
 	end
 
-	function helpers.FormatError(code--[[#: Code]], msg--[[#: string]], start--[[#: number]], stop--[[#: number]], size--[[#: number]], ...)
+	function helpers.FormatError(
+		code--[[#: Code]],
+		msg--[[#: string]],
+		start--[[#: number]],
+		stop--[[#: number]],
+		size--[[#: number]],
+		...
+	)
 		local lua_code = code:GetString()
 		local path = code:GetName()
 		size = size or 2
@@ -175,7 +173,9 @@ do
 		start = clamp(start, 1, #lua_code)
 		stop = clamp(stop, 1, #lua_code)
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
+
 		if not data then return end
+
 		local line_start, line_stop = data.line_start, data.line_stop
 		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(lua_code, start, size)
 		local post_start_pos, post_stop_pos, lines_after = get_lines_after(lua_code, stop, size)
@@ -242,13 +242,17 @@ do
 	end
 end
 
-function helpers.GetDataFromLineCharPosition(tokens--[[#: {[number] = Token}]], code--[[#: string]], line--[[#: number]], char--[[#: number]])
+function helpers.GetDataFromLineCharPosition(
+	tokens--[[#: {[number] = Token}]],
+	code--[[#: string]],
+	line--[[#: number]],
+	char--[[#: number]]
+)
 	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
 
 	for _, token in ipairs(tokens) do
-		local found = token.stop >= sub_pos-- and token.stop <= sub_pos
-
-        if not found then
+		local found = token.stop >= sub_pos -- and token.stop <= sub_pos
+		if not found then
 			if token.whitespace then
 				for _, token in ipairs(token.whitespace) do
 					if token.stop >= sub_pos then
@@ -260,43 +264,46 @@ function helpers.GetDataFromLineCharPosition(tokens--[[#: {[number] = Token}]], 
 			end
 		end
 
-		if found then return token, helpers.SubPositionToLinePosition(code, token.start, token.stop) end
+		if found then
+			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
+		end
 	end
 end
 
 function helpers.JITOptimize()
 	if not jit then return end
+
 	pcall(require, "jit.opt")
 	jit.opt.start(
 		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
-        "maxrecord=8000", -- 4000: maximum number of recorded IR instructions
-        "maxirconst=8000", -- 500: maximum number of IR constants of a trace
-        "maxside=5000", -- 100: maximum number of side traces of a root trace
-        "maxsnap=5000", -- 500: maximum number of snapshots for a trace
-        "hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
-        "hotexit=10", -- 10: number of taken exits to start a side trace
-        "tryside=4", -- 4: number of attempts to compile a side trace
-        "instunroll=1000", -- 4: maximum unroll factor for instable loops
-        "loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
-        "callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
-        "recunroll=0", -- 2: minimum unroll factor for true recursion
-        "maxmcode=16384", -- 512: maximum total size of all machine code areas in KBytes
-        --jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
-        "+fold", -- Constant Folding, Simplifications and Reassociation
-        "+cse", -- Common-Subexpression Elimination
-        "+dce", -- Dead-Code Elimination
-        "+narrow", -- Narrowing of numbers to integers
-        "+loop", -- Loop Optimizations (code hoisting)
-        "+fwd", -- Load Forwarding (L2L) and Store Forwarding (S2L)
-        "+dse", -- Dead-Store Elimination
-        "+abc", -- Array Bounds Check Elimination
-        "+sink", -- Allocation/Store Sinking
-        "+fuse" -- Fusion of operands into instructions
-    )
+		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
+		"maxirconst=8000", -- 500: maximum number of IR constants of a trace
+		"maxside=5000", -- 100: maximum number of side traces of a root trace
+		"maxsnap=5000", -- 500: maximum number of snapshots for a trace
+		"hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
+		"hotexit=10", -- 10: number of taken exits to start a side trace
+		"tryside=4", -- 4: number of attempts to compile a side trace
+		"instunroll=1000", -- 4: maximum unroll factor for instable loops
+		"loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
+		"callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
+		"recunroll=0", -- 2: minimum unroll factor for true recursion
+		"maxmcode=16384", -- 512: maximum total size of all machine code areas in KBytes
+		--jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
+		"+fold", -- Constant Folding, Simplifications and Reassociation
+		"+cse", -- Common-Subexpression Elimination
+		"+dce", -- Dead-Code Elimination
+		"+narrow", -- Narrowing of numbers to integers
+		"+loop", -- Loop Optimizations (code hoisting)
+		"+fwd", -- Load Forwarding (L2L) and Store Forwarding (S2L)
+		"+dse", -- Dead-Store Elimination
+		"+abc", -- Array Bounds Check Elimination
+		"+sink", -- Allocation/Store Sinking
+		"+fuse" -- Fusion of operands into instructions
+	)
 
 	if jit.version_num >= 20100 then
 		jit.opt.start("minstitch=0") -- 0: minimum number of IR ins for a stitched trace.
-    end
+	end
 end
 
 return helpers

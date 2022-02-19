@@ -1,5 +1,5 @@
 local META = dofile("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType ]]
+--[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TAny"]]
 --[[#type TAny = META.@Self]]
 META.Type = "any"
@@ -41,4 +41,8 @@ function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
 	return a.Type == b.Type
 end
 
-return {Any = function() return META.New() end}
+return {
+	Any = function()
+		return META.New()
+	end,
+}

@@ -458,8 +458,7 @@ function META:__tostring()
 	end
 
 	local s = "scope[" .. x .. "," .. y .. "]" .. "[" .. (
-			self:IsUncertain()
-			and
+			self:IsUncertain() and
 			"uncertain" or
 			"certain"
 		) .. "]"

@@ -8,10 +8,12 @@ local analyzer function cast(node: any, args: any)
 			types.LString("__index"),
 			types.LuaTypeFunction(
 				function(self, key)
-            -- i'm not really sure about this
-            -- boxed luajit ctypes seem to just get the metatable from the ctype
-            return analyzer:Assert(key:GetNode(), from:Get(key, from.Type == "union"))
-				end, {types.Any(), types.Any()}, {}
+					-- i'm not really sure about this
+					-- boxed luajit ctypes seem to just get the metatable from the ctype
+					return analyzer:Assert(key:GetNode(), from:Get(key, from.Type == "union"))
+				end,
+				{types.Any(), types.Any()},
+				{}
 			)
 		)
 
@@ -20,8 +22,10 @@ local analyzer function cast(node: any, args: any)
 				types.LString("__newindex"),
 				types.LuaTypeFunction(
 					function(self, key, value)
-				error("attempt to write to constant location")
-					end, {types.Any(), types.Any(), types.Any()}, {}
+						error("attempt to write to constant location")
+					end,
+					{types.Any(), types.Any(), types.Any()},
+					{}
 				)
 			)
 		end
@@ -29,13 +33,13 @@ local analyzer function cast(node: any, args: any)
 		meta:Set(
 			types.LString("__add"),
 			types.LuaTypeFunction(function(self, key)
-			return self
+				return self
 			end, {types.Any(), types.Any()}, {})
 		)
 		meta:Set(
 			types.LString("__sub"),
 			types.LuaTypeFunction(function(self, key)
-			return self
+				return self
 			end, {types.Any(), types.Any()}, {})
 		)
 		return meta
@@ -45,13 +49,12 @@ local analyzer function cast(node: any, args: any)
 		local tbl = types.Table()
 
 		if node.n then
-			tbl.ffi_name = "struct " .. node.n 
+			tbl.ffi_name = "struct " .. node.n
 			analyzer.current_tables = analyzer.current_tables or {}
 			table.insert(analyzer.current_tables, tbl)
 		end
 
-		for _,
-		node in ipairs(node) do
+		for _, node in ipairs(node) do
 			if node.tag == "Pair" then
 				local key = types.LString(node[2])
 				local val = cast(node[1], args)
@@ -61,15 +64,14 @@ local analyzer function cast(node: any, args: any)
 				error("NYI: " .. node.tag)
 			end
 		end
-		
+
 		if node.n then table.remove(analyzer.current_tables) end
 
 		return tbl
 	elseif node.tag == "Function" then
 		local arguments = {}
 
-		for _,
-		arg in ipairs(node) do
+		for _, arg in ipairs(node) do
 			if arg.ellipsis then
 				table.insert(
 					arguments,
@@ -182,11 +184,11 @@ local analyzer function cast(node: any, args: any)
 			end
 		else
 			local val = analyzer:IndexOperator(
-					analyzer.current_expression,
-					env.typesystem.ffi:Get(types.LString("C")),
-					types.LString(node.n)
-				)
-			
+				analyzer.current_expression,
+				env.typesystem.ffi:Get(types.LString("C")),
+				types.LString(node.n)
+			)
+
 			if not val or val.Type == "symbol" and val:GetData() == nil then
 				if analyzer.current_tables then
 					local current_tbl = analyzer.current_tables[#analyzer.current_tables]
@@ -211,7 +213,7 @@ local analyzer function cast(node: any, args: any)
 		local meta = cdata_metatable(ctype, node.t.const)
 		ptr:SetMetaTable(meta)
 
-		if node.t.tag == "Qualified" and node.t.t.n == "char" then 
+		if node.t.tag == "Qualified" and node.t.t.n == "char" then
 			ptr:Set(types.Number(), ctype)
 			ptr:SetName(types.LString("const char*"))
 
@@ -247,13 +249,13 @@ analyzer function ffi.cdef(cdecl: string, ...: ...any)
 	end
 end
 
-§env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true
+--§env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true
 
 analyzer function ffi.cast(cdecl: string, src: any)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type)
-	
+
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
 		for _, v in ipairs(ctype:GetData()) do
@@ -311,11 +313,11 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 		types.LString("__call"),
 		types.LuaTypeFunction(
 			function(self, init)
-		if init then
-			analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
-		end
+				if init then
+					analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
+				end
 
-		return self:Copy()
+				return self:Copy()
 			end,
 			{ctype, types.Nilable(nilable_ctype)},
 			{ctype}
@@ -349,17 +351,17 @@ analyzer function ffi.metatype(ctype: any, meta: any)
 			types.LString("__call"),
 			types.LuaTypeFunction(
 				function(self, ...)
-			local val = analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...}))):Unpack()
+					local val = analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...}))):Unpack()
 
-			if val.Type == "union" then
+					if val.Type == "union" then
 						for i, v in ipairs(val:GetData()) do
 							if v.Type == "table" then v:SetMetaTable(meta) end
-				end
-			else
-				val:SetMetaTable(meta)
-			end
+						end
+					else
+						val:SetMetaTable(meta)
+					end
 
-			return val
+					return val
 				end,
 				new:GetArguments():GetData(),
 				new:GetReturnTypes():GetData()

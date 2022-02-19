@@ -87,8 +87,7 @@ return function(META)
 
 		self.diagnostics_map[key] = true
 		severity = severity or "warning"
-		local start,
-		stop = node:GetStartStop()
+		local start, stop = node:GetStartStop()
 
 		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
 			self:OnDiagnostic(node.Code, msg_str, severity, start, stop)

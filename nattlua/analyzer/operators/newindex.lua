@@ -60,8 +60,7 @@ return {
 				obj.Type == "table" and
 				obj.argument_index and
 				(
-					not obj:GetContract()
-					or
+					not obj:GetContract() or
 					not obj:GetContract().mutable
 				)
 				and

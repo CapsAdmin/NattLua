@@ -8,9 +8,9 @@ local META = {}
 META.__index = META
 --[[#type META.@Name = "Lexer"]]
 --[[#type META.@Self = {
-		Code = Code,
-		Position = number,
-	}]]
+	Code = Code,
+	Position = number,
+}]]
 local B = string.byte
 
 function META:GetLength()--[[#: number]]
@@ -79,8 +79,8 @@ end
 
 do
 	local new_token = table_pool(
-			function()
-				local x = {
+		function()
+			local x = {
 				type = "unknown",
 				value = "",
 				whitespace = false,
@@ -88,9 +88,9 @@ do
 				stop = 0,
 			}--[[# as Token]]
 			return x
-			end,
-			3105585
-		)
+		end,
+		3105585
+	)
 
 	function META:NewToken(
 		type--[[#: TokenType]],
@@ -294,7 +294,7 @@ do
 
 	local function ReadLetter(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if not characters.IsLetter(lexer:PeekByte()) then return false end
-		
+
 		while not lexer:TheEnd() do
 			lexer:Advance(1)
 
@@ -357,11 +357,9 @@ do
 
 	local function ReadMultilineComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if
-			not lexer:IsString("--[")
-			or
+			not lexer:IsString("--[") or
 			(
-				not lexer:IsString("[", 3)
-				and
+				not lexer:IsString("[", 3) and
 				not lexer:IsString("=", 3)
 			)
 		then
@@ -399,25 +397,24 @@ do
 	local function ReadInlineAnalyzerDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 		if not lexer:IsString("§") then return false end
 
-			lexer:Advance(#"§")
+		lexer:Advance(#"§")
 
-			while not lexer:TheEnd() do
+		while not lexer:TheEnd() do
 			if
-				lexer:IsString("\n")
-				or
+				lexer:IsString("\n") or
 				(
 					lexer.comment_escape and
 					lexer:IsString(lexer.comment_escape)
 				)
 			then
-					break
-				end
-
-				lexer:Advance(1)
+				break
 			end
 
-			return "analyzer_debug_code"
+			lexer:Advance(1)
 		end
+
+		return "analyzer_debug_code"
+	end
 
 	local function ReadInlineParserDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 		if not lexer:IsString("£") then return false end
@@ -426,8 +423,7 @@ do
 
 		while not lexer:TheEnd() do
 			if
-				lexer:IsString("\n")
-				or
+				lexer:IsString("\n") or
 				(
 					lexer.comment_escape and
 					lexer:IsString(lexer.comment_escape)
@@ -441,7 +437,7 @@ do
 
 		return "parser_debug_code"
 	end
-	
+
 	local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
 		lexer:Advance(1)
 
@@ -549,11 +545,9 @@ do
 
 	local function ReadDecimalNumber(lexer--[[#: Lexer]])
 		if
-			not characters.IsNumber(lexer:PeekByte())
-			and
+			not characters.IsNumber(lexer:PeekByte()) and
 			(
-				not lexer:IsString(".")
-				or
+				not lexer:IsString(".") or
 				not characters.IsNumber(lexer:PeekByte(1))
 			)
 		then
@@ -591,7 +585,7 @@ do
 				if lexer:IsString("e") or lexer:IsString("E") then
 					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
-				
+
 				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 
 				lexer:Error(
@@ -608,11 +602,9 @@ do
 
 	local function ReadMultilineString(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if
-			not lexer:IsString("[", 0)
-			or
+			not lexer:IsString("[", 0) or
 			(
-				not lexer:IsString("[", 1)
-				and
+				not lexer:IsString("[", 1) and
 				not lexer:IsString("=", 1)
 			)
 		then
@@ -665,13 +657,13 @@ do
 
 				local start = lexer:GetPosition()
 				lexer:Advance(1)
-		
+
 				while not lexer:TheEnd() do
 					local char = lexer:ReadByte()
-		
+
 					if char == escape_character then
 						local char = lexer:ReadByte()
-		
+
 						if char == B("z") and not lexer:IsString(quote) then
 							ReadSpace(lexer)
 						end
@@ -683,7 +675,7 @@ do
 						return "string"
 					end
 				end
-		
+
 				lexer:Error(
 					"expected " .. name:lower() .. " quote to end: reached end of file",
 					start,
@@ -692,7 +684,7 @@ do
 				return "string"
 			end
 		end
-		
+
 		ReadDoubleQuoteString = build_string_reader("double", "\"")
 		ReadSingleQuoteString = build_string_reader("single", "'")
 	end
@@ -708,20 +700,17 @@ do
 			lexer:Advance(5)
 			lexer.comment_escape = "]]"
 			return "comment_escape"
-        elseif lexer:IsString("--[=[#") then
-            lexer:Advance(6)
-            lexer.comment_escape = "]=]"
-            return "comment_escape"
-        end
+		elseif lexer:IsString("--[=[#") then
+			lexer:Advance(6)
+			lexer.comment_escape = "]=]"
+			return "comment_escape"
+		end
 
 		return false
 	end
-	
+
 	local function ReadRemainingCommentEscape(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
-		if
-			lexer.comment_escape and
-			lexer:IsString(lexer.comment_escape--[[# as string]])
-		then
+		if lexer.comment_escape and lexer:IsString(lexer.comment_escape--[[# as string]]) then
 			lexer:Advance(#lexer.comment_escape--[[# as string]])
 			return "comment_escape"
 		end
@@ -739,6 +728,7 @@ do
 				ReadLineCComment(self) or
 				ReadMultilineComment(self) or
 				ReadLineComment(self)
+
 			if name then return name, true end
 		end
 
@@ -753,6 +743,7 @@ do
 				ReadDoubleQuoteString(self) or
 				ReadLetter(self) or
 				ReadSymbol(self)
+
 			if name then return name, false end
 		end
 	end

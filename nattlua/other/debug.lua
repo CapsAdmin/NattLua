@@ -1,8 +1,7 @@
 local lib = {}
 
 local function inject_full_path()
-	local ok, lib = pcall(require, "jit.util" --[[# as string]]) -- to avoid warning
-
+	local ok, lib = pcall(require, "jit.util"--[[# as string]]) -- to avoid warning
 	if ok and type(lib) == "table" and lib.funcinfo then
 		lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
 
@@ -28,7 +27,9 @@ end
 
 function lib.EnableJITDumper()
 	if not jit then return end
+
 	if jit.version_num ~= 20100 then return end
+
 	inject_full_path()
 	local jutil = require("jit.util"--[[# as string]])
 	local vmdef = require("jit.vmdef"--[[# as string]])
@@ -36,8 +37,8 @@ function lib.EnableJITDumper()
 	local type, format = _G.type, string.format
 	local stdout, stderr = io.stdout, io.stderr
 	local out = stdout
-    ------------------------------------------------------------------------------
-    local startloc, startex
+	------------------------------------------------------------------------------
+	local startloc, startex
 
 	local function fmtfunc(func--[[#: any]], pc--[[#: any]])
 		local fi = funcinfo(func, pc)
@@ -53,12 +54,10 @@ function lib.EnableJITDumper()
 		end
 	end
 
-    -- Format trace error message.
-    local function fmterr(err--[[#: any]], info--[[#: any]])
+	-- Format trace error message.
+	local function fmterr(err--[[#: any]], info--[[#: any]])
 		if type(err) == "number" then
-			if type(info) == "function" then
-				info = fmtfunc(info)
-			end
+			if type(info) == "function" then info = fmtfunc(info) end
 
 			err = format(vmdef.traceerr[err], info)
 		end
@@ -66,8 +65,15 @@ function lib.EnableJITDumper()
 		return err
 	end
 
-    -- Dump trace states.
-    local function dump_trace(what--[[#: any]], tr--[[#: any]], func--[[#: any]], pc--[[#: any]], otr--[[#: any]], oex--[[#: any]])
+	-- Dump trace states.
+	local function dump_trace(
+		what--[[#: any]],
+		tr--[[#: any]],
+		func--[[#: any]],
+		pc--[[#: any]],
+		otr--[[#: any]],
+		oex--[[#: any]]
+	)
 		if what == "start" then
 			startloc = fmtfunc(func, pc)
 			startex = otr and "(" .. otr .. "/" .. (oex == -1 and "stitch" or oex) .. ") " or ""
@@ -89,12 +95,12 @@ function lib.EnableJITDumper()
 				elseif ltype == "stitch" then
 					out:write(
 						format(
-						"[TRACE %3s %s%s %s %s]\n",
-						tr,
-						startex,
-						startloc,
-						ltype,
-						fmtfunc(func, pc)
+							"[TRACE %3s %s%s %s %s]\n",
+							tr,
+							startex,
+							startloc,
+							ltype,
+							fmtfunc(func, pc)
 						)
 					)
 				elseif link == tr or link == 0 then
@@ -104,12 +110,12 @@ function lib.EnableJITDumper()
 				else
 					out:write(
 						format(
-						"[TRACE %3s %s%s -> %d %s]\n",
-						tr,
-						startex,
-						startloc,
-						link,
-						ltype
+							"[TRACE %3s %s%s -> %d %s]\n",
+							tr,
+							startex,
+							startloc,
+							link,
+							ltype
 						)
 					)
 				end
@@ -171,7 +177,9 @@ do
 	function _G.find_tests()
 		for i = 1, math.huge do
 			local info = debug.getinfo(i)
+
 			if not info then break end
+
 			local path = info.source
 
 			if path:sub(1, 1) == "@" then
@@ -180,7 +188,7 @@ do
 				end
 			end
 		end
-	end	
+	end
 end
 
 return lib

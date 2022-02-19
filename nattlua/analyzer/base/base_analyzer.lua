@@ -23,8 +23,7 @@ return function(META)
 	function META:AnalyzeRootStatement(statement, ...)
 		context:PushCurrentAnalyzer(self)
 		local argument_tuple = ... and
-			Tuple({...})
-			or
+			Tuple({...}) or
 			Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushModuleScope()
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("runtime"), "runtime")

@@ -107,11 +107,9 @@ function META:AddType(e--[[#: TBaseType]])
 		if v:Equal(e) then
 			if
 				e.Type ~= "function" or
-				e:GetContract()
-				or
+				e:GetContract() or
 				(
-					e:GetNode()
-					and
+					e:GetNode() and
 					(
 						e:GetNode() == v:GetNode()
 					)

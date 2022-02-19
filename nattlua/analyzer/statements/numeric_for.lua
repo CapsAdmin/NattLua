@@ -28,8 +28,7 @@ return {
 		local init = self:AnalyzeExpression(statement.expressions[1]):GetFirstValue()
 		local max = self:AnalyzeExpression(statement.expressions[2]):GetFirstValue()
 		local step = statement.expressions[3] and
-			self:AnalyzeExpression(statement.expressions[3]):GetFirstValue()
-			or
+			self:AnalyzeExpression(statement.expressions[3]):GetFirstValue() or
 			nil
 
 		if step then assert(step.Type == "number") end

@@ -2,11 +2,9 @@ local pcall = _G.pcall
 local pairs = _G.pairs
 local ok, table_new = pcall(require, "table.new")
 
-if not ok then
-	table_new = function()
-		return {}
-	end
-end
+if not ok then table_new = function()
+	return {}
+end end
 
 return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: number]])
 	local records = 0
@@ -32,7 +30,7 @@ return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: n
 
 		if not tbl then
 			refill()
-					tbl = pool[i]--[[# as return_type<|alloc|>[1] ]]
+			tbl = pool[i]--[[# as return_type<|alloc|>[1] ]]
 		end
 
 		i = i + 1

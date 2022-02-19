@@ -296,8 +296,7 @@ function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 		if
 			not A:GetData()[1] and
 			(
-				not A:GetContract()
-				or
+				not A:GetContract() or
 				not A:GetContract():GetData()[1]
 			)
 		then
@@ -732,11 +731,9 @@ end
 function META:pairs()
 	local i = 1
 	return function()
-		local keyval = self:GetData()
-			and
+		local keyval = self:GetData() and
 			self:GetData()[i] or
-			self:GetContract()
-			and
+			self:GetContract() and
 			self:GetContract()[i]
 
 		if not keyval then return nil end

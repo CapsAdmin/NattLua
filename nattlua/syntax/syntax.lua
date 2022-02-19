@@ -4,10 +4,7 @@ local META = {}
 META.__index = META
 --[[#type META.@Name = "Syntax"]]
 --[[#type META.@Self = {
-	BinaryOperatorInfo = Map<|string, {
-		left_priority = number,
-		right_priority = number
-	}|>,
+	BinaryOperatorInfo = Map<|string, {left_priority = number, right_priority = number}|>,
 	NumberAnnotations = List<|string|>,
 	Symbols = List<|string|>,
 	BinaryOperators = List<|List<|string|>|>,
@@ -23,24 +20,26 @@ META.__index = META
 	PrefixOperatorFunctionTranslate = Map<|string, {string, string}|>,
 }]]
 
-function META.New() 
-	local self = setmetatable({
-		NumberAnnotations = {},
-		BinaryOperatorInfo = {},
-		Symbols = {},
-		BinaryOperators = {},
-		PrefixOperators = {},
-		PostfixOperators = {},
-		PrimaryBinaryOperators = {},
-		SymbolCharacters = {},
-		KeywordValues = {},
-		Keywords = {},
-		NonStandardKeywords = {},
-		BinaryOperatorFunctionTranslate = {},
-		PostfixOperatorFunctionTranslate = {},
-		PrefixOperatorFunctionTranslate = {},
-	}, META)
-
+function META.New()
+	local self = setmetatable(
+		{
+			NumberAnnotations = {},
+			BinaryOperatorInfo = {},
+			Symbols = {},
+			BinaryOperators = {},
+			PrefixOperators = {},
+			PostfixOperators = {},
+			PrimaryBinaryOperators = {},
+			SymbolCharacters = {},
+			KeywordValues = {},
+			Keywords = {},
+			NonStandardKeywords = {},
+			BinaryOperatorFunctionTranslate = {},
+			PostfixOperatorFunctionTranslate = {},
+			PrefixOperatorFunctionTranslate = {},
+		},
+		META
+	)
 	return self
 end
 
@@ -85,9 +84,7 @@ function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 		for _, token in ipairs(group) do
 			local right = token:sub(1, 1) == "R"
 
-			if right then
-				token = token:sub(2)
-			end
+			if right then token = token:sub(2) end
 
 			if right then
 				self.BinaryOperatorInfo[token] = {
@@ -204,7 +201,7 @@ end
 
 function META:GetFunctionForBinaryOperator(token--[[#: Token]])
 	return self.BinaryOperatorFunctionTranslate[token.value]
-end	
+end
 
 function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
 	for k, v in pairs(tbl) do
@@ -236,9 +233,13 @@ end
 
 function META:IsValue(token--[[#: Token]])
 	if token.type == "number" or token.type == "string" then return true end
+
 	if self:IsKeywordValue(token) then return true end
+
 	if self:IsKeyword(token) then return false end
+
 	if token.type == "letter" then return true end
+
 	return false
 end
 

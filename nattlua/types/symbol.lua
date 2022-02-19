@@ -5,7 +5,7 @@ local table = require("table")
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType ]]
+--[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TSymbol"]]
 --[[#type TSymbol = META.@Self]]
 META.Type = "symbol"
@@ -67,18 +67,18 @@ end
 
 local Symbol = META.New
 return {
-		Symbol = Symbol,
-		Nil = function()
-			return Symbol(nil)
-		end,
-		True = function()
-			return Symbol(true)
-		end,
-		False = function()
-			return Symbol(false)
-		end,
-		Boolean = function()
-			local Union = require("nattlua.types.union").Union
-			return Union({Symbol(true), Symbol(false)})
-		end,
-	}
+	Symbol = Symbol,
+	Nil = function()
+		return Symbol(nil)
+	end,
+	True = function()
+		return Symbol(true)
+	end,
+	False = function()
+		return Symbol(false)
+	end,
+	Boolean = function()
+		local Union = require("nattlua.types.union").Union
+		return Union({Symbol(true), Symbol(false)})
+	end,
+}

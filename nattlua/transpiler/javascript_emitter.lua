@@ -88,15 +88,11 @@ function META:EmitCall(node)
 	if node.expressions[1] then
 		self:Emit(",")
 
-		if node.tokens["call("] then
-			self:EmitToken(node.tokens["call("], "")
-		end
+		if node.tokens["call("] then self:EmitToken(node.tokens["call("], "") end
 
 		self:EmitExpressionList(node.expressions)
 
-		if node.tokens["call)"] then
-			self:EmitToken(node.tokens["call)"], "")
-		end
+		if node.tokens["call)"] then self:EmitToken(node.tokens["call)"], "") end
 	end
 
 	self:Emit(")")
@@ -115,21 +111,17 @@ function META:EmitBinaryOperator(node)
 	if func_chunks then
 		self:Emit(func_chunks[1])
 
-		if node.left then
-			self:EmitExpression(node.left)
-		end
+		if node.left then self:EmitExpression(node.left) end
 
 		self:Emit(func_chunks[2])
 
-		if node.right then
-			self:EmitExpression(node.right)
-		end
+		if node.right then self:EmitExpression(node.right) end
 
 		self:Emit(func_chunks[3])
 		self.operator_transformed = true
 	else
-        -- move whitespace
-        if node.left and node.left.value then
+		-- move whitespace
+		if node.left and node.left.value then
 			self:EmitToken(node.left.value, "")
 			node.left.value.whitespace = nil
 		end
@@ -138,9 +130,7 @@ function META:EmitBinaryOperator(node)
 		self:Emit(node.value.value)
 		self:Emit("'](")
 
-		if node.left then
-			self:EmitExpression(node.left)
-		end
+		if node.left then self:EmitExpression(node.left) end
 
 		self:Emit(",")
 
@@ -166,9 +156,7 @@ do
 		if node.self_call then
 			self:Emit("self")
 
-			if #node.identifiers >= 1 then
-				self:Emit(", ")
-			end
+			if #node.identifiers >= 1 then self:Emit(", ") end
 		end
 
 		self:EmitIdentifierList(node.identifiers)
@@ -176,10 +164,10 @@ do
 		self:Emit(" => {")
 
 		if self.config.annotate and node.inferred_type and not analyzer_function then
-            --self:Emit(" --[[ : ")
-            local str = {}
-            -- this iterates the first return tuple
-            local obj = node.inferred_type:GetContract() or node.inferred_type
+			--self:Emit(" --[[ : ")
+			local str = {}
+			-- this iterates the first return tuple
+			local obj = node.inferred_type:GetContract() or node.inferred_type
 
 			if obj.Type == "function" then
 				for i, v in ipairs(obj:GetReturnTypes():GetData()) do
@@ -193,8 +181,8 @@ do
 				self:Emit(": ")
 				self:Emit(table.concat(str, ", "))
 			end
-            --self:Emit(" ]] ")
-        end
+		--self:Emit(" ]] ")
+		end
 
 		self:Whitespace("\n")
 		self:EmitBlock(node.statements)
@@ -304,9 +292,7 @@ function META:EmitTableKeyValue(node)
 end
 
 function META:EmitTable(tree)
-	if tree.spread then
-		self:Emit("table.mergetables")
-	end
+	if tree.spread then self:Emit("table.mergetables") end
 
 	local is_array = tree.inferred_type and tree.inferred_type:IsNumericallyIndexed()
 	local during_spread = false
@@ -359,9 +345,7 @@ function META:EmitTable(tree)
 		self:Whitespace("\t")
 	end
 
-	if during_spread then
-		self:Emit("}")
-	end
+	if during_spread then self:Emit("}") end
 
 	if is_array then
 		self:EmitToken(tree.tokens["}"], "]")
@@ -370,7 +354,9 @@ function META:EmitTable(tree)
 	end
 end
 
-local translate = {["not"] = "!",}
+local translate = {
+	["not"] = "!",
+}
 
 function META:EmitPrefixOperator(node)
 	local func_chunks = runtime_syntax:GetFunctionForPrefixOperator(node.value)
@@ -418,9 +404,9 @@ end
 
 function META:EmitPostfixOperator(node)
 	local func_chunks = runtime_syntax:GetFunctionForPostfixOperator(node.value)
-    -- no such thing as postfix operator in lua,
-    -- so we have to assume that there's a translation
-    assert(func_chunks)
+	-- no such thing as postfix operator in lua,
+	-- so we have to assume that there's a translation
+	assert(func_chunks)
 	self:Emit(func_chunks[1])
 	self:EmitExpression(node.left)
 	self:Emit(func_chunks[2])
@@ -453,15 +439,11 @@ function META:EmitIfStatement(node)
 				self:EmitToken(node.tokens["if/else/elseif"][i], "else if")
 			end
 
-			if not node.expressions[i].tokens["("] then
-				self:Emit("(")
-			end
+			if not node.expressions[i].tokens["("] then self:Emit("(") end
 
 			self:EmitExpression(node.expressions[i])
 
-			if not node.expressions[i].tokens[")"] then
-				self:Emit(")")
-			end
+			if not node.expressions[i].tokens[")"] then self:Emit(")") end
 
 			self:EmitToken(node.tokens["then"][i], "{")
 		elseif node.tokens["if/else/elseif"][i] then
@@ -475,9 +457,7 @@ function META:EmitIfStatement(node)
 		self:EmitBlock(node.statements[i])
 		self:Whitespace("\t")
 
-		if i ~= #node.statements then
-			self:Emit("}")
-		end
+		if i ~= #node.statements then self:Emit("}") end
 	end
 
 	self:Whitespace("\t")
@@ -618,6 +598,7 @@ end
 
 function META:EmitLocalAssignment(node)
 	if node.environment == "typesystem" then return end
+
 	self:Whitespace("\t")
 
 	if node.environment == "typesystem" then
@@ -635,19 +616,16 @@ function META:EmitLocalAssignment(node)
 			self:EmitToken(node.tokens["="])
 			self:EmitExpression(right)
 
-			if right.tokens[","] then
-				self:EmitToken(right.tokens[","], "")
-			end
+			if right.tokens[","] then self:EmitToken(right.tokens[","], "") end
 		end
 
-		if left.tokens[","] then
-			self:EmitToken(left.tokens[","])
-		end
+		if left.tokens[","] then self:EmitToken(left.tokens[","]) end
 	end
 end
 
 function META:EmitAssignment(node)
 	if node.environment == "typesystem" then return end
+
 	self:Whitespace("\t")
 
 	if node.environment == "typesystem" then
@@ -769,9 +747,7 @@ function META:EmitStatement(node)
 	self:Emit(";")
 
 	if self.OnEmitStatement then
-		if node.kind ~= "end_of_file" then
-			self:OnEmitStatement()
-		end
+		if node.kind ~= "end_of_file" then self:OnEmitStatement() end
 	end
 end
 
@@ -796,9 +772,7 @@ end
 function META:EmitIdentifier(node)
 	self:EmitToken(node.value)
 
-	if node.value.value == "..." then
-		self:Emit("__args")
-	end
+	if node.value.value == "..." then self:Emit("__args") end
 
 	if self.config.annotate then
 		if node.type_expression then
@@ -823,10 +797,8 @@ function META:EmitIdentifierList(tbl)
 end
 
 do -- types
-    function META:EmitTypeBinaryOperator(node)
-		if node.left then
-			self:EmitTypeExpression(node.left)
-		end
+	function META:EmitTypeBinaryOperator(node)
+		if node.left then self:EmitTypeExpression(node.left) end
 
 		if node.value.value == "." or node.value.value == ":" then
 			self:EmitToken(node.value)
@@ -836,9 +808,7 @@ do -- types
 			self:Whitespace(" ")
 		end
 
-		if node.right then
-			self:EmitTypeExpression(node.right)
-		end
+		if node.right then self:EmitTypeExpression(node.right) end
 	end
 
 	function META:EmitType(node)
@@ -934,9 +904,7 @@ do -- types
 			end
 
 			if i ~= #node.identifiers then
-				if exp.tokens[","] then
-					self:EmitToken(exp.tokens[","])
-				end
+				if exp.tokens[","] then self:EmitToken(exp.tokens[","]) end
 			end
 		end
 
@@ -948,9 +916,7 @@ do -- types
 			for i, exp in ipairs(node.return_types) do
 				self:EmitTypeExpression(exp)
 
-				if i ~= #node.return_types then
-					self:EmitToken(exp.tokens[","])
-				end
+				if i ~= #node.return_types then self:EmitToken(exp.tokens[","]) end
 			end
 		else
 			self:Whitespace("\n")
@@ -1002,7 +968,7 @@ do -- types
 end
 
 do -- extra
-    function META:EmitDestructureAssignment(node)
+	function META:EmitDestructureAssignment(node)
 		self:Whitespace("\t")
 		self:EmitToken(node.tokens["{"], "")
 
@@ -1028,16 +994,12 @@ do -- extra
 			self:Emit(v.value.value)
 			self:Emit("\"")
 
-			if i ~= #node.left then
-				self:Emit(", ")
-			end
+			if i ~= #node.left then self:Emit(", ") end
 		end
 
 		self:Emit("}")
 
-		if node.default then
-			self:Emit(", true")
-		end
+		if node.default then self:Emit(", true") end
 
 		self:Emit(")")
 	end

@@ -22,8 +22,7 @@ return {
 			local values = self:Assert(statement.expressions[1], self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
 			if
-				not values:Get(1)
-				or
+				not values:Get(1) or
 				values:Get(1).Type == "symbol" and
 				values:Get(1):GetData() == nil
 			then

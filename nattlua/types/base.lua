@@ -12,7 +12,7 @@ META.__index = META
 
 function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
---[[#	type tbl.@Self[name] = tbl[name] ]]
+	--[[#type tbl.@Self[name] = tbl[name] ]]
 	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
 		self[name] = val
 		return self
@@ -24,7 +24,7 @@ end
 
 function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
 	tbl[name] = default--[[# as NonLiteral<|default|>]]
---[[#	type tbl.@Self[name] = tbl[name] ]]
+	--[[#type tbl.@Self[name] = tbl[name] ]]
 	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
 		self[name] = val
 		return self
@@ -40,8 +40,7 @@ end
 --[[#type TBaseType.parent = TBaseType | nil]]
 META:GetSet("AnalyzerEnvironment", nil--[[# as nil | "runtime" | "typesystem"]])
 
-function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]])
-	--error("nyi " .. a.Type .. " == " .. b.Type)
+function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
 end
 
 function META:CanBeNil()
@@ -51,7 +50,10 @@ end
 META:GetSet("Data", nil--[[# as nil | any]])
 
 function META:GetLuaType()
-	if self.Contract and self.Contract.TypeOverride then return self.Contract.TypeOverride end
+	if self.Contract and self.Contract.TypeOverride then
+		return self.Contract.TypeOverride
+	end
+
 	return self.TypeOverride or self.Type
 end
 
@@ -70,11 +72,13 @@ do
 
 	function META:GetTruthy()
 		if self:IsTruthy() then return self end
+
 		return nil
 	end
 
 	function META:GetFalsy()
 		if self:IsFalsy() then return self end
+
 		return nil
 	end
 
@@ -107,9 +111,7 @@ do -- token, expression and statement association
 	function META:SetNode(node--[[#: nil | any]])
 		self.Node = node
 
-		if node then
-			node.inferred_type = self
-		end
+		if node then node.inferred_type = self end
 
 		return self
 	end
@@ -119,10 +121,8 @@ do -- comes from tbl.@Name = "my name"
 	META:GetSet("Name", nil--[[# as nil | TBaseType]])
 
 	function META:SetName(name--[[#: TBaseType | nil]])
-		if name then
-			assert(name:IsLiteral())
-		end
-		
+		if name then assert(name:IsLiteral()) end
+
 		self.Name = name
 	end
 end
@@ -131,16 +131,14 @@ do -- comes from tbl.@TypeOverride = "my name"
 	META:GetSet("TypeOverride", nil--[[# as nil | TBaseType]])
 
 	function META:SetTypeOverride(name--[[#: any]])
-		if type(name) == "table" and name:IsLiteral() then
-			name = name:GetData()
-		end
+		if type(name) == "table" and name:IsLiteral() then name = name:GetData() end
 
 		self.TypeOverride = name
 	end
 end
 
 do
---[[#	type TBaseType.disabled_unique_id = number | nil]]
+	--[[#type TBaseType.disabled_unique_id = number | nil]]
 	META:GetSet("UniqueID", nil--[[# as nil | number]])
 	local ref = 0
 
@@ -173,8 +171,14 @@ do
 	end
 
 	function META.IsSameUniqueType(a--[[#: TBaseType]], b--[[#: TBaseType]])
-		if a.UniqueID and not b.UniqueID then return type_errors.other({a, "is a unique type"}) end
-		if a.UniqueID ~= b.UniqueID then return type_errors.other({a, "is not the same unique type as ", a}) end
+		if a.UniqueID and not b.UniqueID then
+			return type_errors.other({a, "is a unique type"})
+		end
+
+		if a.UniqueID ~= b.UniqueID then
+			return type_errors.other({a, "is not the same unique type as ", a})
+		end
+
 		return true
 	end
 end
@@ -234,9 +238,7 @@ end
 do
 	function META:SetParent(parent--[[#: TBaseType | nil]])
 		if parent then
-			if parent ~= self then
-				self.parent = parent
-			end
+			if parent ~= self then self.parent = parent end
 		else
 			self.parent = nil
 		end
@@ -248,6 +250,7 @@ do
 
 		while true do
 			if not parent.parent or done[parent] then break end
+
 			done[parent] = true
 			parent = parent.parent
 		end
@@ -269,7 +272,9 @@ do
 
 	function META:GetMetaTable()
 		local contract = self.Contract
+
 		if contract and contract.MetaTable then return contract.MetaTable end
+
 		return self.MetaTable
 	end
 end
@@ -287,6 +292,7 @@ end
 function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
 	if op == "==" then
 		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
+
 		return nil
 	end
 

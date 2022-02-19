@@ -19,7 +19,13 @@ local errors = {
 
 		return false, msg
 	end,
-	table_subset = function(a_key--[[#: any]], b_key--[[#: any]], a--[[#: any]], b--[[#: any]], reason--[[#: string | List<|string|> | nil]])--[[#: false,string | {[number] = any | string}]]
+	table_subset = function(
+		a_key--[[#: any]],
+		b_key--[[#: any]],
+		a--[[#: any]],
+		b--[[#: any]],
+		reason--[[#: string | List<|string|> | nil]]
+	)--[[#: false,string | {[number] = any | string}]]
 		local msg = {"[", a_key, "]", a, " is not a subset of ", "[", b_key, "]", b}
 
 		if reason then
@@ -60,14 +66,14 @@ local errors = {
 	end,
 	binary = function(op--[[#: string]], l--[[#: any]], r--[[#: any]])--[[#: false,string | {[number] = any | string}]]
 		return false,
-			{
+		{
 			l,
 			" ",
 			op,
 			" ",
 			r,
 			" is not a valid binary operation",
-}
+		}
 	end,
 	prefix = function(op--[[#: string]], l--[[#: any]])--[[#: false,string | {[number] = any | string}]]
 		return false, {op, " ", l, " is not a valid prefix operation"}
@@ -87,13 +93,13 @@ local errors = {
 	end,
 	string_pattern = function(a--[[#: any]], b--[[#: any]])--[[#: false,string | {[number] = any | string}]]
 		return false,
-			{
+		{
 			"cannot find ",
 			a,
 			" in pattern \"",
 			b:GetPatternContract(),
 			"\"",
-}
+		}
 	end,
 }
 return errors

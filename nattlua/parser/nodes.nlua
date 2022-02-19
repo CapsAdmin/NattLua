@@ -1,707 +1,690 @@
 local type { Token } = import_type<|"nattlua/lexer/token.nlua"|>
 
 local type Node = {
-  type = "statement" | "expression",
-  kind = string,
-  id = number,
-  parent = Node | nil,
-  environment = "runtime" | "typesystem",
+	type = "statement" | "expression",
+	kind = string,
+	id = number,
+	parent = Node | nil,
+	environment = "runtime" | "typesystem",
 }
-
 local type Statement = Node & {
-  type = "statement",
+	type = "statement",
 }
-
 local type Expression = Node & {
-  type = "expression",
-  standalone_letter = Node | nil,
-  type_expression = Node | nil,
-  tokens = {
-    ["("] = List<|Token|>,
-    [")"] = List<|Token|>,
-    [":"] = Token,
-    ["as"] = Token,
-    ["is"] = Token,
+		type = "expression",
+		standalone_letter = Node | nil,
+		type_expression = Node | nil,
+		tokens = {
+			["("] = List<|Token|>,
+			[")"] = List<|Token|>,
+			[":"] = Token,
+			["as"] = Token,
+			["is"] = Token,
 		},
-  }
+	}
 local type EmptyUnionTypeExpression = Expression & {
-    kind = "empty_union",
-  
-    -- &= assignment operator?
-    tokens = Expression.tokens & {
-      ["|"] = Token,
-    },
-  }
+		kind = "empty_union",
+		-- &= assignment operator?
+		tokens = Expression.tokens & {
+			["|"] = Token,
+		},
+	}
 local type VarargTypeExpression = Node & {
-  type = "expression",
-  kind = "type_vararg",
-  expression = Node,
-
-  tokens = Expression.tokens & {
-    ["..."] = Token,
-  },
-}
+		type = "expression",
+		kind = "type_vararg",
+		expression = Node,
+		tokens = Expression.tokens & {
+			["..."] = Token,
+		},
+	}
 local type ValueExpression = Expression & {
-  type = "expression",
-  kind = "value",
-  value = Token,
-  self_call = boolean,
-}
+		type = "expression",
+		kind = "value",
+		value = Token,
+		self_call = boolean,
+	}
 // function( foo = Bar )
 local type FunctionArgumentSubExpression = Node & {
-  type = "expression",
-  kind = "function_argument",
-  identifier = nil | Token,
-  type_expression = Node,
-  tokens = Expression.tokens & {
-    [":"] = nil | Token,
-  },
-}
+		type = "expression",
+		kind = "function_argument",
+		identifier = nil | Token,
+		type_expression = Node,
+		tokens = Expression.tokens & {
+			[":"] = nil | Token,
+		},
+	}
 local type FunctionReturnTypeSubExpression = Node & {
-  type = "expression",
-  kind = "function_return_type",
-  identifier = nil | Token,
-  type_expression = Node,
-  tokens = Expression.tokens & {
-    [":"] = nil | Token,
-  },
-}
+		type = "expression",
+		kind = "function_return_type",
+		identifier = nil | Token,
+		type_expression = Node,
+		tokens = Expression.tokens & {
+			[":"] = nil | Token,
+		},
+	}
 // { [key] = value }
 local type TableExpressionKeyValueSubExpression = Node & {
-  type = "expression",
-  kind = "table_expression_value",
-  expression_key = boolean,
-  key_expression = Node,
-  value_expression = Node,
-  tokens = Expression.tokens & {
-    ["="] = Token,
-    ["["] = Token,
-    ["]"] = Token,
-  },
-}
+		type = "expression",
+		kind = "table_expression_value",
+		expression_key = boolean,
+		key_expression = Node,
+		value_expression = Node,
+		tokens = Expression.tokens & {
+			["="] = Token,
+			["["] = Token,
+			["]"] = Token,
+		},
+	}
 local type TableSpreadSubExpression = Node & {
-  type = "expression",
-  kind = "table_spread",
-  expression = Node,
-
-  tokens = Expression.tokens & {
-    ["..."] = Token,
-  },
-}
+		type = "expression",
+		kind = "table_spread",
+		expression = Node,
+		tokens = Expression.tokens & {
+			["..."] = Token,
+		},
+	}
 // { key = value }
 local type TableKeyValueSubExpression = Node & {
-  type = "expression",
-  kind = "table_key_value",
-  identifier = Token,
-  value_expression = Node,
-  spread = nil | TableSpreadSubExpression,
-  tokens = Expression.tokens & {
-    ["="] = Token,
-  },
-}
+		type = "expression",
+		kind = "table_key_value",
+		identifier = Token,
+		value_expression = Node,
+		spread = nil | TableSpreadSubExpression,
+		tokens = Expression.tokens & {
+			["="] = Token,
+		},
+	}
 // { value }
 local type TableIndexValueSubExpression = Node & {
-  type = "expression",
-  kind = "table_index_value",
-  value_expression = Node,
-  spread = nil | TableSpreadSubExpression,
-  key = number,
-}
+		type = "expression",
+		kind = "table_index_value",
+		value_expression = Node,
+		spread = nil | TableSpreadSubExpression,
+		key = number,
+	}
 // { [key] = value, key = value, value }
 local type TableExpression = Node & {
-  type = "expression",
-  kind = "table",
-  children = List<|Node|>,
-  spread = boolean,
-  is_array = boolean,
-  is_dictionary = boolean,
-  tokens = Expression.tokens & {
-    ["{"] = Token,
-    ["}"] = Token,
-    ["separators"] = List<|Token|>,
-  },
-}
-
+		type = "expression",
+		kind = "table",
+		children = List<|Node|>,
+		spread = boolean,
+		is_array = boolean,
+		is_dictionary = boolean,
+		tokens = Expression.tokens & {
+			["{"] = Token,
+			["}"] = Token,
+			["separators"] = List<|Token|>,
+		},
+	}
 // foo(a,b,c)
 local type PostfixCallSubExpression = Node & {
-  type = "expression",
-  kind = "postfix_call",
-  arguments = List<|Node|>,
-  is_type_call = boolean,
-  left = Node,
-  tokens = Expression.tokens & {
-    ["arguments("] = nil | Token,
-    [","] = List<|Token|>,
-    ["arguments)"] = nil | Token,
-    // type call
-    ["!"] = Token,
-  },
-}
+		type = "expression",
+		kind = "postfix_call",
+		arguments = List<|Node|>,
+		is_type_call = boolean,
+		left = Node,
+		tokens = Expression.tokens & {
+			["arguments("] = nil | Token,
+			[","] = List<|Token|>,
+			["arguments)"] = nil | Token,
+			// type call
+			["!"] = Token,
+		},
+	}
 local type PostfixIndexSubExpression = Node & {
-  type = "expression",
-  kind = "postfix_expression_index",
-  index = Node,
-  left = Node,
-
-  tokens = Expression.tokens & {
-    ["["] = Token,
-    ["]"] = Token,
-  },
-}
+		type = "expression",
+		kind = "postfix_expression_index",
+		index = Node,
+		left = Node,
+		tokens = Expression.tokens & {
+			["["] = Token,
+			["]"] = Token,
+		},
+	}
 local type EndOfFileStatement = Node & {
-  type = "statement",
-  kind = "end_of_file",
-
-  tokens = Expression.tokens & {
-    ["end_of_file"] = Token,
-  },
-}
+		type = "statement",
+		kind = "end_of_file",
+		tokens = Expression.tokens & {
+			["end_of_file"] = Token,
+		},
+	}
 local type DebugParserDebugCodeStatement = Node & {
-  type = "statement",
-  kind = "parser_debug_code",
-  lua_code = ValueExpression,
-  tokens = Expression.tokens & {
-    ["£"] = Token,
-  },
-}
+		type = "statement",
+		kind = "parser_debug_code",
+		lua_code = ValueExpression,
+		tokens = Expression.tokens & {
+			["£"] = Token,
+		},
+	}
 local type DebugAnalyzerCodeStatement = Node & {
-  type = "statement",
-  kind = "analyzer_debug_code",
-  lua_code = ValueExpression,
-  tokens = Expression.tokens & {
-    ["§"] = Token,
-  },
-}
+		type = "statement",
+		kind = "analyzer_debug_code",
+		lua_code = ValueExpression,
+		tokens = Expression.tokens & {
+			["§"] = Token,
+		},
+	}
 local type ReturnStatement = Node & {
-  type = "statement",
-  kind = "return",
-  expressions = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["return"] = Token,
-    [","] = List<|Token|>,
-  },
-}
+		type = "statement",
+		kind = "return",
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["return"] = Token,
+			[","] = List<|Token|>,
+		},
+	}
 local type BreakStatement = Node & {
-  type = "statement",
-  kind = "break",
-  tokens = Expression.tokens & {
-    ["break"] = Token,
-  },
-}
+		type = "statement",
+		kind = "break",
+		tokens = Expression.tokens & {
+			["break"] = Token,
+		},
+	}
 local type ContinueStatement = Node & {
-  type = "statement",
-  kind = "continue",
-  tokens = Expression.tokens & {
-    ["continue"] = Token,
-  },
-}
+		type = "statement",
+		kind = "continue",
+		tokens = Expression.tokens & {
+			["continue"] = Token,
+		},
+	}
 local type SemicolonStatement = Node & {
-  type = "statement",
-  kind = "semicolon",
-  tokens = Expression.tokens & {
-    [";"] = Token,
-  },
-}
+		type = "statement",
+		kind = "semicolon",
+		tokens = Expression.tokens & {
+			[";"] = Token,
+		},
+	}
 local type GotoStatement = Node & {
-  type = "statement",
-  kind = "goto",
-  identifier = Token,
-  tokens = Expression.tokens & {
-    ["goto"] = Token,
-  },
-}
+		type = "statement",
+		kind = "goto",
+		identifier = Token,
+		tokens = Expression.tokens & {
+			["goto"] = Token,
+		},
+	}
 local type GotoLabelStatement = Node & {
-  type = "statement",
-  kind = "goto_label",
-  identifier = Token,
-  tokens = Expression.tokens & {
-    [" = =left"] = Token,
-    [" = =right"] = Token,
-  },
-}
+		type = "statement",
+		kind = "goto_label",
+		identifier = Token,
+		tokens = Expression.tokens & {
+			[" = =left"] = Token,
+			[" = =right"] = Token,
+		},
+	}
 local type BinaryOperatorExpression = Node & {
-  type = "expression",
-  kind = "binary_operator",
-  operator = Token,
-  left = Node,
-  right = Node,
-}
+		type = "expression",
+		kind = "binary_operator",
+		operator = Token,
+		left = Node,
+		right = Node,
+	}
 local type FunctionAnalyzerStatement = Node & {
-  type = "statement",
-  kind = "analyzer_function",
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  index_expression = BinaryOperatorExpression | ValueExpression,
-  tokens = Expression.tokens & {
-    ["analyzer"] = Token,
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "analyzer_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		tokens = Expression.tokens & {
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type FunctionTypeStatement = Node & {
-  type = "statement",
-  kind = "type_function",
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  index_expression = BinaryOperatorExpression | ValueExpression,
-  tokens = Expression.tokens & {
-    ["type"] = Token,
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "type_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type FunctionAnalyzerExpression = Node & {
-  type = "expression",
-  kind = "analyzer_function",
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["analyzer"] = Token,
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "expression",
+		kind = "analyzer_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type FunctionTypeExpression = Node & {
-  type = "expression",
-  kind = "type_function",
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["type"] = Token,
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "expression",
+		kind = "type_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type FunctionExpression = Node & {
-  type = "expression",
-  kind = "function",
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "expression",
+		kind = "function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type FunctionLocalStatement = Node & {
-  type = "statement",
-  kind = "local_function",
-  label = Token,
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["local"] = Token,
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "local_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type FunctionLocalTypeStatement = Node & {
-  type = "statement",
-  kind = "local_type_function",
-  label = Token,
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["type"] = Token,
-    ["local"] = Token,
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "local_type_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["local"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type FunctionStatement = Node & {
-  type = "statement",
-  kind = "function",
-  index_expression = BinaryOperatorExpression | ValueExpression,
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "function",
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type FunctionLocalAnalyzerStatement = Node & {
-  type = "statement",
-  kind = "local_analyzer_function",
-  label = Token,
-  arguments = List<|FunctionArgumentSubExpression|>,
-  return_types = List<|FunctionReturnTypeSubExpression|>,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["local"] = Token,
-    ["analyzer"] = Token,
-    ["function"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["return_types,"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "local_analyzer_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type ImportExpression = Node & {
-  type = "expression",
-  kind = "import",
-  path = string,
-  expressions = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["import"] = Token,
-    ["arguments)"] = Token,
-    ["arguments("] = Token,
-    [","] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "expression",
+		kind = "import",
+		path = string,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["import"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			[","] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type PrefixOperatorExpression = Node & {
-  type = "expression",
-  kind = "prefix_operator",
-  operator = Token,
-  right = Node,
-}
+		type = "expression",
+		kind = "prefix_operator",
+		operator = Token,
+		right = Node,
+	}
 local type PostfixOperatorSubExpression = Node & {
-  type = "expression",
-  kind = "postfix_operator",
-  operator = Token,
-  left = Node,
-}
+		type = "expression",
+		kind = "postfix_operator",
+		operator = Token,
+		left = Node,
+	}
 local type RepeatStatement = Node & {
-  type = "statement",
-  kind = "repeat",
-  statements = List<|Node|>,
-  expression = Node,
-  tokens = Expression.tokens & {
-    ["repeat"] = Token,
-    ["until"] = Token,
-  },
-}
+		type = "statement",
+		kind = "repeat",
+		statements = List<|Node|>,
+		expression = Node,
+		tokens = Expression.tokens & {
+			["repeat"] = Token,
+			["until"] = Token,
+		},
+	}
 local type DoStatement = Node & {
-  type = "statement",
-  kind = "do",
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["do"] = Token,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "do",
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["do"] = Token,
+			["end"] = Token,
+		},
+	}
 local type IfStatement = Node & {
-  type = "statement",
-  kind = "if",
-  expressions = List<|Node|>,
-  statements = List<|List<|Node|>|>,
-  tokens = Expression.tokens & {
-    ["if/else/elseif"] = List<|Token|>,
-    ["then"] = List<|Token|>,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "if",
+		expressions = List<|Node|>,
+		statements = List<|List<|Node|>|>,
+		tokens = Expression.tokens & {
+			["if/else/elseif"] = List<|Token|>,
+			["then"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}
 local type WhileStatement = Node & {
-  type = "statement",
-  kind = "while",
-  expression = Node,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["while"] = Token,
-    ["do"] = Token,
-    ["end"] = Token,
-  },
-}
+		type = "statement",
+		kind = "while",
+		expression = Node,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["while"] = Token,
+			["do"] = Token,
+			["end"] = Token,
+		},
+	}
 local type ForNumericStatement = Node & {
-  type = "statement",
-  kind = "numeric_for",
-  identifier = Token,
-  init_expression = Node,
-  max_expression = Node,
-  step_expression = nil | Node,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["for"] = Token,
-    ["="] = Token,
-    ["do"] = Token,
-    ["end"] = Token,
-    [",2"] = List<|Token|>,
-  },
-}
+		type = "statement",
+		kind = "numeric_for",
+		identifier = Token,
+		init_expression = Node,
+		max_expression = Node,
+		step_expression = nil | Node,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["for"] = Token,
+			["="] = Token,
+			["do"] = Token,
+			["end"] = Token,
+			[",2"] = List<|Token|>,
+		},
+	}
 local type ForGenericStatement = Node & {
-  type = "statement",
-  kind = "generic_for",
-  identifiers = List<|Node|>,
-  expressions = List<|Node|>,
-  statements = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["for"] = Token,
-    ["="] = Token,
-    ["in"] = Token,
-    ["do"] = Token,
-    ["end"] = Token,
-    ["left,"] = List<|Token|>,
-    ["right,"] = List<|Token|>,
-  },
-}
+		type = "statement",
+		kind = "generic_for",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["for"] = Token,
+			["="] = Token,
+			["in"] = Token,
+			["do"] = Token,
+			["end"] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}
 local type AssignmentLocalStatement = Node & {
-  type = "statement",
-  kind = "local_assignment",
-  identifiers = List<|Node|>,
-  expressions = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["local"] = Token,
-    ["left,"] = List<|Token|>,
-    ["="] = nil | Token,
-    ["right,"] = List<|Token|>,
-  },
-}
+		type = "statement",
+		kind = "local_assignment",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["left,"] = List<|Token|>,
+			["="] = nil | Token,
+			["right,"] = List<|Token|>,
+		},
+	}
 local type AssignmentLocalTypeStatement = Node & {
-  type = "statement",
-  kind = "local_type_assignment",
-  identifiers = List<|Node|>,
-  expressions = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["type"] = Token,
-    ["local"] = Token,
-    ["left,"] = List<|Token|>,
-    ["="] = Token,
-    ["right,"] = List<|Token|>,
-  },
-}
+		type = "statement",
+		kind = "local_type_assignment",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["local"] = Token,
+			["left,"] = List<|Token|>,
+			["="] = Token,
+			["right,"] = List<|Token|>,
+		},
+	}
 local type AssignmentDestructureStatement = Node & {
-  type = "statement",
-  kind = "destructure_assignment",
-  default = nil | ValueExpression,
-  default_comma = Token,
-  left = List<|ValueExpression|>,
-  right = Node,
-  tokens = Expression.tokens & {
-    ["{"] = Token,
-    [","] = List<|Token|>,
-    ["}"] = Token,
-    ["="] = Token,
-  },
-}
+		type = "statement",
+		kind = "destructure_assignment",
+		default = nil | ValueExpression,
+		default_comma = Token,
+		left = List<|ValueExpression|>,
+		right = Node,
+		tokens = Expression.tokens & {
+			["{"] = Token,
+			[","] = List<|Token|>,
+			["}"] = Token,
+			["="] = Token,
+		},
+	}
 local type AssignmentLocalDestructureStatement = Node & {
-  type = "statement",
-  kind = "local_destructure_assignment",
-  default = ValueExpression,
-  default_comma = Token,
-  left = List<|ValueExpression|>,
-  right = Node,
-  tokens = Expression.tokens & {
-    ["local"] = Token,
-    ["{"] = Token,
-    [","] = List<|Token|>,
-    ["}"] = Token,
-    ["="] = Token,
-  },
-}
+		type = "statement",
+		kind = "local_destructure_assignment",
+		default = ValueExpression,
+		default_comma = Token,
+		left = List<|ValueExpression|>,
+		right = Node,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["{"] = Token,
+			[","] = List<|Token|>,
+			["}"] = Token,
+			["="] = Token,
+		},
+	}
 local type AssignmentStatement = Node & {
-  type = "statement",
-  kind = "assignment",
-  left = List<|Node|>,
-  right = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["="] = Token,
-    ["left,"] = List<|Token|>,
-    ["right,"] = List<|Token|>,
-  },
+		type = "statement",
+		kind = "assignment",
+		left = List<|Node|>,
+		right = List<|Node|>,
+		tokens = Expression.tokens & {
+			["="] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}
+local type CallExpressionStatement = Node & {
+	type = "statement",
+	kind = "call_expression",
+	expression = Node,
 }
-
-local type CallExpressionStatement = Node &  {
-  type = "statement",
-  kind = "call_expression",
-  expression = Node,
-}
-
-local type FunctionSignatureTypeExpression = Node &  {
-  type = "expression",
-  kind = "function_signature",
-
-  stmnt = boolean; // ???
-  identifiers = nil | List<|FunctionArgumentSubExpression|>,
-  return_types = nil | List<|FunctionReturnTypeSubExpression|>,
-
-  tokens = Expression.tokens & {
-    ["function"] = Token,
-    ["="] = Token,
-    ["arguments)"] = Token,
-    ["arguments,"] = List<|Token|>,
-    ["arguments("] = Token,
-    [">"] = Token,
-    ["return("] = Token,
-    ["return,"] = List<|Token|>,
-    ["return)"] = Token,
-  },
-}
+local type FunctionSignatureTypeExpression = Node & {
+		type = "expression",
+		kind = "function_signature",
+		stmnt = boolean; // ???
+		identifiers = nil | List<|FunctionArgumentSubExpression|>,
+		return_types = nil | List<|FunctionReturnTypeSubExpression|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["="] = Token,
+			["arguments)"] = Token,
+			["arguments,"] = List<|Token|>,
+			["arguments("] = Token,
+			[">"] = Token,
+			["return("] = Token,
+			["return,"] = List<|Token|>,
+			["return)"] = Token,
+		},
+	}
 local type AssignmentTypeStatement = Node & {
-  type = "statement",
-  kind = "type_assignment",
-  left = List<|Node|>,
-  right = List<|Node|>,
-  tokens = Expression.tokens & {
-    ["type"] = Token,
-    ["^"] = nil | Token,
-    ["="] = Token,
-    ["left,"] = List<|Token|>,
-    ["right,"] = List<|Token|>,
-  },
-}
-
+		type = "statement",
+		kind = "type_assignment",
+		left = List<|Node|>,
+		right = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["^"] = nil | Token,
+			["="] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}
 local type Nodes = {
-  EmptyUnionTypeExpression,
-  VarargTypeExpression,
-  ValueExpression,
-  FunctionArgumentSubExpression,
-  FunctionReturnTypeSubExpression,
-  TableExpressionKeyValueSubExpression,
-  TableSpreadSubExpression,
-  TableKeyValueSubExpression,
-  TableIndexValueSubExpression,
-  TableExpression,
-  PostfixCallSubExpression,
-  PostfixIndexSubExpression,
-  EndOfFileStatement,
-  DebugParserDebugCodeStatement,
-  DebugAnalyzerCodeStatement,
-  ReturnStatement,
-  BreakStatement,
-  ContinueStatement,
-  SemicolonStatement,
-  GotoStatement,
-  GotoLabelStatement,
-  BinaryOperatorExpression,
-  FunctionAnalyzerStatement,
-  FunctionTypeStatement,
-  FunctionAnalyzerExpression,
-  FunctionTypeExpression,
-  FunctionExpression,
-  FunctionLocalStatement,
-  FunctionLocalTypeStatement,
-  FunctionStatement,
-  FunctionLocalAnalyzerStatement,
-  ImportExpression,
-  PrefixOperatorExpression,
-  PostfixOperatorSubExpression,
-  RepeatStatement,
-  DoStatement,
-  IfStatement,
-  WhileStatement,
-  ForNumericStatement,
-  ForGenericStatement,
-  AssignmentLocalStatement,
-  AssignmentLocalTypeStatement,
-  AssignmentDestructureStatement,
-  AssignmentLocalDestructureStatement,
-  AssignmentStatement,
-  CallExpressionStatement,
-  FunctionSignatureTypeExpression,
-  AssignmentTypeStatement,
+	EmptyUnionTypeExpression,
+	VarargTypeExpression,
+	ValueExpression,
+	FunctionArgumentSubExpression,
+	FunctionReturnTypeSubExpression,
+	TableExpressionKeyValueSubExpression,
+	TableSpreadSubExpression,
+	TableKeyValueSubExpression,
+	TableIndexValueSubExpression,
+	TableExpression,
+	PostfixCallSubExpression,
+	PostfixIndexSubExpression,
+	EndOfFileStatement,
+	DebugParserDebugCodeStatement,
+	DebugAnalyzerCodeStatement,
+	ReturnStatement,
+	BreakStatement,
+	ContinueStatement,
+	SemicolonStatement,
+	GotoStatement,
+	GotoLabelStatement,
+	BinaryOperatorExpression,
+	FunctionAnalyzerStatement,
+	FunctionTypeStatement,
+	FunctionAnalyzerExpression,
+	FunctionTypeExpression,
+	FunctionExpression,
+	FunctionLocalStatement,
+	FunctionLocalTypeStatement,
+	FunctionStatement,
+	FunctionLocalAnalyzerStatement,
+	ImportExpression,
+	PrefixOperatorExpression,
+	PostfixOperatorSubExpression,
+	RepeatStatement,
+	DoStatement,
+	IfStatement,
+	WhileStatement,
+	ForNumericStatement,
+	ForGenericStatement,
+	AssignmentLocalStatement,
+	AssignmentLocalTypeStatement,
+	AssignmentDestructureStatement,
+	AssignmentLocalDestructureStatement,
+	AssignmentStatement,
+	CallExpressionStatement,
+	FunctionSignatureTypeExpression,
+	AssignmentTypeStatement,
 }
-local type ExpressionKind = (function() 
-  local type union = |
+local type ExpressionKind = (function()
+	local type union = |
 
-  for _, node in pairs(Nodes) do
-    if node.type == "expression" then
-      type union = union | node.kind
-    end
-  end
+	for _, node in pairs(Nodes) do
+		if node.type == "expression" then type union = union | node.kind end
+	end
 
-  return union
+	return union
 end)()
-local type StatementKind = (function() 
-  local type union = |
+local type StatementKind = (function()
+	local type union = |
 
-  for _, node in pairs(Nodes) do
-    if node.type == "statement" then
-      type union = union | node.kind
-    end
-  end
+	for _, node in pairs(Nodes) do
+		if node.type == "statement" then type union = union | node.kind end
+	end
 
-  return union
+	return union
 end)()
 return {
-  ExpressionKind = ExpressionKind,
-  StatementKind = StatementKind,
-  Nodes = Nodes,
-  EmptyUnionTypeExpression = EmptyUnionTypeExpression,
-  VarargTypeExpression = VarargTypeExpression,
-  ValueExpression = ValueExpression,
-  FunctionArgumentSubExpression = FunctionArgumentSubExpression,
-  FunctionReturnTypeSubExpression = FunctionReturnTypeSubExpression,
-  TableExpressionKeyValueSubExpression = TableExpressionKeyValueSubExpression,
-  TableSpreadSubExpression = TableSpreadSubExpression,
-  TableKeyValueSubExpression = TableKeyValueSubExpression,
-  TableIndexValueSubExpression = TableIndexValueSubExpression,
-  TableExpression = TableExpression,
-  PostfixCallSubExpression = PostfixCallSubExpression,
-  PostfixIndexSubExpression = PostfixIndexSubExpression,
-  EndOfFileStatement = EndOfFileStatement,
-  DebugParserDebugCodeStatement = DebugParserDebugCodeStatement,
-  DebugAnalyzerCodeStatement = DebugAnalyzerCodeStatement,
-  ReturnStatement = ReturnStatement,
-  BreakStatement = BreakStatement,
-  ContinueStatement = ContinueStatement,
-  SemicolonStatement = SemicolonStatement,
-  GotoStatement = GotoStatement,
-  GotoLabelStatement = GotoLabelStatement,
-  BinaryOperatorExpression = BinaryOperatorExpression,
-  FunctionAnalyzerStatement = FunctionAnalyzerStatement,
-  FunctionTypeStatement = FunctionTypeStatement,
-  FunctionAnalyzerExpression = FunctionAnalyzerExpression,
-  FunctionTypeExpression = FunctionTypeExpression,
-  FunctionExpression = FunctionExpression,
-  FunctionLocalStatement = FunctionLocalStatement,
-  FunctionLocalTypeStatement = FunctionLocalTypeStatement,
-  FunctionStatement = FunctionStatement,
-  FunctionLocalAnalyzerStatement = FunctionLocalAnalyzerStatement,
-  ImportExpression = ImportExpression,
-  PrefixOperatorExpression = PrefixOperatorExpression,
-  PostfixOperatorSubExpression = PostfixOperatorSubExpression,
-  RepeatStatement = RepeatStatement,
-  DoStatement = DoStatement,
-  IfStatement = IfStatement,
-  WhileStatement = WhileStatement,
-  ForNumericStatement = ForNumericStatement,
-  ForGenericStatement = ForGenericStatement,
-  AssignmentLocalStatement = AssignmentLocalStatement,
-  AssignmentLocalTypeStatement = AssignmentLocalTypeStatement,
-  AssignmentDestructureStatement = AssignmentDestructureStatement,
-  AssignmentLocalDestructureStatement = AssignmentLocalDestructureStatement,
-  AssignmentStatement = AssignmentStatement,
-  CallExpressionStatement = CallExpressionStatement,
-  FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
-  AssignmentTypeStatement = AssignmentTypeStatement,
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Nodes = Nodes,
+	EmptyUnionTypeExpression = EmptyUnionTypeExpression,
+	VarargTypeExpression = VarargTypeExpression,
+	ValueExpression = ValueExpression,
+	FunctionArgumentSubExpression = FunctionArgumentSubExpression,
+	FunctionReturnTypeSubExpression = FunctionReturnTypeSubExpression,
+	TableExpressionKeyValueSubExpression = TableExpressionKeyValueSubExpression,
+	TableSpreadSubExpression = TableSpreadSubExpression,
+	TableKeyValueSubExpression = TableKeyValueSubExpression,
+	TableIndexValueSubExpression = TableIndexValueSubExpression,
+	TableExpression = TableExpression,
+	PostfixCallSubExpression = PostfixCallSubExpression,
+	PostfixIndexSubExpression = PostfixIndexSubExpression,
+	EndOfFileStatement = EndOfFileStatement,
+	DebugParserDebugCodeStatement = DebugParserDebugCodeStatement,
+	DebugAnalyzerCodeStatement = DebugAnalyzerCodeStatement,
+	ReturnStatement = ReturnStatement,
+	BreakStatement = BreakStatement,
+	ContinueStatement = ContinueStatement,
+	SemicolonStatement = SemicolonStatement,
+	GotoStatement = GotoStatement,
+	GotoLabelStatement = GotoLabelStatement,
+	BinaryOperatorExpression = BinaryOperatorExpression,
+	FunctionAnalyzerStatement = FunctionAnalyzerStatement,
+	FunctionTypeStatement = FunctionTypeStatement,
+	FunctionAnalyzerExpression = FunctionAnalyzerExpression,
+	FunctionTypeExpression = FunctionTypeExpression,
+	FunctionExpression = FunctionExpression,
+	FunctionLocalStatement = FunctionLocalStatement,
+	FunctionLocalTypeStatement = FunctionLocalTypeStatement,
+	FunctionStatement = FunctionStatement,
+	FunctionLocalAnalyzerStatement = FunctionLocalAnalyzerStatement,
+	ImportExpression = ImportExpression,
+	PrefixOperatorExpression = PrefixOperatorExpression,
+	PostfixOperatorSubExpression = PostfixOperatorSubExpression,
+	RepeatStatement = RepeatStatement,
+	DoStatement = DoStatement,
+	IfStatement = IfStatement,
+	WhileStatement = WhileStatement,
+	ForNumericStatement = ForNumericStatement,
+	ForGenericStatement = ForGenericStatement,
+	AssignmentLocalStatement = AssignmentLocalStatement,
+	AssignmentLocalTypeStatement = AssignmentLocalTypeStatement,
+	AssignmentDestructureStatement = AssignmentDestructureStatement,
+	AssignmentLocalDestructureStatement = AssignmentLocalDestructureStatement,
+	AssignmentStatement = AssignmentStatement,
+	CallExpressionStatement = CallExpressionStatement,
+	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
+	AssignmentTypeStatement = AssignmentTypeStatement,
 }
