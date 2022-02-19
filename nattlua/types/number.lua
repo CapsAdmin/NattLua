@@ -95,11 +95,11 @@ end
 
 function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
 	if B.Type == "tuple" then
-		B = (B)--[[# as any]]:Get(1)
+		B = (B--[[# as any]]):Get(1)
 	end
 
 	if B.Type == "any" then return true end
-	if B.Type == "union" then return (B)--[[# as any]]:IsTargetSubsetOfChild(A) end
+	if B.Type == "union" then return (B--[[# as any]]):IsTargetSubsetOfChild(A) end
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
 	if A:IsLiteral() and B:IsLiteral() then
@@ -160,7 +160,7 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 	local err
 
 	if val.Type == "union" then
-		val, err = (val)--[[# as any]]:GetLargestNumber()
+		val, err = (val--[[# as any]]):GetLargestNumber()
 		if not val then return val, err end
 	end
 
