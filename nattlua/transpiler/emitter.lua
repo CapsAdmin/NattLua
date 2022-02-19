@@ -25,232 +25,215 @@ local translate_prefix = {
 }
 
 do -- internal
-function META:Whitespace(str, force)
-    if self.config.preserve_whitespace == nil and not force then return end
+	function META:Whitespace(str, force)
+		if self.config.preserve_whitespace == nil and not force then return end
 
-    if str == "\t" then
-        if self.config.no_newlines then
-            self:Emit(" ")
-        else
-            self:Emit(("\t"):rep(self.level))
-            self.last_indent_index = #self.out
-        end
-    elseif str == " " then
-        self:Emit(" ")
-    elseif str == "\n" then
-        self:Emit(self.config.no_newlines and " " or "\n")
-        self.last_newline_index = #self.out
-    else
-        error("unknown whitespace " .. ("%q"):format(str))
-    end
-end
+		if str == "\t" then
+			if self.config.no_newlines then
+				self:Emit(" ")
+			else
+				self:Emit(("\t"):rep(self.level))
+				self.last_indent_index = #self.out
+			end
+		elseif str == " " then
+			self:Emit(" ")
+		elseif str == "\n" then
+			self:Emit(self.config.no_newlines and " " or "\n")
+			self.last_newline_index = #self.out
+		else
+			error("unknown whitespace " .. ("%q"):format(str))
+		end
+	end
 
-function META:Emit(str)
-    if type(str) ~= "string" then
-        error(debug.traceback("attempted to emit a non string " .. tostring(str)))
-    end
+	function META:Emit(str)
+		if type(str) ~= "string" then
+			error(debug.traceback("attempted to emit a non string " .. tostring(str)))
+		end
 
-	if str == "" then return end
+		if str == "" then return end
 
-    self.out[self.i] = str or ""
-    self.i = self.i + 1
-end
+		self.out[self.i] = str or ""
+		self.i = self.i + 1
+	end
 
-function META:EmitNonSpace(str)
-    self:Emit(str)
-    self.last_non_space_index = #self.out
-end
+	function META:EmitNonSpace(str)
+		self:Emit(str)
+		self.last_non_space_index = #self.out
+	end
 
-function META:EmitSpace(str)
-    self:Emit(str)
-end
+	function META:EmitSpace(str)
+		self:Emit(str)
+	end
 
-function META:Indent()
-    self.level = self.level + 1
-end
+	function META:Indent()
+		self.level = self.level + 1
+	end
 
-function META:Outdent()
-    self.level = self.level - 1
-end
+	function META:Outdent()
+		self.level = self.level - 1
+	end
 
-function META:GetPrevChar()
-    local prev = self.out[self.i - 1]
-    local char = prev and prev:sub(-1)
-    return char and char:byte() or 0
-end
+	function META:GetPrevChar()
+		local prev = self.out[self.i - 1]
+		local char = prev and prev:sub(-1)
+		return char and char:byte() or 0
+	end
 
-function META:EmitWhitespace(token)
-    if self.config.preserve_whitespace == false and token.type == "space" then return end
-    self:EmitToken(token)
+	function META:EmitWhitespace(token)
+		if self.config.preserve_whitespace == false and token.type == "space" then return end
+		self:EmitToken(token)
 
-    if token.type ~= "space" then
-        self:Whitespace("\n")
-        self:Whitespace("\t")
-    end
-end
+		if token.type ~= "space" then
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		end
+	end
 
-function META:EmitToken(node, translate)
-    if
-        self.config.extra_indent and
-        self.config.preserve_whitespace == false and
-        self.inside_call_expression
-    then
-        self.tracking_indents = self.tracking_indents or {}
+	function META:EmitToken(node, translate)
+		if
+			self.config.extra_indent and
+			self.config.preserve_whitespace == false and
+			self.inside_call_expression
+		then
+			self.tracking_indents = self.tracking_indents or {}
 
-        if type(self.config.extra_indent[node.value]) == "table" then
-            self:Indent()
-            local info = self.config.extra_indent[node.value]
+			if type(self.config.extra_indent[node.value]) == "table" then
+				self:Indent()
+				local info = self.config.extra_indent[node.value]
 
-            if type(info.to) == "table" then
-                for to in pairs(info.to) do
-                    self.tracking_indents[to] = self.tracking_indents[to] or {}
-                    table.insert(self.tracking_indents[to], {info = info, level = self.level})
-                end
-            else
-                self.tracking_indents[info.to] = self.tracking_indents[info.to] or {}
-                table.insert(self.tracking_indents[info.to], {info = info, level = self.level})
-            end
-        elseif self.tracking_indents[node.value] then
-            for _, info in ipairs(self.tracking_indents[node.value]) do
-                if info.level == self.level or info.level == self.pre_toggle_level then
-                    self:Outdent()
-                    local info = self.tracking_indents[node.value]
-
-                    for key, val in pairs(self.tracking_indents) do
-                        if info == val.info then
-                            self.tracking_indents[key] = nil
-                        end
-                    end
-
-                    if self.out[self.last_indent_index] then
-                        self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
-                    end
-
-                    if self.toggled_indents then
-                        self:Outdent()
-                        self.toggled_indents = {}
-
-                        if self.out[self.last_indent_index] then
-                            self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
-                        end
-                    end
-
-                    break
-                end
-            end
-        end
-
-        if self.config.extra_indent[node.value] == "toggle" then
-            self.toggled_indents = self.toggled_indents or {}
-
-            if not self.toggled_indents[node.value] then
-                self.toggled_indents[node.value] = true
-                self.pre_toggle_level = self.level
-                self:Indent()
-            elseif self.toggled_indents[node.value] then
-                if self.out[self.last_indent_index] then
-                    self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
-                end
-            end
-        end
-    end
-
-    if node.whitespace then
-        if self.config.preserve_whitespace == false then
-            for i, token in ipairs(node.whitespace) do
-                if token.type == "line_comment" then
-
-
-					local start = i
-					for i = self.i - 1, 1, -1 do
-						if not self.out[i]:find("^%s+") then
-							local found_newline = false							
-							for i = start, 1, -1 do
-								local token = node.whitespace[i]
-								if token.value:find("\n") then 
-									found_newline = true
-									break 
-								end
-							end
-
-							if not found_newline then
-								self.i = i + 1
-								self:Emit(" ")
-							end
-							break
-						end
+				if type(info.to) == "table" then
+					for to in pairs(info.to) do
+						self.tracking_indents[to] = self.tracking_indents[to] or {}
+						table.insert(self.tracking_indents[to], {info = info, level = self.level})
 					end
-					
-					self:EmitToken(token)
+				else
+					self.tracking_indents[info.to] = self.tracking_indents[info.to] or {}
+					table.insert(self.tracking_indents[info.to], {info = info, level = self.level})
+				end
+			elseif self.tracking_indents[node.value] then
+				for _, info in ipairs(self.tracking_indents[node.value]) do
+					if info.level == self.level or info.level == self.pre_toggle_level then
+						self:Outdent()
+						local info = self.tracking_indents[node.value]
 
-                    if node.whitespace[i + 1] then
-                        self:Whitespace("\n")
-                        self:Whitespace("\t")
-                    end
-                elseif token.type == "multiline_comment" then
-                    self:EmitToken(token)
-                    self:Whitespace(" ")
-                end
-            end
-        else
-            for _, token in ipairs(node.whitespace) do
-                if token.type ~= "comment_escape" then
-                    self:EmitWhitespace(token)
-                end
-            end
-        end
-    end
+						for key, val in pairs(self.tracking_indents) do
+							if info == val.info then
+								self.tracking_indents[key] = nil
+							end
+						end
 
-    if self.TranslateToken then
-        translate = self:TranslateToken(node) or translate
-    end
+						if self.out[self.last_indent_index] then
+							self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+						end
 
-    if translate then
-        if type(translate) == "table" then
-            self:Emit(translate[node.value] or node.value)
-        elseif type(translate) == "function" then
-            self:Emit(translate(node.value))
-        elseif translate ~= "" then
-            self:Emit(translate)
-        end
-    else
-        self:Emit(node.value)
-    end
+						if self.toggled_indents then
+							self:Outdent()
+							self.toggled_indents = {}
 
-    if
-        node.type ~= "line_comment" and
-        node.type ~= "multiline_comment" and
-        node.type ~= "space"
-    then
-        self.last_non_space_index = #self.out
-    end
-end
+							if self.out[self.last_indent_index] then
+								self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+							end
+						end
 
-function META:Initialize()
-    self.level = 0
-    self.out = {}
-    self.i = 1
-end
+						break
+					end
+				end
+			end
 
-function META:Concat()
-    return table.concat(self.out)
-end
-end
+			if self.config.extra_indent[node.value] == "toggle" then
+				self.toggled_indents = self.toggled_indents or {}
 
-do -- newline breaking
-	do
-		function META:PushBreakNewline(b)
-			self.force_newlines = self.force_newlines or {}
-			table.insert(self.force_newlines, b)
+				if not self.toggled_indents[node.value] then
+					self.toggled_indents[node.value] = true
+					self.pre_toggle_level = self.level
+					self:Indent()
+				elseif self.toggled_indents[node.value] then
+					if self.out[self.last_indent_index] then
+						self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
+					end
+				end
+			end
 		end
 
-		function META:PopBreakNewline()
-			table.remove(self.force_newlines)
+		if node.whitespace then
+			if self.config.preserve_whitespace == false then
+				for i, token in ipairs(node.whitespace) do
+					if token.type == "line_comment" then
+
+
+						local start = i
+						for i = self.i - 1, 1, -1 do
+							if not self.out[i]:find("^%s+") then
+								local found_newline = false							
+								for i = start, 1, -1 do
+									local token = node.whitespace[i]
+									if token.value:find("\n") then 
+										found_newline = true
+										break 
+									end
+								end
+
+								if not found_newline then
+									self.i = i + 1
+									self:Emit(" ")
+								end
+								break
+							end
+						end
+						
+						self:EmitToken(token)
+
+						if node.whitespace[i + 1] then
+							self:Whitespace("\n")
+							self:Whitespace("\t")
+						end
+					elseif token.type == "multiline_comment" then
+						self:EmitToken(token)
+						self:Whitespace(" ")
+					end
+				end
+			else
+				for _, token in ipairs(node.whitespace) do
+					if token.type ~= "comment_escape" then
+						self:EmitWhitespace(token)
+					end
+				end
+			end
 		end
 
-		function META:ShouldBreakNewline()
-			if self.force_newlines then return self.force_newlines[#self.force_newlines] end
+		if self.TranslateToken then
+			translate = self:TranslateToken(node) or translate
 		end
+
+		if translate then
+			if type(translate) == "table" then
+				self:Emit(translate[node.value] or node.value)
+			elseif type(translate) == "function" then
+				self:Emit(translate(node.value))
+			elseif translate ~= "" then
+				self:Emit(translate)
+			end
+		else
+			self:Emit(node.value)
+		end
+
+		if
+			node.type ~= "line_comment" and
+			node.type ~= "multiline_comment" and
+			node.type ~= "space"
+		then
+			self.last_non_space_index = #self.out
+		end
+	end
+
+	function META:Initialize()
+		self.level = 0
+		self.out = {}
+		self.i = 1
+	end
+
+	function META:Concat()
+		return table.concat(self.out)
 	end
 
 	do
@@ -272,8 +255,25 @@ do -- newline breaking
 			return nil
 		end
 	end
+end
 
-	function META:IsNodeTooLong(node)
+do -- newline breaking
+	do
+		function META:PushForcedLineBreaking(b)
+			self.force_newlines = self.force_newlines or {}
+			table.insert(self.force_newlines, b)
+		end
+
+		function META:PopForcedLineBreaking()
+			table.remove(self.force_newlines)
+		end
+
+		function META:IsLineBreaking()
+			if self.force_newlines then return self.force_newlines[#self.force_newlines] end
+		end
+	end
+
+	function META:ShouldLineBreakNode(node)
 		if node.kind == "table" or node.kind == "type_table" then
 			for _, exp in ipairs(node.children) do
 				if exp.value_expression and exp.value_expression.kind == "function" then 
@@ -301,10 +301,10 @@ do -- newline breaking
 		return node:GetLength() > self.config.max_line_length
 	end
 
-	function META:EmitBreakableList(tbl, func)
+	function META:EmitLineBreakableList(tbl, func)
 		local newline = self:ShouldBreakExpressionList(tbl)
 
-		self:PushBreakNewline(newline)
+		self:PushForcedLineBreaking(newline)
 		if newline then
 			self:Indent()
 			self:Whitespace("\n")
@@ -316,7 +316,7 @@ do -- newline breaking
 			self:Whitespace("\n")
 			self:Whitespace("\t")
 		end
-		self:PopBreakNewline()
+		self:PopForcedLineBreaking()
 	end
 
 	function META:EmitExpressionList(tbl)
@@ -425,16 +425,16 @@ function META:EmitFunctionSignature(node)
 	self:EmitToken(node.tokens["function"])
 	self:EmitToken(node.tokens["="])
 	self:EmitToken(node.tokens["arguments("])
-	self:EmitBreakableList(node.identifiers, self.EmitIdentifierList)
+	self:EmitLineBreakableList(node.identifiers, self.EmitIdentifierList)
 	self:EmitToken(node.tokens["arguments)"])
 	self:EmitToken(node.tokens[">"])
 	self:EmitToken(node.tokens["return("])
-	self:EmitBreakableList(node.return_types, self.EmitExpressionList)
+	self:EmitLineBreakableList(node.return_types, self.EmitExpressionList)
 	self:EmitToken(node.tokens["return)"])		
 end
 
 function META:EmitExpression(node)
-	local newlines = self:ShouldBreakNewline()
+	local newlines = self:IsLineBreaking()
 
 	if node.tokens["("] then
 		for _, node in ipairs(node.tokens["("]) do
@@ -587,9 +587,9 @@ function META:EmitCall(node)
 		self:Whitespace("\t")
     end
 
-	self:PushBreakNewline(newlines)
+	self:PushForcedLineBreaking(newlines)
 	self:EmitExpressionList(node.expressions)
-	self:PopBreakNewline()
+	self:PopForcedLineBreaking()
     
     if newlines then
         self:Outdent()
@@ -647,7 +647,7 @@ function META:EmitBinaryOperator(node)
 			node.value.value == "||" or
 			node.value.value == "&&"
 		then
-			if self:ShouldBreakNewline() then
+			if self:IsLineBreaking() then
 				if self:GetPrevChar() == B(")") then
 					self:Whitespace("\n")
 					self:Whitespace("\t")
@@ -689,7 +689,7 @@ do
 		end
 
 		self:EmitToken(node.tokens["arguments("])
-		self:EmitBreakableList(node.identifiers, self.EmitIdentifierList)
+		self:EmitLineBreakableList(node.identifiers, self.EmitIdentifierList)
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
         
@@ -806,17 +806,17 @@ function META:EmitTableKeyValue(node)
 	self:EmitToken(node.tokens["="])
 	self:Whitespace(" ")
 
-	local break_binary = self:IsNodeTooLong(node.value_expression) and node.value_expression.kind == "binary_operator"
+	local break_binary = node.value_expression.kind == "binary_operator" and self:ShouldLineBreakNode(node.value_expression)
 
 	if break_binary then
 		self:Indent()
 	end
 
-	self:PushBreakNewline(break_binary)
+	self:PushForcedLineBreaking(break_binary)
 	
 	self:EmitExpression(node.value_expression)
 
-	self:PopBreakNewline()
+	self:PopForcedLineBreaking()
 
 	if break_binary then
 		self:Outdent()
@@ -856,7 +856,7 @@ function META:EmitTable(tree)
 
 	local during_spread = false
 	self:EmitToken(tree.tokens["{"])
-	local newline = self:IsNodeTooLong(tree)
+	local newline = self:ShouldLineBreakNode(tree)
 
 	if newline then
 		self:Whitespace("\n")
@@ -969,7 +969,7 @@ function META:EmitBlock(statements)
 end
 
 function META:EmitIfStatement(node)
-	local short = not self:IsNodeTooLong(node)
+	local short = not self:ShouldLineBreakNode(node)
 
 	for i = 1, #node.statements do
 		if node.expressions[i] then
@@ -989,9 +989,9 @@ function META:EmitIfStatement(node)
 				self:Whitespace(" ")
 			end
 
-			self:PushBreakNewline(newlines) 
+			self:PushForcedLineBreaking(newlines) 
 			self:EmitExpression(node.expressions[i])
-			self:PopBreakNewline()
+			self:PopForcedLineBreaking()
 
 			if newlines then
 				self:Outdent()
@@ -1142,9 +1142,9 @@ function META:EmitReturnStatement(node)
 	
 	if node.expressions[1] then
 		self:Whitespace(" ")
-		self:PushBreakNewline(self:IsNodeTooLong(node))
+		self:PushForcedLineBreaking(self:ShouldLineBreakNode(node))
 		self:EmitExpressionList(node.expressions)
-		self:PopBreakNewline()
+		self:PopForcedLineBreaking()
 	end
 end
 
@@ -1177,9 +1177,9 @@ function META:EmitAssignment(node)
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["="])
 		self:Whitespace(" ")
-		self:PushBreakNewline(self:ShouldBreakExpressionList(node.right))
+		self:PushForcedLineBreaking(self:ShouldBreakExpressionList(node.right))
 		self:EmitExpressionList(node.right)
-		self:PopBreakNewline()
+		self:PopForcedLineBreaking()
 	end
 end
 
@@ -1349,9 +1349,9 @@ end
 
 function META:EmitNodeList(tbl, func)
 	for i = 1, #tbl do
-		self:PushBreakNewline(self:IsNodeTooLong(tbl[i]))
+		self:PushForcedLineBreaking(self:ShouldLineBreakNode(tbl[i]))
 
-		local break_binary = self:ShouldBreakNewline() and tbl[i].kind == "binary_operator"
+		local break_binary = self:IsLineBreaking() and tbl[i].kind == "binary_operator"
 		
 		if break_binary then
 			self:Indent()
@@ -1363,12 +1363,12 @@ function META:EmitNodeList(tbl, func)
 			self:Outdent()
 		end
 
-		self:PopBreakNewline()
+		self:PopForcedLineBreaking()
 		
 		if i ~= #tbl then
 			self:EmitToken(tbl[i].tokens[","])
 
-			if self:ShouldBreakNewline() then
+			if self:IsLineBreaking() then
 				self:Whitespace("\n")
 				self:Whitespace("\t")
 			else
@@ -1503,7 +1503,7 @@ do -- types
 	function META:EmitTableType(node)
 		local tree = node
 		self:EmitToken(tree.tokens["{"])
-		local newline = self:IsNodeTooLong(tree)
+		local newline = self:ShouldLineBreakNode(tree)
 
 		if newline then
 			self:Indent()
@@ -1801,8 +1801,8 @@ do -- extra
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["{"])
 		self:Whitespace(" ")
-		self:EmitBreakableList(node.left, self.EmitIdentifierList)
-		self:PopBreakNewline()
+		self:EmitLineBreakableList(node.left, self.EmitIdentifierList)
+		self:PopForcedLineBreaking()
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["}"])
 		self:Whitespace(" ")
