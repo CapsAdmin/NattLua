@@ -24,6 +24,7 @@ local translate_prefix = {
 	["!"] = "not ",
 }
 
+do -- internal
 function META:Whitespace(str, force)
     if self.config.preserve_whitespace == nil and not force then return end
 
@@ -34,10 +35,6 @@ function META:Whitespace(str, force)
             self:Emit(("\t"):rep(self.level))
             self.last_indent_index = #self.out
         end
-    elseif str == "\t+" then
-        self:Indent()
-    elseif str == "\t-" then
-        self:Outdent()
     elseif str == " " then
         self:Emit(" ")
     elseif str == "\n" then
@@ -237,6 +234,98 @@ end
 
 function META:Concat()
     return table.concat(self.out)
+end
+end
+
+do -- newline breaking
+	do
+		function META:PushBreakNewline(b)
+			self.force_newlines = self.force_newlines or {}
+			table.insert(self.force_newlines, b)
+		end
+
+		function META:PopBreakNewline()
+			table.remove(self.force_newlines)
+		end
+
+		function META:ShouldBreakNewline()
+			if self.force_newlines then return self.force_newlines[#self.force_newlines] end
+		end
+	end
+
+	do
+		function META:PushLoop(node)
+			self.loop_nodes = self.loop_nodes or {}
+			table.insert(self.loop_nodes, node)
+		end
+
+		function META:PopLoop()
+			local node = table.remove(self.loop_nodes)
+
+			if node.on_pop then
+				node:on_pop()
+			end
+		end
+
+		function META:GetLoopNode()
+			if self.loop_nodes then return self.loop_nodes[#self.loop_nodes] end
+			return nil
+		end
+	end
+
+	function META:IsNodeTooLong(node)
+		if node.kind == "table" or node.kind == "type_table" then
+			for _, exp in ipairs(node.children) do
+				if exp.value_expression and exp.value_expression.kind == "function" then 
+					return true 
+				end
+			end
+
+			if #node.children > 0 and #node.children == #node.tokens["separators"] then
+				return true
+			end
+		end
+
+		if node.kind == "function" then 
+			return #node.statements > 1 
+		end
+
+		if node.kind == "if" then
+			for i = 1, #node.statements do
+				if #node.statements[i] > 1 then
+					return true
+				end
+			end
+		end
+
+		return node:GetLength() > self.config.max_line_length
+	end
+
+	function META:EmitBreakableList(tbl, func)
+		local newline = self:ShouldBreakExpressionList(tbl)
+
+		self:PushBreakNewline(newline)
+		if newline then
+			self:Indent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		end
+		func(self, tbl)
+		if newline then
+			self:Outdent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		end
+		self:PopBreakNewline()
+	end
+
+	function META:EmitExpressionList(tbl)
+		self:EmitNodeList(tbl, self.EmitExpression)
+	end
+
+	function META:EmitIdentifierList(tbl)
+		self:EmitNodeList(tbl, self.EmitIdentifier)
+	end
 end
 
 function META:BuildCode(block)
@@ -447,38 +536,6 @@ function META:EmitExpressionIndex(node)
 	self:EmitToken(node.tokens["]"])
 end
 
-function META:PushBreakNewline(b)
-	self.force_newlines = self.force_newlines or {}
-	table.insert(self.force_newlines, b)
-end
-
-function META:PopBreakNewline()
-	table.remove(self.force_newlines)
-end
-
-function META:ShouldBreakNewline()
-	if self.force_newlines then return self.force_newlines[#self.force_newlines] end
-end
-
-do
-	function META:PushLoop(node)
-		self.loop_nodes = self.loop_nodes or {}
-		table.insert(self.loop_nodes, node)
-	end
-
-	function META:PopLoop()
-		local node = table.remove(self.loop_nodes)
-
-		if node.on_pop then
-			node:on_pop()
-		end
-	end
-
-	function META:GetLoopNode()
-		if self.loop_nodes then return self.loop_nodes[#self.loop_nodes] end
-		return nil
-	end
-end
 
 function META:EmitCall(node)
 	if node.expand then
@@ -622,7 +679,7 @@ function META:EmitBinaryOperator(node)
 end
 
 do
-	local function emit_function_body(self, node, analyzer_function)
+	function META:EmitFunctionBody(node)
 		if node.identifiers_typesystem then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["arguments_typesystem("])
@@ -635,6 +692,7 @@ do
 		self:EmitBreakableList(node.identifiers, self.EmitIdentifierList)
 		self:EmitToken(node.tokens["arguments)"])
 		self:EmitFunctionReturnAnnotation(node)
+        
         
         if #node.statements == 0 then
             self:Whitespace(" ")
@@ -651,7 +709,7 @@ do
 	function META:EmitAnonymousFunction(node)
 		self:EmitToken(node.tokens["function"])
         local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
-		emit_function_body(self, node)
+		self:EmitFunctionBody(node)
 	end
 
 	function META:EmitLocalFunction(node)
@@ -660,7 +718,7 @@ do
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
-		emit_function_body(self, node)
+		self:EmitFunctionBody(node)
 	end
 
 	function META:EmitLocalAnalyzerFunction(node)
@@ -671,7 +729,7 @@ do
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
-		emit_function_body(self, node)
+		self:EmitFunctionBody(node)
 	end
 
 	function META:EmitLocalTypeFunction(node)
@@ -680,7 +738,7 @@ do
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
-		emit_function_body(self, node, true)
+		self:EmitFunctionBody(node, true)
 	end
 
 	function META:EmitTypeFunction(node)
@@ -691,7 +749,7 @@ do
 			self:EmitExpression(node.expression or node.identifier)
 		end
 
-		emit_function_body(self, node, true)
+		self:EmitFunctionBody(node)
 	end
 
 	function META:EmitFunction(node)
@@ -703,7 +761,7 @@ do
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
 		self:EmitExpression(node.expression or node.identifier)
-		emit_function_body(self, node)
+		self:EmitFunctionBody(node)
 	end
 
 	function META:EmitAnalyzerFunctionStatement(node)
@@ -728,7 +786,7 @@ do
 			self:EmitExpression(node.expression or node.identifier)
 		end
 
-		emit_function_body(self, node)
+		self:EmitFunctionBody(node)
 	end
 end
 
@@ -790,39 +848,6 @@ function META:EmitVararg(node)
 	end
 end
 
-local function has_function_value(tree)
-	for _, exp in ipairs(tree.children) do
-		if exp.value_expression and exp.value_expression.kind == "function" then return true end
-	end
-
-	return false
-end
-
-function META:IsNodeTooLong(node)
-	if node.kind == "table" or node.kind == "type_table" then
-		if node:GetLength() > self.config.max_line_length or has_function_value(node) then
-			return true
-		end
-
-		if #node.children > 0 and #node.children == #node.tokens["separators"] then
-			return true
-		end
-	end
-
-	if node.kind == "function" then 
-		return #node.statements > 1 
-	end
-
-	if node.kind == "if" then
-		for i = 1, #node.statements do
-			if #node.statements[i] > 1 then
-				return true
-			end
-		end
-	end
-
-	return node:GetLength() > self.config.max_line_length
-end
 
 function META:EmitTable(tree)
 	if tree.spread then
@@ -938,9 +963,9 @@ function META:EmitPostfixOperator(node)
 end
 
 function META:EmitBlock(statements)
-	self:Whitespace("\t+")
+	self:Indent()
 	self:EmitStatements(statements)
-	self:Whitespace("\t-")
+	self:Outdent()
 end
 
 function META:EmitIfStatement(node)
@@ -1152,7 +1177,6 @@ function META:EmitAssignment(node)
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["="])
 		self:Whitespace(" ")
-        -- we ident here in case the expression list is broken up
 		self:PushBreakNewline(self:ShouldBreakExpressionList(node.right))
 		self:EmitExpressionList(node.right)
 		self:PopBreakNewline()
@@ -1354,9 +1378,6 @@ function META:EmitNodeList(tbl, func)
 	end
 end
 
-function META:EmitExpressionList(tbl)
-	self:EmitNodeList(tbl, self.EmitExpression)
-end
 function META:HasTypeNotation(node)
 	return node.type_expression or node.inferred_type or node.return_types
 end
@@ -1453,10 +1474,6 @@ function META:EmitIdentifier(node)
 	end
 	
 	self:EmitExpression(node)
-end
-
-function META:EmitIdentifierList(tbl)
-	self:EmitNodeList(tbl, self.EmitIdentifier)
 end
 
 do -- types
@@ -1769,22 +1786,6 @@ do -- extra
 		end
 
 		self:EmitNonSpace(")")
-	end
-
-	function META:EmitBreakableList(tbl, func)
-		local newline = self:ShouldBreakExpressionList(tbl)
-		self:PushBreakNewline(newline)
-		if newline then
-			self:Indent()
-			self:Whitespace("\n")
-			self:Whitespace("\t")
-		end
-		func(self, tbl)
-		if newline then
-			self:Outdent()
-			self:Whitespace("\n")
-			self:Whitespace("\t")
-		end
 	end
 
 	function META:EmitDestructureAssignment(node)
