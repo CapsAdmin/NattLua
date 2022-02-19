@@ -40,6 +40,7 @@ local config = {
 	use_comment_types = true,
 	annotate = "explicit",
 	force_parenthesis = true,
+	skip_import = true,
 	extra_indent = {
 		CreateAndPushScope = {
 			to = "PopScope",

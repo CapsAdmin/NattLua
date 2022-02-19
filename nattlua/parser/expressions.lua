@@ -697,6 +697,13 @@ do -- runtime
 		node.tokens["("] = {self:ExpectValue("(")}
 		local start = self:GetToken()
 		node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
+
+		if self.config.skip_import then
+			node.tokens[")"] = {self:ExpectValue(")")}
+			self:EndNode(node)
+			return node
+		end
+
 		local root = self.config.path and self.config.path:match("(.+/)") or ""
 		node.path = root .. node.expressions[1].value.value:sub(2, -2)
 		local nl = require("nattlua")
@@ -711,6 +718,8 @@ do -- runtime
 		node.tokens[")"] = {self:ExpectValue(")")}
 		self.root.imports = self.root.imports or {}
 		table.insert(self.root.imports, node)
+		self:EndNode(node)
+
 		return node
 	end
 

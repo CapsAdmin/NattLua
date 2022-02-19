@@ -1757,6 +1757,7 @@ do -- extra
 	end
 
 	function META:EmitImportExpression(node)
+		if not node.path then return end
 		self:EmitSpace(" ")
 		self:EmitNonSpace("IMPORTS['" .. node.path .. "'](")
 		self:EmitExpressionList(node.expressions)
