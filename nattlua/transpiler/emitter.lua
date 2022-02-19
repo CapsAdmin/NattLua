@@ -153,7 +153,7 @@ do -- internal
 				end
 			end
 		end
-
+if not node then debug.trace() end
 		if node.whitespace then
 			if self.config.preserve_whitespace == false then
 				for i, token in ipairs(node.whitespace) do
@@ -1830,7 +1830,7 @@ do -- extra
 	end
 end
 
-return function(config)
+function META.New(config)
 	local self = setmetatable({}, META)
 	self.config = config or {}
 	self.config.max_argument_length = self.config.max_argument_length or 5
@@ -1838,3 +1838,5 @@ return function(config)
 	self:Initialize()
 	return self
 end
+
+return META

@@ -1,10 +1,7 @@
 local runtime_syntax = require("nattlua.syntax.runtime")
 local ipairs = ipairs
 local assert = assert
-local type = type
-local META = {}
-META.__index = META
-require("nattlua.transpiler.base_emitter")(META)
+local META = loadfile("nattlua/transpiler/emitter.lua")()
 
 function META:EmitExpression(node)
 	if node.tokens["("] then
@@ -885,7 +882,9 @@ do -- types
 
 	function META:EmitTypeFunction(node)
 		self:EmitToken(node.tokens["function"])
-		self:EmitToken(node.tokens["("])
+        if node.tokens["("] then
+		    self:EmitToken(node.tokens["("])
+        end
 
 		for i, exp in ipairs(node.identifiers) do
 			if not self.config.annotate and node.statements then
@@ -908,7 +907,9 @@ do -- types
 			end
 		end
 
-		self:EmitToken(node.tokens[")"])
+        if node.tokens[")"] then
+		    self:EmitToken(node.tokens[")"])
+        end
 
 		if node.tokens[":"] then
 			self:EmitToken(node.tokens[":"])
@@ -1029,9 +1030,11 @@ do -- extra
 	end
 end
 
-return function(config)
+function META.New(config)
 	local self = setmetatable({}, META)
 	self.config = config or {}
 	self:Initialize()
 	return self
 end
+
+return META

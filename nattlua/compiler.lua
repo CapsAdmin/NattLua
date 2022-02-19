@@ -267,8 +267,8 @@ return function(
 			Analyzer = require("nattlua.analyzer.analyzer"),
 			Emitter = config and
 				config.js and
-				require("nattlua.transpiler.javascript_emitter") or
-				require("nattlua.transpiler.emitter"),
+				require("nattlua.transpiler.javascript_emitter").New or
+				require("nattlua.transpiler.emitter").New,
 		},
 		META
 	)

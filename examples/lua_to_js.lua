@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local LuaEmitter = require("nattlua.transpiler.javascript_emitter")
+local LuaEmitter = require("nattlua.transpiler.javascript_emitter").New
 local code = io.open("nattlua/parser/parser.lua"):read("*all")
 code = [==[
 
