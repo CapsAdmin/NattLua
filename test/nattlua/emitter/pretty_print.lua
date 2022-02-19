@@ -500,3 +500,17 @@ identical([[hook.Add("Foo", "bar_foo", function(ply, pos)
         ply:SetPos(pos + VectorRand())
     end
 end)]])
+
+identical([=[run[[
+aw
+d
+aw
+dawd
+]]]=])
+
+identical([=[run([[
+aw
+d
+aw
+dawd
+]])]=])
