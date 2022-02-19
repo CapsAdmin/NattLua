@@ -56,7 +56,7 @@ local config = {
 local blacklist = {
 	"nattlua/other/cparser%.lua",
 	"nattlua/other/json%.lua",
-	"nattlua/tests/file_importing/deep_error/.*",
+	"test/nattlua/analyzer/file_importing/deep_error/.*",
 }
 
 local function is_blacklisted(path)
