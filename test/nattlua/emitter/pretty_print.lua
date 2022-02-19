@@ -486,3 +486,6 @@ identical([[do
 end]])
 
 check({preserve_whitespace = false, use_comment_types = false, annotate = true},[=[if B.Type == "tuple" then B = (B--[[# as any]]):Get(1) end]=])
+check({preserve_whitespace = false, use_comment_types = false, annotate = true},[=[return ffi.string(A, (B)--[[# as number]])
+return ffi.string(A, (((B))--[[# as number]]))
+return ffi.string(A, (B--[[# as number]]))]=])

@@ -526,17 +526,47 @@ function META:EmitExpression(node)
 		self:Whitespace("\t")
 	end
 
-	if self.config.annotate and node.tokens[":"] then
-		self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
-	end
+	if not node.tokens[")"] then
+		if self.config.annotate and node.tokens[":"] then
+			self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
+		end
 
-	if self.config.annotate and node.tokens["as"] then
-		self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
-	end
+		if self.config.annotate and node.tokens["as"] then
+			self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
+		end
+	else
+		local colon_expression = false
+		local as_expression = false
 
-	if node.tokens[")"] then
-		for _, node in ipairs(node.tokens[")"]) do
-			self:EmitToken(node)
+		for _, token in ipairs(node.tokens[")"]) do
+
+			if not colon_expression then
+				if self.config.annotate and node.tokens[":"] and node.tokens[":"].stop < token.start then
+					self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
+					colon_expression = true
+				end
+			end
+		
+			if not as_expression then
+				if self.config.annotate and node.tokens["as"] and node.tokens["as"].stop < token.start then
+					self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
+					as_expression = true
+				end
+			end
+
+			self:EmitToken(token)
+		end
+
+		if not colon_expression then
+			if self.config.annotate and node.tokens[":"] then
+				self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
+			end
+		end
+	
+		if not as_expression then
+			if self.config.annotate and node.tokens["as"] then
+				self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
+			end
 		end
 	end
 end
