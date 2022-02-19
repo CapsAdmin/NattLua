@@ -489,3 +489,8 @@ check({preserve_whitespace = false, use_comment_types = false, annotate = true},
 check({preserve_whitespace = false, use_comment_types = false, annotate = true},[=[return ffi.string(A, (B)--[[# as number]])
 return ffi.string(A, (((B))--[[# as number]]))
 return ffi.string(A, (B--[[# as number]]))]=])
+
+identical(
+	[=[--[[#£parser.config.skip_import = true]]
+
+local x = import("platforms/windows/filesystem.nlua")]=])

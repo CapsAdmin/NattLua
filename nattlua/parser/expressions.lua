@@ -694,12 +694,12 @@ do -- runtime
 
 		local node = self:StartNode("expression", "import")
 		node.tokens["import"] = self:ExpectValue("import")
-		node.tokens["("] = {self:ExpectValue("(")}
+		node.tokens["arguments("] = self:ExpectValue("(")
 		local start = self:GetToken()
 		node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
 
 		if self.config.skip_import then
-			node.tokens[")"] = {self:ExpectValue(")")}
+			node.tokens["arguments)"] = self:ExpectValue(")")
 			self:EndNode(node)
 			return node
 		end
@@ -715,7 +715,7 @@ do -- runtime
 
 		node.root = root.SyntaxTree
 		node.analyzer = root
-		node.tokens[")"] = {self:ExpectValue(")")}
+		node.tokens["arguments)"] = self:ExpectValue(")")
 		self.root.imports = self.root.imports or {}
 		table.insert(self.root.imports, node)
 		self:EndNode(node)

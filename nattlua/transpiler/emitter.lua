@@ -1790,12 +1790,18 @@ do -- extra
 	end
 
 	function META:EmitImportExpression(node)
-		if not node.path then return end
+		if not node.path then 
+			self:EmitToken(node.tokens["import"])
+			self:EmitToken(node.tokens["arguments("])
+			self:EmitExpressionList(node.expressions)
+			self:EmitToken(node.tokens["arguments)"])
+			return
+		end
 
-		self:EmitSpace(" ")
-		self:EmitNonSpace("IMPORTS['" .. node.path .. "'](")
+		self:EmitNonSpace("IMPORTS['" .. node.path .. "']")
+		self:EmitToken(node.tokens["arguments("])
 		self:EmitExpressionList(node.expressions)
-		self:EmitNonSpace(")")
+		self:EmitToken(node.tokens["arguments)"])
 	end
 end
 
