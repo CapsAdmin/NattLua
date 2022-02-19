@@ -360,35 +360,32 @@ function META:OptionalWhitespace()
 end
 
 do
-	local fixed = {"a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",}
-    local pattern = "["    
-
-    for _, v in ipairs(fixed) do
-        pattern = pattern .. load("return \"\\" .. v .. "\"")()
-    end
-
-    pattern = pattern .. "]"
-    local map_double_quote = {[ [["]] ] = [[\"]]}
-    local map_single_quote = {[ [[']] ] = [[\']]}
-    
-    for _, v in ipairs(fixed) do
-		if v ~= "'" then
-        	map_double_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
-		end
-
-		if v ~= "\"" then
-        	map_single_quote[load("return \"\\" .. v .. "\"")()] = "\\" .. v
-		end
-    end
+	local escape = {
+		["\a"] = [[\a]],
+		["\b"] = [[\b]],
+		["\f"] = [[\f]],
+		["\n"] = [[\n]],
+		["\r"] = [[\r]],
+		["\t"] = [[\t]],
+		["\v"] = [[\v]],
+	}
     
     local function escape_string(str, quote)
-        if quote == "\"" then
-            str = str:gsub(pattern, map_double_quote)
-        elseif quote == "'" then
-            str = str:gsub(pattern, map_single_quote)
-        end
+		local new_str = {}
+		for i = 1, #str do
+			local c = str:sub(i, i)
 
-        return str
+			if c == quote then
+				new_str[i] = "\\" .. c
+			elseif escape[c] then
+				new_str[i] = escape[c]
+			elseif c == "\\" then
+				new_str[i] = "\\\\"
+			else
+				new_str[i] = c
+			end
+		end
+		return table.concat(new_str)
     end
         
     function META:EmitStringToken(token)

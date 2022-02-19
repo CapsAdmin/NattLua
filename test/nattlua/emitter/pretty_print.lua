@@ -27,6 +27,8 @@ check({preserve_whitespace = false, string_quote = '"'}, [[local x = "'"]])
 check({preserve_whitespace = false, string_quote = "'"}, [[local x = '"']])
 
 identical([[x = "" -- foo]] )
+identical([[new_str[i] = "\\" .. c]] )
+identical([[local x = "\xFE\xFF\n\u{1F602}\t\t1"]])
 check({ preserve_whitespace = false, use_comment_types = true },
 	[[local type x = ""]], [=[--[[#local type x = ""]]]=]
 )
