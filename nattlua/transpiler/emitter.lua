@@ -648,7 +648,7 @@ function META:EmitBinaryOperator(node)
 			node.value.value == "&&"
 		then
 			if self:IsLineBreaking() then
-				if self:GetPrevChar() == B(")") then
+				if self:GetPrevChar() == B(")") and node.left.kind ~= "postfix_call" and (node.left.kind == "binary_operator" and node.left.right.kind ~= "postfix_call") then
 					self:Whitespace("\n")
 					self:Whitespace("\t")
 				else

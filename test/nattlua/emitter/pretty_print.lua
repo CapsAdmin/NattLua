@@ -205,8 +205,7 @@ identical(
 		function(e)
 			return e.pac_duplicate_attach_uid ~= lexer.UniqueID
 		end
-	)
-	or
+	) or
 	NULL]])
 
 identical(
@@ -254,8 +253,7 @@ identical(
 [[function META:IsShortIfStatement(node)
 	return #node.statements == 1 and
 		node.statements[1][1] and
-		is_short_statement(node.statements[1][1].kind)
-		and
+		is_short_statement(node.statements[1][1].kind) and
 		not self:ShouldBreakExpressionList({node.expressions[1]})
 end]])
 
@@ -369,8 +367,7 @@ identical([[setmetatable(
 		Analyzer = require("nattlua.analyzer.analyzer"),
 		Emitter = config and
 			config.js and
-			require("nattlua.transpiler.javascript_emitter")
-			or
+			require("nattlua.transpiler.javascript_emitter") or
 			require("nattlua.transpiler.emitter"),
 	},
 	META
@@ -468,3 +465,11 @@ identical([[return function(config)
 
 	return self
 end]])
+
+identical([[
+local name = ReadSpace(self) or
+	ReadCommentEscape(self) or
+	ReadMultilineCComment(self) or
+	ReadLineCComment(self) or
+	ReadMultilineComment(self) or
+	ReadLineComment(self)]])
