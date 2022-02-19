@@ -12,11 +12,11 @@ assert(builder:Parse())
 assert(builder:Analyze())
 
 local code, err = builder:Emit({
-    preserve_whitespace = true, 
+    preserve_whitespace = false, 
     string_quote = "\"",
     no_semicolon = true,
-    use_comment_types = true,
-    annotate = true,
+    use_comment_types = false,
+    annotate = false,
     force_parenthesis = true,
     extra_indent = {
         Start = {to = "Stop"},
