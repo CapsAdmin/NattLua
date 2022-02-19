@@ -153,8 +153,8 @@ do -- internal
 				end
 			end
 		end
-if not node then debug.trace() end
-		if node.whitespace then
+
+        if node.whitespace then
 			if self.config.preserve_whitespace == false then
 				for i, token in ipairs(node.whitespace) do
 					if token.type == "line_comment" then
@@ -390,7 +390,6 @@ do
 		["\t"] = [[\t]],
 		["\v"] = [[\v]],
 	}
-
 	local skip_escape = {
 		["x"] = true,
 		["X"] = true,
@@ -408,7 +407,7 @@ do
 				new_str[i] = "\\" .. c
 			elseif escape[c] then
 				new_str[i] = escape[c]
-			elseif c == "\\" and not skip_escape[str:sub(i+1, i+1)] then
+			elseif c == "\\" and not skip_escape[str:sub(i + 1, i + 1)] then
 				new_str[i] = "\\\\"
 			else
 				new_str[i] = c

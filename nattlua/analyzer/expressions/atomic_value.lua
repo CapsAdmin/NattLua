@@ -49,7 +49,6 @@ local function lookup_value(self, node)
 		end
 	end
 
-	node.inferred_type = node.inferred_type or obj
 	return self:GetTrackedUpvalue(obj) or obj
 end
 

@@ -296,7 +296,7 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 		end
 
 		if self.config and self.config.on_statement then
-			out[i] = self.config.on_statement(self, out[i-1]) or out[i-1]
+			out[i] = self.config.on_statement(self, out[i - 1]) or out[i - 1]
 		end
 	end
 

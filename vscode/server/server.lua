@@ -13,10 +13,10 @@ local TextDocumentSyncKind = {
 	Incremental = 2,
 }
 local DiagnosticSeverity = {
-	Error = 1,
-	Warning = 2,
-	Information = 3,
-	Hint = 4,
+	error = 1,
+	warning = 2,
+	information = 3,
+	hint = 4,
 }
 
 local function compile(uri, server, client)
@@ -32,20 +32,11 @@ local function compile(uri, server, client)
 		},
 	}
 
-	function compiler:OnDiagnostic(code, name, msg, severity, start, stop, ...)
+	function compiler:OnDiagnostic(code, msg, severity, start, stop, ...)
 		msg = helpers.FormatMessage(msg, ...)
-		local data = helpers.SubPositionToLinePosition(code, start, stop)
-
-		if not data then
-			local code = compiler.analyzer:GetDefaultEnvironment("typesystem").path:read("*all")
-			data = helpers.SubPositionToLinePosition(code, start, stop)
-
-			if not data then
-				print("INTERNAL ERROR: ", self, msg, start, stop, ...)
-				return
-			end
-		end
-
+        local lua_code = code:GetString()
+		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
+        
 		table.insert(
 			resp.params.diagnostics,
 			{
@@ -145,9 +136,24 @@ server.methods["textDocument/hover"] = function(params, self, client)
 		add_line("```lua\n" .. tostring(str) .. "\n```")
 	end
 
-	for _, node in ipairs(found_parents) do
-		if node.inferred_type then add_code(node.inferred_type) end
-	end
+    local function get_type(obj)
+        local upvalue = obj:GetUpvalue()
+        if upvalue then
+            return upvalue:GetValue()
+        end
+        return obj
+    end
+
+    if token.inferred_type then
+        add_code(get_type(token.inferred_type))
+    else
+        for _, node in ipairs(found_parents) do
+            if node.inferred_type then 
+                add_code(get_type(node.inferred_type)) 
+                break 
+            end
+        end
+    end
 
 	add_line("nodes:\n\n")
 	add_code("\t[token - " .. token.type .. " (" .. token.value .. ")]")

@@ -882,9 +882,8 @@ do -- types
 
 	function META:EmitTypeFunction(node)
 		self:EmitToken(node.tokens["function"])
-        if node.tokens["("] then
-		    self:EmitToken(node.tokens["("])
-        end
+
+		if node.tokens["("] then self:EmitToken(node.tokens["("]) end
 
 		for i, exp in ipairs(node.identifiers) do
 			if not self.config.annotate and node.statements then
@@ -907,9 +906,7 @@ do -- types
 			end
 		end
 
-        if node.tokens[")"] then
-		    self:EmitToken(node.tokens[")"])
-        end
+		if node.tokens[")"] then self:EmitToken(node.tokens[")"]) end
 
 		if node.tokens[":"] then
 			self:EmitToken(node.tokens[":"])

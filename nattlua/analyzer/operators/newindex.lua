@@ -120,8 +120,6 @@ return {
 
 									break
 								end
-
-								val:GetNode().identifiers[i].inferred_type = existing:GetArguments():Get(i)
 							end
 
 							val:SetArguments(existing:GetArguments())

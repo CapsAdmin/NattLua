@@ -46,7 +46,6 @@ return {
 			condition:AddType(False())
 		end
 
-		statement.identifiers[1].inferred_type = init
 		self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
 
 		if literal_init and literal_max and literal_step and literal_max < 1000 then

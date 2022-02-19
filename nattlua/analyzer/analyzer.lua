@@ -103,7 +103,7 @@ do
 	local AnalyzeFunctionSignature = require("nattlua.analyzer.expressions.function_signature").AnalyzeFunctionSignature
 	local Union = require("nattlua.types.union").Union
 
-	function META:AnalyzeExpression(node)
+	function META:AnalyzeExpression2(node)
 		self.current_expression = node
 
 		if node.type_expression then
@@ -152,6 +152,12 @@ do
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end
+	end
+
+	function META:AnalyzeExpression(node)
+		local obj, err = self:AnalyzeExpression2(node)
+		node.inferred_type = obj or err
+		return obj, err
 	end
 end
 

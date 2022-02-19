@@ -77,6 +77,7 @@ function server:OnError(msg)
 end
 
 function server:OnReceiveBody(client, str)
+    print(str)
 	table.insert(
 		self.responses,
 		{
@@ -91,6 +92,7 @@ end
 local json = require("nattlua.other.json")
 
 function server:Respond(client, res)
+    print(res)
 	local encoded = json.encode(res)
 	local msg = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
 	client:send(msg)
@@ -157,6 +159,7 @@ function server:Loop()
 		local f = io.open("vscode/server/restart_me")
 
 		if f then
+            print("restarting server because of file")
 			os.remove("vscode/server/restart_me")
 
 			for _, client in ipairs(clients) do
