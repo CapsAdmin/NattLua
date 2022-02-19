@@ -13,7 +13,7 @@ local type_errors = require("nattlua.types.error_messages")
 local ipairs = _G.ipairs
 local type = _G.type
 local META = dofile("nattlua/types/base.lua")
---[[#local TBaseType = META.TBaseType ]]
+--[[#local type TBaseType = META.TBaseType ]]
 --[[#type META.@Name = "TTuple"]]
 --[[#type TTuple = META.@Self]]
 
