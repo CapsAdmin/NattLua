@@ -1502,8 +1502,8 @@ do -- types
 	function META:EmitAnalyzerFunction(node)
 		if not self.config.analyzer_function then
 			if node.tokens["analyzer"] then
-				self:Whitespace(" ")
 				self:EmitToken(node.tokens["analyzer"])
+				self:Whitespace(" ")
 			end
 		end
 
