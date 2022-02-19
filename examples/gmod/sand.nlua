@@ -1,25 +1,25 @@
 type cvar3 = {}
 
 type engine = {
-	LightStyle = function(number, string): nil,
+	LightStyle = function=(number, string)>(nil),
 }
 
 type hook = {
-	Remove = (function(string, string): nil),
-	Add = (function(string, string, (function(...): nil)): nil),
+	Remove = function=(string, string)>(nil),
+	Add = function=(string, string, function=(...)>(nil))>(nil),
 }
 
 type player = {
-	GetBots = function(): {}
+	GetBots = function=()>({})
 }
 
 type all = {
-	ReplicateData = (function(table, string, string): nil),
-	Cexec = (function(table, string, string | nil): nil),
+	ReplicateData = function=(table, string, string)>(nil),
+	Cexec = function=(table, string, string | nil)>(nil),
 }
 
 type Entity = {
-	Fire = function(self, string, string): nil
+	Fire = function=(self, string, string)>(nil)
 }
 
 type VectorObject = {
@@ -32,19 +32,19 @@ type ConVar = {}
 type Texture = {}
 
 type MaterialObject = {
-	IsError = (function(self): boolean),
-	GetTexture = (function(self, string): Texture),
-	GetVector = (function(self, string): VectorObject),
-	SetVector = (function(self, string, any): nil),
+	IsError = function=(self)>(boolean),
+	GetTexture = function=(self, string)>(Texture),
+	GetVector = function=(self, string)>(VectorObject),
+	SetVector = function=(self, string, any)>(nil),
 }
 
-type check = function(any, string): nil
-type Material = function(string): MaterialObject
-type GetConVarString = function(string): string
+type check = function=(any, string)>(nil)
+type Material = function=(string)>(MaterialObject)
+type GetConVarString = function=(string)>(string)
 
 type timer = {
-	Simple = (function(number, (function(...): nil)): nil),
-	Remove = (function(string): nil),
+	Simple = function=(number, function=(...)>(nil))>(nil),
+	Remove = function=(string)>(nil),
 }
 
 type fog = Entity
@@ -68,7 +68,7 @@ if SERVER then
 	return
 end
 
-timer.Simple(1, function()render.RedownloadAllLightmaps() end)
+timer.Simple(1, function() render.RedownloadAllLightmaps() end)
 
 timer.Remove("snow_sector_think")
 hook.Remove("Think", "snow")
