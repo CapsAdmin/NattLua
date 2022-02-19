@@ -526,18 +526,18 @@ function META:EmitExpression(node)
 		self:Whitespace("\t")
 	end
 
-	if node.tokens[")"] then
-		for _, node in ipairs(node.tokens[")"]) do
-			self:EmitToken(node)
-		end
-	end
-
 	if self.config.annotate and node.tokens[":"] then
 		self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 	end
 
 	if self.config.annotate and node.tokens["as"] then
 		self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
+	end
+
+	if node.tokens[")"] then
+		for _, node in ipairs(node.tokens[")"]) do
+			self:EmitToken(node)
+		end
 	end
 end
 

@@ -461,7 +461,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 
 	if data then
 		for i, v in ipairs(data) do
-			if i == #data and v.Type == "tuple" and not (v)--[[# as TTuple]].Remainder then
+			if i == #data and v.Type == "tuple" and not (v--[[# as TTuple]]).Remainder then
 				self:AddRemainder(v)
 			else
 				self.Data[i] = v

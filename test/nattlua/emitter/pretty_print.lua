@@ -484,3 +484,5 @@ identical([[do
 
 	end
 end]])
+
+check({preserve_whitespace = false, use_comment_types = false, annotate = true},[=[if B.Type == "tuple" then B = (B--[[# as any]]):Get(1) end]=])
