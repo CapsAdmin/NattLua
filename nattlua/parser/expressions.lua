@@ -719,7 +719,6 @@ do -- runtime
 		self.root.imports = self.root.imports or {}
 		table.insert(self.root.imports, node)
 		self:EndNode(node)
-
 		return node
 	end
 

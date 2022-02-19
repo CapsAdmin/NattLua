@@ -539,16 +539,19 @@ function META:EmitExpression(node)
 		local as_expression = false
 
 		for _, token in ipairs(node.tokens[")"]) do
-
 			if not colon_expression then
 				if self.config.annotate and node.tokens[":"] and node.tokens[":"].stop < token.start then
 					self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 					colon_expression = true
 				end
 			end
-		
+
 			if not as_expression then
-				if self.config.annotate and node.tokens["as"] and node.tokens["as"].stop < token.start then
+				if
+					self.config.annotate and
+					node.tokens["as"] and
+					node.tokens["as"].stop < token.start
+				then
 					self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 					as_expression = true
 				end
@@ -562,7 +565,7 @@ function META:EmitExpression(node)
 				self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 			end
 		end
-	
+
 		if not as_expression then
 			if self.config.annotate and node.tokens["as"] then
 				self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
@@ -1788,6 +1791,7 @@ do -- extra
 
 	function META:EmitImportExpression(node)
 		if not node.path then return end
+
 		self:EmitSpace(" ")
 		self:EmitNonSpace("IMPORTS['" .. node.path .. "'](")
 		self:EmitExpressionList(node.expressions)
