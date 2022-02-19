@@ -261,7 +261,7 @@ do -- newline breaking
 	do
 		function META:PushForcedLineBreaking(b)
 			self.force_newlines = self.force_newlines or {}
-			table.insert(self.force_newlines, b)
+			table.insert(self.force_newlines, b and debug.traceback())
 		end
 
 		function META:PopForcedLineBreaking()
@@ -963,9 +963,11 @@ function META:EmitPostfixOperator(node)
 end
 
 function META:EmitBlock(statements)
+	self:PushForcedLineBreaking(false)
 	self:Indent()
 	self:EmitStatements(statements)
 	self:Outdent()
+	self:PopForcedLineBreaking()
 end
 
 function META:EmitIfStatement(node)

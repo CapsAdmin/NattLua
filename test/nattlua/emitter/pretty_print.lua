@@ -457,3 +457,14 @@ identical([[return {
 	line_start = line_start or 0,
 	line_stop = line_stop or 0,
 }]])
+
+identical([[return function(config)
+	config = config or {}
+	local self = setmetatable({config = config}, META)
+
+	for _, func in ipairs(META.OnInitialize) do
+		func(self)
+	end
+
+	return self
+end]])
