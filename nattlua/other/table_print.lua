@@ -227,87 +227,78 @@ luadata.SetModifier("boolean", function(var--[[#: boolean]])
 	return var and "true" or "false"
 end)
 
-luadata.SetModifier(
-	"function",
-	function(var--[[#: Function]])
-		return (
-			"function(%s) --[==[ptr: %p    src: %s]==] end"
-		):format(table.concat(getparams(var), ", "), var, getprettysource(var, true))
+luadata.SetModifier("function", function(var--[[#: Function]])
+	return (
+		"function(%s) --[==[ptr: %p    src: %s]==] end"
+	):format(table.concat(getparams(var), ", "), var, getprettysource(var, true))
+end)
+
+luadata.SetModifier("fallback", function(var--[[#: any]])
+	return "--[==[  " .. tostringx(var) .. "  ]==]"
+end)
+
+luadata.SetModifier("table", function(tbl, context)
+	local str--[[#: List<|string|>]] = {}
+
+	if context.tab_limit and context.tab >= context.tab_limit then
+		return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}"
 	end
-)
 
-luadata.SetModifier(
-	"fallback",
-	function(var--[[#: any]])
-		return "--[==[  " .. tostringx(var) .. "  ]==]"
-	end
-)
-
-luadata.SetModifier(
-	"table",
-	function(tbl, context)
-		local str--[[#: List<|string|>]] = {}
-
-		if context.tab_limit and context.tab >= context.tab_limit then
-			return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}"
+	if context.done then
+		if context.done[tbl] then
+			return ("{--[=[%s already serialized]=]}"):format(tostring(tbl))
 		end
 
-		if context.done then
-			if context.done[tbl] then
-				return ("{--[=[%s already serialized]=]}"):format(tostring(tbl))
-			end
+		context.done[tbl] = true
+	end
 
-			context.done[tbl] = true
-		end
+	context.tab = context.tab + 1
 
-		context.tab = context.tab + 1
+	if context.tab == 0 then str = {} else str = {"{\n"} end
 
-		if context.tab == 0 then str = {} else str = {"{\n"} end
-
-		if isarray(tbl) then
-			if #tbl == 0 then
-				str = {"{"}
-			else
-				for i = 1, #tbl do
-					str[#str + 1] = ("%s%s,\n"):format(("\t"):rep(context.tab), luadata.ToString(tbl[i], context))
-				end
-			end
+	if isarray(tbl) then
+		if #tbl == 0 then
+			str = {"{"}
 		else
-			for key, value in pairs(tbl) do
-				value = luadata.ToString(value, context)
+			for i = 1, #tbl do
+				str[#str + 1] = ("%s%s,\n"):format(("\t"):rep(context.tab), luadata.ToString(tbl[i], context))
+			end
+		end
+	else
+		for key, value in pairs(tbl) do
+			value = luadata.ToString(value, context)
 
-				if value then
-					if type(key) == "string" and key:find("^[%w_]+$") and not tonumber(key) then
-						str[#str + 1] = ("%s%s = %s,\n"):format(("\t"):rep(context.tab), key, value)
-					else
-						key = luadata.ToString(key, context)
+			if value then
+				if type(key) == "string" and key:find("^[%w_]+$") and not tonumber(key) then
+					str[#str + 1] = ("%s%s = %s,\n"):format(("\t"):rep(context.tab), key, value)
+				else
+					key = luadata.ToString(key, context)
 
-						if key then
-							str[#str + 1] = ("%s[%s] = %s,\n"):format(("\t"):rep(context.tab), key, value)
-						end
+					if key then
+						str[#str + 1] = ("%s[%s] = %s,\n"):format(("\t"):rep(context.tab), key, value)
 					end
 				end
 			end
 		end
-
-		if context.tab == 0 then
-			if str[1] == "{" then
-				str[#str + 1] = "}" -- empty table
-			else
-				str[#str + 1] = "\n"
-			end
-		else
-			if str[1] == "{" then
-				str[#str + 1] = "}" -- empty table
-			else
-				str[#str + 1] = ("%s}"):format(("\t"):rep(context.tab - 1))
-			end
-		end
-
-		context.tab = context.tab - 1
-		return table.concat(str, "")
 	end
-)
+
+	if context.tab == 0 then
+		if str[1] == "{" then
+			str[#str + 1] = "}" -- empty table
+		else
+			str[#str + 1] = "\n"
+		end
+	else
+		if str[1] == "{" then
+			str[#str + 1] = "}" -- empty table
+		else
+			str[#str + 1] = ("%s}"):format(("\t"):rep(context.tab - 1))
+		end
+	end
+
+	context.tab = context.tab - 1
+	return table.concat(str, "")
+end)
 
 return function(...)
 	local tbl = {...}

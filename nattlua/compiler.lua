@@ -113,19 +113,16 @@ end
 local traceback = function(self, obj, msg)
 	if self.debug or _G.TEST then
 		local ret = {
-			xpcall(
-				function()
-					msg = msg or "no error"
-					local s = msg .. "\n" .. stack_trace()
+			xpcall(function()
+				msg = msg or "no error"
+				local s = msg .. "\n" .. stack_trace()
 
-					if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
+				if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
 
-					return s
-				end,
-				function(msg)
-					return debug.traceback(tostring(msg))
-				end
-			),
+				return s
+			end, function(msg)
+				return debug.traceback(tostring(msg))
+			end),
 		}
 
 		if not ret[1] then return "error in error handling: " .. tostring(ret[2]) end
@@ -143,14 +140,11 @@ function META:Lex()
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
 		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
 	end
-	local ok, tokens = xpcall(
-		function()
-			return lexer:GetTokens()
-		end,
-		function(msg)
-			return traceback(self, lexer, msg)
-		end
-	)
+	local ok, tokens = xpcall(function()
+		return lexer:GetTokens()
+	end, function(msg)
+		return traceback(self, lexer, msg)
+	end)
 
 	if not ok then return nil, tokens end
 
@@ -177,14 +171,11 @@ function META:Parse()
 		end
 	end
 
-	local ok, res = xpcall(
-		function()
-			return parser:ReadRootNode()
-		end,
-		function(msg)
-			return traceback(self, parser, msg)
-		end
-	)
+	local ok, res = xpcall(function()
+		return parser:ReadRootNode()
+	end, function(msg)
+		return traceback(self, parser, msg)
+	end)
 
 	if not ok then return nil, res end
 
@@ -226,19 +217,16 @@ function META:Analyze(analyzer, ...)
 
 	analyzer.ResolvePath = self.OnResolvePath
 	local args = {...}
-	local ok, res = xpcall(
-		function()
-			local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
-			analyzer:AnalyzeUnreachableCode()
+	local ok, res = xpcall(function()
+		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
+		analyzer:AnalyzeUnreachableCode()
 
-			if analyzer.OnFinish then analyzer:OnFinish() end
+		if analyzer.OnFinish then analyzer:OnFinish() end
 
-			return res
-		end,
-		function(msg)
-			return traceback(self, analyzer, msg)
-		end
-	)
+		return res
+	end, function(msg)
+		return traceback(self, analyzer, msg)
+	end)
 	self.AnalyzedResult = res
 
 	if not ok then return nil, res end

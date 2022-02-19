@@ -6,17 +6,14 @@ local Table = require("nattlua.types.table").Table
 local LString = require("nattlua.types.string").LString
 local table = require("table")
 return function(META)
-	table.insert(
-		META.OnInitialize,
-		function(self)
-			self.default_environment = {
-				runtime = Table(),
-				typesystem = Table(),
-			}
-			self.environments = {runtime = {}, typesystem = {}}
-			self.scope_stack = {}
-		end
-	)
+	table.insert(META.OnInitialize, function(self)
+		self.default_environment = {
+			runtime = Table(),
+			typesystem = Table(),
+		}
+		self.environments = {runtime = {}, typesystem = {}}
+		self.scope_stack = {}
+	end)
 
 	function META:Hash(node)
 		if node.Type == "string" then return node:GetHash() end

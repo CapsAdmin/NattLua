@@ -54,9 +54,19 @@ local config = {
 
 
 local blacklist = {
-	["./nattlua/other/cparser.lua"] = true,
-	["./nattlua/other/json.lua"] = true,
+	"nattlua/other/cparser%.lua",
+	"nattlua/other/json%.lua",
+	"nattlua/tests/file_importing/deep_error/.*",
 }
+
+local function is_blacklisted(path)
+	for _, pattern in ipairs(blacklist) do
+		if path:find(pattern) then
+			return true
+		end
+	end
+	return false
+end
 
 local dictionary-- = {}
 local AUTOFIX = false
@@ -73,7 +83,7 @@ for _, path in ipairs(lua_files) do
 
 	local compiler = nl.Compiler(lua_code, "@" .. path, config)
 
-	if not blacklist[path] then
+	if not is_blacklisted(path) then
 		for _, token in ipairs(assert(compiler:Lex()).Tokens) do
 			if token.type == "letter" and not runtime_syntax:IsKeyword(token) then
 				if dictionary then

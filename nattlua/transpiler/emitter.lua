@@ -586,10 +586,10 @@ function META:EmitExpressionIndex(node)
 end
 
 function META:EmitCall(node)
-
 	local multiline_string = false
+
 	if #node.expressions == 1 and node.expressions[1].kind == "value" then
-		multiline_string = node.expressions[1].value.value:sub(1,1) == "["
+		multiline_string = node.expressions[1].value.value:sub(1, 1) == "["
 	end
 
 	if node.expand then
@@ -607,7 +607,9 @@ function META:EmitCall(node)
 		if node.tokens["call("] then
 			self:EmitToken(node.tokens["call("])
 		else
-			if self.config.force_parenthesis and not multiline_string then self:EmitNonSpace("(") end
+			if self.config.force_parenthesis and not multiline_string then
+				self:EmitNonSpace("(")
+			end
 		end
 	else
 		-- this will not work for calls with functions that contain statements
@@ -625,16 +627,15 @@ function META:EmitCall(node)
 		if node.tokens["call("] then
 			self:EmitToken(node.tokens["call("])
 		else
-			if self.config.force_parenthesis and not multiline_string then 
-				self:EmitNonSpace("(") 
+			if self.config.force_parenthesis and not multiline_string then
+				self:EmitNonSpace("(")
 			end
 		end
 	end
 
 	local newlines = self:ShouldBreakExpressionList(node.expressions)
-
 	local last = node.expressions[#node.expressions]
-	
+
 	if last and last.kind == "function" and #node.expressions < 4 then
 		newlines = false
 	end
@@ -659,7 +660,7 @@ function META:EmitCall(node)
 
 		self:EmitToken(node.tokens["call)"])
 	else
-		if self.config.force_parenthesis and not multiline_string then 
+		if self.config.force_parenthesis and not multiline_string then
 			if newlines then
 				self:Whitespace("\n")
 				self:Whitespace("\t")
