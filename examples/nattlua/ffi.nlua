@@ -7,15 +7,17 @@ end
 
 type VoidPointer = {
 	@MetaTable = self, -- this is a shortcut to setmetatable<|VoidPointer, VoidPointer|>
-	__index = function() error("cannot index a void pointer") end,
-	__newindex = function() error("cannot index a void pointer") end
+	__index = function()
+		error("cannot index a void pointer")
+	end,
+	__newindex = function()
+		error("cannot index a void pointer")
+	end,
 }
-
 type ffi.C = {
 	@MetaTable = self,
 	__index = analyzer function(self, field: string)
 		-- this is a analyzer function, but the code here is executed by the checker
-
 		if not field:IsLiteral() then error("field must be a literal") end
 
 		local ffi = require("ffi")
@@ -30,13 +32,13 @@ type ffi.C = {
 				error("dunno how to cast " .. type_info.what)
 			end
 		end
-		
+
 		local cdata = ffi.C[field:GetData()]
 		local info = reflect.typeof(cdata)
 
 		if info.what == "func" then
 			local arguments = {}
-			
+
 			for arg_info in info:arguments() do
 				table.insert(arguments, ctype_to_nl_type(arg_info.type))
 			end
@@ -49,25 +51,18 @@ type ffi.C = {
 				type = analyzer:CallTypesystemUpvalue(types.LString("CDataPointer"), ctype_to_nl_type(info.return_type))
 			end
 
-			return types.Function({
-				ret = types.Tuple({type}),
-				arg = types.Tuple(arguments)
-			})
+			return types.Function({ret = types.Tuple({type}), arg = types.Tuple(arguments)})
 		end
-
-	end
+	end,
 }
 
 analyzer function ffi.cdef(c_declaration: string, ...: ...any)
 	assert(c_declaration:IsLiteral(), "c_declaration must be a literal")
-
 	local ffi = require("ffi")
 	ffi.cdef(c_declaration:GetData(), ...)
 end
 
 --- from now it's normal lua code
-
 local ffi = require("ffi")
 ffi.cdef("void * malloc(size_t)")
-print(ffi.C.malloc()[5])
-                  -- ^ should error
+print(ffi.C.malloc()[5]) -- ^ should error

@@ -3,15 +3,13 @@ local run = T.RunCode
 local String = T.String
 
 test("index function", function()
-    local analyzer = run[[
+	local analyzer = run[[
         local t = setmetatable({}, {__index = function(self, key) return 1 end})
         local a = t.lol
     ]]
-
-    local a = analyzer:GetLocalOrGlobalValue(String("a"))
-    equal(1, a:GetData())
-
-    run[[
+	local a = analyzer:GetLocalOrGlobalValue(String("a"))
+	equal(1, a:GetData())
+	run[[
         local meta = {} as {num = number, __index = self}
 
         local a = setmetatable({}, meta)
@@ -21,7 +19,7 @@ test("index function", function()
 end)
 
 test("basic inheritance", function()
-    local analyzer = run[[
+	local analyzer = run[[
         local META = {}
         META.__index = META
 
@@ -35,18 +33,15 @@ test("basic inheritance", function()
         local obj = setmetatable({Bar = 1}, META)
         local a, b = obj:Test(1)
     ]]
-
-    local obj = analyzer:GetLocalOrGlobalValue(String("obj"))
-
-    local a = analyzer:GetLocalOrGlobalValue(String("a"))
-    local b = analyzer:GetLocalOrGlobalValue(String("b"))
-
-    equal(2, a:GetData())
-    equal(3, b:GetData())
+	local obj = analyzer:GetLocalOrGlobalValue(String("obj"))
+	local a = analyzer:GetLocalOrGlobalValue(String("a"))
+	local b = analyzer:GetLocalOrGlobalValue(String("b"))
+	equal(2, a:GetData())
+	equal(3, b:GetData())
 end)
 
 test("__call method", function()
-    local analyzer = run[[
+	local analyzer = run[[
         local META = {}
         META.__index = META
 
@@ -58,14 +53,12 @@ test("__call method", function()
 
         local lol = obj(100,2,3)
     ]]
-
-    local obj = analyzer:GetLocalOrGlobalValue(String("obj"))
-
-    equal(105, analyzer:GetLocalOrGlobalValue(String("lol")):GetData())
+	local obj = analyzer:GetLocalOrGlobalValue(String("obj"))
+	equal(105, analyzer:GetLocalOrGlobalValue(String("lol")):GetData())
 end)
 
 test("__call method should not mess with scopes", function()
-    local analyzer = run[[
+	local analyzer = run[[
         local META = {}
         META.__index = META
 
@@ -75,14 +68,12 @@ test("__call method should not mess with scopes", function()
 
         local a = setmetatable({}, META)(100,2,3)
     ]]
-
-    local a = analyzer:GetLocalOrGlobalValue(String("a"))
-
-    equal(105, a:GetData())
+	local a = analyzer:GetLocalOrGlobalValue(String("a"))
+	equal(105, a:GetData())
 end)
 
 test("vector test", function()
-    local analyzer = run[[
+	local analyzer = run[[
         local Vector = {}
         Vector.__index = Vector
 
@@ -94,13 +85,12 @@ test("vector test", function()
 
         local v = Vector(123).lol
     ]]
-
-    local v = analyzer:GetLocalOrGlobalValue(String("v"))
-    equal(123, v:GetData())
+	local v = analyzer:GetLocalOrGlobalValue(String("v"))
+	equal(123, v:GetData())
 end)
 
 test("vector test2", function()
-    local analyzer = run[[
+	local analyzer = run[[
         local Vector = {}
         Vector.__index = Vector
 
@@ -117,18 +107,16 @@ test("vector test2", function()
         local v = Vector(1,2,3) + Vector(100,100,100)
         local x, y, z = v.x, v.y, v.z
     ]]
-
-    local x = assert(analyzer:GetLocalOrGlobalValue(String("x")))
-    local y = assert(analyzer:GetLocalOrGlobalValue(String("y")))
-    local z = assert(analyzer:GetLocalOrGlobalValue(String("z")))
-
-    equal(101, x:GetData())
-    equal(102, y:GetData())
-    equal(103, z:GetData())
+	local x = assert(analyzer:GetLocalOrGlobalValue(String("x")))
+	local y = assert(analyzer:GetLocalOrGlobalValue(String("y")))
+	local z = assert(analyzer:GetLocalOrGlobalValue(String("z")))
+	equal(101, x:GetData())
+	equal(102, y:GetData())
+	equal(103, z:GetData())
 end)
 
 test("interface extensions", function()
-    run[[
+	run[[
         local type Vec2 = {x = number, y = number}
         local type Vec3 = {z = number} extends Vec2
 
@@ -156,7 +144,8 @@ test("interface extensions", function()
 end)
 
 test("error on newindex", function()
-    run([[
+	run(
+		[[
         local type error = analyzer function(msg: string)
             assert(type(msg:GetData()) == "string", "msg has no field a string?")
             error(msg:GetData())
@@ -177,11 +166,13 @@ test("error on newindex", function()
 
         -- should error
         self.bar = true
-    ]], "cannot use foo")
+    ]],
+		"cannot use foo"
+	)
 end)
 
 test("tutorialspoint", function()
-    run[[
+	run[[
         mytable = setmetatable({key1 = "value1"}, {
             __index = function(mytable, key)
                 if key == "key2" then
@@ -195,8 +186,7 @@ test("tutorialspoint", function()
         attest.equal(mytable.key1, "value1")
         attest.equal(mytable.key2, "metatablevalue")
     ]]
-
-    run[[
+	run[[
         mymetatable = {}
         mytable = setmetatable({key1 = "value1"}, { __newindex = mymetatable })
 
@@ -231,7 +221,6 @@ run[[
     attest.equal(a, 1)
     attest.equal(b, 2)
 ]]
-
 run[[
     local a = setmetatable({c = true}, {
         __index = {
@@ -247,7 +236,6 @@ run[[
     rawset(a, "foo", "hello")
     attest.equal(rawget(a, "foo"), "hello")
 ]]
-
 run[[
     local self = setmetatable({}, {
         __index = setmetatable({foo = true}, {
@@ -260,7 +248,6 @@ run[[
     attest.equal(self.foo, true)
     attest.equal(self.bar, true)
 ]]
-
 run[[
     local META = {}
     META.__index = META
@@ -288,7 +275,6 @@ run[[
         test(self)
     end
 ]]
-
 run[[
     local meta = {}
     meta.__index = meta
@@ -303,8 +289,8 @@ run[[
 
     attest.equal(obj:Test(), 1)
 ]]
-
-run([[
+run(
+	[[
     local meta = {} as {
         __index = self,
         Test = function=(self)>(string)
@@ -320,8 +306,9 @@ run([[
     }, meta)
     
     obj:Test()
-]], "foo.- is not a subset of")
-
+]],
+	"foo.- is not a subset of"
+)
 run([[
     local meta = {} as {
         __index = self, 
@@ -340,7 +327,6 @@ run([[
 
     attest.equal(obj:Test(), _ as number)
 ]])
-
 run([[
     local meta = {}
     meta.__index = meta
@@ -359,7 +345,6 @@ run([[
     attest.equal(meta.data, nil)
     attest.equal(obj:foo(), 1)
 ]])
-
 run[[
     local Vector = {}
     Vector.__index = Vector
@@ -381,9 +366,8 @@ run[[
     local newvector = Vector(1,2,3) + Vector(100,100,100)
     attest.equal(newvector, _ as {x = number, y = number, z = number})
 ]]
-
-
-run([[
+run(
+	[[
     local Vector = {}
     Vector.__index = Vector
 
@@ -404,8 +388,9 @@ run([[
     local new_vector = Vector(1,2,3) + 4
 
     attest.equal(new_vector, _ as {x = number, y = number, z = number})
-]], "4 is not the same type as")
-
+]],
+	"4 is not the same type as"
+)
 run[[
     type code_ptr = {
         @Name = "codeptr",
@@ -420,7 +405,6 @@ run[[
     
     attest.equal(y, _ as code_ptr)
 ]]
-
 run[[
     local type tbl = {}
     type tbl.@Name = "blackbox"
@@ -430,7 +414,6 @@ run[[
 
     attest.equal(lol, 1337)
 ]]
-
 run[[
     local type tbl = {}
     type tbl.__call = analyzer function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end
@@ -439,7 +422,6 @@ run[[
     local lol = tbl({foo = 1337})
     attest.equal(lol, 1337)
 ]]
-
 run[[
     local meta = {}
     meta.__index = meta
@@ -464,7 +446,6 @@ run[[
     local type ret = return_type<|meta.Foo|>[1]
     attest.equal<|ret, 2 | 3|>
 ]]
-
 run[[
     local META = {}
     META.__index = META
@@ -484,7 +465,6 @@ run[[
     local s = setmetatable({Foo = 1337}, META)
     attest.equal(s:GetFoo(), _ as number)
 ]]
-
 run[[
     local META = {}
     META.__index = META
@@ -501,8 +481,8 @@ run[[
     attest.equal(self.parent, _ as nil | number)
     end
 ]]
-
-run([[
+run(
+	[[
     local META = {}
     META.__index = META
 
@@ -514,8 +494,9 @@ run([[
     function META:Lol()
         self.foo[self.i] = {"bad type"}
     end
-]], "bad type.-is not a subset of string")
-
+]],
+	"bad type.-is not a subset of string"
+)
 run[[
     local function GetSet(tbl: ref any, name: ref string, default: ref any)
         tbl[name] = default as NonLiteral<|default|>
@@ -542,7 +523,6 @@ run[[
     attest.equal<|b, boolean|>
     attest.equal<|self.Foo, boolean|>
 ]]
-
 run[[
     local META =  {}
     META.__index = META
@@ -557,7 +537,6 @@ run[[
     end
 
 ]]
-
 run[[
 
     -- class.lua
@@ -648,7 +627,6 @@ run[[
 
 
 ]]
-
 run[[
 
     local function class()
@@ -707,7 +685,6 @@ run[[
     
 
 ]]
-
 run[[
     local type IPlayer = {}
     do
@@ -732,7 +709,6 @@ run[[
         attest.equal(ply:IsVisible(ply), 1337)
     end
 ]]
-
 run[[
     local type IPlayer = {}
     local type IEntity = {}
@@ -767,7 +743,6 @@ run[[
         attest.equal(ply:IsVisible(ply), _ as boolean)
     end
 ]]
-
 run[[
 local FALLBACK = "lol"
 
@@ -782,14 +757,11 @@ attest.equal(x, FALLBACK)
 
 setmetatable(_G)
 ]]
-
-
 run[[
     setmetatable(_G, {__index = function(self: ref any, key: ref any) return "LOL" end})
     attest.equal(DUNNO, "LOL")
     setmetatable(_G)
 ]]
-
 run[[
     local META = {}
     META.__index = META

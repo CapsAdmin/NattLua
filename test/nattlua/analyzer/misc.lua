@@ -21,34 +21,26 @@ run[[
     attest.equal(test, _ as function=(a: any, b: any)>(nil))
 ]]
 
-
 do -- assignment
-    run[[
+	run[[
         local a
         attest.equal(a, nil)
     ]]
-
-    run[[
+	run[[
         local a: boolean
         attest.equal(a, _ as boolean)
     ]]
-
-
-    run[[
+	run[[
         a = nil
         -- todo, if any calls don't happen here then it's probably nil?
         attest.equal(a, _ as nil)
     ]]
-
-    run[[
+	run[[
         local a = {}
         a[5] = 5
         attest.equal(a[5], 5)
     ]]
-
-
-
-    run[[
+	run[[
         local function test(...)
             return 1,2,...
         end
@@ -59,8 +51,7 @@ do -- assignment
         attest.equal(b,2)
         attest.equal(c,3)
     ]]
-
-    run[[
+	run[[
         local a, b, c
         a, b, c = 0, 1
         attest.equal(a, 0)
@@ -74,8 +65,7 @@ do -- assignment
         attest.equal(b, nil)
         attest.equal(c, nil)
     ]]
-
-    run[[
+	run[[
         a, b, c = 0, 1
         attest.equal(a, 0)
         attest.equal(b, 1)
@@ -88,7 +78,7 @@ do -- assignment
         attest.equal(b, nil)
         attest.equal(c, nil)
     ]]
-    run[[
+	run[[
         local a = {}
         local i = 3
 
@@ -97,7 +87,7 @@ do -- assignment
         attest.equal(i, 4)
         attest.equal(a[3], 20)
     ]]
-    run[[
+	run[[
         a = {}
         i = 3
         i, a[i] = i+1, 20
@@ -105,6 +95,7 @@ do -- assignment
         attest.equal(a[3], 20)
     ]]
 end
+
 run[[
     local z1, z2
     local function test(i)
@@ -119,21 +110,17 @@ run[[
     --attest.equal(z1(), 1)
     attest.equal(z2(), 2)
 ]]
-
 --local numbers = {-1,-0.5,0,0.5,1,math.huge,0/0}
-
-run"attest.equal(1, 1)"
-run"attest.equal(-1, -1)"
-run"attest.equal(-0.5, -0.5)"
-run"attest.equal(0, 0)"
-
+run("attest.equal(1, 1)")
+run("attest.equal(-1, -1)")
+run("attest.equal(-0.5, -0.5)")
+run("attest.equal(0, 0)")
 --- exp
 run[[
     attest.equal(1e5, 100000)
     attest.equal(1e+5, 100000)
     attest.equal(1e-5, 0.00001)
 ]]
-
 --- hex exp +hexfloat !lex
 run[[
     attest.equal(0xe+9, 23)
@@ -141,28 +128,24 @@ run[[
     attest.equal(0xep+9, 7168)
     attest.equal(0xep-9, 0.02734375)
 ]]
-
-run"attest.equal(1-1, 0)"
-run"attest.equal(1+1, 2)"
-run"attest.equal(2*3, 6)"
-run"attest.equal(2^3, 8)"
-run"attest.equal(3%3, 0)"
-run"attest.equal(-1*2, -2)"
-run"attest.equal(1/2, 0.5)"
-run"attest.equal(1/2, 0.5)"
-run"attest.equal(0b10 | 0b01, 0b11)"
-run"attest.equal(0b10 & 0b10, 0b10)"
-run"attest.equal(0b10 & 0b10, 0b10)"
-
+run("attest.equal(1-1, 0)")
+run("attest.equal(1+1, 2)")
+run("attest.equal(2*3, 6)")
+run("attest.equal(2^3, 8)")
+run("attest.equal(3%3, 0)")
+run("attest.equal(-1*2, -2)")
+run("attest.equal(1/2, 0.5)")
+run("attest.equal(1/2, 0.5)")
+run("attest.equal(0b10 | 0b01, 0b11)")
+run("attest.equal(0b10 & 0b10, 0b10)")
+run("attest.equal(0b10 & 0b10, 0b10)")
 --R"attest.equal(0b10 >> 1, 0b01)"
 --R"attest.equal(0b01 << 1, 0b10)"
 --R"attest.equal(~0b01, -2)"
-run"attest.equal('a'..'b', 'ab')"
-run"attest.equal('a'..'b'..'c', 'abc')"
-run"attest.equal(1 .. '', nil as '1')"
-run"attest.equal('ab'..(1)..'cd'..(1.5), 'ab1cd1.5')"
-
-
+run("attest.equal('a'..'b', 'ab')")
+run("attest.equal('a'..'b'..'c', 'abc')")
+run("attest.equal(1 .. '', nil as '1')")
+run("attest.equal('ab'..(1)..'cd'..(1.5), 'ab1cd1.5')")
 run[[ --- tnew
     local a = nil
     local b = {}
@@ -176,7 +159,6 @@ run[[ --- tdup
     attest.equal(t[true], nil)
     attest.equal(t[false], b)
 ]]
-
 run[[
     do --- tnew
         local a = nil
@@ -332,7 +314,6 @@ run[[
         attest.equal(a, 2)
     end
 ]]
-
 run[[
     local a = 1337
     for i = 1, a do
@@ -521,7 +502,6 @@ run[[
     attest.equal(a, _ as string)
     attest.equal(b, _ as number)
 ]]
-
 --[[
 
     for i,v in ipairs({"LOL",2,3}) do
@@ -531,8 +511,7 @@ run[[
             attest.equal(v, _ as "LOL")
         end
     end
-]]
-run[[
+]] run[[
     local a = {
         foo = true,
         bar = false,
@@ -577,7 +556,6 @@ run[[
 
     type math.cos = old
 ]]
-
 run[[
     local type a = analyzer function()
         _G.LOL = true
@@ -672,7 +650,6 @@ run[[
         return a
     end
 ]]
-
 pending[[
     for k,v in next, {1} do
         attest.equal(k, 1)
@@ -806,7 +783,6 @@ run([[
         attest.equal(1, 2)
     end
 ]])
-
 run[[
     local x = 1
     goto foo

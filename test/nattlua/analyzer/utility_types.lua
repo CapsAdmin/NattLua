@@ -1,6 +1,5 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
 run[[
 
     attest.equal<|
@@ -15,7 +14,6 @@ run[[
     |>
 
 ]]
-
 run[[
 
     attest.equal<|
@@ -30,9 +28,8 @@ run[[
     |>
 
 ]]
-
-
-run([[
+run(
+	[[
 
     local tbl = Readonly<|{
         foo = 1337 | nil,
@@ -41,9 +38,9 @@ run([[
 
     tbl.bar = 444
 
-]], "444 is not a subset of 666")
-
-
+]],
+	"444 is not a subset of 666"
+)
 run[[
 
     local type CatInfo = {
@@ -61,7 +58,6 @@ run[[
 
     attest.equal(cats.boris.age, _ as number)
 ]]
-
 run[[
 
     local type Todo = {
@@ -78,8 +74,8 @@ run[[
     }
 
 ]]
-
-run([[
+run(
+	[[
 
     local type Todo = {
         title = string,
@@ -97,30 +93,27 @@ run([[
         title = "Get a new car",
         done = false,
     }
-]], "done")
-
+]],
+	"done"
+)
 run[[
     attest.equal<|
         Exclude<|1 | 2 | 3, 2|>, 
         1 | 3
     |>
 ]]
-
 run[[
     attest.equal<|
         Extract<|1337 | "deadbeef", number|>, 
         1337
     |>
 ]]
-
-
 run[[
     attest.equal<|
         Extract<|1337 | 231 | "deadbeef", number|>, 
         1337 | 231
     |>  
 ]]
-
 run[[
     local function foo(a: number, b: string, c: Table): boolean
         return true
@@ -132,7 +125,6 @@ run[[
 
     attest.equal<|ReturnType<|foo|>[1], boolean|>
 ]]
-
 run[[
     attest.equal<|Uppercase<|"foo"|>, "FOO"|>
     attest.equal<|Lowercase<|"FOO"|>, "foo"|>
@@ -141,7 +133,6 @@ run[[
     --attest.equal<|Capitalize<|"foo"|>, "Foo"|>
     --attest.equal<|Uncapitalize<|"FOO"|>, "fOO"|>
 ]]
-
 run[[
     local x: {
         [string] = true,

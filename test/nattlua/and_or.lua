@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 test("order of 'and' expression", function()
-    run[[
+	run[[
         local res = 0
         local a = function(arg) 
             if res == 0 then
@@ -18,17 +18,17 @@ test("order of 'and' expression", function()
 end)
 
 test("if left side is false or something, return a union of the left and right side", function()
-    _G.TEST_DISABLE_ERROR_PRINT = true
-    run[[
+	_G.TEST_DISABLE_ERROR_PRINT = true
+	run[[
         local a: false | {foo = true}
         local b = a and a.foo
         attest.equal(b, _ as false | true)
     ]]
-    _G.TEST_DISABLE_ERROR_PRINT = false
+	_G.TEST_DISABLE_ERROR_PRINT = false
 end)
 
 test("if left side of 'and' is false, don't analyze the right side", function()
-    run[[
+	run[[
         local a = function(arg) 
             attest.equal(arg, 1)
             return false
@@ -39,7 +39,7 @@ test("if left side of 'and' is false, don't analyze the right side", function()
 end)
 
 test("if left side of 'or' is true, don't analyze the right side", function()
-    run[[
+	run[[
         local a = function(arg) 
             attest.equal(arg, 1)
             return 1337
@@ -51,7 +51,7 @@ test("if left side of 'or' is true, don't analyze the right side", function()
 end)
 
 test("right side of or", function()
-    run[[
+	run[[
         local a = function(arg) 
             if arg == 1 then return false end
             return 1337
@@ -63,26 +63,23 @@ test("right side of or", function()
 end)
 
 test("orrr", function()
-    run[[
+	run[[
         local maybe: false | true
         local b = maybe or 1
         attest.equal(b, _ as true | 1)
     ]]
-
-    run[[
+	run[[
         local maybe: false | true
         local b = maybe or maybe
         attest.equal(b, _ as true | false)
     ]]
-
-    run[[
+	run[[
         local maybe: false | true
         local maybe2: nil | 1337
         local b = maybe or maybe2
         attest.equal(b, _ as 1337 | nil | true)
     ]]
-
-    run[[
+	run[[
         local maybe: false | true
         local maybe2: nil | 1337
         local b = maybe2 or maybe

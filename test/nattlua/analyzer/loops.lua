@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 test("pairs on literal table", function()
-    run[[
+	run[[
         local tbl = {1,2,3}
         local key_sum = 0
         local val_sum = 0
@@ -34,7 +34,6 @@ pending[[
     attest.equal(key_sum, _ as number | 0)
     attest.equal(val_sum, _ as number | 0)
 ]]
-
 run[[
     -- pairs on non literal table
 
@@ -47,7 +46,7 @@ run[[
 ]]
 
 test("pairs on any should at least make k,v any", function()
-    run[[
+	run[[
         local key, val
 
         for k,v in pairs(unknown) do
@@ -67,7 +66,6 @@ run[[
     end
     attest.equal(x, 55)
 ]]
-
 run[[
     local x = 0
     for i = 1, 10 do
@@ -78,7 +76,6 @@ run[[
     end
     attest.equal(x, 10)
 ]]
-
 run[[
     local x = 0
     for i = 1, 10 do
@@ -89,7 +86,6 @@ run[[
     end
     attest.equal(x, _ as number)
 ]]
-
 run[[
     local a, b = 0, 0
     for i = 1, 8000 do
@@ -103,7 +99,6 @@ run[[
     attest.equal(a, _ as number)
     attest.equal(b, _ as number)
 ]]
-
 run[[
     local t = {foo = true}
     for k,v in pairs(t) do

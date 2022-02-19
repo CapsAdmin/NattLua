@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
-run([[
+run(
+	[[
     local type contract = {}
     type contract.test = function=(number)>(string)
 
@@ -10,9 +10,11 @@ run([[
     function lib.unknown() 
 
     end
-]], "is not the same value as")
-
-run([[
+]],
+	"is not the same value as"
+)
+run(
+	[[
     local type contract = {}
     type contract.test = function=(number)>(string)
 
@@ -21,8 +23,9 @@ run([[
     function lib.test(lol: string) 
         return 1,2,3
     end
-]], "number is not the same type as string")
-
+]],
+	"number is not the same type as string"
+)
 run[[
     local type contract = {}
     type contract.test = function=(number)>(string)
@@ -34,7 +37,6 @@ run[[
         return "test"
     end
 ]]
-
 run[[
     local META = {} as {[string] = any}
     META.__index = META
@@ -46,7 +48,6 @@ run[[
     attest.equal(META.code, _ as string)
     attest.equal(META.codeawdawd, _ as any) 
 ]]
-
 run[[
     local META = {} as {[string] = any, i = number, code = string}
     META.__index = META

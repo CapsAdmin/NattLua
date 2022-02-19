@@ -1,7 +1,4 @@
 -- just to show import
-
-return {
-    cdecl = [[
+return {cdecl = [[
         struct DIR {}
-    ]]
-}
+    ]]}

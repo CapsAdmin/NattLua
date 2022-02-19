@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
-run([[
+run(
+	[[
     local function func(): number, number
         if math.random() > 0.5 then
             return 1, "" -- HERE
@@ -9,10 +9,11 @@ run([[
     
         return 1,2
     end
-]], "return 1, \"\" %-%- HERE")
-
-
-run([[
+]],
+	"return 1, \"\" %-%- HERE"
+)
+run(
+	[[
     local function func(): number, number
         if math.random() > 0.5 then
             return 1, 2
@@ -20,16 +21,19 @@ run([[
     
         return 3 -- HERE
     end
-]], "return 3 %-%- HERE")
-
-
-run([[
+]],
+	"return 3 %-%- HERE"
+)
+run(
+	[[
     local function func(): number, number
         return 1
     end
-]], "index 2 does not exist")
-
-run([[
+]],
+	"index 2 does not exist"
+)
+run(
+	[[
     local function func(): number, number
         if MAYBE then
             return 1, 2
@@ -37,8 +41,9 @@ run([[
 
         return 3
     end
-]], "index 2 does not exist")
-
+]],
+	"index 2 does not exist"
+)
 run[[
     local MAYBE: boolean
 

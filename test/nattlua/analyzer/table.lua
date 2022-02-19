@@ -3,106 +3,101 @@ local run = T.RunCode
 local String = T.String
 
 test("reassignment", function()
-    local analyzer = run[[
+	local analyzer = run[[
         local tbl = {}
         tbl.foo = true
         tbl.foo = false
     ]]
-
-    local tbl = analyzer:GetLocalOrGlobalValue(String("tbl"))
-
-    equal(false, tbl:Get(String("foo")):GetData())
-
-    local analyzer = run[[
+	local tbl = analyzer:GetLocalOrGlobalValue(String("tbl"))
+	equal(false, tbl:Get(String("foo")):GetData())
+	local analyzer = run[[
         local tbl = {foo = true}
         tbl.foo = false
     ]]
-
-    local tbl = analyzer:GetLocalOrGlobalValue(String("tbl"))
-    equal(false, tbl:Get(String("foo")):GetData())
+	local tbl = analyzer:GetLocalOrGlobalValue(String("tbl"))
+	equal(false, tbl:Get(String("foo")):GetData())
 end)
 
 test("typed field", function()
-    local analyzer = run[[
+	local analyzer = run[[
         local tbl: {foo = boolean} = {foo = true}
     ]]
-    equal(true, analyzer:GetLocalOrGlobalValue(String("tbl")):Get(String("foo")):GetData())
+	equal(true, analyzer:GetLocalOrGlobalValue(String("tbl")):Get(String("foo")):GetData())
 end)
 
 test("typed table invalid reassignment should error", function()
-    local analyzer = run(
-        [[
+	local analyzer = run(
+		[[
             local tbl: {foo = 1} = {foo = 2}
-        ]]
-        ,"2 is not a subset of 1"
-    )
+        ]],
+		"2 is not a subset of 1"
+	)
 end)
 
 test("typed table invalid reassignment should error", function()
-    local analyzer = run(
-        [[
+	local analyzer = run(
+		[[
             local tbl: {foo = 1} = {foo = 1}
             tbl.foo = 2
-        ]]
-        ,"2 is not a subset of 1"
-    )
-    local v = analyzer:GetLocalOrGlobalValue(String("tbl"))
-
-    run(
-        [[
+        ]],
+		"2 is not a subset of 1"
+	)
+	local v = analyzer:GetLocalOrGlobalValue(String("tbl"))
+	run(
+		[[
             local tbl: {foo = {number, number}} = {foo = {1,1}}
             tbl.foo = {66,66}
             tbl.foo = {1,true}
-        ]]
-        ,".-true is not a subset of.-number"
-    )
+        ]],
+		".-true is not a subset of.-number"
+	)
 end)
 
 test("typed table correct assignment not should error", function()
-    run([[
+	run([[
         local tbl: {foo = true} = {foo = true}
         tbl.foo = true
     ]])
 end)
 
 test("self referenced tables should be equal", function()
-    local analyzer = run([[
+	local analyzer = run([[
         local a = {a=true}
         a.foo = {lol = a}
 
         local b = {a=true}
         b.foo = {lol = b}
     ]])
+	local a = analyzer:GetLocalOrGlobalValue(String("a"))
+	local b = analyzer:GetLocalOrGlobalValue(String("b"))
+	local ok, err = a:IsSubsetOf(b)
 
-    local a = analyzer:GetLocalOrGlobalValue(String("a"))
-    local b = analyzer:GetLocalOrGlobalValue(String("b"))
+	if not ok then error(err) end
 
-    local ok, err = a:IsSubsetOf(b)
-    if not ok then
-        error(err)
-    end
-    equal(true, ok)
+	equal(true, ok)
 end)
 
 test("indexing nil in a table should be allowed", function()
-    local analyzer = run([[
+	local analyzer = run([[
         local tbl = {foo = true}
         local a = tbl.bar
     ]])
-
-    equal("symbol", analyzer:GetLocalOrGlobalValue(String("a")).Type)
-    equal(nil, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
+	equal("symbol", analyzer:GetLocalOrGlobalValue(String("a")).Type)
+	equal(nil, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
 end)
 
 test("indexing nil in a table with a contract should error", function()
-    run([[
+	run(
+		[[
         local tbl: {foo = true} = {foo = true}
         local a = tbl.bar
-    ]], "\"bar\" is not the same value as \"foo\"")
+    ]],
+		"\"bar\" is not the same value as \"foo\""
+	)
 end)
 
 test("string: any", function()
-    run([[
+	run([[
         local a: {[string] = any | nil} = {} -- can assign a string to anything, (most common usage)
         a.lol = "aaa"
         a.lol2 = 2
@@ -111,81 +106,88 @@ test("string: any", function()
 end)
 
 test("empty type table shouldn't be writable", function()
-    run([[
+	run([[
         local a: {} = {}
         a.lol = true
     ]], "has no field .-lol")
 end)
 
 test("wrong right hand type should error", function()
-    run([[
+	run(
+		[[
         local {a,b} = nil
-    ]], "expected a table on the right hand side, got")
+    ]],
+		"expected a table on the right hand side, got"
+	)
 end)
 
 test("should error when key doesn't match the type", function()
-    run([[
+	run(
+		[[
         local a: {[string] = string | nil} = {}
         a.lol = "a"
         a[1] = "a"
-    ]], "is not the same type as string")
+    ]],
+		"is not the same type as string"
+	)
 end)
 
 test("with typed numerically indexed table should error", function()
-    run([[
+	run(
+		[[
         local tbl: {1,true,3} = {1, true, 3}
         tbl[2] = false
-    ]], "false is not the same value as true")
+    ]],
+		"false is not the same value as true"
+	)
 end)
 
 test("which has no data but contract says it does should return what the contract says", function()
-    run[[
+	run[[
         local tbl = {} as {[string] = 1}
         attest.equal(tbl.foo, 1)
     ]]
-
-    run([[
+	run(
+		[[
         local tbl = {} as {[string] = 1}
         attest.equal(tbl[true], nil)
-    ]], "has no field true")
+    ]],
+		"has no field true"
+	)
 end)
 
 test("is literal", function()
-    local a = run[[
+	local a = run[[
         local type a = {a = 1, b = 2}
     ]]
-
-    a:PushAnalyzerEnvironment("typesystem")
-    equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), true)
-    a:PopAnalyzerEnvironment()
-    
-    local a = run[[
+	a:PushAnalyzerEnvironment("typesystem")
+	equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), true)
+	a:PopAnalyzerEnvironment()
+	local a = run[[
         local type a = {a = 1, b = 2, c = {c = true}}
         ]]
-        
-    a:PushAnalyzerEnvironment("typesystem")
-        equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), true)
-    a:PopAnalyzerEnvironment()
+	a:PushAnalyzerEnvironment("typesystem")
+	equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), true)
+	a:PopAnalyzerEnvironment()
 end)
 
 test("is not literal", function()
-    local a = run[[
+	local a = run[[
         local type a = {a = number, [string] = boolean}
     ]]
-    a:PushAnalyzerEnvironment("typesystem")
-    equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), false)
-    a:PopAnalyzerEnvironment()
-
-    local a = run[[
+	a:PushAnalyzerEnvironment("typesystem")
+	equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), false)
+	a:PopAnalyzerEnvironment()
+	local a = run[[
         local type a = {a = 1, b = 2, c = {c = boolean}}
     ]]
-    a:PushAnalyzerEnvironment("typesystem")
-    equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), false)
-    a:PopAnalyzerEnvironment()
+	a:PushAnalyzerEnvironment("typesystem")
+	equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), false)
+	a:PopAnalyzerEnvironment()
 end)
 
 test("self reference", function()
-    local a = run[[
+	local a = run[[
         local type Base = {
             Test = function=(self, number)>(number),
         }
@@ -202,12 +204,9 @@ test("self reference", function()
 
         local func = x.Test
     ]]
-
-    equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("GetPos")).Type, "function")
-    equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("Test")).Type, "function")
-    
-
-    run[[
+	equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("GetPos")).Type, "function")
+	equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("Test")).Type, "function")
+	run[[
         local type a = {
             foo = self,
         }
@@ -222,7 +221,7 @@ test("self reference", function()
 end)
 
 test("table extending table", function()
-    run[[
+	run[[
         local type A = {
             Foo = true,
         }
@@ -236,7 +235,7 @@ test("table extending table", function()
 end)
 
 test("table + table", function()
-    run[[
+	run[[
         local type A = {
             Foo = true,
             Bar = 1,
@@ -251,7 +250,7 @@ test("table + table", function()
 end)
 
 test("index literal table with string", function()
-    run[[
+	run[[
         local tbl = {
             [ '"' ] = 1,
             [ "0" ] = 2,
@@ -263,8 +262,8 @@ test("index literal table with string", function()
     ]]
 end)
 
-test("non literal keys should be treated as literals when used multiple times in the same scope", function() 
-    run[[
+test("non literal keys should be treated as literals when used multiple times in the same scope", function()
+	run[[
         local foo: string
         local bar: string
 
@@ -277,7 +276,7 @@ test("non literal keys should be treated as literals when used multiple times in
 end)
 
 test("table is not literal", function()
-    run[[
+	run[[
         local tbl:{[number] = number} = {1,2,3}
         local analyzer function check_literal(tbl: any)
             assert(tbl:IsLiteral() == false)
@@ -287,7 +286,7 @@ test("table is not literal", function()
 end)
 
 test("var args with unknown length", function()
-    run[[
+	run[[
         local tbl = {...}
         attest.equal(tbl[1], _ as any)
         attest.equal(tbl[2], _ as any)
@@ -301,7 +300,6 @@ run[[
     attest.equal(list, _ as {})
     attest.equal<|list, {[number] = any} | {}|>
 ]]
-
 run[[
     local a = {foo = true, bar = false, 1,2,3}
     attest.equal(a[1], 1)
@@ -309,16 +307,15 @@ run[[
     attest.equal(a[3], 3)
 ]]
 
-test("deep nested copy", function() 
-    local a = run([[
+test("deep nested copy", function()
+	local a = run([[
         local a = {nested = {}}
         a.a = a
         a.nested.a = a
     ]]):GetLocalOrGlobalValue(String("a"))
-
-    equal(a:Get(String("nested")):Get(String("a")), a)
-    equal(a:Get(String("a")), a)
-    equal(a:Get(String("a")), a:Get(String("nested")):Get(String("a")))
+	equal(a:Get(String("nested")):Get(String("a")), a)
+	equal(a:Get(String("a")), a)
+	equal(a:Get(String("a")), a:Get(String("nested")):Get(String("a")))
 end)
 
 run[[
@@ -336,7 +333,6 @@ run[[
     local x = test(lol as string | string)
     attest.equal(x, _ as 1 | true | false | nil)    
 ]]
-
 run[[
     local type T = {Foo = "something" | nil, Bar = "definetly"}
 
@@ -355,7 +351,6 @@ run[[
 
     attest.equal<|a.Bar, "definetly"|>
 ]]
-
 run[[
     local function fill(t)
         t.foo = true
@@ -365,7 +360,6 @@ run[[
     fill(tbl)
     attest.equal(tbl.foo, true)
 ]]
-
 run[[
     local function fill(t: mutable {foo = boolean, bar = number})
         t.foo = true
@@ -375,7 +369,6 @@ run[[
     fill(tbl)
     attest.equal(tbl.foo, true)
 ]]
-
 run[[
     local type ShapeA = {Foo = boolean | nil}
     local type ShapeB = {Bar = string | nil}
@@ -387,8 +380,8 @@ run[[
     local obj = {}
     mutate(obj)
 ]]
-
-run([[
+run(
+	[[
     local type ShapeA = {Foo = boolean | nil}
     local type ShapeB = {Bar = string | nil}
 
@@ -398,8 +391,9 @@ run([[
 
     local obj = {Foo = nil}
     mutate(obj)
-]], "mutating function argument")
-
+]],
+	"mutating function argument"
+)
 run[[
     local type ShapeA = {Foo = boolean | nil}
     local type ShapeB = {Bar = string | nil}
@@ -412,8 +406,8 @@ run[[
     -- should be okay, because all the values in the contract can be nil
     mutate(obj)
 ]]
-
-run([[
+run(
+	[[
     local type ShapeA = {Foo = boolean}
     local type ShapeB = {Bar = string}
 
@@ -423,9 +417,11 @@ run([[
 
     local obj = {}
     mutate(obj)
-]], "{ } has no field.-Foo")
-
-run([[
+]],
+	"{ } has no field.-Foo"
+)
+run(
+	[[
     local type ShapeA = {Foo = boolean}
     local type ShapeB = {Bar = string}
 
@@ -435,9 +431,9 @@ run([[
 
     local obj = {Foo = true}
     mutate(obj)
-]], "has no field \"Bar\"")
-
-
+]],
+	"has no field \"Bar\""
+)
 run[[
     local type Foo = {}
     local type Bar = {
@@ -454,8 +450,6 @@ run[[
 
     test(_ as Foo & Bar)
 ]]
-
-
 run[[
     local type Foo = {}
     local type Bar = {
@@ -470,7 +464,6 @@ run[[
         attest.equal(ent.field, _ as nil)
     end
 ]]
-
 run[[
     local type Entity = {
         GetModel = function=(self)>(string),
@@ -495,13 +488,10 @@ run[[
         
     end
 ]]
-
 run[[
     attest.equal({Unknown()}, _ as {[1 .. inf] = any})
     attest.equal({Unknown(), 1}, _ as {any, 1})
 ]]
-
-
 run[[
 
     local function test(tbl: ref {
@@ -529,7 +519,6 @@ run[[
     attest.equal(tbl.NewField2, 9999)
     
 ]]
-
 run[[
     local e = {}
 
@@ -544,7 +533,6 @@ run[[
         attest.equal(v, _ as 666 | 1337)
     end
 ]]
-
 run[[
     local META = {}
 
@@ -558,9 +546,8 @@ run[[
 
     §assert(#analyzer.diagnostics == 1)
 ]]
-
-
-run([[
+run(
+	[[
     local META = {} as {Test = function=(self)>(nil)}
 
     function META:Test()
@@ -570,8 +557,9 @@ run([[
     if not META["Foo"] then
         
     end
-]], "has no field \"Foo\"")
-
+]],
+	"has no field \"Foo\""
+)
 pending[[
     local function tbl_get_foo(self)
         attest.equal(self.foo, 1337)
@@ -582,7 +570,6 @@ pending[[
     tbl.foo = 1337
     tbl.get_foo = tbl_get_foo
 ]]
-
 run[[
     local function foo(tbl: {
         [number] = true,
@@ -596,7 +583,6 @@ run[[
         attest.equal(z, _ as nil | boolean)
     end
 ]]
-
 run[[
     local lol: number
     local t = {}
@@ -605,8 +591,8 @@ run[[
     t[lol] = 2
     attest.equal(t[lol], 2)
 ]]
-
-run([[
+run(
+	[[
     local RED = 1
     local BLUE = 2
     local GREEN: string
@@ -615,14 +601,14 @@ run([[
         [BLUE] = 3,
         [GREEN] = 4,
     }
-]], "has no field string")
-
+]],
+	"has no field string"
+)
 run[[
     local type Foo = { bar = 1337 }
     local type Bar = { foo = 8888 }
     attest.equal<|Foo + Bar, Foo & Bar|>
 ]]
-
 run[[
     local tbl = {}
     tbl.foo = true
@@ -631,12 +617,10 @@ run[[
     local key = _ as "foo" | "bar"
     attest.equal<|tbl[key], true | false|>
 ]]
-
 run[[
     local tbl = _ as {foo = true} | {foo = false}
     attest.equal<|tbl.foo, true | false|>
 ]]
-
 run[[
     local analyzer function test(a: any, b: any)
         analyzer:Assert(analyzer.current_expression, b:IsSubsetOf(a))
@@ -644,14 +628,15 @@ run[[
     
     test(_ as {foo = number}, _ as {foo = number, bar = nil | number})
 ]]
-
-run([[
+run(
+	[[
     local t = {} as {
         foo = {foo = string}    
     }
     t.foo["test"] = true
-]], "is not the same value as .-foo")
-
+]],
+	"is not the same value as .-foo"
+)
 run[[
     local META =  {}
     META.__index = META
@@ -664,12 +649,10 @@ run[[
     attest.equal<|x, {foo = true, bar = false}|>
     attest.equal(META.@Self, _ as {foo = true})
 ]]
-
 run[[
     local t = {} as {[1 .. inf] = number}
     attest.equal(#t, _ as 1 .. inf)
 ]]
-
 run[[
 
     local function test<||>
@@ -683,7 +666,6 @@ run[[
     attest.equal(test().a, _ as 1 | 2)
     attest.equal(test().b, _ as function=(string)>(number))
 ]]
-
 run[[
     local function create_set(...)
         local res = {}
@@ -701,7 +683,6 @@ run[[
         ["\n"] = true,
     })
 ]]
-
 run[[
     local throw = function() error("!") end
 
@@ -721,19 +702,16 @@ run[[
 
     attest.equal(main(), _ as 1 | 2)
 ]]
-
 run[[
     local tbl = {}
     table.insert(tbl, _ as number)
     table.insert(tbl, _ as string)
     attest.equal(tbl, {_ as number, _ as string})
 ]]
-
 run[[
     local type t = {[any] = any}
     attest.equal(t["foo" as string], _ as any)
 ]]
-
 run[[
     local META = {}
     META.__index = META
@@ -751,7 +729,6 @@ run[[
         self.Name = name
     end
 ]]
-
 run[[
     local type T = {
         foo = Table,
@@ -763,7 +740,6 @@ run[[
     
     attest.equal(Table, _ as {[any] = any} | {})
 ]]
-
 run[[
     
     local luadata = {}
@@ -781,7 +757,6 @@ run[[
         attest.equal(Table, _ as {[any] = any} | {})
     end)
 ]]
-
 run[[
     local lookup = {
         [_ as 1 | 2] = "foo",
@@ -790,23 +765,18 @@ run[[
     
     attest.equal(lookup[_ as number], _ as "foo" | "bar" | nil)
 ]]
-
 run[[
     local x = {666, foo = true}
     attest.equal(#x, 1)
 ]]
-
 run[[
     local x = {[1] = 1, [2] = 1, [5] = 2}
     attest.equal(#x, 2)
 ]]
-
-
 run[[
     local x = {[1 as number] = 1, [2] = 1}
     attest.equal(#x, _ as number)
 ]]
-
 run[[
     local x = {666}
 
@@ -820,18 +790,15 @@ run[[
 
     attest.equal(x[2], _ as 1337 | 7777 | 555 | nil)
 ]]
-
 run[[
     local x: {[number] = 1337} = {1337}
     attest.equal(x[5], _ as 1337)
 ]]
-
 run[[
     local x = {}
     x[_ as number] = 1337
     attest.equal(x[5], _ as nil | 1337)
 ]]
-
 run[[
     local type_func_map = {
         [ "nil"     ] = true,
@@ -843,7 +810,6 @@ run[[
     
     attest.equal(type_func_map[_ as string], _ as true | "lol" | 1337 | false | nil)
 ]]
-
 run[[
     local operators: {[string] = function=(number, number)>(number)} = {
         ["+"] = function(l, r)

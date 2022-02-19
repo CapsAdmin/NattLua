@@ -6,13 +6,11 @@ run[[
         attest.equal(i, _ as 1 .. 10000)
     end
 ]]
-
 run[[
     for i = 1, _ as number do
         attest.equal(i, _ as 1..inf)
     end
 ]]
-
 run[[
     --for i = 1, number is an uncertain scope
     local a = 0
@@ -22,7 +20,6 @@ run[[
     end
     attest.equal(a, _ as number)
 ]]
-
 run[[
     local a = 0
     for i = 1, _ as number do
@@ -31,8 +28,8 @@ run[[
     attest.equal(a, _ as number)
 ]]
 
-pending("annotation", function() 
-    local code = transpile([[
+pending("annotation", function()
+	local code = transpile([[
         local x
         for i = 1, 2 do -- i should be 1 | 2
             x = i == 1 -- x should be true | false
@@ -42,10 +39,10 @@ pending("annotation", function()
         -- x should be false, because i == 2 is the last statement
         local b = x
     ]])
-    assert(code:find("i--[[#:1 | 2]] = 1", nil, true) ~= nil)
-    -- if the union sorting algorithm changes, we probably need to change this
-    assert(code:find("local a--[[#:false | true]] = x", nil, true) ~= nil)
-    assert(code:find("local b--[[#:false]] = x", nil, true) ~= nil)
+	assert(code:find("i--[[#:1 | 2]] = 1", nil, true) ~= nil)
+	-- if the union sorting algorithm changes, we probably need to change this
+	assert(code:find("local a--[[#:false | true]] = x", nil, true) ~= nil)
+	assert(code:find("local b--[[#:false]] = x", nil, true) ~= nil)
 end)
 
 run[[
@@ -65,8 +62,6 @@ run[[
 
     attest.equal(lol, 2)
 ]]
-
-
 run[[
     for i = 1, 3 do
         -- i is number if max is math.huge for example
@@ -83,7 +78,6 @@ run[[
         attest.equal(x, 108)
     end
 ]]
-
 run[[
     local string_byte = string.byte
     local x = 0
@@ -102,7 +96,6 @@ run[[
     end
     attest.equal(x,55)
 ]]
-
 run[[
     local tbl = {}
     for i = 1, 10000 do

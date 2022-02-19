@@ -1,6 +1,5 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
 run[[
     local function foo(): number, number
         if math.random() > 0.5 then
@@ -11,12 +10,14 @@ run[[
     
     attest.equal(foo(), _ as (number, number))
 ]]
-
-run([[
+run(
+	[[
     local function foo(): number, number
         if math.random() > 0.5 then
             return foo()
         end
         return nil, 1
     end
-]], "nil is not the same type as number")
+]],
+	"nil is not the same type as number"
+)

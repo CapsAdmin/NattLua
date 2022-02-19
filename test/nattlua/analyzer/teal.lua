@@ -1,6 +1,5 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
 run[[
     £parser.TealCompat = true
     local record tl
@@ -16,7 +15,6 @@ run[[
     attest.equal(tl.LoadMode, _ as "b" | "bt" | "t")
     attest.equal(tl.lol, _ as "b" | "bt" | "t")
 ]]
-
 run[[
     £parser.TealCompat = true
 
@@ -30,7 +28,6 @@ run[[
 
     attest.equal(x, _ as {foo = string, bar = number})
 ]]
-
 run[[
     £parser.TealCompat = true
 
@@ -40,7 +37,6 @@ run[[
 
     attest.equal(x, _ as {[number] = string})
 ]]
-
 run[[
     £parser.TealCompat = true
 
@@ -50,7 +46,6 @@ run[[
 
     attest.equal(x, _ as {string, number, boolean})
 ]]
-
 run[[
     £parser.TealCompat = true
 

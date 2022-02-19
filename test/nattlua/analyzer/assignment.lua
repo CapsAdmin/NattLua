@@ -1,8 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
 local String = T.String
-
-
 run[[
 local   a,b,c = 1,2,3
         d,e,f = 4,5,6
@@ -45,18 +43,19 @@ attest.equal(å, 6)
 A, B, C, D = nil, nil, nil, nil
 
 ]]
-
-run([[
+run(
+	[[
     local type Foo = {
         a = 1,
         b = 2,
     }
 
     local a: Foo = { a = 1 }    
-]], " is missing from ")
-
-
-run([[
+]],
+	" is missing from "
+)
+run(
+	[[
     local type Person = unique {
         id = number,
         name = string,
@@ -78,26 +77,25 @@ run([[
     }
     
     local c: Pet = human    
-]], "is not the same unique type as")
+]],
+	"is not the same unique type as"
+)
 
 test("runtime reassignment", function()
-    local v = run[[
+	local v = run[[
         local a = 1
         do
             a = 2
         end
     ]]:GetLocalOrGlobalValue(String("a"))
-
-    equal(v:GetData(), 2)
-
-    local v = run[[
+	equal(v:GetData(), 2)
+	local v = run[[
         local a = 1
         if true then
             a = 2
         end
     ]]:GetLocalOrGlobalValue(String("a"))
-
-    equal(v:GetData(), 2)
+	equal(v:GetData(), 2)
 end)
 
 run([[

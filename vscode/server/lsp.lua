@@ -3,37 +3,26 @@ local ljsocket = require("vscode.server.ljsocket")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
 ffi.C.chdir("/home/caps/nl/")
 local rpc_util = require("nattlua.other.jsonrpc")
-
 local LSP_VERSION = "3.15"
-
 local LSP_ERRORS = {
 	SERVER_NOT_INITALIZED = {
 		code = -32002,
 		message = "Server not initialized",
 	},
-	UNKNOWN_ERROR = {
-		code = -32001,
-		message = "Unknown error"
-	},
-	REQUEST_CANCELLED = {
-		code = -32800,
-		message = "Request Cancelled"
-	},
+	UNKNOWN_ERROR = {code = -32001, message = "Unknown error"},
+	REQUEST_CANCELLED = {code = -32800, message = "Request Cancelled"},
 }
-
 local MessageType = {
 	error = 1,
 	warning = 2,
 	info = 3,
 	log = 4,
 }
-
 local FileChangeType = {
 	Created = 1,
 	Changed = 2,
 	Deleted = 3,
 }
-
 local CompletionItemKind = {
 	Text = 1,
 	Method = 2,
@@ -54,37 +43,49 @@ local CompletionItemKind = {
 	File = 17,
 	Reference = 18,
 }
-
 local server = {}
-
 server.methods = {}
 
 function server:ShowMessage(client, type, msg)
-	self:Respond(client, {
-		method = "window/showMessage",
-		params = {
-			type = assert(MessageType[type]),
-			message = msg,
+	self:Respond(
+		client,
+		{
+			method = "window/showMessage",
+			params = {
+				type = assert(MessageType[type]),
+				message = msg,
+			},
 		}
-	})
+	)
 end
 
 function server:LogMessage(client, type, msg)
-	self:Respond(client, {
-		method = "window/logMessage",
-		params = {
-			type = assert(MessageType[type]),
-			message = msg,
+	self:Respond(
+		client,
+		{
+			method = "window/logMessage",
+			params = {
+				type = assert(MessageType[type]),
+				message = msg,
+			},
 		}
-	})
+	)
 end
 
 function server:OnError(msg)
-    error(msg)
+	error(msg)
 end
 
 function server:OnReceiveBody(client, str)
-	table.insert(self.responses, {client = client, thread = coroutine.create(function() return rpc_util.ReceiveJSON(str, self.methods, self, client) end)})
+	table.insert(
+		self.responses,
+		{
+			client = client,
+			thread = coroutine.create(function()
+				return rpc_util.ReceiveJSON(str, self.methods, self, client)
+			end),
+		}
+	)
 end
 
 local json = require("nattlua.other.json")
@@ -97,20 +98,16 @@ end
 
 function server:Loop()
 	self.responses = {}
-
-    local socket = ljsocket.create("inet", "stream", "tcp")
+	local socket = ljsocket.create("inet", "stream", "tcp")
 	assert(socket:set_blocking(false))
-    socket:set_option("nodelay", true, "tcp")
-    socket:set_option("reuseaddr", true)
-
+	socket:set_option("nodelay", true, "tcp")
+	socket:set_option("reuseaddr", true)
 	assert(socket:bind("*", 1337))
-	assert(socket:listen())	
-
+	assert(socket:listen())
 	io.write("HOSTING AT: *:1337\n")
-
 	local clients = {}
 
-    while true do
+	while true do
 		local client, err = socket:accept()
 
 		if client then
@@ -124,16 +121,12 @@ function server:Loop()
 		for i = #clients, 1, -1 do
 			local client = clients[i]
 			local chunk, err = client:receive()
-			
-			if err and err ~= "timeout" then
-				print(client, chunk, err)
-			end
+
+			if err and err ~= "timeout" then print(client, chunk, err) end
 
 			local body = rpc_util.ReceiveHTTP(client, chunk)
 
-			if body then
-				self:OnReceiveBody(client, body)
-			end
+			if body then self:OnReceiveBody(client, body) end
 
 			if not chunk then
 				if err == "closed" then
@@ -149,10 +142,9 @@ function server:Loop()
 		for i = #self.responses, 1, -1 do
 			local data = self.responses[i]
 			local ok, msg = coroutine.resume(data.thread)
+
 			if not ok then
-				if msg ~= "suspended" then
-					table.remove(self.responses, i)
-				end
+				if msg ~= "suspended" then table.remove(self.responses, i) end
 			else
 				if type(msg) == "table" then
 					self:Respond(data.client, msg)
@@ -161,19 +153,21 @@ function server:Loop()
 			end
 		end
 
-        ffi.C.usleep(50000)
-
+		ffi.C.usleep(50000)
 		local f = io.open("vscode/server/restart_me")
+
 		if f then
 			os.remove("vscode/server/restart_me")
+
 			for _, client in ipairs(clients) do
 				client:close()
 			end
+
 			socket:close()
 			f:close()
 			loadfile("vscode/server/server.lua")()
 		end
-    end
+	end
 end
 
 return server

@@ -634,13 +634,16 @@ function META:EmitCall(node)
 	end
 
 	local newlines = self:ShouldBreakExpressionList(node.expressions)
+
+	if multiline_string then newlines = false end
+
 	local last = node.expressions[#node.expressions]
 
 	if last and last.kind == "function" and #node.expressions < 4 then
 		newlines = false
 	end
 
-	if newlines then
+	if node.tokens["call("] and newlines then
 		self:Indent()
 		self:Whitespace("\n")
 		self:Whitespace("\t")

@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 test("prefix", function()
-    run([[
+	run([[
         local a = 1
         a = -a
         attest.equal(a, -1)
@@ -10,7 +10,7 @@ test("prefix", function()
 end)
 
 test("postfix", function()
-    run([[
+	run([[
         local a = 1++
         attest.equal(a, 2)
     ]])

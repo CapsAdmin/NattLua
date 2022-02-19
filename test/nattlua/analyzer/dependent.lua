@@ -1,6 +1,5 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
 run([[
     local type A = {Type = "human"}
     local type B = {Type = "cat"}

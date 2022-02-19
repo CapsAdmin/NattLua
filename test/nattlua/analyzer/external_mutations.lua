@@ -1,12 +1,13 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
-run([[
+run(
+	[[
     local x: {foo = boolean} = {foo = true}
 
     unknown(x)
-]], "cannot mutate argument")
-
+]],
+	"cannot mutate argument"
+)
 run([[
     local x = {foo = true}
 
@@ -14,7 +15,6 @@ run([[
 
     attest.equal<|x.foo, any | true|>
 ]])
-
 run[[
     local analyzer function unknown(tbl: {[any] = any} | {} )
         tbl:Set(types.LString("foo"), types.LString("bar"))
@@ -26,8 +26,8 @@ run[[
     
     attest.equal(x.foo, "bar")    
 ]]
-
-run([[
+run(
+	[[
     local function mutate_table(tbl: {lol = number})
         tbl.lol = 1
     end
@@ -37,9 +37,9 @@ run([[
     mutate_table(tbl)
     
     attest.equal(tbl.lol, 1)
-]], "immutable contract")
-
-
+]],
+	"immutable contract"
+)
 pending[[
     local function string_mutator<|tbl: mutable {[any] = any}|>
         for key, val in pairs(tbl) do
@@ -57,7 +57,6 @@ pending[[
     
     attest.equal<|a, {foo = true} | {[string] = string}|>
 ]]
-
 run[[
     local function mutate_table(tbl: mutable {foo = number})
         if math.random() > 0.5 then
@@ -73,7 +72,6 @@ run[[
     
     attest.equal(tbl.foo, _ as 1 | 2)
 ]]
-
 run[[
     local function mutate_table(tbl: mutable {foo = number})
         tbl.foo = 2
@@ -87,8 +85,8 @@ run[[
 
     attest.equal(tbl.foo, 2)
 ]]
-
-run([[
+run(
+	[[
     local function mutate_table(tbl: {lol = number})
         tbl.lol = 1
     end
@@ -98,8 +96,9 @@ run([[
     mutate_table(tbl)
     
     attest.equal(tbl.lol, 1)
-]], "immutable contract")
-
+]],
+	"immutable contract"
+)
 run([[
     local function mutate_table(tbl: mutable {lol = number})
         tbl.lol = 1
@@ -111,7 +110,6 @@ run([[
     
     attest.equal(tbl.lol, 1)
 ]])
-
 run([[
     local function mutate_table(tbl: mutable {lol = number})
         tbl.lol = 1
@@ -127,7 +125,6 @@ run([[
 
     §assert(not analyzer:GetDiagnostics()[1])
 ]])
-
 run[[
     local function mutate_table(tbl: ref mutable {foo = number})
         if math.random() > 0.5 then
@@ -145,7 +142,6 @@ run[[
     
     attest.equal<|typeof tbl.foo, 1 | 2|>
 ]]
-
 run[[
     §analyzer.config.external_mutation = true
     
@@ -156,7 +152,6 @@ run[[
     func(1, test, 2)
     §assert(analyzer:GetDiagnostics()[1].msg:find("can be mutated by external call"))
 ]]
-
 run[[
     local tbl = {} as {foo = number | nil}
 
@@ -164,7 +159,6 @@ run[[
         attest.equal(tbl.foo, _ as number)
     end
 ]]
-
 run[[
     local function foo(x: {value = string})
         attest.equal<|typeof x.value, string|>
@@ -172,8 +166,6 @@ run[[
 
     foo({value = "test"})
 ]]
-
-
 run[[
     local function foo(x: ref {value = string})
         attest.equal<|typeof x.value, "test"|>
@@ -181,7 +173,6 @@ run[[
 
     foo({value = "test"})
 ]]
-
 run[[
     local function test(value: {foo = number | nil})
         if value.foo then
@@ -199,7 +190,6 @@ run[[
     end
     
 ]]
-
 run[[
     local function mutate(tbl: mutable {foo = number, [string] = any})
         tbl.lol = true
@@ -223,7 +213,6 @@ run[[
     
     attest.equal(tbl.foo, 4)
 ]]
-
 run[[
     local t = {lol = "lol"}
 
@@ -245,7 +234,6 @@ run[[
         lol = "ROFL",
     })
 ]]
-
 run[[
     local function string_mutator<|tbl: mutable {[any] = any}|>
         for key, val in pairs(tbl) do
@@ -261,7 +249,6 @@ run[[
     attest.equal<|a.foo, string|>
     attest.equal<|a.bar, string|>
 ]]
-
 run[[
     local META = {}
     META.__index = META
@@ -302,7 +289,6 @@ run[[
         end
     end
 ]]
-
 run[[
     local META = {}
     META.__index = META

@@ -3,31 +3,33 @@ local run = T.RunCode
 local String = T.String
 
 test("should return a tuple with types", function()
-    local analyzer = run([[
+	local analyzer = run([[
         local type test = function()
             return 1,2,3
         end
 
         local a,b,c = test()
     ]])
-
-    equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
-    equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
-    equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
+	equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
+	equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
+	equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
 end)
 
 test("should be able to error", function()
-    run([[
+	run(
+		[[
         local type test = function()
             error("test")
         end
 
         test()
-    ]], "test")
+    ]],
+		"test"
+	)
 end)
 
 test("exclude analyzer function", function()
-    run([[
+	run([[
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
@@ -37,8 +39,8 @@ test("exclude analyzer function", function()
 
         attest.equal(a, _ as 1|3)
     ]])
-
-    run([[
+	run(
+		[[
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
@@ -47,11 +49,13 @@ test("exclude analyzer function", function()
         local a: Exclude<|1|2|3, 2|>
 
         attest.equal(a, _ as 11|31)
-    ]], "expected 11 | 31 got 1 | 3")
+    ]],
+		"expected 11 | 31 got 1 | 3"
+	)
 end)
 
 test("self referenced type tables", function()
-    run[[
+	run[[
         local type a = {
             b = self,
         }
@@ -60,14 +64,14 @@ test("self referenced type tables", function()
 end)
 
 test("next", function()
-    run[[
+	run[[
         local t = {k = 1}
         local a = 1
         local k,v = next({k = 1})
         attest.equal(k, nil as "k")
         attest.equal(v, nil as 1)
     ]]
-    run[[
+	run[[
         local k,v = next({foo = 1})
         attest.equal(string.len(k), _ as 3)
         attest.equal(v, _ as 1)
@@ -75,28 +79,30 @@ test("next", function()
 end)
 
 test("math.floor", function()
-    run[[
+	run[[
         attest.equal(math.floor(1.5), 1)
     ]]
 end)
 
 test("assert", function()
-    run([[
+	run([[
         type_assert_truthy(1 == 2, "lol")
-    ]],"lol")
+    ]], "lol")
 end)
 
 do
-    _G.TEST_DISABLE_ERROR_PRINT = true
-    test("require should error when not finding a module", function()
-        local a = run([[require("adawdawddwaldwadwadawol")]])
-        assert(a:GetDiagnostics()[1].msg:find("not found"))
-    end)
-    _G.TEST_DISABLE_ERROR_PRINT = false
+	_G.TEST_DISABLE_ERROR_PRINT = true
+
+	test("require should error when not finding a module", function()
+		local a = run([[require("adawdawddwaldwadwadawol")]])
+		assert(a:GetDiagnostics()[1].msg:find("not found"))
+	end)
+
+	_G.TEST_DISABLE_ERROR_PRINT = false
 end
 
 test("rawset rawget", function()
-    run[[
+	run[[
         local meta = {}
         meta.__index = meta
 
@@ -113,13 +119,13 @@ test("rawset rawget", function()
 end)
 
 test("select", function()
-    run[[
+	run[[
         attest.equal(select("#", 1,2,3), 3)
     ]]
 end)
 
 test("parenthesis around vararg", function()
-    run[[
+	run[[
         local a = select(2, 1,2,3)
         attest.equal(a, 2)
         attest.equal((select(2, 1,2,3)), 2)
@@ -127,7 +133,7 @@ test("parenthesis around vararg", function()
 end)
 
 test("varargs", function()
-    run[[
+	run[[
     local type test = function(...) end
     local a = {}
     a[1] = true
@@ -138,7 +144,7 @@ test("varargs", function()
 end)
 
 test("exlcude", function()
-    run[[
+	run[[
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
@@ -150,7 +156,7 @@ test("exlcude", function()
 end)
 
 test("table.insert", function()
-    run[[
+	run[[
         local a = {}
         a[1] = true
         a[2] = false
@@ -160,7 +166,7 @@ test("table.insert", function()
 end)
 
 test("string sub on union", function()
-    run[[
+	run[[
         local lol: "foo" | "bar"
 
         attest.equal(lol:sub(1,1), _ as "f" | "b")
@@ -168,9 +174,9 @@ test("string sub on union", function()
     ]]
 end)
 
-do 
-    _G.test_var = 0
-    run[[
+do
+	_G.test_var = 0
+	run[[
         
         local analyzer function test(foo: number)
             -- when defined as number the function should be called twice for each number in the union
@@ -180,10 +186,9 @@ do
         
         test(_ as 1 | 2)
     ]]
-    assert(_G.test_var == 2)
-
-    _G.test_var = 0
-    run[[
+	assert(_G.test_var == 2)
+	_G.test_var = 0
+	run[[
         
         local analyzer function test(foo: any)
             -- when defined as anything, or no type it should just pass the union directly
@@ -193,10 +198,9 @@ do
         
         test(_ as 1 | 2)
     ]]
-    assert(_G.test_var == 1)
-
-    _G.test_var = 0
-    run[[
+	assert(_G.test_var == 1)
+	_G.test_var = 0
+	run[[
         
         local analyzer function test(foo: number | nil)
             -- if the only type added to the union is nil it should still be called twice
@@ -205,9 +209,8 @@ do
         
         test(_ as 1 | 2)
     ]]
-    assert(_G.test_var == 2)
-
-    _G.test_var = nil
+	assert(_G.test_var == 2)
+	_G.test_var = nil
 end
 
 run[[
@@ -219,14 +222,12 @@ run[[
     attest.equal(ok, false)
     attest.superset_of(_ as string, err)
 ]]
-
 run[[
     local ok, val = type_pcall(function() return 1 end)
     
     attest.equal(ok, true)
     attest.equal(val, 1)
 ]]
-
 run([[
     local analyzer function Exclude(T: any, U: any)
         T:RemoveType(U)
@@ -237,8 +238,8 @@ run([[
 
     attest.equal(a, _ as 1|3)
 ]])
-
-run([[
+run(
+	[[
     local analyzer function Exclude(T: any, U: any)
         T:RemoveType(U)
         return T:Copy()
@@ -247,11 +248,12 @@ run([[
     local a: Exclude<|1|2|3, 2|>
 
     attest.equal(a, _ as 11|31)
-]], "expected 11 | 31 got 1 | 3")
-
+]],
+	"expected 11 | 31 got 1 | 3"
+)
 
 test("pairs loop", function()
-    run[[
+	run[[
         local tbl = {4,5,6}
         local k, v = 0, 0
         
@@ -285,8 +287,8 @@ run[[
     
     attest.equal(func(), 55)
 ]]
-
-run([[
+run(
+	[[
     local function build_summary_function(tbl)
         local lua = {}
         table.insert(lua, "local sum = 0")
@@ -303,18 +305,17 @@ run([[
         max = 10,
         body = "sum = sum + i CHECKME"
     })
-]], "CHECKME")
-
+]],
+	"CHECKME"
+)
 run[[
     local a = {"1", "2", "3"}
     attest.equal(table.concat(a), "123")
 ]]
-
 run[[
     local a = {"1", "2", "3", _ as string}
     attest.equal(table.concat(a), _ as string)
 ]]
-
 run[[
     local a = {
         b = {
@@ -326,7 +327,6 @@ run[[
     
     attest.equal(_ as keysof<|typeof a.b|>, _ as "bar" | "faz" | "foo")
 ]]
-
 run[[
     local function foo<|a: any, b: any|>
         return a, b
@@ -336,7 +336,6 @@ run[[
     attest.equal(x, 1)
     attest.equal(y, 2)
 ]]
-
 run[[
     for str in ("lol1\nlol2\nlol3\n"):gmatch("(.-)\n") do
         if str ~= "lol1" and str ~= "lol2" and str ~= "lol3" then
@@ -344,8 +343,6 @@ run[[
         end
     end
 ]]
-
-
 run[[
     -- test's scope should be from where the function was made
 
@@ -360,7 +357,6 @@ run[[
         test()
     end
 ]]
-
 run[[
     local function lol(x)
         attest.equal(x, 1)
@@ -369,7 +365,6 @@ run[[
     local x: 1 | "STRING"
     local z = x == 1 and lol(x)
 ]]
-
 run[[
     local function lol(x)
         attest.equal(x, _ as 1 | "STRING")
@@ -379,13 +374,11 @@ run[[
     local a = x == 1
     local z = lol(x)
 ]]
-
 run[[
     local x: 1.5 | "STRING"
     local y = type(x) == "number" and math.ceil(x)
     attest.equal(y, _ as 2 | false)
 ]]
-
 run[[
     local str, count = string.gsub("hello there!", "hello", "hi")
     attest.equal<|str, "hi there!"|>
@@ -393,8 +386,8 @@ run[[
 ]]
 
 do
-    _G.TEST_DISABLE_ERROR_PRINT = true
-    run[[
+	_G.TEST_DISABLE_ERROR_PRINT = true
+	run[[
         local function test(x)
             error("LOL")
             return "foo"
@@ -411,13 +404,12 @@ do
         attest.equal<|ok, true|>
         attest.equal<|err, "foo"|>
     ]]
-    _G.TEST_DISABLE_ERROR_PRINT = false
+	_G.TEST_DISABLE_ERROR_PRINT = false
 end
 
-
 do
-    _G.TEST_DISABLE_ERROR_PRINT = true
-    run[[
+	_G.TEST_DISABLE_ERROR_PRINT = true
+	run[[
         local ok, table_new = pcall(require, "lol")
         if not ok then
             table_new = "ok"
@@ -426,23 +418,26 @@ do
         attest.equal(ok, false)
         attest.equal(table_new, "ok")
     ]]
-    run[[
+	run[[
         local ok, err = pcall(function() assert(false, "LOL") end)
 
         attest.equal(ok, false)
         attest.equal(err, "LOL")
     ]]
-    _G.TEST_DISABLE_ERROR_PRINT = false
+	_G.TEST_DISABLE_ERROR_PRINT = false
 end
-run([[
+
+run(
+	[[
     local tbl = {
         foo = true,
         bar = false,
         faz = 1
     }
     table.sort(tbl, function(a, b) end)
-]], "foo.-is not the same type as number")
-
+]],
+	"foo.-is not the same type as number"
+)
 run[[
     local META = {}
     META.__index = META
@@ -460,7 +455,6 @@ run[[
 
     attest.equal(META.ExtraField, 1)
 ]]
-
 run[[
     local type Entity = {
         GetChildBones = function=(string, number)>({[number] = number}),
@@ -470,7 +464,6 @@ run[[
     local e = _ as Entity
     attest.equal(e:GetBoneCount(), _ as number)
 ]]
-
 run[[
     -- we need to say that lol has a contract so that we can mutate it
     local lol: {} = {}
@@ -482,7 +475,6 @@ run[[
         return ""
     end
 ]]
-
 run[[
     local function test(a: ref string)
         return a:lower()
@@ -491,7 +483,6 @@ run[[
     local str = test("Foo")
     attest.equal(str, "foo")
 ]]
-
 run[[
     local i = 0
     local function test(x: ref (string | nil))
@@ -506,7 +497,6 @@ run[[
     test("foo")
     test()
 ]]
-
 run[[
     local a,b,c,d =  string.byte(_ as string, _ as number, _ as number)
     
@@ -515,14 +505,12 @@ run[[
     attest.equal<|c, number|>
     attest.equal<|d, number|>
 ]]
-
 run[[
     local a,b,c,d =  string.byte("foo", 1, 2)
     attest.equal(a, 102)
     attest.equal(b, 111)
     attest.equal(c, nil)
 ]]
-
 run[[
     local a,b,c,d =  string.byte(_ as string, 1, 2)
     attest.equal(a, _ as number)
@@ -530,8 +518,6 @@ run[[
     attest.equal(c, nil)
     attest.equal(d, nil)
 ]]
-
-
 run[[
     local function clamp(n: ref number, low: ref number, high: ref number) 
         return math.min(math.max(n, low), high) 
@@ -540,32 +526,26 @@ run[[
     attest.equal(clamp(5, 7, 10), 7)
     attest.equal(clamp(15, 7, 10), 10)
 ]]
-
 run[[
     local x: cdata
 
     attest.equal(type(x), "cdata")
 ]]
-
 run[[
     local ok, table_new = pcall(require, "foo")
     attest.equal(ok, _ as true | false)
     attest.equal(table_new, _ as "module 'foo' not found" | any)
 ]]
-
-
 run[[
     local table_new = require("table.new")
     attest.equal(table_new, table.new)
     §assert(#analyzer.diagnostics == 1)
 ]]
-
 run[[
     local a, b = load("" as string)
     attest.equal(a, _ as nil | Function)
     attest.equal(b, _ as nil | string)
 ]]
-
 run[[
     local type tl = {x=1337}
 
@@ -579,7 +559,6 @@ run[[
     attest.equal(tl, {x=1337, foo=1})
     attest.equal(bar, 2)
 ]]
-
 run[[
     local type tl = {x=1337}
 

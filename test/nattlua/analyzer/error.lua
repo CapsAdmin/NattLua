@@ -1,6 +1,5 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
 run[[
     local function foo()
         local x = _ as boolean
@@ -13,7 +12,6 @@ run[[
     local y = foo()
     attest.equal(y, true)
 ]]
-
 run[[
     local function throw()
         error("lol")
@@ -26,7 +24,6 @@ run[[
     end
     attest.equal(x, _ as number)
 ]]
-
 run[[
     local x = _ as 1 | 2 | 3
     if x == 1 then return end
@@ -36,7 +33,6 @@ run[[
     if x == 2 then return end
     error("dead code")
 ]]
-
 run[[
     local x = ("lol"):byte(1,1 as 1 | 0)
     if not x then 
@@ -45,7 +41,6 @@ run[[
 
     attest.equal(x, 108)
 ]]
-
 run[[
     local a: 1 | nil
 
@@ -55,12 +50,10 @@ run[[
 
     attest.equal(a, 1)
 ]]
-
 run[[
     local a = assert(_ as 1 | nil)
     --attest.equal(a, 1)
 ]]
-
 run[[
     local function foo(input)
         local x = tonumber(input)
@@ -73,7 +66,6 @@ run[[
     local y = foo(_ as string)
     attest.equal<|y, number|>
 ]]
-
 run[[
     local a: 1 | nil
 
@@ -83,7 +75,6 @@ run[[
 
     attest.equal(a, 1)
 ]]
-
 run[[
     local a = true
 
@@ -93,7 +84,6 @@ run[[
 
     attest.equal(a, true)
 ]]
-
 run[[
     local function foo()
         local x = math.random() > 0.5
@@ -104,7 +94,6 @@ run[[
         error("nope")
     end
 ]]
-
 run[[
     local function throw()
         error("nope")
@@ -119,7 +108,6 @@ run[[
         throw()
     end
 ]]
-
 run[[
     local function throw()
         error("nope")
@@ -134,7 +122,6 @@ run[[
         throw()
     end
 ]]
-
 run[[
     local function foo(): number
         local x = math.random() > 0.5
@@ -149,7 +136,6 @@ run[[
 
     attest.equal(x, _ as number)
 ]]
-
 run[[
     local function foo(): number
         local x = math.random() > 0.5
@@ -160,7 +146,6 @@ run[[
         return 1
     end
 ]]
-
 run[[
     local function throw()
         error("nope")
@@ -177,7 +162,6 @@ run[[
     
     attest.equal(foo(), _ as number)
 ]]
-
 run[[
     local function throw()
         error("!")
@@ -201,8 +185,6 @@ run[[
         attest.equal(test(), 1)
     end
 ]]
-
-
 run[[
     local map = {
         --foo = function(x: nil | number) if math.random() > 0.5 then throw() end return 1 end,
@@ -226,7 +208,6 @@ run[[
     
     attest.equal(main(), 2)
 ]]
-
 run[[
     local function codepoint_to_utf8(n: number): ref string
         --§assert(analyzer:IsDefinetlyReachable())
@@ -258,7 +239,6 @@ run[[
     local x = parse_unicode_escape("lol")
     attest.equal(x, "foo")
 ]]
-
 run[[
     local map = {
         foo = function()
@@ -282,7 +262,6 @@ run[[
     
     parse()    
 ]]
-
 run[[
     local function foo()
         local x = _ as 1 | 2 | 3

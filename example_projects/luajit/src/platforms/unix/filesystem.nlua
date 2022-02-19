@@ -1,11 +1,8 @@
 local type contract = import_type<|"platforms/filesystem.nlua"|>
-
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"
-
 local fs = {} as contract
-
 ffi.cdef([[
 	const char *strerror(int);
 	unsigned long syscall(int number, ...);
@@ -14,9 +11,9 @@ ffi.cdef([[
 local function last_error(num: number | nil)
 	num = num or ffi.errno()
 	local ptr = ffi.C.strerror(num)
-	if not ptr then
-		return "strerror returns null"
-	end
+
+	if not ptr then return "strerror returns null" end
+
 	local err = ffi.string(ptr)
 	return err == "" and tostring(num) or err
 end
@@ -51,7 +48,6 @@ do
 				int64_t  st_qspare[2];
 			}
 		]])
-
 		type stat_struct.@Name = "OSXStat"
 	else
 		if X64 then
@@ -77,7 +73,6 @@ do
 					int64_t  __unused[3];
 				}
 			]])
-
 			type stat_struct.@Name = "UnixX64Stat"
 		else
 			stat_struct = ffi.typeof([[
@@ -103,7 +98,6 @@ do
 					uint64_t st_ino;
 				}
 			]])
-
 			type stat_struct.@Name = "UnixX32Stat"
 		end
 	end
@@ -131,7 +125,6 @@ do
 		stat = function(path: string, buff: typeof statbox)
 			return ffi.C.syscall(STAT_SYSCALL, path, buff)
 		end
-
 		stat_link = function(path: string, buff: typeof statbox)
 			return ffi.C.syscall(STAT_LINK_SYSCALL, path, buff)
 		end
@@ -141,7 +134,6 @@ do
 
 	function fs.get_attributes(path, follow_link)
 		local buff = statbox()
-
 		local ret = follow_link and stat_link(path, buff) or stat(path, buff)
 
 		if ret == 0 then
@@ -150,7 +142,6 @@ do
 				last_changed = tonumber(buff[0].st_ctime),
 				last_modified = tonumber(buff[0].st_mtime),
 				size = tonumber(buff[0].st_size),
-
 				type = bit.band(buff[0].st_mode, DIRECTORY) ~= 0 and "directory" or "file",
 			}
 		end
@@ -163,7 +154,7 @@ do
 	ffi.cdef[[
 		void *opendir(const char *name);
 		int closedir(void *dirp);
-	]] 
+	]]
 
 	if OSX then
 		ffi.cdef([[
@@ -191,14 +182,12 @@ do
 	end
 
 	local dot = string.byte(".")
+
 	local function is_dots(ptr: {[number] = number})
 		if ptr[0] == dot then
-			if ptr[1] == dot and ptr[2] == 0 then
-				return true
-			end
-			if ptr[1] == 0 then
-				return true
-			end
+			if ptr[1] == dot and ptr[2] == 0 then return true end
+
+			if ptr[1] == 0 then return true end
 		end
 
 		return false
@@ -206,19 +195,15 @@ do
 
 	function fs.get_files(path)
 		local out: List<|string|> = {} -- [1] TODO
-
 		local ptr = ffi.C.opendir(path or "")
 
-		if ptr == nil then
-			return nil, last_error()
-		end
+		if ptr == nil then return nil, last_error() end
 
 		local i = 1
+
 		while true do
 			local dir_info = ffi.C.readdir(ptr)
-
-			dir_info = dir_info as dir_info | nil -- TODO
-
+			dir_info = dir_info  as dir_info | nil -- TODO
 			if dir_info == nil then break end
 
 			if not is_dots(dir_info.d_name) then
@@ -228,7 +213,6 @@ do
 		end
 
 		ffi.C.closedir(ptr)
-		
 		return out
 	end
 end
@@ -240,21 +224,17 @@ do
 	]])
 
 	function fs.set_current_directory(path)
-		if ffi.C.chdir(path) == 0 then
-			return true
-		end
-		
+		if ffi.C.chdir(path) == 0 then return true end
+
 		return nil, last_error()
 	end
 
 	function fs.get_current_directory()
 		local temp = ffi.new("char[1024]")
 		local ret = ffi.C.getcwd(temp, ffi.sizeof(temp))
-		
-		if ret then
-			return ffi.string(ret, ffi.sizeof(temp))
-		end
-		
+
+		if ret then return ffi.string(ret, ffi.sizeof(temp)) end
+
 		return nil, last_error()
 	end
 end

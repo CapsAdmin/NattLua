@@ -1,7 +1,6 @@
 local T = require("test.helpers")
 local run = T.RunCode
 local transpile = T.Transpile
-
 run[[
     local i = 1
 
@@ -12,7 +11,6 @@ run[[
 
     attest.equal(i, 10)
 ]]
-
 run[[
     local i = 1 as number
     local o = 1
@@ -25,14 +23,12 @@ run[[
 
     attest.equal(o, 2) -- this should probably be number too as it's incremented in an uncertain loop
 ]]
-
 run[[
     local a = 1
     repeat
         attest.equal(a, 1)
     until false
 ]]
-
 run[[
     local a = 0
     while false do
@@ -40,7 +36,6 @@ run[[
     end
     attest.equal(a, 0)
 ]]
-
 run[[
     local a = 1
     while true do
@@ -55,7 +50,6 @@ run[[
 
     local c = b
 ]]
-
 run[[
 
     local a = 0
@@ -65,7 +59,6 @@ run[[
     attest.equal(a, _ as number)
 
 ]]
-
 run[[
     local x: nil | 1
 

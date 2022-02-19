@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 
 test("meta library", function()
-    run[[
+	run[[
         local a = "1234"
         attest.equal(string.len(a), 4)
         attest.equal(a:len(), 4)
@@ -10,11 +10,10 @@ test("meta library", function()
 end)
 
 test("patterns", function()
-    run[[
+	run[[
         local a: $"FOO_.-" = "FOO_BAR"
     ]]
-
-    run([[
+	run([[
         local a: $"FOO_.-" = "lol"
     ]], "cannot find .- in pattern")
 end)
@@ -28,8 +27,6 @@ run[===[
     attest.equal(bar, "foo")
     attest.equal(faz, "foo")
 ]===]
-
-
 run[=[
     local fixed = {
         "a", "b", "f", "n", "r", "t", "v", "\\", "\"", "'",

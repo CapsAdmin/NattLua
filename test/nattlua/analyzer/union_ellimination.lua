@@ -1,6 +1,5 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
 run[[
     local function test() 
         if MAYBE then
@@ -17,7 +16,6 @@ run[[
 
     attest.equal(x.lol, _ as 1 | 2 | false | nil)
 ]]
-
 run[[
     local x = _ as nil | 1 | false
     if x then x = false end

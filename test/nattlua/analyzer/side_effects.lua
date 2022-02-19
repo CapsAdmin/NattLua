@@ -3,7 +3,7 @@ local run = T.RunCode
 local String = T.String
 
 do
-    local foo = run([[
+	local foo = run([[
         local upvalue1 = 1
         local upvalue2 = 2
         local upvalue3 = 3
@@ -29,18 +29,16 @@ do
 
         foo()
     ]]):GetLocalOrGlobalValue(String("foo"))
-
-    equal(foo:GetCallCount(), 1)
-    equal(#foo:GetSideEffects(), 5)
+	equal(foo:GetCallCount(), 1)
+	equal(#foo:GetSideEffects(), 5)
 end
 
 do
-    local foo = run([[
+	local foo = run([[
         local function foo(x: number)
             return 1 + 2 + x
         end
         
     ]]):GetLocalOrGlobalValue(String("foo"))
-
-    equal(foo:IsPure(), true)
+	equal(foo:IsPure(), true)
 end

@@ -1,13 +1,11 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
 run[[
     local type A = (1,2)
     local type B = (3,4)
     local type C = A .. B
     attest.equal<|C, (1,2,3,4)|>
 ]]
-
 -- test for most edge cases regarding the tuple unpack mess
 run[[
 
@@ -150,13 +148,14 @@ attest.equal(tbl[100], _ as any)
 end)(1,2)
 
 ]]
-
-run([[
+run(
+	[[
     local function func(): number, number
         return 1
     end
-]], "index 2 does not exist")
-
+]],
+	"index 2 does not exist"
+)
 run[[
     local type a = (3, 4, 5)
     attest.equal<|a, (3,4,5)|>
@@ -167,7 +166,6 @@ run[[
     local type a = ()
     attest.equal<|a, ()|>
 ]]
-
 run[[
     local analyzer function test(a: any, b: any)
         local tup = types.Tuple({types.LNumber(1),types.LNumber(2),types.LNumber(3)})
@@ -179,7 +177,6 @@ run[[
 
     test<|a,a|>
 ]]
-
 run[[
     local function test2<|a: (number, number, number), b: (number, number, number)|>: (number, number, number)
         attest.equal<|a, (1,2,3)|>
@@ -193,7 +190,6 @@ run[[
     attest.equal<|a, (1,2,3)|>
     attest.equal<|b, a|>
 ]]
-
 run[[
     local function aaa(foo: string, bar: number, faz: boolean): (1,2,3)
         return 1,2,3
@@ -201,7 +197,6 @@ run[[
     attest.equal<|unpack<|argument_type<|aaa|>|>, (string, number, boolean)|>
     attest.equal<|unpack<|return_type<|aaa|>|>, ((1, 2, 3),)|>
 ]]
-
 run[[
     local type test = analyzer function()
         return 11,22,33

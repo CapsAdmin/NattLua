@@ -1,14 +1,11 @@
-
 local T = require("test.helpers")
 local run = T.RunCode
-
 run[[
     local function foo(x: {foo = boolean | nil}) 
         if x.foo and attest.equal(x.foo, true) then end
         attest.equal(x.foo, _ as boolean | nil)
     end
 ]]
-
 run[[
     local a: number | string
     
@@ -18,24 +15,20 @@ run[[
 
     attest.equal(a, _ as number | string)
 ]]
-
 run[[
     local x = _ as false | 1
     local y = not x and attest.equal(x, false) or attest.equal(x, 1)
 ]]
-
 run[[
     local x = _ as 1 | 2
     local y = x == 1 and attest.equal(x, 1) or attest.equal(x, 2)
     attest.equal(x, _ as 1 | 2)
 ]]
-
 run[[
     local x = _ as 1|2|3
     local y = x == 1 and attest.equal(x, 1) or x == 2 and attest.equal(x, 2) or false
     attest.equal(y, _ as 1|2|false)
 ]]
-
 run[[
     local x = _ as 1|2|3
 
@@ -43,14 +36,12 @@ run[[
 
     end
 ]]
-
 run[[
     local x: 1 | "str"
     if x ~= 1 or attest.equal(x, 1) then
     
     end
 ]]
-
 run[[
     local x: 1 | "str"
     if x == 1 or attest.equal(x, "str") then
@@ -62,7 +53,6 @@ run[[
     local result = not a or 1
     attest.equal(result, 1)
 ]]
-
 run[[
     local a = function(arg: ref any) 
         attest.equal(arg, 1)
@@ -72,7 +62,6 @@ run[[
     local b = a(1) or a(2)
     attest.equal(b, 1337)
 ]]
-
 run[[
     local a: 1, b: 2
     local result = a and b
@@ -87,14 +76,12 @@ run[[
     if not x then return false end
     local x = true and attest.equal(x, _ as number)
 ]]
-
 run[[
     local a: 1 | 2 | 3
     if a == 1 or a == 3 then
         attest.equal(a, _ as 1 | 3)
     end
 ]]
-
 run[[
     local a: 1 | 2 | 3 | nil
     local b: true | nil
@@ -103,7 +90,6 @@ run[[
         attest.equal(b, true)
     end
 ]]
-
 run[[
     local c: {foo = true } | nil
 
@@ -111,7 +97,6 @@ run[[
         attest.equal(c.foo, true)
     end
 ]]
-
 run[[
     local tbl = {} as {foo = nil | {bar = 1337 | false}}
 
@@ -119,7 +104,6 @@ run[[
         attest.equal(tbl.foo.bar, 1337)
     end
 ]]
-
 run[[
     -- make sure table key values clear affected upvalues
 
@@ -130,7 +114,6 @@ run[[
         foo = bit.band(buff.x, 1) ~= 0 and "directory" or "file" 
     }
 ]]
-
 run[[
     local tbl = {} as {foo = nil | {bar = 1337 | false}}
 
@@ -138,7 +121,6 @@ run[[
         attest.equal(tbl.foo.bar, 1337)
     end
 ]]
-
 run[[
     local a: nil | 1
 
@@ -148,7 +130,6 @@ run[[
 
     attest.equal(a, _ as 1 | nil)
 ]]
-
 run[[
     local x: 1 | 2 | 3
     if x == 1 or x == 2 then
@@ -157,28 +138,24 @@ run[[
         attest.equal(x, _ as 3)
     end
 ]]
-
 run[[
     local x: {foo = nil | 1}
 
     if not x.foo then return end
     attest.equal(x.foo, _ as 1)
 ]]
-
 run[[
     local x: {foo = nil | 1}
 
     if x.foo == nil then return end
     attest.equal(x.foo, 1)
 ]]
-
 run[[
     local x: {foo = nil | 1}
 
     if x.foo ~= nil then return end
     attest.equal(x.foo, nil)
 ]]
-
 run[[
     local x: {foo = 1 | 2 | 3}
 
@@ -186,7 +163,6 @@ run[[
         attest.equal(x.foo, _ as 1 | 2)
     end
 ]]
-
 run[[
     local x: 1 | 2 | 3 | 4 | 5 | 6 | 7
 
@@ -198,7 +174,6 @@ run[[
         attest.equal(x, _ as 5 | 6 | 7)
     end
 ]]
-
 run[[
     local x: {y = 1 | 2 | 3 | 4 | 5 | 6 | 7}
 
@@ -210,7 +185,6 @@ run[[
         attest.equal(x.y, _ as 5 | 6 | 7)
     end
 ]]
-
 run[[
     local function foo(s: ref any)
         attest.equal(s, _ as string)
@@ -235,7 +209,6 @@ run[[
 
     get_address_info(info)
 ]]
-
 run[[
     local x: {foo = nil | true}
 
@@ -245,7 +218,6 @@ run[[
 
     attest.equal(x.foo, true)
 ]]
-
 run[[
     local x: {foo = nil | true}
 
@@ -255,7 +227,6 @@ run[[
 
     attest.equal(x.foo, nil)
 ]]
-
 run[[
     local x: {foo = nil | true}
 
@@ -265,7 +236,6 @@ run[[
 
     attest.equal(x.foo, true)
 ]]
-
 run[[
     local x: {foo = nil | true}
 
@@ -275,7 +245,6 @@ run[[
 
     attest.equal(x.foo, nil)
 ]]
-
 run[[
     local args: List<|string | List<|string|>|>
 
@@ -285,7 +254,6 @@ run[[
         attest.equal(args[_ as number], _ as nil | {[number | nil] = string})
     end
 ]]
-
 pending[[
     local a: nil | number
     local b: nil | number
@@ -298,7 +266,6 @@ pending[[
         attest.equal(b, _ as number | nil)
     end
 ]]
-
 pending[[
     local type A = {Type = "human"}
     local type B = {Type = "cat"}

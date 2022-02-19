@@ -1,73 +1,75 @@
 local nl = require("nattlua")
 local helpers = require("nattlua.other.helpers")
 local Code = require("nattlua.code.code")
-
 local check_tokens
 
 do
-    local rules = {
-        {name = "parenthesis", l = {"("}, r = {")"}},
-        {name = "curly bracket", l = {"{"}, r = {"}"}},
-        {name = "square bracket", l = {"["}, r = {"]"}},
-        {name = "end", l = {"do", "if", "function"}, r = {"end"}},
-        {name = "until", l = {"repeat"}, r = {"until"}},
-    }
+	local rules = {
+		{name = "parenthesis", l = {"("}, r = {")"}},
+		{name = "curly bracket", l = {"{"}, r = {"}"}},
+		{name = "square bracket", l = {"["}, r = {"]"}},
+		{name = "end", l = {"do", "if", "function"}, r = {"end"}},
+		{name = "until", l = {"repeat"}, r = {"until"}},
+	}
+	local should_check = {}
 
-    local should_check = {}
+	for _, b in ipairs(rules) do
+		do
+			local temp = {}
 
-    for _, b in ipairs(rules) do
-      do
-        local temp = {}
-        for _, key in ipairs(b.l) do
-            should_check[key] = true
-            temp[key] = true
-        end
-        b.l = temp
-      end
+			for _, key in ipairs(b.l) do
+				should_check[key] = true
+				temp[key] = true
+			end
 
-      do
-        local temp = {}
-        for _, key in ipairs(b.r) do
-            should_check[key] = true
-            temp[key] = true
-        end
-        b.r = temp
-      end
-    end
+			b.l = temp
+		end
 
-    local ipairs = ipairs
-    local table_insert = table.insert
-    local table_remove = table.remove
+		do
+			local temp = {}
 
-    function check_tokens(tokens, code)
-        local env = {}
+			for _, key in ipairs(b.r) do
+				should_check[key] = true
+				temp[key] = true
+			end
 
-        for _, b in ipairs(rules) do
-            env[b.name] = {}
-        end
+			b.r = temp
+		end
+	end
 
-        for _, tk in ipairs(tokens) do
-            if should_check[tk.value] then
-                for _, b in ipairs(rules) do
-                    if b.l[tk.value] then
-                        table_insert(env[b.name], tk)
-                    elseif b.r[tk.value] then
-                        if not env[b.name][1] then
-                            io.write(helpers.FormatError(code, "could not find the opening " .. b.name, tk.start, tk.stop))
-                        else
-                            table_remove(env[b.name])
-                        end
-                    end
-                end
-            end
-        end
+	local ipairs = ipairs
+	local table_insert = table.insert
+	local table_remove = table.remove
 
-        for name, tokens in pairs(env) do
-            for _, tk in ipairs(tokens) do
-                io.write(helpers.FormatError(code, "could not the closing " .. name, tk.start, tk.stop))
-            end
-        end
-    end
+	function check_tokens(tokens, code)
+		local env = {}
+
+		for _, b in ipairs(rules) do
+			env[b.name] = {}
+		end
+
+		for _, tk in ipairs(tokens) do
+			if should_check[tk.value] then
+				for _, b in ipairs(rules) do
+					if b.l[tk.value] then
+						table_insert(env[b.name], tk)
+					elseif b.r[tk.value] then
+						if not env[b.name][1] then
+							io.write(helpers.FormatError(code, "could not find the opening " .. b.name, tk.start, tk.stop))
+						else
+							table_remove(env[b.name])
+						end
+					end
+				end
+			end
+		end
+
+		for name, tokens in pairs(env) do
+			for _, tk in ipairs(tokens) do
+				io.write(helpers.FormatError(code, "could not the closing " .. name, tk.start, tk.stop))
+			end
+		end
+	end
 end
 
 local code = [[
@@ -194,7 +196,6 @@ local code = [[
     end))
 ]]
 local compiler = assert(nl.Compiler(code):Lex())
-
 local time = os.clock()
 check_tokens(compiler.Tokens, compiler.Code)
 print(os.clock() - time)

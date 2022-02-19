@@ -30,16 +30,17 @@ for i = 1, #code do
     end
 end
 ]==]
-
 local code = Code(str, "test")
 
 local function example(code)
-    local start
-    for i = 1, #code do
-        if code:sub(i, i) == ">" then start = i+1 end
-        if code:sub(i, i) == "<" then return start, i-1 end
-    end
-end
-local start, stop = example(code:GetString())
+	local start
 
+	for i = 1, #code do
+		if code:sub(i, i) == ">" then start = i + 1 end
+
+		if code:sub(i, i) == "<" then return start, i - 1 end
+	end
+end
+
+local start, stop = example(code:GetString())
 print(helpers.FormatError(code, "pointing at this multiline string", start, stop))

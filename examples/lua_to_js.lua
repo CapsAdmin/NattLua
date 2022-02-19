@@ -1,9 +1,6 @@
 local nl = require("nattlua")
 local LuaEmitter = require("nattlua.transpiler.javascript_emitter")
 local code = io.open("nattlua/parser/parser.lua"):read("*all")
-
-
-
 code = [==[
 
 local META = {}
@@ -37,7 +34,6 @@ table.insert(c, 1)
 print(a)
 
 ]==]
-
 code = [[
 local sun = {}
 local jupiter = {}
@@ -161,8 +157,6 @@ cowde = [[
     local N = undefined or 1000
     print(N)
 ]]
-
-
 codew = [[
     local a = {1,2,3}
     for i = 1, #a do
@@ -173,21 +167,20 @@ codew = [[
 codew = [[
     print(string.format("%s %s", 1,2))
 ]]
-
-codew =[[
+codew = [[
     local a = {}
     a[1] = true
     print(a[1])
 ]]
 local ast = assert(assert(nl.Compiler(code):Parse()):Analyze()).SyntaxTree
-
 local em = LuaEmitter()
-
 local f = loadstring(code)
+
 if f then pcall(f) end
 
 local code = em:BuildCode(ast)
-code = ([[
+code = (
+		[[
 
 let globalThis = {}
 
@@ -288,53 +281,48 @@ let OP = {}
         return obj.apply(obj, args)
     }
 }
-]]):gsub("%$OPERATORS%$", function()
-    
-    local operators = {
-        ["+"] = "__add",
-        ["-"] = "__sub",
-        ["*"] = "__mul",
-        ["/"] = "__div",
-        ["/idiv/"] = "__idiv",
-        ["%"] = "__mod",
-        ["^"] = "__pow",
-        ["&"] = "__band",
-        ["|"] = "__bor",
-        ["<<"] = "__lshift",
-        [">>"] = "__rshift",
-    }
+]]
+	):gsub("%$OPERATORS%$", function()
+		local operators = {
+			["+"] = "__add",
+			["-"] = "__sub",
+			["*"] = "__mul",
+			["/"] = "__div",
+			["/idiv/"] = "__idiv",
+			["%"] = "__mod",
+			["^"] = "__pow",
+			["&"] = "__band",
+			["|"] = "__bor",
+			["<<"] = "__lshift",
+			[">>"] = "__rshift",
+		}
+		local code = ""
 
-    local code = ""
-
-    for operator, name in pairs(operators) do
-        code = code .. [[
-            OP["]] .. operator ..[["] = (l,r) => {
+		for operator, name in pairs(operators) do
+			code = code .. [[
+            OP["]] .. operator .. [["] = (l,r) => {
                 let lmeta = globalThis.getmetatable(l)
-                if (lmeta && lmeta.]]..name..[[) {
-                    return lmeta.]]..name..[[(l, r)
+                if (lmeta && lmeta.]] .. name .. [[) {
+                    return lmeta.]] .. name .. [[(l, r)
                 }
         
                 let rmeta = globalThis.getmetatable(r)
         
-                if (rmeta && rmeta.]]..name..[[) {
-                    return rmeta.]]..name..[[(l, r)
+                if (rmeta && rmeta.]] .. name .. [[) {
+                    return rmeta.]] .. name .. [[(l, r)
                 }
         
-                return l ]]..operator..[[ r
+                return l ]] .. operator .. [[ r
             }
         ]]
-    end
+		end
 
-    return code
-end) .. code
+		return code
+	end) .. code
 print(code)
-
 os.execute("mkdir -p jstest/src")
 os.execute("cd jstest && yarn && yarn add sprintf.js")
 local f = io.open("jstest/src/test.js", "wb")
 f:write(code)
 f:close()
-
-os.execute("node --trace-uncaught jstest/src/test.js")
-
---os.remove("temp.js")
+os.execute("node --trace-uncaught jstest/src/test.js") --os.remove("temp.js")

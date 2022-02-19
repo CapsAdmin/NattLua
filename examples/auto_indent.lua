@@ -1,5 +1,4 @@
 local nl = require("nattlua")
-
 local code = [[
     BlueTeam = game.Teams["BlueTeam"]:Clone()
     local RedTeam = game.Teams["RedTeam"]:Clone()
@@ -122,5 +121,4 @@ local code = [[
     end
     end))
 ]]
-
 print(assert(nl.Compiler(code, nil, {preserve_whitespace = false}):Emit()))
