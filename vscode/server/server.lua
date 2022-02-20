@@ -177,7 +177,6 @@ local function compile(uri, server, client, changed_code)
 end
 
 server.methods["initialize"] = function(params, self, client)
-	table.print(params)
 	return {
 		capabilities = {
 			textDocumentSync = {
@@ -227,89 +226,97 @@ server.methods["initialize"] = function(params, self, client)
 			]] },
 	}
 end
-server.methods["textDocument/semanticTokens"] = function(params, self, client)
-	print("semanticTokens", "!!!!!")
-	local compiler = compile(params.textDocument.uri, self, client)
 
-	table.print(params) do 
-		return 
+
+do -- semantic tokens
+	local tokenTypeMap = {}
+	local tokenModifiersMap = {}
+
+	for i,v in ipairs(SemanticTokenTypes) do
+		tokenTypeMap[v] = i - 1
 	end
 
-	local runtime_syntax = require("nattlua.syntax.runtime")
-	local typesystem_syntax = require("nattlua.syntax.typesystem")
+	for i,v in ipairs(SemanticTokenModifiers) do
+		tokenModifiersMap[v] = i - 1
+	end
 
-	local symbols = {}
-
-	for _, token in ipairs(compiler.Tokens) do
-		if token.type == "string" then
-			local range = get_range(compiler.Code, token.start, token.stop)
-			if not range then return end
-
-			table.insert(symbols, {
-				name = token.value,
-				kind = SymbolKind.String,
-				range = range,
-				selectionRange = range,
-			})
-		elseif token.type == "letter" then
-			local range = get_range(compiler.Code, token.start, token.stop)
-			if not range then return end
-
-			local parent = token.parent
-			if parent and parent.type == "expression" then
-				table.insert(symbols, {
-					name = token.value,
-					kind = SymbolKind.Function,
-					range = range,
-					selectionRange = range,
-				})
+	local function token_to_type_mod(token)
+		if syntax.IsKeyword(token) or syntax.IsNonStandardKeyword(token) then
+			if token.value == "type" then
+				return "type"
 			end
+
+			return "keyword"
+		end
+
+		if token.parent and token.parent.kind == "local_assignment" then
+			return "declaration"
+		end
+
+		if token.type == "number" then
+			return "number"
+		elseif token.type == "string" then
+			return "string"
 		end
 	end
 
-	print("sending symbols", #symbols)
-
-	return symbols
-end
-
-server.methods["textDocument/documentSymbol"] = function(params, self, client)
-	local compiler = compile(params.textDocument.uri, self, client)
-
-	local runtime_syntax = require("nattlua.syntax.runtime")
-	local typesystem_syntax = require("nattlua.syntax.typesystem")
-
-	local symbols = {}
-
-	for _, token in ipairs(compiler.Tokens) do
-		if token.type == "string" then
-			local range = get_range(compiler.Code, token.start, token.stop)
-			if not range then return end
-
-			table.insert(symbols, {
-				name = token.value,
-				kind = SymbolKind.String,
-				range = range,
-				selectionRange = range,
-			})
-		elseif token.type == "letter" then
-			local range = get_range(compiler.Code, token.start, token.stop)
-			if not range then return end
-
-			local parent = token.parent
-			if parent and parent.type == "expression" then
-				table.insert(symbols, {
-					name = token.value,
-					kind = SymbolKind.Function,
-					range = range,
-					selectionRange = range,
-				})
-			end
-		end
+	server.methods["textDocument/semanticTokens/range"] = function(params, self, client) 
+		local textDocument = params.textDocument
+		local range = params
+	
+		print(textDocument, range)
 	end
 
-	print("sending symbols", #symbols)
+		
+	server.methods["textDocument/semanticTokens/full"] = function(params, self, client) 
+		local compiler = compile(params.textDocument.uri, self, client)
+		
+		local integers = {}
 
-	return symbols
+		local last_y = 0
+		local last_x = 0
+
+		for _, token in ipairs(compiler.Tokens) do
+			local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), token.start, token.stop)
+
+			if data then
+				local len = #token.value
+				local y = (data.line_start - 1) - last_y
+				local x = data.character_start - last_x
+				
+				if y ~= 0 then
+					x = data.character_start
+				end
+
+				local type, modifiers = token_to_type_mod(token)
+
+				if type then
+					table.insert(integers, y)
+					table.insert(integers, x)
+					table.insert(integers, len)
+
+					table.insert(integers, tokenTypeMap[type])
+
+					local result = 0
+					if modifiers then
+						for _, mod in ipairs(modifiers) do
+							assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
+							result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod]))
+						end
+					end
+					table.insert(integers, result)
+
+					last_y = (data.line_start - 1)
+					last_x = data.character_start
+				end			
+			end
+		end
+
+		return {
+			data = integers,
+		}
+	end
+
 end
 
 server.methods["textDocument/didOpen"] = function(params, self, client)
@@ -323,10 +330,6 @@ server.methods["textDocument/didSave"] = function(params, self, client)
 end
 server.methods["textDocument/hover"] = function(params, self, client)
 	local compiler = compile(params.textDocument.uri, self, client)
-
-	if params.textDocument.uri:find("test_focus") then
-		print("hover:", compiler.Code:GetString())
-	end
 
 	local pos = params.position
 	local token, data = helpers.GetDataFromLineCharPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
