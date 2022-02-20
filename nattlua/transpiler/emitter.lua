@@ -154,7 +154,7 @@ do -- internal
 			end
 		end
 
-        if node.whitespace then
+		if node.whitespace then
 			if self.config.preserve_whitespace == false then
 				for i, token in ipairs(node.whitespace) do
 					if token.type == "line_comment" then

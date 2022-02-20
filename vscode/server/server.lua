@@ -19,11 +19,14 @@ local DiagnosticSeverity = {
 	hint = 4,
 }
 
-local function compile(uri, server, client)
+local function code_from_uri(uri)
 	local f = assert(io.open(uri:sub(#"file://" + 1), "r"))
 	local code = f:read("*all")
 	f:close()
-	local compiler = nl.Compiler(code, uri, {annotate = true})
+	return code
+end
+
+local function report_diagnostics(compiler, uri, server, client)
 	local resp = {
 		method = "textDocument/publishDiagnostics",
 		params = {
@@ -34,9 +37,17 @@ local function compile(uri, server, client)
 
 	function compiler:OnDiagnostic(code, msg, severity, start, stop, ...)
 		msg = helpers.FormatMessage(msg, ...)
-        local lua_code = code:GetString()
+		local lua_code = code:GetString()
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
-        
+
+		if data.line_start == 0 then return end
+
+		if data.line_stop == 0 then return end
+
+		if data.character_start == 0 then return end
+
+		if data.character_stop == 0 then return end
+
 		table.insert(
 			resp.params.diagnostics,
 			{
@@ -56,13 +67,32 @@ local function compile(uri, server, client)
 		)
 	end
 
+	server:Respond(client, resp)
+end
+
+local cache = {}
+
+local function compile(uri, server, client, changed_code)
+	local lua_code = changed_code or code_from_uri(uri)
+
+	if changed_code and cache[uri] and lua_code ~= cache[uri].Code:GetString() then
+		cache[uri] = nil
+		print("recompiling ", uri)
+
+		if uri:find("test_focus") then print("compile:", lua_code) end
+	end
+
+	if cache[uri] then return cache[uri] end
+
+	local compiler = nl.Compiler(lua_code, uri, {annotate = true})
+	report_diagnostics(compiler, uri, server, client)
 	local tokens = compiler:Lex().Tokens
 	local syntax_tree = compiler:Parse().SyntaxTree
 
-	if code:find("--A" .. "NALYZE", nil, true) then compiler:Analyze() end
+	if lua_code:find("--A" .. "NALYZE", nil, true) then compiler:Analyze() end
 
-	server:Respond(client, resp)
-	return code, tokens, syntax_tree
+	cache[uri] = compiler
+	return cache[uri]
 end
 
 server.methods["initialize"] = function(params, self, client)
@@ -73,6 +103,10 @@ server.methods["initialize"] = function(params, self, client)
 				change = TextDocumentSyncKind.Full,
 			},
 			hoverProvider = true,
+			publishDiagnostics = {
+				relatedInformation = true,
+				tagSupport = {1, 2},
+			},
 		--[[completionProvider = {
 				resolveProvider = true,
 				triggerCharacters = { ".", ":" },
@@ -96,20 +130,27 @@ server.methods["initialize"] = function(params, self, client)
 				moreTriggerCharacter = { "end" },
 			},
 			renameProvider = true,
-			publishDiagnostics = {
-				relatedInformation = true,
-				tags = {1,2},
-			},]] },
+			]] },
 	}
 end
-server.methods["textDocument/didOpen"] = function(params, self, client) end
-server.methods["textDocument/didChange"] = function(params, self, client) end
-server.methods["textDocument/didSave"] = function(params, self, client) end
+server.methods["textDocument/didOpen"] = function(params, self, client)
+	compile(params.textDocument.uri, self, client)
+end
+server.methods["textDocument/didChange"] = function(params, self, client)
+	compile(params.textDocument.uri, self, client, params.contentChanges[1].text)
+end
+server.methods["textDocument/didSave"] = function(params, self, client)
+	compile(params.textDocument.uri, self, client)
+end
 server.methods["textDocument/hover"] = function(params, self, client)
-	local code, tokens = compile(params.textDocument.uri, self, client)
+	local compiler = compile(params.textDocument.uri, self, client)
+
+	if params.textDocument.uri:find("test_focus") then
+		print("hover:", compiler.Code:GetString())
+	end
+
 	local pos = params.position
-	print("FINDING TOKEN FROM: ", pos.line + 1, pos.character + 1)
-	local token, data = helpers.GetDataFromLineCharPosition(tokens, code, pos.line + 1, pos.character + 1)
+	local token, data = helpers.GetDataFromLineCharPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
 
 	if not token or not data then
 		error("cannot find anything at " .. params.textDocument.uri .. ":" .. pos.line .. ":" .. pos.character)
@@ -136,24 +177,25 @@ server.methods["textDocument/hover"] = function(params, self, client)
 		add_line("```lua\n" .. tostring(str) .. "\n```")
 	end
 
-    local function get_type(obj)
-        local upvalue = obj:GetUpvalue()
-        if upvalue then
-            return upvalue:GetValue()
-        end
-        return obj
-    end
+	local function get_type(obj)
+		local upvalue = obj:GetUpvalue()
 
-    if token.inferred_type then
-        add_code(get_type(token.inferred_type))
-    else
-        for _, node in ipairs(found_parents) do
-            if node.inferred_type then 
-                add_code(get_type(node.inferred_type)) 
-                break 
-            end
-        end
-    end
+		if upvalue then return upvalue:GetValue() end
+
+		return obj
+	end
+
+	if token.inferred_type then
+		add_code(get_type(token.inferred_type))
+	else
+		for _, node in ipairs(found_parents) do
+			if node.inferred_type then
+				add_code(get_type(node.inferred_type))
+
+				break
+			end
+		end
+	end
 
 	add_line("nodes:\n\n")
 	add_code("\t[token - " .. token.type .. " (" .. token.value .. ")]")
@@ -166,7 +208,7 @@ server.methods["textDocument/hover"] = function(params, self, client)
 		local min, max = token.parent:GetStartStop()
 
 		if min then
-			local temp = helpers.SubPositionToLinePosition(code, min, max)
+			local temp = helpers.SubPositionToLinePosition(compiler.Code:GetString(), min, max)
 
 			if temp then data = temp end
 		end

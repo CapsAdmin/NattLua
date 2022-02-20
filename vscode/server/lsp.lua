@@ -3,7 +3,7 @@ local ljsocket = require("vscode.server.ljsocket")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
 ffi.C.chdir("/home/caps/nl/")
 local rpc_util = require("nattlua.other.jsonrpc")
-local LSP_VERSION = "3.15"
+local LSP_VERSION = "3.16"
 local LSP_ERRORS = {
 	SERVER_NOT_INITALIZED = {
 		code = -32002,
@@ -77,7 +77,6 @@ function server:OnError(msg)
 end
 
 function server:OnReceiveBody(client, str)
-    print(str)
 	table.insert(
 		self.responses,
 		{
@@ -92,7 +91,6 @@ end
 local json = require("nattlua.other.json")
 
 function server:Respond(client, res)
-    print(res)
 	local encoded = json.encode(res)
 	local msg = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
 	client:send(msg)
@@ -104,7 +102,7 @@ function server:Loop()
 	assert(socket:set_blocking(false))
 	socket:set_option("nodelay", true, "tcp")
 	socket:set_option("reuseaddr", true)
-	assert(socket:bind("*", 1337))
+	socket:bind("*", 1337)
 	assert(socket:listen())
 	io.write("HOSTING AT: *:1337\n")
 	local clients = {}
@@ -159,7 +157,7 @@ function server:Loop()
 		local f = io.open("vscode/server/restart_me")
 
 		if f then
-            print("restarting server because of file")
+			print("restarting server because of file")
 			os.remove("vscode/server/restart_me")
 
 			for _, client in ipairs(clients) do
