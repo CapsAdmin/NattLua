@@ -1,5 +1,10 @@
 {
     "triggerTaskOnSave.tasks": {
-		"onsave": ["**/*.lua", "**/*.nlua"]
+		"onsave": [
+			"examples/**/*.lua", 
+			"nattlua/**/*.lua", 
+			"test/**/*.lua", 
+			"**/*.nlua",
+		]
 	}
 }

@@ -14,9 +14,78 @@ local TextDocumentSyncKind = {
 }
 local DiagnosticSeverity = {
 	error = 1,
+	fatal = 1, -- from lexer and parser
+
 	warning = 2,
 	information = 3,
 	hint = 4,
+}
+
+local SymbolKind = {
+	File = 1,
+	Module = 2,
+	Namespace = 3,
+	Package = 4,
+	Class = 5,
+	Method = 6,
+	Property = 7,
+	Field = 8,
+	Constructor = 9,
+	Enum = 10,
+	Interface = 11,
+	Function = 12,
+	Variable = 13,
+	Constant = 14,
+	String = 15,
+	Number = 16,
+	Boolean = 17,
+	Array = 18,
+	Object = 19,
+	Key = 20,
+	Null = 21,
+	EnumMember = 22,
+	Struct = 23,
+	Event = 24,
+	Operator = 25,
+	TypeParameter = 26,
+}
+
+local SemanticTokenTypes = {
+	'namespace',
+	'type',
+	'class',
+	'enum',
+	'interface',
+	'struct',
+	'typeParameter',
+	'parameter',
+	'variable',
+	'property',
+	'enumMember',
+	'event',
+	'function',
+	'method',
+	'macro',
+	'keyword',
+	'modifier',
+	'comment',
+	'string',
+	'number',
+	'regexp',
+	'operator'
+}
+
+local SemanticTokenModifiers = {
+	'declaration',
+	'definition',
+	'readonly',
+	'static',
+	'deprecated',
+	'abstract',
+	'async',
+	'modification',
+	'documentation',
+	'defaultLibrary'
 }
 
 local function code_from_uri(uri)
@@ -26,49 +95,29 @@ local function code_from_uri(uri)
 	return code
 end
 
-local function report_diagnostics(compiler, uri, server, client)
-	local resp = {
-		method = "textDocument/publishDiagnostics",
-		params = {
-			uri = uri,
-			diagnostics = {},
-		},
-	}
-
-	function compiler:OnDiagnostic(code, msg, severity, start, stop, ...)
-		msg = helpers.FormatMessage(msg, ...)
-		local lua_code = code:GetString()
-		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
-
-		if data.line_start == 0 then return end
-
-		if data.line_stop == 0 then return end
-
-		if data.character_start == 0 then return end
-
-		if data.character_stop == 0 then return end
-
-		table.insert(
-			resp.params.diagnostics,
-			{
-				severity = DiagnosticSeverity[severity],
-				range = {
-					start = {
-						line = data.line_start - 1,
-						character = data.character_start,
-					},
-					["end"] = {
-						line = data.line_stop - 1,
-						character = data.character_stop,
-					},
-				},
-				message = msg,
-			}
-		)
+local function get_range(code, start, stop)
+	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
+	
+	if data.line_start == 0 or data.line_stop == 0 then
+		print("invalid position")
+		print(start, stop)
+		table.print(data)
+		return
 	end
 
-	server:Respond(client, resp)
+	return {
+		start = {
+			line = data.line_start - 1,
+			character = data.character_start,
+		},
+		["end"] = {
+			line = data.line_stop - 1,
+			character = data.character_stop,
+		},
+	}
 end
+
+
 
 local cache = {}
 
@@ -85,17 +134,50 @@ local function compile(uri, server, client, changed_code)
 	if cache[uri] then return cache[uri] end
 
 	local compiler = nl.Compiler(lua_code, uri, {annotate = true})
-	report_diagnostics(compiler, uri, server, client)
-	local tokens = compiler:Lex().Tokens
-	local syntax_tree = compiler:Parse().SyntaxTree
 
-	if lua_code:find("--A" .. "NALYZE", nil, true) then compiler:Analyze() end
+	do
+		local resp = {
+			method = "textDocument/publishDiagnostics",
+			params = {
+				uri = uri,
+				diagnostics = {},
+			},
+		}
+
+		function compiler:OnDiagnostic(code, msg, severity, start, stop, ...)
+			local range = get_range(code, start, stop)
+			if not range then return end
+			
+			print(uri .. ":" .. range.start.line ..":" .. range.start.character, severity .. ":", helpers.FormatMessage(msg, ...))
+			
+			table.insert(
+				resp.params.diagnostics,
+				{
+					severity = DiagnosticSeverity[severity],
+					range = range,
+					message = helpers.FormatMessage(msg, ...),
+				}
+			)
+		end
+
+		compiler:Lex()
+		compiler:Parse()
+
+		if lua_code:find("--A" .. "NALYZE", nil, true) then 
+			compiler:Analyze() 
+		end
+
+		server:Respond(client, resp)
+	end
+
+	--server:Respond(client, {method = "workspace/semanticTokens/refresh"})
 
 	cache[uri] = compiler
 	return cache[uri]
 end
 
 server.methods["initialize"] = function(params, self, client)
+	table.print(params)
 	return {
 		capabilities = {
 			textDocumentSync = {
@@ -107,6 +189,19 @@ server.methods["initialize"] = function(params, self, client)
 				relatedInformation = true,
 				tagSupport = {1, 2},
 			},
+			semanticTokens = {
+				range = true,
+				legend = {
+					tokenTypes = SemanticTokenTypes,
+					tokenModifiers = SemanticTokenModifiers,
+				},
+			},
+			-- for symbols like all functions within a file
+			--documentSymbolProvider = {label = "NattLua"},
+			
+			-- highlighting equal upvalues
+			--documentHighlightProvider = true, 
+
 		--[[completionProvider = {
 				resolveProvider = true,
 				triggerCharacters = { ".", ":" },
@@ -116,8 +211,7 @@ server.methods["initialize"] = function(params, self, client)
 			},
 			definitionProvider = true,
 			referencesProvider = true,
-			documentHighlightProvider = true,
-			documentSymbolProvider = true,
+			
 			workspaceSymbolProvider = true,
 			codeActionProvider = true,
 			codeLensProvider = {
@@ -133,6 +227,91 @@ server.methods["initialize"] = function(params, self, client)
 			]] },
 	}
 end
+server.methods["textDocument/semanticTokens"] = function(params, self, client)
+	print("semanticTokens", "!!!!!")
+	local compiler = compile(params.textDocument.uri, self, client)
+
+	table.print(params) do 
+		return 
+	end
+
+	local runtime_syntax = require("nattlua.syntax.runtime")
+	local typesystem_syntax = require("nattlua.syntax.typesystem")
+
+	local symbols = {}
+
+	for _, token in ipairs(compiler.Tokens) do
+		if token.type == "string" then
+			local range = get_range(compiler.Code, token.start, token.stop)
+			if not range then return end
+
+			table.insert(symbols, {
+				name = token.value,
+				kind = SymbolKind.String,
+				range = range,
+				selectionRange = range,
+			})
+		elseif token.type == "letter" then
+			local range = get_range(compiler.Code, token.start, token.stop)
+			if not range then return end
+
+			local parent = token.parent
+			if parent and parent.type == "expression" then
+				table.insert(symbols, {
+					name = token.value,
+					kind = SymbolKind.Function,
+					range = range,
+					selectionRange = range,
+				})
+			end
+		end
+	end
+
+	print("sending symbols", #symbols)
+
+	return symbols
+end
+
+server.methods["textDocument/documentSymbol"] = function(params, self, client)
+	local compiler = compile(params.textDocument.uri, self, client)
+
+	local runtime_syntax = require("nattlua.syntax.runtime")
+	local typesystem_syntax = require("nattlua.syntax.typesystem")
+
+	local symbols = {}
+
+	for _, token in ipairs(compiler.Tokens) do
+		if token.type == "string" then
+			local range = get_range(compiler.Code, token.start, token.stop)
+			if not range then return end
+
+			table.insert(symbols, {
+				name = token.value,
+				kind = SymbolKind.String,
+				range = range,
+				selectionRange = range,
+			})
+		elseif token.type == "letter" then
+			local range = get_range(compiler.Code, token.start, token.stop)
+			if not range then return end
+
+			local parent = token.parent
+			if parent and parent.type == "expression" then
+				table.insert(symbols, {
+					name = token.value,
+					kind = SymbolKind.Function,
+					range = range,
+					selectionRange = range,
+				})
+			end
+		end
+	end
+
+	print("sending symbols", #symbols)
+
+	return symbols
+end
+
 server.methods["textDocument/didOpen"] = function(params, self, client)
 	compile(params.textDocument.uri, self, client)
 end

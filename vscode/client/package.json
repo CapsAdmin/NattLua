@@ -14,6 +14,9 @@
     ],
     "activationEvents": [
         "onLanguage:lua",
+        "workspaceContains:**/*.lua",
+
+        "onLanguage:nlua",
         "workspaceContains:**/*.nlua"
     ],
     "repository": {
@@ -28,6 +31,16 @@
         "configuration": {
             "type": "object",
             "title": "Generic LSP configuration",
+            "languages": [{
+                "id": "nlua",
+                "aliases": ["NattLua"],
+                "extensions": [".nlua"]
+            },
+            {
+                "id": "lua",
+                "aliases": ["Lua"],
+                "extensions": [".lua"]
+            }],
             "properties": {
                 "generic-lsp.path": {
                     "type": "string",

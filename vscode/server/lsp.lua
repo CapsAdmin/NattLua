@@ -3,6 +3,23 @@ local ljsocket = require("vscode.server.ljsocket")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
 ffi.C.chdir("/home/caps/nl/")
 local rpc_util = require("nattlua.other.jsonrpc")
+
+local files = {}
+local function lazy_file_changed(path)
+	local f = assert(io.open(path, "r"))
+	local code = f:read("*all")
+	f:close()
+
+	if files[path] and files[path] ~= code then
+		files[path] = nil
+		return true
+	end
+
+	files[path] = code
+
+	return false
+end
+
 local LSP_VERSION = "3.16"
 local LSP_ERRORS = {
 	SERVER_NOT_INITALIZED = {
@@ -154,19 +171,23 @@ function server:Loop()
 		end
 
 		ffi.C.usleep(50000)
-		local f = io.open("vscode/server/restart_me")
 
-		if f then
-			print("restarting server because of file")
-			os.remove("vscode/server/restart_me")
+		if lazy_file_changed("vscode/server/lsp.lua") or lazy_file_changed("vscode/server/server.lua") then
+			print("hot reload")
 
 			for _, client in ipairs(clients) do
 				client:close()
 			end
 
 			socket:close()
-			f:close()
+
+			RESTART = os.clock() + 0.1
+		end
+
+		if RESTART and RESTART < os.clock() then
+			print("restarting")
 			loadfile("vscode/server/server.lua")()
+			return
 		end
 	end
 end
