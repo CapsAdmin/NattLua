@@ -42,20 +42,26 @@ function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]])
 end
 
 function META:__tostring()
-	if self.suppress then return "*self-tuple*" end
+	if self.suppress then return "current_tuple" end
 
 	self.suppress = true
-	local s = {}
+	local strings = {}
 
 	for i, v in ipairs(self:GetData()) do
-		s[i] = tostring(v)
+		strings[i] = tostring(v)
 	end
 
-	if self.Remainder then table.insert(s, tostring(self.Remainder)) end
+	if self.Remainder then table.insert(strings, tostring(self.Remainder)) end
 
-	local s = "⦗" .. table.concat(s, ", ") .. "⦘"
+	local s = "("
+	if #strings == 1 then
+		s = s .. strings[1] .. ","
+	else
+		s = s .. table.concat(strings, ", ")
+	end
+	s = s .. ")"
 
-	if self.Repeat then s = s .. "×" .. tostring(self.Repeat) end
+	if self.Repeat then s = s .. "*" .. tostring(self.Repeat) end
 
 	self.suppress = false
 	return s
@@ -456,17 +462,22 @@ function META:Concat(tup--[[#: TTuple]])
 	return self
 end
 
+function META:SetTable(data)
+	self.Data = {}
+	for i, v in ipairs(data) do
+		if i == #data and v.Type == "tuple" and not (v--[[# as TTuple]]).Remainder and v ~= self then
+			self:AddRemainder(v)
+		else
+			table.insert(self.Data, v)
+		end
+	end
+end
+
 function META.New(data--[[#: nil | List<|TBaseType|>]])
 	local self = setmetatable({Data = {}, Falsy = false, Truthy = false, Literal = false}, META)
 
 	if data then
-		for i, v in ipairs(data) do
-			if i == #data and v.Type == "tuple" and not (v--[[# as TTuple]]).Remainder then
-				self:AddRemainder(v)
-			else
-				self.Data[i] = v
-			end
-		end
+		self:SetTable(data)
 	end
 
 	return self

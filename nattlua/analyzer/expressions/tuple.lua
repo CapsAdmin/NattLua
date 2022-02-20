@@ -1,6 +1,10 @@
 local Tuple = require("nattlua.types.tuple").Tuple
 return {
 	AnalyzeTuple = function(self, node)
-		return Tuple(self:AnalyzeExpressions(node.expressions)):SetNode(node):SetUnpackable(true)
+		local tup = Tuple():SetNode(node):SetUnpackable(true)
+		self:PushCurrentType(tup, "tuple")
+		tup:SetTable(self:AnalyzeExpressions(node.expressions))
+		self:PopCurrentType("tuple")
+		return tup
 	end,
 }

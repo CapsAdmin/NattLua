@@ -91,7 +91,7 @@ end
 local level = 0
 
 function META:__tostring()
-	if self.suppress then return "*self-table*" end
+	if self.suppress then return "current_table" end
 
 	self.suppress = true
 
@@ -120,7 +120,7 @@ function META:__tostring()
 			local tkey, tval = tostring(keyval.key), tostring(keyval.val)
 
 			if key == tkey then
-				s[i] = indent .. key
+				s[i] = indent .. "[" .. key .. "]"
 			else
 				s[i] = indent .. "[" .. key .. " as " .. tkey .. "]"
 			end
@@ -134,7 +134,7 @@ function META:__tostring()
 	else
 		for i, keyval in ipairs(self:GetData()) do
 			local key, val = tostring(keyval.key), tostring(keyval.val)
-			s[i] = indent .. key .. " = " .. val
+			s[i] = indent .. "[" .. key .. "]" .. " = " .. val
 		end
 	end
 

@@ -43,7 +43,7 @@ end)
 test("{[number]: any}", function()
 	check(
 		run[[local a: {[number] = any} = {[1] = 1}]],
-		"{ [number(1) as number] = number(1) as any }"
+		"{ [number] = number as any }"
 	)
 	run([[local a: {[number] = any} = {foo = 1}]], [[has no field "foo"]])
 end)
@@ -51,7 +51,7 @@ end)
 test("{[1 .. inf]: any}", function()
 	check(
 		run[[local a: {[1 .. inf] = any} = {[1234] = 1}]],
-		"{ [1234 as 1..inf] = number(1) as any }"
+		"{ [1234 as 1..inf] = number as any }"
 	)
 	run([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[has no field %-1234]])
 end)

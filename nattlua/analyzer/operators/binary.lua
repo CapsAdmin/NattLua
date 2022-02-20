@@ -89,6 +89,13 @@ end
 local function Binary(self, node, l, r, op)
 	op = op or node.value.value
 
+	local cur_union
+
+	if op == "|" and self:IsTypesystem() then
+		cur_union = Union()
+		self:PushCurrentType(cur_union, "union")
+	end
+
 	if not l and not r then
 		if node.value.value == "and" then
 			l = self:AnalyzeExpression(node.left)
@@ -143,9 +150,15 @@ local function Binary(self, node, l, r, op)
 		end
 	end
 
+	if cur_union then
+		self:PopCurrentType("union")
+	end
+
 	if self:IsTypesystem() then
 		if op == "|" then
-			return Union({l, r})
+			cur_union:AddType(l)
+			cur_union:AddType(r)
+			return cur_union
 		elseif op == "==" then
 			return l:Equal(r) and True() or False()
 		elseif op == "~" then
@@ -165,6 +178,10 @@ local function Binary(self, node, l, r, op)
 				return LString(l:GetData() .. r:GetData())
 			else
 				return l:Copy():SetMax(r)
+			end
+		elseif op == "*" then
+			if l.Type == "tuple" and r.Type == "number" and r:IsLiteral() then
+				return l:Copy():SetRepeat(r:GetData())
 			end
 		elseif op == ">" then
 			return Symbol((r:IsSubsetOf(l)))

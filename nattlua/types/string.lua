@@ -78,7 +78,7 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: BaseType]])
 end
 
 function META:__tostring()
-	if self.PatternContract then return "$(" .. self.PatternContract .. ")" end
+	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
 
 	if self:IsLiteral() then
 		if self:GetData() then return "\"" .. self:GetData() .. "\"" end
@@ -88,9 +88,7 @@ function META:__tostring()
 		return tostring(self:GetData())
 	end
 
-	if self:GetData() == nil then return "string" end
-
-	return "string(" .. tostring(self:GetData()) .. ")"
+	return "string"
 end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TString]], op)

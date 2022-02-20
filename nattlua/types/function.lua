@@ -21,7 +21,7 @@ function META.Equal(a, b)
 end
 
 function META:__tostring()
-	return "function" .. tostring(self:GetArguments()) .. ": " .. tostring(self:GetReturnTypes())
+	return "function=" .. tostring(self:GetArguments()) .. ">" .. tostring(self:GetReturnTypes())
 end
 
 function META:GetArguments()

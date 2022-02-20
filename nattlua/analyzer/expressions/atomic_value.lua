@@ -80,12 +80,23 @@ return {
 		local standalone_letter = type == "letter" and node.standalone_letter
 
 		if self:IsTypesystem() and standalone_letter and not node.force_upvalue then
-			local current_table = self.current_tables and self.current_tables[#self.current_tables]
 
+			if value == "current_table" then
+				return self:GetCurrentType("table")
+			elseif value == "current_tuple" then
+				return self:GetCurrentType("tuple")
+			elseif value == "current_function" then
+				return self:GetCurrentType("function")
+			elseif value == "current_union" then
+				return self:GetCurrentType("union")
+			end
+
+			local current_table = self:GetCurrentType("table")
+			
 			if current_table then
-				if value == "self" then return current_table end
-
-				if
+				if value == "self" then 
+					return current_table
+				elseif
 					self.left_assigned and
 					self.left_assigned:GetData() == value and
 					not is_primitive(value)

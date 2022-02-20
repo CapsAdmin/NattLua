@@ -75,7 +75,7 @@ local sort = function(a, b)
 end
 
 function META:__tostring()
-	if self.suppress then return "*self-union*" end
+	if self.suppress then return "current_union" end
 
 	local s = {}
 	self.suppress = true

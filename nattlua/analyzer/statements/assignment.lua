@@ -60,7 +60,7 @@ return {
 				-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
 				-- use context?
 				self.left_assigned = left[right_pos]
-				local obj = self:AnalyzeExpression(exp_val)
+				local obj, err = self:AnalyzeExpression(exp_val)
 				self:ClearTracked()
 
 				if obj.Type == "tuple" and obj:GetLength() == 1 then

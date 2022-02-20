@@ -140,8 +140,6 @@ function META:__tostring()
 
 	if self:IsLiteral() then return s end
 
-	if self:GetData() then return "number(" .. s .. ")" end
-
 	return "number"
 end
 

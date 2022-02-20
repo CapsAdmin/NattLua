@@ -39,7 +39,7 @@ test("declaring base types", function()
         -- if the union sorting algorithm changes, we probably need to change this
         local analyzer function check()
             local a = tostring(env.typesystem.Any)
-            local b = "$(.-) | -inf..inf | false | function⦗⦗*self-union*⦘×inf⦘: ⦗⦗*self-union*⦘×inf⦘ | nan | nil | true | { *self-union* = *self-union* }"
+            local b = "$\".-\" | -inf..inf | false | function=((current_union,)*inf,)>((current_union,)*inf,) | nan | nil | true | { [current_union] = current_union }"
             if a ~= b then
                 print(a)
                 print(b)

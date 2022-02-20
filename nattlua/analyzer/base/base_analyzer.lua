@@ -424,5 +424,21 @@ return function(META)
 				table.remove(self.active_node_stack, 1)
 			end
 		end
+
+		do
+			function META:PushCurrentType(obj, type)
+				self.current_type_stack = self.current_type_stack or {}
+				self.current_type_stack[type] = self.current_type_stack[type] or {}
+				table.insert(self.current_type_stack[type], 1, obj)
+			end
+
+			function META:PopCurrentType(type)
+				table.remove(self.current_type_stack[type], 1)
+			end
+
+			function META:GetCurrentType(type)
+				return self.current_type_stack and self.current_type_stack[type] and self.current_type_stack[type][1]
+			end
+		end
 	end
 end

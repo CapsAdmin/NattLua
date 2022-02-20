@@ -10,8 +10,8 @@ return {
 
 		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
 
-		self.current_tables = self.current_tables or {}
-		table.insert(self.current_tables, tbl)
+		self:PushCurrentType(tbl, "table")
+
 		local tree = node
 		tbl.scope = self:GetScope()
 
@@ -61,7 +61,7 @@ return {
 			self:ClearTracked()
 		end
 
-		table.remove(self.current_tables)
+		self:PopCurrentType("table")
 		return tbl
 	end,
 }

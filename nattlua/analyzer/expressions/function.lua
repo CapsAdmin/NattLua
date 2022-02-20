@@ -70,11 +70,7 @@ local function analyze_function_signature(self, node, current_function)
 				self:CreateLocalValue(key.value.value, Any(), i)
 				args[i] = self:AnalyzeExpression(key.type_expression)
 			elseif key.kind == "value" then
-				if key.value.value == "self" then
-					args[i] = self.current_tables[#self.current_tables]
-
-					if not args[i] then self:Error(key, "cannot find value self") end
-				elseif not node.statements then
+				if not node.statements then
 					local obj = self:AnalyzeExpression(key)
 
 					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
@@ -178,8 +174,13 @@ return {
 				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
 			}
 		):SetNode(node)
+
+		self:PushCurrentType(obj, "function")
+
 		local args, ret, explicit_arguments, explicit_return = analyze_function_signature(self, node, obj)
 		local func
+
+		self:PopCurrentType("function")
 
 		if
 			node.statements and
