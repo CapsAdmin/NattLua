@@ -13,6 +13,13 @@ import { Socket } from "net";
 let client: LanguageClient;
 let server: ChildProcessWithoutNullStreams;
 
+const kill = () => {
+  if (server) {
+    server.kill("SIGKILL");
+  }
+  server = undefined
+}
+
 function restartServer(
   path: string,
   args: string[],
@@ -21,8 +28,7 @@ function restartServer(
   done: () => void
 ) {
   if (server) {
-    server.kill("SIGKILL");
-    server = undefined;
+    kill()
   }
 
   server = spawn(path, args, {
@@ -31,8 +37,7 @@ function restartServer(
 
   context.subscriptions.push({
     dispose: () => {
-      server.kill("SIGKILL");
-      server = undefined;
+      kill()
     }
   });
 
@@ -47,20 +52,17 @@ function restartServer(
   });
   server.stderr.on("data", (str) => {
     output.appendLine("STDERROR: " + str);
-    server.kill("SIGKILL");
-    server = undefined;
+    kill()
   });
 
   server.on("error", (err) => {
     output.appendLine("ERROR: " + err.toString());
-    server.kill("SIGKILL");
-    server = undefined;
+    kill()
   });
 
   process.on("exit", (code) => {
     output.appendLine("EXIT: " + code.toString());
-    server.kill("SIGKILL");
-    server = undefined;
+    kill()
   });
 }
 
