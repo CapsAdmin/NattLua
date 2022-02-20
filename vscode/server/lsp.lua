@@ -3,8 +3,8 @@ local ljsocket = require("vscode.server.ljsocket")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
 ffi.C.chdir("/home/caps/nl/")
 local rpc_util = require("nattlua.other.jsonrpc")
-
 local files = {}
+
 local function lazy_file_changed(path)
 	local f = assert(io.open(path, "r"))
 	local code = f:read("*all")
@@ -16,7 +16,6 @@ local function lazy_file_changed(path)
 	end
 
 	files[path] = code
-
 	return false
 end
 
@@ -99,7 +98,11 @@ function server:OnReceiveBody(client, str)
 		{
 			client = client,
 			thread = coroutine.create(function()
-				return rpc_util.ReceiveJSON(str, self.methods, self, client)
+				local res = rpc_util.ReceiveJSON(str, self.methods, self, client)
+
+				if res.error then table.print(res) end
+
+				return res
 			end),
 		}
 	)
@@ -172,7 +175,10 @@ function server:Loop()
 
 		ffi.C.usleep(50000)
 
-		if lazy_file_changed("vscode/server/lsp.lua") or lazy_file_changed("vscode/server/server.lua") then
+		if
+			lazy_file_changed("vscode/server/lsp.lua") or
+			lazy_file_changed("vscode/server/server.lua")
+		then
 			print("hot reload")
 
 			for _, client in ipairs(clients) do
@@ -180,7 +186,6 @@ function server:Loop()
 			end
 
 			socket:close()
-
 			RESTART = os.clock() + 0.1
 		end
 

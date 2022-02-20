@@ -15,12 +15,10 @@ local TextDocumentSyncKind = {
 local DiagnosticSeverity = {
 	error = 1,
 	fatal = 1, -- from lexer and parser
-
 	warning = 2,
 	information = 3,
 	hint = 4,
 }
-
 local SymbolKind = {
 	File = 1,
 	Module = 2,
@@ -49,43 +47,41 @@ local SymbolKind = {
 	Operator = 25,
 	TypeParameter = 26,
 }
-
 local SemanticTokenTypes = {
-	'namespace',
-	'type',
-	'class',
-	'enum',
-	'interface',
-	'struct',
-	'typeParameter',
-	'parameter',
-	'variable',
-	'property',
-	'enumMember',
-	'event',
-	'function',
-	'method',
-	'macro',
-	'keyword',
-	'modifier',
-	'comment',
-	'string',
-	'number',
-	'regexp',
-	'operator'
+	"namespace",
+	"type",
+	"class",
+	"enum",
+	"interface",
+	"struct",
+	"typeParameter",
+	"parameter",
+	"variable",
+	"property",
+	"enumMember",
+	"event",
+	"function",
+	"method",
+	"macro",
+	"keyword",
+	"modifier",
+	"comment",
+	"string",
+	"number",
+	"regexp",
+	"operator",
 }
-
 local SemanticTokenModifiers = {
-	'declaration',
-	'definition',
-	'readonly',
-	'static',
-	'deprecated',
-	'abstract',
-	'async',
-	'modification',
-	'documentation',
-	'defaultLibrary'
+	"declaration",
+	"definition",
+	"readonly",
+	"static",
+	"deprecated",
+	"abstract",
+	"async",
+	"modification",
+	"documentation",
+	"defaultLibrary",
 }
 
 local function code_from_uri(uri)
@@ -97,7 +93,7 @@ end
 
 local function get_range(code, start, stop)
 	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
-	
+
 	if data.line_start == 0 or data.line_stop == 0 then
 		print("invalid position")
 		print(start, stop)
@@ -116,8 +112,6 @@ local function get_range(code, start, stop)
 		},
 	}
 end
-
-
 
 local cache = {}
 
@@ -146,10 +140,14 @@ local function compile(uri, server, client, changed_code)
 
 		function compiler:OnDiagnostic(code, msg, severity, start, stop, ...)
 			local range = get_range(code, start, stop)
+
 			if not range then return end
-			
-			print(uri .. ":" .. range.start.line ..":" .. range.start.character, severity .. ":", helpers.FormatMessage(msg, ...))
-			
+
+			print(
+				uri .. ":" .. range.start.line .. ":" .. range.start.character,
+				severity .. ":",
+				helpers.FormatMessage(msg, ...)
+			)
 			table.insert(
 				resp.params.diagnostics,
 				{
@@ -163,19 +161,19 @@ local function compile(uri, server, client, changed_code)
 		compiler:Lex()
 		compiler:Parse()
 
-		if lua_code:find("--A" .. "NALYZE", nil, true) then 
-			compiler:Analyze() 
-		end
+		if lua_code:find("--A" .. "NALYZE", nil, true) then compiler:Analyze() end
 
 		server:Respond(client, resp)
 	end
 
 	--server:Respond(client, {method = "workspace/semanticTokens/refresh"})
-
 	cache[uri] = compiler
 	return cache[uri]
 end
 
+server.methods["initialized"] = function(params, self, client)
+	print("vscode ready")
+end
 server.methods["initialize"] = function(params, self, client)
 	return {
 		capabilities = {
@@ -195,12 +193,10 @@ server.methods["initialize"] = function(params, self, client)
 					tokenModifiers = SemanticTokenModifiers,
 				},
 			},
-			-- for symbols like all functions within a file
-			--documentSymbolProvider = {label = "NattLua"},
-			
-			-- highlighting equal upvalues
-			--documentHighlightProvider = true, 
-
+		-- for symbols like all functions within a file
+		--documentSymbolProvider = {label = "NattLua"},
+		-- highlighting equal upvalues
+		--documentHighlightProvider = true, 
 		--[[completionProvider = {
 				resolveProvider = true,
 				triggerCharacters = { ".", ":" },
@@ -227,24 +223,21 @@ server.methods["initialize"] = function(params, self, client)
 	}
 end
 
-
 do -- semantic tokens
 	local tokenTypeMap = {}
 	local tokenModifiersMap = {}
 
-	for i,v in ipairs(SemanticTokenTypes) do
+	for i, v in ipairs(SemanticTokenTypes) do
 		tokenTypeMap[v] = i - 1
 	end
 
-	for i,v in ipairs(SemanticTokenModifiers) do
+	for i, v in ipairs(SemanticTokenModifiers) do
 		tokenModifiersMap[v] = i - 1
 	end
 
 	local function token_to_type_mod(token)
 		if syntax.IsKeyword(token) or syntax.IsNonStandardKeyword(token) then
-			if token.value == "type" then
-				return "type"
-			end
+			if token.value == "type" then return "type" end
 
 			return "keyword"
 		end
@@ -260,19 +253,15 @@ do -- semantic tokens
 		end
 	end
 
-	server.methods["textDocument/semanticTokens/range"] = function(params, self, client) 
+	server.methods["textDocument/semanticTokens/range"] = function(params, self, client)
 		local textDocument = params.textDocument
 		local range = params
-	
 		print(textDocument, range)
 	end
-
-		
-	server.methods["textDocument/semanticTokens/full"] = function(params, self, client) 
+	server.methods["textDocument/semanticTokens/full"] = function(params, self, client)
+		print("omg")
 		local compiler = compile(params.textDocument.uri, self, client)
-		
 		local integers = {}
-
 		local last_y = 0
 		local last_x = 0
 
@@ -283,10 +272,8 @@ do -- semantic tokens
 				local len = #token.value
 				local y = (data.line_start - 1) - last_y
 				local x = data.character_start - last_x
-				
-				if y ~= 0 then
-					x = data.character_start
-				end
+
+				if y ~= 0 then x = data.character_start end
 
 				local type, modifiers = token_to_type_mod(token)
 
@@ -294,21 +281,20 @@ do -- semantic tokens
 					table.insert(integers, y)
 					table.insert(integers, x)
 					table.insert(integers, len)
-
 					table.insert(integers, tokenTypeMap[type])
-
 					local result = 0
+
 					if modifiers then
 						for _, mod in ipairs(modifiers) do
 							assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
 							result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod]))
 						end
 					end
-					table.insert(integers, result)
 
+					table.insert(integers, result)
 					last_y = (data.line_start - 1)
 					last_x = data.character_start
-				end			
+				end
 			end
 		end
 
@@ -316,21 +302,33 @@ do -- semantic tokens
 			data = integers,
 		}
 	end
-
 end
 
+server.methods["$/cancelRequest"] = function(params, self, client)
+	print("cancelRequest")
+	table.print(params)
+end
+server.methods["workspace/didChangeConfiguration"] = function(params, self, client)
+	print("configuration changed")
+	table.print(params)
+end
 server.methods["textDocument/didOpen"] = function(params, self, client)
 	compile(params.textDocument.uri, self, client)
+	print("opened", params.textDocument.uri)
+end
+server.methods["textDocument/didClose"] = function(params, self, client)
+	cache[params.textDocument.uri] = nil
+	print("closed", params.textDocument.uri)
 end
 server.methods["textDocument/didChange"] = function(params, self, client)
 	compile(params.textDocument.uri, self, client, params.contentChanges[1].text)
+	print("changed", params.textDocument.uri)
 end
 server.methods["textDocument/didSave"] = function(params, self, client)
 	compile(params.textDocument.uri, self, client)
 end
 server.methods["textDocument/hover"] = function(params, self, client)
 	local compiler = compile(params.textDocument.uri, self, client)
-
 	local pos = params.position
 	local token, data = helpers.GetDataFromLineCharPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
 
