@@ -223,7 +223,7 @@ local function emit(key, val, self_argument)
 
 		e(")")
 	elseif val.LINK == "utf8.charpattern" then
-		e("\"[%z\\x01-\\x7F\\xC2-\\xF4][\\x80-\\xBF]*\"")
+		e("\"[%z\x01-\x7F\xC2-\xF4][\x80-\xBF]*\"")
 	elseif val.LINK == "derma.Controls" then
 		e("{ClassName = string, Description = string, BaseClass = string}")
 	elseif val.LINK == "math.pi" then

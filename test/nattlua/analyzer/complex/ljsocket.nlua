@@ -1,3 +1,4 @@
+--ANALYZE
 local type print = any
 local ffi = require("ffi")
 local socket = {}
