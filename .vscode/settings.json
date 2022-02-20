@@ -5,6 +5,7 @@
 			"nattlua/**/*.lua", 
 			"test/**/*.lua", 
 			"**/*.nlua",
+			"test_focus.lua",
 		]
 	}
 }
