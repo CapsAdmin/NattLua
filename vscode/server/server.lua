@@ -84,13 +84,6 @@ local SemanticTokenModifiers = {
 	"defaultLibrary",
 }
 
-local function code_from_uri(uri)
-	local f = assert(io.open(uri:sub(#"file://" + 1), "r"))
-	local code = f:read("*all")
-	f:close()
-	return code
-end
-
 local function get_range(code, start, stop)
 	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
 
@@ -115,14 +108,12 @@ end
 
 local cache = {}
 
-local function compile(uri, server, client, changed_code)
-	local lua_code = changed_code or code_from_uri(uri)
+local function compile(uri, lua_code, server, client)
+	lua_code = lua_code or cache[uri] and cache[uri].Code:GetString()
 
-	if changed_code and cache[uri] and lua_code ~= cache[uri].Code:GetString() then
+	if cache[uri] and lua_code ~= cache[uri].Code:GetString() then
 		cache[uri] = nil
 		print("recompiling ", uri)
-
-		if uri:find("test_focus") then print("compile:", lua_code) end
 	end
 
 	if cache[uri] then return cache[uri] end
@@ -166,7 +157,7 @@ local function compile(uri, server, client, changed_code)
 		server:Respond(client, resp)
 	end
 
-	--server:Respond(client, {method = "workspace/semanticTokens/refresh"})
+	server:Respond(client, {method = "workspace/semanticTokens/refresh"})
 	cache[uri] = compiler
 	return cache[uri]
 end
@@ -176,6 +167,10 @@ server.methods["initialized"] = function(params, self, client)
 end
 server.methods["initialize"] = function(params, self, client)
 	return {
+		clientInfo = {
+			name = "NattLua",
+			version = "1.0",
+		},
 		capabilities = {
 			textDocumentSync = {
 				openClose = true,
@@ -260,7 +255,7 @@ do -- semantic tokens
 	end
 	server.methods["textDocument/semanticTokens/full"] = function(params, self, client)
 		print("omg")
-		local compiler = compile(params.textDocument.uri, self, client)
+		local compiler = compile(params.textDocument.uri, params.textDocument.text, self, client)
 		local integers = {}
 		local last_y = 0
 		local last_x = 0
@@ -313,7 +308,7 @@ server.methods["workspace/didChangeConfiguration"] = function(params, self, clie
 	table.print(params)
 end
 server.methods["textDocument/didOpen"] = function(params, self, client)
-	compile(params.textDocument.uri, self, client)
+	compile(params.textDocument.uri, params.textDocument.text, self, client)
 	print("opened", params.textDocument.uri)
 end
 server.methods["textDocument/didClose"] = function(params, self, client)
@@ -321,14 +316,14 @@ server.methods["textDocument/didClose"] = function(params, self, client)
 	print("closed", params.textDocument.uri)
 end
 server.methods["textDocument/didChange"] = function(params, self, client)
-	compile(params.textDocument.uri, self, client, params.contentChanges[1].text)
+	compile(params.textDocument.uri, params.textDocument.text, self, client)
 	print("changed", params.textDocument.uri)
 end
 server.methods["textDocument/didSave"] = function(params, self, client)
-	compile(params.textDocument.uri, self, client)
+	compile(params.textDocument.uri, params.textDocument.text, self, client)
 end
 server.methods["textDocument/hover"] = function(params, self, client)
-	local compiler = compile(params.textDocument.uri, self, client)
+	local compiler = compile(params.textDocument.uri, params.textDocument.text, self, client)
 	local pos = params.position
 	local token, data = helpers.GetDataFromLineCharPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
 
