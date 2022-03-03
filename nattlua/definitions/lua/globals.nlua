@@ -321,7 +321,7 @@ analyzer function assert(obj: any, msg: string | nil)
 	end
 
 	if obj:IsFalsy() then
-		analyzer:ThrowError(msg and msg:GetData() or "unknown error", obj, obj:IsTruthy())
+		analyzer:ThrowError(msg and msg:GetData() or "assertion failed!", obj, obj:IsTruthy())
 
 		if obj.Type == "union" then
 			obj = obj:Copy()

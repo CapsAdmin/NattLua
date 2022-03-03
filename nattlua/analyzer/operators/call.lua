@@ -691,9 +691,15 @@ return {
 				local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
 				-- if the function has return type annotations, analyze them and use it as contract
-				if not return_contract and function_node.return_types then
+				if not return_contract and function_node.return_types and self:IsRuntime() then
 					self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 					self:PushAnalyzerEnvironment("typesystem")
+			
+					for i, key in ipairs(function_node.identifiers) do
+						if function_node.self_call then i = i + 1 end
+						self:CreateLocalValue(key.value.value, arguments:Get(i))
+					end
+
 					return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types))
 					self:PopAnalyzerEnvironment()
 					self:PopScope()
@@ -701,7 +707,7 @@ return {
 
 				if not return_contract then
 					-- if there is no return type 
-					do
+					if self:IsRuntime() then
 						local copy
 
 						for i, v in ipairs(return_result:GetData()) do
@@ -856,6 +862,8 @@ return {
 			-- without resorting to argument drilling
 			local node = call_node or obj:GetNode() or obj
 
+			self.current_call = node
+
 			-- call_node or obj:GetNode() might be nil when called from tests and other places
 			if node.recursively_called then return node.recursively_called:Copy() end
 
@@ -931,6 +939,9 @@ return {
 			if is_runtime then table.remove(self.call_stack) end
 
 			self:PopActiveNode()
+
+			self.current_call = nil
+
 			return ok, err
 		end
 

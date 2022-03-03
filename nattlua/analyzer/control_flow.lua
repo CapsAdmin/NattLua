@@ -138,7 +138,7 @@ return function(META)
 			self.lua_error_thrown = msg
 		end
 
-		if not no_report then self:Error(self.current_statement, msg) end
+		if not no_report then self:Error(self.current_call, msg) end
 	end
 
 	function META:GetThrownErrorMessage()

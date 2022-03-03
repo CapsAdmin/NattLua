@@ -316,7 +316,7 @@ server.methods["textDocument/didClose"] = function(params, self, client)
 	print("closed", params.textDocument.uri)
 end
 server.methods["textDocument/didChange"] = function(params, self, client)
-	compile(params.textDocument.uri, params.textDocument.text, self, client)
+	compile(params.textDocument.uri, params.contentChanges[1].text, self, client)
 	print("changed", params.textDocument.uri)
 end
 server.methods["textDocument/didSave"] = function(params, self, client)

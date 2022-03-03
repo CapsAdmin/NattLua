@@ -25,7 +25,7 @@ return function(META)
 
 	function META:Assert(node, ok, err, ...)
 		if ok == false then
-			err = err or "unknown error"
+			err = err or "assertion failed!"
 			self:Error(node, err)
 			return Any():SetNode(node)
 		end
@@ -34,7 +34,7 @@ return function(META)
 	end
 
 	function META:ErrorAssert(ok, err)
-		if not ok then error(self:ErrorMessageToString(err or "unknown error")) end
+		if not ok then error(self:ErrorMessageToString(err or "assertion failed!")) end
 	end
 
 	function META:ErrorMessageToString(tbl)

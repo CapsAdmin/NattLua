@@ -183,13 +183,9 @@ local function Binary(self, node, l, r, op)
 			if l.Type == "tuple" and r.Type == "number" and r:IsLiteral() then
 				return l:Copy():SetRepeat(r:GetData())
 			end
-		elseif op == ">" then
+		elseif op == ">" or op == "supersetof" then
 			return Symbol((r:IsSubsetOf(l)))
-		elseif op == "<" then
-			return Symbol((l:IsSubsetOf(r)))
-		elseif op == "supersetof" then
-			return Symbol((r:IsSubsetOf(l)))
-		elseif op == "subsetof" then
+		elseif op == "<" or op == "subsetof" then
 			return Symbol((l:IsSubsetOf(r)))
 		elseif op == "+" then
 			if l.Type == "table" and r.Type == "table" then return l:Union(r) end
