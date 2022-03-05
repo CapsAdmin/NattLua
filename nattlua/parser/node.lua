@@ -29,6 +29,8 @@ META.Type = "node"
 	first_node = nil | self,
 	statements = nil | List<|any|>,
 	value = nil | Token,
+    inferred_type = nil | any,
+    inferred_types = nil | List<|any|>,
 }]]
 --[[#local type Node = META.@Self]]
 local id = 0
@@ -134,6 +136,21 @@ end
 
 function META:HasNodes()
 	return self.statements ~= nil
+end
+
+function META:AddType(obj)
+    self.inferred_types = self.inferred_types or {}
+    table.insert(self.inferred_types, obj)
+    self.inferred_type = obj
+end
+
+function META:GetTypes()
+    return self.inferred_types or {}
+end
+
+function META:GetLastType()
+    do return self.inferred_type end
+    return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
 local function find_by_type(

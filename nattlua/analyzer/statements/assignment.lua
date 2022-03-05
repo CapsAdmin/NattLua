@@ -172,7 +172,7 @@ return {
 			end
 
 			-- used by the emitter
-			exp_key.inferred_type = val
+			exp_key:AddType(val)
 			val:SetTokenLabelSource(exp_key)
 			val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
 

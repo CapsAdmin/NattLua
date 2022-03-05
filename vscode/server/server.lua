@@ -360,12 +360,12 @@ server.methods["textDocument/hover"] = function(params, self, client)
 		return obj
 	end
 
-	if token.inferred_type then
-		add_code(get_type(token.inferred_type))
+	if token:GetLastType() then
+		add_code(get_type(token:GetLastType()))
 	else
 		for _, node in ipairs(found_parents) do
-			if node.inferred_type then
-				add_code(get_type(node.inferred_type))
+			if node:GetLastType() then
+				add_code(get_type(node:GetLastType()))
 
 				break
 			end

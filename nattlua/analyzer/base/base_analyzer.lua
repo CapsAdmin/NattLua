@@ -436,8 +436,8 @@ return function(META)
 				table.remove(self.current_type_stack[type], 1)
 			end
 
-			function META:GetCurrentType(type)
-				return self.current_type_stack and self.current_type_stack[type] and self.current_type_stack[type][1]
+			function META:GetCurrentType(type, offset)
+				return self.current_type_stack and self.current_type_stack[type] and self.current_type_stack[type][offset or 1]
 			end
 		end
 	end

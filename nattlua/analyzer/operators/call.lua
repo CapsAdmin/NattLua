@@ -681,11 +681,11 @@ return {
 				do -- this is for the emitter
 					if function_node.identifiers then
 						for i, node in ipairs(function_node.identifiers) do
-							node.inferred_type = obj:GetArguments():Get(i)
+							node:AddType(obj:GetArguments():Get(i))
 						end
 					end
 
-					function_node.inferred_type = obj
+					function_node:AddType(obj)
 				end
 
 				local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()

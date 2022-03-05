@@ -410,11 +410,11 @@ do
 			if scope:IsFunctionScope() then
 				if
 					scope.node and
-					scope.node.inferred_type and
-					scope.node.inferred_type.Type == "function" and
+					scope.node:GetLastType() and
+					scope.node:GetLastType().Type == "function" and
 					not scope:Contains(from)
 				then
-					return not scope.node.inferred_type:IsCalled()
+					return not scope.node:GetLastType():IsCalled()
 				end
 			end
 

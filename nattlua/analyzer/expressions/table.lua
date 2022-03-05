@@ -18,7 +18,6 @@ return {
 		for i, node in ipairs(node.children) do
 			if node.kind == "table_key_value" then
 				local key = LString(node.tokens["identifier"].value):SetNode(node.tokens["identifier"])
-				node.tokens["identifier"].inferred_type = key
 				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
 				self:NewIndexOperator(node, tbl, key, val)
 			elseif node.kind == "table_expression_value" then

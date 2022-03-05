@@ -1,7 +1,7 @@
---[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+--[[#local type { TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
 
 local Code = require("nattlua.code.code")
-local table_pool = require("nattlua.other.table_pool")
+local Token = require("nattlua.lexer.token").New
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
 local META = {}
@@ -77,36 +77,6 @@ function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: n
 	self:OnError(self.Code, msg, start or self.Position, stop or self.Position)
 end
 
-do
-	local new_token = table_pool(
-		function()
-			local x = {
-				type = "unknown",
-				value = "",
-				whitespace = false,
-				start = 0,
-				stop = 0,
-			}--[[# as Token]]
-			return x
-		end,
-		3105585
-	)
-
-	function META:NewToken(
-		type--[[#: TokenType]],
-		is_whitespace--[[#: boolean]],
-		start--[[#: number]],
-		stop--[[#: number]]
-	)--[[#: Token]]
-		local tk = new_token()
-		tk.type = type
-		tk.is_whitespace = is_whitespace
-		tk.start = start
-		tk.stop = stop
-		return tk
-	end
-end
-
 function META:ReadShebang()
 	if self.Position == 1 and self:IsString("#") then
 		for _ = self.Position, self:GetLength() do
@@ -157,6 +127,15 @@ function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
 
 	is_whitespace = is_whitespace or false
 	return type, is_whitespace, start, self.Position - 1
+end
+
+function META:NewToken(
+    type--[[#: TokenType]],
+    is_whitespace--[[#: boolean]],
+    start--[[#: number]],
+    stop--[[#: number]]
+)
+    return Token(type, is_whitespace, start, stop)
 end
 
 function META:ReadToken()

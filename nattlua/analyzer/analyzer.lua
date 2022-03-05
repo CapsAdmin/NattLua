@@ -156,7 +156,7 @@ do
 
 	function META:AnalyzeExpression(node)
 		local obj, err = self:AnalyzeExpression2(node)
-		node.inferred_type = obj or err
+		node:AddType(obj or err)
 		return obj, err
 	end
 end

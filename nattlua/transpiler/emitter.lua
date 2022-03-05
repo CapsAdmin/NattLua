@@ -581,7 +581,7 @@ function META:EmitExpression(node)
 end
 
 function META:EmitVarargTuple(node)
-	self:Emit(tostring(node.inferred_type))
+	self:Emit(tostring(node:GetLastType()))
 end
 
 function META:EmitExpressionIndex(node)
@@ -1390,7 +1390,7 @@ function META:EmitNodeList(tbl, func)
 end
 
 function META:HasTypeNotation(node)
-	return node.type_expression or node.inferred_type or node.return_types
+	return node.type_expression or node:GetLastType() or node.return_types
 end
 
 function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
@@ -1408,10 +1408,10 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 
 			if i ~= #node.return_types then self:EmitToken(exp.tokens[","]) end
 		end
-	elseif node.inferred_type and self.config.annotate ~= "explicit" then
+	elseif node:GetLastType() and self.config.annotate ~= "explicit" then
 		local str = {}
 		-- this iterates the first return tuple
-		local obj = node.inferred_type:GetContract() or node.inferred_type
+		local obj = node:GetLastType():GetContract() or node:GetLastType()
 
 		if obj.Type == "function" then
 			for i, v in ipairs(obj:GetReturnTypes():GetData()) do
@@ -1436,8 +1436,8 @@ end
 function META:EmitAnnotationExpression(node)
 	if node.type_expression then
 		self:EmitTypeExpression(node.type_expression)
-	elseif node.inferred_type and self.config.annotate ~= "explicit" then
-		self:Emit(tostring(node.inferred_type:GetContract() or node.inferred_type))
+	elseif node:GetLastType() and self.config.annotate ~= "explicit" then
+		self:Emit(tostring(node:GetLastType():GetContract() or node:GetLastType()))
 	end
 end
 
