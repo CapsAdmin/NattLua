@@ -2,3 +2,4 @@
 luacov*
 jstest/
 test_focus.lua
+test_focus_result.lua

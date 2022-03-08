@@ -33,9 +33,13 @@ function nl.loadfile(path, config)
 	return loadstring(code, path)
 end
 
-function nl.ParseFile(path, root)
-	local code = assert(nl.File(path, {path = path, root = root}))
-	return assert(code:Parse()), code
+function nl.ParseFile(path, config)
+	config = config or {}
+	local code, err = nl.File(path, config)
+	if not code then return nil, err end
+	local ok, err = code:Parse()
+	if not ok then return nil, err end
+	return ok, code
 end
 
 function nl.File(path, config)
@@ -48,6 +52,7 @@ function nl.File(path, config)
 
 	local code = f:read("*all")
 	f:close()
+	if not code then return nil, path .. " empty file" end
 	return nl.Compiler(code, "@" .. path, config)
 end
 

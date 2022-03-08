@@ -356,10 +356,30 @@ function META:BuildCode(block)
 		self:EmitNonSpace("IMPORTS = IMPORTS or {}\n")
 
 		for i, node in ipairs(block.imports) do
-			if not self.done[node.path] then
+			if not self.done[node.path] and node.root then
 				self:Emit(
 					"IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render(self.config or {}) .. " end\n"
 				)
+				self.done[node.path] = true
+			end
+		end
+	end
+
+	if block.required_files then
+		self.done = {}
+
+		for i, node in ipairs(block.required_files) do
+			if not self.done[node.path] and node.root then
+				self:EmitNonSpace("package.loaded[")
+				self:EmitToken(node.expressions[1].value)
+				self:EmitNonSpace("] = function(...)")
+				self:Whitespace("\n")
+				self:Indent()
+				self:EmitStatements(node.root.statements)
+				self:Outdent()
+				self:Whitespace("\n")
+				self:EmitNonSpace("end")
+				self:Whitespace("\n")
 				self.done[node.path] = true
 			end
 		end
@@ -506,6 +526,8 @@ function META:EmitExpression(node)
 		end
 	elseif node.kind == "import" then
 		self:EmitImportExpression(node)
+	elseif node.kind == "require" then
+		self:EmitRequireExpression(node)
 	elseif node.kind == "type_table" then
 		self:EmitTableType(node)
 	elseif node.kind == "table_expression_value" then
@@ -1822,7 +1844,14 @@ do -- extra
 			return
 		end
 
-		self:EmitNonSpace("IMPORTS['" .. node.path .. "']")
+		self:EmitToken(node.tokens.import, "IMPORTS['" .. node.path .. "']")
+		self:EmitToken(node.tokens["arguments("])
+		self:EmitExpressionList(node.expressions)
+		self:EmitToken(node.tokens["arguments)"])
+	end
+	
+	function META:EmitRequireExpression(node)
+		self:EmitToken(node.tokens["require"])
 		self:EmitToken(node.tokens["arguments("])
 		self:EmitExpressionList(node.expressions)
 		self:EmitToken(node.tokens["arguments)"])
