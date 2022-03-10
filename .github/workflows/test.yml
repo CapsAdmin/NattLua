@@ -6,8 +6,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: clone latest luajit 2.1
-        uses: actions/checkout@master
+      - uses: actions/checkout@master
         with:
           name: LuaJIT/LuaJIT
           ref: v2.1
