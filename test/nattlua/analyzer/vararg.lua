@@ -378,7 +378,6 @@ run[[
     foo("hello", 1)
     foo("hello", function() end)
 ]]
-
 run[[
     local function foo(a: number, ...: (number,)*inf)
         local x,y,z = ...
@@ -388,7 +387,6 @@ run[[
         attest.equal(z, _ as number)
     end
 ]]
-
 run[[
     local function foo(a: number, ...: (number,string)*inf)
         local b,x,y,z = ...

@@ -41,10 +41,7 @@ test("can be indirect", function()
 end)
 
 test("{[number]: any}", function()
-	check(
-		run[[local a: {[number] = any} = {[1] = 1}]],
-		"{ [number] = number as any }"
-	)
+	check(run[[local a: {[number] = any} = {[1] = 1}]], "{ [number] = number as any }")
 	run([[local a: {[number] = any} = {foo = 1}]], [[has no field "foo"]])
 end)
 
