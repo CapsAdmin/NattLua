@@ -6,13 +6,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: clone latest luajit 2.1
       - uses: actions/checkout@master
-
-      - uses: leafo/gh-actions-lua@v8.0.0
         with:
-          luaVersion: "luajit-2.1.0-beta3"
+          name: LuaJIT/LuaJIT
+          ref: v2.1
+          path: luajit
+
+      - name: build luajit
+        run: cd luajit && make && make install
 
       - name: test
-        run: |
-          sudo ln -sf luajit-2.1.0-beta3 /home/runner/work/NattLua/NattLua/.lua/bin/luajit
-          luajit test/run.lua
+        run: luajit test/run.lua
