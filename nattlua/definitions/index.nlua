@@ -2,18 +2,16 @@ analyzer function import_type(name: string)
 	if not name:IsLiteral() then error("path must be a literal string") end
 
 	local path = name:GetData()
+	analyzer.loaded = analyzer.loaded or {}
 
-	if analyzer.loaded and analyzer.loaded[path] then
-		return analyzer.loaded[path]
+	if not analyzer.loaded[path] then
+		local compiler = assert(nl.File(analyzer:ResolvePath(path)))
+		assert(compiler:Lex())
+		assert(compiler:Parse())
+		analyzer.loaded[path] = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 	end
 
-	local compiler = assert(require("nattlua").File(analyzer:ResolvePath(path)))
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-	analyzer.loaded = analyzer.loaded or {}
-	analyzer.loaded[path] = res
-	return res
+	return analyzer.loaded[path]
 end
 
 import_type<|"nattlua/definitions/utility.nlua"|>
