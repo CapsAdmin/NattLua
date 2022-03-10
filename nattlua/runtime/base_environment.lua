@@ -2,10 +2,7 @@ local Table = require("nattlua.types.table").Table
 local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
 return {
 	BuildBaseEnvironment = function()
-		if _G.DISABLE_BASE_ENV then
-			return require("nattlua.types.table").Table({}),
-			require("nattlua.types.table").Table({})
-		end
+		if _G.DISABLE_BASE_ENV then return Table({}), Table({}) end
 
 		local nl = require("nattlua")
 		local compiler = assert(nl.File("nattlua/definitions/index.nlua"))

@@ -111,9 +111,7 @@ do -- token, expression and statement association
 	function META:SetNode(node--[[#: nil | any]])
 		self.Node = node
 
-		if node then 
-            node:AddType(self --[[# as any]])
-        end
+		if node then node:AddType(self--[[# as any]]) end
 
 		return self
 	end

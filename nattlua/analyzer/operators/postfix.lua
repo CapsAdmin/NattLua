@@ -4,6 +4,8 @@ return {
 	Postfix = function(self, node, r)
 		local op = node.value.value
 
-		if op == "++" then return Binary(self, setmetatable({value = {value = "+"}}, Node), r, r) end
+		if op == "++" then
+			return Binary(self, setmetatable({value = {value = "+"}}, Node), r, r)
+		end
 	end,
 }

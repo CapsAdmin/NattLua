@@ -11,7 +11,6 @@ return {
 		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
 
 		self:PushCurrentType(tbl, "table")
-
 		local tree = node
 		tbl.scope = self:GetScope()
 

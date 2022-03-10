@@ -54,11 +54,13 @@ function META:__tostring()
 	if self.Remainder then table.insert(strings, tostring(self.Remainder)) end
 
 	local s = "("
+
 	if #strings == 1 then
 		s = s .. strings[1] .. ","
 	else
 		s = s .. table.concat(strings, ", ")
 	end
+
 	s = s .. ")"
 
 	if self.Repeat then s = s .. "*" .. tostring(self.Repeat) end
@@ -464,8 +466,16 @@ end
 
 function META:SetTable(data)
 	self.Data = {}
+
 	for i, v in ipairs(data) do
-		if i == #data and v.Type == "tuple" and not (v--[[# as TTuple]]).Remainder and v ~= self then
+		if
+			i == #data and
+			v.Type == "tuple" and
+			not (
+				v
+			--[[# as TTuple]]).Remainder and
+			v ~= self
+		then
 			self:AddRemainder(v)
 		else
 			table.insert(self.Data, v)
@@ -476,9 +486,7 @@ end
 function META.New(data--[[#: nil | List<|TBaseType|>]])
 	local self = setmetatable({Data = {}, Falsy = false, Truthy = false, Literal = false}, META)
 
-	if data then
-		self:SetTable(data)
-	end
+	if data then self:SetTable(data) end
 
 	return self
 end

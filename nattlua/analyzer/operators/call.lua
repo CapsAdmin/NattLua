@@ -694,9 +694,10 @@ return {
 				if not return_contract and function_node.return_types and self:IsRuntime() then
 					self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 					self:PushAnalyzerEnvironment("typesystem")
-			
+
 					for i, key in ipairs(function_node.identifiers) do
 						if function_node.self_call then i = i + 1 end
+
 						self:CreateLocalValue(key.value.value, arguments:Get(i))
 					end
 
@@ -861,7 +862,6 @@ return {
 			-- not sure about this, it's used to access the call_node from deeper calls
 			-- without resorting to argument drilling
 			local node = call_node or obj:GetNode() or obj
-
 			self.current_call = node
 
 			-- call_node or obj:GetNode() might be nil when called from tests and other places
@@ -939,9 +939,7 @@ return {
 			if is_runtime then table.remove(self.call_stack) end
 
 			self:PopActiveNode()
-
 			self.current_call = nil
-
 			return ok, err
 		end
 

@@ -130,12 +130,12 @@ function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
 end
 
 function META:NewToken(
-    type--[[#: TokenType]],
-    is_whitespace--[[#: boolean]],
-    start--[[#: number]],
-    stop--[[#: number]]
+	type--[[#: TokenType]],
+	is_whitespace--[[#: boolean]],
+	start--[[#: number]],
+	stop--[[#: number]]
 )
-    return Token(type, is_whitespace, start, stop)
+	return Token(type, is_whitespace, start, stop)
 end
 
 function META:ReadToken()

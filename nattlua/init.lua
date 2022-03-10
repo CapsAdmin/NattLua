@@ -1,4 +1,3 @@
-
 local nl = {}
 nl.Compiler = require("nattlua.compiler")
 

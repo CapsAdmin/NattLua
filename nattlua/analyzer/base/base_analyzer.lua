@@ -437,7 +437,10 @@ return function(META)
 			end
 
 			function META:GetCurrentType(type, offset)
-				return self.current_type_stack and self.current_type_stack[type] and self.current_type_stack[type][offset or 1]
+				return self.current_type_stack and
+					self.current_type_stack[type] and
+					self.current_type_stack[type][offset or
+					1]
 			end
 		end
 	end

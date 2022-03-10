@@ -597,9 +597,8 @@ do -- runtime
 			node.tokens["call("] = self:ExpectValue("(")
 			node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
 			node.tokens["call)"] = self:ExpectValue(")")
-
 		end
-		
+
 		self:EndNode(node)
 
 		if primary_node.kind == "value" and primary_node.value.value == "require" then
@@ -735,43 +734,45 @@ do -- runtime
 		for package_path in (package.path .. ";"):gmatch("(.-);") do
 			local lua_path = package_path:gsub("%?", require_path)
 			local f = io.open(lua_path, "r")
+
 			if f then
 				f:close()
 				return lua_path
 			end
 		end
-		
+
 		return nil
 	end
 
 	function META:HandleRuntimeRequire(node, module_name, start)
-		if not self.config.inline_require then
-			return
-		end
-		
-		local root_node = self.config.root or self.root
+		if not self.config.inline_require then return end
 
+		local root_node = self.config.root or self.root
 		root_node.required_files = root_node.required_files or {}
 		local cache = root_node.required_files
-		
 		local path = require_path_to_path(module_name)
+
 		if path then
 			node.path = path
-			
+
 			if cache[path] == nil then
-				if cache[path] == true then self:Error("circular dependency: $1", start, start, path) end
-								
+				if cache[path] == true then
+					self:Error("circular dependency: $1", start, start, path)
+				end
+
 				local config = {}
-				for k,v in pairs(self.config) do
+
+				for k, v in pairs(self.config) do
 					config[k] = v
 				end
+
 				config.root = self.root
 				config.path = path
 				config.name = module_name
-				
 				cache[path] = false
 				local nl = require("nattlua")
 				local compiler, err = nl.ParseFile(path, config)
+
 				if not compiler then
 					self:Error("error requiring file: $1", start, start, err)
 					cache[path] = nil
@@ -782,12 +783,10 @@ do -- runtime
 			else
 				node.root = cache[path]
 			end
-
 		end
 
 		self.root.required_files = self.root.required_files or {}
 		table.insert(self.root.required_files, node)
-
 		return node
 	end
 

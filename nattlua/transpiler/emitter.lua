@@ -378,7 +378,7 @@ function META:BuildCode(block)
 				self:EmitStatements(node.root.statements)
 				self:Outdent()
 				self:Whitespace("\n")
-                self:EmitNonSpace("end)(\""..node.path.."\");")
+				self:EmitNonSpace("end)(\"" .. node.path .. "\");")
 				self:Whitespace("\n")
 				self.done[node.path] = true
 			end
@@ -1849,7 +1849,7 @@ do -- extra
 		self:EmitExpressionList(node.expressions)
 		self:EmitToken(node.tokens["arguments)"])
 	end
-	
+
 	function META:EmitRequireExpression(node)
 		self:EmitToken(node.tokens["require"])
 		self:EmitToken(node.tokens["arguments("])

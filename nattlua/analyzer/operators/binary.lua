@@ -88,7 +88,6 @@ end
 
 local function Binary(self, node, l, r, op)
 	op = op or node.value.value
-
 	local cur_union
 
 	if op == "|" and self:IsTypesystem() then
@@ -150,9 +149,7 @@ local function Binary(self, node, l, r, op)
 		end
 	end
 
-	if cur_union then
-		self:PopCurrentType("union")
-	end
+	if cur_union then self:PopCurrentType("union") end
 
 	if self:IsTypesystem() then
 		if op == "|" then

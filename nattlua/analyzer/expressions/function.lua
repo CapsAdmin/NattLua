@@ -174,12 +174,9 @@ return {
 				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
 			}
 		):SetNode(node)
-
 		self:PushCurrentType(obj, "function")
-
 		local args, ret, explicit_arguments, explicit_return = analyze_function_signature(self, node, obj)
 		local func
-
 		self:PopCurrentType("function")
 
 		if

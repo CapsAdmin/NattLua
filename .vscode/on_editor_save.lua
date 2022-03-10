@@ -17,11 +17,15 @@ local function run_nattlua(path)
 	local f = assert(io.open(path, "r"))
 	local lua_code = f:read("*all")
 	f:close()
-	
-	local c = assert(nl.File(path, {
-		annotate = true,
-		inline_require = lua_code:find("%-%-%s-INLINE_REQUIRE") ~= nil,
-	}))
+	local c = assert(
+		nl.File(
+			path,
+			{
+				annotate = true,
+				inline_require = lua_code:find("%-%-%s-INLINE_REQUIRE") ~= nil,
+			}
+		)
+	)
 	local preserve_whitespace = nil
 
 	if lua_code:find("%-%-%s-PRETTY_PRINT") then preserve_whitespace = false end
@@ -66,7 +70,7 @@ local function run_nattlua(path)
 		)
 	)
 	require("nattlua.runtime.base_runtime")
-	
+
 	if lua_code:find("%-%-%s-ENABLE_CODE_RESULT_TO_FILE") then
 		local f = io.open("test_focus_result.lua", "w")
 		f:write(res)

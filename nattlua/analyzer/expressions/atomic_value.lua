@@ -80,7 +80,6 @@ return {
 		local standalone_letter = type == "letter" and node.standalone_letter
 
 		if self:IsTypesystem() and standalone_letter and not node.force_upvalue then
-
 			if value == "current_table" then
 				return self:GetCurrentType("table")
 			elseif value == "current_tuple" then
@@ -92,9 +91,9 @@ return {
 			end
 
 			local current_table = self:GetCurrentType("table")
-			
+
 			if current_table then
-				if value == "self" then 
+				if value == "self" then
 					return current_table
 				elseif
 					self.left_assigned and

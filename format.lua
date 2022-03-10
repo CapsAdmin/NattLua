@@ -49,8 +49,12 @@ local config = {
 	},
 }
 local blacklist = {
+	"test_focus_result%.lua",
+	"build_output%.lua",
 	"nattlua/other/cparser%.lua",
 	"nattlua/other/json%.lua",
+	"examples/benchmarks/temp/10mb%.lua",
+	"examples/projects/luajit/out%.lua",
 	"test/nattlua/analyzer/file_importing/deep_error/.*",
 }
 
