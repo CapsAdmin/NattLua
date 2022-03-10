@@ -1,29 +1,14 @@
-analyzer function import_type(path: literal string)
-	path = path:GetData()
-    
-	analyzer.loaded = analyzer.loaded or {}
-
-	if not analyzer.loaded[path] then
-		local compiler = assert(nl.File(analyzer:ResolvePath(path)))
-		assert(compiler:Lex())
-		assert(compiler:Parse())
-		analyzer.loaded[path] = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-	end
-
-	return analyzer.loaded[path]
-end
-
-import("utility.nlua")
-import("attest.nlua")
-import("lua/globals.nlua")
-import("lua/io.nlua")
-import("lua/luajit.nlua")
-import("lua/debug.nlua")
-import("lua/package.nlua")
-import("lua/bit.nlua")
-import("lua/table.nlua")
-import("lua/string.nlua")
-import("lua/math.nlua")
-import("lua/os.nlua")
-import("lua/coroutine.nlua")
-import("typed_ffi.nlua")
+import("./utility.nlua")
+import("./attest.nlua")
+import("./lua/globals.nlua")
+import("./lua/io.nlua")
+import("./lua/luajit.nlua")
+import("./lua/debug.nlua")
+import("./lua/package.nlua")
+import("./lua/bit.nlua")
+import("./lua/table.nlua")
+import("./lua/string.nlua")
+import("./lua/math.nlua")
+import("./lua/os.nlua")
+import("./lua/coroutine.nlua")
+import("./typed_ffi.nlua")

@@ -373,7 +373,7 @@ identical([=[--[[#local type {
 	FunctionStatement,
 	FunctionLocalAnalyzerStatement,
 	ValueExpression
- } = import("~/nattlua/parser/nodes.nlua")]]]=])
+ } = importawd("~/nattlua/parser/nodes.nlua")]]]=])
 check(
 	{preserve_whitespace = false, use_comment_types = true, annotate = true},
 	[=[function META:OnError(
@@ -447,7 +447,7 @@ return ffi.string(A, (B--[[# as number]]))]=]
 )
 identical([=[--[[#£parser.config.skip_import = true]]
 
-local x = import("platforms/windows/filesystem.nlua")]=])
+local x = --[[#import("platforms/windows/filesystem.nlua")]]]=])
 identical([[hook.Add("Foo", "bar_foo", function(ply, pos)
     for i = 1, 10 do
         ply:SetPos(pos + VectorRand())

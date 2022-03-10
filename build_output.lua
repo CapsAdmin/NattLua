@@ -1,3 +1,1810 @@
+IMPORTS = IMPORTS or {}
+IMPORTS['nattlua/lexer/token.nlua'] = function(...) --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
+--[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
+--[[#local type Token = {
+	@Name = "Token",
+	type = TokenType,
+	value = string,
+	start = number,
+	stop = number,
+	is_whitespace = boolean | nil,
+	whitespace = false | nil | {
+		[1 .. inf] = {
+			type = TokenWhitespaceType,
+			value = string,
+			start = number,
+			stop = number,
+		},
+	},
+}]]
+--[[#local type TokenReturnType = TokenType | false]]
+return {
+	Token = Token,
+	TokenType = TokenType,
+	TokenReturnType = TokenReturnType,
+} end
+IMPORTS['nattlua/code/code.lua'] = function(...) local META = {}
+META.__index = META
+--[[#type META.@Name = "Code"]]
+--[[#type META.@Self = {
+	Buffer = string,
+	Name = string,
+}]]
+
+function META:GetString()
+	return self.Buffer
+end
+
+function META:GetName()
+	return self.Name
+end
+
+function META:GetByteSize()
+	return #self.Buffer
+end
+
+function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
+	return self.Buffer:sub(start, stop)
+end
+
+function META:GetByte(pos--[[#: number]])
+	return self.Buffer:byte(pos) or 0
+end
+
+function META:FindNearest(str--[[#: string]], start--[[#: number]])
+	local _, pos = self.Buffer:find(str, start, true)
+
+	if not pos then return nil end
+
+	return pos + 1
+end
+
+local function remove_bom_header(str--[[#: string]])--[[#: string]]
+	if str:sub(1, 2) == "\xFE\xFF" then
+		return str:sub(3)
+	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+		return str:sub(4)
+	end
+
+	return str
+end
+
+local function get_default_name()
+	local info = debug.getinfo(3)
+
+	if info then
+		local parent_line = info.currentline
+		local parent_name = info.source:sub(2)
+		return parent_name .. ":" .. parent_line
+	end
+
+	return "unknown line : unknown name"
+end
+
+function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
+	local self = setmetatable(
+		{
+			Buffer = remove_bom_header(lua_code),
+			Name = name or get_default_name(),
+		},
+		META
+	)
+	return self
+end
+
+--[[#type Code = META.@Self]]
+return META.New end
+IMPORTS['nattlua/types/base.lua'] = function(...) local assert = _G.assert
+local tostring = _G.tostring
+local setmetatable = _G.setmetatable
+local type_errors = require("nattlua.types.error_messages")
+local META = {}
+META.__index = META
+--[[#type META.Type = string]]
+--[[#type META.@Self = {}]]
+--[[#local type TBaseType = META.@Self]]
+--[[#type TBaseType.@Name = "TBaseType"]]
+--[[#type META.Type = string]]
+
+function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
+	tbl[name] = default--[[# as NonLiteral<|default|>]]
+	--[[#type tbl.@Self[name] = tbl[name] ]]
+	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+		self[name] = val
+		return self
+	end
+	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+		return self[name]
+	end
+end
+
+function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
+	tbl[name] = default--[[# as NonLiteral<|default|>]]
+	--[[#type tbl.@Self[name] = tbl[name] ]]
+	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+		self[name] = val
+		return self
+	end
+	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+		return self[name]
+	end
+end
+
+--[[#type META.Type = string]]
+--[[#type TBaseType.Data = any | nil]]
+--[[#type TBaseType.Name = string | nil]]
+--[[#type TBaseType.parent = TBaseType | nil]]
+META:GetSet("AnalyzerEnvironment", nil--[[# as nil | "runtime" | "typesystem"]])
+
+function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
+end
+
+function META:CanBeNil()
+	return false
+end
+
+META:GetSet("Data", nil--[[# as nil | any]])
+
+function META:GetLuaType()
+	if self.Contract and self.Contract.TypeOverride then
+		return self.Contract.TypeOverride
+	end
+
+	return self.TypeOverride or self.Type
+end
+
+do
+	function META:IsUncertain()
+		return self:IsTruthy() and self:IsFalsy()
+	end
+
+	function META:IsCertainlyFalse()
+		return self:IsFalsy() and not self:IsTruthy()
+	end
+
+	function META:IsCertainlyTrue()
+		return self:IsTruthy() and not self:IsFalsy()
+	end
+
+	function META:GetTruthy()
+		if self:IsTruthy() then return self end
+
+		return nil
+	end
+
+	function META:GetFalsy()
+		if self:IsFalsy() then return self end
+
+		return nil
+	end
+
+	META:IsSet("Falsy", false--[[# as boolean]])
+	META:IsSet("Truthy", false--[[# as boolean]])
+end
+
+do
+	function META:Copy()
+		return self
+	end
+
+	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
+		self:SetNode(obj:GetNode())
+		self:SetTokenLabelSource(obj:GetTokenLabelSource())
+		self:SetLiteral(obj:IsLiteral())
+		self:SetContract(obj:GetContract())
+		self:SetName(obj:GetName())
+		self:SetMetaTable(obj:GetMetaTable())
+		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
+		self:SetTypeOverride(obj:GetTypeOverride())
+	end
+end
+
+do -- token, expression and statement association
+	META:GetSet("Upvalue", nil--[[# as nil | any]])
+	META:GetSet("TokenLabelSource", nil--[[# as nil | string]])
+	META:GetSet("Node", nil--[[# as nil | any]])
+
+	function META:SetNode(node--[[#: nil | any]])
+		self.Node = node
+
+		if node then node:AddType(self--[[# as any]]) end
+
+		return self
+	end
+end
+
+do -- comes from tbl.@Name = "my name"
+	META:GetSet("Name", nil--[[# as nil | TBaseType]])
+
+	function META:SetName(name--[[#: TBaseType | nil]])
+		if name then assert(name:IsLiteral()) end
+
+		self.Name = name
+	end
+end
+
+do -- comes from tbl.@TypeOverride = "my name"
+	META:GetSet("TypeOverride", nil--[[# as nil | TBaseType]])
+
+	function META:SetTypeOverride(name--[[#: any]])
+		if type(name) == "table" and name:IsLiteral() then name = name:GetData() end
+
+		self.TypeOverride = name
+	end
+end
+
+do
+	--[[#type TBaseType.disabled_unique_id = number | nil]]
+	META:GetSet("UniqueID", nil--[[# as nil | number]])
+	local ref = 0
+
+	function META:MakeUnique(b--[[#: boolean]])
+		if b then
+			self.UniqueID = ref
+			ref = ref + 1
+		else
+			self.UniqueID = nil
+		end
+
+		return self
+	end
+
+	function META:IsUnique()
+		return self.UniqueID ~= nil
+	end
+
+	function META:DisableUniqueness()
+		self.disabled_unique_id = self.UniqueID
+		self.UniqueID = nil
+	end
+
+	function META:EnableUniqueness()
+		self.UniqueID = self.disabled_unique_id
+	end
+
+	function META:GetHash()
+		return self.UniqueID
+	end
+
+	function META.IsSameUniqueType(a--[[#: TBaseType]], b--[[#: TBaseType]])
+		if a.UniqueID and not b.UniqueID then
+			return type_errors.other({a, "is a unique type"})
+		end
+
+		if a.UniqueID ~= b.UniqueID then
+			return type_errors.other({a, "is not the same unique type as ", a})
+		end
+
+		return true
+	end
+end
+
+do
+	META:IsSet("Literal", false--[[# as boolean]])
+
+	function META:CopyLiteralness(obj--[[#: TBaseType]])
+		self:SetLiteral(obj:IsLiteral())
+	end
+end
+
+do -- operators
+	function META:Call(...)
+		return type_errors.other({
+			"type ",
+			self.Type,
+			": ",
+			self,
+			" cannot be called",
+		})
+	end
+
+	function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
+		return type_errors.other(
+			{
+				"undefined set: ",
+				self,
+				"[",
+				key,
+				"] = ",
+				val,
+				" on type ",
+				self.Type,
+			}
+		)
+	end
+
+	function META:Get(key--[[#: boolean]])
+		return type_errors.other(
+			{
+				"undefined get: ",
+				self,
+				"[",
+				key,
+				"] on type ",
+				self.Type,
+			}
+		)
+	end
+
+	function META:PrefixOperator(op--[[#: string]])
+		return type_errors.other({"no operator ", op, " on ", self})
+	end
+end
+
+do
+	function META:SetParent(parent--[[#: TBaseType | nil]])
+		if parent then
+			if parent ~= self then self.parent = parent end
+		else
+			self.parent = nil
+		end
+	end
+
+	function META:GetRoot()
+		local parent = self
+		local done = {}
+
+		while true do
+			if not parent.parent or done[parent] then break end
+
+			done[parent] = true
+			parent = parent.parent
+		end
+
+		return parent
+	end
+end
+
+do -- contract
+	function META:Seal()
+		self:SetContract(self:GetContract() or self:Copy())
+	end
+
+	META:GetSet("Contract", nil--[[# as TBaseType | nil]])
+end
+
+do
+	META:GetSet("MetaTable", nil--[[# as TBaseType | nil]])
+
+	function META:GetMetaTable()
+		local contract = self.Contract
+
+		if contract and contract.MetaTable then return contract.MetaTable end
+
+		return self.MetaTable
+	end
+end
+
+function META:Widen()
+	self:SetLiteral(false)
+	return self
+end
+
+function META:GetFirstValue()
+	-- for tuples, this would return the first value in the tuple
+	return self
+end
+
+function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
+	if op == "==" then
+		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
+
+		return nil
+	end
+
+	return type_errors.binary(op, l, r)
+end
+
+function META.New()
+	return setmetatable({}--[[# as META.@Self]], META)
+end
+
+--[[#type META.TBaseType = copy<|META|>.@Self]]
+return META end
+IMPORTS['./nattlua/lexer/token.nlua'] = function(...) --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
+--[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
+--[[#local type Token = {
+	@Name = "Token",
+	type = TokenType,
+	value = string,
+	start = number,
+	stop = number,
+	is_whitespace = boolean | nil,
+	whitespace = false | nil | {
+		[1 .. inf] = {
+			type = TokenWhitespaceType,
+			value = string,
+			start = number,
+			stop = number,
+		},
+	},
+}]]
+--[[#local type TokenReturnType = TokenType | false]]
+return {
+	Token = Token,
+	TokenType = TokenType,
+	TokenReturnType = TokenReturnType,
+} end
+IMPORTS['./nattlua/parser/nodes.nlua'] = function(...) --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+
+--[[#local type Node = {
+	type = "statement" | "expression",
+	kind = string,
+	id = number,
+	parent = Node | nil,
+	environment = "runtime" | "typesystem",
+}]]
+--[[#local type Statement = Node & {
+	type = "statement",
+}]]
+--[[#local type Expression = Node & {
+		type = "expression",
+		standalone_letter = Node | nil,
+		type_expression = Node | nil,
+		tokens = {
+			["("] = List<|Token|>,
+			[")"] = List<|Token|>,
+			[":"] = Token,
+			["as"] = Token,
+			["is"] = Token,
+		},
+	}]]
+--[[#local type EmptyUnionTypeExpression = Expression & {
+		kind = "empty_union",
+		-- &= assignment operator?
+		tokens = Expression.tokens & {
+			["|"] = Token,
+		},
+	}]]
+--[[#local type VarargTypeExpression = Node & {
+		type = "expression",
+		kind = "type_vararg",
+		expression = Node,
+		tokens = Expression.tokens & {
+			["..."] = Token,
+		},
+	}]]
+--[[#local type ValueExpression = Expression & {
+		type = "expression",
+		kind = "value",
+		value = Token,
+		self_call = boolean,
+	}]]
+--[[#// function( foo = Bar )
+local type FunctionArgumentSubExpression = Node & {
+		type = "expression",
+		kind = "function_argument",
+		identifier = nil | Token,
+		type_expression = Node,
+		tokens = Expression.tokens & {
+			[":"] = nil | Token,
+		},
+	}]]
+--[[#local type FunctionReturnTypeSubExpression = Node & {
+		type = "expression",
+		kind = "function_return_type",
+		identifier = nil | Token,
+		type_expression = Node,
+		tokens = Expression.tokens & {
+			[":"] = nil | Token,
+		},
+	}]]
+--[[#// { [key] = value }
+local type TableExpressionKeyValueSubExpression = Node & {
+		type = "expression",
+		kind = "table_expression_value",
+		expression_key = boolean,
+		key_expression = Node,
+		value_expression = Node,
+		tokens = Expression.tokens & {
+			["="] = Token,
+			["["] = Token,
+			["]"] = Token,
+		},
+	}]]
+--[[#local type TableSpreadSubExpression = Node & {
+		type = "expression",
+		kind = "table_spread",
+		expression = Node,
+		tokens = Expression.tokens & {
+			["..."] = Token,
+		},
+	}]]
+--[[#// { key = value }
+local type TableKeyValueSubExpression = Node & {
+		type = "expression",
+		kind = "table_key_value",
+		identifier = Token,
+		value_expression = Node,
+		spread = nil | TableSpreadSubExpression,
+		tokens = Expression.tokens & {
+			["="] = Token,
+		},
+	}]]
+--[[#// { value }
+local type TableIndexValueSubExpression = Node & {
+		type = "expression",
+		kind = "table_index_value",
+		value_expression = Node,
+		spread = nil | TableSpreadSubExpression,
+		key = number,
+	}]]
+--[[#// { [key] = value, key = value, value }
+local type TableExpression = Node & {
+		type = "expression",
+		kind = "table",
+		children = List<|Node|>,
+		spread = boolean,
+		is_array = boolean,
+		is_dictionary = boolean,
+		tokens = Expression.tokens & {
+			["{"] = Token,
+			["}"] = Token,
+			["separators"] = List<|Token|>,
+		},
+	}]]
+--[[#// foo(a,b,c)
+local type PostfixCallSubExpression = Node & {
+		type = "expression",
+		kind = "postfix_call",
+		arguments = List<|Node|>,
+		is_type_call = boolean,
+		left = Node,
+		tokens = Expression.tokens & {
+			["arguments("] = nil | Token,
+			[","] = List<|Token|>,
+			["arguments)"] = nil | Token,
+			// type call
+			["!"] = Token,
+		},
+	}]]
+--[[#local type PostfixIndexSubExpression = Node & {
+		type = "expression",
+		kind = "postfix_expression_index",
+		index = Node,
+		left = Node,
+		tokens = Expression.tokens & {
+			["["] = Token,
+			["]"] = Token,
+		},
+	}]]
+--[[#local type EndOfFileStatement = Node & {
+		type = "statement",
+		kind = "end_of_file",
+		tokens = Expression.tokens & {
+			["end_of_file"] = Token,
+		},
+	}]]
+--[[#local type DebugParserDebugCodeStatement = Node & {
+		type = "statement",
+		kind = "parser_debug_code",
+		lua_code = ValueExpression,
+		tokens = Expression.tokens & {
+			["£"] = Token,
+		},
+	}]]
+--[[#local type DebugAnalyzerCodeStatement = Node & {
+		type = "statement",
+		kind = "analyzer_debug_code",
+		lua_code = ValueExpression,
+		tokens = Expression.tokens & {
+			["§"] = Token,
+		},
+	}]]
+--[[#local type ReturnStatement = Node & {
+		type = "statement",
+		kind = "return",
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["return"] = Token,
+			[","] = List<|Token|>,
+		},
+	}]]
+--[[#local type BreakStatement = Node & {
+		type = "statement",
+		kind = "break",
+		tokens = Expression.tokens & {
+			["break"] = Token,
+		},
+	}]]
+--[[#local type ContinueStatement = Node & {
+		type = "statement",
+		kind = "continue",
+		tokens = Expression.tokens & {
+			["continue"] = Token,
+		},
+	}]]
+--[[#local type SemicolonStatement = Node & {
+		type = "statement",
+		kind = "semicolon",
+		tokens = Expression.tokens & {
+			[";"] = Token,
+		},
+	}]]
+--[[#local type GotoStatement = Node & {
+		type = "statement",
+		kind = "goto",
+		identifier = Token,
+		tokens = Expression.tokens & {
+			["goto"] = Token,
+		},
+	}]]
+--[[#local type GotoLabelStatement = Node & {
+		type = "statement",
+		kind = "goto_label",
+		identifier = Token,
+		tokens = Expression.tokens & {
+			[" = =left"] = Token,
+			[" = =right"] = Token,
+		},
+	}]]
+--[[#local type BinaryOperatorExpression = Node & {
+		type = "expression",
+		kind = "binary_operator",
+		operator = Token,
+		left = Node,
+		right = Node,
+	}]]
+--[[#local type FunctionAnalyzerStatement = Node & {
+		type = "statement",
+		kind = "analyzer_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		tokens = Expression.tokens & {
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionTypeStatement = Node & {
+		type = "statement",
+		kind = "type_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionAnalyzerExpression = Node & {
+		type = "expression",
+		kind = "analyzer_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionTypeExpression = Node & {
+		type = "expression",
+		kind = "type_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionExpression = Node & {
+		type = "expression",
+		kind = "function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionLocalStatement = Node & {
+		type = "statement",
+		kind = "local_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionLocalTypeStatement = Node & {
+		type = "statement",
+		kind = "local_type_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["local"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionStatement = Node & {
+		type = "statement",
+		kind = "function",
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionLocalAnalyzerStatement = Node & {
+		type = "statement",
+		kind = "local_analyzer_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type ImportExpression = Node & {
+		type = "expression",
+		kind = "import",
+		path = string,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["import"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			[","] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type PrefixOperatorExpression = Node & {
+		type = "expression",
+		kind = "prefix_operator",
+		operator = Token,
+		right = Node,
+	}]]
+--[[#local type PostfixOperatorSubExpression = Node & {
+		type = "expression",
+		kind = "postfix_operator",
+		operator = Token,
+		left = Node,
+	}]]
+--[[#local type RepeatStatement = Node & {
+		type = "statement",
+		kind = "repeat",
+		statements = List<|Node|>,
+		expression = Node,
+		tokens = Expression.tokens & {
+			["repeat"] = Token,
+			["until"] = Token,
+		},
+	}]]
+--[[#local type DoStatement = Node & {
+		type = "statement",
+		kind = "do",
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["do"] = Token,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type IfStatement = Node & {
+		type = "statement",
+		kind = "if",
+		expressions = List<|Node|>,
+		statements = List<|List<|Node|>|>,
+		tokens = Expression.tokens & {
+			["if/else/elseif"] = List<|Token|>,
+			["then"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type WhileStatement = Node & {
+		type = "statement",
+		kind = "while",
+		expression = Node,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["while"] = Token,
+			["do"] = Token,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type ForNumericStatement = Node & {
+		type = "statement",
+		kind = "numeric_for",
+		identifier = Token,
+		init_expression = Node,
+		max_expression = Node,
+		step_expression = nil | Node,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["for"] = Token,
+			["="] = Token,
+			["do"] = Token,
+			["end"] = Token,
+			[",2"] = List<|Token|>,
+		},
+	}]]
+--[[#local type ForGenericStatement = Node & {
+		type = "statement",
+		kind = "generic_for",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["for"] = Token,
+			["="] = Token,
+			["in"] = Token,
+			["do"] = Token,
+			["end"] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type AssignmentLocalStatement = Node & {
+		type = "statement",
+		kind = "local_assignment",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["left,"] = List<|Token|>,
+			["="] = nil | Token,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type AssignmentLocalTypeStatement = Node & {
+		type = "statement",
+		kind = "local_type_assignment",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["local"] = Token,
+			["left,"] = List<|Token|>,
+			["="] = Token,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type AssignmentDestructureStatement = Node & {
+		type = "statement",
+		kind = "destructure_assignment",
+		default = nil | ValueExpression,
+		default_comma = Token,
+		left = List<|ValueExpression|>,
+		right = Node,
+		tokens = Expression.tokens & {
+			["{"] = Token,
+			[","] = List<|Token|>,
+			["}"] = Token,
+			["="] = Token,
+		},
+	}]]
+--[[#local type AssignmentLocalDestructureStatement = Node & {
+		type = "statement",
+		kind = "local_destructure_assignment",
+		default = ValueExpression,
+		default_comma = Token,
+		left = List<|ValueExpression|>,
+		right = Node,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["{"] = Token,
+			[","] = List<|Token|>,
+			["}"] = Token,
+			["="] = Token,
+		},
+	}]]
+--[[#local type AssignmentStatement = Node & {
+		type = "statement",
+		kind = "assignment",
+		left = List<|Node|>,
+		right = List<|Node|>,
+		tokens = Expression.tokens & {
+			["="] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type CallExpressionStatement = Node & {
+	type = "statement",
+	kind = "call_expression",
+	expression = Node,
+}]]
+--[[#local type FunctionSignatureTypeExpression = Node & {
+		type = "expression",
+		kind = "function_signature",
+		stmnt = boolean; // ???
+		identifiers = nil | List<|FunctionArgumentSubExpression|>,
+		return_types = nil | List<|FunctionReturnTypeSubExpression|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["="] = Token,
+			["arguments)"] = Token,
+			["arguments,"] = List<|Token|>,
+			["arguments("] = Token,
+			[">"] = Token,
+			["return("] = Token,
+			["return,"] = List<|Token|>,
+			["return)"] = Token,
+		},
+	}]]
+--[[#local type AssignmentTypeStatement = Node & {
+		type = "statement",
+		kind = "type_assignment",
+		left = List<|Node|>,
+		right = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["^"] = nil | Token,
+			["="] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type Nodes = {
+	EmptyUnionTypeExpression,
+	VarargTypeExpression,
+	ValueExpression,
+	FunctionArgumentSubExpression,
+	FunctionReturnTypeSubExpression,
+	TableExpressionKeyValueSubExpression,
+	TableSpreadSubExpression,
+	TableKeyValueSubExpression,
+	TableIndexValueSubExpression,
+	TableExpression,
+	PostfixCallSubExpression,
+	PostfixIndexSubExpression,
+	EndOfFileStatement,
+	DebugParserDebugCodeStatement,
+	DebugAnalyzerCodeStatement,
+	ReturnStatement,
+	BreakStatement,
+	ContinueStatement,
+	SemicolonStatement,
+	GotoStatement,
+	GotoLabelStatement,
+	BinaryOperatorExpression,
+	FunctionAnalyzerStatement,
+	FunctionTypeStatement,
+	FunctionAnalyzerExpression,
+	FunctionTypeExpression,
+	FunctionExpression,
+	FunctionLocalStatement,
+	FunctionLocalTypeStatement,
+	FunctionStatement,
+	FunctionLocalAnalyzerStatement,
+	ImportExpression,
+	PrefixOperatorExpression,
+	PostfixOperatorSubExpression,
+	RepeatStatement,
+	DoStatement,
+	IfStatement,
+	WhileStatement,
+	ForNumericStatement,
+	ForGenericStatement,
+	AssignmentLocalStatement,
+	AssignmentLocalTypeStatement,
+	AssignmentDestructureStatement,
+	AssignmentLocalDestructureStatement,
+	AssignmentStatement,
+	CallExpressionStatement,
+	FunctionSignatureTypeExpression,
+	AssignmentTypeStatement,
+}]]
+--[[#local type ExpressionKind = (function()
+	local type union = |
+
+	for _, node in pairs(Nodes) do
+		if node.type == "expression" then type union = union | node.kind end
+	end
+
+	return union
+end)()]]
+--[[#local type StatementKind = (function()
+	local type union = |
+
+	for _, node in pairs(Nodes) do
+		if node.type == "statement" then type union = union | node.kind end
+	end
+
+	return union
+end)()]]
+return {
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Nodes = Nodes,
+	EmptyUnionTypeExpression = EmptyUnionTypeExpression,
+	VarargTypeExpression = VarargTypeExpression,
+	ValueExpression = ValueExpression,
+	FunctionArgumentSubExpression = FunctionArgumentSubExpression,
+	FunctionReturnTypeSubExpression = FunctionReturnTypeSubExpression,
+	TableExpressionKeyValueSubExpression = TableExpressionKeyValueSubExpression,
+	TableSpreadSubExpression = TableSpreadSubExpression,
+	TableKeyValueSubExpression = TableKeyValueSubExpression,
+	TableIndexValueSubExpression = TableIndexValueSubExpression,
+	TableExpression = TableExpression,
+	PostfixCallSubExpression = PostfixCallSubExpression,
+	PostfixIndexSubExpression = PostfixIndexSubExpression,
+	EndOfFileStatement = EndOfFileStatement,
+	DebugParserDebugCodeStatement = DebugParserDebugCodeStatement,
+	DebugAnalyzerCodeStatement = DebugAnalyzerCodeStatement,
+	ReturnStatement = ReturnStatement,
+	BreakStatement = BreakStatement,
+	ContinueStatement = ContinueStatement,
+	SemicolonStatement = SemicolonStatement,
+	GotoStatement = GotoStatement,
+	GotoLabelStatement = GotoLabelStatement,
+	BinaryOperatorExpression = BinaryOperatorExpression,
+	FunctionAnalyzerStatement = FunctionAnalyzerStatement,
+	FunctionTypeStatement = FunctionTypeStatement,
+	FunctionAnalyzerExpression = FunctionAnalyzerExpression,
+	FunctionTypeExpression = FunctionTypeExpression,
+	FunctionExpression = FunctionExpression,
+	FunctionLocalStatement = FunctionLocalStatement,
+	FunctionLocalTypeStatement = FunctionLocalTypeStatement,
+	FunctionStatement = FunctionStatement,
+	FunctionLocalAnalyzerStatement = FunctionLocalAnalyzerStatement,
+	ImportExpression = ImportExpression,
+	PrefixOperatorExpression = PrefixOperatorExpression,
+	PostfixOperatorSubExpression = PostfixOperatorSubExpression,
+	RepeatStatement = RepeatStatement,
+	DoStatement = DoStatement,
+	IfStatement = IfStatement,
+	WhileStatement = WhileStatement,
+	ForNumericStatement = ForNumericStatement,
+	ForGenericStatement = ForGenericStatement,
+	AssignmentLocalStatement = AssignmentLocalStatement,
+	AssignmentLocalTypeStatement = AssignmentLocalTypeStatement,
+	AssignmentDestructureStatement = AssignmentDestructureStatement,
+	AssignmentLocalDestructureStatement = AssignmentLocalDestructureStatement,
+	AssignmentStatement = AssignmentStatement,
+	CallExpressionStatement = CallExpressionStatement,
+	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
+	AssignmentTypeStatement = AssignmentTypeStatement,
+} end
+IMPORTS['nattlua/parser/nodes.nlua'] = function(...) --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+
+--[[#local type Node = {
+	type = "statement" | "expression",
+	kind = string,
+	id = number,
+	parent = Node | nil,
+	environment = "runtime" | "typesystem",
+}]]
+--[[#local type Statement = Node & {
+	type = "statement",
+}]]
+--[[#local type Expression = Node & {
+		type = "expression",
+		standalone_letter = Node | nil,
+		type_expression = Node | nil,
+		tokens = {
+			["("] = List<|Token|>,
+			[")"] = List<|Token|>,
+			[":"] = Token,
+			["as"] = Token,
+			["is"] = Token,
+		},
+	}]]
+--[[#local type EmptyUnionTypeExpression = Expression & {
+		kind = "empty_union",
+		-- &= assignment operator?
+		tokens = Expression.tokens & {
+			["|"] = Token,
+		},
+	}]]
+--[[#local type VarargTypeExpression = Node & {
+		type = "expression",
+		kind = "type_vararg",
+		expression = Node,
+		tokens = Expression.tokens & {
+			["..."] = Token,
+		},
+	}]]
+--[[#local type ValueExpression = Expression & {
+		type = "expression",
+		kind = "value",
+		value = Token,
+		self_call = boolean,
+	}]]
+--[[#// function( foo = Bar )
+local type FunctionArgumentSubExpression = Node & {
+		type = "expression",
+		kind = "function_argument",
+		identifier = nil | Token,
+		type_expression = Node,
+		tokens = Expression.tokens & {
+			[":"] = nil | Token,
+		},
+	}]]
+--[[#local type FunctionReturnTypeSubExpression = Node & {
+		type = "expression",
+		kind = "function_return_type",
+		identifier = nil | Token,
+		type_expression = Node,
+		tokens = Expression.tokens & {
+			[":"] = nil | Token,
+		},
+	}]]
+--[[#// { [key] = value }
+local type TableExpressionKeyValueSubExpression = Node & {
+		type = "expression",
+		kind = "table_expression_value",
+		expression_key = boolean,
+		key_expression = Node,
+		value_expression = Node,
+		tokens = Expression.tokens & {
+			["="] = Token,
+			["["] = Token,
+			["]"] = Token,
+		},
+	}]]
+--[[#local type TableSpreadSubExpression = Node & {
+		type = "expression",
+		kind = "table_spread",
+		expression = Node,
+		tokens = Expression.tokens & {
+			["..."] = Token,
+		},
+	}]]
+--[[#// { key = value }
+local type TableKeyValueSubExpression = Node & {
+		type = "expression",
+		kind = "table_key_value",
+		identifier = Token,
+		value_expression = Node,
+		spread = nil | TableSpreadSubExpression,
+		tokens = Expression.tokens & {
+			["="] = Token,
+		},
+	}]]
+--[[#// { value }
+local type TableIndexValueSubExpression = Node & {
+		type = "expression",
+		kind = "table_index_value",
+		value_expression = Node,
+		spread = nil | TableSpreadSubExpression,
+		key = number,
+	}]]
+--[[#// { [key] = value, key = value, value }
+local type TableExpression = Node & {
+		type = "expression",
+		kind = "table",
+		children = List<|Node|>,
+		spread = boolean,
+		is_array = boolean,
+		is_dictionary = boolean,
+		tokens = Expression.tokens & {
+			["{"] = Token,
+			["}"] = Token,
+			["separators"] = List<|Token|>,
+		},
+	}]]
+--[[#// foo(a,b,c)
+local type PostfixCallSubExpression = Node & {
+		type = "expression",
+		kind = "postfix_call",
+		arguments = List<|Node|>,
+		is_type_call = boolean,
+		left = Node,
+		tokens = Expression.tokens & {
+			["arguments("] = nil | Token,
+			[","] = List<|Token|>,
+			["arguments)"] = nil | Token,
+			// type call
+			["!"] = Token,
+		},
+	}]]
+--[[#local type PostfixIndexSubExpression = Node & {
+		type = "expression",
+		kind = "postfix_expression_index",
+		index = Node,
+		left = Node,
+		tokens = Expression.tokens & {
+			["["] = Token,
+			["]"] = Token,
+		},
+	}]]
+--[[#local type EndOfFileStatement = Node & {
+		type = "statement",
+		kind = "end_of_file",
+		tokens = Expression.tokens & {
+			["end_of_file"] = Token,
+		},
+	}]]
+--[[#local type DebugParserDebugCodeStatement = Node & {
+		type = "statement",
+		kind = "parser_debug_code",
+		lua_code = ValueExpression,
+		tokens = Expression.tokens & {
+			["£"] = Token,
+		},
+	}]]
+--[[#local type DebugAnalyzerCodeStatement = Node & {
+		type = "statement",
+		kind = "analyzer_debug_code",
+		lua_code = ValueExpression,
+		tokens = Expression.tokens & {
+			["§"] = Token,
+		},
+	}]]
+--[[#local type ReturnStatement = Node & {
+		type = "statement",
+		kind = "return",
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["return"] = Token,
+			[","] = List<|Token|>,
+		},
+	}]]
+--[[#local type BreakStatement = Node & {
+		type = "statement",
+		kind = "break",
+		tokens = Expression.tokens & {
+			["break"] = Token,
+		},
+	}]]
+--[[#local type ContinueStatement = Node & {
+		type = "statement",
+		kind = "continue",
+		tokens = Expression.tokens & {
+			["continue"] = Token,
+		},
+	}]]
+--[[#local type SemicolonStatement = Node & {
+		type = "statement",
+		kind = "semicolon",
+		tokens = Expression.tokens & {
+			[";"] = Token,
+		},
+	}]]
+--[[#local type GotoStatement = Node & {
+		type = "statement",
+		kind = "goto",
+		identifier = Token,
+		tokens = Expression.tokens & {
+			["goto"] = Token,
+		},
+	}]]
+--[[#local type GotoLabelStatement = Node & {
+		type = "statement",
+		kind = "goto_label",
+		identifier = Token,
+		tokens = Expression.tokens & {
+			[" = =left"] = Token,
+			[" = =right"] = Token,
+		},
+	}]]
+--[[#local type BinaryOperatorExpression = Node & {
+		type = "expression",
+		kind = "binary_operator",
+		operator = Token,
+		left = Node,
+		right = Node,
+	}]]
+--[[#local type FunctionAnalyzerStatement = Node & {
+		type = "statement",
+		kind = "analyzer_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		tokens = Expression.tokens & {
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionTypeStatement = Node & {
+		type = "statement",
+		kind = "type_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionAnalyzerExpression = Node & {
+		type = "expression",
+		kind = "analyzer_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionTypeExpression = Node & {
+		type = "expression",
+		kind = "type_function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionExpression = Node & {
+		type = "expression",
+		kind = "function",
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionLocalStatement = Node & {
+		type = "statement",
+		kind = "local_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionLocalTypeStatement = Node & {
+		type = "statement",
+		kind = "local_type_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["local"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionStatement = Node & {
+		type = "statement",
+		kind = "function",
+		index_expression = BinaryOperatorExpression | ValueExpression,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type FunctionLocalAnalyzerStatement = Node & {
+		type = "statement",
+		kind = "local_analyzer_function",
+		label = Token,
+		arguments = List<|FunctionArgumentSubExpression|>,
+		return_types = List<|FunctionReturnTypeSubExpression|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["analyzer"] = Token,
+			["function"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			["arguments,"] = List<|Token|>,
+			["return_types,"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type ImportExpression = Node & {
+		type = "expression",
+		kind = "import",
+		path = string,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["import"] = Token,
+			["arguments)"] = Token,
+			["arguments("] = Token,
+			[","] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type PrefixOperatorExpression = Node & {
+		type = "expression",
+		kind = "prefix_operator",
+		operator = Token,
+		right = Node,
+	}]]
+--[[#local type PostfixOperatorSubExpression = Node & {
+		type = "expression",
+		kind = "postfix_operator",
+		operator = Token,
+		left = Node,
+	}]]
+--[[#local type RepeatStatement = Node & {
+		type = "statement",
+		kind = "repeat",
+		statements = List<|Node|>,
+		expression = Node,
+		tokens = Expression.tokens & {
+			["repeat"] = Token,
+			["until"] = Token,
+		},
+	}]]
+--[[#local type DoStatement = Node & {
+		type = "statement",
+		kind = "do",
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["do"] = Token,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type IfStatement = Node & {
+		type = "statement",
+		kind = "if",
+		expressions = List<|Node|>,
+		statements = List<|List<|Node|>|>,
+		tokens = Expression.tokens & {
+			["if/else/elseif"] = List<|Token|>,
+			["then"] = List<|Token|>,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type WhileStatement = Node & {
+		type = "statement",
+		kind = "while",
+		expression = Node,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["while"] = Token,
+			["do"] = Token,
+			["end"] = Token,
+		},
+	}]]
+--[[#local type ForNumericStatement = Node & {
+		type = "statement",
+		kind = "numeric_for",
+		identifier = Token,
+		init_expression = Node,
+		max_expression = Node,
+		step_expression = nil | Node,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["for"] = Token,
+			["="] = Token,
+			["do"] = Token,
+			["end"] = Token,
+			[",2"] = List<|Token|>,
+		},
+	}]]
+--[[#local type ForGenericStatement = Node & {
+		type = "statement",
+		kind = "generic_for",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		statements = List<|Node|>,
+		tokens = Expression.tokens & {
+			["for"] = Token,
+			["="] = Token,
+			["in"] = Token,
+			["do"] = Token,
+			["end"] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type AssignmentLocalStatement = Node & {
+		type = "statement",
+		kind = "local_assignment",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["left,"] = List<|Token|>,
+			["="] = nil | Token,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type AssignmentLocalTypeStatement = Node & {
+		type = "statement",
+		kind = "local_type_assignment",
+		identifiers = List<|Node|>,
+		expressions = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["local"] = Token,
+			["left,"] = List<|Token|>,
+			["="] = Token,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type AssignmentDestructureStatement = Node & {
+		type = "statement",
+		kind = "destructure_assignment",
+		default = nil | ValueExpression,
+		default_comma = Token,
+		left = List<|ValueExpression|>,
+		right = Node,
+		tokens = Expression.tokens & {
+			["{"] = Token,
+			[","] = List<|Token|>,
+			["}"] = Token,
+			["="] = Token,
+		},
+	}]]
+--[[#local type AssignmentLocalDestructureStatement = Node & {
+		type = "statement",
+		kind = "local_destructure_assignment",
+		default = ValueExpression,
+		default_comma = Token,
+		left = List<|ValueExpression|>,
+		right = Node,
+		tokens = Expression.tokens & {
+			["local"] = Token,
+			["{"] = Token,
+			[","] = List<|Token|>,
+			["}"] = Token,
+			["="] = Token,
+		},
+	}]]
+--[[#local type AssignmentStatement = Node & {
+		type = "statement",
+		kind = "assignment",
+		left = List<|Node|>,
+		right = List<|Node|>,
+		tokens = Expression.tokens & {
+			["="] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type CallExpressionStatement = Node & {
+	type = "statement",
+	kind = "call_expression",
+	expression = Node,
+}]]
+--[[#local type FunctionSignatureTypeExpression = Node & {
+		type = "expression",
+		kind = "function_signature",
+		stmnt = boolean; // ???
+		identifiers = nil | List<|FunctionArgumentSubExpression|>,
+		return_types = nil | List<|FunctionReturnTypeSubExpression|>,
+		tokens = Expression.tokens & {
+			["function"] = Token,
+			["="] = Token,
+			["arguments)"] = Token,
+			["arguments,"] = List<|Token|>,
+			["arguments("] = Token,
+			[">"] = Token,
+			["return("] = Token,
+			["return,"] = List<|Token|>,
+			["return)"] = Token,
+		},
+	}]]
+--[[#local type AssignmentTypeStatement = Node & {
+		type = "statement",
+		kind = "type_assignment",
+		left = List<|Node|>,
+		right = List<|Node|>,
+		tokens = Expression.tokens & {
+			["type"] = Token,
+			["^"] = nil | Token,
+			["="] = Token,
+			["left,"] = List<|Token|>,
+			["right,"] = List<|Token|>,
+		},
+	}]]
+--[[#local type Nodes = {
+	EmptyUnionTypeExpression,
+	VarargTypeExpression,
+	ValueExpression,
+	FunctionArgumentSubExpression,
+	FunctionReturnTypeSubExpression,
+	TableExpressionKeyValueSubExpression,
+	TableSpreadSubExpression,
+	TableKeyValueSubExpression,
+	TableIndexValueSubExpression,
+	TableExpression,
+	PostfixCallSubExpression,
+	PostfixIndexSubExpression,
+	EndOfFileStatement,
+	DebugParserDebugCodeStatement,
+	DebugAnalyzerCodeStatement,
+	ReturnStatement,
+	BreakStatement,
+	ContinueStatement,
+	SemicolonStatement,
+	GotoStatement,
+	GotoLabelStatement,
+	BinaryOperatorExpression,
+	FunctionAnalyzerStatement,
+	FunctionTypeStatement,
+	FunctionAnalyzerExpression,
+	FunctionTypeExpression,
+	FunctionExpression,
+	FunctionLocalStatement,
+	FunctionLocalTypeStatement,
+	FunctionStatement,
+	FunctionLocalAnalyzerStatement,
+	ImportExpression,
+	PrefixOperatorExpression,
+	PostfixOperatorSubExpression,
+	RepeatStatement,
+	DoStatement,
+	IfStatement,
+	WhileStatement,
+	ForNumericStatement,
+	ForGenericStatement,
+	AssignmentLocalStatement,
+	AssignmentLocalTypeStatement,
+	AssignmentDestructureStatement,
+	AssignmentLocalDestructureStatement,
+	AssignmentStatement,
+	CallExpressionStatement,
+	FunctionSignatureTypeExpression,
+	AssignmentTypeStatement,
+}]]
+--[[#local type ExpressionKind = (function()
+	local type union = |
+
+	for _, node in pairs(Nodes) do
+		if node.type == "expression" then type union = union | node.kind end
+	end
+
+	return union
+end)()]]
+--[[#local type StatementKind = (function()
+	local type union = |
+
+	for _, node in pairs(Nodes) do
+		if node.type == "statement" then type union = union | node.kind end
+	end
+
+	return union
+end)()]]
+return {
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Nodes = Nodes,
+	EmptyUnionTypeExpression = EmptyUnionTypeExpression,
+	VarargTypeExpression = VarargTypeExpression,
+	ValueExpression = ValueExpression,
+	FunctionArgumentSubExpression = FunctionArgumentSubExpression,
+	FunctionReturnTypeSubExpression = FunctionReturnTypeSubExpression,
+	TableExpressionKeyValueSubExpression = TableExpressionKeyValueSubExpression,
+	TableSpreadSubExpression = TableSpreadSubExpression,
+	TableKeyValueSubExpression = TableKeyValueSubExpression,
+	TableIndexValueSubExpression = TableIndexValueSubExpression,
+	TableExpression = TableExpression,
+	PostfixCallSubExpression = PostfixCallSubExpression,
+	PostfixIndexSubExpression = PostfixIndexSubExpression,
+	EndOfFileStatement = EndOfFileStatement,
+	DebugParserDebugCodeStatement = DebugParserDebugCodeStatement,
+	DebugAnalyzerCodeStatement = DebugAnalyzerCodeStatement,
+	ReturnStatement = ReturnStatement,
+	BreakStatement = BreakStatement,
+	ContinueStatement = ContinueStatement,
+	SemicolonStatement = SemicolonStatement,
+	GotoStatement = GotoStatement,
+	GotoLabelStatement = GotoLabelStatement,
+	BinaryOperatorExpression = BinaryOperatorExpression,
+	FunctionAnalyzerStatement = FunctionAnalyzerStatement,
+	FunctionTypeStatement = FunctionTypeStatement,
+	FunctionAnalyzerExpression = FunctionAnalyzerExpression,
+	FunctionTypeExpression = FunctionTypeExpression,
+	FunctionExpression = FunctionExpression,
+	FunctionLocalStatement = FunctionLocalStatement,
+	FunctionLocalTypeStatement = FunctionLocalTypeStatement,
+	FunctionStatement = FunctionStatement,
+	FunctionLocalAnalyzerStatement = FunctionLocalAnalyzerStatement,
+	ImportExpression = ImportExpression,
+	PrefixOperatorExpression = PrefixOperatorExpression,
+	PostfixOperatorSubExpression = PostfixOperatorSubExpression,
+	RepeatStatement = RepeatStatement,
+	DoStatement = DoStatement,
+	IfStatement = IfStatement,
+	WhileStatement = WhileStatement,
+	ForNumericStatement = ForNumericStatement,
+	ForGenericStatement = ForGenericStatement,
+	AssignmentLocalStatement = AssignmentLocalStatement,
+	AssignmentLocalTypeStatement = AssignmentLocalTypeStatement,
+	AssignmentDestructureStatement = AssignmentDestructureStatement,
+	AssignmentLocalDestructureStatement = AssignmentLocalDestructureStatement,
+	AssignmentStatement = AssignmentStatement,
+	CallExpressionStatement = CallExpressionStatement,
+	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
+	AssignmentTypeStatement = AssignmentTypeStatement,
+} end
 package.loaded["nattlua.other.table_print"] = (function(...)
 	local pairs = _G.pairs
 	local tostring = _G.tostring
@@ -343,9 +2150,9 @@ package.loaded["nattlua.other.quote"] = (function(...)
 	return helpers	
 end)("./nattlua/other/quote.lua");
 package.loaded["nattlua.other.helpers"] = (function(...)
-	--[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
-	--[[#import("~/nattlua/code/code.lua")]]
+	IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
 	local math = require("math")
 	local table = require("table")
 	local quote = require("nattlua.other.quote")
@@ -2713,7 +4520,7 @@ package.loaded["nattlua.types.string"] = (function(...)
 	local context = require("nattlua.analyzer.context")
 	local META = dofile("nattlua/types/base.lua")
 
-	--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { Token, TokenType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 	--[[#local type TBaseType = META.TBaseType]]
 	META.Type = "string"
@@ -2876,7 +4683,7 @@ package.loaded["nattlua.types.table"] = (function(...)
 	local Tuple = require("nattlua.types.tuple").Tuple
 	local type_errors = require("nattlua.types.error_messages")
 	local META = dofile("nattlua/types/base.lua")
-	--[[#local type BaseType = import("~/nattlua/types/base.lua")]]
+	--[[#local type BaseType = IMPORTS['nattlua/types/base.lua']("~/nattlua/types/base.lua")]]
 	META.Type = "table"
 	--[[#type META.@Name = "TTable"]]
 	--[[#type TTable = META.@Self]]
@@ -3841,10 +5648,7 @@ package.loaded["nattlua.runtime.base_environment"] = (function(...)
 	local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
 	return {
 		BuildBaseEnvironment = function()
-			if _G.DISABLE_BASE_ENV then
-				return require("nattlua.types.table").Table({}),
-				require("nattlua.types.table").Table({})
-			end
+			if _G.DISABLE_BASE_ENV then return Table({}), Table({}) end
 
 			local nl = require("nattlua")
 			local compiler = assert(nl.File("nattlua/definitions/index.nlua"))
@@ -4164,7 +5968,7 @@ package.loaded["nattlua.syntax.characters"] = (function(...)
 	return characters	
 end)("./nattlua/syntax/characters.lua");
 package.loaded["nattlua.syntax.syntax"] = (function(...)
-	--[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 	local META = {}
 	META.__index = META
@@ -4536,7 +6340,7 @@ package.loaded["nattlua.syntax.runtime"] = (function(...)
 	return runtime	
 end)("./nattlua/syntax/runtime.lua");
 package.loaded["nattlua.lexer.lexer"] = (function(...)
-	--[[#local type { TokenType } = import("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { TokenType } = IMPORTS['./nattlua/lexer/token.nlua']("./token.nlua")]]
 
 	local Code = require("nattlua.code.code")
 	local Token = require("nattlua.lexer.token").New
@@ -4789,7 +6593,7 @@ package.loaded["nattlua.lexer.lexer"] = (function(...)
 	do
 		--[[#local type Lexer = META.@Self]]
 
-		--[[#local type { TokenReturnType } = import("~/nattlua/lexer/token.nlua")]]
+		--[[#local type { TokenReturnType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 		local characters = require("nattlua.syntax.characters")
 		local runtime_syntax = require("nattlua.syntax.runtime")
@@ -5796,7 +7600,11 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 				end
 			end
 		elseif node.kind == "import" then
-			self:EmitImportExpression(node)
+			if not node.path then
+				self:EmitInvalidLuaCode("EmitImportExpression", node)
+			else
+				self:EmitImportExpression(node)
+			end
 		elseif node.kind == "require" then
 			self:EmitRequireExpression(node)
 		elseif node.kind == "type_table" then
@@ -7026,6 +8834,7 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self[func](self, ...)
 			self:StopEmittingInvalidLuaCode(emitted)
+			return emitted
 		end
 	end
 
@@ -7141,11 +8950,11 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 	return META	
 end)("./nattlua/transpiler/emitter.lua");
 package.loaded["nattlua.parser.node"] = (function(...)
-	--[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
-	--[[#local type { ExpressionKind, StatementKind } = import("~/nattlua/parser/nodes.nlua")]]
+	--[[#local type { ExpressionKind, StatementKind } = IMPORTS['nattlua/parser/nodes.nlua']("~/nattlua/parser/nodes.nlua")]]
 
-	--[[#import("~/nattlua/code/code.lua")]]
+	IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
 	--[[#local type NodeType = "expression" | "statement"]]
 	--[[#local type Node = any]]
 	local ipairs = _G.ipairs
@@ -7324,7 +9133,7 @@ package.loaded["nattlua.parser.node"] = (function(...)
 	return META	
 end)("./nattlua/parser/node.lua");
 package.loaded["nattlua.parser.base"] = (function(...)
-	--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { Token, TokenType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 	--[[#local type { 
 		ExpressionKind,
@@ -7339,9 +9148,9 @@ package.loaded["nattlua.parser.base"] = (function(...)
 		FunctionStatement,
 		FunctionLocalAnalyzerStatement,
 		ValueExpression
-	 } = import("~/nattlua/parser/nodes.nlua")]]
+	 } = IMPORTS['./nattlua/parser/nodes.nlua']("./nodes.nlua")]]
 
-	--[[#import("~/nattlua/code/code.lua")]]
+	IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
 	--[[#local type NodeType = "expression" | "statement"]]
 	local Node = require("nattlua.parser.node")
 	local ipairs = _G.ipairs
@@ -13594,8 +15403,7 @@ package.loaded["nattlua.analyzer.expressions.import"] = (function(...)
 	local table = require("table")
 	return {
 		AnalyzeImport = function(self, node)
-			local args = self:AnalyzeExpressions(node.expressions)
-			return self:AnalyzeRootStatement(node.root, table.unpack(args))
+			return self:AnalyzeRootStatement(node.root)
 		end,
 	}	
 end)("./nattlua/analyzer/expressions/import.lua");

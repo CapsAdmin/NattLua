@@ -525,7 +525,11 @@ function META:EmitExpression(node)
 			end
 		end
 	elseif node.kind == "import" then
-		self:EmitImportExpression(node)
+		if not node.path then
+			self:EmitInvalidLuaCode("EmitImportExpression", node)
+		else
+			self:EmitImportExpression(node)
+		end
 	elseif node.kind == "require" then
 		self:EmitRequireExpression(node)
 	elseif node.kind == "type_table" then
@@ -1755,6 +1759,7 @@ do -- types
 		local emitted = self:StartEmittingInvalidLuaCode()
 		self[func](self, ...)
 		self:StopEmittingInvalidLuaCode(emitted)
+		return emitted
 	end
 end
 
