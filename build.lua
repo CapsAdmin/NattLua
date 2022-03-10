@@ -7,7 +7,7 @@ local c = assert(nl.File(entry, {
     inline_require = true,
 }))
 
-local code = c:Emit({
+local lua_code = c:Emit({
     preserve_whitespace = false,
     string_quote = "\"",
     no_semicolon = true,
@@ -21,28 +21,28 @@ local code = c:Emit({
 })
 io.write(" - OK\n")
 
-io.write("output is "..#code.." bytes\n")
+io.write("output is "..#lua_code.." bytes\n")
 
--- double check that the code is valid
-io.write("checking if code is loadable")
-assert(loadstring(code))()
+-- double check that the lua_code is valid
+io.write("checking if lua_code is loadable")
+assert(loadstring(lua_code))()
 io.write(" - OK\n")
 
 -- run tests before we write the file
 local f = io.open("temp_build_output.lua", "w")
-f:write(code)
+f:write(lua_code)
 f:close()
 
 io.write("running tests with temp_build_output.lua")
 io.flush()
-local code = os.execute("luajit -e 'require(\"temp_build_output\") require(\"test\")'")
+local exit_code = os.execute("luajit -e 'require(\"temp_build_output\") require(\"test\")'")
 
-if code == 0 then 
+if exit_code == 0 then 
     io.write(" - OK\n")
 
     io.write("writing build_output.lua")
     local f = io.open("build_output.lua", "w")
-    f:write(code)
+    f:write(lua_code)
     f:close()
     io.write(" - OK\n")
 else
