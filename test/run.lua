@@ -20,14 +20,7 @@ if map then
 end
 
 function _G.test(name, cb)
-	local ok, err = pcall(cb)
-
-	if ok then
-		io.output():flush()
-	else
-		io.write("\n")
-		io.write("FAIL: ", name, ": ", err, "\n")
-	end
+	cb()
 end
 
 function _G.pending() end

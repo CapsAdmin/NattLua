@@ -372,13 +372,13 @@ function META:BuildCode(block)
 			if not self.done[node.path] and node.root then
 				self:EmitNonSpace("package.loaded[")
 				self:EmitToken(node.expressions[1].value)
-				self:EmitNonSpace("] = function(...)")
+				self:EmitNonSpace("] = (function(...)")
 				self:Whitespace("\n")
 				self:Indent()
 				self:EmitStatements(node.root.statements)
 				self:Outdent()
 				self:Whitespace("\n")
-				self:EmitNonSpace("end")
+                self:EmitNonSpace("end)(\""..node.path.."\");")
 				self:Whitespace("\n")
 				self.done[node.path] = true
 			end
