@@ -7,7 +7,7 @@ jobs:
 
     steps:
       - name: checkout latest luajit 2.1
-      - uses: actions/checkout@master
+        uses: actions/checkout@master
         with:
           repository: LuaJIT/LuaJIT
           ref: v2.1
