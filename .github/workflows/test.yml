@@ -14,7 +14,7 @@ jobs:
           path: luajit
 
       - name: build luajit
-        run: cd luajit && make && make install
+        run: cd luajit && make && sudo make install
 
       - name: test
-        run: luajit test/run.lua
+        run: luajit test.lua
