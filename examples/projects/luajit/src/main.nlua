@@ -1,4 +1,4 @@
-local fs = import("filesystem.nlua")
+local fs = import("./filesystem.nlua")
 print("get files: ", assert(fs.get_files(".")))
 
 for k, v in ipairs(assert(fs.get_files("."))) do

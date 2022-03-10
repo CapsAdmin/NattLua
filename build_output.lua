@@ -343,9 +343,9 @@ package.loaded["nattlua.other.quote"] = (function(...)
 	return helpers	
 end)("./nattlua/other/quote.lua");
 package.loaded["nattlua.other.helpers"] = (function(...)
-	--[[#local type { Token } = import_type<|"nattlua/lexer/token.nlua"|>]]
+	--[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
 
-	--[[#import_type<|"nattlua/code/code.lua"|>]]
+	--[[#import("~/nattlua/code/code.lua")]]
 	local math = require("math")
 	local table = require("table")
 	local quote = require("nattlua.other.quote")
@@ -2713,7 +2713,7 @@ package.loaded["nattlua.types.string"] = (function(...)
 	local context = require("nattlua.analyzer.context")
 	local META = dofile("nattlua/types/base.lua")
 
-	--[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+	--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
 
 	--[[#local type TBaseType = META.TBaseType]]
 	META.Type = "string"
@@ -2876,7 +2876,7 @@ package.loaded["nattlua.types.table"] = (function(...)
 	local Tuple = require("nattlua.types.tuple").Tuple
 	local type_errors = require("nattlua.types.error_messages")
 	local META = dofile("nattlua/types/base.lua")
-	--[[#local type BaseType = import_type<|"nattlua/types/base.lua"|>]]
+	--[[#local type BaseType = import("~/nattlua/types/base.lua")]]
 	META.Type = "table"
 	--[[#type META.@Name = "TTable"]]
 	--[[#type TTable = META.@Self]]
@@ -4164,7 +4164,7 @@ package.loaded["nattlua.syntax.characters"] = (function(...)
 	return characters	
 end)("./nattlua/syntax/characters.lua");
 package.loaded["nattlua.syntax.syntax"] = (function(...)
-	--[[#local type { Token } = import_type<|"nattlua/lexer/token.nlua"|>]]
+	--[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
 
 	local META = {}
 	META.__index = META
@@ -4536,7 +4536,7 @@ package.loaded["nattlua.syntax.runtime"] = (function(...)
 	return runtime	
 end)("./nattlua/syntax/runtime.lua");
 package.loaded["nattlua.lexer.lexer"] = (function(...)
-	--[[#local type { TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+	--[[#local type { TokenType } = import("~/nattlua/lexer/token.nlua")]]
 
 	local Code = require("nattlua.code.code")
 	local Token = require("nattlua.lexer.token").New
@@ -4789,7 +4789,7 @@ package.loaded["nattlua.lexer.lexer"] = (function(...)
 	do
 		--[[#local type Lexer = META.@Self]]
 
-		--[[#local type { TokenReturnType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+		--[[#local type { TokenReturnType } = import("~/nattlua/lexer/token.nlua")]]
 
 		local characters = require("nattlua.syntax.characters")
 		local runtime_syntax = require("nattlua.syntax.runtime")
@@ -7141,11 +7141,11 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 	return META	
 end)("./nattlua/transpiler/emitter.lua");
 package.loaded["nattlua.parser.node"] = (function(...)
-	--[[#local type { Token } = import_type<|"nattlua/lexer/token.nlua"|>]]
+	--[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
 
-	--[[#local type { ExpressionKind, StatementKind } = import_type<|"nattlua/parser/nodes.nlua"|>]]
+	--[[#local type { ExpressionKind, StatementKind } = import("~/nattlua/parser/nodes.nlua")]]
 
-	--[[#import_type<|"nattlua/code/code.lua"|>]]
+	--[[#import("~/nattlua/code/code.lua")]]
 	--[[#local type NodeType = "expression" | "statement"]]
 	--[[#local type Node = any]]
 	local ipairs = _G.ipairs
@@ -7324,7 +7324,7 @@ package.loaded["nattlua.parser.node"] = (function(...)
 	return META	
 end)("./nattlua/parser/node.lua");
 package.loaded["nattlua.parser.base"] = (function(...)
-	--[[#local type { Token, TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+	--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
 
 	--[[#local type { 
 		ExpressionKind,
@@ -7339,9 +7339,9 @@ package.loaded["nattlua.parser.base"] = (function(...)
 		FunctionStatement,
 		FunctionLocalAnalyzerStatement,
 		ValueExpression
-	 } = import_type<|"nattlua/parser/nodes.nlua"|>]]
+	 } = import("~/nattlua/parser/nodes.nlua")]]
 
-	--[[#import_type<|"nattlua/code/code.lua"|>]]
+	--[[#import("~/nattlua/code/code.lua")]]
 	--[[#local type NodeType = "expression" | "statement"]]
 	local Node = require("nattlua.parser.node")
 	local ipairs = _G.ipairs

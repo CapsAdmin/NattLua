@@ -1,4 +1,4 @@
-local type { Token } = import_type<|"nattlua/lexer/token.nlua"|>
+local type { Token } = import("~/nattlua/lexer/token.nlua")
 
 local type Node = {
 	type = "statement" | "expression",

@@ -373,7 +373,7 @@ identical([=[--[[#local type {
 	FunctionStatement,
 	FunctionLocalAnalyzerStatement,
 	ValueExpression
- } = import_type<|"nattlua/parser/nodes.nlua"|>]]]=])
+ } = import("~/nattlua/parser/nodes.nlua")]]]=])
 check(
 	{preserve_whitespace = false, use_comment_types = true, annotate = true},
 	[=[function META:OnError(

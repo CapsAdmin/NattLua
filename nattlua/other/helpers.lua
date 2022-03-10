@@ -1,6 +1,6 @@
---[[#local type { Token } = import_type<|"nattlua/lexer/token.nlua"|>]]
+--[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
 
---[[#import_type<|"nattlua/code/code.lua"|>]]
+--[[#import("~/nattlua/code/code.lua")]]
 local math = require("math")
 local table = require("table")
 local quote = require("nattlua.other.quote")

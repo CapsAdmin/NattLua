@@ -140,7 +140,7 @@ for _, info in ipairs(files) do
 			end
 		)() .. [[
 
-		import_type<|"nattlua/glua.nlua"|>
+		import("~/nattlua/glua.nlua")
 
 	]] .. compiler.Code.Buffer
 	assert(compiler:Analyze())

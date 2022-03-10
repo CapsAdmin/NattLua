@@ -46,7 +46,7 @@ function table.print(...)
 end
 
 IMPORTS = IMPORTS or {}
-IMPORTS['examples/projects/luajit/src/platforms/windows/filesystem.nlua'] = function(...) local type contract = --[[#import_type<|"platforms/filesystem.nlua"|>]]
+IMPORTS['examples/projects/luajit/src/platforms/windows/filesystem.nlua'] = function(...) local type contract = --[[#import("~/platforms/filesystem.nlua")]]
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"
@@ -231,7 +231,7 @@ do
 end
 
 return fs end
-IMPORTS['examples/projects/luajit/src/platforms/unix/filesystem.nlua'] = function(...) local type contract = --[[#import_type<|"platforms/filesystem.nlua"|>]]
+IMPORTS['examples/projects/luajit/src/platforms/unix/filesystem.nlua'] = function(...) local type contract = --[[#import("~/platforms/filesystem.nlua")]]
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"

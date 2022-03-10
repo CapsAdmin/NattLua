@@ -1,4 +1,4 @@
-import_type<|"nattlua/definitions/glua.nlua"|>
+import("~/nattlua/definitions/glua.nlua")
 local aowl = {}
 aowl.commands = {}
 aowl.ArgumentTypes = {

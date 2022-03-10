@@ -1,7 +1,6 @@
-analyzer function import_type(name: string)
-	if not name:IsLiteral() then error("path must be a literal string") end
-
-	local path = name:GetData()
+analyzer function import_type(path: literal string)
+	path = path:GetData()
+    
 	analyzer.loaded = analyzer.loaded or {}
 
 	if not analyzer.loaded[path] then
@@ -14,17 +13,17 @@ analyzer function import_type(name: string)
 	return analyzer.loaded[path]
 end
 
-import_type<|"nattlua/definitions/utility.nlua"|>
-import_type<|"nattlua/definitions/attest.nlua"|>
-import_type<|"nattlua/definitions/lua/globals.nlua"|>
-import_type<|"nattlua/definitions/lua/io.nlua"|>
-import_type<|"nattlua/definitions/lua/luajit.nlua"|>
-import_type<|"nattlua/definitions/lua/debug.nlua"|>
-import_type<|"nattlua/definitions/lua/package.nlua"|>
-import_type<|"nattlua/definitions/lua/bit.nlua"|>
-import_type<|"nattlua/definitions/lua/table.nlua"|>
-import_type<|"nattlua/definitions/lua/string.nlua"|>
-import_type<|"nattlua/definitions/lua/math.nlua"|>
-import_type<|"nattlua/definitions/lua/os.nlua"|>
-import_type<|"nattlua/definitions/lua/coroutine.nlua"|>
-import_type<|"nattlua/definitions/typed_ffi.nlua"|>
+import("utility.nlua")
+import("attest.nlua")
+import("lua/globals.nlua")
+import("lua/io.nlua")
+import("lua/luajit.nlua")
+import("lua/debug.nlua")
+import("lua/package.nlua")
+import("lua/bit.nlua")
+import("lua/table.nlua")
+import("lua/string.nlua")
+import("lua/math.nlua")
+import("lua/os.nlua")
+import("lua/coroutine.nlua")
+import("typed_ffi.nlua")

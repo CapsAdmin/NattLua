@@ -1,4 +1,4 @@
-local type { Entity, Vector, Angle } = import_type<|"nattlua/definitions/glua.nlua"|>
+local type { Entity, Vector, Angle } = import("~/nattlua/definitions/glua.nlua")
 
 local type HeadPos = {
 	findheadpos_head_bone = number | nil,

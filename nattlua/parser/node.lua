@@ -1,8 +1,8 @@
---[[#local type { Token } = import_type<|"nattlua/lexer/token.nlua"|>]]
+--[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
 
---[[#local type { ExpressionKind, StatementKind } = import_type<|"nattlua/parser/nodes.nlua"|>]]
+--[[#local type { ExpressionKind, StatementKind } = import("~/nattlua/parser/nodes.nlua")]]
 
---[[#import_type<|"nattlua/code/code.lua"|>]]
+--[[#import("~/nattlua/code/code.lua")]]
 --[[#local type NodeType = "expression" | "statement"]]
 --[[#local type Node = any]]
 local ipairs = _G.ipairs

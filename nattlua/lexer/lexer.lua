@@ -1,4 +1,4 @@
---[[#local type { TokenType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+--[[#local type { TokenType } = import("./token.nlua")]]
 
 local Code = require("nattlua.code.code")
 local Token = require("nattlua.lexer.token").New
@@ -251,7 +251,7 @@ end
 do
 	--[[#local type Lexer = META.@Self]]
 
-	--[[#local type { TokenReturnType } = import_type<|"nattlua/lexer/token.nlua"|>]]
+	--[[#local type { TokenReturnType } = import("~/nattlua/lexer/token.nlua")]]
 
 	local characters = require("nattlua.syntax.characters")
 	local runtime_syntax = require("nattlua.syntax.runtime")

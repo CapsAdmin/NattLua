@@ -1,4 +1,4 @@
-local type contract = import_type<|"platforms/filesystem.nlua"|>
+local type contract = import("~/platforms/filesystem.nlua")
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"

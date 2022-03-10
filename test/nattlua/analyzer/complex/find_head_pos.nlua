@@ -1,4 +1,4 @@
-local type { Entity, Vector, Angle } = import_type<|"nattlua/definitions/glua.nlua"|>
+local type { Entity, Vector, Angle } = import("~/nattlua/definitions/glua.nlua")
 
 local type Matrix = exclude<|return_type<|Entity.GetBoneMatrix|>[1], nil|>
 local type HeadPos = {

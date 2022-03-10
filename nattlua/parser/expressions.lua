@@ -361,6 +361,7 @@ do -- typesystem
 			self:ReadPrefixOperatorTypeExpression() or
 			self:ReadAnalyzerFunctionExpression() or -- shared
 			self:ReadFunctionSignatureExpression() or
+            self:ReadImportExpression() or
 			self:ReadTypeFunctionExpression() or -- shared
 			self:ReadFunctionExpression() or -- shared
 			self:ReadValueTypeExpression() or
@@ -710,10 +711,43 @@ do -- runtime
 			return node
 		end
 
-		local root = self.config.path and self.config.path:match("(.+/)") or ""
-		node.path = root .. node.expressions[1].value.value:sub(2, -2)
+        local path = node.expressions[1].value.string_value
+
+        do
+            local root = self.config.working_directory or ""
+            print("ROOT?", self, root)
+
+            if path:sub(1, 1) == "~" then
+                path = path:sub(2)
+                if path:sub(1, 1) == "/" then
+                    path = path:sub(2)
+                end
+            elseif path:sub(1, 2) == "./" then
+                root = self.config.path and self.config.path:match("(.+/)") or root
+                path = path:sub(3)
+            end
+
+            print("ROOT: ", root)
+            print("PATH: ", path)
+
+            node.path = root .. path
+        end
+
+        self.imported = self.imported or {}
+
+        if self.imported[node.path] then
+            self:EndNode(node)
+            node.tokens["arguments)"] = self:ExpectValue(")")
+
+            return self.imported[node.path]
+        end
+        
 		local nl = require("nattlua")
-		local root, err = nl.ParseFile(self:ResolvePath(node.path), {root = self.root, path = node.path})
+		local root, err = nl.ParseFile(node.path, {
+            root = self.root, 
+            path = node.path, 
+            working_directory = self.config.working_directory
+        })
 
 		if not root then
 			self:Error("error importing file: $1", start, start, err)
@@ -725,6 +759,9 @@ do -- runtime
 		self.root.imports = self.root.imports or {}
 		table.insert(self.root.imports, node)
 		self:EndNode(node)
+
+        self.imported[node.path] = node
+
 		return node
 	end
 
