@@ -6,9 +6,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: checkout latest luajit 2.1
       - uses: actions/checkout@master
         with:
-          name: LuaJIT/LuaJIT
+          repository: LuaJIT/LuaJIT
           ref: v2.1
           path: luajit
 
