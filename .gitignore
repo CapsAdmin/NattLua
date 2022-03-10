@@ -3,3 +3,4 @@ luacov*
 jstest/
 test_focus.lua
 test_focus_result.lua
+error_build_output.lua
