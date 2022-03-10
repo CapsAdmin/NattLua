@@ -39,7 +39,7 @@
                 "generic-lsp.arguments": {
                     "type": "array",
                     "default": [
-                        "./vscode/server/server.lua"
+                        "./language_server/server/server.lua"
                     ],
                     "items": {
                         "type": "string"

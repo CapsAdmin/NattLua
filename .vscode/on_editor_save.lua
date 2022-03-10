@@ -109,8 +109,8 @@ if normalized:find("/nattlua/", nil, true) then
 
 	if not is_lua and not is_nattlua then return end
 
-	if normalized:find("vscode/server", nil, true) then
-		io.open("vscode/server/restart_me", "w"):close()
+	if normalized:find("language_server/server", nil, true) then
+		io.open("language_server/server/restart_me", "w"):close()
 		return
 	elseif normalized:find("typed_ffi.nlua", nil, true) and has_test_focus() then
 		print("running test focus")

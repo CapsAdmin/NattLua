@@ -176,8 +176,8 @@ function server:Loop()
 		ffi.C.usleep(50000)
 
 		if
-			lazy_file_changed("vscode/server/lsp.lua") or
-			lazy_file_changed("vscode/server/server.lua")
+			lazy_file_changed("language_server/server/lsp.lua") or
+			lazy_file_changed("language_server/server/server.lua")
 		then
 			print("hot reload")
 
@@ -191,7 +191,7 @@ function server:Loop()
 
 		if RESTART and RESTART < os.clock() then
 			print("restarting")
-			loadfile("vscode/server/server.lua")()
+			loadfile("language_server/server/server.lua")()
 			return
 		end
 	end
