@@ -82,7 +82,7 @@ if false then LintCodebase() end
 
 local helpers = require("nattlua.other.helpers")
 --helpers.EnableJITDumper()
-local root = "example_projects/gmod/"
+local root = "examples/projects/gmod/"
 local files = {
 	{
 		path = "lua/autorun/client/myaddon.lua",

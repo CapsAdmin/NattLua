@@ -6,7 +6,7 @@ local LString = require("nattlua.types.string").LString
 local nl = require("nattlua")
 local blob = assert(
 	util.FetchCode(
-		"example_projects/gmod/nattlua/gmod_wiki.json",
+		"examples/projects/gmod/nattlua/gmod_wiki.json",
 		"https://venner.io/gmod-wiki.json"
 	)
 )
@@ -580,7 +580,7 @@ local header = ""
 header = header .. "type IPixVis = {}\n"
 header = header .. "type ISensor = {}\n"
 code = header .. code
-local f = io.open("example_projects/gmod/nattlua/glua_base.nlua", "w")
+local f = io.open("examples/projects/gmod/nattlua/glua_base.nlua", "w")
 f:write(code)
 f:close()
 code = "local SERVER = true\nlocal CLIENT = true\n"
