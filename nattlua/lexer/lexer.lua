@@ -690,7 +690,8 @@ do
 
 	local function ReadRemainingCommentEscape(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 		if lexer.comment_escape and lexer:IsString(lexer.comment_escape--[[# as string]]) then
-			lexer:Advance(#lexer.comment_escape--[[# as string]])
+			lexer:Advance(#lexer.comment_escape --[[# as string]])
+			lexer.comment_escape = nil
 			return "comment_escape"
 		end
 

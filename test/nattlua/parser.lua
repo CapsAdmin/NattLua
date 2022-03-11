@@ -327,3 +327,12 @@ do
     ]==]
 	assert(_G.LOL == nil)
 end
+
+parse[=[
+
+	--[[#type integer = number]]
+	for i, obj in ipairs(arguments) do
+		args[i] = obj:GetData()[ys[i]]
+	end
+	
+]=]
