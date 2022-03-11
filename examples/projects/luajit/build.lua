@@ -2,7 +2,10 @@ local nl = require("nattlua")
 local builder = assert(
 	nl.File(
 		"examples/projects/luajit/src/main.nlua",
-		{working_directory = "examples/projects/luajit/src/"}
+		{
+			working_directory = "examples/projects/luajit/src/",
+			emit_environment = true,
+		}
 	)
 )
 assert(builder:Lex())
@@ -22,10 +25,5 @@ local code, err = builder:Emit(
 		},
 	}
 )
--- todo
-code = io.open("nattlua/runtime/base_runtime.lua"):read("*all") .. "\n" .. code
-local file = io.open("examples/projects/luajit/out.lua", "w")
-file:write(code)
-file:close()
 print("===RUNNING CODE===")
 require("examples/projects.luajit.out")

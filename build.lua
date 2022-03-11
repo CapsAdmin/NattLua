@@ -4,6 +4,7 @@ io.write("parsing " .. entry)
 local c = assert(nl.File(entry, {
 	annotate = true,
 	inline_require = true,
+	emit_environment = true,
 }))
 local lua_code = c:Emit(
 	{
@@ -50,8 +51,7 @@ if exit_code == 0 then
 	f:write(lua_code)
 	f:close()
 	io.write(" - OK\n")
+	os.remove("temp_build_output.lua")
 else
 	io.write(" - FAIL\n")
 end
-
-os.remove("temp_build_output.lua")

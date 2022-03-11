@@ -101,3 +101,33 @@ analyzer function table.unpack(tbl: List<|any|>)
 end
 
 type unpack = table.unpack
+
+function table.destructure(tbl: Table, fields: List<|string|>, with_default: boolean | nil)
+	local out = {}
+
+	for i, key in ipairs(fields) do
+		out[i] = tbl[key]
+	end
+
+	if with_default then table.insert(out, 1, tbl) end
+
+	return table.unpack(out)
+end
+
+function table.mergetables(tables: List<|Table|>)
+	local out = {}
+
+	for i, tbl in ipairs(tables) do
+		for k, v in pairs(tbl) do
+			out[k] = v
+		end
+	end
+
+	return out
+end
+
+function table.spread(tbl: nil | List<|any|>)
+	if not tbl then return nil end
+
+	return table.unpack(tbl)
+end

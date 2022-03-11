@@ -191,6 +191,15 @@ assert(loadfile("nattlua/parser/expressions.lua"))(META)
 assert(loadfile("nattlua/parser/statements.lua"))(META)
 assert(loadfile("nattlua/parser/teal.lua"))(META)
 
+function META:ParseString(code)
+	local compiler = require("nattlua").Compiler(code, "temp")
+	assert(compiler:Lex())
+	assert(compiler:Parse())
+	return compiler.SyntaxTree
+end
+
+local imported_index = nil
+
 function META:ReadRootNode()
 	local node = self:StartNode("statement", "root")
 	self.RootStatement = self.config and self.config.root_statement_override or node
@@ -203,9 +212,32 @@ function META:ReadRootNode()
 		node.tokens["shebang"] = shebang.tokens["shebang"]
 	end
 
+	local import_tree
+
+	if self.config.emit_environment then
+		if not imported_index then
+			imported_index = true
+			imported_index = self:ParseString([[import("nattlua/definitions/index.nlua")]])
+		end
+
+		if imported_index and imported_index ~= true then
+			self.RootStatement.imports = self.RootStatement.imports or {}
+
+			for _, import in ipairs(imported_index.imports) do
+				table.insert(self.RootStatement.imports, import)
+			end
+
+			import_tree = imported_index
+		end
+	end
+
 	node.statements = self:ReadNodes()
 
 	if shebang then table.insert(node.statements, 1, shebang) end
+
+	if import_tree then
+		table.insert(node.statements, 1, import_tree.statements[1])
+	end
 
 	if self:IsType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")

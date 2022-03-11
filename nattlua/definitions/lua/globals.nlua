@@ -526,3 +526,19 @@ analyzer function tonumber(val: string | number, base: number | nil)
 
 	return val
 end
+
+function _G.LSX(
+	tag: string,
+	constructor: function=(Table, Table)>(Table),
+	props: Table,
+	children: Table
+)
+	local e = constructor and
+		constructor(props, children) or
+		{
+			props = props,
+			children = children,
+		}
+	e.tag = tag
+	return e
+end
