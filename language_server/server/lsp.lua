@@ -1,5 +1,5 @@
 local ffi = require("ffi")
-local ljsocket = require("vscode.server.ljsocket")
+local ljsocket = require("language_server.server.ljsocket")
 ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
 ffi.C.chdir("/home/caps/nl/")
 local rpc_util = require("nattlua.other.jsonrpc")
