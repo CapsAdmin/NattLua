@@ -30,7 +30,7 @@ local runtime_env, typesystem_env = BuildBaseEnvironment()
 local function run(code, expect_error, expect_warning)
 	_G.TEST = true
 	local compiler = nl.Compiler(code, nil, nil, 3)
-	compiler:SetEnvironments(types.Table(), typesystem_env)
+	compiler:SetEnvironments(runtime_env:Copy(), typesystem_env)
 	local ok, err = compiler:Analyze()
 	_G.TEST = false
 

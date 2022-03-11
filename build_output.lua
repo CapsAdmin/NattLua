@@ -477,6 +477,21 @@ end]]
 	if not name:IsLiteral() then return types.Any() end
 
 	local str = name
+
+	do
+		local env = analyzer:GetDefaultEnvironment("runtime")
+		local package = env:Get(types.LString("package"))
+
+		if package then
+			local preload = package:Get(types.LString("preload"))
+			local func = preload:Get(name)
+
+			if func then
+				return analyzer:Assert(name:GetNode(), analyzer:Call(func, types.Tuple({name})))
+			end
+		end
+	end
+
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
 
@@ -508,8 +523,25 @@ end]]
 		return analyzer:GetLocalOrGlobalValue(str)
 	end
 
+	local allowed = {
+		["string.buffer"] = true,
+		["ffi"] = true,
+		["table.new"] = true,
+		["table.clear"] = true,
+		["jit.util"] = true,
+		["jit.profile"] = true,
+	}
+	local old = package.preload
+	local new = {}
+
+	for k, v in pairs(old) do
+		if allowed[k] then new[k] = v end
+	end
+
+	package.preload = new
+
 	if package.loaders then
-		for _, searcher in ipairs(package.loaders) do
+		for i, searcher in ipairs(package.loaders) do
 			local loader = searcher(str:GetData())
 
 			if type(loader) == "function" then
@@ -519,6 +551,7 @@ end]]
 					local path = path:sub(2)
 
 					if analyzer.loaded and analyzer.loaded[path] then
+						package.preload = old
 						return analyzer.loaded[path]
 					end
 
@@ -528,12 +561,14 @@ end]]
 					local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 					analyzer.loaded = analyzer.loaded or {}
 					analyzer.loaded[path] = res
+					package.preload = old
 					return res
 				end
 			end
 		end
 	end
 
+	package.preload = old
 	analyzer:Error(name:GetNode(), "module '" .. str:GetData() .. "' not found")
 	return types.Any
 end]]
@@ -2927,6 +2962,21 @@ analyzer function require(name: string)
 	if not name:IsLiteral() then return types.Any() end
 
 	local str = name
+
+	do
+		local env = analyzer:GetDefaultEnvironment("runtime")
+		local package = env:Get(types.LString("package"))
+
+		if package then
+			local preload = package:Get(types.LString("preload"))
+			local func = preload:Get(name)
+
+			if func then
+				return analyzer:Assert(name:GetNode(), analyzer:Call(func, types.Tuple({name})))
+			end
+		end
+	end
+
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
 
@@ -2958,8 +3008,25 @@ analyzer function require(name: string)
 		return analyzer:GetLocalOrGlobalValue(str)
 	end
 
+	local allowed = {
+		["string.buffer"] = true,
+		["ffi"] = true,
+		["table.new"] = true,
+		["table.clear"] = true,
+		["jit.util"] = true,
+		["jit.profile"] = true,
+	}
+	local old = package.preload
+	local new = {}
+
+	for k, v in pairs(old) do
+		if allowed[k] then new[k] = v end
+	end
+
+	package.preload = new
+
 	if package.loaders then
-		for _, searcher in ipairs(package.loaders) do
+		for i, searcher in ipairs(package.loaders) do
 			local loader = searcher(str:GetData())
 
 			if type(loader) == "function" then
@@ -2969,6 +3036,7 @@ analyzer function require(name: string)
 					local path = path:sub(2)
 
 					if analyzer.loaded and analyzer.loaded[path] then
+						package.preload = old
 						return analyzer.loaded[path]
 					end
 
@@ -2978,12 +3046,14 @@ analyzer function require(name: string)
 					local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 					analyzer.loaded = analyzer.loaded or {}
 					analyzer.loaded[path] = res
+					package.preload = old
 					return res
 				end
 			end
 		end
 	end
 
+	package.preload = old
 	analyzer:Error(name:GetNode(), "module '" .. str:GetData() .. "' not found")
 	return types.Any
 end
@@ -5900,7 +5970,7 @@ return {
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
 } end
-package.loaded["nattlua.other.table_print"] = (function(...)
+package.preload["nattlua.other.table_print"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local pairs = _G.pairs
 	local tostring = _G.tostring
@@ -6219,8 +6289,8 @@ package.loaded["nattlua.other.table_print"] = (function(...)
 
 		io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
 	end	
-end)("./nattlua/other/table_print.lua");
-package.loaded["nattlua.other.quote"] = (function(...)
+end
+package.preload["nattlua.other.quote"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local helpers = {}
 
@@ -6245,8 +6315,8 @@ package.loaded["nattlua.other.quote"] = (function(...)
 	end
 
 	return helpers	
-end)("./nattlua/other/quote.lua");
-package.loaded["nattlua.other.helpers"] = (function(...)
+end
+package.preload["nattlua.other.helpers"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
 	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
@@ -6558,8 +6628,8 @@ package.loaded["nattlua.other.helpers"] = (function(...)
 	end
 
 	return helpers	
-end)("./nattlua/other/helpers.lua");
-package.loaded["nattlua.types.error_messages"] = (function(...)
+end
+package.preload["nattlua.types.error_messages"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local table = require("table")
 	local type = _G.type
@@ -6666,8 +6736,8 @@ package.loaded["nattlua.types.error_messages"] = (function(...)
 		end,
 	}
 	return errors	
-end)("./nattlua/types/error_messages.lua");
-package.loaded["nattlua.types.symbol"] = (function(...)
+end
+package.preload["nattlua.types.symbol"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local type = type
 	local tostring = tostring
@@ -6753,8 +6823,8 @@ package.loaded["nattlua.types.symbol"] = (function(...)
 			return Union({Symbol(true), Symbol(false)})
 		end,
 	}	
-end)("./nattlua/types/symbol.lua");
-package.loaded["nattlua.types.number"] = (function(...)
+end
+package.preload["nattlua.types.number"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local math = math
 	local assert = assert
@@ -7166,8 +7236,8 @@ package.loaded["nattlua.types.number"] = (function(...)
 		end,
 		TNumber = TNumber,
 	}	
-end)("./nattlua/types/number.lua");
-package.loaded["nattlua.types.any"] = (function(...)
+end
+package.preload["nattlua.types.any"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	--[[#local type TBaseType = META.TBaseType]]
@@ -7217,8 +7287,8 @@ package.loaded["nattlua.types.any"] = (function(...)
 			return META.New()
 		end,
 	}	
-end)("./nattlua/types/any.lua");
-package.loaded["nattlua.types.tuple"] = (function(...)
+end
+package.preload["nattlua.types.tuple"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = tostring
 	local table = require("table")
@@ -7748,8 +7818,8 @@ package.loaded["nattlua.types.tuple"] = (function(...)
 			return arguments
 		end,
 	}	
-end)("./nattlua/types/tuple.lua");
-package.loaded["nattlua.types.function"] = (function(...)
+end
+package.preload["nattlua.types.function"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = _G.tostring
 	local ipairs = _G.ipairs
@@ -7973,8 +8043,8 @@ package.loaded["nattlua.types.function"] = (function(...)
 			return self
 		end,
 	}	
-end)("./nattlua/types/function.lua");
-package.loaded["nattlua.types.union"] = (function(...)
+end
+package.preload["nattlua.types.union"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = tostring
 	local math = math
@@ -8599,8 +8669,8 @@ package.loaded["nattlua.types.union"] = (function(...)
 			return META.New({typ, Nil()})
 		end,
 	}	
-end)("./nattlua/types/union.lua");
-package.loaded["nattlua.analyzer.context"] = (function(...)
+end
+package.preload["nattlua.analyzer.context"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local current_analyzer = {}
 	local CONTEXT = {}
@@ -8618,8 +8688,8 @@ package.loaded["nattlua.analyzer.context"] = (function(...)
 	end
 
 	return CONTEXT	
-end)("./nattlua/analyzer/context.lua");
-package.loaded["nattlua.types.string"] = (function(...)
+end
+package.preload["nattlua.types.string"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = tostring
 	local setmetatable = _G.setmetatable
@@ -8778,8 +8848,8 @@ package.loaded["nattlua.types.string"] = (function(...)
 			return META.New(node.value.value):SetLiteral(true):SetNode(node)
 		end,
 	}	
-end)("./nattlua/types/string.lua");
-package.loaded["nattlua.types.table"] = (function(...)
+end
+package.preload["nattlua.types.table"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local setmetatable = _G.setmetatable
 	local table = require("table")
@@ -9733,8 +9803,8 @@ package.loaded["nattlua.types.table"] = (function(...)
 	end
 
 	return {Table = META.New}	
-end)("./nattlua/types/table.lua");
-package.loaded["nattlua"] = (function(...)
+end
+package.preload["nattlua"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
 	if not table.unpack and _G.unpack then table.unpack = _G.unpack end
@@ -9753,8 +9823,8 @@ package.loaded["nattlua"] = (function(...)
 	helpers.JITOptimize()
 	--helpers.EnableJITDumper()
 	return require("nattlua.init")	
-end)("./nattlua.lua");
-package.loaded["nattlua.runtime.base_environment"] = (function(...)
+end
+package.preload["nattlua.runtime.base_environment"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Table = require("nattlua.types.table").Table
 	local Nil = require("nattlua.types.symbol").Nil
@@ -9793,7 +9863,14 @@ package.loaded["nattlua.runtime.base_environment"] = (function(...)
 			local runtime_env = Table()
 			local typesystem_env = Table()
 			typesystem_env.string_metatable = Table()
-			runtime_env:Set(LStringNoMeta("IMPORTS"), Table())
+
+			do
+				runtime_env:Set(LStringNoMeta("IMPORTS"), Table())
+				local tbl = Table()
+				tbl:Set(LStringNoMeta("preload"), Table())
+				runtime_env:Set(LStringNoMeta("package"), tbl)
+			end
+
 			compiler:SetEnvironments(runtime_env, typesystem_env)
 			local base = compiler.Analyzer()
 			assert(compiler:Analyze(base))
@@ -9804,8 +9881,8 @@ package.loaded["nattlua.runtime.base_environment"] = (function(...)
 			return runtime_env, typesystem_env
 		end,
 	}	
-end)("./nattlua/runtime/base_environment.lua");
-package.loaded["nattlua.code.code"] = (function(...)
+end
+package.preload["nattlua.code.code"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local META = {}
 	META.__index = META
@@ -9878,8 +9955,8 @@ package.loaded["nattlua.code.code"] = (function(...)
 
 	--[[#type Code = META.@Self]]
 	return META.New	
-end)("./nattlua/code/code.lua");
-package.loaded["nattlua.other.table_pool"] = (function(...)
+end
+package.preload["nattlua.other.table_pool"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local pcall = _G.pcall
 	local pairs = _G.pairs
@@ -9920,8 +9997,8 @@ package.loaded["nattlua.other.table_pool"] = (function(...)
 			return tbl
 		end
 	end	
-end)("./nattlua/other/table_pool.lua");
-package.loaded["nattlua.lexer.token"] = (function(...)
+end
+package.preload["nattlua.lexer.token"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local table_pool = require("nattlua.other.table_pool")
 	--[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
@@ -10011,8 +10088,8 @@ package.loaded["nattlua.lexer.token"] = (function(...)
 	META.TokenReturnType = TokenReturnType
 	META.WhitespaceToken = TokenReturnType
 	return META	
-end)("./nattlua/lexer/token.lua");
-package.loaded["nattlua.syntax.characters"] = (function(...)
+end
+package.preload["nattlua.syntax.characters"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local characters = {}
 	local B = string.byte
@@ -10110,8 +10187,8 @@ package.loaded["nattlua.syntax.characters"] = (function(...)
 	end
 
 	return characters	
-end)("./nattlua/syntax/characters.lua");
-package.loaded["nattlua.syntax.syntax"] = (function(...)
+end
+package.preload["nattlua.syntax.syntax"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
 	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
@@ -10376,8 +10453,8 @@ package.loaded["nattlua.syntax.syntax"] = (function(...)
 	end
 
 	return META.New	
-end)("./nattlua/syntax/syntax.lua");
-package.loaded["nattlua.syntax.runtime"] = (function(...)
+end
+package.preload["nattlua.syntax.runtime"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Syntax = require("nattlua.syntax.syntax")
 	local runtime = Syntax()
@@ -10485,8 +10562,8 @@ package.loaded["nattlua.syntax.runtime"] = (function(...)
 		["ÆØÅÆ"] = "(A)",
 	})
 	return runtime	
-end)("./nattlua/syntax/runtime.lua");
-package.loaded["nattlua.lexer.lexer"] = (function(...)
+end
+package.preload["nattlua.lexer.lexer"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
 	--[[#local type { TokenType } = IMPORTS['./nattlua/lexer/token.nlua']("./token.nlua")]]
@@ -11182,6 +11259,7 @@ package.loaded["nattlua.lexer.lexer"] = (function(...)
 		local function ReadRemainingCommentEscape(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
 			if lexer.comment_escape and lexer:IsString(lexer.comment_escape--[[# as string]]) then
 				lexer:Advance(#lexer.comment_escape--[[# as string]])
+				lexer.comment_escape = nil
 				return "comment_escape"
 			end
 
@@ -11220,8 +11298,8 @@ package.loaded["nattlua.lexer.lexer"] = (function(...)
 	end
 
 	return META.New	
-end)("./nattlua/lexer/lexer.lua");
-package.loaded["nattlua.transpiler.emitter"] = (function(...)
+end
+package.preload["nattlua.transpiler.emitter"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local runtime_syntax = require("nattlua.syntax.runtime")
 	local characters = require("nattlua.syntax.characters")
@@ -11602,15 +11680,15 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 
 			for i, node in ipairs(block.required_files) do
 				if not self.done[node.path] and node.RootStatement then
-					self:EmitNonSpace("package.loaded[")
+					self:EmitNonSpace("package.preload[")
 					self:EmitToken(node.expressions[1].value)
-					self:EmitNonSpace("] = (function(...)")
+					self:EmitNonSpace("] = function(...)")
 					self:Whitespace("\n")
 					self:Indent()
 					self:EmitStatements(node.RootStatement.statements)
 					self:Outdent()
 					self:Whitespace("\n")
-					self:EmitNonSpace("end)(\"" .. node.path .. "\");")
+					self:EmitNonSpace("end")
 					self:Whitespace("\n")
 					self.done[node.path] = true
 				end
@@ -13097,8 +13175,8 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 	end
 
 	return META	
-end)("./nattlua/transpiler/emitter.lua");
-package.loaded["nattlua.parser.node"] = (function(...)
+end
+package.preload["nattlua.parser.node"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
 	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
@@ -13282,8 +13360,8 @@ package.loaded["nattlua.parser.node"] = (function(...)
 	end
 
 	return META	
-end)("./nattlua/parser/node.lua");
-package.loaded["nattlua.parser.base"] = (function(...)
+end
+package.preload["nattlua.parser.base"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
 	--[[#local type { Token, TokenType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
@@ -13618,8 +13696,8 @@ package.loaded["nattlua.parser.base"] = (function(...)
 	end
 
 	return META	
-end)("./nattlua/parser/base.lua");
-package.loaded["nattlua.syntax.typesystem"] = (function(...)
+end
+package.preload["nattlua.syntax.typesystem"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Syntax = require("nattlua.syntax.syntax")
 	local typesystem = Syntax()
@@ -13768,8 +13846,8 @@ package.loaded["nattlua.syntax.typesystem"] = (function(...)
 		}
 	)
 	return typesystem	
-end)("./nattlua/syntax/typesystem.lua");
-package.loaded["nattlua.parser.parser"] = (function(...)
+end
+package.preload["nattlua.parser.parser"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local META = require("nattlua.parser.base")
 	local runtime_syntax = require("nattlua.syntax.runtime")
@@ -14060,8 +14138,8 @@ package.loaded["nattlua.parser.parser"] = (function(...)
 	end
 
 	return META.New	
-end)("./nattlua/parser/parser.lua");
-package.loaded["nattlua.types.types"] = (function(...)
+end
+package.preload["nattlua.types.types"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local types = {}
 
@@ -14087,8 +14165,8 @@ package.loaded["nattlua.types.types"] = (function(...)
 	end
 
 	return types	
-end)("./nattlua/types/types.lua");
-package.loaded["nattlua.analyzer.base.lexical_scope"] = (function(...)
+end
+package.preload["nattlua.analyzer.base.lexical_scope"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local pairs = pairs
@@ -14603,8 +14681,8 @@ package.loaded["nattlua.analyzer.base.lexical_scope"] = (function(...)
 	end
 
 	return LexicalScope	
-end)("./nattlua/analyzer/base/lexical_scope.lua");
-package.loaded["nattlua.analyzer.base.scopes"] = (function(...)
+end
+package.preload["nattlua.analyzer.base.scopes"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local type = type
 	local ipairs = ipairs
@@ -14827,8 +14905,8 @@ package.loaded["nattlua.analyzer.base.scopes"] = (function(...)
 			return val
 		end
 	end	
-end)("./nattlua/analyzer/base/scopes.lua");
-package.loaded["nattlua.analyzer.base.error_handling"] = (function(...)
+end
+package.preload["nattlua.analyzer.base.error_handling"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local table = require("table")
 	local type = type
@@ -14972,8 +15050,8 @@ package.loaded["nattlua.analyzer.base.error_handling"] = (function(...)
 			return self.diagnostics
 		end
 	end	
-end)("./nattlua/analyzer/base/error_handling.lua");
-package.loaded["nattlua.analyzer.base.base_analyzer"] = (function(...)
+end
+package.preload["nattlua.analyzer.base.base_analyzer"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tonumber = tonumber
 	local ipairs = ipairs
@@ -15422,8 +15500,8 @@ package.loaded["nattlua.analyzer.base.base_analyzer"] = (function(...)
 			end
 		end
 	end	
-end)("./nattlua/analyzer/base/base_analyzer.lua");
-package.loaded["nattlua.analyzer.control_flow"] = (function(...)
+end
+package.preload["nattlua.analyzer.control_flow"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local type = type
@@ -15669,8 +15747,8 @@ package.loaded["nattlua.analyzer.control_flow"] = (function(...)
 			self:PopScope()
 		end
 	end	
-end)("./nattlua/analyzer/control_flow.lua");
-package.loaded["nattlua.analyzer.mutations"] = (function(...)
+end
+package.preload["nattlua.analyzer.mutations"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local Nil = require("nattlua.types.symbol").Nil
@@ -16408,8 +16486,8 @@ package.loaded["nattlua.analyzer.mutations"] = (function(...)
 			end
 		end
 	end	
-end)("./nattlua/analyzer/mutations.lua");
-package.loaded["nattlua.analyzer.operators.index"] = (function(...)
+end
+package.preload["nattlua.analyzer.operators.index"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local LString = require("nattlua.types.string").LString
 	local Nil = require("nattlua.types.symbol").Nil
@@ -16544,8 +16622,8 @@ package.loaded["nattlua.analyzer.operators.index"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/operators/index.lua");
-package.loaded["nattlua.analyzer.operators.newindex"] = (function(...)
+end
+package.preload["nattlua.analyzer.operators.newindex"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local tostring = tostring
@@ -16710,8 +16788,8 @@ package.loaded["nattlua.analyzer.operators.newindex"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/operators/newindex.lua");
-package.loaded["nattlua.analyzer.operators.call"] = (function(...)
+end
+package.preload["nattlua.analyzer.operators.call"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local type = type
@@ -17724,8 +17802,8 @@ package.loaded["nattlua.analyzer.operators.call"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/operators/call.lua");
-package.loaded["nattlua.analyzer.statements.assignment"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.assignment"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local tostring = tostring
@@ -17959,8 +18037,8 @@ package.loaded["nattlua.analyzer.statements.assignment"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/statements/assignment.lua");
-package.loaded["nattlua.analyzer.statements.destructure_assignment"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.destructure_assignment"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = tostring
 	local ipairs = ipairs
@@ -18005,8 +18083,8 @@ package.loaded["nattlua.analyzer.statements.destructure_assignment"] = (function
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/statements/destructure_assignment.lua");
-package.loaded["nattlua.analyzer.expressions.function"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.function"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = tostring
 	local table = require("table")
@@ -18215,8 +18293,8 @@ package.loaded["nattlua.analyzer.expressions.function"] = (function(...)
 			return obj
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/function.lua");
-package.loaded["nattlua.analyzer.statements.function"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.function"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 	local NodeToString = require("nattlua.types.string").NodeToString
@@ -18225,7 +18303,11 @@ package.loaded["nattlua.analyzer.statements.function"] = (function(...)
 			if
 				statement.kind == "local_function" or
 				statement.kind == "local_analyzer_function" or
-				statement.kind == "local_type_function"
+				statement.kind == "local_type_function" or
+				(
+					not statement.expression and
+					statement.kind == "analyzer_function"
+				)
 			then
 				self:PushAnalyzerEnvironment(statement.kind == "local_function" and "runtime" or "typesystem")
 				self:CreateLocalValue(statement.tokens["identifier"].value, AnalyzeFunction(self, statement))
@@ -18255,8 +18337,8 @@ package.loaded["nattlua.analyzer.statements.function"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/statements/function.lua");
-package.loaded["nattlua.analyzer.statements.if"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.if"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local Union = require("nattlua.types.union").Union
@@ -18379,8 +18461,8 @@ package.loaded["nattlua.analyzer.statements.if"] = (function(...)
 			self:ClearTracked()
 		end,
 	}	
-end)("./nattlua/analyzer/statements/if.lua");
-package.loaded["nattlua.analyzer.statements.do"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.do"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	return {
 		AnalyzeDo = function(self, statement)
@@ -18389,8 +18471,8 @@ package.loaded["nattlua.analyzer.statements.do"] = (function(...)
 			self:PopScope()
 		end,
 	}	
-end)("./nattlua/analyzer/statements/do.lua");
-package.loaded["nattlua.analyzer.statements.generic_for"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.generic_for"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local table = require("table")
 	local ipairs = ipairs
@@ -18478,16 +18560,16 @@ package.loaded["nattlua.analyzer.statements.generic_for"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/statements/generic_for.lua");
-package.loaded["nattlua.analyzer.statements.call_expression"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.call_expression"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	return {
 		AnalyzeCall = function(self, statement)
 			self:AnalyzeExpression(statement.value)
 		end,
 	}	
-end)("./nattlua/analyzer/statements/call_expression.lua");
-package.loaded["nattlua.analyzer.operators.binary"] = (function(...)
+end
+package.preload["nattlua.analyzer.operators.binary"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = tostring
 	local ipairs = ipairs
@@ -18920,8 +19002,8 @@ package.loaded["nattlua.analyzer.operators.binary"] = (function(...)
 	end
 
 	return {Binary = Binary}	
-end)("./nattlua/analyzer/operators/binary.lua");
-package.loaded["nattlua.analyzer.statements.numeric_for"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.numeric_for"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local math = math
@@ -19046,8 +19128,8 @@ package.loaded["nattlua.analyzer.statements.numeric_for"] = (function(...)
 			self:PopConditionalScope()
 		end,
 	}	
-end)("./nattlua/analyzer/statements/numeric_for.lua");
-package.loaded["nattlua.analyzer.statements.break"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.break"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	return {
 		AnalyzeBreak = function(self, statement)
@@ -19055,16 +19137,16 @@ package.loaded["nattlua.analyzer.statements.break"] = (function(...)
 			self.break_loop = true
 		end,
 	}	
-end)("./nattlua/analyzer/statements/break.lua");
-package.loaded["nattlua.analyzer.statements.continue"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.continue"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	return {
 		AnalyzeContinue = function(self, statement)
 			self._continue_ = true
 		end,
 	}	
-end)("./nattlua/analyzer/statements/continue.lua");
-package.loaded["nattlua.analyzer.statements.repeat"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.repeat"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	return {
 		AnalyzeRepeat = function(self, statement)
@@ -19073,8 +19155,8 @@ package.loaded["nattlua.analyzer.statements.repeat"] = (function(...)
 			self:PopScope()
 		end,
 	}	
-end)("./nattlua/analyzer/statements/repeat.lua");
-package.loaded["nattlua.analyzer.statements.return"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.return"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Nil = require("nattlua.types.symbol").Nil
 	return {
@@ -19083,8 +19165,8 @@ package.loaded["nattlua.analyzer.statements.return"] = (function(...)
 			self:Return(statement, ret)
 		end,
 	}	
-end)("./nattlua/analyzer/statements/return.lua");
-package.loaded["nattlua.analyzer.statements.analyzer_debug_code"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.analyzer_debug_code"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	return {
 		AnalyzeAnalyzerDebugCode = function(self, statement)
@@ -19096,8 +19178,8 @@ package.loaded["nattlua.analyzer.statements.analyzer_debug_code"] = (function(..
 			)
 		end,
 	}	
-end)("./nattlua/analyzer/statements/analyzer_debug_code.lua");
-package.loaded["nattlua.analyzer.statements.while"] = (function(...)
+end
+package.preload["nattlua.analyzer.statements.while"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	return {
 		AnalyzeWhile = function(self, statement)
@@ -19137,8 +19219,8 @@ package.loaded["nattlua.analyzer.statements.while"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/statements/while.lua");
-package.loaded["nattlua.analyzer.expressions.binary_operator"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.binary_operator"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local table = require("table")
 	local Binary = require("nattlua.analyzer.operators.binary").Binary
@@ -19149,8 +19231,8 @@ package.loaded["nattlua.analyzer.expressions.binary_operator"] = (function(...)
 			return self:Assert(node, Binary(self, node))
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/binary_operator.lua");
-package.loaded["nattlua.analyzer.operators.prefix"] = (function(...)
+end
+package.preload["nattlua.analyzer.operators.prefix"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local ipairs = ipairs
 	local error = error
@@ -19297,8 +19379,8 @@ package.loaded["nattlua.analyzer.operators.prefix"] = (function(...)
 	end
 
 	return {Prefix = Prefix}	
-end)("./nattlua/analyzer/operators/prefix.lua");
-package.loaded["nattlua.analyzer.expressions.prefix_operator"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.prefix_operator"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Prefix = require("nattlua.analyzer.operators.prefix").Prefix
 	return {
@@ -19306,8 +19388,8 @@ package.loaded["nattlua.analyzer.expressions.prefix_operator"] = (function(...)
 			return self:Assert(node, Prefix(self, node))
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/prefix_operator.lua");
-package.loaded["nattlua.analyzer.operators.postfix"] = (function(...)
+end
+package.preload["nattlua.analyzer.operators.postfix"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Binary = require("nattlua.analyzer.operators.binary").Binary
 	local Node = require("nattlua.parser.node")
@@ -19320,8 +19402,8 @@ package.loaded["nattlua.analyzer.operators.postfix"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/operators/postfix.lua");
-package.loaded["nattlua.analyzer.expressions.postfix_operator"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.postfix_operator"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Postfix = require("nattlua.analyzer.operators.postfix").Postfix
 	return {
@@ -19329,8 +19411,8 @@ package.loaded["nattlua.analyzer.expressions.postfix_operator"] = (function(...)
 			return self:Assert(node, Postfix(self, node, self:AnalyzeExpression(node.left)))
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/postfix_operator.lua");
-package.loaded["nattlua.analyzer.expressions.postfix_call"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.postfix_call"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local table = require("table")
 	local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
@@ -19384,8 +19466,8 @@ package.loaded["nattlua.analyzer.expressions.postfix_call"] = (function(...)
 			return returned_tuple
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/postfix_call.lua");
-package.loaded["nattlua.analyzer.expressions.postfix_index"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.postfix_index"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	return {
 		AnalyzePostfixIndex = function(self, node)
@@ -19399,8 +19481,8 @@ package.loaded["nattlua.analyzer.expressions.postfix_index"] = (function(...)
 			)
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/postfix_index.lua");
-package.loaded["nattlua.analyzer.expressions.table"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.table"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = tostring
 	local ipairs = ipairs
@@ -19467,8 +19549,8 @@ package.loaded["nattlua.analyzer.expressions.table"] = (function(...)
 			return tbl
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/table.lua");
-package.loaded["nattlua.analyzer.expressions.atomic_value"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.atomic_value"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local runtime_syntax = require("nattlua.syntax.runtime")
 	local NodeToString = require("nattlua.types.string").NodeToString
@@ -19620,8 +19702,8 @@ package.loaded["nattlua.analyzer.expressions.atomic_value"] = (function(...)
 			self:FatalError("unhandled value type " .. type .. " " .. node:Render())
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/atomic_value.lua");
-package.loaded["nattlua.analyzer.expressions.import"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.import"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local LString = require("nattlua.types.string").LString
 	return {
@@ -19633,8 +19715,8 @@ package.loaded["nattlua.analyzer.expressions.import"] = (function(...)
 			end
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/import.lua");
-package.loaded["nattlua.analyzer.expressions.tuple"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.tuple"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Tuple = require("nattlua.types.tuple").Tuple
 	return {
@@ -19646,8 +19728,8 @@ package.loaded["nattlua.analyzer.expressions.tuple"] = (function(...)
 			return tup
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/tuple.lua");
-package.loaded["nattlua.analyzer.expressions.vararg"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.vararg"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local VarArg = require("nattlua.types.tuple").VarArg
 	return {
@@ -19655,8 +19737,8 @@ package.loaded["nattlua.analyzer.expressions.vararg"] = (function(...)
 			return VarArg(self:AnalyzeExpression(node.value)):SetNode(node)
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/vararg.lua");
-package.loaded["nattlua.analyzer.expressions.function_signature"] = (function(...)
+end
+package.preload["nattlua.analyzer.expressions.function_signature"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local Tuple = require("nattlua.types.tuple").Tuple
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
@@ -19665,8 +19747,8 @@ package.loaded["nattlua.analyzer.expressions.function_signature"] = (function(..
 			return AnalyzeFunction(self, node)
 		end,
 	}	
-end)("./nattlua/analyzer/expressions/function_signature.lua");
-package.loaded["nattlua.analyzer.analyzer"] = (function(...)
+end
+package.preload["nattlua.analyzer.analyzer"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local tostring = tostring
 	local error = error
@@ -19843,8 +19925,8 @@ package.loaded["nattlua.analyzer.analyzer"] = (function(...)
 
 		return self
 	end	
-end)("./nattlua/analyzer/analyzer.lua");
-package.loaded["nattlua.transpiler.javascript_emitter"] = (function(...)
+end
+package.preload["nattlua.transpiler.javascript_emitter"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local runtime_syntax = require("nattlua.syntax.runtime")
 	local ipairs = ipairs
@@ -20883,8 +20965,8 @@ package.loaded["nattlua.transpiler.javascript_emitter"] = (function(...)
 	end
 
 	return META	
-end)("./nattlua/transpiler/javascript_emitter.lua");
-package.loaded["nattlua.compiler"] = (function(...)
+end
+package.preload["nattlua.compiler"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local io = io
 	local error = error
@@ -21161,8 +21243,8 @@ package.loaded["nattlua.compiler"] = (function(...)
 			META
 		)
 	end	
-end)("./nattlua/compiler.lua");
-package.loaded["nattlua.init"] = (function(...)
+end
+package.preload["nattlua.init"] = function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 	local nl = {}
 	nl.Compiler = require("nattlua.compiler")
@@ -21215,7 +21297,7 @@ package.loaded["nattlua.init"] = (function(...)
 	end
 
 	return nl	
-end)("./nattlua/init.lua");
+end
 IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
 if not table.unpack and _G.unpack then table.unpack = _G.unpack end

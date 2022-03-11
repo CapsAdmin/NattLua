@@ -45,7 +45,7 @@ run[[
 ]]
 run[[
     local type test = analyzer function(name: string)
-         return analyzer:GetLocalOrGlobalValue(name:GetData())
+         return analyzer:GetLocalOrGlobalValue(name)
     end
     local type lol = {}
     attest.equal(test("lol"), lol)

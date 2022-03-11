@@ -377,15 +377,15 @@ function META:BuildCode(block)
 
 		for i, node in ipairs(block.required_files) do
 			if not self.done[node.path] and node.RootStatement then
-				self:EmitNonSpace("package.loaded[")
+				self:EmitNonSpace("package.preload[")
 				self:EmitToken(node.expressions[1].value)
-				self:EmitNonSpace("] = (function(...)")
+				self:EmitNonSpace("] = function(...)")
 				self:Whitespace("\n")
 				self:Indent()
 				self:EmitStatements(node.RootStatement.statements)
 				self:Outdent()
 				self:Whitespace("\n")
-				self:EmitNonSpace("end)(\"" .. node.path .. "\");")
+				self:EmitNonSpace("end")
 				self:Whitespace("\n")
 				self.done[node.path] = true
 			end

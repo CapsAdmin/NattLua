@@ -35,7 +35,14 @@ return {
 		local runtime_env = Table()
 		local typesystem_env = Table()
 		typesystem_env.string_metatable = Table()
-		runtime_env:Set(LStringNoMeta("IMPORTS"), Table())
+
+		do
+			runtime_env:Set(LStringNoMeta("IMPORTS"), Table())
+			local tbl = Table()
+			tbl:Set(LStringNoMeta("preload"), Table())
+			runtime_env:Set(LStringNoMeta("package"), tbl)
+		end
+
 		compiler:SetEnvironments(runtime_env, typesystem_env)
 		local base = compiler.Analyzer()
 		assert(compiler:Analyze(base))
