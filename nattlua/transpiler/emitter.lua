@@ -353,21 +353,21 @@ end
 function META:BuildCode(block)
 	if block.imports then
 		self.done = {}
-		self:EmitNonSpace("IMPORTS = IMPORTS or {}\n")
+		self:EmitNonSpace("_G.IMPORTS = _G.IMPORTS or {}\n")
 
 		for i, node in ipairs(block.imports) do
-			if not self.done[node.path] then
+			if not self.done[node.key] then
 				if node.data then
 					self:Emit(
-						"IMPORTS['" .. node.path .. "'] = function(...) return [======[ " .. node.data .. " ]======] end\n"
+						"IMPORTS['" .. node.key .. "'] = function() return [======[ " .. node.data .. " ]======] end\n"
 					)
 				elseif node.RootStatement then
 					self:Emit(
-						"IMPORTS['" .. node.path .. "'] = function(...) " .. node.RootStatement:Render(self.config or {}) .. " end\n"
+						"IMPORTS['" .. node.key .. "'] = function() " .. node.RootStatement:Render(self.config or {}) .. " end\n"
 					)
 				end
 
-				self.done[node.path] = true
+				self.done[node.key] = true
 			end
 		end
 	end
@@ -1307,7 +1307,7 @@ function META:EmitStatement(node)
 	elseif node.kind == "end_of_file" then
 		self:EmitToken(node.tokens["end_of_file"])
 	elseif node.kind == "root" then
-		self:EmitStatements(node.statements)
+		self:BuildCode(node)
 	elseif node.kind == "analyzer_debug_code" then
 		self:EmitInvalidLuaCode("EmitExpression", node.lua_code)
 	elseif node.kind == "parser_debug_code" then
@@ -1848,7 +1848,7 @@ do -- extra
 			return
 		end
 
-		self:EmitToken(node.left.value, "IMPORTS['" .. node.path .. "']")
+		self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
 		self:EmitToken(node.tokens["call("])
 		self:EmitExpressionList(node.expressions)
 		self:EmitToken(node.tokens["call)"])

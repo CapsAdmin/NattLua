@@ -734,8 +734,11 @@ do -- runtime
 
 		node.path = resolve_import_path(self, path)
 		self.imported = self.imported or {}
+		local key = node.path
 
-		if self.imported[node.path] then return self.imported[node.path] end
+		if self.RootStatement.data_import then key = "DATA_" .. key end
+
+		if self.imported[key] then return self.imported[key] end
 
 		local nl = require("nattlua")
 		local compiler, err = nl.ParseFile(
@@ -751,17 +754,11 @@ do -- runtime
 			self:Error("error importing file: $1", start, start, err)
 		end
 
-		if self.RootStatement.data_import then
-			node.data = compiler.SyntaxTree:Render({
-				preserve_whitespace = false,
-				uncomment_types = true,
-			})
-		end
-
 		node.RootStatement = compiler.SyntaxTree
 		self.RootStatement.imports = self.RootStatement.imports or {}
 		table.insert(self.RootStatement.imports, node)
-		self.imported[node.path] = node
+		self.imported[key] = node
+		node.key = key
 		return node
 	end
 
@@ -772,8 +769,9 @@ do -- runtime
 
 		node.path = resolve_import_path(self, path)
 		self.imported = self.imported or {}
+		local key = "DATA_" .. node.path
 
-		if self.imported[node.path] then return self.imported[node.path] end
+		if self.imported[key] then return self.imported[key] end
 
 		self.RootStatement.data_import = true
 		local data
@@ -789,10 +787,13 @@ do -- runtime
 					inline_require = true,
 				}
 			)
-			data = compiler.SyntaxTree:Render({
-				preserve_whitespace = false,
-				uncomment_types = true,
-			})
+			data = compiler.SyntaxTree:Render(
+				{
+					preserve_whitespace = false,
+					uncomment_types = true,
+					annotate = true,
+				}
+			)
 		else
 			local f
 			f, err = io.open(node.path, "rb")
@@ -808,9 +809,10 @@ do -- runtime
 		end
 
 		node.data = data
+		node.key = key
 		self.RootStatement.imports = self.RootStatement.imports or {}
 		table.insert(self.RootStatement.imports, node)
-		self.imported[node.path] = node
+		self.imported[key] = node
 		return node
 	end
 
