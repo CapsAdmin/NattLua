@@ -1,16 +1,41 @@
 local Table = require("nattlua.types.table").Table
+local Nil = require("nattlua.types.symbol").Nil
 local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
+
+local function import_data(path)
+	local f, err = io.open(path, "rb")
+
+	if not f then return nil, err end
+
+	local code = f:read("*all")
+	f:close()
+
+	if not code then return nil, path .. " empty file" end
+
+	return code
+end
+
+local function load_definitions()
+	local path = "nattlua/definitions/index.nlua"
+	local config = {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or path
+	-- import_data will be transformed on build and the local function will not be used
+	-- we canot use the upvalue path here either since this happens at parse time
+	local code = assert(import_data("nattlua/definitions/index.nlua"))
+	local nl = require("nattlua")
+	return nl.Compiler(code, "@" .. path, config)
+end
+
 return {
 	BuildBaseEnvironment = function()
-		if _G.DISABLE_BASE_ENV then return Table({}), Table({}) end
-
-		local nl = require("nattlua")
-		local compiler = assert(nl.File("nattlua/definitions/index.nlua"))
+		local compiler = load_definitions()
 		assert(compiler:Lex())
 		assert(compiler:Parse())
 		local runtime_env = Table()
 		local typesystem_env = Table()
 		typesystem_env.string_metatable = Table()
+		runtime_env:Set(LStringNoMeta("IMPORTS"), Table())
 		compiler:SetEnvironments(runtime_env, typesystem_env)
 		local base = compiler.Analyzer()
 		assert(compiler:Analyze(base))
