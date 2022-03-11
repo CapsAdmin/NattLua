@@ -69,7 +69,6 @@ local function run_nattlua(path)
 			}
 		)
 	)
-	require("nattlua.runtime.base_runtime")
 
 	if lua_code:find("%-%-%s-ENABLE_CODE_RESULT_TO_FILE") then
 		local f = io.open("test_focus_result.lua", "w")

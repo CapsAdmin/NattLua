@@ -14,7 +14,10 @@ return {
 		compiler:SetEnvironments(runtime_env, typesystem_env)
 		local base = compiler.Analyzer()
 		assert(compiler:Analyze(base))
-		typesystem_env.string_metatable:Set(LStringNoMeta("__index"), typesystem_env:Get(LStringNoMeta("string")))
+		typesystem_env.string_metatable:Set(
+			LStringNoMeta("__index"),
+			base:Assert(compiler.SyntaxTree, typesystem_env:Get(LStringNoMeta("string")))
+		)
 		return runtime_env, typesystem_env
 	end,
 }

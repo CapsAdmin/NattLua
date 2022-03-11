@@ -356,10 +356,17 @@ function META:BuildCode(block)
 		self:EmitNonSpace("IMPORTS = IMPORTS or {}\n")
 
 		for i, node in ipairs(block.imports) do
-			if not self.done[node.path] and node.root then
-				self:Emit(
-					"IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render(self.config or {}) .. " end\n"
-				)
+			if not self.done[node.path] then
+				if node.data then
+					self:Emit(
+						"IMPORTS['" .. node.path .. "'] = function(...) return [======[ " .. node.data .. " ]======] end\n"
+					)
+				elseif node.RootStatement then
+					self:Emit(
+						"IMPORTS['" .. node.path .. "'] = function(...) " .. node.RootStatement:Render(self.config or {}) .. " end\n"
+					)
+				end
+
 				self.done[node.path] = true
 			end
 		end
@@ -369,13 +376,13 @@ function META:BuildCode(block)
 		self.done = {}
 
 		for i, node in ipairs(block.required_files) do
-			if not self.done[node.path] and node.root then
+			if not self.done[node.path] and node.RootStatement then
 				self:EmitNonSpace("package.loaded[")
 				self:EmitToken(node.expressions[1].value)
 				self:EmitNonSpace("] = (function(...)")
 				self:Whitespace("\n")
 				self:Indent()
-				self:EmitStatements(node.root.statements)
+				self:EmitStatements(node.RootStatement.statements)
 				self:Outdent()
 				self:Whitespace("\n")
 				self:EmitNonSpace("end)(\"" .. node.path .. "\");")
@@ -503,7 +510,13 @@ function META:EmitExpression(node)
 	elseif node.kind == "postfix_operator" then
 		self:EmitPostfixOperator(node)
 	elseif node.kind == "postfix_call" then
-		if node.expressions_typesystem then
+		if node.import_expression then
+			if not node.path or node.type_call then
+				self:EmitInvalidLuaCode("EmitImportExpression", node)
+			else
+				self:EmitImportExpression(node)
+			end
+		elseif node.expressions_typesystem then
 			self:EmitCall(node)
 		elseif node.type_call then
 			self:EmitInvalidLuaCode("EmitCall", node)
@@ -523,12 +536,6 @@ function META:EmitExpression(node)
 			else
 				self:EmitToken(node.value)
 			end
-		end
-	elseif node.kind == "import" then
-		if not node.path then
-			self:EmitInvalidLuaCode("EmitImportExpression", node)
-		else
-			self:EmitImportExpression(node)
 		end
 	elseif node.kind == "require" then
 		self:EmitRequireExpression(node)
@@ -1283,14 +1290,6 @@ function META:EmitStatement(node)
 
 			if node.kind == "assignment" then self:Emit_ENVFromAssignment(node) end
 		end
-	elseif node.kind == "import" then
-		self:EmitNonSpace("local")
-		self:EmitSpace(" ")
-		self:EmitIdentifierList(node.left)
-		self:EmitSpace(" ")
-		self:EmitNonSpace("=")
-		self:EmitSpace(" ")
-		self:EmitImportExpression(node)
 	elseif node.kind == "call_expression" then
 		self:EmitExpression(node.value)
 	elseif node.kind == "shebang" then
@@ -1842,17 +1841,17 @@ do -- extra
 
 	function META:EmitImportExpression(node)
 		if not node.path then
-			self:EmitToken(node.tokens["import"])
-			self:EmitToken(node.tokens["arguments("])
+			self:EmitToken(node.left.value)
+			self:EmitToken(node.tokens["call("])
 			self:EmitExpressionList(node.expressions)
-			self:EmitToken(node.tokens["arguments)"])
+			self:EmitToken(node.tokens["call)"])
 			return
 		end
 
-		self:EmitToken(node.tokens.import, "IMPORTS['" .. node.path .. "']")
-		self:EmitToken(node.tokens["arguments("])
+		self:EmitToken(node.left.value, "IMPORTS['" .. node.path .. "']")
+		self:EmitToken(node.tokens["call("])
 		self:EmitExpressionList(node.expressions)
-		self:EmitToken(node.tokens["arguments)"])
+		self:EmitToken(node.tokens["call)"])
 	end
 
 	function META:EmitRequireExpression(node)

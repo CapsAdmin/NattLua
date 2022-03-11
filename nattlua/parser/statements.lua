@@ -488,15 +488,7 @@ function META:ReadCallOrAssignmentStatement()
 		return node
 	end
 
-	if
-		left[1] and
-		(
-			left[1].kind == "postfix_call" or
-			left[1].kind == "import"
-		)
-		and
-		not left[2]
-	then
+	if left[1] and (left[1].kind == "postfix_call") and not left[2] then
 		local node = self:StartNode("statement", "call_expression")
 		node.value = left[1]
 		node.tokens = left[1].tokens

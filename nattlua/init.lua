@@ -34,8 +34,8 @@ end
 
 function nl.File(path, config)
 	config = config or {}
-	config.path = config.path or path
-	config.name = config.name or path
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or path
 	local f, err = io.open(path, "rb")
 
 	if not f then return nil, err end

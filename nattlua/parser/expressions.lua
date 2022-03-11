@@ -285,10 +285,11 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadTypeCallSubExpression()
+	function META:ReadTypeCallSubExpression(primary_node)
 		if not self:IsCallExpression(0) then return end
 
 		local node = self:StartNode("expression", "postfix_call")
+		local start = self:GetToken()
 
 		if self:IsValue("{") then
 			node.expressions = {self:ReadTableTypeExpression()}
@@ -302,6 +303,14 @@ do -- typesystem
 			node.tokens["call("] = self:ExpectValue("(")
 			node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectValue(")")
+		end
+
+		if primary_node.kind == "value" then
+			if primary_node.value.value == "import" then
+				self:HandleImportExpression(node, node.expressions[1].value.string_value, start)
+			elseif primary_node.value.value == "import_data" then
+				self:HandleImportDataExpression(node, node.expressions[1].value.string_value, start)
+			end
 		end
 
 		node.type_call = true
@@ -326,7 +335,7 @@ do -- typesystem
 			local found = self:ReadIndexSubExpression() or
 				self:ReadSelfCallSubExpression() or
 				self:ReadPostfixTypeOperatorSubExpression() or
-				self:ReadTypeCallSubExpression() or
+				self:ReadTypeCallSubExpression(node) or
 				self:ReadPostfixTypeIndexExpressionSubExpression() or
 				self:ReadAsSubExpression(left_node)
 
@@ -361,7 +370,6 @@ do -- typesystem
 			self:ReadPrefixOperatorTypeExpression() or
 			self:ReadAnalyzerFunctionExpression() or -- shared
 			self:ReadFunctionSignatureExpression() or
-			self:ReadImportExpression() or
 			self:ReadTypeFunctionExpression() or -- shared
 			self:ReadFunctionExpression() or -- shared
 			self:ReadValueTypeExpression() or
@@ -602,8 +610,14 @@ do -- runtime
 
 		self:EndNode(node)
 
-		if primary_node.kind == "value" and primary_node.value.value == "require" then
-			self:HandleRuntimeRequire(node, node.expressions[1].value.string_value, start)
+		if primary_node.kind == "value" then
+			if primary_node.value.value == "require" then
+				self:HandleRuntimeRequire(node, node.expressions[1].value.string_value, start)
+			elseif primary_node.value.value == "import" then
+				self:HandleImportExpression(node, node.expressions[1].value.string_value, start)
+			elseif primary_node.value.value == "import_data" then
+				self:HandleImportDataExpression(node, node.expressions[1].value.string_value, start)
+			end
 		end
 
 		return node
@@ -696,66 +710,106 @@ do -- runtime
 		return self:ReadValueExpressionToken()
 	end
 
-	function META:ReadImportExpression()
-		if not (self:IsValue("import") and self:IsValue("(", 1)) then return end
+	local function resolve_import_path(self, path)
+		local working_directory = self.config.working_directory or ""
 
-		local node = self:StartNode("expression", "import")
-		node.tokens["import"] = self:ExpectValue("import")
-		node.tokens["arguments("] = self:ExpectValue("(")
-		local start = self:GetToken()
-		node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
+		if path:sub(1, 1) == "~" then
+			path = path:sub(2)
 
-		if self.config.skip_import then
-			node.tokens["arguments)"] = self:ExpectValue(")")
-			self:EndNode(node)
-			return node
+			if path:sub(1, 1) == "/" then path = path:sub(2) end
+		elseif path:sub(1, 2) == "./" then
+			working_directory = self.config.file_path and
+				self.config.file_path:match("(.+/)") or
+				working_directory
+			path = path:sub(3)
 		end
 
-		local path = node.expressions[1].value.string_value
+		return working_directory .. path
+	end
 
-		do
-			local root = self.config.working_directory or ""
+	function META:HandleImportExpression(node, path, start)
+		node.import_expression = true
 
-			if path:sub(1, 1) == "~" then
-				path = path:sub(2)
+		if self.config.skip_import then return node end
 
-				if path:sub(1, 1) == "/" then path = path:sub(2) end
-			elseif path:sub(1, 2) == "./" then
-				root = self.config.path and self.config.path:match("(.+/)") or root
-				path = path:sub(3)
-			end
-
-			node.path = root .. path
-		end
-
+		node.path = resolve_import_path(self, path)
 		self.imported = self.imported or {}
 
-		if self.imported[node.path] then
-			self:EndNode(node)
-			node.tokens["arguments)"] = self:ExpectValue(")")
-			return self.imported[node.path]
-		end
+		if self.imported[node.path] then return self.imported[node.path] end
 
 		local nl = require("nattlua")
-		local root, err = nl.ParseFile(
+		local compiler, err = nl.ParseFile(
 			node.path,
 			{
-				root = self.root,
+				root_statement_override = self.RootStatement,
 				path = node.path,
 				working_directory = self.config.working_directory,
 			}
 		)
 
-		if not root then
+		if not compiler then
 			self:Error("error importing file: $1", start, start, err)
 		end
 
-		node.root = root.SyntaxTree
-		node.analyzer = root
-		node.tokens["arguments)"] = self:ExpectValue(")")
-		self.root.imports = self.root.imports or {}
-		table.insert(self.root.imports, node)
-		self:EndNode(node)
+		if self.RootStatement.data_import then
+			node.data = compiler.SyntaxTree:Render({
+				preserve_whitespace = false,
+				uncomment_types = true,
+			})
+		end
+
+		node.RootStatement = compiler.SyntaxTree
+		self.RootStatement.imports = self.RootStatement.imports or {}
+		table.insert(self.RootStatement.imports, node)
+		self.imported[node.path] = node
+		return node
+	end
+
+	function META:HandleImportDataExpression(node, path, start)
+		node.import_expression = true
+
+		if self.config.skip_import then return node end
+
+		node.path = resolve_import_path(self, path)
+		self.imported = self.imported or {}
+
+		if self.imported[node.path] then return self.imported[node.path] end
+
+		self.RootStatement.data_import = true
+		local data
+		local err
+
+		if node.path:sub(-4) == "lua" or node.path:sub(-5) ~= "nlua" then
+			local nl = require("nattlua")
+			local compiler, err = nl.ParseFile(
+				node.path,
+				{
+					path = node.path,
+					working_directory = self.config.working_directory,
+					inline_require = true,
+				}
+			)
+			data = compiler.SyntaxTree:Render({
+				preserve_whitespace = false,
+				uncomment_types = true,
+			})
+		else
+			local f
+			f, err = io.open(node.path, "rb")
+
+			if f then
+				data = f:read("*all")
+				f:close()
+			end
+		end
+
+		if not data then
+			self:Error("error importing file: $1", start, start, err)
+		end
+
+		node.data = data
+		self.RootStatement.imports = self.RootStatement.imports or {}
+		table.insert(self.RootStatement.imports, node)
 		self.imported[node.path] = node
 		return node
 	end
@@ -779,7 +833,7 @@ do -- runtime
 	function META:HandleRuntimeRequire(node, module_name, start)
 		if not self.config.inline_require then return end
 
-		local root_node = self.config.root or self.root
+		local root_node = self.config.root_statement_override or self.RootStatement
 		root_node.required_files = root_node.required_files or {}
 		local cache = root_node.required_files
 		local path = require_path_to_path(module_name)
@@ -798,9 +852,9 @@ do -- runtime
 					config[k] = v
 				end
 
-				config.root = self.root
-				config.path = path
-				config.name = module_name
+				config.root_statement_override = self.RootStatement
+				config.file_path = path
+				config.friendly_name = module_name
 				cache[path] = false
 				local nl = require("nattlua")
 				local compiler, err = nl.ParseFile(path, config)
@@ -809,16 +863,16 @@ do -- runtime
 					self:Error("error requiring file: $1", start, start, err)
 					cache[path] = nil
 				else
-					node.root = compiler.SyntaxTree
+					node.RootStatement = compiler.SyntaxTree
 					cache[path] = compiler.SyntaxTree
 				end
 			else
-				node.root = cache[path]
+				node.RootStatement = cache[path]
 			end
 		end
 
-		self.root.required_files = self.root.required_files or {}
-		table.insert(self.root.required_files, node)
+		self.RootStatement.required_files = self.RootStatement.required_files or {}
+		table.insert(self.RootStatement.required_files, node)
 		return node
 	end
 
@@ -855,7 +909,6 @@ do -- runtime
 			self:ReadPrefixOperatorExpression() or
 			self:ReadAnalyzerFunctionExpression() or
 			self:ReadFunctionExpression() or
-			self:ReadImportExpression() or
 			self:ReadValueExpression() or
 			self:ReadTableExpression()
 		local first = node

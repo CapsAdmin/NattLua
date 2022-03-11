@@ -82,7 +82,7 @@ if false then LintCodebase() end
 
 local helpers = require("nattlua.other.helpers")
 --helpers.EnableJITDumper()
-local root = "examples/projects/gmod/"
+local working_directory = "examples/projects/gmod/"
 local files = {
 	{
 		path = "lua/autorun/client/myaddon.lua",
@@ -111,16 +111,18 @@ local files = {
 }
 
 for _, info in ipairs(files) do
-	local compiler = assert(nl.File(root .. info.path))
-	local last_directory = root
+	local compiler = assert(nl.File(working_directory .. info.path, {
+		working_directory = working_directory,
+	}))
+	local last_directory = working_directory
 
 	function compiler:OnResolvePath(path)
 		if file_exists(last_directory .. path) then
 			path = last_directory .. path
-		elseif file_exists(root .. "lua/" .. path) then
-			path = root .. "lua/" .. path
+		elseif file_exists(working_directory .. "lua/" .. path) then
+			path = working_directory .. "lua/" .. path
 		else
-			path = root .. path
+			path = working_directory .. path
 		end
 
 		last_directory = path:match("(.+/)")

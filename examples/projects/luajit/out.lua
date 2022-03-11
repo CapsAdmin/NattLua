@@ -46,7 +46,21 @@ function table.print(...)
 end
 
 IMPORTS = IMPORTS or {}
-IMPORTS['examples/projects/luajit/src/platforms/windows/filesystem.nlua'] = function(...) local type contract = --[[#import("~/platforms/filesystem.nlua")]]
+IMPORTS['examples/projects/luajit/src/platforms/filesystem.nlua'] = function(...) --[[#local type FileStat = {
+	last_accessed = number,
+	last_changed = number,
+	last_modified = number,
+	size = number,
+	type = "directory" | "file",
+}]]
+--[[#local type fs_contract = {
+	get_attributes = function=(string, false | nil | true)>(ErrorReturn<|FileStat|>),
+	get_files = function=(string)>(ErrorReturn<|List<|string|>|>),
+	set_current_directory = function=(string)>(ErrorReturn<|true|>),
+	get_current_directory = function=()>(ErrorReturn<|string|>),
+}]]
+return fs_contract end
+IMPORTS['examples/projects/luajit/src/platforms/windows/filesystem.nlua'] = function(...) --[[#local type contract = IMPORTS['examples/projects/luajit/src/platforms/filesystem.nlua']("~/platforms/filesystem.nlua")]]
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"
@@ -231,7 +245,7 @@ do
 end
 
 return fs end
-IMPORTS['examples/projects/luajit/src/platforms/unix/filesystem.nlua'] = function(...) local type contract = --[[#import("~/platforms/filesystem.nlua")]]
+IMPORTS['examples/projects/luajit/src/platforms/unix/filesystem.nlua'] = function(...) --[[#local type contract = IMPORTS['examples/projects/luajit/src/platforms/filesystem.nlua']("~/platforms/filesystem.nlua")]]
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"
@@ -281,7 +295,7 @@ do
 				int64_t  st_qspare[2];
 			}
 		]])
-		type stat_struct.@Name = "OSXStat"
+		--[[#type stat_struct.@Name = "OSXStat"]]
 	else
 		if X64 then
 			stat_struct = ffi.typeof([[
@@ -306,7 +320,7 @@ do
 					int64_t  __unused[3];
 				}
 			]])
-			type stat_struct.@Name = "UnixX64Stat"
+			--[[#type stat_struct.@Name = "UnixX64Stat"]]
 		else
 			stat_struct = ffi.typeof([[
 				struct {
@@ -331,7 +345,7 @@ do
 					uint64_t st_ino;
 				}
 			]])
-			type stat_struct.@Name = "UnixX32Stat"
+			--[[#type stat_struct.@Name = "UnixX32Stat"]]
 		end
 	end
 
@@ -474,13 +488,13 @@ end
 
 return fs end
 IMPORTS['examples/projects/luajit/src/filesystem.nlua'] = function(...) if jit.os == "Windows" then
-	return IMPORTS['examples/projects/luajit/src/platforms/windows/filesystem.nlua']("platforms/windows/filesystem.nlua")
+	return IMPORTS['examples/projects/luajit/src/platforms/windows/filesystem.nlua']("./platforms/windows/filesystem.nlua")
 else
-	return IMPORTS['examples/projects/luajit/src/platforms/unix/filesystem.nlua']("platforms/unix/filesystem.nlua")
+	return IMPORTS['examples/projects/luajit/src/platforms/unix/filesystem.nlua']("./platforms/unix/filesystem.nlua")
 end
 
 error("unknown platform") end
-local fs = IMPORTS['examples/projects/luajit/src/filesystem.nlua']("filesystem.nlua")
+local fs = IMPORTS['examples/projects/luajit/src/filesystem.nlua']("./filesystem.nlua")
 print("get files: ", assert(fs.get_files(".")))
 
 for k, v in ipairs(assert(fs.get_files("."))) do

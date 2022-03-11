@@ -140,9 +140,11 @@ do
 		elseif node.kind == "postfix_expression_index" then
 			return AnalyzePostfixIndex(self, node)
 		elseif node.kind == "postfix_call" then
-			return AnalyzePostfixCall(self, node)
-		elseif node.kind == "import" then
-			return AnalyzeImport(self, node)
+			if node.import_expression then
+				return AnalyzeImport(self, node)
+			else
+				return AnalyzePostfixCall(self, node)
+			end
 		elseif node.kind == "empty_union" then
 			return Union({}):SetNode(node)
 		elseif node.kind == "tuple" then

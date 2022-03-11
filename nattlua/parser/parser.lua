@@ -193,7 +193,7 @@ assert(loadfile("nattlua/parser/teal.lua"))(META)
 
 function META:ReadRootNode()
 	local node = self:StartNode("statement", "root")
-	self.root = self.config and self.config.root or node
+	self.RootStatement = self.config and self.config.root_statement_override or node
 	local shebang
 
 	if self:IsType("shebang") then

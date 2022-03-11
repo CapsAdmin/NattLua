@@ -5660,7 +5660,10 @@ package.loaded["nattlua.runtime.base_environment"] = (function(...)
 			compiler:SetEnvironments(runtime_env, typesystem_env)
 			local base = compiler.Analyzer()
 			assert(compiler:Analyze(base))
-			typesystem_env.string_metatable:Set(LStringNoMeta("__index"), typesystem_env:Get(LStringNoMeta("string")))
+			typesystem_env.string_metatable:Set(
+				LStringNoMeta("__index"),
+				base:Assert(compiler.SyntaxTree, typesystem_env:Get(LStringNoMeta("string")))
+			)
 			return runtime_env, typesystem_env
 		end,
 	}	
@@ -7431,10 +7434,17 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 			self:EmitNonSpace("IMPORTS = IMPORTS or {}\n")
 
 			for i, node in ipairs(block.imports) do
-				if not self.done[node.path] and node.root then
-					self:Emit(
-						"IMPORTS['" .. node.path .. "'] = function(...) " .. node.root:Render(self.config or {}) .. " end\n"
-					)
+				if not self.done[node.path] then
+					if node.data then
+						self:Emit(
+							"IMPORTS['" .. node.path .. "'] = function(...) return [======[ " .. node.data .. " ]======] end\n"
+						)
+					elseif node.RootStatement then
+						self:Emit(
+							"IMPORTS['" .. node.path .. "'] = function(...) " .. node.RootStatement:Render(self.config or {}) .. " end\n"
+						)
+					end
+
 					self.done[node.path] = true
 				end
 			end
@@ -7444,13 +7454,13 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 			self.done = {}
 
 			for i, node in ipairs(block.required_files) do
-				if not self.done[node.path] and node.root then
+				if not self.done[node.path] and node.RootStatement then
 					self:EmitNonSpace("package.loaded[")
 					self:EmitToken(node.expressions[1].value)
 					self:EmitNonSpace("] = (function(...)")
 					self:Whitespace("\n")
 					self:Indent()
-					self:EmitStatements(node.root.statements)
+					self:EmitStatements(node.RootStatement.statements)
 					self:Outdent()
 					self:Whitespace("\n")
 					self:EmitNonSpace("end)(\"" .. node.path .. "\");")
@@ -7578,7 +7588,13 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 		elseif node.kind == "postfix_operator" then
 			self:EmitPostfixOperator(node)
 		elseif node.kind == "postfix_call" then
-			if node.expressions_typesystem then
+			if node.import_expression then
+				if not node.path or node.type_call then
+					self:EmitInvalidLuaCode("EmitImportExpression", node)
+				else
+					self:EmitImportExpression(node)
+				end
+			elseif node.expressions_typesystem then
 				self:EmitCall(node)
 			elseif node.type_call then
 				self:EmitInvalidLuaCode("EmitCall", node)
@@ -7598,12 +7614,6 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 				else
 					self:EmitToken(node.value)
 				end
-			end
-		elseif node.kind == "import" then
-			if not node.path then
-				self:EmitInvalidLuaCode("EmitImportExpression", node)
-			else
-				self:EmitImportExpression(node)
 			end
 		elseif node.kind == "require" then
 			self:EmitRequireExpression(node)
@@ -8358,14 +8368,6 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 
 				if node.kind == "assignment" then self:Emit_ENVFromAssignment(node) end
 			end
-		elseif node.kind == "import" then
-			self:EmitNonSpace("local")
-			self:EmitSpace(" ")
-			self:EmitIdentifierList(node.left)
-			self:EmitSpace(" ")
-			self:EmitNonSpace("=")
-			self:EmitSpace(" ")
-			self:EmitImportExpression(node)
 		elseif node.kind == "call_expression" then
 			self:EmitExpression(node.value)
 		elseif node.kind == "shebang" then
@@ -8917,17 +8919,17 @@ package.loaded["nattlua.transpiler.emitter"] = (function(...)
 
 		function META:EmitImportExpression(node)
 			if not node.path then
-				self:EmitToken(node.tokens["import"])
-				self:EmitToken(node.tokens["arguments("])
+				self:EmitToken(node.left.value)
+				self:EmitToken(node.tokens["call("])
 				self:EmitExpressionList(node.expressions)
-				self:EmitToken(node.tokens["arguments)"])
+				self:EmitToken(node.tokens["call)"])
 				return
 			end
 
-			self:EmitToken(node.tokens.import, "IMPORTS['" .. node.path .. "']")
-			self:EmitToken(node.tokens["arguments("])
+			self:EmitToken(node.left.value, "IMPORTS['" .. node.path .. "']")
+			self:EmitToken(node.tokens["call("])
 			self:EmitExpressionList(node.expressions)
-			self:EmitToken(node.tokens["arguments)"])
+			self:EmitToken(node.tokens["call)"])
 		end
 
 		function META:EmitRequireExpression(node)
@@ -9811,7 +9813,7 @@ package.loaded["nattlua.parser.parser"] = (function(...)
 
 	function META:ReadRootNode()
 		local node = self:StartNode("statement", "root")
-		self.root = self.config and self.config.root or node
+		self.RootStatement = self.config and self.config.root_statement_override or node
 		local shebang
 
 		if self:IsType("shebang") then
@@ -15400,10 +15402,14 @@ package.loaded["nattlua.analyzer.expressions.atomic_value"] = (function(...)
 	}	
 end)("./nattlua/analyzer/expressions/atomic_value.lua");
 package.loaded["nattlua.analyzer.expressions.import"] = (function(...)
-	local table = require("table")
+	local LString = require("nattlua.types.string").LString
 	return {
 		AnalyzeImport = function(self, node)
-			return self:AnalyzeRootStatement(node.root)
+			if node.RootStatement then
+				return self:AnalyzeRootStatement(node.RootStatement)
+			elseif node.data then
+				return LString(node.data)
+			end
 		end,
 	}	
 end)("./nattlua/analyzer/expressions/import.lua");
@@ -15579,9 +15585,11 @@ package.loaded["nattlua.analyzer.analyzer"] = (function(...)
 			elseif node.kind == "postfix_expression_index" then
 				return AnalyzePostfixIndex(self, node)
 			elseif node.kind == "postfix_call" then
-				return AnalyzePostfixCall(self, node)
-			elseif node.kind == "import" then
-				return AnalyzeImport(self, node)
+				if node.import_expression then
+					return AnalyzeImport(self, node)
+				else
+					return AnalyzePostfixCall(self, node)
+				end
 			elseif node.kind == "empty_union" then
 				return Union({}):SetNode(node)
 			elseif node.kind == "tuple" then
@@ -16964,8 +16972,8 @@ package.loaded["nattlua.init"] = (function(...)
 
 	function nl.File(path, config)
 		config = config or {}
-		config.path = config.path or path
-		config.name = config.name or path
+		config.file_path = config.file_path or path
+		config.file_name = config.file_name or path
 		local f, err = io.open(path, "rb")
 
 		if not f then return nil, err end

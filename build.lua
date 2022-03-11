@@ -24,6 +24,7 @@ io.write("output is " .. #lua_code .. " bytes\n")
 -- double check that the lua_code is valid
 io.write("checking if lua_code is loadable")
 local func, err = loadstring(lua_code)
+
 if not func then
 	io.write(" - FAILED\n")
 	io.write(err .. "\n")
@@ -32,6 +33,7 @@ if not func then
 	f:close()
 	return
 end
+
 io.write(" - OK\n")
 -- run tests before we write the file
 local f = io.open("temp_build_output.lua", "w")

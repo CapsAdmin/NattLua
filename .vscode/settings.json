@@ -1,11 +1,16 @@
 {
-    "triggerTaskOnSave.tasks": {
-		"onsave": [
-			"examples/**/*.lua", 
-			"nattlua/**/*.lua", 
-			"test/**/*.lua", 
-			"**/*.nlua",
-			"test_focus.lua",
-		]
-	}
+  "triggerTaskOnSave.tasks": {
+    "onsave": [
+      "examples/**/*.lua",
+      "nattlua/**/*.lua",
+      "test/**/*.lua",
+      "**/*.nlua",
+      "test_focus.lua"
+    ]
+  },
+  "search.exclude": {
+    "build_output.lua": true,
+    "test/**": true,
+    "language_server/vscode": true
+  }
 }
