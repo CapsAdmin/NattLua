@@ -15,7 +15,7 @@
 	ValueExpression
  } = import("./nodes.nlua")]]
 
---[[#import("~/nattlua/code/code.lua")]]
+--[[#import<|"~/nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
 local Node = require("nattlua.parser.node")
 local ipairs = _G.ipairs

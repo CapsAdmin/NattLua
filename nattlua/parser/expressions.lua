@@ -613,7 +613,7 @@ do -- runtime
 		if primary_node.kind == "value" then
 			if primary_node.value.value == "require" then
 				self:HandleRuntimeRequire(node, node.expressions[1].value.string_value, start)
-			elseif primary_node.value.value == "import" then
+			elseif primary_node.value.value == "import" or primary_node.value.value == "dofile" then
 				self:HandleImportExpression(node, node.expressions[1].value.string_value, start)
 			elseif primary_node.value.value == "import_data" then
 				self:HandleImportDataExpression(node, node.expressions[1].value.string_value, start)
@@ -728,13 +728,13 @@ do -- runtime
 	end
 
 	function META:HandleImportExpression(node, path, start)
-		node.import_expression = true
-
 		if self.config.skip_import then return node end
 
+		node.import_expression = true
 		node.path = resolve_import_path(self, path)
 		self.imported = self.imported or {}
 		local key = node.path
+		node.key = key
 
 		if self.RootStatement.data_import then key = "DATA_" .. key end
 
@@ -758,18 +758,17 @@ do -- runtime
 		self.RootStatement.imports = self.RootStatement.imports or {}
 		table.insert(self.RootStatement.imports, node)
 		self.imported[key] = node
-		node.key = key
 		return node
 	end
 
 	function META:HandleImportDataExpression(node, path, start)
-		node.import_expression = true
-
 		if self.config.skip_import then return node end
 
+		node.import_expression = true
 		node.path = resolve_import_path(self, path)
 		self.imported = self.imported or {}
 		local key = "DATA_" .. node.path
+		node.key = key
 
 		if self.imported[key] then return self.imported[key] end
 
@@ -809,7 +808,6 @@ do -- runtime
 		end
 
 		node.data = data
-		node.key = key
 		self.RootStatement.imports = self.RootStatement.imports or {}
 		table.insert(self.RootStatement.imports, node)
 		self.imported[key] = node

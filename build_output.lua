@@ -4496,7 +4496,7 @@ IMPORTS['nattlua/definitions/lua/math.nlua']("./lua/math.nlua")
 IMPORTS['nattlua/definitions/lua/os.nlua']("./lua/os.nlua")
 IMPORTS['nattlua/definitions/lua/coroutine.nlua']("./lua/coroutine.nlua")
 IMPORTS['nattlua/definitions/typed_ffi.nlua']("./typed_ffi.nlua") ]======] end
-IMPORTS['DATA_./nattlua/lexer/token.nlua'] = function() --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
+IMPORTS['./nattlua/lexer/token.nlua'] = function() --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
 --[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
 --[[#local type Token = {
 	@Name = "Token",
@@ -4520,31 +4520,7 @@ return {
 	TokenType = TokenType,
 	TokenReturnType = TokenReturnType,
 } end
-IMPORTS['DATA_nattlua/lexer/token.nlua'] = function() --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
---[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
---[[#local type Token = {
-	@Name = "Token",
-	type = TokenType,
-	value = string,
-	start = number,
-	stop = number,
-	is_whitespace = boolean | nil,
-	whitespace = false | nil | {
-		[1 .. inf] = {
-			type = TokenWhitespaceType,
-			value = string,
-			start = number,
-			stop = number,
-		},
-	},
-}]]
---[[#local type TokenReturnType = TokenType | false]]
-return {
-	Token = Token,
-	TokenType = TokenType,
-	TokenReturnType = TokenReturnType,
-} end
-IMPORTS['DATA_./nattlua/parser/nodes.nlua'] = function() --[[#local type { Token } = IMPORTS['DATA_nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+IMPORTS['./nattlua/parser/nodes.nlua'] = function() --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 --[[#local type Node = {
 	type = "statement" | "expression",
@@ -5234,78 +5210,7 @@ return {
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
 } end
-IMPORTS['DATA_nattlua/code/code.lua'] = function() local META = {}
-META.__index = META
---[[#type META.@Name = "Code"]]
---[[#type META.@Self = {
-	Buffer = string,
-	Name = string,
-}]]
-
-function META:GetString()
-	return self.Buffer
-end
-
-function META:GetName()
-	return self.Name
-end
-
-function META:GetByteSize()
-	return #self.Buffer
-end
-
-function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
-	return self.Buffer:sub(start, stop)
-end
-
-function META:GetByte(pos--[[#: number]])
-	return self.Buffer:byte(pos) or 0
-end
-
-function META:FindNearest(str--[[#: string]], start--[[#: number]])
-	local _, pos = self.Buffer:find(str, start, true)
-
-	if not pos then return nil end
-
-	return pos + 1
-end
-
-local function remove_bom_header(str--[[#: string]])--[[#: string]]
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
-end
-
-local function get_default_name()
-	local info = debug.getinfo(3)
-
-	if info then
-		local parent_line = info.currentline
-		local parent_name = info.source:sub(2)
-		return parent_name .. ":" .. parent_line
-	end
-
-	return "unknown line : unknown name"
-end
-
-function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
-	local self = setmetatable(
-		{
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		},
-		META
-	)
-	return self
-end
-
---[[#type Code = META.@Self]]
-return META.New end
-IMPORTS['DATA_nattlua/parser/nodes.nlua'] = function() --[[#local type { Token } = IMPORTS['DATA_nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+IMPORTS['nattlua/parser/nodes.nlua'] = function() --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 --[[#local type Node = {
 	type = "statement" | "expression",
@@ -6346,7 +6251,7 @@ package.loaded["nattlua.other.helpers"] = (function(...)
 
 	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
-	IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+	--[[#IMPORTS['nattlua/code/code.lua']<|"~/nattlua/code/code.lua"|>]]
 	local math = require("math")
 	local table = require("table")
 	local quote = require("nattlua.other.quote")
@@ -6770,7 +6675,7 @@ package.loaded["nattlua.types.symbol"] = (function(...)
 	local table = require("table")
 	local setmetatable = _G.setmetatable
 	local type_errors = require("nattlua.types.error_messages")
-	local META = dofile("nattlua/types/base.lua")
+	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	--[[#local type TBaseType = META.TBaseType]]
 	--[[#type META.@Name = "TSymbol"]]
 	--[[#type TSymbol = META.@Self]]
@@ -6859,7 +6764,7 @@ package.loaded["nattlua.types.number"] = (function(...)
 	local setmetatable = _G.setmetatable
 	local type_errors = require("nattlua.types.error_messages")
 	local bit = require("bit")
-	local META = dofile("nattlua/types/base.lua")
+	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	--[[#local type TBaseType = META.TBaseType]]
 	--[[#type META.@Name = "TNumber"]]
 	--[[#type TNumber = META.@Self]]
@@ -7264,7 +7169,7 @@ package.loaded["nattlua.types.number"] = (function(...)
 end)("./nattlua/types/number.lua");
 package.loaded["nattlua.types.any"] = (function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
-	local META = dofile("nattlua/types/base.lua")
+	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	--[[#local type TBaseType = META.TBaseType]]
 	--[[#type META.@Name = "TAny"]]
 	--[[#type TAny = META.@Self]]
@@ -7329,7 +7234,7 @@ package.loaded["nattlua.types.tuple"] = (function(...)
 	local type_errors = require("nattlua.types.error_messages")
 	local ipairs = _G.ipairs
 	local type = _G.type
-	local META = dofile("nattlua/types/base.lua")
+	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	--[[#local type TBaseType = META.TBaseType]]
 	--[[#type META.@Name = "TTuple"]]
 	--[[#type TTuple = META.@Self]]
@@ -7855,7 +7760,7 @@ package.loaded["nattlua.types.function"] = (function(...)
 	local Any = require("nattlua.types.any").Any
 	local Union = require("nattlua.types.union").Union
 	local type_errors = require("nattlua.types.error_messages")
-	local META = dofile("nattlua/types/base.lua")
+	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	META.Type = "function"
 
 	function META:__call(...)
@@ -8081,7 +7986,7 @@ package.loaded["nattlua.types.union"] = (function(...)
 
 	--[[#local type { TNumber } = require("nattlua.types.number")]]
 
-	local META = dofile("nattlua/types/base.lua")
+	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	--[[#local type TBaseType = META.TBaseType]]
 	--[[#type META.@Name = "TUnion"]]
 	--[[#type TUnion = META.@Self]]
@@ -8721,7 +8626,7 @@ package.loaded["nattlua.types.string"] = (function(...)
 	local type_errors = require("nattlua.types.error_messages")
 	local Number = require("nattlua.types.number").Number
 	local context = require("nattlua.analyzer.context")
-	local META = dofile("nattlua/types/base.lua")
+	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 
 	--[[#local type { Token, TokenType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
@@ -8886,7 +8791,7 @@ package.loaded["nattlua.types.table"] = (function(...)
 	local LNumber = require("nattlua.types.number").LNumber
 	local Tuple = require("nattlua.types.tuple").Tuple
 	local type_errors = require("nattlua.types.error_messages")
-	local META = dofile("nattlua/types/base.lua")
+	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	--[[#local type BaseType = IMPORTS['nattlua/types/base.lua']("~/nattlua/types/base.lua")]]
 	META.Type = "table"
 	--[[#type META.@Name = "TTable"]]
@@ -10209,7 +10114,7 @@ end)("./nattlua/syntax/characters.lua");
 package.loaded["nattlua.syntax.syntax"] = (function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
-	--[[#local type { Token } = IMPORTS['DATA_nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 	local META = {}
 	META.__index = META
@@ -10584,7 +10489,7 @@ end)("./nattlua/syntax/runtime.lua");
 package.loaded["nattlua.lexer.lexer"] = (function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
-	--[[#local type { TokenType } = IMPORTS['DATA_./nattlua/lexer/token.nlua']("./token.nlua")]]
+	--[[#local type { TokenType } = IMPORTS['./nattlua/lexer/token.nlua']("./token.nlua")]]
 
 	local Code = require("nattlua.code.code")
 	local Token = require("nattlua.lexer.token").New
@@ -10837,7 +10742,7 @@ package.loaded["nattlua.lexer.lexer"] = (function(...)
 	do
 		--[[#local type Lexer = META.@Self]]
 
-		--[[#local type { TokenReturnType } = IMPORTS['DATA_nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+		--[[#local type { TokenReturnType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 		local characters = require("nattlua.syntax.characters")
 		local runtime_syntax = require("nattlua.syntax.runtime")
@@ -13196,11 +13101,11 @@ end)("./nattlua/transpiler/emitter.lua");
 package.loaded["nattlua.parser.node"] = (function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
-	--[[#local type { Token } = IMPORTS['DATA_nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
-	--[[#local type { ExpressionKind, StatementKind } = IMPORTS['DATA_nattlua/parser/nodes.nlua']("~/nattlua/parser/nodes.nlua")]]
+	--[[#local type { ExpressionKind, StatementKind } = IMPORTS['nattlua/parser/nodes.nlua']("~/nattlua/parser/nodes.nlua")]]
 
-	IMPORTS['DATA_nattlua/code/code.lua']("~/nattlua/code/code.lua")
+	--[[#IMPORTS['nattlua/code/code.lua']<|"~/nattlua/code/code.lua"|>]]
 	--[[#local type NodeType = "expression" | "statement"]]
 	--[[#local type Node = any]]
 	local ipairs = _G.ipairs
@@ -13381,7 +13286,7 @@ end)("./nattlua/parser/node.lua");
 package.loaded["nattlua.parser.base"] = (function(...)
 	IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
-	--[[#local type { Token, TokenType } = IMPORTS['DATA_nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+	--[[#local type { Token, TokenType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 	--[[#local type { 
 		ExpressionKind,
@@ -13396,9 +13301,9 @@ package.loaded["nattlua.parser.base"] = (function(...)
 		FunctionStatement,
 		FunctionLocalAnalyzerStatement,
 		ValueExpression
-	 } = IMPORTS['DATA_./nattlua/parser/nodes.nlua']("./nodes.nlua")]]
+	 } = IMPORTS['./nattlua/parser/nodes.nlua']("./nodes.nlua")]]
 
-	IMPORTS['DATA_nattlua/code/code.lua']("~/nattlua/code/code.lua")
+	--[[#IMPORTS['nattlua/code/code.lua']<|"~/nattlua/code/code.lua"|>]]
 	--[[#local type NodeType = "expression" | "statement"]]
 	local Node = require("nattlua.parser.node")
 	local ipairs = _G.ipairs
