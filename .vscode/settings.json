@@ -10,6 +10,7 @@
   },
   "search.exclude": {
     "build_output.lua": true,
+    "examples/projects/luajit/out.lua": true,
     "test/**": true,
     "language_server/vscode": true
   }
