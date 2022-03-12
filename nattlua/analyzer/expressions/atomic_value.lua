@@ -109,7 +109,7 @@ return {
 			elseif value == "inf" then
 				return LNumber(math.huge):SetNode(node)
 			elseif value == "nan" then
-				return LNumber(0 / 0):SetNode(node)
+				return LNumber(math.abs(0 / 0)):SetNode(node)
 			elseif value == "string" then
 				return String():SetNode(node)
 			elseif value == "number" then

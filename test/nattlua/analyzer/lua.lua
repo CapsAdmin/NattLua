@@ -3,6 +3,7 @@ local pairs = pairs
 local tostring = _G.tostring
 local T = require("test.helpers")
 local run = T.RunCode
+local bit = _G.bit32 or require("bit")
 
 test("logic operators", function()
 	run[[
@@ -289,16 +290,18 @@ test("boolean and or logic", function() -- and or
 	end
 end)
 
-test("bit operations", function()
-	run[[
-        for i=1,100 do
-            type_assert_truthy(bit.tobit(i+0x7fffffff) < 0)
-        end
-        for i=1,100 do
-            type_assert_truthy(bit.tobit(i+0x7fffffff) <= 0)
-        end
-    ]]
-end)
+if bit.tobit then
+	test("bit operations", function()
+		run[[
+            for i=1,100 do
+                type_assert_truthy(bit.tobit(i+0x7fffffff) < 0)
+            end
+            for i=1,100 do
+                type_assert_truthy(bit.tobit(i+0x7fffffff) <= 0)
+            end
+        ]]
+	end)
+end
 
 test("string comparisons", function()
 	run[[

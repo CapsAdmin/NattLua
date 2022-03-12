@@ -162,6 +162,7 @@ return function(META)
 	do
 		local helpers = require("nattlua.other.helpers")
 		local locals = ""
+		locals = locals .. "local bit=bit32 or require(\"bit\");"
 		locals = locals .. "local nl=require(\"nattlua\");"
 		locals = locals .. "local types=require(\"nattlua.types.types\");"
 		locals = locals .. "local context=require(\"nattlua.analyzer.context\");"

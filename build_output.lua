@@ -10663,7 +10663,7 @@ package.preload["nattlua.types.number"] = function(...)
 	local tonumber = _G.tonumber
 	local setmetatable = _G.setmetatable
 	local type_errors = require("nattlua.types.error_messages")
-	local bit = require("bit")
+	local bit = _G.bit32 or require("bit")
 	local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 	--[[#local type TBaseType = META.TBaseType]]
 	--[[#type META.@Name = "TNumber"]]
@@ -19055,6 +19055,7 @@ package.preload["nattlua.analyzer.base.base_analyzer"] = function(...)
 		do
 			local helpers = require("nattlua.other.helpers")
 			local locals = ""
+			locals = locals .. "local bit=bit32 or require(\"bit\");"
 			locals = locals .. "local nl=require(\"nattlua\");"
 			locals = locals .. "local types=require(\"nattlua.types.types\");"
 			locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
@@ -23501,7 +23502,7 @@ package.preload["nattlua.analyzer.expressions.atomic_value"] = function(...)
 				elseif value == "inf" then
 					return LNumber(math.huge):SetNode(node)
 				elseif value == "nan" then
-					return LNumber(0 / 0):SetNode(node)
+					return LNumber(math.abs(0 / 0)):SetNode(node)
 				elseif value == "string" then
 					return String():SetNode(node)
 				elseif value == "number" then
