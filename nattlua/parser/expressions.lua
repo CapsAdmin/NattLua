@@ -837,6 +837,8 @@ do -- runtime
 	function META:HandleRuntimeRequire(node, module_name, start)
 		if not self.config.inline_require then return end
 
+		node.require_expression = true
+		node.key = module_name
 		local root_node = self.config.root_statement_override or self.RootStatement
 		root_node.required_files = root_node.required_files or {}
 		local cache = root_node.required_files

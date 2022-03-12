@@ -378,18 +378,18 @@ function META:BuildCode(block)
 
 	if block.required_files then
 		self.done = {}
+		self:EmitNonSpace("_G.IMPORTS = _G.IMPORTS or {}\n")
 
 		for i, node in ipairs(block.required_files) do
 			if not self.done[node.path] and node.RootStatement then
-				self:EmitNonSpace("package.preload[")
-				self:EmitToken(node.expressions[1].value)
-				self:EmitNonSpace("] = function(...)")
+				self:EmitNonSpace("do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...)")
+				self:EmitNonSpace("__M = __M or (function(...)")
 				self:Whitespace("\n")
 				self:Indent()
 				self:EmitStatements(node.RootStatement.statements)
 				self:Outdent()
 				self:Whitespace("\n")
-				self:EmitNonSpace("end")
+				self:EmitNonSpace("end)(...) return __M end end")
 				self:Whitespace("\n")
 				self.done[node.path] = true
 			end
@@ -520,6 +520,8 @@ function META:EmitExpression(node)
 			else
 				self:EmitImportExpression(node)
 			end
+		elseif node.require_expression then
+			self:EmitImportExpression(node)
 		elseif node.expressions_typesystem then
 			self:EmitCall(node)
 		elseif node.type_call then

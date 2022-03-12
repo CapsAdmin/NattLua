@@ -159,21 +159,6 @@ analyzer function require(name: string)
 	if not name:IsLiteral() then return types.Any() end
 
 	local str = name
-
-	do
-		local env = analyzer:GetDefaultEnvironment("runtime")
-		local package = env:Get(types.LString("package"))
-
-		if package then
-			local preload = package:Get(types.LString("preload"))
-			local func = preload:Get(name)
-
-			if func then
-				return analyzer:Assert(name:GetNode(), analyzer:Call(func, types.Tuple({name})))
-			end
-		end
-	end
-
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
 	local val = base_environment:Get(str)
 
@@ -205,23 +190,6 @@ analyzer function require(name: string)
 		return analyzer:GetLocalOrGlobalValue(str)
 	end
 
-	local allowed = {
-		["string.buffer"] = true,
-		["ffi"] = true,
-		["table.new"] = true,
-		["table.clear"] = true,
-		["jit.util"] = true,
-		["jit.profile"] = true,
-	}
-	local old = package.preload
-	local new = {}
-
-	for k, v in pairs(old) do
-		if allowed[k] then new[k] = v end
-	end
-
-	package.preload = new
-
 	if package.loaders then
 		for i, searcher in ipairs(package.loaders) do
 			local loader = searcher(str:GetData())
@@ -233,7 +201,6 @@ analyzer function require(name: string)
 					local path = path:sub(2)
 
 					if analyzer.loaded and analyzer.loaded[path] then
-						package.preload = old
 						return analyzer.loaded[path]
 					end
 
@@ -243,14 +210,12 @@ analyzer function require(name: string)
 					local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 					analyzer.loaded = analyzer.loaded or {}
 					analyzer.loaded[path] = res
-					package.preload = old
 					return res
 				end
 			end
 		end
 	end
 
-	package.preload = old
 	analyzer:Error(name:GetNode(), "module '" .. str:GetData() .. "' not found")
 	return types.Any
 end
