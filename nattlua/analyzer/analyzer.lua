@@ -140,7 +140,11 @@ do
 		elseif node.kind == "postfix_expression_index" then
 			return AnalyzePostfixIndex(self, node)
 		elseif node.kind == "postfix_call" then
-			if node.import_expression then
+			if
+				node.import_expression and
+				node.left.value.value ~= "dofile" and
+				node.left.value.value ~= "loadfile"
+			then
 				return AnalyzeImport(self, node)
 			else
 				return AnalyzePostfixCall(self, node)

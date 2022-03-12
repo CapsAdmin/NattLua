@@ -361,6 +361,10 @@ function META:BuildCode(block)
 					self:Emit(
 						"IMPORTS['" .. node.key .. "'] = function() return [======[ " .. node.data .. " ]======] end\n"
 					)
+				elseif node.left.value.value == "loadfile" then
+					self:Emit(
+						"IMPORTS['" .. node.key .. "'] = function(...) " .. node.RootStatement:Render(self.config or {}) .. " end\n"
+					)
 				elseif node.RootStatement then
 					self:Emit(
 						"IMPORTS['" .. node.key .. "'] = function() " .. node.RootStatement:Render(self.config or {}) .. " end\n"
@@ -1848,10 +1852,14 @@ do -- extra
 			return
 		end
 
-		self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
-		self:EmitToken(node.tokens["call("])
-		self:EmitExpressionList(node.expressions)
-		self:EmitToken(node.tokens["call)"])
+		if node.left.value.value == "loadfile" then
+			self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
+		else
+			self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
+			self:EmitToken(node.tokens["call("])
+			self:EmitExpressionList(node.expressions)
+			self:EmitToken(node.tokens["call)"])
+		end
 	end
 
 	function META:EmitRequireExpression(node)

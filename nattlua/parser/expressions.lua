@@ -613,7 +613,11 @@ do -- runtime
 		if primary_node.kind == "value" then
 			if primary_node.value.value == "require" then
 				self:HandleRuntimeRequire(node, node.expressions[1].value.string_value, start)
-			elseif primary_node.value.value == "import" or primary_node.value.value == "dofile" then
+			elseif
+				primary_node.value.value == "import" or
+				primary_node.value.value == "dofile" or
+				primary_node.value.value == "loadfile"
+			then
 				self:HandleImportExpression(node, node.expressions[1].value.string_value, start)
 			elseif primary_node.value.value == "import_data" then
 				self:HandleImportDataExpression(node, node.expressions[1].value.string_value, start)
