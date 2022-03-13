@@ -359,39 +359,30 @@ function META:BuildCode(block)
 			if not self.done[node.key] then
 				if node.data then
 					self:Emit(
-						"IMPORTS['" .. node.key .. "'] = function() return [======[ " .. node.data .. " ]======] end\n"
+						"IMPORTS['" .. node.key .. "'] = function() return [===" .. "===[ " .. node.data .. " ]===" .. "===] end\n"
 					)
-				elseif node.left.value.value == "loadfile" then
-					self:Emit(
-						"IMPORTS['" .. node.key .. "'] = function(...) " .. node.RootStatement:Render(self.config or {}) .. " end\n"
-					)
-				elseif node.RootStatement then
-					self:Emit(
-						"IMPORTS['" .. node.key .. "'] = function() " .. node.RootStatement:Render(self.config or {}) .. " end\n"
-					)
+				else
+					-- ugly way of dealing with recursive import
+					local root = node.RootStatement
+
+					if root and root.kind ~= "root" then root = root.RootStatement end
+
+					if root then
+						if node.left.value.value == "loadfile" then
+							self:Emit(
+								"IMPORTS['" .. node.key .. "'] = function(...) " .. root:Render(self.config or {}) .. " end\n"
+							)
+						elseif node.left.value.value == "require" then
+							self:Emit(
+								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (function(...) " .. root:Render(self.config or {}) .. " end)(...) return __M end end\n"
+							)
+						elseif root then
+							self:Emit("IMPORTS['" .. node.key .. "'] = function() " .. root:Render(self.config or {}) .. " end\n")
+						end
+					end
 				end
 
 				self.done[node.key] = true
-			end
-		end
-	end
-
-	if block.required_files then
-		self.done = {}
-		self:EmitNonSpace("_G.IMPORTS = _G.IMPORTS or {}\n")
-
-		for i, node in ipairs(block.required_files) do
-			if not self.done[node.path] and node.RootStatement then
-				self:EmitNonSpace("do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...)")
-				self:EmitNonSpace("__M = __M or (function(...)")
-				self:Whitespace("\n")
-				self:Indent()
-				self:EmitStatements(node.RootStatement.statements)
-				self:Outdent()
-				self:Whitespace("\n")
-				self:EmitNonSpace("end)(...) return __M end end")
-				self:Whitespace("\n")
-				self.done[node.path] = true
 			end
 		end
 	end

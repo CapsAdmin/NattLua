@@ -73,6 +73,10 @@ function META:__tostring()
 end
 
 function META:Render(config)
+	--[[#-- we have to do this because nattlua.transpiler.emitter is not yet typed
+	-- so if it's hoisted the self.nlua will fail
+	£ parser.dont_hoist_next_import = true]]
+
 	local em = require("nattlua.transpiler.emitter"--[[# as string]]).New(config or {preserve_whitespace = false, no_newlines = true})
 
 	if self.type == "expression" then

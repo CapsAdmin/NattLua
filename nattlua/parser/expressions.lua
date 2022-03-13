@@ -306,9 +306,11 @@ do -- typesystem
 		end
 
 		if primary_node.kind == "value" then
-			if primary_node.value.value == "import" then
-				self:HandleImportExpression(node, node.expressions[1].value.string_value, start)
-			elseif primary_node.value.value == "import_data" then
+			local name = primary_node.value.value
+
+			if name == "import" then
+				self:HandleImportExpression(node, name, node.expressions[1].value.string_value, start)
+			elseif name == "import_data" then
 				self:HandleImportDataExpression(node, node.expressions[1].value.string_value, start)
 			end
 		end
@@ -611,15 +613,16 @@ do -- runtime
 		self:EndNode(node)
 
 		if primary_node.kind == "value" then
-			if primary_node.value.value == "require" then
-				self:HandleRuntimeRequire(node, node.expressions[1].value.string_value, start)
-			elseif
-				primary_node.value.value == "import" or
-				primary_node.value.value == "dofile" or
-				primary_node.value.value == "loadfile"
+			local name = primary_node.value.value
+
+			if
+				name == "import" or
+				name == "dofile" or
+				name == "loadfile" or
+				name == "require"
 			then
-				self:HandleImportExpression(node, node.expressions[1].value.string_value, start)
-			elseif primary_node.value.value == "import_data" then
+				self:HandleImportExpression(node, name, node.expressions[1].value.string_value, start)
+			elseif name == "import_data" then
 				self:HandleImportDataExpression(node, node.expressions[1].value.string_value, start)
 			end
 		end
@@ -731,94 +734,7 @@ do -- runtime
 		return working_directory .. path
 	end
 
-	function META:HandleImportExpression(node, path, start)
-		if self.config.skip_import then return node end
-
-		node.import_expression = true
-		node.path = resolve_import_path(self, path)
-		self.imported = self.imported or {}
-		local key = node.path
-		node.key = key
-
-		if self.RootStatement.data_import then key = "DATA_" .. key end
-
-		if self.imported[key] then return self.imported[key] end
-
-		local nl = require("nattlua")
-		local compiler, err = nl.ParseFile(
-			node.path,
-			{
-				root_statement_override = self.RootStatement,
-				path = node.path,
-				working_directory = self.config.working_directory,
-			}
-		)
-
-		if not compiler then
-			self:Error("error importing file: $1", start, start, err)
-		end
-
-		node.RootStatement = compiler.SyntaxTree
-		self.RootStatement.imports = self.RootStatement.imports or {}
-		table.insert(self.RootStatement.imports, node)
-		self.imported[key] = node
-		return node
-	end
-
-	function META:HandleImportDataExpression(node, path, start)
-		if self.config.skip_import then return node end
-
-		node.import_expression = true
-		node.path = resolve_import_path(self, path)
-		self.imported = self.imported or {}
-		local key = "DATA_" .. node.path
-		node.key = key
-
-		if self.imported[key] then return self.imported[key] end
-
-		self.RootStatement.data_import = true
-		local data
-		local err
-
-		if node.path:sub(-4) == "lua" or node.path:sub(-5) ~= "nlua" then
-			local nl = require("nattlua")
-			local compiler, err = nl.ParseFile(
-				node.path,
-				{
-					path = node.path,
-					working_directory = self.config.working_directory,
-					inline_require = true,
-				}
-			)
-			data = compiler.SyntaxTree:Render(
-				{
-					preserve_whitespace = false,
-					uncomment_types = true,
-					annotate = true,
-				}
-			)
-		else
-			local f
-			f, err = io.open(node.path, "rb")
-
-			if f then
-				data = f:read("*all")
-				f:close()
-			end
-		end
-
-		if not data then
-			self:Error("error importing file: $1", start, start, err)
-		end
-
-		node.data = data
-		self.RootStatement.imports = self.RootStatement.imports or {}
-		table.insert(self.RootStatement.imports, node)
-		self.imported[key] = node
-		return node
-	end
-
-	local function require_path_to_path(require_path)
+	local function resolve_require_path(require_path)
 		require_path = require_path:gsub("%.", "/")
 
 		for package_path in (package.path .. ";"):gmatch("(.-);") do
@@ -834,51 +750,141 @@ do -- runtime
 		return nil
 	end
 
-	function META:HandleRuntimeRequire(node, module_name, start)
-		if not self.config.inline_require then return end
+	function META:HandleImportExpression(node, name, str, start)
+		if self.config.skip_import then return end
 
-		node.require_expression = true
-		node.key = module_name
-		local root_node = self.config.root_statement_override or self.RootStatement
-		root_node.required_files = root_node.required_files or {}
-		local cache = root_node.required_files
-		local path = require_path_to_path(module_name)
-
-		if path then
-			node.path = path
-
-			if cache[path] == nil then
-				if cache[path] == true then
-					self:Error("circular dependency: $1", start, start, path)
-				end
-
-				local config = {}
-
-				for k, v in pairs(self.config) do
-					config[k] = v
-				end
-
-				config.root_statement_override = self.RootStatement
-				config.file_path = path
-				config.friendly_name = module_name
-				cache[path] = false
-				local nl = require("nattlua")
-				local compiler, err = nl.ParseFile(path, config)
-
-				if not compiler then
-					self:Error("error requiring file: $1", start, start, err)
-					cache[path] = nil
-				else
-					node.RootStatement = compiler.SyntaxTree
-					cache[path] = compiler.SyntaxTree
-				end
-			else
-				node.RootStatement = cache[path]
-			end
+		if self.dont_hoist_next_import then
+			self.dont_hoist_next_import = nil
+			return
 		end
 
-		self.RootStatement.required_files = self.RootStatement.required_files or {}
-		table.insert(self.RootStatement.required_files, node)
+		local path
+
+		if name == "require" then
+			path = resolve_require_path(str)
+		else
+			path = resolve_import_path(self, str)
+		end
+
+		if not path then return end
+
+		local dont_hoist_import = _G.dont_hoist_import and _G.dont_hoist_import > 0
+		node.import_expression = true
+		node.path = path
+		local key = name == "require" and str or path
+		local root_node = self.config.root_statement_override_data or
+			self.config.root_statement_override or
+			self.RootStatement
+		root_node.imported = root_node.imported or {}
+		local imported = root_node.imported
+		node.key = key
+
+		if imported[key] == nil then
+			imported[key] = node
+			local nl = require("nattlua")
+			local compiler, err = nl.ParseFile(
+				path,
+				{
+					root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
+					root_statement_override = self.RootStatement,
+					path = node.path,
+					working_directory = self.config.working_directory,
+					inline_require = not root_node.data_import,
+				}
+			)
+
+			if not compiler then
+				self:Error("error importing file: $1", start, start, err)
+			end
+
+			node.RootStatement = compiler.SyntaxTree
+		else
+			-- ugly way of dealing with recursive require
+			node.RootStatement = imported[key]
+		end
+
+		if root_node.data_import and dont_hoist_import then
+			root_node.imports = root_node.imports or {}
+			table.insert(root_node.imports, node)
+			return
+		end
+
+		if name == "require" and not self.config.inline_require then
+			root_node.imports = root_node.imports or {}
+			table.insert(root_node.imports, node)
+			return
+		end
+
+		self.RootStatement.imports = self.RootStatement.imports or {}
+		table.insert(self.RootStatement.imports, node)
+	end
+
+	function META:HandleImportDataExpression(node, path, start)
+		if self.config.skip_import then return end
+
+		node.import_expression = true
+		node.path = resolve_import_path(self, path)
+		self.imported = self.imported or {}
+		local key = "DATA_" .. node.path
+		node.key = key
+		local root_node = self.config.root_statement_override_data or
+			self.config.root_statement_override or
+			self.RootStatement
+		root_node.imported = root_node.imported or {}
+		local imported = root_node.imported
+		root_node.data_import = true
+		local data
+		local err
+
+		if imported[key] == nil then
+			imported[key] = node
+
+			if node.path:sub(-4) == "lua" or node.path:sub(-5) ~= "nlua" then
+				local nl = require("nattlua")
+				local compiler, err = nl.ParseFile(
+					node.path,
+					{
+						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
+						path = node.path,
+						working_directory = self.config.working_directory,
+					--inline_require = true,
+					}
+				)
+
+				if not compiler then
+					self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
+				end
+
+				data = compiler.SyntaxTree:Render(
+					{
+						preserve_whitespace = false,
+						uncomment_types = true,
+						annotate = true,
+					}
+				)
+			else
+				local f
+				f, err = io.open(node.path, "rb")
+
+				if f then
+					data = f:read("*all")
+					f:close()
+				end
+			end
+
+			if not data then
+				self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
+			end
+
+			node.data = data
+		else
+			node.data = imported[key].data
+		end
+
+		if _G.dont_hoist_import and _G.dont_hoist_import > 0 then return end
+
+		self.RootStatement.imports = self.RootStatement.imports or {}
+		table.insert(self.RootStatement.imports, node)
 		return node
 	end
 

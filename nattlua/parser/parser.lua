@@ -176,11 +176,15 @@ function META:ReadAnalyzerFunctionBody(
 		node.return_types = self:ReadMultipleValues(math.huge, self.ReadTypeExpression, 0)
 		self:PopParserEnvironment()
 		local start = self:GetToken()
+		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
 		node.statements = self:ReadNodes({["end"] = true})
+		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	elseif not self:IsValue(",") then
 		local start = self:GetToken()
+		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
 		node.statements = self:ReadNodes({["end"] = true})
+		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	end
 

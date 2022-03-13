@@ -21,13 +21,15 @@ test("file import", function()
 	)
 end)
 
-run([[
+pending(function()
+	run([[
     -- ERROR1
     loadfile("test/nattlua/analyzer/file_importing/deep_error/main.nlua")()
 ]], function(err)
-	for i = 1, 4 do
-		assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)
-	end
+		for i = 1, 4 do
+			assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)
+		end
+	end)
 end)
 
 run([[

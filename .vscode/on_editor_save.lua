@@ -22,8 +22,8 @@ local function run_nattlua(path)
 			path,
 			{
 				annotate = true,
-				inline_require = lua_code:find("%-%-%s-INLINE_REQUIRE") ~= nil,
-				emit_environment = true,
+			--inline_require = lua_code:find("%-%-%s-INLINE_REQUIRE") ~= nil,
+			--emit_environment = true,
 			}
 		)
 	)

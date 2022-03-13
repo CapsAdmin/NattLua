@@ -2,6 +2,19 @@ local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
 
+if not _G.IMPORTS then
+	_G.IMPORTS = setmetatable(
+		{},
+		{
+			__index = function(self, key)
+				return function()
+					return _G["req" .. "uire"](key)
+				end
+			end,
+		}
+	)
+end
+
 local function import_data(path)
 	local f, err = io.open(path, "rb")
 
@@ -35,14 +48,6 @@ return {
 		local runtime_env = Table()
 		local typesystem_env = Table()
 		typesystem_env.string_metatable = Table()
-
-		do
-			runtime_env:Set(LStringNoMeta("IMPORTS"), Table())
-			local tbl = Table()
-			tbl:Set(LStringNoMeta("preload"), Table())
-			runtime_env:Set(LStringNoMeta("package"), tbl)
-		end
-
 		compiler:SetEnvironments(runtime_env, typesystem_env)
 		local base = compiler.Analyzer()
 		assert(compiler:Analyze(base))
