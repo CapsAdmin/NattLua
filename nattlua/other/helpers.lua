@@ -170,8 +170,8 @@ do
 		local path = code:GetName()
 		size = size or 2
 		msg = helpers.FormatMessage(msg, ...)
-		start = clamp(start, 1, #lua_code)
-		stop = clamp(stop, 1, #lua_code)
+		start = clamp(start or 0, 1, #lua_code)
+		stop = clamp(stop or 0, 1, #lua_code)
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
 
 		if not data then return end

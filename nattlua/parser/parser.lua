@@ -67,7 +67,7 @@ function META:ReadFunctionBody(
 		node.tokens["return:"] = self:ExpectValue(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
-		self:PopParserEnvironment("typesystem")
+		self:PopParserEnvironment()
 	end
 
 	node.statements = self:ReadNodes({["end"] = true})
@@ -174,7 +174,7 @@ function META:ReadAnalyzerFunctionBody(
 		node.tokens["return:"] = self:ExpectValue(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ReadMultipleValues(math.huge, self.ReadTypeExpression, 0)
-		self:PopParserEnvironment("typesystem")
+		self:PopParserEnvironment()
 		local start = self:GetToken()
 		node.statements = self:ReadNodes({["end"] = true})
 		node.tokens["end"] = self:ExpectValue("end", start, start)

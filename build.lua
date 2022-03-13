@@ -29,7 +29,7 @@ local func, err = loadstring(lua_code)
 if not func then
 	io.write(" - FAILED\n")
 	io.write(err .. "\n")
-	local f = io.open("error_build_output.lua", "w")
+	local f = io.open("temp_build_output.lua", "w")
 	f:write(lua_code)
 	f:close()
 	return
