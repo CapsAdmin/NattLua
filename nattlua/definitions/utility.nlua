@@ -289,3 +289,7 @@ analyzer function PopTypeEnvironment()
 	analyzer:PopAnalyzerEnvironment("typesystem")
 	analyzer:PopGlobalEnvironment("typesystem")
 end
+
+analyzer function CurrentType(what: "table" | "tuple" | "function" | "union", level: literal nil | number)
+	return analyzer:GetCurrentType(what:GetData(), level and level:GetData())
+end
