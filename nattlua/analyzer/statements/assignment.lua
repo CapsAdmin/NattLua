@@ -1,6 +1,6 @@
 local ipairs = ipairs
 local tostring = tostring
-local table = require("table")
+local table = _G.table
 local NodeToString = require("nattlua.types.string").NodeToString
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil

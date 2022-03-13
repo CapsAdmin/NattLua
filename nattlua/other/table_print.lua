@@ -2,7 +2,7 @@ local pairs = _G.pairs
 local tostring = _G.tostring
 local type = _G.type
 local debug = _G.debug
-local table = require("table")
+local table = _G.table
 local tonumber = _G.tonumber
 local pcall = _G.pcall
 local assert = _G.assert
@@ -11,6 +11,7 @@ local setfenv = _G.setfenv
 local io = _G.io
 local luadata = {}
 local encode_table
+local loadstring = require("nattlua.other.loadstring")
 
 local function count(tbl--[[#: Table]])
 	local i = 0
@@ -178,7 +179,7 @@ function luadata.ToString(var, context--[[#: nil | Context]])
 end
 
 function luadata.FromString(str--[[#: string]])
-	local func = assert(load("return " .. str), "luadata")
+	local func = assert(loadstring("return " .. str), "luadata")
 	setfenv(func, env)
 	return func()
 end
@@ -188,7 +189,7 @@ function luadata.Encode(tbl--[[#: Table]])
 end
 
 function luadata.Decode(str--[[#: string]])
-	local func, err = load("return {\n" .. str .. "\n}", "luadata")
+	local func, err = loadstring("return {\n" .. str .. "\n}", "luadata")
 
 	if not func then return func, err end
 

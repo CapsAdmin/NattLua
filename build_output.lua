@@ -316,11 +316,23 @@ end]]
 end]]
 
 _G.attest = attest end
+do local __M; IMPORTS["nattlua.other.loadstring"] = function(...) __M = __M or (function(...) local f = _G.loadstring or _G.load
+return function(str--[[#: string]], name--[[#: nil | string]])
+	if _G.CompileString then
+		local var = CompileString(str, name or "loadstring", false)
+
+		if type(var) == "string" then return nil, var, 2 end
+
+		return setfenv(var, getfenv(1))
+	end
+
+	return (f--[[# as any]])(str, name)
+end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.table_print"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
 local tostring = _G.tostring
 local type = _G.type
 local debug = _G.debug
-local table = require("table")
+local table = _G.table
 local tonumber = _G.tonumber
 local pcall = _G.pcall
 local assert = _G.assert
@@ -329,6 +341,7 @@ local setfenv = _G.setfenv
 local io = _G.io
 local luadata = {}
 local encode_table
+local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 
 local function count(tbl--[[#: Table]])
 	local i = 0
@@ -496,7 +509,7 @@ function luadata.ToString(var, context--[[#: nil | Context]])
 end
 
 function luadata.FromString(str--[[#: string]])
-	local func = assert(load("return " .. str), "luadata")
+	local func = assert(loadstring("return " .. str), "luadata")
 	setfenv(func, env)
 	return func()
 end
@@ -506,7 +519,7 @@ function luadata.Encode(tbl--[[#: Table]])
 end
 
 function luadata.Decode(str--[[#: string]])
-	local func, err = load("return {\n" .. str .. "\n}", "luadata")
+	local func, err = loadstring("return {\n" .. str .. "\n}", "luadata")
 
 	if not func then return func, err end
 
@@ -754,8 +767,8 @@ return helpers end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (function(...) --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
 --[[#IMPORTS['nattlua/code/code.lua']<|"~/nattlua/code/code.lua"|>]]
-local math = require("math")
-local table = require("table")
+local math = _G.math
+local table = _G.table
 local quote = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local type = _G.type
 local pairs = _G.pairs
@@ -1026,7 +1039,6 @@ end
 function helpers.JITOptimize()
 	if not jit then return end
 
-	pcall(require, "jit.opt")
 	jit.opt.start(
 		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
 		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
@@ -1060,7 +1072,7 @@ function helpers.JITOptimize()
 end
 
 return helpers end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.error_messages"] = function(...) __M = __M or (function(...) local table = require("table")
+do local __M; IMPORTS["nattlua.types.error_messages"] = function(...) __M = __M or (function(...) local table = _G.table
 local type = _G.type
 local ipairs = _G.ipairs
 local errors = {
@@ -1475,7 +1487,7 @@ return META end
 do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (function(...) local tostring = tostring
 local math = math
 local setmetatable = _G.setmetatable
-local table = require("table")
+local table = _G.table
 local ipairs = _G.ipairs
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
@@ -2098,7 +2110,7 @@ return {
 do local __M; IMPORTS["nattlua.types.symbol"] = function(...) __M = __M or (function(...) local type = type
 local tostring = tostring
 local ipairs = ipairs
-local table = require("table")
+local table = _G.table
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
@@ -2186,7 +2198,7 @@ local tostring = _G.tostring
 local tonumber = _G.tonumber
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-local bit = _G.bit32 or require("bit")
+local bit = _G.bit32 or _G.bit
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TNumber"]]
@@ -2590,7 +2602,7 @@ return {
 	TNumber = TNumber,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (function(...) local tostring = tostring
-local table = require("table")
+local table = _G.table
 local math = math
 local assert = assert
 local print = print
@@ -3168,7 +3180,7 @@ return {
 do local __M; IMPORTS["nattlua.types.function"] = function(...) __M = __M or (function(...) local tostring = _G.tostring
 local ipairs = _G.ipairs
 local setmetatable = _G.setmetatable
-local table = require("table")
+local table = _G.table
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
@@ -3561,7 +3573,7 @@ return {
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (function(...) local setmetatable = _G.setmetatable
-local table = require("table")
+local table = _G.table
 local ipairs = _G.ipairs
 local tostring = _G.tostring
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -5868,10 +5880,10 @@ local os = _G.os
 -- Lua module to preprocess and parse C declarations.
 -- (Leon Bottou, 2015)
 -- standard libs
-local string = require("string")
-local coroutine = require("coroutine")
-local table = require("table")
-local io = require("io")
+local string = _G.string
+local coroutine = _G.coroutine
+local table = _G.table
+local io = _G.io
 -- Lua 5.1 to 5.3 compatibility
 local unpack = unpack or table.unpack
 -- Debugging
@@ -10220,7 +10232,19 @@ end]]
 end]] end
 do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (function(...) if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 
-if not _G.loadstring and _G.load then _G.loadstring = _G.load end
+if not io or not io.write then
+	io = io or {}
+
+	if gmod then
+		io.write = function(...)
+			for i = 1, select("#", ...) do
+				MsgC(Color(255, 255, 255), select(i, ...))
+			end
+		end
+	else
+		io.write = print
+	end
+end
 
 do -- these are just helpers for print debugging
 	table.print = IMPORTS['nattlua.other.table_print']("nattlua.other.table_print")
@@ -10233,7 +10257,20 @@ end
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 helpers.JITOptimize()
 --helpers.EnableJITDumper()
-return IMPORTS['nattlua.init']("nattlua.init") end)(...) return __M end end
+local m = IMPORTS['nattlua.init']("nattlua.init")
+
+if _G.gmod then
+	local pairs = pairs
+	local getfenv = getfenv
+	module("nattlua")
+	local _G = getfenv(1)
+
+	for k, v in pairs(m) do
+		_G[k] = v
+	end
+end
+
+return m end)(...) return __M end end
 do local __M; IMPORTS["nattlua.runtime.base_environment"] = function(...) __M = __M or (function(...) local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local LStringNoMeta = IMPORTS['nattlua.types.string']("nattlua.types.string").LStringNoMeta
@@ -10389,14 +10426,18 @@ return {
 	TokenType = TokenType,
 	TokenReturnType = TokenReturnType,
 } end
-do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pcall = _G.pcall
-local pairs = _G.pairs
-local ok, table_new = pcall(require, "table.new")
+do local __M; IMPORTS["nattlua.other.table_new"] = function(...) __M = __M or (function(...) local table_new
+local ok
 
-if not ok then table_new = function()
+if not _G.gmod then ok, table_new = pcall(require, "table.new") end
+
+if not ok then table_new = function(size, records)
 	return {}
 end end
 
+return table_new end)(...) return __M end end
+do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
+local table_new = IMPORTS['nattlua.other.table_new']("nattlua.other.table_new")
 return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: number]])
 	local records = 0
 
@@ -10983,6 +11024,7 @@ return runtime end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer.lexer"] = function(...) __M = __M or (function(...) --[[#local type { TokenType } = IMPORTS['./nattlua/lexer/token.nlua']("./token.nlua")]]
 
 local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
+local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 local Token = IMPORTS['nattlua.lexer.token']("nattlua.lexer.token").New
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
@@ -11153,8 +11195,8 @@ local map_double_quote = {[ [[\"]] ] = [["]]}
 local map_single_quote = {[ [[\']] ] = [[']]}
 
 for _, v in ipairs(fixed) do
-	map_double_quote["\\" .. v] = load("return \"\\" .. v .. "\"")()
-	map_single_quote["\\" .. v] = load("return \"\\" .. v .. "\"")()
+	map_double_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
+	map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
 end
 
 local function reverse_escape_string(str, quote--[[#: '"' | "'"]])
@@ -13103,7 +13145,7 @@ local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
 local type = _G.type
-local table = require("table")
+local table = _G.table
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local META = {}
@@ -13167,11 +13209,21 @@ function META:__tostring()
 end
 
 function META:Render(config)
-	--[[#-- we have to do this because nattlua.transpiler.emitter is not yet typed
-	-- so if it's hoisted the self.nlua will fail
-	£ parser.dont_hoist_next_import = true]]
+	local emitter
 
-	local em = require("nattlua.transpiler.emitter"--[[# as string]]).New(config or {preserve_whitespace = false, no_newlines = true})
+	do
+		-- we have to do this because nattlua.transpiler.emitter is not yet typed
+		-- so if it's hoisted the self.nlua will fail
+		if IMPORTS--[[# as false]] then
+			emitter = IMPORTS["nattlua.transpiler.emitter"]()
+		else
+			--[[#£ parser.dont_hoist_next_import = true]]
+
+			emitter = require("nattlua.transpiler.emitter"--[[# as string]])
+		end
+	end
+
+	local em = emitter.New(config or {preserve_whitespace = false, no_newlines = true})
 
 	if self.type == "expression" then
 		em:EmitExpression(self)
@@ -13301,7 +13353,7 @@ local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
 local type = _G.type
-local table = require("table")
+local table = _G.table
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local META = {}
@@ -13757,8 +13809,8 @@ typesystem:AddBinaryOperators(
 )
 return typesystem end)(...) return __M end end
 IMPORTS['nattlua/parser/expressions.lua'] = function(...) local META = ...
-local table_insert = require("table").insert
-local table_remove = require("table").remove
+local table_insert = _G.table.insert
+local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
@@ -15715,10 +15767,10 @@ end end
 do local __M; IMPORTS["nattlua.parser.parser"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
-local math = require("math")
+local math = _G.math
 local math_huge = math.huge
-local table_insert = require("table").insert
-local table_remove = require("table").remove
+local table_insert = _G.table.insert
+local table_remove = _G.table.remove
 local ipairs = _G.ipairs
 
 function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
@@ -16037,7 +16089,7 @@ local assert = assert
 local setmetatable = setmetatable
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local table_insert = table.insert
-local table = require("table")
+local table = _G.table
 local type = _G.type
 local upvalue_meta
 
@@ -16548,7 +16600,7 @@ local tostring = tostring
 local LexicalScope = IMPORTS['nattlua.analyzer.base.lexical_scope']("nattlua.analyzer.base.lexical_scope")
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-local table = require("table")
+local table = _G.table
 return function(META)
 	table.insert(META.OnInitialize, function(self)
 		self.default_environment = {
@@ -16763,7 +16815,7 @@ return function(META)
 		return val
 	end
 end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.base.error_handling"] = function(...) __M = __M or (function(...) local table = require("table")
+do local __M; IMPORTS["nattlua.analyzer.base.error_handling"] = function(...) __M = __M or (function(...) local table = _G.table
 local type = type
 local ipairs = ipairs
 local tostring = tostring
@@ -16921,8 +16973,8 @@ local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
 local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
-local table = require("table")
-local math = require("math")
+local table = _G.table
+local math = _G.math
 return function(META)
 	IMPORTS['nattlua.analyzer.base.scopes']("nattlua.analyzer.base.scopes")(META)
 	IMPORTS['nattlua.analyzer.base.error_handling']("nattlua.analyzer.base.error_handling")(META)
@@ -17068,14 +17120,67 @@ return function(META)
 
 	do
 		local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+		local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 		local locals = ""
-		locals = locals .. "local bit=bit32 or require(\"bit\");"
-		locals = locals .. "local nl=require(\"nattlua\");"
-		locals = locals .. "local types=require(\"nattlua.types.types\");"
-		locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
+		locals = locals .. "local bit=bit32 or _G.bit;"
 
-		for k, v in pairs(_G) do
-			locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
+		if gmod then
+			locals = locals .. "local nl=IMPORTS[\"nattlua\"]();"
+			locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
+			locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
+		else
+			locals = locals .. "local nl=require(\"nattlua\");"
+			locals = locals .. "local types=require(\"nattlua.types.types\");"
+			locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
+		end
+
+		local globals = {
+			"loadstring",
+			"dofile",
+			"gcinfo",
+			"collectgarbage",
+			"newproxy",
+			"print",
+			"_VERSION",
+			"coroutine",
+			"debug",
+			"package",
+			"os",
+			"bit",
+			"_G",
+			"module",
+			"require",
+			"assert",
+			"string",
+			"arg",
+			"jit",
+			"math",
+			"table",
+			"io",
+			"type",
+			"next",
+			"pairs",
+			"ipairs",
+			"getmetatable",
+			"setmetatable",
+			"getfenv",
+			"setfenv",
+			"rawget",
+			"rawset",
+			"rawequal",
+			"unpack",
+			"select",
+			"tonumber",
+			"tostring",
+			"error",
+			"pcall",
+			"xpcall",
+			"loadfile",
+			"load",
+		}
+
+		for _, key in ipairs(globals) do
+			locals = locals .. "local " .. tostring(key) .. "=_G." .. key .. ";"
 		end
 
 		local runtime_injection = [[
@@ -17105,7 +17210,7 @@ return function(META)
 				code = ("\n"):rep(line - 1) .. code
 			end
 
-			local func, err = load(code, node.name)
+			local func, err = loadstring(code, node.name)
 
 			if not func then
 				print("========================")
@@ -17603,7 +17708,7 @@ local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local print = print
 local tostring = tostring
 local ipairs = ipairs
-local table = require("table")
+local table = _G.table
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 
 local function get_value_from_scope(self, mutations, scope, obj, key)
@@ -18632,11 +18737,11 @@ return {
 do local __M; IMPORTS["nattlua.analyzer.operators.call"] = function(...) __M = __M or (function(...) local ipairs = ipairs
 local type = type
 local math = math
-local table = require("table")
+local table = _G.table
 local tostring = tostring
 local debug = debug
 local print = print
-local string = require("string")
+local string = _G.string
 local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
@@ -19642,7 +19747,7 @@ return {
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.statements.assignment"] = function(...) __M = __M or (function(...) local ipairs = ipairs
 local tostring = tostring
-local table = require("table")
+local table = _G.table
 local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
@@ -19916,7 +20021,7 @@ return {
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.expressions.function"] = function(...) __M = __M or (function(...) local tostring = tostring
-local table = require("table")
+local table = _G.table
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
@@ -20291,7 +20396,7 @@ do local __M; IMPORTS["nattlua.analyzer.statements.do"] = function(...) __M = __
 		self:PopScope()
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.generic_for"] = function(...) __M = __M or (function(...) local table = require("table")
+do local __M; IMPORTS["nattlua.analyzer.statements.generic_for"] = function(...) __M = __M or (function(...) local table = _G.table
 local ipairs = ipairs
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -20384,7 +20489,7 @@ do local __M; IMPORTS["nattlua.analyzer.statements.call_expression"] = function(
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.operators.binary"] = function(...) __M = __M or (function(...) local tostring = tostring
 local ipairs = ipairs
-local table = require("table")
+local table = _G.table
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local String = IMPORTS['nattlua.types.string']("nattlua.types.string").String
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
@@ -21009,7 +21114,7 @@ do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M =
 		end
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.binary_operator"] = function(...) __M = __M or (function(...) local table = require("table")
+do local __M; IMPORTS["nattlua.analyzer.expressions.binary_operator"] = function(...) __M = __M or (function(...) local table = _G.table
 local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local assert = _G.assert
@@ -21186,7 +21291,7 @@ return {
 		return self:Assert(node, Postfix(self, node, self:AnalyzeExpression(node.left)))
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_call"] = function(...) __M = __M or (function(...) local table = require("table")
+do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_call"] = function(...) __M = __M or (function(...) local table = _G.table
 local NormalizeTuples = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").NormalizeTuples
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 return {
@@ -21255,7 +21360,7 @@ local ipairs = ipairs
 local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
-local table = require("table")
+local table = _G.table
 return {
 	AnalyzeTable = function(self, node)
 		local tbl = Table():SetNode(node):SetLiteral(self:IsTypesystem())
@@ -21327,7 +21432,7 @@ local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local String = IMPORTS['nattlua.types.string']("nattlua.types.string").String
 local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
 local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
-local table = require("table")
+local table = _G.table
 
 local function lookup_value(self, node)
 	local errors = {}
@@ -21689,7 +21794,7 @@ local error = _G.error
 local debug = _G.debug
 local tostring = _G.tostring
 local pairs = _G.pairs
-local table = require("table")
+local table = _G.table
 local ipairs = _G.ipairs
 local assert = _G.assert
 local type = _G.type
@@ -24601,7 +24706,7 @@ local error = _G.error
 local debug = _G.debug
 local tostring = _G.tostring
 local pairs = _G.pairs
-local table = require("table")
+local table = _G.table
 local ipairs = _G.ipairs
 local assert = _G.assert
 local type = _G.type
@@ -26473,10 +26578,10 @@ do local __M; IMPORTS["nattlua.compiler"] = function(...) __M = __M or (function
 local error = error
 local xpcall = xpcall
 local tostring = tostring
-local table = require("table")
+local table = _G.table
 local assert = assert
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local debug = require("debug")
+local debug = _G.debug
 local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
 local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
@@ -26745,6 +26850,7 @@ return function(
 	)
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.init"] = function(...) __M = __M or (function(...) local nl = {}
+local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 nl.Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler")
 
 function nl.load(code, name, config)
@@ -28861,7 +28967,19 @@ IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 
 if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 
-if not _G.loadstring and _G.load then _G.loadstring = _G.load end
+if not io or not io.write then
+	io = io or {}
+
+	if gmod then
+		io.write = function(...)
+			for i = 1, select("#", ...) do
+				MsgC(Color(255, 255, 255), select(i, ...))
+			end
+		end
+	else
+		io.write = print
+	end
+end
 
 do -- these are just helpers for print debugging
 	table.print = IMPORTS['nattlua.other.table_print']("nattlua.other.table_print")
@@ -28874,4 +28992,17 @@ end
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 helpers.JITOptimize()
 --helpers.EnableJITDumper()
-return IMPORTS['nattlua.init']("nattlua.init")
+local m = IMPORTS['nattlua.init']("nattlua.init")
+
+if _G.gmod then
+	local pairs = pairs
+	local getfenv = getfenv
+	module("nattlua")
+	local _G = getfenv(1)
+
+	for k, v in pairs(m) do
+		_G[k] = v
+	end
+end
+
+return m

@@ -1,4 +1,5 @@
 local nl = {}
+local loadstring = require("nattlua.other.loadstring")
 nl.Compiler = require("nattlua.compiler")
 
 function nl.load(code, name, config)

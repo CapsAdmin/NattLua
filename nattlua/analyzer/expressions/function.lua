@@ -1,5 +1,5 @@
 local tostring = tostring
-local table = require("table")
+local table = _G.table
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple

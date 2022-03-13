@@ -9,7 +9,7 @@ local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
 local type = _G.type
-local table = require("table")
+local table = _G.table
 local helpers = require("nattlua.other.helpers")
 local quote_helper = require("nattlua.other.quote")
 local META = {}
@@ -73,11 +73,21 @@ function META:__tostring()
 end
 
 function META:Render(config)
-	--[[#-- we have to do this because nattlua.transpiler.emitter is not yet typed
-	-- so if it's hoisted the self.nlua will fail
-	£ parser.dont_hoist_next_import = true]]
+	local emitter
 
-	local em = require("nattlua.transpiler.emitter"--[[# as string]]).New(config or {preserve_whitespace = false, no_newlines = true})
+	do
+		-- we have to do this because nattlua.transpiler.emitter is not yet typed
+		-- so if it's hoisted the self.nlua will fail
+		if IMPORTS--[[# as false]] then
+			emitter = IMPORTS["nattlua.transpiler.emitter"]()
+		else
+			--[[#£ parser.dont_hoist_next_import = true]]
+
+			emitter = require("nattlua.transpiler.emitter"--[[# as string]])
+		end
+	end
+
+	local em = emitter.New(config or {preserve_whitespace = false, no_newlines = true})
 
 	if self.type == "expression" then
 		em:EmitExpression(self)

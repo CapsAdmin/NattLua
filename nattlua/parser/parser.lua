@@ -1,10 +1,10 @@
 local META = require("nattlua.parser.base")
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
-local math = require("math")
+local math = _G.math
 local math_huge = math.huge
-local table_insert = require("table").insert
-local table_remove = require("table").remove
+local table_insert = _G.table.insert
+local table_remove = _G.table.remove
 local ipairs = _G.ipairs
 
 function META:ReadIdentifier(expect_type--[[#: nil | boolean]])

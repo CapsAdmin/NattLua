@@ -1,4 +1,4 @@
-local table = require("table")
+local table = _G.table
 local type = type
 local ipairs = ipairs
 local tostring = tostring

@@ -1,5 +1,5 @@
 local setmetatable = _G.setmetatable
-local table = require("table")
+local table = _G.table
 local ipairs = _G.ipairs
 local tostring = _G.tostring
 local Union = require("nattlua.types.union").Union

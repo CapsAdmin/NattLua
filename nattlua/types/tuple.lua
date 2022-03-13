@@ -1,5 +1,5 @@
 local tostring = tostring
-local table = require("table")
+local table = _G.table
 local math = math
 local assert = assert
 local print = print

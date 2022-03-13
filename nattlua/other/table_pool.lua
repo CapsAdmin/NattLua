@@ -1,11 +1,5 @@
-local pcall = _G.pcall
 local pairs = _G.pairs
-local ok, table_new = pcall(require, "table.new")
-
-if not ok then table_new = function()
-	return {}
-end end
-
+local table_new = require("nattlua.other.table_new")
 return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: number]])
 	local records = 0
 

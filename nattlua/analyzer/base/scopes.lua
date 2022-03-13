@@ -4,7 +4,7 @@ local tostring = tostring
 local LexicalScope = require("nattlua.analyzer.base.lexical_scope")
 local Table = require("nattlua.types.table").Table
 local LString = require("nattlua.types.string").LString
-local table = require("table")
+local table = _G.table
 return function(META)
 	table.insert(META.OnInitialize, function(self)
 		self.default_environment = {

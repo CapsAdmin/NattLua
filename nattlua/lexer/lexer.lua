@@ -1,6 +1,7 @@
 --[[#local type { TokenType } = import("./token.nlua")]]
 
 local Code = require("nattlua.code.code")
+local loadstring = require("nattlua.other.loadstring")
 local Token = require("nattlua.lexer.token").New
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
@@ -171,8 +172,8 @@ local map_double_quote = {[ [[\"]] ] = [["]]}
 local map_single_quote = {[ [[\']] ] = [[']]}
 
 for _, v in ipairs(fixed) do
-	map_double_quote["\\" .. v] = load("return \"\\" .. v .. "\"")()
-	map_single_quote["\\" .. v] = load("return \"\\" .. v .. "\"")()
+	map_double_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
+	map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
 end
 
 local function reverse_escape_string(str, quote--[[#: '"' | "'"]])

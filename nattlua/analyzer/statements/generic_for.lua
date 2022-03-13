@@ -1,4 +1,4 @@
-local table = require("table")
+local table = _G.table
 local ipairs = ipairs
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union

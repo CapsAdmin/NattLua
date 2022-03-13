@@ -1,6 +1,6 @@
 local type = _G.type
 local ipairs = _G.ipairs
-local table = require("table")
+local table = _G.table
 local xpcall = _G.xpcall
 local debug = _G.debug
 local pcall = _G.pcall

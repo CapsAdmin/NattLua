@@ -6,7 +6,7 @@ local assert = assert
 local setmetatable = setmetatable
 local Union = require("nattlua.types.union").Union
 local table_insert = table.insert
-local table = require("table")
+local table = _G.table
 local type = _G.type
 local upvalue_meta
 

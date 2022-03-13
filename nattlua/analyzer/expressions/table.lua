@@ -3,7 +3,7 @@ local ipairs = ipairs
 local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
 local Table = require("nattlua.types.table").Table
-local table = require("table")
+local table = _G.table
 return {
 	AnalyzeTable = function(self, node)
 		local tbl = Table():SetNode(node):SetLiteral(self:IsTypesystem())

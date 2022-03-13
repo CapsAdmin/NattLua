@@ -1,8 +1,8 @@
 --[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
 
 --[[#import<|"~/nattlua/code/code.lua"|>]]
-local math = require("math")
-local table = require("table")
+local math = _G.math
+local table = _G.table
 local quote = require("nattlua.other.quote")
 local type = _G.type
 local pairs = _G.pairs
@@ -273,7 +273,6 @@ end
 function helpers.JITOptimize()
 	if not jit then return end
 
-	pcall(require, "jit.opt")
 	jit.opt.start(
 		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
 		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions

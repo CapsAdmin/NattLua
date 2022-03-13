@@ -19,7 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 --]] local ffi = require("ffi")
-local bit = require("bit")
+local bit = _G.bit
 local reflect = {}
 local CTState, init_CTState
 local miscmap, init_miscmap

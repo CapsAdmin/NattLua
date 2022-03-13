@@ -1,4 +1,4 @@
-local table = require("table")
+local table = _G.table
 local type = _G.type
 local ipairs = _G.ipairs
 local errors = {

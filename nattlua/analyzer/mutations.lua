@@ -4,7 +4,7 @@ local Table = require("nattlua.types.table").Table
 local print = print
 local tostring = tostring
 local ipairs = ipairs
-local table = require("table")
+local table = _G.table
 local Union = require("nattlua.types.union").Union
 
 local function get_value_from_scope(self, mutations, scope, obj, key)

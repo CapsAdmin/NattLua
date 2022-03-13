@@ -1,4 +1,4 @@
-local table = require("table")
+local table = _G.table
 local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Tuple = require("nattlua.types.tuple").Tuple
 return {

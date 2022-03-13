@@ -14,8 +14,8 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local context = require("nattlua.analyzer.context")
-local table = require("table")
-local math = require("math")
+local table = _G.table
+local math = _G.math
 return function(META)
 	require("nattlua.analyzer.base.scopes")(META)
 	require("nattlua.analyzer.base.error_handling")(META)
@@ -161,14 +161,67 @@ return function(META)
 
 	do
 		local helpers = require("nattlua.other.helpers")
+		local loadstring = require("nattlua.other.loadstring")
 		local locals = ""
-		locals = locals .. "local bit=bit32 or require(\"bit\");"
-		locals = locals .. "local nl=require(\"nattlua\");"
-		locals = locals .. "local types=require(\"nattlua.types.types\");"
-		locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
+		locals = locals .. "local bit=bit32 or _G.bit;"
 
-		for k, v in pairs(_G) do
-			locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
+		if gmod then
+			locals = locals .. "local nl=IMPORTS[\"nattlua\"]();"
+			locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
+			locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
+		else
+			locals = locals .. "local nl=require(\"nattlua\");"
+			locals = locals .. "local types=require(\"nattlua.types.types\");"
+			locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
+		end
+
+		local globals = {
+			"loadstring",
+			"dofile",
+			"gcinfo",
+			"collectgarbage",
+			"newproxy",
+			"print",
+			"_VERSION",
+			"coroutine",
+			"debug",
+			"package",
+			"os",
+			"bit",
+			"_G",
+			"module",
+			"require",
+			"assert",
+			"string",
+			"arg",
+			"jit",
+			"math",
+			"table",
+			"io",
+			"type",
+			"next",
+			"pairs",
+			"ipairs",
+			"getmetatable",
+			"setmetatable",
+			"getfenv",
+			"setfenv",
+			"rawget",
+			"rawset",
+			"rawequal",
+			"unpack",
+			"select",
+			"tonumber",
+			"tostring",
+			"error",
+			"pcall",
+			"xpcall",
+			"loadfile",
+			"load",
+		}
+
+		for _, key in ipairs(globals) do
+			locals = locals .. "local " .. tostring(key) .. "=_G." .. key .. ";"
 		end
 
 		local runtime_injection = [[
@@ -198,7 +251,7 @@ return function(META)
 				code = ("\n"):rep(line - 1) .. code
 			end
 
-			local func, err = load(code, node.name)
+			local func, err = loadstring(code, node.name)
 
 			if not func then
 				print("========================")

@@ -3,7 +3,7 @@ local pairs = pairs
 local tostring = _G.tostring
 local T = require("test.helpers")
 local run = T.RunCode
-local bit = _G.bit32 or require("bit")
+local bit = _G.bit32 or _G.bit
 
 test("logic operators", function()
 	run[[

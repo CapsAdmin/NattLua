@@ -24,10 +24,10 @@ local os = _G.os
 
 
 -- standard libs
-local string = require("string")
-local coroutine = require("coroutine")
-local table = require("table")
-local io = require("io")
+local string = _G.string
+local coroutine = _G.coroutine
+local table = _G.table
+local io = _G.io
 
 -- Lua 5.1 to 5.3 compatibility
 local unpack = unpack or table.unpack
