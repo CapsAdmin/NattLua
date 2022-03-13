@@ -295,7 +295,7 @@ When transpiled to lua, the result is just:
 local x = math.floor(5.5)
 ```
 
-So analyzer functions only exist when analyzing. Again, the body of these functions are not analyzed like the rest of the code. For example, if this project was written in Python the contents of the analyzer functions would be written in Python as well.
+So analyzer functions only exist when analyzing. The body of these functions are not analyzed like the rest of the code. For example, if this project was written in Python the contents of the analyzer functions would be written in Python as well.
 
 They exist to provide a way to define advanced custom types and functions that cannot easily be made into a normal type function.
 
