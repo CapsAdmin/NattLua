@@ -75,7 +75,7 @@ local bad_names = { --v = "val",
 for _, path in ipairs(lua_files) do
 	local lua_code = read_file(path)
 	config.comment_type_annotations = path:sub(-#".lua") == ".lua"
-	config.uncomment_types = not config.comment_type_annotations
+	config.comment_type_annotations = config.comment_type_annotations
 	local compiler = nl.Compiler(lua_code, "@" .. path, config)
 
 	if not is_blacklisted(path) then

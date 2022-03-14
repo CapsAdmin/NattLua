@@ -1,11 +1,16 @@
 local nl = require("nattlua")
 local entry = "./nattlua.lua"
 io.write("parsing " .. entry)
-local c = assert(nl.File(entry, {
-	type_annotations = false,
-	inline_require = true,
-	emit_environment = true,
-}))
+local c = assert(
+	nl.File(
+		entry,
+		{
+			type_annotations = false,
+			inline_require = true,
+			emit_environment = true,
+		}
+	)
+)
 local lua_code = c:Emit(
 	{
 		preserve_whitespace = false,

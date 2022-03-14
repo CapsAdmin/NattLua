@@ -10310,6 +10310,7 @@ local function load_definitions()
 	local config = {}
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or path
+	config.comment_type_annotations = false
 	-- import_data will be transformed on build and the local function will not be used
 	-- we canot use the upvalue path here either since this happens at parse time
 	local code = assert(IMPORTS['DATA_nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua"))
@@ -14672,7 +14673,7 @@ do -- runtime
 				data = compiler.SyntaxTree:Render(
 					{
 						preserve_whitespace = false,
-						uncomment_types = true,
+						comment_type_annotations = false,
 						type_annotations = true,
 					}
 				)
@@ -20214,7 +20215,10 @@ return {
 		then
 			node.analyzer_function = true
 			--'local analyzer = self;local env = self:GetScopeHelper(scope);'
-			func = self:CompileLuaAnalyzerDebugCode("return  " .. node:Render({uncomment_types = true, analyzer_function = true}), node)()
+			func = self:CompileLuaAnalyzerDebugCode(
+				"return  " .. node:Render({analyzer_function = true, comment_type_annotations = false}),
+				node
+			)()
 		end
 
 		obj.Data.arg = args
@@ -23506,7 +23510,7 @@ do -- types
 	function META:StartEmittingInvalidLuaCode()
 		local emitted = false
 
-		if not self.config.uncomment_types then
+		if self.config.comment_type_annotations then
 			if not self.during_comment_type or self.during_comment_type == 0 then
 				self:EmitNonSpace("--[[#")
 				emitted = #self.out
@@ -23543,7 +23547,7 @@ do -- types
 			end
 		end
 
-		if not self.config.uncomment_types then
+		if self.config.comment_type_annotations then
 			self.during_comment_type = self.during_comment_type - 1
 		end
 	end
@@ -23665,6 +23669,11 @@ function META.New(config)
 	self.config = config or {}
 	self.config.max_argument_length = self.config.max_argument_length or 5
 	self.config.max_line_length = self.config.max_line_length or 80
+
+	if self.config.comment_type_annotations == nil then
+		self.config.comment_type_annotations = true
+	end
+
 	self:Initialize()
 	return self
 end

@@ -188,7 +188,10 @@ return {
 		then
 			node.analyzer_function = true
 			--'local analyzer = self;local env = self:GetScopeHelper(scope);'
-			func = self:CompileLuaAnalyzerDebugCode("return  " .. node:Render({uncomment_types = true, analyzer_function = true}), node)()
+			func = self:CompileLuaAnalyzerDebugCode(
+				"return  " .. node:Render({analyzer_function = true, comment_type_annotations = false}),
+				node
+			)()
 		end
 
 		obj.Data.arg = args

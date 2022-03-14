@@ -3,6 +3,12 @@ local nl = require("nattlua")
 local function check(config, input, expect)
 	expect = expect or input
 	expect = expect:gsub("    ", "\t")
+	config = config or {}
+
+	if config.comment_type_annotations == nil then
+		config.comment_type_annotations = false
+	end
+
 	local new_lua_code = assert(nl.Compiler(input, nil, config):Emit())
 
 	if new_lua_code ~= expect then diff(new_lua_code, expect) end
@@ -137,17 +143,32 @@ check(
 	{preserve_whitespace = false, comment_type_annotations = true},
 	[=[--[[#type start = function=(...string)>(nil)]]]=]
 )
-check({preserve_whitespace = false, type_annotations = true}, [=[local type x = (...,)]=])
 check(
-	{preserve_whitespace = false, comment_type_annotations = true, type_annotations = true},
+	{preserve_whitespace = false, type_annotations = true},
+	[=[local type x = (...,)]=]
+)
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		type_annotations = true,
+	},
 	[=[local args--[[#: List<|string | List<|string|>|>]]]=]
 )
 check(
-	{preserve_whitespace = false, comment_type_annotations = true, type_annotations = true},
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		type_annotations = true,
+	},
 	[=[return function()--[[#: number]] end]=]
 )
 check(
-	{preserve_whitespace = false, comment_type_annotations = true, type_annotations = true},
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		type_annotations = true,
+	},
 	[=[--[[#analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil) end]]]=]
 )
 identical([[local x = lexer.OnDraw and
@@ -360,7 +381,7 @@ end
 -- bar
 local foo = aaa'aaa' -- dawdwa
 local x = 1]])
-identical([=[--[[#local type { 
+identical([=[local type { 
 	ExpressionKind,
 	StatementKind,
 	FunctionAnalyzerStatement,
@@ -373,9 +394,13 @@ identical([=[--[[#local type {
 	FunctionStatement,
 	FunctionLocalAnalyzerStatement,
 	ValueExpression
- } = importawd("~/nattlua/parser/nodes.nlua")]]]=])
+ } = importawd("~/nattlua/parser/nodes.nlua")]=])
 check(
-	{preserve_whitespace = false, comment_type_annotations = true, type_annotations = true},
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		type_annotations = true,
+	},
 	[=[function META:OnError(
 	code--[[#: Code]],
 	message--[[#: string]],
@@ -390,17 +415,21 @@ identical([[local type Context = {
 	done = Table,
 }]])
 check(
-	{preserve_whitespace = false, comment_type_annotations = false, type_annotations = true},
-	[=[type coroutine = {
-	create = --[[#function=(empty_function)>(thread)]],
-	close = --[[#function=(thread)>(boolean, string)]],
-	isyieldable = --[[#function=()>(boolean)]],
-	resume = --[[#function=(thread, ...)>(boolean, ...)]],
-	running = --[[#function=()>(thread, boolean)]],
-	status = --[[#function=(thread)>(string)]],
-	wrap = --[[#function=(empty_function)>(empty_function)]],
-	yield = --[[#function=(...)>(...)]],
-}]=]
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		type_annotations = true,
+	},
+	[=[--[[#type coroutine = {
+	create = function=(empty_function)>(thread),
+	close = function=(thread)>(boolean, string),
+	isyieldable = function=()>(boolean),
+	resume = function=(thread, ...)>(boolean, ...),
+	running = function=()>(thread, boolean),
+	status = function=(thread)>(string),
+	wrap = function=(empty_function)>(empty_function),
+	yield = function=(...)>(...),
+}]]]=]
 )
 identical([[return {
 	character_start = character_start or 0,
@@ -436,18 +465,33 @@ identical([[do
 	end
 end]])
 check(
-	{preserve_whitespace = false, comment_type_annotations = false, type_annotations = true},
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		type_annotations = true,
+	},
 	[=[if B.Type == "tuple" then B = (B--[[# as any]]):Get(1) end]=]
 )
 check(
-	{preserve_whitespace = false, comment_type_annotations = false, type_annotations = true},
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		type_annotations = true,
+	},
 	[=[return ffi.string(A, (B)--[[# as number]])
 return ffi.string(A, (((B))--[[# as number]]))
 return ffi.string(A, (B--[[# as number]]))]=]
 )
-identical([=[--[[#£parser.config.skip_import = true]]
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		type_annotations = true,
+	},
+	[=[--[[#£parser.config.skip_import = true]]
 
-local x = import("platforms/windows/filesystem.nlua")]=])
+local x = import("platforms/windows/filesystem.nlua")]=]
+)
 identical([[hook.Add("Foo", "bar_foo", function(ply, pos)
     for i = 1, 10 do
         ply:SetPos(pos + VectorRand())

@@ -576,7 +576,11 @@ function META:EmitExpression(node)
 
 		for _, token in ipairs(node.tokens[")"]) do
 			if not colon_expression then
-				if self.config.type_annotations and node.tokens[":"] and node.tokens[":"].stop < token.start then
+				if
+					self.config.type_annotations and
+					node.tokens[":"] and
+					node.tokens[":"].stop < token.start
+				then
 					self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 					colon_expression = true
 				end
@@ -1709,7 +1713,7 @@ do -- types
 	function META:StartEmittingInvalidLuaCode()
 		local emitted = false
 
-		if not self.config.uncomment_types then
+		if self.config.comment_type_annotations then
 			if not self.during_comment_type or self.during_comment_type == 0 then
 				self:EmitNonSpace("--[[#")
 				emitted = #self.out
@@ -1746,7 +1750,7 @@ do -- types
 			end
 		end
 
-		if not self.config.uncomment_types then
+		if self.config.comment_type_annotations then
 			self.during_comment_type = self.during_comment_type - 1
 		end
 	end
@@ -1868,6 +1872,11 @@ function META.New(config)
 	self.config = config or {}
 	self.config.max_argument_length = self.config.max_argument_length or 5
 	self.config.max_line_length = self.config.max_line_length or 80
+
+	if self.config.comment_type_annotations == nil then
+		self.config.comment_type_annotations = true
+	end
+
 	self:Initialize()
 	return self
 end

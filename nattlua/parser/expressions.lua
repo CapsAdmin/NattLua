@@ -858,7 +858,7 @@ do -- runtime
 				data = compiler.SyntaxTree:Render(
 					{
 						preserve_whitespace = false,
-						uncomment_types = true,
+						comment_type_annotations = false,
 						type_annotations = true,
 					}
 				)
