@@ -160,7 +160,7 @@ do
 		self:EmitToken(node.tokens["arguments)"])
 		self:Emit(" => {")
 
-		if self.config.annotate and node:GetLastType() and not analyzer_function then
+		if self.config.type_annotations and node:GetLastType() and not analyzer_function then
 			--self:Emit(" --[[ : ")
 			local str = {}
 			-- this iterates the first return tuple
@@ -771,7 +771,7 @@ function META:EmitIdentifier(node)
 
 	if node.value.value == "..." then self:Emit("__args") end
 
-	if self.config.annotate then
+	if self.config.type_annotations then
 		if node.type_expression then
 			self:EmitToken(node.tokens[":"])
 			self:EmitTypeExpression(node.type_expression)
@@ -886,7 +886,7 @@ do -- types
 		if node.tokens["("] then self:EmitToken(node.tokens["("]) end
 
 		for i, exp in ipairs(node.identifiers) do
-			if not self.config.annotate and node.statements then
+			if not self.config.type_annotations and node.statements then
 				if exp.identifier then
 					self:EmitToken(exp.identifier)
 				else

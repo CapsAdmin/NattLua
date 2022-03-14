@@ -27,7 +27,7 @@ identical([[x = "" -- foo]])
 identical([[new_str[i] = "\\" .. c]])
 identical([[local x = "\xFE\xFF\n\u{1F602}\t\t1"]])
 check(
-	{preserve_whitespace = false, use_comment_types = true},
+	{preserve_whitespace = false, comment_type_annotations = true},
 	[[local type x = ""]],
 	[=[--[[#local type x = ""]]]=]
 )
@@ -130,24 +130,24 @@ identical([[pos, ang = LocalToWorld(
 )]])
 identical([[if not ply.pac_cameras then return end]])
 check(
-	{preserve_whitespace = false, use_comment_types = true},
+	{preserve_whitespace = false, comment_type_annotations = true},
 	[=[--[[#type Vector.__mul = function=(Vector, number | Vector)>(Vector)]]]=]
 )
 check(
-	{preserve_whitespace = false, use_comment_types = true},
+	{preserve_whitespace = false, comment_type_annotations = true},
 	[=[--[[#type start = function=(...string)>(nil)]]]=]
 )
-check({preserve_whitespace = false, annotate = true}, [=[local type x = (...,)]=])
+check({preserve_whitespace = false, type_annotations = true}, [=[local type x = (...,)]=])
 check(
-	{preserve_whitespace = false, use_comment_types = true, annotate = true},
+	{preserve_whitespace = false, comment_type_annotations = true, type_annotations = true},
 	[=[local args--[[#: List<|string | List<|string|>|>]]]=]
 )
 check(
-	{preserve_whitespace = false, use_comment_types = true, annotate = true},
+	{preserve_whitespace = false, comment_type_annotations = true, type_annotations = true},
 	[=[return function()--[[#: number]] end]=]
 )
 check(
-	{preserve_whitespace = false, use_comment_types = true, annotate = true},
+	{preserve_whitespace = false, comment_type_annotations = true, type_annotations = true},
 	[=[--[[#analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil) end]]]=]
 )
 identical([[local x = lexer.OnDraw and
@@ -375,7 +375,7 @@ identical([=[--[[#local type {
 	ValueExpression
  } = importawd("~/nattlua/parser/nodes.nlua")]]]=])
 check(
-	{preserve_whitespace = false, use_comment_types = true, annotate = true},
+	{preserve_whitespace = false, comment_type_annotations = true, type_annotations = true},
 	[=[function META:OnError(
 	code--[[#: Code]],
 	message--[[#: string]],
@@ -390,7 +390,7 @@ identical([[local type Context = {
 	done = Table,
 }]])
 check(
-	{preserve_whitespace = false, use_comment_types = false, annotate = true},
+	{preserve_whitespace = false, comment_type_annotations = false, type_annotations = true},
 	[=[type coroutine = {
 	create = --[[#function=(empty_function)>(thread)]],
 	close = --[[#function=(thread)>(boolean, string)]],
@@ -436,11 +436,11 @@ identical([[do
 	end
 end]])
 check(
-	{preserve_whitespace = false, use_comment_types = false, annotate = true},
+	{preserve_whitespace = false, comment_type_annotations = false, type_annotations = true},
 	[=[if B.Type == "tuple" then B = (B--[[# as any]]):Get(1) end]=]
 )
 check(
-	{preserve_whitespace = false, use_comment_types = false, annotate = true},
+	{preserve_whitespace = false, comment_type_annotations = false, type_annotations = true},
 	[=[return ffi.string(A, (B)--[[# as number]])
 return ffi.string(A, (((B))--[[# as number]]))
 return ffi.string(A, (B--[[# as number]]))]=]

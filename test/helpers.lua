@@ -105,7 +105,7 @@ do
 end
 
 function helpers.Transpile(code)
-	return helpers.RunCode(code):Emit({annotate = true})
+	return helpers.RunCode(code):Emit({type_annotations = true})
 end
 
 function helpers.TableEqual(o1, o2, ignore_mt, callList)

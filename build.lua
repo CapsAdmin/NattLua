@@ -2,7 +2,7 @@ local nl = require("nattlua")
 local entry = "./nattlua.lua"
 io.write("parsing " .. entry)
 local c = assert(nl.File(entry, {
-	annotate = true,
+	type_annotations = false,
 	inline_require = true,
 	emit_environment = true,
 }))
@@ -11,8 +11,8 @@ local lua_code = c:Emit(
 		preserve_whitespace = false,
 		string_quote = "\"",
 		no_semicolon = true,
-		use_comment_types = true,
-		annotate = true,
+		comment_type_annotations = true,
+		type_annotations = true,
 		force_parenthesis = true,
 		extra_indent = {
 			Start = {to = "Stop"},

@@ -118,7 +118,7 @@ local function compile(uri, lua_code, server, client)
 
 	if cache[uri] then return cache[uri] end
 
-	local compiler = nl.Compiler(lua_code, uri, {annotate = true})
+	local compiler = nl.Compiler(lua_code, uri, {type_annotations = true})
 
 	do
 		local resp = {

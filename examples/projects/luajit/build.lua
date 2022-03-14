@@ -16,8 +16,8 @@ local code, err = builder:Emit(
 		preserve_whitespace = false,
 		string_quote = "\"",
 		no_semicolon = true,
-		use_comment_types = true,
-		annotate = false,
+		comment_type_annotations = true,
+		type_annotations = false,
 		force_parenthesis = true,
 		extra_indent = {
 			Start = {to = "Stop"},

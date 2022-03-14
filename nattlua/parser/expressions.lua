@@ -859,7 +859,7 @@ do -- runtime
 					{
 						preserve_whitespace = false,
 						uncomment_types = true,
-						annotate = true,
+						type_annotations = true,
 					}
 				)
 			else

@@ -563,11 +563,11 @@ function META:EmitExpression(node)
 	end
 
 	if not node.tokens[")"] then
-		if self.config.annotate and node.tokens[":"] then
+		if self.config.type_annotations and node.tokens[":"] then
 			self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 		end
 
-		if self.config.annotate and node.tokens["as"] then
+		if self.config.type_annotations and node.tokens["as"] then
 			self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 		end
 	else
@@ -576,7 +576,7 @@ function META:EmitExpression(node)
 
 		for _, token in ipairs(node.tokens[")"]) do
 			if not colon_expression then
-				if self.config.annotate and node.tokens[":"] and node.tokens[":"].stop < token.start then
+				if self.config.type_annotations and node.tokens[":"] and node.tokens[":"].stop < token.start then
 					self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 					colon_expression = true
 				end
@@ -584,7 +584,7 @@ function META:EmitExpression(node)
 
 			if not as_expression then
 				if
-					self.config.annotate and
+					self.config.type_annotations and
 					node.tokens["as"] and
 					node.tokens["as"].stop < token.start
 				then
@@ -597,13 +597,13 @@ function META:EmitExpression(node)
 		end
 
 		if not colon_expression then
-			if self.config.annotate and node.tokens[":"] then
+			if self.config.type_annotations and node.tokens[":"] then
 				self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 			end
 		end
 
 		if not as_expression then
-			if self.config.annotate and node.tokens["as"] then
+			if self.config.type_annotations and node.tokens["as"] then
 				self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 			end
 		end
@@ -1274,13 +1274,13 @@ function META:EmitStatement(node)
 		node.kind == "destructure_assignment" or
 		node.kind == "local_destructure_assignment"
 	then
-		if self.config.use_comment_types or node.environment == "typesystem" then
+		if self.config.comment_type_annotations or node.environment == "typesystem" then
 			self:EmitInvalidLuaCode("EmitDestructureAssignment", node)
 		else
 			self:EmitTranspiledDestructureAssignment(node)
 		end
 	elseif node.kind == "assignment" or node.kind == "local_assignment" then
-		if node.environment == "typesystem" and self.config.use_comment_types then
+		if node.environment == "typesystem" and self.config.comment_type_annotations then
 			self:EmitInvalidLuaCode("EmitAssignment", node)
 		else
 			self:EmitAssignment(node)
@@ -1430,7 +1430,7 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 
 			if i ~= #node.return_types then self:EmitToken(exp.tokens[","]) end
 		end
-	elseif node:GetLastType() and self.config.annotate ~= "explicit" then
+	elseif node:GetLastType() and self.config.type_annotations ~= "explicit" then
 		local str = {}
 		-- this iterates the first return tuple
 		local obj = node:GetLastType():GetContract() or node:GetLastType()
@@ -1448,7 +1448,7 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 end
 
 function META:EmitFunctionReturnAnnotation(node, analyzer_function)
-	if not self.config.annotate then return end
+	if not self.config.type_annotations then return end
 
 	if self:HasTypeNotation(node) and node.tokens["return:"] then
 		self:EmitInvalidLuaCode("EmitFunctionReturnAnnotationExpression", node, analyzer_function)
@@ -1458,7 +1458,7 @@ end
 function META:EmitAnnotationExpression(node)
 	if node.type_expression then
 		self:EmitTypeExpression(node.type_expression)
-	elseif node:GetLastType() and self.config.annotate ~= "explicit" then
+	elseif node:GetLastType() and self.config.type_annotations ~= "explicit" then
 		self:Emit(tostring(node:GetLastType():GetContract() or node:GetLastType()))
 	end
 end
@@ -1483,7 +1483,7 @@ function META:EmitColonAnnotationExpression(node)
 end
 
 function META:EmitAnnotation(node)
-	if not self.config.annotate then return end
+	if not self.config.type_annotations then return end
 
 	if self:HasTypeNotation(node) and not node.tokens["as"] then
 		self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
@@ -1595,7 +1595,7 @@ do -- types
 		self:EmitToken(node.tokens["arguments("])
 
 		for i, exp in ipairs(node.identifiers) do
-			if not self.config.annotate and node.statements then
+			if not self.config.type_annotations and node.statements then
 				if exp.identifier then
 					self:EmitToken(exp.identifier)
 				else

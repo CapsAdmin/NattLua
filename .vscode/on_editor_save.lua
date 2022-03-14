@@ -21,7 +21,7 @@ local function run_nattlua(path)
 		nl.File(
 			path,
 			{
-				annotate = true,
+				type_annotations = true,
 			--inline_require = lua_code:find("%-%-%s-INLINE_REQUIRE") ~= nil,
 			--emit_environment = true,
 			}
@@ -60,8 +60,8 @@ local function run_nattlua(path)
 				preserve_whitespace = preserve_whitespace,
 				string_quote = "\"",
 				no_semicolon = true,
-				use_comment_types = true,
-				annotate = true,
+				comment_type_annotations = true,
+				type_annotations = true,
 				force_parenthesis = true,
 				extra_indent = {
 					Start = {to = "Stop"},

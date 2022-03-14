@@ -35,8 +35,8 @@ local config = {
 	preserve_whitespace = false,
 	string_quote = "\"",
 	no_semicolon = true,
-	use_comment_types = true,
-	annotate = "explicit",
+	comment_type_annotations = true,
+	type_annotations = "explicit",
 	force_parenthesis = true,
 	skip_import = true,
 	extra_indent = {
@@ -74,8 +74,8 @@ local bad_names = { --v = "val",
 
 for _, path in ipairs(lua_files) do
 	local lua_code = read_file(path)
-	config.use_comment_types = path:sub(-#".lua") == ".lua"
-	config.uncomment_types = not config.use_comment_types
+	config.comment_type_annotations = path:sub(-#".lua") == ".lua"
+	config.uncomment_types = not config.comment_type_annotations
 	local compiler = nl.Compiler(lua_code, "@" .. path, config)
 
 	if not is_blacklisted(path) then
@@ -98,7 +98,7 @@ for _, path in ipairs(lua_files) do
 		assert(compiler:Parse())
 		local new_lua_code = assert(compiler:Emit())
 
-		if config.use_comment_types then
+		if config.comment_type_annotations then
 			local ok, err = loadstring(new_lua_code, "@" .. path)
 
 			if not ok then
