@@ -4,7 +4,7 @@ local builder = assert(
 		"examples/projects/luajit/src/main.nlua",
 		{
 			working_directory = "examples/projects/luajit/src/",
-			emit_environment = true,
+			emit_environment = false,
 		}
 	)
 )
@@ -16,6 +16,7 @@ local code, err = builder:Emit(
 		preserve_whitespace = false,
 		string_quote = "\"",
 		no_semicolon = true,
+		omit_invalid_code = true,
 		comment_type_annotations = true,
 		type_annotations = false,
 		force_parenthesis = true,
@@ -25,5 +26,8 @@ local code, err = builder:Emit(
 		},
 	}
 )
+local file = io.open("examples/projects/luajit/out.lua", "w")
+file:write(code)
+file:close()
 print("===RUNNING CODE===")
 require("examples/projects.luajit.out")
