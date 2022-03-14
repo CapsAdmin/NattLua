@@ -2,7 +2,7 @@ local T = require("test.helpers")
 local run = T.RunCode
 local String = T.String
 
-test("smoke", function()
+do -- smoke
 	local a = run[[local type a = 1337 | 8888]]
 	a:PushAnalyzerEnvironment("typesystem")
 	local union = a:GetLocalOrGlobalValue(String("a"))
@@ -10,9 +10,9 @@ test("smoke", function()
 	equal(2, union:GetLength())
 	equal(1337, union:GetData()[1]:GetData())
 	equal(8888, union:GetData()[2]:GetData())
-end)
+end
 
-test("union operator", function()
+do -- union operator
 	local a = run[[
         local type a = 1337 | 888
         local type b = 666 | 777
@@ -22,56 +22,49 @@ test("union operator", function()
 	local union = a:GetLocalOrGlobalValue(String("c"))
 	a:PopAnalyzerEnvironment()
 	equal(4, union:GetLength())
-end)
+end
 
-test("union + object", function()
-	run[[
+run[[
+        --union + object
         local a = _ as (1 | 2) + 3
         attest.equal(a, _ as 4 | 5)
     ]]
-end)
-
-test("union + union", function()
-	run[[
+run[[
+        --union + union
         local a = _ as 1 | 2
         local b = _ as 10 | 20
 
         attest.equal(a + b, _ as 11 | 12 | 21 | 22)
     ]]
-end)
-
-test("union.foo", function()
-	run[[
+run[[
+        --union.foo
         local a = _ as {foo = true} | {foo = false}
 
         attest.equal(a.foo, _ as true | false)
     ]]
-end)
-
-test("union.foo = bar", function()
-	run[[
+run[[
+        --union.foo = bar
         local type a = { foo = 4 } | { foo = 1|2 } | { foo = 3 }
         attest.equal<|a.foo, 1 | 2 | 3 | 4|>
     ]]
-end)
 
-test("is literal", function()
+do --is literal
 	local a = run[[
         local type a = 1 | 2 | 3
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
 	assert(a:GetLocalOrGlobalValue(String("a")):IsLiteral() == true)
 	a:PopAnalyzerEnvironment()
-end)
+end
 
-test("is not literal", function()
+do -- is not literal
 	local a = run[[
         local type a = 1 | 2 | 3 | string
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
 	assert(a:GetLocalOrGlobalValue(String("a")):IsLiteral() == false)
 	a:PopAnalyzerEnvironment()
-end)
+end
 
 run[[
     local x: any | function=()>(boolean)

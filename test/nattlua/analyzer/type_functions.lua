@@ -1,35 +1,30 @@
 local T = require("test.helpers")
 local run = T.RunCode
 local String = T.String
-
-test("should return a tuple with types", function()
-	local analyzer = run([[
+local analyzer = run([[
+        -- should return a tuple with types
         local type test = function()
             return 1,2,3
         end
 
         local a,b,c = test()
     ]])
-	equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
-	equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
-	equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
-end)
-
-test("should be able to error", function()
-	run(
-		[[
+equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
+equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
+equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
+run(
+	-- should be able to error
+	[[
         local type test = function()
             error("test")
         end
 
         test()
     ]],
-		"test"
-	)
-end)
-
-test("exclude analyzer function", function()
-	run([[
+	"test"
+)
+run([[
+        -- exclude analyzer function
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
@@ -39,8 +34,8 @@ test("exclude analyzer function", function()
 
         attest.equal(a, _ as 1|3)
     ]])
-	run(
-		[[
+run(
+	[[
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
@@ -50,45 +45,36 @@ test("exclude analyzer function", function()
 
         attest.equal(a, _ as 11|31)
     ]],
-		"expected 11 | 31 got 1 | 3"
-	)
-end)
-
-test("self referenced type tables", function()
-	run[[
+	"expected 11 | 31 got 1 | 3"
+)
+run[[
+        -- self referenced type tables
         local type a = {
             b = self,
         }
         attest.equal(a, a.b)
     ]]
-end)
-
-test("next", function()
-	run[[
+run[[
+        -- next
         local t = {k = 1}
         local a = 1
         local k,v = next({k = 1})
         attest.equal(k, nil as "k")
         attest.equal(v, nil as 1)
     ]]
-	run[[
+run[[
         local k,v = next({foo = 1})
         attest.equal(string.len(k), _ as 3)
         attest.equal(v, _ as 1)
     ]]
-end)
-
-test("math.floor", function()
-	run[[
+run[[
+        -- math.floor
         attest.equal(math.floor(1.5), 1)
     ]]
-end)
-
-test("assert", function()
-	run([[
+run([[
+        -- assert
         type_assert_truthy(1 == 2, "lol")
     ]], "lol")
-end)
 
 do
 	_G.TEST_DISABLE_ERROR_PRINT = true
@@ -101,8 +87,8 @@ do
 	_G.TEST_DISABLE_ERROR_PRINT = false
 end
 
-test("rawset rawget", function()
-	run[[
+run[[
+        -- rawset rawget
         local meta = {}
         meta.__index = meta
 
@@ -116,24 +102,18 @@ test("rawset rawget", function()
         attest.equal(rawget(self, "lol"), "LOL")
         attest.equal(called, false)
     ]]
-end)
-
-test("select", function()
-	run[[
+run[[
+        -- select
         attest.equal(select("#", 1,2,3), 3)
     ]]
-end)
-
-test("parenthesis around vararg", function()
-	run[[
+run[[
+        -- parenthesis around vararg
         local a = select(2, 1,2,3)
         attest.equal(a, 2)
         attest.equal((select(2, 1,2,3)), 2)
     ]]
-end)
-
-test("varargs", function()
-	run[[
+run[[
+        -- varargs
     local type test = function(...) end
     local a = {}
     a[1] = true
@@ -141,10 +121,8 @@ test("varargs", function()
     test(test(a))
 
     ]]
-end)
-
-test("exlcude", function()
-	run[[
+run[[
+        -- exlcude
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
             return T
@@ -153,26 +131,21 @@ test("exlcude", function()
         local a: Exclude<|1|2|3, 2|>
         attest.equal(a, _ as 1|3)
     ]]
-end)
-
-test("table.insert", function()
-	run[[
+run[[
+        -- table.insert
         local a = {}
         a[1] = true
         a[2] = false
         table.insert(a, 1337)
         attest.equal(a[3], 1337)
     ]]
-end)
-
-test("string sub on union", function()
-	run[[
+run[[
+        -- string sub on union
         local lol: "foo" | "bar"
 
         attest.equal(lol:sub(1,1), _ as "f" | "b")
         attest.equal(lol:sub(_ as 2 | 3), _ as "ar" | "o" | "oo" | "r")
     ]]
-end)
 
 do
 	_G.test_var = 0
@@ -251,9 +224,8 @@ run(
 ]],
 	"expected 11 | 31 got 1 | 3"
 )
-
-test("pairs loop", function()
-	run[[
+run[[
+        --pairs loop
         local tbl = {4,5,6}
         local k, v = 0, 0
         
@@ -265,8 +237,6 @@ test("pairs loop", function()
         attest.equal(k, 6)
         attest.equal(v, 15)
     ]]
-end)
-
 run[[
     local function build_numeric_for(tbl)
         local lua = {}

@@ -1,28 +1,20 @@
 local T = require("test.helpers")
 local run = T.RunCode
-
-test("vararg", function()
-	run[[
+run[[
         local function test(...)
 
         end
 
         test({})
     ]]
-end)
-
-test("vararg", function()
-	run[[
+run[[
         local function test(...)
             local a,b,c = ...
             return a+b+c
         end
         attest.equal(test(test(1,2,3), test(1,2,3), test(1,2,3)), 18)
     ]]
-end)
-
-test("smoke", function()
-	run[[
+run[[
         local function test()
             return 1,2
         end
@@ -32,7 +24,7 @@ test("smoke", function()
         assert_type(b, 3)
         assert_type(c, nil)
     ]]
-	run[[
+run[[
         local function test(...)
             return 1,2,...
         end
@@ -43,10 +35,8 @@ test("smoke", function()
         attest.equal(b,2)
         attest.equal(c,3)
     ]]
-end)
-
-test("vararg in table", function()
-	run[[
+run[[
+        -- vararg in table
         local function test(...)
             local a = {...}
             attest.equal(a[1], 1)
@@ -56,10 +46,8 @@ test("vararg in table", function()
 
         test(1,2,3)
     ]]
-end)
-
-test("var arg in table and return", function()
-	run[[
+run[[
+        -- var arg in table and return
         local a,b,c = test(1,2,3)
 
         local function test(...)
@@ -72,10 +60,7 @@ test("var arg in table and return", function()
         attest.equal(b, 20)
         attest.equal(c, 30)
     ]]
-end)
-
-test("asadawd", function()
-	run[[
+run[[
         local function test(...)
             return 1,2,3, ...
         end
@@ -87,8 +72,6 @@ test("asadawd", function()
         attest.equal(C, nil)
         attest.equal(D, nil)
     ]]
-end)
-
 run[[
     local a,b,c = ...
     attest.equal(a, _ as any)
@@ -123,19 +106,16 @@ run[[
     attest.equal(b, _ as any)
     attest.equal(c, _ as any)
 ]]
-
-test("parenthesis around varargs should only return the first value in the tuple", function()
-	run[[
+run[[
+        --parenthesis around varargs should only return the first value in the tuple
         local function s(...) return ... end
         local a,b,c = (s(1, 2, 3))
         attest.equal(a, 1)
         attest.equal(b, nil)
         attest.equal(c, nil)
     ]]
-end)
-
-test("analyzer function varargs", function()
-	run[[
+run[[
+        --analyzer function varargs
         local lol = function(...)
             local a,b,c = ...
             attest.equal(a, 1)
@@ -149,8 +129,6 @@ test("analyzer function varargs", function()
 
         lol2(1,2,3)
     ]]
-end)
-
 run[[
     local type lol = function=()>(...any)
 

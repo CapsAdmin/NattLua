@@ -186,8 +186,8 @@ test("is not literal", function()
 	a:PopAnalyzerEnvironment()
 end)
 
-test("self reference", function()
-	local a = run[[
+local a = run[[
+        -- self reference
         local type Base = {
             Test = function=(self, number)>(number),
         }
@@ -204,9 +204,9 @@ test("self reference", function()
 
         local func = x.Test
     ]]
-	equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("GetPos")).Type, "function")
-	equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("Test")).Type, "function")
-	run[[
+equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("GetPos")).Type, "function")
+equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("Test")).Type, "function")
+run[[
         local type a = {
             foo = self,
         }
@@ -218,10 +218,8 @@ test("self reference", function()
         attest.equal<|b.bar, true|>
         attest.equal<|b.foo, b|>
     ]]
-end)
-
-test("table extending table", function()
-	run[[
+run[[
+        -- table extending table
         local type A = {
             Foo = true,
         }
@@ -232,10 +230,8 @@ test("table extending table", function()
 
         attest.equal<|A extends B, {Foo = true, Bar = false}|>
     ]]
-end)
-
-test("table + table", function()
-	run[[
+run[[
+        -- table + table
         local type A = {
             Foo = true,
             Bar = 1,
@@ -247,10 +243,8 @@ test("table + table", function()
 
         attest.equal<|A + B, {Foo = true, Bar = false}|>
     ]]
-end)
-
-test("index literal table with string", function()
-	run[[
+run[[
+        -- index literal table with string
         local tbl = {
             [ '"' ] = 1,
             [ "0" ] = 2,
@@ -260,10 +254,8 @@ test("index literal table with string", function()
         local val = tbl[key]
         attest.equal(val, _ as 1 | 2 | nil)
     ]]
-end)
-
-test("non literal keys should be treated as literals when used multiple times in the same scope", function()
-	run[[
+run[[
+        -- non literal keys should be treated as literals when used multiple times in the same scope
         local foo: string
         local bar: string
 
@@ -273,27 +265,21 @@ test("non literal keys should be treated as literals when used multiple times in
 
         attest.equal(a[foo][bar], 1)
     ]]
-end)
-
-test("table is not literal", function()
-	run[[
+run[[
+        -- table is not literal
         local tbl:{[number] = number} = {1,2,3}
         local analyzer function check_literal(tbl: any)
             assert(tbl:IsLiteral() == false)
         end
         check_literal(tbl)
     ]]
-end)
-
-test("var args with unknown length", function()
-	run[[
+run[[
+        -- var args with unknown length
         local tbl = {...}
         attest.equal(tbl[1], _ as any)
         attest.equal(tbl[2], _ as any)
         attest.equal(tbl[100], _ as any)
     ]]
-end)
-
 run[[
     local list: {[number] = any} | {}
     list = {}

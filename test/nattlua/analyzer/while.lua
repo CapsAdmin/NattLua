@@ -1,6 +1,5 @@
 local T = require("test.helpers")
 local run = T.RunCode
-local transpile = T.Transpile
 run[[
     local i = 1
 
