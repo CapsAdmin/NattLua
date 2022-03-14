@@ -1,27 +1,21 @@
 local T = require("test.helpers")
-local run = T.RunCode
-
-test("load", function()
-	run[[
+local analyze = T.RunCode
+-- load
+analyze[[
         attest.equal(assert(load("attest.equal(1, 1) return 2"))(), 2)
     ]]
-	run[[
+analyze[[
         attest.equal(assert(load("return " .. 2))(), 2)
     ]]
-end)
-
-run[[
+analyze[[
     attest.equal(require("test.nattlua.analyzer.file_importing.expect_5")(5), 1337)
 ]]
-
-test("file import", function()
-	equal(
-		8,
-		assert(require("nattlua").File("test/nattlua/analyzer/file_importing/test/main.nlua")):Analyze().AnalyzedResult:GetData()
-	)
-end)
-
-pending(function()
+-- file import
+equal(
+	8,
+	assert(require("nattlua").File("test/nattlua/analyzer/file_importing/test/main.nlua")):Analyze().AnalyzedResult:GetData()
+)
+--[=[
 	run([[
     -- ERROR1
     loadfile("test/nattlua/analyzer/file_importing/deep_error/main.nlua")()
@@ -30,36 +24,35 @@ pending(function()
 			assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)
 		end
 	end)
-end)
-
-run([[
+]=] analyze([[
     attest.equal(loadfile("test/nattlua/analyzer/file_importing/complex/main.nlua")(), 14)
 ]])
-run[[
+analyze[[
     attest.equal(require("test.nattlua.analyzer.file_importing.complex.adapter"), 14)
 ]]
-run[[
+analyze[[
     attest.equal(require("table.new"), table.new)
 ]]
-run[[
+analyze[[
     attest.equal(require("string"), string)
     attest.equal(require("io"), io)
 ]]
-run[[
+analyze[[
     local type test = analyzer function(name: string)
          return analyzer:GetLocalOrGlobalValue(name)
     end
     local type lol = {}
     attest.equal(test("lol"), lol)
 ]]
-run[[
+analyze[[
     type lol = {}
     attest.equal(require("lol"), lol)
     type lol = nil
 ]]
-pending[[
-    require("test.nattlua.analyzer.file_importing.env_leak.main")
-]]
-run[[
+--[=[
+    analyze[[
+        require("test.nattlua.analyzer.file_importing.env_leak.main")
+    ]]
+]=] analyze[[
     loadfile("test/nattlua/analyzer/file_importing/require_cache/main.nlua")()
 ]]

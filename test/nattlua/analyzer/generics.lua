@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[=[
+local analyze = T.RunCode
+analyze[=[
     -- without literal event_name
 
 
@@ -34,7 +34,7 @@ run[=[
         return 1337 
     end)
 ]=]
-run[=[
+analyze[=[
     -- with literal event_name, causing it to choose the specific function
 
     local type declared = {}
@@ -64,7 +64,7 @@ run[=[
 
     events.AddListener("message", function(data) attest.equal(data, _ as string) return 1337 end)
 ]=]
-run[[
+analyze[[
     local type tbl = {}
     tbl.foo = 1337
     local function test(key: ref keysof<|tbl|>)
@@ -72,7 +72,7 @@ run[[
     end
     attest.equal(test("foo"), 1337)
 ]]
-run(
+analyze(
 	[[
     local type tbl = {}
     tbl.foo = 1337
@@ -83,7 +83,7 @@ run(
 ]],
 	"bar.- is not a subset of.-foo"
 )
-run[[
+analyze[[
     local function TypeToString<|T: any|>
         if T > number then
             return "number"
@@ -97,7 +97,7 @@ run[[
     local type b = TypeToString<|string|>
     attest.equal<|b, "other"|>
 ]]
-run[[
+analyze[[
     local function foo<|A: any, B: any|>(a: A, b: B)
         attest.equal(a, _ as number)
         attest.equal(b, _ as number)

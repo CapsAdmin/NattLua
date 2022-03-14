@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[
+local analyze = T.RunCode
+analyze[[
     local function test(a,b): nil
 
     end
@@ -10,7 +10,7 @@ run[[
 
     attest.equal(test, _ as function=(a: false|true|any, b: false|true|any)>(nil))
 ]]
-run[[
+analyze[[
     local function test(a: any,b: any): nil
 
     end
@@ -22,25 +22,25 @@ run[[
 ]]
 
 do -- assignment
-	run[[
+	analyze[[
         local a
         attest.equal(a, nil)
     ]]
-	run[[
+	analyze[[
         local a: boolean
         attest.equal(a, _ as boolean)
     ]]
-	run[[
+	analyze[[
         a = nil
         -- todo, if any calls don't happen here then it's probably nil?
         attest.equal(a, _ as nil)
     ]]
-	run[[
+	analyze[[
         local a = {}
         a[5] = 5
         attest.equal(a[5], 5)
     ]]
-	run[[
+	analyze[[
         local function test(...)
             return 1,2,...
         end
@@ -51,7 +51,7 @@ do -- assignment
         attest.equal(b,2)
         attest.equal(c,3)
     ]]
-	run[[
+	analyze[[
         local a, b, c
         a, b, c = 0, 1
         attest.equal(a, 0)
@@ -65,7 +65,7 @@ do -- assignment
         attest.equal(b, nil)
         attest.equal(c, nil)
     ]]
-	run[[
+	analyze[[
         a, b, c = 0, 1
         attest.equal(a, 0)
         attest.equal(b, 1)
@@ -78,7 +78,7 @@ do -- assignment
         attest.equal(b, nil)
         attest.equal(c, nil)
     ]]
-	run[[
+	analyze[[
         local a = {}
         local i = 3
 
@@ -87,7 +87,7 @@ do -- assignment
         attest.equal(i, 4)
         attest.equal(a[3], 20)
     ]]
-	run[[
+	analyze[[
         a = {}
         i = 3
         i, a[i] = i+1, 20
@@ -96,7 +96,7 @@ do -- assignment
     ]]
 end
 
-run[[
+analyze[[
     local z1, z2
     local function test(i)
         local function f() return i end
@@ -111,55 +111,55 @@ run[[
     attest.equal(z2(), 2)
 ]]
 --local numbers = {-1,-0.5,0,0.5,1,math.huge,0/0}
-run("attest.equal(1, 1)")
-run("attest.equal(-1, -1)")
-run("attest.equal(-0.5, -0.5)")
-run("attest.equal(0, 0)")
+analyze("attest.equal(1, 1)")
+analyze("attest.equal(-1, -1)")
+analyze("attest.equal(-0.5, -0.5)")
+analyze("attest.equal(0, 0)")
 --- exp
-run[[
+analyze[[
     attest.equal(1e5, 100000)
     attest.equal(1e+5, 100000)
     attest.equal(1e-5, 0.00001)
 ]]
 --- hex exp +hexfloat !lex
-run[[
+analyze[[
     attest.equal(0xe+9, 23)
     attest.equal(0xep9, 7168)
     attest.equal(0xep+9, 7168)
     attest.equal(0xep-9, 0.02734375)
 ]]
-run("attest.equal(1-1, 0)")
-run("attest.equal(1+1, 2)")
-run("attest.equal(2*3, 6)")
-run("attest.equal(2^3, 8)")
-run("attest.equal(3%3, 0)")
-run("attest.equal(-1*2, -2)")
-run("attest.equal(1/2, 0.5)")
-run("attest.equal(1/2, 0.5)")
-run("attest.equal(0b10 | 0b01, 0b11)")
-run("attest.equal(0b10 & 0b10, 0b10)")
-run("attest.equal(0b10 & 0b10, 0b10)")
+analyze("attest.equal(1-1, 0)")
+analyze("attest.equal(1+1, 2)")
+analyze("attest.equal(2*3, 6)")
+analyze("attest.equal(2^3, 8)")
+analyze("attest.equal(3%3, 0)")
+analyze("attest.equal(-1*2, -2)")
+analyze("attest.equal(1/2, 0.5)")
+analyze("attest.equal(1/2, 0.5)")
+analyze("attest.equal(0b10 | 0b01, 0b11)")
+analyze("attest.equal(0b10 & 0b10, 0b10)")
+analyze("attest.equal(0b10 & 0b10, 0b10)")
 --R"attest.equal(0b10 >> 1, 0b01)"
 --R"attest.equal(0b01 << 1, 0b10)"
 --R"attest.equal(~0b01, -2)"
-run("attest.equal('a'..'b', 'ab')")
-run("attest.equal('a'..'b'..'c', 'abc')")
-run("attest.equal(1 .. '', nil as '1')")
-run("attest.equal('ab'..(1)..'cd'..(1.5), 'ab1cd1.5')")
-run[[ --- tnew
+analyze("attest.equal('a'..'b', 'ab')")
+analyze("attest.equal('a'..'b'..'c', 'abc')")
+analyze("attest.equal(1 .. '', nil as '1')")
+analyze("attest.equal('ab'..(1)..'cd'..(1.5), 'ab1cd1.5')")
+analyze[[ --- tnew
     local a = nil
     local b = {}
     local t = {[true] = a, [false] = b or 1}
     attest.equal(t[true], nil)
     attest.equal(t[false], b)
 ]]
-run[[ --- tdup
+analyze[[ --- tdup
     local b = {}
     local t = {[true] = nil, [false] = b or 1}
     attest.equal(t[true], nil)
     attest.equal(t[false], b)
 ]]
-run[[
+analyze[[
     do --- tnew
         local a = nil
         local b = {}
@@ -176,42 +176,42 @@ run[[
         attest.equal(t[false], b)
     end
 ]]
-run[[
+analyze[[
     local a = 1
     attest.equal(a, nil as 1)
 ]]
-run[[
+analyze[[
     local a = {a = 1}
     attest.equal(a.a, nil as 1)
 ]]
-run[[
+analyze[[
     local a = {a = {a = 1}}
     attest.equal(a.a.a, nil as 1)
 ]]
-run[[
+analyze[[
     local a = {a = 1}
     a.a = nil
     attest.equal(a.a, nil)
 ]]
-run[[
+analyze[[
     local a = {}
     a.a = 1
     attest.equal(a.a, nil as 1)
 ]]
-run[[
+analyze[[
     local a = ""
     attest.equal(a, nil as "")
 ]]
-run[[
+analyze[[
     local type a = number
     attest.equal(a, _ as number)
 ]]
-run[[
+analyze[[
     local a
     a = 1
     attest.equal(a, 1)
 ]]
-run[[
+analyze[[
     local a = {}
     a.foo = {}
 
@@ -226,14 +226,14 @@ run[[
 
     attest.equal(c, 1)
 ]]
-run[[
+analyze[[
     local function test()
 
     end
 
     attest.equal(test, nil as function=()>())
 ]]
-run[[
+analyze[[
     local c = 0
     for i = 1, 10, 2 do
         attest.superset_of(nil as number, i)
@@ -244,7 +244,7 @@ run[[
     end
     attest.equal(c, _ as 1)
 ]]
-run[[
+analyze[[
     local function lol(a,b,c)
         if true then
             return a+b+c
@@ -258,7 +258,7 @@ run[[
 
     attest.equal(a, 6)
 ]]
-run[[
+analyze[[
     local a = 1+2+3+4
     local b = nil
 
@@ -273,7 +273,7 @@ run[[
     attest.equal(b, 20)
     attest.equal(a, 10)
 ]]
-run[[
+analyze[[
     b = {}
     b.lol = 1
 
@@ -287,7 +287,7 @@ run[[
 
     attest.equal(c, 2)
 ]]
-run[[
+analyze[[
     local META = {}
     META.__index = META
 
@@ -297,7 +297,7 @@ run[[
 
     local a,b,c = META:Test(1,2,3)
 ]]
-run[[
+analyze[[
     local function test(a)
         if a then
             return 1
@@ -314,7 +314,7 @@ run[[
         attest.equal(a, 2)
     end
 ]]
-run[[
+analyze[[
     local a = 1337
     for i = 1, a do
         attest.equal(i, 1)
@@ -325,7 +325,7 @@ run[[
     end
     attest.equal(a, _ as number)
 ]]
-run[[
+analyze[[
     local function lol(a, ...)
         local lol,foo,bar = ...
 
@@ -340,18 +340,18 @@ run[[
     attest.equal(b, 4)
     attest.equal(c, 3)
 ]]
-run[[
+analyze[[
     function foo(a, b) return a+b end
 
     local a = foo(1,2)
 
     attest.equal(a, 3)
 ]]
-run[[
+analyze[[
 local a = {b = {c = {}}}
 a.b.c = 1
 ]]
-run[[
+analyze[[
     local a = function(b)
         if b then
             return true
@@ -363,7 +363,7 @@ run[[
     a(true)
 
 ]]
-run[[
+analyze[[
     function aaa(ok)
         if ok then
             return 2
@@ -378,7 +378,7 @@ run[[
     attest.equal(ag, "hello")
 
 ]]
-run[[
+analyze[[
     local foo = {lol = 30}
     function foo:bar(a)
         return a+self.lol
@@ -387,14 +387,14 @@ run[[
     attest.equal(foo:bar(20), 50)
 
 ]]
-run[[
+analyze[[
     function prefix (w1, w2)
         return w1 .. ' ' .. w2
     end
 
     attest.equal(prefix("hello", "world"), "hello world")
 ]]
-run[[
+analyze[[
     local func = function()
         local a = 1
 
@@ -407,7 +407,7 @@ run[[
 
     attest.equal(f(), 1)
 ]]
-run[[
+analyze[[
     function prefix (w1, w2)
         return w1 .. ' ' .. w2
     end
@@ -418,7 +418,7 @@ run[[
     local test = statetab[prefix(w1, w2)]
     attest.equal(test, 1337)
 ]]
-run[[
+analyze[[
     local function test(a)
         --if a > 10 then return a end
         return test(a+1)
@@ -426,7 +426,7 @@ run[[
 
     attest.equal(test(1), nil as any)
 ]]
-run[[
+analyze[[
     local function test(a): number
         if a > 10 then return a end
         return test(a+1)
@@ -434,7 +434,7 @@ run[[
 
     attest.equal(test(1), nil as number)
 ]]
-run[[
+analyze[[
     local a: string | number = 1
 
     local type test = function=(a: number, b: string)>(boolean, number)
@@ -444,7 +444,7 @@ run[[
     attest.equal(foo, nil as boolean)
     attest.equal(bar, nil as number)
 ]]
-run[[
+analyze[[
     local type lol = number
 
     local type math = {
@@ -463,7 +463,7 @@ run[[
 
     type math.lol = nil
 ]]
-run[[
+analyze[[
     local type foo = {
         a = number,
         b = {
@@ -477,12 +477,12 @@ run[[
 
     attest.subset_of(b, _ as foo)
 ]]
-run[[
+analyze[[
   --  local a: (string|number)[] = {"", ""}
   --  a[1] = ""
   --  a[2] = 1
 ]]
-run[[
+analyze[[
     local type foo = {
         bar = function=(a: boolean, b: number)>(true) | function=(a: number)>(false),
     }
@@ -493,7 +493,7 @@ run[[
     attest.equal(a, nil as true)
     attest.equal(b, nil as false)
 ]]
-run[[
+analyze[[
     local a: string = "1"
     local type a = string | number | (boolean | string)
 
@@ -511,7 +511,7 @@ run[[
             attest.equal(v, _ as "LOL")
         end
     end
-]] run[[
+]] analyze[[
     local a = {
         foo = true,
         bar = false,
@@ -521,12 +521,12 @@ run[[
 
     local k, v = next(a)
 ]]
-run[[
+analyze[[
     local a: _G.string
 
     attest.equal(a, _G.string)
 ]]
-run[[
+analyze[[
     local a = ""
 
     if a is string then
@@ -534,7 +534,7 @@ run[[
     end
 
 ]]
-run[[
+analyze[[
     local a = math.cos(_ as number)
     attest.equal(a, nil as number)
 
@@ -542,7 +542,7 @@ run[[
         attest.equal(a, _ as number)
     end
 ]]
-run[[
+analyze[[
     local type math = {
         sin = function=(number)>(number)
     } & math
@@ -556,7 +556,7 @@ run[[
 
     type math.cos = old
 ]]
-run[[
+analyze[[
     local type a = analyzer function()
         _G.LOL = true
     end
@@ -573,16 +573,16 @@ run[[
 
     local a = b()
 ]]
-run[[
+analyze[[
     a: number = (lol as function=()>(number))()
 
     attest.equal(a, nil as number)
 ]]
-run[[
+analyze[[
     local a = {}
     a.b: boolean, a.c: number = LOL as any, LOL2 as any
 ]]
-run[[
+analyze[[
     local type test = {
         sin = function=(number)>(number),
         cos = function=(number)>(number),
@@ -590,33 +590,33 @@ run[[
 
     local a = test.sin(1)
 ]]
-run[[
+analyze[[
     local type lol = analyzer function(a: string) return a end
     local a: lol<|string|>
     attest.equal(a, _ as string)
 ]]
-run[[
+analyze[[
     local a = {}
     function a:lol(a,b,c)
         return a+b+c
     end
     attest.equal(a:lol(1,2,3), 6)
 ]]
-run[[
+analyze[[
     local a = {}
     function a.lol(_, a,b,c)
         return a+b+c
     end
     attest.equal(a:lol(1,2,3), 6)
 ]]
-run[[
+analyze[[
     local a = {}
     function a.lol(a,b,c)
         return a+b+c
     end
     attest.equal(a.lol(1,2,3), 6)
 ]]
-run[[
+analyze[[
     local a = {}
     function a.lol(...)
         local a,b,c = ...
@@ -624,7 +624,7 @@ run[[
     end
     attest.equal(a.lol(1,2,3), 6)
 ]]
-run[[
+analyze[[
     local a = {}
     function a.lol(foo, ...)
         local a,b,c = ...
@@ -632,20 +632,20 @@ run[[
     end
     attest.equal(a.lol(10,1,2,3), 16)
 ]]
-run[[
+analyze[[
     local a = (function(...) return ...+... end)(10)
 ]]
-run[[
+analyze[[
     -- this will error with not defined
     --attest.equal(TOTAL_STRANGER_COUNT, _ as number)
     --attest.equal(TOTAL_STRANGER_STRING, _ as string)
 ]]
-run[[
+analyze[[
     local a = b as any
     local b = 2
     attest.equal(a, _ as any)
 ]]
-run[[
+analyze[[
     local analyzer function identity(a: any)
         return a
     end
@@ -656,15 +656,15 @@ pending[[
         attest.equal(v, 1)
     end
 ]]
-run[[
+analyze[[
     local a = {a = self}
 ]]
-run[[
+analyze[[
     local a = setmetatable({} as {num = number}, meta)
 
     attest.equal(a.num, _ as number)
 ]]
-run[[
+analyze[[
 
     local a,b,c = string.match("1 2 3", "(%d) (%d) (%d)")
     attest.equal(a, nil as "1")
@@ -672,52 +672,52 @@ run[[
     attest.equal(c, nil as "3")
 
 ]]
-run[[
+analyze[[
     local def,{a,b,c} = {a=1,b=2,c=3}
     attest.equal(a, 1)
     attest.equal(b, 2)
     attest.equal(c, 3)
     attest.equal(def, def)
 ]]
-run[[
+analyze[[
     -- local a = nil
     -- local b = a and a.b or 1
  ]]
-run[[
+analyze[[
     local tbl = {} as {[true] = false}
     tbl[true] = false
     attest.equal(tbl[true], false)
  ]]
-run[[
+analyze[[
     local tbl = {} as {1,true,3}
     tbl[1] = 1
     tbl[2] = true
  ]]
-run[[
+analyze[[
     local tbl: {1,true,3} = {1, true, 3}
     tbl[1] = 1
     tbl[2] = true
     tbl[3] = 3
  ]]
-run[[
+analyze[[
     local tbl: {1,true,3} = {1, true, 3}
     tbl[1] = 1
     tbl[2] = true
     tbl[3] = 3
  ]]
-run[[
+analyze[[
     local pl = {IsValid = function(self) end}
     local a = pl:IsValid()
     attest.equal(a, nil)
  ]]
-run[[
+analyze[[
     local tbl = {}
     local test = "asdawd"
   --  tbl[test] = tbl[test] or {} TODO
     tbl[test] = "1"
     attest.equal(tbl[test], nil as "1")
 ]]
-run[[
+analyze[[
     local function fill(t)
         for i = 1, 10 do
             t[i] = i
@@ -726,7 +726,7 @@ run[[
     local tbl = {}
     fill(tbl)
 ]]
-run[[
+analyze[[
     tbl, {a,b} = {a=1,b=2}
 
     attest.equal(tbl.a, nil as 1)
@@ -734,17 +734,17 @@ run[[
     attest.equal(a, nil as 1)
     attest.equal(b, nil as 2)
 ]]
-run[[
+analyze[[
     local type a = 1
     attest.equal(a, 1)
 ]]
-run[[
+analyze[[
     local a = function(): number,string return 1,"" end
 ]]
-run[[
+analyze[[
     assert(1 == 1, "lol")
 ]]
-run[[
+analyze[[
     local function test(a, b)
 
     end
@@ -766,7 +766,7 @@ run[[
 
     check(test, "!")
 ]]
-run([[
+analyze([[
     local type a = {}
 
     if not a then
@@ -776,14 +776,14 @@ run([[
         attest.equal(1, 1)
     end
 ]])
-run([[
+analyze([[
     local type a = {}
     if not a then
         -- shouldn't reach
         attest.equal(1, 2)
     end
 ]])
-run[[
+analyze[[
     local x = 1
     goto foo
     x = 2

@@ -1,17 +1,11 @@
 local T = require("test.helpers")
-local run = T.RunCode
-
-test("prefix", function()
-	run([[
+local analyze = T.RunCode
+analyze([[
         local a = 1
         a = -a
         attest.equal(a, -1)
     ]])
-end)
-
-test("postfix", function()
-	run([[
+analyze([[
         local a = 1++
         attest.equal(a, 2)
     ]])
-end)

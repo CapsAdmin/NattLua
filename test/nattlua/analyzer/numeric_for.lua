@@ -1,17 +1,17 @@
 local T = require("test.helpers")
-local run = T.RunCode
+local analyze = T.RunCode
 local transpile = T.Transpile
-run[[
+analyze[[
     for i = 1, 10000 do
         attest.equal(i, _ as 1 .. 10000)
     end
 ]]
-run[[
+analyze[[
     for i = 1, _ as number do
         attest.equal(i, _ as 1..inf)
     end
 ]]
-run[[
+analyze[[
     --for i = 1, number is an uncertain scope
     local a = 0
     for i = 1, _ as number do
@@ -20,7 +20,7 @@ run[[
     end
     attest.equal(a, _ as number)
 ]]
-run[[
+analyze[[
     local a = 0
     for i = 1, _ as number do
         a = a + 1
@@ -28,7 +28,7 @@ run[[
     attest.equal(a, _ as number)
 ]]
 
-pending("annotation", function()
+if false then
 	local code = transpile([[
         local x
         for i = 1, 2 do -- i should be 1 | 2
@@ -43,9 +43,9 @@ pending("annotation", function()
 	-- if the union sorting algorithm changes, we probably need to change this
 	assert(code:find("local a--[[#:false | true]] = x", nil, true) ~= nil)
 	assert(code:find("local b--[[#:false]] = x", nil, true) ~= nil)
-end)
+end
 
-run[[
+analyze[[
     local lol = 0
 
     for i = 1, 5 do
@@ -62,7 +62,7 @@ run[[
 
     attest.equal(lol, 2)
 ]]
-run[[
+analyze[[
     for i = 1, 3 do
         -- i is number if max is math.huge for example
     
@@ -78,7 +78,7 @@ run[[
         attest.equal(x, 108)
     end
 ]]
-run[[
+analyze[[
     local string_byte = string.byte
     local x = 0
     local check = false
@@ -96,7 +96,7 @@ run[[
     end
     attest.equal(x,55)
 ]]
-run[[
+analyze[[
     local tbl = {}
     for i = 1, 10000 do
         tbl[i] = i*100

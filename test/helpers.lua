@@ -2,28 +2,6 @@ local nl = require("nattlua")
 local types = require("nattlua.types.types")
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 types.Initialize()
-
-local function cast(...)
-	local ret = {}
-
-	for i = 1, select("#", ...) do
-		local v = select(i, ...)
-		local t = type(v)
-
-		if t == "number" then
-			ret[i] = types.LNumber(v)
-		elseif t == "string" then
-			ret[i] = types.LString(v)
-		elseif t == "boolean" then
-			ret[i] = types.Symbol(v)
-		else
-			ret[i] = v
-		end
-	end
-
-	return ret
-end
-
 -- reuse an existing environment to speed up tests
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 
@@ -71,7 +49,7 @@ local function run(code, expect_error, expect_warning)
 	return compiler
 end
 
-local function internalProtectedEquals(o1, o2, ignore_mt, callList)
+local function table_equal(o1, o2, ignore_mt, callList)
 	if o1 == o2 then return true end
 
 	local o1Type = type(o1)
@@ -111,7 +89,7 @@ local function internalProtectedEquals(o1, o2, ignore_mt, callList)
 		local vComparisons = callList[value1]
 
 		if not vComparisons or vComparisons[value2] == nil then
-			if not internalProtectedEquals(value1, value2, ignore_mt, callList) then
+			if not table_equal(value1, value2, ignore_mt, callList) then
 				return false
 			end
 		end
@@ -126,6 +104,27 @@ local function internalProtectedEquals(o1, o2, ignore_mt, callList)
 	-- comparison finished - objects are equal do not compare again
 	oComparisons[o2] = true
 	return true
+end
+
+local function cast(...)
+	local ret = {}
+
+	for i = 1, select("#", ...) do
+		local v = select(i, ...)
+		local t = type(v)
+
+		if t == "number" then
+			ret[i] = types.LNumber(v)
+		elseif t == "string" then
+			ret[i] = types.LString(v)
+		elseif t == "boolean" then
+			ret[i] = types.Symbol(v)
+		else
+			ret[i] = v
+		end
+	end
+
+	return ret
 end
 
 return {
@@ -161,6 +160,6 @@ return {
 		return run(code):Emit({annotate = true})
 	end,
 	TableEqual = function(o1, o2, ignore_mt)
-		return internalProtectedEquals(o1, o2, ignore_mt, {})
+		return table_equal(o1, o2, ignore_mt, {})
 	end,
 }

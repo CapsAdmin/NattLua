@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[
+local analyze = T.RunCode
+analyze[[
 
     attest.equal<|
         Partial<|{
@@ -14,7 +14,7 @@ run[[
     |>
 
 ]]
-run[[
+analyze[[
 
     attest.equal<|
         Required<|{
@@ -28,7 +28,7 @@ run[[
     |>
 
 ]]
-run(
+analyze(
 	[[
 
     local tbl = Readonly<|{
@@ -41,7 +41,7 @@ run(
 ]],
 	"444 is not a subset of 666"
 )
-run[[
+analyze[[
 
     local type CatInfo = {
         age = number,
@@ -58,7 +58,7 @@ run[[
 
     attest.equal(cats.boris.age, _ as number)
 ]]
-run[[
+analyze[[
 
     local type Todo = {
         title = string,
@@ -74,7 +74,7 @@ run[[
     }
 
 ]]
-run(
+analyze(
 	[[
 
     local type Todo = {
@@ -96,25 +96,25 @@ run(
 ]],
 	"done"
 )
-run[[
+analyze[[
     attest.equal<|
         Exclude<|1 | 2 | 3, 2|>, 
         1 | 3
     |>
 ]]
-run[[
+analyze[[
     attest.equal<|
         Extract<|1337 | "deadbeef", number|>, 
         1337
     |>
 ]]
-run[[
+analyze[[
     attest.equal<|
         Extract<|1337 | 231 | "deadbeef", number|>, 
         1337 | 231
     |>  
 ]]
-run[[
+analyze[[
     local function foo(a: number, b: string, c: Table): boolean
         return true
     end
@@ -125,7 +125,7 @@ run[[
 
     attest.equal<|ReturnType<|foo|>[1], boolean|>
 ]]
-run[[
+analyze[[
     attest.equal<|Uppercase<|"foo"|>, "FOO"|>
     attest.equal<|Lowercase<|"FOO"|>, "foo"|>
 
@@ -133,7 +133,7 @@ run[[
     --attest.equal<|Capitalize<|"foo"|>, "Foo"|>
     --attest.equal<|Uncapitalize<|"FOO"|>, "fOO"|>
 ]]
-run[[
+analyze[[
     local x: {
         [string] = true,
         foo = 1337,

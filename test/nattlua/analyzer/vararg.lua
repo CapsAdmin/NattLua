@@ -1,20 +1,20 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[
+local analyze = T.RunCode
+analyze[[
         local function test(...)
 
         end
 
         test({})
     ]]
-run[[
+analyze[[
         local function test(...)
             local a,b,c = ...
             return a+b+c
         end
         attest.equal(test(test(1,2,3), test(1,2,3), test(1,2,3)), 18)
     ]]
-run[[
+analyze[[
         local function test()
             return 1,2
         end
@@ -24,7 +24,7 @@ run[[
         assert_type(b, 3)
         assert_type(c, nil)
     ]]
-run[[
+analyze[[
         local function test(...)
             return 1,2,...
         end
@@ -35,7 +35,7 @@ run[[
         attest.equal(b,2)
         attest.equal(c,3)
     ]]
-run[[
+analyze[[
         -- vararg in table
         local function test(...)
             local a = {...}
@@ -46,7 +46,7 @@ run[[
 
         test(1,2,3)
     ]]
-run[[
+analyze[[
         -- var arg in table and return
         local a,b,c = test(1,2,3)
 
@@ -60,7 +60,7 @@ run[[
         attest.equal(b, 20)
         attest.equal(c, 30)
     ]]
-run[[
+analyze[[
         local function test(...)
             return 1,2,3, ...
         end
@@ -72,19 +72,19 @@ run[[
         attest.equal(C, nil)
         attest.equal(D, nil)
     ]]
-run[[
+analyze[[
     local a,b,c = ...
     attest.equal(a, _ as any)
     attest.equal(b, _ as any)
     attest.equal(c, _ as any)
 ]]
-run[[
+analyze[[
     local tbl = {...}
     attest.equal(tbl[1], _ as any)
     attest.equal(tbl[2], _ as any)
     attest.equal(tbl[100], _ as any)
 ]]
-run[[
+analyze[[
     local function foo(...)
         local tbl = {...}
         attest.equal(tbl[1], _ as any)
@@ -92,7 +92,7 @@ run[[
         attest.equal(tbl[100], _ as any)
     end
 ]]
-run[[
+analyze[[
     ;(function(...)   
         local tbl = {...}
         attest.equal(tbl[1], 1)
@@ -100,13 +100,13 @@ run[[
         attest.equal(tbl[100], _ as nil) -- or nil?
     end)(1,2)
 ]]
-run[[
+analyze[[
     local a,b,c = unknown()
     attest.equal(a, _ as any)
     attest.equal(b, _ as any)
     attest.equal(c, _ as any)
 ]]
-run[[
+analyze[[
         --parenthesis around varargs should only return the first value in the tuple
         local function s(...) return ... end
         local a,b,c = (s(1, 2, 3))
@@ -114,7 +114,7 @@ run[[
         attest.equal(b, nil)
         attest.equal(c, nil)
     ]]
-run[[
+analyze[[
         --analyzer function varargs
         local lol = function(...)
             local a,b,c = ...
@@ -129,7 +129,7 @@ run[[
 
         lol2(1,2,3)
     ]]
-run[[
+analyze[[
     local type lol = function=()>(...any)
 
     local a,b,c = lol()
@@ -146,7 +146,7 @@ run[[
 
     test(lol())
 ]]
-run[[
+analyze[[
     local function resume(a, ...)
         local a, b, c = a, ...
         attest.equal(a, _ as 1)
@@ -156,7 +156,7 @@ run[[
     
     resume(1, 2, 3)
 ]]
-run[[
+analyze[[
     local type lol = function=()>(1,...any)
 
     local a,b,c,d = lol()
@@ -200,7 +200,7 @@ run[[
     
     test(lol(),2,3)
 ]]
-run[[
+analyze[[
     local a = {}
 
     local i = 0
@@ -218,14 +218,14 @@ run[[
 
     a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)
 ]]
-run[[
+analyze[[
     local t = {foo = true}
     for k,v in pairs(t) do
         attest.equal(k, _ as "foo")
         attest.equal(v, _ as true)
     end
 ]]
-run[[
+analyze[[
     local analyzer function create(func: Function)
         local t = types.Table()
         t.func = func
@@ -244,7 +244,7 @@ run[[
     
     call(co,1,2,3)
 ]]
-run[[
+analyze[[
     
     local function foo(...)
 
@@ -259,7 +259,7 @@ run[[
     
     foo(1,2,3)
 ]]
-run[[
+analyze[[
     ;(function(...) 
         local a,b,c,d = ...
         attest.equal(a, _ as 1)
@@ -268,7 +268,7 @@ run[[
         attest.equal(d, nil)
     end)(1,2,3)
 ]]
-run(
+analyze(
 	[[
     ;(function(...: ...number) 
         print("!", ...)
@@ -276,7 +276,7 @@ run(
 ]],
 	"foo.-is not the same type as number"
 )
-run[[
+analyze[[
     local function foo()
         return foo()
     end
@@ -286,14 +286,14 @@ run[[
     -- should not be a nested tuple
     attest.superset_of(foo, nil as function=()>(any))
 ]]
-run[[
+analyze[[
     local analyzer function foo(a: any)
         assert(a == nil)
     end
 
     foo()
 ]]
-run[[
+analyze[[
     local analyzer function foo(a: any)
         assert(a.Type == "symbol")
         assert(a:GetData() == nil)
@@ -304,7 +304,7 @@ run[[
 
 do
 	_G.LOL = nil
-	run[[
+	analyze[[
         local analyzer function test()
             return function() _G.LOL = true end
         end
@@ -316,7 +316,7 @@ do
 	_G.LOL = nil
 end
 
-run[[
+analyze[[
     local analyzer function foo() 
         return 1
     end
@@ -327,7 +327,7 @@ run[[
     
     §assert(env.runtime.a:Get(types.LString("foo")).Type ~= "tuple")
 ]]
-run[[
+analyze[[
     local a,b,c = 1,2,3
     local function test(...)
         return a,b,c, ...
@@ -342,7 +342,7 @@ run[[
     attest.equal(å, 6)
 
 ]]
-run[[
+analyze[[
     local function bar(a: string, b: number)
     
     end
@@ -356,7 +356,7 @@ run[[
     foo("hello", 1)
     foo("hello", function() end)
 ]]
-run[[
+analyze[[
     local function foo(a: number, ...: (number,)*inf)
         local x,y,z = ...
         attest.equal(a, _ as number)
@@ -365,7 +365,7 @@ run[[
         attest.equal(z, _ as number)
     end
 ]]
-run[[
+analyze[[
     local function foo(a: number, ...: (number,string)*inf)
         local b,x,y,z = ...
         attest.equal(a, _ as number)

@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run(
+local analyze = T.RunCode
+analyze(
 	[[
     local function func(): number, number
         if math.random() > 0.5 then
@@ -12,7 +12,7 @@ run(
 ]],
 	"return 1, \"\" %-%- HERE"
 )
-run(
+analyze(
 	[[
     local function func(): number, number
         if math.random() > 0.5 then
@@ -24,7 +24,7 @@ run(
 ]],
 	"return 3 %-%- HERE"
 )
-run(
+analyze(
 	[[
     local function func(): number, number
         return 1
@@ -32,7 +32,7 @@ run(
 ]],
 	"index 2 does not exist"
 )
-run(
+analyze(
 	[[
     local function func(): number, number
         if MAYBE then
@@ -44,7 +44,7 @@ run(
 ]],
 	"index 2 does not exist"
 )
-run[[
+analyze[[
     local MAYBE: boolean
 
     local function ReadLiteralString(multiline_comment : boolean): (true,) | (false, string)

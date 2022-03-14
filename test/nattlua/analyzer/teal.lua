@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[
+local analyze = T.RunCode
+analyze[[
     £parser.TealCompat = true
     local record tl
         enum LoadMode
@@ -15,7 +15,7 @@ run[[
     attest.equal(tl.LoadMode, _ as "b" | "bt" | "t")
     attest.equal(tl.lol, _ as "b" | "bt" | "t")
 ]]
-run[[
+analyze[[
     £parser.TealCompat = true
 
     local record VisitorCallbacks<N, T>
@@ -28,7 +28,7 @@ run[[
 
     attest.equal(x, _ as {foo = string, bar = number})
 ]]
-run[[
+analyze[[
     £parser.TealCompat = true
 
     local x: {string}
@@ -37,7 +37,7 @@ run[[
 
     attest.equal(x, _ as {[number] = string})
 ]]
-run[[
+analyze[[
     £parser.TealCompat = true
 
     local x: {string, number, boolean}
@@ -46,7 +46,7 @@ run[[
 
     attest.equal(x, _ as {string, number, boolean})
 ]]
-run[[
+analyze[[
     £parser.TealCompat = true
 
     local x: {string, number, boolean}

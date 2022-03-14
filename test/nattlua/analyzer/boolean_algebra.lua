@@ -1,13 +1,13 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[ -- A
+local analyze = T.RunCode
+analyze[[ -- A
     local A = _ as true | false
 
     if A then 
         attest.equal(A, true)
     end
 ]]
-run[[ -- A or B
+analyze[[ -- A or B
 
     local A = _ as true | false
     local B = _ as true | false
@@ -20,7 +20,7 @@ run[[ -- A or B
         attest.equal(A, false)
     end
 ]]
-run[[ -- A and B
+analyze[[ -- A and B
     local A = _ as true | false
     local B = _ as true | false
     if A then
@@ -30,7 +30,7 @@ run[[ -- A and B
         end
     end
 ]]
-run[[ -- A or B or C
+analyze[[ -- A or B or C
 
     local A = _ as true | false
     local B = _ as true | false
@@ -50,7 +50,7 @@ run[[ -- A or B or C
         attest.equal(C, true)
     end
 ]]
-run[[ -- A or not B
+analyze[[ -- A or not B
 
     local A = _ as true | false
     local B = _ as true | false
@@ -63,7 +63,7 @@ run[[ -- A or not B
         attest.equal(B, false)
     end
 ]]
-run[[ -- A or not B or C
+analyze[[ -- A or not B or C
     local A = _ as true | false
     local B = _ as true | false
     local C = _ as true | false
@@ -82,7 +82,7 @@ run[[ -- A or not B or C
         attest.equal(C, true)
     end
 ]]
-run[[ -- A or not B or not C
+analyze[[ -- A or not B or not C
     local A = _ as true | false
     local B = _ as true | false
     local C = _ as true | false
@@ -101,7 +101,7 @@ run[[ -- A or not B or not C
         attest.equal(C, false)
     end
 ]]
-run[[ -- A and not B
+analyze[[ -- A and not B
     local A = _ as true | false
     local B = _ as true | false
     if A then
@@ -111,7 +111,7 @@ run[[ -- A and not B
         end
     end
 ]]
-run[[ -- not A and not B
+analyze[[ -- not A and not B
     local A = _ as true | false
     local B = _ as true | false
     if not A then
@@ -121,7 +121,7 @@ run[[ -- not A and not B
         end
     end
 ]]
-run[[ -- not A and B
+analyze[[ -- not A and B
     local A = _ as true | false
     local B = _ as true | false
     if not A then
@@ -131,7 +131,7 @@ run[[ -- not A and B
         end
     end
 ]]
-run[[ -- (A and B) or (C and D)
+analyze[[ -- (A and B) or (C and D)
 
     local A = _ as true | false
     local B = _ as true | false

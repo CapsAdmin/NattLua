@@ -1,18 +1,22 @@
 local T = require("test.helpers")
-local run = T.RunCode
+local analyze = T.RunCode
 local String = T.String
-local analyzer = run([[
-        -- should return a tuple with types
-        local type test = function()
-            return 1,2,3
-        end
 
-        local a,b,c = test()
-    ]])
-equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
-equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
-equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
-run(
+do
+	local analyzer = analyze([[
+            -- should return a tuple with types
+            local type test = function()
+                return 1,2,3
+            end
+
+            local a,b,c = test()
+        ]])
+	equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
+	equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
+	equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
+end
+
+analyze(
 	-- should be able to error
 	[[
         local type test = function()
@@ -23,7 +27,7 @@ run(
     ]],
 	"test"
 )
-run([[
+analyze([[
         -- exclude analyzer function
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
@@ -34,7 +38,7 @@ run([[
 
         attest.equal(a, _ as 1|3)
     ]])
-run(
+analyze(
 	[[
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
@@ -47,14 +51,14 @@ run(
     ]],
 	"expected 11 | 31 got 1 | 3"
 )
-run[[
+analyze[[
         -- self referenced type tables
         local type a = {
             b = self,
         }
         attest.equal(a, a.b)
     ]]
-run[[
+analyze[[
         -- next
         local t = {k = 1}
         local a = 1
@@ -62,32 +66,28 @@ run[[
         attest.equal(k, nil as "k")
         attest.equal(v, nil as 1)
     ]]
-run[[
+analyze[[
         local k,v = next({foo = 1})
         attest.equal(string.len(k), _ as 3)
         attest.equal(v, _ as 1)
     ]]
-run[[
+analyze[[
         -- math.floor
         attest.equal(math.floor(1.5), 1)
     ]]
-run([[
+analyze([[
         -- assert
         type_assert_truthy(1 == 2, "lol")
     ]], "lol")
 
-do
+do -- require should error when not finding a module
 	_G.TEST_DISABLE_ERROR_PRINT = true
-
-	test("require should error when not finding a module", function()
-		local a = run([[require("adawdawddwaldwadwadawol")]])
-		assert(a:GetDiagnostics()[1].msg:find("not found"))
-	end)
-
+	local a = analyze([[require("adawdawddwaldwadwadawol")]])
+	assert(a:GetDiagnostics()[1].msg:find("not found"))
 	_G.TEST_DISABLE_ERROR_PRINT = false
 end
 
-run[[
+analyze[[
         -- rawset rawget
         local meta = {}
         meta.__index = meta
@@ -102,17 +102,17 @@ run[[
         attest.equal(rawget(self, "lol"), "LOL")
         attest.equal(called, false)
     ]]
-run[[
+analyze[[
         -- select
         attest.equal(select("#", 1,2,3), 3)
     ]]
-run[[
+analyze[[
         -- parenthesis around vararg
         local a = select(2, 1,2,3)
         attest.equal(a, 2)
         attest.equal((select(2, 1,2,3)), 2)
     ]]
-run[[
+analyze[[
         -- varargs
     local type test = function(...) end
     local a = {}
@@ -121,7 +121,7 @@ run[[
     test(test(a))
 
     ]]
-run[[
+analyze[[
         -- exlcude
         local analyzer function Exclude(T: any, U: any)
             T:RemoveType(U)
@@ -131,7 +131,7 @@ run[[
         local a: Exclude<|1|2|3, 2|>
         attest.equal(a, _ as 1|3)
     ]]
-run[[
+analyze[[
         -- table.insert
         local a = {}
         a[1] = true
@@ -139,7 +139,7 @@ run[[
         table.insert(a, 1337)
         attest.equal(a[3], 1337)
     ]]
-run[[
+analyze[[
         -- string sub on union
         local lol: "foo" | "bar"
 
@@ -149,7 +149,7 @@ run[[
 
 do
 	_G.test_var = 0
-	run[[
+	analyze[[
         
         local analyzer function test(foo: number)
             -- when defined as number the function should be called twice for each number in the union
@@ -161,7 +161,7 @@ do
     ]]
 	assert(_G.test_var == 2)
 	_G.test_var = 0
-	run[[
+	analyze[[
         
         local analyzer function test(foo: any)
             -- when defined as anything, or no type it should just pass the union directly
@@ -173,7 +173,7 @@ do
     ]]
 	assert(_G.test_var == 1)
 	_G.test_var = 0
-	run[[
+	analyze[[
         
         local analyzer function test(foo: number | nil)
             -- if the only type added to the union is nil it should still be called twice
@@ -186,7 +186,7 @@ do
 	_G.test_var = nil
 end
 
-run[[
+analyze[[
     local ok, err = type_pcall(function()
         attest.equal(1, 2)
         return 1
@@ -195,13 +195,13 @@ run[[
     attest.equal(ok, false)
     attest.superset_of(_ as string, err)
 ]]
-run[[
+analyze[[
     local ok, val = type_pcall(function() return 1 end)
     
     attest.equal(ok, true)
     attest.equal(val, 1)
 ]]
-run([[
+analyze([[
     local analyzer function Exclude(T: any, U: any)
         T:RemoveType(U)
         return T:Copy()
@@ -211,7 +211,7 @@ run([[
 
     attest.equal(a, _ as 1|3)
 ]])
-run(
+analyze(
 	[[
     local analyzer function Exclude(T: any, U: any)
         T:RemoveType(U)
@@ -224,7 +224,7 @@ run(
 ]],
 	"expected 11 | 31 got 1 | 3"
 )
-run[[
+analyze[[
         --pairs loop
         local tbl = {4,5,6}
         local k, v = 0, 0
@@ -237,7 +237,7 @@ run[[
         attest.equal(k, 6)
         attest.equal(v, 15)
     ]]
-run[[
+analyze[[
     local function build_numeric_for(tbl)
         local lua = {}
         table.insert(lua, "local sum = 0")
@@ -257,7 +257,7 @@ run[[
     
     attest.equal(func(), 55)
 ]]
-run(
+analyze(
 	[[
     local function build_summary_function(tbl)
         local lua = {}
@@ -278,15 +278,15 @@ run(
 ]],
 	"CHECKME"
 )
-run[[
+analyze[[
     local a = {"1", "2", "3"}
     attest.equal(table.concat(a), "123")
 ]]
-run[[
+analyze[[
     local a = {"1", "2", "3", _ as string}
     attest.equal(table.concat(a), _ as string)
 ]]
-run[[
+analyze[[
     local a = {
         b = {
             foo = true,
@@ -297,7 +297,7 @@ run[[
     
     attest.equal(_ as keysof<|typeof a.b|>, _ as "bar" | "faz" | "foo")
 ]]
-run[[
+analyze[[
     local function foo<|a: any, b: any|>
         return a, b
     end
@@ -306,14 +306,14 @@ run[[
     attest.equal(x, 1)
     attest.equal(y, 2)
 ]]
-run[[
+analyze[[
     for str in ("lol1\nlol2\nlol3\n"):gmatch("(.-)\n") do
         if str ~= "lol1" and str ~= "lol2" and str ~= "lol3" then
             type_error(str)
         end
     end
 ]]
-run[[
+analyze[[
     -- test's scope should be from where the function was made
 
     local type lol = 2
@@ -327,7 +327,7 @@ run[[
         test()
     end
 ]]
-run[[
+analyze[[
     local function lol(x)
         attest.equal(x, 1)
     end
@@ -335,7 +335,7 @@ run[[
     local x: 1 | "STRING"
     local z = x == 1 and lol(x)
 ]]
-run[[
+analyze[[
     local function lol(x)
         attest.equal(x, _ as 1 | "STRING")
     end
@@ -344,12 +344,12 @@ run[[
     local a = x == 1
     local z = lol(x)
 ]]
-run[[
+analyze[[
     local x: 1.5 | "STRING"
     local y = type(x) == "number" and math.ceil(x)
     attest.equal(y, _ as 2 | false)
 ]]
-run[[
+analyze[[
     local str, count = string.gsub("hello there!", "hello", "hi")
     attest.equal<|str, "hi there!"|>
     attest.equal<|count, 1|>
@@ -357,7 +357,7 @@ run[[
 
 do
 	_G.TEST_DISABLE_ERROR_PRINT = true
-	run[[
+	analyze[[
         local function test(x)
             error("LOL")
             return "foo"
@@ -379,7 +379,7 @@ end
 
 do
 	_G.TEST_DISABLE_ERROR_PRINT = true
-	run[[
+	analyze[[
         local ok, table_new = pcall(require, "lol")
         if not ok then
             table_new = "ok"
@@ -388,7 +388,7 @@ do
         attest.equal(ok, false)
         attest.equal(table_new, "ok")
     ]]
-	run[[
+	analyze[[
         local ok, err = pcall(function() assert(false, "LOL") end)
 
         attest.equal(ok, false)
@@ -397,7 +397,7 @@ do
 	_G.TEST_DISABLE_ERROR_PRINT = false
 end
 
-run(
+analyze(
 	[[
     local tbl = {
         foo = true,
@@ -408,7 +408,7 @@ run(
 ]],
 	"foo.-is not the same type as number"
 )
-run[[
+analyze[[
     local META = {}
     META.__index = META
     META.MyField = true
@@ -425,7 +425,7 @@ run[[
 
     attest.equal(META.ExtraField, 1)
 ]]
-run[[
+analyze[[
     local type Entity = {
         GetChildBones = function=(string, number)>({[number] = number}),
         GetBoneCount = function=(self)>(number),
@@ -434,7 +434,7 @@ run[[
     local e = _ as Entity
     attest.equal(e:GetBoneCount(), _ as number)
 ]]
-run[[
+analyze[[
     -- we need to say that lol has a contract so that we can mutate it
     local lol: {} = {}
     type lol.rofl = function=(number, string)>(string)
@@ -445,7 +445,7 @@ run[[
         return ""
     end
 ]]
-run[[
+analyze[[
     local function test(a: ref string)
         return a:lower()
     end
@@ -453,7 +453,7 @@ run[[
     local str = test("Foo")
     attest.equal(str, "foo")
 ]]
-run[[
+analyze[[
     local i = 0
     local function test(x: ref (string | nil))
         if i == 0 then
@@ -467,7 +467,7 @@ run[[
     test("foo")
     test()
 ]]
-run[[
+analyze[[
     local a,b,c,d =  string.byte(_ as string, _ as number, _ as number)
     
     attest.equal<|a, number|>
@@ -475,20 +475,20 @@ run[[
     attest.equal<|c, number|>
     attest.equal<|d, number|>
 ]]
-run[[
+analyze[[
     local a,b,c,d =  string.byte("foo", 1, 2)
     attest.equal(a, 102)
     attest.equal(b, 111)
     attest.equal(c, nil)
 ]]
-run[[
+analyze[[
     local a,b,c,d =  string.byte(_ as string, 1, 2)
     attest.equal(a, _ as number)
     attest.equal(b, _ as number)
     attest.equal(c, nil)
     attest.equal(d, nil)
 ]]
-run[[
+analyze[[
     local function clamp(n: ref number, low: ref number, high: ref number) 
         return math.min(math.max(n, low), high) 
     end
@@ -496,27 +496,27 @@ run[[
     attest.equal(clamp(5, 7, 10), 7)
     attest.equal(clamp(15, 7, 10), 10)
 ]]
-run[[
+analyze[[
     local x: cdata
 
     attest.equal(type(x), "cdata")
 ]]
-run[[
+analyze[[
     local ok, table_new = pcall(require, "foo")
     attest.equal(ok, _ as true | false)
     attest.equal(table_new, _ as "module 'foo' not found" | any)
 ]]
-run[[
+analyze[[
     local table_new = require("table.new")
     attest.equal(table_new, table.new)
     §assert(#analyzer.diagnostics == 1)
 ]]
-run[[
+analyze[[
     local a, b = load("" as string)
     attest.equal(a, _ as nil | Function)
     attest.equal(b, _ as nil | string)
 ]]
-run[[
+analyze[[
     local type tl = {x=1337}
 
     do
@@ -529,7 +529,7 @@ run[[
     attest.equal(tl, {x=1337, foo=1})
     attest.equal(bar, 2)
 ]]
-run[[
+analyze[[
     local type tl = {x=1337}
 
     do

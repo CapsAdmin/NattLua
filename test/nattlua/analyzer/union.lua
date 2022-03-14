@@ -1,9 +1,9 @@
 local T = require("test.helpers")
-local run = T.RunCode
+local analyze = T.RunCode
 local String = T.String
 
 do -- smoke
-	local a = run[[local type a = 1337 | 8888]]
+	local a = analyze[[local type a = 1337 | 8888]]
 	a:PushAnalyzerEnvironment("typesystem")
 	local union = a:GetLocalOrGlobalValue(String("a"))
 	a:PopAnalyzerEnvironment()
@@ -13,7 +13,7 @@ do -- smoke
 end
 
 do -- union operator
-	local a = run[[
+	local a = analyze[[
         local type a = 1337 | 888
         local type b = 666 | 777
         local type c = a | b
@@ -24,32 +24,32 @@ do -- union operator
 	equal(4, union:GetLength())
 end
 
-run[[
+analyze[[
         --union + object
         local a = _ as (1 | 2) + 3
         attest.equal(a, _ as 4 | 5)
     ]]
-run[[
+analyze[[
         --union + union
         local a = _ as 1 | 2
         local b = _ as 10 | 20
 
         attest.equal(a + b, _ as 11 | 12 | 21 | 22)
     ]]
-run[[
+analyze[[
         --union.foo
         local a = _ as {foo = true} | {foo = false}
 
         attest.equal(a.foo, _ as true | false)
     ]]
-run[[
+analyze[[
         --union.foo = bar
         local type a = { foo = 4 } | { foo = 1|2 } | { foo = 3 }
         attest.equal<|a.foo, 1 | 2 | 3 | 4|>
     ]]
 
 do --is literal
-	local a = run[[
+	local a = analyze[[
         local type a = 1 | 2 | 3
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
@@ -58,7 +58,7 @@ do --is literal
 end
 
 do -- is not literal
-	local a = run[[
+	local a = analyze[[
         local type a = 1 | 2 | 3 | string
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
@@ -66,11 +66,11 @@ do -- is not literal
 	a:PopAnalyzerEnvironment()
 end
 
-run[[
+analyze[[
     local x: any | function=()>(boolean)
     x()
 ]]
-run[[
+analyze[[
     local function test(x: {}  | {foo = nil | 1})
         attest.equal(x.foo, _ as nil | 1)
         if x.foo then
@@ -80,34 +80,34 @@ run[[
 
     test({})
 ]]
-run[[
+analyze[[
     local type a = 1 | 5 | 2 | 3 | 4
     local type b = 5 | 3 | 4 | 2 | 1
     attest.equal<|a == b, true|>
 ]]
-run[[
+analyze[[
     local shapes = _ as {[number] = 1} | {[number] = 2} | {[number] = 3}
     attest.equal(shapes[0], _ as 1|2|3)
 ]]
-run(
+analyze(
 	[[
     local shapes = _ as {[number] = 1} | {[number] = 2} | {[number] = 3}| false
     local x = shapes[0]
 ]],
 	"false.-0.-on type symbol"
 )
-run([[
+analyze([[
     local a: nil | {}
     a.foo = true
 ]], "undefined set.- = true")
-run(
+analyze(
 	[[
     local b: nil | {foo = true}
     local c = b.foo
 ]],
 	"undefined get: nil.-foo"
 )
-run([[
+analyze([[
     local analyzer function test(a: any, b: any)
         assert(a:ShrinkToFunctionSignature():Equal(b))
     end
@@ -117,13 +117,13 @@ run([[
     
     test<|A|B, C|>
 ]])
-run[[
+analyze[[
     local type a = |
     type a = a | 1
     type a = a | 2
     attest.equal<|a, 1|2|>
 ]]
-run[[
+analyze[[
     local type tbl = {[number] = string} | {}
     attest.equal<|tbl[1], string|>
 ]]

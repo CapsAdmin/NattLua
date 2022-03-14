@@ -2,11 +2,9 @@ local ipairs = ipairs
 local pairs = pairs
 local tostring = _G.tostring
 local T = require("test.helpers")
-local run = T.RunCode
+local analyze = T.RunCode
 local bit = _G.bit32 or _G.bit
-
-test("logic operators", function()
-	run[[
+analyze[[
         local function lt(x, y)
             if x < y then return true else return false end
         end
@@ -225,74 +223,71 @@ test("logic operators", function()
             attest.equal(nex1(0),	true)
         end
     ]]
-end)
+-- boolean and or logic
+-- when false, or returns its second argument
+analyze("attest.equal(nil or false, false)")
+analyze("attest.equal(false or nil, nil)")
+-- when true, or returns its first argument
+analyze("attest.equal(1 or false, 1)")
+analyze("attest.equal(true or nil, true)")
+analyze("attest.equal(nil or {}, {})")
+-- boolean without any data can be true and false at the same time
+analyze("attest.equal((_ as boolean) or (1), _ as true | 1)")
+-- when false and returns its first argument
+analyze("attest.equal(false and true, false)")
+analyze("attest.equal(true and nil, nil)")
+-- when true and returns its second argument
+-- ????
+-- smoke test
+analyze("attest.equal(((1 or false) and true) or false, true)")
 
-test("boolean and or logic", function() -- and or
-	-- when false, or returns its second argument
-	run("attest.equal(nil or false, false)")
-	run("attest.equal(false or nil, nil)")
-	-- when true, or returns its first argument
-	run("attest.equal(1 or false, 1)")
-	run("attest.equal(true or nil, true)")
-	run("attest.equal(nil or {}, {})")
-	-- boolean without any data can be true and false at the same time
-	run("attest.equal((_ as boolean) or (1), _ as true | 1)")
-	-- when false and returns its first argument
-	run("attest.equal(false and true, false)")
-	run("attest.equal(true and nil, nil)")
-	-- when true and returns its second argument
-	-- ????
-	-- smoke test
-	run("attest.equal(((1 or false) and true) or false, true)")
+do --- allcases
+	local basiccases = {
+		{"nil", nil},
+		{"false", false},
+		{"true", true},
+		{"10", 10},
+	}
+	local mem = {basiccases} -- for memoization
+	local function allcases(n)
+		if mem[n] then return mem[n] end
 
-	do --- allcases
-		local basiccases = {
-			{"nil", nil},
-			{"false", false},
-			{"true", true},
-			{"10", 10},
-		}
-		local mem = {basiccases} -- for memoization
-		local function allcases(n)
-			if mem[n] then return mem[n] end
+		local res = {}
 
-			local res = {}
+		-- include all smaller cases
+		for _, v in ipairs(allcases(n - 1)) do
+			res[#res + 1] = v
+		end
 
-			-- include all smaller cases
-			for _, v in ipairs(allcases(n - 1)) do
-				res[#res + 1] = v
-			end
-
-			for i = 1, n - 1 do
-				for _, v1 in ipairs(allcases(i)) do
-					for _, v2 in ipairs(allcases(n - i)) do
-						res[#res + 1] = {
-							"(" .. v1[1] .. " and " .. v2[1] .. ")",
-							v1[2] and
-							v2[2],
-						}
-						res[#res + 1] = {
-							"(" .. v1[1] .. " or " .. v2[1] .. ")",
-							v1[2] or
-							v2[2],
-						}
-					end
+		for i = 1, n - 1 do
+			for _, v1 in ipairs(allcases(i)) do
+				for _, v2 in ipairs(allcases(n - i)) do
+					res[#res + 1] = {
+						"(" .. v1[1] .. " and " .. v2[1] .. ")",
+						v1[2] and
+						v2[2],
+					}
+					res[#res + 1] = {
+						"(" .. v1[1] .. " or " .. v2[1] .. ")",
+						v1[2] or
+						v2[2],
+					}
 				end
 			end
-
-			mem[n] = res -- memoize
-			return res
 		end
 
-		for _, v in pairs(allcases(4)) do
-			run("attest.equal(" .. tostring(v[1]) .. ", " .. tostring(v[2]) .. ")")
-		end
+		mem[n] = res -- memoize
+		return res
 	end
-end)
+
+	for _, v in pairs(allcases(4)) do
+		analyze("attest.equal(" .. tostring(v[1]) .. ", " .. tostring(v[2]) .. ")")
+	end
+end
 
 if bit.tobit then
-	test("bit operations", function()
-		run[[
+	analyze[[
+            -- bit operations
             for i=1,100 do
                 type_assert_truthy(bit.tobit(i+0x7fffffff) < 0)
             end
@@ -300,11 +295,10 @@ if bit.tobit then
                 type_assert_truthy(bit.tobit(i+0x7fffffff) <= 0)
             end
         ]]
-	end)
 end
 
-test("string comparisons", function()
-	run[[
+analyze[[
+        -- string comparisons
         do
             local a = "\255\255\255\255"
             local b = "\1\1\1\1"
@@ -350,10 +344,8 @@ test("string comparisons", function()
             str_hi("a\0", "a")
         end
     ]]
-end)
-
-test("object equality", function()
-	run[[
+analyze[[
+        -- object equality
         local function obj_eq(a, b)
             attest.equal(a==b, true)
             attest.equal(a~=b, false)
@@ -392,4 +384,3 @@ test("object equality", function()
         obj_ne(t, 1)
         obj_ne(t, "")
     ]]
-end)

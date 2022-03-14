@@ -1,7 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-local transpile = T.Transpile
-run([[
+local analyze = T.RunCode
+analyze([[
     local type i = 0
     for k,v in ipairs(_ as any) do 
         attest.equal(k, _ as any)
@@ -13,7 +12,7 @@ run([[
     
     attest.equal<|i, 1|>
 ]])
-run[[
+analyze[[
     local tbl: {[number] = {
         foo = nil | {[number] = boolean}
     }}
@@ -24,7 +23,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local function test(): number
         local foo = 1
         return 1
@@ -36,7 +35,7 @@ run[[
 
     -- make sure break does not leak onto deferred analysis of test()
 ]]
-run[[
+analyze[[
     local sum = 0
 
     for i, num in ipairs({10, 20}) do
@@ -45,7 +44,7 @@ run[[
     
     attest.equal(sum, 33)
 ]]
-run[[
+analyze[[
     local sum = 0
 
     for i, num in ipairs({10, 20}) do

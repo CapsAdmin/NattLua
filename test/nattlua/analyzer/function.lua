@@ -1,9 +1,9 @@
 local T = require("test.helpers")
-local run = T.RunCode
+local analyze = T.RunCode
 local String = T.String
 
 test("arguments", function()
-	local analyzer = run[[
+	local analyzer = analyze[[
         local function test(a,b,c)
             return a+b+c
         end
@@ -13,7 +13,7 @@ test("arguments", function()
 end)
 
 test("arguments should get annotated", function()
-	local analyzer = run[[
+	local analyzer = analyze[[
         local function test(a,b,c)
             return a+c
         end
@@ -29,7 +29,7 @@ test("arguments should get annotated", function()
 end)
 
 test("arguments and return types are volatile", function()
-	local analyzer = run[[
+	local analyzer = analyze[[
         local function test(a)
             return a
         end
@@ -47,7 +47,7 @@ test("arguments and return types are volatile", function()
 end)
 
 test("which is not explicitly annotated should not dictate return values", function()
-	local analyzer = run[[
+	local analyzer = analyze[[
         local function test(a)
             return a
         end
@@ -62,7 +62,7 @@ test("which is not explicitly annotated should not dictate return values", funct
 end)
 
 test("which is explicitly annotated should error when the actual return value is different", function()
-	run(
+	analyze(
 		[[
         local function test(a)
             return a
@@ -75,7 +75,7 @@ test("which is explicitly annotated should error when the actual return value is
 end)
 
 test("which is explicitly annotated should error when the actual return value is unknown", function()
-	run(
+	analyze(
 		[[
         local function test(a: number): string
             return a
@@ -86,7 +86,7 @@ test("which is explicitly annotated should error when the actual return value is
 end)
 
 test("call within a function shouldn't mess up collected return types", function()
-	local analyzer = run[[
+	local analyzer = analyze[[
         local function b()
             (function() return 888 end)()
             return 1337
@@ -99,7 +99,7 @@ test("call within a function shouldn't mess up collected return types", function
 end)
 
 test("arguments with any", function()
-	run([[
+	analyze([[
         local function test(b: any, a: any)
 
         end
@@ -109,7 +109,7 @@ test("arguments with any", function()
 end)
 
 test("self argument should be volatile", function()
-	local analyzer = run([[
+	local analyzer = analyze([[
         local meta = {}
         function meta:Foo(b)
 
@@ -121,7 +121,7 @@ test("self argument should be volatile", function()
 end)
 
 test("arguments that are explicitly typed should error", function()
-	run(
+	analyze(
 		[[
         local function test(a: 1)
 
@@ -131,7 +131,7 @@ test("arguments that are explicitly typed should error", function()
     ]],
 		"2 is not a subset of 1"
 	)
-	run(
+	analyze(
 		[[
         local function test(a: number)
 
@@ -141,7 +141,7 @@ test("arguments that are explicitly typed should error", function()
     ]],
 		"\"a\" is not the same type as number"
 	)
-	run(
+	analyze(
 		[[
         local function test(a: number, b: 1)
 
@@ -151,7 +151,7 @@ test("arguments that are explicitly typed should error", function()
     ]],
 		"2 is not a subset of 1"
 	)
-	run(
+	analyze(
 		[[
         local function test(b: 123, a: number)
 
@@ -165,7 +165,7 @@ end)
 
 test("arguments that are not explicitly typed should be volatile", function()
 	do
-		local analyzer = run[[
+		local analyzer = analyze[[
             local function test(a, b)
                 return 1337
             end
@@ -182,7 +182,7 @@ test("arguments that are not explicitly typed should be volatile", function()
 	end
 
 	do
-		local analyzer = run[[
+		local analyzer = analyze[[
             local function test(a, b)
                 return 1337
             end
@@ -197,7 +197,7 @@ test("arguments that are not explicitly typed should be volatile", function()
 	end
 
 	do
-		local analyzer = run[[
+		local analyzer = analyze[[
             local function test(a, b)
                 return 1337
             end
@@ -212,7 +212,7 @@ test("arguments that are not explicitly typed should be volatile", function()
 		assert(a:Equal(b))
 	end
 
-	local analyzer = run[[
+	local analyzer = analyze[[
         local function test(a, b)
             return 1337
         end
@@ -224,7 +224,7 @@ test("arguments that are not explicitly typed should be volatile", function()
 end)
 
 test("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", function()
-	local analyzer = run[[
+	local analyzer = analyze[[
         function f1()
             return { data = function () return 1, 2, 3 end }
         end
@@ -247,13 +247,13 @@ test("https://github.com/teal-language/tl/blob/master/spec/lax/lax_spec.lua", fu
 end)
 
 test("return type", function()
-	local analyzer = run[[
+	local analyzer = analyze[[
         function foo(a: number):string return '' end
     ]]
 end)
 
 test("calling a union", function()
-	run[[
+	analyze[[
         local type test = function=(boolean, boolean)>(number) | function=(boolean)>(string)
 
         local a = test(true, true)
@@ -265,7 +265,7 @@ test("calling a union", function()
 end)
 
 test("calling a union that has no field a function should error", function()
-	run(
+	analyze(
 		[[
         local type test = function=(boolean, boolean)>(number) | function=(boolean)>(string) | number
 
@@ -276,7 +276,7 @@ test("calling a union that has no field a function should error", function()
 end)
 
 pending("pcall", function()
-	run[[
+	analyze[[
         local ok, err = pcall(function()
             local a, b = 10.5, nil
             return a < b
@@ -288,7 +288,7 @@ pending("pcall", function()
 end)
 
 test("complex", function()
-	run[[
+	analyze[[
         local function foo()
             return foo()
         end
@@ -300,7 +300,7 @@ test("complex", function()
 end)
 
 test("lol", function()
-	run[[
+	analyze[[
         do
             type x = boolean | number
         end
@@ -320,7 +320,7 @@ test("lol", function()
 end)
 
 test("lol2", function()
-	run[[
+	analyze[[
         local function test(a:number,b: number)
             return a + b
         end
@@ -332,7 +332,7 @@ test("lol2", function()
 end)
 
 test("make sure analyzer return flags dont leak over to deferred calls", function()
-	local foo = run([[
+	local foo = analyze([[
         local function bar() end
         bar()
         
@@ -346,7 +346,7 @@ test("make sure analyzer return flags dont leak over to deferred calls", functio
 	equal(foo:GetReturnTypes():Get(1):GetData(), true)
 end)
 
-run[[
+analyze[[
     local a = function()
         if maybe then
             -- the return value here sneaks into val
@@ -363,11 +363,11 @@ run[[
 
     attest.equal(a(), _ as 1 | "")
 ]]
-run[[
+analyze[[
     local x = (" "):rep(#tostring(_ as string))
     attest.equal(x, _ as string)
 ]]
-run[[
+analyze[[
     local function foo()
         return "foo"
     end
@@ -384,7 +384,7 @@ run[[
     local f = genfunc("foo")
     attest.equal(f(), "foo")
 ]]
-run[[
+analyze[[
     function faz(a)
         return foo(a + 1)
     end
@@ -399,20 +399,20 @@ run[[
     
     attest.equal(foo(1), _ as any)
 ]]
-run[[
+analyze[[
     local Foo = {Bar = {foo = {bar={test={}}}}}
 
     function Foo.Bar.foo.bar.test:init() end
 
     attest.superset_of(Foo.Bar.foo.bar.test.init, _ as function=(...any)>(...any))
 ]]
-run[[
+analyze[[
     local aaa = function(...) end
     function foo(...: ...number)
         aaa(...)
     end
 ]]
-run[[
+analyze[[
     local analyzer function test2(a: any, ...: ...any)
         local b,c,d = ...
         assert(a:GetData() == "1")
@@ -427,7 +427,7 @@ run[[
     
     test("1",2,3,4)
 ]]
-run[[
+analyze[[
     local function foo(a,b,c,d)
         attest.equal(a, 1)
         attest.equal(b, 2)
@@ -439,12 +439,12 @@ run[[
         foo(1,2,...)
     end)
 ]]
-run[[
+analyze[[
     local func = function(one, two) end
     func(1, 2)
     func(1, "2")
 ]]
-run[[
+analyze[[
     local type Token = {
         type = string,
         value = string,
@@ -463,7 +463,7 @@ run[[
     attest.equal(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
     attest.equal(foo({value = "test", type = "lol"}), _ as 1|2|3|nil)
 ]]
-run[[
+analyze[[
     local function test()
         if MAYBE then
             return true
@@ -473,7 +473,7 @@ run[[
     local x = test()
     attest.equal(x, _ as nil | true)
 ]]
-run[[
+analyze[[
     local function test(cb: function=(string)>(string))
 
     end
@@ -484,7 +484,7 @@ run[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
-run[[
+analyze[[
     local function test(): ref number 
         return 1
     end 
@@ -492,7 +492,7 @@ run[[
     local x = test()
     attest.equal(x, 1)
 ]]
-run[[
+analyze[[
     local function test(): number 
         return 1
     end 
@@ -500,7 +500,7 @@ run[[
     local x = test()
     attest.equal(x, _ as number)
 ]]
-run[[
+analyze[[
     local A = {kind = "a"}
     function A:Foo()
         return self.kind
@@ -521,21 +521,21 @@ run[[
     attest.equal(A:Foo(), "a")
     attest.equal(B:Bar(), "b")
 ]]
-run[[
+analyze[[
     local function foo(str: boolean | nil)
 
     end
     
     foo()
 ]]
-run[[
+analyze[[
     local function foo(x: { foo = nil | number })
 
     end
 
     foo({})
 ]]
-run[[
+analyze[[
     local type MyTable = {foo = number}
 
     local function foo(tbl: MyTable & {bar = boolean | nil})
@@ -551,7 +551,7 @@ run[[
     attest.equal<|tbl.foo, number|>
     attest.equal<|tbl.bar, boolean | nil|>
 ]]
-run[[
+analyze[[
     local meta = {}
     meta.__index = meta
     type meta.@Self = {foo = number}
@@ -573,7 +573,7 @@ run[[
     attest.equal(obj:Foo(), 1336)
     attest.equal(test(obj), 1337)
 ]]
-run[[
+analyze[[
     local type foo = (function=(
         boolean | nil, 
         boolean | nil, 
@@ -583,7 +583,7 @@ run[[
     
     foo(true, nil, "")
 ]]
-run[[
+analyze[[
     local tbl = {}
 
     local function add(
@@ -600,20 +600,20 @@ run[[
     tbl.FooNumber("FooNumber")
     tbl.BarString("BarString")
 ]]
-run[[
+analyze[[
     local type mytuple = (string, number, boolean)
     local type lol = function=(mytuple)>(mytuple)
 
     attest.equal(lol, _ as function=(string, number, boolean)>(string, number, boolean))
 ]]
-run[[
+analyze[[
     type lol = function =(foo: string, number)>(bar: string, string)
 
     attest.equal(lol, _ as function =(string, number)>(string, string))
     
     type lol = nil
 ]]
-run[[
+analyze[[
     local function test!(T: any)
         if T == string then
             return expand setmetatable({}, {__call = function(_, a: ref T, b: ref T)
@@ -630,7 +630,7 @@ run[[
     attest.equal(a, 3)
     attest.equal(b, "12")    
 ]]
-run[[
+analyze[[
     local type Type = "foo" | "bar" 
     local type Object = {
         foo = Type,
@@ -648,7 +648,7 @@ run[[
     tk.foo = "bar"
     attest.equal<|tk.foo, Type|>
 ]]
-run(
+analyze(
 	[[
     local type Type = "foo" | "bar" 
     local type Object = {
@@ -666,7 +666,7 @@ run(
 ]],
 	"777 is not the same type as string"
 )
-run[[
+analyze[[
     local function foo(x: function=(number, string)>())
 
     end
@@ -676,7 +676,7 @@ run[[
         attest.equal(y, _ as string)
     end)
 ]]
-run[[
+analyze[[
     local function foo(x: function=(number, string)>())
 
     end
@@ -685,7 +685,7 @@ run[[
         attest.equal(x, _ as number)
     end)
 ]]
-run[[
+analyze[[
     local foo = function(s: string)
         return "code" as string
     end
@@ -695,7 +695,7 @@ run[[
         attest.equal(code, _ as string)
     end)(arg)
 ]]
-run[[
+analyze[[
     local function IREqual(IR1: {number, number})
         return true
     end
@@ -714,7 +714,7 @@ run[[
     replaceIRs(instList)
     § assert(#env.runtime.instList.contracts == 0)    
 ]]
-run[[
+analyze[[
     local z = 2
     do
         local function WORD(low: number, high: number)
@@ -740,12 +740,12 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local func: function=(number, string)>(nil)
     local x: function=(unpack<|Parameters<|func|>|>)>(nil)
     attest.equal(x, func)
 ]]
-run[[
+analyze[[
     local analyzer function foo(n: number): number, string
         return types.LNumber(1337), types.LString("foo")
     end
@@ -756,7 +756,7 @@ run[[
     
     attest.equal<|foo, function=(number)>(number, string)|>
 ]]
-run(
+analyze(
 	[[
     local function foo(s: ref literal string)
         return s
@@ -766,13 +766,13 @@ run(
 ]],
 	"not literal"
 )
-run[[
+analyze[[
     local function foo(str: literal ref (nil | string))
         return str
     end
     attest.equal(foo("hello"), "hello")
 ]]
-run[[
+analyze[[
     local function foo(x: any)
         local y = {foo = 0}
     
@@ -791,7 +791,7 @@ run[[
     
     attest.equal(return_type<|foo|>[1], {foo = _ as 0 | 1 | 2 | 3})
 ]]
-run[[
+analyze[[
     local type Instruction = {number, number}
     local type InstructionList = {[number] = Instruction}
 
@@ -803,7 +803,7 @@ run[[
 
     foo(tbl)
 ]]
-run(
+analyze(
 	[[
     local function foo(out: List<|string|>)
     end
@@ -813,7 +813,7 @@ run(
 ]],
 	"key 3 is not a subset of nil | string"
 )
-run[[
+analyze[[
     local function fmt(str: string)
         if math.random() > 0.5 then 
             error("!") 
@@ -830,7 +830,7 @@ run[[
         attest.equal(node, 1337)
     end
 ]]
-run[[
+analyze[[
     local function foo()
         assert(math.random() > 0.5)
         return 1337
@@ -843,7 +843,7 @@ run[[
         attest.equal(node, 1337)
     end
 ]]
-run[[
+analyze[[
 
     local function foo()
         assert(true)

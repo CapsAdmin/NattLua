@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[
+local analyze = T.RunCode
+analyze[[
     local lol
     do
         lol = 1
@@ -10,7 +10,7 @@ run[[
         attest.equal(lol, 1)
     end
 ]]
-run([[
+analyze([[
     -- test shadow upvalues
     local foo = 1337
 
@@ -20,7 +20,7 @@ run([[
     
     local foo = 666
 ]])
-run([[
+analyze([[
     -- test shadow upvalues
     local foo = 1337
 
@@ -30,7 +30,7 @@ run([[
     
     local foo = 666
 ]])
-run[[
+analyze[[
     local foo = 1337
 
     local function test()
@@ -41,7 +41,7 @@ run[[
 
     local foo = 666
 ]]
-run[[
+analyze[[
     local x = 0
 
     local function lol()

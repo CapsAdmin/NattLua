@@ -1,8 +1,7 @@
 local T = require("test.helpers")
-local run = T.RunCode
-
-test("pairs on literal table", function()
-	run[[
+local analyze = T.RunCode
+analyze[[
+        -- pairs on literal table
         local tbl = {1,2,3}
         local key_sum = 0
         local val_sum = 0
@@ -15,9 +14,8 @@ test("pairs on literal table", function()
         attest.equal(key_sum, 6)
         attest.equal(val_sum, 6)
     ]]
-end)
-
-pending[[
+--[=[
+analyze[[
     -- ipairs on non literal table
     local tbl = {1,2,3} as {[number] = number}
     local key_sum = 0
@@ -34,7 +32,7 @@ pending[[
     attest.equal(key_sum, _ as number | 0)
     attest.equal(val_sum, _ as number | 0)
 ]]
-run[[
+]=] analyze[[
     -- pairs on non literal table
 
     local tbl:{[number] = number} = {1,2,3}
@@ -44,9 +42,8 @@ run[[
         attest.equal(val, _ as number)
     end
 ]]
-
-test("pairs on any should at least make k,v any", function()
-	run[[
+analyze[[
+        -- pairs on any should at least make k,v any
         local key, val
 
         for k,v in pairs(unknown) do
@@ -57,16 +54,14 @@ test("pairs on any should at least make k,v any", function()
         attest.equal(key, _ as any | nil)
         attest.equal(val, _ as any | nil)
     ]]
-end)
-
-run[[
+analyze[[
     local x = 0
     for i = 1, 10 do
         x = x + i
     end
     attest.equal(x, 55)
 ]]
-run[[
+analyze[[
     local x = 0
     for i = 1, 10 do
         x = x + i
@@ -76,7 +71,7 @@ run[[
     end
     attest.equal(x, 10)
 ]]
-run[[
+analyze[[
     local x = 0
     for i = 1, 10 do
         x = x + i
@@ -86,7 +81,7 @@ run[[
     end
     attest.equal(x, _ as number)
 ]]
-run[[
+analyze[[
     local a, b = 0, 0
     for i = 1, 8000 do
         if 5 == i then
@@ -99,7 +94,7 @@ run[[
     attest.equal(a, _ as number)
     attest.equal(b, _ as number)
 ]]
-run[[
+analyze[[
     local t = {foo = true}
     for k,v in pairs(t) do
         attest.equal(k, _ as "foo")

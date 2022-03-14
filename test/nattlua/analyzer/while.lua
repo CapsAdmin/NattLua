@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[
+local analyze = T.RunCode
+analyze[[
     local i = 1
 
     while true do
@@ -10,7 +10,7 @@ run[[
 
     attest.equal(i, 10)
 ]]
-run[[
+analyze[[
     local i = 1 as number
     local o = 1
 
@@ -22,20 +22,20 @@ run[[
 
     attest.equal(o, 2) -- this should probably be number too as it's incremented in an uncertain loop
 ]]
-run[[
+analyze[[
     local a = 1
     repeat
         attest.equal(a, 1)
     until false
 ]]
-run[[
+analyze[[
     local a = 0
     while false do
         a = 1
     end
     attest.equal(a, 0)
 ]]
-run[[
+analyze[[
     local a = 1
     while true do
         a = a + 1
@@ -49,7 +49,7 @@ run[[
 
     local c = b
 ]]
-run[[
+analyze[[
 
     local a = 0
     while _ as boolean do
@@ -58,7 +58,7 @@ run[[
     attest.equal(a, _ as number)
 
 ]]
-run[[
+analyze[[
     local x: nil | 1
 
     while x ~= nil do

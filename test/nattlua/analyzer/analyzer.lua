@@ -1,17 +1,16 @@
 local T = require("test.helpers")
-local R = T.RunCode
-local E = T.RunCode
+local analyze = T.RunCode
 local String = T.String
 -- check that type assert works
-E("attest.equal(1, 2)", "expected.-2 got 1")
-E("attest.equal(nil as 1|2, 1)", "expected.-1")
-E("attest.equal<|string, number|>", "expected number got string")
-R("attest.equal(not true, false)")
-R("attest.equal(not 1, false)")
-R("attest.equal(nil == nil, true)")
+analyze("attest.equal(1, 2)", "expected.-2 got 1")
+analyze("attest.equal(nil as 1|2, 1)", "expected.-1")
+analyze("attest.equal<|string, number|>", "expected number got string")
+analyze("attest.equal(not true, false)")
+analyze("attest.equal(not 1, false)")
+analyze("attest.equal(nil == nil, true)")
 
 test("declaring base types", function()
-	R[[
+	analyze[[
         local type Symbol = analyzer function(T: any)
             return types.Symbol((loadstring or load)("return " .. T:GetNode().value.value)(), true)
         end
@@ -67,13 +66,13 @@ test("declaring base types", function()
 end)
 
 test("escape comments", function()
-	R[=[
+	analyze[=[
         local a = --[[# 1  ^ ]] --[[# -1]] * 3 --[[# * 1]]
         local b = 1 ^ -1 * 3 + 1 * 1
         
         type_expect(a, b)
     ]=]
-	R([=[
+	analyze([=[
         local function foo(
             a --[[#: string]], 
             b --[[#: number]], 
@@ -84,19 +83,19 @@ test("escape comments", function()
         attest.equal<|argument_type<|foo, 2|>[1], number|>
         attest.equal<|argument_type<|foo, 3|>[1], string|>
     ]=])
-	R[=[
+	analyze[=[
         --[[# local type a = 1 ]]
         attest.equal(a, 1)
     ]=]
 end)
 
 test("runtime scopes", function()
-	local v = R("local a = 1"):GetLocalOrGlobalValue(String("a"))
+	local v = analyze("local a = 1"):GetLocalOrGlobalValue(String("a"))
 	equal(true, v.Type == "number")
 end)
 
 test("default declaration is literal", function()
-	R([[
+	analyze([[
         local a = 1
         local t = {k = 1}
         local b = t.k
@@ -107,13 +106,13 @@ test("default declaration is literal", function()
 end)
 
 test("runtime block scopes", function()
-	local analyzer, syntax_tree = R("do local a = 1 end")
+	local analyzer, syntax_tree = analyze("do local a = 1 end")
 	equal(false, (syntax_tree.environments.runtime:Get(String("a"))))
 	equal(
 		1,
 		analyzer:GetScope():GetChildren()[1]:GetUpvalues("runtime")[1]:GetValue():GetData()
 	)
-	local v = R[[
+	local v = analyze[[
         local a = 1
         do
             local a = 2
@@ -123,7 +122,7 @@ test("runtime block scopes", function()
 end)
 
 test("typesystem differs from runtime", function()
-	local analyzer = R[[
+	local analyzer = analyze[[
         local a = 1
         local type a = 2
     ]]
@@ -136,7 +135,7 @@ test("typesystem differs from runtime", function()
 end)
 
 test("global types", function()
-	local analyzer = R[[
+	local analyzer = analyze[[
         do
             type a = 2
         end
@@ -147,7 +146,7 @@ test("global types", function()
 end)
 
 test("constant types", function()
-	local analyzer = R[[
+	local analyzer = analyze[[
         local a: 1
         local b: number
     ]]
@@ -157,7 +156,7 @@ end)
 
 -- literal + vague = vague
 test("1 + number = number", function()
-	local analyzer = R[[
+	local analyzer = analyze[[
         local a: 1
         local b: number
         local c = a + b
@@ -168,7 +167,7 @@ test("1 + number = number", function()
 end)
 
 test("1 + 2 = 3", function()
-	local analyzer = R[[
+	local analyzer = analyze[[
         local a = 1
         local b = 2
         local c = a + b
@@ -179,7 +178,7 @@ test("1 + 2 = 3", function()
 end)
 
 test("function return value", function()
-	local analyzer = R[[
+	local analyzer = analyze[[
         local function test()
             return 1+2+3
         end
@@ -189,8 +188,8 @@ test("function return value", function()
 	equal(6, v:GetData())
 end)
 
-test("multiple function return values", function()
-	local analyzer = R[[
+do -- multiple function return values
+	local analyzer = analyze[[
         local function test()
             return 1,2,3
         end
@@ -199,10 +198,10 @@ test("multiple function return values", function()
 	equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
 	equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
 	equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
-end)
+end
 
-test("scopes shouldn't leak", function()
-	local analyzer = R[[
+do -- scopes shouldn't leak
+	local analyzer = analyze[[
         local a = {}
         function a:test(a, b)
             return nil, a+b
@@ -210,16 +209,15 @@ test("scopes shouldn't leak", function()
         local _, a = a:test(1, 2)
     ]]
 	equal(3, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
-end)
+end
 
-test("explicitly annotated variables need to be set properly", function()
-	local analyzer = R[[
+analyze[[
+        -- explicitly annotated variables need to be set properly
         local a: number | string = 1
     ]]
-end)
 
-test("functions can modify parent scope", function()
-	local analyzer = R[[
+do -- functions can modify parent scope
+	local analyzer = analyze[[
         local a = 1
         local c = a
         local function test()
@@ -229,10 +227,10 @@ test("functions can modify parent scope", function()
     ]]
 	equal(2, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
 	equal(1, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
-end)
+end
 
-test("uncalled functions should be called", function()
-	local analyzer = R[[
+do -- uncalled functions should be called
+	local analyzer = analyze[[
         local lib = {}
 
         function lib.foo1(a, b)
@@ -260,25 +258,25 @@ test("uncalled functions should be called", function()
 	equal("number", lib:Get(String("foo2")):GetArguments():Get(1):GetType("number").Type)
 	equal("number", lib:Get(String("foo2")):GetArguments():Get(2):GetType("number").Type)
 	equal("number", lib:Get(String("foo2")):GetReturnTypes():Get(1):GetType("number").Type)
-end)
+end
 
-R[[
+analyze[[
     -- when setting a to nil in the typesystem we want to delete it
     type a = nil
     local a = 1
     attest.equal<|a, 1|>
 ]]
-R[[
+analyze[[
     local num = 0b01 -- binary numbers
     attest.equal(num, 1)
 ]]
-R([[
+analyze([[
     local a: UNKNOWN_GLOBAL = true
 ]], "has no field.-UNKNOWN_GLOBAL")
-R([[
+analyze([[
     unknown_type_function<|1,2,3|>
 ]], "has no field.-unknown_type_function")
-R(
+analyze(
 	[[
     local type should_error = function()
         error("the error")
@@ -288,7 +286,7 @@ R(
 ]],
 	"the error"
 )
-R[[
+analyze[[
     local function list()
         local tbl
         local i
@@ -319,7 +317,7 @@ R[[
     a:add(3)
     attest.equal(a:get(), {1,2,3})
 ]]
-R[[
+analyze[[
     local FOO = enum<|{
         A = 1,
         B = 2,
@@ -336,7 +334,7 @@ R[[
     type B = nil
     type C = nil
 ]]
-R[[
+analyze[[
     local type Foo = {
         x = number,
         y = self,
@@ -346,7 +344,7 @@ R[[
 
     attest.equal(x.y.y.y.x, _ as number)
 ]]
-R[[
+analyze[[
     local type Foo = {
         x = number,
         y = self,
@@ -356,7 +354,7 @@ R[[
 
     attest.equal(x.y.y.y.x, _ as number)
 ]]
-R[[
+analyze[[
     local type Foo = {
         x = number,
         y = Foo,
@@ -368,7 +366,7 @@ R[[
 ]]
 
 test("forward declare types", function()
-	R[[
+	analyze[[
         local type Ping = {}
         local type Pong = {}
 
@@ -382,8 +380,8 @@ test("forward declare types", function()
     ]]
 end)
 
-R([[type_error("hey over here")]], "hey over here")
-R(
+analyze([[type_error("hey over here")]], "hey over here")
+analyze(
 	[[
 local a    
 local b    
@@ -393,7 +391,7 @@ local c
 ]],
 	[[3 | §error%("LOL"%)]]
 )
-R(
+analyze(
 	[[
     local foo = function() return "hello" end
 
@@ -405,7 +403,7 @@ R(
 ]],
 	"hello.-is not the same type as.-number"
 )
-R[[
+analyze[[
     return function()
 
         local function foo(x)
@@ -423,7 +421,7 @@ R[[
         type_expect(faz(1), 12)
     end
 ]]
-R[[
+analyze[[
     local type Boolean = true | false
     local type Number = -inf .. inf | nan
     local type String = $".*"
@@ -457,19 +455,19 @@ R[[
     attest.equal(y, _ as Any)
     attest.equal(z, _ as Any)
 ]]
-R[[
+analyze[[
     -- we should be able to initialize with no value if the value can be nil
     local x: { y = number | nil } = {}
 ]]
-R([[
+analyze([[
     local x: { y = number } = {}
 ]], "is not a subset of")
-R[[
+analyze[[
     local Foo = {Bar = {}}
 
     function Foo.Bar:init() end
 ]]
-R[[
+analyze[[
     function test2(callback: function=(...any)>(...any)) 
 
     end
@@ -478,13 +476,13 @@ R[[
     
     end)
 ]]
-R[[
+analyze[[
     local math = {}
     -- since math is defined explicitly as a local here
     -- it should not get its type from the base environment
     math = {}
 ]]
-R[[
+analyze[[
     local analyzer function nothing()
         return -- return nothing, not even nil
     end
@@ -494,7 +492,7 @@ R[[
     
     attest.equal(a, true)
 ]]
-R[[
+analyze[[
     a = {b = {c = {d = {lol = true}}}}
     function a.b.c.d:e()
         attest.equal(self.lol, true)
@@ -502,14 +500,14 @@ R[[
     a.b.c.d:e()
     a = nil
 ]]
-R[[
+analyze[[
     local a = {b = {c = {d = {lol = true}}}}
     function a.b.c.d:e()
         return self.lol
     end
     attest.equal(a.b.c.d:e(), true)
 ]]
-R[[
+analyze[[
     type lib = {}
     type lib.myfunc = function=(number, string)>(boolean)
 
@@ -521,22 +519,22 @@ R[[
 
     attest.equal(lib.myfunc, _ as function=(number, string)>(boolean))
 ]]
-R[[
+analyze[[
     local val: nan
     attest.equal(val, 0/0)
 ]]
-R[[
+analyze[[
     local val: nil
     attest.equal(val, nil)
 ]]
-R[[
+analyze[[
     local {Foo} = {}
     attest.equal(Foo, nil)
 ]]
-R([[
+analyze([[
     local type {Foo} = {}
 ]], "Foo does not exist")
-R[[
+analyze[[
     local function test(num: number)
         attest.equal<|num, number|>
         return num
@@ -554,7 +552,7 @@ R[[
     local a = test(1)
     attest.equal<|typeof a, 1|> -- TODO: we have to use typeof here because earlier we do type a = nil
 ]]
-R[[
+analyze[[
     local type Shape = {
         Foo = number,
     }
@@ -575,11 +573,11 @@ R[[
     mutate(tbl)
     attest.superset_of<|tbl.Foo, number|>
 ]]
-R[[
+analyze[[
     local T: (boolean,) | (1|2,)
     attest.equal<|T, (boolean,) | (1|2,)|>
 ]]
-R[[
+analyze[[
     local x = {foo = 1, bar = 2}
     x.__index = x
     x.func = _ as function=(lol: x | nil)>(x)
@@ -587,7 +585,7 @@ R[[
 
     §assert(env.runtime.x:Equal(env.runtime.x:Copy()))
 ]]
-R[[
+analyze[[
     -- this has to do with the analyzer 
     -- not calling analyzer:ClearError() when analyzing unreachable code
 
@@ -604,7 +602,7 @@ R[[
         foo()
     end
 ]]
-R[[
+analyze[[
     local type test = function=(a: number, b: string)>(1)
 
     function test(a, b)

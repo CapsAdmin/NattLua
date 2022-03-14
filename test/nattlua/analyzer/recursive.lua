@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[
+local analyze = T.RunCode
+analyze[[
     local function foo(): number, number
         if math.random() > 0.5 then
             return foo()
@@ -10,7 +10,7 @@ run[[
     
     attest.equal(foo(), _ as (number, number))
 ]]
-run(
+analyze(
 	[[
     local function foo(): number, number
         if math.random() > 0.5 then

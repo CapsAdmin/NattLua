@@ -1,9 +1,9 @@
 local T = require("test.helpers")
-local run = T.RunCode
+local analyze = T.RunCode
 local String = T.String
 
 do
-	local foo = run([[
+	local foo = analyze([[
         local upvalue1 = 1
         local upvalue2 = 2
         local upvalue3 = 3
@@ -34,7 +34,7 @@ do
 end
 
 do
-	local foo = run([[
+	local foo = analyze([[
         local function foo(x: number)
             return 1 + 2 + x
         end

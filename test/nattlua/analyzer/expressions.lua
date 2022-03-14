@@ -1,12 +1,12 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[[
+local analyze = T.RunCode
+analyze[[
     local function foo(x: {foo = boolean | nil}) 
         if x.foo and attest.equal(x.foo, true) then end
         attest.equal(x.foo, _ as boolean | nil)
     end
 ]]
-run[[
+analyze[[
     local a: number | string
     
     if type(a) == "number" then
@@ -15,45 +15,45 @@ run[[
 
     attest.equal(a, _ as number | string)
 ]]
-run[[
+analyze[[
     local x = _ as false | 1
     local y = not x and attest.equal(x, false) or attest.equal(x, 1)
 ]]
-run[[
+analyze[[
     local x = _ as 1 | 2
     local y = x == 1 and attest.equal(x, 1) or attest.equal(x, 2)
     attest.equal(x, _ as 1 | 2)
 ]]
-run[[
+analyze[[
     local x = _ as 1|2|3
     local y = x == 1 and attest.equal(x, 1) or x == 2 and attest.equal(x, 2) or false
     attest.equal(y, _ as 1|2|false)
 ]]
-run[[
+analyze[[
     local x = _ as 1|2|3
 
     if x == 1 or attest.equal(x, _ as 2|3) then
 
     end
 ]]
-run[[
+analyze[[
     local x: 1 | "str"
     if x ~= 1 or attest.equal(x, 1) then
     
     end
 ]]
-run[[
+analyze[[
     local x: 1 | "str"
     if x == 1 or attest.equal(x, "str") then
     
     end
 ]]
-run[[
+analyze[[
     local a = true
     local result = not a or 1
     attest.equal(result, 1)
 ]]
-run[[
+analyze[[
     local a = function(arg: ref any) 
         attest.equal(arg, 1)
         return 1337
@@ -62,7 +62,7 @@ run[[
     local b = a(1) or a(2)
     attest.equal(b, 1337)
 ]]
-run[[
+analyze[[
     local a: 1, b: 2
     local result = a and b
 
@@ -71,18 +71,18 @@ run[[
 
     §assert(env.runtime.result:GetNode().kind == "binary_operator")
 ]]
-run[[
+analyze[[
     local x = _ as number
     if not x then return false end
     local x = true and attest.equal(x, _ as number)
 ]]
-run[[
+analyze[[
     local a: 1 | 2 | 3
     if a == 1 or a == 3 then
         attest.equal(a, _ as 1 | 3)
     end
 ]]
-run[[
+analyze[[
     local a: 1 | 2 | 3 | nil
     local b: true | nil
     if (a == 1 or a == 3) and b then
@@ -90,21 +90,21 @@ run[[
         attest.equal(b, true)
     end
 ]]
-run[[
+analyze[[
     local c: {foo = true } | nil
 
     if c and c.foo then
         attest.equal(c.foo, true)
     end
 ]]
-run[[
+analyze[[
     local tbl = {} as {foo = nil | {bar = 1337 | false}}
 
     if tbl.foo and tbl.foo.bar then
         attest.equal(tbl.foo.bar, 1337)
     end
 ]]
-run[[
+analyze[[
     -- make sure table key values clear affected upvalues
 
     local buff: {x = number, y = number} | {x = number, y = string}
@@ -114,14 +114,14 @@ run[[
         foo = bit.band(buff.x, 1) ~= 0 and "directory" or "file" 
     }
 ]]
-run[[
+analyze[[
     local tbl = {} as {foo = nil | {bar = 1337 | false}}
 
     if tbl.foo and attest.equal(tbl.foo.bar, _ as 1337 | false) then
         attest.equal(tbl.foo.bar, 1337)
     end
 ]]
-run[[
+analyze[[
     local a: nil | 1
 
     if a or true and a or false then
@@ -130,7 +130,7 @@ run[[
 
     attest.equal(a, _ as 1 | nil)
 ]]
-run[[
+analyze[[
     local x: 1 | 2 | 3
     if x == 1 or x == 2 then
         attest.equal(x, _ as 1 | 2)
@@ -138,32 +138,32 @@ run[[
         attest.equal(x, _ as 3)
     end
 ]]
-run[[
+analyze[[
     local x: {foo = nil | 1}
 
     if not x.foo then return end
     attest.equal(x.foo, _ as 1)
 ]]
-run[[
+analyze[[
     local x: {foo = nil | 1}
 
     if x.foo == nil then return end
     attest.equal(x.foo, 1)
 ]]
-run[[
+analyze[[
     local x: {foo = nil | 1}
 
     if x.foo ~= nil then return end
     attest.equal(x.foo, nil)
 ]]
-run[[
+analyze[[
     local x: {foo = 1 | 2 | 3}
 
     if x.foo == 1 or x.foo == 2 then
         attest.equal(x.foo, _ as 1 | 2)
     end
 ]]
-run[[
+analyze[[
     local x: 1 | 2 | 3 | 4 | 5 | 6 | 7
 
     if x == 1 or x == 2 then
@@ -174,7 +174,7 @@ run[[
         attest.equal(x, _ as 5 | 6 | 7)
     end
 ]]
-run[[
+analyze[[
     local x: {y = 1 | 2 | 3 | 4 | 5 | 6 | 7}
 
     if x.y == 1 or x.y == 2 then
@@ -185,7 +185,7 @@ run[[
         attest.equal(x.y, _ as 5 | 6 | 7)
     end
 ]]
-run[[
+analyze[[
     local function foo(s: ref any)
         attest.equal(s, _ as string)
         return s
@@ -209,7 +209,7 @@ run[[
 
     get_address_info(info)
 ]]
-run[[
+analyze[[
     local x: {foo = nil | true}
 
     if x.foo == nil then
@@ -218,7 +218,7 @@ run[[
 
     attest.equal(x.foo, true)
 ]]
-run[[
+analyze[[
     local x: {foo = nil | true}
 
     if x.foo ~= nil then
@@ -227,7 +227,7 @@ run[[
 
     attest.equal(x.foo, nil)
 ]]
-run[[
+analyze[[
     local x: {foo = nil | true}
 
     if not x.foo then
@@ -236,7 +236,7 @@ run[[
 
     attest.equal(x.foo, true)
 ]]
-run[[
+analyze[[
     local x: {foo = nil | true}
 
     if x.foo then
@@ -245,7 +245,7 @@ run[[
 
     attest.equal(x.foo, nil)
 ]]
-run[[
+analyze[[
     local args: List<|string | List<|string|>|>
 
     if type(args[_ as number]) == "string" then

@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run[=[
+local analyze = T.RunCode
+analyze[=[
 	ffi.C = {}
 
 	local ctype = ffi.typeof([[struct {
@@ -17,7 +17,7 @@ run[=[
 		bar1 = number,
 	}, typeof struct|>
 ]=]
-run[=[
+analyze[=[
 	ffi.C = {}
 
 	local ctype = ffi.typeof([[struct {
@@ -39,7 +39,7 @@ run[=[
 		}
 	}, typeof struct|>
 ]=]
-run[=[
+analyze[=[
 	ffi.C = {}
 
 	ffi.cdef("typedef size_t lol;")
@@ -52,7 +52,7 @@ run[=[
 
 	attest.equal<|typeof ffi.C.foo, function=(number, boolean, number)>(number) |>
 ]=]
-run[=[
+analyze[=[
 	ffi.C = {}
 
 	local struct
@@ -94,12 +94,12 @@ run[=[
 
 	attest.equal<|typeof union, {foo = number, bar2 = number} | {foo = number, bar3 = number} | {foo = number, uhoh = number, bar1 = number}|>
 ]=]
-run[=[
+analyze[=[
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
 	attest.equal(ctype.foo, _ as ffi.typeof<|"const char*"|>)
 ]=]
-run[=[
+analyze[=[
 	ffi.C = {}
 	local struct
 	local LINUX = jit.os == "Linux"
@@ -120,14 +120,14 @@ run[=[
 
 	attest.equal<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>)>((nil)) |>
 ]=]
-run[=[
+analyze[=[
 	ffi.C = {}
 	ffi.cdef("void foo(void *ptr, int foo, const char *test);")
 
 	ffi.C.foo(nil, 1, nil)
 	ffi.C.foo(nil, 1, "")
 ]=]
-run[=[
+analyze[=[
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { int foo; }")
 
@@ -135,7 +135,7 @@ run[=[
 
 	attest.equal<|(typeof cdata).foo, number|>
 ]=]
-run[=[
+analyze[=[
     ffi.C = {}
 
 	local handle = ffi.typeof("struct {}")
@@ -184,7 +184,7 @@ run[=[
 		attest.equal<|int, number|>
 	end
 ]=]
-run[=[	
+analyze[=[	
     ffi.C = {}
 	ffi.cdef([[
 		struct in6_addr {
@@ -200,7 +200,7 @@ run[=[
 
 	attest.equal(lol.u6_addr.u6_addr16, _ as {[number] = number})
 ]=]
-run[=[
+analyze[=[
 	ffi.C = {}
 
 	ffi.cdef[[
@@ -210,14 +210,14 @@ run[=[
 	local num = ffi.new("SOCKET", -1)
 	attest.equal<|num, number|>
 ]=]
-run[=[
+analyze[=[
 	local buffer = ffi.new("char[?]", 5)
 	attest.equal<|buffer, {[number] = number}|>
 
 	local buffer = ffi.new("char[8]")
 	attest.equal<|buffer, {[number] = number}|>
 ]=]
-run[[
+analyze[[
 	ffi.C = {}
 
 	if _ as boolean then
@@ -235,7 +235,7 @@ run[[
 	end
 
 ]]
-run[=[
+analyze[=[
 	ffi.C = {}
 
 	if math.random() > 0.5 then
@@ -251,7 +251,7 @@ run[=[
 	ffi.C.readdir()
 	
 ]=]
-run[[
+analyze[[
 	ffi.C = {}
 
 	local ffi = require "ffi"
@@ -264,17 +264,17 @@ run[[
 		ptr = ptr - 1
 	end
 ]]
-run[[
+analyze[[
 	local newbuf = ffi.new("char [?]", _ as number)
 	attest.equal(newbuf, _ as {[number] = number})
 ]]
-run[[
+analyze[[
 	local gbuf_n = 1024
 	local gbuf = ffi.new("char [?]", gbuf_n)
 	gbuf = gbuf + 1
 	attest.equal(gbuf, gbuf)
 ]]
-run[==[
+analyze[==[
 	ffi.C = {}
 
 	local ffi = require("ffi")
@@ -297,7 +297,7 @@ run[==[
 		attest.equal(nxt.ai_next.foo, _ as nil | number)
 	end
 ]==]
-run[==[
+analyze[==[
 	ffi.C = {}
 
 	local ffi = require("ffi")
@@ -311,7 +311,7 @@ run[==[
 	attest.equal(ffi.C.FormatMessageA(0, nil, true, true, false, {}, "LOL"), _ as number)
 
 ]==]
-run[=[
+analyze[=[
 	ffi.C = {}
 
 	local ffi = require("ffi")
@@ -338,7 +338,7 @@ run[=[
 	
 
 ]=]
-run[=[
+analyze[=[
 	local ffi = require("ffi")
 	ffi.C = {}
 
@@ -352,7 +352,7 @@ run[=[
 	local box = ffi.new("struct foo[1]")
 	attest.equal(box[0], _ as {a = number, b = number})
 ]=]
-run[[
+analyze[[
 	local str_v = ffi.new("const char *[?]", 1)
 
 	attest.equal(str_v, _ as {

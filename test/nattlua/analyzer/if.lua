@@ -1,6 +1,6 @@
 local T = require("test.helpers")
-local run = T.RunCode
-run([[
+local analyze = T.RunCode
+analyze([[
     local a = 1
     local function b(lol)
         if lol == 1 then return "foo" end
@@ -11,7 +11,7 @@ run([[
     local d = b(a)
     attest.equal(d, "foo")
 ]])
-run[[
+analyze[[
     local function test(i)
         if i == 20 then
             return false
@@ -32,7 +32,7 @@ run[[
     attest.equal(b, true)
     attest.equal(c, "lol")
 ]]
-run[[
+analyze[[
     local function test(max)
         for i = 1, max do
             if i == 20 then
@@ -48,7 +48,7 @@ run[[
     local a = test(20)
     attest.equal(a, _ as true | false)
 ]]
-run[[
+analyze[[
     local x = 0
     local MAYBE: true | false
 
@@ -66,7 +66,7 @@ run[[
     end
 
 ]]
-run([[
+analyze([[
     -- assigning a value inside an uncertain branch
     local a = false
 
@@ -77,7 +77,7 @@ run([[
     end
     attest.equal(a, _ as false | true)
 ]])
-run([[
+analyze([[
     -- assigning in uncertain branch and else part
     local a = false
 
@@ -93,7 +93,7 @@ run([[
 
     attest.equal(a, _ as true | 1)
 ]])
-run([[
+analyze([[
     local a: nil | 1
 
     if a then
@@ -102,7 +102,7 @@ run([[
 
     attest.equal(a, _ as 1 | nil)
 ]])
-run([[
+analyze([[
     local a: nil | 1
 
     if a then
@@ -113,7 +113,7 @@ run([[
 
     attest.equal(a, _ as 1 | nil)
 ]])
-run([[
+analyze([[
     local a = 0
 
     if MAYBE then
@@ -121,7 +121,7 @@ run([[
     end
     attest.equal(a, _ as 0 | 1)
 ]])
-run[[
+analyze[[
     local a: nil | 1
 
     if a then
@@ -136,7 +136,7 @@ run[[
 
     attest.equal(a, _ as 1 | nil)
 ]]
-run([[
+analyze([[
     local a: nil | 1
 
     if not a then
@@ -145,7 +145,7 @@ run([[
 
     attest.equal(a, _ as 1 | nil)
 ]])
-run[[
+analyze[[
     local a: true | false
 
     if not a then
@@ -154,7 +154,7 @@ run[[
         attest.equal(a, true)
     end
 ]]
-run([[
+analyze([[
     local a: number | string
 
     if type(a) == "number" then
@@ -163,7 +163,7 @@ run([[
 
     attest.equal(a, _ as number | string)
 ]])
-run[[
+analyze[[
     local a: 1 | false | true
 
     if type(a) == "boolean" then
@@ -179,7 +179,7 @@ run[[
 
 do
 	_G.lol = nil
-	run([[
+	analyze([[
         local type hit = analyzer function()
             _G.lol = (_G.lol or 0) + 1
         end
@@ -197,7 +197,7 @@ do
 	_G.lol = nil
 end
 
-run([[
+analyze([[
     local a: 1
     local b: 1
 
@@ -211,7 +211,7 @@ run([[
 
     attest.equal(c, 1)
 ]])
-run([[
+analyze([[
     local a: number
     local b: number
 
@@ -225,7 +225,7 @@ run([[
 
     attest.equal(c, _ as -1 | 1)
 ]])
-run[[
+analyze[[
     local a = false
 
     attest.equal(a, false)
@@ -237,7 +237,7 @@ run[[
 
     attest.equal(a, _ as true | false)
 ]]
-run[[
+analyze[[
     local a: true | false
 
     if a then
@@ -264,7 +264,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local a: nil | 1
         
     if a then
@@ -279,36 +279,36 @@ run[[
 
     attest.equal(a, _ as 1 | nil)
 ]]
-run[[
+analyze[[
     local x: false | 1
     assert(not x)
     attest.equal(x, false)
 ]]
-run[[
+analyze[[
     local x: true | nil 
     attest.equal(assert(x), true)
     attest.equal(x, true)
 ]]
-run[[
+analyze[[
     local x: false | 1
     assert(x)
     attest.equal(x, 1)
 ]]
-run[[
+analyze[[
     local x: true | false
     
     if x then return end
     
     attest.equal(x, false)
 ]]
-run[[
+analyze[[
     local x: true | false
     
     if not x then return end
     
     attest.equal(x, true)
 ]]
-run[[
+analyze[[
     local c = 0
 
     if maybe then
@@ -319,17 +319,17 @@ run[[
 
     attest.equal(c, _ as -1 | 1)
 ]]
-run([[
+analyze([[
     local a: nil | 1
     if not a then return end
     attest.equal(a, 1)
 ]])
-run([[
+analyze([[
     local a: nil | 1
     if a then return end
     attest.equal(a, nil)
 ]])
-run[[
+analyze[[
     local a = true
 
     while maybe do
@@ -338,7 +338,7 @@ run[[
 
     attest.equal(a, _ as true | false)
 ]]
-run[[
+analyze[[
     local a = true
 
     for i = 1, 10 do
@@ -347,7 +347,7 @@ run[[
 
     attest.equal(a, _ as false)
 ]]
-run[[
+analyze[[
     local a = true
 
     for i = 1, _ as number do
@@ -356,7 +356,7 @@ run[[
 
     attest.equal(a, _ as true | false)
 ]]
-run[[
+analyze[[
     local a: {[string] = number}
     local b = true
 
@@ -368,7 +368,7 @@ run[[
 
     attest.equal(b, _ as true | false)
 ]]
-run[[
+analyze[[
     local a: {foo = number}
     local b = true
 
@@ -378,7 +378,7 @@ run[[
 
     attest.equal(b, _ as false)
 ]]
-run([[
+analyze([[
     local type a = {}
 
     if not a then
@@ -388,14 +388,14 @@ run([[
         attest.equal(1, 1)
     end
 ]])
-run([[
+analyze([[
     local type a = {}
     if not a then
         -- shouldn't reach
         attest.equal(1, 2)
     end
 ]])
-run[[
+analyze[[
     local a: true | false | number | "foo" | "bar" | nil | 1
 
     if a then
@@ -412,7 +412,7 @@ run[[
         attest.equal(a, "foo")
     end
 ]]
-run[[
+analyze[[
     local x: nil | true
 
     if not x then
@@ -425,7 +425,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local function parse_unicode_escape(s: string)
         local n = tonumber(s:sub(1, 1))
         
@@ -438,7 +438,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local function parse_unicode_escape(s: string)
         local n = tonumber(s:sub(1, 1))
         
@@ -452,7 +452,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     do
         local s: string
         local _1337_false: false | 1337
@@ -471,14 +471,14 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local MAYBE: function=()>(boolean)
     local x = 0
     if MAYBE() then x = x + 1 end -- 1
     if MAYBE() then x = x - 1 end -- -1 | 0
     attest.equal(x, _ as -1 | 0 | 1)
 ]]
-run[[
+analyze[[
     local x = 0
     if MAYBE then
         x = 1
@@ -487,14 +487,14 @@ run[[
     end
     attest.equal(x, _ as -1 | 1)
 ]]
-run[[
+analyze[[
     local x = 0
     if MAYBE then
         x = 1
     end
     attest.equal(x, _ as 0 | 1)
 ]]
-run[[
+analyze[[
     x = 1
 
     if MAYBE then
@@ -509,7 +509,7 @@ run[[
 
     x = nil
 ]]
-run[[
+analyze[[
     local foo = false
 
     if MAYBE then
@@ -522,7 +522,7 @@ run[[
 
     attest.equal(foo, true)
 ]]
-run[[
+analyze[[
     local x = 1
 
     if MAYBE then
@@ -533,7 +533,7 @@ run[[
 
     attest.equal(x, _ as 1 | 2)
 ]]
-run[[
+analyze[[
     local x = 1
 
     if false then
@@ -544,7 +544,7 @@ run[[
 
     attest.equal(x, _ as 2)
 ]]
-run[[
+analyze[[
     local x = 1
 
     if MAYBE then
@@ -557,7 +557,7 @@ run[[
 
     attest.equal(x, _ as 1 | 2 | 3)
 ]]
-run[[
+analyze[[
     --DISABLE_CODE_RESULT
 
     local x = 1
@@ -578,7 +578,7 @@ run[[
 
     attest.equal<|x, 1 | 2 | 3 | 4|>
 ]]
-run[[
+analyze[[
     local foo = false
 
     if MAYBE then
@@ -590,36 +590,36 @@ run[[
 
     attest.equal(foo, true)
 ]]
-run[[
+analyze[[
     local x = 1
     attest.equal<|x, 1|>
 ]]
-run[[
+analyze[[
     local x = 1
     do
         attest.equal<|x, 1|>
     end
 ]]
-run[[
+analyze[[
     local x = 1
     x = 2
     attest.equal<|x, 2|>
 ]]
-run[[
+analyze[[
     local x = 1
     if true then
         x = 2
     end
     attest.equal<|x, 2|>
 ]]
-run[[
+analyze[[
     local x = 1
     if MAYBE then
         x = 2
     end
     attest.equal<|x, 1 | 2|>
 ]]
-run[[
+analyze[[
     local x = 1
     if MAYBE then
         attest.equal<|x, 1|>
@@ -628,7 +628,7 @@ run[[
     end
     attest.equal<|x, 1|2|>
 ]]
-run[[
+analyze[[
     local x = 1
 
     if math.random() > 0.5 then
@@ -640,7 +640,7 @@ run[[
     end
     attest.equal<|x, 2 | 3|>
 ]]
-run[[
+analyze[[
     local x = 1
 
     if math.random() > 0.5 then
@@ -653,7 +653,7 @@ run[[
 
     attest.equal<|x, 1|2|3|4|>
 ]]
-run[[
+analyze[[
     local x = 1
 
     if MAYBE then
@@ -668,7 +668,7 @@ run[[
 
     attest.equal<|x, 5|2|3|4|>
 ]]
-run([[
+analyze([[
     local x = 1
 
     if x == 1 then
@@ -681,7 +681,7 @@ run([[
 
     attest.equal<|x, 3|>
 ]])
-run[[
+analyze[[
     local x: -1 | 0 | 1 | 2 | 3
     local y = x >= 0 and x or nil
     attest.equal<|y, 0 | 1 | 2 | 3 | nil|>
@@ -689,7 +689,7 @@ run[[
     local y = x >= 0 and x >= 1 and x or nil
     attest.equal<|y, 1 | 2 | 3 | nil|>
 ]]
-run[[
+analyze[[
     local function test(LOL)
         attest.equal(LOL, "str")
     end
@@ -699,7 +699,7 @@ run[[
     
     end
 ]]
-run[[
+analyze[[
     local function test(LOL)
         attest.equal(LOL, 1)
     end
@@ -709,7 +709,7 @@ run[[
     
     end
 ]]
-run[[
+analyze[[
     local function test(LOL)
         return LOL
     end
@@ -719,7 +719,7 @@ run[[
     
     attest.equal<|y, 1 | true|>
 ]]
-run[[
+analyze[[
     local a = {}
     if MAYBE then
         a.lol = true
@@ -727,7 +727,7 @@ run[[
     end
     attest.equal(a.lol, _ as nil | true)
 ]]
-run[[
+analyze[[
     if _ as boolean then
         local function foo() 
             local c = {}
@@ -744,7 +744,7 @@ run[[
         foo()
     end
 ]]
-run[[
+analyze[[
     local tbl = {foo = 1}
 
     if MAYBE then
@@ -754,7 +754,7 @@ run[[
     
     attest.equal(tbl.foo, _ as 1 | 2)
 ]]
-run[[
+analyze[[
     local tbl = {foo = {bar = 1}}
 
     if MAYBE then
@@ -764,7 +764,7 @@ run[[
 
     attest.equal(tbl.foo.bar, _ as 1 | 2)
 ]]
-run[[
+analyze[[
     local x: {
         field = number | nil,
     } = {}
@@ -775,7 +775,7 @@ run[[
     end
     attest.equal(x.field, _ as number | nil)
 ]]
-run[[
+analyze[[
     local x = { lol = _ as false | 1 }
     if not x.lol then
         if MAYBE then
@@ -784,7 +784,7 @@ run[[
     end
     attest.equal(x.lol, _ as false | 1)
 ]]
-run[[
+analyze[[
     assert(maybe)
 
     local y = 1
@@ -796,7 +796,7 @@ run[[
 
     attest.equal(foo(), 1)
 ]]
-run[[
+analyze[[
     local function lol()
         if MAYBE then
             return 1
@@ -807,7 +807,7 @@ run[[
     
     attest.equal<|x, 1 | nil|>
 ]]
-run[[
+analyze[[
     --DISABLE_CODE_RESULT
 
     local type HeadPos = {
@@ -834,7 +834,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local function test()
         if MAYBE then
             return "test"
@@ -847,14 +847,14 @@ run[[
     
     attest.equal(x, _ as "test" | "foo")
 ]]
-run[[
+analyze[[
     local x: {foo = nil | 1}
 
     if x.foo then
         attest.equal(x.foo, 1)
     end
 ]]
-run[[
+analyze[[
     local MAYBE1: boolean
     local MAYBE2: boolean
 
@@ -872,7 +872,7 @@ run[[
 
     attest.equal(x, _ as 2 | 3 | 4)
 ]]
-run[[
+analyze[[
     local MAYBE1: boolean
     local MAYBE2: boolean
 
@@ -892,7 +892,7 @@ run[[
     -- this ensures that they are inferred before being added
     attest.equal(x(), _ as 1 | 2 | 3)
 ]]
-run[[
+analyze[[
     local x
 
     if _ as boolean then
@@ -909,7 +909,7 @@ run[[
 
     lol()
 ]]
-run[[
+analyze[[
     if math.random() > 0.5 then
         FOO = 1
     
@@ -920,7 +920,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     assert(math.random() > 0.5)
 
     LOL = true
@@ -929,7 +929,7 @@ run[[
 
     attest.equal(LOL, true)
 ]]
-run[[
+analyze[[
     local foo = {}
     assert(math.random() > 0.5)
 
@@ -939,7 +939,7 @@ run[[
 
     attest.equal(foo.bar, 1)
 ]]
-run[[
+analyze[[
     local foo = 1
 
     assert(_ as boolean)
@@ -954,7 +954,7 @@ run[[
         attest.equal(foo, 2)
     end
 ]]
-run[[
+analyze[[
     local foo = 1
 
     assert(_ as boolean)
@@ -971,7 +971,7 @@ run[[
         attest.equal(foo, 2)
     end
 ]]
-run[[
+analyze[[
     local function test(x: ref any)
         attest.equal(x, true)
         return true
@@ -983,7 +983,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local MAYBE: boolean
 
     x = 1
@@ -1000,7 +1000,7 @@ run[[
 
     x = nil
 ]]
-run[[
+analyze[[
     local a: nil | 1
 
     if not not a then
@@ -1009,7 +1009,7 @@ run[[
 
     attest.equal(a, _ as 1 | nil)
 ]]
-run[[
+analyze[[
     local x = 1
 
     do
@@ -1020,7 +1020,7 @@ run[[
 
     attest.equal(x, 2)
 ]]
-run[[
+analyze[[
     if false then
     else
         local x = 1
@@ -1029,7 +1029,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local bar
 
     if false then
@@ -1045,14 +1045,14 @@ run[[
 
     attest.equal(bar(), 2)
 ]]
-run[[
+analyze[[
     local tbl = {} as {field = nil | {foo = true | false}}
 
     if tbl.field and tbl.field.foo then
         attest.equal(tbl.field, _ as { foo = false | true })
     end
 ]]
-run[[
+analyze[[
     local type T = {
         config = {
             extra_indent = nil | {
@@ -1071,7 +1071,7 @@ run[[
         attest.equal(t.config.extra_indent[x], lol[x])
     end
 ]]
-run[[
+analyze[[
     local META = {}
     META.__index = META
     type META.@Self = {parent = number | nil}
@@ -1084,7 +1084,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local x = _ as 1 | 2 | 3
     if x == 1 then return end
     attest.equal(x, _ as 2 | 3)
@@ -1093,7 +1093,7 @@ run[[
     if x == 2 then return end
     error("dead code")
 ]]
-run[[
+analyze[[
     local x = _ as 1 | 2
 
     if x == 1 then
@@ -1106,7 +1106,7 @@ run[[
     
     error("shouldn't happen")
 ]]
-run[[
+analyze[[
     local lol
     if true then
         lol = {}
@@ -1124,7 +1124,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     -- mutation tracking for wide key
     local operators = {
         ["+"] = 1,
@@ -1142,7 +1142,7 @@ run[[
 
     attest.equal(i, _ as -1 | 0 | 1)
 ]]
-run[[
+analyze[[
     local ffi = require("ffi")
 
     do
@@ -1161,7 +1161,7 @@ run[[
         end
     end
 ]]
-run[=[
+analyze[=[
     local ffi = require("ffi")
 
     local x: boolean
@@ -1180,7 +1180,7 @@ run[=[
         attest.equal(x, _ as function=(number)>(nil))
     end
 ]=]
-run[=[
+analyze[=[
     local ffi = require("ffi")
 
     if math.random() > 0.5 then
@@ -1201,7 +1201,7 @@ run[=[
         end
     end
 ]=]
-run[[
+analyze[[
     local function foo(x: any)
         if type(x) == "string" then
             § SCOPE1 = analyzer:GetScope()
@@ -1217,7 +1217,7 @@ run[[
         § SCOPE1 = nil
     end
 ]]
-run[[
+analyze[[
     local val: any
 
     if type(val) == "boolean" then
@@ -1230,7 +1230,7 @@ run[[
     
     attest.equal(val, _ as any | {[number] = number})
 ]]
-run(
+analyze(
 	[[
     local function foo(b: true)
         if b then
@@ -1241,7 +1241,7 @@ run(
 	nil,
 	"if condition is always true"
 )
-run(
+analyze(
 	[[
     local function foo(b: false)
         if false then
@@ -1252,7 +1252,7 @@ run(
 	nil,
 	"if condition is always false"
 )
-run(
+analyze(
 	[[
     local function foo(b: false)
         if b then
@@ -1265,7 +1265,7 @@ run(
 	nil,
 	"else part of if condition is always true"
 )
-run[[
+analyze[[
     local function foo(b: literal ref boolean)
         if b then
 
@@ -1277,7 +1277,7 @@ run[[
     
     §assert(#analyzer.diagnostics == 0)
 ]]
-run[[
+analyze[[
     --local type print = any
     local ffi = require("ffi")
 
@@ -1298,7 +1298,7 @@ run[[
         attest.equal(ffi.os == "Windows", _ as true | false)
     end
 ]]
-run([[
+analyze([[
     local function foo(x: literal ref (nil | boolean))
         if x then
     
@@ -1311,7 +1311,7 @@ run([[
 
     §assert(#analyzer.diagnostics == 0)
 ]])
-run[[
+analyze[[
     local function foo(x: literal ref (nil | boolean))
         if x == false then
     
@@ -1324,7 +1324,7 @@ run[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
-run[[
+analyze[[
     local function foo(x: literal ref (nil | boolean))
         if x == false then
     
@@ -1341,7 +1341,7 @@ run[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
-run[[
+analyze[[
     local test
     local function foo()
         test()
@@ -1353,7 +1353,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local x: string | {} | nil
 
     if x then
@@ -1362,7 +1362,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     local x: -3 | -2 | -1 | 0 | 1 | 2 | 3
 
     if x >= 0 then
@@ -1372,7 +1372,7 @@ run[[
         end
     end
 ]]
-run[[
+analyze[[
     for i = 1, 10 do
         if i == 1 then
             
@@ -1381,7 +1381,7 @@ run[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
-run[[
+analyze[[
     local tbl = {foo = true, bar = false}
 
     for k,v in pairs(tbl) do
@@ -1391,187 +1391,190 @@ run[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
-pending[[
-    do
-        local x: {foo = nil | true}
-     
-        if x.foo == nil then
-           return
+
+if false then
+	pending[[
+        do
+            local x: {foo = nil | true}
+        
+            if x.foo == nil then
+            return
+            end
+        
+            attest.equal(x.foo, true)
         end
-     
-        attest.equal(x.foo, true)
-     end
-     
-]]
-pending[[
-    local x: true | false | 2
+        
+    ]]
+	pending[[
+        local x: true | false | 2
 
-    if x then    
-        attest.equal(x, _ as true | 2)
-        x = 1
-    end
+        if x then    
+            attest.equal(x, _ as true | 2)
+            x = 1
+        end
 
-    attest.equal<|x, true | false | 2 | 1|>
-]]
-pending[[
-    local x = 1
+        attest.equal<|x, true | false | 2 | 1|>
+    ]]
+	pending[[
+        local x = 1
 
-    if MAYBE then
-        attest.equal<|x, 1|>
-        x = 1.5
-        attest.equal<|x, 1.5|>
-        x = 1.75
-        attest.equal<|x, 1.75|>
+        if MAYBE then
+            attest.equal<|x, 1|>
+            x = 1.5
+            attest.equal<|x, 1.5|>
+            x = 1.75
+            attest.equal<|x, 1.75|>
+            if MAYBE then
+                x = 2
+                if MAYBE then
+                    x = 2.5
+                end
+                attest.equal<|x, 2 | 2.5|>
+            end
+            x = 3
+            attest.equal<|x, 3|>
+        end
+        
+        attest.equal<|x, 1 | 3|>
+    ]]
+	pending[[
+        local x = 1
+
+        if math.random() > 0.5 then
+            if true then
+                do
+                    x = 1337
+                end
+            end
+            attest.equal<|x, 1337|>
+            x = 2
+            attest.equal<|x, 2|>
+        else
+            attest.equal<|x, 1|>
+            x = 66
+        end
+        
+        attest.equal<|x, 1 | 2|>
+    ]]
+	pending[[
+        local x = 1
+
+        
         if MAYBE then
             x = 2
-            if MAYBE then
-                x = 2.5
-            end
-            attest.equal<|x, 2 | 2.5|>
-        end
-        x = 3
-        attest.equal<|x, 3|>
-    end
-    
-    attest.equal<|x, 1 | 3|>
-]]
-pending[[
-    local x = 1
 
-    if math.random() > 0.5 then
-        if true then
-            do
+            if MAYBE then
                 x = 1337
             end
-        end
-        attest.equal<|x, 1337|>
-        x = 2
-        attest.equal<|x, 2|>
-    else
-        attest.equal<|x, 1|>
-        x = 66
-    end
-    
-    attest.equal<|x, 1 | 2|>
-]]
-pending[[
-    local x = 1
 
-    
-    if MAYBE then
-        x = 2
+            x = 0 -- the last one counts
 
-        if MAYBE then
-            x = 1337
+        elseif MAYBE then
+            x = 3
+        elseif MAYBE then
+            x = 4
         end
 
-        x = 0 -- the last one counts
-
-    elseif MAYBE then
-        x = 3
-    elseif MAYBE then
-        x = 4
-    end
-
-    attest.equal<|x, 1337 | 0 | 1 | 3 | 4|>
-]]
-pending[[
-    elseif MAYBE then
-        attest.equal<|x, 1|>
-        x = 3
-        attest.equal<|x, 3|>
-    elseif MAYBE then
-        attest.equal<|x, 1|>
-        x = 4
-        attest.equal<|x, 4|>
-    else
-        attest.equal<|x, 1|>
-        x = 5
-        attest.equal<|x, 5|>
-    end
-
-    print(x)
-
-    --attest.equal<|x, 1 | 2 | 3 | 4|>
-]]
-pending([[
-    local a: nil | 1
-
-    if not a or true and a or false then
-        attest.equal(a, _ as 1 | nil)
-    end
-
-    attest.equal(a, _ as 1 | nil)
-]])
-pending[[
-    local MAYBE: boolean
-    local x = 0
-    if MAYBE then x = x + 1 end -- 1
-    if MAYBE then x = x - 1 end -- 0
-    attest.equal(x, 0)
-]]
-pending[[
-    local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }
-
-    local function area(shape: Shape): number
-        if shape.kind == "circle" then 
-            print(shape.radius)
+        attest.equal<|x, 1337 | 0 | 1 | 3 | 4|>
+    ]]
+	pending[[
+        elseif MAYBE then
+            attest.equal<|x, 1|>
+            x = 3
+            attest.equal<|x, 3|>
+        elseif MAYBE then
+            attest.equal<|x, 1|>
+            x = 4
+            attest.equal<|x, 4|>
         else
-            print(shape.sideLength)
-        end 
-    end
-]]
-pending[[
-    local a: nil | 1
+            attest.equal<|x, 1|>
+            x = 5
+            attest.equal<|x, 5|>
+        end
 
-    if not not a then
-        attest.equal(a, _ as 1)
-    end
+        print(x)
 
-    attest.equal(a, _ as 1 | nil)
-]]
-pending[[
-    local a: nil | 1
+        --attest.equal<|x, 1 | 2 | 3 | 4|>
+    ]]
+	pending([[
+        local a: nil | 1
 
-    if a or true and a or false then
-        attest.equal(a, _ as 1 | 1)
-    end
+        if not a or true and a or false then
+            attest.equal(a, _ as 1 | nil)
+        end
 
-    attest.equal(a, _ as 1 | nil)
-]]
-pending[[
+        attest.equal(a, _ as 1 | nil)
+    ]])
+	pending[[
+        local MAYBE: boolean
+        local x = 0
+        if MAYBE then x = x + 1 end -- 1
+        if MAYBE then x = x - 1 end -- 0
+        attest.equal(x, 0)
+    ]]
+	pending[[
+        local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }
 
-    local x: number
-    
-    if x >= 0 and x <= 10 then
-        attest.equal<|x, 0 .. 10|>
-    end
-]]
-pending[[
-    local x: 1 | "1"
-    local y = type(x) == "number"
-    if y then
-        attest.equal(x, 1)
-    else
-        attest.equal(x, "1")
-    end
-]]
-pending[[
-    local x: 1 | "1"
-    local y = type(x) ~= "number"
-    if y then
-        attest.equal(x, "1")
-    else
-        attest.equal(x, 1)
-    end
-]]
-pending[[
-    local x: 1 | "1"
-    local t = "number"
-    local y = type(x) ~= t
-    if y then
-        attest.equal(x, "1")
-    else
-        attest.equal(x, 1)
-    end
-]]
+        local function area(shape: Shape): number
+            if shape.kind == "circle" then 
+                print(shape.radius)
+            else
+                print(shape.sideLength)
+            end 
+        end
+    ]]
+	pending[[
+        local a: nil | 1
+
+        if not not a then
+            attest.equal(a, _ as 1)
+        end
+
+        attest.equal(a, _ as 1 | nil)
+    ]]
+	pending[[
+        local a: nil | 1
+
+        if a or true and a or false then
+            attest.equal(a, _ as 1 | 1)
+        end
+
+        attest.equal(a, _ as 1 | nil)
+    ]]
+	pending[[
+
+        local x: number
+        
+        if x >= 0 and x <= 10 then
+            attest.equal<|x, 0 .. 10|>
+        end
+    ]]
+	pending[[
+        local x: 1 | "1"
+        local y = type(x) == "number"
+        if y then
+            attest.equal(x, 1)
+        else
+            attest.equal(x, "1")
+        end
+    ]]
+	pending[[
+        local x: 1 | "1"
+        local y = type(x) ~= "number"
+        if y then
+            attest.equal(x, "1")
+        else
+            attest.equal(x, 1)
+        end
+    ]]
+	pending[[
+        local x: 1 | "1"
+        local t = "number"
+        local y = type(x) ~= t
+        if y then
+            attest.equal(x, "1")
+        else
+            attest.equal(x, 1)
+        end
+    ]]
+end

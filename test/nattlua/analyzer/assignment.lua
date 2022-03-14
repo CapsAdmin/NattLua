@@ -1,7 +1,7 @@
 local T = require("test.helpers")
-local run = T.RunCode
+local analyze = T.RunCode
 local String = T.String
-run[[
+analyze[[
 local   a,b,c = 1,2,3
         d,e,f = 4,5,6
 
@@ -43,7 +43,7 @@ attest.equal(å, 6)
 A, B, C, D = nil, nil, nil, nil
 
 ]]
-run(
+analyze(
 	[[
     local type Foo = {
         a = 1,
@@ -54,7 +54,7 @@ run(
 ]],
 	" is missing from "
 )
-run(
+analyze(
 	[[
     local type Person = unique {
         id = number,
@@ -82,14 +82,14 @@ run(
 )
 
 test("runtime reassignment", function()
-	local v = run[[
+	local v = analyze[[
         local a = 1
         do
             a = 2
         end
     ]]:GetLocalOrGlobalValue(String("a"))
 	equal(v:GetData(), 2)
-	local v = run[[
+	local v = analyze[[
         local a = 1
         if true then
             a = 2
@@ -98,7 +98,7 @@ test("runtime reassignment", function()
 	equal(v:GetData(), 2)
 end)
 
-run([[
+analyze([[
     local x <const> = 1
     x = 2
 ]], "cannot assign to const variable")
