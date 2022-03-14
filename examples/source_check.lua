@@ -1,18 +1,7 @@
 local nl = require("nattlua")
 local table_print = require("nattlua.other.table_print")
-
-local function get_all_files()
-	local paths = {}
-	local all = assert(io.popen("find nattlua/")):read("*all") .. "\n"
-
-	for path in all:gmatch("(.-)\n") do
-		if path:sub(-4) == ".lua" then table.insert(paths, path) end
-	end
-
-	return paths
-end
-
-local paths = get_all_files()
+local util = require("examples.util")
+local paths = util.GetFilesRecursively("./nattlua")
 local stats = {
 	tokens = 0,
 	locals = 0,

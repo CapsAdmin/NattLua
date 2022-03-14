@@ -265,10 +265,7 @@ return function(
 			Lexer = require("nattlua.lexer.lexer"),
 			Parser = require("nattlua.parser.parser"),
 			Analyzer = require("nattlua.analyzer.analyzer"),
-			Emitter = config and
-				config.js and
-				require("nattlua.transpiler.javascript_emitter").New or
-				require("nattlua.transpiler.emitter").New,
+			Emitter = require("nattlua.transpiler.emitter").New,
 		},
 		META
 	)
