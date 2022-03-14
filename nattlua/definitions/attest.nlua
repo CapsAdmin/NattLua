@@ -23,4 +23,10 @@ analyzer function attest.subset_of(A: any, B: any)
 	return A
 end
 
+analyzer function attest.truthy(obj: any, err: string | nil)
+	if obj:IsTruthy() then return obj end
+
+	error(err and err:GetData() or "assertion failed")
+end
+
 _G.attest = attest

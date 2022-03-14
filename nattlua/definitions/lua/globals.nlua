@@ -27,12 +27,6 @@ end
 
 type tostring = function=(val: any)>(string)
 
-analyzer function type_assert_truthy(obj: any, err: string | nil)
-	if obj:IsTruthy() then return obj end
-
-	error(err and err:GetData() or "assertion failed")
-end
-
 analyzer function next(t: Map<|any, any|>, k: any)
 	if t.Type == "any" then return types.Any(), types.Any() end
 

@@ -85,6 +85,8 @@ IMPORTS['nattlua/definitions/attest.nlua'] = function()
 
 
 
+
+
 _G.attest = attest end
 do local __M; IMPORTS["nattlua.other.loadstring"] = function(...) __M = __M or (function(...) local f = _G.loadstring or _G.load
 return function(str, name)
@@ -4290,8 +4292,6 @@ IMPORTS['nattlua/definitions/lua/globals.nlua'] = function()
 
 
 _G.arg = _
-
-
 
 
 
@@ -21358,6 +21358,12 @@ analyzer function attest.subset_of(A: any, B: any)
 	return A
 end
 
+analyzer function attest.truthy(obj: any, err: string | nil)
+	if obj:IsTruthy() then return obj end
+
+	error(err and err:GetData() or "assertion failed")
+end
+
 _G.attest = attest end
 IMPORTS['nattlua/definitions/lua/globals.nlua'] = function() type @Name = "_G"
 type setmetatable = function=(table: Table, metatable: Table | nil)>(Table)
@@ -21387,12 +21393,6 @@ analyzer function print(...: ...any)
 end
 
 type tostring = function=(val: any)>(string)
-
-analyzer function type_assert_truthy(obj: any, err: string | nil)
-	if obj:IsTruthy() then return obj end
-
-	error(err and err:GetData() or "assertion failed")
-end
 
 analyzer function next(t: Map<|any, any|>, k: any)
 	if t.Type == "any" then return types.Any(), types.Any() end

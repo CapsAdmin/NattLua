@@ -289,10 +289,10 @@ if bit.tobit then
 	analyze[[
             -- bit operations
             for i=1,100 do
-                type_assert_truthy(bit.tobit(i+0x7fffffff) < 0)
+                attest.truthy(bit.tobit(i+0x7fffffff) < 0)
             end
             for i=1,100 do
-                type_assert_truthy(bit.tobit(i+0x7fffffff) <= 0)
+                attest.truthy(bit.tobit(i+0x7fffffff) <= 0)
             end
         ]]
 end
@@ -303,22 +303,22 @@ analyze[[
             local a = "\255\255\255\255"
             local b = "\1\1\1\1"
 
-            type_assert_truthy(a > b)
-            type_assert_truthy(a > b)
-            type_assert_truthy(a >= b)
-            type_assert_truthy(b <= a)
+            attest.truthy(a > b)
+            attest.truthy(a > b)
+            attest.truthy(a >= b)
+            attest.truthy(b <= a)
         end
 
         do --- String comparisons:
             local function str_cmp(a, b, lt, gt, le, ge)
-                type_assert_truthy(a<b == lt)
-                type_assert_truthy(a>b == gt)
-                type_assert_truthy(a<=b == le)
-                type_assert_truthy(a>=b == ge)
-                type_assert_truthy((not (a<b)) == (not lt))
-                type_assert_truthy((not (a>b)) == (not gt))
-                type_assert_truthy((not (a<=b)) == (not le))
-                type_assert_truthy((not (a>=b)) == (not ge))
+                attest.truthy(a<b == lt)
+                attest.truthy(a>b == gt)
+                attest.truthy(a<=b == le)
+                attest.truthy(a>=b == ge)
+                attest.truthy((not (a<b)) == (not lt))
+                attest.truthy((not (a>b)) == (not gt))
+                attest.truthy((not (a<=b)) == (not le))
+                attest.truthy((not (a>=b)) == (not ge))
             end
 
             local function str_lo(a, b)

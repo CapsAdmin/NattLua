@@ -77,7 +77,7 @@ analyze[[
     ]]
 analyze([[
         -- assert
-        type_assert_truthy(1 == 2, "lol")
+        attest.truthy(1 == 2, "lol")
     ]], "lol")
 
 do -- require should error when not finding a module
